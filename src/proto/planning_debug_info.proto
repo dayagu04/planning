@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package planning.common;
+
+message PlanningDebugInfo {
+  uint64 timestamp = 1;
+  string data_json = 2;
+}
+

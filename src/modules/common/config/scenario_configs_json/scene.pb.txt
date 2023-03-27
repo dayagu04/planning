@@ -1,0 +1,3 @@
+scene_type : "highway",
+sensor_configuration : "vision",
+cpu_configuration : "mdc"

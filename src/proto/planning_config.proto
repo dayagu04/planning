@@ -1,0 +1,21 @@
+syntax = "proto2";
+
+option cc_enable_arenas = true;
+
+package planning.common;
+
+enum SceneType {
+  URBAN = 0;
+  PARKING = 1;
+  HIGHWAY = 2;
+  RADS = 3;
+  NOT_DEFINED = 4;
+}
+
+enum FunctionModeEnum {
+  ACC = 0;
+  SCC = 1;
+  NOA = 2;
+  APA = 3;
+}
+

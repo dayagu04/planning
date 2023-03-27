@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+option cc_enable_arenas = true;
+
+package planning.common;
+
+message TasksConfig {
+  optional string scene_type = 1;
+  optional string sensor_configuration = 2;
+  optional string cpu_configuration = 3;
+}
