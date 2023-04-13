@@ -2,8 +2,8 @@
 #include <cstdint>
 #include <string>
 
-#include "../res/include/proto/asw_proto_common.pb.h"
-#include "../res/include/proto/bsw_proto_planning.pb.h"
+#include "../res/include/proto/common.pb.h"
+#include "../res/include/proto/planning_plan.pb.h"
 #include "proto/generated_files/planning_debug_info.pb.h"
 
 namespace planning {
@@ -22,7 +22,7 @@ struct Polyline {
 
 struct DebugOutput {
   // 自车位置
-  Asw::Common::Point2d ego_position;
+  Common::Point2d ego_position;
   // 横向信息
   Polyline left_lane;
   Polyline centre_lane;
@@ -30,8 +30,8 @@ struct DebugOutput {
   Polyline target_lane;
   Polyline fix_lane;
   // 纵向信息
-  Asw::Common::Point2d velocity;
-  Bsw::PlanningOutput::AccelerationRange acceleration;
+  Common::Point2d velocity;
+  PlanningOutput::AccelerationRange acceleration;
   planning::common::PlanningDebugInfo data;
 };
 } // namespace planning

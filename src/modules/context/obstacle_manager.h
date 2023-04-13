@@ -8,7 +8,7 @@
 #include "src/modules/context/reference_path.h"
 #include "src/modules/context/environmental_model.h"
 
-#include "../res/include/proto/bsw_proto_fusion_objects.pb.h"
+#include "../res/include/proto/fusion_objects.pb.h"
 
 namespace planning {
 

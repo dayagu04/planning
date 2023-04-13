@@ -9,7 +9,7 @@
 #include "src/modules/context/frenet_ego_state.h"
 #include "src/modules/context/frenet_obstacle.h"
 
-#include "res/include/proto/asw_proto_common.pb.h"
+#include "res/include/proto/common.pb.h"
 // #include "src/modules/environmental_model/mdk/horizonkit/horizonkit.h"
 // #include "mdk.h"
 
@@ -26,10 +26,10 @@ struct ReferencePathPoint {
   double distance_to_right_road_border;
   double distance_to_left_lane_border;
   double distance_to_right_lane_border;
-  Asw::Common::LaneBoundaryType left_road_border_type;
-  Asw::Common::LaneBoundaryType right_road_border_type;
-  Asw::Common::LaneBoundaryType left_lane_border_type;
-  Asw::Common::LaneBoundaryType right_lane_border_type;
+  Common::LaneBoundaryType left_road_border_type;
+  Common::LaneBoundaryType right_road_border_type;
+  Common::LaneBoundaryType left_lane_border_type;
+  Common::LaneBoundaryType right_lane_border_type;
   ReferencePathPointType type;
   bool is_in_intersection;
 };

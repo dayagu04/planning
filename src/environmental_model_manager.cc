@@ -18,7 +18,7 @@
 #include "modules/context/parking_slot_manager.h"
 #include "modules/context/ego_planning_config.h"
 
-#include "../res/include/proto/bsw_proto_vehicle_service.pb.h"
+#include "../res/include/proto/vehicle_service.pb.h"
 #include "proto/generated_files/planning_config.pb.h"
 #include "proto/generated_files/vehicle_status.pb.h"
 

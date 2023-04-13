@@ -51,10 +51,10 @@ bool PlanningComponent::Init() {
   // 2.定义收发topics
   // -------------- reader topics --------------
   auto fusion_objects_reader_ =
-      planning_node_->CreateReader<Bsw::ObjectFusion::FusionObjectsInfo>(
+      planning_node_->CreateReader<FusionObjects::FusionObjectsInfo>(
           "/fusion/fusion_object",
           [this](
-              const std::shared_ptr<Bsw::ObjectFusion::FusionObjectsInfo> &fusion_objects_info_msg) {
+              const std::shared_ptr<FusionObjects::FusionObjectsInfo> &fusion_objects_info_msg) {
             std::cout << "receive fusion fusion_objects_info " << fusion_objects_info_msg->header().timestamp()
                       << std::endl;
             std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -62,10 +62,10 @@ bool PlanningComponent::Init() {
           });
 
   auto fusion_road_reader_ =
-      planning_node_->CreateReader<Asw::RoadFusion::RoadInfo>(
+      planning_node_->CreateReader<FusionRoad::RoadInfo>(
           "/fusion/fusion_road",
           [this](
-              const std::shared_ptr<Asw::RoadFusion::RoadInfo> &road_info_msg) {
+              const std::shared_ptr<FusionRoad::RoadInfo> &road_info_msg) {
             std::cout << "receive fusion road_info " << road_info_msg->header().timestamp()
                       << std::endl;
             std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -73,10 +73,10 @@ bool PlanningComponent::Init() {
           });
 
   auto localization_reader_ =
-      planning_node_->CreateReader<Asw::LocalizationOutput::LocalizationEstimate>(
+      planning_node_->CreateReader<LocalizationOutput::LocalizationEstimate>(
           "/localization",
           [this](
-              const std::shared_ptr<Asw::LocalizationOutput::LocalizationEstimate> &localization_estimate_msg) {
+              const std::shared_ptr<LocalizationOutput::LocalizationEstimate> &localization_estimate_msg) {
             std::cout << "receive localization_estimate " << localization_estimate_msg->header().timestamp()
                       << std::endl;
             std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -84,10 +84,10 @@ bool PlanningComponent::Init() {
           });
 
   auto prediction_reader_ =
-      planning_node_->CreateReader<Asw::Prediction::PredictionResult>(
+      planning_node_->CreateReader<Prediction::PredictionResult>(
           "/prediction",
           [this](
-              const std::shared_ptr<Asw::Prediction::PredictionResult> &prediction_result_msg) {
+              const std::shared_ptr<Prediction::PredictionResult> &prediction_result_msg) {
             std::cout << "receive prediction_result " << prediction_result_msg->header().timestamp()
                       << std::endl;
             std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -95,10 +95,10 @@ bool PlanningComponent::Init() {
           });
 
   auto vehicel_service_reader_ =
-      planning_node_->CreateReader<Bsw::VehicleService::VehicleServiceOutputInfo>(
+      planning_node_->CreateReader<VehicleService::VehicleServiceOutputInfo>(
           "/vehicel_service_output_info",
           [this](
-              const std::shared_ptr<Bsw::VehicleService::VehicleServiceOutputInfo> &vehicel_service_output_info_msg) {
+              const std::shared_ptr<VehicleService::VehicleServiceOutputInfo> &vehicel_service_output_info_msg) {
             std::cout << "receive vehicel_service_output_info " << vehicel_service_output_info_msg->header().timestamp()
                       << std::endl;
             std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -106,10 +106,10 @@ bool PlanningComponent::Init() {
           });
 
   auto radar_perception_objects_reader_ =
-      planning_node_->CreateReader<Bsw::RadarPerceptionObjects::RadarPerceptionObjectsInfo>(
+      planning_node_->CreateReader<RadarPerceptionObjects::RadarPerceptionObjectsInfo>(
           "/radar_perception_objects_info",
           [this](
-              const std::shared_ptr<Bsw::RadarPerceptionObjects::RadarPerceptionObjectsInfo> &radar_perception_objects_info_msg) {
+              const std::shared_ptr<RadarPerceptionObjects::RadarPerceptionObjectsInfo> &radar_perception_objects_info_msg) {
             std::cout << "receive radar_perception_objects_info " << radar_perception_objects_info_msg->header().timestamp()
                       << std::endl;
             std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -117,10 +117,10 @@ bool PlanningComponent::Init() {
           });
 
   auto control_output_reader_ =
-      planning_node_->CreateReader<Bsw::ControlOutput::ControlOutput>(
+      planning_node_->CreateReader<ControlCommand::ControlOutput>(
           "/control_output",
           [this](
-              const std::shared_ptr<Bsw::ControlOutput::ControlOutput> &control_output_msg) {
+              const std::shared_ptr<ControlCommand::ControlOutput> &control_output_msg) {
             std::cout << "receive control_output " << control_output_msg->header().timestamp()
                       << std::endl;
             std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -129,7 +129,7 @@ bool PlanningComponent::Init() {
 
   // -------------- writter topics --------------
   planning_writer_ =
-      planning_node_->CreateWriter<Bsw::PlanningOutput::PlanningOutput>(
+      planning_node_->CreateWriter<PlanningOutput::PlanningOutput>(
           "/planning");
   planning_debug_writer_ =
       planning_node_->CreateWriter<planning::common::PlanningDebugInfo>(
@@ -160,7 +160,7 @@ bool PlanningComponent::Proc() {
   }
 
   // 2.planning run
-  Bsw::PlanningOutput::PlanningOutput planning_output;
+  PlanningOutput::PlanningOutput planning_output;
   DebugOutput debug_output;
 
   std::cout << "==============The planning enters RunOnce=============" << std::endl;

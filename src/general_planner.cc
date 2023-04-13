@@ -88,11 +88,11 @@ void GeneralPlanner::SetPlanningResult(
 
   ClearPlanningResult(pnc_result);
   if (ego_planning_result.turn_signal == NO_CHANGE) {
-    pnc_result.turn_signal_cmd = Asw::Common::TurnSignalType::TURN_SIGNAL_TYPE_NONE;
+    pnc_result.turn_signal_cmd = Common::TurnSignalType::TURN_SIGNAL_TYPE_NONE;
   } else if (ego_planning_result.turn_signal == LEFT_CHANGE) {
-    pnc_result.turn_signal_cmd = Asw::Common::TurnSignalType::TURN_SIGNAL_TYPE_LEFT;
+    pnc_result.turn_signal_cmd = Common::TurnSignalType::TURN_SIGNAL_TYPE_LEFT;
   } else {
-    pnc_result.turn_signal_cmd = Asw::Common::TurnSignalType::TURN_SIGNAL_TYPE_RIGHT;
+    pnc_result.turn_signal_cmd = Common::TurnSignalType::TURN_SIGNAL_TYPE_RIGHT;
   }
   LOG_DEBUG("turn_signal: %d", (int)pnc_result.turn_signal_cmd);
 

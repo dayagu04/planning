@@ -24,7 +24,7 @@ void GeneralPlanning::Init() {
 }
 
 bool GeneralPlanning::RunOnce(const LocalView& local_view,
-               Bsw::PlanningOutput::PlanningOutput* const planning_output,
+               PlanningOutput::PlanningOutput* const planning_output,
                DebugOutput &debug_info) {
   // using namespace FeiMa::SystemFunc;
   LOG_ERROR("GeneralPlanning::RunOnce \n");
@@ -39,7 +39,7 @@ bool GeneralPlanning::RunOnce(const LocalView& local_view,
   auto *planning_status =
       session_.mutable_planning_output_context()->mutable_planning_status();
   planning_status->pre_planning_result = planning_status->planning_result;
-  session_.mutable_planning_context()
+  session_.mutable_planning_output_context()
       ->mutable_planning_status()
       ->planning_result.next_timestamp = start_timestamp;
 
@@ -77,7 +77,7 @@ bool GeneralPlanning::RunOnce(const LocalView& local_view,
   }
 
   // 开始执行规划部分
-  scheduler_.RunOnce()
+  scheduler_.RunOnce();
 
   bool planning_success =
       session_.ego_planning_context().planning_success();

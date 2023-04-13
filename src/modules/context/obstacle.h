@@ -10,8 +10,8 @@
 #include "modules/common/math/math_utils.h"
 #include "modules/common/math/polygon2d.h"
 #include "modules/common/math/vec2d.h"
-#include "../res/include/proto/asw_proto_prediction.pb.h"
-#include "../res/include/proto/bsw_proto_fusion_objects.pb.h"
+#include "../res/include/proto/prediction.pb.h"
+#include "../res/include/proto/fusion_objects.pb.h"
 #include "modules/common/prediction_object.h"
 
 namespace planning {
@@ -23,15 +23,15 @@ class Obstacle {
                     bool is_static, double start_relative_timestamp);
 
   explicit Obstacle(int id,
-                    const Bsw::ObjectFusion::FusionObject &perception_obstacle,
+                    const FusionObjects::FusionObject &perception_obstacle,
                     bool is_static);
 
   explicit Obstacle(int id, double x, double y, double heading_angle,
                     double length, double width, double height,
-                    Asw::Common::ObjectType type);
+                    Common::ObjectType type);
 
   // for ground line
-  explicit Obstacle(int id, const std::vector<Asw::Common::Point3d> &points);
+  explicit Obstacle(int id, const std::vector<Common::Point3d> &points);
   explicit Obstacle(int id, const std::vector<planning_math::Vec2d> &points);
 
   const std::vector<planning_math::Vec2d> &perception_points() const {
@@ -53,7 +53,7 @@ class Obstacle {
   double acceleration_signed() const { return acc_signed_; }
   double velocity_angle() const { return velocity_angle_; }
   bool is_static() const { return is_static_; }
-  Asw::Common::ObjectType type() const { return type_; }
+  Common::ObjectType type() const { return type_; }
   bool is_vaild() const { return valid_; }
   bool abnormal_data_dectection(
       const PredictionObject &prediction_object);
@@ -62,7 +62,7 @@ class Obstacle {
     return trajectory_;
   }
 
-  const Bsw::ObjectFusion::FusionObject &PerceptionInfo()
+  const FusionObjects::FusionObject &PerceptionInfo()
       const {
     return perception_obstacle_;
   }
@@ -98,11 +98,11 @@ class Obstacle {
   double velocity_angle_ = 0.0;
   double acc_ = 0.0;
   double acc_signed_ = 0.0;
-  Asw::Common::ObjectType type_;
+  Common::ObjectType type_;
   bool valid_ = true;
 
   std::vector<PncTrajectoryPoint> trajectory_{};
-  Bsw::ObjectFusion::FusionObject perception_obstacle_;
+  FusionObjects::FusionObject perception_obstacle_;
   planning_math::Box2d perception_bounding_box_;
   planning_math::Polygon2d perception_polygon_;
   planning_math::Polygon2d obstacle_ego_polygon_;
@@ -111,7 +111,7 @@ class Obstacle {
 
 struct HistoryObstacle {
   int id{};
-  Asw::Common::ObjectType type;
+  Common::ObjectType type;
   double time = 0.0;
   double x_center = 0.0;
   double y_center = 0.0;

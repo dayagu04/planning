@@ -8,8 +8,8 @@
 #include "modules/common/define/geometry.h"
 // #include "modules/common/define/plan.h"
 // #include "proto/generated_files/vehicle_status.pb.h"
-#include "../res/include/proto/asw_proto_common.pb.h"
-#include "../res/include/proto/bsw_proto_planning.pb.h"
+#include "../res/include/proto/common.pb.h"
+#include "../res/include/proto/planning_plan.pb.h"
 
 namespace planning {
 namespace common {
@@ -203,14 +203,14 @@ typedef struct {
   double max_jerk;
 
   // traj
-  std::vector<Bsw::PlanningOutput::TrajectoryPoint> traj_pose_array;
+  std::vector<PlanningOutput::TrajectoryPoint> traj_pose_array;
   std::vector<double> traj_vel_array;
   std::vector<double> traj_acceleration;
 
   // 已经转为proto类型
-  Asw::Common::TurnSignalType turn_signal_cmd;
+  Common::TurnSignalType turn_signal_cmd;
       // common::TurnSignalType::NONE;
-  Asw::Common::GearCommandValue gear_cmd;
+  Common::GearCommandValue gear_cmd;
       // common::GearType::NONE;
 
   //for control

@@ -7,13 +7,11 @@
 
 namespace planning {
 
-// Obstacle::abnormal_data_dectection
-
 // Obstacle::Obstacle(int id,
-//                    const Asw::Prediction::PredictionObject &prediction_object,
+//                    const Prediction::PredictionObject &prediction_object,
 //                    const bool is_static, double start_relative_timestamp)
 //     : id_(id),
-//       perception_id_(prediction_object.perception_obstacle().id()),
+//       perception_id_(prediction_object.perception_obstacle().id()), //prediction_object.fusion_object().additional_info().track_id()
 //       is_static_(is_static),
 //       perception_bounding_box_(
 //           {prediction_object.perception_obstacle().center_position().x(), 
@@ -126,7 +124,7 @@ namespace planning {
 // }
 
 // Obstacle::Obstacle(int id,
-//                    const Asw::ObjectFusion::FusionObject &perception_obstacle,
+//                    const FusionObjects::FusionObject &perception_obstacle,
 //                    const bool is_static)
 //     : id_(id), perception_id_(perception_obstacle.additional_info().track_id()),
 //       is_static_(is_static), perception_obstacle_(perception_obstacle),

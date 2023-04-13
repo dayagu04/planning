@@ -9,7 +9,7 @@
 #include "modules/common/transform.h"
 #include "modules/context/vehicle_config_context.h"
 #include "modules/context/environmental_model.h"
-#include "../res/include/proto/asw_proto_road_fusion.pb.h"
+#include "../res/include/proto/fusion_road.pb.h"
 
 namespace planning {
 
@@ -33,7 +33,7 @@ struct VirtualLanePoint {
   LaneBoundaryType right_lane_border_type;
   bool on_route = true;
   bool is_in_intersection = false;
-  Asw::RoadFusion::LaneType lane_type = Asw::RoadFusion::LaneType::LANE_TYPE_UNKNOWN;
+  FusionRoad::LaneType lane_type = FusionRoad::LaneType::LANE_TYPE_UNKNOWN;
 };
 
 class VirtualLane {
@@ -79,7 +79,7 @@ class VirtualLane {
   bool is_obstacle_on(const Obstacle *obstacle) const;
   bool get_point_by_distance(double distance, VirtualLanePoint &point) const;
  
-  Asw::RoadFusion::LaneType lane_type() const { return lane_type_; }
+  FusionRoad::LaneType lane_type() const { return lane_type_; }
   const std::unordered_set<int> &lane_type_set() const {
     return lane_type_set_;
   }
@@ -112,7 +112,7 @@ class VirtualLane {
   double lateral_offset_ = 0;
   std::unordered_set<int> lane_type_set_{};
   Direction lane_marks_ = Direction::DIRECTION_UNKNOWN;
-  Asw::RoadFusion::LaneType lane_type_ = Asw::RoadFusion::LaneType::LANE_TYPE_UNKNOWN;
+  FusionRoad::LaneType lane_type_ = FusionRoad::LaneType::LANE_TYPE_UNKNOWN;
   std::vector<int> track_ids_;
 
 };

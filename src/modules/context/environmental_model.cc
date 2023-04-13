@@ -20,6 +20,7 @@ bool EnvironmentalModel::Init(common::SceneType scene_type) {
 }
 
 bool EnvironmentalModel::Update() {
+  
   return true;
 }
 

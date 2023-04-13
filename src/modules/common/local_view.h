@@ -2,17 +2,17 @@
 
 #include <memory>
 
-#include "../res/include/proto/bsw_proto_vehicle_service.pb.h"
-#include "../res/include/proto/bsw_proto_fusion_objects.pb.h"
-#include "../res/include/proto/asw_proto_localization.pb.h"
-#include "../res/include/proto/bsw_proto_planning.pb.h"
-#include "../res/include/proto/bsw_proto_control.pb.h"
-#include "../res/include/proto/asw_proto_parking_fusion.pb.h"
-#include "../res/include/proto/asw_proto_parking_slot_list.pb.h"
-#include "../res/include/proto/asw_proto_parking_slot_select.pb.h"
-#include "../res/include/proto/asw_proto_prediction.pb.h"
-#include "../res/include/proto/asw_proto_road_fusion.pb.h"
-#include "../res/include/proto/bsw_proto_radar_perception_objects.pb.h"
+#include "../res/include/proto/vehicle_service.pb.h"
+#include "../res/include/proto/fusion_objects.pb.h"
+#include "../res/include/proto/localization.pb.h"
+#include "../res/include/proto/planning_plan.pb.h"
+#include "../res/include/proto/control_command.pb.h"
+#include "../res/include/proto/parking_fusion.pb.h"
+#include "../res/include/proto/parking_slot_list.pb.h"
+#include "../res/include/proto/parking_slot_select.pb.h"
+#include "../res/include/proto/prediction.pb.h"
+#include "../res/include/proto/fusion_road.pb.h"
+#include "../res/include/proto/radar_perception_objects.pb.h"
 
 
 namespace planning {
@@ -23,13 +23,13 @@ namespace planning {
 
 struct LocalView {
 
-  Asw::Prediction::PredictionResult prediction_result;
-  Asw::RoadFusion::RoadInfo road_info;
-  Asw::LocalizationOutput::LocalizationEstimate localization_estimate;
-  Bsw::ObjectFusion::FusionObjectsInfo fusion_objects_info;
-  Bsw::VehicleService::VehicleServiceOutputInfo vehicel_service_output_info;
-  Bsw::RadarPerceptionObjects::RadarPerceptionObjectsInfo radar_perception_objects_info;
-  Bsw::ControlOutput::ControlOutput control_output;
+  Prediction::PredictionResult prediction_result;
+  FusionRoad::RoadInfo road_info;
+  LocalizationOutput::LocalizationEstimate localization_estimate;
+  FusionObjects::FusionObjectsInfo fusion_objects_info;
+  VehicleService::VehicleServiceOutputInfo vehicel_service_output_info;
+  RadarPerceptionObjects::RadarPerceptionObjectsInfo radar_perception_objects_info;
+  ControlCommand::ControlOutput control_output;
 
 };
 

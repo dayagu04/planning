@@ -18,7 +18,7 @@ class FrenetObstacle {
                  const planning::common::CartEgoState& ego_state_info);
 
   int id() const { return id_; }
-  Asw::Common::ObjectType type() const { return obstacle_ptr_->type(); }
+  Common::ObjectType type() const { return obstacle_ptr_->type(); }
 
   double frenet_s() const { return frenet_s_; }
   double frenet_l() const { return frenet_l_; }

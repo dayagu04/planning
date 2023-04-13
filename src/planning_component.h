@@ -6,17 +6,17 @@
 #include <iostream>
 #include <mutex>
 
-#include "../res/include/proto/bsw_proto_vehicle_service.pb.h"
-#include "../res/include/proto/bsw_proto_fusion_objects.pb.h"
-#include "../res/include/proto/asw_proto_localization.pb.h"
-#include "../res/include/proto/bsw_proto_planning.pb.h"
-#include "../res/include/proto/bsw_proto_control.pb.h"
-#include "../res/include/proto/asw_proto_parking_fusion.pb.h"
-#include "../res/include/proto/asw_proto_parking_slot_list.pb.h"
-#include "../res/include/proto/asw_proto_parking_slot_select.pb.h"
-#include "../res/include/proto/asw_proto_prediction.pb.h"
-#include "../res/include/proto/asw_proto_road_fusion.pb.h"
-#include "../res/include/proto/bsw_proto_radar_perception_objects.pb.h"
+#include "../res/include/proto/vehicle_service.pb.h"
+#include "../res/include/proto/fusion_objects.pb.h"
+#include "../res/include/proto/localization.pb.h"
+#include "../res/include/proto/planning_plan.pb.h"
+#include "../res/include/proto/control_command.pb.h"
+#include "../res/include/proto/parking_fusion.pb.h"
+#include "../res/include/proto/parking_slot_list.pb.h"
+#include "../res/include/proto/parking_slot_select.pb.h"
+#include "../res/include/proto/prediction.pb.h"
+#include "../res/include/proto/fusion_road.pb.h"
+#include "../res/include/proto/radar_perception_objects.pb.h"
 
 
 #include "autoplt/include/ADSComponent.h"
@@ -44,20 +44,20 @@ class PlanningComponent final : public autoplt::ADSTimerCoponent {
  private:
   std::mutex msg_mutex_;
   // input signals
-  Asw::Prediction::PredictionResult prediction_result_msg_;
-  Asw::RoadFusion::RoadInfo road_info_msg_;
-  Asw::LocalizationOutput::LocalizationEstimate localization_estimate_msg_;
-  Bsw::ObjectFusion::FusionObjectsInfo fusion_objects_info_msg_;
-  Bsw::VehicleService::VehicleServiceOutputInfo vehicel_service_output_info_msg_;
-  Bsw::RadarPerceptionObjects::RadarPerceptionObjectsInfo radar_perception_objects_info_msg_;
-  Bsw::ControlOutput::ControlOutput control_output_msg_;
+  Prediction::PredictionResult prediction_result_msg_;
+  FusionRoad::RoadInfo road_info_msg_;
+  LocalizationOutput::LocalizationEstimate localization_estimate_msg_;
+  FusionObjects::FusionObjectsInfo fusion_objects_info_msg_;
+  VehicleService::VehicleServiceOutputInfo vehicel_service_output_info_msg_;
+  RadarPerceptionObjects::RadarPerceptionObjectsInfo radar_perception_objects_info_msg_;
+  ControlCommand::ControlOutput control_output_msg_;
   LocalView local_view_;
   DebugOutput debug_info_;
 //   Session session_;
 //   Scheduler scheduler_;
 
   std::shared_ptr<ADSNode> planning_node_ = nullptr;
-  std::shared_ptr<Writer<Bsw::PlanningOutput::PlanningOutput>> planning_writer_ =
+  std::shared_ptr<Writer<PlanningOutput::PlanningOutput>> planning_writer_ =
       nullptr;
   std::shared_ptr<Writer<planning::common::PlanningDebugInfo>> planning_debug_writer_ =
       nullptr;

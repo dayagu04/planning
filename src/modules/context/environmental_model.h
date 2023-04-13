@@ -20,11 +20,11 @@
 // #include "modules/context/traffic_light_decision_manager.h"
 #include "modules/context/parking_slot_manager.h"
 
-#include "../res/include/proto/bsw_proto_vehicle_service.pb.h"
+#include "../res/include/proto/vehicle_service.pb.h"
 #include "proto/generated_files/planning_config.pb.h"
 #include "proto/generated_files/vehicle_status.pb.h"
-#include "../res/include/proto/bsw_proto_fusion_objects.pb.h"
-#include "../res/include/proto/asw_proto_prediction.pb.h"
+#include "../res/include/proto/fusion_objects.pb.h"
+#include "../res/include/proto/prediction.pb.h"
 
 #include "src/modules/common/config/vehicle_param.h"
 
@@ -49,8 +49,8 @@ enum class VirtualObstacleId : int {
 struct ObstacleRawData {
   bool has_prediction{false};
   bool has_fusion{false};
-  Bsw::ObjectFusion::FusionObject *fusion_info;
-  Asw::Prediction::PredictionObject *prediction_info;
+  FusionObjects::FusionObject *fusion_info;
+  Prediction::PredictionObject *prediction_info;
 };
 
 class EgoPlanningConfigBuilder;

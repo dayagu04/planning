@@ -15,7 +15,7 @@
 #include "modules/common/local_view.h"
 
 #include "modules/common/define/debug_output.h"
-#include "../res/include/proto/bsw_proto_planning.pb.h"
+#include "../res/include/proto/planning_plan.pb.h"
 
 namespace planning {
 
@@ -27,24 +27,24 @@ class GeneralPlanning {
 
   void Init();
   bool RunOnce(const LocalView& local_view,
-               Bsw::PlanningOutput::PlanningOutput* const planning_output,
+               PlanningOutput::PlanningOutput* const planning_output,
                DebugOutput &debug_info);
 //   void ResetState() override;
 
  private:
   // 解析障碍物
   void FillPredictionTrajectoryPoint(
-      const std::vector<Asw::Prediction::PredictionTrajectoryPoint> &input,
-      Asw::Prediction::PredictionTrajectory &output);
+      const std::vector<Prediction::PredictionTrajectoryPoint> &input,
+      Prediction::PredictionTrajectory &output);
 
   void FillPredictionTrajectory(
-      const std::vector<Asw::Prediction::PredictionTrajectory> &input,
-      Asw::Prediction::PredictionObject &output);
+      const std::vector<Prediction::PredictionTrajectory> &input,
+      Prediction::PredictionObject &output);
 
-  void FillPredictionObjectInfo(const std::shared_ptr<Asw::Prediction::PredictionResult> &prediction_result_raw,
-                                const std::shared_ptr<Bsw::ObjectFusion::FusionObjectsInfo> &fusion_objects_info_raw,
-                                const std::shared_ptr<Bsw::RadarPerceptionObjects::RadarPerceptionObjectsInfo> &radar_objects_raw,
-                                Asw::Prediction::PredictionResult &output_prediction_ojects);
+  void FillPredictionObjectInfo(const std::shared_ptr<Prediction::PredictionResult> &prediction_result_raw,
+                                const std::shared_ptr<FusionObjects::FusionObjectsInfo> &fusion_objects_info_raw,
+                                const std::shared_ptr<RadarPerceptionObjects::RadarPerceptionObjectsInfo> &radar_objects_raw,
+                                Prediction::PredictionResult &output_prediction_ojects);
 
   void UpdateChassisReport(double current_time);
   void UpdateWheelReport(double current_time);
@@ -53,15 +53,15 @@ class GeneralPlanning {
   void UpdateVehicleStatus(double current_time);
   
   void FillEgoPlanningTrajectoryPoint(
-      const std::vector<Asw::Prediction::PredictionTrajectoryPoint> &input,
+      const std::vector<Prediction::PredictionTrajectoryPoint> &input,
       std::vector<planning::common::TrajectoryPoint> &output);
 
   void FillEgoPlanningTrajectory(
-      const Asw::Prediction::PredictionTrajectory &pred_traj,
+      const Prediction::PredictionTrajectory &pred_traj,
       planning::common::EgoPredictionTrajectory &ego_prediction_traj);
   
   void FillEgoPlanningInfo(
-      const std::shared_ptr<Asw::Prediction::PredictionObject>
+      const std::shared_ptr<Prediction::PredictionObject>
           &prediction_object,
       planning::common::EgoPredictionObject &ego_prediction_info);
 
@@ -76,9 +76,9 @@ class GeneralPlanning {
 
   bool InputReady(double current_time, std::string &error_msg);
 
-  void FillPlanningTrajectory(double start_time, Bsw::PlanningOutput::PlanningOutput *const planning_output);
+  void FillPlanningTrajectory(double start_time, PlanningOutput::PlanningOutput *const planning_output);
 
-  void GenerateStopTrajectory(double start_time, Bsw::PlanningOutput::PlanningOutput *const planning_output);
+  void GenerateStopTrajectory(double start_time, PlanningOutput::PlanningOutput *const planning_output);
 
   void FillPlanningDebugInfo(double start_time, DebugOutput &debug_info);
 
