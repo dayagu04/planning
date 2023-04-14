@@ -26,14 +26,14 @@ enum LeverStatus {
 };
 
 enum LaneBoundaryType {
-  MARKING_UNKNOWN = 0,        // 未知线型
-  MARKING_DASHED = 1,         // 虚线
-  MARKING_SOLID = 2,          // 实线
-  MARKING_SHORT_DASHED = 3,   // 短虚线
-  MARKING_DOUBLE_DASHED = 4,  // 双虚线
-  MARKING_DOUBLE_SOLID = 5,   // 双实线
-  MARKING_LEFT_DASHED_RIGHT_SOLID = 6,    // 左虚右实线
-  MARKING_LEFT_SOLID_RIGHT_DASHED = 7    // 左实右虚线
+  MARKING_UNKNOWN = 0,                  // 未知线型
+  MARKING_DASHED = 1,                   // 虚线
+  MARKING_SOLID = 2,                    // 实线
+  MARKING_SHORT_DASHED = 3,             // 短虚线
+  MARKING_DOUBLE_DASHED = 4,            // 双虚线
+  MARKING_DOUBLE_SOLID = 5,             // 双实线
+  MARKING_LEFT_DASHED_RIGHT_SOLID = 6,  // 左虚右实线
+  MARKING_LEFT_SOLID_RIGHT_DASHED = 7   // 左实右虚线
 };
 
 enum RequestSource {
@@ -60,7 +60,6 @@ struct VirtualPoint3D {
   VirtualPoint3D() = default;
   VirtualPoint3D(double xx, double yy, double zz) : x(xx), y(yy), z(zz) {}
 };
-
 
 struct TrajectoryPoint {
   // enu
@@ -154,7 +153,6 @@ enum ScenarioStateEnum {
 };
 
 enum ScenarioEnum { SCENARIO_CRUISE = 0, SCENARIO_LOW_SPEED };
-
 
 enum FaultDiagnosisType {
   OFF_ROUTE = 0,

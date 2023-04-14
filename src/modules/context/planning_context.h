@@ -73,7 +73,20 @@ class PlanningContext {
   FaultDiagnosisInfo &mutable_fault_diagnosis_result() {
     return fault_diagnosis_result_;
   }
+  const LatBehaviorInfo &lat_behavior_info() const {
+    return lat_behavior_info_;
+  }
 
+  LatBehaviorInfo &mutable_lat_behavior_info() { return lat_behavior_info_; }
+
+  const LatBehaviorStateMachineOutput &lat_behavior_state_machine_output()
+      const {
+    return lat_behavior_state_machine_output_;
+  }
+
+  LatBehaviorStateMachineOutput &mutable_lat_behavior_state_machine_output() {
+    return lat_behavior_state_machine_output_;
+  }
   void set_last_planning_result(
       const std::shared_ptr<PlanningResult> planning_result) {
     last_planning_result_ = planning_result;
@@ -146,6 +159,8 @@ class PlanningContext {
   VehicleParam vehicle_param_;
   StatusInfo status_info_;
   SpeedLimit speed_limit_;
+  LatBehaviorInfo lat_behavior_info_;
+  LatBehaviorStateMachineOutput lat_behavior_state_machine_output_;
   std::shared_ptr<ScenarioManager> scenario_manager_ptr_;
   std::shared_ptr<ScenarioStateMachine> scenario_state_machine_ptr_;
 };
