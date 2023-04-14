@@ -2,25 +2,26 @@
 
 #include "framework/session.h"
 #include "modules/context/ego_planning_config.h"
-#include "modules/context/reference_path.h"
 #include "modules/context/environmental_model.h"
+#include "modules/context/reference_path.h"
 #include "modules/scenario/normal_road_state.h"
 #include "modules/scenario/scenario_state.h"
 
 namespace planning {
 
-using ScenarioFsm = M::PeerRoot<
-    M::Composite<
-        RoadState, RoadState::None,
-        M::Composite<RoadState::LC, RoadState::LC::LWait, RoadState::LC::RWait,
-                     RoadState::LC::LChange, RoadState::LC::RChange,
-                     RoadState::LC::LBack, RoadState::LC::RBack>,
+// LC-Lane Change, LB-Lane Borrow
+// TODO: None --> LK LaneKeep
+using ScenarioFsm = M::PeerRoot<M::Composite<
+    RoadState, RoadState::None,
+    M::Composite<RoadState::LC, RoadState::LC::LWait, RoadState::LC::RWait,
+                 RoadState::LC::LChange, RoadState::LC::RChange,
+                 RoadState::LC::LBack, RoadState::LC::RBack>>>;
 
-        M::Composite<RoadState::LB, RoadState::LB::LBorrow,
-                     RoadState::LB::RBorrow, RoadState::LB::LBack,
-                     RoadState::LB::RBack, RoadState::LB::LReturn,
-                     RoadState::LB::RReturn, RoadState::LB::LSuspend,
-                     RoadState::LB::RSuspend>>>;
+// M::Composite<RoadState::LB, RoadState::LB::LBorrow,
+//              RoadState::LB::RBorrow, RoadState::LB::LBack,
+//              RoadState::LB::RBack, RoadState::LB::LReturn,
+//              RoadState::LB::RReturn, RoadState::LB::LSuspend,
+//              RoadState::LB::RSuspend>>>;
 
 typedef struct {
   std::pair<int, int> gap;
@@ -96,14 +97,15 @@ class ScenarioStateMachine
   void update_scenario();
   void update_state_machine();
 
+  // 实现状态的切换
   template <typename T>
   void change_state_external() {
     if (fsm_context_.state == type2int<T>::value) {
       return;
     }
 
-    LOG_DEBUG("change_state_external from [%s] to [%s]", fsm_context_.name.c_str(),
-          type2name<T>::name);
+    LOG_DEBUG("change_state_external from [%s] to [%s]",
+              fsm_context_.name.c_str(), type2name<T>::name);
 
     fsm_context_.external = true;
     scenario_fsm_.changeTo<T>();
@@ -137,9 +139,8 @@ class ScenarioStateMachine
   bool lc_valid_back_ = true;
   bool lc_should_back_ = false;
   bool must_change_lane_ = false;
-  bool behavior_suspend_ = false;        // lateral suspend
-  std::vector<int> suspend_obs_; // lateral suspend obstacles
-
+  bool behavior_suspend_ = false;  // lateral suspend
+  std::vector<int> suspend_obs_;   // lateral suspend obstacles
 
   bool lc_pause_ = false;
   int lc_pause_id_ = -1000;
@@ -169,7 +170,6 @@ class ScenarioStateMachine
   bool not_accident_ = true;
 
   double start_move_dist_lane_ = 0.;
-
 };
 
 struct GapInfo {

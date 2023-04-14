@@ -112,8 +112,8 @@ class GeneralLongitudinalDecider : public Task {
 
  private:
   LongitudinalDeciderV3Config config_;
-  // AdaptiveCruiseControlConfig config_acc_; // 暂时不考虑acc
-  // StartStopEnableConfig config_start_stop_;
+  AdaptiveCruiseControlConfig config_acc_; // 暂时不考虑acc
+  StartStopEnableConfig config_start_stop_;
   LonYieldInfo lon_yield_info_;
   VelocityLimitInfo vel_limit_info_;
   // CollisionChecker lon_collision_checker_; // 主要给pnp使用，暂时不需要

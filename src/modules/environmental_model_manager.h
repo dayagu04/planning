@@ -1,24 +1,24 @@
 #pragma once
 
-#include "modules/common/utils/ifly_time.h"
 #include "framework/frame.h"
 #include "framework/session.h"
 #include "modules/context/ego_planning_config.h"
+#include "src/common/ifly_time.h"
 
 namespace planning {
 namespace planner {
 class EnvironmentalModelManager {
-  public:
+ public:
   EnvironmentalModelManager();
   bool Run(planning::framework::Frame *frame);
   void Init(planning::framework::Session *session);
   void InitContext();
   ~EnvironmentalModelManager() = default;
 
-//  private:
-//   void SetPlanningPesult(const PlanningResult &ego_prediction_result,
-//                            common::PlanningResult &pnc_result);
-//   void ClearPlanningResult(common::PlanningResult &pnc_result);
+  //  private:
+  //   void SetPlanningPesult(const PlanningResult &ego_prediction_result,
+  //                            common::PlanningResult &pnc_result);
+  //   void ClearPlanningResult(common::PlanningResult &pnc_result);
 
  private:
   bool ego_state_update(const LocalView& local_view);
@@ -44,7 +44,8 @@ class EnvironmentalModelManager {
       nullptr;
   std::shared_ptr<planning::ReferencePathManager> reference_path_manager_ptr_ =
       nullptr;
-  std::shared_ptr<planning::TrafficLightDecisionManager> traffic_light_decision_manager_ptr_ = nullptr;
+  std::shared_ptr<planning::TrafficLightDecisionManager>
+      traffic_light_decision_manager_ptr_ = nullptr;
   std::shared_ptr<planning::LateralObstacle> lateral_obstacle_ptr_ = nullptr;
 };
 

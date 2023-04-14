@@ -6,11 +6,11 @@
 
 #include <iostream>
 
-#ifdef  CYBER_ENV
+#ifdef CYBER_ENV
 #include "autoplt/include/ADSTime.h"
 #endif
-#include "modules/context/environmental_model.h"
 #include "modules/common/config_context.h"
+#include "modules/context/environmental_model.h"
 
 namespace planning {
 
@@ -23,9 +23,10 @@ void GeneralPlanning::Init() {
   scheduler_.Init(&session_);
 }
 
-bool GeneralPlanning::RunOnce(const LocalView& local_view,
-               PlanningOutput::PlanningOutput* const planning_output,
-               DebugOutput &debug_info) {
+bool GeneralPlanning::RunOnce(
+    const LocalView &local_view,
+    PlanningOutput::PlanningOutput *const planning_output,
+    DebugOutput &debug_info) {
   // using namespace FeiMa::SystemFunc;
   LOG_ERROR("GeneralPlanning::RunOnce \n");
   local_view_ = local_view;
@@ -46,8 +47,8 @@ bool GeneralPlanning::RunOnce(const LocalView& local_view,
   VehicleParam vehicle_param;
   // session->mutable_vehicel_config_context()->load_vehicle_param();
   session_.mutable_vehicel_config_context()->set_vehicle_param(vehicle_param);
-  environmental_model->set_vehicle_param(session_.vehicel_config_context().get_vehicle_param());
-
+  environmental_model->set_vehicle_param(
+      session_.vehicel_config_context().get_vehicle_param());
 
   printf("VERSION: 2023-03-31 \n");
 
@@ -79,13 +80,13 @@ bool GeneralPlanning::RunOnce(const LocalView& local_view,
   // 开始执行规划部分
   scheduler_.RunOnce();
 
-  bool planning_success =
-      session_.planning_context().planning_success();
+  bool planning_success = session_.planning_context().planning_success();
 
   planning_status->planning_success = planning_success;
   auto end_timestamp = IflyTime::Now_ms();
   planning_status->time_consumption = end_timestamp - start_timestamp;
-  LOG_DEBUG("general planning: planning time cost %f", planning_status->time_consumption);
+  LOG_DEBUG("general planning: planning time cost %f",
+            planning_status->time_consumption);
   planning_status->planning_result.timestamp =
       planning_status->planning_result.next_timestamp;
 

@@ -148,6 +148,71 @@ struct ObstacleDeciderConfig : public EgoPlanningConfig {
   }
 };
 
+struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    ready_remain_time = read_json_keys<int>(
+        json, std::vector<std::string>{"display_state", "ready_remain_time"});
+    wait_remain_time = read_json_keys<int>(
+        json, std::vector<std::string>{"display_state", "wait_remain_time"});
+    int_rqt_cnt_trsh = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"int_request", "request_count_threshold"});
+    map_int_cancel_freeze_cnt = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"int_request", "map_int_cancel_freeze_cnt"});
+    model_int_cancel_freeze_cnt = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"int_request", "model_int_cancel_freeze_cnt"});
+    finish_remain_time = read_json_keys<int>(
+        json, std::vector<std::string>{"display_state", "finish_remain_time"});
+    enable_confirm_mode = read_json_keys<bool>(
+        json, std::vector<std::string>{"confirm_mode", "enable_confirm_mode"});
+    map_confirm_cancel_freeze_cnt = read_json_keys<int>(
+        json, std::vector<std::string>{"confirm_mode",
+                                       "map_confirm_cancel_freeze_cnt"});
+    model_confirm_cancel_freeze_cnt = read_json_keys<int>(
+        json, std::vector<std::string>{"confirm_mode",
+                                       "model_confirm_cancel_freeze_cnt"});
+    enalbe_display_function = read_json_keys<bool>(
+        json,
+        std::vector<std::string>{"display_state", "enable_display_function"});
+    int_vel_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"int_request", "int_vel_limit"});
+    into_ramp_threshold = read_json_keys<double>(
+        json, std::vector<std::string>{"display_state", "into_ramp_threshold"});
+    close_to_split_merge_threshold = read_json_keys<double>(
+        json, std::vector<std::string>{"display_state",
+                                       "close_to_split_merge_threshold"});
+    avoid_truck_time_distance_threshold = read_json_keys<double>(
+        json, std::vector<std::string>{"display_state",
+                                       "avoid_truck_time_distance_threshold"});
+    enable_int_request_function = read_json_keys<bool>(
+        json,
+        std::vector<std::string>{"int_request", "enable_int_request_function"});
+    enable_hnp_function = read_json_key<bool>(json, "enable_hnp_functions");
+  }
+
+  int ready_remain_time = 2;
+  int wait_remain_time = 100;
+  int finish_remain_time = 1;
+  double int_vel_limit = 0.0;
+  double Kkph2m_s = 3.6;
+  double into_ramp_threshold = 2000.0;               // meter
+  double close_to_split_merge_threshold = 100.0;     // meter
+  double avoid_truck_time_distance_threshold = 1.5;  // seconds
+  int int_rqt_cnt_trsh = 2;
+  int map_int_cancel_freeze_cnt = 50;
+  int model_int_cancel_freeze_cnt = 100;
+  int map_confirm_cancel_freeze_cnt = 50;
+  int model_confirm_cancel_freeze_cnt = 100;
+  bool enable_hnp_function = false;
+  bool enalbe_display_function = false;
+  bool enable_int_request_function = false;
+  bool enable_confirm_mode = false;
+};
+
 struct LateralDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -349,6 +414,73 @@ struct StartStopEnableConfig : public EgoPlanningConfig {
   double leadone_s_upper = 0.0;
   double leadone_v_threshold = 0.0;
   double dx_ref_weight = 200.0;
+};
+
+struct MrcConditionConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    enable_mrc_condition = read_json_keys<bool>(
+        json, std::vector<std::string>{"mrc_condition", "enable_mrc_condition"},
+        enable_mrc_condition);
+    fcw_threshold = read_json_keys<double>(
+        json, std::vector<std::string>{"mrc_condition", "fcw_threshold"},
+        fcw_threshold);
+    a_brake_slow = read_json_keys<double>(
+        json, std::vector<std::string>{"mrc_condition", "a_brake_slow"},
+        a_brake_slow);
+    a_brake_hard = read_json_keys<double>(
+        json, std::vector<std::string>{"mrc_condition", "a_brake_hard"},
+        a_brake_hard);
+    a_brake_emergency = read_json_keys<double>(
+        json, std::vector<std::string>{"mrc_condition", "a_brake_emergency"},
+        a_brake_emergency);
+    jerk_brake_slow = read_json_keys<double>(
+        json, std::vector<std::string>{"mrc_condition", "jerk_brake_slow"},
+        jerk_brake_slow);
+    jerk_brake_hard = read_json_keys<double>(
+        json, std::vector<std::string>{"mrc_condition", "jerk_brake_hard"},
+        jerk_brake_hard);
+    jerk_brake_emergency = read_json_keys<double>(
+        json, std::vector<std::string>{"mrc_condition", "jerk_brake_emergency"},
+        jerk_brake_emergency);
+    time_out_threshold = read_json_keys<double>(
+        json, std::vector<std::string>{"mrc_condition", "time_out_threshold"},
+        time_out_threshold);
+    split_merge_dist_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"mrc_condition", "split_merge_dist_threshold"},
+        split_merge_dist_threshold);
+    ramp_dist_threshold = read_json_keys<double>(
+        json, std::vector<std::string>{"mrc_condition", "ramp_dist_threshold"},
+        ramp_dist_threshold);
+    tunnel_dist_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"mrc_condition", "tunnel_dist_threshold"},
+        tunnel_dist_threshold);
+    construction_zone_dist_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"mrc_condition",
+                                 "construction_zone_dist_threshold"},
+        construction_zone_dist_threshold);
+    v_pull_over_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"mrc_condition", "v_pull_over_threshold"},
+        v_pull_over_threshold);
+  }
+
+  bool enable_mrc_condition = false;
+  int time_out_threshold = 100;
+  double fcw_threshold = 2.5;
+  double a_brake_slow = -1.5;
+  double a_brake_hard = -5.0;
+  double a_brake_emergency = -3.0;
+  double jerk_brake_slow = -0.2;
+  double jerk_brake_hard = -0.4;
+  double jerk_brake_emergency = -0.4;
+  double split_merge_dist_threshold = 150.0;
+  double ramp_dist_threshold = 1000.0;
+  double tunnel_dist_threshold = 1000.0;
+  double construction_zone_dist_threshold = 1000.0;
+  double v_pull_over_threshold = 20 / 3.6;
 };
 
 struct LongitudinalOptimizerV3Config : public EgoPlanningConfig {

@@ -71,52 +71,53 @@ struct RoadState : StateBase {
     };
   };
 
-  struct LB : RoadBase {
-    // static void process_borrow(Control &control, FsmContext &context);
-    // static void process_back(Control &control, FsmContext &context);
-    // static void process_return(Control &control, FsmContext &context);
-    // static void process_suspend(Control &control, FsmContext &context);
+  // 暂时不设计Lane Borrow：
+  // struct LB : RoadBase {
+  //   // static void process_borrow(Control &control, FsmContext &context);
+  //   // static void process_back(Control &control, FsmContext &context);
+  //   // static void process_return(Control &control, FsmContext &context);
+  //   // static void process_suspend(Control &control, FsmContext &context);
 
-    struct LBorrow : RoadBase {
-      void get_state_transition_candidates(
-        FsmContext &context, StateTransitionContexts &transition_contexts);
-    };
+  //   struct LBorrow : RoadBase {
+  //     void get_state_transition_candidates(
+  //       FsmContext &context, StateTransitionContexts &transition_contexts);
+  //   };
 
-    struct RBorrow : RoadBase {
-      void get_state_transition_candidates(
-        FsmContext &context, StateTransitionContexts &transition_contexts);
-    };
+  //   struct RBorrow : RoadBase {
+  //     void get_state_transition_candidates(
+  //       FsmContext &context, StateTransitionContexts &transition_contexts);
+  //   };
 
-    struct LBack : RoadBase {
-      void get_state_transition_candidates(
-        FsmContext &context, StateTransitionContexts &transition_contexts);
-    };
+  //   struct LBack : RoadBase {
+  //     void get_state_transition_candidates(
+  //       FsmContext &context, StateTransitionContexts &transition_contexts);
+  //   };
 
-    struct RBack : RoadBase {
-      void get_state_transition_candidates(
-        FsmContext &context, StateTransitionContexts &transition_contexts);
-    };
+  //   struct RBack : RoadBase {
+  //     void get_state_transition_candidates(
+  //       FsmContext &context, StateTransitionContexts &transition_contexts);
+  //   };
 
-    struct LReturn : RoadBase {
-      void get_state_transition_candidates(
-        FsmContext &context, StateTransitionContexts &transition_contexts);
-    };
+  //   struct LReturn : RoadBase {
+  //     void get_state_transition_candidates(
+  //       FsmContext &context, StateTransitionContexts &transition_contexts);
+  //   };
 
-    struct RReturn : RoadBase {
-      void get_state_transition_candidates(
-        FsmContext &context, StateTransitionContexts &transition_contexts);
-    };
+  //   struct RReturn : RoadBase {
+  //     void get_state_transition_candidates(
+  //       FsmContext &context, StateTransitionContexts &transition_contexts);
+  //   };
 
-    struct LSuspend : RoadBase {
-      void get_state_transition_candidates(
-        FsmContext &context, StateTransitionContexts &transition_contexts);
-    };
+  //   struct LSuspend : RoadBase {
+  //     void get_state_transition_candidates(
+  //       FsmContext &context, StateTransitionContexts &transition_contexts);
+  //   };
 
-    struct RSuspend : RoadBase {
-      void get_state_transition_candidates(
-        FsmContext &context, StateTransitionContexts &transition_contexts);
-    };
-  };
+  //   struct RSuspend : RoadBase {
+  //     void get_state_transition_candidates(
+  //       FsmContext &context, StateTransitionContexts &transition_contexts);
+  //   };
+  // };
 };
 
 template <> struct type2int<RoadState::None> {
@@ -147,37 +148,37 @@ template <> struct type2int<RoadState::LC::RBack> {
   enum { value = ROAD_LC_RBACK };
 };
 
-template <> struct type2int<RoadState::LB::LBorrow> {
-  enum { value = ROAD_LB_LBORROW };
-};
+// template <> struct type2int<RoadState::LB::LBorrow> {
+//   enum { value = ROAD_LB_LBORROW };
+// };
 
-template <> struct type2int<RoadState::LB::RBorrow> {
-  enum { value = ROAD_LB_RBORROW };
-};
+// template <> struct type2int<RoadState::LB::RBorrow> {
+//   enum { value = ROAD_LB_RBORROW };
+// };
 
-template <> struct type2int<RoadState::LB::LBack> {
-  enum { value = ROAD_LB_LBACK };
-};
+// template <> struct type2int<RoadState::LB::LBack> {
+//   enum { value = ROAD_LB_LBACK };
+// };
 
-template <> struct type2int<RoadState::LB::RBack> {
-  enum { value = ROAD_LB_RBACK };
-};
+// template <> struct type2int<RoadState::LB::RBack> {
+//   enum { value = ROAD_LB_RBACK };
+// };
 
-template <> struct type2int<RoadState::LB::LReturn> {
-  enum { value = ROAD_LB_LRETURN };
-};
+// template <> struct type2int<RoadState::LB::LReturn> {
+//   enum { value = ROAD_LB_LRETURN };
+// };
 
-template <> struct type2int<RoadState::LB::RReturn> {
-  enum { value = ROAD_LB_RRETURN };
-};
+// template <> struct type2int<RoadState::LB::RReturn> {
+//   enum { value = ROAD_LB_RRETURN };
+// };
 
-template <> struct type2int<RoadState::LB::LSuspend> {
-  enum { value = ROAD_LB_LSUSPEND };
-};
+// template <> struct type2int<RoadState::LB::LSuspend> {
+//   enum { value = ROAD_LB_LSUSPEND };
+// };
 
-template <> struct type2int<RoadState::LB::RSuspend> {
-  enum { value = ROAD_LB_RSUSPEND };
-};
+// template <> struct type2int<RoadState::LB::RSuspend> {
+//   enum { value = ROAD_LB_RSUSPEND };
+// };
 
 
 template <> struct type2name<RoadState::None> {
@@ -208,36 +209,36 @@ template <> struct type2name<RoadState::LC::RBack> {
   static constexpr auto name = "ROAD_LC_RBACK";
 };
 
-template <> struct type2name<RoadState::LB::LBorrow> {
-  static constexpr auto name = "ROAD_LB_LBORROW";
-};
+// template <> struct type2name<RoadState::LB::LBorrow> {
+//   static constexpr auto name = "ROAD_LB_LBORROW";
+// };
 
-template <> struct type2name<RoadState::LB::RBorrow> {
-  static constexpr auto name = "ROAD_LB_RBORROW";
-};
+// template <> struct type2name<RoadState::LB::RBorrow> {
+//   static constexpr auto name = "ROAD_LB_RBORROW";
+// };
 
-template <> struct type2name<RoadState::LB::LBack> {
-  static constexpr auto name = "ROAD_LB_LBACK";
-};
+// template <> struct type2name<RoadState::LB::LBack> {
+//   static constexpr auto name = "ROAD_LB_LBACK";
+// };
 
-template <> struct type2name<RoadState::LB::RBack> {
-  static constexpr auto name = "ROAD_LB_RBACK";
-};
+// template <> struct type2name<RoadState::LB::RBack> {
+//   static constexpr auto name = "ROAD_LB_RBACK";
+// };
 
-template <> struct type2name<RoadState::LB::LReturn> {
-  static constexpr auto name = "ROAD_LB_LRETURN";
-};
+// template <> struct type2name<RoadState::LB::LReturn> {
+//   static constexpr auto name = "ROAD_LB_LRETURN";
+// };
 
-template <> struct type2name<RoadState::LB::RReturn> {
-  static constexpr auto name = "ROAD_LB_RRETURN";
-};
+// template <> struct type2name<RoadState::LB::RReturn> {
+//   static constexpr auto name = "ROAD_LB_RRETURN";
+// };
 
-template <> struct type2name<RoadState::LB::LSuspend> {
-  static constexpr auto name = "ROAD_LB_LSUSPEND";
-};
+// template <> struct type2name<RoadState::LB::LSuspend> {
+//   static constexpr auto name = "ROAD_LB_LSUSPEND";
+// };
 
-template <> struct type2name<RoadState::LB::RSuspend> {
-  static constexpr auto name = "ROAD_LB_RSUSPEND";
-};
+// template <> struct type2name<RoadState::LB::RSuspend> {
+//   static constexpr auto name = "ROAD_LB_RSUSPEND";
+// };
 
 } // namespace planning

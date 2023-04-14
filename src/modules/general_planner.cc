@@ -1,8 +1,11 @@
-#include "general_planner.h"
+#include "src/modules/general_planner.h"
 
 #include <math.h>
 
-#include "modules/scenario/scenario_state_machine.h"
+#include "src/modules/scc_function/adaptive_cruise_control.h"
+#include "src/modules/scc_function/mrc_condition.h"
+#include "src/modules/scc_function/start_stop_enable.h"
+#include "src/modules/scenario/scenario_state_machine.h"
 // #include "mjson/mjson.hpp"
 
 namespace planning {
@@ -28,10 +31,21 @@ void GeneralPlanner::InitContext() {
       scenario_state_machine_);
   session_->mutable_planning_context()->set_vehicle_param(
       session_->vehicel_config_context().get_vehicle_param());
+
+  // SCC Function
+  adaptive_cruise_control_ =
+      std::make_shared<AdaptiveCruiseControl>(config_builder, session_);
+  session_->mutable_planning_context()->set_adaptive_cruise_control_function(
+      adaptive_cruise_control_);
+
+  start_stop_ = std::make_shared<StartStopEnable>(config_builder, session_);
+  session_->mutable_planning_context()->set_start_stop_enable(start_stop_);
+
+  mrc_condition_ = std::make_shared<MrcCondition>(config_builder, session_);
+  session_->mutable_planning_context()->set_mrc_condition(mrc_condition_);
 }
 
 bool GeneralPlanner::Run(planning::framework::Frame *frame) {
-
   frame_ = frame;
   // Step 1) clear info
 
@@ -63,7 +77,7 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
 
   // Step 6) check proposal match
   if (planning_failed) {
-    //TODO：backup
+    // TODO：backup
     LOG_DEBUG("general_planner failed");
   } else {
     // SetPlanningResult(ego_planning_result, pnc_result);
@@ -99,8 +113,7 @@ void GeneralPlanner::SetPlanningResult(
   // add stitcher trajectory
 }
 
-void GeneralPlanner::ClearPlanningResult(
-    common::PlanningResult &pnc_result) {
+void GeneralPlanner::ClearPlanningResult(common::PlanningResult &pnc_result) {
   pnc_result.traj_vel_array.clear();
   pnc_result.traj_acceleration.clear();
   pnc_result.traj_pose_array.clear();

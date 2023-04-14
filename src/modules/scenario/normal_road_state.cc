@@ -2,7 +2,7 @@
 
 #include "modules/context/reference_path_manager.h"
 #include "modules/scenario/scenario_state_machine.h"
-#include "modules/common/utils/ifly_time.h"
+#include "src/common/ifly_time.h"
 
 namespace planning {
 
@@ -167,17 +167,18 @@ void RoadState::LC::process_wait(FsmContext &context,
 
   auto lc_lane_manager = std::make_shared<LaneChangeLaneManager>(
       state_machine->get_lane_change_lane_manager());
-  
-  std::shared_ptr<EnvironmentalModel> environmental_model = context.environmental_model;
+
+  std::shared_ptr<EnvironmentalModel> environmental_model =
+      context.environmental_model;
 
   RequestType lc_request = lc_req_manager->request();
   RequestSource lc_source = lc_req_manager->request_source();
-  bool aggressive_change{lc_req_manager->aggressive_change()};
+  bool aggressive_change{lc_req_manager->AggressiveChange()};
   bool gap_available{true};
   bool hdmap_valid = environmental_model->get_hdmap_valid();
-  double lc_tstart = lc_req_manager->get_req_tstart(lc_source);
-  double delay_time = 2.0; //TODO(Rui):后面根据请求来源做成配置项
-  double curr_time = IflyTime::Now_ms(); //注意
+  double lc_tstart = lc_req_manager->GetReqStartTime(lc_source);
+  double delay_time = 2.0;  // TODO(Rui):后面根据请求来源做成配置项
+  double curr_time = IflyTime::Now_ms();  // 注意
   std::vector<int> overtake_obstacles;
   std::vector<int> yield_obstacles;
   if (lc_request != NO_CHANGE && lc_request == context.direction) {
@@ -188,10 +189,12 @@ void RoadState::LC::process_wait(FsmContext &context,
     }
     gap_available = state_machine->gap_available(lc_request, overtake_obstacles,
                                                  yield_obstacles);
-    LaneChangeStageInfo lane_change_info = state_machine->decide_lc_valid_info(lc_request);
+    LaneChangeStageInfo lane_change_info =
+        state_machine->decide_lc_valid_info(lc_request);
     LOG_DEBUG("[CruiseState::Wait] gap_available: %d, aggressive_change: %d, ",
               gap_available, aggressive_change);
-    // if (gap_available || aggressive_change) { //TODO(Rui):后面把安全检查坐在gap_available里，统一通过gap_available判断
+    // if (gap_available || aggressive_change) {
+    // //TODO(Rui):后面把安全检查坐在gap_available里，统一通过gap_available判断
     if (curr_time > lc_tstart + delay_time && lane_change_info.gap_insertable) {
       prepare_for_change_state(lc_lane_manager, lc_req_manager,
                                candidate_states, lc_lane_managers);
@@ -247,7 +250,8 @@ void RoadState::LC::process_change(
   auto lc_lane_manager = std::make_shared<LaneChangeLaneManager>(
       state_machine->get_lane_change_lane_manager());
 
-  std::shared_ptr<EnvironmentalModel> environmental_model = context.environmental_model;
+  std::shared_ptr<EnvironmentalModel> environmental_model =
+      context.environmental_model;
 
   RequestType lc_request = lc_req_manager->request();
   bool gap_available{true};
@@ -274,8 +278,7 @@ void RoadState::LC::process_change(
     if (candidate_states.size() > 0 &&
         (candidate_states[0] == ROAD_LC_LCHANGE ||
          candidate_states[0] == ROAD_LC_RCHANGE) &&
-        !lc_lane_manager->is_ego_on(lc_lane_manager->tlane()) &&
-        hdmap_valid) {
+        !lc_lane_manager->is_ego_on(lc_lane_manager->tlane()) && hdmap_valid) {
       prepare_for_wait_state(lc_lane_manager, lc_req_manager, candidate_states,
                              lc_lane_managers);
     }
@@ -322,7 +325,7 @@ void RoadState::LC::process_back(FsmContext &context,
       state_machine->get_lane_change_lane_manager());
 
   RequestType lc_request = lc_req_manager->request();
-  bool aggressive_change{lc_req_manager->aggressive_change()};
+  bool aggressive_change{lc_req_manager->AggressiveChange()};
   bool gap_available{true};
   std::vector<int> overtake_obstacles;
   std::vector<int> yield_obstacles;

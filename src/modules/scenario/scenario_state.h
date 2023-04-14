@@ -4,13 +4,14 @@
 #include <iostream>
 
 #include "common/log.h"
-#include "framework/frame.h"
-#include "framework/session.h"
-#include "modules/common/utils/lateral_utils.h"
-#include "modules/context/virtual_lane_manager.h"
-#include "modules/scenario/lane_change_lane_manager.h"
-#include "modules/scenario/lane_change_request_manager.h"
-#include "modules/tasks/task_pipeline.h"
+#include "src/common/ifly_time.h"
+#include "src/framework/frame.h"
+#include "src/framework/session.h"
+#include "src/modules/common/utils/lateral_utils.h"
+#include "src/modules/context/virtual_lane_manager.h"
+#include "src/modules/scenario/lane_change_lane_manager.h"
+#include "src/modules/scenario/lane_change_request_manager.h"
+#include "src/modules/tasks/task_pipeline.h"
 #include "thirdparty/hfsm/machine_single.hpp"
 
 namespace planning {
@@ -71,12 +72,12 @@ struct StateBase : M::Base {
     }
 
     LOG_DEBUG("change_state from [%s] to [%s]", context.name.c_str(),
-          type2name<T>::name);
+              type2name<T>::name);
 
     control.changeTo<T>();
     context.state = type2int<T>::value;
     context.name = type2name<T>::name;
-    context.entry_time = get_system_time();
+    context.entry_time = IflyTime::Now_s();
   }
 
   void change_state(ScenarioStateEnum next_state, Control &control,
@@ -92,8 +93,7 @@ struct StateBase : M::Base {
   //       EgoPlanningTaskPipelineType::NORMAL, config_builder, frame);
   // }
 
-  virtual std::shared_ptr<Evaluator> get_evaluator(
-      framework::Frame *frame);
+  virtual std::shared_ptr<Evaluator> get_evaluator(framework::Frame *frame);
 
   virtual bool is_leaf() { return false; }
 

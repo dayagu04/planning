@@ -11,8 +11,11 @@
 namespace planning {
 
 // class EgoPlanningConfigBuilder;
-class ScenarioStateMachine;
 class ScenarioManager;
+class ScenarioStateMachine;
+class AdaptiveCruiseControl;
+class StartStopEnable;
+class MrcCondition;
 
 struct StatusInfo {
   std::string error_info;
@@ -22,6 +25,8 @@ struct StatusInfo {
   double timestamp_ego_prediction = 0.0;
   double last_vel_limit = 100.0;
 };
+
+class StartStopEnable;
 
 class PlanningContext {
  public:
@@ -95,6 +100,30 @@ class PlanningContext {
 
   LateralBehaviorPlannerOutput &mutable_lateral_behavior_planner_output() {
     return lateral_behavior_planner_output_;
+  }
+
+  const std::shared_ptr<AdaptiveCruiseControl>
+      &adaptive_cruise_control_function() {
+    return adaptive_cruise_control_ptr_;
+  }
+  void set_adaptive_cruise_control_function(
+      std::shared_ptr<AdaptiveCruiseControl> adaptive_cruise_control) {
+    adaptive_cruise_control_ptr_ = adaptive_cruise_control;
+  }
+
+  const std::shared_ptr<StartStopEnable> &start_stop() {
+    return start_stop_ptr_;
+  }
+  void set_start_stop_enable(std::shared_ptr<StartStopEnable> start_stop_ptr) {
+    start_stop_ptr_ = start_stop_ptr;
+  }
+
+  const std::shared_ptr<MrcCondition> &mrc_condition() {
+    return mrc_condition_ptr_;
+  }
+  void set_mrc_condition(
+      const std::shared_ptr<MrcCondition> &mrc_condition_ptr) {
+    mrc_condition_ptr_ = mrc_condition_ptr;
   }
 
   void set_last_planning_result(
@@ -174,6 +203,9 @@ class PlanningContext {
   LateralBehaviorPlannerOutput lateral_behavior_planner_output_;
   std::shared_ptr<ScenarioManager> scenario_manager_ptr_;
   std::shared_ptr<ScenarioStateMachine> scenario_state_machine_ptr_;
+  std::shared_ptr<MrcCondition> mrc_condition_ptr_;
+  std::shared_ptr<StartStopEnable> start_stop_ptr_;
+  std::shared_ptr<AdaptiveCruiseControl> adaptive_cruise_control_ptr_;
 };
 
 }  // namespace planning

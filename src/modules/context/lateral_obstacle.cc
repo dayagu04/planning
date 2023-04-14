@@ -1,12 +1,12 @@
 #include "src/modules/context/lateral_obstacle.h"
+
+#include "src/common/ifly_time.h"
 #include "src/modules/common/common.h"
-#include "modules/common/utils/ifly_time.h"
 
 namespace planning {
 
-LateralObstacle::LateralObstacle(
-    const EgoPlanningConfigBuilder *config_builder,
-    planning::framework::Session *session)
+LateralObstacle::LateralObstacle(const EgoPlanningConfigBuilder *config_builder,
+                                 planning::framework::Session *session)
     : session_(session) {
   // TODO: add config
   config_ = config_builder->cast<LateralObstacleConfig>();
@@ -24,28 +24,27 @@ LateralObstacle::LateralObstacle(
   lead_cars_.temp_lead_two = nullptr;
 }
 
-LateralObstacle::~LateralObstacle() {
-  lead_cars_.clear();
-}
+LateralObstacle::~LateralObstacle() { lead_cars_.clear(); }
 
 bool LateralObstacle::update() {
-  update_sensors(session_->environmental_model().ego_state_manager(), 
-                 session_->environmental_model().get_prediction_info(), 
-                 false,
-                 false);  //TODO session_->environmental_model().get_hdmap_valid()
+  update_sensors(
+      session_->environmental_model().ego_state_manager(),
+      session_->environmental_model().get_prediction_info(), false,
+      false);  // TODO session_->environmental_model().get_hdmap_valid()
   return true;
 }
 
-bool LateralObstacle::update_sensors(const std::shared_ptr<EgoStateManager>& ego_state,
-    const std::vector<PredictionObject> &predictions, bool isRedLightStop, bool hdmap_valid) {
-
+bool LateralObstacle::update_sensors(
+    const std::shared_ptr<EgoStateManager> &ego_state,
+    const std::vector<PredictionObject> &predictions, bool isRedLightStop,
+    bool hdmap_valid) {
   double fusion_timeout = 0.5;
   double curr_time = IflyTime::Now_ms();
   std::vector<TrackedObject> tracked_objects;
 
   if (prediction_update_ || !hdmap_valid) {
-    maintainer_->apply_update(*ego_state, predictions, tracked_objects, lead_cars_,
-                             isRedLightStop, hdmap_valid);
+    maintainer_->apply_update(*ego_state, predictions, tracked_objects,
+                              lead_cars_, isRedLightStop, hdmap_valid);
     update_tracks(tracked_objects);
 
     prediction_update_ = false;
@@ -69,12 +68,14 @@ bool LateralObstacle::update_sensors(const std::shared_ptr<EgoStateManager>& ego
 
     double abs_time = IflyTime::Now_ms();
     if (abs_time - warning_timer_[2] > 5.0) {
-      LOG_ERROR("[LateralObstacle::update_sensors] frontview fusion unavailable");
+      LOG_ERROR(
+          "[LateralObstacle::update_sensors] frontview fusion unavailable");
       warning_timer_[2] = abs_time;
     }
 
     if (abs_time - warning_timer_[1] > 5.0) {
-      LOG_ERROR("[LateralObstacle::update_sensors] sideview fusion unavailable");
+      LOG_ERROR(
+          "[LateralObstacle::update_sensors] sideview fusion unavailable");
       warning_timer_[1] = abs_time;
     }
   }
@@ -84,7 +85,6 @@ bool LateralObstacle::update_sensors(const std::shared_ptr<EgoStateManager>& ego
 
 void LateralObstacle::update_tracks(
     const std::vector<TrackedObject> &tracked_objects) {
-
   front_tracks_.clear();
   front_tracks_copy_.clear();
   front_tracks_l_.clear();
@@ -180,7 +180,8 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //       }
 //     }
 //   } else {
-//     MSD_LOG(ERROR, "[LaneTracksManager::get_drel_close] Illegal side argument");
+//     MSD_LOG(ERROR, "[LaneTracksManager::get_drel_close] Illegal side
+//     argument");
 //   }
 
 //   return d_rel_close;
@@ -206,17 +207,24 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //   }
 //   auto traffic_light_direction = map_info.traffic_light_direction();
 //   bool curr_direct_exist =
-//       (map_info.current_lane_marks() & traffic_light_direction) || traffic_light_direction == MSD_DIRECTION_UNKNOWN ||
-//       (map_info.current_lane_marks() == MSD_DIRECTION_UNKNOWN && map_info.current_lane_type() == MSD_LANE_TYPE_NORMAL);
+//       (map_info.current_lane_marks() & traffic_light_direction) ||
+//       traffic_light_direction == MSD_DIRECTION_UNKNOWN ||
+//       (map_info.current_lane_marks() == MSD_DIRECTION_UNKNOWN &&
+//       map_info.current_lane_type() == MSD_LANE_TYPE_NORMAL);
 
 //   bool left_direct_exist =
-//       (map_info.left_lane_marks() & traffic_light_direction) || traffic_light_direction == MSD_DIRECTION_UNKNOWN ||
-//       (map_info.left_lane_marks() == MSD_DIRECTION_UNKNOWN && map_info.lane_type(map_info.current_lane_index() - 1) == MSD_LANE_TYPE_NORMAL);
+//       (map_info.left_lane_marks() & traffic_light_direction) ||
+//       traffic_light_direction == MSD_DIRECTION_UNKNOWN ||
+//       (map_info.left_lane_marks() == MSD_DIRECTION_UNKNOWN &&
+//       map_info.lane_type(map_info.current_lane_index() - 1) ==
+//       MSD_LANE_TYPE_NORMAL);
 
 //   bool right_direct_exist =
-//       (map_info.right_lane_marks() & traffic_light_direction) || traffic_light_direction == MSD_DIRECTION_UNKNOWN ||
-//       (map_info.right_lane_marks() == MSD_DIRECTION_UNKNOWN && map_info.lane_type(map_info.current_lane_index() + 1) == MSD_LANE_TYPE_NORMAL);
-
+//       (map_info.right_lane_marks() & traffic_light_direction) ||
+//       traffic_light_direction == MSD_DIRECTION_UNKNOWN ||
+//       (map_info.right_lane_marks() == MSD_DIRECTION_UNKNOWN &&
+//       map_info.lane_type(map_info.current_lane_index() + 1) ==
+//       MSD_LANE_TYPE_NORMAL);
 
 //   bool curr_direct_has_straight =
 //       (map_info.current_lane_marks() & MSD_DIRECTION_GO_STRAIGHT);
@@ -230,20 +238,26 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //       ((lead_cars.lead_one != nullptr &&
 //         map_info.dist_to_intsect() - lead_cars.lead_one->d_rel > 150) ||
 //        (lead_cars.temp_lead_one != nullptr &&
-//         map_info.dist_to_intsect() - lead_cars.temp_lead_one->d_rel > 150))) {
+//         map_info.dist_to_intsect() - lead_cars.temp_lead_one->d_rel > 150)))
+//         {
 //     if (lead_cars.lead_one != nullptr && status != 7 && status != 8) {
-//       fvf_drel_confident = lead_cars.lead_one->d_rel + std::max(30., lead_cars.lead_one->v_lead * 5.) ;
+//       fvf_drel_confident = lead_cars.lead_one->d_rel + std::max(30.,
+//       lead_cars.lead_one->v_lead * 5.) ;
 //     } else if (lead_cars.temp_lead_one != nullptr &&
 //                (status == 7 || status == 8)) {
-//       fvf_drel_confident = lead_cars.temp_lead_one->d_rel + std::max(30., lead_cars.temp_lead_one->v_lead * 5.);
+//       fvf_drel_confident = lead_cars.temp_lead_one->d_rel + std::max(30.,
+//       lead_cars.temp_lead_one->v_lead * 5.);
 //     }
 //   } else if (flane_left_id == -1) {
 //     if (side == -1 && !left_direct_exist && curr_direct_exist &&
 //         map_info.left_boundary_info().size() > 0 &&
-//         map_info.left_boundary_info()[0].type == MSD_LANE_BOUNDARY_TYPE_DASH) {
-//       if (lead_cars.lead_one != nullptr && lead_cars.lead_one->v_lead < 1.0 &&
+//         map_info.left_boundary_info()[0].type == MSD_LANE_BOUNDARY_TYPE_DASH)
+//         {
+//       if (lead_cars.lead_one != nullptr && lead_cars.lead_one->v_lead < 1.0
+//       &&
 //           status != 7 && status != 8 &&
-//           map_info.left_boundary_info()[0].length - lead_cars.lead_one->d_rel >
+//           map_info.left_boundary_info()[0].length - lead_cars.lead_one->d_rel
+//           >
 //               0) {
 //         fvf_drel_confident =
 //             lead_cars.lead_one->d_rel +
@@ -269,9 +283,11 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //                map_info.right_boundary_info().size() > 0 &&
 //                map_info.right_boundary_info()[0].type ==
 //                    MSD_LANE_BOUNDARY_TYPE_DASH) {
-//       if (lead_cars.lead_one != nullptr && lead_cars.lead_one->v_lead < 1.0 &&
+//       if (lead_cars.lead_one != nullptr && lead_cars.lead_one->v_lead < 1.0
+//       &&
 //           status != 7 && status != 8 &&
-//           map_info.right_boundary_info()[0].length - lead_cars.lead_one->d_rel >
+//           map_info.right_boundary_info()[0].length -
+//           lead_cars.lead_one->d_rel >
 //               0) {
 //         fvf_drel_confident =
 //             lead_cars.lead_one->d_rel +
@@ -352,8 +368,8 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //   }
 
 //   if (front_tracks == nullptr) {
-//     MSD_LOG(ERROR, "[LaneTracksManager::get_vrel_close] front tracks is null");
-//     return v_rel_close;
+//     MSD_LOG(ERROR, "[LaneTracksManager::get_vrel_close] front tracks is
+//     null"); return v_rel_close;
 //   }
 
 //   for (auto &tr : *front_tracks) {
@@ -367,10 +383,12 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 // }
 
 // std::vector<TrackedObject> *LaneTracksManager::get_lane_tracks(int lane,
-//                                                                int track_type) {
-//   if (lane != LaneProperty::TARGET_LANE && lane != LaneProperty::ORIGIN_LANE &&
-//       lane != LaneProperty::CURRENT_LANE && lane != LaneProperty::LEFT_LANE &&
-//       lane != LaneProperty::RIGHT_LANE) {
+//                                                                int
+//                                                                track_type) {
+//   if (lane != LaneProperty::TARGET_LANE && lane != LaneProperty::ORIGIN_LANE
+//   &&
+//       lane != LaneProperty::CURRENT_LANE && lane != LaneProperty::LEFT_LANE
+//       && lane != LaneProperty::RIGHT_LANE) {
 //     MSD_LOG(ERROR,
 //             "[LaneTracksManager::get_lane_tracks] Illegal lane property[%d]",
 //             lane);
@@ -406,8 +424,8 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //     if (master != &clane && master != &llane && master != &rlane) {
 //       MSD_LOG(
 //           ERROR,
-//           "[LaneTracksManager::get_lane_tracks] Wrong target lane position[%d]",
-//           master->position());
+//           "[LaneTracksManager::get_lane_tracks] Wrong target lane
+//           position[%d]", master->position());
 //       return &empty_tracks_;
 //     }
 //   }
@@ -422,8 +440,8 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //     if (master != &clane && master != &llane && master != &rlane) {
 //       MSD_LOG(
 //           ERROR,
-//           "[LateralObstacle::get_lane_tracks] Wrong origin lane position[%d]",
-//           master->position());
+//           "[LateralObstacle::get_lane_tracks] Wrong origin lane
+//           position[%d]", master->position());
 //       return &empty_tracks_;
 //     }
 //   }
@@ -514,8 +532,8 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //     } else {
 //       MSD_LOG(
 //           ERROR,
-//           "[LateralObstacle::update_lane_tracks] Illegal position[%d] argument",
-//           position);
+//           "[LateralObstacle::update_lane_tracks] Illegal position[%d]
+//           argument", position);
 //       return;
 //     }
 //   } else if (track_type == TrackType::SIDE_TRACK) {
@@ -555,14 +573,15 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //     } else {
 //       MSD_LOG(
 //           ERROR,
-//           "[LateralObstacle::update_lane_tracks] Illegal position[%d] argument",
-//           position);
+//           "[LateralObstacle::update_lane_tracks] Illegal position[%d]
+//           argument", position);
 //       return;
 //     }
 //   }
 // }
 
-// std::pair<int, pair<double, double>> LaneTracksManager::get_vavg_poi(int side, double poi_back_limit, double poi_front_limit) {
+// std::pair<int, pair<double, double>> LaneTracksManager::get_vavg_poi(int
+// side, double poi_back_limit, double poi_front_limit) {
 //   std::vector<TrackedObject> *front_tracks = nullptr;
 //   std::pair<int, pair<double, double>> ret(0, {0.0, 0.0});
 //   if (side == 0) {
@@ -575,7 +594,8 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //     front_tracks =
 //         get_lane_tracks(LaneProperty::RIGHT_LANE, TrackType::FRONT_TRACK);
 //   } else {
-//     MSD_LOG(ERROR, "[LateralObstacle::get_vavg_poi] Illegal side[%d] argument",
+//     MSD_LOG(ERROR, "[LateralObstacle::get_vavg_poi] Illegal side[%d]
+//     argument",
 //               side);
 //   }
 
@@ -583,9 +603,9 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //     MSD_LOG(ERROR, "[LateralObstacle::get_vavg_poi] front tracks is null");
 //     return ret;
 //   }
-  
+
 //   const auto& map_info = map_info_mgr_.get_map_info();
-  
+
 //   int poi_cnt_total = 0;
 
 //   double poi_v_sum_total = 0.0;
@@ -595,13 +615,18 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //   const auto &MergeInfo = map_info.next_merge_info();
 //   const auto &MergePointDis = map_info.distance_to_next_merge();
 
-//   std::vector<TrackedObject> *cur_tracks = 
+//   std::vector<TrackedObject> *cur_tracks =
 //         get_lane_tracks(LaneProperty::CURRENT_LANE, TrackType::FRONT_TRACK);
 //   std::vector<int> poi_ids;
 
-//   if ((side == 1) && (MergePointDis > 0) && (MergePointDis < poi_front_limit) &&
-//      (!MergeInfo.is_split && (MergeInfo.orientation == MSD_LANE_MERGING_SPLITTING_POINT_TYPE_RIGHT || MergeInfo.orientation == MSD_LANE_MERGING_SPLITTING_POINT_TYPE_INTERSECT))) {
-//     //  ((MergeType == MSD_LANE_MERGING_SPLITTING_POINT_TYPE_MERGE_FROM_RIGHT) || (MergeType == MSD_LANE_MERGING_SPLITTING_POINT_TYPE_MERGE_FROM_BOTH))) {
+//   if ((side == 1) && (MergePointDis > 0) && (MergePointDis < poi_front_limit)
+//   &&
+//      (!MergeInfo.is_split && (MergeInfo.orientation ==
+//      MSD_LANE_MERGING_SPLITTING_POINT_TYPE_RIGHT || MergeInfo.orientation ==
+//      MSD_LANE_MERGING_SPLITTING_POINT_TYPE_INTERSECT))) {
+//     //  ((MergeType ==
+//     MSD_LANE_MERGING_SPLITTING_POINT_TYPE_MERGE_FROM_RIGHT) || (MergeType ==
+//     MSD_LANE_MERGING_SPLITTING_POINT_TYPE_MERGE_FROM_BOTH))) {
 //     poi_ids.clear();
 //     for (auto &tr : *cur_tracks) {
 //       double tr_yaw = tr.theta;
@@ -613,7 +638,8 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //         tr_yaw += 3.1415926;
 //       }
 //       tr_yaw = std::min(std::abs(tr_yaw), std::abs(3.1415926 - tr_yaw));
-//       if (std::abs(tr.d_max_cpath - tr.d_min_cpath) >= 3.0 && tr_yaw >= 0.52) { // 60 deg
+//       if (std::abs(tr.d_max_cpath - tr.d_min_cpath) >= 3.0 && tr_yaw >= 0.52)
+//       { // 60 deg
 //         continue;
 //       }
 //       if ((tr.type < 1) || (tr.type > 5)) continue;
@@ -623,7 +649,9 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //       double tmp_d = tr.d_rel;
 //       double tmp_v = tr.v_rel + ego_state_.ego_vel;
 //       double tmp_v_lat = tr.v_lat;
-//       if ((tmp_d < poi_front_limit) && (tmp_d >= MergePointDis) && std::find(poi_ids.begin(), poi_ids.end(), origin_id) == poi_ids.end()) {
+//       if ((tmp_d < poi_front_limit) && (tmp_d >= MergePointDis) &&
+//       std::find(poi_ids.begin(), poi_ids.end(), origin_id) == poi_ids.end())
+//       {
 //         poi_v_sum_total += tmp_v;
 //         poi_v_lat_sum_total += tmp_v_lat;
 //         poi_ids.emplace_back(origin_id);
@@ -633,8 +661,11 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //     poi_front_limit = std::min(poi_front_limit, MergePointDis);
 //   }
 
-//   if ((side == -1) && (MergePointDis > 0) && (MergePointDis < poi_front_limit) && 
-//      (!MergeInfo.is_split && (MergeInfo.orientation == MSD_LANE_MERGING_SPLITTING_POINT_TYPE_LEFT || MergeInfo.orientation == MSD_LANE_MERGING_SPLITTING_POINT_TYPE_INTERSECT))) {
+//   if ((side == -1) && (MergePointDis > 0) && (MergePointDis <
+//   poi_front_limit) &&
+//      (!MergeInfo.is_split && (MergeInfo.orientation ==
+//      MSD_LANE_MERGING_SPLITTING_POINT_TYPE_LEFT || MergeInfo.orientation ==
+//      MSD_LANE_MERGING_SPLITTING_POINT_TYPE_INTERSECT))) {
 //     poi_ids.clear();
 //     for (auto &tr : *cur_tracks) {
 //       double tr_yaw = tr.theta;
@@ -646,7 +677,8 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //         tr_yaw += 3.1415926;
 //       }
 //       tr_yaw = std::min(std::abs(tr_yaw), std::abs(3.1415926 - tr_yaw));
-//       if (std::abs(tr.d_max_cpath - tr.d_min_cpath) >= 3.0 && tr_yaw >= 0.52) { // 60 deg
+//       if (std::abs(tr.d_max_cpath - tr.d_min_cpath) >= 3.0 && tr_yaw >= 0.52)
+//       { // 60 deg
 //         continue;
 //       }
 //       if ((tr.type < 1) || (tr.type > 5)) continue;
@@ -656,7 +688,9 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //       double tmp_d = tr.d_rel;
 //       double tmp_v = tr.v_rel + ego_state_.ego_vel;
 //       double tmp_v_lat = tr.v_lat;
-//       if ((tmp_d < poi_front_limit) && (tmp_d >= MergePointDis) && std::find(poi_ids.begin(), poi_ids.end(), origin_id) == poi_ids.end()) {
+//       if ((tmp_d < poi_front_limit) && (tmp_d >= MergePointDis) &&
+//       std::find(poi_ids.begin(), poi_ids.end(), origin_id) == poi_ids.end())
+//       {
 //         poi_v_sum_total += tmp_v;
 //         poi_v_lat_sum_total += tmp_v_lat;
 //         poi_ids.emplace_back(origin_id);
@@ -665,7 +699,7 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //     }
 //     poi_front_limit = std::min(poi_front_limit, MergePointDis);
 //   }
-  
+
 //   poi_ids.clear();
 //   for (auto &tr : *front_tracks) {
 //     double tr_yaw = tr.theta;
@@ -677,7 +711,8 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //       tr_yaw += 3.1415926;
 //     }
 //     tr_yaw = std::min(std::abs(tr_yaw), std::abs(3.1415926 - tr_yaw));
-//     if (std::abs(tr.d_max_cpath - tr.d_min_cpath) >= 3.0 && tr_yaw >= 0.52) { // 60 deg
+//     if (std::abs(tr.d_max_cpath - tr.d_min_cpath) >= 3.0 && tr_yaw >= 0.52) {
+//     // 60 deg
 //       continue;
 //     }
 //     if ((tr.type < 1) || (tr.type > 5)) continue;
@@ -687,7 +722,8 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //     double tmp_d = tr.d_rel;
 //     double tmp_v = tr.v_rel + ego_state_.ego_vel;
 //     double tmp_v_lat = tr.v_lat;
-//     if (tmp_d < poi_front_limit && tmp_d >= poi_back_limit && std::find(poi_ids.begin(), poi_ids.end(), origin_id) == poi_ids.end()) {
+//     if (tmp_d < poi_front_limit && tmp_d >= poi_back_limit &&
+//     std::find(poi_ids.begin(), poi_ids.end(), origin_id) == poi_ids.end()) {
 //       poi_v_sum_total += tmp_v;
 //       poi_v_lat_sum_total += tmp_v_lat;
 //       poi_ids.emplace_back(origin_id);
@@ -700,8 +736,9 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //     ++poi_cnt_total;
 //   }
 
-//   double poi_v_avg_total = (poi_cnt_total > 0) ? (poi_v_sum_total / poi_cnt_total) : 0.0;
-//   double poi_v_lat_avg_total = (poi_cnt_total > 0) ? (poi_v_lat_sum_total / poi_cnt_total) : 0.0;
+//   double poi_v_avg_total = (poi_cnt_total > 0) ? (poi_v_sum_total /
+//   poi_cnt_total) : 0.0; double poi_v_lat_avg_total = (poi_cnt_total > 0) ?
+//   (poi_v_lat_sum_total / poi_cnt_total) : 0.0;
 
 //   ret.first = poi_cnt_total;
 //   ret.second.first = poi_v_avg_total;
@@ -709,7 +746,8 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //   return ret;
 // }
 
-// std::pair<int, double> LaneTracksManager::get_vavg_poi_int(int side, double bound, double poi_back_limit, double poi_front_limit) {
+// std::pair<int, double> LaneTracksManager::get_vavg_poi_int(int side, double
+// bound, double poi_back_limit, double poi_front_limit) {
 //   const auto& map_info = map_info_mgr_.get_map_info();
 //   std::pair<int, double> res(0, 0.0);
 //   double poi_left_limit = 4;
@@ -728,24 +766,26 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 
 //   for (auto &tr: lateral_obstacle_.front_tracks()) {
 //     if (tr.type < 1 || tr.type > 4) continue;
-//     if (tr.v_rel < -2.0) continue;  // ignore cars from the opposite direction
-//     if (tr.d_rel < poi_back_limit || tr.d_rel >= poi_front_limit) continue;
-//     if (tr.d_max_cpath < poi_right_limit || tr.d_min_cpath >= poi_left_limit) continue;  // ?
-//     double tr_yaw = tr.theta;
-//     if (tr_yaw < 0.0) {
+//     if (tr.v_rel < -2.0) continue;  // ignore cars from the opposite
+//     direction if (tr.d_rel < poi_back_limit || tr.d_rel >= poi_front_limit)
+//     continue; if (tr.d_max_cpath < poi_right_limit || tr.d_min_cpath >=
+//     poi_left_limit) continue;  // ? double tr_yaw = tr.theta; if (tr_yaw <
+//     0.0) {
 //       tr_yaw += 3.1415926;
 //     }
 //     if (tr_yaw < 0.0) {
 //       tr_yaw += 3.1415926;
 //     }
 //     tr_yaw = std::min(std::abs(tr_yaw), std::abs(3.1415926 - tr_yaw));
-//     if (std::abs(tr.d_max_cpath - tr.d_min_cpath) >= 3.0 && tr_yaw >= 0.52) { // 60 deg
+//     if (std::abs(tr.d_max_cpath - tr.d_min_cpath) >= 3.0 && tr_yaw >= 0.52) {
+//     // 60 deg
 //       continue;
 //     }
 //     double tmp_v = tr.v_rel + ego_state_.ego_vel;
 //     ++poi_cnt;
 
-//     if ((tr.d_max_cpath < poi_left_limit && tr.d_min_cpath >= poi_right_limit)) {
+//     if ((tr.d_max_cpath < poi_left_limit && tr.d_min_cpath >=
+//     poi_right_limit)) {
 //       poi_v_sum += tmp_v;
 //     }
 //     else {
@@ -757,24 +797,26 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 
 //   for (auto &tr: lateral_obstacle_.side_tracks()) {
 //     if (tr.type < 1 || tr.type > 4) continue;
-//     if (tr.v_rel < -2.0) continue;  // ignore cars from the opposite direction
-//     if (tr.d_rel < poi_back_limit || tr.d_rel >= poi_front_limit) continue;
-//     if (tr.d_max_cpath < poi_right_limit || tr.d_min_cpath >= poi_left_limit) continue;  // ?
-//     double tr_yaw = tr.theta;
-//     if (tr_yaw < 0.0) {
+//     if (tr.v_rel < -2.0) continue;  // ignore cars from the opposite
+//     direction if (tr.d_rel < poi_back_limit || tr.d_rel >= poi_front_limit)
+//     continue; if (tr.d_max_cpath < poi_right_limit || tr.d_min_cpath >=
+//     poi_left_limit) continue;  // ? double tr_yaw = tr.theta; if (tr_yaw <
+//     0.0) {
 //       tr_yaw += 3.1415926;
 //     }
 //     if (tr_yaw < 0.0) {
 //       tr_yaw += 3.1415926;
 //     }
 //     tr_yaw = std::min(std::abs(tr_yaw), std::abs(3.1415926 - tr_yaw));
-//     if (std::abs(tr.d_max_cpath - tr.d_min_cpath) >= 3.0 && tr_yaw >= 0.52) { // 60 deg
+//     if (std::abs(tr.d_max_cpath - tr.d_min_cpath) >= 3.0 && tr_yaw >= 0.52) {
+//     // 60 deg
 //       continue;
 //     }
 //     double tmp_v = tr.v_rel + ego_state_.ego_vel;
 //     ++poi_cnt;
 
-//     if ((tr.d_max_cpath < poi_left_limit && tr.d_min_cpath >= poi_right_limit)) {
+//     if ((tr.d_max_cpath < poi_left_limit && tr.d_min_cpath >=
+//     poi_right_limit)) {
 //       poi_v_sum += tmp_v;
 //     }
 //     else {
@@ -782,7 +824,7 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //       fraction = std::max(fraction, 1.0);
 //       poi_v_sum += tmp_v * fraction;
 //     }
-//   }  
+//   }
 
 //   res.first = poi_cnt;
 //   res.second = poi_cnt > 0 ? poi_v_sum / poi_cnt : 0.0;
@@ -790,11 +832,12 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 // }
 
 // bool LaneTracksManager::front_cone_exist() {
-//   std::vector<TrackedObject> *front_tracks = get_lane_tracks(LaneProperty::CURRENT_LANE, TrackType::FRONT_TRACK);
+//   std::vector<TrackedObject> *front_tracks =
+//   get_lane_tracks(LaneProperty::CURRENT_LANE, TrackType::FRONT_TRACK);
 
 //   if (front_tracks == nullptr) {
-//     MSD_LOG(ERROR, "[LateralObstacle::front_cone_exist] front tracks is null");
-//     return false;
+//     MSD_LOG(ERROR, "[LateralObstacle::front_cone_exist] front tracks is
+//     null"); return false;
 //   }
 
 //   for (auto &tr : *front_tracks) {
@@ -807,4 +850,4 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //   return false;
 // }
 
-} // namespace planning
+}  // namespace planning

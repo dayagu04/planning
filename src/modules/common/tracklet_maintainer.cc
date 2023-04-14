@@ -1,9 +1,11 @@
 #define _USE_MATH_DEFINES
+#include "src/modules/common/tracklet_maintainer.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
-#include "modules/common/utils/ifly_time.h"
-#include "src/modules/common/tracklet_maintainer.h"
+
+#include "src/common/ifly_time.h"
 #include "src/modules/context/planning_context.h"
 
 namespace planning {
@@ -124,8 +126,9 @@ void TrackletMaintainer::apply_update(
        lateral_output.tleft_lane, lateral_output.rightest_lane,
        lateral_output.dist_intersect, lateral_output.intersect_length,
        lateral_output.left_faster, lateral_output.right_faster, leadcars,
-       isRedLightStop, lateral_output.isFasterStaticAvd, lateral_output.isOnHighway,
-       lateral_output.d_poly, lateral_output.c_poly);
+       isRedLightStop, lateral_output.isFasterStaticAvd,
+       lateral_output.isOnHighway, lateral_output.d_poly,
+       lateral_output.c_poly);
 
   set_default_value(objects);
 
@@ -145,7 +148,6 @@ void TrackletMaintainer::apply_update(
 void TrackletMaintainer::recv_prediction_objects(
     const std::vector<PredictionObject> &predictions,
     std::vector<TrackedObject *> &objects) {
-
   double pi = std::atan(1.0) * 4;
   std::map<int, TrackedObject *> new_map;
 
@@ -189,7 +191,7 @@ void TrackletMaintainer::recv_prediction_objects(
       new_map.insert(std::make_pair(origin->track_id, origin));
     }
 
-    origin->timestamp = get_system_time();
+    origin->timestamp = IflyTime::Now_s();
     origin->type = p.type;
     origin->fusion_type = 2;
 
@@ -352,7 +354,6 @@ void TrackletMaintainer::recv_prediction_objects(
 void TrackletMaintainer::recv_relative_prediction_objects(
     const std::vector<PredictionObject> &predictions,
     std::vector<TrackedObject *> &objects) {
-
   // double pi = std::atan(1.0) * 4;
   std::map<int, TrackedObject *> new_map;
 
@@ -400,7 +401,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
       origin->has_history = false;
     }
 
-    origin->timestamp = get_system_time();
+    origin->timestamp = IflyTime::Now_s();
     origin->type = p.type;
     origin->fusion_type = 2;
 
@@ -430,16 +431,16 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     origin->theta = p.relative_theta;
     origin->y_rel_ori = rel_y;
     // origin->speed_yaw =
-    //     std::atan2(p.relative_speed_y, p.relative_speed_x + ego_state_.ego_vel);
+    //     std::atan2(p.relative_speed_y, p.relative_speed_x +
+    //     ego_state_.ego_vel);
     // TODO: ego_state relative
-    origin->speed_yaw =
-        std::atan2(p.relative_speed_y, p.relative_speed_x);
+    origin->speed_yaw = std::atan2(p.relative_speed_y, p.relative_speed_x);
     origin->a = p.acc;
     // origin->v =
-    //     std::hypot(p.relative_speed_x + ego_state_.ego_vel, p.relative_speed_y);
+    //     std::hypot(p.relative_speed_x + ego_state_.ego_vel,
+    //     p.relative_speed_y);
     // origin->v_lead = p.relative_speed_x + ego_state_.ego_vel;
-    origin->v =
-        std::hypot(p.relative_speed_x, p.relative_speed_y);
+    origin->v = std::hypot(p.relative_speed_x, p.relative_speed_y);
     origin->v_lead = p.relative_speed_x;
     origin->v_lead_k = origin->v_lead;
     origin->v_lead_raw = origin->v_lead;
@@ -612,19 +613,15 @@ void TrackletMaintainer::fisheye_helper(const PredictionObject &prediction,
   }
 }
 
-void TrackletMaintainer::calc(std::vector<TrackedObject *> &tracked_objects,
-                              const std::vector<PathPoint> &path_points,
-                              int scenario, double lane_width,
-                              double lat_offset, bool borrow_bicycle_lane,
-                              bool enable_intersection_planner,
-                              double dist_rblane, bool tleft_lane,
-                              bool rightest_lane, double dist_intersect,
-                              double intersect_length, bool left_faster,
-                              bool right_faster, LeadCars &lead_cars,
-                              bool isRedLightStop, bool isFasterStaticAvd,
-                              bool isOnHighway, std::vector<double> d_poly,
-                              std::vector<double> c_poly) {
-
+void TrackletMaintainer::calc(
+    std::vector<TrackedObject *> &tracked_objects,
+    const std::vector<PathPoint> &path_points, int scenario, double lane_width,
+    double lat_offset, bool borrow_bicycle_lane,
+    bool enable_intersection_planner, double dist_rblane, bool tleft_lane,
+    bool rightest_lane, double dist_intersect, double intersect_length,
+    bool left_faster, bool right_faster, LeadCars &lead_cars,
+    bool isRedLightStop, bool isFasterStaticAvd, bool isOnHighway,
+    std::vector<double> d_poly, std::vector<double> c_poly) {
   seq_state_.remove_clean();
   simple_refline_.update_pathpoints(path_points);
 
@@ -651,7 +648,7 @@ void TrackletMaintainer::calc(std::vector<TrackedObject *> &tracked_objects,
         fill_deriv_info(*item);
         fill_possibility_of_cutin(*item);
       }
-      if (item->type != 0) // hack MSD_OBJECT_TYPE_RADAR_ONLY type
+      if (item->type != 0)  // hack MSD_OBJECT_TYPE_RADAR_ONLY type
         is_potential_lead_one(*item, v_ego);
       calc_intersection_with_refline(*item, enable_intersection_planner,
                                      simple_refline_);
@@ -662,8 +659,8 @@ void TrackletMaintainer::calc(std::vector<TrackedObject *> &tracked_objects,
 
   for (auto tr : tracked_objects) {
     check_accident_car(*tr, v_ego, scenario, dist_intersect, intersect_length,
-                       left_faster, right_faster, isRedLightStop, isFasterStaticAvd,
-                       isOnHighway);
+                       left_faster, right_faster, isRedLightStop,
+                       isFasterStaticAvd, isOnHighway);
   }
 
   for (auto tr : tracked_objects) {
@@ -671,10 +668,11 @@ void TrackletMaintainer::calc(std::vector<TrackedObject *> &tracked_objects,
   }
 
   for (auto tr : tracked_objects) {
-    if (tr->type == 0) continue; // hack MSD_OBJECT_TYPE_RADAR_ONLY type
+    if (tr->type == 0) continue;  // hack MSD_OBJECT_TYPE_RADAR_ONLY type
     tr->is_avd_car = is_potential_avoiding_car(
-        *tr, lead_cars.lead_one, v_ego, lane_width, scenario, borrow_bicycle_lane, dist_rblane,
-        tleft_lane, rightest_lane, dist_intersect, intersect_length, isRedLightStop);
+        *tr, lead_cars.lead_one, v_ego, lane_width, scenario,
+        borrow_bicycle_lane, dist_rblane, tleft_lane, rightest_lane,
+        dist_intersect, intersect_length, isRedLightStop);
   }
 
   is_leadone_potential_avoiding_car(lead_cars.lead_one, scenario, lane_width,
@@ -721,7 +719,10 @@ void TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
   item.l0 = l0_;
   item.c0 = l0_;
   item.v_lat = (l > 0) ? v_l : -v_l;
-  std::cout << "object track_id: " << item.track_id << " ego l0_ : " << l0_ << " ego vl_: " << vl_ego_ << " item.s: " << item.s << " item.l: " << item.l << " item.v_lat: " << item.v_lat << " item.vy_rel: " << item.vy_rel << " v_l: " << v_l << std::endl;
+  std::cout << "object track_id: " << item.track_id << " ego l0_ : " << l0_
+            << " ego vl_: " << vl_ego_ << " item.s: " << item.s
+            << " item.l: " << item.l << " item.v_lat: " << item.v_lat
+            << " item.vy_rel: " << item.vy_rel << " v_l: " << v_l << std::endl;
   if (hdmap_valid_) {
     item.a_lead = item.a * std::cos(item.theta - theta);
     item.a_lead_k = item.a_lead;
@@ -885,7 +886,6 @@ void TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
     }
   }
 
-
   item.d_center_cpath = item.l;
   item.d_max_cpath = max_l;
   item.d_min_cpath = min_l;
@@ -915,14 +915,16 @@ void TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
 
 void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
   LOG_DEBUG("----fill_deriv_info-----\n");
-  double planning_cycle_time = 1.0 / 20.; // hack FLAGS_planning_loop_rate = 20.
+  double planning_cycle_time =
+      1.0 / 20.;  // hack FLAGS_planning_loop_rate = 20.
   if (!item.has_history) {
     return;
   }
 
   double curr_time = IflyTime::Now_ms();
-  double interval =
-      (item.last_recv_time == 0.0) ? planning_cycle_time : (curr_time - item.last_recv_time);
+  double interval = (item.last_recv_time == 0.0)
+                        ? planning_cycle_time
+                        : (curr_time - item.last_recv_time);
 
   double pi = std::atan(1.0) * 4;
 
@@ -954,7 +956,7 @@ void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
   double k_v_lat = 2 * pi * 0.2 * interval / (1 + 2 * pi * 0.2 * interval);
   item.v_lat = k_v_lat * v_lat_unfiltered + (1 - k_v_lat) * item.v_lat;
   // for radar only, set to zero
-  if (item.type == 0) { // hack MSD_OBJECT_TYPE_RADAR_ONLY type
+  if (item.type == 0) {  // hack MSD_OBJECT_TYPE_RADAR_ONLY type
     item.v_lat = 0.0;
   }
   item.v_lat_self = item.v_lat;
@@ -975,7 +977,8 @@ void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
 
 void TrackletMaintainer::fill_possibility_of_cutin(TrackedObject &item) {
   LOG_DEBUG("----fill_possibility_of_cutin-----\n");
-  double planning_cycle_time = 1.0 / 20.; // hack FLAGS_planning_loop_rate = 20.
+  double planning_cycle_time =
+      1.0 / 20.;  // hack FLAGS_planning_loop_rate = 20.
   double ttc = std::max(item.d_path - 1.5, 0.0) / std::max(-item.v_lat, 0.01);
   ttc = std::min(15.0, ttc);
 
@@ -997,8 +1000,8 @@ void TrackletMaintainer::fill_possibility_of_cutin(TrackedObject &item) {
       (temp > lower_dist_threshold && temp < upper_dist_threshold);
 
   double curr_time = IflyTime::Now_ms();
-  double gap =
-      (item.last_recv_time == 0.0) ? planning_cycle_time : (curr_time - item.last_recv_time);
+  double gap = (item.last_recv_time == 0.0) ? planning_cycle_time
+                                            : (curr_time - item.last_recv_time);
 
   if (is_need_consider && is_in_range) {
     item.cutinp = item.cutinp - gap * std::max(item.v_lat, -1.0) /
@@ -1026,7 +1029,6 @@ void TrackletMaintainer::fill_possibility_of_cutin(TrackedObject &item) {
 void TrackletMaintainer::calc_intersection_with_refline(
     TrackedObject &item, bool enable_intersection_planner,
     SimpleRefLine &simple_refline) {
-
   if (0 == item.type) {
     item.trajectory.intersection = 0;
     return;
@@ -1063,7 +1065,8 @@ void TrackletMaintainer::calc_intersection_with_refline(
     ego_x.push_back(rel_x);
     ego_y.push_back(rel_y);
     ego_speed.push_back(item.trajectory.speed[i]);
-    // ego_yaw.push_back(item.trajectory.yaw[i] - ego_state_.ego_pose_raw.theta);
+    // ego_yaw.push_back(item.trajectory.yaw[i] -
+    // ego_state_.ego_pose_raw.theta);
     // TODO: ego_state relative
     ego_yaw.push_back(item.trajectory.yaw[i]);
   }
@@ -1167,18 +1170,19 @@ void TrackletMaintainer::calc_intersection_with_refline(
     }
     double end_speed_yaw;
     if (item.trajectory.yaw.size() > 0) {
-      // end_speed_yaw = item.trajectory.yaw[end_idx] - ego_state_.ego_pose_raw.theta;
+      // end_speed_yaw = item.trajectory.yaw[end_idx] -
+      // ego_state_.ego_pose_raw.theta;
       // TODO: ego_state relative
       end_speed_yaw = item.trajectory.yaw[end_idx];
     }
-
 
     simple_refline.cartesian_frenet(ego_x[min_idx], ego_y[min_idx], smin, lmin,
                                     v_s, v_l, theta, false);
     simple_refline.cartesian_frenet(ego_x[max_idx], ego_y[max_idx], smax, lmax,
                                     v_s, v_l, theta, false);
-    simple_refline.cartesian_frenet(ego_x[end_idx], ego_y[end_idx], send, lend,
-                                    v_s, v_l, theta, true, &item.trajectory.speed[end_idx], &end_speed_yaw);
+    simple_refline.cartesian_frenet(
+        ego_x[end_idx], ego_y[end_idx], send, lend, v_s, v_l, theta, true,
+        &item.trajectory.speed[end_idx], &end_speed_yaw);
     double v_l_end = (lend > 0) ? v_l : -v_l;
     double v_s_end = v_s;
     bool is_same_side = ((lmin > 0 && lend > 0) || (lmin <= 0 && lend <= 0));
@@ -1198,7 +1202,10 @@ void TrackletMaintainer::calc_intersection_with_refline(
       }
       item.trajectory.intersection = min_idx;
       if ((lmin + min_ignore_thre) * (lend + end_ignore_thre) < 0 &&
-          ((!is_same_side && (std::fabs(lend) > 2 || (v_s_end <= -3.0 && std::fabs(lend) > item.width / 2))) || (v_l_end > 0.6) || (std::fabs(lend) < 0.5 && v_l_end < -0.5))) {
+          ((!is_same_side &&
+            (std::fabs(lend) > 2 ||
+             (v_s_end <= -3.0 && std::fabs(lend) > item.width / 2))) ||
+           (v_l_end > 0.6) || (std::fabs(lend) < 0.5 && v_l_end < -0.5))) {
         item.trajectory.intersection = 10000;
       }
       return;
@@ -1245,7 +1252,10 @@ void TrackletMaintainer::calc_intersection_with_refline(
         if (max_idx <= mid_idx + 1) {
           item.trajectory.intersection = mid_idx;
           if ((lmin + min_ignore_thre) * (lend + end_ignore_thre) < 0 &&
-              ((!is_same_side && (std::fabs(lend) > 2 || (v_s_end <= -3.0 && std::fabs(lend) > item.width / 2))) || (v_l_end > 0.6) || (std::fabs(lend) < 0.5 && v_l_end < -0.5))) {
+              ((!is_same_side &&
+                (std::fabs(lend) > 2 ||
+                 (v_s_end <= -3.0 && std::fabs(lend) > item.width / 2))) ||
+               (v_l_end > 0.6) || (std::fabs(lend) < 0.5 && v_l_end < -0.5))) {
             item.trajectory.intersection = 10000;
           }
 
@@ -1262,7 +1272,10 @@ void TrackletMaintainer::calc_intersection_with_refline(
         if (mid_idx <= min_idx + 1) {
           item.trajectory.intersection = mid_idx;
           if ((lmin + min_ignore_thre) * (lend + end_ignore_thre) < 0 &&
-              ((!is_same_side && (std::fabs(lend) > 2 || (v_s_end <= -3.0 && std::fabs(lend) > item.width / 2))) || (v_l_end > 0.6) || (std::fabs(lend) < 0.5 && v_l_end < -0.5))) {
+              ((!is_same_side &&
+                (std::fabs(lend) > 2 ||
+                 (v_s_end <= -3.0 && std::fabs(lend) > item.width / 2))) ||
+               (v_l_end > 0.6) || (std::fabs(lend) < 0.5 && v_l_end < -0.5))) {
             item.trajectory.intersection = 10000;
           }
 
@@ -1284,7 +1297,6 @@ void TrackletMaintainer::calc_intersection_with_refline(
 
 double TrackletMaintainer::calc_ignorance_threshold(
     TrackedObject &item, int idx, int sgn, bool enable_intersection_planner) {
-
   double half_car_width = std::max(
       1.1,
       0.5 * item.width * std::fabs(cos(item.trajectory.relative_ego_yaw[idx])) +
@@ -1293,22 +1305,20 @@ double TrackletMaintainer::calc_ignorance_threshold(
 
   double half_lane_width = 0.;
   if (enable_intersection_planner) {
-    if (sgn == -1)
-      half_lane_width = -0.45;
+    if (sgn == -1) half_lane_width = -0.45;
   }
 
   double ignorance_threshold = half_lane_width + half_car_width;
   return sgn * ignorance_threshold;
 }
 
-void TrackletMaintainer::check_accident_car(TrackedObject &item, double v_ego,
-                                            int scenario, double dist_intersect,
-                                            double intersect_length,
-                                            bool left_faster, bool right_faster,
-                                            bool isRedLightStop, bool isFasterStaticAvd,
-                                            bool isOnHighway) {
+void TrackletMaintainer::check_accident_car(
+    TrackedObject &item, double v_ego, int scenario, double dist_intersect,
+    double intersect_length, bool left_faster, bool right_faster,
+    bool isRedLightStop, bool isFasterStaticAvd, bool isOnHighway) {
   LOG_DEBUG("----check_accident_car-----\n");
-  double planning_cycle_time = 1.0 / 20.; // hack FLAGS_planning_loop_rate = 20.
+  double planning_cycle_time =
+      1.0 / 20.;  // hack FLAGS_planning_loop_rate = 20.
   std::array<double, 5> xp{0, 10, 15, 20, 30};
   std::array<double, 5> fp{250, 200, 170, 140, 100};
   std::array<double, 5> xp_lat{-1.0, -0.7, -0.5, 0.0, 0.5};
@@ -1331,37 +1341,42 @@ void TrackletMaintainer::check_accident_car(TrackedObject &item, double v_ego,
     }
     if (item.d_rel < 15.0) {
       accident_discern_threshold *=
-        interp(std::max(l_ego - item.d_max_cpath, item.d_min_cpath - l_ego),
-               xp_lat, fp_lat);
+          interp(std::max(l_ego - item.d_max_cpath, item.d_min_cpath - l_ego),
+                 xp_lat, fp_lat);
     }
     accident_discern_threshold = std::max(accident_discern_threshold, 25.0);
   }
 
   double curr_time = IflyTime::Now_ms();
-  double gap =
-      (item.last_recv_time == 0.0) ? planning_cycle_time : (curr_time - item.last_recv_time);
+  double gap = (item.last_recv_time == 0.0) ? planning_cycle_time
+                                            : (curr_time - item.last_recv_time);
 
   if (item.type == 20001 && (item.is_lead || item.is_temp_lead) &&
       item.d_rel < 40.0 && item.v_lead > -3 && item.v_lead < 0.5 &&
       std::fabs(item.v_lat) < 0.2) {
-    item.is_accident_cnt = std::min(5 * (item.is_accident_cnt + gap),
-                                      accident_discern_threshold * planning_cycle_time);
+    item.is_accident_cnt =
+        std::min(5 * (item.is_accident_cnt + gap),
+                 accident_discern_threshold * planning_cycle_time);
   } else if (((!isRedLightStop && (item.is_lead || item.is_temp_lead)) ||
-       item.is_accident_car) &&
-      item.v_lead > -3 && item.v_lead < 0.5 && std::fabs(item.v_lat) < 0.2 &&
-      ((left_faster || right_faster) || scenario == LOCATION_INTER)) {
-    item.is_accident_cnt = std::min(item.is_accident_cnt + gap,
-                                      accident_discern_threshold * planning_cycle_time);
+              item.is_accident_car) &&
+             item.v_lead > -3 && item.v_lead < 0.5 &&
+             std::fabs(item.v_lat) < 0.2 &&
+             ((left_faster || right_faster) || scenario == LOCATION_INTER)) {
+    item.is_accident_cnt =
+        std::min(item.is_accident_cnt + gap,
+                 accident_discern_threshold * planning_cycle_time);
   } else {
     int count = (int)((gap + 0.01) / planning_cycle_time);
-    item.is_accident_cnt = std::max(
-        item.is_accident_cnt - accident_discern_threshold / 6 * count * planning_cycle_time,
-        0.0);
+    item.is_accident_cnt =
+        std::max(item.is_accident_cnt - accident_discern_threshold / 6 * count *
+                                            planning_cycle_time,
+                 0.0);
   }
-  if (item.is_accident_cnt >= accident_discern_threshold * planning_cycle_time) {
-      item.is_accident_car = true;
+  if (item.is_accident_cnt >=
+      accident_discern_threshold * planning_cycle_time) {
+    item.is_accident_car = true;
   } else if (equal_zero(item.is_accident_cnt)) {
-      item.is_accident_car = false;
+    item.is_accident_car = false;
   }
 }
 
@@ -1403,7 +1418,8 @@ void TrackletMaintainer::check_prebrk_object(TrackedObject &item, double v_ego,
 bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
                                                double v_ego) {
   LOG_DEBUG("----is_potential_lead_one-----\n");
-  double planning_cycle_time = 1.0 / 20.; // hack FLAGS_planning_loop_rate = 20.
+  double planning_cycle_time =
+      1.0 / 20.;  // hack FLAGS_planning_loop_rate = 20.
   LOG_DEBUG("planning_cycle_time is: [%f]\n", planning_cycle_time);
   std::array<double, 5> xp1{1.5, 5.0, 10.0, 40.0, 60.0 + v_ego / 1.2};
   std::array<double, 5> fp1{0.8, 1.0, 0.8, 0.7, 0.0};
@@ -1434,8 +1450,10 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
   double result = interp(item.d_rel, xp3, fp3);
 
   double d_path = std::max(item.d_path_pos + lat_corr, 0.0);
-  LOG_DEBUG("item's id is: [%d], item.d_rel is: [%f], item.v_lat is: [%f]\n", item.track_id, item.d_rel, item.v_lat);
-  LOG_DEBUG("item.d_path_pos is: [%f], lat_corr is: [%f], d_path is : [%f]\n", item.d_path_pos, lat_corr, d_path);
+  LOG_DEBUG("item's id is: [%d], item.d_rel is: [%f], item.v_lat is: [%f]\n",
+            item.track_id, item.d_rel, item.v_lat);
+  LOG_DEBUG("item.d_path_pos is: [%f], lat_corr is: [%f], d_path is : [%f]\n",
+            item.d_path_pos, lat_corr, d_path);
   if (item.type < 10000 && item.v_lead > 0.2) {
     lead_d_path_thr = result;
   } else if (item.type < 10000) {
@@ -1453,8 +1471,9 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
     item.is_lead = d_path < lead_d_path_thr && item.d_rel >= 0.0;
   } else {
     double curr_time = IflyTime::Now_ms();
-    double gap =
-        (item.last_recv_time == 0.0) ? planning_cycle_time : (curr_time - item.last_recv_time);
+    double gap = (item.last_recv_time == 0.0)
+                     ? planning_cycle_time
+                     : (curr_time - item.last_recv_time);
     LOG_DEBUG("the gap is : [%f]s \n", gap);
     if (d_path < lead_d_path_thr && item.d_rel > 0.0) {
       item.leadone_confidence_cnt =
@@ -1462,9 +1481,10 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
     } else {
       LOG_DEBUG("!!!!!!!gap is : [%f] \n", gap);
       int count = (int)((gap + 0.01) / planning_cycle_time);
-      item.leadone_confidence_cnt =
-          std::max(item.leadone_confidence_cnt - 10 * count * planning_cycle_time, 0.0);
-      LOG_DEBUG("!!!!!!!leadone_confidence_cnt is : [%f] \n", item.leadone_confidence_cnt);
+      item.leadone_confidence_cnt = std::max(
+          item.leadone_confidence_cnt - 10 * count * planning_cycle_time, 0.0);
+      LOG_DEBUG("!!!!!!!leadone_confidence_cnt is : [%f] \n",
+                item.leadone_confidence_cnt);
     }
 
     std::array<double, 5> xp4{0, 30, 60, 90, 120};
@@ -1477,7 +1497,8 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
       lead_confidence_thrshld = interp(item.d_rel, xp4, fp4);
     }
     LOG_DEBUG("lead_confidence_thrshld is : [%f]\n", lead_confidence_thrshld);
-    item.is_lead = item.leadone_confidence_cnt >= lead_confidence_thrshld * planning_cycle_time;
+    item.is_lead = item.leadone_confidence_cnt >=
+                   lead_confidence_thrshld * planning_cycle_time;
   }
   LOG_DEBUG("item.is_lead: [%d]\n", item.is_lead);
   return item.is_lead;
@@ -1486,7 +1507,8 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
 bool TrackletMaintainer::is_potential_lead_two(TrackedObject &item,
                                                TrackedObject *lead_one) {
   LOG_DEBUG("----is_potential_lead_two-----\n");
-  double planning_cycle_time = 1.0 / 20.; // hack FLAGS_planning_loop_rate = 20.
+  double planning_cycle_time =
+      1.0 / 20.;  // hack FLAGS_planning_loop_rate = 20.
   if (lead_one == nullptr) {
     return false;
   }
@@ -1498,26 +1520,29 @@ bool TrackletMaintainer::is_potential_lead_two(TrackedObject &item,
 
   if (hdmap_valid_) {
     item.leadtwo_confidence_cnt = 0.0;
-    return (is_diff_d_rel || is_diff_v_rel || is_diff_y_rel) && item.d_rel > 0.0;
+    return (is_diff_d_rel || is_diff_v_rel || is_diff_y_rel) &&
+           item.d_rel > 0.0;
   } else {
     double curr_time = IflyTime::Now_ms();
-    double gap =
-        (item.last_recv_time == 0.0) ? planning_cycle_time : (curr_time - item.last_recv_time);
+    double gap = (item.last_recv_time == 0.0)
+                     ? planning_cycle_time
+                     : (curr_time - item.last_recv_time);
 
     if ((is_diff_d_rel || is_diff_v_rel || is_diff_y_rel) && item.d_rel > 0.0) {
       item.leadtwo_confidence_cnt =
           std::min(item.leadtwo_confidence_cnt + gap, 50 * planning_cycle_time);
     } else {
       int count = (int)((gap + 0.01) / planning_cycle_time);
-      item.leadtwo_confidence_cnt =
-          std::max(item.leadtwo_confidence_cnt - 10 * count * planning_cycle_time, 0.0);
+      item.leadtwo_confidence_cnt = std::max(
+          item.leadtwo_confidence_cnt - 10 * count * planning_cycle_time, 0.0);
     }
 
     std::array<double, 5> xp{0, 30, 60, 90, 120};
     std::array<double, 5> fp{2, 4, 6, 10, 50};
     double lead_confidence_time = interp(item.d_rel, xp, fp);
 
-    return item.leadtwo_confidence_cnt >= lead_confidence_time * planning_cycle_time;
+    return item.leadtwo_confidence_cnt >=
+           lead_confidence_time * planning_cycle_time;
   }
 }
 
@@ -1525,7 +1550,8 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
                                                     double v_ego,
                                                     bool refline_update) {
   LOG_DEBUG("----is_potential_temp_lead_one-----\n");
-  double planning_cycle_time = 1.0 / 20.; // hack FLAGS_planning_loop_rate = 20.
+  double planning_cycle_time =
+      1.0 / 20.;  // hack FLAGS_planning_loop_rate = 20.
   std::array<double, 5> xp1{1.5, 5.0, 10.0, 40.0, 60.0 + v_ego / 1.2};
   std::array<double, 5> fp1{0.8, 1.0, 0.8, 0.7, 0.0};
   double t_lookahead = interp(item.d_rel, xp1, fp1);
@@ -1541,7 +1567,7 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
   }
   LOG_DEBUG("v_lat_self is: [%f], v_lat: [%f]\n", item.v_lat_self, item.v_lat);
   LOG_DEBUG("max_d_offset is: [%f], t_lookahead: [%f], lat_corr is: [%f]\n",
-                                      max_d_offset, t_lookahead, lat_corr);
+            max_d_offset, t_lookahead, lat_corr);
   double d_path_self = std::max(item.d_path_self_pos + lat_corr, 0.0);
   item.d_path_self_ori =
       std::max(std::fabs(item.y_rel_ori - item.dy_self) + lat_corr, 0.0);
@@ -1574,35 +1600,39 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
          (item.y_rel_ori < item.dy_self && item.y_rel_ori > item.dy));
   }
   LOG_DEBUG("item's id is: [%d], item.d_rel is: [%f], item.v_lat is: [%f]\n",
-                                    item.track_id, item.d_rel, item.v_lat);
-  LOG_DEBUG("item.d_path_self_pos is: [%f], lat_corr is: [%f], d_path_self is : [%f]\n",
-                                  item.d_path_self_pos, lat_corr, d_path_self);
-  LOG_DEBUG("item.l is: [%f], l0 is: [%f], y_rel_ori is : [%f], dy_self is : [%f]\n",
-                item.l, item.l0, item.y_rel_ori, item.dy_self);
+            item.track_id, item.d_rel, item.v_lat);
+  LOG_DEBUG(
+      "item.d_path_self_pos is: [%f], lat_corr is: [%f], d_path_self is : "
+      "[%f]\n",
+      item.d_path_self_pos, lat_corr, d_path_self);
+  LOG_DEBUG(
+      "item.l is: [%f], l0 is: [%f], y_rel_ori is : [%f], dy_self is : [%f]\n",
+      item.l, item.l0, item.y_rel_ori, item.dy_self);
 
   if (hdmap_valid_) {
     item.tleadone_confidence_cnt = 0.0;
     item.is_temp_lead = (is_get_threshold || is_in_range) && item.d_rel >= 0.0;
   } else {
     double curr_time = IflyTime::Now_ms();
-    double gap =
-        (item.last_recv_time == 0.0) ? planning_cycle_time : (curr_time - item.last_recv_time);
+    double gap = (item.last_recv_time == 0.0)
+                     ? planning_cycle_time
+                     : (curr_time - item.last_recv_time);
 
     if ((is_get_threshold || is_in_range) && item.d_rel >= 0.0) {
-      item.tleadone_confidence_cnt =
-          std::min(item.tleadone_confidence_cnt + gap, 50 * planning_cycle_time);
+      item.tleadone_confidence_cnt = std::min(
+          item.tleadone_confidence_cnt + gap, 50 * planning_cycle_time);
     } else {
       int count = (int)((gap + 0.01) / planning_cycle_time);
-      item.tleadone_confidence_cnt =
-          std::max(item.tleadone_confidence_cnt - 10 * count * planning_cycle_time, 0.0);
+      item.tleadone_confidence_cnt = std::max(
+          item.tleadone_confidence_cnt - 10 * count * planning_cycle_time, 0.0);
     }
 
     std::array<double, 5> xp4{0, 30, 60, 90, 120};
     std::array<double, 5> fp4{1, 1, 1, 10, 50};
     double lead_confidence_time = interp(item.d_rel, xp4, fp4);
 
-    item.is_temp_lead =
-        item.tleadone_confidence_cnt >= lead_confidence_time * planning_cycle_time;
+    item.is_temp_lead = item.tleadone_confidence_cnt >=
+                        lead_confidence_time * planning_cycle_time;
   }
   LOG_DEBUG("item.is_temp_lead: [%d]\n", item.is_temp_lead);
   return item.is_temp_lead;
@@ -1611,7 +1641,8 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
 bool TrackletMaintainer::is_potential_temp_lead_two(
     TrackedObject &item, TrackedObject *temp_lead_one) {
   LOG_DEBUG("----is_potential_temp_lead_two-----\n");
-  double planning_cycle_time = 1.0 / 20.; // hack FLAGS_planning_loop_rate = 20.
+  double planning_cycle_time =
+      1.0 / 20.;  // hack FLAGS_planning_loop_rate = 20.
   if (temp_lead_one == nullptr) {
     return false;
   }
@@ -1624,35 +1655,40 @@ bool TrackletMaintainer::is_potential_temp_lead_two(
 
   if (hdmap_valid_) {
     item.tleadtwo_confidence_cnt = 0.0;
-    return (is_diff_d_rel || is_diff_v_rel || is_diff_y_rel) && item.d_rel > 0.0;
+    return (is_diff_d_rel || is_diff_v_rel || is_diff_y_rel) &&
+           item.d_rel > 0.0;
   } else {
     double curr_time = IflyTime::Now_ms();
-    double gap =
-        (item.last_recv_time == 0.0) ? planning_cycle_time : (curr_time - item.last_recv_time);
+    double gap = (item.last_recv_time == 0.0)
+                     ? planning_cycle_time
+                     : (curr_time - item.last_recv_time);
 
     if ((is_diff_d_rel || is_diff_v_rel || is_diff_y_rel) && item.d_rel > 0.0) {
-      item.tleadtwo_confidence_cnt =
-          std::min(item.tleadtwo_confidence_cnt + gap, 50 * planning_cycle_time);
+      item.tleadtwo_confidence_cnt = std::min(
+          item.tleadtwo_confidence_cnt + gap, 50 * planning_cycle_time);
     } else {
       int count = (int)((gap + 0.01) / planning_cycle_time);
-      item.tleadtwo_confidence_cnt =
-          std::max(item.tleadtwo_confidence_cnt - 10 * count * planning_cycle_time, 0.0);
+      item.tleadtwo_confidence_cnt = std::max(
+          item.tleadtwo_confidence_cnt - 10 * count * planning_cycle_time, 0.0);
     }
 
     std::array<double, 5> xp{0, 30, 60, 90, 120};
     std::array<double, 5> fp{2, 2, 2, 20, 80};
     double lead_confidence_time = interp(item.d_rel, xp, fp);
 
-    return item.tleadtwo_confidence_cnt > lead_confidence_time * planning_cycle_time;
+    return item.tleadtwo_confidence_cnt >
+           lead_confidence_time * planning_cycle_time;
   }
 }
 
 bool TrackletMaintainer::is_potential_avoiding_car(
-    TrackedObject &item, TrackedObject *lead_one, double v_ego, double lane_width, int scenario,
-    bool borrow_bicycle_lane, double dist_rblane, bool tleft_lane,
-    bool rightest_lane, double dist_intersect, double intersect_length, bool isRedLightStop) {
+    TrackedObject &item, TrackedObject *lead_one, double v_ego,
+    double lane_width, int scenario, bool borrow_bicycle_lane,
+    double dist_rblane, bool tleft_lane, bool rightest_lane,
+    double dist_intersect, double intersect_length, bool isRedLightStop) {
   LOG_DEBUG("----is_potential_avoiding_car-----\n");
-  double planning_cycle_time = 1.0 / 20.; // hack FLAGS_planning_loop_rate = 20.
+  double planning_cycle_time =
+      1.0 / 20.;  // hack FLAGS_planning_loop_rate = 20.
   item.is_ncar = false;
   double ego_car_width = 2.2;
   double lat_safety_buffer = 0.2;
@@ -1702,7 +1738,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
                borrow_bicycle_lane && item.v_lead < 0.2) ||
               lane_width / 2 - item.d_max_cpath >= 2.4));
 
-        if (dist_intersect == 1000 && lane_width > 5. && lead_one != nullptr && !lead_one->is_accident_car) {
+        if (dist_intersect == 1000 && lane_width > 5. && lead_one != nullptr &&
+            !lead_one->is_accident_car) {
           can_avoid = item.d_min_cpath > 0.9 || item.d_max_cpath < -0.5;
         }
 
@@ -1717,9 +1754,11 @@ bool TrackletMaintainer::is_potential_avoiding_car(
                         -0.9)) &&
               ((item.d_max_cpath <= 0 && !tleft_lane && item.type < 10000) ||
                (item.d_min_cpath < 0 && item.type == 20001)))) &&
-            lead_one != nullptr && item.track_id == lead_one->track_id && item.v_lead < 0.3 &&
-            abs(item.v_lat) < 0.2 && dist_intersect - item.d_rel >= -5 &&
-            dist_intersect - item.d_rel < 50.0 && (!isRedLightStop || item.type == 20001);
+            lead_one != nullptr && item.track_id == lead_one->track_id &&
+            item.v_lead < 0.3 && abs(item.v_lat) < 0.2 &&
+            dist_intersect - item.d_rel >= -5 &&
+            dist_intersect - item.d_rel < 50.0 &&
+            (!isRedLightStop || item.type == 20001);
 
         item.is_ncar =
             (is_same_side && is_need_avoid && can_avoid) ||
@@ -1755,12 +1794,13 @@ bool TrackletMaintainer::is_potential_avoiding_car(
                                    l_ego - item.d_max_cpath > -0.5);
         bool accid_avoid = (item.v_lead < 0.5);
 
-        item.is_ncar =
-            (is_same_side && is_need_avoid && dynamic_can_avoid &&
-             is_not_intersect) ||
-            (((is_need_avoid && accid_avoid && static_can_avoid && !tleft_lane) ||
-            (is_need_avoid && accid_avoid && leftlane_can_avoid && tleft_lane)) &&
-            item.d_rel - dist_intersect <= intersect_length + 5.);
+        item.is_ncar = (is_same_side && is_need_avoid && dynamic_can_avoid &&
+                        is_not_intersect) ||
+                       (((is_need_avoid && accid_avoid && static_can_avoid &&
+                          !tleft_lane) ||
+                         (is_need_avoid && accid_avoid && leftlane_can_avoid &&
+                          tleft_lane)) &&
+                        item.d_rel - dist_intersect <= intersect_length + 5.);
       }
     }
   }
@@ -1795,8 +1835,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   }
 
   double curr_time = IflyTime::Now_ms();
-  double gap =
-      (item.last_recv_time == 0.0) ? planning_cycle_time : (curr_time - item.last_recv_time);
+  double gap = (item.last_recv_time == 0.0) ? planning_cycle_time
+                                            : (curr_time - item.last_recv_time);
   int count = (int)((gap + 0.01) / planning_cycle_time);
 
   if (item.is_ncar) {
@@ -1807,12 +1847,13 @@ bool TrackletMaintainer::is_potential_avoiding_car(
         borrow_bicycle_lane || rightest_lane) {
       if ((item.v_lat > -0.5 && item.v_lat < 0.3 && item.type < 10000) ||
           (std::fabs(item.v_lat) < 0.3 && item.type > 10000)) {
-        item.ncar_count = std::min(item.ncar_count + gap, 100 * planning_cycle_time);
+        item.ncar_count =
+            std::min(item.ncar_count + gap, 100 * planning_cycle_time);
       }
     } else {
       item.ncar_count = std::max(
-          item.ncar_count -
-              5 * (int)(std::fabs(item.v_lat) / 0.3 + 0.5) * count * planning_cycle_time,
+          item.ncar_count - 5 * (int)(std::fabs(item.v_lat) / 0.3 + 0.5) *
+                                count * planning_cycle_time,
           0.0);
     }
 
@@ -1829,13 +1870,16 @@ bool TrackletMaintainer::is_potential_avoiding_car(
       return true;
     }
   } else {
-    item.ncar_count = std::max(item.ncar_count - 2 * count * planning_cycle_time, 0.0);
+    item.ncar_count =
+        std::max(item.ncar_count - 2 * count * planning_cycle_time, 0.0);
     if (item.v_rel > 1.5) {
-      item.ncar_count = std::max(item.ncar_count - 5 * count * planning_cycle_time, 0.0);
+      item.ncar_count =
+          std::max(item.ncar_count - 5 * count * planning_cycle_time, 0.0);
     }
 
     if (item.trajectory.intersection > 0) {
-      item.ncar_count = std::max(item.ncar_count - 10 * count * planning_cycle_time, 0.0);
+      item.ncar_count =
+          std::max(item.ncar_count - 10 * count * planning_cycle_time, 0.0);
     }
 
     if (item.d_max_cpath > 0 && item.d_min_cpath < 0) {
@@ -1893,7 +1937,8 @@ bool TrackletMaintainer::is_leadone_potential_avoiding_car(
          is_in_avoid_range_by_nearest_line_in_right || borrow_bicycle_lane ||
          scenario == LocationEnum::LOCATION_INTER || rightest_lane ||
          (dist_intersect - lead_one->d_rel < 50 &&
-          dist_intersect - lead_one->d_rel >= -5 && (!isRedLightStop || lead_one->type == 20001)));
+          dist_intersect - lead_one->d_rel >= -5 &&
+          (!isRedLightStop || lead_one->type == 20001)));
   }
 
   return lead_one->is_avd_car;
@@ -1901,7 +1946,6 @@ bool TrackletMaintainer::is_leadone_potential_avoiding_car(
 
 void TrackletMaintainer::select_lead_cars(
     const std::vector<TrackedObject *> &tracked_objects, LeadCars &lead_cars) {
-
   TrackedObject *lead_one = nullptr;
   TrackedObject *lead_two = nullptr;
   TrackedObject *temp_lead_one = nullptr;
@@ -1965,7 +2009,6 @@ void TrackletMaintainer::select_lead_cars(
 
 void TrackletMaintainer::set_default_value(
     const std::vector<TrackedObject *> &tracked_objects) {
-
   for (auto tr : tracked_objects) {
     if (tr->d_center_cpath == DBL_MAX) {
       tr->d_center_cpath = 100;
@@ -2011,4 +2054,4 @@ void TrackletMaintainer::set_default_value(
   }
 }
 
-} // namespace planning
+}  // namespace planning

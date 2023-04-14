@@ -1,8 +1,10 @@
-#include "modules/common/utils/lateral_utils.h"
-#include "modules/common/define/geometry.h"
-#include "modules/common/config/vehicle_param_tmp.h"
-#include "modules/common/utils/pose2d_utils.h"
+#include "src/modules/common/utils/lateral_utils.h"
+
 #include <algorithm>
+
+#include "src/modules/common/config/vehicle_param_tmp.h"
+#include "src/modules/common/define/geometry.h"
+#include "src/modules/common/utils/pose2d_utils.h"
 namespace planning {
 
 double calc_poly1d(const std::vector<double> &coefs, double x) {
@@ -103,12 +105,6 @@ bool calc_dist(const std::vector<double> &path_y, double x, double y,
   return true;
 }
 
-double get_system_time() {
-  struct timespec curr_time;
-  clock_gettime(CLOCK_REALTIME, &curr_time);
-  return (double)curr_time.tv_sec + (double)curr_time.tv_nsec / 1000000000.0;
-}
-
 double get_boot_time() {
   struct timespec curr_time;
   clock_gettime(CLOCK_MONOTONIC, &curr_time);
@@ -123,8 +119,8 @@ double cal_lat_offset(double ego_vel, double dash_length) {
   double ddl_limit = std::min(
       kLateralAccMax / pow(fmax(ego_vel, 3.0), 2.),
       vehicle_param::max_front_wheel_angle / vehicle_param::wheel_base);
-  double physical_limit = kDeltaRateMax / vehicle_param::wheel_base /
-                          std::fmax(ego_vel, 0.1);
+  double physical_limit =
+      kDeltaRateMax / vehicle_param::wheel_base / std::fmax(ego_vel, 0.1);
   double comfort_limit = kLateralJerkMax / pow(ego_vel, 3);
   double dddl_limit = std::fmin(physical_limit, comfort_limit);
 
@@ -138,7 +134,8 @@ double cal_lat_offset(double ego_vel, double dash_length) {
       ddd_max = dddl_limit;
     else
       ddd_max = -dddl_limit;
-    l += dl * delta_s + ddl * pow(delta_s, 2) / 2. + ddd_max * pow(delta_s, 3) / 6.;
+    l += dl * delta_s + ddl * pow(delta_s, 2) / 2. +
+         ddd_max * pow(delta_s, 3) / 6.;
     dl += ddl * delta_s + ddd_max * pow(delta_s, 2) / 2.;
     ddl += ddd_max * delta_s;
     ddl = clip(ddl, ddl_limit, -ddl_limit);
@@ -147,4 +144,4 @@ double cal_lat_offset(double ego_vel, double dash_length) {
   return l * 2.0;
 }
 
-} // namespace planning
+}  // namespace planning

@@ -1,16 +1,15 @@
 #include "modules/scenario/scenario_state.h"
 
-#include "src/modules/common/utils/ifly_time.h"
+#include "src/common/ifly_time.h"
+#include "src/modules/context/ego_planning_config.h"
 #include "src/modules/context/reference_path_manager.h"
 #include "src/modules/scenario/ego_planning_candidate.h"
 #include "src/modules/scenario/evaluator.h"
 #include "src/modules/scenario/scenario_state_machine.h"
-#include "src/modules/context/ego_planning_config.h"
 
 namespace planning {
 
-std::shared_ptr<Evaluator> StateBase::get_evaluator(
-    framework::Frame *frame) {
+std::shared_ptr<Evaluator> StateBase::get_evaluator(framework::Frame *frame) {
   common::SceneType scene_type = frame->session()->get_scene_type();
   auto config_builder =
       frame->session()->environmental_model().config_builder(scene_type);
@@ -30,7 +29,8 @@ void StateBase::process(Control &control, FsmContext &context) {
   get_state_transition_candidates(context, transition_contexts);
   assert(transition_contexts.size() > 0);
   auto candidates_time = IflyTime::Now_ms();
-  LOG_DEBUG("[StateBase] get candidates time: %f", candidates_time - start_time);
+  LOG_DEBUG("[StateBase] get candidates time: %f",
+            candidates_time - start_time);
 
   // Step 2) refine candidates
   EgoPlanningCandidates candidates;
@@ -40,16 +40,14 @@ void StateBase::process(Control &control, FsmContext &context) {
     EgoPlanningCandidate candidate(context.frame);
     candidate.set_coarse_planning_info(transition_context);
 
-    auto &last_planning_result =
-        context.frame->mutable_session()
-            ->mutable_planning_context()
-            ->last_planning_result();
+    auto &last_planning_result = context.frame->mutable_session()
+                                     ->mutable_planning_context()
+                                     ->last_planning_result();
     if (&last_planning_result != nullptr and
         last_planning_result->target_lane_id ==
             candidate.coarse_planning_info().target_lane_id and
         last_planning_result->traj_points.size() >= 10) {
-      candidate.set_last_planning_result(
-          last_planning_result);
+      candidate.set_last_planning_result(last_planning_result);
     }
 
     if (candidate.pre_check()) {

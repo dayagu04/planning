@@ -746,11 +746,11 @@ bool LateralMotionPlannerV1::update(
 //                 }
 //               }
 
-//               curr_time_ = get_system_time();
+//               curr_time_ = IflyTime::Now_s();
 //             } else if (avoid_car_info[1][6] < -1.5 &&
 //                        diff_dist_nudge_car >=
 //                            desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
-//               if (get_system_time() - curr_time_ > 2) {
+//               if (IflyTime::Now_s() - curr_time_ > 2) {
 //                 lat_offset = 0.5 * (lane_width - car_width / 2 -
 //                                     std::fabs(avoid_car_info[0][5])) +
 //                              lat_compen1;
@@ -998,11 +998,11 @@ bool LateralMotionPlannerV1::update(
 //                 }
 //               }
 
-//               curr_time_ = get_system_time();
+//               curr_time_ = IflyTime::Now_s();
 //             } else if (avoid_car_info[0][6] < -1.5 &&
 //                        diff_dist_nudge_car >=
 //                            desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
-//               if (get_system_time() - curr_time_ > 2) {
+//               if (IflyTime::Now_s() - curr_time_ > 2) {
 //                 lat_offset = 0.5 * (lane_width - car_width / 2 -
 //                                     std::fabs(avoid_car_info[0][6])) +
 //                              lat_compen1;

@@ -61,7 +61,6 @@ SUBDIRLIST_SRC(${PROJECT_SOURCE_DIR}/common SRC_COMMON)
 SUBDIRLIST_SRC(${PROJECT_SOURCE_DIR}/modules SRC_MODULES)
 SUBDIRLIST_SRC(${PROJECT_SOURCE_DIR}/proto SRC_PROTO)
 SUBDIRLIST_SRC(${PROJECT_SOURCE_DIR}/../res/include/proto SRC_PROTO_LIB)
-SET(${PROJECT_SOURCE_DIR} SRC_COMMON )
 
 # 组件间通讯协议
 # link_directories(../lib/protolib)
@@ -124,6 +123,18 @@ else()
                               )
     endif()
 endif()
+
+# -----------GTEST 单元测试-----------
+option (PNC_ENABLE_TEST "build unit tests" ON)
+message (STATUS "PNC_ENABLE_TEST=" ${PNC_ENABLE_TEST})
+if (PNC_ENABLE_TEST)
+  set(CMAKE_BUILD_TYPE Debug)
+  message (STATUS "include googletets and enable test")
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
+  set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0")
+
+  add_subdirectory (test)
+endif ()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     CONFIG_PATH="/asw/Planning/Res/config")

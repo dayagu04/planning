@@ -1,9 +1,10 @@
 #pragma once
 
-#include <src/modules/tasks/task_basic_types.h>
-
 #include <array>
+#include <cassert>
 #include <vector>
+
+#include "src/modules/tasks/task_basic_types.h"
 
 typedef long long c_int;
 typedef double c_float;
