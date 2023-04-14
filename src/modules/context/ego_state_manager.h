@@ -1,74 +1,128 @@
-#pragma once
-#include <array>
+#ifndef ZNQC_MODULES_CONTEXT_EGO_STATE_MANAGER_H_
+#define ZNQC_MODULES_CONTEXT_EGO_STATE_MANAGER_H_
 
 #include "src/framework/session.h"
-#include "modules/common/config/message_type.h"
-#include "modules/common/math/polygon2d.h"
 #include "modules/context/vehicle_config_context.h"
-#include "modules/context/environmental_model.h"
+#include "modules/common/define/geometry.h"
+#include "proto/generated_files/vehicle_status.pb.h"
+#include "modules/common/config/vehicle_param.h"
+#include "modules/common/config/basic_type.h"
 #include "modules/common/transform.h"
-
+#include "modules/common/math/polygon2d.h"
+#include "modules/common/config/message_type.h"
 
 namespace planning {
 
 class EgoStateManager {
-  public:
-    EgoStateManager(framework::Session *session);
-    ~EgoStateManager() = default;
+ public:
+  EgoStateManager(framework::Session *session);
+  ~EgoStateManager() = default;
 
-    void update();
+  void update(const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_carte(const Point2D &ego_carte);
+  
+  void set_ego_position_llh(
+      const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_enu(
+      const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_pose_and_vel(
+      const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_prediction_info(double ego_pose_timestamp);
+  void set_ego_steer_angle(
+      const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_acc(
+      const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_v_cruise(
+      const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_t_distance(
+      const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_start_stop(
+      const planning::common::VehicleStatus &vehicle_status);
+  void set_throttle_override(
+      const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_blinker(
+      const planning::common::VehicleLight &vehicle_light);
+  void set_ego_blinker(
+    const planning::common::VehicleStatus &vehicle_status);
+  void set_planning_init_point_valid(bool planning_init_point_valid) {
+    planning_init_point_valid_ = planning_init_point_valid;
+  };
 
-    double navi_timestamp() const { return navi_timestamp_; }
-    double ego_v_cruise() { return ego_v_cruise_; }
-    double ego_t_distance() { return ego_t_distance_; }
-    double x() const { return x_; }
-    double y() const { return y_; }
-    double heading_angle() const { return heading_angle_; }
-    double ego_steer_angle() const { return ego_steer_angle_; }
-    double velocity() const { return velocity_; }
-    int ego_start_stop() const { return ego_start_stop_; }
-    double acc() const { return acc_; }
-    double jerk() const { return jerk_; }
-    const planning_math::Polygon2d polygon() const { return polygon_; }
-    const PlanningInitPoint &planning_init_point() const {
-      return planning_init_point_;
-    }
-    const VehicleParam &vehicle_param() const { return vehicle_param_; }
-    const define::Transform &enu2car() { return enu2car_; }
-    const define::Transform &car2enu() { return car2enu_; }
-    const std::vector<PncTrajectoryPoint> &stitching_trajectory()
-        const {
-      return stitch_trajectory_;
-    }
-    bool ego_throttle_override() { return ego_throttle_override_; }
+  const planning::VehicleParam& get_vehicle_param() const { return vehicle_param_; };
+  double navi_timestamp() const { return navi_timestamp_; } //todo
+  Pose location_enu() const { return location_enu_; };
+  PointLLH position_llh() const { return position_llh_; };
+  EulerAngle euler_angle() const { return euler_angle_; }
+  Pose2D ego_pose() const { return ego_pose_; };
+  Pose2D ego_pose_raw() const { return ego_pose_raw_; };
+  Point2D ego_carte() const { return ego_carte_; };
+  double heading_angle() { return ego_pose_.theta; }
+  double ego_v() const {return ego_v_; };
+  double ego_v_angle() const { return ego_v_angle_; };
+  double ego_v_cruise() const { return ego_v_cruise_; };
+  double ego_acc() const { return ego_acc_; };
+  double ego_steer_angle() const { return ego_steer_angle_; };
+  uint ego_blinker() const { return ego_blinker_; };
+  double jerk() const { return jerk_; };
+  double t_distance() const { return ego_t_distance_; };
+  int start_stop() const { return ego_start_stop_; };
+  bool is_auto() const { return is_auto_; };
+  bool flag_is_replan() const { return flag_is_replan_; };
+  bool throttle_override() const { return throttle_override_; };
+  const planning_math::Polygon2d polygon() const { return polygon_; }
+
+  const PlanningInitPoint& planning_init_point() { return planning_init_point_; };
+  PlanningInitPoint& mutable_planning_init_point() { return planning_init_point_; };
+  bool planning_init_point_valid() const { return planning_init_point_valid_; };
+
+  const std::vector<PncTrajectoryPoint> &stitching_trajectory() const {
+    return stitch_trajectory_;
+  }
+
+  const define::Transform &get_car2enu() const { return car2enu_; };
+  const define::Transform &get_enu2car() const { return enu2car_; };
 
  private:
+  void update_transform();
   void update_planning_init_point();
   std::vector<PncTrajectoryPoint> compute_stitching_trajectory();
+  void set_timestamp_us(const planning::common::VehicleStatus &vehicle_status);
 
  private:
+  planning::VehicleParam vehicle_param_;
   framework::Session *session_ = nullptr;
-  VehicleParam vehicle_param_;
 
   double navi_timestamp_;
-  double x_;
-  double y_;
-  double heading_angle_;
-  double velocity_;
-  double velocity_angle_;
-  double acc_;
-  double jerk_;
-  double ego_steer_angle_;
-  double ego_v_cruise_;
-  double ego_t_distance_;
-  int ego_start_stop_;
-  bool ego_throttle_override_;
+  uint64_t timestamp_us_ = 0;
+  uint64_t timestamp_us_last_ = 0;
+  Pose location_enu_;
+  PointLLH position_llh_;
+  EulerAngle euler_angle_; //车身姿态yaw, pitch, roll
+  Pose2D ego_pose_;
+  Pose2D ego_pose_raw_;
+  Point2D ego_carte_;
+  double ego_v_ = 0;
+  double ego_v_angle_ = 0;
+  double ego_v_cruise_ = 0;
+  double ego_acc_ = 0;
+  double ego_acc_last_ = 0;
+  double ego_steer_angle_ = 0;
+  uint ego_blinker_ = 0;
+  double jerk_ = 0;
+  double ego_t_distance_ = 0;
+  int ego_start_stop_ = 0;
+  bool is_auto_ = false;
+  bool flag_is_replan_ = false;
+  bool throttle_override_ = false;
   planning_math::Polygon2d polygon_;
+  PlanningInitPoint planning_init_point_;
+  bool planning_init_point_valid_ = false;
 
   std::vector<PncTrajectoryPoint> stitch_trajectory_;
-  PlanningInitPoint planning_init_point_;
 
   define::Transform car2enu_;
   define::Transform enu2car_;
 };
-}
+}  // planning
+
+#endif

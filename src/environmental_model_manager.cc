@@ -68,13 +68,19 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   auto start_time = IflyTime::Now_ms();
 
   // Step 2) update planning world
-  ego_state_manager_ptr_->update();
-  if (!virtual_lane_manager_ptr_->update()) {
-    session_->mutable_planning_context()->mutable_planning_success() =
-        false;
+  if (!ego_state_update(local_view)) {
+    return false;
+  }
+
+  if (!virtual_lane_manager_->update(local_view.road_info)) {
     LOG_ERROR("virtual_lane_manager update failed");
     return false;
   }
+
+  if (!obstacle_prediction_update(local_view)) {
+    return false;
+  }
+
   obstacle_manager_ptr_->update();
 
   reference_path_manager_ptr_->update();
@@ -88,6 +94,13 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   LOG_DEBUG("update time:%f", end_time - start_time);
 
   return true;
+}
+
+bool EnvironmentalModelManager::ego_state_update(const LocalView& local_view) {
+  common::VehicleStatus vehicle_status;
+  vehicle_status_adaptor(local_view.vehicel_service_output_info, local_view.localization_estimate,
+                      vehicle_status);
+  return ego_state_manager_ptr_->update(vehicle_status);
 }
 
 }  // namespace planner

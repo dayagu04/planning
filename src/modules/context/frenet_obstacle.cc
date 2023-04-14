@@ -3,24 +3,27 @@
 #include "modules/context/frenet_obstacle.h"
 #include "framework/session.h"
 #include "modules/common/math/linear_interpolation.h"
-#include "modules/context/cart_ego_state.h"
 #include "modules/context/reference_path.h"
 #include "src/modules/common/utils/pose2d_utils.h"
+#include "ego_state_manager.h"
 
 namespace planning {
 
 FrenetObstacle::FrenetObstacle(const Obstacle *obstacle_ptr,
                                const ReferencePath &reference_path,
-                               const planning::common::CartEgoState &ego_state_info)
+                               const std::shared_ptr<EgoStateManager> ego_state_info)
     : id_(obstacle_ptr->id()), obstacle_ptr_(obstacle_ptr) {
-  adc_cart_x_ = ego_state_info.ego_pose().x();
-  adc_cart_y_ = ego_state_info.ego_pose().y();
+  adc_cart_x_ = ego_state_info->ego_pose().x;
+  adc_cart_y_ = ego_state_info->ego_pose().y;
   compute_frenet_obstacle_boundary(reference_path);
   compute_frenet_polygon_sequence(reference_path);
 }
 
 void FrenetObstacle::compute_frenet_obstacle_boundary(
     const ReferencePath &reference_path) {
+  FrenetEgoState frenet_ego_state = reference_path.get_frenet_ego_state();
+  double ego_l = frenet_ego_state.l();
+
   const auto &frenet_coord = reference_path.get_frenet_coord();
   double obs_start_s(std::numeric_limits<double>::max());
   double obs_end_s(std::numeric_limits<double>::lowest());
@@ -108,6 +111,44 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(
   frenet_velocity_l_ =
       obstacle_ptr_->velocity() * std::sin(frenet_relative_velocity_angle_);
   b_frenet_valid_ = true;
+
+  std::vector<double> corners_l = {frenet_obstacle_corners_.l_front_left, frenet_obstacle_corners_.l_front_right,
+                                  frenet_obstacle_corners_.l_rear_left, frenet_obstacle_corners_.l_rear_right};
+  std::vector<double> corners_s = {frenet_obstacle_corners_.s_front_left, frenet_obstacle_corners_.s_front_right,
+                                  frenet_obstacle_corners_.s_rear_left, frenet_obstacle_corners_.s_rear_right};
+
+  s_with_max_l_.x = *std::max_element(corners_l.begin(), corners_l.end());
+  auto it = std::find(corners_l.begin(), corners_l.end(), s_with_max_l_.x);
+  size_t index = (size_t)(it - corners_l.begin());
+  if (index < corners_l.size()) {
+    s_with_max_l_.y = std::max(corners_s[index], 0.0);
+  }
+
+  s_with_min_l_.x = *std::max_element(corners_l.begin(), corners_l.end());
+  it = std::find(corners_l.begin(), corners_l.end(), s_with_min_l_.x);
+  index = (size_t)(it - corners_l.begin());
+
+  if (index < corners_l.size()) {
+    s_with_min_l_.y = std::max(corners_s[index], 0.0);
+  }
+
+  if (frenet_s_ > frenet_ego_state.s()) {
+    double min_s = *std::min_element(corners_s.begin(), corners_s.end());
+    rel_s_ = (min_s > frenet_ego_state.s()) ? (min_s - frenet_ego_state.s()) : 0;
+  } else {
+    double max_s = *std::max_element(corners_s.begin(), corners_s.end());
+    rel_s_ = (max_s < frenet_ego_state.s()) ? (max_s - frenet_ego_state.s()) : 0;
+  }
+
+
+  std::vector<double> corners_l_relative_ego = {frenet_obstacle_corners_.l_front_left - ego_l, frenet_obstacle_corners_.l_front_right - ego_l,
+                                                frenet_obstacle_corners_.l_rear_left - ego_l, frenet_obstacle_corners_.l_rear_right - ego_l};
+  double min_corners_l_relative_ego = *std::min_element(corners_l_relative_ego.begin(), corners_l_relative_ego.end());
+  if (frenet_l_ >= ego_l) {
+    l_relative_to_ego_ = min_corners_l_relative_ego > 0 ? min_corners_l_relative_ego : 0;
+  } else {
+    l_relative_to_ego_ = min_corners_l_relative_ego < 0 ? min_corners_l_relative_ego : 0;
+  }
 }
 
 void FrenetObstacle::compute_frenet_polygon_sequence(

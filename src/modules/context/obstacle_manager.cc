@@ -20,7 +20,7 @@ ObstacleManager::ObstacleManager(
 void ObstacleManager::update() {
   clear();
   const auto &ego_state =
-      *session_->mutable_environmental_model()->ego_state_manager();
+      *session_->mutable_environmental_model()->get_ego_state_manager();
   double ego_init_relative_time = ego_state.planning_init_point().relative_time;
   bool enable_bbox_mode = config_.enable_bbox_mode;
   const auto &prediction_objects =
@@ -111,7 +111,7 @@ std::vector<FrenetObstacle> ObstacleManager::get_reference_path_obstacles(
     // construct frenet_obstacle
     frenet_obstacles.emplace_back(
         obstacle_ptr, reference_path,
-        session_->environmental_model().get_cart_ego_state_manager()->get_cart_ego_state());
+        session_->environmental_model().get_ego_state_manager());
   }
 
   return frenet_obstacles;
@@ -148,7 +148,7 @@ ObstacleManager::get_reference_path_obstacles_map(
         std::piecewise_construct, std::forward_as_tuple(obstacle_ptr->id()),
         std::forward_as_tuple(
             obstacle_ptr, reference_path,
-            session_->environmental_model().get_cart_ego_state_manager()->get_cart_ego_state()));
+            session_->environmental_model().get_ego_state_manager()));
   }
   return frenet_ob_map;
 }
@@ -168,7 +168,7 @@ void ObstacleManager::assign_obstacles_to_lanes() {
       session_->mutable_environmental_model()->reference_path_manager();
 
   for (auto lane_ptr : virtual_lane_manager->get_virtual_lanes()) {
-    int virtual_id = lane_ptr->virtual_id();
+    int virtual_id = lane_ptr->get_virtual_id();
     auto reference_path_ptr =
         reference_path_manager->get_reference_path_by_lane(virtual_id);
     if (reference_path_ptr == nullptr) {
@@ -203,6 +203,53 @@ void ObstacleManager::assign_obstacles_to_lanes() {
     lanes_obstacles_.insert(std::make_pair(virtual_id, lane_obstacles));
     lanes_leadone_obstacle_.insert(std::make_pair(virtual_id, leadone));
     lanes_leadtwo_obstacle_.insert(std::make_pair(virtual_id, leadtwo));
+  }
+}
+
+void ObstacleManager::cal_current_leadone_leadtwo_to_ego(int lane_virtual_id) {
+  int current_leadone_id{-1};
+  int current_leadtwo_id{-1};
+  auto &reference_path_manager =
+      session_->mutable_environmental_model()->reference_path_manager();
+  auto reference_path_ptr =
+    reference_path_manager->get_reference_path_by_lane(lane_virtual_id);
+  double s_ego = reference_path_ptr->get_frenet_ego_state().s();
+  auto lane_obstacles = get_lane_obstacles(lane_virtual_id);
+  std::vector<FrenetObstacle> sorted_obstacles;
+  for (auto &frenet_obstacle : reference_path_ptr->get_obstacles()) {
+    if (std::find(lane_obstacles.begin(), lane_obstacles.end(),frenet_obstacle.id()) == lane_obstacles.end() ||
+       frenet_obstacle.frenet_s() > s_ego) {
+      continue;
+    }
+    if (is_potential_current_leadone_leadtwo_to_ego(frenet_obstacle)) {
+      sorted_obstacles.emplace_back(frenet_obstacle);
+    }
+  }
+
+  std::sort(sorted_obstacles.begin(), sorted_obstacles.end(),
+              compare_obstacle_s_ascend);
+
+  for (auto &frenet_obstacle : sorted_obstacles) {
+    if (current_leadone_id == -1) {
+      current_leadone_id = frenet_obstacle.id();
+      continue;
+    }
+    if (current_leadone_id != -1 &&
+        current_leadtwo_id == -1) {
+      current_leadtwo_id = frenet_obstacle.id();
+      break;
+    }
+  }
+  current_leadone_obstacle_ = current_leadone_id;
+  current_leadtwo_obstacle_ = current_leadtwo_id;
+}
+
+bool ObstacleManager::is_potential_current_leadone_leadtwo_to_ego(const FrenetObstacle &frenet_obstacle) {
+  double l_relative_to_ego = frenet_obstacle.l_relative_to_ego();
+  if (fabs(l_relative_to_ego) < 1.6) {
+    return true;
+  } else {
+    return false;
   }
 }
 

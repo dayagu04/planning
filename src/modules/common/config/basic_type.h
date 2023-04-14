@@ -9,6 +9,8 @@
 #include "modules/common/utils/cartesian_coordinate_system.h"
 #include "modules/common/utils/frenet_coordinate_system.h"
 
+#define DEFAULT_LANE_WIDTH (3.8)
+
 namespace planning {
 
 enum RequestType { NO_CHANGE, LEFT_CHANGE, RIGHT_CHANGE };
@@ -339,5 +341,29 @@ enum CurrentState {
   COVER_LIGHT,
   INTO_WAIT_ZONE
 };
+
+struct PointLLH {
+    double Longitude;    // Longitude in degrees, ranging from -180 to 180,(度)
+    double Latitude;    // Latitude in degrees, ranging from -90 to 90,(度)
+    double height; // WGS-84 ellipsoid height in meters,(米)
+};
+
+struct EulerAngle {
+  double yaw;
+  double pitch;
+  double roll;
+};
+
+typedef enum {
+  BOTH_AVAILABLE = 0,
+  LEFT_AVAILABLE,
+  RIGHT_AVAILABLE,
+  BOTH_MISSING
+} LaneStatusEx;
+
+typedef enum {
+  LEFT = 0,
+  RIGHT
+} LineDirection;
 
 }  // namespace planning

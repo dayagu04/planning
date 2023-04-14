@@ -12,7 +12,6 @@
 // #include "common/baseline_info.h"
 
 // #include "modules/context/virtual_lane_manager.h"
-#include "src/modules/context/cart_ego_state.h"
 // #include "modules/context/frenet_ego_state.h"
 // #include "modules/context/ego_state_manager.h"
 // #include "modules/context/obstacle_manager.h"
@@ -96,11 +95,8 @@ class EnvironmentalModel {
     return mixed_prediction_info_;
   }
 
-  const std::shared_ptr<CartEgoStateManager> &get_cart_ego_state_manager() const {
-    return cart_ego_state_manager_;
-  }
+  const std::shared_ptr<EgoStateManager> &get_ego_state_manager() const { return ego_state_manager_; }
 
-  const std::shared_ptr<EgoStateManager> &ego_state_manager() const { return ego_state_manager_; }
   void set_ego_state(std::shared_ptr<EgoStateManager> ego_state_manager) {
     ego_state_manager_ = ego_state_manager;
   }
@@ -171,7 +167,6 @@ private:
   // planning::framework::Session *session_ = nullptr;
   // planning::framework::Frame *frame_ = nullptr;
   bool vehicle_dbw_status_{false};
-  std::shared_ptr<CartEgoStateManager> cart_ego_state_manager_ = nullptr;
   std::shared_ptr<EgoStateManager> ego_state_manager_ = nullptr;
   std::shared_ptr<ObstacleManager> obstacle_manager_ = nullptr;
   std::shared_ptr<VirtualLaneManager> virtual_lane_manager_ =

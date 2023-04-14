@@ -95,7 +95,7 @@ class ObstacleManager {
   const IndexedList<int, Obstacle> &get_parking_space() const {
     return parking_space_obstacles_;
   }
-
+  void cal_current_leadone_leadtwo_to_ego(int lane_virtual_id);
  public:
   // 用在sort函数中，应使用全局量或Lambda函数
   inline static bool compare_obstacle_s_descend(const FrenetObstacle &o1,
@@ -110,7 +110,7 @@ class ObstacleManager {
 
  private:
   void clear();
-
+  bool is_potential_current_leadone_leadtwo_to_ego(const FrenetObstacle &frenet_obstacle);
  private:
   planning::framework::Session *session_ = nullptr;
   IndexedList<int, Obstacle> obstacles_;
@@ -122,6 +122,8 @@ class ObstacleManager {
   std::unordered_map<int, std::vector<int>> lanes_obstacles_;
   std::unordered_map<int, int> lanes_leadone_obstacle_;
   std::unordered_map<int, int> lanes_leadtwo_obstacle_;
+  int current_leadone_obstacle_{-1};
+  int current_leadtwo_obstacle_{-1};
   std::unordered_map<int, std::vector<int>> lanes_virtual_obstacles_;
 };
 

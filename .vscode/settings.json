@@ -68,7 +68,6 @@
     "set": "cpp",
     "string": "cpp",
     "string_view": "cpp",
-    "osqp.h": "c",
     "*.ipp": "cpp"
   }
 }

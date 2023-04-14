@@ -2,10 +2,10 @@
 
 #include <algorithm>
 #include <limits>
-
+#include "modules/common/config/basic_type.h"
 #include "modules/common/speed/sl_polygon_seq.h"
 #include "modules/context/obstacle.h"
-#include "modules/context/cart_ego_state.h"
+#include "modules/context/ego_state_manager.h"
 
 namespace planning {
 
@@ -15,7 +15,7 @@ class FrenetObstacle {
  public:
   FrenetObstacle(const Obstacle* obstacle_ptr,
                  const ReferencePath& reference_path,
-                 const planning::common::CartEgoState& ego_state_info);
+                 const std::shared_ptr<EgoStateManager> ego_state_info);
 
   int id() const { return id_; }
   Common::ObjectType type() const { return obstacle_ptr_->type(); }
@@ -27,6 +27,11 @@ class FrenetObstacle {
   double frenet_relative_velocity_angle() const {
     return frenet_relative_velocity_angle_;
   }
+  double rel_s() const { return rel_s_; }
+  Point2D s_min_l() const { return s_with_min_l_; }
+  Point2D s_max_l() const { return s_with_max_l_; }
+  double l_relative_to_ego() { return l_relative_to_ego_; }
+
   const Obstacle* obstacle() const { return obstacle_ptr_; }
   double velocity() const { return obstacle_ptr_->velocity(); }
   const bool b_frenet_valid() const { return b_frenet_valid_; }
@@ -65,6 +70,13 @@ class FrenetObstacle {
   double frenet_velocity_s_;
   double frenet_velocity_l_;
   double frenet_relative_velocity_angle_;
+  double rel_s_;
+
+  Point2D s_with_min_l_; // x:l, y:s
+  Point2D s_with_max_l_;
+
+  double l_relative_to_ego_;
+
   const Obstacle* obstacle_ptr_ = nullptr;
 
   FrenetObstacleBoundary frenet_obstacle_boundary_;

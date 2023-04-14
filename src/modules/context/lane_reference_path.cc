@@ -97,23 +97,23 @@ bool LaneReferencePath::get_points_by_lane_id(
     constexpr double kDefaultLaneBorderDis = 20.0;
     ReferencePathPoint ref_path_pt;
     ref_path_pt.enu_point = Point3D{
-        refline_pt.enu_point.x, refline_pt.enu_point.y, refline_pt.enu_point.z};
-    ref_path_pt.curvature = refline_pt.curvature;
-    ref_path_pt.yaw = refline_pt.yaw;
+        refline_pt.enu_point().x(), refline_pt.enu_point().y(), refline_pt.enu_point().z()};
+    ref_path_pt.curvature = refline_pt.curvature();
+    ref_path_pt.yaw = refline_pt.heading();
     ref_path_pt.distance_to_left_lane_border = std::fmin(
-        refline_pt.distance_to_left_lane_border, kDefaultLaneBorderDis);
+        refline_pt.distance_to_left_lane_border(), kDefaultLaneBorderDis);
     ref_path_pt.distance_to_right_lane_border = std::fmin(
-        refline_pt.distance_to_right_lane_border, kDefaultLaneBorderDis);
+        refline_pt.distance_to_right_lane_border(), kDefaultLaneBorderDis);
     ref_path_pt.distance_to_left_road_border = std::fmin(
-        refline_pt.distance_to_left_road_border, kDefaultLaneBorderDis);
+        refline_pt.distance_to_left_road_border(), kDefaultLaneBorderDis);
     ref_path_pt.distance_to_right_road_border = std::fmin(
-        refline_pt.distance_to_right_road_border, kDefaultLaneBorderDis);
-    ref_path_pt.left_road_border_type = refline_pt.left_road_border_type;
-    ref_path_pt.right_road_border_type = refline_pt.right_road_border_type;
-    ref_path_pt.left_lane_border_type = refline_pt.left_lane_border_type;
-    ref_path_pt.right_lane_border_type = refline_pt.right_lane_border_type;
+        refline_pt.distance_to_right_road_border(), kDefaultLaneBorderDis);
+    ref_path_pt.left_road_border_type = refline_pt.left_road_border_type();
+    ref_path_pt.right_road_border_type = refline_pt.right_road_border_type();
+    ref_path_pt.left_lane_border_type = refline_pt.left_lane_border_type();
+    ref_path_pt.right_lane_border_type = refline_pt.right_lane_border_type();
     ref_path_pt.type = ReferencePathPointType::MAP;
-    ref_path_pt.is_in_intersection = refline_pt.is_in_intersection;
+    ref_path_pt.is_in_intersection = refline_pt.is_in_intersection();
 
     // check direction
     if (not ref_path_points.empty()) {
