@@ -19,6 +19,10 @@ namespace planning {
 class Obstacle {
  public:
   explicit Obstacle(int id,
+                    const Prediction::PredictionObject &prediction_object,
+                    bool is_static, double start_relative_timestamp);
+
+  explicit Obstacle(int id,
                     const PredictionObject &prediction_object,
                     bool is_static, double start_relative_timestamp);
 
@@ -100,12 +104,18 @@ class Obstacle {
   double acc_signed_ = 0.0;
   Common::ObjectType type_;
   bool valid_ = true;
+  bool is_virtual_ = false;
+  double prob_;
+  double speed_ = 0.0;
+  double speed_direction_ = 0.0;
+  
 
   std::vector<PncTrajectoryPoint> trajectory_{};
   FusionObjects::FusionObject perception_obstacle_;
   planning_math::Box2d perception_bounding_box_;
   planning_math::Polygon2d perception_polygon_;
   planning_math::Polygon2d obstacle_ego_polygon_;
+  planning_math::Polygon2d car_ego_polygon_;
   std::vector<planning_math::Vec2d> perception_points_;
 };
 

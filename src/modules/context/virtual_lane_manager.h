@@ -27,10 +27,10 @@ struct VirtualLanePoint {
   double lane_width = 3.2;
   double speed_limit = std::numeric_limits<double>::max();  // unit: m/s
   int track_id;
-  LaneBoundaryType left_road_border_type;
-  LaneBoundaryType right_road_border_type;
-  LaneBoundaryType left_lane_border_type;
-  LaneBoundaryType right_lane_border_type;
+  Common::LaneBoundaryType left_road_border_type;
+  Common::LaneBoundaryType right_road_border_type;
+  Common::LaneBoundaryType left_lane_border_type;
+  Common::LaneBoundaryType right_lane_border_type;
   bool on_route = true;
   bool is_in_intersection = false;
   FusionRoad::LaneType lane_type = FusionRoad::LaneType::LANE_TYPE_UNKNOWN;

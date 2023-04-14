@@ -7,6 +7,8 @@
 #include "modules/common/math/vec2d.h"
 #include "thirdparty/eigen/Eigen/Dense"
 
+#define HYPOT_MIN 1000.0
+
 namespace planning {
 namespace planning_math {
 
@@ -303,6 +305,13 @@ double interpolate(double y1, double y2, double ratio);
 double InterpolateAngle(double x1, double y1, double x2, double y2, double x);
 
 double InterpolateAngle(double y1, double y2, double ratio);
+
+inline double fast_hypot(double a, double b) {
+  if (a <= HYPOT_MIN && b <= HYPOT_MIN) {
+    return std::sqrt(a * a + b * b);
+  }
+  return std::hypot(a, b);
+}
 
 }  // namespace planning_math
 }  // namespace planning
