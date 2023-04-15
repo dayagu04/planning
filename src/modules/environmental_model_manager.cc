@@ -198,12 +198,12 @@ void EnvironmentalModelManager::vehicle_status_adaptor(const VehicleService::Veh
   //Todo
 
   vehicle_status.mutable_velocity()->mutable_cruise_velocity()
-                ->set_value_mps(hmi_mcu_inner_info.acc_set_disp_speed()); 
+                ->set_value_mps(hmi_mcu_inner_info.acc_set_disp_speed());
   if (vehicel_service_output_info.vehicle_speed_available()) {
     vehicle_status.mutable_velocity()->set_available(true);
     vehicle_status.mutable_velocity()->mutable_heading_velocity()
                       ->set_value_mps(vehicel_service_output_info.vehicle_speed());
-    
+
   }
   if (vehicel_service_output_info.vehicle_speed_display_available()) {
     vehicle_status.mutable_velocity()->set_available(true);
