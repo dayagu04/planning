@@ -45,7 +45,7 @@ void EgoPlanningCandidate::set_coarse_planning_info(
   coarse_planning_info_.reference_path =
       make_map_lane_reference_path(frame_->mutable_session()
                                         ->mutable_environmental_model()
-                                        ->reference_path_manager()
+                                        ->get_reference_path_manager()
                                         .get(),
                                     coarse_planning_info_.target_lane_id);
 
@@ -145,7 +145,7 @@ void EgoPlanningCandidate::refine(
       last_planning_result_->use_backup_cnt <= 5) {
     auto cur_time = frame_->mutable_session()
                         ->mutable_environmental_model()
-                        ->ego_state_manager()
+                        ->get_ego_state_manager()
                         ->navi_timestamp();
     auto delta_time =
         cur_time - last_planning_result_->timestamp;
@@ -160,7 +160,7 @@ void EgoPlanningCandidate::refine(
   if (success_) {
     planning_result_.timestamp = frame_->mutable_session()
                                      ->mutable_environmental_model()
-                                     ->ego_state_manager()
+                                     ->get_ego_state_manager()
                                      ->navi_timestamp();
     planning_result_.target_lane_id = coarse_planning_info_.target_lane_id;
     planning_result_.target_scenario_state = coarse_planning_info_.target_state;
@@ -174,7 +174,7 @@ void EgoPlanningCandidate::interpolate_with_last_trajectory_points() {
 
   auto curr_time = frame_->mutable_session()
                        ->mutable_environmental_model()
-                       ->ego_state_manager()
+                       ->get_ego_state_manager()
                        ->navi_timestamp();
   auto start_time = curr_time - last_planning_result_->timestamp;
   assert(start_time >= 0);

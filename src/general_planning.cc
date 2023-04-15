@@ -126,4 +126,8 @@ void GeneralPlanning::UpdateRawEnvironmentalModel(double current_time) {
   UpdateVehicleStatus(current_time);
 }
 
+bool InputReady(double current_time, std::string &error_msg) {
+  return true;
+}
+
 }  // namespace planning

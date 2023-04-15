@@ -163,9 +163,9 @@ void ObstacleManager::assign_obstacles_to_lanes() {
   lanes_obstacles_.insert(std::make_pair(-1, lane_obstacles));
 
   auto &virtual_lane_manager =
-      session_->mutable_environmental_model()->virtual_lane_manager();
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
   auto &reference_path_manager =
-      session_->mutable_environmental_model()->reference_path_manager();
+      session_->mutable_environmental_model()->get_reference_path_manager();
 
   for (auto lane_ptr : virtual_lane_manager->get_virtual_lanes()) {
     int virtual_id = lane_ptr->get_virtual_id();
@@ -210,7 +210,7 @@ void ObstacleManager::cal_current_leadone_leadtwo_to_ego(int lane_virtual_id) {
   int current_leadone_id{-1};
   int current_leadtwo_id{-1};
   auto &reference_path_manager =
-      session_->mutable_environmental_model()->reference_path_manager();
+      session_->mutable_environmental_model()->get_reference_path_manager();
   auto reference_path_ptr =
     reference_path_manager->get_reference_path_by_lane(lane_virtual_id);
   double s_ego = reference_path_ptr->get_frenet_ego_state().s();

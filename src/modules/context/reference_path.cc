@@ -27,7 +27,7 @@ void ReferencePath::update(planning::framework::Session *session) {
   session_ = session;
   // Step 1) update ego state
   frenet_ego_state_.update(
-      frenet_coord_, *session_->mutable_environmental_model()->ego_state_manager());
+      frenet_coord_, *session_->mutable_environmental_model()->get_ego_state_manager());
 
   // Step 2) update obstacles
   update_obstacles();
@@ -35,7 +35,7 @@ void ReferencePath::update(planning::framework::Session *session) {
 
 void ReferencePath::update_obstacles() {
   auto obstacle_manager =
-      session_->mutable_environmental_model()->obstacle_manager();
+      session_->mutable_environmental_model()->get_obstacle_manager();
   frenet_obstacles_ = obstacle_manager->get_reference_path_obstacles(*this);
 }
 

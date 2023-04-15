@@ -66,7 +66,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   frame_ = frame;
 
   auto start_time = IflyTime::Now_ms();
-
+  i=0;
   // Step 2) update planning world
   if (!ego_state_update(local_view)) {
     return false;

@@ -26,7 +26,7 @@ void LaneReferencePath::update(planning::framework::Session *session) {
     update_refpath_points(points);
     frenet_ego_state_.update(
         frenet_coord_,
-        *session_->mutable_environmental_model()->ego_state_manager());
+        *session_->mutable_environmental_model()->get_ego_state_manager());
     update_obstacles();
     valid_ = true;
   } else {
@@ -70,7 +70,7 @@ bool LaneReferencePath::is_obstacle_ignorable(const FrenetObstacle &obstacle) {
 
 void LaneReferencePath::update_obstacles() {
   auto obstacle_manager =
-      session_->mutable_environmental_model()->obstacle_manager();
+      session_->mutable_environmental_model()->get_obstacle_manager();
   frenet_obstacles_ = obstacle_manager->get_reference_path_obstacles(*this);
   frenet_obstacles_map_ =
       obstacle_manager->get_reference_path_obstacles_map(*this);
@@ -84,7 +84,7 @@ void LaneReferencePath::update_obstacles() {
 bool LaneReferencePath::get_points_by_lane_id(
     int target_lane_virtual_id, ReferencePathPoints &ref_path_points) {
   auto virtual_lane_manager =
-      session_->mutable_environmental_model()->virtual_lane_manager();
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
   auto virtual_lane =
       virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
   if (virtual_lane == nullptr) {

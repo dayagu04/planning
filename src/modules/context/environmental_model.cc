@@ -14,7 +14,6 @@ EnvironmentalModel::EnvironmentalModel() {}
 // EnvironmentalModel::~EnvironmentalModel() {}
 
 bool EnvironmentalModel::Init(common::SceneType scene_type) {
-  
   return true;
 }
 

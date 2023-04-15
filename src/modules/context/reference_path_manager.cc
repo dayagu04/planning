@@ -32,7 +32,7 @@ std::shared_ptr<ReferencePath> ReferencePathManager::get_reference_path_by_lane(
 std::shared_ptr<ReferencePath>
 ReferencePathManager::get_reference_path_by_current_lane() {
   auto virtual_lane_manager =
-      session_->mutable_environmental_model()->virtual_lane_manager();
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
   return get_reference_path_by_lane(
       virtual_lane_manager->current_lane_virtual_id(), false);
 }
@@ -40,7 +40,7 @@ ReferencePathManager::get_reference_path_by_current_lane() {
 void ReferencePathManager::update() {
 
   auto virtual_lane_manager =
-      session_->mutable_environmental_model()->virtual_lane_manager();
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
   for (auto it = reference_paths_.begin(); it != reference_paths_.end();) {
     auto lane_id = it->first.second;
     if (virtual_lane_manager->has_lane(lane_id)) {

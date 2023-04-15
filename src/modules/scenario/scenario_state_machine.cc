@@ -18,7 +18,7 @@ ScenarioStateMachine::ScenarioStateMachine(
     : scenario_fsm_(fsm_context_), session_(session) {
   std::shared_ptr<VirtualLaneManager> virtual_lane_mgr =
       // session_->mutable_planning_context()->virtual_lane_manager();
-      session_->mutable_environmental_model()->virtual_lane_manager();
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
   lc_lane_mgr_ =
       std::make_shared<LaneChangeLaneManager>(virtual_lane_mgr, session);
   lc_req_mgr_ = std::make_shared<LaneChangeRequestManager>(
@@ -142,7 +142,7 @@ void ScenarioStateMachine::post_process() {
 
 void ScenarioStateMachine::gen_map_turn_signal() {
   std::shared_ptr<VirtualLaneManager> map_info_mgr =
-      session_->mutable_environmental_model()->virtual_lane_manager();
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
 }
 
 void ScenarioStateMachine::gen_merge_split_turn_signal() {

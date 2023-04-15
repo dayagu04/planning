@@ -101,7 +101,7 @@ class EnvironmentalModel {
     ego_state_manager_ = ego_state_manager;
   }
 
-  const std::shared_ptr<ObstacleManager> &obstacle_manager() const {
+  const std::shared_ptr<ObstacleManager> &get_obstacle_manager() const {
     return obstacle_manager_;
   }
   void set_obstacle_manager(
@@ -109,15 +109,14 @@ class EnvironmentalModel {
     obstacle_manager_ = obstacle_manager;
   }
 
-  const std::shared_ptr<VirtualLaneManager> &virtual_lane_manager() const {
+  const std::shared_ptr<VirtualLaneManager> &get_virtual_lane_manager() const {
     return virtual_lane_manager_;
   }
-  void set_virtual_lane_manager(
-      std::shared_ptr<VirtualLaneManager> virtual_lane_manager) {
+  void set_virtual_lane_manager(std::shared_ptr<VirtualLaneManager> virtual_lane_manager) {
     virtual_lane_manager_ = virtual_lane_manager;
   }
 
-  const std::shared_ptr<TrafficLightDecisionManager> &traffic_light_decision_manager() const {
+  const std::shared_ptr<TrafficLightDecisionManager> &get_traffic_light_decision_manager() const {
     return traffic_light_decision_manager_;
   }
   void set_traffic_light_decision_manager(
@@ -125,7 +124,7 @@ class EnvironmentalModel {
     traffic_light_decision_manager_ = traffic_light_decision_manager;
   }
 
-  const std::shared_ptr<ReferencePathManager> &reference_path_manager() const {
+  const std::shared_ptr<ReferencePathManager> &get_reference_path_manager() const {
     return reference_path_manager_;
   }
   void set_reference_path_manager(
