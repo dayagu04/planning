@@ -59,6 +59,7 @@ class ObstacleManager;
 class VirtualLaneManager;
 class ReferencePathManager;
 class TrafficLightDecisionManager;
+class LateralObstacle;
 
 
 class EnvironmentalModel {
@@ -132,6 +133,14 @@ class EnvironmentalModel {
     reference_path_manager_ = reference_path_manager;
   }
 
+  const std::shared_ptr<LateralObstacle> &lateral_obstacle() const {
+    return lateral_obstacle_;
+  }
+  void set_lateral_obstacle(
+      std::shared_ptr<LateralObstacle> lateral_obstacle) {
+    lateral_obstacle_ = lateral_obstacle;
+  }
+
   const std::string &get_module_config_file_dir() const { return config_file_dir_; }
 
   void set_module_config_file_dir(const std::string &config_file_dir) {
@@ -173,6 +182,7 @@ private:
   std::shared_ptr<ReferencePathManager> reference_path_manager_ =
       nullptr;
   std::shared_ptr<TrafficLightDecisionManager> traffic_light_decision_manager_ = nullptr;
+  std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
 
   // // set 到session里
   // std::shared_ptr<CartEgoStateManager> cart_ego_state_manager_ptr_;

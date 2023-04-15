@@ -3,6 +3,7 @@
 #include <cmath>
 #include <vector>
 
+#include "modules/common/utils/ifly_time.h"
 #include "framework/frame.h"
 #include "framework/session.h"
 #include "modules/context/ego_planning_config.h"
@@ -18,7 +19,7 @@ class GeneralPlanner {
   ~GeneralPlanner() = default;
 
  private:
-  void SetPlanningPesult(const PlanningResult &ego_prediction_result,
+  void SetPlanningResult(const PlanningResult &ego_prediction_result,
                            common::PlanningResult &pnc_result);
   void ClearPlanningResult(common::PlanningResult &pnc_result);
 

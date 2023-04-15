@@ -7,6 +7,7 @@
 #include "src/modules/context/reference_path_manager.h"
 #include "src/modules/context/traffic_light_decision_manager.h"
 #include "src/modules/context/virtual_lane_manager.h"
+#include "src/modules/context/lateral_obstacle.h"
 
 namespace planning {
 EnvironmentalModel::EnvironmentalModel() {}

@@ -62,7 +62,7 @@ int GeneralPlannerModule::init(const ::google::protobuf::Message* config,
 }
 
 int GeneralPlannerModule::reset(const ::google::protobuf::Message* config) {
-  general_planner_.init_context();
+  general_planner_.InitContext();
   return 0;
 }
 
@@ -84,7 +84,7 @@ void GeneralPlannerModule::compute(planning::framework::Frame* frame) {
 
   frame->mutable_session()
       ->mutable_planning_context()
-      ->mutable_last_planning_result() =
+      ->mutable_last_frame_planning_result() =
       frame->session()->planning_output_context().planning_status().planning_result;
   frame->mutable_session()
       ->mutable_planning_context()

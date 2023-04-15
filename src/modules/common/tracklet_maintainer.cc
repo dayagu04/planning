@@ -97,7 +97,7 @@
 // }
 
 // void TrackletMaintainer::apply_update(
-//     const EgoState &ego_state,
+//     const EgoStateManager &ego_state,
 //     const std::vector<PredictionObject> &predictions,
 //     std::vector<TrackedObject> &tracked_objects, LeadCars &lead_cars,
 //     bool isRedLightStop, bool hdmap_valid) {

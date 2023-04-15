@@ -83,10 +83,25 @@ class PlanningContext {
     return last_planning_result_;
   }
 
+  const common::PlanningResult &last_frame_planning_result() const {
+    return last_frame_planning_result_;
+  }
+  common::PlanningResult &mutable_last_frame_planning_result() {
+    return last_frame_planning_result_;
+  }
+
   const VehicleParam &vehicle_param() const { return vehicle_param_; }
 
   void set_vehicle_param(const VehicleParam &vehicle_param) {
     vehicle_param_ = vehicle_param;
+  }
+
+  const std::shared_ptr<ScenarioStateMachine> &scenario_state_machine() const {
+    return scenario_state_machine_ptr_;
+  }
+  void set_scenario_state_machine(
+      std::shared_ptr<ScenarioStateMachine> scenario_state_machine) {
+    scenario_state_machine_ptr_ = scenario_state_machine;
   }
 
   const StatusInfo &status_info() { return status_info_; }
@@ -121,6 +136,7 @@ class PlanningContext {
   bool last_planning_success_{false};
   bool replan_trajectory_{false};
   PlanningResult planning_result_;
+  common::PlanningResult last_frame_planning_result_;
   std::shared_ptr<PlanningResult> last_planning_result_;
   AdaptiveCruiseControlInfo adaptive_cruise_control_result_;
   StartStopInfo start_stop_result_;

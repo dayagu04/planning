@@ -16,6 +16,7 @@
 #include "modules/context/reference_path_manager.h"
 #include "modules/context/traffic_light_decision_manager.h"
 #include "modules/context/parking_slot_manager.h"
+#include "modules/context/lateral_obstacle.h"
 #include "modules/context/ego_planning_config.h"
 
 #include "../res/include/proto/vehicle_service.pb.h"
@@ -50,14 +51,18 @@ void EnvironmentalModelManager::InitContext() {
   session_->mutable_environmental_model()->set_obstacle_manager(
       obstacle_manager_ptr_);
 
-  traffic_light_decision_manager_ptr_ = std::make_shared<planning::TrafficLightDecisionManager>(
-      config_builder, session_, virtual_lane_manager_);
-  session_->mutable_environmental_model()->set_traffic_light_decision_manager(
-      traffic_light_decision_manager_ptr_);
+//   traffic_light_decision_manager_ptr_ = std::make_shared<planning::TrafficLightDecisionManager>(
+//       config_builder, session_, virtual_lane_manager_ptr_);
+//   session_->mutable_environmental_model()->set_traffic_light_decision_manager(
+//       traffic_light_decision_manager_ptr_);
 
   reference_path_manager_ptr_ = std::make_shared<planning::ReferencePathManager>(session_);
   session_->mutable_environmental_model()->set_reference_path_manager(
       reference_path_manager_ptr_);
+
+//   lateral_obstacle_ptr_ = std::make_shared<LateralObstacle>(session_);
+//   session_->mutable_environmental_model()->set_lateral_obstacle(
+//       lateral_obstacle_ptr_);
 
 }
 
@@ -84,11 +89,13 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   obstacle_manager_ptr_->update();
 
   reference_path_manager_ptr_->update();
-  // HACK (@Haowen) this operation depends on obstacle_manager_->update() and
-  // reference_path_manager_->update()
+
   obstacle_manager_ptr_->assign_obstacles_to_lanes();
 
-  traffic_light_decision_manager_ptr_->update();
+//   traffic_light_decision_manager_ptr_->update();
+
+  // TODO(Rui):lateral_obstacle_ptr_->update() only for real time planner
+//   lateral_obstacle_ptr_->update();
 
   auto end_time = IflyTime::Now_ms();
   LOG_DEBUG("update time:%f", end_time - start_time);

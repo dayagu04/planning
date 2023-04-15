@@ -30,7 +30,7 @@ bool GeneralPlanning::RunOnce(const LocalView& local_view,
   LOG_ERROR("GeneralPlanning::RunOnce \n");
   local_view_ = local_view;
   double start_timestamp = IflyTime::Now_ms();
-  std::shared_ptr<EnvironmentalModel> environmental_model = session_.mutable_environmental_model();
+  EnvironmentalModel *environmental_model = session_.mutable_environmental_model();
 
   auto pre_planning_status =
       session_.mutable_planning_output_context()->mutable_prev_planning_status();
@@ -45,8 +45,8 @@ bool GeneralPlanning::RunOnce(const LocalView& local_view,
 
   VehicleParam vehicle_param;
   // session->mutable_vehicel_config_context()->load_vehicle_param();
-  session->mutable_vehicel_config_context()->set_vehicle_param(*vehicle_param);
-  environmental_model.set_vehicle_param(session->vehicel_config_context()->get_vehicle_param());
+  session_.mutable_vehicel_config_context()->set_vehicle_param(vehicle_param);
+  environmental_model->set_vehicle_param(session_.vehicel_config_context().get_vehicle_param());
 
 
   printf("VERSION: 2023-03-31 \n");
@@ -80,7 +80,7 @@ bool GeneralPlanning::RunOnce(const LocalView& local_view,
   scheduler_.RunOnce();
 
   bool planning_success =
-      session_.ego_planning_context().planning_success();
+      session_.planning_context().planning_success();
 
   planning_status->planning_success = planning_success;
   auto end_timestamp = IflyTime::Now_ms();
@@ -106,25 +106,25 @@ bool GeneralPlanning::RunOnce(const LocalView& local_view,
   return false;
 }
 
-void GeneralPlanning::UpdateRawEnvironmentalModel(double current_time) {
-  LOG_DEBUG("GeneralPlanning::UpdateRawEnvironmentalmodel \n");
+// void GeneralPlanning::UpdateRawEnvironmentalModel(double current_time) {
+//   LOG_DEBUG("GeneralPlanning::UpdateRawEnvironmentalmodel \n");
 
-  // 1.判断车辆是否处于自动状态
-  bool status{true};
-  // 这里采用hack为true
-  LOG_DEBUG("The status is: %i\n", status);
-  // status = true;
-  // LOG_DEBUG("The status is hacked: %i\n", status);
+//   // 1.判断车辆是否处于自动状态
+//   bool status{true};
+//   // 这里采用hack为true
+//   LOG_DEBUG("The status is: %i\n", status);
+//   // status = true;
+//   // LOG_DEBUG("The status is hacked: %i\n", status);
 
-  environmental_model->UpdateVehicleDbwStatus(status);
-  last_feed_time_[FEED_VEHICLE_DBW_STATUS] = current_time;
+//   environmental_model->UpdateVehicleDbwStatus(status);
+//   last_feed_time_[FEED_VEHICLE_DBW_STATUS] = current_time;
 
-  UpdateFusionObjectInfo(current_time);
+//   UpdateFusionObjectInfo(current_time);
 
-  UpdatePredictionInfo(current_time);
+//   UpdatePredictionInfo(current_time);
 
-  UpdateVehicleStatus(current_time);
-}
+//   UpdateVehicleStatus(current_time);
+// }
 
 bool InputReady(double current_time, std::string &error_msg) {
   return true;

@@ -40,7 +40,7 @@ int EnvironmentalModelModule::init(const ::google::protobuf::Message* config,
   std::string config_file_dir =
       session->mutable_environmental_model()->get_module_config_file_dir();
   // planning::planner::ConfigurationContext::Instance()->load_vehicle_param();
-  (void)planning::planner::VehicleModel::LoadVehicleModelConfig(config_file_dir);
+  (void)planning::common::VehicleModel::LoadVehicleModelConfig(config_file_dir);
 
   auto urban_config_builder =
       load_config_builder(session, "general_planner_module_urban.json");
@@ -62,7 +62,7 @@ int EnvironmentalModelModule::init(const ::google::protobuf::Message* config,
 }
 
 int EnvironmentalModelModule::reset(const ::google::protobuf::Message* config) {
-  environmental_model_manager_.init_context();
+  environmental_model_manager_.InitContext();
   return 0;
 }
 

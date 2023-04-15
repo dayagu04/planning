@@ -37,7 +37,7 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
 
   auto start_time = IflyTime::Now_ms();
   common::PlanningStatus *pnc_status =
-      session_->mutable_planning_context()->mutable_planning_status();
+      session_->mutable_planning_output_context()->mutable_planning_status();
   common::PlanningResult &pnc_result = pnc_status->planning_result;
   session_->mutable_planning_context()->clear();
 

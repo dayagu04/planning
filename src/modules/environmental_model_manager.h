@@ -1,5 +1,6 @@
 #pragma once
 
+#include "modules/common/utils/ifly_time.h"
 #include "framework/frame.h"
 #include "framework/session.h"
 #include "modules/context/ego_planning_config.h"
@@ -32,6 +33,7 @@ class EnvironmentalModelManager {
   std::shared_ptr<planning::ReferencePathManager> reference_path_manager_ptr_ =
       nullptr;
   std::shared_ptr<planning::TrafficLightDecisionManager> traffic_light_decision_manager_ptr_ = nullptr;
+  std::shared_ptr<planning::LateralObstacle> lateral_obstacle_ptr_ = nullptr;
 };
 
 }  // namespace planner

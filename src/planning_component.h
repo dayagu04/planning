@@ -23,7 +23,7 @@
 #include "autoplt/include/ADSNode.h"
 #include "autoplt/include/ADSTime.h"
 #include "common/ifly_time.h"
-#include "src/general_planning.h"
+#include "src/modules/general_planning.h"
 
 namespace planning {
 

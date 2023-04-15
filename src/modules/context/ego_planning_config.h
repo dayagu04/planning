@@ -127,6 +127,20 @@ struct EgoPlanningCandidateConfig : public EgoPlanningConfig {
   double reference_point_velocity = 22.22;  // m/s
 };
 
+struct LateralObstacleConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+  }
+};
+
+struct VisionLateralBehaviorPlannerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+  }
+};
+
 struct ObstacleDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

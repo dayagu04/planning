@@ -1,12 +1,12 @@
-// #ifndef MSQUARE_DECISION_PLANNING_PLANNER_TRACKLET_MAINTAINER_H_
-// #define MSQUARE_DECISION_PLANNING_PLANNER_TRACKLET_MAINTAINER_H_
+// #ifndef PLANNING_PLANNER_TRACKLET_MAINTAINER_H_
+// #define PLANNING_PLANNER_TRACKLET_MAINTAINER_H_
 
-// #include "common/ego_state_manager.h"
-// #include "common/map_info_manager.h"
-// #include "common/prediction_object.h"
-// #include "common/refline.h"
-// #include "common/tracked_object.h"
-// #include "common/utils/lateral_utils.h"
+// // #include "common/ego_state_manager.h"
+// // #include "common/map_info_manager.h"
+// #include "src/modules/common/prediction_object.h"
+// // #include "common/refline.h"
+// #include "src/modules/common/tracked_object.h"
+// #include "src/modules/common/utils/lateral_utils.h"
 // #include <map>
 // #include <set>
 
@@ -18,8 +18,8 @@
 //   double target_right_line_filter_count;
 // };
 
-// double calc_poly1d(const std::vector<double> &coefs, double x);
-// double get_dist(double x, double y, const std::vector<double> &y_x);
+// // double calc_poly1d(const std::vector<double> &coefs, double x);
+// // double get_dist(double x, double y, const std::vector<double> &y_x);
 
 // class LifecycleDict {
 // public:
@@ -39,32 +39,32 @@
 //   std::set<int> dirty_set_;
 // };
 
-// class SimpleRefLine {
-// public:
-//   SimpleRefLine();
-//   virtual ~SimpleRefLine() = default;
+// // class SimpleRefLine {
+// // public:
+// //   SimpleRefLine();
+// //   virtual ~SimpleRefLine() = default;
 
-//   void update_pathpoints(const std::vector<PathPoint> &path_points);
+// //   void update_pathpoints(const std::vector<PathPoint> &path_points);
 
-//   void cartesian_frenet(double x, double y, double &s, double &l, double &v_s,
-//                         double &v_l, double &theta, bool get_theta = false,
-//                         double *v = nullptr, double *yaw = nullptr);
+// //   void cartesian_frenet(double x, double y, double &s, double &l, double &v_s,
+// //                         double &v_l, double &theta, bool get_theta = false,
+// //                         double *v = nullptr, double *yaw = nullptr);
 
-//   void frenet_cartesian(double s, double l, double &x, double &y);
+// //   void frenet_cartesian(double s, double l, double &x, double &y);
 
-//   bool has_update() const { return update_; }
+// //   bool has_update() const { return update_; }
 
-// private:
-//   std::vector<PathPoint> path_points_;
-//   bool update_;
-// };
+// // private:
+// //   std::vector<PathPoint> path_points_;
+// //   bool update_;
+// // };
 
 // class TrackletMaintainer {
 // public:
 //   TrackletMaintainer();
 //   virtual ~TrackletMaintainer();
 
-//   void apply_update(const EgoState &ego_state,
+//   void apply_update(const EgoStateManager &ego_state,
 //                     const std::vector<PredictionObject> &predictions,
 //                     std::vector<TrackedObject> &tracked_objects,
 //                     LeadCars &lead_cars, bool isRedLightStop, bool hdmap_valid);
@@ -139,7 +139,7 @@
 //   LifecycleDict seq_state_;
 //   SimpleRefLine simple_refline_;
 //   std::map<int, TrackedObject *> object_map_;
-//   EgoState ego_state_;
+//   EgoStateManager ego_state_;
 //   bool hdmap_valid_{true};
 
 //   double s0_;
