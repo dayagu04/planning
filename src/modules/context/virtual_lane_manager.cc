@@ -160,7 +160,7 @@ void VirtualLaneManager::reset() {
   last_right_diff_ = 0;
 }
 
-const std::vector<std::shared_ptr<Obstacle>> VirtualLaneManager::get_current_lane_obstacle() const {
+std::vector<std::shared_ptr<Obstacle>> VirtualLaneManager::get_current_lane_obstacle(){
   std::vector<std::shared_ptr<Obstacle>> tr;
   if(current_lane_ == nullptr) {
     return tr;
@@ -171,7 +171,7 @@ const std::vector<std::shared_ptr<Obstacle>> VirtualLaneManager::get_current_lan
   return tr;
 }
 
-const std::vector<std::shared_ptr<Obstacle>> VirtualLaneManager::get_left_lane_obstacle() const {
+std::vector<std::shared_ptr<Obstacle>> VirtualLaneManager::get_left_lane_obstacle(){
   std::vector<std::shared_ptr<Obstacle>> tr;
   if(left_lane_ == nullptr) {
     return tr;
@@ -182,7 +182,7 @@ const std::vector<std::shared_ptr<Obstacle>> VirtualLaneManager::get_left_lane_o
   return tr;
 }
 
-const std::vector<std::shared_ptr<Obstacle>> VirtualLaneManager::get_right_lane_obstacle() const {
+std::vector<std::shared_ptr<Obstacle>> VirtualLaneManager::get_right_lane_obstacle(){
   std::vector<std::shared_ptr<Obstacle>> tr;
   if(right_lane_ == nullptr) {
     return tr;

@@ -30,7 +30,7 @@ class FrenetObstacle {
   double rel_s() const { return rel_s_; }
   Point2D s_min_l() const { return s_with_min_l_; }
   Point2D s_max_l() const { return s_with_max_l_; }
-  double l_relative_to_ego() { return l_relative_to_ego_; }
+  double l_relative_to_ego() const { return l_relative_to_ego_; }
 
   const Obstacle* obstacle() const { return obstacle_ptr_; }
   double velocity() const { return obstacle_ptr_->velocity(); }

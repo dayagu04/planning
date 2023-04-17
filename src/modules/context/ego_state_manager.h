@@ -56,7 +56,7 @@ class EgoStateManager {
   Pose2D ego_pose() const { return ego_pose_; };
   Pose2D ego_pose_raw() const { return ego_pose_raw_; };
   Point2D ego_carte() const { return ego_carte_; };
-  double heading_angle() { return ego_pose_.theta; }
+  double heading_angle() const { return ego_pose_.theta; }
   double ego_v() const {return ego_v_; };
   double ego_v_angle() const { return ego_v_angle_; };
   double ego_v_cruise() const { return ego_v_cruise_; };
@@ -71,7 +71,7 @@ class EgoStateManager {
   bool throttle_override() const { return throttle_override_; };
   const planning_math::Polygon2d polygon() const { return polygon_; }
 
-  const PlanningInitPoint& planning_init_point() { return planning_init_point_; };
+  const PlanningInitPoint& planning_init_point() const { return planning_init_point_; };
   PlanningInitPoint& mutable_planning_init_point() { return planning_init_point_; };
   bool planning_init_point_valid() const { return planning_init_point_valid_; };
 

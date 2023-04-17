@@ -33,9 +33,9 @@ class VirtualLaneManager : public VirtualLane{
   std::vector<std::shared_ptr<VirtualLane>>& get_virtual_lanes() { return relative_id_lanes_; }
   // const std::shared_ptr<VirtualLane> get_lane_with_order_id(uint order_id);
   uint get_lane_num() const { return relative_id_lanes_.size(); };
-  const std::vector<std::shared_ptr<Obstacle>> get_current_lane_obstacle() const;
-  const std::vector<std::shared_ptr<Obstacle>> get_left_lane_obstacle() const;
-  const std::vector<std::shared_ptr<Obstacle>> get_right_lane_obstacle() const;
+  std::vector<std::shared_ptr<Obstacle>> get_current_lane_obstacle();
+  std::vector<std::shared_ptr<Obstacle>> get_left_lane_obstacle();
+  std::vector<std::shared_ptr<Obstacle>> get_right_lane_obstacle();
   bool has_lane(int virtual_lane_id);
   //Intersection intersection_;
   //Ramp ramp_;
@@ -43,7 +43,7 @@ class VirtualLaneManager : public VirtualLane{
 
   //void update_current_lane();
   void update_last_fix_lane_id(int flane_virtual_id) { last_fix_lane_virtual_id_ = flane_virtual_id;  }
-  bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads);
+  bool update(const FusionRoad::RoadInfo& roads);
   void reset();
 
  private:
