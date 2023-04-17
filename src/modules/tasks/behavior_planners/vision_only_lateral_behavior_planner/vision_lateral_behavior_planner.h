@@ -10,6 +10,7 @@
 
 #include "src/modules/tasks/task.h"
 #include "src/modules/tasks/task_basic_types.h"
+#include "src/modules/context/lateral_obstacle.h" // TODO(Rui):include object_selector.h
 
 namespace planning {
 

@@ -22,6 +22,40 @@ using ScenarioFsm = M::PeerRoot<
                      RoadState::LB::RReturn, RoadState::LB::LSuspend,
                      RoadState::LB::RSuspend>>>;
 
+typedef struct {
+  std::pair<int, int> gap;
+  bool gap_valid{false};
+  bool gap_approached{false};
+  bool gap_insertable{false};
+  bool side_approach{false};
+  bool should_suspend{false};
+
+  // lc valid related
+  bool lc_pause{false};
+  int lc_pause_id{-1000};
+  bool should_premove{false};
+  std::string lc_invalid_reason{"none"};
+
+  // lc back related
+  double tr_pause_dv{0.0};
+  double tr_pause_l{0.0};
+  double tr_pause_s{-100.0};
+  bool accident_back{false};
+
+  // clear lc related
+  bool need_clear_lb_car{false};
+
+  // not related but needed
+  bool accident_ahead{false};
+  bool close_to_accident{false};
+
+  // back to state machine only for debug
+  bool lc_should_back{false};
+  bool lc_valid{false};
+  std::string lc_back_reason{"none"};
+
+} LaneChangeStageInfo;
+
 class ScenarioStateMachine
     : public std::enable_shared_from_this<ScenarioStateMachine> {
  public:
@@ -42,6 +76,10 @@ class ScenarioStateMachine
 
   bool gap_available(RequestType direction, std::vector<int>& overlap_obstacles,
                      std::vector<int>& yield_obstacles);
+  LaneChangeStageInfo compute_lc_valid_info(RequestType direction);
+  LaneChangeStageInfo decide_lc_valid_info(RequestType direction);
+  LaneChangeStageInfo compute_lc_back_info(RequestType direction);
+  LaneChangeStageInfo decide_lc_back_info(RequestType direction);
   bool check_lc_change_finish(RequestType direction);
   bool check_lc_back_finish(RequestType direction);
   void set_entry_time(double t) { state_entry_time_ = t; }
@@ -91,6 +129,47 @@ class ScenarioStateMachine
   RequestType map_turn_signal_ = NO_CHANGE;
   RequestType merge_split_turn_signal_ = NO_CHANGE;
   RequestType turn_signal_ = NO_CHANGE;
+  int lc_back_cnt_ = 0;
+  int lb_back_cnt_ = 0;
+  int lc_valid_cnt_ = 0;
+
+  bool lc_valid_ = true;
+  bool lc_valid_back_ = true;
+  bool lc_should_back_ = false;
+  bool must_change_lane_ = false;
+  bool behavior_suspend_ = false;        // lateral suspend
+  std::vector<int> suspend_obs_; // lateral suspend obstacles
+
+
+  bool lc_pause_ = false;
+  int lc_pause_id_ = -1000;
+  double tr_pause_l_ = 0.0;
+  double tr_pause_s_ = -100.0;
+  double tr_pause_dv_ = 0.0;
+
+  std::string lc_back_reason_ = "none";
+  std::string lc_invalid_reason_ = "none";
+  std::string invalid_back_reason_ = "none";
+
+  std::vector<TrackInfo> near_cars_target_;
+  std::vector<TrackInfo> near_cars_origin_;
+
+  TrackInfo lc_invalid_track_;
+  TrackInfo lc_back_track_;
+
+  bool side_approaching_ = false;
+  bool get_dist_lane_ = false;
+
+  bool should_premove_ = false;
+  bool should_suspend_ = false;
+
+  bool accident_ahead_ = false;
+  bool close_to_accident_ = false;
+  bool accident_back_ = false;
+  bool not_accident_ = true;
+
+  double start_move_dist_lane_ = 0.;
+
 };
 
 struct GapInfo {

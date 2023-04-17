@@ -195,6 +195,9 @@ class LaneChangeRequestManager {
     return false;
   }
 
+  double get_req_tstart(int source) const;
+  double get_req_tfinish(int source) const;
+
  private:
   RequestType request_ = NO_CHANGE;
   RequestSource request_source_ = NO_REQUEST;
