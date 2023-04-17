@@ -6,6 +6,7 @@
 #include "modules/common/speed/speed_limit.h"
 // #include "modules/context/ego_planning_config.h"
 #include "modules/common/define/planning_status.h"
+#include "src/modules/common/define/lateral_behavior_planner_output.h"
 
 namespace planning {
 
@@ -87,6 +88,15 @@ class PlanningContext {
   LatBehaviorStateMachineOutput &mutable_lat_behavior_state_machine_output() {
     return lat_behavior_state_machine_output_;
   }
+
+  const LateralBehaviorPlannerOutput &lateral_behavior_planner_output() const {
+    return lateral_behavior_planner_output_;
+  }
+
+  LateralBehaviorPlannerOutput &mutable_lateral_behavior_planner_output() {
+    return lateral_behavior_planner_output_;
+  }
+
   void set_last_planning_result(
       const std::shared_ptr<PlanningResult> planning_result) {
     last_planning_result_ = planning_result;
@@ -161,6 +171,7 @@ class PlanningContext {
   SpeedLimit speed_limit_;
   LatBehaviorInfo lat_behavior_info_;
   LatBehaviorStateMachineOutput lat_behavior_state_machine_output_;
+  LateralBehaviorPlannerOutput lateral_behavior_planner_output_;
   std::shared_ptr<ScenarioManager> scenario_manager_ptr_;
   std::shared_ptr<ScenarioStateMachine> scenario_state_machine_ptr_;
 };

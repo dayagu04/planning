@@ -52,6 +52,7 @@ class ScenarioStateMachine
   RequestType merge_split_turn_signal() const {
     return merge_split_turn_signal_;
   }
+  void generate_state_machine_output() {}
 
  private:
   void update_scenario();

@@ -1,167 +1,164 @@
-// #include "common/lateral_obstacle.h"
-// #include "planning/common/common.h"
+#include "src/modules/context/lateral_obstacle.h"
+#include "src/modules/common/common.h"
+#include "modules/common/utils/ifly_time.h"
 
-// namespace planning {
+namespace planning {
 
-// LateralObstacle::LateralObstacle(
-//     const EgoPlanningConfigBuilder *config_builder,
-//     planning::framework::Session *session)
-//     : session_(session) {
-//   config_ = config_builder->cast<EgoPlanningObstacleManagerConfig>();
-// }
+LateralObstacle::LateralObstacle(
+    const EgoPlanningConfigBuilder *config_builder,
+    planning::framework::Session *session)
+    : session_(session) {
+  // TODO: add config
+  config_ = config_builder->cast<LateralObstacleConfig>();
+  maintainer_ = std::make_shared<planning::TrackletMaintainer>(session_);
+  double curr_time = IflyTime::Now_ms();
+  warning_timer_[0] = curr_time;
+  warning_timer_[1] = curr_time - 1;
+  warning_timer_[2] = curr_time - 2;
+  warning_timer_[3] = curr_time - 3;
+  warning_timer_[4] = curr_time;
 
-// LateralObstacle::LateralObstacle() {
-//   double curr_time = get_system_time();
-//   warning_timer_[0] = curr_time;
-//   warning_timer_[1] = curr_time - 1;
-//   warning_timer_[2] = curr_time - 2;
-//   warning_timer_[3] = curr_time - 3;
-//   warning_timer_[4] = curr_time;
+  lead_cars_.lead_one = nullptr;
+  lead_cars_.lead_two = nullptr;
+  lead_cars_.temp_lead_one = nullptr;
+  lead_cars_.temp_lead_two = nullptr;
+}
 
-//   lead_cars_.lead_one = nullptr;
-//   lead_cars_.lead_two = nullptr;
-//   lead_cars_.temp_lead_one = nullptr;
-//   lead_cars_.temp_lead_two = nullptr;
-// }
+LateralObstacle::~LateralObstacle() {
+  lead_cars_.clear();
+}
 
-// LateralObstacle::~LateralObstacle() {
-//   lead_cars_.clear();
-// }
+bool LateralObstacle::update() {
+  update_sensors(session_->environmental_model().ego_state_manager(), 
+                 session_->environmental_model().get_prediction_info(), 
+                 false,
+                 false);  //TODO session_->environmental_model().get_hdmap_valid()
+  return true;
+}
 
-// bool LateralObstacle::update(const EgoState& ego_state,
-//                              const std::vector<PredictionObject> &predictions,
-//                              bool isRedLightStop, bool hdmap_valid) {
-//   update_sensors(ego_state, predictions, isRedLightStop, hdmap_valid);
-//   return true;
-// }
+bool LateralObstacle::update_sensors(const std::shared_ptr<EgoStateManager>& ego_state,
+    const std::vector<PredictionObject> &predictions, bool isRedLightStop, bool hdmap_valid) {
 
-// bool LateralObstacle::update_sensors(const EgoState& ego_state,
-//     const std::vector<PredictionObject> &predictions, bool isRedLightStop, bool hdmap_valid) {
+  double fusion_timeout = 0.5;
+  double curr_time = IflyTime::Now_ms();
+  std::vector<TrackedObject> tracked_objects;
 
-//   double fusion_timeout = 0.5;
-//   double curr_time = get_boot_time();
-//   std::vector<TrackedObject> tracked_objects;
+  if (prediction_update_ || !hdmap_valid) {
+    maintainer_->apply_update(*ego_state, predictions, tracked_objects, lead_cars_,
+                             isRedLightStop, hdmap_valid);
+    update_tracks(tracked_objects);
 
-//   if (prediction_update_ || !hdmap_valid) {
-//     maintainer_.apply_update(ego_state, predictions, tracked_objects, lead_cars_,
-//                              isRedLightStop, hdmap_valid);
-//     update_tracks(tracked_objects);
+    prediction_update_ = false;
+    fvf_time_ = curr_time;
+    svf_time_ = curr_time;
 
-//     prediction_update_ = false;
-//     fvf_time_ = curr_time;
-//     svf_time_ = curr_time;
+    fvf_dead_ = false;
+    svf_dead_ = false;
+  } else if (curr_time - fvf_time_ > fusion_timeout) {
+    front_tracks_.clear();
+    front_tracks_copy_.clear();
+    side_tracks_.clear();
+    side_tracks_l_.clear();
+    side_tracks_r_.clear();
 
-//     fvf_dead_ = false;
-//     svf_dead_ = false;
-//   } else if (curr_time - fvf_time_ > fusion_timeout) {
-//     front_tracks_.clear();
-//     front_tracks_copy_.clear();
-//     side_tracks_.clear();
-//     side_tracks_l_.clear();
-//     side_tracks_r_.clear();
+    lead_cars_.clear();
+    fvf_dead_ = true;
+    svf_dead_ = true;
 
-//     lead_cars_.clear();
-//     fvf_dead_ = true;
-//     svf_dead_ = true;
+    LOG_ERROR("[LateralObstacle::update_sensors] Fusion lagging too large");
 
-//     MSD_LOG(ERROR,
-//             "[LateralObstacle::update_sensors] Fusion lagging too large");
+    double abs_time = IflyTime::Now_ms();
+    if (abs_time - warning_timer_[2] > 5.0) {
+      LOG_ERROR("[LateralObstacle::update_sensors] frontview fusion unavailable");
+      warning_timer_[2] = abs_time;
+    }
 
-//     double abs_time = get_system_time();
-//     if (abs_time - warning_timer_[2] > 5.0) {
-//       MSD_LOG(ERROR,
-//               "[LateralObstacle::update_sensors] frontview fusion unavailable");
-//       warning_timer_[2] = abs_time;
-//     }
+    if (abs_time - warning_timer_[1] > 5.0) {
+      LOG_ERROR("[LateralObstacle::update_sensors] sideview fusion unavailable");
+      warning_timer_[1] = abs_time;
+    }
+  }
 
-//     if (abs_time - warning_timer_[1] > 5.0) {
-//       MSD_LOG(ERROR,
-//               "[LateralObstacle::update_sensors] sideview fusion unavailable");
-//       warning_timer_[1] = abs_time;
-//     }
-//   }
+  return true;
+}
 
-//   return true;
-// }
+void LateralObstacle::update_tracks(
+    const std::vector<TrackedObject> &tracked_objects) {
 
-// void LateralObstacle::update_tracks(
-//     const std::vector<TrackedObject> &tracked_objects) {
+  front_tracks_.clear();
+  front_tracks_copy_.clear();
+  front_tracks_l_.clear();
+  front_tracks_r_.clear();
+  side_tracks_.clear();
+  side_tracks_l_.clear();
+  side_tracks_r_.clear();
 
-//   front_tracks_.clear();
-//   front_tracks_copy_.clear();
-//   front_tracks_l_.clear();
-//   front_tracks_r_.clear();
-//   side_tracks_.clear();
-//   side_tracks_l_.clear();
-//   side_tracks_r_.clear();
+  for (auto &tr : tracked_objects) {
+    if (tr.d_rel >= 0.0) {
+      auto it = front_tracks_.begin();
+      while (it != front_tracks_.end() && it->d_rel < tr.d_rel) {
+        ++it;
+      }
 
-//   for (auto &tr : tracked_objects) {
-//     if (tr.d_rel >= 0.0) {
-//       auto it = front_tracks_.begin();
-//       while (it != front_tracks_.end() && it->d_rel < tr.d_rel) {
-//         ++it;
-//       }
+      if (it != front_tracks_.end()) {
+        front_tracks_.insert(it, tr);
+      } else {
+        front_tracks_.push_back(tr);
+      }
+    } else {
+      auto it = side_tracks_.begin();
+      while (it != side_tracks_.end() && it->d_rel > tr.d_rel) {
+        ++it;
+      }
 
-//       if (it != front_tracks_.end()) {
-//         front_tracks_.insert(it, tr);
-//       } else {
-//         front_tracks_.push_back(tr);
-//       }
-//     } else {
-//       auto it = side_tracks_.begin();
-//       while (it != side_tracks_.end() && it->d_rel > tr.d_rel) {
-//         ++it;
-//       }
+      if (it != side_tracks_.end()) {
+        side_tracks_.insert(it, tr);
+      } else {
+        side_tracks_.push_back(tr);
+      }
+    }
+  }
 
-//       if (it != side_tracks_.end()) {
-//         side_tracks_.insert(it, tr);
-//       } else {
-//         side_tracks_.push_back(tr);
-//       }
-//     }
-//   }
+  front_tracks_copy_ = front_tracks_;
 
-//   front_tracks_copy_ = front_tracks_;
+  for (auto &tr : front_tracks_) {
+    if (tr.y_center_rel >= 0) {
+      front_tracks_l_.push_back(tr);
+    } else {
+      front_tracks_r_.push_back(tr);
+    }
+  }
 
-//   for (auto &tr : front_tracks_) {
-//     if (tr.y_center_rel >= 0) {
-//       front_tracks_l_.push_back(tr);
-//     } else {
-//       front_tracks_r_.push_back(tr);
-//     }
-//   }
+  for (auto &tr : side_tracks_) {
+    if (tr.y_center_rel >= 0) {
+      side_tracks_l_.push_back(tr);
+    } else {
+      side_tracks_r_.push_back(tr);
+    }
+  }
+}
 
-//   for (auto &tr : side_tracks_) {
-//     if (tr.y_center_rel >= 0) {
-//       side_tracks_l_.push_back(tr);
-//     } else {
-//       side_tracks_r_.push_back(tr);
-//     }
-//   }
-// }
+bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
+  for (auto &tr : front_tracks_) {
+    if (tr.track_id == track_id) {
+      dest = tr;
+      return true;
+    }
+  }
 
-// bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
-//   for (auto &tr : front_tracks_) {
-//     if (tr.track_id == track_id) {
-//       dest = tr;
-//       return true;
-//     }
-//   }
+  for (auto &tr : side_tracks_) {
+    if (tr.track_id == track_id) {
+      dest = tr;
+      return true;
+    }
+  }
 
-//   for (auto &tr : side_tracks_) {
-//     if (tr.track_id == track_id) {
-//       dest = tr;
-//       return true;
-//     }
-//   }
+  return false;
+}
 
-//   return false;
-// }
-
-// LaneTracksManager::LaneTracksManager(MapInfoManager &map_info_mgr,
-//                                      LateralObstacle &lateral_obstacle,
+// LaneTracksManager::LaneTracksManager(LateralObstacle &lateral_obstacle,
 //                                      VirtualLaneManager &virtual_lane_mgr)
-//     : map_info_mgr_(map_info_mgr), lateral_obstacle_(lateral_obstacle),
+//     : lateral_obstacle_(lateral_obstacle),
 //       virtual_lane_mgr_(virtual_lane_mgr) {}
 
 // double LaneTracksManager::get_drel_close(int side) {
@@ -810,4 +807,4 @@
 //   return false;
 // }
 
-// } // namespace planning
+} // namespace planning

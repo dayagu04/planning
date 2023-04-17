@@ -58,9 +58,9 @@ void EnvironmentalModelManager::InitContext() {
   session_->mutable_environmental_model()->set_reference_path_manager(
       reference_path_manager_ptr_);
 
-//   lateral_obstacle_ptr_ = std::make_shared<LateralObstacle>(session_);
-//   session_->mutable_environmental_model()->set_lateral_obstacle(
-//       lateral_obstacle_ptr_);
+  lateral_obstacle_ptr_ = std::make_shared<planning::LateralObstacle>(config_builder, session_);
+  session_->mutable_environmental_model()->set_lateral_obstacle(
+      lateral_obstacle_ptr_);
 
 }
 
@@ -93,7 +93,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
 //   traffic_light_decision_manager_ptr_->update();
 
   // TODO(Rui):lateral_obstacle_ptr_->update() only for real time planner
-//   lateral_obstacle_ptr_->update();
+  lateral_obstacle_ptr_->update();
 
   auto end_time = IflyTime::Now_ms();
   LOG_DEBUG("update time:%f", end_time - start_time);

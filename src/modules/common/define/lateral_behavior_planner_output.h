@@ -3,6 +3,7 @@
 
 #include "geometry.h"
 #include "path_point.h"
+#include "src/modules/common/config/basic_type.h"
 #include <array>
 #include <map>
 #include <set>
@@ -22,41 +23,41 @@ struct AvdMsg {
   float blocked_time_end;
 };
 
-struct TrackInfo {
-  TrackInfo() {}
+// struct TrackInfo {
+//   TrackInfo() {}
 
-  TrackInfo(int id, double drel, double vrel)
-      : track_id(id), d_rel(drel), v_rel(vrel) {}
+//   TrackInfo(int id, double drel, double vrel)
+//       : track_id(id), d_rel(drel), v_rel(vrel) {}
 
-  TrackInfo(const TrackInfo &track_info) {
-    track_id = track_info.track_id;
-    d_rel = track_info.d_rel;
-    v_rel = track_info.v_rel;
-  }
+//   TrackInfo(const TrackInfo &track_info) {
+//     track_id = track_info.track_id;
+//     d_rel = track_info.d_rel;
+//     v_rel = track_info.v_rel;
+//   }
 
-  TrackInfo &operator=(const TrackInfo &track_info) {
-    track_id = track_info.track_id;
-    d_rel = track_info.d_rel;
-    v_rel = track_info.v_rel;
-    return *this;
-  }
+//   TrackInfo &operator=(const TrackInfo &track_info) {
+//     track_id = track_info.track_id;
+//     d_rel = track_info.d_rel;
+//     v_rel = track_info.v_rel;
+//     return *this;
+//   }
 
-  void set_value(int id, double drel, double vrel) {
-    track_id = id;
-    d_rel = drel;
-    v_rel = vrel;
-  }
+//   void set_value(int id, double drel, double vrel) {
+//     track_id = id;
+//     d_rel = drel;
+//     v_rel = vrel;
+//   }
 
-  void reset() {
-    track_id = -10000;
-    d_rel = 0.0;
-    v_rel = 0.0;
-  }
+//   void reset() {
+//     track_id = -10000;
+//     d_rel = 0.0;
+//     v_rel = 0.0;
+//   }
 
-  int track_id = -10000;
-  double d_rel = 0.0;
-  double v_rel = 0.0;
-};
+//   int track_id = -10000;
+//   double d_rel = 0.0;
+//   double v_rel = 0.0;
+// };
 
 struct CarCount {
   int pos;

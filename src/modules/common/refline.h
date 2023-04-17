@@ -1,18 +1,18 @@
-// #pragma once
+#pragma once
 
-// #include <float.h>
-// #include <limits.h>
-// #include <map>
-// #include <memory>
+#include <float.h>
+#include <limits.h>
+#include <map>
+#include <memory>
 
-// #include "modules/common/utils/spline.h"
+#include "src/modules/common/utils/spline.h"
 // #include "worldmodel/lane.h"
-// #include "define/geometry.h"
-// #include "path_point.h"
-// #include "define/lateral_behavior_planner_output.h"
-// #include "utils/pose2d_utils.h"
+#include "src/modules/common/define/geometry.h"
+#include "src/modules/common/define/path_point.h"
+#include "src/modules/common/define/lateral_behavior_planner_output.h"
+#include "src/modules/common/utils/pose2d_utils.h"
 
-// namespace planning {
+namespace planning {
 
 // typedef enum {
 //   UNKNOWN_REFLINE = -100,
@@ -23,7 +23,7 @@
 //   RIGHT_RIGHT_REFLINE = 2
 // } RefLinePosition;
 
-// typedef enum { LOCATION_NONE, LOCATION_ROAD, LOCATION_INTER } LocationEnum;
+typedef enum { LOCATION_NONE, LOCATION_ROAD, LOCATION_INTER } LocationEnum;
 
 // struct PPath {
 //   double u_min;
@@ -132,44 +132,52 @@
 //   bool in_intersection = false;
 // };
 
-// const double kInvalidDist = NL_NMAX;
+const double kInvalidDist = NL_NMAX;
 
-// bool equal_zero(double a);
+bool equal_zero(double a);
 
-// void calc_cartesian_frenet(const std::vector<PathPoint> &path_points, double x,
-//                            double y, double &s, double &l, double &v_s,
-//                            double &v_l, double &theta, bool get_theta,
-//                            double *v = nullptr, double *yaw = nullptr);
+void calc_cartesian_frenet(const std::vector<PathPoint> &path_points, double x,
+                           double y, double &s, double &l, double &v_s,
+                           double &v_l, double &theta, bool get_theta,
+                           double *v = nullptr, double *yaw = nullptr);
 
-// void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s,
-//                            double l, double &x, double &y);
+void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s,
+                           double l, double &x, double &y);
 
-// template <size_t SIZE>
-// double interp(double x, const std::array<double, SIZE> &xp,
-//               const std::array<double, SIZE> &fp) {
-//   int n = xp.size();
-
-//   int hi = 0;
-//   while (hi < n && x > xp[hi]) {
-//     hi++;
-//   }
-
-//   int low = hi - 1;
-//   if (hi == n && x > xp[low]) {
-//     return fp.back();
-//   } else {
-//     if (hi == 0) {
-//       return fp[0];
-//     } else{
-//       if (equal_zero(xp[hi] - xp[low])) {
-//         return 0;
-//       } else {
-//         return (x - xp[low]) * (fp[hi] - fp[low]) / (xp[hi] - xp[low]) +
-//                fp[low];
-//       }
-//     }
+// void discrete(double start, double end, double gap,
+//               std::vector<double> &output) {
+//   output.clear();
+//   for (double value = start; value < end; value += gap) {
+//     output.push_back(value);
 //   }
 // }
+
+template <size_t SIZE>
+double interp(double x, const std::array<double, SIZE> &xp,
+              const std::array<double, SIZE> &fp) {
+  int n = xp.size();
+
+  int hi = 0;
+  while (hi < n && x > xp[hi]) {
+    hi++;
+  }
+
+  int low = hi - 1;
+  if (hi == n && x > xp[low]) {
+    return fp.back();
+  } else {
+    if (hi == 0) {
+      return fp[0];
+    } else{
+      if (equal_zero(xp[hi] - xp[low])) {
+        return 0;
+      } else {
+        return (x - xp[low]) * (fp[hi] - fp[low]) / (xp[hi] - xp[low]) +
+               fp[low];
+      }
+    }
+  }
+}
 
 // class RawRefLine {
 // public:
@@ -217,35 +225,35 @@
 
 //   void update_pathpoints();
 
-//   void set_ppath(const std::vector<double> &u_points,
-//                  const planning::planning_math::spline &x_spline,
-//                  const planning::planning_math::spline &y_spline);
+//   // void set_ppath(const std::vector<double> &u_points,
+//   //                const planning::planning_math::spline &x_spline,
+//   //                const planning::planning_math::spline &y_spline);
 
-//   void set_master(const RawRefLine *master) {
-//     master_ = master;
-//     if (master != nullptr) {
-//       position_ = master->position();
-//     }
-//   }
+//   // void set_master(const RawRefLine *master) {
+//   //   master_ = master;
+//   //   if (master != nullptr) {
+//   //     position_ = master->position();
+//   //   }
+//   // }
 
 //   void cartesian_frenet(double x, double y, double &s, double &l, double &theta,
 //                         bool get_theta = false);
 
 //   void frenet_cartesian(double s, double l, double &x, double &y);
 
-//   int position() const { return position_; }
+//   // int position() const { return position_; }
 
 //   const std::vector<PathPoint> &path_points() const { return path_points_; }
 
-//   void save_context(FixRefLineContext &context) const;
-//   void restore_context(const FixRefLineContext &context);
+//   // void save_context(FixRefLineContext &context) const;
+//   // void restore_context(const FixRefLineContext &context);
 
 // private:
 //   std::vector<PathPoint> path_points_;
-//   const RawRefLine *master_;
-//   std::unique_ptr<PPath> ppath_;
-//   int position_;
+//   // const RawRefLine *master_;
+//   // std::unique_ptr<PPath> ppath_;
+//   // int position_;
 // };
 
-// } // namespace planning
+} // namespace planning
 

@@ -24,7 +24,7 @@ class VisionLateralBehaviorPlanner : public Task {
   bool Execute(planning::framework::Frame *frame) override;
 
  private:
-  
+  bool update_lateral_behavior_planner_output() {}
 
  private:
   VisionLateralBehaviorPlannerConfig config_;
