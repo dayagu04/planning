@@ -1,5 +1,5 @@
 #include "src/modules/context/virtual_lane.h"
-
+#include "modules/common/math/linear_interpolation.h"
 namespace planning {
 
 void VirtualLane::update_data(const FusionRoad::Lane& lane) {
@@ -140,6 +140,31 @@ uint VirtualLane::get_common_point_num(const std::shared_ptr<VirtualLane> &other
   return common_point_num;
 }
 
+double VirtualLane::width() {
+  return width(0);
+}
+
+double VirtualLane::width(double s) {
+  double width = 0;
+  if (reference_path_ != nullptr) {
+    auto &reference_path_points = reference_path_->get_points();
+    if (reference_path_points.size() < 1) {
+    } else {
+      auto comp = [](const ReferencePathPoint& p, const double s) { return p.frenet_point.x < s; };
+      auto p_first_point = std::lower_bound(reference_path_points.begin(), reference_path_points.end(), s, comp);
+      if (p_first_point == reference_path_points.begin()) {
+        width = reference_path_points.begin()->lane_width;
+      } else if (p_first_point == reference_path_points.end()) {
+        width = reference_path_points.end()->lane_width;
+      } else  {
+        width = planning_math::lerp((p_first_point - 1)->lane_width, (p_first_point - 1)->frenet_point.x,
+              p_first_point->lane_width, p_first_point->frenet_point.x, s);
+      }
+    }
+  }
+  return std::max(width, 2.8);
+}
+
 bool VirtualLane::get_point_by_distance(double distance, FusionRoad::VirtualLanePoint *point) {
   double min_distance_diff = std::numeric_limits<double>::max();
   for (auto virtual_lane_refine_point : lane_reference_line_.virtual_lane_refline_points()) {
@@ -154,6 +179,44 @@ bool VirtualLane::get_point_by_distance(double distance, FusionRoad::VirtualLane
     return true;
   } else {
     return false;
+  }
+}
+
+double VirtualLane::max_width() {
+  switch (lane_type_) {
+    case FusionRoad::LaneType::LANE_TYPE_UNKNOWN:;
+    case FusionRoad::LaneType::LANE_TYPE_NORMAL:;
+    case FusionRoad::LaneType::LANE_TYPE_VIRTUAL:;
+    case FusionRoad::LaneType::LANE_TYPE_PARKING:;
+    case FusionRoad::LaneType::LANE_TYPE_ACCELERATE:;
+    case FusionRoad::LaneType::LANE_TYPE_DECELERATE:;
+    case FusionRoad::LaneType::LANE_TYPE_BUS:;
+    case FusionRoad::LaneType::LANE_TYPE_EMERGENCY:;
+    case FusionRoad::LaneType::LANE_TYPE_ACCELERATE_DECELERATE:;
+    case FusionRoad::LaneType::LANE_TYPE_LEFT_TURN_WAITTING_AREA:;
+    case FusionRoad::LaneType::LANE_TYPE_NON_MOTOR:;
+    case FusionRoad::LaneType::LANE_TYPE_RAMP: return 4.2;
+    default:
+      return DBL_MAX;
+  }
+}
+
+double VirtualLane::min_width() {
+  switch (lane_type_) {
+    case FusionRoad::LaneType::LANE_TYPE_UNKNOWN:;
+    case FusionRoad::LaneType::LANE_TYPE_NORMAL:;
+    case FusionRoad::LaneType::LANE_TYPE_VIRTUAL:;
+    case FusionRoad::LaneType::LANE_TYPE_PARKING:;
+    case FusionRoad::LaneType::LANE_TYPE_ACCELERATE:;
+    case FusionRoad::LaneType::LANE_TYPE_DECELERATE:;
+    case FusionRoad::LaneType::LANE_TYPE_BUS:;
+    case FusionRoad::LaneType::LANE_TYPE_EMERGENCY:;
+    case FusionRoad::LaneType::LANE_TYPE_ACCELERATE_DECELERATE:;
+    case FusionRoad::LaneType::LANE_TYPE_LEFT_TURN_WAITTING_AREA:;
+    case FusionRoad::LaneType::LANE_TYPE_NON_MOTOR:;
+    case FusionRoad::LaneType::LANE_TYPE_RAMP: return 2.8;
+    default:
+      return DBL_MAX;
   }
 }
 }

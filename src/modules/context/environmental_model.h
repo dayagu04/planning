@@ -162,6 +162,7 @@ class EnvironmentalModel {
     highway_config_builder_ptr_ = highway_config_builder_ptr;
   }
 
+  bool is_on_highway() { return true; } //hack
 private:
   // planning::framework::Session *session_ = nullptr;
   // planning::framework::Frame *frame_ = nullptr;
