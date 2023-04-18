@@ -21,6 +21,17 @@ class EnvironmentalModelManager {
 //   void ClearPlanningResult(common::PlanningResult &pnc_result);
 
  private:
+  bool ego_state_update(const LocalView& local_view);
+  void vehicle_status_adaptor(const VehicleService::VehicleServiceOutputInfo &vehicel_service_output_info,
+                              const LocalizationOutput::LocalizationEstimate &localization_estimate,
+                              common::VehicleStatus &vehicle_status);
+  void truncate_prediction_info(const Prediction::PredictionResult& prediction_result,
+                                double cur_timestamp_us,
+                                std::unordered_set<uint>& prediction_obj_id_set);
+  void transform_fusion_to_prediction(const FusionObjects::FusionObject &fusion_object, double timestamp);
+  void transform_surround_radar_to_prediction(const RadarPerceptionObjects::RadarPerceptionObject radar_perception_objects);
+  bool obstacle_prediction_update(const LocalView& local_view);
+  PredictionTrajectoryPoint GetPointAtTime(const std::vector<PredictionTrajectoryPoint>& trajectory_points, const double relative_time) const;
   // std::shared_ptr<EnvironmentalModel> environmental_model_ = nullptr; session已包含
   planning::framework::Session *session_ = nullptr;
   planning::framework::Frame *frame_ = nullptr;

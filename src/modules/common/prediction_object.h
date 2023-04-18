@@ -2,12 +2,14 @@
 #define PREDICTION_OBJECT_H
 
 #include "modules/common/common.h"
+#include "modules/common/config/basic_type.h"
 #include <string>
 #include <vector>
 
 namespace planning {
 
 struct PredictionTrajectoryPoint {
+  double relative_time{0.0};
   float x{0.0};
   float y{0.0};
   float yaw{0.0}; // for obs
@@ -56,11 +58,11 @@ struct PredictionTrajectory {
 };
 
 struct PredictionObject {
-  unsigned int id;
-  unsigned int type;
+  uint id;
+  Common::ObjectType type;
   double timestamp_us;
   double delay_time{0.0};
-  std::string intention;
+  ObstacleIntentType intention;
   bool b_backup_freemove{false};
   double cutin_score;
   float position_x;

@@ -8,7 +8,7 @@ struct VehicleParam {
     double back_edge_to_center = 0.94;
     double left_edge_to_center = 0.9675;
     double right_edge_to_center = 0.9675;
-
+    double rear_axis_to_front_edge = 4.157;
     double length = 4.786;
     double width = 1.935;
     double height = 1.685;

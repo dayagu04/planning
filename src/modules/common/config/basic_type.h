@@ -17,11 +17,11 @@ enum RequestType { NO_CHANGE, LEFT_CHANGE, RIGHT_CHANGE };
 
 enum LooseBoundType { NONE_SIDE, LEFT_SIDE, RIGHT_SIDE, BOTH_SIDE };
 
-enum LeverStatus { 
-  LEVER_STATE_OFF, 
-  LEVER_STATE_LEFT, 
-  LEVER_STATE_RIGHT, 
-  LEVER_STATE_RESERVED1, 
+enum LeverStatus {
+  LEVER_STATE_OFF,
+  LEVER_STATE_LEFT,
+  LEVER_STATE_RIGHT,
+  LEVER_STATE_RESERVED1,
   LEVER_STATE_RESERVED2
 };
 
@@ -366,4 +366,14 @@ typedef enum {
   RIGHT
 } LineDirection;
 
+enum FusionSource {
+  CAMERA_ONLY = 1,
+  RADAR_ONLY,
+  FUSION
+};
+
+enum ObstacleIntentType {
+  COMMON = 0,
+  CUT_IN = 1
+};
 }  // namespace planning

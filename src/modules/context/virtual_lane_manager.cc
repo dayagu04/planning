@@ -4,6 +4,12 @@
 
 namespace planning {
 
+VirtualLaneManager::VirtualLaneManager(planning::framework::Session *session) {
+  session_ = session;
+}
+// VirtualLaneManager::VirtualLaneManager(planning::framework::Session *session)
+// {  session_= session; }
+
 bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   current_lane_ = nullptr;
   left_lane_ = nullptr;
@@ -166,7 +172,8 @@ std::vector<std::shared_ptr<Obstacle>> VirtualLaneManager::get_current_lane_obst
     return tr;
   }
   int virtual_id = current_lane_->get_virtual_id();
-  std::shared_ptr<ReferencePath> reference_path = reference_path_manager_.get_reference_path_by_lane(virtual_id);
+  auto reference_path_manager = session_->environmental_model().get_reference_path_manager();
+  std::shared_ptr<ReferencePath> reference_path = reference_path_manager->get_reference_path_by_lane(virtual_id);
   //tr = reference_path->cal_obstacles_on_lane() //todo
   return tr;
 }
@@ -177,7 +184,8 @@ std::vector<std::shared_ptr<Obstacle>> VirtualLaneManager::get_left_lane_obstacl
     return tr;
   }
   int virtual_id = left_lane_->get_virtual_id();
-  std::shared_ptr<ReferencePath> reference_path = reference_path_manager_.get_reference_path_by_lane(virtual_id);
+  auto reference_path_manager = session_->environmental_model().get_reference_path_manager();
+  std::shared_ptr<ReferencePath> reference_path = reference_path_manager->get_reference_path_by_lane(virtual_id);
   //tr = reference_path->cal_obstacles_on_lane() //todo
   return tr;
 }
@@ -188,7 +196,8 @@ std::vector<std::shared_ptr<Obstacle>> VirtualLaneManager::get_right_lane_obstac
     return tr;
   }
   int virtual_id = right_lane_->get_virtual_id();
-  std::shared_ptr<ReferencePath> reference_path = reference_path_manager_.get_reference_path_by_lane(virtual_id);
+  auto reference_path_manager = session_->environmental_model().get_reference_path_manager();
+  std::shared_ptr<ReferencePath> reference_path = reference_path_manager->get_reference_path_by_lane(virtual_id);
   //tr = reference_path->cal_obstacles_on_lane() //todo
   return tr;
 }

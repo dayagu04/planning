@@ -24,9 +24,9 @@ void ObstacleManager::update() {
   double ego_init_relative_time = ego_state.planning_init_point().relative_time;
   bool enable_bbox_mode = config_.enable_bbox_mode;
   const auto &prediction_objects =
-        session_->environmental_model().get_mixed_prediction_info();
+        session_->environmental_model().get_prediction_info();
   for (int i = 0;
-       i < session_->environmental_model().get_mixed_prediction_info().size();
+       i < session_->environmental_model().get_prediction_info().size();
        i++) {
     auto prediction_object = prediction_objects[i];
     bool is_static = prediction_object.speed < 0.1 ||

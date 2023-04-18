@@ -113,7 +113,7 @@ void EgoStateManager::set_timestamp_us(const planning::common::VehicleStatus &ve
   timestamp_us_last_ = timestamp_us_;
   timestamp_us_ = vehicle_status.header().timestamp_us();
 }
-void EgoStateManager::update(const planning::common::VehicleStatus &vehicle_status) {
+bool EgoStateManager::update(const planning::common::VehicleStatus &vehicle_status) {
 
   set_timestamp_us(vehicle_status);
   set_ego_position_llh(vehicle_status);
@@ -128,7 +128,7 @@ void EgoStateManager::update(const planning::common::VehicleStatus &vehicle_stat
   set_ego_start_stop(vehicle_status);
   set_throttle_override(vehicle_status);
   set_ego_blinker(vehicle_status);
-  
+
   if (timestamp_us_ == timestamp_us_last_) {
     jerk_ = 0;
   } else {
@@ -144,6 +144,7 @@ void EgoStateManager::update(const planning::common::VehicleStatus &vehicle_stat
 
   // planning start point
   update_planning_init_point();
+  return true;
 }
 
 void EgoStateManager::update_planning_init_point() {
@@ -213,7 +214,7 @@ EgoStateManager::compute_stitching_trajectory() {
   double init_point_relative_time =
       (pnc_planning_status->planning_result.next_timestamp -
        pnc_planning_status->planning_result.timestamp);// todo .sec();
-          
+
   vehicle_state.timestamp = init_point_relative_time;
   LOG_DEBUG("init_point_relative_time: %f", init_point_relative_time);
 

@@ -6,7 +6,7 @@
 #include "src/modules/common/config/message_type.h"
 #include "src/modules/common/define/path_point.h"
 #include "src/modules/common/config/basic_type.h"
-
+#include "src/modules/common/prediction_object.h"
 /**
  * @namespace apollo::common::math
  * @brief apollo::common::math
@@ -60,7 +60,9 @@ planning::PathPoint InterpolateUsingLinearApproximation(const PathPoint &p0,
 planning::PncTrajectoryPoint InterpolateUsingLinearApproximation(const PncTrajectoryPoint &tp0,
                                                     const PncTrajectoryPoint &tp1,
                                                     const double t);
-
+planning::PredictionTrajectoryPoint InterpolateUsingLinearApproximation(const PredictionTrajectoryPoint &tp0,
+                                                    const PredictionTrajectoryPoint &tp1,
+                                                    const double t);
 }  // namespace planning_math
 }  // namespace planning
 

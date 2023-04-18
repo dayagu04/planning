@@ -108,5 +108,41 @@ PncTrajectoryPoint InterpolateUsingLinearApproximation(const PncTrajectoryPoint 
   return tp;
 }
 
+PredictionTrajectoryPoint InterpolateUsingLinearApproximation(const PredictionTrajectoryPoint &tp0,
+                                                    const PredictionTrajectoryPoint &tp1,
+                                                    const double t) {
+  double t0 = tp0.relative_time;
+  double t1 = tp1.relative_time;
+
+  PredictionTrajectoryPoint tp;
+  tp.relative_time = t;
+  tp.x = lerp(tp0.x, t0, tp1.x, t1, t);
+  tp.y = lerp(tp0.y, t0, tp1.y, t1, t);
+  tp.yaw =
+    // std::abs(t -t0) < std::abs(t -t1) ? tp0.velocity_direction : tp1.velocity_direction;
+    slerp(tp0.yaw, t0, tp1.yaw, t1, t);
+  tp.speed = lerp(tp0.speed, t0, tp1.speed, t1, t);
+  tp.theta =
+    // std::abs(t -t0) < std::abs(t -t1) ? tp0.velocity_direction : tp1.velocity_direction;
+    slerp(tp0.theta, t0, tp1.theta, t1, t);
+  tp.prob =
+    lerp(tp0.prob, t0, tp1.prob, t1, t);
+  tp.std_dev_x = lerp(tp0.std_dev_x, t0, tp1.std_dev_x, t1, t);
+  tp.std_dev_y = lerp(tp0.std_dev_y, t0, tp1.std_dev_y, t1, t);
+  tp.std_dev_yaw = lerp(tp0.std_dev_yaw, t0, tp1.std_dev_yaw, t1, t);
+  tp.std_dev_speed = lerp(tp0.std_dev_speed, t0, tp1.std_dev_speed, t1, t);
+
+  // tp.steer = slerp(tp0.steer, t0, tp1.steer, t1, t);
+  tp.relative_ego_x = lerp(tp0.relative_ego_x, t0, tp1.relative_ego_x, t1, t);
+  tp.relative_ego_y = lerp(tp0.relative_ego_y, t0, tp1.relative_ego_y, t1, t);
+  tp.relative_ego_yaw = lerp(tp0.relative_ego_yaw, t0, tp1.relative_ego_yaw, t1, t);
+  tp.relative_ego_speed = lerp(tp0.relative_ego_speed, t0, tp1.relative_ego_speed, t1, t);
+  tp.relative_ego_std_dev_x = lerp(tp0.relative_ego_std_dev_x, t0, tp1.relative_ego_std_dev_x, t1, t);
+  tp.relative_ego_std_dev_y = lerp(tp0.relative_ego_std_dev_y, t0, tp1.relative_ego_std_dev_y, t1, t);
+  tp.relative_ego_std_dev_yaw = lerp(tp0.relative_ego_std_dev_yaw, t0, tp1.relative_ego_std_dev_yaw, t1, t);
+  tp.relative_ego_std_dev_speed = lerp(tp0.relative_ego_std_dev_speed, t0, tp1.relative_ego_std_dev_speed, t1, t);
+  return tp;
+}
+
 }  // namespace planning_math
 }  // namespace planning

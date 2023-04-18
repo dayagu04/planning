@@ -31,7 +31,7 @@ bool GeneralPlanning::RunOnce(const LocalView& local_view,
   local_view_ = local_view;
   double start_timestamp = IflyTime::Now_ms();
   EnvironmentalModel *environmental_model = session_.mutable_environmental_model();
-
+  environmental_model->feed_local_view(local_view);//todo
   auto pre_planning_status =
       session_.mutable_planning_output_context()->mutable_prev_planning_status();
   *pre_planning_status =

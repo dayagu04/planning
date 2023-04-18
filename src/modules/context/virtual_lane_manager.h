@@ -17,14 +17,15 @@ enum LaneChangeStatus {
 
 class VirtualLaneManager : public VirtualLane{
  public:
-  VirtualLaneManager() = default;
-  ~VirtualLaneManager() = default;
+  VirtualLaneManager(planning::framework::Session *session);
+  // VirtualLaneManager() = default;
+  ~VirtualLaneManager() {};
 
   const std::shared_ptr<VirtualLane> get_current_lane() const { return current_lane_; }
   const std::shared_ptr<VirtualLane> get_left_lane() const { return left_lane_; }
   const std::shared_ptr<VirtualLane> get_right_lane() const { return right_lane_; }
   const std::shared_ptr<VirtualLane> get_lane_with_virtual_id (int virtual_id);
-  int current_lane_virtual_id() { 
+  int current_lane_virtual_id() {
     if (current_lane_ != nullptr) {
       return current_lane_->get_virtual_id();
     }
@@ -50,7 +51,8 @@ class VirtualLaneManager : public VirtualLane{
   LaneChangeStatus is_lane_change();
   void update_virtual_id();
 
-  ReferencePathManager reference_path_manager_;
+  planning::framework::Session *session_ = nullptr;
+  //ReferencePathManager reference_path_manager_;
   int last_fix_lane_virtual_id_ = 0;
   int current_lane_virtual_id_ = 0;
   std::unordered_map<int, std::shared_ptr<VirtualLane>> virtual_id_mapped_lane_;

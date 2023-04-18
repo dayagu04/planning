@@ -18,9 +18,9 @@ class EgoStateManager {
   EgoStateManager(framework::Session *session);
   ~EgoStateManager() = default;
 
-  void update(const planning::common::VehicleStatus &vehicle_status);
+  bool update(const planning::common::VehicleStatus &vehicle_status);
   void set_ego_carte(const Point2D &ego_carte);
-  
+
   void set_ego_position_llh(
       const planning::common::VehicleStatus &vehicle_status);
   void set_ego_enu(

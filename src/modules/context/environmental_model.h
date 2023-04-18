@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "common/log.h"
+#include "modules/common/local_view.h"
 #include "modules/context/ego_planning_config.h"
 #include "modules/common/prediction_object.h"
 // #include "planning/common/common.h"
@@ -91,10 +92,13 @@ class EnvironmentalModel {
   const std::vector<PredictionObject> &get_prediction_info() const {
     return prediction_info_;
   }
-
-  const std::vector<PredictionObject> &get_mixed_prediction_info() const {
-    return mixed_prediction_info_;
+  std::vector<PredictionObject> &get_mutable_prediction_info() {
+    return prediction_info_;
   }
+
+  // const std::vector<PredictionObject> &get_mixed_prediction_info() const {
+  //   return mixed_prediction_info_;
+  // }
 
   const std::shared_ptr<EgoStateManager> &get_ego_state_manager() const { return ego_state_manager_; }
 
@@ -171,9 +175,16 @@ class EnvironmentalModel {
     highway_config_builder_ptr_ = highway_config_builder_ptr;
   }
 
+  void feed_local_view(const LocalView& local_view) {
+    local_view_ = local_view;
+  }
+  const LocalView& get_local_view() const { return local_view_; }
+
+  bool get_hdmap_valid() { return hdmap_valid_; }
 private:
   // planning::framework::Session *session_ = nullptr;
   // planning::framework::Frame *frame_ = nullptr;
+  LocalView local_view_;
   bool vehicle_dbw_status_{false};
   std::shared_ptr<EgoStateManager> ego_state_manager_ = nullptr;
   std::shared_ptr<ObstacleManager> obstacle_manager_ = nullptr;
@@ -201,7 +212,7 @@ private:
 //   std::vector<MSDPerceptionFusionObjectData> fusion_info_;
   std::vector<PredictionObject> prediction_info_;
 //   std::vector<PredictionObject> truncated_prediction_info_;
-  std::vector<PredictionObject> mixed_prediction_info_;
+  //std::vector<PredictionObject> mixed_prediction_info_;
 
 //   TrafficLight traffic_light_info_;
 //   MapInfoManager map_info_manager_;
@@ -214,7 +225,7 @@ private:
 //   FrenetCoordinateSystemParameters frenet_parameters_;
 
 //   bool hdmap_enable_status_{false};
-//   bool hdmap_valid_{false};
+     bool hdmap_valid_{false};
 //   bool vehicle_dbw_status_{false};
 //   bool dbw_status_{false};
 //   bool pretreatment_status_{true};
