@@ -92,7 +92,7 @@ class ScenarioStateMachine
   RequestType merge_split_turn_signal() const {
     return merge_split_turn_signal_;
   }
-  void generate_state_machine_output() {}
+  void generate_state_machine_output(const LaneChangeStageInfo &lc_info);
 
  private:
   void update_scenario();

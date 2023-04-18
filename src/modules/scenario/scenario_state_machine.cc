@@ -995,4 +995,77 @@ bool ScenarioStateMachine::check_lc_back_finish(RequestType direction) {
   return lc_back_finish;
 }
 
+void ScenarioStateMachine::generate_state_machine_output(const LaneChangeStageInfo &lc_info) {
+  auto &state_machine_output =
+      session_->mutable_planning_context()->mutable_lat_behavior_state_machine_output();
+
+  // context->mutable_planning_status()->lane_status.change_lane.target_gap_obs = lc_info.gap;
+
+  state_machine_output.scenario = scenario_;
+  // state_machine_output.curr_state = target_state;
+  // state_machine_output.state_name = target_state_name;
+  state_machine_output.lc_back_reason = lc_info.lc_back_reason;
+  state_machine_output.lc_invalid_reason = lc_info.lc_invalid_reason;
+  state_machine_output.behavior_suspend = behavior_suspend_;                        // lateral suspend
+  state_machine_output.suspend_obs.assign(suspend_obs_.begin(), suspend_obs_.end());// lateral obstacles
+  state_machine_output.must_change_lane = must_change_lane_;
+
+  // if (target_state == type2int<RoadState::None>::value) {
+  //   state_machine_output.turn_light = 0;
+  // } else {
+  if (map_turn_signal_ != NO_CHANGE) {
+    state_machine_output.turn_light = map_turn_signal_;
+  } else if (lc_req_mgr_->turn_signal() > 0) {
+    state_machine_output.turn_light = lc_req_mgr_->turn_signal();
+  } else {
+    state_machine_output.turn_light = 0;
+  }
+  // }
+  state_machine_output.map_turn_light = map_turn_signal_;
+  state_machine_output.accident_back = lc_info.accident_back;
+  state_machine_output.accident_ahead = accident_ahead_;
+  state_machine_output.close_to_accident = close_to_accident_;
+  state_machine_output.should_premove = lc_info.should_premove;
+  state_machine_output.should_suspend = should_suspend_;
+  state_machine_output.lc_pause = lc_info.lc_pause;
+  state_machine_output.lc_pause_id = lc_info.lc_pause_id;
+  state_machine_output.tr_pause_l = lc_info.tr_pause_l;
+  state_machine_output.tr_pause_s = lc_info.tr_pause_s;
+  state_machine_output.disable_l = false;
+  state_machine_output.disable_r = false;
+  state_machine_output.enable_l = false;
+  state_machine_output.enable_r = false;
+  state_machine_output.need_clear_lb_car = true;
+  state_machine_output.enable_lb = false;
+  state_machine_output.lc_request = lc_req_mgr_->request();
+  state_machine_output.lc_request_source = lc_req_mgr_->request_source();
+  state_machine_output.act_request_source = lc_req_mgr_->act_request_source();
+  state_machine_output.lc_turn_light = lc_req_mgr_->turn_signal();
+
+  state_machine_output.premovel = false;
+  state_machine_output.premover = false;
+  state_machine_output.premove_dist = 0.;
+
+  //TODO(Rui):待加入object_selector
+  // state_machine_output.left_is_faster = object_selector_->left_is_faster();
+  // state_machine_output.right_is_faster = object_selector_->right_is_faster();
+
+  // state_machine_output.neg_left_lb_car = object_selector_->neg_left_lb_car();
+  // state_machine_output.neg_right_lb_car = object_selector_->neg_right_lb_car();
+  // state_machine_output.neg_left_alc_car = object_selector_->neg_left_alc_car();
+  // state_machine_output.neg_right_alc_car = object_selector_->neg_right_alc_car();
+
+  // state_machine_output.left_lb_car = object_selector_->left_lb_car();
+  // state_machine_output.left_alc_car = object_selector_->left_alc_car();
+  // state_machine_output.right_lb_car = object_selector_->right_lb_car();
+  // state_machine_output.right_alc_car = object_selector_->right_alc_car();
+
+  state_machine_output.enable_alc_car_protection = false;
+  // state_machine_output.alc_cars_ = alc_cars_; //TODO(Rui):待添加
+  state_machine_output.near_cars_target = near_cars_target_;
+  state_machine_output.near_cars_origin = near_cars_origin_;
+  state_machine_output.lc_invalid_track = lc_invalid_track_;
+  state_machine_output.lc_back_track = lc_back_track_;
+}
+
 }  // namespace planning

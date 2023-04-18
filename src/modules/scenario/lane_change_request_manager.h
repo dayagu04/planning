@@ -189,6 +189,10 @@ class LaneChangeRequestManager {
 
   RequestType request() const { return request_; }
   RequestSource request_source() const { return request_source_; }
+  std::string act_request_source() {
+    return request_source_ == ACT_REQUEST ? act_request_.act_request_source()
+                                          : "none";
+  }
   int target_lane_virtual_id() { return target_lane_virtual_id_; }
   void set_target_lane_virtual_id(int target_lane_virtual_id) {
     target_lane_virtual_id_ = target_lane_virtual_id;

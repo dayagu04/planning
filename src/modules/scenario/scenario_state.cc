@@ -40,9 +40,15 @@ void StateBase::process(Control &control, FsmContext &context) {
     EgoPlanningCandidate candidate(context.frame);
     candidate.set_coarse_planning_info(transition_context);
 
-    auto &last_planning_result = context.frame->mutable_session()
-                                     ->mutable_planning_context()
-                                     ->last_planning_result();
+    auto &last_planning_result =
+        context.frame->mutable_session()
+            ->mutable_planning_context()
+            ->last_planning_result();
+    auto state_machine_output = context.frame->mutable_session()
+                                    ->mutable_planning_context()
+                                    ->mutable_lat_behavior_state_machine_output();
+    state_machine_output.curr_state = transition_context.target_state;
+    // state_machine_output.state_name = type2name<RoadState::None>::name; //TODO(Rui):add name transfer
     if (&last_planning_result != nullptr and
         last_planning_result->target_lane_id ==
             candidate.coarse_planning_info().target_lane_id and
@@ -104,6 +110,10 @@ void StateBase::process(Control &control, FsmContext &context) {
   if (best_transition_context.target_state != context.state) {
     change_state(next_state, control, context);
     context.state = next_state;
+    //TODO(Rui):fix me
+    context.frame->mutable_session()
+                 ->mutable_planning_context()
+                 ->mutable_lat_behavior_state_machine_output().curr_state = context.state;
   }
   LOG_DEBUG("[StateBase] evaluate success");
 }

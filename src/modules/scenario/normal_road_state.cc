@@ -123,6 +123,7 @@ void RoadState::None::get_state_transition_candidates(
   int target_lane_virtual_id = lc_req_manager->target_lane_virtual_id();
   std::vector<int> overtake_obstacles;
   std::vector<int> yield_obstacles;
+  LaneChangeStageInfo lc_info;
   if (lc_request == LEFT_CHANGE || lc_request == RIGHT_CHANGE) {
     lc_lane_manager->assign_lc_lanes(target_lane_virtual_id);
     prepare_for_wait_state(lc_lane_manager, lc_req_manager, candidate_states,
@@ -134,6 +135,7 @@ void RoadState::None::get_state_transition_candidates(
     prepare_for_none_state(lc_lane_manager, lc_req_manager, candidate_states,
                            lc_lane_managers);
   }
+  state_machine->generate_state_machine_output(lc_info);
 
   for (size_t i = 0; i < candidate_states.size(); ++i) {
     int o_lane_virtual_id = lc_lane_managers[i]->olane_virtual_id();
@@ -181,6 +183,7 @@ void RoadState::LC::process_wait(FsmContext &context,
   double curr_time = IflyTime::Now_ms();  // 注意
   std::vector<int> overtake_obstacles;
   std::vector<int> yield_obstacles;
+  LaneChangeStageInfo lane_change_info;
   if (lc_request != NO_CHANGE && lc_request == context.direction) {
     int target_lane_virtual_id = lc_req_manager->target_lane_virtual_id();
     if (!lc_lane_manager->has_target_lane() ||
@@ -189,8 +192,7 @@ void RoadState::LC::process_wait(FsmContext &context,
     }
     gap_available = state_machine->gap_available(lc_request, overtake_obstacles,
                                                  yield_obstacles);
-    LaneChangeStageInfo lane_change_info =
-        state_machine->decide_lc_valid_info(lc_request);
+    lane_change_info = state_machine->decide_lc_valid_info(lc_request);
     LOG_DEBUG("[CruiseState::Wait] gap_available: %d, aggressive_change: %d, ",
               gap_available, aggressive_change);
     // if (gap_available || aggressive_change) {
@@ -213,6 +215,8 @@ void RoadState::LC::process_wait(FsmContext &context,
     prepare_for_none_state(lc_lane_manager, lc_req_manager, candidate_states,
                            lc_lane_managers);
   }
+
+  state_machine->generate_state_machine_output(lane_change_info);
 
   for (size_t i = 0; i < candidate_states.size(); ++i) {
     auto o_lane_virtual_id = lc_lane_managers[i]->olane_virtual_id();
@@ -258,6 +262,7 @@ void RoadState::LC::process_change(
   bool hdmap_valid = environmental_model->get_hdmap_valid();
   std::vector<int> overtake_obstacles;
   std::vector<int> yield_obstacles;
+  LaneChangeStageInfo lc_back_info;
   if (state_machine->check_lc_change_finish(context.direction)) {
     LOG_DEBUG("[RoadState::Change] Lane Change Finished");
     prepare_for_none_state(lc_lane_manager, lc_req_manager, candidate_states,
@@ -277,7 +282,7 @@ void RoadState::LC::process_change(
     
     if (lc_lane_manager->has_origin_lane() &&
         lc_lane_manager->olane_virtual_id() != lc_lane_manager->tlane_virtual_id()) {
-      LaneChangeStageInfo lc_back_info = state_machine->decide_lc_back_info(lc_request);
+      lc_back_info = state_machine->decide_lc_back_info(lc_request);
       if (lc_back_info.lc_should_back) {
         prepare_for_back_state(lc_lane_manager, lc_req_manager, candidate_states,
                                lc_lane_managers);
@@ -313,6 +318,8 @@ void RoadState::LC::process_change(
     prepare_for_back_state(lc_lane_manager, lc_req_manager, candidate_states,
                            lc_lane_managers);
   }
+
+  state_machine->generate_state_machine_output(lc_back_info);
 
   for (size_t i = 0; i < candidate_states.size(); ++i) {
     auto o_lane_virtual_id = lc_lane_managers[i]->olane_virtual_id();
@@ -355,6 +362,7 @@ void RoadState::LC::process_back(FsmContext &context,
   bool gap_available{true};
   std::vector<int> overtake_obstacles;
   std::vector<int> yield_obstacles;
+  LaneChangeStageInfo lane_change_info;
   if (state_machine->check_lc_back_finish(context.direction)) {
     // prepare for WAIT state
     LOG_DEBUG("[RoadeState::Back] Lane Back Finished");
@@ -367,7 +375,7 @@ void RoadState::LC::process_back(FsmContext &context,
     }
     gap_available = state_machine->gap_available(lc_request, overtake_obstacles,
                                                  yield_obstacles);
-    LaneChangeStageInfo lane_change_info = state_machine->decide_lc_valid_info(lc_request);
+    lane_change_info = state_machine->decide_lc_valid_info(lc_request);
     // if (gap_available || aggressive_change) { //TODO(Rui):后面把安全检查坐在gap_available里，统一通过gap_available判断
     if (lane_change_info.gap_insertable) {
       prepare_for_change_state(lc_lane_manager, lc_req_manager,
@@ -381,6 +389,8 @@ void RoadState::LC::process_back(FsmContext &context,
     prepare_for_none_state(lc_lane_manager, lc_req_manager, candidate_states,
                            lc_lane_managers);
   }
+
+  state_machine->generate_state_machine_output(lane_change_info);
 
   for (size_t i = 0; i < candidate_states.size(); ++i) {
     auto o_lane_virtual_id = lc_lane_managers[i]->olane_virtual_id();
