@@ -158,19 +158,19 @@ void EnvironmentalModelManager::vehicle_status_adaptor(const VehicleService::Veh
                               ->set_value_rad(localization_estimate.pose().euler_angles().yaw());
 
     auto llh_position = localization_estimate.pose().llh_position();
-    vehicle_status.mutable_location()->location_geographic().set_latitude_degree(llh_position.lat());
-    vehicle_status.mutable_location()->location_geographic().set_longitude_degree(llh_position.lon());
-    vehicle_status.mutable_location()->location_geographic().set_altitude_meter(llh_position.height());
+    vehicle_status.mutable_location()->mutable_location_geographic()->set_latitude_degree(llh_position.lat());
+    vehicle_status.mutable_location()->mutable_location_geographic()->set_longitude_degree(llh_position.lon());
+    vehicle_status.mutable_location()->mutable_location_geographic()->set_altitude_meter(llh_position.height());
     auto enu_position = localization_estimate.pose().enu_position();
-    vehicle_status.mutable_location()->location_enu().set_x(enu_position.x());
-    vehicle_status.mutable_location()->location_enu().set_y(enu_position.y());
-    vehicle_status.mutable_location()->location_enu().set_z(enu_position.z());
+    vehicle_status.mutable_location()->mutable_location_enu()->set_x(enu_position.x());
+    vehicle_status.mutable_location()->mutable_location_enu()->set_y(enu_position.y());
+    vehicle_status.mutable_location()->mutable_location_enu()->set_z(enu_position.z());
 
     auto enu_orientation = localization_estimate.pose().orientation();
-    vehicle_status.mutable_location()->location_enu().orientation().set_x(enu_orientation.qx());
-    vehicle_status.mutable_location()->location_enu().orientation().set_y(enu_orientation.qy());
-    vehicle_status.mutable_location()->location_enu().orientation().set_z(enu_orientation.qz());
-    vehicle_status.mutable_location()->location_enu().orientation().set_w(enu_orientation.qw());
+    vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_x(enu_orientation.qx());
+    vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_y(enu_orientation.qy());
+    vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_z(enu_orientation.qz());
+    vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_w(enu_orientation.qw());
   } else {
     if (vehicel_service_output_info.yaw_rate_available()) {
       vehicle_status.mutable_heading_yaw()->mutable_heading_yaw_data()
@@ -225,23 +225,23 @@ void EnvironmentalModelManager::vehicle_status_adaptor(const VehicleService::Veh
   }
 
   if (vehicel_service_output_info.long_acceleration_available()) {
-    vehicle_status.mutable_brake_info()->brake_info_data()
-                            .set_acceleration_on_vehicle_wheel(vehicel_service_output_info.long_acceleration());
+    vehicle_status.mutable_brake_info()->mutable_brake_info_data()
+                            ->set_acceleration_on_vehicle_wheel(vehicel_service_output_info.long_acceleration());
   }
 
   if (vehicel_service_output_info.power_train_override_flag_available()) {
-    vehicle_status.mutable_throttle()->throttle_data().set_override(vehicel_service_output_info.power_train_override_flag());
+    vehicle_status.mutable_throttle()->mutable_throttle_data()->set_override(vehicel_service_output_info.power_train_override_flag());
   }
 
   auto vehicle_light = vehicle_status.mutable_vehicle_light();
   if (vehicel_service_output_info.left_turn_light_state() && vehicel_service_output_info.left_turn_light_state_available()) {
-    vehicle_light->vehicle_light_data().turn_signal().set_value(common::TurnSignalType::LEFT);
+    vehicle_light->mutable_vehicle_light_data()->mutable_turn_signal()->set_value(common::TurnSignalType::LEFT);
   } else if (vehicel_service_output_info.right_turn_light_state() && vehicel_service_output_info.right_turn_light_state_available()) {
-    vehicle_light->vehicle_light_data().turn_signal().set_value(common::TurnSignalType::RIGHT);
+    vehicle_light->mutable_vehicle_light_data()->mutable_turn_signal()->set_value(common::TurnSignalType::RIGHT);
   } else if (vehicel_service_output_info.hazard_light_state() && vehicel_service_output_info.hazard_light_state_available()) {
-    vehicle_light->vehicle_light_data().turn_signal().set_value(common::TurnSignalType::EMERGENCY_FLASHER);
+    vehicle_light->mutable_vehicle_light_data()->mutable_turn_signal()->set_value(common::TurnSignalType::EMERGENCY_FLASHER);
   } else {
-    vehicle_light->vehicle_light_data().turn_signal().set_value(common::TurnSignalType::NONE);
+    vehicle_light->mutable_vehicle_light_data()->mutable_turn_signal()->set_value(common::TurnSignalType::NONE);
   }
 
 }
@@ -253,7 +253,7 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
 
   ego_rear_axis_to_front_edge = session_->vehicel_config_context().get_vehicle_param().rear_axis_to_front_edge;
   double current_time = session_->planning_output_context().planning_status().planning_result.next_timestamp;
-  auto prediction_info = session_->environmental_model().get_mutable_prediction_info();
+  auto prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
   prediction_info.clear();
 
   for (const auto &prediction_object : prediction_result.prediction_obstacle()) {
@@ -366,11 +366,11 @@ void EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
   ego_rear_axis_to_front_edge = session_->vehicel_config_context().get_vehicle_param().rear_axis_to_front_edge;
 
   double current_time = session_->planning_output_context().planning_status().planning_result.next_timestamp;
-  auto prediction_info = session_->environmental_model().get_mutable_prediction_info();
+  auto prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
 
   PredictionObject prediction_object;
   prediction_object.id = fusion_object.common_info().id();
-  prediction_object.type = (unsigned int)fusion_object.common_info().type();
+  prediction_object.type = fusion_object.common_info().type();
   prediction_object.timestamp_us = timestamp;
 
   prediction_object.delay_time = 0.0;
@@ -400,10 +400,10 @@ void EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
 }
 
 void EnvironmentalModelManager::transform_surround_radar_to_prediction(RadarPerceptionObjects::RadarPerceptionObject radar_perception_objects) {
-  auto prediction_info = session_->environmental_model().get_mutable_prediction_info();
+  auto prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
   PredictionObject prediction_object;
   prediction_object.id = radar_perception_objects.common_info().id();
-  prediction_object.type = (unsigned int)radar_perception_objects.common_info().type();
+  prediction_object.type = radar_perception_objects.common_info().type();
   //prediction_object.timestamp_us = ;
   //double delay_time{0.0};
   //std::string intention;

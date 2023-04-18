@@ -180,7 +180,7 @@ class EnvironmentalModel {
   }
   const LocalView& get_local_view() const { return local_view_; }
 
-  bool get_hdmap_valid() { return hdmap_valid_; }
+  bool get_hdmap_valid() const { return hdmap_valid_; }
 private:
   // planning::framework::Session *session_ = nullptr;
   // planning::framework::Frame *frame_ = nullptr;
