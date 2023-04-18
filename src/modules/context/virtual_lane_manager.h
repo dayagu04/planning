@@ -51,7 +51,8 @@ class VirtualLaneManager : public VirtualLane{
   void update_last_fix_lane_id(int flane_virtual_id) { last_fix_lane_virtual_id_ = flane_virtual_id;  }
   bool update(const FusionRoad::RoadInfo& roads);
   void reset();
-
+  int current_lane_index() const ;
+  double v_cruise() const { return v_cruise_; };
  private:
   LaneChangeStatus is_lane_change();
   void update_virtual_id();

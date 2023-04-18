@@ -201,7 +201,7 @@ bool VirtualLaneManager::has_lane(int virtual_lane_id) {
   }
 }
 
-void VirtualLaneManager::update_speed_limit(double ego_vel, double ego_v_cruise) {
+void VirtualLaneManager::update_speed_limit(double ego_vel, double ego_v_cruise) { //todo
   // update vision only v_cruise_
   if (current_lane_ != nullptr) {
     if(current_lane_->get_lane_source() == FusionRoad::LaneSource::SOURCE_FUSION) {
@@ -248,6 +248,14 @@ void VirtualLaneManager::update_speed_limit(double ego_vel, double ego_v_cruise)
 
   v_cruise_ =
       std::min(current_lane_speed_limit_, speed_change_point_.speed);
+}
+
+int VirtualLaneManager::current_lane_index() const {
+  if (relative_id_lanes_.size() > 0) {
+    return 0 - relative_id_lanes_[0]->get_relative_id();
+  }
+
+  return 0;
 }
 
 }
