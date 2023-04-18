@@ -112,6 +112,40 @@ void ScenarioStateMachine::reset_state_machine() {
   change_state_external<RoadState::None>();
   lc_lane_mgr_->reset_lc_lanes();
   lc_req_mgr_->finish_request();
+  clear_lc_variables();
+}
+
+void ScenarioStateMachine::clear_lc_variables() {
+  lc_valid_cnt_ = 0;
+  lb_back_cnt_ = 0;
+  lc_pause_id_ = -1000;
+  lc_valid_ = true;
+  lc_should_back_ = false;
+  lc_valid_back_ = true;
+  must_change_lane_ = false;
+
+  lc_back_reason_ = "none";
+  lc_invalid_reason_ = "none";
+  invalid_back_reason_ = "none";
+
+  lc_invalid_track_.reset();
+  lc_back_track_.reset();
+
+  near_cars_target_.clear();
+  near_cars_origin_.clear();
+
+  start_move_dist_lane_ = 0;
+
+  should_premove_ = false;
+  should_suspend_ = false;
+  accident_ahead_ = false;
+  close_to_accident_ = false;
+  accident_back_ = false;
+  lc_pause_ = false;
+  not_accident_ = true;
+  behavior_suspend_ = false; // lateral suspend
+  suspend_obs_.clear();
+
 }
 
 void ScenarioStateMachine::update_scenario() { scenario_ = SCENARIO_CRUISE; }
@@ -854,16 +888,110 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
   return result;
 }
 
-LaneChangeStageInfo ScenarioStateMachine::decide_lc_back_info(
-    RequestType direction) {}
+LaneChangeStageInfo ScenarioStateMachine::decide_lc_back_info(RequestType direction) {
+  auto lc_info = compute_lc_back_info(direction);
+  double coefficient = 20. / 25; //TODO(Rui): FLAGS_planning_loop_rate = 20.
+  int lc_back_thre = static_cast<int>(5 * coefficient);
+  if (lc_info.lc_should_back) {
+    lc_back_cnt_ += 1;
+    if (lc_back_cnt_ > lc_back_thre) {
+      // reset lc_back_cnt_ when choose back finally
+    } else {
+      lc_info.lc_should_back = false;
+      lc_info.lc_back_reason = "but back cnt below threshold";
+    }
+  } else {
+    lc_back_cnt_ = 0;
+  }
+  lc_back_reason_ = lc_info.lc_back_reason;
+  return lc_info;
+}
 
 bool ScenarioStateMachine::check_lc_change_finish(RequestType direction) {
+  auto &virtual_lane_mgr =
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
+  auto clane = virtual_lane_mgr->get_current_lane();
+  auto clane_virtual_id = virtual_lane_mgr->current_lane_virtual_id();
+
+  if (clane == nullptr || !lc_lane_mgr_->has_target_lane() ||
+      !lc_lane_mgr_->has_fix_lane()) {
+    LOG_ERROR("[check_lc_change_finish] invalid clane [%d] or tlane [%d] or flane",
+          clane == nullptr, !lc_lane_mgr_->has_target_lane(),
+          !lc_lane_mgr_->has_fix_lane());
+    return false;
+  }
+  auto tlane = lc_lane_mgr_->tlane();
+  auto tlane_virtual_id = lc_lane_mgr_->tlane_virtual_id();
+
+  if (tlane_virtual_id != clane_virtual_id &&
+      clane->lc_map_decision() != tlane->lc_map_decision()) {
+    // tlane与clane的virtual id和lc_map_decision都不相同时，换道一定没有完成.
+    return false;
+  }
+
+  double dist_threshold = 0.5;
+  double v_ego =
+      session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
+  std::vector<double> angle_thre_v{0.72, 0.48, 0.12};
+  std::vector<double> angle_thre_bp{1.0, 3.0, 5.0};
+  double angle_threshold = interp(v_ego, angle_thre_bp, angle_thre_v);
+
+  std::shared_ptr<ReferencePathManager> reference_path_mgr =
+      session_->mutable_environmental_model()->get_reference_path_manager();
+  auto target_reference_path =
+      reference_path_mgr->get_reference_path_by_lane(tlane_virtual_id);
+  auto frenet_ego_state = target_reference_path->get_frenet_ego_state();
+
   bool lc_change_finish{false};
+  if (direction == RIGHT_CHANGE) {
+    lc_change_finish =
+        ((frenet_ego_state.l() < dist_threshold) &&
+         (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
+  } else if (direction == LEFT_CHANGE) {
+    lc_change_finish =
+        ((frenet_ego_state.l() > -dist_threshold) &&
+         (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
+  } else {
+    LOG_ERROR("[check_lc_change_finish] invalid direction[%d]", direction);
+    lc_change_finish = true;
+  }
   return lc_change_finish;
 }
 
 bool ScenarioStateMachine::check_lc_back_finish(RequestType direction) {
+  if (!lc_lane_mgr_->has_origin_lane() || !lc_lane_mgr_->has_fix_lane()) {
+    return false;
+  }
+  assert(lc_lane_mgr_->olane_virtual_id() == lc_lane_mgr_->flane_virtual_id());
+
+  // Find the half lane width
+  std::shared_ptr<VirtualLaneManager> virtual_lane_mgr =
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
+  auto flane = virtual_lane_mgr->get_lane_with_virtual_id(
+      lc_lane_mgr_->flane_virtual_id());
+  double half_lane_width = 1.6;  // HACK  TODO(Rui):get real fix_lane->width() / 2.
+  double ego_width =
+      session_->mutable_vehicel_config_context()->get_vehicle_param().width;
+  double dist_threshold = half_lane_width - 0.5 * ego_width - 0.1;
+  double angle_threshold = 0.01;
+
+  std::shared_ptr<ReferencePathManager> reference_path_mgr =
+      session_->mutable_environmental_model()->get_reference_path_manager();
+  auto fix_reference_path = reference_path_mgr->get_reference_path_by_lane(
+      lc_lane_mgr_->flane_virtual_id());
+  auto frenet_ego_state = fix_reference_path->get_frenet_ego_state();
+
   bool lc_back_finish{false};
+  if (direction == LEFT_CHANGE) {
+    lc_back_finish = ((frenet_ego_state.l() < dist_threshold) &&
+            (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
+  } else if (direction == RIGHT_CHANGE) {
+    lc_back_finish = ((frenet_ego_state.l() > -dist_threshold) &&
+            (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
+  } else {
+    LOG_ERROR("[check_lc_back_finish] invalid direction[%d]", direction);
+    lc_back_finish = true;
+  }
   return lc_back_finish;
 }
 

@@ -86,6 +86,7 @@ class ScenarioStateMachine
   void set_entry_time(double t) { state_entry_time_ = t; }
   void post_process();
   void reset_state_machine();
+  void clear_lc_variables();
   double turn_signal_on_time() const { return turn_signal_on_time_; }
   RequestType turn_signal() const { return turn_signal_; }
   RequestType merge_split_turn_signal() const {
