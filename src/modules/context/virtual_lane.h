@@ -24,6 +24,7 @@ class VirtualLane {
   uint get_order_id() const { return order_id_; };
   int get_virtual_id () const { return virtual_id_; };
   int get_relative_id() const { return relative_id_; };
+  double width_by_s(double s);
   double width(double s);
   double width();
   LaneStatusEx status() { return lane_status_; }

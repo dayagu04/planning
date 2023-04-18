@@ -144,7 +144,25 @@ double VirtualLane::width() {
   return width(0);
 }
 
-double VirtualLane::width(double s) {
+double VirtualLane::width(double x) {
+  double width = 0;
+  auto virtual_lane_refline_points = lane_reference_line_.virtual_lane_refline_points();
+  if (virtual_lane_refline_points.size() < 1) {
+  } else {
+    auto comp = [](const FusionRoad::VirtualLanePoint & p, const double x) { return p.car_point().x() < x; };
+      auto p_first_point = std::lower_bound(virtual_lane_refline_points.begin(), virtual_lane_refline_points.end(), x, comp);
+      if (p_first_point == virtual_lane_refline_points.begin()) {
+        width = virtual_lane_refline_points.begin()->lane_width();
+      } else if (p_first_point == virtual_lane_refline_points.end()) {
+        width = virtual_lane_refline_points.end()->lane_width();
+      } else  {
+        width = planning_math::lerp((p_first_point - 1)->lane_width(), (p_first_point - 1)->car_point().x(),
+              p_first_point->lane_width(), p_first_point->car_point().x(), x);
+      }
+  }
+  return std::max(width, 2.8);
+}
+double VirtualLane::width_by_s(double s) {
   double width = 0;
   if (reference_path_ != nullptr) {
     auto &reference_path_points = reference_path_->get_points();
