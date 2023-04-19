@@ -14,12 +14,12 @@ double VisionLateralBehaviorPlanner::update_antsides_strict() {
   double ego_car_width = 2.2;
   double lat_safety_buffer = 0.2;
 
-  auto &virtual_lane_manager = frame_->mutable_session()->mutable_environmental_model()->virtual_lane_manager();
-  auto &lateral_obstacle = frame_->mutable_session()->mutable_environmental_model()->lateral_obstacle();
-  auto &ego_state = frame_->mutable_session()->mutable_environmental_model()->ego_state_manager();
+  auto &virtual_lane_manager = frame_->mutable_session()->mutable_environmental_model()->get_virtual_lane_manager();
+  auto &lateral_obstacle = frame_->mutable_session()->mutable_environmental_model()->get_lateral_obstacle();
+  auto &ego_state = frame_->mutable_session()->mutable_environmental_model()->get_ego_state_manager();
   auto &frenet_ego_state = reference_path_ptr_->get_frenet_ego_state();
 
-  double v_ego = ego_state->velocity();
+  double v_ego = ego_state->ego_v();
   auto &front_tracks_copy = lateral_obstacle->front_tracks_copy();
   auto &side_tracks_l = lateral_obstacle->side_tracks_l();
   auto &side_tracks_r = lateral_obstacle->side_tracks_r();
@@ -176,7 +176,7 @@ double VisionLateralBehaviorPlanner::update_antsides_strict() {
 }
 
 bool VisionLateralBehaviorPlanner::update_lfrontavds_info(bool no_near_car) {
-  auto &lateral_obstacle = frame_->mutable_session()->mutable_environmental_model()->lateral_obstacle();
+  auto &lateral_obstacle = frame_->mutable_session()->mutable_environmental_model()->get_lateral_obstacle();
 
   if (no_near_car == false ||
       lateral_obstacle->front_tracks_copy().size() == 0) {
@@ -205,7 +205,7 @@ bool VisionLateralBehaviorPlanner::update_lfrontavds_info(bool no_near_car) {
 }
 
 bool VisionLateralBehaviorPlanner::update_rfrontavds_info(bool no_near_car) {
-  auto &lateral_obstacle = frame_->mutable_session()->mutable_environmental_model()->lateral_obstacle();
+  auto &lateral_obstacle = frame_->mutable_session()->mutable_environmental_model()->get_lateral_obstacle();
 
   if (no_near_car == false ||
       lateral_obstacle->front_tracks_copy().size() == 0) {
@@ -238,7 +238,7 @@ bool VisionLateralBehaviorPlanner::update_lsideavds_info(bool no_near_car) {
     return no_near_car;
   }
 
-  auto &lateral_obstacle = frame_->mutable_session()->mutable_environmental_model()->lateral_obstacle();
+  auto &lateral_obstacle = frame_->mutable_session()->mutable_environmental_model()->get_lateral_obstacle();
 
   for (auto &tr : lateral_obstacle->side_tracks_l()) {
     if (tr.d_rel > -7 && ((tr.d_min_cpath > 1.0 && tr.d_min_cpath < lane_width_ - 1.1) ||
@@ -266,7 +266,7 @@ bool VisionLateralBehaviorPlanner::update_rsideavds_info(bool no_near_car) {
     return no_near_car;
   }
 
-  auto &lateral_obstacle = frame_->mutable_session()->mutable_environmental_model()->lateral_obstacle();
+  auto &lateral_obstacle = frame_->mutable_session()->mutable_environmental_model()->get_lateral_obstacle();
 
   for (auto &tr : lateral_obstacle->side_tracks_r()) {
     if (tr.d_rel > -7 && ((tr.d_max_cpath > -(lane_width_ - 1.1) && tr.d_max_cpath < -1.0) ||
@@ -305,9 +305,9 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(const CoarsePlanningInfo &c
   t_avd_car_ = 3.0;
   is_ncar_ = false;
 
-  auto &virtual_lane_manager = frame_->mutable_session()->mutable_environmental_model()->virtual_lane_manager();
-  auto &lateral_obstacle = frame_->mutable_session()->mutable_environmental_model()->lateral_obstacle();
-  auto &ego_state = frame_->mutable_session()->mutable_environmental_model()->ego_state_manager();
+  auto &virtual_lane_manager = frame_->mutable_session()->mutable_environmental_model()->get_virtual_lane_manager();
+  auto &lateral_obstacle = frame_->mutable_session()->mutable_environmental_model()->get_lateral_obstacle();
+  auto &ego_state = frame_->mutable_session()->mutable_environmental_model()->get_ego_state_manager();
   auto &frenet_ego_state = reference_path_ptr_->get_frenet_ego_state();
 
   // const auto &lon_output =
@@ -321,7 +321,7 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(const CoarsePlanningInfo &c
     intersection_cnt_ = 0;
   }
 
-  double v_ego = ego_state->velocity();
+  double v_ego = ego_state->ego_v();
   double l_ego = frenet_ego_state.l();
   double curr_time = IflyTime::Now_ms();
 

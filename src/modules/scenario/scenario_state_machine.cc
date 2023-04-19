@@ -191,7 +191,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
     RequestType direction) {
   assert(direction == LEFT_CHANGE || direction == RIGHT_CHANGE);
   LaneChangeStageInfo result_info;
-  auto &lateral_obstacle = session_->environmental_model().lateral_obstacle();
+  auto &lateral_obstacle = session_->environmental_model().get_lateral_obstacle();
   auto &ego_state = session_->environmental_model().get_ego_state_manager();
 
   auto &lateral_output =
@@ -537,7 +537,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
     RequestType direction) {
   LaneChangeStageInfo result;
 
-  auto &lateral_obstacle = session_->environmental_model().lateral_obstacle();
+  auto &lateral_obstacle = session_->environmental_model().get_lateral_obstacle();
   auto &ego_state = session_->environmental_model().get_ego_state_manager();
 
   auto &lateral_output =

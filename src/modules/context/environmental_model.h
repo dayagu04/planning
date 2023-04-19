@@ -137,7 +137,7 @@ class EnvironmentalModel {
     reference_path_manager_ = reference_path_manager;
   }
 
-  const std::shared_ptr<LateralObstacle> &lateral_obstacle() const {
+  const std::shared_ptr<LateralObstacle> &get_lateral_obstacle() const {
     return lateral_obstacle_;
   }
   void set_lateral_obstacle(

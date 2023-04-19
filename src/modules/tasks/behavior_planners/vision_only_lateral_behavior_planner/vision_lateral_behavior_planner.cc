@@ -21,7 +21,7 @@ bool VisionLateralBehaviorPlanner::Execute(planning::framework::Frame *frame) {
   auto &ego_planning_info = pipeline_context_->planning_info;
   auto &coarse_planning_info = pipeline_context_->coarse_planning_info;
 
-  auto &virtual_lane_manager = frame_->mutable_session()->mutable_environmental_model()->virtual_lane_manager();
+  auto &virtual_lane_manager = frame_->mutable_session()->mutable_environmental_model()->get_virtual_lane_manager();
 
   // TODO:update width()
   // lane_width_ = virtual_lane_manager->get_lane_with_virtual_id(coarse_planning_info.target_lane_id)->width();
