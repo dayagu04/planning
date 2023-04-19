@@ -169,10 +169,15 @@ struct PassableAreaInfo {
   BoundInfo right_bound_info;
 };
 
+struct LateralAvdCarsInfo {
+  std::array<std::vector<double>, 2> avd_car_past;
+};
+
 struct PlanningInfo {
   //  DecisionTimePositions decision_time_positions;
   ObstacleDecisions obstacle_decisions;
   MapObstacleDecision map_obstacle_decision;
+  LateralAvdCarsInfo lateral_avd_cars_info;
 
   std::vector<LatRefPath> lat_ref_paths;
   LatLonEgoState ego_state;
