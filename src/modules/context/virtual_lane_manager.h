@@ -3,7 +3,7 @@
 
 #include "src/modules/context/virtual_lane.h"
 #include "src/modules/context/virtual_lane_manager.h"
-//#include "src/modules/common/worldmodel/intersection.h"
+#include "src/modules/context/intersection.h"
 #include "../../res/include/proto/fusion_road.pb.h"
 #include <vector>
 
@@ -13,6 +13,12 @@ enum LaneChangeStatus {
   NO_LANE_CHANGE = 0,
   ON_LEFT_LANE = 1,
   ON_RIGHT_LANE = 2,
+};
+
+struct SpeedChangePoint {
+  double x;
+  double y;
+  double speed;
 };
 
 class VirtualLaneManager : public VirtualLane{
@@ -38,7 +44,7 @@ class VirtualLaneManager : public VirtualLane{
   std::vector<std::shared_ptr<Obstacle>> get_left_lane_obstacle();
   std::vector<std::shared_ptr<Obstacle>> get_right_lane_obstacle();
   bool has_lane(int virtual_lane_id);
-  //Intersection intersection_;
+  Intersection intersection_;
   //Ramp ramp_;
   //Destination destination_;
 
@@ -46,10 +52,12 @@ class VirtualLaneManager : public VirtualLane{
   void update_last_fix_lane_id(int flane_virtual_id) { last_fix_lane_virtual_id_ = flane_virtual_id;  }
   bool update(const FusionRoad::RoadInfo& roads);
   void reset();
-
+  int current_lane_index() const ;
+  double v_cruise() const { return v_cruise_; };
  private:
   LaneChangeStatus is_lane_change();
   void update_virtual_id();
+  void update_speed_limit(double ego_vel, double ego_v_cruise);
 
   planning::framework::Session *session_ = nullptr;
   //ReferencePathManager reference_path_manager_;
@@ -64,6 +72,10 @@ class VirtualLaneManager : public VirtualLane{
 
   double last_left_diff_ = 0;
   double last_right_diff_ = 0;
+
+  double v_cruise_ = 0.0;
+  double current_lane_speed_limit_ = 0.0;
+  SpeedChangePoint speed_change_point_{};
 
 };
 }

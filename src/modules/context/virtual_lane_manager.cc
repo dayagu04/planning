@@ -209,4 +209,62 @@ bool VirtualLaneManager::has_lane(int virtual_lane_id) {
     return false;
   }
 }
+
+void VirtualLaneManager::update_speed_limit(double ego_vel, double ego_v_cruise) { //todo
+  // update vision only v_cruise_
+  if (current_lane_ != nullptr) {
+    if(current_lane_->get_lane_source() == FusionRoad::LaneSource::SOURCE_FUSION) {
+      v_cruise_ = ego_v_cruise;
+      return;
+    }
+  }
+
+  auto &referece_path_points = current_lane_->get_reference_path()->get_points();
+  if (referece_path_points.size() > 1) {
+    double last_speed;
+    bool find_last = false;
+    bool find_change = false;
+    double acc_brake_min = 100.0;
+    for (size_t i = 1; i < referece_path_points.size(); ++i) {
+      if (!find_last && referece_path_points[i].frenet_point.x > 0.0) { //hack: frenet_point
+        find_last = true;
+        last_speed = referece_path_points[i - 1].max_velocity;
+        current_lane_speed_limit_ = last_speed;
+        continue;
+      }
+
+      if (find_last && referece_path_points[i].max_velocity != last_speed) {
+        double acc_brake = (std::pow(referece_path_points[i].max_velocity, 2) - std::pow(ego_vel, 2)) / std::max(1.0,
+                           std::sqrt(std::pow(referece_path_points[i].frenet_point.x, 2) + std::pow(referece_path_points[i].frenet_point.y, 2)));
+        if (acc_brake < acc_brake_min) {
+          acc_brake_min = acc_brake;
+          find_change = true;
+          speed_change_point_.x = referece_path_points[i].frenet_point.x;
+          speed_change_point_.y = referece_path_points[i].frenet_point.y;
+          speed_change_point_.speed = referece_path_points[i].max_velocity;
+        }
+      }
+    }
+
+    if (!find_change) {
+      speed_change_point_.x = referece_path_points.back().frenet_point.x;
+      speed_change_point_.y = referece_path_points.back().frenet_point.y;
+      speed_change_point_.speed = referece_path_points.back().max_velocity;
+    }
+  }
+
+  current_lane_speed_limit_ = std::min(current_lane_speed_limit_, ego_v_cruise);
+
+  v_cruise_ =
+      std::min(current_lane_speed_limit_, speed_change_point_.speed);
+}
+
+int VirtualLaneManager::current_lane_index() const {
+  if (relative_id_lanes_.size() > 0) {
+    return 0 - relative_id_lanes_[0]->get_relative_id();
+  }
+
+  return 0;
+}
+
 }

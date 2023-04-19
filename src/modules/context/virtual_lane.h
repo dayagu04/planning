@@ -6,7 +6,8 @@
 #include "../../res/include/proto/fusion_road.pb.h"
 #include "src/modules/context/reference_path_manager.h"
 #include "src/modules/context/reference_path.h"
-
+#include <float.h>
+#include <limits.h>
 
 namespace planning {
 
@@ -23,6 +24,10 @@ class VirtualLane {
   uint get_order_id() const { return order_id_; };
   int get_virtual_id () const { return virtual_id_; };
   int get_relative_id() const { return relative_id_; };
+  double width_by_s(double s);
+  double width(double s);
+  double width();
+  LaneStatusEx status() { return lane_status_; }
   const FusionRoad::LaneBoundary &get_left_lane_boundary() { return left_lane_boundary_; }
   const FusionRoad::LaneBoundary &get_right_lane_boundary() { return right_lane_boundary_; }
   const FusionRoad::LaneReferenceLine& get_center_line() const {
@@ -34,10 +39,12 @@ class VirtualLane {
       virtual_lane_points.emplace_back(p);
     }
     return virtual_lane_points;
-  } 
+  }
   void update_reference_path(std::shared_ptr<ReferencePath> reference_path) {
     reference_path_ = reference_path;
   };
+
+  std::shared_ptr<ReferencePath> get_reference_path() { return reference_path_; }
   double get_ego_lateral_offset() const { return ego_lateral_offset_; };
   FusionRoad::LaneType get_lane_type() const { return lane_type_; };
   FusionRoad::LaneDrivableDirection get_lane_marks() const { return lane_marks_; };
@@ -57,7 +64,10 @@ class VirtualLane {
     return center_line_points_track_id_;
   }
 
+  double min_width();
+  double max_width();
  private:
+
   int order_id_ = 0;
   int virtual_id_ = 0;
   int relative_id_ = 0;

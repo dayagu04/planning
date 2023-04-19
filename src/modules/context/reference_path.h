@@ -30,6 +30,8 @@ struct ReferencePathPoint {
   Common::LaneBoundaryType right_road_border_type;
   Common::LaneBoundaryType left_lane_border_type;
   Common::LaneBoundaryType right_lane_border_type;
+  double lane_width;
+  double max_velocity;
   ReferencePathPointType type;
   bool is_in_intersection;
 };
