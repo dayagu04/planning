@@ -13,7 +13,7 @@
 #include "../res/include/proto/prediction.pb.h"
 #include "../res/include/proto/fusion_road.pb.h"
 #include "../res/include/proto/radar_perception_objects.pb.h"
-
+#include "../res/include/proto/hmi_mcu_inner.pb.h"
 
 namespace planning {
 /**
@@ -30,7 +30,7 @@ struct LocalView {
   VehicleService::VehicleServiceOutputInfo vehicel_service_output_info;
   RadarPerceptionObjects::RadarPerceptionObjectsInfo radar_perception_objects_info;
   ControlCommand::ControlOutput control_output;
-
+  HimMcuInner::HmiMcuInner hmi_mcu_inner_info;
 };
 
 }  // namespace planning

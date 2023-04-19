@@ -290,7 +290,7 @@ message Velocity {
   optional HeadingVelocity heading_velocity = 2;
   optional Velocity3d velocity3d = 4;
   optional CruiseVelocity cruise_velocity = 5;
-
+  optional float hmi_speed = 6;
   enum Type {
     NONE = 0;
     HEADING_VELOCITY = 1;

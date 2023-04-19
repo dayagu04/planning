@@ -24,6 +24,7 @@ class EnvironmentalModelManager {
   bool ego_state_update(const LocalView& local_view);
   void vehicle_status_adaptor(const VehicleService::VehicleServiceOutputInfo &vehicel_service_output_info,
                               const LocalizationOutput::LocalizationEstimate &localization_estimate,
+                              const HimMcuInner::HmiMcuInner &hmi_mcu_inner_info,
                               common::VehicleStatus &vehicle_status);
   void truncate_prediction_info(const Prediction::PredictionResult& prediction_result,
                                 double cur_timestamp_us,

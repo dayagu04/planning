@@ -61,6 +61,7 @@ class EgoStateManager {
   double ego_v_angle() const { return ego_v_angle_; };
   double ego_v_cruise() const { return ego_v_cruise_; };
   double ego_acc() const { return ego_acc_; };
+  double ego_hmi_v() const { return ego_hmi_v_; }
   double ego_steer_angle() const { return ego_steer_angle_; };
   uint ego_blinker() const { return ego_blinker_; };
   double jerk() const { return jerk_; };
@@ -106,6 +107,7 @@ class EgoStateManager {
   double ego_v_cruise_ = 0;
   double ego_acc_ = 0;
   double ego_acc_last_ = 0;
+  double ego_hmi_v_;
   double ego_steer_angle_ = 0;
   uint ego_blinker_ = 0;
   double jerk_ = 0;

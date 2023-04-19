@@ -25,7 +25,7 @@ class VirtualLane {
   int get_virtual_id () const { return virtual_id_; };
   int get_relative_id() const { return relative_id_; };
   double width_by_s(double s);
-  double width(double s);
+  double width(double x);
   double width();
   LaneStatusEx status() { return lane_status_; }
   const FusionRoad::LaneBoundary &get_left_lane_boundary() { return left_lane_boundary_; }

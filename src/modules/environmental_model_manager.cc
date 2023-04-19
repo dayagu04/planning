@@ -103,7 +103,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
 
 bool EnvironmentalModelManager::ego_state_update(const LocalView& local_view) {
   common::VehicleStatus vehicle_status;
-  vehicle_status_adaptor(local_view.vehicel_service_output_info, local_view.localization_estimate,
+  vehicle_status_adaptor(local_view.vehicel_service_output_info, local_view.localization_estimate, local_view.hmi_mcu_inner_info,
                       vehicle_status);
   return ego_state_manager_ptr_->update(vehicle_status);
 }
@@ -150,7 +150,8 @@ bool EnvironmentalModelManager::obstacle_prediction_update(const LocalView& loca
 
 void EnvironmentalModelManager::vehicle_status_adaptor(const VehicleService::VehicleServiceOutputInfo &vehicel_service_output_info,
                                          const LocalizationOutput::LocalizationEstimate &localization_estimate,
-                                        common::VehicleStatus &vehicle_status) {
+                                         const HimMcuInner::HmiMcuInner &hmi_mcu_inner_info,
+                                         common::VehicleStatus &vehicle_status) {
   vehicle_status.mutable_header()->set_timestamp_us(vehicel_service_output_info.header().timestamp());
 
   if(session_->environmental_model().get_hdmap_valid()) {
@@ -195,12 +196,20 @@ void EnvironmentalModelManager::vehicle_status_adaptor(const VehicleService::Veh
 
 
   //Todo
-  //vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(cruise_velocity);
+
+  vehicle_status.mutable_velocity()->mutable_cruise_velocity()
+                ->set_value_mps(hmi_mcu_inner_info.acc_set_disp_speed()); 
   if (vehicel_service_output_info.vehicle_speed_available()) {
     vehicle_status.mutable_velocity()->set_available(true);
     vehicle_status.mutable_velocity()->mutable_heading_velocity()
                       ->set_value_mps(vehicel_service_output_info.vehicle_speed());
+    
   }
+  if (vehicel_service_output_info.vehicle_speed_display_available()) {
+    vehicle_status.mutable_velocity()->set_available(true);
+    vehicle_status.mutable_velocity()->set_hmi_speed(vehicel_service_output_info.vehicle_speed_display());
+  }
+
 
 
   if (session_->environmental_model().get_hdmap_valid()) {

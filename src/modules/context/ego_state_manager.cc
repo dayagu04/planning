@@ -28,6 +28,7 @@ void EgoStateManager::set_ego_pose_and_vel(
 
   ego_v_ = vehicle_status.velocity().heading_velocity().value_mps();
   ego_v_angle_ = vehicle_status.heading_yaw().heading_yaw_data().value_rad();
+  ego_hmi_v_ = vehicle_status.velocity().hmi_speed();
 }
 
 void EgoStateManager::set_ego_position_llh(const planning::common::VehicleStatus &vehicle_status){

@@ -51,6 +51,7 @@ class PlanningComponent final : public autoplt::ADSTimerCoponent {
   VehicleService::VehicleServiceOutputInfo vehicel_service_output_info_msg_;
   RadarPerceptionObjects::RadarPerceptionObjectsInfo radar_perception_objects_info_msg_;
   ControlCommand::ControlOutput control_output_msg_;
+  HimMcuInner::HmiMcuInner hmi_mcu_inner_info_msg_;
   LocalView local_view_;
   DebugOutput debug_info_;
 //   Session session_;

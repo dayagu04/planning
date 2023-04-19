@@ -126,6 +126,17 @@ bool PlanningComponent::Init() {
             std::lock_guard<std::mutex> lock(msg_mutex_);
             control_output_msg_.CopyFrom(*control_output_msg);
           });
+  
+  auto hmi_reader_ =
+      planning_node_->CreateReader<HimMcuInner::HmiMcuInner>(
+          "/iflytek/hmi/mcu_inner",
+          [this](
+              const std::shared_ptr<HimMcuInner::HmiMcuInner> &hmi_mcu_inner_info_msg) {
+            std::cout << "receive hmi_mcu_inner_info_output " << hmi_mcu_inner_info_msg->timestamp_us()
+                      << std::endl;
+            std::lock_guard<std::mutex> lock(msg_mutex_);
+            hmi_mcu_inner_info_msg_.CopyFrom(*hmi_mcu_inner_info_msg);
+          });
 
   // -------------- writter topics --------------
   planning_writer_ =
@@ -157,6 +168,7 @@ bool PlanningComponent::Proc() {
     local_view_.vehicel_service_output_info = vehicel_service_output_info_msg_;
     local_view_.radar_perception_objects_info = radar_perception_objects_info_msg_;
     local_view_.control_output = control_output_msg_;
+    local_view_.hmi_mcu_inner_info = hmi_mcu_inner_info_msg_;
   }
 
   // 2.planning run
