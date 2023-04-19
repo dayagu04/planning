@@ -44,7 +44,7 @@ class LaneChangeLaneManager {
     }
     // hack
     return true;
-  //   auto ego_state = session_->mutable_environmental_model()->ego_state_manager();
+  //   auto ego_state = session_->mutable_environmental_model()->get_ego_state_manager();
   //   double lateral_offset =
   //       lane->calc_fabs_lateral_offset(ego_state->x(), ego_state->y());
   //   return (lateral_offset < 1.6) ? true : false;

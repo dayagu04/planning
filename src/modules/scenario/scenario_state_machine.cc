@@ -158,7 +158,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
   assert(direction == LEFT_CHANGE || direction == RIGHT_CHANGE);
   LaneChangeStageInfo result_info;
   auto &lateral_obstacle = session_->environmental_model().lateral_obstacle();
-  auto &ego_state = session_->environmental_model().ego_state_manager();
+  auto &ego_state = session_->environmental_model().get_ego_state_manager();
 
   auto &lateral_output =
       session_->planning_context().lateral_behavior_planner_output();
@@ -168,9 +168,9 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
   auto origin_lane = lc_lane_mgr_->olane();
   auto fix_lane = lc_lane_mgr_->flane();
   auto &virtual_lane_manager =
-      session_->mutable_environmental_model()->virtual_lane_manager();
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
   if (origin_lane == nullptr) {
-    origin_lane = virtual_lane_manager->current_lane();
+    origin_lane = virtual_lane_manager->get_current_lane();
   }
   if (direction == LEFT_CHANGE) {
     target_lane = virtual_lane_manager->get_left_neighbor(origin_lane);
@@ -181,19 +181,19 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
     return result_info;
   }
   if (fix_lane == nullptr) {
-    fix_lane = virtual_lane_manager->current_lane();
+    fix_lane = virtual_lane_manager->get_current_lane();
   }
 
   // int current_lane_virtual_id = session_->mutable_environmental_model()
   //                                   ->virtual_lane_manager()
   //                                   ->current_lane_virtual_id();
   auto reference_path_manager =
-      session_->mutable_environmental_model()->reference_path_manager();
+      session_->mutable_environmental_model()->get_reference_path_manager();
   auto fix_reference_path = reference_path_manager->get_reference_path_by_lane(
-      fix_lane->virtual_id());
+      fix_lane->get_virtual_id());
   auto target_reference_path =
       reference_path_manager->get_reference_path_by_lane(
-          target_lane->virtual_id());
+          target_lane->get_virtual_id());
   // auto &frenet_obstacles = current_reference_path->get_obstacles();
   auto &frenet_ego_state = fix_reference_path->get_frenet_ego_state();
   auto &target_lane_frenet_ego_state =
@@ -229,7 +229,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
     return result_info;
   }
 
-  double v_ego = ego_state->velocity();
+  double v_ego = ego_state->ego_v();
   double l_ego = frenet_ego_state.l();
   double safety_dist = v_ego * v_ego * 0.01 + 2.0;
   double dist_mline = std::fabs(target_lane_frenet_ego_state.l()) -
@@ -242,9 +242,9 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
   std::vector<TrackedObject> side_target_tracks;
   std::vector<TrackedObject> front_target_tracks;
   auto &obstacle_manager =
-      session_->mutable_environmental_model()->obstacle_manager();
+      session_->mutable_environmental_model()->get_obstacle_manager();
   auto tlane_obstacles =
-      obstacle_manager->get_lane_obstacles(target_lane->virtual_id());
+      obstacle_manager->get_lane_obstacles(target_lane->get_virtual_id());
 
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
@@ -504,7 +504,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
   LaneChangeStageInfo result;
 
   auto &lateral_obstacle = session_->environmental_model().lateral_obstacle();
-  auto &ego_state = session_->environmental_model().ego_state_manager();
+  auto &ego_state = session_->environmental_model().get_ego_state_manager();
 
   auto &lateral_output =
       session_->planning_context().lateral_behavior_planner_output();
@@ -514,9 +514,9 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
   auto origin_lane = lc_lane_mgr_->olane();
   auto fix_lane = lc_lane_mgr_->flane();
   auto &virtual_lane_manager =
-      session_->mutable_environmental_model()->virtual_lane_manager();
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
   if (origin_lane == nullptr) {
-    origin_lane = virtual_lane_manager->current_lane();
+    origin_lane = virtual_lane_manager->get_current_lane();
   }
   if (direction == LEFT_CHANGE) {
     target_lane = virtual_lane_manager->get_left_neighbor(origin_lane);
@@ -527,19 +527,19 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
     return result;
   }
   if (fix_lane == nullptr) {
-    fix_lane = virtual_lane_manager->current_lane();
+    fix_lane = virtual_lane_manager->get_current_lane();
   }
 
   int current_lane_virtual_id = session_->mutable_environmental_model()
-                                    ->virtual_lane_manager()
+                                    ->get_virtual_lane_manager()
                                     ->current_lane_virtual_id();
   auto reference_path_manager =
-      session_->mutable_environmental_model()->reference_path_manager();
+      session_->mutable_environmental_model()->get_reference_path_manager();
   auto fix_reference_path = reference_path_manager->get_reference_path_by_lane(
-      fix_lane->virtual_id());
+      fix_lane->get_virtual_id());
   auto target_reference_path =
       reference_path_manager->get_reference_path_by_lane(
-          target_lane->virtual_id());
+          target_lane->get_virtual_id());
   // auto &frenet_obstacles = current_reference_path->get_obstacles();
   auto &frenet_ego_state = fix_reference_path->get_frenet_ego_state();
   auto &target_lane_frenet_ego_state =
@@ -556,10 +556,10 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
 
   // if (!map_info.is_in_intersection() &&
   //     map_info.left_refline_points().size() > 0) {
-  if (virtual_lane_manager->left_lane()->lane_points().size() > 0) {
-    for (auto &p : virtual_lane_manager->left_lane()->lane_points()) {
-      if (p.car_point.x >= 0 && p.car_point.x <= 20 && !p.is_in_intersection) {
-        left_lane_width = p.lane_width;
+  if (virtual_lane_manager->get_left_lane()->lane_points().size() > 0) {
+    for (auto &p : virtual_lane_manager->get_left_lane()->lane_points()) {
+      if (p.car_point().x() >= 0 && p.car_point().x() <= 20 && !p.is_in_intersection()) {
+        left_lane_width = p.lane_width();
         if (left_lane_width < 100) {
           break;
         }
@@ -569,10 +569,10 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
 
   // if (!map_info.is_in_intersection() &&
   //     map_info.right_refline_points().size() > 0) {
-  if (virtual_lane_manager->right_lane()->lane_points().size() > 0) {
-    for (auto &p : virtual_lane_manager->right_lane()->lane_points()) {
-      if (p.car_point.x >= 0 && p.car_point.x <= 20 && !p.is_in_intersection) {
-        right_lane_width = p.lane_width;
+  if (virtual_lane_manager->get_right_lane()->lane_points().size() > 0) {
+    for (auto &p : virtual_lane_manager->get_right_lane()->lane_points()) {
+      if (p.car_point().x() >= 0 && p.car_point().x() <= 20 && !p.is_in_intersection()) {
+        right_lane_width = p.lane_width();
         if (right_lane_width < 100) {
           break;
         }
@@ -594,7 +594,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
   double mss = 0.0;
   double mss_t = 0.0;
 
-  double v_ego = ego_state->velocity();
+  double v_ego = ego_state->ego_v();
   double safety_dist = v_ego * 0.2 + 2;
   // double dist_mline = virtual_lane_mgr.dist_mline(direction);
   double dist_mline = std::fabs(target_lane_frenet_ego_state.l()) -
@@ -610,9 +610,9 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
   std::vector<TrackedObject> side_target_tracks;
   std::vector<TrackedObject> front_target_tracks;
   auto &obstacle_manager =
-      session_->mutable_environmental_model()->obstacle_manager();
+      session_->mutable_environmental_model()->get_obstacle_manager();
   auto tlane_obstacles =
-      obstacle_manager->get_lane_obstacles(target_lane->virtual_id());
+      obstacle_manager->get_lane_obstacles(target_lane->get_virtual_id());
 
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
@@ -651,8 +651,8 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
       int end_idx = 0;
       if (tr.trajectory.intersection == 0) {
         for (int i = 0; i < x.size(); i++) {
-          double dx = x[i] - ego_state->x();
-          double dy = y[i] - ego_state->y();
+          double dx = x[i] - ego_state->ego_pose().x;
+          double dy = y[i] - ego_state->ego_pose().y;
 
           double rel_x = dx * ego_fx + dy * ego_fy;
           double rel_y = dx * ego_lx + dy * ego_ly;
@@ -790,7 +790,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
         distance > -left_lane_width / 2 - move_thre) ||
        (direction == RIGHT_CHANGE && start_move_dist_lane_ != 0 &&
         distance < right_lane_width / 2 + move_thre) ||
-       fix_lane->virtual_id() ==
+       fix_lane->get_virtual_id() ==
            current_lane_virtual_id)) {  // TODO(Rui): &&
                                         // !object_selector_->jam_cancel()
     if (result.lc_should_back && result.tr_pause_dv > pause_v_rel &&

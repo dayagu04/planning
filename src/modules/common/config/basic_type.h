@@ -340,10 +340,120 @@ enum CurrentState {
   INTO_WAIT_ZONE
 };
 
+struct TrackInfo {
+  TrackInfo() {}
+
+  TrackInfo(int id, double drel, double vrel)
+      : track_id(id), d_rel(drel), v_rel(vrel) {}
+
+  TrackInfo(const TrackInfo &track_info) {
+    track_id = track_info.track_id;
+    d_rel = track_info.d_rel;
+    v_rel = track_info.v_rel;
+  }
+
+  TrackInfo &operator=(const TrackInfo &track_info) {
+    track_id = track_info.track_id;
+    d_rel = track_info.d_rel;
+    v_rel = track_info.v_rel;
+    return *this;
+  }
+
+  void set_value(int id, double drel, double vrel) {
+    track_id = id;
+    d_rel = drel;
+    v_rel = vrel;
+  }
+
+  void reset() {
+    track_id = -10000;
+    d_rel = 0.0;
+    v_rel = 0.0;
+  }
+
+  int track_id = -10000;
+  double d_rel = 0.0;
+  double v_rel = 0.0;
+};
+
+struct LatBehaviorStateMachineOutput {
+  int scenario;
+  int curr_state;
+  std::string state_name;
+  std::string lc_back_reason = "none";
+  std::string lc_invalid_reason = "none";
+
+  int turn_light;
+  int map_turn_light;
+
+  bool accident_back;
+  bool accident_ahead;
+  bool close_to_accident;
+  bool should_premove;
+  bool should_suspend;
+  bool must_change_lane;
+  bool behavior_suspend;         // lateral suspend
+  std::vector<int> suspend_obs;  // lateral suspend
+
+  bool lc_pause;
+  int lc_pause_id;
+  double tr_pause_l;
+  double tr_pause_s;
+
+  bool disable_l;
+  bool disable_r;
+  bool enable_l;
+  bool enable_r;
+
+  bool need_clear_lb_car;
+  std::unordered_map<int, int> front_tracks_slow_cnt;
+  std::unordered_map<int, int> avd_track_cnt;
+  bool enable_lb;
+  int enable_id;
+
+  int lc_request;
+  int lc_request_source;
+  int lc_turn_light;
+  std::string act_request_source;
+
+  int lb_request;
+  int lb_turn_light;
+
+  bool premovel;
+  bool premover;
+  double premove_dist;
+
+  bool left_is_faster;
+  bool right_is_faster;
+
+  bool neg_left_lb_car;
+  bool neg_right_lb_car;
+  bool neg_left_alc_car;
+  bool neg_right_alc_car;
+
+  std::vector<int> left_lb_car;
+  std::vector<int> left_alc_car;
+  std::vector<int> right_lb_car;
+  std::vector<int> right_alc_car;
+
+  bool enable_alc_car_protection{false};
+  std::vector<int> alc_cars_;
+  std::vector<TrackInfo> near_cars_target;
+  std::vector<TrackInfo> near_cars_origin;
+  TrackInfo lc_invalid_track;
+  TrackInfo lc_back_track;
+};
+struct LatBehaviorInfo {
+  std::array<std::vector<double>, 2> avd_car_past;
+  std::array<std::vector<double>, 2> avd_sp_car_past;
+  bool flag_avd;
+  double dist_rblane;
+};
+
 struct PointLLH {
-    double Longitude;    // Longitude in degrees, ranging from -180 to 180,(度)
-    double Latitude;    // Latitude in degrees, ranging from -90 to 90,(度)
-    double height; // WGS-84 ellipsoid height in meters,(米)
+  double Longitude;  // Longitude in degrees, ranging from -180 to 180,(度)
+  double Latitude;   // Latitude in degrees, ranging from -90 to 90,(度)
+  double height;     // WGS-84 ellipsoid height in meters,(米)
 };
 
 struct EulerAngle {
@@ -359,19 +469,9 @@ typedef enum {
   BOTH_MISSING
 } LaneStatusEx;
 
-typedef enum {
-  LEFT = 0,
-  RIGHT
-} LineDirection;
+typedef enum { LEFT = 0, RIGHT } LineDirection;
 
-enum FusionSource {
-  CAMERA_ONLY = 1,
-  RADAR_ONLY,
-  FUSION
-};
+enum FusionSource { CAMERA_ONLY = 1, RADAR_ONLY, FUSION };
 
-enum ObstacleIntentType {
-  COMMON = 0,
-  CUT_IN = 1
-};
+enum ObstacleIntentType { COMMON = 0, CUT_IN = 1 };
 }  // namespace planning

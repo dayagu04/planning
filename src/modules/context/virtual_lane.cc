@@ -1,6 +1,8 @@
 #include "src/modules/context/virtual_lane.h"
 #include "modules/common/math/linear_interpolation.h"
+#include "virtual_lane.h"
 namespace planning {
+VirtualLane::VirtualLane() {}
 
 void VirtualLane::update_data(const FusionRoad::Lane& lane) {
   order_id_ = lane.order_id();

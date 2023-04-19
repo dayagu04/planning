@@ -28,7 +28,7 @@ LateralObstacle::~LateralObstacle() { lead_cars_.clear(); }
 
 bool LateralObstacle::update() {
   update_sensors(
-      session_->environmental_model().ego_state_manager(),
+      session_->environmental_model().get_ego_state_manager(),
       session_->environmental_model().get_prediction_info(), false,
       false);  // TODO session_->environmental_model().get_hdmap_valid()
   return true;

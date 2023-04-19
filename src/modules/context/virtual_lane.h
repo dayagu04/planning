@@ -50,7 +50,13 @@ class VirtualLane {
   FusionRoad::LaneDrivableDirection get_lane_marks() const { return lane_marks_; };
   FusionRoad::LaneSource get_lane_source() const { return lane_source_; };
 
-  //int lc_map_decision();
+
+  // 能让车沿着route形式，在当前位置所在的lanegroup中，最少需要变道几次
+  // +： right; -: left
+  int lc_map_decision() const {
+    // HACK
+    return 0;
+  }
   //double lc_end_dist();
   bool has_lines(LineDirection direction) const;
   double distance_to_line(double s, double l, LineDirection direction);
@@ -66,6 +72,19 @@ class VirtualLane {
 
   double min_width();
   double max_width();
+
+
+  // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离
+  double lc_map_decision_offset() const {
+    //HACK
+    return 5000.;
+  };
+
+    // 到最远变道点距离是否小于给定距离阈值，用来判断是否应该开始换道。
+  double must_change_lane(double on_route_distance_threshold) const {
+    return lc_map_decision() != 0 &&
+           lc_map_decision_offset() < on_route_distance_threshold;
+  }
  private:
 
   int order_id_ = 0;

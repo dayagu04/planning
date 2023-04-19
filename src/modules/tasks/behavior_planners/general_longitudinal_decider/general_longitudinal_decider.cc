@@ -53,7 +53,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
   const double ego_a = planning_init_point.a;
   const double ego_s = planning_init_point.frenet_state.s;
 
-  auto ego_state = frame->session()->environmental_model().ego_state_manager();
+  auto ego_state = frame->session()->environmental_model().get_ego_state_manager();
 
   // Step 1)
   ReferencePathPoints refpath_points;
@@ -84,7 +84,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
   double total_time = 4.0;
 
   // enable start & stop function
-  auto start_stop_info = ego_state->ego_start_stop();
+  auto start_stop_info = ego_state->start_stop();
   StartStopInfo &start_stop_result = frame->mutable_session()
                                          ->mutable_planning_context()
                                          ->mutable_start_stop_result();
@@ -145,7 +145,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
                                              planning_init_point);
   MrcBrakeType mrc_brake_type = mrc_brake->mrc_brake_type();
 
-  double ego_v_real = ego_state->velocity();
+  double ego_v_real = ego_state->ego_v();
   mrc_brake->mrc_engage_p_gear(ego_v_real);
   // MDEBUG_JSON_ADD_ITEM(ego_v_real, ego_v_real, Mrc_v_ref_debug)
   // MDEBUG_JSON_ADD_ITEM(mrc_brake_type, static_cast<int>(mrc_brake_type),

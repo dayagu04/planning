@@ -12,7 +12,7 @@ void AdaptiveCruiseControl::adaptive_cruise_control(
     LonDecisionInfo& lon_decision_information,
     AdaptiveCruiseControlInfo& acc_info,
     PlanningResult& ego_prediction_result) {
-  auto ego_state = session_->environmental_model().ego_state_manager();
+  auto ego_state = session_->environmental_model().get_ego_state_manager();
 
   // const double ego_v = ego_state->velocity();
   // const double ego_a = ego_state->acc();

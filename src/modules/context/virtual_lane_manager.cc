@@ -7,8 +7,11 @@ namespace planning {
 VirtualLaneManager::VirtualLaneManager(planning::framework::Session *session) {
   session_ = session;
 }
-// VirtualLaneManager::VirtualLaneManager(planning::framework::Session *session)
-// {  session_= session; }
+
+double VirtualLaneManager::get_distance_to_dash_line(
+    const RequestType direction, int order_id) const {
+  return 0.0;
+}
 
 bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   current_lane_ = nullptr;

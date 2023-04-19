@@ -21,11 +21,42 @@ struct SpeedChangePoint {
   double speed;
 };
 
-class VirtualLaneManager : public VirtualLane{
+class VirtualLaneManager {
  public:
   VirtualLaneManager(planning::framework::Session *session);
   // VirtualLaneManager() = default;
   ~VirtualLaneManager() {};
+
+  // 在该lane上，到下一个实线车道线的距离
+  // 如果当前是实线车道线，即返回0
+  double get_distance_to_dash_line(const RequestType direction,
+                                   int order_id) const;
+
+  // 就是到最远变道点的距离
+  double get_distance_to_final_dash_line(const RequestType direction,
+                                         int order_id) {
+    if (order_id < 0 ||
+        order_id >= static_cast<int>(relative_id_lanes_.size())) {
+      LOG_ERROR("wrong order_id %d", order_id);
+      //HACK
+      return 5000.;
+    }
+    return relative_id_lanes_.at(order_id)->lc_map_decision_offset();
+  }
+
+  std::shared_ptr<VirtualLane> get_left_neighbor(
+      std::shared_ptr<VirtualLane> this_lane) const {
+    return this_lane->get_order_id() > 0
+               ? relative_id_lanes_[this_lane->get_order_id() - 1]
+               : nullptr;
+  }
+  std::shared_ptr<VirtualLane> get_right_neighbor(
+      std::shared_ptr<VirtualLane> this_lane) const {
+    return this_lane->get_order_id() <
+                   static_cast<int>(relative_id_lanes_.size()) - 1
+               ? relative_id_lanes_[this_lane->get_order_id() + 1]
+               : nullptr;
+  }
 
   const std::shared_ptr<VirtualLane> get_current_lane() const { return current_lane_; }
   const std::shared_ptr<VirtualLane> get_left_lane() const { return left_lane_; }

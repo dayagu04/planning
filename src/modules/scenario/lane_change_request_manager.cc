@@ -48,9 +48,9 @@ void LaneChangeRequest::Finish() {
 bool LaneChangeRequest::AggressiveChange() const {
   auto origin_lane = lane_change_lane_mgr_->has_origin_lane()
                          ? lane_change_lane_mgr_->olane()
-                         : virtual_lane_mgr_->current_lane();
-  auto lc_map_decision =
-      origin_lane != nullptr ? origin_lane->lc_map_decision() : 0;
+                         : virtual_lane_mgr_->get_current_lane();
+  auto lc_map_decision = 0; // hack
+      // origin_lane != nullptr ? origin_lane->lc_map_decision() : 0;
   auto aggressive_change_distance = 200.0;  // WB: hack
   // virtual_lane_mgr_->is_on_highway()
   //     ? aggressive_lane_change_distance_highway_
@@ -97,10 +97,10 @@ bool LaneChangeRequest::IsDashedLineEnough(
   double error_buffer = std::fmin(ego_vel * 0.5, 5);
   dash_length -= error_buffer;
 
-  double distance_thld =
-      std::max(map_info_mgr->map_velocity_limit(), ego_vel) * 4.0;
+  double distance_thld = 500.0 ; // hack for distance
+      // std::max(map_info_mgr->map_velocity_limit(), ego_vel) * 4.0;
   bool must_change_lane =
-      map_info_mgr->current_lane()->must_change_lane(distance_thld);
+      map_info_mgr->get_current_lane()->must_change_lane(distance_thld);
   if (!must_change_lane && cal_lat_offset(ego_vel, dash_length) < 3.6) {
     LOG_ERROR("!dashed_enough \n");
     return false;
@@ -197,7 +197,7 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       nullptr) {
     int target_lane_order_id =
         virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)
-            ->order_id();
+            ->get_order_id();
     LOG_DEBUG("[LCRequestManager::update] final target_lane_order_id: %d \n",
               target_lane_order_id);
     // MDEBUG_JSON_ADD_ITEM(tlane_oid, target_lane_order_id,

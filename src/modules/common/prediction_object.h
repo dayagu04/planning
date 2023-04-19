@@ -3,6 +3,7 @@
 
 #include "modules/common/common.h"
 #include "modules/common/config/basic_type.h"
+#include "res/include/proto/common.pb.h"
 #include <string>
 #include <vector>
 
