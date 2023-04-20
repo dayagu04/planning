@@ -56,9 +56,6 @@ class VirtualLaneManager {
   bool update(const FusionRoad::RoadInfo& roads);
   void reset();
   
-  // 到最远变道点距离是否小于给定距离阈值，用来判断是否应该开始换道。
-  bool must_change_lane(uint order_id, double on_route_distance_threshold) const;
-  
   double get_distance_to_dash_line(const RequestType direction, uint order_id) const {
     return std::numeric_limits<double>::max();
   }

@@ -208,14 +208,6 @@ bool VirtualLaneManager::has_lane(int virtual_lane_id) {
   }
 }
 
-bool VirtualLaneManager::must_change_lane(uint order_id, double on_route_distance_threshold) const {
-  auto virtual_lane = get_lane_with_order_id(order_id);
-  if (virtual_lane == nullptr) {
-    return false;
-  }
-  return virtual_lane->lc_map_decision(get_lane_num()) != 0 && virtual_lane->lc_map_decision_offset() < on_route_distance_threshold;
-}
-
 double VirtualLaneManager::get_distance_to_final_dash_line(const RequestType direction, uint order_id) const{
     auto virtual_lane = get_lane_with_order_id(order_id);
     if (virtual_lane == nullptr) {

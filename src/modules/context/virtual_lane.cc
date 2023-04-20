@@ -264,6 +264,10 @@ int VirtualLane::current_tasks_id(uint lane_num) const {
   return current_tasks;
 }
 
+bool VirtualLane::must_change_lane(uint lane_num, double on_route_distance_threshold) const {
+  return lc_map_decision(lane_num) != 0 && lc_map_decision_offset() < on_route_distance_threshold;
+}
+
 int VirtualLane::lc_map_decision(uint lane_num) const {
   int tasks_id = current_tasks_id(lane_num);
   int lane_index = current_lane_index();
@@ -277,6 +281,7 @@ int VirtualLane::lc_map_decision(uint lane_num) const {
 
   return tasks_id;
 }
+
 
 void VirtualLane::update_speed_limit(double ego_vel, double ego_v_cruise) { //todo
   // update vision only v_cruise_

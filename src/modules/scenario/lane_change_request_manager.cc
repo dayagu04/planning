@@ -58,7 +58,7 @@ bool LaneChangeRequest::AggressiveChange() const {
 
   auto aggressive_change =
       origin_lane != nullptr
-          ? virtual_lane_mgr_->must_change_lane(origin_lane->get_order_id(), aggressive_change_distance *
+          ? origin_lane->must_change_lane(virtual_lane_mgr_->get_lane_num(), aggressive_change_distance *
                                           std::fabs(lc_map_decision))
           : false;
   return aggressive_change && (request_ != NO_CHANGE);
@@ -99,7 +99,8 @@ bool LaneChangeRequest::IsDashedLineEnough(
 
   double distance_thld = 500.0 ; // hack for distance
       // std::max(map_info_mgr->map_velocity_limit(), ego_vel) * 4.0;
-  bool must_change_lane =virtual_lane_mgr_->must_change_lane(map_info_mgr->get_current_lane()->get_order_id(), distance_thld);
+  bool must_change_lane = map_info_mgr->get_current_lane()->must_change_lane(virtual_lane_mgr_->get_lane_num(),distance_thld);
+
   if (!must_change_lane && cal_lat_offset(ego_vel, dash_length) < 3.6) {
     LOG_ERROR("!dashed_enough \n");
     return false;

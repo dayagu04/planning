@@ -78,6 +78,7 @@ class VirtualLane {
   double min_width();
   double max_width();
 
+  bool must_change_lane(uint lane_num, double on_route_distance_threshold) const;
   int lc_map_decision(uint lane_num) const;
   int current_tasks_id(uint lane_num) const;
   int current_lane_index() const ;
