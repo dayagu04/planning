@@ -11,18 +11,20 @@ TSRSys tsr_sys;
 void TSRUpdateInput(planning::framework::Session *session, TSRSys *sys)
 {
     // 获取TSR开关状态
-    sys->input.tsr_main_switch = TRUE;
+    sys->input.tsr_main_switch = session->mutable_environmental_model()
+                                     ->get_hmi_info()
+                                     .tsr_main_switch();
 
-    // 当前车道的限速值
+    // 当前车道的限速值 缺少接口
     auto ptr_current_lane = session->mutable_environmental_model()
                                 ->get_virtual_lane_manager()
                                 ->get_current_lane();
-    sys->input.tsr_speed_limit = ptr_current_lane->get_virtual_id();
+    sys->input.tsr_speed_limit = ptr_current_lane->get_ego_lateral_offset();
 
     // 获取当前仪表车速
     auto ptr_ego_state_manager = session->mutable_environmental_model()
                                      ->get_ego_state_manager();
-    sys->input.vehicle_speed_display_kph = ptr_ego_state_manager->ego_v() *
+    sys->input.vehicle_speed_display_kph = ptr_ego_state_manager->ego_hmi_v() *
                                            3.6F; // 当前车速 单位:m/s
 }
 
