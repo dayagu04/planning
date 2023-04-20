@@ -8,16 +8,19 @@
 namespace planning {
 namespace framework {
 
+Scheduler::Scheduler() : run_count_(0) {}
 Scheduler::~Scheduler() {}
 
 
 void Scheduler::Init(Session *session) {
+  run_count_ = 0;
   session_ = session;
   (void)InitModuleList(session);
 }
 
 void Scheduler::Reset() {
   LOG_DEBUG("Scheduler::reset");
+  run_count_ = 0;
   for (auto &module_ptr : module_list_) {
     PlanningModule *p = dynamic_cast<PlanningModule *>(module_ptr);
     if (p != nullptr) {
@@ -27,6 +30,7 @@ void Scheduler::Reset() {
 }
 
 void Scheduler::RunOnce() {
+  run_count_++;
   Frame frame{session_};
 
   for (auto &module_ptr : module_list_) {

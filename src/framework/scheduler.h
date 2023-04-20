@@ -27,6 +27,7 @@ class Scheduler {
 
   Session *session_;
   std::list<BaseModule *> module_list_;
+  int64_t run_count_;
 
   DISALLOW_COPY_AND_ASSIGN(Scheduler);
 };

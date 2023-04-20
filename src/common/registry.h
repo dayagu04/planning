@@ -6,7 +6,7 @@
 #include <map>
 #include <sstream>
 
-#include "common/log.h"
+#include "src/common/log.h"
 
 namespace planning {
 namespace common {
@@ -37,7 +37,8 @@ class Registry {
     }
 
     factory_map_[name] = factory;
-    LOG_DEBUG("factory inserted: name=%s", name);
+    std::cout<<"factory inserted: name= "<<name<<std::endl;
+    // printf("factory inserted: name=%s", name);
     return true;
   }
 

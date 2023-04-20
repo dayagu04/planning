@@ -52,7 +52,7 @@ add_subdirectory(thirdparty/osqp EXCLUDE_FROM_ALL)
 # add_subdirectory(planning)
 
 # 添加宏开关
-add_definitions("-DNDEBUG")
+# add_definitions("-DNDEBUG")
 
 # 遍历源文件
 # aux_source_directory(${PROJECT_SOURCE_DIR}/../test SRC_TEST)
@@ -125,7 +125,7 @@ else()
 endif()
 
 # -----------GTEST 单元测试-----------
-option (PNC_ENABLE_TEST "build unit tests" OFF)
+option (PNC_ENABLE_TEST "build unit tests" ON)
 message (STATUS "PNC_ENABLE_TEST=" ${PNC_ENABLE_TEST})
 if (PNC_ENABLE_TEST)
   set(CMAKE_BUILD_TYPE Debug)

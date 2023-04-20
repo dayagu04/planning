@@ -127,8 +127,19 @@ bool GeneralPlanning::RunOnce(
 //   UpdateVehicleStatus(current_time);
 // }
 
-bool InputReady(double current_time, std::string &error_msg) {
+void GeneralPlanning::UpdateRawEnvironmentalModel(double current_time) {}
+
+bool GeneralPlanning::InputReady(double current_time, std::string &error_msg) {
   return true;
 }
+
+void GeneralPlanning::FillPlanningTrajectory(
+    double start_time, PlanningOutput::PlanningOutput *const planning_output) {}
+
+void GeneralPlanning::GenerateStopTrajectory(
+    double start_time, PlanningOutput::PlanningOutput *const planning_output) {}
+
+void GeneralPlanning::FillPlanningDebugInfo(double start_time,
+                                            DebugOutput &debug_info) {}
 
 }  // namespace planning
