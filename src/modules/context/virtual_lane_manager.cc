@@ -8,11 +8,6 @@ VirtualLaneManager::VirtualLaneManager(planning::framework::Session *session) {
   session_ = session;
 }
 
-double VirtualLaneManager::get_distance_to_dash_line(
-    const RequestType direction, int order_id) const {
-  return 0.0;
-}
-
 bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   current_lane_ = nullptr;
   left_lane_ = nullptr;
@@ -59,21 +54,21 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   update_virtual_id();
 }
 
-const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(int virtual_id) {
+std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(int virtual_id) const{
   if (virtual_id_mapped_lane_.find(virtual_id) != virtual_id_mapped_lane_.end()) {
-    return virtual_id_mapped_lane_[virtual_id];
+    return virtual_id_mapped_lane_.at(virtual_id);
   }
   else {
     return nullptr;
   }
 }
 
-// std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_order_id(uint order_id) {
-//   if(order_id_mapped_lanes_.size() < order_id + 1) {
-//     return nullptr;
-//   }
-//   return order_id_mapped_lanes_.at(order_id);
-// }
+const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_order_id(uint order_id) const{
+  if (order_id > relative_id_lanes_.size() -1) {
+    return nullptr;
+  }
+  return relative_id_lanes_.at(order_id);
+}
 
 void VirtualLaneManager::update_virtual_id() {
   virtual_id_mapped_lane_.clear();
@@ -213,61 +208,19 @@ bool VirtualLaneManager::has_lane(int virtual_lane_id) {
   }
 }
 
-void VirtualLaneManager::update_speed_limit(double ego_vel, double ego_v_cruise) { //todo
-  // update vision only v_cruise_
-  if (current_lane_ != nullptr) {
-    if(current_lane_->get_lane_source() == FusionRoad::LaneSource::SOURCE_FUSION) {
-      v_cruise_ = ego_v_cruise;
-      return;
-    }
+bool VirtualLaneManager::must_change_lane(uint order_id, double on_route_distance_threshold) const {
+  auto virtual_lane = get_lane_with_order_id(order_id);
+  if (virtual_lane == nullptr) {
+    return false;
   }
-
-  auto &referece_path_points = current_lane_->get_reference_path()->get_points();
-  if (referece_path_points.size() > 1) {
-    double last_speed;
-    bool find_last = false;
-    bool find_change = false;
-    double acc_brake_min = 100.0;
-    for (size_t i = 1; i < referece_path_points.size(); ++i) {
-      if (!find_last && referece_path_points[i].frenet_point.x > 0.0) { //hack: frenet_point
-        find_last = true;
-        last_speed = referece_path_points[i - 1].max_velocity;
-        current_lane_speed_limit_ = last_speed;
-        continue;
-      }
-
-      if (find_last && referece_path_points[i].max_velocity != last_speed) {
-        double acc_brake = (std::pow(referece_path_points[i].max_velocity, 2) - std::pow(ego_vel, 2)) / std::max(1.0,
-                           std::sqrt(std::pow(referece_path_points[i].frenet_point.x, 2) + std::pow(referece_path_points[i].frenet_point.y, 2)));
-        if (acc_brake < acc_brake_min) {
-          acc_brake_min = acc_brake;
-          find_change = true;
-          speed_change_point_.x = referece_path_points[i].frenet_point.x;
-          speed_change_point_.y = referece_path_points[i].frenet_point.y;
-          speed_change_point_.speed = referece_path_points[i].max_velocity;
-        }
-      }
-    }
-
-    if (!find_change) {
-      speed_change_point_.x = referece_path_points.back().frenet_point.x;
-      speed_change_point_.y = referece_path_points.back().frenet_point.y;
-      speed_change_point_.speed = referece_path_points.back().max_velocity;
-    }
-  }
-
-  current_lane_speed_limit_ = std::min(current_lane_speed_limit_, ego_v_cruise);
-
-  v_cruise_ =
-      std::min(current_lane_speed_limit_, speed_change_point_.speed);
+  return virtual_lane->lc_map_decision(get_lane_num()) != 0 && virtual_lane->lc_map_decision_offset() < on_route_distance_threshold;
 }
 
-int VirtualLaneManager::current_lane_index() const {
-  if (relative_id_lanes_.size() > 0) {
-    return 0 - relative_id_lanes_[0]->get_relative_id();
+double VirtualLaneManager::get_distance_to_final_dash_line(const RequestType direction, uint order_id) const{
+    auto virtual_lane = get_lane_with_order_id(order_id);
+    if (virtual_lane == nullptr) {
+      return std::numeric_limits<double>::max();
+    }
+    return virtual_lane->lc_map_decision_offset();
   }
-
-  return 0;
-}
-
-}
+} 

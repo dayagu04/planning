@@ -763,7 +763,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
               std::array<double, 3> fp1{2, 1.5, 1.};
               double a = interp(temp, xp1, fp1);
 
-              if (std::fabs(fix_lane->lc_map_decision()) == 1) {
+              if (std::fabs(fix_lane->lc_map_decision(virtual_lane_manager->get_lane_num())) == 1) {
                 mss = tr.v_rel * t_reaction / 2 * 0.7 +
                       temp * temp / (2 * a) * 0.7 + safety_dist -
                       2 / (tr.v_rel + 1);
@@ -924,7 +924,7 @@ bool ScenarioStateMachine::check_lc_change_finish(RequestType direction) {
   auto tlane_virtual_id = lc_lane_mgr_->tlane_virtual_id();
 
   if (tlane_virtual_id != clane_virtual_id &&
-      clane->lc_map_decision() != tlane->lc_map_decision()) {
+      clane->lc_map_decision(virtual_lane_mgr->get_lane_num()) != tlane->lc_map_decision(virtual_lane_mgr->get_lane_num())) {
     // tlane与clane的virtual id和lc_map_decision都不相同时，换道一定没有完成.
     return false;
   }

@@ -15,53 +15,26 @@ enum LaneChangeStatus {
   ON_RIGHT_LANE = 2,
 };
 
-struct SpeedChangePoint {
-  double x;
-  double y;
-  double speed;
-};
-
 class VirtualLaneManager {
  public:
   VirtualLaneManager(planning::framework::Session *session);
   // VirtualLaneManager() = default;
   ~VirtualLaneManager() {};
 
-  // 在该lane上，到下一个实线车道线的距离
-  // 如果当前是实线车道线，即返回0
-  double get_distance_to_dash_line(const RequestType direction,
-                                   int order_id) const;
-
-  // 就是到最远变道点的距离
-  double get_distance_to_final_dash_line(const RequestType direction,
-                                         int order_id) {
-    if (order_id < 0 ||
-        order_id >= static_cast<int>(relative_id_lanes_.size())) {
-      LOG_ERROR("wrong order_id %d", order_id);
-      //HACK
-      return 5000.;
-    }
-    return relative_id_lanes_.at(order_id)->lc_map_decision_offset();
-  }
-
-  std::shared_ptr<VirtualLane> get_left_neighbor(
-      std::shared_ptr<VirtualLane> this_lane) const {
+  std::shared_ptr<VirtualLane> get_left_neighbor(std::shared_ptr<VirtualLane> this_lane) const {
     return this_lane->get_order_id() > 0
-               ? relative_id_lanes_[this_lane->get_order_id() - 1]
-               : nullptr;
+           ? relative_id_lanes_[this_lane->get_order_id() - 1] : nullptr;
   }
-  std::shared_ptr<VirtualLane> get_right_neighbor(
-      std::shared_ptr<VirtualLane> this_lane) const {
-    return this_lane->get_order_id() <
-                   static_cast<int>(relative_id_lanes_.size()) - 1
-               ? relative_id_lanes_[this_lane->get_order_id() + 1]
-               : nullptr;
+  std::shared_ptr<VirtualLane> get_right_neighbor(std::shared_ptr<VirtualLane> this_lane) const {
+     return this_lane->get_order_id() < static_cast<int>(relative_id_lanes_.size()) - 1
+              ? relative_id_lanes_[this_lane->get_order_id() + 1] : nullptr;          
   }
 
   const std::shared_ptr<VirtualLane> get_current_lane() const { return current_lane_; }
   const std::shared_ptr<VirtualLane> get_left_lane() const { return left_lane_; }
   const std::shared_ptr<VirtualLane> get_right_lane() const { return right_lane_; }
-  const std::shared_ptr<VirtualLane> get_lane_with_virtual_id (int virtual_id);
+  std::shared_ptr<VirtualLane> get_lane_with_virtual_id(int virtual_id) const;
+  const std::shared_ptr<VirtualLane> get_lane_with_order_id(uint order_id) const;
   int current_lane_virtual_id() {
     if (current_lane_ != nullptr) {
       return current_lane_->get_virtual_id();
@@ -69,7 +42,6 @@ class VirtualLaneManager {
   }
   std::shared_ptr<VirtualLane> get_mutable_lane_with_virtual_id(int virtual_id);
   std::vector<std::shared_ptr<VirtualLane>>& get_virtual_lanes() { return relative_id_lanes_; }
-  // const std::shared_ptr<VirtualLane> get_lane_with_order_id(uint order_id);
   uint get_lane_num() const { return relative_id_lanes_.size(); };
   std::vector<std::shared_ptr<Obstacle>> get_current_lane_obstacle();
   std::vector<std::shared_ptr<Obstacle>> get_left_lane_obstacle();
@@ -83,19 +55,25 @@ class VirtualLaneManager {
   void update_last_fix_lane_id(int flane_virtual_id) { last_fix_lane_virtual_id_ = flane_virtual_id;  }
   bool update(const FusionRoad::RoadInfo& roads);
   void reset();
-  int current_lane_index() const ;
-  double v_cruise() const { return v_cruise_; };
+  
+  // 到最远变道点距离是否小于给定距离阈值，用来判断是否应该开始换道。
+  bool must_change_lane(uint order_id, double on_route_distance_threshold) const;
+  
+  double get_distance_to_dash_line(const RequestType direction, uint order_id) const {
+    return std::numeric_limits<double>::max();
+  }
+
+  double get_distance_to_final_dash_line(const RequestType direction, uint order_id) const;
  private:
   LaneChangeStatus is_lane_change();
   void update_virtual_id();
-  void update_speed_limit(double ego_vel, double ego_v_cruise);
+  
 
   planning::framework::Session *session_ = nullptr;
   //ReferencePathManager reference_path_manager_;
   int last_fix_lane_virtual_id_ = 0;
   int current_lane_virtual_id_ = 0;
   std::unordered_map<int, std::shared_ptr<VirtualLane>> virtual_id_mapped_lane_;
-  //std::unordered_map<int, std::shared_ptr<VirtualLane>> relative_id_lanes_;
   std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes_;
   std::shared_ptr<VirtualLane> current_lane_ = nullptr;
   std::shared_ptr<VirtualLane> left_lane_ = nullptr;
@@ -103,11 +81,6 @@ class VirtualLaneManager {
 
   double last_left_diff_ = 0;
   double last_right_diff_ = 0;
-
-  double v_cruise_ = 0.0;
-  double current_lane_speed_limit_ = 0.0;
-  SpeedChangePoint speed_change_point_{};
-
 };
 }
 #endif

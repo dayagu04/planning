@@ -239,4 +239,90 @@ double VirtualLane::min_width() {
       return DBL_MAX;
   }
 }
+int VirtualLane::current_lane_index() const {
+  return 0 - relative_id_;
+}
+
+int VirtualLane::current_tasks_id(uint lane_num) const {
+  int current_tasks = 0;
+  if (current_tasks_.empty()) {
+    return 0;
+  }
+  for (int i = 0; i < current_tasks_.size(); i++) {
+    if (current_tasks_[i] != current_tasks_[0]) {
+      break;
+    }
+    current_tasks += current_tasks_[i];
+  }
+
+  // clip tasks according to lane nums
+  int lane_index = current_lane_index();
+  int right_lane_nums = std::max((int)lane_num - lane_index - 1, 0);
+  int left_lane_nums = lane_index;
+  current_tasks = std::max(std::min(current_tasks, right_lane_nums), -left_lane_nums);
+
+  return current_tasks;
+}
+
+int VirtualLane::lc_map_decision(uint lane_num) const {
+  int tasks_id = current_tasks_id(lane_num);
+  int lane_index = current_lane_index();
+
+  // hack valid and on rightest way
+  if (hack_ &&lane_index == (lane_num - 1)) {
+    if (tasks_id <= 0) {
+      tasks_id = std::min(tasks_id, -1);
+    }
+  }
+
+  return tasks_id;
+}
+
+void VirtualLane::update_speed_limit(double ego_vel, double ego_v_cruise) { //todo
+  // update vision only v_cruise_
+  if (get_lane_source() == FusionRoad::LaneSource::SOURCE_FUSION) {
+    v_cruise_ = ego_v_cruise;
+  }
+
+  assert(reference_path_ == nullptr);
+  auto &referece_path_points = reference_path_->get_points();
+  if (referece_path_points.size() > 1) {
+    double last_speed;
+    bool find_last = false;
+    bool find_change = false;
+    double acc_brake_min = 100.0;
+    for (size_t i = 1; i < referece_path_points.size(); ++i) {
+      if (!find_last && referece_path_points[i].frenet_point.x > 0.0) { //hack: frenet_point
+        find_last = true;
+        last_speed = referece_path_points[i - 1].max_velocity;
+        current_lane_speed_limit_ = last_speed;
+        continue;
+      }
+
+      if (find_last && referece_path_points[i].max_velocity != last_speed) {
+        double acc_brake = (std::pow(referece_path_points[i].max_velocity, 2) - std::pow(ego_vel, 2)) / std::max(1.0,
+                           std::sqrt(std::pow(referece_path_points[i].frenet_point.x, 2) + std::pow(referece_path_points[i].frenet_point.y, 2)));
+        if (acc_brake < acc_brake_min) {
+          acc_brake_min = acc_brake;
+          find_change = true;
+          speed_change_point_.x = referece_path_points[i].frenet_point.x;
+          speed_change_point_.y = referece_path_points[i].frenet_point.y;
+          speed_change_point_.speed = referece_path_points[i].max_velocity;
+        }
+      }
+    }
+
+    if (!find_change) {
+      speed_change_point_.x = referece_path_points.back().frenet_point.x;
+      speed_change_point_.y = referece_path_points.back().frenet_point.y;
+      speed_change_point_.speed = referece_path_points.back().max_velocity;
+    }
+  }
+
+  current_lane_speed_limit_ = std::min(current_lane_speed_limit_, ego_v_cruise);
+
+  v_cruise_ =
+      std::min(current_lane_speed_limit_, speed_change_point_.speed);
+}
+
 }
