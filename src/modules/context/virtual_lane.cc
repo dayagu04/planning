@@ -239,48 +239,7 @@ double VirtualLane::min_width() {
       return DBL_MAX;
   }
 }
-int VirtualLane::current_lane_index() const {
-  return 0 - relative_id_;
-}
 
-int VirtualLane::current_tasks_id(uint lane_num) const {
-  int current_tasks = 0;
-  if (current_tasks_.empty()) {
-    return 0;
-  }
-  for (int i = 0; i < current_tasks_.size(); i++) {
-    if (current_tasks_[i] != current_tasks_[0]) {
-      break;
-    }
-    current_tasks += current_tasks_[i];
-  }
-
-  // clip tasks according to lane nums
-  int lane_index = current_lane_index();
-  int right_lane_nums = std::max((int)lane_num - lane_index - 1, 0);
-  int left_lane_nums = lane_index;
-  current_tasks = std::max(std::min(current_tasks, right_lane_nums), -left_lane_nums);
-
-  return current_tasks;
-}
-
-bool VirtualLane::must_change_lane(uint lane_num, double on_route_distance_threshold) const {
-  return lc_map_decision(lane_num) != 0 && lc_map_decision_offset() < on_route_distance_threshold;
-}
-
-int VirtualLane::lc_map_decision(uint lane_num) const {
-  int tasks_id = current_tasks_id(lane_num);
-  int lane_index = current_lane_index();
-
-  // hack valid and on rightest way
-  if (hack_ &&lane_index == (lane_num - 1)) {
-    if (tasks_id <= 0) {
-      tasks_id = std::min(tasks_id, -1);
-    }
-  }
-
-  return tasks_id;
-}
 
 
 void VirtualLane::update_speed_limit(double ego_vel, double ego_v_cruise) { //todo
