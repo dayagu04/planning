@@ -26,7 +26,8 @@ void GeneralPlanning::Init() {
 bool GeneralPlanning::RunOnce(
     const LocalView &local_view,
     PlanningOutput::PlanningOutput *const planning_output,
-    DebugOutput &debug_info) {
+    DebugOutput &debug_info,
+    PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info) {
   // using namespace FeiMa::SystemFunc;
   LOG_ERROR("GeneralPlanning::RunOnce \n");
   local_view_ = local_view;
@@ -94,6 +95,7 @@ bool GeneralPlanning::RunOnce(
   if (planning_status->planning_success) {
     FillPlanningTrajectory(start_timestamp, planning_output);
     FillPlanningDebugInfo(start_timestamp, debug_info);
+    FillPlanningHmiInfo(start_timestamp, planning_hmi_Info);
     std::cout << "The RunOnce is successed !!!!:" << std::endl;
     return true;
   } else {

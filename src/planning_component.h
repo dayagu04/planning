@@ -17,7 +17,7 @@
 #include "../res/include/proto/prediction.pb.h"
 #include "../res/include/proto/fusion_road.pb.h"
 #include "../res/include/proto/radar_perception_objects.pb.h"
-
+#include "../res/include/proto/planning_hmi.pb.h"
 
 #include "autoplt/include/ADSComponent.h"
 #include "autoplt/include/ADSNode.h"
@@ -62,7 +62,9 @@ class PlanningComponent final : public autoplt::ADSTimerCoponent {
       nullptr;
   std::shared_ptr<Writer<planning::common::PlanningDebugInfo>> planning_debug_writer_ =
       nullptr;
-
+  std::shared_ptr<Writer<PlanningHMI::PlanningHMIOutputInfoStr>> planning_hmi_Info_writer_ =
+      nullptr;
+ 
   std::unique_ptr<GeneralPlanning> planning_base_ = nullptr;
 };
 

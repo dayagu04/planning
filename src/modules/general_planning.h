@@ -28,7 +28,8 @@ class GeneralPlanning {
   void Init();
   bool RunOnce(const LocalView& local_view,
                PlanningOutput::PlanningOutput* const planning_output,
-               DebugOutput &debug_info);
+               DebugOutput &debug_info,
+               PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info);
 //   void ResetState() override;
 
  private:
@@ -81,7 +82,7 @@ class GeneralPlanning {
   void GenerateStopTrajectory(double start_time, PlanningOutput::PlanningOutput *const planning_output);
 
   void FillPlanningDebugInfo(double start_time, DebugOutput &debug_info);
-
+  void FillPlanningHmiInfo(double start_timestamp, PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info);
  private:
 //   std::shared_ptr<EnvironmentalModel> environmental_model_ = nullptr;
 //   std::shared_ptr<ScenarioManager> scenario_manager_;

@@ -2,6 +2,7 @@
 #define MODULES_PLANNING_OUTPUT_CONTEXT_
 
 #include "modules/common/define/planning_status.h"
+#include "../res/include/proto/planning_hmi.pb.h"
 
 namespace planning {
 
@@ -26,10 +27,12 @@ public:
   common::PlanningStatus *mutable_prev_planning_status() {
     return &prev_planning_status_;
   }
-
+  const PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_Info() const { return planning_hmi_Info_; }
+  PlanningHMI::PlanningHMIOutputInfoStr* mutable_planning_hmi_Info()  { return &planning_hmi_Info_; }
 private:
   FallBackInfo fallback_info_;
   common::PlanningStatus planning_status_;
+  PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_Info_;
   common::PlanningStatus prev_planning_status_;
 };
 

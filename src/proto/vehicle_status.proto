@@ -154,6 +154,7 @@ message SteeringWheel {
 message VehicleLightData {
   optional uint64 timestamp_us = 1;
   optional TurnSignalType turn_signal = 2;
+  optional bool auto_light_state = 3;
 }
 
 message HeadingYaw {

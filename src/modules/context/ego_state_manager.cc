@@ -94,6 +94,10 @@ void EgoStateManager::set_ego_blinker(
   ego_blinker_ =  vehicle_light.vehicle_light_data().turn_signal().value();
 }
 
+void EgoStateManager::set_ego_auto_light_state(const planning::common::VehicleStatus &vehicle_status) {
+  ego_auto_light_state_ = vehicle_status.vehicle_light().vehicle_light_data().auto_light_state();
+}
+
 void EgoStateManager::update_transform() {
   Eigen::Vector4d q;
   q.x() = location_enu_.orientation.x;
@@ -129,7 +133,7 @@ bool EgoStateManager::update(const planning::common::VehicleStatus &vehicle_stat
   set_ego_start_stop(vehicle_status);
   set_throttle_override(vehicle_status);
   set_ego_blinker(vehicle_status);
-
+  set_ego_auto_light_state(vehicle_status);
   if (timestamp_us_ == timestamp_us_last_) {
     jerk_ = 0;
   } else {

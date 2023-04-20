@@ -158,6 +158,8 @@ bool PlanningComponent::Init() {
   planning_debug_writer_ =
       planning_node_->CreateWriter<planning::common::PlanningDebugInfo>(
           "/planning_debug_info");
+  planning_hmi_Info_writer_ =
+      planning_node_->CreateWriter<PlanningHMI::PlanningHMIOutputInfoStr>("/iflytek/planning/hmi");
 
   // 3.planning初始化，使用general_planning
   planning_base_ = std::make_unique<GeneralPlanning>();
@@ -189,10 +191,10 @@ bool PlanningComponent::Proc() {
   // 2.planning run
   PlanningOutput::PlanningOutput planning_output;
   DebugOutput debug_output;
-
+  PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_Info;
   std::cout << "==============The planning enters RunOnce============="
             << std::endl;
-  planning_base_->RunOnce(local_view_, &planning_output, debug_output);
+  planning_base_->RunOnce(local_view_, &planning_output, debug_output, planning_hmi_Info);
 
   // 3.get output & publish
   // 重新刷新相对时间 - TBD
@@ -223,7 +225,7 @@ bool PlanningComponent::Proc() {
 
   // planning_output.mutable_extra()->set_json(debug_info.dump());
   planning_writer_->Write(planning_output);
-
+  planning_hmi_Info_writer_->Write(planning_hmi_Info);
   double planning_cost_time = IflyTime::Now_ms() - start_time;
   if (planning_cost_time > 50.0) {
     LOG_ERROR("The cost time of proc() is: [%f] ms!\n", planning_cost_time);
