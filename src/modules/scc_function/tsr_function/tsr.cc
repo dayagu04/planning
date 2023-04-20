@@ -1,5 +1,5 @@
 #include "tsr.h"
-#include <stdio.h>
+//#include <stdio.h>
 
 TSRSys tsr_sys;
 #define TSR_StateMachine_IN_ACTIVE 1  // TSR一级主状态
@@ -174,24 +174,25 @@ void TSRStep(planning::framework::Session *session)
     tsr_sys.state.tsr_fault_code = TSRFaultCode(&tsr_sys);
     tsr_sys.state.tsr_state = TSRStateMachine(&tsr_sys);
 
-    // TSR识别到的限速标识牌赋值
+    // TSR功能处于激活状态
     if (tsr_sys.state.tsr_state == 3)
     {
+        // TSR识别到的限速标识牌赋值
         tsr_sys.state.tsr_speed_limit = tsr_sys.input.tsr_speed_limit;
+
+        // TSR超速报警标志位赋值
+        if (tsr_sys.input.vehicle_speed_display_kph > tsr_sys.state.tsr_speed_limit)
+        {
+            tsr_sys.state.tsr_warning = TRUE;
+        }
+        else
+        {
+            tsr_sys.state.tsr_warning = FALSE;
+        }
     }
     else
     {
         tsr_sys.state.tsr_speed_limit = 0;
-    }
-
-    // TSR超速报警标志位赋值
-    if ((tsr_sys.state.tsr_state == 3) &&
-        (tsr_sys.input.vehicle_speed_display_kph > tsr_sys.state.tsr_speed_limit))
-    {
-        tsr_sys.state.tsr_warning = TRUE;
-    }
-    else
-    {
         tsr_sys.state.tsr_warning = FALSE;
     }
 

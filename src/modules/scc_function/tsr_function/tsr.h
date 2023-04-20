@@ -5,10 +5,10 @@
 #include "src/framework/frame.h"
 #include "src/modules/context/virtual_lane_manager.h"
 
-// #ifdef __cplusplus
-// extern "C"
-// {
-// #endif
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 // TSR算法输入信号结构体定义
 typedef struct TSRSysInput
@@ -38,8 +38,8 @@ typedef struct TSRSys
 
 extern void TSRStep(planning::framework::Session *session);
 
-// #ifdef __cplusplus
-// }
-// #endif
+#ifdef __cplusplus
+}
+#endif
 
 #endif
