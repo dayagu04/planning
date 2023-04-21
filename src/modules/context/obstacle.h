@@ -46,15 +46,15 @@ class Obstacle {
 
   double x_center() const { return x_center_; }
   double y_center() const { return y_center_; }
-  double length() const { return perception_obstacle_.common_info().shape().length(); }
-  double width() const { return perception_obstacle_.common_info().shape().width(); }
+  double length() const { return length_; }
+  double width() const { return width_; }
   //  relative_heading_angle
   double relative_heading_angle() const { return perception_obstacle_.common_info().relative_heading_angle(); }
   double heading_angle() const { return perception_obstacle_.common_info().heading_angle(); }
   double velocity() const { return velocity_; }
   double perception_velocity() const { return perception_velocity_; }
   double acceleration() const { return acc_; }
-  double acceleration_signed() const { return acc_signed_; }
+  // double acceleration_signed() const { return acc_signed_; }
   double velocity_angle() const { return velocity_angle_; }
   bool is_static() const { return is_static_; }
   Common::ObjectType type() const { return type_; }
@@ -64,11 +64,6 @@ class Obstacle {
 
   const std::vector<PncTrajectoryPoint> &trajectory() const {
     return trajectory_;
-  }
-
-  const FusionObjects::FusionObject &PerceptionInfo()
-      const {
-    return perception_obstacle_;
   }
 
   const planning_math::Box2d &perception_bounding_box() const {
@@ -93,25 +88,29 @@ class Obstacle {
 
  private:
   int id_{};
-  int32_t perception_id_ = 0;
+  int perception_id_ = 0;
   bool is_static_ = false;
   double x_center_;
   double y_center_;
+  double z_center_ = 0.0;
+  double yaw_;
   double velocity_ = 0.0;
-  double perception_velocity_{};
+  // double perception_velocity_{};
   double velocity_angle_ = 0.0;
   double acc_ = 0.0;
-  double acc_signed_ = 0.0;
+  // double acc_signed_ = 0.0;
   Common::ObjectType type_;
   bool valid_ = true;
   bool is_virtual_ = false;
   double prob_;
-  double speed_ = 0.0;
-  double speed_direction_ = 0.0;
-  
+  // double speed_ = 0.0;
+  // double speed_direction_ = 0.0;
+  double width_;
+  double length_;
+
 
   std::vector<PncTrajectoryPoint> trajectory_{};
-  FusionObjects::FusionObject perception_obstacle_;
+  // FusionObjects::FusionObject perception_obstacle_;
   planning_math::Box2d perception_bounding_box_;
   planning_math::Polygon2d perception_polygon_;
   planning_math::Polygon2d obstacle_ego_polygon_;
