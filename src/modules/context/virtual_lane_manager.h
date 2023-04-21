@@ -62,10 +62,10 @@ class VirtualLaneManager {
 
   double get_distance_to_final_dash_line(const RequestType direction, uint order_id) const;
 
-  int get_lane_index(std::shared_ptr<VirtualLane> virtual_lane) const;
-  int get_tasks(std::shared_ptr<VirtualLane> virtual_lane) const;
-  bool must_change_lane(std::shared_ptr<VirtualLane> virtual_lane, double on_route_distance_threshold) const;
-  int lc_map_decision(std::shared_ptr<VirtualLane> virtual_lane) const;
+  int get_lane_index(const std::shared_ptr<VirtualLane> virtual_lane) const;
+  int get_tasks(const std::shared_ptr<VirtualLane> virtual_lane) const;
+  bool must_change_lane(const std::shared_ptr<VirtualLane> virtual_lane, double on_route_distance_threshold) const;
+  int lc_map_decision(const std::shared_ptr<VirtualLane> virtual_lane) const;
  private:
   LaneChangeStatus is_lane_change();
   void update_virtual_id();

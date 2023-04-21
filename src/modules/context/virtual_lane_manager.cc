@@ -216,14 +216,14 @@ double VirtualLaneManager::get_distance_to_final_dash_line(const RequestType dir
   return virtual_lane->lc_map_decision_offset();
 }
 
-int VirtualLaneManager::get_lane_index(std::shared_ptr<VirtualLane> virtual_lane) const {
+int VirtualLaneManager::get_lane_index(const std::shared_ptr<VirtualLane> virtual_lane) const {
   if(virtual_lane != nullptr) {
     return virtual_lane->get_relative_id() - relative_id_lanes_.at(0)->get_relative_id();
   }
   return 0;
 }
 
-int VirtualLaneManager::get_tasks(std::shared_ptr<VirtualLane> virtual_lane) const {
+int VirtualLaneManager::get_tasks(const std::shared_ptr<VirtualLane> virtual_lane) const {
   int current_tasks = 0;
   if(virtual_lane != nullptr) {
     auto current_tasks_vector = virtual_lane->get_current_tasks();
@@ -247,14 +247,14 @@ int VirtualLaneManager::get_tasks(std::shared_ptr<VirtualLane> virtual_lane) con
   }
 }
 
-bool VirtualLaneManager::must_change_lane(std::shared_ptr<VirtualLane> virtual_lane, double on_route_distance_threshold) const {
+bool VirtualLaneManager::must_change_lane(const std::shared_ptr<VirtualLane> virtual_lane, double on_route_distance_threshold) const {
   if (virtual_lane == nullptr) {
     return 0;
   }
   return lc_map_decision(virtual_lane) != 0 && virtual_lane->lc_map_decision_offset() < on_route_distance_threshold;
 }
 
-int VirtualLaneManager::lc_map_decision(std::shared_ptr<VirtualLane> virtual_lane) const {
+int VirtualLaneManager::lc_map_decision(const std::shared_ptr<VirtualLane> virtual_lane) const {
   if(virtual_lane == nullptr) {
     return 0;
   }
