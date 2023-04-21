@@ -85,13 +85,6 @@ class VirtualLane {
     return 5000.;
   };
 
-    
-  // 在该lane上，到下一个实线车道线的距离
-  // 如果当前是实线车道线，即返回0
-  double get_distance_to_dash_line(const RequestType direction) const;
-
-  // 就是到最远变道点的距离
-  double get_distance_to_final_dash_line(const RequestType direction) const;
   void update_speed_limit(double ego_vel, double ego_v_cruise);
  private:
   

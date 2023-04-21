@@ -69,7 +69,6 @@ class VirtualLaneManager {
  private:
   LaneChangeStatus is_lane_change();
   void update_virtual_id();
-  
 
   planning::framework::Session *session_ = nullptr;
   //ReferencePathManager reference_path_manager_;
