@@ -24,7 +24,8 @@ class EgoPlanningConfigBuilder {
                   "cast only works on derived Config");
     T target;
     target.init(json_);
-    LOG_DEBUG("created %s with %s", typeid(T).name(), name());
+    std::cout<< "created" << typeid(T).name()<<std::endl;
+    // LOG_DEBUG("created %s with %s", typeid(T).name(), name());
     return target;
   }
 
