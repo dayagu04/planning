@@ -32,7 +32,7 @@ void GeneralPlanner::InitContext() {
       scenario_state_machine_);
   session_->mutable_planning_context()->set_vehicle_param(
       session_->vehicle_config_context().get_vehicle_param());
-  
+
   object_selector_ = std::make_shared<ObjectSelector>(config_builder, session_);
   session_->mutable_planning_context()->set_object_selector(
       object_selector_);
@@ -65,7 +65,7 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
   auto updated_time = IflyTime::Now_ms();
   LOG_DEBUG("update time:%f", updated_time - start_time);
 
-  object_selector_->update(session_->planning_context().lat_behavior_state_machine_output().curr_state, 
+  object_selector_->update(session_->planning_context().lat_behavior_state_machine_output().curr_state,
                            session_->planning_context().scenario_state_machine()->get_start_move_dist_lane(),
                            false, 80., false, false, false, false, false, -1);
 
