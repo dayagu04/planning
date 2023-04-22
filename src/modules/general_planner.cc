@@ -6,6 +6,7 @@
 #include "src/modules/scc_function/mrc_condition.h"
 #include "src/modules/scc_function/start_stop_enable.h"
 #include "src/modules/scenario/scenario_state_machine.h"
+#include "src/modules/scenario/lateral_behavior_object_selector.h"
 // #include "mjson/mjson.hpp"
 
 namespace planning {
@@ -31,6 +32,10 @@ void GeneralPlanner::InitContext() {
       scenario_state_machine_);
   session_->mutable_planning_context()->set_vehicle_param(
       session_->vehicel_config_context().get_vehicle_param());
+  
+  object_selector_ = std::make_shared<ObjectSelector>(config_builder, session_);
+  session_->mutable_planning_context()->set_object_selector(
+      object_selector_);
 
   // SCC Function
   adaptive_cruise_control_ =
@@ -59,6 +64,9 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
 
   auto updated_time = IflyTime::Now_ms();
   LOG_DEBUG("update time:%f", updated_time - start_time);
+
+  object_selector_->update(session_->planning_context().lat_behavior_state_machine_output().curr_state, 0.,
+                          false, 80., false, false, false, false, false, -1);
 
   // Step 2) update state machine
   (void)scenario_state_machine_->update(frame_);

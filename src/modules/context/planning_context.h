@@ -12,6 +12,7 @@ namespace planning {
 
 // class EgoPlanningConfigBuilder;
 class ScenarioManager;
+class ObjectSelector;
 class ScenarioStateMachine;
 class AdaptiveCruiseControl;
 class StartStopEnable;
@@ -100,6 +101,15 @@ class PlanningContext {
 
   LateralBehaviorPlannerOutput &mutable_lateral_behavior_planner_output() {
     return lateral_behavior_planner_output_;
+  }
+
+  const std::shared_ptr<ObjectSelector>
+      &object_selector() {
+    return object_selector_ptr_;
+  }
+  void set_object_selector(
+      std::shared_ptr<ObjectSelector> object_selector) {
+    object_selector_ptr_ = object_selector;
   }
 
   const std::shared_ptr<AdaptiveCruiseControl>
@@ -202,6 +212,7 @@ class PlanningContext {
   LatBehaviorStateMachineOutput lat_behavior_state_machine_output_;
   LateralBehaviorPlannerOutput lateral_behavior_planner_output_;
   std::shared_ptr<ScenarioManager> scenario_manager_ptr_;
+  std::shared_ptr<ObjectSelector> object_selector_ptr_;
   std::shared_ptr<ScenarioStateMachine> scenario_state_machine_ptr_;
   std::shared_ptr<MrcCondition> mrc_condition_ptr_;
   std::shared_ptr<StartStopEnable> start_stop_ptr_;

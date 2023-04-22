@@ -540,6 +540,13 @@ struct EgoPlanningMapInfoManagerConfig : public EgoPlanningConfig {
   }
 };
 
+struct EgoPlanningObjectSelectorManagerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+  }
+};
+
 struct EgoPlanningTaskPipelineConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

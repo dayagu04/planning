@@ -54,7 +54,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   update_virtual_id();
 }
 
-std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(int virtual_id) const{
+const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(int virtual_id) const{
   if (virtual_id_mapped_lane_.find(virtual_id) != virtual_id_mapped_lane_.end()) {
     return virtual_id_mapped_lane_.at(virtual_id);
   }

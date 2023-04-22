@@ -30,6 +30,7 @@ class GeneralPlanner {
   planning::framework::Frame *frame_ = nullptr;
   //   std::shared_ptr<PlanningResultManager> planning_result_manager_ =
   //   nullptr; std::shared_ptr<EgoPoseManager> ego_pose_manager_ = nullptr;
+  std::shared_ptr<ObjectSelector> object_selector_ = nullptr;
   std::shared_ptr<ScenarioStateMachine> scenario_state_machine_ = nullptr;
   std::shared_ptr<AdaptiveCruiseControl> adaptive_cruise_control_ = nullptr;
   std::shared_ptr<StartStopEnable> start_stop_ = nullptr;

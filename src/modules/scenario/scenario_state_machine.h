@@ -87,6 +87,9 @@ class ScenarioStateMachine
   void post_process();
   void reset_state_machine();
   void clear_lc_variables();
+  void clear_lc_valid_cnt() { lc_valid_cnt_ = 0; }
+  void clear_lc_back_cnt() { lc_back_cnt_ = 0; }
+  void set_get_dist_lane(bool value) { get_dist_lane_ = value; }
   double turn_signal_on_time() const { return turn_signal_on_time_; }
   RequestType turn_signal() const { return turn_signal_; }
   RequestType merge_split_turn_signal() const {

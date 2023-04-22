@@ -21,6 +21,10 @@ class Intersection {
   double intsect_length() {
     return NL_NMAX;
   }
+
+  double dis_to_ramp() {
+    return NL_NMAX;
+  }
 };
 }
 

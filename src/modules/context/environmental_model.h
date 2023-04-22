@@ -181,7 +181,7 @@ class EnvironmentalModel {
   const LocalView& get_local_view() const { return local_view_; }
 
   bool get_hdmap_valid() const { return hdmap_valid_; }
-  bool is_on_highway() { return true; } //hack
+  bool is_on_highway() const { return true; } //hack
   const HimMcuInner::HmiMcuInner& get_hmi_info() const { return local_view_.hmi_mcu_inner_info; }
 private:
   // planning::framework::Session *session_ = nullptr;

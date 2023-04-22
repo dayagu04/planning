@@ -379,6 +379,9 @@ struct TrackInfo {
 struct LatBehaviorStateMachineOutput {
   int scenario;
   int curr_state;
+  int fix_lane_virtual_id;
+  int origin_lane_virtual_id;
+  int target_lane_virtual_id;
   std::string state_name;
   std::string lc_back_reason = "none";
   std::string lc_invalid_reason = "none";

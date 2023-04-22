@@ -47,7 +47,10 @@ void StateBase::process(Control &control, FsmContext &context) {
     auto state_machine_output = context.frame->mutable_session()
                                     ->mutable_planning_context()
                                     ->mutable_lat_behavior_state_machine_output();
-    state_machine_output.curr_state = transition_context.target_state;
+    state_machine_output.curr_state = candidate.coarse_planning_info().target_state;
+    state_machine_output.fix_lane_virtual_id = candidate.coarse_planning_info().target_lane_id;
+    state_machine_output.origin_lane_virtual_id = candidate.coarse_planning_info().source_lane_id;
+    state_machine_output.target_lane_virtual_id = transition_context.lane_change_lane_manager->tlane_virtual_id();
     // state_machine_output.state_name = type2name<RoadState::None>::name; //TODO(Rui):add name transfer
     if (&last_planning_result != nullptr and
         last_planning_result->target_lane_id ==
@@ -111,9 +114,16 @@ void StateBase::process(Control &control, FsmContext &context) {
     change_state(next_state, control, context);
     context.state = next_state;
     //TODO(Rui):fix me
-    context.frame->mutable_session()
-                 ->mutable_planning_context()
-                 ->mutable_lat_behavior_state_machine_output().curr_state = context.state;
+    auto lat_behavior_state_machine_output = 
+                        context.frame->mutable_session()
+                                    ->mutable_planning_context()
+                                    ->mutable_lat_behavior_state_machine_output();
+    lat_behavior_state_machine_output.fix_lane_virtual_id = 
+                 lane_change_lane_manager->flane_virtual_id();
+    lat_behavior_state_machine_output.origin_lane_virtual_id = 
+                 lane_change_lane_manager->olane_virtual_id();
+    lat_behavior_state_machine_output.target_lane_virtual_id = 
+                 lane_change_lane_manager->tlane_virtual_id();             
   }
   LOG_DEBUG("[StateBase] evaluate success");
 }

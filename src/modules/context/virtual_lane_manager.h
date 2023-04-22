@@ -34,7 +34,7 @@ class VirtualLaneManager {
   const std::shared_ptr<VirtualLane> get_current_lane() const { return current_lane_; }
   const std::shared_ptr<VirtualLane> get_left_lane() const { return left_lane_; }
   const std::shared_ptr<VirtualLane> get_right_lane() const { return right_lane_; }
-  std::shared_ptr<VirtualLane> get_lane_with_virtual_id(int virtual_id) const;
+  const std::shared_ptr<VirtualLane> get_lane_with_virtual_id(int virtual_id) const;
   const std::shared_ptr<VirtualLane> get_lane_with_order_id(uint order_id) const;
   int current_lane_virtual_id() {
     if (current_lane_ != nullptr) {
@@ -48,6 +48,7 @@ class VirtualLaneManager {
   std::vector<std::shared_ptr<Obstacle>> get_left_lane_obstacle();
   std::vector<std::shared_ptr<Obstacle>> get_right_lane_obstacle();
   bool has_lane(int virtual_lane_id);
+  const Intersection &get_intersection_info() const { return intersection_; }
   Intersection intersection_;
   Ramp ramp_;
   //Destination destination_;
