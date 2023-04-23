@@ -17,6 +17,7 @@ enum RequestType { NO_CHANGE, LEFT_CHANGE, RIGHT_CHANGE };
 
 enum LooseBoundType { NONE_SIDE, LEFT_SIDE, RIGHT_SIDE, BOTH_SIDE };
 
+// 转向灯拨杆
 enum LeverStatus {
   LEVER_STATE_OFF,
   LEVER_STATE_LEFT,

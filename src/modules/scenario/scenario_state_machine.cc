@@ -51,7 +51,7 @@ bool ScenarioStateMachine::update(planning::framework::Frame *frame) {
   update_scenario();  // cruise or low speed or ...
 
   if (active == false) {
-    lc_req_mgr_->finish_request();
+    lc_req_mgr_->FinishRequest();
     map_turn_signal_ = NO_CHANGE;
     reset_state_machine();
   }
@@ -111,7 +111,7 @@ void ScenarioStateMachine::update_state_machine() {
 void ScenarioStateMachine::reset_state_machine() {
   change_state_external<RoadState::None>();
   lc_lane_mgr_->reset_lc_lanes();
-  lc_req_mgr_->finish_request();
+  lc_req_mgr_->FinishRequest();
   clear_lc_variables();
 }
 

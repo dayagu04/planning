@@ -15,8 +15,7 @@ void LaneChangeRequest::GenerateRequest(RequestType direction) {
     LOG_DEBUG("[LaneChangeRequest::GenerateRequest] Illgeal direction[%d] \n",
               direction);
   }
-
-  if (request_ == direction) {
+  if (request_type_ == direction) {
     LOG_DEBUG(
         "[LaneChangeRequest::GenerateRequest] duplicated request, "
         "direction[%d] \n",
@@ -24,19 +23,19 @@ void LaneChangeRequest::GenerateRequest(RequestType direction) {
     return;
   }
 
-  request_ = direction;
+  request_type_ = direction;
   turn_signal_ = direction;
   tstart_ = IflyTime::Now_s();
 }
 
 void LaneChangeRequest::Finish() {
-  if (request_ == NO_CHANGE) {
+  if (request_type_ == NO_CHANGE) {
     LOG_DEBUG("[LaneChangeRequest::Finish] No request to finish \n");
     turn_signal_ = NO_CHANGE;
     return;
   }
 
-  request_ = NO_CHANGE;
+  request_type_ = NO_CHANGE;
   turn_signal_ = NO_CHANGE;
   tfinish_ = IflyTime::Now_s();
 }
@@ -58,7 +57,7 @@ bool LaneChangeRequest::AggressiveChange() const {
           ? origin_lane->must_change_lane(aggressive_change_distance *
                                           std::fabs(lc_map_decision))
           : false;
-  return aggressive_change && (request_ != NO_CHANGE);
+  return aggressive_change && (request_type_ != NO_CHANGE);
 }
 
 bool LaneChangeRequest::IsDashedLineEnough(

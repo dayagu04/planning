@@ -157,7 +157,7 @@ struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"display_state", "ready_remain_time"});
     wait_remain_time = read_json_keys<int>(
         json, std::vector<std::string>{"display_state", "wait_remain_time"});
-    int_rqt_cnt_trsh = read_json_keys<int>(
+    int_rqt_cnt_threshold = read_json_keys<int>(
         json,
         std::vector<std::string>{"int_request", "request_count_threshold"});
     map_int_cancel_freeze_cnt = read_json_keys<int>(
@@ -203,7 +203,7 @@ struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
   double into_ramp_threshold = 2000.0;               // meter
   double close_to_split_merge_threshold = 100.0;     // meter
   double avoid_truck_time_distance_threshold = 1.5;  // seconds
-  int int_rqt_cnt_trsh = 2;
+  int int_rqt_cnt_threshold = 2;
   int map_int_cancel_freeze_cnt = 50;
   int model_int_cancel_freeze_cnt = 100;
   int map_confirm_cancel_freeze_cnt = 50;

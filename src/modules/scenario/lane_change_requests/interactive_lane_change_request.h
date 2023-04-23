@@ -17,12 +17,16 @@ class IntRequest : public LaneChangeRequest {
   IntCancelReasonType request_cancel_reason() {
     return request_cancel_reason_;
   };
+
   void reset_freeze_cnt() {
     left_cancel_freeze_cnt_ = 0;
     right_cancel_freeze_cnt_ = 0;
   }
+
   void reset_int_cnt() { reset_freeze_cnt(); }
+
   bool enable_int_request() { return enable_int_request_; }
+
   void finish_and_clear();
 
   const int get_left_cancel_freeze_cnt() const {
@@ -39,19 +43,22 @@ class IntRequest : public LaneChangeRequest {
   }
 
  private:
-  void print_forbid_generating_reason(
+  void PrintForbidGeneratingReason(
       const std::vector<std::string> forbid_generating_reason);
-  void check_lc_forbid_reason(
-      std::vector<std::string>& forbid_generating_left_reason,
-      std::vector<std::string>& forbid_generating_right_reason);
+
+  // void check_lc_forbid_reason(
+  //     std::vector<std::string>& forbid_generating_left_reason,
+  //     std::vector<std::string>& forbid_generating_right_reason);
+
+ private:
   int counter_left_ = 0;
   int counter_right_ = 0;
   int left_cancel_freeze_cnt_ = 0;
   int right_cancel_freeze_cnt_ = 0;
   bool enable_int_request_ = false;
-  int count_trsh_ = 2;
+  int count_threshold_ = 3;
   std::uint8_t lane_change_cmd_ = LeverStatus::LEVER_STATE_OFF;
   IntCancelReasonType request_cancel_reason_ = NO_CANCEL;
 };
 
-} // namespace planning
+}  // namespace planning

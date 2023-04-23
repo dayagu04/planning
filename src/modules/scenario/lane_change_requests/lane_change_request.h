@@ -8,8 +8,9 @@
 #include "src/common/ifly_time.h"
 #include "src/framework/session.h"
 #include "src/modules/common/config/basic_type.h"
+#include "src/modules/context/virtual_lane_manager.h"
 #include "src/modules/scc_function/display_state_types.h"
-#include "src/modules/scenario/lane_change_lane_manager.h"
+#include "src/modules/scenario/lane_change_requests/lane_change_lane_manager.h"
 
 namespace planning {
 /// @brief 换道请求的基类，生成、结束换道请求等
@@ -27,7 +28,7 @@ class LaneChangeRequest {
   bool IsDashedLineEnough(RequestType direction, const double ego_vel,
                           std::shared_ptr<VirtualLaneManager> map_info_mgr);
 
-  RequestType request() const { return request_; }
+  RequestType request_type() const { return request_type_; }
   int target_lane_virtual_id() { return target_lane_virtual_id_; }
   void set_target_lane_virtual_id(int target_lane_virtual_id) {
     target_lane_virtual_id_ = target_lane_virtual_id;
@@ -37,7 +38,7 @@ class LaneChangeRequest {
   double tfinish() const { return tfinish_; }
 
  protected:
-  RequestType request_ = NO_CHANGE;
+  RequestType request_type_ = NO_CHANGE;
   int target_lane_virtual_id_ = -1;
   int origin_lane_virtual_id_ = -1;
   int origin_lane_order_id_ = -1;

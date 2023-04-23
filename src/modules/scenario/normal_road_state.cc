@@ -267,7 +267,7 @@ void RoadState::LC::process_change(
     LOG_DEBUG("[RoadState::Change] Lane Change Finished");
     prepare_for_none_state(lc_lane_manager, lc_req_manager, candidate_states,
                            lc_lane_managers);
-    lc_req_manager->finish_request();
+    lc_req_manager->FinishRequest();
   } else if ((lc_request != NO_CHANGE && lc_request == context.direction) ||
              (lc_request == NO_CHANGE &&
               lc_lane_manager->is_ego_on(lc_lane_manager->tlane()))) {
@@ -279,7 +279,7 @@ void RoadState::LC::process_change(
 
     gap_available = state_machine->gap_available(lc_request, overtake_obstacles,
                                                  yield_obstacles);
-    
+
     if (lc_lane_manager->has_origin_lane() &&
         lc_lane_manager->olane_virtual_id() != lc_lane_manager->tlane_virtual_id()) {
       lc_back_info = state_machine->decide_lc_back_info(lc_request);

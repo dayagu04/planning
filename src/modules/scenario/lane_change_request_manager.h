@@ -4,11 +4,9 @@
 #include "src/framework/session.h"
 #include "src/modules/common/config/basic_type.h"
 #include "src/modules/context/ego_planning_config.h"
-
-#include "src/modules/scenario/lane_change_lane_manager.h"
-#include "src/modules/scenario/lane_change_requests/lane_change_request.h"
 #include "src/modules/scenario/lane_change_requests/active_lane_change_request.h"
 #include "src/modules/scenario/lane_change_requests/interactive_lane_change_request.h"
+#include "src/modules/scenario/lane_change_requests/lane_change_request.h"
 #include "src/modules/scenario/lane_change_requests/map_lane_change_request.h"
 
 namespace planning {
@@ -27,7 +25,7 @@ class LaneChangeRequestManager {
       std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
   virtual ~LaneChangeRequestManager() = default;
 
-  void finish_request();
+  void FinishRequest();
 
   void Update(int lc_status, const bool hd_map_valid);
 

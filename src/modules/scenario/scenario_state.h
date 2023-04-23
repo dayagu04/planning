@@ -9,8 +9,8 @@
 #include "src/framework/session.h"
 #include "src/modules/common/utils/lateral_utils.h"
 #include "src/modules/context/virtual_lane_manager.h"
-#include "src/modules/scenario/lane_change_lane_manager.h"
 #include "src/modules/scenario/lane_change_request_manager.h"
+#include "src/modules/scenario/lane_change_requests/lane_change_lane_manager.h"
 #include "src/modules/tasks/task_pipeline.h"
 #include "thirdparty/hfsm/machine_single.hpp"
 

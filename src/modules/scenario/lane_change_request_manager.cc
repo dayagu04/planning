@@ -15,7 +15,15 @@ LaneChangeRequestManager::LaneChangeRequestManager(
       act_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       session_(session) {}
 
-void LaneChangeRequestManager::finish_request() {}
+void LaneChangeRequestManager::FinishRequest() {
+  int_request_.finish_and_clear();
+  // act_request_.finish_and_clear();
+  // map_request_.finish();
+
+  request_ = NO_CHANGE;
+  request_source_ = NO_REQUEST;
+  turn_signal_ = NO_CHANGE;
+}
 
 void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   LOG_DEBUG("LaneChangeRequestManager.Update() \n");
@@ -29,7 +37,7 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   } else {
     int_request_.reset_int_cnt();
   }
-  if (int_request_.request() == NO_CHANGE && hd_map_valid) {
+  if (int_request_.request_type() == NO_CHANGE && hd_map_valid) {
     map_request_.update(lc_status, int_request_.get_left_cancel_freeze_cnt(),
                         int_request_.get_right_cancel_freeze_cnt());
   }
@@ -37,7 +45,7 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   LOG_DEBUG(
       "[LaneChangeRequestManager::update] int_request: %d, map_request: %d, "
       "int_cancel_reason: %d, turn_signal: %d \n",
-      int_request_.request(), map_request_.request(),
+      int_request_.request_type(), map_request_.request_type(),
       int_request_cancel_reason_, turn_signal_);
 
   if (int_request_cancel_reason_ == MANUAL_CANCEL &&
@@ -56,15 +64,15 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
         "[LaneChangeRequestManager::update] manual cancel finish dd or map "
         "request! \n");
   }
-  if (int_request_.request() != NO_CHANGE) {
-    if (map_request_.request() != NO_CHANGE) {
+  if (int_request_.request_type() != NO_CHANGE) {
+    if (map_request_.request_type() != NO_CHANGE) {
       map_request_.Finish();
     }
-    request_ = int_request_.request();
+    request_ = int_request_.request_type();
     request_source_ = INT_REQUEST;
     target_lane_virtual_id_ = int_request_.target_lane_virtual_id();
-  } else if (map_request_.request() != NO_CHANGE) {
-    request_ = map_request_.request();
+  } else if (map_request_.request_type() != NO_CHANGE) {
+    request_ = map_request_.request_type();
     request_source_ = MAP_REQUEST;
     target_lane_virtual_id_ = map_request_.target_lane_virtual_id();
   } else {

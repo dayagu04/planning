@@ -1,14 +1,13 @@
 #pragma once
 
-#include "modules/context/ego_state_manager.h"
-#include "modules/context/virtual_lane_manager.h"
+#include "src/modules/context/ego_state_manager.h"
+#include "src/modules/context/virtual_lane_manager.h"
 
 namespace planning {
 
-
-// 这个类是用来管理一个变道过程中，原始车道origin lane，目标车道target
-// lane，以及当前时刻想要去的车道fix lane。fix lane一定等于origin lane或者target
-// lane
+/// @brief 管理一个变道过程中，原始车道origin lane，目标车道target
+/// lane，以及当前时刻想要去的车道fix lane。fix lane一定等于origin
+/// lane或者target lane
 class LaneChangeLaneManager {
  public:
   LaneChangeLaneManager(std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
@@ -42,13 +41,16 @@ class LaneChangeLaneManager {
     if (lane == nullptr) {
       return false;
     }
-    // hack
-    return true;
-  //   auto ego_state = session_->mutable_environmental_model()->get_ego_state_manager();
-  //   double lateral_offset =
-  //       lane->calc_fabs_lateral_offset(ego_state->x(), ego_state->y());
-  //   return (lateral_offset < 1.6) ? true : false;
+    auto ego_state =
+        session_->mutable_environmental_model()->get_ego_state_manager();
+        
+    // double lateral_offset = lane->calc_fabs_lateral_offset(
+    //     ego_state->ego_pose().x, ego_state->ego_pose().y);
+    double lateral_offset = lane->get_ego_lateral_offset();
+
+    return (lateral_offset < 1.6) ? true : false;
   }
+
   std::shared_ptr<VirtualLane> flane() {
     return virtual_lane_mgr_->get_lane_with_virtual_id(flane_virtual_id_);
   }

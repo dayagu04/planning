@@ -1,7 +1,6 @@
-#include "modules/scenario/lane_change_lane_manager.h"
+#include "src/modules/scenario/lane_change_requests/lane_change_lane_manager.h"
 
 namespace planning {
-
 
 LaneChangeLaneManager::LaneChangeLaneManager(
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
