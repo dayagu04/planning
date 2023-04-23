@@ -1,4 +1,5 @@
 #include "modules/tasks/behavior_planners/vision_only_lane_change_decider/vision_only_lane_change_decider.h"
+#include "src/modules/context/virtual_lane_manager.h"
 
 namespace planning {
 
@@ -19,7 +20,7 @@ VisionOnlyLaneChangeDecider::VisionOnlyLaneChangeDecider() {
 
 void VisionOnlyLaneChangeDecider::feed_config_and_target_cars(
     bool is_merging, LaneChangeParams params, double dis_to_change_point,
-    std::vector<TrackedObject *> &target_cars, TrackedObject *lead_one,
+    std::vector<TrackedObject *> &target_cars, const TrackedObject *lead_one,
     double v_ego) {
   is_merging_ = is_merging;
   params_ = params;
@@ -58,7 +59,7 @@ bool VisionOnlyLaneChangeDecider::process(planning::framework::Frame *frame) {
   // }
   // current_lane_id_ = planning_status.lane_status.target_lane_id;
   // dis_to_change_point_ = std::numeric_limits<double>::max();
-  const auto &current_v_lane = frame->session()->environmental_model().get_virtual_lane_manager()->get_current_lane();
+  const auto current_v_lane = frame->session()->environmental_model().get_virtual_lane_manager()->get_current_lane();
   // bool is_in_dash_line = false;
   // if (planning_status.lane_status.change_lane.direction == "left") {
   //   lane_change_direction_ = 1;
@@ -81,7 +82,7 @@ bool VisionOnlyLaneChangeDecider::process(planning::framework::Frame *frame) {
   // }
   // LOG_NOTICE("gap debug dis %f", dis_to_change_point_);
   // dis_to_change_point_ = map_info.lc_end_dis();
-  lc_map_decision_ = current_v_lane->lc_map_decision();
+  lc_map_decision_ = frame->session()->environmental_model().get_virtual_lane_manager()->lc_map_decision(current_v_lane);
   current_lane_type_ = current_v_lane->get_lane_type();
 
   v_limit_ = planning_status.v_limit;
@@ -406,7 +407,7 @@ VisionOnlyLaneChangeDecider::check_gap_valid(const TargetObstacle &rear_car,
     double ego_end_dis = lc_end_dis - acc_time * v_ego_ -
                          10 * v_ego_p * std::max(lc_map_decision_ - 1, 0);
     if ((lc_map_decision_ == -1) &&
-        (current_lane_type_ == LANE_TYPE_NORMAL)) {
+        (current_lane_type_ == FusionRoad::LANE_TYPE_NORMAL)) {
       ego_end_dis = lc_end_dis - acc_time * v_ego_ - 3.0 * v_ego_p - 20.0;
     }
     l_end_dis = std::min(gap_end_dis, ego_end_dis);

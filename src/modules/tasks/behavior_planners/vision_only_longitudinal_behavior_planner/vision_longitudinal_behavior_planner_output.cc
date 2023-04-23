@@ -3,12 +3,13 @@
 #include "thirdparty/rapidjson/include/rapidjson/stringbuffer.h"
 #include "thirdparty/rapidjson/include/rapidjson/writer.h"
 #include "thirdparty/rapidjson/include/rapidjson/prettywriter.h"
+#include "common/ifly_time.h"
 
 namespace planning {
 
 void VisionLongitudinalBehaviorPlanner::update_planner_output() {
   auto &vision_longitudinal_output =
-      frame_->session()->planning_context().mutable_vision_longitudinal_behavior_planner_output();
+            frame_->mutable_session()->mutable_planning_context()->mutable_vision_longitudinal_behavior_planner_output();
   // planning result
   vision_longitudinal_output.timestamp = IflyTime::Now_ms();
 
@@ -32,7 +33,7 @@ void VisionLongitudinalBehaviorPlanner::log_planner_debug_info() {
   create_vision_longitudinal_behavior_planner_msg(plan_msg);
 
   auto &vision_longitudinal_output =
-      frame_->session()->planning_context().mutable_vision_longitudinal_behavior_planner_output();
+            frame_->mutable_session()->mutable_planning_context()->mutable_vision_longitudinal_behavior_planner_output();
 
   vision_longitudinal_output.plan_msg = plan_msg;
 }
@@ -40,7 +41,7 @@ void VisionLongitudinalBehaviorPlanner::log_planner_debug_info() {
 void VisionLongitudinalBehaviorPlanner::
     create_vision_longitudinal_behavior_planner_msg(std::string &plan_msg) {
   auto &vision_longitudinal_output =
-      frame_->session()->planning_context().mutable_vision_longitudinal_behavior_planner_output();
+            frame_->mutable_session()->mutable_planning_context()->mutable_vision_longitudinal_behavior_planner_output();
   
   rapidjson::Document publish_json;
   publish_json.SetObject();

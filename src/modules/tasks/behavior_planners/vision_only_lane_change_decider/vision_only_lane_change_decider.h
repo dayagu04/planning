@@ -2,7 +2,8 @@
 #define MSQUARE_VISION_ONLY_DECISION_PLANNING_PLANNER_LANE_CHANGE_DECIDER_H_
 
 #include "framework/frame.h"
-
+#include "src/modules/context/lateral_obstacle.h"
+#include "res/include/proto/fusion_road.pb.h"
 namespace planning {
 
 struct LaneChangeParams {
@@ -33,7 +34,7 @@ public:
   void feed_config_and_target_cars(bool is_merging_, LaneChangeParams params,
                                    double dis_to_change_point,
                                    std::vector<TrackedObject *> &target_cars,
-                                   TrackedObject *lead_one, double v_ego);
+                                   const TrackedObject *lead_one, double v_ego);
 
   TargetObstacle nearest_rear_car_track() { return nearest_rear_car_track_; };
 
@@ -81,7 +82,7 @@ private:
   std::vector<RefPointFrenet> cur_lane_, target_lane_;
   double dis_to_change_point_;
   int lc_map_decision_;
-  LaneType current_lane_type_;
+  FusionRoad::LaneType current_lane_type_;
 
   int target_lane_id_;
   int current_lane_id_;
@@ -90,7 +91,7 @@ private:
   //planning::framework::Frame *frame_ = nullptr;
 
   std::vector<TrackedObject *> target_cars_;
-  TrackedObject *lead_one_ = nullptr;
+  const TrackedObject *lead_one_ = nullptr;
   TargetObstacle nearest_rear_car_track_{-1, DBL_MAX, DBL_MAX};
   double v_ego_ = 0.0;
   bool is_merging_ = false;

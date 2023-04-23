@@ -182,13 +182,13 @@ class ScenarioStateMachine
   double start_move_dist_lane_ = 0.;
 };
 
-struct GapInfo {
+/* struct GapInfo {
   int id_front;
   double s_front;
   double v_front;
   int id_rear;
   double s_rear;
   double v_rear;
-};
+}; */
 
 }  // namespace planning

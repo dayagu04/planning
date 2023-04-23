@@ -1,11 +1,15 @@
 #include "modules/tasks/task.h"
+#include "src/modules/context/lateral_obstacle.h"
+#include "src/modules/context/virtual_lane_manager.h"
+#include "src/modules/tasks/behavior_planners/vision_only_lane_change_decider/vision_only_lane_change_decider.h"
+#include <memory>
 
 namespace planning {
 
 class VisionLongitudinalBehaviorPlanner : public Task {
  public:
   explicit VisionLongitudinalBehaviorPlanner(const EgoPlanningConfigBuilder *config_builder,
-                const std::share_ptr<TaskPipelineContext> &pipeline_context);
+                const std::shared_ptr<TaskPipelineContext> &pipeline_context);
   virtual ~VisionLongitudinalBehaviorPlanner() = default;
 
   bool Execute(framework::Frame *frame);
@@ -132,10 +136,10 @@ class VisionLongitudinalBehaviorPlanner : public Task {
 
   VisionLongitudinalBehaviorPlannerConfig config_;
 
-  std::unique_ptr<VirtualLaneManager> virtual_lane_mgr_ = nullptr;
+  std::shared_ptr<VirtualLaneManager> virtual_lane_mgr_ = nullptr;
   std::shared_ptr<LaneTracksManager> lane_tracks_mgr_ = nullptr;
 
-  std::unique_ptr<VisionOnlyLaneChangeDecider> lane_changing_decider_ = nullptr;
+  std::shared_ptr<VisionOnlyLaneChangeDecider> lane_changing_decider_ = nullptr;
 
 };
 }

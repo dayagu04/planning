@@ -1,9 +1,11 @@
 #include "vision_longitudinal_behavior_planner.h"
+#include "src/modules/scenario/scenario_state_machine.h"
+#include "common/ifly_time.h"
 
 namespace planning {
 
 VisionLongitudinalBehaviorPlanner::VisionLongitudinalBehaviorPlanner(const EgoPlanningConfigBuilder *config_builder,
-                const std::share_ptr<TaskPipelineContext> &pipeline_context)
+                const std::shared_ptr<TaskPipelineContext> &pipeline_context)
     : Task(config_builder, pipeline_context) {
       config_ = config_builder->cast<VisionLongitudinalBehaviorPlannerConfig>();
       name_ = "VisionLongitudinalBehaviorPlanner";
@@ -42,7 +44,7 @@ bool VisionLongitudinalBehaviorPlanner::calculate() {
 
 bool VisionLongitudinalBehaviorPlanner::update() {
   LOG_DEBUG("=======VisionLongitudinalBehaviorPlanner======= \n");
-  auto &ego_state = frame_->session()->environmental_model().get_cart_ego_state_manager().get_cart_ego_state();
+  auto &ego_state_mgr = frame_->session()->environmental_model().get_ego_state_manager();
   auto &lateral_obstacle = frame_->session()->environmental_model().get_lateral_obstacle();
   auto &lateral_outputs = frame_->session()->planning_context().lateral_behavior_planner_output();
 
@@ -63,11 +65,11 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   }
  
   LOG_DEBUG("ego_v_cruise is [%f], v_ego is [%f],  a_ego is [%f] \n",
-                ego_state.ego_v_cruise, ego_state.ego_vel, ego_state.ego_acc);
-  double v_ego = ego_state.ego_vel;
-  v_target_ = std::min(ego_state.ego_v_cruise, 40.0);
+                ego_state_mgr->ego_v_cruise(), ego_state_mgr->ego_v(), ego_state_mgr->ego_acc());
+  double v_ego = ego_state_mgr->ego_v();
+  v_target_ = std::min(ego_state_mgr->ego_v_cruise(), 40.0);
   calc_cruise_accel_limits(v_ego);
-  limit_accel_velocity_in_turns(v_ego, ego_state.ego_steer_angle,
+  limit_accel_velocity_in_turns(v_ego, ego_state_mgr->ego_steer_angle(),
                                 lateral_outputs.d_poly);
   a_target_objective_ = a_target_;
   limit_accel_velocity_for_cutin(lateral_obstacle->front_tracks(),
@@ -86,18 +88,18 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   //                      lateral_outputs.lc_status, v_limit_in_turns_, v_ego);
   calc_speed_with_potential_cutin_car(lateral_obstacle->front_tracks(),
                                       lateral_outputs.lc_request,
-                                      ego_state.ego_v_cruise, v_ego);
+                                      ego_state_mgr->ego_v_cruise(), v_ego);
   // limit_speed_4_potential_object(lateral_obstacle->front_tracks(),
   //                                lateral_outputs.lc_request, interval, v_ego);
   // compute_speed_4_merging();
-  calc_speed_for_lane_change(lateral_obstacle->leadone(), ego_state.ego_v_cruise, v_ego, lateral_outputs.lc_request, lateral_outputs.lc_status);
+  calc_speed_for_lane_change(lateral_obstacle->leadone(), ego_state_mgr->ego_v_cruise(), v_ego, lateral_outputs.lc_request, lateral_outputs.lc_status);
 
   double decel_base = std::min(v_target_ramp_ - v_ego + 2.0, 0.0);
   a_target_.first = std::min(a_target_.first, decel_base);
 
   // debug info
   auto &highway_longitudinal_output =
-        frame_->session()->planning_context().mutable_vision_longitudinal_behavior_planner_output();
+            frame_->mutable_session()->mutable_planning_context()->mutable_vision_longitudinal_behavior_planner_output();
   highway_longitudinal_output.decel_base = decel_base;
 
   a_target_.first = clip(a_target_.first, _A_MIN, _A_MAX);
@@ -172,7 +174,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
 
   // debug info
   auto &highway_longitudinal_output =
-      frame_->session()->planning_context().mutable_vision_longitudinal_behavior_planner_output();
+            frame_->mutable_session()->mutable_planning_context()->mutable_vision_longitudinal_behavior_planner_output();
   highway_longitudinal_output.v_limit_in_turns = v_limit_in_turns;
   highway_longitudinal_output.a_limit_in_turns = a_target_;
 
@@ -203,8 +205,8 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
   // filter near cars from front && side tracks
   near_cars.clear();
   for (auto &track : front_tracks) {
-    // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle
-    if (track.type == MSD_OBJECT_TYPE_RADAR_ONLY) { continue; };
+    // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle, MSD_OBJECT_TYPE_RADAR_ONLY == 0
+    if (track.type == 0) { continue; };
     if (std::abs(track.y_rel) < 10.0 && std::abs(track.d_rel) < 20.0 &&
         track.type == 1) {
       near_cars.push_back(&track);
@@ -212,7 +214,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
   }
   for (auto &track : side_tracks) {
     // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle
-    if (track.type == MSD_OBJECT_TYPE_RADAR_ONLY) { continue; };
+    if (track.type == 0) { continue; };
     if (std::abs(track.y_rel) < 10.0 && std::abs(track.d_rel) < 20.0 &&
         track.type == 1) {
       near_cars.push_back(&track);
@@ -525,7 +527,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
 
   // debug info
   auto &highway_longitudinal_output =
-          frame_->session()->planning_context().mutable_vision_longitudinal_behavior_planner_output();
+          frame_->mutable_session()->mutable_planning_context()->mutable_vision_longitudinal_behavior_planner_output();
 
   highway_longitudinal_output.v_limit_cutin = v_limit_cutin;
   highway_longitudinal_output.a_limit_cutin = a_limit_cutin;
@@ -554,7 +556,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
 
   LOG_DEBUG("----compute_speed_with_leads--- \n");
   // leadone
-  if (lead_one != nullptr && lead_one->type != MSD_OBJECT_TYPE_RADAR_ONLY) {
+  if (lead_one != nullptr && lead_one->type != 0) {
     LOG_DEBUG("target_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
               lead_one->track_id, lead_one->d_rel, lead_one->v_lead);
     // process noisy a_lead signal from radar processing
@@ -567,7 +569,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
     v_target_lead =
         calc_desired_speed(lead_one->d_rel, d_des, lead_one->v_lead);
     // leadtwo
-    if (lead_two != nullptr && lead_two->type != MSD_OBJECT_TYPE_RADAR_ONLY) {
+    if (lead_two != nullptr && lead_two->type != 0) {
       LOG_DEBUG("target_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
                         lead_two->track_id, lead_two->d_rel, lead_two->v_lead);
       a_lead_p_2 = process_a_lead(lead_two->a_lead_k);
@@ -606,8 +608,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
 
   // debug info
   auto &highway_longitudinal_output =
-        frame_->session()->planning_context().mutable_vision_longitudinal_behavior_planner_output();
-
+            frame_->mutable_session()->mutable_planning_context()->mutable_vision_longitudinal_behavior_planner_output();
   highway_longitudinal_output.v_target_lead_one = v_target_lead;
   highway_longitudinal_output.v_target_lead_two = v_target_lead_2;
   highway_longitudinal_output.a_target_lead = a_target;
@@ -632,7 +633,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
   // tleadone
   if (temp_lead_one != nullptr && !close_to_accident &&
       (temp_lead_one->d_path_self + std::min(temp_lead_one->v_lat, 0.3)) <
-          1.0 && temp_lead_one->type != MSD_OBJECT_TYPE_RADAR_ONLY) {
+          1.0 && temp_lead_one->type != 0) {
     LOG_DEBUG("temp_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n ",
               temp_lead_one->track_id, temp_lead_one->d_rel, temp_lead_one->v_lead);
     // process noisy a_lead signal from radar processing
@@ -658,7 +659,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
   }
   // tleadtwo
   if (temp_lead_two != nullptr && lc_status == "none"
-                    && temp_lead_two->type != MSD_OBJECT_TYPE_RADAR_ONLY) {
+                    && temp_lead_two->type != 0) {
     LOG_DEBUG("temp_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n ",
               temp_lead_two->track_id, temp_lead_two->d_rel, temp_lead_two->v_lead);
     a_lead_p_2 = process_a_lead(temp_lead_two->a_lead_k);
@@ -685,7 +686,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
 
   // debug info
   auto &highway_longitudinal_output =
-        frame_->session()->planning_context().mutable_vision_longitudinal_behavior_planner_output();
+            frame_->mutable_session()->mutable_planning_context()->mutable_vision_longitudinal_behavior_planner_output();
 
   highway_longitudinal_output.v_target_temp_lead_one = v_target_temp_lead;
   highway_longitudinal_output.a_target_temp_lead_one = a_target_temp;
@@ -867,7 +868,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
   front_cut_in_track_id.clear();
   for (auto &track : front_tracks) {
     // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle
-    if (track.type == MSD_OBJECT_TYPE_RADAR_ONLY) { continue; };
+    if (track.type == 0) { continue; };
     if (!track.is_lead && track.cutinp > cutinp_threshold &&
         track.v_lat < -0.01 && track.type < 50000) {
       std::pair<double, double> a_target = a_target_objective_;
@@ -900,7 +901,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
 
   // debug info
   auto &highway_longitudinal_output =
-        frame_->session()->planning_context().mutable_vision_longitudinal_behavior_planner_output();
+            frame_->mutable_session()->mutable_planning_context()->mutable_vision_longitudinal_behavior_planner_output();
 
   highway_longitudinal_output.v_target_cutin_front = v_target_potental_cutin;
   highway_longitudinal_output.a_target_cutin_front = a_target_potential_min;
@@ -968,8 +969,8 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
 //   MSDMergeType next_merge_type =
 //       map_info_mgr.get_map_info().next_merge_type();
 //   double v_target = v_target_;
-//   double v_cruise = ego_state.ego_v_cruise;
-//   double v_ego = ego_state.ego_vel;
+//   double v_cruise = ego_state_mgr->ego_v_cruise;
+//   double v_ego = ego_state_mgr->ego_vel;
 //   TrackedObject *lead_one = lateral_obstacle->leadone();
 //   double safety_dist = 4.0 + v_ego * 0.2;
 //   double v_limit_merge = 40.0;
@@ -1157,7 +1158,6 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
 bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(const TrackedObject *lead_one, const double v_cruise, const double v_ego,
         const string& lc_request, const string& lc_status) {
   LOG_DEBUG("----compute_speed_4_lane_change--- \n");
-  auto &ego_state = frame_->session()->environmental_model().get_cart_ego_state_manager().get_cart_ego_state();
   auto &lateral_obstacle = frame_->session()->environmental_model().get_lateral_obstacle();
 
   /*modify
@@ -1165,14 +1165,13 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(const Tracked
   virtual_lane_mgr_->restore_context(
       state_machine_output.virtual_lane_mgr_context);
   */
-  auto &lane_change_lane_manager = frame_->session()->planning_context().scenario_state_machine()->get_lane_change_lane_manager();
-  const auto &current_v_lane = frame_->session()->environmental_model().get_virtual_lane_manager()->get_current_lane();
+  const auto &lane_change_lane_manager = frame_->session()->planning_context().scenario_state_machine()->get_lane_change_lane_manager();
+  const auto current_v_lane = frame_->session()->environmental_model().get_virtual_lane_manager()->get_current_lane();
   //modify
   //double lc_end_dis = map_info_mgr.get_map_info().lc_end_dis();
   double lc_end_dis = 0;
-  int lc_map_decision = current_v_lane->lc_map_decision();
+  int lc_map_decision = frame_->session()->environmental_model().get_virtual_lane_manager()->lc_map_decision(current_v_lane);
   double v_target = v_target_;
-  TrackedObject *lead_one = lateral_obstacle->leadone();
   double safety_dist = 2.0 + v_ego * 0.2;
   double v_limit_lc = 40.0;
   double a_target_lc = 0.0;
@@ -1188,17 +1187,21 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(const Tracked
     // get target line tarcks
     if (lane_change_lane_manager->has_target_lane()) {
       std::vector<TrackedObject> *front_target_tracks =
-          lane_tracks_mgr_->get_lane_tracks(TARGET_LANE, FRONT_TRACK);
+          //modify
+          //lane_tracks_mgr_->get_lane_tracks(TARGET_LANE, FRONT_TRACK);
+          lane_tracks_mgr_->get_lane_tracks(2, 0);
       for (auto &track : *front_target_tracks) {
         // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle
-        if (track.type == MSD_OBJECT_TYPE_RADAR_ONLY) { continue; };
+        if (track.type == 0) { continue; };
         lane_changing_cars.push_back(&track);
       }
       std::vector<TrackedObject> *side_target_tracks =
-          lane_tracks_mgr_->get_lane_tracks(TARGET_LANE, SIDE_TRACK);
+          //modify
+          //lane_tracks_mgr_->get_lane_tracks(TARGET_LANE, FRONT_TRACK);
+          lane_tracks_mgr_->get_lane_tracks(2, 1);
       for (auto &track : *side_target_tracks) {
         // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle
-        if (track.type == MSD_OBJECT_TYPE_RADAR_ONLY) { continue; };
+        if (track.type == 0) { continue; };
         lane_changing_cars.push_back(&track);
       }
     }
@@ -1285,7 +1288,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(const Tracked
 
   // debug info
   auto &highway_longitudinal_output =
-        frame_->session()->planning_context().mutable_vision_longitudinal_behavior_planner_output();
+            frame_->mutable_session()->mutable_planning_context()->mutable_vision_longitudinal_behavior_planner_output();
   highway_longitudinal_output.v_target_lane_change = v_limit_lc;
   highway_longitudinal_output.a_target_lane_change = a_target_lc;
   highway_longitudinal_output.lane_changing_cars.clear();
