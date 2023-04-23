@@ -262,6 +262,14 @@ void EnvironmentalModelManager::vehicle_status_adaptor(const VehicleService::Veh
     vehicle_light->mutable_vehicle_light_data()->mutable_turn_signal()->set_value(common::TurnSignalType::NONE);
   }
   vehicle_light->mutable_vehicle_light_data()->set_auto_light_state(vehicel_service_output_info.auto_light_state());
+
+  if (vehicel_service_output_info.driver_hand_torque_available()) {
+    vehicle_status.mutable_driver_hand_state()->set_driver_hand_torque(vehicel_service_output_info.driver_hand_torque());
+  }
+
+  if (vehicel_service_output_info.driver_hands_off_state_available()) {
+    vehicle_status.mutable_driver_hand_state()->set_driver_hands_off_state(vehicel_service_output_info.driver_hands_off_state());
+  }
 }
 
 void EnvironmentalModelManager::truncate_prediction_info(const Prediction::PredictionResult& prediction_result, double cur_timestamp_us, std::unordered_set<uint>& prediction_obj_id_set) {

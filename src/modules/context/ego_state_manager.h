@@ -45,6 +45,8 @@ class EgoStateManager {
   void set_ego_blinker(
     const planning::common::VehicleStatus &vehicle_status);
   void set_ego_auto_light_state(const planning::common::VehicleStatus &vehicle_status);
+  void set_driver_hand_state(
+      const planning::common::VehicleStatus &vehicle_status);
   void set_planning_init_point_valid(bool planning_init_point_valid) {
     planning_init_point_valid_ = planning_init_point_valid;
   };
@@ -66,6 +68,8 @@ class EgoStateManager {
   double ego_steer_angle() const { return ego_steer_angle_; };
   uint ego_blinker() const { return ego_blinker_; };
   bool ego_auto_light_state() const { return ego_auto_light_state_; }
+  float driver_hand_torque() const { return driver_hand_torque_; }
+  bool driver_hands_off_state() const { return driver_hands_off_state_; }
   double jerk() const { return jerk_; };
   double t_distance() const { return ego_t_distance_; };
   int start_stop() const { return ego_start_stop_; };
@@ -113,6 +117,8 @@ class EgoStateManager {
   double ego_steer_angle_ = 0;
   uint ego_blinker_ = 0;
   bool ego_auto_light_state_;
+  float driver_hand_torque_;
+  bool driver_hands_off_state_;
   double jerk_ = 0;
   double ego_t_distance_ = 0;
   int ego_start_stop_ = 0;

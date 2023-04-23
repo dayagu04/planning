@@ -304,6 +304,13 @@ message Header {
   optional uint64 timestamp_us = 1;
 }
 
+message DriverHandState {
+  optional bool driver_hand_torque_available  = 1;
+  optional float driver_hand_torque  = 2;
+  optional bool driver_hands_off_state_available = 3;
+  optional bool driver_hands_off_state =4;
+}
+
 message VehicleStatus {
   optional Header header = 1;
   optional VehicleStatusMeta meta = 2;
@@ -322,5 +329,6 @@ message VehicleStatus {
   optional DoorStatus door_status = 15;
   optional SeatbeltStatus seatbelt_status = 16;
   optional int32 start_stop_info = 17;
+  optional DriverHandState driver_hand_state = 18;
   optional double navi_time_distance = 19;
 }
