@@ -150,6 +150,13 @@ void ScenarioStateMachine::clear_lc_variables() {
 
 void ScenarioStateMachine::update_scenario() { scenario_ = SCENARIO_CRUISE; }
 
+void ScenarioStateMachine::update_start_move_dist_lane() {
+  int flane_virtual_id = lc_lane_mgr_->flane_virtual_id();
+  auto fix_reference_path = session_->environmental_model().get_reference_path_manager()->get_reference_path_by_lane(flane_virtual_id);
+  auto frenet_ego_state = fix_reference_path->get_frenet_ego_state();
+  start_move_dist_lane_ = frenet_ego_state.l();
+}
+
 void ScenarioStateMachine::post_process() {
   RequestType turn_signal_this_frame = (map_turn_signal_ == NO_CHANGE)
                                            ? lc_req_mgr_->turn_signal()

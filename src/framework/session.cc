@@ -52,6 +52,9 @@ void Session::Init() {
   common::ConfigurationContext::Instance()->load_params_from_json(scenario_config_file_dir);
   auto synthetic_config = common::ConfigurationContext::Instance()->synthetic_config();
   planning::common::SceneType init_scene_type = planning::common::SceneType::HIGHWAY;
+  if (synthetic_config.scene_type == "apa") {
+    init_scene_type = planning::common::SceneType::PARKING_APA;
+  }
   // planning::common::SceneType init_scene_type = static_cast<planning::common::SceneType>(synthetic_config.scene_type);
   if (init_scene_type == planning::common::SceneType::NOT_DEFINED) {
     init_scene_type = default_scene_type_;

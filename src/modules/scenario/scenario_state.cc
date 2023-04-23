@@ -111,6 +111,14 @@ void StateBase::process(Control &control, FsmContext &context) {
   // Step 7) change state
   auto next_state = best_transition_context.target_state;
   if (best_transition_context.target_state != context.state) {
+    if (next_state == ROAD_NONE) {
+      state_machine->clear_lc_variables();
+    } else if ((next_state == ROAD_LC_LCHANGE &&
+              (context.state == ROAD_LC_LWAIT || context.state == ROAD_LC_LBACK)) ||
+              (next_state == ROAD_LC_RCHANGE &&
+              (context.state == ROAD_LC_RWAIT || context.state == ROAD_LC_RBACK))) {
+      state_machine->update_start_move_dist_lane();
+    }
     change_state(next_state, control, context);
     context.state = next_state;
     //TODO(Rui):fix me

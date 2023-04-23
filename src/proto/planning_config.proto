@@ -9,7 +9,8 @@ enum SceneType {
   PARKING = 1;
   HIGHWAY = 2;
   RADS = 3;
-  NOT_DEFINED = 4;
+  PARKING_APA = 4;
+  NOT_DEFINED = 5;
 }
 
 enum FunctionModeEnum {

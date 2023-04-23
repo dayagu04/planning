@@ -65,8 +65,9 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
   auto updated_time = IflyTime::Now_ms();
   LOG_DEBUG("update time:%f", updated_time - start_time);
 
-  object_selector_->update(session_->planning_context().lat_behavior_state_machine_output().curr_state, 0.,
-                          false, 80., false, false, false, false, false, -1);
+  object_selector_->update(session_->planning_context().lat_behavior_state_machine_output().curr_state, 
+                           session_->planning_context().scenario_state_machine()->get_start_move_dist_lane(),
+                           false, 80., false, false, false, false, false, -1);
 
   // Step 2) update state machine
   (void)scenario_state_machine_->update(frame_);
