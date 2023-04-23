@@ -7,6 +7,7 @@
 // #include "modules/context/ego_planning_config.h"
 #include "modules/common/define/planning_status.h"
 #include "src/modules/common/define/lateral_behavior_planner_output.h"
+#include "modules/tasks/behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner_output.h"
 
 namespace planning {
 
@@ -108,6 +109,14 @@ class PlanningContext {
   }
   void set_object_selector(std::shared_ptr<ObjectSelector> object_selector) {
     object_selector_ptr_ = object_selector;
+  }
+
+  const VisionLongitudinalBehaviorPlannerOutput &vision_longitudinal_behavior_planner_output() const {
+    return vision_longitudinal_behavior_planner_output_;
+  }
+
+  VisionLongitudinalBehaviorPlannerOutput &mutable_vision_longitudinal_behavior_planner_output() {
+    return vision_longitudinal_behavior_planner_output_;
   }
 
   const std::shared_ptr<AdaptiveCruiseControl>
@@ -213,7 +222,7 @@ class PlanningContext {
   LatBehaviorStateMachineOutput lat_behavior_state_machine_output_;
 
   LateralBehaviorPlannerOutput lateral_behavior_planner_output_;
-
+  VisionLongitudinalBehaviorPlannerOutput vision_longitudinal_behavior_planner_output_;
   std::shared_ptr<ScenarioManager> scenario_manager_ptr_;
   std::shared_ptr<ObjectSelector> object_selector_ptr_;
   std::shared_ptr<ScenarioStateMachine> scenario_state_machine_ptr_;

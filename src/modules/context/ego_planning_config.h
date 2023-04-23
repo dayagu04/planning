@@ -491,6 +491,25 @@ struct LongitudinalOptimizerV3Config : public EgoPlanningConfig {
   }
 };
 
+struct VisionLongitudinalBehaviorPlannerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    preview_x =
+        read_json_key<double>(json, "preview_x");
+    dis_zero_speed =
+        read_json_key<double>(json, "dis_zero_speed");
+    dis_zero_speed_accident =
+        read_json_key<double>(json, "dis_zero_speed_accident");
+    ttc_brake_hysteresis =
+        read_json_key<double>(json, "ttc_brake_hysteresis");
+  }
+  double preview_x = 80.0;
+  double dis_zero_speed = 3.5;
+  double dis_zero_speed_accident = 6;
+  double ttc_brake_hysteresis = 0.3;
+};
+
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
