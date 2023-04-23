@@ -65,7 +65,8 @@ class LaneChangeLaneManager {
   void upload_fix_lane_virtual_id() {
     virtual_lane_mgr_->update_last_fix_lane_id(flane_virtual_id_);
   }
-
+  void save_context(VirtualLaneManagerContext &context) const;
+  void restore_context(const VirtualLaneManagerContext &context);
  private:
   int flane_virtual_id_;
   int olane_virtual_id_;

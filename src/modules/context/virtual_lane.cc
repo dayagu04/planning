@@ -240,8 +240,6 @@ double VirtualLane::min_width() {
   }
 }
 
-
-
 void VirtualLane::update_speed_limit(double ego_vel, double ego_v_cruise) { //todo
   // update vision only v_cruise_
   if (get_lane_source() == FusionRoad::LaneSource::SOURCE_FUSION) {
@@ -287,6 +285,14 @@ void VirtualLane::update_speed_limit(double ego_vel, double ego_v_cruise) { //to
 
   v_cruise_ =
       std::min(current_lane_speed_limit_, speed_change_point_.speed);
+}
+
+void VirtualLane::save_context(VirtualLaneContext &context) const {
+  // todo: clren
+}
+
+void VirtualLane::restore_context(const VirtualLaneContext &context) {
+  // todo: clren
 }
 
 }

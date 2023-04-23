@@ -17,6 +17,23 @@ struct SpeedChangePoint {
   double speed;
 };
 
+// hack :clren
+struct VirtualLaneMember {
+  int order_id_ = -1;
+  int virtual_id_ = 0;
+  int relative_id_ = 0;
+  float ego_lateral_offset_ = 0;
+  LaneStatusEx lane_status_;
+  FusionRoad::LaneType lane_type_;
+  FusionRoad::LaneDrivableDirection lane_marks_;
+  FusionRoad::LaneSource lane_source_;
+  FusionRoad::LaneReferenceLine lane_reference_line_;
+  std::array<double, 4> c_poly_;
+  FusionRoad::LaneMergeSplitPoint lane_merge_split_point_;
+  FusionRoad::LaneBoundary left_lane_boundary_;
+  FusionRoad::LaneBoundary right_lane_boundary_;
+};
+
 class VirtualLane {
  public:
   VirtualLane();
@@ -86,6 +103,8 @@ class VirtualLane {
   };
 
   void update_speed_limit(double ego_vel, double ego_v_cruise);
+  void save_context(VirtualLaneContext &context) const;
+  void restore_context(const VirtualLaneContext &context);
  private:
   
   int order_id_ = -1;
