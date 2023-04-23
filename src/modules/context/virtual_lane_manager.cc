@@ -270,4 +270,9 @@ int VirtualLaneManager::lc_map_decision(const std::shared_ptr<VirtualLane> virtu
 
   return tasks_id;
 }
+
+double VirtualLaneManager::lc_end_dis() const {
+  //todo: clren
+  return NL_NMAX; 
+}
 } 

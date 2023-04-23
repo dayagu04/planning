@@ -4,6 +4,7 @@
 #include "src/modules/context/virtual_lane.h"
 #include "src/modules/context/virtual_lane_manager.h"
 #include "src/modules/context/intersection.h"
+#include "src/modules/context/Ramp.h"
 #include "../../res/include/proto/fusion_road.pb.h"
 #include <vector>
 
@@ -48,7 +49,7 @@ class VirtualLaneManager {
   std::vector<std::shared_ptr<Obstacle>> get_right_lane_obstacle();
   bool has_lane(int virtual_lane_id);
   Intersection intersection_;
-  //Ramp ramp_;
+  Ramp ramp_;
   //Destination destination_;
 
   //void update_current_lane();
@@ -66,6 +67,7 @@ class VirtualLaneManager {
   int get_tasks(const std::shared_ptr<VirtualLane> virtual_lane) const;
   bool must_change_lane(const std::shared_ptr<VirtualLane> virtual_lane, double on_route_distance_threshold) const;
   int lc_map_decision(const std::shared_ptr<VirtualLane> virtual_lane) const;
+  double lc_end_dis() const;
  private:
   LaneChangeStatus is_lane_change();
   void update_virtual_id();
