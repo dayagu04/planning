@@ -61,6 +61,14 @@ class ObstacleManager {
     }
   }
 
+  int get_current_leadone_obstacle_to_ego() const {
+    return current_leadone_obstacle_to_ego_;
+  }
+
+  int get_current_leadtwo_obstacle_to_ego() const {
+    return current_leadtwo_obstacle_to_ego_;
+  }
+
   void assign_obstacles_to_lanes();
 
   // lidar road edge
@@ -122,8 +130,8 @@ class ObstacleManager {
   std::unordered_map<int, std::vector<int>> lanes_obstacles_;
   std::unordered_map<int, int> lanes_leadone_obstacle_;
   std::unordered_map<int, int> lanes_leadtwo_obstacle_;
-  int current_leadone_obstacle_{-1};
-  int current_leadtwo_obstacle_{-1};
+  int current_leadone_obstacle_to_ego_{-1};
+  int current_leadtwo_obstacle_to_ego_{-1};
   std::unordered_map<int, std::vector<int>> lanes_virtual_obstacles_;
 };
 

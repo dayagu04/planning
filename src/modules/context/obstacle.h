@@ -18,21 +18,21 @@ namespace planning {
 
 class Obstacle {
  public:
-  explicit Obstacle(int id,
-                    const Prediction::PredictionObject &prediction_object,
-                    bool is_static, double start_relative_timestamp);
+  // explicit Obstacle(int id,
+  //                   const Prediction::PredictionObject &prediction_object,
+  //                   bool is_static, double start_relative_timestamp);
 
   explicit Obstacle(int id,
                     const PredictionObject &prediction_object,
                     bool is_static, double start_relative_timestamp);
 
-  explicit Obstacle(int id,
-                    const FusionObjects::FusionObject &perception_obstacle,
-                    bool is_static);
+  // explicit Obstacle(int id,
+  //                   const FusionObjects::FusionObject &perception_obstacle,
+  //                   bool is_static);
 
-  explicit Obstacle(int id, double x, double y, double heading_angle,
-                    double length, double width, double height,
-                    Common::ObjectType type);
+  // explicit Obstacle(int id, double x, double y, double heading_angle,
+  //                   double length, double width, double height,
+  //                   Common::ObjectType type);
 
   // for ground line
   explicit Obstacle(int id, const std::vector<Common::Point3d> &points);
@@ -49,10 +49,10 @@ class Obstacle {
   double length() const { return length_; }
   double width() const { return width_; }
   //  relative_heading_angle
-  double relative_heading_angle() const { return perception_obstacle_.common_info().relative_heading_angle(); }
-  double heading_angle() const { return perception_obstacle_.common_info().heading_angle(); }
+  double relative_heading_angle() const { return relative_yaw_; }
+  double heading_angle() const { return yaw_; }
   double velocity() const { return velocity_; }
-  double perception_velocity() const { return perception_velocity_; }
+  // double perception_velocity() const { return perception_velocity_; }
   double acceleration() const { return acc_; }
   // double acceleration_signed() const { return acc_signed_; }
   double velocity_angle() const { return velocity_angle_; }
@@ -94,6 +94,7 @@ class Obstacle {
   double y_center_;
   double z_center_ = 0.0;
   double yaw_;
+  double relative_yaw_;
   double velocity_ = 0.0;
   // double perception_velocity_{};
   double velocity_angle_ = 0.0;

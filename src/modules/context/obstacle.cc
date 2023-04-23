@@ -137,23 +137,11 @@ Obstacle::Obstacle(int id,
   width_ = prediction_object.width;
   length_ = prediction_object.length;
   yaw_ = planning_math::NormalizeAngle(prediction_object.yaw);
+  relative_yaw_ = planning_math::NormalizeAngle(prediction_object.relative_theta);
   velocity_ = prediction_object.speed;
-  velocity_angle_ = perception_obstacle_.common_info().heading_angle();
+  // todo, 看是否存在象限问题，以及都为0的情况
+  velocity_angle_ = std::atan2(prediction_object.relative_speed_y, prediction_object.relative_speed_x);
   acc_ = prediction_object.acc;
-  // perception_obstacle_.mutable_common_info()->mutable_center_position()->set_x(prediction_object.position_x);
-  // perception_obstacle_.mutable_common_info()->mutable_center_position()->set_y(prediction_object.position_y);
-  // // perception_obstacle_.position.z = 0.0;  // 障碍物感知位置需要z的信息
-  // perception_obstacle_.mutable_common_info()->mutable_shape()->set_length(prediction_object.length);
-  // perception_obstacle_.mutable_common_info()->mutable_shape()->set_width(prediction_object.width);
-
-  // perception_obstacle_.mutable_common_info()->set_heading_angle(planning_math::NormalizeAngle(prediction_object.yaw));
-  // perception_obstacle_.mutable_common_info()->mutable_acceleration()->set_x(prediction_object.acc);
-  // perception_obstacle_.mutable_common_info()->mutable_velocity()->set_x(prediction_object.speed * std::cos(perception_obstacle_.common_info().heading_angle()));
-  // perception_obstacle_.mutable_common_info()->mutable_velocity()->set_y(prediction_object.speed * std::sin(perception_obstacle_.common_info().heading_angle()));
-
-  // perception_obstacle_.mutable_common_info()->mutable_shape()->set_height(0.0);
-  // velocity_ = prediction_object.speed;
-  // velocity_angle_ = perception_obstacle_.common_info().heading_angle();
 
   std::vector<planning_math::Vec2d> polygon_points;
   if (prediction_object.bottom_polygon_points.size() < 3) {
@@ -164,8 +152,8 @@ Obstacle::Obstacle(int id,
       auto &point = prediction_object.bottom_polygon_points[i];
       polygon_points.emplace_back(planning_math::Vec2d(point.x, point.y));
       LOG_DEBUG("point x %f y %f", polygon_points[i].x(), polygon_points[i].y());
-      LOG_DEBUG("rel point x %f y %f", polygon_points[i].x() - perception_obstacle_.common_info().center_position().x(),
-          polygon_points[i].y()-perception_obstacle_.common_info().center_position().y());
+      LOG_DEBUG("rel point x %f y %f", polygon_points[i].x() - x_center_,
+          polygon_points[i].y()- y_center_);
     }
     // polygon_points.erase(polygon_points.begin());
   }
@@ -181,12 +169,10 @@ Obstacle::Obstacle(int id,
   }
   std::vector<planning_math::Vec2d> ego_polygon_points;
   LOG_DEBUG("obstacle[%d] polygon size : %d %d, ego x %f y %f", prediction_object.bottom_polygon_points.size(),
-      polygon_points.size(), perception_obstacle_.common_info().center_position().x(),
-      perception_obstacle_.common_info().center_position().y());
+      polygon_points.size(), x_center_, y_center_);
   for (const auto &point : perception_polygon_.points()) {
     ego_polygon_points.emplace_back(planning_math::Vec2d(
-                                    point.x() - perception_obstacle_.common_info().center_position().x(),
-                                    point.y() - perception_obstacle_.common_info().center_position().y()));
+                                    point.x() - x_center_, point.y() - y_center_));
     // LOG_DEBUG("ego point x %f y %f", ego_polygon_points.back().x(), ego_polygon_points.back().y());
   }
   // LOG_DEBUG("obstacle[%d] last polygon size : %d", polygon_points.size());
@@ -381,10 +367,10 @@ PncTrajectoryPoint Obstacle::get_point_at_time(
   const auto &points = trajectory_;
   if (points.size() < 2) {
     PncTrajectoryPoint point;
-    point.path_point.x = perception_obstacle_.common_info().center_position().x();
-    point.path_point.y = perception_obstacle_.common_info().center_position().y();
+    point.path_point.x = x_center_;
+    point.path_point.y = y_center_;
     point.path_point.z = 0.; // 障碍物位置需要z信息
-    point.path_point.theta = perception_obstacle_.common_info().heading_angle();
+    point.path_point.theta = yaw_;
     point.prediction_prob = 1.0;
     point.velocity_direction = 0.0;
     point.path_point.s = 0.0;
@@ -423,14 +409,13 @@ PncTrajectoryPoint Obstacle::get_point_at_time(
 planning_math::Box2d Obstacle::get_bounding_box(
     const PncTrajectoryPoint &point) const {
   return planning_math::Box2d(
-      {point.path_point.x, point.path_point.y}, point.path_point.theta,
-      perception_obstacle_.common_info().shape().length(), perception_obstacle_.common_info().shape().width());
+      {point.path_point.x, point.path_point.y}, point.path_point.theta, length_, width_);
 }
 
 planning_math::Polygon2d Obstacle::get_polygon_at_point(
     const PncTrajectoryPoint &point) const {
   std::vector<planning_math::Vec2d> polygon_points;
-  double rel_theta = point.path_point.theta - perception_obstacle_.common_info().heading_angle();
+  double rel_theta = point.path_point.theta - yaw_;
 
   for (const auto &ego_point : obstacle_ego_polygon_.points()) {
     polygon_points.emplace_back(planning_math::Vec2d(

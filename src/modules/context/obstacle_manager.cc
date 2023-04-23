@@ -25,9 +25,7 @@ void ObstacleManager::update() {
   bool enable_bbox_mode = config_.enable_bbox_mode;
   const auto &prediction_objects =
         session_->environmental_model().get_prediction_info();
-  for (int i = 0;
-       i < session_->environmental_model().get_prediction_info().size();
-       i++) {
+  for (int i = 0; i < session_->environmental_model().get_prediction_info().size(); i++) {
     auto prediction_object = prediction_objects[i];
     bool is_static = prediction_object.speed < 0.1 ||
                      prediction_object.trajectory_array.size() == 0;
@@ -154,7 +152,6 @@ ObstacleManager::get_reference_path_obstacles_map(
 }
 
 void ObstacleManager::assign_obstacles_to_lanes() {
-
   lanes_obstacles_.clear();
   lanes_leadone_obstacle_.clear();
   lanes_leadtwo_obstacle_.clear();
@@ -240,8 +237,8 @@ void ObstacleManager::cal_current_leadone_leadtwo_to_ego(int lane_virtual_id) {
       break;
     }
   }
-  current_leadone_obstacle_ = current_leadone_id;
-  current_leadtwo_obstacle_ = current_leadtwo_id;
+  current_leadone_obstacle_to_ego_ = current_leadone_id;
+  current_leadtwo_obstacle_to_ego_ = current_leadtwo_id;
 }
 
 bool ObstacleManager::is_potential_current_leadone_leadtwo_to_ego(const FrenetObstacle &frenet_obstacle) {
