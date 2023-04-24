@@ -53,7 +53,8 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
   const double ego_a = planning_init_point.a;
   const double ego_s = planning_init_point.frenet_state.s;
 
-  auto ego_state = frame->session()->environmental_model().get_ego_state_manager();
+  auto ego_state =
+      frame->session()->environmental_model().get_ego_state_manager();
 
   // Step 1)
   ReferencePathPoints refpath_points;
@@ -655,8 +656,7 @@ void GeneralLongitudinalDecider::generate_lon_decision_from_path(
 
   // construct longitudinal obstacle decisions
   construct_longitudinal_obstacle_decisions(lateral_trajectory_points,
-                                            refpath_points,
-                                            obstacle_decisions,
+                                            refpath_points, obstacle_decisions,
                                             lon_ref_path);
 
   construct_longitudinal_outer_decision(
@@ -732,8 +732,8 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decisions(
     ObstacleDecisions &obstacle_decisions, LonRefPath &lon_ref_path) {
   // NTRACE_CALL(9);
 
-  // std::vector<Polygon2d> lon_overlap_path;
-  // make_longitudinal_overlap_path(traj_points, lon_overlap_path);
+  std::vector<Polygon2d> lon_overlap_path;
+  make_longitudinal_overlap_path(traj_points, lon_overlap_path);
 
   // pipeline_context_->planning_result.extra_json_raw["lon_decision_error_info"]
   // =
@@ -793,23 +793,23 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decisions(
   // }
   // MDEBUG_JSON_END_ARRAY(longitudinal_obstacle_decisions_based_on_lateral_path)
 
-  // int traj_length = traj_points.size();
-  // lon_ref_path.lon_obstacle_yield_info.reserve(traj_length);
-  // for (int i = 0; i < traj_length; i++) {
-  //   lon_ref_path.lon_obstacle_yield_info.emplace_back(
-  //       LonObstalceYieldInfo{0, 1000, 1000});
-  // }
-  // for (auto &obstacle : reference_path_ptr_->get_obstacles()) {
-  //   if (check_longitudinal_ignore_obstacle(obstacle)) {
-  //     continue;
-  //   }
-  //   auto obstacle_id = obstacle.id();
-  //   if (obstacle.b_frenet_valid()) {
-  //     construct_longitudinal_obstacle_decision(
-  //         traj_points, refpath_points, lon_overlap_path, obstacle,
-  //         obstacle_decisions[obstacle_id], lon_ref_path);
-  //   }
-  // }
+  int traj_length = traj_points.size();
+  lon_ref_path.lon_obstacle_yield_info.reserve(traj_length);
+  for (int i = 0; i < traj_length; i++) {
+    lon_ref_path.lon_obstacle_yield_info.emplace_back(
+        LonObstalceYieldInfo{0, 1000, 1000});
+  }
+  for (auto &obstacle : reference_path_ptr_->get_obstacles()) {
+    if (check_longitudinal_ignore_obstacle(obstacle)) {
+      continue;
+    }
+    auto obstacle_id = obstacle.id();
+    if (obstacle.b_frenet_valid()) {
+      construct_longitudinal_obstacle_decision(
+          traj_points, refpath_points, lon_overlap_path, obstacle,
+          obstacle_decisions[obstacle_id], lon_ref_path);
+    }
+  }
 
   // MDEBUG_JSON_BEGIN_DICT(lon_yield_obstacle)
   // MDEBUG_JSON_BEGIN_ARRAY(lon_yield_obj)
@@ -829,37 +829,37 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decisions(
   // MDEBUG_JSON_END_DICT(lon_yield_obstacle)
   // MDEBUG_JSON_BEGIN_DICT(lon_st_obstacle)
   // MDEBUG_JSON_BEGIN_ARRAY(lon_obstacle_overlap)
-  // if (!lon_ref_path.lon_obstacle_yield_info.empty()) {
-  //   for (size_t i = 0; i < lon_ref_path.lon_obstacle_yield_info.size(); i++)
-  //   {
-  //     auto iter = lon_ref_path.lon_obstacle_overlap_info.find(
-  //         lon_ref_path.lon_obstacle_yield_info[i].yield_id);
-  //     if (iter != lon_ref_path.lon_obstacle_overlap_info.end()) {
-  //       lon_ref_path.lon_obstacle_overlap_info.erase(
-  //           lon_ref_path.lon_obstacle_yield_info[i].yield_id);
-  //     }
-  //   }
-  //   for (auto lon_overlap_iter =
-  //   lon_ref_path.lon_obstacle_overlap_info.begin();
-  //        lon_overlap_iter != lon_ref_path.lon_obstacle_overlap_info.end();
-  //        ++lon_overlap_iter) {
-  //     MDEBUG_JSON_BEGIN_OBJECT(object)
-  //     MDEBUG_JSON_BEGIN_ARRAY(lon_obstacle_overlap_iter)
-  //     for (size_t j = 0; j < lon_overlap_iter->second.size(); j++) {
-  //       MDEBUG_JSON_BEGIN_OBJECT(object)
-  //       MDEBUG_JSON_ADD_ITEM(id, lon_overlap_iter->first, object)
-  //       MDEBUG_JSON_ADD_ITEM(s, lon_overlap_iter->second[j].s, object)
-  //       MDEBUG_JSON_ADD_ITEM(t, lon_overlap_iter->second[j].t, object)
-  //       MDEBUG_JSON_END_OBJECT(object)
-  //     }
-  //     MDEBUG_JSON_END_ARRAY(lon_obstacle_overlap_iter)
-  //     MDEBUG_JSON_END_OBJECT(object)
-  //   }
-  //   lon_ref_path.lon_obstacle_overlap_info.clear();
-  // }
+  if (!lon_ref_path.lon_obstacle_yield_info.empty()) {
+    for (size_t i = 0; i < lon_ref_path.lon_obstacle_yield_info.size(); i++)
+    {
+      auto iter = lon_ref_path.lon_obstacle_overlap_info.find(
+          lon_ref_path.lon_obstacle_yield_info[i].yield_id);
+      if (iter != lon_ref_path.lon_obstacle_overlap_info.end()) {
+        lon_ref_path.lon_obstacle_overlap_info.erase(
+            lon_ref_path.lon_obstacle_yield_info[i].yield_id);
+      }
+    }
+    // for (auto lon_overlap_iter =
+    // lon_ref_path.lon_obstacle_overlap_info.begin();
+    //      lon_overlap_iter != lon_ref_path.lon_obstacle_overlap_info.end();
+    //      ++lon_overlap_iter) {
+    //   MDEBUG_JSON_BEGIN_OBJECT(object)
+    //   MDEBUG_JSON_BEGIN_ARRAY(lon_obstacle_overlap_iter)
+    //   for (size_t j = 0; j < lon_overlap_iter->second.size(); j++) {
+    //     MDEBUG_JSON_BEGIN_OBJECT(object)
+    //     MDEBUG_JSON_ADD_ITEM(id, lon_overlap_iter->first, object)
+    //     MDEBUG_JSON_ADD_ITEM(s, lon_overlap_iter->second[j].s, object)
+    //     MDEBUG_JSON_ADD_ITEM(t, lon_overlap_iter->second[j].t, object)
+    //     MDEBUG_JSON_END_OBJECT(object)
+    //   }
+    //   MDEBUG_JSON_END_ARRAY(lon_obstacle_overlap_iter)
+    //   MDEBUG_JSON_END_OBJECT(object)
+    // }
+    lon_ref_path.lon_obstacle_overlap_info.clear();
+  }
   // MDEBUG_JSON_END_ARRAY(lon_obstacle_overlap)
   // MDEBUG_JSON_END_DICT(lon_st_obstacle)
-  // lon_ref_path.lon_obstacle_yield_info.clear();
+  lon_ref_path.lon_obstacle_yield_info.clear();
 }
 
 void GeneralLongitudinalDecider::make_longitudinal_overlap_path(
