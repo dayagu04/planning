@@ -143,8 +143,8 @@ typedef struct {
   std::unordered_map<int, AvdInfo> avd_info;
   std::unordered_map<int, int> yield_history;
 
-  // planning_output_info
-  PlanningOutput::PlanningOutput planning_output_info;
+  // planning_output
+  PlanningOutput::PlanningOutput planning_output;
 
   std::vector<double> traj_vel_array;
   std::vector<double> traj_acceleration;
