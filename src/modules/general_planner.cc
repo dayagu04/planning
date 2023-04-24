@@ -102,13 +102,13 @@ void GeneralPlanner::SetPlanningResult(
 
   ClearPlanningResult(pnc_result);
   if (ego_planning_result.turn_signal == NO_CHANGE) {
-    pnc_result.turn_signal_cmd = Common::TurnSignalType::TURN_SIGNAL_TYPE_NONE;
+    pnc_result.planning_output_info.mutable_turn_signal_command()->set_turn_signal_value(Common::TurnSignalType::TURN_SIGNAL_TYPE_NONE);
   } else if (ego_planning_result.turn_signal == LEFT_CHANGE) {
-    pnc_result.turn_signal_cmd = Common::TurnSignalType::TURN_SIGNAL_TYPE_LEFT;
+    pnc_result.planning_output_info.mutable_turn_signal_command()->set_turn_signal_value(Common::TurnSignalType::TURN_SIGNAL_TYPE_LEFT);
   } else {
-    pnc_result.turn_signal_cmd = Common::TurnSignalType::TURN_SIGNAL_TYPE_RIGHT;
+    pnc_result.planning_output_info.mutable_turn_signal_command()->set_turn_signal_value(Common::TurnSignalType::TURN_SIGNAL_TYPE_RIGHT);
   }
-  LOG_DEBUG("turn_signal: %d", (int)pnc_result.turn_signal_cmd);
+  LOG_DEBUG("turn_signal: %d", (int)pnc_result.planning_output_info.turn_signal_command().turn_signal_value());
 
   // add stitcher trajectory
 }
@@ -116,8 +116,8 @@ void GeneralPlanner::SetPlanningResult(
 void GeneralPlanner::ClearPlanningResult(common::PlanningResult &pnc_result) {
   pnc_result.traj_vel_array.clear();
   pnc_result.traj_acceleration.clear();
-  pnc_result.traj_pose_array.clear();
-  pnc_result.jerk_output.clear();
+  // pnc_result.traj_pose_array.clear();
+  // pnc_result.jerk_output.clear();
 }
 
 }  // namespace planner

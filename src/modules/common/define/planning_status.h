@@ -136,17 +136,6 @@ typedef struct {
   float lon_error = 0.0F;
   float lat_error = 0.0F;
 
-  float v_target = 0.0F;
-  float a_target = 0.0F;
-  std::vector<float> v_array;
-  std::vector<float> a_array;
-
-  // traffic light
-  int traffic_light_state = 0;
-  bool stop_flag = false;
-  bool is_passed_stop_line = false;
-  double dist_to_stop = 0.0;
-
   // decision
   std::vector<uint32_t> lon_follow_obstacles;
   std::vector<uint32_t> lon_overtake_obstacles;
@@ -154,64 +143,11 @@ typedef struct {
   std::unordered_map<int, AvdInfo> avd_info;
   std::unordered_map<int, int> yield_history;
 
-  // TODO: discriminate diffenent type of trajectory to judge if
-  // the corresponding result is approvable amd select the best solution
-  std::string matched_scenario_type;
+  // planning_output_info
+  PlanningOutput::PlanningOutput planning_output_info;
 
-  // longitudinal debug
-  int flag_closelead;
-  int flag_invalid;
-  int flag_type0;
-  int flag_softbrake;
-  int flag_fastcutin;
-  double v_set;
-  double v_set_obs;
-  double a_set;
-  double ds_set;
-  double t_set;
-  double v_limit;
-  double v_limit_map;
-  double v_limit_map_current;
-  int num_yield;
-  double vl_yield;
-  double dsl_yield;
-  int type_yield;
-  int id_yield;
-  int tag_yield;
-  double dsl_overtake;
-  int type_overtake;
-  int id_overtake;
-  int type_merge;
-  double dis2merge;
-  double dis2cross;
-  double cutin_score;
-  double lon_weights[4]{};
-  bool NeedAEB;
-  bool pnc_start{false};
-  bool pnc_stop{false};
-  std::vector<int> id_nudge;
-
-  // lateral motion debug
-  int lat_plan_status;
-  std::vector<int> id_clear;
-
-  std::vector<double> acc_output;
-  std::vector<double> jerk_output;
-  double min_acc;
-  double max_acc;
-  double min_jerk;
-  double max_jerk;
-
-  // traj
-  std::vector<PlanningOutput::TrajectoryPoint> traj_pose_array;
   std::vector<double> traj_vel_array;
   std::vector<double> traj_acceleration;
-
-  // 已经转为proto类型
-  Common::TurnSignalType turn_signal_cmd;
-      // common::TurnSignalType::NONE;
-  Common::GearCommandValue gear_cmd;
-      // common::GearType::NONE;
 
   //for control
   std::string extra_json;
