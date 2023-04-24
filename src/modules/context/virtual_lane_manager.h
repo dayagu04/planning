@@ -67,7 +67,10 @@ class VirtualLaneManager {
   int get_tasks(const std::shared_ptr<VirtualLane> virtual_lane) const;
   bool must_change_lane(const std::shared_ptr<VirtualLane> virtual_lane, double on_route_distance_threshold) const;
   int lc_map_decision(const std::shared_ptr<VirtualLane> virtual_lane) const;
-  double lc_end_dis() const;
+  double lc_map_decision_offset(const std::shared_ptr<VirtualLane> virtual_lane) const {
+    //HACK
+    return 5000.;
+  };
  private:
   LaneChangeStatus is_lane_change();
   void update_virtual_id();

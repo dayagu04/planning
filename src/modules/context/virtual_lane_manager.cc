@@ -213,7 +213,7 @@ double VirtualLaneManager::get_distance_to_final_dash_line(const RequestType dir
   if (virtual_lane == nullptr) {
     return std::numeric_limits<double>::max();
   }
-  return virtual_lane->lc_map_decision_offset();
+  return lc_map_decision_offset(virtual_lane);
 }
 
 int VirtualLaneManager::get_lane_index(const std::shared_ptr<VirtualLane> virtual_lane) const {
@@ -251,7 +251,7 @@ bool VirtualLaneManager::must_change_lane(const std::shared_ptr<VirtualLane> vir
   if (virtual_lane == nullptr) {
     return 0;
   }
-  return lc_map_decision(virtual_lane) != 0 && virtual_lane->lc_map_decision_offset() < on_route_distance_threshold;
+  return lc_map_decision(virtual_lane) != 0 && lc_map_decision_offset(virtual_lane) < on_route_distance_threshold;
 }
 
 int VirtualLaneManager::lc_map_decision(const std::shared_ptr<VirtualLane> virtual_lane) const {
@@ -271,8 +271,4 @@ int VirtualLaneManager::lc_map_decision(const std::shared_ptr<VirtualLane> virtu
   return tasks_id;
 }
 
-double VirtualLaneManager::lc_end_dis() const {
-  //todo: clren
-  return NL_NMAX; 
-}
 } 

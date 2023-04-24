@@ -97,10 +97,7 @@ class VirtualLane {
   bool hack() const { return hack_; }
   const std::vector<int>& get_current_tasks() const { return current_tasks_; };
   // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离
-  double lc_map_decision_offset() const {
-    //HACK
-    return 5000.;
-  };
+  
 
   void update_speed_limit(double ego_vel, double ego_v_cruise);
   void save_context(VirtualLaneContext &context) const;
