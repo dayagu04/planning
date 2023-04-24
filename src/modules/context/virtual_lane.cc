@@ -295,4 +295,70 @@ void VirtualLane::restore_context(const VirtualLaneContext &context) {
   // todo: clren
 }
 
+void VirtualLane::update_refined_lane_points() {
+  if (lane_points().size() < 2) {
+    refined_lane_points_.clear();
+    return;
+  }
+
+  double interp_gap = 0.5;
+  std::vector<double> x_points, y_points;
+
+  for (size_t i = 0; i < lane_points().size(); i++) {
+    x_points.push_back(lane_points()[i].car_point().x());
+    y_points.push_back(lane_points()[i].car_point().y());
+  }
+
+  refined_lane_points_.clear();
+
+  std::vector<double> u_points{0};
+
+  for (size_t i = 0; i + 1 < x_points.size(); i++) {
+    double dist = std::sqrt(std::pow(x_points[i + 1] - x_points[i], 2) +
+                            std::pow(y_points[i + 1] - y_points[i], 2));
+
+    u_points.push_back(u_points[i] + dist);
+  }
+
+  planning::planning_math::spline x_spline, y_spline;
+  x_spline.set_points(u_points, x_points);
+  y_spline.set_points(u_points, y_points);
+
+  std::vector<double> us;
+  discrete(u_points[0], u_points.back(), interp_gap, us);
+
+  size_t index = 0;
+  for (size_t i = 0; i < us.size(); i++) {
+    PathPoint pp;
+    pp.x = x_spline(us[i]);
+    pp.y = y_spline(us[i]);
+
+    if (i == 0) {
+      pp.s = 0;
+    } else {
+      double dist = std::sqrt(std::pow(pp.x - refined_lane_points_[i - 1].x, 2) +
+                              std::pow(pp.y - refined_lane_points_[i - 1].y, 2));
+
+      pp.s = refined_lane_points_[i - 1].s + dist;
+    }
+
+    // something strange
+    for (size_t j = 0; j + 1 < u_points.size(); j++) {
+      if (j < index) {
+        continue;
+      }
+
+      if (us[i] >= u_points[j] && us[i] < u_points[j + 1]) {
+        index = j;
+        break;
+      }
+      index++;
+    }
+
+    pp.theta = std::atan2(y_spline.deriv(1, us[i]), x_spline.deriv(1, us[i]));
+    pp.kappa = 0;
+    refined_lane_points_.push_back(pp);
+  }
+}
+
 }

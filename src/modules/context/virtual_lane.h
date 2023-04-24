@@ -6,6 +6,7 @@
 #include "../../res/include/proto/fusion_road.pb.h"
 #include "src/modules/context/reference_path_manager.h"
 #include "src/modules/context/reference_path.h"
+#include "src/modules/common/refline.h"
 #include <float.h>
 #include <limits.h>
 
@@ -70,6 +71,20 @@ class VirtualLane {
     reference_path_ = reference_path;
   };
 
+  void discrete(double start, double end, double gap,
+                std::vector<double> &output) {
+    output.clear();
+    for (double value = start; value < end; value += gap) {
+      output.push_back(value);
+    }
+  }
+
+  void update_refined_lane_points();
+
+  const std::vector<PathPoint> &get_refined_lane_points() {
+    return refined_lane_points_;
+  }
+
   std::shared_ptr<ReferencePath> get_reference_path() { return reference_path_; }
   double get_ego_lateral_offset() const { return ego_lateral_offset_; };
   FusionRoad::LaneType get_lane_type() const { return lane_type_; };
@@ -118,6 +133,7 @@ class VirtualLane {
   FusionRoad::LaneMergeSplitPoint lane_merge_split_point_;
   FusionRoad::LaneBoundary left_lane_boundary_;
   FusionRoad::LaneBoundary right_lane_boundary_;
+  std::vector<PathPoint> refined_lane_points_;
 
   std::vector<std::string> center_line_points_track_id_;
   std::shared_ptr<ReferencePath> reference_path_ = nullptr;

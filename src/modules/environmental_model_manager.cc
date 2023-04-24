@@ -128,7 +128,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(const LocalView& loca
       if (num > local_view.fusion_objects_info.num()) {
         break;
       }
-      if (prediction_obj_id_set.find(obj.common_info().id()) == prediction_obj_id_set.end()) {
+      if (prediction_obj_id_set.find(obj.additional_info().track_id()) == prediction_obj_id_set.end()) {
         transform_fusion_to_prediction(obj, (double)local_view.fusion_objects_info.header().timestamp());
       }
     }
@@ -284,7 +284,7 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
 
   for (const auto &prediction_object : prediction_result.prediction_obstacle()) {
     PredictionObject cur_predicion_obj;
-    cur_predicion_obj.id = prediction_object.fusion_obstacle().common_info().id();
+    cur_predicion_obj.id = prediction_object.fusion_obstacle().additional_info().track_id();
     prediction_obj_id_set.emplace(cur_predicion_obj.id);
     cur_predicion_obj.type = prediction_object.fusion_obstacle().common_info().type();
     // cur_predicion_obj.timestamp_us = prediction_object.timestamp_us(); todo: clren
@@ -395,7 +395,7 @@ void EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
   auto prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
 
   PredictionObject prediction_object;
-  prediction_object.id = fusion_object.common_info().id();
+  prediction_object.id = fusion_object.additional_info().track_id();
   prediction_object.type = fusion_object.common_info().type();
   prediction_object.timestamp_us = timestamp;
 
