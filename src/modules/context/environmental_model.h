@@ -227,7 +227,7 @@ private:
 //   FrenetCoordinateSystemParameters frenet_parameters_;
 
 //   bool hdmap_enable_status_{false};
-     bool hdmap_valid_{false};
+  bool hdmap_valid_{false};
 //   bool vehicle_dbw_status_{false};
 //   bool dbw_status_{false};
 //   bool pretreatment_status_{true};

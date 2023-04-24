@@ -277,7 +277,7 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
 
   double ego_rear_axis_to_front_edge = 0;
 
-  ego_rear_axis_to_front_edge = session_->vehicel_config_context().get_vehicle_param().rear_axis_to_front_edge;
+  ego_rear_axis_to_front_edge = session_->vehicle_config_context().get_vehicle_param().rear_axis_to_front_edge;
   double current_time = session_->planning_output_context().planning_status().planning_result.next_timestamp;
   auto prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
   prediction_info.clear();
@@ -389,7 +389,7 @@ void EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
   assert(session_ == nullptr);
 
   double ego_rear_axis_to_front_edge = 0;
-  ego_rear_axis_to_front_edge = session_->vehicel_config_context().get_vehicle_param().rear_axis_to_front_edge;
+  ego_rear_axis_to_front_edge = session_->vehicle_config_context().get_vehicle_param().rear_axis_to_front_edge;
 
   double current_time = session_->planning_output_context().planning_status().planning_result.next_timestamp;
   auto prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();

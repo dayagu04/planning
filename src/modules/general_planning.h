@@ -68,7 +68,6 @@ class GeneralPlanning {
 
   void FillControlInfo();
   void FillFusionRoadInfo();
-  void UpdateRawEnvironmentalModel(double current_time);
   void UpdatePredictionInfo(double current_time);
   void UpdateFusionObjectInfo(double current_time);
 

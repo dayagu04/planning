@@ -32,9 +32,9 @@ class Session : public planning::common::Arena {
 
   PlanningOutputContext *mutable_planning_output_context() { return planning_output_context_; }
 
-  const VehicleConfigurationContext &vehicel_config_context() const { return *vehicel_config_context_; }
+  const VehicleConfigurationContext &vehicle_config_context() const { return *vehicle_config_context_; }
 
-  VehicleConfigurationContext *mutable_vehicel_config_context() { return vehicel_config_context_; }
+  VehicleConfigurationContext *mutable_vehicle_config_context() { return vehicle_config_context_; }
 
   bool is_highway_scene() const {
     return get_scene_type() == planning::common::SceneType::HIGHWAY;
@@ -74,7 +74,7 @@ class Session : public planning::common::Arena {
   planning::EnvironmentalModel *environmental_model_;
   PlanningContext *planning_context_;
   PlanningOutputContext *planning_output_context_;
-  VehicleConfigurationContext *vehicel_config_context_;
+  VehicleConfigurationContext *vehicle_config_context_;
   planning::common::SceneType default_scene_type_;
   // uint8_t function_mode_ = planning::common::FunctionModeEnum::NOA;
   PlanningInitConfig planning_init_config_;

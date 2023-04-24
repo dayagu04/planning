@@ -6,7 +6,7 @@ namespace planning {
 
 EgoStateManager::EgoStateManager(planning::framework::Session *session)
     : session_(session) {
-  vehicle_param_ = session_->vehicel_config_context().get_vehicle_param();
+  vehicle_param_ = session_->vehicle_config_context().get_vehicle_param();
 }
 
 void EgoStateManager::set_ego_carte(const Point2D &ego_carte) {

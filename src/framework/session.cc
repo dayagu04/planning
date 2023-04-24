@@ -67,7 +67,7 @@ void Session::Init() {
   planning_context_ = alloc<PlanningContext>();
   planning_output_context_ = alloc<PlanningOutputContext>();
   environmental_model_->set_module_config_file_dir(module_config_file_dir);
-  vehicel_config_context_ = VehicleConfigurationContext::Instance();
+  vehicle_config_context_ = VehicleConfigurationContext::Instance();
 }
 
 void Session::Update() { LOG_DEBUG("Session::update"); }

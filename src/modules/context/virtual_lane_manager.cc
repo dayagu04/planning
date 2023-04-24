@@ -144,9 +144,9 @@ LaneChangeStatus VirtualLaneManager::is_lane_change() {
     last_left_diff_ = left_diff;
     last_right_diff_ = right_diff;
   } else {
-  last_left_diff_ = 0;
-  last_right_diff_ = 0;
-}
+    last_left_diff_ = 0;
+    last_right_diff_ = 0;
+  }
 
   return change_statu;
 }

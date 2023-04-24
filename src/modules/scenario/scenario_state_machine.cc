@@ -978,7 +978,7 @@ bool ScenarioStateMachine::check_lc_back_finish(RequestType direction) {
       lc_lane_mgr_->flane_virtual_id());
   double half_lane_width = 1.6;  // HACK  TODO(Rui):get real fix_lane->width() / 2.
   double ego_width =
-      session_->mutable_vehicel_config_context()->get_vehicle_param().width;
+      session_->mutable_vehicle_config_context()->get_vehicle_param().width;
   double dist_threshold = half_lane_width - 0.5 * ego_width - 0.1;
   double angle_threshold = 0.01;
 

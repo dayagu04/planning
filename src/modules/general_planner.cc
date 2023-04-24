@@ -31,7 +31,7 @@ void GeneralPlanner::InitContext() {
   session_->mutable_planning_context()->set_scenario_state_machine(
       scenario_state_machine_);
   session_->mutable_planning_context()->set_vehicle_param(
-      session_->vehicel_config_context().get_vehicle_param());
+      session_->vehicle_config_context().get_vehicle_param());
   
   object_selector_ = std::make_shared<ObjectSelector>(config_builder, session_);
   session_->mutable_planning_context()->set_object_selector(

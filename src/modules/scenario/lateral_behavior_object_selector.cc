@@ -285,7 +285,7 @@ void ObjectSelector::update(int status, double start_move_distolane,
   double dis_to_ramp = intersection_info.dis_to_ramp();
   double intersect_length = intersection_info.intsect_length();
   bool is_on_ramp = false; // hack map_info.is_on_ramp()
-  double lc_end_dis = clane->lc_map_decision_offset();
+  double lc_end_dis = virtual_lane_mgr->lc_map_decision_offset(clane);
   int current_lane_tasks_id = virtual_lane_mgr->get_tasks(clane);
   int left_lane_tasks_id = virtual_lane_mgr->get_tasks(llane);
   int right_lane_tasks_id = virtual_lane_mgr->get_tasks(rlane);

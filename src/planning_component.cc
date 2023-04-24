@@ -51,9 +51,6 @@ bool PlanningComponent::Init() {
   ADSNode::Init("planning_node");
   planning_node_ = std::make_shared<ADSNode>("planning_node");
 
-  // session_.init();
-  // scheduler_.init(&session_);
-
   // 2.定义收发topics
   // -------------- reader topics --------------
   auto fusion_objects_reader_ =
