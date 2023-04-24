@@ -105,6 +105,9 @@ VehicleState VehicleModel::Predict(const double predicted_time_horizon,
 bool VehicleModel::LoadVehicleModelConfig(std::string config_file_dir) {
   std::string config_path = config_file_dir + "/vehicle_model.json";
   std::ifstream fjson(config_path);
+  if (!fjson.is_open()) {
+    return false;
+  }
   std::string json_str((std::istreambuf_iterator<char>(fjson)),
                         std::istreambuf_iterator<char>());
   mjson::Reader reader(json_str);

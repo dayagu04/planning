@@ -108,31 +108,58 @@ class ConfigurationContext {
     // load_scene_params_from_json(target_scene_config_dir);
   }
 
-  void load_engine_config_from_json(std::string config_path) {
+  bool load_engine_config_from_json(std::string config_path) {
     std::ifstream fjson(config_path);
+    if (!fjson.is_open()) {
+      return false;
+    }
     std::string json_str((std::istreambuf_iterator<char>(fjson)),
                          std::istreambuf_iterator<char>());
     mjson::Reader reader(json_str);
+    auto json_keys = reader.get_json_keys();
+
+    if (std::find(json_keys.begin(), json_keys.end(), "module_cfg_dir") == json_keys.end()) {
+      return false;
+    }
+    auto module_cfg_dir = reader.get<mjson::Json>("module_cfg_dir").string_value();
+    std::cout<<"json module_cfg_dir: !!!===="<< module_cfg_dir <<std::endl;
+    engine_conf_.module_cfg_dir = module_cfg_dir;
+
+    if (std::find(json_keys.begin(), json_keys.end(), "log_file_dir") == json_keys.end()) {
+      return false;
+    }
     auto log_file_dir = reader.get<mjson::Json>("log_file_dir").string_value();
     std::cout<<"json log_file_dir: !!!===="<< log_file_dir <<std::endl;
     engine_conf_.log_file_dir = log_file_dir;
 
+    if (std::find(json_keys.begin(), json_keys.end(), "log_level") == json_keys.end()) {
+      return false;
+    }
     auto log_level = reader.get<mjson::Json>("log_level").string_value();
     std::cout<<"json log_level: !!!===="<< log_level <<std::endl;
     engine_conf_.log_level = log_level;
 
+    if (std::find(json_keys.begin(), json_keys.end(), "scenario_cfg_dir") == json_keys.end()) {
+      return false;
+    }
     auto scenario_cfg_dir = reader.get<mjson::Json>("scenario_cfg_dir").string_value();
     std::cout<<"json scenario_cfg_dir: !!!===="<< scenario_cfg_dir <<std::endl;
     engine_conf_.scenario_cfg_dir = scenario_cfg_dir;
 
+    if (std::find(json_keys.begin(), json_keys.end(), "vehicle_cfg_dir") == json_keys.end()) {
+      return false;
+    }
     auto vehicle_cfg_dir = reader.get<mjson::Json>("vehicle_cfg_dir").string_value();
     std::cout<<"json vehicle_cfg_dir: !!!===="<< vehicle_cfg_dir <<std::endl;
     engine_conf_.vehicle_cfg_dir = vehicle_cfg_dir;
 
+    if (std::find(json_keys.begin(), json_keys.end(), "algorithm_param_cfg_dir") == json_keys.end()) {
+      return false;
+    }
     auto algorithm_param_cfg_dir = reader.get<mjson::Json>("algorithm_param_cfg_dir").string_value();
     std::cout<<"json algorithm_param_cfg_dir: !!!===="<< algorithm_param_cfg_dir <<std::endl;
     engine_conf_.algorithm_param_cfg_dir = algorithm_param_cfg_dir;
-
+    return true;
   }
 
    void load_algorithm_config_from_json(std::string config_path) {

@@ -120,6 +120,8 @@ else()
                               protobuf
                               gflags
                               autoplt
+                              osqp
+                              mjson
                               )
     endif()
 endif()

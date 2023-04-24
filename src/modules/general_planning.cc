@@ -21,6 +21,9 @@ GeneralPlanning::~GeneralPlanning() {}
 void GeneralPlanning::Init() {
   session_.Init();
   scheduler_.Init(&session_);
+  VehicleParam vehicle_param;
+  // session->mutable_vehicel_config_context()->load_vehicle_param();
+  session_.mutable_vehicel_config_context()->set_vehicle_param(vehicle_param);
 }
 
 bool GeneralPlanning::RunOnce(
@@ -45,9 +48,7 @@ bool GeneralPlanning::RunOnce(
       ->mutable_planning_status()
       ->planning_result.next_timestamp = start_timestamp;
 
-  VehicleParam vehicle_param;
-  // session->mutable_vehicel_config_context()->load_vehicle_param();
-  session_.mutable_vehicel_config_context()->set_vehicle_param(vehicle_param);
+  
   environmental_model->set_vehicle_param(
       session_.vehicel_config_context().get_vehicle_param());
 
@@ -144,4 +145,5 @@ void GeneralPlanning::GenerateStopTrajectory(
 void GeneralPlanning::FillPlanningDebugInfo(double start_time,
                                             DebugOutput &debug_info) {}
 
+void GeneralPlanning::FillPlanningHmiInfo(double start_timestamp, PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info) {}
 }  // namespace planning
