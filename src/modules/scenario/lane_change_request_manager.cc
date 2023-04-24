@@ -1,6 +1,7 @@
 #include "src/modules/scenario/lane_change_request_manager.h"
 
 #include "src/modules/scc_function/mrc_condition.h"
+#include "src/modules/scenario/scenario_state_machine.h"
 
 namespace planning {
 
@@ -25,9 +26,7 @@ void LaneChangeRequestManager::FinishRequest() {
   turn_signal_ = NO_CHANGE;
 }
 
-void LaneChangeRequestManager::Update(
-    int lc_status, std::shared_ptr<ObjectSelector>& object_selector,
-    const bool hd_map_valid) {
+void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   LOG_DEBUG("LaneChangeRequestManager.Update() \n");
   // MDEBUG_JSON_BEGIN_DICT(LaneChangeRequestManager)
   // TBD： 后续考虑json形式进行数据存储
@@ -44,8 +43,14 @@ void LaneChangeRequestManager::Update(
       map_request_.update(lc_status, int_request_.get_left_cancel_freeze_cnt(),
                           int_request_.get_right_cancel_freeze_cnt());
     }
-    act_request_.Update(lc_status, int_request_.tfinish(),
-                        map_request_.tfinish(), object_selector);
+    // WB hack:
+    bool accident_ahead = false;
+    bool not_accident = true;
+    double start_move_distolane = session_->planning_context()
+                                      .scenario_state_machine()
+                                      ->get_start_move_dist_lane();
+    act_request_.Update(lc_status, start_move_distolane, int_request_.tfinish(),
+                        map_request_.tfinish(), accident_ahead, not_accident);
   }
 
   LOG_DEBUG(

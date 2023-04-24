@@ -16,7 +16,7 @@ namespace planning {
 class ObjectSelector {
 public:
   ObjectSelector(const EgoPlanningConfigBuilder *config_builder,
-                 planning::framework::Session *session);
+                 framework::Session *session);
 
   virtual ~ObjectSelector() = default;
 

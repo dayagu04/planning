@@ -65,7 +65,7 @@ bool ScenarioStateMachine::update(planning::framework::Frame *frame) {
     LOG_DEBUG("[scenario_state_machine] active");
     if (scenario_ == SCENARIO_CRUISE) {
       // update lc_req_mgr_
-      lc_req_mgr_->Update(fsm_context_.state, object_selector_,
+      lc_req_mgr_->Update(fsm_context_.state,
                           session_->environmental_model().IsOnRoute());
       gen_map_turn_signal();
       update_state_machine();
@@ -143,16 +143,17 @@ void ScenarioStateMachine::clear_lc_variables() {
   accident_back_ = false;
   lc_pause_ = false;
   not_accident_ = true;
-  behavior_suspend_ = false; // lateral suspend
+  behavior_suspend_ = false;  // lateral suspend
   suspend_obs_.clear();
-
 }
 
 void ScenarioStateMachine::update_scenario() { scenario_ = SCENARIO_CRUISE; }
 
 void ScenarioStateMachine::update_start_move_dist_lane() {
   int flane_virtual_id = lc_lane_mgr_->flane_virtual_id();
-  auto fix_reference_path = session_->environmental_model().get_reference_path_manager()->get_reference_path_by_lane(flane_virtual_id);
+  auto fix_reference_path = session_->environmental_model()
+                                .get_reference_path_manager()
+                                ->get_reference_path_by_lane(flane_virtual_id);
   auto frenet_ego_state = fix_reference_path->get_frenet_ego_state();
   start_move_dist_lane_ = frenet_ego_state.l();
 }
@@ -198,7 +199,8 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
     RequestType direction) {
   assert(direction == LEFT_CHANGE || direction == RIGHT_CHANGE);
   LaneChangeStageInfo result_info;
-  auto &lateral_obstacle = session_->environmental_model().get_lateral_obstacle();
+  auto &lateral_obstacle =
+      session_->environmental_model().get_lateral_obstacle();
   auto &ego_state = session_->environmental_model().get_ego_state_manager();
 
   auto &lateral_output =
@@ -544,7 +546,8 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
     RequestType direction) {
   LaneChangeStageInfo result;
 
-  auto &lateral_obstacle = session_->environmental_model().get_lateral_obstacle();
+  auto &lateral_obstacle =
+      session_->environmental_model().get_lateral_obstacle();
   auto &ego_state = session_->environmental_model().get_ego_state_manager();
 
   auto &lateral_output =
@@ -599,7 +602,8 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
   //     map_info.left_refline_points().size() > 0) {
   if (virtual_lane_manager->get_left_lane()->lane_points().size() > 0) {
     for (auto &p : virtual_lane_manager->get_left_lane()->lane_points()) {
-      if (p.car_point().x() >= 0 && p.car_point().x() <= 20 && !p.is_in_intersection()) {
+      if (p.car_point().x() >= 0 && p.car_point().x() <= 20 &&
+          !p.is_in_intersection()) {
         left_lane_width = p.lane_width();
         if (left_lane_width < 100) {
           break;
@@ -612,7 +616,8 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
   //     map_info.right_refline_points().size() > 0) {
   if (virtual_lane_manager->get_right_lane()->lane_points().size() > 0) {
     for (auto &p : virtual_lane_manager->get_right_lane()->lane_points()) {
-      if (p.car_point().x() >= 0 && p.car_point().x() <= 20 && !p.is_in_intersection()) {
+      if (p.car_point().x() >= 0 && p.car_point().x() <= 20 &&
+          !p.is_in_intersection()) {
         right_lane_width = p.lane_width();
         if (right_lane_width < 100) {
           break;
@@ -770,7 +775,8 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
               std::array<double, 3> fp1{2, 1.5, 1.};
               double a = interp(temp, xp1, fp1);
 
-              if (std::fabs(virtual_lane_manager->lc_map_decision(fix_lane)) == 1) {
+              if (std::fabs(virtual_lane_manager->lc_map_decision(fix_lane)) ==
+                  1) {
                 mss = tr.v_rel * t_reaction / 2 * 0.7 +
                       temp * temp / (2 * a) * 0.7 + safety_dist -
                       2 / (tr.v_rel + 1);
@@ -895,9 +901,10 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
   return result;
 }
 
-LaneChangeStageInfo ScenarioStateMachine::decide_lc_back_info(RequestType direction) {
+LaneChangeStageInfo ScenarioStateMachine::decide_lc_back_info(
+    RequestType direction) {
   auto lc_info = compute_lc_back_info(direction);
-  double coefficient = 20. / 25; //TODO(Rui): FLAGS_planning_loop_rate = 20.
+  double coefficient = 20. / 25;  // TODO(Rui): FLAGS_planning_loop_rate = 20.
   int lc_back_thre = static_cast<int>(5 * coefficient);
   if (lc_info.lc_should_back) {
     lc_back_cnt_ += 1;
@@ -922,16 +929,18 @@ bool ScenarioStateMachine::check_lc_change_finish(RequestType direction) {
 
   if (clane == nullptr || !lc_lane_mgr_->has_target_lane() ||
       !lc_lane_mgr_->has_fix_lane()) {
-    LOG_ERROR("[check_lc_change_finish] invalid clane [%d] or tlane [%d] or flane",
-          clane == nullptr, !lc_lane_mgr_->has_target_lane(),
-          !lc_lane_mgr_->has_fix_lane());
+    LOG_ERROR(
+        "[check_lc_change_finish] invalid clane [%d] or tlane [%d] or flane",
+        clane == nullptr, !lc_lane_mgr_->has_target_lane(),
+        !lc_lane_mgr_->has_fix_lane());
     return false;
   }
   auto tlane = lc_lane_mgr_->tlane();
   auto tlane_virtual_id = lc_lane_mgr_->tlane_virtual_id();
 
   if (tlane_virtual_id != clane_virtual_id &&
-      virtual_lane_mgr->lc_map_decision(clane) != virtual_lane_mgr->lc_map_decision(tlane)) {
+      virtual_lane_mgr->lc_map_decision(clane) !=
+          virtual_lane_mgr->lc_map_decision(tlane)) {
     // tlane与clane的virtual id和lc_map_decision都不相同时，换道一定没有完成.
     return false;
   }
@@ -976,7 +985,8 @@ bool ScenarioStateMachine::check_lc_back_finish(RequestType direction) {
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   auto flane = virtual_lane_mgr->get_lane_with_virtual_id(
       lc_lane_mgr_->flane_virtual_id());
-  double half_lane_width = 1.6;  // HACK  TODO(Rui):get real fix_lane->width() / 2.
+  double half_lane_width =
+      1.6;  // HACK  TODO(Rui):get real fix_lane->width() / 2.
   double ego_width =
       session_->mutable_vehicle_config_context()->get_vehicle_param().width;
   double dist_threshold = half_lane_width - 0.5 * ego_width - 0.1;
@@ -990,11 +1000,13 @@ bool ScenarioStateMachine::check_lc_back_finish(RequestType direction) {
 
   bool lc_back_finish{false};
   if (direction == LEFT_CHANGE) {
-    lc_back_finish = ((frenet_ego_state.l() < dist_threshold) &&
-            (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
+    lc_back_finish =
+        ((frenet_ego_state.l() < dist_threshold) &&
+         (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
   } else if (direction == RIGHT_CHANGE) {
-    lc_back_finish = ((frenet_ego_state.l() > -dist_threshold) &&
-            (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
+    lc_back_finish =
+        ((frenet_ego_state.l() > -dist_threshold) &&
+         (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
   } else {
     LOG_ERROR("[check_lc_back_finish] invalid direction[%d]", direction);
     lc_back_finish = true;
@@ -1002,19 +1014,23 @@ bool ScenarioStateMachine::check_lc_back_finish(RequestType direction) {
   return lc_back_finish;
 }
 
-void ScenarioStateMachine::generate_state_machine_output(const LaneChangeStageInfo &lc_info) {
+void ScenarioStateMachine::generate_state_machine_output(
+    const LaneChangeStageInfo &lc_info) {
   auto &state_machine_output =
-      session_->mutable_planning_context()->mutable_lat_behavior_state_machine_output();
+      session_->mutable_planning_context()
+          ->mutable_lat_behavior_state_machine_output();
 
-  // context->mutable_planning_status()->lane_status.change_lane.target_gap_obs = lc_info.gap;
+  // context->mutable_planning_status()->lane_status.change_lane.target_gap_obs
+  // = lc_info.gap;
 
   state_machine_output.scenario = scenario_;
   // state_machine_output.curr_state = target_state;
   // state_machine_output.state_name = target_state_name;
   state_machine_output.lc_back_reason = lc_info.lc_back_reason;
   state_machine_output.lc_invalid_reason = lc_info.lc_invalid_reason;
-  state_machine_output.behavior_suspend = behavior_suspend_;                        // lateral suspend
-  state_machine_output.suspend_obs.assign(suspend_obs_.begin(), suspend_obs_.end());// lateral obstacles
+  state_machine_output.behavior_suspend = behavior_suspend_;  // lateral suspend
+  state_machine_output.suspend_obs.assign(
+      suspend_obs_.begin(), suspend_obs_.end());  // lateral obstacles
   state_machine_output.must_change_lane = must_change_lane_;
 
   // if (target_state == type2int<RoadState::None>::value) {
@@ -1053,14 +1069,17 @@ void ScenarioStateMachine::generate_state_machine_output(const LaneChangeStageIn
   state_machine_output.premover = false;
   state_machine_output.premove_dist = 0.;
 
-  //TODO(Rui):待加入object_selector
-  // state_machine_output.left_is_faster = object_selector_->left_is_faster();
-  // state_machine_output.right_is_faster = object_selector_->right_is_faster();
+  // TODO(Rui):待加入object_selector
+  //  state_machine_output.left_is_faster = object_selector_->left_is_faster();
+  //  state_machine_output.right_is_faster =
+  //  object_selector_->right_is_faster();
 
   // state_machine_output.neg_left_lb_car = object_selector_->neg_left_lb_car();
-  // state_machine_output.neg_right_lb_car = object_selector_->neg_right_lb_car();
-  // state_machine_output.neg_left_alc_car = object_selector_->neg_left_alc_car();
-  // state_machine_output.neg_right_alc_car = object_selector_->neg_right_alc_car();
+  // state_machine_output.neg_right_lb_car =
+  // object_selector_->neg_right_lb_car(); state_machine_output.neg_left_alc_car
+  // = object_selector_->neg_left_alc_car();
+  // state_machine_output.neg_right_alc_car =
+  // object_selector_->neg_right_alc_car();
 
   // state_machine_output.left_lb_car = object_selector_->left_lb_car();
   // state_machine_output.left_alc_car = object_selector_->left_alc_car();

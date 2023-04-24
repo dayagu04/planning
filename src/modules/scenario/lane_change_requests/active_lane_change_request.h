@@ -12,8 +12,8 @@ class ActRequest : public LaneChangeRequest {
              std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
   virtual ~ActRequest() = default;
 
-  void Update(int lc_status, double lc_int_tfinish, double lc_map_tfinish,
-              std::shared_ptr<ObjectSelector>& object_selector);
+  void Update(int lc_status, double start_move_distolane, double lc_int_tfinish,
+              double lc_map_tfinish, bool accident_ahead, bool not_accident);
 
   void Reset(int direction = NO_CHANGE);
 

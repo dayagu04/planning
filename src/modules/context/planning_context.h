@@ -103,12 +103,10 @@ class PlanningContext {
     return lateral_behavior_planner_output_;
   }
 
-  const std::shared_ptr<ObjectSelector>
-      &object_selector() {
+  const std::shared_ptr<ObjectSelector> &object_selector() const{
     return object_selector_ptr_;
   }
-  void set_object_selector(
-      std::shared_ptr<ObjectSelector> object_selector) {
+  void set_object_selector(std::shared_ptr<ObjectSelector> object_selector) {
     object_selector_ptr_ = object_selector;
   }
 
