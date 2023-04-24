@@ -4,6 +4,7 @@
 
 namespace planning {
 
+/// @brief 自主式(Active)换道请求
 class ActRequest : public LaneChangeRequest {
  public:
   ActRequest(planning::framework::Session* session,
@@ -11,9 +12,10 @@ class ActRequest : public LaneChangeRequest {
              std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
   virtual ~ActRequest() = default;
 
-  void reset(int direction = NO_CHANGE);
+  void Update(int lc_status, double lc_int_tfinish, double lc_map_tfinish,
+              std::shared_ptr<ObjectSelector>& object_selector);
 
-  void update(int lc_status);
+  void Reset(int direction = NO_CHANGE);
 
   bool enforced_l() const { return enforced_l_; }
   bool enforced_r() const { return enforced_r_; }

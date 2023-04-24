@@ -27,7 +27,8 @@ class LaneChangeRequestManager {
 
   void FinishRequest();
 
-  void Update(int lc_status, const bool hd_map_valid);
+  void Update(int lc_status, std::shared_ptr<ObjectSelector>& object_selector,
+              const bool hd_map_valid);
 
   /// @brief 获取换道请求开始和完成的时间
   double GetReqStartTime(int source) const;

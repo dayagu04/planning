@@ -25,7 +25,9 @@ void LaneChangeRequestManager::FinishRequest() {
   turn_signal_ = NO_CHANGE;
 }
 
-void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
+void LaneChangeRequestManager::Update(
+    int lc_status, std::shared_ptr<ObjectSelector>& object_selector,
+    const bool hd_map_valid) {
   LOG_DEBUG("LaneChangeRequestManager.Update() \n");
   // MDEBUG_JSON_BEGIN_DICT(LaneChangeRequestManager)
   // TBD： 后续考虑json形式进行数据存储
@@ -37,16 +39,21 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   } else {
     int_request_.reset_int_cnt();
   }
-  if (int_request_.request_type() == NO_CHANGE && hd_map_valid) {
-    map_request_.update(lc_status, int_request_.get_left_cancel_freeze_cnt(),
-                        int_request_.get_right_cancel_freeze_cnt());
+  if (int_request_.request_type() == NO_CHANGE) {
+    if (hd_map_valid) {
+      map_request_.update(lc_status, int_request_.get_left_cancel_freeze_cnt(),
+                          int_request_.get_right_cancel_freeze_cnt());
+    }
+    act_request_.Update(lc_status, int_request_.tfinish(),
+                        map_request_.tfinish(), object_selector);
   }
 
   LOG_DEBUG(
       "[LaneChangeRequestManager::update] int_request: %d, map_request: %d, "
+      "act_request: %d,"
       "int_cancel_reason: %d, turn_signal: %d \n",
       int_request_.request_type(), map_request_.request_type(),
-      int_request_cancel_reason_, turn_signal_);
+      act_request_.request_type(), int_request_cancel_reason_, turn_signal_);
 
   if (int_request_cancel_reason_ == MANUAL_CANCEL &&
       turn_signal_ != NO_CHANGE &&

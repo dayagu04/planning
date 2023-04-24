@@ -43,7 +43,7 @@ class LaneChangeLaneManager {
     }
     auto ego_state =
         session_->mutable_environmental_model()->get_ego_state_manager();
-        
+
     // double lateral_offset = lane->calc_fabs_lateral_offset(
     //     ego_state->ego_pose().x, ego_state->ego_pose().y);
     double lateral_offset = lane->get_ego_lateral_offset();
@@ -51,6 +51,7 @@ class LaneChangeLaneManager {
     return (lateral_offset < 1.6) ? true : false;
   }
 
+  // 这里是否应该是返回const 指针引用？
   std::shared_ptr<VirtualLane> flane() {
     return virtual_lane_mgr_->get_lane_with_virtual_id(flane_virtual_id_);
   }

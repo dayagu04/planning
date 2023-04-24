@@ -74,6 +74,9 @@ class ScenarioStateMachine
   std::shared_ptr<LaneChangeLaneManager> get_lane_change_lane_manager() {
     return lc_lane_mgr_;
   }
+  std::shared_ptr<ObjectSelector> get_object_selector() {
+    return object_selector_;
+  }
 
   bool gap_available(RequestType direction, std::vector<int>& overlap_obstacles,
                      std::vector<int>& yield_obstacles);
@@ -131,6 +134,7 @@ class ScenarioStateMachine
   // std::shared_ptr<EnvironmentalModel> environmental_model_;  session已包含
   std::shared_ptr<LaneChangeRequestManager> lc_req_mgr_;
   std::shared_ptr<LaneChangeLaneManager> lc_lane_mgr_;
+  std::shared_ptr<ObjectSelector> object_selector_;
   int scenario_ = SCENARIO_CRUISE;
   double state_entry_time_ = 0.0;
   double turn_signal_on_time_ = 0.0;
