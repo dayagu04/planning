@@ -1,0 +1,9 @@
+uint32 ESCFLWheelDir
+uint32 ESCFRWheelDir
+uint32 ESCRLWheelDir
+uint32 ESCRRWheelDir
+float32 ESCWhlFLSpd 
+float32 ESCWhlFRSpd 
+float32 ESCWhlRLSpd 
+float32 ESCWhlRRSpd 
+float32 EPS_StrAngle

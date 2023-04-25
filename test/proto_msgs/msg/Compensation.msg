@@ -1,0 +1,3 @@
+bool available 
+float64 steering_angle_compensation_value 
+float64 trajectory_latitude_compensation_value

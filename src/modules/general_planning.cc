@@ -24,6 +24,9 @@ void GeneralPlanning::Init() {
   VehicleParam vehicle_param;
   // session->mutable_vehicle_config_context()->load_vehicle_param();
   session_.mutable_vehicle_config_context()->set_vehicle_param(vehicle_param);
+  EnvironmentalModel *environmental_model = session_.mutable_environmental_model();
+  environmental_model->set_vehicle_param(
+      session_.vehicel_config_context().get_vehicle_param());
 }
 
 bool GeneralPlanning::RunOnce(
@@ -46,12 +49,7 @@ bool GeneralPlanning::RunOnce(
   planning_status->pre_planning_result = planning_status->planning_result;
   planning_status->planning_result.next_timestamp = start_timestamp;
 
-  
-  environmental_model->set_vehicle_param(
-      session_.vehicle_config_context().get_vehicle_param());
-
   printf("VERSION: 2023-03-31 \n");
-
   // 1.校验输入 TBD
 
   // 2.update world module from local_view_

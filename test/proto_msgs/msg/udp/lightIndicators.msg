@@ -1,0 +1,1 @@
+uint8 light_indicator_byte

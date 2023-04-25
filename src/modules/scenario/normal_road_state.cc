@@ -193,7 +193,7 @@ void RoadState::LC::process_wait(FsmContext &context,
     gap_available = state_machine->gap_available(lc_request, overtake_obstacles,
                                                  yield_obstacles);
     lane_change_info = state_machine->decide_lc_valid_info(lc_request);
-    LOG_DEBUG("[CruiseState::Wait] gap_available: %d, aggressive_change: %d, ",
+    LOG_DEBUG("[CruiseState::Wait] gap_available: %d, aggressive_change: %d, \n",
               gap_available, aggressive_change);
     // if (gap_available || aggressive_change) {
     // //TODO(Rui):后面把安全检查坐在gap_available里，统一通过gap_available判断
@@ -264,7 +264,7 @@ void RoadState::LC::process_change(
   std::vector<int> yield_obstacles;
   LaneChangeStageInfo lc_back_info;
   if (state_machine->check_lc_change_finish(context.direction)) {
-    LOG_DEBUG("[RoadState::Change] Lane Change Finished");
+    LOG_DEBUG("[RoadState::Change] Lane Change Finished\n");
     prepare_for_none_state(lc_lane_manager, lc_req_manager, candidate_states,
                            lc_lane_managers);
     lc_req_manager->FinishRequest();
@@ -314,7 +314,7 @@ void RoadState::LC::process_change(
                              lc_lane_managers);
     }
   } else {
-    LOG_DEBUG("[RoadState::Change] Change to Back");
+    LOG_DEBUG("[RoadState::Change] Change to Back\n");
     prepare_for_back_state(lc_lane_manager, lc_req_manager, candidate_states,
                            lc_lane_managers);
   }
@@ -365,7 +365,7 @@ void RoadState::LC::process_back(FsmContext &context,
   LaneChangeStageInfo lane_change_info;
   if (state_machine->check_lc_back_finish(context.direction)) {
     // prepare for WAIT state
-    LOG_DEBUG("[RoadeState::Back] Lane Back Finished");
+    LOG_DEBUG("[RoadeState::Back] Lane Back Finished\n");
     prepare_for_wait_state(lc_lane_manager, lc_req_manager, candidate_states,
                            lc_lane_managers);
   } else if (lc_request != NO_CHANGE && lc_request == context.direction) {
@@ -381,7 +381,7 @@ void RoadState::LC::process_back(FsmContext &context,
       prepare_for_change_state(lc_lane_manager, lc_req_manager,
                                candidate_states, lc_lane_managers);
     } else {
-      LOG_DEBUG("[CruiseState haowen] Wait to Back");
+      LOG_DEBUG("[CruiseState haowen] Wait to Back\n");
       prepare_for_back_state(lc_lane_manager, lc_req_manager, candidate_states,
                              lc_lane_managers);
     }

@@ -8,11 +8,11 @@ namespace planning {
 namespace modules {
 
 GeneralPlannerModule::GeneralPlannerModule() : general_planner_() {
-  LOG_DEBUG("%s constructed", name().c_str());
+  LOG_DEBUG("%s constructed\n", name().c_str());
 }
 
 GeneralPlannerModule::~GeneralPlannerModule() {
-  LOG_DEBUG("%s destructed", name().c_str());
+  LOG_DEBUG("%s destructed\n", name().c_str());
 }
 
 planning::framework::BaseModule* GeneralPlannerModule::clone() const {
@@ -34,9 +34,9 @@ EgoPlanningConfigBuilder* GeneralPlannerModule::load_config_builder(
   //                                                   file_name);
 }
 
-int GeneralPlannerModule::init(const ::google::protobuf::Message* config,
+bool GeneralPlannerModule::init(const ::google::protobuf::Message* config,
                                   planning::framework::Session* session) {
-  LOG_DEBUG("%s init", name().c_str());
+  LOG_DEBUG("%s init\n", name().c_str());
   // std::string config_file_dir =
   //     session->mutable_environmental_model()->get_module_config_file_dir();
   // // planning::planner::ConfigurationContext::Instance()->load_vehicle_param();
@@ -58,17 +58,17 @@ int GeneralPlannerModule::init(const ::google::protobuf::Message* config,
   //     highway_config_builder);
 
   general_planner_.Init(session);
-  return 0;
+  return true;
 }
 
-int GeneralPlannerModule::reset(const ::google::protobuf::Message* config) {
+bool GeneralPlannerModule::reset(const ::google::protobuf::Message* config) {
   general_planner_.InitContext();
-  return 0;
+  return true;
 }
 
 void GeneralPlannerModule::compute(planning::framework::Frame* frame) {
 
-  LOG_DEBUG("%s compute", name().c_str());
+  LOG_DEBUG("%s compute\n", name().c_str());
   if (!frame->session()->environmental_model().GetVehicleDbwStatus()) {
     LOG_WARNING("%s DBW_Disable, but continue", name().c_str());
   }
@@ -90,7 +90,7 @@ void GeneralPlannerModule::compute(planning::framework::Frame* frame) {
       ->mutable_planning_context()
       ->mutable_last_planning_success() =
       frame->session()->planning_context().planning_success();
-  LOG_DEBUG("%s planning_success = %d", name().c_str(),
+  LOG_DEBUG("%s planning_success = %d\n", name().c_str(),
         frame->session()->planning_context().planning_success());
 }
 

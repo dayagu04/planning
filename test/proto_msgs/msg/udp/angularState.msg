@@ -1,0 +1,10 @@
+float32 angleRight
+float32 angleRightStd
+float32 angleLeft
+float32 angleLeftStd
+float32 angleSide
+float32 angleSideStd
+float32 angleMid
+float32 angleMidStd
+float32 angularSpeed
+float32 angularSpeedStd

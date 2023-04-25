@@ -1,0 +1,5 @@
+uint64 timestamp_us
+bool pedal_pressed
+float32 pedal_input
+float32 pedal_command
+float32 pedal_output

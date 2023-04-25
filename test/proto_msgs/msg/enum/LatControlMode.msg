@@ -1,0 +1,4 @@
+int8 LAT_NONE = 0
+int8 STEER = 1
+int8 STEER_RATE = 2
+int8 STEER_TORQUE = 3

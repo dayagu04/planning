@@ -32,7 +32,7 @@ class Registry {
   static bool insert_factory(const char *name, T *factory) {
     // module already inserted, fail
     if (factory_map_.find(name) != factory_map_.end()) {
-      LOG_ERROR("factory already exist: name=%s", name);
+      LOG_ERROR("factory already exist: name=%s\n", name);
       return false;
     }
 
@@ -46,13 +46,13 @@ class Registry {
     // factory never inserted, fail
     auto iter = factory_map_.find(name);
     if (iter == factory_map_.end()) {
-      LOG_ERROR("factory not found: name=%s", name);
+      LOG_ERROR("factory not found: name=%s\n", name);
       return false;
     }
 
     // factory to delete doesn't match
     if (iter->second != factory) {
-      LOG_ERROR("factory not match: name=%s", name);
+      LOG_ERROR("factory not match: name=%s\n", name);
       return false;
     }
 
@@ -62,7 +62,7 @@ class Registry {
   static T *get_factory(const char *name) {
     auto iter = factory_map_.find(name);
     if (iter == factory_map_.end()) {
-      LOG_ERROR("factory not found: name=%s", name);
+      LOG_ERROR("factory not found: name=%s\n", name);
       return nullptr;
     }
 

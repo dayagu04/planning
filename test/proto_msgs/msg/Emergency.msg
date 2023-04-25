@@ -1,0 +1,3 @@
+bool available
+float64 jerk_factor
+StationaryObstacleCarInfo stationary_obstacle_car_info

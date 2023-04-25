@@ -1,0 +1,10 @@
+hostLeftMarker host_left_marker
+hostRightMarker host_right_marker
+nextLeftLeftMarker next_ll_marker
+nextLeftRightMarker next_lr_marker
+nextRightRightMarker next_rr_marker
+nextRightLeftMarker next_rl_marker
+uint8 roadMarker_ambigLinePatt_const_byte
+uint8 roadPredictionLeft_byte
+uint8 roadPredictionRight_byte
+uint8 padding

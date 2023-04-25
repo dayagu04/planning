@@ -1,0 +1,19 @@
+uint64 timestamp
+float32 yaw_rate
+float32 veh_spd
+float32 accel
+float32 ego_curvature
+uint32 veh_motion_state
+bool left_turn_light_state
+bool right_turn_light_state
+# add
+SteeringWheel steering_wheel
+VehicleAcceleration acceleration
+Brake brake
+Throttle throttle
+Gear gear
+WheelVelocity wheel_velocity
+FunctionSwitch function
+Location location
+ControlErrType contrl_err_source
+SteeringWheelKey steering_wheel_key # 方向盘按键预留，按键含义由用户自定义

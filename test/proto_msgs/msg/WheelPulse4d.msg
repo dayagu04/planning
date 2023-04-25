@@ -1,0 +1,5 @@
+uint64 timestamp_us
+int32 front_left_pulse
+int32 front_right_pulse
+int32 rear_left_pulse
+int32 rear_right_pulse

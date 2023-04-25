@@ -44,12 +44,14 @@ void Session::Reset() {
 //   std::string function_mode = planning::common::trim(str);
 // }
 
-void Session::Init() {
+bool Session::Init() {
   auto engine_config = common::ConfigurationContext::Instance()->engine_config();
   auto scenario_config_file_dir = engine_config.scenario_cfg_dir;
   auto module_config_file_dir = engine_config.module_cfg_dir;
   LOG_DEBUG("ScenarioManager scenario_config_file_dir is: %s \n", scenario_config_file_dir.c_str());
-  common::ConfigurationContext::Instance()->load_params_from_json(scenario_config_file_dir);
+  if (!common::ConfigurationContext::Instance()->load_params_from_json(scenario_config_file_dir)) {
+    return false;
+  }
   auto synthetic_config = common::ConfigurationContext::Instance()->synthetic_config();
   planning::common::SceneType init_scene_type = planning::common::SceneType::HIGHWAY;
   if (synthetic_config.scene_type == "apa") {
@@ -59,7 +61,7 @@ void Session::Init() {
   if (init_scene_type == planning::common::SceneType::NOT_DEFINED) {
     init_scene_type = default_scene_type_;
   }
-  LOG_DEBUG("init_scene_type %s",
+  LOG_DEBUG("init_scene_type %s\n",
         planning::common::SceneType_Name(init_scene_type).c_str());
 
   environmental_model_ = alloc<EnvironmentalModel>();
@@ -68,9 +70,10 @@ void Session::Init() {
   planning_output_context_ = alloc<PlanningOutputContext>();
   environmental_model_->set_module_config_file_dir(module_config_file_dir);
   vehicle_config_context_ = VehicleConfigurationContext::Instance();
+  return true;
 }
 
-void Session::Update() { LOG_DEBUG("Session::update"); }
+void Session::Update() { LOG_DEBUG("Session::update\n"); }
 
 }  // namespace framework
 }  // namespace planning

@@ -1,0 +1,9 @@
+uint8    NONE=0
+uint8    LOCATION_GEOGRAPHIC=1
+uint8    LOCATION_ENU=2
+uint8    LOCATION_APA=3
+uint8    type
+LocationGeographic location_geographic 
+LocationENU location_enu
+LocationAPA location_apa
+bool available

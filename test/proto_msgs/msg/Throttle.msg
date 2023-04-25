@@ -1,0 +1,2 @@
+bool available
+ThrottleData throttle_data

@@ -81,11 +81,15 @@ class ConfigurationContext {
   }
 
   // load all scenarios configuration for target scene
-  void load_params_from_json(std::string config_file_dir) {
+  bool load_params_from_json(std::string config_file_dir) {
     // judge urban or highway scene
     // 采用proto加载配置文件
     std::cout<<"config_file_dir ===="<<config_file_dir<<std::endl;
     common::TasksConfig task_config;
+    if (access((config_file_dir + "/scene.pb.txt").c_str(), F_OK) == -1) {
+      LOG_DEBUG("%s\n",config_file_dir + "/scene.pb.txt" + " not exist!");
+      return false;
+    }
     common::util::GetProtoFromFile(config_file_dir + "/scene.pb.txt", &task_config);
     auto scene_type = task_config.scene_type();
     synthetic_conf_.scene_type = scene_type;
@@ -106,6 +110,7 @@ class ConfigurationContext {
       LOG_ERROR("ConfigContext: invalid scene type!");
     }
     // load_scene_params_from_json(target_scene_config_dir);
+    return true;
   }
 
   bool load_engine_config_from_json(std::string config_path) {

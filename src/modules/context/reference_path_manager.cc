@@ -52,8 +52,8 @@ void ReferencePathManager::update() {
       it = reference_paths_.erase(it);
     }
   }
-}
 
+}
 std::shared_ptr<ReferencePath> make_map_lane_reference_path(
     ReferencePathManager* reference_path_manager, int lane_id) {
   return reference_path_manager->get_reference_path_by_lane(lane_id, true);

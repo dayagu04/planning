@@ -16,7 +16,7 @@ class Session : public planning::common::Arena {
   Session();
   ~Session();
 
-  void Init();
+  bool Init();
   void Update();
   void Reset();
 

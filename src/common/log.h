@@ -84,10 +84,11 @@ private:
         fprintf(bst::Log::getInstance().getModulePointer(),format, ##__VA_ARGS__); \
         fflush(bst::Log::getInstance().getModulePointer()); \
     } while(0)
+
     #define LOG_BST_DEBUG(severity, format, ...) do { \
-        fprintf(bst::Log::getInstance().getModulePointer(),format, ##__VA_ARGS__); \
-        fflush(bst::Log::getInstance().getModulePointer()); \
+        printf(format, ##__VA_ARGS__); \
     } while(0)
+
 #endif
 
 #ifdef NDEBUG 

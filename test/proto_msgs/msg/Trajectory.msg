@@ -1,0 +1,3 @@
+int32 type
+Curve polynomial_curve
+TrajectoryPoint[] trajectory_points

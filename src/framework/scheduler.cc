@@ -19,7 +19,7 @@ void Scheduler::Init(Session *session) {
 }
 
 void Scheduler::Reset() {
-  LOG_DEBUG("Scheduler::reset");
+  LOG_DEBUG("Scheduler::reset\n");
   run_count_ = 0;
   for (auto &module_ptr : module_list_) {
     PlanningModule *p = dynamic_cast<PlanningModule *>(module_ptr);
@@ -43,7 +43,7 @@ void Scheduler::RunOnce() {
 }
 
 bool Scheduler::InitModuleList(Session *session) {
-  LOG_DEBUG("registry=%s", ModuleFactoryRegistry::dump().c_str());
+  LOG_DEBUG("registry=%s\n", ModuleFactoryRegistry::dump().c_str());
 
   bool ret = true;
   // TODO read module list from config file
@@ -66,7 +66,7 @@ bool Scheduler::InitModuleList(Session *session) {
       ret = false;
       continue;
     }
-    LOG_DEBUG("create_module succ: name=%s", module->name().c_str());
+    LOG_DEBUG("create_module succ: name=%s\n", module->name().c_str());
 
     module_list_.push_back(module);
   }

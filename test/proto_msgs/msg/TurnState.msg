@@ -1,0 +1,2 @@
+bool available
+uint32 TurnSignal

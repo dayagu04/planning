@@ -52,6 +52,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   }
 
   update_virtual_id();
+  return true;
 }
 
 const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(int virtual_id) const{
@@ -71,20 +72,20 @@ const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_order_id(ui
 }
 
 void VirtualLaneManager::update_virtual_id() {
-  virtual_id_mapped_lane_.clear();
-  LaneChangeStatus change_statu = is_lane_change();
+  LaneChangeStatus change_status = is_lane_change();
   int lane_virtual_id;
-  if (change_statu == LaneChangeStatus::NO_LANE_CHANGE) {
+  if (change_status == LaneChangeStatus::NO_LANE_CHANGE) {
     lane_virtual_id  = current_lane_virtual_id_;
-  } else if (change_statu == LaneChangeStatus::ON_LEFT_LANE) {
+  } else if (change_status == LaneChangeStatus::ON_LEFT_LANE) {
     lane_virtual_id  = current_lane_virtual_id_ - 1;
   } else {
     lane_virtual_id  = current_lane_virtual_id_ + 1;
   }
+  virtual_id_mapped_lane_.clear();
 
-  virtual_id_mapped_lane_[lane_virtual_id] = current_lane_;
-  virtual_id_mapped_lane_[lane_virtual_id - 1] = left_lane_;
-  virtual_id_mapped_lane_[lane_virtual_id + 1] = right_lane_;
+  for (auto lane : relative_id_lanes_) {
+    virtual_id_mapped_lane_[lane->get_relative_id() + current_lane_virtual_id_] = lane;
+  }
 
   current_lane_->set_virtual_id(lane_virtual_id);
   if (left_lane_ != nullptr) {
@@ -105,28 +106,28 @@ LaneChangeStatus VirtualLaneManager::is_lane_change() {
     auto last_virtual_lane = virtual_id_mapped_lane_[current_lane_virtual_id_];
     double left_C0, right_C0, last_left_C0, last_right_C0;
     if (last_virtual_lane->get_left_lane_boundary().existence()) {
-      last_left_C0 = last_virtual_lane->get_left_lane_boundary().poly_coefficient().data()[0];
+      last_left_C0 = last_virtual_lane->get_left_lane_boundary().poly_coefficient(0);
     }
     else {
       last_left_C0 = 8.0;
     }
 
     if (last_virtual_lane->get_right_lane_boundary().existence()) {
-      last_right_C0 = last_virtual_lane->get_right_lane_boundary().poly_coefficient().data()[0];
+      last_right_C0 = last_virtual_lane->get_right_lane_boundary().poly_coefficient(0);
     }
     else {
       last_right_C0 = -8.0;
     }
 
     if (current_lane_->get_left_lane_boundary().existence()) {
-      left_C0 = current_lane_->get_left_lane_boundary().poly_coefficient().data()[0];
+      left_C0 = current_lane_->get_left_lane_boundary().poly_coefficient(0);
     }
     else {
       left_C0 = 8.0;
     }
 
     if (current_lane_->get_right_lane_boundary().existence()) {
-      right_C0 = current_lane_->get_right_lane_boundary().poly_coefficient().data()[0];
+      right_C0 = current_lane_->get_right_lane_boundary().poly_coefficient(0);
     }
     else {
       right_C0 = -8.0;
@@ -136,9 +137,9 @@ LaneChangeStatus VirtualLaneManager::is_lane_change() {
     double right_diff = right_C0 - last_right_C0;
 
     if (left_diff > lane_change_thre && right_diff > lane_change_thre && last_left_diff_ < lane_change_thre) {
-      change_statu = ON_LEFT_LANE;
+      change_status = ON_LEFT_LANE;
     } else if (left_diff < -lane_change_thre && right_diff < -lane_change_thre && last_right_diff_ > -lane_change_thre) {
-      change_statu = ON_RIGHT_LANE;
+      change_status = ON_RIGHT_LANE;
     }
     last_left_diff_ = left_diff;
     last_right_diff_ = right_diff;
@@ -147,7 +148,7 @@ LaneChangeStatus VirtualLaneManager::is_lane_change() {
     last_right_diff_ = 0;
   }
 
-  return change_statu;
+  return change_status;
 }
 
 void VirtualLaneManager::reset() {

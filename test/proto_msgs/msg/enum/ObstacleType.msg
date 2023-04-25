@@ -1,0 +1,17 @@
+int8 UNKNOWN_OBJCET = 0     # 未知障碍物类型
+int8 UNKNOWN_MOVABLE = 1    # 未知移动物体
+int8 UNKNOWN_UNMOVABLE = 2  # 未知静止物体
+int8 CAR = 3                # 轿车
+int8 VAN = 4                # 面包车
+int8 CARGO = 5              # 厢式货车
+int8 BUS = 6                # 大型客车
+int8 TRUCK = 7              # 卡车
+int8 TRAILER = 8            # 拖车
+int8 CYCLE = 9              # 自行车
+int8 MOTORCYCLE = 10        # 摩托车
+int8 TRICYCLE = 11          # 三轮车
+int8 PEDESTRIAN = 12        # 行人
+int8 ANIMAL = 13            # 动物
+int8 TRAFFICCONE = 14       # 交通锥
+int8 TRAFFICBARRIER = 15    # 隔离墩
+int8 TRAFFICTMPSIGN = 16    # 临时指示牌

@@ -1,0 +1,2 @@
+bool available
+Acceleration3d acceleration3d

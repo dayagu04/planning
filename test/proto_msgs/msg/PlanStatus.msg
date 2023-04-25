@@ -1,0 +1,2 @@
+bool available
+PlanAlgorithmStatus algorithm_status

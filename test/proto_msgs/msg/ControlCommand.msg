@@ -1,0 +1,15 @@
+uint64 timestamp_us
+uint8 lat_control_mode
+float64 steering
+float64 steering_rate
+float64 steering_torque
+int32 lon_control_mode
+float64 throttle
+int32 brake
+float64 speed
+float64 acceleration
+float64 axle_torque
+float64 stop_distance
+GearState gear
+TurnState turn_state
+MPCTrajectoryPoint[] mpc_trajectory

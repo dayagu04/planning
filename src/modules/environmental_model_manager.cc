@@ -28,7 +28,7 @@ namespace planning {
 namespace planner {
 
 EnvironmentalModelManager::EnvironmentalModelManager() {
-  LOG_DEBUG("EnvironmentalModelManager created");
+  LOG_DEBUG("EnvironmentalModelManager created\n");
 }
 
 void EnvironmentalModelManager::Init(planning::framework::Session *session) {
@@ -92,7 +92,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   if (!obstacle_prediction_update(local_view)) {
     return false;
   }
-
+  // session_->environmental_model().get_prediction_info()
   obstacle_manager_ptr_->update();
 
   reference_path_manager_ptr_->update();
@@ -105,7 +105,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   lateral_obstacle_ptr_->update();
 
   auto end_time = IflyTime::Now_ms();
-  LOG_DEBUG("update time:%f", end_time - start_time);
+  LOG_DEBUG("update time:%f\n", end_time - start_time);
 
   return true;
 }
@@ -155,6 +155,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(const LocalView& loca
     }
     transform_surround_radar_to_prediction(obj);
   }
+  return true;
 }
 
 void EnvironmentalModelManager::vehicle_status_adaptor(const VehicleService::VehicleServiceOutputInfo &vehicel_service_output_info,
@@ -279,7 +280,8 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
 
   ego_rear_axis_to_front_edge = session_->vehicle_config_context().get_vehicle_param().rear_axis_to_front_edge;
   double current_time = session_->planning_output_context().planning_status().planning_result.next_timestamp;
-  auto prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
+  auto init_relative_time = session_->environmental_model().get_ego_state_manager()->planning_init_point().relative_time;
+  auto &prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
   prediction_info.clear();
 
   for (const auto &prediction_object : prediction_result.prediction_obstacle()) {
@@ -287,9 +289,13 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
     cur_predicion_obj.id = prediction_object.fusion_obstacle().additional_info().track_id();
     prediction_obj_id_set.emplace(cur_predicion_obj.id);
     cur_predicion_obj.type = prediction_object.fusion_obstacle().common_info().type();
-    // cur_predicion_obj.timestamp_us = prediction_object.timestamp_us(); todo: clren
-    //double prediction_relative_time = clip(prediction_object.timestamp_us() / 1.e+6 - current_time - 50,
+    // cur_predicion_obj.timestamp_us = prediction_object.header().timestamp_us();  //todo 目前proto没有时间
+    // double prediction_relative_time = clip(prediction_object.timestamp_us() / 1.e+6 - current_time - init_relative_time,
     //                                      0.0, -1.0) ;
+    // if (std::abs(prediction_relative_time) > 0.3) {
+    //   LOG_DEBUG("[prediction delay time] obstacle[%d] absolute start time %f relative time %f start time %f init_relative_time %f", prediction_object.id,
+    //     prediction_object.timestamp_us(), prediction_object.timestamp_us() / 1.e+6 - current_time, prediction_relative_time, init_relative_time);
+    // }
     // cur_predicion_obj.delay_time = prediction_relative_time;
     // cur_predicion_obj.intention = prediction_object.obstacle_intent().type();
     // cur_predicion_obj.b_backup_freemove = prediction_object.b_backup_freemove(); todo: clren
@@ -385,14 +391,16 @@ PredictionTrajectoryPoint EnvironmentalModelManager::GetPointAtTime(const std::v
   }
 }
 
-void EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjects::FusionObject &fusion_object, double timestamp) {
-  assert(session_ == nullptr);
-
+bool EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjects::FusionObject &fusion_object, double timestamp) {
+  assert(session_ != nullptr);
+  if (session_ == nullptr) {
+    return false;
+  }
   double ego_rear_axis_to_front_edge = 0;
   ego_rear_axis_to_front_edge = session_->vehicle_config_context().get_vehicle_param().rear_axis_to_front_edge;
 
   double current_time = session_->planning_output_context().planning_status().planning_result.next_timestamp;
-  auto prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
+  auto &prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
 
   PredictionObject prediction_object;
   prediction_object.id = fusion_object.additional_info().track_id();
@@ -422,13 +430,15 @@ void EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
   prediction_object.relative_theta = fusion_object.common_info().relative_heading_angle();
   //std::vector<Point3d> bottom_polygon_points;
   //std::vector<Point3d> top_polygon_points;
+  PredictionTrajectory tra;
+  prediction_object.trajectory_array.emplace_back(tra);
   prediction_info.emplace_back(prediction_object);
 }
 
 void EnvironmentalModelManager::transform_surround_radar_to_prediction(RadarPerceptionObjects::RadarPerceptionObject radar_perception_objects) {
   auto prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
   PredictionObject prediction_object;
-  prediction_object.id = radar_perception_objects.common_info().id();
+  // prediction_object.id = radar_perception_objects.additional_info().track_id(); //proto暂时无track_id
   prediction_object.type = radar_perception_objects.common_info().type();
   //prediction_object.timestamp_us = ;
   //double delay_time{0.0};

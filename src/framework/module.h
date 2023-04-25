@@ -25,9 +25,9 @@ class BaseModule {
 
   virtual BaseModule* clone() const = 0;
 
-  virtual int init(const ::google::protobuf::Message* config,
+  virtual bool init(const ::google::protobuf::Message* config,
                    Session* session) = 0;
-  virtual int reset(const ::google::protobuf::Message* config) = 0;
+  virtual bool reset(const ::google::protobuf::Message* config) = 0;
 
   // Get/Set the universally unique name of the underlying module. Basically
   // thay are trivial methods, however it is not guaranteed since they would be
@@ -114,7 +114,7 @@ using ModuleFactoryRegistry = planning::common::Registry<planning::framework::Mo
       }                                                        \
       planning::framework::BaseModule* p = session->alloc<T>();     \
       p->set_name(planning::common::class_name_str<T>());           \
-      if (p->init(config, session) != 0) {                     \
+      if (p->init(config, session) != true) {                     \
         return nullptr;                                        \
       }                                                        \
       return p;                                                \

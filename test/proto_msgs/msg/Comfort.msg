@@ -1,0 +1,2 @@
+bool available
+int32 maneuver_gear

@@ -8,11 +8,11 @@ namespace planning {
 namespace modules {
 
 EnvironmentalModelModule::EnvironmentalModelModule() : environmental_model_manager_() {
-  LOG_DEBUG("%s constructed", name().c_str());
+  LOG_DEBUG("%s constructed\n", name().c_str());
 }
 
 EnvironmentalModelModule::~EnvironmentalModelModule() {
-  LOG_DEBUG("%s destructed", name().c_str());
+  LOG_DEBUG("%s destructed\n", name().c_str());
 }
 
 planning::framework::BaseModule* EnvironmentalModelModule::clone() const {
@@ -23,7 +23,7 @@ EgoPlanningConfigBuilder* EnvironmentalModelModule::load_config_builder(
     planning::framework::Session* session, const char* file_name) {
   auto config_file_dir = session->environmental_model().get_module_config_file_dir();
   auto ego_planning_config_json_file = config_file_dir + "/" + file_name;
-  LOG_DEBUG("%s", ego_planning_config_json_file.c_str());
+  LOG_DEBUG("%s\n", ego_planning_config_json_file.c_str());
 
   Json ego_planning_config_json;
   std::ifstream fin(ego_planning_config_json_file);
@@ -34,9 +34,9 @@ EgoPlanningConfigBuilder* EnvironmentalModelModule::load_config_builder(
                                                     file_name);
 }
 
-int EnvironmentalModelModule::init(const ::google::protobuf::Message* config,
+bool EnvironmentalModelModule::init(const ::google::protobuf::Message* config,
                                   planning::framework::Session* session) {
-  LOG_DEBUG("%s init", name().c_str());
+  LOG_DEBUG("%s init\n", name().c_str());
   std::string config_file_dir =
       session->mutable_environmental_model()->get_module_config_file_dir();
   // planning::planner::ConfigurationContext::Instance()->load_vehicle_param();
@@ -58,17 +58,17 @@ int EnvironmentalModelModule::init(const ::google::protobuf::Message* config,
       highway_config_builder);
 
   environmental_model_manager_.Init(session);
-  return 0;
+  return true;
 }
 
-int EnvironmentalModelModule::reset(const ::google::protobuf::Message* config) {
+bool EnvironmentalModelModule::reset(const ::google::protobuf::Message* config) {
   environmental_model_manager_.InitContext();
-  return 0;
+  return true;
 }
 
 void EnvironmentalModelModule::compute(planning::framework::Frame* frame) {
 
-  LOG_DEBUG("%s compute", name().c_str());
+  LOG_DEBUG("%s compute\n", name().c_str());
   if (!frame->session()->environmental_model().GetVehicleDbwStatus()) {
     LOG_WARNING("%s DBW_Disable, but continue", name().c_str());
   }

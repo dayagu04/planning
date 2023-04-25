@@ -1,0 +1,7 @@
+int8 LON_NONE = 0
+int8 THROTTLE = 1
+int8 BRAKE = 2
+int8 SPEED = 3
+int8 ACCELERATION = 4
+int8 AXLE_TORQUE = 5
+int8 STOP_DISTANCE = 6

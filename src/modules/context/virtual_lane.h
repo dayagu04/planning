@@ -60,12 +60,8 @@ class VirtualLane {
     return lane_reference_line_;
   };
   const FusionRoad::LaneMergeSplitPoint &get_lane_merge_split_point() { return lane_merge_split_point_; }
-  const std::vector<FusionRoad::VirtualLanePoint> &lane_points() const {
-    std::vector<FusionRoad::VirtualLanePoint> virtual_lane_points; //todo
-    for (auto p : lane_reference_line_.virtual_lane_refline_points()) {
-      virtual_lane_points.emplace_back(p);
-    }
-    return virtual_lane_points;
+  const google::protobuf::RepeatedPtrField<FusionRoad::VirtualLanePoint> &lane_points() const {
+    return lane_reference_line_.virtual_lane_refline_points();
   }
   void update_reference_path(std::shared_ptr<ReferencePath> reference_path) {
     reference_path_ = reference_path;

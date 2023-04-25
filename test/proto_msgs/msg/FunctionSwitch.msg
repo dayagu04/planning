@@ -1,0 +1,2 @@
+bool available
+FunctionData function_data

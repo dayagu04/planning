@@ -62,7 +62,7 @@ bool ScenarioStateMachine::update(planning::framework::Frame *frame) {
   }
 
   if (active) {
-    LOG_DEBUG("[scenario_state_machine] active");
+    LOG_DEBUG("[scenario_state_machine] active\n");
     if (scenario_ == SCENARIO_CRUISE) {
       // update lc_req_mgr_
       lc_req_mgr_->Update(fsm_context_.state,
@@ -74,7 +74,7 @@ bool ScenarioStateMachine::update(planning::framework::Frame *frame) {
       return false;
     }
   } else {
-    LOG_DEBUG("[scenario_state_machine] not active");
+    LOG_DEBUG("[scenario_state_machine] not active\n");
     if (scenario_ == SCENARIO_CRUISE) {
       // update lc_req_mgr_
       lc_req_mgr_->Update(fsm_context_.state,
