@@ -1,2 +1,3 @@
 build/*
-src/proto/generated_files/*
+src/proto/generated_files/*.cc
+src/proto/generated_files/*.h
