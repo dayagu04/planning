@@ -51,6 +51,7 @@ bool Scheduler::InitModuleList(Session *session) {
       "planning.modules.EnvironmentalModelModule",
       // "planning.modules.GeneralPlanningModule",
       // "planning.modules.CandidatesRunner",
+      "planning.modules.ApaPlanningModule"
   };
 
   // init modules

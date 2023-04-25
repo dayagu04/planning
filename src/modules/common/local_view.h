@@ -31,6 +31,7 @@ struct LocalView {
   RadarPerceptionObjects::RadarPerceptionObjectsInfo radar_perception_objects_info;
   ControlCommand::ControlOutput control_output;
   HimMcuInner::HmiMcuInner hmi_mcu_inner_info;
+  ParkingFusion::ParkingFusionInfo parking_fusion_info;
 };
 
 }  // namespace planning

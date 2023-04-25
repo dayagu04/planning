@@ -5,6 +5,9 @@
 #include "modules/common/config_context.h"
 
 namespace planning {
+
+using ParkingFusion::ParkingFusionInfo;
+
 bool PlanningComponent::Init() {
   std::cout << "The planning component init!!!" << std::endl;
   std::string engine_config_path =
@@ -149,6 +152,15 @@ bool PlanningComponent::Init() {
             hmi_mcu_inner_info_msg_.CopyFrom(*hmi_mcu_inner_info_msg);
           });
 
+  auto parking_fusion_info_reader_ =
+      planning_node_->CreateReader<ParkingFusionInfo>(
+          "/iflytek/fusion/parking_slot",
+          [this]
+          (const std::shared_ptr<ParkingFusionInfo> &parking_fusion_info_msg) {
+            std::lock_guard<std::mutex> lock(msg_mutex_);
+            parking_fusion_info_msg_.CopyFrom(*parking_fusion_info_msg);
+          });
+
   // -------------- writter topics --------------
   planning_writer_ =
       planning_node_->CreateWriter<PlanningOutput::PlanningOutput>("/planning");
@@ -183,6 +195,7 @@ bool PlanningComponent::Proc() {
         radar_perception_objects_info_msg_;
     local_view_.control_output = control_output_msg_;
     local_view_.hmi_mcu_inner_info = hmi_mcu_inner_info_msg_;
+    local_view_.parking_fusion_info = parking_fusion_info_msg_;
   }
 
   // 2.planning run

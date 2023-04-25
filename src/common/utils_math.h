@@ -24,6 +24,10 @@
 #define M_2_PI  0.636619772367581343076  // 2/pi
 #endif
 
+#ifndef M_10000_PI
+#define M_10000_PI  3183.09886183790671538  // 10000/pi
+#endif
+
 #ifndef DEG_PER_RAD
 #define DEG_PER_RAD (180.0 / M_PI)
 #endif

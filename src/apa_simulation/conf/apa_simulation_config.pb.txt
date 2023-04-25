@@ -1,0 +1,154 @@
+init_x: 0.0
+init_y: 0.0
+init_theta: 0.0
+init_speed: 0.4
+
+# ParkingFusionInfo
+parking_fusion_info {
+  slot_counter: 6
+  select_slot_id: 0
+  # right vertical
+  parking_fusion_slot_lists {
+    id: 0
+    type: PARKING_SLOT_TYPE_VERTICAL
+    fusion_source: 1
+    confidence: 100
+    slot_side: 1
+    corner_points {
+      x: 1200
+      y: -1500
+    }
+    corner_points {
+      x: -1200
+      y: -1500
+    }
+    corner_points {
+      x: 1200
+      y: -6500
+    }
+    corner_points {
+      x: -1200
+      y: -6500
+    }
+  }
+  # left Vertical
+  parking_fusion_slot_lists {
+    id: 1
+    type: PARKING_SLOT_TYPE_VERTICAL
+    fusion_source: 1
+    confidence: 100
+    slot_side: 0
+    corner_points {
+      x: 1200
+      y: 1500
+    }
+    corner_points {
+      x: -1200
+      y: 1500
+    }
+    corner_points {
+      x: 1200
+      y: 6500
+    }
+    corner_points {
+      x: -1200
+      y: 6500
+    }
+  }
+  # right horizontal
+  parking_fusion_slot_lists {
+    id: 2
+    type: PARKING_SLOT_TYPE_HORIZONTAL
+    fusion_source: 1
+    confidence: 100
+    slot_side: 1
+    corner_points {
+      x: 3000
+      y: -1500
+    }
+    corner_points {
+      x: -3000
+      y: -1500
+    }
+    corner_points {
+      x: 3000
+      y: -4000
+    }
+    corner_points {
+      x: -3000
+      y: -4000
+    }
+  }
+  # left horizontal
+  parking_fusion_slot_lists {
+    id: 3
+    type: PARKING_SLOT_TYPE_HORIZONTAL
+    fusion_source: 1
+    confidence: 100
+    slot_side: 0
+    corner_points {
+      x: 3000
+      y: 1500
+    }
+    corner_points {
+      x: -3000
+      y: 1500
+    }
+    corner_points {
+      x: 3000
+      y: 4000
+    }
+    corner_points {
+      x: -3000
+      y: 4000
+    }
+  }
+  # right slanting
+  parking_fusion_slot_lists {
+    id: 4
+    type: PARKING_SLOT_TYPE_SLANTING
+    fusion_source: 1
+    confidence: 100
+    slot_side: 1
+    corner_points {
+      x: 1300
+      y: -1500
+    }
+    corner_points {
+      x: -1300
+      y: -1500
+    }
+    corner_points {
+      x: -1586
+      y: -6500
+    }
+    corner_points {
+      x: -4186
+      y: -6500
+    }
+  }
+  # left slanting
+  parking_fusion_slot_lists {
+    id: 5
+    type: PARKING_SLOT_TYPE_SLANTING
+    fusion_source: 1
+    confidence: 100
+    slot_side: 0
+    corner_points {
+      x: 1300
+      y: 1500
+    }
+    corner_points {
+      x: -1300
+      y: 1500
+    }
+    corner_points {
+      x: -1586
+      y: 6500
+    }
+    corner_points {
+      x: -4186
+      y: 6500
+    }
+  }
+}
