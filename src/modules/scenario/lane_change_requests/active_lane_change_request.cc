@@ -1,5 +1,7 @@
 #include "src/modules/scenario/lane_change_requests/active_lane_change_request.h"
 
+#include "active_lane_change_request.h"
+#include "src/modules/context/virtual_lane_manager.h"
 #include "src/modules/scenario/lateral_behavior_object_selector.h"
 
 namespace planning {
@@ -39,12 +41,12 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
   double v_ego = ego_state->ego_v();
   double dt_delay = v_ego < 5.0 ? 0.0 : 0.03;
   int left_lane_index = 0;
-  int right_lane_index = virtual_lane_mgr_.get_lane_num() - 1;
+  int right_lane_index = virtual_lane_mgr_->get_lane_num() - 1;
 
   auto current_lane = virtual_lane_mgr_->get_current_lane();
   auto current_lane_index = virtual_lane_mgr_->get_lane_index(current_lane);
   if (virtual_lane_mgr_->lc_map_decision(current_lane) == -1 &&
-      current_lane->lc_map_decision_offset() < 150) {
+      virtual_lane_mgr_->lc_map_decision_offset(current_lane) < 150) {
     default_int_delay = 0.;
     default_ma_delay = 0.;
   }
@@ -55,11 +57,11 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
   // }
   olane_width = 3.6;  // hack
   double act_cancel_thr = std::max(olane_width / 2 - 0.6, 0.);
-  bool l_change_cond = (tlane.has_master() &&
+  bool l_change_cond = (lane_change_lane_mgr_->has_target_lane() &&
                         flane->get_ego_lateral_offset() + v_ego * dt_delay <
                             start_move_distolane + act_cancel_thr);
 
-  bool r_change_cond = (tlane.has_master() &&
+  bool r_change_cond = (lane_change_lane_mgr_->has_target_lane() &&
                         flane->get_ego_lateral_offset() - v_ego * dt_delay >
                             start_move_distolane - act_cancel_thr);
 
@@ -71,7 +73,7 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
   if (current_lane_index > 0) {
     left_lane_index = current_lane_index - 1;
   }
-  if (current_lane_index <= map_info.lanes_num() - 1) {
+  if (current_lane_index <= virtual_lane_mgr_->get_lane_num() - 1) {
     right_lane_index = current_lane_index + 1;
   }
 
@@ -79,9 +81,7 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
   const double kSpeedLimit = 60.0 / 3.6;
   const int kDistanceBuffer = 1000;
   // 道路限速
-  auto v_limit_map = session_->planning_output_context()
-                         .planning_status()
-                         .planning_result.v_limit_map;
+  auto v_limit_map = current_lane->velocity_limit();
   bool is_on_highway = session_->environmental_model().is_on_highway();
   bool is_not_on_ramp = true;  // hack !map_info.is_on_ramp();
   // 判断是否为最左侧车道
@@ -89,53 +89,62 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
   bool is_normal_lane =
       current_lane->get_lane_type() == FusionRoad::LaneType::LANE_TYPE_NORMAL;
 
-  auto distance_to_merge_point =
-      current_lane->get_lane_merge_split_point()->distance();
+  auto distance_to_merge_point = current_lane->get_lane_merge_split_point()
+                                     .merge_split_point_data(0)
+                                     .distance();
+  // WB hack: distance_to_y_point计算需要更新
+  auto distance_to_y_point = current_lane->get_lane_merge_split_point()
+                                 .merge_split_point_data(0)
+                                 .distance();
+  // 判断分汇流情况目前不完善，TBD
   bool is_nearby_right_merge_point =
-      map_info.lanes_merge_type() ==
+      current_lane->get_lane_merge_split_point()
+              .merge_split_point_data(0)
+              .orientation() ==
           FusionRoad::LaneOrientation::ORIENTATION_RIGHT &&
       distance_to_merge_point > 0 &&
       distance_to_merge_point < kDistanceBuffer &&
-      distance_to_merge_point + kDistanceBuffer < map_info.dis_to_ramp();
+      distance_to_merge_point + kDistanceBuffer <
+          virtual_lane_mgr_->get_ramp().dis_to_ramp();
 
   bool is_nearby_right_merge_point_lc_valid =
       (virtual_lane_mgr_->lc_map_decision(current_lane) >= 0 &&
-       distance_to_merge_point + kDistanceBuffer < map_info.lc_end_dis()) ||
+       distance_to_merge_point + kDistanceBuffer <
+           current_lane->lc_end_dist()) ||
       virtual_lane_mgr_->lc_map_decision(current_lane) < 0;
 
+  // WB TBD： 汇流判断目前为hack，需要更新逻辑
   bool is_nearby_right_y_point =
-      map_info.lanes_y_point_type() ==
+      current_lane->get_lane_merge_split_point()
+              .merge_split_point_data(0)
+              .orientation() ==
           FusionRoad::LaneOrientation::ORIENTATION_RIGHT &&
-      map_info.distance_to_lanes_y_point() > 0 &&
-      map_info.distance_to_lanes_y_point() < kDistanceBuffer &&
-      map_info.distance_to_lanes_y_point() + kDistanceBuffer <
-          map_info.dis_to_ramp();
+      distance_to_y_point > 0 && distance_to_y_point < kDistanceBuffer &&
+      distance_to_y_point + kDistanceBuffer <
+          virtual_lane_mgr_->get_ramp().dis_to_ramp();
   bool is_from_right_y_point_lc_decision_valid =
       (virtual_lane_mgr_->lc_map_decision(current_lane) >= 0 &&
-       map_info.distance_to_lanes_y_point() + kDistanceBuffer <
-           map_info.lc_end_dis()) ||
+       distance_to_y_point + kDistanceBuffer < current_lane->lc_end_dist()) ||
       virtual_lane_mgr_->lc_map_decision(current_lane) < 0;
-
-  bool lane_change_condition =
+  // 整合分汇流附近换道条件：
+  bool lc_condition_nearby_merge =
       v_limit_map >= kSpeedLimit && is_on_highway && is_not_on_ramp &&
       ((is_nearby_right_merge_point && is_nearby_right_merge_point_lc_valid &&
         front_tracks_r_cnt > 0) ||
        (is_nearby_right_y_point && is_from_right_y_point_lc_decision_valid)) &&
       is_not_on_most_left_lane && is_normal_lane;
 
-  if (lane_change_condition) {
-    if (request_ == NO_CHANGE) {
-      if ((((v_rel_l - v_rel_f > 0. ||
-             map_info.distance_to_lanes_y_point() < 1000) &&
+  if (lc_condition_nearby_merge) {
+    if (request_type_ == NO_CHANGE) {
+      if ((((v_rel_l - v_rel_f > 0. || distance_to_y_point < 1000) &&
             v_rel_l > 0.) ||
            v_rel_l + v_ego > 75. / 3.6 ||
            (v_rel_f - v_rel_l < 5. && v_rel_l > -2.5 &&
             v_rel_l + v_ego > 60. / 3.6) ||
            (v_rel_f <= -2.5 && v_rel_l + v_ego > 30. / 3.6)) &&
           (v_rel_r < 15.0 ||
-           map_info.current_lane_index() == map_info.lanes_num() - 1) &&
-          v_ego > 30 / 3.6 &&
-          (v_rel_f <= 6. || map_info.distance_to_lanes_y_point() < 1000)) {
+           current_lane_index == virtual_lane_mgr_->get_lane_num() - 1) &&
+          v_ego > 30 / 3.6 && (v_rel_f <= 6. || distance_to_y_point < 1000)) {
         pos_cnt_l_ += 1;
         neg_cnt_l_ = 0;
         if (pos_cnt_l_ > 20) {
@@ -158,12 +167,11 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
                     __FUNCTION__, __LINE__);
         }
       }
-    } else if (enable_l_ && request_ == LEFT_CHANGE &&
+    } else if (enable_l_ && request_type_ == LEFT_CHANGE &&
                (lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT) &&
                ((v_rel_l < -3. && v_rel_l + v_ego <= 50. / 3.6) ||
                 v_rel_l + v_ego < 20. / 3.6 || v_ego < 20. / 3.6 ||
-                (v_rel_f > 6.0 &&
-                 !(map_info.distance_to_lanes_y_point() < 1000)))) {
+                (v_rel_f > 6.0 && !(distance_to_y_point < 1000)))) {
       LOG_DEBUG(
           "[ActRequest::update] v_rel not satisified for avoid merge/y point "
           "when request generated");
@@ -174,8 +182,8 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
         enable_l_ = false;
         LOG_DEBUG("[ActRequest::update] %s:%d enable_l_ cleared", __FUNCTION__,
                   __LINE__);
-        finish();
-        reset();
+        Finish();
+        Reset();
         LOG_DEBUG(
             "[ActRequest::update] %s:%d finish request, v_rel not satisified "
             "not satistied for merge/Y",
@@ -184,21 +192,182 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
     }
   } else {
     if (lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT) {
-      if (enable_l_ && request_ == LEFT_CHANGE) {
-        finish();
-        reset();
+      if (enable_l_ && request_type_ == LEFT_CHANGE) {
+        Finish();
+        Reset();
         LOG_DEBUG(
-            "[ActRequest::update] %s:%d finish request, merge/Y not satistied",
+            "[ActRequest::update] %s:%d finish request, merge/Y not satistied "
+            "\n",
             __FUNCTION__, __LINE__);
       }
       pos_cnt_l_ = 0;
       neg_cnt_l_ = 0;
       left_faster_ = false;
       enable_l_ = false;
-      LOG_DEBUG("[ActRequest::update] %s:%d enable_l_ cleared", __FUNCTION__,
+      LOG_DEBUG("[ActRequest::update] %s:%d enable_l_ cleared \n", __FUNCTION__,
                 __LINE__);
+    }
+  }
+
+  if ((enforced_l_ || enable_l_) && diff_map > default_ma_delay &&
+      diff_int > default_int_delay && !virtual_lane_mgr_->is_solid_line(0)) {
+    if (request_type_ != LEFT_CHANGE) {
+      GenerateRequest(LEFT_CHANGE);
+      LOG_DEBUG("[ActRequest::update] Ask for active changing lane to left \n");
+      // if (map_info.lanes_y_point_type() == MSD_MERGE_TYPE_MERGE_FROM_RIGHT) {
+      // 需要区分 merge_split_point, y_point的差异和类型
+      if (current_lane->get_lane_merge_split_point()
+              .merge_split_point_data(0)
+              .orientation() ==
+          FusionRoad::LaneOrientation::ORIENTATION_RIGHT) {
+        act_request_source_ = "avd_y_from_right";
+      }
+      // else if (map_info.lanes_merge_type() ==
+      //            MSD_MERGE_TYPE_MERGE_FROM_RIGHT) {
+      //   act_request_source_ = "avd_merge_from_right";
+      // }
+    }
+    if (!IsDashedLineEnough(LEFT_CHANGE, v_ego, virtual_lane_mgr_) &&
+        curr_direct_exist && request_type_ != NO_CHANGE &&
+        (lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT ||
+         (lc_status == ROAD_LC_LBACK &&
+          (lane_change_lane_mgr_->has_origin_lane() &&
+           lane_change_lane_mgr_->is_ego_on(olane))))) {
+      Finish();
+      Reset();
+      LOG_DEBUG("[ActRequest::update] %s:%d finish request, dash not enough \n",
+                __FUNCTION__, __LINE__);
+    }
+  } else if (!enforced_l_) {
+    bool status_cond =
+        ((not_accident && lane_change_lane_mgr_->has_origin_lane() &&
+          lane_change_lane_mgr_->is_ego_on(olane)) ||
+         (!(lc_status == ROAD_LC_LCHANGE || lc_status == ROAD_LC_RCHANGE ||
+            lc_status == INTER_GS_LC_LCHANGE ||
+            lc_status == INTER_GS_LC_RCHANGE ||
+            lc_status == INTER_TR_LC_LCHANGE ||
+            lc_status == INTER_TR_LC_RCHANGE ||
+            lc_status == INTER_TL_LC_LCHANGE ||
+            lc_status == INTER_TL_LC_RCHANGE) ||
+          ((lc_status == ROAD_LC_LCHANGE) || (lc_status == ROAD_LC_RCHANGE) ||
+           (lc_status == INTER_GS_LC_LCHANGE && l_change_cond) ||
+           (lc_status == INTER_GS_LC_RCHANGE && r_change_cond) ||
+           (lc_status == INTER_TR_LC_LCHANGE && l_change_cond) ||
+           (lc_status == INTER_TR_LC_RCHANGE && r_change_cond) ||
+           (lc_status == INTER_TL_LC_LCHANGE && l_change_cond) ||
+           (lc_status == INTER_TL_LC_RCHANGE && r_change_cond))));
+
+    if (left_alc_car.size() > 0) {
+      // 存在需要从左避让的车
+      if (request_type_ != LEFT_CHANGE) {
+        // if (is_on_highway &&
+        //     ((map_info.lanes_merge_type(left_lane_index) ==
+        //           MSD_MERGE_TYPE_MERGE_FROM_LEFT &&
+        //       map_info.distance_to_lanes_merge(left_lane_index) < 1200) ||
+        //      (map_info.lanes_y_point_type(left_lane_index) ==
+        //           MSD_MERGE_TYPE_MERGE_FROM_LEFT &&
+        //       map_info.distance_to_lanes_y_point(left_lane_index) < 1200))) {
+        if (is_on_highway &&
+            (is_nearby_right_merge_point || is_nearby_right_y_point)) {
+        } else {
+          GenerateRequest(LEFT_CHANGE);
+          act_request_source_ = "act";
+          LOG_DEBUG(
+              "[ActRequest::update] Ask for active changing lane to left \n");
+        }
+      }
+      if (!IsDashedLineEnough(LEFT_CHANGE, v_ego, virtual_lane_mgr_) &&
+          curr_direct_exist && request_type_ != NO_CHANGE &&
+          (lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT ||
+           (lc_status == ROAD_LC_LBACK &&
+            (lane_change_lane_mgr_->has_origin_lane() &&
+             lane_change_lane_mgr_->is_ego_on(olane))))) {
+        Finish();
+        Reset();
+        LOG_DEBUG(
+            "[ActRequest::update] %s:%d finish request, dash not enough \n",
+            __FUNCTION__, __LINE__);
+      }
+    } else if (right_alc_car.size() > 0) {
+      // 存在需要从右避让的车
+      if (request_type_ != RIGHT_CHANGE) {
+        // if (is_on_highway &&
+        //     ((map_info.lanes_merge_type(right_lane_index) ==
+        //           MSD_MERGE_TYPE_MERGE_FROM_RIGHT &&
+        //       map_info.distance_to_lanes_merge(right_lane_index) < 1200) ||
+        //      (map_info.lanes_y_point_type(right_lane_index) ==
+        //           MSD_MERGE_TYPE_MERGE_FROM_RIGHT &&
+        //       map_info.distance_to_lanes_y_point(right_lane_index) < 1200)))
+        //       {
+        if (is_on_highway &&
+            (is_nearby_right_merge_point || is_nearby_right_y_point)) {
+        } else {
+          GenerateRequest(RIGHT_CHANGE);
+          act_request_source_ = "act";
+          LOG_DEBUG(
+              "[ActRequest::update] Ask for active changing lane to right \n");
+        }
+      }
+      if (!IsDashedLineEnough(RIGHT_CHANGE, v_ego, virtual_lane_mgr_) &&
+          curr_direct_exist && request_type_ != NO_CHANGE &&
+          (lc_status == ROAD_NONE || lc_status == ROAD_LC_RWAIT ||
+           (lc_status == ROAD_LC_RBACK &&
+            (lane_change_lane_mgr_->has_origin_lane() &&
+             lane_change_lane_mgr_->is_ego_on(olane))))) {
+        Finish();
+        Reset();
+        LOG_DEBUG(
+            "[ActRequest::update] %s:%d finish request, dash not enough \n",
+            __FUNCTION__, __LINE__);
+      }
+    } else if (request_type_ != NO_CHANGE && status_cond) {
+      Finish();
+      act_request_source_ = "none";
+      LOG_DEBUG("[ActRequest::update] %s:%d finish request, no alc cars \n",
+                __FUNCTION__, __LINE__);
+    }
+
+    if (neg_left_alc_car && status_cond) {
+      if (request_type_ == LEFT_CHANGE) {
+        Finish();
+        act_request_source_ = "none";
+        LOG_DEBUG(
+            "[ActRequest::update] %s:%d finish request, neg_left_alc_car \n",
+            __FUNCTION__, __LINE__);
+      }
+    }
+
+    if (neg_right_alc_car && status_cond) {
+      if (request_type_ == RIGHT_CHANGE) {
+        Finish();
+        act_request_source_ = "none";
+        LOG_DEBUG(
+            "[ActRequest::update] %s:%d finish request, neg_right_alc_car \n",
+            __FUNCTION__, __LINE__);
+      }
     }
   }
 }
 
+void ActRequest::Reset(int direction) {
+  if (direction == NO_CHANGE) {
+    pos_cnt_l_ = 0;
+    pos_cnt_r_ = 0;
+    neg_cnt_l_ = 0;
+    neg_cnt_r_ = 0;
+    left_faster_ = false;
+    right_faster_ = false;
+  } else if (direction == LEFT_CHANGE) {
+    pos_cnt_l_ = 0;
+    neg_cnt_l_ = 0;
+    left_faster_ = false;
+  } else if (direction == RIGHT_CHANGE) {
+    pos_cnt_r_ = 0;
+    neg_cnt_r_ = 0;
+    right_faster_ = false;
+  } else {
+    LOG_ERROR("[ActRequest::reset] Illegal direction \n");
+  }
+  act_request_source_ = "none";
+}
 }  // namespace planning

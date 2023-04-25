@@ -26,7 +26,7 @@ class LaneChangeRequest {
   void Finish();
   bool AggressiveChange() const;
   bool IsDashedLineEnough(RequestType direction, const double ego_vel,
-                          std::shared_ptr<VirtualLaneManager> map_info_mgr);
+                          std::shared_ptr<VirtualLaneManager> virtual_lane_mgr);
 
   RequestType request_type() const { return request_type_; }
   int target_lane_virtual_id() { return target_lane_virtual_id_; }

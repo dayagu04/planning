@@ -94,8 +94,8 @@ class VirtualLane {
 
   // 能让车沿着route形式，在当前位置所在的lanegroup中，最少需要变道几次
   // +： right; -: left
-  
-  //double lc_end_dist();
+
+  double lc_end_dist() {return 5000.0;} // hack
   bool has_lines(LineDirection direction) const;
   double distance_to_line(double s, double l, LineDirection direction);
   bool is_obstacle_on(const Obstacle &tr);
@@ -113,13 +113,13 @@ class VirtualLane {
   bool hack() const { return hack_; }
   const std::vector<int>& get_current_tasks() const { return current_tasks_; };
   // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离
-  
+
 
   void update_speed_limit(double ego_vel, double ego_v_cruise);
   void save_context(VirtualLaneContext &context) const;
   void restore_context(const VirtualLaneContext &context);
  private:
-  
+
   int order_id_ = -1;
   int virtual_id_ = 0;
   int relative_id_ = 0;

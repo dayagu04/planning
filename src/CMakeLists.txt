@@ -127,7 +127,7 @@ else()
 endif()
 
 # -----------GTEST 单元测试-----------
-option (PNC_ENABLE_TEST "build unit tests" OFF)
+option (PNC_ENABLE_TEST "build unit tests" ON)
 message (STATUS "PNC_ENABLE_TEST=" ${PNC_ENABLE_TEST})
 if (PNC_ENABLE_TEST)
   set(CMAKE_BUILD_TYPE Debug)

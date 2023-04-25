@@ -28,7 +28,7 @@ class VirtualLaneManager {
   }
   std::shared_ptr<VirtualLane> get_right_neighbor(std::shared_ptr<VirtualLane> this_lane) const {
      return this_lane->get_order_id() < static_cast<int>(relative_id_lanes_.size()) - 1
-              ? relative_id_lanes_[this_lane->get_order_id() + 1] : nullptr;          
+              ? relative_id_lanes_[this_lane->get_order_id() + 1] : nullptr;
   }
 
   const std::shared_ptr<VirtualLane> get_current_lane() const { return current_lane_; }
@@ -49,15 +49,15 @@ class VirtualLaneManager {
   std::vector<std::shared_ptr<Obstacle>> get_right_lane_obstacle();
   bool has_lane(int virtual_lane_id);
   const Intersection &get_intersection_info() const { return intersection_; }
-  Intersection intersection_;
-  Ramp ramp_;
+  const Ramp &get_ramp() const { return ramp_; }
+
   //Destination destination_;
 
   //void update_current_lane();
   void update_last_fix_lane_id(int flane_virtual_id) { last_fix_lane_virtual_id_ = flane_virtual_id;  }
   bool update(const FusionRoad::RoadInfo& roads);
   void reset();
-  
+
   double get_distance_to_dash_line(const RequestType direction, uint order_id) const {
     return std::numeric_limits<double>::max();
   }
@@ -72,6 +72,10 @@ class VirtualLaneManager {
     //HACK
     return 5000.;
   };
+
+  // side: 0-left, 1-right
+  bool is_solid_line(int side) const;
+
  private:
   LaneChangeStatus is_lane_change();
   void update_virtual_id();
@@ -88,6 +92,8 @@ class VirtualLaneManager {
 
   double last_left_diff_ = 0;
   double last_right_diff_ = 0;
+  Intersection intersection_;
+  Ramp ramp_;
 };
 }
 #endif

@@ -68,13 +68,13 @@ bool LaneChangeRequest::AggressiveChange() const {
 
 bool LaneChangeRequest::IsDashedLineEnough(
     RequestType direction, const double ego_vel,
-    std::shared_ptr<VirtualLaneManager> map_info_mgr) {
+    std::shared_ptr<VirtualLaneManager> virtual_lane_mgr) {
   LOG_DEBUG("dashed_enough: direction: %d \n", static_cast<int>(direction));
   LOG_DEBUG("dashed_enough: vel: %.2f \n", ego_vel);
   double dash_length = 80;
-  double right_dash_line_len = map_info_mgr->get_distance_to_dash_line(
+  double right_dash_line_len = virtual_lane_mgr->get_distance_to_dash_line(
       RIGHT_CHANGE, origin_lane_order_id_);
-  double left_dash_line_len = map_info_mgr->get_distance_to_dash_line(
+  double left_dash_line_len = virtual_lane_mgr->get_distance_to_dash_line(
       LEFT_CHANGE, origin_lane_order_id_);
   LOG_DEBUG("dashed_enough: right_dash_line_len: %.2f \n", right_dash_line_len);
   LOG_DEBUG("dashed_enough: left_dash_line_len: %.2f \n", left_dash_line_len);
@@ -101,9 +101,9 @@ bool LaneChangeRequest::IsDashedLineEnough(
 
   double distance_thld =
       500.0;  // hack for distance
-              // std::max(map_info_mgr->map_velocity_limit(), ego_vel) * 4.0;
+              // std::max(virtual_lane_mgr->map_velocity_limit(), ego_vel) * 4.0;
   // bool must_change_lane =
-  //     map_info_mgr->get_current_lane()->must_change_lane(distance_thld);
+  //     virtual_lane_mgr->get_current_lane()->must_change_lane(distance_thld);
   auto current_lane = virtual_lane_mgr_->get_current_lane();
   auto must_change_lane =
       current_lane != nullptr
