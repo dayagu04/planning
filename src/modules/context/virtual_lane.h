@@ -94,8 +94,6 @@ class VirtualLane {
 
   // 能让车沿着route形式，在当前位置所在的lanegroup中，最少需要变道几次
   // +： right; -: left
-
-  double lc_end_dist() {return 5000.0;} // hack
   bool has_lines(LineDirection direction) const;
   double distance_to_line(double s, double l, LineDirection direction);
   bool is_obstacle_on(const Obstacle &tr);

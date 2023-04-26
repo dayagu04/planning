@@ -110,7 +110,7 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
   bool is_nearby_right_merge_point_lc_valid =
       (virtual_lane_mgr_->lc_map_decision(current_lane) >= 0 &&
        distance_to_merge_point + kDistanceBuffer <
-           current_lane->lc_end_dist()) ||
+           virtual_lane_mgr_->lc_map_decision_offset(current_lane)) ||
       virtual_lane_mgr_->lc_map_decision(current_lane) < 0;
 
   // WB TBD： 汇流判断目前为hack，需要更新逻辑
@@ -124,7 +124,8 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
           virtual_lane_mgr_->get_ramp().dis_to_ramp();
   bool is_from_right_y_point_lc_decision_valid =
       (virtual_lane_mgr_->lc_map_decision(current_lane) >= 0 &&
-       distance_to_y_point + kDistanceBuffer < current_lane->lc_end_dist()) ||
+       distance_to_y_point + kDistanceBuffer <
+           virtual_lane_mgr_->lc_map_decision_offset(current_lane)) ||
       virtual_lane_mgr_->lc_map_decision(current_lane) < 0;
   // 整合分汇流附近换道条件：
   bool lc_condition_nearby_merge =
