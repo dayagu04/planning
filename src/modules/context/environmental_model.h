@@ -96,9 +96,13 @@ class EnvironmentalModel {
     return prediction_info_;
   }
 
-  // const std::vector<PredictionObject> &get_mixed_prediction_info() const {
-  //   return mixed_prediction_info_;
-  // }
+  const std::unordered_map<Common::SensorType, std::vector<PredictionObject>> &get_surr_radar_prediction_info() const {
+    return surr_radar_map_info_;
+  }
+
+  std::unordered_map<Common::SensorType, std::vector<PredictionObject>> &get_mutable_surr_radar_prediction_info() {
+    return surr_radar_map_info_;
+  }
 
   const std::shared_ptr<EgoStateManager> &get_ego_state_manager() const { return ego_state_manager_; }
 
@@ -219,6 +223,7 @@ private:
 //   EgoStateManager ego_state_manager_;
 //   std::vector<MSDPerceptionFusionObjectData> fusion_info_;
   std::vector<PredictionObject> prediction_info_;
+  std::unordered_map<Common::SensorType, std::vector<PredictionObject>> surr_radar_map_info_;
 //   std::vector<PredictionObject> truncated_prediction_info_;
   //std::vector<PredictionObject> mixed_prediction_info_;
 

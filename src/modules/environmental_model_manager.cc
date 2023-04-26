@@ -186,6 +186,8 @@ bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, 
     }
   }
 
+  auto &prediction_map_info = session_->mutable_environmental_model()->get_mutable_surr_radar_prediction_info();
+  prediction_map_info.clear();
   // surround_radar update
   int num = local_view.radar_perception_objects_info.num();
   for (auto &obj : local_view.radar_perception_objects_info.radar_perception_object_list()) {
@@ -497,7 +499,7 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
 }
 
 void EnvironmentalModelManager::transform_surround_radar_to_prediction(RadarPerceptionObjects::RadarPerceptionObject radar_perception_objects) {
-  auto prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
+  auto &prediction_map_info = session_->mutable_environmental_model()->get_mutable_surr_radar_prediction_info();
   PredictionObject prediction_object;
   // prediction_object.id = radar_perception_objects.additional_info().track_id(); //proto暂时无track_id
   prediction_object.type = radar_perception_objects.common_info().type();
@@ -527,7 +529,7 @@ void EnvironmentalModelManager::transform_surround_radar_to_prediction(RadarPerc
   prediction_object.relative_theta = 0;
   //std::vector<Point3d> bottom_polygon_points;
   //std::vector<Point3d> top_polygon_points;
-  prediction_info.emplace_back(prediction_object);
+  prediction_map_info[radar_perception_objects.additional_info().sensor_type()].emplace_back(prediction_object);
 }
 
 bool EnvironmentalModelManager::InputReady(double current_time, std::string &error_msg) {
