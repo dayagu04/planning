@@ -17,12 +17,16 @@ LaneReferencePath::LaneReferencePath(int target_lane_virtual_id) : ReferencePath
 
 void LaneReferencePath::update(planning::framework::Session *session) {
   session_ = session;
-  // Step 1) get reference_points
-  ReferencePathPoints points;
-  
-  bool ok = get_points_by_lane_id(lane_virtual_id_, points);
+  // Step 1) import reference_path pointer to virtual_lane
+  auto virtual_lane = session->mutable_environmental_model()->mutable_virtual_lane_manager()
+                                        ->mutable_lane_with_virtual_id(lane_virtual_id_);
+  virtual_lane->update_reference_path(std::shared_ptr<LaneReferencePath>(this));
 
-  // Step 2) update
+  // Step 2) get reference_points
+  ReferencePathPoints points;
+  bool ok = get_points_by_lane_id(lane_virtual_id_, points);
+  
+  // Step 3) update
   if (ok) {
     update_refpath_points(points);
     frenet_ego_state_.update(
@@ -33,6 +37,10 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   } else {
     LOG_DEBUG("LaneReferencePath::update failed");
   }
+
+  // Step 4) update virtual_lane speed_limit
+  virtual_lane->update_speed_limit(session->environmental_model().get_ego_state_manager()->ego_v(),
+                                  session->environmental_model().get_ego_state_manager()->ego_v_cruise());
 }
 
 bool LaneReferencePath::is_obstacle_ignorable(const FrenetObstacle &obstacle) {

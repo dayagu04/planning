@@ -8,7 +8,6 @@
 #include "modules/common/config/basic_type.h"
 #include "modules/context/lane_reference_path.h"
 
-
 namespace planning {
 
 enum class ReferencePathType {
@@ -26,7 +25,7 @@ class ReferencePathManager {
 
   // map lane reference
   std::shared_ptr<ReferencePath> get_reference_path_by_lane(
-      int lane_id, bool create_if_not_exist = true);
+      int virtual_lane_id, bool create_if_not_exist = true);
   std::shared_ptr<ReferencePath> get_reference_path_by_current_lane();
 
   // update
@@ -39,7 +38,7 @@ class ReferencePathManager {
 };
 
 std::shared_ptr<ReferencePath> make_map_lane_reference_path(
-    ReferencePathManager* reference_path_manager, int lane_id);
+    ReferencePathManager* reference_path_manager, int virtual_lane_id);
 
 }
 

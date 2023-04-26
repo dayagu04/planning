@@ -46,7 +46,7 @@ class VirtualLane {
   void set_relative_id(int relative_id) { relative_id_ = relative_id; };
 
   uint get_order_id() const { return order_id_; };
-  int get_virtual_id () const { return virtual_id_; };
+  int get_virtual_id() const { return virtual_id_; };
   int get_relative_id() const { return relative_id_; };
   double width_by_s(double s);
   double width(double x);

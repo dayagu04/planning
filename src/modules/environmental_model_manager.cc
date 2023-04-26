@@ -89,9 +89,9 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   if (!ego_state_update(current_time, local_view)) {
     return false;
   }
-  auto end_time = IflyTime::Now_ms();
-  LOG_DEBUG("ego_state_update time:%f\n", end_time - current_time);
-  current_time = end_time;
+  // auto end_time = IflyTime::Now_ms();
+  // LOG_DEBUG("ego_state_update time:%f\n", end_time - current_time);
+  // current_time = end_time;
   // Step 3) update virtual_lane
   if (!virtual_lane_manager_ptr_->update(local_view.road_info)) {
     LOG_ERROR("virtual_lane_manager update failed");
@@ -123,7 +123,6 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   // LOG_DEBUG("reference_path_manager update time:%f\n", end_time - current_time);
   // current_time = end_time;
 
-
   obstacle_manager_ptr_->assign_obstacles_to_lanes();
   // end_time = IflyTime::Now_ms();
   // LOG_DEBUG("assign_obstacles_to_lanes update time:%f\n", end_time - current_time);
@@ -136,7 +135,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   // LOG_DEBUG("lateral_obstacle_ptr update time:%f\n", end_time - current_time);
   // current_time = end_time;
 
-  end_time = IflyTime::Now_ms();
+  auto end_time = IflyTime::Now_ms();
   LOG_DEBUG("update time:%f\n", end_time - current_time);
 
   std::string status_msg;
