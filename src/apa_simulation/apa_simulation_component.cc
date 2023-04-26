@@ -57,7 +57,6 @@ bool ApaSimulationComponent::Proc() {
 }
 
 void ApaSimulationComponent::MockLocalizationAndVehicleService() {
-  ego_motion_msg_.Clear();
   {
     cur_planning_output_ = planning_output_msg_;
   }
@@ -102,12 +101,12 @@ void ApaSimulationComponent::MockLocalizationAndVehicleService() {
   euler_angles->set_yaw(ego_theta);
   euler_angles->set_pitch(0.0);
   euler_angles->set_roll(0.0);
-  ego_motion_writer_->Write(localization_estimate_msg);
+  localization_estimate_writer_->Write(localization_estimate_msg);
 
-  VehicleServiceOutputInfo vehicle_service_output_info;
-  vehicle_service_output_info.set_veh_spd(vehicle_speed);
-  vehicle_service_output_info.set_vehicle_speed_available(true);
-  vehicle_service_output_info_writer_->Write(localization_estimate_msg);
+  VehicleServiceOutputInfo vehicle_service_output_info_msg;
+  vehicle_service_output_info_msg.set_vehicle_speed(ego_spd);
+  vehicle_service_output_info_msg.set_vehicle_speed_available(true);
+  vehicle_service_output_info_writer_->Write(vehicle_service_output_info_msg);
 
   last_planning_gear_ =
       cur_planning_output_.gear_command().gear_command_value();

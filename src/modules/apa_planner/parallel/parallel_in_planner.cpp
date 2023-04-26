@@ -1,4 +1,4 @@
-#include "modules/apa_planner/diagonal/diagonal_in_planner.h"
+#include "modules/apa_planner/parallel/parallel_in_planner.h"
 
 #include "modules/apa_planner/common/planning_log_helper.h"
 
@@ -7,9 +7,9 @@ namespace apa_planner {
 
 using PlanningOutput::PlanningOutput;
 
-bool DiagonalInPlanner::Update(framework::Frame* const frame) {
-  PLANNING_LOG << "+++++++++++++diagonal planning+++++++++++++" << std::endl;
-  PLANNING_LOG << "is_stop_planning_:" << is_stop_planning_ << std::endl;
+bool ParallelInPlanner::Update(framework::Frame* const frame) {
+
+  PLANNING_LOG << "+++++++++++++parallel planning+++++++++++++" << std::endl;
   if (is_stop_planning_) {
     PLANNING_LOG << "last planning failed, stop planning" << std::endl;
     SetFailedPlanningOutput(frame);
@@ -24,7 +24,7 @@ bool DiagonalInPlanner::Update(framework::Frame* const frame) {
   const bool is_planning_ok = trajectory_generator_.Plan(frame);
   if (!is_planning_ok) {
     SetFailedPlanningOutput(frame);
-    PLANNING_LOG << "diagonal parking failed" << std::endl;
+    PLANNING_LOG << "parallel parking failed" << std::endl;
   }
 
   if (is_planning_ok_ && !is_planning_ok) {

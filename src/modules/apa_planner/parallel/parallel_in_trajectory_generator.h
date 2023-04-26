@@ -2,17 +2,18 @@
 
 #include "framework/frame.h"
 #include "modules/apa_planner/common/geometry_planning_io.h"
-#include "modules/apa_planner/diagonal/diagonal_in_geometry_plan.h"
+#include "modules/apa_planner/common/planning_log_helper.h"
+#include "modules/apa_planner/parallel/parallel_in_geometry_plan.h"
 #include "modules/common/local_view.h"
 #include "modules/common/math/box2d.h"
 
 namespace planning {
 namespace apa_planner {
 
-class DiagonalInTrajectoryGenerator {
+class ParallelInTrajectoryGenerator {
  public:
-  DiagonalInTrajectoryGenerator() = default;
-  ~DiagonalInTrajectoryGenerator() = default;
+  ParallelInTrajectoryGenerator() = default;
+  ~ParallelInTrajectoryGenerator() = default;
 
   bool Plan(framework::Frame* const frame);
 
@@ -20,46 +21,58 @@ class DiagonalInTrajectoryGenerator {
   bool GeometryPlan(const PlanningPoint &start_point,
       int idx, PlanningOutput::PlanningOutput *const planning_output);
 
-  bool ABSegmentPlan(
-      const PlanningPoint &point_a, bool is_start, bool is_search, int idx,
-      DiagonalInGeometryPlan * const geometry_planning,
+  bool ABSegmentPlan(const PlanningPoint &point_a, bool is_start,
+      bool is_search, int idx, ParallelInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool BCSegmentPlan(
-      const PlanningPoint &point_b, bool is_start, bool is_search, int idx,
-      DiagonalInGeometryPlan * const geometry_planning,
+  bool BCSegmentPlan(const PlanningPoint &point_b, bool is_start,
+      bool is_search, int idx, ParallelInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool CDSegmentPlan(
-      const PlanningPoint &point_c, bool is_start, bool is_search, int idx,
-      DiagonalInGeometryPlan * const geometry_planning,
+  bool CDSegmentPlan(const PlanningPoint &point_c, bool is_start,
+      bool is_search, int idx, ParallelInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool DESegmentPlan(
-      const PlanningPoint &point_d, bool is_start, bool is_search, int idx,
-      DiagonalInGeometryPlan * const geometry_planning,
+  bool DESegmentPlan(const PlanningPoint &point_d, bool is_start,
+      bool is_search, int idx, ParallelInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
+
+  bool EFSegmentPlan(const PlanningPoint &point_e, bool is_start,
+      bool is_search, int idx, ParallelInGeometryPlan * const geometry_planning,
+      PlanningOutput::PlanningOutput *const planning_output);
+
+  bool FHSegmentPlan(const PlanningPoint &point_f, bool is_start,
+      bool is_search, int idx, ParallelInGeometryPlan * const geometry_planning,
+      PlanningOutput::PlanningOutput *const planning_output);
 
   bool GenerateABSegmentTrajectory(
-      const DiagonalSegmentsInfo& segments_info,
+      const ParallelSegmentsInfo& segments_info,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
   bool GenerateBCSegmentTrajectory(
-      const DiagonalSegmentsInfo& segments_info,
+      const ParallelSegmentsInfo& segments_info,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
   bool GenerateCDSegmentTrajectory(
-      const DiagonalSegmentsInfo& segments_info,
+      const ParallelSegmentsInfo& segments_info,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
   bool GenerateDESegmentTrajectory(
-      const DiagonalSegmentsInfo& segments_info,
+      const ParallelSegmentsInfo& segments_info,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
-  void SetApaObjectInfo(int idx, DiagonalInGeometryPlan* geometry_planning) const;
+  bool GenerateEFSegmentTrajectory(
+      const ParallelSegmentsInfo& segments_info,
+      PlanningOutput::PlanningOutput *const planning_output) const;
+
+  bool GenerateFHSegmentTrajectory(
+      const ParallelSegmentsInfo& segments_info,
+      PlanningOutput::PlanningOutput *const planning_output) const;
+
+  void SetApaObjectInfo(int idx, ParallelInGeometryPlan* geometry_planning) const;
 
   void SetGeometryPlanningParameter(int idx,
-      DiagonalInGeometryPlan *geometry_planning) const;
+      ParallelInGeometryPlan *geometry_planning);
 
   void GetCurPtSpeed(const double segment_len, const double cur_s,
       const double spd_sign,
@@ -76,7 +89,7 @@ class DiagonalInTrajectoryGenerator {
 
   double CalApaTargetY() const;
 
-  double CalApaTargetX(int idx) const;
+  double CalApaTargetX() const;
 
   void CalApaTargetInSlot(int idx);
 
@@ -107,12 +120,21 @@ class DiagonalInTrajectoryGenerator {
   void PrintTrajectoryPoints(
       const PlanningOutput::PlanningOutput& planning_output) const;
 
+  void UpdateTargetPointInSlot(
+      const ParallelInGeometryPlan& geometry_planning) {
+    target_point_in_slot_  = geometry_planning.GetUpdatedTargetPoint();
+
+  PLANNING_LOG << "updated target_point_in_slot_ x:" << target_point_in_slot_.x
+      << ", y:" << target_point_in_slot_.y
+      << ", theta:" << target_point_in_slot_.theta << std::endl;
+  }
+
  private:
-  DiagonalInGeometryPlan geometry_planning_;
+  ParallelInGeometryPlan geometry_planning_;
 
-  int slot_sign_ = 0;  // 1:Right ,-1:Left, 0:Invalid
+  int slot_sign_ = 1;  // 1:Right,(default),-1:Left
 
-  const LocalView* local_view_ = nullptr;
+  const LocalView *local_view_ = nullptr;
 
   PlanningPoint slot_origin_in_odom_;
 

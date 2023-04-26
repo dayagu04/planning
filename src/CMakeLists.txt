@@ -61,6 +61,7 @@ SUBDIRLIST_SRC(${PROJECT_SOURCE_DIR}/common SRC_COMMON)
 SUBDIRLIST_SRC(${PROJECT_SOURCE_DIR}/modules SRC_MODULES)
 SUBDIRLIST_SRC(${PROJECT_SOURCE_DIR}/proto SRC_PROTO)
 SUBDIRLIST_SRC(${PROJECT_SOURCE_DIR}/../res/include/proto SRC_PROTO_LIB)
+SUBDIRLIST_SRC(${PROJECT_SOURCE_DIR}/apa_simulation SRC_APA_SIMULATION)
 
 # 组件间通讯协议
 # link_directories(../lib/protolib)
@@ -77,6 +78,11 @@ add_library(${PROJECT_NAME} SHARED
             ${SRC_FRAMEWORK}
             ${SRC_MODULES}
             ${SRC_PROTO}
+            ${SRC_PROTO_LIB}
+            )
+
+add_library(apa_simulation_component SHARED
+            ${SRC_APA_SIMULATION}
             ${SRC_PROTO_LIB}
             )
 
@@ -112,6 +118,11 @@ else()
                               autoplt
                               NanoLog
                               )
+        target_link_libraries(apa_simulation_component PUBLIC
+                              cyber
+                              protobuf
+                              autoplt
+                              )
     # X86
     else()
         target_link_libraries(${PROJECT_NAME} PUBLIC
@@ -122,6 +133,11 @@ else()
                               autoplt
                               osqp
                               mjson
+                              )
+        target_link_libraries(apa_simulation_component PUBLIC
+                              cyber
+                              protobuf
+                              autoplt
                               )
     endif()
 endif()
