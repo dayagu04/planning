@@ -168,7 +168,7 @@ Obstacle::Obstacle(int id,
     LOG_DEBUG("polygon_debug invalid cart polygon");
   }
   std::vector<planning_math::Vec2d> ego_polygon_points;
-  LOG_DEBUG("obstacle[%d] polygon size : %d %d, ego x %f y %f", prediction_object.bottom_polygon_points.size(),
+  LOG_DEBUG("obstacle[%d] polygon size : %d %d, ego x %f y %f\n",id_, prediction_object.bottom_polygon_points.size(),
       polygon_points.size(), x_center_, y_center_);
   for (const auto &point : perception_polygon_.points()) {
     ego_polygon_points.emplace_back(planning_math::Vec2d(
@@ -177,7 +177,7 @@ Obstacle::Obstacle(int id,
   }
   // LOG_DEBUG("obstacle[%d] last polygon size : %d", polygon_points.size());
   if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
-                                                     &car_ego_polygon_)) {
+                                                     &obstacle_ego_polygon_)) {
     LOG_DEBUG("polygon_debug invalid ego polygon");
   }
   is_virtual_ = id_ < 0;
@@ -426,7 +426,7 @@ planning_math::Polygon2d Obstacle::get_polygon_at_point(
   }
   planning_math::Polygon2d polygon;
   if (!planning_math::Polygon2d::ComputeConvexHull(polygon_points, &polygon)) {
-    LOG_DEBUG("polygon_debug : get position %f %f failed", point.path_point.x,
+    LOG_DEBUG("polygon_debug : get position %f %f failed\n", point.path_point.x,
           point.path_point.y);
     for (auto p : polygon_points) {
       LOG_DEBUG("polygon_debug invald point x %f y %f", p.x() - point.path_point.x,
@@ -434,7 +434,7 @@ planning_math::Polygon2d Obstacle::get_polygon_at_point(
     }
     if (!planning_math::Polygon2d::ComputeConvexHull(
             get_bounding_box(point).GetAllCorners(), &polygon)) {
-      LOG_DEBUG("polygon_debug : invalid box polygon");
+      LOG_DEBUG("polygon_debug : invalid box polygon\n");
     }
   }
   return polygon;

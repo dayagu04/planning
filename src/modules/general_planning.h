@@ -71,11 +71,6 @@ class GeneralPlanning {
   void UpdatePredictionInfo(double current_time);
   void UpdateFusionObjectInfo(double current_time);
 
-  // 更新地图、车道线、障碍物等
-  // void update_worldmodel_info(double current_time);
-
-  bool InputReady(double current_time, std::string &error_msg);
-
   void FillPlanningTrajectory(double start_time, PlanningOutput::PlanningOutput *const planning_output);
 
   void GenerateStopTrajectory(double start_time, PlanningOutput::PlanningOutput *const planning_output);

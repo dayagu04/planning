@@ -90,7 +90,7 @@ void FrenetEgoState::update(
       planning_init_point_.frenet_state.dr_ds,
       planning_init_point_.frenet_state.ddr_dsds, ego_state.ego_carte().x, ego_state.ego_carte().y,
       s_, l_);
-  LOG_DEBUG("planning_init_point_valid: %d", ok);
+  LOG_DEBUG("planning_init_point_valid: %d\n", ok);
   planning_init_point_valid_ = ok;
 }
 

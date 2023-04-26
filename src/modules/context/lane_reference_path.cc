@@ -3,14 +3,14 @@
 #include "framework/session.h"
 #include "modules/context/obstacle_manager.h"
 #include "modules/context/virtual_lane_manager.h"
-
+#include "common/ifly_time.h"
 namespace planning {
 
 
 using namespace planning_math;
 
 LaneReferencePath::LaneReferencePath(int target_lane_virtual_id) : ReferencePath() {
-  target_lane_virtual_id_ = target_lane_virtual_id;
+  lane_virtual_id_ = target_lane_virtual_id;
   // update();
   LOG_DEBUG("lane_reference_path: target_lane_virtual_id: %d", target_lane_virtual_id);
 }
@@ -19,7 +19,8 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   session_ = session;
   // Step 1) get reference_points
   ReferencePathPoints points;
-  bool ok = get_points_by_lane_id(target_lane_virtual_id_, points);
+  
+  bool ok = get_points_by_lane_id(lane_virtual_id_, points);
 
   // Step 2) update
   if (ok) {
@@ -73,7 +74,7 @@ void LaneReferencePath::update_obstacles() {
       session_->mutable_environmental_model()->get_obstacle_manager();
   frenet_obstacles_ = obstacle_manager->get_reference_path_obstacles(*this);
   frenet_obstacles_map_ =
-      obstacle_manager->get_reference_path_obstacles_map(*this);
+      obstacle_manager->get_reference_path_obstacles_map(*this); //功能有点重复
 
   parking_spaces_ = obstacle_manager->get_parking_space().Items();
   free_space_ground_lines_ =

@@ -8,7 +8,7 @@ class LaneReferencePath : public ReferencePath {
   LaneReferencePath(int target_lane_virtual_id);
   virtual ~LaneReferencePath() = default;
 
-  int get_lane_id() { return target_lane_virtual_id_; }
+  int get_lane_id() { return lane_virtual_id_; }
 
   virtual void update(planning::framework::Session *session);
 
@@ -18,7 +18,7 @@ class LaneReferencePath : public ReferencePath {
   virtual void update_obstacles();
   bool get_points_by_lane_id(int target_lane_virtual_id, ReferencePathPoints &points);
 
-  int target_lane_virtual_id_ = 0;
+  int lane_virtual_id_ = 0;
 };
 
 }  // namespace planning

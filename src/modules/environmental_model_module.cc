@@ -70,7 +70,7 @@ void EnvironmentalModelModule::compute(planning::framework::Frame* frame) {
 
   LOG_DEBUG("%s compute\n", name().c_str());
   if (!frame->session()->environmental_model().GetVehicleDbwStatus()) {
-    LOG_WARNING("%s DBW_Disable, but continue", name().c_str());
+    LOG_WARNING("%s DBW_Disable, but continue\n", name().c_str());
   }
 
   bool success = false;
@@ -78,7 +78,7 @@ void EnvironmentalModelModule::compute(planning::framework::Frame* frame) {
   success = environmental_model_manager_.Run(frame);
 
   if (!success) {
-    LOG_ERROR("%s planning run failed", name().c_str());
+    LOG_ERROR("%s planning run failed\n", name().c_str());
     return;
   }
 

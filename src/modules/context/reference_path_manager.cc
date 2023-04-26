@@ -44,15 +44,14 @@ void ReferencePathManager::update() {
   for (auto it = reference_paths_.begin(); it != reference_paths_.end();) {
     auto lane_id = it->first.second;
     if (virtual_lane_manager->has_lane(lane_id)) {
-      LOG_DEBUG("--------- for lane_id: update %d", lane_id);
+      LOG_DEBUG("--------- for lane_id: update %d\n", lane_id);
       it->second->update(session_);
       ++it;
     } else {
-      LOG_DEBUG("--------- for lane_id: delete %d", lane_id);
+      LOG_DEBUG("--------- for lane_id: delete %d\n", lane_id);
       it = reference_paths_.erase(it);
     }
   }
-
 }
 std::shared_ptr<ReferencePath> make_map_lane_reference_path(
     ReferencePathManager* reference_path_manager, int lane_id) {

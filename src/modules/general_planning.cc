@@ -26,7 +26,7 @@ void GeneralPlanning::Init() {
   session_.mutable_vehicle_config_context()->set_vehicle_param(vehicle_param);
   EnvironmentalModel *environmental_model = session_.mutable_environmental_model();
   environmental_model->set_vehicle_param(
-      session_.vehicel_config_context().get_vehicle_param());
+      session_.vehicle_config_context().get_vehicle_param());
 }
 
 bool GeneralPlanning::RunOnce(
@@ -52,26 +52,10 @@ bool GeneralPlanning::RunOnce(
   printf("VERSION: 2023-03-31 \n");
   // 1.校验输入 TBD
 
-  // 2.update world module from local_view_
-  double current_time = IflyTime::Now_ms();
-
-  LOG_DEBUG("update_raw_environmental_model is finished !!!! \n");
-  std::string status_msg;
-  if (!InputReady(current_time, status_msg)) {
-    LOG_ERROR("run_once is failed !!!! \n");
-    return false;
-  }
-
   if (reset_pnc_) {
     // reset dbw when hdmap_valid is changed
     environmental_model->UpdateVehicleDbwStatus(false);
     reset_pnc_ = false;
-  }
-
-  if (!environmental_model->Update()) {
-    LOG_ERROR("(%s)environmental model update error", __FUNCTION__, "\n");
-    status_msg = "planning environmental model update error.";
-    return false;
   }
 
   // 开始执行规划部分
@@ -103,10 +87,6 @@ bool GeneralPlanning::RunOnce(
   double end_time = IflyTime::Now_ms();
   LOG_DEBUG("The time cost of RunOnce is: %f \n", end_time - start_timestamp);
   return false;
-}
-
-bool GeneralPlanning::InputReady(double current_time, std::string &error_msg) {
-  return true;
 }
 
 void GeneralPlanning::FillPlanningTrajectory(

@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
   if(argc==2) {
     bagPath=argv[1];
   } else {
-    bagPath="/home/ros/Downloads/bag/shuxihu_curve_brake_2.00000"; ///home/root/shuxihu_0118/fangxingdadao_4.00000   /home/ros/Downloads/360_jichang_26.00000
+    bagPath="/home/ros/Downloads/bag/jichang_urban_2.00000"; ///home/root/shuxihu_0118/fangxingdadao_4.00000   /home/ros/Downloads/360_jichang_26.00000
   }///home/ros/Downloads/bag/shuxihu_curve_brake_2.00000
   LOG_DEBUG("bag path is %s\n",bagPath.c_str());
   if (access(bagPath.c_str(), F_OK) != 0) {
@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
 
 
   uint32_t count;
-  while (1) //apollo::cyber::OK()
+  while (apollo::cyber::OK()) //apollo::cyber::OK()
   {
     count++;
     LOG_DEBUG("***********read new frame %d******************\n",count);
@@ -199,6 +199,8 @@ void convertMsg(const OldLocalView &old_local_view, planning::LocalView &local_v
   local_view.vehicel_service_output_info.set_vehicle_speed_available(1);
   local_view.vehicel_service_output_info.set_vehicle_speed(old_local_view.ego_motion.veh_spd());
 
+  local_view.vehicel_service_output_info.set_long_acceleration_available(1);
+
   local_view.vehicel_service_output_info.set_vehicle_speed_display_available(1);
   local_view.vehicel_service_output_info.set_vehicle_speed_display(old_local_view.ego_motion.veh_spd()+3);
 
@@ -210,7 +212,13 @@ void convertMsg(const OldLocalView &old_local_view, planning::LocalView &local_v
   local_view.vehicel_service_output_info.set_left_turn_light_state(old_local_view.ego_motion.left_turn_light_state());
   local_view.vehicel_service_output_info.set_right_turn_light_state(old_local_view.ego_motion.right_turn_light_state());
 
+  local_view.vehicel_service_output_info.set_fl_wheel_speed_available(1);
+  local_view.vehicel_service_output_info.set_fr_wheel_speed_available(1);
+  local_view.vehicel_service_output_info.set_rl_wheel_speed_available(1);
+  local_view.vehicel_service_output_info.set_rr_wheel_speed_available(1);
+
   local_view.hmi_mcu_inner_info.set_acc_set_disp_speed(old_local_view.ego_motion.function().function_data().acc_cruise_velocity());
+  local_view.hmi_mcu_inner_info.set_noa_active_switch(old_local_view.ego_motion.function().function_data().acc_active_switch());
   // local_view.hmi_mcu_inner_info
   // vehicleEgoMotionmsg.accel=old_local_view.ego_motion.accel();
   // vehicleEgoMotionmsg.yaw_rate=old_local_view.ego_motion.yaw_rate();
@@ -224,7 +232,8 @@ void convertMsg(const OldLocalView &old_local_view, planning::LocalView &local_v
   // vehicleEgoMotionmsg.function.function_data.lcc_active_switch=old_local_view.ego_motion.function().function_data().lcc_active_switch();
 
   //车道线
-  auto lane = local_view.road_info.add_lanes();
+  FusionRoad::RoadInfo road_info;
+  auto lane = road_info.add_lanes();
   lane->set_virtual_id(0);
   lane->set_relative_id(0);
   lane->mutable_left_lane_boundary()->set_existence(1);
@@ -241,21 +250,22 @@ void convertMsg(const OldLocalView &old_local_view, planning::LocalView &local_v
   lane->mutable_right_lane_boundary()->add_poly_coefficient(0);
   lane->mutable_right_lane_boundary()->set_begin(0);
   lane->mutable_right_lane_boundary()->set_end(80);
-  
   double distance = 80;
-  for(float dis = -30 ; dis < distance; dis += 0.2) {
+  // lane->lane_reference_line().clear_virtual_lane_refline_points();
+  for(float dis = -30 ; dis < distance; dis += 2) {
      
-    auto point = lane->lane_reference_line().add_virtual_lane_refline_points();
+    auto point = lane->mutable_lane_reference_line()->add_virtual_lane_refline_points();
     point->mutable_car_point()->set_x(dis);
     point->mutable_car_point()->set_y(0);
     point->mutable_enu_point()->set_x(dis);
     point->mutable_enu_point()->set_y(0);
   }
-  
+  local_view.road_info = road_info;
   //感知障碍物
 
   local_view.fusion_objects_info.mutable_header()->set_timestamp(old_local_view.fusion_out.camera_timestamp());
   local_view.fusion_objects_info.set_num(old_local_view.fusion_out.fusion().num_obstacle());
+  local_view.fusion_objects_info.clear_fusion_object();
   for (auto &fusion_object : old_local_view.fusion_out.fusion().objects()) {
     auto fusion_obj = local_view.fusion_objects_info.add_fusion_object();
     fusion_obj->mutable_additional_info()->set_track_id(fusion_object.track_id());

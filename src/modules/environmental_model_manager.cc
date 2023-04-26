@@ -77,48 +77,87 @@ void EnvironmentalModelManager::InitContext() {
 bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   frame_ = frame;
 
-  auto start_time = IflyTime::Now_ms();
+  auto current_time = IflyTime::Now_ms();
   auto &local_view = session_->environmental_model().get_local_view();
-  // Step 2) update planning world
-  if (!ego_state_update(local_view)) {
+
+  // Step 2) update ehicleDbwStatus 
+  session_->mutable_environmental_model()->UpdateVehicleDbwStatus(
+    local_view.hmi_mcu_inner_info.noa_active_switch());
+  last_feed_time_[FEED_VEHICLE_DBW_STATUS] = current_time;
+
+  // Step 2) update ego_state
+  if (!ego_state_update(current_time, local_view)) {
     return false;
   }
-
+  auto end_time = IflyTime::Now_ms();
+  LOG_DEBUG("ego_state_update time:%f\n", end_time - current_time);
+  current_time = end_time;
+  // Step 3) update virtual_lane
   if (!virtual_lane_manager_ptr_->update(local_view.road_info)) {
     LOG_ERROR("virtual_lane_manager update failed");
     return false;
+  } else {
+    //后面需要判断是否为地图
+    last_feed_time_[FEED_FUSION_LANES_INFO] = current_time;
   }
 
-  if (!obstacle_prediction_update(local_view)) {
+  // end_time = IflyTime::Now_ms();
+  // LOG_DEBUG("virtual_lane_manager time:%f\n", end_time - current_time);
+  // current_time = end_time;
+
+  // Step 3) update obstacle
+  if (!obstacle_prediction_update(current_time, local_view)) {
     return false;
   }
-  // session_->environmental_model().get_prediction_info()
+  // end_time = IflyTime::Now_ms();
+  // LOG_DEBUG("obstacle_prediction_update time:%f\n", end_time - current_time);
+  // current_time = end_time;
+
   obstacle_manager_ptr_->update();
+  // end_time = IflyTime::Now_ms();
+  // LOG_DEBUG("obstacle_manager update time:%f\n", end_time - current_time);
+  // current_time = end_time;
 
   reference_path_manager_ptr_->update();
+  // end_time = IflyTime::Now_ms();
+  // LOG_DEBUG("reference_path_manager update time:%f\n", end_time - current_time);
+  // current_time = end_time;
+
 
   obstacle_manager_ptr_->assign_obstacles_to_lanes();
-
+  // end_time = IflyTime::Now_ms();
+  // LOG_DEBUG("assign_obstacles_to_lanes update time:%f\n", end_time - current_time);
+  // current_time = end_time;
   //   traffic_light_decision_manager_ptr_->update();
 
   // TODO(Rui):lateral_obstacle_ptr_->update() only for real time planner
   lateral_obstacle_ptr_->update();
+  // end_time = IflyTime::Now_ms();
+  // LOG_DEBUG("lateral_obstacle_ptr update time:%f\n", end_time - current_time);
+  // current_time = end_time;
 
-  auto end_time = IflyTime::Now_ms();
-  LOG_DEBUG("update time:%f\n", end_time - start_time);
+  end_time = IflyTime::Now_ms();
+  LOG_DEBUG("update time:%f\n", end_time - current_time);
 
+  std::string status_msg;
+  if (!InputReady(current_time, status_msg)) {
+    LOG_ERROR("run_once is failed !!!! \n");
+    return false;
+  }
   return true;
 }
 
-bool EnvironmentalModelManager::ego_state_update(const LocalView& local_view) {
+bool EnvironmentalModelManager::ego_state_update(double current_time, const LocalView& local_view) {
   common::VehicleStatus vehicle_status;
-  vehicle_status_adaptor(local_view.vehicel_service_output_info, local_view.localization_estimate, local_view.hmi_mcu_inner_info,
+  vehicle_status_adaptor(current_time, local_view.vehicel_service_output_info, local_view.localization_estimate, local_view.hmi_mcu_inner_info,
                       vehicle_status);
   return ego_state_manager_ptr_->update(vehicle_status);
 }
 
-bool EnvironmentalModelManager::obstacle_prediction_update(const LocalView& local_view) {
+bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, const LocalView& local_view) {
   // fusion and prediction update
+  auto &prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
+  prediction_info.clear();
   if (local_view.prediction_result.prediction_obstacle_size() > 0) {
     std::unordered_set<uint> prediction_obj_id_set;
     truncate_prediction_info(local_view.prediction_result, local_view.localization_estimate.header().timestamp(), prediction_obj_id_set);
@@ -131,6 +170,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(const LocalView& loca
       if (prediction_obj_id_set.find(obj.additional_info().track_id()) == prediction_obj_id_set.end()) {
         transform_fusion_to_prediction(obj, (double)local_view.fusion_objects_info.header().timestamp());
       }
+      last_feed_time_[FEED_FUSION_INFO] = current_time;
     }
   } else {
     int num = 0;
@@ -143,6 +183,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(const LocalView& loca
         continue;
       }
       transform_fusion_to_prediction(obj, (double)local_view.fusion_objects_info.header().timestamp());
+      last_feed_time_[FEED_FUSION_INFO] = current_time;
     }
   }
 
@@ -154,11 +195,12 @@ bool EnvironmentalModelManager::obstacle_prediction_update(const LocalView& loca
       break;
     }
     transform_surround_radar_to_prediction(obj);
+    last_feed_time_[FEED_SURR_RADAR_INFO] = current_time;
   }
   return true;
 }
 
-void EnvironmentalModelManager::vehicle_status_adaptor(const VehicleService::VehicleServiceOutputInfo &vehicel_service_output_info,
+void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, const VehicleService::VehicleServiceOutputInfo &vehicel_service_output_info,
                                          const LocalizationOutput::LocalizationEstimate &localization_estimate,
                                          const HimMcuInner::HmiMcuInner &hmi_mcu_inner_info,
                                          common::VehicleStatus &vehicle_status) {
@@ -182,6 +224,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(const VehicleService::Veh
     vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_y(enu_orientation.qy());
     vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_z(enu_orientation.qz());
     vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_w(enu_orientation.qw());
+    last_feed_time_[FEED_EGO_ENU] = current_time;
   } else {
     if (vehicel_service_output_info.yaw_rate_available()) {
       vehicle_status.mutable_heading_yaw()->mutable_heading_yaw_data()
@@ -190,8 +233,6 @@ void EnvironmentalModelManager::vehicle_status_adaptor(const VehicleService::Veh
       vehicle_status.mutable_heading_yaw()->mutable_heading_yaw_data()
                               ->set_value_rad(0);
     }
-
-
     auto location_enu = vehicle_status.mutable_location()->mutable_location_enu();
     //Todo
     //location_enu->set_timestamp_us(static_cast<uint64_t>(current_time * 1e6));
@@ -202,10 +243,8 @@ void EnvironmentalModelManager::vehicle_status_adaptor(const VehicleService::Veh
     location_enu->mutable_orientation()->set_y(0.0);
     location_enu->mutable_orientation()->set_z(0.0);
     location_enu->mutable_orientation()->set_w(1.0);
+    last_feed_time_[FEED_EGO_ENU] = current_time;
   }
-
-
-  //Todo
 
   vehicle_status.mutable_velocity()->mutable_cruise_velocity()
                 ->set_value_mps(hmi_mcu_inner_info.acc_set_disp_speed());
@@ -213,14 +252,19 @@ void EnvironmentalModelManager::vehicle_status_adaptor(const VehicleService::Veh
     vehicle_status.mutable_velocity()->set_available(true);
     vehicle_status.mutable_velocity()->mutable_heading_velocity()
                       ->set_value_mps(vehicel_service_output_info.vehicle_speed());
-
+    last_feed_time_[FEED_EGO_VEL] = current_time;
   }
+
+  if (vehicel_service_output_info.long_acceleration_available()) {
+    vehicle_status.mutable_brake_info()->mutable_brake_info_data()
+                            ->set_acceleration_on_vehicle_wheel(vehicel_service_output_info.long_acceleration());
+    last_feed_time_[FEED_EGO_ACC] = current_time;
+  }
+
   if (vehicel_service_output_info.vehicle_speed_display_available()) {
     vehicle_status.mutable_velocity()->set_available(true);
     vehicle_status.mutable_velocity()->set_hmi_speed(vehicel_service_output_info.vehicle_speed_display());
   }
-
-
 
   if (session_->environmental_model().get_hdmap_valid()) {
     auto linear_velocity_from_wheel = localization_estimate.pose().linear_velocity_from_wheel();
@@ -240,12 +284,21 @@ void EnvironmentalModelManager::vehicle_status_adaptor(const VehicleService::Veh
     steering_data->mutable_steering_wheel_data()->set_steering_wheel_rad(vehicel_service_output_info.steering_wheel_angle());
     steering_data->mutable_steering_wheel_data()->set_steering_wheel_torque(vehicel_service_output_info.power_train_current_torque());
 
-    //last_feed_time_[FEED_EGO_STEER_ANGLE] = current_time;
+    last_feed_time_[FEED_EGO_STEER_ANGLE] = current_time;
   }
 
-  if (vehicel_service_output_info.long_acceleration_available()) {
-    vehicle_status.mutable_brake_info()->mutable_brake_info_data()
-                            ->set_acceleration_on_vehicle_wheel(vehicel_service_output_info.long_acceleration());
+  if (vehicel_service_output_info.fl_wheel_speed_available() &&
+      vehicel_service_output_info.fr_wheel_speed_available() &&
+      vehicel_service_output_info.rl_wheel_speed_available() &&
+      vehicel_service_output_info.rr_wheel_speed_available()) {
+    vehicle_status.mutable_wheel_velocity()->set_available(true); // hack
+    auto wheel_velocity4d = vehicle_status.mutable_wheel_velocity()
+                                        ->mutable_wheel_velocity4d();
+    wheel_velocity4d->set_front_left(vehicel_service_output_info.fl_wheel_speed());
+    wheel_velocity4d->set_front_right(vehicel_service_output_info.fr_wheel_speed());
+    wheel_velocity4d->set_rear_left(vehicel_service_output_info.rl_wheel_speed());
+    wheel_velocity4d->set_rear_right(vehicel_service_output_info.rr_wheel_speed());
+    last_feed_time_[FEED_WHEEL_SPEED_REPORT] = current_time;
   }
 
   if (vehicel_service_output_info.power_train_override_flag_available()) {
@@ -255,14 +308,23 @@ void EnvironmentalModelManager::vehicle_status_adaptor(const VehicleService::Veh
   auto vehicle_light = vehicle_status.mutable_vehicle_light();
   if (vehicel_service_output_info.left_turn_light_state() && vehicel_service_output_info.left_turn_light_state_available()) {
     vehicle_light->mutable_vehicle_light_data()->mutable_turn_signal()->set_value(common::TurnSignalType::LEFT);
+    last_feed_time_[FEED_MISC_REPORT] = current_time;
   } else if (vehicel_service_output_info.right_turn_light_state() && vehicel_service_output_info.right_turn_light_state_available()) {
     vehicle_light->mutable_vehicle_light_data()->mutable_turn_signal()->set_value(common::TurnSignalType::RIGHT);
+    last_feed_time_[FEED_MISC_REPORT] = current_time;
   } else if (vehicel_service_output_info.hazard_light_state() && vehicel_service_output_info.hazard_light_state_available()) {
     vehicle_light->mutable_vehicle_light_data()->mutable_turn_signal()->set_value(common::TurnSignalType::EMERGENCY_FLASHER);
+    last_feed_time_[FEED_MISC_REPORT] = current_time;
   } else {
     vehicle_light->mutable_vehicle_light_data()->mutable_turn_signal()->set_value(common::TurnSignalType::NONE);
+    last_feed_time_[FEED_MISC_REPORT] = current_time;
   }
-  vehicle_light->mutable_vehicle_light_data()->set_auto_light_state(vehicel_service_output_info.auto_light_state());
+
+  if (vehicel_service_output_info.auto_light_state_available()) {
+    vehicle_light->mutable_vehicle_light_data()->set_auto_light_state(vehicel_service_output_info.auto_light_state());
+    last_feed_time_[FEED_MISC_REPORT] = current_time;
+  }
+  
 
   if (vehicel_service_output_info.driver_hand_torque_available()) {
     vehicle_status.mutable_driver_hand_state()->set_driver_hand_torque(vehicel_service_output_info.driver_hand_torque());
@@ -467,6 +529,74 @@ void EnvironmentalModelManager::transform_surround_radar_to_prediction(RadarPerc
   //std::vector<Point3d> bottom_polygon_points;
   //std::vector<Point3d> top_polygon_points;
   prediction_info.emplace_back(prediction_object);
+}
+
+bool EnvironmentalModelManager::InputReady(double current_time, std::string &error_msg) {
+  auto to_string = [](FeedType feed_type) -> const char * {
+    switch (feed_type) {
+      case FEED_VEHICLE_DBW_STATUS:
+        return "vehicle_dbw_status";
+      case FEED_EGO_VEL:
+        return "ego_pose_and_vel";
+      case FEED_EGO_STEER_ANGLE:
+        return "ego_steer_angle";
+      case FEED_EGO_ENU:
+        return "ego_enu";
+      case FEED_WHEEL_SPEED_REPORT:
+        return "wheel_speed_report";
+      case FEED_EGO_ACC:
+        return "ego_acc";
+      case FEED_MISC_REPORT:
+        return "misc_report";
+      case FEED_MAP_INFO:
+        return "map_info";
+      case FEED_SURR_RADAR_INFO:
+        return "surr_radar_info";
+      case FEED_FUSION_INFO:
+        return "fusion_info";  
+      case FEED_PREDICTION_INFO:
+        return "prediction_info";
+      case FEED_FUSION_LANES_INFO:
+        return "fusion_lanes_info";
+      default:
+        return "unknown type";
+    };
+  };
+
+  static const double kCheckTimeDiff = 2.0;
+
+  error_msg.clear();
+
+  bool res = true;
+  for (int i = 0; i < FEED_TYPE_MAX; ++i) {
+    const char *feed_type_str = to_string(static_cast<FeedType>(i));
+
+    if (session_->environmental_model().get_hdmap_valid()) {
+      // use hdmap if vaild, skip fusion lanes
+      if (i == FEED_FUSION_LANES_INFO) {
+        continue;
+      }
+    } else {
+      // support for vision only //todo deal with FEED_SURR_RADAR_INFO
+      if ((i == FEED_MAP_INFO) || (i == FEED_PREDICTION_INFO) || (i == FEED_SURR_RADAR_INFO)) {
+        continue;
+      }
+    }
+    if (last_feed_time_[i] > 0.0) {
+      if (current_time - last_feed_time_[i] > kCheckTimeDiff) {
+        LOG_ERROR("(%s)feed delay: %d, %s", __FUNCTION__, i, feed_type_str,
+                  "\n");
+        error_msg += std::string(feed_type_str) + "; ";
+        res = false;
+      }
+    } else {
+      // LOG_ERROR("(%s)no feed: %d, %s", __FUNCTION__, i, feed_type_str, "\n");
+      LOG_ERROR("no feed: '%s'\n", feed_type_str);
+      error_msg += std::string(feed_type_str) + "; ";
+      res = false;
+    }
+  }
+  return res;
 }
 
 }  // namespace planner
