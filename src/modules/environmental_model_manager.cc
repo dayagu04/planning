@@ -337,7 +337,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
 }
 
 void EnvironmentalModelManager::truncate_prediction_info(const Prediction::PredictionResult& prediction_result, double cur_timestamp_us, std::unordered_set<uint>& prediction_obj_id_set) {
-  assert(session_ == nullptr);
+  assert(session_ != nullptr);
 
   double ego_rear_axis_to_front_edge = 0;
 
@@ -432,7 +432,7 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
 }
 
 PredictionTrajectoryPoint EnvironmentalModelManager::GetPointAtTime(const std::vector<PredictionTrajectoryPoint>& trajectory_points, const double relative_time) const {
-  assert(trajectory_points.size() == 0);
+  assert(trajectory_points.size() != 0);
 
   if (trajectory_points.size() < 2) {
     return trajectory_points.at(0);

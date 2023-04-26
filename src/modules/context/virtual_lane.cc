@@ -264,7 +264,7 @@ void VirtualLane::update_speed_limit(double ego_vel, double ego_v_cruise) { //to
     v_cruise_ = ego_v_cruise;
   }
 
-  assert(reference_path_ == nullptr);
+  assert(reference_path_ != nullptr);
   auto &referece_path_points = reference_path_->get_points();
   if (referece_path_points.size() > 1) {
     double last_speed;

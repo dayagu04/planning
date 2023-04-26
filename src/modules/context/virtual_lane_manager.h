@@ -39,7 +39,12 @@ class VirtualLaneManager {
   int current_lane_virtual_id() {
     return current_lane_->get_virtual_id();
   }
-  std::shared_ptr<VirtualLane> mutable_lane_with_virtual_id(int virtual_id);
+  std::shared_ptr<VirtualLane> mutable_lane_with_virtual_id(int virtual_id) {
+    if (virtual_id_mapped_lane_.find(virtual_id) != virtual_id_mapped_lane_.end()) {
+      return virtual_id_mapped_lane_[virtual_id];
+    }
+    return nullptr;
+  }
   std::vector<std::shared_ptr<VirtualLane>>& get_virtual_lanes() { return relative_id_lanes_; }
   uint get_lane_num() const { return relative_id_lanes_.size(); };
   std::vector<std::shared_ptr<Obstacle>> get_current_lane_obstacle();

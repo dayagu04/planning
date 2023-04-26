@@ -4,6 +4,7 @@
 #include "modules/context/obstacle_manager.h"
 #include "modules/context/virtual_lane_manager.h"
 #include "common/ifly_time.h"
+
 namespace planning {
 
 
@@ -20,7 +21,7 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   // Step 1) import reference_path pointer to virtual_lane
   auto virtual_lane = session->mutable_environmental_model()->mutable_virtual_lane_manager()
                                         ->mutable_lane_with_virtual_id(lane_virtual_id_);
-  virtual_lane->update_reference_path(std::shared_ptr<LaneReferencePath>(this));
+  virtual_lane->update_reference_path(shared_from_this());
 
   // Step 2) get reference_points
   ReferencePathPoints points;

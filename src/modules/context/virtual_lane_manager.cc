@@ -99,7 +99,7 @@ void VirtualLaneManager::update_virtual_id() {
 }
 
 LaneChangeStatus VirtualLaneManager::is_lane_change() {
-  LaneChangeStatus change_statu = LaneChangeStatus::NO_LANE_CHANGE;
+  LaneChangeStatus change_status = LaneChangeStatus::NO_LANE_CHANGE;
   const float lane_change_thre = 1;
 
   if (virtual_id_mapped_lane_.find(current_lane_virtual_id_) != virtual_id_mapped_lane_.end()) {

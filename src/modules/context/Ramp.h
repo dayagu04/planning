@@ -6,7 +6,7 @@ namespace planning {
 
 class Ramp {
  public:
-  double dis_to_ramp() {
+  double dis_to_ramp() const {
     return NL_NMAX;
   }
 };

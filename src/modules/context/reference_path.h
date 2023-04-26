@@ -37,7 +37,7 @@ struct ReferencePathPoint {
 };
 using ReferencePathPoints = std::vector<ReferencePathPoint>;
 
-class ReferencePath {
+class ReferencePath : public std::enable_shared_from_this<ReferencePath>{
  public:
   ReferencePath();
   virtual ~ReferencePath() = default;
