@@ -5,6 +5,9 @@
 #include "common/utils/pose2d_utils.h"
 #include "modules/context/virtual_lane_manager.h"
 #include "src/modules/common/config/basic_type.h"
+#include "src/modules/common/define/planning_status.h"
+#include "src/modules/context/lateral_obstacle.h"
+#include "src/modules/scenario/scenario_state_machine.h"
 #include "src/modules/tasks/task.h"
 namespace planning {
 typedef enum {
@@ -31,29 +34,25 @@ class LateralMotionPlannerV1 : public Task {
 
   bool Execute(planning::framework::Frame *frame) override;
 
-  bool update_basic_path(const int &lane_status);
+  bool update_basic_path(const int &status);
 
-  bool update_premove_path(
-      int lane_status, bool execute_premove, bool should_suspend,
-      bool exist_accident_ahead,
-      const std::array<std::vector<double>, 2> &avoid_car_info);
+  void update_premove_path(
+      int status, bool should_premove, bool should_suspend, bool accident_ahead,
+      const std::array<std::vector<double>, 2> &avd_car_past);
 
   bool update_avoidance_path(
-      int lane_status, bool flag_avoid, bool exist_accident_ahead,
-      bool execute_premove, double dist_rblane,
-      const std::array<std::vector<double>, 2> &avoid_car_info,
-      const std::array<std::vector<double>, 2> &avoid_sp_car_info);
+      int status, bool flag_avd, bool accident_ahead, bool should_premove,
+      double dist_rblane,
+      const std::array<std::vector<double>, 2> &avd_car_past,
+      const std::array<std::vector<double>, 2> &avd_sp_car_past);
 
-  bool check_premove(const int &lane_status);
-  bool check_avoidance_path(const int &lane_status);
+  void calc_desired_path(const std::array<double, 4> &l_poly,
+                         const std::array<double, 4> &r_poly, double l_prob,
+                         double r_prob, double intercept_width,
+                         std::array<double, 4> &d_poly);
 
-  // void calc_desired_path(const CubicPoly &l_poly, const CubicPoly &r_poly,
-  //                        const double &left_prob, const double &right_prob,
-  //                        const double &intercept_width,
-  //                        CubicPoly &desired_poly);
-
-  double calc_lane_width_by_dist(const std::vector<double> &left_poly,
-                                 const std::vector<double> &right_poly,
+  double calc_lane_width_by_dist(const std::array<double, 4> &left_poly,
+                                 const std::array<double, 4> &right_poly,
                                  const double &dist_x);
 
   bool update(int lane_status, bool flag_avoid, bool exist_accident_ahead,
@@ -70,6 +69,32 @@ class LateralMotionPlannerV1 : public Task {
   bool log_planner_debug_info();
 
   bool create_lateral_behavior_planner_msg(std::string &plan_msg);
+
+  void set_left_lane_boundary_poly() {
+    for (auto i = 0;
+         i < flane_->get_left_lane_boundary().poly_coefficient().size(); ++i) {
+      if (i < 4) {
+        left_lane_boundary_poly_[i] =
+            flane_->get_left_lane_boundary().poly_coefficient()[i];
+      }
+    }
+  }
+
+  void set_right_lane_boundary_poly() {
+    for (auto i = 0;
+         i < flane_->get_right_lane_boundary().poly_coefficient().size(); ++i) {
+      if (i < 4) {
+        right_lane_boundary_poly_[i] =
+            flane_->get_right_lane_boundary().poly_coefficient()[i];
+      }
+    }
+  }
+  const std::array<double, 4> left_lane_boundary_poly() & {
+    return left_lane_boundary_poly_;
+  };
+  const std::array<double, 4> right_lane_boundary_poly() & {
+    return right_lane_boundary_poly_;
+  };
 
  private:
   LateralMotionPlannerV1Config config_;
@@ -93,13 +118,28 @@ class LateralMotionPlannerV1 : public Task {
   double intercept_width_ = 3.8;
   int lb_suspend_cnt_ = 0;
   double suspend_lat_offset_ = 0;
+
+  bool cross_left_solid_line_ = false;
+  bool cross_right_solid_line_ = false;
   std::array<double, 4> c_poly_;
   std::array<double, 4> d_poly_;
   std::array<double, 4> l_poly_;
   std::array<double, 4> r_poly_;
+  std::array<double, 4> left_lane_boundary_poly_;
+  std::array<double, 4> right_lane_boundary_poly_;
   std::array<std::vector<double>, 2> avd_car_past_;
+  std::array<std::vector<double>, 2> avd_sp_car_past_;
+  std::shared_ptr<ReferencePath> fix_reference_path_;
+  std::shared_ptr<VirtualLane> flane_;
+  std::shared_ptr<EgoStateManager> ego_cart_state_manager_;
+  FrenetEgoState ego_frenet_state_;
+  std::shared_ptr<VirtualLaneManager> virtual_lane_manager_;
 
-  // VirtualLaneManager &virtual_lane_mgr_;
+  int two_nudge_car_;
+  int one_nudge_left_car_;
+  int one_nudge_right_car_;
+  int lane_borrow_suspend_cnt_ = 0;
+  // int suspend_lat_offset_ = 0;
 };
 
 }  // namespace planning

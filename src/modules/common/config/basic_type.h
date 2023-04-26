@@ -36,7 +36,29 @@ enum LaneBoundaryType {
   MARKING_LEFT_DASHED_RIGHT_SOLID = 6,  // 左虚右实线
   MARKING_LEFT_SOLID_RIGHT_DASHED = 7   // 左实右虚线
 };
+enum MSDLaneType {
+  MSD_LANE_TYPE_UNKNOWN = 0,
+  MSD_LANE_TYPE_NORMAL = 1,
+  MSD_LANE_TYPE_VIRTUAL = 2,
+  MSD_LANE_TYPE_PARKING = 3,
+  MSD_LANE_TYPE_ACCELERATE = 4,
+  MSD_LANE_TYPE_DECELERATE = 5,
+  MSD_LANE_TYPE_BUS = 6,
+  MSD_LANE_TYPE_EMERGENCY = 7,
+  MSD_LANE_TYPE_ACCELERATE_DECELERATE = 8,
+  MSD_LANE_TYPE_LEFT_TURN_WAITTING_AREA = 9,
+  MSD_LANE_TYPE_NON_MOTOR = 10,
+  MSD_LANE_TYPE_RAMP = 11,
+};
 
+typedef enum {
+  UNKNOWN_POS = -100,
+  LEFT_LEFT_POS = -2,
+  LEFT_POS = -1,
+  CURR_POS = 0,
+  RIGHT_POS = 1,
+  RIGHT_RIGHT_POS = 2
+} LanePosition;
 enum RequestSource {
   NO_REQUEST,
   INT_REQUEST,
@@ -44,7 +66,71 @@ enum RequestSource {
   ACT_REQUEST,
   ROUTE_REQUEST
 };
+struct PointLLH {
+  double Longitude;  // Longitude in degrees, ranging from -180 to 180,(度)
+  double Latitude;   // Latitude in degrees, ranging from -90 to 90,(度)
+  double height;     // WGS-84 ellipsoid height in meters,(米)
+};
 
+struct EulerAngle {
+  double yaw;
+  double pitch;
+  double roll;
+};
+
+typedef enum {
+  BOTH_AVAILABLE = 0,
+  LEFT_AVAILABLE,
+  RIGHT_AVAILABLE,
+  BOTH_MISSING
+} LaneStatusEx;
+
+enum FusionSource { CAMERA_ONLY = 1, RADAR_ONLY, FUSION };
+typedef enum { LEFT = 0, RIGHT } LineDirection;
+struct TrackInfo {
+  TrackInfo() {}
+
+  TrackInfo(int id, double drel, double vrel)
+      : track_id(id), d_rel(drel), v_rel(vrel) {}
+
+  TrackInfo(const TrackInfo &track_info) {
+    track_id = track_info.track_id;
+    d_rel = track_info.d_rel;
+    v_rel = track_info.v_rel;
+  }
+
+  TrackInfo &operator=(const TrackInfo &track_info) {
+    track_id = track_info.track_id;
+    d_rel = track_info.d_rel;
+    v_rel = track_info.v_rel;
+    return *this;
+  }
+
+  void set_value(int id, double drel, double vrel) {
+    track_id = id;
+    d_rel = drel;
+    v_rel = vrel;
+  }
+
+  void reset() {
+    track_id = -10000;
+    d_rel = 0.0;
+    v_rel = 0.0;
+  }
+
+  int track_id = -10000;
+  double d_rel = 0.0;
+  double v_rel = 0.0;
+};
+
+struct LatBehaviorInfo {
+  std::array<std::vector<double>, 2> avd_car_past;
+  std::array<std::vector<double>, 2> avd_sp_car_past;
+  bool flag_avd;
+  double dist_rblane;
+};
+
+enum ObstacleIntentType { COMMON = 0, CUT_IN = 1 };
 struct VirtualPoint2D {
   double x = 0.0;
   double y = 0.0;
@@ -341,42 +427,27 @@ enum CurrentState {
   INTO_WAIT_ZONE
 };
 
-struct TrackInfo {
-  TrackInfo() {}
-
-  TrackInfo(int id, double drel, double vrel)
-      : track_id(id), d_rel(drel), v_rel(vrel) {}
-
-  TrackInfo(const TrackInfo &track_info) {
-    track_id = track_info.track_id;
-    d_rel = track_info.d_rel;
-    v_rel = track_info.v_rel;
-  }
-
-  TrackInfo &operator=(const TrackInfo &track_info) {
-    track_id = track_info.track_id;
-    d_rel = track_info.d_rel;
-    v_rel = track_info.v_rel;
-    return *this;
-  }
-
-  void set_value(int id, double drel, double vrel) {
-    track_id = id;
-    d_rel = drel;
-    v_rel = vrel;
-  }
-
-  void reset() {
-    track_id = -10000;
-    d_rel = 0.0;
-    v_rel = 0.0;
-  }
-
-  int track_id = -10000;
-  double d_rel = 0.0;
-  double v_rel = 0.0;
-};
-
+typedef enum { NORMAL_ROAD = 1, INTERSECT = 2 } AlgorithmScene;
+typedef enum {
+  LANE_CHANGE_LEFT = 1,
+  LANE_CHANGE_RIGHT = 2,
+  LANE_BORROW_LEFT = 4,
+  LANE_BORROW_RIGHT = 8,
+  INTERSECT_GO_STRAIGHT = 16,
+  INTERSECT_TURN_LEFT = 32,
+  INTERSECT_TURN_RIGHT = 64,
+  INTERSECT_U_TURN = 128,
+  LANE_BORROW_IN_NON_MOTORIZED_LANE = 256
+} AlgorithmAction;
+typedef enum {
+  LANE_CHANGE_WAITING = 1,
+  LANE_CHANGEING = 2,
+  LANE_CHANGE_BACK = 4,
+  LANE_BORROWING = 8,
+  LANE_BORROW_BACK = 16,
+  LANE_BORROW_RETURN = 32,
+  LANE_BORROW_SUSPEND = 64
+} AlgorithmStatus;
 struct LatBehaviorStateMachineOutput {
   int scenario;
   int curr_state;
@@ -447,35 +518,5 @@ struct LatBehaviorStateMachineOutput {
   TrackInfo lc_invalid_track;
   TrackInfo lc_back_track;
 };
-struct LatBehaviorInfo {
-  std::array<std::vector<double>, 2> avd_car_past;
-  std::array<std::vector<double>, 2> avd_sp_car_past;
-  bool flag_avd;
-  double dist_rblane;
-};
 
-struct PointLLH {
-  double Longitude;  // Longitude in degrees, ranging from -180 to 180,(度)
-  double Latitude;   // Latitude in degrees, ranging from -90 to 90,(度)
-  double height;     // WGS-84 ellipsoid height in meters,(米)
-};
-
-struct EulerAngle {
-  double yaw;
-  double pitch;
-  double roll;
-};
-
-typedef enum {
-  BOTH_AVAILABLE = 0,
-  LEFT_AVAILABLE,
-  RIGHT_AVAILABLE,
-  BOTH_MISSING
-} LaneStatusEx;
-
-typedef enum { LEFT = 0, RIGHT } LineDirection;
-
-enum FusionSource { CAMERA_ONLY = 1, RADAR_ONLY, FUSION };
-
-enum ObstacleIntentType { COMMON = 0, CUT_IN = 1 };
 }  // namespace planning

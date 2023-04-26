@@ -1,15 +1,17 @@
 #ifndef COMMON_LATERAL_BEHAVIOR_PLANNER_OUTPUT_
 #define COMMON_LATERAL_BEHAVIOR_PLANNER_OUTPUT_
 
-#include "geometry.h"
-#include "path_point.h"
-#include "src/modules/common/config/basic_type.h"
 #include <array>
 #include <map>
 #include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include "geometry.h"
+#include "path_point.h"
+#include "src/modules/common/config/basic_type.h"
+#include "src/modules/common/tracked_object.h"
 
 namespace planning {
 
@@ -274,8 +276,8 @@ struct MSDStateMachineOutput {
   bool should_premove;
   bool should_suspend;
   bool must_change_lane;
-  bool behavior_suspend;       // lateral suspend
-  std::vector<int> suspend_obs;// lateral suspend
+  bool behavior_suspend;         // lateral suspend
+  std::vector<int> suspend_obs;  // lateral suspend
 
   bool lc_pause;
   int lc_pause_id;
@@ -374,8 +376,8 @@ struct LateralBehaviorPlannerOutput {
   bool right_faster = false;
   bool close_to_accident = false;
   bool premove = false;
-  bool behavior_suspension = false; // lateral suspend
-  std::vector<int> suspension_obs;  // lateral suspend
+  bool behavior_suspension = false;  // lateral suspend
+  std::vector<int> suspension_obs;   // lateral suspend
   double angle_steers_limit = 0.0;
   double premove_dist = 0.0;
   std::vector<double> c_poly;
@@ -425,6 +427,6 @@ struct LateralBehaviorPlannerOutput {
   LateralBehaviorPlannerContext planner_context;
 };
 
-} // namespace planning
+}  // namespace planning
 
 #endif

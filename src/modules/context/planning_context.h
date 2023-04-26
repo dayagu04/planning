@@ -159,6 +159,9 @@ class PlanningContext {
   const std::shared_ptr<ScenarioStateMachine> &scenario_state_machine() const {
     return scenario_state_machine_ptr_;
   }
+  std::shared_ptr<ScenarioStateMachine> mutable_scenario_state_machine() {
+    return scenario_state_machine_ptr_;
+  }
   void set_scenario_state_machine(
       std::shared_ptr<ScenarioStateMachine> scenario_state_machine) {
     scenario_state_machine_ptr_ = scenario_state_machine;
@@ -208,7 +211,9 @@ class PlanningContext {
   SpeedLimit speed_limit_;
   LatBehaviorInfo lat_behavior_info_;
   LatBehaviorStateMachineOutput lat_behavior_state_machine_output_;
+
   LateralBehaviorPlannerOutput lateral_behavior_planner_output_;
+
   std::shared_ptr<ScenarioManager> scenario_manager_ptr_;
   std::shared_ptr<ObjectSelector> object_selector_ptr_;
   std::shared_ptr<ScenarioStateMachine> scenario_state_machine_ptr_;
