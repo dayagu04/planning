@@ -285,6 +285,11 @@ class Polygon2d {
   double min_y() const { return min_y_; }
   double max_y() const { return max_y_; }
 
+  // rotate around rotate_center, then translate
+  void RotateAndTranslate(const Vec2d& rotate_center,
+      const double sin_rotate_angle, const double cos_rotate_angle,
+      const Vec2d& translate_vector);
+
  protected:
   void BuildFromPoints();
   int Next(int at) const;

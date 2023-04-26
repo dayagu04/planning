@@ -294,6 +294,7 @@ void InitDefaults() {
 }
 
 ::google::protobuf::Metadata file_level_metadata[12];
+const ::google::protobuf::EnumDescriptor* file_level_enum_descriptors[1];
 
 const ::google::protobuf::uint32 TableStruct::offsets[] GOOGLE_PROTOBUF_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
   GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::PlanningOutput::PlanMeta, _has_bits_),
@@ -421,7 +422,9 @@ const ::google::protobuf::uint32 TableStruct::offsets[] GOOGLE_PROTOBUF_ATTRIBUT
   ~0u,  // no _weak_field_map_
   GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::PlanningOutput::PlanningStatus, standstill_),
   GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::PlanningOutput::PlanningStatus, ready_to_go_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::PlanningOutput::PlanningStatus, apa_planning_status_),
   0,
+  2,
   1,
   GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::PlanningOutput::PlanningOutput, _has_bits_),
   GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::PlanningOutput::PlanningOutput, _internal_metadata_),
@@ -456,8 +459,8 @@ static const ::google::protobuf::internal::MigrationSchema schemas[] GOOGLE_PROT
   { 87, 94, sizeof(::PlanningOutput::HornSignalCommand)},
   { 96, 103, sizeof(::PlanningOutput::GearCommand)},
   { 105, 114, sizeof(::PlanningOutput::OpenLoopSteeringCommand)},
-  { 118, 125, sizeof(::PlanningOutput::PlanningStatus)},
-  { 127, 140, sizeof(::PlanningOutput::PlanningOutput)},
+  { 118, 126, sizeof(::PlanningOutput::PlanningStatus)},
+  { 129, 142, sizeof(::PlanningOutput::PlanningOutput)},
 };
 
 static ::google::protobuf::Message const * const file_default_instances[] = {
@@ -479,7 +482,7 @@ void protobuf_AssignDescriptors() {
   AddDescriptors();
   AssignDescriptors(
       "planning_plan.proto", schemas, file_default_instances, TableStruct::offsets,
-      file_level_metadata, NULL, NULL);
+      file_level_metadata, file_level_enum_descriptors, NULL);
 }
 
 void protobuf_AssignDescriptorsOnce() {
@@ -527,24 +530,27 @@ void AddDescriptorsImpl() {
       "pSteeringCommand\022\021\n\tavailable\030\001 \001(\010\022\023\n\013j"
       "erk_factor\030\002 \001(\001\022&\n\036need_steering_wheel_"
       "stationary\030\003 \001(\010\022 \n\030steering_wheel_rad_l"
-      "imit\030\004 \001(\001\"F\n\016PlanningStatus\022\031\n\nstandsti"
-      "ll\030\001 \001(\010:\005false\022\031\n\013ready_to_go\030\002 \001(\010:\004tr"
-      "ue\"\343\003\n\016PlanningOutput\022&\n\004meta\030\001 \001(\0132\030.Pl"
-      "anningOutput.PlanMeta\022.\n\ntrajectory\030\002 \001("
-      "\0132\032.PlanningOutput.Trajectory\022>\n\023turn_si"
-      "gnal_command\030\003 \001(\0132!.PlanningOutput.Turn"
-      "SignalCommand\022@\n\024light_signal_command\030\004 "
-      "\001(\0132\".PlanningOutput.LightSignalCommand\022"
-      ">\n\023horn_signal_command\030\005 \001(\0132!.PlanningO"
-      "utput.HornSignalCommand\0221\n\014gear_command\030"
-      "\006 \001(\0132\033.PlanningOutput.GearCommand\022K\n\032op"
-      "en_loop_steering_command\030\007 \001(\0132\'.Plannin"
-      "gOutput.OpenLoopSteeringCommand\0227\n\017plann"
-      "ing_status\030\010 \001(\0132\036.PlanningOutput.Planni"
-      "ngStatus"
+      "imit\030\004 \001(\001\"\206\001\n\016PlanningStatus\022\031\n\nstandst"
+      "ill\030\001 \001(\010:\005false\022\031\n\013ready_to_go\030\002 \001(\010:\004t"
+      "rue\022>\n\023apa_planning_status\030\003 \001(\0162!.Plann"
+      "ingOutput.ApaPlanningStatus\"\343\003\n\016Planning"
+      "Output\022&\n\004meta\030\001 \001(\0132\030.PlanningOutput.Pl"
+      "anMeta\022.\n\ntrajectory\030\002 \001(\0132\032.PlanningOut"
+      "put.Trajectory\022>\n\023turn_signal_command\030\003 "
+      "\001(\0132!.PlanningOutput.TurnSignalCommand\022@"
+      "\n\024light_signal_command\030\004 \001(\0132\".PlanningO"
+      "utput.LightSignalCommand\022>\n\023horn_signal_"
+      "command\030\005 \001(\0132!.PlanningOutput.HornSigna"
+      "lCommand\0221\n\014gear_command\030\006 \001(\0132\033.Plannin"
+      "gOutput.GearCommand\022K\n\032open_loop_steerin"
+      "g_command\030\007 \001(\0132\'.PlanningOutput.OpenLoo"
+      "pSteeringCommand\0227\n\017planning_status\030\010 \001("
+      "\0132\036.PlanningOutput.PlanningStatus*H\n\021Apa"
+      "PlanningStatus\022\010\n\004NONE\020\000\022\017\n\013IN_PROGRESS\020"
+      "\001\022\014\n\010FINISHED\020\002\022\n\n\006FAILED\020\003"
   };
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-      descriptor, 1808);
+      descriptor, 1947);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "planning_plan.proto", &protobuf_RegisterTypes);
   ::protobuf_common_2eproto::AddDescriptors();
@@ -562,6 +568,22 @@ struct StaticDescriptorInitializer {
 } static_descriptor_initializer;
 }  // namespace protobuf_planning_5fplan_2eproto
 namespace PlanningOutput {
+const ::google::protobuf::EnumDescriptor* ApaPlanningStatus_descriptor() {
+  protobuf_planning_5fplan_2eproto::protobuf_AssignDescriptorsOnce();
+  return protobuf_planning_5fplan_2eproto::file_level_enum_descriptors[0];
+}
+bool ApaPlanningStatus_IsValid(int value) {
+  switch (value) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+      return true;
+    default:
+      return false;
+  }
+}
+
 
 // ===================================================================
 
@@ -3944,6 +3966,7 @@ void PlanningStatus::InitAsDefaultInstance() {
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
 const int PlanningStatus::kStandstillFieldNumber;
 const int PlanningStatus::kReadyToGoFieldNumber;
+const int PlanningStatus::kApaPlanningStatusFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
 PlanningStatus::PlanningStatus()
@@ -3965,7 +3988,9 @@ PlanningStatus::PlanningStatus(const PlanningStatus& from)
 }
 
 void PlanningStatus::SharedCtor() {
-  standstill_ = false;
+  ::memset(&standstill_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&apa_planning_status_) -
+      reinterpret_cast<char*>(&standstill_)) + sizeof(apa_planning_status_));
   ready_to_go_ = true;
 }
 
@@ -3998,8 +4023,10 @@ void PlanningStatus::Clear() {
   (void) cached_has_bits;
 
   cached_has_bits = _has_bits_[0];
-  if (cached_has_bits & 3u) {
-    standstill_ = false;
+  if (cached_has_bits & 7u) {
+    ::memset(&standstill_, 0, static_cast<size_t>(
+        reinterpret_cast<char*>(&apa_planning_status_) -
+        reinterpret_cast<char*>(&standstill_)) + sizeof(apa_planning_status_));
     ready_to_go_ = true;
   }
   _has_bits_.Clear();
@@ -4044,6 +4071,26 @@ bool PlanningStatus::MergePartialFromCodedStream(
         break;
       }
 
+      // optional .PlanningOutput.ApaPlanningStatus apa_planning_status = 3;
+      case 3: {
+        if (static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(24u /* 24 & 0xFF */)) {
+          int value;
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   int, ::google::protobuf::internal::WireFormatLite::TYPE_ENUM>(
+                 input, &value)));
+          if (::PlanningOutput::ApaPlanningStatus_IsValid(value)) {
+            set_apa_planning_status(static_cast< ::PlanningOutput::ApaPlanningStatus >(value));
+          } else {
+            mutable_unknown_fields()->AddVarint(
+                3, static_cast< ::google::protobuf::uint64>(value));
+          }
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
       default: {
       handle_unusual:
         if (tag == 0) {
@@ -4077,8 +4124,14 @@ void PlanningStatus::SerializeWithCachedSizes(
   }
 
   // optional bool ready_to_go = 2 [default = true];
-  if (cached_has_bits & 0x00000002u) {
+  if (cached_has_bits & 0x00000004u) {
     ::google::protobuf::internal::WireFormatLite::WriteBool(2, this->ready_to_go(), output);
+  }
+
+  // optional .PlanningOutput.ApaPlanningStatus apa_planning_status = 3;
+  if (cached_has_bits & 0x00000002u) {
+    ::google::protobuf::internal::WireFormatLite::WriteEnum(
+      3, this->apa_planning_status(), output);
   }
 
   if (_internal_metadata_.have_unknown_fields()) {
@@ -4102,8 +4155,14 @@ void PlanningStatus::SerializeWithCachedSizes(
   }
 
   // optional bool ready_to_go = 2 [default = true];
-  if (cached_has_bits & 0x00000002u) {
+  if (cached_has_bits & 0x00000004u) {
     target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(2, this->ready_to_go(), target);
+  }
+
+  // optional .PlanningOutput.ApaPlanningStatus apa_planning_status = 3;
+  if (cached_has_bits & 0x00000002u) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteEnumToArray(
+      3, this->apa_planning_status(), target);
   }
 
   if (_internal_metadata_.have_unknown_fields()) {
@@ -4123,10 +4182,16 @@ size_t PlanningStatus::ByteSizeLong() const {
       ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
         _internal_metadata_.unknown_fields());
   }
-  if (_has_bits_[0 / 32] & 3u) {
+  if (_has_bits_[0 / 32] & 7u) {
     // optional bool standstill = 1 [default = false];
     if (has_standstill()) {
       total_size += 1 + 1;
+    }
+
+    // optional .PlanningOutput.ApaPlanningStatus apa_planning_status = 3;
+    if (has_apa_planning_status()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::EnumSize(this->apa_planning_status());
     }
 
     // optional bool ready_to_go = 2 [default = true];
@@ -4163,11 +4228,14 @@ void PlanningStatus::MergeFrom(const PlanningStatus& from) {
   (void) cached_has_bits;
 
   cached_has_bits = from._has_bits_[0];
-  if (cached_has_bits & 3u) {
+  if (cached_has_bits & 7u) {
     if (cached_has_bits & 0x00000001u) {
       standstill_ = from.standstill_;
     }
     if (cached_has_bits & 0x00000002u) {
+      apa_planning_status_ = from.apa_planning_status_;
+    }
+    if (cached_has_bits & 0x00000004u) {
       ready_to_go_ = from.ready_to_go_;
     }
     _has_bits_[0] |= cached_has_bits;
@@ -4199,6 +4267,7 @@ void PlanningStatus::Swap(PlanningStatus* other) {
 void PlanningStatus::InternalSwap(PlanningStatus* other) {
   using std::swap;
   swap(standstill_, other->standstill_);
+  swap(apa_planning_status_, other->apa_planning_status_);
   swap(ready_to_go_, other->ready_to_go_);
   swap(_has_bits_[0], other->_has_bits_[0]);
   _internal_metadata_.Swap(&other->_internal_metadata_);

@@ -29,6 +29,7 @@
 #include <google/protobuf/message.h>
 #include <google/protobuf/repeated_field.h>  // IWYU pragma: export
 #include <google/protobuf/extension_set.h>  // IWYU pragma: export
+#include <google/protobuf/generated_enum_reflection.h>
 #include <google/protobuf/unknown_field_set.h>
 #include "common.pb.h"
 // @@protoc_insertion_point(includes)
@@ -102,6 +103,27 @@ template<> ::PlanningOutput::TurnSignalCommand* Arena::CreateMaybeMessage<::Plan
 }  // namespace google
 namespace PlanningOutput {
 
+enum ApaPlanningStatus {
+  NONE = 0,
+  IN_PROGRESS = 1,
+  FINISHED = 2,
+  FAILED = 3
+};
+bool ApaPlanningStatus_IsValid(int value);
+const ApaPlanningStatus ApaPlanningStatus_MIN = NONE;
+const ApaPlanningStatus ApaPlanningStatus_MAX = FAILED;
+const int ApaPlanningStatus_ARRAYSIZE = ApaPlanningStatus_MAX + 1;
+
+const ::google::protobuf::EnumDescriptor* ApaPlanningStatus_descriptor();
+inline const ::std::string& ApaPlanningStatus_Name(ApaPlanningStatus value) {
+  return ::google::protobuf::internal::NameOfEnum(
+    ApaPlanningStatus_descriptor(), value);
+}
+inline bool ApaPlanningStatus_Parse(
+    const ::std::string& name, ApaPlanningStatus* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<ApaPlanningStatus>(
+    ApaPlanningStatus_descriptor(), name, value);
+}
 // ===================================================================
 
 class PlanMeta : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:PlanningOutput.PlanMeta) */ {
@@ -1614,6 +1636,13 @@ class PlanningStatus : public ::google::protobuf::Message /* @@protoc_insertion_
   bool standstill() const;
   void set_standstill(bool value);
 
+  // optional .PlanningOutput.ApaPlanningStatus apa_planning_status = 3;
+  bool has_apa_planning_status() const;
+  void clear_apa_planning_status();
+  static const int kApaPlanningStatusFieldNumber = 3;
+  ::PlanningOutput::ApaPlanningStatus apa_planning_status() const;
+  void set_apa_planning_status(::PlanningOutput::ApaPlanningStatus value);
+
   // optional bool ready_to_go = 2 [default = true];
   bool has_ready_to_go() const;
   void clear_ready_to_go();
@@ -1627,11 +1656,14 @@ class PlanningStatus : public ::google::protobuf::Message /* @@protoc_insertion_
   void clear_has_standstill();
   void set_has_ready_to_go();
   void clear_has_ready_to_go();
+  void set_has_apa_planning_status();
+  void clear_has_apa_planning_status();
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
   ::google::protobuf::internal::HasBits<1> _has_bits_;
   mutable ::google::protobuf::internal::CachedSize _cached_size_;
   bool standstill_;
+  int apa_planning_status_;
   bool ready_to_go_;
   friend struct ::protobuf_planning_5fplan_2eproto::TableStruct;
 };
@@ -2910,13 +2942,13 @@ inline void PlanningStatus::set_standstill(bool value) {
 
 // optional bool ready_to_go = 2 [default = true];
 inline bool PlanningStatus::has_ready_to_go() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
+  return (_has_bits_[0] & 0x00000004u) != 0;
 }
 inline void PlanningStatus::set_has_ready_to_go() {
-  _has_bits_[0] |= 0x00000002u;
+  _has_bits_[0] |= 0x00000004u;
 }
 inline void PlanningStatus::clear_has_ready_to_go() {
-  _has_bits_[0] &= ~0x00000002u;
+  _has_bits_[0] &= ~0x00000004u;
 }
 inline void PlanningStatus::clear_ready_to_go() {
   ready_to_go_ = true;
@@ -2930,6 +2962,31 @@ inline void PlanningStatus::set_ready_to_go(bool value) {
   set_has_ready_to_go();
   ready_to_go_ = value;
   // @@protoc_insertion_point(field_set:PlanningOutput.PlanningStatus.ready_to_go)
+}
+
+// optional .PlanningOutput.ApaPlanningStatus apa_planning_status = 3;
+inline bool PlanningStatus::has_apa_planning_status() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void PlanningStatus::set_has_apa_planning_status() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void PlanningStatus::clear_has_apa_planning_status() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void PlanningStatus::clear_apa_planning_status() {
+  apa_planning_status_ = 0;
+  clear_has_apa_planning_status();
+}
+inline ::PlanningOutput::ApaPlanningStatus PlanningStatus::apa_planning_status() const {
+  // @@protoc_insertion_point(field_get:PlanningOutput.PlanningStatus.apa_planning_status)
+  return static_cast< ::PlanningOutput::ApaPlanningStatus >(apa_planning_status_);
+}
+inline void PlanningStatus::set_apa_planning_status(::PlanningOutput::ApaPlanningStatus value) {
+  assert(::PlanningOutput::ApaPlanningStatus_IsValid(value));
+  set_has_apa_planning_status();
+  apa_planning_status_ = value;
+  // @@protoc_insertion_point(field_set:PlanningOutput.PlanningStatus.apa_planning_status)
 }
 
 // -------------------------------------------------------------------
@@ -3429,6 +3486,18 @@ inline void PlanningOutput::set_allocated_planning_status(::PlanningOutput::Plan
 // @@protoc_insertion_point(namespace_scope)
 
 }  // namespace PlanningOutput
+
+namespace google {
+namespace protobuf {
+
+template <> struct is_proto_enum< ::PlanningOutput::ApaPlanningStatus> : ::std::true_type {};
+template <>
+inline const EnumDescriptor* GetEnumDescriptor< ::PlanningOutput::ApaPlanningStatus>() {
+  return ::PlanningOutput::ApaPlanningStatus_descriptor();
+}
+
+}  // namespace protobuf
+}  // namespace google
 
 // @@protoc_insertion_point(global_scope)
 

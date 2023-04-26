@@ -1,6 +1,7 @@
 #include "modules/apa_planner/apa_planner_dispatcher.h"
 
 #include "modules/apa_planner/common/planning_log_helper.h"
+#include "modules/apa_planner/diagonal/diagonal_in_planner.h"
 
 namespace planning {
 namespace apa_planner {
@@ -13,7 +14,7 @@ ApaPlannerDispatcher::ApaPlannerDispatcher() {
 
 void ApaPlannerDispatcher::RegisterPlanners() {
   planner_list_.clear();
-  // planner_list_.emplace_back(std::make_unique<DiagonalInPlanner>());
+  planner_list_.emplace_back(std::make_unique<DiagonalInPlanner>());
   // planner_list_.emplace_back(std::make_unique<ParallelInPlanner>());
 }
 

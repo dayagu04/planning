@@ -8,16 +8,17 @@ using framework::Frame;
 void ApaPlannerBase::SetFailedPlanningOutput(Frame* const frame) const {
   auto planning_output_context =
       frame->mutable_session()->mutable_planning_output_context();
-  auto& planning_output = planning_output_context->mutable_planning_status()\
-      ->planning_result.planning_output;
+  auto planning_output = &(planning_output_context->mutable_planning_status()\
+      ->planning_result.planning_output);
 
-  // planning_output->set_is_apa_finished(false);
-  auto trajectory = planning_output.mutable_trajectory();
+  planning_output->mutable_planning_status()->set_apa_planning_status(
+      ::PlanningOutput::ApaPlanningStatus::FAILED);
+  auto trajectory = planning_output->mutable_trajectory();
   trajectory->set_available(true);
   trajectory->set_trajectory_type(
       Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
   trajectory->mutable_trajectory_points()->Clear();
-  auto gear_command = planning_output.mutable_gear_command();
+  auto gear_command = planning_output->mutable_gear_command();
   gear_command->set_available(true);
   gear_command->set_gear_command_value(
       Common::GearCommandValue::GEAR_COMMAND_VALUE_PARKING);

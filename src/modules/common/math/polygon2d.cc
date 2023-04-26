@@ -604,5 +604,37 @@ Polygon2d Polygon2d::ExpandByDistance(const double distance) const {
   return new_polygon;
 }
 
+void Polygon2d::RotateAndTranslate(const Vec2d& rotate_center,
+    const double sin_rotate_angle, const double cos_rotate_angle,
+    const Vec2d& translate_vector) {
+  // update points
+  const double x_offset = rotate_center.x() + translate_vector.x();
+  const double y_offset = rotate_center.y() + translate_vector.y();
+  for (auto& pt : points_) {
+    const double dx = pt.x() - rotate_center.x();
+    const double dy = pt.y() - rotate_center.y();
+    pt.set_x(dx * cos_rotate_angle - dy * sin_rotate_angle + x_offset);
+    pt.set_y(dx * sin_rotate_angle + dy * cos_rotate_angle + y_offset);
+  }
+
+  // update line_segments
+  line_segments_.clear();
+  for (int i = 0; i < num_points_; ++i) {
+    line_segments_.emplace_back(points_[i], points_[Next(i)]);
+  }
+
+  // update aabox.
+  min_x_ = points_[0].x();
+  max_x_ = points_[0].x();
+  min_y_ = points_[0].y();
+  max_y_ = points_[0].y();
+  for (const auto &point : points_) {
+    min_x_ = std::min(min_x_, point.x());
+    max_x_ = std::max(max_x_, point.x());
+    min_y_ = std::min(min_y_, point.y());
+    max_y_ = std::max(max_y_, point.y());
+  }
+}
+
 }  // namespace planning_math
 }  // namespace planning
