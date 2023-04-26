@@ -19,6 +19,10 @@ std::shared_ptr<Evaluator> StateBase::get_evaluator(framework::Frame *frame) {
 void StateBase::process(Control &control, FsmContext &context) {
   LOG_DEBUG("StateBase::process(); ");
 
+  if (!is_leaf()) {
+    return;
+  }
+
   LOG_DEBUG("[StateBase] entering process");
   auto start_time = IflyTime::Now_ms();
 
@@ -40,7 +44,7 @@ void StateBase::process(Control &control, FsmContext &context) {
     EgoPlanningCandidate candidate(context.frame);
     candidate.set_coarse_planning_info(transition_context);
 
-    auto &last_planning_result =
+    auto last_planning_result =
         context.frame->mutable_session()
             ->mutable_planning_context()
             ->last_planning_result();
@@ -52,7 +56,7 @@ void StateBase::process(Control &control, FsmContext &context) {
     state_machine_output.origin_lane_virtual_id = candidate.coarse_planning_info().source_lane_id;
     state_machine_output.target_lane_virtual_id = transition_context.lane_change_lane_manager->tlane_virtual_id();
     // state_machine_output.state_name = type2name<RoadState::None>::name; //TODO(Rui):add name transfer
-    if (&last_planning_result != nullptr and
+    if (last_planning_result != nullptr and
         last_planning_result->target_lane_id ==
             candidate.coarse_planning_info().target_lane_id and
         last_planning_result->traj_points.size() >= 10) {

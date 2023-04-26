@@ -38,6 +38,7 @@ bool VisionLateralBehaviorPlanner::Execute(planning::framework::Frame *frame) {
 bool VisionLateralBehaviorPlanner::Process(const CoarsePlanningInfo &coarse_planning_info,
                                            LateralAvdCarsInfo &lateral_avd_cars_info) {
   update_avoid_cars(coarse_planning_info, lateral_avd_cars_info);
+  return true;
 }
 
 }  // namespace planning
