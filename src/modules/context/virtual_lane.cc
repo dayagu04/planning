@@ -221,6 +221,24 @@ double VirtualLane::max_width() {
   }
 }
 
+bool VirtualLane::is_solid_line(int side) const {
+  assert(side == 0 || side == 1);
+  if (side == 0) {
+    if (left_lane_boundary_.segment_size() > 0 &&
+        left_lane_boundary_.segment(0).type() ==
+            Common::LaneBoundaryType::MARKING_SOLID) {
+      return true;
+    }
+  } else if (side == 1) {
+    if (right_lane_boundary_.segment_size() > 0 &&
+        right_lane_boundary_.segment(0).type() ==
+            Common::LaneBoundaryType::MARKING_SOLID) {
+      return true;
+    }
+  }
+  return false;
+}
+
 double VirtualLane::min_width() {
   switch (lane_type_) {
     case FusionRoad::LaneType::LANE_TYPE_UNKNOWN:;
@@ -361,4 +379,4 @@ void VirtualLane::update_refined_lane_points() {
   }
 }
 
-}
+}  // namespace planning

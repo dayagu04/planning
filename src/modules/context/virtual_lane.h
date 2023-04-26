@@ -108,6 +108,9 @@ class VirtualLane {
     return center_line_points_track_id_;
   }
 
+  // side: 0-left, 1-right
+  bool is_solid_line(int side) const;
+
   double min_width();
   double max_width();
   bool hack() const { return hack_; }

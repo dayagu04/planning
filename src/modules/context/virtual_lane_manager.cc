@@ -97,26 +97,6 @@ void VirtualLaneManager::update_virtual_id() {
   current_lane_virtual_id_ = lane_virtual_id;
 }
 
-bool VirtualLaneManager::is_solid_line(int side) const {
-  assert(side == 0 || side == 1);
-  if (side == 0) {
-    auto left_boundary_info = current_lane_->get_left_lane_boundary();
-    if (left_boundary_info.segment_size() > 0 &&
-        left_boundary_info.segment(0).type() ==
-            Common::LaneBoundaryType::MARKING_SOLID) {
-      return true;
-    }
-  } else if (side == 1) {
-    auto right_boundary_info = current_lane_->get_right_lane_boundary();
-    if (right_boundary_info.segment_size() > 0 &&
-        right_boundary_info.segment(0).type() ==
-            Common::LaneBoundaryType::MARKING_SOLID) {
-      return true;
-    }
-  }
-  return false;
-}
-
 LaneChangeStatus VirtualLaneManager::is_lane_change() {
   LaneChangeStatus change_statu = LaneChangeStatus::NO_LANE_CHANGE;
   const float lane_change_thre = 1;

@@ -210,7 +210,7 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
   }
 
   if ((enforced_l_ || enable_l_) && diff_map > default_ma_delay &&
-      diff_int > default_int_delay && !virtual_lane_mgr_->is_solid_line(0)) {
+      diff_int > default_int_delay && !current_lane->is_solid_line(0)) {
     if (request_type_ != LEFT_CHANGE) {
       GenerateRequest(LEFT_CHANGE);
       LOG_DEBUG("[ActRequest::update] Ask for active changing lane to left \n");

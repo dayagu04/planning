@@ -73,9 +73,6 @@ class VirtualLaneManager {
     return 5000.;
   };
 
-  // side: 0-left, 1-right
-  bool is_solid_line(int side) const;
-
  private:
   LaneChangeStatus is_lane_change();
   void update_virtual_id();
