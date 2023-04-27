@@ -6,6 +6,7 @@
 #include "src/modules/context/intersection.h"
 #include "src/modules/context/Ramp.h"
 #include "../../res/include/proto/fusion_road.pb.h"
+#include "src/common/log.h"
 #include <vector>
 
 namespace planning {
@@ -33,7 +34,7 @@ class VirtualLaneManager {
 
   const std::shared_ptr<VirtualLane> get_current_lane() const { 
     assert(current_lane_ != nullptr);
-    LOG_BST_DEBUG("current_lane_ is nullptr\n");
+    LOG_DEBUG("current_lane_ is nullptr\n");
     return current_lane_; 
   }
   const std::shared_ptr<VirtualLane> get_left_lane() const { return left_lane_; }
@@ -42,7 +43,7 @@ class VirtualLaneManager {
   const std::shared_ptr<VirtualLane> get_lane_with_order_id(uint order_id) const;
   int current_lane_virtual_id() {
     assert(current_lane_ != nullptr);
-    LOG_BST_DEBUG("current_lane_ is nullptr\n");
+    LOG_DEBUG("current_lane_ is nullptr\n");
     return current_lane_->get_virtual_id();
   }
   std::shared_ptr<VirtualLane> mutable_lane_with_virtual_id(int virtual_id) {
