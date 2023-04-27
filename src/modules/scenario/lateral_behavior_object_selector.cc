@@ -42,7 +42,7 @@ bool ObjectSelector::in_alc_range() {
 double ObjectSelector::get_vrel_close(int side, int status) {
   double v_rel_close = 15.;
   double fvf_drel_confident = 120.;
-  std::vector<TrackedObject> *front_tracks = nullptr;
+  std::vector<TrackedObject> front_tracks;
 
   auto &virtual_lane_mgr = session_->environmental_model().get_virtual_lane_manager();
   auto state_machine_output = session_->planning_context().lat_behavior_state_machine_output();
@@ -92,20 +92,21 @@ double ObjectSelector::get_vrel_close(int side, int status) {
   int llane_leadone_id = obstacle_manager->get_lane_leadone_obstacle(llane->get_virtual_id());
   int rlane_leadone_id = obstacle_manager->get_lane_leadone_obstacle(rlane->get_virtual_id());
 
-  for (auto &obstacle : lateral_obstacle->front_tracks()) {
+  for (TrackedObject obstacle : lateral_obstacle->front_tracks()) {
+    auto &obj_tmp = obstacle;
     if (side == 0) {
-      if (obstacle.track_id == clane_leadone_id) {
-        front_tracks->push_back(obstacle);
+      if (obj_tmp.track_id == clane_leadone_id) {
+        front_tracks.push_back(obj_tmp);
         break;
       }
     } else if (side == -1) {
-      if (obstacle.track_id == llane_leadone_id) {
-        front_tracks->push_back(obstacle);
+      if (obj_tmp.track_id == llane_leadone_id) {
+        front_tracks.push_back(obj_tmp);
         break;
       }
     } else if (side == 1) {
-      if (obstacle.track_id == rlane_leadone_id) {
-        front_tracks->push_back(obstacle);
+      if (obj_tmp.track_id == rlane_leadone_id) {
+        front_tracks.push_back(obj_tmp);
         break;
       }
     } else {
@@ -115,12 +116,12 @@ double ObjectSelector::get_vrel_close(int side, int status) {
     }
   }
 
-  if (front_tracks == nullptr) {
+  if (front_tracks.size() == 0) {
     LOG_ERROR("[LaneTracksManager::get_vrel_close] front tracks is null");
     return v_rel_close;
   }
 
-  for (auto &tr : *front_tracks) {
+  for (auto &tr : front_tracks) {
     if (tr.d_rel < fvf_drel_confident) {
       v_rel_close = tr.v_rel;
       break;

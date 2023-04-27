@@ -3,6 +3,7 @@
 #include "src/modules/context/vehicle_config_context.h"
 #include "src/modules/tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
 #include "src/modules/tasks/motion_planners/general_longitudinal_motion_planner/general_longitudinal_optimizer.h"
+#include "src/modules/tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 
 namespace planning {
 
