@@ -126,9 +126,7 @@ void convertMsg(const OldLocalView &old_local_view, LocalView &local_view) {
   }
 }
 
-
-
-bool update() {
+planning::framework::Session* update() {
   static bool flag =true;
   static std::unique_ptr<planning::GeneralPlanning> planning_base;
   static planning::PlanningComponent planningComponent;
@@ -149,7 +147,8 @@ bool update() {
     if (access(bagPath.c_str(), F_OK) != 0) {
       LOG_ERROR("%s is not exist\n",bagPath.c_str());
       std::cout<<bagPath<<" is not exist"<<std::endl;
-      return false;
+      exit(0);
+      // return false;
     }
     flag = false;
     reader = std::make_shared<RecordReader>(bagPath);
@@ -219,8 +218,9 @@ bool update() {
     old_local_view.srnd_radar_info = radar_surround_msg;
     convertMsg(old_local_view, local_view);
     planning_base->RunOnce(local_view, &planning_output, debug_output, planning_hmi_Info);
-    auto session = planning_base->MutableSession();
+    // session = planning_base->MutableSession();
     rate.Sleep();
+    return planning_base->MutableSession();
   }
   return 1;
 }

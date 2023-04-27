@@ -69,9 +69,8 @@ bool init() {
 }
 int main(int argc, char *argv[]) {
   while(1) {
-    planning::update();
+    auto session= planning::update();
   }
-  
 }
 int main1(int argc, char *argv[]) {
   int return_value=system("source /usr/bin/cyber/setup.bash");
