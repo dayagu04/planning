@@ -65,6 +65,11 @@ std::shared_ptr<Task> Task::Make(
       return std::make_shared<LongitudinalOptimizerV3>(config_builder,
                                                        pipeline_context);
     }
+
+    case TaskType::VISION_ONLY_LONGITUDINAL_BEHAVIOR_PLANNER: {
+      return std::make_shared<VisionLateralBehaviorPlanner>(config_builder,
+                                                       pipeline_context);
+    }
       // case TaskType::RESULT_TRAJECTORY_GENERATOR: {
       //   return std::make_shared<ResultTrajectoryGenerator>(config_builder,
       //                                                      pipeline_context);

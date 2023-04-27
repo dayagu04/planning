@@ -585,6 +585,18 @@ struct EgoPlanningTaskPipelineNormalConfig
   std::string pipeline_version = "v1";
 };
 
+struct EgoPlanningTaskPipelineVisionOnlyConfig
+    : public EgoPlanningTaskPipelineConfig {
+  void init(const Json &json) override {
+    EgoPlanningTaskPipelineConfig::init(json);
+    /* read config from json */
+    pipeline_version =
+        read_json_key<std::string>(json, "pipeline_version", "v1");
+  }
+
+  std::string pipeline_version = "v1";
+};
+
 struct EgoPlanningEvaluatorConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
