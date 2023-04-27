@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include "src/modules/common/define/debug_output.h"
 #include "../res/include/proto/planning_plan.pb.h"
+#include "../src/test/session_build.h"
 using apollo::cyber::record::RecordReader;
 using apollo::cyber::record::RecordMessage;
 using apollo::cyber::Parameter;
@@ -67,6 +68,12 @@ bool init() {
   LOG_DEBUG("The algorithm_config json file load well!!! \n");
 }
 int main(int argc, char *argv[]) {
+  while(1) {
+    planning::update();
+  }
+  
+}
+int main1(int argc, char *argv[]) {
   int return_value=system("source /usr/bin/cyber/setup.bash");
   printf("result:%d",return_value);
   planning::PlanningComponent planningComponent;

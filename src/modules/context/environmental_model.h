@@ -113,7 +113,7 @@ class EnvironmentalModel {
   const std::shared_ptr<ObstacleManager> &get_obstacle_manager() const{
     return obstacle_manager_;
   }
-  std::shared_ptr<ObstacleManager> mutable_obstacle_manager() {
+  std::shared_ptr<ObstacleManager> &mutable_obstacle_manager() {
     return obstacle_manager_;
   }
   void set_obstacle_manager(
@@ -124,7 +124,7 @@ class EnvironmentalModel {
   const std::shared_ptr<VirtualLaneManager> &get_virtual_lane_manager() const {
     return virtual_lane_manager_;
   }
-  std::shared_ptr<VirtualLaneManager> mutable_virtual_lane_manager() {
+  std::shared_ptr<VirtualLaneManager> &mutable_virtual_lane_manager() {
     return virtual_lane_manager_;
   }
   void set_virtual_lane_manager(std::shared_ptr<VirtualLaneManager> virtual_lane_manager) {

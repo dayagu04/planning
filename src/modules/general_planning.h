@@ -31,7 +31,9 @@ class GeneralPlanning {
                DebugOutput &debug_info,
                PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info);
 //   void ResetState() override;
-
+  planning::framework::Session* MutableSession() {
+    return &session_;
+  }
  private:
   // 解析障碍物
   void FillPredictionTrajectoryPoint(
@@ -77,6 +79,7 @@ class GeneralPlanning {
 
   void FillPlanningDebugInfo(double start_time, DebugOutput &debug_info);
   void FillPlanningHmiInfo(double start_timestamp, PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info);
+  
  private:
 //   std::shared_ptr<EnvironmentalModel> environmental_model_ = nullptr;
 //   std::shared_ptr<ScenarioManager> scenario_manager_;

@@ -66,7 +66,7 @@ bool GeneralPlanning::RunOnce(
   planning_status->planning_success = planning_success;
   auto end_timestamp = IflyTime::Now_ms();
   planning_status->time_consumption = end_timestamp - start_timestamp;
-  LOG_DEBUG("general planning: planning time cost %f",
+  LOG_DEBUG("general planning: planning time cost %f\n",
             planning_status->time_consumption);
   planning_status->planning_result.timestamp =
       planning_status->planning_result.next_timestamp;
