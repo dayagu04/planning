@@ -23,12 +23,17 @@ VisionLateralMotionPlanner::VisionLateralMotionPlanner(
 
 bool VisionLateralMotionPlanner::Execute(planning::framework::Frame *frame) {
   // NTRACE_CALL(7);
+  frame_ = frame;
+
+  if (Task::Execute(frame) == false) {
+    return false;
+  }
 
   // auto config_builder =
   //     frame->mutable_session()->mutable_planning_context()->config_builder(
   //         planning::common::SceneType::HIGHWAY);
 
-  const auto &session = frame->session();
+  const auto &session = frame_->session();
   auto &planning_context = session->planning_context();
   auto &ego_prediction_result = pipeline_context_->planning_result;
   auto &ego_prediction_info = pipeline_context_->planning_info;

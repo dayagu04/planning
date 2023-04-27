@@ -1451,6 +1451,9 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(const CoarsePlanningInfo &c
     }
   }
   lateral_avd_cars_info.avd_car_past = avd_car_past_;
+  auto lat_behavior_info = frame_->mutable_session()->mutable_planning_context()->mutable_lat_behavior_info();
+  lat_behavior_info.flag_avd = flag_avd_;
+  lat_behavior_info.avd_car_past = avd_car_past_;
 }
 
 } // namespace planning
