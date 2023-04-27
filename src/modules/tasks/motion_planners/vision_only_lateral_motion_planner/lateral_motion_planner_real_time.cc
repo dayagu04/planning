@@ -13,15 +13,15 @@
 
 namespace planning {
 
-LateralMotionPlannerV1::LateralMotionPlannerV1(
+VisionLateralMotionPlanner::VisionLateralMotionPlanner(
     const EgoPlanningConfigBuilder *config_builder,
     const std::shared_ptr<TaskPipelineContext> &pipeline_context)
     : Task(config_builder, pipeline_context) {
-  config_ = config_builder->cast<LateralMotionPlannerV1Config>();
-  name_ = "LateralMotionPlannerV1";
+  config_ = config_builder->cast<VisionLateralMotionPlannerConfig>();
+  name_ = "VisionLateralMotionPlanner";
 }
 
-bool LateralMotionPlannerV1::Execute(planning::framework::Frame *frame) {
+bool VisionLateralMotionPlanner::Execute(planning::framework::Frame *frame) {
   // NTRACE_CALL(7);
 
   // auto config_builder =
@@ -87,7 +87,7 @@ bool LateralMotionPlannerV1::Execute(planning::framework::Frame *frame) {
   return b_success;
 }
 
-bool LateralMotionPlannerV1::update(
+bool VisionLateralMotionPlanner::update(
     int status, bool flag_avd, bool accident_ahead, bool should_premove,
     bool should_suspend, double dist_rblane,
     const std::array<std::vector<double>, 2> &avd_car_past,
@@ -128,7 +128,7 @@ bool LateralMotionPlannerV1::update(
   }
 }
 
-bool LateralMotionPlannerV1::update_basic_path(const int &status) {
+bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
   double reject_prob_thre = 0.5;
   double short_reject_length = 15;
 
@@ -317,7 +317,7 @@ bool LateralMotionPlannerV1::update_basic_path(const int &status) {
   }
 }
 
-void LateralMotionPlannerV1::update_premove_path(
+void VisionLateralMotionPlanner::update_premove_path(
     int status, bool should_premove, bool should_suspend, bool accident_ahead,
     const std::array<std::vector<double>, 2> &avd_car_past) {
   if (flane_->status() == BOTH_MISSING) {
@@ -404,7 +404,7 @@ void LateralMotionPlannerV1::update_premove_path(
   LOG_NOTICE("WR: premoving_[%d]", premoving_);
 }
 
-bool LateralMotionPlannerV1::update_avoidance_path(
+bool VisionLateralMotionPlanner::update_avoidance_path(
     int status, bool flag_avd, bool accident_ahead, bool should_premove,
     double dist_rblane, const std::array<std::vector<double>, 2> &avd_car_past,
     const std::array<std::vector<double>, 2> &avd_sp_car_past) {
@@ -2391,7 +2391,7 @@ bool LateralMotionPlannerV1::update_avoidance_path(
   }
 }
 
-bool LateralMotionPlannerV1::update_planner_output() {
+bool VisionLateralMotionPlanner::update_planner_output() {
   //   auto &map_info = world_model_->get_map_info();
   //   auto &map_info_mgr =
   // world_model_->get_map_info_manager();
@@ -2589,11 +2589,11 @@ bool LateralMotionPlannerV1::update_planner_output() {
 
   lateral_output.dist_intersect = 1000;  // attention !
 
-  if (virtual_lane_manager_->intersection_.intsect_length() !=
+  if (virtual_lane_manager_->get_intersection_info().intsect_length() !=
       DBL_MAX) {  // attention !
 
     lateral_output.intersect_length =
-        virtual_lane_manager_->intersection_.intsect_length();
+        virtual_lane_manager_->get_intersection_info().intsect_length();
   } else {
     lateral_output.intersect_length = 1000;
   }
@@ -2607,8 +2607,8 @@ bool LateralMotionPlannerV1::update_planner_output() {
     lateral_output.lc_end_dis = 10000;
   }
 
-  if (virtual_lane_manager_->ramp_.dis_to_ramp() != DBL_MAX) {  // attention !
-    lateral_output.dis_to_ramp = virtual_lane_manager_->ramp_.dis_to_ramp();
+  if (virtual_lane_manager_->get_ramp().dis_to_ramp() != DBL_MAX) {  // attention !
+    lateral_output.dis_to_ramp = virtual_lane_manager_->get_ramp().dis_to_ramp();
   } else {
     lateral_output.dis_to_ramp = 10000;
   }
@@ -2736,7 +2736,7 @@ bool LateralMotionPlannerV1::update_planner_output() {
   }
   //   //   return true;
 }
-bool LateralMotionPlannerV1::update_lateral_info() {
+bool VisionLateralMotionPlanner::update_lateral_info() {
   // //
   // world_model_->mutable_map_info_manager().get_lane_change_point(world_model_);
 
@@ -2907,7 +2907,7 @@ bool LateralMotionPlannerV1::update_lateral_info() {
   // //   // construct_virtual_obstacles();
   return true;
 }
-bool LateralMotionPlannerV1::update_planner_status() {
+bool VisionLateralMotionPlanner::update_planner_status() {
   auto &lateral_output = frame_->mutable_session()
                              ->mutable_planning_context()
                              ->mutable_lateral_behavior_planner_output();
@@ -3166,7 +3166,7 @@ bool LateralMotionPlannerV1::update_planner_status() {
   }
 }
 //   // bool
-//   LateralMotionPlannerV1::log_planner_debug_info()
+//   VisionLateralMotionPlanner::log_planner_debug_info()
 //   {
 //   //   std::string plan_msg;
 //   //   create_lateral_behavior_planner_msg(plan_msg);
@@ -3179,7 +3179,7 @@ bool LateralMotionPlannerV1::update_planner_status() {
 //   plan_msg;
 //   // }
 //   // bool
-//   LateralMotionPlannerV1::create_lateral_behavior_planner_msg(
+//   VisionLateralMotionPlanner::create_lateral_behavior_planner_msg(
 //   //     std::string &plan_msg) {
 //   //   auto &lateral_output =
 //   //
@@ -3715,7 +3715,7 @@ bool LateralMotionPlannerV1::update_planner_status() {
 //   //   plan_msg = std::string(jsonBuffer.GetString(),
 //   jsonBuffer.GetSize());
 
-void LateralMotionPlannerV1::calc_desired_path(const std::array<double, 4> &l_poly,
+void VisionLateralMotionPlanner::calc_desired_path(const std::array<double, 4> &l_poly,
                        const std::array<double, 4> &r_poly, double l_prob,
                        double r_prob, double intercept_width,
                        std::array<double, 4> &d_poly) {
@@ -3732,7 +3732,7 @@ void LateralMotionPlannerV1::calc_desired_path(const std::array<double, 4> &l_po
   }
 }
 
-double LateralMotionPlannerV1::calc_lane_width_by_dist(
+double VisionLateralMotionPlanner::calc_lane_width_by_dist(
     const std::array<double, 4> &left_poly,
     const std::array<double, 4> &right_poly, const double &dist_x) {
   std::vector<double> left_poly_yx, r_poly_yx;

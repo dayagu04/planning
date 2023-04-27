@@ -24,13 +24,13 @@ struct LateralSolverOption {
   bool enable_log{false};
 };
 
-class LateralMotionPlannerV1 : public Task {
+class VisionLateralMotionPlanner : public Task {
  public:
-  explicit LateralMotionPlannerV1(
+  explicit VisionLateralMotionPlanner(
       const EgoPlanningConfigBuilder *config_builder,
       const std::shared_ptr<TaskPipelineContext> &pipeline_context);
 
-  virtual ~LateralMotionPlannerV1() = default;
+  virtual ~VisionLateralMotionPlanner() = default;
 
   bool Execute(planning::framework::Frame *frame) override;
 
@@ -97,7 +97,7 @@ class LateralMotionPlannerV1 : public Task {
   };
 
  private:
-  LateralMotionPlannerV1Config config_;
+  VisionLateralMotionPlannerConfig config_;
 
   bool sb_lane_ = false;
   bool sb_blane_ = false;

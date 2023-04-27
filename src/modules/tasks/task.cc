@@ -4,6 +4,7 @@
 #include "src/modules/tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
 #include "src/modules/tasks/motion_planners/general_longitudinal_motion_planner/general_longitudinal_optimizer.h"
 #include "src/modules/tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
+#include "src/modules/tasks/motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
 
 namespace planning {
 
@@ -44,10 +45,14 @@ std::shared_ptr<Task> Task::Make(
     //   return std::make_shared<ObstacleDecider>(config_builder,
     //                                            pipeline_context);
     // }
-    // case TaskType::LATERAL_DECIDER: {
-    //   return std::make_shared<LateralDecider>(config_builder,
-    //   pipeline_context);
-    // }
+    case TaskType::LATERAL_DECIDER: {
+      return std::make_shared<VisionLateralBehaviorPlanner>(config_builder,
+      pipeline_context);
+    }
+    case TaskType::VISION_LATERAL_MOTION_PLANNER: {
+      return std::make_shared<VisionLateralMotionPlanner>(config_builder,
+                                                  pipeline_context);
+    }
     // case TaskType::LATERAL_OPTIMIZER_V2: {
     //   return std::make_shared<LateralOptimizerV2>(config_builder,
     //                                               pipeline_context);

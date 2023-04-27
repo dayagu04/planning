@@ -229,7 +229,7 @@ struct LateralOptimizerConfig : public EgoPlanningConfig {
 };
 using LateralOptimizerV2Config = LateralOptimizerConfig;
 
-struct LateralMotionPlannerV1Config : public EgoPlanningConfig {
+struct VisionLateralMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */

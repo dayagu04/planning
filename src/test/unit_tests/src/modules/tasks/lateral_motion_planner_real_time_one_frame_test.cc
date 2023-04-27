@@ -8,7 +8,7 @@
 
 namespace planning {
 
-TEST(TestLatMotionPlannerRealTime, LateralMotionPlannerV1) {
+TEST(TestLatMotionPlannerRealTime, VisionLateralMotionPlanner) {
   std::string log_file = "/home/ros/asw/Planning/log/planning_log";
   bst::Log::getInstance().setConfig("Planning_Log", log_file.c_str(),
                                     bst::DEBUG);
@@ -20,7 +20,7 @@ TEST(TestLatMotionPlannerRealTime, LateralMotionPlannerV1) {
   framework::Frame *frame;
   std::shared_ptr<TaskPipelineContext> pipeline_context;
 
-  auto lat_motion_planner_ptr = std::make_shared<LateralMotionPlannerV1>(
+  auto lat_motion_planner_ptr = std::make_shared<VisionLateralMotionPlanner>(
       config_builder, pipeline_context);
 
   lat_motion_planner_ptr->Execute(frame);
