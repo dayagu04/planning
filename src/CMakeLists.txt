@@ -148,7 +148,7 @@ message (STATUS "PNC_ENABLE_TEST=" ${PNC_ENABLE_TEST})
 if (PNC_ENABLE_TEST)
   set(CMAKE_BUILD_TYPE Debug)
   message (STATUS "include googletets and enable test")
-  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2")
   set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0")
 
   add_subdirectory (test)

@@ -28,7 +28,4 @@ std::shared_ptr<TaskPipeline> TaskPipeline::Make(
   }
 }
 
-// bool TaskPipeline::run(const std::shared_ptr<ReferencePath>&
-// reference_path) {}
-
 }  // namespace planning

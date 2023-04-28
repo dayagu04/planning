@@ -14,6 +14,7 @@ LaneChangeRequestManager::LaneChangeRequestManager(
       map_request_(session, config_builder, virtual_lane_mgr,
                    lane_change_lane_mgr),
       act_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
+      virtual_lane_mgr_(virtual_lane_mgr),
       session_(session) {}
 
 void LaneChangeRequestManager::FinishRequest() {

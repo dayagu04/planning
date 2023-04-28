@@ -32,12 +32,12 @@ class VirtualLaneManager {
               ? relative_id_lanes_[this_lane->get_order_id() + 1] : nullptr;
   }
 
-  const std::shared_ptr<VirtualLane> &get_current_lane() const { 
+  const std::shared_ptr<VirtualLane> &get_current_lane() const {
     assert(current_lane_ != nullptr);
     if (current_lane_ == nullptr) {
       LOG_DEBUG("current_lane_ is nullptr\n");
     }
-    return current_lane_; 
+    return current_lane_;
   }
   const std::shared_ptr<VirtualLane> &get_left_lane() const { return left_lane_; }
   const std::shared_ptr<VirtualLane> &get_right_lane() const { return right_lane_; }

@@ -152,47 +152,47 @@ struct ObstacleDeciderConfig : public EgoPlanningConfig {
 struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
-    /* read config from json */
-    ready_remain_time = read_json_keys<int>(
-        json, std::vector<std::string>{"display_state", "ready_remain_time"});
-    wait_remain_time = read_json_keys<int>(
-        json, std::vector<std::string>{"display_state", "wait_remain_time"});
-    int_rqt_cnt_threshold = read_json_keys<int>(
-        json,
-        std::vector<std::string>{"int_request", "request_count_threshold"});
-    map_int_cancel_freeze_cnt = read_json_keys<int>(
-        json,
-        std::vector<std::string>{"int_request", "map_int_cancel_freeze_cnt"});
-    model_int_cancel_freeze_cnt = read_json_keys<int>(
-        json,
-        std::vector<std::string>{"int_request", "model_int_cancel_freeze_cnt"});
-    finish_remain_time = read_json_keys<int>(
-        json, std::vector<std::string>{"display_state", "finish_remain_time"});
-    enable_confirm_mode = read_json_keys<bool>(
-        json, std::vector<std::string>{"confirm_mode", "enable_confirm_mode"});
-    map_confirm_cancel_freeze_cnt = read_json_keys<int>(
-        json, std::vector<std::string>{"confirm_mode",
-                                       "map_confirm_cancel_freeze_cnt"});
-    model_confirm_cancel_freeze_cnt = read_json_keys<int>(
-        json, std::vector<std::string>{"confirm_mode",
-                                       "model_confirm_cancel_freeze_cnt"});
-    enalbe_display_function = read_json_keys<bool>(
-        json,
-        std::vector<std::string>{"display_state", "enable_display_function"});
-    int_vel_limit = read_json_keys<double>(
-        json, std::vector<std::string>{"int_request", "int_vel_limit"});
-    into_ramp_threshold = read_json_keys<double>(
-        json, std::vector<std::string>{"display_state", "into_ramp_threshold"});
-    close_to_split_merge_threshold = read_json_keys<double>(
-        json, std::vector<std::string>{"display_state",
-                                       "close_to_split_merge_threshold"});
-    avoid_truck_time_distance_threshold = read_json_keys<double>(
-        json, std::vector<std::string>{"display_state",
-                                       "avoid_truck_time_distance_threshold"});
-    enable_int_request_function = read_json_keys<bool>(
-        json,
-        std::vector<std::string>{"int_request", "enable_int_request_function"});
-    enable_hnp_function = read_json_key<bool>(json, "enable_hnp_functions");
+    // /* read config from json */
+    // ready_remain_time = read_json_keys<int>(
+    //     json, std::vector<std::string>{"display_state", "ready_remain_time"});
+    // wait_remain_time = read_json_keys<int>(
+    //     json, std::vector<std::string>{"display_state", "wait_remain_time"});
+    // int_rqt_cnt_threshold = read_json_keys<int>(
+    //     json,
+    //     std::vector<std::string>{"int_request", "request_count_threshold"});
+    // map_int_cancel_freeze_cnt = read_json_keys<int>(
+    //     json,
+    //     std::vector<std::string>{"int_request", "map_int_cancel_freeze_cnt"});
+    // model_int_cancel_freeze_cnt = read_json_keys<int>(
+    //     json,
+    //     std::vector<std::string>{"int_request", "model_int_cancel_freeze_cnt"});
+    // finish_remain_time = read_json_keys<int>(
+    //     json, std::vector<std::string>{"display_state", "finish_remain_time"});
+    // enable_confirm_mode = read_json_keys<bool>(
+    //     json, std::vector<std::string>{"confirm_mode", "enable_confirm_mode"});
+    // map_confirm_cancel_freeze_cnt = read_json_keys<int>(
+    //     json, std::vector<std::string>{"confirm_mode",
+    //                                    "map_confirm_cancel_freeze_cnt"});
+    // model_confirm_cancel_freeze_cnt = read_json_keys<int>(
+    //     json, std::vector<std::string>{"confirm_mode",
+    //                                    "model_confirm_cancel_freeze_cnt"});
+    // enalbe_display_function = read_json_keys<bool>(
+    //     json,
+    //     std::vector<std::string>{"display_state", "enable_display_function"});
+    // int_vel_limit = read_json_keys<double>(
+    //     json, std::vector<std::string>{"int_request", "int_vel_limit"});
+    // into_ramp_threshold = read_json_keys<double>(
+    //     json, std::vector<std::string>{"display_state", "into_ramp_threshold"});
+    // close_to_split_merge_threshold = read_json_keys<double>(
+    //     json, std::vector<std::string>{"display_state",
+    //                                    "close_to_split_merge_threshold"});
+    // avoid_truck_time_distance_threshold = read_json_keys<double>(
+    //     json, std::vector<std::string>{"display_state",
+    //                                    "avoid_truck_time_distance_threshold"});
+    // enable_int_request_function = read_json_keys<bool>(
+    //     json,
+    //     std::vector<std::string>{"int_request", "enable_int_request_function"});
+    // enable_hnp_function = read_json_key<bool>(json, "enable_hnp_functions");
   }
 
   int ready_remain_time = 2;
@@ -489,6 +489,11 @@ struct LongitudinalOptimizerV3Config : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
   }
+
+  std::string optimization_type = "refine";
+  uint max_iteration_num = 30000;
+  bool enable_longitudinal_optimization_backup{false};
+  double acc_stop = -4.0;
 };
 
 struct VisionLongitudinalBehaviorPlannerConfig : public EgoPlanningConfig {

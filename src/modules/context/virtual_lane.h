@@ -52,6 +52,7 @@ class VirtualLane {
   double width_by_s(double s);
   double width(double x);
   double width();
+  // WB：用户设置巡航车速不应与地图限速耦合
   double velocity_limit() const { return v_cruise_; };
   const std::array<double, 4> c_poly() const { return c_poly_; }
   LaneStatusEx status() { return lane_status_; }

@@ -12,7 +12,7 @@ TaskPipelineNormal::TaskPipelineNormal(
     : TaskPipeline(config_builder, frame) {
   name_ = "TaskPipelineNormal";
   config_ = config_builder->cast<EgoPlanningTaskPipelineNormalConfig>();
-  version_to_tasks_["v2"] = {
+  version_to_tasks_["v1"] = {
       // TaskType::OBSTACLE_DECIDER,
       TaskType::LATERAL_DECIDER,
       TaskType::VISION_LATERAL_MOTION_PLANNER,

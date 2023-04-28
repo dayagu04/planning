@@ -1,9 +1,14 @@
 #include "src/modules/scenario/scenario_state_machine.h"
-#include "src/modules/tasks/task_pipeline_context.h"
-#include "src/modules/general_planning.h"
-#include "src/modules/context/virtual_lane_manager.h"
-#include "src/modules/context/ego_state_manager.h"
-#include "src/modules/context/frenet_ego_state.h"
+
+#include <array>
+#include <cmath>
+
+#include "gtest/gtest.h"
+#include "res/include/proto/fusion_road.pb.h"
+#include "res/include/proto/vehicle_service.pb.h"
+#include "src/common/log.h"
+#include "src/modules/common/math/linear_interpolation.h"
+#include "src/modules/context/ego_planning_config.h"
 #include "src/modules/context/ego_state_manager.h"
 #include "src/modules/context/frenet_ego_state.h"
 #include "src/modules/context/lateral_obstacle.h"
@@ -11,11 +16,11 @@
 #include "src/modules/context/parking_slot_manager.h"
 #include "src/modules/context/reference_path_manager.h"
 #include "src/modules/context/traffic_light_decision_manager.h"
-#include "src/modules/context/parking_slot_manager.h"
-#include "src/modules/context/lateral_obstacle.h"
-#include "src/modules/context/ego_planning_config.h"
-#include "src/modules/common/math/linear_interpolation.h"
-#include "res/include/proto/vehicle_service.pb.h"
+#include "src/modules/context/virtual_lane_manager.h"
+#include "src/modules/environmental_model_manager.h"
+#include "src/modules/general_planning.h"
+#include "src/modules/scc_function/mrc_condition.h"
+#include "src/modules/tasks/task_pipeline_context.h"
 #include "src/proto/generated_files/planning_config.pb.h"
 #include "src/proto/generated_files/vehicle_status.pb.h"
 #include "src/common/log.h"
@@ -72,18 +77,19 @@ bool transform_fusion_to_prediction(const FusionObjects::FusionObject &fusion_ob
     PredictionTrajectory tra;
     prediction_object.trajectory_array.emplace_back(tra);
     prediction_info.emplace_back(prediction_object);
-}  
+}
 
 TEST(TestScenarioStateMachine, scenario_state_machine) {
   std::string log_file = "/asw/Planning/log/planning_log";
-  bst::Log::getInstance().setConfig("Planning_Log", log_file.c_str(), bst::DEBUG);
-  
+  bst::Log::getInstance().setConfig("Planning_Log", log_file.c_str(),
+                                    bst::DEBUG);
+
   printf("TestScenarioStateMachine: scenario_state_machine");
   // std::unique_ptr<GeneralPlanning> planning_base_ = nullptr;
   // planning_base_ = std::make_unique<GeneralPlanning>();
   framework::Session session;
   session.Init();
-  
+
   EgoPlanningConfigBuilder *config_builder;
   framework::Frame frame{&session};
   LocalView local_view;
@@ -182,7 +188,7 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
     fusion_obj->mutable_common_info()->mutable_shape()->set_height(1.5);
   }
 
-  
+
   // framework::Frame *frame;
   // frame(session);
   std::shared_ptr<planning::EgoStateManager> ego_state_manager_ptr_ = nullptr;
@@ -192,7 +198,9 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
   std::shared_ptr<planning::ReferencePathManager> reference_path_manager_ptr_ =
       nullptr;
   std::shared_ptr<planning::LateralObstacle> lateral_obstacle_ptr_ = nullptr;
+  std::shared_ptr<MrcCondition> mrc_condition_ = nullptr;
   std::shared_ptr<ObjectSelector> object_selector_ = nullptr;
+
   ego_state_manager_ptr_ =
       std::make_shared<planning::EgoStateManager>(&session);
   (&frame)->mutable_session()->mutable_environmental_model()->set_ego_state(
@@ -200,23 +208,39 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
 
   virtual_lane_manager_ptr_ =
       std::make_shared<planning::VirtualLaneManager>(&session);
-  (&frame)->mutable_session()->mutable_environmental_model()->set_virtual_lane_manager(
-      virtual_lane_manager_ptr_);
+  (&frame)
+      ->mutable_session()
+      ->mutable_environmental_model()
+      ->set_virtual_lane_manager(virtual_lane_manager_ptr_);
 
   obstacle_manager_ptr_ =
       std::make_shared<planning::ObstacleManager>(config_builder, &session);
-  (&frame)->mutable_session()->mutable_environmental_model()->set_obstacle_manager(
-      obstacle_manager_ptr_);
+  (&frame)
+      ->mutable_session()
+      ->mutable_environmental_model()
+      ->set_obstacle_manager(obstacle_manager_ptr_);
 
   reference_path_manager_ptr_ =
       std::make_shared<planning::ReferencePathManager>(&session);
-  (&frame)->mutable_session()->mutable_environmental_model()->set_reference_path_manager(
-      reference_path_manager_ptr_);
+  (&frame)
+      ->mutable_session()
+      ->mutable_environmental_model()
+      ->set_reference_path_manager(reference_path_manager_ptr_);
 
   lateral_obstacle_ptr_ =
       std::make_shared<planning::LateralObstacle>(config_builder, &session);
-  (&frame)->mutable_session()->mutable_environmental_model()->set_lateral_obstacle(
-      lateral_obstacle_ptr_);
+  (&frame)
+      ->mutable_session()
+      ->mutable_environmental_model()
+      ->set_lateral_obstacle(lateral_obstacle_ptr_);
+
+  mrc_condition_ = std::make_shared<MrcCondition>(config_builder, &session);
+  (&frame)->mutable_session()->mutable_planning_context()->set_mrc_condition(
+      mrc_condition_);
+
+  object_selector_ = std::make_shared<ObjectSelector>(config_builder, &session);
+  (&frame)->mutable_session()->mutable_planning_context()->set_object_selector(
+      object_selector_);
 
   object_selector_ = std::make_shared<ObjectSelector>(config_builder, &session);
   (&frame)->mutable_session()->mutable_planning_context()->set_object_selector(
@@ -258,7 +282,7 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
   object_selector_->update((&frame)->session()->planning_context().lat_behavior_state_machine_output().curr_state,
                            (&frame)->session()->planning_context().scenario_state_machine()->get_start_move_dist_lane(),
                            false, 80., false, false, false, false, false, -1);
-  
+
   (void)scenario_state_machine_->update(&frame);
 
 }
