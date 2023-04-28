@@ -3,6 +3,10 @@
 namespace planning {
 namespace modules {
 
+ApaPlanningModule::ApaPlanningModule() {
+  planner_dispatcher_ = std::make_unique<apa_planner::ApaPlannerDispatcher>();
+}
+
 planning::framework::BaseModule* ApaPlanningModule::clone() const {
   return nullptr;
 }

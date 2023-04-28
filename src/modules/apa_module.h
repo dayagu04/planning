@@ -9,6 +9,9 @@ namespace modules {
 
 class ApaPlanningModule : public framework::PlanningModule {
  public:
+  ApaPlanningModule();
+  ~ApaPlanningModule() = default;
+
   void compute(framework::Frame* frame) override;
 
   planning::framework::BaseModule* clone() const override;

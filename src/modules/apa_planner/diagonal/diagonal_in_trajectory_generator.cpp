@@ -76,14 +76,6 @@ bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
     return false;
   }
 
-  if (slots[select_slot_index].type() !=
-          Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING
-      && slots[select_slot_index].type() !=
-          Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
-    PLANNING_LOG << "Error: slot type is not diagonal" << std::endl;
-    return false;
-  }
-
   CalSlotPointsInM(select_slot_index);
 
   if (slot_sign_ == 0) {
@@ -782,9 +774,8 @@ bool DiagonalInTrajectoryGenerator::IsReplan(
   PLANNING_LOG << "veh_spd:" <<
       local_view_->vehicel_service_output_info.vehicle_speed() << std::endl;
 
-  const auto& traj = planning_output->trajectory();
-  const int traj_point_size = traj.trajectory_points_size();
-  if (traj_point_size == 0) {
+  if (!planning_output->has_trajectory()
+      || planning_output->trajectory().trajectory_points_size() == 0) {
     is_replan_ = true;
     last_segment_name_.clear();
     return true;
@@ -792,6 +783,8 @@ bool DiagonalInTrajectoryGenerator::IsReplan(
 
   double min_dis_sq = std::numeric_limits<double>::max();
   int min_dis_index = -1;
+  const auto& traj = planning_output->trajectory();
+  const int traj_point_size = traj.trajectory_points_size();
   const auto& traj_points = traj.trajectory_points();
   for (int i = 0; i < traj_point_size; ++i) {
     const double dis_sq = std::pow(ego_x - traj_points[i].x(), 2.0)

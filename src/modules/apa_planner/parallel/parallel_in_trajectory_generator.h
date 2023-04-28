@@ -132,7 +132,7 @@ class ParallelInTrajectoryGenerator {
  private:
   ParallelInGeometryPlan geometry_planning_;
 
-  int slot_sign_ = 1;  // 1:Right,(default),-1:Left
+  int slot_sign_ = 0;  // 1:Right,(default),-1:Left
 
   const LocalView *local_view_ = nullptr;
 
