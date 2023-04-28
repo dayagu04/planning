@@ -1,15 +1,14 @@
 #ifndef ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_H_
 #define ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_H_
 
+#include "src/modules/common/config/basic_type.h"
+#include "../../res/include/proto/lane_lines.pb.h"
+#include "../../res/include/proto/fusion_road.pb.h"
+#include "src/modules/context/reference_path_manager.h"
+#include "src/modules/context/lane_reference_path.h"
+#include "src/modules/common/refline.h"
 #include <float.h>
 #include <limits.h>
-
-#include "../../res/include/proto/fusion_road.pb.h"
-#include "../../res/include/proto/lane_lines.pb.h"
-#include "src/modules/common/config/basic_type.h"
-#include "src/modules/common/refline.h"
-#include "src/modules/context/reference_path.h"
-#include "src/modules/context/reference_path_manager.h"
 
 namespace planning {
 
@@ -69,7 +68,7 @@ class VirtualLane {
   const google::protobuf::RepeatedPtrField<FusionRoad::VirtualLanePoint> &lane_points() const {
     return lane_reference_line_.virtual_lane_refline_points();
   }
-  void update_reference_path(std::shared_ptr<ReferencePath> reference_path) {
+  void update_reference_path(std::shared_ptr<LaneReferencePath> reference_path) {
     reference_path_ = reference_path;
   };
 
@@ -87,9 +86,7 @@ class VirtualLane {
     return refined_lane_points_;
   }
 
-  std::shared_ptr<ReferencePath> get_reference_path() {
-    return reference_path_;
-  }
+  const std::shared_ptr<LaneReferencePath> get_reference_path() { return reference_path_; }
   double get_ego_lateral_offset() const { return ego_lateral_offset_; };
   FusionRoad::LaneType get_lane_type() const { return lane_type_; };
   FusionRoad::LaneDrivableDirection get_lane_marks() const {
@@ -143,7 +140,7 @@ class VirtualLane {
   std::vector<PathPoint> refined_lane_points_;
 
   std::vector<std::string> center_line_points_track_id_;
-  std::shared_ptr<ReferencePath> reference_path_ = nullptr;
+  std::shared_ptr<LaneReferencePath>  reference_path_;
 
   std::vector<int> current_tasks_;
   bool hack_ = false;

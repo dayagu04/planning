@@ -64,6 +64,10 @@ public:
     return side_tracks_r_;
   }
 
+  const std::vector<TrackedObject> &all_tracks() const {
+    return all_tracks_;
+  }
+
   bool find_track(int track_id, TrackedObject &dest);
 private:
   bool update_sensors(const std::shared_ptr<EgoStateManager> &ego_state,
@@ -85,7 +89,7 @@ private:
   std::vector<TrackedObject> side_tracks_;
   std::vector<TrackedObject> side_tracks_l_;
   std::vector<TrackedObject> side_tracks_r_;
-
+  std::vector<TrackedObject> all_tracks_;
   LeadCars lead_cars_;
   std::shared_ptr<planning::TrackletMaintainer> maintainer_ = nullptr;
   planning::framework::Session *session_ = nullptr;
@@ -95,7 +99,7 @@ private:
 class LaneTracksManager {
 public:
   LaneTracksManager(LateralObstacle &lateral_obstacle,
-                    VirtualLaneManager &virtual_lane_mgr);
+                    VirtualLaneManager &virtual_lane_mgr, planning::framework::Session *session);
   virtual ~LaneTracksManager() = default;
 
   // void update_ego_state(const EgoStateManager& ego_state) {
@@ -134,6 +138,7 @@ private:
 
   LateralObstacle &lateral_obstacle_;
   VirtualLaneManager &virtual_lane_mgr_;
+  planning::framework::Session *session_ = nullptr;
   // EgoStateManager ego_state_;
 };
 

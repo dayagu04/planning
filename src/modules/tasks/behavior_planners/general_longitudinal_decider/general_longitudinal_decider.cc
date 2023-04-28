@@ -665,7 +665,7 @@ void GeneralLongitudinalDecider::generate_lon_decision_from_path(
 }
 
 bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(
-    const FrenetObstacle &obstacle) {
+    const std::shared_ptr<FrenetObstacle> obstacle) {
   //   auto ego_sl_boundary = reference_path_ptr_->get_ego_frenet_boundary();
 
   //   auto obstacle_sl_boundary = obstacle.frenet_obstacle_boundary();
@@ -901,7 +901,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
     const TrajectoryPoints &traj_points,
     const ReferencePathPoints &refpath_points,
     const std::vector<planning_math::Polygon2d> &overlap_path,
-    const FrenetObstacle &obstacle, ObstacleDecision &obstacle_decision,
+    const std::shared_ptr<FrenetObstacle> obstacle, ObstacleDecision &obstacle_decision,
     LonRefPath &lon_ref_path) {
   // config
   // auto care_width = vehicle_param_.width;
@@ -1768,10 +1768,10 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
 }
 
 bool GeneralLongitudinalDecider::check_obstacle_both_sides(
-    const FrenetObstacle &obstacle) {
+    const std::shared_ptr<FrenetObstacle> obstacle) {
   auto ego_sl_boundary = reference_path_ptr_->get_ego_frenet_boundary();
 
-  auto obstacle_sl_boundary = obstacle.frenet_obstacle_boundary();
+  auto obstacle_sl_boundary = obstacle->frenet_obstacle_boundary();
 
   const double kLonIgnoreDistance = 0.0;
   // obstacel is near the side of ego car

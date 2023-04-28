@@ -87,12 +87,12 @@ void ReferencePath::update_refpath_points(const ReferencePathPoints &points) {
   }
 }
 
-bool ReferencePath::is_obstacle_ignorable(const FrenetObstacle &obstacle) {
+bool ReferencePath::is_obstacle_ignorable(const std::shared_ptr<FrenetObstacle> obstacle) {
   bool res{false};
-  if (obstacle.frenet_obstacle_boundary().s_end <
+  if (obstacle->frenet_obstacle_boundary().s_end <
       frenet_ego_state_.boundary().s_start) {
-    if (obstacle.frenet_l() > frenet_ego_state_.boundary().l_start &&
-        obstacle.frenet_l() < frenet_ego_state_.boundary().l_end) {
+    if (obstacle->frenet_l() > frenet_ego_state_.boundary().l_start &&
+        obstacle->frenet_l() < frenet_ego_state_.boundary().l_end) {
       res = true;
     }
   }

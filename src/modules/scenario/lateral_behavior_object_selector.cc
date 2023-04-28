@@ -88,9 +88,9 @@ double ObjectSelector::get_vrel_close(int side, int status) {
     }
   }
 
-  int clane_leadone_id = obstacle_manager->get_lane_leadone_obstacle(clane->get_virtual_id());
-  int llane_leadone_id = obstacle_manager->get_lane_leadone_obstacle(llane->get_virtual_id());
-  int rlane_leadone_id = obstacle_manager->get_lane_leadone_obstacle(rlane->get_virtual_id());
+  int clane_leadone_id = clane->get_reference_path()->get_lane_leadone_obstacle();
+  int llane_leadone_id = llane->get_reference_path()->get_lane_leadone_obstacle();
+  int rlane_leadone_id = rlane->get_reference_path()->get_lane_leadone_obstacle();
 
   for (TrackedObject obstacle : lateral_obstacle->front_tracks()) {
     auto &obj_tmp = obstacle;

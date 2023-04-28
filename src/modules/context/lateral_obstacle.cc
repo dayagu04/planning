@@ -1,5 +1,5 @@
 #include "src/modules/context/lateral_obstacle.h"
-
+#include "src/modules/context/virtual_lane_manager.h"
 #include "src/common/ifly_time.h"
 #include "src/modules/common/common.h"
 
@@ -92,7 +92,7 @@ void LateralObstacle::update_tracks(
   side_tracks_.clear();
   side_tracks_l_.clear();
   side_tracks_r_.clear();
-
+  all_tracks_ = tracked_objects;
   for (auto &tr : tracked_objects) {
     if (tr.d_rel >= 0.0) {
       auto it = front_tracks_.begin();
@@ -382,108 +382,157 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 //   return v_rel_close;
 // }
 
-// std::vector<TrackedObject> *LaneTracksManager::get_lane_tracks(int lane,
-//                                                                int
-//                                                                track_type) {
-//   if (lane != LaneProperty::TARGET_LANE && lane != LaneProperty::ORIGIN_LANE
-//   &&
-//       lane != LaneProperty::CURRENT_LANE && lane != LaneProperty::LEFT_LANE
-//       && lane != LaneProperty::RIGHT_LANE) {
-//     MSD_LOG(ERROR,
-//             "[LaneTracksManager::get_lane_tracks] Illegal lane property[%d]",
-//             lane);
-//     return nullptr;
-//   }
+std::vector<TrackedObject> *LaneTracksManager::get_lane_tracks(int lane,
+                                                               int
+                                                               track_type) {
+  assert(lane == 0 || lane == -1 || lane == 1);
+  front_tracks_clane_.clear();
+  front_tracks_llane_.clear();
+  front_tracks_rlane_.clear();
 
-//   if (track_type != TrackType::SIDE_TRACK &&
-//       track_type != TrackType::FISHEYE_TRACK &&
-//       track_type != TrackType::FRONT_TRACK) {
-//     MSD_LOG(ERROR,
-//             "[LaneTracksManager::get_lane_tracks] Illegal track_type[%d]",
-//             track_type);
-//     return nullptr;
-//   }
+  const auto &obstacle_manager = session_->environmental_model().get_obstacle_manager();
+  const auto &virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
+  const auto &clane = virtual_lane_manager->get_current_lane();
+  const auto &llane = virtual_lane_manager->get_left_lane();
+  const auto &rlane = virtual_lane_manager->get_right_lane();
+  const auto tracks = lateral_obstacle_.all_tracks();
+  std::unordered_map<int, TrackedObject> tracks_map;
+  for (auto track : tracks) {
+    tracks_map[track.track_id] = track;
+  }
+  if (clane != nullptr) {
+    auto abstacles_id = clane->get_reference_path()->get_lane_obstacles();
+    for (auto abstacle_id : abstacles_id) {
+      if (tracks_map.find(abstacle_id) != tracks_map.end()) {
+        front_tracks_clane_.emplace_back(tracks_map[abstacle_id]);
+      }
+    }
+  }
 
-//   auto &clane = map_info_mgr_.clane_;
-//   auto &llane = map_info_mgr_.llane_;
-//   auto &rlane = map_info_mgr_.rlane_;
-//   auto &olane = virtual_lane_mgr_.mutable_origin_lane();
-//   auto &tlane = virtual_lane_mgr_.mutable_target_lane();
+  if (llane != nullptr) {
+    auto &abstacles_id = llane->get_reference_path()->get_lane_obstacles();
+    for (auto abstacle_id : abstacles_id) {
+      if (tracks_map.find(abstacle_id) != tracks_map.end()) {
+        front_tracks_llane_.emplace_back(tracks_map[abstacle_id]);
+      }
+    }
+  }
 
-//   if (lane == LaneProperty::TARGET_LANE) {
-//     assert(tlane.has_master());
+  if (rlane != nullptr) {
+    auto &abstacles_id = rlane->get_reference_path()->get_lane_obstacles();
+    for (auto abstacle_id : abstacles_id) {
+      if (tracks_map.find(abstacle_id) != tracks_map.end()) {
+        front_tracks_rlane_.emplace_back(tracks_map[abstacle_id]);
+      }
+    }
+  }
 
-//     if (tlane.has_master() == false) {
-//       MSD_LOG(
-//           ERROR,
-//           "[LaneTracksManager::get_lane_tracks] target lane has no master");
-//       return &empty_tracks_;
-//     }
+  if (lane == -1) {
+    return &front_tracks_llane_;
+  } else if(lane == 0) {
+    return &front_tracks_clane_;
+  } else if(lane == 1) {
+    return &front_tracks_rlane_;
+  } 
+  // if (lane != LaneProperty::TARGET_LANE && lane != LaneProperty::ORIGIN_LANE
+  // &&
+  //     lane != LaneProperty::CURRENT_LANE && lane != LaneProperty::LEFT_LANE
+  //     && lane != LaneProperty::RIGHT_LANE) {
+  //   MSD_LOG(ERROR,
+  //           "[LaneTracksManager::get_lane_tracks] Illegal lane property[%d]",
+  //           lane);
+  //   return nullptr;
+  // }
 
-//     Lane *master = tlane.master();
-//     if (master != &clane && master != &llane && master != &rlane) {
-//       MSD_LOG(
-//           ERROR,
-//           "[LaneTracksManager::get_lane_tracks] Wrong target lane
-//           position[%d]", master->position());
-//       return &empty_tracks_;
-//     }
-//   }
+  // if (track_type != TrackType::SIDE_TRACK &&
+  //     track_type != TrackType::FISHEYE_TRACK &&
+  //     track_type != TrackType::FRONT_TRACK) {
+  //   MSD_LOG(ERROR,
+  //           "[LaneTracksManager::get_lane_tracks] Illegal track_type[%d]",
+  //           track_type);
+  //   return nullptr;
+  // }
 
-//   if (lane == LaneProperty::ORIGIN_LANE) {
-//     // assert(map_info_manager_.olane_.has_master());
-//     if (!(olane.has_master() == true)) {
-//       olane.attach(&clane);
-//     }
+  // auto &clane = map_info_mgr_.clane_;
+  // auto &llane = map_info_mgr_.llane_;
+  // auto &rlane = map_info_mgr_.rlane_;
+  // auto &olane = virtual_lane_mgr_.mutable_origin_lane();
+  // auto &tlane = virtual_lane_mgr_.mutable_target_lane();
 
-//     Lane *master = olane.master();
-//     if (master != &clane && master != &llane && master != &rlane) {
-//       MSD_LOG(
-//           ERROR,
-//           "[LateralObstacle::get_lane_tracks] Wrong origin lane
-//           position[%d]", master->position());
-//       return &empty_tracks_;
-//     }
-//   }
+  // if (lane == LaneProperty::TARGET_LANE) {
+  //   assert(tlane.has_master());
 
-//   if (lane == LaneProperty::LEFT_LANE ||
-//       (lane == LaneProperty::TARGET_LANE && tlane.master() == &llane) ||
-//       (lane == LaneProperty::ORIGIN_LANE && olane.master() == &llane)) {
-//     update_lane_tracks(track_type, LanePosition::LEFT_POS);
+  //   if (tlane.has_master() == false) {
+  //     MSD_LOG(
+  //         ERROR,
+  //         "[LaneTracksManager::get_lane_tracks] target lane has no master");
+  //     return &empty_tracks_;
+  //   }
 
-//     if (track_type == TrackType::SIDE_TRACK) {
-//       return &side_tracks_llane_;
-//     } else if (track_type == TrackType::FRONT_TRACK) {
-//       return &front_tracks_llane_;
-//     }
-//   }
+  //   Lane *master = tlane.master();
+  //   if (master != &clane && master != &llane && master != &rlane) {
+  //     MSD_LOG(
+  //         ERROR,
+  //         "[LaneTracksManager::get_lane_tracks] Wrong target lane
+  //         position[%d]", master->position());
+  //     return &empty_tracks_;
+  //   }
+  // }
 
-//   if (lane == LaneProperty::RIGHT_LANE ||
-//       (lane == LaneProperty::TARGET_LANE && tlane.master() == &rlane) ||
-//       (lane == LaneProperty::ORIGIN_LANE && olane.master() == &rlane)) {
-//     update_lane_tracks(track_type, LanePosition::RIGHT_POS);
+  // if (lane == LaneProperty::ORIGIN_LANE) {
+  //   // assert(map_info_manager_.olane_.has_master());
+  //   if (!(olane.has_master() == true)) {
+  //     olane.attach(&clane);
+  //   }
 
-//     if (track_type == TrackType::SIDE_TRACK) {
-//       return &side_tracks_rlane_;
-//     } else if (track_type == TrackType::FRONT_TRACK) {
-//       return &front_tracks_rlane_;
-//     }
-//   }
+  //   Lane *master = olane.master();
+  //   if (master != &clane && master != &llane && master != &rlane) {
+  //     MSD_LOG(
+  //         ERROR,
+  //         "[LateralObstacle::get_lane_tracks] Wrong origin lane
+  //         position[%d]", master->position());
+  //     return &empty_tracks_;
+  //   }
+  // }
 
-//   if (lane == LaneProperty::CURRENT_LANE ||
-//       (lane == LaneProperty::TARGET_LANE && tlane.master() == &clane) ||
-//       (lane == LaneProperty::ORIGIN_LANE && olane.master() == &clane)) {
-//     update_lane_tracks(track_type, LanePosition::CURR_POS);
+  // if (lane == LaneProperty::LEFT_LANE ||
+  //     (lane == LaneProperty::TARGET_LANE && tlane.master() == &llane) ||
+  //     (lane == LaneProperty::ORIGIN_LANE && olane.master() == &llane)) {
+  //   update_lane_tracks(track_type, LanePosition::LEFT_POS);
 
-//     if (track_type == TrackType::SIDE_TRACK) {
-//       return &side_tracks_clane_;
-//     } else if (track_type == TrackType::FRONT_TRACK) {
-//       return &front_tracks_clane_;
-//     }
-//   }
+  //   if (track_type == TrackType::SIDE_TRACK) {
+  //     return &side_tracks_llane_;
+  //   } else if (track_type == TrackType::FRONT_TRACK) {
+  //     return &front_tracks_llane_;
+  //   }
+  // }
 
-//   return nullptr;
-// }
+  // if (lane == LaneProperty::RIGHT_LANE ||
+  //     (lane == LaneProperty::TARGET_LANE && tlane.master() == &rlane) ||
+  //     (lane == LaneProperty::ORIGIN_LANE && olane.master() == &rlane)) {
+  //   update_lane_tracks(track_type, LanePosition::RIGHT_POS);
+
+  //   if (track_type == TrackType::SIDE_TRACK) {
+  //     return &side_tracks_rlane_;
+  //   } else if (track_type == TrackType::FRONT_TRACK) {
+  //     return &front_tracks_rlane_;
+  //   }
+  // }
+
+  // if (lane == LaneProperty::CURRENT_LANE ||
+  //     (lane == LaneProperty::TARGET_LANE && tlane.master() == &clane) ||
+  //     (lane == LaneProperty::ORIGIN_LANE && olane.master() == &clane)) {
+  //   update_lane_tracks(track_type, LanePosition::CURR_POS);
+
+  //   if (track_type == TrackType::SIDE_TRACK) {
+  //     return &side_tracks_clane_;
+  //   } else if (track_type == TrackType::FRONT_TRACK) {
+  //     return &front_tracks_clane_;
+  //   }
+  // }
+
+  // return nullptr;
+}
 
 // void LaneTracksManager::update_lane_tracks(int track_type, int position) {
 //   std::tuple<int, int> track_info(track_type, position);

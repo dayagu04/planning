@@ -103,11 +103,17 @@ void convertMsg(const OldLocalView &old_local_view, LocalView &local_view) {
   //感知障碍物
 
   local_view.fusion_objects_info.mutable_header()->set_timestamp(old_local_view.fusion_out.camera_timestamp());
-  local_view.fusion_objects_info.set_num(old_local_view.fusion_out.fusion().num_obstacle());
+  
   local_view.fusion_objects_info.clear_fusion_object();
+  int num = 0;
   for (auto &fusion_object : old_local_view.fusion_out.fusion().objects()) {
+    if (fusion_object.track_id() == 0) {
+      continue;
+    }
+    num++;
     auto fusion_obj = local_view.fusion_objects_info.add_fusion_object();
     fusion_obj->mutable_additional_info()->set_track_id(fusion_object.track_id());
+    printf("id:%d\n", fusion_object.track_id());
     fusion_obj->mutable_common_info()->set_type(fusion_object.type());
     // fusion_obj->mutable_common_info()->mutable_position()->set_x(fusion_object.long_position());
     // fusion_obj->mutable_common_info()->mutable_position()->set_y(fusion_object.lat_position());
@@ -124,6 +130,7 @@ void convertMsg(const OldLocalView &old_local_view, LocalView &local_view) {
     fusion_obj->mutable_common_info()->mutable_shape()->set_width(fusion_object.width());
     fusion_obj->mutable_common_info()->mutable_shape()->set_height(fusion_object.height());
   }
+  local_view.fusion_objects_info.set_num(num);
 }
 
 planning::framework::Session* update() {

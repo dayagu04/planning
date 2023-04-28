@@ -286,8 +286,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
   std::vector<TrackedObject> front_target_tracks;
   auto &obstacle_manager =
       session_->mutable_environmental_model()->get_obstacle_manager();
-  auto tlane_obstacles =
-      obstacle_manager->get_lane_obstacles(target_lane->get_virtual_id());
+  auto tlane_obstacles = target_lane->get_reference_path()->get_lane_obstacles();
 
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
@@ -657,8 +656,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
   std::vector<TrackedObject> front_target_tracks;
   auto &obstacle_manager =
       session_->mutable_environmental_model()->get_obstacle_manager();
-  auto tlane_obstacles =
-      obstacle_manager->get_lane_obstacles(target_lane->get_virtual_id());
+  auto tlane_obstacles = target_lane->get_reference_path()->get_lane_obstacles();
 
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),

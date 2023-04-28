@@ -37,7 +37,7 @@ struct ReferencePathPoint {
 };
 using ReferencePathPoints = std::vector<ReferencePathPoint>;
 
-class ReferencePath : public std::enable_shared_from_this<ReferencePath>{
+class ReferencePath {
  public:
   ReferencePath();
   virtual ~ReferencePath() = default;
@@ -60,14 +60,14 @@ class ReferencePath : public std::enable_shared_from_this<ReferencePath>{
     return frenet_ego_state_.boundary();
   }
 
-  const std::vector<FrenetObstacle> &get_obstacles() const {
+  const std::vector<std::shared_ptr<FrenetObstacle>> &get_obstacles() const {
     return frenet_obstacles_;
   }
 
-  const std::unordered_map<int, FrenetObstacle> &get_obstacles_map() const {
+  const std::unordered_map<int, std::shared_ptr<FrenetObstacle>> &get_obstacles_map() const {
     return frenet_obstacles_map_;
   }
-  virtual bool is_obstacle_ignorable(const FrenetObstacle &obstacle);
+  virtual bool is_obstacle_ignorable(const std::shared_ptr<FrenetObstacle> obstacle);
 
   const std::vector<const Obstacle *> &get_parking_space() const {
     return parking_spaces_;
@@ -85,7 +85,17 @@ class ReferencePath : public std::enable_shared_from_this<ReferencePath>{
       double s, ReferencePathPoint &reference_path_point) const;
   bool transform_trajectory_points(TrajectoryPoints &trajectory_points) const;
   bool transform_trajectory_point(TrajectoryPoint &trajectory_point) const;
+ public:
+  // 用在sort函数中，应使用全局量或Lambda函数
+  inline static bool compare_obstacle_s_descend(const std::shared_ptr<FrenetObstacle> o1,
+                                  const std::shared_ptr<FrenetObstacle> o2) {
+    return (o1->frenet_s() > o2->frenet_s());
+  }
 
+  inline static bool compare_obstacle_s_ascend(const std::shared_ptr<FrenetObstacle> o1,
+                                const std::shared_ptr<FrenetObstacle> o2) {
+    return (o1->frenet_s() < o2->frenet_s());
+  }
  protected:
   void init();
   void update_refpath_points(const ReferencePathPoints &points);
@@ -102,9 +112,9 @@ class ReferencePath : public std::enable_shared_from_this<ReferencePath>{
   FrenetEgoState frenet_ego_state_;
 
   // obstacles
-  std::vector<FrenetObstacle> frenet_obstacles_;
+  std::vector<std::shared_ptr<FrenetObstacle>> frenet_obstacles_;
 
-  std::unordered_map<int, FrenetObstacle> frenet_obstacles_map_;
+  std::unordered_map<int, std::shared_ptr<FrenetObstacle>> frenet_obstacles_map_;
 
   std::vector<const Obstacle *> parking_spaces_;
   std::vector<const Obstacle *> free_space_ground_lines_;

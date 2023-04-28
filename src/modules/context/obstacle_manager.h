@@ -28,48 +28,11 @@ class ObstacleManager {
 
   const IndexedList<int, Obstacle> &get_obstacles() const;
 
-  std::vector<FrenetObstacle> get_reference_path_obstacles(
+  std::vector<std::shared_ptr<FrenetObstacle>> get_reference_path_obstacles(
       const ReferencePath &reference_path) const;
 
-  std::unordered_map<int, FrenetObstacle> get_reference_path_obstacles_map(
+  std::unordered_map<int, std::shared_ptr<FrenetObstacle>> get_reference_path_obstacles_map(
       const ReferencePath &reference_path) const;
-
-  const std::vector<int> &get_lane_obstacles(int lane_virtual_id) const {
-    if (lanes_obstacles_.count(lane_virtual_id) > 0) {
-      return lanes_obstacles_.at(lane_virtual_id);
-    } else {
-      LOG_ERROR("[ObstacleManager] lane_virtual_id does not exist");
-      return lanes_obstacles_.at(-1);
-    }
-  }
-
-  int get_lane_leadone_obstacle(int lane_virtual_id) const {
-    if (lanes_leadone_obstacle_.count(lane_virtual_id) > 0) {
-      return lanes_leadone_obstacle_.at(lane_virtual_id);
-    } else {
-      LOG_ERROR("[ObstacleManager] lane_virtual_id does not exist");
-      return -1;
-    }
-  }
-
-  int get_lane_leadtwo_obstacle(int lane_virtual_id) const {
-    if (lanes_leadtwo_obstacle_.count(lane_virtual_id) > 0) {
-      return lanes_leadtwo_obstacle_.at(lane_virtual_id);
-    } else {
-      LOG_ERROR("[ObstacleManager] lane_virtual_id does not exist");
-      return -1;
-    }
-  }
-
-  int get_current_leadone_obstacle_to_ego() const {
-    return current_leadone_obstacle_to_ego_;
-  }
-
-  int get_current_leadtwo_obstacle_to_ego() const {
-    return current_leadtwo_obstacle_to_ego_;
-  }
-
-  void assign_obstacles_to_lanes();
 
   // lidar road edge
   Obstacle *add_road_edge_obstacle(const Obstacle &obstacle) {
@@ -103,22 +66,10 @@ class ObstacleManager {
   const IndexedList<int, Obstacle> &get_parking_space() const {
     return parking_space_obstacles_;
   }
-  void cal_current_leadone_leadtwo_to_ego(int lane_virtual_id);
- public:
-  // 用在sort函数中，应使用全局量或Lambda函数
-  inline static bool compare_obstacle_s_descend(const FrenetObstacle &o1,
-                                  const FrenetObstacle &o2) {
-    return (o1.frenet_s() > o2.frenet_s());
-  }
-
-  inline static bool compare_obstacle_s_ascend(const FrenetObstacle &o1,
-                                const FrenetObstacle &o2) {
-    return (o1.frenet_s() < o2.frenet_s());
-  }
 
  private:
   void clear();
-  bool is_potential_current_leadone_leadtwo_to_ego(const FrenetObstacle &frenet_obstacle);
+  // bool is_potential_current_leadone_leadtwo_to_ego(const std::shared_ptr<FrenetObstacle> &frenet_obstacle);
  private:
   planning::framework::Session *session_ = nullptr;
   IndexedList<int, Obstacle> obstacles_;
@@ -127,11 +78,8 @@ class ObstacleManager {
   IndexedList<int, Obstacle> parking_space_obstacles_;
   IndexedList<int, Obstacle> road_edge_obstacles_;
   EgoPlanningObstacleManagerConfig config_;
-  std::unordered_map<int, std::vector<int>> lanes_obstacles_;
-  std::unordered_map<int, int> lanes_leadone_obstacle_;
-  std::unordered_map<int, int> lanes_leadtwo_obstacle_;
-  int current_leadone_obstacle_to_ego_{-1};
-  int current_leadtwo_obstacle_to_ego_{-1};
+  // std::unordered_map<int, std::vector<int>> lanes_obstacles_;
+  
   std::unordered_map<int, std::vector<int>> lanes_virtual_obstacles_;
 };
 

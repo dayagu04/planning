@@ -22,6 +22,7 @@ std::shared_ptr<ReferencePath> ReferencePathManager::get_reference_path_by_lane(
     reference_path->update(session_);
     if (reference_path->valid()) {
       reference_paths_[key] = reference_path;
+      lane_reference_paths_[lane_virtual_id] = reference_path;
     }
   }
 
@@ -42,15 +43,24 @@ void ReferencePathManager::update() {
   auto virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   //step1 construct current/left/right reference_path
-  auto current_lane = virtual_lane_manager->get_current_lane();
-  auto left_lane = virtual_lane_manager->get_left_lane();
-  auto right_lane = virtual_lane_manager->get_right_lane();
+  auto &current_lane = virtual_lane_manager->get_current_lane();
+  auto &left_lane = virtual_lane_manager->get_left_lane();
+  auto &right_lane = virtual_lane_manager->get_right_lane();
   get_reference_path_by_lane(current_lane->get_virtual_id(), true);
+  if (lane_reference_paths_[current_lane->get_virtual_id()] != nullptr) {
+    lane_reference_paths_[current_lane->get_virtual_id()]->assign_obstacles_to_lanes();
+  }
   if (left_lane != nullptr) {
     get_reference_path_by_lane(left_lane->get_virtual_id(), true);
+    if (lane_reference_paths_[left_lane->get_virtual_id()] != nullptr) {
+      lane_reference_paths_[left_lane->get_virtual_id()]->assign_obstacles_to_lanes();
+    }
   }
   if (right_lane != nullptr) {
     get_reference_path_by_lane(right_lane->get_virtual_id(), true);
+    if (lane_reference_paths_[right_lane->get_virtual_id()] != nullptr) {
+      lane_reference_paths_[right_lane->get_virtual_id()]->assign_obstacles_to_lanes();
+    }
   }
 
   // step2 check reference_paths_'s history, and update data

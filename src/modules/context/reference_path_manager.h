@@ -35,6 +35,16 @@ class ReferencePathManager {
   planning::framework::Session* session_;
   std::map<ReferencePathKeyType, std::shared_ptr<ReferencePath>>
       reference_paths_;
+  std::map<int, std::shared_ptr<LaneReferencePath>>
+      lane_reference_paths_;
+  // std::map<int, std::shared_ptr<LaneReferencePath>>
+  //     lane_reference_paths_;
+  // std::map<int, std::shared_ptr<LaneReferencePath>>
+  //     lane_reference_paths_;
+  // std::map<int, std::shared_ptr<LaneReferencePath>>
+  //     lane_reference_paths_;
+  // std::map<int, std::shared_ptr<ReferencePath>>
+  //     reference_paths_;
 };
 
 std::shared_ptr<ReferencePath> make_map_lane_reference_path(
