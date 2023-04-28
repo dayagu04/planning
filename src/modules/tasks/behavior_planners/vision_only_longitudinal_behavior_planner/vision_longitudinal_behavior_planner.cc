@@ -55,7 +55,7 @@ bool VisionLongitudinalBehaviorPlanner::update() {
 
   if (lane_tracks_mgr_ == nullptr) {
     lane_tracks_mgr_ = std::make_shared<LaneTracksManager>(
-    *lateral_obstacle, *virtual_lane_mgr_);
+    *lateral_obstacle, *virtual_lane_mgr_, frame_->session());
   }
   //modify
   //lane_tracks_mgr_->update_ego_state(ego_state);

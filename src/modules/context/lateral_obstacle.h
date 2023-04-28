@@ -99,7 +99,7 @@ private:
 class LaneTracksManager {
 public:
   LaneTracksManager(LateralObstacle &lateral_obstacle,
-                    VirtualLaneManager &virtual_lane_mgr, planning::framework::Session *session);
+                    VirtualLaneManager &virtual_lane_mgr, const planning::framework::Session *session);
   virtual ~LaneTracksManager() = default;
 
   // void update_ego_state(const EgoStateManager& ego_state) {

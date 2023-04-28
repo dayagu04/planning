@@ -156,10 +156,12 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
   return false;
 }
 
-// LaneTracksManager::LaneTracksManager(LateralObstacle &lateral_obstacle,
-//                                      VirtualLaneManager &virtual_lane_mgr)
-//     : lateral_obstacle_(lateral_obstacle),
-//       virtual_lane_mgr_(virtual_lane_mgr) {}
+LaneTracksManager::LaneTracksManager(LateralObstacle &lateral_obstacle,
+                                     VirtualLaneManager &virtual_lane_mgr,
+                                     const planning::framework::Session *session)
+    : lateral_obstacle_(lateral_obstacle),
+      virtual_lane_mgr_(virtual_lane_mgr),
+      session_(session) {}
 
 // double LaneTracksManager::get_drel_close(int side) {
 //   double d_rel_close = 150;
