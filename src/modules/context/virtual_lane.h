@@ -140,6 +140,7 @@ class VirtualLane {
   std::vector<PathPoint> refined_lane_points_;
 
   std::vector<std::string> center_line_points_track_id_;
+  // todo:clren 后面改成map，适配多种reference_path
   std::shared_ptr<LaneReferencePath>  reference_path_;
 
   std::vector<int> current_tasks_;
