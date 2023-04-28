@@ -158,7 +158,7 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
 
 LaneTracksManager::LaneTracksManager(LateralObstacle &lateral_obstacle,
                                      VirtualLaneManager &virtual_lane_mgr,
-                                     const planning::framework::Session *session)
+                                     planning::framework::Session *session)
     : lateral_obstacle_(lateral_obstacle),
       virtual_lane_mgr_(virtual_lane_mgr),
       session_(session) {}

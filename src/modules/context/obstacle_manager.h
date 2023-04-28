@@ -28,8 +28,8 @@ class ObstacleManager {
 
   const IndexedList<int, Obstacle> &get_obstacles() const;
 
-  void  generate_frenet_obstacles(ReferencePath &reference_path);
-  
+  void generate_frenet_obstacles(ReferencePath &reference_path);
+
   // lidar road edge
   Obstacle *add_road_edge_obstacle(const Obstacle &obstacle) {
     return road_edge_obstacles_.Add(obstacle.id(), obstacle);
