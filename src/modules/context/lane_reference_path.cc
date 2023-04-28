@@ -81,10 +81,8 @@ bool LaneReferencePath::is_obstacle_ignorable(const std::shared_ptr<FrenetObstac
 void LaneReferencePath::update_obstacles() {
   auto obstacle_manager =
       session_->mutable_environmental_model()->get_obstacle_manager();
-  frenet_obstacles_ = obstacle_manager->get_reference_path_obstacles(*this);
-  frenet_obstacles_map_ =
-      obstacle_manager->get_reference_path_obstacles_map(*this); //功能有点重复
-
+  obstacle_manager->generate_frenet_obstacles(*this);
+  
   parking_spaces_ = obstacle_manager->get_parking_space().Items();
   free_space_ground_lines_ =
       obstacle_manager->get_groundline_obstacles().Items();

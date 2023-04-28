@@ -28,12 +28,8 @@ class ObstacleManager {
 
   const IndexedList<int, Obstacle> &get_obstacles() const;
 
-  std::vector<std::shared_ptr<FrenetObstacle>> get_reference_path_obstacles(
-      const ReferencePath &reference_path) const;
-
-  std::unordered_map<int, std::shared_ptr<FrenetObstacle>> get_reference_path_obstacles_map(
-      const ReferencePath &reference_path) const;
-
+  void  generate_frenet_obstacles(ReferencePath &reference_path);
+  
   // lidar road edge
   Obstacle *add_road_edge_obstacle(const Obstacle &obstacle) {
     return road_edge_obstacles_.Add(obstacle.id(), obstacle);

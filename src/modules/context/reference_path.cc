@@ -35,7 +35,7 @@ void ReferencePath::update(planning::framework::Session *session) {
 void ReferencePath::update_obstacles() {
   auto obstacle_manager =
       session_->mutable_environmental_model()->get_obstacle_manager();
-  frenet_obstacles_ = obstacle_manager->get_reference_path_obstacles(*this);
+  obstacle_manager->generate_frenet_obstacles(*this);
 }
 
 void ReferencePath::update_refpath_points(const ReferencePathPoints &points) {

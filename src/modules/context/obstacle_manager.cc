@@ -74,10 +74,13 @@ const IndexedList<int, Obstacle> &ObstacleManager::get_obstacles() const {
   return obstacles_;
 }
 
-std::vector<std::shared_ptr<FrenetObstacle>> ObstacleManager::get_reference_path_obstacles(
-    const ReferencePath &reference_path) const {
+void ObstacleManager::generate_frenet_obstacles(
+    ReferencePath &reference_path) {
   const auto &frenet_coord = reference_path.get_frenet_coord();
-  std::vector<std::shared_ptr<FrenetObstacle>> frenet_obstacles;
+  auto &frenet_obstacles = reference_path.mutable_obstacles();
+  auto &frenet_obstacles_map = reference_path.mutable_obstacles_map();
+  frenet_obstacles.clear();
+  frenet_obstacles_map.clear();
   constexpr double kCareDistance = 30.0;
   auto ego_s = reference_path.get_frenet_ego_state().s();
   auto ego_l = reference_path.get_frenet_ego_state().l();
@@ -107,48 +110,48 @@ std::vector<std::shared_ptr<FrenetObstacle>> ObstacleManager::get_reference_path
       continue;
     }
     // construct frenet_obstacle
-    frenet_obstacles.emplace_back(std::make_shared<FrenetObstacle>(obstacle_ptr, reference_path,
-        session_->environmental_model().get_ego_state_manager())
-        );
+    std::shared_ptr<FrenetObstacle> frenet_obstacle = 
+                  std::make_shared<FrenetObstacle>(obstacle_ptr, reference_path,
+                  session_->environmental_model().get_ego_state_manager());
+    frenet_obstacles.emplace_back(frenet_obstacle);
+    frenet_obstacles_map[obstacle_ptr->id()] = frenet_obstacle;
   }
-
-  return frenet_obstacles;
 }
 
-std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
-ObstacleManager::get_reference_path_obstacles_map(
-    const ReferencePath &reference_path) const {
-  const auto &frenet_coord = reference_path.get_frenet_coord();
-  std::unordered_map<int, std::shared_ptr<FrenetObstacle>> frenet_ob_map;
-  auto ego_s = reference_path.get_frenet_ego_state().s();
-  auto ego_l = reference_path.get_frenet_ego_state().l();
-  for (const Obstacle *obstacle_ptr : obstacles_.Items()) {
-    // filter some obstacle
+// std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+// ObstacleManager::get_reference_path_obstacles_map(
+//     const ReferencePath &reference_path) const {
+//   const auto &frenet_coord = reference_path.get_frenet_coord();
+//   std::unordered_map<int, std::shared_ptr<FrenetObstacle>> frenet_ob_map;
+//   auto ego_s = reference_path.get_frenet_ego_state().s();
+//   auto ego_l = reference_path.get_frenet_ego_state().l();
+//   for (const Obstacle *obstacle_ptr : obstacles_.Items()) {
+//     // filter some obstacle
 
-    Point2D frenet_point, cart_point;
-    cart_point.x = obstacle_ptr->x_center();
-    cart_point.y = obstacle_ptr->y_center();
-    std::vector<std::shared_ptr<FrenetObstacle>> frenet_obstacles;
-    const double frenet_obstacle_range_s_max = 200.0;
-    const double frenet_obstacle_range_s_min = -50.0;
-    bool frenet_transform_flag =
-        frenet_coord->CartCoord2FrenetCoord(cart_point, frenet_point);
-    if (frenet_transform_flag == TRANSFORM_FAILED ||
-        std::isnan(frenet_point.x) || std::isnan(frenet_point.y) ||
-        frenet_point.x > (frenet_obstacle_range_s_max + ego_s) ||
-        frenet_point.x < (frenet_obstacle_range_s_min + ego_s) ||
-        frenet_point.y > (config_.frenet_obstacle_range_l_max + ego_l) ||
-        frenet_point.y < (config_.frenet_obstacle_range_l_min + ego_l)) {
-      continue;
-    }
+//     Point2D frenet_point, cart_point;
+//     cart_point.x = obstacle_ptr->x_center();
+//     cart_point.y = obstacle_ptr->y_center();
+//     std::vector<std::shared_ptr<FrenetObstacle>> frenet_obstacles;
+//     const double frenet_obstacle_range_s_max = 200.0;
+//     const double frenet_obstacle_range_s_min = -50.0;
+//     bool frenet_transform_flag =
+//         frenet_coord->CartCoord2FrenetCoord(cart_point, frenet_point);
+//     if (frenet_transform_flag == TRANSFORM_FAILED ||
+//         std::isnan(frenet_point.x) || std::isnan(frenet_point.y) ||
+//         frenet_point.x > (frenet_obstacle_range_s_max + ego_s) ||
+//         frenet_point.x < (frenet_obstacle_range_s_min + ego_s) ||
+//         frenet_point.y > (config_.frenet_obstacle_range_l_max + ego_l) ||
+//         frenet_point.y < (config_.frenet_obstacle_range_l_min + ego_l)) {
+//       continue;
+//     }
 
-    frenet_ob_map.emplace(
-        std::piecewise_construct, std::forward_as_tuple(obstacle_ptr->id()),
-        std::forward_as_tuple(std::make_shared<FrenetObstacle>(
-            obstacle_ptr, reference_path,
-            session_->environmental_model().get_ego_state_manager())));
-  }
-  return frenet_ob_map;
-}
+//     frenet_ob_map.emplace(
+//         std::piecewise_construct, std::forward_as_tuple(obstacle_ptr->id()),
+//         std::forward_as_tuple(std::make_shared<FrenetObstacle>(
+//             obstacle_ptr, reference_path,
+//             session_->environmental_model().get_ego_state_manager())));
+//   }
+//   return frenet_ob_map;
+// }
 
 }  // namespace planning

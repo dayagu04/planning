@@ -64,6 +64,14 @@ class ReferencePath {
     return frenet_obstacles_;
   }
 
+  std::vector<std::shared_ptr<FrenetObstacle>> &mutable_obstacles() {
+    return frenet_obstacles_;
+  }
+
+  std::unordered_map<int, std::shared_ptr<FrenetObstacle>> &mutable_obstacles_map() {
+    return frenet_obstacles_map_;
+  }
+
   const std::unordered_map<int, std::shared_ptr<FrenetObstacle>> &get_obstacles_map() const {
     return frenet_obstacles_map_;
   }
