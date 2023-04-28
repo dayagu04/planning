@@ -1,6 +1,6 @@
 #define _USE_MATH_DEFINES
 #include "src/modules/common/tracklet_maintainer.h"
-#include "src/modules/context/reference_path_manager.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -118,49 +118,17 @@ void TrackletMaintainer::apply_update(
 
   auto &lateral_output =
       session_->planning_context().lateral_behavior_planner_output();
-  auto reference_path_manager = session_->environmental_model().get_reference_path_manager();
-  auto &ref_points = reference_path_manager->get_reference_path_by_current_lane()->get_points();
-                            
-  std::vector<PathPoint> path_points;
-  for (auto &ref_point : ref_points) {
-    PathPoint point;
-    point.s = ref_point.frenet_point.x;
-    point.x = ref_point.enu_point.x;
-    point.y = ref_point.enu_point.y;
-    path_points.emplace_back(point);
-  }
 
-  calc(objects, 
-       path_points, //lateral_output.path_points
-       LOCATION_INTER, //lateral_output.scenario,
-       3.8,//lateral_output.flane_width,
-       0, //lateral_output.lat_offset,
-       0, //lateral_output.borrow_bicycle_lane,
-       0, //lateral_output.enable_intersection_planner, 
-       10, //lateral_output.dist_rblane,
-       false, //lateral_output.tleft_lane, 
-       false, //lateral_output.rightest_lane,
-       10000, //lateral_output.dist_intersect, 
-       10000, //lateral_output.intersect_length,
-       0, //lateral_output.left_faster,
-       0, //lateral_output.right_faster, 
-       leadcars,
-       0, //isRedLightStop, 
-       lateral_output.isFasterStaticAvd,
-       1, //lateral_output.isOnHighway, 
-       lateral_output.d_poly,
+  calc(objects, lateral_output.path_points, lateral_output.scenario,
+       lateral_output.flane_width, lateral_output.lat_offset,
+       lateral_output.borrow_bicycle_lane,
+       lateral_output.enable_intersection_planner, lateral_output.dist_rblane,
+       lateral_output.tleft_lane, lateral_output.rightest_lane,
+       lateral_output.dist_intersect, lateral_output.intersect_length,
+       lateral_output.left_faster, lateral_output.right_faster, leadcars,
+       isRedLightStop, lateral_output.isFasterStaticAvd,
+       lateral_output.isOnHighway, lateral_output.d_poly,
        lateral_output.c_poly);
-
-  // calc(objects, lateral_output.path_points, lateral_output.scenario,
-  //      lateral_output.flane_width, lateral_output.lat_offset,
-  //      lateral_output.borrow_bicycle_lane,
-  //      lateral_output.enable_intersection_planner, lateral_output.dist_rblane,
-  //      lateral_output.tleft_lane, lateral_output.rightest_lane,
-  //      lateral_output.dist_intersect, lateral_output.intersect_length,
-  //      lateral_output.left_faster, lateral_output.right_faster, leadcars,
-  //      isRedLightStop, lateral_output.isFasterStaticAvd,
-  //      lateral_output.isOnHighway, lateral_output.d_poly,
-  //      lateral_output.c_poly);
 
   set_default_value(objects);
 

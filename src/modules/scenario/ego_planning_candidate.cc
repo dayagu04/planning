@@ -43,11 +43,10 @@ void EgoPlanningCandidate::set_coarse_planning_info(
       ->mutable_planning_result()
       .use_refined_reference_path = false;
   coarse_planning_info_.reference_path =
-      make_map_lane_reference_path(frame_->mutable_session()
-                                        ->mutable_environmental_model()
-                                        ->get_reference_path_manager()
-                                        .get(),
-                                    coarse_planning_info_.target_lane_id);
+      frame_->mutable_session()
+            ->mutable_environmental_model()
+            ->get_reference_path_manager()
+            ->make_map_lane_reference_path(coarse_planning_info_.target_lane_id);
 
   // Step 3) calculate trajectory points
   const auto &planning_init_point =
