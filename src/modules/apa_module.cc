@@ -11,13 +11,13 @@ planning::framework::BaseModule* ApaPlanningModule::clone() const {
   return nullptr;
 }
 
-int ApaPlanningModule::init(const ::google::protobuf::Message* config,
+bool ApaPlanningModule::init(const ::google::protobuf::Message* config,
     planning::framework::Session* session) {
-  return 0;
+  return true;
 }
 
-int ApaPlanningModule::reset(const ::google::protobuf::Message* config) {
-  return 0;
+bool ApaPlanningModule::reset(const ::google::protobuf::Message* config) {
+  return true;
 }
 
 void ApaPlanningModule::compute(framework::Frame* frame) {

@@ -16,10 +16,10 @@ class ApaPlanningModule : public framework::PlanningModule {
 
   planning::framework::BaseModule* clone() const override;
 
-  int init(const ::google::protobuf::Message* config,
+  bool init(const ::google::protobuf::Message* config,
       planning::framework::Session* session) override;
 
-  int reset(const ::google::protobuf::Message* config) override;
+  bool reset(const ::google::protobuf::Message* config) override;
 
  private:
   std::unique_ptr<apa_planner::ApaPlannerDispatcher> planner_dispatcher_
