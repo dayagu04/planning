@@ -29,7 +29,7 @@ bool init() {
       std::string(CONFIG_PATH) + "/engine_config.json";
   if (!planning::common::ConfigurationContext::Instance()->load_engine_config_from_json(
       engine_config_path)) {
-    return false;    
+    return false;
   }
 
   auto engine_config =
@@ -59,13 +59,6 @@ bool init() {
   bst::Log::getInstance().setConfig("Planning_Log", log_file.c_str(),
                                     log_level);
   LOG_DEBUG("The planning component init!!! \n");
-
-  // load algorithm and planner config params
-  std::string algorithm_config_path = engine_config.algorithm_param_cfg_dir +
-                                      "/algorithm_param.json";  // 待优化
-  planning::common::ConfigurationContext::Instance()->load_algorithm_config_from_json(
-      algorithm_config_path);
-  LOG_DEBUG("The algorithm_config json file load well!!! \n");
 }
 int main(int argc, char *argv[]) {
   while(1) {
@@ -81,7 +74,7 @@ int main1(int argc, char *argv[]) {
   planning::LocalView local_view;
   // init();
   std::unique_ptr<planning::GeneralPlanning> planning_base = std::make_unique<planning::GeneralPlanning>();
-  
+
   const std::string channel_ego = "/ego_motion";
   const std::string channel_fusionout = "/fusion/fusion_object";
   const std::string channel_srnd_radar = "/surround_radar";
@@ -152,9 +145,9 @@ int main1(int argc, char *argv[]) {
                 Parameter cyer_para("apollo::cyber::proto::ParamType::PROTOBUF", message.content, "FeiMa::control::ControlCommand", reader->GetProtoDesc(message.channel_name));
                 control_msg = cyer_para.value<FeiMa::control::ControlCommand>();
             }
-        }   
-      }  
-      failTimes=0;     
+        }
+      }
+      failTimes=0;
     }
     failTimes++;
     if(failTimes>2) {
@@ -171,7 +164,7 @@ int main1(int argc, char *argv[]) {
   //     std::make_unique<GeneralPlanning>();
   // std::cout << "==============The planning enters RunOnce============="
   //           << std::endl;
-  // 
+  //
     old_local_view.fusion_out = fusion_msg;
     old_local_view.ego_motion = ego_motion_msg;
     old_local_view.srnd_radar_info = radar_surround_msg;
@@ -188,7 +181,7 @@ int main1(int argc, char *argv[]) {
         pubPlanningOutObj = nodeHandle.advertise<proto_msgs::PlanningOutput>("/sensor/proto/planning", 1000);
         pubRadarSurroundOutObj = nodeHandle.advertise<proto_msgs::RadarSurroundInfo>("/sensor/proto/surround_radar", 2000);
         pubControlObj = nodeHandle.advertise<proto_msgs::ControlCommand>("/sensor/proto/control", 1000);
-      } 
+      }
     }
     rate.Sleep();
   }
@@ -259,7 +252,7 @@ void convertMsg(const OldLocalView &old_local_view, planning::LocalView &local_v
   double distance = 80;
   // lane->lane_reference_line().clear_virtual_lane_refline_points();
   for(float dis = -30 ; dis < distance; dis += 2) {
-     
+
     auto point = lane->mutable_lane_reference_line()->add_virtual_lane_refline_points();
     point->mutable_car_point()->set_x(dis);
     point->mutable_car_point()->set_y(0);
@@ -305,9 +298,9 @@ void convertMsg(const OldLocalView &old_local_view, planning::LocalView &local_v
   // proto_msgs::VehicleEgoMotion vehicleEgoMotionmsg;
   // proto_msgs::FusionOut fusionOutMsg;
   // proto_msgs::PlanningOutput planningOutputMsg;
-  // proto_msgs::RadarSurroundInfo radarSurroundInfoMsg; 
+  // proto_msgs::RadarSurroundInfo radarSurroundInfoMsg;
   // proto_msgs::ControlCommand controlCommandMsg;
-  
+
   // /* 自车信息*/
   // vehicleEgoMotionmsg.timestamp=local_view.ego_motion.accel();
   // vehicleEgoMotionmsg.accel=local_view.ego_motion.accel();
@@ -320,7 +313,7 @@ void convertMsg(const OldLocalView &old_local_view, planning::LocalView &local_v
   // vehicleEgoMotionmsg.function.function_data.acc_active_switch=local_view.ego_motion.function().function_data().acc_active_switch();
   // vehicleEgoMotionmsg.function.function_data.acc_cruise_velocity=local_view.ego_motion.function().function_data().acc_cruise_velocity();
   // vehicleEgoMotionmsg.function.function_data.lcc_active_switch=local_view.ego_motion.function().function_data().lcc_active_switch();
-  
+
 
   // /* 融合车道线输出*/
   // for (auto &fusion_lane_raw : local_view.fusion_out.lane().lane_marker()) {
@@ -334,7 +327,7 @@ void convertMsg(const OldLocalView &old_local_view, planning::LocalView &local_v
   //   lane_marker_msg.crossing=fusion_lane_raw.crossing();
   //   lane_marker_msg.width_marking=fusion_lane_raw.width_marking();
   //   lane_marker_msg.view_range_start=fusion_lane_raw.view_range_start();
-  //   lane_marker_msg.view_range_end=fusion_lane_raw.view_range_end();  
+  //   lane_marker_msg.view_range_end=fusion_lane_raw.view_range_end();
   //   lane_marker_msg.coeff_a0=fusion_lane_raw.coeff_a0();
   //   lane_marker_msg.coeff_a1=fusion_lane_raw.coeff_a1();
   //   lane_marker_msg.coeff_a2=fusion_lane_raw.coeff_a2();
@@ -412,7 +405,7 @@ void convertMsg(const OldLocalView &old_local_view, planning::LocalView &local_v
   // /*planning输出*/
   // planningOutputMsg.meta.timestamp_us=planning_output.meta().timestamp_us();
   // planningOutputMsg.meta.plan_timestamp_us=planning_output.meta().plan_timestamp_us();
-  
+
   // planningOutputMsg.velocity.type=planning_output.velocity().type();
   // planningOutputMsg.velocity.target_value=planning_output.velocity().target_value();
   // planningOutputMsg.acceleration.type=planning_output.acceleration().type();
@@ -426,7 +419,7 @@ void convertMsg(const OldLocalView &old_local_view, planning::LocalView &local_v
   // planningOutputMsg.trajectory.type=planning_output.trajectory().type();
   // for (int i=0;i<planning_output.trajectory().polynomial_curve().polynomial_size();i++) {
   //   planningOutputMsg.trajectory.polynomial_curve.polynomial.push_back(planning_output.trajectory().polynomial_curve().polynomial(i));
-  // } 
+  // }
   // for (int i=0;i<planning_output.trajectory().trajectory_points_size();i++) {
   //   proto_msgs::TrajectoryPoint TrajectoryPoint_Msg;
   //   TrajectoryPoint_Msg.x=planning_output.trajectory().trajectory_points(i).x();
@@ -443,11 +436,11 @@ void convertMsg(const OldLocalView &old_local_view, planning::LocalView &local_v
   // }
 
   // auto debug_info = mjson::Json(mjson::Json::object());
-  
+
   // debug_info["fix_lane_a"]=debug_out_put.fix_lane.a;
   // debug_info["fix_lane_b"]=debug_out_put.fix_lane.b;
   // debug_info["fix_lane_c"]=debug_out_put.fix_lane.c;
-  // debug_info["fix_lane_d"]=debug_out_put.fix_lane.d; 
+  // debug_info["fix_lane_d"]=debug_out_put.fix_lane.d;
   // if (debug_out_put.target_lane.a!=0&&debug_out_put.target_lane.b!=0&&
   //     debug_out_put.target_lane.c!=0&&debug_out_put.target_lane.d!=0) {
   //   debug_info["target_lane_a"]=debug_out_put.target_lane.a;

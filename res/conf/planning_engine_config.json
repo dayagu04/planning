@@ -1,0 +1,9 @@
+{
+  "module_cfg_dir": "/asw/planning/res/conf/module_configs",
+  "scenario_cfg_dir": "/asw/planning/res/config/scenario_configs",
+  "vehicle_cfg_dir": "/asw/planning/res/config",
+  "log_cfg":{
+    "log_file_dir": "/asw/planning/log",
+    "log_level": "DEBUG"
+  }
+}

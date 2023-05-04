@@ -155,4 +155,4 @@ if (PNC_ENABLE_TEST)
 endif ()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-    CONFIG_PATH="/asw/Planning/Res/config")
+    CONFIG_PATH="/asw/planning/res/conf")

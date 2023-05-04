@@ -11,7 +11,7 @@ using ParkingFusion::ParkingFusionInfo;
 bool PlanningComponent::Init() {
   std::cout << "The planning component init!!!" << std::endl;
   std::string engine_config_path =
-      std::string(CONFIG_PATH) + "/engine_config.json";
+      std::string(CONFIG_PATH) + "/planning_engine_config.json";
   common::ConfigurationContext::Instance()->load_engine_config_from_json(
       engine_config_path);
 
@@ -19,36 +19,29 @@ bool PlanningComponent::Init() {
       common::ConfigurationContext::Instance()->engine_config();
   double time_stamp = IflyTime::Now_s();
 
-  std::string log_file = engine_config.log_file_dir + "/planning_log_" +
-                         std::to_string(time_stamp);
+  std::string log_file = engine_config.log_conf.log_file_dir +
+                         "/planning_log_" + std::to_string(time_stamp);
   std::cout << "log_file!!!" << log_file << std::endl;
   // Nanolog
   bst::LogLevel log_level;
-  if (engine_config.log_level == "FETAL") {
+  if (engine_config.log_conf.log_level == "FETAL") {
     log_level = bst::FETAL;
-  } else if (engine_config.log_level == "ERROR") {
+  } else if (engine_config.log_conf.log_level == "ERROR") {
     log_level = bst::ERROR;
-  } else if (engine_config.log_level == "WARNING") {
+  } else if (engine_config.log_conf.log_level == "WARNING") {
     log_level = bst::WARNING;
-  } else if (engine_config.log_level == "NOTICE") {
+  } else if (engine_config.log_conf.log_level == "NOTICE") {
     log_level = bst::NOTICE;
-  } else if (engine_config.log_level == "DEBUG") {
+  } else if (engine_config.log_conf.log_level == "DEBUG") {
     log_level = bst::DEBUG;
   } else {
     log_level = bst::ERROR;
   }
 
-  std::cout << "log_level!!!" << engine_config.log_level << std::endl;
+  std::cout << "log_level!!!" << engine_config.log_conf.log_level << std::endl;
   bst::Log::getInstance().setConfig("Planning_Log", log_file.c_str(),
                                     log_level);
   LOG_DEBUG("The planning component init!!! \n");
-
-  // load algorithm and planner config params
-  std::string algorithm_config_path = engine_config.algorithm_param_cfg_dir +
-                                      "/algorithm_param.json";  // 待优化
-  common::ConfigurationContext::Instance()->load_algorithm_config_from_json(
-      algorithm_config_path);
-  LOG_DEBUG("The algorithm_config json file load well!!! \n");
 
   // 1.定义cyber node
   ADSNode::Init("planning_node");
@@ -140,23 +133,22 @@ bool PlanningComponent::Init() {
             std::lock_guard<std::mutex> lock(msg_mutex_);
             control_output_msg_.CopyFrom(*control_output_msg);
           });
-  
-  auto hmi_reader_ =
-      planning_node_->CreateReader<HimMcuInner::HmiMcuInner>(
-          "/iflytek/hmi/mcu_inner",
-          [this](
-              const std::shared_ptr<HimMcuInner::HmiMcuInner> &hmi_mcu_inner_info_msg) {
-            std::cout << "receive hmi_mcu_inner_info_output " << hmi_mcu_inner_info_msg->timestamp_us()
-                      << std::endl;
-            std::lock_guard<std::mutex> lock(msg_mutex_);
-            hmi_mcu_inner_info_msg_.CopyFrom(*hmi_mcu_inner_info_msg);
-          });
+
+  auto hmi_reader_ = planning_node_->CreateReader<HimMcuInner::HmiMcuInner>(
+      "/iflytek/hmi/mcu_inner",
+      [this](const std::shared_ptr<HimMcuInner::HmiMcuInner>
+                 &hmi_mcu_inner_info_msg) {
+        std::cout << "receive hmi_mcu_inner_info_output "
+                  << hmi_mcu_inner_info_msg->timestamp_us() << std::endl;
+        std::lock_guard<std::mutex> lock(msg_mutex_);
+        hmi_mcu_inner_info_msg_.CopyFrom(*hmi_mcu_inner_info_msg);
+      });
 
   auto parking_fusion_info_reader_ =
       planning_node_->CreateReader<ParkingFusionInfo>(
           "/iflytek/fusion/parking_slot",
-          [this]
-          (const std::shared_ptr<ParkingFusionInfo> &parking_fusion_info_msg) {
+          [this](const std::shared_ptr<ParkingFusionInfo>
+                     &parking_fusion_info_msg) {
             std::lock_guard<std::mutex> lock(msg_mutex_);
             parking_fusion_info_msg_.CopyFrom(*parking_fusion_info_msg);
           });
@@ -168,7 +160,8 @@ bool PlanningComponent::Init() {
       planning_node_->CreateWriter<planning::common::PlanningDebugInfo>(
           "/planning_debug_info");
   planning_hmi_Info_writer_ =
-      planning_node_->CreateWriter<PlanningHMI::PlanningHMIOutputInfoStr>("/iflytek/planning/hmi");
+      planning_node_->CreateWriter<PlanningHMI::PlanningHMIOutputInfoStr>(
+          "/iflytek/planning/hmi");
 
   // 3.planning初始化，使用general_planning
   planning_base_ = std::make_unique<GeneralPlanning>();
@@ -204,7 +197,8 @@ bool PlanningComponent::Proc() {
   PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_Info;
   std::cout << "==============The planning enters RunOnce============="
             << std::endl;
-  planning_base_->RunOnce(local_view_, &planning_output, debug_output, planning_hmi_Info);
+  planning_base_->RunOnce(local_view_, &planning_output, debug_output,
+                          planning_hmi_Info);
 
   // 3.get output & publish
   // 重新刷新相对时间 - TBD
