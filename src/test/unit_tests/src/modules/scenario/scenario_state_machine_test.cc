@@ -262,7 +262,7 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
   // LOG_DEBUG("reference_path_manager update time:%f\n", end_time - current_time);
   // current_time = end_time;
 
-//   obstacle_manager_ptr_->assign_obstacles_to_lanes();
+  // obstacle_manager_ptr_->assign_obstacles_to_lanes();
   // end_time = IflyTime::Now_ms();
   // LOG_DEBUG("assign_obstacles_to_lanes update time:%f\n", end_time - current_time);
   // current_time = end_time;

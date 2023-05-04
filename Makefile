@@ -9,7 +9,7 @@ clean:
 build:
 	mkdir -p build && cd build && \
 	cmake .. && \
-	make -j 4
+	make -j 32
 
 deploy:
 	mkdir -p build/Planning/Lib && \

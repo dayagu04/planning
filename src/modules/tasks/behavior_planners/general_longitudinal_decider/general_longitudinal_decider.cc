@@ -648,10 +648,10 @@ void GeneralLongitudinalDecider::generate_lon_decision_from_path(
 
 bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(
     const std::shared_ptr<FrenetObstacle> obstacle) {
-  //   auto ego_sl_boundary = reference_path_ptr_->get_ego_frenet_boundary();
+  auto ego_sl_boundary = reference_path_ptr_->get_ego_frenet_boundary();
 
-  auto obstacle_sl_boundary = obstacle.frenet_obstacle_boundary();
-  auto l_center = obstacle.frenet_l();
+  auto obstacle_sl_boundary = obstacle->frenet_obstacle_boundary();
+  auto l_center = obstacle->frenet_l();
 
   const auto &map_info_manager =
       frame_->session()->environmental_model().get_virtual_lane_manager();
@@ -667,16 +667,16 @@ bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(
   double distance_to_destination = get_distance_to_destination();
 
   // LPNP: obstacle's frenet is wrong when it out of route
-  if (distance_to_destination < 10.0 && (obstacle.b_frenet_valid() == false)) {
+  if (distance_to_destination < 10.0 && (obstacle->b_frenet_valid() == false)) {
     LOG_DEBUG(
         "The obstacle's frenet is invalid but it is needed to be cared by LPNP "
         "whose id : %d \n",
-        obstacle.id());
+        obstacle->id());
     return false;
   }
   // behind ego car
   if ((frame_->session()->is_parking_scene() &&
-       obstacle.type() != Common::ObjectType::OBJECT_TYPE_PEDESTRIAN)) {
+       obstacle->type() != Common::ObjectType::OBJECT_TYPE_PEDESTRIAN)) {
     // the obstacle will be ignored when it behind rear axle for PNP
     if (obstacle_sl_boundary.s_end + vehicle_param_.length / 2 <
         ego_sl_boundary.s_end) {
@@ -734,14 +734,14 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decisions(
   // MDEBUG_JSON_ADD_ITEM(ego_l_rear_right, ego_corners.l_rear_right, object)
   // MDEBUG_JSON_END_OBJECT(object)
   // for (auto &obstacle : reference_path_ptr_->get_obstacles()) {
-  //   auto obstacle_sl_boundary = obstacle.frenet_obstacle_boundary();
-  //   auto obstacle_corners = obstacle.frenet_obstacle_corners();
+  //   auto obstacle_sl_boundary = obstacle->frenet_obstacle_boundary();
+  //   auto obstacle_corners = obstacle->frenet_obstacle_corners();
 
   //   MDEBUG_JSON_BEGIN_OBJECT(object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_id, obstacle.id(), object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_vel, obstacle.frenet_velocity_s(), object)
+  //   MDEBUG_JSON_ADD_ITEM(obj_id, obstacle->id(), object)
+  //   MDEBUG_JSON_ADD_ITEM(obj_vel, obstacle->frenet_velocity_s(), object)
   //   MDEBUG_JSON_ADD_ITEM(obj_vel_dir,
-  //   obstacle.frenet_relative_velocity_angle(),
+  //   obstacle->frenet_relative_velocity_angle(),
   //                        object)
   //   MDEBUG_JSON_ADD_ITEM(obj_s_rear, obstacle_sl_boundary.s_start, object)
   //   MDEBUG_JSON_ADD_ITEM(obj_s_front, obstacle_sl_boundary.s_end, object)
@@ -764,7 +764,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decisions(
   //                        object)
   //   MDEBUG_JSON_ADD_ITEM(
   //       obj_rel_pos,
-  //       static_cast<int>(obstacle_decisions[obstacle.id()].rel_pos_type),
+  //       static_cast<int>(obstacle_decisions[obstacle->id()].rel_pos_type),
   //       object)
   //   MDEBUG_JSON_END_OBJECT(object)
   // }
@@ -780,8 +780,8 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decisions(
     if (check_longitudinal_ignore_obstacle(obstacle)) {
       continue;
     }
-    auto obstacle_id = obstacle.id();
-    if (obstacle.b_frenet_valid()) {
+    auto obstacle_id = obstacle->id();
+    if (obstacle->b_frenet_valid()) {
       construct_longitudinal_obstacle_decision(
           traj_points, refpath_points, lon_overlap_path, obstacle,
           obstacle_decisions[obstacle_id], lon_ref_path);
@@ -875,8 +875,8 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
     const TrajectoryPoints &traj_points,
     const ReferencePathPoints &refpath_points,
     const std::vector<planning_math::Polygon2d> &overlap_path,
-    const std::shared_ptr<FrenetObstacle> obstacle, ObstacleDecision &obstacle_decision,
-    LonRefPath &lon_ref_path) {
+    const std::shared_ptr<FrenetObstacle> obstacle,
+    ObstacleDecision &obstacle_decision, LonRefPath &lon_ref_path) {
   // config： 需要统一
   auto care_width = vehicle_param_.width;
   auto dt_square = config_.delta_time * config_.delta_time;
@@ -904,7 +904,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
     obstacle_yield_uppers.emplace_back(t, std::numeric_limits<double>::max());
 
     Polygon2d obstacle_sl_polygon;
-    auto ok = obstacle.get_polygon_at_time(t, reference_path_ptr_,
+    auto ok = obstacle->get_polygon_at_time(t, reference_path_ptr_,
                                            obstacle_sl_polygon);
     if (not ok) {
       continue;
@@ -925,7 +925,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
     // obstain all lon overlap info
     if ((overlap_points.empty() || i == traj_points.size() - 1) &&
         !overlap_info.empty()) {
-      lon_ref_path.lon_obstacle_overlap_info.emplace(obstacle.id(),
+      lon_ref_path.lon_obstacle_overlap_info.emplace(obstacle->id(),
                                                      overlap_info);
       overlap_info.clear();
     }
@@ -1035,15 +1035,15 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
 
   // add bounds
   // get ignore relative time
-  auto obstacle_sl_boundary = obstacle.frenet_obstacle_boundary();
+  auto obstacle_sl_boundary = obstacle->frenet_obstacle_boundary();
   auto ego_s = reference_path_ptr_->get_frenet_ego_state().s();
   auto ego_acc = reference_path_ptr_->get_frenet_ego_state().acc();
 
   double ignore_relative_time = std::numeric_limits<double>::max();
   // inverse direction car
   if (fabs(planning_math::NormalizeAngle(
-          obstacle.frenet_relative_velocity_angle())) > M_PI / 4 * 3 &&
-      obstacle.velocity() > 1.0) {
+          obstacle->frenet_relative_velocity_angle())) > M_PI / 4 * 3 &&
+      obstacle->velocity() > 1.0) {
     ignore_relative_time =
         std::min(ignore_relative_time, config_.lon_max_ignore_relative_time);
   }
@@ -1054,7 +1054,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
   auto ego_velocity = reference_path_ptr_->get_frenet_ego_state().velocity_s();
   auto distance_buff =
       is_CIPV ? std::min(5.0, std::max(0.0, ego_velocity -
-                                                obstacle.frenet_velocity_s()) *
+                                                obstacle->frenet_velocity_s()) *
                                   0.5)
               : 0.0;
   auto ini_ds = obstacle_sl_boundary.s_start - ego_sl_boundary.s_end;
@@ -1078,7 +1078,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
       reference_path_ptr_->get_frenet_ego_state().corners().s_front_right;
   const double ego_front_right_l =
       reference_path_ptr_->get_frenet_ego_state().corners().l_front_right;
-  const auto &frenet_obstacle_corners = obstacle.frenet_obstacle_corners();
+  const auto &frenet_obstacle_corners = obstacle->frenet_obstacle_corners();
   const double rad2deg = 180.0 / 3.1415926;
   const double min_radius = std::tan(vehicle_param_.max_steer_angle * rad2deg /
                                      vehicle_param_.steer_ratio) /
@@ -1167,30 +1167,30 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
       continue;
     }
 
-    double frenet_point_s = obstacle.frenet_s();
-    auto obstacle_point = obstacle.obstacle()->get_point_at_time(t);
+    double frenet_point_s = obstacle->frenet_s();
+    auto obstacle_point = obstacle->obstacle()->get_point_at_time(t);
     double relative_yaw = obstacle_point.velocity_direction -
                           frenet_coord_->GetRefCurveHeading(frenet_point_s);
     double obstacle_v_lon =
         std::max(obstacle_point.v * std::cos(relative_yaw), 0.0);
     bool b_on_ego_path = std::min(std::min(fabs(obstacle_sl_boundary.l_start),
                                            fabs(obstacle_sl_boundary.l_end)),
-                                  fabs(obstacle.frenet_l())) < 1.5;
+                                  fabs(obstacle->frenet_l())) < 1.5;
 
     auto distance_safe = 2.0;
     if (frame_->session()->is_parking_scene()) {
       static constexpr double kSafeDistanceInverse = 3.0;
       static constexpr double kDistanceInverseTTC = 0.3;
-      double relative_velocity = ego_velocity - obstacle.frenet_velocity_s();
+      double relative_velocity = ego_velocity - obstacle->frenet_velocity_s();
       distance_safe = kSafeDistanceInverse +
                       std::fabs(relative_velocity) * kDistanceInverseTTC;
     }
-    auto obstacle_type = obstacle.type();
+    auto obstacle_type = obstacle->type();
     bool b_fast_car =
         obstacle_type != Common::ObjectType::OBJECT_TYPE_BICYCLE and
         obstacle_type != Common::ObjectType::OBJECT_TYPE_PEDESTRIAN &&
         obstacle_v_lon > ego_velocity &&
-        obstacle.obstacle()->acceleration() > 0.5;
+        obstacle->obstacle()->acceleration() > 0.5;
     if (t < 0.3 && obstacle_yield_uppers[i].second < (5.0 + ego_s) &&
         b_fast_car) {
       distance_safe = 1.0;
@@ -1217,7 +1217,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
       if (std::fabs(t_traj - t) < 1e-2 &&
           lon_ref_path.lon_obstacle_yield_info[i].yield_upper > yield_upper) {
         lon_ref_path.lon_obstacle_yield_info[i].yield_upper = yield_upper;
-        lon_ref_path.lon_obstacle_yield_info[i].yield_id = obstacle.id();
+        lon_ref_path.lon_obstacle_yield_info[i].yield_id = obstacle->id();
         lon_ref_path.lon_obstacle_yield_info[i].yield_buff = distance_safe;
       }
     }
@@ -1227,10 +1227,10 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
     lon_yield_info_.min_ds = std::min(lon_yield_info_.min_ds, yield_ds);
     lon_yield_info_.min_ttc =
         (obstacle_sl_boundary.s_start > ego_s &&
-         ego_velocity > obstacle.frenet_velocity_s())
+         ego_velocity > obstacle->frenet_velocity_s())
             ? std::min(lon_yield_info_.min_ttc,
                        (obstacle_sl_boundary.s_start - ego_s) /
-                           (ego_velocity - obstacle.frenet_velocity_s()))
+                           (ego_velocity - obstacle->frenet_velocity_s()))
             : lon_yield_info_.min_ttc;
     if (yield_ds > 0.0) {
       if (obstacle_v_lon < ego_velocity) {
@@ -1255,7 +1255,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
 
     // add ttc cost:
     const bool b_high_speed_diff = ego_velocity > 25.0 / 3.6 &&
-                                   ego_velocity > obstacle.frenet_velocity_s();
+                                   ego_velocity > obstacle->frenet_velocity_s();
     const double t_ego =
         std::min(1.0, std::max(0.4, 2.0 * lat_overlap_ratio + 0.4 * t));
     const double ttc_pre = std::max(1.0, yield_upper - ego_sl_boundary.s_end) /
@@ -1275,7 +1275,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
         "[GeneralLongitudinalDecider]: lon cost: id=%d  t=%f  ttc_pre=%f  "
         "ttc_buff=%f  t_ego=%f  enable_ttc_cost=%d  able_to_yield=%d  "
         "is_cross=%d  on_ego_path=%d \n",
-        obstacle.id(), t, ttc_pre, ttc_buff, t_ego, enable_ttc_cost,
+        obstacle->id(), t, ttc_pre, ttc_buff, t_ego, enable_ttc_cost,
         able_to_yield, is_cross_obj, b_on_ego_path);
     if (enable_ttc_cost) {
       WeightedLonLeadBound bound;
@@ -1362,7 +1362,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_outer_decision(
       }
       if (not conflict_with_safe) {
         for (auto &obstacle : reference_path_ptr_->get_obstacles()) {
-          if (obstacle.id() != overtake_obstacle_id) {
+          if (obstacle->id() != overtake_obstacle_id) {
             continue;
           }
 
@@ -1379,7 +1379,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_outer_decision(
                   pos_decision.lon_decision = LonObstacleDecisionType::OVERTAKE;
 
                   Polygon2d obstacle_sl_polygon;
-                  auto ok = obstacle.get_polygon_at_time(
+                  auto ok = obstacle->get_polygon_at_time(
                       traj_pt.t, reference_path_ptr_, obstacle_sl_polygon);
                   if (not ok) {
                     continue;
@@ -1413,7 +1413,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_outer_decision(
       }
       if (not conflict_with_safe) {
         for (auto &obstacle : reference_path_ptr_->get_obstacles()) {
-          if (obstacle.id() != yield_obstacle_id) {
+          if (obstacle->id() != yield_obstacle_id) {
             continue;
           }
 
@@ -1430,7 +1430,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_outer_decision(
                   pos_decision.lon_decision = LonObstacleDecisionType::YIELD;
 
                   Polygon2d obstacle_sl_polygon;
-                  auto ok = obstacle.get_polygon_at_time(
+                  auto ok = obstacle->get_polygon_at_time(
                       traj_pt.t, reference_path_ptr_, obstacle_sl_polygon);
                   if (not ok) {
                     continue;
@@ -1538,11 +1538,11 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
       constexpr double lateral_v_threshold = 0.5;
       bool l_away_ego = false;
       bool left_satisfy =
-          frenet_obstacle.frenet_obstacle_boundary().l_start > ego_l_end &&
-          frenet_obstacle.frenet_velocity_l() > lateral_v_threshold;
+          frenet_obstacle->frenet_obstacle_boundary().l_start > ego_l_end &&
+          frenet_obstacle->frenet_velocity_l() > lateral_v_threshold;
       bool right_satisfy =
-          frenet_obstacle.frenet_obstacle_boundary().l_end < ego_l_start &&
-          frenet_obstacle.frenet_velocity_l() < -lateral_v_threshold;
+          frenet_obstacle->frenet_obstacle_boundary().l_end < ego_l_start &&
+          frenet_obstacle->frenet_velocity_l() < -lateral_v_threshold;
       if (!lon_decision_information.nearby_obstacle) {
         if (left_satisfy || right_satisfy) {
           l_away_ego = true;
@@ -1552,10 +1552,10 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
             "f_l_end: %.2f, left_satisfy: %d, right_satisfy: %d, "
             "ego_l_start: %.2f, ego_l_end: %.2f, frenet_obstacle_s: %.2f, "
             "l_away_ego: %d, ego_s: %.2f, get_lon_success: %d \n",
-            obstacle_decision.first, frenet_obstacle.frenet_velocity_l(),
-            frenet_obstacle.frenet_obstacle_boundary().l_start,
-            frenet_obstacle.frenet_obstacle_boundary().l_end, left_satisfy,
-            right_satisfy, ego_l_start, ego_l_end, frenet_obstacle.frenet_s(),
+            obstacle_decision.first, frenet_obstacle->frenet_velocity_l(),
+            frenet_obstacle->frenet_obstacle_boundary().l_start,
+            frenet_obstacle->frenet_obstacle_boundary().l_end, left_satisfy,
+            right_satisfy, ego_l_start, ego_l_end, frenet_obstacle->frenet_s(),
             l_away_ego, ego_s, get_lon_success);
         if (!l_away_ego) {
           if (get_lon_success) {
@@ -1564,17 +1564,17 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
             double distance_to_right_road_border =
                 refpath_pt.distance_to_right_road_border;
             bool lateral_satisfy =
-                (frenet_obstacle.frenet_obstacle_boundary().l_start >
+                (frenet_obstacle->frenet_obstacle_boundary().l_start >
                      ego_l_end &&
-                 frenet_obstacle.frenet_obstacle_boundary().l_start <
+                 frenet_obstacle->frenet_obstacle_boundary().l_start <
                      distance_to_left_road_border) ||
-                (frenet_obstacle.frenet_obstacle_boundary().l_end <
+                (frenet_obstacle->frenet_obstacle_boundary().l_end <
                      ego_l_start &&
-                 frenet_obstacle.frenet_obstacle_boundary().l_end >
+                 frenet_obstacle->frenet_obstacle_boundary().l_end >
                      -distance_to_right_road_border);
             bool longitual_satisfy =
-                (frenet_obstacle.frenet_s() - ego_s > -10.0) &&
-                (frenet_obstacle.frenet_s() - ego_s < 100.0);
+                (frenet_obstacle->frenet_s() - ego_s > -10.0) &&
+                (frenet_obstacle->frenet_s() - ego_s < 100.0);
             lon_decision_information.nearby_obstacle =
                 lon_decision_information.nearby_obstacle ||
                 (lateral_satisfy && longitual_satisfy);
@@ -1586,12 +1586,12 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
                 lateral_satisfy, longitual_satisfy);
           } else {
             bool s_l_satisfy =
-                (frenet_obstacle.frenet_obstacle_boundary().l_start >
+                (frenet_obstacle->frenet_obstacle_boundary().l_start >
                      ego_l_end ||
-                 frenet_obstacle.frenet_obstacle_boundary().l_end <
+                 frenet_obstacle->frenet_obstacle_boundary().l_end <
                      ego_l_start) &&
-                (frenet_obstacle.frenet_s() - ego_s > -50.0) &&
-                (frenet_obstacle.frenet_s() - ego_s < 100.0);
+                (frenet_obstacle->frenet_s() - ego_s > -50.0) &&
+                (frenet_obstacle->frenet_s() - ego_s < 100.0);
             lon_decision_information.nearby_obstacle =
                 lon_decision_information.nearby_obstacle || s_l_satisfy;
             LOG_DEBUG("HHLDEBUGW s_l_satisfy: %d \n", s_l_satisfy);
@@ -1612,19 +1612,19 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
         continue;
       }
       const bool satisfy_s_leadone =
-          (frenet_obstacle.frenet_s() - ego_s - half_ego_length <
+          (frenet_obstacle->frenet_s() - ego_s - half_ego_length <
            leadone_min_s_leadone) &&
-          frenet_obstacle.frenet_s() - ego_s - half_ego_length > 0;
+          frenet_obstacle->frenet_s() - ego_s - half_ego_length > 0;
       const bool satisfy_s_CIPV =
-          frenet_obstacle.frenet_s() - ego_s - half_ego_length > 0;
+          frenet_obstacle->frenet_s() - ego_s - half_ego_length > 0;
       const bool polygen_out_lane =
-          frenet_obstacle.frenet_obstacle_boundary().l_start > ego_l_end ||
-          frenet_obstacle.frenet_obstacle_boundary().l_end < ego_l_start;
+          frenet_obstacle->frenet_obstacle_boundary().l_start > ego_l_end ||
+          frenet_obstacle->frenet_obstacle_boundary().l_end < ego_l_start;
       LOG_DEBUG(
           "HHLDEBUG: l_start: %.2f, l_end: %.2f, ego_s: %.2f, "
           "ego_l_start:%.2f, ego_l_end: %.2f, half_ego_length: %.2f \n",
-          frenet_obstacle.frenet_obstacle_boundary().l_start,
-          frenet_obstacle.frenet_obstacle_boundary().l_end, ego_s, ego_l_start,
+          frenet_obstacle->frenet_obstacle_boundary().l_start,
+          frenet_obstacle->frenet_obstacle_boundary().l_end, ego_s, ego_l_start,
           ego_l_end, half_ego_length);
       LOG_DEBUG(
           "HHLDEBUG: has_lon_decision_overtake: %d, satisfy_s_leadone: "
@@ -1636,21 +1636,21 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
         lon_decision_information.leadone_info.has_leadone = true;
         if (satisfy_s_leadone) {
           lon_decision_information.leadone_info.leadone_information.obstacle_s =
-              frenet_obstacle.frenet_s() - ego_s - half_ego_length;
+              frenet_obstacle->frenet_s() - ego_s - half_ego_length;
           lon_decision_information.leadone_info.leadone_information
               .obstacle_id = obstacle_decision.first;
           lon_decision_information.leadone_info.leadone_information
               .obstacle_length =
-              std::max(frenet_obstacle.frenet_obstacle_boundary().s_end -
-                           frenet_obstacle.frenet_obstacle_boundary().s_start,
+              std::max(frenet_obstacle->frenet_obstacle_boundary().s_end -
+                           frenet_obstacle->frenet_obstacle_boundary().s_start,
                        4.0);
           leadone_min_s_leadone = lon_decision_information.leadone_info
                                       .leadone_information.obstacle_s;
           lon_decision_information.leadone_info.leadone_information.obstacle_v =
-              frenet_obstacle.velocity();
-          if (frenet_obstacle.type() ==
+              frenet_obstacle->velocity();
+          if (frenet_obstacle->type() ==
                   Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
-              frenet_obstacle.type() ==
+              frenet_obstacle->type() ==
                   Common::ObjectType::OBJECT_TYPE_BICYCLE) {
             lon_decision_information.leadone_info.leadone_information
                 .obstacle_type = 0;
@@ -1663,12 +1663,12 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
         if (satisfy_s_CIPV) {
           lon_decision_information.CIPV_info.has_CIPV = true;
           CIPV_object.obstacle_s =
-              frenet_obstacle.frenet_s() - ego_s - half_ego_length;
+              frenet_obstacle->frenet_s() - ego_s - half_ego_length;
           CIPV_object.obstacle_id = obstacle_decision.first;
-          CIPV_object.obstacle_v = frenet_obstacle.velocity();
-          if (frenet_obstacle.type() ==
+          CIPV_object.obstacle_v = frenet_obstacle->velocity();
+          if (frenet_obstacle->type() ==
                   Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
-              frenet_obstacle.type() ==
+              frenet_obstacle->type() ==
                   Common::ObjectType::OBJECT_TYPE_BICYCLE) {
             CIPV_object.obstacle_type = 0;
           } else {
@@ -1681,16 +1681,16 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
       // obstain cutin information
       else if (polygen_out_lane && has_lon_decision_yield) {
         lon_decision_information.cutin_info.has_cutin = true;
-        if (frenet_obstacle.type() ==
+        if (frenet_obstacle->type() ==
                 Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
-            frenet_obstacle.type() == Common::ObjectType::OBJECT_TYPE_BICYCLE) {
+            frenet_obstacle->type() == Common::ObjectType::OBJECT_TYPE_BICYCLE) {
           cutin_object.obstacle_type = 0;
         } else {
           cutin_object.obstacle_type = 1;
         }
         cutin_object.obstacle_s =
-            frenet_obstacle.frenet_s() - ego_s - half_ego_length;
-        cutin_object.obstacle_v = frenet_obstacle.velocity();
+            frenet_obstacle->frenet_s() - ego_s - half_ego_length;
+        cutin_object.obstacle_v = frenet_obstacle->velocity();
         cutin_object.obstacle_id = obstacle_decision.first;
         lon_decision_information.cutin_info.cutin_information.emplace_back(
             cutin_object);

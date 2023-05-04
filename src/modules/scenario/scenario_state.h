@@ -83,16 +83,15 @@ struct StateBase : M::Base {
   void change_state(ScenarioStateEnum next_state, Control &control,
                     FsmContext &context);
 
-  // wait for EgoPlanningTaskPipeline
-  virtual std::shared_ptr<TaskPipeline>
-  get_ego_planning_task_pipeline(planning::framework::Frame *frame) {
+  // wait for TaskPipeline
+  virtual std::shared_ptr<TaskPipeline> get_ego_planning_task_pipeline(
+      planning::framework::Frame *frame) {
     common::SceneType scene_type = frame->session()->get_scene_type();
     auto config_builder =
         frame->session()->environmental_model().config_builder(scene_type);
     // return TaskPipeline::Make(
-    //     TaskPipelineType::NORMAL, config_builder, frame);
-    return TaskPipeline::Make(
-        TaskPipelineType::VISION_ONLY, config_builder, frame);
+    //     TaskPipelineType::VISION_ONLY, config_builder, frame);
+    return TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, frame);
   }
 
   virtual std::shared_ptr<Evaluator> get_evaluator(framework::Frame *frame);
