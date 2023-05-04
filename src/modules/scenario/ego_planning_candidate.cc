@@ -1,7 +1,9 @@
 #include "modules/scenario/ego_planning_candidate.h"
+
 #include <memory>
-#include "modules/context/reference_path_manager.h"
+
 #include "modules/common/math/math_utils.h"
+#include "modules/context/reference_path_manager.h"
 #include "modules/tasks/task_pipeline_context.h"
 
 namespace planning {
@@ -9,9 +11,8 @@ namespace planning {
 EgoPlanningCandidate::EgoPlanningCandidate(planning::framework::Frame *frame) {
   frame_ = frame;
   result_trajectory_type_ = ResultTrajectoryType::REFINED_TRAJ;
-  auto config_builder =
-      frame->session()->environmental_model().config_builder(
-          frame_->session()->get_scene_type());
+  auto config_builder = frame->session()->environmental_model().config_builder(
+      frame_->session()->get_scene_type());
   config_ = config_builder->cast<EgoPlanningCandidateConfig>();
 }
 
@@ -44,18 +45,18 @@ void EgoPlanningCandidate::set_coarse_planning_info(
       .use_refined_reference_path = false;
   coarse_planning_info_.reference_path =
       frame_->mutable_session()
-            ->mutable_environmental_model()
-            ->get_reference_path_manager()
-            ->make_map_lane_reference_path(coarse_planning_info_.target_lane_id);
+          ->mutable_environmental_model()
+          ->get_reference_path_manager()
+          ->make_map_lane_reference_path(coarse_planning_info_.target_lane_id);
 
   // Step 3) calculate trajectory points
   const auto &planning_init_point =
       coarse_planning_info_.reference_path->get_frenet_ego_state()
           .planning_init_point();
   LOG_DEBUG("planning_init_point: x = %f, y = %f,s = %f,l = %f",
-        planning_init_point.x, planning_init_point.y,
-        planning_init_point.frenet_state.s,
-        planning_init_point.frenet_state.r);
+            planning_init_point.x, planning_init_point.y,
+            planning_init_point.frenet_state.s,
+            planning_init_point.frenet_state.r);
   const auto &reference_path =
       coarse_planning_info_.reference_path->get_points();
   LOG_DEBUG("reference_path.size() = %d", reference_path.size());
@@ -64,11 +65,14 @@ void EgoPlanningCandidate::set_coarse_planning_info(
 
   TrajectoryPoint point;
   TrajectoryPoints trajectory_points;
-  for (size_t i = 0; i < 21; i++) {
-    point.v =
-        i == 0 ? planning_init_point.v : config_.reference_point_velocity;
-    point.s = planning_init_point.frenet_state.s + 0.2 * i * point.v;
+  // TODO: 采用配置项
+  const double delta_time = 0.2;
+  const int num_point = 21;  // reference_path.size();
+  for (size_t i = 0; i < num_point; i++) {
+    point.v = i == 0 ? planning_init_point.v : config_.reference_point_velocity;
+    point.s = planning_init_point.frenet_state.s + delta_time * i * point.v;
     point.l = i == 0 ? planning_init_point.frenet_state.r : 0.;
+    point.t = i * delta_time;
     Point2D frenet_pt{point.s, point.l};
     Point2D cart_pt;
     if (frenet_coord != nullptr &&
@@ -146,8 +150,7 @@ void EgoPlanningCandidate::refine(
                         ->mutable_environmental_model()
                         ->get_ego_state_manager()
                         ->navi_timestamp();
-    auto delta_time =
-        cur_time - last_planning_result_->timestamp;
+    auto delta_time = cur_time - last_planning_result_->timestamp;
     if (0 < delta_time and delta_time < 1.0) {
       interpolate_with_last_trajectory_points();
       planning_result_.use_backup_cnt =
@@ -203,23 +206,24 @@ void EgoPlanningCandidate::interpolate_with_last_trajectory_points() {
     auto &next_pt = last_traj_points[pre_idx + 1];
 
     traj_pt.t = t;
-    traj_pt.x =
-        planning_math::interpolate(pre_pt.t, pre_pt.x, next_pt.t, next_pt.x, interpolate_t);
-    traj_pt.y =
-        planning_math::interpolate(pre_pt.t, pre_pt.y, next_pt.t, next_pt.y, interpolate_t);
-    traj_pt.heading_angle =
-        planning_math::InterpolateAngle(pre_pt.t, pre_pt.heading_angle, next_pt.t,
-                          next_pt.heading_angle, interpolate_t);
-    traj_pt.curvature = planning_math::interpolate(pre_pt.t, pre_pt.curvature, next_pt.t,
-                                    next_pt.curvature, interpolate_t);
-    traj_pt.v =
-        planning_math::interpolate(pre_pt.t, pre_pt.v, next_pt.t, next_pt.v, interpolate_t);
-    traj_pt.a =
-        planning_math::interpolate(pre_pt.t, pre_pt.a, next_pt.t, next_pt.a, interpolate_t);
-    traj_pt.s =
-        planning_math::interpolate(pre_pt.t, pre_pt.s, next_pt.t, next_pt.s, interpolate_t);
-    traj_pt.l =
-        planning_math::interpolate(pre_pt.t, pre_pt.l, next_pt.t, next_pt.l, interpolate_t);
+    traj_pt.x = planning_math::interpolate(pre_pt.t, pre_pt.x, next_pt.t,
+                                           next_pt.x, interpolate_t);
+    traj_pt.y = planning_math::interpolate(pre_pt.t, pre_pt.y, next_pt.t,
+                                           next_pt.y, interpolate_t);
+    traj_pt.heading_angle = planning_math::InterpolateAngle(
+        pre_pt.t, pre_pt.heading_angle, next_pt.t, next_pt.heading_angle,
+        interpolate_t);
+    traj_pt.curvature =
+        planning_math::interpolate(pre_pt.t, pre_pt.curvature, next_pt.t,
+                                   next_pt.curvature, interpolate_t);
+    traj_pt.v = planning_math::interpolate(pre_pt.t, pre_pt.v, next_pt.t,
+                                           next_pt.v, interpolate_t);
+    traj_pt.a = planning_math::interpolate(pre_pt.t, pre_pt.a, next_pt.t,
+                                           next_pt.a, interpolate_t);
+    traj_pt.s = planning_math::interpolate(pre_pt.t, pre_pt.s, next_pt.t,
+                                           next_pt.s, interpolate_t);
+    traj_pt.l = planning_math::interpolate(pre_pt.t, pre_pt.l, next_pt.t,
+                                           next_pt.l, interpolate_t);
     traj_pt.frenet_valid = pre_pt.frenet_valid and next_pt.frenet_valid;
     planning_result_.traj_points.emplace_back(traj_pt);
   }
