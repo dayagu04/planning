@@ -128,17 +128,17 @@ void EgoPlanningCandidate::refine(
   success_ = false;
 
   //  wait for task_pipeline
-  bool ok = false;
-  // bool ok = task_pipeline->run(*this);
-  // auto task_pipeline_context = task_pipeline->get_pipeline_context();
+  // bool ok = false;
+  bool ok = task_pipeline->Run(*this);
+  auto task_pipeline_context = task_pipeline->get_pipeline_context();
   // status_info_ = task_pipeline_context->status_info;
-  // if (ok) {
-  //   planning_result_ = task_pipeline_context->planning_result;
-  //   planning_result_.use_backup_cnt = 0;
-  //   success_ = true;
-  // } else {
-  //   LOG_ERROR("task_pipepine failed");
-  // }
+  if (ok) {
+    planning_result_ = task_pipeline_context->planning_result;
+    planning_result_.use_backup_cnt = 0;
+    success_ = true;
+  } else {
+    LOG_ERROR("task_pipepine failed");
+  }
 
   if (not ok and last_planning_result_ != nullptr and
       last_planning_result_->use_backup_cnt <= 5) {

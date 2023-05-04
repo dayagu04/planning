@@ -5,6 +5,7 @@
 #include "src/modules/tasks/motion_planners/general_longitudinal_motion_planner/general_longitudinal_optimizer.h"
 #include "src/modules/tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 #include "src/modules/tasks/motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
+#include "src/modules/tasks/behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner.h"
 
 namespace planning {
 
@@ -67,7 +68,7 @@ std::shared_ptr<Task> Task::Make(
     }
 
     case TaskType::VISION_ONLY_LONGITUDINAL_BEHAVIOR_PLANNER: {
-      return std::make_shared<VisionLateralBehaviorPlanner>(config_builder,
+      return std::make_shared<VisionLongitudinalBehaviorPlanner>(config_builder,
                                                        pipeline_context);
     }
       // case TaskType::RESULT_TRAJECTORY_GENERATOR: {

@@ -65,9 +65,9 @@ void StateBase::process(Control &control, FsmContext &context) {
 
     if (candidate.pre_check()) {
       // wait for task_pipeline
-      // std::shared_ptr<EgoPlanningTaskPipeline> task_pipeline =
-      //     get_ego_planning_task_pipeline(context.frame);
-      // candidate.refine(task_pipeline);
+      std::shared_ptr<TaskPipeline> task_pipeline =
+          get_ego_planning_task_pipeline(context.frame);
+      candidate.refine(task_pipeline);
     } else {
       LOG_ERROR("pre_check failed");
     }

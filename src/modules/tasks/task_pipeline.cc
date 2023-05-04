@@ -1,6 +1,7 @@
 #include "src/modules/tasks/task_pipeline.h"
 
 #include "src/modules/tasks/task_pipeline_normal.h"
+#include "src/modules/tasks/task_pipeline_vision_only.h"
 
 namespace planning {
 
@@ -18,9 +19,9 @@ std::shared_ptr<TaskPipeline> TaskPipeline::Make(
     case TaskPipelineType::NORMAL: {
       return std::make_shared<TaskPipelineNormal>(config_builder, frame);
     }
-    // case TaskPipelineType::VISION_ONLY: {
-    //   return std::make_shared<TaskPipelineNormal>(config_builder, frame);
-    // }
+    case TaskPipelineType::VISION_ONLY: {
+      return std::make_shared<TaskPipelineVisionOnly>(config_builder, frame);
+    }
     default: { /*LOG_ERROR*/
       return nullptr;
     }

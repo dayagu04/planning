@@ -131,6 +131,8 @@ bool VisionLateralMotionPlanner::update(
   } else {
     lat_offset_ = 0;
   }
+
+  return true;
 }
 
 bool VisionLateralMotionPlanner::update_basic_path(const int &status) {

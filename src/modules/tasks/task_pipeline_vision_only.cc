@@ -14,9 +14,9 @@ TaskPipelineVisionOnly::TaskPipelineVisionOnly(
   config_ = config_builder->cast<EgoPlanningTaskPipelineVisionOnlyConfig>();
   version_to_tasks_["v1"] = {
       // TaskType::OBSTACLE_DECIDER,
-      // TaskType::LATERAL_DECIDER,
-      // TaskType::LATERAL_OPTIMIZER_V2,
-      TaskType::VISION_ONLY_LONGITUDINAL_BEHAVIOR_PLANNER
+      TaskType::LATERAL_DECIDER,
+      TaskType::VISION_LATERAL_MOTION_PLANNER,
+      TaskType::VISION_ONLY_LONGITUDINAL_BEHAVIOR_PLANNER,
       // TaskType::RESULT_TRAJECTORY_GENERATOR
   };
   CreatePlanningTasks(config_builder);

@@ -218,9 +218,6 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
   (&frame)->mutable_session()->mutable_environmental_model()->set_lateral_obstacle(
       lateral_obstacle_ptr_);
 
-  std::shared_ptr<ScenarioStateMachine> scenario_state_machine_ = nullptr;
-  scenario_state_machine_ =
-      std::make_shared<ScenarioStateMachine>(config_builder, &session);
   object_selector_ = std::make_shared<ObjectSelector>(config_builder, &session);
   (&frame)->mutable_session()->mutable_planning_context()->set_object_selector(
       object_selector_);
@@ -241,7 +238,7 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
   // LOG_DEBUG("reference_path_manager update time:%f\n", end_time - current_time);
   // current_time = end_time;
 
-  obstacle_manager_ptr_->assign_obstacles_to_lanes();
+//   obstacle_manager_ptr_->assign_obstacles_to_lanes();
   // end_time = IflyTime::Now_ms();
   // LOG_DEBUG("assign_obstacles_to_lanes update time:%f\n", end_time - current_time);
   // current_time = end_time;
@@ -249,6 +246,10 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
 
   // TODO(Rui):lateral_obstacle_ptr_->update() only for real time planner
   lateral_obstacle_ptr_->update();
+
+  std::shared_ptr<ScenarioStateMachine> scenario_state_machine_ = nullptr;
+  scenario_state_machine_ =
+      std::make_shared<ScenarioStateMachine>(config_builder, &session);
 
   scenario_state_machine_->init();
   (&frame)->mutable_session()->mutable_planning_context()->set_scenario_state_machine(

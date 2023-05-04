@@ -6,6 +6,7 @@ message(STATUS ">>> [${PROJECT_NAME}] @ ${PROJECT_SOURCE_DIR}/MakeLists.txt")
 # 递归遍历所有.cc文件
 # file(GLOB_RECURSE TEST_CPP_FILES ${CMAKE_CURRENT_LIST_DIR}/src/*.cc)
 file(GLOB_RECURSE TEST_CPP_FILES ${CMAKE_CURRENT_LIST_DIR}/src/general_longitudinal_decider_test.cc)
+file(GLOB_RECURSE TEST_CPP_FILES ${CMAKE_CURRENT_LIST_DIR}/src/scenario_state_machine_test.cc)
 # CMAKE_SOURCE_DIR: 主cmakelist所在路径
 file(GLOB_RECURSE SRC_MATH ${CMAKE_SOURCE_DIR}/src/modules/common/math/*.cc)
 file(GLOB_RECURSE SRC_UTILS ${CMAKE_SOURCE_DIR}/src/modules/common/utils/*.cc)
