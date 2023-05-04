@@ -7,8 +7,6 @@
 #include "modules/context/obstacle.h"
 #include "modules/context/ego_state_manager.h"
 
-#include "src/modules/context/frenet_obstacle.h"
-
 namespace planning {
 
 class ReferencePath;
