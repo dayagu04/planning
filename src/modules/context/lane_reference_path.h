@@ -13,7 +13,7 @@ class LaneReferencePath : public ReferencePath, public std::enable_shared_from_t
   virtual void update(planning::framework::Session *session);
 
   virtual bool is_obstacle_ignorable(const std::shared_ptr<FrenetObstacle> obstacle) override;
-  void assign_obstacles_to_lanes();
+  void assign_obstacles_to_lane();
   void cal_current_leadone_leadtwo_to_ego();
   bool is_potential_current_leadone_leadtwo_to_ego(const std::shared_ptr<FrenetObstacle> frenet_obstacle);
 

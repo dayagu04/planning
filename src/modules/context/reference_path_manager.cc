@@ -38,41 +38,39 @@ ReferencePathManager::get_reference_path_by_current_lane() {
 }
 
 void ReferencePathManager::update() {
-
   auto &virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   //step1 construct current/left/right reference_path
   auto &current_lane = virtual_lane_manager->get_current_lane();
   auto &left_lane = virtual_lane_manager->get_left_lane();
   auto &right_lane = virtual_lane_manager->get_right_lane();
-  // auto key = ReferencePathKeyType(ReferencePathType::MAP_LANE, lane_virtual_id);
-  auto current_reference_path = get_reference_path_by_lane(current_lane->get_virtual_id(), true);
-  auto current_lane_reference_path = dynamic_pointer_cast<LaneReferencePath>(current_reference_path);
-  if (current_lane_reference_path != nullptr) {
-    current_lane_reference_path->assign_obstacles_to_lanes();
-  }
 
+  auto lane_virtual_id = current_lane->get_virtual_id();
+  get_reference_path_by_lane(lane_virtual_id, true);
+  LOG_DEBUG("--------- for lane_virtual_id: update %d\n", lane_virtual_id);
   if (left_lane != nullptr) {
-    auto left_reference_path = get_reference_path_by_lane(left_lane->get_virtual_id(), true);
-    auto left_lane_reference_path = dynamic_pointer_cast<LaneReferencePath>(left_reference_path);
-    if (left_lane_reference_path != nullptr) {
-      left_lane_reference_path->assign_obstacles_to_lanes();
-    }
+    lane_virtual_id = left_lane->get_virtual_id();
+    get_reference_path_by_lane(lane_virtual_id, true);
+    LOG_DEBUG("--------- for lane_virtual_id: update %d\n", lane_virtual_id);
   }
   if (right_lane != nullptr) {
-    auto right_reference_path = get_reference_path_by_lane(right_lane->get_virtual_id(), true);
-    auto right_lane_reference_path = dynamic_pointer_cast<LaneReferencePath>(right_reference_path);
-    if (right_lane_reference_path != nullptr) {
-      right_lane_reference_path->assign_obstacles_to_lanes();
-    }
+    lane_virtual_id = right_lane->get_virtual_id();
+    get_reference_path_by_lane(lane_virtual_id, true);
+    LOG_DEBUG("--------- for lane_virtual_id: update %d\n", lane_virtual_id);
   }
 
   // step2 check reference_paths_'s history, and update data
   for (auto it = reference_paths_.begin(); it != reference_paths_.end();) {
-    auto lane_virtual_id = it->first.second;
+    lane_virtual_id = it->first.second;
     if (virtual_lane_manager->has_lane(lane_virtual_id)) {
-      LOG_DEBUG("--------- for lane_virtual_id: update %d\n", lane_virtual_id);
+      //current_lane, left_lane, right_lane has called update()
+      if (current_lane->get_virtual_id() == lane_virtual_id ||
+          (left_lane != nullptr && left_lane->get_virtual_id() == lane_virtual_id) ||
+          (right_lane != nullptr && right_lane->get_virtual_id() == lane_virtual_id)) {
+        continue;
+      }
       it->second->update(session_);
+      LOG_DEBUG("--------- for lane_virtual_id: update %d\n", lane_virtual_id);
       ++it;
     } else {
       LOG_DEBUG("--------- for lane_virtual_id: delete %d\n", lane_virtual_id);

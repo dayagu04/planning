@@ -82,7 +82,7 @@ void LaneReferencePath::update_obstacles() {
   auto obstacle_manager =
       session_->mutable_environmental_model()->get_obstacle_manager();
   obstacle_manager->generate_frenet_obstacles(*this);
-  
+  assign_obstacles_to_lane();
   parking_spaces_ = obstacle_manager->get_parking_space().Items();
   free_space_ground_lines_ =
       obstacle_manager->get_groundline_obstacles().Items();
@@ -139,7 +139,7 @@ bool LaneReferencePath::get_points_by_lane_id(
   return ref_path_points.size() >= 3;
 }
 
-void LaneReferencePath::assign_obstacles_to_lanes() {
+void LaneReferencePath::assign_obstacles_to_lane() {
   lane_obstacles_.clear();
   lane_leadone_obstacle_ = -1; //需要注意id是否为负数 todo
   lane_leadtwo_obstacle_ = -1;
