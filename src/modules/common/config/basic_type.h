@@ -8,6 +8,7 @@
 #include "framework/planning_def.h"
 #include "modules/common/utils/cartesian_coordinate_system.h"
 #include "modules/common/utils/frenet_coordinate_system.h"
+#include "src/thirdparty/mjson/include/mjson/mjson.hpp"
 
 #define DEFAULT_LANE_WIDTH (3.8)
 
@@ -361,7 +362,8 @@ struct PlanningResult {
   double timestamp = 0.0;
   bool use_refined_reference_path = false;
   int contingency_trigger_index = 0;
-  std::string extra_json;
+  // std::string extra_json;
+  mjson::Json extra_json = mjson::Json(mjson::Json::object());
 };
 
 struct PlanningInitPoint {

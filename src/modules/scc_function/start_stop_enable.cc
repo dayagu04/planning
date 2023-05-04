@@ -2,10 +2,13 @@
 
 namespace planning {
 
-void planning::StartStopEnable::init() {}
+void StartStopEnable::init() {
+  enable_start_stop_function_ = config_.enable_start_stop_function;
+  enable_hnp_functions_ = config_.enable_hnp_functions;
+}
 
-void planning::StartStopEnable::go_trajectory(
-    LonDecisionInfo& lon_decision_information, int& start_stop_information,
-    StartStopInfo& start_stop_result) {}
+void StartStopEnable::go_trajectory(LonDecisionInfo& lon_decision_information,
+                                    int& start_stop_information,
+                                    StartStopInfo& start_stop_result) {}
 
 }  // namespace planning

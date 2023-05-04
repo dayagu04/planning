@@ -7,7 +7,6 @@
 #include "common/log.h"
 #include "environmental_model_manager.h"
 #include "modules/context/virtual_lane_manager.h"
-#include "modules/context/ego_state_manager.h"
 #include "modules/context/frenet_ego_state.h"
 #include "modules/context/ego_state_manager.h"
 #include "modules/context/frenet_ego_state.h"
@@ -80,7 +79,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   auto current_time = IflyTime::Now_ms();
   auto &local_view = session_->environmental_model().get_local_view();
 
-  // Step 2) update ehicleDbwStatus 
+  // Step 2) update ehicleDbwStatus
   session_->mutable_environmental_model()->UpdateVehicleDbwStatus(
     local_view.hmi_mcu_inner_info.noa_active_switch());
   last_feed_time_[FEED_VEHICLE_DBW_STATUS] = current_time;
@@ -325,7 +324,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
     vehicle_light->mutable_vehicle_light_data()->set_auto_light_state(vehicel_service_output_info.auto_light_state());
     last_feed_time_[FEED_MISC_REPORT] = current_time;
   }
-  
+
 
   if (vehicel_service_output_info.driver_hand_torque_available()) {
     vehicle_status.mutable_driver_hand_state()->set_driver_hand_torque(vehicel_service_output_info.driver_hand_torque());
@@ -554,7 +553,7 @@ bool EnvironmentalModelManager::InputReady(double current_time, std::string &err
       case FEED_SURR_RADAR_INFO:
         return "surr_radar_info";
       case FEED_FUSION_INFO:
-        return "fusion_info";  
+        return "fusion_info";
       case FEED_PREDICTION_INFO:
         return "prediction_info";
       case FEED_FUSION_LANES_INFO:

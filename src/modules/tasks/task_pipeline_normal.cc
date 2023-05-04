@@ -31,11 +31,11 @@ bool TaskPipelineNormal::Run(const EgoPlanningCandidate &candidate) {
   auto &reference_path = candidate.coarse_planning_info().reference_path;
   auto &trajectory_points = candidate.coarse_planning_info().trajectory_points;
   if (reference_path == nullptr) {
-    // NTRACE_FAIL("reference_path is null");
+    LOG_ERROR("reference_path is null! \n");
     return false;
   }
   if (trajectory_points.empty()) {
-    // NTRACE_FAIL("trajectory_points is empty");
+    LOG_ERROR("trajectory_points is empty! \n");
     return false;
   }
 

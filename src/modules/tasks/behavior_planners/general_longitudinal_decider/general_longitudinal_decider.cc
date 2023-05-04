@@ -905,7 +905,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
 
     Polygon2d obstacle_sl_polygon;
     auto ok = obstacle->get_polygon_at_time(t, reference_path_ptr_,
-                                           obstacle_sl_polygon);
+                                            obstacle_sl_polygon);
     if (not ok) {
       continue;
     }
@@ -1683,7 +1683,8 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
         lon_decision_information.cutin_info.has_cutin = true;
         if (frenet_obstacle->type() ==
                 Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
-            frenet_obstacle->type() == Common::ObjectType::OBJECT_TYPE_BICYCLE) {
+            frenet_obstacle->type() ==
+                Common::ObjectType::OBJECT_TYPE_BICYCLE) {
           cutin_object.obstacle_type = 0;
         } else {
           cutin_object.obstacle_type = 1;

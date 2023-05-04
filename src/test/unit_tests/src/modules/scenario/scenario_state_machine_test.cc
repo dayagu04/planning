@@ -20,6 +20,8 @@
 #include "src/modules/environmental_model_manager.h"
 #include "src/modules/general_planning.h"
 #include "src/modules/scc_function/mrc_condition.h"
+#include "src/modules/scc_function/adaptive_cruise_control.h"
+#include "src/modules/scc_function/start_stop_enable.h"
 #include "src/modules/tasks/task_pipeline_context.h"
 #include "src/proto/generated_files/planning_config.pb.h"
 #include "src/proto/generated_files/vehicle_status.pb.h"
@@ -29,7 +31,6 @@
 #include "res/include/proto/fusion_objects.pb.h"
 #include "src/common/ifly_time.h"
 #include "src/modules/scenario/lateral_behavior_object_selector.h"
-
 
 #include <array>
 #include <cmath>
@@ -199,6 +200,8 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
       nullptr;
   std::shared_ptr<planning::LateralObstacle> lateral_obstacle_ptr_ = nullptr;
   std::shared_ptr<MrcCondition> mrc_condition_ = nullptr;
+  std::shared_ptr<AdaptiveCruiseControl> adaptive_cruise_control_ = nullptr;
+  std::shared_ptr<StartStopEnable> start_stop_ptr_ = nullptr;
   std::shared_ptr<ObjectSelector> object_selector_ = nullptr;
 
   ego_state_manager_ptr_ =
@@ -238,9 +241,14 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
   (&frame)->mutable_session()->mutable_planning_context()->set_mrc_condition(
       mrc_condition_);
 
-  object_selector_ = std::make_shared<ObjectSelector>(config_builder, &session);
-  (&frame)->mutable_session()->mutable_planning_context()->set_object_selector(
-      object_selector_);
+  adaptive_cruise_control_ =
+      std::make_shared<AdaptiveCruiseControl>(config_builder, &session);
+  (&frame)->mutable_session()->mutable_planning_context()->set_adaptive_cruise_control_function(
+      adaptive_cruise_control_);
+
+  start_stop_ptr_ = std::make_shared<StartStopEnable>(config_builder, &session);
+  (&frame)->mutable_session()->mutable_planning_context()->set_start_stop_enable(
+      start_stop_ptr_);
 
   object_selector_ = std::make_shared<ObjectSelector>(config_builder, &session);
   (&frame)->mutable_session()->mutable_planning_context()->set_object_selector(
