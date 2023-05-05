@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 # no project name in src
 
-# settings
-add_compile_options(-std=c++17 -Wall -g -O2 -fPIC -fpermissive -DCYBER_ENV -DLINUX)
-
 # include directories
 set(INCLUDE_DIRS
   # general directories: to be removed
