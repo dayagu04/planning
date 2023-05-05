@@ -30,17 +30,17 @@ file(GLOB_RECURSE SRC_FILES
 add_subdirectory(proto)
 
 # libraries
-add_subdirectory(library/advanced_ctrl_lib)
-add_subdirectory(library/ilqr_lib)
+add_subdirectory(library/advanced_ctrl_lib EXCLUDE_FROM_ALL)
+add_subdirectory(library/ilqr_lib EXCLUDE_FROM_ALL)
 
 # thirdparties
-add_subdirectory(thirdparty/mjson)
-add_subdirectory(thirdparty/eigen)
-add_subdirectory(thirdparty/rapidjson)
-add_subdirectory(thirdparty/osqp)
-add_subdirectory(thirdparty/nlohmann_json)
-add_subdirectory(thirdparty/hfsm)
-add_subdirectory(thirdparty/interface) # to be replaced by submodule
+add_subdirectory(thirdparty/mjson EXCLUDE_FROM_ALL)
+add_subdirectory(thirdparty/eigen EXCLUDE_FROM_ALL)
+add_subdirectory(thirdparty/rapidjson EXCLUDE_FROM_ALL)
+add_subdirectory(thirdparty/osqp EXCLUDE_FROM_ALL)
+add_subdirectory(thirdparty/nlohmann_json EXCLUDE_FROM_ALL)
+add_subdirectory(thirdparty/hfsm EXCLUDE_FROM_ALL)
+add_subdirectory(thirdparty/interface EXCLUDE_FROM_ALL) # to be replaced by submodule
 
 include_directories(
   ${EIGEN3_INCLUDE_DIR}
