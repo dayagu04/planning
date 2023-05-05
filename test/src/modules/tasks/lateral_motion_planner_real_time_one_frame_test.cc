@@ -3,7 +3,7 @@
 
 #include "session.h"
 #include "gtest/gtest.h"
-#include "tasks/motion_planners/general_lateral_motion_planner/lateral_motion_planner_real_time.h"
+#include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner_real_time.h"
 #include "tasks/task_pipeline_context.h"
 
 namespace planning {
@@ -14,7 +14,7 @@ TEST(TestLatMotionPlannerRealTime, VisionLateralMotionPlanner) {
                                     bst::DEBUG);
   auto kk = 10.0;
 
-  printf("TestLongMotion: general_lateral_motion_planner");
+  printf("TestLongMotion: lateral_motion_planner");
 
   EgoPlanningConfigBuilder *config_builder;
   framework::Frame *frame;

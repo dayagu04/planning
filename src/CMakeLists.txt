@@ -10,8 +10,10 @@ set(INCLUDE_DIRS
   ${CMAKE_CURRENT_LIST_DIR}/apa_simulation
 
   # detailed directories: all subdirectories ought to be included
-  ${CMAKE_CURRENT_LIST_DIR}/modules/tasks/motion_planners/general_lateral_motion_planner
-  ${CMAKE_CURRENT_LIST_DIR}/modules/tasks/motion_planners/general_longitudinal_motion_planner
+  ${CMAKE_CURRENT_LIST_DIR}/modules/tasks/motion_planners/lateral_motion_planner
+  ${CMAKE_CURRENT_LIST_DIR}/modules/tasks/motion_planners/lateral_motion_planner/src
+  ${CMAKE_CURRENT_LIST_DIR}/modules/tasks/motion_planners/longitudinal_motion_planner
+  ${CMAKE_CURRENT_LIST_DIR}/modules/tasks/motion_planners/longitudinal_motion_planner/src
   ${CMAKE_CURRENT_LIST_DIR}/modules/tasks/motion_planners/vision_only_lateral_motion_planner)
 
 # source files
@@ -27,7 +29,11 @@ file(GLOB_RECURSE SRC_FILES
 # planning proto
 add_subdirectory(proto)
 
-# thirdparty
+# libraries
+add_subdirectory(library/advanced_ctrl_lib)
+add_subdirectory(library/ilqr_lib)
+
+# thirdparties
 add_subdirectory(thirdparty/mjson)
 add_subdirectory(thirdparty/eigen)
 add_subdirectory(thirdparty/rapidjson)
@@ -54,6 +60,8 @@ target_link_libraries(planning_component PUBLIC
   gflags
   autoplt
   osqp
+  advanced_ctrl_lib
+  ilqr_lib
   mjson
   rapidjson
   nlohmann_json

@@ -2,7 +2,7 @@
 
 #include "context/vehicle_config_context.h"
 #include "tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
-#include "tasks/motion_planners/general_longitudinal_motion_planner/general_longitudinal_optimizer.h"
+#include "tasks/motion_planners/longitudinal_motion_planner/general_longitudinal_optimizer.h"
 #include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 #include "tasks/motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
 #include "tasks/behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner.h"

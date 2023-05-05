@@ -1,3 +1,5 @@
-build/*
-src/proto/generated_files/*.cc
-src/proto/generated_files/*.h
+build
+bin
+jupyter_pybind/motion_planning/build
+.cache
+jupyter_pybind/motion_planning/notebooks/lib/__pycache__

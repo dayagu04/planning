@@ -1,5 +1,5 @@
 
-#include "tasks/motion_planners/general_longitudinal_motion_planner/general_longitudinal_optimizer.h"
+#include "tasks/motion_planners/longitudinal_motion_planner/general_longitudinal_optimizer.h"
 
 #include <iomanip>
 #include <sstream>

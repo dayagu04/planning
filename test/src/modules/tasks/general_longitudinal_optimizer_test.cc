@@ -1,4 +1,4 @@
-#include "tasks/motion_planners/general_longitudinal_motion_planner/general_longitudinal_optimizer.h"
+#include "tasks/motion_planners/longitudinal_motion_planner/general_longitudinal_optimizer.h"
 #include "tasks/task_pipeline_context.h"
 
 #include <array>
@@ -8,9 +8,9 @@
 
 namespace planning {
 
-TEST(TestLongMotion, general_longitudinal_motion_planner) {
+TEST(TestLongMotion, longitudinal_motion_planner) {
   auto kk = 10.0;
-  printf("TestLongMotion: general_longitudinal_motion_planner");
+  printf("TestLongMotion: longitudinal_motion_planner");
   EgoPlanningConfigBuilder *config_builder;
   framework::Frame *frame;
   std::shared_ptr<TaskPipelineContext> pipeline_context;
