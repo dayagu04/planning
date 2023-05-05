@@ -227,6 +227,20 @@ struct LateralDeciderConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
   }
+  double desired_vel = 11.11;                    // KPH_40;
+  double l_care_width = 10.;                     // TBD: more beautiful
+  double care_obj_lat_distance_threshold = 30.;  // TBD: more beautiful
+  double care_obj_lon_distance_threshold = 60.;  // TBD: more beautiful
+  double dynamic_obj_safe_buffer = 0.3;          //
+  double min_obstacle_avoid_distance = 0.2;      // check it
+  double lateral_bound_converge_speed = 1.0;
+  double kPhysicalBoundWeight = 10.;
+  double kHardBoundWeight = -1.;
+  double dynamic_bound_slack_coefficient = 1.;
+  double buffer2border = 0.15;
+  double buffer2lane = 0.1;
+  double l_offset_limit = 0.1;
+  double min_gain_vel = 1.0;
 };
 
 struct LateralOptimizerConfig : public EgoPlanningConfig {
