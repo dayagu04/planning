@@ -1,8 +1,8 @@
 #pragma once
 
-#include "framework/frame.h"
-#include "framework/module.h"
-#include "modules/apa_planner/apa_planner_dispatcher.h"
+#include "frame.h"
+#include "module.h"
+#include "apa_planner/apa_planner_dispatcher.h"
 
 namespace planning {
 namespace modules {

@@ -1,6 +1,6 @@
 
 // #include
-// "src/modules/tasks/motion_planners/lateral_motion_planner_real_time/lateral_motion_planner_real_time.h"
+// "tasks/motion_planners/lateral_motion_planner_real_time/lateral_motion_planner_real_time.h"
 
 #include <iomanip>
 #include <vector>

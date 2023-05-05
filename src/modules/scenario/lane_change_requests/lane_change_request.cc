@@ -1,6 +1,6 @@
-#include "src/modules/scenario/lane_change_requests/lane_change_request.h"
+#include "scenario/lane_change_requests/lane_change_request.h"
 
-#include "src/modules/common/utils/lateral_utils.h"
+#include "common/utils/lateral_utils.h"
 
 namespace planning {
 LaneChangeRequest::LaneChangeRequest(

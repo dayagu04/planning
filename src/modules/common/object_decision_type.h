@@ -1,7 +1,7 @@
 #ifndef MODULES_PLANNING_OPTIMIZERS_OBJECT_DECISION_TYPE_H_
 #define MODULES_PLANNING_OPTIMIZERS_OBJECT_DECISION_TYPE_H_
 
-#include "modules/common/math/vec2d.h"
+#include "vec2d.h"
 // #include <boost/optional.hpp>
 #include <string>
 #include <string.h>

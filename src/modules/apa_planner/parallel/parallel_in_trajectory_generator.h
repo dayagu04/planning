@@ -1,11 +1,11 @@
 #pragma once
 
-#include "framework/frame.h"
-#include "modules/apa_planner/common/geometry_planning_io.h"
-#include "modules/apa_planner/common/planning_log_helper.h"
-#include "modules/apa_planner/parallel/parallel_in_geometry_plan.h"
-#include "modules/common/local_view.h"
-#include "modules/common/math/box2d.h"
+#include "frame.h"
+#include "apa_planner/common/geometry_planning_io.h"
+#include "apa_planner/common/planning_log_helper.h"
+#include "apa_planner/parallel/parallel_in_geometry_plan.h"
+#include "common/local_view.h"
+#include "common/math/box2d.h"
 
 namespace planning {
 namespace apa_planner {

@@ -1,4 +1,4 @@
-#include "common/arena.h"
+#include "arena.h"
 
 namespace planning {
 namespace common {

@@ -14,9 +14,9 @@
  * limitations under the License.
  *****************************************************************************/
 
-#include "modules/common/math/angle.h"
+#include "common/math/angle.h"
 
-#include "modules/common/math/sin_table.h"
+#include "common/math/sin_table.h"
 
 namespace planning {
 namespace planning_math {

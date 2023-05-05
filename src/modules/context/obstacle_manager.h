@@ -1,14 +1,14 @@
 #pragma once
 
-#include "src/modules/context/ego_planning_config.h"
-#include "src/framework/session.h"
-#include "src/modules/common/utils/index_list.h"
-#include "src/modules/context/frenet_obstacle.h"
-#include "src/modules/context/obstacle.h"
-#include "src/modules/context/reference_path.h"
-#include "src/modules/context/environmental_model.h"
+#include "context/ego_planning_config.h"
+#include "session.h"
+#include "common/utils/index_list.h"
+#include "context/frenet_obstacle.h"
+#include "context/obstacle.h"
+#include "context/reference_path.h"
+#include "context/environmental_model.h"
 
-#include "../res/include/proto/fusion_objects.pb.h"
+#include "fusion_objects.pb.h"
 
 namespace planning {
 
@@ -75,7 +75,7 @@ class ObstacleManager {
   IndexedList<int, Obstacle> road_edge_obstacles_;
   EgoPlanningObstacleManagerConfig config_;
   // std::unordered_map<int, std::vector<int>> lanes_obstacles_;
-  
+
   std::unordered_map<int, std::vector<int>> lanes_virtual_obstacles_;
 };
 

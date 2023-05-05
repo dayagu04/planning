@@ -7,10 +7,10 @@
 #include <string>
 #include <vector>
 
-#include "src/framework/frame.h"
-#include "src/modules/common/config_context.h"
-#include "src/modules/context/ego_planning_config.h"
-#include "src/modules/tasks/task_pipeline_context.h"
+#include "frame.h"
+#include "common/config_context.h"
+#include "context/ego_planning_config.h"
+#include "tasks/task_pipeline_context.h"
 
 namespace planning {
 

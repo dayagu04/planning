@@ -1,7 +1,0 @@
-int8 OBJ_TRACK_STATUS_INVALID_      = 0 # (0x00u)
-int8 OBJ_TRACK_STATUS_MERGED_       = 1 # (0x01u)
-int8 OBJ_TRACK_STATUS_NEW_          = 2 # (0x02u)
-int8 OBJ_TRACK_STATUS_NEW_COASTED_  = 3 # (0x03u)
-int8 OBJ_TRACK_STATUS_NOT_USED_     = 4 # (0x04u)
-int8 OBJ_TRACK_STATUS_UPDATED_      = 5 # (0x05u)
-int8 OBJ_TRACK_STATUS_COASTED_      = 6 # (0x06u)

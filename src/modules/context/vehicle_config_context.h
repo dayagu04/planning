@@ -7,10 +7,10 @@
 #include <iterator>
 #include <unordered_map>
 
-#include "common/log.h"
-#include "common/macro.h"
-#include "common/utils.h"
-#include "modules/common/config/vehicle_param.h"
+#include "log.h"
+#include "macro.h"
+#include "utils.h"
+#include "common/config/vehicle_param.h"
 
 namespace planning {
 

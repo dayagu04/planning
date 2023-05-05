@@ -15,8 +15,8 @@
  *****************************************************************************/
 
 #include "utils.h"
-#include "thirdparty/rapidjson/include/rapidjson/internal/dtoa.h"
-#include "thirdparty/rapidjson/include/rapidjson/internal/itoa.h"
+#include "rapidjson/internal/dtoa.h"
+#include "rapidjson/internal/itoa.h"
 
 #include <cmath>
 #include <vector>

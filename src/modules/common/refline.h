@@ -5,12 +5,12 @@
 #include <map>
 #include <memory>
 
-#include "src/modules/common/utils/spline.h"
+#include "common/utils/spline.h"
 // #include "worldmodel/lane.h"
-#include "src/modules/common/define/geometry.h"
-#include "src/modules/common/define/path_point.h"
-#include "src/modules/common/define/lateral_behavior_planner_output.h"
-#include "src/modules/common/utils/pose2d_utils.h"
+#include "common/define/geometry.h"
+#include "path_point.h"
+#include "common/define/lateral_behavior_planner_output.h"
+#include "common/utils/pose2d_utils.h"
 
 namespace planning {
 

@@ -1,14 +1,14 @@
-#include "modules/apa_planner/parallel/parallel_in_trajectory_generator.h"
+#include "apa_planner/parallel/parallel_in_trajectory_generator.h"
 
 #include <limits>
 
-#include "common/ifly_time.h"
-#include "common/utils_math.h"
-#include "modules/apa_planner/common/apa_cos_sin.h"
-#include "modules/apa_planner/common/planning_log_helper.h"
-#include "modules/apa_planner/common/vehicle_param_helper.h"
-#include "modules/common/math/math_utils.h"
-#include "modules/common/math/line_segment2d.h"
+#include "ifly_time.h"
+#include "utils_math.h"
+#include "apa_planner/common/apa_cos_sin.h"
+#include "apa_planner/common/planning_log_helper.h"
+#include "apa_planner/common/vehicle_param_helper.h"
+#include "common/math/math_utils.h"
+#include "common/math/line_segment2d.h"
 
 namespace planning {
 namespace apa_planner {

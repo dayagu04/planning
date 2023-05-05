@@ -1,5 +1,5 @@
-#include "src/modules/context/virtual_lane.h"
-#include "modules/common/math/linear_interpolation.h"
+#include "context/virtual_lane.h"
+#include "common/math/linear_interpolation.h"
 #include "virtual_lane.h"
 namespace planning {
 VirtualLane::VirtualLane() {}

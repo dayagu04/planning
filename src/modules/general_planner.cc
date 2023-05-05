@@ -1,12 +1,12 @@
-#include "src/modules/general_planner.h"
+#include "general_planner.h"
 
 #include <math.h>
 
-#include "src/modules/scc_function/adaptive_cruise_control.h"
-#include "src/modules/scc_function/mrc_condition.h"
-#include "src/modules/scc_function/start_stop_enable.h"
-#include "src/modules/scenario/scenario_state_machine.h"
-#include "src/modules/scenario/lateral_behavior_object_selector.h"
+#include "scc_function/adaptive_cruise_control.h"
+#include "scc_function/mrc_condition.h"
+#include "scc_function/start_stop_enable.h"
+#include "scenario/scenario_state_machine.h"
+#include "scenario/lateral_behavior_object_selector.h"
 // #include "mjson/mjson.hpp"
 
 namespace planning {

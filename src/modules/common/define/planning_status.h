@@ -5,11 +5,11 @@
 #include <unordered_map>
 #include <vector>
 
-#include "modules/common/define/geometry.h"
-// #include "modules/common/define/plan.h"
-// #include "proto/generated_files/vehicle_status.pb.h"
-#include "../res/include/proto/common.pb.h"
-#include "../res/include/proto/planning_plan.pb.h"
+#include "common/define/geometry.h"
+// #include "common/define/plan.h"
+// #include "vehicle_status.pb.h"
+#include "common.pb.h"
+#include "planning_plan.pb.h"
 
 namespace planning {
 namespace common {

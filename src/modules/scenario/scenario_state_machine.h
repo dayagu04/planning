@@ -1,11 +1,11 @@
 #pragma once
 
-#include "framework/session.h"
-#include "modules/context/ego_planning_config.h"
-#include "modules/context/environmental_model.h"
-#include "modules/context/reference_path.h"
-#include "modules/scenario/normal_road_state.h"
-#include "modules/scenario/scenario_state.h"
+#include "session.h"
+#include "context/ego_planning_config.h"
+#include "context/environmental_model.h"
+#include "context/reference_path.h"
+#include "scenario/normal_road_state.h"
+#include "scenario/scenario_state.h"
 
 namespace planning {
 

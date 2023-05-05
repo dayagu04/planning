@@ -1,6 +1,6 @@
 #include "vision_longitudinal_behavior_planner.h"
-#include "src/modules/scenario/scenario_state_machine.h"
-#include "common/ifly_time.h"
+#include "scenario/scenario_state_machine.h"
+#include "ifly_time.h"
 
 namespace planning {
 
@@ -59,11 +59,11 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   }
   //modify
   //lane_tracks_mgr_->update_ego_state(ego_state);
- 
+
   if (lane_changing_decider_ == nullptr) {
     lane_changing_decider_ = std::make_unique<VisionOnlyLaneChangeDecider>();
   }
- 
+
   LOG_DEBUG("ego_v_cruise is [%f], v_ego is [%f],  a_ego is [%f] \n",
                 ego_state_mgr->ego_v_cruise(), ego_state_mgr->ego_v(), ego_state_mgr->ego_acc());
   double v_ego = ego_state_mgr->ego_v();

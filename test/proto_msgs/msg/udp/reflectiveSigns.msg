@@ -1,8 +1,0 @@
-float32 lightSignLeftAngle
-float32 lightSignRightAngle
-float32 lightSignBottomAngle
-float32 lightSignTopAngle
-uint32 lightSignID
-uint16 lightSignDistance
-uint8 lightSignGlareLevelMax
-uint8 lightSignGlareLevelCurrent

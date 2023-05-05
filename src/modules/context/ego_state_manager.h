@@ -1,16 +1,16 @@
 #ifndef ZNQC_MODULES_CONTEXT_EGO_STATE_MANAGER_H_
 #define ZNQC_MODULES_CONTEXT_EGO_STATE_MANAGER_H_
 
-#include "modules/common/config/basic_type.h"
-#include "modules/common/config/message_type.h"
-#include "modules/common/config/vehicle_param.h"
-#include "modules/common/define/geometry.h"
-#include "modules/common/math/polygon2d.h"
-#include "modules/common/refline.h"
-#include "modules/common/transform.h"
-#include "modules/context/vehicle_config_context.h"
-#include "proto/generated_files/vehicle_status.pb.h"
-#include "src/framework/session.h"
+#include "common/config/basic_type.h"
+#include "common/config/message_type.h"
+#include "common/config/vehicle_param.h"
+#include "common/define/geometry.h"
+#include "common/math/polygon2d.h"
+#include "common/refline.h"
+#include "common/transform.h"
+#include "context/vehicle_config_context.h"
+#include "vehicle_status.pb.h"
+#include "session.h"
 
 namespace planning {
 

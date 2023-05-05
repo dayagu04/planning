@@ -1,10 +1,10 @@
 #pragma once
-#include "modules/common/config/basic_type.h"
-#include "modules/common/math/math_utils.h"
-#include "modules/common/math/polygon2d.h"
-#include "modules/common/utils/frenet_coordinate_system.h"
-#include "modules/context/ego_state_manager.h"
-// #include "proto/generated_files/ego_state_info.pb.h"
+#include "common/config/basic_type.h"
+#include "common/math/math_utils.h"
+#include "common/math/polygon2d.h"
+#include "common/utils/frenet_coordinate_system.h"
+#include "context/ego_state_manager.h"
+// #include "ego_state_info.pb.h"
 
 namespace planning {
 

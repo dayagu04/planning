@@ -1,4 +1,0 @@
-uint64 timestamp_us
-float32 steering_wheel_angle
-float32 steering_wheel_speed
-float32 steering_wheel_torque

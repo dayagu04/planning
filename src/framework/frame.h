@@ -1,12 +1,12 @@
 #ifndef ZNQC_FRAMEWORK_FRAME_H
 #define ZNQC_FRAMEWORK_FRAME_H
 
-#include "src/common/macro.h"
-#include "src/common/arena.h"
-#include "src/framework/session.h"
-#include "modules/context/planning_context.h"
-#include "modules/context/planning_output_context.h"
-#include "modules/context/environmental_model.h"
+#include "macro.h"
+#include "arena.h"
+#include "session.h"
+#include "context/planning_context.h"
+#include "context/planning_output_context.h"
+#include "context/environmental_model.h"
 
 namespace planning {
 namespace framework {

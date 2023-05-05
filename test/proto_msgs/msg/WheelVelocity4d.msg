@@ -1,9 +1,0 @@
-uint64 timestamp_us
-float32 front_left_spd
-float32 front_right_spd
-float32 rear_left_spd
-float32 rear_right_spd
-float32 front_left_dir
-float32 front_right_dir
-float32 rear_left_dir
-float32 rear_right_dir

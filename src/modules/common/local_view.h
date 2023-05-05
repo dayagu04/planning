@@ -2,18 +2,18 @@
 
 #include <memory>
 
-#include "../res/include/proto/vehicle_service.pb.h"
-#include "../res/include/proto/fusion_objects.pb.h"
-#include "../res/include/proto/localization.pb.h"
-#include "../res/include/proto/planning_plan.pb.h"
-#include "../res/include/proto/control_command.pb.h"
-#include "../res/include/proto/parking_fusion.pb.h"
-#include "../res/include/proto/parking_slot_list.pb.h"
-#include "../res/include/proto/parking_slot_select.pb.h"
-#include "../res/include/proto/prediction.pb.h"
-#include "../res/include/proto/fusion_road.pb.h"
-#include "../res/include/proto/radar_perception_objects.pb.h"
-#include "../res/include/proto/hmi_mcu_inner.pb.h"
+#include "vehicle_service.pb.h"
+#include "fusion_objects.pb.h"
+#include "localization.pb.h"
+#include "planning_plan.pb.h"
+#include "control_command.pb.h"
+#include "parking_fusion.pb.h"
+#include "parking_slot_list.pb.h"
+#include "parking_slot_select.pb.h"
+#include "prediction.pb.h"
+#include "fusion_road.pb.h"
+#include "radar_perception_objects.pb.h"
+#include "hmi_mcu_inner.pb.h"
 
 namespace planning {
 /**

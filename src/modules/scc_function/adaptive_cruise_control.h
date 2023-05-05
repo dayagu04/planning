@@ -2,8 +2,8 @@
 
 #include <math.h>
 
-#include "src/framework/frame.h"
-#include "src/modules/tasks/task_basic_types.h"
+#include "frame.h"
+#include "tasks/task_basic_types.h"
 
 namespace planning {
 class AdaptiveCruiseControl {

@@ -1,5 +1,0 @@
-vision_road_info vision_road_info_
-vision_active_light_sensor_info vision_active_light_sensor_info_
-vision_traffic_sign_info vision_traffic_sign_info_
-vision_AEB_info vision_AEB_info_
-vision_obstacles_info vision_obstacles_info_

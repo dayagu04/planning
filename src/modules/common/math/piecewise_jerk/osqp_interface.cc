@@ -1,4 +1,4 @@
-#include "src/thirdparty/osqp/include/osqp.h"
+#include "osqp.h"
 
 int OptimizeWithOsqp(c_float P_x[], c_int P_nnz, c_int P_i[], c_int P_p[],
                      c_float q[], c_float A_x[], c_int A_nnz, c_int A_i[],

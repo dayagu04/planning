@@ -1,15 +1,15 @@
 #ifndef SCENARIO_MANAGER_OBJECT_SELECTOR_H_
 #define SCENARIO_MANAGER_OBJECT_SELECTOR_H_
 
-#include "src/common/ifly_time.h"
-#include "src/framework/session.h"
-#include "src/modules/common/config/basic_type.h"
-#include "src/modules/context/ego_planning_config.h"
-#include "src/modules/context/ego_state_manager.h"
-#include "src/modules/context/lateral_obstacle.h"
-#include "src/modules/context/virtual_lane_manager.h"
-#include "src/modules/context/reference_path_manager.h"
-#include "src/modules/context/obstacle_manager.h"
+#include "ifly_time.h"
+#include "session.h"
+#include "common/config/basic_type.h"
+#include "context/ego_planning_config.h"
+#include "context/ego_state_manager.h"
+#include "context/lateral_obstacle.h"
+#include "context/virtual_lane_manager.h"
+#include "context/reference_path_manager.h"
+#include "context/obstacle_manager.h"
 
 namespace planning {
 

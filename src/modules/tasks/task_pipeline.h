@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/modules/tasks/task.h"
+#include "tasks/task.h"
 
 namespace planning {
 

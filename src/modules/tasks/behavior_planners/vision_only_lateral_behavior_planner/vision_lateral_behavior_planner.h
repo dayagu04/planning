@@ -8,11 +8,11 @@
 #include <string>
 #include <vector>
 
-#include "src/modules/tasks/task.h"
-#include "src/modules/tasks/task_basic_types.h"
-#include "src/modules/common/config/basic_type.h"
-#include "src/modules/context/reference_path.h"
-#include "src/modules/context/lateral_obstacle.h" // TODO(Rui):include object_selector.h
+#include "tasks/task.h"
+#include "tasks/task_basic_types.h"
+#include "common/config/basic_type.h"
+#include "context/reference_path.h"
+#include "context/lateral_obstacle.h" // TODO(Rui):include object_selector.h
 
 namespace planning {
 
@@ -29,7 +29,7 @@ class VisionLateralBehaviorPlanner : public Task {
  private:
   bool Process(const CoarsePlanningInfo &coarse_planning_info,
                LateralAvdCarsInfo &lateral_avd_cars_info);
-  
+
   double update_antsides_strict();
   bool update_lfrontavds_info(bool no_near_car);
   bool update_rfrontavds_info(bool no_near_car);

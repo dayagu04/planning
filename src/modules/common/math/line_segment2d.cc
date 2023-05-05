@@ -1,11 +1,11 @@
-#include "modules/common/math/line_segment2d.h"
+#include "common/math/line_segment2d.h"
 
 #include <algorithm>
 #include <cmath>
 #include <utility>
 #include "assert.h"
 
-#include "modules/common/math/math_utils.h"
+#include "common/math/math_utils.h"
 
 namespace planning {
 namespace planning_math {

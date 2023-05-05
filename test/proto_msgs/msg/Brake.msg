@@ -1,2 +1,0 @@
-bool available
-BrakeData brake_data

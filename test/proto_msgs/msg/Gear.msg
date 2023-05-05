@@ -1,2 +1,0 @@
-bool available
-GearData gear_data

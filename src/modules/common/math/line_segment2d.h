@@ -1,7 +1,7 @@
 #ifndef MODULES_PLANNING_MATH_LINE_SEGMENT2D_H_
 #define MODULES_PLANNING_MATH_LINE_SEGMENT2D_H_
 
-#include "modules/common/math/vec2d.h"
+#include "vec2d.h"
 
 #include <cmath>
 #include <string>

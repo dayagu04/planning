@@ -2,11 +2,11 @@
 #define MSQUARE_PNC_PERCEPTION_RANGE_HPP
 #include <memory>
 
-// #include "modules/context/ego_state_manager.h"
+// #include "context/ego_state_manager.h"
 // #include "common/map_info_manager.h"
-#include "modules/common/tracked_object.h"
-#include "modules/common/transform.h"
-#include "modules/common/utils/frenet_coordinate_system.h"
+#include "common/tracked_object.h"
+#include "common/transform.h"
+#include "common/utils/frenet_coordinate_system.h"
 
 namespace planning {
 

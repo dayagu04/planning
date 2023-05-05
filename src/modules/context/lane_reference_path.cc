@@ -1,9 +1,9 @@
-#include "modules/context/lane_reference_path.h"
+#include "context/lane_reference_path.h"
 
-#include "framework/session.h"
-#include "modules/context/obstacle_manager.h"
-#include "modules/context/virtual_lane_manager.h"
-#include "common/ifly_time.h"
+#include "session.h"
+#include "context/obstacle_manager.h"
+#include "context/virtual_lane_manager.h"
+#include "ifly_time.h"
 
 namespace planning {
 
@@ -26,7 +26,7 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   // Step 2) get reference_points
   ReferencePathPoints points;
   bool ok = get_points_by_lane_id(lane_virtual_id_, points);
-  
+
   // Step 3) update
   if (ok) {
     update_refpath_points(points);

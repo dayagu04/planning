@@ -1,4 +1,0 @@
-uint64 timestamp_us
-float64 latitude_degree
-float64 longitude_degree
-float64 altitude_meter

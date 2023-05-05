@@ -4,8 +4,8 @@
 #include <utility>
 #include <vector>
 // #include "Eigen/Dense"
-#include "modules/common/math/vec2d.h"
-#include "thirdparty/eigen/Eigen/Dense"
+#include "vec2d.h"
+#include "Eigen/Dense"
 
 #define HYPOT_MIN 1000.0
 

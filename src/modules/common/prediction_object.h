@@ -1,9 +1,9 @@
 #ifndef PREDICTION_OBJECT_H
 #define PREDICTION_OBJECT_H
 
-#include "modules/common/common.h"
-#include "modules/common/config/basic_type.h"
-#include "res/include/proto/common.pb.h"
+#include "common/common.h"
+#include "common/config/basic_type.h"
+#include "common.pb.h"
 #include <string>
 #include <vector>
 

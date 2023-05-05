@@ -6,24 +6,24 @@
 #include <iostream>
 #include <mutex>
 
-#include "../res/include/proto/vehicle_service.pb.h"
-#include "../res/include/proto/fusion_objects.pb.h"
-#include "../res/include/proto/localization.pb.h"
-#include "../res/include/proto/planning_plan.pb.h"
-#include "../res/include/proto/control_command.pb.h"
-#include "../res/include/proto/parking_fusion.pb.h"
-#include "../res/include/proto/parking_slot_list.pb.h"
-#include "../res/include/proto/parking_slot_select.pb.h"
-#include "../res/include/proto/prediction.pb.h"
-#include "../res/include/proto/fusion_road.pb.h"
-#include "../res/include/proto/radar_perception_objects.pb.h"
-#include "../res/include/proto/planning_hmi.pb.h"
+#include "vehicle_service.pb.h"
+#include "fusion_objects.pb.h"
+#include "localization.pb.h"
+#include "planning_plan.pb.h"
+#include "control_command.pb.h"
+#include "parking_fusion.pb.h"
+#include "parking_slot_list.pb.h"
+#include "parking_slot_select.pb.h"
+#include "prediction.pb.h"
+#include "fusion_road.pb.h"
+#include "radar_perception_objects.pb.h"
+#include "planning_hmi.pb.h"
 
 #include "autoplt/include/ADSComponent.h"
 #include "autoplt/include/ADSNode.h"
 #include "autoplt/include/ADSTime.h"
-#include "common/ifly_time.h"
-#include "src/modules/general_planning.h"
+#include "ifly_time.h"
+#include "modules/general_planning.h"
 
 namespace planning {
 
@@ -65,7 +65,7 @@ class PlanningComponent final : public autoplt::ADSTimerCoponent {
       nullptr;
   std::shared_ptr<Writer<PlanningHMI::PlanningHMIOutputInfoStr>> planning_hmi_Info_writer_ =
       nullptr;
- 
+
   std::unique_ptr<GeneralPlanning> planning_base_ = nullptr;
 };
 

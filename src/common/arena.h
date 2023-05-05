@@ -1,7 +1,7 @@
 #ifndef ZNQC_COMMON_ARENA_H
 #define ZNQC_COMMON_ARENA_H
 
-#include "common/macro.h"
+#include "macro.h"
 #include "google/protobuf/arena.h"
 
 namespace planning {

@@ -5,9 +5,9 @@
 #include <map>
 #include <string>
 
-#include "common/registry.h"
-#include "framework/module.h"
-#include "framework/session.h"
+#include "registry.h"
+#include "module.h"
+#include "session.h"
 
 namespace planning {
 namespace framework {

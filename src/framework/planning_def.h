@@ -4,8 +4,8 @@
 #include <functional>
 #include <string>
 
-#include "common/macro.h"
-#include "proto/generated_files/planning_config.pb.h"
+#include "macro.h"
+#include "planning_config.pb.h"
 
 namespace planning {
 namespace framework {

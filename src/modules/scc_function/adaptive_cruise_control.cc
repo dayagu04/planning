@@ -1,6 +1,6 @@
-#include "src/modules/scc_function/adaptive_cruise_control.h"
+#include "scc_function/adaptive_cruise_control.h"
 
-#include "src/modules/context/ego_state_manager.h"
+#include "context/ego_state_manager.h"
 
 namespace planning {
 

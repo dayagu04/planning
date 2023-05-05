@@ -3,16 +3,16 @@
 #include <array>
 #include <iostream>
 
-#include "common/log.h"
-#include "src/common/ifly_time.h"
-#include "src/framework/frame.h"
-#include "src/framework/session.h"
-#include "src/modules/common/utils/lateral_utils.h"
-#include "src/modules/context/virtual_lane_manager.h"
-#include "src/modules/scenario/lane_change_request_manager.h"
-#include "src/modules/scenario/lane_change_requests/lane_change_lane_manager.h"
-#include "src/modules/tasks/task_pipeline.h"
-#include "thirdparty/hfsm/machine_single.hpp"
+#include "log.h"
+#include "ifly_time.h"
+#include "frame.h"
+#include "session.h"
+#include "common/utils/lateral_utils.h"
+#include "context/virtual_lane_manager.h"
+#include "scenario/lane_change_request_manager.h"
+#include "scenario/lane_change_requests/lane_change_lane_manager.h"
+#include "tasks/task_pipeline.h"
+#include "machine_single.hpp"
 
 namespace planning {
 

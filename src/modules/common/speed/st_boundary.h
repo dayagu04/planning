@@ -9,7 +9,7 @@
 
 #include "common/math/box2d.h"
 #include "common/math/polygon2d.h"
-#include "common/math/vec2d.h"
+#include "vec2d.h"
 // #include "common/config/dp_st_speed_config.h"
 #include "common/speed/st_point.h"
 #include "common/math/math_utils.h"

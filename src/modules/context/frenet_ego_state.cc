@@ -1,7 +1,7 @@
-#include "modules/context/frenet_ego_state.h"
-// #include "proto/generated_files/ego_state_info.pb.h"
+#include "context/frenet_ego_state.h"
+// #include "ego_state_info.pb.h"
 
-#include "src/framework/session.h"
+#include "session.h"
 
 namespace planning {
 

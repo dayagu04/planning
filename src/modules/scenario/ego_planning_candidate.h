@@ -1,10 +1,10 @@
 #pragma once
 #include <iostream>
 
-#include "src/framework/frame.h"
-#include "src/modules/common/config/basic_type.h"
-#include "src/modules/context/ego_planning_config.h"
-#include "src/modules/scenario/scenario_state.h"
+#include "frame.h"
+#include "common/config/basic_type.h"
+#include "context/ego_planning_config.h"
+#include "scenario/scenario_state.h"
 
 namespace planning {
 

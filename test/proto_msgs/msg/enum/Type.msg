@@ -1,6 +1,0 @@
-int8 GEAR_NONE = 0
-int8 GEAR_PARK = 1
-int8 GEAR_REVERSE = 2
-int8 GEAR_NEUTRAL = 3
-int8 GEAR_DRIVE = 4
-int8 GEAR_LOW = 5

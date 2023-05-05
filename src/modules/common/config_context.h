@@ -4,15 +4,15 @@
 #include <iostream>
 #include <iterator>
 
-#include "common/macro.h"
-#include "src/thirdparty/nlohmann_json/nlohmann_json.hpp"
+#include "macro.h"
+#include "nlohmann_json.hpp"
 // #include "planning/config/scenario_facade_config.h"
 // #include "planning/config/vision_only_longitudinal_motion_planner_param.h"
 #include <unordered_map>
 
-#include "modules/common/utils/file.h"
-#include "proto/generated_files/planning_config.pb.h"
-#include "proto/generated_files/tasks_configs.pb.h"
+#include "utils/file.h"
+#include "planning_config.pb.h"
+#include "tasks_configs.pb.h"
 // #include "thirdparty/mjson/include/mjson/mjson.hpp"
 
 namespace planning {

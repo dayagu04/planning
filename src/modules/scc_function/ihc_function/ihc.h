@@ -1,10 +1,10 @@
 #ifndef _IHC_STEP_H_
 #define _IHC_STEP_H_
 
-#include "src/common/Platform_Types.h"
-#include "src/framework/frame.h"
-#include "src/modules/context/virtual_lane_manager.h"
-#include "src/modules/context/obstacle_manager.h"
+#include "Platform_Types.h"
+#include "frame.h"
+#include "context/virtual_lane_manager.h"
+#include "context/obstacle_manager.h"
 #include <math.h>
 
 #ifdef __cplusplus

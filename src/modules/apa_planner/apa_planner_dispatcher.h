@@ -2,9 +2,9 @@
 
 #include <memory>
 
-#include "modules/apa_planner/apa_planner_base.h"
+#include "apa_planner/apa_planner_base.h"
 
-#include "framework/frame.h"
+#include "frame.h"
 
 namespace planning {
 namespace apa_planner {

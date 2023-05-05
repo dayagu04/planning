@@ -1,8 +1,8 @@
-#include "src/modules/scenario/lane_change_requests/active_lane_change_request.h"
+#include "scenario/lane_change_requests/active_lane_change_request.h"
 
 #include "active_lane_change_request.h"
-#include "src/modules/context/virtual_lane_manager.h"
-#include "src/modules/scenario/lateral_behavior_object_selector.h"
+#include "context/virtual_lane_manager.h"
+#include "scenario/lateral_behavior_object_selector.h"
 
 namespace planning {
 // class: ActRequest

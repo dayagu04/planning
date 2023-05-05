@@ -1,10 +1,10 @@
-#include "modules/common/math/aabox2d.h"
+#include "common/math/aabox2d.h"
 
 #include <algorithm>
 #include <cmath>
 #include "assert.h"
 
-#include "modules/common/math/math_utils.h"
+#include "common/math/math_utils.h"
 
 namespace planning {
 namespace planning_math {

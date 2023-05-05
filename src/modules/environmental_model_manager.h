@@ -1,9 +1,9 @@
 #pragma once
 
-#include "framework/frame.h"
-#include "framework/session.h"
-#include "modules/context/ego_planning_config.h"
-#include "src/common/ifly_time.h"
+#include "frame.h"
+#include "session.h"
+#include "context/ego_planning_config.h"
+#include "ifly_time.h"
 
 namespace planning {
 namespace planner {

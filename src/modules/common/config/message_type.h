@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include "../res/include/proto/common.pb.h"
-#include "modules/common/define/path_point.h"
+#include "common.pb.h"
+#include "path_point.h"
 
 #define VEHICLE_LENGTH 4.98
 

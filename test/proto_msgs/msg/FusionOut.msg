@@ -1,8 +1,0 @@
-FusionObjects fusion
-LaneMarkers lane
-RGFInfos rgf
-VehicleEgoMotion ego_motion
-uint64 camera_timestamp
-uint64 radar_timestamp
-uint64 fusion_timestamp
-uint64 rgf_timestamp

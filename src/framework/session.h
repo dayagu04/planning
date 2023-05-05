@@ -1,12 +1,12 @@
 #pragma once
 
-#include "common/arena.h"
-#include "src/common/macro.h"
-#include "framework/planning_def.h"
-#include "modules/context/planning_context.h"
-#include "modules/context/planning_output_context.h"
-#include "modules/context/environmental_model.h"
-#include "modules/context/vehicle_config_context.h"
+#include "arena.h"
+#include "macro.h"
+#include "planning_def.h"
+#include "context/planning_context.h"
+#include "context/planning_output_context.h"
+#include "context/environmental_model.h"
+#include "context/vehicle_config_context.h"
 
 namespace planning {
 namespace framework {

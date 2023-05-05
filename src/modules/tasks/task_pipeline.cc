@@ -1,7 +1,7 @@
-#include "src/modules/tasks/task_pipeline.h"
+#include "tasks/task_pipeline.h"
 
-#include "src/modules/tasks/task_pipeline_normal.h"
-#include "src/modules/tasks/task_pipeline_vision_only.h"
+#include "tasks/task_pipeline_normal.h"
+#include "tasks/task_pipeline_vision_only.h"
 
 namespace planning {
 

@@ -1,10 +1,10 @@
-#include "modules/scenario/ego_planning_candidate.h"
+#include "scenario/ego_planning_candidate.h"
 
 #include <memory>
 
-#include "modules/common/math/math_utils.h"
-#include "modules/context/reference_path_manager.h"
-#include "modules/tasks/task_pipeline_context.h"
+#include "common/math/math_utils.h"
+#include "context/reference_path_manager.h"
+#include "tasks/task_pipeline_context.h"
 
 namespace planning {
 

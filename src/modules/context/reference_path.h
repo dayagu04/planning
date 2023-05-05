@@ -3,14 +3,14 @@
 #include <memory>
 #include <vector>
 
-// #include "src/modules/common/define/path_point.h"
-#include "src/framework/session.h"
-#include "src/modules/common/config/basic_type.h"
-#include "src/modules/context/frenet_ego_state.h"
-#include "src/modules/context/frenet_obstacle.h"
+// #include "path_point.h"
+#include "session.h"
+#include "common/config/basic_type.h"
+#include "context/frenet_ego_state.h"
+#include "context/frenet_obstacle.h"
 
-#include "res/include/proto/common.pb.h"
-// #include "src/modules/environmental_model/mdk/horizonkit/horizonkit.h"
+#include "common.pb.h"
+// #include "environmental_model/mdk/horizonkit/horizonkit.h"
 // #include "mdk.h"
 
 namespace planning {

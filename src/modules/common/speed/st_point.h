@@ -2,7 +2,7 @@
 #define MODULES_PLANNING_OPTIMIZERS_ST_POINT_H_
 
 #include <string>
-#include "common/math/vec2d.h"
+#include "vec2d.h"
 
 namespace planning {
 

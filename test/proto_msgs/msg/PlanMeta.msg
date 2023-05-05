@@ -1,3 +1,0 @@
-uint64 timestamp_us
-uint64 plan_timestamp_us
-string plan_strategy_name

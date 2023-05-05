@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
-#include "src/common/log.h"
+#include "log.h"
 
 namespace planning {
 struct Shape3f {

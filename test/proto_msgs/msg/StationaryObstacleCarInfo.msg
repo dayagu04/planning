@@ -1,2 +1,0 @@
-bool close_to_obstacle
-float64 steering_wheel_rad_limit  # rad

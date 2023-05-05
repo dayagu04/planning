@@ -4,13 +4,13 @@
 #include <cassert>
 #include <vector>
 
-#include "src/modules/tasks/task_basic_types.h"
+#include "tasks/task_basic_types.h"
 
 typedef long long c_int;
 typedef double c_float;
 
 extern "C" {
-#include "src/modules/common/math/piecewise_jerk/osqp_interface.h"
+#include "common/math/piecewise_jerk/osqp_interface.h"
 }
 
 typedef int (*Osqp_run_para)(c_float *, c_int, c_int *, c_int *, c_float *,

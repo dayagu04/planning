@@ -1,13 +1,13 @@
-#include "modules/apa_planner/parallel/parallel_in_geometry_plan.h"
+#include "apa_planner/parallel/parallel_in_geometry_plan.h"
 
 #include <limits>
 #include <math.h>
 
-#include "modules/apa_planner/common/apa_cos_sin.h"
-#include "modules/apa_planner/common/apa_utils.h"
-#include "modules/apa_planner/common/planning_log_helper.h"
-#include "modules/common/math/box2d.h"
-#include "modules/common/math/math_utils.h"
+#include "apa_planner/common/apa_cos_sin.h"
+#include "apa_planner/common/apa_utils.h"
+#include "apa_planner/common/planning_log_helper.h"
+#include "common/math/box2d.h"
+#include "common/math/math_utils.h"
 
 namespace planning {
 namespace apa_planner {
@@ -682,7 +682,7 @@ bool ParallelInGeometryPlan::EF2Segment(const PlanningPoint &point_e,
           slot_sign_ * radius_ef_tmp * (-sin_point_e_theta + sin_point_f_theta);
       if (point_f.x < target_point_.x - kBackwardOverLen) {
         continue;
-      }   
+      }
       point_f.y = point_e.y +
           slot_sign_ * radius_ef_tmp * (cos_point_e_theta - cos_point_f_theta);
 

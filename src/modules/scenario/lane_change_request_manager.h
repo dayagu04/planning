@@ -1,13 +1,13 @@
 #pragma once
 
-#include "src/common/ifly_time.h"
-#include "src/framework/session.h"
-#include "src/modules/common/config/basic_type.h"
-#include "src/modules/context/ego_planning_config.h"
-#include "src/modules/scenario/lane_change_requests/active_lane_change_request.h"
-#include "src/modules/scenario/lane_change_requests/interactive_lane_change_request.h"
-#include "src/modules/scenario/lane_change_requests/lane_change_request.h"
-#include "src/modules/scenario/lane_change_requests/map_lane_change_request.h"
+#include "ifly_time.h"
+#include "session.h"
+#include "common/config/basic_type.h"
+#include "context/ego_planning_config.h"
+#include "scenario/lane_change_requests/active_lane_change_request.h"
+#include "scenario/lane_change_requests/interactive_lane_change_request.h"
+#include "scenario/lane_change_requests/lane_change_request.h"
+#include "scenario/lane_change_requests/map_lane_change_request.h"
 
 namespace planning {
 

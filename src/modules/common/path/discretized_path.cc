@@ -1,9 +1,9 @@
-#include "modules/common/path/discretized_path.h"
+#include "common/path/discretized_path.h"
 
 #include <algorithm>
 #include "assert.h"
-#include "modules/common/math/linear_interpolation.h"
-#include "modules/common/math/line_segment2d.h"
+#include "common/math/linear_interpolation.h"
+#include "common/math/line_segment2d.h"
 
 namespace planning {
 

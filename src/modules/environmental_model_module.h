@@ -1,7 +1,7 @@
 #ifndef ZNQC_MODULES_ENVIRONMENTAL_MODEL_MODULE_H
 #define ZNQC_MODULES_ENVIRONMENTAL_MODEL_MODULE_H
 
-#include "framework/module.h"
+#include "module.h"
 #include "environmental_model_manager.h"
 
 namespace planning {

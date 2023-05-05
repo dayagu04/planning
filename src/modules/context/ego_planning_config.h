@@ -4,8 +4,8 @@
 #include <set>
 #include <vector>
 
-#include "common/log.h"
-#include "thirdparty/nlohmann_json/nlohmann_json.hpp"
+#include "log.h"
+#include "nlohmann_json.hpp"
 
 namespace planning {
 

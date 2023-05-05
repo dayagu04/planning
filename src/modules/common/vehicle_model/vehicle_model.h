@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cmath>
-#include "src/modules/common/config/message_type.h"
+#include "common/config/message_type.h"
 
 namespace planning {
 namespace common {

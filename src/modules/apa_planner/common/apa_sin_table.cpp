@@ -1,4 +1,4 @@
-#include "modules/apa_planner/common/apa_sin_table.h"
+#include "apa_planner/common/apa_sin_table.h"
 
 namespace planning {
 

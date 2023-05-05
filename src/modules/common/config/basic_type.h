@@ -5,10 +5,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "framework/planning_def.h"
-#include "modules/common/utils/cartesian_coordinate_system.h"
-#include "modules/common/utils/frenet_coordinate_system.h"
-#include "src/thirdparty/mjson/include/mjson/mjson.hpp"
+#include "planning_def.h"
+#include "common/utils/cartesian_coordinate_system.h"
+#include "common/utils/frenet_coordinate_system.h"
+#include "mjson/mjson.hpp"
 
 #define DEFAULT_LANE_WIDTH (3.8)
 

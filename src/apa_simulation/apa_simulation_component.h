@@ -2,17 +2,17 @@
 
 #include <mutex>
 
-#include "../res/include/proto/apa_simulation_config.pb.h"
-#include "../res/include/proto/localization.pb.h"
-#include "../res/include/proto/parking_fusion.pb.h"
-#include "../res/include/proto/planning_plan.pb.h"
-#include "../res/include/proto/vehicle_service.pb.h"
+#include "apa_simulation_config.pb.h"
+#include "localization.pb.h"
+#include "parking_fusion.pb.h"
+#include "planning_plan.pb.h"
+#include "vehicle_service.pb.h"
 
 #include "autoplt/include/ADSComponent.h"
 #include "autoplt/include/ADSNode.h"
 #include "autoplt/include/ADSTime.h"
-#include "common/ifly_time.h"
-#include "modules/common/utils/file.h"
+#include "ifly_time.h"
+#include "common/utils/file.h"
 
 namespace planning {
 

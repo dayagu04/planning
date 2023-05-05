@@ -1,15 +1,15 @@
-#include "modules/scenario/scenario_state_machine.h"
+#include "scenario/scenario_state_machine.h"
 
 #include <limits>
 #include <numeric>
 
-#include "modules/common/utils/pose2d_utils.h"
-#include "modules/context/ego_state_manager.h"
-#include "modules/context/obstacle_manager.h"
-#include "modules/context/reference_path.h"
-#include "modules/context/reference_path_manager.h"
-#include "modules/context/vehicle_config_context.h"
-#include "src/modules/tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
+#include "common/utils/pose2d_utils.h"
+#include "context/ego_state_manager.h"
+#include "context/obstacle_manager.h"
+#include "context/reference_path.h"
+#include "context/reference_path_manager.h"
+#include "context/vehicle_config_context.h"
+#include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 
 namespace planning {
 

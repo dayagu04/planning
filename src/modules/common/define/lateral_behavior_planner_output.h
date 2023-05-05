@@ -10,8 +10,8 @@
 
 #include "geometry.h"
 #include "path_point.h"
-#include "src/modules/common/config/basic_type.h"
-#include "src/modules/common/tracked_object.h"
+#include "common/config/basic_type.h"
+#include "common/tracked_object.h"
 
 namespace planning {
 

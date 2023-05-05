@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "modules/common/math/vec2d.h"
+#include "vec2d.h"
 
 namespace planning {
 namespace planning_math {

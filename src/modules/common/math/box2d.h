@@ -13,9 +13,9 @@
 #include <string>
 #include <vector>
 
-#include "modules/common/math/aabox2d.h"
-#include "modules/common/math/line_segment2d.h"
-#include "modules/common/math/vec2d.h"
+#include "common/math/aabox2d.h"
+#include "common/math/line_segment2d.h"
+#include "vec2d.h"
 
 namespace planning {
 namespace planning_math {

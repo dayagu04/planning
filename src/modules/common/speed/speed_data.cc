@@ -2,8 +2,8 @@
 #include <utility>
 #include "assert.h"
 
-#include "modules/common/math/linear_interpolation.h"
-#include "modules/common/speed/speed_data.h"
+#include "common/math/linear_interpolation.h"
+#include "common/speed/speed_data.h"
 
 namespace planning {
 

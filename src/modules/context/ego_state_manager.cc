@@ -1,6 +1,6 @@
-#include "modules/context/ego_state_manager.h"
-#include "modules/common/utils/pose2d_utils.h"
-#include "modules/common/trajectory/trajectory_stitcher.h"
+#include "context/ego_state_manager.h"
+#include "common/utils/pose2d_utils.h"
+#include "common/trajectory/trajectory_stitcher.h"
 
 namespace planning {
 

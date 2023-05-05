@@ -2,10 +2,10 @@
 
 #include <vector>
 
-#include "modules/apa_planner/common/geometry_planning_io.h"
-#include "modules/apa_planner/common/vehicle_param_helper.h"
-#include "modules/common/math/line_segment2d.h"
-#include "modules/common/math/polygon2d.h"
+#include "apa_planner/common/geometry_planning_io.h"
+#include "apa_planner/common/vehicle_param_helper.h"
+#include "common/math/line_segment2d.h"
+#include "common/math/polygon2d.h"
 
 namespace planning {
 namespace apa_planner {

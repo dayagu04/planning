@@ -3,9 +3,9 @@
 
 // #include "common/ego_state_manager.h"
 // #include "common/map_info_manager.h"
-#include "src/modules/common/prediction_object.h"
-#include "src/modules/common/tracked_object.h"
-#include "src/modules/common/tracklet_maintainer.h"
+#include "common/prediction_object.h"
+#include "common/tracked_object.h"
+#include "common/tracklet_maintainer.h"
 
 
 #include <utility>
@@ -45,7 +45,7 @@ public:
   }
 
   const std::vector<TrackedObject> &side_tracks() const {
-    return side_tracks_; 
+    return side_tracks_;
   }
 
   const std::vector<TrackedObject> &front_tracks_l() const {
@@ -55,7 +55,7 @@ public:
   const std::vector<TrackedObject> &front_tracks_r() const {
     return front_tracks_r_;
   }
-  
+
   const std::vector<TrackedObject> &side_tracks_l() const {
     return side_tracks_l_;
   }
@@ -80,7 +80,7 @@ private:
   double svf_time_ = 0.0;
   bool svf_dead_ = true;
   double warning_timer_[5];
-  bool prediction_update_ = false;  
+  bool prediction_update_ = false;
 
   std::vector<TrackedObject> front_tracks_;
   std::vector<TrackedObject> front_tracks_copy_;

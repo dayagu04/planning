@@ -1,9 +1,9 @@
 #ifndef _TSR_STEP_H_
 #define _TSR_STEP_H_
 
-#include "src/common/Platform_Types.h"
-#include "src/framework/frame.h"
-#include "src/modules/context/virtual_lane_manager.h"
+#include "Platform_Types.h"
+#include "frame.h"
+#include "context/virtual_lane_manager.h"
 
 #ifdef __cplusplus
 extern "C"

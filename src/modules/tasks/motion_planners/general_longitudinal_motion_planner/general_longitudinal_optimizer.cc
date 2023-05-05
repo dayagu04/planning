@@ -1,5 +1,5 @@
 
-#include "src/modules/tasks/motion_planners/general_longitudinal_motion_planner/general_longitudinal_optimizer.h"
+#include "tasks/motion_planners/general_longitudinal_motion_planner/general_longitudinal_optimizer.h"
 
 #include <iomanip>
 #include <sstream>
@@ -8,8 +8,8 @@
 // #include "core/common/trace.h"
 // #include "core/modules/common/ego_prediction_utils.h"
 // #include "core/modules/context/ego_state.h"
-#include "src/modules/common/math/piecewise_jerk/piecewise_problem.h"
-#include "src/modules/scc_function/mrc_condition.h"
+#include "common/math/piecewise_jerk/piecewise_problem.h"
+#include "scc_function/mrc_condition.h"
 
 namespace planning {
 

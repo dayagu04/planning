@@ -1,14 +1,14 @@
-#include "framework/session.h"
+#include "session.h"
 
 #include <algorithm>
 #include <cstdint>
 #include <string>
 
-#include "common/utils.h"
-#include "modules/context/vehicle_config_context.h"
-#include "modules/context/environmental_model.h"
-#include "modules/context/ego_planning_config.h"
-#include "src/modules/common/config_context.h"
+#include "utils.h"
+#include "context/vehicle_config_context.h"
+#include "context/environmental_model.h"
+#include "context/ego_planning_config.h"
+#include "common/config_context.h"
 // #include "ego_planning_config.pb.h"
 
 namespace planning {

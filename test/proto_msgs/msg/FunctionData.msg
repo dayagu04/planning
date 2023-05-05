@@ -1,4 +1,0 @@
-uint64 timestamp_us
-bool acc_active_switch
-float32 acc_cruise_velocity
-bool lcc_active_switch

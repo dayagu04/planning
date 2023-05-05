@@ -2,10 +2,10 @@
 
 #include <algorithm>
 #include <limits>
-#include "modules/common/config/basic_type.h"
-#include "modules/common/speed/sl_polygon_seq.h"
-#include "modules/context/obstacle.h"
-#include "modules/context/ego_state_manager.h"
+#include "common/config/basic_type.h"
+#include "common/speed/sl_polygon_seq.h"
+#include "context/obstacle.h"
+#include "context/ego_state_manager.h"
 
 namespace planning {
 

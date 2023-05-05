@@ -12,8 +12,8 @@
 
 #include "google/protobuf/util/message_differencer.h"
 
-#include "modules/common/math/vec2d.h"
-#include "modules/common/config/message_type.h"
+#include "vec2d.h"
+#include "common/config/message_type.h"
 
 // The helper function "std::make_unique()" is defined since C++14.
 // The definition of "std::make_unique()" borrowed from C++14 is given here

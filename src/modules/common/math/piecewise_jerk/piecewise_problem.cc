@@ -1,6 +1,6 @@
-#include "src/modules/common/math/piecewise_jerk/piecewise_problem.h"
+#include "common/math/piecewise_jerk/piecewise_problem.h"
 
-#include "src/common/log.h"
+#include "log.h"
 #include "assert.h"
 // #include "core/common/trace.h"
 

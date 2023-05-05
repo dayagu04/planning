@@ -1,13 +1,13 @@
-#include "modules/apa_planner/diagonal/diagonal_in_geometry_plan.h"
+#include "apa_planner/diagonal/diagonal_in_geometry_plan.h"
 
 #include <limits>
 #include <math.h>
 
-#include "modules/apa_planner/common/apa_cos_sin.h"
-#include "modules/apa_planner/common/apa_utils.h"
-#include "modules/apa_planner/common/planning_log_helper.h"
-#include "modules/common/math/box2d.h"
-#include "modules/common/math/math_utils.h"
+#include "apa_planner/common/apa_cos_sin.h"
+#include "apa_planner/common/apa_utils.h"
+#include "apa_planner/common/planning_log_helper.h"
+#include "common/math/box2d.h"
+#include "common/math/math_utils.h"
 
 namespace planning {
 namespace apa_planner {

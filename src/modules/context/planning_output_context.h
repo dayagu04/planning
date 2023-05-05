@@ -1,8 +1,8 @@
 #ifndef MODULES_PLANNING_OUTPUT_CONTEXT_
 #define MODULES_PLANNING_OUTPUT_CONTEXT_
 
-#include "modules/common/define/planning_status.h"
-#include "../res/include/proto/planning_hmi.pb.h"
+#include "common/define/planning_status.h"
+#include "planning_hmi.pb.h"
 
 namespace planning {
 

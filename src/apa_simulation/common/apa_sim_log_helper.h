@@ -2,7 +2,7 @@
 
 #include <fstream>
 
-#include "common/macro.h"
+#include "macro.h"
 
 namespace planning {
 

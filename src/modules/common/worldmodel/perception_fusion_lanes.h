@@ -1,9 +1,9 @@
 #pragma once
 
 // 等common proto出来，
-// #include "res/include/proto/common.pb.h"
-#include "modules/common/common.h"
-#include "modules/common/worldmodel/lane.h"
+// #include "common.pb.h"
+#include "common/common.h"
+#include "common/worldmodel/lane.h"
 
 namespace planning {
 

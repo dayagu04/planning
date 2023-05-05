@@ -3,8 +3,8 @@
 #include "math.h"
 #include "assert.h"
 
-#include "modules/common/math/linear_interpolation.h"
-#include "modules/common/speed/sl_polygon_seq.h"
+#include "common/math/linear_interpolation.h"
+#include "common/speed/sl_polygon_seq.h"
 
 namespace planning {
 

@@ -3,7 +3,7 @@
 #include <cmath>
 #include <string.h>
 
-#include "apa_simulation/common/apa_sim_log_helper.h"
+#include "common/apa_sim_log_helper.h"
 #include "common/utils/file.h"
 
 namespace planning {

@@ -1,7 +1,7 @@
-#include "src/modules/scenario/lane_change_request_manager.h"
+#include "scenario/lane_change_request_manager.h"
 
-#include "src/modules/scc_function/mrc_condition.h"
-#include "src/modules/scenario/scenario_state_machine.h"
+#include "scc_function/mrc_condition.h"
+#include "scenario/scenario_state_machine.h"
 
 namespace planning {
 

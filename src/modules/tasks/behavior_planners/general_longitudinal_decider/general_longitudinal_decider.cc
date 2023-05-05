@@ -1,4 +1,4 @@
-#include "src/modules/tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
+#include "tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
 
 #include <assert.h>
 
@@ -8,9 +8,9 @@
 #include <string>
 #include <vector>
 
-#include "src/modules/scc_function/adaptive_cruise_control.h"
-#include "src/modules/scc_function/mrc_condition.h"
-#include "src/modules/scc_function/start_stop_enable.h"
+#include "scc_function/adaptive_cruise_control.h"
+#include "scc_function/mrc_condition.h"
+#include "scc_function/start_stop_enable.h"
 
 namespace planning {
 

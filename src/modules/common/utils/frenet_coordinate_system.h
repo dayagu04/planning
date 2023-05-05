@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "cartesian_coordinate_system.h"
-#include "modules/common/utils/spline.h"
+#include "common/utils/spline.h"
 using planning::planning_math::spline;
 using std::vector;
 

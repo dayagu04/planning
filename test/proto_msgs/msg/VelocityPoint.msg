@@ -1,3 +1,0 @@
-float64 target_velocity
-float64 relative_time
-float64 distance

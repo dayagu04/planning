@@ -1,4 +1,4 @@
-#include "src/modules/scenario/lane_change_requests/interactive_lane_change_request.h"
+#include "scenario/lane_change_requests/interactive_lane_change_request.h"
 
 #include <string>
 

@@ -1,8 +1,8 @@
-#include "modules/context/obstacle.h"
+#include "context/obstacle.h"
 
-#include "common/log.h"
-#include "modules/common/math/linear_interpolation.h"
-#include "modules/common/common.h"
+#include "log.h"
+#include "common/math/linear_interpolation.h"
+#include "common/common.h"
 // #include "core/modules/common/trajectory/discretized_trajectory.h"
 
 namespace planning {
@@ -14,9 +14,9 @@ namespace planning {
 //       perception_id_(prediction_object.fusion_obstacle().additional_info().track_id()),
 //       is_static_(is_static),
 //       perception_bounding_box_(
-//           {prediction_object.fusion_obstacle().common_info().center_position().x(), 
+//           {prediction_object.fusion_obstacle().common_info().center_position().x(),
 //           prediction_object.fusion_obstacle().common_info().center_position().y()},
-//           prediction_object.fusion_obstacle().common_info().heading_angle(), 
+//           prediction_object.fusion_obstacle().common_info().heading_angle(),
 //           prediction_object.fusion_obstacle().common_info().shape().length(),
 //           prediction_object.fusion_obstacle().common_info().shape().width()) {
 
@@ -131,7 +131,7 @@ Obstacle::Obstacle(int id,
           {prediction_object.position_x, prediction_object.position_y},
           prediction_object.yaw, prediction_object.length,
           prediction_object.width) {
-  
+
   x_center_ = prediction_object.position_x;
   y_center_ = prediction_object.position_y;
   width_ = prediction_object.width;

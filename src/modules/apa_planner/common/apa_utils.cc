@@ -1,6 +1,6 @@
-#include "modules/apa_planner/common/apa_utils.h"
+#include "apa_planner/common/apa_utils.h"
 
-#include "modules/apa_planner/common/apa_cos_sin.h"
+#include "apa_planner/common/apa_cos_sin.h"
 
 namespace planning {
 

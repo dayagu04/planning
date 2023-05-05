@@ -1,12 +1,12 @@
-#include "modules/common/math/box2d.h"
+#include "common/math/box2d.h"
 
 #include <algorithm>
 #include <cmath>
 #include <utility>
 #include "assert.h"
 
-#include "modules/common/math/math_utils.h"
-#include "modules/common/math/polygon2d.h"
+#include "common/math/math_utils.h"
+#include "common/math/polygon2d.h"
 
 namespace planning {
 namespace planning_math {

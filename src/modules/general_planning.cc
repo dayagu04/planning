@@ -9,8 +9,8 @@
 #ifdef CYBER_ENV
 #include "autoplt/include/ADSTime.h"
 #endif
-#include "modules/common/config_context.h"
-#include "modules/context/environmental_model.h"
+#include "common/config_context.h"
+#include "context/environmental_model.h"
 
 namespace planning {
 

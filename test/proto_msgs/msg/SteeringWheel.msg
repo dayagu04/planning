@@ -1,2 +1,0 @@
-bool available
-SteeringWheelData steering_wheel_data

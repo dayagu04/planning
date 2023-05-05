@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include "common/macro.h"
-#include "proto/generated_files/vehicle_param.pb.h"
+#include "macro.h"
+#include "vehicle_param.pb.h"
 
 namespace planning {
 

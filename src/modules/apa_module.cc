@@ -1,4 +1,4 @@
-#include "modules/apa_module.h"
+#include "apa_module.h"
 
 namespace planning {
 namespace modules {

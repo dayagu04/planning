@@ -1,2 +1,0 @@
-uint64 timestamp
-RadarSurroundData[] radar_surround_data

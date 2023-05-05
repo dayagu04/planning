@@ -1,10 +1,10 @@
-#include "modules/context/reference_path.h"
+#include "context/reference_path.h"
 #include <cmath>
-#include "framework/session.h"
-#include "modules/context/ego_state_manager.h"
-#include "modules/context/obstacle_manager.h"
-#include "modules/common/math/math_utils.h"
-#include "common/ifly_time.h"
+#include "session.h"
+#include "context/ego_state_manager.h"
+#include "context/obstacle_manager.h"
+#include "common/math/math_utils.h"
+#include "ifly_time.h"
 
 namespace planning {
 

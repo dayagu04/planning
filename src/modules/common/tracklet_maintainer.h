@@ -7,14 +7,14 @@
 #include <map>
 #include <set>
 
-#include "src/modules/common/prediction_object.h"
-#include "src/modules/common/refline.h"
-#include "src/modules/context/ego_state_manager.h"
-// #include "src/modules/common/define/path_point.h"
-#include "src/modules/common/tracked_object.h"
-#include "src/modules/common/utils/lateral_utils.h"
-#include "framework/session.h"
-#include "res/include/proto/fusion_objects.pb.h"
+#include "common/prediction_object.h"
+#include "common/refline.h"
+#include "context/ego_state_manager.h"
+// #include "path_point.h"
+#include "common/tracked_object.h"
+#include "common/utils/lateral_utils.h"
+#include "session.h"
+#include "fusion_objects.pb.h"
 
 namespace planning {
 

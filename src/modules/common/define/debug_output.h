@@ -2,9 +2,9 @@
 #include <cstdint>
 #include <string>
 
-#include "../res/include/proto/common.pb.h"
-#include "../res/include/proto/planning_plan.pb.h"
-#include "proto/generated_files/planning_debug_info.pb.h"
+#include "common.pb.h"
+#include "planning_plan.pb.h"
+#include "planning_debug_info.pb.h"
 
 namespace planning {
 

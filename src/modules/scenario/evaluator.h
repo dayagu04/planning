@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/modules/scenario/ego_planning_candidate.h"
+#include "scenario/ego_planning_candidate.h"
 
 namespace planning {
 

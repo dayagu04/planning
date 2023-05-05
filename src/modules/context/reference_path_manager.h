@@ -4,9 +4,9 @@
 #include <map>
 #include <utility>
 
-#include "framework/session.h"
-#include "modules/common/config/basic_type.h"
-#include "modules/context/lane_reference_path.h"
+#include "session.h"
+#include "common/config/basic_type.h"
+#include "context/lane_reference_path.h"
 
 namespace planning {
 

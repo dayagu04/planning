@@ -1,7 +1,7 @@
 #ifndef ZNQC_MODULES_GENERAL_PLANNER_MODULE_H
 #define ZNQC_MODULES_GENERAL_PLANNER_MODULE_H
 
-#include "framework/module.h"
+#include "module.h"
 #include "general_planner.h"
 
 namespace planning {

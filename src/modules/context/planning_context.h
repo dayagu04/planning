@@ -1,13 +1,13 @@
 #pragma once
 
-#include "common/macro.h"
-#include "modules/common/config/basic_type.h"
-#include "modules/common/config/vehicle_param.h"
-#include "modules/common/speed/speed_limit.h"
-// #include "modules/context/ego_planning_config.h"
-#include "modules/common/define/planning_status.h"
-#include "src/modules/common/define/lateral_behavior_planner_output.h"
-#include "modules/tasks/behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner_output.h"
+#include "macro.h"
+#include "common/config/basic_type.h"
+#include "common/config/vehicle_param.h"
+#include "common/speed/speed_limit.h"
+// #include "context/ego_planning_config.h"
+#include "common/define/planning_status.h"
+#include "common/define/lateral_behavior_planner_output.h"
+#include "tasks/behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner_output.h"
 
 namespace planning {
 

@@ -4,18 +4,18 @@
 // #include <string>
 #include <vector>
 
-#include "common/ifly_time.h"
+#include "ifly_time.h"
 
-#include "modules/context/environmental_model.h"
-#include "modules/scenario/scenario_manager.h"
-#include "common/utils_math.h"
+#include "context/environmental_model.h"
+#include "scenario/scenario_manager.h"
+#include "utils_math.h"
 
-#include "framework/session.h"
-#include "framework/scheduler.h"
-#include "modules/common/local_view.h"
+#include "session.h"
+#include "scheduler.h"
+#include "common/local_view.h"
 
-#include "modules/common/define/debug_output.h"
-#include "../res/include/proto/planning_plan.pb.h"
+#include "common/define/debug_output.h"
+#include "planning_plan.pb.h"
 
 namespace planning {
 
@@ -54,7 +54,7 @@ class GeneralPlanning {
   void UpdateUodyReport(double current_time);
   void UpdateEgoPose(double current_time);
   void UpdateVehicleStatus(double current_time);
-  
+
   void FillEgoPlanningTrajectoryPoint(
       const std::vector<Prediction::PredictionTrajectoryPoint> &input,
       std::vector<planning::common::TrajectoryPoint> &output);
@@ -62,7 +62,7 @@ class GeneralPlanning {
   void FillEgoPlanningTrajectory(
       const Prediction::PredictionTrajectory &pred_traj,
       planning::common::EgoPredictionTrajectory &ego_prediction_traj);
-  
+
   void FillEgoPlanningInfo(
       const std::shared_ptr<Prediction::PredictionObject>
           &prediction_object,
@@ -79,7 +79,7 @@ class GeneralPlanning {
 
   void FillPlanningDebugInfo(double start_time, DebugOutput &debug_info);
   void FillPlanningHmiInfo(double start_timestamp, PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info);
-  
+
  private:
 //   std::shared_ptr<EnvironmentalModel> environmental_model_ = nullptr;
 //   std::shared_ptr<ScenarioManager> scenario_manager_;

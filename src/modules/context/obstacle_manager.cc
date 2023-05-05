@@ -1,12 +1,12 @@
 #include <tuple>
 
-#include "modules/common/math/math_utils.h"
+#include "common/math/math_utils.h"
 
-#include "modules/context/obstacle_manager.h"
-#include "modules/context/ego_state_manager.h"
-// #include "modules/context/groundline_decider.h"
-#include "modules/context/reference_path_manager.h"
-#include "modules/context/virtual_lane_manager.h"
+#include "context/obstacle_manager.h"
+#include "context/ego_state_manager.h"
+// #include "context/groundline_decider.h"
+#include "context/reference_path_manager.h"
+#include "context/virtual_lane_manager.h"
 
 namespace planning {
 
@@ -110,7 +110,7 @@ void ObstacleManager::generate_frenet_obstacles(
       continue;
     }
     // construct frenet_obstacle
-    std::shared_ptr<FrenetObstacle> frenet_obstacle = 
+    std::shared_ptr<FrenetObstacle> frenet_obstacle =
                   std::make_shared<FrenetObstacle>(obstacle_ptr, reference_path,
                   session_->environmental_model().get_ego_state_manager());
     frenet_obstacles.emplace_back(frenet_obstacle);

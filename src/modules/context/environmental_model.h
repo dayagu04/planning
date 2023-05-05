@@ -5,28 +5,28 @@
 #include <typeinfo>
 #include <unordered_map>
 
-#include "common/log.h"
-#include "modules/common/local_view.h"
-#include "modules/context/ego_planning_config.h"
-#include "modules/common/prediction_object.h"
+#include "log.h"
+#include "common/local_view.h"
+#include "context/ego_planning_config.h"
+#include "common/prediction_object.h"
 // #include "planning/common/common.h"
 // #include "common/baseline_info.h"
 
-// #include "modules/context/virtual_lane_manager.h"
-// #include "modules/context/frenet_ego_state.h"
-// #include "modules/context/ego_state_manager.h"
-// #include "modules/context/obstacle_manager.h"
-// #include "modules/context/reference_path_manager.h"
-// #include "modules/context/traffic_light_decision_manager.h"
-#include "modules/context/parking_slot_manager.h"
+// #include "context/virtual_lane_manager.h"
+// #include "context/frenet_ego_state.h"
+// #include "context/ego_state_manager.h"
+// #include "context/obstacle_manager.h"
+// #include "context/reference_path_manager.h"
+// #include "context/traffic_light_decision_manager.h"
+#include "context/parking_slot_manager.h"
 
-#include "../res/include/proto/vehicle_service.pb.h"
-#include "proto/generated_files/planning_config.pb.h"
-#include "proto/generated_files/vehicle_status.pb.h"
-#include "../res/include/proto/fusion_objects.pb.h"
-#include "../res/include/proto/prediction.pb.h"
+#include "vehicle_service.pb.h"
+#include "planning_config.pb.h"
+#include "vehicle_status.pb.h"
+#include "fusion_objects.pb.h"
+#include "prediction.pb.h"
 
-#include "src/modules/common/config/vehicle_param.h"
+#include "common/config/vehicle_param.h"
 
 namespace planning {
 

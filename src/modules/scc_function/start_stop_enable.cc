@@ -1,4 +1,4 @@
-#include "src/modules/scc_function/start_stop_enable.h"
+#include "scc_function/start_stop_enable.h"
 
 namespace planning {
 

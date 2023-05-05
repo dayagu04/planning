@@ -6,7 +6,7 @@
 #include <map>
 #include <sstream>
 
-#include "src/common/log.h"
+#include "log.h"
 
 namespace planning {
 namespace common {

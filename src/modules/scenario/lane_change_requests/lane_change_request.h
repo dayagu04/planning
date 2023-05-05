@@ -5,12 +5,12 @@
 #include <unordered_map>
 #include <vector>
 
-#include "src/common/ifly_time.h"
-#include "src/framework/session.h"
-#include "src/modules/common/config/basic_type.h"
-#include "src/modules/context/virtual_lane_manager.h"
-#include "src/modules/scc_function/display_state_types.h"
-#include "src/modules/scenario/lane_change_requests/lane_change_lane_manager.h"
+#include "ifly_time.h"
+#include "session.h"
+#include "common/config/basic_type.h"
+#include "context/virtual_lane_manager.h"
+#include "scc_function/display_state_types.h"
+#include "scenario/lane_change_requests/lane_change_lane_manager.h"
 
 namespace planning {
 /// @brief 换道请求的基类，生成、结束换道请求等

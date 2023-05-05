@@ -1,9 +1,9 @@
 #include "vision_longitudinal_behavior_planner.h"
-#include "thirdparty/rapidjson/include/rapidjson/document.h"
-#include "thirdparty/rapidjson/include/rapidjson/stringbuffer.h"
-#include "thirdparty/rapidjson/include/rapidjson/writer.h"
-#include "thirdparty/rapidjson/include/rapidjson/prettywriter.h"
-#include "common/ifly_time.h"
+#include "rapidjson/document.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/prettywriter.h"
+#include "ifly_time.h"
 
 namespace planning {
 
@@ -42,7 +42,7 @@ void VisionLongitudinalBehaviorPlanner::
     create_vision_longitudinal_behavior_planner_msg(std::string &plan_msg) {
   auto &vision_longitudinal_output =
             frame_->mutable_session()->mutable_planning_context()->mutable_vision_longitudinal_behavior_planner_output();
-  
+
   rapidjson::Document publish_json;
   publish_json.SetObject();
   rapidjson::Document::AllocatorType& allocator = publish_json.GetAllocator();

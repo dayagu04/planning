@@ -4,11 +4,11 @@
 #include <string>
 #include <type_traits>
 
-#include "common/class_name.h"
-#include "common/macro.h"
-#include "common/registry.h"
-#include "framework/frame.h"
-#include "framework/session.h"
+#include "class_name.h"
+#include "macro.h"
+#include "registry.h"
+#include "frame.h"
+#include "session.h"
 #include "google/protobuf/message.h"
 
 namespace planning {

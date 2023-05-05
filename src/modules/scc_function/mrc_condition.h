@@ -2,11 +2,11 @@
 
 #include <math.h>
 
-#include "src/framework/session.h"
-#include "src/modules/context/ego_planning_config.h"
-#include "src/modules/context/planning_context.h"
-#include "src/modules/scc_function/mrc_types.h"
-#include "src/modules/tasks/task_basic_types.h"
+#include "session.h"
+#include "context/ego_planning_config.h"
+#include "context/planning_context.h"
+#include "scc_function/mrc_types.h"
+#include "tasks/task_basic_types.h"
 
 namespace planning {
 

@@ -1,10 +1,10 @@
 #include <cassert>
 
-#include "modules/context/frenet_obstacle.h"
-#include "framework/session.h"
-#include "modules/common/math/linear_interpolation.h"
-#include "modules/context/reference_path.h"
-#include "src/modules/common/utils/pose2d_utils.h"
+#include "context/frenet_obstacle.h"
+#include "session.h"
+#include "common/math/linear_interpolation.h"
+#include "context/reference_path.h"
+#include "common/utils/pose2d_utils.h"
 #include "ego_state_manager.h"
 
 namespace planning {

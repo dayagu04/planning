@@ -1,8 +1,8 @@
 #include "environmental_model_module.h"
 
-#include "common/log.h"
-#include "modules/common/vehicle_model/vehicle_model.h"
-// #include "modules/context/vehicle_config_context.h"
+#include "log.h"
+#include "common/vehicle_model/vehicle_model.h"
+// #include "context/vehicle_config_context.h"
 
 namespace planning {
 namespace modules {

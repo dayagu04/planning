@@ -1,7 +1,7 @@
-#include "modules/common/vehicle_model/vehicle_model.h"
-#include "modules/common/config/vehicle_param_tmp.h"
-#include "thirdparty/mjson/include/mjson/mjson.hpp"
-#include "modules/common/config_context.h"
+#include "common/vehicle_model/vehicle_model.h"
+#include "common/config/vehicle_param_tmp.h"
+#include "mjson/mjson.hpp"
+#include "common/config_context.h"
 #include <iterator>
 #include <fstream>
 #include <assert.h>

@@ -1,10 +1,10 @@
 #pragma once
 
 #include <math.h>
-#include "src/modules/scenario/ego_planning_candidate.h"
+#include "scenario/ego_planning_candidate.h"
 
-#include "src/modules/context/ego_planning_config.h"
-#include "src/framework/session.h"
+#include "context/ego_planning_config.h"
+#include "session.h"
 
 namespace planning {
 

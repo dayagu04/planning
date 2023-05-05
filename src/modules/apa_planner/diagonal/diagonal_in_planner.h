@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../res/include/proto/planning_plan.pb.h"
+#include "planning_plan.pb.h"
 
-#include "framework/frame.h"
-#include "modules/apa_planner/apa_planner_base.h"
-#include "modules/apa_planner/diagonal/diagonal_in_trajectory_generator.h"
+#include "frame.h"
+#include "apa_planner/apa_planner_base.h"
+#include "apa_planner/diagonal/diagonal_in_trajectory_generator.h"
 
 namespace planning {
 namespace apa_planner {

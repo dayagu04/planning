@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "src/modules/common/config/message_type.h"
+#include "common/config/message_type.h"
 #include "common/speed/speed_limit.h"
 #include "common/speed/st_boundary.h"
 

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "src/framework/frame.h"
-#include "src/framework/session.h"
-#include "src/modules/context/reference_path.h"
-// #include "src/modules/context/traffic_light_decider.h"
-#include "src/modules/tasks/task_basic_types.h"
+#include "frame.h"
+#include "session.h"
+#include "context/reference_path.h"
+// #include "context/traffic_light_decider.h"
+#include "tasks/task_basic_types.h"
 
 namespace planning {
 

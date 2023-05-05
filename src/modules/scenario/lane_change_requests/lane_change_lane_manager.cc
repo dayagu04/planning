@@ -1,4 +1,4 @@
-#include "src/modules/scenario/lane_change_requests/lane_change_lane_manager.h"
+#include "scenario/lane_change_requests/lane_change_lane_manager.h"
 
 namespace planning {
 

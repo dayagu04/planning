@@ -1,11 +1,11 @@
-#include "modules/scenario/scenario_state.h"
+#include "scenario/scenario_state.h"
 
-#include "src/common/ifly_time.h"
-#include "src/modules/context/ego_planning_config.h"
-#include "src/modules/context/reference_path_manager.h"
-#include "src/modules/scenario/ego_planning_candidate.h"
-#include "src/modules/scenario/evaluator.h"
-#include "src/modules/scenario/scenario_state_machine.h"
+#include "ifly_time.h"
+#include "context/ego_planning_config.h"
+#include "context/reference_path_manager.h"
+#include "scenario/ego_planning_candidate.h"
+#include "scenario/evaluator.h"
+#include "scenario/scenario_state_machine.h"
 
 namespace planning {
 
