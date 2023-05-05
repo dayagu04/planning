@@ -28,27 +28,26 @@ GeneralLateralDecider::GeneralLateralDecider(
 
 bool GeneralLateralDecider::init_info() {
   // init input info
-  cur_reference_path_ptr_ =
-      frame_->session()
-          ->environmental_model()
-          .get_reference_path_manager()
-          ->get_reference_path_by_lane(frame_->mutable_session()
-                                           ->mutable_planning_context()
-                                           ->mutable_scenario_state_machine()
-                                           ->get_lane_change_lane_manager()
-                                           ->flane()
-                                           ->get_virtual_id());
-  obs_vec_ = cur_reference_path_ptr_->get_obstacles();
+  // reference_path_ptr_ =
+  //     frame_->session()
+  //         ->environmental_model()
+  //         .get_reference_path_manager()
+  //         ->get_reference_path_by_lane(frame_->mutable_session()
+  //                                          ->mutable_planning_context()
+  //                                          ->mutable_scenario_state_machine()
+  //                                          ->get_lane_change_lane_manager()
+  //                                          ->flane()
+  //                                          ->get_virtual_id());
+  obs_vec_ = reference_path_ptr_->get_obstacles();
 
-  ego_frenet_state_ = cur_reference_path_ptr_->get_frenet_ego_state();
+  ego_frenet_state_ = reference_path_ptr_->get_frenet_ego_state();
 
   ego_cart_state_manager_ =
       frame_->session()->environmental_model().get_ego_state_manager();
 
   is_lane_change_scene_ = false;
 
-  if (cur_reference_path_ptr_ == nullptr ||
-      ego_cart_state_manager_ == nullptr) {
+  if (reference_path_ptr_ == nullptr || ego_cart_state_manager_ == nullptr) {
     // add logs
     return false;
   }
@@ -106,7 +105,7 @@ bool GeneralLateralDecider::construct_reference_path_points(
 
   double s = ego_frenet_state_.s();
   for (size_t i = 0; i < horizion_num_ + 1; i++) {
-    auto success = cur_reference_path_ptr_->get_reference_point_by_lon(
+    auto success = reference_path_ptr_->get_reference_point_by_lon(
         s + i * delta_t_ * cruise_vel_, refpath_pt);  // TBD: check API
 
     if (!success) {
@@ -147,16 +146,16 @@ void GeneralLateralDecider::construct_lane_and_boundary_bounds(
         refpath_points[i].distance_to_right_road_border;
 
     safe_bound.upper = std::fmin(
-        left_lane_distance - vehicle_param.width - config_.buffer2lane,
+        left_lane_distance - 0.5 * vehicle_param.width - config_.buffer2lane,
         safe_bound.upper);
     safe_bound.lower = std::fmax(
-        -right_lane_distance + vehicle_param.width + config_.buffer2lane,
+        -right_lane_distance + 0.5 * vehicle_param.width + config_.buffer2lane,
         safe_bound.lower);
     path_bound.upper = std::fmin(
-        right_road_distance - vehicle_param.width - config_.buffer2border,
+        right_road_distance - 0.5 * vehicle_param.width - config_.buffer2border,
         path_bound.upper);
     path_bound.lower = std::fmin(
-        right_road_distance - vehicle_param.width - config_.buffer2border,
+        right_road_distance - 0.5 * vehicle_param.width - config_.buffer2border,
         path_bound.upper);
 
     map_obstacle_decision.lat_bounds.emplace_back(
@@ -251,12 +250,12 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
                                   obstacle->frenet_obstacle_boundary().l_start >
                                       ego_cur_l + vehicle_param.width / 2);
 
-  Polygon2d obstacle_start_sl_polygon;
+  // Polygon2d obstacle_start_sl_polygon;
   Polygon2d obstacle_end_sl_polygon;
-  const bool ok_start = obstacle->get_polygon_at_time(  // TBD: no prediction
-      0., cur_reference_path_ptr_, obstacle_start_sl_polygon);
+  // const bool ok_start = obstacle->get_polygon_at_time(  // TBD: no prediction
+  //     0., reference_path_ptr_, obstacle_start_sl_polygon);
   const bool ok_end = obstacle->get_polygon_at_time(  // TBD: no prediction
-      refpath_points.size() * delta_t_, cur_reference_path_ptr_,
+      refpath_points.size() * delta_t_, reference_path_ptr_,
       obstacle_end_sl_polygon);
 
   double dynamic_bound_gain_vel = std::max(config_.min_gain_vel, ego_velocity);
@@ -302,7 +301,9 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
   }
 
   // Step 3) filter rear objects
-  if (obstacle->frenet_obstacle_boundary().s_end < ego_cur_s) {
+  if (obstacle->frenet_obstacle_boundary().s_end +
+          config_.lon_rear_car_filter_buffer <
+      ego_cur_s) {
     // TBD: add log
     return;
   }
@@ -352,7 +353,7 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
     //  }
 
     Polygon2d obstacle_sl_polygon;
-    auto ok = obstacle->get_polygon_at_time(0., cur_reference_path_ptr_,
+    auto ok = obstacle->get_polygon_at_time(0., reference_path_ptr_,
                                             obstacle_sl_polygon);
     if (!ok) {
       // TBD add log
@@ -744,7 +745,7 @@ void GeneralLateralDecider::generate_lat_reference_traj(
   for (size_t i = 0; i < refpath_points.size(); i++) {
     Point2D cart_point;
     const auto &ref_point = refpath_points[i];
-    if (cur_reference_path_ptr_->get_frenet_coord()->FrenetCoord2CartCoord(
+    if (reference_path_ptr_->get_frenet_coord()->FrenetCoord2CartCoord(
             Point2D{ref_point.frenet_point.x, ref_point.frenet_point.y},
             cart_point) != TRANSFORM_STATUS::TRANSFORM_FAILED) {
       enu_ref_path[i].first = cart_point.x;

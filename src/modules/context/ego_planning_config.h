@@ -238,9 +238,10 @@ struct LateralDeciderConfig : public EgoPlanningConfig {
   double kHardBoundWeight = -1.;
   double dynamic_bound_slack_coefficient = 1.;
   double buffer2border = 0.15;
-  double buffer2lane = 0.1;
+  double buffer2lane = 0.3;
   double l_offset_limit = 0.1;
   double min_gain_vel = 1.0;
+  double lon_rear_car_filter_buffer = 10.;
 };
 
 struct LateralOptimizerConfig : public EgoPlanningConfig {
