@@ -2542,6 +2542,8 @@ bool VisionLateralMotionPlanner::update_planner_output() {
 
   lateral_output.dist_rblane = 10.;  // attention!!hack!
 
+  flane_->update_refined_lane_points();
+
   lateral_output.path_points =
       flane_->get_refined_lane_points();  // attention! transform
                                           // RerencePathPoint 2 PathPoint

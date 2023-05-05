@@ -7,7 +7,8 @@
 
 namespace planning {
 
-ReferencePathManager::ReferencePathManager(planning::framework::Session* session) {
+ReferencePathManager::ReferencePathManager(
+    planning::framework::Session *session) {
   session_ = session;
 }
 
@@ -40,7 +41,7 @@ ReferencePathManager::get_reference_path_by_current_lane() {
 void ReferencePathManager::update() {
   auto &virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
-  //step1 construct current/left/right reference_path
+  // step1 construct current/left/right reference_path
   auto &current_lane = virtual_lane_manager->get_current_lane();
   auto &left_lane = virtual_lane_manager->get_left_lane();
   auto &right_lane = virtual_lane_manager->get_right_lane();
@@ -63,10 +64,13 @@ void ReferencePathManager::update() {
   for (auto it = reference_paths_.begin(); it != reference_paths_.end();) {
     lane_virtual_id = it->first.second;
     if (virtual_lane_manager->has_lane(lane_virtual_id)) {
-      //current_lane, left_lane, right_lane has called update()
+      // current_lane, left_lane, right_lane has called update()
       if (current_lane->get_virtual_id() == lane_virtual_id ||
-          (left_lane != nullptr && left_lane->get_virtual_id() == lane_virtual_id) ||
-          (right_lane != nullptr && right_lane->get_virtual_id() == lane_virtual_id)) {
+          (left_lane != nullptr &&
+           left_lane->get_virtual_id() == lane_virtual_id) ||
+          (right_lane != nullptr &&
+           right_lane->get_virtual_id() == lane_virtual_id)) {
+        ++it;
         continue;
       }
       it->second->update(session_);
@@ -79,7 +83,8 @@ void ReferencePathManager::update() {
   }
 }
 
-std::shared_ptr<ReferencePath> ReferencePathManager::make_map_lane_reference_path(int lane_virtual_id) {
+std::shared_ptr<ReferencePath>
+ReferencePathManager::make_map_lane_reference_path(int lane_virtual_id) {
   return get_reference_path_by_lane(lane_virtual_id, true);
 }
 

@@ -107,19 +107,19 @@ double InterpolateAngle(double y1, double y2, double ratio) {
     y1 += M_PI * 2;
   }
 
-  auto y = interpolate(y1, y2, ratio);
+  auto y = Interpolate(y1, y2, ratio);
   y = NormalizeAngle(y);
 
   return y;
 }
 
-double interpolate(double x1, double y1, double x2, double y2, double x) {
+double Interpolate(double x1, double y1, double x2, double y2, double x) {
   auto ratio = (x2 - x) / (x2 - x1);
   auto y = ratio * y1 + (1 - ratio) * y2;
   return y;
 }
 
-double interpolate(double y1, double y2, double ratio) {
+double Interpolate(double y1, double y2, double ratio) {
   auto y = ratio * y1 + (1 - ratio) * y2;
   return y;
 }

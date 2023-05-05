@@ -206,23 +206,23 @@ void EgoPlanningCandidate::interpolate_with_last_trajectory_points() {
     auto &next_pt = last_traj_points[pre_idx + 1];
 
     traj_pt.t = t;
-    traj_pt.x = planning_math::interpolate(pre_pt.t, pre_pt.x, next_pt.t,
+    traj_pt.x = planning_math::Interpolate(pre_pt.t, pre_pt.x, next_pt.t,
                                            next_pt.x, interpolate_t);
-    traj_pt.y = planning_math::interpolate(pre_pt.t, pre_pt.y, next_pt.t,
+    traj_pt.y = planning_math::Interpolate(pre_pt.t, pre_pt.y, next_pt.t,
                                            next_pt.y, interpolate_t);
     traj_pt.heading_angle = planning_math::InterpolateAngle(
         pre_pt.t, pre_pt.heading_angle, next_pt.t, next_pt.heading_angle,
         interpolate_t);
     traj_pt.curvature =
-        planning_math::interpolate(pre_pt.t, pre_pt.curvature, next_pt.t,
+        planning_math::Interpolate(pre_pt.t, pre_pt.curvature, next_pt.t,
                                    next_pt.curvature, interpolate_t);
-    traj_pt.v = planning_math::interpolate(pre_pt.t, pre_pt.v, next_pt.t,
+    traj_pt.v = planning_math::Interpolate(pre_pt.t, pre_pt.v, next_pt.t,
                                            next_pt.v, interpolate_t);
-    traj_pt.a = planning_math::interpolate(pre_pt.t, pre_pt.a, next_pt.t,
+    traj_pt.a = planning_math::Interpolate(pre_pt.t, pre_pt.a, next_pt.t,
                                            next_pt.a, interpolate_t);
-    traj_pt.s = planning_math::interpolate(pre_pt.t, pre_pt.s, next_pt.t,
+    traj_pt.s = planning_math::Interpolate(pre_pt.t, pre_pt.s, next_pt.t,
                                            next_pt.s, interpolate_t);
-    traj_pt.l = planning_math::interpolate(pre_pt.t, pre_pt.l, next_pt.t,
+    traj_pt.l = planning_math::Interpolate(pre_pt.t, pre_pt.l, next_pt.t,
                                            next_pt.l, interpolate_t);
     traj_pt.frenet_valid = pre_pt.frenet_valid and next_pt.frenet_valid;
     planning_result_.traj_points.emplace_back(traj_pt);

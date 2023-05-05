@@ -507,11 +507,11 @@ void LongitudinalOptimizerV3::interpolate_frenet_lon(
                 (traj_points[j + 1].s - traj_points[j].s);
       }
 
-      l[i] = planning_math::interpolate(traj_points[j].l, traj_points[j + 1].l, ratio);
+      l[i] = planning_math::Interpolate(traj_points[j].l, traj_points[j + 1].l, ratio);
       heading_angle[i] = planning_math::InterpolateAngle(
           traj_points[j].heading_angle, traj_points[j + 1].heading_angle,
           ratio);
-      curvature[i] = planning_math::interpolate(traj_points[j].curvature,
+      curvature[i] = planning_math::Interpolate(traj_points[j].curvature,
                                  traj_points[j + 1].curvature, ratio);
     }
   }

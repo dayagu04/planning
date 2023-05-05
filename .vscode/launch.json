@@ -12,7 +12,7 @@
             "args": [],
             // "program": "/usr/bin/mainboard",
             // "args": ["-d", "/asw/planning/planning.dag"],
-            "stopAtEntry": false,
+            "stopAtEntry": false, // 不在调试入口停留
             "justMyCode": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

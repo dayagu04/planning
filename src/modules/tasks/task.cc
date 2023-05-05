@@ -6,6 +6,7 @@
 #include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 #include "tasks/motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
 #include "tasks/behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner.h"
+#include "tasks/trajectory_generator/result_trajectory_generator.h"
 
 namespace planning {
 
@@ -48,11 +49,11 @@ std::shared_ptr<Task> Task::Make(
     // }
     case TaskType::LATERAL_DECIDER: {
       return std::make_shared<VisionLateralBehaviorPlanner>(config_builder,
-      pipeline_context);
+                                                            pipeline_context);
     }
     case TaskType::VISION_LATERAL_MOTION_PLANNER: {
       return std::make_shared<VisionLateralMotionPlanner>(config_builder,
-                                                  pipeline_context);
+                                                          pipeline_context);
     }
     // case TaskType::LATERAL_OPTIMIZER_V2: {
     //   return std::make_shared<LateralOptimizerV2>(config_builder,
@@ -68,13 +69,14 @@ std::shared_ptr<Task> Task::Make(
     }
 
     case TaskType::VISION_ONLY_LONGITUDINAL_BEHAVIOR_PLANNER: {
-      return std::make_shared<VisionLongitudinalBehaviorPlanner>(config_builder,
-                                                       pipeline_context);
+      return std::make_shared<VisionLongitudinalBehaviorPlanner>(
+          config_builder, pipeline_context);
     }
-      // case TaskType::RESULT_TRAJECTORY_GENERATOR: {
-      //   return std::make_shared<ResultTrajectoryGenerator>(config_builder,
-      //                                                      pipeline_context);
-      // }
+
+    case TaskType::RESULT_TRAJECTORY_GENERATOR: {
+      return std::make_shared<ResultTrajectoryGenerator>(config_builder,
+                                                         pipeline_context);
+    }
       // case TaskType::ILQR_LATERAL_OPTIMIZER: {
       //   return std::make_shared<ILQRLateralOptimizer>(config_builder,
       //                                                 pipeline_context);

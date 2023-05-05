@@ -14,13 +14,11 @@ TaskPipelineNormal::TaskPipelineNormal(
   config_ = config_builder->cast<EgoPlanningTaskPipelineNormalConfig>();
   version_to_tasks_["v1"] = {
       // TaskType::OBSTACLE_DECIDER,
-      TaskType::LATERAL_DECIDER,
-      TaskType::VISION_LATERAL_MOTION_PLANNER,
+      TaskType::LATERAL_DECIDER, TaskType::VISION_LATERAL_MOTION_PLANNER,
       // TaskType::LATERAL_OPTIMIZER_V2,
       TaskType::GENERAL_LONGITUDINAL_DECIDER,
       TaskType::GENERAL_LONGITUDINAL_OPTIMIZER,
-      // TaskType::RESULT_TRAJECTORY_GENERATOR
-  };
+      TaskType::RESULT_TRAJECTORY_GENERATOR};
   CreatePlanningTasks(config_builder);
 }
 
@@ -49,13 +47,13 @@ bool TaskPipelineNormal::Run(const EgoPlanningCandidate &candidate) {
     auto start_timestamp = IflyTime::Now_ms();
     if (task.second->Execute(frame_)) {
       auto end_timestamp = IflyTime::Now_ms();
-      printf("%s| DDP_TASK_DONE =============== TIME_COST: %f",
+      printf("%s| TASK_DONE =============== TIME_COST: [%f] ms \n",
              task.second->Name().c_str(), (end_timestamp - start_timestamp));
     } else {
       ego_prediction_status_info.error_info =
-          "DDP_ERROR|" + task.second->Name() + "|" +
+          "ERROR|" + task.second->Name() + "|" +
           ego_prediction_status_info.error_info;
-      printf("%s| FAIL ===============", task.second->Name().c_str());
+      printf("%s| FAIL =============== \n", task.second->Name().c_str());
       return false;
     }
   }

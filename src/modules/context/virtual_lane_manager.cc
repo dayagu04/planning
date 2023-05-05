@@ -14,6 +14,10 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   right_lane_ = nullptr;
   relative_id_lanes_.clear();
 
+  if(roads.lanes().size() == 0 ) {
+    LOG_ERROR("roads' lanes are empty \n");
+    return false;
+  }
   for(auto& lane : roads.lanes()) {
     std::shared_ptr<VirtualLane> virtual_lane_tmp = std::make_shared<VirtualLane>();
     virtual_lane_tmp->update_data(lane);
