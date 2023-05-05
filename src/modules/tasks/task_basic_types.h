@@ -186,5 +186,15 @@ struct PlanningInfo {
 
   TrafficLightDecision traffic_light_decision;
 };
+enum class LatObstacleType { LANE, ROAD, CAR };
 
+struct LatDeciderOutput {
+  std::vector<std::pair<double, double>> enu_ref_path;  // <x, y>
+  std::vector<std::pair<double, double>>
+      last_path;  // pass it by planning context
+  // planning::PlanningInitPoint init_state;  // pass it by planning context
+  std::vector<std::pair<double, double>> path_bounds;  // <lower ,upper >
+  std::vector<std::pair<double, double>> safe_bounds;  // <lower ,upper >
+  double v_cruise;
+};
 }  // namespace planning

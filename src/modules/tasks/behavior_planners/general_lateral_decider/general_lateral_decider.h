@@ -12,13 +12,13 @@
 #include <string>
 #include <vector>
 
-#include "modules/context/frenet_ego_state.h"
-#include "modules/context/obstacle_manager.h"
-#include "src/modules/common/math/linear_interpolation.h"
-#include "src/modules/context/environmental_model.h"
-#include "src/modules/scenario/scenario_state_machine.h"
-#include "src/modules/tasks/task.h"
-#include "src/modules/tasks/task_basic_types.h"
+#include "common/math/linear_interpolation.h"
+#include "context/environmental_model.h"
+#include "context/frenet_ego_state.h"
+#include "context/obstacle_manager.h"
+#include "scenario/scenario_state_machine.h"
+#include "tasks/task.h"
+#include "tasks/task_basic_types.h"
 
 namespace planning {
 
