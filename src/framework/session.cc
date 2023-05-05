@@ -51,7 +51,7 @@ bool Session::Init() {
   LOG_DEBUG("ScenarioManager scenario_config_file_dir is: %s \n", scenario_config_file_dir.c_str());
   if (!common::ConfigurationContext::Instance()->load_params_from_json(scenario_config_file_dir)) {
     LOG_ERROR("ConfigurationContext load_params_from_json : %s \n", "ERROR");
-    // return false;
+    return false;
   }
   auto synthetic_config = common::ConfigurationContext::Instance()->synthetic_config();
   planning::common::SceneType init_scene_type = planning::common::SceneType::HIGHWAY;

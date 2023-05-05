@@ -94,7 +94,7 @@ class ConfigurationContext {
     std::cout << "config_file_dir ====" << config_file_dir << std::endl;
     common::TasksConfig task_config;
     if (access((config_file_dir + "/scene.pb.txt").c_str(), F_OK) == -1) {
-      LOG_DEBUG("%s\n", config_file_dir + "/scene.pb.txt" + " not exist!");
+      std::cout << config_file_dir << "/scene.pb.txt not exist!"<< std::endl;
       return false;
     }
     common::util::GetProtoFromFile(config_file_dir + "/scene.pb.txt",
@@ -143,8 +143,7 @@ class ConfigurationContext {
       return false;
     }
     auto module_cfg_dir = json_data["module_cfg_dir"];
-    std::cout << "json module_cfg_dir: !!!====" << module_cfg_dir
-              << std::endl;
+    std::cout << "json module_cfg_dir: !!!====" << module_cfg_dir << std::endl;
     engine_conf_.module_cfg_dir = module_cfg_dir;
 
     // 加载log配置文件路径
@@ -179,7 +178,7 @@ class ConfigurationContext {
               << std::endl;
     engine_conf_.vehicle_cfg_dir = vehicle_cfg_dir;
 
-    LOG_DEBUG("Load engine config DONE! \n");
+    std::cout << "Load engine config DONE!" << std::endl;
     return true;
   }
 
