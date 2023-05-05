@@ -94,7 +94,7 @@ class ConfigurationContext {
     std::cout << "config_file_dir ====" << config_file_dir << std::endl;
     common::TasksConfig task_config;
     if (access((config_file_dir + "/scene.pb.txt").c_str(), F_OK) == -1) {
-      std::cout << config_file_dir << "/scene.pb.txt not exist!"<< std::endl;
+      std::cout << config_file_dir << "/scene.pb.txt not exist!" << std::endl;
       return false;
     }
     common::util::GetProtoFromFile(config_file_dir + "/scene.pb.txt",
