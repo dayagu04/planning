@@ -5,8 +5,8 @@
 #include <map>
 
 // #include "core/modules/common/config/basic_types.h"
-#include "src/modules/tasks/task.h"
-#include "src/modules/tasks/task_basic_types.h"
+#include "tasks/task.h"
+#include "tasks/task_basic_types.h"
 
 namespace planning {
 
