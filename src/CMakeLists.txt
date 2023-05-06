@@ -59,7 +59,7 @@ target_link_libraries(planning_component PUBLIC
   proto_bsw
   gflags
   autoplt
-  osqp
+  osqpstatic
   advanced_ctrl_lib
   ilqr_lib
   mjson
