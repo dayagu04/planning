@@ -134,9 +134,9 @@ bool PlanningComponent::Init() {
             control_output_msg_.CopyFrom(*control_output_msg);
           });
 
-  auto hmi_reader_ = planning_node_->CreateReader<HimMcuInner::HmiMcuInner>(
+  auto hmi_reader_ = planning_node_->CreateReader<HmiMcuInner::HmiMcuInner>(
       "/iflytek/hmi/mcu_inner",
-      [this](const std::shared_ptr<HimMcuInner::HmiMcuInner>
+      [this](const std::shared_ptr<HmiMcuInner::HmiMcuInner>
                  &hmi_mcu_inner_info_msg) {
         std::cout << "receive hmi_mcu_inner_info_output "
                   << hmi_mcu_inner_info_msg->timestamp_us() << std::endl;

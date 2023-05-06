@@ -41,13 +41,14 @@ class EnvironmentalModelManager {
   bool ego_state_update(double current_time,  const LocalView& local_view);
   void vehicle_status_adaptor(double current_time,  const VehicleService::VehicleServiceOutputInfo &vehicel_service_output_info,
                               const LocalizationOutput::LocalizationEstimate &localization_estimate,
-                              const HimMcuInner::HmiMcuInner &hmi_mcu_inner_info,
+                              const HmiMcuInner::HmiMcuInner &hmi_mcu_inner_info,
                               common::VehicleStatus &vehicle_status);
   void truncate_prediction_info(const Prediction::PredictionResult& prediction_result,
                                 double cur_timestamp_us,
                                 std::unordered_set<uint>& prediction_obj_id_set);
   bool transform_fusion_to_prediction(const FusionObjects::FusionObject &fusion_object, double timestamp);
-  void transform_surround_radar_to_prediction(const RadarPerceptionObjects::RadarPerceptionObject radar_perception_objects);
+  void transform_surround_radar_to_prediction(const RadarPerceptionObjects::RadarPerceptionObject radar_perception_objects,
+                                              const Common::SensorType sensor_type);
   bool obstacle_prediction_update(double current_time,  const LocalView& local_view);
   bool InputReady(double current_time, std::string &error_msg);
   PredictionTrajectoryPoint GetPointAtTime(const std::vector<PredictionTrajectoryPoint>& trajectory_points, const double relative_time) const;
