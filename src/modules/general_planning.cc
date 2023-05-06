@@ -107,49 +107,70 @@ void GeneralPlanning::FillPlanningTrajectory(
   auto trajectory = planning_output->mutable_trajectory();
   // Hack: 长时规划
   if (hdmap_valid_) {
-    trajectory->trajectory_type(
-        common::Trajectory::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
+    trajectory->set_trajectory_type(
+        Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
     trajectory->mutable_trajectory_points()->Clear();
     trajectory->mutable_target_reference()->Clear();
     for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
       auto path_point = trajectory->add_trajectory_points();
       path_point->set_x(planning_result.traj_points[i].x);
       path_point->set_y(planning_result.traj_points[i].y);
-      path_point->set_heading_angle(planning_result.traj_points[i].heading_yaw);
+      path_point->set_heading_yaw(planning_result.traj_points[i].heading_angle);
       path_point->set_curvature(planning_result.traj_points[i].curvature);
-
       path_point->set_t(planning_result.traj_points[i].t);
       path_point->set_v(planning_result.traj_points[i].v);
       path_point->set_a(planning_result.traj_points[i].a);
       path_point->set_distance(planning_result.traj_points[i].s);
-      path_point->set_jerk(planning_result.traj_points[i].curvature);  // TBD
+      path_point->set_jerk(0.0);  // TBD
     }
   } else {
     // set vision_only_longitudinal_outputs if hdmpa valid is false
-    trajectory->trajectory_type(
-        common::Trajectory::TRAJECTORY_TYPE_TARGET_REFERENCE);
+    trajectory->set_trajectory_type(
+        Common::TrajectoryType::TRAJECTORY_TYPE_TARGET_REFERENCE);
     trajectory->mutable_trajectory_points()->Clear();
     trajectory->mutable_target_reference()->Clear();
 
-    // auto velocity = planning_output->mutable_velocity();
-    // velocity->set_type(FeiMa::Planning::Velocity::VELOCITY_TARGET_VALUE);
-    // velocity->set_target_value(
-    //     vision_only_longitudinal_outputs.velocity_target);
+    auto target_ref = trajectory->mutable_target_reference();
+    target_ref->set_target_velocity(
+        vision_only_longitudinal_outputs.velocity_target);
 
-    // auto acceleration = planning_output->mutable_acceleration();
-    // acceleration->set_type(
-    //     FeiMa::Planning::Acceleration::ACCELERATION_RANGE_LIMIT);
-    // acceleration->mutable_range_limit()->set_min(
-    //     vision_only_longitudinal_outputs.a_target_min);
-    // acceleration->mutable_range_limit()->set_max(
-    //     vision_only_longitudinal_outputs.a_target_max);
+    auto acceleration_range_limit =
+        target_ref->mutable_acceleration_range_limit();
+    acceleration_range_limit->set_min_a(
+        vision_only_longitudinal_outputs.a_target_min);
+    acceleration_range_limit->set_max_a(
+        vision_only_longitudinal_outputs.a_target_max);
   }
 
   // HMI结果
 }
 
 void GeneralPlanning::GenerateStopTrajectory(
-    double start_time, PlanningOutput::PlanningOutput *const planning_output) {}
+    double start_time, PlanningOutput::PlanningOutput *const planning_output) {
+  // 更新输出
+  planning_output->mutable_meta()->set_plan_timestamp_us(IflyTime::Now_ms());
+
+  auto trajectory = planning_output->mutable_trajectory();
+  // Hack: 长时规划
+  trajectory->set_trajectory_type(
+      Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
+  trajectory->mutable_trajectory_points()->Clear();
+  trajectory->mutable_target_reference()->Clear();
+  double t = 0.0;
+  for (size_t i = 0; i < 21; i++) {
+    t = 0.1 * i;
+    auto path_point = trajectory->add_trajectory_points();
+    path_point->set_x(0.0);
+    path_point->set_y(0.0);
+    path_point->set_heading_yaw(0.0);
+    path_point->set_curvature(0.0);
+    path_point->set_t(t);
+    path_point->set_v(0.0);
+    path_point->set_a(0.0);
+    path_point->set_distance(0.0);
+    path_point->set_jerk(0.0);  // TBD
+  }
+}
 
 void GeneralPlanning::FillPlanningDebugInfo(double start_time,
                                             DebugOutput &debug_info) {}

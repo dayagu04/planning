@@ -40,9 +40,12 @@ endif()
 # install to system
 if (INSTALL_TO_SYSTEM)
   file(MAKE_DIRECTORY /asw/planning)
+  file(MAKE_DIRECTORY /asw/planning/res/conf)
 
   install(TARGETS planning_component
     LIBRARY DESTINATION /asw/planning/Lib)
   install(FILES ${CMAKE_CURRENT_LIST_DIR}/res/dag/planning.dag
     DESTINATION /asw/planning)
+  install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/res/conf
+    DESTINATION /asw/planning/res)
 endif()

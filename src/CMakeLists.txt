@@ -69,4 +69,4 @@ target_link_libraries(planning_component PUBLIC
   planning_proto)
 
 target_compile_definitions(planning_component PRIVATE
-    CONFIG_PATH="/asw/Planning/Res/config")
+    CONFIG_PATH="/asw/planning/res/conf")

@@ -8,6 +8,7 @@
   "replanning_with_navi": false,
   "use_ego_prediction_model_in_planning": true,
   "dump_mdebug": false,
+  "enable_bbox_mode": true,
   "bound_return_speed": 0.5,
   "physical_road_bound_buffer": 0.5,
   "solid_line_bound_buffer": 0.5,

@@ -5,13 +5,15 @@
 # Usage
 1.编译：采用gcc编译器，生成产物在build文件夹内
 ```
-make clean & make build
+mkdir build & cd build
+cmake ..
+make -j 32
 ```
-2.部署：将需要的产物打包，用于部署实车,打包后产物路径：build/Planning，将其部署在FDC域控路径: /asw 下即可
+2.部署：将需要的产物打包，用于部署实车,打包后产物路径：build/planning，将其部署在FDC域控路径: /asw 下即可
 ```
-make deploy
+make install
 ```
 3.启动：
 ```
-mainboard -d /asw/Planning/planning.dag
+mainboard -d /asw/planning/planning.dag
 ```
