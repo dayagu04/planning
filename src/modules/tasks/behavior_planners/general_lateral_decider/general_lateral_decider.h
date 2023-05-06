@@ -120,7 +120,7 @@ class GeneralLateralDecider : public Task {
 
   void handle_lane_change_scene();
 
-  LateralDeciderConfig config_;
+  GeneralLateralDeciderConfig config_;
 
   // VelocityLimitInfo vel_limit_info_;
   // LatIgnoreType lat_ignore_type_;

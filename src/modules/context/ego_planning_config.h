@@ -222,7 +222,7 @@ struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
   bool enable_confirm_mode = false;
 };
 
-struct LateralDeciderConfig : public EgoPlanningConfig {
+struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */

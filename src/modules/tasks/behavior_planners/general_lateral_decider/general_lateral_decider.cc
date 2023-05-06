@@ -22,7 +22,7 @@ GeneralLateralDecider::GeneralLateralDecider(
     const EgoPlanningConfigBuilder *config_builder,
     const std::shared_ptr<TaskPipelineContext> &pipeline_context)
     : Task(config_builder, pipeline_context) {
-  config_ = config_builder->cast<LateralDeciderConfig>();
+  config_ = config_builder->cast<GeneralLateralDeciderConfig>();
   name_ = "Lateral Deicder";
 }
 
@@ -45,6 +45,10 @@ bool GeneralLateralDecider::init_info() {
   ego_cart_state_manager_ =
       frame_->session()->environmental_model().get_ego_state_manager();
 
+  cruise_vel_ = ego_cart_state_manager_->ego_v_cruise();
+  horizion_num_ = 25;
+  delta_t_ = 0.20;
+
   is_lane_change_scene_ = false;
 
   if (reference_path_ptr_ == nullptr || ego_cart_state_manager_ == nullptr) {
@@ -60,9 +64,6 @@ bool GeneralLateralDecider::Execute(planning::framework::Frame *frame) {
     return false;
   };
 
-  cruise_vel_ = KPH_40;
-  horizion_num_ = 25;
-  delta_t_ = 0.25;
   // auto config_builder =
   //     frame->mutable_session()->mutable_planning_context()->config_builder(
   //         planning::common::SceneType::HIGHWAY);  // TBD:  check api
@@ -284,10 +285,10 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
     return;
   }
 
-  if (ego_cur_s - vehicle_param.back_edge_to_rear_axis -
-          config_.dynamic_obj_safe_buffer - obstacle->frenet_s() -
-          obstacle->obstacle()->length() >
-      0.) {
+  // Step 3) filter rear objects
+  if (obstacle->frenet_obstacle_boundary().s_end +
+          config_.lon_rear_car_filter_buffer <
+      ego_cur_s) {
     // TBD: add log
     return;
   }
@@ -298,14 +299,6 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
       obstacle->type() == Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
       obstacle->type() == Common::ObjectType::OBJECT_TYPE_TRUCK) {
     safe_extra_distance += 0.2;
-  }
-
-  // Step 3) filter rear objects
-  if (obstacle->frenet_obstacle_boundary().s_end +
-          config_.lon_rear_car_filter_buffer <
-      ego_cur_s) {
-    // TBD: add log
-    return;
   }
 
   if (check_obj_nudge_condition(
