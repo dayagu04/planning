@@ -40,7 +40,7 @@ add_subdirectory(thirdparty/rapidjson EXCLUDE_FROM_ALL)
 add_subdirectory(thirdparty/osqp EXCLUDE_FROM_ALL)
 add_subdirectory(thirdparty/nlohmann_json EXCLUDE_FROM_ALL)
 add_subdirectory(thirdparty/hfsm EXCLUDE_FROM_ALL)
-add_subdirectory(thirdparty/interface EXCLUDE_FROM_ALL) # to be replaced by submodule
+add_subdirectory(thirdparty/interface/src/proto EXCLUDE_FROM_ALL)
 
 include_directories(
   ${EIGEN3_INCLUDE_DIR}
@@ -56,7 +56,7 @@ target_link_libraries(planning_component PUBLIC
   eigen
   cyber
   protobuf
-  proto_bsw
+  proto_interface
   gflags
   autoplt
   osqpstatic

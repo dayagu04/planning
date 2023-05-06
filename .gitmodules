@@ -1,0 +1,3 @@
+[submodule "src/thirdparty/interface"]
+	path = src/thirdparty/interface
+	url = ssh://git@code.iflytek.com:30004/ZNQC_AutonomousDriving/interface.git
