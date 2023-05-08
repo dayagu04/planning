@@ -113,13 +113,13 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   // current_time = end_time;
 
   obstacle_manager_ptr_->update();
-  current_time = IflyTime::Now_ms();
+  // current_time = IflyTime::Now_ms();
   // LOG_DEBUG("obstacle_manager update time:%f\n", end_time - current_time);
   // current_time = end_time;
 
   reference_path_manager_ptr_->update();
   auto end_time = IflyTime::Now_ms();
-  LOG_DEBUG("reference_path_manager update time:%f\n", end_time - current_time);
+  LOG_DEBUG("EnvironmentalModelManager run time:%f\n", end_time - current_time);
   current_time = end_time;
 
   // obstacle_manager_ptr_->assign_obstacles_to_lanes();

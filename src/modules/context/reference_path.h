@@ -20,8 +20,8 @@ enum class ReferencePathPointType { MAP, TRAJ, INTERPOLATE };
 
 struct ReferencePathPoint {
   PathPoint path_point;
-  double curvature;
-  double yaw;
+  // double curvature;
+  // double yaw;
   double distance_to_left_road_border;
   double distance_to_right_road_border;
   double distance_to_left_lane_border;

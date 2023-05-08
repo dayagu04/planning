@@ -38,13 +38,13 @@ void LaneReferencePath::update(planning::framework::Session *session) {
         *session_->mutable_environmental_model()->get_ego_state_manager());
     update_obstacles();
     valid_ = true;
+
+    // Step 4) update virtual_lane speed_limit
+    virtual_lane->update_speed_limit(session->environmental_model().get_ego_state_manager()->ego_v(),
+                                  session->environmental_model().get_ego_state_manager()->ego_v_cruise());
   } else {
     LOG_DEBUG("LaneReferencePath::update failed");
-  }
-
-  // Step 4) update virtual_lane speed_limit
-  virtual_lane->update_speed_limit(session->environmental_model().get_ego_state_manager()->ego_v(),
-                                  session->environmental_model().get_ego_state_manager()->ego_v_cruise());
+  } 
 }
 
 bool LaneReferencePath::is_obstacle_ignorable(const std::shared_ptr<FrenetObstacle> obstacle) {
@@ -116,8 +116,8 @@ bool LaneReferencePath::get_points_by_lane_id(
       ref_path_pt.path_point.y = refline_pt.car_point().y();
       ref_path_pt.path_point.z = 0;
     }
-    ref_path_pt.curvature = refline_pt.curvature();
-    ref_path_pt.yaw = refline_pt.heading();
+    ref_path_pt.path_point.kappa = refline_pt.curvature();
+    ref_path_pt.path_point.theta = refline_pt.heading();
     ref_path_pt.distance_to_left_lane_border = std::fmin(
         refline_pt.distance_to_left_lane_border(), kDefaultLaneBorderDis);
     ref_path_pt.distance_to_right_lane_border = std::fmin(
@@ -138,9 +138,9 @@ bool LaneReferencePath::get_points_by_lane_id(
       const auto &pre_pt = ref_path_points.back();
       Vec2d delta{ref_path_pt.path_point.x - pre_pt.path_point.x,
                   ref_path_pt.path_point.y - pre_pt.path_point.y};
-      Vec2d cur_direction = Vec2d::CreateUnitVec2d(ref_path_pt.yaw);
+      Vec2d cur_direction = Vec2d::CreateUnitVec2d(ref_path_pt.path_point.theta);
       if (cur_direction.InnerProd(delta) < 0) {
-        continue;
+        continue; 
       }
     }
     ref_path_points.emplace_back(std::move(ref_path_pt));

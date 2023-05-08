@@ -73,10 +73,6 @@ class VirtualLane {
     reference_path_ = reference_path;
   };
 
-  // const std::vector<PathPoint> &get_refined_lane_points() {
-  //   return refined_lane_points_;
-  // }
-
   const std::shared_ptr<LaneReferencePath> get_reference_path() { return reference_path_; }
   double get_ego_lateral_offset() const { return ego_lateral_offset_; };
   FusionRoad::LaneType get_lane_type() const { return lane_type_; };

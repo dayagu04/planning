@@ -252,11 +252,11 @@ bool ReferencePath::get_reference_point_by_lon(
   reference_path_point.path_point.z =
       planning_math::Interpolate(pre_reference_point.path_point.z,
                   next_reference_point.path_point.z, interpolate_ratio);
-  reference_path_point.curvature =
-      planning_math::Interpolate(pre_reference_point.curvature, next_reference_point.curvature,
+  reference_path_point.path_point.kappa =
+      planning_math::Interpolate(pre_reference_point.path_point.kappa, next_reference_point.path_point.kappa,
                   interpolate_ratio);
-  reference_path_point.yaw = planning_math::InterpolateAngle(
-      pre_reference_point.yaw, next_reference_point.yaw, interpolate_ratio);
+  reference_path_point.path_point.theta = planning_math::InterpolateAngle(
+      pre_reference_point.path_point.theta, next_reference_point.path_point.theta, interpolate_ratio);
 
   reference_path_point.left_road_border_type =
       next_reference_point.left_road_border_type;
@@ -317,11 +317,11 @@ bool ReferencePath::get_reference_point_by_lon_from_raw_ref_path_points(
   reference_path_point.path_point.z =
       planning_math::Interpolate(pre_reference_point.path_point.z,
                   next_reference_point.path_point.z, interpolate_ratio);
-  reference_path_point.curvature =
-      planning_math::Interpolate(pre_reference_point.curvature, next_reference_point.curvature,
+  reference_path_point.path_point.kappa =
+      planning_math::Interpolate(pre_reference_point.path_point.kappa, next_reference_point.path_point.kappa,
                   interpolate_ratio);
-  reference_path_point.yaw = planning_math::InterpolateAngle(
-      pre_reference_point.yaw, next_reference_point.yaw, interpolate_ratio);
+  reference_path_point.path_point.theta = planning_math::InterpolateAngle(
+      pre_reference_point.path_point.theta, next_reference_point.path_point.theta, interpolate_ratio);
 
   reference_path_point.left_road_border_type =
       next_reference_point.left_road_border_type;
