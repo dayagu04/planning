@@ -51,7 +51,7 @@ bool PlanningComponent::Init() {
   // -------------- reader topics --------------
   auto fusion_objects_reader_ =
       planning_node_->CreateReader<FusionObjects::FusionObjectsInfo>(
-          "/fusion/fusion_object",
+          "/iflytek/fusion/fusion_object",
           [this](const std::shared_ptr<FusionObjects::FusionObjectsInfo>
                      &fusion_objects_info_msg) {
             std::cout << "receive fusion fusion_objects_info "
@@ -62,7 +62,7 @@ bool PlanningComponent::Init() {
           });
 
   auto fusion_road_reader_ = planning_node_->CreateReader<FusionRoad::RoadInfo>(
-      "/fusion/fusion_road",
+      "/iflytek/fusion/road_fusion",
       [this](const std::shared_ptr<FusionRoad::RoadInfo> &road_info_msg) {
         std::cout << "receive fusion road_info "
                   << road_info_msg->header().timestamp() << std::endl;
@@ -96,7 +96,7 @@ bool PlanningComponent::Init() {
 
   auto vehicel_service_reader_ =
       planning_node_->CreateReader<VehicleService::VehicleServiceOutputInfo>(
-          "/vehicel_service_output_info",
+          "/iflytek/vehicle_service",
           [this](const std::shared_ptr<VehicleService::VehicleServiceOutputInfo>
                      &vehicel_service_output_info_msg) {
             std::cout << "receive vehicel_service_output_info "
@@ -110,7 +110,7 @@ bool PlanningComponent::Init() {
   auto radar_perception_objects_reader_ =
       planning_node_
           ->CreateReader<RadarPerceptionObjects::RadarPerceptionObjectsInfo>(
-              "/radar_perception_objects_info",
+              "/iflytek/radar_perception_info",
               [this](const std::shared_ptr<
                      RadarPerceptionObjects::RadarPerceptionObjectsInfo>
                          &radar_perception_objects_info_msg) {
@@ -125,7 +125,7 @@ bool PlanningComponent::Init() {
 
   auto control_output_reader_ =
       planning_node_->CreateReader<ControlCommand::ControlOutput>(
-          "/control_output",
+          "/iflytek/control/control_command",
           [this](const std::shared_ptr<ControlCommand::ControlOutput>
                      &control_output_msg) {
             std::cout << "receive control_output "
@@ -155,10 +155,10 @@ bool PlanningComponent::Init() {
 
   // -------------- writter topics --------------
   planning_writer_ =
-      planning_node_->CreateWriter<PlanningOutput::PlanningOutput>("/planning");
+      planning_node_->CreateWriter<PlanningOutput::PlanningOutput>("/iflytek/planning");
   planning_debug_writer_ =
       planning_node_->CreateWriter<planning::common::PlanningDebugInfo>(
-          "/planning_debug_info");
+          "/iflytek/planning_debug_info");
   planning_hmi_Info_writer_ =
       planning_node_->CreateWriter<PlanningHMI::PlanningHMIOutputInfoStr>(
           "/iflytek/planning/hmi");
