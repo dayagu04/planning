@@ -39,6 +39,7 @@ ReferencePathManager::get_reference_path_by_current_lane() {
 }
 
 void ReferencePathManager::update() {
+  reference_paths_.clear();
   auto &virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   // step1 construct current/left/right reference_path
@@ -66,10 +67,8 @@ void ReferencePathManager::update() {
     if (virtual_lane_manager->has_lane(lane_virtual_id)) {
       // current_lane, left_lane, right_lane has called update()
       if (current_lane->get_virtual_id() == lane_virtual_id ||
-          (left_lane != nullptr &&
-           left_lane->get_virtual_id() == lane_virtual_id) ||
-          (right_lane != nullptr &&
-           right_lane->get_virtual_id() == lane_virtual_id)) {
+          (left_lane != nullptr && left_lane->get_virtual_id() == lane_virtual_id) ||
+          (right_lane != nullptr && right_lane->get_virtual_id() == lane_virtual_id)) {
         ++it;
         continue;
       }

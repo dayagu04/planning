@@ -17,9 +17,9 @@ namespace planning {
 
 enum class ReferencePathPointType { MAP, TRAJ, INTERPOLATE };
 
+
 struct ReferencePathPoint {
-  Point2D frenet_point;
-  Point3D enu_point;
+  PathPoint path_point;
   double curvature;
   double yaw;
   double distance_to_left_road_border;
@@ -46,7 +46,7 @@ class ReferencePath {
   virtual void update(planning::framework::Session *session);
   virtual void update_obstacles();
 
-  const std::vector<ReferencePathPoint> &get_points() const { return points_; }
+  const std::vector<ReferencePathPoint> &get_points() const { return refined_ref_path_points_; }
 
   const std::shared_ptr<FrenetCoordinateSystem> &get_frenet_coord() const {
     return frenet_coord_;
@@ -106,12 +106,20 @@ class ReferencePath {
   }
  protected:
   void init();
-  void update_refpath_points(const ReferencePathPoints &points);
-
+  void update_refpath_points(ReferencePathPoints &raw_reference_path_points);
+  void ReferencePath::update_refined_path_points(const ReferencePathPoints &raw_reference_path_points);
+  bool get_reference_point_by_lon_from_raw_ref_path_points(
+      double s, ReferencePathPoint &reference_path_point, const ReferencePathPoints &raw_reference_path_point);
+  void discrete(double start, double end, double gap,
+                std::vector<double> &output) {
+    output.clear();
+    for (double value = start; value < end; value += gap) {
+      output.push_back(value);
+    }
+  }
  protected:
   bool valid_;
-  ReferencePathPoints points_;
-
+  ReferencePathPoints refined_ref_path_points_;
   // frenet coord system
   FrenetCoordinateSystemParameters frenet_parameters_;
   std::shared_ptr<FrenetCoordinateSystem> frenet_coord_;

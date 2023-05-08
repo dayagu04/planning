@@ -36,7 +36,8 @@ class LaneReferencePath : public ReferencePath, public std::enable_shared_from_t
   int get_current_leadtwo_obstacle_to_ego() const {
     return current_leadtwo_obstacle_to_ego_;
   }
- private:
+private:
+  void update_refined_lane_points();
   virtual void update_obstacles();
   bool get_points_by_lane_id(int target_lane_virtual_id, ReferencePathPoints &points);
 

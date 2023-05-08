@@ -16,8 +16,8 @@ struct PathPoint {
   // curvature on the x-y plane
   double kappa;
   // accumulated distance from beginning of the path
-  double s;
 
+  double s;
   // derivative of kappa w.r.t s.
   double dkappa;
   // derivative of derivative of kappa w.r.t s.

@@ -73,19 +73,9 @@ class VirtualLane {
     reference_path_ = reference_path;
   };
 
-  void discrete(double start, double end, double gap,
-                std::vector<double> &output) {
-    output.clear();
-    for (double value = start; value < end; value += gap) {
-      output.push_back(value);
-    }
-  }
-
-  void update_refined_lane_points();
-
-  const std::vector<PathPoint> &get_refined_lane_points() {
-    return refined_lane_points_;
-  }
+  // const std::vector<PathPoint> &get_refined_lane_points() {
+  //   return refined_lane_points_;
+  // }
 
   const std::shared_ptr<LaneReferencePath> get_reference_path() { return reference_path_; }
   double get_ego_lateral_offset() const { return ego_lateral_offset_; };
@@ -138,7 +128,6 @@ class VirtualLane {
   FusionRoad::LaneMergeSplitPoint lane_merge_split_point_;
   FusionRoad::LaneBoundary left_lane_boundary_;
   FusionRoad::LaneBoundary right_lane_boundary_;
-  std::vector<PathPoint> refined_lane_points_;
 
   std::vector<std::string> center_line_points_track_id_;
   // todo:clren 后面改成map，适配多种reference_path

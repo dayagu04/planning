@@ -2542,11 +2542,18 @@ bool VisionLateralMotionPlanner::update_planner_output() {
 
   lateral_output.dist_rblane = 10.;  // attention!!hack!
 
-  flane_->update_refined_lane_points();
-
-  lateral_output.path_points =
-      flane_->get_refined_lane_points();  // attention! transform
-                                          // RerencePathPoint 2 PathPoint
+  //todo:clren 后面会使用ReferencePoints代替PathPoint
+  std::vector<PathPoint> path_points; 
+  if (flane_ != nullptr) {
+    auto &ref_path = flane_->get_reference_path();
+    for (auto &ref_point : ref_path->get_points()) {
+      path_points.emplace_back(ref_point.path_point);
+    }  
+  }
+  lateral_output.path_points = path_points;
+  // lateral_output.path_points =
+  //     flane_->get_refined_lane_points();  // attention! transform
+  //                                         // RerencePathPoint 2 PathPoint
 
   if (((virtual_lane_manager_->current_lane_virtual_id() ==
         virtual_lane_manager_->get_lane_num() - 1) ||

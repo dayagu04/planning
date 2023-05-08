@@ -24,12 +24,15 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   virtual_lane->update_reference_path(shared_from_this());
 
   // Step 2) get reference_points
-  ReferencePathPoints points;
-  bool ok = get_points_by_lane_id(lane_virtual_id_, points);
-
+  ReferencePathPoints raw_reference_path_points;
+  bool ok = get_points_by_lane_id(lane_virtual_id_, raw_reference_path_points);
+  
   // Step 3) update
   if (ok) {
-    update_refpath_points(points);
+    auto current_time = IflyTime::Now_ms(); 
+    update_refpath_points(raw_reference_path_points);
+    auto end_time = IflyTime::Now_ms();
+    LOG_DEBUG("update_refpath_points time:%f\n", end_time - current_time);
     frenet_ego_state_.update(
         frenet_coord_,
         *session_->mutable_environmental_model()->get_ego_state_manager());
@@ -40,8 +43,8 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   }
 
   // Step 4) update virtual_lane speed_limit
-  virtual_lane->update_speed_limit(session->environmental_model().get_ego_state_manager()->ego_v(),
-                                  session->environmental_model().get_ego_state_manager()->ego_v_cruise());
+  // virtual_lane->update_speed_limit(session->environmental_model().get_ego_state_manager()->ego_v(),
+  //                                 session->environmental_model().get_ego_state_manager()->ego_v_cruise());
 }
 
 bool LaneReferencePath::is_obstacle_ignorable(const std::shared_ptr<FrenetObstacle> obstacle) {
@@ -104,8 +107,15 @@ bool LaneReferencePath::get_points_by_lane_id(
   for (auto &refline_pt : lane_points) {
     constexpr double kDefaultLaneBorderDis = 20.0;
     ReferencePathPoint ref_path_pt;
-    ref_path_pt.enu_point = Point3D{
-        refline_pt.enu_point().x(), refline_pt.enu_point().y(), refline_pt.enu_point().z()};
+    if (0) {//后续加入enu_point available
+      ref_path_pt.path_point.x = refline_pt.enu_point().x();
+      ref_path_pt.path_point.y = refline_pt.enu_point().y();
+      ref_path_pt.path_point.z = refline_pt.enu_point().z();
+    } else {
+      ref_path_pt.path_point.x = refline_pt.car_point().x();
+      ref_path_pt.path_point.y = refline_pt.car_point().y();
+      ref_path_pt.path_point.z = 0;
+    }
     ref_path_pt.curvature = refline_pt.curvature();
     ref_path_pt.yaw = refline_pt.heading();
     ref_path_pt.distance_to_left_lane_border = std::fmin(
@@ -126,8 +136,8 @@ bool LaneReferencePath::get_points_by_lane_id(
     // check direction
     if (not ref_path_points.empty()) {
       const auto &pre_pt = ref_path_points.back();
-      Vec2d delta{ref_path_pt.enu_point.x - pre_pt.enu_point.x,
-                  ref_path_pt.enu_point.y - pre_pt.enu_point.y};
+      Vec2d delta{ref_path_pt.path_point.x - pre_pt.path_point.x,
+                  ref_path_pt.path_point.y - pre_pt.path_point.y};
       Vec2d cur_direction = Vec2d::CreateUnitVec2d(ref_path_pt.yaw);
       if (cur_direction.InnerProd(delta) < 0) {
         continue;
@@ -138,6 +148,8 @@ bool LaneReferencePath::get_points_by_lane_id(
 
   return ref_path_points.size() >= 3;
 }
+
+
 
 void LaneReferencePath::assign_obstacles_to_lane() {
   lane_obstacles_.clear();

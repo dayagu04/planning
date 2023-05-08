@@ -170,15 +170,15 @@ double VirtualLane::width_by_s(double s) {
     auto &reference_path_points = reference_path_->get_points();
     if (reference_path_points.size() < 1) {
     } else {
-      auto comp = [](const ReferencePathPoint& p, const double s) { return p.frenet_point.x < s; };
+      auto comp = [](const ReferencePathPoint& p, const double s) { return p.path_point.s < s; };
       auto p_first_point = std::lower_bound(reference_path_points.begin(), reference_path_points.end(), s, comp);
       if (p_first_point == reference_path_points.begin()) {
         width = reference_path_points.begin()->lane_width;
       } else if (p_first_point == reference_path_points.end()) {
         width = reference_path_points.end()->lane_width;
       } else  {
-        width = planning_math::lerp((p_first_point - 1)->lane_width, (p_first_point - 1)->frenet_point.x,
-              p_first_point->lane_width, p_first_point->frenet_point.x, s);
+        width = planning_math::lerp((p_first_point - 1)->lane_width, (p_first_point - 1)->path_point.s,
+              p_first_point->lane_width, p_first_point->path_point.s, s);
       }
     }
   }
@@ -272,7 +272,7 @@ void VirtualLane::update_speed_limit(double ego_vel, double ego_v_cruise) { //to
     bool find_change = false;
     double acc_brake_min = 100.0;
     for (size_t i = 1; i < referece_path_points.size(); ++i) {
-      if (!find_last && referece_path_points[i].frenet_point.x > 0.0) { //hack: frenet_point
+      if (!find_last && referece_path_points[i].path_point.s > 0.0) { //hack: frenet_point
         find_last = true;
         last_speed = referece_path_points[i - 1].max_velocity;
         current_lane_speed_limit_ = last_speed;
@@ -280,21 +280,21 @@ void VirtualLane::update_speed_limit(double ego_vel, double ego_v_cruise) { //to
       }
 
       if (find_last && referece_path_points[i].max_velocity != last_speed) {
-        double acc_brake = (std::pow(referece_path_points[i].max_velocity, 2) - std::pow(ego_vel, 2)) / std::max(1.0,
-                           std::sqrt(std::pow(referece_path_points[i].frenet_point.x, 2) + std::pow(referece_path_points[i].frenet_point.y, 2)));
+        double acc_brake = (std::pow(referece_path_points[i].max_velocity, 2) - std::pow(ego_vel, 2)) / 
+                          std::max(1.0, referece_path_points[i].path_point.s);
         if (acc_brake < acc_brake_min) {
           acc_brake_min = acc_brake;
           find_change = true;
-          speed_change_point_.x = referece_path_points[i].frenet_point.x;
-          speed_change_point_.y = referece_path_points[i].frenet_point.y;
+          speed_change_point_.x = referece_path_points[i].path_point.s;
+          speed_change_point_.y = 0;
           speed_change_point_.speed = referece_path_points[i].max_velocity;
         }
       }
     }
 
     if (!find_change) {
-      speed_change_point_.x = referece_path_points.back().frenet_point.x;
-      speed_change_point_.y = referece_path_points.back().frenet_point.y;
+      speed_change_point_.x = referece_path_points.back().path_point.s;
+      speed_change_point_.y = 0;
       speed_change_point_.speed = referece_path_points.back().max_velocity;
     }
   }
@@ -311,72 +311,6 @@ void VirtualLane::save_context(VirtualLaneContext &context) const {
 
 void VirtualLane::restore_context(const VirtualLaneContext &context) {
   // todo: clren
-}
-
-void VirtualLane::update_refined_lane_points() {
-  if (lane_points().size() < 2) {
-    refined_lane_points_.clear();
-    return;
-  }
-
-  double interp_gap = 0.5;
-  std::vector<double> x_points, y_points;
-
-  for (size_t i = 0; i < lane_points().size(); i++) {
-    x_points.push_back(lane_points()[i].car_point().x());
-    y_points.push_back(lane_points()[i].car_point().y());
-  }
-
-  refined_lane_points_.clear();
-
-  std::vector<double> u_points{0};
-
-  for (size_t i = 0; i + 1 < x_points.size(); i++) {
-    double dist = std::sqrt(std::pow(x_points[i + 1] - x_points[i], 2) +
-                            std::pow(y_points[i + 1] - y_points[i], 2));
-
-    u_points.push_back(u_points[i] + dist);
-  }
-
-  planning::planning_math::spline x_spline, y_spline;
-  x_spline.set_points(u_points, x_points);
-  y_spline.set_points(u_points, y_points);
-
-  std::vector<double> us;
-  discrete(u_points[0], u_points.back(), interp_gap, us);
-
-  size_t index = 0;
-  for (size_t i = 0; i < us.size(); i++) {
-    PathPoint pp;
-    pp.x = x_spline(us[i]);
-    pp.y = y_spline(us[i]);
-
-    if (i == 0) {
-      pp.s = 0;
-    } else {
-      double dist = std::sqrt(std::pow(pp.x - refined_lane_points_[i - 1].x, 2) +
-                              std::pow(pp.y - refined_lane_points_[i - 1].y, 2));
-
-      pp.s = refined_lane_points_[i - 1].s + dist;
-    }
-
-    // something strange
-    for (size_t j = 0; j + 1 < u_points.size(); j++) {
-      if (j < index) {
-        continue;
-      }
-
-      if (us[i] >= u_points[j] && us[i] < u_points[j + 1]) {
-        index = j;
-        break;
-      }
-      index++;
-    }
-
-    pp.theta = std::atan2(y_spline.deriv(1, us[i]), x_spline.deriv(1, us[i]));
-    pp.kappa = 0;
-    refined_lane_points_.push_back(pp);
-  }
 }
 
 }  // namespace planning
