@@ -89,10 +89,10 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
     // TODO：backup
     LOG_DEBUG("general_planner failed");
   } else {
-    // SetPlanningResult(ego_planning_result, pnc_result);
-    // session_->mutable_planning_context()
-    //     ->set_last_planning_result(
-    //         std::make_shared<PlanningResult>(ego_planning_result));
+    SetPlanningResult(ego_planning_result, pnc_result);
+    session_->mutable_planning_context()
+        ->set_last_planning_result(
+            std::make_shared<PlanningResult>(ego_planning_result));
     // session_->mutable_planning_context()
     //     ->planning_result_manager()
     //     ->add_planning_result(ego_planning_result);
@@ -107,7 +107,10 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
 void GeneralPlanner::SetPlanningResult(
     const PlanningResult &ego_planning_result,
     common::PlanningResult &pnc_result) {
+  // 这个函数需要好好整理下
   const auto &traj_points = ego_planning_result.traj_points;
+  auto trajectory = pnc_result.planning_output.mutable_trajectory();
+  // trajectory->CopyFrom(ego_planning_result.traj_points);
 
   ClearPlanningResult(pnc_result);
   if (ego_planning_result.turn_signal == NO_CHANGE) {

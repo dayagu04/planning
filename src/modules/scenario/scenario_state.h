@@ -3,16 +3,16 @@
 #include <array>
 #include <iostream>
 
-#include "log.h"
-#include "ifly_time.h"
-#include "frame.h"
-#include "session.h"
 #include "common/utils/lateral_utils.h"
 #include "context/virtual_lane_manager.h"
+#include "frame.h"
+#include "ifly_time.h"
+#include "log.h"
+#include "machine_single.hpp"
 #include "scenario/lane_change_request_manager.h"
 #include "scenario/lane_change_requests/lane_change_lane_manager.h"
+#include "session.h"
 #include "tasks/task_pipeline.h"
-#include "machine_single.hpp"
 
 namespace planning {
 
@@ -89,9 +89,10 @@ struct StateBase : M::Base {
     common::SceneType scene_type = frame->session()->get_scene_type();
     auto config_builder =
         frame->session()->environmental_model().config_builder(scene_type);
-    // return TaskPipeline::Make(
-    //     TaskPipelineType::VISION_ONLY, config_builder, frame);
-    return TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, frame);
+    return TaskPipeline::Make(TaskPipelineType::VISION_ONLY, config_builder,
+                              frame);
+    // return TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder,
+    // frame);
   }
 
   virtual std::shared_ptr<Evaluator> get_evaluator(framework::Frame *frame);

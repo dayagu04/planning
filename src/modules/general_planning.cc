@@ -101,11 +101,15 @@ void GeneralPlanning::FillPlanningTrajectory(
   auto &planning_result = session_.planning_context().planning_result();
 
   // 更新输出
-  planning_output->mutable_meta()->set_plan_timestamp_us(
-      planning_result.timestamp);
+  auto time_stamp_us = IflyTime::Now_us();
+  // 1.Meta
+  planning_output->mutable_meta()->set_plan_timestamp_us(time_stamp_us);
+  auto header = planning_output->mutable_meta()->mutable_header();
+  header->set_timestamp(time_stamp_us);
+  header->set_version("TEST");
 
+  // 2.Trajectory
   auto trajectory = planning_output->mutable_trajectory();
-  // Hack: 长时规划
   if (hdmap_valid_) {
     trajectory->set_trajectory_type(
         Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
@@ -131,6 +135,11 @@ void GeneralPlanning::FillPlanningTrajectory(
     trajectory->mutable_target_reference()->Clear();
 
     auto target_ref = trajectory->mutable_target_reference();
+    // add polynomial
+    for (size_t i = 0; i < lateral_output.d_poly.size(); i++) {
+      target_ref->add_polynomial(lateral_output.d_poly[i]);
+    }
+
     target_ref->set_target_velocity(
         vision_only_longitudinal_outputs.velocity_target);
 
@@ -141,8 +150,25 @@ void GeneralPlanning::FillPlanningTrajectory(
     acceleration_range_limit->set_max_a(
         vision_only_longitudinal_outputs.a_target_max);
   }
+  // 3.Turn signal
+  auto turn_signal = planning_output->mutable_turn_signal_command();
+  turn_signal->set_available(true);
+  if (planning_result.turn_signal == NO_CHANGE) {
+    turn_signal->set_turn_signal_value(Common::TurnSignalType::TURN_SIGNAL_TYPE_NONE);
+  } else if (planning_result.turn_signal == LEFT_CHANGE) {
+    turn_signal->set_turn_signal_value(Common::TurnSignalType::TURN_SIGNAL_TYPE_LEFT);
+  } else {
+    turn_signal->set_turn_signal_value(Common::TurnSignalType::TURN_SIGNAL_TYPE_RIGHT);
+  }
+  // 4.Light signal
 
-  // HMI结果
+  // 5.Horn signal
+
+  // 6.Gear signal
+
+  // 7.Open loop steering command
+
+  // 8.Planning status
 }
 
 void GeneralPlanning::GenerateStopTrajectory(

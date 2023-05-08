@@ -3,12 +3,6 @@
 #include <array>
 #include <cmath>
 
-#include "gtest/gtest.h"
-#include "fusion_objects.pb.h"
-#include "fusion_road.pb.h"
-#include "vehicle_service.pb.h"
-#include "ifly_time.h"
-#include "log.h"
 #include "common/config_context.h"
 #include "common/math/linear_interpolation.h"
 #include "context/ego_planning_config.h"
@@ -21,13 +15,19 @@
 #include "context/traffic_light_decision_manager.h"
 #include "context/virtual_lane_manager.h"
 #include "environmental_model_manager.h"
+#include "fusion_objects.pb.h"
+#include "fusion_road.pb.h"
 #include "general_planning.h"
+#include "gtest/gtest.h"
+#include "ifly_time.h"
+#include "log.h"
+#include "planning_config.pb.h"
 #include "scc_function/adaptive_cruise_control.h"
 #include "scc_function/mrc_condition.h"
 #include "scc_function/start_stop_enable.h"
 #include "scenario/lateral_behavior_object_selector.h"
 #include "tasks/task_pipeline_context.h"
-#include "planning_config.pb.h"
+#include "vehicle_service.pb.h"
 #include "vehicle_status.pb.h"
 
 namespace planning {
@@ -115,7 +115,7 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
   // planning_base_ = std::make_unique<GeneralPlanning>();
   session.Init();
 
-  EgoPlanningConfigBuilder *config_builder;
+  auto config_builder = std::make_unique<EgoPlanningConfigBuilder>("", "empty");
   framework::Frame frame{&session};
   LocalView local_view;
   double time_stamp = IflyTime::Now_ms();
@@ -259,8 +259,8 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
       ->mutable_environmental_model()
       ->set_virtual_lane_manager(virtual_lane_manager_ptr_);
 
-  obstacle_manager_ptr_ =
-      std::make_shared<planning::ObstacleManager>(config_builder, &session);
+  obstacle_manager_ptr_ = std::make_shared<planning::ObstacleManager>(
+      config_builder.get(), &session);
   (&frame)
       ->mutable_session()
       ->mutable_environmental_model()
@@ -273,31 +273,37 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
       ->mutable_environmental_model()
       ->set_reference_path_manager(reference_path_manager_ptr_);
 
-  lateral_obstacle_ptr_ =
-      std::make_shared<planning::LateralObstacle>(config_builder, &session);
+  lateral_obstacle_ptr_ = std::make_shared<planning::LateralObstacle>(
+      config_builder.get(), &session);
   (&frame)
       ->mutable_session()
       ->mutable_environmental_model()
       ->set_lateral_obstacle(lateral_obstacle_ptr_);
 
-  mrc_condition_ = std::make_shared<MrcCondition>(config_builder, &session);
+  session.mutable_environmental_model()->set_highway_config_builder(
+      config_builder.get());
+
+  mrc_condition_ =
+      std::make_shared<MrcCondition>(config_builder.get(), &session);
   (&frame)->mutable_session()->mutable_planning_context()->set_mrc_condition(
       mrc_condition_);
 
   adaptive_cruise_control_ =
-      std::make_shared<AdaptiveCruiseControl>(config_builder, &session);
+      std::make_shared<AdaptiveCruiseControl>(config_builder.get(), &session);
   (&frame)
       ->mutable_session()
       ->mutable_planning_context()
       ->set_adaptive_cruise_control_function(adaptive_cruise_control_);
 
-  start_stop_ptr_ = std::make_shared<StartStopEnable>(config_builder, &session);
+  start_stop_ptr_ =
+      std::make_shared<StartStopEnable>(config_builder.get(), &session);
   (&frame)
       ->mutable_session()
       ->mutable_planning_context()
       ->set_start_stop_enable(start_stop_ptr_);
 
-  object_selector_ = std::make_shared<ObjectSelector>(config_builder, &session);
+  object_selector_ =
+      std::make_shared<ObjectSelector>(config_builder.get(), &session);
   (&frame)->mutable_session()->mutable_planning_context()->set_object_selector(
       object_selector_);
 
@@ -330,7 +336,7 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
 
   std::shared_ptr<ScenarioStateMachine> scenario_state_machine_ = nullptr;
   scenario_state_machine_ =
-      std::make_shared<ScenarioStateMachine>(config_builder, &session);
+      std::make_shared<ScenarioStateMachine>(config_builder.get(), &session);
 
   scenario_state_machine_->init();
   (&frame)
