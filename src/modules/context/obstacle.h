@@ -46,16 +46,20 @@ class Obstacle {
 
   double x_center() const { return x_center_; }
   double y_center() const { return y_center_; }
+  double x_relative_center() const { return x_relative_center_; }
+  double y_relative_center() const { return y_relative_center_; }
   double length() const { return length_; }
   double width() const { return width_; }
   //  relative_heading_angle
   double relative_heading_angle() const { return relative_yaw_; }
   double heading_angle() const { return yaw_; }
   double velocity() const { return velocity_; }
+  double x_relative_velocity() const { return x_relative_velocity_; }
+  double y_relative_velocity() const { return y_relative_velocity_; }
   // double perception_velocity() const { return perception_velocity_; }
   double acceleration() const { return acc_; }
   // double acceleration_signed() const { return acc_signed_; }
-  double velocity_angle() const { return velocity_angle_; }
+  // double velocity_angle() const { return velocity_angle_; }
   bool is_static() const { return is_static_; }
   Common::ObjectType type() const { return type_; }
   bool is_vaild() const { return valid_; }
@@ -92,12 +96,16 @@ class Obstacle {
   bool is_static_ = false;
   double x_center_;
   double y_center_;
+  double x_relative_center_;
+  double y_relative_center_;
   double z_center_ = 0.0;
   double yaw_;
   double relative_yaw_;
   double velocity_ = 0.0;
   // double perception_velocity_{};
-  double velocity_angle_ = 0.0;
+  // double velocity_angle_ = 0.0;
+  double x_relative_velocity_ = 0.0;
+  double y_relative_velocity_ = 0.0;
   double acc_ = 0.0;
   // double acc_signed_ = 0.0;
   Common::ObjectType type_;

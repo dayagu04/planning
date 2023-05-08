@@ -104,8 +104,9 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(
       obs_width / 2.0 * std::cos(obs_relative_heading);
 
   double curve_heading = frenet_coord->GetRefCurveHeading(frenet_s_);
-  frenet_relative_velocity_angle_ = planning_math::NormalizeAngle(
-      obstacle_ptr_->velocity_angle() - curve_heading);
+  // todo:clren ,现在无velocity_angle
+  // frenet_relative_velocity_angle_ = planning_math::NormalizeAngle(
+  //     obstacle_ptr_->velocity_angle() - curve_heading);
   frenet_velocity_s_ =
       obstacle_ptr_->velocity() * std::cos(frenet_relative_velocity_angle_);
   frenet_velocity_l_ =

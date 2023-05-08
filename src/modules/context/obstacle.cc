@@ -134,13 +134,17 @@ Obstacle::Obstacle(int id,
 
   x_center_ = prediction_object.position_x;
   y_center_ = prediction_object.position_y;
+  x_relative_center_ = prediction_object.relative_position_x;
+  y_relative_center_ = prediction_object.relative_position_x;
   width_ = prediction_object.width;
   length_ = prediction_object.length;
   yaw_ = planning_math::NormalizeAngle(prediction_object.yaw);
   relative_yaw_ = planning_math::NormalizeAngle(prediction_object.relative_theta);
   velocity_ = prediction_object.speed;
   // todo, 看是否存在象限问题，以及都为0的情况
-  velocity_angle_ = std::atan2(prediction_object.relative_speed_y, prediction_object.relative_speed_x);
+  // velocity_angle_ = std::atan2(prediction_object.relative_speed_y, prediction_object.relative_speed_x);
+  x_relative_velocity_ = prediction_object.relative_speed_x;
+  y_relative_velocity_ = prediction_object.relative_speed_y;
   acc_ = prediction_object.acc;
 
   std::vector<planning_math::Vec2d> polygon_points;
