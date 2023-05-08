@@ -43,8 +43,8 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   }
 
   // Step 4) update virtual_lane speed_limit
-  // virtual_lane->update_speed_limit(session->environmental_model().get_ego_state_manager()->ego_v(),
-  //                                 session->environmental_model().get_ego_state_manager()->ego_v_cruise());
+  virtual_lane->update_speed_limit(session->environmental_model().get_ego_state_manager()->ego_v(),
+                                  session->environmental_model().get_ego_state_manager()->ego_v_cruise());
 }
 
 bool LaneReferencePath::is_obstacle_ignorable(const std::shared_ptr<FrenetObstacle> obstacle) {
