@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "debug_info_log.h"
 #include "scc_function/adaptive_cruise_control.h"
 #include "scc_function/mrc_condition.h"
 #include "scc_function/start_stop_enable.h"
@@ -520,6 +521,7 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
                        std::numeric_limits<double>::lowest(),
                        std::numeric_limits<double>::max());
 
+  JSON_DEBUG_VALUE("v_limit_final", vel_limit_info_.v_limit_final);
   // MDEBUG_JSON_BEGIN_DICT(vel_limit_info)
   // MDEBUG_JSON_ADD_ITEM(v_limit_final, vel_limit_info_.v_limit_final,
   //                      vel_limit_info)
