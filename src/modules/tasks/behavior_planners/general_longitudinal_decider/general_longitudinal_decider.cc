@@ -521,31 +521,12 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
                        std::numeric_limits<double>::lowest(),
                        std::numeric_limits<double>::max());
 
-  JSON_DEBUG_VALUE("v_limit_final", vel_limit_info_.v_limit_final);
-  // MDEBUG_JSON_BEGIN_DICT(vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(v_limit_final, vel_limit_info_.v_limit_final,
-  //                      vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(v_limit_map, vel_limit_info_.v_limit_map,
-  // vel_limit_info) MDEBUG_JSON_ADD_ITEM(v_limit_usr,
-  // vel_limit_info_.v_limit_usr, vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(v_limit_curv, vel_limit_info_.v_limit_curv,
-  //                      vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(v_limit_narrow_area,
-  // vel_limit_info_.v_limit_narrow_area,
-  //                      vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(max_curvature, max_curvature, vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(path_curvature, path_curvature, vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(steer_curvature, steer_curvature, vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(max_curv_s, max_curv_s, vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(ego_v, ego_v, vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(ego_a, ego_a, vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(v_limit_path_curv, v_limit_path_curv, vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(time_to_brake, time_to_brake, vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(vlimit_acc, vlimit_acc, vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(vlimit_jerk, vlimit_jerk, vel_limit_info)
-  // MDEBUG_JSON_ADD_ITEM(ego_jerk_thld, ego_jerk - kDeltaJerkThld,
-  // vel_limit_info) MDEBUG_JSON_ADD_ITEM(enable_jerk, enable_jerk,
-  // vel_limit_info) MDEBUG_JSON_END_DICT(vel_limit_info)
+  JSON_DEBUG_VALUE("LonBehavior_v_limit_final", vel_limit_info_.v_limit_final);
+  JSON_DEBUG_VALUE("LonBehavior_v_limit_map", vel_limit_info_.v_limit_map);
+  JSON_DEBUG_VALUE("LonBehavior_v_limit_final", vel_limit_info_.v_limit_map);
+  JSON_DEBUG_VALUE("LonBehavior_v_limit_final", vel_limit_info_.v_limit_usr);
+  JSON_DEBUG_VALUE("LonBehavior_v_limit_final", vel_limit_info_.v_limit_curv);
+  JSON_DEBUG_VALUE("LonBehavior_v_limit_final", v_limit_path_curv);
 
   return brake_traj;
 }

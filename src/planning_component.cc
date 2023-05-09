@@ -1,6 +1,7 @@
 #include "planning_component.h"
 
 #include "common/Platform_Types.h"
+#include "common/debug_info_log.h"
 #include "general_planning.h"
 #include "modules/common/config_context.h"
 
@@ -155,7 +156,8 @@ bool PlanningComponent::Init() {
 
   // -------------- writter topics --------------
   planning_writer_ =
-      planning_node_->CreateWriter<PlanningOutput::PlanningOutput>("/iflytek/planning");
+      planning_node_->CreateWriter<PlanningOutput::PlanningOutput>(
+          "/iflytek/planning");
   planning_debug_writer_ =
       planning_node_->CreateWriter<planning::common::PlanningDebugInfo>(
           "/iflytek/planning_debug_info");
@@ -209,7 +211,10 @@ bool PlanningComponent::Proc() {
 
   planning::common::PlanningDebugInfo planning_debug_data;
   planning_debug_data.set_timestamp(IflyTime::Now_ms());
-  planning_debug_data.set_data_json(debug_output.data.data_json());
+  // 获取debug json信息
+  auto debug_info_json = *DebugInfoJson::GetInstance().GetDebugJson();
+  planning_debug_data.set_data_json(mjson::Json(debug_info_json).dump());
+  // planning_debug_data.set_data_json(debug_output.data.data_json());
   planning_debug_writer_->Write(planning_debug_data);
 
   // fill planning_debug_info —需要好好设计一下

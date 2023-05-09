@@ -29,6 +29,7 @@
 #include "tasks/task_pipeline_context.h"
 #include "vehicle_service.pb.h"
 #include "vehicle_status.pb.h"
+#include "debug_info_log.h"
 
 namespace planning {
 
@@ -357,5 +358,7 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
                            false, 80., false, false, false, false, false, -1);
 
   (void)scenario_state_machine_->update(&frame);
+  auto debug_info_json = *DebugInfoJson::GetInstance().GetDebugJson();
+  auto v_limit_final = debug_info_json["LonBehavior_v_limit_final"].number_value();
 }
 }  // namespace planning
