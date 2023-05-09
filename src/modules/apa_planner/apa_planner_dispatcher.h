@@ -19,6 +19,9 @@ class ApaPlannerDispatcher {
  private:
   void RegisterPlanners();
 
+  bool IsStateMachineStateValid(
+      const FuncStateMachine::FuncStateMachine& func_state_machine) const;
+
  private:
    std::vector<std::unique_ptr<ApaPlannerBase>> planner_list_;
 };

@@ -53,12 +53,21 @@ endif()
 # install to system
 if (INSTALL_TO_SYSTEM)
   file(MAKE_DIRECTORY /asw/${PROJECT_NAME})
+  file(MAKE_DIRECTORY /asw/${PROJECT_NAME}/log)
   file(MAKE_DIRECTORY /asw/${PROJECT_NAME}/res/conf)
 
-  install(TARGETS ${PROJECT_NAME}_component
+  install(TARGETS
+    ${PROJECT_NAME}_component
+    apa_simulation_component
     LIBRARY DESTINATION /asw/${PROJECT_NAME}/Lib)
-  install(FILES ${CMAKE_CURRENT_LIST_DIR}/res/dag/${PROJECT_NAME}.dag
+  install(FILES
+    ${CMAKE_CURRENT_LIST_DIR}/res/dag/apa_simulation_and_planning.dag
+    ${CMAKE_CURRENT_LIST_DIR}/res/dag/apa_simulation.dag
+    ${CMAKE_CURRENT_LIST_DIR}/res/dag/planning_and_control.dag
+    ${CMAKE_CURRENT_LIST_DIR}/res/dag/${PROJECT_NAME}.dag
     DESTINATION /asw/${PROJECT_NAME})
   install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/res/conf
     DESTINATION /asw/${PROJECT_NAME}/res)
+  install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/res/scripts
+    DESTINATION /asw/${PROJECT_NAME})
 endif()

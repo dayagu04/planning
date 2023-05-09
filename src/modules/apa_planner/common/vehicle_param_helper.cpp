@@ -12,7 +12,7 @@ VehicleParam VehicleParamHelper::vehicle_param_;
 bool VehicleParamHelper::is_init_ = false;
 
 void VehicleParamHelper::Init() {
-  Init("/asw/Planning/Res/config/vehicle_param.pb.txt");
+  Init(std::string(CONFIG_PATH) + "/vehicle_param.pb.txt");
 }
 
 void VehicleParamHelper::Init(const std::string& config_file) {

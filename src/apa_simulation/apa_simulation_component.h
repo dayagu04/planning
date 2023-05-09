@@ -16,6 +16,7 @@
 
 namespace planning {
 
+using ::FuncStateMachine::FuncStateMachine;
 using autoplt::ADSNode;
 using LocalizationOutput::LocalizationEstimate;
 using ParkingFusion::ParkingFusionInfo;
@@ -34,6 +35,7 @@ class ApaSimulationComponent final : public autoplt::ADSTimerCoponent {
  private:
   void MockParkingFusionInfo();
   void MockLocalizationAndVehicleService();
+  void MockFuncStateMachine();
 
  private:
   std::mutex msg_mutex_;
@@ -52,6 +54,8 @@ class ApaSimulationComponent final : public autoplt::ADSTimerCoponent {
       parking_fusion_info_writer_ = nullptr;
   std::shared_ptr<Writer<VehicleServiceOutputInfo>>
       vehicle_service_output_info_writer_ = nullptr;
+  std::shared_ptr<Writer<FuncStateMachine>>
+      func_state_machine_writer_ = nullptr;
 
   int traj_pt_index_ = 0;
   PlanningOutput cur_planning_output_;

@@ -12,6 +12,7 @@ class ApaPlannerBase {
 
   virtual bool Update(framework::Frame* const frame) = 0;
 
+ protected:
   void SetFailedPlanningOutput(framework::Frame* const frame) const;
 };
 

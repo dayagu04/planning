@@ -14,33 +14,33 @@ class ParallelInGeometryPlan {
  public:
   ParallelInGeometryPlan() = default;
 
-  bool ABSegment(const PlanningPoint &point_a, bool is_start, bool is_search,
+  bool ABSegment(const PlanningPoint &point_a, bool is_start, bool is_rough_calc,
       ParallelSegmentsInfo *segments_info);
   bool BCSegment(const PlanningPoint &point_b, double len_ab, bool is_start,
-      bool is_search, ParallelSegmentsInfo *segments_info);
-  bool CDSegment(const PlanningPoint &point_c, bool is_start, bool is_search,
+      bool is_rough_calc, ParallelSegmentsInfo *segments_info);
+  bool CDSegment(const PlanningPoint &point_c, bool is_start, bool is_rough_calc,
       ParallelSegmentsInfo *segments_info);
-  bool DESegment(const PlanningPoint &point_d, bool is_start, bool is_search,
+  bool DESegment(const PlanningPoint &point_d, bool is_start, bool is_rough_calc,
       ParallelSegmentsInfo *segments_info);
-  bool EFSegment(const PlanningPoint &point_e, bool is_start, bool is_search,
+  bool EFSegment(const PlanningPoint &point_e, bool is_start, bool is_rough_calc,
       ParallelSegmentsInfo *segments_info);
-  bool EF1Segment(const PlanningPoint &point_e, bool is_start, bool is_search,
+  bool EF1Segment(const PlanningPoint &point_e, bool is_start, bool is_rough_calc,
       ParallelSegmentsInfo *segments_info);
-  bool EF2Segment(const PlanningPoint &point_e, bool is_start, bool is_search,
+  bool EF2Segment(const PlanningPoint &point_e, bool is_start, bool is_rough_calc,
       ParallelSegmentsInfo *segments_info);
-  bool FGSegment(const PlanningPoint &point_f, bool is_start, bool is_search,
+  bool FGSegment(const PlanningPoint &point_f, bool is_start, bool is_rough_calc,
       ParallelSegmentsInfo *segments_info);
-  bool EF3Segment(const PlanningPoint &point_e, bool is_start, bool is_search,
+  bool EF3Segment(const PlanningPoint &point_e, bool is_start, bool is_rough_calc,
       ParallelSegmentsInfo *segments_info);
-  bool FHSegment(const PlanningPoint &point_f, bool is_start, bool is_search,
+  bool FHSegment(const PlanningPoint &point_f, bool is_start, bool is_rough_calc,
       ParallelSegmentsInfo *segments_info);
-  bool FH1Segment(const PlanningPoint &point_f, bool is_start, bool is_search,
+  bool FH1Segment(const PlanningPoint &point_f, bool is_start, bool is_rough_calc,
       ParallelSegmentsInfo *segments_info);
-  bool FH2Segment(const PlanningPoint &point_f, bool is_start, bool is_search,
+  bool FH2Segment(const PlanningPoint &point_f, bool is_start, bool is_rough_calc,
       ParallelSegmentsInfo *segments_info);
-  bool HISegment(const PlanningPoint &point_h, bool is_start, bool is_search,
+  bool HISegment(const PlanningPoint &point_h, bool is_start, bool is_rough_calc,
       ParallelSegmentsInfo *segments_info);
-  bool FH3Segment(const PlanningPoint &point_f, bool is_start, bool is_search,
+  bool FH3Segment(const PlanningPoint &point_f, bool is_start, bool is_rough_calc,
       ParallelSegmentsInfo *segments_info);
 
   void SetTargetPoint(const PlanningPoint& target_point);

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "common/math/polygon2d.h"
 #include "apa_planner/common/geometry_planning_io.h"
+#include "common/math/polygon2d.h"
+#include "frame.h"
 
 namespace planning {
 
@@ -11,5 +12,15 @@ planning::planning_math::Polygon2d ConstructVehiclePolygon(
     const double rear_edge_to_rear_center,
     const double front_shrink_dis, const double front_side_shrink_dis,
     const double rear_shrink_dis, const double rear_side_shrink_dis);
+
+  bool IsSlotSelected(framework::Frame* const frame);
+
+  bool IsRoughCalc(framework::Frame* const frame);
+
+  bool IsReplanEachFrame(
+      const FuncStateMachine::FuncStateMachine& func_state_machine);
+
+  bool IsReplanNecessary(
+      const FuncStateMachine::FuncStateMachine& func_state_machine);
 
 } // namespace  planning

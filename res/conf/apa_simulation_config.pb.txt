@@ -152,3 +152,9 @@ parking_fusion_info {
     }
   }
 }
+
+func_state_machine {
+  current_state: PARK_IN_ACTIVATE_CONTROL
+  state_duration: 0
+  message: 0
+}

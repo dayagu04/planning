@@ -18,8 +18,6 @@ class ParallelInPlanner : public ApaPlannerBase {
 
  private:
   ParallelInTrajectoryGenerator trajectory_generator_;
-  bool is_planning_ok_ = false;
-  bool is_stop_planning_ = false;
 };
 
 } // namespace apa_planner

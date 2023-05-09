@@ -5,6 +5,7 @@
 #include "ifly_time.h"
 #include "utils_math.h"
 #include "apa_planner/common/apa_cos_sin.h"
+#include "apa_planner/common/apa_utils.h"
 #include "apa_planner/common/planning_log_helper.h"
 #include "apa_planner/common/vehicle_param_helper.h"
 #include "common/math/math_utils.h"
@@ -14,6 +15,7 @@ namespace planning {
 namespace apa_planner {
 
 using ::Common::GearCommandValue;
+using ::FuncStateMachine::FunctionalState;
 using ::PlanningOutput::PlanningOutput;
 using ::PlanningOutput::Trajectory;
 using ::PlanningOutput::TrajectoryPoint;
@@ -65,21 +67,57 @@ bool ParallelInTrajectoryGenerator::Plan(framework::Frame* const frame) {
     return false;
   }
 
-  const auto& slots = parking_fusion_info.parking_fusion_slot_lists();
-  const int select_slot_id = parking_fusion_info.select_slot_id();
-  int select_slot_index = -1;
-  for (int i = 0; i < slots_size; ++i) {
-    if (select_slot_id == slots[i].id()) {
-      select_slot_index = i;
-      break;
-    }
-  }
-  if (select_slot_index == -1) {
-    PLANNING_LOG << "select_slot_id is invalid" << std::endl;
-    return false;
+  current_state_ = FunctionalState::INIT;
+  if (local_view_->function_state_machine_info.has_current_state()) {
+    current_state_ = local_view_->function_state_machine_info.current_state();
   }
 
-  CalSlotPointsInM(select_slot_index);
+  is_rough_calc_ = IsRoughCalc(frame);
+
+  const auto& slots = parking_fusion_info.parking_fusion_slot_lists();
+  if (IsSlotSelected(frame)) {
+    if (!parking_fusion_info.has_select_slot_id()) {
+      PLANNING_LOG << "no select_slot_id" << std::endl;
+      return false;
+    }
+
+    int select_slot_index = -1;
+    const size_t selected_slot_id = parking_fusion_info.select_slot_id();
+    PLANNING_LOG << "selected_slot_id:" << selected_slot_id << std::endl;
+    for (int i = 0; i < parking_fusion_info.parking_fusion_slot_lists_size();
+        ++i) {
+      if (selected_slot_id == slots[i].id()
+          && slots[i].type() ==
+              Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
+        select_slot_index = i;
+        PLANNING_LOG << "parallel slot selected" << std::endl;
+        break;
+      }
+    }
+    if (select_slot_index == -1) {
+      PLANNING_LOG << "selected slot is not parallel" << std::endl;
+      return false;
+    }
+    return SingleSlotPlan(select_slot_index, planning_output);
+  } else {
+    bool is_planning_ok = false;
+    for (int i = 0; i < parking_fusion_info.parking_fusion_slot_lists_size();
+        ++i) {
+      if (slots[i].type() ==
+              Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
+        PLANNING_LOG << "parallel slot id:" << slots[i].id() << std::endl;
+        is_planning_ok = SingleSlotPlan(i, planning_output) || is_planning_ok;
+      }
+    }
+    return is_planning_ok;
+  }
+
+  return true;
+}
+
+bool ParallelInTrajectoryGenerator::SingleSlotPlan(const int slot_index,
+    PlanningOutput *const planning_output) {
+  CalSlotPointsInM(slot_index);
 
   if (slot_length_ < kMinSlotLength) {
     PLANNING_LOG << "slot_length_:" << slot_length_
@@ -87,31 +125,18 @@ bool ParallelInTrajectoryGenerator::Plan(framework::Frame* const frame) {
     return false;
   }
 
-  if (slot_sign_ == 0) {
-    const double slot_heading_in_odom =
-        std::atan2(slot_points_in_m_[2].y - slot_points_in_m_[0].y,
-        slot_points_in_m_[2].x - slot_points_in_m_[0].x);
-    const double ego_heading_in_odom = local_view_->localization_estimate\
-        .pose().euler_angles().yaw();
-    const double heading_diff = planning_math::NormalizeAngle(
-        ego_heading_in_odom - slot_heading_in_odom);
-    if (heading_diff < -M_PI_4) {
-      slot_sign_ = -1;
-    } else if (heading_diff > M_PI_4) {
-      slot_sign_ = 1;
-    } else {
-      PLANNING_LOG << "Error: slot side is invalid" << std::endl;
-      return false;
-    }
-  }
+  const auto& slots =
+      local_view_->parking_fusion_info.parking_fusion_slot_lists();
+
+  slot_sign_ = slots[slot_index].slot_side() == 0 ? -1.0 : 1.0;
 
   PLANNING_LOG << "slot_sign_:" << slot_sign_ << std::endl;
 
-  CalSlotOriginInodom(select_slot_index);
+  CalSlotOriginInodom(slot_index);
 
-  CalApaTargetInSlot(select_slot_index);
+  CalApaTargetInSlot(slot_index);
 
-  CalEgoPostionInSlotAndOdom(select_slot_index);
+  CalEgoPostionInSlotAndOdom(slot_index);
 
   if (IsApaFinished()) {
     PLANNING_LOG << "apa is finished" << std::endl;
@@ -125,7 +150,7 @@ bool ParallelInTrajectoryGenerator::Plan(framework::Frame* const frame) {
   PLANNING_LOG << "parallel replan triggered" << std::endl;
   PLANNING_LOG << "cur segment name:" << last_segment_name_ << std::endl;
 
-  if (!GeometryPlan(cur_pos_in_slot_, select_slot_index, planning_output)) {
+  if (!GeometryPlan(cur_pos_in_slot_, slot_index, planning_output)) {
     PLANNING_LOG << "geometry parallel plan failed" << std::endl;
     return false;
   }
@@ -143,43 +168,45 @@ bool ParallelInTrajectoryGenerator::GeometryPlan(
   bool is_planning_ok = false;
   planning_output->mutable_trajectory()->mutable_trajectory_points()->Clear();
   if (last_segment_name_.empty()) {
-    if (ABSegmentPlan(start_point, true, false, idx,
+    if (ABSegmentPlan(start_point, false, idx,
         &geometry_planning_, planning_output)) {
-      last_segment_name_ = "BC";
+      if (current_state_ == FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
+        last_segment_name_ = "BC";
+      }
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "AB") {
-    if (BCSegmentPlan(start_point, true, false, idx,
+    if (BCSegmentPlan(start_point, false, idx,
         &geometry_planning_, planning_output)) {
       last_segment_name_ = "BC";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "BC") {
-    if (CDSegmentPlan(start_point, true, false, idx,
+    if (CDSegmentPlan(start_point, false, idx,
         &geometry_planning_, planning_output)) {
       last_segment_name_ = "EF";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "CD") {
-    if (DESegmentPlan(start_point, true, false, idx,
+    if (DESegmentPlan(start_point, false, idx,
         &geometry_planning_, planning_output)) {
       last_segment_name_ = "DE";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "DE") {
-    if (EFSegmentPlan(start_point, true, false, idx,
+    if (EFSegmentPlan(start_point, false, idx,
         &geometry_planning_, planning_output)) {
       last_segment_name_ = "EF";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "EF") {
-    if (FHSegmentPlan(start_point, true, false, idx,
+    if (FHSegmentPlan(start_point, false, idx,
         &geometry_planning_, planning_output)) {
       last_segment_name_ = "FH";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "FH") {
-    if (EFSegmentPlan(start_point, true, false, idx,
+    if (EFSegmentPlan(start_point, false, idx,
         &geometry_planning_, planning_output)) {
       last_segment_name_ = "EF";
       is_planning_ok = true;
@@ -193,14 +220,19 @@ bool ParallelInTrajectoryGenerator::GeometryPlan(
 }
 
 bool ParallelInTrajectoryGenerator::ABSegmentPlan(
-    const PlanningPoint &point_a, bool is_start, bool is_search, int idx,
+    const PlanningPoint &point_a, bool is_start, int idx,
     ParallelInGeometryPlan * const geometry_planning,
     PlanningOutput *const planning_output) const {
   ParallelSegmentsInfo segments_info;
   segments_info.opt_point_a = point_a;
-  if (geometry_planning->ABSegment(point_a, is_start, is_search,
+  if (geometry_planning->ABSegment(point_a, is_start, is_rough_calc_,
       &segments_info)) {
-    PLANNING_LOG << "plan a-b success" << std::endl;
+    PLANNING_LOG << "plan a-b success, slot index:" << idx << std::endl;
+    if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
+      planning_output->add_successful_slot_info_list()->set_id(
+          local_view_->parking_fusion_info.parking_fusion_slot_lists()[idx].id());
+      return true;
+    }
     GenerateABSegmentTrajectory(segments_info, planning_output);
     GenerateBCSegmentTrajectory(segments_info, planning_output);
 
@@ -218,12 +250,12 @@ bool ParallelInTrajectoryGenerator::ABSegmentPlan(
 }
 
 bool ParallelInTrajectoryGenerator::BCSegmentPlan(
-    const PlanningPoint &point_b, bool is_start, bool is_search, int idx,
+    const PlanningPoint &point_b, bool is_start, int idx,
     ParallelInGeometryPlan * const geometry_planning,
     PlanningOutput *const planning_output) const {
   ParallelSegmentsInfo segments_info;
   segments_info.opt_point_b = point_b;
-  if (geometry_planning->BCSegment(point_b, is_start, is_search, 0.0,
+  if (geometry_planning->BCSegment(point_b, is_start, is_rough_calc_, 0.0,
       &segments_info)) {
     PLANNING_LOG << "plan b-c success" << std::endl;
     GenerateBCSegmentTrajectory(segments_info, planning_output);
@@ -242,12 +274,12 @@ bool ParallelInTrajectoryGenerator::BCSegmentPlan(
 }
 
 bool ParallelInTrajectoryGenerator::CDSegmentPlan(
-    const PlanningPoint &point_c, bool is_start, bool is_search, int idx,
+    const PlanningPoint &point_c, bool is_start, int idx,
     ParallelInGeometryPlan * const geometry_planning,
     PlanningOutput *const planning_output) const {
   ParallelSegmentsInfo segments_info;
   segments_info.opt_point_c = point_c;
-  if (geometry_planning->CDSegment(point_c, is_start, is_search,
+  if (geometry_planning->CDSegment(point_c, is_start, is_rough_calc_,
       &segments_info)) {
     PLANNING_LOG << "plan c-d success" << std::endl;
     GenerateCDSegmentTrajectory(segments_info, planning_output);
@@ -268,12 +300,12 @@ bool ParallelInTrajectoryGenerator::CDSegmentPlan(
 }
 
 bool ParallelInTrajectoryGenerator::DESegmentPlan(
-    const PlanningPoint &point_d, bool is_start, bool is_search, int idx,
+    const PlanningPoint &point_d, bool is_start, int idx,
     ParallelInGeometryPlan * const geometry_planning,
     PlanningOutput *const planning_output) const {
   ParallelSegmentsInfo segments_info;
   segments_info.opt_point_d = point_d;
-  if (geometry_planning->DESegment(point_d, is_start, is_search,
+  if (geometry_planning->DESegment(point_d, is_start, is_rough_calc_,
       &segments_info)) {
     PLANNING_LOG << "plan d-e success" << std::endl;
     GenerateDESegmentTrajectory(segments_info, planning_output);
@@ -293,12 +325,12 @@ bool ParallelInTrajectoryGenerator::DESegmentPlan(
 }
 
 bool ParallelInTrajectoryGenerator::EFSegmentPlan(
-    const PlanningPoint &point_e, bool is_start, bool is_search, int idx,
+    const PlanningPoint &point_e, bool is_start, int idx,
     ParallelInGeometryPlan * const geometry_planning,
     PlanningOutput *const planning_output) {
   ParallelSegmentsInfo segments_info;
   segments_info.opt_point_e = point_e;
-  if (geometry_planning->EFSegment(point_e, is_start, is_search,
+  if (geometry_planning->EFSegment(point_e, is_start, is_rough_calc_,
       &segments_info)) {
     PLANNING_LOG << "plan e-f success" << std::endl;
 
@@ -320,12 +352,12 @@ bool ParallelInTrajectoryGenerator::EFSegmentPlan(
 }
 
 bool ParallelInTrajectoryGenerator::FHSegmentPlan(
-    const PlanningPoint &point_f, bool is_start, bool is_search, int idx,
+    const PlanningPoint &point_f, bool is_start, int idx,
     ParallelInGeometryPlan * const geometry_planning,
     PlanningOutput *const planning_output) {
   ParallelSegmentsInfo segments_info;
   segments_info.opt_point_f = point_f;
-  if (geometry_planning->FHSegment(point_f, is_start, is_search,
+  if (geometry_planning->FHSegment(point_f, is_start, is_rough_calc_,
       &segments_info)) {
     PLANNING_LOG << "plan f-h success" << std::endl;
 
@@ -1080,6 +1112,11 @@ void ParallelInTrajectoryGenerator::SquareSlot() {
 
 bool ParallelInTrajectoryGenerator::IsReplan(
     PlanningOutput *const planning_output) {
+  if (IsReplanEachFrame(local_view_->function_state_machine_info)) {
+    PLANNING_LOG << "replan state:" << current_state_ << std::endl;
+    return true;
+  }
+
   planning_output->mutable_planning_status()->set_apa_planning_status(
       ::PlanningOutput::ApaPlanningStatus::IN_PROGRESS);
   const auto& local_position =
@@ -1132,6 +1169,10 @@ bool ParallelInTrajectoryGenerator::IsReplan(
 
 void ParallelInTrajectoryGenerator::SetPlanningOutputInfo(
     PlanningOutput *const planning_output) const {
+  if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
+    return;
+  }
+
   auto gear_command = planning_output->mutable_gear_command();
   gear_command->set_available(true);
   if (planning_output->trajectory().trajectory_points()[0].v() >= 0.0) {
@@ -1176,7 +1217,8 @@ void ParallelInTrajectoryGenerator::UpdatePosUnchangedCount() {
 }
 
 bool ParallelInTrajectoryGenerator::IsApaFinished() const {
-  return standstill_time_ >= kMinStandstillTime
+  return current_state_ == FunctionalState::PARK_IN_ACTIVATE_CONTROL
+      && standstill_time_ >= kMinStandstillTime
       && fabs(target_point_in_slot_.x - cur_pos_in_slot_.x) < kMaxXOffset
       && fabs(target_point_in_slot_.y - cur_pos_in_slot_.y) < kMaxYOffset
       && fabs(target_point_in_slot_.theta - cur_pos_in_slot_.theta)

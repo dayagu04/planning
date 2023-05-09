@@ -8,7 +8,7 @@ std::ofstream ApaSimLogHelper::ofs_;
 bool ApaSimLogHelper::is_init_ = false;
 
 void ApaSimLogHelper::Init() {
-  std::string log_file = "/asw/Planning/log/sim.log";
+  std::string log_file = "/asw/planning/log/sim.log";
   ofs_.open(log_file);
   is_init_ = true;
 }

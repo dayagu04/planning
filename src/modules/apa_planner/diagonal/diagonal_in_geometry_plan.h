@@ -15,28 +15,28 @@ class DiagonalInGeometryPlan {
   DiagonalInGeometryPlan() = default;
 
   bool ABSegment(const PlanningPoint &point_a,
-      bool is_start, bool is_search, DiagonalSegmentsInfo *segments_info);
+      bool is_start, bool is_rough_calc, DiagonalSegmentsInfo *segments_info);
   bool BCSegment(const PlanningPoint &point_b,
-      double len_ab, bool is_start, bool is_search,
+      double len_ab, bool is_start, bool is_rough_calc,
       DiagonalSegmentsInfo *segments_info);
   bool CDSegment(const PlanningPoint &point_c,
-      bool is_start, bool is_search, DiagonalSegmentsInfo *segments_info);
+      bool is_start, bool is_rough_calc, DiagonalSegmentsInfo *segments_info);
   bool CD1Segment(const PlanningPoint &point_c,
-      bool is_start, bool is_search, DiagonalSegmentsInfo *segments_info);
+      bool is_start, bool is_rough_calc, DiagonalSegmentsInfo *segments_info);
   bool CD2Segment(const PlanningPoint &point_c,
-      bool is_start, bool is_search, DiagonalSegmentsInfo *segments_info);
+      bool is_start, bool is_rough_calc, DiagonalSegmentsInfo *segments_info);
   bool DE1Segment(const PlanningPoint &point_d,
-      bool is_start, bool is_search, DiagonalSegmentsInfo *segments_info);
+      bool is_start, bool is_rough_calc, DiagonalSegmentsInfo *segments_info);
   bool EFSegment(const PlanningPoint &point_e,
-      bool is_start, bool is_search, DiagonalSegmentsInfo *segments_info);
+      bool is_start, bool is_rough_calc, DiagonalSegmentsInfo *segments_info);
   bool CD3Segment(const PlanningPoint &point_c,
-      bool is_start, bool is_search, DiagonalSegmentsInfo *segments_info);
+      bool is_start, bool is_rough_calc, DiagonalSegmentsInfo *segments_info);
   bool DESegment(const PlanningPoint &point_d,
-      bool is_start, bool is_search, DiagonalSegmentsInfo *segments_info);
+      bool is_start, bool is_rough_calc, DiagonalSegmentsInfo *segments_info);
   bool DE2Segment(const PlanningPoint &point_d,
-      bool is_start, bool is_search, DiagonalSegmentsInfo *segments_info);
+      bool is_start, bool is_rough_calc, DiagonalSegmentsInfo *segments_info);
   bool DE3Segment(const PlanningPoint &point_d,
-      bool is_start, bool is_search, DiagonalSegmentsInfo *segments_info);
+      bool is_start, bool is_rough_calc, DiagonalSegmentsInfo *segments_info);
 
   void SetTargetPoint(const PlanningPoint& target_point);
 

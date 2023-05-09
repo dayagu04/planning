@@ -7,6 +7,7 @@
 
 namespace planning {
 
+using FuncStateMachine::FuncStateMachine;
 using ParkingFusion::ParkingFusionInfo;
 
 bool PlanningComponent::Init() {
@@ -144,7 +145,7 @@ bool PlanningComponent::Init() {
         hmi_mcu_inner_info_msg_.CopyFrom(*hmi_mcu_inner_info_msg);
       });
 
-  auto parking_fusion_info_reader_ =
+  auto parking_fusion_info_reader =
       planning_node_->CreateReader<ParkingFusionInfo>(
           "/iflytek/fusion/parking_slot",
           [this](const std::shared_ptr<ParkingFusionInfo>
@@ -154,9 +155,9 @@ bool PlanningComponent::Init() {
           });
 
   auto func_state_machine_reader_ =
-      planning_node_->CreateReader<FuncStateMachine::FuncStateMachine>(
+      planning_node_->CreateReader<FuncStateMachine>(
           "/iflytek/system_state/soc_state",
-          [this](const std::shared_ptr<FuncStateMachine::FuncStateMachine>
+          [this](const std::shared_ptr<FuncStateMachine>
                      &func_state_machine_msg) {
             std::lock_guard<std::mutex> lock(msg_mutex_);
             func_state_machine_msg_.CopyFrom(*func_state_machine_msg);

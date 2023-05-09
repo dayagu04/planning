@@ -26,6 +26,10 @@ file(GLOB_RECURSE SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/apa_simulation/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/apa_simulation/*.cpp)
 
+file(GLOB_RECURSE APA_SIMULATION_SRC_FILES
+  ${CMAKE_CURRENT_LIST_DIR}/apa_simulation/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/apa_simulation/common/*.cc)
+
 # planning proto
 add_subdirectory(proto)
 
@@ -90,6 +94,13 @@ else()
     planning_proto
   )
 endif()
+
+add_library(apa_simulation_component SHARED ${APA_SIMULATION_SRC_FILES})
+target_link_libraries(apa_simulation_component PUBLIC
+  cyber
+  protobuf
+  proto_interface
+  autoplt)
 
 target_compile_definitions(planning_component PRIVATE
     CONFIG_PATH="/asw/planning/res/conf")

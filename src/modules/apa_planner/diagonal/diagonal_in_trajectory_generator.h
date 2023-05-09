@@ -17,26 +17,29 @@ class DiagonalInTrajectoryGenerator {
   bool Plan(framework::Frame* const frame);
 
  private:
+  bool SingleSlotPlan(const int slot_index,
+      PlanningOutput::PlanningOutput *const planning_output);
+
   bool GeometryPlan(const PlanningPoint &start_point,
       int idx, PlanningOutput::PlanningOutput *const planning_output);
 
   bool ABSegmentPlan(
-      const PlanningPoint &point_a, bool is_start, bool is_search, int idx,
+      const PlanningPoint &point_a, bool is_start, int idx,
       DiagonalInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
   bool BCSegmentPlan(
-      const PlanningPoint &point_b, bool is_start, bool is_search, int idx,
+      const PlanningPoint &point_b, bool is_start, int idx,
       DiagonalInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
   bool CDSegmentPlan(
-      const PlanningPoint &point_c, bool is_start, bool is_search, int idx,
+      const PlanningPoint &point_c, bool is_start, int idx,
       DiagonalInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
   bool DESegmentPlan(
-      const PlanningPoint &point_d, bool is_start, bool is_search, int idx,
+      const PlanningPoint &point_d, bool is_start, int idx,
       DiagonalInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
@@ -107,6 +110,8 @@ class DiagonalInTrajectoryGenerator {
   void PrintTrajectoryPoints(
       const PlanningOutput::PlanningOutput& planning_output) const;
 
+  bool IsSelectedSlotValid(framework::Frame* const frame) const;
+
  private:
   DiagonalInGeometryPlan geometry_planning_;
 
@@ -134,6 +139,11 @@ class DiagonalInTrajectoryGenerator {
   uint64_t standstill_time_ = 0;
   uint64_t last_time_ = 0;
   uint64_t pos_unchanged_cnt_ = 0;
+
+  bool is_rough_calc_ = false;
+
+  ::FuncStateMachine::FunctionalState current_state_ =
+        ::FuncStateMachine::FunctionalState::INIT;
 };
 
 } // namespace apa_planner

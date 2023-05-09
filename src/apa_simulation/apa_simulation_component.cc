@@ -12,7 +12,7 @@ bool ApaSimulationComponent::Init() {
   APA_SIM_LOG << "The apa simulation component init!!!" << std::endl;
 
   const std::string apa_simulation_config_path =
-      "/asw/Planning/Res/config/apa_simulation_config.pb.txt";
+      "/asw/planning/res/conf/apa_simulation_config.pb.txt";
 
   common::util::GetProtoFromFile(apa_simulation_config_path, &apa_sim_config_);
 
@@ -23,7 +23,7 @@ bool ApaSimulationComponent::Init() {
   // 2.定义收发topics
   auto planning_output_reader =
       simulation_node_->CreateReader<PlanningOutput>(
-          "/planning",
+          "/iflytek/planning",
           [this](const std::shared_ptr<PlanningOutput> &planning_msg) {
             std::lock_guard<std::mutex> lock(msg_mutex_);
             planning_output_msg_.CopyFrom(*planning_msg);
@@ -37,7 +37,10 @@ bool ApaSimulationComponent::Init() {
         "/iflytek/fusion/parking_slot");
   vehicle_service_output_info_writer_ =
       simulation_node_->CreateWriter<VehicleServiceOutputInfo>(
-        "/vehicel_service_output_info");
+        "/iflytek/vehicle_service");
+  func_state_machine_writer_ =
+      simulation_node_->CreateWriter<FuncStateMachine>(
+        "/iflytek/system_state/soc_state");
 
   return true;
 }
@@ -49,6 +52,7 @@ bool ApaSimulationComponent::Proc() {
 
   MockParkingFusionInfo();
   MockLocalizationAndVehicleService();
+  MockFuncStateMachine();
 
   const uint64_t simulation_cost_time = IflyTime::Now_ms() - start_time;
   APA_SIM_LOG << "time cost(ms):" << simulation_cost_time << std::endl;
@@ -119,6 +123,11 @@ void ApaSimulationComponent::MockLocalizationAndVehicleService() {
 void ApaSimulationComponent::MockParkingFusionInfo() {
   // mock parking fusion
   parking_fusion_info_writer_->Write(apa_sim_config_.parking_fusion_info());
+}
+
+void ApaSimulationComponent::MockFuncStateMachine() {
+  // mock parking fusion
+  func_state_machine_writer_->Write(apa_sim_config_.func_state_machine());
 }
 
 }  // namespace planning

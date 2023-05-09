@@ -18,31 +18,34 @@ class ParallelInTrajectoryGenerator {
   bool Plan(framework::Frame* const frame);
 
  private:
+  bool SingleSlotPlan(const int slot_index,
+      PlanningOutput::PlanningOutput *const planning_output);
+
   bool GeometryPlan(const PlanningPoint &start_point,
       int idx, PlanningOutput::PlanningOutput *const planning_output);
 
-  bool ABSegmentPlan(const PlanningPoint &point_a, bool is_start,
-      bool is_search, int idx, ParallelInGeometryPlan * const geometry_planning,
+  bool ABSegmentPlan(const PlanningPoint &point_a, bool is_start, int idx,
+      ParallelInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool BCSegmentPlan(const PlanningPoint &point_b, bool is_start,
-      bool is_search, int idx, ParallelInGeometryPlan * const geometry_planning,
+  bool BCSegmentPlan(const PlanningPoint &point_b, bool is_start, int idx,
+      ParallelInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool CDSegmentPlan(const PlanningPoint &point_c, bool is_start,
-      bool is_search, int idx, ParallelInGeometryPlan * const geometry_planning,
+  bool CDSegmentPlan(const PlanningPoint &point_c, bool is_start, int idx,
+      ParallelInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool DESegmentPlan(const PlanningPoint &point_d, bool is_start,
-      bool is_search, int idx, ParallelInGeometryPlan * const geometry_planning,
+  bool DESegmentPlan(const PlanningPoint &point_d, bool is_start, int idx,
+      ParallelInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool EFSegmentPlan(const PlanningPoint &point_e, bool is_start,
-      bool is_search, int idx, ParallelInGeometryPlan * const geometry_planning,
+  bool EFSegmentPlan(const PlanningPoint &point_e, bool is_start, int idx,
+      ParallelInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output);
 
-  bool FHSegmentPlan(const PlanningPoint &point_f, bool is_start,
-      bool is_search, int idx, ParallelInGeometryPlan * const geometry_planning,
+  bool FHSegmentPlan(const PlanningPoint &point_f, bool is_start, int idx,
+      ParallelInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output);
 
   bool GenerateABSegmentTrajectory(
@@ -124,10 +127,12 @@ class ParallelInTrajectoryGenerator {
       const ParallelInGeometryPlan& geometry_planning) {
     target_point_in_slot_  = geometry_planning.GetUpdatedTargetPoint();
 
-  PLANNING_LOG << "updated target_point_in_slot_ x:" << target_point_in_slot_.x
-      << ", y:" << target_point_in_slot_.y
-      << ", theta:" << target_point_in_slot_.theta << std::endl;
+    PLANNING_LOG << "updated target_point_in_slot_ x:"
+        << target_point_in_slot_.x << ", y:" << target_point_in_slot_.y
+        << ", theta:" << target_point_in_slot_.theta << std::endl;
   }
+
+  bool IsSelectedSlotValid(framework::Frame* const frame) const;
 
  private:
   ParallelInGeometryPlan geometry_planning_;
@@ -156,6 +161,11 @@ class ParallelInTrajectoryGenerator {
   uint64_t standstill_time_ = 0;
   uint64_t last_time_ = 0;
   uint64_t pos_unchanged_cnt_ = 0;
+
+  bool is_rough_calc_ = false;
+
+  ::FuncStateMachine::FunctionalState current_state_ =
+        ::FuncStateMachine::FunctionalState::INIT;
 };
 
 } // namespace apa_planner

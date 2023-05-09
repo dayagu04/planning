@@ -1,11 +1,16 @@
 #include "apa_planner/common/apa_utils.h"
 
 #include "apa_planner/common/apa_cos_sin.h"
+#include "apa_planner/common/planning_log_helper.h"
+#include "func_state_machine.pb.h"
 
 namespace planning {
 
+using framework::Frame;
 using planning::planning_math::Polygon2d;
 using planning::planning_math::Vec2d;
+using ::FuncStateMachine::FuncStateMachine;
+using ::FuncStateMachine::FunctionalState;
 
 Polygon2d ConstructVehiclePolygon(
     const PlanningPoint &rear_center, const double half_width,
@@ -59,6 +64,87 @@ Polygon2d ConstructVehiclePolygon(
       rear_center.x - dx6 + dx3, rear_center.y - dy6 - dy3);
 
   return Polygon2d(points);
+}
+
+bool IsSlotSelected(Frame* const frame) {
+  const auto& func_state_machine = frame->session()->environmental_model().\
+      get_local_view().function_state_machine_info;
+
+  if (!func_state_machine.has_current_state()) {
+    PLANNING_LOG << "func_state_machine is invalid" << std::endl;
+    return false;
+  }
+
+  if (func_state_machine.current_state()
+          == FunctionalState::PARK_IN_READY
+      || func_state_machine.current_state()
+          == FunctionalState::PARK_IN_ACTIVATE_WAIT
+      || func_state_machine.current_state()
+          == FunctionalState::PARK_IN_ACTIVATE_CONTROL
+      || func_state_machine.current_state()
+          == FunctionalState::PARK_IN_SUSPEND_ACTIVATE
+      || func_state_machine.current_state()
+          == FunctionalState::PARK_IN_SUSPEND_CLOSE
+      || func_state_machine.current_state()
+          == FunctionalState::PARK_IN_SECURE) {
+    return true;
+  }
+
+  return false;
+}
+
+bool IsRoughCalc(Frame* const frame) {
+  const auto& func_state_machine = frame->session()->environmental_model().\
+      get_local_view().function_state_machine_info;
+
+  if (!func_state_machine.has_current_state()) {
+    PLANNING_LOG << "func_state_machine is invalid" << std::endl;
+    return false;
+  }
+
+  if (func_state_machine.current_state()
+          == FunctionalState::PARK_IN_SEARCHING
+      || func_state_machine.current_state()
+          == FunctionalState::PARK_IN_NO_READY
+      || func_state_machine.current_state()
+          == FunctionalState::PARK_IN_READY
+      || func_state_machine.current_state()
+          == FunctionalState::PARK_IN_ACTIVATE_WAIT) {
+    return true;
+  }
+
+  return false;
+}
+
+bool IsReplanEachFrame(const FuncStateMachine& func_state_machine) {
+  if (!func_state_machine.has_current_state()) {
+    PLANNING_LOG << "func_state_machine is invalid" << std::endl;
+    return false;
+  }
+
+  if (func_state_machine.current_state()
+          == FunctionalState::PARK_IN_SEARCHING
+      || func_state_machine.current_state()
+          == FunctionalState::PARK_IN_NO_READY
+      || func_state_machine.current_state()
+          == FunctionalState::PARK_IN_READY
+      || func_state_machine.current_state()
+          == FunctionalState::PARK_IN_ACTIVATE_WAIT) {
+    return true;
+  }
+
+  return false;
+}
+
+bool IsReplanNecessary(const FuncStateMachine& func_state_machine) {
+  if (!func_state_machine.has_current_state()) {
+    PLANNING_LOG << "func_state_machine is invalid" << std::endl;
+    return false;
+  }
+
+  return IsReplanEachFrame(func_state_machine)
+      || func_state_machine.current_state()
+          == FunctionalState::PARK_IN_ACTIVATE_CONTROL;
 }
 
 } // namespace  planning
