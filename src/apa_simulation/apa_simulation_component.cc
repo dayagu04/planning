@@ -2,11 +2,19 @@
 
 #include <cmath>
 #include <string.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #include "common/apa_sim_log_helper.h"
 #include "common/utils/file.h"
 
 namespace planning {
+
+ApaSimulationComponent::~ApaSimulationComponent() {
+  if (key_input_thread_ && key_input_thread_->joinable()) {
+    key_input_thread_->join();
+  }
+}
 
 bool ApaSimulationComponent::Init() {
   APA_SIM_LOG << "The apa simulation component init!!!" << std::endl;
@@ -42,20 +50,23 @@ bool ApaSimulationComponent::Init() {
       simulation_node_->CreateWriter<FuncStateMachine>(
         "/iflytek/system_state/soc_state");
 
+  key_input_thread_ =
+      std::make_shared<std::thread>(&ApaSimulationComponent::GetKeyInput, this);
+
   return true;
 }
 
 bool ApaSimulationComponent::Proc() {
-  APA_SIM_LOG << "=======Apa simulation component running=======" << std::endl;
+  // APA_SIM_LOG << "=======Apa simulation component running=======" << std::endl;
   uint64_t start_time = IflyTime::Now_ms();
-  APA_SIM_LOG << "start time(ms):" << start_time << std::endl;
+  // APA_SIM_LOG << "start time(ms):" << start_time << std::endl;
 
   MockParkingFusionInfo();
   MockLocalizationAndVehicleService();
   MockFuncStateMachine();
 
   const uint64_t simulation_cost_time = IflyTime::Now_ms() - start_time;
-  APA_SIM_LOG << "time cost(ms):" << simulation_cost_time << std::endl;
+  // APA_SIM_LOG << "time cost(ms):" << simulation_cost_time << std::endl;
 
   return true;
 }
@@ -125,9 +136,67 @@ void ApaSimulationComponent::MockParkingFusionInfo() {
   parking_fusion_info_writer_->Write(apa_sim_config_.parking_fusion_info());
 }
 
+void ApaSimulationComponent::GetKeyInput() {
+  while (true) {
+    char key_input = 0;
+    std::cin >> key_input;
+    if (key_input == 27) {
+      break;
+    }
+
+    FunctionalState func_state = FunctionalState::INIT;
+    switch (key_input) {
+      case '1':
+        func_state = FunctionalState::PARK_IN_SEARCHING;
+        break;
+      case '2':
+        func_state = FunctionalState::PARK_IN_NO_READY;
+        break;
+      case '3':
+        func_state = FunctionalState::PARK_IN_READY;
+        break;
+      case '4':
+        func_state = FunctionalState::PARK_IN_ACTIVATE_WAIT;
+        break;
+      case '5':
+        func_state = FunctionalState::PARK_IN_ACTIVATE_CONTROL;
+        break;
+      case '6':
+        func_state = FunctionalState::PARK_IN_SUSPEND_ACTIVATE;
+        break;
+      case '7':
+        func_state = FunctionalState::PARK_IN_SUSPEND_CLOSE;
+        break;
+      case '8':
+        func_state = FunctionalState::PARK_IN_SECURE;
+        break;
+      case '9':
+        func_state = FunctionalState::PARK_IN_COMPLETED;
+        break;
+      default:
+        break;
+    }
+
+    {
+      std::lock_guard<std::mutex> lock(func_state_mutex_);
+      func_state_ = func_state;
+    }
+    // std::cout << "func_state_:" << func_state_ << std::endl;
+    usleep(100000);
+  }
+}
+
 void ApaSimulationComponent::MockFuncStateMachine() {
   // mock parking fusion
-  func_state_machine_writer_->Write(apa_sim_config_.func_state_machine());
+  auto func_state_machine = apa_sim_config_.func_state_machine();
+
+  FunctionalState func_state = FunctionalState::INIT;
+  {
+    std::lock_guard<std::mutex> lock(func_state_mutex_);
+    func_state = func_state_;
+  }
+  func_state_machine.set_current_state(func_state);
+  func_state_machine_writer_->Write(func_state_machine);
 }
 
 }  // namespace planning

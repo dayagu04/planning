@@ -22,9 +22,7 @@ file(GLOB_RECURSE SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/common/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/framework/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/modules/*.cc
-  ${CMAKE_CURRENT_LIST_DIR}/modules/*.cpp
-  ${CMAKE_CURRENT_LIST_DIR}/apa_simulation/*.cc
-  ${CMAKE_CURRENT_LIST_DIR}/apa_simulation/*.cpp)
+  ${CMAKE_CURRENT_LIST_DIR}/modules/*.cpp)
 
 file(GLOB_RECURSE APA_SIMULATION_SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/apa_simulation/*.cc

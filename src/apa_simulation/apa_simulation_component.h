@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mutex>
+#include <atomic>
 
 #include "apa_simulation_config.pb.h"
 #include "localization.pb.h"
@@ -17,6 +18,7 @@
 namespace planning {
 
 using ::FuncStateMachine::FuncStateMachine;
+using ::FuncStateMachine::FunctionalState;
 using autoplt::ADSNode;
 using LocalizationOutput::LocalizationEstimate;
 using ParkingFusion::ParkingFusionInfo;
@@ -27,7 +29,7 @@ class ApaSimulationComponent final : public autoplt::ADSTimerCoponent {
  public:
   ApaSimulationComponent() = default;
 
-  ~ApaSimulationComponent() = default;
+  ~ApaSimulationComponent();
 
   bool Init() override;
   bool Proc() override;
@@ -36,9 +38,11 @@ class ApaSimulationComponent final : public autoplt::ADSTimerCoponent {
   void MockParkingFusionInfo();
   void MockLocalizationAndVehicleService();
   void MockFuncStateMachine();
+  void GetKeyInput();
 
  private:
   std::mutex msg_mutex_;
+  std::mutex func_state_mutex_;
 
   ApaSimulationConfig apa_sim_config_;
 
@@ -66,6 +70,9 @@ class ApaSimulationComponent final : public autoplt::ADSTimerCoponent {
   double last_ego_y_ = 0.0;
   double last_ego_theta_ = 0.0;
   double last_ego_spd_ = 0.0;
+
+  FunctionalState func_state_ = FunctionalState::INIT;
+  std::shared_ptr<std::thread> key_input_thread_;
 };
 
 // register planning component
