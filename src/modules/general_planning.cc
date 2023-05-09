@@ -9,6 +9,7 @@
 #ifdef CYBER_ENV
 #include "autoplt/include/ADSTime.h"
 #endif
+#include "apa_planner/common/planning_log_helper.h"
 #include "common/config_context.h"
 #include "context/environmental_model.h"
 
@@ -42,6 +43,13 @@ bool GeneralPlanning::RunOnce(
   EnvironmentalModel *environmental_model =
       session_.mutable_environmental_model();
   environmental_model->feed_local_view(local_view);  // todo
+
+  // for apa planner test
+  scheduler_.RunOnce();
+  *planning_output = session_.planning_output_context()\
+      .planning_status().planning_result.planning_output;
+  return true;
+
   auto pre_planning_status = session_.mutable_planning_output_context()
                                  ->mutable_prev_planning_status();
   *pre_planning_status =
@@ -61,7 +69,7 @@ bool GeneralPlanning::RunOnce(
   }
 
   // 开始执行规划部分
-  scheduler_.RunOnce();
+  // scheduler_.RunOnce();
 
   bool planning_success = session_.planning_context().planning_success();
 

@@ -52,9 +52,9 @@ bool Scheduler::InitModuleList(Session *session) {
   // TODO read module list from config file
   std::vector<const char *> module_names{
       "planning.modules.EnvironmentalModelModule",
-      "planning.modules.GeneralPlannerModule",
+      // "planning.modules.GeneralPlanningModule",
       // "planning.modules.CandidatesRunner",
-      // "planning.modules.ApaPlanningModule"
+      "planning.modules.ApaPlanningModule"
   };
 
   // init modules
