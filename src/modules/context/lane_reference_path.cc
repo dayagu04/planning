@@ -17,10 +17,12 @@ LaneReferencePath::LaneReferencePath(int target_lane_virtual_id) : ReferencePath
 }
 
 void LaneReferencePath::update(planning::framework::Session *session) {
+  LOG_DEBUG("update LaneReferencePath\n");
   session_ = session;
   // Step 1) import reference_path pointer to virtual_lane
   auto virtual_lane = session->mutable_environmental_model()->mutable_virtual_lane_manager()
                                         ->mutable_lane_with_virtual_id(lane_virtual_id_);
+  std::cout<< "get id " << lane_virtual_id_ <<std::endl;
   virtual_lane->update_reference_path(shared_from_this());
 
   // Step 2) get reference_points

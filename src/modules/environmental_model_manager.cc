@@ -74,6 +74,7 @@ void EnvironmentalModelManager::InitContext() {
 }
 
 bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
+  LOG_DEBUG("EnvironmentalModelManager run\n");
   frame_ = frame;
 
   auto current_time = IflyTime::Now_ms();
@@ -86,6 +87,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
 
   // Step 2) update ego_state
   if (!ego_state_update(current_time, local_view)) {
+    LOG_ERROR("ego_state_update false\n");
     return false;
   }
   // auto end_time = IflyTime::Now_ms();

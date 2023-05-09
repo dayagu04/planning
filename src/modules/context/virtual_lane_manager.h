@@ -52,9 +52,12 @@ class VirtualLaneManager {
   }
   std::shared_ptr<VirtualLane> mutable_lane_with_virtual_id(int virtual_id) {
     if (virtual_id_mapped_lane_.find(virtual_id) != virtual_id_mapped_lane_.end()) {
+      LOG_DEBUG("get mutable lane virtual %d id\n", virtual_id);
       return virtual_id_mapped_lane_[virtual_id];
-    }
+    } else {
+    LOG_DEBUG("mutable lane virtual %d id is null\n", virtual_id);
     return nullptr;
+  }
   }
   std::vector<std::shared_ptr<VirtualLane>>& get_virtual_lanes() { return relative_id_lanes_; }
   uint get_lane_num() const { return relative_id_lanes_.size(); };

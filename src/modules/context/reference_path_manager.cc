@@ -46,7 +46,7 @@ void ReferencePathManager::update() {
   auto &current_lane = virtual_lane_manager->get_current_lane();
   auto &left_lane = virtual_lane_manager->get_left_lane();
   auto &right_lane = virtual_lane_manager->get_right_lane();
-
+  assert(current_lane != nullptr);
   auto lane_virtual_id = current_lane->get_virtual_id();
   get_reference_path_by_lane(lane_virtual_id, true);
   LOG_DEBUG("--------- for lane_virtual_id: update %d\n", lane_virtual_id);
