@@ -134,8 +134,8 @@ void GeneralLateralDecider::construct_lane_and_boundary_bounds(
     MapObstaclePositionDecision map_obstacle_decision;
 
     map_obstacle_decision.tp.t = i * delta_t_;
-    map_obstacle_decision.tp.s = refpath_points[i].frenet_point.x;
-    map_obstacle_decision.tp.l = refpath_points[i].frenet_point.y;
+    map_obstacle_decision.tp.s = refpath_points[i].path_point.s;
+    map_obstacle_decision.tp.l = 0.0;
 
     const auto &left_lane_distance =
         refpath_points[i].distance_to_left_lane_border;
@@ -228,8 +228,8 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
       config_.care_obj_lat_distance_threshold;
   const auto &care_object_lon_distance_threshold =
       config_.care_obj_lon_distance_threshold;
-  const auto &ego_cur_s = refpath_points.front().frenet_point.x;
-  const auto &ego_cur_l = refpath_points.front().frenet_point.y;
+  const auto &ego_cur_s = refpath_points.front().path_point.s;
+  const auto &ego_cur_l = 0.0;
   const auto &ego_velocity = cruise_vel_;
 
   auto safe_center_distance =
@@ -322,8 +322,8 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
       continue;
     }
 
-    const auto &ego_s = refpath_pt.frenet_point.x;
-    const auto &ego_l = refpath_pt.frenet_point.y;
+    const auto &ego_s = refpath_pt.path_point.s;
+    const auto &ego_l = 0.0;
     double rear_axle_to_front_bumper =
         vehicle_param.length - vehicle_param.back_edge_to_rear_axis;
     double care_area_s_buffer =
@@ -521,7 +521,7 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
         double converge_coeff = std::min(
             1.0, std::pow(config_.lateral_bound_converge_speed * t, 2));
         safe_bound.upper = planning::planning_math::lerp(
-            ego_l, 0, safe_bound.upper, 1.0, converge_coeff);
+            ego_l, 0.0, safe_bound.upper, 1.0, converge_coeff);
         safe_bound.upper =
             std::min(safe_bound.upper,
                      path_bound.upper - config_.min_obstacle_avoid_distance);
@@ -739,7 +739,7 @@ void GeneralLateralDecider::generate_lat_reference_traj(
     Point2D cart_point;
     const auto &ref_point = refpath_points[i];
     if (reference_path_ptr_->get_frenet_coord()->FrenetCoord2CartCoord(
-            Point2D{ref_point.frenet_point.x, ref_point.frenet_point.y},
+            Point2D{ref_point.path_point.s, 0.0},
             cart_point) != TRANSFORM_STATUS::TRANSFORM_FAILED) {
       enu_ref_path[i].first = cart_point.x;
       enu_ref_path[i].second = cart_point.y;
