@@ -36,7 +36,10 @@ void Scheduler::RunOnce() {
   for (auto &module_ptr : module_list_) {
     PlanningModule *p = dynamic_cast<PlanningModule *>(module_ptr);
     if (p != nullptr) {
-      p->compute(&frame);
+      if (p->compute(&frame) != true) {
+        LOG_DEBUG("%s compute failed \n",p->name().c_str());
+        break;
+      };
     }
   }
   // frame is destroyed here
@@ -49,7 +52,7 @@ bool Scheduler::InitModuleList(Session *session) {
   // TODO read module list from config file
   std::vector<const char *> module_names{
       "planning.modules.EnvironmentalModelModule",
-      "planning.modules.GeneralPlanningModule",
+      "planning.modules.GeneralPlannerModule",
       // "planning.modules.CandidatesRunner",
       // "planning.modules.ApaPlanningModule"
   };

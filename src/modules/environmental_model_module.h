@@ -19,7 +19,7 @@ class EnvironmentalModelModule : public planning::framework::PlanningModule {
 
   bool reset(const ::google::protobuf::Message* config) override;
 
-  void compute(planning::framework::Frame* frame) override;
+  bool compute(planning::framework::Frame* frame) override;
 
  private:
   planning::planner::EnvironmentalModelManager environmental_model_manager_;

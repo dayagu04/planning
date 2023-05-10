@@ -87,24 +87,23 @@ double ObjectSelector::get_vrel_close(int side, int status) {
       fvf_drel_confident = lead_cars.temp_lead_one->d_rel + 30;
     }
   }
-
-  int clane_leadone_id = clane->get_reference_path()->get_lane_leadone_obstacle();
-  int llane_leadone_id = llane->get_reference_path()->get_lane_leadone_obstacle();
-  int rlane_leadone_id = rlane->get_reference_path()->get_lane_leadone_obstacle();
-
+  
   for (TrackedObject obstacle : lateral_obstacle->front_tracks()) {
     auto &obj_tmp = obstacle;
     if (side == 0) {
+      int clane_leadone_id = clane->get_reference_path()->get_lane_leadone_obstacle();
       if (obj_tmp.track_id == clane_leadone_id) {
         front_tracks.push_back(obj_tmp);
         break;
       }
     } else if (side == -1) {
+      int llane_leadone_id = llane->get_reference_path()->get_lane_leadone_obstacle();
       if (obj_tmp.track_id == llane_leadone_id) {
         front_tracks.push_back(obj_tmp);
         break;
       }
     } else if (side == 1) {
+      int rlane_leadone_id = rlane->get_reference_path()->get_lane_leadone_obstacle();
       if (obj_tmp.track_id == rlane_leadone_id) {
         front_tracks.push_back(obj_tmp);
         break;

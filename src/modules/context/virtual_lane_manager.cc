@@ -68,7 +68,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   return true;
 }
 
-const std::shared_ptr<VirtualLane> &VirtualLaneManager::get_lane_with_virtual_id(int virtual_id) const{
+const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(int virtual_id) const{
   if (virtual_id_mapped_lane_.find(virtual_id) != virtual_id_mapped_lane_.end()) {
     LOG_DEBUG("get lane virtual %d id\n", virtual_id);
     return virtual_id_mapped_lane_[virtual_id];
@@ -157,6 +157,8 @@ LaneChangeStatus VirtualLaneManager::is_lane_change() {
     }
     last_left_diff_ = left_diff;
     last_right_diff_ = right_diff;
+    std::cout<<"last_left_C0: " << last_left_C0 << " left_C0: " << left_C0 << " left_diff: " << left_diff << " last_right_C0: " << last_right_C0 << " right_C0: " << right_C0 << " right_diff: " << right_diff << " last_left_diff_: " << last_left_diff_ << " change_status: " << change_status << std::endl;
+
   } else {
     last_left_diff_ = 0;
     last_right_diff_ = 0;

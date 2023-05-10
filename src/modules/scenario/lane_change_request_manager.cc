@@ -109,8 +109,7 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
     // MDEBUG_JSON_ADD_ITEM(request_shape, ">>>>>>>>", LaneChangeRequestManager)
   }
-  if (virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_) !=
-      nullptr) {
+  if (virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)) {
     int target_lane_order_id =
         virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)
             ->get_order_id();

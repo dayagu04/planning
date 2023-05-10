@@ -12,7 +12,7 @@ class ApaPlanningModule : public framework::PlanningModule {
   ApaPlanningModule();
   ~ApaPlanningModule() = default;
 
-  void compute(framework::Frame* frame) override;
+  bool compute(framework::Frame* frame) override;
 
   planning::framework::BaseModule* clone() const override;
 

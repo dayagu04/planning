@@ -62,7 +62,7 @@ class ModuleConfig : public BaseModule {
 class PlanningModule : public ModuleConfig {
  public:
   // const current cannot be done
-  virtual void compute(Frame* frame) = 0;
+  virtual bool compute(Frame* frame) = 0;
 };
 
 /**
@@ -72,7 +72,7 @@ class PlanningModule : public ModuleConfig {
 class CandidatePlanningModule : public ModuleConfig {
  public:
   // const current cannot be done
-  virtual void compute() = 0;
+  virtual bool compute() = 0;
 };
 
 class ModuleFactory {

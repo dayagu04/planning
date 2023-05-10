@@ -73,8 +73,8 @@ class VirtualLane {
     //assert(reference_path != nullptr);
     if (reference_path == nullptr)
       std::cout<<"reference_path is null"<<std::endl;
-    printf("reference_path_:%p\n",reference_path_);
-    printf("reference_path:%p\n",reference_path);
+    // printf("reference_path_:%p\n",reference_path_);
+    // printf("reference_path:%p\n",reference_path);
     reference_path_ = reference_path;
   };
 

@@ -50,9 +50,26 @@ void GeneralPlanner::InitContext() {
   session_->mutable_planning_context()->set_mrc_condition(mrc_condition_);
 }
 
+void GeneralPlanner::UpdateFixLaneVirtualId() {
+  std::shared_ptr<ReferencePathManager> reference_path_mgr =
+      session_->mutable_environmental_model()->get_reference_path_manager();
+  auto state_machine_output = session_->mutable_planning_context()->mutable_lat_behavior_state_machine_output();
+  int flane_virtual_id = state_machine_output.fix_lane_virtual_id;
+  int current_lane_virtual_id = session_->environmental_model().get_virtual_lane_manager()->current_lane_virtual_id();
+  auto fix_reference_path = reference_path_mgr->get_reference_path_by_lane(flane_virtual_id, false);
+  if (fix_reference_path == nullptr) {
+    session_->mutable_planning_context()->mutable_scenario_state_machine()->get_lane_change_lane_manager()->reset_lc_lanes();
+    session_->mutable_planning_context()->mutable_lat_behavior_state_machine_output().fix_lane_virtual_id = current_lane_virtual_id;
+    session_->mutable_planning_context()->mutable_lat_behavior_state_machine_output().origin_lane_virtual_id = current_lane_virtual_id;
+    session_->mutable_planning_context()->mutable_lat_behavior_state_machine_output().target_lane_virtual_id = current_lane_virtual_id;
+         
+  }
+}
+
 bool GeneralPlanner::Run(planning::framework::Frame *frame) {
   frame_ = frame;
   // Step 1) clear info
+  std::cout << "coming general planner !!!" << std::endl;
 
   auto start_time = IflyTime::Now_ms();
   common::PlanningStatus *pnc_status =
@@ -65,9 +82,12 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
   auto updated_time = IflyTime::Now_ms();
   LOG_DEBUG("update time:%f", updated_time - start_time);
 
+  UpdateFixLaneVirtualId();
+
   object_selector_->update(session_->planning_context().lat_behavior_state_machine_output().curr_state,
                            session_->planning_context().scenario_state_machine()->get_start_move_dist_lane(),
                            false, 80., false, false, false, false, false, -1);
+  LOG_DEBUG("object_selector_update end");
 
   // Step 2) update state machine
   (void)scenario_state_machine_->update(frame_);

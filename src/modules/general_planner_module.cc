@@ -66,7 +66,7 @@ bool GeneralPlannerModule::reset(const ::google::protobuf::Message* config) {
   return true;
 }
 
-void GeneralPlannerModule::compute(planning::framework::Frame* frame) {
+bool GeneralPlannerModule::compute(planning::framework::Frame* frame) {
 
   LOG_DEBUG("%s compute\n", name().c_str());
   if (!frame->session()->environmental_model().GetVehicleDbwStatus()) {
@@ -79,7 +79,7 @@ void GeneralPlannerModule::compute(planning::framework::Frame* frame) {
 
   if (!success) {
     LOG_ERROR("%s planning run failed", name().c_str());
-    return;
+    return false;
   }
 
   frame->mutable_session()
@@ -92,6 +92,7 @@ void GeneralPlannerModule::compute(planning::framework::Frame* frame) {
       frame->session()->planning_context().planning_success();
   LOG_DEBUG("%s planning_success = %d\n", name().c_str(),
         frame->session()->planning_context().planning_success());
+  return true;
 }
 
 }  // namespace modules

@@ -15,6 +15,7 @@ ActRequest::ActRequest(
 void ActRequest::Update(int lc_status, double start_move_distolane,
                         double lc_int_tfinish, double lc_map_tfinish,
                         bool accident_ahead, bool not_accident) {
+  std::cout << "coming active lane change request" << std::endl;
   double default_int_delay = 2;
   double default_ma_delay = 1.5;
   double diff_int = IflyTime::Now_s() - lc_int_tfinish;
@@ -90,14 +91,20 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
       current_lane->get_lane_type() == FusionRoad::LaneType::LANE_TYPE_NORMAL;
 
   auto distance_to_merge_point = current_lane->get_lane_merge_split_point()
+                                     .merge_split_point_data_size() > 0 ?
+                                 current_lane->get_lane_merge_split_point()
                                      .merge_split_point_data(0)
-                                     .distance();
+                                     .distance() : 5000.; //hack
   // WB hack: distance_to_y_point计算需要更新
   auto distance_to_y_point = current_lane->get_lane_merge_split_point()
-                                 .merge_split_point_data(0)
-                                 .distance();
+                                     .merge_split_point_data_size() > 0 ?
+                             current_lane->get_lane_merge_split_point()
+                                     .merge_split_point_data(0)
+                                     .distance() : 5000.; //hack
   // 判断分汇流情况目前不完善，TBD
   bool is_nearby_right_merge_point =
+      current_lane->get_lane_merge_split_point()
+              .merge_split_point_data_size() > 0 &&
       current_lane->get_lane_merge_split_point()
               .merge_split_point_data(0)
               .orientation() ==
@@ -115,6 +122,8 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
 
   // WB TBD： 汇流判断目前为hack，需要更新逻辑
   bool is_nearby_right_y_point =
+      current_lane->get_lane_merge_split_point()
+              .merge_split_point_data_size() > 0 &&
       current_lane->get_lane_merge_split_point()
               .merge_split_point_data(0)
               .orientation() ==
@@ -218,6 +227,8 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
       // if (map_info.lanes_y_point_type() == MSD_MERGE_TYPE_MERGE_FROM_RIGHT) {
       // 需要区分 merge_split_point, y_point的差异和类型
       if (current_lane->get_lane_merge_split_point()
+              .merge_split_point_data_size() > 0 &&
+          current_lane->get_lane_merge_split_point()
               .merge_split_point_data(0)
               .orientation() ==
           FusionRoad::LaneOrientation::ORIENTATION_RIGHT) {

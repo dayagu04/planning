@@ -83,6 +83,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   // Step 2) update ehicleDbwStatus
   session_->mutable_environmental_model()->UpdateVehicleDbwStatus(
     local_view.hmi_mcu_inner_info.noa_active_switch());
+  // session_->mutable_environmental_model()->UpdateVehicleDbwStatus(true);
   last_feed_time_[FEED_VEHICLE_DBW_STATUS] = current_time;
 
   // Step 2) update ego_state

@@ -104,6 +104,7 @@ bool LaneReferencePath::get_points_by_lane_id(
     return false;
   }
   auto &lane_points = virtual_lane->lane_points();
+  std::cout << "lane_points.size(): " << lane_points.size() << std::endl;
 
   ref_path_points.clear();
   for (auto &refline_pt : lane_points) {
@@ -136,6 +137,17 @@ bool LaneReferencePath::get_points_by_lane_id(
     ref_path_pt.max_velocity = refline_pt.speed_limit();
     ref_path_pt.type = ReferencePathPointType::MAP;
     ref_path_pt.is_in_intersection = refline_pt.is_in_intersection();
+
+    // check direction
+    if (not ref_path_points.empty()) {
+      const auto &pre_pt = ref_path_points.back();
+      Vec2d delta{ref_path_pt.path_point.x - pre_pt.path_point.x,
+                  ref_path_pt.path_point.y - pre_pt.path_point.y};
+      Vec2d cur_direction = Vec2d::CreateUnitVec2d(ref_path_pt.path_point.theta);
+      if (cur_direction.InnerProd(delta) > 0) {
+        continue; 
+      }
+    }
     ref_path_points.emplace_back(std::move(ref_path_pt));
   }
 

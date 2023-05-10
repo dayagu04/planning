@@ -20,8 +20,10 @@ bool ApaPlanningModule::reset(const ::google::protobuf::Message* config) {
   return true;
 }
 
-void ApaPlanningModule::compute(framework::Frame* frame) {
-  planner_dispatcher_->Update(frame);
+bool ApaPlanningModule::compute(framework::Frame* frame) {
+  bool success = false;
+  success = planner_dispatcher_->Update(frame);
+  return success;
 }
 
 } // namespace modules

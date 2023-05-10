@@ -75,6 +75,8 @@ void FrenetEgoState::update(
   CartesianState cstate;
   cstate.x = planning_init_point_.x;
   cstate.y = planning_init_point_.y;
+//   cstate.x = 10.;
+//   cstate.y = 0.;
   cstate.yaw = planning_init_point_.heading_angle;
   cstate.speed = std::max(planning_init_point_.v, 0.0);
   cstate.acceleration = planning_init_point_.a;

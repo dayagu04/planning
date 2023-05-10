@@ -66,7 +66,7 @@ bool EnvironmentalModelModule::reset(const ::google::protobuf::Message* config) 
   return true;
 }
 
-void EnvironmentalModelModule::compute(planning::framework::Frame* frame) {
+bool EnvironmentalModelModule::compute(planning::framework::Frame* frame) {
   LOG_DEBUG("%s compute\n", name().c_str());
   if (!frame->session()->environmental_model().GetVehicleDbwStatus()) {
     LOG_WARNING("%s DBW_Disable, but continue\n", name().c_str());
@@ -78,8 +78,9 @@ void EnvironmentalModelModule::compute(planning::framework::Frame* frame) {
 
   if (!success) {
     LOG_ERROR("%s planning run failed\n", name().c_str());
-    return;
+    return false;
   }
+  return true;
 
 }
 

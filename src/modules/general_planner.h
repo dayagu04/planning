@@ -23,6 +23,8 @@ class GeneralPlanner {
                          common::PlanningResult &pnc_result);
   void ClearPlanningResult(common::PlanningResult &pnc_result);
 
+  void UpdateFixLaneVirtualId();
+
  private:
   // std::shared_ptr<EnvironmentalModel> environmental_model_ = nullptr;
   // session已包含
