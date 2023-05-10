@@ -32,7 +32,7 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   // Step 3) update
   if (ok) {
     auto current_time = IflyTime::Now_ms(); 
-    update_refpath_points(raw_reference_path_points);
+    update_refpath_points(raw_reference_path_points, false);
     auto end_time = IflyTime::Now_ms();
     LOG_DEBUG("update_refpath_points time:%f\n", end_time - current_time);
     frenet_ego_state_.update(
@@ -132,19 +132,10 @@ bool LaneReferencePath::get_points_by_lane_id(
     ref_path_pt.right_road_border_type = refline_pt.right_road_border_type();
     ref_path_pt.left_lane_border_type = refline_pt.left_lane_border_type();
     ref_path_pt.right_lane_border_type = refline_pt.right_lane_border_type();
+    ref_path_pt.lane_width = refline_pt.lane_width();
+    ref_path_pt.max_velocity = refline_pt.speed_limit();
     ref_path_pt.type = ReferencePathPointType::MAP;
     ref_path_pt.is_in_intersection = refline_pt.is_in_intersection();
-
-    // check direction
-    if (not ref_path_points.empty()) {
-      const auto &pre_pt = ref_path_points.back();
-      Vec2d delta{ref_path_pt.path_point.x - pre_pt.path_point.x,
-                  ref_path_pt.path_point.y - pre_pt.path_point.y};
-      Vec2d cur_direction = Vec2d::CreateUnitVec2d(ref_path_pt.path_point.theta);
-      if (cur_direction.InnerProd(delta) < 0) {
-        continue; 
-      }
-    }
     ref_path_points.emplace_back(std::move(ref_path_pt));
   }
 

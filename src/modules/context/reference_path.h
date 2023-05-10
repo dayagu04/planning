@@ -20,8 +20,6 @@ enum class ReferencePathPointType { MAP, TRAJ, INTERPOLATE };
 
 struct ReferencePathPoint {
   PathPoint path_point;
-  // double curvature;
-  // double yaw;
   double distance_to_left_road_border;
   double distance_to_right_road_border;
   double distance_to_left_lane_border;
@@ -106,8 +104,8 @@ class ReferencePath {
   }
  protected:
   void init();
-  void update_refpath_points(ReferencePathPoints &raw_reference_path_points);
-  void ReferencePath::update_refined_path_points(const ReferencePathPoints &raw_reference_path_points);
+  void update_refpath_points(ReferencePathPoints &raw_reference_path_points, bool is_need_density = false);
+  void densifying_refined_path_points(ReferencePathPoints &refined_ref_path_points);
   bool get_reference_point_by_lon_from_raw_ref_path_points(
       double s, ReferencePathPoint &reference_path_point, const ReferencePathPoints &raw_reference_path_point);
   void discrete(double start, double end, double gap,

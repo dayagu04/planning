@@ -22,6 +22,8 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   for(auto& lane : roads.lanes()) {
     std::shared_ptr<VirtualLane> virtual_lane_tmp = std::make_shared<VirtualLane>();
     virtual_lane_tmp->update_data(lane);
+    printf("lane relative_id:%d, order_id:%d, virtual_id:%d\n", lane.relative_id(),
+    lane.order_id(), lane.virtual_id());
     relative_id_lanes_.emplace_back(virtual_lane_tmp);
   }
 
@@ -46,7 +48,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   //   relative_id_lanes_.emplace_back(virtual_lane_tmp);
   // }
 
-  for (auto relative_id_lane : relative_id_lanes_) {
+    for (auto relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane->get_relative_id() == 0) {
       current_lane_ = relative_id_lane;
       LOG_DEBUG("create current_lane_\n");
