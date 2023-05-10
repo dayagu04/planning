@@ -13,13 +13,14 @@
 #include <vector>
 
 #include "common/math/linear_interpolation.h"
+
+#include "common/math/quintic_poly_2d.h"
 #include "context/environmental_model.h"
 #include "context/frenet_ego_state.h"
 #include "context/obstacle_manager.h"
 #include "scenario/scenario_state_machine.h"
 #include "tasks/task.h"
 #include "tasks/task_basic_types.h"
-
 namespace planning {
 
 // struct LatYieldInfo {
