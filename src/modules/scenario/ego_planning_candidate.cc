@@ -66,10 +66,15 @@ void EgoPlanningCandidate::set_coarse_planning_info(
   TrajectoryPoint point;
   TrajectoryPoints trajectory_points;
   // TODO: 采用配置项
-  const double delta_time = 0.2;
-  const int num_point = 21;  // reference_path.size();
+  const double delta_time = config_.delta_t;
+  const int num_point = config_.num_point;  // reference_path.size();
+  const auto &v_cruise = frame_->session()
+                             ->environmental_model()
+                             .get_ego_state_manager()
+                             ->ego_v_cruise();
+
   for (size_t i = 0; i < num_point; i++) {
-    point.v = i == 0 ? planning_init_point.v : config_.reference_point_velocity;
+    point.v = i == 0 ? planning_init_point.v : v_cruise;
     point.s = planning_init_point.frenet_state.s + delta_time * i * point.v;
     point.l = i == 0 ? planning_init_point.frenet_state.r : 0.;
     point.t = i * delta_time;

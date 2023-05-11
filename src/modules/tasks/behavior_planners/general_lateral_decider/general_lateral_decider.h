@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "common/math/linear_interpolation.h"
-
 #include "common/math/quintic_poly_2d.h"
 #include "context/environmental_model.h"
 #include "context/frenet_ego_state.h"
@@ -80,21 +79,18 @@ class GeneralLateralDecider : public Task {
   // // 1. construct the trajectory of reference and bind the obstacle info on
   // the
   // // traj point
-  bool construct_reference_path_points(ReferencePathPoints &refpath_points);
+  bool construct_reference_path_points(const TrajectoryPoints &traj_points);
 
   // // 2. construct the obstacle decisions
   void construct_lateral_obstacle_decisions(
       // const TrajectoryPoints &traj_points,
-      const ReferencePathPoints &refpath_points,
-      ObstacleDecisions &obstacle_decisions);
+       ObstacleDecisions &obstacle_decisions );
 
   void construct_lateral_obstacle_decision(
-      const ReferencePathPoints &refpath_points,
       const std::shared_ptr<FrenetObstacle> obstacle,
       ObstacleDecision &obstacle_decision);
   // 3. construct the lane and boundary bound
   void construct_lane_and_boundary_bounds(
-      const ReferencePathPoints &refpath_points,
       MapObstacleDecision &map_obstacle_decisions);
 
   // void construct_lat_behavior_output(
@@ -102,7 +98,6 @@ class GeneralLateralDecider : public Task {
   //         &obstacle_decisions);  // output the info for lat motion planner
 
   bool check_obj_nudge_condition(
-      const ReferencePathPoints &refpath_points,
       const std::shared_ptr<FrenetObstacle> &obstacle);
 
   bool check_obj_crossing_condition(
@@ -113,11 +108,9 @@ class GeneralLateralDecider : public Task {
 
   void generate_boundary(const MapObstacleDecision &map_obstacle_decision,
                          const ObstacleDecisions &obstacle_decisions,
-                         const ReferencePathPoints &refpath_points,
                          LatDeciderOutput &lat_decider_output);
 
-  void generate_lat_reference_traj(const ReferencePathPoints &refpath_points,
-                                   LatDeciderOutput &lat_decider_output);
+  void generate_lat_reference_traj(LatDeciderOutput &lat_decider_output);
 
   void handle_lane_change_scene();
 
@@ -128,13 +121,13 @@ class GeneralLateralDecider : public Task {
   planning::framework::Frame *frame_;
   LatDeciderInfo lat_decider_info_;
   LatDeciderOutput lat_decider_output_;
+  TrajectoryPoints ref_traj_points_;
+  ReferencePathPoints ref_path_points_;
   std::vector<std::shared_ptr<FrenetObstacle>> obs_vec_;
   FrenetEgoState ego_frenet_state_;
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;
   std::shared_ptr<ReferencePath> cur_reference_path_ptr_;
   double cruise_vel_;
-  double horizion_num_;
-  double delta_t_;
   bool is_lane_change_scene_;
 };
 

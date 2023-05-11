@@ -126,6 +126,8 @@ struct EgoPlanningCandidateConfig : public EgoPlanningConfig {
   }
 
   double reference_point_velocity = 22.22;  // m/s
+  double delta_t = 0.2;
+  int num_point = 26;
 };
 
 struct LateralObstacleConfig : public EgoPlanningConfig {
@@ -234,6 +236,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double l_offset_limit = 0.1;
   double min_gain_vel = 1.0;
   double lon_rear_car_filter_buffer = 10.;
+  double refine_lat_ref_threshold = 0.5;
+  double delta_t = 0.2;
 };
 
 struct LateralOptimizerConfig : public EgoPlanningConfig {
