@@ -10,6 +10,7 @@
 // #include "core/modules/context/ego_state.h"
 #include "common/math/piecewise_jerk/piecewise_problem.h"
 #include "scc_function/mrc_condition.h"
+#include "debug_info_log.h"
 
 namespace planning {
 
@@ -204,6 +205,12 @@ bool LongitudinalOptimizerV3::optimize(
   // MDEBUG_JSON_ADD_ITEM(a, s_init_state[2], init_state)
   // MDEBUG_JSON_END_DICT(init_state)
 
+  JSON_DEBUG_VALUE("LonMotionOpt_status", status);
+  JSON_DEBUG_VALUE("LonMotionOpt_success", success);
+  JSON_DEBUG_VALUE("LonMotionOpt_init_state_s", s_init_state[0]);
+  JSON_DEBUG_VALUE("LonMotionOpt_init_state_v", s_init_state[1]);
+  JSON_DEBUG_VALUE("LonMotionOpt_init_state_a", s_init_state[2]);
+
   // mdebug
   std::string mdebug_table_name =
       "LongitudinalOptimizeProblem (target_lane_id:" +
@@ -334,9 +341,8 @@ bool LongitudinalOptimizerV3::optimize(
     //   MDEBUG_JSON_ADD_ITEM(s_ref_raw, s_ref_raw - init_s, object)
     //   MDEBUG_JSON_ADD_ITEM(s_lower, s_lower - init_s, object)
     //   MDEBUG_JSON_ADD_ITEM(s_upper, s_upper - init_s, object)
-    //   MDEBUG_JSON_ADD_ITEM(s_lower_bound_info_id, s_lower_bound_info.id,
-    //   object) MDEBUG_JSON_ADD_ITEM(s_upper_bound_info_id,
-    //   s_upper_bound_info.id, object)
+    //   MDEBUG_JSON_ADD_ITEM(s_lower_bound_info_id, s_lower_bound_info.id, object) 
+    //   MDEBUG_JSON_ADD_ITEM(s_upper_bound_info_id, s_upper_bound_info.id, object)
     //   MDEBUG_JSON_ADD_ITEM(s_lower_bound_info_type, s_lower_bound_info.type,
     //                        object)
     //   MDEBUG_JSON_ADD_ITEM(s_upper_bound_info_type, s_upper_bound_info.type,

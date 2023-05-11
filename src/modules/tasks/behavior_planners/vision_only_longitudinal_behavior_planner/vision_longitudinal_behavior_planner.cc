@@ -1,6 +1,7 @@
 #include "vision_longitudinal_behavior_planner.h"
 #include "scenario/scenario_state_machine.h"
 #include "ifly_time.h"
+#include "debug_info_log.h"
 
 namespace planning {
 
@@ -105,6 +106,11 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   a_target_.first = clip(a_target_.first, _A_MIN, _A_MAX);
   a_target_.second = clip(a_target_.second, _A_MIN, _A_MAX);
   v_target_ = clip(v_target_, 0.0, 40.0);
+
+  JSON_DEBUG_VALUE("VisionLonBehavior_a_target_high", a_target_.second);
+  JSON_DEBUG_VALUE("VisionLonBehavior_a_target_low", a_target_.first);
+  JSON_DEBUG_VALUE("VisionLonBehavior_v_target", v_target_);
+
 
   std::cout<<a_target_.first<<"< final a_target_ < "<<a_target_.second<<std::endl;
   std::cout<<"final v_target_ = : "<<v_target_<<std::endl;
@@ -568,6 +574,11 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
     // remove v_coast
     v_target_lead =
         calc_desired_speed(lead_one->d_rel, d_des, lead_one->v_lead);
+    
+    JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_id", lead_one->track_id);
+    JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_dis", lead_one->d_rel);
+    JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_vel", lead_one->v_lead);
+
     // leadtwo
     if (lead_two != nullptr && lead_two->type != 0) {
       LOG_DEBUG("target_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
@@ -579,6 +590,10 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
       d_des_2 += 7.0;
       v_target_lead_2 =
           calc_desired_speed(lead_two->d_rel, d_des_2, lead_two->v_lead);
+
+      JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_id", lead_two->track_id);
+      JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_dis", lead_two->d_rel);
+      JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_vel", lead_two->v_lead);
     }
     // listen to lead that makes you go slower
     if ((v_target_lead_2 < v_target_lead) && (lead_two != nullptr)) {
@@ -601,12 +616,16 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
     v_target_ = std::min(v_target_, v_target_lead);
 
     LOG_DEBUG("desire_des : [%f] , v_target_ : [%f] \n", d_des, v_target_);
+    
   } else {
     a_target.first = 0.0;
     a_target.second = 0.0;
   }
 
   // debug info
+  JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_one", v_target_lead);
+  JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_two", v_target_lead_2);
+
   auto &highway_longitudinal_output =
             frame_->mutable_session()->mutable_planning_context()->mutable_vision_longitudinal_behavior_planner_output();
   highway_longitudinal_output.v_target_lead_one = v_target_lead;

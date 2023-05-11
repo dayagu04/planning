@@ -42,7 +42,7 @@ class DebugInfoJson : public planning::common::Arena {
 
 #define JSON_DEBUG_VECTOR(var_name, var_value, keep_length) \
   (*DebugInfoJson::GetInstance().GetDebugJson())[var_name] =  \
-      mjson::Json(pnc::log::Utils::vec_to_char_array(var_value, keep_length));
+      mjson::Json(Utils::vec_to_char_array(var_value, keep_length));
 
 #define JSON_READ_VALUE(var_name, type, json_name) \
   var_name = config.get<type>(json_name, false, var_name)
