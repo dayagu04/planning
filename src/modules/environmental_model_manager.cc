@@ -582,7 +582,7 @@ bool EnvironmentalModelManager::InputReady(double current_time, std::string &err
     };
   };
 
-  static const double kCheckTimeDiff = 2.0;
+  static const double kCheckTimeDiff = 2000.0;
 
   error_msg.clear();
 

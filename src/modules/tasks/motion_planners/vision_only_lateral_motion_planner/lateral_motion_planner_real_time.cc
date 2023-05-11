@@ -2396,6 +2396,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
   } else {
     lat_offset_ = lat_offset;
   }
+  LOG_DEBUG("vision_only_lateral_motion_palnner:: lat_offset_[%f], d_poly_[3][%f]", lat_offset_, d_poly_[3]);
 }
 
 bool VisionLateralMotionPlanner::update_planner_output() {

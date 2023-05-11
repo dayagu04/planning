@@ -156,7 +156,7 @@ double VirtualLane::width(double x) {
       if (p_first_point == virtual_lane_refline_points.begin()) {
         width = virtual_lane_refline_points.begin()->lane_width();
       } else if (p_first_point == virtual_lane_refline_points.end()) {
-        width = virtual_lane_refline_points.end()->lane_width();
+        width = std::prev(virtual_lane_refline_points.end())->lane_width();
       } else  {
         width = planning_math::lerp((p_first_point - 1)->lane_width(), (p_first_point - 1)->car_point().x(),
               p_first_point->lane_width(), p_first_point->car_point().x(), x);

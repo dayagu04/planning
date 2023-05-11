@@ -52,7 +52,7 @@ bool PlanningComponent::Init() {
   // -------------- reader topics --------------
   auto fusion_objects_reader_ =
       planning_node_->CreateReader<FusionObjects::FusionObjectsInfo>(
-          "/iflytek/fusion/fusion_object",
+          "/iflytek/fusion/objects",
           [this](const std::shared_ptr<FusionObjects::FusionObjectsInfo>
                      &fusion_objects_info_msg) {
             std::cout << "receive fusion fusion_objects_info "

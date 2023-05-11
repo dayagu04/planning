@@ -56,12 +56,12 @@ double ObjectSelector::get_vrel_close(int side, int status) {
       session_->mutable_environmental_model()->get_reference_path_manager();
   auto fix_reference_path = reference_path_mgr->get_reference_path_by_lane(flane_virtual_id);
   auto frenet_ego_state = fix_reference_path->get_frenet_ego_state();
-  auto &flane = virtual_lane_mgr->get_lane_with_virtual_id(flane_virtual_id);
-  auto &olane = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id);
-  auto &tlane = virtual_lane_mgr->get_lane_with_virtual_id(tlane_virtual_id);
-  auto &clane = virtual_lane_mgr->get_current_lane();
-  auto &llane = virtual_lane_mgr->get_left_lane();
-  auto &rlane = virtual_lane_mgr->get_right_lane();
+  auto flane = virtual_lane_mgr->get_lane_with_virtual_id(flane_virtual_id);
+  auto olane = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id);
+  auto tlane = virtual_lane_mgr->get_lane_with_virtual_id(tlane_virtual_id);
+  auto clane = virtual_lane_mgr->get_current_lane();
+  auto llane = virtual_lane_mgr->get_left_lane();
+  auto rlane = virtual_lane_mgr->get_right_lane();
 
   auto &lead_cars = lateral_obstacle->get_lead_cars();
 
@@ -96,13 +96,13 @@ double ObjectSelector::get_vrel_close(int side, int status) {
         front_tracks.push_back(obj_tmp);
         break;
       }
-    } else if (side == -1) {
+    } else if (side == -1 && llane != nullptr) {
       int llane_leadone_id = llane->get_reference_path()->get_lane_leadone_obstacle();
       if (obj_tmp.track_id == llane_leadone_id) {
         front_tracks.push_back(obj_tmp);
         break;
       }
-    } else if (side == 1) {
+    } else if (side == 1 && rlane != nullptr) {
       int rlane_leadone_id = rlane->get_reference_path()->get_lane_leadone_obstacle();
       if (obj_tmp.track_id == rlane_leadone_id) {
         front_tracks.push_back(obj_tmp);
@@ -141,9 +141,9 @@ bool ObjectSelector::in_alc_status(int status, double start_move_distolane) {
       session_->mutable_environmental_model()->get_reference_path_manager();
   auto fix_reference_path = reference_path_mgr->get_reference_path_by_lane(flane_virtual_id);
   auto frenet_ego_state = fix_reference_path->get_frenet_ego_state();
-  auto &flane = virtual_lane_mgr->get_lane_with_virtual_id(flane_virtual_id);
-  auto &olane = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id);
-  auto &tlane = virtual_lane_mgr->get_lane_with_virtual_id(tlane_virtual_id);
+  auto flane = virtual_lane_mgr->get_lane_with_virtual_id(flane_virtual_id);
+  auto olane = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id);
+  auto tlane = virtual_lane_mgr->get_lane_with_virtual_id(tlane_virtual_id);
 
   double olane_width = flane->width();
   double v_ego = ego_state->ego_v();
@@ -218,12 +218,12 @@ void ObjectSelector::update(int status, double start_move_distolane,
       session_->mutable_environmental_model()->get_reference_path_manager();
   auto fix_reference_path = reference_path_mgr->get_reference_path_by_lane(flane_virtual_id);
   auto frenet_ego_state = fix_reference_path->get_frenet_ego_state();
-  auto &flane = virtual_lane_mgr->get_lane_with_virtual_id(flane_virtual_id);
-  auto &olane = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id);
-  auto &tlane = virtual_lane_mgr->get_lane_with_virtual_id(tlane_virtual_id);
-  auto &clane = virtual_lane_mgr->get_current_lane();
-  auto &llane = virtual_lane_mgr->get_left_lane();
-  auto &rlane = virtual_lane_mgr->get_right_lane();
+  auto flane = virtual_lane_mgr->get_lane_with_virtual_id(flane_virtual_id);
+  auto olane = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id);
+  auto tlane = virtual_lane_mgr->get_lane_with_virtual_id(tlane_virtual_id);
+  auto clane = virtual_lane_mgr->get_current_lane();
+  auto llane = virtual_lane_mgr->get_left_lane();
+  auto rlane = virtual_lane_mgr->get_right_lane();
   bool is_on_highway = session_->environmental_model().is_on_highway();
 
   int request_source = state_machine_output.lc_request_source;

@@ -78,7 +78,7 @@ const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(
   }
 }
 
-const std::shared_ptr<VirtualLane> &VirtualLaneManager::get_lane_with_order_id(uint order_id) const{
+const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_order_id(uint order_id) const{
   if (order_id > relative_id_lanes_.size() -1) {
     return nullptr;
   }
