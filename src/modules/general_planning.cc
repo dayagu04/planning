@@ -110,6 +110,7 @@ void GeneralPlanning::FillPlanningTrajectory(
 
   // 2.Trajectory
   auto trajectory = planning_output->mutable_trajectory();
+  trajectory->set_available(true);
   if (hdmap_valid_) {
     trajectory->set_trajectory_type(
         Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
@@ -154,21 +155,50 @@ void GeneralPlanning::FillPlanningTrajectory(
   auto turn_signal = planning_output->mutable_turn_signal_command();
   turn_signal->set_available(true);
   if (planning_result.turn_signal == NO_CHANGE) {
-    turn_signal->set_turn_signal_value(Common::TurnSignalType::TURN_SIGNAL_TYPE_NONE);
+    turn_signal->set_turn_signal_value(
+        Common::TurnSignalType::TURN_SIGNAL_TYPE_NONE);
   } else if (planning_result.turn_signal == LEFT_CHANGE) {
-    turn_signal->set_turn_signal_value(Common::TurnSignalType::TURN_SIGNAL_TYPE_LEFT);
+    turn_signal->set_turn_signal_value(
+        Common::TurnSignalType::TURN_SIGNAL_TYPE_LEFT);
   } else {
-    turn_signal->set_turn_signal_value(Common::TurnSignalType::TURN_SIGNAL_TYPE_RIGHT);
+    turn_signal->set_turn_signal_value(
+        Common::TurnSignalType::TURN_SIGNAL_TYPE_RIGHT);
   }
+  // WB start:--------临时hack以下信号--------
   // 4.Light signal
+  auto light_signal = planning_output->mutable_light_signal_command();
+  light_signal->set_available(true);
+  light_signal->set_light_signal_value(
+      Common::LightSignalType::LIGHT_SIGNAL_TYPE_NONE);
 
   // 5.Horn signal
+  auto horn_signal_command = planning_output->mutable_horn_signal_command();
+  horn_signal_command->set_available(true);
+  horn_signal_command->set_horn_signal_value(
+      Common::HornSignalType::HORN_SIGNAL_TYPE_NONE);
 
   // 6.Gear signal
+  auto gear_command = planning_output->mutable_gear_command();
+  gear_command->set_available(true);
+  // 需要获取目标挡位值
+  auto gear = Common::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE;
+  gear_command->set_gear_command_value(gear);
 
   // 7.Open loop steering command
+  auto open_loop_steering_command =
+      planning_output->mutable_open_loop_steering_command();
+  open_loop_steering_command->set_available(true);
+  open_loop_steering_command->set_jerk_factor(70.0);  // hack
+  open_loop_steering_command->set_need_steering_wheel_stationary(false);
+  open_loop_steering_command->set_steering_wheel_rad_limit(0.1);
 
   // 8.Planning status
+  auto planning_status = planning_output->mutable_planning_status();
+  planning_status->set_standstill(false);
+  planning_status->set_ready_to_go(true);
+  planning_status->set_apa_planning_status(
+      PlanningOutput::ApaPlanningStatus::NONE);
+  // WB end:--------临时hack以上信号--------
 }
 
 void GeneralPlanning::GenerateStopTrajectory(
