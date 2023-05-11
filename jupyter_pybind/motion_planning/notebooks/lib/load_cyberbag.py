@@ -14,7 +14,7 @@ class CyberBagLoader:
         except OSError:
             print(f'Error: File {bagfile} does not exist.')
             self.record = None
-
+    # 1.加载自车运动状态信息:
     def load_ego_motion(self):
         if self.record is None:
             print('Error: Record object is not initialized.')
@@ -28,4 +28,43 @@ class CyberBagLoader:
             print(f'Error: Failed to read messages from /ego_motion: {e}')
             return None
         return ego_motion
-    
+
+    # 2.加载自车定位信息:
+    def load_ego_motion(self):
+        if self.record is None:
+            print('Error: Record object is not initialized.')
+            return None
+        ego_motion = {'data':[], 't':[]}
+        try:
+            for message, t in self.bagdata.read_messages('/ego_motion'):
+                ego_motion['data'].append(message)
+                ego_motion['t'].append(t)
+        except Exception as e:
+            print(f'Error: Failed to read messages from /ego_motion: {e}')
+            return None
+        return ego_motion
+
+    # 3.加载融合车道线信息:
+    def load_ego_motion(self):
+        if self.record is None:
+            print('Error: Record object is not initialized.')
+            return None
+        ego_motion = {'data':[], 't':[]}
+        try:
+            for message, t in self.bagdata.read_messages('/ego_motion'):
+                ego_motion['data'].append(message)
+                ego_motion['t'].append(t)
+        except Exception as e:
+            print(f'Error: Failed to read messages from /ego_motion: {e}')
+            return None
+        return ego_motion
+
+    # 4.加载融合障碍物信息:
+
+    # 5.加载mobileye信息:
+
+    # 6.加载control信息:
+
+    # 7.加载planning信息:
+
+    # 7.加载planning debug信息:
