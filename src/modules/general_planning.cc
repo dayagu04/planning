@@ -128,12 +128,35 @@ void GeneralPlanning::FillPlanningTrajectory(
       path_point->set_distance(planning_result.traj_points[i].s);
       path_point->set_jerk(0.0);  // TBD
     }
+    // 设置参考线为default
+    auto target_ref = trajectory->mutable_target_reference();
+    target_ref->add_polynomial(0.0);
+    target_ref->set_target_velocity(0.0);
+    auto acceleration_range_limit =
+        target_ref->mutable_acceleration_range_limit();
+    acceleration_range_limit->set_min_a(-4.0);
+    acceleration_range_limit->set_max_a(4.0);
+
   } else {
     // set vision_only_longitudinal_outputs if hdmpa valid is false
     trajectory->set_trajectory_type(
         Common::TrajectoryType::TRAJECTORY_TYPE_TARGET_REFERENCE);
     trajectory->mutable_trajectory_points()->Clear();
     trajectory->mutable_target_reference()->Clear();
+
+    // 设置轨迹为default
+    {
+      auto path_point = trajectory->add_trajectory_points();
+      path_point->set_x(0.0);
+      path_point->set_y(0.0);
+      path_point->set_heading_yaw(0.0);
+      path_point->set_curvature(0.0);
+      path_point->set_t(0.0);
+      path_point->set_v(0.0);
+      path_point->set_a(0.0);
+      path_point->set_distance(0.0);
+      path_point->set_jerk(0.0);
+    }
 
     auto target_ref = trajectory->mutable_target_reference();
     // add polynomial
