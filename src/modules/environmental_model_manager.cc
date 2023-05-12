@@ -277,15 +277,8 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
 
   if (session_->environmental_model().get_hdmap_valid()) {
     auto linear_velocity_from_wheel = localization_estimate.pose().linear_velocity_from_wheel();
-    vehicle_status.mutable_velocity()->mutable_velocity3d()->mutable_value()->set_x(linear_velocity_from_wheel.x());
-    vehicle_status.mutable_velocity()->mutable_velocity3d()->mutable_value()->set_y(linear_velocity_from_wheel.y());
-    vehicle_status.mutable_velocity()->mutable_velocity3d()->mutable_value()->set_z(linear_velocity_from_wheel.z());
-  } else {
-    vehicle_status.mutable_velocity()->mutable_velocity3d()->mutable_value()->set_x(0.0);
-    vehicle_status.mutable_velocity()->mutable_velocity3d()->mutable_value()->set_y(0.0);
-    vehicle_status.mutable_velocity()->mutable_velocity3d()->mutable_value()->set_z(0.0);
-  }
-
+    vehicle_status.mutable_velocity()->mutable_heading_velocity()->set_value_mps(linear_velocity_from_wheel);
+  } 
 
   if (vehicel_service_output_info.steering_wheel_angle_available()) {
     auto steering_data = vehicle_status.mutable_steering_wheel();

@@ -140,7 +140,7 @@ bool PlanningComponent::Init() {
       [this](const std::shared_ptr<HmiMcuInner::HmiMcuInner>
                  &hmi_mcu_inner_info_msg) {
         std::cout << "receive hmi_mcu_inner_info_output "
-                  << hmi_mcu_inner_info_msg->timestamp_us() << std::endl;
+                  << hmi_mcu_inner_info_msg->header().timestamp() << std::endl;
         std::lock_guard<std::mutex> lock(msg_mutex_);
         hmi_mcu_inner_info_msg_.CopyFrom(*hmi_mcu_inner_info_msg);
       });
