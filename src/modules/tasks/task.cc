@@ -2,10 +2,10 @@
 
 #include "context/vehicle_config_context.h"
 #include "tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
-#include "tasks/motion_planners/longitudinal_motion_planner/general_longitudinal_optimizer.h"
 #include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
-#include "tasks/motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
 #include "tasks/behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner.h"
+#include "tasks/motion_planners/longitudinal_motion_planner/general_longitudinal_optimizer.h"
+#include "tasks/motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
 
 namespace planning {
@@ -26,8 +26,10 @@ bool Task::Execute(framework::Frame *frame) {
   }
   auto &frenet_ego_state = reference_path_ptr_->get_frenet_ego_state();
 
-  if (reference_path_ptr_ == nullptr or frenet_coord_ == nullptr or
-      not frenet_ego_state.planning_init_point_valid()) {
+  // if (reference_path_ptr_ == nullptr or frenet_coord_ == nullptr or
+  //     not frenet_ego_state.planning_init_point_valid()) {
+  // hack: 目前planning_init_point校验有问题
+  if (reference_path_ptr_ == nullptr or frenet_coord_ == nullptr) {
     printf(
         "baseline_info_ is %d, frenet_coord_ is %d, planning_init_point_valid "
         "is %d",

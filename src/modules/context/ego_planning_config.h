@@ -306,7 +306,7 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
     narrow_space_distance_stop_thrshld =
         read_json_key<double>(json, "narrow_space_distance_stop_thrshld");
   }
-  int lon_num_step = 20;
+  int lon_num_step = 25;
   double delta_time = 0.2;
   double lon_speed_decision_horizon = 100.0;
   double lane_width = 2.4;

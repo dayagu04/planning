@@ -89,9 +89,9 @@ struct StateBase : M::Base {
     common::SceneType scene_type = frame->session()->get_scene_type();
     auto config_builder =
         frame->session()->environmental_model().config_builder(scene_type);
-    // return TaskPipeline::Make(TaskPipelineType::VISION_ONLY, config_builder,
-    //                           frame);
-    return TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, frame);
+    return TaskPipeline::Make(TaskPipelineType::VISION_ONLY, config_builder,
+                              frame);
+    // return TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, frame);
   }
 
   virtual std::shared_ptr<Evaluator> get_evaluator(framework::Frame *frame);

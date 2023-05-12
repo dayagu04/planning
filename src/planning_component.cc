@@ -157,10 +157,10 @@ bool PlanningComponent::Init() {
   // -------------- writter topics --------------
   planning_writer_ =
       planning_node_->CreateWriter<PlanningOutput::PlanningOutput>(
-          "/iflytek/planning");
+          "/iflytek/planning/plan");
   planning_debug_writer_ =
       planning_node_->CreateWriter<planning::common::PlanningDebugInfo>(
-          "/iflytek/planning_debug_info");
+          "/iflytek/planning/debug_info");
   planning_hmi_Info_writer_ =
       planning_node_->CreateWriter<PlanningHMI::PlanningHMIOutputInfoStr>(
           "/iflytek/planning/hmi");

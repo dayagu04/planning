@@ -103,10 +103,11 @@ void GeneralPlanning::FillPlanningTrajectory(
   // 更新输出
   auto time_stamp_us = IflyTime::Now_us();
   // 1.Meta
-  planning_output->mutable_meta()->set_plan_timestamp_us(time_stamp_us);
   auto header = planning_output->mutable_meta()->mutable_header();
   header->set_timestamp(time_stamp_us);
   header->set_version("TEST");
+  planning_output->mutable_meta()->set_plan_timestamp_us(time_stamp_us);
+  planning_output->mutable_meta()->set_plan_strategy_name("Test");
 
   // 2.Trajectory
   auto trajectory = planning_output->mutable_trajectory();
@@ -136,27 +137,25 @@ void GeneralPlanning::FillPlanningTrajectory(
         target_ref->mutable_acceleration_range_limit();
     acceleration_range_limit->set_min_a(-4.0);
     acceleration_range_limit->set_max_a(4.0);
-
+    target_ref->set_lateral_maneuver_gear(
+        Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
   } else {
     // set vision_only_longitudinal_outputs if hdmpa valid is false
     trajectory->set_trajectory_type(
         Common::TrajectoryType::TRAJECTORY_TYPE_TARGET_REFERENCE);
     trajectory->mutable_trajectory_points()->Clear();
     trajectory->mutable_target_reference()->Clear();
-
     // 设置轨迹为default
-    {
-      auto path_point = trajectory->add_trajectory_points();
-      path_point->set_x(0.0);
-      path_point->set_y(0.0);
-      path_point->set_heading_yaw(0.0);
-      path_point->set_curvature(0.0);
-      path_point->set_t(0.0);
-      path_point->set_v(0.0);
-      path_point->set_a(0.0);
-      path_point->set_distance(0.0);
-      path_point->set_jerk(0.0);
-    }
+    auto path_point = trajectory->add_trajectory_points();
+    path_point->set_x(0.0);
+    path_point->set_y(0.0);
+    path_point->set_heading_yaw(0.0);
+    path_point->set_curvature(0.0);
+    path_point->set_t(0.0);
+    path_point->set_v(0.0);
+    path_point->set_a(0.0);
+    path_point->set_distance(0.0);
+    path_point->set_jerk(0.0);
 
     auto target_ref = trajectory->mutable_target_reference();
     // add polynomial
@@ -173,6 +172,8 @@ void GeneralPlanning::FillPlanningTrajectory(
         vision_only_longitudinal_outputs.a_target_min);
     acceleration_range_limit->set_max_a(
         vision_only_longitudinal_outputs.a_target_max);
+    target_ref->set_lateral_maneuver_gear(
+        Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
   }
   // 3.Turn signal
   auto turn_signal = planning_output->mutable_turn_signal_command();
