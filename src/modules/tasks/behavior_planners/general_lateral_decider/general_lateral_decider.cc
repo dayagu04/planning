@@ -779,10 +779,9 @@ void GeneralLateralDecider::generate_enu_boundary_points(
   Point2D tmp_safe_upper_point;
   Point2D tmp_path_lower_point;
   Point2D tmp_path_upper_point;
-  for (size_t i = 0; i < ref_path_points_.size(); ++i) {
+  for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
     if (frenet_coord->FrenetCoord2CartCoord(
-            Point2D(ref_path_points_[i].frenet_point.x,
-                    frenet_safe_bounds[i].first),
+            Point2D(ref_traj_points_[i].s, frenet_safe_bounds[i].first),
             tmp_safe_lower_point) !=
         TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // safe lower
     {
@@ -790,8 +789,7 @@ void GeneralLateralDecider::generate_enu_boundary_points(
     }
 
     if (frenet_coord->FrenetCoord2CartCoord(
-            Point2D(ref_path_points_[i].frenet_point.x,
-                    frenet_safe_bounds[i].second),
+            Point2D(ref_traj_points_[i].s, frenet_safe_bounds[i].second),
             tmp_safe_upper_point) !=
         TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // safe upper
     {
@@ -801,8 +799,7 @@ void GeneralLateralDecider::generate_enu_boundary_points(
         tmp_safe_lower_point, tmp_safe_upper_point));
 
     if (frenet_coord->FrenetCoord2CartCoord(
-            Point2D(ref_path_points_[i].frenet_point.x,
-                    frenet_path_bounds[i].first),
+            Point2D(ref_traj_points_[i].s, frenet_path_bounds[i].first),
             tmp_path_lower_point) !=
         TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // path lower
     {
@@ -810,8 +807,7 @@ void GeneralLateralDecider::generate_enu_boundary_points(
     }
 
     if (frenet_coord->FrenetCoord2CartCoord(
-            Point2D(ref_path_points_[i].frenet_point.x,
-                    frenet_path_bounds[i].second),
+            Point2D(ref_traj_points_[i].s, frenet_path_bounds[i].second),
             tmp_path_upper_point) !=
         TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // path upper
     {
@@ -846,7 +842,7 @@ void GeneralLateralDecider::generate_enu_reference_theta(
 
   for (size_t i = 0; i < ref_path_points_.size(); i++) {
     enu_ref_theta.emplace_back(
-        frenet_coord->GetRefCurveHeading(ref_path_points_[i].frenet_point.x));
+        frenet_coord->GetRefCurveHeading(ref_traj_points_[i].s));
   }
 
   // seed init state
