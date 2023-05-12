@@ -239,7 +239,33 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double refine_lat_ref_threshold = 0.5;
   double delta_t = 0.2;
 };
+struct GeneralLateralMotionPlannerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+  }
+  int horizon = 25;
+  bool warm_start_enable = true;
+  double acc_bound = 5.0;
+  double jerk_bound = 3.0;
+  double curv_factor = 0.276;
 
+  double q_ref_x = 1.0;
+  double q_ref_y = 1.0;
+  double q_ref_theta = 1.0;
+
+  double q_continuity = 0.;
+  double q_acc = 1.0;
+  double q_jerk = 1.0;
+  double q_snap = 1.0;
+
+  double q_acc_bound = 1000.0;
+  double q_jerk_bound = 1000.0;
+
+  double q_soft_corridor = 1.0;
+  double q_hard_corridor = 1.0;
+  double delta_t = 0.2;
+};
 struct LateralOptimizerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

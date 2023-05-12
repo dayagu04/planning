@@ -1,12 +1,12 @@
 #pragma once
 
-#include "macro.h"
 #include "common/config/basic_type.h"
 #include "common/config/vehicle_param.h"
 #include "common/speed/speed_limit.h"
+#include "macro.h"
 // #include "context/ego_planning_config.h"
-#include "common/define/planning_status.h"
 #include "common/define/lateral_behavior_planner_output.h"
+#include "common/define/planning_status.h"
 #include "tasks/behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner_output.h"
 
 namespace planning {
@@ -104,23 +104,31 @@ class PlanningContext {
     return lateral_behavior_planner_output_;
   }
 
-  const std::shared_ptr<ObjectSelector> &object_selector() const{
+  const std::shared_ptr<ObjectSelector> &object_selector() const {
     return object_selector_ptr_;
   }
   void set_object_selector(std::shared_ptr<ObjectSelector> object_selector) {
     object_selector_ptr_ = object_selector;
   }
 
-  const VisionLongitudinalBehaviorPlannerOutput &vision_longitudinal_behavior_planner_output() const {
+  const VisionLongitudinalBehaviorPlannerOutput &
+  vision_longitudinal_behavior_planner_output() const {
     return vision_longitudinal_behavior_planner_output_;
   }
 
-  VisionLongitudinalBehaviorPlannerOutput &mutable_vision_longitudinal_behavior_planner_output() {
+  VisionLongitudinalBehaviorPlannerOutput &
+  mutable_vision_longitudinal_behavior_planner_output() {
     return vision_longitudinal_behavior_planner_output_;
   }
 
-  const std::shared_ptr<AdaptiveCruiseControl>
-      &adaptive_cruise_control_function() {
+  const LatDeciderOutput &lat_decider_output() const {
+    return lat_decider_output_;
+  }
+
+  LatDeciderOutput &mutable_lat_decider_output() { return lat_decider_output_; }
+
+  const std::shared_ptr<AdaptiveCruiseControl> &
+  adaptive_cruise_control_function() {
     return adaptive_cruise_control_ptr_;
   }
   void set_adaptive_cruise_control_function(
@@ -157,6 +165,20 @@ class PlanningContext {
   }
   common::PlanningResult &mutable_last_frame_planning_result() {
     return last_frame_planning_result_;
+  }
+
+  const std::vector<std::pair<double, double>> &last_lat_enu_ref_path() const {
+    return last_enu_ref_path_;
+  }
+  std::vector<std::pair<double, double>> &mutable_last_lat_enu_ref_path() {
+    return last_enu_ref_path_;
+  }
+
+  const std::vector<double> &last_enu_ref_theta() const {
+    return last_enu_ref_theta_;
+  }
+  std::vector<double> &mutable_last_enu_ref_theta() {
+    return last_enu_ref_theta_;
   }
 
   const VehicleParam &vehicle_param() const { return vehicle_param_; }
@@ -210,6 +232,8 @@ class PlanningContext {
   PlanningResult planning_result_;
   common::PlanningResult last_frame_planning_result_;
   std::shared_ptr<PlanningResult> last_planning_result_;
+  std::vector<std::pair<double, double>> last_enu_ref_path_;
+  std::vector<double> last_enu_ref_theta_;
   AdaptiveCruiseControlInfo adaptive_cruise_control_result_;
   StartStopInfo start_stop_result_;
   LonDecisionInfo lon_decision_result_;
@@ -220,9 +244,10 @@ class PlanningContext {
   SpeedLimit speed_limit_;
   LatBehaviorInfo lat_behavior_info_;
   LatBehaviorStateMachineOutput lat_behavior_state_machine_output_;
-
+  LatDeciderOutput lat_decider_output_;
   LateralBehaviorPlannerOutput lateral_behavior_planner_output_;
-  VisionLongitudinalBehaviorPlannerOutput vision_longitudinal_behavior_planner_output_;
+  VisionLongitudinalBehaviorPlannerOutput
+      vision_longitudinal_behavior_planner_output_;
   std::shared_ptr<ScenarioManager> scenario_manager_ptr_;
   std::shared_ptr<ObjectSelector> object_selector_ptr_;
   std::shared_ptr<ScenarioStateMachine> scenario_state_machine_ptr_;

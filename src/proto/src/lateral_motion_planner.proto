@@ -1,0 +1,70 @@
+syntax = "proto2";
+
+package planning.common;
+
+message LateralMotionPlanningInput {
+  repeated double init_state = 1;
+
+  repeated double ref_x_vec = 2;
+  repeated double ref_y_vec = 3;
+  repeated double ref_theta_vec = 4;
+
+  repeated double last_x_vec = 5;
+  repeated double last_y_vec = 6;
+  repeated double last_theta_vec = 7;
+
+  optional double ref_vel = 8;
+  optional double curv_factor = 9;
+
+  repeated double soft_upper_bound_x0_vec = 10;
+  repeated double soft_upper_bound_y0_vec = 11;
+  repeated double soft_upper_bound_x1_vec = 12;
+  repeated double soft_upper_bound_y1_vec = 13;
+
+  repeated double soft_lower_bound_x0_vec = 14;
+  repeated double soft_lower_bound_y0_vec = 15;
+  repeated double soft_lower_bound_x1_vec = 16;
+  repeated double soft_lower_bound_y1_vec = 17;
+
+  repeated double hard_upper_bound_x0_vec = 18;
+  repeated double hard_upper_bound_y0_vec = 19;
+  repeated double hard_upper_bound_x1_vec = 20;
+  repeated double hard_upper_bound_y1_vec = 21;
+
+  repeated double hard_lower_bound_x0_vec = 22;
+  repeated double hard_lower_bound_y0_vec = 23;
+  repeated double hard_lower_bound_x1_vec = 24;
+  repeated double hard_lower_bound_y1_vec = 25;
+
+  optional double acc_bound = 26;
+  optional double jerk_bound = 27;
+
+  optional double q_ref_x = 28;
+  optional double q_ref_y = 29;
+  optional double q_ref_theta = 30;
+
+  optional double q_continuity = 31;
+  optional double q_acc = 32;
+  optional double q_jerk = 33;
+  optional double q_snap = 34;
+
+  optional double q_acc_bound = 35;
+  optional double q_jerk_bound = 36;
+
+  optional double q_soft_corridor = 37;
+  optional double q_hard_corridor = 38;
+}
+
+message LateralMotionPlanningOutput {
+  repeated double time_vec = 1;
+
+  repeated double x_vec = 2;
+  repeated double y_vec = 3;
+  repeated double theta_vec = 4;
+  repeated double delta_vec = 5;
+
+  repeated double omega_vec = 7;
+  repeated double omega_dot_vec = 8;
+  repeated double acc_vec = 9;
+  repeated double jerk_vec = 10;
+}

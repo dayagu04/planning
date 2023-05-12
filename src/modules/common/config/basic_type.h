@@ -5,10 +5,11 @@
 #include <unordered_map>
 #include <vector>
 
-#include "planning_def.h"
 #include "common/utils/cartesian_coordinate_system.h"
 #include "common/utils/frenet_coordinate_system.h"
+//#include "ilqr_define.h"
 #include "mjson/mjson.hpp"
+#include "planning_def.h"
 
 #define DEFAULT_LANE_WIDTH (3.8)
 
@@ -519,6 +520,35 @@ struct LatBehaviorStateMachineOutput {
   std::vector<TrackInfo> near_cars_origin;
   TrackInfo lc_invalid_track;
   TrackInfo lc_back_track;
+};
+
+enum class LatObstacleType { LANE, ROAD, CAR };
+
+struct LatDeciderOutput {
+  std::vector<double> init_state;
+  std::vector<std::pair<double, double>> enu_ref_path;  // <x, y>
+  std::vector<std::pair<double, double>>
+      last_enu_ref_path;  // pass it by planning context
+  // planning::PlanningInitPoint init_state;  // pass it by planning context
+  std::vector<std::pair<Point2D, Point2D>> path_bounds;  // <lower ,upper >
+  std::vector<std::pair<Point2D, Point2D>> safe_bounds;  // <lower ,upper >
+  std::vector<double> enu_ref_theta;
+  std::vector<double> last_enu_ref_theta;
+  double v_cruise;
+};
+
+struct LateralMotionPlanningOutput {
+  std::vector<double> time_vec;
+  std::vector<double> x_vec;
+  std::vector<double> y_vec;
+  std::vector<double> theta_vec;
+  std::vector<double> delta_vec;
+  std::vector<double> omega_vec;
+  std::vector<double> omega_dot_vec;
+  std::vector<double> acc_vec;
+  std::vector<double> jerk_vec;
+ // const ilqr_solver::iLqr::iLqrSolverInfo *solver_info_ptr;
+ // ilqr_solver::iLqr::iLqrSolverInfo solver_info;  // to be removed
 };
 
 }  // namespace planning

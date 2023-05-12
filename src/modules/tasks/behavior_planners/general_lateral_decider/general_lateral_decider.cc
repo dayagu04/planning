@@ -73,18 +73,33 @@ bool GeneralLateralDecider::Execute(planning::framework::Frame *frame) {
 
   construct_reference_path_points(traj_points);
 
-  MapObstacleDecision map_obstacle_decisions;
+  auto &obstacle_decisions =
+      pipeline_context_->planning_info.obstacle_decisions;
+  auto &map_obstacle_decisions =
+      pipeline_context_->planning_info.map_obstacle_decision;
+
   construct_lane_and_boundary_bounds(map_obstacle_decisions);
 
-  ObstacleDecisions obstacle_decisions;
   construct_lateral_obstacle_decisions(obstacle_decisions);
 
-  LatDeciderOutput lat_decider_output;
+  LatDeciderOutput &lat_decider_output = frame_->mutable_session()
+                                             ->mutable_planning_context()
+                                             ->mutable_lat_decider_output();
+
   lat_decider_output.v_cruise = cruise_vel_;
 
-  generate_boundary(map_obstacle_decisions, obstacle_decisions,
-                    lat_decider_output);
-  generate_lat_reference_traj(lat_decider_output);
+  std::vector<std::pair<double, double>> frenet_safe_bounds;
+  std::vector<std::pair<double, double>> frenet_path_bounds;
+
+  extract_boundary(map_obstacle_decisions, obstacle_decisions,
+                   frenet_safe_bounds, frenet_path_bounds);
+
+  generate_enu_boundary_points(frenet_safe_bounds, frenet_path_bounds,
+                               lat_decider_output);
+
+  generate_enu_reference_theta(lat_decider_output);
+
+  generate_enu_reference_traj(lat_decider_output);
 
   return true;
 }
@@ -675,10 +690,11 @@ void GeneralLateralDecider::refine_conflict_lat_decisions(
   }
 }
 
-void GeneralLateralDecider::generate_boundary(
+void GeneralLateralDecider::extract_boundary(
     const MapObstacleDecision &map_obstacle_decision,
     const ObstacleDecisions &obstacle_decisions,
-    LatDeciderOutput &lat_decider_output) {
+    std::vector<std::pair<double, double>> &frenet_safe_bounds,
+    std::vector<std::pair<double, double>> &frenet_path_bounds) {
   assert(map_obstacle_decision.size() == ref_traj_points_.size());
 
   // auto &path_bounds = lat_decider_output.path_bounds;
@@ -730,7 +746,7 @@ void GeneralLateralDecider::generate_boundary(
         tmp_bound.first = bound.lower;
       }
     }
-    lat_decider_output.path_bounds.emplace_back(tmp_bound);
+    frenet_path_bounds.emplace_back(tmp_bound);
   }
 
   for (auto &bounds : safe_bounds) {
@@ -743,23 +759,106 @@ void GeneralLateralDecider::generate_boundary(
         tmp_bound.first = bound.lower;
       }
     }
-    lat_decider_output.safe_bounds.emplace_back(tmp_bound);
+    frenet_safe_bounds.emplace_back(tmp_bound);
   }
 
-  assert(lat_decider_output.safe_bounds.size() == ref_traj_points_.size());
-  assert(lat_decider_output.path_bounds.size() == ref_traj_points_.size());
+  assert(frenet_path_bounds.size() == ref_traj_points_.size());
+  assert(frenet_safe_bounds.size() == ref_traj_points_.size());
 }
 
-void GeneralLateralDecider::generate_lat_reference_traj(
+void GeneralLateralDecider::generate_enu_boundary_points(
+    const std::vector<std::pair<double, double>> &frenet_safe_bounds,
+    const std::vector<std::pair<double, double>> &frenet_path_bounds,
+    LatDeciderOutput &lat_decider_output) {
+  auto &safe_bounds_output = lat_decider_output.safe_bounds;
+  auto &path_bounds_output = lat_decider_output.path_bounds;
+
+  const std::shared_ptr<FrenetCoordinateSystem> frenet_coord =
+      reference_path_ptr_->get_frenet_coord();
+  Point2D tmp_safe_lower_point;
+  Point2D tmp_safe_upper_point;
+  Point2D tmp_path_lower_point;
+  Point2D tmp_path_upper_point;
+  for (size_t i = 0; i < ref_path_points_.size(); ++i) {
+    if (frenet_coord->FrenetCoord2CartCoord(
+            Point2D(ref_path_points_[i].frenet_point.x,
+                    frenet_safe_bounds[i].first),
+            tmp_safe_lower_point) !=
+        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // safe lower
+    {
+      // TODO: add logs
+    }
+
+    if (frenet_coord->FrenetCoord2CartCoord(
+            Point2D(ref_path_points_[i].frenet_point.x,
+                    frenet_safe_bounds[i].second),
+            tmp_safe_upper_point) !=
+        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // safe upper
+    {
+      // TODO: add logs
+    }
+    safe_bounds_output.emplace_back(std::pair<Point2D, Point2D>(
+        tmp_safe_lower_point, tmp_safe_upper_point));
+
+    if (frenet_coord->FrenetCoord2CartCoord(
+            Point2D(ref_path_points_[i].frenet_point.x,
+                    frenet_path_bounds[i].first),
+            tmp_path_lower_point) !=
+        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // path lower
+    {
+      // TODO: add logs
+    }
+
+    if (frenet_coord->FrenetCoord2CartCoord(
+            Point2D(ref_path_points_[i].frenet_point.x,
+                    frenet_path_bounds[i].second),
+            tmp_path_upper_point) !=
+        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // path upper
+    {
+      // TODO: add logs
+    }
+
+    path_bounds_output.emplace_back(std::pair<Point2D, Point2D>(
+        tmp_path_lower_point, tmp_path_upper_point));
+  }
+};
+
+void GeneralLateralDecider::generate_enu_reference_traj(
+
     LatDeciderOutput &lat_decider_output) {
   auto &enu_ref_path = lat_decider_output.enu_ref_path;
   enu_ref_path.resize(ref_traj_points_.size());
 
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    const auto &ref_traj_point = ref_traj_points_[i];
-
-    enu_ref_path[i].first = ref_traj_point.x;
-    enu_ref_path[i].second = ref_traj_point.y;
+    enu_ref_path[i].first = ref_traj_points_[i].x;
+    enu_ref_path[i].second = ref_traj_points_[i].y;
   }
+}
+
+void GeneralLateralDecider::generate_enu_reference_theta(
+
+    LatDeciderOutput &lat_decider_output) {
+  auto &enu_ref_theta = lat_decider_output.enu_ref_theta;
+
+  enu_ref_theta.resize(ref_path_points_.size());
+  const std::shared_ptr<FrenetCoordinateSystem> frenet_coord =
+      reference_path_ptr_->get_frenet_coord();
+
+  for (size_t i = 0; i < ref_path_points_.size(); i++) {
+    enu_ref_theta.emplace_back(
+        frenet_coord->GetRefCurveHeading(ref_path_points_[i].frenet_point.x));
+  }
+
+  // seed init state
+  const auto &ego_state =
+      frame_->session()->environmental_model().get_ego_state_manager();
+  auto &init_state = lat_decider_output.init_state;
+  init_state.reserve(5);  //
+  init_state.emplace_back(ego_state->planning_init_point().x);
+  init_state.emplace_back(ego_state->planning_init_point().y);
+  init_state.emplace_back(
+      ego_state->planning_init_point().heading_angle);  // theta
+  init_state.emplace_back(0.);                          // delta
+  init_state.emplace_back(0.);                          // delta_dot
 }
 }  // namespace planning

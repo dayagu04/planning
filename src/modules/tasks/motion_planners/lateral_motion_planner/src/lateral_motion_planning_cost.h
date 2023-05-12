@@ -3,7 +3,7 @@
 
 #include "ilqr_cost.h"
 
-namespace pnc {
+namespace pnc {   
 namespace lateral_planning {
 enum iLqrCostconfigId {
   REF_X,

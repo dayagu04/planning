@@ -84,7 +84,7 @@ class GeneralLateralDecider : public Task {
   // // 2. construct the obstacle decisions
   void construct_lateral_obstacle_decisions(
       // const TrajectoryPoints &traj_points,
-       ObstacleDecisions &obstacle_decisions );
+      ObstacleDecisions &obstacle_decisions);
 
   void construct_lateral_obstacle_decision(
       const std::shared_ptr<FrenetObstacle> obstacle,
@@ -106,11 +106,21 @@ class GeneralLateralDecider : public Task {
   void refine_conflict_lat_decisions(const double &ego_l,
                                      ObstacleDecision &obstacle_decision);
 
-  void generate_boundary(const MapObstacleDecision &map_obstacle_decision,
-                         const ObstacleDecisions &obstacle_decisions,
-                         LatDeciderOutput &lat_decider_output);
+  void extract_boundary(
+      const MapObstacleDecision &map_obstacle_decision,
+      const ObstacleDecisions &obstacle_decisions,
+      std::vector<std::pair<double, double>> &frenet_safe_bounds,
+      std::vector<std::pair<double, double>> &frenet_path_bounds);
 
-  void generate_lat_reference_traj(LatDeciderOutput &lat_decider_output);
+  void generate_enu_boundary_points(
+
+      const std::vector<std::pair<double, double>> &frenet_safe_bounds,
+      const std::vector<std::pair<double, double>> &frenet_path_bounds,
+      LatDeciderOutput &lat_decider_output);
+
+  void generate_enu_reference_traj(LatDeciderOutput &lat_decider_output);
+
+  void generate_enu_reference_theta(LatDeciderOutput &lat_decider_output);
 
   void handle_lane_change_scene();
 
