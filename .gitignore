@@ -1,6 +1,6 @@
 build
 install
 bin
-jupyter_pybind/motion_planning/build
 .cache
-jupyter_pybind/motion_planning/notebooks/lib/__pycache__
+jupyter_pybind/notebooks/lib/__pycache__
+jupyter_pybind/notebooks/scripts/.ipynb_checkpoints
