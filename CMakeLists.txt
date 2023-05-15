@@ -70,4 +70,6 @@ if (INSTALL_TO_SYSTEM)
     DESTINATION /asw/${PROJECT_NAME}/res)
   install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/res/scripts
     DESTINATION /asw/${PROJECT_NAME})
+  install(FILES ${CMAKE_CURRENT_LIST_DIR}/CHANGELOG.md
+    DESTINATION /asw/planning/log)
 endif()
