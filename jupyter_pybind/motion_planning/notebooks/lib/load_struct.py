@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+import math
 
 def load_car_params_patch():
     car_x = [4.015, 4.015, -1.083, -1.083, 4.015]
@@ -112,3 +113,57 @@ def load_mpc_parameters(config_data, bag_data, mpc_parameters):
     mpc_parameters.q1_low_vel_gain_ = config_data["q1_low_vel_gain"];
     mpc_parameters.q0_max_ = config_data["q0_max"];
     mpc_parameters.low_speed_jerk_y_limit_ = config_data["low_speed_jerk_y_limit"];
+
+def load_obstacle_params(obstacle_list):
+    obs_info = {'obstacles_x': [],
+                'obstacles_y': [],
+                'pos_x': [],
+                'pos_y': [],
+                'obstacles_vel': [],
+                'obstacles_acc': [],
+                'obstacles_tid': [],
+                'is_cipv': [],
+                'obs_label':[]
+                }
+    obs_num = len(obstacle_list)
+    print(obs_num)
+    num = 0
+    for i in range(obs_num):
+      if obstacle_list[i].common_info.relative_position.x == 0 and obstacle_list[i].common_info.relative_position.y == 0:
+        continue
+      elif obstacle_list[i].common_info.shape.width == 0 or obstacle_list[i].common_info.shape.length == 0:
+        continue
+      else:
+        long_pos = obstacle_list[i].common_info.relative_position.x
+        lat_pos = obstacle_list[i].common_info.relative_position.y
+        theta = obstacle_list[i].common_info.relative_heading_angle
+        half_width = obstacle_list[i].common_info.shape.width /2
+        length = obstacle_list[i].common_info.shape.length
+        
+        obs_x = [long_pos+half_width*math.sin(theta), \
+                  long_pos+half_width*math.sin(theta)+length*math.cos(theta), \
+                  long_pos-half_width*math.sin(theta)+length*math.cos(theta), \
+                  long_pos-half_width*math.sin(theta), \
+                  long_pos+half_width*math.sin(theta)]
+        
+        obs_y = [lat_pos-half_width*math.cos(theta), \
+                  lat_pos-half_width*math.cos(theta)+ length*math.sin(theta), \
+                  lat_pos+half_width*math.cos(theta)+ length*math.sin(theta), \
+                  lat_pos+half_width*math.cos(theta), 
+                  lat_pos-half_width*math.cos(theta)]
+        
+        num = num + 1
+        # print(obs_x)
+        # print(obs_y)
+        # for ind in range(len(obs_x)):
+        obs_info['obstacles_x'].append(obs_x)
+        # for ind in range(len(obs_y)):
+        obs_info['obstacles_y'].append(obs_y)
+        obs_info['pos_x'].append(long_pos)
+        obs_info['pos_y'].append(lat_pos)
+        obs_info['obstacles_vel'].append(obstacle_list[i].common_info.relative_velocity.x)
+        obs_info['obstacles_acc'].append(obstacle_list[i].common_info.relative_acceleration.x)
+        obs_info['obstacles_tid'].append(obstacle_list[i].common_info.id)
+#             obs_info['is_cipv'].append(obstacle_list[i].target_selection_type)
+        obs_info['obs_label'].append(str(obstacle_list[i].common_info.id) + ',v=' + str(round(obstacle_list[i].common_info.relative_velocity.x, 2)))
+    return obs_info
