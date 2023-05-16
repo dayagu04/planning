@@ -33,10 +33,49 @@ void VirtualLane::update_data(const FusionRoad::Lane& lane) {
     }
   }
 
+  calc_c_poly(c_poly_);
+
   center_line_points_track_id_.clear();
   for (auto& virtual_lane_refine_point : lane_reference_line_.virtual_lane_refline_points()) {
     // center_line_points_track_id_.emplace_back(virtual_lane_refine_point.track_id()); // todo
   }
+}
+
+bool VirtualLane::calc_c_poly(std::vector<double> &output) {
+  output.clear();
+
+  if (lane_status_ == BOTH_MISSING) {
+    output.assign(4, 0.0);
+    return true;
+  } else if (lane_status_ == LEFT_AVAILABLE) {
+    if (left_lane_boundary_.poly_coefficient_size() < 4) {
+      output.assign(4, 0.0);
+      return true;
+    }
+    for (size_t i = 0; i < left_lane_boundary_.poly_coefficient_size(); i++) {
+      output.push_back((left_lane_boundary_.poly_coefficient(i)));
+      if (i == 0) {
+        output[0] = left_lane_boundary_.poly_coefficient(0) - 0.5 * width() * std::sqrt(1 + std::pow(left_lane_boundary_.poly_coefficient(1), 2));
+      }
+    }
+  } else if (lane_status_ == RIGHT_AVAILABLE) {
+    if (right_lane_boundary_.poly_coefficient_size() < 4) {
+      output.assign(4, 0.0);
+      return true;
+    }
+    for (size_t i = 0; i < right_lane_boundary_.poly_coefficient_size(); i++) {
+      output.push_back((right_lane_boundary_.poly_coefficient(i)));
+      if (i == 0) {
+        output[0] = right_lane_boundary_.poly_coefficient(0) + 0.5 * width() * std::sqrt(1 + std::pow(right_lane_boundary_.poly_coefficient(1), 2));
+      }
+    }
+  } else {
+    for (size_t i = 0; i < left_lane_boundary_.poly_coefficient_size() && i < right_lane_boundary_.poly_coefficient_size(); i++) {
+      output.push_back((left_lane_boundary_.poly_coefficient(i) + right_lane_boundary_.poly_coefficient(i)) / 2.0);
+    }
+  }
+
+  return true;
 }
 
 bool VirtualLane::has_lines(LineDirection direction) const {

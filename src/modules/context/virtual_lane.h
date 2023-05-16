@@ -29,7 +29,7 @@ struct VirtualLaneMember {
   FusionRoad::LaneDrivableDirection lane_marks_;
   FusionRoad::LaneSource lane_source_;
   FusionRoad::LaneReferenceLine lane_reference_line_;
-  std::array<double, 4> c_poly_;
+  std::vector<double> c_poly_;
   FusionRoad::LaneMergeSplitPoint lane_merge_split_point_;
   FusionRoad::LaneBoundary left_lane_boundary_;
   FusionRoad::LaneBoundary right_lane_boundary_;
@@ -54,7 +54,7 @@ class VirtualLane {
   double width();
   // WB：用户设置巡航车速不应与地图限速耦合
   double velocity_limit() const { return v_cruise_; };
-  const std::array<double, 4> c_poly() const { return c_poly_; }
+  const std::vector<double> &c_poly() const { return c_poly_; }
   LaneStatusEx status() { return lane_status_; }
   const FusionRoad::LaneBoundary &get_left_lane_boundary() {
     return left_lane_boundary_;
@@ -113,6 +113,7 @@ class VirtualLane {
   void update_speed_limit(double ego_vel, double ego_v_cruise);
   void save_context(VirtualLaneContext &context) const;
   void restore_context(const VirtualLaneContext &context);
+  bool calc_c_poly(std::vector<double> &output);
 
  private:
   int order_id_ = -1;
@@ -125,7 +126,7 @@ class VirtualLane {
   FusionRoad::LaneDrivableDirection lane_marks_;
   FusionRoad::LaneSource lane_source_;
   FusionRoad::LaneReferenceLine lane_reference_line_;
-  std::array<double, 4> c_poly_;
+  std::vector<double> c_poly_;
   FusionRoad::LaneMergeSplitPoint lane_merge_split_point_;
   FusionRoad::LaneBoundary left_lane_boundary_;
   FusionRoad::LaneBoundary right_lane_boundary_;

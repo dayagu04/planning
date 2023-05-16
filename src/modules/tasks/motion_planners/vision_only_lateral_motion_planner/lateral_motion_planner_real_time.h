@@ -51,8 +51,8 @@ class VisionLateralMotionPlanner : public Task {
                          double r_prob, double intercept_width,
                          std::array<double, 4> &d_poly);
 
-  double calc_lane_width_by_dist(const std::array<double, 4> &left_poly,
-                                 const std::array<double, 4> &right_poly,
+  double calc_lane_width_by_dist(const std::vector<double> &left_poly,
+                                 const std::vector<double> &right_poly,
                                  const double &dist_x);
 
   bool update(int lane_status, bool flag_avoid, bool exist_accident_ahead,
@@ -72,27 +72,27 @@ class VisionLateralMotionPlanner : public Task {
 
   void set_left_lane_boundary_poly() {
     for (auto i = 0;
-         i < flane_->get_left_lane_boundary().poly_coefficient().size(); ++i) {
+         i < flane_->get_left_lane_boundary().poly_coefficient_size(); ++i) {
       if (i < 4) {
-        left_lane_boundary_poly_[i] =
-            flane_->get_left_lane_boundary().poly_coefficient()[i];
+        left_lane_boundary_poly_.push_back(
+            flane_->get_left_lane_boundary().poly_coefficient(i));
       }
     }
   }
 
   void set_right_lane_boundary_poly() {
     for (auto i = 0;
-         i < flane_->get_right_lane_boundary().poly_coefficient().size(); ++i) {
+         i < flane_->get_right_lane_boundary().poly_coefficient_size(); ++i) {
       if (i < 4) {
-        right_lane_boundary_poly_[i] =
-            flane_->get_right_lane_boundary().poly_coefficient()[i];
+        right_lane_boundary_poly_.push_back(
+            flane_->get_right_lane_boundary().poly_coefficient(i));
       }
     }
   }
-  const std::array<double, 4> left_lane_boundary_poly() & {
+  const std::vector<double> &left_lane_boundary_poly() {
     return left_lane_boundary_poly_;
   };
-  const std::array<double, 4> right_lane_boundary_poly() & {
+  const std::vector<double> &right_lane_boundary_poly() {
     return right_lane_boundary_poly_;
   };
 
@@ -125,8 +125,8 @@ class VisionLateralMotionPlanner : public Task {
   std::array<double, 4> d_poly_;
   std::array<double, 4> l_poly_;
   std::array<double, 4> r_poly_;
-  std::array<double, 4> left_lane_boundary_poly_;
-  std::array<double, 4> right_lane_boundary_poly_;
+  std::vector<double> left_lane_boundary_poly_;
+  std::vector<double> right_lane_boundary_poly_;
   std::array<std::vector<double>, 2> avd_car_past_;
   std::array<std::vector<double>, 2> avd_sp_car_past_;
   std::shared_ptr<ReferencePath> fix_reference_path_;

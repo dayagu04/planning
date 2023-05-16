@@ -66,7 +66,8 @@ target_link_libraries(planning_component PUBLIC
   rapidjson
   nlohmann_json
   hfsm
-  planning_proto)
+  planning_proto
+  NanoLog)
 
 target_compile_definitions(planning_component PRIVATE
     CONFIG_PATH="/asw/planning/res/conf")

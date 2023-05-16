@@ -322,6 +322,7 @@ bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
       intercept_width_ = intercept_width;
     }
   }
+  return true;
 }
 
 void VisionLateralMotionPlanner::update_premove_path(
@@ -2397,6 +2398,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
     lat_offset_ = lat_offset;
   }
   LOG_DEBUG("vision_only_lateral_motion_palnner:: lat_offset_[%f], d_poly_[3][%f]", lat_offset_, d_poly_[3]);
+  return true;
 }
 
 bool VisionLateralMotionPlanner::update_planner_output() {
@@ -2751,7 +2753,7 @@ bool VisionLateralMotionPlanner::update_planner_output() {
     //   横向规划轨迹的输出部分
     //   //     return false;
   }
-  //   //   return true;
+  return true;
 }
 bool VisionLateralMotionPlanner::update_lateral_info() {
   // //
@@ -3181,6 +3183,7 @@ bool VisionLateralMotionPlanner::update_planner_status() {
 
         AlgorithmAction::LANE_BORROW_IN_NON_MOTORIZED_LANE;
   }
+  return true;
 }
 //   // bool
 //   VisionLateralMotionPlanner::log_planner_debug_info()
@@ -3750,8 +3753,8 @@ void VisionLateralMotionPlanner::calc_desired_path(const std::array<double, 4> &
 }
 
 double VisionLateralMotionPlanner::calc_lane_width_by_dist(
-    const std::array<double, 4> &left_poly,
-    const std::array<double, 4> &right_poly, const double &dist_x) {
+    const std::vector<double> &left_poly,
+    const std::vector<double> &right_poly, const double &dist_x) {
   std::vector<double> left_poly_yx, r_poly_yx;
   left_poly_yx.resize(left_poly.size());
   r_poly_yx.resize(right_poly.size());

@@ -1324,6 +1324,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(const Tracked
       lane_changing_nearest_rear_car_track_id;
 
   LOG_DEBUG("v_target_: [%f], a_target.second: [%f]\n", v_target_, a_target_.second);
+  return true;
 }
 
 double VisionLongitudinalBehaviorPlanner::interp(const double x,

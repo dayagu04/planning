@@ -473,7 +473,7 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
   auto &prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
 
   PredictionObject prediction_object;
-  prediction_object.id = fusion_object.additional_info().track_id();
+  prediction_object.id = fusion_object.common_info().id();
   prediction_object.type = fusion_object.common_info().type();
   prediction_object.timestamp_us = timestamp;
 
@@ -501,8 +501,9 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
   //std::vector<Point3d> bottom_polygon_points;
   //std::vector<Point3d> top_polygon_points;
   PredictionTrajectory tra;
-  prediction_object.trajectory_array.emplace_back(tra);
-  prediction_info.emplace_back(prediction_object);
+  prediction_object.trajectory_array.emplace_back(std::move(tra));
+  prediction_info.emplace_back(std::move(prediction_object));
+  return true;
 }
 
 void EnvironmentalModelManager::transform_surround_radar_to_prediction(RadarPerceptionObjects::RadarPerceptionObject radar_perception_objects,
