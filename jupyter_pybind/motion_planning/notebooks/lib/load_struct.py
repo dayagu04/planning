@@ -126,9 +126,10 @@ def load_obstacle_params(obstacle_list):
                 'obs_label':[]
                 }
     obs_num = len(obstacle_list)
-    print(obs_num)
     num = 0
     for i in range(obs_num):
+      if obstacle_list[i].additional_info.fusion_source == 2:
+        continue
       if obstacle_list[i].common_info.relative_position.x == 0 and obstacle_list[i].common_info.relative_position.y == 0:
         continue
       elif obstacle_list[i].common_info.shape.width == 0 or obstacle_list[i].common_info.shape.length == 0:
@@ -138,23 +139,27 @@ def load_obstacle_params(obstacle_list):
         lat_pos = obstacle_list[i].common_info.relative_position.y
         theta = obstacle_list[i].common_info.relative_heading_angle
         half_width = obstacle_list[i].common_info.shape.width /2
-        length = obstacle_list[i].common_info.shape.length
+        half_length = obstacle_list[i].common_info.shape.length / 2
         
-        obs_x = [long_pos+half_width*math.sin(theta), \
-                  long_pos+half_width*math.sin(theta)+length*math.cos(theta), \
-                  long_pos-half_width*math.sin(theta)+length*math.cos(theta), \
-                  long_pos-half_width*math.sin(theta), \
-                  long_pos+half_width*math.sin(theta)]
+        cos_heading = math.cos(theta)
+        sin_heading = math.sin(theta)
+        dx1 = cos_heading * half_length
+        dy1 = sin_heading * half_length
+        dx2 = sin_heading * half_width
+        dy2 = -cos_heading * half_width
         
-        obs_y = [lat_pos-half_width*math.cos(theta), \
-                  lat_pos-half_width*math.cos(theta)+ length*math.sin(theta), \
-                  lat_pos+half_width*math.cos(theta)+ length*math.sin(theta), \
-                  lat_pos+half_width*math.cos(theta), 
-                  lat_pos-half_width*math.cos(theta)]
+        obs_x = [long_pos + dx1 + dx2,
+                 long_pos + dx1 - dx2,
+                 long_pos - dx1 - dx2,
+                 long_pos - dx1 + dx2,
+                 long_pos + dx1 + dx2]
+        obs_y = [lat_pos + dy1 + dy2,
+                 lat_pos + dy1 - dy2,
+                 lat_pos - dy1 - dy2,
+                 lat_pos - dy1 + dy2,
+                 lat_pos + dy1 + dy2]
         
         num = num + 1
-        # print(obs_x)
-        # print(obs_y)
         # for ind in range(len(obs_x)):
         obs_info['obstacles_x'].append(obs_x)
         # for ind in range(len(obs_y)):
@@ -167,3 +172,51 @@ def load_obstacle_params(obstacle_list):
 #             obs_info['is_cipv'].append(obstacle_list[i].target_selection_type)
         obs_info['obs_label'].append(str(obstacle_list[i].common_info.id) + ',v=' + str(round(obstacle_list[i].common_info.relative_velocity.x, 2)))
     return obs_info
+
+def gen_line(c0, c1, c2, c3, start, end):
+  points_x = []
+  points_y = []
+
+  for x in np.linspace(start, end, 50):
+      y = c0 + c1 * x + c2 * x * x + c3 * x * x* x
+      points_x.append([x])
+      points_y.append([y])
+
+  return points_x, points_y
+  
+def load_lane_lines(lanes):
+  line_info_list = []
+
+  for i in range(6):
+    lane_info_l = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+    if i< len(lanes):
+        lane = lanes[i]
+        left_line = lane.left_lane_boundary
+        left_line_coef = left_line.poly_coefficient
+        line_x, line_y = gen_line(left_line_coef[0], left_line_coef[1], left_line_coef[2], left_line_coef[3], \
+          left_line.begin, left_line.end)
+
+        lane_info_l['line_x_vec'] = line_x
+        lane_info_l['line_y_vec'] = line_y
+        lane_info_l['type'] = left_line.segment[0].type
+
+        line_info_list.append(lane_info_l)
+
+        lane_info_r = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+        right_line = lane.right_lane_boundary
+        right_line_coef = right_line.poly_coefficient
+        line_x, line_y = gen_line(right_line_coef[0], right_line_coef[1], right_line_coef[2], right_line_coef[3], \
+          right_line.begin, right_line.end)
+        lane_info_r['line_x_vec'] = line_x
+        lane_info_r['line_y_vec'] = line_y
+        lane_info_r['type'] = left_line.segment[0].type
+        line_info_list.append(lane_info_r)
+    else:
+        line_x, line_y = gen_line(0,0,0,0,0,0)
+        lane_info_l['line_x_vec'] = line_x
+        lane_info_l['line_y_vec'] = line_y
+        lane_info_l['type'] = []
+        line_info_list.append(lane_info_l)
+        line_info_list.append(lane_info_l)
+
+  return line_info_list  

@@ -32,13 +32,3 @@ def getposbodyandworld(ref_x_vec, ref_y_vec, cur_pos_xn, cur_pos_yn, cur_yaw, cu
 
     return ref_xn_vec, ref_yn_vec, ref_xb_vec, ref_yb_vec
   
-def gen_line(c0, c1, c2, c3, start, end):
-    points_x = []
-    points_y = []
-
-    for x in np.linspace(start, end, 50):
-        y = c0 + c1 * x + c2 * x * x + c3 * x * x* x
-        points_x.append([x])
-        points_y.append([y])
-
-    return points_x, points_y
