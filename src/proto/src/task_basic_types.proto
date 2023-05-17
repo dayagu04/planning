@@ -52,5 +52,5 @@ message LonRefPath {
 
   optional Bounds lon_bound_v = 6;
   optional Bounds lon_bound_a = 7;
-  optional double lon_bound_jerk = 8;
+  optional Bounds lon_bound_jerk = 8;
 }

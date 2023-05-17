@@ -1,9 +1,15 @@
-syntax = "proto3";
+syntax = "proto2";
 
 package planning.common;
 
-message PlanningDebugInfo {
-  uint64 timestamp = 1;
-  string data_json = 2;
-}
+import "task_basic_types.proto";
 
+message PlanningDebugInfo {
+  optional uint64 timestamp = 1; // us
+  optional string data_json = 2;
+  // TBD: 存在多条candidates时，应该使用repeated
+  // TBD: lat behavior
+  // TBD: lat motion
+  optional LonRefPath long_ref_path = 3; // long behavior
+  // TBD: lon motion
+}

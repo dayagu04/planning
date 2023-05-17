@@ -209,13 +209,14 @@ bool PlanningComponent::Proc() {
   //   p.set_relative_time(p.relative_time() + dt);
   // }
 
-  planning::common::PlanningDebugInfo planning_debug_data;
-  planning_debug_data.set_timestamp(IflyTime::Now_ms());
+  auto& debug_info_manager = DebugInfoManager::GetInstance();
+  auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
+  planning_debug_data->set_timestamp(IflyTime::Now_ms());
   // 获取debug json信息
-  auto debug_info_json = *DebugInfoJson::GetInstance().GetDebugJson();
-  planning_debug_data.set_data_json(mjson::Json(debug_info_json).dump());
+  auto debug_info_json = *DebugInfoManager::GetInstance().GetDebugJson();
+  planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
   // planning_debug_data.set_data_json(debug_output.data.data_json());
-  planning_debug_writer_->Write(planning_debug_data);
+  planning_debug_writer_->Write(*planning_debug_data);
 
   // fill planning_debug_info —需要好好设计一下
   auto debug_info = mjson::Json(mjson::Json::object());

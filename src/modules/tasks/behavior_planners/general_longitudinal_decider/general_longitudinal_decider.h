@@ -67,16 +67,18 @@ class GeneralLongitudinalDecider : public Task {
       const TrajectoryPoints &traj_points,
       const ReferencePathPoints &refpath_points,
       const std::vector<planning_math::Polygon2d> &overlap_path,
-      const std::shared_ptr<FrenetObstacle> obstacle, ObstacleDecision &obstacle_decision,
-      LonRefPath &lon_ref_path);
+      const std::shared_ptr<FrenetObstacle> obstacle,
+      ObstacleDecision &obstacle_decision, LonRefPath &lon_ref_path);
 
   void make_longitudinal_overlap_path(
       const TrajectoryPoints &traj_points,
       std::vector<planning_math::Polygon2d> &overlap_path);
 
-  bool check_longitudinal_ignore_obstacle(const std::shared_ptr<FrenetObstacle> obstacle);
+  bool check_longitudinal_ignore_obstacle(
+      const std::shared_ptr<FrenetObstacle> obstacle);
 
-  bool check_obstacle_both_sides(const std::shared_ptr<FrenetObstacle> obstacle);
+  bool check_obstacle_both_sides(
+      const std::shared_ptr<FrenetObstacle> obstacle);
 
   // TBD(binwang33): refpath_points 入参没有被使用，需要去除
   // 函数名需要统一
@@ -110,9 +112,14 @@ class GeneralLongitudinalDecider : public Task {
 
   double get_s_bound_by_target_parking_space();
 
+  /**
+   * @brief 将纵向输出转存为proto后存入planning debug info
+   */
+  void GenerateLonRefPathPB(const LonRefPath &lon_ref_path);
+
  private:
   LongitudinalDeciderV3Config config_;
-  AdaptiveCruiseControlConfig config_acc_; // 暂时不考虑acc
+  AdaptiveCruiseControlConfig config_acc_;  // 暂时不考虑acc
   StartStopEnableConfig config_start_stop_;
   LonYieldInfo lon_yield_info_;
   VelocityLimitInfo vel_limit_info_;
