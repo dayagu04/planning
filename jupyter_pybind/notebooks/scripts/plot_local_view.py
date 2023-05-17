@@ -8,7 +8,7 @@ sys.path.append('../../../')
 
 
 # bag path and frame dt
-bag_path = "/mnt/xlwang71/20230515203542.record.00000"
+bag_path = "/docker_share/data/clren/code/new_planning2/planning/20230515203542.record.00000"
 frame_dt = 0.02 # sec
 
 import numpy as np
@@ -98,15 +98,15 @@ class LoadCyberbag:
       self.vs_msg['enable'] = False
       print("missing /iflytek/vehicle_service !!!")
 
-bag_loder = LoadCyberbag(bag_path)
-bag_loder.load_all_data()
+bag_loader = LoadCyberbag(bag_path)
+bag_loader.load_all_data()
 
 
 ### sliders config
 class LocalViewSlider:
-  def __init__(self, bag_data, silder_callback):
-    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=bag_loder.vs_msg['t'][-1], value=-0.1, step=frame_dt)
-    ipywidgets.interact(silder_callback, bag_time = self.time_slider)
+  def __init__(self,  slider_callback):
+    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=bag_loader.vs_msg['t'][-1], value=-0.1, step=frame_dt)
+    ipywidgets.interact(slider_callback, bag_time = self.time_slider)
 
 
 ### figures config
@@ -147,51 +147,51 @@ fig1.legend.click_policy = 'hide'
 
 ### global variables
 # pos offset
-cur_pos_xn0 = cur_pos_xn = bag_loder.loc_msg['data'][0].pose.local_position.x
-cur_pos_yn0 = cur_pos_yn = bag_loder.loc_msg['data'][0].pose.local_position.y
+cur_pos_xn0 = cur_pos_xn = bag_loader.loc_msg['data'][0].pose.local_position.x
+cur_pos_yn0 = cur_pos_yn = bag_loader.loc_msg['data'][0].pose.local_position.y
 
 # car pos in local coordinates
 car_xb, car_yb = load_car_params_patch()
 
 ### sliders callback
-def silder_callback(bag_time):
+def slider_callback(bag_time):
   kwargs = locals()
 
   ### step 1: 时间戳对齐
   loc_msg_idx = 0
-  if bag_loder.loc_msg['enable'] == True:
-    while bag_loder.loc_msg['t'][loc_msg_idx] <= bag_time and loc_msg_idx < (len(bag_loder.loc_msg['t'])-2):
+  if bag_loader.loc_msg['enable'] == True:
+    while bag_loader.loc_msg['t'][loc_msg_idx] <= bag_time and loc_msg_idx < (len(bag_loader.loc_msg['t'])-2):
         loc_msg_idx = loc_msg_idx + 1
 
   road_msg_idx = 0
-  if bag_loder.road_msg['enable'] == True:
-    while bag_loder.road_msg['t'][road_msg_idx] <= bag_time and road_msg_idx < (len(bag_loder.road_msg['t'])-2):
+  if bag_loader.road_msg['enable'] == True:
+    while bag_loader.road_msg['t'][road_msg_idx] <= bag_time and road_msg_idx < (len(bag_loader.road_msg['t'])-2):
         road_msg_idx = road_msg_idx + 1
 
   fus_msg_idx = 0
-  if bag_loder.fus_msg['enable'] == True:
-    while bag_loder.fus_msg['t'][fus_msg_idx] <= bag_time and fus_msg_idx < (len(bag_loder.fus_msg['t'])-2):
+  if bag_loader.fus_msg['enable'] == True:
+    while bag_loader.fus_msg['t'][fus_msg_idx] <= bag_time and fus_msg_idx < (len(bag_loader.fus_msg['t'])-2):
         fus_msg_idx = fus_msg_idx + 1
 
   vs_msg_idx = 0
-  if bag_loder.vs_msg['enable'] == True:
-    while bag_loder.vs_msg['t'][vs_msg_idx] <= bag_time and vs_msg_idx < (len(bag_loder.vs_msg['t'])-2):
+  if bag_loader.vs_msg['enable'] == True:
+    while bag_loader.vs_msg['t'][vs_msg_idx] <= bag_time and vs_msg_idx < (len(bag_loader.vs_msg['t'])-2):
         vs_msg_idx = vs_msg_idx + 1
 
 
   ### step 2: 加载定位信息
-  if bag_loder.loc_msg['enable'] == True:
+  if bag_loader.loc_msg['enable'] == True:
     # ego pos in local and global coordinates
-    cur_pos_xn = bag_loder.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loder.loc_msg['data'][loc_msg_idx].pose.local_position.y
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
 
-    cur_yaw = bag_loder.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
     ego_xb, ego_yb = [], []
     ego_xn, ego_yn = [], []
 
-    for i in range(len(bag_loder.loc_msg['data'])):
-      pos_xn_i = bag_loder.loc_msg['data'][i].pose.local_position.x
-      pos_yn_i = bag_loder.loc_msg['data'][i].pose.local_position.y
+    for i in range(len(bag_loader.loc_msg['data'])):
+      pos_xn_i = bag_loader.loc_msg['data'][i].pose.local_position.x
+      pos_yn_i = bag_loader.loc_msg['data'][i].pose.local_position.y
 
       ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
 
@@ -222,9 +222,9 @@ def silder_callback(bag_time):
     })
 
     try:
-      vel_ego =  bag_loder.loc_msg['data'][loc_msg_idx].linear_velocity_from_wheel
+      vel_ego =  bag_loader.loc_msg['data'][loc_msg_idx].linear_velocity_from_wheel
     except:
-      vel_ego = bag_loder.vs_msg['data'][vs_msg_idx].vehicle_speed
+      vel_ego = bag_loader.vs_msg['data'][vs_msg_idx].vehicle_speed
 
     text_xn = cur_pos_xn - cur_pos_xn0 - 2.0
     text_yn = cur_pos_yn - cur_pos_yn0 + 2.0
@@ -236,9 +236,9 @@ def silder_callback(bag_time):
 
 
   ### step 3: 加载车道线信息
-  if bag_loder.road_msg['enable'] == True:
+  if bag_loader.road_msg['enable'] == True:
     # load lane info
-    line_info_list = load_lane_lines(bag_loder.road_msg['data'][road_msg_idx].lanes)
+    line_info_list = load_lane_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
     # update lane info
     data_lane_dict = {
       0:data_lane_0,
@@ -269,8 +269,8 @@ def silder_callback(bag_time):
 
   ### step 4: 加载障碍物信息
   # load fus_obj
-  if bag_loder.fus_msg['enable'] == True:
-    fusion_objects = bag_loder.fus_msg['data'][fus_msg_idx].fusion_object
+  if bag_loader.fus_msg['enable'] == True:
+    fusion_objects = bag_loader.fus_msg['data'][fus_msg_idx].fusion_object
     obstacles_info = load_obstacle_params(fusion_objects)
     data_fus_obj.data.update({
       'obstacles_x': obstacles_info['obstacles_x'],
@@ -283,4 +283,4 @@ def silder_callback(bag_time):
   push_notebook()
 
 bkp.show(row(fig1), notebook_handle=True)
-slider_class = LocalViewSlider(bag_loder.loc_msg, silder_callback)
+slider_class = LocalViewSlider(slider_callback)

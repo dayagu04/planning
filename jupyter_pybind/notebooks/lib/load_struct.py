@@ -33,7 +33,7 @@ def load_lane_lines(lanes):
 
       lane_info_r['line_x_vec'] = line_x
       lane_info_r['line_y_vec'] = line_y
-      lane_info_r['type'] = left_line.segment[0].type
+      lane_info_r['type'] = right_line.segment[0].type
       line_info_list.append(lane_info_r)
     else:
       line_x, line_y = gen_line(0,0,0,0,0,0)
@@ -117,40 +117,3 @@ def gen_line(c0, c1, c2, c3, start, end):
       points_y.append([y])
 
   return points_x, points_y
-
-def load_lane_lines(lanes):
-  line_info_list = []
-
-  for i in range(6):
-    lane_info_l = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
-    if i< len(lanes):
-      lane = lanes[i]
-      left_line = lane.left_lane_boundary
-      left_line_coef = left_line.poly_coefficient
-      line_x, line_y = gen_line(left_line_coef[0], left_line_coef[1], left_line_coef[2], left_line_coef[3], \
-        left_line.begin, left_line.end)
-
-      lane_info_l['line_x_vec'] = line_x
-      lane_info_l['line_y_vec'] = line_y
-      lane_info_l['type'] = left_line.segment[0].type
-
-      line_info_list.append(lane_info_l)
-
-      lane_info_r = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
-      right_line = lane.right_lane_boundary
-      right_line_coef = right_line.poly_coefficient
-      line_x, line_y = gen_line(right_line_coef[0], right_line_coef[1], right_line_coef[2], right_line_coef[3], \
-        right_line.begin, right_line.end)
-      lane_info_r['line_x_vec'] = line_x
-      lane_info_r['line_y_vec'] = line_y
-      lane_info_r['type'] = left_line.segment[0].type
-      line_info_list.append(lane_info_r)
-    else:
-      line_x, line_y = gen_line(0,0,0,0,0,0)
-      lane_info_l['line_x_vec'] = line_x
-      lane_info_l['line_y_vec'] = line_y
-      lane_info_l['type'] = []
-      line_info_list.append(lane_info_l)
-      line_info_list.append(lane_info_l)
-
-  return line_info_list
