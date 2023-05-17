@@ -2,7 +2,8 @@ project(planning)
 cmake_minimum_required(VERSION 3.0)
 
 # set release mode
-set(CMAKE_BUILD_TYPE Release)
+# Debug: X86  Release: FDC
+set(CMAKE_BUILD_TYPE Debug)
 
 # install config
 set(INSTALL_TO_CURRENT ON)

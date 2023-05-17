@@ -358,7 +358,5 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
                            false, 80., false, false, false, false, false, -1);
 
   (void)scenario_state_machine_->update(&frame);
-  auto debug_info_json = *DebugInfoJson::GetInstance().GetDebugJson();
-  auto v_limit_final = debug_info_json["LonBehavior_v_limit_final"].number_value();
 }
 }  // namespace planning

@@ -21,7 +21,7 @@ bool PlanningComponent::Init() {
   double time_stamp = IflyTime::Now_s();
 
   std::string log_file = engine_config.log_conf.log_file_dir +
-                         "/planning_log_" + std::to_string(time_stamp);
+                         "/planning_log";
   std::cout << "log_file!!!" << log_file << std::endl;
   // Nanolog
   bst::LogLevel log_level;

@@ -52,22 +52,44 @@ include_directories(
 add_library(planning_component SHARED ${SRC_FILES})
 target_include_directories(planning_component PUBLIC ${INCLUDE_DIRS})
 
-target_link_libraries(planning_component PUBLIC
-  eigen
-  cyber
-  protobuf
-  proto_interface
-  gflags
-  autoplt
-  osqpstatic
-  advanced_ctrl_lib
-  ilqr_lib
-  mjson
-  rapidjson
-  nlohmann_json
-  hfsm
-  planning_proto
-  NanoLog)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  # release for FDC
+  target_link_libraries(planning_component PUBLIC
+    eigen
+    cyber
+    protobuf
+    proto_interface
+    gflags
+    autoplt
+    osqpstatic
+    advanced_ctrl_lib
+    ilqr_lib
+    mjson
+    rapidjson
+    nlohmann_json
+    hfsm
+    planning_proto
+    NanoLog
+  )
+else()
+  # debug for X86
+  target_link_libraries(planning_component PUBLIC
+    eigen
+    cyber
+    protobuf
+    proto_interface
+    gflags
+    autoplt
+    osqpstatic
+    advanced_ctrl_lib
+    ilqr_lib
+    mjson
+    rapidjson
+    nlohmann_json
+    hfsm
+    planning_proto
+  )
+endif()
 
 target_compile_definitions(planning_component PRIVATE
     CONFIG_PATH="/asw/planning/res/conf")
