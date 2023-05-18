@@ -63,7 +63,7 @@ class VisionLateralMotionPlanner : public Task {
   bool update_planner_output();
 
   bool update_lateral_info();
-
+  void save_to_debug_info();
   bool update_planner_status();
 
   bool log_planner_debug_info();

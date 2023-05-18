@@ -8,6 +8,7 @@
 #include "ifly_time.h"
 #include "context/planning_context.h"
 #include "environment_model_debug_info.pb.h"
+#include "debug_info_log.h"
 namespace planning {
 
 TrackletSequentialState *LifecycleDict::get(int uid) {
@@ -696,7 +697,10 @@ void TrackletMaintainer::calc(
   // optional bool is_accident_car = 16;
   // optional uint32 is_accident_cnt = 17;
   // optional bool num_avoid_car = 18;
-  auto environment_model_debug_info = session_->mutable_environmental_model()->mutable_environment_model_debug_info();
+  auto& debug_info_manager = DebugInfoManager::GetInstance();
+  auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
+  auto environment_model_debug_info = planning_debug_data->mutable_environment_model_info();
+   
   for (auto tr : tracked_objects) {
     planning::common::Obstacle *obstacle = environment_model_debug_info->add_obstacle();
     obstacle->set_id(tr->track_id);

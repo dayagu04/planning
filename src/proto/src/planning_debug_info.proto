@@ -3,6 +3,8 @@ syntax = "proto2";
 package planning.common;
 
 import "task_basic_types.proto";
+import "vision_only_lateral_behavior_planner.proto";
+import "environment_model_debug_info.proto";
 
 message ReadTopicStampList {
   optional uint64 fusion_object_stamp = 1;
@@ -25,4 +27,6 @@ message PlanningDebugInfo {
   optional LonRefPath long_ref_path = 3; // long behavior
   optional ReadTopicStampList read_topic_timestamp = 4;
   // TBD: lon motion
+  optional VOLatBehaviorPlan vo_lat_behavior_plan = 4;
+  optional EnvironmentModelInfo environment_model_info = 5;
 }

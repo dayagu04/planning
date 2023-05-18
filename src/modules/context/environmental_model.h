@@ -193,12 +193,6 @@ class EnvironmentalModel {
   bool get_hdmap_valid() const { return hdmap_valid_; }
   bool is_on_highway() const { return true; } //hack
   const HmiMcuInner::HmiMcuInner& get_hmi_info() const { return local_view_.hmi_mcu_inner_info; }
-  const planning::common::EnvironmentModelInfo &environment_model_debug_info() {
-    return environment_model_debug_info_;
-  }
-  planning::common::EnvironmentModelInfo *mutable_environment_model_debug_info() {
-    return &environment_model_debug_info_;
-  }
 private:
   // planning::framework::Session *session_ = nullptr;
   // planning::framework::Frame *frame_ = nullptr;
@@ -254,8 +248,6 @@ private:
   EgoPlanningConfigBuilder *urban_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *parking_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *highway_config_builder_ptr_ = nullptr;
-
-  planning::common::EnvironmentModelInfo environment_model_debug_info_;
 };
 
 }  // namespace planning
