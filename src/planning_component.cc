@@ -20,8 +20,7 @@ bool PlanningComponent::Init() {
       common::ConfigurationContext::Instance()->engine_config();
   double time_stamp = IflyTime::Now_s();
 
-  std::string log_file = engine_config.log_conf.log_file_dir +
-                         "/planning_log";
+  std::string log_file = engine_config.log_conf.log_file_dir + "/planning_log";
   std::cout << "log_file!!!" << log_file << std::endl;
   // Nanolog
   bst::LogLevel log_level;
@@ -209,8 +208,31 @@ bool PlanningComponent::Proc() {
   //   p.set_relative_time(p.relative_time() + dt);
   // }
 
-  auto& debug_info_manager = DebugInfoManager::GetInstance();
-  auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
+  auto &debug_info_manager = DebugInfoManager::GetInstance();
+  auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
+
+  // record timestamp of all read topics for FPP
+  planning_debug_data->mutable_read_topic_timestamp()->set_control_output_stamp(
+      local_view_.control_output.header().timestamp());
+  planning_debug_data->mutable_read_topic_timestamp()->set_localization_stamp(
+      local_view_.localization_estimate.header().timestamp());
+  planning_debug_data->mutable_read_topic_timestamp()->set_fusion_object_stamp(
+      local_view_.fusion_objects_info.header().timestamp());
+  planning_debug_data->mutable_read_topic_timestamp()->set_parking_fusion_stamp(
+      local_view_.parking_fusion_info.header().timestamp());
+  planning_debug_data->mutable_read_topic_timestamp()->set_fusion_road_stamp(
+      local_view_.road_info.header().timestamp());
+  planning_debug_data->mutable_read_topic_timestamp()->set_hmi_stamp(
+      local_view_.hmi_mcu_inner_info.header().timestamp());
+  planning_debug_data->mutable_read_topic_timestamp()->set_prediction_stamp(
+      local_view_.prediction_result.header().timestamp());
+  planning_debug_data->mutable_read_topic_timestamp()
+      ->set_vehicle_service_stamp(
+          local_view_.vehicel_service_output_info.header().timestamp());
+  planning_debug_data->mutable_read_topic_timestamp()
+      ->set_radar_perception_stamp(
+          local_view_.radar_perception_objects_info.header().timestamp());
+
   planning_debug_data->set_timestamp(IflyTime::Now_ms());
   // 获取debug json信息
   auto debug_info_json = *DebugInfoManager::GetInstance().GetDebugJson();
@@ -247,4 +269,4 @@ bool PlanningComponent::Proc() {
 
 DebugOutput PlanningComponent::GetDebugInfo() { return debug_info_; }
 
-}  // namespace planning
+} // namespace planning

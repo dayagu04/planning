@@ -4,6 +4,18 @@ package planning.common;
 
 import "task_basic_types.proto";
 
+message ReadTopicStampList {
+  optional uint64 fusion_object_stamp = 1;
+  optional uint64 fusion_road_stamp = 2;
+  optional uint64 localization_stamp = 3;
+  optional uint64 prediction_stamp = 4;
+  optional uint64 vehicle_service_stamp = 5;
+  optional uint64 radar_perception_stamp = 6;
+  optional uint64 control_output_stamp = 7;
+  optional uint64 hmi_stamp = 8;
+  optional uint64 parking_fusion_stamp = 9;
+}
+
 message PlanningDebugInfo {
   optional uint64 timestamp = 1; // us
   optional string data_json = 2;
@@ -11,5 +23,6 @@ message PlanningDebugInfo {
   // TBD: lat behavior
   // TBD: lat motion
   optional LonRefPath long_ref_path = 3; // long behavior
+  optional ReadTopicStampList read_topic_timestamp = 4;
   // TBD: lon motion
 }
