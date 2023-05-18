@@ -144,7 +144,7 @@ bool LaneReferencePath::get_points_by_lane_id(
       Vec2d delta{ref_path_pt.path_point.x - pre_pt.path_point.x,
                   ref_path_pt.path_point.y - pre_pt.path_point.y};
       Vec2d cur_direction = Vec2d::CreateUnitVec2d(ref_path_pt.path_point.theta);
-      if (cur_direction.InnerProd(delta) > 0) {
+      if (cur_direction.InnerProd(delta) < 0) {
         continue; 
       }
     }
