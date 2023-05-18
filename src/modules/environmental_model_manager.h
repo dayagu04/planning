@@ -4,7 +4,6 @@
 #include "session.h"
 #include "context/ego_planning_config.h"
 #include "ifly_time.h"
-
 namespace planning {
 namespace planner {
 
@@ -66,7 +65,7 @@ class EnvironmentalModelManager {
   std::shared_ptr<planning::TrafficLightDecisionManager>
       traffic_light_decision_manager_ptr_ = nullptr;
   std::shared_ptr<planning::LateralObstacle> lateral_obstacle_ptr_ = nullptr;
-  double last_feed_time_[FEED_TYPE_MAX]{};
+  double last_feed_time_[FEED_TYPE_MAX]{};  
 };
 
 }  // namespace planner
