@@ -25,7 +25,7 @@
 #include "vehicle_status.pb.h"
 #include "fusion_objects.pb.h"
 #include "prediction.pb.h"
-
+#include "environment_model_debug_info.pb.h"
 #include "common/config/vehicle_param.h"
 
 namespace planning {
@@ -193,6 +193,12 @@ class EnvironmentalModel {
   bool get_hdmap_valid() const { return hdmap_valid_; }
   bool is_on_highway() const { return true; } //hack
   const HmiMcuInner::HmiMcuInner& get_hmi_info() const { return local_view_.hmi_mcu_inner_info; }
+  const planning::common::EnvironmentModelInfo &environment_model_debug_info() {
+    return environment_model_debug_info_;
+  }
+  planning::common::EnvironmentModelInfo *mutable_environment_model_debug_info() {
+    return &environment_model_debug_info_;
+  }
 private:
   // planning::framework::Session *session_ = nullptr;
   // planning::framework::Frame *frame_ = nullptr;
@@ -206,14 +212,6 @@ private:
       nullptr;
   std::shared_ptr<TrafficLightDecisionManager> traffic_light_decision_manager_ = nullptr;
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
-
-  // // set 到session里
-  // std::shared_ptr<CartEgoStateManager> cart_ego_state_manager_ptr_;
-  // std::shared_ptr<EgoStateManager> ego_state_manager_ptr_;
-  // std::shared_ptr<ObstacleManager> obstacle_manager_ptr_;
-  // std::shared_ptr<VirtualLaneManager> virtual_lane_manager_ptr_;
-  // std::shared_ptr<ReferencePathManager> reference_path_manager_ptr_;
-  // std::shared_ptr<TrafficLightDecisionManager> traffic_light_decision_manager_ptr_;
 
 //  private:
 //   std::unique_ptr<LateralObstacle> lateral_obstacle_;
@@ -257,7 +255,7 @@ private:
   EgoPlanningConfigBuilder *parking_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *highway_config_builder_ptr_ = nullptr;
 
-
+  planning::common::EnvironmentModelInfo environment_model_debug_info_;
 };
 
 }  // namespace planning

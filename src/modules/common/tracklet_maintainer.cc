@@ -7,7 +7,7 @@
 
 #include "ifly_time.h"
 #include "context/planning_context.h"
-
+#include "environment_model_debug_info.pb.h"
 namespace planning {
 
 TrackletSequentialState *LifecycleDict::get(int uid) {
@@ -678,6 +678,48 @@ void TrackletMaintainer::calc(
   is_leadone_potential_avoiding_car(lead_cars.lead_one, scenario, lane_width,
                                     borrow_bicycle_lane, rightest_lane,
                                     dist_intersect, isRedLightStop);
+  // optional uint32 id = 1;
+  // optional ObjectType type = 2;
+  // optional double s = 3;
+  // optional double l = 4;
+  // optional double s_to_ego = 5; 
+  // optional double max_l_to_ref = 6;
+  // optional double min_l_to_ref = 7;
+  // optional double nearest_l_to_desire_path = 8;
+  // optional double nearest_l_to_ego = 9;
+  // optional double vs_lat_relative = 10;
+  // optional double vs_lon_relative = 11;
+  // optional double vs_lon = 12;
+  // optional Point2d s_with_min_l_ = 13;
+  // optional Point2d s_with_max_l_ = 14;
+  // optional double nearest_y_to_desired_path = 15;
+  // optional bool is_accident_car = 16;
+  // optional uint32 is_accident_cnt = 17;
+  // optional bool num_avoid_car = 18;
+  auto environment_model_debug_info = session_->mutable_environmental_model()->mutable_environment_model_debug_info();
+  for (auto tr : tracked_objects) {
+    planning::common::Obstacle *obstacle = environment_model_debug_info->add_obstacle();
+    obstacle->set_id(tr->track_id);
+    obstacle->set_s(tr->s);
+    obstacle->set_l(tr->l);
+    obstacle->set_s_to_ego(tr->d_rel);
+    obstacle->set_max_l_to_ref(tr->d_max_cpath);
+    obstacle->set_min_l_to_ref(tr->d_min_cpath);
+    obstacle->set_nearest_l_to_desire_path(tr->d_path);
+    obstacle->set_nearest_l_to_ego(tr->d_path_self);
+    obstacle->set_vs_lat_relative(tr->v_lat);
+    obstacle->set_vs_lon_relative(tr->v_rel);
+    obstacle->set_vs_lon(tr->v_lead);
+    obstacle->mutable_s_with_min_l()->set_x(tr->d_rel);
+    obstacle->mutable_s_with_max_l()->set_x(tr->d_rel);
+    obstacle->set_nearest_y_to_desired_path(tr->y_rel);
+    obstacle->set_is_accident_car(tr->is_accident_car);
+    obstacle->set_is_accident_cnt(tr->is_accident_cnt);
+    obstacle->set_is_avoid_car(tr->is_avd_car);
+    obstacle->set_is_lane_lead_obstacle(tr->is_lead);
+    obstacle->set_current_lead_obstacle_to_ego(tr->is_temp_lead);
+    
+  }
 }
 
 void TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
