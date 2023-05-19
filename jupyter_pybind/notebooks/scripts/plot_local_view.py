@@ -6,20 +6,20 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/docker_share/data/clren/code/new_planning2/planning/20230515203542.record.00000"
+bag_path = "/mnt/xlwang71/0518/20230207030915.record.00000"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
 bag_loader = LoadCyberbag(bag_path)
-bag_loader.load_all_data()
+max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=bag_loader.vs_msg['t'][-1], value=-0.1, step=frame_dt)
+    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider)
 
 ### sliders callback

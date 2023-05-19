@@ -38,16 +38,18 @@ class LoadCyberbag:
     # vehicle service msg
     self.vs_msg = {'t':[], 'data':[], 'enable':[]}
     # car pos in local coordinates
-    
+
   def load_all_data(self):
+    max_time = 0.0
     # load localization msg
     try:
-      for topic, msg, t in self.bag.read_messages("/localization"):
+      for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
         # load timestamp
         self.loc_msg['t'].append(msg.header.timestamp / 1e6)
         self.loc_msg['data'].append(msg)
       self.loc_msg['t'] = [tmp - self.loc_msg['t'][0]  for tmp in self.loc_msg['t']]
       self.loc_msg['enable'] = True
+      max_time = max(max_time, self.loc_msg['t'][-1])
     except:
       self.loc_msg['enable'] = False
       print('missing /iflytek/localization/ego_pose !!!')
@@ -81,12 +83,15 @@ class LoadCyberbag:
         self.vs_msg['data'].append(msg)
       self.vs_msg['t'] = [tmp - self.vs_msg['t'][0]  for tmp in self.vs_msg['t']]
       self.vs_msg['enable'] = True
+      max_time = max(max_time, self.vs_msg['t'][-1])
     except:
       self.vs_msg['enable'] = False
       print("missing /iflytek/vehicle_service !!!")
-      
+
+    return max_time
+
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
-  
+
   ### step 1: 时间戳对齐
   loc_msg_idx = 0
   if bag_loader.loc_msg['enable'] == True:
@@ -122,7 +127,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     ego_xn, ego_yn = [], []
     ### global variables
     # pos offset
-    
+
     for i in range(len(bag_loader.loc_msg['data'])):
       pos_xn_i = bag_loader.loc_msg['data'][i].pose.local_position.x
       pos_yn_i = bag_loader.loc_msg['data'][i].pose.local_position.y
@@ -162,8 +167,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
     text_xn = cur_pos_xn - cur_pos_xn0 - 2.0
     text_yn = cur_pos_yn - cur_pos_yn0 + 2.0
-    
-    
+
+
     local_view_data['data_text'].data.update({
       'vel_ego_text': ['v={:.2f}'.format(round(vel_ego, 2))],
       'text_xn': [text_xn],
@@ -231,7 +236,7 @@ def load_local_view_figure():
   data_fus_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obs_label':[]})
-  
+
   local_view_data = {'data_car':data_car, \
                      'data_ego':data_ego, \
                      'data_text':data_text, \
