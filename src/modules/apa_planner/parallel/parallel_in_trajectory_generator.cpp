@@ -42,6 +42,11 @@ namespace {
   constexpr double kMinSlotLength = 5.8;
 }
 
+ParallelInTrajectoryGenerator::ParallelInTrajectoryGenerator() {
+  iterative_anchoring_smoother_ =
+      std::make_unique<IterativeAnchoringSmoother>();
+}
+
 bool ParallelInTrajectoryGenerator::Plan(framework::Frame* const frame) {
   auto planning_output = &(frame->mutable_session()->\
       mutable_planning_output_context()->mutable_planning_status()->\
@@ -285,6 +290,9 @@ bool ParallelInTrajectoryGenerator::CDSegmentPlan(
     GenerateCDSegmentTrajectory(segments_info, planning_output);
     GenerateDESegmentTrajectory(segments_info, planning_output);
     GenerateEFSegmentTrajectory(segments_info, planning_output);
+
+    iterative_anchoring_smoother_->Smooth(
+        geometry_planning_.GetObjectMap(), planning_output);
 
     PrintTrajectoryPoints(*planning_output);
 

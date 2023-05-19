@@ -13,6 +13,10 @@ planning::planning_math::Polygon2d ConstructVehiclePolygon(
     const double front_shrink_dis, const double front_side_shrink_dis,
     const double rear_shrink_dis, const double rear_side_shrink_dis);
 
+planning_math::Polygon2d ConstructVehiclePolygonWithBuffer(
+    const PlanningPoint &veh_point, const double front_buffer,
+    const double rear_buffer, const double lat_buffer);
+
   bool IsSlotSelected(framework::Frame* const frame);
 
   bool IsRoughCalc(framework::Frame* const frame);

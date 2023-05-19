@@ -73,10 +73,6 @@ class DiagonalInGeometryPlan {
       const PlanningPoint &veh_point2, const double radius,
       const planning::planning_math::Polygon2d& init_ego_polygon) const;
 
-  planning::planning_math::Polygon2d ConstructVehiclePolygonWithBuffer(
-      const PlanningPoint &veh_point, const double front_buffer,
-      const double rear_buffer, const double lat_buffer) const;
-
   bool CEndCollideCheck(const PlanningPoint &point_c,
       const double safe_dst) const;
 
@@ -106,15 +102,6 @@ class DiagonalInGeometryPlan {
   PlanningPoint target_point_;
   std::vector<planning_math::LineSegment2d> objects_map_line_segments_;
   std::vector<double> target_x_vec_;
-
-  double front_shrink_dis_ =
-      VehicleParamHelper::Instance()->GetParam().front_shrink_dis();
-  double front_side_shrink_dis_ =
-      VehicleParamHelper::Instance()->GetParam().front_side_shrink_dis();
-  double rear_shrink_dis_ =
-      VehicleParamHelper::Instance()->GetParam().rear_shrink_dis();
-  double rear_side_shrink_dis_ =
-      VehicleParamHelper::Instance()->GetParam().rear_side_shrink_dis();
 };
 
 } // namespace apa_planner

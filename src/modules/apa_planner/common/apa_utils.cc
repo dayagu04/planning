@@ -2,6 +2,7 @@
 
 #include "apa_planner/common/apa_cos_sin.h"
 #include "apa_planner/common/planning_log_helper.h"
+#include "apa_planner/common/vehicle_param_helper.h"
 #include "func_state_machine.pb.h"
 
 namespace planning {
@@ -64,6 +65,35 @@ Polygon2d ConstructVehiclePolygon(
       rear_center.x - dx6 + dx3, rear_center.y - dy6 - dy3);
 
   return Polygon2d(points);
+}
+
+Polygon2d ConstructVehiclePolygonWithBuffer(
+    const PlanningPoint &veh_point, const double front_buffer,
+    const double rear_buffer, const double lat_buffer) {
+  const double half_width_veh =
+      VehicleParamHelper::Instance()->GetParam().width() * 0.5;
+  const double front_edge_to_center =
+      VehicleParamHelper::Instance()->GetParam().front_edge_to_center();
+  const double back_edge_to_center =
+      VehicleParamHelper::Instance()->GetParam().back_edge_to_center();
+  const double front_shrink_dis =
+      VehicleParamHelper::Instance()->GetParam().front_shrink_dis();
+  const double front_side_shrink_dis =
+      VehicleParamHelper::Instance()->GetParam().front_side_shrink_dis();
+  const double rear_shrink_dis =
+      VehicleParamHelper::Instance()->GetParam().rear_shrink_dis();
+  const double rear_side_shrink_dis =
+      VehicleParamHelper::Instance()->GetParam().rear_side_shrink_dis();
+
+  const double front_edge_to_center_with_safe_dst =
+      front_edge_to_center + front_buffer;
+  const double back_edge_to_center_with_safe_dst =
+      back_edge_to_center + rear_buffer;
+  const double half_width_with_safe_dis = half_width_veh + lat_buffer;
+  return ConstructVehiclePolygon(veh_point,
+      half_width_with_safe_dis, front_edge_to_center_with_safe_dst,
+      back_edge_to_center_with_safe_dst, front_shrink_dis,
+      front_side_shrink_dis, rear_shrink_dis, rear_side_shrink_dis);
 }
 
 bool IsSlotSelected(Frame* const frame) {

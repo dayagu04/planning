@@ -1132,20 +1132,6 @@ bool DiagonalInGeometryPlan::CollideWithObjectsByPolygon(
   return false;
 }
 
-Polygon2d DiagonalInGeometryPlan::ConstructVehiclePolygonWithBuffer(
-    const PlanningPoint &veh_point, const double front_buffer,
-    const double rear_buffer, const double lat_buffer) const {
-  const double front_edge_to_center_with_safe_dst =
-      front_edge_to_center_ + front_buffer;
-  const double back_edge_to_center_with_safe_dst =
-      back_edge_to_center_ + rear_buffer;
-  const double half_width_with_safe_dis = half_width_veh_ + lat_buffer;
-  return ConstructVehiclePolygon(veh_point,
-      half_width_with_safe_dis, front_edge_to_center_with_safe_dst,
-      back_edge_to_center_with_safe_dst, front_shrink_dis_,
-      front_side_shrink_dis_, rear_shrink_dis_, rear_side_shrink_dis_);
-}
-
 bool DiagonalInGeometryPlan::CEndCollideCheck(const PlanningPoint &point_c,
                     const double safe_dst) const {
   if (objects_map_line_segments_.empty()) {

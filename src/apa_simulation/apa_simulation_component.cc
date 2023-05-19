@@ -31,7 +31,7 @@ bool ApaSimulationComponent::Init() {
   // 2.定义收发topics
   auto planning_output_reader =
       simulation_node_->CreateReader<PlanningOutput>(
-          "/iflytek/planning",
+          "/iflytek/planning/plan",
           [this](const std::shared_ptr<PlanningOutput> &planning_msg) {
             std::lock_guard<std::mutex> lock(msg_mutex_);
             planning_output_msg_.CopyFrom(*planning_msg);

@@ -4,6 +4,7 @@
 #include <atomic>
 
 #include "apa_simulation_config.pb.h"
+#include "func_state_machine.pb.h"
 #include "localization.pb.h"
 #include "parking_fusion.pb.h"
 #include "planning_plan.pb.h"

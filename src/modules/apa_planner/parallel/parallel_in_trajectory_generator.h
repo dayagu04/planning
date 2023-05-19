@@ -4,6 +4,7 @@
 #include "apa_planner/common/geometry_planning_io.h"
 #include "apa_planner/common/planning_log_helper.h"
 #include "apa_planner/parallel/parallel_in_geometry_plan.h"
+#include "apa_planner/path_smoother/iterative_anchoring_smoother.h"
 #include "common/local_view.h"
 #include "common/math/box2d.h"
 
@@ -12,7 +13,7 @@ namespace apa_planner {
 
 class ParallelInTrajectoryGenerator {
  public:
-  ParallelInTrajectoryGenerator() = default;
+  ParallelInTrajectoryGenerator();
   ~ParallelInTrajectoryGenerator() = default;
 
   bool Plan(framework::Frame* const frame);
@@ -166,6 +167,9 @@ class ParallelInTrajectoryGenerator {
 
   ::FuncStateMachine::FunctionalState current_state_ =
         ::FuncStateMachine::FunctionalState::INIT;
+
+  std::unique_ptr<IterativeAnchoringSmoother> iterative_anchoring_smoother_ =
+      nullptr;
 };
 
 } // namespace apa_planner

@@ -1,0 +1,22 @@
+fem_pos_deviation_smoother_config {
+  weight_fem_pos_deviation: 1e8
+  weight_ref_deviation: 1.0
+  weight_path_length: 1.0
+  apply_curvature_constraint: true
+  weight_curvature_constraint_slack_var: 1e8
+  curvature_constraint: 0.2
+  use_sqp: true
+  sqp_ftol: 0.01
+  sqp_pen_max_iter: 10
+  sqp_sub_max_iter: 100
+
+  max_iter: 500
+  time_limit: 0.0
+  verbose: false
+  scaled_termination: true
+  warm_start: true
+}
+default_bound: 0.2
+collision_decrease_ratio: 0.5
+lon_buffer: 0.1
+lat_buffer: 0.1
