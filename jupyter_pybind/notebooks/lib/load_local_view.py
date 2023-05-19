@@ -38,7 +38,9 @@ class LoadCyberbag:
     # vehicle service msg
     self.vs_msg = {'t':[], 'data':[], 'enable':[]}
     # car pos in local coordinates
-
+    
+     # planning msg
+    self.plan_msg = {'t':[], 'data':[], 'enable':[]}
   def load_all_data(self):
     max_time = 0.0
     # load localization msg
@@ -88,6 +90,18 @@ class LoadCyberbag:
       self.vs_msg['enable'] = False
       print("missing /iflytek/vehicle_service !!!")
 
+    # load vehicle service msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
+        self.plan_msg['t'].append(msg.meta.header.timestamp / 1e6)
+        self.plan_msg['data'].append(msg)
+      self.plan_msg['t'] = [tmp - self.plan_msg['t'][0]  for tmp in self.plan_msg['t']]
+      self.plan_msg['enable'] = True
+      max_time = max(max_time, self.plan_msg['t'][-1])
+    except:
+      self.plan_msg['enable'] = False
+      print("missing /iflytek/planning/plan !!!")
+
     return max_time
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
@@ -113,6 +127,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     while bag_loader.vs_msg['t'][vs_msg_idx] <= bag_time and vs_msg_idx < (len(bag_loader.vs_msg['t'])-2):
         vs_msg_idx = vs_msg_idx + 1
 
+  plan_msg_idx = 0
+  if bag_loader.plan_msg['enable'] == True:
+    while bag_loader.plan_msg['t'][plan_msg_idx] <= bag_time and plan_msg_idx < (len(bag_loader.plan_msg['t'])-2):
+        plan_msg_idx = plan_msg_idx + 1
 
   ### step 2: 加载定位信息
   if bag_loader.loc_msg['enable'] == True:
@@ -153,7 +171,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], cur_pos_xn, cur_pos_yn, cur_yaw)
         car_xn.append(tmp_x - cur_pos_xn0)
         car_yn.append(tmp_y - cur_pos_yn0)
-
 
     local_view_data['data_car'].data.update({
       'car_xb': car_xb,
@@ -221,6 +238,18 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'pos_y' : obstacles_info['pos_y'],
       'obs_label' : obstacles_info['obs_label'],
     })
+  
+  ### step 3: 加载车道线信息
+  if bag_loader.plan_msg['enable'] == True:
+    trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
+    if trajectory.trajectory_type == 0:
+      mpc_polynomial = trajectory.target_reference.polynomial
+      mpc_x, mpc_y = gen_line(mpc_polynomial[3],mpc_polynomial[2], mpc_polynomial[1], mpc_polynomial[0], 0, 50)
+      local_view_data['data_mpc_trajectory'].data.update({
+        'mpc_y' : mpc_y,
+        'mpc_x' : mpc_x,
+      })
+      
   return local_view_data
 
 def load_local_view_figure():
@@ -236,7 +265,10 @@ def load_local_view_figure():
   data_fus_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obs_label':[]})
-
+  
+  mpc_data = ColumnDataSource(data = {'mpc_y':[],
+                                      'mpc_x':[],})
+  
   local_view_data = {'data_car':data_car, \
                      'data_ego':data_ego, \
                      'data_text':data_text, \
@@ -246,13 +278,14 @@ def load_local_view_figure():
                      'data_lane_3':data_lane_3, \
                      'data_lane_4':data_lane_4, \
                      'data_lane_5':data_lane_5, \
-                     'data_fus_obj':data_fus_obj
+                     'data_fus_obj':data_fus_obj, \
+                     'data_mpc_trajectory':mpc_data 
                      }
   ### figures config
   fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=500, height=800, match_aspect = True, aspect_scale=1)
   fig1.x_range.flipped = True
   # figure plot
-  f1 = fig1.patch('car_yb', 'car_xb', source = local_view_data['data_car'], fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
+  f1 = fig1.patch('car_yb', 'car_xb', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
   fig1.line('ego_yb', 'ego_xb', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'car')
   fig1.line('line_0_y', 'line_0_x', source = data_lane_0, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
@@ -264,6 +297,7 @@ def load_local_view_figure():
   fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'obj')
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'obj_info')
 
+  fig1.line('mpc_y', 'mpc_x', source = mpc_data, line_width = 3, line_color = 'pink', line_dash = 'solid', legend_label = 'mpc_trajectory')
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 
