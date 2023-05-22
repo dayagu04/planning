@@ -280,7 +280,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
   if (session_->environmental_model().get_hdmap_valid()) {
     auto linear_velocity_from_wheel = localization_estimate.pose().linear_velocity_from_wheel();
     vehicle_status.mutable_velocity()->mutable_heading_velocity()->set_value_mps(linear_velocity_from_wheel);
-  } 
+  }
 
   if (vehicel_service_output_info.steering_wheel_angle_available()) {
     auto steering_data = vehicle_status.mutable_steering_wheel();
@@ -355,7 +355,7 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
     cur_predicion_obj.id = prediction_object.fusion_obstacle().additional_info().track_id();
     prediction_obj_id_set.emplace(cur_predicion_obj.id);
     cur_predicion_obj.type = prediction_object.fusion_obstacle().common_info().type();
-    // cur_predicion_obj.timestamp_us = prediction_object.header().timestamp_us(); 
+    // cur_predicion_obj.timestamp_us = prediction_object.header().timestamp_us();
     // double prediction_relative_time = clip(prediction_object.header().timestamp_us() / 1.e+6 - current_time - init_relative_time,
     //                                      0.0, -1.0);
     // if (std::abs(prediction_relative_time) > 0.3) {
@@ -408,7 +408,7 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
         trajectory_point.relative_ego_x = point.relative_position().x();
         trajectory_point.relative_ego_y = point.relative_position().y();
         trajectory_point.relative_ego_yaw = point.relative_yaw();
-        trajectory_point.relative_ego_speed = std::hypot(point.relative_velocity().x(), 
+        trajectory_point.relative_ego_speed = std::hypot(point.relative_velocity().x(),
                                                          point.relative_velocity().y());
 
         // trajectory_point.relative_ego_std_dev_x = point.relative_ego_std_dev_x();

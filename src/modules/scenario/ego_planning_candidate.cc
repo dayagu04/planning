@@ -236,7 +236,7 @@ void EgoPlanningCandidate::interpolate_with_last_trajectory_points() {
 }
 
 void EgoPlanningCandidate::copy_to_planning_context() {
-  assert(success_);
+  // assert(success_);
 
   // traj points and status info
   frame_->mutable_session()

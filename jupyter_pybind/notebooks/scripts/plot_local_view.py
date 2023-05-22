@@ -31,9 +31,9 @@ def slider_callback(bag_time):
   # if bag_loader.plan_msg['enable'] == True:
   #   while bag_loader.plan_msg['t'][plan_msg_idx] <= bag_time and plan_msg_idx < (len(bag_loader.plan_msg['t'])-2):
   #       plan_msg_idx = plan_msg_idx + 1
-        
+
   # bag_loader.plan_msg['data'][plan_msg_idx]
-  
+
   push_notebook()
 
 bkp.show(row(fig1), notebook_handle=True)

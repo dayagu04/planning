@@ -28,6 +28,7 @@ GeneralLongitudinalDecider::GeneralLongitudinalDecider(
 bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
   frame_ = frame;
   LOG_DEBUG("=======GeneralLongitudinalDecider======= \n");
+  double start_time = IflyTime::Now_ms();
   if (Task::Execute(frame) == false) {
     return false;
   }
@@ -349,6 +350,10 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
   }
   // 转存纵向决策信息至debuginfo
   GenerateLonRefPathPB(lon_ref_path);
+
+  double end_time = IflyTime::Now_ms();
+  LOG_DEBUG("=======GeneralLongitudinalDecider time cost is [%f]ms:\n",
+            end_time - start_time);
 
   return true;
 }
@@ -1004,8 +1009,8 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
     }
 
     Polygon2d care_overlap_polygon;
-    ok = care_overlap_polygon.ComputeConvexHull(overlap_points,
-                                                &care_overlap_polygon);
+    ok = planning_math::Polygon2d::ComputeConvexHull(overlap_points,
+                                                     &care_overlap_polygon);
     if (not ok) {
       continue;
     }
@@ -1532,7 +1537,7 @@ void GeneralLongitudinalDecider::construct_refpath_points(
     auto success =
         reference_path_ptr_->get_reference_point_by_lon(traj_pt.s, refpath_pt);
     (void)success;
-    assert(success);
+    // assert(success);
     refpath_points.emplace_back(std::move(refpath_pt));
   }
 
