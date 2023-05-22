@@ -17,7 +17,8 @@ TaskPipelineNormal::TaskPipelineNormal(
       TaskType::LATERAL_DECIDER, TaskType::VISION_LATERAL_MOTION_PLANNER,
       // TaskType::LATERAL_OPTIMIZER_V2,
       TaskType::GENERAL_LONGITUDINAL_DECIDER,
-      TaskType::GENERAL_LONGITUDINAL_OPTIMIZER,
+      TaskType::PWJ_LONGITUDINAL_MOTION_PLANNER,
+      // TaskType::ILQR_LONGITUDINAL_MOTION_PLANNER,
       TaskType::RESULT_TRAJECTORY_GENERATOR};
   CreatePlanningTasks(config_builder);
 }

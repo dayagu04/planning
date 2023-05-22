@@ -28,10 +28,10 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   // Step 2) get reference_points
   ReferencePathPoints raw_reference_path_points;
   bool ok = get_points_by_lane_id(lane_virtual_id_, raw_reference_path_points);
-  
+
   // Step 3) update
   if (ok) {
-    auto current_time = IflyTime::Now_ms(); 
+    auto current_time = IflyTime::Now_ms();
     update_refpath_points(raw_reference_path_points, false);
     auto end_time = IflyTime::Now_ms();
     LOG_DEBUG("update_refpath_points time:%f\n", end_time - current_time);
@@ -46,7 +46,7 @@ void LaneReferencePath::update(planning::framework::Session *session) {
                                   session->environmental_model().get_ego_state_manager()->ego_v_cruise());
   } else {
     LOG_DEBUG("LaneReferencePath::update failed");
-  } 
+  }
 }
 
 bool LaneReferencePath::is_obstacle_ignorable(const std::shared_ptr<FrenetObstacle> obstacle) {
@@ -145,7 +145,7 @@ bool LaneReferencePath::get_points_by_lane_id(
                   ref_path_pt.path_point.y - pre_pt.path_point.y};
       Vec2d cur_direction = Vec2d::CreateUnitVec2d(ref_path_pt.path_point.theta);
       if (cur_direction.InnerProd(delta) < 0) {
-        continue; 
+        continue;
       }
     }
     ref_path_points.emplace_back(std::move(ref_path_pt));

@@ -4,7 +4,7 @@
 #include "tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
 #include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 #include "tasks/behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner.h"
-#include "tasks/motion_planners/longitudinal_motion_planner/general_longitudinal_optimizer.h"
+#include "tasks/motion_planners/longitudinal_motion_planner/pwj_longitudinal_motion_planner.h"
 #include "tasks/motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
 
@@ -65,7 +65,7 @@ std::shared_ptr<Task> Task::Make(
       return std::make_shared<GeneralLongitudinalDecider>(config_builder,
                                                           pipeline_context);
     }
-    case TaskType::GENERAL_LONGITUDINAL_OPTIMIZER: {
+    case TaskType::PWJ_LONGITUDINAL_MOTION_PLANNER: {
       return std::make_shared<LongitudinalOptimizerV3>(config_builder,
                                                        pipeline_context);
     }

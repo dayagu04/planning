@@ -1,4 +1,4 @@
-#include "tasks/motion_planners/longitudinal_motion_planner/general_longitudinal_optimizer.h"
+#include "tasks/motion_planners/longitudinal_motion_planner/pwj_longitudinal_motion_planner.h"
 #include "tasks/task_pipeline_context.h"
 
 #include <array>

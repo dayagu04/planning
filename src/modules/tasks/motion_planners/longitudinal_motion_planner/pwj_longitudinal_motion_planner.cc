@@ -1,5 +1,5 @@
 
-#include "tasks/motion_planners/longitudinal_motion_planner/general_longitudinal_optimizer.h"
+#include "pwj_longitudinal_motion_planner.h"
 
 #include <iomanip>
 #include <sstream>
@@ -20,7 +20,7 @@ LongitudinalOptimizerV3::LongitudinalOptimizerV3(
     const std::shared_ptr<TaskPipelineContext> &pipeline_context)
     : Task(config_builder, pipeline_context) {
   config_ = config_builder->cast<LongitudinalOptimizerV3Config>();
-  name_ = "LongitudinalOptimizerV3";
+  name_ = "PWJLonMotionPlanner";
 }
 
 bool LongitudinalOptimizerV3::Execute(planning::framework::Frame *frame) {
@@ -266,7 +266,7 @@ bool LongitudinalOptimizerV3::optimize(
     auto t = lon_ref_path.t_list[i];
     auto s_ref = lon_ref_path.s_refs[i].first;
     v_ok = (s_ref - s_last) / 0.2;
-    LOG_DEBUG("HHLDEBUG from model v: %.2f \n", v_ok * 3.6);
+    LOG_DEBUG("v_ref from long behavior planner is: [%.2f] m/s \n", v_ok);
     s_last = s_ref;
     auto s_ref_raw = i < ego_prediction_raw_traj_points.size()
                          ? ego_prediction_raw_traj_points[i].s
