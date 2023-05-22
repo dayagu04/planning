@@ -47,4 +47,5 @@ message VOLatBehaviorPlan {
 
   repeated int32 avoid_car_ids = 35;
   repeated int32 avoid_car_allow_max_opposite_offset = 36;
+  optional string lc_back_reason = 37;
 }

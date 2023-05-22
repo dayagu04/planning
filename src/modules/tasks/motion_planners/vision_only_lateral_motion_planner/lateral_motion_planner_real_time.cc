@@ -2766,7 +2766,6 @@ void VisionLateralMotionPlanner::save_to_debug_info() {
   auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
   
   planning::common::VOLatBehaviorPlan lat_behavior_plan = planning_debug_data->vo_lat_behavior_plan();
-
   lat_behavior_plan.set_lc_request(lateral_output.lc_request);
   lat_behavior_plan.set_lc_request_source(lateral_output.lc_request_source);
   lat_behavior_plan.set_lc_status(lateral_output.lc_status);
@@ -2775,7 +2774,7 @@ void VisionLateralMotionPlanner::save_to_debug_info() {
   // lat_behavior_plan.set_lc_valid_cnt(state_machine_output.lc_valid_cnt);
   lat_behavior_plan.set_lc_back_obj_id(state_machine_output.lc_back_track.track_id);
   // lat_behavior_plan.set_lc_back_cnt(lateral_output.lc_request_source);
-  // lat_behavior_plan.set_lc_back_reason(state_machine_output.lc_back_reason);
+  lat_behavior_plan.set_lc_back_reason(state_machine_output.lc_back_reason);
   // lat_behavior_plan.set_lc_back_invalid_reason(lateral_output.lc_request);
   for (auto &near_car_origin : state_machine_output.near_cars_origin){
     lat_behavior_plan.add_near_car_ids_origin(near_car_origin.track_id);
@@ -2783,7 +2782,6 @@ void VisionLateralMotionPlanner::save_to_debug_info() {
   for (auto &near_car_target : state_machine_output.near_cars_target){
     lat_behavior_plan.add_near_car_ids_target(near_car_target.track_id);
   }
-  
   lat_behavior_plan.set_turn_light(lateral_output.turn_light);
   lat_behavior_plan.set_turn_light_source(lateral_output.turn_light_source);
 
@@ -2814,10 +2812,10 @@ void VisionLateralMotionPlanner::save_to_debug_info() {
   // lat_behavior_plan.set_has_target_lane(lateral_output.sb_lane);
 
   for (auto &item : lateral_output.avd_car_past){
-    lat_behavior_plan.add_avoid_car_ids(item[0]);
-  }
-  for (auto &item : lateral_output.avd_car_past){
-    lat_behavior_plan.add_avoid_car_allow_max_opposite_offset(item[9]);
+    if (item.size() > 0 ) {
+      lat_behavior_plan.add_avoid_car_ids(item[0]);
+      lat_behavior_plan.add_avoid_car_allow_max_opposite_offset(item[9]);
+    }
   }
 }
 

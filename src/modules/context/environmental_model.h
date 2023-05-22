@@ -25,7 +25,6 @@
 #include "vehicle_status.pb.h"
 #include "fusion_objects.pb.h"
 #include "prediction.pb.h"
-#include "environment_model_debug_info.pb.h"
 #include "common/config/vehicle_param.h"
 
 namespace planning {

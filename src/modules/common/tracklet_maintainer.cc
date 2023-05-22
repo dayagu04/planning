@@ -116,7 +116,7 @@ void TrackletMaintainer::apply_update(
   } else {
     recv_relative_prediction_objects(predictions, objects);
   }
-
+  std::cout<<"objects size:"<<objects.size()<<std::endl;
   auto &lateral_output =
       session_->planning_context().lateral_behavior_planner_output();
 
@@ -700,7 +700,7 @@ void TrackletMaintainer::calc(
   auto& debug_info_manager = DebugInfoManager::GetInstance();
   auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto environment_model_debug_info = planning_debug_data->mutable_environment_model_info();
-   
+  environment_model_debug_info->obstacle().Clear();
   for (auto tr : tracked_objects) {
     planning::common::Obstacle *obstacle = environment_model_debug_info->add_obstacle();
     obstacle->set_id(tr->track_id);

@@ -135,7 +135,7 @@ Obstacle::Obstacle(int id,
   x_center_ = prediction_object.position_x;
   y_center_ = prediction_object.position_y;
   x_relative_center_ = prediction_object.relative_position_x;
-  y_relative_center_ = prediction_object.relative_position_x;
+  y_relative_center_ = prediction_object.relative_position_y;
   width_ = prediction_object.width;
   length_ = prediction_object.length;
   yaw_ = planning_math::NormalizeAngle(prediction_object.yaw);
