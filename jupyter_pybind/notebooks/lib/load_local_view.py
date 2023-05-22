@@ -105,7 +105,8 @@ class LoadCyberbag:
     return max_time
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
-
+  cur_pos_xn0 = 0
+  cur_pos_yn0 = 0
   ### step 1: 时间戳对齐
   loc_msg_idx = 0
   if bag_loader.loc_msg['enable'] == True:
@@ -197,6 +198,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   if bag_loader.road_msg['enable'] == True:
     # load lane info
     line_info_list = load_lane_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
+    
+    # 
     # update lane info
     local_view_data['data_lane_0']
     data_lane_dict = {
@@ -206,9 +209,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       3:local_view_data['data_lane_3'],
       4:local_view_data['data_lane_4'],
       5:local_view_data['data_lane_5'],
+      6:local_view_data['data_lane_6'],
+      7:local_view_data['data_lane_7'],
+      8:local_view_data['data_lane_8'],
+      9:local_view_data['data_lane_9'],
     }
 
-    for i in range(6):
+    for i in range(10):
       try:
         if line_info_list[i]['type'] == 0 or \
           line_info_list[i]['type'] == 1 or \
@@ -223,7 +230,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'line_{}_y'.format(i): line_info_list[i]['line_y_vec'],
         })
       except:
-        print('update lane line error')
+        pass
 
 
   ### step 4: 加载障碍物信息
@@ -231,23 +238,34 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   if bag_loader.fus_msg['enable'] == True:
     fusion_objects = bag_loader.fus_msg['data'][fus_msg_idx].fusion_object
     obstacles_info = load_obstacle_params(fusion_objects)
-    local_view_data['data_fus_obj'].data.update({
-      'obstacles_x': obstacles_info['obstacles_x'],
-      'obstacles_y': obstacles_info['obstacles_y'],
-      'pos_x' : obstacles_info['pos_x'],
-      'pos_y' : obstacles_info['pos_y'],
-      'obs_label' : obstacles_info['obs_label'],
-    })
+    # 加载自车坐标系下的数据
+    if 1: 
+      local_view_data['data_fus_obj'].data.update({
+        'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
+        'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
+        'pos_x_rel' : obstacles_info['pos_x_rel'],
+        'pos_y_rel' : obstacles_info['pos_y_rel'],
+        'obstacles_x': obstacles_info['obstacles_x'],
+        'obstacles_y': obstacles_info['obstacles_y'],
+        'pos_x' : obstacles_info['pos_x'],
+        'pos_y' : obstacles_info['pos_y'],
+        'obs_label' : obstacles_info['obs_label'],
+      })
+    # else :
+    #   obstacles_info['obstacles_x_rel'],
+    #   obstacles_info['obstacles_x_rel'],
+    #   obstacles_info['obstacles_x_rel'],
+      
   
-  ### step 3: 加载车道线信息
+  ### step 3: 加载planning轨迹信息
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
     if trajectory.trajectory_type == 0:
-      mpc_polynomial = trajectory.target_reference.polynomial
-      mpc_x, mpc_y = gen_line(mpc_polynomial[3],mpc_polynomial[2], mpc_polynomial[1], mpc_polynomial[0], 0, 50)
-      local_view_data['data_mpc_trajectory'].data.update({
-        'mpc_y' : mpc_y,
-        'mpc_x' : mpc_x,
+      planning_polynomial = trajectory.target_reference.polynomial
+      planning_x, planning_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
+      local_view_data['data_planning_trajectory'].data.update({
+        'planning_y' : planning_y,
+        'planning_x' : planning_x,
       })
       
   return local_view_data
@@ -262,12 +280,18 @@ def load_local_view_figure():
   data_lane_3 = ColumnDataSource(data = {'line_3_y':[], 'line_3_x':[]})
   data_lane_4 = ColumnDataSource(data = {'line_4_y':[], 'line_4_x':[]})
   data_lane_5 = ColumnDataSource(data = {'line_5_y':[], 'line_5_x':[]})
+  data_lane_6 = ColumnDataSource(data = {'line_6_y':[], 'line_6_x':[]})
+  data_lane_7 = ColumnDataSource(data = {'line_7_y':[], 'line_7_x':[]})
+  data_lane_8 = ColumnDataSource(data = {'line_8_y':[], 'line_8_x':[]})
+  data_lane_9 = ColumnDataSource(data = {'line_9_y':[], 'line_9_x':[]})
   data_fus_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
+                                        'obstacles_y_rel':[], 'obstacles_x_rel':[],
+                                        'pos_y_rel':[], 'pos_x_rel':[],
                                         'obs_label':[]})
   
-  mpc_data = ColumnDataSource(data = {'mpc_y':[],
-                                      'mpc_x':[],})
+  planning_data = ColumnDataSource(data = {'planning_y':[],
+                                      'planning_x':[],})
   
   local_view_data = {'data_car':data_car, \
                      'data_ego':data_ego, \
@@ -278,8 +302,12 @@ def load_local_view_figure():
                      'data_lane_3':data_lane_3, \
                      'data_lane_4':data_lane_4, \
                      'data_lane_5':data_lane_5, \
+                     'data_lane_6':data_lane_6, \
+                     'data_lane_7':data_lane_7, \
+                     'data_lane_8':data_lane_8, \
+                     'data_lane_9':data_lane_9, \
                      'data_fus_obj':data_fus_obj, \
-                     'data_mpc_trajectory':mpc_data 
+                     'data_planning_trajectory':planning_data 
                      }
   ### figures config
   fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=500, height=800, match_aspect = True, aspect_scale=1)
@@ -294,10 +322,14 @@ def load_local_view_figure():
   fig1.line('line_3_y', 'line_3_x', source = data_lane_3, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   fig1.line('line_4_y', 'line_4_x', source = data_lane_4, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   fig1.line('line_5_y', 'line_5_x', source = data_lane_5, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
-  fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'obj')
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'obj_info')
+  fig1.line('line_6_y', 'line_6_x', source = data_lane_6, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_7_y', 'line_7_x', source = data_lane_7, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_8_y', 'line_8_x', source = data_lane_8, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_9_y', 'line_9_x', source = data_lane_9, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'obj')
+  fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'obj_info')
 
-  fig1.line('mpc_y', 'mpc_x', source = mpc_data, line_width = 3, line_color = 'pink', line_dash = 'solid', legend_label = 'mpc_trajectory')
+  fig1.line('planning_y', 'planning_x', source = planning_data, line_width = 3, line_color = 'pink', line_dash = 'solid', legend_label = 'planning_trajectory')
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 
