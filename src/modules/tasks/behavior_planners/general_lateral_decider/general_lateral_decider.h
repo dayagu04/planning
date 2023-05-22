@@ -118,6 +118,12 @@ class GeneralLateralDecider : public Task {
       const std::vector<std::pair<double, double>> &frenet_path_bounds,
       LatDeciderOutput &lat_decider_output);
 
+  void sample_road_distance_info(const double &s_target,
+                                 double &left_lane_distance,
+                                 double &right_lane_distance,
+                                 double &left_road_distance,
+                                 double &right_road_distance);
+
   void generate_enu_reference_traj(LatDeciderOutput &lat_decider_output);
 
   void generate_enu_reference_theta(LatDeciderOutput &lat_decider_output);

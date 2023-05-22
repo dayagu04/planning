@@ -127,14 +127,9 @@ bool GeneralLateralDecider::construct_reference_path_points(
 
     for (const auto &traj_point : traj_points) {
       TrajectoryPoint pt(traj_point);
-      if (traj_point.s < start_s) {
-        pt.l = start_l;
-      } else if (traj_point.s > end_s) {
-        pt.l = end_l;
-      } else {
-        pt.l =
-            planning::planning_math::lerp(start_l, start_s, end_l, end_s, pt.s);
-      }
+      pt.l =
+          planning::planning_math::lerp(start_l, start_s, end_l, end_s, pt.s);
+
       ref_traj_points_.emplace_back(pt);
       ReferencePathPoint refpath_pt{};
       if (!reference_path_ptr_->get_reference_point_by_lon(traj_point.s,
@@ -176,14 +171,14 @@ void GeneralLateralDecider::construct_lane_and_boundary_bounds(
     map_obstacle_decision.tp.s = ref_traj_points_[i].s;
     map_obstacle_decision.tp.l = ref_traj_points_[i].l;
 
-    const auto &left_lane_distance =
-        ref_path_points_[i].distance_to_left_lane_border;
-    const auto &right_lane_distance =
-        ref_path_points_[i].distance_to_right_lane_border;
-    const auto &left_road_distance =
-        ref_path_points_[i].distance_to_left_road_border;
-    const auto &right_road_distance =
-        ref_path_points_[i].distance_to_right_road_border;
+    double left_lane_distance = 10.;
+    double right_lane_distance = 10.;
+    double left_road_distance = 10.;
+    double right_road_distance = 10.;
+
+    sample_road_distance_info(map_obstacle_decision.tp.s, left_lane_distance,
+                              right_lane_distance, left_road_distance,
+                              right_road_distance);
 
     safe_bound.upper = std::fmin(
         left_lane_distance - 0.5 * vehicle_param.width - config_.buffer2lane,
@@ -192,11 +187,12 @@ void GeneralLateralDecider::construct_lane_and_boundary_bounds(
         -right_lane_distance + 0.5 * vehicle_param.width + config_.buffer2lane,
         safe_bound.lower);
     path_bound.upper = std::fmin(
-        right_road_distance - 0.5 * vehicle_param.width - config_.buffer2border,
+        left_road_distance - 0.5 * vehicle_param.width - config_.buffer2border,
         path_bound.upper);
-    path_bound.lower = std::fmin(
-        right_road_distance - 0.5 * vehicle_param.width - config_.buffer2border,
-        path_bound.upper);
+    path_bound.lower =
+        std::fmax(-right_road_distance + 0.5 * vehicle_param.width +
+                      config_.buffer2border,
+                  path_bound.lower);
 
     map_obstacle_decision.lat_bounds.emplace_back(
         WeightedBound{safe_bound.lower, safe_bound.upper,
@@ -857,4 +853,29 @@ void GeneralLateralDecider::generate_enu_reference_theta(
   init_state.emplace_back(0.);                          // delta
   init_state.emplace_back(0.);                          // delta_dot
 }
+
+void GeneralLateralDecider::sample_road_distance_info(
+    const double &s_target, double &left_lane_distance,
+    double &right_lane_distance, double &left_road_distance,
+    double &right_road_distance) {
+  const double cut_length = config_.sample_step;
+  ReferencePathPoint refpath_pt{};
+
+  for (double s = s_target - vehicle_param_.back_edge_to_rear_axis;
+       s < s_target + vehicle_param_.rear_axis_to_front_edge +
+               config_.sample_forward_distance;
+       s += cut_length) {
+    if (!reference_path_ptr_->get_reference_point_by_lon(s, refpath_pt)) {
+      left_lane_distance = std::fmin(refpath_pt.distance_to_left_lane_border,
+                                     left_lane_distance);
+      right_lane_distance = std::fmin(refpath_pt.distance_to_right_lane_border,
+                                      right_lane_distance);
+      left_road_distance = std::fmin(refpath_pt.distance_to_left_road_border,
+                                     left_road_distance);
+      right_road_distance = std::fmin(refpath_pt.distance_to_right_road_border,
+                                      right_road_distance);
+    }
+  }
+}
+
 }  // namespace planning

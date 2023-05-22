@@ -238,6 +238,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double lon_rear_car_filter_buffer = 10.;
   double refine_lat_ref_threshold = 0.5;
   double delta_t = 0.2;
+  double sample_step = 0.2;
+  double sample_forward_distance = 2.0;
 };
 struct GeneralLateralMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
