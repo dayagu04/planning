@@ -2759,62 +2759,63 @@ bool VisionLateralMotionPlanner::update_planner_output() {
 }
 
 void VisionLateralMotionPlanner::save_to_debug_info() {
+  return;
   const auto &state_machine_output =
       frame_->session()->planning_context().lat_behavior_state_machine_output();
   const auto &lateral_output = frame_->session()->planning_context().lateral_behavior_planner_output();
   auto& debug_info_manager = DebugInfoManager::GetInstance();
   auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
   
-  planning::common::VOLatBehaviorPlan lat_behavior_plan = planning_debug_data->vo_lat_behavior_plan();
-  lat_behavior_plan.set_lc_request(lateral_output.lc_request);
-  lat_behavior_plan.set_lc_request_source(lateral_output.lc_request_source);
-  lat_behavior_plan.set_lc_status(lateral_output.lc_status);
-  // lat_behavior_plan.set_is_lc_valid(lateral_output.lc_valid);
-  lat_behavior_plan.set_lc_invalid_obj_id(state_machine_output.lc_invalid_track.track_id);
-  // lat_behavior_plan.set_lc_valid_cnt(state_machine_output.lc_valid_cnt);
-  lat_behavior_plan.set_lc_back_obj_id(state_machine_output.lc_back_track.track_id);
-  // lat_behavior_plan.set_lc_back_cnt(lateral_output.lc_request_source);
-  lat_behavior_plan.set_lc_back_reason(state_machine_output.lc_back_reason);
-  // lat_behavior_plan.set_lc_back_invalid_reason(lateral_output.lc_request);
+  auto lat_behavior_plan = planning_debug_data->mutable_vo_lat_behavior_plan();
+  lat_behavior_plan->set_lc_request(lateral_output.lc_request);
+  lat_behavior_plan->set_lc_request_source(lateral_output.lc_request_source);
+  lat_behavior_plan->set_lc_status(lateral_output.lc_status);
+  // lat_behavior_plan->set_is_lc_valid(lateral_output.lc_valid);
+  lat_behavior_plan->set_lc_invalid_obj_id(state_machine_output.lc_invalid_track.track_id);
+  // lat_behavior_plan->set_lc_valid_cnt(state_machine_output.lc_valid_cnt);
+  lat_behavior_plan->set_lc_back_obj_id(state_machine_output.lc_back_track.track_id);
+  // lat_behavior_plan->set_lc_back_cnt(lateral_output.lc_request_source);
+  lat_behavior_plan->set_lc_back_reason(state_machine_output.lc_back_reason);
+  // lat_behavior_plan->set_lc_back_invalid_reason(lateral_output.lc_request);
   for (auto &near_car_origin : state_machine_output.near_cars_origin){
-    lat_behavior_plan.add_near_car_ids_origin(near_car_origin.track_id);
+    lat_behavior_plan->add_near_car_ids_origin(near_car_origin.track_id);
   }
   for (auto &near_car_target : state_machine_output.near_cars_target){
-    lat_behavior_plan.add_near_car_ids_target(near_car_target.track_id);
+    lat_behavior_plan->add_near_car_ids_target(near_car_target.track_id);
   }
-  lat_behavior_plan.set_turn_light(lateral_output.turn_light);
-  lat_behavior_plan.set_turn_light_source(lateral_output.turn_light_source);
+  lat_behavior_plan->set_turn_light(lateral_output.turn_light);
+  lat_behavior_plan->set_turn_light_source(lateral_output.turn_light_source);
 
-  // lat_behavior_plan.set_v_relative_left_lane(state_machine_output.lc_status);
-  lat_behavior_plan.set_is_faster_left_lane(state_machine_output.left_is_faster);
-  // lat_behavior_plan.set_faster_left_lane_cnt(state_machine_output.lc_status);
-  // lat_behavior_plan.set_v_relative_right_lane(state_machine_output.lc_status);
-  lat_behavior_plan.set_is_faster_right_lane(state_machine_output.right_is_faster);
-  // lat_behavior_plan.set_faster_right_lane_cnt(state_machine_output.lc_status);
+  // lat_behavior_plan->set_v_relative_left_lane(state_machine_output.lc_status);
+  lat_behavior_plan->set_is_faster_left_lane(state_machine_output.left_is_faster);
+  // lat_behavior_plan->set_faster_left_lane_cnt(state_machine_output.lc_status);
+  // lat_behavior_plan->set_v_relative_right_lane(state_machine_output.lc_status);
+  lat_behavior_plan->set_is_faster_right_lane(state_machine_output.right_is_faster);
+  // lat_behavior_plan->set_faster_right_lane_cnt(state_machine_output.lc_status);
   for (auto id : state_machine_output.left_alc_car){
-    lat_behavior_plan.add_left_alc_car_ids(id);
+    lat_behavior_plan->add_left_alc_car_ids(id);
   }
   for (auto id : state_machine_output.right_alc_car){
-    lat_behavior_plan.add_right_alc_car_ids(id);
+    lat_behavior_plan->add_right_alc_car_ids(id);
   }
 
-  lat_behavior_plan.set_is_faster_left_lane(state_machine_output.left_is_faster);
-  lat_behavior_plan.set_is_faster_left_lane(state_machine_output.left_is_faster);
-  lat_behavior_plan.set_is_forbid_left_alc_car(state_machine_output.neg_left_alc_car);
-  lat_behavior_plan.set_is_forbid_right_alc_car(state_machine_output.neg_right_alc_car);
-  lat_behavior_plan.set_is_side_borrow_bicycle_lane(lateral_output.sb_blane);
-  lat_behavior_plan.set_is_side_borrow_lane(lateral_output.sb_lane);
+  lat_behavior_plan->set_is_faster_left_lane(state_machine_output.left_is_faster);
+  lat_behavior_plan->set_is_faster_left_lane(state_machine_output.left_is_faster);
+  lat_behavior_plan->set_is_forbid_left_alc_car(state_machine_output.neg_left_alc_car);
+  lat_behavior_plan->set_is_forbid_right_alc_car(state_machine_output.neg_right_alc_car);
+  lat_behavior_plan->set_is_side_borrow_bicycle_lane(lateral_output.sb_blane);
+  lat_behavior_plan->set_is_side_borrow_lane(lateral_output.sb_lane);
 
-  lat_behavior_plan.set_fix_lane_virtual_id(state_machine_output.fix_lane_virtual_id);
-  lat_behavior_plan.set_origin_lane_virtual_id(state_machine_output.origin_lane_virtual_id);
-  lat_behavior_plan.set_target_lane_virtual_id(state_machine_output.target_lane_virtual_id);
-  // lat_behavior_plan.set_has_origin_lane(lateral_output.sb_blane);
-  // lat_behavior_plan.set_has_target_lane(lateral_output.sb_lane);
+  lat_behavior_plan->set_fix_lane_virtual_id(state_machine_output.fix_lane_virtual_id);
+  lat_behavior_plan->set_origin_lane_virtual_id(state_machine_output.origin_lane_virtual_id);
+  lat_behavior_plan->set_target_lane_virtual_id(state_machine_output.target_lane_virtual_id);
+  // lat_behavior_plan->set_has_origin_lane(lateral_output.sb_blane);
+  // lat_behavior_plan->set_has_target_lane(lateral_output.sb_lane);
 
   for (auto &item : lateral_output.avd_car_past){
     if (item.size() > 0 ) {
-      lat_behavior_plan.add_avoid_car_ids(item[0]);
-      lat_behavior_plan.add_avoid_car_allow_max_opposite_offset(item[9]);
+      lat_behavior_plan->add_avoid_car_ids(item[0]);
+      lat_behavior_plan->add_avoid_car_allow_max_opposite_offset(item[9]);
     }
   }
 }
