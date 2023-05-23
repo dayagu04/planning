@@ -417,8 +417,6 @@ void PiecewiseProblem::calculate_offset(std::vector<c_float> *q) {
   if (has_dx_ref_) {
     for (int i = n; i < 2 * n; ++i) {
       q->at(i) += -2.0 * (weight_dx_ + weight_dx_ref_[i - n]) * dx_ref_[i - n];
-      LOG_DEBUG("HHLDEBUG has_dx_ref weight_dx_ref_: %.2f, dx_ref_: %.2f \n",
-            weight_dx_ref_[i - n], dx_ref_[i - n] * 3.6);
     }
   }
 

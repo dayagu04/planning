@@ -141,8 +141,8 @@ bool LongitudinalOptimizerV3::optimize(
     }
   }
   LOG_DEBUG(
-      "HHLDEBUGB enable_stop_flag: %d, enable_dx_ref: %d,"
-      "acc_weight_dx_config: %.2f, stop_weight_dx_config: %.2f \n",
+      "enable_stop_flag: %d, enable_dx_ref: %d, acc_weight_dx_config: %.2f, "
+      "stop_weight_dx_config: %.2f \n",
       enable_stop_flag, enable_dx_ref, acc_weight_dx_config,
       stop_weight_dx_config);
   lon_problem.set_weight_ddx(1.0);
@@ -266,7 +266,7 @@ bool LongitudinalOptimizerV3::optimize(
     auto t = lon_ref_path.t_list[i];
     auto s_ref = lon_ref_path.s_refs[i].first;
     v_ok = (s_ref - s_last) / 0.2;
-    LOG_DEBUG("v_ref from long behavior planner is: [%.2f] m/s \n", v_ok);
+    // LOG_DEBUG("v_ref from long behavior planner is: [%.2f] m/s \n", v_ok);
     s_last = s_ref;
     auto s_ref_raw = i < ego_prediction_raw_traj_points.size()
                          ? ego_prediction_raw_traj_points[i].s

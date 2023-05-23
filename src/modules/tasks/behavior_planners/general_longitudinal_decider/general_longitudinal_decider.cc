@@ -26,6 +26,7 @@ GeneralLongitudinalDecider::GeneralLongitudinalDecider(
 }
 
 bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
+  double start_time = IflyTime::Now_ms();
   frame_ = frame;
   LOG_DEBUG("=======GeneralLongitudinalDecider======= \n");
   double start_time = IflyTime::Now_ms();
@@ -45,6 +46,9 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
   lon_yield_info_.min_jerk = 100.0;
   lon_yield_info_.keep_stop = false;
 
+  double time_tmp = IflyTime::Now_ms();
+  LOG_DEBUG("config_builder cost is [%f]ms:\n", time_tmp - start_time);
+
   auto &ego_planning_result = pipeline_context_->planning_result;
   auto &ego_planning_info = pipeline_context_->planning_info;
   auto &lon_ref_path = ego_planning_info.lon_ref_path;
@@ -59,19 +63,28 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
       frame->session()->environmental_model().get_ego_state_manager();
 
   // Step 1)
+  double time_0 = IflyTime::Now_ms();
+  LOG_DEBUG("time_0 cost is [%f]ms:\n", time_0 - time_tmp);
   ReferencePathPoints refpath_points;
   construct_refpath_points(ego_planning_result.traj_points, refpath_points);
+  double time_1 = IflyTime::Now_ms();
+  LOG_DEBUG("construct_refpath_points cost is [%f]ms:\n", time_1 - time_0);
 
   // Step 2) generate lon decisions & lon bounds info
   generate_lon_decision_from_path(
       ego_planning_result.traj_points, refpath_points,
       ego_planning_info.obstacle_decisions, lon_ref_path);
+  double time_2 = IflyTime::Now_ms();
+  LOG_DEBUG("generate_lon_decision_from_path cost is [%f]ms:\n",
+            time_2 - time_1);
 
   // execution leadone & cutin information
   auto &lon_decision_information = frame->mutable_session()
                                        ->mutable_planning_context()
                                        ->mutable_lon_decision_result();
   get_lon_decision_info(lon_decision_information);
+  double time_3 = IflyTime::Now_ms();
+  LOG_DEBUG("get_lon_decision_info cost is [%f]ms:\n", time_3 - time_2);
 
   // enter into the ACC function
   auto acc_function = frame->session()
@@ -346,7 +359,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
       }
     }
     s_ref = std::max(s_ref, 0.0);
-    LOG_DEBUG("parking_space_id_s_ref: = %f, index = %d \n", s_ref, i);
+    LOG_DEBUG("s_ref: = %f, index = %d \n", s_ref, i);
   }
   // 转存纵向决策信息至debuginfo
   GenerateLonRefPathPB(lon_ref_path);
@@ -607,10 +620,10 @@ void GeneralLongitudinalDecider::set_velocity_acceleration_bound(
 
     bound_a.upper = std::min(config_.acceleration_upper_bound,
                              std::max(kAccUpperBound, ego_a + 1e-2));
-    LOG_DEBUG(
-        "[GeneralLongitudinalDecider] vel_acc_bound, i: %d, s_i: %f, v_i: "
-        "%f, v_upper: %f, a_upper: %f \n",
-        i, s_i, v_i, bound_v.upper, bound_a.upper);
+    // LOG_DEBUG(
+    //     "[GeneralLongitudinalDecider] vel_acc_bound, i: %d, s_i: %f, v_i: "
+    //     "%f, v_upper: %f, a_upper: %f \n",
+    //     i, s_i, v_i, bound_v.upper, bound_a.upper);
   }
 }
 
@@ -629,12 +642,16 @@ void GeneralLongitudinalDecider::generate_lon_decision_from_path(
       }
     }
   }
-
+  double time_1 = IflyTime::Now_ms();
   // construct longitudinal obstacle decisions
   construct_longitudinal_obstacle_decisions(lateral_trajectory_points,
                                             refpath_points, obstacle_decisions,
                                             lon_ref_path);
-
+  double time_2 = IflyTime::Now_ms();
+  LOG_DEBUG(
+      "construct_longitudinal_obstacle_decisions cost is "
+      "[%f]ms:\n",
+      time_2 - time_1);
   construct_longitudinal_outer_decision(
       lateral_trajectory_points, refpath_points,
       pipeline_context_->coarse_planning_info, obstacle_decisions);
@@ -821,17 +838,32 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decisions(
     lon_ref_path.lon_obstacle_yield_info.emplace_back(
         LonObstalceYieldInfo{0, 1000, 1000});
   }
+  double construct_longitudinal_obstacle_decision_time_start =
+      IflyTime::Now_ms();
   for (auto &obstacle : reference_path_ptr_->get_obstacles()) {
     if (check_longitudinal_ignore_obstacle(obstacle)) {
       continue;
     }
     auto obstacle_id = obstacle->id();
     if (obstacle->b_frenet_valid()) {
+      double time_obj = IflyTime::Now_ms();
+      LOG_DEBUG(
+          "construct_longitudinal_obstacle_decision== obstacle_id is [%d]:\n",
+          obstacle_id);
+
       construct_longitudinal_obstacle_decision(
           traj_points, refpath_points, lon_overlap_path, obstacle,
           obstacle_decisions[obstacle_id], lon_ref_path);
+
+      double time_obj_end = IflyTime::Now_ms();
+      LOG_DEBUG("construct_longitudinal_obstacle_decision== cost is %f]ms:\n",
+                time_obj_end - time_obj);
     }
   }
+  double construct_longitudinal_obstacle_decision_time_end = IflyTime::Now_ms();
+  LOG_DEBUG("construct_longitudinal_obstacle_decision cost is %f]ms:\n",
+            construct_longitudinal_obstacle_decision_time_end -
+                construct_longitudinal_obstacle_decision_time_start);
 
   // MDEBUG_JSON_BEGIN_DICT(lon_yield_obstacle)
   // MDEBUG_JSON_BEGIN_ARRAY(lon_yield_obj)
@@ -984,17 +1016,29 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
       continue;
     }
 
+    // double ComputeOverlap_start = IflyTime::Now_ms();
     std::vector<Vec2d> overlap_points;
     for (auto &overlap_path_polygon : overlap_path) {
+      bool b_overlap = false;
+      // 对碰撞检测进行加速
+      auto obstacle_AABox = obstacle_sl_polygon.AABoundingBox();
+      auto overlap_path_polygon_AABox = overlap_path_polygon.AABoundingBox();
+      if (!obstacle_AABox.HasOverlap(overlap_path_polygon_AABox)) {
+        continue;
+      }
       Polygon2d overlap_polygon;
-      bool b_overlap = obstacle_sl_polygon.ComputeOverlap(overlap_path_polygon,
-                                                          &overlap_polygon);
+      b_overlap = obstacle_sl_polygon.ComputeOverlap(overlap_path_polygon,
+                                                     &overlap_polygon);
       if (b_overlap) {
         auto points = overlap_polygon.GetAllVertices();
         overlap_points.insert(overlap_points.end(), points.begin(),
                               points.end());
       }
     }
+    // double ComputeOverlap_end = IflyTime::Now_ms();
+    // LOG_DEBUG("ComputeOverlap obstacle [%d] cost is [%f]ms:\n",
+    // obstacle->id(),
+    //           ComputeOverlap_end - ComputeOverlap_start);
 
     // obstain all lon overlap info
     if ((overlap_points.empty() || i == traj_points.size() - 1) &&
@@ -1653,7 +1697,7 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
                 lon_decision_information.nearby_obstacle ||
                 (lateral_satisfy && longitual_satisfy);
             LOG_DEBUG(
-                "HHLDEBUGW distance_to_left_road_border: %.2f, "
+                "Distance_to_left_road_border: %.2f, "
                 "distance_to_right_road_border: %.2f, lateral_satisfy: "
                 "%d,longitual_satisfy: % d \n",
                 distance_to_left_road_border, distance_to_right_road_border,

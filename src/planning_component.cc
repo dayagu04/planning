@@ -260,7 +260,7 @@ bool PlanningComponent::Proc() {
   planning_hmi_Info_writer_->Write(planning_hmi_Info);
   double planning_cost_time = IflyTime::Now_ms() - start_time;
   if (planning_cost_time > 50.0) {
-    LOG_ERROR("The cost time of proc() is: [%f] ms!\n", planning_cost_time);
+    LOG_ERROR("The cost time of proc() is too long: [%f] ms!\n", planning_cost_time);
   }
   LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);
 
