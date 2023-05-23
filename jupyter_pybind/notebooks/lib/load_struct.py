@@ -45,6 +45,35 @@ def load_lane_lines(lanes):
 
   return line_info_list
 
+def load_lane_center_lines(lanes):
+  line_info_list = []
+
+  for i in range(5):
+    lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+    if i< len(lanes):
+      lane = lanes[i]
+      virtual_lane_refline_points = lane.lane_reference_line.virtual_lane_refline_points 
+      line_x = []
+      line_y = []
+      for virtual_lane_refline_point in virtual_lane_refline_points:
+        line_x.append(virtual_lane_refline_point.car_point.x)
+        line_y.append(virtual_lane_refline_point.car_point.y)
+
+      lane_info['line_x_vec'] = line_x
+      lane_info['line_y_vec'] = line_y
+      lane_info['type'] = 0
+
+      line_info_list.append(lane_info)
+    else:
+      line_x, line_y = gen_line(0,0,0,0,0,0)
+      lane_info['line_x_vec'] = line_x
+      lane_info['line_y_vec'] = line_y
+      lane_info['type'] = []
+      line_info_list.append(lane_info)
+      line_info_list.append(lane_info)
+
+  return line_info_list
+
 def load_obstacle_params(obstacle_list):
   obs_info = {
     'obstacles_x_rel': [],

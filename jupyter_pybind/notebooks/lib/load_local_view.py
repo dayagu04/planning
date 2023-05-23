@@ -39,8 +39,11 @@ class LoadCyberbag:
     self.vs_msg = {'t':[], 'data':[], 'enable':[]}
     # car pos in local coordinates
     
-     # planning msg
+    # planning msg
     self.plan_msg = {'t':[], 'data':[], 'enable':[]}
+    
+    # planning debug msg
+    self.plan_debug_msg = {'t':[], 'data':[], 'enable':[]}
   def load_all_data(self):
     max_time = 0.0
     # load localization msg
@@ -102,11 +105,22 @@ class LoadCyberbag:
       self.plan_msg['enable'] = False
       print("missing /iflytek/planning/plan !!!")
 
+    # load vehicle service msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
+        self.plan_debug_msg['t'].append(msg.timestamp / 1e3)
+        self.plan_debug_msg['data'].append(msg)
+      self.plan_debug_msg['t'] = [tmp - self.plan_debug_msg['t'][0]  for tmp in self.plan_debug_msg['t']]
+      self.plan_debug_msg['enable'] = True
+      max_time = max(max_time, self.plan_debug_msg['t'][-1])      
+    except:
+      self.plan_debug_msg['enable'] = False
+      print("missing /iflytek/planning/debug_info !!!")
+    print(self.plan_debug_msg['enable'] )
     return max_time
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
-  cur_pos_xn0 = 0
-  cur_pos_yn0 = 0
+  
   ### step 1: 时间戳对齐
   loc_msg_idx = 0
   if bag_loader.loc_msg['enable'] == True:
@@ -134,6 +148,11 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         plan_msg_idx = plan_msg_idx + 1
 
   ### step 2: 加载定位信息
+  cur_pos_xn0 = 0
+  cur_pos_yn0 = 0
+  cur_pos_xn = 0
+  cur_pos_yn = 0
+  cur_yaw = 0
   if bag_loader.loc_msg['enable'] == True:
     cur_pos_xn0 = cur_pos_xn = bag_loader.loc_msg['data'][0].pose.local_position.x
     cur_pos_yn0 = cur_pos_yn = bag_loader.loc_msg['data'][0].pose.local_position.y
@@ -146,7 +165,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     ego_xn, ego_yn = [], []
     ### global variables
     # pos offset
-
     for i in range(len(bag_loader.loc_msg['data'])):
       pos_xn_i = bag_loader.loc_msg['data'][i].pose.local_position.x
       pos_yn_i = bag_loader.loc_msg['data'][i].pose.local_position.y
@@ -161,10 +179,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     local_view_data['data_ego'].data.update({
       'ego_xb': ego_xb,
       'ego_yb': ego_yb,
-      'ego_xn': ego_xn,
-      'ego_yn': ego_yn,
+      # 'ego_xn': ego_xn,
+      # 'ego_yn': ego_yn,
     })
-
     # car pos in global coordinates
     car_xn = []
     car_yn = []
@@ -201,7 +218,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     
     # 
     # update lane info
-    local_view_data['data_lane_0']
     data_lane_dict = {
       0:local_view_data['data_lane_0'],
       1:local_view_data['data_lane_1'],
@@ -213,6 +229,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       7:local_view_data['data_lane_7'],
       8:local_view_data['data_lane_8'],
       9:local_view_data['data_lane_9'],
+    }
+    data_center_line_dict = {
+      0:local_view_data['data_center_line_0'],
+      1:local_view_data['data_center_line_1'],
+      2:local_view_data['data_center_line_2'],
+      3:local_view_data['data_center_line_3'],
+      4:local_view_data['data_center_line_4'],
     }
 
     for i in range(10):
@@ -231,7 +254,34 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         })
       except:
         pass
-
+    
+    center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
+    for i in range(5):
+      try:
+        if 1:
+          data_center_line = data_center_line_dict[i]
+          data_center_line.data.update({
+            'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
+            'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
+          })
+        else:
+          data_center_line = data_center_line_dict[i]
+          line_x_rel = []
+          line_y_rel = []
+          for index in range(len(center_line_list[i]['line_x_vec'])):
+            pos_xn_i, pos_yn_i = center_line_list[i]['line_x_vec'][index], center_line_list[i]['line_y_vec'][index]
+            # print(pos_xn_i, pos_yn_i)
+            ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+            line_x_rel.append(ego_local_x)
+            line_y_rel.append(ego_local_y)
+          center_line_list[i]['line_x_vec'] = line_x_rel
+          center_line_list[i]['line_y_vec'] = line_y_rel
+          data_center_line.data.update({
+            'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
+            'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
+          })
+      except:
+        pass
 
   ### step 4: 加载障碍物信息
   # load fus_obj
@@ -251,12 +301,33 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'pos_y' : obstacles_info['pos_y'],
         'obs_label' : obstacles_info['obs_label'],
       })
-    # else :
-    #   obstacles_info['obstacles_x_rel'],
-    #   obstacles_info['obstacles_x_rel'],
-    #   obstacles_info['obstacles_x_rel'],
+    else :
+      poses_x = obstacles_info['pos_x']
+      poses_y = obstacles_info['pos_y']
+      poses_x_rel = []
+      poses_y_rel = []
+      # print(poses_x)
+      # print(cur_pos_xn, cur_pos_yn, cur_yaw)
+      for index in range(len(poses_x)):
+        pos_xn_i, pos_yn_i = poses_x[index], poses_y[index]
+        print(pos_xn_i, pos_yn_i)
+        ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+        poses_x_rel.append(ego_local_x)
+        poses_y_rel.append(ego_local_y)
+      obstacles_info['pos_x_rel'] = poses_x_rel
+      obstacles_info['pos_x_rel'] = poses_y_rel
       
-  
+      local_view_data['data_fus_obj'].data.update({
+        'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
+        'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
+        'pos_x_rel' : obstacles_info['pos_x_rel'],
+        'pos_y_rel' : obstacles_info['pos_y_rel'],
+        'obstacles_x': obstacles_info['obstacles_x'],
+        'obstacles_y': obstacles_info['obstacles_y'],
+        'pos_x' : obstacles_info['pos_x'],
+        'pos_y' : obstacles_info['pos_y'],
+        'obs_label' : obstacles_info['obs_label'],
+      })
   ### step 3: 加载planning轨迹信息
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
@@ -284,6 +355,11 @@ def load_local_view_figure():
   data_lane_7 = ColumnDataSource(data = {'line_7_y':[], 'line_7_x':[]})
   data_lane_8 = ColumnDataSource(data = {'line_8_y':[], 'line_8_x':[]})
   data_lane_9 = ColumnDataSource(data = {'line_9_y':[], 'line_9_x':[]})
+  data_center_line_0 = ColumnDataSource(data = {'center_line_0_y':[], 'center_line_0_x':[]})
+  data_center_line_1 = ColumnDataSource(data = {'center_line_1_y':[], 'center_line_1_x':[]})
+  data_center_line_2 = ColumnDataSource(data = {'center_line_2_y':[], 'center_line_2_x':[]})
+  data_center_line_3 = ColumnDataSource(data = {'center_line_3_y':[], 'center_line_3_x':[]})
+  data_center_line_4 = ColumnDataSource(data = {'center_line_4_y':[], 'center_line_4_x':[]})
   data_fus_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obstacles_y_rel':[], 'obstacles_x_rel':[],
@@ -306,10 +382,16 @@ def load_local_view_figure():
                      'data_lane_7':data_lane_7, \
                      'data_lane_8':data_lane_8, \
                      'data_lane_9':data_lane_9, \
+                     'data_center_line_0':data_center_line_0, \
+                     'data_center_line_1':data_center_line_1, \
+                     'data_center_line_2':data_center_line_2, \
+                     'data_center_line_3':data_center_line_3, \
+                     'data_center_line_4':data_center_line_4, \
                      'data_fus_obj':data_fus_obj, \
                      'data_planning_trajectory':planning_data 
                      }
   ### figures config
+
   fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=500, height=800, match_aspect = True, aspect_scale=1)
   fig1.x_range.flipped = True
   # figure plot
@@ -326,6 +408,13 @@ def load_local_view_figure():
   fig1.line('line_7_y', 'line_7_x', source = data_lane_7, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   fig1.line('line_8_y', 'line_8_x', source = data_lane_8, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   fig1.line('line_9_y', 'line_9_x', source = data_lane_9, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  
+  fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.5, legend_label = 'center_line')
+  fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.5, legend_label = 'center_line')
+  fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.5, legend_label = 'center_line')
+  fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.5, legend_label = 'center_line')
+  fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.5, legend_label = 'center_line')
+  
   fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'obj')
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'obj_info')
 

@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/docker_share/data/clren/bag/new_planning_bag/20230206103929.record.00000"
+bag_path = "/docker_share/data/clren/code/new_planning_3/planning/test2/20230206142906.record.00000"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -22,10 +22,18 @@ class LocalViewSlider:
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider)
 
+
 ### sliders callback
 def slider_callback(bag_time):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
+  # plan_msg_idx = 0
+  # if bag_loader.plan_msg['enable'] == True:
+  #   while bag_loader.plan_msg['t'][plan_msg_idx] <= bag_time and plan_msg_idx < (len(bag_loader.plan_msg['t'])-2):
+  #       plan_msg_idx = plan_msg_idx + 1
+        
+  # bag_loader.plan_msg['data'][plan_msg_idx]
+  
   push_notebook()
 
 bkp.show(row(fig1), notebook_handle=True)
