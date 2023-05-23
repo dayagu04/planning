@@ -132,7 +132,7 @@ void StateBase::process(Control &control, FsmContext &context) {
     }
     change_state(next_state, control, context);
     context.state = next_state;
-    // TODO(Rui):fix me
+    // TODO(Rui):fix me  与上面的命名一致
     auto lat_behavior_state_machine_output =
         context.frame->mutable_session()
             ->mutable_planning_context()

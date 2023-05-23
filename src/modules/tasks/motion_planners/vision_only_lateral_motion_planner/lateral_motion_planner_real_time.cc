@@ -107,9 +107,16 @@ bool VisionLateralMotionPlanner::update(
 
   l_poly_.fill(0);
   r_poly_.fill(0);
+  auto& debug_info_manager = DebugInfoManager::GetInstance();
+  auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
+  
+  auto lat_motion_plan = planning_debug_data->mutable_vo_lat_motion_plan();
 
   update_basic_path(status);
-
+  lat_motion_plan->basic_dpoly().Clear();
+  for (auto value : d_poly_) {
+    lat_motion_plan->add_basic_dpoly(value);
+  }
   if (status == ROAD_LC_LWAIT || status == ROAD_LC_RWAIT ||
       status == ROAD_LC_LBACK || status == ROAD_LC_RBACK ||
       status == INTER_GS_LC_LWAIT || status == INTER_GS_LC_RWAIT ||
@@ -120,7 +127,7 @@ bool VisionLateralMotionPlanner::update(
   } else {
     premoving_ = false;
   }
-
+  lat_motion_plan->set_premove_dpoly_c0(d_poly_[3]);
   if ((status >= ROAD_NONE && status <= INTER_GS_NONE) ||
       status == INTER_TR_NONE || status == INTER_TL_NONE ||
       status == INTER_GS_LC_LCHANGE || status == INTER_GS_LC_RCHANGE ||
@@ -131,7 +138,7 @@ bool VisionLateralMotionPlanner::update(
   } else {
     lat_offset_ = 0;
   }
-
+  lat_motion_plan->set_avoid_dpoly_c0(d_poly_[3]);
   return true;
 }
 
@@ -2759,7 +2766,6 @@ bool VisionLateralMotionPlanner::update_planner_output() {
 }
 
 void VisionLateralMotionPlanner::save_to_debug_info() {
-  return;
   const auto &state_machine_output =
       frame_->session()->planning_context().lat_behavior_state_machine_output();
   const auto &lateral_output = frame_->session()->planning_context().lateral_behavior_planner_output();

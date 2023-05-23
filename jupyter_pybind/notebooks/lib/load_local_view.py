@@ -116,7 +116,6 @@ class LoadCyberbag:
     except:
       self.plan_debug_msg['enable'] = False
       print("missing /iflytek/planning/debug_info !!!")
-    print(self.plan_debug_msg['enable'] )
     return max_time
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
@@ -215,8 +214,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   if bag_loader.road_msg['enable'] == True:
     # load lane info
     line_info_list = load_lane_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
-    
-    # 
+
     # update lane info
     data_lane_dict = {
       0:local_view_data['data_lane_0'],
@@ -258,7 +256,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
     for i in range(5):
       try:
-        if 1:
+        if 0:
           data_center_line = data_center_line_dict[i]
           data_center_line.data.update({
             'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
@@ -287,47 +285,76 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # load fus_obj
   if bag_loader.fus_msg['enable'] == True:
     fusion_objects = bag_loader.fus_msg['data'][fus_msg_idx].fusion_object
-    obstacles_info = load_obstacle_params(fusion_objects)
+    obstacles_info_all = load_obstacle_params(fusion_objects)
     # 加载自车坐标系下的数据
     if 1: 
-      local_view_data['data_fus_obj'].data.update({
-        'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
-        'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
-        'pos_x_rel' : obstacles_info['pos_x_rel'],
-        'pos_y_rel' : obstacles_info['pos_y_rel'],
-        'obstacles_x': obstacles_info['obstacles_x'],
-        'obstacles_y': obstacles_info['obstacles_y'],
-        'pos_x' : obstacles_info['pos_x'],
-        'pos_y' : obstacles_info['pos_y'],
-        'obs_label' : obstacles_info['obs_label'],
-      })
+      for key in obstacles_info_all:
+        obstacles_info = obstacles_info_all[key]
+        if key == 1:   
+          local_view_data['data_fus_obj'].data.update({
+            'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
+            'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
+            'pos_x_rel' : obstacles_info['pos_x_rel'],
+            'pos_y_rel' : obstacles_info['pos_y_rel'],
+            'obstacles_x': obstacles_info['obstacles_x'],
+            'obstacles_y': obstacles_info['obstacles_y'],
+            'pos_x' : obstacles_info['pos_x'],
+            'pos_y' : obstacles_info['pos_y'],
+            'obs_label' : obstacles_info['obs_label'],
+          }) 
+        else :
+          local_view_data['data_snrd_obj'].data.update({
+            'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
+            'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
+            'pos_x_rel' : obstacles_info['pos_x_rel'],
+            'pos_y_rel' : obstacles_info['pos_y_rel'],
+            'obstacles_x': obstacles_info['obstacles_x'],
+            'obstacles_y': obstacles_info['obstacles_y'],
+            'pos_x' : obstacles_info['pos_x'],
+            'pos_y' : obstacles_info['pos_y'],
+            'obs_label' : obstacles_info['obs_label'],
+          })
     else :
-      poses_x = obstacles_info['pos_x']
-      poses_y = obstacles_info['pos_y']
-      poses_x_rel = []
-      poses_y_rel = []
-      # print(poses_x)
-      # print(cur_pos_xn, cur_pos_yn, cur_yaw)
-      for index in range(len(poses_x)):
-        pos_xn_i, pos_yn_i = poses_x[index], poses_y[index]
-        print(pos_xn_i, pos_yn_i)
-        ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
-        poses_x_rel.append(ego_local_x)
-        poses_y_rel.append(ego_local_y)
-      obstacles_info['pos_x_rel'] = poses_x_rel
-      obstacles_info['pos_x_rel'] = poses_y_rel
+      for key in obstacles_info_all:
+        obstacles_info = obstacles_info_all[key]
+        poses_x = obstacles_info['pos_x']
+        poses_y = obstacles_info['pos_y']
+        poses_x_rel = []
+        poses_y_rel = []
+        # print(poses_x)
+        # print(cur_pos_xn, cur_pos_yn, cur_yaw)
+        for index in range(len(poses_x)):
+          pos_xn_i, pos_yn_i = poses_x[index], poses_y[index]
+          ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+          poses_x_rel.append(ego_local_x)
+          poses_y_rel.append(ego_local_y)
+        obstacles_info['pos_x_rel'] = poses_x_rel
+        obstacles_info['pos_y_rel'] = poses_y_rel
+        if key == 1:   
+          local_view_data['data_fus_obj'].data.update({
+            'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
+            'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
+            'pos_x_rel' : obstacles_info['pos_x_rel'],
+            'pos_y_rel' : obstacles_info['pos_y_rel'],
+            'obstacles_x': obstacles_info['obstacles_x'],
+            'obstacles_y': obstacles_info['obstacles_y'],
+            'pos_x' : obstacles_info['pos_x'],
+            'pos_y' : obstacles_info['pos_y'],
+            'obs_label' : obstacles_info['obs_label'],
+          }) 
+        else :
+          local_view_data['data_snrd_obj'].data.update({
+            'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
+            'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
+            'pos_x_rel' : obstacles_info['pos_x_rel'],
+            'pos_y_rel' : obstacles_info['pos_y_rel'],
+            'obstacles_x': obstacles_info['obstacles_x'],
+            'obstacles_y': obstacles_info['obstacles_y'],
+            'pos_x' : obstacles_info['pos_x'],
+            'pos_y' : obstacles_info['pos_y'],
+            'obs_label' : obstacles_info['obs_label'],
+          })
       
-      local_view_data['data_fus_obj'].data.update({
-        'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
-        'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
-        'pos_x_rel' : obstacles_info['pos_x_rel'],
-        'pos_y_rel' : obstacles_info['pos_y_rel'],
-        'obstacles_x': obstacles_info['obstacles_x'],
-        'obstacles_y': obstacles_info['obstacles_y'],
-        'pos_x' : obstacles_info['pos_x'],
-        'pos_y' : obstacles_info['pos_y'],
-        'obs_label' : obstacles_info['obs_label'],
-      })
   ### step 3: 加载planning轨迹信息
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
@@ -365,7 +392,11 @@ def load_local_view_figure():
                                         'obstacles_y_rel':[], 'obstacles_x_rel':[],
                                         'pos_y_rel':[], 'pos_x_rel':[],
                                         'obs_label':[]})
-  
+  data_snrd_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
+                                        'pos_y':[], 'pos_x':[],
+                                        'obstacles_y_rel':[], 'obstacles_x_rel':[],
+                                        'pos_y_rel':[], 'pos_x_rel':[],
+                                        'obs_label':[]})
   planning_data = ColumnDataSource(data = {'planning_y':[],
                                       'planning_x':[],})
   
@@ -388,6 +419,7 @@ def load_local_view_figure():
                      'data_center_line_3':data_center_line_3, \
                      'data_center_line_4':data_center_line_4, \
                      'data_fus_obj':data_fus_obj, \
+                     'data_snrd_obj':data_snrd_obj, \
                      'data_planning_trajectory':planning_data 
                      }
   ### figures config
@@ -398,26 +430,27 @@ def load_local_view_figure():
   f1 = fig1.patch('car_yb', 'car_xb', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
   fig1.line('ego_yb', 'ego_xb', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'car')
-  fig1.line('line_0_y', 'line_0_x', source = data_lane_0, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
-  fig1.line('line_1_y', 'line_1_x', source = data_lane_1, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
-  fig1.line('line_2_y', 'line_2_x', source = data_lane_2, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
-  fig1.line('line_3_y', 'line_3_x', source = data_lane_3, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
-  fig1.line('line_4_y', 'line_4_x', source = data_lane_4, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
-  fig1.line('line_5_y', 'line_5_x', source = data_lane_5, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
-  fig1.line('line_6_y', 'line_6_x', source = data_lane_6, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
-  fig1.line('line_7_y', 'line_7_x', source = data_lane_7, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
-  fig1.line('line_8_y', 'line_8_x', source = data_lane_8, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
-  fig1.line('line_9_y', 'line_9_x', source = data_lane_9, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_0_y', 'line_0_x', source = data_lane_0, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_1_y', 'line_1_x', source = data_lane_1, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_2_y', 'line_2_x', source = data_lane_2, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_3_y', 'line_3_x', source = data_lane_3, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_4_y', 'line_4_x', source = data_lane_4, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_5_y', 'line_5_x', source = data_lane_5, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_6_y', 'line_6_x', source = data_lane_6, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_7_y', 'line_7_x', source = data_lane_7, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_8_y', 'line_8_x', source = data_lane_8, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_9_y', 'line_9_x', source = data_lane_9, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   
-  fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.5, legend_label = 'center_line')
-  fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.5, legend_label = 'center_line')
-  fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.5, legend_label = 'center_line')
-  fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.5, legend_label = 'center_line')
-  fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.5, legend_label = 'center_line')
+  fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   
-  fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'obj')
-  fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'obj_info')
-
+  fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'obj')
+  fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd')
+  fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fusion_info')
+  fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info')
   fig1.line('planning_y', 'planning_x', source = planning_data, line_width = 3, line_color = 'pink', line_dash = 'solid', legend_label = 'planning_trajectory')
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)

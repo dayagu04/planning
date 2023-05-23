@@ -4,6 +4,7 @@ package planning.common;
 
 import "task_basic_types.proto";
 import "vision_only_lateral_behavior_planner.proto";
+import "vision_only_lateral_motion_planner.proto";
 import "environment_model_debug_info.proto";
 
 message ReadTopicStampList {
@@ -28,5 +29,7 @@ message PlanningDebugInfo {
   optional ReadTopicStampList read_topic_timestamp = 4;
   // TBD: lon motion
   optional VOLatBehaviorPlan vo_lat_behavior_plan = 5;
-  optional EnvironmentModelInfo environment_model_info = 6;
+  optional VOLatMotionPlan vo_lat_motion_plan = 6;
+  optional EnvironmentModelInfo environment_model_info = 7;
+ 
 }

@@ -15,7 +15,7 @@ message EnvironmentModelInfo {
 
 message Obstacle {
   optional uint32 id = 1;
-  optional ObjectType type = 2;
+  optional uint32 type = 2;
   optional double s = 3;
   optional double l = 4;
   optional double s_to_ego = 5; 
@@ -26,12 +26,14 @@ message Obstacle {
   optional double vs_lat_relative = 10;
   optional double vs_lon_relative = 11;
   optional double vs_lon = 12;
-  optional Point2d s_with_min_l = 13;
-  optional Point2d s_with_max_l = 14;
-  optional double nearest_y_to_desired_path = 15;
-  optional bool is_accident_car = 16;
-  optional double is_accident_cnt = 17;
-  optional bool is_avoid_car = 18;
-  optional bool is_lane_lead_obstacle = 19;
-  optional bool current_lead_obstacle_to_ego = 20;
+  optional double min_l = 13;
+  optional double s_with_min_l = 14;
+  optional double max_l = 15;
+  optional double s_with_max_l = 16;
+  optional double nearest_y_to_desired_path = 17;
+  optional bool is_accident_car = 18;
+  optional double is_accident_cnt = 19;
+  optional bool is_avoid_car = 20;
+  optional bool is_lane_lead_obstacle = 21;
+  optional bool current_lead_obstacle_to_ego = 22;
 }

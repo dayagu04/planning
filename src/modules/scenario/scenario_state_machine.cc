@@ -10,6 +10,7 @@
 #include "context/reference_path_manager.h"
 #include "context/vehicle_config_context.h"
 #include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
+#include "debug_info_log.h"
 namespace planning {
 
 ScenarioStateMachine::ScenarioStateMachine(
@@ -525,6 +526,7 @@ LaneChangeStageInfo ScenarioStateMachine::decide_lc_valid_info(
     LOG_DEBUG("decide_lc_valid_info lc_valid_cnt : %d", lc_valid_cnt_);
     if (lc_valid_cnt_ > lc_valid_thre) {
       // lc_valid_cnt_ = 0; // todo: set value when choose change stae finally
+      raw_info.lc_valid = true;
     } else {
       raw_info.gap_insertable = false;
       raw_info.lc_invalid_reason = "valid cnt below threshold";

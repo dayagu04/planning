@@ -1,0 +1,10 @@
+syntax = "proto2";
+
+package planning.common;
+import "basic_types.proto"; 
+
+message VOLatMotionPlan {
+  repeated double basic_dpoly = 1;
+  optional double premove_dpoly_c0 = 2;
+  optional double avoid_dpoly_c0 = 3;
+}

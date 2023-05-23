@@ -520,6 +520,11 @@ struct LatBehaviorStateMachineOutput {
   std::vector<TrackInfo> near_cars_origin;
   TrackInfo lc_invalid_track;
   TrackInfo lc_back_track;
+
+  bool is_lc_valid;
+  int lc_valid_cnt;
+  int lc_back_cnt;
+  std::string lc_back_invalid_reason;
 };
 
 enum class LatObstacleType { LANE, ROAD, CAR };

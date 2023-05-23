@@ -704,6 +704,7 @@ void TrackletMaintainer::calc(
   for (auto tr : tracked_objects) {
     planning::common::Obstacle *obstacle = environment_model_debug_info->add_obstacle();
     obstacle->set_id(tr->track_id);
+    obstacle->set_type(tr->type);
     obstacle->set_s(tr->s);
     obstacle->set_l(tr->l);
     obstacle->set_s_to_ego(tr->d_rel);
@@ -714,8 +715,10 @@ void TrackletMaintainer::calc(
     obstacle->set_vs_lat_relative(tr->v_lat);
     obstacle->set_vs_lon_relative(tr->v_rel);
     obstacle->set_vs_lon(tr->v_lead);
-    obstacle->mutable_s_with_min_l()->set_x(tr->d_rel);
-    obstacle->mutable_s_with_max_l()->set_x(tr->d_rel);
+    obstacle->set_min_l(tr->d_min_cpath);
+    obstacle->set_s_with_min_l(tr->s_min);
+    obstacle->set_max_l(tr->d_max_cpath);
+    obstacle->set_s_with_max_l(tr->s_max);
     obstacle->set_nearest_y_to_desired_path(tr->y_rel);
     obstacle->set_is_accident_car(tr->is_accident_car);
     obstacle->set_is_accident_cnt(tr->is_accident_cnt);
