@@ -473,7 +473,7 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
   auto &prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
 
   PredictionObject prediction_object;
-  prediction_object.id = fusion_object.common_info().id();
+  prediction_object.id = fusion_object.additional_info().track_id();
   prediction_object.type = fusion_object.common_info().type();
   prediction_object.timestamp_us = timestamp;
 
