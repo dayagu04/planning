@@ -2805,8 +2805,6 @@ void VisionLateralMotionPlanner::save_to_debug_info() {
     lat_behavior_plan->add_right_alc_car_ids(id);
   }
 
-  lat_behavior_plan->set_is_faster_left_lane(state_machine_output.left_is_faster);
-  lat_behavior_plan->set_is_faster_left_lane(state_machine_output.left_is_faster);
   lat_behavior_plan->set_is_forbid_left_alc_car(state_machine_output.neg_left_alc_car);
   lat_behavior_plan->set_is_forbid_right_alc_car(state_machine_output.neg_right_alc_car);
   lat_behavior_plan->set_is_side_borrow_bicycle_lane(lateral_output.sb_blane);

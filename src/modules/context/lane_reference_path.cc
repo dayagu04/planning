@@ -110,10 +110,11 @@ bool LaneReferencePath::get_points_by_lane_id(
   for (auto &refline_pt : lane_points) {
     constexpr double kDefaultLaneBorderDis = 20.0;
     ReferencePathPoint ref_path_pt;
-    if (0) {//后续加入enu_point available
-      ref_path_pt.path_point.x = refline_pt.enu_point().x();
-      ref_path_pt.path_point.y = refline_pt.enu_point().y();
-      ref_path_pt.path_point.z = refline_pt.enu_point().z();
+    if (refline_pt.enu_point_valid()) {
+      ref_path_pt.path_point.x = refline_pt.local_point().x();
+      ref_path_pt.path_point.y = refline_pt.local_point().y();
+      ref_path_pt.path_point.z = refline_pt.local_point().z();
+    }
     } else {
       ref_path_pt.path_point.x = refline_pt.car_point().x();
       ref_path_pt.path_point.y = refline_pt.car_point().y();

@@ -158,9 +158,9 @@ def load_obstacle_params(obstacle_list):
     obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
     obs_info_all[source]['obstacles_vel'].append(obstacle_list[i].common_info.relative_velocity.x)
     obs_info_all[source]['obstacles_acc'].append(obstacle_list[i].common_info.relative_acceleration.x)
-    obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].common_info.id)
+    obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].additional_info.track_id)
 #             fusion_obs_info['is_cipv'].append(obstacle_list[i].target_selection_type)
-    obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].common_info.id) + ')=' \
+    obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
         + str(round(obstacle_list[i].common_info.relative_velocity.x, 2)))
     obs_info_all[source]['obstacles_x'].append(obs_x)
     # for ind in range(len(obs_y)):

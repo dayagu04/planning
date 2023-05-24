@@ -116,7 +116,6 @@ void TrackletMaintainer::apply_update(
   } else {
     recv_relative_prediction_objects(predictions, objects);
   }
-  std::cout<<"objects size:"<<objects.size()<<std::endl;
   auto &lateral_output =
       session_->planning_context().lateral_behavior_planner_output();
 
@@ -679,24 +678,6 @@ void TrackletMaintainer::calc(
   is_leadone_potential_avoiding_car(lead_cars.lead_one, scenario, lane_width,
                                     borrow_bicycle_lane, rightest_lane,
                                     dist_intersect, isRedLightStop);
-  // optional uint32 id = 1;
-  // optional ObjectType type = 2;
-  // optional double s = 3;
-  // optional double l = 4;
-  // optional double s_to_ego = 5; 
-  // optional double max_l_to_ref = 6;
-  // optional double min_l_to_ref = 7;
-  // optional double nearest_l_to_desire_path = 8;
-  // optional double nearest_l_to_ego = 9;
-  // optional double vs_lat_relative = 10;
-  // optional double vs_lon_relative = 11;
-  // optional double vs_lon = 12;
-  // optional Point2d s_with_min_l_ = 13;
-  // optional Point2d s_with_max_l_ = 14;
-  // optional double nearest_y_to_desired_path = 15;
-  // optional bool is_accident_car = 16;
-  // optional uint32 is_accident_cnt = 17;
-  // optional bool num_avoid_car = 18;
   auto& debug_info_manager = DebugInfoManager::GetInstance();
   auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto environment_model_debug_info = planning_debug_data->mutable_environment_model_info();
@@ -710,15 +691,13 @@ void TrackletMaintainer::calc(
     obstacle->set_s_to_ego(tr->d_rel);
     obstacle->set_max_l_to_ref(tr->d_max_cpath);
     obstacle->set_min_l_to_ref(tr->d_min_cpath);
+    obstacle->set_s_with_min_l(tr->s_min);
+    obstacle->set_s_with_max_l(tr->s_max);
     obstacle->set_nearest_l_to_desire_path(tr->d_path);
     obstacle->set_nearest_l_to_ego(tr->d_path_self);
     obstacle->set_vs_lat_relative(tr->v_lat);
     obstacle->set_vs_lon_relative(tr->v_rel);
     obstacle->set_vs_lon(tr->v_lead);
-    obstacle->set_min_l(tr->d_min_cpath);
-    obstacle->set_s_with_min_l(tr->s_min);
-    obstacle->set_max_l(tr->d_max_cpath);
-    obstacle->set_s_with_max_l(tr->s_max);
     obstacle->set_nearest_y_to_desired_path(tr->y_rel);
     obstacle->set_is_accident_car(tr->is_accident_car);
     obstacle->set_is_accident_cnt(tr->is_accident_cnt);
