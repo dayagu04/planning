@@ -183,7 +183,9 @@ bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, 
       if (num > local_view.fusion_objects_info.fusion_object_num()) {
         break;
       }
-      if (obj.additional_info().fusion_source() == FusionSource::RADAR_ONLY) {
+      if (obj.additional_info().fusion_source() == FusionSource::RADAR_ONLY ||
+          obj.common_info().shape().height() == 0 ||
+          obj.common_info().shape().width() == 0) {
         continue;
       }
       transform_fusion_to_prediction(obj, (double)local_view.fusion_objects_info.header().timestamp());

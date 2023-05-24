@@ -114,7 +114,6 @@ bool LaneReferencePath::get_points_by_lane_id(
       ref_path_pt.path_point.x = refline_pt.local_point().x();
       ref_path_pt.path_point.y = refline_pt.local_point().y();
       ref_path_pt.path_point.z = refline_pt.local_point().z();
-    }
     } else {
       ref_path_pt.path_point.x = refline_pt.car_point().x();
       ref_path_pt.path_point.y = refline_pt.car_point().y();
