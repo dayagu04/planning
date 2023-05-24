@@ -104,8 +104,8 @@ def load_obstacle_params(obstacle_list):
       }
       obs_info_all[source] = obs_info
     
-    long_pos_rel = obstacle_list[i].common_info.relative_position.x
-    lat_pos_rel = obstacle_list[i].common_info.relative_position.y
+    long_pos_rel = obstacle_list[i].common_info.relative_center_position.x
+    lat_pos_rel = obstacle_list[i].common_info.relative_center_position.y
     theta = obstacle_list[i].common_info.relative_heading_angle
     half_width = obstacle_list[i].common_info.shape.width /2
     half_length = obstacle_list[i].common_info.shape.length / 2
@@ -130,8 +130,8 @@ def load_obstacle_params(obstacle_list):
               lat_pos_rel + dy1 + dy2]
 
     # 绝对坐标系下的数据
-    long_pos = obstacle_list[i].common_info.position.x
-    lat_pos = obstacle_list[i].common_info.position.y
+    long_pos = obstacle_list[i].common_info.center_position.x
+    lat_pos = obstacle_list[i].common_info.center_position.y
     theta = obstacle_list[i].common_info.heading_angle
     cos_heading = math.cos(theta)
     sin_heading = math.sin(theta)

@@ -64,8 +64,10 @@ def obj_id_handler(id):
 
     names  = []
     datas = []
+    is_find = False
     for obstacle in environment_model_info.obstacle:
       if obstacle.id == id:
+        is_find = True
         for name in obj_vars:
           try:
             # print(getattr(obstacle,name))
@@ -73,6 +75,17 @@ def obj_id_handler(id):
             datas.append(getattr(obstacle,name))
           except:
             pass
+    if not is_find:
+      for obstacle in environment_model_info.obstacle:
+        id = obstacle.id
+        for name in obj_vars:
+          try:
+            # print(getattr(obstacle,name))
+            names.append(name)
+            datas.append(getattr(obstacle,name))
+          except:
+            pass
+        break
     obstacle_data.data.update({
       'name': names,
       'data': datas,
@@ -97,6 +110,7 @@ def update_behavior_data(vo_lat_behavior_plan):
       datas.append(getattr(vo_lat_behavior_plan,name))
     except:
       pass
+  print(vo_lat_behavior_plan.avoid_car_ids)
   behavior_data.data.update({
     'name': names,
     'data': datas,
