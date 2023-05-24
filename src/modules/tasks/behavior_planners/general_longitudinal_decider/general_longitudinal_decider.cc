@@ -22,23 +22,25 @@ GeneralLongitudinalDecider::GeneralLongitudinalDecider(
     const std::shared_ptr<TaskPipelineContext> &pipeline_context)
     : Task(config_builder, pipeline_context) {
   config_ = config_builder->cast<LongitudinalDeciderV3Config>();
+  config_acc_ = config_builder->cast<AdaptiveCruiseControlConfig>();
+  config_start_stop_ = config_builder->cast<StartStopEnableConfig>();
   name_ = "GeneralLongitudinalDecider";
 }
 
 bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
-  double start_time = IflyTime::Now_ms();
-  frame_ = frame;
   LOG_DEBUG("=======GeneralLongitudinalDecider======= \n");
   double start_time = IflyTime::Now_ms();
+  frame_ = frame;
+
   if (Task::Execute(frame) == false) {
     return false;
   }
 
-  auto config_builder =
-      frame->session()->mutable_environmental_model()->config_builder(
-          planning::common::SceneType::HIGHWAY);
-  config_acc_ = config_builder->cast<AdaptiveCruiseControlConfig>();
-  config_start_stop_ = config_builder->cast<StartStopEnableConfig>();
+  // auto config_builder =
+  //     frame->session()->mutable_environmental_model()->config_builder(
+  //         planning::common::SceneType::HIGHWAY);
+  // config_acc_ = config_builder->cast<AdaptiveCruiseControlConfig>();
+  // config_start_stop_ = config_builder->cast<StartStopEnableConfig>();
 
   lon_yield_info_.min_ds = 1000.0;
   lon_yield_info_.min_ttc = 100.0;
@@ -666,20 +668,19 @@ bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(
 
   const auto &map_info_manager =
       frame_->session()->environmental_model().get_virtual_lane_manager();
-  const bool is_low_right_intersection =
-      false;  // hack
-              // map_info_manager->curr_intersection_with_traffic_light().getRoadOffset()
-              // <
-              //     10.0 &&
-              // map_info_manager->traffic_light_direction() !=
-              // Direction::GO_STRAIGHT;
+  const bool is_low_right_intersection = false;
+  // hack
+  // map_info_manager->curr_intersection_with_traffic_light().getRoadOffset()
+  // < 10.0 &&
+  // map_info_manager->traffic_light_direction() !=
+  // Direction::GO_STRAIGHT;
   const double kLonIgnoreDistance = is_low_right_intersection ? 10.0 : 0.0;
 
   double distance_to_destination = get_distance_to_destination();
 
   // LPNP: obstacle's frenet is wrong when it out of route
   if (distance_to_destination < 10.0 && (obstacle->b_frenet_valid() == false)) {
-    LOG_DEBUG(
+    LOG_ERROR(
         "The obstacle's frenet is invalid but it is needed to be cared by LPNP "
         "whose id : %d \n",
         obstacle->id());
@@ -700,17 +701,16 @@ bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(
     }
   }
 
-  // #pragma GCC diagnostic push
-  // #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-  //   bool b_ego_intersection_turn_left =
-  //       map_info_manager->ego_in_intersection() &&
-  //       map_info_manager->current_intersection_task() ==
-  //       Direction::TURN_LEFT;
-  // #pragma GCC diagnostic pop
-  //   const double kLatIgnoreDistance = b_ego_intersection_turn_left ? 30.0
-  //   : 10.0; if (std::fabs(l_center) > kLatIgnoreDistance) {
-  //     return true;
-  //   }
+  // hack: 现在无法知道路口左转
+  // bool b_ego_intersection_turn_left =
+  //     map_info_manager->ego_in_intersection() &&
+  //     map_info_manager->current_intersection_task() == Direction::TURN_LEFT;
+  const bool b_ego_intersection_turn_left = false;
+
+  const double kLatIgnoreDistance = b_ego_intersection_turn_left ? 30.0 : 10.0;
+  if (std::fabs(l_center) > kLatIgnoreDistance) {
+    return true;
+  }
 
   return false;
 }
@@ -729,44 +729,6 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decisions(
   auto ego_sl_boundary = reference_path_ptr_->get_ego_frenet_boundary();
   auto ego_corners = reference_path_ptr_->get_frenet_ego_state().corners();
 
-  // MDEBUG_JSON_BEGIN_ARRAY(longitudinal_obstacle_decisions_based_on_lateral_path)
-  // for (auto &obstacle : reference_path_ptr_->get_obstacles()) {
-  //   auto obstacle_sl_boundary = obstacle->frenet_obstacle_boundary();
-  //   auto obstacle_corners = obstacle->frenet_obstacle_corners();
-
-  //   MDEBUG_JSON_BEGIN_OBJECT(object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_id, obstacle->id(), object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_vel, obstacle->frenet_velocity_s(), object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_vel_dir,
-  //   obstacle->frenet_relative_velocity_angle(),
-  //                        object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_s_rear, obstacle_sl_boundary.s_start, object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_s_front, obstacle_sl_boundary.s_end, object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_l_right, obstacle_sl_boundary.l_start, object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_l_left, obstacle_sl_boundary.l_end, object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_s_front_left, obstacle_corners.s_front_left,
-  //                        object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_l_front_left, obstacle_corners.l_front_left,
-  //                        object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_s_front_right, obstacle_corners.s_front_right,
-  //                        object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_l_front_right, obstacle_corners.l_front_right,
-  //                        object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_s_rear_left, obstacle_corners.s_rear_left,
-  //   object) MDEBUG_JSON_ADD_ITEM(obj_l_rear_left,
-  //   obstacle_corners.l_rear_left, object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_s_rear_right, obstacle_corners.s_rear_right,
-  //                        object)
-  //   MDEBUG_JSON_ADD_ITEM(obj_l_rear_right, obstacle_corners.l_rear_right,
-  //                        object)
-  //   MDEBUG_JSON_ADD_ITEM(
-  //       obj_rel_pos,
-  //       static_cast<int>(obstacle_decisions[obstacle->id()].rel_pos_type),
-  //       object)
-  //   MDEBUG_JSON_END_OBJECT(object)
-  // }
-  // MDEBUG_JSON_END_ARRAY(longitudinal_obstacle_decisions_based_on_lateral_path)
-
   // new json debug
   JSON_DEBUG_VALUE("LonBehavior_ego_s_rear", ego_sl_boundary.s_start);
   JSON_DEBUG_VALUE("LonBehavior_ego_s_front", ego_sl_boundary.s_end);
@@ -781,63 +743,10 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decisions(
   JSON_DEBUG_VALUE("LonBehavior_ego_s_rear_right", ego_corners.s_rear_right);
   JSON_DEBUG_VALUE("LonBehavior_ego_l_rear_right", ego_corners.l_rear_right);
 
-  std::vector<double> obj_id_vec, obj_vel_vec, obj_vel_dir_vec, obj_s_rear_vec,
-      obj_s_front_vec, obj_l_right_vec, obj_l_left_vec, obj_s_front_left_vec,
-      obj_l_front_left_vec, obj_s_front_right_vec, obj_l_front_right_vec,
-      obj_s_rear_left_vec, obj_l_rear_left_vec, obj_s_rear_right_vec,
-      obj_l_rear_right_vec, obj_rel_pos_type_vec;
+  std::vector<LonObstalceYieldInfo> obstacle_info(traj_points.size(),
+                                                  {0, 1000, 1000});
+  lon_ref_path.lon_obstacle_yield_info = std::move(obstacle_info);
 
-  for (auto &obstacle : reference_path_ptr_->get_obstacles()) {
-    auto obstacle_sl_boundary = obstacle->frenet_obstacle_boundary();
-    auto obstacle_corners = obstacle->frenet_obstacle_corners();
-    obj_id_vec.push_back(static_cast<double>(obstacle->id()));
-    obj_vel_vec.push_back(obstacle->frenet_velocity_s());
-    obj_vel_dir_vec.push_back(obstacle->frenet_relative_velocity_angle());
-    obj_s_rear_vec.push_back(obstacle_sl_boundary.s_start);
-    obj_s_front_vec.push_back(obstacle_sl_boundary.s_end);
-    obj_l_right_vec.push_back(obstacle_sl_boundary.l_start);
-    obj_l_left_vec.push_back(obstacle_sl_boundary.l_end);
-    obj_s_front_left_vec.push_back(obstacle_corners.s_front_left);
-    obj_l_front_left_vec.push_back(obstacle_corners.l_front_left);
-    obj_s_front_right_vec.push_back(obstacle_corners.s_front_right);
-    obj_l_front_right_vec.push_back(obstacle_corners.l_front_right);
-    obj_s_rear_left_vec.push_back(obstacle_corners.s_rear_left);
-    obj_l_rear_left_vec.push_back(obstacle_corners.l_rear_left);
-    obj_s_rear_right_vec.push_back(obstacle_corners.s_rear_right);
-    obj_l_rear_right_vec.push_back(obstacle_corners.l_rear_right);
-    obj_rel_pos_type_vec.push_back(
-        static_cast<double>(obstacle_decisions[obstacle->id()].rel_pos_type));
-  }
-  JSON_DEBUG_VECTOR("LonBehavior_obj_id_vec", obj_id_vec, 2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_vel_vec", obj_vel_vec, 2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_vel_dir_vec", obj_vel_dir_vec, 2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_s_rear_vec", obj_s_rear_vec, 2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_s_front_vec", obj_s_front_vec, 2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_l_right_vec", obj_l_right_vec, 2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_l_left_vec", obj_l_left_vec, 2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_s_front_left_vec", obj_s_front_left_vec,
-                    2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_l_front_left_vec", obj_l_front_left_vec,
-                    2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_s_front_right_vec", obj_s_front_right_vec,
-                    2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_l_front_right_vec", obj_l_front_right_vec,
-                    2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_s_rear_left_vec", obj_s_rear_left_vec, 2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_l_rear_left_vec", obj_l_rear_left_vec, 2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_s_rear_right_vec", obj_s_rear_right_vec,
-                    2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_l_rear_right_vec", obj_l_rear_right_vec,
-                    2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_rel_pos_type_vec", obj_rel_pos_type_vec,
-                    2);
-
-  int traj_length = traj_points.size();
-  lon_ref_path.lon_obstacle_yield_info.reserve(traj_length);
-  for (int i = 0; i < traj_length; i++) {
-    lon_ref_path.lon_obstacle_yield_info.emplace_back(
-        LonObstalceYieldInfo{0, 1000, 1000});
-  }
   double construct_longitudinal_obstacle_decision_time_start =
       IflyTime::Now_ms();
   for (auto &obstacle : reference_path_ptr_->get_obstacles()) {
@@ -848,7 +757,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decisions(
     if (obstacle->b_frenet_valid()) {
       double time_obj = IflyTime::Now_ms();
       LOG_DEBUG(
-          "construct_longitudinal_obstacle_decision== obstacle_id is [%d]:\n",
+          "construct_longitudinal_obstacle_decision== obstacle_id: [%d]:\n",
           obstacle_id);
 
       construct_longitudinal_obstacle_decision(
@@ -865,39 +774,6 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decisions(
             construct_longitudinal_obstacle_decision_time_end -
                 construct_longitudinal_obstacle_decision_time_start);
 
-  // MDEBUG_JSON_BEGIN_DICT(lon_yield_obstacle)
-  // MDEBUG_JSON_BEGIN_ARRAY(lon_yield_obj)
-  // for (size_t i = 0; i < traj_points.size(); ++i) {
-  //   MDEBUG_JSON_BEGIN_OBJECT(object)
-  //   MDEBUG_JSON_ADD_ITEM(
-  //       yield_id, lon_ref_path.lon_obstacle_yield_info[i].yield_id, object)
-  //   MDEBUG_JSON_ADD_ITEM(yield_upper,
-  //                        lon_ref_path.lon_obstacle_yield_info[i].yield_upper,
-  //                        object)
-  //   MDEBUG_JSON_ADD_ITEM(
-  //       yield_buff, lon_ref_path.lon_obstacle_yield_info[i].yield_buff,
-  //       object)
-  //   MDEBUG_JSON_END_OBJECT(object)
-  // }
-  // MDEBUG_JSON_END_ARRAY(lon_yield_obj)
-  // MDEBUG_JSON_END_DICT(lon_yield_obstacle)
-
-  // MDEBUG_JSON_BEGIN_DICT(lon_yield_obstacle)
-  std::vector<double> yield_id_vec, yield_upper_vec, yield_buff_vec;
-  for (size_t i = 0; i < traj_points.size(); ++i) {
-    yield_id_vec.push_back(
-        static_cast<double>(lon_ref_path.lon_obstacle_yield_info[i].yield_id));
-    yield_upper_vec.push_back(
-        lon_ref_path.lon_obstacle_yield_info[i].yield_upper);
-    yield_buff_vec.push_back(
-        lon_ref_path.lon_obstacle_yield_info[i].yield_buff);
-  }
-  JSON_DEBUG_VECTOR("LonBehavior_obj_yield_id_vec", yield_id_vec, 2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_yield_upper_vec", yield_upper_vec, 2);
-  JSON_DEBUG_VECTOR("LonBehavior_obj_yield_buff_vec", yield_buff_vec, 2);
-
-  // MDEBUG_JSON_BEGIN_DICT(lon_st_obstacle)
-  // MDEBUG_JSON_BEGIN_ARRAY(lon_obstacle_overlap)
   if (!lon_ref_path.lon_obstacle_yield_info.empty()) {
     for (size_t i = 0; i < lon_ref_path.lon_obstacle_yield_info.size(); i++) {
       auto iter = lon_ref_path.lon_obstacle_overlap_info.find(
@@ -907,41 +783,9 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decisions(
             lon_ref_path.lon_obstacle_yield_info[i].yield_id);
       }
     }
-    // for (auto lon_overlap_iter =
-    // lon_ref_path.lon_obstacle_overlap_info.begin();
-    //      lon_overlap_iter != lon_ref_path.lon_obstacle_overlap_info.end();
-    //      ++lon_overlap_iter) {
-    //   MDEBUG_JSON_BEGIN_OBJECT(object)
-    //   MDEBUG_JSON_BEGIN_ARRAY(lon_obstacle_overlap_iter)
-    //   for (size_t j = 0; j < lon_overlap_iter->second.size(); j++) {
-    //     MDEBUG_JSON_BEGIN_OBJECT(object)
-    //     MDEBUG_JSON_ADD_ITEM(id, lon_overlap_iter->first, object)
-    //     MDEBUG_JSON_ADD_ITEM(s, lon_overlap_iter->second[j].s, object)
-    //     MDEBUG_JSON_ADD_ITEM(t, lon_overlap_iter->second[j].t, object)
-    //     MDEBUG_JSON_END_OBJECT(object)
-    //   }
-    //   MDEBUG_JSON_END_ARRAY(lon_obstacle_overlap_iter)
-    //   MDEBUG_JSON_END_OBJECT(object)
-    // }
-    std::vector<double> one_s_vec, one_t_vec;
-    std::string s_pre_str = "LonBehavior_obstacle_overlap_s_vec_";
-    std::string t_pre_str = "LonBehavior_obstacle_overlap_t_vec_";
-    for (auto lon_overlap_iter = lon_ref_path.lon_obstacle_overlap_info.begin();
-         lon_overlap_iter != lon_ref_path.lon_obstacle_overlap_info.end();
-         ++lon_overlap_iter) {
-      int one_id = lon_overlap_iter->first;
-      one_s_vec.clear();
-      one_t_vec.clear();
-      for (size_t j = 0; j < lon_overlap_iter->second.size(); j++) {
-        one_s_vec.push_back(lon_overlap_iter->second[j].s);
-        one_t_vec.push_back(lon_overlap_iter->second[j].t);
-      }
-      JSON_DEBUG_VECTOR(s_pre_str + std::to_string(one_id), one_s_vec, 2);
-      JSON_DEBUG_VECTOR(t_pre_str + std::to_string(one_id), one_t_vec, 2);
-    }
-    lon_ref_path.lon_obstacle_overlap_info.clear();
+    // lon_ref_path.lon_obstacle_overlap_info.clear();
   }
-  lon_ref_path.lon_obstacle_yield_info.clear();
+  // lon_ref_path.lon_obstacle_yield_info.clear();
 }
 
 void GeneralLongitudinalDecider::make_longitudinal_overlap_path(
@@ -988,6 +832,8 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
   auto dt_square = config_.delta_time * config_.delta_time;
   auto dt_cube = dt_square * config_.delta_time;
 
+  // TBD: 超车buffer应该根据自车和障碍物速度变换，确保安全
+  // TBD: 到CIPV也应该根据车速来计算
   constexpr double kSOvertakeBuffer = 0.0;
   constexpr double kTOvertakeThreshold = 0.0;
   constexpr double kLowSpeedThreshold = 0.5;
@@ -998,6 +844,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
   std::vector<std::pair<double, double>> obstacle_yield_uppers;
   std::vector<LonObstacleOverlapInfo> overlap_info;
 
+  obstacle_decision.id_ = obstacle->id();
   const bool is_cross_obj =
       obstacle_decision.rel_pos_type == ObsRelPosType::CROSSING;
 
@@ -1026,6 +873,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
       if (!obstacle_AABox.HasOverlap(overlap_path_polygon_AABox)) {
         continue;
       }
+      // TBD：这里有必要使用多边形碰撞检测并且再恢复多边形么？
       Polygon2d overlap_polygon;
       b_overlap = obstacle_sl_polygon.ComputeOverlap(overlap_path_polygon,
                                                      &overlap_polygon);
@@ -1035,10 +883,6 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
                               points.end());
       }
     }
-    // double ComputeOverlap_end = IflyTime::Now_ms();
-    // LOG_DEBUG("ComputeOverlap obstacle [%d] cost is [%f]ms:\n",
-    // obstacle->id(),
-    //           ComputeOverlap_end - ComputeOverlap_start);
 
     // obstain all lon overlap info
     if ((overlap_points.empty() || i == traj_points.size() - 1) &&
@@ -1052,14 +896,14 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
       continue;
     }
 
+    // WB：这里建议直接使用多边形，不要再重新构造多边形
     Polygon2d care_overlap_polygon;
     ok = planning_math::Polygon2d::ComputeConvexHull(overlap_points,
                                                      &care_overlap_polygon);
     if (not ok) {
+      LOG_WARNING("Failed to get [%d]'s polygon", obstacle->id());
       continue;
-    }
-
-    if (ok) {
+    } else {
       overlap_info.emplace_back(LonObstacleOverlapInfo{
           care_overlap_polygon.min_x() - vehicle_param_.length / 2, t});
     }
@@ -1328,7 +1172,8 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
     }
 
     pos_decision.lon_bounds.emplace_back(WeightedBound{
-        std::numeric_limits<double>::min(), yield_upper - distance_safe, -1});
+        std::numeric_limits<double>::min(), yield_upper - distance_safe, -1,
+        BoundInfo{obstacle->id(), "obstacle"}});
 
     for (size_t i = 0; i < traj_points.size(); ++i) {
       auto t_traj = traj_points[i].t;
@@ -1716,7 +1561,7 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
           }
         }
       }
-      LOG_DEBUG("HHLDEBUGW nearby_obstacle: %d",
+      LOG_DEBUG("nearby_obstacle: %d \n",
                 lon_decision_information.nearby_obstacle);
 
       if (!obstacle_decision.second.position_decisions.empty()) {

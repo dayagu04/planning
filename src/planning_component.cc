@@ -72,7 +72,7 @@ bool PlanningComponent::Init() {
 
   auto localization_reader_ =
       planning_node_->CreateReader<LocalizationOutput::LocalizationEstimate>(
-          "/localization",
+          "/iflytek/localization/ego_pose",
           [this](const std::shared_ptr<LocalizationOutput::LocalizationEstimate>
                      &localization_estimate_msg) {
             std::cout << "receive localization_estimate "

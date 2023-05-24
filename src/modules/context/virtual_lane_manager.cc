@@ -48,7 +48,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   //   relative_id_lanes_.emplace_back(virtual_lane_tmp);
   // }
 
-    for (auto relative_id_lane : relative_id_lanes_) {
+  for (auto relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane->get_relative_id() == 0) {
       current_lane_ = relative_id_lane;
       LOG_DEBUG("create current_lane_\n");

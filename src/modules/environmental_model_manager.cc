@@ -228,7 +228,10 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
     vehicle_status.mutable_location()->mutable_location_enu()->set_x(enu_position.x());
     vehicle_status.mutable_location()->mutable_location_enu()->set_y(enu_position.y());
     vehicle_status.mutable_location()->mutable_location_enu()->set_z(enu_position.z());
-
+    auto local_position = localization_estimate.pose().local_position();
+    vehicle_status.mutable_location()->mutable_location_enu()->set_x(local_position.x());
+    vehicle_status.mutable_location()->mutable_location_enu()->set_y(local_position.y());
+    vehicle_status.mutable_location()->mutable_location_enu()->set_z(local_position.z());
     auto enu_orientation = localization_estimate.pose().orientation();
     vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_x(enu_orientation.qx());
     vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_y(enu_orientation.qy());
