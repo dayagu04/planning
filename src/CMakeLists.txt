@@ -95,10 +95,11 @@ endif()
 
 add_library(apa_simulation_component SHARED ${APA_SIMULATION_SRC_FILES})
 target_link_libraries(apa_simulation_component PUBLIC
+  autoplt
   cyber
-  protobuf
+  planning_proto
   proto_interface
-  autoplt)
+  protobuf)
 
 target_compile_definitions(planning_component PRIVATE
     CONFIG_PATH="/asw/planning/res/conf")

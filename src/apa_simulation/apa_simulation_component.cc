@@ -19,10 +19,14 @@ ApaSimulationComponent::~ApaSimulationComponent() {
 bool ApaSimulationComponent::Init() {
   APA_SIM_LOG << "The apa simulation component init!!!" << std::endl;
 
-  const std::string apa_simulation_config_path =
-      "/asw/planning/res/conf/apa_simulation_config.pb.txt";
+  const std::string apa_sim_config_path =
+      "/asw/planning/res/conf/apa_sim_config.pb.txt";
+  common::util::GetProtoFromFile(apa_sim_config_path, &apa_sim_config_);
 
-  common::util::GetProtoFromFile(apa_simulation_config_path, &apa_sim_config_);
+  const std::string apa_sim_parking_fusion_info_path =
+      "/asw/planning/res/conf/apa_sim_parking_fusion_info.pb.txt";
+  common::util::GetProtoFromFile(
+      apa_sim_parking_fusion_info_path, &parking_fusion_info_msg_);
 
   // 1.定义cyber node
   ADSNode::Init("simulation_node");
@@ -39,16 +43,17 @@ bool ApaSimulationComponent::Init() {
 
   // -------------- writter topics --------------
   localization_estimate_writer_ =
-      simulation_node_->CreateWriter<LocalizationEstimate>("/localization");
+      simulation_node_->CreateWriter<LocalizationEstimate>(
+          "/iflytek/localization/ego_pose");
   parking_fusion_info_writer_ =
       simulation_node_->CreateWriter<ParkingFusionInfo>(
-        "/iflytek/fusion/parking_slot");
+          "/iflytek/fusion/parking_slot");
   vehicle_service_output_info_writer_ =
       simulation_node_->CreateWriter<VehicleServiceOutputInfo>(
-        "/iflytek/vehicle_service");
+          "/iflytek/vehicle_service");
   func_state_machine_writer_ =
       simulation_node_->CreateWriter<FuncStateMachine>(
-        "/iflytek/system_state/soc_state");
+          "/iflytek/system_state/soc_state");
 
   key_input_thread_ =
       std::make_shared<std::thread>(&ApaSimulationComponent::GetKeyInput, this);
@@ -102,7 +107,6 @@ void ApaSimulationComponent::MockLocalizationAndVehicleService() {
     ego_spd = last_ego_spd_;
   }
 
-
   LocalizationEstimate localization_estimate_msg;
   localization_estimate_msg.mutable_pose()->set_type(
       LocalizationOutput::Pose::LOCATION_LOCAL);
@@ -121,6 +125,8 @@ void ApaSimulationComponent::MockLocalizationAndVehicleService() {
   VehicleServiceOutputInfo vehicle_service_output_info_msg;
   vehicle_service_output_info_msg.set_vehicle_speed(ego_spd);
   vehicle_service_output_info_msg.set_vehicle_speed_available(true);
+  vehicle_service_output_info_msg.set_steering_wheel_angle(0.0);
+  vehicle_service_output_info_msg.set_steering_wheel_angle_available(true);
   vehicle_service_output_info_writer_->Write(vehicle_service_output_info_msg);
 
   last_planning_gear_ =
@@ -133,7 +139,7 @@ void ApaSimulationComponent::MockLocalizationAndVehicleService() {
 
 void ApaSimulationComponent::MockParkingFusionInfo() {
   // mock parking fusion
-  parking_fusion_info_writer_->Write(apa_sim_config_.parking_fusion_info());
+  parking_fusion_info_writer_->Write(parking_fusion_info_msg_);
 }
 
 void ApaSimulationComponent::GetKeyInput() {
@@ -188,8 +194,7 @@ void ApaSimulationComponent::GetKeyInput() {
 
 void ApaSimulationComponent::MockFuncStateMachine() {
   // mock parking fusion
-  auto func_state_machine = apa_sim_config_.func_state_machine();
-
+  FuncStateMachine func_state_machine;
   FunctionalState func_state = FunctionalState::INIT;
   {
     std::lock_guard<std::mutex> lock(func_state_mutex_);

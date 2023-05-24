@@ -3,7 +3,7 @@
 #include <mutex>
 #include <atomic>
 
-#include "apa_simulation_config.pb.h"
+#include "apa_sim_config.pb.h"
 #include "func_state_machine.pb.h"
 #include "localization.pb.h"
 #include "parking_fusion.pb.h"
@@ -45,12 +45,14 @@ class ApaSimulationComponent final : public autoplt::ADSTimerCoponent {
   std::mutex msg_mutex_;
   std::mutex func_state_mutex_;
 
-  ApaSimulationConfig apa_sim_config_;
+  ApaSimConfig apa_sim_config_;
 
   std::shared_ptr<ADSNode> simulation_node_ = nullptr;
 
   // input signals
   PlanningOutput planning_output_msg_;
+
+  ParkingFusionInfo parking_fusion_info_msg_;
 
   // output signals
   std::shared_ptr<Writer<LocalizationEstimate>>

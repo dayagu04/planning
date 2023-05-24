@@ -1,0 +1,4 @@
+init_x: 0.0
+init_y: 0.0
+init_theta: 0.0
+init_speed: 0.4
