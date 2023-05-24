@@ -366,8 +366,8 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
     // cur_predicion_obj.intention = prediction_object.obstacle_intent().type();
     // cur_predicion_obj.b_backup_freemove = prediction_object.b_backup_freemove(); todo: clren
     // cur_predicion_obj.cutin_score = prediction_object.cutin_score();  todo: clren
-    cur_predicion_obj.position_x = prediction_object.fusion_obstacle().common_info().position().x();
-    cur_predicion_obj.position_y = prediction_object.fusion_obstacle().common_info().position().y();
+    cur_predicion_obj.position_x = prediction_object.fusion_obstacle().common_info().center_position().x();
+    cur_predicion_obj.position_y = prediction_object.fusion_obstacle().common_info().center_position().y();
     cur_predicion_obj.relative_position_x = prediction_object.fusion_obstacle().common_info().relative_center_position().x() - ego_rear_axis_to_front_edge;
     cur_predicion_obj.relative_position_y = prediction_object.fusion_obstacle().common_info().relative_center_position().y();
     cur_predicion_obj.relative_speed_x = prediction_object.fusion_obstacle().common_info().relative_velocity().x();
@@ -481,8 +481,8 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
 
   prediction_object.delay_time = 0.0;
   prediction_object.cutin_score = 0;
-  prediction_object.position_x = fusion_object.common_info().position().x();
-  prediction_object.position_y = fusion_object.common_info().position().y();
+  prediction_object.position_x = fusion_object.common_info().center_position().x();
+  prediction_object.position_y = fusion_object.common_info().center_position().y();
   prediction_object.length = fusion_object.common_info().shape().length();
   prediction_object.width = fusion_object.common_info().shape().width();
   prediction_object.speed = std::hypot(fusion_object.common_info().velocity().x(),
