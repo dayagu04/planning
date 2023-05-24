@@ -165,7 +165,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, 
     int num = 0;
     for (auto &obj : local_view.fusion_objects_info.fusion_object()) {
       num++;
-      if (num > local_view.fusion_objects_info.num()) {
+      if (num > local_view.fusion_objects_info.fusion_object_num()) {
         break;
       }
       if (obj.additional_info().fusion_source() == FusionSource::RADAR_ONLY) {
@@ -180,7 +180,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, 
     int num = 0;
     for (auto &obj : local_view.fusion_objects_info.fusion_object()) {
       num++;
-      if (num > local_view.fusion_objects_info.num()) {
+      if (num > local_view.fusion_objects_info.fusion_object_num()) {
         break;
       }
       if (obj.additional_info().fusion_source() == FusionSource::RADAR_ONLY) {
@@ -198,7 +198,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, 
   int num = local_view.radar_perception_objects_info.num();
   for (auto &obj : local_view.radar_perception_objects_info.radar_perception_object_list()) {
     num++;
-    if (num > local_view.fusion_objects_info.num()) {
+    if (num > local_view.fusion_objects_info.fusion_object_num()) {
       break;
     }
     transform_surround_radar_to_prediction(obj, local_view.radar_perception_objects_info.sensor_type());
@@ -396,7 +396,7 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
         trajectory_point.y = point.position().y();
         trajectory_point.yaw = point.yaw();
         trajectory_point.speed = point.velocity();
-        trajectory_point.theta = point.theta();
+        trajectory_point.theta = point.theta_vel();
         trajectory_point.prob = prediction_traj.confidence();
         trajectory_point.std_dev_x = point.gaussian_info().sigma_x();
         trajectory_point.std_dev_y = point.gaussian_info().sigma_y();

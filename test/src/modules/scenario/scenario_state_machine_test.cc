@@ -206,7 +206,7 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
       5.0);
 
   local_view.fusion_objects_info.mutable_header()->set_timestamp(time_stamp);
-  local_view.fusion_objects_info.set_num(2);
+  local_view.fusion_objects_info.set_fusion_object_num(2);
   for (int i = 0; i < 2; i++) {
     auto fusion_obj = local_view.fusion_objects_info.add_fusion_object();
     fusion_obj->mutable_additional_info()->set_track_id(i + 1);
