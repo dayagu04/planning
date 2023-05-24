@@ -362,7 +362,7 @@ void EgoPlanningCandidate::refine(
     planning_result_.use_backup_cnt = 0;
     success_ = true;
   } else {
-    LOG_ERROR("task_pipepine failed");
+    LOG_ERROR("task_pipepine failed\n");
   }
 
   if (not ok and last_planning_result_ != nullptr and

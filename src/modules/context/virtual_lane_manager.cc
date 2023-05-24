@@ -1,6 +1,6 @@
 #include "context/virtual_lane_manager.h"
 #include "context/reference_path_manager.h"
-
+#include "debug_info_log.h"
 
 namespace planning {
 
@@ -16,14 +16,15 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   relative_id_lanes_.clear();
 
   if(roads.lanes().size() == 0 ) {
-    LOG_ERROR("roads' lanes are empty \n");
+    LOG_ERROR("!!!roads' lanes are empty \n");
     return false;
   }
+  //todo:clren 添加enu是否有效的标志位
   for(auto& lane : roads.lanes()) {
     std::shared_ptr<VirtualLane> virtual_lane_tmp = std::make_shared<VirtualLane>();
     virtual_lane_tmp->update_data(lane);
-    printf("lane relative_id:%d, order_id:%d, virtual_id:%d\n", lane.relative_id(),
-    lane.order_id(), lane.virtual_id());
+    printf("lane relative_id:%d, order_id:%d\n", lane.relative_id(),
+    lane.order_id());
     relative_id_lanes_.emplace_back(virtual_lane_tmp);
   }
 
@@ -58,12 +59,23 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       right_lane_ = relative_id_lane;
     }
   }
-
+  
+  if (current_lane_ == nullptr) {
+    LOG_ERROR("!!!current_lane is empty!!!");
+    return false;
+  }
+  
   update_virtual_id();
+  LOG_DEBUG("input lane:");
+  auto& debug_info_manager = DebugInfoManager::GetInstance();
+  auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
+  auto environment_model_debug_info = planning_debug_data->mutable_environment_model_info();
+  environment_model_debug_info->set_currrent_lane_vitual_id(current_lane_virtual_id_);
   LOG_DEBUG("current lane virtual id:%d\n", current_lane_virtual_id_);
   for (auto lane : relative_id_lanes_) {
-    LOG_DEBUG(" %d", lane->get_virtual_id());
+    LOG_DEBUG(" relative id:%d, virtual id: %d,",lane->get_relative_id(), lane->get_virtual_id());
   }
+  
   LOG_DEBUG("\n");
   return true;
 }
@@ -95,20 +107,13 @@ void VirtualLaneManager::update_virtual_id() {
   } else {
     lane_virtual_id  = current_lane_virtual_id_ + 1;
   }
-  current_lane_->set_virtual_id(lane_virtual_id);
-  if (left_lane_ != nullptr) {
-    left_lane_->set_virtual_id(lane_virtual_id - 1);
-  }
-  if (right_lane_ != nullptr) {
-    right_lane_->set_virtual_id(lane_virtual_id + 1);
-  }
 
   current_lane_virtual_id_ = lane_virtual_id;
   virtual_id_mapped_lane_.clear();
   for (auto lane : relative_id_lanes_) {
-    virtual_id_mapped_lane_[lane->get_relative_id() + current_lane_virtual_id_] = lane;
-    LOG_DEBUG("virtual_id_mapped_lane_ virtual id :%d\n",
-      lane->get_relative_id() + current_lane_virtual_id_);
+    auto lane_virtual_id = lane->get_relative_id() + current_lane_virtual_id_;
+    virtual_id_mapped_lane_[lane_virtual_id] = lane;
+    lane->set_virtual_id(lane_virtual_id);
   }
 }
 

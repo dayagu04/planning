@@ -75,9 +75,15 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   frame_ = frame;
 
   auto current_time = IflyTime::Now_ms();
+  
   auto &local_view = session_->environmental_model().get_local_view();
-
-  // Step 2) update ehicleDbwStatus
+  
+  //todo 后续加入车道线，障碍物的local_point是否有效
+  auto location_valid = local_view.localization_estimate.msf_status().available() &&
+      local_view.localization_estimate.msf_status().msf_status() !=
+          LocalizationOutput::MsfStatus::ERROR;
+  session_->mutable_environmental_model()->set_location_valid(location_valid);
+  // Step 1) update vehicleDbwStatus
   session_->mutable_environmental_model()->UpdateVehicleDbwStatus(
     local_view.hmi_mcu_inner_info.noa_active_switch());
   // session_->mutable_environmental_model()->UpdateVehicleDbwStatus(true);
@@ -104,7 +110,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   // LOG_DEBUG("virtual_lane_manager time:%f\n", end_time - current_time);
   // current_time = end_time;
 
-  // Step 3) update obstacle
+  // Step 4) update obstacle
   if (!obstacle_prediction_update(current_time, local_view)) {
     return false;
   }
@@ -213,9 +219,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
   vehicle_status.mutable_header()->set_timestamp_us(vehicel_service_output_info.header().timestamp());
 
   // FBI WARNING
-  if (localization_estimate.msf_status().available() &&
-      localization_estimate.msf_status().msf_status() !=
-          LocalizationOutput::MsfStatus::ERROR || 1) {
+  if (session_->environmental_model().location_valid()) {
     vehicle_status.mutable_heading_yaw()
         ->mutable_heading_yaw_data()
         ->set_value_rad(localization_estimate.pose().euler_angles().yaw());
@@ -355,10 +359,6 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
 
 void EnvironmentalModelManager::truncate_prediction_info(const Prediction::PredictionResult& prediction_result, double cur_timestamp_us, std::unordered_set<uint>& prediction_obj_id_set) {
   assert(session_ != nullptr);
-
-  double ego_rear_axis_to_front_edge = 0;
-
-  ego_rear_axis_to_front_edge = session_->vehicle_config_context().get_vehicle_param().rear_axis_to_front_edge;
   double current_time = session_->planning_output_context().planning_status().planning_result.next_timestamp;
   auto init_relative_time = session_->environmental_model().get_ego_state_manager()->planning_init_point().relative_time;
   auto &prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
@@ -382,7 +382,7 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
     // cur_predicion_obj.cutin_score = prediction_object.cutin_score();  todo: clren
     cur_predicion_obj.position_x = prediction_object.fusion_obstacle().common_info().center_position().x();
     cur_predicion_obj.position_y = prediction_object.fusion_obstacle().common_info().center_position().y();
-    cur_predicion_obj.relative_position_x = prediction_object.fusion_obstacle().common_info().relative_center_position().x() - ego_rear_axis_to_front_edge;
+    cur_predicion_obj.relative_position_x = prediction_object.fusion_obstacle().common_info().relative_center_position().x();
     cur_predicion_obj.relative_position_y = prediction_object.fusion_obstacle().common_info().relative_center_position().y();
     cur_predicion_obj.relative_speed_x = prediction_object.fusion_obstacle().common_info().relative_velocity().x();
     cur_predicion_obj.relative_speed_y = prediction_object.fusion_obstacle().common_info().relative_velocity().y();
@@ -483,8 +483,6 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
   if (session_ == nullptr) {
     return false;
   }
-  double ego_rear_axis_to_front_edge = 0;
-  ego_rear_axis_to_front_edge = session_->vehicle_config_context().get_vehicle_param().rear_axis_to_front_edge;
 
   auto &prediction_info = session_->mutable_environmental_model()->get_mutable_prediction_info();
 
@@ -505,7 +503,7 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
   prediction_object.acc = std::hypot(fusion_object.common_info().acceleration().x(),
                                     fusion_object.common_info().acceleration().y());
   // add relative info for highway
-  prediction_object.relative_position_x = fusion_object.common_info().relative_center_position().x() - ego_rear_axis_to_front_edge;
+  prediction_object.relative_position_x = fusion_object.common_info().relative_center_position().x();
   prediction_object.relative_position_y = fusion_object.common_info().relative_center_position().y();
   prediction_object.relative_speed_x = fusion_object.common_info().relative_velocity().x();
   prediction_object.relative_speed_y = fusion_object.common_info().relative_velocity().y();

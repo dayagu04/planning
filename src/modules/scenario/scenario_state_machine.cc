@@ -520,7 +520,7 @@ LaneChangeStageInfo ScenarioStateMachine::decide_lc_valid_info(
   auto raw_info = compute_lc_valid_info(direction);
   double coefficient = 20. / 25;  // TODO(Rui): FLAGS_planning_loop_rate = 20.
   int lc_valid_thre = static_cast<int>(10.0 * coefficient);
-  // int lc_valid_thre = 0.0;
+  // int lc_valid_thre = 1;
   if (raw_info.gap_insertable) {
     lc_valid_cnt_ += 1;
     LOG_DEBUG("decide_lc_valid_info lc_valid_cnt : %d", lc_valid_cnt_);
@@ -600,8 +600,9 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
 
   // if (!map_info.is_in_intersection() &&
   //     map_info.left_refline_points().size() > 0) {
-  if (virtual_lane_manager->get_left_lane()->lane_points().size() > 0) {
-    for (auto &p : virtual_lane_manager->get_left_lane()->lane_points()) {
+  auto left_lane = virtual_lane_manager->get_left_lane();
+  if (left_lane != nullptr) {
+    for (auto &p : left_lane->lane_points()) {
       if (p.car_point().x() >= 0 && p.car_point().x() <= 20 &&
           !p.is_in_intersection()) {
         left_lane_width = p.lane_width();
@@ -614,8 +615,9 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
 
   // if (!map_info.is_in_intersection() &&
   //     map_info.right_refline_points().size() > 0) {
-  if (virtual_lane_manager->get_right_lane()->lane_points().size() > 0) {
-    for (auto &p : virtual_lane_manager->get_right_lane()->lane_points()) {
+  auto right_lane = virtual_lane_manager->get_right_lane();
+  if (right_lane != nullptr) {
+    for (auto &p : right_lane->lane_points()) {
       if (p.car_point().x() >= 0 && p.car_point().x() <= 20 &&
           !p.is_in_intersection()) {
         right_lane_width = p.lane_width();
@@ -625,7 +627,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
       }
     }
   }
-
+  
   if (!lateral_obstacle->sensors_okay()) {
     if (lateral_obstacle->fvf_dead()) {
       result.lc_back_reason = "no front view";

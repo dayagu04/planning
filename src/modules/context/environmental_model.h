@@ -187,6 +187,8 @@ class EnvironmentalModel {
   void feed_local_view(const LocalView& local_view) {
     local_view_ = local_view;
   }
+  void set_location_valid(bool flag) {location_valid_ = flag; }
+  bool location_valid() const { return location_valid_; }
   const LocalView& get_local_view() const { return local_view_; }
 
   bool get_hdmap_valid() const { return hdmap_valid_; }
@@ -230,6 +232,7 @@ private:
 
 //   bool hdmap_enable_status_{false};
   bool hdmap_valid_{false};
+  bool location_valid_{true};
 //   bool vehicle_dbw_status_{false};
 //   bool dbw_status_{false};
 //   bool pretreatment_status_{true};
@@ -247,6 +250,7 @@ private:
   EgoPlanningConfigBuilder *urban_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *parking_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *highway_config_builder_ptr_ = nullptr;
+
 };
 
 }  // namespace planning

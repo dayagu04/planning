@@ -4,13 +4,10 @@ package planning.common;
 import "basic_types.proto"; 
 
 message EnvironmentModelInfo {
-  optional int32 current_lane_vitual_id = 1;
-  optional int32 left_lane_vitual_id = 2;
-  optional int32 right_lane_vitual_id = 3;
-  optional bool has_current_lane = 4;
-  optional bool has_left_lane = 5;
-  optional bool has_right_lane = 6;
-  repeated Obstacle obstacle = 7;
+  optional int32 currrent_lane_vitual_id = 1;
+  optional double ego_s = 2;
+  optional double ego_l = 3;
+  repeated Obstacle obstacle = 4;
 }
 
 message Obstacle {

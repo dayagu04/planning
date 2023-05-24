@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import math
+from lib.load_rotate import *
 
 def load_car_params_patch():
   car_x = [4.015, 4.015, -1.083, -1.083, 4.015]
@@ -41,7 +42,6 @@ def load_lane_lines(lanes):
       lane_info_l['line_y_vec'] = line_y
       lane_info_l['type'] = []
       line_info_list.append(lane_info_l)
-      line_info_list.append(lane_info_l)
 
   return line_info_list
 
@@ -49,7 +49,7 @@ def load_lane_center_lines(lanes):
   line_info_list = []
 
   for i in range(5):
-    lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+    lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[]}
     if i< len(lanes):
       lane = lanes[i]
       virtual_lane_refline_points = lane.lane_reference_line.virtual_lane_refline_points
@@ -61,6 +61,7 @@ def load_lane_center_lines(lanes):
 
       lane_info['line_x_vec'] = line_x
       lane_info['line_y_vec'] = line_y
+      lane_info['relative_id'] = lane.relative_id
       lane_info['type'] = 0
 
       line_info_list.append(lane_info)
@@ -68,8 +69,8 @@ def load_lane_center_lines(lanes):
       line_x, line_y = gen_line(0,0,0,0,0,0)
       lane_info['line_x_vec'] = line_x
       lane_info['line_y_vec'] = line_y
-      lane_info['type'] = []
-      line_info_list.append(lane_info)
+      lane_info['relative_id'] = 1000
+      lane_info['type'] = 0
       line_info_list.append(lane_info)
 
   return line_info_list
@@ -161,7 +162,7 @@ def load_obstacle_params(obstacle_list):
     obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].additional_info.track_id)
 #             fusion_obs_info['is_cipv'].append(obstacle_list[i].target_selection_type)
     obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
-        + str(round(obstacle_list[i].common_info.relative_velocity.x, 2)))
+        + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 2)))
     obs_info_all[source]['obstacles_x'].append(obs_x)
     # for ind in range(len(obs_y)):
     obs_info_all[source]['obstacles_y'].append(obs_y)
@@ -177,7 +178,93 @@ def gen_line(c0, c1, c2, c3, start, end):
 
   for x in np.linspace(start, end, 50):
       y = c0 + c1 * x + c2 * x * x + c3 * x * x* x
-      points_x.append([x])
-      points_y.append([y])
+      points_x.append(x)
+      points_y.append(y)
 
   return points_x, points_y
+
+def load_prediction_objects(obstacle_list, localization_info):
+    obs_info = {'obstacles_x': [],
+                'obstacles_y': [],
+                'pos_x': [],
+                'pos_y': [],
+                'loc_x': [],
+                'loc_y': [],
+                'obstacles_vel': [],
+                'obstacles_acc': [],
+                'obstacles_tid': [],
+                'is_cipv': [],
+                'obs_label':[]
+                }
+    localization_x = 0
+    localization_y = 0
+    if localization_info.pose.type == 1:
+      localization_x = localization_info.pose.enu_position.x
+      localization_y = localization_info.pose.enu_position.y
+    elif localization_info.pose.type == 2:
+      localization_x = localization_info.pose.llh_position.x
+      localization_y = localization_info.pose.llh_position.y
+    elif localization_info.pose.type == 3:
+      localization_x = localization_info.pose.local_position.x
+      localization_y = localization_info.pose.local_position.y
+    elif localization_info.pose.type == 0:
+      localization_x = localization_info.pose.local_position.x
+      localization_y = localization_info.pose.local_position.y
+    linear_velocity_from_wheel = localization_info.pose.linear_velocity_from_wheel
+    localization_theta = localization_info.pose.euler_angles.yaw
+
+    trajectory_info = {'x':[],'y':[]}
+    obs_num = len(obstacle_list)
+    num = len(obstacle_list[0].trajectory[0].trajectory_point)
+    for i in range(obs_num):
+      if len(obstacle_list[i].trajectory[0].trajectory_point) == 0:
+        # print("No data")
+        continue
+      elif obstacle_list[i].fusion_obstacle.common_info.shape.width == 0 or obstacle_list[i].fusion_obstacle.common_info.shape.length == 0:
+        continue
+      else:
+        long_pos = obstacle_list[i].trajectory[0].trajectory_point[0].relative_position.x
+        lat_pos = obstacle_list[i].trajectory[0].trajectory_point[0].relative_position.y
+        theta = obstacle_list[i].fusion_obstacle.common_info.relative_heading_angle
+        half_width = obstacle_list[i].fusion_obstacle.common_info.shape.width /2
+        length = obstacle_list[i].fusion_obstacle.common_info.shape.length
+        track_id = obstacle_list[i].fusion_obstacle.additional_info.track_id
+
+        # print(f"long_pos = {long_pos}\tlat_pos = {lat_pos}\ttheta = {theta}\thalf_width = {half_width}\tlength = {length}\n")
+
+        obs_x = [long_pos+half_width*math.sin(theta), \
+                  long_pos+half_width*math.sin(theta)+length*math.cos(theta), \
+                  long_pos-half_width*math.sin(theta)+length*math.cos(theta), \
+                  long_pos-half_width*math.sin(theta), \
+                  long_pos+half_width*math.sin(theta)]
+
+        obs_y = [lat_pos-half_width*math.cos(theta), \
+                  lat_pos-half_width*math.cos(theta)+ length*math.sin(theta), \
+                  lat_pos+half_width*math.cos(theta)+ length*math.sin(theta), \
+                  lat_pos+half_width*math.cos(theta),
+                  lat_pos-half_width*math.cos(theta)]
+        num = num + 1
+        obs_info['obstacles_x'].append(obs_x)
+        obs_info['obstacles_y'].append(obs_y)
+        obs_info['pos_x'].append(lat_pos)
+        obs_info['pos_y'].append(long_pos)
+        obs_info['obstacles_vel'].append(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x)
+        obs_info['obstacles_acc'].append(obstacle_list[i].fusion_obstacle.common_info.relative_acceleration.x)
+        obs_info['obstacles_tid'].append(obstacle_list[i].fusion_obstacle.common_info.id)
+        obs_info['obs_label'].append(str(obstacle_list[i].fusion_obstacle.common_info.id) + ',v=' + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2)))
+
+        p_x = []
+        p_y = []
+        for j in range(len(obstacle_list[i].trajectory[0].trajectory_point)):
+          local_x = obstacle_list[i].trajectory[0].trajectory_point[j].relative_position.x
+          local_y = obstacle_list[i].trajectory[0].trajectory_point[j].relative_position.y
+          # global_x = obstacle_list[i].trajectory[0].trajectory_point[j].position.x
+          # global_y = obstacle_list[i].trajectory[0].trajectory_point[j].position.y
+          # local_x, local_y = global2local(global_x, global_y, localization_x, localization_y, localization_theta)
+          p_x.append(local_x)
+          p_y.append(local_y)
+        # trajectory_info[track_id] = [p_x, p_y]
+      trajectory_info['x'].append(p_x)
+      trajectory_info['y'].append(p_y)
+
+    return obs_info, trajectory_info

@@ -610,11 +610,13 @@ void TrackletMaintainer::calc(
   seq_state_.remove_clean();
   simple_refline_.update_pathpoints(path_points);
 
-  double v_ego = ego_state_.ego_v();
-
+  // TODO: ego_state relative
+  // double v_ego = ego_state_.ego_vel;
+  double v_ego = 20.;
+  double ego_rear_axis_to_front_edge = session_->vehicle_config_context().get_vehicle_param().rear_axis_to_front_edge;
   if (simple_refline_.has_update()) {
     double yaw = 0;
-    simple_refline_.cartesian_frenet(0, 0, s_ego_, l_ego_, vs_ego_, vl_ego_,
+    simple_refline_.cartesian_frenet(ego_rear_axis_to_front_edge, 0, s_ego_, l_ego_, vs_ego_, vl_ego_,
                                      theta_ego_, true, &v_ego, &yaw);
 
     for (auto item : tracked_objects) {
@@ -664,6 +666,8 @@ void TrackletMaintainer::calc(
   auto& debug_info_manager = DebugInfoManager::GetInstance();
   auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto environment_model_debug_info = planning_debug_data->mutable_environment_model_info();
+  environment_model_debug_info->set_ego_s(s_ego_);
+  environment_model_debug_info->set_ego_l(l_ego_);
   environment_model_debug_info->obstacle().Clear();
   for (auto tr : tracked_objects) {
     planning::common::Obstacle *obstacle = environment_model_debug_info->add_obstacle();

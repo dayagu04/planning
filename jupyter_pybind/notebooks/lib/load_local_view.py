@@ -39,6 +39,9 @@ class LoadCyberbag:
     self.vs_msg = {'t':[], 'data':[], 'enable':[]}
     # car pos in local coordinates
     
+    # prediction_msg
+    self.prediction_msg = {'t':[], 'data':[], 'enable':[]}
+    
     # planning msg
     self.plan_msg = {'t':[], 'data':[], 'enable':[]}
     
@@ -55,6 +58,7 @@ class LoadCyberbag:
       self.loc_msg['t'] = [tmp - self.loc_msg['t'][0]  for tmp in self.loc_msg['t']]
       self.loc_msg['enable'] = True
       max_time = max(max_time, self.loc_msg['t'][-1])
+      print('loc_msg time:',self.loc_msg['t'][-1])
     except:
       self.loc_msg['enable'] = False
       print('missing /iflytek/localization/ego_pose !!!')
@@ -66,6 +70,7 @@ class LoadCyberbag:
         self.road_msg['data'].append(msg)
       self.road_msg['t'] = [tmp - self.road_msg['t'][0]  for tmp in self.road_msg['t']]
       self.road_msg['enable'] = True
+      print('road_msg time:',self.road_msg['t'][-1])
     except:
       self.road_msg['enable'] = False
       print('missing /iflytek/fusion/road_fusion topic !!!')
@@ -77,6 +82,7 @@ class LoadCyberbag:
         self.fus_msg['data'].append(msg)
       self.fus_msg['t'] = [tmp - self.fus_msg['t'][0]  for tmp in self.fus_msg['t']]
       self.fus_msg['enable'] = True
+      print('fus_msg time:',self.fus_msg['t'][-1])
     except:
       self.fus_msg['enable'] = False
       print('missing /iflytek/fusion/objects !!!')
@@ -84,10 +90,11 @@ class LoadCyberbag:
     # load vehicle service msg
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/vehicle_service"):
-        self.vs_msg['t'].append(msg.header.timestamp / 1e3)
+        self.vs_msg['t'].append(msg.header.timestamp / 1e6)
         self.vs_msg['data'].append(msg)
       self.vs_msg['t'] = [tmp - self.vs_msg['t'][0]  for tmp in self.vs_msg['t']]
       self.vs_msg['enable'] = True
+      print('vs time:',self.vs_msg['t'][-1])
       max_time = max(max_time, self.vs_msg['t'][-1])
     except:
       self.vs_msg['enable'] = False
@@ -101,9 +108,24 @@ class LoadCyberbag:
       self.plan_msg['t'] = [tmp - self.plan_msg['t'][0]  for tmp in self.plan_msg['t']]
       self.plan_msg['enable'] = True
       max_time = max(max_time, self.plan_msg['t'][-1])
+      print('plan_msg time:',self.plan_msg['t'][-1])
     except:
       self.plan_msg['enable'] = False
       print("missing /iflytek/planning/plan !!!")
+      
+    
+    # load prediction msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/iflytek/prediction/prediction_result"):
+        self.prediction_msg['t'].append(msg.header.timestamp / 1e6)
+        self.prediction_msg['data'].append(msg)
+      self.prediction_msg['t'] = [tmp - self.prediction_msg['t'][0]  for tmp in self.prediction_msg['t']]
+      self.prediction_msg['enable'] = True
+      max_time = max(max_time, self.prediction_msg['t'][-1])
+      print('prediction_msg time:',self.prediction_msg['t'][-1])
+    except:
+      self.prediction_msg['enable'] = False
+      print("missing /iflytek/prediction/prediction_result !!!")
 
     # load vehicle service msg
     try:
@@ -146,6 +168,16 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     while bag_loader.plan_msg['t'][plan_msg_idx] <= bag_time and plan_msg_idx < (len(bag_loader.plan_msg['t'])-2):
         plan_msg_idx = plan_msg_idx + 1
 
+  plan_debug_msg_idx = 0
+  if bag_loader.plan_debug_msg['enable'] == True:
+    while bag_loader.plan_debug_msg['t'][plan_debug_msg_idx] <= bag_time and plan_debug_msg_idx < (len(bag_loader.plan_debug_msg['t'])-2):
+        plan_debug_msg_idx = plan_debug_msg_idx + 1
+  
+  pred_msg_idx = 0
+  if bag_loader.prediction_msg['enable'] == True:
+    while bag_loader.prediction_msg['t'][pred_msg_idx] <= bag_time and pred_msg_idx < (len(bag_loader.prediction_msg['t'])-2):
+        pred_msg_idx = pred_msg_idx + 1
+        
   ### step 2: 加载定位信息
   cur_pos_xn0 = 0
   cur_pos_yn0 = 0
@@ -153,6 +185,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   cur_pos_yn = 0
   cur_yaw = 0
   if bag_loader.loc_msg['enable'] == True:
+    
     cur_pos_xn0 = cur_pos_xn = bag_loader.loc_msg['data'][0].pose.local_position.x
     cur_pos_yn0 = cur_pos_yn = bag_loader.loc_msg['data'][0].pose.local_position.y
     # ego pos in local and global coordinates
@@ -251,11 +284,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'line_{}_y'.format(i): line_info_list[i]['line_y_vec'],
         })
       except:
+        print('error')
         pass
     
     center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
+    # print(center_line_list)
     for i in range(5):
-      try:
+      # try:
         if 0:
           data_center_line = data_center_line_dict[i]
           data_center_line.data.update({
@@ -268,26 +303,63 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           line_y_rel = []
           for index in range(len(center_line_list[i]['line_x_vec'])):
             pos_xn_i, pos_yn_i = center_line_list[i]['line_x_vec'][index], center_line_list[i]['line_y_vec'][index]
-            # print(pos_xn_i, pos_yn_i)
             ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
             line_x_rel.append(ego_local_x)
             line_y_rel.append(ego_local_y)
           center_line_list[i]['line_x_vec'] = line_x_rel
           center_line_list[i]['line_y_vec'] = line_y_rel
+          if center_line_list[i]['relative_id'] == 0:
+            fig1.renderers[13 + i].glyph.line_dash = 'dotdash'
+            fig1.renderers[13 + i].glyph.line_alpha = 1
+            fig1.renderers[13 + i].glyph.line_width = 2
+          else:
+            fig1.renderers[13 + i].glyph.line_dash = 'dotted'
+            fig1.renderers[13 + i].glyph.line_alpha = 0.8
+            fig1.renderers[13 + i].glyph.line_width = 1
           data_center_line.data.update({
             'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
             'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
           })
-      except:
-        pass
-
+      # except:
+      #   print('error')
+      #   pass
+  # fix_lane,origin_lane
+  if bag_loader.plan_debug_msg['enable'] == True:
+    lat_behavior_common = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lat_behavior_common
+    environment_model_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].environment_model_info
+    current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
+    fix_lane_ralative_id = lat_behavior_common.fix_lane_virtual_id - current_lane_virtual_id
+    target_lane_ralative_id = lat_behavior_common.target_lane_virtual_id - current_lane_virtual_id
+    origin_lane_ralative_id = lat_behavior_common.origin_lane_virtual_id - current_lane_virtual_id
+    for i in range(5):
+      if center_line_list[i]['relative_id'] == fix_lane_ralative_id:
+        local_view_data['data_fix_lane'].data.update({
+          'fix_lane_x': center_line_list[i]['line_x_vec'], 
+          'fix_lane_y':center_line_list[i]['line_y_vec']   
+        })
+      if center_line_list[i]['relative_id'] == target_lane_ralative_id:
+        local_view_data['data_target_lane'].data.update({
+          'target_lane_x': center_line_list[i]['line_x_vec'], 
+          'target_lane_y':center_line_list[i]['line_y_vec']   
+        })
+      if center_line_list[i]['relative_id'] == origin_lane_ralative_id:
+        local_view_data['data_origin_lane'].data.update({
+          'origin_lane_x': center_line_list[i]['line_x_vec'], 
+          'origin_lane_y':center_line_list[i]['line_y_vec']   
+        })
+        
+    local_view_data['data_text'].data.update({
+      'vel_ego_text': ['v={:.2f}({:d})'.format(round(vel_ego, 2),current_lane_virtual_id)],
+      'text_xn': [text_xn],
+      'text_yn': [text_yn],
+    })
   ### step 4: 加载障碍物信息
   # load fus_obj
   if bag_loader.fus_msg['enable'] == True:
     fusion_objects = bag_loader.fus_msg['data'][fus_msg_idx].fusion_object
     obstacles_info_all = load_obstacle_params(fusion_objects)
     # 加载自车坐标系下的数据
-    if 1: 
+    if 0: 
       for key in obstacles_info_all:
         obstacles_info = obstacles_info_all[key]
         if key == 1:   
@@ -354,7 +426,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             'pos_y' : obstacles_info['pos_y'],
             'obs_label' : obstacles_info['obs_label'],
           })
-      
+   
+  #  加载fix_lane, target_lane信息
   ### step 3: 加载planning轨迹信息
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
@@ -365,7 +438,17 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'planning_y' : planning_y,
         'planning_x' : planning_x,
       })
-      
+  
+  # 加载prediction_msg
+  if bag_loader.prediction_msg['enable'] == True:
+    prediction_info = bag_loader.prediction_msg['data'][pred_msg_idx]
+    # 定位的选择需要修改
+    localization_info = bag_loader.loc_msg['data'][loc_msg_idx]
+    prediction_objects, trajectory_info = load_prediction_objects(prediction_info.prediction_obstacle_list, localization_info)
+    local_view_data['data_prediction'].data.update({
+      'prediction_y' : trajectory_info['y'],
+      'prediction_x' : trajectory_info['x'],
+    })
   return local_view_data
 
 def load_local_view_figure():
@@ -387,6 +470,9 @@ def load_local_view_figure():
   data_center_line_2 = ColumnDataSource(data = {'center_line_2_y':[], 'center_line_2_x':[]})
   data_center_line_3 = ColumnDataSource(data = {'center_line_3_y':[], 'center_line_3_x':[]})
   data_center_line_4 = ColumnDataSource(data = {'center_line_4_y':[], 'center_line_4_x':[]})
+  data_fix_lane = ColumnDataSource(data = {'fix_lane_y':[], 'fix_lane_x':[]})
+  data_target_lane = ColumnDataSource(data = {'target_lane_y':[], 'target_lane_x':[]})
+  data_origin_lane = ColumnDataSource(data = {'origin_lane_y':[], 'origin_lane_x':[]})
   data_fus_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obstacles_y_rel':[], 'obstacles_x_rel':[],
@@ -399,6 +485,9 @@ def load_local_view_figure():
                                         'obs_label':[]})
   planning_data = ColumnDataSource(data = {'planning_y':[],
                                       'planning_x':[],})
+
+  data_prediction = ColumnDataSource(data = {'prediction_y':[],
+                                             'prediction_x':[],})
   
   local_view_data = {'data_car':data_car, \
                      'data_ego':data_ego, \
@@ -418,6 +507,10 @@ def load_local_view_figure():
                      'data_center_line_2':data_center_line_2, \
                      'data_center_line_3':data_center_line_3, \
                      'data_center_line_4':data_center_line_4, \
+                     'data_fix_lane': data_fix_lane ,\
+                     'data_target_lane': data_target_lane ,\
+                     'data_origin_lane': data_origin_lane ,\
+                     'data_prediction' : data_prediction ,\
                      'data_fus_obj':data_fus_obj, \
                      'data_snrd_obj':data_snrd_obj, \
                      'data_planning_trajectory':planning_data 
@@ -446,12 +539,15 @@ def load_local_view_figure():
   fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
-  
+  fig1.line('fix_lane_y', 'fix_lane_x', source = data_fix_lane, line_width = 1, line_color = 'red', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
+  fig1.line('target_lane_y', 'target_lane_x', source = data_target_lane, line_width = 1, line_color = 'orange', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'taget_lane')
+  fig1.line('origin_lane_y', 'origin_lane_x', source = data_origin_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'origin_lane')
   fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'obj')
   fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd')
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fusion_info')
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info')
   fig1.line('planning_y', 'planning_x', source = planning_data, line_width = 3, line_color = 'pink', line_dash = 'solid', legend_label = 'planning_trajectory')
+  fig1.multi_line('prediction_y', 'prediction_x', source = data_prediction, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'prediction')
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 

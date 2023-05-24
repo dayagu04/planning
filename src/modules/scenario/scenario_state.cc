@@ -6,7 +6,7 @@
 #include "scenario/ego_planning_candidate.h"
 #include "scenario/evaluator.h"
 #include "scenario/scenario_state_machine.h"
-
+#include "debug_info_log.h"
 namespace planning {
 
 std::shared_ptr<Evaluator> StateBase::get_evaluator(framework::Frame *frame) {
@@ -79,7 +79,7 @@ void StateBase::process(Control &control, FsmContext &context) {
 
     candidates.emplace_back(std::move(candidate));
   }
-  LOG_DEBUG("candidates: size: %d", candidates.size());
+  LOG_DEBUG("candidates:size: %d", candidates.size());
   auto refined_time = IflyTime::Now_ms();
   LOG_DEBUG("[StateBase] refine time: %f", refined_time - candidates_time);
 
@@ -144,6 +144,42 @@ void StateBase::process(Control &control, FsmContext &context) {
     lat_behavior_state_machine_output.target_lane_virtual_id =
         lane_change_lane_manager->tlane_virtual_id();
   }
+
+
+  {
+    const auto &state_machine_output =
+      context.frame->session()->planning_context().lat_behavior_state_machine_output();
+    auto& debug_info_manager = DebugInfoManager::GetInstance();
+    auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();  
+    auto lat_behavior_common = planning_debug_data->mutable_lat_behavior_common();
+    lat_behavior_common->set_lc_invalid_obj_id(state_machine_output.lc_invalid_track.track_id);
+    lat_behavior_common->set_lc_back_obj_id(state_machine_output.lc_back_track.track_id);
+    // lat_behavior_common->set_lc_back_reason(state_machine_output.lc_back_reason);
+    lat_behavior_common->near_car_ids_origin().Clear();
+    for (auto &near_car_origin : state_machine_output.near_cars_origin){
+      lat_behavior_common->add_near_car_ids_origin(near_car_origin.track_id);
+    }
+    lat_behavior_common->near_car_ids_target().Clear();
+    for (auto &near_car_target : state_machine_output.near_cars_target){
+      lat_behavior_common->add_near_car_ids_target(near_car_target.track_id);
+    }
+    lat_behavior_common->set_is_faster_left_lane(state_machine_output.left_is_faster);
+    lat_behavior_common->set_is_faster_right_lane(state_machine_output.right_is_faster);
+    lat_behavior_common->left_alc_car_ids().Clear();
+    for (auto id : state_machine_output.left_alc_car){
+      lat_behavior_common->add_left_alc_car_ids(id);
+    }
+    lat_behavior_common->right_alc_car_ids().Clear();
+    for (auto id : state_machine_output.right_alc_car){
+      lat_behavior_common->add_right_alc_car_ids(id);
+    }
+    lat_behavior_common->set_is_forbid_left_alc_car(state_machine_output.neg_left_alc_car);
+    lat_behavior_common->set_is_forbid_right_alc_car(state_machine_output.neg_right_alc_car);
+    lat_behavior_common->set_fix_lane_virtual_id(state_machine_output.fix_lane_virtual_id);
+    lat_behavior_common->set_origin_lane_virtual_id(state_machine_output.origin_lane_virtual_id);
+    lat_behavior_common->set_target_lane_virtual_id(state_machine_output.target_lane_virtual_id);
+  }
+
   LOG_DEBUG("[StateBase] evaluate success");
 }
 

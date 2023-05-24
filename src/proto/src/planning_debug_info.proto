@@ -7,6 +7,7 @@ import "vision_only_lateral_behavior_planner.proto";
 import "vision_only_lateral_motion_planner.proto";
 import "environment_model_debug_info.proto";
 import "lateral_motion_planner.proto";
+import "lat_behavior_common.proto";
 
 message ReadTopicStampList {
   optional uint64 fusion_object_stamp = 1;
@@ -31,7 +32,9 @@ message PlanningDebugInfo {
   optional LateralPlanningOutput lateral_motion_planning_output = 5;
   // optional ReadTopicStampList read_topic_timestamp = 4;
   // TBD: lon motion
-  optional VOLatBehaviorPlan vo_lat_behavior_plan = 6;
-  optional VOLatMotionPlan vo_lat_motion_plan = 7;
-  optional EnvironmentModelInfo environment_model_info = 8;
+  optional LatBehaviorCommon lat_behavior_common = 6;
+  optional VOLatBehaviorPlan vo_lat_behavior_plan = 7;
+  optional VOLatMotionPlan vo_lat_motion_plan = 8;
+  optional EnvironmentModelInfo environment_model_info = 9;
+  
 }

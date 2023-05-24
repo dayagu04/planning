@@ -6,7 +6,7 @@ VirtualLane::VirtualLane() {}
 
 void VirtualLane::update_data(const FusionRoad::Lane& lane) {
   order_id_ = lane.order_id();
-  virtual_id_ = lane.virtual_id();
+  // virtual_id_ = lane.virtual_id();
   relative_id_ = lane.relative_id();
   ego_lateral_offset_ = lane.ego_lateral_offset();
 

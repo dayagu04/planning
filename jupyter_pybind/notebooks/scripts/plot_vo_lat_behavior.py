@@ -8,7 +8,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/docker_share/data/clren/code/new_planning_3/planning/20230207132027-plan.record.00000"
+bag_path = "/docker_share/data/clren/code/new_planning_3/planning/20230526171536.record.00000"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -44,6 +44,10 @@ data_d_poly = ColumnDataSource({
   'd_poly_y':[],
   'd_poly_x':[]
 })
+data_fix_lane = ColumnDataSource({
+  'fixlane_y':[],
+  'fixlane_x':[]
+})
 columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
@@ -51,6 +55,7 @@ columns = [
 data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=400, height=800)
 data_behavior_table = DataTable(source=behavior_data, columns=columns, width=400, height=800)
 fig1.line('d_poly_y', 'd_poly_x', source = data_d_poly, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'd_poly')
+fig1.line('fixlane_y', 'fixlane_x', source = data_fix_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
 # 障碍物id的文本框的回调函数
 def obj_id_handler(id):
   global obj_id
@@ -71,8 +76,8 @@ def obj_id_handler(id):
         for name in obj_vars:
           try:
             # print(getattr(obstacle,name))
-            names.append(name)
             datas.append(getattr(obstacle,name))
+            names.append(name)
           except:
             pass
     if not is_find:
@@ -80,25 +85,33 @@ def obj_id_handler(id):
         id = obstacle.id
         for name in obj_vars:
           try:
-            # print(getattr(obstacle,name))
-            names.append(name)
             datas.append(getattr(obstacle,name))
+            names.append(name)
           except:
             pass
         break
+    # try:
+    names.append('ego_s')
+    names.append('ego_l')
+    datas.append(environment_model_info.ego_s)
+    datas.append(environment_model_info.ego_l)
+    # except:
+      # pass
     obstacle_data.data.update({
       'name': names,
       'data': datas,
     })
+    
   push_notebook()  
 
 
-def update_behavior_data(vo_lat_behavior_plan):
-  vars = ['lc_request','lc_request_source','lc_status','is_lc_valid','lc_valid_cnt','lc_invalid_obj_id','lc_invalid_reason',\
+def update_behavior_data(lat_behavior_common):
+  vars = ['fix_lane_virtual_id','target_lane_virtual_id','origin_lane_virtual_id',\
+          'lc_request','lc_request_source','lc_status','is_lc_valid','lc_valid_cnt','lc_invalid_obj_id','lc_invalid_reason',\
       'lc_valid_back','lc_back_obj_id','lc_back_cnt','lc_back_invalid_reason',\
         'turn_light','turn_light_source','v_relative_left_lane','is_faster_left_lane','faster_left_lane_cnt','v_relative_right_lane',\
           'is_faster_right_lane','faster_right_lane_cnt','is_forbid_left_alc_car','is_forbid_right_alc_car',\
-            'is_side_borrow_bicycle_lane','is_side_borrow_lane','fix_lane_virtual_id','origin_lane_virtual_id','target_lane_virtual_id','has_origin_lane',\
+            'is_side_borrow_bicycle_lane','is_side_borrow_lane','has_origin_lane',\
               'has_target_lane','enable_left_lc','enable_right_lc','lc_back_reason']
   # 'near_car_ids_origin','near_car_ids_target', 'left_alc_car_ids','right_alc_car_ids', ,'avoid_car_ids','avoid_car_allow_max_opposite_offset'
   names  = []
@@ -106,11 +119,11 @@ def update_behavior_data(vo_lat_behavior_plan):
   for name in vars:
     try:
       # print(getattr(vo_lat_behavior_plan,name))
+      datas.append(getattr(lat_behavior_common,name))
       names.append(name)
-      datas.append(getattr(vo_lat_behavior_plan,name))
     except:
       pass
-  print(vo_lat_behavior_plan.avoid_car_ids)
+  # print(vo_lat_behavior_plan.avoid_car_ids)
   behavior_data.data.update({
     'name': names,
     'data': datas,
@@ -127,15 +140,16 @@ def slider_callback(bag_time):
   obj_id_handler(obj_id)
   if bag_loader.plan_debug_msg['enable'] == True:
     vo_lat_motion_plan = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].vo_lat_motion_plan
-    basic_dpoly = vo_lat_motion_plan.basic_dpoly
-    d_poly_x, d_poly_y = gen_line(basic_dpoly[3], basic_dpoly[2], basic_dpoly[1], basic_dpoly[0], 0,60)
-    data_d_poly.data.update({
-      'd_poly_y':d_poly_y,
-      'd_poly_x':d_poly_x
-    })
+    # basic_dpoly = vo_lat_motion_plan.basic_dpoly
+    # d_poly_x, d_poly_y = gen_line(basic_dpoly[3], basic_dpoly[2], basic_dpoly[1], basic_dpoly[0], 0,60)
+    # data_d_poly.data.update({
+    #   'd_poly_y':d_poly_y,
+    #   'd_poly_x':d_poly_x
+    # })
     
-    vo_lat_behavior_plan = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].vo_lat_behavior_plan
-    update_behavior_data(vo_lat_behavior_plan)
+    
+    lat_behavior_common = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lat_behavior_common
+    update_behavior_data(lat_behavior_common)
   push_notebook()
 
 bkp.show(row(fig1, data_obstacle_table, data_behavior_table), notebook_handle=True)
