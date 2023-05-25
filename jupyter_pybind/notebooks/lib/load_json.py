@@ -1,4 +1,3 @@
-import rosbag
 import json
 import numpy
 import math

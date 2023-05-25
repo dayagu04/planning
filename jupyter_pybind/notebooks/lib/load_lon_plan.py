@@ -39,7 +39,7 @@ class LoadCyberbag:
       # load timestamp
       self.plan_msg['t'].append(msg.meta.header.timestamp / 1e6)
       self.plan_msg['data'].append(msg)
-    
+
     # 2. load planning debug msg and json
     for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
 
@@ -68,7 +68,7 @@ class LoadCyberbag:
 
 def load_lon_plan_figure():
   data_st = ColumnDataSource(data = {'t':[], 's':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
-  data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[]})
+  data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s':[], 'v':[], 'v_low':[], 'v_high':[]})
   data_tv = ColumnDataSource(data = {'t':[], 'vel':[]})
   data_ta = ColumnDataSource(data = {'t':[], 'acc':[]})
@@ -97,11 +97,11 @@ def load_lon_plan_figure():
   # fig2 S-V
   fig2 = bkp.figure(x_axis_label='s', y_axis_label='v', width=600, height=400, match_aspect = True, aspect_scale=1)
   fig2.x_range.flipped = False
-  
+
   f1 = fig1.line('t', 's', source = data_st, line_width = 2, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_st')
   fig1.line('t', 'obs_low', source = data_st, line_width = 2, line_color = 'cyan', line_dash = 'solid', legend_label = 'obs_low_bound')
   fig1.line('t', 'obs_high', source = data_st, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'obs_high_bound')
-  fig1.line('t_long', 's_plan', source = data_st_plan, line_width = 2, line_color = 'green', line_dash = 'solid', legend_label = 's_plan_ref')
+  fig1.line('t_long', 's_plan', source = data_st_plan, line_width = 2, line_color = 'green', line_dash = 'solid', legend_label = 's_plan_result')
   fig1.circle('t', 'obs_low', source = data_st, size = 5, alpha = 1.0, legend_label = 'obs_low_bound_pos')
   #label_low_id = LabelSet(x='t', y='obs_low', text='obs_low_id', x_offset=2, y_offset=2, source=data_st)
   #fig1.add_layout(label_low_id)
@@ -111,6 +111,8 @@ def load_lon_plan_figure():
   f2 = fig2.line('s', 'v', source = data_sv, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'ego_sv')
   fig2.line('s', 'v_low', source = data_sv, line_width = 2, line_color = 'cyan', line_dash = 'solid', legend_label = 'v_low_bound')
   fig2.line('s', 'v_high', source = data_sv, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'v_high_bound')
+  fig2.line('s_plan', 'v_plan', source = data_st_plan, line_width = 2, line_color = 'green', line_dash = 'solid', legend_label = 'v_plan')
+  
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
   fig2.toolbar.active_scroll = fig2.select_one(WheelZoomTool)
   fig1.legend.click_policy = 'hide'
@@ -138,11 +140,14 @@ def update_lon_plan_figure(bag_time, bag_loder, lon_plot_data):
   s_plan_vec =  []
   for item in (bag_loder.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
      s_plan_vec.append(item.distance)
+  v_plan_vec =  []
+  for item in (bag_loder.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
+     v_plan_vec.append(item.v)
 
   s_ref_vec = []
   for item in (bag_loder.plan_debug_msg['data'][plan_debug_msg_idx].long_ref_path.s_refs):
      s_ref_vec.append(item.first)
-  
+
   obs_low_vec = []
   obs_high_vec = []
   obs_low_id_vec = []
@@ -175,7 +180,7 @@ def update_lon_plan_figure(bag_time, bag_loder, lon_plot_data):
      obs_high_id_vec.append(high_bound_id)
      obs_low_type_vec.append(low_bound_type)
      obs_high_type_vec.append(high_bound_type)
-        
+
   print(obs_low_id_vec)
   print(obs_high_id_vec)
   print(t_vec)
@@ -209,10 +214,11 @@ def update_lon_plan_figure(bag_time, bag_loder, lon_plot_data):
     'obs_low_type': obs_low_type_vec,
     'obs_high_type': obs_high_type_vec
   })
-  
+
   lon_plot_data['data_st_plan'].data.update({
     't_long': t_long_vec,
-    's_plan': s_plan_vec
+    's_plan': s_plan_vec,
+    'v_plan': v_plan_vec
   })
 
   lon_plot_data['data_sv'].data.update({

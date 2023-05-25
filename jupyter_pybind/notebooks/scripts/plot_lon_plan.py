@@ -11,15 +11,15 @@ display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
 # bag path and frame dt
-bag_path = "/docker_share/urban_bag_0213/planning_result_bag.00000"
+bag_path = "/docker_share/bags/record_tmp/planning_result_bag_0525.00000"
 frame_dt = 0.1
 
 bag_loder = LoadCyberbag(bag_path)
 bag_loder.load_all_data()
 
 bag_loder.plan_msg['data'][0]
+# bag_loder.plan_debug_msg['data'][0]
 
-bag_loder.plan_debug_msg['data'][0]
 lon_plan_plot_data, fig1, fig2 = load_lon_plan_figure()
 
 # sliders
