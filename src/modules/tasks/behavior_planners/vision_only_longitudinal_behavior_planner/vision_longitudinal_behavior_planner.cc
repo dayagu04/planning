@@ -574,7 +574,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
     // remove v_coast
     v_target_lead =
         calc_desired_speed(lead_one->d_rel, d_des, lead_one->v_lead);
-    
+
     JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_id", lead_one->track_id);
     JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_dis", lead_one->d_rel);
     JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_vel", lead_one->v_lead);
@@ -616,7 +616,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
     v_target_ = std::min(v_target_, v_target_lead);
 
     LOG_DEBUG("desire_des : [%f] , v_target_ : [%f] \n", d_des, v_target_);
-    
+
   } else {
     a_target.first = 0.0;
     a_target.second = 0.0;

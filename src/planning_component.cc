@@ -84,7 +84,7 @@ bool PlanningComponent::Init() {
 
   auto prediction_reader_ =
       planning_node_->CreateReader<Prediction::PredictionResult>(
-          "/prediction",
+          "/iflytek/prediction/prediction_result",
           [this](const std::shared_ptr<Prediction::PredictionResult>
                      &prediction_result_msg) {
             std::cout << "receive prediction_result "

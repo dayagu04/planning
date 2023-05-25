@@ -37,26 +37,6 @@ EgoPlanningConfigBuilder* GeneralPlannerModule::load_config_builder(
 bool GeneralPlannerModule::init(const ::google::protobuf::Message* config,
                                   planning::framework::Session* session) {
   LOG_DEBUG("%s init\n", name().c_str());
-  // std::string config_file_dir =
-  //     session->mutable_environmental_model()->get_module_config_file_dir();
-  // // planning::planner::ConfigurationContext::Instance()->load_vehicle_param();
-  // (void)planning::planner::VehicleModel::LoadVehicleModelConfig(config_file_dir);
-
-  // auto urban_config_builder =
-  //     load_config_builder(session, "general_planner_module_urban.json");
-  // session->mutable_environmental_model()->set_urban_config_builder(
-  //     urban_config_builder);
-
-  // auto parking_config_builder =
-  //     load_config_builder(session, "general_planner_module_parking.json");
-  // session->mutable_environmental_model()->set_parking_config_builder(
-  //     parking_config_builder);
-
-  // auto highway_config_builder =
-  //     load_config_builder(session, "general_planner_module_highway.json");
-  // session->mutable_environmental_model()->set_highway_config_builder(
-  //     highway_config_builder);
-
   general_planner_.Init(session);
   return true;
 }
