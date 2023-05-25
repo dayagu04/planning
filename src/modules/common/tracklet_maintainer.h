@@ -1,9 +1,6 @@
 #ifndef PLANNING_PLANNER_TRACKLET_MAINTAINER_H_
 #define PLANNING_PLANNER_TRACKLET_MAINTAINER_H_
 
-// #include "common/ego_state_manager.h"
-// #include "common/map_info_manager.h"
-
 #include <map>
 #include <set>
 
@@ -146,11 +143,11 @@ private:
   LifecycleDict seq_state_;
   SimpleRefLine simple_refline_;
   std::map<int, TrackedObject *> object_map_;
-  // EgoStateManager ego_state_;
-  bool hdmap_valid_{true};
+  EgoStateManager ego_state_;
+  bool hdmap_valid_{false};
 
-  double s0_;
-  double l0_;
+  double s_ego_;
+  double l_ego_;
   double theta_ego_;
   double vl_ego_;
   double vs_ego_;
