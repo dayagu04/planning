@@ -30,6 +30,8 @@ int OptimizeWithOsqp(c_float P_x[], c_int P_nnz, c_int P_i[], c_int P_p[],
   // Define Solver settings as default
   osqp_set_default_settings(settings);
   settings->max_iter = max_iter;
+  // close the output
+  settings->verbose = false;
 
   // Setup workspace
   work = osqp_setup(data, settings);
