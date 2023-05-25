@@ -12,12 +12,6 @@ namespace planning {
 
 using namespace planning_math;
 
-#ifndef KPH_40
-#define KPH_40 11.11
-#endif
-#ifndef KPH_50
-#define KPH_50 13.88
-#endif
 GeneralLateralDecider::GeneralLateralDecider(
     const EgoPlanningConfigBuilder *config_builder,
     const std::shared_ptr<TaskPipelineContext> &pipeline_context)
@@ -26,20 +20,7 @@ GeneralLateralDecider::GeneralLateralDecider(
   name_ = "GeneralLateralDecider";
 }
 
-bool GeneralLateralDecider::init_info() {
-  // init input info
-  // reference_path_ptr_ =
-  //     frame_->session()
-  //         ->environmental_model()
-  //         .get_reference_path_manager()
-  //         ->get_reference_path_by_lane(frame_->mutable_session()
-  //                                          ->mutable_planning_context()
-  //                                          ->mutable_scenario_state_machine()
-  //                                          ->get_lane_change_lane_manager()
-  //                                          ->flane()
-  //                                          ->get_virtual_id());
-  obs_vec_ = reference_path_ptr_->get_obstacles();
-
+bool GeneralLateralDecider::InitInfo() {
   ego_frenet_state_ = reference_path_ptr_->get_frenet_ego_state();
 
   ego_cart_state_manager_ =
@@ -49,6 +30,16 @@ bool GeneralLateralDecider::init_info() {
 
   is_lane_change_scene_ = false;
 
+  LatDeciderOutput &lat_decider_output = frame_->mutable_session()
+                                             ->mutable_planning_context()
+                                             ->mutable_lat_decider_output();
+  lat_decider_output.enu_ref_path.clear();
+  lat_decider_output.last_enu_ref_path.clear();
+  lat_decider_output.path_bounds.clear();
+  lat_decider_output.safe_bounds.clear();
+  lat_decider_output.enu_ref_theta.clear();
+  lat_decider_output.last_enu_ref_theta.clear();
+
   if (reference_path_ptr_ == nullptr || ego_cart_state_manager_ == nullptr) {
     // add logs
     return false;
@@ -57,49 +48,50 @@ bool GeneralLateralDecider::init_info() {
 }
 
 bool GeneralLateralDecider::Execute(planning::framework::Frame *frame) {
-  frame_ = frame;  // TBD:  check api
-  if (!init_info()) {
+  LOG_DEBUG("=======GeneralLateralDecider======= \n");
+  frame_ = frame;
+  if (Task::Execute(frame) == false) {
+    return false;
+  }
+
+  if (!InitInfo()) {
     return false;
   };
 
-  // auto config_builder =
-  //     frame->mutable_session()->mutable_planning_context()->config_builder(
-  //         planning::common::SceneType::HIGHWAY);  // TBD:  check api
+  auto &traj_points = pipeline_context_->planning_result.traj_points;
 
-  // process
-  const auto &traj_points =
-      frame_->session()->planning_context().planning_result().traj_points;
-  handle_lane_change_scene();  // TODO:handle the lane change info;
+  traj_points = pipeline_context_->coarse_planning_info.trajectory_points;
 
-  construct_reference_path_points(traj_points);
+  HandleLaneChangeScene(); // TODO:handle the lane change info;
+
+  ConstructReferencePathPoints(traj_points);
 
   auto &obstacle_decisions =
       pipeline_context_->planning_info.obstacle_decisions;
   auto &map_obstacle_decisions =
       pipeline_context_->planning_info.map_obstacle_decision;
 
-  construct_lane_and_boundary_bounds(map_obstacle_decisions);
+  ConstructlaneAndBoundaryBounds(map_obstacle_decisions);
 
-  construct_lateral_obstacle_decisions(obstacle_decisions);
+  ConstructLateralObstacleDecisions(obstacle_decisions);
 
   LatDeciderOutput &lat_decider_output = frame_->mutable_session()
                                              ->mutable_planning_context()
                                              ->mutable_lat_decider_output();
-
   lat_decider_output.v_cruise = cruise_vel_;
 
   std::vector<std::pair<double, double>> frenet_safe_bounds;
   std::vector<std::pair<double, double>> frenet_path_bounds;
 
-  extract_boundary(map_obstacle_decisions, obstacle_decisions,
-                   frenet_safe_bounds, frenet_path_bounds);
+  ExtractBoundary(map_obstacle_decisions, obstacle_decisions,
+                  frenet_safe_bounds, frenet_path_bounds);
 
-  generate_enu_boundary_points(frenet_safe_bounds, frenet_path_bounds,
-                               lat_decider_output);
+  GenerateEnuBoundaryPoints(frenet_safe_bounds, frenet_path_bounds,
+                            lat_decider_output);
 
-  generate_enu_reference_theta(lat_decider_output);
+  GenerateEnuReferenceTheta(lat_decider_output);
 
-  generate_enu_reference_traj(lat_decider_output);
+  GenerateEnuReferenceTraj(lat_decider_output);
 
   return true;
 }
@@ -110,11 +102,11 @@ bool GeneralLateralDecider::ExecuteTest(planning::framework::Frame *frame,
   return true;
 }
 
-void GeneralLateralDecider::handle_lane_change_scene() {
+void GeneralLateralDecider::HandleLaneChangeScene() {
   // logic;
 }
 
-bool GeneralLateralDecider::construct_reference_path_points(
+bool GeneralLateralDecider::ConstructReferencePathPoints(
     const TrajectoryPoints &traj_points) {
   ref_traj_points_.clear();
   ref_path_points_.clear();
@@ -135,6 +127,7 @@ bool GeneralLateralDecider::construct_reference_path_points(
       if (!reference_path_ptr_->get_reference_point_by_lon(traj_point.s,
                                                            refpath_pt)) {
         // add logs
+        LOG_ERROR("Get reference point by lon failed!");
       }
       ref_path_points_.emplace_back(refpath_pt);
     }
@@ -146,6 +139,7 @@ bool GeneralLateralDecider::construct_reference_path_points(
       if (!reference_path_ptr_->get_reference_point_by_lon(traj_point.s,
                                                            refpath_pt)) {
         // add logs
+        LOG_ERROR("Get reference point by lon failed!");
       }
       ref_path_points_.emplace_back(refpath_pt);
     }
@@ -154,7 +148,7 @@ bool GeneralLateralDecider::construct_reference_path_points(
   return true;
 }
 
-void GeneralLateralDecider::construct_lane_and_boundary_bounds(
+void GeneralLateralDecider::ConstructlaneAndBoundaryBounds(
     MapObstacleDecision &map_obstacle_decisions) {
   const auto &vehicle_param =
       frame_->session()->vehicle_config_context().get_vehicle_param();
@@ -205,17 +199,18 @@ void GeneralLateralDecider::construct_lane_and_boundary_bounds(
   }
 }
 
-void GeneralLateralDecider::construct_lateral_obstacle_decisions(
+void GeneralLateralDecider::ConstructLateralObstacleDecisions(
     // const TrajectoryPoints &traj_points,
     ObstacleDecisions &obstacle_decisions) {
   ObstaclePotentialDecisions obstacle_potential_decisions;
 
   int32_t obj_cnt = 0;
 
-  for (auto &obstacle : obs_vec_) {
+  const auto &obs_vec = reference_path_ptr_->get_obstacles();
+  for (auto &obstacle : obs_vec) {
     const auto &otype = obstacle->type();
-    if (otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
-                                                             // obstacle type
+    if (otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN or // TBD: check
+                                                            // obstacle type
         otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
         otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
         otype == Common::ObjectType::OBJECT_TYPE_VAN or
@@ -229,7 +224,7 @@ void GeneralLateralDecider::construct_lateral_obstacle_decisions(
     auto obstacle_potential_decision =
         ObstaclePotentialDecision{obstacle_id, {}};
 
-    construct_lateral_obstacle_decision(obstacle, obstacle_decision);
+    ConstructLateralObstacleDecision(obstacle, obstacle_decision);
 
     obstacle_decisions[obstacle_id] = std::move(obstacle_decision);
     if (obstacle_potential_decision.extend_decisions.extended) {
@@ -241,7 +236,7 @@ void GeneralLateralDecider::construct_lateral_obstacle_decisions(
   }
 }
 
-void GeneralLateralDecider::construct_lateral_obstacle_decision(
+void GeneralLateralDecider::ConstructLateralObstacleDecision(
     const std::shared_ptr<FrenetObstacle> obstacle,
     ObstacleDecision &obstacle_decision) {
   // NTRACE_CALL();
@@ -272,7 +267,7 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
   auto avoid_cross_lane = 0.2;
   auto pre_lateral_decision = LatObstacleDecisionType::IGNORE;
 
-  double rear_axle_to_front_bumper =  // TBD：define as consexpr
+  double rear_axle_to_front_bumper = // TBD：define as consexpr
       vehicle_param.length - vehicle_param.back_edge_to_rear_axis;
   const bool init_lon_no_overlap =
       (obstacle->frenet_obstacle_boundary().s_end <
@@ -288,7 +283,7 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
   Polygon2d obstacle_end_sl_polygon;
   // const bool ok_start = obstacle->get_polygon_at_time(  // TBD: no prediction
   //     0., reference_path_ptr_, obstacle_start_sl_polygon);
-  const bool ok_end = obstacle->get_polygon_at_time(  // TBD: no prediction
+  const bool ok_end = obstacle->get_polygon_at_time( // TBD: no prediction
       ref_traj_points_.back().t, reference_path_ptr_, obstacle_end_sl_polygon);
 
   double dynamic_bound_gain_vel = std::max(config_.min_gain_vel, ego_velocity);
@@ -333,11 +328,11 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
     safe_extra_distance += 0.2;
   }
 
-  if (check_obj_nudge_condition(
-          obstacle)) {  // TBD: execute nudge logic in this function:
-                        //       1. whether to nudge?
-                        //       2. calc the extra buffer
-                        //       3. set the lat type as NUDGE
+  if (CheckObstacleNudgeCondition(
+          obstacle)) { // TBD: execute nudge logic in this function:
+                       //       1. whether to nudge?
+                       //       2. calc the extra buffer
+                       //       3. set the lat type as NUDGE
     // TBD: add log;
     safe_extra_distance += nudge_obj_extra_buffer;
   }
@@ -355,11 +350,10 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
 
     const auto &ego_s = traj_point.s;
     const auto &ego_l = traj_point.l;
-    double rear_axle_to_front_bumper =
-        vehicle_param.length - vehicle_param.back_edge_to_rear_axis;
+
     double care_area_s_buffer =
         std::max(std::min(5.0, 5.0 - 0.5 * (10.0 - ego_velocity)),
-                 0.0);  // 5m -> 0m linear decay wrt ego_
+                 0.0); // 5m -> 0m linear decay wrt ego_
 
     auto care_area_s_start = ego_s - vehicle_param.back_edge_to_rear_axis;
     auto care_area_s_end =
@@ -419,12 +413,12 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
     bool b_overlap_side = std::max(s_side_range.first, ego_side_range.first) <
                           std::min(s_side_range.second, ego_side_range.second);
 
-    if (check_obj_crossing_condition(obstacle, is_cross_obj)) {
+    if (CheckObstacleCrossingCondition(obstacle, is_cross_obj)) {
       // TBD:add logs
     }
 
     const auto &nudge_reference_center_l = ego_l;
-    constexpr double kMaxAvoidEdgeL{2.0};  // m
+    constexpr double kMaxAvoidEdgeL{2.0}; // m
 
     if ((overlap_min_y <= nudge_reference_center_l &&
          nudge_reference_center_l <= overlap_max_y) ||
@@ -473,7 +467,7 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
         lat_decision = LatObstacleDecisionType::IGNORE;
         lon_decision = LonObstacleDecisionType::YIELD;
         if (!reset_conflict_decision && init_lon_no_overlap) {
-          refine_conflict_lat_decisions(ego_l, obstacle_decision);
+          RefineConflictLatDecisions(ego_l, obstacle_decision);
           reset_conflict_decision = true;
           // add logs
         }
@@ -484,7 +478,7 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
         lat_decision = LatObstacleDecisionType::IGNORE;
         lon_decision = LonObstacleDecisionType::YIELD;
         if (!reset_conflict_decision && init_lon_no_overlap) {
-          refine_conflict_lat_decisions(ego_l, obstacle_decision);
+          RefineConflictLatDecisions(ego_l, obstacle_decision);
           reset_conflict_decision = true;
           // add logs
         }
@@ -599,38 +593,14 @@ void GeneralLateralDecider::construct_lateral_obstacle_decision(
   // }
 }
 
-bool GeneralLateralDecider::check_obj_nudge_condition(
+bool GeneralLateralDecider::CheckObstacleNudgeCondition(
 
     const std::shared_ptr<FrenetObstacle> &obstacle) {
   // nudge logic
   return false;
 }
 
-// bool GeneralLateralDecider::construct_lat_behavior_output(
-//     const ObstacleDecisions &obstacle_decisions) {
-//   // Step 2) update ego info
-//   auto &init_point = reference_path_ptr_->get_frenet_ego_state()
-//                          .planning_init_point();  // TBD: check api
-//   lat_decider_output_.init_state_frenet_s = init_point.frenet_state.s;
-//   lat_decider_output_.init_state_frenet_l = init_point.frenet_state.r;
-//   lat_decider_output_.init_state_frenet_dl = init_point.frenet_state.dr_ds;
-//   lat_decider_output_.init_state_frenet_ddl =
-//   init_point.frenet_state.ddr_dsds; lat_decider_output_.s_start =
-//   init_point.frenet_state.s; lat_decider_output_.adc_velocity =
-//       std::max(reference_path_ptr_->get_frenet_ego_state().velocity(),
-//                config_.min_init_velocity);
-//   //  info_.adc_velocity = std::max(init_point.v, config_.kMinInitVelocity);
-
-//   // Step 4) update ego_state (used by lateral optimization)
-//   auto &ego_state = pipeline_context_->planning_info.ego_state;
-//   ego_state.s_start = info_.init_state_frenet_s;
-//   ego_state.velocity = info_.adc_velocity;
-//   ego_state.frenet_l = info_.init_state_frenet_l;
-//   ego_state.frenet_dl = info_.init_state_frenet_dl;
-//   ego_state.frenet_ddl = info_.init_state_frenet_ddl;
-// }
-
-bool GeneralLateralDecider::check_obj_crossing_condition(
+bool GeneralLateralDecider::CheckObstacleCrossingCondition(
     const std::shared_ptr<FrenetObstacle> obstacle, bool &is_cross_obj) {
   // check crossing:
   // constexpr double kCrossVelThreshold{2.0};
@@ -664,7 +634,7 @@ bool GeneralLateralDecider::check_obj_crossing_condition(
   return false;
 }
 
-void GeneralLateralDecider::refine_conflict_lat_decisions(
+void GeneralLateralDecider::RefineConflictLatDecisions(
     const double &ego_l, ObstacleDecision &obstacle_decision) {
   for (size_t n_pd = 0; n_pd < obstacle_decision.position_decisions.size();
        ++n_pd) {
@@ -686,7 +656,7 @@ void GeneralLateralDecider::refine_conflict_lat_decisions(
   }
 }
 
-void GeneralLateralDecider::extract_boundary(
+void GeneralLateralDecider::ExtractBoundary(
     const MapObstacleDecision &map_obstacle_decision,
     const ObstacleDecisions &obstacle_decisions,
     std::vector<std::pair<double, double>> &frenet_safe_bounds,
@@ -733,7 +703,7 @@ void GeneralLateralDecider::extract_boundary(
   }
 
   for (auto &bounds : path_bounds) {
-    std::pair<double, double> tmp_bound{-10., 10.};  // <lower ,upper >
+    std::pair<double, double> tmp_bound{-10., 10.}; // <lower ,upper >
     for (auto &bound : bounds) {
       if (bound.upper < tmp_bound.second) {
         tmp_bound.second = bound.upper;
@@ -746,7 +716,7 @@ void GeneralLateralDecider::extract_boundary(
   }
 
   for (auto &bounds : safe_bounds) {
-    std::pair<double, double> tmp_bound{-10., 10.};  // <lower ,upper >
+    std::pair<double, double> tmp_bound{-10., 10.}; // <lower ,upper >
     for (auto &bound : bounds) {
       if (bound.upper < tmp_bound.second) {
         tmp_bound.second = bound.upper;
@@ -762,7 +732,7 @@ void GeneralLateralDecider::extract_boundary(
   assert(frenet_safe_bounds.size() == ref_traj_points_.size());
 }
 
-void GeneralLateralDecider::generate_enu_boundary_points(
+void GeneralLateralDecider::GenerateEnuBoundaryPoints(
     const std::vector<std::pair<double, double>> &frenet_safe_bounds,
     const std::vector<std::pair<double, double>> &frenet_path_bounds,
     LatDeciderOutput &lat_decider_output) {
@@ -779,7 +749,7 @@ void GeneralLateralDecider::generate_enu_boundary_points(
     if (frenet_coord->FrenetCoord2CartCoord(
             Point2D(ref_traj_points_[i].s, frenet_safe_bounds[i].first),
             tmp_safe_lower_point) !=
-        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // safe lower
+        TRANSFORM_STATUS::TRANSFORM_SUCCESS) // safe lower
     {
       // TODO: add logs
     }
@@ -787,7 +757,7 @@ void GeneralLateralDecider::generate_enu_boundary_points(
     if (frenet_coord->FrenetCoord2CartCoord(
             Point2D(ref_traj_points_[i].s, frenet_safe_bounds[i].second),
             tmp_safe_upper_point) !=
-        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // safe upper
+        TRANSFORM_STATUS::TRANSFORM_SUCCESS) // safe upper
     {
       // TODO: add logs
     }
@@ -797,7 +767,7 @@ void GeneralLateralDecider::generate_enu_boundary_points(
     if (frenet_coord->FrenetCoord2CartCoord(
             Point2D(ref_traj_points_[i].s, frenet_path_bounds[i].first),
             tmp_path_lower_point) !=
-        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // path lower
+        TRANSFORM_STATUS::TRANSFORM_SUCCESS) // path lower
     {
       // TODO: add logs
     }
@@ -805,7 +775,7 @@ void GeneralLateralDecider::generate_enu_boundary_points(
     if (frenet_coord->FrenetCoord2CartCoord(
             Point2D(ref_traj_points_[i].s, frenet_path_bounds[i].second),
             tmp_path_upper_point) !=
-        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // path upper
+        TRANSFORM_STATUS::TRANSFORM_SUCCESS) // path upper
     {
       // TODO: add logs
     }
@@ -815,7 +785,7 @@ void GeneralLateralDecider::generate_enu_boundary_points(
   }
 };
 
-void GeneralLateralDecider::generate_enu_reference_traj(
+void GeneralLateralDecider::GenerateEnuReferenceTraj(
 
     LatDeciderOutput &lat_decider_output) {
   auto &enu_ref_path = lat_decider_output.enu_ref_path;
@@ -827,31 +797,13 @@ void GeneralLateralDecider::generate_enu_reference_traj(
   }
 }
 
-void GeneralLateralDecider::generate_enu_reference_theta(
-
+void GeneralLateralDecider::GenerateEnuReferenceTheta(
     LatDeciderOutput &lat_decider_output) {
   auto &enu_ref_theta = lat_decider_output.enu_ref_theta;
 
-  enu_ref_theta.resize(ref_path_points_.size());
-  const std::shared_ptr<FrenetCoordinateSystem> frenet_coord =
-      reference_path_ptr_->get_frenet_coord();
-
   for (size_t i = 0; i < ref_path_points_.size(); i++) {
-    enu_ref_theta.emplace_back(
-        frenet_coord->GetRefCurveHeading(ref_traj_points_[i].s));
+    enu_ref_theta.emplace_back(ref_traj_points_[i].heading_angle);
   }
-
-  // seed init state
-  const auto &ego_state =
-      frame_->session()->environmental_model().get_ego_state_manager();
-  auto &init_state = lat_decider_output.init_state;
-  init_state.reserve(5);  //
-  init_state.emplace_back(ego_state->planning_init_point().x);
-  init_state.emplace_back(ego_state->planning_init_point().y);
-  init_state.emplace_back(
-      ego_state->planning_init_point().heading_angle);  // theta
-  init_state.emplace_back(0.);                          // delta
-  init_state.emplace_back(0.);                          // delta_dot
 }
 
 void GeneralLateralDecider::sample_road_distance_info(
@@ -865,7 +817,7 @@ void GeneralLateralDecider::sample_road_distance_info(
        s < s_target + vehicle_param_.rear_axis_to_front_edge +
                config_.sample_forward_distance;
        s += cut_length) {
-    if (!reference_path_ptr_->get_reference_point_by_lon(s, refpath_pt)) {
+    if (reference_path_ptr_->get_reference_point_by_lon(s, refpath_pt)) {
       left_lane_distance = std::fmin(refpath_pt.distance_to_left_lane_border,
                                      left_lane_distance);
       right_lane_distance = std::fmin(refpath_pt.distance_to_right_lane_border,
@@ -878,4 +830,4 @@ void GeneralLateralDecider::sample_road_distance_info(
   }
 }
 
-}  // namespace planning
+} // namespace planning

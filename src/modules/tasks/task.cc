@@ -1,9 +1,11 @@
 #include "tasks/task.h"
 
 #include "context/vehicle_config_context.h"
+#include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
 #include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 #include "tasks/behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner.h"
+#include "general_lateral_motion_planner.h"
 #include "tasks/motion_planners/longitudinal_motion_planner/pwj_longitudinal_motion_planner.h"
 #include "tasks/motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
@@ -45,9 +47,17 @@ std::shared_ptr<Task> Task::Make(
     const TaskType &task_type, const EgoPlanningConfigBuilder *config_builder,
     const std::shared_ptr<TaskPipelineContext> &pipeline_context) {
   switch (task_type) {
-    // case TaskType::OBSTACLE_DECIDER: {
-    //   return std::make_shared<ObstacleDecider>(config_builder,
-    //                                            pipeline_context);
+    case TaskType::GENERAL_LATERAL_DECIDER: {
+      return std::make_shared<GeneralLateralDecider>(config_builder,
+                                                     pipeline_context);
+    }
+    case TaskType::LATERAL_MOTION_PLANNER: {
+      return std::make_shared<LateralMotionPlanner>(config_builder,
+                                                           pipeline_context);
+    }
+    // case TaskType::LONGITUDINAL_MOTION_PLANNER: {
+    //   return std::make_shared<LongitudinalMotionPlanner>(config_builder,
+    //                                                 pipeline_context);
     // }
     case TaskType::LATERAL_DECIDER: {
       return std::make_shared<VisionLateralBehaviorPlanner>(config_builder,

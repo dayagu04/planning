@@ -173,6 +173,7 @@ double Deg2Rad(double u);
 
 double DeadzoneTypeI(double d0, double k, double u);
 double GetCurvFactor(double c1, double c2, double vel);
+double DeltaAngleFix(double delta_angle);
 
 } // namespace mathlib
 } // namespace pnc

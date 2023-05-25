@@ -16,7 +16,6 @@
 #include "context/environmental_model.h"
 #include "context/frenet_ego_state.h"
 #include "context/obstacle_manager.h"
-#include "ilqr_core.h"
 #include "lateral_motion_planner.pb.h"
 #include "lateral_motion_planning_cost.h"
 #include "lateral_motion_planning_model.h"
@@ -27,33 +26,37 @@
 #include "tasks/task_basic_types.h"
 namespace planning {
 
-class GeneralLateralMotionPlanner : public Task {
- public:
-  explicit GeneralLateralMotionPlanner(
+class LateralMotionPlanner : public Task {
+public:
+  explicit LateralMotionPlanner(
       const EgoPlanningConfigBuilder *config_builder,
       const std::shared_ptr<TaskPipelineContext> &pipeline_context);
 
-  virtual ~GeneralLateralMotionPlanner() = default;
+  virtual ~LateralMotionPlanner() = default;
 
+  void Init();
   bool Execute(planning::framework::Frame *frame) override;
 
-  bool generate_lat_motion_planner_input();
-
-  bool generate_lat_motion_planner_output();
-
-  bool update_one_step_traj();
-
-  bool init();
-
- private:
+private:
+  void GeneratePlanningInput();
+  void GeneratePlanningOutput();
+  void UpdateOneStepTrajectory();
   GeneralLateralMotionPlannerConfig config_;
   string name_;
-  // std::shared_ptr<ilqr_solver::iLqr> ilqr_core_ptr_;
   std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningProblem>
-      lat_motion_planning_problem_ptr_;
-  planning::common::LateralMotionPlanningOutput planning_output_;
-  planning::common::LateralMotionPlanningInput planning_input_;
+      planning_problem_ptr_;
+  planning::common::LateralPlanningOutput planning_output_;
+  planning::common::LateralPlanningInput planning_input_;
   State init_state_;
+
+  // state vector
+  std::vector<double> x_vec_;
+  std::vector<double> y_vec_;
+  std::vector<double> theta_vec_;
+  std::vector<double> delta_vec_;
+  std::vector<double> omega_vec_;
+  std::vector<double> s_vec_;
+  double v_cruise_ = 0.0;
 };
 
-}  // namespace planning
+} // namespace planning

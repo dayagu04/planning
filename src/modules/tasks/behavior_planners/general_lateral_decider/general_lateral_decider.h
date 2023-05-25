@@ -4,14 +4,6 @@
 
 #pragma once
 
-#include <assert.h>
-
-#include <cmath>
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "common/math/linear_interpolation.h"
 #include "common/math/quintic_poly_2d.h"
 #include "context/environmental_model.h"
@@ -59,7 +51,7 @@ struct LatDeciderInfo {
 // };
 
 class GeneralLateralDecider : public Task {
- public:
+public:
   explicit GeneralLateralDecider(
       const EgoPlanningConfigBuilder *config_builder,
       const std::shared_ptr<TaskPipelineContext> &pipeline_context);
@@ -70,49 +62,48 @@ class GeneralLateralDecider : public Task {
 
   bool ExecuteTest(planning::framework::Frame *frame, bool pipeline_test);
 
-  bool init_info();
+  bool InitInfo();
 
- private:
+private:
   // bool process(ObstacleDecisions &obstacle_decisions,
   //              TrajectoryPoints &traj_points);
 
   // // 1. construct the trajectory of reference and bind the obstacle info on
-  // the
-  // // traj point
-  bool construct_reference_path_points(const TrajectoryPoints &traj_points);
+  bool ConstructReferencePathPoints(const TrajectoryPoints &traj_points);
 
   // // 2. construct the obstacle decisions
-  void construct_lateral_obstacle_decisions(
+  void ConstructLateralObstacleDecisions(
       // const TrajectoryPoints &traj_points,
       ObstacleDecisions &obstacle_decisions);
 
-  void construct_lateral_obstacle_decision(
+  void ConstructLateralObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
       ObstacleDecision &obstacle_decision);
   // 3. construct the lane and boundary bound
-  void construct_lane_and_boundary_bounds(
-      MapObstacleDecision &map_obstacle_decisions);
+  void
+  ConstructlaneAndBoundaryBounds(MapObstacleDecision &map_obstacle_decisions);
 
   // void construct_lat_behavior_output(
   //     const ObstacleDecisions
   //         &obstacle_decisions);  // output the info for lat motion planner
 
-  bool check_obj_nudge_condition(
-      const std::shared_ptr<FrenetObstacle> &obstacle);
+  bool
+  CheckObstacleNudgeCondition(const std::shared_ptr<FrenetObstacle> &obstacle);
 
-  bool check_obj_crossing_condition(
-      const std::shared_ptr<FrenetObstacle> obstacle, bool &is_cross_obj);
+  bool
+  CheckObstacleCrossingCondition(const std::shared_ptr<FrenetObstacle> obstacle,
+                                 bool &is_cross_obj);
 
-  void refine_conflict_lat_decisions(const double &ego_l,
-                                     ObstacleDecision &obstacle_decision);
+  void RefineConflictLatDecisions(const double &ego_l,
+                                  ObstacleDecision &obstacle_decision);
 
-  void extract_boundary(
-      const MapObstacleDecision &map_obstacle_decision,
-      const ObstacleDecisions &obstacle_decisions,
-      std::vector<std::pair<double, double>> &frenet_safe_bounds,
-      std::vector<std::pair<double, double>> &frenet_path_bounds);
+  void
+  ExtractBoundary(const MapObstacleDecision &map_obstacle_decision,
+                  const ObstacleDecisions &obstacle_decisions,
+                  std::vector<std::pair<double, double>> &frenet_safe_bounds,
+                  std::vector<std::pair<double, double>> &frenet_path_bounds);
 
-  void generate_enu_boundary_points(
+  void GenerateEnuBoundaryPoints(
 
       const std::vector<std::pair<double, double>> &frenet_safe_bounds,
       const std::vector<std::pair<double, double>> &frenet_path_bounds,
@@ -124,27 +115,24 @@ class GeneralLateralDecider : public Task {
                                  double &left_road_distance,
                                  double &right_road_distance);
 
-  void generate_enu_reference_traj(LatDeciderOutput &lat_decider_output);
+  void GenerateEnuReferenceTraj(LatDeciderOutput &lat_decider_output);
 
-  void generate_enu_reference_theta(LatDeciderOutput &lat_decider_output);
+  void GenerateEnuReferenceTheta(LatDeciderOutput &lat_decider_output);
 
-  void handle_lane_change_scene();
+  void HandleLaneChangeScene();
 
   GeneralLateralDeciderConfig config_;
 
   // VelocityLimitInfo vel_limit_info_;
   // LatIgnoreType lat_ignore_type_;
   planning::framework::Frame *frame_;
-  LatDeciderInfo lat_decider_info_;
-  LatDeciderOutput lat_decider_output_;
   TrajectoryPoints ref_traj_points_;
   ReferencePathPoints ref_path_points_;
-  std::vector<std::shared_ptr<FrenetObstacle>> obs_vec_;
   FrenetEgoState ego_frenet_state_;
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;
   std::shared_ptr<ReferencePath> cur_reference_path_ptr_;
-  double cruise_vel_;
-  bool is_lane_change_scene_;
+  double cruise_vel_ = 0.0;
+  bool is_lane_change_scene_ = false;
 };
 
-}  // namespace planning
+} // namespace planning

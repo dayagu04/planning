@@ -10,9 +10,9 @@
 // #include "planning/config/vision_only_longitudinal_motion_planner_param.h"
 #include <unordered_map>
 
-#include "utils/file.h"
 #include "planning_config.pb.h"
 #include "tasks_configs.pb.h"
+#include "utils/file.h"
 // #include "thirdparty/mjson/include/mjson/mjson.hpp"
 
 namespace planning {
@@ -182,33 +182,33 @@ class ConfigurationContext {
     return true;
   }
 
-  void load_algorithm_config_from_json(std::string config_path) {
-    std::ifstream fjson(config_path);
-    std::string json_str((std::istreambuf_iterator<char>(fjson)),
-                         std::istreambuf_iterator<char>());
-    mjson::Reader reader(json_str);
-    auto srnd_obj_roi_x_max = reader.get<mjson::Json>("srnd_object_roi")
-                                  .object_value()["x_thrs_max"]
-                                  .number_value();
-    algorithm_conf_.srnd_obj_roi_x_max = srnd_obj_roi_x_max;
+  // void load_algorithm_config_from_json(std::string config_path) {
+  //   std::ifstream fjson(config_path);
+  //   std::string json_str((std::istreambuf_iterator<char>(fjson)),
+  //                        std::istreambuf_iterator<char>());
+  //   mjson::Reader reader(json_str);
+  //   auto srnd_obj_roi_x_max = reader.get<mjson::Json>("srnd_object_roi")
+  //                                 .object_value()["x_thrs_max"]
+  //                                 .number_value();
+  //   algorithm_conf_.srnd_obj_roi_x_max = srnd_obj_roi_x_max;
 
-    auto srnd_obj_roi_x_min = reader.get<mjson::Json>("srnd_object_roi")
-                                  .object_value()["x_thrs_min"]
-                                  .number_value();
-    algorithm_conf_.srnd_obj_roi_x_min = srnd_obj_roi_x_min;
+  //   auto srnd_obj_roi_x_min = reader.get<mjson::Json>("srnd_object_roi")
+  //                                 .object_value()["x_thrs_min"]
+  //                                 .number_value();
+  //   algorithm_conf_.srnd_obj_roi_x_min = srnd_obj_roi_x_min;
 
-    auto srnd_obj_roi_y_max = reader.get<mjson::Json>("srnd_object_roi")
-                                  .object_value()["y_thrs_max"]
-                                  .number_value();
-    algorithm_conf_.srnd_obj_roi_y_max = srnd_obj_roi_y_max;
+  //   auto srnd_obj_roi_y_max = reader.get<mjson::Json>("srnd_object_roi")
+  //                                 .object_value()["y_thrs_max"]
+  //                                 .number_value();
+  //   algorithm_conf_.srnd_obj_roi_y_max = srnd_obj_roi_y_max;
 
-    auto srnd_obj_roi_y_min = reader.get<mjson::Json>("srnd_object_roi")
-                                  .object_value()["y_thrs_min"]
-                                  .number_value();
-    algorithm_conf_.srnd_obj_roi_y_min = srnd_obj_roi_y_min;
+  //   auto srnd_obj_roi_y_min = reader.get<mjson::Json>("srnd_object_roi")
+  //                                 .object_value()["y_thrs_min"]
+  //                                 .number_value();
+  //   algorithm_conf_.srnd_obj_roi_y_min = srnd_obj_roi_y_min;
 
-    std::cout << "algorithm_param json load well !!!" << std::endl;
-  }
+  //   std::cout << "algorithm_param json load well !!!" << std::endl;
+  // }
 
  private:
   common::SceneType scene_type_;

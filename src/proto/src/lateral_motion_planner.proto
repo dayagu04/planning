@@ -2,8 +2,16 @@ syntax = "proto2";
 
 package planning.common;
 
-message LateralMotionPlanningInput {
-  repeated double init_state = 1;
+message LateralInitState {
+  optional double x = 1;
+  optional double y = 2;
+  optional double theta = 3;
+  optional double delta = 4;
+  optional double omega = 5;
+}
+
+message LateralPlanningInput {
+  optional LateralInitState init_state = 1;
 
   repeated double ref_x_vec = 2;
   repeated double ref_y_vec = 3;
@@ -55,7 +63,7 @@ message LateralMotionPlanningInput {
   optional double q_hard_corridor = 38;
 }
 
-message LateralMotionPlanningOutput {
+message LateralPlanningOutput {
   repeated double time_vec = 1;
 
   repeated double x_vec = 2;

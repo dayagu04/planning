@@ -212,50 +212,33 @@ bool PlanningComponent::Proc() {
   auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
 
   // record timestamp of all read topics for FPP
-  planning_debug_data->mutable_read_topic_timestamp()->set_control_output_stamp(
-      local_view_.control_output.header().timestamp());
-  planning_debug_data->mutable_read_topic_timestamp()->set_localization_stamp(
-      local_view_.localization_estimate.header().timestamp());
-  planning_debug_data->mutable_read_topic_timestamp()->set_fusion_object_stamp(
-      local_view_.fusion_objects_info.header().timestamp());
-  planning_debug_data->mutable_read_topic_timestamp()->set_parking_fusion_stamp(
-      local_view_.parking_fusion_info.header().timestamp());
-  planning_debug_data->mutable_read_topic_timestamp()->set_fusion_road_stamp(
-      local_view_.road_info.header().timestamp());
-  planning_debug_data->mutable_read_topic_timestamp()->set_hmi_stamp(
-      local_view_.hmi_mcu_inner_info.header().timestamp());
-  planning_debug_data->mutable_read_topic_timestamp()->set_prediction_stamp(
-      local_view_.prediction_result.header().timestamp());
-  planning_debug_data->mutable_read_topic_timestamp()
-      ->set_vehicle_service_stamp(
-          local_view_.vehicel_service_output_info.header().timestamp());
-  planning_debug_data->mutable_read_topic_timestamp()
-      ->set_radar_perception_stamp(
-          local_view_.radar_perception_objects_info.header().timestamp());
+  // planning_debug_data->mutable_read_topic_timestamp()->set_control_output_stamp(
+  //     local_view_.control_output.header().timestamp());
+  // planning_debug_data->mutable_read_topic_timestamp()->set_localization_stamp(
+  //     local_view_.localization_estimate.header().timestamp());
+  // planning_debug_data->mutable_read_topic_timestamp()->set_fusion_object_stamp(
+  //     local_view_.fusion_objects_info.header().timestamp());
+  // planning_debug_data->mutable_read_topic_timestamp()->set_parking_fusion_stamp(
+  //     local_view_.parking_fusion_info.header().timestamp());
+  // planning_debug_data->mutable_read_topic_timestamp()->set_fusion_road_stamp(
+  //     local_view_.road_info.header().timestamp());
+  // planning_debug_data->mutable_read_topic_timestamp()->set_hmi_stamp(
+  //     local_view_.hmi_mcu_inner_info.header().timestamp());
+  // planning_debug_data->mutable_read_topic_timestamp()->set_prediction_stamp(
+  //     local_view_.prediction_result.header().timestamp());
+  // planning_debug_data->mutable_read_topic_timestamp()
+  //     ->set_vehicle_service_stamp(
+  //         local_view_.vehicel_service_output_info.header().timestamp());
+  // planning_debug_data->mutable_read_topic_timestamp()
+  //     ->set_radar_perception_stamp(
+  //         local_view_.radar_perception_objects_info.header().timestamp());
 
-  planning_debug_data->set_timestamp(IflyTime::Now_ms());
+  planning_debug_data->set_timestamp(IflyTime::Now_us());
   // 获取debug json信息
   auto debug_info_json = *DebugInfoManager::GetInstance().GetDebugJson();
   planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
-  // planning_debug_data.set_data_json(debug_output.data.data_json());
   planning_debug_writer_->Write(*planning_debug_data);
 
-  // fill planning_debug_info —需要好好设计一下
-  auto debug_info = mjson::Json(mjson::Json::object());
-
-  debug_info["fix_lane_a"] = debug_output.fix_lane.a;
-  debug_info["fix_lane_b"] = debug_output.fix_lane.b;
-  debug_info["fix_lane_c"] = debug_output.fix_lane.c;
-  debug_info["fix_lane_d"] = debug_output.fix_lane.d;
-  if (debug_output.target_lane.a != 0 && debug_output.target_lane.b != 0 &&
-      debug_output.target_lane.c != 0 && debug_output.target_lane.d != 0) {
-    debug_info["target_lane_a"] = debug_output.target_lane.a;
-    debug_info["target_lane_b"] = debug_output.target_lane.b;
-    debug_info["target_lane_c"] = debug_output.target_lane.c;
-    debug_info["target_lane_d"] = debug_output.target_lane.d;
-  }
-
-  // planning_output.mutable_extra()->set_json(debug_info.dump());
   planning_writer_->Write(planning_output);
   planning_hmi_Info_writer_->Write(planning_hmi_Info);
   double planning_cost_time = IflyTime::Now_ms() - start_time;

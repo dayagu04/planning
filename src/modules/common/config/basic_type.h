@@ -7,9 +7,11 @@
 
 #include "common/utils/cartesian_coordinate_system.h"
 #include "common/utils/frenet_coordinate_system.h"
-//#include "ilqr_define.h"
+#include "lateral_motion_planner.pb.h"
+#include "longitudinal_motion_planner.pb.h"
 #include "mjson/mjson.hpp"
 #include "planning_def.h"
+#include "spline.h"
 
 #define DEFAULT_LANE_WIDTH (3.8)
 
@@ -29,14 +31,14 @@ enum LeverStatus {
 };
 
 enum LaneBoundaryType {
-  MARKING_UNKNOWN = 0,                  // 未知线型
-  MARKING_DASHED = 1,                   // 虚线
-  MARKING_SOLID = 2,                    // 实线
-  MARKING_SHORT_DASHED = 3,             // 短虚线
-  MARKING_DOUBLE_DASHED = 4,            // 双虚线
-  MARKING_DOUBLE_SOLID = 5,             // 双实线
-  MARKING_LEFT_DASHED_RIGHT_SOLID = 6,  // 左虚右实线
-  MARKING_LEFT_SOLID_RIGHT_DASHED = 7   // 左实右虚线
+  MARKING_UNKNOWN = 0,                 // 未知线型
+  MARKING_DASHED = 1,                  // 虚线
+  MARKING_SOLID = 2,                   // 实线
+  MARKING_SHORT_DASHED = 3,            // 短虚线
+  MARKING_DOUBLE_DASHED = 4,           // 双虚线
+  MARKING_DOUBLE_SOLID = 5,            // 双实线
+  MARKING_LEFT_DASHED_RIGHT_SOLID = 6, // 左虚右实线
+  MARKING_LEFT_SOLID_RIGHT_DASHED = 7  // 左实右虚线
 };
 enum MSDLaneType {
   MSD_LANE_TYPE_UNKNOWN = 0,
@@ -69,9 +71,9 @@ enum RequestSource {
   ROUTE_REQUEST
 };
 struct PointLLH {
-  double Longitude;  // Longitude in degrees, ranging from -180 to 180,(度)
-  double Latitude;   // Latitude in degrees, ranging from -90 to 90,(度)
-  double height;     // WGS-84 ellipsoid height in meters,(米)
+  double Longitude; // Longitude in degrees, ranging from -180 to 180,(度)
+  double Latitude;  // Latitude in degrees, ranging from -90 to 90,(度)
+  double height;    // WGS-84 ellipsoid height in meters,(米)
 };
 
 struct EulerAngle {
@@ -352,11 +354,26 @@ struct AdaptiveCruiseControlInfo {
   AccInfo navi_time_distance_info;
 };
 
+struct TrajectorySpline {
+  pnc::mathlib::spline x_s_spline;
+  pnc::mathlib::spline y_s_spline;
+  pnc::mathlib::spline theta_s_spline;
+  pnc::mathlib::spline delta_s_spline;
+  pnc::mathlib::spline omega_s_spline;
+
+  pnc::mathlib::spline s_t_spline;
+  pnc::mathlib::spline v_t_spline;
+  pnc::mathlib::spline a_t_spline;
+  pnc::mathlib::spline j_t_spline;
+};
+
 struct PlanningResult {
+  bool init_flag = false;
   int target_lane_id;
   ScenarioStateEnum target_scenario_state = ROAD_NONE;
   TrajectoryPoints raw_traj_points;
   TrajectoryPoints traj_points;
+  TrajectorySpline traj_spline;
   RequestType turn_signal = NO_CHANGE;
   CurvatureInfo curvature_info;
   int use_backup_cnt = 0;
@@ -378,9 +395,20 @@ struct PlanningInitPoint {
   double jerk;
   double relative_time;
   FrenetState frenet_state;
+
+  planning::common::LateralInitState lat_init_state;
+  LongitudinalMotionPlanning::InitState lon_init_state;
 };
 
 class ReferencePath;
+
+struct CarReferenceInfo {
+  pnc::mathlib::spline x_s_spline;
+  pnc::mathlib::spline y_s_spline;
+  std::vector<double> x_vec;
+  std::vector<double> y_vec;
+  std::vector<double> s_vec;
+};
 struct CoarsePlanningInfo {
   ScenarioStateEnum source_state;
   ScenarioStateEnum target_state;
@@ -393,6 +421,7 @@ struct CoarsePlanningInfo {
   // overtake_obstacles and yield_obstacles are used only under wait state
   std::vector<int> overtake_obstacles;
   std::vector<int> yield_obstacles;
+  CarReferenceInfo cart_ref_info;
 };
 
 struct FrenetBoundary {
@@ -470,8 +499,8 @@ struct LatBehaviorStateMachineOutput {
   bool should_premove;
   bool should_suspend;
   bool must_change_lane;
-  bool behavior_suspend;         // lateral suspend
-  std::vector<int> suspend_obs;  // lateral suspend
+  bool behavior_suspend;        // lateral suspend
+  std::vector<int> suspend_obs; // lateral suspend
 
   bool lc_pause;
   int lc_pause_id;
@@ -530,13 +559,13 @@ struct LatBehaviorStateMachineOutput {
 enum class LatObstacleType { LANE, ROAD, CAR };
 
 struct LatDeciderOutput {
-  std::vector<double> init_state;
-  std::vector<std::pair<double, double>> enu_ref_path;  // <x, y>
+  planning::common::LateralInitState init_state;
+
+  std::vector<std::pair<double, double>> enu_ref_path; // <x, y>
   std::vector<std::pair<double, double>>
-      last_enu_ref_path;  // pass it by planning context
-  // planning::PlanningInitPoint init_state;  // pass it by planning context
-  std::vector<std::pair<Point2D, Point2D>> path_bounds;  // <lower ,upper >
-  std::vector<std::pair<Point2D, Point2D>> safe_bounds;  // <lower ,upper >
+      last_enu_ref_path; // pass it by planning context
+  std::vector<std::pair<Point2D, Point2D>> path_bounds; // <lower ,upper >
+  std::vector<std::pair<Point2D, Point2D>> safe_bounds; // <lower ,upper >
   std::vector<double> enu_ref_theta;
   std::vector<double> last_enu_ref_theta;
   double v_cruise;
@@ -552,8 +581,8 @@ struct LateralMotionPlanningOutput {
   std::vector<double> omega_dot_vec;
   std::vector<double> acc_vec;
   std::vector<double> jerk_vec;
- // const ilqr_solver::iLqr::iLqrSolverInfo *solver_info_ptr;
- // ilqr_solver::iLqr::iLqrSolverInfo solver_info;  // to be removed
+  // const ilqr_solver::iLqr::iLqrSolverInfo *solver_info_ptr;
+  // ilqr_solver::iLqr::iLqrSolverInfo solver_info;  // to be removed
 };
 
-}  // namespace planning
+} // namespace planning

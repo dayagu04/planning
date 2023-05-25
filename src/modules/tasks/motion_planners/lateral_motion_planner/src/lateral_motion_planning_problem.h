@@ -13,31 +13,23 @@
 namespace pnc {
 namespace lateral_planning {
 class LateralMotionPlanningProblem {
- public:
+public:
   void Init();
-  uint8_t Update(planning::common::LateralMotionPlanningInput &planning_input);
+  uint8_t Update(planning::common::LateralPlanningInput &planning_input);
   void SetWarmStart(bool flag) { ilqr_core_ptr_->SetWarmStart(flag); };
   void SetMaxIter(size_t max_iter) { ilqr_core_ptr_->SetMaxIter(max_iter); };
 
   void Reset();
 
-  const planning::common::LateralMotionPlanningOutput GetOutput() const {
-    return planning_output_;
-  }
-
-  const planning::common::LateralMotionPlanningOutput *GetOutputPtr() const {
-    return &planning_output_;
-  }
-  const std::shared_ptr<ilqr_solver::iLqr> ilqr_core_ptr() const {
+  const std::shared_ptr<ilqr_solver::iLqr> GetiLqrCorePtr() const {
     return ilqr_core_ptr_;
   }
 
- private:
+private:
   std::shared_ptr<ilqr_solver::iLqr> ilqr_core_ptr_;
   State init_state_;
-  planning::common::LateralMotionPlanningOutput planning_output_;
 };
 
-}  // namespace lateral_planning
-}  // namespace pnc
+} // namespace lateral_planning
+} // namespace pnc
 #endif

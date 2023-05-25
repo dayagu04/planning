@@ -52,7 +52,7 @@ def load_lane_center_lines(lanes):
     lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
     if i< len(lanes):
       lane = lanes[i]
-      virtual_lane_refline_points = lane.lane_reference_line.virtual_lane_refline_points 
+      virtual_lane_refline_points = lane.lane_reference_line.virtual_lane_refline_points
       line_x = []
       line_y = []
       for virtual_lane_refline_point in virtual_lane_refline_points:
@@ -75,9 +75,9 @@ def load_lane_center_lines(lanes):
   return line_info_list
 
 def load_obstacle_params(obstacle_list):
-  
+
   obs_info_all = dict()
-  
+
   obs_num = len(obstacle_list)
   num = 0
   for i in range(obs_num):
@@ -103,7 +103,7 @@ def load_obstacle_params(obstacle_list):
         'obs_label':[]
       }
       obs_info_all[source] = obs_info
-    
+
     long_pos_rel = obstacle_list[i].common_info.relative_center_position.x
     lat_pos_rel = obstacle_list[i].common_info.relative_center_position.y
     theta = obstacle_list[i].common_info.relative_heading_angle
@@ -149,7 +149,7 @@ def load_obstacle_params(obstacle_list):
               lat_pos - dy1 - dy2,
               lat_pos - dy1 + dy2,
               lat_pos + dy1 + dy2]
-    
+
     # if source == 1 or source == 3:
     num = num + 1
     obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
@@ -167,8 +167,8 @@ def load_obstacle_params(obstacle_list):
     obs_info_all[source]['obstacles_y'].append(obs_y)
     obs_info_all[source]['pos_x'].append(long_pos)
     obs_info_all[source]['pos_y'].append(lat_pos)
-    
-  # print(num) 
+
+  # print(num)
   return obs_info_all
 
 def gen_line(c0, c1, c2, c3, start, end):

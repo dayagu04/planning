@@ -1,13 +1,11 @@
 #include <memory>
+#include <set>
 #include <string>
 #include <typeinfo>
 #include <unordered_map>
-#include <set>
 
-#include "log.h"
-#include "environmental_model_manager.h"
-#include "context/virtual_lane_manager.h"
-#include "context/frenet_ego_state.h"
+#include "common/math/linear_interpolation.h"
+#include "context/ego_planning_config.h"
 #include "context/ego_state_manager.h"
 #include "context/frenet_ego_state.h"
 #include "context/lateral_obstacle.h"
@@ -15,12 +13,11 @@
 #include "context/parking_slot_manager.h"
 #include "context/reference_path_manager.h"
 #include "context/traffic_light_decision_manager.h"
-#include "context/parking_slot_manager.h"
-#include "context/lateral_obstacle.h"
-#include "context/ego_planning_config.h"
-#include "common/math/linear_interpolation.h"
-#include "vehicle_service.pb.h"
+#include "context/virtual_lane_manager.h"
+#include "environmental_model_manager.h"
+#include "log.h"
 #include "planning_config.pb.h"
+#include "vehicle_service.pb.h"
 #include "vehicle_status.pb.h"
 
 namespace planning {
@@ -215,23 +212,32 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
                                          common::VehicleStatus &vehicle_status) {
   vehicle_status.mutable_header()->set_timestamp_us(vehicel_service_output_info.header().timestamp());
 
-  if(localization_estimate.msf_status().available() &&
-     localization_estimate.msf_status().msf_status() != LocalizationOutput::MsfStatus::ERROR) {
-    vehicle_status.mutable_heading_yaw()->mutable_heading_yaw_data()
-                              ->set_value_rad(localization_estimate.pose().euler_angles().yaw());
+  // FBI WARNING
+  if (localization_estimate.msf_status().available() &&
+      localization_estimate.msf_status().msf_status() !=
+          LocalizationOutput::MsfStatus::ERROR || 1) {
+    vehicle_status.mutable_heading_yaw()
+        ->mutable_heading_yaw_data()
+        ->set_value_rad(localization_estimate.pose().euler_angles().yaw());
     vehicle_status.mutable_location()->set_available(true);
     auto llh_position = localization_estimate.pose().llh_position();
-    vehicle_status.mutable_location()->mutable_location_geographic()->set_latitude_degree(llh_position.lat());
-    vehicle_status.mutable_location()->mutable_location_geographic()->set_longitude_degree(llh_position.lon());
-    vehicle_status.mutable_location()->mutable_location_geographic()->set_altitude_meter(llh_position.height());
-    auto enu_position = localization_estimate.pose().enu_position();
-    vehicle_status.mutable_location()->mutable_location_enu()->set_x(enu_position.x());
-    vehicle_status.mutable_location()->mutable_location_enu()->set_y(enu_position.y());
-    vehicle_status.mutable_location()->mutable_location_enu()->set_z(enu_position.z());
+    vehicle_status.mutable_location()
+        ->mutable_location_geographic()
+        ->set_latitude_degree(llh_position.lat());
+    vehicle_status.mutable_location()
+        ->mutable_location_geographic()
+        ->set_longitude_degree(llh_position.lon());
+    vehicle_status.mutable_location()
+        ->mutable_location_geographic()
+        ->set_altitude_meter(llh_position.height());
     auto local_position = localization_estimate.pose().local_position();
-    vehicle_status.mutable_location()->mutable_location_enu()->set_x(local_position.x());
-    vehicle_status.mutable_location()->mutable_location_enu()->set_y(local_position.y());
-    vehicle_status.mutable_location()->mutable_location_enu()->set_z(local_position.z());
+    vehicle_status.mutable_location()->mutable_location_enu()->set_x(
+        local_position.x());
+    vehicle_status.mutable_location()->mutable_location_enu()->set_y(
+        local_position.y());
+    vehicle_status.mutable_location()->mutable_location_enu()->set_z(
+        local_position.z());
+
     auto enu_orientation = localization_estimate.pose().orientation();
     vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_x(enu_orientation.qx());
     vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_y(enu_orientation.qy());
@@ -260,8 +266,13 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
     last_feed_time_[FEED_EGO_ENU] = current_time;
   }
 
-  vehicle_status.mutable_velocity()->mutable_cruise_velocity()
-                ->set_value_mps(hmi_mcu_inner_info.acc_set_disp_speed());
+  // FBI WARNING
+  // vehicle_status.mutable_velocity()->mutable_cruise_velocity()
+  //               ->set_value_mps(hmi_mcu_inner_info.acc_set_disp_speed());
+
+  vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
+      4.0);
+
   if (vehicel_service_output_info.vehicle_speed_available()) {
     vehicle_status.mutable_velocity()->set_available(true);
     vehicle_status.mutable_velocity()->mutable_heading_velocity()

@@ -69,7 +69,7 @@ typedef std::vector<double> ILqrCostVec;
 // ilqr solver config for solver parameters
 namespace ilqr_solver {
 struct iLqrSolverConfig {
-  size_t horizion = 25;
+  size_t horizon = 25;
   size_t state_size = 3;
   size_t input_size = 1;
   size_t max_iter = 10;

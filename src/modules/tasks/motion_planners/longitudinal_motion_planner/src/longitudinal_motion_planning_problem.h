@@ -4,8 +4,12 @@
 #include <cstddef>
 #include <vector>
 
+#include "common/config/basic_type.h"
 #include "ilqr_core.h"
+#include "longitudinal_motion_planner.pb.h"
+#include "longitudinal_motion_planning_cost.h"
 #include "longitudinal_motion_planning_model.h"
+#include "math_lib.h"
 
 namespace pnc {
 namespace longitudinal_planning {
@@ -63,23 +67,18 @@ struct LongitudinalMotionPlanningOutput {
 class LongitudinalMotionPlanningProblem {
  public:
   void Init();
-  uint8_t Update(LongitudinalMotionPlanningInput &planning_input);
+  uint8_t Update(LongitudinalMotionPlanning::PlanningInput &planning_input);
   void SetWarmStart(bool flag) { ilqr_core_ptr_->SetWarmStart(flag); };
   void SetMaxIter(size_t max_iter) { ilqr_core_ptr_->SetMaxIter(max_iter); };
 
   void Reset();
-
-  const LongitudinalMotionPlanningOutput GetOutput() const {
-    return planning_output_;
-  }
-
-  const LongitudinalMotionPlanningOutput *GetOutputPtr() const {
-    return &planning_output_;
+  const std::shared_ptr<ilqr_solver::iLqr> GetiLqrCorePtr() const {
+    return ilqr_core_ptr_;
   }
 
  private:
   std::shared_ptr<ilqr_solver::iLqr> ilqr_core_ptr_;
-  LongitudinalMotionPlanningOutput planning_output_;
+  State init_state_;
 };
 
 }  // namespace longitudinal_planning

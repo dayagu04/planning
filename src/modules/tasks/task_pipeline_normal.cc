@@ -14,7 +14,7 @@ TaskPipelineNormal::TaskPipelineNormal(
   config_ = config_builder->cast<EgoPlanningTaskPipelineNormalConfig>();
   version_to_tasks_["v1"] = {
       // TaskType::OBSTACLE_DECIDER,
-      TaskType::LATERAL_DECIDER, TaskType::VISION_LATERAL_MOTION_PLANNER,
+      TaskType::GENERAL_LATERAL_DECIDER, TaskType::LATERAL_MOTION_PLANNER,
       // TaskType::LATERAL_OPTIMIZER_V2,
       TaskType::GENERAL_LONGITUDINAL_DECIDER,
       TaskType::PWJ_LONGITUDINAL_MOTION_PLANNER,

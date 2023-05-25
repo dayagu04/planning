@@ -10,18 +10,18 @@ void iLqrModel::InitControlVar() {
   u_.setZero();
 
   // uk_vec init
-  uk_vec_.resize(solver_config_ptr_->horizion + 1);
+  uk_vec_.resize(solver_config_ptr_->horizon + 1);
   ResizeVectorElemFromEigenVec(uk_vec_, solver_config_ptr_->input_size);
   ResetVectorElemFromEigen(uk_vec_);
 }
 
 double iLqrModel::UpateDynamics(StateVec &x0, const ControlVec &u0) {
   double cost = 0.0;
-  for (size_t t = 0; t < solver_config_ptr_->horizion; ++t) {
+  for (size_t t = 0; t < solver_config_ptr_->horizon; ++t) {
     cost += GetCost(x0[t], u0[t], t);
     x0[t + 1] = UpdateDynamicsOneStep(x0[t], u0[t], t);
   }
-  cost += GetTerminalCost(x0[solver_config_ptr_->horizion]);
+  cost += GetTerminalCost(x0[solver_config_ptr_->horizon]);
   return cost;
 }
 
@@ -58,7 +58,7 @@ double iLqrModel::GetTerminalCost(const State &x) {
 
     // update cost map
 #ifdef __ILQR_DEBUG__
-    cost_map_ptr_->at(each_cost->GetCostId())[solver_config_ptr_->horizion] =
+    cost_map_ptr_->at(each_cost->GetCostId())[solver_config_ptr_->horizon] =
         result;
 #endif
   }
@@ -93,7 +93,7 @@ void iLqrModel::InitGuess(StateVec &x0_vec, ControlVec &u0_vec,
     init_cost = UpateDynamics(x0_vec, u0_vec);
   } else {
     // set zero
-    for (size_t i = 0; i < solver_config_ptr_->horizion; i++) {
+    for (size_t i = 0; i < solver_config_ptr_->horizon; i++) {
       u0_vec[i].setZero();
     }
 

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.0)
 
 # set release mode
 # Debug: X86  Release: FDC
-set(CMAKE_BUILD_TYPE Debug)
+# set(CMAKE_BUILD_TYPE Release)
 
 # install config
 set(INSTALL_TO_CURRENT ON)

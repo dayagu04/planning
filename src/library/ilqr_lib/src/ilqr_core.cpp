@@ -31,7 +31,7 @@ void iLqr::Init(std::shared_ptr<iLqrModel> ilqr_model) {
 }
 
 void iLqr::InitSolverConfig() {
-  const auto horizon = solver_config_ptr_->horizion;
+  const auto horizon = solver_config_ptr_->horizon;
   const auto input_size = solver_config_ptr_->input_size;
   const auto state_size = solver_config_ptr_->state_size;
 
@@ -150,7 +150,7 @@ void iLqr::Solve(const State &x0) {
   time_info_.t_one_step_ms = time_info_.GetElapsed(time_info_.all_start, false);
 #endif
 
-  // print info when debug
+// print info when debug
 #ifdef __ILQR_PRINT__
   PrintSolverInfo();
   PrintCostInfo();
@@ -193,12 +193,12 @@ bool iLqr::PSDCheck(Eigen::MatrixXd &Q) {
 */
 bool iLqr::BackwardPass() {
   // cost-to-go at end
-  Eigen::MatrixXd Vx = lx_vec_[solver_config_ptr_->horizion];
-  Eigen::MatrixXd Vxx = lxx_vec_[solver_config_ptr_->horizion];
+  Eigen::MatrixXd Vx = lx_vec_[solver_config_ptr_->horizon];
+  Eigen::MatrixXd Vxx = lxx_vec_[solver_config_ptr_->horizon];
 
   dV_.fill(0);
 
-  for (int i = (static_cast<int>(solver_config_ptr_->horizion) - 1); i >= 0;
+  for (int i = (static_cast<int>(solver_config_ptr_->horizon) - 1); i >= 0;
        i--) { // back up from end of trajectory
 
     const Eigen::MatrixXd fut = fu_vec_[i].transpose();
@@ -265,7 +265,7 @@ bool iLqr::ForwardPass(double &new_cost, double &expected, const size_t &iter) {
     alpha = solver_config_ptr_->alpha_vec[i];
     new_cost = 0.0;
 
-    for (size_t i = 0; i < solver_config_ptr_->horizion; ++i) {
+    for (size_t i = 0; i < solver_config_ptr_->horizon; ++i) {
       const auto du =
           alpha * k_vec_[i] + K_vec_[i] * (xk_new_vec_[i] - xk_vec_[i]);
 
@@ -284,7 +284,7 @@ bool iLqr::ForwardPass(double &new_cost, double &expected, const size_t &iter) {
     solver_info_.iteration_info_vec[iter].du_norm = du_norm;
 
     new_cost += ilqr_model_ptr_->GetTerminalCost(
-        xk_new_vec_[solver_config_ptr_->horizion]);
+        xk_new_vec_[solver_config_ptr_->horizon]);
 
     expected = -alpha * (dV_[0] + alpha * dV_[1]);
 
@@ -325,7 +325,7 @@ void iLqr::InitAdvancedInfo() {
   solver_info_.cost_iter_vec.resize(solver_config_ptr_->max_iter + 1);
 
   std::vector<double> tmp_vec;
-  tmp_vec.resize(solver_config_ptr_->horizion + 1, 0.0);
+  tmp_vec.resize(solver_config_ptr_->horizon + 1, 0.0);
 
   for (size_t iter = 0; iter < solver_config_ptr_->max_iter + 1; ++iter) {
     // init cost map after adding cost
@@ -354,7 +354,7 @@ void iLqr::DecreaseLambda() {
 }
 
 void iLqr::UpdateDynamicsDerivatives() {
-  for (size_t i = 0; i < solver_config_ptr_->horizion + 1; ++i) {
+  for (size_t i = 0; i < solver_config_ptr_->horizon + 1; ++i) {
     // reset Derivatives before updating
     lx_vec_[i].setZero();
     lu_vec_[i].setZero();
@@ -362,7 +362,7 @@ void iLqr::UpdateDynamicsDerivatives() {
     lxu_vec_[i].setZero();
     luu_vec_[i].setZero();
 
-    if (i < solver_config_ptr_->horizion) {
+    if (i < solver_config_ptr_->horizon) {
       ilqr_model_ptr_->GetDynamicsDerivatives(xk_vec_[i], uk_vec_[i],
                                               fx_vec_[i], fu_vec_[i], i);
 

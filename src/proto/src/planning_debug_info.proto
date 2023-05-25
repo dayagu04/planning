@@ -6,6 +6,7 @@ import "task_basic_types.proto";
 import "vision_only_lateral_behavior_planner.proto";
 import "vision_only_lateral_motion_planner.proto";
 import "environment_model_debug_info.proto";
+import "lateral_motion_planner.proto";
 
 message ReadTopicStampList {
   optional uint64 fusion_object_stamp = 1;
@@ -20,16 +21,17 @@ message ReadTopicStampList {
 }
 
 message PlanningDebugInfo {
-  optional uint64 timestamp = 1; // us
+  optional uint64 timestamp = 1;  // us
   optional string data_json = 2;
   // TBD: 存在多条candidates时，应该使用repeated
   // TBD: lat behavior
   // TBD: lat motion
-  optional LonRefPath long_ref_path = 3; // long behavior
-  optional ReadTopicStampList read_topic_timestamp = 4;
+  optional LonRefPath long_ref_path = 3;  // long behavior
+  optional LateralPlanningInput lateral_motion_planning_input = 4;
+  optional LateralPlanningOutput lateral_motion_planning_output = 5;
+  // optional ReadTopicStampList read_topic_timestamp = 4;
   // TBD: lon motion
-  optional VOLatBehaviorPlan vo_lat_behavior_plan = 5;
-  optional VOLatMotionPlan vo_lat_motion_plan = 6;
-  optional EnvironmentModelInfo environment_model_info = 7;
- 
+  optional VOLatBehaviorPlan vo_lat_behavior_plan = 6;
+  optional VOLatMotionPlan vo_lat_motion_plan = 7;
+  optional EnvironmentModelInfo environment_model_info = 8;
 }

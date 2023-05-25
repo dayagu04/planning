@@ -12,6 +12,8 @@
 #include <cmath>
 namespace pnc {
 namespace mathlib {
+static const double kPie = 3.141592653589793;
+
 double DoubleConstrain(double u, double min, double max) {
   if (u < min) {
     return min;
@@ -125,7 +127,22 @@ double GetCurvFactor(double c1, double c2, double vel) {
   return curv_factor;
 }
 
+double DeltaAngleFix(double delta_angle) {
+  double out = delta_angle;
+  for (int i = 0; i < 5; ++i) {
+    if ((out >= -kPie) && (out <= kPie)) {
+      break;
+    }
+    if (out < -kPie) {
+      out += 2.0 * kPie;
+    } else if (out > kPie) {
+      out -= 2.0 * kPie;
+    }
+  }
 
+  out = Clamp(out, -kPie, kPie);
+  return out;
+}
 
 } // namespace mathlib
 

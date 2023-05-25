@@ -11,21 +11,21 @@ using namespace ilqr_solver;
 using namespace pnc::mathlib;
 
 static const double kMaxWheelAngle =
-    360.0 / 14.5 / 57.3;  // 360 deg steering angle for scc
+    360.0 / 14.5 / 57.3; // 360 deg steering angle for scc
 static const double kMaxWheelAngleRate =
-    240.0 / 14.5 / 57.3;  // 240 deg/s steering angle rate for scc
+    240.0 / 14.5 / 57.3; // 240 deg/s steering angle rate for scc
 namespace pnc {
 namespace lateral_planning {
 void LateralMotionPlanningProblem::Init() {
   // STEP 0: set solver config parmeters
   iLqrSolverConfig solver_config;
-  solver_config.horizion = 25;
+  solver_config.horizon = 25;
   solver_config.state_size = STATE_SIZE;
   solver_config.input_size = INPUT_SIZE;
   solver_config.model_dt = 0.2;
   solver_config.warm_start_enable = true;
   solver_config.du_tol = 0.01 / 57.3 / 14.5;
-  init_state_.resize(5);
+  init_state_.resize(STATE_SIZE);
   // STEP 1: init core with solver config
   ilqr_core_ptr_ = std::make_shared<iLqr>();
   ilqr_core_ptr_->Init(std::make_shared<LateralMotionPlanningModel>(),
@@ -33,55 +33,44 @@ void LateralMotionPlanningProblem::Init() {
 
   // STEP 2: add cost
   ilqr_core_ptr_->AddCost(
-      std::make_shared<ReferenceCostTerm>());  // reference cost
+      std::make_shared<ReferenceCostTerm>()); // reference cost
   ilqr_core_ptr_->AddCost(
-      std::make_shared<ContinuityCostTerm>());  // continuity cost
+      std::make_shared<ContinuityCostTerm>()); // continuity cost
   ilqr_core_ptr_->AddCost(
-      std::make_shared<LatAccCostTerm>());  // lateral acc cost
+      std::make_shared<LatAccCostTerm>()); // lateral acc cost
   ilqr_core_ptr_->AddCost(
-      std::make_shared<LatJerkCostTerm>());  // lateral jerk cost
+      std::make_shared<LatJerkCostTerm>()); // lateral jerk cost
   ilqr_core_ptr_->AddCost(
-      std::make_shared<LatAccBoundCostTerm>());  // lateral acc bound cost
+      std::make_shared<LatAccBoundCostTerm>()); // lateral acc bound cost
   ilqr_core_ptr_->AddCost(
-      std::make_shared<LatJerkBoundCostTerm>());  // lateral jerk bound cost
+      std::make_shared<LatJerkBoundCostTerm>()); // lateral jerk bound cost
   ilqr_core_ptr_->AddCost(
-      std::make_shared<PathSoftCorridorCostTerm>());  // path soft corridor
-                                                      // cost
+      std::make_shared<PathSoftCorridorCostTerm>()); // path soft corridor
+                                                     // cost
   ilqr_core_ptr_->AddCost(
-      std::make_shared<LatSnapCostTerm>());  // omega dot cost term
+      std::make_shared<LatSnapCostTerm>()); // omega dot cost term
 
   // STEP 3: init debug info, must run after add cost
   ilqr_core_ptr_->InitAdvancedInfo();
-
-  // STEP 4: init some vars
-  // set time vec once
-  const size_t N = ilqr_core_ptr_->GetSolverConfigPtr()->horizion + 1;
-  const double dt = ilqr_core_ptr_->GetSolverConfigPtr()->model_dt;
-
-  double time = 0.0;
-  for (size_t i = 0; i < N; ++i) {
-    planning_output_.add_time_vec(time);
-    time += dt;
-  }
 }
 
 uint8_t LateralMotionPlanningProblem::Update(
-    planning::common::LateralMotionPlanningInput &planning_input) {
+    planning::common::LateralPlanningInput &planning_input) {
   // set cost config
-  const size_t N = ilqr_core_ptr_->GetSolverConfigPtr()->horizion + 1;
+  const size_t N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
 
   std::vector<IlqrCostConfig> cost_config_vec;
   cost_config_vec.resize(N);
 
   // calculate delta_bound and omega_bound
-  double delta_bound = std::min(
-      kMaxWheelAngle,
-      planning_input.acc_bound() /
-          (planning_input.curv_factor() * Square(planning_input.ref_vel())));
-  double omega_bound = std::min(
-      kMaxWheelAngleRate,
-      planning_input.jerk_bound() /
-          (planning_input.curv_factor() * Square(planning_input.ref_vel())));
+  double delta_bound =
+      std::min(kMaxWheelAngle,
+               planning_input.acc_bound() / (planning_input.curv_factor() *
+                                             Square(planning_input.ref_vel())));
+  double omega_bound =
+      std::min(kMaxWheelAngleRate, planning_input.jerk_bound() /
+                                       (planning_input.curv_factor() *
+                                        Square(planning_input.ref_vel())));
 
   for (size_t i = 0; i < N; ++i) {
     // // reference
@@ -153,14 +142,14 @@ uint8_t LateralMotionPlanningProblem::Update(
   ilqr_core_ptr_->SetCostConfig(cost_config_vec);
 
   // solve the ilqr problem
-  init_state_ << planning_input.init_state(0), planning_input.init_state(1),
-      planning_input.init_state(2), planning_input.init_state(3),
-      planning_input.init_state(4);
+  init_state_ << planning_input.init_state().x(),
+      planning_input.init_state().y(), planning_input.init_state().theta(),
+      planning_input.init_state().delta(), planning_input.init_state().omega();
 
   ilqr_core_ptr_->Solve(init_state_);
 
   return true;
 }
 
-}  // namespace lateral_planning
-}  // namespace pnc
+} // namespace lateral_planning
+} // namespace pnc
