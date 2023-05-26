@@ -62,7 +62,7 @@ bool GeneralLateralDecider::Execute(planning::framework::Frame *frame) {
 
   traj_points = pipeline_context_->coarse_planning_info.trajectory_points;
 
-  HandleLaneChangeScene(); // TODO:handle the lane change info;
+  HandleLaneChangeScene();  // TODO:handle the lane change info;
 
   ConstructReferencePathPoints(traj_points);
 
@@ -181,10 +181,10 @@ void GeneralLateralDecider::ConstructlaneAndBoundaryBounds(
         -right_lane_distance + 0.5 * vehicle_param.width + config_.buffer2lane,
         safe_bound.lower);
     path_bound.upper = std::fmin(
-        left_road_distance - 0.5 * vehicle_param.width - config_.buffer2border,
+        left_lane_distance - 0.5 * vehicle_param.width - config_.buffer2border,
         path_bound.upper);
     path_bound.lower =
-        std::fmax(-right_road_distance + 0.5 * vehicle_param.width +
+        std::fmax(-right_lane_distance + 0.5 * vehicle_param.width +
                       config_.buffer2border,
                   path_bound.lower);
 
@@ -209,8 +209,8 @@ void GeneralLateralDecider::ConstructLateralObstacleDecisions(
   const auto &obs_vec = reference_path_ptr_->get_obstacles();
   for (auto &obstacle : obs_vec) {
     const auto &otype = obstacle->type();
-    if (otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN or // TBD: check
-                                                            // obstacle type
+    if (otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
+                                                             // obstacle type
         otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
         otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
         otype == Common::ObjectType::OBJECT_TYPE_VAN or
@@ -267,7 +267,7 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
   auto avoid_cross_lane = 0.2;
   auto pre_lateral_decision = LatObstacleDecisionType::IGNORE;
 
-  double rear_axle_to_front_bumper = // TBD：define as consexpr
+  double rear_axle_to_front_bumper =  // TBD：define as consexpr
       vehicle_param.length - vehicle_param.back_edge_to_rear_axis;
   const bool init_lon_no_overlap =
       (obstacle->frenet_obstacle_boundary().s_end <
@@ -283,7 +283,7 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
   Polygon2d obstacle_end_sl_polygon;
   // const bool ok_start = obstacle->get_polygon_at_time(  // TBD: no prediction
   //     0., reference_path_ptr_, obstacle_start_sl_polygon);
-  const bool ok_end = obstacle->get_polygon_at_time( // TBD: no prediction
+  const bool ok_end = obstacle->get_polygon_at_time(  // TBD: no prediction
       ref_traj_points_.back().t, reference_path_ptr_, obstacle_end_sl_polygon);
 
   double dynamic_bound_gain_vel = std::max(config_.min_gain_vel, ego_velocity);
@@ -329,10 +329,10 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
   }
 
   if (CheckObstacleNudgeCondition(
-          obstacle)) { // TBD: execute nudge logic in this function:
-                       //       1. whether to nudge?
-                       //       2. calc the extra buffer
-                       //       3. set the lat type as NUDGE
+          obstacle)) {  // TBD: execute nudge logic in this function:
+                        //       1. whether to nudge?
+                        //       2. calc the extra buffer
+                        //       3. set the lat type as NUDGE
     // TBD: add log;
     safe_extra_distance += nudge_obj_extra_buffer;
   }
@@ -353,7 +353,7 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
 
     double care_area_s_buffer =
         std::max(std::min(5.0, 5.0 - 0.5 * (10.0 - ego_velocity)),
-                 0.0); // 5m -> 0m linear decay wrt ego_
+                 0.0);  // 5m -> 0m linear decay wrt ego_
 
     auto care_area_s_start = ego_s - vehicle_param.back_edge_to_rear_axis;
     auto care_area_s_end =
@@ -418,7 +418,7 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
     }
 
     const auto &nudge_reference_center_l = ego_l;
-    constexpr double kMaxAvoidEdgeL{2.0}; // m
+    constexpr double kMaxAvoidEdgeL{2.0};  // m
 
     if ((overlap_min_y <= nudge_reference_center_l &&
          nudge_reference_center_l <= overlap_max_y) ||
@@ -703,7 +703,7 @@ void GeneralLateralDecider::ExtractBoundary(
   }
 
   for (auto &bounds : path_bounds) {
-    std::pair<double, double> tmp_bound{-10., 10.}; // <lower ,upper >
+    std::pair<double, double> tmp_bound{-10., 10.};  // <lower ,upper >
     for (auto &bound : bounds) {
       if (bound.upper < tmp_bound.second) {
         tmp_bound.second = bound.upper;
@@ -716,7 +716,7 @@ void GeneralLateralDecider::ExtractBoundary(
   }
 
   for (auto &bounds : safe_bounds) {
-    std::pair<double, double> tmp_bound{-10., 10.}; // <lower ,upper >
+    std::pair<double, double> tmp_bound{-10., 10.};  // <lower ,upper >
     for (auto &bound : bounds) {
       if (bound.upper < tmp_bound.second) {
         tmp_bound.second = bound.upper;
@@ -749,7 +749,7 @@ void GeneralLateralDecider::GenerateEnuBoundaryPoints(
     if (frenet_coord->FrenetCoord2CartCoord(
             Point2D(ref_traj_points_[i].s, frenet_safe_bounds[i].first),
             tmp_safe_lower_point) !=
-        TRANSFORM_STATUS::TRANSFORM_SUCCESS) // safe lower
+        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // safe lower
     {
       // TODO: add logs
     }
@@ -757,7 +757,7 @@ void GeneralLateralDecider::GenerateEnuBoundaryPoints(
     if (frenet_coord->FrenetCoord2CartCoord(
             Point2D(ref_traj_points_[i].s, frenet_safe_bounds[i].second),
             tmp_safe_upper_point) !=
-        TRANSFORM_STATUS::TRANSFORM_SUCCESS) // safe upper
+        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // safe upper
     {
       // TODO: add logs
     }
@@ -767,7 +767,7 @@ void GeneralLateralDecider::GenerateEnuBoundaryPoints(
     if (frenet_coord->FrenetCoord2CartCoord(
             Point2D(ref_traj_points_[i].s, frenet_path_bounds[i].first),
             tmp_path_lower_point) !=
-        TRANSFORM_STATUS::TRANSFORM_SUCCESS) // path lower
+        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // path lower
     {
       // TODO: add logs
     }
@@ -775,7 +775,7 @@ void GeneralLateralDecider::GenerateEnuBoundaryPoints(
     if (frenet_coord->FrenetCoord2CartCoord(
             Point2D(ref_traj_points_[i].s, frenet_path_bounds[i].second),
             tmp_path_upper_point) !=
-        TRANSFORM_STATUS::TRANSFORM_SUCCESS) // path upper
+        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // path upper
     {
       // TODO: add logs
     }
@@ -830,4 +830,4 @@ void GeneralLateralDecider::sample_road_distance_info(
   }
 }
 
-} // namespace planning
+}  // namespace planning
