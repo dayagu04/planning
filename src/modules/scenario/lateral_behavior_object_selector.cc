@@ -87,7 +87,7 @@ double ObjectSelector::get_vrel_close(int side, int status) {
       fvf_drel_confident = lead_cars.temp_lead_one->d_rel + 30;
     }
   }
-  
+
   for (TrackedObject obstacle : lateral_obstacle->front_tracks()) {
     auto &obj_tmp = obstacle;
     if (side == 0) {
@@ -110,13 +110,13 @@ double ObjectSelector::get_vrel_close(int side, int status) {
       }
     } else {
       LOG_ERROR(
-              "[LaneTracksManager::get_vrel_close] Illegal side[%d] argument",
+              "[LaneTracksManager::get_vrel_close] Illegal side[%d] argument \n",
               side);
     }
   }
 
   if (front_tracks.size() == 0) {
-    LOG_ERROR("[LaneTracksManager::get_vrel_close] front tracks is null");
+    LOG_ERROR("[LaneTracksManager::get_vrel_close] front tracks is null \n");
     return v_rel_close;
   }
 

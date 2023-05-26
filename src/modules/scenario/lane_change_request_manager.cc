@@ -115,8 +115,6 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
             ->get_order_id();
     LOG_DEBUG("[LCRequestManager::update] final target_lane_order_id: %d \n",
               target_lane_order_id);
-    // MDEBUG_JSON_ADD_ITEM(tlane_oid, target_lane_order_id,
-    //                      LaneChangeRequestManager)
   }
   // MDEBUG_JSON_ADD_ITEM(request, static_cast<int>(request_),
   //                      LaneChangeRequestManager)
@@ -132,7 +130,6 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     turn_signal_ = NO_CHANGE;
   }
   LOG_WARNING("[LCRequestManager::update] ===cur_state: %d=== \n", lc_status);
-  // MDEBUG_JSON_END_DICT(LaneChangeRequestManager)
 }
 
 double LaneChangeRequestManager::GetReqStartTime(int source) const {

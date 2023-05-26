@@ -128,7 +128,7 @@
     "avoid_truck_time_distance_threshold": 1.5
   },
   "int_request": {
-    "enable_int_request_function": false,
+    "enable_int_request_function": true,
     "int_vel_limit": 0,
     "request_count_threshold": 2,
     "map_int_cancel_freeze_cnt": 20,

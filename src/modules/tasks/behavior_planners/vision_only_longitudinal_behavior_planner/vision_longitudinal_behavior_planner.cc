@@ -1246,7 +1246,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(
                                              ->planning_context()
                                              .scenario_state_machine()
                                              ->get_lane_change_lane_manager();
-  const auto current_v_lane = frame_->session()
+  const auto current_lane = frame_->session()
                                   ->environmental_model()
                                   .get_virtual_lane_manager()
                                   ->get_current_lane();
@@ -1256,7 +1256,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(
   int lc_map_decision = frame_->session()
                             ->environmental_model()
                             .get_virtual_lane_manager()
-                            ->lc_map_decision(current_v_lane);
+                            ->lc_map_decision(current_lane);
   double v_target = v_target_;
   double safety_dist = 2.0 + v_ego * 0.2;
   double v_limit_lc = 40.0;
