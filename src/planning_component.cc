@@ -239,11 +239,18 @@ bool PlanningComponent::Proc() {
   planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
   planning_debug_writer_->Write(*planning_debug_data);
 
+  // set meta time
+  auto time_stamp_us = IflyTime::Now_us();
+  auto header = planning_output.mutable_meta()->mutable_header();
+  header->set_timestamp(time_stamp_us);
+  header->set_version("TEST");
   planning_writer_->Write(planning_output);
+
   planning_hmi_Info_writer_->Write(planning_hmi_Info);
   double planning_cost_time = IflyTime::Now_ms() - start_time;
   if (planning_cost_time > 50.0) {
-    LOG_ERROR("The cost time of proc() is too long: [%f] ms!\n", planning_cost_time);
+    LOG_ERROR("The cost time of proc() is too long: [%f] ms!\n",
+              planning_cost_time);
   }
   LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);
 

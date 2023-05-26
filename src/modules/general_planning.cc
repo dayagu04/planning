@@ -79,16 +79,14 @@ bool GeneralPlanning::RunOnce(
     FillPlanningDebugInfo(start_timestamp, debug_info);
     FillPlanningHmiInfo(start_timestamp, planning_hmi_Info);
     std::cout << "The RunOnce is successed !!!!:" << std::endl;
-    return true;
   } else {
-    std::cout << "The RunOnce is failed !!!!:" << std::endl;
     LOG_DEBUG("RunOnce failed !!!! \n");
-    GenerateStopTrajectory(start_timestamp, planning_output);
   }
 
   double end_time = IflyTime::Now_ms();
   LOG_DEBUG("The time cost of RunOnce is: %f \n", end_time - start_timestamp);
-  return false;
+
+  return planning_status->planning_success;
 }
 
 void GeneralPlanning::FillPlanningTrajectory(
@@ -102,10 +100,7 @@ void GeneralPlanning::FillPlanningTrajectory(
 
   // 更新输出
   auto time_stamp_us = IflyTime::Now_us();
-  // 1.Meta
-  auto header = planning_output->mutable_meta()->mutable_header();
-  header->set_timestamp(time_stamp_us);
-  header->set_version("TEST");
+
   planning_output->mutable_meta()->set_plan_timestamp_us(time_stamp_us);
   planning_output->mutable_meta()->set_plan_strategy_name("Test");
 
