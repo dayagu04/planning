@@ -16,6 +16,8 @@ class DiagonalInGeometryPlan {
 
   bool ABSegment(const PlanningPoint &point_a,
       bool is_start, bool is_rough_calc, DiagonalSegmentsInfo *segments_info);
+  bool ReverseABSegment(const PlanningPoint &point_a,
+      bool is_start, bool is_rough_calc, DiagonalSegmentsInfo *segments_info);
   bool BCSegment(const PlanningPoint &point_b,
       double len_ab, bool is_start, bool is_rough_calc,
       DiagonalSegmentsInfo *segments_info);
@@ -83,6 +85,7 @@ class DiagonalInGeometryPlan {
   double CalBCThetaDiffCost(const double theta_diff) const;
   double CalPointDThetaCost(const double theta) const;
   void CalTargetXVec();
+  double CalDESegmentLengthCost(const double segment_len) const;
 
  private:
   double min_turn_radius_ =

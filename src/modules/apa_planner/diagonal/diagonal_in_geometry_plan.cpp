@@ -30,6 +30,8 @@ constexpr double kTargetXStep = 0.01;
 constexpr int kTargetXNum = 11;
 constexpr int kHalfTargetXNum = kTargetXNum / 2;
 constexpr double kMaxXOffset = kTargetXStep * kHalfTargetXNum;
+constexpr double kMaxXOffsetInDE3 = 0.5;
+constexpr double kMaxXOffsetInCD2 = 0.15;
 constexpr double kMaxYOffset = 0.2;
 constexpr double kMaxThetaDiff = 0.02;
 constexpr double kMaxYBackwardPos = -2.5;
@@ -40,6 +42,8 @@ constexpr double kEndThetaWeight = 100.0;
 constexpr double kSegmentCost = 10000.0;
 constexpr double kBCThetaDiffCost = 10.0;
 constexpr double kPointDThetaCost = 10.0;
+constexpr double kDELengthWeight = 100;
+constexpr double kDEStandardLength = 1.0;
 }  // namespace
 
 bool DiagonalInGeometryPlan::CheckSlotOpenSideWrong(
@@ -50,7 +54,7 @@ bool DiagonalInGeometryPlan::CheckSlotOpenSideWrong(
   }
   if (std::fabs(start_point.theta) > M_PI_4) {
     side_wrong = true;
-  }
+  } 
   return side_wrong;
 }
 
@@ -164,6 +168,102 @@ bool DiagonalInGeometryPlan::ABSegment(const PlanningPoint &point_a,
   return true;
 }
 
+bool DiagonalInGeometryPlan::ReverseABSegment(const PlanningPoint &point_a,
+    bool is_start, bool is_rough_calc, DiagonalSegmentsInfo *segments_info) {
+  
+  PLANNING_LOG << "ReverseABSegment start!!!" << std::endl;
+  segments_info->total_cost = std::numeric_limits<double>::infinity();
+  if (CheckSlotOpenSideWrong(point_a)) {
+    PLANNING_LOG << "open side wrong" << std::endl;
+    return false;
+  }
+  const double min_l_step = 0.2;
+  double max_l_step = 2.0;
+  int sparse_step_num = 0;
+  const double sparse_len = std::fmax(point_a.x - 3.0, 0.0);
+  if (sparse_len > 0.0) {
+    sparse_step_num = sparse_len / max_l_step + 1;
+    max_l_step = sparse_len / sparse_step_num;
+  }
+  const double slot_with = 1.2;
+  const int dense_step_num = (point_a.x - sparse_len + slot_with) / min_l_step;
+  const int point_num = std::max(sparse_step_num + dense_step_num, 1);
+  PLANNING_LOG << "sparse_step_num:" << sparse_step_num
+      << ", dense_step_num:" << dense_step_num << std::endl;
+
+  const double cos_point_a_theta = apa_cos(point_a.theta);
+  const double sin_point_a_theta = apa_sin(point_a.theta);
+
+  PlanningPoint point_b;
+  size_t collide_cnt = 0;
+  size_t cd_fail_cnt = 0;
+  size_t total_cost_nan_cnt = 0;
+  const double front_buffer = 0.0;
+  const double rear_buffer = kLonBuffer;
+  const double lat_buffer = kLatBuffer;
+  Polygon2d init_ego_polygon = std::move(ConstructVehiclePolygonWithBuffer(
+        point_a, front_buffer, rear_buffer, lat_buffer));
+ 
+  for (int i = 0; i < point_num; ++i) {
+    double l_ab = 0.0;
+    if (i <= sparse_step_num) {
+      l_ab = i * max_l_step;
+    } else {
+      l_ab = (i - sparse_step_num) * min_l_step + sparse_len;
+    }
+    point_b.x = point_a.x - l_ab * cos_point_a_theta;
+    point_b.y = point_a.y - l_ab * sin_point_a_theta;
+    point_b.theta = point_a.theta;
+    if (CollideWithObjectsByPolygon(point_a, point_b, init_ego_polygon)) {
+      ++collide_cnt;
+      break;
+    }
+    DiagonalSegmentsInfo tmp_segments_info;
+    if (!CDSegment(point_b, false, is_rough_calc, &tmp_segments_info)) {
+      ++cd_fail_cnt;
+      continue;
+    }
+    const double r_len_ab = std::fabs(point_b.x - point_a.x);
+    const double len_cost = CalSegmentLengthCost(r_len_ab);
+    const double total_cost = len_cost + tmp_segments_info.total_cost;
+    if (std::isinf(total_cost)) {
+      ++total_cost_nan_cnt;
+      continue;
+    }
+
+    if (total_cost < segments_info->total_cost) {
+      segments_info->total_cost = total_cost;
+
+      //r_ac
+      segments_info->opt_point_c = point_b;
+
+      // cd
+      segments_info->opt_radius_cd = tmp_segments_info.opt_radius_cd;
+      segments_info->opt_point_d = tmp_segments_info.opt_point_d;
+
+      // de
+      segments_info->opt_radius_de = tmp_segments_info.opt_radius_de;
+      segments_info->opt_point_e = tmp_segments_info.opt_point_e;
+
+      // ef
+      segments_info->opt_radius_ef = tmp_segments_info.opt_radius_ef;
+      segments_info->opt_point_f = tmp_segments_info.opt_point_f;
+
+      if (is_rough_calc) {
+        return true;
+      }
+    }
+  }
+  PLANNING_LOG << "totoal_cnt:" << point_num
+  << ", collide_cnt:" << collide_cnt
+  << ", bc_fail_cnt:" << cd_fail_cnt
+  << ", total_cost_nan_cnt:" << total_cost_nan_cnt
+  << std::endl;
+  if (std::isinf(segments_info->total_cost)) {
+    return false;
+  }
+  return true;
+}
 bool DiagonalInGeometryPlan::BCSegment(const PlanningPoint &point_b,
     double len_ab, bool is_start, bool is_rough_calc,
     DiagonalSegmentsInfo *segments_info) {
@@ -477,7 +577,7 @@ bool DiagonalInGeometryPlan::CD2Segment(const PlanningPoint &point_c,
         break;
       }
 
-      if (point_d.x < target_point_.x - kMaxXOffset) {
+      if (point_d.x > target_point_.x + kMaxXOffsetInCD2) {
         continue;
       }
 
@@ -602,8 +702,9 @@ bool DiagonalInGeometryPlan::DE1Segment(const PlanningPoint &point_d,
 
       const double len_de =
           std::fabs(point_d.theta - point_e.theta) * radius_de_tmp;
-
-      const double len_cost = CalSegmentLengthCost(len_de);
+      //const double len_cost = CalSegmentLengthCost(len_de);
+      //TODO(fengwang31):updata the CalDESegmentLengthCost
+      const double len_cost = CalDESegmentLengthCost(len_de);
       const double radius_cost = CalRadiusCost(radius_de_tmp, len_de);
 
       const double total_cost =
@@ -664,9 +765,10 @@ bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c,
   const double sin_point_c_theta = apa_sin(point_c.theta);
   const double cos_point_c_theta = apa_cos(point_c.theta);
   PlanningPoint point_d;
-  // size_t collide_cnt = 0;
-  // size_t ab_fail_cnt = 0;
-  // size_t total_cost_nan_cnt = 0;
+  size_t collide_cnt = 0;
+  size_t ex1_cnt = 0;
+  size_t ex2_cnt = 0;
+  size_t total_cost_nan_cnt = 0;
   const double radius_cd_step = 1;
   const double theta_step = kDefaultThetaStep * slot_sign_;
   const int size_step = std::max(
@@ -687,15 +789,17 @@ bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c,
           (apa_cos(point_d.theta) - cos_point_c_theta);
 
       if (CollideWithObjectsByPolygon(point_c, point_d, init_ego_polygon)) {
-        // ++collide_cnt;
+        ++collide_cnt;
         break;
       }
 
       if (point_d.x < target_point_.x - kMaxXOffset) {
+        ++ex1_cnt;
         break;
       }
 
       if (point_d.x > target_point_.x + kMaxXOffset) {
+        ++ex2_cnt;
         continue;
       }
 
@@ -718,20 +822,21 @@ bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c,
           return true;
         }
       }
-
     }
   }
 
-  // PLANNING_LOG << "total_cnt:" << size_i
-  //     << ", collide_cnt:" << collide_cnt
-  //     << ", ab_fail_cnt:" << ab_fail_cnt
-  //     << ", total_cost_nan_cnt:" << total_cost_nan_cnt
-  //     << std::endl;
+  if (is_start) {
+    PLANNING_LOG << "total_cnt:" << (size_radius_cd * size_step)
+                << ", collide_cnt:" << collide_cnt
+                << ", ex1_cnt:" << ex1_cnt
+                << ", ex2_cnt:" << ex2_cnt
+                << ", total_cost_nan_cnt:" << total_cost_nan_cnt
+                << std::endl;
+  }
 
   if (std::isinf(segments_info->total_cost)) {
     return false;
   }
-
   return true;
 }
 
@@ -823,7 +928,7 @@ bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d,
 
       const double len_de =
           std::fabs(point_d.theta - point_e.theta) * radius_de;
-      const double len_cost = CalSegmentLengthCost(len_de);
+      const double len_cost = CalDESegmentLengthCost(len_de);
       const double radius_cost = CalRadiusCost(radius_de, len_de);
 
       const double total_cost =
@@ -901,10 +1006,11 @@ bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d,
       point_e.theta = point_d.theta + yaw_step * j;
       point_e.x = point_d.x +
           slot_sign_ * radius_de * (-sin_point_d_theta + apa_sin(point_e.theta));
-      // if (point_e.x > target_point_.x + kMaxXOffset) {
-      //   ++ex_cnt2;
-      //   break;
-      // }
+
+      if (point_e.x > target_point_.x + kMaxXOffsetInDE3) {
+        ++ex_cnt2;
+        break;
+      }
 
       point_e.y = point_d.y +
           slot_sign_ * radius_de * (cos_point_d_theta - apa_cos(point_e.theta));
@@ -921,7 +1027,7 @@ bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d,
 
       const double len_de =
           std::fabs(point_d.theta - point_e.theta) * radius_de;
-      const double len_cost = CalSegmentLengthCost(len_de);
+      const double len_cost = CalDESegmentLengthCost(len_de);
       const double radius_cost = CalRadiusCost(radius_de, len_de);
       const double theta_cost = CalEndThetaCost(point_e.theta);
 
@@ -1224,6 +1330,21 @@ double DiagonalInGeometryPlan::CalBCThetaDiffCost(
 double DiagonalInGeometryPlan::CalPointDThetaCost(
     const double theta) const {
   return std::fabs(target_point_.theta - theta) * kPointDThetaCost;
+}
+
+double DiagonalInGeometryPlan::CalDESegmentLengthCost(
+    const double segment_len) const {
+  if (segment_len < kMinSegmentLen) {
+    return std::numeric_limits<double>::infinity();
+  } else {
+    if(segment_len < kDEStandardLength){
+      return kSegmentLengthWeight * (1 / segment_len) * kDELengthWeight;
+    }
+    else{
+      return kSegmentLengthWeight * segment_len * kDELengthWeight;
+    }
+  }
+  return 0.0;
 }
 
 } // namespace apa_planner

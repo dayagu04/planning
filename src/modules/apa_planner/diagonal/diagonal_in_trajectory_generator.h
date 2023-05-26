@@ -28,6 +28,11 @@ class DiagonalInTrajectoryGenerator {
       DiagonalInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
+  bool ReverseABSegmentPlan(
+      const PlanningPoint &point_a, bool is_start, int idx,
+      DiagonalInGeometryPlan * const geometry_planning,
+      PlanningOutput::PlanningOutput *const planning_output) const; 
+
   bool BCSegmentPlan(
       const PlanningPoint &point_b, bool is_start, int idx,
       DiagonalInGeometryPlan * const geometry_planning,
@@ -44,6 +49,10 @@ class DiagonalInTrajectoryGenerator {
       PlanningOutput::PlanningOutput *const planning_output) const;
 
   bool GenerateABSegmentTrajectory(
+      const DiagonalSegmentsInfo& segments_info,
+      PlanningOutput::PlanningOutput *const planning_output) const;
+
+  bool GenerateRACSegmentTrajectory(
       const DiagonalSegmentsInfo& segments_info,
       PlanningOutput::PlanningOutput *const planning_output) const;
 

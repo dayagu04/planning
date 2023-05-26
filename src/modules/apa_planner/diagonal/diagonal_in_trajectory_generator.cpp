@@ -153,7 +153,6 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlan(const int slot_index,
   }
 
   SetPlanningOutputInfo(planning_output);
-
   return true;
 }
 
@@ -165,11 +164,13 @@ bool DiagonalInTrajectoryGenerator::GeometryPlan(
   bool is_planning_ok = false;
   planning_output->mutable_trajectory()->mutable_trajectory_points()->Clear();
   if (last_segment_name_.empty()) {
-    if (ABSegmentPlan(start_point, false, idx,
+    if (ABSegmentPlan(start_point, true, idx,
         &geometry_planning_, planning_output)) {
-      if (current_state_ == FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
-        last_segment_name_ = "BC";
-      }
+      last_segment_name_ = "BC";
+      is_planning_ok = true;
+    } else if (ReverseABSegmentPlan(start_point, true, idx,
+        &geometry_planning_, planning_output)) {
+      last_segment_name_ = "CD";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "AB") {
@@ -231,6 +232,30 @@ bool DiagonalInTrajectoryGenerator::ABSegmentPlan(
     return false;
   }
 
+  return true;
+}
+
+bool DiagonalInTrajectoryGenerator::ReverseABSegmentPlan(
+    const PlanningPoint &point_a, bool is_start, int idx,
+    DiagonalInGeometryPlan * const geometry_planning,
+    PlanningOutput *const planning_output) const {
+  DiagonalSegmentsInfo segments_info;
+  segments_info.opt_point_a = point_a;
+  //PLANNING_LOG << "point_a.x:" << point_a.x << std::end;
+  if (geometry_planning->ReverseABSegment(point_a, is_start, is_rough_calc_,
+      &segments_info)) {
+    PLANNING_LOG << "plan R_a-c success" << std::endl;
+    GenerateRACSegmentTrajectory(segments_info, planning_output);
+    GenerateCDSegmentTrajectory(segments_info, planning_output);
+    PrintTrajectoryPoints(*planning_output);
+
+    return true;
+  } else {
+    PLANNING_LOG << "point_a, x:" << point_a.x << ", y:" << point_a.y
+          << ", theta:" << point_a.theta << std::endl;
+    PLANNING_LOG << "plan R_a_c fail" << std::endl;
+    return false;
+  }
   return true;
 }
 
@@ -346,8 +371,55 @@ bool DiagonalInTrajectoryGenerator::GenerateABSegmentTrajectory(
     trajectory_point->set_y(point_tmp_in_odom.y);
     trajectory_point->set_heading_yaw(point_tmp_in_odom.theta);
     trajectory_point->set_curvature(0.0);
-    // GetCurPtSpeed(segment_len, s, 1.0, trajectory_point);
     GetCurPtSpeed(1.0, trajectory_point);
+    trajectory_point->set_distance(s);
+    trajectory_point->set_jerk(0.0);
+    s += line_step;
+  }
+  return true;
+}
+
+bool DiagonalInTrajectoryGenerator::GenerateRACSegmentTrajectory(
+    const DiagonalSegmentsInfo& segments_info,
+    PlanningOutput *const planning_output) const {
+  double line_step = kStep;
+  const auto& point_a = segments_info.opt_point_a;
+  const auto& point_b = segments_info.opt_point_c;
+
+  const double segment_len = std::hypot(
+      point_b.x - point_a.x, point_b.y - point_a.y);
+  int size_i_ab = static_cast<int>(segment_len / line_step);
+  if (!IsSamePoint(point_a, point_b)) {
+    size_i_ab = std::max(size_i_ab, 1);
+  }
+  if (size_i_ab > 0) {
+    line_step = segment_len / size_i_ab;
+  }
+
+  const double cos_point_a_theta = apa_cos(point_a.theta);
+  const double sin_point_a_theta = apa_sin(point_a.theta);
+
+  auto trajectory = planning_output->mutable_trajectory();
+  trajectory->set_available(true);
+  trajectory->set_trajectory_type(
+      Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
+  double s = 0.0;
+  PlanningPoint point_tmp_in_odom;
+  PlanningPoint point_tmp_in_slot;
+  for (int i = 0; i <= size_i_ab; ++i) {
+    point_tmp_in_slot.x =
+        point_a.x - cos_point_a_theta * line_step * i;
+    point_tmp_in_slot.y =
+        point_a.y - sin_point_a_theta * line_step * i;
+    point_tmp_in_slot.theta = point_a.theta;
+    point_tmp_in_odom =
+        FromLocal2GlobalCor(slot_origin_in_odom_, point_tmp_in_slot);
+    TrajectoryPoint *trajectory_point = trajectory->add_trajectory_points();
+    trajectory_point->set_x(point_tmp_in_odom.x);
+    trajectory_point->set_y(point_tmp_in_odom.y);
+    trajectory_point->set_heading_yaw(point_tmp_in_odom.theta);
+    trajectory_point->set_curvature(0.0);
+    GetCurPtSpeed(-1.0, trajectory_point);
     trajectory_point->set_distance(s);
     trajectory_point->set_jerk(0.0);
     s += line_step;
