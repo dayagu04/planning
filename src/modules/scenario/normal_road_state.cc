@@ -158,7 +158,7 @@ void RoadState::None::get_state_transition_candidates(
   }
 }
 
-void RoadState::LC::process_wait(FsmContext &context,
+void RoadBase::process_wait(FsmContext &context,
                                  StateTransitionContexts &transition_contexts) {
   std::shared_ptr<ScenarioStateMachine> state_machine = context.state_machine;
   std::shared_ptr<LaneChangeRequestManager> lc_req_manager =
@@ -170,14 +170,14 @@ void RoadState::LC::process_wait(FsmContext &context,
   auto lc_lane_manager = std::make_shared<LaneChangeLaneManager>(
       state_machine->get_lane_change_lane_manager());
 
-  std::shared_ptr<EnvironmentalModel> environmental_model =
-      context.environmental_model;
+  // std::shared_ptr<EnvironmentalModel> environmental_model =
+  //     context.environmental_model;
 
   RequestType lc_request = lc_req_manager->request();
   RequestSource lc_source = lc_req_manager->request_source();
   bool aggressive_change{lc_req_manager->AggressiveChange()};
   bool gap_available{true};
-  bool hdmap_valid = environmental_model->get_hdmap_valid();
+  bool hdmap_valid = context.session->environmental_model().get_hdmap_valid();
   double lc_tstart = lc_req_manager->GetReqStartTime(lc_source);
   double delay_time = 2.0;  // TODO(Rui):后面根据请求来源做成配置项
   double curr_time = IflyTime::Now_ms();  // 注意
@@ -193,8 +193,8 @@ void RoadState::LC::process_wait(FsmContext &context,
     gap_available = state_machine->gap_available(lc_request, overtake_obstacles,
                                                  yield_obstacles);
     lane_change_info = state_machine->decide_lc_valid_info(lc_request);
-    LOG_DEBUG("[CruiseState::Wait] gap_available: %d, aggressive_change: %d, \n",
-              gap_available, aggressive_change);
+    LOG_DEBUG("[CruiseState::Wait] gap_available: %d, aggressive_change: %d, target_lane_virtual_id: %d, lane_change_info.gap_insertable: %d, curr_time: %f, lc_tstart: %f, delay_time: %f \n",
+              gap_available, aggressive_change, target_lane_virtual_id, lane_change_info.gap_insertable, curr_time, lc_tstart, delay_time);
     // if (gap_available || aggressive_change) {
     // //TODO(Rui):后面把安全检查坐在gap_available里，统一通过gap_available判断
     if (curr_time > lc_tstart + delay_time && lane_change_info.gap_insertable) {
@@ -242,7 +242,7 @@ void RoadState::LC::process_wait(FsmContext &context,
   }
 }
 
-void RoadState::LC::process_change(
+void RoadBase::process_change(
     FsmContext &context, StateTransitionContexts &transition_contexts) {
   std::shared_ptr<ScenarioStateMachine> state_machine = context.state_machine;
   std::shared_ptr<LaneChangeRequestManager> lc_req_manager =
@@ -259,7 +259,7 @@ void RoadState::LC::process_change(
 
   RequestType lc_request = lc_req_manager->request();
   bool gap_available{true};
-  bool hdmap_valid = environmental_model->get_hdmap_valid();
+  bool hdmap_valid = context.session->environmental_model().get_hdmap_valid();
   std::vector<int> overtake_obstacles;
   std::vector<int> yield_obstacles;
   LaneChangeStageInfo lc_back_info;
@@ -345,7 +345,7 @@ void RoadState::LC::process_change(
   }
 }
 
-void RoadState::LC::process_back(FsmContext &context,
+void RoadBase::process_back(FsmContext &context,
                                  StateTransitionContexts &transition_contexts) {
   std::shared_ptr<ScenarioStateMachine> state_machine = context.state_machine;
   std::shared_ptr<LaneChangeRequestManager> lc_req_manager =
@@ -418,32 +418,32 @@ void RoadState::LC::process_back(FsmContext &context,
 
 void RoadState::LC::LWait::get_state_transition_candidates(
     FsmContext &context, StateTransitionContexts &transition_contexts) {
-  // process_wait(context, transition_contexts);
+  process_wait(context, transition_contexts);
 }
 
 void RoadState::LC::RWait::get_state_transition_candidates(
     FsmContext &context, StateTransitionContexts &transition_contexts) {
-  // process_wait(context, transition_contexts);
+  process_wait(context, transition_contexts);
 }
 
 void RoadState::LC::LChange::get_state_transition_candidates(
     FsmContext &context, StateTransitionContexts &transition_contexts) {
-  // process_change(context, transition_contexts);
+  process_change(context, transition_contexts);
 }
 
 void RoadState::LC::RChange::get_state_transition_candidates(
     FsmContext &context, StateTransitionContexts &transition_contexts) {
-  // process_change(context, transition_contexts);
+  process_change(context, transition_contexts);
 }
 
 void RoadState::LC::LBack::get_state_transition_candidates(
     FsmContext &context, StateTransitionContexts &transition_contexts) {
-  // process_back(context, transition_contexts);
+  process_back(context, transition_contexts);
 }
 
 void RoadState::LC::RBack::get_state_transition_candidates(
     FsmContext &context, StateTransitionContexts &transition_contexts) {
-  // process_back(context, transition_contexts);
+  process_back(context, transition_contexts);
 }
 
 // void RoadState::UTurn::get_state_transition_candidates(

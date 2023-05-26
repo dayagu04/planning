@@ -113,8 +113,14 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     int target_lane_order_id =
         virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)
             ->get_order_id();
-    LOG_DEBUG("[LCRequestManager::update] final target_lane_order_id: %d \n",
-              target_lane_order_id);
+    LOG_DEBUG("[LCRequestManager::update] final :target_lane_order_id %d, target_lane_virtual_id: %d \n",
+              target_lane_order_id, target_lane_virtual_id_);
+    // MDEBUG_JSON_ADD_ITEM(tlane_oid, target_lane_order_id,
+    //                      LaneChangeRequestManager)
+  } else {
+    target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+    LOG_DEBUG("[LCRequestManager::update] Target lane lost !!! final target_lane_virtual_id: %d \n",
+              target_lane_virtual_id_);
   }
   // MDEBUG_JSON_ADD_ITEM(request, static_cast<int>(request_),
   //                      LaneChangeRequestManager)

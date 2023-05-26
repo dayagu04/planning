@@ -207,7 +207,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
       session_->planning_context().lateral_behavior_planner_output();
   auto &vel_sequence = lateral_output.vel_sequence;
 
-  std::shared_ptr<VirtualLane> target_lane = nullptr;
+  std::shared_ptr<VirtualLane> target_lane = lc_lane_mgr_->tlane();
   auto origin_lane = lc_lane_mgr_->olane();
   auto fix_lane = lc_lane_mgr_->flane();
   auto &virtual_lane_manager =
@@ -215,11 +215,11 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
   if (origin_lane == nullptr) {
     origin_lane = virtual_lane_manager->get_current_lane();
   }
-  if (direction == LEFT_CHANGE) {
-    target_lane = virtual_lane_manager->get_left_neighbor(origin_lane);
-  } else if (direction == RIGHT_CHANGE) {
-    target_lane = virtual_lane_manager->get_right_neighbor(origin_lane);
-  }
+  // if (direction == LEFT_CHANGE) {
+  //   target_lane = virtual_lane_manager->get_left_neighbor(origin_lane);
+  // } else if (direction == RIGHT_CHANGE) {
+  //   target_lane = virtual_lane_manager->get_right_neighbor(origin_lane);
+  // }
   if (target_lane == nullptr) {
     return result_info;
   }
@@ -230,13 +230,16 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
   // int current_lane_virtual_id = session_->mutable_environmental_model()
   //                                   ->virtual_lane_manager()
   //                                   ->current_lane_virtual_id();
+  std::cout << "compute_lc_valid_info: flane_virtual_id: " << lc_lane_mgr_->flane_virtual_id() << " fix_lane->get_virtual_id(): " << fix_lane->get_virtual_id() << std::endl;
+  std::cout << "compute_lc_valid_info: tlane_virtual_id: " << lc_lane_mgr_->tlane_virtual_id() << " target_lane->get_virtual_id(): " << target_lane->get_virtual_id() << std::endl;
+  std::cout << "compute_lc_valid_info: clane_virtual_id: " << virtual_lane_manager->current_lane_virtual_id() << std::endl;
   auto reference_path_manager =
       session_->mutable_environmental_model()->get_reference_path_manager();
   auto fix_reference_path = reference_path_manager->get_reference_path_by_lane(
-      fix_lane->get_virtual_id());
+      lc_lane_mgr_->flane_virtual_id());
   auto target_reference_path =
       reference_path_manager->get_reference_path_by_lane(
-          target_lane->get_virtual_id());
+          lc_lane_mgr_->tlane_virtual_id());
   // auto &frenet_obstacles = current_reference_path->get_obstacles();
   auto &frenet_ego_state = fix_reference_path->get_frenet_ego_state();
   auto &target_lane_frenet_ego_state =
@@ -554,7 +557,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
       session_->planning_context().lateral_behavior_planner_output();
   auto &vel_sequence = lateral_output.vel_sequence;
 
-  std::shared_ptr<VirtualLane> target_lane = nullptr;
+  std::shared_ptr<VirtualLane> target_lane = lc_lane_mgr_->tlane();
   auto origin_lane = lc_lane_mgr_->olane();
   auto fix_lane = lc_lane_mgr_->flane();
   auto &virtual_lane_manager =
@@ -562,11 +565,11 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
   if (origin_lane == nullptr) {
     origin_lane = virtual_lane_manager->get_current_lane();
   }
-  if (direction == LEFT_CHANGE) {
-    target_lane = virtual_lane_manager->get_left_neighbor(origin_lane);
-  } else if (direction == RIGHT_CHANGE) {
-    target_lane = virtual_lane_manager->get_right_neighbor(origin_lane);
-  }
+  // if (direction == LEFT_CHANGE) {
+  //   target_lane = virtual_lane_manager->get_left_neighbor(origin_lane);
+  // } else if (direction == RIGHT_CHANGE) {
+  //   target_lane = virtual_lane_manager->get_right_neighbor(origin_lane);
+  // }
   if (target_lane == nullptr) {
     return result;
   }
@@ -579,11 +582,13 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
                                     ->current_lane_virtual_id();
   auto reference_path_manager =
       session_->mutable_environmental_model()->get_reference_path_manager();
+  std::cout << "compute_lc_back_info: flane_virtual_id: " << lc_lane_mgr_->flane_virtual_id() << " fix_lane->get_virtual_id(): " << fix_lane->get_virtual_id() << std::endl;
+  std::cout << "compute_lc_back_info: tlane_virtual_id: " << lc_lane_mgr_->tlane_virtual_id() << " target_lane->get_virtual_id(): " << target_lane->get_virtual_id() << std::endl;
   auto fix_reference_path = reference_path_manager->get_reference_path_by_lane(
-      fix_lane->get_virtual_id());
+      lc_lane_mgr_->flane_virtual_id());
   auto target_reference_path =
       reference_path_manager->get_reference_path_by_lane(
-          target_lane->get_virtual_id());
+          lc_lane_mgr_->tlane_virtual_id());
   // auto &frenet_obstacles = current_reference_path->get_obstacles();
   auto &frenet_ego_state = fix_reference_path->get_frenet_ego_state();
   auto &target_lane_frenet_ego_state =
@@ -938,10 +943,9 @@ bool ScenarioStateMachine::check_lc_change_finish(RequestType direction) {
   }
   auto tlane = lc_lane_mgr_->tlane();
   auto tlane_virtual_id = lc_lane_mgr_->tlane_virtual_id();
+  int flane_virtual_id = lc_lane_mgr_->flane_virtual_id();
 
-  if (tlane_virtual_id != clane_virtual_id &&
-      virtual_lane_mgr->lc_map_decision(clane) !=
-          virtual_lane_mgr->lc_map_decision(tlane)) {
+  if (tlane_virtual_id != clane_virtual_id) {
     // tlane与clane的virtual id和lc_map_decision都不相同时，换道一定没有完成.
     return false;
   }
@@ -955,6 +959,7 @@ bool ScenarioStateMachine::check_lc_change_finish(RequestType direction) {
 
   std::shared_ptr<ReferencePathManager> reference_path_mgr =
       session_->mutable_environmental_model()->get_reference_path_manager();
+  std::cout << "check_lc_change_finish: tlane_virtual_id: " << tlane_virtual_id << " clane_virtual_id: " << clane_virtual_id << " flane_virtual_id: " << flane_virtual_id << std::endl;
   auto target_reference_path =
       reference_path_mgr->get_reference_path_by_lane(tlane_virtual_id);
   auto frenet_ego_state = target_reference_path->get_frenet_ego_state();

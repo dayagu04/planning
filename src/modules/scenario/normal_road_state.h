@@ -28,6 +28,9 @@ struct RoadBase : StateBase {
       std::shared_ptr<LaneChangeRequestManager> &lc_req_manager,
       std::vector<ScenarioStateEnum> &candidate_states,
       std::vector<std::shared_ptr<LaneChangeLaneManager>> &lc_lane_managers);
+  void process_wait(FsmContext &context, StateTransitionContexts &transition_contexts);
+  void process_change(FsmContext &context, StateTransitionContexts &transition_contexts);
+  void process_back(FsmContext &context, StateTransitionContexts &transition_contexts);
 };
 
 struct RoadState : StateBase {
@@ -37,9 +40,6 @@ struct RoadState : StateBase {
   };
 
   struct LC : RoadBase {
-    void process_wait(FsmContext &context, StateTransitionContexts &transition_contexts);
-    void process_change(FsmContext &context, StateTransitionContexts &transition_contexts);
-    void process_back(FsmContext &context, StateTransitionContexts &transition_contexts);
     struct LWait : RoadBase {
       void get_state_transition_candidates(
         FsmContext &context, StateTransitionContexts &transition_contexts);

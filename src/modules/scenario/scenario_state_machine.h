@@ -13,9 +13,9 @@ namespace planning {
 // TODO: None --> LK LaneKeep
 using ScenarioFsm = M::PeerRoot<M::Composite<
     RoadState, RoadState::None,
-    M::Composite<RoadState::LC, RoadState::LC::LWait, RoadState::LC::RWait,
+    RoadState::LC, RoadState::LC::LWait, RoadState::LC::RWait,
                  RoadState::LC::LChange, RoadState::LC::RChange,
-                 RoadState::LC::LBack, RoadState::LC::RBack>>>;
+                 RoadState::LC::LBack, RoadState::LC::RBack>>;
 
 // M::Composite<RoadState::LB, RoadState::LB::LBorrow,
 //              RoadState::LB::RBorrow, RoadState::LB::LBack,

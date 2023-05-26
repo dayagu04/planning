@@ -103,9 +103,9 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   //                                lateral_outputs.lc_request, interval,
   //                                v_ego);
   // compute_speed_4_merging();
-  calc_speed_for_lane_change(
-      lateral_obstacle->leadone(), ego_state_mgr->ego_v_cruise(), v_ego,
-      lateral_outputs.lc_request, lateral_outputs.lc_status);
+  // calc_speed_for_lane_change(
+  //     lateral_obstacle->leadone(), ego_state_mgr->ego_v_cruise(), v_ego,
+  //     lateral_outputs.lc_request, lateral_outputs.lc_status);
 
   double decel_base = std::min(v_target_ramp_ - v_ego + 2.0, 0.0);
   a_target_.first = std::min(a_target_.first, decel_base);

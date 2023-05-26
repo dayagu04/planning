@@ -37,6 +37,7 @@ bool VisionLateralMotionPlanner::Execute(planning::framework::Frame *frame) {
   auto &planning_context = session->planning_context();
   auto &ego_prediction_result = pipeline_context_->planning_result;
   auto &ego_prediction_info = pipeline_context_->planning_info;
+  auto &coarse_planning_info = pipeline_context_->coarse_planning_info;
   bool b_success = false;
 
   // obtain the session information
@@ -53,19 +54,12 @@ bool VisionLateralMotionPlanner::Execute(planning::framework::Frame *frame) {
   const auto &dist_rblane = lat_behavior_info.dist_rblane;
 
   // init info
-  flane_ = frame_->mutable_session()
-               ->mutable_planning_context()
-               ->mutable_scenario_state_machine()
-               ->get_lane_change_lane_manager()
-               ->flane();
+  flane_ = frame_->session()
+               ->environmental_model()
+               .get_virtual_lane_manager()
+               ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
 
-  fix_reference_path_ =
-      frame_->session()
-          ->environmental_model()
-          .get_reference_path_manager()
-          ->get_reference_path_by_lane(flane_->get_virtual_id());
-
-  ego_frenet_state_ = fix_reference_path_->get_frenet_ego_state();
+  ego_frenet_state_ = reference_path_ptr_->get_frenet_ego_state();
   ego_cart_state_manager_ =
       frame_->session()->environmental_model().get_ego_state_manager();
 
