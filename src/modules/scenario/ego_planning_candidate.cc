@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <memory>
 
-#include "Eigen/src/Core/Matrix.h"
 #include "common/math/math_utils.h"
 #include "context/reference_path_manager.h"
 #include "debug_info_log.h"

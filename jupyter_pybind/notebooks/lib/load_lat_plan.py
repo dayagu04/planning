@@ -58,6 +58,10 @@ class LoadCyberbag:
       self.loc_msg['t'] = [tmp - self.loc_msg['t'][0]  for tmp in self.loc_msg['t']]
       self.loc_msg['enable'] = True
       max_time = max(max_time, self.loc_msg['t'][-1])
+      if len(self.loc_msg['t']) > 0:
+        self.loc_msg['enable'] = True
+      else:
+        self.loc_msg['enable'] = False
     except:
       self.loc_msg['enable'] = False
       print('missing /iflytek/localization/ego_pose !!!')
@@ -96,12 +100,15 @@ class LoadCyberbag:
       self.vs_msg['t'] = [tmp - self.vs_msg['t'][0]  for tmp in self.vs_msg['t']]
       self.vs_msg['enable'] = True
       # max_time = max(max_time, self.vs_msg['t'][-1])
+      if len(self.vs_msg['t']) > 0:
+        self.vs_msg['enable'] = True
+      else:
+        self.vs_msg['enable'] = False
     except:
       self.vs_msg['enable'] = False
       print("missing /iflytek/vehicle_service !!!")
 
     # load planning msg
-
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
         self.plan_msg['t'].append(msg.meta.header.timestamp / 1e6)
@@ -115,31 +122,32 @@ class LoadCyberbag:
       self.plan_msg['enable'] = False
 
     # load planning debug msg
-    for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
-      self.plan_debug_msg['t'].append(msg.timestamp / 1e6)
-      self.plan_debug_msg['data'].append(msg)
-      try:
-        json_struct = json.loads(msg.data_json, strict = False)
-        json_data = {}
-        LoadScalar(json_data, json_struct, "ego_pos_x")
-        LoadScalar(json_data, json_struct, "ego_pos_y")
-        LoadVector(json_data, json_struct, "raw_refline_x_vec")
-        LoadVector(json_data, json_struct, "raw_refline_y_vec")
+    try:
+      for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
+        self.plan_debug_msg['t'].append(msg.timestamp / 1e6)
+        self.plan_debug_msg['data'].append(msg)
+        try:
+          json_struct = json.loads(msg.data_json, strict = False)
+          json_data = {}
+          LoadScalar(json_data, json_struct, "ego_pos_x")
+          LoadScalar(json_data, json_struct, "ego_pos_y")
+          LoadVector(json_data, json_struct, "raw_refline_x_vec")
+          LoadVector(json_data, json_struct, "raw_refline_y_vec")
 
-        self.plan_debug_msg['json'].append(json_data)
-      except json.decoder.JSONDecodeError as jserr:
-        print('except',jserr)
+          self.plan_debug_msg['json'].append(json_data)
+        except json.decoder.JSONDecodeError as jserr:
+          print('except',jserr)
 
-    self.plan_debug_msg['t'] = [tmp - self.plan_debug_msg['t'][0]  for tmp in self.plan_debug_msg['t']]
-    self.plan_debug_msg['enable'] = True
-
-    if len(self.plan_debug_msg['t']) > 0:
+      self.plan_debug_msg['t'] = [tmp - self.plan_debug_msg['t'][0]  for tmp in self.plan_debug_msg['t']]
       self.plan_debug_msg['enable'] = True
-    else:
+
+      if len(self.plan_debug_msg['t']) > 0:
+        self.plan_debug_msg['enable'] = True
+      else:
+        self.plan_debug_msg['enable'] = False
+    except:
       self.plan_debug_msg['enable'] = False
-    # except:
-    #   self.plan_debug_msg['enable'] = False
-    #   print("missing /iflytek/planning/debug_info !!!")
+      print("missing /iflytek/planning/debug_info !!!")
 
 
     return max_time
@@ -381,11 +389,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
       if trajectory.trajectory_type == 0:
         planning_polynomial = trajectory.target_reference.polynomial
-        planning_x, planning_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
-        local_view_data['data_planning_trajectory'].data.update({
-          'planning_y' : planning_y,
-          'planning_x' : planning_x,
+        plan_x, plan_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
+        local_view_data['data_plan'].data.update({
+          'plan_y' : plan_y,
+          'plan_x' : plan_x,
         })
+      else:
+        pass
   except:
     pass
 
@@ -474,8 +484,8 @@ def load_local_view_figure():
                                         'pos_y_rel':[], 'pos_x_rel':[],
                                         'obs_label':[]})
 
-  planning_data = ColumnDataSource(data = {'planning_y':[],
-                                           'planning_x':[],})
+  data_plan = ColumnDataSource(data = {'plan_y':[],
+                                           'plan_x':[],})
 
   data_refline = ColumnDataSource(data = {'raw_refline_x':[],
                                           'raw_refline_y':[],})
@@ -503,8 +513,8 @@ def load_local_view_figure():
                                                         # 'jerk_vec':[]
                                                         })
 
-  planning_data = ColumnDataSource(data = {'planning_y':[],
-                                      'planning_x':[],})
+  data_plan = ColumnDataSource(data = {'plan_y':[],
+                                      'plan_x':[],})
 
   local_view_data = {'data_car':data_car, \
                      'data_ego':data_ego, \
@@ -526,7 +536,7 @@ def load_local_view_figure():
                      'data_center_line_4':data_center_line_4, \
                      'data_fus_obj':data_fus_obj, \
                      'data_snrd_obj':data_snrd_obj, \
-                     'data_planning_trajectory':planning_data,\
+                     'data_plan':data_plan,\
                      'data_lat_motion_plan_input':data_lat_motion_plan_input, \
                      'data_lat_motion_plan_output':data_lat_motion_plan_output, \
                      'data_refline':data_refline, \
@@ -560,7 +570,7 @@ def load_local_view_figure():
   fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd')
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fusion_info')
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info')
-  fig1.line('planning_y', 'planning_x', source = planning_data, line_width = 3, line_color = 'pink', line_dash = 'solid', legend_label = 'planning_trajectory')
+  fig1.line('plan_y', 'plan_x', source = data_plan, line_width = 3, line_color = 'pink', line_dash = 'solid', legend_label = 'plan_traj')
 
   # motion planning
   fig1.line('ref_y', 'ref_x', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path')
