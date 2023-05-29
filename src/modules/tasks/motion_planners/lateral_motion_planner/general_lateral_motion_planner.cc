@@ -327,42 +327,27 @@ void LateralMotionPlanner::GeneratePlanningOutput() {
 
     traj_points[i].v = v_cruise;
     traj_points[i].t = planning_output_.time_vec(i);
+
+    Point2D cart_pt(traj_points[i].x, traj_points[i].y);
+    Point2D frenet_pt;
+
+    if (reference_path_ptr_->get_frenet_coord() != nullptr &&
+        reference_path_ptr_->get_frenet_coord()->CartCoord2FrenetCoord(
+            cart_pt, frenet_pt) == TRANSFORM_STATUS::TRANSFORM_SUCCESS) {
+      traj_points[i].s = frenet_pt.x;
+      traj_points[i].l = frenet_pt.y;
+    } else {
+      LOG_DEBUG(
+          "CartCoord2FrenetCoord = FAILED !!!!!!!! index: %ld,  point.s : "
+          "%f, point.l: %f ",
+          i, traj_points[i].s, traj_points[i].l);
+    }
   }
 
   frame_->mutable_session()
       ->mutable_planning_context()
       ->mutable_planning_result()
       .init_flag = true;
-
-  // frenet will be no longer used, then will be removed
-  // TrajectoryPoint point;
-  // for (size_t i = 0; i < N; i++) {
-  //   point.x = state_result->at(i)[pnc::lateral_planning::StateId::X];
-  //   point.y = state_result->at(i)[pnc::lateral_planning::StateId::Y];
-  //   point.heading_angle =
-  //       state_result->at(i)[pnc::lateral_planning::StateId::THETA];
-  //   point.curvature =
-  //       planning_input_.curv_factor() *
-  //       state_result->at(i)[pnc::lateral_planning::StateId::DELTA];
-
-  //   Point2D frenet_pt;
-  //   Point2D cart_pt{point.x, point.y};
-  //   if (reference_path_ptr_->get_frenet_coord() != nullptr &&
-  //       reference_path_ptr_->get_frenet_coord()->CartCoord2FrenetCoord(
-  //           cart_pt, frenet_pt) == TRANSFORM_STATUS::TRANSFORM_SUCCESS) {
-  //     point.s = frenet_pt.x;
-  //     point.l = frenet_pt.y;
-  //   } else {
-  //     LOG_DEBUG(
-  //         "CartCoord2FrenetCoord = FAILED !!!!!!!! index: %ld,  point.s : "
-  //         "%f, point.l: %f ",
-  //         i, point.s, point.l);
-  //   }
-
-  //   point.v = v_cruise;
-  //   point.t = planning_output_.time_vec(i);
-  //   traj_points[i] = point;
-  // }
 }
 
 void LateralMotionPlanner::UpdateOneStepTrajectory() {}

@@ -107,7 +107,9 @@ void GeneralPlanning::FillPlanningTrajectory(
   // 2.Trajectory
   auto trajectory = planning_output->mutable_trajectory();
   trajectory->set_available(true);
-  if (hdmap_valid_) {
+  
+  // FBI WARNING
+  if (hdmap_valid_ || 1) {
     trajectory->set_trajectory_type(
         Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
     trajectory->mutable_trajectory_points()->Clear();
