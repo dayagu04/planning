@@ -137,56 +137,8 @@ void EgoPlanningCandidate::set_coarse_planning_info(
           ->get_reference_path_manager()
           ->make_map_lane_reference_path(coarse_planning_info_.target_lane_id);
 
-  // frenet is no longer use_refined_reference_path
-  // Step 3) calculate trajectory points
-  // const auto &planning_init_point =
-  //     coarse_planning_info_.reference_path->get_frenet_ego_state()
-  //         .planning_init_point();
-  // LOG_DEBUG("planning_init_point: x = %f, y = %f,s = %f,l = %f",
-  //           planning_init_point.x, planning_init_point.y,
-  //           planning_init_point.frenet_state.s,
-  //           planning_init_point.frenet_state.r);
-  // const auto &reference_path =
-  //     coarse_planning_info_.reference_path->get_points();
-  // LOG_DEBUG("reference_path.size() = %d", reference_path.size());
-  // const auto &frenet_coord =
-  //     coarse_planning_info_.reference_path->get_frenet_coord();
-
-  // TrajectoryPoint point;
-  // TrajectoryPoints trajectory_points;
-  // // TODO: 采用配置项
-  // const double delta_time = config_.delta_t;
-  // const int num_point = config_.num_point;  // reference_path.size();
-  // const auto &v_cruise = frame_->session()
-  //                            ->environmental_model()
-  //                            .get_ego_state_manager()
-  //                            ->ego_v_cruise();
-
-  // for (size_t i = 0; i < num_point; i++) {
-  //   point.v = i == 0 ? planning_init_point.v : v_cruise;
-  //   point.s = planning_init_point.frenet_state.s + delta_time * i * point.v;
-  //   point.l = i == 0 ? planning_init_point.frenet_state.r : 0.;
-  //   point.t = i * delta_time;
-  //   Point2D frenet_pt{point.s, point.l};
-  //   Point2D cart_pt;
-  //   if (frenet_coord != nullptr &&
-  //       frenet_coord->FrenetCoord2CartCoord(frenet_pt, cart_pt) ==
-  //           TRANSFORM_SUCCESS) {
-  //     point.x = cart_pt.x;
-  //     point.y = cart_pt.y;
-  //   } else {
-  //     LOG_DEBUG(
-  //         "FrenetCoord2CartCoord = FAILED !!!!!!!! index: %d,  point.s : "
-  //         "%f, point.l: %f ",
-  //         i, point.s, point.l);
-  //   }
-  //   trajectory_points.emplace_back(point);
-  //   coarse_planning_info_.trajectory_points.emplace_back(point);
-  // }
-
   // Step 3) calculate trajectory points
   // generate reference path
-
   const auto &v_cruise = frame_->session()
                              ->environmental_model()
                              .get_ego_state_manager()
@@ -198,8 +150,6 @@ void EgoPlanningCandidate::set_coarse_planning_info(
   auto &cart_ref_info = coarse_planning_info_.cart_ref_info;
   const auto &frenet_coord =
       coarse_planning_info_.reference_path->get_frenet_coord();
-
-  // const auto &frenet_length = frenet_coord->GetLength();
 
   double s = 0.0;
   Point2D frenet_pt{s, 0.0};
@@ -219,36 +169,6 @@ void EgoPlanningCandidate::set_coarse_planning_info(
         coarse_planning_info_.reference_path->get_points().at(i).path_point.s;
   }
 
-  // for (size_t i = 0; i < point_size; ++i) {
-  //   if (s > frenet_length) {
-  //     if (i > 1) {
-  //       Eigen::Vector2d lambda(
-  //           cart_ref_info.x_vec[i - 1] - cart_ref_info.x_vec[i - 2],
-  //           cart_ref_info.y_vec[i - 1] - cart_ref_info.y_vec[i - 2]);
-  //       auto dis = lambda.normalized() * v_cruise * delta_time;
-
-  //       cart_ref_info.x_vec[i] = cart_ref_info.x_vec[i - 1] + dis.x();
-  //       cart_ref_info.y_vec[i] = cart_ref_info.y_vec[i - 1] + dis.y();
-  //     } else {
-  //       cart_ref_info.x_vec[i] = cart_ref_info.x_vec[i - 1];
-  //       cart_ref_info.y_vec[i] = cart_ref_info.y_vec[i - 1];
-  //     }
-  //   } else {
-  //     frenet_pt.x = s;
-  //     frenet_coord->FrenetCoord2CartCoord(frenet_pt, cart_pt);
-
-  //     cart_ref_info.x_vec[i] = cart_pt.x;
-  //     cart_ref_info.y_vec[i] = cart_pt.y;
-  //   }
-
-  //   if (i > 0) {
-  //     const double ds = v_cruise * delta_time;
-  //     s += std::max(ds, 1e-3);
-  //   }
-
-  //   cart_ref_info.s_vec[i] = s;
-  // }
-
   cart_ref_info.x_s_spline.set_points(cart_ref_info.s_vec, cart_ref_info.x_vec);
   cart_ref_info.y_s_spline.set_points(cart_ref_info.s_vec, cart_ref_info.y_vec);
 
@@ -259,7 +179,6 @@ void EgoPlanningCandidate::set_coarse_planning_info(
       coarse_planning_info_.reference_path->get_frenet_ego_state()
           .planning_init_point();
 
-  // FBI WARNING
   Eigen::Vector2d init_pos(planning_init_point.lat_init_state.x(),
                            planning_init_point.lat_init_state.y());
   const auto &ego_state =
@@ -269,10 +188,17 @@ void EgoPlanningCandidate::set_coarse_planning_info(
   JSON_DEBUG_VALUE("ego_pos_y", ego_state->ego_pose().y)
   JSON_DEBUG_VALUE("ego_pos_yaw", ego_state->ego_pose().theta)
 
+  // FBI WARNING
   init_pos << ego_state->ego_pose().x, ego_state->ego_pose().y;
 
   // start from project s
   double s_ref = CalProjectPoint(init_pos);
+
+  const auto &frenet_length = frenet_coord->GetLength();
+
+  s_ref = std::min(s_ref, frenet_length * 0.95);
+  const double delta_s = frenet_length - s_ref;
+  const double v_cruise_scale = std::min(delta_s / (v_cruise * 5.0), 1.0);
 
   coarse_planning_info_.trajectory_points.clear();
   TrajectoryPoint point;
@@ -284,19 +210,6 @@ void EgoPlanningCandidate::set_coarse_planning_info(
       point.heading_angle =
           std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
                      cart_ref_info.x_s_spline.deriv(1, s_ref));
-    } else {
-      auto const &vec_size = cart_ref_info.x_vec.size();
-
-      Eigen::Vector2d lambda(cart_ref_info.x_vec[vec_size - 1] -
-                                 cart_ref_info.x_vec[vec_size - 2],
-                             cart_ref_info.y_vec[vec_size - 1] -
-                                 cart_ref_info.y_vec[vec_size - 2]);
-
-      auto const disp = lambda.normalized() * v_cruise * delta_time;
-      point.x = coarse_planning_info_.trajectory_points.back().x + disp.x();
-      point.y = coarse_planning_info_.trajectory_points.back().y + disp.y();
-      point.heading_angle =
-          coarse_planning_info_.trajectory_points.back().heading_angle;
     }
 
     // frenet info
@@ -307,7 +220,7 @@ void EgoPlanningCandidate::set_coarse_planning_info(
     point.l = frenet_pt.y;
     point.t = static_cast<double>(i) * delta_time;
 
-    s_ref += v_cruise * delta_time;
+    s_ref += v_cruise_scale * v_cruise * delta_time;
     coarse_planning_info_.trajectory_points.emplace_back(point);
   }
 }

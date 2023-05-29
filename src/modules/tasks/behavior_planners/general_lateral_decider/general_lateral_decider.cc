@@ -786,7 +786,6 @@ void GeneralLateralDecider::GenerateEnuBoundaryPoints(
 };
 
 void GeneralLateralDecider::GenerateEnuReferenceTraj(
-
     LatDeciderOutput &lat_decider_output) {
   auto &enu_ref_path = lat_decider_output.enu_ref_path;
   enu_ref_path.resize(ref_traj_points_.size());
@@ -795,6 +794,12 @@ void GeneralLateralDecider::GenerateEnuReferenceTraj(
     enu_ref_path[i].first = ref_traj_points_[i].x;
     enu_ref_path[i].second = ref_traj_points_[i].y;
   }
+
+  const auto &s_start = ref_traj_points_.front().s;
+  const auto &s_end = ref_traj_points_.back().s;
+
+  lat_decider_output.v_cruise =
+      (s_end - s_start) / (config_.delta_t * (ref_traj_points_.size() - 1));
 }
 
 void GeneralLateralDecider::GenerateEnuReferenceTheta(
