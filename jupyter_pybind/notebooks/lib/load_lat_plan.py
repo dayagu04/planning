@@ -131,8 +131,24 @@ class LoadCyberbag:
           json_data = {}
           LoadScalar(json_data, json_struct, "ego_pos_x")
           LoadScalar(json_data, json_struct, "ego_pos_y")
+          LoadScalar(json_data, json_struct, "ego_pos_yaw")
+
+          LoadScalar(json_data, json_struct, "init_pos_x")
+          LoadScalar(json_data, json_struct, "init_pos_y")
+          LoadScalar(json_data, json_struct, "init_pos_x0")
+          LoadScalar(json_data, json_struct, "init_pos_y0")
+          LoadScalar(json_data, json_struct, "init_pos_x1")
+          LoadScalar(json_data, json_struct, "init_pos_y1")
+          LoadScalar(json_data, json_struct, "init_flag")
+          LoadScalar(json_data, json_struct, "replan_flag")
+          LoadScalar(json_data, json_struct, "h2_error")
+          LoadScalar(json_data, json_struct, "reset_flag")
+          LoadScalar(json_data, json_struct, "replan_status")
+
+
           LoadVector(json_data, json_struct, "raw_refline_x_vec")
           LoadVector(json_data, json_struct, "raw_refline_y_vec")
+          LoadVector(json_data, json_struct, "traj_x_vec")
 
           self.plan_debug_msg['json'].append(json_data)
         except json.decoder.JSONDecodeError as jserr:
@@ -199,7 +215,11 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
 
-    coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+    # coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+    # FBI WARNING
+    json_pos_x = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['ego_pos_x']
+    json_pos_y = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['ego_pos_y']
+    coord_tf.set_info( json_pos_x, json_pos_y, cur_yaw)
 
     ego_xb, ego_yb = [], []
     ### global variables
@@ -399,11 +419,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   except:
     pass
 
-  # FBI WARNING
-  json_pos_x = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['ego_pos_x']
-  json_pos_y = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['ego_pos_y']
-  coord_tf.set_info( json_pos_x, json_pos_y, cur_yaw)
-
   ref_x, ref_y = coord_tf.global_to_local(bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_input.ref_x_vec, \
     bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_input.ref_y_vec)
 
@@ -450,6 +465,32 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     'x_vec': x_vec,
     'y_vec': y_vec,
   })
+
+  try:
+    print('init_flag = ', bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['init_flag'])
+    print('replan_flag = ', bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_flag'])
+    print('reset_flag = ', bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['reset_flag'])
+    # print('init_pos_x0 = ', bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['init_pos_x0'])
+    # print('init_pos_y0 = ', bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['init_pos_y0'])
+    print('init_pos_x = ', bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['init_pos_x'])
+    print('init_pos_y = ', bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['init_pos_y'])
+    # print('init_pos_x1 = ', bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['init_pos_x1'])
+    # print('init_pos_y1 = ', bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['init_pos_y1'])
+
+  except:
+    pass
+
+  h2_error = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['h2_error']
+  print("json_pos_x =", json_pos_x)
+  print("json_pos_y =", json_pos_y)
+  print("h2_error =", h2_error)
+
+
+  print("traj_x_vec =", bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['traj_x_vec'])
+  print("x_vec =", bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_output.x_vec)
+
+
+
 
 
   return local_view_data

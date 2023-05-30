@@ -1,8 +1,8 @@
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
 
 // #include "core/common/trace.h"
-#include "common/math/math_utils.h"
 #include "common/define/geometry.h"
+#include "common/math/math_utils.h"
 
 namespace planning {
 
@@ -123,7 +123,19 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
   }
 
   ego_planning_result.traj_points = dense_traj_points;
+
+  // record some results
+  ego_planning_result.traj_spline = frame_->mutable_session()
+                                        ->mutable_planning_context()
+                                        ->mutable_planning_result()
+                                        .traj_spline;
+
+  ego_planning_result.init_flag = frame_->mutable_session()
+                                      ->mutable_planning_context()
+                                      ->mutable_planning_result()
+                                      .init_flag;
+
   return true;
 }
 
-}  // namespace planning
+} // namespace planning

@@ -10,6 +10,7 @@
 #include "debug_info_log.h"
 #include "math_lib.h"
 #include "spline.h"
+#include "spline_projection.h"
 #include "tasks/task_pipeline_context.h"
 namespace planning {
 using namespace pnc;
@@ -20,88 +21,6 @@ EgoPlanningCandidate::EgoPlanningCandidate(planning::framework::Frame *frame) {
   auto config_builder = frame->session()->environmental_model().config_builder(
       frame_->session()->get_scene_type());
   config_ = config_builder->cast<EgoPlanningCandidateConfig>();
-}
-
-double EgoPlanningCandidate::CalProjectPoint(Eigen::Vector2d &current_pos) {
-  auto cart_ref_info = coarse_planning_info_.cart_ref_info;
-
-  // newton iteration to calculate projection point
-  Eigen::Vector2d proj_pos;
-
-  double s_proj = 0.0;
-  static const size_t newton_iter = 5;
-  static const double tol = 1e-3;
-  s_proj = 0.0;
-  auto const &x0 = current_pos.x();
-  auto const &y0 = current_pos.y();
-
-  // get s_proj
-  for (size_t i = 0; i < newton_iter; ++i) {
-    double xs = cart_ref_info.x_s_spline(s_proj);
-    double xs_derv_1st = cart_ref_info.x_s_spline.deriv(1, s_proj);
-    double xs_derv_2nd = cart_ref_info.x_s_spline.deriv(2, s_proj);
-
-    double ys = cart_ref_info.y_s_spline(s_proj);
-    double ys_derv_1st = cart_ref_info.y_s_spline.deriv(1, s_proj);
-    double ys_derv_2nd = cart_ref_info.y_s_spline.deriv(2, s_proj);
-
-    double deriv_1st = xs * xs_derv_1st + ys * ys_derv_1st - x0 * xs_derv_1st -
-                       y0 * ys_derv_1st;
-
-    double deriv_2nd = xs_derv_1st * xs_derv_1st + xs * xs_derv_2nd +
-                       ys_derv_1st * ys_derv_1st + ys * ys_derv_2nd -
-                       x0 * xs_derv_2nd - y0 * ys_derv_2nd;
-
-    if (mathlib::IsDoubleEqual(deriv_2nd, 0.0, 1e-9)) {
-      break;
-    }
-
-    double ds = -deriv_1st / deriv_2nd;
-
-    s_proj += ds;
-    s_proj = mathlib::Clamp(s_proj, cart_ref_info.s_vec.front(),
-                            cart_ref_info.s_vec.back());
-
-    // terminate when tol achived
-    if (std::fabs(ds) < tol) {
-      break;
-    }
-  }
-
-  // cal the euclidean distance between the projection point and the current pos
-  Eigen::Vector2d pos_proj(cart_ref_info.x_s_spline(s_proj),
-                           cart_ref_info.y_s_spline(s_proj));
-  double dist_proj = (pos_proj - current_pos).norm();
-
-  // first point of trajectory
-  Eigen::Vector2d first_pos(cart_ref_info.x_vec.front(),
-                            cart_ref_info.y_vec.front());
-  double dist_first = (first_pos - current_pos).norm();
-
-  // last point of trajectory
-  Eigen::Vector2d last_pos(cart_ref_info.x_vec.back(),
-                           cart_ref_info.y_vec.back());
-  double dist_last = (last_pos - current_pos).norm();
-
-  // FBI
-  uint8_t refline_state = 0;
-
-  // projection point can also be first (probably) or last point
-  if (dist_first < dist_proj && dist_first < dist_last) {
-    pos_proj = first_pos;
-    s_proj = cart_ref_info.s_vec.front();
-    refline_state = 1;
-  } else if (dist_last < dist_proj && dist_last < dist_first) {
-    pos_proj = last_pos;
-    s_proj = cart_ref_info.s_vec.back();
-    refline_state = 2;
-  }
-
-  proj_pos = pos_proj;
-
-  JSON_DEBUG_VALUE("refline_state", refline_state)
-
-  return s_proj;
 }
 
 void EgoPlanningCandidate::set_coarse_planning_info(
@@ -187,12 +106,15 @@ void EgoPlanningCandidate::set_coarse_planning_info(
   JSON_DEBUG_VALUE("ego_pos_x", ego_state->ego_pose().x)
   JSON_DEBUG_VALUE("ego_pos_y", ego_state->ego_pose().y)
   JSON_DEBUG_VALUE("ego_pos_yaw", ego_state->ego_pose().theta)
-
-  // FBI WARNING
-  init_pos << ego_state->ego_pose().x, ego_state->ego_pose().y;
+  JSON_DEBUG_VALUE("init_pos_x", init_pos.x())
+  JSON_DEBUG_VALUE("init_pos_y", init_pos.y())
 
   // start from project s
-  double s_ref = CalProjectPoint(init_pos);
+  pnc::spline::Projection projection_spline;
+  projection_spline.CalProjectionPoint(cart_ref_info.x_s_spline, cart_ref_info.y_s_spline,
+   cart_ref_info.s_vec.front(), cart_ref_info.s_vec.back(), init_pos);
+
+  double s_ref = projection_spline.GetOutput().s_proj;
 
   const auto &frenet_length = frenet_coord->GetLength();
 
@@ -373,4 +295,4 @@ void EgoPlanningCandidate::copy_to_planning_context() {
       ->mutable_planning_result() = planning_result_;
 }
 
-}  // namespace planning
+} // namespace planning

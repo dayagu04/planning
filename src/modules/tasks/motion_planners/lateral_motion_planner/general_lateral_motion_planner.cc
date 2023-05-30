@@ -77,6 +77,8 @@ void LateralMotionPlanner::Init() {
   theta_vec_.resize(N);
   delta_vec_.resize(N);
   omega_vec_.resize(N);
+  curv_vec.resize(N);
+  d_curv_vec.resize(N);
   s_vec_.resize(N);
 }
 
@@ -201,6 +203,9 @@ void LateralMotionPlanner::GeneratePlanningInput() {
   const auto &planning_init_point =
       reference_path_ptr_->get_frenet_ego_state().planning_init_point();
 
+  JSON_DEBUG_VALUE("init_pos_x1", planning_init_point.lat_init_state.x())
+  JSON_DEBUG_VALUE("init_pos_y1", planning_init_point.lat_init_state.y())
+
   planning_input_.mutable_init_state()->set_x(
       planning_init_point.lat_init_state.x());
 
@@ -270,6 +275,9 @@ void LateralMotionPlanner::GeneratePlanningOutput() {
     omega_vec_[i] = state_result->at(i)[pnc::lateral_planning::StateId::OMEGA];
     planning_output_.mutable_omega_vec()->Set(i, omega_vec_[i]);
 
+    curv_vec[i] = planning_input_.curv_factor() *
+                  state_result->at(i)[pnc::lateral_planning::StateId::DELTA];
+
     planning_output_.mutable_acc_vec()->Set(
         i, kv2 * planning_output_.delta_vec(i));
 
@@ -280,10 +288,16 @@ void LateralMotionPlanner::GeneratePlanningOutput() {
       planning_output_.mutable_omega_dot_vec()->Set(
           i,
           control_result->at(i)[pnc::lateral_planning::ControlId::OMEGA_DOT]);
+
+      d_curv_vec[i] =
+          planning_input_.curv_factor() *
+          control_result->at(i)[pnc::lateral_planning::ControlId::OMEGA_DOT];
     } else {
       planning_output_.mutable_omega_dot_vec()->Set(
           i, planning_output_.omega_dot_vec(i - 1));
-    };
+
+      d_curv_vec[i] = d_curv_vec[i - 1];
+    }
 
     if (i == 0) {
       s = 0.0;
@@ -307,6 +321,14 @@ void LateralMotionPlanner::GeneratePlanningOutput() {
   traj_spline.theta_s_spline.set_points(s_vec_, theta_vec_);
   traj_spline.delta_s_spline.set_points(s_vec_, delta_vec_);
   traj_spline.omega_s_spline.set_points(s_vec_, omega_vec_);
+  traj_spline.curv_s_spline.set_points(s_vec_, curv_vec);
+  traj_spline.d_curv_s_spline.set_points(s_vec_, d_curv_vec);
+
+  traj_spline.enable_flag = true;
+
+  traj_spline.x_vec = x_vec_;
+  traj_spline.y_vec = y_vec_;
+  traj_spline.s_vec = s_vec_;
 
   // assemble results
   const auto &v_cruise = frame_->session()
@@ -347,7 +369,7 @@ void LateralMotionPlanner::GeneratePlanningOutput() {
   frame_->mutable_session()
       ->mutable_planning_context()
       ->mutable_planning_result()
-      .init_flag = true;
+              .init_flag = true;
 }
 
 void LateralMotionPlanner::UpdateOneStepTrajectory() {}

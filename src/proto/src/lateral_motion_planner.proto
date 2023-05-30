@@ -8,6 +8,8 @@ message LateralInitState {
   optional double theta = 3;
   optional double delta = 4;
   optional double omega = 5;
+  optional double curv = 6;
+  optional double d_curv = 7;
 }
 
 message LateralPlanningInput {

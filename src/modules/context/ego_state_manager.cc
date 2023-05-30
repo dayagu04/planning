@@ -1,8 +1,14 @@
 #include "context/ego_state_manager.h"
 #include "common/utils/pose2d_utils.h"
 #include "common/trajectory/trajectory_stitcher.h"
+#include "debug_info_log.h"
+#include "spline_projection.h"
+#include <cmath>
+#include <cstdint>
 
 namespace planning {
+
+static const double planning_loop_dt = 0.1;
 
 EgoStateManager::EgoStateManager(planning::framework::Session *session)
     : session_(session) {
@@ -159,6 +165,107 @@ bool EgoStateManager::update(const planning::common::VehicleStatus &vehicle_stat
   return true;
 }
 
+void EgoStateManager::ResetProcess() {
+  const auto &ego_state =
+    session_->environmental_model().get_ego_state_manager();
+
+  auto &lat_init_state = planning_init_point_.lat_init_state;
+  auto &lon_init_state = planning_init_point_.lon_init_state;
+
+  lat_init_state.set_x(ego_state->ego_pose().x);
+  lat_init_state.set_y(ego_state->ego_pose().y);
+  lat_init_state.set_theta(ego_state->ego_pose().theta);
+
+  // TODO: need estimated delta and omega for large curv condition
+  lat_init_state.set_delta(0.0);
+  lat_init_state.set_omega(0.0);
+  lat_init_state.set_curv(0.0);
+  lat_init_state.set_d_curv(0.0);
+
+  // lon_init_state.set_s(0.0);
+  // lon_init_state.set_v(ego_state->ego_v());
+  // lon_init_state.set_a(ego_state->ego_acc());
+  // lon_init_state.set_j(0.0);
+}
+
+uint8_t EgoStateManager::ReplanProcess() {
+  const auto &ego_state =
+    session_->environmental_model().get_ego_state_manager();
+  const auto &traj_spline = session_->mutable_planning_context()
+                                ->mutable_planning_result()
+                                .traj_spline;
+  auto &lat_init_state = planning_init_point_.lat_init_state;
+  auto &lon_init_state = planning_init_point_.lon_init_state;
+
+  Eigen::Vector2d cur_pos(ego_state->ego_pose().x, ego_state->ego_pose().y);
+
+  pnc::spline::Projection projection_spline;
+  projection_spline.CalProjectionPoint(traj_spline.x_s_spline, traj_spline.y_s_spline,
+  traj_spline.s_vec.front(), traj_spline.s_vec.back(), cur_pos);
+
+  const double &lat_err = projection_spline.GetOutput().dist_proj;
+
+  // FBI WARNING
+  const double ds = ego_state->ego_v() * 0.8 * planning_loop_dt;
+  const double &lon_err = projection_spline.GetOutput().s_proj - (traj_spline.s_vec.front() + ds);
+
+  if (lat_err > 0.6) {
+    ResetProcess();
+    return ReplanStatus::LAT_REPLAN;
+  } else if (lon_err > 1.0) {
+    lat_init_state.set_x(projection_spline.GetOutput().point_proj.x());
+    lat_init_state.set_y(projection_spline.GetOutput().point_proj.y());
+    lat_init_state.set_theta(traj_spline.theta_s_spline(projection_spline.GetOutput().s_proj));
+
+    // TODO: need estimated delta and omega for large curv condition
+    lat_init_state.set_delta(0.0);
+    lat_init_state.set_omega(0.0);
+    lat_init_state.set_curv(0.0);
+    lat_init_state.set_d_curv(0.0);
+
+    // lon_init_state.set_s(0.0);
+    // lon_init_state.set_v(ego_state->ego_v());
+    // lon_init_state.set_a(ego_state->ego_acc());
+    // lon_init_state.set_j(0.0);
+
+    return ReplanStatus::LON_REPLAN;
+
+  } else {
+    return ReplanStatus::NONE;
+  }
+}
+
+bool EgoStateManager::StitchProcess() {
+
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  auto &lat_init_state = planning_init_point_.lat_init_state;
+  const auto &traj_spline = session_->mutable_planning_context()
+                                ->mutable_planning_result()
+                                .traj_spline;
+
+  // FBI WARNING
+  if (traj_spline.enable_flag) {
+    // const double s = traj_spline.s_t_spline(planning_loop_dt);
+    const double s = ego_state->ego_v() * 0.8 * planning_loop_dt;
+    lat_init_state.set_x(traj_spline.x_s_spline(s));
+    lat_init_state.set_y(traj_spline.y_s_spline(s));
+    lat_init_state.set_theta(traj_spline.theta_s_spline(s));
+    lat_init_state.set_delta(traj_spline.delta_s_spline(s));
+    lat_init_state.set_omega(traj_spline.omega_s_spline(s));
+    lat_init_state.set_curv(traj_spline.curv_s_spline(s));
+    lat_init_state.set_d_curv(traj_spline.d_curv_s_spline(s));
+
+    // lon_init_state.set_s(s);
+    // lon_init_state.set_v(traj_spline.v_t_spline(planning_loop_dt));
+    // lon_init_state.set_a(traj_spline.a_t_spline(planning_loop_dt));
+    // lon_init_state.set_j(traj_spline.j_t_spline(planning_loop_dt));
+    return true;
+  } else {
+    return false;
+  }
+}
+
 void EgoStateManager::update_planning_init_point() {
   stitch_trajectory_ = compute_stitching_trajectory();
   PncTrajectoryPoint init_point = stitch_trajectory_.back();
@@ -182,41 +289,44 @@ void EgoStateManager::update_planning_init_point() {
                                 ->mutable_planning_result()
                                 .traj_spline;
 
-  auto const &init_flag =
-      session_->mutable_planning_context()->mutable_planning_result().init_flag;
+  auto init_flag =
+      session_->planning_context().planning_result().init_flag;
 
   // FBI WARNING
   auto &lat_init_state = planning_init_point_.lat_init_state;
-  auto &lon_init_state = planning_init_point_.lon_init_state;
+
+  bool reset_flag = false;
+  uint8_t replan_status = ReplanStatus::NONE;
 
   if (!init_flag) {
-    lat_init_state.set_x(ego_state->ego_pose().x);
-    lat_init_state.set_y(ego_state->ego_pose().y);
-    lat_init_state.set_theta(ego_state->ego_pose().theta);
-
-    // TODO: need estimated delta and omega for large curv condition
-    lat_init_state.set_delta(0.0);
-    lat_init_state.set_omega(0.0);
-
-    lon_init_state.set_s(0.0);
-    lon_init_state.set_v(ego_state->ego_v());
-    lon_init_state.set_a(ego_state->ego_acc());
-    lon_init_state.set_j(0.0);
+    ResetProcess();
+    reset_flag = true;
   } else {
-    static const double planning_loop_dt = 0.1;
-    const double s = traj_spline.s_t_spline(planning_loop_dt);
-
-    lat_init_state.set_x(traj_spline.x_s_spline(s));
-    lat_init_state.set_y(traj_spline.y_s_spline(s));
-    lat_init_state.set_theta(traj_spline.theta_s_spline(s));
-    lat_init_state.set_delta(traj_spline.delta_s_spline(s));
-    lat_init_state.set_omega(traj_spline.omega_s_spline(s));
-
-    lon_init_state.set_s(s);
-    lon_init_state.set_v(traj_spline.v_t_spline(planning_loop_dt));
-    lon_init_state.set_a(traj_spline.a_t_spline(planning_loop_dt));
-    lon_init_state.set_j(traj_spline.j_t_spline(planning_loop_dt));
+    auto stitch_success = StitchProcess();
+    if (stitch_success) {
+      replan_status = ReplanProcess();
+    } else {
+      reset_flag = true;
+      ResetProcess();
+    }
   }
+
+  JSON_DEBUG_VALUE("replan_status", replan_status)
+  JSON_DEBUG_VALUE("reset_flag", reset_flag)
+
+
+  JSON_DEBUG_VECTOR("traj_x_vec", traj_spline.x_vec, 2)
+  JSON_DEBUG_VALUE("init_pos_x0", lat_init_state.x())
+  JSON_DEBUG_VALUE("init_pos_y0", lat_init_state.y())
+
+
+  // assebling init state
+  // planning_init_point_.x = lat_init_state.x();
+  // planning_init_point_.y = lat_init_state.y();
+  // planning_init_point_.heading_angle = lat_init_state.theta();
+  planning_init_point_.relative_time = planning_loop_dt;
+  // planning_init_point_.curvature = lat_init_state.curv();
+  // planning_init_point_.dkappa = lat_init_state.d_curv();
 }
 
 std::vector<PncTrajectoryPoint>

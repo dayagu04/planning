@@ -355,16 +355,23 @@ struct AdaptiveCruiseControlInfo {
 };
 
 struct TrajectorySpline {
+  bool enable_flag  = false;
   pnc::mathlib::spline x_s_spline;
   pnc::mathlib::spline y_s_spline;
   pnc::mathlib::spline theta_s_spline;
   pnc::mathlib::spline delta_s_spline;
   pnc::mathlib::spline omega_s_spline;
+  pnc::mathlib::spline curv_s_spline;
+  pnc::mathlib::spline d_curv_s_spline;
 
   pnc::mathlib::spline s_t_spline;
   pnc::mathlib::spline v_t_spline;
   pnc::mathlib::spline a_t_spline;
   pnc::mathlib::spline j_t_spline;
+
+  std::vector<double> x_vec;
+  std::vector<double> y_vec;
+  std::vector<double> s_vec;
 };
 
 struct PlanningResult {

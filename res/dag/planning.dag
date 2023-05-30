@@ -6,7 +6,7 @@ module_config {
     class_name : "PlanningComponent"
     config {
       name : "planning"
-      interval : 50
+      interval : 100
     }
   }
 }

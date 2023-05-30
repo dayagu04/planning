@@ -19,6 +19,12 @@ class EgoStateManager {
   EgoStateManager(framework::Session *session);
   ~EgoStateManager() = default;
 
+  enum ReplanStatus {
+    NONE,
+    LAT_REPLAN,
+    LON_REPLAN,
+  };
+
   bool update(const planning::common::VehicleStatus &vehicle_status);
   void set_ego_carte(const Point2D &ego_carte);
 
@@ -95,6 +101,9 @@ class EgoStateManager {
  private:
   void update_transform();
   void update_planning_init_point();
+  void ResetProcess();
+  uint8_t ReplanProcess();
+  bool StitchProcess();
   std::vector<PncTrajectoryPoint> compute_stitching_trajectory();
   void set_timestamp_us(const planning::common::VehicleStatus &vehicle_status);
 

@@ -23,8 +23,6 @@ class EgoPlanningCandidate {
   void set_last_planning_result(
       const std::shared_ptr<PlanningResult> &planning_result);
 
-  double CalProjectPoint(Eigen::Vector2d &current_pos);
-
   // check and refine
   bool pre_check();
   void refine(const std::shared_ptr<TaskPipeline> &task_pipeline);

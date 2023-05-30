@@ -55,6 +55,8 @@ private:
   std::vector<double> theta_vec_;
   std::vector<double> delta_vec_;
   std::vector<double> omega_vec_;
+  std::vector<double> curv_vec;
+  std::vector<double> d_curv_vec;
   std::vector<double> s_vec_;
   double v_cruise_ = 0.0;
 };

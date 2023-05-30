@@ -75,9 +75,9 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   frame_ = frame;
 
   auto current_time = IflyTime::Now_ms();
-  
+
   auto &local_view = session_->environmental_model().get_local_view();
-  
+
   //todo 后续加入车道线，障碍物的local_point是否有效
   auto location_valid = local_view.localization_estimate.msf_status().available() &&
       local_view.localization_estimate.msf_status().msf_status() !=
@@ -275,7 +275,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
   //               ->set_value_mps(hmi_mcu_inner_info.acc_set_disp_speed());
 
   vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
-      4.0);
+      ego_state_manager_ptr_->ego_v() * 0.8);
 
   if (vehicel_service_output_info.vehicle_speed_available()) {
     vehicle_status.mutable_velocity()->set_available(true);
