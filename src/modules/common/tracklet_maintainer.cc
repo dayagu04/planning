@@ -1476,7 +1476,7 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
     double gap = (item.last_recv_time == 0.0)
                      ? planning_cycle_time
                      : (curr_time - item.last_recv_time);
-    LOG_DEBUG("the gap is : [%f]s \n", gap);
+    LOG_DEBUG("the gap is : [%f]ms \n", gap);
     if (d_path < lead_d_path_thr && item.d_rel > 0.0) {
       item.leadone_confidence_cnt =
           std::min(item.leadone_confidence_cnt + gap, 50 * planning_cycle_time);

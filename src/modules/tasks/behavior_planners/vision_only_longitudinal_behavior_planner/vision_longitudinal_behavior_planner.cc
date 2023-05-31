@@ -62,7 +62,7 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   }
 
   if (lane_tracks_mgr_ == nullptr) {
-    lane_tracks_mgr_ = std::make_shared<LaneTracksManager>(
+    lane_tracks_mgr_ = std::make_shared<LaneTracksManager>( 
         *lateral_obstacle, *virtual_lane_mgr_, frame_->mutable_session());
   }
   // modify
@@ -1273,9 +1273,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(
     // get target line tarcks
     if (lane_change_lane_manager->has_target_lane()) {
       std::vector<TrackedObject> *front_target_tracks =
-          // modify
-          // lane_tracks_mgr_->get_lane_tracks(TARGET_LANE, FRONT_TRACK);
-          lane_tracks_mgr_->get_lane_tracks(2, 0);
+        lane_tracks_mgr_->get_lane_tracks(lane_change_lane_manager->tlane_virtual_id(), FRONT_TRACK);
       for (auto &track : *front_target_tracks) {
         // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle
         if (track.type == 0) {
@@ -1284,9 +1282,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(
         lane_changing_cars.push_back(&track);
       }
       std::vector<TrackedObject> *side_target_tracks =
-          // modify
-          // lane_tracks_mgr_->get_lane_tracks(TARGET_LANE, FRONT_TRACK);
-          lane_tracks_mgr_->get_lane_tracks(2, 1);
+        lane_tracks_mgr_->get_lane_tracks(lane_change_lane_manager->tlane_virtual_id(), FRONT_TRACK);
       for (auto &track : *side_target_tracks) {
         // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle
         if (track.type == 0) {
@@ -1305,19 +1301,12 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(
         false, lane_changing_params, lc_end_dis, lane_changing_cars, lead_one,
         v_ego);
 
-    auto planning_status = frame_->mutable_session()
-                               ->mutable_planning_output_context()
-                               ->mutable_planning_status();
-    planning::framework::Frame decider_frame;
-    decider_frame.mutable_session()
-        ->mutable_planning_output_context()
-        ->mutable_planning_status()
-        ->lane_status.status = planning_status->lane_status.status;
-    decider_frame.mutable_session()
+    frame_->mutable_session()
         ->mutable_planning_output_context()
         ->mutable_planning_status()
         ->v_limit = std::min(v_target, v_cruise);
-    lane_changing_decider_->process(&decider_frame);
+    lane_changing_decider_->set_frame(frame_);  
+    lane_changing_decider_->process();
 
     available_gap = lane_changing_decider_->get_gap_list();
     if (available_gap.size() > 0) {

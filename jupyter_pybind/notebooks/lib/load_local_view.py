@@ -482,14 +482,22 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   ### step 3: 加载planning轨迹信息
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
-    if trajectory.trajectory_type == 0:
-      planning_polynomial = trajectory.target_reference.polynomial
-      planning_x, planning_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
-      local_view_data['data_planning'].data.update({
-        'planning_y' : planning_y,
-        'planning_x' : planning_x,
-      })
-
+    try:
+      if trajectory == []:
+        print('planning trajectory is empty')
+      else: 
+        # 实时的轨迹
+        if trajectory.trajectory_type == 0: 
+          planning_polynomial = trajectory.target_reference.polynomial
+          # print(planning_polynomial)
+          planning_x, planning_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
+          local_view_data['data_planning_trajectory'].data.update({
+            'planning_y' : planning_y,
+            'planning_x' : planning_x,
+          })
+    except:
+      pass
+  
   # 加载prediction_msg
   if bag_loader.prediction_msg['enable'] == True:
     prediction_info = bag_loader.prediction_msg['data'][pred_msg_idx]

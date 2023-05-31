@@ -13,7 +13,7 @@ using namespace planning_math;
 LaneReferencePath::LaneReferencePath(int target_lane_virtual_id) : ReferencePath() {
   lane_virtual_id_ = target_lane_virtual_id;
   // update();
-  LOG_DEBUG("lane_reference_path: target_lane_virtual_id: %d \n", target_lane_virtual_id);
+  LOG_DEBUG("construct lane_reference_path: target_lane_virtual_id: %d\n", target_lane_virtual_id);
 }
 
 void LaneReferencePath::update(planning::framework::Session *session) {

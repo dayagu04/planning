@@ -182,7 +182,7 @@ Obstacle::Obstacle(int id,
   // LOG_DEBUG("obstacle[%d] last polygon size : %d", polygon_points.size());
   if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
                                                      &obstacle_ego_polygon_)) {
-    LOG_DEBUG("polygon_debug invalid ego polygon");
+    LOG_DEBUG("polygon_debug invalid ego polygon\n");
   }
   is_virtual_ = id_ < 0;
 

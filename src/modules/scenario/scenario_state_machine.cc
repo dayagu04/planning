@@ -1256,5 +1256,10 @@ void ScenarioStateMachine::generate_state_machine_output(
   state_machine_output.near_cars_origin = near_cars_origin_;
   state_machine_output.lc_invalid_track = lc_invalid_track_;
   state_machine_output.lc_back_track = lc_back_track_;
+
+  state_machine_output.lc_valid_cnt = lc_valid_cnt_;
+  state_machine_output.lc_back_cnt = lc_back_cnt_;
+  state_machine_output.is_lc_valid = lc_valid_;
+  state_machine_output.lc_back_invalid_reason = invalid_back_reason_;
 }
 }  // namespace planning

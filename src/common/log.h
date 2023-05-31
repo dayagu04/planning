@@ -3,7 +3,7 @@
 #include <chrono>
 #include "iostream"
 
-#ifndef LINUX
+#ifndef X86
 #include "Nanolog/NanoLogCpp17.h"
 #endif
 
@@ -26,7 +26,7 @@ enum LogLevel
 
 
 
-#ifndef LINUX
+#ifndef X86
 class Log
 {
 public:
@@ -71,7 +71,7 @@ private:
 };
 #endif
 //bst::Log::getInstance().getModulePointer(),
-#ifndef LINUX
+#ifndef X86
     #define LOG_BST_RELEASE(severity, format, ...) do { \
         NANO_LOG(severity, CONCAT(format),  bst::Log::getInstance().getModuleName(), ##__VA_ARGS__); \
     } while(0)

@@ -85,7 +85,7 @@ void FrenetEgoState::update(
                 cstate, planning_init_point_.frenet_state) == TRANSFORM_SUCCESS;
   LOG_DEBUG(
       "planning_init_point: rel_t: %f, x: %f, y: %f, yaw: %f, v: %f, a: %f, s: %f, l: %f, dr/ds: %f, dds/drdr: %f | \
-           ego_pose: x: %f, y: %F, s: %f, l: %f",
+           ego_pose: x: %f, y: %F, s: %f, l: %f\n",
       planning_init_point_.relative_time, cstate.x, cstate.y, cstate.yaw,
       planning_init_point_.v, planning_init_point_.a,
       planning_init_point_.frenet_state.s, planning_init_point_.frenet_state.r,

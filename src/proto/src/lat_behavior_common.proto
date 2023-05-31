@@ -12,9 +12,7 @@ message LatBehaviorCommon {
   optional bool lc_valid_back = 8;
   optional int32 lc_back_obj_id = 9;
   optional int32 lc_back_cnt = 10;
-  // optional string lc_back_reason = 11;
-  optional string lc_back_invalid_reason = 11;
-
+  optional string lc_back_reason = 11;
   repeated int32 near_car_ids_origin = 12;
   repeated int32 near_car_ids_target = 13;
 
@@ -37,6 +35,12 @@ message LatBehaviorCommon {
   optional bool enable_left_lc = 33;
   optional bool enable_right_lc = 34;
 
-  optional string turn_light = 35;
-  optional string turn_light_source = 36;
+  optional int32 turn_light = 35;
+  optional int32 map_turn_light = 36;
+  optional int32 lc_request = 37;
+  optional int32 lc_request_source = 38;
+  optional int32 lc_turn_light = 39;
+  optional string act_request_source = 40;
+  optional string lc_back_invalid_reason = 41;
+
 }

@@ -107,7 +107,7 @@ class ReferencePath {
   void update_refpath_points(ReferencePathPoints &raw_reference_path_points, bool is_need_density = false);
   void densifying_refined_path_points(ReferencePathPoints &refined_ref_path_points);
   bool get_reference_point_by_lon_from_raw_ref_path_points(
-      double s, ReferencePathPoint &reference_path_point, const ReferencePathPoints &raw_reference_path_point);
+      double s, const ReferencePathPoints &raw_reference_path_point, ReferencePathPoint &reference_path_point);
   void discrete(double start, double end, double gap,
                 std::vector<double> &output) {
     output.clear();

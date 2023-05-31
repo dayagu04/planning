@@ -119,7 +119,7 @@ void RoadState::None::get_state_transition_candidates(
   auto lc_lane_manager = std::make_shared<LaneChangeLaneManager>(
       state_machine->get_lane_change_lane_manager());
 
-  RequestType lc_request = lc_req_manager->request();
+   RequestType lc_request = lc_req_manager->request();
   int target_lane_virtual_id = lc_req_manager->target_lane_virtual_id();
   std::vector<int> overtake_obstacles;
   std::vector<int> yield_obstacles;

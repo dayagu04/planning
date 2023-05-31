@@ -6,7 +6,7 @@
 #include "common/prediction_object.h"
 #include "common/tracked_object.h"
 #include "common/tracklet_maintainer.h"
-
+#include "common/config/basic_type.h"
 
 #include <utility>
 
@@ -113,7 +113,7 @@ public:
   const std::vector<TrackedObject> &front_tracks_c() const { return front_tracks_clane_; }
   const std::vector<TrackedObject> &get_front_tracks() const { return lateral_obstacle_.front_tracks(); }
   const std::vector<TrackedObject> &get_side_tracks() const { return lateral_obstacle_.side_tracks(); }
-  std::vector<TrackedObject> *get_lane_tracks(int lane, int track_type);
+  std::vector<TrackedObject> *get_lane_tracks(int lane, TrackType track_type);
 
   // std::pair<int, double> get_vavg_poi_int(int side, double bound, double poi_back_limit, double poi_front_limit);
   // std::pair<int, pair<double, double>> get_vavg_poi(int side, double, double);
@@ -125,8 +125,9 @@ public:
   void update() { lane_tracks_update_.clear(); }
 
 private:
-  void update_lane_tracks(int track_type, int position);
-
+  void reset();
+  void update_lane_tracks();
+  
   std::set<std::tuple<int, int>> lane_tracks_update_;
   std::vector<TrackedObject> front_tracks_clane_;
   std::vector<TrackedObject> front_tracks_llane_;

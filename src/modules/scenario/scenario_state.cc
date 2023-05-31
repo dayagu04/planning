@@ -23,7 +23,7 @@ void StateBase::process(Control &control, FsmContext &context) {
     return;
   }
 
-  LOG_DEBUG("[StateBase] entering process");
+  LOG_DEBUG("[StateBase] entering process\n");
   auto start_time = IflyTime::Now_ms();
 
   // Step 1) get state transition candidates
@@ -132,32 +132,32 @@ void StateBase::process(Control &control, FsmContext &context) {
     }
     change_state(next_state, control, context);
     context.state = next_state;
-    // TODO(Rui):fix me  与上面的命名一致
-    auto lat_behavior_state_machine_output =
-        context.frame->mutable_session()
-            ->mutable_planning_context()
-            ->mutable_lat_behavior_state_machine_output();
-    lat_behavior_state_machine_output.fix_lane_virtual_id =
-        lane_change_lane_manager->flane_virtual_id();
-    lat_behavior_state_machine_output.origin_lane_virtual_id =
-        lane_change_lane_manager->olane_virtual_id();
-    lat_behavior_state_machine_output.target_lane_virtual_id =
-        lane_change_lane_manager->tlane_virtual_id();
   }
 
+  // TODO(Rui):fix me  与上面的命名一致
+  auto &lat_behavior_state_machine_output =
+      context.frame->mutable_session()
+          ->mutable_planning_context()
+          ->mutable_lat_behavior_state_machine_output();
+  lat_behavior_state_machine_output.fix_lane_virtual_id =
+      lane_change_lane_manager->flane_virtual_id();
+  lat_behavior_state_machine_output.origin_lane_virtual_id =
+      lane_change_lane_manager->olane_virtual_id();
+  lat_behavior_state_machine_output.target_lane_virtual_id =
+      lane_change_lane_manager->tlane_virtual_id();
+
   {
-    const auto &state_machine_output = context.frame->session()
-                                           ->planning_context()
-                                           .lat_behavior_state_machine_output();
-    auto &debug_info_manager = DebugInfoManager::GetInstance();
-    auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
-    auto lat_behavior_common =
-        planning_debug_data->mutable_lat_behavior_common();
-    lat_behavior_common->set_lc_invalid_obj_id(
-        state_machine_output.lc_invalid_track.track_id);
-    lat_behavior_common->set_lc_back_obj_id(
-        state_machine_output.lc_back_track.track_id);
-    // lat_behavior_common->set_lc_back_reason(state_machine_output.lc_back_reason);
+
+    const auto &state_machine_output =
+      context.frame->session()->planning_context().lat_behavior_state_machine_output();
+    auto& debug_info_manager = DebugInfoManager::GetInstance();
+    auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();  
+    auto lat_behavior_common = planning_debug_data->mutable_lat_behavior_common();
+    lat_behavior_common->set_lc_invalid_obj_id(state_machine_output.lc_invalid_track.track_id);
+    lat_behavior_common->set_lc_back_obj_id(state_machine_output.lc_back_track.track_id);
+    lat_behavior_common->set_lc_invalid_reason(state_machine_output.lc_invalid_reason);
+    lat_behavior_common->set_lc_back_reason(state_machine_output.lc_back_reason);
+    lat_behavior_common->set_lc_back_invalid_reason(state_machine_output.lc_back_invalid_reason);
     lat_behavior_common->near_car_ids_origin().Clear();
     for (auto &near_car_origin : state_machine_output.near_cars_origin) {
       lat_behavior_common->add_near_car_ids_origin(near_car_origin.track_id);
@@ -178,16 +178,23 @@ void StateBase::process(Control &control, FsmContext &context) {
     for (auto id : state_machine_output.right_alc_car) {
       lat_behavior_common->add_right_alc_car_ids(id);
     }
-    lat_behavior_common->set_is_forbid_left_alc_car(
-        state_machine_output.neg_left_alc_car);
-    lat_behavior_common->set_is_forbid_right_alc_car(
-        state_machine_output.neg_right_alc_car);
-    lat_behavior_common->set_fix_lane_virtual_id(
-        state_machine_output.fix_lane_virtual_id);
-    lat_behavior_common->set_origin_lane_virtual_id(
-        state_machine_output.origin_lane_virtual_id);
-    lat_behavior_common->set_target_lane_virtual_id(
-        state_machine_output.target_lane_virtual_id);
+    lat_behavior_common->set_is_forbid_left_alc_car(state_machine_output.neg_left_alc_car);
+    lat_behavior_common->set_is_forbid_right_alc_car(state_machine_output.neg_right_alc_car);
+    lat_behavior_common->set_fix_lane_virtual_id(state_machine_output.fix_lane_virtual_id);
+    lat_behavior_common->set_origin_lane_virtual_id(state_machine_output.origin_lane_virtual_id);
+    lat_behavior_common->set_target_lane_virtual_id(state_machine_output.target_lane_virtual_id);
+
+    lat_behavior_common->set_turn_light(state_machine_output.turn_light);
+    lat_behavior_common->set_map_turn_light(state_machine_output.map_turn_light);
+    lat_behavior_common->set_lc_request(state_machine_output.lc_request);
+    lat_behavior_common->set_lc_request_source(state_machine_output.lc_request_source);
+    lat_behavior_common->set_lc_turn_light(state_machine_output.lc_turn_light);
+    lat_behavior_common->set_act_request_source(state_machine_output.act_request_source);
+
+    lat_behavior_common->set_is_lc_valid(state_machine_output.is_lc_valid);
+    lat_behavior_common->set_lc_valid_cnt(state_machine_output.lc_valid_cnt);
+    lat_behavior_common->set_lc_back_cnt(state_machine_output.lc_back_cnt);
+    
   }
 
   LOG_DEBUG("[StateBase] evaluate success");

@@ -77,6 +77,12 @@ double ObjectSelector::get_vrel_close(int side, int status) {
   bool left_direct_has_straight = true;
   bool right_direct_has_straight = true;
 
+  if ((side == -1 && llane == nullptr) || (side == 1 && rlane == nullptr) || side > 1 || side < -1) {
+    LOG_ERROR("[LaneTracksManager::get_vrel_close] Illegal side[%d] argument \n",
+              side);
+    return v_rel_close;
+  }
+
   if (tlane == nullptr || tlane->get_virtual_id() != flane->get_virtual_id()) {
     if (lead_cars.lead_one != nullptr) {
       fvf_drel_confident = lead_cars.lead_one->d_rel + std::max(30., lead_cars.lead_one->v_lead * 5.) ;
@@ -88,30 +94,19 @@ double ObjectSelector::get_vrel_close(int side, int status) {
     }
   }
 
+  auto lane = clane;
+  if (side == -1) {
+    lane = llane;
+  } else if (side == 1) {
+    lane = rlane;
+  }
+  
   for (TrackedObject obstacle : lateral_obstacle->front_tracks()) {
     auto &obj_tmp = obstacle;
-    if (side == 0) {
-      int clane_leadone_id = clane->get_reference_path()->get_lane_leadone_obstacle();
-      if (obj_tmp.track_id == clane_leadone_id) {
-        front_tracks.push_back(obj_tmp);
-        break;
-      }
-    } else if (side == -1 && llane != nullptr) {
-      int llane_leadone_id = llane->get_reference_path()->get_lane_leadone_obstacle();
-      if (obj_tmp.track_id == llane_leadone_id) {
-        front_tracks.push_back(obj_tmp);
-        break;
-      }
-    } else if (side == 1 && rlane != nullptr) {
-      int rlane_leadone_id = rlane->get_reference_path()->get_lane_leadone_obstacle();
-      if (obj_tmp.track_id == rlane_leadone_id) {
-        front_tracks.push_back(obj_tmp);
-        break;
-      }
-    } else {
-      LOG_ERROR(
-              "[LaneTracksManager::get_vrel_close] Illegal side[%d] argument \n",
-              side);
+    int leadone_id = lane->get_reference_path()->get_lane_leadone_obstacle();
+    if (obj_tmp.track_id == leadone_id) {
+      front_tracks.push_back(obj_tmp);
+      break;
     }
   }
 

@@ -30,7 +30,7 @@ void VisionOnlyLaneChangeDecider::feed_config_and_target_cars(
   v_ego_ = v_ego;
 }
 
-bool VisionOnlyLaneChangeDecider::process(planning::framework::Frame *frame) {
+bool VisionOnlyLaneChangeDecider::process() {
   LOG_NOTICE("----VisionOnlyLaneChangeDecider::process---- \n");
  /*  context_.mutable_planning_status()->lane_status.status =
       context.planning_status().lane_status.status;
@@ -45,7 +45,7 @@ bool VisionOnlyLaneChangeDecider::process(planning::framework::Frame *frame) {
   // cur_lane_.clear();
   // target_lane_.clear();
 
-  const auto &planning_status = frame->session()->planning_output_context().planning_status();
+  const auto &planning_status = frame_->session()->planning_output_context().planning_status();
 
   // only enable in lane change preparation stage
   // if (planning_status.lane_status.status != LaneStatus::Status::LANE_CHANGE
@@ -59,7 +59,7 @@ bool VisionOnlyLaneChangeDecider::process(planning::framework::Frame *frame) {
   // }
   // current_lane_id_ = planning_status.lane_status.target_lane_id;
   // dis_to_change_point_ = std::numeric_limits<double>::max();
-  const auto current_v_lane = frame->session()->environmental_model().get_virtual_lane_manager()->get_current_lane();
+  const auto current_v_lane = frame_->session()->environmental_model().get_virtual_lane_manager()->get_current_lane();
   // bool is_in_dash_line = false;
   // if (planning_status.lane_status.change_lane.direction == "left") {
   //   lane_change_direction_ = 1;
@@ -82,7 +82,7 @@ bool VisionOnlyLaneChangeDecider::process(planning::framework::Frame *frame) {
   // }
   // LOG_NOTICE("gap debug dis %f", dis_to_change_point_);
   // dis_to_change_point_ = map_info.lc_end_dis();
-  lc_map_decision_ = frame->session()->environmental_model().get_virtual_lane_manager()->lc_map_decision(current_v_lane);
+  lc_map_decision_ = frame_->session()->environmental_model().get_virtual_lane_manager()->lc_map_decision(current_v_lane);
   current_lane_type_ = current_v_lane->get_lane_type();
 
   v_limit_ = planning_status.v_limit;
@@ -297,7 +297,7 @@ bool VisionOnlyLaneChangeDecider::process(planning::framework::Frame *frame) {
   //     }
   //   }
   // }
-  frame->mutable_session()->mutable_planning_output_context()->mutable_planning_status()->lane_status.change_lane.target_gap_obs =
+  frame_->mutable_session()->mutable_planning_output_context()->mutable_planning_status()->lane_status.change_lane.target_gap_obs =
       target_gap_;
   return true;
 }

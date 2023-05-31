@@ -87,8 +87,7 @@ class PlanningContext {
 
   LatBehaviorInfo &mutable_lat_behavior_info() { return lat_behavior_info_; }
 
-  const LatBehaviorStateMachineOutput &lat_behavior_state_machine_output()
-      const {
+  const LatBehaviorStateMachineOutput &lat_behavior_state_machine_output() const {
     return lat_behavior_state_machine_output_;
   }
 

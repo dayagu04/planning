@@ -8,7 +8,8 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/docker_share/data/clren/code/new_planning_3/planning/20230526171536.record.00000"
+bag_path = "/docker_share/data/clren/bag/planning_bag/20230530150709.record.00000"
+# bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -48,6 +49,10 @@ data_fix_lane = ColumnDataSource({
   'fixlane_y':[],
   'fixlane_x':[]
 })
+data_avd_cars = ColumnDataSource({
+  'pos_y':[],
+  'pos_x':[]
+})
 columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
@@ -56,6 +61,7 @@ data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=400
 data_behavior_table = DataTable(source=behavior_data, columns=columns, width=400, height=800)
 fig1.line('d_poly_y', 'd_poly_x', source = data_d_poly, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'd_poly')
 fig1.line('fixlane_y', 'fixlane_x', source = data_fix_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
+fig1.circle('pos_y', 'pos_x', source = data_avd_cars, color='red',radius=1,fill_color='yellow',line_color='green',fill_alpha = 0.3, legend_label = 'avoid_car')
 # 障碍物id的文本框的回调函数
 def obj_id_handler(id):
   global obj_id
@@ -104,15 +110,15 @@ def obj_id_handler(id):
     
   push_notebook()  
 
-
-def update_behavior_data(lat_behavior_common):
+def update_data(lat_behavior_common, vo_lat_motion_plan):
   vars = ['fix_lane_virtual_id','target_lane_virtual_id','origin_lane_virtual_id',\
-          'lc_request','lc_request_source','lc_status','is_lc_valid','lc_valid_cnt','lc_invalid_obj_id','lc_invalid_reason',\
+          'lc_request','lc_request_source','turn_light','map_turn_light','lc_turn_light','act_request_source','lc_back_invalid_reason','lc_status',\
+            'is_lc_valid','lc_valid_cnt','lc_invalid_obj_id','lc_invalid_reason',\
       'lc_valid_back','lc_back_obj_id','lc_back_cnt','lc_back_invalid_reason',\
-        'turn_light','turn_light_source','v_relative_left_lane','is_faster_left_lane','faster_left_lane_cnt','v_relative_right_lane',\
+        'v_relative_left_lane','is_faster_left_lane','faster_left_lane_cnt','v_relative_right_lane',\
           'is_faster_right_lane','faster_right_lane_cnt','is_forbid_left_alc_car','is_forbid_right_alc_car',\
             'is_side_borrow_bicycle_lane','is_side_borrow_lane','has_origin_lane',\
-              'has_target_lane','enable_left_lc','enable_right_lc','lc_back_reason']
+              'has_target_lane','enable_left_lc','enable_right_lc','lc_back_reason', ]
   # 'near_car_ids_origin','near_car_ids_target', 'left_alc_car_ids','right_alc_car_ids', ,'avoid_car_ids','avoid_car_allow_max_opposite_offset'
   names  = []
   datas = []
@@ -123,6 +129,13 @@ def update_behavior_data(lat_behavior_common):
       names.append(name)
     except:
       pass
+  
+  # 横向运动规划offset 可视化
+  names.append('premove_dpoly_c0')
+  names.append('avoid_dpoly_c0')
+  basic_dpoly = vo_lat_motion_plan.basic_dpoly
+  datas.append(vo_lat_motion_plan.premove_dpoly_c0 - basic_dpoly[3])
+  datas.append(vo_lat_motion_plan.avoid_dpoly_c0 - basic_dpoly[3])
   # print(vo_lat_behavior_plan.avoid_car_ids)
   behavior_data.data.update({
     'name': names,
@@ -132,11 +145,12 @@ def update_behavior_data(lat_behavior_common):
 
 def slider_callback(bag_time):
   global plan_debug_msg_idx
-  update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
+  local_view_data_ = update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
   plan_debug_msg_idx = 0
   if bag_loader.plan_debug_msg['enable'] == True:
     while bag_loader.plan_debug_msg['t'][plan_debug_msg_idx] <= bag_time and plan_debug_msg_idx < (len(bag_loader.plan_debug_msg['t'])-2):
         plan_debug_msg_idx = plan_debug_msg_idx + 1
+  
   obj_id_handler(obj_id)
   if bag_loader.plan_debug_msg['enable'] == True:
     vo_lat_motion_plan = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].vo_lat_motion_plan
@@ -147,11 +161,32 @@ def slider_callback(bag_time):
     #   'd_poly_x':d_poly_x
     # })
     
-    
     lat_behavior_common = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lat_behavior_common
-    update_behavior_data(lat_behavior_common)
+    update_data(lat_behavior_common, vo_lat_motion_plan)
+
+    lat_behavior_plan = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].vo_lat_behavior_plan
+    
+    # 可视化avoid cars
+    pos_y_rels = []
+    pos_x_rels = []
+    for id in lat_behavior_plan.avoid_car_ids:
+      tmp_str = '(' + str(id) + ')'
+      for index, obs_label in enumerate(local_view_data_['data_snrd_obj'].data['obs_label']):
+        if tmp_str in obs_label:
+          pos_x_rel = local_view_data_['data_snrd_obj'].data['pos_x_rel'][index]
+          pos_y_rel = local_view_data_['data_snrd_obj'].data['pos_y_rel'][index]
+          pos_y_rels.append(pos_y_rel)
+          pos_x_rels.append(pos_x_rel)
+          break
+      # print('avoid obstacle: ', id)
+    data_avd_cars.data.update({
+      'pos_y':pos_y_rels,
+      'pos_x':pos_x_rels,
+    })
+    
   push_notebook()
 
-bkp.show(row(fig1, data_obstacle_table, data_behavior_table), notebook_handle=True)
+
+bkp.show(row(fig1,data_obstacle_table,data_behavior_table), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
 slider_class = ObjText(obj_id_handler)

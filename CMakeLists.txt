@@ -23,7 +23,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
 else()
   # debug mode
   message("Building in Debug mode")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -DLINUX")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -DX86")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
   add_subdirectory(src)
   add_subdirectory(test)

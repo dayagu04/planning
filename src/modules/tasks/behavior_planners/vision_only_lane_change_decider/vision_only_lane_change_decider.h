@@ -27,6 +27,7 @@ public:
   // void set_v_limit(double v_limit) { v_limit_ = v_limit; }
   // void set_mode(bool called_in_state_machine) { called_in_state_machine_ =
   // called_in_state_machine; }
+  void set_frame(framework::Frame *frame) { frame_ = frame; }
   std::pair<int, int> get_target_gap() { return target_gap_; }
   std::vector<GapInfo> get_gap_list() { return gap_list_; }
   double get_target_gap_cost() { return target_gap_cost_; }
@@ -38,7 +39,7 @@ public:
 
   TargetObstacle nearest_rear_car_track() { return nearest_rear_car_track_; };
 
-  bool process(planning::framework::Frame *frame);
+  bool process();
 
 private:
   bool is_on_target(const FrenetObstacleBoundary &sl_boundary);
@@ -88,8 +89,6 @@ private:
   int current_lane_id_;
   int leader_car_id_;
 
-  //planning::framework::Frame *frame_ = nullptr;
-
   std::vector<TrackedObject *> target_cars_;
   const TrackedObject *lead_one_ = nullptr;
   TargetObstacle nearest_rear_car_track_{-1, DBL_MAX, DBL_MAX};
@@ -97,6 +96,7 @@ private:
   bool is_merging_ = false;
 
   LaneChangeParams params_;
+  framework::Frame *frame_ = nullptr;
 };
 
 } // namespace planning

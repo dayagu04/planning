@@ -456,6 +456,11 @@ struct FrenetObstacleBoundary {
   double l_end{std::numeric_limits<double>::lowest()};
 };
 
+enum TrackType {
+  SIDE_TRACK,
+  FRONT_TRACK
+};
+
 enum CurrentState {
   INIT = 0,
   LANE_KEEPING,

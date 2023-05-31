@@ -17,6 +17,7 @@
 #include "environmental_model_manager.h"
 #include "log.h"
 #include "planning_config.pb.h"
+#include "prediction.pb.h"
 #include "vehicle_service.pb.h"
 #include "vehicle_status.pb.h"
 
@@ -82,7 +83,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   auto location_valid = local_view.localization_estimate.msf_status().available() &&
       local_view.localization_estimate.msf_status().msf_status() !=
           LocalizationOutput::MsfStatus::ERROR;
-  session_->mutable_environmental_model()->set_location_valid(location_valid);
+  // session_->mutable_environmental_model()->set_location_valid(false);
   // Step 1) update vehicleDbwStatus
   session_->mutable_environmental_model()->UpdateVehicleDbwStatus(
     local_view.hmi_mcu_inner_info.noa_active_switch());
@@ -369,15 +370,23 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
     cur_predicion_obj.id = prediction_object.fusion_obstacle().additional_info().track_id();
     prediction_obj_id_set.emplace(cur_predicion_obj.id);
     cur_predicion_obj.type = prediction_object.fusion_obstacle().common_info().type();
-    // cur_predicion_obj.timestamp_us = prediction_object.header().timestamp_us();
-    // double prediction_relative_time = clip(prediction_object.header().timestamp_us() / 1.e+6 - current_time - init_relative_time,
-    //                                      0.0, -1.0);
-    // if (std::abs(prediction_relative_time) > 0.3) {
-    //   LOG_DEBUG("[prediction delay time] obstacle[%d] absolute start time %f relative time %f start time %f init_relative_time %f", prediction_object.id,
-    //     prediction_object.header().timestamp_us(), prediction_object.header().timestamp_us() / 1.e+6 - current_time, prediction_relative_time, init_relative_time);
-    // }
-    // cur_predicion_obj.delay_time = prediction_relative_time;
-    // cur_predicion_obj.intention = prediction_object.obstacle_intent().type();
+    // todo:后面接口变化时，取trajectory的时间戳
+    cur_predicion_obj.timestamp_us = prediction_result.header().timestamp();
+    double prediction_relative_time = clip( prediction_result.header().timestamp() / 1.e+6 - current_time / 1.e+3 - init_relative_time,
+                                         0.0, -1.0);
+    if (std::abs(prediction_relative_time) > 0.3) {
+      LOG_DEBUG("[prediction delay time] obstacle[%d] absolute start time %llu relative time %f start time %f init_relative_time %f", cur_predicion_obj.id,
+         prediction_result.header().timestamp(),  prediction_result.header().timestamp() / 1.e+6 - current_time / 1.e+3, prediction_relative_time, init_relative_time);
+    }
+    cur_predicion_obj.delay_time = prediction_relative_time;
+    #ifdef X86
+      cur_predicion_obj.delay_time = 0;
+    #endif
+    if (prediction_object.obstacle_intent().type() == Prediction::ObstacleIntent::COMMON) {
+      cur_predicion_obj.intention = ObstacleIntentType::COMMON;
+    } else if (prediction_object.obstacle_intent().type() == Prediction::ObstacleIntent::CUT_IN) {
+      cur_predicion_obj.intention = ObstacleIntentType::CUT_IN;
+    }
     // cur_predicion_obj.b_backup_freemove = prediction_object.b_backup_freemove(); todo: clren
     // cur_predicion_obj.cutin_score = prediction_object.cutin_score();  todo: clren
     cur_predicion_obj.position_x = prediction_object.fusion_obstacle().common_info().center_position().x();
@@ -391,7 +400,7 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
     cur_predicion_obj.relative_acceleration_x = prediction_object.fusion_obstacle().common_info().relative_acceleration().x();
     cur_predicion_obj.relative_acceleration_y = prediction_object.fusion_obstacle().common_info().relative_acceleration().y();
     cur_predicion_obj.length = prediction_object.fusion_obstacle().common_info().shape().length();
-    cur_predicion_obj.width = prediction_object.fusion_obstacle().common_info().shape().width();;
+    cur_predicion_obj.width = prediction_object.fusion_obstacle().common_info().shape().width();
     cur_predicion_obj.speed = std::hypot(prediction_object.fusion_obstacle().common_info().velocity().x(),
                                       prediction_object.fusion_obstacle().common_info().velocity().y());;
     cur_predicion_obj.yaw = prediction_object.fusion_obstacle().common_info().heading_angle();
@@ -403,10 +412,11 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
     for (const auto &prediction_traj : prediction_object.trajectory()) {
       PredictionTrajectory cur_prediction_trajectory;
       size_t traj_index = 0;
+      double step_time = prediction_traj.relative_time();
       std::vector<PredictionTrajectoryPoint> trajectory_points;
       for (auto point : prediction_traj.trajectory_point()) {
         PredictionTrajectoryPoint trajectory_point;
-        double point_relative_time = cur_predicion_obj.delay_time + 0.2 * traj_index;
+        double point_relative_time = cur_predicion_obj.delay_time + step_time * traj_index;
         trajectory_point.relative_time = point_relative_time;
         trajectory_point.x = point.position().x();
         trajectory_point.y = point.position().y();

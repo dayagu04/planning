@@ -1450,6 +1450,10 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(const CoarsePlanningInfo &c
       }
     }
   }
+  for (auto avd_car : avd_car_past_) {
+    if (avd_car.size() != 0)
+      LOG_DEBUG("avd_car id :%d ", (int)avd_car[0]);
+  }
   lateral_avd_cars_info.avd_car_past = avd_car_past_;
   auto &lat_behavior_info = frame_->mutable_session()->mutable_planning_context()->mutable_lat_behavior_info();
   lat_behavior_info.flag_avd = flag_avd_;
