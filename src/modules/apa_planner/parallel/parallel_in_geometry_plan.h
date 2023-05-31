@@ -16,6 +16,8 @@ class ParallelInGeometryPlan {
 
   bool ABSegment(const PlanningPoint &point_a, bool is_start, bool is_rough_calc,
       ParallelSegmentsInfo *segments_info);
+  bool ReverseABSegment(const PlanningPoint &point_a, bool is_start, 
+      bool is_rough_calc, ParallelSegmentsInfo *segments_info);
   bool BCSegment(const PlanningPoint &point_b, double len_ab, bool is_start,
       bool is_rough_calc, ParallelSegmentsInfo *segments_info);
   bool CDSegment(const PlanningPoint &point_c, bool is_start, bool is_rough_calc,

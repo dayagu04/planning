@@ -40,6 +40,9 @@ namespace {
   constexpr double kMaxYOffset = 0.2;
   constexpr double kMaxThetaOffset = 0.05;
   constexpr double kMinSlotLength = 5.8;
+  constexpr double kMaxLenOfSmallSpeed = 1.0;
+  constexpr double kMaxSpdInLineStep = 0.5;
+  constexpr double kMinSpdInCircleStep = 0.4;
 }
 
 ParallelInTrajectoryGenerator::ParallelInTrajectoryGenerator() {
@@ -179,6 +182,12 @@ bool ParallelInTrajectoryGenerator::GeometryPlan(
         last_segment_name_ = "BC";
       }
       is_planning_ok = true;
+    } else if (ReverseABSegmentPlan(start_point, false, idx,
+        &geometry_planning_, planning_output)) {
+      if (current_state_ == FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
+        last_segment_name_ = "EF";
+      }
+      is_planning_ok = true;
     }
   } else if (last_segment_name_ == "AB") {
     if (BCSegmentPlan(start_point, false, idx,
@@ -248,6 +257,33 @@ bool ParallelInTrajectoryGenerator::ABSegmentPlan(
     PLANNING_LOG << "point_a, x:" << point_a.x << ", y:" << point_a.y
           << ", theta:" << point_a.theta << std::endl;
     PLANNING_LOG << "plan a-b fail" << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+bool ParallelInTrajectoryGenerator::ReverseABSegmentPlan(
+    const PlanningPoint &point_a, bool is_start, int idx,
+    ParallelInGeometryPlan * const geometry_planning,
+    PlanningOutput *const planning_output) const {
+  ParallelSegmentsInfo segments_info;
+  segments_info.opt_point_a = point_a;
+  if (geometry_planning->ReverseABSegment(point_a, is_start, is_rough_calc_,
+      &segments_info)) {
+    PLANNING_LOG << "plan backward a-b success" << std::endl;
+    GenerateABSegmentTrajectory(segments_info, planning_output);
+    GenerateCDSegmentTrajectory(segments_info, planning_output);
+    GenerateDESegmentTrajectory(segments_info, planning_output);
+    GenerateEFSegmentTrajectory(segments_info, planning_output);
+    //GenerateSpdInMultiSegmentTrajectory(planning_output);
+    PrintTrajectoryPoints(*planning_output);
+
+    return true;
+  } else {
+    PLANNING_LOG << "point_a, x:" << point_a.x << ", y:" << point_a.y
+          << ", theta:" << point_a.theta << std::endl;
+    PLANNING_LOG << "plan backward a-b fail" << std::endl;
     return false;
   }
 
@@ -426,7 +462,7 @@ bool ParallelInTrajectoryGenerator::GenerateABSegmentTrajectory(
     trajectory_point->set_heading_yaw(point_tmp_in_odom.theta);
     trajectory_point->set_curvature(0.0);
     // GetCurPtSpeed(segment_len, s, 1.0, trajectory_point);
-    GetCurPtSpeed(1.0, trajectory_point);
+    GetCurPtSpeed(segment_len, 1.0, trajectory_point);
     trajectory_point->set_distance(s);
     s += line_step;
   }
@@ -441,6 +477,7 @@ bool ParallelInTrajectoryGenerator::GenerateBCSegmentTrajectory(
   const auto& point_c = segments_info.opt_point_c;
   const double theta_diff = fabs(point_b.theta - point_c.theta);
   const double radius_bc = segments_info.opt_radius_bc;
+  const double len_bc = theta_diff * radius_bc;
   double yaw_step = kYawStep / radius_bc;
   int size_i_bc = static_cast<int>(theta_diff / yaw_step);
   if (!IsSamePoint(point_b, point_c)) {
@@ -484,7 +521,7 @@ bool ParallelInTrajectoryGenerator::GenerateBCSegmentTrajectory(
     trajectory_point->set_heading_yaw(point_tmp_in_odom.theta);
     trajectory_point->set_curvature(curvature_bc);
     trajectory_point->set_distance(s);
-    GetCurPtSpeed(1.0, trajectory_point);
+    GetCurPtSpeed(len_bc, 1.0, trajectory_point);
     s += step_size;
   }
   trajectory->mutable_trajectory_points()->rbegin()->set_v(0.0);
@@ -503,6 +540,7 @@ bool ParallelInTrajectoryGenerator::GenerateCDSegmentTrajectory(
   const auto& point_d = segments_info.opt_point_d;
   const double radius_cd = segments_info.opt_radius_cd;
   const double theta_diff = fabs(point_d.theta - point_c.theta);
+  const double len_cd = theta_diff * radius_cd;
   double yaw_step = kYawStep / radius_cd;
   int size_i_cd = static_cast<int>(theta_diff / yaw_step);
   if (!IsSamePoint(point_c, point_d)) {
@@ -535,7 +573,7 @@ bool ParallelInTrajectoryGenerator::GenerateCDSegmentTrajectory(
     trajectory_point->set_curvature(curvature_cd);
     trajectory_point->set_distance(s);
     // GetCurPtSpeed(segment_len, s, -1.0, trajectory_point);
-    GetCurPtSpeed(-1.0, trajectory_point);
+    GetCurPtSpeed(len_cd, -1.0, trajectory_point);
     s += step_size;
   }
   return true;
@@ -587,7 +625,7 @@ bool ParallelInTrajectoryGenerator::GenerateDESegmentTrajectory(
     trajectory_point->set_heading_yaw(point_tmp_in_odom.theta);
     trajectory_point->set_curvature(0.0);
     // GetCurPtSpeed(segment_len, s, -1.0, trajectory_point);
-    GetCurPtSpeed(-1.0, trajectory_point);
+    GetCurPtSpeed(segment_len, -1.0, trajectory_point);
     trajectory_point->set_distance(s);
     s += line_step;
   }
@@ -634,7 +672,7 @@ bool ParallelInTrajectoryGenerator::GenerateEFSegmentTrajectory(
       trajectory_point->set_heading_yaw(point_tmp_in_odom.theta);
       trajectory_point->set_curvature(0.0);
       // GetCurPtSpeed(segment_len, s, 1.0, trajectory_point);
-      GetCurPtSpeed(-1.0, trajectory_point);
+      GetCurPtSpeed(segment_len, -1.0, trajectory_point);
       trajectory_point->set_distance(s);
       s += line_step;
     }
@@ -643,6 +681,7 @@ bool ParallelInTrajectoryGenerator::GenerateEFSegmentTrajectory(
   }
 
   const double theta_diff = fabs(point_f.theta - point_e.theta);
+  const double len_ef = theta_diff * radius_ef; 
   double yaw_step = kYawStep / radius_ef;
   int size_i_ef = static_cast<int>(theta_diff / yaw_step);
   if (!IsSamePoint(point_e, point_f)) {
@@ -682,7 +721,7 @@ bool ParallelInTrajectoryGenerator::GenerateEFSegmentTrajectory(
     trajectory_point->set_heading_yaw(point_tmp_in_odom.theta);
     trajectory_point->set_curvature(curvature_ef);
     trajectory_point->set_distance(s);
-    GetCurPtSpeed(-1.0, trajectory_point);
+    GetCurPtSpeed(len_ef, -1.0, trajectory_point);
     s += step_size;
   }
 
@@ -715,7 +754,7 @@ bool ParallelInTrajectoryGenerator::GenerateEFSegmentTrajectory(
       trajectory_point->set_y(point_tmp_in_odom.y);
       trajectory_point->set_heading_yaw(point_tmp_in_odom.theta);
       trajectory_point->set_curvature(0.0);
-      GetCurPtSpeed(-1.0, trajectory_point);
+      GetCurPtSpeed(segment_len, -1.0, trajectory_point);
       trajectory_point->set_distance(s);
       s += line_step;
     }
@@ -765,7 +804,7 @@ bool ParallelInTrajectoryGenerator::GenerateFHSegmentTrajectory(
       trajectory_point->set_heading_yaw(point_tmp_in_odom.theta);
       trajectory_point->set_curvature(0.0);
       // GetCurPtSpeed(segment_len, s, 1.0, trajectory_point);
-      GetCurPtSpeed(1.0, trajectory_point);
+      GetCurPtSpeed(segment_len, 1.0, trajectory_point);
       trajectory_point->set_distance(s);
       s += line_step;
     }
@@ -774,6 +813,7 @@ bool ParallelInTrajectoryGenerator::GenerateFHSegmentTrajectory(
   }
 
   const double theta_diff = fabs(point_h.theta - point_f.theta);
+  const double len_fh = theta_diff * radius_fh;
   double yaw_step = kYawStep / radius_fh;
 
   int size_i_fh = static_cast<int>(theta_diff / yaw_step);
@@ -806,7 +846,7 @@ bool ParallelInTrajectoryGenerator::GenerateFHSegmentTrajectory(
     trajectory_point->set_heading_yaw(point_tmp_in_odom.theta);
     trajectory_point->set_curvature(curvature_fh);
     trajectory_point->set_distance(s);
-    GetCurPtSpeed(1.0, trajectory_point);
+    GetCurPtSpeed(len_fh, 1.0, trajectory_point);
     s += step_size;
   }
 
@@ -839,7 +879,7 @@ bool ParallelInTrajectoryGenerator::GenerateFHSegmentTrajectory(
       trajectory_point->set_heading_yaw(point_tmp_in_odom.theta);
       trajectory_point->set_curvature(0.0);
       // GetCurPtSpeed(segment_len, s, 1.0, trajectory_point);
-      GetCurPtSpeed(1.0, trajectory_point);
+      GetCurPtSpeed(segment_len, 1.0, trajectory_point);
       trajectory_point->set_distance(s);
       s += line_step;
     }
@@ -1033,6 +1073,25 @@ void ParallelInTrajectoryGenerator::GetCurPtSpeed(const double spd_sign,
   trajectory_point->set_t(0.0);
   trajectory_point->set_v(kMaxSpd * spd_sign);
   trajectory_point->set_a(0.0);
+}
+
+void ParallelInTrajectoryGenerator::GetCurPtSpeed(const double segment_len, 
+    const double spd_sign, TrajectoryPoint* trajectory_point) const {
+  trajectory_point->set_t(0.0);
+  trajectory_point->set_a(0.0);
+  if (segment_len <= kMaxLenOfSmallSpeed) {
+    trajectory_point->set_v(kMinSpdInCircleStep * spd_sign);
+    return;
+  }
+  if (trajectory_point->curvature() == 0.0) {
+    if (spd_sign > 0.0) {
+      trajectory_point->set_v(kMaxSpdInLineStep * spd_sign);
+    } else {
+      trajectory_point->set_v(kMinSpdInCircleStep * spd_sign);
+    }
+  } else {
+    trajectory_point->set_v(kMinSpdInCircleStep * spd_sign);
+  }
 }
 
 void ParallelInTrajectoryGenerator::CalSlotOriginInodom(const int idx) {

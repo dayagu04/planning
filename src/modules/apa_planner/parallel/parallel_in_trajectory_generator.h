@@ -29,6 +29,10 @@ class ParallelInTrajectoryGenerator {
       ParallelInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
+  bool ReverseABSegmentPlan(const PlanningPoint &point_a, bool is_start, int idx,
+      ParallelInGeometryPlan * const geometry_planning,
+      PlanningOutput::PlanningOutput *const planning_output) const;
+
   bool BCSegmentPlan(const PlanningPoint &point_b, bool is_start, int idx,
       ParallelInGeometryPlan * const geometry_planning,
       PlanningOutput::PlanningOutput *const planning_output) const;
@@ -83,6 +87,9 @@ class ParallelInTrajectoryGenerator {
       PlanningOutput::TrajectoryPoint* trajectory_point) const;
 
   void GetCurPtSpeed(const double spd_sign,
+      PlanningOutput::TrajectoryPoint* trajectory_point) const;
+  
+  void GetCurPtSpeed(const double segment_len, const double spd_sign,
       PlanningOutput::TrajectoryPoint* trajectory_point) const;
 
   PlanningPoint FromLocal2GlobalCor(const PlanningPoint &ego,
