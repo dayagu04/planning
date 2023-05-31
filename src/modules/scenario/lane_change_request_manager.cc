@@ -91,8 +91,6 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   } else {
     request_ = NO_CHANGE;
     request_source_ = NO_REQUEST;
-    // WB: 这里去掉模型的换道，需要补充默认的目标车道id
-    // target_lane_virtual_id_ = model_request_.target_lane_virtual_id();
   }
 
   if (request_ == NO_CHANGE) {
@@ -102,12 +100,10 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     LOG_WARNING(
         "[LCRequestManager::update] request: Left Change <<<<<<<<<<<<<<<<< \n");
     LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
-    // MDEBUG_JSON_ADD_ITEM(request_shape, "<<<<<<<<", LaneChangeRequestManager)
   } else {
     LOG_WARNING(
         "[LCRequestManager::update] request: Right Change >>>>>>>>>>>>>>>> \n");
     LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
-    // MDEBUG_JSON_ADD_ITEM(request_shape, ">>>>>>>>", LaneChangeRequestManager)
   }
   if (virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)) {
     int target_lane_order_id =
@@ -115,18 +111,11 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
             ->get_order_id();
     LOG_DEBUG("[LCRequestManager::update] final :target_lane_order_id %d, target_lane_virtual_id: %d \n",
               target_lane_order_id, target_lane_virtual_id_);
-    // MDEBUG_JSON_ADD_ITEM(tlane_oid, target_lane_order_id,
-    //                      LaneChangeRequestManager)
   } else {
     target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
     LOG_DEBUG("[LCRequestManager::update] Target lane lost !!! final target_lane_virtual_id: %d \n",
               target_lane_virtual_id_);
   }
-  // MDEBUG_JSON_ADD_ITEM(request, static_cast<int>(request_),
-  //                      LaneChangeRequestManager)
-  // MDEBUG_JSON_ADD_ITEM(request_source, static_cast<int>(request_source_),
-  //                      LaneChangeRequestManager)
-  // MDEBUG_JSON_ADD_ITEM(current_state, lc_status, LaneChangeRequestManager)
   if (request_source_ == MAP_REQUEST) {
     turn_signal_ = map_request_.turn_signal();
   } else if (request_source_ == INT_REQUEST &&

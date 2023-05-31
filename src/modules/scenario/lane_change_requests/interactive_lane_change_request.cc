@@ -14,20 +14,36 @@ IntRequest::IntRequest(
   auto config_builder = session_->mutable_environmental_model()->config_builder(
       planning::common::SceneType::HIGHWAY);
   auto int_request_config = config_builder->cast<ScenarioDisplayStateConfig>();
-  enable_int_request_ =
-      int_request_config.enable_int_request_function;  // 没有使用
+  enable_int_request_ = int_request_config.enable_int_request_function;
   count_threshold_ = int_request_config.int_rqt_cnt_threshold;
 }
 
 void IntRequest::Update(int lc_status) {
-  // ego_blinker 具体数值含义需对齐
+  // ego_blinker 0-lane follow, 1-left, 2-reght
   lane_change_cmd_ = session_->mutable_environmental_model()
                          ->get_ego_state_manager()
                          ->ego_blinker();
-  LOG_DEBUG("IntRequest::Update lane_change_cmd: %d\n", lane_change_cmd_);
+  // init lanes with id
+  if (virtual_lane_mgr_->get_current_lane() == nullptr) return;
+  auto current_lane_virtual_id = virtual_lane_mgr_->current_lane_virtual_id();
+
+  if (lane_change_lane_mgr_->has_origin_lane()) {
+    auto origin_lane = lane_change_lane_mgr_->olane();
+    origin_lane_virtual_id_ = origin_lane->get_virtual_id();
+  } else {
+    origin_lane_virtual_id_ = current_lane_virtual_id;
+  }
+  int target_lane_virtual_id_tmp{current_lane_virtual_id};
+
+  LOG_DEBUG("[IntRequest::update] lane_change_cmd: %d\n", lane_change_cmd_);
+  LOG_DEBUG(
+      "[IntRequest::update] current_lane_virtual_id: %d, "
+      "origin_lane_virtual_id_: %d, target_lane_virtual_id_: %d \n",
+      current_lane_virtual_id, origin_lane_virtual_id_,
+      target_lane_virtual_id_);
+
   if (lane_change_cmd_ == common::TurnSignalType::LEFT &&
       request_type_ != LEFT_CHANGE) {
-    // 1.未左换道的情况下，左拨杆
     counter_right_ = 0;
     counter_left_++;
     // 获取左车道线型
@@ -39,11 +55,16 @@ void IntRequest::Update(int lc_status) {
     if (left_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) {
       counter_left_ = -5;
     }
-    // counter满足，则生成换道请求
     if (counter_left_ > count_threshold_) {
-      GenerateRequest(LEFT_CHANGE);
-      LOG_DEBUG(
-          "[IntRequest::update] Ask for interactive changing lane to left\n");
+      target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
+      auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(
+          target_lane_virtual_id_tmp);
+      if (tlane != nullptr) {
+        GenerateRequest(LEFT_CHANGE);
+        set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+        LOG_DEBUG(
+            "[IntRequest::update] Ask for interactive changing lane to left\n");
+      }
     } else {
       LOG_DEBUG(
           "[IntRequest::update] waiting counter for interactive changing lane "
@@ -51,7 +72,6 @@ void IntRequest::Update(int lc_status) {
     }
   } else if (lane_change_cmd_ == common::TurnSignalType::RIGHT &&
              request_type_ != RIGHT_CHANGE) {
-    // 2.未右换道的情况下，右拨杆
     counter_left_ = 0;
     counter_right_ = counter_right_ + 1;
     // 获取右车道线型,实线禁止换道
@@ -63,9 +83,16 @@ void IntRequest::Update(int lc_status) {
       counter_left_ = -5;
     }
     if (counter_right_ > count_threshold_) {
-      GenerateRequest(RIGHT_CHANGE);
-      LOG_DEBUG(
-          "[IntRequest::update] Ask for interactive changing lane to right \n");
+      target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
+      auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(
+          target_lane_virtual_id_tmp);
+      if (tlane != nullptr) {
+        GenerateRequest(RIGHT_CHANGE);
+        set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+        LOG_DEBUG(
+            "[IntRequest::update] Ask for interactive changing lane to right "
+            "\n");
+      }
     } else {
       LOG_DEBUG(
           "[IntRequest::update] waiting counter for interactive changing lane "

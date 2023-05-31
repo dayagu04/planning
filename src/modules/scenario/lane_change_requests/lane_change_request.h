@@ -39,9 +39,9 @@ class LaneChangeRequest {
 
  protected:
   RequestType request_type_ = NO_CHANGE;
-  int target_lane_virtual_id_ = -1;
-  int origin_lane_virtual_id_ = -1;
-  int origin_lane_order_id_ = -1;
+  int target_lane_virtual_id_ = -1000; // invalid
+  int origin_lane_virtual_id_ = -1000;
+  int origin_lane_order_id_ = -1000;
   RequestType turn_signal_ = NO_CHANGE;
   double tstart_ = 0.0;
   double tfinish_ = 0.0;

@@ -1,8 +1,8 @@
 #include "scenario/normal_road_state.h"
 
 #include "context/reference_path_manager.h"
-#include "scenario/scenario_state_machine.h"
 #include "ifly_time.h"
+#include "scenario/scenario_state_machine.h"
 
 namespace planning {
 
@@ -190,8 +190,8 @@ void RoadBase::process_wait(FsmContext &context,
         lc_lane_manager->tlane_virtual_id() != target_lane_virtual_id) {
       lc_lane_manager->assign_lc_lanes(target_lane_virtual_id);
     }
-    gap_available = state_machine->gap_available(lc_request, overtake_obstacles,
-                                                 yield_obstacles);
+    gap_available = state_machine->GapAvailable(lc_request, overtake_obstacles,
+                                                yield_obstacles);
     lane_change_info = state_machine->decide_lc_valid_info(lc_request);
     LOG_DEBUG("[CruiseState::Wait] gap_available: %d, aggressive_change: %d, target_lane_virtual_id: %d, lane_change_info.gap_insertable: %d, curr_time: %f, lc_tstart: %f, delay_time: %f \n",
               gap_available, aggressive_change, target_lane_virtual_id, lane_change_info.gap_insertable, curr_time, lc_tstart, delay_time);
@@ -277,38 +277,38 @@ void RoadBase::process_change(
       lc_lane_manager->assign_lc_lanes(target_lane_virtual_id);
     }
 
-    gap_available = state_machine->gap_available(lc_request, overtake_obstacles,
-                                                 yield_obstacles);
+    gap_available = state_machine->GapAvailable(lc_request, overtake_obstacles,
+                                                yield_obstacles);
 
     if (lc_lane_manager->has_origin_lane() &&
-        lc_lane_manager->olane_virtual_id() != lc_lane_manager->tlane_virtual_id()) {
+        lc_lane_manager->olane_virtual_id() !=
+            lc_lane_manager->tlane_virtual_id()) {
       lc_back_info = state_machine->decide_lc_back_info(lc_request);
       if (lc_back_info.lc_should_back) {
-        prepare_for_back_state(lc_lane_manager, lc_req_manager, candidate_states,
-                               lc_lane_managers);
+        prepare_for_back_state(lc_lane_manager, lc_req_manager,
+                               candidate_states, lc_lane_managers);
         if (candidate_states.size() > 0 &&
             (candidate_states[0] == ROAD_LC_LBACK ||
-            candidate_states[0] == ROAD_LC_RBACK) &&
-            lc_lane_manager->has_target_lane() &&
-            hdmap_valid) {
-          prepare_for_change_state(lc_lane_manager, lc_req_manager, candidate_states,
-                                lc_lane_managers);
+             candidate_states[0] == ROAD_LC_RBACK) &&
+            lc_lane_manager->has_target_lane() && hdmap_valid) {
+          prepare_for_change_state(lc_lane_manager, lc_req_manager,
+                                   candidate_states, lc_lane_managers);
         }
       } else {
-        prepare_for_change_state(lc_lane_manager, lc_req_manager, candidate_states,
-                                 lc_lane_managers);
+        prepare_for_change_state(lc_lane_manager, lc_req_manager,
+                                 candidate_states, lc_lane_managers);
         if (candidate_states.size() > 0 &&
             (candidate_states[0] == ROAD_LC_LCHANGE ||
-            candidate_states[0] == ROAD_LC_RCHANGE) &&
+             candidate_states[0] == ROAD_LC_RCHANGE) &&
             !lc_lane_manager->is_ego_on(lc_lane_manager->tlane()) &&
             hdmap_valid) {
-          prepare_for_back_state(lc_lane_manager, lc_req_manager, candidate_states,
-                                lc_lane_managers);
+          prepare_for_back_state(lc_lane_manager, lc_req_manager,
+                                 candidate_states, lc_lane_managers);
         }
       }
     } else if (lc_lane_manager->has_target_lane()) {
-      prepare_for_change_state(lc_lane_manager, lc_req_manager, candidate_states,
-                               lc_lane_managers);
+      prepare_for_change_state(lc_lane_manager, lc_req_manager,
+                               candidate_states, lc_lane_managers);
     } else {
       prepare_for_none_state(lc_lane_manager, lc_req_manager, candidate_states,
                              lc_lane_managers);
@@ -373,10 +373,11 @@ void RoadBase::process_back(FsmContext &context,
       int target_lane_virtual_id = lc_req_manager->target_lane_virtual_id();
       lc_lane_manager->assign_lc_lanes(target_lane_virtual_id);
     }
-    gap_available = state_machine->gap_available(lc_request, overtake_obstacles,
-                                                 yield_obstacles);
+    gap_available = state_machine->GapAvailable(lc_request, overtake_obstacles,
+                                                yield_obstacles);
     lane_change_info = state_machine->decide_lc_valid_info(lc_request);
-    // if (gap_available || aggressive_change) { //TODO(Rui):后面把安全检查坐在gap_available里，统一通过gap_available判断
+    // if (gap_available || aggressive_change) {
+    // //TODO(Rui):后面把安全检查坐在gap_available里，统一通过gap_available判断
     if (lane_change_info.gap_insertable) {
       prepare_for_change_state(lc_lane_manager, lc_req_manager,
                                candidate_states, lc_lane_managers);

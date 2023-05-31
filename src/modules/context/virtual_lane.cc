@@ -164,6 +164,24 @@ bool VirtualLane::has_lines(LineDirection direction) const {
 //   }
 // }
 
+bool VirtualLane::is_obstacle_on(int obj_id) {
+  const double HALF_LANE_WIDTH = 1.8;
+  if (reference_path_ == nullptr) {
+    LOG_ERROR("The reference_path_ is null \n");
+    return false;
+  }
+  auto &obstacles_map = reference_path_->get_obstacles_map();
+  std::shared_ptr<FrenetObstacle> frenet_obstacle = nullptr;
+  auto iter = obstacles_map.find(obj_id);
+  if(iter != obstacles_map.end()){
+    frenet_obstacle = iter->second;
+  } else {
+    LOG_WARNING("There is no obstacle[%d] \n", obj_id);
+    return false;
+  }
+  return (std::fabs(frenet_obstacle->frenet_l()) < HALF_LANE_WIDTH) ? true : false;
+}
+
 uint VirtualLane::get_common_point_num(const std::shared_ptr<VirtualLane> &other) {
   if (other == nullptr) {
     return 0;
@@ -319,7 +337,7 @@ void VirtualLane::update_speed_limit(double ego_vel, double ego_v_cruise) { //to
       }
 
       if (find_last && referece_path_points[i].max_velocity != last_speed) {
-        double acc_brake = (std::pow(referece_path_points[i].max_velocity, 2) - std::pow(ego_vel, 2)) / 
+        double acc_brake = (std::pow(referece_path_points[i].max_velocity, 2) - std::pow(ego_vel, 2)) /
                           std::max(1.0, referece_path_points[i].path_point.s);
         if (acc_brake < acc_brake_min) {
           acc_brake_min = acc_brake;

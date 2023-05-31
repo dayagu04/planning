@@ -90,7 +90,7 @@ class VirtualLane {
   // +： right; -: left
   bool has_lines(LineDirection direction) const;
   double distance_to_line(double s, double l, LineDirection direction);
-  bool is_obstacle_on(const Obstacle &tr);
+  bool is_obstacle_on(int obj_id);
 
   uint get_common_point_num(const std::shared_ptr<VirtualLane> &other);
 

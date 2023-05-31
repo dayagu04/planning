@@ -78,8 +78,9 @@ class ScenarioStateMachine
     return object_selector_;
   }
 
-  bool gap_available(RequestType direction, std::vector<int>& overlap_obstacles,
-                     std::vector<int>& yield_obstacles);
+  bool GapAvailable(RequestType direction, std::vector<int>& overlap_obstacles,
+                    std::vector<int>& yield_obstacles);
+
   LaneChangeStageInfo compute_lc_valid_info(RequestType direction);
   LaneChangeStageInfo decide_lc_valid_info(RequestType direction);
   LaneChangeStageInfo compute_lc_back_info(RequestType direction);
@@ -105,6 +106,10 @@ class ScenarioStateMachine
  private:
   void update_scenario();
   void update_state_machine();
+
+  // Determine whether the gap distance between vehicles is sufficient
+  bool IsFollowBufferEnough(const double front_s, const double behind_s,
+                            const double front_v, const double behind_v);
 
   // 实现状态的切换
   template <typename T>

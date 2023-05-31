@@ -1,5 +1,6 @@
-#include "scenario/scenario_state_machine.h"
+#include "scenario_state_machine.h"
 
+#include <iterator>
 #include <limits>
 #include <numeric>
 
@@ -9,8 +10,9 @@
 #include "context/reference_path.h"
 #include "context/reference_path_manager.h"
 #include "context/vehicle_config_context.h"
-#include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 #include "debug_info_log.h"
+#include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
+
 namespace planning {
 
 ScenarioStateMachine::ScenarioStateMachine(
@@ -188,11 +190,150 @@ void ScenarioStateMachine::gen_map_turn_signal() {
 
 void ScenarioStateMachine::gen_merge_split_turn_signal() {}
 
-bool ScenarioStateMachine::gap_available(RequestType direction,
-                                         std::vector<int> &overtake_obstacles,
-                                         std::vector<int> &yield_obstacles) {
-  bool b_gap_available{true};
+bool ScenarioStateMachine::GapAvailable(RequestType direction,
+                                        std::vector<int> &overtake_obstacles,
+                                        std::vector<int> &yield_obstacles) {
+  // 1.获取所需车道: current lane, target lane
+  std::shared_ptr<VirtualLane> target_lane = lc_lane_mgr_->tlane();
+  auto origin_lane = lc_lane_mgr_->olane();
+  auto &virtual_lane_manager =
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
+  if (origin_lane == nullptr) {
+    origin_lane = virtual_lane_manager->get_current_lane();
+  }
+  if (target_lane == nullptr) {
+    LOG_WARNING("[GapAvailable] target_lane is null \n");
+    return false;
+  }
+  // 2.获取当前车道参考线 & 参考线关联障碍物
+  auto reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  int current_lane_id = virtual_lane_manager->current_lane_virtual_id();
+  auto current_reference_path =
+      reference_path_manager->get_reference_path_by_lane(current_lane_id);
+  auto &frenet_obstacles = current_reference_path->get_obstacles();
+  auto &frenet_ego_state = current_reference_path->get_frenet_ego_state();
+  bool b_gap_available(true);
+  // 3.交互式换道需要判断最近的gap是否满足需求
+  /*
+  -|                |-▅-|     |
+  ▅...........................
+  ----▅-|   |-▅-|    |-▅-|  |
+  */
+  for (auto &frenet_obstacle : frenet_obstacles) {
+    if (target_lane->is_obstacle_on(frenet_obstacle->id())) {
+      double ego_s = frenet_ego_state.s();
+      double obstacle_s = frenet_obstacle->frenet_s();
+      if ((obstacle_s > ego_s) &&
+          !IsFollowBufferEnough(
+              frenet_obstacle->frenet_obstacle_boundary().s_start,
+              frenet_ego_state.boundary().s_end,
+              frenet_obstacle->frenet_velocity_s(),
+              frenet_ego_state.velocity_s())) {
+        // 目标车道近距离前侧存在障碍物使自车无法换道
+        b_gap_available = false;
+        LOG_DEBUG(
+            "gap_available is: FALSE, obstacle id: [%d], obstacle s: [%f], ego "
+            "s: [%f] \n",
+            frenet_obstacle->id(), obstacle_s, ego_s);
+      }
+      if ((obstacle_s < ego_s) &&
+          !IsFollowBufferEnough(
+              frenet_ego_state.boundary().s_start,
+              frenet_obstacle->frenet_obstacle_boundary().s_end,
+              frenet_ego_state.velocity_s(),
+              frenet_obstacle->frenet_velocity_s())) {
+        // 目标车道近距离后侧存在障碍物使自车无法换道
+        b_gap_available = false;
+      }
+    }
+  }
+  LOG_DEBUG("gap_available is:[%d] \n", b_gap_available);
+
+  // 4.排序障碍物
+  auto tlane_obstacles =
+      target_lane->get_reference_path()->get_lane_obstacles();
+  std::vector<std::shared_ptr<FrenetObstacle>> sorted_obstacles;
+  for (auto &frenet_obstacle : frenet_obstacles) {
+    if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
+                   frenet_obstacle->id()) > 0) {
+      sorted_obstacles.emplace_back(frenet_obstacle);
+    }
+  }
+  std::sort(sorted_obstacles.begin(), sorted_obstacles.end(),
+            [&](const std::shared_ptr<FrenetObstacle> &o1,
+                const std::shared_ptr<FrenetObstacle> &o2) {
+              return o1->frenet_s() > o2->frenet_s();
+            });
+
+  // 5.构建gap
+  std::vector<GapInfo> gap_infos;
+  if (sorted_obstacles.size() > 0) {
+    GapInfo first_gap{};
+    first_gap.front_id = -1;
+    first_gap.s_front = std::numeric_limits<double>::max();
+    first_gap.v_front = std::numeric_limits<double>::max();
+    first_gap.rear_id = sorted_obstacles[0]->id();
+    first_gap.s_rear = sorted_obstacles[0]->frenet_obstacle_boundary().s_end;
+    first_gap.v_rear = sorted_obstacles[0]->frenet_velocity_s();
+
+    gap_infos.emplace_back(first_gap);
+  }
+  for (size_t i = 0; i < sorted_obstacles.size(); i++) {
+    GapInfo gap{};
+    gap.front_id = sorted_obstacles[i]->id();
+    gap.s_front = sorted_obstacles[i]->frenet_obstacle_boundary().s_start;
+    gap.v_front = sorted_obstacles[i]->frenet_velocity_s();
+    
+    double s_rear = -5.0;
+    double v_rear = 0;
+    int id_rear = -1;
+    if ((i + 1) < sorted_obstacles.size()) {
+      s_rear = sorted_obstacles[i + 1]->frenet_obstacle_boundary().s_end;
+      v_rear = sorted_obstacles[i + 1]->frenet_velocity_s();
+      id_rear = sorted_obstacles[i + 1]->id();
+    }
+    gap.rear_id = id_rear;
+    gap.s_rear = s_rear;
+    gap.v_rear = v_rear;
+
+    gap_infos.emplace_back(gap);
+  }
+
+  // 6.Select gap
+
   return b_gap_available;
+}
+
+bool ScenarioStateMachine::IsFollowBufferEnough(const double front_s,
+                                                const double behind_s,
+                                                const double front_v,
+                                                const double behind_v) {
+  // TBD: use config
+  double kMinSafeDistance = 2.0;
+  double kMaxEndurableAcc = 2.0;
+  if ((front_s - behind_s) > 30) {
+    return true;
+  }
+  if (fsm_context_.state == ROAD_LC_LCHANGE ||
+      fsm_context_.state == ROAD_LC_RCHANGE) {
+    kMinSafeDistance = 2.0;
+    kMaxEndurableAcc = 2.0;
+  } else if (fsm_context_.state == ROAD_NONE ||
+             fsm_context_.state == ROAD_LC_LWAIT ||
+             fsm_context_.state == ROAD_LC_RWAIT ||
+             fsm_context_.state == ROAD_LC_LBACK ||
+             fsm_context_.state == ROAD_LC_RBACK) {
+    kMinSafeDistance = 3.0;
+    kMaxEndurableAcc = 0.75;
+  }
+  double delta_v = std::max(behind_v - front_v, 0.0);
+  double s_safe = std::min(0.5 * (behind_v + delta_v), kMinSafeDistance);
+  if ((front_s - behind_s) < s_safe) {
+    return false;
+  }
+  double slow_down_distance = std::pow(delta_v, 2.0) / 2.0 / kMaxEndurableAcc;
+  return slow_down_distance < (front_s - behind_s);
 }
 
 LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
@@ -230,9 +371,16 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
   // int current_lane_virtual_id = session_->mutable_environmental_model()
   //                                   ->virtual_lane_manager()
   //                                   ->current_lane_virtual_id();
-  std::cout << "compute_lc_valid_info: flane_virtual_id: " << lc_lane_mgr_->flane_virtual_id() << " fix_lane->get_virtual_id(): " << fix_lane->get_virtual_id() << std::endl;
-  std::cout << "compute_lc_valid_info: tlane_virtual_id: " << lc_lane_mgr_->tlane_virtual_id() << " target_lane->get_virtual_id(): " << target_lane->get_virtual_id() << std::endl;
-  std::cout << "compute_lc_valid_info: clane_virtual_id: " << virtual_lane_manager->current_lane_virtual_id() << std::endl;
+  std::cout << "compute_lc_valid_info: flane_virtual_id: "
+            << lc_lane_mgr_->flane_virtual_id()
+            << " fix_lane->get_virtual_id(): " << fix_lane->get_virtual_id()
+            << std::endl;
+  std::cout << "compute_lc_valid_info: tlane_virtual_id: "
+            << lc_lane_mgr_->tlane_virtual_id()
+            << " target_lane->get_virtual_id(): "
+            << target_lane->get_virtual_id() << std::endl;
+  std::cout << "compute_lc_valid_info: clane_virtual_id: "
+            << virtual_lane_manager->current_lane_virtual_id() << std::endl;
   auto reference_path_manager =
       session_->mutable_environmental_model()->get_reference_path_manager();
   auto fix_reference_path = reference_path_manager->get_reference_path_by_lane(
@@ -289,7 +437,8 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
   std::vector<TrackedObject> front_target_tracks;
   auto &obstacle_manager =
       session_->mutable_environmental_model()->get_obstacle_manager();
-  auto tlane_obstacles = target_lane->get_reference_path()->get_lane_obstacles();
+  auto tlane_obstacles =
+      target_lane->get_reference_path()->get_lane_obstacles();
 
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
@@ -582,8 +731,14 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
                                     ->current_lane_virtual_id();
   auto reference_path_manager =
       session_->mutable_environmental_model()->get_reference_path_manager();
-  std::cout << "compute_lc_back_info: flane_virtual_id: " << lc_lane_mgr_->flane_virtual_id() << " fix_lane->get_virtual_id(): " << fix_lane->get_virtual_id() << std::endl;
-  std::cout << "compute_lc_back_info: tlane_virtual_id: " << lc_lane_mgr_->tlane_virtual_id() << " target_lane->get_virtual_id(): " << target_lane->get_virtual_id() << std::endl;
+  std::cout << "compute_lc_back_info: flane_virtual_id: "
+            << lc_lane_mgr_->flane_virtual_id()
+            << " fix_lane->get_virtual_id(): " << fix_lane->get_virtual_id()
+            << std::endl;
+  std::cout << "compute_lc_back_info: tlane_virtual_id: "
+            << lc_lane_mgr_->tlane_virtual_id()
+            << " target_lane->get_virtual_id(): "
+            << target_lane->get_virtual_id() << std::endl;
   auto fix_reference_path = reference_path_manager->get_reference_path_by_lane(
       lc_lane_mgr_->flane_virtual_id());
   auto target_reference_path =
@@ -632,7 +787,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
       }
     }
   }
-  
+
   if (!lateral_obstacle->sensors_okay()) {
     if (lateral_obstacle->fvf_dead()) {
       result.lc_back_reason = "no front view";
@@ -664,7 +819,8 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
   std::vector<TrackedObject> front_target_tracks;
   auto &obstacle_manager =
       session_->mutable_environmental_model()->get_obstacle_manager();
-  auto tlane_obstacles = target_lane->get_reference_path()->get_lane_obstacles();
+  auto tlane_obstacles =
+      target_lane->get_reference_path()->get_lane_obstacles();
 
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
@@ -959,7 +1115,9 @@ bool ScenarioStateMachine::check_lc_change_finish(RequestType direction) {
 
   std::shared_ptr<ReferencePathManager> reference_path_mgr =
       session_->mutable_environmental_model()->get_reference_path_manager();
-  std::cout << "check_lc_change_finish: tlane_virtual_id: " << tlane_virtual_id << " clane_virtual_id: " << clane_virtual_id << " flane_virtual_id: " << flane_virtual_id << std::endl;
+  std::cout << "check_lc_change_finish: tlane_virtual_id: " << tlane_virtual_id
+            << " clane_virtual_id: " << clane_virtual_id
+            << " flane_virtual_id: " << flane_virtual_id << std::endl;
   auto target_reference_path =
       reference_path_mgr->get_reference_path_by_lane(tlane_virtual_id);
   auto frenet_ego_state = target_reference_path->get_frenet_ego_state();

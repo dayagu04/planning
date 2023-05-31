@@ -99,9 +99,9 @@ bool LaneChangeRequest::IsDashedLineEnough(
   double error_buffer = std::fmin(ego_vel * 0.5, 5);
   dash_length -= error_buffer;
 
-  double distance_thld =
-      500.0;  // hack for distance
-              // std::max(virtual_lane_mgr->map_velocity_limit(), ego_vel) * 4.0;
+  double distance_thld = 500.0;  // hack for distance
+                                 // std::max(virtual_lane_mgr->map_velocity_limit(),
+                                 // ego_vel) * 4.0;
   // bool must_change_lane =
   //     virtual_lane_mgr->get_current_lane()->must_change_lane(distance_thld);
   auto current_lane = virtual_lane_mgr_->get_current_lane();

@@ -103,7 +103,7 @@ bool VisionLateralMotionPlanner::update(
   r_poly_.fill(0);
   auto& debug_info_manager = DebugInfoManager::GetInstance();
   auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
-  
+
   auto lat_motion_plan = planning_debug_data->mutable_vo_lat_motion_plan();
 
   update_basic_path(status);
@@ -2398,7 +2398,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
   } else {
     lat_offset_ = lat_offset;
   }
-  LOG_DEBUG("vision_only_lateral_motion_palnner:: lat_offset_[%f], d_poly_[3][%f]", lat_offset_, d_poly_[3]);
+  LOG_DEBUG("vision_only_lateral_motion_palnner:: lat_offset_[%f], d_poly_[3][%f] \n", lat_offset_, d_poly_[3]);
   return true;
 }
 
@@ -2547,12 +2547,12 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   lateral_output.dist_rblane = 10.;  // attention!!hack!
 
   //todo:clren 后面会使用ReferencePoints代替PathPoint
-  std::vector<PathPoint> path_points; 
+  std::vector<PathPoint> path_points;
   if (flane_ != nullptr) {
     auto &ref_path = flane_->get_reference_path();
     for (auto &ref_point : ref_path->get_points()) {
       path_points.emplace_back(ref_point.path_point);
-    }  
+    }
   }
   lateral_output.path_points = path_points;
   // lateral_output.path_points =
@@ -2760,11 +2760,11 @@ bool VisionLateralMotionPlanner::update_planner_output() {
 }
 
 void VisionLateralMotionPlanner::save_to_debug_info() {
-  
+
   const auto &lateral_output = frame_->session()->planning_context().lateral_behavior_planner_output();
   auto& debug_info_manager = DebugInfoManager::GetInstance();
   auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
-  
+
   auto lat_behavior_plan = planning_debug_data->mutable_vo_lat_behavior_plan();
   // lat_behavior_plan->set_lc_request(lateral_output.lc_request);
   // lat_behavior_plan->set_lc_request_source(lateral_output.lc_request_source);

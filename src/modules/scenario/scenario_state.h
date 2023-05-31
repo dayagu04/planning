@@ -89,9 +89,16 @@ struct StateBase : M::Base {
     common::SceneType scene_type = frame->session()->get_scene_type();
     auto config_builder =
         frame->session()->environmental_model().config_builder(scene_type);
-    //  return TaskPipeline::Make(TaskPipelineType::VISION_ONLY, config_builder,
-    //                           frame);
-    return TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, frame);
+    // 根据定位状态切换实时、长时
+    auto location_valid =
+        frame->session()->environmental_model().location_valid();
+    if (location_valid) {
+      return TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder,
+                                frame);
+    } else {
+      return TaskPipeline::Make(TaskPipelineType::VISION_ONLY, config_builder,
+                                frame);
+    }
   }
 
   virtual std::shared_ptr<Evaluator> get_evaluator(framework::Frame *frame);

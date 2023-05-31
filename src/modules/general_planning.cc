@@ -107,9 +107,10 @@ void GeneralPlanning::FillPlanningTrajectory(
   // 2.Trajectory
   auto trajectory = planning_output->mutable_trajectory();
   trajectory->set_available(true);
-  
-  // FBI WARNING
-  if (hdmap_valid_ || 1) {
+
+  // 根据定位有效性决定实时、长时
+  auto location_valid = session_.environmental_model().location_valid();
+  if (location_valid) {
     trajectory->set_trajectory_type(
         Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
     trajectory->mutable_trajectory_points()->Clear();

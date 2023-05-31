@@ -62,7 +62,7 @@ void GeneralPlanner::UpdateFixLaneVirtualId() {
     session_->mutable_planning_context()->mutable_lat_behavior_state_machine_output().fix_lane_virtual_id = current_lane_virtual_id;
     session_->mutable_planning_context()->mutable_lat_behavior_state_machine_output().origin_lane_virtual_id = current_lane_virtual_id;
     session_->mutable_planning_context()->mutable_lat_behavior_state_machine_output().target_lane_virtual_id = current_lane_virtual_id;
-         
+
   }
 }
 

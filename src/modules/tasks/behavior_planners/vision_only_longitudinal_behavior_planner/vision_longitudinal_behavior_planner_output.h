@@ -16,11 +16,16 @@ struct CutinMsg {
 };
 
 struct GapInfo {
-  int rear_id;
   int front_id;
+  double s_front;
+  double v_front;
+  int rear_id;
+  double s_rear;
+  double v_rear;
+
   int base_car_id;
-  bool acc_valid; // acc valid if front car speed is much larger than rear car
-                  // speed
+  bool acc_valid;  // acc valid if front car speed is much larger than rear car
+                   // speed
   bool valid;
   double cost;
   double acc_time;
@@ -95,6 +100,6 @@ struct VisionLongitudinalBehaviorPlannerOutput {
   std::string plan_msg;
 };
 
-} // namespace planning
+}  // namespace planning
 
 #endif
