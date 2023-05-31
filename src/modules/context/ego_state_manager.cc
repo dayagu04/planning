@@ -209,27 +209,19 @@ uint8_t EgoStateManager::ReplanProcess() {
   const double ds = ego_state->ego_v() * 0.8 * planning_loop_dt;
   const double &lon_err = projection_spline.GetOutput().s_proj - (traj_spline.s_vec.front() + ds);
 
+  // Do not reset delta and omega when replan or not
   if (lat_err > 0.6) {
-    ResetProcess();
+    lat_init_state.set_x(ego_state->ego_pose().x);
+    lat_init_state.set_y(ego_state->ego_pose().y);
+    lat_init_state.set_theta(traj_spline.theta_s_spline(projection_spline.GetOutput().s_proj));
+
     return ReplanStatus::LAT_REPLAN;
   } else if (lon_err > 1.0) {
     lat_init_state.set_x(projection_spline.GetOutput().point_proj.x());
     lat_init_state.set_y(projection_spline.GetOutput().point_proj.y());
     lat_init_state.set_theta(traj_spline.theta_s_spline(projection_spline.GetOutput().s_proj));
 
-    // TODO: need estimated delta and omega for large curv condition
-    lat_init_state.set_delta(0.0);
-    lat_init_state.set_omega(0.0);
-    lat_init_state.set_curv(0.0);
-    lat_init_state.set_d_curv(0.0);
-
-    // lon_init_state.set_s(0.0);
-    // lon_init_state.set_v(ego_state->ego_v());
-    // lon_init_state.set_a(ego_state->ego_acc());
-    // lon_init_state.set_j(0.0);
-
     return ReplanStatus::LON_REPLAN;
-
   } else {
     return ReplanStatus::NONE;
   }

@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/root/bag/20230531134335.record.00000"
+bag_path = "/root/bag/20230531152930.record.00000"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -17,7 +17,7 @@ max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 
 # load lateral planning (behavior and motion)
-fig1, lat_plan_data = load_lat_plan_figure(fig1)
+fig1, fig2, fig3, fig4, fig5, fig6, lat_plan_data = load_lat_plan_figure(fig1)
 
 ### sliders config
 class LocalViewSlider:
@@ -34,5 +34,5 @@ def slider_callback(bag_time):
 
   push_notebook()
 
-bkp.show(row(fig1), notebook_handle=True)
+bkp.show(row(fig1, column(fig2, fig3, fig4, fig5, fig6)), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)
