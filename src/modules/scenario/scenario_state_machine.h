@@ -11,11 +11,11 @@ namespace planning {
 
 // LC-Lane Change, LB-Lane Borrow
 // TODO: None --> LK LaneKeep
-using ScenarioFsm = M::PeerRoot<M::Composite<
-    RoadState, RoadState::None,
-    RoadState::LC, RoadState::LC::LWait, RoadState::LC::RWait,
-                 RoadState::LC::LChange, RoadState::LC::RChange,
-                 RoadState::LC::LBack, RoadState::LC::RBack>>;
+using ScenarioFsm =
+    M::PeerRoot<M::Composite<RoadState, RoadState::None, RoadState::LC,
+                             RoadState::LC::LWait, RoadState::LC::RWait,
+                             RoadState::LC::LChange, RoadState::LC::RChange,
+                             RoadState::LC::LBack, RoadState::LC::RBack>>;
 
 // M::Composite<RoadState::LB, RoadState::LB::LBorrow,
 //              RoadState::LB::RBorrow, RoadState::LB::LBack,
@@ -78,6 +78,12 @@ class ScenarioStateMachine
     return object_selector_;
   }
 
+  /**
+   * @brief 判断和构造目标车道中的gap
+    -|                |-▅-|     |
+    ▅...........................
+    ----▅-|   |-▅-|    |-▅-|  |
+   */
   bool GapAvailable(RequestType direction, std::vector<int>& overlap_obstacles,
                     std::vector<int>& yield_obstacles);
 

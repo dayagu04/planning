@@ -130,58 +130,6 @@ bool VirtualLane::has_lines(LineDirection direction) const {
 //   }
 // }
 
-// bool VirtualLane::is_obstacle_on(const Obstacle &tr) {
-//   if (reference_path_ == nullptr) {
-//     return false;
-//   }
-//   if (reference_path_->frenet_obstacles_map_.find(tr.id) == reference_path_->frenet_obstacles_map_.end()) {
-//     return false;
-//   }
-
-//   const FrenetObstacle& frenet_obstacle = reference_path_->get_obstacles_map()[tr.id];
-//   if (frenet_obstacle.rel_s() > 60 || frenet_obstacle.rel_s() < -40 || frenet_obstacle.s_min_l().x > 15 || frenet_obstacle.s_min_l().x < -15) {
-//     return false;
-//   }
-
-//   double d_min_l = distance_to_line(frenet_obstacle.s_min_l().y, frenet_obstacle.s_min_l().x, LEFT);
-//   double d_max_r = distance_to_line(frenet_obstacle.s_max_l().y, frenet_obstacle.s_max_l().x, RIGHT);
-
-//   double check_offset = 0.0;
-
-//   double lane_width = DEFAULT_LANE_WIDTH;
-//   std::array<double, 3> xp_v{0., 3., 5.};
-//   std::array<double, 3> fp_v{std::max(lane_width / 2 - 1.45, 0.0),
-//                             std::max(lane_width / 2 - 1.65, 0.0), 0.0};
-//   if (true) {
-//     std::array<double, 5> xp_s{-30, -20, 20, 30, 60};
-//     std::array<double, 5> fp_s{0.45, 0.2, 0.3, 0.45, 0.6};
-//     if (check_offset == 0.0) {
-//       check_offset =
-//         interp(frenet_obstacle.rel_s(), xp_s, fp_s) + interp(frenet_obstacle.frenet_velocity_s(), xp_v, fp_v);
-//     }
-
-//     return (d_min_l < -check_offset && d_max_r > check_offset);
-//   }
-// }
-
-bool VirtualLane::is_obstacle_on(int obj_id) {
-  const double HALF_LANE_WIDTH = 1.8;
-  if (reference_path_ == nullptr) {
-    LOG_ERROR("The reference_path_ is null \n");
-    return false;
-  }
-  auto &obstacles_map = reference_path_->get_obstacles_map();
-  std::shared_ptr<FrenetObstacle> frenet_obstacle = nullptr;
-  auto iter = obstacles_map.find(obj_id);
-  if(iter != obstacles_map.end()){
-    frenet_obstacle = iter->second;
-  } else {
-    LOG_WARNING("There is no obstacle[%d] \n", obj_id);
-    return false;
-  }
-  return (std::fabs(frenet_obstacle->frenet_l()) < HALF_LANE_WIDTH) ? true : false;
-}
-
 uint VirtualLane::get_common_point_num(const std::shared_ptr<VirtualLane> &other) {
   if (other == nullptr) {
     return 0;

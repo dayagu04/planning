@@ -24,7 +24,6 @@ void IntRequest::Update(int lc_status) {
                          ->get_ego_state_manager()
                          ->ego_blinker();
   // init lanes with id
-  if (virtual_lane_mgr_->get_current_lane() == nullptr) return;
   auto current_lane_virtual_id = virtual_lane_mgr_->current_lane_virtual_id();
 
   if (lane_change_lane_mgr_->has_origin_lane()) {
@@ -64,6 +63,10 @@ void IntRequest::Update(int lc_status) {
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         LOG_DEBUG(
             "[IntRequest::update] Ask for interactive changing lane to left\n");
+      } else {
+        LOG_WARNING(
+            "[IntRequest::update] Ask for interactive changing lane to left "
+            "but left lane is null \n");
       }
     } else {
       LOG_DEBUG(
@@ -92,6 +95,10 @@ void IntRequest::Update(int lc_status) {
         LOG_DEBUG(
             "[IntRequest::update] Ask for interactive changing lane to right "
             "\n");
+      } else {
+        LOG_WARNING(
+            "[IntRequest::update] Ask for interactive changing lane to right "
+            "but right lane is null \n");
       }
     } else {
       LOG_DEBUG(

@@ -17,13 +17,13 @@ std::shared_ptr<Evaluator> StateBase::get_evaluator(framework::Frame *frame) {
 }
 
 void StateBase::process(Control &control, FsmContext &context) {
-  LOG_DEBUG("StateBase::process(); ");
+  LOG_DEBUG("StateBase::process() \n");
 
   if (!is_leaf()) {
     return;
   }
 
-  LOG_DEBUG("[StateBase] entering process\n");
+  LOG_DEBUG("[StateBase] entering process \n");
   auto start_time = IflyTime::Now_ms();
 
   // Step 1) get state transition candidates
@@ -33,7 +33,7 @@ void StateBase::process(Control &control, FsmContext &context) {
   get_state_transition_candidates(context, transition_contexts);
   assert(transition_contexts.size() > 0);
   auto candidates_time = IflyTime::Now_ms();
-  LOG_DEBUG("[StateBase] get candidates time: %f",
+  LOG_DEBUG("[StateBase] get candidates time: %f \n",
             candidates_time - start_time);
 
   // Step 2) refine candidates
@@ -151,7 +151,7 @@ void StateBase::process(Control &control, FsmContext &context) {
     const auto &state_machine_output =
       context.frame->session()->planning_context().lat_behavior_state_machine_output();
     auto& debug_info_manager = DebugInfoManager::GetInstance();
-    auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();  
+    auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
     auto lat_behavior_common = planning_debug_data->mutable_lat_behavior_common();
     lat_behavior_common->set_lc_invalid_obj_id(state_machine_output.lc_invalid_track.track_id);
     lat_behavior_common->set_lc_back_obj_id(state_machine_output.lc_back_track.track_id);
@@ -194,7 +194,7 @@ void StateBase::process(Control &control, FsmContext &context) {
     lat_behavior_common->set_is_lc_valid(state_machine_output.is_lc_valid);
     lat_behavior_common->set_lc_valid_cnt(state_machine_output.lc_valid_cnt);
     lat_behavior_common->set_lc_back_cnt(state_machine_output.lc_back_cnt);
-    
+
   }
 
   LOG_DEBUG("[StateBase] evaluate success");

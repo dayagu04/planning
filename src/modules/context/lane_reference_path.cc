@@ -161,13 +161,18 @@ bool LaneReferencePath::get_points_by_lane_id(
 
 
 void LaneReferencePath::assign_obstacles_to_lane() {
-  lane_obstacles_.clear();
+  const double HALF_LANE_WIDTH = 1.8;
+  lane_obstacles_id_.clear();
   lane_leadone_obstacle_ = -1; //需要注意id是否为负数 todo
   lane_leadtwo_obstacle_ = -1;
 
   std::vector<std::shared_ptr<FrenetObstacle>> sorted_obstacles;
   for (auto &frenet_obstacle : frenet_obstacles_) {
-    if (std::fabs(frenet_obstacle->frenet_l()) < 1.6) {
+    ReferencePathPoint point;
+    // Get the width of the lane at the obstacle's position
+    bool valid = get_reference_point_by_lon(frenet_obstacle->frenet_s(), point);
+    auto half_lane_width = valid == true ? (point.lane_width / 2) : HALF_LANE_WIDTH;
+    if (std::fabs(frenet_obstacle->frenet_l()) < half_lane_width) {
       sorted_obstacles.push_back(frenet_obstacle);
     }
   }
@@ -178,7 +183,7 @@ void LaneReferencePath::assign_obstacles_to_lane() {
   int leadtwo{-1};
   double s_ego = get_frenet_ego_state().s();
   for (auto &frenet_obstacle : sorted_obstacles) {
-    lane_obstacles_.emplace_back(frenet_obstacle->id());
+    lane_obstacles_id_.emplace_back(frenet_obstacle->id());
     if (frenet_obstacle->frenet_s() > s_ego && leadone == -1) {
       leadone = frenet_obstacle->id();
       continue;
@@ -198,7 +203,7 @@ void LaneReferencePath::cal_current_leadone_leadtwo_to_ego() {
   int current_leadtwo_id{-1};
 
   double s_ego = get_frenet_ego_state().s();
-  auto lane_obstacles = get_lane_obstacles();
+  auto lane_obstacles = get_lane_obstacles_ids();
   std::vector<std::shared_ptr<FrenetObstacle>> sorted_obstacles;
   for (auto &frenet_obstacle : frenet_obstacles_) {
     if (std::find(lane_obstacles.begin(), lane_obstacles.end(),frenet_obstacle->id()) == lane_obstacles.end() ||

@@ -162,15 +162,15 @@ LaneTracksManager::LaneTracksManager(LateralObstacle &lateral_obstacle,
     : lateral_obstacle_(lateral_obstacle),
       virtual_lane_mgr_(virtual_lane_mgr),
       session_(session) {
-    update_lane_tracks();    
+    update_lane_tracks();
   }
 
 std::vector<TrackedObject> *LaneTracksManager::get_lane_tracks(int virtual_id,
                                                                TrackType track_type) {
-  const auto &virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();    
-  const auto &current_lane = virtual_lane_manager->get_current_lane();                        
+  const auto &virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
+  const auto &current_lane = virtual_lane_manager->get_current_lane();
   const auto &left_lane = virtual_lane_manager->get_left_lane();
-  const auto &right_lane = virtual_lane_manager->get_right_lane();                                                  
+  const auto &right_lane = virtual_lane_manager->get_right_lane();
 
   if (current_lane != nullptr && current_lane->get_virtual_id() == virtual_id) {
     if (track_type == TrackType::FRONT_TRACK) {
@@ -201,7 +201,7 @@ std::vector<TrackedObject> *LaneTracksManager::get_lane_tracks(int virtual_id,
 
 void LaneTracksManager::update_lane_tracks() {
   const auto &virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
-  const auto &current_lane = virtual_lane_manager->get_current_lane();                        
+  const auto &current_lane = virtual_lane_manager->get_current_lane();
   const auto &left_lane = virtual_lane_manager->get_left_lane();
   const auto &right_lane = virtual_lane_manager->get_right_lane();
 
@@ -222,11 +222,11 @@ void LaneTracksManager::update_lane_tracks() {
           front_tracks_clane_.emplace_back(tracks_map[obstacle_id]);
         } else {
           side_tracks_clane_.emplace_back(tracks_map[obstacle_id]);
-        }  
+        }
       }
     }
-  } 
-  
+  }
+
   if (left_lane != nullptr) {
     auto obstacles_id = left_lane->get_reference_path()->get_lane_obstacles();
     for (auto obstacle_id : obstacles_id) {
@@ -236,10 +236,10 @@ void LaneTracksManager::update_lane_tracks() {
           front_tracks_llane_.emplace_back(tracks_map[obstacle_id]);
         } else {
           side_tracks_llane_.emplace_back(tracks_map[obstacle_id]);
-        }  
+        }
       }
     }
-  } 
+  }
 
   if (right_lane != nullptr) {
     auto obstacles_id = right_lane->get_reference_path()->get_lane_obstacles();
@@ -250,10 +250,10 @@ void LaneTracksManager::update_lane_tracks() {
           front_tracks_rlane_.emplace_back(tracks_map[obstacle_id]);
         } else {
           side_tracks_rlane_.emplace_back(tracks_map[obstacle_id]);
-        }  
+        }
       }
     }
-  } 
+  }
 }
 
 void LaneTracksManager::reset() {

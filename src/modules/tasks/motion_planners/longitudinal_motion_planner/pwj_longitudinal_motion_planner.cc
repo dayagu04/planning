@@ -1,18 +1,19 @@
 
 #include "pwj_longitudinal_motion_planner.h"
-#include "ifly_time.h"
 
 #include <iomanip>
 #include <sstream>
 #include <vector>
+
+#include "ifly_time.h"
 
 // #include "core/common/trace.h"
 // #include "core/modules/common/ego_prediction_utils.h"
 // #include "core/modules/context/ego_state.h"
 #include "common/math/piecewise_jerk/piecewise_problem.h"
 #include "debug_info_log.h"
-#include "scc_function/mrc_condition.h"
 #include "ifly_time.h"
+#include "scc_function/mrc_condition.h"
 
 namespace planning {
 
@@ -217,45 +218,6 @@ bool LongitudinalOptimizerV3::optimize(
   JSON_DEBUG_VALUE("LonMotionOpt_init_state_v", s_init_state[1]);
   JSON_DEBUG_VALUE("LonMotionOpt_init_state_a", s_init_state[2]);
 
-  // mdebug
-  std::string mdebug_table_name =
-      "LongitudinalOptimizeProblem (target_lane_id:" +
-      std::to_string(pipeline_context_->coarse_planning_info.target_lane_id) +
-      ", option.loose_obstacle_bound:" +
-      std::to_string(option.loose_obstacle_bound) +
-      ", option.use_raw_model_traj:" +
-      std::to_string(option.use_raw_model_traj) +
-      ", s:" + std::to_string(planning_init_point.frenet_state.s) +
-      ", v:" + std::to_string(planning_init_point.v) +
-      ", a:" + std::to_string(planning_init_point.a) +
-      ", status:" + std::to_string(status) + ", success:";
-  // mdebug_table_name += success ? "true" : "false";
-  // mdebug_table_name += ")";
-
-  // MDEBUG_TABLE_BEGIN(mdebug_table_name)
-  // MDEBUG_TABLE_BEGIN_COLUMNS()
-  // MDEBUG_TABLE_ADD_COLUMN("t", "number")
-  // MDEBUG_TABLE_ADD_COLUMN("s_ref", "number")
-  // MDEBUG_TABLE_ADD_COLUMN("s_ref_raw", "number")
-  // MDEBUG_TABLE_ADD_COLUMN("s_lower", "string")
-  // MDEBUG_TABLE_ADD_COLUMN("s_upper", "string")
-  // MDEBUG_TABLE_ADD_COLUMN("v_lower", "number")
-  // MDEBUG_TABLE_ADD_COLUMN("v_upper", "number")
-  // MDEBUG_TABLE_ADD_COLUMN("a_lower", "number")
-  // MDEBUG_TABLE_ADD_COLUMN("a_upper", "number")
-  // MDEBUG_TABLE_ADD_COLUMN("v_ref", "number");
-  // MDEBUG_TABLE_ADD_COLUMN("jerk_lower", "number");
-  // MDEBUG_TABLE_ADD_COLUMN("jerk_upper", "number");
-  // MDEBUG_TABLE_ADD_COLUMN("s_lead_bound", "number")
-  // MDEBUG_TABLE_ADD_COLUMN("s", "number")
-  // MDEBUG_TABLE_ADD_COLUMN("v", "number")
-  // MDEBUG_TABLE_ADD_COLUMN("a", "number")
-  // MDEBUG_TABLE_ADD_COLUMN("s_lead", "number")
-  // MDEBUG_TABLE_ADD_COLUMN("jerk", "number")
-  // MDEBUG_TABLE_END_COLUMNS()
-  // MDEBUG_TABLE_BEGIN_ROWS()
-
-  // MDEBUG_JSON_BEGIN_ARRAY(points)
   const auto &ego_prediction_raw_traj_points =
       pipeline_context_->planning_result.raw_traj_points;
   auto init_s = planning_init_point.frenet_state.s;
@@ -340,94 +302,7 @@ bool LongitudinalOptimizerV3::optimize(
         }
       }
     }
-
-    //   MDEBUG_JSON_BEGIN_OBJECT(object)
-    //   MDEBUG_JSON_ADD_ITEM(t, t, object)
-    //   MDEBUG_JSON_ADD_ITEM(s_ref, s_ref - init_s, object)
-    //   MDEBUG_JSON_ADD_ITEM(s_ref_raw, s_ref_raw - init_s, object)
-    //   MDEBUG_JSON_ADD_ITEM(s_lower, s_lower - init_s, object)
-    //   MDEBUG_JSON_ADD_ITEM(s_upper, s_upper - init_s, object)
-    //   MDEBUG_JSON_ADD_ITEM(s_lower_bound_info_id, s_lower_bound_info.id,
-    //   object) MDEBUG_JSON_ADD_ITEM(s_upper_bound_info_id,
-    //   s_upper_bound_info.id, object)
-    //   MDEBUG_JSON_ADD_ITEM(s_lower_bound_info_type, s_lower_bound_info.type,
-    //                        object)
-    //   MDEBUG_JSON_ADD_ITEM(s_upper_bound_info_type, s_upper_bound_info.type,
-    //                        object)
-    //   MDEBUG_JSON_ADD_ITEM(
-    //       v_lower, i < lon_bound_v.size() ? lon_bound_v[i].lower : -100.0,
-    //       object)
-    //   MDEBUG_JSON_ADD_ITEM(
-    //       v_upper, i < lon_bound_v.size() ? lon_bound_v[i].upper : 100.0,
-    //       object)
-    //   MDEBUG_JSON_ADD_ITEM(
-    //       a_lower, i < lon_bound_a.size() ? lon_bound_a[i].lower : -10.0,
-    //       object)
-    //   MDEBUG_JSON_ADD_ITEM(
-    //       a_upper, i < lon_bound_a.size() ? lon_bound_a[i].upper : 10.0,
-    //       object)
-    //   MDEBUG_JSON_ADD_ITEM(v_ref, lon_ref_path.ds_refs[i].first, object)
-    //   MDEBUG_JSON_ADD_ITEM(
-    //       jerk_lower, i < lon_bound_jerk.size() ? lon_bound_jerk[i].lower :
-    //       -10.0, object)
-    //   MDEBUG_JSON_ADD_ITEM(
-    //       jerk_upper, i < lon_bound_jerk.size() ? lon_bound_jerk[i].upper
-    //       : 10.0, object)
-    //   MDEBUG_JSON_ADD_ITEM(s_lead_bound, s_lead_bound, object)
-
-    //   MDEBUG_TABLE_BEGIN_ONE_ROW()
-    //   MDEBUG_TABLE_ADD_RAW_DATA(t)
-    //   MDEBUG_TABLE_ADD_RAW_DATA(s_ref - init_s)
-    //   MDEBUG_TABLE_ADD_RAW_DATA(s_ref_raw - init_s)
-    //   MDEBUG_TABLE_ADD_RAW_DATA(std::to_string(s_lower - init_s) + "(id:" +
-    //                             std::to_string(s_lower_bound_info.id) +
-    //                             ",type:" + s_lower_bound_info.type + ")")
-    //   MDEBUG_TABLE_ADD_RAW_DATA(std::to_string(s_upper - init_s) + "(id:" +
-    //                             std::to_string(s_upper_bound_info.id) +
-    //                             ",type:" + s_upper_bound_info.type + ")")
-    //   MDEBUG_TABLE_ADD_RAW_DATA(i < lon_bound_v.size() ? lon_bound_v[i].lower
-    //                                                    : -100.0)
-    //   MDEBUG_TABLE_ADD_RAW_DATA(i < lon_bound_v.size() ? lon_bound_v[i].upper
-    //                                                    : 100.0)
-    //   MDEBUG_TABLE_ADD_RAW_DATA(i < lon_bound_a.size() ? lon_bound_a[i].lower
-    //                                                    : -10.0)
-    //   MDEBUG_TABLE_ADD_RAW_DATA(i < lon_bound_a.size() ? lon_bound_a[i].upper
-    //                                                    : 10.0)
-    //   MDEBUG_TABLE_ADD_RAW_DATA(lon_ref_path.ds_refs[i].first)
-    //   MDEBUG_TABLE_ADD_RAW_DATA(
-    //       i < lon_bound_jerk.size() ? lon_bound_jerk[i].lower : -10.0);
-    //   MDEBUG_TABLE_ADD_RAW_DATA(
-    //       i < lon_bound_jerk.size() ? lon_bound_jerk[i].upper : 10.0);
-    //   MDEBUG_TABLE_ADD_RAW_DATA(s_lead_bound)
-
-    //   if (success) {
-    //     MDEBUG_JSON_ADD_ITEM(s, s[i] - init_s, object)
-    //     MDEBUG_JSON_ADD_ITEM(v, v[i], object)
-    //     MDEBUG_JSON_ADD_ITEM(a, a[i], object)
-    //     MDEBUG_JSON_ADD_ITEM(s_lead, s[i] - init_s + 2 * v[i], object)
-    //     MDEBUG_JSON_ADD_ITEM(jerk, i < jerk.size() ? jerk[i] : 0.0, object)
-    //     LOG_DEBUG("HHLDEBUG optimize s: %.2f, v: %.2f, a: %.2f, jerk: %.2f",
-    //     s[i],
-    //           v[i] * 3.6, a[i], jerk[i]);
-
-    //     MDEBUG_TABLE_ADD_RAW_DATA(s[i] - init_s)
-    //     MDEBUG_TABLE_ADD_RAW_DATA(v[i])
-    //     MDEBUG_TABLE_ADD_RAW_DATA(a[i])
-    //     MDEBUG_TABLE_ADD_RAW_DATA(s[i] - init_s + 2 * v[i])
-    //     MDEBUG_TABLE_ADD_RAW_DATA(i < jerk.size() ? jerk[i] : 0.0)
-    //   } else {
-    //     MDEBUG_TABLE_ADD_RAW_DATA(0.0)
-    //     MDEBUG_TABLE_ADD_RAW_DATA(0.0)
-    //     MDEBUG_TABLE_ADD_RAW_DATA(0.0)
-    //     MDEBUG_TABLE_ADD_RAW_DATA(0.0)
-    //     MDEBUG_TABLE_ADD_RAW_DATA(0.0)
-    //   }
-    //   MDEBUG_JSON_END_OBJECT(object)
-    //   MDEBUG_TABLE_END_ONE_ROW()
   }
-  // MDEBUG_TABLE_END_ROWS()
-  // MDEBUG_TABLE_END()
-  // MDEBUG_JSON_END_ARRAY(points)
 
   // step 4) check result
   if (not success) {

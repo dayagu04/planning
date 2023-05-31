@@ -208,20 +208,18 @@ bool ScenarioStateMachine::GapAvailable(RequestType direction,
   // 2.获取当前车道参考线 & 参考线关联障碍物
   auto reference_path_manager =
       session_->environmental_model().get_reference_path_manager();
-  int current_lane_id = virtual_lane_manager->current_lane_virtual_id();
   auto current_reference_path =
-      reference_path_manager->get_reference_path_by_lane(current_lane_id);
+      reference_path_manager->get_reference_path_by_current_lane();
   auto &frenet_obstacles = current_reference_path->get_obstacles();
   auto &frenet_ego_state = current_reference_path->get_frenet_ego_state();
   bool b_gap_available(true);
   // 3.交互式换道需要判断最近的gap是否满足需求
-  /*
-  -|                |-▅-|     |
-  ▅...........................
-  ----▅-|   |-▅-|    |-▅-|  |
-  */
+  // 获取目标车道中的障碍物id序列
+  auto tlane_lane_obstacles =
+      target_lane->get_reference_path()->get_lane_obstacles_ids();
   for (auto &frenet_obstacle : frenet_obstacles) {
-    if (target_lane->is_obstacle_on(frenet_obstacle->id())) {
+    if (std::count(tlane_lane_obstacles.begin(), tlane_lane_obstacles.end(),
+                   frenet_obstacle->id())) {
       double ego_s = frenet_ego_state.s();
       double obstacle_s = frenet_obstacle->frenet_s();
       if ((obstacle_s > ego_s) &&
@@ -248,11 +246,10 @@ bool ScenarioStateMachine::GapAvailable(RequestType direction,
       }
     }
   }
-  LOG_DEBUG("gap_available is:[%d] \n", b_gap_available);
 
-  // 4.排序障碍物
+  // 4.排序障碍物: 由远至近
   auto tlane_obstacles =
-      target_lane->get_reference_path()->get_lane_obstacles();
+      target_lane->get_reference_path()->get_lane_obstacles_ids();
   std::vector<std::shared_ptr<FrenetObstacle>> sorted_obstacles;
   for (auto &frenet_obstacle : frenet_obstacles) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
@@ -284,7 +281,7 @@ bool ScenarioStateMachine::GapAvailable(RequestType direction,
     gap.front_id = sorted_obstacles[i]->id();
     gap.s_front = sorted_obstacles[i]->frenet_obstacle_boundary().s_start;
     gap.v_front = sorted_obstacles[i]->frenet_velocity_s();
-    
+
     double s_rear = -5.0;
     double v_rear = 0;
     int id_rear = -1;
@@ -301,7 +298,38 @@ bool ScenarioStateMachine::GapAvailable(RequestType direction,
   }
 
   // 6.Select gap
+  double s_ego_rear = frenet_ego_state.boundary().s_start;
+  double s_ego_front = frenet_ego_state.boundary().s_end;
+  double v_ego = frenet_ego_state.velocity_s();
+  static const double time_headway = 0.5;
+  static const double care_time = 2.0;
+  static const double acc = 1.0;
 
+  for (auto &gap_info : gap_infos) {
+    double sc_f = gap_info.s_front + gap_info.v_front * care_time -
+                  std::min(gap_info.v_front * time_headway, 5.0);
+    double sc_r = gap_info.s_rear + gap_info.v_rear * care_time +
+                  std::min(gap_info.v_rear * time_headway, 5.0);
+    double s_upper =
+        s_ego_front + v_ego * care_time - 0.5 * acc * care_time * care_time;
+    double s_lower =
+        s_ego_rear + v_ego * care_time + 0.5 * acc * care_time * care_time;
+    LOG_DEBUG(
+        "[gap info] front id: [%d], rear id: [%d], sc_f: [%f], sc_r: [%f], "
+        "s_upper: [%f],  s_lower: [%f] \n",
+        gap_info.front_id, gap_info.rear_id, sc_f, sc_r, s_upper, s_lower);
+    if ((s_upper < sc_f && s_lower > sc_r) ||
+        gap_info.s_rear < s_ego_rear - 20.0 || gap_info.rear_id == -1) {
+      if (gap_info.front_id != -1) {
+        yield_obstacles.push_back(gap_info.front_id);
+      }
+      if (gap_info.rear_id != -1) {
+        overtake_obstacles.push_back(gap_info.rear_id);
+      }
+      break;
+    }
+  }
+  LOG_DEBUG("gap_available is:[%d] \n", b_gap_available);
   return b_gap_available;
 }
 
@@ -438,7 +466,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
   auto &obstacle_manager =
       session_->mutable_environmental_model()->get_obstacle_manager();
   auto tlane_obstacles =
-      target_lane->get_reference_path()->get_lane_obstacles();
+      target_lane->get_reference_path()->get_lane_obstacles_ids();
 
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
@@ -675,7 +703,7 @@ LaneChangeStageInfo ScenarioStateMachine::decide_lc_valid_info(
   // int lc_valid_thre = 1;
   if (raw_info.gap_insertable) {
     lc_valid_cnt_ += 1;
-    LOG_DEBUG("decide_lc_valid_info lc_valid_cnt : %d", lc_valid_cnt_);
+    LOG_DEBUG("decide_lc_valid_info lc_valid_cnt : %d \n", lc_valid_cnt_);
     if (lc_valid_cnt_ > lc_valid_thre) {
       // lc_valid_cnt_ = 0; // todo: set value when choose change stae finally
       raw_info.lc_valid = true;
@@ -684,7 +712,7 @@ LaneChangeStageInfo ScenarioStateMachine::decide_lc_valid_info(
       raw_info.lc_invalid_reason = "valid cnt below threshold";
     }
   } else {
-    LOG_DEBUG("arbitrator lc invalid reason %s ",
+    LOG_DEBUG("arbitrator lc invalid reason %s \n",
               raw_info.lc_invalid_reason.c_str());
     lc_valid_cnt_ = 0;
   }
@@ -820,7 +848,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
   auto &obstacle_manager =
       session_->mutable_environmental_model()->get_obstacle_manager();
   auto tlane_obstacles =
-      target_lane->get_reference_path()->get_lane_obstacles();
+      target_lane->get_reference_path()->get_lane_obstacles_ids();
 
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
