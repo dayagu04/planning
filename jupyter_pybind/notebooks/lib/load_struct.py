@@ -256,11 +256,11 @@ def load_prediction_objects(obstacle_list, localization_info):
         p_x = []
         p_y = []
         for j in range(len(obstacle_list[i].trajectory[0].trajectory_point)):
-          local_x = obstacle_list[i].trajectory[0].trajectory_point[j].relative_position.x
-          local_y = obstacle_list[i].trajectory[0].trajectory_point[j].relative_position.y
-          # global_x = obstacle_list[i].trajectory[0].trajectory_point[j].position.x
-          # global_y = obstacle_list[i].trajectory[0].trajectory_point[j].position.y
-          # local_x, local_y = global2local(global_x, global_y, localization_x, localization_y, localization_theta)
+          # local_x = obstacle_list[i].trajectory[0].trajectory_point[j].relative_position.x
+          # local_y = obstacle_list[i].trajectory[0].trajectory_point[j].relative_position.y
+          global_x = obstacle_list[i].trajectory[0].trajectory_point[j].position.x
+          global_y = obstacle_list[i].trajectory[0].trajectory_point[j].position.y
+          local_x, local_y = global2local(global_x, global_y, localization_x, localization_y, localization_theta)
           p_x.append(local_x)
           p_y.append(local_y)
         # trajectory_info[track_id] = [p_x, p_y]

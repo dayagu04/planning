@@ -264,8 +264,8 @@ struct GeneralLateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_bound = 1000.0;
   double q_jerk_bound = 1000.0;
 
-  double q_soft_corridor = 100.0;
-  double q_hard_corridor = 2000.0;
+  double q_soft_corridor = 0.0;
+  double q_hard_corridor = 0.0;
   double delta_t = 0.2;
 };
 
