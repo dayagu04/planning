@@ -83,10 +83,13 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   auto location_valid = local_view.localization_estimate.msf_status().available() &&
       local_view.localization_estimate.msf_status().msf_status() !=
           LocalizationOutput::MsfStatus::ERROR;
-  // session_->mutable_environmental_model()->set_location_valid(false);
+  session_->mutable_environmental_model()->set_location_valid(location_valid);
+  // 长时，实时切换，临时hack
+  // session_->mutable_environmental_model()->set_location_valid(false); 
   // Step 1) update vehicleDbwStatus
   session_->mutable_environmental_model()->UpdateVehicleDbwStatus(
     local_view.hmi_mcu_inner_info.noa_active_switch());
+  // 自动有效，临时hack
   // session_->mutable_environmental_model()->UpdateVehicleDbwStatus(true);
   last_feed_time_[FEED_VEHICLE_DBW_STATUS] = current_time;
 

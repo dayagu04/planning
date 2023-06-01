@@ -270,7 +270,7 @@ bool ReferencePath::get_reference_point_by_lon(
   reference_path_point.path_point.theta = planning_math::InterpolateAngle(
       pre_reference_point.path_point.theta, next_reference_point.path_point.theta, interpolate_ratio);
 
-  reference_path_point.lane_width = planning_math::InterpolateAngle(
+  reference_path_point.lane_width = planning_math::Interpolate(
       pre_reference_point.lane_width, next_reference_point.lane_width, interpolate_ratio);
 
   reference_path_point.max_velocity = pre_reference_point.max_velocity;
@@ -340,7 +340,7 @@ bool ReferencePath::get_reference_point_by_lon_from_raw_ref_path_points(
   reference_path_point.path_point.theta = planning_math::InterpolateAngle(
       pre_reference_point.path_point.theta, next_reference_point.path_point.theta, interpolate_ratio);
   
-  reference_path_point.lane_width = planning_math::InterpolateAngle(
+  reference_path_point.lane_width = planning_math::Interpolate(
       pre_reference_point.lane_width, next_reference_point.lane_width, interpolate_ratio);
 
   reference_path_point.max_velocity = pre_reference_point.max_velocity;
