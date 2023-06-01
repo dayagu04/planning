@@ -214,42 +214,42 @@ void LaneTracksManager::update_lane_tracks() {
   }
 
   if (current_lane != nullptr) {
-    auto abstacles_id = current_lane->get_reference_path()->get_lane_obstacles();
-    for (auto abstacle_id : abstacles_id) {
-      if (tracks_map.find(abstacle_id) != tracks_map.end()) {
-        auto d_rel = tracks_map[abstacle_id].d_rel;
+    auto obstacles_id = current_lane->get_reference_path()->get_lane_obstacles();
+    for (auto obstacle_id : obstacles_id) {
+      if (tracks_map.find(obstacle_id) != tracks_map.end()) {
+        auto d_rel = tracks_map[obstacle_id].d_rel;
         if (d_rel > 0) {
-          front_tracks_clane_.emplace_back(tracks_map[abstacle_id]);
+          front_tracks_clane_.emplace_back(tracks_map[obstacle_id]);
         } else {
-          side_tracks_clane_.emplace_back(tracks_map[abstacle_id]);
+          side_tracks_clane_.emplace_back(tracks_map[obstacle_id]);
         }  
       }
     }
   } 
   
   if (left_lane != nullptr) {
-    auto abstacles_id = left_lane->get_reference_path()->get_lane_obstacles();
-    for (auto abstacle_id : abstacles_id) {
-      if (tracks_map.find(abstacle_id) != tracks_map.end()) {
-        auto d_rel = tracks_map[abstacle_id].d_rel;
+    auto obstacles_id = left_lane->get_reference_path()->get_lane_obstacles();
+    for (auto obstacle_id : obstacles_id) {
+      if (tracks_map.find(obstacle_id) != tracks_map.end()) {
+        auto d_rel = tracks_map[obstacle_id].d_rel;
         if (d_rel > 0) {
-          front_tracks_llane_.emplace_back(tracks_map[abstacle_id]);
+          front_tracks_llane_.emplace_back(tracks_map[obstacle_id]);
         } else {
-          side_tracks_llane_.emplace_back(tracks_map[abstacle_id]);
+          side_tracks_llane_.emplace_back(tracks_map[obstacle_id]);
         }  
       }
     }
   } 
 
   if (right_lane != nullptr) {
-    auto abstacles_id = right_lane->get_reference_path()->get_lane_obstacles();
-    for (auto abstacle_id : abstacles_id) {
-      if (tracks_map.find(abstacle_id) != tracks_map.end()) {
-        auto d_rel = tracks_map[abstacle_id].d_rel;
+    auto obstacles_id = right_lane->get_reference_path()->get_lane_obstacles();
+    for (auto obstacle_id : obstacles_id) {
+      if (tracks_map.find(obstacle_id) != tracks_map.end()) {
+        auto d_rel = tracks_map[obstacle_id].d_rel;
         if (d_rel > 0) {
-          front_tracks_rlane_.emplace_back(tracks_map[abstacle_id]);
+          front_tracks_rlane_.emplace_back(tracks_map[obstacle_id]);
         } else {
-          side_tracks_rlane_.emplace_back(tracks_map[abstacle_id]);
+          side_tracks_rlane_.emplace_back(tracks_map[obstacle_id]);
         }  
       }
     }
