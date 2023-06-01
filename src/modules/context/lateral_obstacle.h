@@ -101,10 +101,7 @@ public:
   LaneTracksManager(LateralObstacle &lateral_obstacle,
                     VirtualLaneManager &virtual_lane_mgr, planning::framework::Session *session);
   virtual ~LaneTracksManager() = default;
-
-  // void update_ego_state(const EgoStateManager& ego_state) {
-  //   ego_state_ = ego_state;
-  // }
+  void update_lane_tracks();
 
   double get_drel_close(int side);
   double get_vrel_close(int side, int status);
@@ -119,14 +116,10 @@ public:
   // std::pair<int, pair<double, double>> get_vavg_poi(int side, double, double);
   // bool front_cone_exist();
 
-  // void save_context(LaneTracksManagerContext &context) const {}
-  // void restore_context(const LaneTracksManagerContext &context) {}
-
   void update() { lane_tracks_update_.clear(); }
 
 private:
   void reset();
-  void update_lane_tracks();
   
   std::set<std::tuple<int, int>> lane_tracks_update_;
   std::vector<TrackedObject> front_tracks_clane_;

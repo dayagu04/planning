@@ -161,9 +161,8 @@ LaneTracksManager::LaneTracksManager(LateralObstacle &lateral_obstacle,
                                      planning::framework::Session *session)
     : lateral_obstacle_(lateral_obstacle),
       virtual_lane_mgr_(virtual_lane_mgr),
-      session_(session) {
-    update_lane_tracks();
-  }
+      session_(session) {  
+}
 
 std::vector<TrackedObject> *LaneTracksManager::get_lane_tracks(int virtual_id,
                                                                TrackType track_type) {

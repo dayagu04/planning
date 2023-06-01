@@ -118,35 +118,42 @@ void ScenarioStateMachine::reset_state_machine() {
 }
 
 void ScenarioStateMachine::clear_lc_variables() {
+  clear_lc_stage_info();
   lc_valid_cnt_ = 0;
   lb_back_cnt_ = 0;
-  lc_pause_id_ = -1000;
-  lc_valid_ = true;
-  lc_should_back_ = false;
-  lc_valid_back_ = true;
-  must_change_lane_ = false;
-
-  lc_back_reason_ = "none";
-  lc_invalid_reason_ = "none";
-  invalid_back_reason_ = "none";
-
   lc_invalid_track_.reset();
   lc_back_track_.reset();
 
   near_cars_target_.clear();
   near_cars_origin_.clear();
-
+  must_change_lane_ = false;
   start_move_dist_lane_ = 0;
 
-  should_premove_ = false;
-  should_suspend_ = false;
-  accident_ahead_ = false;
-  close_to_accident_ = false;
-  accident_back_ = false;
-  lc_pause_ = false;
   not_accident_ = true;
   behavior_suspend_ = false;  // lateral suspend
   suspend_obs_.clear();
+}
+
+void ScenarioStateMachine::clear_lc_stage_info() {
+  lane_change_stage_info_.gap_valid = false;
+  lane_change_stage_info_.gap_approached = false;
+  lane_change_stage_info_.gap_insertable = false;
+  lane_change_stage_info_.side_approach = false;
+  lane_change_stage_info_.should_suspend = false;
+  lane_change_stage_info_.lc_pause = false;
+  lane_change_stage_info_.lc_pause_id = -1000;
+  lane_change_stage_info_.should_premove = false;
+  lane_change_stage_info_.lc_invalid_reason = "none";
+  lane_change_stage_info_.tr_pause_dv = 0.0;
+  lane_change_stage_info_.tr_pause_l = 0.0;
+  lane_change_stage_info_.tr_pause_s = -100.0;
+  lane_change_stage_info_.accident_back = false;
+  lane_change_stage_info_.need_clear_lb_car = false;
+  lane_change_stage_info_.accident_ahead = false;
+  lane_change_stage_info_.close_to_accident = false;
+  lane_change_stage_info_.lc_should_back = false;
+  lane_change_stage_info_.lc_valid = false;
+  lane_change_stage_info_.lc_back_reason = "none";
 }
 
 void ScenarioStateMachine::update_scenario() { scenario_ = SCENARIO_CRUISE; }
@@ -364,10 +371,9 @@ bool ScenarioStateMachine::IsFollowBufferEnough(const double front_s,
   return slow_down_distance < (front_s - behind_s);
 }
 
-LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
+void ScenarioStateMachine::compute_lc_valid_info(
     RequestType direction) {
   assert(direction == LEFT_CHANGE || direction == RIGHT_CHANGE);
-  LaneChangeStageInfo result_info;
   auto &lateral_obstacle =
       session_->environmental_model().get_lateral_obstacle();
   auto &ego_state = session_->environmental_model().get_ego_state_manager();
@@ -390,7 +396,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
   //   target_lane = virtual_lane_manager->get_right_neighbor(origin_lane);
   // }
   if (target_lane == nullptr) {
-    return result_info;
+    return;
   }
   if (fix_lane == nullptr) {
     fix_lane = virtual_lane_manager->get_current_lane();
@@ -421,12 +427,12 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
   auto &target_lane_frenet_ego_state =
       target_reference_path->get_frenet_ego_state();
 
-  result_info.gap_insertable = true;
-  result_info.gap_approached = true;
-  result_info.gap_valid = true;
-  result_info.side_approach = false;
-  result_info.should_premove = should_premove_;
-  result_info.gap = {-10, -10};
+  lane_change_stage_info_.gap_insertable = true;
+  lane_change_stage_info_.gap_approached = true;
+  lane_change_stage_info_.gap_valid = true;
+  lane_change_stage_info_.side_approach = false;
+  lane_change_stage_info_.should_premove = false; 
+  lane_change_stage_info_.gap = {-10, -10};
 
   // lc_valid_ = true;
   // lc_invalid_reason_ = "none";
@@ -440,15 +446,15 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
 
   if (!lateral_obstacle->sensors_okay()) {
     if (lateral_obstacle->fvf_dead()) {
-      result_info.lc_invalid_reason = "no front view";
+      lane_change_stage_info_.lc_invalid_reason = "no front view";
     } else if (lateral_obstacle->svf_dead()) {
-      result_info.lc_invalid_reason = "no side view";
+      lane_change_stage_info_.lc_invalid_reason = "no side view";
     }
 
-    result_info.gap_valid = false;
-    result_info.gap_approached = false;
-    result_info.gap_insertable = false;
-    return result_info;
+    lane_change_stage_info_.gap_valid = false;
+    lane_change_stage_info_.gap_approached = false;
+    lane_change_stage_info_.gap_insertable = false;
+    return;
   }
 
   double v_ego = ego_state->ego_v();
@@ -597,12 +603,12 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
 
           if (tr.v_rel > 0.0 && tr.d_rel > -2 * (5.0 + mss)) {
             // side_approaching_ = true;
-            result_info.side_approach = true;
+            lane_change_stage_info_.side_approach = true;
           }
 
           if (tr.v_rel > 0.0 && tr.d_rel > -4 * (5.0 + mss)) {
             // should_premove_ = true;
-            result_info.should_premove = true;
+            lane_change_stage_info_.should_premove = true;
           }
         }
       }
@@ -611,8 +617,8 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
     }
   }
   if (!is_side_target_valid) {
-    result_info.gap_insertable = false;
-    result_info.lc_invalid_reason = "side view invalid";
+    lane_change_stage_info_.gap_insertable = false;
+    lane_change_stage_info_.lc_invalid_reason = "side view invalid";
   }
 
   for (auto &tr : front_target_tracks) {
@@ -688,44 +694,40 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_valid_info(
     }
   }
   if (!is_front_target_valid) {
-    result_info.gap_insertable = false;
-    result_info.lc_invalid_reason = "front view invalid";
+    lane_change_stage_info_.gap_insertable = false;
+    lane_change_stage_info_.lc_invalid_reason = "front view invalid";
   }
 
-  return result_info;
+  return;
 }
 
 LaneChangeStageInfo ScenarioStateMachine::decide_lc_valid_info(
     RequestType direction) {
-  auto raw_info = compute_lc_valid_info(direction);
+  clear_lc_stage_info();    
+  compute_lc_valid_info(direction);
   double coefficient = 20. / 25;  // TODO(Rui): FLAGS_planning_loop_rate = 20.
   int lc_valid_thre = static_cast<int>(10.0 * coefficient);
   // int lc_valid_thre = 1;
-  if (raw_info.gap_insertable) {
+  if (lane_change_stage_info_.gap_insertable) {
     lc_valid_cnt_ += 1;
     LOG_DEBUG("decide_lc_valid_info lc_valid_cnt : %d \n", lc_valid_cnt_);
     if (lc_valid_cnt_ > lc_valid_thre) {
       // lc_valid_cnt_ = 0; // todo: set value when choose change stae finally
-      raw_info.lc_valid = true;
+      lane_change_stage_info_.lc_valid = true;
     } else {
-      raw_info.gap_insertable = false;
-      raw_info.lc_invalid_reason = "valid cnt below threshold";
+      lane_change_stage_info_.gap_insertable = false;
+      lane_change_stage_info_.lc_invalid_reason = "valid cnt below threshold";
     }
   } else {
-    LOG_DEBUG("arbitrator lc invalid reason %s \n",
-              raw_info.lc_invalid_reason.c_str());
+    LOG_DEBUG("arbitrator lc invalid reason %s ",
+              lane_change_stage_info_.lc_invalid_reason.c_str());
     lc_valid_cnt_ = 0;
   }
-
-  // update
-  lc_invalid_reason_ = raw_info.lc_invalid_reason;
-  return raw_info;
+  return lane_change_stage_info_;
 }
 
-LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
+void ScenarioStateMachine::compute_lc_back_info(
     RequestType direction) {
-  LaneChangeStageInfo result;
-
   auto &lateral_obstacle =
       session_->environmental_model().get_lateral_obstacle();
   auto &ego_state = session_->environmental_model().get_ego_state_manager();
@@ -748,7 +750,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
   //   target_lane = virtual_lane_manager->get_right_neighbor(origin_lane);
   // }
   if (target_lane == nullptr) {
-    return result;
+    return;
   }
   if (fix_lane == nullptr) {
     fix_lane = virtual_lane_manager->get_current_lane();
@@ -818,13 +820,13 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
 
   if (!lateral_obstacle->sensors_okay()) {
     if (lateral_obstacle->fvf_dead()) {
-      result.lc_back_reason = "no front view";
+      lane_change_stage_info_.lc_back_reason = "no front view";
     } else if (lateral_obstacle->svf_dead()) {
-      result.lc_back_reason = "no side view";
+      lane_change_stage_info_.lc_back_reason = "no side view";
     }
-    result.lc_should_back = true;
+    lane_change_stage_info_.lc_should_back = true;
     // lc_back_cnt_ = 0;
-    return result;
+    return;
   }
 
   double mss = 0.0;
@@ -908,7 +910,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
         // lend,
         //                            theta, false); //TODO(Rui)
       }
-      if (lc_should_back_ == false &&
+      if (lane_change_stage_info_.lc_should_back == false &&
           ((direction == LEFT_CHANGE &&
             lend < car_width + 0.3 - lane_width / 2 + tr.width / 2) ||
            (direction == RIGHT_CHANGE &&
@@ -920,10 +922,10 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
 
         if (tr.d_rel < safety_dist && tr.d_rel > -5.0 - safety_dist &&
             tr.v_rel > 100.0) {
-          result.lc_should_back = true;
-          result.lc_back_reason = "side view back";
+          lane_change_stage_info_.lc_should_back = true;
+          lane_change_stage_info_.lc_back_reason = "side view back";
           lc_back_track_.set_value(tr.track_id, tr.d_rel, tr.v_rel);
-          result.lc_pause_id = tr.track_id;
+          lane_change_stage_info_.lc_pause_id = tr.track_id;
         } else if (tr.v_rel < 100.0) {
           if (tr.d_rel > -5.0) {
             if (tr.v_rel < 0) {
@@ -947,14 +949,14 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
                   tr.d_rel < mss || (mss_t != mss && mss_t > -2)) &&
                  tr.v_lead >= 1) ||
                 (tr.d_rel > mss && tr.v_lead < 1)) {
-              result.lc_should_back = true;
-              result.lc_back_reason = "side view back";
+              lane_change_stage_info_.lc_should_back = true;
+              lane_change_stage_info_.lc_back_reason = "side view back";
               lc_back_track_.set_value(tr.track_id, tr.d_rel, tr.v_rel);
-              if (tr.d_rel < 0 && tr.d_rel > tr_pause_s_) {
-                result.lc_pause_id = tr.track_id;
-                result.tr_pause_s = tr.d_rel;
-                result.tr_pause_l = tr.d_center_cpath;
-                result.tr_pause_dv = tr.v_rel;
+              if (tr.d_rel < 0 && tr.d_rel > lane_change_stage_info_.tr_pause_s) {
+                lane_change_stage_info_.lc_pause_id = tr.track_id;
+                lane_change_stage_info_.tr_pause_s = tr.d_rel;
+                lane_change_stage_info_.tr_pause_l = tr.d_center_cpath;
+                lane_change_stage_info_.tr_pause_dv = tr.v_rel;
               }
             }
           } else {
@@ -1003,14 +1005,14 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
                    (tr.d_min_cpath +
                         tr.v_lat * std::min(tr.d_rel + 5 / tr.v_rel, 4.) <=
                     lat_thre))) {
-                result.lc_should_back = true;
-                result.lc_back_reason = "side view back";
+                lane_change_stage_info_.lc_should_back = true;
+                lane_change_stage_info_.lc_back_reason = "side view back";
                 lc_back_track_.set_value(tr.track_id, tr.d_rel, tr.v_rel);
-                if (tr.d_rel < 0 && tr.d_rel > tr_pause_s_) {
-                  result.lc_pause_id = tr.track_id;
-                  result.tr_pause_s = tr.d_rel;
-                  result.tr_pause_l = tr.d_center_cpath;
-                  result.tr_pause_dv = tr.v_rel;
+                if (tr.d_rel < 0 && tr.d_rel > lane_change_stage_info_.tr_pause_s) {
+                  lane_change_stage_info_.lc_pause_id = tr.track_id;
+                  lane_change_stage_info_.tr_pause_s = tr.d_rel;
+                  lane_change_stage_info_.tr_pause_l = tr.d_center_cpath;
+                  lane_change_stage_info_.tr_pause_dv = tr.v_rel;
                 }
               }
             }
@@ -1030,19 +1032,19 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
        fix_lane->get_virtual_id() ==
            current_lane_virtual_id)) {  // TODO(Rui): &&
                                         // !object_selector_->jam_cancel()
-    if (result.lc_should_back && result.tr_pause_dv > pause_v_rel &&
-        -result.tr_pause_s / result.tr_pause_dv < pause_ttc &&
-        ((direction == LEFT_CHANGE && tr_pause_l_ - distance > 0.5) ||
-         (direction == RIGHT_CHANGE && distance - tr_pause_l_ > 0.5))) {
-      result.lc_pause = true;
+    if (lane_change_stage_info_.lc_should_back && lane_change_stage_info_.tr_pause_dv > pause_v_rel &&
+        -lane_change_stage_info_.tr_pause_s / lane_change_stage_info_.tr_pause_dv < pause_ttc &&
+        ((direction == LEFT_CHANGE && lane_change_stage_info_.tr_pause_l - distance > 0.5) ||
+         (direction == RIGHT_CHANGE && distance - lane_change_stage_info_.tr_pause_l > 0.5))) {
+      lane_change_stage_info_.lc_pause = true;
     }
-    if (result.lc_should_back) {
+    if (lane_change_stage_info_.lc_should_back) {
       behavior_suspend_ = true;  // lateral suspend
       suspend_obs_.push_back(lc_back_track_.track_id);
     }
-    result.lc_should_back = false;
-    result.lc_back_reason = "exceed move_thre, do not back";
-    return result;
+    lane_change_stage_info_.lc_should_back = false;
+    lane_change_stage_info_.lc_back_reason = "exceed move_thre, do not back";
+    return;
   }
 
   if (front_target_tracks.size() > 0) {
@@ -1052,7 +1054,7 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
     }
 
     for (auto &tr : front_target_tracks) {
-      if (lc_should_back_ == false) {
+      if (lane_change_stage_info_.lc_should_back == false) {
         std::array<double, 2> a_dec_v{3.0, 2.0};
         std::array<double, 2> v_ego_bp{6, 20};
         double a_dflc = interp(v_ego, v_ego_bp, a_dec_v);
@@ -1069,8 +1071,8 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
         if ((lat_condi < 1.5 && tr.d_rel < 1.0) ||
             (lat_condi <= 1.5 &&
              tr.d_rel < 0.8 * (mss - std::max(lat_condi * tr.v_rel, 0.0)))) {
-          result.lc_should_back = true;
-          result.lc_back_reason = "front view back";
+          lane_change_stage_info_.lc_should_back = true;
+          lane_change_stage_info_.lc_back_reason = "front view back";
           lc_back_track_.set_value(tr.track_id, tr.d_rel, tr.v_rel);
         }
       } else {
@@ -1079,36 +1081,36 @@ LaneChangeStageInfo ScenarioStateMachine::compute_lc_back_info(
     }
   }
 
-  if (close_to_accident_ && result.lc_should_back) {
-    result.lc_should_back = false;
-    result.accident_back = true;
+  if (lane_change_stage_info_.close_to_accident && lane_change_stage_info_.lc_should_back) {
+    lane_change_stage_info_.lc_should_back = false;
+    lane_change_stage_info_.accident_back = true;
   }
   // if (virtual_lane_mgr.has_target_lane() &&
   //     virtual_lane_mgr.is_on_lane(TARGET_LANE) &&
   //     object_selector_->jam_cancel()) {
   //   result.lc_should_back = true;
   // } //TODO(Rui)
-  return result;
+  return;
 }
 
 LaneChangeStageInfo ScenarioStateMachine::decide_lc_back_info(
     RequestType direction) {
-  auto lc_info = compute_lc_back_info(direction);
+  clear_lc_stage_info();
+  compute_lc_back_info(direction);
   double coefficient = 20. / 25;  // TODO(Rui): FLAGS_planning_loop_rate = 20.
   int lc_back_thre = static_cast<int>(5 * coefficient);
-  if (lc_info.lc_should_back) {
+  if (lane_change_stage_info_.lc_should_back) {
     lc_back_cnt_ += 1;
     if (lc_back_cnt_ > lc_back_thre) {
       // reset lc_back_cnt_ when choose back finally
     } else {
-      lc_info.lc_should_back = false;
-      lc_info.lc_back_reason = "but back cnt below threshold";
+      lane_change_stage_info_.lc_should_back = false;
+      lane_change_stage_info_.lc_back_reason = "but back cnt below threshold";
     }
   } else {
     lc_back_cnt_ = 0;
   }
-  lc_back_reason_ = lc_info.lc_back_reason;
-  return lc_info;
+  return lane_change_stage_info_;
 }
 
 bool ScenarioStateMachine::check_lc_change_finish(RequestType direction) {
@@ -1238,10 +1240,10 @@ void ScenarioStateMachine::generate_state_machine_output(
   // }
   state_machine_output.map_turn_light = map_turn_signal_;
   state_machine_output.accident_back = lc_info.accident_back;
-  state_machine_output.accident_ahead = accident_ahead_;
-  state_machine_output.close_to_accident = close_to_accident_;
+  state_machine_output.accident_ahead = lc_info.accident_ahead;
+  state_machine_output.close_to_accident = lc_info.close_to_accident;
   state_machine_output.should_premove = lc_info.should_premove;
-  state_machine_output.should_suspend = should_suspend_;
+  state_machine_output.should_suspend = lc_info.should_suspend;
   state_machine_output.lc_pause = lc_info.lc_pause;
   state_machine_output.lc_pause_id = lc_info.lc_pause_id;
   state_machine_output.tr_pause_l = lc_info.tr_pause_l;
@@ -1287,7 +1289,7 @@ void ScenarioStateMachine::generate_state_machine_output(
 
   state_machine_output.lc_valid_cnt = lc_valid_cnt_;
   state_machine_output.lc_back_cnt = lc_back_cnt_;
-  state_machine_output.is_lc_valid = lc_valid_;
-  state_machine_output.lc_back_invalid_reason = invalid_back_reason_;
+  state_machine_output.is_lc_valid = lc_info.lc_valid;
+  // state_machine_output.lc_back_invalid_reason = lc_info.invalid_back_reason_;
 }
 }  // namespace planning

@@ -136,9 +136,6 @@ class VisionLongitudinalBehaviorPlanner : public Task {
 
   VisionLongitudinalBehaviorPlannerConfig config_;
 
-  std::shared_ptr<VirtualLaneManager> virtual_lane_mgr_ = nullptr;
-  std::shared_ptr<LaneTracksManager> lane_tracks_mgr_ = nullptr;
-
   std::shared_ptr<VisionOnlyLaneChangeDecider> lane_changing_decider_ = nullptr;
 
 };

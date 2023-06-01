@@ -89,12 +89,21 @@ void ObstacleManager::generate_frenet_obstacles(
   auto planning_init_y =
       reference_path.get_frenet_ego_state().planning_init_point().y;
 
+  auto is_location_valid = session_->environmental_model().location_valid();
+
   for (const Obstacle *obstacle_ptr : obstacles_.Items()) {
     // filter some obstacle
 
     Point2D frenet_point, cart_point;
-    cart_point.x = obstacle_ptr->x_center();
-    cart_point.y = obstacle_ptr->y_center();
+    if (is_location_valid) {
+      cart_point.x = obstacle_ptr->x_center();
+      cart_point.y = obstacle_ptr->y_center();
+    } else {
+      cart_point.x = obstacle_ptr->x_relative_center();
+      cart_point.y = obstacle_ptr->y_relative_center();
+    }
+      
+
     // 在自车30m范围内，即使frenet失败也不能丢弃
     auto obstacle_care_flag =
         (fabs(cart_point.x - planning_init_x) < kCareDistance) &&

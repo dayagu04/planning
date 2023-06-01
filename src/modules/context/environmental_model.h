@@ -60,7 +60,7 @@ class VirtualLaneManager;
 class ReferencePathManager;
 class TrafficLightDecisionManager;
 class LateralObstacle;
-
+class LaneTracksManager;
 
 class EnvironmentalModel {
  public:
@@ -153,6 +153,14 @@ class EnvironmentalModel {
       std::shared_ptr<LateralObstacle> lateral_obstacle) {
     lateral_obstacle_ = lateral_obstacle;
   }
+  
+  const std::shared_ptr<LaneTracksManager> &get_lane_tracks_manager() const {
+    return lane_tracks_manager_;
+  }
+  void set_lane_tracks_manager(
+      std::shared_ptr<LaneTracksManager> lane_tracks_manager) {
+    lane_tracks_manager_ = lane_tracks_manager;
+  }
 
   const std::string &get_module_config_file_dir() const { return config_file_dir_; }
 
@@ -207,7 +215,7 @@ private:
       nullptr;
   std::shared_ptr<TrafficLightDecisionManager> traffic_light_decision_manager_ = nullptr;
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
-
+  std::shared_ptr<LaneTracksManager> lane_tracks_manager_ = nullptr;
 //  private:
 //   std::unique_ptr<LateralObstacle> lateral_obstacle_;
 //   std::shared_ptr<TrafficLightDecision> traffic_light_decision_;

@@ -87,9 +87,9 @@ class ScenarioStateMachine
   bool GapAvailable(RequestType direction, std::vector<int>& overlap_obstacles,
                     std::vector<int>& yield_obstacles);
 
-  LaneChangeStageInfo compute_lc_valid_info(RequestType direction);
+  void compute_lc_valid_info(RequestType direction);
   LaneChangeStageInfo decide_lc_valid_info(RequestType direction);
-  LaneChangeStageInfo compute_lc_back_info(RequestType direction);
+  void compute_lc_back_info(RequestType direction);
   LaneChangeStageInfo decide_lc_back_info(RequestType direction);
   bool check_lc_change_finish(RequestType direction);
   bool check_lc_back_finish(RequestType direction);
@@ -97,6 +97,7 @@ class ScenarioStateMachine
   void post_process();
   void reset_state_machine();
   void clear_lc_variables();
+  void clear_lc_stage_info();
   void clear_lc_valid_cnt() { lc_valid_cnt_ = 0; }
   void clear_lc_back_cnt() { lc_back_cnt_ = 0; }
   void set_get_dist_lane(bool value) { get_dist_lane_ = value; }
@@ -142,7 +143,6 @@ class ScenarioStateMachine
   FsmContext fsm_context_;
   ScenarioFsm scenario_fsm_;
   planning::framework::Session* session_;
-  // std::shared_ptr<EnvironmentalModel> environmental_model_;  session已包含
   std::shared_ptr<LaneChangeRequestManager> lc_req_mgr_;
   std::shared_ptr<LaneChangeLaneManager> lc_lane_mgr_;
   std::shared_ptr<ObjectSelector> object_selector_;
@@ -156,22 +156,9 @@ class ScenarioStateMachine
   int lb_back_cnt_ = 0;
   int lc_valid_cnt_ = 0;
 
-  bool lc_valid_ = true;
-  bool lc_valid_back_ = true;
-  bool lc_should_back_ = false;
   bool must_change_lane_ = false;
   bool behavior_suspend_ = false;  // lateral suspend
   std::vector<int> suspend_obs_;   // lateral suspend obstacles
-
-  bool lc_pause_ = false;
-  int lc_pause_id_ = -1000;
-  double tr_pause_l_ = 0.0;
-  double tr_pause_s_ = -100.0;
-  double tr_pause_dv_ = 0.0;
-
-  std::string lc_back_reason_ = "none";
-  std::string lc_invalid_reason_ = "none";
-  std::string invalid_back_reason_ = "none";
 
   std::vector<TrackInfo> near_cars_target_;
   std::vector<TrackInfo> near_cars_origin_;
@@ -179,18 +166,11 @@ class ScenarioStateMachine
   TrackInfo lc_invalid_track_;
   TrackInfo lc_back_track_;
 
-  bool side_approaching_ = false;
   bool get_dist_lane_ = false;
-
-  bool should_premove_ = false;
-  bool should_suspend_ = false;
-
-  bool accident_ahead_ = false;
-  bool close_to_accident_ = false;
-  bool accident_back_ = false;
   bool not_accident_ = true;
 
   double start_move_dist_lane_ = 0.;
+  LaneChangeStageInfo lane_change_stage_info_;
 };
 
 /* struct GapInfo {

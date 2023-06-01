@@ -56,15 +56,6 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   auto &lateral_outputs =
       frame_->session()->planning_context().lateral_behavior_planner_output();
 
-  if (virtual_lane_mgr_ == nullptr) {
-    virtual_lane_mgr_ =
-        std::make_unique<VirtualLaneManager>(frame_->mutable_session());
-  }
-
-  if (lane_tracks_mgr_ == nullptr) {
-    lane_tracks_mgr_ = std::make_shared<LaneTracksManager>(
-        *lateral_obstacle, *virtual_lane_mgr_, frame_->mutable_session());
-  }
   // modify
   // lane_tracks_mgr_->update_ego_state(ego_state);
 
@@ -1272,8 +1263,10 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(
     LOG_DEBUG("!! lang change !! \n");
     // get target line tarcks
     if (lane_change_lane_manager->has_target_lane()) {
+      auto &lane_tracks_mgr =
+        frame_->session()->environmental_model().get_lane_tracks_manager();
       std::vector<TrackedObject> *front_target_tracks =
-        lane_tracks_mgr_->get_lane_tracks(lane_change_lane_manager->tlane_virtual_id(), FRONT_TRACK);
+        lane_tracks_mgr->get_lane_tracks(lane_change_lane_manager->tlane_virtual_id(), FRONT_TRACK);
       for (auto &track : *front_target_tracks) {
         // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle
         if (track.type == 0) {
@@ -1282,7 +1275,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(
         lane_changing_cars.push_back(&track);
       }
       std::vector<TrackedObject> *side_target_tracks =
-        lane_tracks_mgr_->get_lane_tracks(lane_change_lane_manager->tlane_virtual_id(), FRONT_TRACK);
+        lane_tracks_mgr->get_lane_tracks(lane_change_lane_manager->tlane_virtual_id(), SIDE_TRACK);
       for (auto &track : *side_target_tracks) {
         // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle
         if (track.type == 0) {
