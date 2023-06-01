@@ -1,5 +1,6 @@
 {
   "enable_raw_ego_prediction": false,
+  "enable_NOA": false,
   "enable_dagger": false,
   "pipeline_version": "v2",
   "torch_use_cuda": true,

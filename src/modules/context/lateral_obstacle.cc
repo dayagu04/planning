@@ -214,7 +214,7 @@ void LaneTracksManager::update_lane_tracks() {
   }
 
   if (current_lane != nullptr) {
-    auto obstacles_id = current_lane->get_reference_path()->get_lane_obstacles();
+    auto obstacles_id = current_lane->get_reference_path()->get_lane_obstacles_ids();
     for (auto obstacle_id : obstacles_id) {
       if (tracks_map.find(obstacle_id) != tracks_map.end()) {
         auto d_rel = tracks_map[obstacle_id].d_rel;
@@ -228,7 +228,7 @@ void LaneTracksManager::update_lane_tracks() {
   }
 
   if (left_lane != nullptr) {
-    auto obstacles_id = left_lane->get_reference_path()->get_lane_obstacles();
+    auto obstacles_id = left_lane->get_reference_path()->get_lane_obstacles_ids();
     for (auto obstacle_id : obstacles_id) {
       if (tracks_map.find(obstacle_id) != tracks_map.end()) {
         auto d_rel = tracks_map[obstacle_id].d_rel;
@@ -242,7 +242,7 @@ void LaneTracksManager::update_lane_tracks() {
   }
 
   if (right_lane != nullptr) {
-    auto obstacles_id = right_lane->get_reference_path()->get_lane_obstacles();
+    auto obstacles_id = right_lane->get_reference_path()->get_lane_obstacles_ids();
     for (auto obstacle_id : obstacles_id) {
       if (tracks_map.find(obstacle_id) != tracks_map.end()) {
         auto d_rel = tracks_map[obstacle_id].d_rel;

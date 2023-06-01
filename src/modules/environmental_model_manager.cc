@@ -37,7 +37,7 @@ void EnvironmentalModelManager::InitContext() {
   planning::common::SceneType scene_type = session_->get_scene_type();
   auto config_builder =
       session_->environmental_model().config_builder(scene_type);
-  auto config = config_builder->cast<planning::EgoPlanningConfig>();
+  ego_config_ = config_builder->cast<planning::EgoPlanningConfig>();
 
   ego_state_manager_ptr_ =
       std::make_shared<planning::EgoStateManager>(session_);
@@ -79,10 +79,13 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
 
   auto &local_view = session_->environmental_model().get_local_view();
 
+  // 通过配置项进行实时长时的切换 true: 长时规划
+  bool enable_NOA = ego_config_.enable_NOA;
   //todo 后续加入车道线，障碍物的local_point是否有效
-  auto location_valid = local_view.localization_estimate.msf_status().available() &&
-      local_view.localization_estimate.msf_status().msf_status() !=
-          LocalizationOutput::MsfStatus::ERROR;
+  auto location_valid =
+          local_view.localization_estimate.msf_status().available() &&
+          (local_view.localization_estimate.msf_status().msf_status() != LocalizationOutput::MsfStatus::ERROR) &&
+          enable_NOA;
   session_->mutable_environmental_model()->set_location_valid(location_valid);
   // 长时，实时切换，临时hack
   // session_->mutable_environmental_model()->set_location_valid(false); 

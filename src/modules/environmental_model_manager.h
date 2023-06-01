@@ -65,7 +65,8 @@ class EnvironmentalModelManager {
   std::shared_ptr<planning::TrafficLightDecisionManager>
       traffic_light_decision_manager_ptr_ = nullptr;
   std::shared_ptr<planning::LateralObstacle> lateral_obstacle_ptr_ = nullptr;
-  double last_feed_time_[FEED_TYPE_MAX]{};  
+  double last_feed_time_[FEED_TYPE_MAX]{};
+  EgoPlanningConfig ego_config_;
 };
 
 }  // namespace planner

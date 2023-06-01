@@ -111,10 +111,12 @@ struct EgoPlanningConfig : public Config {
     enable_dagger = read_json_key<bool>(json, "enable_dagger");
     use_ego_prediction_model_in_planning = read_json_key<bool>(
         json, "use_ego_prediction_model_in_planning", false);
+    enable_NOA = read_json_key<bool>(json, "enable_NOA");
   }
   bool enable_raw_ego_prediction = false;
   bool enable_dagger = false;
   bool use_ego_prediction_model_in_planning = false;
+  bool enable_NOA = false;
 };
 
 struct EgoPlanningCandidateConfig : public EgoPlanningConfig {
@@ -568,7 +570,8 @@ struct VisionLongitudinalBehaviorPlannerConfig : public EgoPlanningConfig {
     // dis_zero_speed = read_json_key<double>(json, "dis_zero_speed");
     // dis_zero_speed_accident =
     //     read_json_key<double>(json, "dis_zero_speed_accident");
-    // ttc_brake_hysteresis = read_json_key<double>(json, "ttc_brake_hysteresis");
+    // ttc_brake_hysteresis = read_json_key<double>(json,
+    // "ttc_brake_hysteresis");
   }
   double preview_x = 80.0;
   double dis_zero_speed = 3.5;

@@ -62,7 +62,7 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   }
 
   if (lane_tracks_mgr_ == nullptr) {
-    lane_tracks_mgr_ = std::make_shared<LaneTracksManager>( 
+    lane_tracks_mgr_ = std::make_shared<LaneTracksManager>(
         *lateral_obstacle, *virtual_lane_mgr_, frame_->mutable_session());
   }
   // modify
@@ -103,9 +103,9 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   //                                lateral_outputs.lc_request, interval,
   //                                v_ego);
   // compute_speed_4_merging();
-  // calc_speed_for_lane_change(
-  //     lateral_obstacle->leadone(), ego_state_mgr->ego_v_cruise(), v_ego,
-  //     lateral_outputs.lc_request, lateral_outputs.lc_status);
+  calc_speed_for_lane_change(
+      lateral_obstacle->leadone(), ego_state_mgr->ego_v_cruise(), v_ego,
+      lateral_outputs.lc_request, lateral_outputs.lc_status);
 
   double decel_base = std::min(v_target_ramp_ - v_ego + 2.0, 0.0);
   a_target_.first = std::min(a_target_.first, decel_base);
@@ -1305,7 +1305,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(
         ->mutable_planning_output_context()
         ->mutable_planning_status()
         ->v_limit = std::min(v_target, v_cruise);
-    lane_changing_decider_->set_frame(frame_);  
+    lane_changing_decider_->set_frame(frame_);
     lane_changing_decider_->process();
 
     available_gap = lane_changing_decider_->get_gap_list();
