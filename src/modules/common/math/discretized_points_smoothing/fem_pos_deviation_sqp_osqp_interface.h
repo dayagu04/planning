@@ -83,6 +83,8 @@ class FemPosDeviationSqpOsqpInterface {
 
   void set_sqp_ftol(const double sqp_ftol) { sqp_ftol_ = sqp_ftol; }
 
+  void set_sqp_ctol(const double sqp_ctol) { sqp_ctol_ = sqp_ctol; }
+
   void set_sqp_sub_max_iter(const int sqp_sub_max_iter) {
     sqp_sub_max_iter_ = sqp_sub_max_iter;
   }
@@ -140,6 +142,7 @@ class FemPosDeviationSqpOsqpInterface {
   // Settings of sqp
   int sqp_pen_max_iter_ = 100;
   double sqp_ftol_ = 1e-2;
+  double sqp_ctol_ = 1e-2;
   int sqp_sub_max_iter_ = 100;
 
   // Optimization problem definitions

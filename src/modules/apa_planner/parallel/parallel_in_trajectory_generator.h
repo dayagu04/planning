@@ -177,6 +177,8 @@ class ParallelInTrajectoryGenerator {
 
   std::unique_ptr<IterativeAnchoringSmoother> iterative_anchoring_smoother_ =
       nullptr;
+
+  std::vector<planning_math::LineSegment2d> objects_map_in_global_cor_;
 };
 
 } // namespace apa_planner

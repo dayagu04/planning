@@ -205,24 +205,11 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
 
     ctol = CalculateConstraintViolation(opt_xy_);
 
-    PLANNING_LOG << "ctol is " << ctol
+    PLANNING_LOG << "ctol is " << ctol << ", pre_ctol:" << pre_ctol
         << ", at pen itr " << pen_itr << std::endl;
 
-    if (ctol < 0.0) {
-      PLANNING_LOG << "constraint satisfied at pen itr num "
-          << pen_itr << std::endl;
-      weight_curvature_constraint_slack_var_ = original_slack_penalty;
-      osqp_cleanup(work);
-      c_free(data->A);
-      c_free(data->P);
-      c_free(data);
-      c_free(settings);
-      return true;
-    }
-
-    if (pre_ctol < ctol) {
-      PLANNING_LOG << "return early due to divergence, pen itr num:"
-          << pen_itr << std::endl;
+    if (ctol < sqp_ctol_) {
+      PLANNING_LOG << "constraint satisfied" << std::endl;
       weight_curvature_constraint_slack_var_ = original_slack_penalty;
       osqp_cleanup(work);
       c_free(data->A);

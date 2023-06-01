@@ -596,25 +596,25 @@ bool DiagonalInTrajectoryGenerator::GenerateDESegmentTrajectory(
 
 void DiagonalInTrajectoryGenerator::SetApaObjectInfo(int idx,
     DiagonalInGeometryPlan* geometry_planning) const {
-  std::vector<LineSegment2d> objects_map;
-  objects_map.reserve(4);
+  objects_map_in_global_cor_.clear();
+  objects_map_in_global_cor_.reserve(4);
 
-  const auto& slots = local_view_->parking_fusion_info.parking_fusion_slot_lists();
+  const auto& slots =
+      local_view_->parking_fusion_info.parking_fusion_slot_lists();
+
   // consider slot line as obstacle
-  PlanningPoint p0 =
-      FromGlobal2LocalCor(slot_origin_in_odom_, raw_slot_points_in_m_[0]);
-  PlanningPoint p1 =
-      FromGlobal2LocalCor(slot_origin_in_odom_, raw_slot_points_in_m_[1]);
-  PlanningPoint p2 =
-      FromGlobal2LocalCor(slot_origin_in_odom_, raw_slot_points_in_m_[2]);
-  PlanningPoint p3 =
-      FromGlobal2LocalCor(slot_origin_in_odom_, raw_slot_points_in_m_[3]);
   // TODO(xjli32): use real obstacles instead
-  objects_map.emplace_back(Vec2d(p2.x, p2.y), Vec2d(p3.x, p3.y));
+  objects_map_in_global_cor_.emplace_back(
+      Vec2d(raw_slot_points_in_m_[2].x, raw_slot_points_in_m_[2].y),
+      Vec2d(raw_slot_points_in_m_[3].x, raw_slot_points_in_m_[3].y));
   if (slots[idx].type() !=
       Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
-    objects_map.emplace_back(Vec2d(p0.x, p0.y), Vec2d(p2.x, p2.y));
-    objects_map.emplace_back(Vec2d(p3.x, p3.y), Vec2d(p1.x, p1.y));
+    objects_map_in_global_cor_.emplace_back(
+        Vec2d(raw_slot_points_in_m_[0].x, raw_slot_points_in_m_[0].y),
+        Vec2d(raw_slot_points_in_m_[2].x, raw_slot_points_in_m_[2].y));
+    objects_map_in_global_cor_.emplace_back(
+        Vec2d(raw_slot_points_in_m_[3].x, raw_slot_points_in_m_[3].y),
+        Vec2d(raw_slot_points_in_m_[1].x, raw_slot_points_in_m_[1].y));
   }
 
   // mocked obstacle to avoid collision with opposite object
@@ -646,19 +646,29 @@ void DiagonalInTrajectoryGenerator::SetApaObjectInfo(int idx,
   const double obj_center_y =
       center_10_y + rotated_unit_10_y * mocked_obj_y_offset;
 
-  PlanningPoint p4;
-  PlanningPoint p5;
-  p4.x = obj_center_x + obj_half_len * unit_10_x;
-  p4.y = obj_center_y + obj_half_len * unit_10_y;
-  p5.x = obj_center_x - obj_half_len * unit_10_x;
-  p5.y = obj_center_y - obj_half_len * unit_10_y;
-  PLANNING_LOG << "mocked obj x:" << p4.x << ", y:" << p4.y
-      << ", x:" << p5.x << ", y:" << p5.y << std::endl;
+  PlanningPoint mocked_obj_pt0;
+  PlanningPoint mocked_obj_pt1;
+  mocked_obj_pt0.x = obj_center_x + obj_half_len * unit_10_x;
+  mocked_obj_pt0.y = obj_center_y + obj_half_len * unit_10_y;
+  mocked_obj_pt1.x = obj_center_x - obj_half_len * unit_10_x;
+  mocked_obj_pt1.y = obj_center_y - obj_half_len * unit_10_y;
+  PLANNING_LOG << "mocked obj x:" << mocked_obj_pt0.x
+      << ", y:" << mocked_obj_pt0.y
+      << ", x:" << mocked_obj_pt1.x
+      << ", y:" << mocked_obj_pt1.y << std::endl;
+  objects_map_in_global_cor_.emplace_back(
+      Vec2d(mocked_obj_pt0.x, mocked_obj_pt0.y),
+      Vec2d(mocked_obj_pt1.x, mocked_obj_pt1.y));
 
-  p4 = FromGlobal2LocalCor(slot_origin_in_odom_, p4);
-  p5 = FromGlobal2LocalCor(slot_origin_in_odom_, p5);
-
-  objects_map.emplace_back(Vec2d(p4.x, p4.y), Vec2d(p5.x, p5.y));
+  std::vector<LineSegment2d> objects_map;
+  objects_map.reserve(objects_map_in_global_cor_.size());
+  for (const auto& obs : objects_map_in_global_cor_) {
+    PlanningPoint p0 = FromGlobal2LocalCor(slot_origin_in_odom_,
+        PlanningPoint(obs.start().x(), obs.start().y(), 0.0));
+    PlanningPoint p1 = FromGlobal2LocalCor(slot_origin_in_odom_,
+        PlanningPoint(obs.end().x(), obs.end().y(), 0.0));
+    objects_map.emplace_back(Vec2d(p0.x, p0.y), Vec2d(p1.x, p1.y));
+  }
 
   geometry_planning->SetObjectMap(objects_map);
 }

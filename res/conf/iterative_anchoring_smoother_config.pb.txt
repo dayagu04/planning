@@ -7,6 +7,7 @@ fem_pos_deviation_smoother_config {
   curvature_constraint: 0.2
   use_sqp: true
   sqp_ftol: 0.01
+  sqp_ctol: 0.0004
   sqp_pen_max_iter: 10
   sqp_sub_max_iter: 100
 
