@@ -5,7 +5,8 @@
 #include "tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
 #include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 #include "tasks/behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner.h"
-#include "general_lateral_motion_planner.h"
+#include "lateral_motion_planner.h"
+#include "longitudinal_motion_planner.h"
 #include "tasks/motion_planners/longitudinal_motion_planner/pwj_longitudinal_motion_planner.h"
 #include "tasks/motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
@@ -51,14 +52,19 @@ std::shared_ptr<Task> Task::Make(
       return std::make_shared<GeneralLateralDecider>(config_builder,
                                                      pipeline_context);
     }
+
+    // ilqr based lateral motion planner
     case TaskType::LATERAL_MOTION_PLANNER: {
       return std::make_shared<LateralMotionPlanner>(config_builder,
                                                            pipeline_context);
     }
-    // case TaskType::LONGITUDINAL_MOTION_PLANNER: {
-    //   return std::make_shared<LongitudinalMotionPlanner>(config_builder,
-    //                                                 pipeline_context);
-    // }
+
+    // ilqr based longitudinal motion planner
+    case TaskType::LONGITUDINAL_MOTION_PLANNER: {
+      return std::make_shared<LongitudinalMotionPlanner>(config_builder,
+                                                    pipeline_context);
+    }
+
     case TaskType::LATERAL_DECIDER: {
       return std::make_shared<VisionLateralBehaviorPlanner>(config_builder,
                                                             pipeline_context);
@@ -89,14 +95,6 @@ std::shared_ptr<Task> Task::Make(
       return std::make_shared<ResultTrajectoryGenerator>(config_builder,
                                                          pipeline_context);
     }
-      // case TaskType::ILQR_LATERAL_OPTIMIZER: {
-      //   return std::make_shared<ILQRLateralOptimizer>(config_builder,
-      //                                                 pipeline_context);
-      // }
-      // case TaskType::SPLINE_TRAJECTORY_GENERATOR: {
-      //   return std::make_shared<SplineTrajectoryGenerator>(config_builder,
-      //                                                      pipeline_context);
-      // }
     default: { /*LOG_ERROR*/
       return nullptr;
     }

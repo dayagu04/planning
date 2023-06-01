@@ -58,7 +58,7 @@ void LongitudinalMotionPlanningProblem::Init() {
 }
 
 uint8_t LongitudinalMotionPlanningProblem::Update(
-    LongitudinalMotionPlanning::PlanningInput &planning_input) {
+    planning::common::LongitudinalPlanningInput &planning_input) {
   // set cost config
   const size_t N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
 

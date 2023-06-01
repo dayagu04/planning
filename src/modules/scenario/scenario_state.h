@@ -32,11 +32,9 @@ struct FsmContext {
 
 using M = hfsm::Machine<FsmContext>;
 
-template <typename T>
-struct type2int {};
+template <typename T> struct type2int {};
 
-template <typename T>
-struct type2name {};
+template <typename T> struct type2name {};
 
 struct StateTransitionContext {
   ScenarioStateEnum source_state;
@@ -84,8 +82,8 @@ struct StateBase : M::Base {
                     FsmContext &context);
 
   // wait for TaskPipeline
-  virtual std::shared_ptr<TaskPipeline> get_ego_planning_task_pipeline(
-      planning::framework::Frame *frame) {
+  virtual std::shared_ptr<TaskPipeline>
+  get_ego_planning_task_pipeline(planning::framework::Frame *frame) {
     common::SceneType scene_type = frame->session()->get_scene_type();
     auto config_builder =
         frame->session()->environmental_model().config_builder(scene_type);
@@ -93,11 +91,15 @@ struct StateBase : M::Base {
     auto location_valid =
         frame->session()->environmental_model().location_valid();
     if (location_valid) {
-      return TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder,
-                                frame);
+      static auto normal_task =
+          TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, frame);
+      normal_task->SetFrame(frame);
+      return normal_task;
     } else {
-      return TaskPipeline::Make(TaskPipelineType::VISION_ONLY, config_builder,
-                                frame);
+      static auto vision_only_task = TaskPipeline::Make(
+          TaskPipelineType::VISION_ONLY, config_builder, frame);
+      vision_only_task->SetFrame(frame);
+      return vision_only_task;
     }
   }
 
@@ -109,4 +111,4 @@ struct StateBase : M::Base {
       FsmContext &context, StateTransitionContexts &transition_contexts) {}
 };
 
-}  // namespace planning
+} // namespace planning

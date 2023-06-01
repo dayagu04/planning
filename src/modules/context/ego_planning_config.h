@@ -243,15 +243,14 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double sample_step = 0.2;
   double sample_forward_distance = 2.0;
 };
-struct GeneralLateralMotionPlannerConfig : public EgoPlanningConfig {
+struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
   }
-  int horizon = 25;
   bool warm_start_enable = true;
-  double acc_bound = 0.0;
-  double jerk_bound = 0.0;
+  double acc_bound = 6.0;
+  double jerk_bound = 3.5;
   double curv_factor = 0.35;
 
   double q_ref_x = 15.0;
@@ -263,28 +262,30 @@ struct GeneralLateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_jerk = 1.0;
   double q_snap = 1.0;
 
-  double q_acc_bound = 1000.0;
-  double q_jerk_bound = 1000.0;
+  double q_acc_bound = 200.0;
+  double q_jerk_bound = 500.0;
 
   double q_soft_corridor = 0.0;
   double q_hard_corridor = 0.0;
   double delta_t = 0.2;
 };
 
-struct ILqrLonMotionPlannerConfig : public EgoPlanningConfig {
+struct LongitudinalMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
   }
-  int horizon = 25;
-  double q_pos_bound = 100.;
-  double q_vel_bound = 100.;
-  double q_acc_bound = 100.;
-  double q_jerk_bound = 100.;
-  double kMaxAcc = 4.0;
-  double kMinDec = -7.0;
-  double kMaxJerk = 10.0;
-  size_t kMaxCheckIndex = 5;
+  double q_ref_pos = 0.065;
+  double q_ref_vel = 1.0;
+  double q_acc = 1.0;
+  double q_jerk = 1.0;
+  double q_snap = 1.0;
+
+  double q_pos_bound = 2000.0;
+  double q_vel_bound = 2000.0;
+  double q_acc_bound = 500.0;
+  double q_jerk_bound = 100.0;
+  double q_stop_s = 2000.0;
 };
 struct LateralOptimizerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {

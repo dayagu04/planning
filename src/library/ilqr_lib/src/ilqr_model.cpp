@@ -47,7 +47,7 @@ double iLqrModel::GetCost(const State &x, const Control &u,
 }
 
 double iLqrModel::GetTerminalCost(const State &x) {
-  static Control u = u_.setZero();
+  Control u = u_.setZero();
 
   double cost = 0.0;
   double result = 0.0;
@@ -77,7 +77,7 @@ void iLqrModel::GetGradientHessian(const State &x, const Control &u,
 
 void iLqrModel::GetTerminalGradientHessian(const State &x, LxMT &lx, LuMT &lu,
                                            LxxMT &lxx, LxuMT &lxu, LuuMT &luu) {
-  static Control u = u_.setZero();
+  Control u = u_.setZero();
 
   for (auto &each_cost : cost_stack_) {
     each_cost->SetConfig(&cost_config_vec_ptr_->back());

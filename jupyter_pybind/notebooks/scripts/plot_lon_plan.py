@@ -1,40 +1,38 @@
 import sys, os
 sys.path.append("..")
-# from lib.load_cyberbag import *
-from lib.load_struct import *
-from lib.load_rotate import *
-from lib.load_json import *
+from lib.load_local_view import *
 from lib.load_lon_plan import *
 sys.path.append('../..')
+sys.path.append('../../../')
+
+# bag path and frame dt
+bag_path = "/root/bag/20230601205951.record.00000"
+frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-# bag path and frame dt
-bag_path = "/docker_share/bags/record_tmp/planning_result_bag_0525.00000"
-frame_dt = 0.1
+bag_loader = LoadCyberbag(bag_path)
+max_time = bag_loader.load_all_data()
+fig1, local_view_data = load_local_view_figure()
 
-bag_loder = LoadCyberbag(bag_path)
-bag_loder.load_all_data()
+# load lateral planning (behavior and motion)
+fig2, fig3, fig4, fig5, fig6, fig7, lon_plan_data = load_lon_plan_figure(fig1)
 
-bag_loder.plan_msg['data'][0]
-# bag_loder.plan_debug_msg['data'][0]
-
-lon_plan_plot_data, fig1, fig2 = load_lon_plan_figure()
-
-# sliders
-class PlanningSlider:
-  def __init__(self, silder_callback):
-    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=100, value=-0.1, step=frame_dt)
-    ipywidgets.interact(silder_callback, bag_time = self.time_slider)
+### sliders config
+class LocalViewSlider:
+  def __init__(self,  slider_callback):
+    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
+    ipywidgets.interact(slider_callback, bag_time = self.time_slider)
 
 
-def silder_callback(bag_time):
+### sliders callback
+def slider_callback(bag_time):
   kwargs = locals()
+  update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
+  update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data)
 
-  update_lon_plan_figure(bag_time, bag_loder, lon_plan_plot_data)
   push_notebook()
 
-
-bkp.show(row(fig1, fig2), notebook_handle=True)
-slider_class = PlanningSlider(silder_callback)
+bkp.show(row(fig1, column(fig2, fig3), column(fig4, fig5, fig6, fig7)), notebook_handle=True)
+slider_class = LocalViewSlider(slider_callback)

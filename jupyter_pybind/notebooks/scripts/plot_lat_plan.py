@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/root/bag/20230531152930.record.00000"
+bag_path = "/root/bag/20230601190315.record.00000"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -30,7 +30,7 @@ class LocalViewSlider:
 def slider_callback(bag_time):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
-  update_lat_plan_data(fig1, bag_loader, bag_time, local_view_data, lat_plan_data)
+  update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data)
 
   push_notebook()
 

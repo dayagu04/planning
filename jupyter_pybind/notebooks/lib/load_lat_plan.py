@@ -26,7 +26,7 @@ from cyber_record.record import Record
 car_xb, car_yb = load_car_params_patch()
 coord_tf = coord_transformer()
 
-def update_lat_plan_data(fig1, bag_loader, bag_time, local_view_data, lat_plan_data):
+def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
 
   loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
   road_msg_idx = local_view_data['data_index']['road_msg_idx']
@@ -122,13 +122,29 @@ def update_lat_plan_data(fig1, bag_loader, bag_time, local_view_data, lat_plan_d
       'jerk_vec': jerk_vec,
     })
 
-    print("init_state:", lat_motion_plan_input.init_state)
-    print("delta_vec:", lat_motion_plan_output.delta_vec)
+  if bag_loader.plan_msg['enable'] == True:
+    trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
+    if trajectory.trajectory_type == 0:
+      planning_polynomial = trajectory.target_reference.polynomial
+      plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
 
-    # print('init_flag = ', planning_json['init_flag'])
-    # print('replan_status = ', planning_json['replan_flag'])
+    else:
+      plan_x = []
+      plan_y = []
+      for i in range(len(trajectory.trajectory_points)):
+        plan_x.append(trajectory.trajectory_points[i].x)
+        plan_y.append(trajectory.trajectory_points[i].y)
 
-  return local_view_data
+      plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
+
+    lat_plan_data['data_planning'].data.update({
+      'plan_traj_y' : plan_traj_y,
+      'plan_traj_x' : plan_traj_x,
+      })
+
+    # print("init_state:", lat_motion_plan_input.init_state)
+    # print("delta_vec:", lat_motion_plan_output.delta_vec)
+
 
 def load_lat_plan_figure(fig1):
   data_refline = ColumnDataSource(data = {'raw_refline_x':[],
@@ -156,11 +172,16 @@ def load_lat_plan_figure(fig1):
                                                          'acc_vec':[],
                                                          'jerk_vec':[]
                                                         })
+  data_planning = ColumnDataSource(data = {'plan_traj_y':[],
+                                    'plan_traj_x':[],})
 
-  lat_plan_data = {  'data_lat_motion_plan_input':data_lat_motion_plan_input, \
-                     'data_lat_motion_plan_output':data_lat_motion_plan_output, \
-                     'data_refline':data_refline, \
-                     }
+  lat_plan_data = {'data_lat_motion_plan_input':data_lat_motion_plan_input,
+                   'data_lat_motion_plan_output':data_lat_motion_plan_output,
+                   'data_refline':data_refline,
+                   'data_planning':data_planning,
+  }
+
+
 
   # motion planning
   fig1.line('ref_y', 'ref_x', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path', visible=False)
@@ -169,7 +190,9 @@ def load_lat_plan_figure(fig1):
   fig1.line('hard_upper_bound_y0_vec', 'hard_upper_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 5, line_color = 'black', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard bound', visible=False)
   fig1.line('hard_lower_bound_y0_vec', 'hard_lower_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 5, line_color = 'black', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard bound', visible=False)
   fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=False)
-  fig1.line('y_vec', 'x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.4, legend_label = 'plan path')
+  fig1.line('y_vec', 'x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
+
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan_debug')
 
   fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 5.2], width=600, height=160)
   fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=600, height=160)
@@ -177,7 +200,7 @@ def load_lat_plan_figure(fig1):
   fig5 = bkp.figure(x_axis_label='time', y_axis_label='steer',x_range = fig2.x_range, width=600, height=160)
   fig6 = bkp.figure(x_axis_label='time', y_axis_label='steer dot',x_range = fig2.x_range, width=600, height=160)
 
-  f2 = fig2.line('time_vec', 'ref_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'theta')
+  f2 = fig2.line('time_vec', 'ref_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'ref_theta')
   fig2.line('time_vec', 'theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'theta')
   f3 = fig3.line('time_vec', 'acc_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat acc')
   f4 = fig4.line('time_vec', 'jerk_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat jerk')

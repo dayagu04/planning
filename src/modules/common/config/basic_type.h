@@ -355,7 +355,8 @@ struct AdaptiveCruiseControlInfo {
 };
 
 struct TrajectorySpline {
-  bool enable_flag  = false;
+  bool lat_enable_flag = false;
+  bool lon_enable_flag = false;
   pnc::mathlib::spline x_s_spline;
   pnc::mathlib::spline y_s_spline;
   pnc::mathlib::spline theta_s_spline;
@@ -375,7 +376,6 @@ struct TrajectorySpline {
 };
 
 struct PlanningResult {
-  bool init_flag = false;
   int target_lane_id;
   ScenarioStateEnum target_scenario_state = ROAD_NONE;
   TrajectoryPoints raw_traj_points;
@@ -404,7 +404,7 @@ struct PlanningInitPoint {
   FrenetState frenet_state;
 
   planning::common::LateralInitState lat_init_state;
-  LongitudinalMotionPlanning::InitState lon_init_state;
+  planning::common::LongitudinalInitState lon_init_state;
 };
 
 class ReferencePath;

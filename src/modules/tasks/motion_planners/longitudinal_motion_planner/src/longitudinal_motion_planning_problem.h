@@ -67,7 +67,7 @@ struct LongitudinalMotionPlanningOutput {
 class LongitudinalMotionPlanningProblem {
  public:
   void Init();
-  uint8_t Update(LongitudinalMotionPlanning::PlanningInput &planning_input);
+  uint8_t Update(planning::common::LongitudinalPlanningInput &planning_input);
   void SetWarmStart(bool flag) { ilqr_core_ptr_->SetWarmStart(flag); };
   void SetMaxIter(size_t max_iter) { ilqr_core_ptr_->SetMaxIter(max_iter); };
 

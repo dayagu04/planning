@@ -130,11 +130,6 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
                                         ->mutable_planning_result()
                                         .traj_spline;
 
-  ego_planning_result.init_flag = frame_->mutable_session()
-                                      ->mutable_planning_context()
-                                      ->mutable_planning_result()
-                                      .init_flag;
-
   return true;
 }
 

@@ -22,6 +22,10 @@ class TaskPipeline {
     return pipeline_context_;
   }
 
+  void SetFrame(framework::Frame *frame) {
+    frame_ = frame;
+  }
+
   virtual bool Run(const EgoPlanningCandidate &candidate) = 0;
 
   static std::shared_ptr<TaskPipeline> Make(

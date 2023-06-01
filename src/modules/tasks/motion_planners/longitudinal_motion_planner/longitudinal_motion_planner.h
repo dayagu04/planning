@@ -1,8 +1,9 @@
 /**
- * @file general_general_lateral_motion_planner.h
+ * @file longitudinal_motion_planner.h
  **/
 
-#pragma once
+#ifndef __LONGITUDINAL_MOTION_PLANNER_H__
+#define __LONGITUDINAL_MOTION_PLANNER_H__
 
 #include <assert.h>
 
@@ -12,7 +13,6 @@
 #include <string>
 #include <vector>
 
-#include "common/math/linear_interpolation.h"
 #include "context/environmental_model.h"
 #include "context/frenet_ego_state.h"
 #include "context/obstacle_manager.h"
@@ -31,40 +31,28 @@ namespace planning {
 
 class LongitudinalMotionPlanner : public Task {
 public:
-  explicit LongitudinalMotionPlanner(
+  LongitudinalMotionPlanner(
       const EgoPlanningConfigBuilder *config_builder,
       const std::shared_ptr<TaskPipelineContext> &pipeline_context);
 
-  virtual ~LongitudinalMotionPlanner() = default;
-
-  bool Execute(planning::framework::Frame *frame) override;
   void Init();
+  bool Execute(planning::framework::Frame *frame);
+
+private:
   void GeneratePlanningInput();
   void GeneratePlanningOutput();
 
-  // bool RecheckPlanningResult();
-
-  void interpolate_frenet_lon(const std::vector<TrajectoryPoint> &traj_points,
-                              const std::vector<double> &s,
-                              std::vector<double> &l,
-                              std::vector<double> &heading_angle,
-                              std::vector<double> &curvature);
-
-  bool UpdateOneStepTrajectory();
-
-  bool init();
-
-private:
   Bound s_limit_;
-  ILqrLonMotionPlannerConfig config_;
+  LongitudinalMotionPlannerConfig config_;
+
   AdaptiveCruiseControlConfig config_acc_;
   StartStopEnableConfig config_start_stop_;
+
   string name_;
   std::shared_ptr<pnc::longitudinal_planning::LongitudinalMotionPlanningProblem>
       planning_problem_ptr_;
-  LongitudinalMotionPlanning::PlanningOutput planning_output_;
-  LongitudinalMotionPlanning::PlanningInput planning_input_;
-  State init_state_;
+  planning::common::LongitudinalPlanningOutput planning_output_;
+  planning::common::LongitudinalPlanningInput planning_input_;
 
   // state vector
   std::vector<double> s_vec_;
@@ -75,3 +63,5 @@ private:
 };
 
 } // namespace planning
+
+#endif
