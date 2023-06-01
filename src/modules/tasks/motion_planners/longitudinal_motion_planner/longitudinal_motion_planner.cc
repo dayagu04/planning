@@ -1,4 +1,5 @@
 #include "longitudinal_motion_planner.h"
+#include "debug_info_log.h"
 #include "math_lib.h"
 
 namespace planning {
@@ -6,7 +7,7 @@ LongitudinalMotionPlanner::LongitudinalMotionPlanner(
     const EgoPlanningConfigBuilder *config_builder,
     const std::shared_ptr<TaskPipelineContext> &pipeline_context)
     : Task(config_builder, pipeline_context) {
-  config_ = config_builder->cast<ILqrLonMotionPlannerConfig>();
+  config_ = config_builder->cast<LongitudinalMotionPlannerConfig>();
   config_start_stop_ = config_builder->cast<StartStopEnableConfig>();
   config_acc_ = config_builder->cast<AdaptiveCruiseControlConfig>();
   name_ = "LongitudinalMotionPlanner";
@@ -67,8 +68,16 @@ bool LongitudinalMotionPlanner::Execute(planning::framework::Frame *frame) {
 
   GeneratePlanningOutput();
 
-  // recheck the planning result
-  // RecheckPlanningResult();
+  // record input and output
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_longitudinal_motion_planning_input()
+      ->CopyFrom(planning_input_);
+
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_longitudinal_motion_planning_output()
+      ->CopyFrom(planning_output_);
 
   return true;
 }
@@ -84,61 +93,42 @@ void LongitudinalMotionPlanner::GeneratePlanningInput() {
   const auto &a_bounds = lon_ref_path.lon_bound_a;
   const auto &jerk_bounds = lon_ref_path.lon_bound_jerk;
 
-  assert(s_refs.size() == v_refs.size());
-  assert(s_refs.size() == config_.horizon + 1);
-  assert(s_bounds.size() == config_.horizon + 1);
+  // const auto &enable_dx_ref = frame_->mutable_session()
+  //                                 ->mutable_planning_context()
+  //                                 ->mutable_adaptive_cruise_control_result()
+  //                                 .navi_speed_control_info.enable_v_cost;
 
-  const auto &enable_dx_ref = frame_->mutable_session()
-                                  ->mutable_planning_context()
-                                  ->mutable_adaptive_cruise_control_result()
-                                  .navi_speed_control_info.enable_v_cost;
+  // const auto &enable_stop_flag = frame_->mutable_session()
+  //                                    ->mutable_planning_context()
+  //                                    ->mutable_start_stop_result()
+  //                                    .enable_stop;
 
-  const auto &enable_stop_flag = frame_->mutable_session()
-                                     ->mutable_planning_context()
-                                     ->mutable_start_stop_result()
-                                     .enable_stop;
+  // const auto &mrc_brake_type = frame_->mutable_session()
+  //                                  ->mutable_planning_context()
+  //                                  ->mrc_condition()
+  //                                  ->mrc_brake_type();
 
-  const auto &mrc_brake_type = frame_->mutable_session()
-                                   ->mutable_planning_context()
-                                   ->mrc_condition()
-                                   ->mrc_brake_type();
+  // const bool mrc_condition_enable =
+  //     mrc_brake_type == MrcBrakeType::SLOW_BRAKE ||
+  //     mrc_brake_type == MrcBrakeType::HARD_BRAKE ||
+  //     mrc_brake_type == MrcBrakeType::EMERGENCY_BRAKE;
 
-  const bool mrc_condition_enable =
-      mrc_brake_type == MrcBrakeType::SLOW_BRAKE ||
-      mrc_brake_type == MrcBrakeType::HARD_BRAKE ||
-      mrc_brake_type == MrcBrakeType::EMERGENCY_BRAKE;
-
-  double weight_x;
-  double weight_dx;
-  double weight_ddx;
-  double weight_dddx;
-  double weight_ddddx;
-
-  if (enable_stop_flag) {
-    weight_dx = config_start_stop_.dx_ref_weight;
-    weight_x = 0.;
-  } else {
-    if (mrc_condition_enable || enable_dx_ref) {
-      weight_dx = config_acc_.dx_ref_weight;
-      weight_x = 0.;
-    } else {
-      weight_dx = 0.;
-      weight_x = 1.;
-    }
-  }
-  LOG_DEBUG(
-      "[LongitudinalMotionPlanner] enable_stop_flag: %d, enable_dx_ref: %d,"
-      "acc_weight_dx_config: %.2f, stop_weight_dx_config: %.2f \n",
-      enable_stop_flag, enable_dx_ref, config_acc_.dx_ref_weight,
-      config_start_stop_.dx_ref_weight);
-
-  weight_ddx = 1.0;
-  weight_dddx = 100.;
-  weight_ddddx = 1000.; // TBD: adjust in pnc tools;
-
+  // set ref_pos and ref_vel
   for (size_t i = 0; i < s_refs.size(); ++i) {
-    planning_input_.mutable_ref_pos_vec()->Set(i, s_refs[i].first);
-    planning_input_.mutable_ref_vel_vec()->Set(i, s_refs[i].first);
+    auto const &dt =
+        planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->model_dt;
+
+    auto const &v_ref = v_refs[i].first;
+    auto s_ref = s_refs[i].first;
+
+    // note that s_ref should be limited by v_ref
+    if (i > 0) {
+      auto const &last_s_ref = planning_input_.ref_pos_vec(i - 1);
+      s_ref = pnc::mathlib::Limit(s_ref, last_s_ref + dt * v_ref);
+    }
+
+    planning_input_.mutable_ref_pos_vec()->Set(i, s_ref);
+    planning_input_.mutable_ref_vel_vec()->Set(i, v_ref);
   }
 
   // FBI WARNING: s bound should know soft or hard?
@@ -181,8 +171,9 @@ void LongitudinalMotionPlanner::GeneratePlanningInput() {
   const auto &planning_init_point =
       reference_path_ptr_->get_frenet_ego_state().planning_init_point();
 
+  // init s uses frenet state
   planning_input_.mutable_init_state()->set_s(
-      planning_init_point.lon_init_state.s());
+      planning_init_point.frenet_state.s);
 
   planning_input_.mutable_init_state()->set_v(
       planning_init_point.lon_init_state.v());
@@ -194,14 +185,14 @@ void LongitudinalMotionPlanner::GeneratePlanningInput() {
       planning_init_point.lon_init_state.j());
 
   // set weights
-  planning_input_.set_q_ref_pos(weight_x);
-  planning_input_.set_q_ref_vel(weight_dx);
-  planning_input_.set_q_acc(weight_ddx);
-  planning_input_.set_q_jerk(weight_dddx);
-  planning_input_.set_q_snap(weight_ddddx);
+  planning_input_.set_q_ref_pos(config_.q_ref_pos);
+  planning_input_.set_q_ref_vel(config_.q_ref_vel);
+  planning_input_.set_q_acc(config_.q_acc);
+  planning_input_.set_q_jerk(config_.q_jerk);
+  planning_input_.set_q_snap(config_.q_snap);
+  planning_input_.set_q_stop_s(config_.q_stop_s);
 
-  planning_input_.set_q_pos_bound(
-      config_.q_pos_bound); // TBD: adjust in pnc tools;
+  planning_input_.set_q_pos_bound(config_.q_pos_bound);
   planning_input_.set_q_vel_bound(config_.q_vel_bound);
   planning_input_.set_q_acc_bound(config_.q_acc_bound);
   planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
@@ -264,140 +255,75 @@ void LongitudinalMotionPlanner::GeneratePlanningOutput() {
   traj_spline.a_t_spline.set_points(t_vec_, a_vec_);
   traj_spline.j_t_spline.set_points(t_vec_, j_vec_);
 
-  auto &traj_points = pipeline_context_->planning_result.traj_points;
+  traj_spline.lon_enable_flag = true;
 
   // assemble trajectory that combining lateral and longitudinal planning_result
+  auto &traj_points = pipeline_context_->planning_result.traj_points;
   for (size_t i = 0; i < N; ++i) {
-    traj_points[i].s = s_vec_[i];
     traj_points[i].v = v_vec_[i];
     traj_points[i].a = a_vec_[i];
-    traj_points[i].x = traj_spline.x_s_spline(s_vec_[i]);
-    traj_points[i].y = traj_spline.y_s_spline(s_vec_[i]);
+    traj_points[i].t = planning_output_.time_vec(i);
+
+    // lateral path resampling
+    // s is lateral path rather than longitudinal path (frenet)
+    // considering an offset that equals to init s
+    const auto &s = s_vec_[i] - s_vec_[0];
+    traj_points[i].x = traj_spline.x_s_spline(s);
+    traj_points[i].y = traj_spline.y_s_spline(s);
     traj_points[i].heading_angle =
-        pnc::mathlib::DeltaAngleFix(traj_spline.theta_s_spline(s_vec_[i]));
+        pnc::mathlib::DeltaAngleFix(traj_spline.theta_s_spline(s));
+
+    // frenet state update
+    Point2D cart_pt(traj_points[i].x, traj_points[i].y);
+    Point2D frenet_pt;
+
+    if (reference_path_ptr_->get_frenet_coord() != nullptr &&
+        reference_path_ptr_->get_frenet_coord()->CartCoord2FrenetCoord(
+            cart_pt, frenet_pt) == TRANSFORM_STATUS::TRANSFORM_SUCCESS) {
+      traj_points[i].s = frenet_pt.x;
+      traj_points[i].l = frenet_pt.y;
+    } else {
+      LOG_DEBUG(
+          "CartCoord2FrenetCoord = FAILED !!!!!!!! index: %ld,  point.s : "
+          "%f, point.l: %f ",
+          i, traj_points[i].s, traj_points[i].l);
+    }
   }
 
-  frame_->mutable_session()
-      ->mutable_planning_context()
-      ->mutable_planning_result()
-      .init_flag = true;
+  // bool LongitudinalMotionPlanner::RecheckPlanningResult() {
+  //   const auto &lon_ref_path = // result from lon decision
+  //       pipeline_context_->planning_info.lon_ref_path;
+  //   const auto &state_result =
+  //       planning_problem_ptr_->GetiLqrCorePtr()->GetStateResultPtr();
 
-  // frenet is no longer used
-  // std::vector<double> l;
-  // std::vector<double> heading_angle;
-  // std::vector<double> curvature;
-  // l.reserve(N);
-  // heading_angle.reserve(N);
-  // curvature.reserve(N);
+  //   const auto &num_t = lon_ref_path.t_list.size();
 
-  // interpolate_frenet_lon(traj_points, s_vec_, l, heading_angle, curvature);
+  //   for (size_t i = 0; i < num_t; i++) {
+  //     if (state_result->at(i)[pnc::longitudinal_planning::StateId::POS] <
+  //             s_limit_.lower ||
+  //         state_result->at(i)[pnc::longitudinal_planning::StateId::POS] >
+  //             s_limit_.upper) {
+  //       LOG_ERROR("[ILqrLonPlanning]: Error! s bound collide! %d %f [%f %f]
+  //       \n",
+  //                 i,
+  //                 state_result->at(i)[pnc::longitudinal_planning::StateId::POS],
+  //                 s_limit_.lower, s_limit_.upper);
+  //     }
 
-  // for (size_t i = 0; i < traj_points.size(); i++) {
-  //   traj_points[i].s = s_vec_[i];
-  //   traj_points[i].v = v_vec_[i];
-  //   traj_points[i].a = a_vec_[i];
-  //   traj_points[i].l = l[i];
-  //   traj_points[i].heading_angle = heading_angle[i];
-  //   traj_points[i].curvature = curvature[i];
-  // }
+  //     if (state_result->at(i)[pnc::longitudinal_planning::StateId::ACC] >
+  //             config_.kMaxAcc ||
+  //         state_result->at(i)[pnc::longitudinal_planning::StateId::ACC] <
+  //             config_.kMinDec) {
+  //       LOG_ERROR("[ILqrLonPlanning]: Error! Invalid acc %f ! \n",
+  //                 state_result->at(i)[pnc::longitudinal_planning::StateId::ACC]);
+  //     }
+
+  //     if (std::fabs(state_result->at(
+  //             i)[pnc::longitudinal_planning::StateId::JERK]) >
+  //             config_.kMaxJerk) {
+  //       LOG_ERROR("[ILqrLonPlanning]: Error! Invalid jerk %f ! \n",
+  //                 state_result->at(i)[pnc::longitudinal_planning::StateId::JERK]);
+  //     }
+  //   }
 }
-
-// void LongitudinalMotionPlanner::interpolate_frenet_lon(
-//     const std::vector<TrajectoryPoint> &traj_points,
-//     const std::vector<double> &s, std::vector<double> &l,
-//     std::vector<double> &heading_angle, std::vector<double> &curvature) {
-//   const auto &state_result =
-//       planning_problem_ptr_->GetiLqrCorePtr()->GetStateResultPtr();
-
-//   const size_t N =
-//       planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon
-//       + 1;
-
-//   size_t j = 0;
-//   for (size_t i = 1; i < N; i++) {
-//     if (state_result->at(i)[pnc::longitudinal_planning::StateId::POS] >=
-//         traj_points.back().s) {
-//       l[i] = traj_points.back().l;
-//       heading_angle[i] = traj_points.back().heading_angle;
-//       curvature[i] = traj_points.back().curvature;
-//       continue;
-
-//     } else if (state_result->at(i)[pnc::longitudinal_planning::StateId::POS]
-//     <=
-//                traj_points.front().s) {
-//       l[i] = traj_points.front().l;
-//       heading_angle[i] = traj_points.front().heading_angle;
-//       curvature[i] = traj_points.front().curvature;
-//       continue;
-//     }
-//     bool found_left_right = false;
-//     while (j + 1 < traj_points.size()) {
-//       if (traj_points[j].s <= s[i] and s[i] < traj_points[j + 1].s) {
-//         found_left_right = true;
-//         break;
-//       }
-//       ++j;
-//     }
-
-//     // compute l_i
-//     if (not found_left_right) {
-//       l[i] = traj_points.back().l;
-//       heading_angle[i] = traj_points.back().heading_angle;
-//       curvature[i] = traj_points.back().curvature;
-//     } else {
-//       auto ratio = 1.0;
-//       if ((traj_points[j + 1].s - traj_points[j].s) > 1e-2) {
-//         ratio = (traj_points[j + 1].s - s[i]) /
-//                 (traj_points[j + 1].s - traj_points[j].s);
-//       }
-
-//       l[i] = planning_math::Interpolate(traj_points[j].l, traj_points[j +
-//       1].l,
-//                                         ratio);
-//       heading_angle[i] = planning_math::InterpolateAngle(
-//           traj_points[j].heading_angle, traj_points[j + 1].heading_angle,
-//           ratio);
-//       curvature[i] = planning_math::Interpolate(
-//           traj_points[j].curvature, traj_points[j + 1].curvature, ratio);
-//     }
-//   }
-// }
-
-// bool LongitudinalMotionPlanner::RecheckPlanningResult() {
-//   const auto &lon_ref_path = // result from lon decision
-//       pipeline_context_->planning_info.lon_ref_path;
-//   const auto &state_result =
-//       planning_problem_ptr_->GetiLqrCorePtr()->GetStateResultPtr();
-
-//   const auto &num_t = lon_ref_path.t_list.size();
-
-//   for (size_t i = 0; i < num_t; i++) {
-//     if (state_result->at(i)[pnc::longitudinal_planning::StateId::POS] <
-//             s_limit_.lower ||
-//         state_result->at(i)[pnc::longitudinal_planning::StateId::POS] >
-//             s_limit_.upper) {
-//       LOG_ERROR("[ILqrLonPlanning]: Error! s bound collide! %d %f [%f %f]
-//       \n",
-//                 i,
-//                 state_result->at(i)[pnc::longitudinal_planning::StateId::POS],
-//                 s_limit_.lower, s_limit_.upper);
-//     }
-
-//     if (state_result->at(i)[pnc::longitudinal_planning::StateId::ACC] >
-//             config_.kMaxAcc ||
-//         state_result->at(i)[pnc::longitudinal_planning::StateId::ACC] <
-//             config_.kMinDec) {
-//       LOG_ERROR("[ILqrLonPlanning]: Error! Invalid acc %f ! \n",
-//                 state_result->at(i)[pnc::longitudinal_planning::StateId::ACC]);
-//     }
-
-//     if (std::fabs(state_result->at(
-//             i)[pnc::longitudinal_planning::StateId::JERK]) >
-//             config_.kMaxJerk) {
-//       LOG_ERROR("[ILqrLonPlanning]: Error! Invalid jerk %f ! \n",
-//                 state_result->at(i)[pnc::longitudinal_planning::StateId::JERK]);
-//     }
-//   }
-// }
-
 } // namespace planning

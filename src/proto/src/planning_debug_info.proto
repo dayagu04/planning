@@ -7,6 +7,7 @@ import "vision_only_lateral_behavior_planner.proto";
 import "vision_only_lateral_motion_planner.proto";
 import "environment_model_debug_info.proto";
 import "lateral_motion_planner.proto";
+import "longitudinal_motion_planner.proto";
 import "lat_behavior_common.proto";
 
 message ReadTopicStampList {
@@ -30,11 +31,13 @@ message PlanningDebugInfo {
   optional LonRefPath long_ref_path = 3;  // long behavior
   optional LateralPlanningInput lateral_motion_planning_input = 4;
   optional LateralPlanningOutput lateral_motion_planning_output = 5;
+  optional LongitudinalPlanningInput longitudinal_motion_planning_input = 6;
+  optional LongitudinalPlanningOutput longitudinal_motion_planning_output = 7;
+  optional LatBehaviorCommon lat_behavior_common = 8;
+  optional VOLatBehaviorPlan vo_lat_behavior_plan = 9;
+  optional VOLatMotionPlan vo_lat_motion_plan = 10;
+  optional EnvironmentModelInfo environment_model_info = 11;
+
   // optional ReadTopicStampList read_topic_timestamp = 4;
-  // TBD: lon motion
-  optional LatBehaviorCommon lat_behavior_common = 6;
-  optional VOLatBehaviorPlan vo_lat_behavior_plan = 7;
-  optional VOLatMotionPlan vo_lat_motion_plan = 8;
-  optional EnvironmentModelInfo environment_model_info = 9;
-  
+
 }

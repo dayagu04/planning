@@ -1,5 +1,5 @@
 
-#include "general_lateral_motion_planner.h"
+#include "lateral_motion_planner.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -14,7 +14,7 @@ LateralMotionPlanner::LateralMotionPlanner(
     const EgoPlanningConfigBuilder *config_builder,
     const std::shared_ptr<TaskPipelineContext> &pipeline_context)
     : Task(config_builder, pipeline_context) {
-  config_ = config_builder->cast<GeneralLateralMotionPlannerConfig>();
+  config_ = config_builder->cast<LateralMotionPlannerConfig>();
   name_ = "LateralMotionPlanner";
 
   Init();
@@ -98,7 +98,7 @@ bool LateralMotionPlanner::Execute(planning::framework::Frame *frame) {
   // get output
   GeneratePlanningOutput();
 
-  // record input
+  // record input and output
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
       ->mutable_lateral_motion_planning_input()
@@ -324,32 +324,27 @@ void LateralMotionPlanner::GeneratePlanningOutput() {
   traj_spline.curv_s_spline.set_points(s_vec_, curv_vec);
   traj_spline.d_curv_s_spline.set_points(s_vec_, d_curv_vec);
 
-  traj_spline.enable_flag = true;
+  traj_spline.lat_enable_flag = true;
 
   traj_spline.x_vec = x_vec_;
   traj_spline.y_vec = y_vec_;
   traj_spline.s_vec = s_vec_;
 
   // assemble results
-  const auto &v_cruise = frame_->session()
-                             ->environmental_model()
-                             .get_ego_state_manager()
-                             ->ego_v_cruise();
-  v_cruise_ = v_cruise;
+  const auto &lat_decider_output = // result from lat decision
+      frame_->session()->planning_context().lat_decider_output();
 
   auto &traj_points = pipeline_context_->planning_result.traj_points;
   for (size_t i = 0; i < N; i++) {
-    traj_points[i].x = state_result->at(i)[pnc::lateral_planning::StateId::X];
-    traj_points[i].y = state_result->at(i)[pnc::lateral_planning::StateId::Y];
-    traj_points[i].heading_angle =
-        state_result->at(i)[pnc::lateral_planning::StateId::THETA];
-    traj_points[i].curvature =
-        planning_input_.curv_factor() *
-        state_result->at(i)[pnc::lateral_planning::StateId::DELTA];
+    traj_points[i].x = x_vec_[i];
+    traj_points[i].y = y_vec_[i];
+    traj_points[i].heading_angle = theta_vec_[i];
+    traj_points[i].curvature = planning_input_.curv_factor() * delta_vec_[i];
 
-    traj_points[i].v = v_cruise;
+    traj_points[i].v = lat_decider_output.v_cruise;
     traj_points[i].t = planning_output_.time_vec(i);
 
+    // frenet state update
     Point2D cart_pt(traj_points[i].x, traj_points[i].y);
     Point2D frenet_pt;
 
@@ -365,13 +360,6 @@ void LateralMotionPlanner::GeneratePlanningOutput() {
           i, traj_points[i].s, traj_points[i].l);
     }
   }
-
-  frame_->mutable_session()
-      ->mutable_planning_context()
-      ->mutable_planning_result()
-              .init_flag = true;
 }
-
-void LateralMotionPlanner::UpdateOneStepTrajectory() {}
 
 } // namespace planning

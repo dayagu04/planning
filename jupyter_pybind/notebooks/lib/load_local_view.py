@@ -154,7 +154,11 @@ class LoadCyberbag:
 
     # load planning debug msg
     try:
-      json_value_list = ["init_flag", "replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw"]
+      json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'VisionLonBehavior_a_target_high',
+                         "VisionLonBehavior_a_target_low", "VisionLonBehavior_v_target", "VisionLonBehavior_lead_one_id",
+                         "VisionLonBehavior_lead_one_dis", "VisionLonBehavior_lead_one_vel", "VisionLonBehavior_lead_two_id",
+                         "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel"]
+
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec"]
 
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
@@ -243,6 +247,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
 
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+
+    coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+
     ego_xb, ego_yb = [], []
     ego_xn, ego_yn = [], []
     ### global variables
@@ -278,7 +285,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     })
 
     try:
-      vel_ego =  bag_loader.loc_msg['data'][loc_msg_idx].linear_velocity_from_wheel
+      vel_ego =  bag_loader.loc_msg['data'][loc_msg_idx].pose.linear_velocity_from_wheel
     except:
       vel_ego = bag_loader.vs_msg['data'][vs_msg_idx].vehicle_speed
 
@@ -288,7 +295,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     steer_deg = bag_loader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
 
     local_view_data['data_text'].data.update({
-      'vel_ego_text': ['v={:.2f}\nsteer={:.1f}'.format(round(vel_ego, 2), round(steer_deg, 1))],
+      'vel_ego_text': ['v={:.2f}\nsteer={:.2f}'.format(round(vel_ego, 2), round(steer_deg, 2))],
       'text_xn': [text_xn],
       'text_yn': [text_yn],
     })
@@ -400,7 +407,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         })
 
     local_view_data['data_text'].data.update({
-      'vel_ego_text': ['v={:.2f}({:d})\nsteer={:.21}'.format(round(vel_ego, 2),current_lane_virtual_id, round(steer_deg, 1))],
+      'vel_ego_text': ['v={:.2f}({:d})\nsteer={:.2}'.format(round(vel_ego, 2),current_lane_virtual_id, round(steer_deg, 2))],
       'text_xn': [text_xn],
       'text_yn': [text_yn],
     })
@@ -482,22 +489,24 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   ### step 3: 加载planning轨迹信息
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
-    try:
-      if trajectory == []:
-        print('planning trajectory is empty')
-      else: 
-        # 实时的轨迹
-        if trajectory.trajectory_type == 0: 
-          planning_polynomial = trajectory.target_reference.polynomial
-          # print(planning_polynomial)
-          planning_x, planning_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
-          local_view_data['data_planning_trajectory'].data.update({
-            'planning_y' : planning_y,
-            'planning_x' : planning_x,
-          })
-    except:
-      pass
-  
+    if trajectory.trajectory_type == 0:
+      planning_polynomial = trajectory.target_reference.polynomial
+      plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
+
+    else:
+      plan_x = []
+      plan_y = []
+      for i in range(len(trajectory.trajectory_points)):
+        plan_x.append(trajectory.trajectory_points[i].x)
+        plan_y.append(trajectory.trajectory_points[i].y)
+
+      plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
+
+    local_view_data['data_planning'].data.update({
+        'plan_traj_y' : plan_traj_y,
+        'plan_traj_x' : plan_traj_x,
+    })
+
   # 加载prediction_msg
   if bag_loader.prediction_msg['enable'] == True:
     prediction_info = bag_loader.prediction_msg['data'][pred_msg_idx]
@@ -542,8 +551,8 @@ def load_local_view_figure():
                                         'obstacles_y_rel':[], 'obstacles_x_rel':[],
                                         'pos_y_rel':[], 'pos_x_rel':[],
                                         'obs_label':[]})
-  data_planning = ColumnDataSource(data = {'planning_y':[],
-                                      'planning_x':[],})
+  data_planning = ColumnDataSource(data = {'plan_traj_y':[],
+                                      'plan_traj_x':[],})
 
   data_prediction = ColumnDataSource(data = {'prediction_y':[],
                                              'prediction_x':[],})
@@ -614,7 +623,7 @@ def load_local_view_figure():
   fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd')
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fusion_info')
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info')
-  fig1.line('planning_y', 'planning_x', source = data_planning, line_width = 3, line_color = 'pink', line_dash = 'solid', legend_label = 'planning_trajectory')
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
   fig1.multi_line('prediction_y', 'prediction_x', source = data_prediction, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'prediction')
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)

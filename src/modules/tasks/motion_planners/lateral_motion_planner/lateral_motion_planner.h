@@ -1,8 +1,9 @@
 /**
- * @file general_lateral_motion_planner.h
+ * @file lateral_motion_planner.h
  **/
 
-#pragma once
+#ifndef __LATERAL_MOTION_PLANNER_H__
+#define __LATERAL_MOTION_PLANNER_H__
 
 #include <assert.h>
 
@@ -12,7 +13,6 @@
 #include <string>
 #include <vector>
 
-#include "common/math/linear_interpolation.h"
 #include "context/environmental_model.h"
 #include "context/frenet_ego_state.h"
 #include "context/obstacle_manager.h"
@@ -28,26 +28,23 @@ namespace planning {
 
 class LateralMotionPlanner : public Task {
 public:
-  explicit LateralMotionPlanner(
+  LateralMotionPlanner(
       const EgoPlanningConfigBuilder *config_builder,
       const std::shared_ptr<TaskPipelineContext> &pipeline_context);
 
-  virtual ~LateralMotionPlanner() = default;
-
   void Init();
-  bool Execute(planning::framework::Frame *frame) override;
+  bool Execute(planning::framework::Frame *frame);
 
 private:
   void GeneratePlanningInput();
   void GeneratePlanningOutput();
-  void UpdateOneStepTrajectory();
-  GeneralLateralMotionPlannerConfig config_;
+
+  LateralMotionPlannerConfig config_;
   string name_;
   std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningProblem>
       planning_problem_ptr_;
   planning::common::LateralPlanningOutput planning_output_;
   planning::common::LateralPlanningInput planning_input_;
-  State init_state_;
 
   // state vector
   std::vector<double> x_vec_;
@@ -58,7 +55,8 @@ private:
   std::vector<double> curv_vec;
   std::vector<double> d_curv_vec;
   std::vector<double> s_vec_;
-  double v_cruise_ = 0.0;
 };
 
 } // namespace planning
+
+#endif

@@ -100,14 +100,18 @@ class EgoStateManager {
 
  private:
   void update_transform();
-  void update_planning_init_point();
-  void ResetProcess();
-  uint8_t ReplanProcess();
-  bool StitchProcess();
+  void UpdatePlanningInitState();
+  uint8_t ReplanProcess(bool lat_replan, bool lon_replan);
+
+  void LateralReset();
+  void LongitudinalReset();
+  bool LateralStitch();
+  bool LongitudinalStitch();
+
   std::vector<PncTrajectoryPoint> compute_stitching_trajectory();
   void set_timestamp_us(const planning::common::VehicleStatus &vehicle_status);
 
- private:
+private:
   planning::VehicleParam vehicle_param_;
   framework::Session *session_ = nullptr;
 
