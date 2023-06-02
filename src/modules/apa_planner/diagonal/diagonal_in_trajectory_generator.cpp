@@ -202,6 +202,10 @@ bool DiagonalInTrajectoryGenerator::GeometryPlan(
     return false;
   }
 
+  if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
+    last_segment_name_.clear();
+  }
+
   return is_planning_ok;
 }
 
@@ -245,6 +249,11 @@ bool DiagonalInTrajectoryGenerator::ReverseABSegmentPlan(
   if (geometry_planning->ReverseABSegment(point_a, is_start, is_rough_calc_,
       &segments_info)) {
     PLANNING_LOG << "plan R_a-c success" << std::endl;
+    if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
+      planning_output->add_successful_slot_info_list()->set_id(
+          local_view_->parking_fusion_info.parking_fusion_slot_lists()[idx].id());
+      return true;
+    }
     GenerateRACSegmentTrajectory(segments_info, planning_output);
     GenerateCDSegmentTrajectory(segments_info, planning_output);
     PrintTrajectoryPoints(*planning_output);
