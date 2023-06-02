@@ -18,6 +18,7 @@
 #include "fusion_road.pb.h"
 #include "radar_perception_objects.pb.h"
 #include "planning_hmi.pb.h"
+#include "func_state_machine.pb.h"
 
 #include "autoplt/include/ADSComponent.h"
 #include "autoplt/include/ADSNode.h"
@@ -53,6 +54,7 @@ class PlanningComponent final : public autoplt::ADSTimerCoponent {
   ControlCommand::ControlOutput control_output_msg_;
   HmiMcuInner::HmiMcuInner hmi_mcu_inner_info_msg_;
   ParkingFusion::ParkingFusionInfo parking_fusion_info_msg_;
+  FuncStateMachine::FuncStateMachine func_state_machine_msg_;
   LocalView local_view_;
   DebugOutput debug_info_;
 //   Session session_;

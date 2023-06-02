@@ -96,7 +96,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   // session_->mutable_environmental_model()->set_location_valid(false); 
   // Step 1) update vehicleDbwStatus
   session_->mutable_environmental_model()->UpdateVehicleDbwStatus(
-    local_view.hmi_mcu_inner_info.noa_active_switch());
+    local_view.function_state_machine_info.current_state() == FuncStateMachine::FunctionalState::SCC_ACTIVATE);
   // 自动有效，临时hack
   // session_->mutable_environmental_model()->UpdateVehicleDbwStatus(true);
   last_feed_time_[FEED_VEHICLE_DBW_STATUS] = current_time;

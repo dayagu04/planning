@@ -153,6 +153,15 @@ bool PlanningComponent::Init() {
             parking_fusion_info_msg_.CopyFrom(*parking_fusion_info_msg);
           });
 
+  auto func_state_machine_reader_ =
+      planning_node_->CreateReader<FuncStateMachine::FuncStateMachine>(
+          "/iflytek/system_state/soc_state",
+          [this](const std::shared_ptr<FuncStateMachine::FuncStateMachine>
+                     &func_state_machine_msg) {
+            std::lock_guard<std::mutex> lock(msg_mutex_);
+            func_state_machine_msg_.CopyFrom(*func_state_machine_msg);
+          });
+
   // -------------- writter topics --------------
   planning_writer_ =
       planning_node_->CreateWriter<PlanningOutput::PlanningOutput>(
@@ -190,6 +199,7 @@ bool PlanningComponent::Proc() {
     local_view_.control_output = control_output_msg_;
     local_view_.hmi_mcu_inner_info = hmi_mcu_inner_info_msg_;
     local_view_.parking_fusion_info = parking_fusion_info_msg_;
+    local_view_.function_state_machine_info = func_state_machine_msg_;
   }
 
   // 2.planning run
