@@ -3,6 +3,8 @@
 
 import matplotlib.pyplot as plt
 import math
+import numpy as np
+
 
 class PlotPlanningInfo(object):
     def __init__(self, data_path):
@@ -18,6 +20,9 @@ class PlotPlanningInfo(object):
         self.x_traj_list = []
         self.y_traj_list = []
         self.theta_traj_list = []
+        self.smooth_v_list = []
+        self.smoothed_s_list = []
+        self.v_limit_list = []
         self.gear_list = []
         self.veh_spd_mps_list = []
         self.target_x = None
@@ -141,6 +146,14 @@ class PlotPlanningInfo(object):
             self.slot3_x = float(strs2[1])
             strs2 = strs1[7].split(":")
             self.slot3_y = float(strs2[1])
+        elif line.startswith("smoothed traj pt"):
+            strs1 = line.split(",")
+            strs2 = strs1[5].split(":")
+            self.smooth_v_list.append(float(strs2[1]))
+            strs2 = strs1[6].split(":")
+            self.v_limit_list.append(float(strs2[1]))
+            strs2 = strs1[7].split(":")
+            self.smoothed_s_list.append(float(strs2[1]))
 
     def read_file(self):
         file_object = open(self.data_path, 'r')
@@ -235,6 +248,28 @@ class PlotPlanningInfo(object):
 
         plt.subplot(1, 1, 1)
         plt.plot(self.rel_time_list, self.all_time_diff_list, label="time diff")
+        plt.legend()
+        plt.grid()
+        plt.show()
+
+    def plot_smoothed_speed(self):
+        fig = plt.figure(num="smoothed speed")
+        fig.subplots(1, 1, sharex=True, sharey=False)
+
+        plt.subplot(1, 1, 1)
+        delta_s = 0.0
+        smoothed_s_list = [0]
+        for i in range(0, len(self.v_limit_list)):
+            if i == 0:
+                delta_s = self.smoothed_s_list[1] - self.smoothed_s_list[0]
+            elif self.v_limit_list[i] * self.v_limit_list[i - 1] < 0.0:
+                delta_s = self.smoothed_s_list[i + 1] - self.smoothed_s_list[i]
+            else:
+                delta_s = self.smoothed_s_list[i] - self.smoothed_s_list[i - 1]
+            if i != 0:
+                smoothed_s_list.append(smoothed_s_list[-1] + delta_s)
+        plt.plot(smoothed_s_list, self.smooth_v_list, label="smoothed speed", marker='.')
+        plt.plot(smoothed_s_list, self.v_limit_list, label="speed limit", marker='.')
         plt.legend()
         plt.grid()
         plt.show()

@@ -16,6 +16,10 @@ namespace planning {
 using ::PlanningOutput::PlanningOutput;
 using planning_math::LineSegment2d;
 
+namespace {
+constexpr double kMinSpd = 0.3;
+}
+
 ApaSpeedSmoother::ApaSpeedSmoother() {
   const std::string config_file =
       "/asw/planning/res/conf/apa_speed_smoother_config.pb.txt";
@@ -77,7 +81,7 @@ bool ApaSpeedSmoother::Smooth(
       smoothed_planning_output, obstacles, &speed_limit_data);
 
   // construct piecewise jerk problem
-  const std::array<double, 3> init_state = {0.0, 0.0, 0.0};
+  const std::array<double, 3> init_state = {kMinSpd, 0.0, 0.0};
   planning_math::PiecewiseProblem
       piecewise_jerk_problem(resample_point_num, s_vev, init_state, true);
   piecewise_jerk_problem.set_weight_x(config_.weight_v());
@@ -106,8 +110,8 @@ bool ApaSpeedSmoother::Smooth(
     v_bounds[i][0] = v_bound;
     v_refs.emplace_back(v_bound.upper, config_.weight_ref_v());
   }
-  v_bounds.back().back().lower = 0.0;
-  v_bounds.back().back().upper = 0.0;
+  v_bounds.back().back().lower = kMinSpd;
+  v_bounds.back().back().upper = kMinSpd;
 
   const int end_index = resample_point_num - 1;
   piecewise_jerk_problem.set_x_bounds(v_bounds);
@@ -135,14 +139,16 @@ bool ApaSpeedSmoother::Smooth(
   const auto& v_vec = piecewise_jerk_problem.x();
   for (int i = 0; i < resample_point_num; ++i) {
     const double v = v_vec[i] * motion_sign;
+    const double v_limit =
+        speed_limit_data.speed_limit_points()[i].second * motion_sign;
     smooothed_trajectory->mutable_trajectory_points(i)->set_v(v);
     const auto& pt = smooothed_trajectory->trajectory_points()[i];
     PLANNING_LOG << "smoothed traj pt [" << i << "], x:" << pt.x()
         << ", y:" << pt.y() << ", theta:" << pt.heading_yaw()
         << ", kappa:" << pt.curvature() << ", v:" << pt.v()
-        << ", v limit:" << speed_limit_data.speed_limit_points()[i].second
-        << ", s:" << pt.distance() << std::endl;
+        << ", v limit:" << v_limit << ", s:" << pt.distance() << std::endl;
   }
+  smooothed_trajectory->mutable_trajectory_points()->rbegin()->set_v(0.0);
   *planning_output = smoothed_planning_output;
 
   return true;

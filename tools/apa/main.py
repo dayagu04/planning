@@ -9,3 +9,4 @@ if __name__ == '__main__':
     plot_all_frame.read_file()
     plot_all_frame.plot_pos_data()
     plot_all_frame.plot_time_diff()
+    # plot_all_frame.plot_smoothed_speed()
