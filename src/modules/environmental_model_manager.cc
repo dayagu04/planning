@@ -282,7 +282,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
   //               ->set_value_mps(hmi_mcu_inner_info.acc_set_disp_speed());
 
   vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
-      30.0);
+      hmi_mcu_inner_info.acc_set_disp_speed());
 
   if (vehicel_service_output_info.vehicle_speed_available()) {
     vehicle_status.mutable_velocity()->set_available(true);
