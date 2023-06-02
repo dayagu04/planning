@@ -14,6 +14,7 @@
 #include "fusion_road.pb.h"
 #include "radar_perception_objects.pb.h"
 #include "hmi_mcu_inner.pb.h"
+#include "func_state_machine.pb.h"
 
 namespace planning {
 /**
@@ -32,6 +33,7 @@ struct LocalView {
   ControlCommand::ControlOutput control_output;
   HmiMcuInner::HmiMcuInner hmi_mcu_inner_info;
   ParkingFusion::ParkingFusionInfo parking_fusion_info;
+  FuncStateMachine::FuncStateMachine function_state_machine_info;
 };
 
 }  // namespace planning

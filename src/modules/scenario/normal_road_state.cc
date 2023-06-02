@@ -314,9 +314,16 @@ void RoadBase::process_change(
                              lc_lane_managers);
     }
   } else {
-    LOG_DEBUG("[RoadState::Change] Change to Back\n");
-    prepare_for_back_state(lc_lane_manager, lc_req_manager, candidate_states,
-                           lc_lane_managers);
+    if (lc_request != context.direction ||
+        !lc_lane_manager->is_ego_on(lc_lane_manager->tlane())) {
+      LOG_DEBUG("[RoadState::Change] Change to None\n");
+      prepare_for_none_state(lc_lane_manager, lc_req_manager, candidate_states,
+                             lc_lane_managers);
+    } else {
+      LOG_DEBUG("[RoadState::Change] Change to Back\n");
+      prepare_for_back_state(lc_lane_manager, lc_req_manager, candidate_states,
+                            lc_lane_managers);
+    }
   }
 
   state_machine->generate_state_machine_output(lc_back_info);
