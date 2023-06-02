@@ -3,6 +3,7 @@
 #include "frame.h"
 #include "apa_planner/common/geometry_planning_io.h"
 #include "apa_planner/diagonal/diagonal_in_geometry_plan.h"
+#include "apa_planner/speed_smoother/apa_speed_smoother.h"
 #include "common/local_view.h"
 #include "common/math/box2d.h"
 
@@ -155,6 +156,8 @@ class DiagonalInTrajectoryGenerator {
         ::FuncStateMachine::FunctionalState::INIT;
 
   std::vector<planning_math::LineSegment2d> objects_map_in_global_cor_;
+
+  ApaSpeedSmoother apa_speed_smoother_;
 };
 
 } // namespace apa_planner

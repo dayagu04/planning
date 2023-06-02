@@ -1,4 +1,4 @@
-#include "apa_planner/apa_speed_decider/apa_speed_limit_decider.h"
+#include "apa_planner/speed_smoother/apa_speed_limit_decider.h"
 
 #include <cassert>
 #include <limits>

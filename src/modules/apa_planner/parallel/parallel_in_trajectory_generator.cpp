@@ -233,6 +233,10 @@ bool ParallelInTrajectoryGenerator::GeometryPlan(
     last_segment_name_.clear();
   }
 
+  // if (is_planning_ok) {
+  //   apa_speed_smoother_.Smooth(objects_map_in_global_cor_, planning_output);
+  // }
+
   return is_planning_ok;
 }
 

@@ -58,7 +58,10 @@ class PiecewiseProblem {
   void set_dx_bounds(const double dx_lower_bound, const double dx_upper_bound,
                      const double weight = -1);
   void set_dx_bounds(const Bounds &dx_bounds, const double weight = -1);
+  void set_dx_bounds(const Bound &dx_bound, const int index,
+                     const double weight = -1);
   void set_ddx_bounds(const Bounds &ddx_bounds);
+  void set_ddx_bounds(const Bound &ddx_bound, const int index);
   void set_dddx_bound(const double dddx_bound);
   void set_dddx_bounds(const Bounds &dddx_bounds);
   void set_x_infer_bounds(

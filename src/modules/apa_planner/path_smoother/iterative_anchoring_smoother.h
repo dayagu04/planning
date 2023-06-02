@@ -39,8 +39,7 @@ class IterativeAnchoringSmoother {
 
   ~IterativeAnchoringSmoother() = default;
 
-  bool Smooth(const std::vector<planning_math::LineSegment2d>&
-          obstacles_vertices_vec,
+  bool Smooth(const std::vector<planning_math::LineSegment2d>& obstacles,
       ::PlanningOutput::PlanningOutput *const planning_output);
 
  private:

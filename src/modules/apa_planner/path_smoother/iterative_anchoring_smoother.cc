@@ -51,7 +51,7 @@ IterativeAnchoringSmoother::IterativeAnchoringSmoother() {
 }
 
 bool IterativeAnchoringSmoother::Smooth(
-      const std::vector<LineSegment2d>& obstacles_vertices_vec,
+      const std::vector<LineSegment2d>& obstacles,
       PlanningOutput *const planning_output) {
   size_t traj_point_num = planning_output->trajectory().trajectory_points_size();
   if (traj_point_num < 4) {
@@ -62,7 +62,7 @@ bool IterativeAnchoringSmoother::Smooth(
 
   const uint64_t start_timestamp = IflyTime::Now_ms();
 
-  obstacles_linesegments_vec_ = obstacles_vertices_vec;
+  obstacles_linesegments_vec_ = obstacles;
 
   const auto& traj_points = planning_output->trajectory().trajectory_points();
   motion_sign_ = traj_points[0].v() > 0.0 ? 1.0 : -1.0;

@@ -134,6 +134,18 @@ void PiecewiseProblem::set_dx_bounds(const Bounds &dx_bounds,
   }
 }
 
+void PiecewiseProblem::set_dx_bounds(const Bound &dx_bound,
+                                     const int index,
+                                     const double weight) {
+  IndexedVariableBound variable_bound;
+  variable_bound.order = 1;
+  variable_bound.idx = index;
+  variable_bound.lower = dx_bound.lower;
+  variable_bound.upper = dx_bound.upper;
+  variable_bound.weight = weight;
+  add_variable_bound(variable_bound);
+}
+
 void PiecewiseProblem::set_ddx_bounds(const Bounds &ddx_bounds) {
   assert(ddx_bounds.size() == num_of_knots_);
   for (size_t i = 0; i < num_of_knots_; i++) {
@@ -145,6 +157,17 @@ void PiecewiseProblem::set_ddx_bounds(const Bounds &ddx_bounds) {
     variable_bound.weight = -1;
     add_variable_bound(variable_bound);
   }
+}
+
+void PiecewiseProblem::set_ddx_bounds(const Bound &ddx_bound,
+                                      const int index) {
+  IndexedVariableBound variable_bound;
+  variable_bound.order = 2;
+  variable_bound.idx = index;
+  variable_bound.lower = ddx_bound.lower;
+  variable_bound.upper = ddx_bound.upper;
+  variable_bound.weight = -1.0;
+  add_variable_bound(variable_bound);
 }
 
 void PiecewiseProblem::set_dddx_bound(const double dddx_bound) {
@@ -410,13 +433,13 @@ void PiecewiseProblem::calculate_offset(std::vector<c_float> *q) {
 
   if (has_x_ref_) {
     for (int i = 0; i < n; ++i) {
-      q->at(i) += -2.0 * (weight_x_ref_[i] + weight_x_) * x_ref_[i];
+      q->at(i) += -2.0 * weight_x_ref_[i] * x_ref_[i];
     }
   }
 
   if (has_dx_ref_) {
     for (int i = n; i < 2 * n; ++i) {
-      q->at(i) += -2.0 * (weight_dx_ + weight_dx_ref_[i - n]) * dx_ref_[i - n];
+      q->at(i) += -2.0 * weight_dx_ref_[i - n] * dx_ref_[i - n];
     }
   }
 

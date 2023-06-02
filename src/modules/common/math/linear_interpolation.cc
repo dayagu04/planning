@@ -9,6 +9,10 @@
 namespace planning {
 namespace planning_math {
 
+namespace {
+constexpr double kEps = 1e-6;
+}
+
 double slerp(const double a0, const double t0, const double a1, const double t1,
              const double t) {
   if (std::abs(t1 - t0) <= kMathEpsilon) {
@@ -142,6 +146,40 @@ PredictionTrajectoryPoint InterpolateUsingLinearApproximation(const PredictionTr
   tp.relative_ego_std_dev_yaw = lerp(tp0.relative_ego_std_dev_yaw, t0, tp1.relative_ego_std_dev_yaw, t1, t);
   tp.relative_ego_std_dev_speed = lerp(tp0.relative_ego_std_dev_speed, t0, tp1.relative_ego_std_dev_speed, t1, t);
   return tp;
+}
+
+::PlanningOutput::TrajectoryPoint InterpolateUsingLinearApproximation(
+    const ::PlanningOutput::TrajectoryPoint &p0,
+    const ::PlanningOutput::TrajectoryPoint &p1, const double s) {
+  if (std::fabs(p0.distance() - p1.distance()) < kEps) {
+    return p0;
+  }
+
+  ::PlanningOutput::TrajectoryPoint trajectory_point;
+  const double weight0 = (s - p0.distance()) / (p1.distance() - p0.distance());
+  const double weight1 = 1.0 - weight0;
+  const double x = weight1 * p0.x() + weight0 * p1.x();
+  const double y = weight1 * p0.y() + weight0 * p1.y();
+  const double heading_yaw = slerp(
+      p0.heading_yaw(), p0.distance(), p1.heading_yaw(), p1.distance(), s);
+  const double curvature = weight1 * p0.curvature() + weight0 * p1.curvature();
+  const double t = weight1 * p0.t() + weight0 * p1.t();
+  const double v = weight1 * p0.v() + weight0 * p1.v();
+  const double a = weight1 * p0.a() + weight0 * p1.a();
+  const double distance = weight1 * p0.distance() + weight0 * p1.distance();
+  const double jerk = weight1* p0.jerk() + weight0 * p1.jerk();
+
+  trajectory_point.set_x(x);
+  trajectory_point.set_y(y);
+  trajectory_point.set_heading_yaw(heading_yaw);
+  trajectory_point.set_curvature(curvature);
+  trajectory_point.set_t(t);
+  trajectory_point.set_v(v);
+  trajectory_point.set_a(a);
+  trajectory_point.set_distance(distance);
+  trajectory_point.set_jerk(jerk);
+
+  return trajectory_point;
 }
 
 }  // namespace planning_math

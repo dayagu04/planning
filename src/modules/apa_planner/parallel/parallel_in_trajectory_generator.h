@@ -5,6 +5,7 @@
 #include "apa_planner/common/planning_log_helper.h"
 #include "apa_planner/parallel/parallel_in_geometry_plan.h"
 #include "apa_planner/path_smoother/iterative_anchoring_smoother.h"
+#include "apa_planner/speed_smoother/apa_speed_smoother.h"
 #include "common/local_view.h"
 #include "common/math/box2d.h"
 
@@ -179,6 +180,8 @@ class ParallelInTrajectoryGenerator {
       nullptr;
 
   std::vector<planning_math::LineSegment2d> objects_map_in_global_cor_;
+
+  ApaSpeedSmoother apa_speed_smoother_;
 };
 
 } // namespace apa_planner
