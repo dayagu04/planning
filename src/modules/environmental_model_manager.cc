@@ -88,7 +88,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
           enable_NOA;
   session_->mutable_environmental_model()->set_location_valid(location_valid);
   // 长时，实时切换，临时hack
-  // session_->mutable_environmental_model()->set_location_valid(false); 
+  // session_->mutable_environmental_model()->set_location_valid(false);
   // Step 1) update vehicleDbwStatus
   session_->mutable_environmental_model()->UpdateVehicleDbwStatus(
     local_view.function_state_machine_info.current_state() == FuncStateMachine::FunctionalState::SCC_ACTIVATE);
@@ -225,7 +225,6 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
                                          common::VehicleStatus &vehicle_status) {
   vehicle_status.mutable_header()->set_timestamp_us(vehicel_service_output_info.header().timestamp());
 
-  // FBI WARNING
   if (session_->environmental_model().location_valid()) {
     vehicle_status.mutable_heading_yaw()
         ->mutable_heading_yaw_data()
@@ -276,10 +275,6 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
     location_enu->mutable_orientation()->set_w(1.0);
     last_feed_time_[FEED_EGO_ENU] = current_time;
   }
-
-  // FBI WARNING
-  // vehicle_status.mutable_velocity()->mutable_cruise_velocity()
-  //               ->set_value_mps(hmi_mcu_inner_info.acc_set_disp_speed());
 
   vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
       hmi_mcu_inner_info.acc_set_disp_speed());

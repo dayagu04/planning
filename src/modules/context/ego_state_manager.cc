@@ -171,6 +171,10 @@ uint8_t EgoStateManager::ReplanProcess(bool lat_replan, bool lon_replan) {
   const auto &traj_spline = session_->mutable_planning_context()
                                 ->mutable_planning_result()
                                 .traj_spline;
+
+  const auto &traj_points = session_->mutable_planning_context()
+      ->mutable_planning_result().traj_points;
+
   auto &lat_init_state = planning_init_point_.lat_init_state;
   auto &lon_init_state = planning_init_point_.lon_init_state;
 
@@ -183,7 +187,9 @@ uint8_t EgoStateManager::ReplanProcess(bool lat_replan, bool lon_replan) {
   const double &lat_err = projection_spline.GetOutput().dist_proj;
 
   // FBI WARNING
-  const double ds = ego_state->ego_v() * 0.8 * planning_loop_dt;
+  // const double ds = ego_state->ego_v() * 0.8 * planning_loop_dt;
+  const double ds = traj_points.front().v * planning_loop_dt;
+
   const double &lon_err = projection_spline.GetOutput().s_proj - (traj_spline.s_lat_vec.front() + ds);
 
   uint8_t out = 0;
@@ -250,17 +256,21 @@ bool EgoStateManager::LateralStitch() {
   const auto &traj_spline = session_->mutable_planning_context()
                                 ->mutable_planning_result()
                                 .traj_spline;
+  const auto &traj_points = session_->mutable_planning_context()
+      ->mutable_planning_result().traj_points;
 
   if (traj_spline.lat_enable_flag) {
     // note that s is only for lateral path rather than frenet
     // const double s = traj_spline.s_t_spline(planning_loop_dt);
 
     // FBI WARNING
-    const auto &ego_state =
-    session_->environmental_model().get_ego_state_manager();
-    auto const ds = ego_state->ego_v() * 0.8 * planning_loop_dt;
+    // const auto &ego_state =
+    // session_->environmental_model().get_ego_state_manager();
+    // auto const ds = ego_state->ego_v() * 0.8 * planning_loop_dt;
+    const double ds = traj_points.front().v * planning_loop_dt;
+
     const double s = ds;
-    
+
     lat_init_state.set_x(traj_spline.x_s_spline(s));
     lat_init_state.set_y(traj_spline.y_s_spline(s));
     lat_init_state.set_theta(traj_spline.theta_s_spline(s));

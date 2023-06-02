@@ -131,7 +131,7 @@ void LongitudinalMotionPlanner::GeneratePlanningInput() {
     planning_input_.mutable_ref_vel_vec()->Set(i, v_ref);
   }
 
-  // FBI WARNING: s bound should know soft or hard?
+  // TODO: s bound should know soft or hard
   // set s bounds
   for (size_t i = 0; i < s_bounds.size(); ++i) {
     Bound tmp_bound{-1.0e4, 1.0e4};
