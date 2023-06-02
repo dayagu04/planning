@@ -326,9 +326,7 @@ void LateralMotionPlanner::GeneratePlanningOutput() {
 
   traj_spline.lat_enable_flag = true;
 
-  traj_spline.x_vec = x_vec_;
-  traj_spline.y_vec = y_vec_;
-  traj_spline.s_vec = s_vec_;
+  traj_spline.s_lat_vec = s_vec_;
 
   // assemble results
   const auto &lat_decider_output = // result from lat decision

@@ -178,13 +178,13 @@ uint8_t EgoStateManager::ReplanProcess(bool lat_replan, bool lon_replan) {
 
   pnc::spline::Projection projection_spline;
   projection_spline.CalProjectionPoint(traj_spline.x_s_spline, traj_spline.y_s_spline,
-  traj_spline.s_vec.front(), traj_spline.s_vec.back(), cur_pos);
+  traj_spline.s_lat_vec.front(), traj_spline.s_lat_vec.back(), cur_pos);
 
   const double &lat_err = projection_spline.GetOutput().dist_proj;
 
   // FBI WARNING
   const double ds = ego_state->ego_v() * 0.8 * planning_loop_dt;
-  const double &lon_err = projection_spline.GetOutput().s_proj - (traj_spline.s_vec.front() + ds);
+  const double &lon_err = projection_spline.GetOutput().s_proj - (traj_spline.s_lat_vec.front() + ds);
 
   uint8_t out = 0;
 

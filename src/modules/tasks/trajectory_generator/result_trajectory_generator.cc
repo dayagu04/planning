@@ -3,6 +3,9 @@
 // #include "core/common/trace.h"
 #include "common/define/geometry.h"
 #include "common/math/math_utils.h"
+#include "math_lib.h"
+#include <cstddef>
+#include <utility>
 
 namespace planning {
 
@@ -17,12 +20,111 @@ ResultTrajectoryGenerator::ResultTrajectoryGenerator(
   name_ = "ResultTrajectoryGenerator";
 }
 
-bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
-  // NTRACE_CALL(7);
+bool ResultTrajectoryGenerator::GenerateTrajecotry(
+    planning::framework::Frame *frame) {
 
-  if (Task::Execute(frame) == false) {
-    return false;
+  auto &ego_planning_result = pipeline_context_->planning_result;
+  auto &traj_spline =
+      frame_->session()->planning_context().planning_result().traj_spline;
+
+  // Step 1) get x,y of trajectory points
+  auto &traj_points = ego_planning_result.traj_points;
+
+  // Step 2) get dense trajectory points
+  auto &planning_init_point =
+      reference_path_ptr_->get_frenet_ego_state().planning_init_point();
+  std::vector<TrajectoryPoint> dense_traj_points;
+  size_t N_dense_points =
+      size_t(traj_points.back().t / config_.planning_result_delta_time) + 1;
+  const double &relative_time = planning_init_point.relative_time;
+
+  const auto &s_frenet_init = traj_points.front().s;
+
+  for (size_t i = 0; i < N_dense_points; ++i) {
+    TrajectoryPoint traj_pt;
+    const auto t = static_cast<double>(i) * config_.planning_result_delta_time;
+
+    // time considers relative_time
+    traj_pt.t = t + relative_time;
+
+    // longitudinal states sampled by time
+    traj_pt.v = traj_spline.v_t_spline(t);
+    traj_pt.a = traj_spline.a_t_spline(t);
+
+    const auto &s_frenet = traj_spline.s_t_spline(t);
+    traj_pt.s = s_frenet;
+
+    // lateral states sampled by s
+    // not that s is lateral path rather than longitudinal path (frenet)
+    // considering an offset that equals to init s
+
+    const auto &s_lat = s_frenet - s_frenet_init;
+    traj_pt.x = traj_spline.x_s_spline(s_lat);
+    traj_pt.y = traj_spline.y_s_spline(s_lat);
+    traj_pt.heading_angle =
+        pnc::mathlib::DeltaAngleFix(traj_spline.theta_s_spline(s_lat));
+    traj_pt.curvature = traj_spline.curv_s_spline(s_lat);
+    traj_pt.dkappa = traj_spline.d_curv_s_spline(s_lat);
+
+    // ddkappa is useless, set zero
+    traj_pt.ddkappa = 0.0;
+
+    // frenet state update
+    Point2D cart_pt(traj_pt.x, traj_pt.y);
+    Point2D frenet_pt;
+
+    if (reference_path_ptr_->get_frenet_coord() != nullptr &&
+        reference_path_ptr_->get_frenet_coord()->CartCoord2FrenetCoord(
+            cart_pt, frenet_pt) == TRANSFORM_STATUS::TRANSFORM_SUCCESS) {
+      // note that s is already got
+      // traj_pt.s = frenet_pt.x;
+      traj_pt.l = frenet_pt.y;
+    } else {
+      LOG_DEBUG(
+          "CartCoord2FrenetCoord = FAILED !!!!!!!! index: %ld,  point.s : "
+          "%f, point.l: %f ",
+          i, traj_pt.s, traj_pt.l);
+    }
+
+    traj_pt.frenet_valid = true;
+    dense_traj_points.emplace_back(std::move(traj_pt));
   }
+
+  // Step 3) extends to max length if needed
+  double desired_length =
+      planning_init_point.frenet_state.s + config_.min_path_length;
+
+  while (dense_traj_points.back().s < desired_length) {
+    auto traj_pt = dense_traj_points.back();
+    traj_pt.s += 0.2;
+    traj_pt.t += config_.planning_result_delta_time;
+
+    Point2D frenet_pt{traj_pt.s, traj_pt.l};
+    Point2D cart_pt;
+    if (frenet_coord_->FrenetCoord2CartCoord(frenet_pt, cart_pt) !=
+        TRANSFORM_SUCCESS) {
+      LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
+      return false;
+    }
+
+    traj_pt.x = cart_pt.x;
+    traj_pt.y = cart_pt.y;
+    dense_traj_points.emplace_back(std::move(traj_pt));
+  }
+
+  ego_planning_result.traj_points = dense_traj_points;
+
+  // record some results
+  ego_planning_result.traj_spline = frame_->mutable_session()
+                                        ->mutable_planning_context()
+                                        ->mutable_planning_result()
+                                        .traj_spline;
+
+  return true;
+}
+
+bool ResultTrajectoryGenerator::GenerateTrajecotryVisionOnly(
+    planning::framework::Frame *frame) {
 
   auto &ego_planning_result = pipeline_context_->planning_result;
   // Step 1) get x,y of trajectory points
@@ -131,6 +233,22 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
                                         .traj_spline;
 
   return true;
+}
+
+bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
+
+  if (Task::Execute(frame) == false) {
+    return false;
+  }
+
+  const auto &location_valid =
+      frame_->session()->environmental_model().location_valid();
+
+  if (location_valid) {
+    return GenerateTrajecotry(frame);
+  } else {
+    return GenerateTrajecotryVisionOnly(frame);
+  }
 }
 
 } // namespace planning
