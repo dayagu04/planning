@@ -370,9 +370,7 @@ struct TrajectorySpline {
   pnc::mathlib::spline a_t_spline;
   pnc::mathlib::spline j_t_spline;
 
-  std::vector<double> x_vec;
-  std::vector<double> y_vec;
-  std::vector<double> s_vec;
+  std::vector<double> s_lat_vec;
 };
 
 struct PlanningResult {

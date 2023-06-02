@@ -2,8 +2,11 @@ project(planning)
 cmake_minimum_required(VERSION 3.0)
 
 # set release mode
-# Debug: X86  Release: FDC
-# set(CMAKE_BUILD_TYPE Release)
+# Release ON: FDC, OFF: X86
+set(RELEASE_ENABLE OFF)
+
+# set unit test
+set(UNIT_TEST_ENABLE OFF)
 
 # install config
 set(INSTALL_TO_CURRENT ON)
@@ -14,7 +17,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g -fPIC -fpermissive -DCYBER_ENV")
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
+if(RELEASE_ENABLE)
   # release mode
   message("Building in Release mode")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
@@ -26,7 +29,12 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -DX86")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
   add_subdirectory(src)
-  add_subdirectory(test)
+  if (UNIT_TEST_ENABLE)
+    # unit test needs -O0
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -DX86")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
+    add_subdirectory(test)
+  endif()
 endif()
 
 # install to current directory
