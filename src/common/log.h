@@ -21,7 +21,7 @@ enum LogLevel
    WARNING,
    NOTICE,
    DEBUG,
-   LOGLEVEL_END 
+   LOGLEVEL_END
 };
 
 
@@ -30,7 +30,10 @@ enum LogLevel
 class Log
 {
 public:
-    static Log& getInstance();
+    static Log& getInstance(){
+      static Log instance;
+      return instance;
+    };
     void setConfig(const char* modulename, const char* filename, LogLevel loglevel);
     inline const char* getModuleName() { return m_moduleName.c_str(); }
     void sync();
@@ -42,7 +45,7 @@ private:
 private:
     std::string m_moduleName;
 };
-    
+
 #else
 class Log
 {
@@ -79,7 +82,7 @@ private:
     #define LOG_BST_DEBUG(severity, format, ...) do { \
         printf(format, ##__VA_ARGS__); \
     } while(0)
-#else   
+#else
     #define LOG_BST_RELEASE(severity, format, ...) do { \
         fprintf(bst::Log::getInstance().getModulePointer(),format, ##__VA_ARGS__); \
         fflush(bst::Log::getInstance().getModulePointer()); \
@@ -91,7 +94,7 @@ private:
 
 #endif
 
-#ifdef NDEBUG 
+#ifdef NDEBUG
     #define LOG_BST LOG_BST_RELEASE
 #else
     #define LOG_BST LOG_BST_DEBUG

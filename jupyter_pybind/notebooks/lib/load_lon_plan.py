@@ -187,11 +187,11 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
-    if trajectory.trajectory_type == 0:
+    try:
       planning_polynomial = trajectory.target_reference.polynomial
       plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
 
-    else:
+    except:
       plan_x = []
       plan_y = []
       for i in range(len(trajectory.trajectory_points)):

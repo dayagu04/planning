@@ -489,11 +489,11 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   ### step 3: 加载planning轨迹信息
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
-    if trajectory.trajectory_type == 0:
+    try:
       planning_polynomial = trajectory.target_reference.polynomial
       plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
 
-    else:
+    except:
       plan_x = []
       plan_y = []
       for i in range(len(trajectory.trajectory_points)):
@@ -509,14 +509,17 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   # 加载prediction_msg
   if bag_loader.prediction_msg['enable'] == True:
-    prediction_info = bag_loader.prediction_msg['data'][pred_msg_idx]
-    # 定位的选择需要修改
-    localization_info = bag_loader.loc_msg['data'][loc_msg_idx]
-    prediction_objects, trajectory_info = load_prediction_objects(prediction_info.prediction_obstacle_list, localization_info)
-    local_view_data['data_prediction'].data.update({
-      'prediction_y' : trajectory_info['y'],
-      'prediction_x' : trajectory_info['x'],
-    })
+    try:
+      prediction_info = bag_loader.prediction_msg['data'][pred_msg_idx]
+      # 定位的选择需要修改
+      localization_info = bag_loader.loc_msg['data'][loc_msg_idx]
+      prediction_objects, trajectory_info = load_prediction_objects(prediction_info.prediction_obstacle_list, localization_info)
+      local_view_data['data_prediction'].data.update({
+        'prediction_y' : trajectory_info['y'],
+        'prediction_x' : trajectory_info['x'],
+      })
+    except:
+      pass
   return local_view_data
 
 def load_local_view_figure():

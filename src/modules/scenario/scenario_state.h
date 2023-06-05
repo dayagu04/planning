@@ -91,15 +91,10 @@ struct StateBase : M::Base {
     auto location_valid =
         frame->session()->environmental_model().location_valid();
     if (location_valid) {
-      static auto normal_task =
-          TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, frame);
-      normal_task->SetFrame(frame);
-      return normal_task;
+      return TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, frame);
     } else {
-      static auto vision_only_task = TaskPipeline::Make(
+      return TaskPipeline::Make(
           TaskPipelineType::VISION_ONLY, config_builder, frame);
-      vision_only_task->SetFrame(frame);
-      return vision_only_task;
     }
   }
 

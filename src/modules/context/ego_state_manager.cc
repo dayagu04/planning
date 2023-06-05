@@ -2,6 +2,7 @@
 #include "common/utils/pose2d_utils.h"
 #include "common/trajectory/trajectory_stitcher.h"
 #include "debug_info_log.h"
+#include "math_lib.h"
 #include "spline_projection.h"
 #include <cmath>
 #include <cstdint>
@@ -271,6 +272,11 @@ bool EgoStateManager::LateralStitch() {
 
     const double s = ds;
 
+    if (pnc::mathlib::IsInBound(s, traj_spline.s_lat_vec.front(),
+      traj_spline.s_lat_vec.back())) {
+        return false;
+      }
+
     lat_init_state.set_x(traj_spline.x_s_spline(s));
     lat_init_state.set_y(traj_spline.y_s_spline(s));
     lat_init_state.set_theta(traj_spline.theta_s_spline(s));
@@ -305,6 +311,7 @@ bool EgoStateManager::LongitudinalStitch() {
 
 void EgoStateManager::UpdatePlanningInitState() {
   bool lat_reset_flag = false;
+  bool lon_reset_flag = false;
   uint8_t replan_status = 0;
 
   // stitch process
@@ -315,10 +322,12 @@ void EgoStateManager::UpdatePlanningInitState() {
 
   if (!LongitudinalStitch()) {
     LongitudinalReset();
+    lon_reset_flag = true;
   }
 
   // replan process
-  if (!lat_reset_flag) {
+  if (!lat_reset_flag && !lon_reset_flag) {
+    // leave a protocal for acc (lat_replan default true)
     replan_status = ReplanProcess(false, false);
   }
 
