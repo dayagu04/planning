@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/root/bag/20230602111448.record.00000"
+bag_path = "/root/bag/20230602143903.record.00000"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
