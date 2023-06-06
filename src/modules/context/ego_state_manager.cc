@@ -252,6 +252,17 @@ void EgoStateManager::LongitudinalReset() {
   lon_init_state.set_j(0.0);
 }
 
+void EgoStateManager::TrajectorySplineReset() {
+   auto &traj_spline = session_->mutable_planning_context()
+                                ->mutable_planning_result()
+                                .traj_spline;
+
+  if (!session_->environmental_model().location_valid()) {
+    traj_spline.lat_enable_flag = false;
+    traj_spline.lon_enable_flag = false;
+  }
+}
+
 bool EgoStateManager::LateralStitch() {
   auto &lat_init_state = planning_init_point_.lat_init_state;
   const auto &traj_spline = session_->mutable_planning_context()
@@ -313,6 +324,9 @@ void EgoStateManager::UpdatePlanningInitState() {
   bool lat_reset_flag = false;
   bool lon_reset_flag = false;
   uint8_t replan_status = 0;
+
+  // reset trajectory spline
+  TrajectorySplineReset();
 
   // stitch process
   if (!LateralStitch()) {

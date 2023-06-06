@@ -105,6 +105,7 @@ class EgoStateManager {
 
   void LateralReset();
   void LongitudinalReset();
+  void TrajectorySplineReset();
   bool LateralStitch();
   bool LongitudinalStitch();
 
