@@ -255,7 +255,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
 
   double q_ref_x = 15.0;
   double q_ref_y = 15.0;
-  double q_ref_theta = 0.0; // FBI WARNING
+  double q_ref_theta = 0.0;  // FBI WARNING
 
   double q_continuity = 0.;
   double q_acc = 1.0;
@@ -587,6 +587,7 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
   }
   double planning_result_delta_time = 0.025;
   double min_path_length = 10.0;
+  bool is_pwj_planning = false;
 };
 
 struct TrafficLightDeciderConfig : public EgoPlanningConfig {

@@ -69,8 +69,8 @@ void EnvironmentalModelManager::InitContext() {
       std::make_shared<planning::LateralObstacle>(config_builder, session_);
   session_->mutable_environmental_model()->set_lateral_obstacle(
       lateral_obstacle_ptr_);
-  
-  lane_tracks_mgr_ptr_ = std::make_shared<LaneTracksManager>( 
+
+  lane_tracks_mgr_ptr_ = std::make_shared<LaneTracksManager>(
         *lateral_obstacle_ptr_, *virtual_lane_manager_ptr_, session_);
   session_->mutable_environmental_model()->set_lane_tracks_manager(
       lane_tracks_mgr_ptr_);
@@ -150,7 +150,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
 
   // TODO(Rui):lateral_obstacle_ptr_->update() only for real time planner
   lateral_obstacle_ptr_->update();
-  lane_tracks_mgr_ptr_->update_lane_tracks();  
+  lane_tracks_mgr_ptr_->update_lane_tracks();
   // end_time = IflyTime::Now_ms();
   // LOG_DEBUG("lateral_obstacle_ptr update time:%f\n", end_time - current_time);
   // current_time = end_time;

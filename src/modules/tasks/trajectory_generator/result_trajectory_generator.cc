@@ -8,6 +8,7 @@ namespace planning {
 
 using namespace std;
 using namespace planning::planning_math;
+using namespace pnc::mathlib;
 
 ResultTrajectoryGenerator::ResultTrajectoryGenerator(
     const EgoPlanningConfigBuilder *config_builder,
@@ -27,22 +28,70 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
   auto &ego_planning_result = pipeline_context_->planning_result;
   // Step 1) get x,y of trajectory points
   auto &traj_points = ego_planning_result.traj_points;
+  const auto &num_point = traj_points.size();
+  pnc::mathlib::spline x_t_spline;
+  pnc::mathlib::spline y_t_spline;
+  pnc::mathlib::spline s_t_spline;
+  pnc::mathlib::spline l_t_spline;
+  pnc::mathlib::spline v_t_spline;
+  pnc::mathlib::spline a_t_spline;
+  pnc::mathlib::spline heading_angle_t_spline;
+  pnc::mathlib::spline curvature_t_spline;
+  pnc::mathlib::spline dkappa_t_spline;
+  pnc::mathlib::spline ddkappa_t_spline;
+
+  std::vector<double> t_vec(num_point);
+  std::vector<double> x_vec(num_point);
+  std::vector<double> y_vec(num_point);
+  std::vector<double> s_vec(num_point);
+  std::vector<double> l_vec(num_point);
+  std::vector<double> v_vec(num_point);
+  std::vector<double> a_vec(num_point);
+  std::vector<double> heading_angle_vec(num_point);
+  std::vector<double> curvature_vec(num_point);
+  std::vector<double> dkappa_vec(num_point);
+  std::vector<double> ddkappa_vec(num_point);
+
   for (auto &traj_pt : traj_points) {
-    Point2D frenet_pt{traj_pt.s, traj_pt.l};
-    Point2D cart_pt;
-    if (frenet_coord_->FrenetCoord2CartCoord(frenet_pt, cart_pt) !=
-        TRANSFORM_SUCCESS) {
-      LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
-      return false;
+    if (config_.is_pwj_planning) {
+      Point2D frenet_pt{traj_pt.s, traj_pt.l};
+      Point2D cart_pt;
+      if (frenet_coord_->FrenetCoord2CartCoord(frenet_pt, cart_pt) !=
+          TRANSFORM_SUCCESS) {
+        LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
+        return false;
+      }
+
+      traj_pt.x = cart_pt.x;
+      traj_pt.y = cart_pt.y;
+
+      LOG_DEBUG("result traj_point s=%f, l=%f, x=%f, y=%f \n", traj_pt.s,
+                traj_pt.l, traj_pt.x, traj_pt.y);
     }
 
-    traj_pt.x = cart_pt.x;
-    traj_pt.y = cart_pt.y;
-
-    LOG_DEBUG("result traj_point s=%f, l=%f, x=%f, y=%f \n", traj_pt.s,
-              traj_pt.l, traj_pt.x, traj_pt.y);
+    t_vec.emplace_back(traj_pt.t);
+    x_vec.emplace_back(traj_pt.x);
+    y_vec.emplace_back(traj_pt.y);
+    s_vec.emplace_back(traj_pt.s);
+    l_vec.emplace_back(traj_pt.l);
+    v_vec.emplace_back(traj_pt.v);
+    a_vec.emplace_back(traj_pt.a);
+    heading_angle_vec.emplace_back(traj_pt.heading_angle);
+    curvature_vec.emplace_back(traj_pt.curvature);
+    dkappa_vec.emplace_back(traj_pt.dkappa);
+    ddkappa_vec.emplace_back(traj_pt.ddkappa);
   }
 
+  x_t_spline.set_points(t_vec, x_vec);
+  y_t_spline.set_points(t_vec, y_vec);
+  s_t_spline.set_points(t_vec, s_vec);
+  l_t_spline.set_points(t_vec, l_vec);
+  v_t_spline.set_points(t_vec, v_vec);
+  a_t_spline.set_points(t_vec, a_vec);
+  heading_angle_t_spline.set_points(t_vec, heading_angle_vec);
+  curvature_t_spline.set_points(t_vec, curvature_vec);
+  dkappa_t_spline.set_points(t_vec, dkappa_vec);
+  ddkappa_t_spline.set_points(t_vec, ddkappa_vec);
   // Step 2) get dense trajectory points
   auto &planning_init_point =
       reference_path_ptr_->get_frenet_ego_state().planning_init_point();
@@ -55,31 +104,20 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
   for (int j = 0; j < dense_num_points; ++j) {
     TrajectoryPoint traj_pt;
     double t = j * config_.planning_result_delta_time;
-    while (i + 1 < traj_points.size() && traj_points[i].t < t) {
-      ++i;
-    }
-    double ratio =
-        (traj_points[i].t - t) / (traj_points[i].t - traj_points[i - 1].t);
-    if (is_abnormal_number(ratio)) {
-      LOG_ERROR("ResultTrajectoryGenerator::execute, ratio is abnormal \n");
-      return false;
-    }
+    traj_pt.x = x_t_spline(t);
+    traj_pt.y = y_t_spline(t);
 
     traj_pt.t = init_point_relative_time + t;
-    traj_pt.s = Interpolate(traj_points[i - 1].s, traj_points[i].s, ratio);
-    traj_pt.l = Interpolate(traj_points[i - 1].l, traj_points[i].l, ratio);
-    traj_pt.v = Interpolate(traj_points[i - 1].v, traj_points[i].v, ratio);
-    traj_pt.a = Interpolate(traj_points[i - 1].a, traj_points[i].a, ratio);
-    traj_pt.x = Interpolate(traj_points[i - 1].x, traj_points[i].x, ratio);
-    traj_pt.y = Interpolate(traj_points[i - 1].y, traj_points[i].y, ratio);
-    traj_pt.heading_angle = InterpolateAngle(
-        traj_points[i - 1].heading_angle, traj_points[i].heading_angle, ratio);
-    traj_pt.curvature = Interpolate(traj_points[i - 1].curvature,
-                                    traj_points[i].curvature, ratio);
-    traj_pt.dkappa =
-        Interpolate(traj_points[i - 1].dkappa, traj_points[i].dkappa, ratio);
-    traj_pt.ddkappa =
-        Interpolate(traj_points[i - 1].ddkappa, traj_points[i].ddkappa, ratio);
+    traj_pt.s = s_t_spline(traj_pt.t);
+    traj_pt.x = x_t_spline(traj_pt.t);
+    traj_pt.y = y_t_spline(traj_pt.t);
+    traj_pt.v = v_t_spline(traj_pt.t);
+    traj_pt.a = a_t_spline(traj_pt.t);
+    traj_pt.l = l_t_spline(traj_pt.t);
+    traj_pt.heading_angle = heading_angle_t_spline(traj_pt.t);
+    traj_pt.curvature = curvature_t_spline(traj_pt.t);
+    traj_pt.dkappa = dkappa_t_spline(traj_pt.t);
+    traj_pt.ddkappa = ddkappa_t_spline(traj_pt.t);
     traj_pt.frenet_valid = true;
     dense_traj_points.push_back(std::move(traj_pt));
   }
@@ -87,22 +125,6 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
   // Step 3) extends to max length if needed
   double desired_length =
       planning_init_point.frenet_state.s + config_.min_path_length;
-
-  // if (frame_->session()->is_parking_scene()) {
-  //   auto dest = frame_->session()
-  //                   ->environmental_model()
-  //                   .get_virtual_lane_manager()
-  //                   ->get_dest();
-  //   auto destination_s = std::numeric_limits<double>::max();
-  //   // auto distance_to_intersection = std::numeric_limits<double>::max();
-  //   if (dest.isValid()) {
-  //     auto distance_to_destination = dest.hasLanePathOffset()
-  //                                        ? dest.getLanePathOffset()
-  //                                        : dest.getRoadOffset();
-  //     destination_s =
-  //         planning_init_point.frenet_state.s + distance_to_destination;
-  //   }
-  // }
 
   while (dense_traj_points.back().s < desired_length) {
     auto traj_pt = dense_traj_points.back();
@@ -133,4 +155,4 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
   return true;
 }
 
-} // namespace planning
+}  // namespace planning
