@@ -532,11 +532,27 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
   prediction_object.relative_acceleration_x = fusion_object.common_info().relative_acceleration().x();
   prediction_object.relative_acceleration_y = fusion_object.common_info().relative_acceleration().y();
   prediction_object.acceleration_relative_to_ground_x = fusion_object.common_info().acceleration().x();
-  prediction_object.acceleration_relative_to_ground_y = fusion_object.common_info().acceleration().y();;
+  prediction_object.acceleration_relative_to_ground_y = fusion_object.common_info().acceleration().y();
+  
+  // TODO:clren  后面感知会直接给出yaw和theta;   这部分赋值需要重新更改 
   prediction_object.relative_theta = fusion_object.common_info().relative_heading_angle();
-  //std::vector<Point3d> bottom_polygon_points;
-  //std::vector<Point3d> top_polygon_points;
-  PredictionTrajectory tra;
+  
+  PredictionTrajectoryPoint trajectory_point;
+  trajectory_point.relative_time = 0;
+  trajectory_point.x = prediction_object.position_x;
+  trajectory_point.y = prediction_object.position_y;
+  trajectory_point.yaw = prediction_object.yaw;
+  trajectory_point.speed = prediction_object.speed;
+  
+  trajectory_point.theta = std::atan2(fusion_object.common_info().velocity().y(), fusion_object.common_info().velocity().x());
+  trajectory_point.prob = 1;
+  trajectory_point.relative_ego_x = prediction_object.relative_position_x;
+  trajectory_point.relative_ego_y = prediction_object.relative_position_y;
+  trajectory_point.relative_ego_yaw = prediction_object.relative_theta;
+  trajectory_point.relative_ego_speed = std::hypot(prediction_object.relative_speed_x,
+                                                    prediction_object.relative_speed_y);
+  PredictionTrajectory tra;                                                  
+  tra.trajectory.emplace_back(std::move(trajectory_point));                                    
   prediction_object.trajectory_array.emplace_back(std::move(tra));
   prediction_info.emplace_back(std::move(prediction_object));
   return true;
