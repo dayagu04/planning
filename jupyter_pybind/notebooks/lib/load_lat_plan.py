@@ -42,13 +42,14 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
     planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
-    try:
-      json_pos_x = planning_json['ego_pos_x']
-      json_pos_y = planning_json['ego_pos_y']
-      json_yaw = planning_json['ego_pos_yaw']
-      coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
-    except:
-      coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+    # try:
+    #   json_pos_x = planning_json['ego_pos_x']
+    #   json_pos_y = planning_json['ego_pos_y']
+    #   json_yaw = planning_json['ego_pos_yaw']
+    #   coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
+    # except:
+    #   coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+    coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
   if bag_loader.plan_debug_msg['enable'] == True:
     lat_motion_plan_input = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_input
@@ -188,7 +189,7 @@ def load_lat_plan_figure(fig1):
   fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=False)
   fig1.line('y_vec', 'x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
 
-  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan_debug')
+  # fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan_debug')
 
   fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 5.2], width=600, height=160)
   fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=600, height=160)

@@ -98,7 +98,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   session_->mutable_environmental_model()->UpdateVehicleDbwStatus(
     local_view.function_state_machine_info.current_state() == FuncStateMachine::FunctionalState::SCC_ACTIVATE
       || local_view.function_state_machine_info.current_state() == FuncStateMachine::FunctionalState::ACC_ACTIVATE);
-      
+
   // 自动有效，临时hack
   // session_->mutable_environmental_model()->UpdateVehicleDbwStatus(true);
   last_feed_time_[FEED_VEHICLE_DBW_STATUS] = current_time;
@@ -286,6 +286,9 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
 
   vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
       hmi_mcu_inner_info.acc_set_disp_speed());
+
+  // vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
+  //     18.0);
 
   if (vehicel_service_output_info.vehicle_speed_available()) {
     vehicle_status.mutable_velocity()->set_available(true);

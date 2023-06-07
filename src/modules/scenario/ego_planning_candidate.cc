@@ -103,9 +103,9 @@ void EgoPlanningCandidate::set_coarse_planning_info(
   const auto &ego_state =
       frame_->session()->environmental_model().get_ego_state_manager();
 
-  JSON_DEBUG_VALUE("ego_pos_x", ego_state->ego_pose().x)
-  JSON_DEBUG_VALUE("ego_pos_y", ego_state->ego_pose().y)
-  JSON_DEBUG_VALUE("ego_pos_yaw", ego_state->ego_pose().theta)
+  JSON_DEBUG_VALUE("ego_pos_x", ego_state->ego_pose_raw().x)
+  JSON_DEBUG_VALUE("ego_pos_y", ego_state->ego_pose_raw().y)
+  JSON_DEBUG_VALUE("ego_pos_yaw", ego_state->ego_pose_raw().theta)
   JSON_DEBUG_VALUE("init_pos_x", init_pos.x())
   JSON_DEBUG_VALUE("init_pos_y", init_pos.y())
 

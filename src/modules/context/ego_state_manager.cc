@@ -179,7 +179,7 @@ uint8_t EgoStateManager::ReplanProcess(bool lat_replan, bool lon_replan) {
   auto &lat_init_state = planning_init_point_.lat_init_state;
   auto &lon_init_state = planning_init_point_.lon_init_state;
 
-  Eigen::Vector2d cur_pos(ego_state->ego_pose().x, ego_state->ego_pose().y);
+  Eigen::Vector2d cur_pos(ego_state->ego_pose_raw().x, ego_state->ego_pose_raw().y);
 
   pnc::spline::Projection projection_spline;
   projection_spline.CalProjectionPoint(traj_spline.x_s_spline, traj_spline.y_s_spline,
@@ -198,8 +198,8 @@ uint8_t EgoStateManager::ReplanProcess(bool lat_replan, bool lon_replan) {
   // lateral replan
   if (lat_err > 0.6 || lat_replan) {
     // when lateral replan, delta and omega use stitch result
-    lat_init_state.set_x(ego_state->ego_pose().x);
-    lat_init_state.set_y(ego_state->ego_pose().y);
+    lat_init_state.set_x(ego_state->ego_pose_raw().x);
+    lat_init_state.set_y(ego_state->ego_pose_raw().y);
     lat_init_state.set_theta(traj_spline.theta_s_spline(projection_spline.GetOutput().s_proj));
 
     out += ReplanStatus::LAT_REPLAN;
@@ -229,9 +229,9 @@ void EgoStateManager::LateralReset() {
 
   auto &lat_init_state = planning_init_point_.lat_init_state;
 
-  lat_init_state.set_x(ego_state->ego_pose().x);
-  lat_init_state.set_y(ego_state->ego_pose().y);
-  lat_init_state.set_theta(ego_state->ego_pose().theta);
+  lat_init_state.set_x(ego_state->ego_pose_raw().x);
+  lat_init_state.set_y(ego_state->ego_pose_raw().y);
+  lat_init_state.set_theta(ego_state->ego_pose_raw().theta);
 
   // TODO: need estimated delta and omega for large curv condition
   lat_init_state.set_delta(0.0);
@@ -283,7 +283,7 @@ bool EgoStateManager::LateralStitch() {
 
     const double s = ds;
 
-    if (pnc::mathlib::IsInBound(s, traj_spline.s_lat_vec.front(),
+    if (!pnc::mathlib::IsInBound(s, traj_spline.s_lat_vec.front(),
       traj_spline.s_lat_vec.back())) {
         return false;
       }

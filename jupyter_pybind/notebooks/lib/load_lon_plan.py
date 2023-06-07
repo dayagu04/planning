@@ -177,13 +177,15 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
     planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
-    try:
-      json_pos_x = planning_json['ego_pos_x']
-      json_pos_y = planning_json['ego_pos_y']
-      json_yaw = planning_json['ego_pos_yaw']
-      coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
-    except:
-      coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+   #  try:
+   #    json_pos_x = planning_json['ego_pos_x']
+   #    json_pos_y = planning_json['ego_pos_y']
+   #    json_yaw = planning_json['ego_pos_yaw']
+   #    coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
+   #  except:
+   #    coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+
+    coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
@@ -252,7 +254,7 @@ def load_lon_plan_figure(fig1):
      ('low_type','@obs_low_type'),
      ('high_type','@obs_high_type'),
   ])
-  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan_debug')
+#   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan_debug')
 
   # fig2 S-T
   fig2 = bkp.figure(x_axis_label='t', y_axis_label='s', x_range = [-0.1, 7.0], width=600, height=400, tools=[hover,'pan,wheel_zoom,box_zoom,reset'], match_aspect = True, aspect_scale=1)
