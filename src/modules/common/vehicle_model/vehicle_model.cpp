@@ -86,17 +86,17 @@ VehicleState VehicleModel::Predict(const double predicted_time_horizon,
   if (vehicle_model_config.model_type ==
       VehicleModelConfig::REAR_CENTERED_KINEMATIC_BICYCLE_MODEL) {
     auto rear_center_state = cur_vehicle_state;
-    rear_center_state.x -= std::cos(rear_center_state.yaw) *
-        (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
-    rear_center_state.y -= std::sin(rear_center_state.yaw) *
-        (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
+    // rear_center_state.x -= std::cos(rear_center_state.yaw) *
+    //     (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
+    // rear_center_state.y -= std::sin(rear_center_state.yaw) *
+    //     (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
     RearCenteredKinematicBicycleModel(vehicle_model_config,
                                       predicted_time_horizon, rear_center_state,
                                       &predicted_vehicle_state);
-    predicted_vehicle_state.x += std::cos(rear_center_state.yaw) *
-        (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
-    predicted_vehicle_state.y += std::sin(rear_center_state.yaw) *
-        (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
+    // predicted_vehicle_state.x += std::cos(rear_center_state.yaw) *
+    //     (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
+    // predicted_vehicle_state.y += std::sin(rear_center_state.yaw) *
+    //     (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
   }
 
   return predicted_vehicle_state;

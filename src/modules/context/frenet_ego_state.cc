@@ -22,28 +22,28 @@ void FrenetEgoState::update(
   acc_ = ego_state.ego_acc();
   jerk_ = ego_state.jerk();
   corners_.s_front_left =
-      s_ + ego_state.get_vehicle_param().length / 2.0 * std::cos(heading_angle_) -
+      s_ + ego_state.get_vehicle_param().rear_axis_to_front_edge * std::cos(heading_angle_) -
       ego_state.get_vehicle_param().width / 2.0 * std::sin(heading_angle_);
   corners_.l_front_left =
-      l_ + ego_state.get_vehicle_param().length / 2.0 * std::sin(heading_angle_) +
+      l_ + ego_state.get_vehicle_param().rear_axis_to_front_edge * std::sin(heading_angle_) +
       ego_state.get_vehicle_param().width / 2.0 * std::cos(heading_angle_);
   corners_.s_front_right =
-      s_ + ego_state.get_vehicle_param().length / 2.0 * std::cos(heading_angle_) +
+      s_ + ego_state.get_vehicle_param().rear_axis_to_front_edge * std::cos(heading_angle_) +
       ego_state.get_vehicle_param().width / 2.0 * std::sin(heading_angle_);
   corners_.l_front_right =
-      l_ + ego_state.get_vehicle_param().length / 2.0 * std::sin(heading_angle_) -
+      l_ + ego_state.get_vehicle_param().rear_axis_to_front_edge * std::sin(heading_angle_) -
       ego_state.get_vehicle_param().width / 2.0 * std::cos(heading_angle_);
   corners_.s_rear_left =
-      s_ - ego_state.get_vehicle_param().length / 2.0 * std::cos(heading_angle_) -
+      s_ - ego_state.get_vehicle_param().back_edge_to_rear_axis * std::cos(heading_angle_) -
       ego_state.get_vehicle_param().width / 2.0 * std::sin(heading_angle_);
   corners_.l_rear_left =
-      l_ - ego_state.get_vehicle_param().length / 2.0 * std::sin(heading_angle_) +
+      l_ - ego_state.get_vehicle_param().back_edge_to_rear_axis * std::sin(heading_angle_) +
       ego_state.get_vehicle_param().width / 2.0 * std::cos(heading_angle_);
   corners_.s_rear_right =
-      s_ - ego_state.get_vehicle_param().length / 2.0 * std::cos(heading_angle_) +
+      s_ - ego_state.get_vehicle_param().back_edge_to_rear_axis * std::cos(heading_angle_) +
       ego_state.get_vehicle_param().width / 2.0 * std::sin(heading_angle_);
   corners_.l_rear_right =
-      l_ - ego_state.get_vehicle_param().length / 2.0 * std::sin(heading_angle_) -
+      l_ - ego_state.get_vehicle_param().back_edge_to_rear_axis * std::sin(heading_angle_) -
       ego_state.get_vehicle_param().width / 2.0 * std::cos(heading_angle_);
 
   // Step 2) update polygon

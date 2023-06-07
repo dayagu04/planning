@@ -28,10 +28,10 @@ void EgoStateManager::set_ego_pose_and_vel(
   ego_pose_.theta = vehicle_status.heading_yaw().heading_yaw_data().value_rad();
   ego_pose_raw_ = ego_pose_;
 
-  ego_pose_.x = ego_pose_.x -
-    std::cos(ego_pose_.theta) * vehicle_param_.length / 2.0;
-  ego_pose_.y = ego_pose_.y -
-    std::sin(ego_pose_.theta) * vehicle_param_.length / 2.0;
+  // ego_pose_.x = ego_pose_.x -
+  //   std::cos(ego_pose_.theta) * vehicle_param_.length / 2.0;
+  // ego_pose_.y = ego_pose_.y -
+  //   std::sin(ego_pose_.theta) * vehicle_param_.length / 2.0;
 
   ego_v_ = vehicle_status.velocity().heading_velocity().value_mps();
   ego_v_angle_ = vehicle_status.heading_yaw().heading_yaw_data().value_rad();
@@ -154,7 +154,8 @@ bool EgoStateManager::update(const planning::common::VehicleStatus &vehicle_stat
     jerk_ = (ego_acc_ - ego_acc_last_) / ((timestamp_us_ - timestamp_us_last_) / 1000000.0);
   }
 
-  planning_math::Vec2d center(ego_pose_.x, ego_pose_.y);
+  planning_math::Vec2d center(ego_pose_.x + std::cos(ego_pose_.theta) * vehicle_param_.rear_axis_to_center,
+                              ego_pose_.y + std::sin(ego_pose_.theta) * vehicle_param_.rear_axis_to_center);
   planning_math::Box2d ego_box(center, ego_pose_.theta, vehicle_param_.length,
                                vehicle_param_.width);
   polygon_ = planning_math::Polygon2d(ego_box);
