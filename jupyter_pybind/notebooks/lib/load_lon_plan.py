@@ -5,7 +5,7 @@ import ipywidgets
 from bokeh.io import output_notebook, push_notebook
 from bokeh.layouts import layout, column, row
 from IPython.core.display import display, HTML
-from bokeh.models import Label, LabelSet
+from bokeh.models import Label, LabelSet, DataTable, DateFormatter, TableColumn
 import ipywidgets as widgets
 from IPython.display import display
 from ipywidgets import Button, HBox
@@ -20,6 +20,7 @@ from bokeh.models import WheelZoomTool, HoverTool
 from bokeh.plotting import ColumnDataSource
 from cyber_record.record import Record
 from lib.load_json import *
+from lib.load_struct import *
 
 coord_tf = coord_transformer()
 
@@ -32,7 +33,12 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
   pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
 
+  planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', 'VisionLonBehavior_v_target', \
+                            'VisionLonBehavior_lead_one_id', 'VisionLonBehavior_lead_one_dis', 'VisionLonBehavior_lead_one_vel', \
+                            'VisionLonBehavior_lead_two_id', 'VisionLonBehavior_lead_two_dis', 'VisionLonBehavior_lead_two_vel']
+
   plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
+  plan_debug_json_info = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
   # behavior planning
   t_vec = list(plan_debug_info.long_ref_path.t_list)
 
@@ -103,6 +109,10 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   for item in (plan_debug_info.long_ref_path.lon_bound_a.bound):
      a_bound_high_vec.append(item.upper)
 
+  vision_lon_attr_vec = []
+  for ind in range(len(planning_json_value_list)):
+     vision_lon_attr_vec.append(plan_debug_json_info[planning_json_value_list[ind]])
+
   lon_plan_data['data_st'].data.update({
     't': t_vec,
     's': s_ref_vec,
@@ -125,6 +135,11 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'v': v_ref_vec,
     'v_low': v_bound_low_vec,
     'v_high': v_bound_high_vec,
+  })
+
+  lon_plan_data['data_text'].data.update({
+    'VisionLonAttr': planning_json_value_list,
+    'VisionLonVal': vision_lon_attr_vec
   })
 
   # motion planning
@@ -207,6 +222,55 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       'plan_traj_x' : plan_traj_x,
       })
 
+def load_lon_global_figure(bag_loader):
+   velocity_fig = bkp.figure(title='车速',x_axis_label='time/s',
+                  y_axis_label='velocity/(m/s)',width=600,height=400)
+   
+   ego_velocity_vec = []
+   target_velocity_vec = []
+   leadone_velocity_vec = []
+   leadtwo_velocity_vec = []
+   t_plan_vec = bag_loader.plan_debug_msg['t']
+   t_loc_vec = bag_loader.loc_msg['t']
+   for ind in range(len(bag_loader.plan_debug_msg['json'])):
+      target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_v_target'], 2))
+      leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_lead_one_vel'], 2))
+      leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_lead_two_vel'], 2))
+
+   for ind in range(len(bag_loader.loc_msg['data'])):
+      ego_velocity_vec.append(round(bag_loader.loc_msg['data'][ind].pose.linear_velocity_from_wheel, 2))
+
+   velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
+                                legend_label='target_velocity', color="green")
+   velocity_fig.line(t_loc_vec, ego_velocity_vec, line_width=1,
+                                  legend_label='ego_velocity',color="blue")
+   velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
+                                legend_label='leadone_velocity', color="red")
+   velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,
+                                  legend_label='leadtwo_velocity',color="orange")
+
+   acc_fig = bkp.figure(title='加速度',x_axis_label='time/s',
+                  y_axis_label='acc/(m/s2)',width=600,height=400)
+   
+   ego_acc_vec = []
+   acc_min_vec = []
+   acc_max_vec = []
+   
+   t_vs_vec = bag_loader.vs_msg['t']
+   for ind in range(len(bag_loader.plan_debug_msg['json'])):
+      acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_low'], 2))
+      acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_high'], 2))
+   for ind in range(len(bag_loader.vs_msg['data'])):
+      ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
+
+   acc_fig.line(t_plan_vec, acc_min_vec, line_width=1,
+                                legend_label='acc_min', color="brown")
+   acc_fig.line(t_vs_vec, ego_acc_vec, line_width=1,
+                                  legend_label='ego_acc',color="blue")
+   acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
+                                legend_label='acc_max', color="red")
+   return velocity_fig, acc_fig
+
 def load_lon_plan_figure(fig1):
   data_st = ColumnDataSource(data = {'t':[], 's':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
@@ -214,7 +278,7 @@ def load_lon_plan_figure(fig1):
   data_tv = ColumnDataSource(data = {'t':[], 'vel':[]})
   data_ta = ColumnDataSource(data = {'t':[], 'acc':[]})
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
-  data_text = ColumnDataSource(data = {'leadone':[], 'leadtwo':[]})
+  data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
 
   data_lon_motion_plan = ColumnDataSource(data = {'time_vec': [],
                                                   'ref_pos_vec':[],
@@ -247,6 +311,10 @@ def load_lon_plan_figure(fig1):
                    'data_planning':data_planning,
   }
 
+  columns = [
+        TableColumn(field="VisionLonAttr", title="VisionLonAttr"),
+        TableColumn(field="VisionLonVal", title="VisionLonVal"),
+    ]
   hover = HoverTool(tooltips = [
      ('index','$index'),
      ('id_low','@obs_low_id'),
@@ -352,7 +420,10 @@ def load_lon_plan_figure(fig1):
   fig7.toolbar.active_scroll = fig7.select_one(WheelZoomTool)
   fig7.legend.click_policy = 'hide'
 
-  return fig2, fig3, fig4, fig5, fig6, fig7, lon_plan_data
+  tab1 = DataTable(source=data_text, columns=columns, width=500, height=400)
+
+
+  return fig2, fig3, fig4, fig5, fig6, fig7, tab1, lon_plan_data
 
 
 
