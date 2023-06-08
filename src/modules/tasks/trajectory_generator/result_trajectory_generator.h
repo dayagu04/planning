@@ -21,6 +21,7 @@ class ResultTrajectoryGenerator : public Task {
 
   bool GenerateTrajecotry(planning::framework::Frame *frame);
   bool GenerateTrajecotryVisionOnly(planning::framework::Frame *frame);
+  void Init();
 
   inline bool is_abnormal_number(double number) {
     return (isnan(number) == 1) || (isinf(number) != 0);
@@ -28,6 +29,18 @@ class ResultTrajectoryGenerator : public Task {
 
  private:
   ResultTrajectoryGeneratorConfig config_;
+  std::vector<double> t_vec_;
+  std::vector<double> x_vec_;
+  std::vector<double> y_vec_;
+  std::vector<double> s_vec_;
+  std::vector<double> l_vec_;
+  std::vector<double> v_vec_;
+  std::vector<double> a_vec_;
+  std::vector<double> heading_angle_vec_;
+  std::vector<double> curvature_vec_;
+  std::vector<double> dkappa_vec_;
+  std::vector<double> ddkappa_vec_;
+
 };
 
 }  // namespace planning

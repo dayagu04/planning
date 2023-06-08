@@ -6,6 +6,7 @@
 #include "spline_projection.h"
 #include <cmath>
 #include <cstdint>
+#include <vector>
 
 namespace planning {
 
@@ -292,8 +293,12 @@ bool EgoStateManager::LateralStitch() {
     lat_init_state.set_x(traj_spline.x_s_spline(s));
     lat_init_state.set_y(traj_spline.y_s_spline(s));
     lat_init_state.set_theta(traj_spline.theta_s_spline(s));
-    lat_init_state.set_delta(traj_spline.delta_s_spline(s));
-    lat_init_state.set_omega(traj_spline.omega_s_spline(s));
+    // lat_init_state.set_delta(traj_spline.delta_s_spline(s));
+    // lat_init_state.set_omega(traj_spline.omega_s_spline(s));
+
+    lat_init_state.set_delta(0.0);
+    lat_init_state.set_omega(0.0);
+
     lat_init_state.set_curv(traj_spline.curv_s_spline(s));
     lat_init_state.set_d_curv(traj_spline.d_curv_s_spline(s));
 

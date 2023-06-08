@@ -309,6 +309,41 @@ void LateralMotionPlanner::GeneratePlanningOutput() {
     s_vec_[i] = s;
   }
 
+  // load solver and iteration info
+  planning_output_.clear_solver_info();
+
+  const auto &soler_info_ptr =
+      planning_problem_ptr_->GetiLqrCorePtr()->GetSolverInfoPtr();
+
+  planning_output_.mutable_solver_info()->set_solver_condition(
+      soler_info_ptr->solver_condition);
+
+  planning_output_.mutable_solver_info()->set_cost_size(
+      soler_info_ptr->cost_size);
+
+  planning_output_.mutable_solver_info()->set_iter_count(
+      soler_info_ptr->iter_count);
+
+  planning_output_.mutable_solver_info()->set_init_cost(
+      soler_info_ptr->init_cost);
+
+  for (size_t i = 0; i < soler_info_ptr->iter_count; ++i) {
+    const auto &iter_info =
+        planning_output_.mutable_solver_info()->add_iter_info();
+
+    iter_info->set_linesearch_success(
+        soler_info_ptr->iteration_info_vec[i].linesearch_success);
+
+    iter_info->set_backward_pass_count(
+        soler_info_ptr->iteration_info_vec[i].backward_pass_count);
+
+    iter_info->set_lambda(soler_info_ptr->iteration_info_vec[i].lambda);
+    iter_info->set_cost(soler_info_ptr->iteration_info_vec[i].cost);
+    iter_info->set_dcost(soler_info_ptr->iteration_info_vec[i].dcost);
+    iter_info->set_expect(soler_info_ptr->iteration_info_vec[i].expect);
+    iter_info->set_du_norm(soler_info_ptr->iteration_info_vec[i].du_norm);
+  }
+
   // generate motion planning output into planning_context
   auto &traj_spline = frame_->mutable_session()
                           ->mutable_planning_context()

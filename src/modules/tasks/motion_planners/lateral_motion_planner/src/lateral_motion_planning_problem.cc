@@ -34,8 +34,8 @@ void LateralMotionPlanningProblem::Init() {
   // STEP 2: add cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<ReferenceCostTerm>()); // reference cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<ContinuityCostTerm>()); // continuity cost
+  // ilqr_core_ptr_->AddCost(
+  //     std::make_shared<ContinuityCostTerm>()); // continuity cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LatAccCostTerm>()); // lateral acc cost
   ilqr_core_ptr_->AddCost(
@@ -44,9 +44,9 @@ void LateralMotionPlanningProblem::Init() {
       std::make_shared<LatAccBoundCostTerm>()); // lateral acc bound cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LatJerkBoundCostTerm>()); // lateral jerk bound cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<PathSoftCorridorCostTerm>()); // path soft corridor
-                                                     // cost
+  // ilqr_core_ptr_->AddCost(
+  //     std::make_shared<PathSoftCorridorCostTerm>()); // path soft corridor
+  //                                                    // cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LatSnapCostTerm>()); // omega dot cost term
 

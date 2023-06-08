@@ -65,6 +65,24 @@ message LateralPlanningInput {
   optional double q_hard_corridor = 38;
 }
 
+message SolverIterationInfo {
+  optional bool linesearch_success = 1;
+  optional uint32 backward_pass_count = 2;
+  optional double lambda = 3;
+  optional double cost = 4;
+  optional double dcost = 5;
+  optional double expect = 6;
+  optional double du_norm = 7;
+}
+
+message LateralSolverInfo {
+  optional uint32 solver_condition = 1;
+  optional uint32 cost_size = 2;
+  optional uint32 iter_count = 3;
+  optional double init_cost = 4;
+  repeated SolverIterationInfo iter_info = 5;
+}
+
 message LateralPlanningOutput {
   repeated double time_vec = 1;
 
@@ -77,4 +95,6 @@ message LateralPlanningOutput {
   repeated double omega_dot_vec = 8;
   repeated double acc_vec = 9;
   repeated double jerk_vec = 10;
+
+  optional LateralSolverInfo solver_info = 11;
 }
