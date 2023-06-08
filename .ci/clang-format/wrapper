@@ -1,0 +1,4 @@
+#!/bin/bash
+
+SCRIPT_DIR=$(dirname "$0")
+LD_LIBRARY_PATH=$SCRIPT_DIR $SCRIPT_DIR/clang-format-5.0 $@

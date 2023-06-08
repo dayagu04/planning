@@ -4,6 +4,11 @@ import os
 import subprocess
 import argparse
 
+sub_folders = [
+    "src/common", "src/framework", "src/library", "src/modules", "src/planning_component.cc", "src/planning_component.h",
+  ]
+
+clang_format_path = ".ci/clang-format/wrapper"
 
 def error(msg=""):
   print "error: %s" % msg
@@ -26,12 +31,12 @@ def _run_cpp(sub_folders,
   assert isinstance(file_types, list)
   assert format_file.strip()
   root = get_root_path(format_file)
-  print "check in [%s] with [%s]" % (", ".join(sub_folders),
+  print "run in [%s] with [%s]" % (", ".join(sub_folders),
                                      ", ".join(file_types))
   for folder in sub_folders:
     for file_type in file_types:
-      cmd = "find %s/%s -name %s | xargs clang-format -i 2>/dev/null" % (
-        root, folder, file_type)
+      cmd = "find %s/%s -name %s | xargs %s -i 2>/dev/null" % (
+        root, folder, file_type, clang_format_path)
       os.system(cmd)
 
 
@@ -39,17 +44,13 @@ def _run_py(sub_folders, file_types=["*.py"], format_file=".style.cfg"):
   assert isinstance(file_types, list)
   assert format_file.strip()
   root = get_root_path(format_file)
-  print "check in [%s] with [%s]" % (", ".join(sub_folders),
+  print "run in [%s] with [%s]" % (", ".join(sub_folders),
                                      ", ".join(file_types))
   for folder in sub_folders:
     for file_type in file_types:
       cmd = "yapf --style %s/%s -i -r %s/%s %s" % (root, format_file, root,
                                                    folder, file_type)
       os.system(cmd)
-
-sub_folders = [
-    "src/common", "src/framework", "src/library", "src/modules", "src/planning_component.cc", "src/planning_component.h",
-  ]
 
 def run():
   _run_cpp(sub_folders)
@@ -66,8 +67,8 @@ def _check_cpp(sub_folders,
   for folder in sub_folders:
     for file_type in file_types:
       try:
-        cmd = "find %s/%s -name %s | xargs clang-format -output-replacements-xml | grep -c '<replacement '" % (
-          root, folder, file_type)
+        cmd = "find %s/%s -name %s | xargs %s -output-replacements-xml | grep -c '<replacement '" % (
+          root, folder, file_type, clang_format_path)
         result = subprocess.check_output(cmd, shell=True)
         error("not all %s in %s/%s is formatted" % (file_type, root, folder))
       except Exception as e:
@@ -95,6 +96,9 @@ def check():
 
 
 if __name__ == "__main__":
+  print "clang-format path %s" % (clang_format_path)
+  os.system(clang_format_path + " --version")
+
   parser = argparse.ArgumentParser()
   parser.add_argument("action",
                       choices=["check", "run"],

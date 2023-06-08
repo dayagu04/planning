@@ -21,3 +21,9 @@ make install
 ```
 mainboard -d /asw/planning/planning.dag
 ```
+
+# Tools
+1.代码格式化（.ci/clang-format/clang-format-5.0）：
+```
+.ci/format.py
+```
