@@ -7,7 +7,7 @@ file(GLOB_RECURSE SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/src/modules/tasks/longitudinal_motion_planning_cost_test.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/modules/tasks/lateral_motion_planning_one_frame_test.cc)
 
-add_executable(${PROJECT_NAME}
+add_executable(${PROJECT_NAME} EXCLUDE_FROM_ALL
   ${SRC_FILES}
   ${CMAKE_CURRENT_LIST_DIR}/main_test.cc)
 

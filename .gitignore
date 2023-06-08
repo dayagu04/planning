@@ -4,3 +4,4 @@ bin
 .cache
 jupyter_pybind/notebooks/lib/__pycache__
 jupyter_pybind/notebooks/scripts/.ipynb_checkpoints
+target/*.tar
