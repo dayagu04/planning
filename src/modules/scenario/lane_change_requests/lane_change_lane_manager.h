@@ -48,7 +48,7 @@ class LaneChangeLaneManager {
     //     ego_state->ego_pose().x, ego_state->ego_pose().y);
     double lateral_offset = lane->get_ego_lateral_offset();
 
-    return (lateral_offset < 1.6) ? true : false;
+    return (fabs(lateral_offset) < 1.6) ? true : false;
   }
 
   // 这里是否应该是返回const 指针引用？

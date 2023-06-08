@@ -118,8 +118,7 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   }
   if (request_source_ == MAP_REQUEST) {
     turn_signal_ = map_request_.turn_signal();
-  } else if (request_source_ == INT_REQUEST &&
-             (lc_status == ROAD_LC_LCHANGE || lc_status == ROAD_LC_RCHANGE)) {
+  } else if (request_source_ == INT_REQUEST) {
     turn_signal_ = int_request_.turn_signal();
   } else {
     turn_signal_ = NO_CHANGE;
