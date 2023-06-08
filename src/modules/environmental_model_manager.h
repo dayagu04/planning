@@ -38,10 +38,7 @@ class EnvironmentalModelManager {
 
  private:
   bool ego_state_update(double current_time,  const LocalView& local_view);
-  void vehicle_status_adaptor(double current_time,  const VehicleService::VehicleServiceOutputInfo &vehicel_service_output_info,
-                              const LocalizationOutput::LocalizationEstimate &localization_estimate,
-                              const HmiMcuInner::HmiMcuInner &hmi_mcu_inner_info,
-                              common::VehicleStatus &vehicle_status);
+  void vehicle_status_adaptor(double current_time,  const LocalView &local_view, common::VehicleStatus &vehicle_status);
   void truncate_prediction_info(const Prediction::PredictionResult& prediction_result,
                                 double cur_timestamp_us,
                                 std::unordered_set<uint>& prediction_obj_id_set);

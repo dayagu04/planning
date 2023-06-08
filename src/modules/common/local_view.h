@@ -23,17 +23,35 @@ namespace planning {
  */
 
 struct LocalView {
-
   Prediction::PredictionResult prediction_result;
+  double prediction_result_recv_time = 0.0;
+
   FusionRoad::RoadInfo road_info;
+  double road_info_recv_time = 0.0;
+
   LocalizationOutput::LocalizationEstimate localization_estimate;
+  double localization_estimate_recv_time = 0.0;
+
   FusionObjects::FusionObjectsInfo fusion_objects_info;
+  double fusion_objects_info_recv_time = 0.0;
+
   VehicleService::VehicleServiceOutputInfo vehicel_service_output_info;
+  double vehicel_service_output_info_recv_time = 0.0;
+
   RadarPerceptionObjects::RadarPerceptionObjectsInfo radar_perception_objects_info;
+  double radar_perception_objects_info_recv_time = 0.0;
+
   ControlCommand::ControlOutput control_output;
+  double control_output_recv_time = 0.0;
+
   HmiMcuInner::HmiMcuInner hmi_mcu_inner_info;
+  double hmi_mcu_inner_info_recv_time = 0.0;
+  
   ParkingFusion::ParkingFusionInfo parking_fusion_info;
+  double parking_fusion_info_recv_time = 0.0;
+
   FuncStateMachine::FuncStateMachine function_state_machine_info;
+  double function_state_machine_info_recv_time = 0.0;
 };
 
 }  // namespace planning

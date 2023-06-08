@@ -18,7 +18,6 @@ bool PlanningComponent::Init() {
 
   auto engine_config =
       common::ConfigurationContext::Instance()->engine_config();
-  double time_stamp = IflyTime::Now_s();
 
   std::string log_file = engine_config.log_conf.log_file_dir + "/planning_log";
   std::cout << "log_file!!!" << log_file << std::endl;
@@ -186,20 +185,73 @@ bool PlanningComponent::Proc() {
   LOG_DEBUG("GeneralPlanning::RunOnce \n");
   double start_time = IflyTime::Now_ms();
 
+  auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
+
   // 1.update all inputs to local_view
   {
     std::lock_guard<std::mutex> lock(msg_mutex_);
+    auto input_topic_timestamp = planning_debug_data->mutable_input_topic_timestamp();
+    auto input_topic_latency = planning_debug_data->mutable_input_topic_latency();
+    constexpr double US_PER_MS = 1000.0;
+
     local_view_.prediction_result = prediction_result_msg_;
+    local_view_.prediction_result_recv_time = start_time;
+    input_topic_timestamp->set_prediction(prediction_result_msg_.header().timestamp());
+    input_topic_latency->set_prediction(start_time - prediction_result_msg_.header().timestamp() / US_PER_MS);
+    prediction_result_msg_.Clear();
+
     local_view_.road_info = road_info_msg_;
+    local_view_.road_info_recv_time = start_time;
+    input_topic_timestamp->set_fusion_road(road_info_msg_.header().timestamp());
+    input_topic_latency->set_fusion_road(start_time - road_info_msg_.header().timestamp() / US_PER_MS);
+    road_info_msg_.Clear();
+
     local_view_.localization_estimate = localization_estimate_msg_;
+    local_view_.localization_estimate_recv_time = start_time;
+    input_topic_timestamp->set_localization(localization_estimate_msg_.header().timestamp());
+    input_topic_latency->set_localization(start_time - localization_estimate_msg_.header().timestamp() / US_PER_MS);
+    localization_estimate_msg_.Clear();
+
     local_view_.fusion_objects_info = fusion_objects_info_msg_;
+    local_view_.fusion_objects_info_recv_time = start_time;
+    input_topic_timestamp->set_fusion_object(fusion_objects_info_msg_.header().timestamp());
+    input_topic_latency->set_fusion_object(start_time - fusion_objects_info_msg_.header().timestamp() / US_PER_MS);
+    fusion_objects_info_msg_.Clear();
+
     local_view_.vehicel_service_output_info = vehicel_service_output_info_msg_;
+    local_view_.vehicel_service_output_info_recv_time = start_time;
+    input_topic_timestamp->set_vehicle_service(vehicel_service_output_info_msg_.header().timestamp());
+    input_topic_latency->set_vehicle_service(start_time - vehicel_service_output_info_msg_.header().timestamp() / US_PER_MS);
+    vehicel_service_output_info_msg_.Clear();
+
     local_view_.radar_perception_objects_info =
         radar_perception_objects_info_msg_;
+    local_view_.radar_perception_objects_info_recv_time = start_time;
+    input_topic_timestamp->set_radar_perception(radar_perception_objects_info_msg_.header().timestamp());
+    input_topic_latency->set_radar_perception(start_time - radar_perception_objects_info_msg_.header().timestamp() / US_PER_MS);
+    radar_perception_objects_info_msg_.Clear();
+
     local_view_.control_output = control_output_msg_;
+    local_view_.control_output_recv_time = start_time;
+    input_topic_timestamp->set_control_output(control_output_msg_.header().timestamp());
+    input_topic_latency->set_control_output(start_time - control_output_msg_.header().timestamp() / US_PER_MS);
+    control_output_msg_.Clear();
+
     local_view_.hmi_mcu_inner_info = hmi_mcu_inner_info_msg_;
+    local_view_.hmi_mcu_inner_info_recv_time = start_time;
+    input_topic_timestamp->set_hmi(hmi_mcu_inner_info_msg_.header().timestamp());
+    input_topic_latency->set_hmi(start_time - hmi_mcu_inner_info_msg_.header().timestamp() / US_PER_MS);
+    hmi_mcu_inner_info_msg_.Clear();
+
     local_view_.parking_fusion_info = parking_fusion_info_msg_;
+    local_view_.parking_fusion_info_recv_time = start_time;
+    input_topic_timestamp->set_parking_fusion(parking_fusion_info_msg_.header().timestamp());
+    input_topic_latency->set_parking_fusion(start_time - parking_fusion_info_msg_.header().timestamp() / US_PER_MS);
+    parking_fusion_info_msg_.Clear();
+
     local_view_.function_state_machine_info = func_state_machine_msg_;
+    local_view_.function_state_machine_info_recv_time = start_time;
+    func_state_machine_msg_.Clear();
   }
 
   // 2.planning run
@@ -217,31 +269,6 @@ bool PlanningComponent::Proc() {
   // for (auto& p : *adc_trajectory_pb.mutable_trajectory_point()) {
   //   p.set_relative_time(p.relative_time() + dt);
   // }
-
-  auto &debug_info_manager = DebugInfoManager::GetInstance();
-  auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
-
-  // record timestamp of all read topics for FPP
-  // planning_debug_data->mutable_read_topic_timestamp()->set_control_output_stamp(
-  //     local_view_.control_output.header().timestamp());
-  // planning_debug_data->mutable_read_topic_timestamp()->set_localization_stamp(
-  //     local_view_.localization_estimate.header().timestamp());
-  // planning_debug_data->mutable_read_topic_timestamp()->set_fusion_object_stamp(
-  //     local_view_.fusion_objects_info.header().timestamp());
-  // planning_debug_data->mutable_read_topic_timestamp()->set_parking_fusion_stamp(
-  //     local_view_.parking_fusion_info.header().timestamp());
-  // planning_debug_data->mutable_read_topic_timestamp()->set_fusion_road_stamp(
-  //     local_view_.road_info.header().timestamp());
-  // planning_debug_data->mutable_read_topic_timestamp()->set_hmi_stamp(
-  //     local_view_.hmi_mcu_inner_info.header().timestamp());
-  // planning_debug_data->mutable_read_topic_timestamp()->set_prediction_stamp(
-  //     local_view_.prediction_result.header().timestamp());
-  // planning_debug_data->mutable_read_topic_timestamp()
-  //     ->set_vehicle_service_stamp(
-  //         local_view_.vehicel_service_output_info.header().timestamp());
-  // planning_debug_data->mutable_read_topic_timestamp()
-  //     ->set_radar_perception_stamp(
-  //         local_view_.radar_perception_objects_info.header().timestamp());
 
   planning_debug_data->set_timestamp(IflyTime::Now_us());
   // 获取debug json信息

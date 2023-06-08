@@ -48,7 +48,6 @@ bool ScenarioStateMachine::update(planning::framework::Frame *frame) {
   if (!session_->mutable_planning_context()->last_planning_success()) {
     reset_state_machine();
   }
-  session_->mutable_planning_context()->mutable_planning_success() = false;
 
   update_scenario();  // cruise or low speed or ...
 

@@ -10,16 +10,16 @@ import "lateral_motion_planner.proto";
 import "longitudinal_motion_planner.proto";
 import "lat_behavior_common.proto";
 
-message ReadTopicStampList {
-  optional uint64 fusion_object_stamp = 1;
-  optional uint64 fusion_road_stamp = 2;
-  optional uint64 localization_stamp = 3;
-  optional uint64 prediction_stamp = 4;
-  optional uint64 vehicle_service_stamp = 5;
-  optional uint64 radar_perception_stamp = 6;
-  optional uint64 control_output_stamp = 7;
-  optional uint64 hmi_stamp = 8;
-  optional uint64 parking_fusion_stamp = 9;
+message TopicTimeList {
+  optional uint64 fusion_object = 1;
+  optional uint64 fusion_road = 2;
+  optional uint64 localization = 3;
+  optional uint64 prediction = 4;
+  optional uint64 vehicle_service = 5;
+  optional uint64 radar_perception = 6;
+  optional uint64 control_output = 7;
+  optional uint64 hmi = 8;
+  optional uint64 parking_fusion = 9;
 }
 
 message PlanningDebugInfo {
@@ -38,6 +38,6 @@ message PlanningDebugInfo {
   optional VOLatMotionPlan vo_lat_motion_plan = 10;
   optional EnvironmentModelInfo environment_model_info = 11;
 
-  // optional ReadTopicStampList read_topic_timestamp = 4;
-
+  optional TopicTimeList input_topic_timestamp = 12;
+  optional TopicTimeList input_topic_latency = 13;
 }

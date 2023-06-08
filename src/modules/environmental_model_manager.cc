@@ -117,7 +117,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
     return false;
   } else {
     //后面需要判断是否为地图
-    last_feed_time_[FEED_FUSION_LANES_INFO] = current_time;
+    last_feed_time_[FEED_FUSION_LANES_INFO] = local_view.road_info_recv_time;
   }
 
   // end_time = IflyTime::Now_ms();
@@ -168,8 +168,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
 
 bool EnvironmentalModelManager::ego_state_update(double current_time, const LocalView& local_view) {
   common::VehicleStatus vehicle_status;
-  vehicle_status_adaptor(current_time, local_view.vehicel_service_output_info, local_view.localization_estimate, local_view.hmi_mcu_inner_info,
-                      vehicle_status);
+  vehicle_status_adaptor(current_time, local_view, vehicle_status);
   return ego_state_manager_ptr_->update(vehicle_status);
 }
 
@@ -192,8 +191,9 @@ bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, 
       if (prediction_obj_id_set.find(obj.additional_info().track_id()) == prediction_obj_id_set.end()) {
         transform_fusion_to_prediction(obj, (double)local_view.fusion_objects_info.header().timestamp());
       }
-      last_feed_time_[FEED_FUSION_INFO] = current_time;
+      last_feed_time_[FEED_FUSION_INFO] = local_view.fusion_objects_info_recv_time;
     }
+    last_feed_time_[FEED_PREDICTION_INFO] = local_view.prediction_result_recv_time;
   } else {
     int num = 0;
     for (auto &obj : local_view.fusion_objects_info.fusion_object()) {
@@ -207,7 +207,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, 
         continue;
       }
       transform_fusion_to_prediction(obj, (double)local_view.fusion_objects_info.header().timestamp());
-      last_feed_time_[FEED_FUSION_INFO] = current_time;
+      last_feed_time_[FEED_FUSION_INFO] = local_view.fusion_objects_info_recv_time;
     }
   }
 
@@ -222,15 +222,16 @@ bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, 
       break;
     }
     transform_surround_radar_to_prediction(obj, local_view.radar_perception_objects_info.sensor_type());
-    last_feed_time_[FEED_SURR_RADAR_INFO] = current_time;
+    last_feed_time_[FEED_SURR_RADAR_INFO] = local_view.radar_perception_objects_info_recv_time;
   }
   return true;
 }
 
-void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, const VehicleService::VehicleServiceOutputInfo &vehicel_service_output_info,
-                                         const LocalizationOutput::LocalizationEstimate &localization_estimate,
-                                         const HmiMcuInner::HmiMcuInner &hmi_mcu_inner_info,
+void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, const LocalView &local_view,
                                          common::VehicleStatus &vehicle_status) {
+  const auto& vehicel_service_output_info =  local_view.vehicel_service_output_info;
+  const auto& localization_estimate = local_view.localization_estimate;
+  const auto& hmi_mcu_inner_info = local_view.hmi_mcu_inner_info;
   vehicle_status.mutable_header()->set_timestamp_us(vehicel_service_output_info.header().timestamp());
 
   if (session_->environmental_model().location_valid()) {
@@ -261,7 +262,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
     vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_y(enu_orientation.qy());
     vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_z(enu_orientation.qz());
     vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_w(enu_orientation.qw());
-    last_feed_time_[FEED_EGO_ENU] = current_time;
+    last_feed_time_[FEED_EGO_ENU] = local_view.localization_estimate_recv_time;
   } else {
     if (vehicel_service_output_info.yaw_rate_available()) {
       vehicle_status.mutable_heading_yaw()->mutable_heading_yaw_data()
@@ -281,7 +282,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
     location_enu->mutable_orientation()->set_y(0.0);
     location_enu->mutable_orientation()->set_z(0.0);
     location_enu->mutable_orientation()->set_w(1.0);
-    last_feed_time_[FEED_EGO_ENU] = current_time;
+    last_feed_time_[FEED_EGO_ENU] = local_view.localization_estimate_recv_time;
   }
 
   vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
@@ -294,13 +295,13 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
     vehicle_status.mutable_velocity()->set_available(true);
     vehicle_status.mutable_velocity()->mutable_heading_velocity()
                       ->set_value_mps(vehicel_service_output_info.vehicle_speed());
-    last_feed_time_[FEED_EGO_VEL] = current_time;
+    last_feed_time_[FEED_EGO_VEL] = local_view.vehicel_service_output_info_recv_time;
   }
 
   if (vehicel_service_output_info.long_acceleration_available()) {
     vehicle_status.mutable_brake_info()->mutable_brake_info_data()
                             ->set_acceleration_on_vehicle_wheel(vehicel_service_output_info.long_acceleration());
-    last_feed_time_[FEED_EGO_ACC] = current_time;
+    last_feed_time_[FEED_EGO_ACC] = local_view.vehicel_service_output_info_recv_time;
   }
 
   if (vehicel_service_output_info.vehicle_speed_display_available()) {
@@ -319,7 +320,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
     steering_data->mutable_steering_wheel_data()->set_steering_wheel_rad(vehicel_service_output_info.steering_wheel_angle());
     steering_data->mutable_steering_wheel_data()->set_steering_wheel_torque(vehicel_service_output_info.power_train_current_torque());
 
-    last_feed_time_[FEED_EGO_STEER_ANGLE] = current_time;
+    last_feed_time_[FEED_EGO_STEER_ANGLE] = local_view.vehicel_service_output_info_recv_time;
   }
 
   if (vehicel_service_output_info.fl_wheel_speed_available() &&
@@ -333,7 +334,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
     wheel_velocity4d->set_front_right(vehicel_service_output_info.fr_wheel_speed());
     wheel_velocity4d->set_rear_left(vehicel_service_output_info.rl_wheel_speed());
     wheel_velocity4d->set_rear_right(vehicel_service_output_info.rr_wheel_speed());
-    last_feed_time_[FEED_WHEEL_SPEED_REPORT] = current_time;
+    last_feed_time_[FEED_WHEEL_SPEED_REPORT] = local_view.vehicel_service_output_info_recv_time;
   }
 
   if (vehicel_service_output_info.power_train_override_flag_available()) {
@@ -343,21 +344,21 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
   auto vehicle_light = vehicle_status.mutable_vehicle_light();
   if (vehicel_service_output_info.left_turn_light_state() && vehicel_service_output_info.left_turn_light_state_available()) {
     vehicle_light->mutable_vehicle_light_data()->mutable_turn_signal()->set_value(common::TurnSignalType::LEFT);
-    last_feed_time_[FEED_MISC_REPORT] = current_time;
+    last_feed_time_[FEED_MISC_REPORT] = local_view.vehicel_service_output_info_recv_time;
   } else if (vehicel_service_output_info.right_turn_light_state() && vehicel_service_output_info.right_turn_light_state_available()) {
     vehicle_light->mutable_vehicle_light_data()->mutable_turn_signal()->set_value(common::TurnSignalType::RIGHT);
-    last_feed_time_[FEED_MISC_REPORT] = current_time;
+    last_feed_time_[FEED_MISC_REPORT] = local_view.vehicel_service_output_info_recv_time;
   } else if (vehicel_service_output_info.hazard_light_state() && vehicel_service_output_info.hazard_light_state_available()) {
     vehicle_light->mutable_vehicle_light_data()->mutable_turn_signal()->set_value(common::TurnSignalType::EMERGENCY_FLASHER);
-    last_feed_time_[FEED_MISC_REPORT] = current_time;
+    last_feed_time_[FEED_MISC_REPORT] = local_view.vehicel_service_output_info_recv_time;
   } else {
     vehicle_light->mutable_vehicle_light_data()->mutable_turn_signal()->set_value(common::TurnSignalType::NONE);
-    last_feed_time_[FEED_MISC_REPORT] = current_time;
+    last_feed_time_[FEED_MISC_REPORT] = local_view.vehicel_service_output_info_recv_time;
   }
 
   if (vehicel_service_output_info.auto_light_state_available()) {
     vehicle_light->mutable_vehicle_light_data()->set_auto_light_state(vehicel_service_output_info.auto_light_state());
-    last_feed_time_[FEED_MISC_REPORT] = current_time;
+    last_feed_time_[FEED_MISC_REPORT] = local_view.vehicel_service_output_info_recv_time;
   }
 
 
@@ -630,23 +631,69 @@ bool EnvironmentalModelManager::InputReady(double current_time, std::string &err
 
   static const double kCheckTimeDiff = 2000.0;
 
+  static const std::vector<FeedType> input_longtime_with_hdmap {
+    FEED_VEHICLE_DBW_STATUS,
+    FEED_EGO_VEL,
+    FEED_EGO_STEER_ANGLE,
+    FEED_EGO_ENU,
+    FEED_WHEEL_SPEED_REPORT,
+    FEED_EGO_ACC,
+    FEED_MISC_REPORT,
+    FEED_FUSION_INFO,
+    FEED_PREDICTION_INFO,
+    // FEED_SURR_RADAR_INFO,
+    FEED_MAP_INFO,
+  };
+
+  static const std::vector<FeedType> input_longtime_without_hdmap {
+    FEED_VEHICLE_DBW_STATUS,
+    FEED_EGO_VEL,
+    FEED_EGO_STEER_ANGLE,
+    FEED_EGO_ENU,
+    FEED_WHEEL_SPEED_REPORT,
+    FEED_EGO_ACC,
+    FEED_MISC_REPORT,
+    FEED_FUSION_INFO,
+    FEED_PREDICTION_INFO,
+    // FEED_SURR_RADAR_INFO,
+    FEED_FUSION_LANES_INFO,
+  };
+
+  static const std::vector<FeedType> input_realtime_with_hdmap {
+    FEED_VEHICLE_DBW_STATUS,
+    FEED_EGO_VEL,
+    FEED_EGO_STEER_ANGLE,
+    FEED_EGO_ENU,
+    FEED_WHEEL_SPEED_REPORT,
+    FEED_EGO_ACC,
+    FEED_MISC_REPORT,
+    FEED_FUSION_INFO,
+    // FEED_SURR_RADAR_INFO,
+    FEED_MAP_INFO,
+  };
+
+  static const std::vector<FeedType> input_realtime_without_hdmap {
+    FEED_VEHICLE_DBW_STATUS,
+    FEED_EGO_VEL,
+    FEED_EGO_STEER_ANGLE,
+    FEED_EGO_ENU,
+    FEED_WHEEL_SPEED_REPORT,
+    FEED_EGO_ACC,
+    FEED_MISC_REPORT,
+    FEED_FUSION_INFO,
+    // FEED_SURR_RADAR_INFO,
+    FEED_FUSION_LANES_INFO,
+  };
+
   error_msg.clear();
 
   bool res = true;
-  for (int i = 0; i < FEED_TYPE_MAX; ++i) {
+  const auto &input_list =
+      session_->environmental_model().get_hdmap_valid()
+          ? (session_->environmental_model().location_valid() ? input_longtime_with_hdmap : input_realtime_with_hdmap)
+          : (session_->environmental_model().location_valid() ? input_longtime_without_hdmap : input_realtime_without_hdmap);
+  for (int i : input_list) {
     const char *feed_type_str = to_string(static_cast<FeedType>(i));
-
-    if (session_->environmental_model().get_hdmap_valid()) {
-      // use hdmap if vaild, skip fusion lanes
-      if (i == FEED_FUSION_LANES_INFO) {
-        continue;
-      }
-    } else {
-      // support for vision only //todo deal with FEED_SURR_RADAR_INFO
-      if ((i == FEED_MAP_INFO) || (i == FEED_PREDICTION_INFO) || (i == FEED_SURR_RADAR_INFO)) {
-        continue;
-      }
-    }
     if (last_feed_time_[i] > 0.0) {
       if (current_time - last_feed_time_[i] > kCheckTimeDiff) {
         LOG_ERROR("(%s)feed delay: %d, %s", __FUNCTION__, i, feed_type_str,
