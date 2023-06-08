@@ -260,7 +260,7 @@ bool PlanningComponent::Proc() {
   PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_Info;
   std::cout << "==============The planning enters RunOnce============="
             << std::endl;
-  planning_base_->RunOnce(local_view_, &planning_output, debug_output,
+  bool run_success = planning_base_->RunOnce(local_view_, &planning_output, debug_output,
                           planning_hmi_Info);
 
   // 3.get output & publish
@@ -277,11 +277,13 @@ bool PlanningComponent::Proc() {
   planning_debug_writer_->Write(*planning_debug_data);
 
   // set meta time
-  auto time_stamp_us = IflyTime::Now_us();
-  auto header = planning_output.mutable_meta()->mutable_header();
-  header->set_timestamp(time_stamp_us);
-  header->set_version("TEST");
-  planning_writer_->Write(planning_output);
+  if (run_success) {
+    auto time_stamp_us = IflyTime::Now_us();
+    auto header = planning_output.mutable_meta()->mutable_header();
+    header->set_timestamp(time_stamp_us);
+    header->set_version("TEST");
+    planning_writer_->Write(planning_output);
+  }
 
   planning_hmi_Info_writer_->Write(planning_hmi_Info);
   double planning_cost_time = IflyTime::Now_ms() - start_time;
