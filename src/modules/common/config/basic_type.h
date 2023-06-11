@@ -370,6 +370,12 @@ struct TrajectorySpline {
   pnc::mathlib::spline a_t_spline;
   pnc::mathlib::spline j_t_spline;
 
+  pnc::mathlib::spline x_t_spline;
+  pnc::mathlib::spline y_t_spline;
+  pnc::mathlib::spline theta_t_spline;
+  pnc::mathlib::spline delta_t_spline;
+  pnc::mathlib::spline omega_t_spline;
+
   std::vector<double> s_lat_vec;
 };
 

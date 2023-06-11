@@ -359,8 +359,6 @@ void LateralMotionPlanner::GeneratePlanningOutput() {
   traj_spline.curv_s_spline.set_points(s_vec_, curv_vec);
   traj_spline.d_curv_s_spline.set_points(s_vec_, d_curv_vec);
 
-  traj_spline.lat_enable_flag = true;
-
   traj_spline.s_lat_vec = s_vec_;
 
   // assemble results
