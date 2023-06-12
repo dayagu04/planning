@@ -26,7 +26,7 @@ class GeneralPlannerModule : public planning::framework::PlanningModule {
   EgoPlanningConfigBuilder* load_config_builder(planning::framework::Session* session, const char* file_name);
 };
 
-REGISTER_MODULE_FACTORY(GeneralPlannerModule)
+// REGISTER_MODULE_FACTORY(GeneralPlannerModule)
 
 }  // namespace modules
 }  // namespace planning

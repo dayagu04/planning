@@ -104,7 +104,7 @@ bool transform_fusion_to_prediction(
 TEST(TestScenarioStateMachine, scenario_state_machine) {
   framework::Session session;
   // load engine configuration
-  std::string engine_config_path = "res/conf/planning_engine_config.json";
+  std::string engine_config_path = std::string(CONFIG_PATH) + "/planning_engine_config.json";
   common::ConfigurationContext::Instance()->load_engine_config_from_json(
       engine_config_path);
   auto engine_config =

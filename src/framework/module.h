@@ -1,5 +1,5 @@
 #ifndef ZNQC_FRAMEWORK_MODULE_H
-#define znqc_FRAMEWORK_MODULE_H
+#define ZNQC_FRAMEWORK_MODULE_H
 
 #include <string>
 #include <type_traits>
@@ -85,11 +85,10 @@ bool register_module(const char* name, ModuleFactory* const factory);
 bool deregister_module(const char* name, ModuleFactory* const factory);
 
 }  // namespace framework
+}  // namespace planning
 
 // used to access ModuleFactory instance of Registry interface
 using ModuleFactoryRegistry = planning::common::Registry<planning::framework::ModuleFactory>;
-
-}  // namespace planning
 
 // TODO use malloc, use errno
 // TODO don't init here maybe, since parameter not knowned yet

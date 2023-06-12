@@ -50,7 +50,7 @@ bool Session::Init() {
   auto engine_config = common::ConfigurationContext::Instance()->engine_config();
   auto scenario_config_file_dir = engine_config.scenario_cfg_dir;
   auto module_config_file_dir = engine_config.module_cfg_dir;
-  LOG_DEBUG("ScenarioManager scenario_config_file_dir is: %s \n", scenario_config_file_dir.c_str());
+  LOG_NOTICE("ScenarioManager scenario_config_file_dir is: %s \n", scenario_config_file_dir.c_str());
   if (!common::ConfigurationContext::Instance()->load_params_from_json(scenario_config_file_dir)) {
     LOG_ERROR("ConfigurationContext load_params_from_json : %s \n", "ERROR");
     return false;

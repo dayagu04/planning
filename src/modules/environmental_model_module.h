@@ -26,7 +26,7 @@ class EnvironmentalModelModule : public planning::framework::PlanningModule {
   EgoPlanningConfigBuilder* load_config_builder(planning::framework::Session* session, const char* file_name);
 };
 
-REGISTER_MODULE_FACTORY(EnvironmentalModelModule)
+// REGISTER_MODULE_FACTORY(EnvironmentalModelModule)
 
 }  // namespace modules
 }  // namespace planning

@@ -9,9 +9,9 @@ git submodule update --init --recursive
 ```
 2.编译：采用gcc编译器，生成产物在build文件夹内
 ```
-mkdir build & cd build
+mkdir build && cd build
 cmake ..
-make -j 32
+make -j
 ```
 3.部署：将需要的产物打包，用于部署实车,打包后产物路径：build/planning，将其部署在FDC域控路径: /asw 下即可
 ```
@@ -26,4 +26,16 @@ mainboard -d /asw/planning/planning.dag
 1.代码格式化（.ci/clang-format/clang-format-5.0）：
 ```
 .ci/format.py
+```
+2.VSCode插件:
+- clangd 用于代码跳转和自动补全(需要先`cd build && cmake ..`一下)
+
+# Test
+1.单元测试:
+```
+mkdir build && cd build
+cmake ..
+make unit_test -j
+make install
+./test/unit_test
 ```

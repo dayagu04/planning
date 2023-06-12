@@ -9,9 +9,9 @@ AdaptiveCruiseControl::AdaptiveCruiseControl(const EgoPlanningConfigBuilder* con
                                              framework::Session* session) {
   session_ = session;
   config_ = config_builder->cast<AdaptiveCruiseControlConfig>();
-  common::SceneType scene_type = session_->get_scene_type();
-  auto config_all = session_->environmental_model().config_builder(scene_type);
-  config_lon_ = config_all->cast<LongitudinalDeciderV3Config>();
+  // common::SceneType scene_type = session_->get_scene_type();
+  // auto config_all = session_->environmental_model().config_builder(scene_type);
+  // config_lon_ = config_all->cast<LongitudinalDeciderV3Config>();
 }
 
 void AdaptiveCruiseControl::adaptive_cruise_control(LonDecisionInfo& lon_decision_information,

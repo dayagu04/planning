@@ -47,7 +47,7 @@ class AdaptiveCruiseControl {
   double kMaxCentrifugalAcceleration_{3.0};
 
   AdaptiveCruiseControlConfig config_{};
-  LongitudinalDeciderV3Config config_lon_{};
+  // LongitudinalDeciderV3Config config_lon_{};
   framework::Session *session_ = nullptr;
 };
 

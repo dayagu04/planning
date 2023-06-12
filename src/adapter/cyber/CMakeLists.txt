@@ -2,7 +2,7 @@ project (planning_component)
 cmake_minimum_required (VERSION 3.0)
 
 file(GLOB_RECURSE SRC_FILES
-  ${CMAKE_CURRENT_LIST_DIR}/planning_component.cc
+  ${CMAKE_CURRENT_LIST_DIR}/*.cc
 )
 
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
@@ -12,6 +12,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   common
   modules
   autoplt
+  osqpstatic
 )
 
 include_directories(

@@ -6,14 +6,11 @@
     "configurations": [
         {
             "name": "(gdb) 启动",
-            "type": "lldb",
+            "type": "cppdbg",
             "request": "launch",
-            // "program": "${workspaceFolder}/build/test/unit_test",
-            // "args": [],
             "program": "/usr/bin/mainboard",
             "args": ["-d", "/asw/planning/planning.dag"],
             "stopAtEntry": false, // 不在调试入口停留
-            "justMyCode": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
@@ -26,6 +23,27 @@
                 }
             ],
             // "preLaunchTask": "make build",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
+            "name": "(gdb) unit_test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/test/unit_test",
+            "args": [],
+            "stopAtEntry": false, // 不在调试入口停留
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            // "preLaunchTask": "make unit_test",
             "miDebuggerPath": "/usr/bin/gdb"
         }
     ]

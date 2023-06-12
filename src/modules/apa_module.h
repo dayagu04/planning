@@ -24,7 +24,7 @@ class ApaPlanningModule : public framework::PlanningModule {
   std::unique_ptr<apa_planner::ApaPlannerDispatcher> planner_dispatcher_ = nullptr;
 };
 
-REGISTER_MODULE_FACTORY(ApaPlanningModule)
+// REGISTER_MODULE_FACTORY(ApaPlanningModule)
 
 }  // namespace modules
 }  // namespace planning

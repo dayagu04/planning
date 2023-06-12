@@ -71,7 +71,11 @@
     "osqp.h": "c",
     "*.ipp": "cpp",
     "any": "cpp",
-    "variant": "cpp"
+    "variant": "cpp",
+    "nonlinearoptimization": "cpp",
+    "*.txx": "cpp",
+    "queue": "cpp",
+    "stack": "cpp"
   },
   "C_Cpp.errorSquiggles": "disabled",
 
@@ -81,5 +85,5 @@
     "strings": true
   },
   "editor.wordBasedSuggestions": true,
-  "C_Cpp.intelliSenseEngine": "Default"
+  "C_Cpp.intelliSenseEngine": "disabled"
 }

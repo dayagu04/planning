@@ -60,6 +60,7 @@ void ReferencePath::update_refpath_points(ReferencePathPoints &raw_ref_path_poin
     if (not coord_points.empty()) {
       auto &last_pt = coord_points.back();
       if (planning_math::Vec2d(last_pt.x - pt.x, last_pt.y - pt.y).Length() < 1e-2) {
+        iter++;
         continue;
       }
     }
