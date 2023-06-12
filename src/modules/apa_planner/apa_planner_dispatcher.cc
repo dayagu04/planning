@@ -1,9 +1,9 @@
-#include "apa_planner/apa_planner_dispatcher.h"
+#include "apa_planner_dispatcher.h"
 
-#include "apa_planner/common/planning_log_helper.h"
-#include "apa_planner/diagonal/diagonal_in_planner.h"
-#include "apa_planner/parallel/parallel_in_planner.h"
-#include "context/environmental_model.h"
+#include "common/planning_log_helper.h"
+#include "diagonal/diagonal_in_planner.h"
+#include "environmental_model.h"
+#include "parallel/parallel_in_planner.h"
 
 namespace planning {
 namespace apa_planner {

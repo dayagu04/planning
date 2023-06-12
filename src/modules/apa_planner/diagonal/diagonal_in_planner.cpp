@@ -1,6 +1,8 @@
-#include "apa_planner/diagonal/diagonal_in_planner.h"
+#include "diagonal/diagonal_in_planner.h"
 
-#include "apa_planner/common/planning_log_helper.h"
+#include "common/planning_log_helper.h"
+#include "environmental_model.h"
+#include "planning_output_context.h"
 
 namespace planning {
 namespace apa_planner {

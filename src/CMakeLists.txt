@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 3.0)
 # no project name in src
 
-add_subdirectory(adapter)
+if(ADAPTER STREQUAL "cyber")
+  add_subdirectory(adapter/cyber)
+elseif(ADAPTER STREQUAL "ap")
+  # add_subdirectory((adapter/ap)
+endif()
 
 add_subdirectory(proto EXCLUDE_FROM_ALL)
 add_subdirectory(common EXCLUDE_FROM_ALL)

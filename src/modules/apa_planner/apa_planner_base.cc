@@ -1,6 +1,6 @@
-#include "apa_planner/apa_planner_base.h"
-#include "context/environmental_model.h"
-#include "context/planning_output_context.h"
+#include "apa_planner_base.h"
+#include "environmental_model.h"
+#include "planning_output_context.h"
 
 namespace planning {
 namespace apa_planner {

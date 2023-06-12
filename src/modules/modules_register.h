@@ -1,3 +1,5 @@
+#pragma once
+
 #include "apa_module.h"
 #include "environmental_model_module.h"
 #include "general_planner_module.h"
@@ -10,8 +12,8 @@ namespace planning {
 namespace modules {
 
 REGISTER_MODULE_FACTORY(GeneralPlannerModule);
-// REGISTER_MODULE_FACTORY(ApaPlanningModule);
 REGISTER_MODULE_FACTORY(EnvironmentalModelModule);
+REGISTER_MODULE_FACTORY(ApaPlanningModule);
 
 }  // namespace modules
 }  // namespace planning

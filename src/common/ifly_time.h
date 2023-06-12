@@ -6,6 +6,11 @@
 #include <sys/time.h>
 #include <time.h>
 
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <string>
+
 namespace IflyTime {
 
 static inline double Now_us() {
@@ -47,6 +52,14 @@ static inline double Now_s() {
   gettimeofday(&tval, NULL);
   return tval.tv_sec;
 #endif
+}
+
+static inline std::string DateString() {
+  auto tp = std::chrono::time_point<std::chrono::system_clock, std::chrono::microseconds>(
+      std::chrono::microseconds((int64_t)Now_us()));
+  auto tt = std::chrono::system_clock::to_time_t(tp);
+  std::tm* now = std::gmtime(&tt);
+  return std::to_string(now->tm_year + 1900) + std::to_string(now->tm_mon + 1) + std::to_string(now->tm_mday);
 }
 
 }  // namespace IflyTime

@@ -2,7 +2,7 @@
 
 #include <limits>
 
-#include "apa_planner/common/vehicle_param_helper.h"
+#include "common/vehicle_param_helper.h"
 
 namespace planning {
 

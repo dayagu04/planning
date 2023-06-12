@@ -17,6 +17,7 @@ add_subdirectory(tasks EXCLUDE_FROM_ALL)
 target_link_libraries(${PROJECT_NAME} PUBLIC
   framework
   modules_scenario
+  modules_apa_planner
   hfsm
 )
 

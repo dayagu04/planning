@@ -2,9 +2,9 @@
 
 #include "planning_plan.pb.h"
 
-#include "apa_planner/apa_planner_base.h"
-#include "apa_planner/parallel/parallel_in_trajectory_generator.h"
+#include "apa_planner_base.h"
 #include "frame.h"
+#include "parallel/parallel_in_trajectory_generator.h"
 
 namespace planning {
 namespace apa_planner {

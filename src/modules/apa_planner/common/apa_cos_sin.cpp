@@ -1,7 +1,7 @@
-#include "apa_planner/common/apa_cos_sin.h"
+#include "common/apa_cos_sin.h"
 
-#include "apa_planner/common/apa_cos_table.h"
-#include "apa_planner/common/apa_sin_table.h"
+#include "common/apa_cos_table.h"
+#include "common/apa_sin_table.h"
 #include "utils_math.h"
 
 namespace planning {

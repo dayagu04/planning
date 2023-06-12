@@ -1,4 +1,4 @@
-#include "apa_planner/common/apa_cos_table.h"
+#include "common/apa_cos_table.h"
 
 namespace planning {
 

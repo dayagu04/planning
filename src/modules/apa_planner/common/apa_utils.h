@@ -1,7 +1,7 @@
 #pragma once
 
-#include "apa_planner/common/geometry_planning_io.h"
-#include "common/math/polygon2d.h"
+#include "common/geometry_planning_io.h"
+#include "math/polygon2d.h"
 
 namespace planning {
 

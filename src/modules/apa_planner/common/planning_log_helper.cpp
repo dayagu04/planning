@@ -1,4 +1,4 @@
-#include "apa_planner/common/planning_log_helper.h"
+#include "common/planning_log_helper.h"
 
 #include <string>
 
@@ -10,9 +10,7 @@ std::ofstream PlanningLogHelper::ofs_;
 bool PlanningLogHelper::is_init_ = false;
 
 void PlanningLogHelper::Init() {
-  auto time_now = autoplt::ADSTime::Now();
-  std::string date = time_now.ToDateString();
-  std::string log_file = "/asw/Planning/log/planning.log." + date;
+  std::string log_file = "/asw/Planning/log/planning.log." + IflyTime::DateString();
   ofs_.open(log_file);
   is_init_ = true;
 }

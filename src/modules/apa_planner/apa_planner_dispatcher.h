@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "apa_planner/apa_planner_base.h"
+#include "apa_planner_base.h"
 
 #include "frame.h"
 

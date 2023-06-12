@@ -2,8 +2,8 @@
 
 #include "planning_plan.pb.h"
 
-#include "apa_planner/apa_planner_base.h"
-#include "apa_planner/diagonal/diagonal_in_trajectory_generator.h"
+#include "apa_planner_base.h"
+#include "diagonal/diagonal_in_trajectory_generator.h"
 #include "frame.h"
 
 namespace planning {

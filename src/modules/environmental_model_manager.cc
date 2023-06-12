@@ -179,9 +179,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, 
       if (prediction_obj_id_set.find(obj.additional_info().track_id()) == prediction_obj_id_set.end()) {
         transform_fusion_to_prediction(obj, (double)local_view.fusion_objects_info.header().timestamp());
       }
-      last_feed_time_[FEED_FUSION_INFO] = local_view.fusion_objects_info_recv_time;
     }
-    last_feed_time_[FEED_PREDICTION_INFO] = local_view.prediction_result_recv_time;
   } else {
     int num = 0;
     for (auto &obj : local_view.fusion_objects_info.fusion_object()) {
@@ -194,9 +192,10 @@ bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, 
         continue;
       }
       transform_fusion_to_prediction(obj, (double)local_view.fusion_objects_info.header().timestamp());
-      last_feed_time_[FEED_FUSION_INFO] = local_view.fusion_objects_info_recv_time;
     }
   }
+  last_feed_time_[FEED_FUSION_INFO] = local_view.fusion_objects_info_recv_time;
+  last_feed_time_[FEED_PREDICTION_INFO] = local_view.prediction_result_recv_time;
 
   auto &prediction_map_info = session_->mutable_environmental_model()->get_mutable_surr_radar_prediction_info();
   prediction_map_info.clear();

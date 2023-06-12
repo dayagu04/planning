@@ -1,6 +1,6 @@
 #pragma once
 
-#include "apa_planner/apa_planner_dispatcher.h"
+#include "apa_planner_dispatcher.h"
 #include "frame.h"
 #include "module.h"
 
