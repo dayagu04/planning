@@ -241,12 +241,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
     vehicle_status.mutable_location()->mutable_location_enu()->mutable_orientation()->set_w(enu_orientation.qw());
     last_feed_time_[FEED_EGO_ENU] = local_view.localization_estimate_recv_time;
   } else {
-    if (vehicel_service_output_info.yaw_rate_available()) {
-      vehicle_status.mutable_heading_yaw()->mutable_heading_yaw_data()->set_value_rad(
-          vehicel_service_output_info.yaw_rate());
-    } else {
-      vehicle_status.mutable_heading_yaw()->mutable_heading_yaw_data()->set_value_rad(0);
-    }
+    vehicle_status.mutable_heading_yaw()->mutable_heading_yaw_data()->set_value_rad(0.);
     vehicle_status.mutable_location()->set_available(true);
     auto location_enu = vehicle_status.mutable_location()->mutable_location_enu();
     // Todo
@@ -265,6 +260,16 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
 
   // vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
   //     18.0);
+
+  if (vehicel_service_output_info.yaw_rate_available()) {
+    vehicle_status.mutable_angular_velocity()->set_available(true);
+    vehicle_status.mutable_angular_velocity()->mutable_heading_yaw_rate()
+                            ->set_value_rps(vehicel_service_output_info.yaw_rate());
+  } else {
+    vehicle_status.mutable_angular_velocity()->set_available(false);
+    vehicle_status.mutable_angular_velocity()->mutable_heading_yaw_rate()
+                            ->set_value_rps(0.);
+  }
 
   if (vehicel_service_output_info.vehicle_speed_available()) {
     vehicle_status.mutable_velocity()->set_available(true);
