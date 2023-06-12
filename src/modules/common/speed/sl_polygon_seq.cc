@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <utility>
-#include "math.h"
 #include "assert.h"
+#include "math.h"
 
 #include "math/linear_interpolation.h"
 #include "speed/sl_polygon_seq.h"
@@ -12,17 +12,14 @@ planning_math::IntervalMethodSolution<double> SLPolygonSeq::interval_methods_;
 
 SLPolygonSeq::SLPolygonSeq(std::vector<PolygonWithT> sl_polygon_points)
     : std::vector<PolygonWithT>(std::move(sl_polygon_points)) {
-  std::sort(begin(), end(), [](const PolygonWithT& p1, const PolygonWithT& p2) {
-    return p1.first < p2.first;
-  });
+  std::sort(begin(), end(), [](const PolygonWithT& p1, const PolygonWithT& p2) { return p1.first < p2.first; });
 }
 
-void SLPolygonSeq::set_invalid_time_sections(const std::vector<std::pair<double, double>> & secs) {
+void SLPolygonSeq::set_invalid_time_sections(const std::vector<std::pair<double, double>>& secs) {
   invalid_time_sections_ = secs;
 }
 
-bool SLPolygonSeq::EvaluateByTime(const double t,
-                                  PolygonWithT* const polygon_t) const {
+bool SLPolygonSeq::EvaluateByTime(const double t, PolygonWithT* const polygon_t) const {
   if (size() < 2) {
     return false;
   }
@@ -77,7 +74,7 @@ bool SLPolygonSeq::EvaluateByTime(const double t,
     const auto& p1_points = p1.second.points();
     // assert(p0_points.size() == p1_points.size());
     if (p0_points.size() != p1_points.size()) {
-      *polygon_t = t < (t0 + t1)/2.0 ? p0 : p1;
+      *polygon_t = t < (t0 + t1) / 2.0 ? p0 : p1;
       return true;
     }
     std::vector<planning_math::Vec2d> p_points;
@@ -92,7 +89,7 @@ bool SLPolygonSeq::EvaluateByTime(const double t,
       res.second = convex_polygon;
       *polygon_t = res;
     } else {
-      *polygon_t = t < (t0 + t1)/2.0 ? p0 : p1;
+      *polygon_t = t < (t0 + t1) / 2.0 ? p0 : p1;
     }
   }
   return true;
@@ -100,8 +97,8 @@ bool SLPolygonSeq::EvaluateByTime(const double t,
 
 void SLPolygonSeq::SetTimeStep(double time_step) {
   if (time_step > 0 && time_step < (back().first - front().first)) {
-      is_uniform_time_step_ = true;
-      time_step_ = time_step;
+    is_uniform_time_step_ = true;
+    time_step_ = time_step;
   }
 }
 
@@ -112,4 +109,4 @@ double SLPolygonSeq::TotalTime() const {
   return back().first - front().first;
 }
 
-} // namespace planning
+}  // namespace planning

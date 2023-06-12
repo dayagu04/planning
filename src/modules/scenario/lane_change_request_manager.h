@@ -1,13 +1,13 @@
 #pragma once
 
-#include "ifly_time.h"
-#include "session.h"
 #include "config/basic_type.h"
 #include "ego_planning_config.h"
+#include "ifly_time.h"
 #include "lane_change_requests/active_lane_change_request.h"
 #include "lane_change_requests/interactive_lane_change_request.h"
 #include "lane_change_requests/lane_change_request.h"
 #include "lane_change_requests/map_lane_change_request.h"
+#include "session.h"
 
 namespace planning {
 
@@ -18,11 +18,9 @@ class LaneChangeLaneManager;
 /// @brief 管理所有的换道请求
 class LaneChangeRequestManager {
  public:
-  LaneChangeRequestManager(
-      framework::Session* session,
-      const EgoPlanningConfigBuilder* config_builder,
-      std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
-      std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
+  LaneChangeRequestManager(framework::Session* session, const EgoPlanningConfigBuilder* config_builder,
+                           std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
+                           std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
   virtual ~LaneChangeRequestManager() = default;
 
   void FinishRequest();
@@ -36,8 +34,7 @@ class LaneChangeRequestManager {
   RequestType request() const { return request_; }
   RequestSource request_source() const { return request_source_; }
   std::string act_request_source() {
-    return request_source_ == ACT_REQUEST ? act_request_.act_request_source()
-                                          : "none";
+    return request_source_ == ACT_REQUEST ? act_request_.act_request_source() : "none";
   }
   int target_lane_virtual_id() { return target_lane_virtual_id_; }
   void set_target_lane_virtual_id(int target_lane_virtual_id) {

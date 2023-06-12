@@ -11,7 +11,7 @@
 namespace pnc {
 namespace identification {
 class FrequencySweepInput {
-public:
+ public:
   FrequencySweepInput(){};
   void SetParam(double T_stop, double f_start, double f_stop, double amp);
   void Tick(double time_now);
@@ -20,7 +20,7 @@ public:
   double GetSweepSignal() { return u_; }
   bool GetStopFlag() { return stop_flag_; };
 
-private:
+ private:
   /* parameters */
   double T_stop_;
   double f_start_;
@@ -37,6 +37,6 @@ private:
   bool stop_flag_;
 };
 
-} // namespace identification
-} // namespace pnc
+}  // namespace identification
+}  // namespace pnc
 #endif

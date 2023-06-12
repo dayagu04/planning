@@ -61,8 +61,7 @@ std::string demangle(const char* name) {
 std::string& serialize(std::string&& name) {
   static const std::string old_value = "::";
   static const std::string new_value = ".";
-  for (std::string::size_type pos(0); pos != std::string::npos;
-       pos += new_value.length()) {
+  for (std::string::size_type pos(0); pos != std::string::npos; pos += new_value.length()) {
     if ((pos = name.find(old_value, pos)) != std::string::npos) {
       name.replace(pos, old_value.length(), new_value);
     } else {

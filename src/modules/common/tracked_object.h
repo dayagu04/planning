@@ -221,6 +221,6 @@ struct LeadCars {
   TrackedObject *temp_lead_two;
 };
 
-} // namespace planning
+}  // namespace planning
 
 #endif

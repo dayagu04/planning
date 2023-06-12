@@ -5,12 +5,12 @@
 
 #include "common/config/basic_type.h"
 #include "common/define/planning_status.h"
+#include "context/ego_planning_config.h"
 #include "frame.h"
+#include "ifly_time.h"
 #include "scenario/lateral_behavior_object_selector.h"
 #include "scenario/scenario_state_machine.h"
 #include "session.h"
-#include "context/ego_planning_config.h"
-#include "ifly_time.h"
 
 namespace planning {
 namespace planner {
@@ -23,8 +23,7 @@ class GeneralPlanner {
   ~GeneralPlanner() = default;
 
  private:
-  void SetPlanningResult(const PlanningResult &ego_prediction_result,
-                         common::PlanningResult &pnc_result);
+  void SetPlanningResult(const PlanningResult &ego_prediction_result, common::PlanningResult &pnc_result);
   void ClearPlanningResult(common::PlanningResult &pnc_result);
 
   void UpdateFixLaneVirtualId();

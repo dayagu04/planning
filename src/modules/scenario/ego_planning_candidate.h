@@ -1,9 +1,9 @@
 #pragma once
 #include <iostream>
 
-#include "frame.h"
 #include "config/basic_type.h"
 #include "ego_planning_config.h"
+#include "frame.h"
 #include "scenario_state.h"
 
 namespace planning {
@@ -13,15 +13,11 @@ class PlanningResult;
 class EgoPlanningCandidate {
  public:
   EgoPlanningCandidate(planning::framework::Frame *frame);
-  const CoarsePlanningInfo &coarse_planning_info() const {
-    return coarse_planning_info_;
-  }
+  const CoarsePlanningInfo &coarse_planning_info() const { return coarse_planning_info_; }
 
   // prepare candidate information
-  void set_coarse_planning_info(
-      const StateTransitionContext &transition_context);
-  void set_last_planning_result(
-      const std::shared_ptr<PlanningResult> &planning_result);
+  void set_coarse_planning_info(const StateTransitionContext &transition_context);
+  void set_last_planning_result(const std::shared_ptr<PlanningResult> &planning_result);
 
   // check and refine
   bool pre_check();
@@ -40,8 +36,7 @@ class EgoPlanningCandidate {
 
  private:
   CoarsePlanningInfo coarse_planning_info_;
-  std::shared_ptr<PlanningResult> last_planning_result_ =
-      nullptr;
+  std::shared_ptr<PlanningResult> last_planning_result_ = nullptr;
   std::shared_ptr<TaskPipelineContext> pipeline_context_ = nullptr;
 
   bool success_ = false;

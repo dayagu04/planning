@@ -3,8 +3,8 @@
 #include <string>
 
 #include "common.pb.h"
-#include "planning_plan.pb.h"
 #include "planning_debug_info.pb.h"
+#include "planning_plan.pb.h"
 
 namespace planning {
 
@@ -15,9 +15,9 @@ struct Polyline {
   double c = 0.0;
   double d = 0.0;
   double vel = 10.0;
-  double t = 5.0; // 5.0s
+  double t = 5.0;  // 5.0s
   double dt = 0.1;
-  double corri_l = 0.5; // corridor size = 0.5m
+  double corri_l = 0.5;  // corridor size = 0.5m
 };
 
 struct DebugOutput {
@@ -34,4 +34,4 @@ struct DebugOutput {
   PlanningOutput::AccelerationRange acceleration;
   planning::common::PlanningDebugInfo data;
 };
-} // namespace planning
+}  // namespace planning

@@ -16,4 +16,4 @@ struct MSDWorldModelExtra {
   std::string json;
 };
 
-} // namespace planning
+}  // namespace planning

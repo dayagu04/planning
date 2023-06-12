@@ -1,10 +1,10 @@
 #pragma once
 
 #include "common.h"
+#include "object_source_data.h"
 #include "object_status.h"
 #include "object_type.h"
 #include "object_type_info.h"
-#include "object_source_data.h"
 
 namespace planning {
 
@@ -74,4 +74,4 @@ struct MSDPerceptionFusionResult {
   MSDPerceptionFusionObjects perception_fusion_objects;
 };
 
-} // namespace planning
+}  // namespace planning

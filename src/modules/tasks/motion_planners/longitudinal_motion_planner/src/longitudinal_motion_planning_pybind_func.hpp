@@ -1,12 +1,12 @@
-#include "longitudinal_motion_planning_problem.h"
-#include "math_lib.h"
-#include "spline.h"
-#include "transform.h"
 #include <cmath>
 #include <cstddef>
 #include <iostream>
 #include <numeric>
 #include <vector>
+#include "longitudinal_motion_planning_problem.h"
+#include "math_lib.h"
+#include "spline.h"
+#include "transform.h"
 
 namespace pnc {
 namespace longitudinal_planning {
@@ -47,7 +47,7 @@ struct PybindFuncParam {
 };
 
 class LongitudinalMotionPlanningPybindFunc {
-public:
+ public:
   // hack planning input
   void Update(PybindFuncParam &param) {
     const size_t N = 41;
@@ -75,21 +75,17 @@ public:
       if (i == 0) {
         planning_input_.ref_vel_vec.emplace_back(param.vel);
         planning_input_.ref_pos_vec.emplace_back(param.pos);
-        planning_input_.pos_max_vec.emplace_back(param.cipv_dist -
-                                                 back_to_rear);
+        planning_input_.pos_max_vec.emplace_back(param.cipv_dist - back_to_rear);
         planning_input_.pos_min_vec.emplace_back(0.0);
       } else {
-        planning_input_.ref_vel_vec.emplace_back(mathlib::Clamp(
-            param.set_vel,
-            planning_input_.ref_vel_vec.at(i - 1) + param.ref_acc_dec * dt,
-            planning_input_.ref_vel_vec.at(i - 1) + param.ref_acc_inc * dt));
+        planning_input_.ref_vel_vec.emplace_back(
+            mathlib::Clamp(param.set_vel, planning_input_.ref_vel_vec.at(i - 1) + param.ref_acc_dec * dt,
+                           planning_input_.ref_vel_vec.at(i - 1) + param.ref_acc_inc * dt));
 
-        planning_input_.ref_pos_vec.emplace_back(
-            planning_input_.ref_pos_vec.at(i - 1) +
-            planning_input_.ref_vel_vec.at(i) * dt);
+        planning_input_.ref_pos_vec.emplace_back(planning_input_.ref_pos_vec.at(i - 1) +
+                                                 planning_input_.ref_vel_vec.at(i) * dt);
 
-        planning_input_.pos_max_vec.emplace_back(
-            planning_input_.pos_max_vec.at(i - 1) + param.cipv_vel * dt);
+        planning_input_.pos_max_vec.emplace_back(planning_input_.pos_max_vec.at(i - 1) + param.cipv_vel * dt);
         planning_input_.pos_min_vec.emplace_back(0.0);
       }
 
@@ -129,12 +125,10 @@ public:
     planning_input_.init_state = x0;
   }
 
-  pnc::longitudinal_planning::LongitudinalMotionPlanningInput GetOutput() {
-    return planning_input_;
-  }
+  pnc::longitudinal_planning::LongitudinalMotionPlanningInput GetOutput() { return planning_input_; }
 
-private:
+ private:
   pnc::longitudinal_planning::LongitudinalMotionPlanningInput planning_input_;
 };
-} // namespace longitudinal_planning
-} // namespace pnc
+}  // namespace longitudinal_planning
+}  // namespace pnc

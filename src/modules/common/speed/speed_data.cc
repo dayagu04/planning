@@ -7,16 +7,11 @@
 
 namespace planning {
 
-SpeedData::SpeedData(std::vector<SpeedPoint> speed_points)
-    : std::vector<SpeedPoint>(std::move(speed_points)) {
-  std::sort(begin(), end(), [](const SpeedPoint& p1, const SpeedPoint& p2) {
-    return p1.t < p2.t;
-  });
+SpeedData::SpeedData(std::vector<SpeedPoint> speed_points) : std::vector<SpeedPoint>(std::move(speed_points)) {
+  std::sort(begin(), end(), [](const SpeedPoint& p1, const SpeedPoint& p2) { return p1.t < p2.t; });
 }
 
-void SpeedData::AppendSpeedPoint(const double s, const double time,
-                                 const double v, const double a,
-                                 const double da) {
+void SpeedData::AppendSpeedPoint(const double s, const double time, const double v, const double a, const double da) {
   if (!empty()) {
     assert(back().t < time);
   }
@@ -29,8 +24,7 @@ void SpeedData::AppendSpeedPoint(const double s, const double time,
   emplace_back(speed_point);
 }
 
-bool SpeedData::EvaluateByTime(const double t,
-                               SpeedPoint* const speed_point) const {
+bool SpeedData::EvaluateByTime(const double t, SpeedPoint* const speed_point) const {
   if (size() < 2) {
     return false;
   }
@@ -81,8 +75,7 @@ bool SpeedData::EvaluateByTime(const double t,
 // to this function must make sure that the speed profile is generated according
 // to const acc model and for each segment(begin and end speed point pair) the
 // acceleration is stored in the end speed point by default
-bool SpeedData::EvaluateByTimeWithConstAcc(
-    const double t, SpeedPoint* const speed_point) const {
+bool SpeedData::EvaluateByTimeWithConstAcc(const double t, SpeedPoint* const speed_point) const {
   if (size() < 2) {
     return false;
   }
@@ -121,8 +114,7 @@ bool SpeedData::EvaluateByTimeWithConstAcc(
 // to this function must make sure that the speed profile is generated according
 // to const jerk model and for each segment(begin and end speed point pair) the
 // jerk is stored in the end speed point by default
-bool SpeedData::EvaluateByTimeWithConstJerk(
-    const double t, SpeedPoint* const speed_point) const {
+bool SpeedData::EvaluateByTimeWithConstJerk(const double t, SpeedPoint* const speed_point) const {
   if (size() < 2) {
     return false;
   }
@@ -141,7 +133,7 @@ bool SpeedData::EvaluateByTimeWithConstJerk(
     const auto& p0 = *(it_lower - 1);
     const auto& p1 = *it_lower;
     double t0 = p0.t;
-//    double t1 = p1.t;
+    //    double t1 = p1.t;
 
     SpeedPoint res;
     res.t = t;
@@ -149,8 +141,7 @@ bool SpeedData::EvaluateByTimeWithConstJerk(
     res.da = (p1.a - p0.a) / (t - t0);
     res.a = p0.a + res.da * (t - t0);
     res.v = p0.v + p0.a * (t - t0) + 0.5 * res.da * std::pow(t - t0, 2);
-    res.s = p0.s + p0.v * (t - t0) + 0.5 * p0.a * std::pow(t - t0, 2) +
-            1 / 6 * res.da * std::pow(t - t0, 3);
+    res.s = p0.s + p0.v * (t - t0) + 0.5 * p0.a * std::pow(t - t0, 2) + 1 / 6 * res.da * std::pow(t - t0, 3);
     *speed_point = res;
   }
   return true;

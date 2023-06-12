@@ -1,11 +1,11 @@
 #include "reference_path.h"
 #include <cmath>
-#include "session.h"
 #include "ego_state_manager.h"
-#include "obstacle_manager.h"
-#include "math/math_utils.h"
-#include "vec2d.h"
 #include "ifly_time.h"
+#include "math/math_utils.h"
+#include "obstacle_manager.h"
+#include "session.h"
+#include "vec2d.h"
 namespace planning {
 
 ReferencePath::ReferencePath() { init(); }
@@ -25,16 +25,14 @@ void ReferencePath::init() {
 void ReferencePath::update(planning::framework::Session *session) {
   session_ = session;
   // Step 1) update ego state
-  frenet_ego_state_.update(
-      frenet_coord_, *session_->mutable_environmental_model()->get_ego_state_manager());
+  frenet_ego_state_.update(frenet_coord_, *session_->mutable_environmental_model()->get_ego_state_manager());
 
   // Step 2) update obstacles
   update_obstacles();
 }
 
 void ReferencePath::update_obstacles() {
-  auto obstacle_manager =
-      session_->mutable_environmental_model()->get_obstacle_manager();
+  auto obstacle_manager = session_->mutable_environmental_model()->get_obstacle_manager();
   obstacle_manager->generate_frenet_obstacles(*this);
 }
 
@@ -46,15 +44,14 @@ void ReferencePath::update_refpath_points(ReferencePathPoints &raw_ref_path_poin
   const double interp_gap_s = 2.0;
   // Step 1) update refined path points
   refined_ref_path_points_ = raw_ref_path_points;
-  if (is_need_density) { 
+  if (is_need_density) {
     densifying_refined_path_points(refined_ref_path_points_);
   }
 
   // Step 2) reset coord system from refined_ref_path_points_
   std::vector<Point2D> coord_points;
-  for(auto iter = refined_ref_path_points_.begin(); iter != refined_ref_path_points_.end();) {
-    if (std::isnan(iter->path_point.x) ||
-        std::isnan(iter->path_point.y)) {
+  for (auto iter = refined_ref_path_points_.begin(); iter != refined_ref_path_points_.end();) {
+    if (std::isnan(iter->path_point.x) || std::isnan(iter->path_point.y)) {
       LOG_ERROR("update_refpath_points: skip NaN point");
       refined_ref_path_points_.erase(iter);
       continue;
@@ -62,8 +59,7 @@ void ReferencePath::update_refpath_points(ReferencePathPoints &raw_ref_path_poin
     auto pt = Point2D(iter->path_point.x, iter->path_point.y);
     if (not coord_points.empty()) {
       auto &last_pt = coord_points.back();
-      if (planning_math::Vec2d(last_pt.x - pt.x, last_pt.y - pt.y).Length() <
-          1e-2) {
+      if (planning_math::Vec2d(last_pt.x - pt.x, last_pt.y - pt.y).Length() < 1e-2) {
         continue;
       }
     }
@@ -71,20 +67,18 @@ void ReferencePath::update_refpath_points(ReferencePathPoints &raw_ref_path_poin
     iter++;
   }
   // 需要检查coord_points数量是否满足要求，  frenet_coord_是否构建成功
-  frenet_coord_ = std::make_shared<FrenetCoordinateSystem>(coord_points,
-                                                           frenet_parameters_);
+  frenet_coord_ = std::make_shared<FrenetCoordinateSystem>(coord_points, frenet_parameters_);
 
   // Step 3) 1. update raw_ref_path_points' frenet points by frenet_coord_
   //         2. if s > interp_gap_s, it need interpolate
-  for(auto iter = raw_ref_path_points.begin(); iter != raw_ref_path_points.end();) {
+  for (auto iter = raw_ref_path_points.begin(); iter != raw_ref_path_points.end();) {
     if (std::isnan(iter->path_point.x) || std::isnan(iter->path_point.y)) {
       LOG_ERROR("raw_ref_path_points: skip NaN point");
       raw_ref_path_points.erase(iter);
       continue;
     }
     Point2D frenet_point;
-    if (frenet_coord_->CartCoord2FrenetCoord(
-            Point2D(iter->path_point.x, iter->path_point.y), frenet_point) ==
+    if (frenet_coord_->CartCoord2FrenetCoord(Point2D(iter->path_point.x, iter->path_point.y), frenet_point) ==
         TRANSFORM_SUCCESS) {
       if (iter != raw_ref_path_points.begin()) {
         iter->path_point.s = frenet_point.x;
@@ -95,7 +89,7 @@ void ReferencePath::update_refpath_points(ReferencePathPoints &raw_ref_path_poin
           LOG_ERROR("raw_ref_path_points frenet x is smaller");
           raw_ref_path_points.erase(iter);
           continue;
-        } else if (dist > interp_gap_s) {  //检验原始点的密度，如果点距离大于interp_gap_s，需要插值加密  
+        } else if (dist > interp_gap_s) {  //检验原始点的密度，如果点距离大于interp_gap_s，需要插值加密
           int num_point = ceil(dist / interp_gap_s - 1);
           double interpolate_s = dist / (num_point + 1);
           ReferencePathPoints ref_path_pts;
@@ -105,10 +99,10 @@ void ReferencePath::update_refpath_points(ReferencePathPoints &raw_ref_path_poin
             get_reference_point_by_lon_from_raw_ref_path_points(dis, raw_ref_path_points, ref_path_pt);
             ref_path_pts.emplace_back(std::move(ref_path_pt));
           }
-          iter = raw_ref_path_points.insert(iter, ref_path_pts.begin(), ref_path_pts.end());   
+          iter = raw_ref_path_points.insert(iter, ref_path_pts.begin(), ref_path_pts.end());
           iter += ref_path_pts.size();
         }
-      }    
+      }
     } else {
       LOG_ERROR("trasform raw_ref_path_points frenet Failed");
       raw_ref_path_points.erase(iter);
@@ -119,15 +113,14 @@ void ReferencePath::update_refpath_points(ReferencePathPoints &raw_ref_path_poin
 
   // Step 4) update refined_ref_path_points_ again
   if (is_need_density) {
-    for(auto iter = refined_ref_path_points_.begin(); iter != refined_ref_path_points_.end();) {
+    for (auto iter = refined_ref_path_points_.begin(); iter != refined_ref_path_points_.end();) {
       if (std::isnan(iter->path_point.x) || std::isnan(iter->path_point.y)) {
         refined_ref_path_points_.erase(iter);
         continue;
       }
-      if (iter != refined_ref_path_points_.begin() && iter->path_point.s > 
-          (iter - 1)->path_point.s) {
+      if (iter != refined_ref_path_points_.begin() && iter->path_point.s > (iter - 1)->path_point.s) {
         refined_ref_path_points_.erase(iter);
-        continue;         
+        continue;
       }
       get_reference_point_by_lon_from_raw_ref_path_points(iter->path_point.s, raw_ref_path_points, *iter);
       iter->path_point.kappa = frenet_coord_->GetRefCurveCurvature(iter->path_point.s);
@@ -135,11 +128,11 @@ void ReferencePath::update_refpath_points(ReferencePathPoints &raw_ref_path_poin
       // check direction
       if (iter != refined_ref_path_points_.begin()) {
         planning_math::Vec2d delta{iter->path_point.x - (iter - 1)->path_point.x,
-                    iter->path_point.y - (iter - 1)->path_point.y};
+                                   iter->path_point.y - (iter - 1)->path_point.y};
         planning_math::Vec2d cur_direction = planning_math::Vec2d::CreateUnitVec2d(iter->path_point.theta);
         if (cur_direction.InnerProd(delta) < 0) {
           refined_ref_path_points_.erase(iter);
-          continue;    
+          continue;
         }
       }
       ++iter;
@@ -163,8 +156,7 @@ void ReferencePath::densifying_refined_path_points(ReferencePathPoints &refined_
     y_points.push_back(ref_path_point.path_point.y);
   }
   for (size_t i = 0; i + 1 < x_points.size(); i++) {
-    double dist = std::sqrt(std::pow(x_points[i + 1] - x_points[i], 2) +
-                            std::pow(y_points[i + 1] - y_points[i], 2));
+    double dist = std::sqrt(std::pow(x_points[i + 1] - x_points[i], 2) + std::pow(y_points[i + 1] - y_points[i], 2));
     u_points.push_back(u_points[i] + dist);
   }
 
@@ -205,13 +197,12 @@ void ReferencePath::densifying_refined_path_points(ReferencePathPoints &refined_
       index++;
     }
     refined_ref_path_points.push_back(std::move(ref_path_pt));
-  } 
+  }
 }
 
 bool ReferencePath::is_obstacle_ignorable(const std::shared_ptr<FrenetObstacle> obstacle) {
   bool res{false};
-  if (obstacle->frenet_obstacle_boundary().s_end <
-      frenet_ego_state_.boundary().s_start) {
+  if (obstacle->frenet_obstacle_boundary().s_end < frenet_ego_state_.boundary().s_start) {
     if (obstacle->frenet_l() > frenet_ego_state_.boundary().l_start &&
         obstacle->frenet_l() < frenet_ego_state_.boundary().l_end) {
       res = true;
@@ -220,8 +211,7 @@ bool ReferencePath::is_obstacle_ignorable(const std::shared_ptr<FrenetObstacle> 
   return res;
 }
 
-bool ReferencePath::get_reference_point_by_lon(
-    double s, ReferencePathPoint &reference_path_point) const {
+bool ReferencePath::get_reference_point_by_lon(double s, ReferencePathPoint &reference_path_point) const {
   if (std::isnan(s) || s < refined_ref_path_points_.front().path_point.s ||
       s > refined_ref_path_points_.back().path_point.s) {
     return false;
@@ -239,50 +229,41 @@ bool ReferencePath::get_reference_point_by_lon(
   auto &pre_reference_point = refined_ref_path_points_[pos_idx];
   auto &next_reference_point = refined_ref_path_points_[pos_idx + 1];
 
-  auto interpolate_ratio = (next_reference_point.path_point.s - s) /
-                           (next_reference_point.path_point.s -
-                            pre_reference_point.path_point.s);
+  auto interpolate_ratio =
+      (next_reference_point.path_point.s - s) / (next_reference_point.path_point.s - pre_reference_point.path_point.s);
 
-  reference_path_point.distance_to_left_lane_border = planning_math::Interpolate(
-      pre_reference_point.distance_to_left_lane_border,
-      next_reference_point.distance_to_left_lane_border, interpolate_ratio);
-  reference_path_point.distance_to_right_lane_border = planning_math::Interpolate(
-      pre_reference_point.distance_to_right_lane_border,
-      next_reference_point.distance_to_right_lane_border, interpolate_ratio);
-  reference_path_point.distance_to_left_road_border = planning_math::Interpolate(
-      pre_reference_point.distance_to_left_road_border,
-      next_reference_point.distance_to_left_road_border, interpolate_ratio);
-  reference_path_point.distance_to_right_road_border = planning_math::Interpolate(
-      pre_reference_point.distance_to_right_road_border,
-      next_reference_point.distance_to_right_road_border, interpolate_ratio);
-  reference_path_point.path_point.x =
-      planning_math::Interpolate(pre_reference_point.path_point.x,
-                  next_reference_point.path_point.x, interpolate_ratio);
-  reference_path_point.path_point.y =
-      planning_math::Interpolate(pre_reference_point.path_point.y,
-                  next_reference_point.path_point.y, interpolate_ratio);
-  reference_path_point.path_point.z =
-      planning_math::Interpolate(pre_reference_point.path_point.z,
-                  next_reference_point.path_point.z, interpolate_ratio);
-  reference_path_point.path_point.kappa =
-      planning_math::Interpolate(pre_reference_point.path_point.kappa, next_reference_point.path_point.kappa,
-                  interpolate_ratio);
+  reference_path_point.distance_to_left_lane_border =
+      planning_math::Interpolate(pre_reference_point.distance_to_left_lane_border,
+                                 next_reference_point.distance_to_left_lane_border, interpolate_ratio);
+  reference_path_point.distance_to_right_lane_border =
+      planning_math::Interpolate(pre_reference_point.distance_to_right_lane_border,
+                                 next_reference_point.distance_to_right_lane_border, interpolate_ratio);
+  reference_path_point.distance_to_left_road_border =
+      planning_math::Interpolate(pre_reference_point.distance_to_left_road_border,
+                                 next_reference_point.distance_to_left_road_border, interpolate_ratio);
+  reference_path_point.distance_to_right_road_border =
+      planning_math::Interpolate(pre_reference_point.distance_to_right_road_border,
+                                 next_reference_point.distance_to_right_road_border, interpolate_ratio);
+  reference_path_point.path_point.x = planning_math::Interpolate(pre_reference_point.path_point.x,
+                                                                 next_reference_point.path_point.x, interpolate_ratio);
+  reference_path_point.path_point.y = planning_math::Interpolate(pre_reference_point.path_point.y,
+                                                                 next_reference_point.path_point.y, interpolate_ratio);
+  reference_path_point.path_point.z = planning_math::Interpolate(pre_reference_point.path_point.z,
+                                                                 next_reference_point.path_point.z, interpolate_ratio);
+  reference_path_point.path_point.kappa = planning_math::Interpolate(
+      pre_reference_point.path_point.kappa, next_reference_point.path_point.kappa, interpolate_ratio);
   reference_path_point.path_point.theta = planning_math::InterpolateAngle(
       pre_reference_point.path_point.theta, next_reference_point.path_point.theta, interpolate_ratio);
 
-  reference_path_point.lane_width = planning_math::Interpolate(
-      pre_reference_point.lane_width, next_reference_point.lane_width, interpolate_ratio);
+  reference_path_point.lane_width =
+      planning_math::Interpolate(pre_reference_point.lane_width, next_reference_point.lane_width, interpolate_ratio);
 
   reference_path_point.max_velocity = pre_reference_point.max_velocity;
 
-  reference_path_point.left_road_border_type =
-      next_reference_point.left_road_border_type;
-  reference_path_point.right_road_border_type =
-      next_reference_point.right_road_border_type;
-  reference_path_point.left_lane_border_type =
-      next_reference_point.left_lane_border_type;
-  reference_path_point.right_lane_border_type =
-      next_reference_point.right_lane_border_type;
+  reference_path_point.left_road_border_type = next_reference_point.left_road_border_type;
+  reference_path_point.right_road_border_type = next_reference_point.right_road_border_type;
+  reference_path_point.left_lane_border_type = next_reference_point.left_lane_border_type;
+  reference_path_point.right_lane_border_type = next_reference_point.right_lane_border_type;
 
   reference_path_point.path_point.s = s;
   reference_path_point.type = ReferencePathPointType::INTERPOLATE;
@@ -309,50 +290,41 @@ bool ReferencePath::get_reference_point_by_lon_from_raw_ref_path_points(
   auto &pre_reference_point = raw_reference_path_point[pos_idx];
   auto &next_reference_point = raw_reference_path_point[pos_idx + 1];
 
-  auto interpolate_ratio = (next_reference_point.path_point.s - s) /
-                           (next_reference_point.path_point.s -
-                            pre_reference_point.path_point.s);
+  auto interpolate_ratio =
+      (next_reference_point.path_point.s - s) / (next_reference_point.path_point.s - pre_reference_point.path_point.s);
 
-  reference_path_point.distance_to_left_lane_border = planning_math::Interpolate(
-      pre_reference_point.distance_to_left_lane_border,
-      next_reference_point.distance_to_left_lane_border, interpolate_ratio);
-  reference_path_point.distance_to_right_lane_border = planning_math::Interpolate(
-      pre_reference_point.distance_to_right_lane_border,
-      next_reference_point.distance_to_right_lane_border, interpolate_ratio);
-  reference_path_point.distance_to_left_road_border = planning_math::Interpolate(
-      pre_reference_point.distance_to_left_road_border,
-      next_reference_point.distance_to_left_road_border, interpolate_ratio);
-  reference_path_point.distance_to_right_road_border = planning_math::Interpolate(
-      pre_reference_point.distance_to_right_road_border,
-      next_reference_point.distance_to_right_road_border, interpolate_ratio);
-  reference_path_point.path_point.x =
-      planning_math::Interpolate(pre_reference_point.path_point.x,
-                  next_reference_point.path_point.x, interpolate_ratio);
-  reference_path_point.path_point.y =
-      planning_math::Interpolate(pre_reference_point.path_point.y,
-                  next_reference_point.path_point.y, interpolate_ratio);
-  reference_path_point.path_point.z =
-      planning_math::Interpolate(pre_reference_point.path_point.z,
-                  next_reference_point.path_point.z, interpolate_ratio);
-  reference_path_point.path_point.kappa =
-      planning_math::Interpolate(pre_reference_point.path_point.kappa, next_reference_point.path_point.kappa,
-                  interpolate_ratio);
+  reference_path_point.distance_to_left_lane_border =
+      planning_math::Interpolate(pre_reference_point.distance_to_left_lane_border,
+                                 next_reference_point.distance_to_left_lane_border, interpolate_ratio);
+  reference_path_point.distance_to_right_lane_border =
+      planning_math::Interpolate(pre_reference_point.distance_to_right_lane_border,
+                                 next_reference_point.distance_to_right_lane_border, interpolate_ratio);
+  reference_path_point.distance_to_left_road_border =
+      planning_math::Interpolate(pre_reference_point.distance_to_left_road_border,
+                                 next_reference_point.distance_to_left_road_border, interpolate_ratio);
+  reference_path_point.distance_to_right_road_border =
+      planning_math::Interpolate(pre_reference_point.distance_to_right_road_border,
+                                 next_reference_point.distance_to_right_road_border, interpolate_ratio);
+  reference_path_point.path_point.x = planning_math::Interpolate(pre_reference_point.path_point.x,
+                                                                 next_reference_point.path_point.x, interpolate_ratio);
+  reference_path_point.path_point.y = planning_math::Interpolate(pre_reference_point.path_point.y,
+                                                                 next_reference_point.path_point.y, interpolate_ratio);
+  reference_path_point.path_point.z = planning_math::Interpolate(pre_reference_point.path_point.z,
+                                                                 next_reference_point.path_point.z, interpolate_ratio);
+  reference_path_point.path_point.kappa = planning_math::Interpolate(
+      pre_reference_point.path_point.kappa, next_reference_point.path_point.kappa, interpolate_ratio);
   reference_path_point.path_point.theta = planning_math::InterpolateAngle(
       pre_reference_point.path_point.theta, next_reference_point.path_point.theta, interpolate_ratio);
-  
-  reference_path_point.lane_width = planning_math::Interpolate(
-      pre_reference_point.lane_width, next_reference_point.lane_width, interpolate_ratio);
+
+  reference_path_point.lane_width =
+      planning_math::Interpolate(pre_reference_point.lane_width, next_reference_point.lane_width, interpolate_ratio);
 
   reference_path_point.max_velocity = pre_reference_point.max_velocity;
 
-  reference_path_point.left_road_border_type =  
-      next_reference_point.left_road_border_type;
-  reference_path_point.right_road_border_type =
-      next_reference_point.right_road_border_type;
-  reference_path_point.left_lane_border_type =
-      next_reference_point.left_lane_border_type;
-  reference_path_point.right_lane_border_type =
-      next_reference_point.right_lane_border_type;
+  reference_path_point.left_road_border_type = next_reference_point.left_road_border_type;
+  reference_path_point.right_road_border_type = next_reference_point.right_road_border_type;
+  reference_path_point.left_lane_border_type = next_reference_point.left_lane_border_type;
+  reference_path_point.right_lane_border_type = next_reference_point.right_lane_border_type;
 
   reference_path_point.path_point.s = s;
   reference_path_point.type = ReferencePathPointType::INTERPOLATE;
@@ -360,8 +332,7 @@ bool ReferencePath::get_reference_point_by_lon_from_raw_ref_path_points(
   return true;
 }
 
-bool ReferencePath::transform_trajectory_points(
-    TrajectoryPoints &trajectory_points) const {
+bool ReferencePath::transform_trajectory_points(TrajectoryPoints &trajectory_points) const {
   bool ok = true;
   for (auto &traj_pt : trajectory_points) {
     auto success = transform_trajectory_point(traj_pt);
@@ -378,9 +349,7 @@ bool ReferencePath::transform_trajectory_point(TrajectoryPoint &traj_pt) const {
     return false;
   }
   Point2D frenet_point;
-  auto success =
-      frenet_coord_->CartCoord2FrenetCoord(Point2D{traj_pt.x, traj_pt.y},
-                                           frenet_point) == TRANSFORM_SUCCESS;
+  auto success = frenet_coord_->CartCoord2FrenetCoord(Point2D{traj_pt.x, traj_pt.y}, frenet_point) == TRANSFORM_SUCCESS;
   if (success) {
     traj_pt.s = frenet_point.x;
     traj_pt.l = frenet_point.y;

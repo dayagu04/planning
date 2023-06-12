@@ -1,11 +1,11 @@
 #ifndef MSQUARE_VISION_ONLY_DECISION_PLANNING_PLANNER_LANE_CHANGE_DECIDER_H_
 #define MSQUARE_VISION_ONLY_DECISION_PLANNING_PLANNER_LANE_CHANGE_DECIDER_H_
 
+#include "behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner_output.h"
 #include "environmental_model.h"
 #include "frame.h"
-#include "lateral_obstacle.h"
 #include "fusion_road.pb.h"
-#include "behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner_output.h"
+#include "lateral_obstacle.h"
 namespace planning {
 
 struct LaneChangeParams {
@@ -17,7 +17,7 @@ struct LaneChangeParams {
 
 // class VisionOnlyLaneChangeDecider : public Decider {
 class VisionOnlyLaneChangeDecider {
-public:
+ public:
   // explicit VisionOnlyLaneChangeDecider(const TaskConfig &config);
   explicit VisionOnlyLaneChangeDecider();
   // virtual void init(std::shared_ptr<WorldModel> world_model,
@@ -34,34 +34,26 @@ public:
   std::vector<GapInfo> get_gap_list() { return gap_list_; }
   double get_target_gap_cost() { return target_gap_cost_; }
 
-  void feed_config_and_target_cars(bool is_merging_, LaneChangeParams params,
-                                   double dis_to_change_point,
-                                   std::vector<TrackedObject *> &target_cars,
-                                   const TrackedObject *lead_one, double v_ego);
+  void feed_config_and_target_cars(bool is_merging_, LaneChangeParams params, double dis_to_change_point,
+                                   std::vector<TrackedObject *> &target_cars, const TrackedObject *lead_one,
+                                   double v_ego);
 
   TargetObstacle nearest_rear_car_track() { return nearest_rear_car_track_; };
 
   bool process();
 
-private:
+ private:
   bool is_on_target(const FrenetObstacleBoundary &sl_boundary);
-  GapInfo check_gap_valid(const TargetObstacle &rear_car,
-                          const TargetObstacle &front_car);
-  static bool compare_distance_asc(const TargetObstacle &obs1,
-                                   const TargetObstacle &obs2);
-  double calc_lane_width(const double &s,
-                         const std::vector<RefPointFrenet> &ref_line);
+  GapInfo check_gap_valid(const TargetObstacle &rear_car, const TargetObstacle &front_car);
+  static bool compare_distance_asc(const TargetObstacle &obs1, const TargetObstacle &obs2);
+  double calc_lane_width(const double &s, const std::vector<RefPointFrenet> &ref_line);
   double clip(const double x, const double lo, const double hi);
-  double calc_time_for_lane_change(TargetObstacle base_car,
-                                   TargetObstacle front_car, GapInfo gap_info,
-                                   const double safety_distance,
-                                   const double max_v);
+  double calc_time_for_lane_change(TargetObstacle base_car, TargetObstacle front_car, GapInfo gap_info,
+                                   const double safety_distance, const double max_v);
   double calc_desired_distance(const double v_lead, const double v_ego);
-  double calc_desired_speed(const double d_rel, const double d_des,
-                            const double v_lead);
+  double calc_desired_speed(const double d_rel, const double d_des, const double v_lead);
   static bool compare_cost_asc(const GapInfo &gap1, const GapInfo &gap2);
-  double interp(double x, const std::vector<double> &xp,
-                const std::vector<double> &fp);
+  double interp(double x, const std::vector<double> &xp, const std::vector<double> &fp);
 
   const std::vector<double> _T_GAP_VEGO_BP{5.0, 15.0, 30.0};
   const std::vector<double> _T_GAP_VEGO_V{1.35, 1.55, 2.0};
@@ -101,6 +93,6 @@ private:
   framework::Frame *frame_ = nullptr;
 };
 
-} // namespace planning
+}  // namespace planning
 
 #endif

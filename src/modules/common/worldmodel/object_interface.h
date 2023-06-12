@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 #include "../common/common.h"
-#include "perception_fusion_result.h"
 #include "object_status.h"
+#include "perception_fusion_result.h"
 // #include "object_type.h"
 
 namespace planning {
@@ -104,4 +104,4 @@ struct MSDObjectsInterface {
   MSDObjectsResult objects_result;
 };
 
-} // namespace planning
+}  // namespace planning

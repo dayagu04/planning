@@ -3,8 +3,8 @@
 
 #include "vec2d.h"
 // #include <boost/optional.hpp>
-#include <string>
 #include <string.h>
+#include <string>
 
 namespace planning {
 
@@ -74,7 +74,7 @@ typedef struct {
 } ObjectAvoid;
 
 class ObjectDecisionType {
-public:
+ public:
   explicit ObjectDecisionType() { object_tag_case_ = OBJECT_TAG_NOT_SET; }
 
   ~ObjectDecisionType() = default;
@@ -84,7 +84,7 @@ public:
   bool has_yield() const { return !yield_.set_flag ? false : true; }
   bool has_follow() const { return !follow_.set_flag ? false : true; }
   bool has_overtake() const { return !overtake_.set_flag ? false : true; }
-  bool has_avoid() const { return !avoid_ .set_flag? false : true; }
+  bool has_avoid() const { return !avoid_.set_flag ? false : true; }
   bool has_ignore() const { return !ignore_.set_flag ? false : true; }
 
   ObjectStop *mutable_stop() {
@@ -198,24 +198,13 @@ public:
     ignore_ = ignore;
     object_tag_case_ = kIgnore;
   }
-  void setDecisionSource(std::string module_name) {
-    decision_source_ = module_name;
-  }
+  void setDecisionSource(std::string module_name) { decision_source_ = module_name; }
 
-  enum ObjectTagCase {
-    kIgnore,
-    kOvertake,
-    kFollow,
-    kYield,
-    kStop,
-    kNudge,
-    kAvoid,
-    OBJECT_TAG_NOT_SET
-  };
+  enum ObjectTagCase { kIgnore, kOvertake, kFollow, kYield, kStop, kNudge, kAvoid, OBJECT_TAG_NOT_SET };
 
   ObjectTagCase object_tag_case() const { return object_tag_case_; }
 
-private:
+ private:
   ObjectStop stop_;
   ObjectNudge nudge_;
   ObjectYield yield_;
@@ -227,5 +216,5 @@ private:
   std::string decision_source_;
 };
 
-} // namespace planning
+}  // namespace planning
 #endif /* MODULES_PLANNING_OPTIMIZERS_OBJECT_DECISION_TYPE_H_ */

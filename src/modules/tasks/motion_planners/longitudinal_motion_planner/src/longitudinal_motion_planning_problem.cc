@@ -29,36 +29,25 @@ void LongitudinalMotionPlanningProblem::Init() {
   init_state_.resize(STATE_SIZE);
   // STEP 1: init core with solver config
   ilqr_core_ptr_ = std::make_shared<iLqr>();
-  ilqr_core_ptr_->Init(std::make_shared<LongitudinalMotionPlanningModel>(),
-                       solver_config);
+  ilqr_core_ptr_->Init(std::make_shared<LongitudinalMotionPlanningModel>(), solver_config);
 
   // STEP 2: add cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<ReferenceCostTerm>()); // reference cost for s and v
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<LonAccCostTerm>()); // longitudinal acc cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<LonJerkCostTerm>()); // longitudinal jerk cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<LonPosBoundCostTerm>()); // longitudinal pos bound cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<LonVelBoundCostTerm>()); // longitudinal vel bound cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<LonAccBoundCostTerm>()); // longitudinal acc bound cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<LonJerkBoundCostTerm>()); // longitudinal jerk bound
-                                                 // cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<LonStopPointCost>()); // longitudinal stop point cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<LonSnapCostTerm>()); // longitudinal snap cost cost
+  ilqr_core_ptr_->AddCost(std::make_shared<ReferenceCostTerm>());     // reference cost for s and v
+  ilqr_core_ptr_->AddCost(std::make_shared<LonAccCostTerm>());        // longitudinal acc cost
+  ilqr_core_ptr_->AddCost(std::make_shared<LonJerkCostTerm>());       // longitudinal jerk cost
+  ilqr_core_ptr_->AddCost(std::make_shared<LonPosBoundCostTerm>());   // longitudinal pos bound cost
+  ilqr_core_ptr_->AddCost(std::make_shared<LonVelBoundCostTerm>());   // longitudinal vel bound cost
+  ilqr_core_ptr_->AddCost(std::make_shared<LonAccBoundCostTerm>());   // longitudinal acc bound cost
+  ilqr_core_ptr_->AddCost(std::make_shared<LonJerkBoundCostTerm>());  // longitudinal jerk bound
+                                                                      // cost
+  ilqr_core_ptr_->AddCost(std::make_shared<LonStopPointCost>());      // longitudinal stop point cost
+  ilqr_core_ptr_->AddCost(std::make_shared<LonSnapCostTerm>());       // longitudinal snap cost cost
 
   // STEP 3: init debug info, must run after add cost
   ilqr_core_ptr_->InitAdvancedInfo();
 }
 
-uint8_t LongitudinalMotionPlanningProblem::Update(
-    planning::common::LongitudinalPlanningInput &planning_input) {
+uint8_t LongitudinalMotionPlanningProblem::Update(planning::common::LongitudinalPlanningInput &planning_input) {
   // set cost config
   const size_t N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
 
@@ -105,13 +94,12 @@ uint8_t LongitudinalMotionPlanningProblem::Update(
   ilqr_core_ptr_->SetCostConfig(cost_config_vec);
 
   // solve the ilqr problem
-  init_state_ << planning_input.init_state().s(),
-      planning_input.init_state().v(), planning_input.init_state().a(),
+  init_state_ << planning_input.init_state().s(), planning_input.init_state().v(), planning_input.init_state().a(),
       planning_input.init_state().j();
   ilqr_core_ptr_->Solve(init_state_);
 
   return true;
 }
 
-} // namespace longitudinal_planning
-} // namespace pnc
+}  // namespace longitudinal_planning
+}  // namespace pnc

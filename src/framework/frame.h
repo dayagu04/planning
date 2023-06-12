@@ -1,8 +1,8 @@
 #ifndef ZNQC_FRAMEWORK_FRAME_H
 #define ZNQC_FRAMEWORK_FRAME_H
 
-#include "macro.h"
 #include "arena.h"
+#include "macro.h"
 #include "session.h"
 
 namespace planning {
@@ -16,6 +16,7 @@ class Frame : public planning::common::Arena {
 
   const Session* session() const { return session_; }
   Session* mutable_session() { return session_; }
+
  private:
   Session* session_;
 

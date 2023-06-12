@@ -12,20 +12,18 @@ namespace pnc {
 namespace spline {
 
 class QuinticPolynominalPath {
-public:
-  void SetPoints(const Eigen::Vector2d &x0, const Eigen::Vector2d &xT,
-                 const Eigen::Vector2d &dx0, const Eigen::Vector2d &dxT,
-                 const Eigen::Vector2d &ddx0, const Eigen::Vector2d &ddxT,
-                 const double T);
+ public:
+  void SetPoints(const Eigen::Vector2d &x0, const Eigen::Vector2d &xT, const Eigen::Vector2d &dx0,
+                 const Eigen::Vector2d &dxT, const Eigen::Vector2d &ddx0, const Eigen::Vector2d &ddxT, const double T);
 
   Eigen::Vector2d operator()(double t) const;
 
-private:
+ private:
   Eigen::Matrix<double, 6, 1> coef_x_;
   Eigen::Matrix<double, 6, 1> coef_y_;
   Eigen::Matrix<double, 6, 1> T_;
 };
-} // namespace spline
-} // namespace pnc
+}  // namespace spline
+}  // namespace pnc
 
 #endif

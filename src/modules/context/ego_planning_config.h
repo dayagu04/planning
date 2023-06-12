@@ -15,13 +15,11 @@ struct Config;
 
 class EgoPlanningConfigBuilder {
  public:
-  explicit EgoPlanningConfigBuilder(const Json &json, const char *name)
-      : json_(json), name_(name) {}
+  explicit EgoPlanningConfigBuilder(const Json &json, const char *name) : json_(json), name_(name) {}
 
   template <typename T>
   T cast() const {
-    static_assert(std::is_base_of<Config, T>::value,
-                  "cast only works on derived Config");
+    static_assert(std::is_base_of<Config, T>::value, "cast only works on derived Config");
     T target;
     target.init(json_);
     std::cout << "created" << typeid(T).name() << std::endl;
@@ -70,8 +68,7 @@ T read_json_keys(const Json &json, const std::vector<std::string> &keys) {
 }
 
 template <typename T>
-T read_json_keys(const Json &json, const std::vector<std::string> &keys,
-                 T default_value) {
+T read_json_keys(const Json &json, const std::vector<std::string> &keys, T default_value) {
   if (keys.empty()) return default_value;
   Json json_new = json;
   for (int i = 0; i < (int)keys.size() - 1; i++) {
@@ -87,8 +84,7 @@ T read_json_keys(const Json &json, const std::vector<std::string> &keys,
 }
 
 template <typename T>
-void read_json_vec(const Json &json, const std::string &key,
-                   std::vector<T> &vec,
+void read_json_vec(const Json &json, const std::string &key, std::vector<T> &vec,
                    const std::vector<T> &default_vec = {}) {
   if (json.find(key) != json.end()) {
     for (size_t i = 0; i < json[key].size(); i++) {
@@ -106,11 +102,9 @@ struct Config {
 /***************************************************************************************/
 struct EgoPlanningConfig : public Config {
   void init(const Json &json) override {
-    enable_raw_ego_prediction =
-        read_json_key<bool>(json, "enable_raw_ego_prediction");
+    enable_raw_ego_prediction = read_json_key<bool>(json, "enable_raw_ego_prediction");
     enable_dagger = read_json_key<bool>(json, "enable_dagger");
-    use_ego_prediction_model_in_planning = read_json_key<bool>(
-        json, "use_ego_prediction_model_in_planning", false);
+    use_ego_prediction_model_in_planning = read_json_key<bool>(json, "use_ego_prediction_model_in_planning", false);
     enable_NOA = read_json_key<bool>(json, "enable_NOA");
   }
   bool enable_raw_ego_prediction = false;
@@ -157,45 +151,31 @@ struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     // /* read config from json */
-    ready_remain_time = read_json_keys<int>(
-        json, std::vector<std::string>{"display_state", "ready_remain_time"});
-    wait_remain_time = read_json_keys<int>(
-        json, std::vector<std::string>{"display_state", "wait_remain_time"});
-    int_rqt_cnt_threshold = read_json_keys<int>(
-        json,
-        std::vector<std::string>{"int_request", "request_count_threshold"});
-    map_int_cancel_freeze_cnt = read_json_keys<int>(
-        json,
-        std::vector<std::string>{"int_request", "map_int_cancel_freeze_cnt"});
-    model_int_cancel_freeze_cnt = read_json_keys<int>(
-        json,
-        std::vector<std::string>{"int_request", "model_int_cancel_freeze_cnt"});
-    finish_remain_time = read_json_keys<int>(
-        json, std::vector<std::string>{"display_state", "finish_remain_time"});
-    enable_confirm_mode = read_json_keys<bool>(
-        json, std::vector<std::string>{"confirm_mode", "enable_confirm_mode"});
-    map_confirm_cancel_freeze_cnt = read_json_keys<int>(
-        json, std::vector<std::string>{"confirm_mode",
-                                       "map_confirm_cancel_freeze_cnt"});
-    model_confirm_cancel_freeze_cnt = read_json_keys<int>(
-        json, std::vector<std::string>{"confirm_mode",
-                                       "model_confirm_cancel_freeze_cnt"});
-    enalbe_display_function = read_json_keys<bool>(
-        json,
-        std::vector<std::string>{"display_state", "enable_display_function"});
-    int_vel_limit = read_json_keys<double>(
-        json, std::vector<std::string>{"int_request", "int_vel_limit"});
-    into_ramp_threshold = read_json_keys<double>(
-        json, std::vector<std::string>{"display_state", "into_ramp_threshold"});
-    close_to_split_merge_threshold = read_json_keys<double>(
-        json, std::vector<std::string>{"display_state",
-                                       "close_to_split_merge_threshold"});
-    avoid_truck_time_distance_threshold = read_json_keys<double>(
-        json, std::vector<std::string>{"display_state",
-                                       "avoid_truck_time_distance_threshold"});
-    enable_int_request_function = read_json_keys<bool>(
-        json,
-        std::vector<std::string>{"int_request", "enable_int_request_function"});
+    ready_remain_time = read_json_keys<int>(json, std::vector<std::string>{"display_state", "ready_remain_time"});
+    wait_remain_time = read_json_keys<int>(json, std::vector<std::string>{"display_state", "wait_remain_time"});
+    int_rqt_cnt_threshold =
+        read_json_keys<int>(json, std::vector<std::string>{"int_request", "request_count_threshold"});
+    map_int_cancel_freeze_cnt =
+        read_json_keys<int>(json, std::vector<std::string>{"int_request", "map_int_cancel_freeze_cnt"});
+    model_int_cancel_freeze_cnt =
+        read_json_keys<int>(json, std::vector<std::string>{"int_request", "model_int_cancel_freeze_cnt"});
+    finish_remain_time = read_json_keys<int>(json, std::vector<std::string>{"display_state", "finish_remain_time"});
+    enable_confirm_mode = read_json_keys<bool>(json, std::vector<std::string>{"confirm_mode", "enable_confirm_mode"});
+    map_confirm_cancel_freeze_cnt =
+        read_json_keys<int>(json, std::vector<std::string>{"confirm_mode", "map_confirm_cancel_freeze_cnt"});
+    model_confirm_cancel_freeze_cnt =
+        read_json_keys<int>(json, std::vector<std::string>{"confirm_mode", "model_confirm_cancel_freeze_cnt"});
+    enalbe_display_function =
+        read_json_keys<bool>(json, std::vector<std::string>{"display_state", "enable_display_function"});
+    int_vel_limit = read_json_keys<double>(json, std::vector<std::string>{"int_request", "int_vel_limit"});
+    into_ramp_threshold =
+        read_json_keys<double>(json, std::vector<std::string>{"display_state", "into_ramp_threshold"});
+    close_to_split_merge_threshold =
+        read_json_keys<double>(json, std::vector<std::string>{"display_state", "close_to_split_merge_threshold"});
+    avoid_truck_time_distance_threshold =
+        read_json_keys<double>(json, std::vector<std::string>{"display_state", "avoid_truck_time_distance_threshold"});
+    enable_int_request_function =
+        read_json_keys<bool>(json, std::vector<std::string>{"int_request", "enable_int_request_function"});
     enable_hnp_function = read_json_key<bool>(json, "enable_hnp_functions");
   }
 
@@ -307,25 +287,16 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
     velocity_upper_bound = read_json_key<double>(json, "velocity_upper_bound");
-    velocity_upper_bound_scale_rate =
-        read_json_key<double>(json, "velocity_upper_bound_scale_rate");
-    acceleration_upper_bound =
-        read_json_key<double>(json, "acceleration_upper_bound");
-    stop_distance_to_destination =
-        read_json_key<double>(json, "stop_distance_to_destination");
-    velocity_limit_parking =
-        read_json_key<double>(json, "velocity_limit_parking");
-    pnp_collision_threshold =
-        read_json_key<double>(json, "pnp_collision_threshold");
+    velocity_upper_bound_scale_rate = read_json_key<double>(json, "velocity_upper_bound_scale_rate");
+    acceleration_upper_bound = read_json_key<double>(json, "acceleration_upper_bound");
+    stop_distance_to_destination = read_json_key<double>(json, "stop_distance_to_destination");
+    velocity_limit_parking = read_json_key<double>(json, "velocity_limit_parking");
+    pnp_collision_threshold = read_json_key<double>(json, "pnp_collision_threshold");
     lon_care_length = read_json_key<double>(json, "lon_care_length");
-    lon_max_ignore_relative_time =
-        read_json_key<double>(json, "lon_max_ignore_relative_time");
-    rads_stop_distance_to_destination =
-        read_json_key<double>(json, "rads_stop_distance_to_destination");
-    narrow_space_width_stop_thrshld =
-        read_json_key<double>(json, "narrow_space_width_stop_thrshld");
-    narrow_space_distance_stop_thrshld =
-        read_json_key<double>(json, "narrow_space_distance_stop_thrshld");
+    lon_max_ignore_relative_time = read_json_key<double>(json, "lon_max_ignore_relative_time");
+    rads_stop_distance_to_destination = read_json_key<double>(json, "rads_stop_distance_to_destination");
+    narrow_space_width_stop_thrshld = read_json_key<double>(json, "narrow_space_width_stop_thrshld");
+    narrow_space_distance_stop_thrshld = read_json_key<double>(json, "narrow_space_distance_stop_thrshld");
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -363,66 +334,42 @@ struct AdaptiveCruiseControlConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    kMaxCentrifugalAcceleration = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"acc_control", "kMaxCentrifugalAcceleration"});
-    enable_navi_speed_control = read_json_keys<bool>(
-        json,
-        std::vector<std::string>{"acc_control", "enable_navi_speed_control"});
-    enable_navi_time_distance_control = read_json_keys<bool>(
-        json, std::vector<std::string>{"acc_control",
-                                       "enable_navi_time_distance_control"});
-    v_ratio_threshold = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "v_ratio_threshold"});
-    t_cons = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "t_cons"});
-    gain_tg = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "gain_tg"});
-    dv_down = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "dv_down"});
-    gain_s = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "gain_s"});
-    gain_v = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "gain_v"});
-    v_max_able = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "v_max_able"});
-    v_min_able = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "v_min_able"});
-    obstacle_max_brake = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "obstacle_max_brake"});
-    kMinCurvature = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "kMinCurvature"});
-    s_rel_threshold = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "s_rel_threshold"});
+    kMaxCentrifugalAcceleration =
+        read_json_keys<double>(json, std::vector<std::string>{"acc_control", "kMaxCentrifugalAcceleration"});
+    enable_navi_speed_control =
+        read_json_keys<bool>(json, std::vector<std::string>{"acc_control", "enable_navi_speed_control"});
+    enable_navi_time_distance_control =
+        read_json_keys<bool>(json, std::vector<std::string>{"acc_control", "enable_navi_time_distance_control"});
+    v_ratio_threshold = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "v_ratio_threshold"});
+    t_cons = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "t_cons"});
+    gain_tg = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "gain_tg"});
+    dv_down = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "dv_down"});
+    gain_s = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "gain_s"});
+    gain_v = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "gain_v"});
+    v_max_able = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "v_max_able"});
+    v_min_able = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "v_min_able"});
+    obstacle_max_brake = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "obstacle_max_brake"});
+    kMinCurvature = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "kMinCurvature"});
+    s_rel_threshold = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "s_rel_threshold"});
     enable_hnp_functions = read_json_key<bool>(json, "enable_hnp_functions");
-    jerk_set_accel = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "jerk_set_accel"});
-    jerk_set_brake = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "jerk_set_brake"});
-    dx_ref_weight = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "dx_ref_weight"});
-    acc_jerk_control_num = read_json_keys<size_t>(
-        json, std::vector<std::string>{"acc_control", "acc_jerk_control_num"});
-    acc_set_a = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "acc_set_a"});
-    s_set_a = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "s_set_a"});
-    time_distance_aggresive = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"acc_control", "time_distance_aggresive"});
-    time_distance_moderate_aggresive = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control",
-                                       "time_distance_moderate_aggresive"});
-    time_distance_normal = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "time_distance_normal"});
-    time_distance_moderate_conservative = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control",
-                                       "time_distance_moderate_conservative"});
-    time_distance_conservcative = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"acc_control", "time_distance_conservcative"});
-    max_curvatrue_fixed = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "max_curvatrue_fixed"});
+    jerk_set_accel = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "jerk_set_accel"});
+    jerk_set_brake = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "jerk_set_brake"});
+    dx_ref_weight = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "dx_ref_weight"});
+    acc_jerk_control_num =
+        read_json_keys<size_t>(json, std::vector<std::string>{"acc_control", "acc_jerk_control_num"});
+    acc_set_a = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "acc_set_a"});
+    s_set_a = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "s_set_a"});
+    time_distance_aggresive =
+        read_json_keys<double>(json, std::vector<std::string>{"acc_control", "time_distance_aggresive"});
+    time_distance_moderate_aggresive =
+        read_json_keys<double>(json, std::vector<std::string>{"acc_control", "time_distance_moderate_aggresive"});
+    time_distance_normal =
+        read_json_keys<double>(json, std::vector<std::string>{"acc_control", "time_distance_normal"});
+    time_distance_moderate_conservative =
+        read_json_keys<double>(json, std::vector<std::string>{"acc_control", "time_distance_moderate_conservative"});
+    time_distance_conservcative =
+        read_json_keys<double>(json, std::vector<std::string>{"acc_control", "time_distance_conservcative"});
+    max_curvatrue_fixed = read_json_keys<double>(json, std::vector<std::string>{"acc_control", "max_curvatrue_fixed"});
   }
 
   double t_cons = 0.9;
@@ -458,20 +405,14 @@ struct StartStopEnableConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    enable_start_stop_function = read_json_keys<bool>(
-        json,
-        std::vector<std::string>{"start_stop", "enable_start_stop_function"});
+    enable_start_stop_function =
+        read_json_keys<bool>(json, std::vector<std::string>{"start_stop", "enable_start_stop_function"});
     enable_hnp_functions = read_json_key<bool>(json, "enable_hnp_functions");
-    ego_stop_v = read_json_keys<double>(
-        json, std::vector<std::string>{"start_stop", "ego_stop_v"});
-    leadone_s_lower = read_json_keys<double>(
-        json, std::vector<std::string>{"start_stop", "leadone_s_lower"});
-    leadone_s_upper = read_json_keys<double>(
-        json, std::vector<std::string>{"start_stop", "leadone_s_upper"});
-    leadone_v_threshold = read_json_keys<double>(
-        json, std::vector<std::string>{"start_stop", "leadone_v_threshold"});
-    dx_ref_weight = read_json_keys<double>(
-        json, std::vector<std::string>{"start_stop", "dx_ref_weight"});
+    ego_stop_v = read_json_keys<double>(json, std::vector<std::string>{"start_stop", "ego_stop_v"});
+    leadone_s_lower = read_json_keys<double>(json, std::vector<std::string>{"start_stop", "leadone_s_lower"});
+    leadone_s_upper = read_json_keys<double>(json, std::vector<std::string>{"start_stop", "leadone_s_upper"});
+    leadone_v_threshold = read_json_keys<double>(json, std::vector<std::string>{"start_stop", "leadone_v_threshold"});
+    dx_ref_weight = read_json_keys<double>(json, std::vector<std::string>{"start_stop", "dx_ref_weight"});
   }
 
   bool enable_start_stop_function = false;
@@ -485,53 +426,35 @@ struct StartStopEnableConfig : public EgoPlanningConfig {
 
 struct MrcConditionConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
-    enable_mrc_condition = read_json_keys<bool>(
-        json, std::vector<std::string>{"mrc_condition", "enable_mrc_condition"},
-        enable_mrc_condition);
-    fcw_threshold = read_json_keys<double>(
-        json, std::vector<std::string>{"mrc_condition", "fcw_threshold"},
-        fcw_threshold);
-    a_brake_slow = read_json_keys<double>(
-        json, std::vector<std::string>{"mrc_condition", "a_brake_slow"},
-        a_brake_slow);
-    a_brake_hard = read_json_keys<double>(
-        json, std::vector<std::string>{"mrc_condition", "a_brake_hard"},
-        a_brake_hard);
-    a_brake_emergency = read_json_keys<double>(
-        json, std::vector<std::string>{"mrc_condition", "a_brake_emergency"},
-        a_brake_emergency);
-    jerk_brake_slow = read_json_keys<double>(
-        json, std::vector<std::string>{"mrc_condition", "jerk_brake_slow"},
-        jerk_brake_slow);
-    jerk_brake_hard = read_json_keys<double>(
-        json, std::vector<std::string>{"mrc_condition", "jerk_brake_hard"},
-        jerk_brake_hard);
+    enable_mrc_condition = read_json_keys<bool>(json, std::vector<std::string>{"mrc_condition", "enable_mrc_condition"},
+                                                enable_mrc_condition);
+    fcw_threshold =
+        read_json_keys<double>(json, std::vector<std::string>{"mrc_condition", "fcw_threshold"}, fcw_threshold);
+    a_brake_slow =
+        read_json_keys<double>(json, std::vector<std::string>{"mrc_condition", "a_brake_slow"}, a_brake_slow);
+    a_brake_hard =
+        read_json_keys<double>(json, std::vector<std::string>{"mrc_condition", "a_brake_hard"}, a_brake_hard);
+    a_brake_emergency =
+        read_json_keys<double>(json, std::vector<std::string>{"mrc_condition", "a_brake_emergency"}, a_brake_emergency);
+    jerk_brake_slow =
+        read_json_keys<double>(json, std::vector<std::string>{"mrc_condition", "jerk_brake_slow"}, jerk_brake_slow);
+    jerk_brake_hard =
+        read_json_keys<double>(json, std::vector<std::string>{"mrc_condition", "jerk_brake_hard"}, jerk_brake_hard);
     jerk_brake_emergency = read_json_keys<double>(
-        json, std::vector<std::string>{"mrc_condition", "jerk_brake_emergency"},
-        jerk_brake_emergency);
-    time_out_threshold = read_json_keys<double>(
-        json, std::vector<std::string>{"mrc_condition", "time_out_threshold"},
-        time_out_threshold);
+        json, std::vector<std::string>{"mrc_condition", "jerk_brake_emergency"}, jerk_brake_emergency);
+    time_out_threshold = read_json_keys<double>(json, std::vector<std::string>{"mrc_condition", "time_out_threshold"},
+                                                time_out_threshold);
     split_merge_dist_threshold = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"mrc_condition", "split_merge_dist_threshold"},
-        split_merge_dist_threshold);
-    ramp_dist_threshold = read_json_keys<double>(
-        json, std::vector<std::string>{"mrc_condition", "ramp_dist_threshold"},
-        ramp_dist_threshold);
+        json, std::vector<std::string>{"mrc_condition", "split_merge_dist_threshold"}, split_merge_dist_threshold);
+    ramp_dist_threshold = read_json_keys<double>(json, std::vector<std::string>{"mrc_condition", "ramp_dist_threshold"},
+                                                 ramp_dist_threshold);
     tunnel_dist_threshold = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"mrc_condition", "tunnel_dist_threshold"},
-        tunnel_dist_threshold);
-    construction_zone_dist_threshold = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"mrc_condition",
-                                 "construction_zone_dist_threshold"},
-        construction_zone_dist_threshold);
+        json, std::vector<std::string>{"mrc_condition", "tunnel_dist_threshold"}, tunnel_dist_threshold);
+    construction_zone_dist_threshold =
+        read_json_keys<double>(json, std::vector<std::string>{"mrc_condition", "construction_zone_dist_threshold"},
+                               construction_zone_dist_threshold);
     v_pull_over_threshold = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"mrc_condition", "v_pull_over_threshold"},
-        v_pull_over_threshold);
+        json, std::vector<std::string>{"mrc_condition", "v_pull_over_threshold"}, v_pull_over_threshold);
   }
 
   bool enable_mrc_condition = false;
@@ -601,10 +524,8 @@ struct MapRequestConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    aggressive_lane_change_distance_highway =
-        read_json_key<double>(json, "aggressive_lane_change_distance_highway");
-    aggressive_lane_change_distance_urban =
-        read_json_key<double>(json, "aggressive_lane_change_distance_urban");
+    aggressive_lane_change_distance_highway = read_json_key<double>(json, "aggressive_lane_change_distance_highway");
+    aggressive_lane_change_distance_urban = read_json_key<double>(json, "aggressive_lane_change_distance_urban");
   }
   double aggressive_lane_change_distance_highway{0.0};
   double aggressive_lane_change_distance_urban{0.0};
@@ -614,9 +535,8 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    enable_bbox_mode = read_json_key<bool>(
-        json, "enable_bbox_mode",
-        enable_bbox_mode);  // obstacle boundary construction
+    enable_bbox_mode = read_json_key<bool>(json, "enable_bbox_mode",
+                                           enable_bbox_mode);  // obstacle boundary construction
   }
   double frenet_obstacle_range_s_min = -30.0;
   double frenet_obstacle_range_s_max = 100.0;
@@ -646,8 +566,7 @@ struct EgoPlanningTaskPipelineConfig : public EgoPlanningConfig {
   }
 };
 
-struct EgoPlanningTaskPipelineNormalConfig
-    : public EgoPlanningTaskPipelineConfig {
+struct EgoPlanningTaskPipelineNormalConfig : public EgoPlanningTaskPipelineConfig {
   void init(const Json &json) override {
     EgoPlanningTaskPipelineConfig::init(json);
     /* read config from json */
@@ -658,8 +577,7 @@ struct EgoPlanningTaskPipelineNormalConfig
   std::string pipeline_version = "v1";
 };
 
-struct EgoPlanningTaskPipelineVisionOnlyConfig
-    : public EgoPlanningTaskPipelineConfig {
+struct EgoPlanningTaskPipelineVisionOnlyConfig : public EgoPlanningTaskPipelineConfig {
   void init(const Json &json) override {
     EgoPlanningTaskPipelineConfig::init(json);
     /* read config from json */
@@ -703,8 +621,7 @@ struct EgoPlanningKeepEvaluatorConfig : public EgoPlanningEvaluatorConfig {
   }
 };
 
-struct EgoPlanningNormalChangeEvaluatorConfig
-    : public EgoPlanningEvaluatorConfig {
+struct EgoPlanningNormalChangeEvaluatorConfig : public EgoPlanningEvaluatorConfig {
   void init(const Json &json) override {
     EgoPlanningEvaluatorConfig::init(json);
     /* read config from json */
@@ -716,8 +633,7 @@ struct EgoPlanningNormalChangeEvaluatorConfig
   }
 };
 
-struct EgoPlanningUrgentChangeEvaluatorConfig
-    : public EgoPlanningEvaluatorConfig {
+struct EgoPlanningUrgentChangeEvaluatorConfig : public EgoPlanningEvaluatorConfig {
   void init(const Json &json) override {
     EgoPlanningEvaluatorConfig::init(json);
     /* read config from json */

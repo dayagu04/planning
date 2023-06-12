@@ -5,13 +5,13 @@
 #include <unordered_map>
 #include <vector>
 
-#include "utils/cartesian_coordinate_system.h"
-#include "utils/frenet_coordinate_system.h"
 #include "lateral_motion_planner.pb.h"
 #include "longitudinal_motion_planner.pb.h"
 #include "mjson/mjson.hpp"
 #include "planning_def.h"
 #include "spline.h"
+#include "utils/cartesian_coordinate_system.h"
+#include "utils/frenet_coordinate_system.h"
 
 #define DEFAULT_LANE_WIDTH (3.8)
 
@@ -22,23 +22,17 @@ enum RequestType { NO_CHANGE, LEFT_CHANGE, RIGHT_CHANGE };
 enum LooseBoundType { NONE_SIDE, LEFT_SIDE, RIGHT_SIDE, BOTH_SIDE };
 
 // 转向灯拨杆
-enum LeverStatus {
-  LEVER_STATE_OFF,
-  LEVER_STATE_LEFT,
-  LEVER_STATE_RIGHT,
-  LEVER_STATE_RESERVED1,
-  LEVER_STATE_RESERVED2
-};
+enum LeverStatus { LEVER_STATE_OFF, LEVER_STATE_LEFT, LEVER_STATE_RIGHT, LEVER_STATE_RESERVED1, LEVER_STATE_RESERVED2 };
 
 enum LaneBoundaryType {
-  MARKING_UNKNOWN = 0,                 // 未知线型
-  MARKING_DASHED = 1,                  // 虚线
-  MARKING_SOLID = 2,                   // 实线
-  MARKING_SHORT_DASHED = 3,            // 短虚线
-  MARKING_DOUBLE_DASHED = 4,           // 双虚线
-  MARKING_DOUBLE_SOLID = 5,            // 双实线
-  MARKING_LEFT_DASHED_RIGHT_SOLID = 6, // 左虚右实线
-  MARKING_LEFT_SOLID_RIGHT_DASHED = 7  // 左实右虚线
+  MARKING_UNKNOWN = 0,                  // 未知线型
+  MARKING_DASHED = 1,                   // 虚线
+  MARKING_SOLID = 2,                    // 实线
+  MARKING_SHORT_DASHED = 3,             // 短虚线
+  MARKING_DOUBLE_DASHED = 4,            // 双虚线
+  MARKING_DOUBLE_SOLID = 5,             // 双实线
+  MARKING_LEFT_DASHED_RIGHT_SOLID = 6,  // 左虚右实线
+  MARKING_LEFT_SOLID_RIGHT_DASHED = 7   // 左实右虚线
 };
 enum MSDLaneType {
   MSD_LANE_TYPE_UNKNOWN = 0,
@@ -63,17 +57,11 @@ typedef enum {
   RIGHT_POS = 1,
   RIGHT_RIGHT_POS = 2
 } LanePosition;
-enum RequestSource {
-  NO_REQUEST,
-  INT_REQUEST,
-  MAP_REQUEST,
-  ACT_REQUEST,
-  ROUTE_REQUEST
-};
+enum RequestSource { NO_REQUEST, INT_REQUEST, MAP_REQUEST, ACT_REQUEST, ROUTE_REQUEST };
 struct PointLLH {
-  double Longitude; // Longitude in degrees, ranging from -180 to 180,(度)
-  double Latitude;  // Latitude in degrees, ranging from -90 to 90,(度)
-  double height;    // WGS-84 ellipsoid height in meters,(米)
+  double Longitude;  // Longitude in degrees, ranging from -180 to 180,(度)
+  double Latitude;   // Latitude in degrees, ranging from -90 to 90,(度)
+  double height;     // WGS-84 ellipsoid height in meters,(米)
 };
 
 struct EulerAngle {
@@ -82,20 +70,14 @@ struct EulerAngle {
   double roll;
 };
 
-typedef enum {
-  BOTH_AVAILABLE = 0,
-  LEFT_AVAILABLE,
-  RIGHT_AVAILABLE,
-  BOTH_MISSING
-} LaneStatusEx;
+typedef enum { BOTH_AVAILABLE = 0, LEFT_AVAILABLE, RIGHT_AVAILABLE, BOTH_MISSING } LaneStatusEx;
 
 enum FusionSource { CAMERA_ONLY = 1, RADAR_ONLY, FUSION };
 typedef enum { LEFT = 0, RIGHT } LineDirection;
 struct TrackInfo {
   TrackInfo() {}
 
-  TrackInfo(int id, double drel, double vrel)
-      : track_id(id), d_rel(drel), v_rel(vrel) {}
+  TrackInfo(int id, double drel, double vrel) : track_id(id), d_rel(drel), v_rel(vrel) {}
 
   TrackInfo(const TrackInfo &track_info) {
     track_id = track_info.track_id;
@@ -460,10 +442,7 @@ struct FrenetObstacleBoundary {
   double l_end{std::numeric_limits<double>::lowest()};
 };
 
-enum TrackType {
-  SIDE_TRACK,
-  FRONT_TRACK
-};
+enum TrackType { SIDE_TRACK, FRONT_TRACK };
 
 enum CurrentState {
   INIT = 0,
@@ -515,8 +494,8 @@ struct LatBehaviorStateMachineOutput {
   bool should_premove;
   bool should_suspend;
   bool must_change_lane;
-  bool behavior_suspend;        // lateral suspend
-  std::vector<int> suspend_obs; // lateral suspend
+  bool behavior_suspend;         // lateral suspend
+  std::vector<int> suspend_obs;  // lateral suspend
 
   bool lc_pause;
   int lc_pause_id;
@@ -577,11 +556,10 @@ enum class LatObstacleType { LANE, ROAD, CAR };
 struct LatDeciderOutput {
   planning::common::LateralInitState init_state;
 
-  std::vector<std::pair<double, double>> enu_ref_path; // <x, y>
-  std::vector<std::pair<double, double>>
-      last_enu_ref_path; // pass it by planning context
-  std::vector<std::pair<Point2D, Point2D>> path_bounds; // <lower ,upper >
-  std::vector<std::pair<Point2D, Point2D>> safe_bounds; // <lower ,upper >
+  std::vector<std::pair<double, double>> enu_ref_path;       // <x, y>
+  std::vector<std::pair<double, double>> last_enu_ref_path;  // pass it by planning context
+  std::vector<std::pair<Point2D, Point2D>> path_bounds;      // <lower ,upper >
+  std::vector<std::pair<Point2D, Point2D>> safe_bounds;      // <lower ,upper >
   std::vector<double> enu_ref_theta;
   std::vector<double> last_enu_ref_theta;
   double v_cruise;
@@ -601,4 +579,4 @@ struct LateralMotionPlanningOutput {
   // ilqr_solver::iLqr::iLqrSolverInfo solver_info;  // to be removed
 };
 
-} // namespace planning
+}  // namespace planning

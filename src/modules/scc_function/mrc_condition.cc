@@ -86,8 +86,7 @@ void MrcCondition::process() {
       execute_pull_over();
       break;
     case MrcExecuteType::INLANE_BRAKE:
-      execute_type_output_ = pull_over_to_brake_ ? MrcExecuteType::PULL_OVER
-                                                 : MrcExecuteType::INLANE_BRAKE;
+      execute_type_output_ = pull_over_to_brake_ ? MrcExecuteType::PULL_OVER : MrcExecuteType::INLANE_BRAKE;
       check_inline_brake_condition();
       break;
     case MrcExecuteType::BLIND_BRAKE:
@@ -113,15 +112,13 @@ void MrcCondition::decide_mrc_type() { ; }
 
 void MrcCondition::mrc_engage_p_gear(double ego_v) { ; }
 
-void MrcCondition::mrc_brake_execute(LonRefPath& lon_ref_path,
-                                     PlanningResult& ego_prediction_result,
+void MrcCondition::mrc_brake_execute(LonRefPath& lon_ref_path, PlanningResult& ego_prediction_result,
                                      PlanningInitPoint& planning_init_point) {
   ;
 }
 
-void MrcCondition::update_inline_brake_by_obstacle(
-    LonDecisionInfo& lon_decision_information,
-    PlanningInitPoint& planning_init_point) {
+void MrcCondition::update_inline_brake_by_obstacle(LonDecisionInfo& lon_decision_information,
+                                                   PlanningInitPoint& planning_init_point) {
   ;
 }
 

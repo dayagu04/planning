@@ -13,7 +13,7 @@ inline size_t argmax(ForwardIterator first, ForwardIterator last) {
 }
 
 class Line {
-public:
+ public:
   explicit Line(const Point2D &A, const Point2D &B) {
     a_ = A.y - B.y;
     b_ = B.x - A.x;
@@ -23,22 +23,20 @@ public:
   Point2D operator*(const Line &line) const {
     double d = a_ * line.b_ - line.a_ * b_;
     if (std::abs(d) < std::numeric_limits<double>::epsilon()) {
-      return {std::numeric_limits<double>::min(),
-              std::numeric_limits<double>::min()};
+      return {std::numeric_limits<double>::min(), std::numeric_limits<double>::min()};
     } else {
-      return {(b_ * line.c_ - line.b_ * c_) / d,
-              (c_ * line.a_ - line.c_ * a_) / d};
+      return {(b_ * line.c_ - line.b_ * c_) / d, (c_ * line.a_ - line.c_ * a_) / d};
     }
   }
 
-private:
+ private:
   double a_;
   double b_;
   double c_;
 };
 
 class PerceptionRangeEstimatorImpl : public PerceptionRangeEstimator {
-public:
+ public:
   struct Config {
     double half_car_width = 1.1;
     double lidar_position_x = -2.8;
@@ -53,10 +51,7 @@ public:
   PerceptionRangeEstimatorImpl() : ego_yaw_(0.0), ego_frenet_s_(0.0){};
   ~PerceptionRangeEstimatorImpl() = default;
 
-  void
-  updateFrenet(const std::shared_ptr<FrenetCoordinateSystem> &frenet) override {
-    frenet_coord_ = frenet;
-  };
+  void updateFrenet(const std::shared_ptr<FrenetCoordinateSystem> &frenet) override { frenet_coord_ = frenet; };
 
   // void feedMapInfo(const MSDMapInfo &map_info) override {
   //   refline_points_.clear();
@@ -191,7 +186,7 @@ public:
   //   return ret;
   // }
 
-private:
+ private:
   double ego_yaw_;
   double ego_frenet_s_;
   define::Transform car2enu_;
@@ -204,36 +199,28 @@ private:
 
   // Rotate a point
   // Param angle should be in radius
-  static Point2D rotatePoint(const Point2D &origin, const Point2D &point,
-                             double angle) {
+  static Point2D rotatePoint(const Point2D &origin, const Point2D &point, double angle) {
     double sin_yaw = std::sin(angle);
     double cos_yaw = std::cos(angle);
-    return {cos_yaw * (point.x - origin.x) - sin_yaw * (point.y - origin.y) +
-                origin.x,
-            sin_yaw * (point.x - origin.x) + cos_yaw * (point.y - origin.y) +
-                origin.y};
+    return {cos_yaw * (point.x - origin.x) - sin_yaw * (point.y - origin.y) + origin.x,
+            sin_yaw * (point.x - origin.x) + cos_yaw * (point.y - origin.y) + origin.y};
   }
 
-  static Point2D findReflineCrossing(double x,
-                                     const std::vector<Point2D> &refline) {
+  static Point2D findReflineCrossing(double x, const std::vector<Point2D> &refline) {
     for (size_t i = 0; (i + 1) < refline.size(); ++i) {
-      if ((i == 0 && x < refline[i].x) ||
-          (i == refline.size() - 2 && x > refline[i + 1].x) ||
+      if ((i == 0 && x < refline[i].x) || (i == refline.size() - 2 && x > refline[i + 1].x) ||
           (refline[i].x <= x && refline[i + 1].x >= x)) {
-        Line curr_segment(Point2D(refline[i].x, refline[i].y),
-                          Point2D(refline[i + 1].x, refline[i + 1].y));
+        Line curr_segment(Point2D(refline[i].x, refline[i].y), Point2D(refline[i + 1].x, refline[i + 1].y));
         return curr_segment(x);
       }
     }
     return {0, 0};
   }
 
-  static Point2D findReflineCrossing(const Point2D &A, const Point2D &B,
-                                     const std::vector<Point2D> &refline) {
+  static Point2D findReflineCrossing(const Point2D &A, const Point2D &B, const std::vector<Point2D> &refline) {
     Line line_a(A, B);
     for (size_t i = 0; (i + 1) < refline.size(); ++i) {
-      Line curr_segment(Point2D(refline[i].x, refline[i].y),
-                        Point2D(refline[i + 1].x, refline[i + 1].y));
+      Line curr_segment(Point2D(refline[i].x, refline[i].y), Point2D(refline[i + 1].x, refline[i + 1].y));
       auto cross_point = line_a * curr_segment;
       if (cross_point.x >= refline[i].x && cross_point.x <= refline[i + 1].x &&
           cross_point.y >= std::min({refline[i].y, refline[i + 1].y}) &&
@@ -241,8 +228,7 @@ private:
         return cross_point;
       }
     }
-    return {std::numeric_limits<double>::min(),
-            std::numeric_limits<double>::min()};
+    return {std::numeric_limits<double>::min(), std::numeric_limits<double>::min()};
   }
 };
 
@@ -250,4 +236,4 @@ std::shared_ptr<PerceptionRangeEstimator> PerceptionRangeEstimator::make() {
   return std::make_shared<PerceptionRangeEstimatorImpl>();
 }
 
-} // namespace planning
+}  // namespace planning

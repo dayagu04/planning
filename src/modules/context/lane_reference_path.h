@@ -22,26 +22,17 @@ class LaneReferencePath : public ReferencePath, public std::enable_shared_from_t
   /**
    * @brief 获取车道内障碍物：lead one & lead two以及后方obstacles的id
    */
-  const std::vector<int> &get_lane_obstacles_ids() const {
-    return lane_obstacles_id_;
-  }
+  const std::vector<int> &get_lane_obstacles_ids() const { return lane_obstacles_id_; }
 
-  int get_lane_leadone_obstacle() const {
-    return lane_leadone_obstacle_;
-  }
+  int get_lane_leadone_obstacle() const { return lane_leadone_obstacle_; }
 
-  int get_lane_leadtwo_obstacle() const {
-    return lane_leadtwo_obstacle_;
-  }
+  int get_lane_leadtwo_obstacle() const { return lane_leadtwo_obstacle_; }
 
-  int get_current_leadone_obstacle_to_ego() const {
-    return current_leadone_obstacle_to_ego_;
-  }
+  int get_current_leadone_obstacle_to_ego() const { return current_leadone_obstacle_to_ego_; }
 
-  int get_current_leadtwo_obstacle_to_ego() const {
-    return current_leadtwo_obstacle_to_ego_;
-  }
-private:
+  int get_current_leadtwo_obstacle_to_ego() const { return current_leadtwo_obstacle_to_ego_; }
+
+ private:
   void update_refined_lane_points();
   virtual void update_obstacles();
   bool get_points_by_lane_id(int target_lane_virtual_id, ReferencePathPoints &points);

@@ -1,22 +1,19 @@
 #include "reference_path_manager.h"
 
-#include "environmental_model.h"
-#include "session.h"
 #include "config/basic_type.h"
+#include "environmental_model.h"
 #include "lane_reference_path.h"
+#include "session.h"
 #include "virtual_lane_manager.h"
 
 namespace planning {
 
-ReferencePathManager::ReferencePathManager(
-    planning::framework::Session *session) {
-  session_ = session;
-}
+ReferencePathManager::ReferencePathManager(planning::framework::Session *session) { session_ = session; }
 
 ReferencePathManager::~ReferencePathManager() {}
 
-std::shared_ptr<ReferencePath> ReferencePathManager::get_reference_path_by_lane(
-    int lane_virtual_id, bool create_if_not_exist) {
+std::shared_ptr<ReferencePath> ReferencePathManager::get_reference_path_by_lane(int lane_virtual_id,
+                                                                                bool create_if_not_exist) {
   auto key = ReferencePathKeyType(ReferencePathType::MAP_LANE, lane_virtual_id);
   auto it = reference_paths_.find(key);
   if (it == reference_paths_.end() and create_if_not_exist) {
@@ -31,18 +28,14 @@ std::shared_ptr<ReferencePath> ReferencePathManager::get_reference_path_by_lane(
   return it == reference_paths_.end() ? nullptr : it->second;
 }
 
-std::shared_ptr<ReferencePath>
-ReferencePathManager::get_reference_path_by_current_lane() {
-  auto virtual_lane_manager =
-      session_->mutable_environmental_model()->get_virtual_lane_manager();
-  return get_reference_path_by_lane(
-      virtual_lane_manager->current_lane_virtual_id(), false);
+std::shared_ptr<ReferencePath> ReferencePathManager::get_reference_path_by_current_lane() {
+  auto virtual_lane_manager = session_->mutable_environmental_model()->get_virtual_lane_manager();
+  return get_reference_path_by_lane(virtual_lane_manager->current_lane_virtual_id(), false);
 }
 
 void ReferencePathManager::update() {
   reference_paths_.clear();
-  auto &virtual_lane_manager =
-      session_->mutable_environmental_model()->get_virtual_lane_manager();
+  auto &virtual_lane_manager = session_->mutable_environmental_model()->get_virtual_lane_manager();
   // step1 construct current/left/right reference_path
   auto &current_lane = virtual_lane_manager->get_current_lane();
   auto &left_lane = virtual_lane_manager->get_left_lane();
@@ -83,8 +76,7 @@ void ReferencePathManager::update() {
   }
 }
 
-std::shared_ptr<ReferencePath>
-ReferencePathManager::make_map_lane_reference_path(int lane_virtual_id) {
+std::shared_ptr<ReferencePath> ReferencePathManager::make_map_lane_reference_path(int lane_virtual_id) {
   return get_reference_path_by_lane(lane_virtual_id, true);
 }
 

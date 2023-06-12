@@ -31,7 +31,7 @@ enum MSDThrottleAvailable {
 
 struct MSDThrottle {
   uint8_t available;
-  double value_pedal; // 0.0 - 1.0
+  double value_pedal;  // 0.0 - 1.0
 };
 
 enum MSDBrakeAvailable {
@@ -40,7 +40,7 @@ enum MSDBrakeAvailable {
 
 struct MSDBrake {
   uint8_t available;
-  double value_pedal; // 0.0 - 1.0
+  double value_pedal;  // 0.0 - 1.0
 };
 
 enum MSDSteerAvailable {
@@ -49,7 +49,7 @@ enum MSDSteerAvailable {
 
 struct MSDSteer {
   uint8_t available;
-  double value_angle; // [-470, 470]
+  double value_angle;  // [-470, 470]
 };
 
 struct MSDActuator {
@@ -59,4 +59,4 @@ struct MSDActuator {
   MSDSteer steer;
   MSDTurnState turn_state;
 };
-} // namespace planning
+}  // namespace planning

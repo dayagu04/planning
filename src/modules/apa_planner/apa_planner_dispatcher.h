@@ -20,8 +20,8 @@ class ApaPlannerDispatcher {
   void RegisterPlanners();
 
  private:
-   std::vector<std::unique_ptr<ApaPlannerBase>> planner_list_;
+  std::vector<std::unique_ptr<ApaPlannerBase>> planner_list_;
 };
 
-} // namespace apa_planner
-} // namespace planning
+}  // namespace apa_planner
+}  // namespace planning

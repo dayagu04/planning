@@ -4,13 +4,13 @@
 #include <cstdint>
 #include <string>
 
-#include "utils.h"
+#include "config_context.h"
+#include "ego_planning_config.h"
+#include "environmental_model.h"
 #include "planning_context.h"
 #include "planning_output_context.h"
+#include "utils.h"
 #include "vehicle_config_context.h"
-#include "environmental_model.h"
-#include "ego_planning_config.h"
-#include "config_context.h"
 // #include "ego_planning_config.pb.h"
 
 namespace planning {
@@ -60,12 +60,12 @@ bool Session::Init() {
   if (synthetic_config.scene_type == "apa") {
     init_scene_type = planning::common::SceneType::PARKING_APA;
   }
-  // planning::common::SceneType init_scene_type = static_cast<planning::common::SceneType>(synthetic_config.scene_type);
+  // planning::common::SceneType init_scene_type =
+  // static_cast<planning::common::SceneType>(synthetic_config.scene_type);
   if (init_scene_type == planning::common::SceneType::NOT_DEFINED) {
     init_scene_type = default_scene_type_;
   }
-  LOG_DEBUG("init_scene_type %s\n",
-        planning::common::SceneType_Name(init_scene_type).c_str());
+  LOG_DEBUG("init_scene_type %s\n", planning::common::SceneType_Name(init_scene_type).c_str());
 
   environmental_model_ = alloc<EnvironmentalModel>();
   (void)environmental_model_->Init(init_scene_type);

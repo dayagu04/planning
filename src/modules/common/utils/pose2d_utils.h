@@ -11,9 +11,9 @@ namespace planning {
 
 using namespace std;
 
-template <class T> typename std::underlying_type<T>::type enumToInteger(T t)
-{
-    return static_cast<typename std::underlying_type<T>::type>(t);
+template <class T>
+typename std::underlying_type<T>::type enumToInteger(T t) {
+  return static_cast<typename std::underlying_type<T>::type>(t);
 }
 
 // dis
@@ -45,7 +45,7 @@ bool get_theta(vector<Pose2D> &pose_array);
 bool get_theta(const vector<Pose2D> &in_array, vector<Pose2D> &out_array);
 double sub_theta(double t1, double t2);
 double go2target(double in, double step, double target);
-//double go2target(const double &in, const double &step, const double &target, double &preview_dis);
+// double go2target(const double &in, const double &step, const double &target, double &preview_dis);
 
 // planning
 int get_preview_index(const vector<Pose2D> &pose_array, const Pose2D &pose, double preview_dis);
@@ -55,13 +55,9 @@ void shift_pose_array(vector<Pose2D> &pose_array, double w);
 void forward_pose(Pose2D &pose, double l);
 bool sim_pose_array(const vector<Pose2D> &in_array, vector<Pose2D> &out_array, const Pose2D &car_pose, double car_vel);
 
-
-//decision
-bool concat(double dis1, double dis2,
-    const vector<Pose2D> &pose_array1,
-    const vector<Pose2D> &pose_array2,
-    vector<Pose2D> &pose_array3,
-    const Pose2D &car_pose);
+// decision
+bool concat(double dis1, double dis2, const vector<Pose2D> &pose_array1, const vector<Pose2D> &pose_array2,
+            vector<Pose2D> &pose_array3, const Pose2D &car_pose);
 
 // controller
 /* interpolation when x is a scalor,
@@ -72,35 +68,33 @@ double interp(double x, const vector<double> &xp, const vector<double> &fp);
 double interp(double x1, double x2, const vector<double> &xp1, const vector<double> &xp2, const vector<double> &fp);
 
 template <class T>
-T interpolation(T x, const vector<T> &xp, const vector<T> &fp)
-{
-    const size_t N = xp.size();
-    size_t hi;
-    for (hi = 0; hi < N && x > xp[hi]; hi++);
+T interpolation(T x, const vector<T> &xp, const vector<T> &fp) {
+  const size_t N = xp.size();
+  size_t hi;
+  for (hi = 0; hi < N && x > xp[hi]; hi++)
+    ;
 
-    if (hi == 0)
-        return fp[0];
+  if (hi == 0) return fp[0];
 
-    if (hi == N && x > xp[N - 1])
-        return fp[N - 1];
+  if (hi == N && x > xp[N - 1]) return fp[N - 1];
 
-    const size_t low = hi - 1;
-    const T xp_diff = xp[hi] - xp[low];
-    if (xp_diff < static_cast<T>(1e-5f) && xp_diff > static_cast<T>(-1e-5f))
-        return fp[low];
+  const size_t low = hi - 1;
+  const T xp_diff = xp[hi] - xp[low];
+  if (xp_diff < static_cast<T>(1e-5f) && xp_diff > static_cast<T>(-1e-5f)) return fp[low];
 
-    return (x - xp[low]) * (fp[hi] - fp[low]) / xp_diff + fp[low];
+  return (x - xp[low]) * (fp[hi] - fp[low]) / xp_diff + fp[low];
 }
 
 template <class T>
-T clip(T x, T max_x, T min_x){
-    if(x > max_x) return max_x;
-    if(x < min_x) return min_x;
-    return x;
+T clip(T x, T max_x, T min_x) {
+  if (x > max_x) return max_x;
+  if (x < min_x) return min_x;
+  return x;
 }
 
 // ADRC public tools
-template <typename T> int sign(T val);
+template <typename T>
+int sign(T val);
 
 double fhan(double x1, double x2, double r, double h);
 double fal(double error, double alpha, double delta);
@@ -110,6 +104,6 @@ double fal(double error, double alpha, double delta);
 // time tools for log files
 string get_current_date();
 
-} // namespace planning
+}  // namespace planning
 
 #endif

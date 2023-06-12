@@ -9,8 +9,7 @@ static const double kOneSix = 1.0 / 6.0;
 namespace pnc {
 namespace lateral_planning {
 
-State LateralMotionPlanningModel::UpdateDynamicsOneStep(
-    const State &x, const Control &u, const size_t &step) const {
+State LateralMotionPlanningModel::UpdateDynamicsOneStep(const State &x, const Control &u, const size_t &step) const {
   const IlqrCostConfig &cost_config = cost_config_vec_ptr_->at(step);
   std::array<double, STATE_SIZE> k1{}, k2{}, k3{}, k4{};
 
@@ -65,9 +64,8 @@ State LateralMotionPlanningModel::UpdateDynamicsOneStep(
   return x1;
 }
 
-void LateralMotionPlanningModel::GetDynamicsDerivatives(
-    const State &x, const Control & /*u*/, FxMT &f_x, FuMT &f_u,
-    const size_t &step) const {
+void LateralMotionPlanningModel::GetDynamicsDerivatives(const State &x, const Control & /*u*/, FxMT &f_x, FuMT &f_u,
+                                                        const size_t &step) const {
   const IlqrCostConfig &cost_config = cost_config_vec_ptr_->at(step);
   const double dt = solver_config_ptr_->model_dt;
   const double theta = x[StateId::THETA];
@@ -76,11 +74,9 @@ void LateralMotionPlanningModel::GetDynamicsDerivatives(
   const double v = cost_config[REF_VEL];
   const double k = cost_config[CURV_FACTOR];
 
-  f_x << 1.0, 0.0, -dt * v * sin(theta), 0.0, 0.0, 0.0, 1.0,
-      dt * v * cos(theta), 0.0, 0.0, 0.0, 0.0, 1.0,
-      dt * k * v * (delta * delta + 1.0), 0.0, 0.0, 0.0, 0.0, 1.0, dt, 0.0, 0.0,
-      0.0, 0.0, 1.0;
+  f_x << 1.0, 0.0, -dt * v * sin(theta), 0.0, 0.0, 0.0, 1.0, dt * v * cos(theta), 0.0, 0.0, 0.0, 0.0, 1.0,
+      dt * k * v * (delta * delta + 1.0), 0.0, 0.0, 0.0, 0.0, 1.0, dt, 0.0, 0.0, 0.0, 0.0, 1.0;
   f_u << 0.0, 0.0, 0.0, 0.0, dt;
 }
-} // namespace lateral_planning
-} // namespace pnc
+}  // namespace lateral_planning
+}  // namespace pnc

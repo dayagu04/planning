@@ -38,4 +38,4 @@ struct MSDIntersection {
   size_t available;
   std::vector<MSDIntersectionData> intersections;
 };
-} // namespace planning
+}  // namespace planning

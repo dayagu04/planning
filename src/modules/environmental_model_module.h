@@ -1,8 +1,8 @@
 #ifndef ZNQC_MODULES_ENVIRONMENTAL_MODEL_MODULE_H
 #define ZNQC_MODULES_ENVIRONMENTAL_MODEL_MODULE_H
 
-#include "module.h"
 #include "environmental_model_manager.h"
+#include "module.h"
 
 namespace planning {
 namespace modules {
@@ -14,8 +14,7 @@ class EnvironmentalModelModule : public planning::framework::PlanningModule {
 
   planning::framework::BaseModule* clone() const override;
 
-  bool init(const ::google::protobuf::Message* config,
-           planning::framework::Session* session) override;
+  bool init(const ::google::protobuf::Message* config, planning::framework::Session* session) override;
 
   bool reset(const ::google::protobuf::Message* config) override;
 
@@ -24,8 +23,7 @@ class EnvironmentalModelModule : public planning::framework::PlanningModule {
  private:
   planning::planner::EnvironmentalModelManager environmental_model_manager_;
 
-  EgoPlanningConfigBuilder* load_config_builder(
-      planning::framework::Session* session, const char* file_name);
+  EgoPlanningConfigBuilder* load_config_builder(planning::framework::Session* session, const char* file_name);
 };
 
 REGISTER_MODULE_FACTORY(EnvironmentalModelModule)

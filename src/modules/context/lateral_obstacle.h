@@ -1,11 +1,11 @@
 #ifndef LATERAL_OBSTACLE_H
 #define LATERAL_OBSTACLE_H
 
+#include "config/basic_type.h"
+#include "ego_planning_config.h"
 #include "prediction_object.h"
 #include "tracked_object.h"
 #include "tracklet_maintainer.h"
-#include "config/basic_type.h"
-#include "ego_planning_config.h"
 
 #include <utility>
 
@@ -15,9 +15,8 @@ class EgoStateManager;
 class VirtualLaneManager;
 
 class LateralObstacle {
-public:
-  LateralObstacle(const EgoPlanningConfigBuilder *config_builder,
-                  planning::framework::Session *session);
+ public:
+  LateralObstacle(const EgoPlanningConfigBuilder *config_builder, planning::framework::Session *session);
   virtual ~LateralObstacle();
 
   bool update();
@@ -35,43 +34,27 @@ public:
 
   void set_prediction_update(bool value) { prediction_update_ = value; }
 
-  const std::vector<TrackedObject> &front_tracks() const {
-    return front_tracks_;
-  }
+  const std::vector<TrackedObject> &front_tracks() const { return front_tracks_; }
 
-  const std::vector<TrackedObject> &front_tracks_copy() const {
-    return front_tracks_copy_;
-  }
+  const std::vector<TrackedObject> &front_tracks_copy() const { return front_tracks_copy_; }
 
-  const std::vector<TrackedObject> &side_tracks() const {
-    return side_tracks_;
-  }
+  const std::vector<TrackedObject> &side_tracks() const { return side_tracks_; }
 
-  const std::vector<TrackedObject> &front_tracks_l() const {
-    return front_tracks_l_;
-  }
+  const std::vector<TrackedObject> &front_tracks_l() const { return front_tracks_l_; }
 
-  const std::vector<TrackedObject> &front_tracks_r() const {
-    return front_tracks_r_;
-  }
+  const std::vector<TrackedObject> &front_tracks_r() const { return front_tracks_r_; }
 
-  const std::vector<TrackedObject> &side_tracks_l() const {
-    return side_tracks_l_;
-  }
+  const std::vector<TrackedObject> &side_tracks_l() const { return side_tracks_l_; }
 
-  const std::vector<TrackedObject> &side_tracks_r() const {
-    return side_tracks_r_;
-  }
+  const std::vector<TrackedObject> &side_tracks_r() const { return side_tracks_r_; }
 
-  const std::vector<TrackedObject> &all_tracks() const {
-    return all_tracks_;
-  }
+  const std::vector<TrackedObject> &all_tracks() const { return all_tracks_; }
 
   bool find_track(int track_id, TrackedObject &dest);
-private:
+
+ private:
   bool update_sensors(const std::shared_ptr<EgoStateManager> &ego_state,
-                      const std::vector<PredictionObject> &predictions,
-                      bool isRedLightStop, bool hdmap_valid);
+                      const std::vector<PredictionObject> &predictions, bool isRedLightStop, bool hdmap_valid);
   void update_tracks(const std::vector<TrackedObject> &tracked_objects);
 
   double fvf_time_ = 0.0;
@@ -96,9 +79,9 @@ private:
 };
 
 class LaneTracksManager {
-public:
-  LaneTracksManager(LateralObstacle &lateral_obstacle,
-                    VirtualLaneManager &virtual_lane_mgr, planning::framework::Session *session);
+ public:
+  LaneTracksManager(LateralObstacle &lateral_obstacle, VirtualLaneManager &virtual_lane_mgr,
+                    planning::framework::Session *session);
   virtual ~LaneTracksManager() = default;
   void update_lane_tracks();
 
@@ -117,9 +100,9 @@ public:
 
   void update() { lane_tracks_update_.clear(); }
 
-private:
+ private:
   void reset();
-  
+
   std::set<std::tuple<int, int>> lane_tracks_update_;
   std::vector<TrackedObject> front_tracks_clane_;
   std::vector<TrackedObject> front_tracks_llane_;
@@ -135,6 +118,6 @@ private:
   // EgoStateManager ego_state_;
 };
 
-} // namespace planning
+}  // namespace planning
 
 #endif

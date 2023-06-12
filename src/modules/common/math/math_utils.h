@@ -4,8 +4,8 @@
 #include <utility>
 #include <vector>
 // #include "Eigen/Dense"
-#include "vec2d.h"
 #include "Eigen/Dense"
+#include "vec2d.h"
 
 #define HYPOT_MIN 1000.0
 
@@ -23,8 +23,7 @@ double Sqr(const double x);
  *
  * @return The cross product result.
  */
-double CrossProd(const Vec2d& start_point, const Vec2d& end_point_1,
-                 const Vec2d& end_point_2);
+double CrossProd(const Vec2d& start_point, const Vec2d& end_point_1, const Vec2d& end_point_2);
 
 /**
  * @brief Inner product between two 2-D vectors from the common start point,
@@ -35,8 +34,7 @@ double CrossProd(const Vec2d& start_point, const Vec2d& end_point_1,
  *
  * @return The inner product result.
  */
-double InnerProd(const Vec2d& start_point, const Vec2d& end_point_1,
-                 const Vec2d& end_point_2);
+double InnerProd(const Vec2d& start_point, const Vec2d& end_point_1, const Vec2d& end_point_2);
 
 /**
  * @brief Cross product between two vectors.
@@ -49,8 +47,7 @@ double InnerProd(const Vec2d& start_point, const Vec2d& end_point_1,
  *
  * @return The cross product result.
  */
-double CrossProd(const double x0, const double y0, const double x1,
-                 const double y1);
+double CrossProd(const double x0, const double y0, const double x1, const double y1);
 
 /**
  * @brief Inner product between two vectors.
@@ -63,8 +60,7 @@ double CrossProd(const double x0, const double y0, const double x1,
  *
  * @return The inner product result.
  */
-double InnerProd(const double x0, const double y0, const double x1,
-                 const double y1);
+double InnerProd(const double x0, const double y0, const double x1, const double y1);
 
 /**
  * @brief Wrap angle to [0, 2 * PI).
@@ -143,9 +139,8 @@ T Clamp(const T value, T bound1, T bound2) {
 double Gaussian(const double u, const double std, const double x);
 
 // 2-dimension Gaussian
-double Gaussian2d(const double u1, const double u2, const double std1,
-                  const double std2, const double x1, const double x2,
-                  const double rho);
+double Gaussian2d(const double u1, const double u2, const double std1, const double std2, const double x1,
+                  const double x2, const double rho);
 
 // Sigmoid
 double Sigmoid(const double x);
@@ -153,13 +148,9 @@ double Sigmoid(const double x);
 // Rotate a 2d vector counter-clockwise by theta
 Eigen::Vector2d RotateVector2d(const Eigen::Vector2d& v_in, const double theta);
 
-inline std::pair<double, double> RFUToFLU(const double x, const double y) {
-  return std::make_pair(y, -x);
-}
+inline std::pair<double, double> RFUToFLU(const double x, const double y) { return std::make_pair(y, -x); }
 
-inline std::pair<double, double> FLUToRFU(const double x, const double y) {
-  return std::make_pair(-y, x);
-}
+inline std::pair<double, double> FLUToRFU(const double x, const double y) { return std::make_pair(-y, x); }
 
 inline void L2Norm(int feat_dim, float* feat_data) {
   if (feat_dim == 0) {
@@ -208,21 +199,18 @@ class IntervalMethodSolution {
     return res;
   }
 
-  std::vector<Interval> intersect(const std::vector<Interval>& intervals,
-                                  const Interval& section) {
+  std::vector<Interval> intersect(const std::vector<Interval>& intervals, const Interval& section) {
     std::vector<Interval> res;
     for (auto& interval : intervals) {
       if (interval.second < section.first || interval.first > section.second) {
         continue;
       }
-      res.push_back({std::max(interval.first, section.first),
-                     std::min(interval.second, section.second)});
+      res.push_back({std::max(interval.first, section.first), std::min(interval.second, section.second)});
     }
     return res;
   }
 
-  std::vector<Interval> intersect(const std::vector<Interval>& a,
-                                  const std::vector<Interval>& b) {
+  std::vector<Interval> intersect(const std::vector<Interval>& a, const std::vector<Interval>& b) {
     size_t i = 0;
     size_t j = 0;
     std::vector<Interval> result;
@@ -244,8 +232,7 @@ class IntervalMethodSolution {
     return result;
   }
 
-  void filter(std::vector<Interval>& intervals, T lower_length,
-              T upper_length) {
+  void filter(std::vector<Interval>& intervals, T lower_length, T upper_length) {
     for (auto itor_s = intervals.begin(); itor_s != intervals.end();) {
       auto cur_length = std::abs(itor_s->second - itor_s->first);
       if (cur_length < lower_length || cur_length > upper_length) {
@@ -256,8 +243,7 @@ class IntervalMethodSolution {
     }
   }
 
-  std::vector<Interval> complement(const std::vector<Interval>& intervals,
-                                   T lower_bound, T upper_bound) {
+  std::vector<Interval> complement(const std::vector<Interval>& intervals, T lower_bound, T upper_bound) {
     std::vector<Interval> result;
     T sweep_line = lower_bound;
     for (auto& interval : intervals) {
@@ -315,4 +301,3 @@ inline double fast_hypot(double a, double b) {
 
 }  // namespace planning_math
 }  // namespace planning
-

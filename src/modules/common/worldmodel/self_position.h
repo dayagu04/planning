@@ -18,4 +18,4 @@ struct MSDSelfPosition {
   size_t available;
   MSDSelfPositionData self_position_data;
 };
-} // namespace planning
+}  // namespace planning

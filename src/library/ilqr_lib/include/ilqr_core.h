@@ -1,25 +1,25 @@
 #ifndef __ILQR_CORE_H__
 #define __ILQR_CORE_H__
 
-#include "ilqr_define.h"
-#include "ilqr_model.h"
 #include <chrono>
 #include <utility>
 #include <vector>
+#include "ilqr_define.h"
+#include "ilqr_model.h"
 namespace ilqr_solver {
 class iLqr {
-public:
+ public:
   // ilqr solver condition of result
   enum iLqrSolveCondition {
-    INIT,                    // solver init
-    NORMAL_TERMINATE,        // normal terminate, dcost < cost_tol
-    CONST_CONTROL_TERMINATE, // small control u update, du_norm < du_tol
-    MAX_ITER_TERMINATE,      // max iteration
-    LINESEARCH_TERMINATE,    // linesearch terminate, lambda is too big
-    INIT_TERMINATE,          // one step iteration, init is the minimum
-    BACKWARD_PASS_FAIL,      // backward pass failed, non-positive definite Quu
-    NON_POSITIVE_EXPECT,     // non-positive expect, should not happen
-    FAULT_INPUT_SIZE,        // input size is error
+    INIT,                     // solver init
+    NORMAL_TERMINATE,         // normal terminate, dcost < cost_tol
+    CONST_CONTROL_TERMINATE,  // small control u update, du_norm < du_tol
+    MAX_ITER_TERMINATE,       // max iteration
+    LINESEARCH_TERMINATE,     // linesearch terminate, lambda is too big
+    INIT_TERMINATE,           // one step iteration, init is the minimum
+    BACKWARD_PASS_FAIL,       // backward pass failed, non-positive definite Quu
+    NON_POSITIVE_EXPECT,      // non-positive expect, should not happen
+    FAULT_INPUT_SIZE,         // input size is error
   };
 
   // solver info for each iteration
@@ -60,13 +60,9 @@ public:
       t_one_step_ms = 0.0;
     }
 
-    double GetElapsed(std::chrono::time_point<std::chrono::system_clock> &start,
-                      const bool is_overlay) {
-
+    double GetElapsed(std::chrono::time_point<std::chrono::system_clock> &start, const bool is_overlay) {
       auto now = std::chrono::system_clock::now();
-      auto elapsed =
-          std::chrono::duration_cast<std::chrono::nanoseconds>(now - start)
-              .count();
+      auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(now - start).count();
 
       if (is_overlay) {
         start = now;
@@ -88,12 +84,11 @@ public:
     double t_one_step_ms = 0.0;
   };
 
-public:
+ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   iLqr() = default;
   ~iLqr() = default;
-  void Init(const std::shared_ptr<iLqrModel> ilqr_model,
-            const iLqrSolverConfig &ilqr_sovler_config);
+  void Init(const std::shared_ptr<iLqrModel> ilqr_model, const iLqrSolverConfig &ilqr_sovler_config);
 
   void Init(const std::shared_ptr<iLqrModel> ilqr_model);
 
@@ -125,21 +120,15 @@ public:
 
   void AddCost(std::shared_ptr<BaseCostTerm> cost_term);
 
-  void SetSolverConfig(const iLqrSolverConfig &ilqr_sovler_config) {
-    *solver_config_ptr_ = ilqr_sovler_config;
-  }
+  void SetSolverConfig(const iLqrSolverConfig &ilqr_sovler_config) { *solver_config_ptr_ = ilqr_sovler_config; }
 
-  void SetCostConfig(const std::vector<IlqrCostConfig> &cost_config) {
-    ilqr_model_ptr_->SetCostConfig(cost_config);
-  }
+  void SetCostConfig(const std::vector<IlqrCostConfig> &cost_config) { ilqr_model_ptr_->SetCostConfig(cost_config); }
 
   void InitSolverConfig();
 
   std::shared_ptr<iLqrModel> GetiLqrModelPtr() const { return ilqr_model_ptr_; }
 
-  std::shared_ptr<iLqrSolverConfig> GetSolverConfigPtr() {
-    return solver_config_ptr_;
-  }
+  std::shared_ptr<iLqrSolverConfig> GetSolverConfigPtr() { return solver_config_ptr_; }
 
   // init cost map
   void InitAdvancedInfo();
@@ -150,7 +139,7 @@ public:
   // reset solver
   void Reset();
 
-private:
+ private:
   bool BackwardPass();
   bool iLqrIteration();
 
@@ -166,18 +155,18 @@ private:
 
   double cost_ = 0.0;
 
-  LxMTVec lx_vec_;   // n * (CONTROL_HORIZON)
-  LuMTVec lu_vec_;   // m * (CONTROL_HORIZON)
-  LxxMTVec lxx_vec_; // n * n * (CONTROL_HORIZON)
-  LxuMTVec lxu_vec_; // n * m * (CONTROL_HORIZON)
-  LuuMTVec luu_vec_; // m * m * (CONTROL_HORIZON)
+  LxMTVec lx_vec_;    // n * (CONTROL_HORIZON)
+  LuMTVec lu_vec_;    // m * (CONTROL_HORIZON)
+  LxxMTVec lxx_vec_;  // n * n * (CONTROL_HORIZON)
+  LxuMTVec lxu_vec_;  // n * m * (CONTROL_HORIZON)
+  LuuMTVec luu_vec_;  // m * m * (CONTROL_HORIZON)
 
-  FxMTVec fx_vec_; // n * n * (CONTROL_HORIZON)
-  FuMTVec fu_vec_; // n * m * (CONTROL_HORIZON)
+  FxMTVec fx_vec_;  // n * n * (CONTROL_HORIZON)
+  FuMTVec fu_vec_;  // n * m * (CONTROL_HORIZON)
 
-  std::array<double, 2> dV_{}; // 2 * 1
-  kMTVec k_vec_;               // m * (CONTROL_HORIZON + 1)
-  KMTVec K_vec_;               // m * n * (CONTROL_HORIZON + 1)
+  std::array<double, 2> dV_{};  // 2 * 1
+  kMTVec k_vec_;                // m * (CONTROL_HORIZON + 1)
+  KMTVec K_vec_;                // m * n * (CONTROL_HORIZON + 1)
 
   Eigen::VectorXd Qu_, Qx_, k_i_;
   Eigen::MatrixXd Quu_, Qxx_, Qux_, Quuf_, K_i_;
@@ -200,6 +189,6 @@ private:
   // time debug info
   TimeInfo time_info_;
 };
-} // namespace ilqr_solver
+}  // namespace ilqr_solver
 
 #endif

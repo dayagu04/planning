@@ -15,5 +15,5 @@ class ApaPlannerBase {
   void SetFailedPlanningOutput(framework::Frame* const frame) const;
 };
 
-} // namespace apa_planner
-} // namespace planning
+}  // namespace apa_planner
+}  // namespace planning

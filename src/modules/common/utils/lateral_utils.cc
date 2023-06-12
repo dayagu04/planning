@@ -32,11 +32,9 @@ double get_dist(double x, double y, const std::vector<double> &y_x) {
   double x_left = x_low + invphi2 * h;
   double x_right = x_low + invphi * h;
 
-  double d_left =
-      std::pow(x_left - x, 2) + std::pow(calc_poly1d(y_x, x_left) - y, 2);
+  double d_left = std::pow(x_left - x, 2) + std::pow(calc_poly1d(y_x, x_left) - y, 2);
 
-  double d_right =
-      std::pow(x_right - x, 2) + std::pow(calc_poly1d(y_x, x_right) - y, 2);
+  double d_right = std::pow(x_right - x, 2) + std::pow(calc_poly1d(y_x, x_right) - y, 2);
 
   for (int i = 0; i < n - 1; i++) {
     if (d_left < d_right) {
@@ -45,16 +43,14 @@ double get_dist(double x, double y, const std::vector<double> &y_x) {
       d_right = d_left;
       h = invphi * h;
       x_left = x_low + invphi2 * h;
-      d_left =
-          std::pow(x_left - x, 2) + std::pow(calc_poly1d(y_x, x_left) - y, 2);
+      d_left = std::pow(x_left - x, 2) + std::pow(calc_poly1d(y_x, x_left) - y, 2);
     } else {
       x_low = x_left;
       x_left = x_right;
       d_left = d_right;
       h = invphi * h;
       x_right = x_low + invphi * h;
-      d_right =
-          std::pow(x_right - x, 2) + std::pow(calc_poly1d(y_x, x_right) - y, 2);
+      d_right = std::pow(x_right - x, 2) + std::pow(calc_poly1d(y_x, x_right) - y, 2);
     }
   }
 
@@ -74,9 +70,8 @@ double get_dist(double x, double y, const std::vector<double> &y_x) {
   return sgn * std::sqrt(v_min);
 }
 
-bool calc_dist(const std::vector<double> &path_y, double x, double y,
-               double length, double width, double theta, double &d_center,
-               double &d_edge_max, double &d_edge_min) {
+bool calc_dist(const std::vector<double> &path_y, double x, double y, double length, double width, double theta,
+               double &d_center, double &d_edge_max, double &d_edge_min) {
   if (path_y.empty()) {
     return false;
   }
@@ -116,11 +111,9 @@ double cal_lat_offset(double ego_vel, double dash_length) {
   double kDeltaRateMax = 0.4 - std::fmax(ego_vel, 3) * 0.005;
   double kLateralJerkMax = 5.0 - std::fmax(ego_vel, 3) * 0.15;
 
-  double ddl_limit = std::min(
-      kLateralAccMax / pow(fmax(ego_vel, 3.0), 2.),
-      vehicle_param::max_front_wheel_angle / vehicle_param::wheel_base);
-  double physical_limit =
-      kDeltaRateMax / vehicle_param::wheel_base / std::fmax(ego_vel, 0.1);
+  double ddl_limit = std::min(kLateralAccMax / pow(fmax(ego_vel, 3.0), 2.),
+                              vehicle_param::max_front_wheel_angle / vehicle_param::wheel_base);
+  double physical_limit = kDeltaRateMax / vehicle_param::wheel_base / std::fmax(ego_vel, 0.1);
   double comfort_limit = kLateralJerkMax / pow(ego_vel, 3);
   double dddl_limit = std::fmin(physical_limit, comfort_limit);
 
@@ -134,8 +127,7 @@ double cal_lat_offset(double ego_vel, double dash_length) {
       ddd_max = dddl_limit;
     else
       ddd_max = -dddl_limit;
-    l += dl * delta_s + ddl * pow(delta_s, 2) / 2. +
-         ddd_max * pow(delta_s, 3) / 6.;
+    l += dl * delta_s + ddl * pow(delta_s, 2) / 2. + ddd_max * pow(delta_s, 3) / 6.;
     dl += ddl * delta_s + ddd_max * pow(delta_s, 2) / 2.;
     ddl += ddd_max * delta_s;
     ddl = clip(ddl, ddl_limit, -ddl_limit);

@@ -8,9 +8,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include "config/basic_type.h"
 #include "geometry.h"
 #include "path_point.h"
-#include "config/basic_type.h"
 #include "tracked_object.h"
 
 namespace planning {
@@ -86,9 +86,7 @@ struct CarCount {
     return *this;
   }
 
-  bool operator==(const CarCount &car_cnt) const {
-    return (pos == car_cnt.pos && neg == car_cnt.neg);
-  }
+  bool operator==(const CarCount &car_cnt) const { return (pos == car_cnt.pos && neg == car_cnt.neg); }
 };
 
 struct PathPlannerContext {

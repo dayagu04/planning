@@ -38,15 +38,9 @@ class Session : public planning::common::Arena {
 
   VehicleConfigurationContext *mutable_vehicle_config_context() { return vehicle_config_context_; }
 
-  bool is_highway_scene() const {
-    return get_scene_type() == planning::common::SceneType::HIGHWAY;
-  }
-  bool is_urban_scene() const {
-    return get_scene_type() == planning::common::SceneType::URBAN;
-  }
-  bool is_parking_scene() const {
-    return get_scene_type() == planning::common::SceneType::PARKING;
-  }
+  bool is_highway_scene() const { return get_scene_type() == planning::common::SceneType::HIGHWAY; }
+  bool is_urban_scene() const { return get_scene_type() == planning::common::SceneType::URBAN; }
+  bool is_parking_scene() const { return get_scene_type() == planning::common::SceneType::PARKING; }
 
   void feed_scene_type(planning::common::SceneType value) {
     // environmental_model_->mutable_local_view()->set_scene_type(value);
@@ -57,15 +51,9 @@ class Session : public planning::common::Arena {
     // hack
     return default_scene_type_;
   }
-  const std::string &get_scene_type_name() const {
-    return planning::common::SceneType_Name(get_scene_type());
-  }
-  planning::common::SceneType default_scene_type() const {
-    return default_scene_type_;
-  }
-  const std::string &default_scene_type_name() const {
-    return planning::common::SceneType_Name(default_scene_type());
-  }
+  const std::string &get_scene_type_name() const { return planning::common::SceneType_Name(get_scene_type()); }
+  planning::common::SceneType default_scene_type() const { return default_scene_type_; }
+  const std::string &default_scene_type_name() const { return planning::common::SceneType_Name(default_scene_type()); }
 
   // void feed_function_mode(uint8_t value) { function_mode_ = value; }
   // std::string get_function_mode_name() const;
@@ -86,4 +74,3 @@ class Session : public planning::common::Arena {
 
 }  // namespace framework
 }  // namespace planning
-

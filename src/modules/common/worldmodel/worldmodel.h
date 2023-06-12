@@ -4,17 +4,16 @@
 #include <memory>
 #include <vector>
 
-#include "scene_objects.h"
-#include "target_position.h"
 #include "lane.h"
-#include "map_poi_info.h"
-#include "self_position.h"
-#include "perception_fusion_lanes.h"
-#include "perception_objects.h"
 #include "lane_merging_splitting_point.h"
 #include "lane_stratery.h"
+#include "map_poi_info.h"
+#include "perception_fusion_lanes.h"
+#include "perception_objects.h"
+#include "scene_objects.h"
+#include "self_position.h"
+#include "target_position.h"
 #include "worldmodel_extra.h"
-
 
 namespace planning {
 
@@ -43,4 +42,4 @@ struct MSDWorldModel {
   MSDLaneStratery lane_stratery;
   MSDWorldModelExtra extra;
 };
-} // namespace planning
+}  // namespace planning

@@ -12,8 +12,8 @@
 
 #include "google/protobuf/util/message_differencer.h"
 
-#include "vec2d.h"
 #include "config/message_type.h"
+#include "vec2d.h"
 
 // The helper function "std::make_unique()" is defined since C++14.
 // The definition of "std::make_unique()" borrowed from C++14 is given here
@@ -66,8 +66,7 @@ namespace planning {
 namespace util {
 template <typename ProtoA, typename ProtoB>
 bool IsProtoEqual(const ProtoA& a, const ProtoB& b) {
-  return a.GetTypeName() == b.GetTypeName() &&
-         a.SerializeAsString() == b.SerializeAsString();
+  return a.GetTypeName() == b.GetTypeName() && a.SerializeAsString() == b.SerializeAsString();
   // Test shows that the above method is 5 times faster than the
   // API: google::protobuf::util::MessageDifferencer::Equals(a, b);
 }
@@ -103,11 +102,9 @@ planning_math::Vec2d MakeVec2d(const T& t) {
 
 // PointENU MakePointENU(const math::Vec2d& xy);
 
-SpeedPoint MakeSpeedPoint(const double s, const double t, const double v,
-                          const double a, const double da);
+SpeedPoint MakeSpeedPoint(const double s, const double t, const double v, const double a, const double da);
 
-PathPoint MakePathPoint(const double x, const double y, const double z,
-                        const double theta, const double kappa,
+PathPoint MakePathPoint(const double x, const double y, const double z, const double theta, const double kappa,
                         const double dkappa, const double ddkappa);
 
 /**
@@ -116,8 +113,7 @@ PathPoint MakePathPoint(const double x, const double y, const double z,
  * segment. `start` and `end` will be the first and last element in `sliced`.
  */
 template <typename T>
-void uniform_slice(const T start, const T end, uint32_t num,
-                   std::vector<T>* sliced) {
+void uniform_slice(const T start, const T end, uint32_t num, std::vector<T>* sliced) {
   if (!sliced || num == 0) {
     return;
   }
@@ -141,8 +137,7 @@ typename Container::value_type MinElement(const Container& elements) {
 }
 
 template <typename T>
-std::unordered_set<T> Intersection(const std::unordered_set<T>& s1,
-                                   const std::unordered_set<T>& s2) {
+std::unordered_set<T> Intersection(const std::unordered_set<T>& s1, const std::unordered_set<T>& s2) {
   if (s1.size() < s2.size()) {
     std::unordered_set<T> result;
     for (const auto& v : s1) {
@@ -179,13 +174,10 @@ double DistanceXY(const U& u, const V& v) {
 template <typename U, typename V>
 bool SamePointXY(const U& u, const V& v) {
   constexpr double kMathEpsilonSqr = 1e-8 * 1e-8;
-  return (u.x - v.x) * (u.x - v.x) < kMathEpsilonSqr &&
-         (u.y - v.y) * (u.y - v.y) < kMathEpsilonSqr;
+  return (u.x - v.x) * (u.x - v.x) < kMathEpsilonSqr && (u.y - v.y) * (u.y - v.y) < kMathEpsilonSqr;
 }
 
-PathPoint GetWeightedAverageOfTwoPathPoints(const PathPoint& p1,
-                                            const PathPoint& p2,
-                                            const double w1, const double w2);
+PathPoint GetWeightedAverageOfTwoPathPoints(const PathPoint& p1, const PathPoint& p2, const double w1, const double w2);
 
 // a wrapper template function for remove_if (notice that remove_if cannot
 // change the Container size)
@@ -232,12 +224,10 @@ void QuaternionToRotationMatrix(const T* quat, T* R) {
 // Test whether two float or double numbers are equal.
 // ulp: units in the last place.
 template <typename T>
-typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type
-IsFloatEqual(T x, T y, int ulp = 2) {
+typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type IsFloatEqual(T x, T y, int ulp = 2) {
   // the machine epsilon has to be scaled to the magnitude of the values used
   // and multiplied by the desired precision in ULPs (units in the last place)
-  return std::fabs(x - y) <
-             std::numeric_limits<T>::epsilon() * std::fabs(x + y) * ulp
+  return std::fabs(x - y) < std::numeric_limits<T>::epsilon() * std::fabs(x + y) * ulp
          // unless the result is subnormal
          || std::fabs(x - y) < std::numeric_limits<T>::min();
 }

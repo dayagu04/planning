@@ -76,22 +76,16 @@ class FrenetCoordinateSystem {
   //! along the path )
   double SquaredDistanceToOffSetOnCurve(double s, const Point2D& cart0) const;
   //! Gradient of the SquaredDistanceToOffSetOnCurve function
-  double GradientSquaredDistanceToOffSetOnCurve(double s,
-                                                const Point2D& cart0) const;
+  double GradientSquaredDistanceToOffSetOnCurve(double s, const Point2D& cart0) const;
   //! Hessian of the SquaredDistanceToOffSetOnCurve function
-  double HessianSquaredDistanceToPointOnCurve(double s,
-                                              const Point2D& cart0) const;
+  double HessianSquaredDistanceToPointOnCurve(double s, const Point2D& cart0) const;
   //! Find the offset that has the minimal distance to the given point
-  double FindMinDistanceOffsetOnCurve(const Point2D& cart0, double yaw = 0.0,
-                                      bool has_yaw = false,
-                                      bool has_heuristics = false,
-                                      double s_begin = 0.0,
-                                      double s_end = 120.0) const;
+  double FindMinDistanceOffsetOnCurve(const Point2D& cart0, double yaw = 0.0, bool has_yaw = false,
+                                      bool has_heuristics = false, double s_begin = 0.0, double s_end = 120.0) const;
 
-  void ConstructFrenetCoordinateSystem(
-      const vector<double>& vec_x, const vector<double>& vec_y,
-      double s_polyfit_start = 0.0,
-      double s_polyfit_end = std::numeric_limits<double>::max());
+  void ConstructFrenetCoordinateSystem(const vector<double>& vec_x, const vector<double>& vec_y,
+                                       double s_polyfit_start = 0.0,
+                                       double s_polyfit_end = std::numeric_limits<double>::max());
 
  public:
   //! Default constructor
@@ -99,48 +93,35 @@ class FrenetCoordinateSystem {
   //! Default destructor
   ~FrenetCoordinateSystem() {}
   //! Constructor with vector of x and y
-  explicit FrenetCoordinateSystem(
-      const vector<double>& vec_x, const vector<double>& vec_y,
-      const FrenetCoordinateSystemParameters& fcs_params);
+  explicit FrenetCoordinateSystem(const vector<double>& vec_x, const vector<double>& vec_y,
+                                  const FrenetCoordinateSystemParameters& fcs_params);
   //! Constructor with vector of points
-  explicit FrenetCoordinateSystem(
-      const vector<Point2D>& vec_pts,
-      const FrenetCoordinateSystemParameters& fcs_params);
+  explicit FrenetCoordinateSystem(const vector<Point2D>& vec_pts, const FrenetCoordinateSystemParameters& fcs_params);
   //! Constructor without default curvature
-  explicit FrenetCoordinateSystem(
-      double length, const spline& x_s, const spline& y_s,
-      const FrenetCoordinateSystemParameters& fcs_params);
+  explicit FrenetCoordinateSystem(double length, const spline& x_s, const spline& y_s,
+                                  const FrenetCoordinateSystemParameters& fcs_params);
   //! Constructor with default curvature
-  explicit FrenetCoordinateSystem(
-      double length, const spline& x_s, const spline& y_s, const spline& k_s,
-      const FrenetCoordinateSystemParameters& fcs_params);
+  explicit FrenetCoordinateSystem(double length, const spline& x_s, const spline& y_s, const spline& k_s,
+                                  const FrenetCoordinateSystemParameters& fcs_params);
 
-  explicit FrenetCoordinateSystem(
-      const vector<double>& vec_x, const vector<double>& vec_y,
-      const FrenetCoordinateSystemParameters& fcs_params, double s_start,
-      double s_end);
+  explicit FrenetCoordinateSystem(const vector<double>& vec_x, const vector<double>& vec_y,
+                                  const FrenetCoordinateSystemParameters& fcs_params, double s_start, double s_end);
 
   double GetLength() const { return m_length; }
   //! Cartesian coordinate to frenet coordinate
-  TRANSFORM_STATUS CartCoord2FrenetCoord(const Point2D& cart, Point2D& frenet,
-                                         bool has_heuristics = false,
-                                         double s_begin = 0.0,
-                                         double s_end = 120.0) const;
+  TRANSFORM_STATUS CartCoord2FrenetCoord(const Point2D& cart, Point2D& frenet, bool has_heuristics = false,
+                                         double s_begin = 0.0, double s_end = 120.0) const;
   //! Cartesian coordinate to frenet coordinate
   //! with yaw information to better determine the actual frenet coordinate
-  TRANSFORM_STATUS CartCoord2FrenetCoord(const Point2D& cart, Point2D& frenet,
-                                         double yaw) const;
+  TRANSFORM_STATUS CartCoord2FrenetCoord(const Point2D& cart, Point2D& frenet, double yaw) const;
   // std::vector<double> CartCoord2FrenetCoord1(
   //     const Point2D& cart, Point2D& frenet) const;
   //! Frenet coordinate to cartesian coordinate
-  TRANSFORM_STATUS FrenetCoord2CartCoord(const Point2D& frenet,
-                                         Point2D& cart) const;
+  TRANSFORM_STATUS FrenetCoord2CartCoord(const Point2D& frenet, Point2D& cart) const;
   //! Cartesian state to frenet state
-  TRANSFORM_STATUS CartState2FrenetState(const CartesianState& cart_state,
-                                         FrenetState& frenet_state) const;
+  TRANSFORM_STATUS CartState2FrenetState(const CartesianState& cart_state, FrenetState& frenet_state) const;
   //! Frenet state to cartesian state
-  TRANSFORM_STATUS FrenetState2CartState(const FrenetState& frenet_state,
-                                         CartesianState& cart_state) const;
+  TRANSFORM_STATUS FrenetState2CartState(const FrenetState& frenet_state, CartesianState& cart_state) const;
   /*
   std::vector<double>  CartCoord2FrenetCoord1(
       const Point2D& cart, Point2D& frenet) const;
@@ -155,8 +136,7 @@ class FrenetCoordinateSystem {
     assert(s <= m_length && s >= 0);
     double real_delta = std::min<double>(m_length - s, delta_s);
     if (real_delta > 0.1)
-      return atan2(m_y_s(s + real_delta) - m_y_s(s),
-                   m_x_s(s + real_delta) - m_x_s(s));
+      return atan2(m_y_s(s + real_delta) - m_y_s(s), m_x_s(s + real_delta) - m_x_s(s));
     else
       return GetRefCurveHeading(s);
   }
@@ -180,9 +160,7 @@ class FrenetCoordinateSystem {
 
   std::vector<double> polyfit(vector<std::pair<double, double>>& array, int n);
 
-  const std::vector<double>& GetCurveParameters() const {
-    return curvature_fit_parameters;
-  }
+  const std::vector<double>& GetCurveParameters() const { return curvature_fit_parameters; }
   void VerifyCurveFit();
 };
 

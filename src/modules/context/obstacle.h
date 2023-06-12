@@ -5,13 +5,13 @@
 #include <vector>
 
 #include "config/message_type.h"
+#include "fusion_objects.pb.h"
 #include "math/box2d.h"
 #include "math/math_utils.h"
 #include "math/polygon2d.h"
-#include "vec2d.h"
 #include "prediction.pb.h"
-#include "fusion_objects.pb.h"
 #include "prediction_object.h"
+#include "vec2d.h"
 
 namespace planning {
 
@@ -21,9 +21,7 @@ class Obstacle {
   //                   const Prediction::PredictionObject &prediction_object,
   //                   bool is_static, double start_relative_timestamp);
 
-  explicit Obstacle(int id,
-                    const PredictionObject &prediction_object,
-                    bool is_static, double start_relative_timestamp);
+  explicit Obstacle(int id, const PredictionObject &prediction_object, bool is_static, double start_relative_timestamp);
 
   // explicit Obstacle(int id,
   //                   const FusionObjects::FusionObject &perception_obstacle,
@@ -37,9 +35,7 @@ class Obstacle {
   explicit Obstacle(int id, const std::vector<Common::Point3d> &points);
   explicit Obstacle(int id, const std::vector<planning_math::Vec2d> &points);
 
-  const std::vector<planning_math::Vec2d> &perception_points() const {
-    return perception_points_;
-  }
+  const std::vector<planning_math::Vec2d> &perception_points() const { return perception_points_; }
 
   int id() const { return id_; }
 
@@ -56,7 +52,7 @@ class Obstacle {
   double x_relative_velocity() const { return x_relative_velocity_; }
   double y_relative_velocity() const { return y_relative_velocity_; }
   double relative_velocity_angle() const { return relative_velocity_angle_; }
-  
+
   // double perception_velocity() const { return perception_velocity_; }
   double acceleration() const { return acc_; }
   // double acceleration_signed() const { return acc_signed_; }
@@ -64,32 +60,22 @@ class Obstacle {
   bool is_static() const { return is_static_; }
   Common::ObjectType type() const { return type_; }
   bool is_vaild() const { return valid_; }
-  bool abnormal_data_dectection(
-      const PredictionObject &prediction_object);
+  bool abnormal_data_dectection(const PredictionObject &prediction_object);
 
-  const std::vector<PncTrajectoryPoint> &trajectory() const {
-    return trajectory_;
-  }
+  const std::vector<PncTrajectoryPoint> &trajectory() const { return trajectory_; }
 
-  const planning_math::Box2d &perception_bounding_box() const {
-    return perception_bounding_box_;
-  }
+  const planning_math::Box2d &perception_bounding_box() const { return perception_bounding_box_; }
 
-  const planning_math::Polygon2d &perception_polygon() const {
-    return perception_polygon_;
-  }
+  const planning_math::Polygon2d &perception_polygon() const { return perception_polygon_; }
 
   PncTrajectoryPoint get_point_at_time(const double relative_time) const;
 
-  planning_math::Polygon2d get_polygon_at_point(
-      const PncTrajectoryPoint &point) const;
+  planning_math::Polygon2d get_polygon_at_point(const PncTrajectoryPoint &point) const;
 
  private:
-  void extract_point_at_specified_resolution(
-      std::vector<planning_math::Vec2d> &points) const;
+  void extract_point_at_specified_resolution(std::vector<planning_math::Vec2d> &points) const;
 
-  planning_math::Box2d get_bounding_box(
-      const PncTrajectoryPoint &point) const;
+  planning_math::Box2d get_bounding_box(const PncTrajectoryPoint &point) const;
 
  private:
   int id_{};
@@ -118,7 +104,6 @@ class Obstacle {
   // double speed_direction_ = 0.0;
   double width_;
   double length_;
-
 
   std::vector<PncTrajectoryPoint> trajectory_{};
   // FusionObjects::FusionObject perception_obstacle_;

@@ -34,8 +34,8 @@ typedef Eigen::VectorXd Control;
 // definition of ilqr matrix for each iteration
 typedef Eigen::VectorXd XkMT;
 typedef Eigen::VectorXd UkMT;
-typedef Eigen::VectorXd LxMT; // lx size is equal to xk
-typedef Eigen::VectorXd LuMT; // lu size is equal to uk
+typedef Eigen::VectorXd LxMT;  // lx size is equal to xk
+typedef Eigen::VectorXd LuMT;  // lu size is equal to uk
 typedef Eigen::MatrixXd LxxMT;
 typedef Eigen::MatrixXd LxuMT;
 typedef Eigen::MatrixXd LuuMT;
@@ -85,10 +85,9 @@ struct iLqrSolverConfig {
   double z_min = 0.0;
   double model_dt = 0.0;
   double loop_dt = 0.0;
-  std::vector<double> alpha_vec = {
-      1.0000, 0.6180, 0.3819, 0.2360, 0.1458,
-      0.0901, 0.0557, 0.0344, 0.01}; // fixed linesearch step
+  std::vector<double> alpha_vec = {1.0000, 0.6180, 0.3819, 0.2360, 0.1458,
+                                   0.0901, 0.0557, 0.0344, 0.01};  // fixed linesearch step
 };
-} // namespace ilqr_solver
+}  // namespace ilqr_solver
 
 #endif

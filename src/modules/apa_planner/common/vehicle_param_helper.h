@@ -23,4 +23,4 @@ class VehicleParamHelper {
   static bool is_init_;
 };
 
-} // namespace planning
+}  // namespace planning

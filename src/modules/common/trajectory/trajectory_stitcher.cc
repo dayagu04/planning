@@ -1,12 +1,11 @@
-#include <algorithm>
 #include "trajectory/trajectory_stitcher.h"
+#include <algorithm>
 #include "math/math_utils.h"
 #include "vehicle_model/vehicle_model.h"
 
 namespace planning {
 
-PncTrajectoryPoint TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
-    const VehicleState& vehicle_state) {
+PncTrajectoryPoint TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(const VehicleState& vehicle_state) {
   PncTrajectoryPoint point;
   point.path_point.s = 0.0;
   point.path_point.x = vehicle_state.x;
@@ -20,8 +19,7 @@ PncTrajectoryPoint TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
   return point;
 }
 
-std::vector<PncTrajectoryPoint>
-TrajectoryStitcher::ComputeReinitStitchingTrajectory(
+std::vector<PncTrajectoryPoint> TrajectoryStitcher::ComputeReinitStitchingTrajectory(
     const double planning_cycle_time, const VehicleState& vehicle_state) {
   PncTrajectoryPoint reinit_point;
   static constexpr double kEpsilon_v = 0.1;
@@ -31,16 +29,13 @@ TrajectoryStitcher::ComputeReinitStitchingTrajectory(
     reinit_point = ComputeTrajectoryPointFromVehicleState(vehicle_state);
   } else {
     VehicleState predicted_vehicle_state;
-    predicted_vehicle_state =
-         common::VehicleModel::Predict(planning_cycle_time, vehicle_state);
-    reinit_point =
-        ComputeTrajectoryPointFromVehicleState(predicted_vehicle_state);
+    predicted_vehicle_state = common::VehicleModel::Predict(planning_cycle_time, vehicle_state);
+    reinit_point = ComputeTrajectoryPointFromVehicleState(predicted_vehicle_state);
     reinit_point.relative_time += planning_cycle_time;
   }
 
   return std::vector<PncTrajectoryPoint>(1, reinit_point);
 }
-
 
 /* Planning from current vehicle state if:
    1. the auto-driving mode is off
@@ -77,7 +72,8 @@ TrajectoryStitcher::ComputeReinitStitchingTrajectory(
 //   size_t prev_trajectory_size = prev_trajectory.size();
 
 //   if (prev_trajectory_size == 0) {
-//     MSD_LOG(INFO, "trajectory stitcher: Projected trajectory at time [%f] size is zero! Previous planning not exist or failed. Use "
+//     MSD_LOG(INFO, "trajectory stitcher: Projected trajectory at time [%f] size is zero! Previous planning not exist
+//     or failed. Use "
 //               "origin car status instead.", prev_trajectory.header_time());
 //     *replan_reason = "replan for empty previous trajectory.";
 //     return ComputeReinitStitchingTrajectory(planning_cycle_time, vehicle_state);
@@ -197,4 +193,4 @@ TrajectoryStitcher::ComputeReinitStitchingTrajectory(
 //   return stitching_trajectory;
 // }
 
-}
+}  // namespace planning

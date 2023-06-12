@@ -14,17 +14,15 @@ static constexpr std::array<double, QUADRATURE_ORDER> GAUSS_QUAD_5TH_POS = {
     0.5 * (1.0 + 0.5384693101), 0.5 * (1.0 + 0.9061798459),
 };
 
-static constexpr std::array<double, QUADRATURE_ORDER + 2>
-    GAUSS_QUAD_5TH_POS_WITH_END = {
-        0.0,       0.5 * (1.0 - 0.9061798459), 0.5 * (1.0 - 0.5384693101),
-        0.5 * 1.0, 0.5 * (1.0 + 0.5384693101), 0.5 * (1.0 + 0.9061798459),
-        1.0,
+static constexpr std::array<double, QUADRATURE_ORDER + 2> GAUSS_QUAD_5TH_POS_WITH_END = {
+    0.0,       0.5 * (1.0 - 0.9061798459), 0.5 * (1.0 - 0.5384693101),
+    0.5 * 1.0, 0.5 * (1.0 + 0.5384693101), 0.5 * (1.0 + 0.9061798459),
+    1.0,
 };
 
 // Guass quadrature point sampling weight
 static constexpr std::array<double, QUADRATURE_ORDER> GAUSS_QUAD_5TH_WT = {
-    0.5 * 0.2369268850, 0.5 * 0.4786286705, 0.5 * 0.5688888888,
-    0.5 * 0.4786286705, 0.5 * 0.2369268850,
+    0.5 * 0.2369268850, 0.5 * 0.4786286705, 0.5 * 0.5688888888, 0.5 * 0.4786286705, 0.5 * 0.2369268850,
 };
 
 /**
@@ -32,16 +30,13 @@ static constexpr std::array<double, QUADRATURE_ORDER> GAUSS_QUAD_5TH_WT = {
  */
 class QuinticPoly2d {
  public:
-  QuinticPoly2d(const std::array<double, 5> &start,
-                const std::array<double, 5> &end, const double end_t)
-      : QuinticPoly2d(start[0], start[1], start[2], start[3], start[4], end[0],
-                      end[1], end[2], end[3], end[4], end_t) {}
+  QuinticPoly2d(const std::array<double, 5> &start, const std::array<double, 5> &end, const double end_t)
+      : QuinticPoly2d(start[0], start[1], start[2], start[3], start[4], end[0], end[1], end[2], end[3], end[4], end_t) {
+  }
 
-  QuinticPoly2d(const double &start_x, const double &start_y,
-                const double &start_yaw, const double &start_v,
-                const double &start_a, const double &end_x, const double &end_y,
-                const double &end_yaw, const double &end_v, const double &end_a,
-                const double &end_t) {
+  QuinticPoly2d(const double &start_x, const double &start_y, const double &start_yaw, const double &start_v,
+                const double &start_a, const double &end_x, const double &end_y, const double &end_yaw,
+                const double &end_v, const double &end_a, const double &end_t) {
     double start_v_x = start_v * std::cos(start_yaw);
     double start_a_x = start_a * std::cos(start_yaw);
     double end_v_x = end_v * std::cos(end_yaw);

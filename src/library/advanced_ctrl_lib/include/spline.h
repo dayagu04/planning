@@ -40,77 +40,81 @@ namespace mathlib {
 // band matrix solver
 // band matrix solver
 class band_matrix {
-private:
-  std::vector<std::vector<double>> m_upper; // upper band
-  std::vector<std::vector<double>> m_lower; // lower band
-public:
-  band_matrix(){};                        // constructor
-  band_matrix(int dim, int n_u, int n_l); // constructor
-  ~band_matrix(){};                       // destructor
-  void resize(int dim, int n_u, int n_l); // init with dim,n_u,n_l
-  int dim() const;                        // matrix dimension
+ private:
+  std::vector<std::vector<double>> m_upper;  // upper band
+  std::vector<std::vector<double>> m_lower;  // lower band
+ public:
+  band_matrix(){};                         // constructor
+  band_matrix(int dim, int n_u, int n_l);  // constructor
+  ~band_matrix(){};                        // destructor
+  void resize(int dim, int n_u, int n_l);  // init with dim,n_u,n_l
+  int dim() const;                         // matrix dimension
   int num_upper() const { return (int)m_upper.size() - 1; }
   int num_lower() const { return (int)m_lower.size() - 1; }
   // access operator
-  double &operator()(int i, int j);      // write
-  double operator()(int i, int j) const; // read
+  double &operator()(int i, int j);       // write
+  double operator()(int i, int j) const;  // read
   // we can store an additional diagonal (in m_lower)
   double &saved_diag(int i);
   double saved_diag(int i) const;
   void lu_decompose();
   std::vector<double> r_solve(const std::vector<double> &b) const;
   std::vector<double> l_solve(const std::vector<double> &b) const;
-  std::vector<double> lu_solve(const std::vector<double> &b,
-                               bool is_lu_decomposed = false);
+  std::vector<double> lu_solve(const std::vector<double> &b, bool is_lu_decomposed = false);
 };
 
 double get_eps();
 
-std::vector<double> solve_cubic(double a, double b, double c, double d,
-                                int newton_iter = 0);
+std::vector<double> solve_cubic(double a, double b, double c, double d, int newton_iter = 0);
 
 // spline interpolation
 class spline {
-public:
+ public:
   // spline types
   enum spline_type {
-    linear = 10,         // linear interpolation
-    cspline = 30,        // cubic splines (classical C^2)
-    cspline_hermite = 31 // cubic hermite splines (local, only C^1)
+    linear = 10,          // linear interpolation
+    cspline = 30,         // cubic splines (classical C^2)
+    cspline_hermite = 31  // cubic hermite splines (local, only C^1)
   };
 
   // boundary condition type for the spline end-points
   enum bd_type { first_deriv = 1, second_deriv = 2, not_a_knot = 3 };
 
-protected:
-  std::vector<double> m_x, m_y; // x,y coordinates of points
+ protected:
+  std::vector<double> m_x, m_y;  // x,y coordinates of points
   // interpolation parameters
   // f(x) = a_i + b_i*(x-x_i) + c_i*(x-x_i)^2 + d_i*(x-x_i)^3
   // where a_i = y_i, or else it won't go through grid points
-  std::vector<double> m_b, m_c, m_d; // spline coefficients
-  double m_c0;                       // for left extrapolation
+  std::vector<double> m_b, m_c, m_d;  // spline coefficients
+  double m_c0;                        // for left extrapolation
   spline_type m_type;
   bd_type m_left, m_right;
   double m_left_value, m_right_value;
   bool m_made_monotonic;
-  void set_coeffs_from_b();            // calculate c_i, d_i from b_i
-  size_t find_closest(double x) const; // closest idx so that m_x[idx]<=x
+  void set_coeffs_from_b();             // calculate c_i, d_i from b_i
+  size_t find_closest(double x) const;  // closest idx so that m_x[idx]<=x
 
-public:
+ public:
   // default constructor: set boundary condition to be zero curvature
   // at both ends, i.e. natural splines
   spline()
-      : m_type(cspline), m_left(second_deriv), m_right(second_deriv),
-        m_left_value(0.0), m_right_value(0.0), m_made_monotonic(false) {
+      : m_type(cspline),
+        m_left(second_deriv),
+        m_right(second_deriv),
+        m_left_value(0.0),
+        m_right_value(0.0),
+        m_made_monotonic(false) {
     ;
   }
-  spline(const std::vector<double> &X, const std::vector<double> &Y,
-         spline_type type = cspline, bool make_monotonic = false,
-         bd_type left = second_deriv, double left_value = 0.0,
+  spline(const std::vector<double> &X, const std::vector<double> &Y, spline_type type = cspline,
+         bool make_monotonic = false, bd_type left = second_deriv, double left_value = 0.0,
          bd_type right = second_deriv, double right_value = 0.0)
-      : m_type(type), m_left(left), m_right(right), m_left_value(left_value),
+      : m_type(type),
+        m_left(left),
+        m_right(right),
+        m_left_value(left_value),
         m_right_value(right_value),
-        m_made_monotonic(false) // false correct here: make_monotonic() sets it
+        m_made_monotonic(false)  // false correct here: make_monotonic() sets it
   {
     this->set_points(X, Y, m_type);
     if (make_monotonic) {
@@ -119,12 +123,10 @@ public:
   }
 
   // modify boundary conditions: if called it must be before set_points()
-  void set_boundary(bd_type left, double left_value, bd_type right,
-                    double right_value);
+  void set_boundary(bd_type left, double left_value, bd_type right, double right_value);
 
   // set all data points (cubic_spline=false means linear interpolation)
-  void set_points(const std::vector<double> &x, const std::vector<double> &y,
-                  spline_type type = cspline);
+  void set_points(const std::vector<double> &x, const std::vector<double> &y, spline_type type = cspline);
 
   // adjust coefficients so that the spline becomes piecewise monotonic
   // where possible
@@ -154,7 +156,7 @@ public:
     return m_x.back();
   }
 };
-} // namespace mathlib
-} // namespace pnc
+}  // namespace mathlib
+}  // namespace pnc
 
 #endif /* TK_SPLINE_H */

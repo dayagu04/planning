@@ -1,6 +1,6 @@
 #include "math/linear_interpolation.h"
-#include "math/math_utils.h"
 #include "common.h"
+#include "math/math_utils.h"
 
 #include <cmath>
 #include <iostream>
@@ -9,8 +9,7 @@
 namespace planning {
 namespace planning_math {
 
-double slerp(const double a0, const double t0, const double a1, const double t1,
-             const double t) {
+double slerp(const double a0, const double t0, const double a1, const double t1, const double t) {
   if (std::abs(t1 - t0) <= kMathEpsilon) {
     LOG_DEBUG("input time difference is too small");
     return NormalizeAngle(a0);
@@ -29,8 +28,7 @@ double slerp(const double a0, const double t0, const double a1, const double t1,
   return NormalizeAngle(a);
 }
 
-SLPoint InterpolateUsingLinearApproximation(const SLPoint &p0,
-                                            const SLPoint &p1, const double w) {
+SLPoint InterpolateUsingLinearApproximation(const SLPoint &p0, const SLPoint &p1, const double w) {
   assert(w > 0.0);
 
   SLPoint p;
@@ -39,9 +37,7 @@ SLPoint InterpolateUsingLinearApproximation(const SLPoint &p0,
   return p;
 }
 
-PathPoint InterpolateUsingLinearApproximation(const PathPoint &p0,
-                                              const PathPoint &p1,
-                                              const double s) {
+PathPoint InterpolateUsingLinearApproximation(const PathPoint &p0, const PathPoint &p1, const double s) {
   double s0 = p0.s;
   double s1 = p1.s;
 
@@ -63,9 +59,8 @@ PathPoint InterpolateUsingLinearApproximation(const PathPoint &p0,
   return path_point;
 }
 
-PncTrajectoryPoint InterpolateUsingLinearApproximation(const PncTrajectoryPoint &tp0,
-                                                    const PncTrajectoryPoint &tp1,
-                                                    const double t) {
+PncTrajectoryPoint InterpolateUsingLinearApproximation(const PncTrajectoryPoint &tp0, const PncTrajectoryPoint &tp1,
+                                                       const double t) {
   //   if (!tp0.has_path_point() || !tp1.has_path_point()) {
   //     PncTrajectoryPoint p;
   //     p.path_point = PathPoint();
@@ -81,11 +76,10 @@ PncTrajectoryPoint InterpolateUsingLinearApproximation(const PncTrajectoryPoint 
   tp.a = lerp(tp0.a, t0, tp1.a, t1, t);
   tp.sigma_x = lerp(tp0.sigma_x, t0, tp1.sigma_x, t1, t);
   tp.sigma_y = lerp(tp0.sigma_y, t0, tp1.sigma_y, t1, t);
-  tp.prediction_prob =
-    lerp(tp0.prediction_prob, t0, tp1.prediction_prob, t1, t);
+  tp.prediction_prob = lerp(tp0.prediction_prob, t0, tp1.prediction_prob, t1, t);
   tp.velocity_direction =
-    // std::abs(t -t0) < std::abs(t -t1) ? tp0.velocity_direction : tp1.velocity_direction;
-    slerp(tp0.velocity_direction, t0, tp1.velocity_direction, t1, t);
+      // std::abs(t -t0) < std::abs(t -t1) ? tp0.velocity_direction : tp1.velocity_direction;
+      slerp(tp0.velocity_direction, t0, tp1.velocity_direction, t1, t);
   tp.relative_time = t;
   // tp.steer = slerp(tp0.steer, t0, tp1.steer, t1, t);
 
@@ -109,8 +103,7 @@ PncTrajectoryPoint InterpolateUsingLinearApproximation(const PncTrajectoryPoint 
 }
 
 PredictionTrajectoryPoint InterpolateUsingLinearApproximation(const PredictionTrajectoryPoint &tp0,
-                                                    const PredictionTrajectoryPoint &tp1,
-                                                    const double t) {
+                                                              const PredictionTrajectoryPoint &tp1, const double t) {
   double t0 = tp0.relative_time;
   double t1 = tp1.relative_time;
 
@@ -119,14 +112,13 @@ PredictionTrajectoryPoint InterpolateUsingLinearApproximation(const PredictionTr
   tp.x = lerp(tp0.x, t0, tp1.x, t1, t);
   tp.y = lerp(tp0.y, t0, tp1.y, t1, t);
   tp.yaw =
-    // std::abs(t -t0) < std::abs(t -t1) ? tp0.velocity_direction : tp1.velocity_direction;
-    slerp(tp0.yaw, t0, tp1.yaw, t1, t);
+      // std::abs(t -t0) < std::abs(t -t1) ? tp0.velocity_direction : tp1.velocity_direction;
+      slerp(tp0.yaw, t0, tp1.yaw, t1, t);
   tp.speed = lerp(tp0.speed, t0, tp1.speed, t1, t);
   tp.theta =
-    // std::abs(t -t0) < std::abs(t -t1) ? tp0.velocity_direction : tp1.velocity_direction;
-    slerp(tp0.theta, t0, tp1.theta, t1, t);
-  tp.prob =
-    lerp(tp0.prob, t0, tp1.prob, t1, t);
+      // std::abs(t -t0) < std::abs(t -t1) ? tp0.velocity_direction : tp1.velocity_direction;
+      slerp(tp0.theta, t0, tp1.theta, t1, t);
+  tp.prob = lerp(tp0.prob, t0, tp1.prob, t1, t);
   tp.std_dev_x = lerp(tp0.std_dev_x, t0, tp1.std_dev_x, t1, t);
   tp.std_dev_y = lerp(tp0.std_dev_y, t0, tp1.std_dev_y, t1, t);
   tp.std_dev_yaw = lerp(tp0.std_dev_yaw, t0, tp1.std_dev_yaw, t1, t);

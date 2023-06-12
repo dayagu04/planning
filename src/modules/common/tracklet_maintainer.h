@@ -4,14 +4,14 @@
 #include <map>
 #include <set>
 
+#include "ego_state_manager.h"
 #include "prediction_object.h"
 #include "refline.h"
-#include "ego_state_manager.h"
 // #include "path_point.h"
+#include "fusion_objects.pb.h"
+#include "session.h"
 #include "tracked_object.h"
 #include "utils/lateral_utils.h"
-#include "session.h"
-#include "fusion_objects.pb.h"
 
 namespace planning {
 
@@ -25,7 +25,7 @@ struct TrackletSequentialState {
 // double get_dist(double x, double y, const std::vector<double> &y_x);
 
 class LifecycleDict {
-public:
+ public:
   LifecycleDict() {}
   virtual ~LifecycleDict() = default;
 
@@ -37,105 +37,87 @@ public:
 
   void remove_clean();
 
-private:
+ private:
   std::map<int, TrackletSequentialState> data_dict_;
   std::set<int> dirty_set_;
 };
 
 class SimpleRefLine {
-public:
+ public:
   SimpleRefLine();
   virtual ~SimpleRefLine() = default;
 
   void update_pathpoints(const std::vector<PathPoint> &path_points);
 
-  void cartesian_frenet(double x, double y, double &s, double &l, double &v_s,
-                        double &v_l, double &theta, bool get_theta = false,
-                        double *v = nullptr, double *yaw = nullptr);
+  void cartesian_frenet(double x, double y, double &s, double &l, double &v_s, double &v_l, double &theta,
+                        bool get_theta = false, double *v = nullptr, double *yaw = nullptr);
 
   void frenet_cartesian(double s, double l, double &x, double &y);
 
   bool has_update() const { return update_; }
 
-private:
+ private:
   std::vector<PathPoint> path_points_;
   bool update_;
 };
 
 class TrackletMaintainer {
-public:
+ public:
   TrackletMaintainer(planning::framework::Session *session);
   virtual ~TrackletMaintainer();
 
-  void apply_update(const EgoStateManager &ego_state,
-                    const std::vector<PredictionObject> &predictions,
-                    std::vector<TrackedObject> &tracked_objects,
-                    LeadCars &lead_cars, bool isRedLightStop, bool hdmap_valid);
+  void apply_update(const EgoStateManager &ego_state, const std::vector<PredictionObject> &predictions,
+                    std::vector<TrackedObject> &tracked_objects, LeadCars &lead_cars, bool isRedLightStop,
+                    bool hdmap_valid);
 
-private:
-  void recv_prediction_objects(const std::vector<PredictionObject> &predictions,
-                               std::vector<TrackedObject *> &objects);
-  void recv_relative_prediction_objects(
-      const std::vector<PredictionObject> &predictions,
-      std::vector<TrackedObject *> &objects);
+ private:
+  void recv_prediction_objects(const std::vector<PredictionObject> &predictions, std::vector<TrackedObject *> &objects);
+  void recv_relative_prediction_objects(const std::vector<PredictionObject> &predictions,
+                                        std::vector<TrackedObject *> &objects);
 
-  void fisheye_helper(const PredictionObject &prediction,
-                      TrackedObject &object);
+  void fisheye_helper(const PredictionObject &prediction, TrackedObject &object);
 
-  void calc(std::vector<TrackedObject *> &tracked_objects,
-            const std::vector<PathPoint> &path_points, int scenario,
-            double lane_width, double lat_offset, bool borrow_bicycle_lane,
-            bool enable_intersection_planner, double dist_rblane,
-            bool tleft_lane, bool rightest_lane, double dist_intersect,
-            double intersect_length, bool left_faster, bool right_faster,
-            LeadCars &lead_cars, bool isRedLightStop, bool isFasterStaticAvd,
-            bool isOnHighway, std::vector<double> d_poly,
-            std::vector<double> c_poly);
+  void calc(std::vector<TrackedObject *> &tracked_objects, const std::vector<PathPoint> &path_points, int scenario,
+            double lane_width, double lat_offset, bool borrow_bicycle_lane, bool enable_intersection_planner,
+            double dist_rblane, bool tleft_lane, bool rightest_lane, double dist_intersect, double intersect_length,
+            bool left_faster, bool right_faster, LeadCars &lead_cars, bool isRedLightStop, bool isFasterStaticAvd,
+            bool isOnHighway, std::vector<double> d_poly, std::vector<double> c_poly);
 
-  void fill_info_with_refline(TrackedObject &item,
-                              SimpleRefLine &simple_refline, double lat_offset);
+  void fill_info_with_refline(TrackedObject &item, SimpleRefLine &simple_refline, double lat_offset);
 
   void fill_deriv_info(TrackedObject &item);
 
   void fill_possibility_of_cutin(TrackedObject &item);
 
-  void calc_intersection_with_refline(TrackedObject &item,
-                                      bool enable_intersection_planner,
+  void calc_intersection_with_refline(TrackedObject &item, bool enable_intersection_planner,
                                       SimpleRefLine &simple_refline);
 
-  double calc_ignorance_threshold(TrackedObject &item, int idx, int sgn,
-                                  bool enable_intersection_planner);
+  double calc_ignorance_threshold(TrackedObject &item, int idx, int sgn, bool enable_intersection_planner);
 
-  void check_accident_car(TrackedObject &item, double v_ego, int scenario,
-                          double dist_intersect, double intersect_length,
-                          bool left_faster, bool right_faster,
-                          bool isRedLightStop, bool isFasterStaticAvd, bool isOnHighway);
+  void check_accident_car(TrackedObject &item, double v_ego, int scenario, double dist_intersect,
+                          double intersect_length, bool left_faster, bool right_faster, bool isRedLightStop,
+                          bool isFasterStaticAvd, bool isOnHighway);
 
-  void check_prebrk_object(TrackedObject &item, double v_ego,
-                           double lane_width);
+  void check_prebrk_object(TrackedObject &item, double v_ego, double lane_width);
 
   bool is_potential_lead_one(TrackedObject &item, double v_ego);
 
   bool is_potential_lead_two(TrackedObject &item, TrackedObject *lead_one);
 
-  bool is_potential_temp_lead_one(TrackedObject &item, double v_ego,
-                                  bool refline_update);
+  bool is_potential_temp_lead_one(TrackedObject &item, double v_ego, bool refline_update);
 
-  bool is_potential_temp_lead_two(TrackedObject &item,
-                                  TrackedObject *temp_lead_one);
+  bool is_potential_temp_lead_two(TrackedObject &item, TrackedObject *temp_lead_one);
 
-  bool is_potential_avoiding_car(TrackedObject &item, TrackedObject *lead_one, double v_ego,
-                                 double lane_width, int scenario,
-                                 bool borrow_bicycle_lane, double dist_rblane,
-                                 bool tleft_lane, bool rightest_lane, double dist_intersect, double intersect_length, bool isRedLightStop);
+  bool is_potential_avoiding_car(TrackedObject &item, TrackedObject *lead_one, double v_ego, double lane_width,
+                                 int scenario, bool borrow_bicycle_lane, double dist_rblane, bool tleft_lane,
+                                 bool rightest_lane, double dist_intersect, double intersect_length,
+                                 bool isRedLightStop);
 
-  bool is_leadone_potential_avoiding_car(TrackedObject *lead_one, int scenario,
-                                         double lane_width,
-                                         bool borrow_bicycle_lane,
-                                         bool rightest_lane, double dist_intersect, bool isRedLightStop);
+  bool is_leadone_potential_avoiding_car(TrackedObject *lead_one, int scenario, double lane_width,
+                                         bool borrow_bicycle_lane, bool rightest_lane, double dist_intersect,
+                                         bool isRedLightStop);
 
-  void select_lead_cars(const std::vector<TrackedObject *> &tracked_objects,
-                        LeadCars &lead_cars);
+  void select_lead_cars(const std::vector<TrackedObject *> &tracked_objects, LeadCars &lead_cars);
 
   void set_default_value(const std::vector<TrackedObject *> &tracked_objects);
 
@@ -153,6 +135,6 @@ private:
   double vs_ego_;
 };
 
-} // namespace planning
+}  // namespace planning
 
 #endif

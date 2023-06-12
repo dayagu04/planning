@@ -2,9 +2,8 @@
 
 namespace planning {
 
-LaneChangeLaneManager::LaneChangeLaneManager(
-    std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
-    planning::framework::Session* session) {
+LaneChangeLaneManager::LaneChangeLaneManager(std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
+                                             planning::framework::Session* session) {
   session_ = session;
   virtual_lane_mgr_ = virtual_lane_mgr;
   if (virtual_lane_mgr == nullptr) {
@@ -16,8 +15,7 @@ LaneChangeLaneManager::LaneChangeLaneManager(
   }
 }
 
-LaneChangeLaneManager::LaneChangeLaneManager(
-    std::shared_ptr<LaneChangeLaneManager> source) {
+LaneChangeLaneManager::LaneChangeLaneManager(std::shared_ptr<LaneChangeLaneManager> source) {
   virtual_lane_mgr_ = source->virtual_lane_mgr_;
   session_ = source->session_;
   copy_lane_change_lanes(*source);
@@ -35,17 +33,16 @@ void LaneChangeLaneManager::reset_lc_lanes() {
   flane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
 }
 
-void LaneChangeLaneManager::copy_lane_change_lanes(
-    LaneChangeLaneManager& source) {
+void LaneChangeLaneManager::copy_lane_change_lanes(LaneChangeLaneManager& source) {
   tlane_virtual_id_ = source.tlane_virtual_id_;
   olane_virtual_id_ = source.olane_virtual_id_;
   flane_virtual_id_ = source.flane_virtual_id_;
 }
 
-void LaneChangeLaneManager::save_context(VirtualLaneManagerContext &context) const {
-  //todo :clren
+void LaneChangeLaneManager::save_context(VirtualLaneManagerContext& context) const {
+  // todo :clren
 }
-void LaneChangeLaneManager::restore_context(const VirtualLaneManagerContext &context) {
+void LaneChangeLaneManager::restore_context(const VirtualLaneManagerContext& context) {
   // auto restore_master =
   //     [this](VirtualLane &target_lane, int master_position) {
   //       switch (master_position) {

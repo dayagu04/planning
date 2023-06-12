@@ -60,5 +60,5 @@ float tan(Angle8 a) {
   return tan(b);
 }
 
-}  // namespace math
-}  // namespace apollo
+}  // namespace planning_math
+}  // namespace planning

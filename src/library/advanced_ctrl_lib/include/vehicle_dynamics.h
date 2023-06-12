@@ -9,9 +9,9 @@
 #ifndef __VEHICLE_DYNAMICS_H__
 #define __VEHICLE_DYNAMICS_H__
 
+#include <vector>
 #include "math_lib.h"
 #include "statespace_sys.h"
-#include <vector>
 
 namespace pnc {
 namespace vehicle_dynamics {
@@ -39,12 +39,10 @@ struct SimpleKinematicsState {
 
   SimpleKinematicsState() { Reset(); };
 
-  SimpleKinematicsState(double X, double Y, double v, double a, double phi,
-                        double delta)
+  SimpleKinematicsState(double X, double Y, double v, double a, double phi, double delta)
       : X_(X), Y_(Y), v_(v), a_(a), phi_(phi), delta_(delta) {}
 
-  void SetValue(double X, double Y, double v, double a, double phi,
-                double delta) {
+  void SetValue(double X, double Y, double v, double a, double phi, double delta) {
     X_ = X;
     Y_ = Y;
     v_ = v;
@@ -62,8 +60,7 @@ struct SimpleKinematicsInput {
     acc_cmd_ = 0.0;
     delta_cmd_ = 0.0;
   }
-  SimpleKinematicsInput(double acc_cmd, double delta_cmd)
-      : acc_cmd_(acc_cmd), delta_cmd_(delta_cmd) {}
+  SimpleKinematicsInput(double acc_cmd, double delta_cmd) : acc_cmd_(acc_cmd), delta_cmd_(delta_cmd) {}
   void SetValue(double acc_cmd, double delta_cmd) {
     acc_cmd_ = acc_cmd;
     delta_cmd_ = delta_cmd;
@@ -97,19 +94,23 @@ struct SimpleKinematicsParameters {
     delta_max_ = mathlib::Deg2Rad(120.0);
   }
 
-  SimpleKinematicsParameters(double L, double tau_acc, double k_acc,
-                             double tau_delta, double curv_factor,
-                             double delta_bias, double vel_max,
-                             double acc_inc_max, double acc_dec_max,
+  SimpleKinematicsParameters(double L, double tau_acc, double k_acc, double tau_delta, double curv_factor,
+                             double delta_bias, double vel_max, double acc_inc_max, double acc_dec_max,
                              double delta_max)
-      : L_(L), tau_acc_(tau_acc), k_acc_(k_acc), tau_delta_(tau_delta),
-        curv_factor_(curv_factor), delta_bias_(delta_bias), vel_max_(vel_max),
-        acc_inc_max_(acc_inc_max), acc_dec_max_(acc_dec_max),
+      : L_(L),
+        tau_acc_(tau_acc),
+        k_acc_(k_acc),
+        tau_delta_(tau_delta),
+        curv_factor_(curv_factor),
+        delta_bias_(delta_bias),
+        vel_max_(vel_max),
+        acc_inc_max_(acc_inc_max),
+        acc_dec_max_(acc_dec_max),
         delta_max_(delta_max) {}
 };
 
 class SimpleKinematicsModel {
-public:
+ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   SimpleKinematicsModel() { InitDynamicSys(); }
 
@@ -117,11 +118,10 @@ public:
   void SetParam(const SimpleKinematicsParameters &param);
   void Update(const SimpleKinematicsInput &input);
   void GetState(SimpleKinematicsState &state);
-  void SetInitStateInput(const SimpleKinematicsState &state,
-                         const SimpleKinematicsInput &input);
+  void SetInitStateInput(const SimpleKinematicsState &state, const SimpleKinematicsInput &input);
   void SetDeltaBias(double bias);
 
-private:
+ private:
   void InitDynamicSys();
   void CalStateDot(Eigen::VectorXd &state_dot, Eigen::VectorXd &state);
   void Rk4update(Eigen::VectorXd &state_dot, Eigen::VectorXd &state);
@@ -137,7 +137,7 @@ private:
   statespace_sys::StatespaceSISOSys1st Gdelta_;
 };
 
-} // namespace vehicle_dynamics
-} // namespace pnc
+}  // namespace vehicle_dynamics
+}  // namespace pnc
 
 #endif

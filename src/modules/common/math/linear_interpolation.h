@@ -3,9 +3,9 @@
 
 #include <cmath>
 #include <iostream>
+#include "config/basic_type.h"
 #include "config/message_type.h"
 #include "path_point.h"
-#include "config/basic_type.h"
 #include "prediction_object.h"
 /**
  * @namespace apollo::common::math
@@ -25,8 +25,7 @@ namespace planning_math {
  * @return Interpolated point.
  */
 template <typename T>
-T lerp(const T &x0, const double t0, const T &x1, const double t1,
-       const double t) {
+T lerp(const T &x0, const double t0, const T &x1, const double t1, const double t) {
   if (std::abs(t1 - t0) <= 1.0e-6) {
     std::cerr << "input time difference is too small";
     return x0;
@@ -47,22 +46,17 @@ T lerp(const T &x0, const double t0, const T &x1, const double t1,
  * @param a The value of the spherically interpolated angle.
  * @return Interpolated angle.
  */
-double slerp(const double a0, const double t0, const double a1, const double t1,
-             const double t);
+double slerp(const double a0, const double t0, const double a1, const double t1, const double t);
 
-planning::SLPoint InterpolateUsingLinearApproximation(const SLPoint &p0,
-                                            const SLPoint &p1, const double w);
+planning::SLPoint InterpolateUsingLinearApproximation(const SLPoint &p0, const SLPoint &p1, const double w);
 
-planning::PathPoint InterpolateUsingLinearApproximation(const PathPoint &p0,
-                                              const PathPoint &p1,
-                                              const double s);
+planning::PathPoint InterpolateUsingLinearApproximation(const PathPoint &p0, const PathPoint &p1, const double s);
 
 planning::PncTrajectoryPoint InterpolateUsingLinearApproximation(const PncTrajectoryPoint &tp0,
-                                                    const PncTrajectoryPoint &tp1,
-                                                    const double t);
+                                                                 const PncTrajectoryPoint &tp1, const double t);
 planning::PredictionTrajectoryPoint InterpolateUsingLinearApproximation(const PredictionTrajectoryPoint &tp0,
-                                                    const PredictionTrajectoryPoint &tp1,
-                                                    const double t);
+                                                                        const PredictionTrajectoryPoint &tp1,
+                                                                        const double t);
 }  // namespace planning_math
 }  // namespace planning
 

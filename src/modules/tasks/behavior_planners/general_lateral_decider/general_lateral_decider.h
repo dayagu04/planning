@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "math/linear_interpolation.h"
-#include "math/quintic_poly_2d.h"
 #include "environmental_model.h"
 #include "frenet_ego_state.h"
+#include "math/linear_interpolation.h"
+#include "math/quintic_poly_2d.h"
 #include "obstacle_manager.h"
 #include "task.h"
 #include "task_basic_types.h"
@@ -50,10 +50,9 @@ struct LatDeciderInfo {
 // };
 
 class GeneralLateralDecider : public Task {
-public:
-  explicit GeneralLateralDecider(
-      const EgoPlanningConfigBuilder *config_builder,
-      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+ public:
+  explicit GeneralLateralDecider(const EgoPlanningConfigBuilder *config_builder,
+                                 const std::shared_ptr<TaskPipelineContext> &pipeline_context);
 
   virtual ~GeneralLateralDecider() = default;
 
@@ -63,7 +62,7 @@ public:
 
   bool InitInfo();
 
-private:
+ private:
   // bool process(ObstacleDecisions &obstacle_decisions,
   //              TrajectoryPoints &traj_points);
 
@@ -75,44 +74,32 @@ private:
       // const TrajectoryPoints &traj_points,
       ObstacleDecisions &obstacle_decisions);
 
-  void ConstructLateralObstacleDecision(
-      const std::shared_ptr<FrenetObstacle> obstacle,
-      ObstacleDecision &obstacle_decision);
+  void ConstructLateralObstacleDecision(const std::shared_ptr<FrenetObstacle> obstacle,
+                                        ObstacleDecision &obstacle_decision);
   // 3. construct the lane and boundary bound
-  void
-  ConstructlaneAndBoundaryBounds(MapObstacleDecision &map_obstacle_decisions);
+  void ConstructlaneAndBoundaryBounds(MapObstacleDecision &map_obstacle_decisions);
 
   // void construct_lat_behavior_output(
   //     const ObstacleDecisions
   //         &obstacle_decisions);  // output the info for lat motion planner
 
-  bool
-  CheckObstacleNudgeCondition(const std::shared_ptr<FrenetObstacle> &obstacle);
+  bool CheckObstacleNudgeCondition(const std::shared_ptr<FrenetObstacle> &obstacle);
 
-  bool
-  CheckObstacleCrossingCondition(const std::shared_ptr<FrenetObstacle> obstacle,
-                                 bool &is_cross_obj);
+  bool CheckObstacleCrossingCondition(const std::shared_ptr<FrenetObstacle> obstacle, bool &is_cross_obj);
 
-  void RefineConflictLatDecisions(const double &ego_l,
-                                  ObstacleDecision &obstacle_decision);
+  void RefineConflictLatDecisions(const double &ego_l, ObstacleDecision &obstacle_decision);
 
-  void
-  ExtractBoundary(const MapObstacleDecision &map_obstacle_decision,
-                  const ObstacleDecisions &obstacle_decisions,
-                  std::vector<std::pair<double, double>> &frenet_safe_bounds,
-                  std::vector<std::pair<double, double>> &frenet_path_bounds);
+  void ExtractBoundary(const MapObstacleDecision &map_obstacle_decision, const ObstacleDecisions &obstacle_decisions,
+                       std::vector<std::pair<double, double>> &frenet_safe_bounds,
+                       std::vector<std::pair<double, double>> &frenet_path_bounds);
 
   void GenerateEnuBoundaryPoints(
 
       const std::vector<std::pair<double, double>> &frenet_safe_bounds,
-      const std::vector<std::pair<double, double>> &frenet_path_bounds,
-      LatDeciderOutput &lat_decider_output);
+      const std::vector<std::pair<double, double>> &frenet_path_bounds, LatDeciderOutput &lat_decider_output);
 
-  void sample_road_distance_info(const double &s_target,
-                                 double &left_lane_distance,
-                                 double &right_lane_distance,
-                                 double &left_road_distance,
-                                 double &right_road_distance);
+  void sample_road_distance_info(const double &s_target, double &left_lane_distance, double &right_lane_distance,
+                                 double &left_road_distance, double &right_road_distance);
 
   void GenerateEnuReferenceTraj(LatDeciderOutput &lat_decider_output);
 
@@ -134,4 +121,4 @@ private:
   bool is_lane_change_scene_ = false;
 };
 
-} // namespace planning
+}  // namespace planning

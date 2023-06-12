@@ -14,34 +14,29 @@ class Transform {
 
  public:
   Transform() = default;
-  explicit inline Transform(Eigen::Matrix3d &m, Eigen::Vector3d &v)
-      : m_basis(m), m_origin(v) {}
+  explicit inline Transform(Eigen::Matrix3d &m, Eigen::Vector3d &v) : m_basis(m), m_origin(v) {}
 
   explicit inline Transform(Eigen::Vector4d &q, Eigen::Vector3d &v) {
     setRotation(q);
     setOrigin(v);
   }
 
-  explicit inline Transform(double roll, double pitch, double yaw,
-                            Eigen::Vector3d &v) {
+  explicit inline Transform(double roll, double pitch, double yaw, Eigen::Vector3d &v) {
     setRPY(roll, pitch, yaw);
     setOrigin(v);
   }
 
-  inline Transform(const Transform &other)
-      : m_basis(other.m_basis), m_origin(other.m_origin) {}
+  inline Transform(const Transform &other) : m_basis(other.m_basis), m_origin(other.m_origin) {}
 
-  void setMatrix(const double &xx, const double &xy, const double &xz,
-                 const double &yx, const double &yy, const double &yz,
-                 const double &zx, const double &zy, const double &zz) {
+  void setMatrix(const double &xx, const double &xy, const double &xz, const double &yx, const double &yy,
+                 const double &yz, const double &zx, const double &zy, const double &zz) {
     setValue(xx, xy, xz, yx, yy, yz, zx, zy, zz);
   }
 
   void setOrigin(const Eigen::Vector3d &origin) { m_origin = origin; }
 
-  void setValue(const double &xx, const double &xy, const double &xz,
-                const double &yx, const double &yy, const double &yz,
-                const double &zx, const double &zy, const double &zz) {
+  void setValue(const double &xx, const double &xy, const double &xz, const double &yx, const double &yy,
+                const double &yz, const double &zx, const double &zy, const double &zz) {
     m_basis << xx, xy, xz, yx, yy, yz, zx, zy, zz;
   }
 
@@ -56,8 +51,7 @@ class Transform {
     double wx = q.w() * xs, wy = q.w() * ys, wz = q.w() * zs;
     double xx = q.x() * xs, xy = q.x() * ys, xz = q.x() * zs;
     double yy = q.y() * ys, yz = q.y() * zs, zz = q.z() * zs;
-    setValue(double(1.0) - (yy + zz), xy - wz, xz + wy, xy + wz,
-             double(1.0) - (xx + zz), yz - wx, xz - wy, yz + wx,
+    setValue(double(1.0) - (yy + zz), xy - wz, xz + wy, xy + wz, double(1.0) - (xx + zz), yz - wx, xz - wy, yz + wx,
              double(1.0) - (xx + yy));
   }
 
@@ -84,23 +78,16 @@ class Transform {
     double sc = si * ch;
     double ss = si * sh;
 
-    setValue(cj * ch, sj * sc - cs, sj * cc + ss, cj * sh, sj * ss + cc,
-             sj * cs - sc, -sj, cj * si, cj * ci);
+    setValue(cj * ch, sj * sc - cs, sj * cc + ss, cj * sh, sj * ss + cc, sj * cs - sc, -sj, cj * si, cj * ci);
   }
 
-  void setRPY(double roll, double pitch, double yaw) {
-    setEulerYPR(yaw, pitch, roll);
-  }
+  void setRPY(double roll, double pitch, double yaw) { setEulerYPR(yaw, pitch, roll); }
 
   void getMatrix(Eigen::Matrix3d &m) { m = m_basis; }
 
-  inline Eigen::Vector3d operator()(const Eigen::Vector3d &x) const {
-    return m_basis * x + m_origin;
-  }
+  inline Eigen::Vector3d operator()(const Eigen::Vector3d &x) const { return m_basis * x + m_origin; }
 
-  inline Eigen::Vector3d operator*(const Eigen::Vector3d &x) const {
-    return (*this)(x);
-  }
+  inline Eigen::Vector3d operator*(const Eigen::Vector3d &x) const { return (*this)(x); }
 
   Transform inverse() const {
     Eigen::Matrix3d inv = m_basis.transpose();
@@ -109,5 +96,5 @@ class Transform {
   }
 };
 
-}  // namespace common
+}  // namespace define
 }  // namespace planning

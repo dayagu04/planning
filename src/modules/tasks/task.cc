@@ -1,6 +1,5 @@
 #include "task.h"
 
-#include "vehicle_config_context.h"
 #include "behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
 #include "behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
@@ -10,14 +9,13 @@
 #include "motion_planners/longitudinal_motion_planner/pwj_longitudinal_motion_planner.h"
 #include "motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
 #include "trajectory_generator/result_trajectory_generator.h"
+#include "vehicle_config_context.h"
 
 namespace planning {
 
-Task::Task(const EgoPlanningConfigBuilder *config_builder,
-           const std::shared_ptr<TaskPipelineContext> &pipeline_context)
+Task::Task(const EgoPlanningConfigBuilder *config_builder, const std::shared_ptr<TaskPipelineContext> &pipeline_context)
     : pipeline_context_(pipeline_context),
-      vehicle_param_(
-          VehicleConfigurationContext::Instance()->get_vehicle_param()) {}
+      vehicle_param_(VehicleConfigurationContext::Instance()->get_vehicle_param()) {}
 
 bool Task::Execute(framework::Frame *frame) {
   frame_ = frame;
@@ -44,56 +42,46 @@ bool Task::Execute(framework::Frame *frame) {
   }
 }
 
-std::shared_ptr<Task> Task::Make(
-    const TaskType &task_type, const EgoPlanningConfigBuilder *config_builder,
-    const std::shared_ptr<TaskPipelineContext> &pipeline_context) {
+std::shared_ptr<Task> Task::Make(const TaskType &task_type, const EgoPlanningConfigBuilder *config_builder,
+                                 const std::shared_ptr<TaskPipelineContext> &pipeline_context) {
   switch (task_type) {
     case TaskType::GENERAL_LATERAL_DECIDER: {
-      return std::make_shared<GeneralLateralDecider>(config_builder,
-                                                     pipeline_context);
+      return std::make_shared<GeneralLateralDecider>(config_builder, pipeline_context);
     }
 
     // ilqr based lateral motion planner
     case TaskType::LATERAL_MOTION_PLANNER: {
-      return std::make_shared<LateralMotionPlanner>(config_builder,
-                                                           pipeline_context);
+      return std::make_shared<LateralMotionPlanner>(config_builder, pipeline_context);
     }
 
     // ilqr based longitudinal motion planner
     case TaskType::LONGITUDINAL_MOTION_PLANNER: {
-      return std::make_shared<LongitudinalMotionPlanner>(config_builder,
-                                                    pipeline_context);
+      return std::make_shared<LongitudinalMotionPlanner>(config_builder, pipeline_context);
     }
 
     case TaskType::LATERAL_DECIDER: {
-      return std::make_shared<VisionLateralBehaviorPlanner>(config_builder,
-                                                            pipeline_context);
+      return std::make_shared<VisionLateralBehaviorPlanner>(config_builder, pipeline_context);
     }
     case TaskType::VISION_LATERAL_MOTION_PLANNER: {
-      return std::make_shared<VisionLateralMotionPlanner>(config_builder,
-                                                          pipeline_context);
+      return std::make_shared<VisionLateralMotionPlanner>(config_builder, pipeline_context);
     }
     // case TaskType::LATERAL_OPTIMIZER_V2: {
     //   return std::make_shared<LateralOptimizerV2>(config_builder,
     //                                               pipeline_context);
     // }
     case TaskType::GENERAL_LONGITUDINAL_DECIDER: {
-      return std::make_shared<GeneralLongitudinalDecider>(config_builder,
-                                                          pipeline_context);
+      return std::make_shared<GeneralLongitudinalDecider>(config_builder, pipeline_context);
     }
     case TaskType::PWJ_LONGITUDINAL_MOTION_PLANNER: {
-      return std::make_shared<LongitudinalOptimizerV3>(config_builder,
-                                                       pipeline_context);
+      return std::make_shared<LongitudinalOptimizerV3>(config_builder, pipeline_context);
     }
 
     case TaskType::VISION_ONLY_LONGITUDINAL_BEHAVIOR_PLANNER: {
-      return std::make_shared<VisionLongitudinalBehaviorPlanner>(
-          config_builder, pipeline_context);
+      return std::make_shared<VisionLongitudinalBehaviorPlanner>(config_builder, pipeline_context);
     }
 
     case TaskType::RESULT_TRAJECTORY_GENERATOR: {
-      return std::make_shared<ResultTrajectoryGenerator>(config_builder,
-                                                         pipeline_context);
+      return std::make_shared<ResultTrajectoryGenerator>(config_builder, pipeline_context);
     }
     default: { /*LOG_ERROR*/
       return nullptr;

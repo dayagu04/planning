@@ -7,10 +7,10 @@
 #include "define/geometry.h"
 #include "math/polygon2d.h"
 #include "refline.h"
+#include "session.h"
 #include "transform.h"
 #include "vehicle_config_context.h"
 #include "vehicle_status.pb.h"
-#include "session.h"
 
 namespace planning {
 
@@ -28,35 +28,25 @@ class EgoStateManager {
   bool update(const planning::common::VehicleStatus &vehicle_status);
   void set_ego_carte(const Point2D &ego_carte);
 
-  void set_ego_position_llh(
-      const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_position_llh(const planning::common::VehicleStatus &vehicle_status);
   void set_ego_enu(const planning::common::VehicleStatus &vehicle_status);
-  void set_ego_pose_and_vel(
-      const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_pose_and_vel(const planning::common::VehicleStatus &vehicle_status);
   void set_ego_prediction_info(double ego_pose_timestamp);
-  void set_ego_steer_angle(
-      const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_steer_angle(const planning::common::VehicleStatus &vehicle_status);
   void set_ego_acc(const planning::common::VehicleStatus &vehicle_status);
   void set_ego_v_cruise(const planning::common::VehicleStatus &vehicle_status);
-  void set_ego_t_distance(
-      const planning::common::VehicleStatus &vehicle_status);
-  void set_ego_start_stop(
-      const planning::common::VehicleStatus &vehicle_status);
-  void set_throttle_override(
-      const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_t_distance(const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_start_stop(const planning::common::VehicleStatus &vehicle_status);
+  void set_throttle_override(const planning::common::VehicleStatus &vehicle_status);
   void set_ego_blinker(const planning::common::VehicleLight &vehicle_light);
   void set_ego_blinker(const planning::common::VehicleStatus &vehicle_status);
-  void set_ego_auto_light_state(
-      const planning::common::VehicleStatus &vehicle_status);
-  void set_driver_hand_state(
-      const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_auto_light_state(const planning::common::VehicleStatus &vehicle_status);
+  void set_driver_hand_state(const planning::common::VehicleStatus &vehicle_status);
   void set_planning_init_point_valid(bool planning_init_point_valid) {
     planning_init_point_valid_ = planning_init_point_valid;
   };
 
-  const planning::VehicleParam &get_vehicle_param() const {
-    return vehicle_param_;
-  };
+  const planning::VehicleParam &get_vehicle_param() const { return vehicle_param_; };
   double navi_timestamp() const { return navi_timestamp_; }  // todo
   Pose location_enu() const { return location_enu_; };
   PointLLH position_llh() const { return position_llh_; };
@@ -83,17 +73,11 @@ class EgoStateManager {
   bool throttle_override() const { return throttle_override_; };
   const planning_math::Polygon2d polygon() const { return polygon_; }
 
-  const PlanningInitPoint &planning_init_point() const {
-    return planning_init_point_;
-  };
-  PlanningInitPoint &mutable_planning_init_point() {
-    return planning_init_point_;
-  };
+  const PlanningInitPoint &planning_init_point() const { return planning_init_point_; };
+  PlanningInitPoint &mutable_planning_init_point() { return planning_init_point_; };
   bool planning_init_point_valid() const { return planning_init_point_valid_; };
 
-  const std::vector<PncTrajectoryPoint> &stitching_trajectory() const {
-    return stitch_trajectory_;
-  }
+  const std::vector<PncTrajectoryPoint> &stitching_trajectory() const { return stitch_trajectory_; }
 
   const define::Transform &get_car2enu() const { return car2enu_; };
   const define::Transform &get_enu2car() const { return enu2car_; };
@@ -112,7 +96,7 @@ class EgoStateManager {
   std::vector<PncTrajectoryPoint> compute_stitching_trajectory();
   void set_timestamp_us(const planning::common::VehicleStatus &vehicle_status);
 
-private:
+ private:
   planning::VehicleParam vehicle_param_;
   framework::Session *session_ = nullptr;
 

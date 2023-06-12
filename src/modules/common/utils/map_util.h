@@ -34,8 +34,8 @@
 #ifndef GOOGLE_PROTOBUF_STUBS_MAP_UTIL_H__
 #define GOOGLE_PROTOBUF_STUBS_MAP_UTIL_H__
 
-#include <iterator>
 #include <stddef.h>
+#include <iterator>
 #include <string>
 #include <utility>
 #include <vector>
@@ -46,9 +46,13 @@ namespace google {
 namespace protobuf {
 namespace internal {
 // Local implementation of RemoveConst to avoid including base/type_traits.h.
-template <class T> struct RemoveConst { typedef T type; };
-template <class T> struct RemoveConst<const T> : RemoveConst<T> {};
-} // namespace internal
+template <class T>
+struct RemoveConst {
+  typedef T type;
+};
+template <class T>
+struct RemoveConst<const T> : RemoveConst<T> {};
+}  // namespace internal
 
 //
 // Find*()
@@ -70,9 +74,8 @@ template <class T> struct RemoveConst<const T> : RemoveConst<T> {};
 // This version assumes the key is printable, and includes it in the fatal log
 // message.
 template <class Collection>
-const typename Collection::value_type::second_type &
-FindOrDie(const Collection &collection,
-          const typename Collection::value_type::first_type &key) {
+const typename Collection::value_type::second_type &FindOrDie(const Collection &collection,
+                                                              const typename Collection::value_type::first_type &key) {
   typename Collection::const_iterator it = collection.find(key);
   assert(it != collection.end());
   return it->second;
@@ -80,9 +83,8 @@ FindOrDie(const Collection &collection,
 
 // Same as above, but returns a non-const reference.
 template <class Collection>
-typename Collection::value_type::second_type &
-FindOrDie(Collection &collection, // NOLINT
-          const typename Collection::value_type::first_type &key) {
+typename Collection::value_type::second_type &FindOrDie(Collection &collection,  // NOLINT
+                                                        const typename Collection::value_type::first_type &key) {
   typename Collection::iterator it = collection.find(key);
   assert(it != collection.end());
   return it->second;
@@ -90,9 +92,8 @@ FindOrDie(Collection &collection, // NOLINT
 
 // Same as FindOrDie above, but doesn't log the key on failure.
 template <class Collection>
-const typename Collection::value_type::second_type &
-FindOrDieNoPrint(const Collection &collection,
-                 const typename Collection::value_type::first_type &key) {
+const typename Collection::value_type::second_type &FindOrDieNoPrint(
+    const Collection &collection, const typename Collection::value_type::first_type &key) {
   typename Collection::const_iterator it = collection.find(key);
   assert(it != collection.end());
   return it->second;
@@ -100,9 +101,8 @@ FindOrDieNoPrint(const Collection &collection,
 
 // Same as above, but returns a non-const reference.
 template <class Collection>
-typename Collection::value_type::second_type &
-FindOrDieNoPrint(Collection &collection, // NOLINT
-                 const typename Collection::value_type::first_type &key) {
+typename Collection::value_type::second_type &FindOrDieNoPrint(Collection &collection,  // NOLINT
+                                                               const typename Collection::value_type::first_type &key) {
   typename Collection::iterator it = collection.find(key);
   assert(it != collection.end());
   return it->second;
@@ -119,10 +119,9 @@ FindOrDieNoPrint(Collection &collection, // NOLINT
 // or store it in a string (not string&).
 // Details: http://go/findwithdefault
 template <class Collection>
-const typename Collection::value_type::second_type &
-FindWithDefault(const Collection &collection,
-                const typename Collection::value_type::first_type &key,
-                const typename Collection::value_type::second_type &value) {
+const typename Collection::value_type::second_type &FindWithDefault(
+    const Collection &collection, const typename Collection::value_type::first_type &key,
+    const typename Collection::value_type::second_type &value) {
   typename Collection::const_iterator it = collection.find(key);
   if (it == collection.end()) {
     return value;
@@ -133,9 +132,8 @@ FindWithDefault(const Collection &collection,
 // Returns a pointer to the const value associated with the given key if it
 // exists, or nullptr otherwise.
 template <class Collection>
-const typename Collection::value_type::second_type *
-FindOrNull(const Collection &collection,
-           const typename Collection::value_type::first_type &key) {
+const typename Collection::value_type::second_type *FindOrNull(const Collection &collection,
+                                                               const typename Collection::value_type::first_type &key) {
   typename Collection::const_iterator it = collection.find(key);
   if (it == collection.end()) {
     return 0;
@@ -145,9 +143,8 @@ FindOrNull(const Collection &collection,
 
 // Same as above but returns a pointer to the non-const value.
 template <class Collection>
-typename Collection::value_type::second_type *
-FindOrNull(Collection &collection, // NOLINT
-           const typename Collection::value_type::first_type &key) {
+typename Collection::value_type::second_type *FindOrNull(Collection &collection,  // NOLINT
+                                                         const typename Collection::value_type::first_type &key) {
   typename Collection::iterator it = collection.find(key);
   if (it == collection.end()) {
     return 0;
@@ -162,9 +159,8 @@ FindOrNull(Collection &collection, // NOLINT
 // This function does not distinguish between a missing key and a key mapped
 // to nullptr.
 template <class Collection>
-typename Collection::value_type::second_type
-FindPtrOrNull(const Collection &collection,
-              const typename Collection::value_type::first_type &key) {
+typename Collection::value_type::second_type FindPtrOrNull(const Collection &collection,
+                                                           const typename Collection::value_type::first_type &key) {
   typename Collection::const_iterator it = collection.find(key);
   if (it == collection.end()) {
     return typename Collection::value_type::second_type();
@@ -177,9 +173,8 @@ FindPtrOrNull(const Collection &collection,
 // This function is needed for containers that propagate constness to the
 // pointee, such as boost::ptr_map.
 template <class Collection>
-typename Collection::value_type::second_type
-FindPtrOrNull(Collection &collection, // NOLINT
-              const typename Collection::value_type::first_type &key) {
+typename Collection::value_type::second_type FindPtrOrNull(Collection &collection,  // NOLINT
+                                                           const typename Collection::value_type::first_type &key) {
   typename Collection::iterator it = collection.find(key);
   if (it == collection.end()) {
     return typename Collection::value_type::second_type();
@@ -190,9 +185,8 @@ FindPtrOrNull(Collection &collection, // NOLINT
 // Finds the pointer value associated with the given key in a map whose values
 // are linked_ptrs. Returns nullptr if key is not found.
 template <class Collection>
-typename Collection::value_type::second_type::element_type *
-FindLinkedPtrOrNull(const Collection &collection,
-                    const typename Collection::value_type::first_type &key) {
+typename Collection::value_type::second_type::element_type *FindLinkedPtrOrNull(
+    const Collection &collection, const typename Collection::value_type::first_type &key) {
   typename Collection::const_iterator it = collection.find(key);
   if (it == collection.end()) {
     return 0;
@@ -204,9 +198,8 @@ FindLinkedPtrOrNull(const Collection &collection,
 
 // Same as above, but dies if the key is not found.
 template <class Collection>
-typename Collection::value_type::second_type::element_type &
-FindLinkedPtrOrDie(const Collection &collection,
-                   const typename Collection::value_type::first_type &key) {
+typename Collection::value_type::second_type::element_type &FindLinkedPtrOrDie(
+    const Collection &collection, const typename Collection::value_type::first_type &key) {
   typename Collection::const_iterator it = collection.find(key);
   assert(it != collection.end());
   // Since linked_ptr::operator*() is a const member returning a non const,
@@ -217,8 +210,7 @@ FindLinkedPtrOrDie(const Collection &collection,
 // Finds the value associated with the given key and copies it to *value (if not
 // nullptr). Returns false if the key was not found, true otherwise.
 template <class Collection, class Key, class Value>
-bool FindCopy(const Collection &collection, const Key &key,
-              Value *const value) {
+bool FindCopy(const Collection &collection, const Key &key, Value *const value) {
   typename Collection::const_iterator it = collection.find(key);
   if (it == collection.end()) {
     return false;
@@ -242,8 +234,7 @@ bool ContainsKey(const Collection &collection, const Key &key) {
 // Returns true if and only if the given collection contains the given key-value
 // pair.
 template <class Collection, class Key, class Value>
-bool ContainsKeyValuePair(const Collection &collection, const Key &key,
-                          const Value &value) {
+bool ContainsKeyValuePair(const Collection &collection, const Key &key, const Value &value) {
   typedef typename Collection::const_iterator const_iterator;
   std::pair<const_iterator, const_iterator> range = collection.equal_range(key);
   for (const_iterator it = range.first; it != range.second; ++it) {
@@ -262,8 +253,7 @@ bool ContainsKeyValuePair(const Collection &collection, const Key &key,
 // only if the key from the given pair didn't previously exist. Otherwise, the
 // value in the map is replaced with the value from the given pair.
 template <class Collection>
-bool InsertOrUpdate(Collection *const collection,
-                    const typename Collection::value_type &vt) {
+bool InsertOrUpdate(Collection *const collection, const typename Collection::value_type &vt) {
   std::pair<typename Collection::iterator, bool> ret = collection->insert(vt);
   if (!ret.second) {
     // update
@@ -275,18 +265,15 @@ bool InsertOrUpdate(Collection *const collection,
 
 // Same as above, except that the key and value are passed separately.
 template <class Collection>
-bool InsertOrUpdate(Collection *const collection,
-                    const typename Collection::value_type::first_type &key,
+bool InsertOrUpdate(Collection *const collection, const typename Collection::value_type::first_type &key,
                     const typename Collection::value_type::second_type &value) {
-  return InsertOrUpdate(collection,
-                        typename Collection::value_type(key, value));
+  return InsertOrUpdate(collection, typename Collection::value_type(key, value));
 }
 
 // Inserts/updates all the key-value pairs from the range defined by the
 // iterators "first" and "last" into the given collection.
 template <class Collection, class InputIterator>
-void InsertOrUpdateMany(Collection *const collection, InputIterator first,
-                        InputIterator last) {
+void InsertOrUpdateMany(Collection *const collection, InputIterator first, InputIterator last) {
   for (; first != last; ++first) {
     InsertOrUpdate(collection, *first);
   }
@@ -297,12 +284,9 @@ void InsertOrUpdateMany(Collection *const collection, InputIterator first,
 // value pointers.  If there was an existing value for the key, it is deleted.
 // True indicates an insert took place, false indicates an update + delete.
 template <class Collection>
-bool InsertAndDeleteExisting(
-    Collection *const collection,
-    const typename Collection::value_type::first_type &key,
-    const typename Collection::value_type::second_type &value) {
-  std::pair<typename Collection::iterator, bool> ret =
-      collection->insert(typename Collection::value_type(key, value));
+bool InsertAndDeleteExisting(Collection *const collection, const typename Collection::value_type::first_type &key,
+                             const typename Collection::value_type::second_type &value) {
+  std::pair<typename Collection::iterator, bool> ret = collection->insert(typename Collection::value_type(key, value));
   if (!ret.second) {
     delete ret.first->second;
     ret.first->second = value;
@@ -316,50 +300,41 @@ bool InsertAndDeleteExisting(
 // existed in the collection, the value is not changed. Returns true if the
 // key-value pair was inserted; returns false if the key was already present.
 template <class Collection>
-bool InsertIfNotPresent(Collection *const collection,
-                        const typename Collection::value_type &vt) {
+bool InsertIfNotPresent(Collection *const collection, const typename Collection::value_type &vt) {
   return collection->insert(vt).second;
 }
 
 // Same as above except the key and value are passed separately.
 template <class Collection>
-bool InsertIfNotPresent(
-    Collection *const collection,
-    const typename Collection::value_type::first_type &key,
-    const typename Collection::value_type::second_type &value) {
-  return InsertIfNotPresent(collection,
-                            typename Collection::value_type(key, value));
+bool InsertIfNotPresent(Collection *const collection, const typename Collection::value_type::first_type &key,
+                        const typename Collection::value_type::second_type &value) {
+  return InsertIfNotPresent(collection, typename Collection::value_type(key, value));
 }
 
 // Same as above except dies if the key already exists in the collection.
 template <class Collection>
-void InsertOrDie(Collection *const collection,
-                 const typename Collection::value_type &value) {
+void InsertOrDie(Collection *const collection, const typename Collection::value_type &value) {
   assert(InsertIfNotPresent(collection, value));
 }
 
 // Same as above except doesn't log the value on error.
 template <class Collection>
-void InsertOrDieNoPrint(Collection *const collection,
-                        const typename Collection::value_type &value) {
+void InsertOrDieNoPrint(Collection *const collection, const typename Collection::value_type &value) {
   assert(InsertIfNotPresent(collection, value));
 }
 
 // Inserts the key-value pair into the collection. Dies if key was already
 // present.
 template <class Collection>
-void InsertOrDie(Collection *const collection,
-                 const typename Collection::value_type::first_type &key,
+void InsertOrDie(Collection *const collection, const typename Collection::value_type::first_type &key,
                  const typename Collection::value_type::second_type &data) {
   assert(InsertIfNotPresent(collection, key, data));
 }
 
 // Same as above except doesn't log the key on error.
 template <class Collection>
-void InsertOrDieNoPrint(
-    Collection *const collection,
-    const typename Collection::value_type::first_type &key,
-    const typename Collection::value_type::second_type &data) {
+void InsertOrDieNoPrint(Collection *const collection, const typename Collection::value_type::first_type &key,
+                        const typename Collection::value_type::second_type &data) {
   assert(InsertIfNotPresent(collection, key, data));
 }
 
@@ -370,9 +345,8 @@ void InsertOrDieNoPrint(
 // SomeProto& proto = InsertKeyOrDie(&m, 3);
 // proto.set_field("foo");
 template <class Collection>
-typename Collection::value_type::second_type &
-InsertKeyOrDie(Collection *const collection,
-               const typename Collection::value_type::first_type &key) {
+typename Collection::value_type::second_type &InsertKeyOrDie(Collection *const collection,
+                                                             const typename Collection::value_type::first_type &key) {
   typedef typename Collection::value_type value_type;
   std::pair<typename Collection::iterator, bool> res =
       collection->insert(value_type(key, typename value_type::second_type()));
@@ -388,20 +362,17 @@ InsertKeyOrDie(Collection *const collection,
 // pair if it's not already present. Returns a reference to the value associated
 // with the key.
 template <class Collection>
-typename Collection::value_type::second_type &
-LookupOrInsert(Collection *const collection,
-               const typename Collection::value_type &vt) {
+typename Collection::value_type::second_type &LookupOrInsert(Collection *const collection,
+                                                             const typename Collection::value_type &vt) {
   return collection->insert(vt).first->second;
 }
 
 // Same as above except the key-value are passed separately.
 template <class Collection>
-typename Collection::value_type::second_type &
-LookupOrInsert(Collection *const collection,
-               const typename Collection::value_type::first_type &key,
-               const typename Collection::value_type::second_type &value) {
-  return LookupOrInsert(collection,
-                        typename Collection::value_type(key, value));
+typename Collection::value_type::second_type &LookupOrInsert(
+    Collection *const collection, const typename Collection::value_type::first_type &key,
+    const typename Collection::value_type::second_type &value) {
+  return LookupOrInsert(collection, typename Collection::value_type(key, value));
 }
 
 // Counts the number of equivalent elements in the given "sequence", and stores
@@ -415,14 +386,11 @@ LookupOrInsert(Collection *const collection,
 //   assert(m["b"] == 2);
 //   assert(m["c"] == 1);
 template <typename Sequence, typename Collection>
-void AddTokenCounts(
-    const Sequence &sequence,
-    const typename Collection::value_type::second_type &increment,
-    Collection *const count_map) {
-  for (typename Sequence::const_iterator it = sequence.begin();
-       it != sequence.end(); ++it) {
-    typename Collection::value_type::second_type &value = LookupOrInsert(
-        count_map, *it, typename Collection::value_type::second_type());
+void AddTokenCounts(const Sequence &sequence, const typename Collection::value_type::second_type &increment,
+                    Collection *const count_map) {
+  for (typename Sequence::const_iterator it = sequence.begin(); it != sequence.end(); ++it) {
+    typename Collection::value_type::second_type &value =
+        LookupOrInsert(count_map, *it, typename Collection::value_type::second_type());
     value += increment;
   }
 }
@@ -434,15 +402,11 @@ void AddTokenCounts(
 // inserting a new key, value pair involves constructing a new heap-allocated
 // Value, and storing a pointer to that in the collection.
 template <class Collection>
-typename Collection::value_type::second_type &
-LookupOrInsertNew(Collection *const collection,
-                  const typename Collection::value_type::first_type &key) {
-  typedef typename std::iterator_traits<
-      typename Collection::value_type::second_type>::value_type Element;
-  std::pair<typename Collection::iterator, bool> ret =
-      collection->insert(typename Collection::value_type(
-          key,
-          static_cast<typename Collection::value_type::second_type>(nullptr)));
+typename Collection::value_type::second_type &LookupOrInsertNew(
+    Collection *const collection, const typename Collection::value_type::first_type &key) {
+  typedef typename std::iterator_traits<typename Collection::value_type::second_type>::value_type Element;
+  std::pair<typename Collection::iterator, bool> ret = collection->insert(
+      typename Collection::value_type(key, static_cast<typename Collection::value_type::second_type>(nullptr)));
   if (ret.second) {
     ret.first->second = new Element();
   }
@@ -452,16 +416,12 @@ LookupOrInsertNew(Collection *const collection,
 // Same as above but constructs the value using the single-argument constructor
 // and the given "arg".
 template <class Collection, class Arg>
-typename Collection::value_type::second_type &
-LookupOrInsertNew(Collection *const collection,
-                  const typename Collection::value_type::first_type &key,
-                  const Arg &arg) {
-  typedef typename std::iterator_traits<
-      typename Collection::value_type::second_type>::value_type Element;
-  std::pair<typename Collection::iterator, bool> ret =
-      collection->insert(typename Collection::value_type(
-          key,
-          static_cast<typename Collection::value_type::second_type>(nullptr)));
+typename Collection::value_type::second_type &LookupOrInsertNew(Collection *const collection,
+                                                                const typename Collection::value_type::first_type &key,
+                                                                const Arg &arg) {
+  typedef typename std::iterator_traits<typename Collection::value_type::second_type>::value_type Element;
+  std::pair<typename Collection::iterator, bool> ret = collection->insert(
+      typename Collection::value_type(key, static_cast<typename Collection::value_type::second_type>(nullptr)));
   if (ret.second) {
     ret.first->second = new Element(arg);
   }
@@ -488,10 +448,8 @@ LookupOrInsertNew(Collection *const collection,
 // missing, set collection[key].reset(new Value::element_type) and return that.
 // Value::element_type must be default constructable.
 template <class Collection>
-typename Collection::value_type::second_type::element_type *
-LookupOrInsertNewLinkedPtr(
-    Collection *const collection,
-    const typename Collection::value_type::first_type &key) {
+typename Collection::value_type::second_type::element_type *LookupOrInsertNewLinkedPtr(
+    Collection *const collection, const typename Collection::value_type::first_type &key) {
   typedef typename Collection::value_type::second_type Value;
   std::pair<typename Collection::iterator, bool> ret =
       collection->insert(typename Collection::value_type(key, Value()));
@@ -507,10 +465,8 @@ LookupOrInsertNewLinkedPtr(
 // here.  On the other hand it does not matter how expensive the construction of
 // the actual stored value is, as that only occurs if necessary.
 template <class Collection, class Arg>
-typename Collection::value_type::second_type::element_type *
-LookupOrInsertNewLinkedPtr(
-    Collection *const collection,
-    const typename Collection::value_type::first_type &key, const Arg &arg) {
+typename Collection::value_type::second_type::element_type *LookupOrInsertNewLinkedPtr(
+    Collection *const collection, const typename Collection::value_type::first_type &key, const Arg &arg) {
   typedef typename Collection::value_type::second_type Value;
   std::pair<typename Collection::iterator, bool> ret =
       collection->insert(typename Collection::value_type(key, Value()));
@@ -526,8 +482,7 @@ LookupOrInsertNewLinkedPtr(
 // the raw pointer. Value::element_type must be default constructable.
 template <class Collection>
 typename Collection::value_type::second_type &LookupOrInsertNewSharedPtr(
-    Collection *const collection,
-    const typename Collection::value_type::first_type &key) {
+    Collection *const collection, const typename Collection::value_type::first_type &key) {
   typedef typename Collection::value_type::second_type SharedPtr;
   typedef typename Collection::value_type::second_type::element_type Element;
   std::pair<typename Collection::iterator, bool> ret =
@@ -545,8 +500,7 @@ typename Collection::value_type::second_type &LookupOrInsertNewSharedPtr(
 // the actual stored value is, as that only occurs if necessary.
 template <class Collection, class Arg>
 typename Collection::value_type::second_type &LookupOrInsertNewSharedPtr(
-    Collection *const collection,
-    const typename Collection::value_type::first_type &key, const Arg &arg) {
+    Collection *const collection, const typename Collection::value_type::first_type &key, const Arg &arg) {
   typedef typename Collection::value_type::second_type SharedPtr;
   typedef typename Collection::value_type::second_type::element_type Element;
   std::pair<typename Collection::iterator, bool> ret =
@@ -569,12 +523,10 @@ typename Collection::value_type::second_type &LookupOrInsertNewSharedPtr(
 // InsertOrReturnExisting has complementary behavior that returns the
 // address of an already existing value, rather than updating it.
 template <class Collection>
-bool UpdateReturnCopy(Collection *const collection,
-                      const typename Collection::value_type::first_type &key,
+bool UpdateReturnCopy(Collection *const collection, const typename Collection::value_type::first_type &key,
                       const typename Collection::value_type::second_type &value,
                       typename Collection::value_type::second_type *previous) {
-  std::pair<typename Collection::iterator, bool> ret =
-      collection->insert(typename Collection::value_type(key, value));
+  std::pair<typename Collection::iterator, bool> ret = collection->insert(typename Collection::value_type(key, value));
   if (!ret.second) {
     // update
     if (previous) {
@@ -588,8 +540,7 @@ bool UpdateReturnCopy(Collection *const collection,
 
 // Same as above except that the key and value are passed as a pair.
 template <class Collection>
-bool UpdateReturnCopy(Collection *const collection,
-                      const typename Collection::value_type &vt,
+bool UpdateReturnCopy(Collection *const collection, const typename Collection::value_type &vt,
                       typename Collection::value_type::second_type *previous) {
   std::pair<typename Collection::iterator, bool> ret = collection->insert(vt);
   if (!ret.second) {
@@ -611,25 +562,22 @@ bool UpdateReturnCopy(Collection *const collection,
 // twice. Unlike UpdateReturnCopy this also does not come with the issue of an
 // undefined previous* in case new data was inserted.
 template <class Collection>
-typename Collection::value_type::second_type *
-InsertOrReturnExisting(Collection *const collection,
-                       const typename Collection::value_type &vt) {
+typename Collection::value_type::second_type *InsertOrReturnExisting(Collection *const collection,
+                                                                     const typename Collection::value_type &vt) {
   std::pair<typename Collection::iterator, bool> ret = collection->insert(vt);
   if (ret.second) {
-    return nullptr; // Inserted, no existing previous value.
+    return nullptr;  // Inserted, no existing previous value.
   } else {
-    return &ret.first->second; // Return address of already existing value.
+    return &ret.first->second;  // Return address of already existing value.
   }
 }
 
 // Same as above, except for explicit key and data.
 template <class Collection>
 typename Collection::value_type::second_type *InsertOrReturnExisting(
-    Collection *const collection,
-    const typename Collection::value_type::first_type &key,
+    Collection *const collection, const typename Collection::value_type::first_type &key,
     const typename Collection::value_type::second_type &data) {
-  return InsertOrReturnExisting(collection,
-                                typename Collection::value_type(key, data));
+  return InsertOrReturnExisting(collection, typename Collection::value_type(key, data));
 }
 
 // Erases the collection item identified by the given key, and returns the value
@@ -650,9 +598,8 @@ typename Collection::value_type::second_type *InsertOrReturnExisting(
 //       value_ptr->DoSomething();
 //
 template <class Collection>
-typename Collection::value_type::second_type
-EraseKeyReturnValuePtr(Collection *const collection,
-                       const typename Collection::value_type::first_type &key) {
+typename Collection::value_type::second_type EraseKeyReturnValuePtr(
+    Collection *const collection, const typename Collection::value_type::first_type &key) {
   typename Collection::iterator it = collection->find(key);
   if (it == collection->end()) {
     return nullptr;
@@ -667,11 +614,9 @@ EraseKeyReturnValuePtr(Collection *const collection,
 //
 // Note: any initial contents of the key_container are not cleared.
 template <class MapContainer, class KeyContainer>
-void InsertKeysFromMap(const MapContainer &map_container,
-                       KeyContainer *key_container) {
+void InsertKeysFromMap(const MapContainer &map_container, KeyContainer *key_container) {
   assert(key_container != nullptr);
-  for (typename MapContainer::const_iterator it = map_container.begin();
-       it != map_container.end(); ++it) {
+  for (typename MapContainer::const_iterator it = map_container.begin(); it != map_container.end(); ++it) {
     key_container->insert(it->first);
   }
 }
@@ -681,11 +626,9 @@ void InsertKeysFromMap(const MapContainer &map_container,
 //
 // Note: any initial contents of the key_container are not cleared.
 template <class MapContainer, class KeyContainer>
-void AppendKeysFromMap(const MapContainer &map_container,
-                       KeyContainer *key_container) {
+void AppendKeysFromMap(const MapContainer &map_container, KeyContainer *key_container) {
   assert(key_container != nullptr);
-  for (typename MapContainer::const_iterator it = map_container.begin();
-       it != map_container.end(); ++it) {
+  for (typename MapContainer::const_iterator it = map_container.begin(); it != map_container.end(); ++it) {
     key_container->push_back(it->first);
   }
 }
@@ -698,8 +641,7 @@ void AppendKeysFromMap(const MapContainer &map_container,
 // container that supports it, but this seems to get us 99% of what we need
 // without the complexity of a SFINAE-based solution.)
 template <class MapContainer, class KeyType>
-void AppendKeysFromMap(const MapContainer &map_container,
-                       std::vector<KeyType> *key_container) {
+void AppendKeysFromMap(const MapContainer &map_container, std::vector<KeyType> *key_container) {
   assert(key_container != nullptr);
   // We now have the opportunity to call reserve(). Calling reserve() every
   // time is a bad idea for some use cases: libstdc++'s implementation of
@@ -714,8 +656,7 @@ void AppendKeysFromMap(const MapContainer &map_container,
   if (key_container->empty()) {
     key_container->reserve(map_container.size());
   }
-  for (typename MapContainer::const_iterator it = map_container.begin();
-       it != map_container.end(); ++it) {
+  for (typename MapContainer::const_iterator it = map_container.begin(); it != map_container.end(); ++it) {
     key_container->push_back(it->first);
   }
 }
@@ -725,11 +666,9 @@ void AppendKeysFromMap(const MapContainer &map_container,
 //
 // Note: any initial contents of the value_container are not cleared.
 template <class MapContainer, class ValueContainer>
-void AppendValuesFromMap(const MapContainer &map_container,
-                         ValueContainer *value_container) {
+void AppendValuesFromMap(const MapContainer &map_container, ValueContainer *value_container) {
   assert(value_container != nullptr);
-  for (typename MapContainer::const_iterator it = map_container.begin();
-       it != map_container.end(); ++it) {
+  for (typename MapContainer::const_iterator it = map_container.begin(); it != map_container.end(); ++it) {
     value_container->push_back(it->second);
   }
 }
@@ -742,20 +681,18 @@ void AppendValuesFromMap(const MapContainer &map_container,
 // container that supports it, but this seems to get us 99% of what we need
 // without the complexity of a SFINAE-based solution.)
 template <class MapContainer, class ValueType>
-void AppendValuesFromMap(const MapContainer &map_container,
-                         std::vector<ValueType> *value_container) {
+void AppendValuesFromMap(const MapContainer &map_container, std::vector<ValueType> *value_container) {
   assert(value_container != nullptr);
   // See AppendKeysFromMap for why this is done.
   if (value_container->empty()) {
     value_container->reserve(map_container.size());
   }
-  for (typename MapContainer::const_iterator it = map_container.begin();
-       it != map_container.end(); ++it) {
+  for (typename MapContainer::const_iterator it = map_container.begin(); it != map_container.end(); ++it) {
     value_container->push_back(it->second);
   }
 }
 
-} // namespace protobuf
-} // namespace google
+}  // namespace protobuf
+}  // namespace google
 
-#endif // GOOGLE_PROTOBUF_STUBS_MAP_UTIL_H__
+#endif  // GOOGLE_PROTOBUF_STUBS_MAP_UTIL_H__

@@ -11,7 +11,6 @@ namespace framework {
 Scheduler::Scheduler() : run_count_(0) {}
 Scheduler::~Scheduler() {}
 
-
 void Scheduler::Init(Session *session) {
   run_count_ = 0;
   session_ = session;
@@ -37,7 +36,7 @@ void Scheduler::RunOnce() {
     PlanningModule *p = dynamic_cast<PlanningModule *>(module_ptr);
     if (p != nullptr) {
       if (p->compute(&frame) != true) {
-        LOG_DEBUG("%s compute failed \n",p->name().c_str());
+        LOG_DEBUG("%s compute failed \n", p->name().c_str());
         break;
       };
     }
@@ -51,8 +50,7 @@ bool Scheduler::InitModuleList(Session *session) {
   bool ret = true;
   // TODO read module list from config file
   std::vector<const char *> module_names{
-      "planning.modules.EnvironmentalModelModule",
-      "planning.modules.GeneralPlannerModule",
+      "planning.modules.EnvironmentalModelModule", "planning.modules.GeneralPlannerModule",
       // "planning.modules.CandidatesRunner",
       // "planning.modules.ApaPlanningModule"
   };

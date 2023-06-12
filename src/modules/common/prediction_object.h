@@ -1,11 +1,11 @@
 #ifndef PREDICTION_OBJECT_H
 #define PREDICTION_OBJECT_H
 
-#include "common.h"
-#include "config/basic_type.h"
-#include "common.pb.h"
 #include <string>
 #include <vector>
+#include "common.h"
+#include "common.pb.h"
+#include "config/basic_type.h"
 
 namespace planning {
 
@@ -13,9 +13,9 @@ struct PredictionTrajectoryPoint {
   double relative_time{0.0};
   float x{0.0};
   float y{0.0};
-  float yaw{0.0}; // for obs
+  float yaw{0.0};  // for obs
   float speed{0.0};
-  float theta{0.0}; // for speed
+  float theta{0.0};  // for speed
   float prob{1.0};
 
   float std_dev_x{0.0};
@@ -48,10 +48,10 @@ struct PredictionTrajectory {
   unsigned int num_of_points{41};
 
   // object kinematics state probability
-  float const_vel_prob{1.0};  // constant velocity probability
-  float const_acc_prob{1.0};  // constant acceleration probability
-  float still_prob{1.0};      // still probability
-  float coord_turn_prob{0.0}; // coordinated turn (CT) kinematics probability
+  float const_vel_prob{1.0};   // constant velocity probability
+  float const_acc_prob{1.0};   // constant acceleration probability
+  float still_prob{1.0};       // still probability
+  float coord_turn_prob{0.0};  // coordinated turn (CT) kinematics probability
 
   bool b_minor_modal{false};
 
@@ -94,9 +94,7 @@ static int hash_prediction_id(int perception_id, int traj_index) {
   return perception_id + traj_index * kPredictionHashBit;
 }
 
-static int inverse_hash_prediction_id(int prediction_id) {
-  return prediction_id % kPredictionHashBit;
-}
+static int inverse_hash_prediction_id(int prediction_id) { return prediction_id % kPredictionHashBit; }
 
-} // namespace planning
+}  // namespace planning
 #endif

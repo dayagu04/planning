@@ -5,8 +5,8 @@
 #include <map>
 #include <string>
 
-#include "registry.h"
 #include "module.h"
+#include "registry.h"
 #include "session.h"
 
 namespace planning {

@@ -2,8 +2,8 @@
 
 #include "ego_planning_config.h"
 #include "environmental_model.h"
-#include "reference_path.h"
 #include "normal_road_state.h"
+#include "reference_path.h"
 #include "scenario_state.h"
 #include "session.h"
 
@@ -11,11 +11,9 @@ namespace planning {
 
 // LC-Lane Change, LB-Lane Borrow
 // TODO: None --> LK LaneKeep
-using ScenarioFsm =
-    M::PeerRoot<M::Composite<RoadState, RoadState::None, RoadState::LC,
-                             RoadState::LC::LWait, RoadState::LC::RWait,
-                             RoadState::LC::LChange, RoadState::LC::RChange,
-                             RoadState::LC::LBack, RoadState::LC::RBack>>;
+using ScenarioFsm = M::PeerRoot<
+    M::Composite<RoadState, RoadState::None, RoadState::LC, RoadState::LC::LWait, RoadState::LC::RWait,
+                 RoadState::LC::LChange, RoadState::LC::RChange, RoadState::LC::LBack, RoadState::LC::RBack>>;
 
 // M::Composite<RoadState::LB, RoadState::LB::LBorrow,
 //              RoadState::LB::RBorrow, RoadState::LB::LBack,
@@ -57,26 +55,18 @@ typedef struct {
 
 } LaneChangeStageInfo;
 
-class ScenarioStateMachine
-    : public std::enable_shared_from_this<ScenarioStateMachine> {
+class ScenarioStateMachine : public std::enable_shared_from_this<ScenarioStateMachine> {
  public:
-  ScenarioStateMachine(const EgoPlanningConfigBuilder* config_builder,
-                       planning::framework::Session* session);
+  ScenarioStateMachine(const EgoPlanningConfigBuilder* config_builder, planning::framework::Session* session);
 
   void init();
 
   virtual ~ScenarioStateMachine();
 
   bool update(planning::framework::Frame* frame);
-  std::shared_ptr<LaneChangeRequestManager> get_lane_change_request_manager() {
-    return lc_req_mgr_;
-  }
-  std::shared_ptr<LaneChangeLaneManager> get_lane_change_lane_manager() {
-    return lc_lane_mgr_;
-  }
-  std::shared_ptr<ObjectSelector> get_object_selector() {
-    return object_selector_;
-  }
+  std::shared_ptr<LaneChangeRequestManager> get_lane_change_request_manager() { return lc_req_mgr_; }
+  std::shared_ptr<LaneChangeLaneManager> get_lane_change_lane_manager() { return lc_lane_mgr_; }
+  std::shared_ptr<ObjectSelector> get_object_selector() { return object_selector_; }
 
   /**
    * @brief 判断和构造目标车道中的gap
@@ -84,8 +74,7 @@ class ScenarioStateMachine
     ▅...........................
     ----▅-|   |-▅-|    |-▅-|  |
    */
-  bool GapAvailable(RequestType direction, std::vector<int>& overlap_obstacles,
-                    std::vector<int>& yield_obstacles);
+  bool GapAvailable(RequestType direction, std::vector<int>& overlap_obstacles, std::vector<int>& yield_obstacles);
 
   void compute_lc_valid_info(RequestType direction);
   LaneChangeStageInfo decide_lc_valid_info(RequestType direction);
@@ -105,9 +94,7 @@ class ScenarioStateMachine
   double get_start_move_dist_lane() const { return start_move_dist_lane_; }
   double turn_signal_on_time() const { return turn_signal_on_time_; }
   RequestType turn_signal() const { return turn_signal_; }
-  RequestType merge_split_turn_signal() const {
-    return merge_split_turn_signal_;
-  }
+  RequestType merge_split_turn_signal() const { return merge_split_turn_signal_; }
   void generate_state_machine_output(const LaneChangeStageInfo& lc_info);
 
  private:
@@ -115,8 +102,7 @@ class ScenarioStateMachine
   void update_state_machine();
 
   // Determine whether the gap distance between vehicles is sufficient
-  bool IsFollowBufferEnough(const double front_s, const double behind_s,
-                            const double front_v, const double behind_v);
+  bool IsFollowBufferEnough(const double front_s, const double behind_s, const double front_v, const double behind_v);
 
   // 实现状态的切换
   template <typename T>
@@ -125,8 +111,7 @@ class ScenarioStateMachine
       return;
     }
 
-    LOG_DEBUG("change_state_external from [%s] to [%s]",
-              fsm_context_.name.c_str(), type2name<T>::name);
+    LOG_DEBUG("change_state_external from [%s] to [%s]", fsm_context_.name.c_str(), type2name<T>::name);
 
     fsm_context_.external = true;
     scenario_fsm_.changeTo<T>();

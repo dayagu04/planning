@@ -1,22 +1,21 @@
 #ifndef SCENARIO_MANAGER_OBJECT_SELECTOR_H_
 #define SCENARIO_MANAGER_OBJECT_SELECTOR_H_
 
-#include "ifly_time.h"
-#include "session.h"
 #include "config/basic_type.h"
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"
+#include "ifly_time.h"
 #include "lateral_obstacle.h"
-#include "virtual_lane_manager.h"
-#include "reference_path_manager.h"
 #include "obstacle_manager.h"
+#include "reference_path_manager.h"
+#include "session.h"
+#include "virtual_lane_manager.h"
 
 namespace planning {
 
 class ObjectSelector {
-public:
-  ObjectSelector(const EgoPlanningConfigBuilder *config_builder,
-                 framework::Session *session);
+ public:
+  ObjectSelector(const EgoPlanningConfigBuilder *config_builder, framework::Session *session);
 
   virtual ~ObjectSelector() = default;
 
@@ -26,10 +25,9 @@ public:
 
   bool check_map_alc_enable(int direction, bool accident_ahead);
 
-  void update(int status, double start_move_distolane, bool accident_ahead,
-              double perception_range,
-              bool disable_l, bool disable_r,
-              bool upstream_enable_l, bool upstream_enable_r, bool upstream_enable_lb, int upstream_enable_id);
+  void update(int status, double start_move_distolane, bool accident_ahead, double perception_range, bool disable_l,
+              bool disable_r, bool upstream_enable_l, bool upstream_enable_r, bool upstream_enable_lb,
+              int upstream_enable_id);
 
   bool enable_l() const { return enable_l_; }
   bool enable_r() const { return enable_r_; }
@@ -50,11 +48,11 @@ public:
   bool left_is_faster() const { return left_is_faster_; }
   bool right_is_faster() const { return right_is_faster_; }
 
-  double premove_dist() const { return premove_dist_;}
-  bool premovel() const { return premovel_;}
-  bool premover() const { return premover_;}
-  int premoved_id() const { return premoved_id_;}
-  int neg_premoved_id() const { return neg_premoved_id_;}
+  double premove_dist() const { return premove_dist_; }
+  bool premovel() const { return premovel_; }
+  bool premover() const { return premover_; }
+  int premoved_id() const { return premoved_id_; }
+  int neg_premoved_id() const { return neg_premoved_id_; }
 
   int left_is_faster_cnt() const { return left_is_faster_cnt_; }
   int right_is_faster_cnt() const { return right_is_faster_cnt_; }
@@ -72,21 +70,13 @@ public:
   std::vector<int> &right_lb_car() { return right_lb_car_; }
   std::vector<int> &right_alc_car() { return right_alc_car_; }
 
-  std::map<int, CarCount> &left_lb_car_cnt()  {
-    return left_lb_car_cnt_;
-  }
+  std::map<int, CarCount> &left_lb_car_cnt() { return left_lb_car_cnt_; }
 
-  std::map<int, CarCount> &left_alc_car_cnt()  {
-    return left_alc_car_cnt_;
-  }
+  std::map<int, CarCount> &left_alc_car_cnt() { return left_alc_car_cnt_; }
 
-  std::map<int, CarCount> &right_lb_car_cnt()  {
-    return right_lb_car_cnt_;
-  }
+  std::map<int, CarCount> &right_lb_car_cnt() { return right_lb_car_cnt_; }
 
-  std::map<int, CarCount> &right_alc_car_cnt()  {
-    return right_alc_car_cnt_;
-  }
+  std::map<int, CarCount> &right_alc_car_cnt() { return right_alc_car_cnt_; }
 
   const std::vector<int> &left_close_objs() const { return left_close_objs_; }
   const std::vector<int> &right_close_objs() const { return right_close_objs_; }
@@ -97,7 +87,7 @@ public:
   // void restore_context(const ObjectSelectorContext &context);
   // void save_context(ObjectSelectorContext &context) const;
 
-private:
+ private:
   planning::framework::Session *session_ = nullptr;
   EgoPlanningObjectSelectorManagerConfig config_;
   bool enable_l_ = true;
@@ -148,7 +138,7 @@ private:
   std::vector<int> right_close_objs_;
   std::vector<int> current_close_objs_;
 
-  //TrackedObject *tleadtwo_ = nullptr;
+  // TrackedObject *tleadtwo_ = nullptr;
   // EgoState ego_state_;
   // MapInfoManager &map_info_mgr_;
   // LateralObstacle &lateral_obstacle_;
@@ -156,6 +146,6 @@ private:
   // LaneTracksManager &lane_tracks_mgr_;
 };
 
-} // namespace planning
+}  // namespace planning
 
 #endif

@@ -19,30 +19,21 @@ void GeneralPlanning::Init() {
   VehicleParam vehicle_param;
   // session->mutable_vehicle_config_context()->load_vehicle_param();
   session_.mutable_vehicle_config_context()->set_vehicle_param(vehicle_param);
-  EnvironmentalModel *environmental_model =
-      session_.mutable_environmental_model();
-  environmental_model->set_vehicle_param(
-      session_.vehicle_config_context().get_vehicle_param());
+  EnvironmentalModel *environmental_model = session_.mutable_environmental_model();
+  environmental_model->set_vehicle_param(session_.vehicle_config_context().get_vehicle_param());
 }
 
-bool GeneralPlanning::RunOnce(
-    const LocalView &local_view,
-    PlanningOutput::PlanningOutput *const planning_output,
-    DebugOutput &debug_info,
-    PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info) {
+bool GeneralPlanning::RunOnce(const LocalView &local_view, PlanningOutput::PlanningOutput *const planning_output,
+                              DebugOutput &debug_info, PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info) {
   // using namespace FeiMa::SystemFunc;
   LOG_ERROR("GeneralPlanning::RunOnce \n");
   local_view_ = local_view;
   double start_timestamp = IflyTime::Now_ms();
-  EnvironmentalModel *environmental_model =
-      session_.mutable_environmental_model();
+  EnvironmentalModel *environmental_model = session_.mutable_environmental_model();
   environmental_model->feed_local_view(local_view);  // todo
-  auto pre_planning_status = session_.mutable_planning_output_context()
-                                 ->mutable_prev_planning_status();
-  *pre_planning_status =
-      session_.mutable_planning_output_context()->planning_status();
-  auto *planning_status =
-      session_.mutable_planning_output_context()->mutable_planning_status();
+  auto pre_planning_status = session_.mutable_planning_output_context()->mutable_prev_planning_status();
+  *pre_planning_status = session_.mutable_planning_output_context()->planning_status();
+  auto *planning_status = session_.mutable_planning_output_context()->mutable_planning_status();
   planning_status->pre_planning_result = planning_status->planning_result;
   planning_status->planning_result.next_timestamp = start_timestamp;
 
@@ -65,10 +56,8 @@ bool GeneralPlanning::RunOnce(
   planning_status->planning_success = planning_success;
   auto end_timestamp = IflyTime::Now_ms();
   planning_status->time_consumption = end_timestamp - start_timestamp;
-  LOG_DEBUG("general planning: planning time cost %f\n",
-            planning_status->time_consumption);
-  planning_status->planning_result.timestamp =
-      planning_status->planning_result.next_timestamp;
+  LOG_DEBUG("general planning: planning time cost %f\n", planning_status->time_consumption);
+  planning_status->planning_result.timestamp = planning_status->planning_result.next_timestamp;
 
   // when planning succeed, update the planning_output
   if (planning_status->planning_success) {
@@ -86,11 +75,9 @@ bool GeneralPlanning::RunOnce(
   return planning_status->planning_success;
 }
 
-void GeneralPlanning::FillPlanningTrajectory(
-    double start_time, PlanningOutput::PlanningOutput *const planning_output) {
+void GeneralPlanning::FillPlanningTrajectory(double start_time, PlanningOutput::PlanningOutput *const planning_output) {
   // 获取计算结果
-  const auto &lateral_output =
-      session_.planning_context().lateral_behavior_planner_output();
+  const auto &lateral_output = session_.planning_context().lateral_behavior_planner_output();
   const auto &vision_only_longitudinal_outputs =
       session_.planning_context().vision_longitudinal_behavior_planner_output();
   auto &planning_result = session_.planning_context().planning_result();
@@ -108,8 +95,7 @@ void GeneralPlanning::FillPlanningTrajectory(
   // 根据定位有效性决定实时、长时
   auto location_valid = session_.environmental_model().location_valid();
   if (location_valid) {
-    trajectory->set_trajectory_type(
-        Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
+    trajectory->set_trajectory_type(Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
     trajectory->mutable_trajectory_points()->Clear();
     trajectory->mutable_target_reference()->Clear();
     for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
@@ -128,16 +114,13 @@ void GeneralPlanning::FillPlanningTrajectory(
     auto target_ref = trajectory->mutable_target_reference();
     target_ref->add_polynomial(0.0);
     target_ref->set_target_velocity(0.0);
-    auto acceleration_range_limit =
-        target_ref->mutable_acceleration_range_limit();
+    auto acceleration_range_limit = target_ref->mutable_acceleration_range_limit();
     acceleration_range_limit->set_min_a(-4.0);
     acceleration_range_limit->set_max_a(4.0);
-    target_ref->set_lateral_maneuver_gear(
-        Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
+    target_ref->set_lateral_maneuver_gear(Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
   } else {
     // set vision_only_longitudinal_outputs if hdmpa valid is false
-    trajectory->set_trajectory_type(
-        Common::TrajectoryType::TRAJECTORY_TYPE_TARGET_REFERENCE);
+    trajectory->set_trajectory_type(Common::TrajectoryType::TRAJECTORY_TYPE_TARGET_REFERENCE);
     trajectory->mutable_trajectory_points()->Clear();
     trajectory->mutable_target_reference()->Clear();
     // 设置轨迹为default
@@ -158,43 +141,33 @@ void GeneralPlanning::FillPlanningTrajectory(
       target_ref->add_polynomial(lateral_output.d_poly[i]);
     }
 
-    target_ref->set_target_velocity(
-        vision_only_longitudinal_outputs.velocity_target);
+    target_ref->set_target_velocity(vision_only_longitudinal_outputs.velocity_target);
 
-    auto acceleration_range_limit =
-        target_ref->mutable_acceleration_range_limit();
-    acceleration_range_limit->set_min_a(
-        vision_only_longitudinal_outputs.a_target_min);
-    acceleration_range_limit->set_max_a(
-        vision_only_longitudinal_outputs.a_target_max);
-    target_ref->set_lateral_maneuver_gear(
-        Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
+    auto acceleration_range_limit = target_ref->mutable_acceleration_range_limit();
+    acceleration_range_limit->set_min_a(vision_only_longitudinal_outputs.a_target_min);
+    acceleration_range_limit->set_max_a(vision_only_longitudinal_outputs.a_target_max);
+    target_ref->set_lateral_maneuver_gear(Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
   }
   // 3.Turn signal
   auto turn_signal = planning_output->mutable_turn_signal_command();
   turn_signal->set_available(true);
   if (planning_result.turn_signal == NO_CHANGE) {
-    turn_signal->set_turn_signal_value(
-        Common::TurnSignalType::TURN_SIGNAL_TYPE_NONE);
+    turn_signal->set_turn_signal_value(Common::TurnSignalType::TURN_SIGNAL_TYPE_NONE);
   } else if (planning_result.turn_signal == LEFT_CHANGE) {
-    turn_signal->set_turn_signal_value(
-        Common::TurnSignalType::TURN_SIGNAL_TYPE_LEFT);
+    turn_signal->set_turn_signal_value(Common::TurnSignalType::TURN_SIGNAL_TYPE_LEFT);
   } else {
-    turn_signal->set_turn_signal_value(
-        Common::TurnSignalType::TURN_SIGNAL_TYPE_RIGHT);
+    turn_signal->set_turn_signal_value(Common::TurnSignalType::TURN_SIGNAL_TYPE_RIGHT);
   }
   // WB start:--------临时hack以下信号--------
   // 4.Light signal
   auto light_signal = planning_output->mutable_light_signal_command();
   light_signal->set_available(true);
-  light_signal->set_light_signal_value(
-      Common::LightSignalType::LIGHT_SIGNAL_TYPE_NONE);
+  light_signal->set_light_signal_value(Common::LightSignalType::LIGHT_SIGNAL_TYPE_NONE);
 
   // 5.Horn signal
   auto horn_signal_command = planning_output->mutable_horn_signal_command();
   horn_signal_command->set_available(true);
-  horn_signal_command->set_horn_signal_value(
-      Common::HornSignalType::HORN_SIGNAL_TYPE_NONE);
+  horn_signal_command->set_horn_signal_value(Common::HornSignalType::HORN_SIGNAL_TYPE_NONE);
 
   // 6.Gear signal
   auto gear_command = planning_output->mutable_gear_command();
@@ -204,8 +177,7 @@ void GeneralPlanning::FillPlanningTrajectory(
   gear_command->set_gear_command_value(gear);
 
   // 7.Open loop steering command
-  auto open_loop_steering_command =
-      planning_output->mutable_open_loop_steering_command();
+  auto open_loop_steering_command = planning_output->mutable_open_loop_steering_command();
   open_loop_steering_command->set_available(true);
   open_loop_steering_command->set_jerk_factor(70.0);  // hack
   open_loop_steering_command->set_need_steering_wheel_stationary(false);
@@ -215,20 +187,17 @@ void GeneralPlanning::FillPlanningTrajectory(
   auto planning_status = planning_output->mutable_planning_status();
   planning_status->set_standstill(false);
   planning_status->set_ready_to_go(true);
-  planning_status->set_apa_planning_status(
-      PlanningOutput::ApaPlanningStatus::NONE);
+  planning_status->set_apa_planning_status(PlanningOutput::ApaPlanningStatus::NONE);
   // WB end:--------临时hack以上信号--------
 }
 
-void GeneralPlanning::GenerateStopTrajectory(
-    double start_time, PlanningOutput::PlanningOutput *const planning_output) {
+void GeneralPlanning::GenerateStopTrajectory(double start_time, PlanningOutput::PlanningOutput *const planning_output) {
   // 更新输出
   planning_output->mutable_meta()->set_plan_timestamp_us(IflyTime::Now_ms());
 
   auto trajectory = planning_output->mutable_trajectory();
   // Hack: 长时规划
-  trajectory->set_trajectory_type(
-      Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
+  trajectory->set_trajectory_type(Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
   trajectory->mutable_trajectory_points()->Clear();
   trajectory->mutable_target_reference()->Clear();
   double t = 0.0;
@@ -247,10 +216,8 @@ void GeneralPlanning::GenerateStopTrajectory(
   }
 }
 
-void GeneralPlanning::FillPlanningDebugInfo(double start_time,
-                                            DebugOutput &debug_info) {}
+void GeneralPlanning::FillPlanningDebugInfo(double start_time, DebugOutput &debug_info) {}
 
-void GeneralPlanning::FillPlanningHmiInfo(
-    double start_timestamp,
-    PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info) {}
+void GeneralPlanning::FillPlanningHmiInfo(double start_timestamp,
+                                          PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info) {}
 }  // namespace planning

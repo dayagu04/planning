@@ -13,14 +13,7 @@
 
 namespace planning {
 
-enum class ObstacleTag : int {
-  TRAVERSE = 0,
-  CONVERGE = 1,
-  MERGE = 2,
-  FRONT = 3,
-  BACK = 4,
-  UNKNOWN = -1
-};
+enum class ObstacleTag : int { TRAVERSE = 0, CONVERGE = 1, MERGE = 2, FRONT = 3, BACK = 4, UNKNOWN = -1 };
 
 // a struct for obstacles
 struct Barrier {
@@ -28,7 +21,7 @@ struct Barrier {
   ObjectType type = ObjectType::NOT_KNOW;
   double s_min = 200;
   double s_max = 200;
-  double vel = 120 / 3.6; // velocity
+  double vel = 120 / 3.6;  // velocity
   double r_frenet = 0.0;
   double r_close = 100.0;
   double yaw_relative_frenet = 0.0;
@@ -52,22 +45,15 @@ class StGraphData {
  public:
   StGraphData() = default;
 
-  void LoadData(const std::vector<const STBoundary*>& st_boundaries,
-                const double min_s_on_st_boundaries,
-                const PncTrajectoryPoint& init_point,
-                const SpeedLimit& speed_limit, const double path_data_length,
+  void LoadData(const std::vector<const STBoundary*>& st_boundaries, const double min_s_on_st_boundaries,
+                const PncTrajectoryPoint& init_point, const SpeedLimit& speed_limit, const double path_data_length,
                 const double total_time_by_conf);
 
-  void load_output_data(const BarrierPairList& lane_keep_sv,
-                        const BarrierArray& normal_sv,
-                        const BarrierList& rear_sv,
-                        const BarrierList& yield_sv,
-                        const BarrierList& lane_keep_potential_sv,
+  void load_output_data(const BarrierPairList& lane_keep_sv, const BarrierArray& normal_sv, const BarrierList& rear_sv,
+                        const BarrierList& yield_sv, const BarrierList& lane_keep_potential_sv,
                         const ObstacleTagList& obstacle_tag_list,
-                        const IntObstacleTypeUmap& obstacle_first_time_state_map,
-                        bool dynamic_prebrake_signal,
-                        bool static_prebrake_signal,
-                        bool is_prebrake_target_transverse);
+                        const IntObstacleTypeUmap& obstacle_first_time_state_map, bool dynamic_prebrake_signal,
+                        bool static_prebrake_signal, bool is_prebrake_target_transverse);
 
   bool is_initialized() const { return init_; }
 
@@ -86,19 +72,19 @@ class StGraphData {
   double total_time_by_conf() const;
 
   // interface for current st graph data
-  const BarrierPairList &get_lane_keep_sv() const;
+  const BarrierPairList& get_lane_keep_sv() const;
 
-  const BarrierArray &get_normal_sv() const;
+  const BarrierArray& get_normal_sv() const;
 
-  const BarrierList &get_rear_sv() const;
+  const BarrierList& get_rear_sv() const;
 
-  const BarrierList &get_yield_sv() const;
+  const BarrierList& get_yield_sv() const;
 
-  const BarrierList &get_potential_sv() const;
+  const BarrierList& get_potential_sv() const;
 
-  const ObstacleTagList &get_obstacle_tag() const;
+  const ObstacleTagList& get_obstacle_tag() const;
 
-  const IntObstacleTypeUmap &get_obstacle_first_time_state_map() const;
+  const IntObstacleTypeUmap& get_obstacle_first_time_state_map() const;
 
   bool get_prebrake_signal_from_static() const;
 

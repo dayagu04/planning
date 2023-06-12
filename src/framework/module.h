@@ -5,11 +5,11 @@
 #include <type_traits>
 
 #include "class_name.h"
+#include "frame.h"
+#include "google/protobuf/message.h"
 #include "macro.h"
 #include "registry.h"
-#include "frame.h"
 #include "session.h"
-#include "google/protobuf/message.h"
 
 namespace planning {
 namespace framework {
@@ -25,8 +25,7 @@ class BaseModule {
 
   virtual BaseModule* clone() const = 0;
 
-  virtual bool init(const ::google::protobuf::Message* config,
-                   Session* session) = 0;
+  virtual bool init(const ::google::protobuf::Message* config, Session* session) = 0;
   virtual bool reset(const ::google::protobuf::Message* config) = 0;
 
   // Get/Set the universally unique name of the underlying module. Basically
@@ -43,13 +42,9 @@ class BaseModule {
 
 class ModuleConfig : public BaseModule {
  public:
-  const ::google::protobuf::Message* config() const override final {
-    return config_;
-  }
+  const ::google::protobuf::Message* config() const override final { return config_; }
 
-  ::google::protobuf::Message* mutable_config() override final {
-    return config_;
-  }
+  ::google::protobuf::Message* mutable_config() override final { return config_; }
 
  protected:
   ::google::protobuf::Message* config_ = nullptr;
@@ -79,8 +74,7 @@ class ModuleFactory {
  public:
   ModuleFactory() = default;
   virtual ~ModuleFactory() = default;
-  virtual BaseModule* create_module(const ::google::protobuf::Message* config,
-                                    Session* session) const = 0;
+  virtual BaseModule* create_module(const ::google::protobuf::Message* config, Session* session) const = 0;
   virtual ::google::protobuf::Message* new_config() const = 0;
 
  private:
@@ -99,30 +93,27 @@ using ModuleFactoryRegistry = planning::common::Registry<planning::framework::Mo
 
 // TODO use malloc, use errno
 // TODO don't init here maybe, since parameter not knowned yet
-#define REGISTER_MODULE_FACTORY(T)                         \
-  class T##Factory : public planning::framework::ModuleFactory {    \
-   public:                                                     \
-    T##Factory() {                                             \
-      const char* class_name = planning::common::class_name<T>();   \
-      (void)planning::framework::register_module(class_name, this); \
-    }                                                          \
-    planning::framework::BaseModule* create_module(                 \
-        const ::google::protobuf::Message* config,             \
-        planning::framework::Session* session) const override {     \
-      if (session == nullptr) {                                \
-        return nullptr;                                        \
-      }                                                        \
-      planning::framework::BaseModule* p = session->alloc<T>();     \
-      p->set_name(planning::common::class_name_str<T>());           \
-      if (p->init(config, session) != true) {                     \
-        return nullptr;                                        \
-      }                                                        \
-      return p;                                                \
-    }                                                          \
-    ::google::protobuf::Message* new_config() const override { \
-      return nullptr;                                          \
-    }                                                          \
-  };                                                           \
+#define REGISTER_MODULE_FACTORY(T)                                                                         \
+  class T##Factory : public planning::framework::ModuleFactory {                                           \
+   public:                                                                                                 \
+    T##Factory() {                                                                                         \
+      const char* class_name = planning::common::class_name<T>();                                          \
+      (void)planning::framework::register_module(class_name, this);                                        \
+    }                                                                                                      \
+    planning::framework::BaseModule* create_module(const ::google::protobuf::Message* config,              \
+                                                   planning::framework::Session* session) const override { \
+      if (session == nullptr) {                                                                            \
+        return nullptr;                                                                                    \
+      }                                                                                                    \
+      planning::framework::BaseModule* p = session->alloc<T>();                                            \
+      p->set_name(planning::common::class_name_str<T>());                                                  \
+      if (p->init(config, session) != true) {                                                              \
+        return nullptr;                                                                                    \
+      }                                                                                                    \
+      return p;                                                                                            \
+    }                                                                                                      \
+    ::google::protobuf::Message* new_config() const override { return nullptr; }                           \
+  };                                                                                                       \
   static T##Factory T##factory;
 
 #define ZNQC_REGISTER_MODULE_CREATOR(F)

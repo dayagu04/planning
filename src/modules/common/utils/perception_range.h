@@ -11,7 +11,7 @@
 namespace planning {
 
 class PerceptionRangeEstimator {
-public:
+ public:
   // Update frenet coordinate transformer
   virtual void updateFrenet(const std::shared_ptr<FrenetCoordinateSystem> &frenet) = 0;
 
@@ -29,6 +29,6 @@ public:
   static std::shared_ptr<PerceptionRangeEstimator> make();
 };
 
-} // namespace planning
+}  // namespace planning
 
-#endif // MSQUARE_PNC_PERCEPTION_RANGE_HPP
+#endif  // MSQUARE_PNC_PERCEPTION_RANGE_HPP

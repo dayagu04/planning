@@ -7,13 +7,12 @@ namespace planning {
 /// @brief 自主式(Active)换道请求
 class ActRequest : public LaneChangeRequest {
  public:
-  ActRequest(planning::framework::Session* session,
-             std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
+  ActRequest(planning::framework::Session* session, std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
              std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
   virtual ~ActRequest() = default;
 
-  void Update(int lc_status, double start_move_distolane, double lc_int_tfinish,
-              double lc_map_tfinish, bool accident_ahead, bool not_accident);
+  void Update(int lc_status, double start_move_distolane, double lc_int_tfinish, double lc_map_tfinish,
+              bool accident_ahead, bool not_accident);
 
   void Reset(int direction = NO_CHANGE);
 
@@ -46,10 +45,8 @@ class ActRequest : public LaneChangeRequest {
   double vrel_l_ = 1000.;
   double vrel_r_ = 1000.;
   std::string act_request_source_{"none"};
-  void print_forbid_generating_reason(
-      const std::vector<std::string> forbid_generating_reason);
-  void check_lc_forbid_reason(
-      std::vector<std::string>& forbid_generating_left_reason,
-      std::vector<std::string>& forbid_generating_right_reason);
+  void print_forbid_generating_reason(const std::vector<std::string> forbid_generating_reason);
+  void check_lc_forbid_reason(std::vector<std::string>& forbid_generating_left_reason,
+                              std::vector<std::string>& forbid_generating_right_reason);
 };
 }  // namespace planning

@@ -2,7 +2,5 @@
 
 namespace planning {
 
-class TrafficLightDecisionManager {
-    
-};
-}
+class TrafficLightDecisionManager {};
+}  // namespace planning

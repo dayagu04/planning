@@ -28,7 +28,7 @@ class PathData {
 
   void SetPathBorder(PolygonalLine left_border, PolygonalLine right_border);
 
-  const DiscretizedPath &discretized_path() const;
+  const DiscretizedPath& discretized_path() const;
 
   const PolygonalLine& LeftBorder() const;
 
@@ -42,17 +42,13 @@ class PathData {
 
   bool Empty() const;
 
-  void set_path_label(const std::string &label);
+  void set_path_label(const std::string& label);
 
-  const std::string &path_label() const;
+  const std::string& path_label() const;
 
-  void set_blocking_obstacle_id(int obs_id) {
-    blocking_obstacle_id_ = obs_id;
-  }
+  void set_blocking_obstacle_id(int obs_id) { blocking_obstacle_id_ = obs_id; }
 
-  int blocking_obstacle_id() const {
-    return blocking_obstacle_id_;
-  }
+  int blocking_obstacle_id() const { return blocking_obstacle_id_; }
 
  private:
   DiscretizedPath discretized_path_;

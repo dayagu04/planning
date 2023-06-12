@@ -40,7 +40,6 @@ struct Point2d {
   double x;
   double y;
 
-
   Point2d() = default;
   Point2d(double xx, double yy) : x(xx), y(yy) {}
 };
@@ -126,4 +125,4 @@ enum MapPOIType {
   MAP_POI_TYPE_ROAD_MERGE = 17
 };
 
-} // namespace planning
+}  // namespace planning

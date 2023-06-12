@@ -3,10 +3,8 @@
 
 namespace planning {
 
-void calc_desired_gap(double v_ego, const TrackedObject &first_object,
-                      const TrackedObject &second_object, double t,
-                      double d_offset, double t_gap, double safety_dist,
-                      double &diff_dn_car, double &desired_gap) {
+void calc_desired_gap(double v_ego, const TrackedObject &first_object, const TrackedObject &second_object, double t,
+                      double d_offset, double t_gap, double safety_dist, double &diff_dn_car, double &desired_gap) {
   double v_lead = v_ego + first_object.v_rel;
   double diff_vn_car = first_object.v_rel - second_object.v_rel;
   diff_dn_car = first_object.d_rel - second_object.d_rel + diff_vn_car * t;
@@ -20,8 +18,7 @@ void remove_car(std::vector<int> &car_list, int id) {
   }
 }
 
-ObjectSelector::ObjectSelector(const EgoPlanningConfigBuilder *config_builder,
-                               planning::framework::Session *session)
+ObjectSelector::ObjectSelector(const EgoPlanningConfigBuilder *config_builder, planning::framework::Session *session)
     : session_(session) {
   config_ = config_builder->cast<EgoPlanningObjectSelectorManagerConfig>();
   left_lb_car_cnt_.insert(std::make_pair(1000, CarCount(0, 0)));
@@ -31,7 +28,7 @@ ObjectSelector::ObjectSelector(const EgoPlanningConfigBuilder *config_builder,
 }
 
 bool ObjectSelector::in_alc_range() {
-  //TODO(Rui):wait for map ready
+  // TODO(Rui):wait for map ready
   // const auto &map_info = map_info_mgr_.get_map_info();
   // if (map_info.dist_to_intsect() < 50 || (is_on_highway && lc_end_dis <= 350)) {
   //   return false;
@@ -72,21 +69,19 @@ double ObjectSelector::get_vrel_close(int side, int status) {
 
   bool right_direct_exist = true;
 
-
   bool curr_direct_has_straight = true;
 
   bool left_direct_has_straight = true;
   bool right_direct_has_straight = true;
 
   if ((side == -1 && llane == nullptr) || (side == 1 && rlane == nullptr) || side > 1 || side < -1) {
-    LOG_ERROR("[LaneTracksManager::get_vrel_close] Illegal side[%d] argument \n",
-              side);
+    LOG_ERROR("[LaneTracksManager::get_vrel_close] Illegal side[%d] argument \n", side);
     return v_rel_close;
   }
 
   if (tlane == nullptr || tlane->get_virtual_id() != flane->get_virtual_id()) {
     if (lead_cars.lead_one != nullptr) {
-      fvf_drel_confident = lead_cars.lead_one->d_rel + std::max(30., lead_cars.lead_one->v_lead * 5.) ;
+      fvf_drel_confident = lead_cars.lead_one->d_rel + std::max(30., lead_cars.lead_one->v_lead * 5.);
     }
   } else {
     fvf_drel_confident = 30;
@@ -101,7 +96,7 @@ double ObjectSelector::get_vrel_close(int side, int status) {
   } else if (side == 1) {
     lane = rlane;
   }
-  
+
   for (TrackedObject obstacle : lateral_obstacle->front_tracks()) {
     auto &obj_tmp = obstacle;
     int leadone_id = lane->get_reference_path()->get_lane_leadone_obstacle();
@@ -149,45 +144,34 @@ bool ObjectSelector::in_alc_status(int status, double start_move_distolane) {
   }
   double act_cancel_thr = std::max(olane_width / 2 - 0.6, 0.);
   bool l_change_cond =
-      (tlane != nullptr &&
-       frenet_ego_state.l() + v_ego * dt_delay <
-           start_move_distolane + act_cancel_thr);
+      (tlane != nullptr && frenet_ego_state.l() + v_ego * dt_delay < start_move_distolane + act_cancel_thr);
 
   bool r_change_cond =
-      (tlane != nullptr &&
-       frenet_ego_state.l() - v_ego * dt_delay >
-           start_move_distolane - act_cancel_thr);
+      (tlane != nullptr && frenet_ego_state.l() - v_ego * dt_delay > start_move_distolane - act_cancel_thr);
 
-  return (status == ROAD_NONE || status == ROAD_LC_LWAIT ||
-          status == ROAD_LC_RWAIT ||
+  return (status == ROAD_NONE || status == ROAD_LC_LWAIT || status == ROAD_LC_RWAIT ||
           (status == ROAD_LC_LBACK && state_machine_output.lc_back_reason != "" &&
-          (state_machine_output.lc_back_reason == "front view back" || state_machine_output.lc_back_reason == "side view back")) ||
+           (state_machine_output.lc_back_reason == "front view back" ||
+            state_machine_output.lc_back_reason == "side view back")) ||
           (status == ROAD_LC_RBACK && state_machine_output.lc_back_reason != "" &&
-          (state_machine_output.lc_back_reason == "front view back" || state_machine_output.lc_back_reason == "side view back")) ||
-          status == ROAD_LB_LBORROW ||
-          status == ROAD_LB_RBORROW || status == ROAD_LB_LBACK ||
-          status == ROAD_LB_RBACK || status == INTER_GS_LC_LWAIT ||
-          status == INTER_GS_LC_RWAIT ||
-          (status == ROAD_LC_LCHANGE && l_change_cond) ||
-          (status == ROAD_LC_RCHANGE && r_change_cond) ||
-          (status == INTER_GS_LC_LCHANGE && l_change_cond) ||
-          (status == INTER_GS_LC_RCHANGE && r_change_cond) ||
-          (status == INTER_TR_LC_LCHANGE && l_change_cond) ||
-          (status == INTER_TR_LC_RCHANGE && r_change_cond) ||
-          (status == INTER_TL_LC_LCHANGE && l_change_cond) ||
-          (status == INTER_TL_LC_RCHANGE && r_change_cond));
+           (state_machine_output.lc_back_reason == "front view back" ||
+            state_machine_output.lc_back_reason == "side view back")) ||
+          status == ROAD_LB_LBORROW || status == ROAD_LB_RBORROW || status == ROAD_LB_LBACK ||
+          status == ROAD_LB_RBACK || status == INTER_GS_LC_LWAIT || status == INTER_GS_LC_RWAIT ||
+          (status == ROAD_LC_LCHANGE && l_change_cond) || (status == ROAD_LC_RCHANGE && r_change_cond) ||
+          (status == INTER_GS_LC_LCHANGE && l_change_cond) || (status == INTER_GS_LC_RCHANGE && r_change_cond) ||
+          (status == INTER_TR_LC_LCHANGE && l_change_cond) || (status == INTER_TR_LC_RCHANGE && r_change_cond) ||
+          (status == INTER_TL_LC_LCHANGE && l_change_cond) || (status == INTER_TL_LC_RCHANGE && r_change_cond));
 }
 
 bool ObjectSelector::check_map_alc_enable(int direction, bool accident_ahead) {
-  //TODO(Rui):wait for map
+  // TODO(Rui):wait for map
   return true;
 }
 
-void ObjectSelector::update(int status, double start_move_distolane,
-                            bool accident_ahead,
-                            double perception_range,
-                            bool disable_l, bool disable_r,
-                            bool upstream_enable_l, bool upstream_enable_r, bool upstream_enable_lb, int upstream_enable_id) {
+void ObjectSelector::update(int status, double start_move_distolane, bool accident_ahead, double perception_range,
+                            bool disable_l, bool disable_r, bool upstream_enable_l, bool upstream_enable_r,
+                            bool upstream_enable_lb, int upstream_enable_id) {
   double d_offset = 3.5;
   bool l_enable = true;
   bool r_enable = true;
@@ -225,11 +209,9 @@ void ObjectSelector::update(int status, double start_move_distolane,
   int request_source = state_machine_output.lc_request_source;
   int request = state_machine_output.lc_request;
 
+  double coefficient = 20. / 15;  // TODO(Rui):FLAGS_planning_loop_rate = 20.
 
-  double coefficient = 20. / 15; //TODO(Rui):FLAGS_planning_loop_rate = 20.
-
-  std::array<double, 5> lead_confidence_v{1 * coefficient, 2 * coefficient,
-                                          4 * coefficient, 20 * coefficient,
+  std::array<double, 5> lead_confidence_v{1 * coefficient, 2 * coefficient, 4 * coefficient, 20 * coefficient,
                                           50 * coefficient};
   std::array<double, 5> lead_confidence_bp{0, 30, 60, 90, 120};
   std::array<double, 3> t_gap_vego_v{1.35, 1.55, 2.0};
@@ -242,15 +224,14 @@ void ObjectSelector::update(int status, double start_move_distolane,
   double max_visible_gap = 25.0;
   double max_perception_range = 70.0;
 
-  const std::vector<TrackedObject> &front_tracks =
-      lateral_obstacle->front_tracks();
-  //TODO(Rui):tmp hack front_tracks_l = lateral_obstale->front_tracks_l()
+  const std::vector<TrackedObject> &front_tracks = lateral_obstacle->front_tracks();
+  // TODO(Rui):tmp hack front_tracks_l = lateral_obstale->front_tracks_l()
   // const std::vector<TrackedObject> &front_tracks_l = lane_tracks_mgr_.front_tracks_l();
   // const std::vector<TrackedObject> &front_tracks_r = lane_tracks_mgr_.front_tracks_r();
   // const std::vector<TrackedObject> &front_tracks_c = lane_tracks_mgr_.front_tracks_c();
   const std::vector<TrackedObject> &front_tracks_l = lateral_obstacle->front_tracks_l();
   const std::vector<TrackedObject> &front_tracks_r = lateral_obstacle->front_tracks_r();
-  const std::vector<TrackedObject> &front_tracks_c = lateral_obstacle->front_tracks(); // hack front_tracks_c()
+  const std::vector<TrackedObject> &front_tracks_c = lateral_obstacle->front_tracks();  // hack front_tracks_c()
   front_tracks_l_cnt_ = front_tracks_l.size();
   front_tracks_r_cnt_ = front_tracks_r.size();
 
@@ -266,7 +247,6 @@ void ObjectSelector::update(int status, double start_move_distolane,
   TrackedObject *temp_leadone = lateral_obstacle->tleadone();
   TrackedObject *temp_leadtwo = lateral_obstacle->tleadtwo();
 
-
   auto lanes_num = virtual_lane_mgr->get_lane_num();
   auto current_lane_index = virtual_lane_mgr->get_lane_index(clane);
   auto &left_boundary_info = clane->get_left_lane_boundary();
@@ -280,7 +260,7 @@ void ObjectSelector::update(int status, double start_move_distolane,
   bool is_in_intersection = intersection_info.is_in_intersection();
   double dis_to_ramp = intersection_info.dis_to_ramp();
   double intersect_length = intersection_info.intsect_length();
-  bool is_on_ramp = false; // hack map_info.is_on_ramp()
+  bool is_on_ramp = false;  // hack map_info.is_on_ramp()
   double lc_end_dis = virtual_lane_mgr->lc_map_decision_offset(clane);
   int current_lane_tasks_id = virtual_lane_mgr->get_tasks(clane);
   int left_lane_tasks_id = virtual_lane_mgr->get_tasks(llane);
@@ -292,26 +272,23 @@ void ObjectSelector::update(int status, double start_move_distolane,
   double press_thr = 0.3;
   double lane_width = flane->width();
   double t_gap = interp(v_ego, t_gap_vego_bp, t_gap_vego_v);
-  bool None_state = (status == ROAD_NONE || status == INTER_GS_NONE ||
-                     status == INTER_TR_NONE || status == INTER_TL_NONE ||
-                     status == INTER_UT_NONE);
-  bool LCHANGE = (status == ROAD_LC_LCHANGE || status == INTER_GS_LC_LCHANGE ||
-                  status == INTER_TR_LC_LCHANGE || status == INTER_TL_LC_LCHANGE);
-  bool RCHANGE = (status == ROAD_LC_RCHANGE || status == INTER_GS_LC_RCHANGE ||
-                  status == INTER_TR_LC_RCHANGE || status == INTER_TL_LC_RCHANGE);
+  bool None_state = (status == ROAD_NONE || status == INTER_GS_NONE || status == INTER_TR_NONE ||
+                     status == INTER_TL_NONE || status == INTER_UT_NONE);
+  bool LCHANGE = (status == ROAD_LC_LCHANGE || status == INTER_GS_LC_LCHANGE || status == INTER_TR_LC_LCHANGE ||
+                  status == INTER_TL_LC_LCHANGE);
+  bool RCHANGE = (status == ROAD_LC_RCHANGE || status == INTER_GS_LC_RCHANGE || status == INTER_TR_LC_RCHANGE ||
+                  status == INTER_TL_LC_RCHANGE);
   bool isRedLightStop = false;
 
   if ((llane == nullptr || left_boundary_info.segment(0).type() == Common::LaneBoundaryType::MARKING_SOLID) &&
-      (status == ROAD_NONE ||
-       (olane != nullptr &&
-        olane->get_virtual_id() == clane->get_virtual_id() && (status != ROAD_LC_LCHANGE || l_ego < -lane_width / 2 - 0.2)))) {
+      (status == ROAD_NONE || (olane != nullptr && olane->get_virtual_id() == clane->get_virtual_id() &&
+                               (status != ROAD_LC_LCHANGE || l_ego < -lane_width / 2 - 0.2)))) {
     l_enable = false;
   }
 
   if ((rlane == nullptr || right_boundary_info.segment(0).type() == Common::LaneBoundaryType::MARKING_SOLID) &&
-      (status == ROAD_NONE ||
-       (olane != nullptr &&
-        olane->get_virtual_id() == clane->get_virtual_id() && (status != ROAD_LC_RCHANGE || l_ego > lane_width / 2 + 0.2)))) {
+      (status == ROAD_NONE || (olane != nullptr && olane->get_virtual_id() == clane->get_virtual_id() &&
+                               (status != ROAD_LC_RCHANGE || l_ego > lane_width / 2 + 0.2)))) {
     r_enable = false;
   }
 
@@ -343,14 +320,11 @@ void ObjectSelector::update(int status, double start_move_distolane,
 
   if (l_enable && llane != nullptr) {
     v_rel_l_ = get_vrel_close(-1, status);
-    if (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id() &&
-        request == LEFT_CHANGE) {
-      v_rel_l_ = std::max(get_vrel_close(0, status) + 2.,
-                          get_vrel_close(0, status) + v_ego);
+    if (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id() && request == LEFT_CHANGE) {
+      v_rel_l_ = std::max(get_vrel_close(0, status) + 2., get_vrel_close(0, status) + v_ego);
     }
 
-    if (v_rel_l_ >= 5.0 ||
-        (temp_leadone != nullptr && v_rel_l_ - temp_leadone->v_rel >= 5.0)) {
+    if (v_rel_l_ >= 5.0 || (temp_leadone != nullptr && v_rel_l_ - temp_leadone->v_rel >= 5.0)) {
       left_is_faster_cnt_++;
       if (left_is_faster_cnt_ >= faster_cnt * coefficient) {
         left_is_faster_ = true;
@@ -371,14 +345,11 @@ void ObjectSelector::update(int status, double start_move_distolane,
 
   if (r_enable && rlane != nullptr) {
     v_rel_r_ = get_vrel_close(1, status);
-    if (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id() &&
-        request == RIGHT_CHANGE) {
-      v_rel_r_ = std::max(get_vrel_close(0, status) + 2.,
-                          get_vrel_close(0, status) + v_ego);
+    if (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id() && request == RIGHT_CHANGE) {
+      v_rel_r_ = std::max(get_vrel_close(0, status) + 2., get_vrel_close(0, status) + v_ego);
     }
 
-    if (v_rel_r_ >= 5.0 ||
-        (temp_leadone != nullptr && v_rel_r_ - temp_leadone->v_rel >= 5.0)) {
+    if (v_rel_r_ >= 5.0 || (temp_leadone != nullptr && v_rel_r_ - temp_leadone->v_rel >= 5.0)) {
       right_is_faster_cnt_ += 1;
       if (right_is_faster_cnt_ >= faster_cnt * coefficient) {
         right_is_faster_ = true;
@@ -419,11 +390,9 @@ void ObjectSelector::update(int status, double start_move_distolane,
 
   if ((in_alc_range() ||
        (left_boundary_info.segment_size() > 0 &&
-        left_boundary_info.segment(0).type() == Common::LaneBoundaryType::MARKING_DASHED &&
-        dist_to_intsect > 0 &&
-      (left_boundary_info.segment(0).length() - dist_to_intsect > -10 ||
-      (status == ROAD_LC_LCHANGE) ||
-      (status == ROAD_LC_RCHANGE))) ||
+        left_boundary_info.segment(0).type() == Common::LaneBoundaryType::MARKING_DASHED && dist_to_intsect > 0 &&
+        (left_boundary_info.segment(0).length() - dist_to_intsect > -10 || (status == ROAD_LC_LCHANGE) ||
+         (status == ROAD_LC_RCHANGE))) ||
        dist_to_intsect < -5 || accident_ahead) &&
       lateral_obstacle->sensors_okay()) {
     std::map<int, bool> front_tracks_ids;
@@ -438,7 +407,6 @@ void ObjectSelector::update(int status, double start_move_distolane,
     double accident_drel = 1000.;
     double c_final_drel = 0.;
     bool accident_front = false;
-
 
     for (auto &tr : front_tracks_l) {
       front_tracks_l_ids.insert(std::make_pair(tr.track_id, true));
@@ -495,37 +463,33 @@ void ObjectSelector::update(int status, double start_move_distolane,
 
     for (auto &tr : front_tracks) {
       front_tracks_ids.insert(std::make_pair(tr.track_id, true));
-      if (status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE &&
-          accident_drel < 1000. && front_tracks_l_ids.find(tr.track_id) == front_tracks_l_ids.end() &&
-          front_tracks_r_ids.find(tr.track_id) == front_tracks_r_ids.end() &&
-          accident_drel - tr.d_rel > 2 && accident_drel - tr.d_rel < 15 &&
-          !tr.is_lead && !tr.is_temp_lead) {
+      if (status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE && accident_drel < 1000. &&
+          front_tracks_l_ids.find(tr.track_id) == front_tracks_l_ids.end() &&
+          front_tracks_r_ids.find(tr.track_id) == front_tracks_r_ids.end() && accident_drel - tr.d_rel > 2 &&
+          accident_drel - tr.d_rel < 15 && !tr.is_lead && !tr.is_temp_lead) {
         if (tr.d_max_cpath < lane_width && tr.d_min_cpath > 0 &&
-           ((curr_direct_exist &&
-           (right_direct_exist ||
-           (right_boundary_info.segment_size() > 0 && right_boundary_info.segment(0).type() == Common::LaneBoundaryType::MARKING_DASHED &&
-            right_boundary_info.segment(0).length() - tr.d_rel > 60))) ||
-            (!curr_direct_exist && (right_direct_exist ||
-            dist_to_intsect - tr.d_rel > 200)))) {
+            ((curr_direct_exist && (right_direct_exist || (right_boundary_info.segment_size() > 0 &&
+                                                           right_boundary_info.segment(0).type() ==
+                                                               Common::LaneBoundaryType::MARKING_DASHED &&
+                                                           right_boundary_info.segment(0).length() - tr.d_rel > 60))) ||
+             (!curr_direct_exist && (right_direct_exist || dist_to_intsect - tr.d_rel > 200)))) {
           std::array<double, 4> d_expect_bp{0., tr.d_min_cpath};
           std::array<double, 4> d_expect_v{5., std::max(v_ego * 3, 20.)};
-          double d_expect =
-                  interp(tr.d_min_cpath - l_ego, d_expect_bp, d_expect_v);
+          double d_expect = interp(tr.d_min_cpath - l_ego, d_expect_bp, d_expect_v);
           if (tr.d_rel < d_expect) {
             l_enable = false;
             enable_l_ = false;
           }
         } else if (tr.d_min_cpath > -lane_width && tr.d_max_cpath < 0 &&
-           ((curr_direct_exist &&
-           (left_direct_exist ||
-           (left_boundary_info.segment_size() > 0 && left_boundary_info.segment(0).type() == Common::LaneBoundaryType::MARKING_DASHED &&
-            left_boundary_info.segment(0).length() - tr.d_rel > 60))) ||
-            (!curr_direct_exist && (left_direct_exist ||
-            dist_to_intsect - tr.d_rel > 200)))) {
+                   ((curr_direct_exist &&
+                     (left_direct_exist ||
+                      (left_boundary_info.segment_size() > 0 &&
+                       left_boundary_info.segment(0).type() == Common::LaneBoundaryType::MARKING_DASHED &&
+                       left_boundary_info.segment(0).length() - tr.d_rel > 60))) ||
+                    (!curr_direct_exist && (left_direct_exist || dist_to_intsect - tr.d_rel > 200)))) {
           std::array<double, 4> d_expect_bp{0., -tr.d_max_cpath};
           std::array<double, 4> d_expect_v{5., std::max(v_ego * 3, 20.)};
-          double d_expect =
-                  interp(-tr.d_max_cpath + l_ego, d_expect_bp, d_expect_v);
+          double d_expect = interp(-tr.d_max_cpath + l_ego, d_expect_bp, d_expect_v);
           if (tr.d_rel < d_expect) {
             r_enable = false;
             enable_r_ = false;
@@ -557,20 +521,16 @@ void ObjectSelector::update(int status, double start_move_distolane,
           enable_r_ = false;
           return;
         } else if (!l_enable) {
-          if (left_alc_car_.size() > 0 &&
-              front_tracks_r_ids.find(left_alc_car_[0]) != front_tracks_r_ids.end() &&
+          if (left_alc_car_.size() > 0 && front_tracks_r_ids.find(left_alc_car_[0]) != front_tracks_r_ids.end() &&
               !disable_l) {
-
           } else {
             left_lb_car_.clear();
             left_alc_car_.clear();
             enable_l_ = false;
           }
         } else if (!r_enable) {
-          if (right_alc_car_.size() > 0 &&
-              front_tracks_l_ids.find(right_alc_car_[0]) != front_tracks_l_ids.end() &&
+          if (right_alc_car_.size() > 0 && front_tracks_l_ids.find(right_alc_car_[0]) != front_tracks_l_ids.end() &&
               !disable_r) {
-
           } else {
             right_lb_car_.clear();
             right_alc_car_.clear();
@@ -582,44 +542,30 @@ void ObjectSelector::update(int status, double start_move_distolane,
           double v_target = session_->environmental_model().get_ego_state_manager()->ego_hmi_v();
 
           if (((l_enable && llane != nullptr) ||
-              (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id()))) {
-
+               (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id()))) {
             if (accident_ahead && left_is_faster_ && tr.is_accident_car &&
-                ((lead_one == nullptr ||
-                  ((lead_two == nullptr) ||
-                   (tr.track_id != lead_two->track_id)))) &&
-                (status == ROAD_NONE || status == ROAD_LC_LWAIT ||
-                 status == ROAD_LC_LCHANGE || status == ROAD_LC_LBACK ||
-                 status == ROAD_LB_LBORROW || status == ROAD_LB_LRETURN ||
-                 status == INTER_GS_NONE || status == INTER_GS_LC_LWAIT ||
-                 status == INTER_GS_LC_LCHANGE || status == INTER_GS_LC_LBACK ||
-                 status == INTER_TR_NONE || status == INTER_TR_LC_LWAIT ||
-                 status == INTER_TR_LC_LCHANGE || status == INTER_TR_LC_LBACK ||
-                 status == INTER_TL_NONE || status == INTER_TL_LC_LWAIT ||
-                 status == INTER_TL_LC_LCHANGE || status == INTER_TL_LC_LBACK ||
-                 (status == ROAD_LC_RCHANGE &&
-                  (request_source == MAP_REQUEST ||
-                   request_source == INT_REQUEST))) &&
-                (r_accident_cnt_ != 1 ||
-                 rlane == nullptr) &&
+                ((lead_one == nullptr || ((lead_two == nullptr) || (tr.track_id != lead_two->track_id)))) &&
+                (status == ROAD_NONE || status == ROAD_LC_LWAIT || status == ROAD_LC_LCHANGE ||
+                 status == ROAD_LC_LBACK || status == ROAD_LB_LBORROW || status == ROAD_LB_LRETURN ||
+                 status == INTER_GS_NONE || status == INTER_GS_LC_LWAIT || status == INTER_GS_LC_LCHANGE ||
+                 status == INTER_GS_LC_LBACK || status == INTER_TR_NONE || status == INTER_TR_LC_LWAIT ||
+                 status == INTER_TR_LC_LCHANGE || status == INTER_TR_LC_LBACK || status == INTER_TL_NONE ||
+                 status == INTER_TL_LC_LWAIT || status == INTER_TL_LC_LCHANGE || status == INTER_TL_LC_LBACK ||
+                 (status == ROAD_LC_RCHANGE && (request_source == MAP_REQUEST || request_source == INT_REQUEST))) &&
+                (r_accident_cnt_ != 1 || rlane == nullptr) &&
                 (dist_to_intsect - tr.d_rel >= 35 ||
                  (left_boundary_info.segment_size() > 0 &&
                   left_boundary_info.segment(0).type() == Common::LaneBoundaryType::MARKING_DASHED &&
-                  dist_to_intsect > 0 &&
-                  left_boundary_info.segment(0).length() - dist_to_intsect > -10) ||
+                  dist_to_intsect > 0 && left_boundary_info.segment(0).length() - dist_to_intsect > -10) ||
                  dist_to_intsect < -5)) {
-              if (dist_to_intsect > 0 ||
-                  dist_to_intsect < -5) {
-
-                if (((left_boundary_info.segment_size() == 2 ||
-                      left_boundary_info.segment_size() == 1) &&
-                     left_boundary_info.segment(0).type() ==
-                         Common::LaneBoundaryType::MARKING_DASHED &&
+              if (dist_to_intsect > 0 || dist_to_intsect < -5) {
+                if (((left_boundary_info.segment_size() == 2 || left_boundary_info.segment_size() == 1) &&
+                     left_boundary_info.segment(0).type() == Common::LaneBoundaryType::MARKING_DASHED &&
                      ((!left_direct_exist &&
                        ((left_boundary_info.segment(0).length() - tr.d_rel > 80 && !right_direct_exist &&
-                        (olane == nullptr || (olane != nullptr && olane->get_virtual_id() == clane->get_virtual_id()))))) ||
-                      (left_direct_exist &&
-                       left_boundary_info.segment(0).length() > tr.d_rel))) ||
+                         (olane == nullptr ||
+                          (olane != nullptr && olane->get_virtual_id() == clane->get_virtual_id()))))) ||
+                      (left_direct_exist && left_boundary_info.segment(0).length() > tr.d_rel))) ||
                     left_boundary_info.segment_size() > 3 || dist_to_intsect < -5 ||
                     (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id())) {
                   l_accident_cnt_ = 1;
@@ -629,9 +575,10 @@ void ObjectSelector::update(int status, double start_move_distolane,
                   left_alc_car_.push_back(tr.track_id);
                   neg_left_lb_car_ = false;
                   neg_left_alc_car_ = false;
-                  if (((d_min > -lane_width / 2 + car_width + 0.3 && !is_in_intersection && front_tracks_cone_ids.size() > 1) ||
-                     (is_in_intersection && (d_min > -0.5 && dist_to_last_intsect - min_d_rel > 15))) &&
-                     !accident_front) {
+                  if (((d_min > -lane_width / 2 + car_width + 0.3 && !is_in_intersection &&
+                        front_tracks_cone_ids.size() > 1) ||
+                       (is_in_intersection && (d_min > -0.5 && dist_to_last_intsect - min_d_rel > 15))) &&
+                      !accident_front) {
                     if (front_tracks_cone_ids.find(left_alc_car_[0]) != front_tracks_cone_ids.end()) {
                       left_lb_car_.clear();
                       left_alc_car_.clear();
@@ -640,33 +587,30 @@ void ObjectSelector::update(int status, double start_move_distolane,
                   }
 
                   if (((lead_two != nullptr &&
-                        (status != ROAD_LC_LCHANGE &&
-                         status != ROAD_LC_RCHANGE &&
-                         status != INTER_GS_LC_LCHANGE &&
-                         status != INTER_TR_LC_LCHANGE &&
-                         status != INTER_TL_LC_LCHANGE) &&
-                        lead_two->d_rel - lead_one->d_rel < 20 &&
-                        lead_two->d_rel - lead_one->d_rel > 5 &&
+                        (status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE && status != INTER_GS_LC_LCHANGE &&
+                         status != INTER_TR_LC_LCHANGE && status != INTER_TL_LC_LCHANGE) &&
+                        lead_two->d_rel - lead_one->d_rel < 20 && lead_two->d_rel - lead_one->d_rel > 5 &&
                         lead_two->type != 20001 && lead_one->type != 20001) ||
-                       ((temp_leadtwo != nullptr &&
-                        temp_leadtwo->d_rel - temp_leadone->d_rel < 20 &&
-                        temp_leadtwo->d_rel - temp_leadone->d_rel > 5 &&
-                        temp_leadtwo->type != 20001 &&
-                        temp_leadone->type != 20001) ||
-                        (right_close_objs_.size() > 2 && tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id()) ||
-                        (current_close_objs_.size() > 2 && olane != nullptr && olane->get_virtual_id() == clane->get_virtual_id()))) &&
-                      (((olane == nullptr || (olane != nullptr && olane->get_virtual_id() == clane->get_virtual_id())) && !left_direct_exist) ||
-                         is_in_intersection ||
-                        (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id() && !curr_direct_exist)) &&
+                       ((temp_leadtwo != nullptr && temp_leadtwo->d_rel - temp_leadone->d_rel < 20 &&
+                         temp_leadtwo->d_rel - temp_leadone->d_rel > 5 && temp_leadtwo->type != 20001 &&
+                         temp_leadone->type != 20001) ||
+                        (right_close_objs_.size() > 2 && tlane != nullptr &&
+                         tlane->get_virtual_id() == clane->get_virtual_id()) ||
+                        (current_close_objs_.size() > 2 && olane != nullptr &&
+                         olane->get_virtual_id() == clane->get_virtual_id()))) &&
+                      (((olane == nullptr ||
+                         (olane != nullptr && olane->get_virtual_id() == clane->get_virtual_id())) &&
+                        !left_direct_exist) ||
+                       is_in_intersection ||
+                       (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id() &&
+                        !curr_direct_exist)) &&
                       dist_to_intsect < 170) {
-
                     left_lb_car_.clear();
                     left_alc_car_.clear();
                     neg_left_alc_car_ = true;
                     jam_cancel_ = true;
                   } else {
-                    if (left_alc_car_cnt_.find(tr.track_id) !=
-                        left_alc_car_cnt_.end()) {
+                    if (left_alc_car_cnt_.find(tr.track_id) != left_alc_car_cnt_.end()) {
                       left_alc_car_cnt_[tr.track_id].neg = 0;
                     }
                   }
@@ -691,88 +635,61 @@ void ObjectSelector::update(int status, double start_move_distolane,
               }
             }
 
-            if ((tr.d_max_cpath != 100 &&
-                 tr.d_max_cpath <= lane_width / 2 + car_width / 5 &&
+            if ((tr.d_max_cpath != 100 && tr.d_max_cpath <= lane_width / 2 + car_width / 5 &&
                  tr.d_max_cpath > -(car_width / 2 + lane_width * 0.05)) &&
-                tr.v_rel + v_ego < v_target &&
-                (v_ego > 1)) {
+                tr.v_rel + v_ego < v_target && (v_ego > 1)) {
               v_rel_l_ = get_vrel_close(-1, status);
               double v_left_front = v_rel_l_ + v_ego;
               double v_front_lb = tr.v_rel + v_ego;
 
               std::array<double, 4> xp_pos_l{0, 5, 10, 20};
               std::array<double, 4> xp_pos_lb{0, 5, 10, 20};
-              std::array<double, 4> fp_pos_l{150 * coefficient,
-                                             80 * coefficient, 40 * coefficient,
-                                             10 * coefficient};
-              std::array<double, 4> fp_pos_lb{
-                  100 * coefficient, 50 * coefficient, 15 * coefficient,
-                  10 * coefficient};
+              std::array<double, 4> fp_pos_l{150 * coefficient, 80 * coefficient, 40 * coefficient, 10 * coefficient};
+              std::array<double, 4> fp_pos_lb{100 * coefficient, 50 * coefficient, 15 * coefficient, 10 * coefficient};
               std::array<double, 3> xp_neg{-22, -10, 0};
-              std::array<double, 3> fp_neg{20 * coefficient, 35 * coefficient,
-                                           80 * coefficient};
+              std::array<double, 3> fp_neg{20 * coefficient, 35 * coefficient, 80 * coefficient};
 
-              int temp =
-                  int(interp(tr.d_rel, lead_confidence_bp, lead_confidence_v));
-              int pos_thr_l = std::max(
-                  int(interp(v_target - v_front_lb, xp_pos_l, fp_pos_l)), temp);
-              int pos_thr_lb_l = std::max(
-                  int(interp(v_target - v_front_lb, xp_pos_lb, fp_pos_lb)),
-                  temp);
+              int temp = int(interp(tr.d_rel, lead_confidence_bp, lead_confidence_v));
+              int pos_thr_l = std::max(int(interp(v_target - v_front_lb, xp_pos_l, fp_pos_l)), temp);
+              int pos_thr_lb_l = std::max(int(interp(v_target - v_front_lb, xp_pos_lb, fp_pos_lb)), temp);
 
               int neg_thr_l = int(interp(v_rel_l_, xp_neg, fp_neg));
               int neg_thr_lb_l = neg_thr_l;
 
-              if (left_lb_car_cnt_.find(tr.track_id) ==
-                  left_lb_car_cnt_.end()) {
-                left_lb_car_cnt_.insert(
-                    std::make_pair(tr.track_id, CarCount(0, 0)));
+              if (left_lb_car_cnt_.find(tr.track_id) == left_lb_car_cnt_.end()) {
+                left_lb_car_cnt_.insert(std::make_pair(tr.track_id, CarCount(0, 0)));
               }
 
-              if (left_alc_car_cnt_.find(tr.track_id) ==
-                  left_alc_car_cnt_.end()) {
-                left_alc_car_cnt_.insert(
-                    std::make_pair(tr.track_id, CarCount(0, 0)));
+              if (left_alc_car_cnt_.find(tr.track_id) == left_alc_car_cnt_.end()) {
+                left_alc_car_cnt_.insert(std::make_pair(tr.track_id, CarCount(0, 0)));
               }
 
-              if (right_lb_car_cnt_.find(tr.track_id) ==
-                  right_lb_car_cnt_.end()) {
-                right_lb_car_cnt_.insert(
-                    std::make_pair(tr.track_id, CarCount(0, 0)));
+              if (right_lb_car_cnt_.find(tr.track_id) == right_lb_car_cnt_.end()) {
+                right_lb_car_cnt_.insert(std::make_pair(tr.track_id, CarCount(0, 0)));
               }
 
-              if (right_alc_car_cnt_.find(tr.track_id) ==
-                  right_alc_car_cnt_.end()) {
-                right_alc_car_cnt_.insert(
-                    std::make_pair(tr.track_id, CarCount(0, 0)));
+              if (right_alc_car_cnt_.find(tr.track_id) == right_alc_car_cnt_.end()) {
+                right_alc_car_cnt_.insert(std::make_pair(tr.track_id, CarCount(0, 0)));
               }
 
-              if (lead_one != nullptr &&
-                  left_lb_car_cnt_.find(lead_one->track_id) ==
-                      left_lb_car_cnt_.end()) {
-                left_lb_car_cnt_.insert(
-                    std::make_pair(lead_one->track_id, CarCount(0, 0)));
+              if (lead_one != nullptr && left_lb_car_cnt_.find(lead_one->track_id) == left_lb_car_cnt_.end()) {
+                left_lb_car_cnt_.insert(std::make_pair(lead_one->track_id, CarCount(0, 0)));
               }
 
-              if (temp_leadone != nullptr &&
-                  left_lb_car_cnt_.find(temp_leadone->track_id) ==
-                      left_lb_car_cnt_.end()) {
-                left_lb_car_cnt_.insert(
-                    std::make_pair(temp_leadone->track_id, CarCount(0, 0)));
+              if (temp_leadone != nullptr && left_lb_car_cnt_.find(temp_leadone->track_id) == left_lb_car_cnt_.end()) {
+                left_lb_car_cnt_.insert(std::make_pair(temp_leadone->track_id, CarCount(0, 0)));
               }
 
               if (accident_ahead && v_rel_l_ >= 5 && r_accident_cnt_ != 1) {
-
               } else {
                 l_accident_cnt_ = 0;
 
                 if (!accident_ahead) {
-                  if (status != ROAD_LC_LCHANGE){
-                   left_lb_car_.clear();
+                  if (status != ROAD_LC_LCHANGE) {
+                    left_lb_car_.clear();
                   } else {
                     for (auto &tr : front_tracks) {
-                      auto iter = std::find(left_alc_car_.begin(),
-                                            left_alc_car_.end(), tr.track_id);
+                      auto iter = std::find(left_alc_car_.begin(), left_alc_car_.end(), tr.track_id);
                       if (iter != left_alc_car_.end()) {
                         if (tr.v_rel > 2.5) {
                           left_lb_car_.clear();
@@ -789,30 +706,28 @@ void ObjectSelector::update(int status, double start_move_distolane,
                 std::array<double, 3> xp{0, 30 / 3.6, 67 / 3.6};
                 std::array<double, 3> fp{20 / 3.6, 18 / 3.6, 10 / 3.6};
 
-                if ((std::min(v_left_front, v_target) >
-                     v_front_lb + interp(v_front_lb, xp, fp)) &&
-                    tr.d_rel < 80 && v_left_front > v_ego + 3 &&
+                if ((std::min(v_left_front, v_target) > v_front_lb + interp(v_front_lb, xp, fp)) && tr.d_rel < 80 &&
+                    v_left_front > v_ego + 3 &&
                     (left_direct_exist ||
-                     (!left_direct_exist &&
-                      (!r_enable || !right_direct_exist) &&
-                      (dist_to_intsect - tr.d_rel > 40 ||
-                       tr.d_max_cpath < lb_width_l || tr.v_lead < 1)) ||
+                     (!left_direct_exist && (!r_enable || !right_direct_exist) &&
+                      (dist_to_intsect - tr.d_rel > 40 || tr.d_max_cpath < lb_width_l || tr.v_lead < 1)) ||
                      dist_to_intsect < -5) &&
-                    (dist_to_intsect - tr.d_rel > 40 ||
-                     (std::fabs(tr.v_lead) < 1 && dist_to_intsect < -5))) {
-
+                    (dist_to_intsect - tr.d_rel > 40 || (std::fabs(tr.v_lead) < 1 && dist_to_intsect < -5))) {
                   double d_stop = 0;
                   if (left_boundary_info.segment_size() > 0 &&
-                      left_boundary_info.segment(0).type() ==
-                          Common::LaneBoundaryType::MARKING_DASHED) {
+                      left_boundary_info.segment(0).type() == Common::LaneBoundaryType::MARKING_DASHED) {
                     if (!is_on_highway) {
                       if (lane_merge_split_point.existence() == 0 ||
-                         (lane_merge_split_point.merge_split_point_data(0).distance() < 0 &&
-                          lane_merge_split_point.merge_split_point_data(0).distance() + lane_merge_split_point.merge_split_point_data(0).length() < 0) ||
-                         (lane_merge_split_point.merge_split_point_data(0).is_split() && !lane_merge_split_point.merge_split_point_data(0).is_continue())) {
+                          (lane_merge_split_point.merge_split_point_data(0).distance() < 0 &&
+                           lane_merge_split_point.merge_split_point_data(0).distance() +
+                                   lane_merge_split_point.merge_split_point_data(0).length() <
+                               0) ||
+                          (lane_merge_split_point.merge_split_point_data(0).is_split() &&
+                           !lane_merge_split_point.merge_split_point_data(0).is_continue())) {
                         d_stop = left_boundary_info.segment(0).length();
                       } else if (lane_merge_split_point.merge_split_point_data(0).distance() > 0) {
-                        d_stop = std::min(lane_merge_split_point.merge_split_point_data(0).distance(), left_boundary_info.segment(0).length());
+                        d_stop = std::min(lane_merge_split_point.merge_split_point_data(0).distance(),
+                                          left_boundary_info.segment(0).length());
                       } else {
                         d_stop = -10000;
                       }
@@ -835,27 +750,21 @@ void ObjectSelector::update(int status, double start_move_distolane,
                   double acc_delta_x = 0.0;
                   double v_aver = v_target;
                   if (tr.v_rel != 0) {
-                    t = d_lb_car /
-                        std::max(((std::min(v_left_front, v_target) + v_ego) / 2 - v_front_lb), 0.1);
+                    t = d_lb_car / std::max(((std::min(v_left_front, v_target) + v_ego) / 2 - v_front_lb), 0.1);
                     v_aver = (std::min(v_left_front, v_target) + v_ego) / 2;
                     std::array<double, 2> xp3{40 / 3.6, 80 / 3.6};
                     std::array<double, 2> fp3{0.7, 0.4};
                     double acc = interp(v_target, xp3, fp3);
                     if (v_ego < (std::min(v_left_front, v_target) - 4.) && v_left_front - v_ego > 5) {
                       acc_t = (std::min(v_left_front, v_target) - v_ego) / acc;
-                      acc_delta_x =
-                          acc_t * acc_t / 2 * acc + (v_ego - v_front_lb) * acc_t;
+                      acc_delta_x = acc_t * acc_t / 2 * acc + (v_ego - v_front_lb) * acc_t;
                       if (acc_delta_x > d_lb_car) {
-                        t = std::sqrt(std::pow(v_ego - v_front_lb, 2) * 2.25 +
-                                      3 * d_lb_car) -
+                        t = std::sqrt(std::pow(v_ego - v_front_lb, 2) * 2.25 + 3 * d_lb_car) -
                             (v_ego - v_front_lb) * 1.5;
                         v_aver = v_ego + acc * t / 2;
                       } else {
                         t = acc_t +
-                            (d_lb_car - acc_delta_x) /
-                                std::max((std::min(v_left_front, v_target) -
-                                          v_front_lb),
-                                         0.001);
+                            (d_lb_car - acc_delta_x) / std::max((std::min(v_left_front, v_target) - v_front_lb), 0.001);
                         v_aver = (std::min(v_left_front, v_target) + v_ego) / 2;
                       }
                     }
@@ -876,96 +785,65 @@ void ObjectSelector::update(int status, double start_move_distolane,
                   left_lb_car_cnt_[tr.track_id].neg = 0;
                   left_alc_car_cnt_[tr.track_id].neg = 0;
 
-                  if (left_lane_tasks_id == 1 &&
-                      current_lane_tasks_id == 0 &&
-                      (dis_to_ramp <= 4500. ||
-                      !is_on_highway)) {
+                  if (left_lane_tasks_id == 1 && current_lane_tasks_id == 0 &&
+                      (dis_to_ramp <= 4500. || !is_on_highway)) {
                     std::array<double, 4> xp{0, 30, 100, 200};
-                    std::array<double, 4> fp{40 * coefficient, 20 * coefficient,
-                                             -10 * coefficient,
-                                             -20 * coefficient};
+                    std::array<double, 4> fp{40 * coefficient, 20 * coefficient, -10 * coefficient, -20 * coefficient};
                     std::array<double, 4> xp_lat{-1.0, -0.5, 0.5, 1.5};
                     std::array<double, 4> fp_lat{1.0, 0.7, 0.2, 0.1};
-                    pos_thr_l =
-                        std::max((int)(10 * coefficient),
-                                 pos_thr_l + (int)interp(d_stop, xp, fp));
-                    pos_thr_lb_l = std::max(
-                        (int)(10 * coefficient),
-                        (int)(pos_thr_lb_l *
-                              interp(l_ego - tr.d_max_cpath, xp_lat, fp_lat)) +
-                            (int)interp(d_stop, xp, fp));
-                    LOG_DEBUG("objselector pos_thr_l[%d], pos_thr_lb_l[%d]",
-                            pos_thr_l, pos_thr_lb_l);
+                    pos_thr_l = std::max((int)(10 * coefficient), pos_thr_l + (int)interp(d_stop, xp, fp));
+                    pos_thr_lb_l = std::max((int)(10 * coefficient),
+                                            (int)(pos_thr_lb_l * interp(l_ego - tr.d_max_cpath, xp_lat, fp_lat)) +
+                                                (int)interp(d_stop, xp, fp));
+                    LOG_DEBUG("objselector pos_thr_l[%d], pos_thr_lb_l[%d]", pos_thr_l, pos_thr_lb_l);
 
                     if (d_stop > d_lb_car + 10) {
                       if ((d_stop > v_aver * (t + 5) && v_ego >= 1) ||
-                          (v_ego < 1 &&
-                           d_stop > std::max(v_ego, 0.1) * (t + 5)) ||
-                          tr.v_lead < 1) {
+                          (v_ego < 1 && d_stop > std::max(v_ego, 0.1) * (t + 5)) || tr.v_lead < 1) {
                         if (lead_one != nullptr) {
                           if (tr.track_id == lead_one->track_id) {
                             if (lead_two != nullptr) {
-                              calc_desired_gap(v_ego, *lead_two, tr, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, *lead_two, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (diff_dn_car >
-                                  std::max(desired_gap, diff_thre)) {
+                              if (diff_dn_car > std::max(desired_gap, diff_thre)) {
                                 if (tr.d_max_cpath < lb_width_l || need_lb) {
                                   if (perception_range > lead_one->d_rel &&
-                                      lead_two->d_rel - perception_range >
-                                          std::max(desired_gap, diff_thre)) {
+                                      lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                                     left_lb_car_cnt_[tr.track_id].pos += 3;
                                   } else {
                                     left_lb_car_cnt_[tr.track_id].pos += 1;
                                   }
                                 } else {
                                   if (perception_range > lead_one->d_rel &&
-                                      lead_two->d_rel - perception_range >
-                                          std::max(desired_gap, diff_thre)) {
+                                      lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                                     left_alc_car_cnt_[tr.track_id].pos += 2;
-                                  } else if (perception_range >
-                                                 lead_one->d_rel &&
-                                             lead_two->d_rel -
-                                                     perception_range <
-                                                 min_visible_gap &&
+                                  } else if (perception_range > lead_one->d_rel &&
+                                             lead_two->d_rel - perception_range < min_visible_gap &&
                                              lead_two->v_rel + v_ego < 1.0) {
                                     left_alc_car_cnt_[tr.track_id].pos += 0;
                                   } else {
                                     left_alc_car_cnt_[tr.track_id].pos += 1;
                                   }
-                                  if (!premover_ &&
-                                      left_alc_car_cnt_[tr.track_id].pos >=
-                                          pos_thr_l * 0.4) {
-                                    if (!premovel_ &&
-                                        (tr.track_id == neg_premoved_id_)) {
+                                  if (!premover_ && left_alc_car_cnt_[tr.track_id].pos >= pos_thr_l * 0.4) {
+                                    if (!premovel_ && (tr.track_id == neg_premoved_id_)) {
                                       left_alc_car_cnt_[tr.track_id].pos = 0;
                                       neg_premoved_id_ = -1000;
                                     } else if (premoved_id_ != tr.track_id && v_ego < 30 / 3.6) {
                                       premoved_id_ = tr.track_id;
                                       premovel_ = true;
-                                      premove_dist_ =
-                                          std::max((flane->width() / 2 -
-                                                    car_width / 2 + press_thr),
-                                                   0.0);
+                                      premove_dist_ = std::max((flane->width() / 2 - car_width / 2 + press_thr), 0.0);
                                     }
                                   }
-                                  if (premovel_ &&
-                                      std::fabs(
-                                          premove_dist_ -
-                                          std::max((flane->width() / 2 -
-                                                    car_width / 2 + press_thr),
-                                                   0.0)) > 0.2) {
-                                    premove_dist_ =
-                                        std::max((flane->width() / 2 -
-                                                  car_width / 2 + press_thr),
-                                                 0.0);
+                                  if (premovel_ && std::fabs(premove_dist_ -
+                                                             std::max((flane->width() / 2 - car_width / 2 + press_thr),
+                                                                      0.0)) > 0.2) {
+                                    premove_dist_ = std::max((flane->width() / 2 - car_width / 2 + press_thr), 0.0);
                                   }
                                 }
                               } else {
                                 left_lb_car_cnt_[tr.track_id].pos = 0;
-                                left_lb_car_cnt_[tr.track_id].neg =
-                                    neg_thr_lb_l + 1;
+                                left_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_l + 1;
                                 neg_left_lb_car_ = true;
                                 lb_leadone_disable = true;
                                 // if ((current_lane_index == lanes_num - 1 ||
@@ -989,73 +867,52 @@ void ObjectSelector::update(int status, double start_move_distolane,
                             } else {
                               if (tr.d_max_cpath < lb_width_l || need_lb) {
                                 if (perception_range > lead_one->d_rel &&
-                                    perception_range <
-                                        lead_one->d_rel + max_visible_gap &&
-                                    lead_one->d_rel + max_visible_gap <
-                                        max_perception_range) {
+                                    perception_range < lead_one->d_rel + max_visible_gap &&
+                                    lead_one->d_rel + max_visible_gap < max_perception_range) {
                                   left_lb_car_cnt_[tr.track_id].pos += 5;
                                 } else {
                                   left_lb_car_cnt_[tr.track_id].pos += 1;
                                 }
                               } else {
                                 if (perception_range > lead_one->d_rel &&
-                                    perception_range <
-                                        lead_one->d_rel + max_visible_gap &&
-                                    lead_one->d_rel + max_visible_gap <
-                                        max_perception_range && (v_ego > 40/3.6 || !is_on_highway)) {
+                                    perception_range < lead_one->d_rel + max_visible_gap &&
+                                    lead_one->d_rel + max_visible_gap < max_perception_range &&
+                                    (v_ego > 40 / 3.6 || !is_on_highway)) {
                                   left_alc_car_cnt_[tr.track_id].pos += 3;
                                 } else {
                                   left_alc_car_cnt_[tr.track_id].pos += 1;
                                 }
-                                if (!premover_ &&
-                                    left_alc_car_cnt_[tr.track_id].pos >=
-                                        pos_thr_l * 0.4) {
-                                  if (!premovel_ &&
-                                      (tr.track_id == neg_premoved_id_)) {
+                                if (!premover_ && left_alc_car_cnt_[tr.track_id].pos >= pos_thr_l * 0.4) {
+                                  if (!premovel_ && (tr.track_id == neg_premoved_id_)) {
                                     left_alc_car_cnt_[tr.track_id].pos = 0;
                                     neg_premoved_id_ = -1000;
                                   } else if (premoved_id_ != tr.track_id && v_ego < 30 / 3.6) {
                                     premoved_id_ = tr.track_id;
                                     premovel_ = true;
-                                    premove_dist_ =
-                                        std::max((flane->width() / 2 -
-                                                  car_width / 2 + press_thr),
-                                                 0.0);
+                                    premove_dist_ = std::max((flane->width() / 2 - car_width / 2 + press_thr), 0.0);
                                   }
                                 }
                                 if (premovel_ &&
-                                    std::fabs(
-                                        premove_dist_ -
-                                        std::max((flane->width() / 2 -
-                                                  car_width / 2 + press_thr),
-                                                 0.0)) > 0.2) {
-                                  premove_dist_ =
-                                      std::max((flane->width() / 2 -
-                                                car_width / 2 + press_thr),
-                                               0.0);
+                                    std::fabs(premove_dist_ -
+                                              std::max((flane->width() / 2 - car_width / 2 + press_thr), 0.0)) > 0.2) {
+                                  premove_dist_ = std::max((flane->width() / 2 - car_width / 2 + press_thr), 0.0);
                                 }
                               }
                             }
                           } else {
-                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
-                            if (std::fabs(tr.d_center_cpath -
-                                          lead_one->d_center_cpath) < 1.0 &&
-                                tr.d_rel > lead_one->d_rel &&
-                                diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                            if (std::fabs(tr.d_center_cpath - lead_one->d_center_cpath) < 1.0 &&
+                                tr.d_rel > lead_one->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
                               left_lb_car_cnt_[lead_one->track_id].pos = 0;
-                              left_lb_car_cnt_[lead_one->track_id].neg =
-                                  neg_thr_lb_l + 1;
+                              left_lb_car_cnt_[lead_one->track_id].neg = neg_thr_lb_l + 1;
 
                               neg_left_lb_car_ = true;
                               lb_leadone_disable = true;
                             }
 
-                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
                             if (diff_dn_car > desired_gap) {
@@ -1070,15 +927,12 @@ void ObjectSelector::update(int status, double start_move_distolane,
                           if (temp_leadone != nullptr) {
                             if (tr.track_id == temp_leadone->track_id) {
                               if (temp_leadtwo != nullptr) {
-                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-                                                 d_offset, t_gap, safety_dist,
-                                                 diff_dn_car, desired_gap);
+                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                                 desired_gap);
 
-                                if (diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                                if (diff_dn_car < std::max(desired_gap, diff_thre)) {
                                   left_lb_car_cnt_[tr.track_id].pos = 0;
-                                  left_lb_car_cnt_[tr.track_id].neg =
-                                      neg_thr_lb_l + 1;
+                                  left_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_l + 1;
                                   neg_left_lb_car_ = true;
                                   lb_leadone_disable = true;
                                   // if (traffic_light_direction ==
@@ -1100,20 +954,13 @@ void ObjectSelector::update(int status, double start_move_distolane,
                                 }
                               }
                             } else {
-                              calc_desired_gap(v_ego, tr, *temp_leadone, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, tr, *temp_leadone, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (std::fabs(tr.d_center_cpath -
-                                            temp_leadone->d_center_cpath) <
-                                      1.0 &&
-                                  tr.d_rel > temp_leadone->d_rel &&
-                                  diff_dn_car <
-                                      std::max(desired_gap, diff_thre)) {
-                                left_lb_car_cnt_[temp_leadone->track_id].pos =
-                                    0;
-                                left_lb_car_cnt_[temp_leadone->track_id].neg =
-                                    neg_thr_lb_l + 1;
+                              if (std::fabs(tr.d_center_cpath - temp_leadone->d_center_cpath) < 1.0 &&
+                                  tr.d_rel > temp_leadone->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
+                                left_lb_car_cnt_[temp_leadone->track_id].pos = 0;
+                                left_lb_car_cnt_[temp_leadone->track_id].neg = neg_thr_lb_l + 1;
 
                                 neg_left_lb_car_ = true;
                                 lb_leadone_disable = true;
@@ -1128,70 +975,55 @@ void ObjectSelector::update(int status, double start_move_distolane,
                           }
                         }
                       } else if ((d_stop > v_aver * (t + 1) && v_ego >= 1) ||
-                                 (v_ego < 1 &&
-                                  d_stop > std::max(v_ego, 0.1) * (t + 2))) {
+                                 (v_ego < 1 && d_stop > std::max(v_ego, 0.1) * (t + 2))) {
                         left_alc_car_cnt_[tr.track_id].pos = 0;
                         remove_car(left_alc_car_, tr.track_id);
 
                         if (lead_one != nullptr) {
                           if (tr.track_id == lead_one->track_id) {
                             if (lead_two != nullptr) {
-                              calc_desired_gap(v_ego, *lead_two, tr, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, *lead_two, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (diff_dn_car >
-                                      std::max(desired_gap, diff_thre) &&
-                                  tr.d_max_cpath < lb_width_l) {
+                              if (diff_dn_car > std::max(desired_gap, diff_thre) && tr.d_max_cpath < lb_width_l) {
                                 if (perception_range > lead_one->d_rel &&
-                                    lead_two->d_rel - perception_range >
-                                        std::max(desired_gap, diff_thre)) {
+                                    lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                                   left_lb_car_cnt_[tr.track_id].pos += 3;
                                 } else {
                                   left_lb_car_cnt_[tr.track_id].pos += 1;
                                 }
                               } else {
                                 left_lb_car_cnt_[tr.track_id].pos = 0;
-                                left_lb_car_cnt_[tr.track_id].neg =
-                                    neg_thr_lb_l + 1;
+                                left_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_l + 1;
                                 neg_left_lb_car_ = true;
                                 lb_leadone_disable = true;
                               }
                             } else if (tr.d_max_cpath < lb_width_l || need_lb) {
                               if (perception_range > lead_one->d_rel &&
-                                  perception_range <
-                                      lead_one->d_rel + max_visible_gap &&
-                                  lead_one->d_rel + max_visible_gap <
-                                      max_perception_range) {
+                                  perception_range < lead_one->d_rel + max_visible_gap &&
+                                  lead_one->d_rel + max_visible_gap < max_perception_range) {
                                 left_lb_car_cnt_[tr.track_id].pos += 5;
                               } else {
                                 left_lb_car_cnt_[tr.track_id].pos += 1;
                               }
                             }
                           } else {
-                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
-                            if (std::fabs(tr.d_center_cpath -
-                                          lead_one->d_center_cpath) < 1.0 &&
-                                tr.d_rel > lead_one->d_rel &&
-                                diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                            if (std::fabs(tr.d_center_cpath - lead_one->d_center_cpath) < 1.0 &&
+                                tr.d_rel > lead_one->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
                               left_lb_car_cnt_[lead_one->track_id].pos = 0;
-                              left_lb_car_cnt_[lead_one->track_id].neg =
-                                  neg_thr_lb_l + 1;
+                              left_lb_car_cnt_[lead_one->track_id].neg = neg_thr_lb_l + 1;
 
                               neg_left_lb_car_ = true;
                               lb_leadone_disable = true;
                             }
 
-                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
-                            if (diff_dn_car > desired_gap &&
-                                tr.d_max_cpath < lb_width_l) {
+                            if (diff_dn_car > desired_gap && tr.d_max_cpath < lb_width_l) {
                               left_lb_car_cnt_[tr.track_id].pos += 1;
                             }
                           }
@@ -1199,37 +1031,26 @@ void ObjectSelector::update(int status, double start_move_distolane,
                           if (temp_leadone != nullptr) {
                             if (tr.track_id == temp_leadone->track_id) {
                               if (temp_leadtwo != nullptr) {
-                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-                                                 d_offset, t_gap, safety_dist,
-                                                 diff_dn_car, desired_gap);
+                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                                 desired_gap);
 
-                                if (diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                                if (diff_dn_car < std::max(desired_gap, diff_thre)) {
                                   left_lb_car_cnt_[tr.track_id].pos = 0;
-                                  left_lb_car_cnt_[tr.track_id].neg =
-                                      neg_thr_lb_l + 1;
+                                  left_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_l + 1;
                                   neg_left_lb_car_ = true;
                                   lb_leadone_disable = true;
-                                } else if (tr.d_max_cpath < lb_width_l ||
-                                           need_lb) {
+                                } else if (tr.d_max_cpath < lb_width_l || need_lb) {
                                   left_lb_car_cnt_[tr.track_id].pos += 1;
                                 }
                               }
                             } else {
-                              calc_desired_gap(v_ego, tr, *temp_leadone, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, tr, *temp_leadone, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (std::fabs(tr.d_center_cpath -
-                                            temp_leadone->d_center_cpath) <
-                                      1.0 &&
-                                  tr.d_rel > temp_leadone->d_rel &&
-                                  diff_dn_car <
-                                      std::max(desired_gap, diff_thre)) {
-                                left_lb_car_cnt_[temp_leadone->track_id].pos =
-                                    0;
-                                left_lb_car_cnt_[temp_leadone->track_id].neg =
-                                    neg_thr_lb_l + 1;
+                              if (std::fabs(tr.d_center_cpath - temp_leadone->d_center_cpath) < 1.0 &&
+                                  tr.d_rel > temp_leadone->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
+                                left_lb_car_cnt_[temp_leadone->track_id].pos = 0;
+                                left_lb_car_cnt_[temp_leadone->track_id].neg = neg_thr_lb_l + 1;
 
                                 neg_left_lb_car_ = true;
                                 lb_leadone_disable = true;
@@ -1239,8 +1060,7 @@ void ObjectSelector::update(int status, double start_move_distolane,
                             left_lb_car_cnt_[tr.track_id].pos += 1;
                           }
                         }
-                      } else if (d_stop > v_aver * 4 &&
-                                 left_direct_exist && !isRedLightStop) {
+                      } else if (d_stop > v_aver * 4 && left_direct_exist && !isRedLightStop) {
                         left_alc_car_cnt_[tr.track_id].pos += 1;
                         left_lb_car_cnt_[tr.track_id].pos = 0;
 
@@ -1253,11 +1073,13 @@ void ObjectSelector::update(int status, double start_move_distolane,
                         remove_car(left_lb_car_, tr.track_id);
                       }
                     } else {
-                      if (d_stop > v_aver * 3 &&
-                          left_direct_exist) {
-                        if ((!isRedLightStop && (left_laneout_direct_exist ||
-                                                 (dist_to_intsect + intersect_length + lout_r_dash_length > d_lb_car + 30)) && !is_on_highway) ||
-                            (std::min(dis_to_ramp, lc_end_dis) > d_lb_car + std::max(v_target * 2, 30.0) && is_on_highway)) {
+                      if (d_stop > v_aver * 3 && left_direct_exist) {
+                        if ((!isRedLightStop &&
+                             (left_laneout_direct_exist ||
+                              (dist_to_intsect + intersect_length + lout_r_dash_length > d_lb_car + 30)) &&
+                             !is_on_highway) ||
+                            (std::min(dis_to_ramp, lc_end_dis) > d_lb_car + std::max(v_target * 2, 30.0) &&
+                             is_on_highway)) {
                           left_alc_car_cnt_[tr.track_id].pos += 1;
                           left_lb_car_cnt_[tr.track_id].pos = 0;
 
@@ -1271,65 +1093,48 @@ void ObjectSelector::update(int status, double start_move_distolane,
                         }
                       }
                     }
-                  } else if ((left_lane_tasks_id == 0 &&
-                             current_lane_tasks_id == 0) ||
+                  } else if ((left_lane_tasks_id == 0 && current_lane_tasks_id == 0) ||
                              (is_on_highway &&
-                             ((left_lane_tasks_id == 0 &&
-                              current_lane_tasks_id == -1) ||
-                             (left_lane_tasks_id == -1 &&
-                              current_lane_tasks_id == -2) ||
-                              (dis_to_ramp > 4500.)))) {
+                              ((left_lane_tasks_id == 0 && current_lane_tasks_id == -1) ||
+                               (left_lane_tasks_id == -1 && current_lane_tasks_id == -2) || (dis_to_ramp > 4500.)))) {
                     std::array<double, 4> xp_pos_l{4, 7, 10, 20};
                     std::array<double, 4> xp_pos_lb{4, 7, 10, 20};
                     std::array<double, 4> fp_pos_l{1.0, 0.6, 0.3, 0.1};
                     std::array<double, 4> fp_pos_lb{1.0, 0.5, 0.2, 0.1};
                     std::array<double, 4> xp_pos{0, 50, 100, 200};
-                    std::array<double, 4> fp_pos{20 * coefficient, 0,
-                                                 -10 * coefficient,
-                                                 -20 * coefficient};
+                    std::array<double, 4> fp_pos{20 * coefficient, 0, -10 * coefficient, -20 * coefficient};
                     std::array<double, 4> xp_lat{-1.0, -0.5, 0.5, 1.5};
                     std::array<double, 4> fp_lat{1.0, 0.7, 0.2, 0.1};
 
-                    pos_thr_l = std::max(
-                        (int)(10 * coefficient),
-                        (int)(pos_thr_l * interp(v_left_front - v_front_lb,
-                                                 xp_pos_l, fp_pos_l)));
+                    pos_thr_l = std::max((int)(10 * coefficient),
+                                         (int)(pos_thr_l * interp(v_left_front - v_front_lb, xp_pos_l, fp_pos_l)));
 
-                    pos_thr_lb_l = std::max(
-                        (int)(10 * coefficient),
-                        (int)(pos_thr_lb_l *
-                              interp(v_left_front - v_front_lb, xp_pos_lb,
-                                     fp_pos_lb) *
-                              interp(l_ego - tr.d_max_cpath, xp_lat, fp_lat)));
+                    pos_thr_lb_l =
+                        std::max((int)(10 * coefficient),
+                                 (int)(pos_thr_lb_l * interp(v_left_front - v_front_lb, xp_pos_lb, fp_pos_lb) *
+                                       interp(l_ego - tr.d_max_cpath, xp_lat, fp_lat)));
 
                     if (!is_on_highway) {
-                      pos_thr_l = std::max(
-                          (int)(10 * coefficient),
-                          pos_thr_l + (int)interp(d_stop, xp_pos, fp_pos));
+                      pos_thr_l = std::max((int)(10 * coefficient), pos_thr_l + (int)interp(d_stop, xp_pos, fp_pos));
 
-                      pos_thr_lb_l = std::max(
-                          (int)(10 * coefficient),
-                          pos_thr_lb_l + (int)interp(d_stop, xp_pos, fp_pos));
+                      pos_thr_lb_l =
+                          std::max((int)(10 * coefficient), pos_thr_lb_l + (int)interp(d_stop, xp_pos, fp_pos));
                     }
 
                     if ((d_stop > v_aver * (t + 2) && v_ego >= 1) ||
-                        (v_ego < 1 &&
-                         d_stop > std::max(v_ego, 0.1) * (t + 2))) {
+                        (v_ego < 1 && d_stop > std::max(v_ego, 0.1) * (t + 2))) {
                       left_alc_car_cnt_[tr.track_id].pos += 1;
 
                       if (lead_one != nullptr) {
                         if (tr.track_id == lead_one->track_id) {
                           if (lead_two != nullptr) {
-                            calc_desired_gap(v_ego, *lead_two, tr, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, *lead_two, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
-                            if (diff_dn_car >
-                                std::max(desired_gap, diff_thre)) {
+                            if (diff_dn_car > std::max(desired_gap, diff_thre)) {
                               if (tr.d_max_cpath < lb_width_l) {
                                 if (perception_range > lead_one->d_rel &&
-                                    lead_two->d_rel - perception_range >
-                                        std::max(desired_gap, diff_thre)) {
+                                    lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                                   left_lb_car_cnt_[tr.track_id].pos += 3;
                                 } else {
                                   left_lb_car_cnt_[tr.track_id].pos += 1;
@@ -1337,60 +1142,49 @@ void ObjectSelector::update(int status, double start_move_distolane,
                               }
                             } else {
                               left_lb_car_cnt_[tr.track_id].pos = 0;
-                              left_lb_car_cnt_[tr.track_id].neg =
-                                  neg_thr_lb_l + 1;
+                              left_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_l + 1;
 
                               neg_left_lb_car_ = true;
                               lb_leadone_disable = true;
                             }
                             if (perception_range > lead_one->d_rel &&
-                                lead_two->d_rel - perception_range >
-                                    std::max(desired_gap, diff_thre)) {
+                                lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                               left_alc_car_cnt_[tr.track_id].pos += 2;
                             }
                           } else {
                             if (tr.d_max_cpath < lb_width_l) {
                               if (perception_range > lead_one->d_rel &&
-                                  perception_range <
-                                      lead_one->d_rel + max_visible_gap &&
-                                  lead_one->d_rel + max_visible_gap <
-                                      max_perception_range) {
+                                  perception_range < lead_one->d_rel + max_visible_gap &&
+                                  lead_one->d_rel + max_visible_gap < max_perception_range) {
                                 left_lb_car_cnt_[tr.track_id].pos += 5;
                               } else {
                                 left_lb_car_cnt_[tr.track_id].pos += 1;
                               }
                             }
                             if (perception_range > lead_one->d_rel &&
-                                perception_range <
-                                    lead_one->d_rel + max_visible_gap &&
-                                lead_one->d_rel + max_visible_gap <
-                                    max_perception_range && (v_ego > 40/3.6 || !is_on_highway)) {
+                                perception_range < lead_one->d_rel + max_visible_gap &&
+                                lead_one->d_rel + max_visible_gap < max_perception_range &&
+                                (v_ego > 40 / 3.6 || !is_on_highway)) {
                               left_alc_car_cnt_[tr.track_id].pos += 3;
                             }
                           }
                         } else {
-                          calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
-                                           t_gap, safety_dist, diff_dn_car,
+                          calc_desired_gap(v_ego, tr, *lead_one, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                            desired_gap);
 
-                          if (std::fabs(tr.d_center_cpath -
-                                        lead_one->d_center_cpath) < 1.0 &&
-                              tr.d_rel > lead_one->d_rel &&
-                              diff_dn_car < std::max(desired_gap, diff_thre)) {
+                          if (std::fabs(tr.d_center_cpath - lead_one->d_center_cpath) < 1.0 &&
+                              tr.d_rel > lead_one->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
                             left_lb_car_cnt_[lead_one->track_id].pos = 0;
-                            left_lb_car_cnt_[lead_one->track_id].neg =
-                                neg_thr_lb_l + 1;
+                            left_lb_car_cnt_[lead_one->track_id].neg = neg_thr_lb_l + 1;
 
                             neg_left_lb_car_ = true;
                             lb_leadone_disable = true;
                           }
 
-                          calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
-                                           t_gap, safety_dist, diff_dn_car,
+                          calc_desired_gap(v_ego, *lead_one, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                            desired_gap);
 
-                          if (diff_dn_car > desired_gap &&
-                              tr.d_max_cpath < lb_width_l) {
+                          if (diff_dn_car > desired_gap && tr.d_max_cpath < lb_width_l) {
                             left_lb_car_cnt_[tr.track_id].pos += 1;
                           }
                         }
@@ -1398,15 +1192,12 @@ void ObjectSelector::update(int status, double start_move_distolane,
                         if (temp_leadone != nullptr) {
                           if (tr.track_id == temp_leadone->track_id) {
                             if (temp_leadtwo != nullptr) {
-                              calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, *temp_leadtwo, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (diff_dn_car <
-                                  std::max(desired_gap, diff_thre)) {
+                              if (diff_dn_car < std::max(desired_gap, diff_thre)) {
                                 left_lb_car_cnt_[tr.track_id].pos = 0;
-                                left_lb_car_cnt_[tr.track_id].neg =
-                                    neg_thr_lb_l + 1;
+                                left_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_l + 1;
 
                                 neg_left_lb_car_ = true;
                                 lb_leadone_disable = true;
@@ -1417,18 +1208,13 @@ void ObjectSelector::update(int status, double start_move_distolane,
                               }
                             }
                           } else {
-                            calc_desired_gap(v_ego, tr, *temp_leadone, t,
-                                             d_offset, t_gap, safety_dist,
-                                             diff_dn_car, desired_gap);
+                            calc_desired_gap(v_ego, tr, *temp_leadone, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                             desired_gap);
 
-                            if (std::fabs(tr.d_center_cpath -
-                                          temp_leadone->d_center_cpath) < 1.0 &&
-                                tr.d_rel > temp_leadone->d_rel &&
-                                diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                            if (std::fabs(tr.d_center_cpath - temp_leadone->d_center_cpath) < 1.0 &&
+                                tr.d_rel > temp_leadone->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
                               left_lb_car_cnt_[temp_leadone->track_id].pos = 0;
-                              left_lb_car_cnt_[temp_leadone->track_id].neg =
-                                  neg_thr_lb_l + 1;
+                              left_lb_car_cnt_[temp_leadone->track_id].neg = neg_thr_lb_l + 1;
 
                               neg_left_lb_car_ = true;
                               lb_leadone_disable = true;
@@ -1450,63 +1236,45 @@ void ObjectSelector::update(int status, double start_move_distolane,
                       remove_car(left_alc_car_, tr.track_id);
                       remove_car(left_lb_car_, tr.track_id);
                     }
-                  } else if (left_lane_tasks_id >= 2 &&
-                             current_lane_tasks_id >= 1) {
+                  } else if (left_lane_tasks_id >= 2 && current_lane_tasks_id >= 1) {
                     std::array<double, 4> xp{0, 50, 100, 200};
-                    std::array<double, 4> fp{40 * coefficient, 20 * coefficient,
-                                             0, -20 * coefficient};
+                    std::array<double, 4> fp{40 * coefficient, 20 * coefficient, 0, -20 * coefficient};
                     std::array<double, 4> xp_lat{-1.0, -0.5, 0.5, 1.5};
                     std::array<double, 4> fp_lat{1.0, 0.7, 0.2, 0.1};
                     if (!is_on_highway) {
-                      pos_thr_l =
-                          std::max((int)(10 * coefficient),
-                                  pos_thr_l + (int)interp(d_stop, xp, fp));
-                      pos_thr_lb_l = std::max(
-                          (int)(10 * coefficient),
-                          (int)(pos_thr_lb_l *
-                                interp(l_ego - tr.d_max_cpath, xp_lat, fp_lat)) +
-                              (int)interp(d_stop, xp, fp));
-
+                      pos_thr_l = std::max((int)(10 * coefficient), pos_thr_l + (int)interp(d_stop, xp, fp));
+                      pos_thr_lb_l = std::max((int)(10 * coefficient),
+                                              (int)(pos_thr_lb_l * interp(l_ego - tr.d_max_cpath, xp_lat, fp_lat)) +
+                                                  (int)interp(d_stop, xp, fp));
                     }
                     double d_stop_r = lc_end_dis;
                     double d_map = d_stop;
 
-
                     if (d_stop > d_lb_car + 30) {
-                      if ((d_stop_r > v_aver * (t + 5 * left_lane_tasks_id) &&
-                           d_map > v_aver * (t + 5) &&
+                      if ((d_stop_r > v_aver * (t + 5 * left_lane_tasks_id) && d_map > v_aver * (t + 5) &&
                            d_stop > v_aver * (t + 5) && v_ego >= 1) ||
-                          (v_ego < 1 &&
-                           d_stop_r > std::max(v_ego, 0.1) * (t + 15) &&
-                           d_map > std::max(v_ego, 0.1) * (t + 5) &&
-                           d_stop > std::max(v_ego, 0.1) * (t + 5))) {
+                          (v_ego < 1 && d_stop_r > std::max(v_ego, 0.1) * (t + 15) &&
+                           d_map > std::max(v_ego, 0.1) * (t + 5) && d_stop > std::max(v_ego, 0.1) * (t + 5))) {
                         if (lead_one != nullptr) {
                           if (tr.track_id == lead_one->track_id) {
                             if (lead_two != nullptr) {
-                              calc_desired_gap(v_ego, *lead_two, tr, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, *lead_two, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (diff_dn_car >
-                                  std::max(desired_gap, diff_thre)) {
+                              if (diff_dn_car > std::max(desired_gap, diff_thre)) {
                                 if (tr.d_max_cpath < lb_width_l) {
                                   if (perception_range > lead_one->d_rel &&
-                                      lead_two->d_rel - perception_range >
-                                          std::max(desired_gap, diff_thre)) {
+                                      lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                                     left_lb_car_cnt_[tr.track_id].pos += 3;
                                   } else {
                                     left_lb_car_cnt_[tr.track_id].pos += 1;
                                   }
                                 } else {
                                   if (perception_range > lead_one->d_rel &&
-                                      lead_two->d_rel - perception_range >
-                                          std::max(desired_gap, diff_thre)) {
+                                      lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                                     left_alc_car_cnt_[tr.track_id].pos += 2;
-                                  } else if (perception_range >
-                                                 lead_one->d_rel &&
-                                             lead_two->d_rel -
-                                                     perception_range <
-                                                 min_visible_gap &&
+                                  } else if (perception_range > lead_one->d_rel &&
+                                             lead_two->d_rel - perception_range < min_visible_gap &&
                                              lead_two->v_rel + v_ego < 1.0) {
                                     left_alc_car_cnt_[tr.track_id].pos += 0;
                                   } else {
@@ -1515,8 +1283,7 @@ void ObjectSelector::update(int status, double start_move_distolane,
                                 }
                               } else {
                                 left_lb_car_cnt_[tr.track_id].pos = 0;
-                                left_lb_car_cnt_[tr.track_id].neg =
-                                    neg_thr_lb_l + 1;
+                                left_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_l + 1;
 
                                 neg_left_lb_car_ = true;
                                 lb_leadone_disable = true;
@@ -1524,20 +1291,17 @@ void ObjectSelector::update(int status, double start_move_distolane,
                             } else {
                               if (tr.d_max_cpath < lb_width_l) {
                                 if (perception_range > lead_one->d_rel &&
-                                    perception_range <
-                                        lead_one->d_rel + max_visible_gap &&
-                                    lead_one->d_rel + max_visible_gap <
-                                        max_perception_range) {
+                                    perception_range < lead_one->d_rel + max_visible_gap &&
+                                    lead_one->d_rel + max_visible_gap < max_perception_range) {
                                   left_lb_car_cnt_[tr.track_id].pos += 5;
                                 } else {
                                   left_lb_car_cnt_[tr.track_id].pos += 1;
                                 }
                               } else {
                                 if (perception_range > lead_one->d_rel &&
-                                    perception_range <
-                                        lead_one->d_rel + max_visible_gap &&
-                                    lead_one->d_rel + max_visible_gap <
-                                        max_perception_range && (v_ego > 40/3.6 || !is_on_highway)) {
+                                    perception_range < lead_one->d_rel + max_visible_gap &&
+                                    lead_one->d_rel + max_visible_gap < max_perception_range &&
+                                    (v_ego > 40 / 3.6 || !is_on_highway)) {
                                   left_alc_car_cnt_[tr.track_id].pos += 3;
                                 } else {
                                   left_alc_car_cnt_[tr.track_id].pos += 1;
@@ -1545,25 +1309,19 @@ void ObjectSelector::update(int status, double start_move_distolane,
                               }
                             }
                           } else {
-                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
-                            if (std::fabs(tr.d_center_cpath -
-                                          lead_one->d_center_cpath) < 1.0 &&
-                                tr.d_rel > lead_one->d_rel &&
-                                diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                            if (std::fabs(tr.d_center_cpath - lead_one->d_center_cpath) < 1.0 &&
+                                tr.d_rel > lead_one->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
                               left_lb_car_cnt_[lead_one->track_id].pos = 0;
-                              left_lb_car_cnt_[lead_one->track_id].neg =
-                                  neg_thr_lb_l + 1;
+                              left_lb_car_cnt_[lead_one->track_id].neg = neg_thr_lb_l + 1;
 
                               neg_left_lb_car_ = true;
                               lb_leadone_disable = true;
                             }
 
-                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
                             if (diff_dn_car > desired_gap) {
@@ -1578,15 +1336,12 @@ void ObjectSelector::update(int status, double start_move_distolane,
                           if (temp_leadone != nullptr) {
                             if (tr.track_id == temp_leadone->track_id) {
                               if (temp_leadtwo != nullptr) {
-                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-                                                 d_offset, t_gap, safety_dist,
-                                                 diff_dn_car, desired_gap);
+                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                                 desired_gap);
 
-                                if (diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                                if (diff_dn_car < std::max(desired_gap, diff_thre)) {
                                   left_lb_car_cnt_[tr.track_id].pos = 0;
-                                  left_lb_car_cnt_[tr.track_id].neg =
-                                      neg_thr_lb_l + 1;
+                                  left_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_l + 1;
 
                                   neg_left_lb_car_ = true;
                                   lb_leadone_disable = true;
@@ -1599,20 +1354,13 @@ void ObjectSelector::update(int status, double start_move_distolane,
                                 }
                               }
                             } else {
-                              calc_desired_gap(v_ego, tr, *temp_leadone, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, tr, *temp_leadone, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (std::fabs(tr.d_center_cpath -
-                                            temp_leadone->d_center_cpath) <
-                                      1.0 &&
-                                  tr.d_rel > temp_leadone->d_rel &&
-                                  diff_dn_car <
-                                      std::max(desired_gap, diff_thre)) {
-                                left_lb_car_cnt_[temp_leadone->track_id].pos =
-                                    0;
-                                left_lb_car_cnt_[temp_leadone->track_id].neg =
-                                    neg_thr_lb_l + 1;
+                              if (std::fabs(tr.d_center_cpath - temp_leadone->d_center_cpath) < 1.0 &&
+                                  tr.d_rel > temp_leadone->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
+                                left_lb_car_cnt_[temp_leadone->track_id].pos = 0;
+                                left_lb_car_cnt_[temp_leadone->track_id].neg = neg_thr_lb_l + 1;
 
                                 neg_left_lb_car_ = true;
                                 lb_leadone_disable = true;
@@ -1626,76 +1374,59 @@ void ObjectSelector::update(int status, double start_move_distolane,
                             }
                           }
                         }
-                      } else if ((d_stop_r > v_aver * (t + 4 * left_lane_tasks_id) &&
-                                  d_map > v_aver * (t + 2) &&
+                      } else if ((d_stop_r > v_aver * (t + 4 * left_lane_tasks_id) && d_map > v_aver * (t + 2) &&
                                   d_stop > v_aver * (t + 2) && v_ego >= 1) ||
-                                 (v_ego < 1 &&
-                                  d_stop_r > std::max(v_ego, 0.1) * (t + 10) &&
-                                  d_map > std::max(v_ego, 0.1) * (t + 2) &&
-                                  d_stop > std::max(v_ego, 0.1) * (t + 2))) {
+                                 (v_ego < 1 && d_stop_r > std::max(v_ego, 0.1) * (t + 10) &&
+                                  d_map > std::max(v_ego, 0.1) * (t + 2) && d_stop > std::max(v_ego, 0.1) * (t + 2))) {
                         left_alc_car_cnt_[tr.track_id].pos = 0;
                         remove_car(left_alc_car_, tr.track_id);
 
                         if (lead_one != nullptr) {
                           if (tr.track_id == lead_one->track_id) {
                             if (lead_two != nullptr) {
-                              calc_desired_gap(v_ego, *lead_two, tr, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, *lead_two, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (diff_dn_car >
-                                      std::max(desired_gap, diff_thre) &&
-                                  tr.d_max_cpath < lb_width_l) {
+                              if (diff_dn_car > std::max(desired_gap, diff_thre) && tr.d_max_cpath < lb_width_l) {
                                 if (perception_range > lead_one->d_rel &&
-                                    lead_two->d_rel - perception_range >
-                                        std::max(desired_gap, diff_thre)) {
+                                    lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                                   left_lb_car_cnt_[tr.track_id].pos += 3;
                                 } else {
                                   left_lb_car_cnt_[tr.track_id].pos += 1;
                                 }
                               } else {
                                 left_lb_car_cnt_[tr.track_id].pos = 0;
-                                left_lb_car_cnt_[tr.track_id].neg =
-                                    neg_thr_lb_l + 1;
+                                left_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_l + 1;
 
                                 neg_left_lb_car_ = true;
                                 lb_leadone_disable = true;
                               }
                             } else if (tr.d_max_cpath < lb_width_l) {
                               if (perception_range > lead_one->d_rel &&
-                                  perception_range <
-                                      lead_one->d_rel + max_visible_gap &&
-                                  lead_one->d_rel + max_visible_gap <
-                                      max_perception_range) {
+                                  perception_range < lead_one->d_rel + max_visible_gap &&
+                                  lead_one->d_rel + max_visible_gap < max_perception_range) {
                                 left_lb_car_cnt_[tr.track_id].pos += 5;
                               } else {
                                 left_lb_car_cnt_[tr.track_id].pos += 1;
                               }
                             }
                           } else {
-                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
-                            if (std::fabs(tr.d_center_cpath -
-                                          lead_one->d_center_cpath) < 1.0 &&
-                                tr.d_rel > lead_one->d_rel &&
-                                diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                            if (std::fabs(tr.d_center_cpath - lead_one->d_center_cpath) < 1.0 &&
+                                tr.d_rel > lead_one->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
                               left_lb_car_cnt_[lead_one->track_id].pos = 0;
-                              left_lb_car_cnt_[lead_one->track_id].neg =
-                                  neg_thr_lb_l + 1;
+                              left_lb_car_cnt_[lead_one->track_id].neg = neg_thr_lb_l + 1;
 
                               neg_left_lb_car_ = true;
                               lb_leadone_disable = true;
                             }
 
-                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
-                            if (diff_dn_car > desired_gap &&
-                                tr.d_max_cpath < lb_width_l) {
+                            if (diff_dn_car > desired_gap && tr.d_max_cpath < lb_width_l) {
                               left_lb_car_cnt_[tr.track_id].pos += 1;
                             }
                           }
@@ -1703,15 +1434,12 @@ void ObjectSelector::update(int status, double start_move_distolane,
                           if (temp_leadone != nullptr) {
                             if (tr.track_id == temp_leadone->track_id) {
                               if (temp_leadtwo != nullptr) {
-                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-                                                 d_offset, t_gap, safety_dist,
-                                                 diff_dn_car, desired_gap);
+                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                                 desired_gap);
 
-                                if (diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                                if (diff_dn_car < std::max(desired_gap, diff_thre)) {
                                   left_lb_car_cnt_[tr.track_id].pos = 0;
-                                  left_lb_car_cnt_[tr.track_id].neg =
-                                      neg_thr_lb_l + 1;
+                                  left_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_l + 1;
 
                                   neg_left_lb_car_ = true;
                                   lb_leadone_disable = true;
@@ -1720,20 +1448,13 @@ void ObjectSelector::update(int status, double start_move_distolane,
                                 }
                               }
                             } else {
-                              calc_desired_gap(v_ego, tr, *temp_leadone, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, tr, *temp_leadone, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (std::fabs(tr.d_center_cpath -
-                                            temp_leadone->d_center_cpath) <
-                                      1.0 &&
-                                  tr.d_rel > temp_leadone->d_rel &&
-                                  diff_dn_car <
-                                      std::max(desired_gap, diff_thre)) {
-                                left_lb_car_cnt_[temp_leadone->track_id].pos =
-                                    0;
-                                left_lb_car_cnt_[temp_leadone->track_id].neg =
-                                    neg_thr_lb_l + 1;
+                              if (std::fabs(tr.d_center_cpath - temp_leadone->d_center_cpath) < 1.0 &&
+                                  tr.d_rel > temp_leadone->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
+                                left_lb_car_cnt_[temp_leadone->track_id].pos = 0;
+                                left_lb_car_cnt_[temp_leadone->track_id].neg = neg_thr_lb_l + 1;
 
                                 neg_left_lb_car_ = true;
                                 lb_leadone_disable = true;
@@ -1751,49 +1472,39 @@ void ObjectSelector::update(int status, double start_move_distolane,
                         remove_car(left_lb_car_, tr.track_id);
                       }
                     }
-                  } else if ((left_lane_tasks_id == 0 &&
-                              current_lane_tasks_id == -1) ||
-                             (left_lane_tasks_id == -1 &&
-                              current_lane_tasks_id == -2)) {
+                  } else if ((left_lane_tasks_id == 0 && current_lane_tasks_id == -1) ||
+                             (left_lane_tasks_id == -1 && current_lane_tasks_id == -2)) {
                   }
 
-                  auto iter = std::find(left_alc_car_.begin(),
-                                      left_alc_car_.end(), tr.track_id);
+                  auto iter = std::find(left_alc_car_.begin(), left_alc_car_.end(), tr.track_id);
 
-                  if (left_alc_car_cnt_[tr.track_id].pos > pos_thr_l &&
-                      iter == left_alc_car_.end() &&
+                  if (left_alc_car_cnt_[tr.track_id].pos > pos_thr_l && iter == left_alc_car_.end() &&
                       left_lb_car_cnt_[tr.track_id].pos < pos_thr_lb_l) {
                     left_alc_car_.push_back(tr.track_id);
                     left_alc_car_cnt_[tr.track_id].neg = 0;
                     neg_left_alc_car_ = false;
                   }
 
-                  iter = std::find(left_lb_car_.begin(), left_lb_car_.end(),
-                                 tr.track_id);
+                  iter = std::find(left_lb_car_.begin(), left_lb_car_.end(), tr.track_id);
 
-                  if (left_lb_car_cnt_[tr.track_id].pos > pos_thr_lb_l &&
-                      iter == left_lb_car_.end()) {
+                  if (left_lb_car_cnt_[tr.track_id].pos > pos_thr_lb_l && iter == left_lb_car_.end()) {
                     left_lb_car_.push_back(tr.track_id);
                     left_lb_car_cnt_[tr.track_id].neg = 0;
                     neg_left_lb_car_ = false;
                   }
                 }
 
-                auto iter = std::find(left_alc_car_.begin(),
-                                      left_alc_car_.end(), tr.track_id);
+                auto iter = std::find(left_alc_car_.begin(), left_alc_car_.end(), tr.track_id);
 
-                if (left_alc_car_cnt_[tr.track_id].pos > pos_thr_l &&
-                    iter == left_alc_car_.end() &&
+                if (left_alc_car_cnt_[tr.track_id].pos > pos_thr_l && iter == left_alc_car_.end() &&
                     left_lb_car_cnt_[tr.track_id].pos < pos_thr_lb_l) {
                   left_alc_car_.push_back(tr.track_id);
                   neg_left_alc_car_ = false;
                 }
 
-                iter = std::find(left_lb_car_.begin(), left_lb_car_.end(),
-                                 tr.track_id);
+                iter = std::find(left_lb_car_.begin(), left_lb_car_.end(), tr.track_id);
 
-                if (left_lb_car_cnt_[tr.track_id].pos > pos_thr_lb_l &&
-                    iter == left_lb_car_.end()) {
+                if (left_lb_car_cnt_[tr.track_id].pos > pos_thr_lb_l && iter == left_lb_car_.end()) {
                   left_lb_car_.push_back(tr.track_id);
                   neg_left_lb_car_ = false;
                 }
@@ -1817,48 +1528,36 @@ void ObjectSelector::update(int status, double start_move_distolane,
                 std::array<double, 4> fp3{-2., 0.6, 2., 4.};
                 // double temp_attenuation = interp(neg_d_stop, xp2, fp2);
                 double temp_attenuation = interp(std::max(v_target - v_front_lb, 0.), xp3, fp3);
-                if (std::min(v_left_front, v_target) <
-                        v_front_lb + interp(v_front_lb, xp, fp1) ||
-                    v_left_front < v_ego + 2 || tr.v_rel > temp_attenuation ||
-                    std::fabs(tr.v_lat) > 0.3 ||
-                    ((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE &&
-                      status != INTER_GS_LC_LCHANGE &&
-                      status != INTER_TR_LC_LCHANGE &&
-                      status != INTER_TL_LC_LCHANGE) &&
+                if (std::min(v_left_front, v_target) < v_front_lb + interp(v_front_lb, xp, fp1) ||
+                    v_left_front < v_ego + 2 || tr.v_rel > temp_attenuation || std::fabs(tr.v_lat) > 0.3 ||
+                    ((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE && status != INTER_GS_LC_LCHANGE &&
+                      status != INTER_TR_LC_LCHANGE && status != INTER_TL_LC_LCHANGE) &&
                      lead_one != nullptr && lead_two != nullptr &&
-                     lead_two->d_rel - lead_one->d_rel <
-                         std::min(v_left_front, v_target) * 2 &&
-                     (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 &&
-                      lead_two->d_min_cpath < 1.1 && lead_two->d_min_cpath + lead_two->width > 1.1))) {
+                     lead_two->d_rel - lead_one->d_rel < std::min(v_left_front, v_target) * 2 &&
+                     (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 && lead_two->d_min_cpath < 1.1 &&
+                      lead_two->d_min_cpath + lead_two->width > 1.1))) {
                   left_lb_car_cnt_[tr.track_id].neg += 1;
                   left_alc_car_cnt_[tr.track_id].neg += 1;
 
                   int lb_pos = left_lb_car_cnt_[tr.track_id].pos;
                   int alc_pos = left_alc_car_cnt_[tr.track_id].pos;
                   left_lb_car_cnt_[tr.track_id].pos = std::max(lb_pos - 3, 0);
-                  left_alc_car_cnt_[tr.track_id].pos =
-                      std::max(alc_pos - 3, 0);
+                  left_alc_car_cnt_[tr.track_id].pos = std::max(alc_pos - 3, 0);
 
-                  if (premovel_ &&
-                      left_alc_car_cnt_[tr.track_id].pos < pos_thr_l * 0.1) {
+                  if (premovel_ && left_alc_car_cnt_[tr.track_id].pos < pos_thr_l * 0.1) {
                     premovel_ = false;
                   }
 
                   if (left_alc_car_cnt_[tr.track_id].neg > neg_thr_l ||
-                      ((status != ROAD_LC_LCHANGE &&
-                        status != ROAD_LC_RCHANGE &&
-                        status != INTER_GS_LC_LCHANGE &&
-                        status != INTER_TR_LC_LCHANGE &&
-                        status != INTER_TL_LC_LCHANGE) &&
+                      ((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE && status != INTER_GS_LC_LCHANGE &&
+                        status != INTER_TR_LC_LCHANGE && status != INTER_TL_LC_LCHANGE) &&
                        lead_one != nullptr && lead_two != nullptr &&
-                       lead_two->d_rel - lead_one->d_rel <
-                           std::min(v_left_front, v_target) * 1.5 &&
+                       lead_two->d_rel - lead_one->d_rel < std::min(v_left_front, v_target) * 1.5 &&
                        ((lead_one->v_lead > 3)) &&
-                         (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 &&
-                          lead_two->d_min_cpath < 1.1 && lead_two->d_min_cpath + lead_two->width > 1.1))) {
+                       (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 && lead_two->d_min_cpath < 1.1 &&
+                        lead_two->d_min_cpath + lead_two->width > 1.1))) {
                     if (left_alc_car_.size() > 0 &&
-                        std::find(left_alc_car_.begin(), left_alc_car_.end(),
-                                  tr.track_id) != left_alc_car_.end()) {
+                        std::find(left_alc_car_.begin(), left_alc_car_.end(), tr.track_id) != left_alc_car_.end()) {
                       neg_premoved_id_ = tr.track_id;
                       premoved_id_ = -1000;
                       premovel_ = false;
@@ -1869,24 +1568,16 @@ void ObjectSelector::update(int status, double start_move_distolane,
                   }
 
                   if (left_lb_car_cnt_[tr.track_id].neg > neg_thr_lb_l ||
-                      ((status != ROAD_LB_LBORROW && lead_one != nullptr &&
-                        lead_two != nullptr &&
-                        lead_two->d_rel - lead_one->d_rel <
-                            std::min(v_left_front, v_target) * 1.5 &&
-                        lead_one->d_max_cpath > lb_width_l / 2.0 &&
-                        ((lead_one->v_lead > 3))) ||
-                       (temp_leadone != nullptr && temp_leadtwo != nullptr &&
-                        left_lb_car_.size() > 0 &&
-                        std::find(left_lb_car_.begin(), left_lb_car_.end(),
-                                  temp_leadone->track_id) !=
+                      ((status != ROAD_LB_LBORROW && lead_one != nullptr && lead_two != nullptr &&
+                        lead_two->d_rel - lead_one->d_rel < std::min(v_left_front, v_target) * 1.5 &&
+                        lead_one->d_max_cpath > lb_width_l / 2.0 && ((lead_one->v_lead > 3))) ||
+                       (temp_leadone != nullptr && temp_leadtwo != nullptr && left_lb_car_.size() > 0 &&
+                        std::find(left_lb_car_.begin(), left_lb_car_.end(), temp_leadone->track_id) !=
                             left_lb_car_.end() &&
-                        temp_leadtwo->d_rel - temp_leadone->d_rel <
-                            v_target * 1.5 &&
-                        temp_leadone->d_max_cpath > lb_width_l / 2.0 &&
-                        ((temp_leadone->v_lead > 3))))) {
+                        temp_leadtwo->d_rel - temp_leadone->d_rel < v_target * 1.5 &&
+                        temp_leadone->d_max_cpath > lb_width_l / 2.0 && ((temp_leadone->v_lead > 3))))) {
                     if (left_lb_car_.size() > 0 &&
-                        std::find(left_lb_car_.begin(), left_lb_car_.end(),
-                                  tr.track_id) != left_lb_car_.end()) {
+                        std::find(left_lb_car_.begin(), left_lb_car_.end(), tr.track_id) != left_lb_car_.end()) {
                       left_lb_car_.clear();
 
                       if (status != ROAD_LB_RBORROW) {
@@ -1898,22 +1589,16 @@ void ObjectSelector::update(int status, double start_move_distolane,
                   }
                 }
               }
-            } else if ((status == ROAD_LC_LCHANGE ||
-                        status == INTER_GS_LC_LCHANGE ||
-                        status == ROAD_LB_LBORROW) &&
-                       (left_alc_car_.size() > 0 || left_lb_car_.size() > 0 ||
-                        v_ego >= 1.0) &&
+            } else if ((status == ROAD_LC_LCHANGE || status == INTER_GS_LC_LCHANGE || status == ROAD_LB_LBORROW) &&
+                       (left_alc_car_.size() > 0 || left_lb_car_.size() > 0 || v_ego >= 1.0) &&
                        tr.d_max_cpath <= -lane_width / 2 + car_width / 5 &&
-                       tr.d_max_cpath >
-                           -(lane_width + car_width / 2 + lane_width * 0.05) &&
-                       dist_to_intsect < 170) {
+                       tr.d_max_cpath > -(lane_width + car_width / 2 + lane_width * 0.05) && dist_to_intsect < 170) {
               v_rel_l_ = get_vrel_close(-1, status);
               double v_left_front = v_rel_l_ + v_ego;
               double v_front_lb = tr.v_rel + v_ego;
 
               std::array<double, 3> xp1{-22, -10, 0};
-              std::array<double, 3> fp1{20 * coefficient, 35 * coefficient,
-                                        80 * coefficient};
+              std::array<double, 3> fp1{20 * coefficient, 35 * coefficient, 80 * coefficient};
 
               std::array<double, 2> xp2{0, 67 / 3.6};
               std::array<double, 2> fp2{12 / 3.6, 8 / 3.6};
@@ -1921,46 +1606,30 @@ void ObjectSelector::update(int status, double start_move_distolane,
               int neg_thr_l = int(interp(v_rel_l_, xp1, fp1));
               int neg_thr_lb_l = neg_thr_l;
 
-              if (std::min(v_left_front, v_target) <
-                      v_front_lb + interp(v_front_lb, xp2, fp2) ||
-                  v_left_front < v_ego + 2 || tr.v_rel > 2.5 ||
-                  std::fabs(tr.v_lat) > 0.3 ||
-                  ((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE &&
-                    status != INTER_GS_LC_LCHANGE &&
-                    status != INTER_TR_LC_LCHANGE &&
-                    status != INTER_TL_LC_LCHANGE) &&
+              if (std::min(v_left_front, v_target) < v_front_lb + interp(v_front_lb, xp2, fp2) ||
+                  v_left_front < v_ego + 2 || tr.v_rel > 2.5 || std::fabs(tr.v_lat) > 0.3 ||
+                  ((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE && status != INTER_GS_LC_LCHANGE &&
+                    status != INTER_TR_LC_LCHANGE && status != INTER_TL_LC_LCHANGE) &&
                    lead_one != nullptr && lead_two != nullptr &&
-                   lead_two->d_rel - lead_one->d_rel <
-                       std::min(v_left_front, v_target) * 2 &&
-                   (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 &&
-                    lead_two->d_min_cpath < 1.1 && lead_two->d_min_cpath + lead_two->width > 1.1))) {
-
-                if (left_lb_car_cnt_.find(tr.track_id) !=
-                    left_lb_car_cnt_.end()) {
+                   lead_two->d_rel - lead_one->d_rel < std::min(v_left_front, v_target) * 2 &&
+                   (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 && lead_two->d_min_cpath < 1.1 &&
+                    lead_two->d_min_cpath + lead_two->width > 1.1))) {
+                if (left_lb_car_cnt_.find(tr.track_id) != left_lb_car_cnt_.end()) {
                   left_lb_car_cnt_[tr.track_id].neg += 1;
                   int lb_pos = left_lb_car_cnt_[tr.track_id].pos;
                   left_lb_car_cnt_[tr.track_id].pos = std::max(lb_pos - 3, 0);
 
-
                   if (left_lb_car_cnt_[tr.track_id].neg > neg_thr_lb_l ||
-                      ((status != ROAD_LB_LBORROW && lead_one != nullptr &&
-                        lead_two != nullptr &&
-                        lead_two->d_rel - lead_one->d_rel <
-                            std::min(v_left_front, v_target) * 1.5 &&
-                        lead_one->d_max_cpath > lb_width_l / 2.0 &&
-                        ((lead_one->v_lead > 3))) ||
-                       (temp_leadone != nullptr && temp_leadtwo != nullptr &&
-                        left_lb_car_.size() > 0 &&
-                        std::find(left_lb_car_.begin(), left_lb_car_.end(),
-                                  temp_leadone->track_id) !=
+                      ((status != ROAD_LB_LBORROW && lead_one != nullptr && lead_two != nullptr &&
+                        lead_two->d_rel - lead_one->d_rel < std::min(v_left_front, v_target) * 1.5 &&
+                        lead_one->d_max_cpath > lb_width_l / 2.0 && ((lead_one->v_lead > 3))) ||
+                       (temp_leadone != nullptr && temp_leadtwo != nullptr && left_lb_car_.size() > 0 &&
+                        std::find(left_lb_car_.begin(), left_lb_car_.end(), temp_leadone->track_id) !=
                             left_lb_car_.end() &&
-                        temp_leadtwo->d_rel - temp_leadone->d_rel <
-                            v_target * 1.5 &&
-                        temp_leadone->d_max_cpath > lb_width_l / 2.0 &&
-                        ((temp_leadone->v_lead > 3))))) {
+                        temp_leadtwo->d_rel - temp_leadone->d_rel < v_target * 1.5 &&
+                        temp_leadone->d_max_cpath > lb_width_l / 2.0 && ((temp_leadone->v_lead > 3))))) {
                     if (left_lb_car_.size() > 0 &&
-                        std::find(left_lb_car_.begin(), left_lb_car_.end(),
-                                  tr.track_id) != left_lb_car_.end()) {
+                        std::find(left_lb_car_.begin(), left_lb_car_.end(), tr.track_id) != left_lb_car_.end()) {
                       left_lb_car_.clear();
 
                       if (status != ROAD_LB_RBORROW) {
@@ -1972,28 +1641,21 @@ void ObjectSelector::update(int status, double start_move_distolane,
                   }
                 }
 
-                if (left_alc_car_cnt_.find(tr.track_id) !=
-                    left_alc_car_cnt_.end()) {
+                if (left_alc_car_cnt_.find(tr.track_id) != left_alc_car_cnt_.end()) {
                   left_alc_car_cnt_[tr.track_id].neg += 1;
                   int alc_pos = left_alc_car_cnt_[tr.track_id].pos;
-                  left_alc_car_cnt_[tr.track_id].pos =
-                      std::max(alc_pos - 3, 0);
+                  left_alc_car_cnt_[tr.track_id].pos = std::max(alc_pos - 3, 0);
 
                   if (left_alc_car_cnt_[tr.track_id].neg > neg_thr_l ||
-                      ((status != ROAD_LC_LCHANGE &&
-                        status != ROAD_LC_RCHANGE &&
-                        status != INTER_GS_LC_LCHANGE &&
-                        status != INTER_TR_LC_LCHANGE &&
-                        status != INTER_TL_LC_LCHANGE) &&
+                      ((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE && status != INTER_GS_LC_LCHANGE &&
+                        status != INTER_TR_LC_LCHANGE && status != INTER_TL_LC_LCHANGE) &&
                        lead_one != nullptr && lead_two != nullptr &&
-                       lead_two->d_rel - lead_one->d_rel <
-                           std::min(v_left_front, v_target) * 1.5 &&
+                       lead_two->d_rel - lead_one->d_rel < std::min(v_left_front, v_target) * 1.5 &&
                        ((lead_one->v_lead > 3)) &&
-                      (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 &&
-                       lead_two->d_min_cpath < 1.1 && lead_two->d_min_cpath + lead_two->width > 1.1))) {
+                       (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 && lead_two->d_min_cpath < 1.1 &&
+                        lead_two->d_min_cpath + lead_two->width > 1.1))) {
                     if (left_alc_car_.size() > 0 &&
-                        std::find(left_alc_car_.begin(), left_alc_car_.end(),
-                                  tr.track_id) != left_alc_car_.end()) {
+                        std::find(left_alc_car_.begin(), left_alc_car_.end(), tr.track_id) != left_alc_car_.end()) {
                       neg_premoved_id_ = tr.track_id;
                       premoved_id_ = -1000;
                       premovel_ = false;
@@ -2008,42 +1670,28 @@ void ObjectSelector::update(int status, double start_move_distolane,
           }
 
           if (((r_enable && rlane != nullptr) ||
-              (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id()))) {
-
+               (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id()))) {
             if (accident_ahead && right_is_faster_ && tr.is_accident_car &&
-                ((lead_one == nullptr ||
-                  ((lead_two == nullptr) ||
-                   (tr.track_id != lead_two->track_id)))) &&
-                (status == ROAD_NONE || status == ROAD_LC_RWAIT ||
-                 status == ROAD_LC_RCHANGE || status == ROAD_LC_RBACK ||
-                 status == ROAD_LB_RBORROW || status == ROAD_LB_RRETURN ||
-                 status == INTER_GS_NONE || status == INTER_GS_LC_RWAIT ||
-                 status == INTER_GS_LC_RCHANGE || status == INTER_GS_LC_RBACK ||
-                 status == INTER_TR_NONE || status == INTER_TR_LC_RWAIT ||
-                 status == INTER_TR_LC_RCHANGE || status == INTER_TR_LC_RBACK ||
-                 status == INTER_TL_NONE || status == INTER_TL_LC_RWAIT ||
-                 status == INTER_TL_LC_RCHANGE || status == INTER_TL_LC_RBACK ||
-                 (status == ROAD_LC_LCHANGE &&
-                  (request_source == MAP_REQUEST ||
-                   request_source == INT_REQUEST))) &&
-                (l_accident_cnt_ != 1 ||
-                 llane == nullptr) &&
+                ((lead_one == nullptr || ((lead_two == nullptr) || (tr.track_id != lead_two->track_id)))) &&
+                (status == ROAD_NONE || status == ROAD_LC_RWAIT || status == ROAD_LC_RCHANGE ||
+                 status == ROAD_LC_RBACK || status == ROAD_LB_RBORROW || status == ROAD_LB_RRETURN ||
+                 status == INTER_GS_NONE || status == INTER_GS_LC_RWAIT || status == INTER_GS_LC_RCHANGE ||
+                 status == INTER_GS_LC_RBACK || status == INTER_TR_NONE || status == INTER_TR_LC_RWAIT ||
+                 status == INTER_TR_LC_RCHANGE || status == INTER_TR_LC_RBACK || status == INTER_TL_NONE ||
+                 status == INTER_TL_LC_RWAIT || status == INTER_TL_LC_RCHANGE || status == INTER_TL_LC_RBACK ||
+                 (status == ROAD_LC_LCHANGE && (request_source == MAP_REQUEST || request_source == INT_REQUEST))) &&
+                (l_accident_cnt_ != 1 || llane == nullptr) &&
                 (dist_to_intsect - tr.d_rel >= 35 || dist_to_intsect < -5)) {
-              if (dist_to_intsect > 0 ||
-                  dist_to_intsect < -5) {
-
-                if (((right_boundary_info.segment_size() == 2 ||
-                      right_boundary_info.segment_size() == 1) &&
-                     right_boundary_info.segment(0).type() ==
-                         Common::LaneBoundaryType::MARKING_DASHED &&
-                     ((!right_direct_exist &&
-                       right_boundary_info.segment(0).length() - tr.d_rel > 80 && !left_direct_exist &&
-                       (olane == nullptr || (olane != nullptr && olane->get_virtual_id() == clane->get_virtual_id()))) ||
-                      (right_direct_exist &&
-                       right_boundary_info.segment(0).length() > tr.d_rel))) ||
+              if (dist_to_intsect > 0 || dist_to_intsect < -5) {
+                if (((right_boundary_info.segment_size() == 2 || right_boundary_info.segment_size() == 1) &&
+                     right_boundary_info.segment(0).type() == Common::LaneBoundaryType::MARKING_DASHED &&
+                     ((!right_direct_exist && right_boundary_info.segment(0).length() - tr.d_rel > 80 &&
+                       !left_direct_exist &&
+                       (olane == nullptr ||
+                        (olane != nullptr && olane->get_virtual_id() == clane->get_virtual_id()))) ||
+                      (right_direct_exist && right_boundary_info.segment(0).length() > tr.d_rel))) ||
                     right_boundary_info.segment_size() > 3 || dist_to_intsect < -5 ||
                     (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id())) {
-
                   r_accident_cnt_ = 1;
                   right_lb_car_.clear();
                   right_alc_car_.clear();
@@ -2053,9 +1701,10 @@ void ObjectSelector::update(int status, double start_move_distolane,
 
                   neg_right_lb_car_ = false;
                   neg_right_alc_car_ = false;
-                  if (((d_max < lane_width / 2 - car_width - 0.3 && !is_in_intersection && front_tracks_cone_ids.size() > 1) ||
-                     (is_in_intersection && (d_max < 0.5 && dist_to_last_intsect - max_d_rel > 15))) &&
-                     !accident_front) {
+                  if (((d_max < lane_width / 2 - car_width - 0.3 && !is_in_intersection &&
+                        front_tracks_cone_ids.size() > 1) ||
+                       (is_in_intersection && (d_max < 0.5 && dist_to_last_intsect - max_d_rel > 15))) &&
+                      !accident_front) {
                     if (front_tracks_cone_ids.find(right_alc_car_[0]) != front_tracks_cone_ids.end()) {
                       right_lb_car_.clear();
                       right_alc_car_.clear();
@@ -2063,32 +1712,30 @@ void ObjectSelector::update(int status, double start_move_distolane,
                     }
                   }
                   if (((lead_two != nullptr &&
-                        (status != ROAD_LC_LCHANGE &&
-                         status != ROAD_LC_RCHANGE &&
-                         status != INTER_GS_LC_RCHANGE &&
-                         status != INTER_TR_LC_RCHANGE &&
-                         status != INTER_TL_LC_RCHANGE) &&
-                        lead_two->d_rel - lead_one->d_rel < 20 &&
-                        lead_two->d_rel - lead_one->d_rel > 5 &&
+                        (status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE && status != INTER_GS_LC_RCHANGE &&
+                         status != INTER_TR_LC_RCHANGE && status != INTER_TL_LC_RCHANGE) &&
+                        lead_two->d_rel - lead_one->d_rel < 20 && lead_two->d_rel - lead_one->d_rel > 5 &&
                         lead_two->type != 20001 && lead_one->type != 20001) ||
-                       ((temp_leadtwo != nullptr &&
-                        temp_leadtwo->d_rel - temp_leadone->d_rel < 20 &&
-                        temp_leadtwo->d_rel - temp_leadone->d_rel > 5 &&
-                        temp_leadtwo->type != 20001 &&
-                        temp_leadone->type != 20001) ||
-                        (left_close_objs_.size() > 2 && tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id()) ||
-                        (current_close_objs_.size() > 2 && olane != nullptr && olane->get_virtual_id() == clane->get_virtual_id()))) &&
-                      (((olane == nullptr || (olane != nullptr && olane->get_virtual_id() == clane->get_virtual_id())) && !right_direct_exist) ||
-                         is_in_intersection ||
-                        (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id() && !curr_direct_exist)) &&
+                       ((temp_leadtwo != nullptr && temp_leadtwo->d_rel - temp_leadone->d_rel < 20 &&
+                         temp_leadtwo->d_rel - temp_leadone->d_rel > 5 && temp_leadtwo->type != 20001 &&
+                         temp_leadone->type != 20001) ||
+                        (left_close_objs_.size() > 2 && tlane != nullptr &&
+                         tlane->get_virtual_id() == clane->get_virtual_id()) ||
+                        (current_close_objs_.size() > 2 && olane != nullptr &&
+                         olane->get_virtual_id() == clane->get_virtual_id()))) &&
+                      (((olane == nullptr ||
+                         (olane != nullptr && olane->get_virtual_id() == clane->get_virtual_id())) &&
+                        !right_direct_exist) ||
+                       is_in_intersection ||
+                       (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id() &&
+                        !curr_direct_exist)) &&
                       dist_to_intsect < 240) {
                     right_lb_car_.clear();
                     right_alc_car_.clear();
                     neg_right_alc_car_ = true;
                     jam_cancel_ = true;
                   } else {
-                    if (right_alc_car_cnt_.find(tr.track_id) !=
-                        right_alc_car_cnt_.end()) {
+                    if (right_alc_car_cnt_.find(tr.track_id) != right_alc_car_cnt_.end()) {
                       right_alc_car_cnt_[tr.track_id].neg = 0;
                     }
                   }
@@ -2113,89 +1760,62 @@ void ObjectSelector::update(int status, double start_move_distolane,
               }
             }
 
-            if (tr.d_min_cpath != 100 &&
-                tr.d_min_cpath >= -(lane_width / 2 + car_width / 5) &&
-                tr.d_min_cpath < (car_width / 2 + lane_width * 0.05) &&
-                tr.v_rel + v_ego < v_target && v_ego > 1) {
+            if (tr.d_min_cpath != 100 && tr.d_min_cpath >= -(lane_width / 2 + car_width / 5) &&
+                tr.d_min_cpath < (car_width / 2 + lane_width * 0.05) && tr.v_rel + v_ego < v_target && v_ego > 1) {
               v_rel_r_ = get_vrel_close(1, status);
               double v_right_front = v_rel_r_ + v_ego;
               double v_front_lb = tr.v_rel + v_ego;
 
               std::array<double, 4> xp_pos_r{0, 5, 10, 20};
               std::array<double, 4> xp_pos_lb{0, 5, 10, 20};
-              std::array<double, 4> fp_pos_r{150 * coefficient,
-                                             80 * coefficient, 40 * coefficient,
-                                             10 * coefficient};
-              std::array<double, 4> fp_pos_lb{
-                  100 * coefficient, 50 * coefficient, 15 * coefficient,
-                  10 * coefficient};
+              std::array<double, 4> fp_pos_r{150 * coefficient, 80 * coefficient, 40 * coefficient, 10 * coefficient};
+              std::array<double, 4> fp_pos_lb{100 * coefficient, 50 * coefficient, 15 * coefficient, 10 * coefficient};
               std::array<double, 3> xp_neg{-22, -10, 0};
-              std::array<double, 3> fp_neg{20 * coefficient, 35 * coefficient,
-                                           80 * coefficient};
+              std::array<double, 3> fp_neg{20 * coefficient, 35 * coefficient, 80 * coefficient};
 
-              int temp =
-                  int(interp(tr.d_rel, lead_confidence_bp, lead_confidence_v));
-              int pos_thr_r = std::max(
-                  int(interp(v_target - v_front_lb, xp_pos_r, fp_pos_r)), temp);
-              int pos_thr_lb_r = std::max(
-                  int(interp(v_target - v_front_lb, xp_pos_lb, fp_pos_lb)),
-                  temp);
+              int temp = int(interp(tr.d_rel, lead_confidence_bp, lead_confidence_v));
+              int pos_thr_r = std::max(int(interp(v_target - v_front_lb, xp_pos_r, fp_pos_r)), temp);
+              int pos_thr_lb_r = std::max(int(interp(v_target - v_front_lb, xp_pos_lb, fp_pos_lb)), temp);
 
               int neg_thr_r = int(interp(v_rel_r_, xp_neg, fp_neg));
               int neg_thr_lb_r = neg_thr_r;
 
-              if (left_lb_car_cnt_.find(tr.track_id) ==
-                  left_lb_car_cnt_.end()) {
-                left_lb_car_cnt_.insert(
-                    std::make_pair(tr.track_id, CarCount(0, 0)));
+              if (left_lb_car_cnt_.find(tr.track_id) == left_lb_car_cnt_.end()) {
+                left_lb_car_cnt_.insert(std::make_pair(tr.track_id, CarCount(0, 0)));
               }
 
-              if (left_alc_car_cnt_.find(tr.track_id) ==
-                  left_alc_car_cnt_.end()) {
-                left_alc_car_cnt_.insert(
-                    std::make_pair(tr.track_id, CarCount(0, 0)));
+              if (left_alc_car_cnt_.find(tr.track_id) == left_alc_car_cnt_.end()) {
+                left_alc_car_cnt_.insert(std::make_pair(tr.track_id, CarCount(0, 0)));
               }
 
-              if (right_lb_car_cnt_.find(tr.track_id) ==
-                  right_lb_car_cnt_.end()) {
-                right_lb_car_cnt_.insert(
-                    std::make_pair(tr.track_id, CarCount(0, 0)));
+              if (right_lb_car_cnt_.find(tr.track_id) == right_lb_car_cnt_.end()) {
+                right_lb_car_cnt_.insert(std::make_pair(tr.track_id, CarCount(0, 0)));
               }
 
-              if (right_alc_car_cnt_.find(tr.track_id) ==
-                  right_alc_car_cnt_.end()) {
-                right_alc_car_cnt_.insert(
-                    std::make_pair(tr.track_id, CarCount(0, 0)));
+              if (right_alc_car_cnt_.find(tr.track_id) == right_alc_car_cnt_.end()) {
+                right_alc_car_cnt_.insert(std::make_pair(tr.track_id, CarCount(0, 0)));
               }
 
-              if (lead_one != nullptr &&
-                  right_lb_car_cnt_.find(lead_one->track_id) ==
-                      right_lb_car_cnt_.end()) {
-                right_lb_car_cnt_.insert(
-                    std::make_pair(lead_one->track_id, CarCount(0, 0)));
+              if (lead_one != nullptr && right_lb_car_cnt_.find(lead_one->track_id) == right_lb_car_cnt_.end()) {
+                right_lb_car_cnt_.insert(std::make_pair(lead_one->track_id, CarCount(0, 0)));
               }
 
               if (temp_leadone != nullptr &&
-                  right_lb_car_cnt_.find(temp_leadone->track_id) ==
-                      right_lb_car_cnt_.end()) {
-                right_lb_car_cnt_.insert(
-                    std::make_pair(temp_leadone->track_id, CarCount(0, 0)));
+                  right_lb_car_cnt_.find(temp_leadone->track_id) == right_lb_car_cnt_.end()) {
+                right_lb_car_cnt_.insert(std::make_pair(temp_leadone->track_id, CarCount(0, 0)));
               }
 
-              if (accident_ahead && v_rel_r_ >= 5 && tr.d_rel > -2 &&
-                  l_accident_cnt_ != 1) {
-
+              if (accident_ahead && v_rel_r_ >= 5 && tr.d_rel > -2 && l_accident_cnt_ != 1) {
               } else {
                 r_accident_cnt_ = 0;
 
                 if (!accident_ahead) {
-                  if (status != ROAD_LC_RCHANGE){
+                  if (status != ROAD_LC_RCHANGE) {
                     right_lb_car_.clear();
                     // right_alc_car_.clear();
                   } else {
                     for (auto &tr : front_tracks) {
-                      auto iter = std::find(right_alc_car_.begin(),
-                                            right_alc_car_.end(), tr.track_id);
+                      auto iter = std::find(right_alc_car_.begin(), right_alc_car_.end(), tr.track_id);
                       if (iter != right_alc_car_.end()) {
                         if (tr.v_rel > 2.5) {
                           right_lb_car_.clear();
@@ -2212,37 +1832,35 @@ void ObjectSelector::update(int status, double start_move_distolane,
                 std::array<double, 3> xp{0, 30 / 3.6, 67 / 3.6};
                 std::array<double, 3> fp{20 / 3.6, 18 / 3.6, 10 / 3.6};
 
-                if (std::min(v_right_front, v_target) >
-                        v_front_lb + interp(v_front_lb, xp, fp) &&
-                    tr.d_rel < std::max(70., 70. - tr.v_lead * 2) && v_right_front > std::min(v_ego + 3., tr.v_lead + 6.) &&
+                if (std::min(v_right_front, v_target) > v_front_lb + interp(v_front_lb, xp, fp) &&
+                    tr.d_rel < std::max(70., 70. - tr.v_lead * 2) &&
+                    v_right_front > std::min(v_ego + 3., tr.v_lead + 6.) &&
                     (right_direct_exist ||
-                     (!right_direct_exist &&
-                      (!l_enable || !left_direct_exist) &&
-                      (dist_to_intsect - tr.d_rel > 60 ||
-                       tr.d_min_cpath > -lb_width_r)) ||
+                     (!right_direct_exist && (!l_enable || !left_direct_exist) &&
+                      (dist_to_intsect - tr.d_rel > 60 || tr.d_min_cpath > -lb_width_r)) ||
                      dist_to_intsect < -5) &&
-                    (dist_to_intsect - tr.d_rel > 50 ||
-                     (std::fabs(tr.v_lead) < 1 && dist_to_intsect < -5))) {
-
+                    (dist_to_intsect - tr.d_rel > 50 || (std::fabs(tr.v_lead) < 1 && dist_to_intsect < -5))) {
                   double d_stop = 0;
                   if (right_boundary_info.segment_size() > 0 &&
-                      right_boundary_info.segment(0).type() ==
-                          Common::LaneBoundaryType::MARKING_DASHED) {
+                      right_boundary_info.segment(0).type() == Common::LaneBoundaryType::MARKING_DASHED) {
                     if (!is_on_highway) {
                       if (lane_merge_split_point.existence() == 0 ||
-                         (lane_merge_split_point.merge_split_point_data(0).distance() < 0 &&
-                          lane_merge_split_point.merge_split_point_data(0).distance() + lane_merge_split_point.merge_split_point_data(0).length() < 0) ||
-                         (lane_merge_split_point.merge_split_point_data(0).is_split() && !lane_merge_split_point.merge_split_point_data(0).is_continue())) {
+                          (lane_merge_split_point.merge_split_point_data(0).distance() < 0 &&
+                           lane_merge_split_point.merge_split_point_data(0).distance() +
+                                   lane_merge_split_point.merge_split_point_data(0).length() <
+                               0) ||
+                          (lane_merge_split_point.merge_split_point_data(0).is_split() &&
+                           !lane_merge_split_point.merge_split_point_data(0).is_continue())) {
                         d_stop = right_boundary_info.segment(0).length();
                       } else if (lane_merge_split_point.merge_split_point_data(0).distance() > 0) {
-                        d_stop = std::min(lane_merge_split_point.merge_split_point_data(0).distance(), right_boundary_info.segment(0).length());
+                        d_stop = std::min(lane_merge_split_point.merge_split_point_data(0).distance(),
+                                          right_boundary_info.segment(0).length());
                       } else {
                         d_stop = -10000;
                       }
                     } else {
                       d_stop = std::min((double)right_boundary_info.segment(0).length(), dis_to_ramp - 200.);
-                      if (!is_on_ramp &&
-                          lane_merge_split_point.merge_split_point_data_size() > 0 &&
+                      if (!is_on_ramp && lane_merge_split_point.merge_split_point_data_size() > 0 &&
                           !lane_merge_split_point.merge_split_point_data(0).is_split() &&
                           lane_merge_split_point.merge_split_point_data(0).is_continue()) {
                         d_stop = std::min(d_stop, (double)lane_merge_split_point.merge_split_point_data(0).distance());
@@ -2254,8 +1872,8 @@ void ObjectSelector::update(int status, double start_move_distolane,
                     d_stop = -10000;
                   }
 
-                  if (!right_direct_exist && tr.d_min_cpath > -lb_width_r &&
-                      tr.v_lead < 1 && std::fabs(tr.v_lat) < 0.3) {
+                  if (!right_direct_exist && tr.d_min_cpath > -lb_width_r && tr.v_lead < 1 &&
+                      std::fabs(tr.v_lat) < 0.3) {
                     pos_thr_r = 1000;
                     pos_thr_lb_r = 10 * coefficient;
                     d_stop += 10.0;
@@ -2272,8 +1890,7 @@ void ObjectSelector::update(int status, double start_move_distolane,
                   double v_aver = v_target;
 
                   if (tr.v_rel != 0) {
-                    t = d_lb_car /
-                        std::max(((std::min(v_right_front, v_target) + v_ego) / 2 - v_front_lb), 0.1);
+                    t = d_lb_car / std::max(((std::min(v_right_front, v_target) + v_ego) / 2 - v_front_lb), 0.1);
                     v_aver = (std::min(v_right_front, v_target) + v_ego) / 2;
                     std::array<double, 2> xp3{40 / 3.6, 80 / 3.6};
                     std::array<double, 2> fp3{0.7, 0.4};
@@ -2281,21 +1898,15 @@ void ObjectSelector::update(int status, double start_move_distolane,
 
                     if (v_ego < std::min(v_right_front, v_target) - 4. && v_right_front - v_ego > 5) {
                       acc_t = (std::min(v_right_front, v_target) - v_ego) / acc;
-                      acc_delta_x =
-                          acc_t * acc_t / 2 * acc + (v_ego - v_front_lb) * acc_t;
+                      acc_delta_x = acc_t * acc_t / 2 * acc + (v_ego - v_front_lb) * acc_t;
                       if (acc_delta_x > d_lb_car) {
-                        t = std::sqrt(std::pow(v_ego - v_front_lb, 2) * 2.25 +
-                                      3 * d_lb_car) -
+                        t = std::sqrt(std::pow(v_ego - v_front_lb, 2) * 2.25 + 3 * d_lb_car) -
                             (v_ego - v_front_lb) * 1.5;
                         v_aver = v_ego + acc * t / 2;
                       } else {
-                        t = acc_t +
-                            (d_lb_car - acc_delta_x) /
-                                std::max((std::min(v_right_front, v_target) -
-                                          v_front_lb),
-                                         0.001);
-                        v_aver =
-                            (std::min(v_right_front, v_target) + v_ego) / 2;
+                        t = acc_t + (d_lb_car - acc_delta_x) /
+                                        std::max((std::min(v_right_front, v_target) - v_front_lb), 0.001);
+                        v_aver = (std::min(v_right_front, v_target) + v_ego) / 2;
                       }
                     }
                   } else {
@@ -2316,91 +1927,63 @@ void ObjectSelector::update(int status, double start_move_distolane,
                   right_lb_car_cnt_[tr.track_id].neg = 0;
                   right_alc_car_cnt_[tr.track_id].neg = 0;
 
-                  if (right_lane_tasks_id == -1 &&
-                      current_lane_tasks_id == 0) {
+                  if (right_lane_tasks_id == -1 && current_lane_tasks_id == 0) {
                     std::array<double, 4> xp{0, 50, 100, 200};
-                    std::array<double, 4> fp{40 * coefficient, 20 * coefficient,
-                                             -10 * coefficient,
-                                             -20 * coefficient};
+                    std::array<double, 4> fp{40 * coefficient, 20 * coefficient, -10 * coefficient, -20 * coefficient};
                     std::array<double, 4> xp_lat{-1.0, -0.5, 0.5, 1.5};
                     std::array<double, 4> fp_lat{1.0, 0.7, 0.2, 0.1};
-                    pos_thr_r =
-                        std::max((int)(10 * coefficient),
-                                 pos_thr_r + (int)interp(d_stop, xp, fp));
-                    pos_thr_lb_r = std::max(
-                        (int)(10 * coefficient),
-                        (int)(pos_thr_lb_r *
-                              interp(tr.d_min_cpath - l_ego, xp_lat, fp_lat)) +
-                            (int)interp(d_stop, xp, fp));
+                    pos_thr_r = std::max((int)(10 * coefficient), pos_thr_r + (int)interp(d_stop, xp, fp));
+                    pos_thr_lb_r = std::max((int)(10 * coefficient),
+                                            (int)(pos_thr_lb_r * interp(tr.d_min_cpath - l_ego, xp_lat, fp_lat)) +
+                                                (int)interp(d_stop, xp, fp));
 
                     if (d_stop > d_lb_car + 20) {
                       if ((d_stop > v_aver * (t + 5) && v_ego >= 1) ||
-                          (v_ego < 1 &&
-                           d_stop > std::max(v_ego, 0.1) * (t + 5))) {
+                          (v_ego < 1 && d_stop > std::max(v_ego, 0.1) * (t + 5))) {
                         if (lead_one != nullptr) {
                           if (tr.track_id == lead_one->track_id) {
                             if (lead_two != nullptr && lead_two->v_lead > -0.5) {
-                              calc_desired_gap(v_ego, *lead_two, tr, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, *lead_two, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (diff_dn_car >
-                                  std::max(desired_gap, diff_thre)) {
+                              if (diff_dn_car > std::max(desired_gap, diff_thre)) {
                                 if (tr.d_min_cpath > -lb_width_r) {
                                   if (perception_range > lead_one->d_rel &&
-                                      lead_two->d_rel - perception_range >
-                                          std::max(desired_gap, diff_thre)) {
+                                      lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                                     right_lb_car_cnt_[tr.track_id].pos += 3;
                                   } else {
                                     right_lb_car_cnt_[tr.track_id].pos += 1;
                                   }
                                 } else {
                                   if (perception_range > lead_one->d_rel &&
-                                      lead_two->d_rel - perception_range >
-                                          std::max(desired_gap, diff_thre)) {
+                                      lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                                     right_alc_car_cnt_[tr.track_id].pos += 2;
-                                  } else if (perception_range >
-                                                 lead_one->d_rel &&
-                                             lead_two->d_rel -
-                                                     perception_range <
-                                                 min_visible_gap &&
+                                  } else if (perception_range > lead_one->d_rel &&
+                                             lead_two->d_rel - perception_range < min_visible_gap &&
                                              lead_two->v_rel + v_ego < 1.0) {
                                     right_alc_car_cnt_[tr.track_id].pos += 0;
                                   } else {
                                     right_alc_car_cnt_[tr.track_id].pos += 1;
                                   }
-                                  if (!premovel_ &&
-                                      right_alc_car_cnt_[tr.track_id].pos >=
-                                          pos_thr_r * 0.4) {
-                                    if (!premover_ &&
-                                        (tr.track_id == neg_premoved_id_)) {
+                                  if (!premovel_ && right_alc_car_cnt_[tr.track_id].pos >= pos_thr_r * 0.4) {
+                                    if (!premover_ && (tr.track_id == neg_premoved_id_)) {
                                       right_alc_car_cnt_[tr.track_id].pos = 0;
                                       neg_premoved_id_ = -1000;
                                     } else if (premoved_id_ != tr.track_id && v_ego < 30 / 3.6) {
                                       premoved_id_ = tr.track_id;
                                       premover_ = true;
-                                      premove_dist_ =
-                                          std::min(-(flane->width() / 2 -
-                                                     car_width / 2 + press_thr),
-                                                   0.0);
+                                      premove_dist_ = std::min(-(flane->width() / 2 - car_width / 2 + press_thr), 0.0);
                                     }
                                   }
-                                  if (premover_ &&
-                                      std::fabs(
-                                          premove_dist_ -
-                                          std::min(-(flane->width() / 2 -
-                                                     car_width / 2 + press_thr),
-                                                   0.0)) > 0.2) {
-                                    premove_dist_ =
-                                        std::min((flane->width() / 2 -
-                                                  car_width / 2 + press_thr),
-                                                 0.0);
+                                  if (premover_ && std::fabs(premove_dist_ -
+                                                             std::min(-(flane->width() / 2 - car_width / 2 + press_thr),
+                                                                      0.0)) > 0.2) {
+                                    premove_dist_ = std::min((flane->width() / 2 - car_width / 2 + press_thr), 0.0);
                                   }
                                 }
                               } else {
                                 right_lb_car_cnt_[tr.track_id].pos = 0;
-                                right_lb_car_cnt_[tr.track_id].neg =
-                                    neg_thr_lb_r + 1;
+                                right_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_r + 1;
 
                                 neg_right_lb_car_ = true;
                                 lb_leadone_disable = true;
@@ -2408,73 +1991,52 @@ void ObjectSelector::update(int status, double start_move_distolane,
                             } else {
                               if (tr.d_min_cpath > -lb_width_r) {
                                 if (perception_range > lead_one->d_rel &&
-                                    perception_range <
-                                        lead_one->d_rel + max_visible_gap &&
-                                    lead_one->d_rel + max_visible_gap <
-                                        max_perception_range) {
+                                    perception_range < lead_one->d_rel + max_visible_gap &&
+                                    lead_one->d_rel + max_visible_gap < max_perception_range) {
                                   right_lb_car_cnt_[tr.track_id].pos += 5;
                                 } else {
                                   right_lb_car_cnt_[tr.track_id].pos += 1;
                                 }
                               } else {
                                 if (perception_range > lead_one->d_rel &&
-                                    perception_range <
-                                        lead_one->d_rel + max_visible_gap &&
-                                    lead_one->d_rel + max_visible_gap <
-                                        max_perception_range && (v_ego > 40/3.6 || !is_on_highway)) {
+                                    perception_range < lead_one->d_rel + max_visible_gap &&
+                                    lead_one->d_rel + max_visible_gap < max_perception_range &&
+                                    (v_ego > 40 / 3.6 || !is_on_highway)) {
                                   right_alc_car_cnt_[tr.track_id].pos += 3;
                                 } else {
                                   right_alc_car_cnt_[tr.track_id].pos += 1;
                                 }
-                                if (!premovel_ &&
-                                    right_alc_car_cnt_[tr.track_id].pos >=
-                                        pos_thr_r * 0.4) {
-                                  if (!premover_ &&
-                                      (tr.track_id == neg_premoved_id_)) {
+                                if (!premovel_ && right_alc_car_cnt_[tr.track_id].pos >= pos_thr_r * 0.4) {
+                                  if (!premover_ && (tr.track_id == neg_premoved_id_)) {
                                     right_alc_car_cnt_[tr.track_id].pos = 0;
                                     neg_premoved_id_ = -1000;
                                   } else if (premoved_id_ != tr.track_id && v_ego < 30 / 3.6) {
                                     premoved_id_ = tr.track_id;
                                     premover_ = true;
-                                    premove_dist_ =
-                                        std::min(-(flane->width() / 2 -
-                                                   car_width / 2 + press_thr),
-                                                 0.0);
+                                    premove_dist_ = std::min(-(flane->width() / 2 - car_width / 2 + press_thr), 0.0);
                                   }
                                 }
                                 if (premover_ &&
-                                    std::fabs(
-                                        premove_dist_ -
-                                        std::min(-(flane->width() / 2 -
-                                                   car_width / 2 + press_thr),
-                                                 0.0)) > 0.2) {
-                                  premove_dist_ =
-                                      std::min((flane->width() / 2 -
-                                                car_width / 2 + press_thr),
-                                               0.0);
+                                    std::fabs(premove_dist_ -
+                                              std::min(-(flane->width() / 2 - car_width / 2 + press_thr), 0.0)) > 0.2) {
+                                  premove_dist_ = std::min((flane->width() / 2 - car_width / 2 + press_thr), 0.0);
                                 }
                               }
                             }
                           } else {
-                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
-                            if (std::fabs(tr.d_center_cpath -
-                                          lead_one->d_center_cpath) < 1.0 &&
-                                tr.d_rel > lead_one->d_rel &&
-                                diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                            if (std::fabs(tr.d_center_cpath - lead_one->d_center_cpath) < 1.0 &&
+                                tr.d_rel > lead_one->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
                               right_lb_car_cnt_[lead_one->track_id].pos = 0;
-                              right_lb_car_cnt_[lead_one->track_id].neg =
-                                  neg_thr_lb_r + 1;
+                              right_lb_car_cnt_[lead_one->track_id].neg = neg_thr_lb_r + 1;
 
                               neg_right_lb_car_ = true;
                               lb_leadone_disable = true;
                             }
 
-                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
                             if (diff_dn_car > desired_gap) {
@@ -2489,15 +2051,12 @@ void ObjectSelector::update(int status, double start_move_distolane,
                           if (temp_leadone != nullptr) {
                             if (tr.track_id == temp_leadone->track_id) {
                               if (temp_leadtwo != nullptr) {
-                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-                                                 d_offset, t_gap, safety_dist,
-                                                 diff_dn_car, desired_gap);
+                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                                 desired_gap);
 
-                                if (diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                                if (diff_dn_car < std::max(desired_gap, diff_thre)) {
                                   right_lb_car_cnt_[tr.track_id].pos = 0;
-                                  right_lb_car_cnt_[tr.track_id].neg =
-                                      neg_thr_lb_r + 1;
+                                  right_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_r + 1;
 
                                   neg_right_lb_car_ = true;
                                   lb_leadone_disable = true;
@@ -2510,20 +2069,13 @@ void ObjectSelector::update(int status, double start_move_distolane,
                                 }
                               }
                             } else {
-                              calc_desired_gap(v_ego, tr, *temp_leadone, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, tr, *temp_leadone, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (std::fabs(tr.d_center_cpath -
-                                            temp_leadone->d_center_cpath) <
-                                      1.0 &&
-                                  tr.d_rel > temp_leadone->d_rel &&
-                                  diff_dn_car <
-                                      std::max(desired_gap, diff_thre)) {
-                                right_lb_car_cnt_[temp_leadone->track_id].pos =
-                                    0;
-                                right_lb_car_cnt_[temp_leadone->track_id].neg =
-                                    neg_thr_lb_r + 1;
+                              if (std::fabs(tr.d_center_cpath - temp_leadone->d_center_cpath) < 1.0 &&
+                                  tr.d_rel > temp_leadone->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
+                                right_lb_car_cnt_[temp_leadone->track_id].pos = 0;
+                                right_lb_car_cnt_[temp_leadone->track_id].neg = neg_thr_lb_r + 1;
 
                                 neg_right_lb_car_ = true;
                                 lb_leadone_disable = true;
@@ -2538,71 +2090,56 @@ void ObjectSelector::update(int status, double start_move_distolane,
                           }
                         }
                       } else if ((d_stop > v_aver * (t + 2) && v_ego >= 1) ||
-                                 (v_ego < 1 &&
-                                  d_stop > std::max(v_ego, 0.1) * (t + 2))) {
+                                 (v_ego < 1 && d_stop > std::max(v_ego, 0.1) * (t + 2))) {
                         right_alc_car_cnt_[tr.track_id].pos = 0;
                         remove_car(right_alc_car_, tr.track_id);
 
                         if (lead_one != nullptr) {
                           if (tr.track_id == lead_one->track_id) {
                             if (lead_two != nullptr) {
-                              calc_desired_gap(v_ego, *lead_two, tr, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, *lead_two, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (diff_dn_car >
-                                      std::max(desired_gap, diff_thre) &&
-                                  tr.d_min_cpath > -lb_width_r) {
+                              if (diff_dn_car > std::max(desired_gap, diff_thre) && tr.d_min_cpath > -lb_width_r) {
                                 if (perception_range > lead_one->d_rel &&
-                                    lead_two->d_rel - perception_range >
-                                        std::max(desired_gap, diff_thre)) {
+                                    lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                                   right_lb_car_cnt_[tr.track_id].pos += 3;
                                 } else {
                                   right_lb_car_cnt_[tr.track_id].pos += 1;
                                 }
                               } else {
                                 right_lb_car_cnt_[tr.track_id].pos = 0;
-                                right_lb_car_cnt_[tr.track_id].neg =
-                                    neg_thr_lb_r + 1;
+                                right_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_r + 1;
 
                                 neg_right_lb_car_ = true;
                                 lb_leadone_disable = true;
                               }
                             } else if (tr.d_min_cpath > -lb_width_r) {
                               if (perception_range > lead_one->d_rel &&
-                                  perception_range <
-                                      lead_one->d_rel + max_visible_gap &&
-                                  lead_one->d_rel + max_visible_gap <
-                                      max_perception_range) {
+                                  perception_range < lead_one->d_rel + max_visible_gap &&
+                                  lead_one->d_rel + max_visible_gap < max_perception_range) {
                                 right_lb_car_cnt_[tr.track_id].pos += 5;
                               } else {
                                 right_lb_car_cnt_[tr.track_id].pos += 1;
                               }
                             }
                           } else {
-                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
-                            if (std::fabs(tr.d_center_cpath -
-                                          lead_one->d_center_cpath) < 1.0 &&
-                                tr.d_rel > lead_one->d_rel &&
-                                diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                            if (std::fabs(tr.d_center_cpath - lead_one->d_center_cpath) < 1.0 &&
+                                tr.d_rel > lead_one->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
                               right_lb_car_cnt_[lead_one->track_id].pos = 0;
-                              right_lb_car_cnt_[lead_one->track_id].neg =
-                                  neg_thr_lb_r + 1;
+                              right_lb_car_cnt_[lead_one->track_id].neg = neg_thr_lb_r + 1;
 
                               neg_right_lb_car_ = true;
                               lb_leadone_disable = true;
                             }
 
-                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
-                            if (diff_dn_car > desired_gap &&
-                                tr.d_min_cpath > -lb_width_r) {
+                            if (diff_dn_car > desired_gap && tr.d_min_cpath > -lb_width_r) {
                               right_lb_car_cnt_[tr.track_id].pos += 1;
                             }
                           }
@@ -2610,15 +2147,12 @@ void ObjectSelector::update(int status, double start_move_distolane,
                           if (temp_leadone != nullptr) {
                             if (tr.track_id == temp_leadone->track_id) {
                               if (temp_leadtwo != nullptr) {
-                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-                                                 d_offset, t_gap, safety_dist,
-                                                 diff_dn_car, desired_gap);
+                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                                 desired_gap);
 
-                                if (diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                                if (diff_dn_car < std::max(desired_gap, diff_thre)) {
                                   right_lb_car_cnt_[tr.track_id].pos = 0;
-                                  right_lb_car_cnt_[tr.track_id].neg =
-                                      neg_thr_lb_r + 1;
+                                  right_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_r + 1;
 
                                   neg_right_lb_car_ = true;
                                   lb_leadone_disable = true;
@@ -2627,20 +2161,13 @@ void ObjectSelector::update(int status, double start_move_distolane,
                                 }
                               }
                             } else {
-                              calc_desired_gap(v_ego, tr, *temp_leadone, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, tr, *temp_leadone, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (std::fabs(tr.d_center_cpath -
-                                            temp_leadone->d_center_cpath) <
-                                      1.0 &&
-                                  tr.d_rel > temp_leadone->d_rel &&
-                                  diff_dn_car <
-                                      std::max(desired_gap, diff_thre)) {
-                                right_lb_car_cnt_[temp_leadone->track_id].pos =
-                                    0;
-                                right_lb_car_cnt_[temp_leadone->track_id].neg =
-                                    neg_thr_lb_r + 1;
+                              if (std::fabs(tr.d_center_cpath - temp_leadone->d_center_cpath) < 1.0 &&
+                                  tr.d_rel > temp_leadone->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
+                                right_lb_car_cnt_[temp_leadone->track_id].pos = 0;
+                                right_lb_car_cnt_[temp_leadone->track_id].neg = neg_thr_lb_r + 1;
 
                                 neg_right_lb_car_ = true;
                                 lb_leadone_disable = true;
@@ -2650,9 +2177,8 @@ void ObjectSelector::update(int status, double start_move_distolane,
                             right_lb_car_cnt_[tr.track_id].pos += 1;
                           }
                         }
-                      } else if (d_stop > v_ego * 8 &&
-                                 right_direct_exist &&
-                                (current_lane_index == 0 || !left_direct_exist) && !isRedLightStop) {
+                      } else if (d_stop > v_ego * 8 && right_direct_exist &&
+                                 (current_lane_index == 0 || !left_direct_exist) && !isRedLightStop) {
                         right_alc_car_cnt_[tr.track_id].pos += 1;
                         right_lb_car_cnt_[tr.track_id].pos = 0;
 
@@ -2665,11 +2191,13 @@ void ObjectSelector::update(int status, double start_move_distolane,
                         remove_car(right_lb_car_, tr.track_id);
                       }
                     } else {
-                      if (d_stop > v_aver * 8 &&
-                          right_direct_exist) {
-                        if ((!isRedLightStop && (right_laneout_direct_exist ||
-                                                 (dist_to_intsect + intersect_length + rout_l_dash_length > d_lb_car + 60)) && !is_on_highway) ||
-                            (std::min(dis_to_ramp, lc_end_dis) > d_lb_car + std::max(v_target * 4, 60.0) && is_on_highway)) {
+                      if (d_stop > v_aver * 8 && right_direct_exist) {
+                        if ((!isRedLightStop &&
+                             (right_laneout_direct_exist ||
+                              (dist_to_intsect + intersect_length + rout_l_dash_length > d_lb_car + 60)) &&
+                             !is_on_highway) ||
+                            (std::min(dis_to_ramp, lc_end_dis) > d_lb_car + std::max(v_target * 4, 60.0) &&
+                             is_on_highway)) {
                           right_alc_car_cnt_[tr.track_id].pos += 1;
                           right_lb_car_cnt_[tr.track_id].pos = 0;
 
@@ -2683,62 +2211,46 @@ void ObjectSelector::update(int status, double start_move_distolane,
                         }
                       }
                     }
-                  } else if ((right_lane_tasks_id == 0 &&
-                             current_lane_tasks_id == 0) ||
-                             (is_on_highway &&
-                             right_lane_tasks_id >= 1 &&
-                              current_lane_tasks_id >= 2)) {
+                  } else if ((right_lane_tasks_id == 0 && current_lane_tasks_id == 0) ||
+                             (is_on_highway && right_lane_tasks_id >= 1 && current_lane_tasks_id >= 2)) {
                     std::array<double, 4> xp_pos_r{4, 7, 10, 20};
                     std::array<double, 4> xp_pos_lb{4, 7, 10, 20};
                     std::array<double, 4> fp_pos_r{1.0, 0.6, 0.3, 0.1};
                     std::array<double, 4> fp_pos_lb{1.0, 0.5, 0.2, 0.1};
                     std::array<double, 4> xp_pos{0, 50, 100, 200};
-                    std::array<double, 4> fp_pos{20 * coefficient, 0,
-                                                 -10 * coefficient,
-                                                 -20 * coefficient};
+                    std::array<double, 4> fp_pos{20 * coefficient, 0, -10 * coefficient, -20 * coefficient};
                     std::array<double, 4> xp_lat{-1.0, -0.5, 0.5, 1.5};
                     std::array<double, 4> fp_lat{1.0, 0.7, 0.2, 0.1};
 
-                    pos_thr_r = std::max(
-                        (int)(10 * coefficient),
-                        (int)(pos_thr_r * interp(v_right_front - v_front_lb,
-                                                 xp_pos_r, fp_pos_r)));
+                    pos_thr_r = std::max((int)(10 * coefficient),
+                                         (int)(pos_thr_r * interp(v_right_front - v_front_lb, xp_pos_r, fp_pos_r)));
 
-                    pos_thr_lb_r = std::max(
-                        (int)(10 * coefficient),
-                        (int)(pos_thr_lb_r *
-                              interp(v_right_front - v_front_lb, xp_pos_lb,
-                                     fp_pos_lb) *
-                              interp(tr.d_min_cpath - l_ego, xp_lat, fp_lat)));
+                    pos_thr_lb_r =
+                        std::max((int)(10 * coefficient),
+                                 (int)(pos_thr_lb_r * interp(v_right_front - v_front_lb, xp_pos_lb, fp_pos_lb) *
+                                       interp(tr.d_min_cpath - l_ego, xp_lat, fp_lat)));
 
                     if (!is_on_highway) {
-                      pos_thr_r = std::max(
-                          (int)(10 * coefficient),
-                          pos_thr_r + (int)interp(d_stop, xp_pos, fp_pos));
+                      pos_thr_r = std::max((int)(10 * coefficient), pos_thr_r + (int)interp(d_stop, xp_pos, fp_pos));
 
-                      pos_thr_lb_r = std::max(
-                          (int)(10 * coefficient),
-                          pos_thr_lb_r + (int)interp(d_stop, xp_pos, fp_pos));
+                      pos_thr_lb_r =
+                          std::max((int)(10 * coefficient), pos_thr_lb_r + (int)interp(d_stop, xp_pos, fp_pos));
                     }
 
                     if ((d_stop > v_aver * (t + 2) && v_ego >= 1) ||
-                        (v_ego < 1 &&
-                         d_stop > std::max(v_ego, 0.1) * (t + 2))) {
+                        (v_ego < 1 && d_stop > std::max(v_ego, 0.1) * (t + 2))) {
                       right_alc_car_cnt_[tr.track_id].pos += 1;
 
                       if (lead_one != nullptr) {
                         if (tr.track_id == lead_one->track_id) {
                           if (lead_two != nullptr && lead_two->v_lead > -0.5) {
-                            calc_desired_gap(v_ego, *lead_two, tr, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, *lead_two, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
-                            if (diff_dn_car >
-                                std::max(desired_gap, diff_thre)) {
+                            if (diff_dn_car > std::max(desired_gap, diff_thre)) {
                               if (tr.d_min_cpath > -lb_width_r) {
                                 if (perception_range > lead_one->d_rel &&
-                                    lead_two->d_rel - perception_range >
-                                        std::max(desired_gap, diff_thre)) {
+                                    lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                                   right_lb_car_cnt_[tr.track_id].pos += 3;
                                 } else {
                                   right_lb_car_cnt_[tr.track_id].pos += 1;
@@ -2746,60 +2258,49 @@ void ObjectSelector::update(int status, double start_move_distolane,
                               }
                             } else {
                               right_lb_car_cnt_[tr.track_id].pos = 0;
-                              right_lb_car_cnt_[tr.track_id].neg =
-                                  neg_thr_lb_r + 1;
+                              right_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_r + 1;
 
                               neg_right_lb_car_ = true;
                               lb_leadone_disable = true;
                             }
                             if (perception_range > lead_one->d_rel &&
-                                lead_two->d_rel - perception_range >
-                                    std::max(desired_gap, diff_thre)) {
+                                lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                               right_alc_car_cnt_[tr.track_id].pos += 2;
                             }
                           } else {
                             if (tr.d_min_cpath > -lb_width_r) {
                               if (perception_range > lead_one->d_rel &&
-                                  perception_range <
-                                      lead_one->d_rel + max_visible_gap &&
-                                  lead_one->d_rel + max_visible_gap <
-                                      max_perception_range) {
+                                  perception_range < lead_one->d_rel + max_visible_gap &&
+                                  lead_one->d_rel + max_visible_gap < max_perception_range) {
                                 right_lb_car_cnt_[tr.track_id].pos += 5;
                               } else {
                                 right_lb_car_cnt_[tr.track_id].pos += 1;
                               }
                             }
                             if (perception_range > lead_one->d_rel &&
-                                perception_range <
-                                    lead_one->d_rel + max_visible_gap &&
-                                lead_one->d_rel + max_visible_gap <
-                                    max_perception_range && (v_ego > 40/3.6 || !is_on_highway)) {
+                                perception_range < lead_one->d_rel + max_visible_gap &&
+                                lead_one->d_rel + max_visible_gap < max_perception_range &&
+                                (v_ego > 40 / 3.6 || !is_on_highway)) {
                               right_alc_car_cnt_[tr.track_id].pos += 3;
                             }
                           }
                         } else {
-                          calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
-                                           t_gap, safety_dist, diff_dn_car,
+                          calc_desired_gap(v_ego, tr, *lead_one, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                            desired_gap);
 
-                          if (std::fabs(tr.d_center_cpath -
-                                        lead_one->d_center_cpath) < 1.0 &&
-                              tr.d_rel > lead_one->d_rel &&
-                              diff_dn_car < std::max(desired_gap, diff_thre)) {
+                          if (std::fabs(tr.d_center_cpath - lead_one->d_center_cpath) < 1.0 &&
+                              tr.d_rel > lead_one->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
                             right_lb_car_cnt_[lead_one->track_id].pos = 0;
-                            right_lb_car_cnt_[lead_one->track_id].neg =
-                                neg_thr_lb_r + 1;
+                            right_lb_car_cnt_[lead_one->track_id].neg = neg_thr_lb_r + 1;
 
                             neg_right_lb_car_ = true;
                             lb_leadone_disable = true;
                           }
 
-                          calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
-                                           t_gap, safety_dist, diff_dn_car,
+                          calc_desired_gap(v_ego, *lead_one, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                            desired_gap);
 
-                          if (diff_dn_car > desired_gap &&
-                              tr.d_min_cpath > -lb_width_r) {
+                          if (diff_dn_car > desired_gap && tr.d_min_cpath > -lb_width_r) {
                             right_lb_car_cnt_[tr.track_id].pos += 1;
                           }
                         }
@@ -2807,15 +2308,12 @@ void ObjectSelector::update(int status, double start_move_distolane,
                         if (temp_leadone != nullptr) {
                           if (tr.track_id == temp_leadone->track_id) {
                             if (temp_leadtwo != nullptr) {
-                              calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, *temp_leadtwo, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (diff_dn_car <
-                                  std::max(desired_gap, diff_thre)) {
+                              if (diff_dn_car < std::max(desired_gap, diff_thre)) {
                                 right_lb_car_cnt_[tr.track_id].pos = 0;
-                                right_lb_car_cnt_[tr.track_id].neg =
-                                    neg_thr_lb_r + 1;
+                                right_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_r + 1;
 
                                 neg_right_lb_car_ = true;
                                 lb_leadone_disable = true;
@@ -2826,18 +2324,13 @@ void ObjectSelector::update(int status, double start_move_distolane,
                               }
                             }
                           } else {
-                            calc_desired_gap(v_ego, tr, *temp_leadone, t,
-                                             d_offset, t_gap, safety_dist,
-                                             diff_dn_car, desired_gap);
+                            calc_desired_gap(v_ego, tr, *temp_leadone, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                             desired_gap);
 
-                            if (std::fabs(tr.d_center_cpath -
-                                          temp_leadone->d_center_cpath) < 1.0 &&
-                                tr.d_rel > temp_leadone->d_rel &&
-                                diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                            if (std::fabs(tr.d_center_cpath - temp_leadone->d_center_cpath) < 1.0 &&
+                                tr.d_rel > temp_leadone->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
                               right_lb_car_cnt_[temp_leadone->track_id].pos = 0;
-                              right_lb_car_cnt_[temp_leadone->track_id].neg =
-                                  neg_thr_lb_r + 1;
+                              right_lb_car_cnt_[temp_leadone->track_id].neg = neg_thr_lb_r + 1;
 
                               neg_right_lb_car_ = true;
                               lb_leadone_disable = true;
@@ -2859,66 +2352,48 @@ void ObjectSelector::update(int status, double start_move_distolane,
                       remove_car(right_alc_car_, tr.track_id);
                       remove_car(right_lb_car_, tr.track_id);
                     }
-                  } else if ((right_lane_tasks_id == -2 &&
-                             current_lane_tasks_id == -1) ||
-                             (is_on_highway && !is_on_ramp &&
-                             right_lane_tasks_id == 0 &&
-                             current_lane_tasks_id == 1)) {
+                  } else if ((right_lane_tasks_id == -2 && current_lane_tasks_id == -1) ||
+                             (is_on_highway && !is_on_ramp && right_lane_tasks_id == 0 && current_lane_tasks_id == 1)) {
                     std::array<double, 4> xp{0, 50, 100, 200};
-                    std::array<double, 4> fp{40 * coefficient, 20 * coefficient,
-                                             0, -20 * coefficient};
+                    std::array<double, 4> fp{40 * coefficient, 20 * coefficient, 0, -20 * coefficient};
                     std::array<double, 4> xp_lat{-1.0, -0.5, 0.5, 1.5};
                     std::array<double, 4> fp_lat{1.0, 0.7, 0.2, 0.1};
 
                     if (!is_on_highway) {
-                      pos_thr_r =
-                          std::max((int)(10 * coefficient),
-                                  pos_thr_r + (int)interp(d_stop, xp, fp));
-                      pos_thr_lb_r = std::max(
-                          (int)(10 * coefficient),
-                          (int)(pos_thr_lb_r *
-                                interp(tr.d_min_cpath - l_ego, xp_lat, fp_lat)) +
-                              (int)interp(d_stop, xp, fp));
+                      pos_thr_r = std::max((int)(10 * coefficient), pos_thr_r + (int)interp(d_stop, xp, fp));
+                      pos_thr_lb_r = std::max((int)(10 * coefficient),
+                                              (int)(pos_thr_lb_r * interp(tr.d_min_cpath - l_ego, xp_lat, fp_lat)) +
+                                                  (int)interp(d_stop, xp, fp));
                     }
 
                     double d_stop_l = lc_end_dis;
                     double d_map = d_stop;
 
                     if (d_stop > d_lb_car + 30) {
-                      if ((d_stop_l > v_aver * (t + 10) &&
-                           d_map > v_aver * (t + 5) &&
-                           d_stop > v_aver * (t + 5) && v_ego >= 1) ||
-                          (v_ego < 1 &&
-                           d_stop_l > std::max(v_ego, 0.1) * (t + 15) &&
-                           d_map > std::max(v_ego, 0.1) * (t + 5) &&
-                           d_stop > std::max(v_ego, 0.1) * (t + 5))) {
+                      if ((d_stop_l > v_aver * (t + 10) && d_map > v_aver * (t + 5) && d_stop > v_aver * (t + 5) &&
+                           v_ego >= 1) ||
+                          (v_ego < 1 && d_stop_l > std::max(v_ego, 0.1) * (t + 15) &&
+                           d_map > std::max(v_ego, 0.1) * (t + 5) && d_stop > std::max(v_ego, 0.1) * (t + 5))) {
                         if (lead_one != nullptr) {
                           if (tr.track_id == lead_one->track_id) {
                             if (lead_two != nullptr && lead_two->v_lead > -0.5) {
-                              calc_desired_gap(v_ego, *lead_two, tr, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, *lead_two, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (diff_dn_car >
-                                  std::max(desired_gap, diff_thre)) {
+                              if (diff_dn_car > std::max(desired_gap, diff_thre)) {
                                 if (tr.d_min_cpath > -lb_width_r) {
                                   if (perception_range > lead_one->d_rel &&
-                                      lead_two->d_rel - perception_range >
-                                          std::max(desired_gap, diff_thre)) {
+                                      lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                                     right_lb_car_cnt_[tr.track_id].pos += 3;
                                   } else {
                                     right_lb_car_cnt_[tr.track_id].pos += 1;
                                   }
                                 } else {
                                   if (perception_range > lead_one->d_rel &&
-                                      lead_two->d_rel - perception_range >
-                                          std::max(desired_gap, diff_thre)) {
+                                      lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                                     right_alc_car_cnt_[tr.track_id].pos += 2;
-                                  } else if (perception_range >
-                                                 lead_one->d_rel &&
-                                             lead_two->d_rel -
-                                                     perception_range <
-                                                 min_visible_gap &&
+                                  } else if (perception_range > lead_one->d_rel &&
+                                             lead_two->d_rel - perception_range < min_visible_gap &&
                                              lead_two->v_rel + v_ego < 1.0) {
                                     right_alc_car_cnt_[tr.track_id].pos += 0;
                                   } else {
@@ -2927,8 +2402,7 @@ void ObjectSelector::update(int status, double start_move_distolane,
                                 }
                               } else {
                                 right_lb_car_cnt_[tr.track_id].pos = 0;
-                                right_lb_car_cnt_[tr.track_id].neg =
-                                    neg_thr_lb_r + 1;
+                                right_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_r + 1;
 
                                 neg_right_lb_car_ = true;
                                 lb_leadone_disable = true;
@@ -2936,20 +2410,17 @@ void ObjectSelector::update(int status, double start_move_distolane,
                             } else {
                               if (tr.d_min_cpath > -lb_width_r) {
                                 if (perception_range > lead_one->d_rel &&
-                                    perception_range <
-                                        lead_one->d_rel + max_visible_gap &&
-                                    lead_one->d_rel + max_visible_gap <
-                                        max_perception_range) {
+                                    perception_range < lead_one->d_rel + max_visible_gap &&
+                                    lead_one->d_rel + max_visible_gap < max_perception_range) {
                                   right_lb_car_cnt_[tr.track_id].pos += 5;
                                 } else {
                                   right_lb_car_cnt_[tr.track_id].pos += 1;
                                 }
                               } else {
                                 if (perception_range > lead_one->d_rel &&
-                                    perception_range <
-                                        lead_one->d_rel + max_visible_gap &&
-                                    lead_one->d_rel + max_visible_gap <
-                                        max_perception_range && (v_ego > 40/3.6 || !is_on_highway)) {
+                                    perception_range < lead_one->d_rel + max_visible_gap &&
+                                    lead_one->d_rel + max_visible_gap < max_perception_range &&
+                                    (v_ego > 40 / 3.6 || !is_on_highway)) {
                                   right_alc_car_cnt_[tr.track_id].pos += 3;
                                 } else {
                                   right_alc_car_cnt_[tr.track_id].pos += 1;
@@ -2957,25 +2428,19 @@ void ObjectSelector::update(int status, double start_move_distolane,
                               }
                             }
                           } else {
-                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
-                            if (std::fabs(tr.d_center_cpath -
-                                          lead_one->d_center_cpath) < 1.0 &&
-                                tr.d_rel > lead_one->d_rel &&
-                                diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                            if (std::fabs(tr.d_center_cpath - lead_one->d_center_cpath) < 1.0 &&
+                                tr.d_rel > lead_one->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
                               right_lb_car_cnt_[lead_one->track_id].pos = 0;
-                              right_lb_car_cnt_[lead_one->track_id].neg =
-                                  neg_thr_lb_r + 1;
+                              right_lb_car_cnt_[lead_one->track_id].neg = neg_thr_lb_r + 1;
 
                               neg_right_lb_car_ = true;
                               lb_leadone_disable = true;
                             }
 
-                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
                             if (diff_dn_car > desired_gap) {
@@ -2990,15 +2455,12 @@ void ObjectSelector::update(int status, double start_move_distolane,
                           if (temp_leadone != nullptr) {
                             if (tr.track_id == temp_leadone->track_id) {
                               if (temp_leadtwo != nullptr) {
-                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-                                                 d_offset, t_gap, safety_dist,
-                                                 diff_dn_car, desired_gap);
+                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                                 desired_gap);
 
-                                if (diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                                if (diff_dn_car < std::max(desired_gap, diff_thre)) {
                                   right_lb_car_cnt_[tr.track_id].pos = 0;
-                                  right_lb_car_cnt_[tr.track_id].neg =
-                                      neg_thr_lb_r + 1;
+                                  right_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_r + 1;
 
                                   neg_right_lb_car_ = true;
                                   lb_leadone_disable = true;
@@ -3011,20 +2473,13 @@ void ObjectSelector::update(int status, double start_move_distolane,
                                 }
                               }
                             } else {
-                              calc_desired_gap(v_ego, tr, *temp_leadone, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, tr, *temp_leadone, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (std::fabs(tr.d_center_cpath -
-                                            temp_leadone->d_center_cpath) <
-                                      1.0 &&
-                                  tr.d_rel > temp_leadone->d_rel &&
-                                  diff_dn_car <
-                                      std::max(desired_gap, diff_thre)) {
-                                right_lb_car_cnt_[temp_leadone->track_id].pos =
-                                    0;
-                                right_lb_car_cnt_[temp_leadone->track_id].neg =
-                                    neg_thr_lb_r + 1;
+                              if (std::fabs(tr.d_center_cpath - temp_leadone->d_center_cpath) < 1.0 &&
+                                  tr.d_rel > temp_leadone->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
+                                right_lb_car_cnt_[temp_leadone->track_id].pos = 0;
+                                right_lb_car_cnt_[temp_leadone->track_id].neg = neg_thr_lb_r + 1;
 
                                 neg_right_lb_car_ = true;
                                 lb_leadone_disable = true;
@@ -3038,75 +2493,58 @@ void ObjectSelector::update(int status, double start_move_distolane,
                             }
                           }
                         }
-                      } else if ((d_stop_l > v_aver * (t + 8) &&
-                                  d_map > v_aver * (t + 2) &&
+                      } else if ((d_stop_l > v_aver * (t + 8) && d_map > v_aver * (t + 2) &&
                                   d_stop > v_aver * (t + 2) && v_ego >= 1) ||
-                                 (v_ego < 1 &&
-                                  d_stop_l > std::max(v_ego, 0.1) * (t + 10) &&
-                                  d_map > std::max(v_ego, 0.1) * (t + 2) &&
-                                  d_stop > std::max(v_ego, 0.1) * (t + 2))) {
-
+                                 (v_ego < 1 && d_stop_l > std::max(v_ego, 0.1) * (t + 10) &&
+                                  d_map > std::max(v_ego, 0.1) * (t + 2) && d_stop > std::max(v_ego, 0.1) * (t + 2))) {
                         right_alc_car_cnt_[tr.track_id].pos = 0;
                         remove_car(right_alc_car_, tr.track_id);
 
                         if (lead_one != nullptr) {
                           if (tr.track_id == lead_one->track_id) {
                             if (lead_two != nullptr) {
-                              calc_desired_gap(v_ego, *lead_two, tr, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, *lead_two, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (diff_dn_car >
-                                      std::max(desired_gap, diff_thre) &&
-                                  tr.d_min_cpath > -lb_width_r) {
+                              if (diff_dn_car > std::max(desired_gap, diff_thre) && tr.d_min_cpath > -lb_width_r) {
                                 if (perception_range > lead_one->d_rel &&
-                                    lead_two->d_rel - perception_range >
-                                        std::max(desired_gap, diff_thre)) {
+                                    lead_two->d_rel - perception_range > std::max(desired_gap, diff_thre)) {
                                   right_lb_car_cnt_[tr.track_id].pos += 3;
                                 } else {
                                   right_lb_car_cnt_[tr.track_id].pos += 1;
                                 }
                               } else {
                                 right_lb_car_cnt_[tr.track_id].pos = 0;
-                                right_lb_car_cnt_[tr.track_id].neg =
-                                    neg_thr_lb_r + 1;
+                                right_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_r + 1;
 
                                 neg_right_lb_car_ = true;
                                 lb_leadone_disable = true;
                               }
                             } else if (tr.d_min_cpath > -lb_width_r) {
                               if (perception_range > lead_one->d_rel &&
-                                  perception_range <
-                                      lead_one->d_rel + max_visible_gap) {
+                                  perception_range < lead_one->d_rel + max_visible_gap) {
                                 right_lb_car_cnt_[tr.track_id].pos += 5;
                               } else {
                                 right_lb_car_cnt_[tr.track_id].pos += 1;
                               }
                             }
                           } else {
-                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, tr, *lead_one, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
-                            if (std::fabs(tr.d_center_cpath -
-                                          lead_one->d_center_cpath) < 1.0 &&
-                                tr.d_rel > lead_one->d_rel &&
-                                diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                            if (std::fabs(tr.d_center_cpath - lead_one->d_center_cpath) < 1.0 &&
+                                tr.d_rel > lead_one->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
                               right_lb_car_cnt_[lead_one->track_id].pos = 0;
-                              right_lb_car_cnt_[lead_one->track_id].neg =
-                                  neg_thr_lb_r + 1;
+                              right_lb_car_cnt_[lead_one->track_id].neg = neg_thr_lb_r + 1;
 
                               neg_right_lb_car_ = true;
                               lb_leadone_disable = true;
                             }
 
-                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
-                                             t_gap, safety_dist, diff_dn_car,
+                            calc_desired_gap(v_ego, *lead_one, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
                                              desired_gap);
 
-                            if (diff_dn_car > desired_gap &&
-                                tr.d_min_cpath > -lb_width_r) {
+                            if (diff_dn_car > desired_gap && tr.d_min_cpath > -lb_width_r) {
                               right_lb_car_cnt_[tr.track_id].pos += 1;
                             }
                           }
@@ -3114,15 +2552,12 @@ void ObjectSelector::update(int status, double start_move_distolane,
                           if (temp_leadone != nullptr) {
                             if (tr.track_id == temp_leadone->track_id) {
                               if (temp_leadtwo != nullptr) {
-                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-                                                 d_offset, t_gap, safety_dist,
-                                                 diff_dn_car, desired_gap);
+                                calc_desired_gap(v_ego, *temp_leadtwo, tr, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                                 desired_gap);
 
-                                if (diff_dn_car <
-                                    std::max(desired_gap, diff_thre)) {
+                                if (diff_dn_car < std::max(desired_gap, diff_thre)) {
                                   right_lb_car_cnt_[tr.track_id].pos = 0;
-                                  right_lb_car_cnt_[tr.track_id].neg =
-                                      neg_thr_lb_r + 1;
+                                  right_lb_car_cnt_[tr.track_id].neg = neg_thr_lb_r + 1;
 
                                   neg_right_lb_car_ = true;
                                   lb_leadone_disable = true;
@@ -3131,20 +2566,13 @@ void ObjectSelector::update(int status, double start_move_distolane,
                                 }
                               }
                             } else {
-                              calc_desired_gap(v_ego, tr, *temp_leadone, t,
-                                               d_offset, t_gap, safety_dist,
-                                               diff_dn_car, desired_gap);
+                              calc_desired_gap(v_ego, tr, *temp_leadone, t, d_offset, t_gap, safety_dist, diff_dn_car,
+                                               desired_gap);
 
-                              if (std::fabs(tr.d_center_cpath -
-                                            temp_leadone->d_center_cpath) <
-                                      1.0 &&
-                                  tr.d_rel > temp_leadone->d_rel &&
-                                  diff_dn_car <
-                                      std::max(desired_gap, diff_thre)) {
-                                right_lb_car_cnt_[temp_leadone->track_id].pos =
-                                    0;
-                                right_lb_car_cnt_[temp_leadone->track_id].neg =
-                                    neg_thr_lb_r + 1;
+                              if (std::fabs(tr.d_center_cpath - temp_leadone->d_center_cpath) < 1.0 &&
+                                  tr.d_rel > temp_leadone->d_rel && diff_dn_car < std::max(desired_gap, diff_thre)) {
+                                right_lb_car_cnt_[temp_leadone->track_id].pos = 0;
+                                right_lb_car_cnt_[temp_leadone->track_id].neg = neg_thr_lb_r + 1;
 
                                 neg_right_lb_car_ = true;
                                 lb_leadone_disable = true;
@@ -3162,36 +2590,29 @@ void ObjectSelector::update(int status, double start_move_distolane,
                         remove_car(right_lb_car_, tr.track_id);
                       }
                     }
-                  } else if ((right_lane_tasks_id == 0 &&
-                              current_lane_tasks_id == 1) ||
-                             (right_lane_tasks_id == 1 &&
-                              current_lane_tasks_id == 2)) {
+                  } else if ((right_lane_tasks_id == 0 && current_lane_tasks_id == 1) ||
+                             (right_lane_tasks_id == 1 && current_lane_tasks_id == 2)) {
                   }
 
-                  auto iter = std::find(right_alc_car_.begin(),
-                                      right_alc_car_.end(), tr.track_id);
+                  auto iter = std::find(right_alc_car_.begin(), right_alc_car_.end(), tr.track_id);
 
-                  if (right_alc_car_cnt_[tr.track_id].pos > pos_thr_r &&
-                      iter == right_alc_car_.end() &&
+                  if (right_alc_car_cnt_[tr.track_id].pos > pos_thr_r && iter == right_alc_car_.end() &&
                       right_lb_car_cnt_[tr.track_id].pos < pos_thr_lb_r) {
                     right_alc_car_.push_back(tr.track_id);
                     right_alc_car_cnt_[tr.track_id].neg = 0;
                     neg_right_alc_car_ = false;
                   }
 
-                  iter = std::find(right_lb_car_.begin(), right_lb_car_.end(),
-                                 tr.track_id);
+                  iter = std::find(right_lb_car_.begin(), right_lb_car_.end(), tr.track_id);
 
-                  if (right_lb_car_cnt_[tr.track_id].pos > pos_thr_lb_r &&
-                      iter == right_lb_car_.end()) {
+                  if (right_lb_car_cnt_[tr.track_id].pos > pos_thr_lb_r && iter == right_lb_car_.end()) {
                     right_lb_car_.push_back(tr.track_id);
                     right_lb_car_cnt_[tr.track_id].neg = 0;
                     neg_right_lb_car_ = false;
                   }
                 }
 
-                auto iter = std::find(right_alc_car_.begin(),
-                                      right_alc_car_.end(), tr.track_id);
+                auto iter = std::find(right_alc_car_.begin(), right_alc_car_.end(), tr.track_id);
 
                 // if (is_on_highway && !is_on_ramp &&
                 //    ((map_info.lanes_merge_type() == MSD_MERGE_TYPE_MERGE_FROM_RIGHT &&
@@ -3202,18 +2623,15 @@ void ObjectSelector::update(int status, double start_move_distolane,
                 //       right_alc_car_cnt_.clear();
                 // }
 
-                if (right_alc_car_cnt_[tr.track_id].pos > pos_thr_r &&
-                    iter == right_alc_car_.end() &&
+                if (right_alc_car_cnt_[tr.track_id].pos > pos_thr_r && iter == right_alc_car_.end() &&
                     right_lb_car_cnt_[tr.track_id].pos < pos_thr_lb_r) {
                   right_alc_car_.push_back(tr.track_id);
                   neg_right_alc_car_ = false;
                 }
 
-                iter = std::find(right_lb_car_.begin(), right_lb_car_.end(),
-                                 tr.track_id);
+                iter = std::find(right_lb_car_.begin(), right_lb_car_.end(), tr.track_id);
 
-                if (right_lb_car_cnt_[tr.track_id].pos > pos_thr_lb_r &&
-                    iter == right_lb_car_.end()) {
+                if (right_lb_car_cnt_[tr.track_id].pos > pos_thr_lb_r && iter == right_lb_car_.end()) {
                   right_lb_car_.push_back(tr.track_id);
                   neg_right_lb_car_ = false;
                 }
@@ -3222,8 +2640,7 @@ void ObjectSelector::update(int status, double start_move_distolane,
 
                 double neg_d_stop = 0.0;
                 if (right_boundary_info.segment_size() > 0 &&
-                    right_boundary_info.segment(0).type() ==
-                        Common::LaneBoundaryType::MARKING_DASHED) {
+                    right_boundary_info.segment(0).type() == Common::LaneBoundaryType::MARKING_DASHED) {
                   neg_d_stop = right_boundary_info.segment(0).length();
                 } else if (dist_to_intsect < -5) {
                   neg_d_stop = dist_to_last_intsect;
@@ -3244,20 +2661,15 @@ void ObjectSelector::update(int status, double start_move_distolane,
                 if (std::min(v_right_front, v_target) < v_front_lb + temp ||
                     v_right_front < std::min(v_ego + 2, tr.v_lead + 3) || tr.v_rel > temp_attenuation ||
                     std::fabs(tr.v_lat) > 0.3 ||
-                    (((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE &&
-                       status != INTER_GS_LC_RCHANGE &&
-                       status != INTER_TR_LC_RCHANGE &&
-                       status != INTER_TL_LC_RCHANGE) &&
+                    (((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE && status != INTER_GS_LC_RCHANGE &&
+                       status != INTER_TR_LC_RCHANGE && status != INTER_TL_LC_RCHANGE) &&
                       lead_one != nullptr && lead_two != nullptr && lead_two->v_lead > -0.5 &&
-                      lead_two->d_rel - lead_one->d_rel <
-                          std::min(v_right_front, v_target) * 2 &&
-                      (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 &&
-                       lead_two->d_min_cpath < 1.1 && lead_two->d_min_cpath + lead_two->width > 1.1)) ||
+                      lead_two->d_rel - lead_one->d_rel < std::min(v_right_front, v_target) * 2 &&
+                      (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 && lead_two->d_min_cpath < 1.1 &&
+                       lead_two->d_min_cpath + lead_two->width > 1.1)) ||
                      (temp_leadone != nullptr && temp_leadtwo != nullptr && temp_leadtwo->v_lead > -0.5 &&
-                      temp_leadtwo->d_rel - temp_leadone->d_rel <
-                          v_target * 2 &&
+                      temp_leadtwo->d_rel - temp_leadone->d_rel < v_target * 2 &&
                       (temp_leadtwo->v_rel < 5. || std::fabs(temp_leadtwo->v_lat) < 0.2)))) {
-
                   right_lb_car_cnt_[tr.track_id].neg += 1;
                   right_alc_car_cnt_[tr.track_id].neg += 1;
 
@@ -3265,28 +2677,21 @@ void ObjectSelector::update(int status, double start_move_distolane,
                   int alc_pos = right_alc_car_cnt_[tr.track_id].pos;
 
                   right_lb_car_cnt_[tr.track_id].pos = std::max(lb_pos - 3, 0);
-                  right_alc_car_cnt_[tr.track_id].pos =
-                      std::max(alc_pos - 3, 0);
+                  right_alc_car_cnt_[tr.track_id].pos = std::max(alc_pos - 3, 0);
 
-                  if (premover_ &&
-                      right_alc_car_cnt_[tr.track_id].pos < pos_thr_r * 0.1) {
+                  if (premover_ && right_alc_car_cnt_[tr.track_id].pos < pos_thr_r * 0.1) {
                     premover_ = false;
                   }
 
                   if (right_alc_car_cnt_[tr.track_id].neg > neg_thr_r ||
-                      (((status != ROAD_LC_LCHANGE &&
-                         status != ROAD_LC_RCHANGE &&
-                         status != INTER_GS_LC_RCHANGE &&
-                         status != INTER_TR_LC_RCHANGE &&
-                         status != INTER_TL_LC_RCHANGE) &&
+                      (((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE && status != INTER_GS_LC_RCHANGE &&
+                         status != INTER_TR_LC_RCHANGE && status != INTER_TL_LC_RCHANGE) &&
                         lead_one != nullptr && lead_two != nullptr &&
-                        lead_two->d_rel - lead_one->d_rel <
-                            std::min(v_right_front, v_target) * 1.5 &&
-                      (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 &&
-                       lead_two->d_min_cpath < 1.1 && lead_two->d_min_cpath + lead_two->width > 1.1)))) {
+                        lead_two->d_rel - lead_one->d_rel < std::min(v_right_front, v_target) * 1.5 &&
+                        (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 && lead_two->d_min_cpath < 1.1 &&
+                         lead_two->d_min_cpath + lead_two->width > 1.1)))) {
                     if (right_alc_car_.size() > 0 &&
-                        std::find(right_alc_car_.begin(), right_alc_car_.end(),
-                                  tr.track_id) != right_alc_car_.end()) {
+                        std::find(right_alc_car_.begin(), right_alc_car_.end(), tr.track_id) != right_alc_car_.end()) {
                       neg_premoved_id_ = tr.track_id;
                       premoved_id_ = -1000;
                       premover_ = false;
@@ -3297,22 +2702,16 @@ void ObjectSelector::update(int status, double start_move_distolane,
                   }
 
                   if (right_lb_car_cnt_[tr.track_id].neg > neg_thr_lb_r ||
-                      ((status != ROAD_LB_RBORROW && lead_one != nullptr &&
-                        lead_two != nullptr &&
-                        lead_two->d_rel - lead_one->d_rel <
-                            std::min(v_right_front, v_target) * 1.5 &&
+                      ((status != ROAD_LB_RBORROW && lead_one != nullptr && lead_two != nullptr &&
+                        lead_two->d_rel - lead_one->d_rel < std::min(v_right_front, v_target) * 1.5 &&
                         lead_one->d_min_cpath < -lb_width_r / 2.0) ||
-                       (temp_leadone != nullptr && temp_leadtwo != nullptr &&
-                        right_lb_car_.size() > 0 &&
-                        std::find(right_lb_car_.begin(), right_lb_car_.end(),
-                                  temp_leadone->track_id) !=
+                       (temp_leadone != nullptr && temp_leadtwo != nullptr && right_lb_car_.size() > 0 &&
+                        std::find(right_lb_car_.begin(), right_lb_car_.end(), temp_leadone->track_id) !=
                             right_lb_car_.end() &&
-                        temp_leadtwo->d_rel - temp_leadone->d_rel <
-                            v_target * 1.5 &&
+                        temp_leadtwo->d_rel - temp_leadone->d_rel < v_target * 1.5 &&
                         temp_leadone->d_min_cpath < -lb_width_r / 2.0))) {
                     if (right_lb_car_.size() > 0 &&
-                        std::find(right_lb_car_.begin(), right_lb_car_.end(),
-                                  tr.track_id) != right_lb_car_.end()) {
+                        std::find(right_lb_car_.begin(), right_lb_car_.end(), tr.track_id) != right_lb_car_.end()) {
                       right_lb_car_.clear();
 
                       if (status != ROAD_LB_LBORROW) {
@@ -3324,22 +2723,16 @@ void ObjectSelector::update(int status, double start_move_distolane,
                   }
                 }
               }
-            } else if ((status == ROAD_LC_RCHANGE ||
-                        status == INTER_GS_LC_RCHANGE ||
-                        status == ROAD_LB_RBORROW) &&
-                       (right_alc_car_.size() > 0 || right_lb_car_.size() > 0 ||
-                        v_ego >= 1.0) &&
+            } else if ((status == ROAD_LC_RCHANGE || status == INTER_GS_LC_RCHANGE || status == ROAD_LB_RBORROW) &&
+                       (right_alc_car_.size() > 0 || right_lb_car_.size() > 0 || v_ego >= 1.0) &&
                        tr.d_min_cpath >= lane_width / 2 - car_width / 5 &&
-                       tr.d_min_cpath <
-                           lane_width + car_width / 2 + lane_width * 0.05 &&
-                       dist_to_intsect < 240) {
+                       tr.d_min_cpath < lane_width + car_width / 2 + lane_width * 0.05 && dist_to_intsect < 240) {
               v_rel_r_ = get_vrel_close(1, status);
               double v_right_front = v_rel_r_ + v_ego;
               double v_front_lb = tr.v_rel + v_ego;
 
               std::array<double, 3> xp1{-22, -10, 0};
-              std::array<double, 3> fp1{20 * coefficient, 35 * coefficient,
-                                        80 * coefficient};
+              std::array<double, 3> fp1{20 * coefficient, 35 * coefficient, 80 * coefficient};
 
               std::array<double, 2> xp2{0, 67 / 3.6};
               std::array<double, 2> fp2{12 / 3.6, 8 / 3.6};
@@ -3347,46 +2740,32 @@ void ObjectSelector::update(int status, double start_move_distolane,
               int neg_thr_r = int(interp(v_rel_r_, xp1, fp1));
               int neg_thr_lb_r = neg_thr_r;
 
-              if (std::min(v_right_front, v_target) <
-                      v_front_lb + interp(v_front_lb, xp2, fp2) ||
-                  v_right_front < v_ego + 2 || tr.v_rel > 2.5 ||
-                  std::fabs(tr.v_lat) > 0.3 ||
-                  ((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE &&
-                    status != INTER_GS_LC_RCHANGE &&
-                    status != INTER_TR_LC_RCHANGE &&
-                    status != INTER_TL_LC_RCHANGE) &&
+              if (std::min(v_right_front, v_target) < v_front_lb + interp(v_front_lb, xp2, fp2) ||
+                  v_right_front < v_ego + 2 || tr.v_rel > 2.5 || std::fabs(tr.v_lat) > 0.3 ||
+                  ((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE && status != INTER_GS_LC_RCHANGE &&
+                    status != INTER_TR_LC_RCHANGE && status != INTER_TL_LC_RCHANGE) &&
                    (lead_one != nullptr && lead_two != nullptr &&
-                    lead_two->d_rel - lead_one->d_rel <
-                        std::min(v_right_front, v_target) * 2 &&
-                    (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 &&
-                     lead_two->d_min_cpath < 1.1 && lead_two->d_min_cpath + lead_two->width > 1.1))) ||
+                    lead_two->d_rel - lead_one->d_rel < std::min(v_right_front, v_target) * 2 &&
+                    (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 && lead_two->d_min_cpath < 1.1 &&
+                     lead_two->d_min_cpath + lead_two->width > 1.1))) ||
                   (temp_leadone != nullptr && temp_leadtwo != nullptr &&
                    temp_leadtwo->d_rel - temp_leadone->d_rel < v_target * 2 &&
                    (temp_leadtwo->v_rel < 5. || std::fabs(temp_leadtwo->v_lat) < 0.2))) {
-
-                if (right_lb_car_cnt_.find(tr.track_id) !=
-                    right_lb_car_cnt_.end()) {
+                if (right_lb_car_cnt_.find(tr.track_id) != right_lb_car_cnt_.end()) {
                   right_lb_car_cnt_[tr.track_id].neg += 1;
-                  right_lb_car_cnt_[tr.track_id].pos =
-                      std::max(right_lb_car_cnt_[tr.track_id].pos - 3, 0);
+                  right_lb_car_cnt_[tr.track_id].pos = std::max(right_lb_car_cnt_[tr.track_id].pos - 3, 0);
 
                   if (right_lb_car_cnt_[tr.track_id].neg > neg_thr_lb_r ||
-                      ((status != ROAD_LB_RBORROW && lead_one != nullptr &&
-                        lead_two != nullptr &&
-                        lead_two->d_rel - lead_one->d_rel <
-                            std::min(v_right_front, v_target) * 1.5 &&
+                      ((status != ROAD_LB_RBORROW && lead_one != nullptr && lead_two != nullptr &&
+                        lead_two->d_rel - lead_one->d_rel < std::min(v_right_front, v_target) * 1.5 &&
                         lead_one->d_min_cpath < -lb_width_r / 2.0) ||
-                       (temp_leadone != nullptr && temp_leadtwo != nullptr &&
-                        right_lb_car_.size() > 0 &&
-                        std::find(right_lb_car_.begin(), right_lb_car_.end(),
-                                  temp_leadone->track_id) !=
+                       (temp_leadone != nullptr && temp_leadtwo != nullptr && right_lb_car_.size() > 0 &&
+                        std::find(right_lb_car_.begin(), right_lb_car_.end(), temp_leadone->track_id) !=
                             right_lb_car_.end() &&
-                        temp_leadtwo->d_rel - temp_leadone->d_rel <
-                            v_target * 1.5 &&
+                        temp_leadtwo->d_rel - temp_leadone->d_rel < v_target * 1.5 &&
                         temp_leadone->d_min_cpath < -lb_width_r / 2.0))) {
                     if (right_lb_car_.size() > 0 &&
-                        std::find(right_lb_car_.begin(), right_lb_car_.end(),
-                                  tr.track_id) != right_lb_car_.end()) {
+                        std::find(right_lb_car_.begin(), right_lb_car_.end(), tr.track_id) != right_lb_car_.end()) {
                       right_lb_car_.clear();
                       if (status != ROAD_LB_LBORROW) {
                         neg_right_lb_car_ = true;
@@ -3397,26 +2776,19 @@ void ObjectSelector::update(int status, double start_move_distolane,
                   }
                 }
 
-                if (right_alc_car_cnt_.find(tr.track_id) !=
-                    right_alc_car_cnt_.end()) {
+                if (right_alc_car_cnt_.find(tr.track_id) != right_alc_car_cnt_.end()) {
                   right_alc_car_cnt_[tr.track_id].neg += 1;
-                  right_alc_car_cnt_[tr.track_id].pos =
-                      std::max(right_alc_car_cnt_[tr.track_id].pos - 3, 0);
+                  right_alc_car_cnt_[tr.track_id].pos = std::max(right_alc_car_cnt_[tr.track_id].pos - 3, 0);
 
                   if (right_alc_car_cnt_[tr.track_id].neg > neg_thr_r ||
-                      (((status != ROAD_LC_LCHANGE &&
-                         status != ROAD_LC_RCHANGE &&
-                         status != INTER_GS_LC_RCHANGE &&
-                         status != INTER_TR_LC_RCHANGE &&
-                         status != INTER_TL_LC_RCHANGE) &&
+                      (((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE && status != INTER_GS_LC_RCHANGE &&
+                         status != INTER_TR_LC_RCHANGE && status != INTER_TL_LC_RCHANGE) &&
                         lead_one != nullptr && lead_two != nullptr &&
-                        lead_two->d_rel - lead_one->d_rel <
-                            std::min(v_right_front, v_target) * 1.5 &&
-                      (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 &&
-                       lead_two->d_min_cpath < 1.1 && lead_two->d_min_cpath + lead_two->width > 1.1)))) {
+                        lead_two->d_rel - lead_one->d_rel < std::min(v_right_front, v_target) * 1.5 &&
+                        (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 && lead_two->d_min_cpath < 1.1 &&
+                         lead_two->d_min_cpath + lead_two->width > 1.1)))) {
                     if (right_alc_car_.size() > 0 &&
-                        std::find(right_alc_car_.begin(), right_alc_car_.end(),
-                                  tr.track_id) != right_alc_car_.end()) {
+                        std::find(right_alc_car_.begin(), right_alc_car_.end(), tr.track_id) != right_alc_car_.end()) {
                       neg_premoved_id_ = tr.track_id;
                       premoved_id_ = -1000;
                       premover_ = false;
@@ -3440,13 +2812,11 @@ void ObjectSelector::update(int status, double start_move_distolane,
               left_lb_car_cnt_[tr.track_id].pos = 0;
             }
 
-            if (right_lb_car_cnt_.find(tr.track_id) !=
-                right_lb_car_cnt_.end()) {
+            if (right_lb_car_cnt_.find(tr.track_id) != right_lb_car_cnt_.end()) {
               right_lb_car_cnt_[tr.track_id].pos = 0;
             }
 
-            if (right_alc_car_cnt_.find(tr.track_id) !=
-                right_alc_car_cnt_.end()) {
+            if (right_alc_car_cnt_.find(tr.track_id) != right_alc_car_cnt_.end()) {
               right_alc_car_cnt_[tr.track_id].pos = 0;
             }
           } else if (right_alc_car_.size() > 0) {
@@ -3457,25 +2827,21 @@ void ObjectSelector::update(int status, double start_move_distolane,
               left_lb_car_cnt_[tr.track_id].pos = 0;
             }
 
-            if (right_lb_car_cnt_.find(tr.track_id) !=
-                right_lb_car_cnt_.end()) {
+            if (right_lb_car_cnt_.find(tr.track_id) != right_lb_car_cnt_.end()) {
               right_lb_car_cnt_[tr.track_id].pos = 0;
             }
-          } else if (left_lb_car_.size() > 0 || status == ROAD_LB_LBORROW ||
-                     status == ROAD_LB_LRETURN || status == ROAD_LB_LSUSPEND) {
+          } else if (left_lb_car_.size() > 0 || status == ROAD_LB_LBORROW || status == ROAD_LB_LRETURN ||
+                     status == ROAD_LB_LSUSPEND) {
             right_lb_car_.clear();
 
-            if (right_lb_car_cnt_.find(tr.track_id) !=
-                right_lb_car_cnt_.end()) {
+            if (right_lb_car_cnt_.find(tr.track_id) != right_lb_car_cnt_.end()) {
               right_lb_car_cnt_[tr.track_id].pos = 0;
             }
           }
         }
 
         if (!l_enable) {
-          if (left_alc_car_.size() > 0 &&
-              front_tracks_r_ids.find(left_alc_car_[0]) != front_tracks_r_ids.end()) {
-
+          if (left_alc_car_.size() > 0 && front_tracks_r_ids.find(left_alc_car_[0]) != front_tracks_r_ids.end()) {
           } else {
             left_alc_car_.clear();
             left_lb_car_.clear();
@@ -3492,9 +2858,7 @@ void ObjectSelector::update(int status, double start_move_distolane,
         }
 
         if (!r_enable) {
-          if (right_alc_car_.size() > 0 &&
-              front_tracks_l_ids.find(right_alc_car_[0]) != front_tracks_l_ids.end()) {
-
+          if (right_alc_car_.size() > 0 && front_tracks_l_ids.find(right_alc_car_[0]) != front_tracks_l_ids.end()) {
           } else {
             right_lb_car_.clear();
             right_alc_car_.clear();
@@ -3504,8 +2868,7 @@ void ObjectSelector::update(int status, double start_move_distolane,
               right_lb_car_cnt_[tr.track_id].pos = 0;
             }
 
-            if (right_alc_car_cnt_.find(tr.track_id) !=
-                right_alc_car_cnt_.end()) {
+            if (right_alc_car_cnt_.find(tr.track_id) != right_alc_car_cnt_.end()) {
               right_alc_car_cnt_[tr.track_id].pos = 0;
             }
           }
@@ -3534,8 +2897,8 @@ void ObjectSelector::update(int status, double start_move_distolane,
     if (left_alc_car_.size() > 0 &&
         (front_tracks_ids.find(left_alc_car_[0]) == front_tracks_ids.end() ||
          front_tracks_c_ids.find(left_alc_car_[0]) == front_tracks_c_ids.end()) &&
-        status != ROAD_LC_LCHANGE && status != INTER_GS_LC_LCHANGE &&
-        status != INTER_TL_LC_LCHANGE && status != INTER_TR_LC_LCHANGE) {
+        status != ROAD_LC_LCHANGE && status != INTER_GS_LC_LCHANGE && status != INTER_TL_LC_LCHANGE &&
+        status != INTER_TR_LC_LCHANGE) {
       if (status == ROAD_NONE || status == INTER_GS_NONE || status == INTER_TL_NONE || status == INTER_TR_NONE) {
         left_alc_car_.clear();
         premovel_ = false;
@@ -3550,10 +2913,10 @@ void ObjectSelector::update(int status, double start_move_distolane,
     }
 
     if (right_alc_car_.size() > 0 || status == ROAD_LC_RCHANGE) {
-      if (status != ROAD_LC_RCHANGE && status != INTER_GS_LC_RCHANGE &&
-          status != INTER_TL_LC_RCHANGE && status != INTER_TR_LC_RCHANGE &&
-         (front_tracks_ids.find(right_alc_car_[0]) == front_tracks_ids.end() ||
-          front_tracks_c_ids.find(right_alc_car_[0]) == front_tracks_c_ids.end())) {
+      if (status != ROAD_LC_RCHANGE && status != INTER_GS_LC_RCHANGE && status != INTER_TL_LC_RCHANGE &&
+          status != INTER_TR_LC_RCHANGE &&
+          (front_tracks_ids.find(right_alc_car_[0]) == front_tracks_ids.end() ||
+           front_tracks_c_ids.find(right_alc_car_[0]) == front_tracks_c_ids.end())) {
         if (status == ROAD_NONE || status == INTER_GS_NONE || status == INTER_TL_NONE || status == INTER_TR_NONE) {
           right_alc_car_.clear();
           premovel_ = false;
@@ -3577,8 +2940,7 @@ void ObjectSelector::update(int status, double start_move_distolane,
         }
       }
       if (front_tracks_ids.find(left_lb_car_[0]) == front_tracks_ids.end() ||
-          lat_dist_l > lane_width * 1.5 + car_width / 8 ||
-          lat_dist_l < -lane_width) {
+          lat_dist_l > lane_width * 1.5 + car_width / 8 || lat_dist_l < -lane_width) {
         left_lb_car_.clear();
         premovel_ = false;
         premover_ = false;
@@ -3594,8 +2956,7 @@ void ObjectSelector::update(int status, double start_move_distolane,
         }
       }
       if (front_tracks_ids.find(right_lb_car_[0]) == front_tracks_ids.end() ||
-          lat_dist_r < -(lane_width * 1.5 + car_width / 8) ||
-          lat_dist_r > lane_width) {
+          lat_dist_r < -(lane_width * 1.5 + car_width / 8) || lat_dist_r > lane_width) {
         right_lb_car_.clear();
         premovel_ = false;
         premover_ = false;
@@ -3655,7 +3016,6 @@ void ObjectSelector::update(int status, double start_move_distolane,
     }
 
   } else {
-
     left_lb_car_.clear();
     left_lb_car_cnt_.clear();
     neg_right_lb_car_ = true;
@@ -3670,10 +3030,9 @@ void ObjectSelector::update(int status, double start_move_distolane,
     premover_ = false;
   }
   LOG_DEBUG(
-          "WRDEBUG left_alc_car_.size()[%d], left_lb_car_.size()[%d], "
-          "right_alc_car_.size()[%d], right_lb_car_.size()[%d]",
-          left_alc_car_.size(), left_lb_car_.size(), right_alc_car_.size(),
-          right_lb_car_.size());
+      "WRDEBUG left_alc_car_.size()[%d], left_lb_car_.size()[%d], "
+      "right_alc_car_.size()[%d], right_lb_car_.size()[%d]",
+      left_alc_car_.size(), left_lb_car_.size(), right_alc_car_.size(), right_lb_car_.size());
 
   if (upstream_enable_r || upstream_enable_l) {
     if (!(upstream_enable_lb)) {
@@ -3685,8 +3044,8 @@ void ObjectSelector::update(int status, double start_move_distolane,
     if (upstream_enable_l) {
       if (right_alc_car_.size() > 0 || right_lb_car_.size() > 0) {
         if (!upstream_enable_r) {
-          if (status != ROAD_LC_RCHANGE && status != INTER_GS_LC_RCHANGE &&
-              status != INTER_TL_LC_RCHANGE && status != INTER_TR_LC_RCHANGE) {
+          if (status != ROAD_LC_RCHANGE && status != INTER_GS_LC_RCHANGE && status != INTER_TL_LC_RCHANGE &&
+              status != INTER_TR_LC_RCHANGE) {
             right_alc_car_.clear();
             right_lb_car_.clear();
           }
@@ -3698,7 +3057,7 @@ void ObjectSelector::update(int status, double start_move_distolane,
       }
       if (left_alc_car_.size() == 0 && left_lb_car_.size() == 0 && !(upstream_enable_lb)) {
         for (auto &tr : front_tracks_c) {
-          if (tr.v_lead > 2.0) break; // assume front_tracks_c is in d_rel-ascending order
+          if (tr.v_lead > 2.0) break;  // assume front_tracks_c is in d_rel-ascending order
           left_alc_car_.push_back(tr.track_id);
         }
         right_alc_car_.clear();
@@ -3713,8 +3072,8 @@ void ObjectSelector::update(int status, double start_move_distolane,
     } else {
       if ((left_alc_car_.size() > 0 || left_lb_car_.size() > 0)) {
         if (!upstream_enable_l) {
-          if (status != ROAD_LC_LCHANGE && status != INTER_GS_LC_LCHANGE &&
-              status != INTER_TL_LC_LCHANGE && status != INTER_TR_LC_LCHANGE) {
+          if (status != ROAD_LC_LCHANGE && status != INTER_GS_LC_LCHANGE && status != INTER_TL_LC_LCHANGE &&
+              status != INTER_TR_LC_LCHANGE) {
             left_alc_car_.clear();
             left_lb_car_.clear();
           }
@@ -3811,4 +3170,4 @@ void ObjectSelector::update(int status, double start_move_distolane,
 //   context.right_alc_car_cnt = right_alc_car_cnt_;
 // }
 
-} // namespace planning
+}  // namespace planning

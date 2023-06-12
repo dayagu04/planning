@@ -24,7 +24,7 @@
 namespace pnc {
 namespace statespace_sys {
 class StatespaceSISOSys1st {
-public:
+ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   void Reset();
   void Update(double u);
@@ -33,11 +33,10 @@ public:
 
   void InitSSdiscrete(double a, double b, double c, double d);
   void InitSScontinuous(double a, double b, double c, double d, double fs);
-  void InitTFcontinuous(const double *coef_p, const double *coef_z,
-                        const double fs);
+  void InitTFcontinuous(const double *coef_p, const double *coef_z, const double fs);
 
 #ifndef DEBUG
-protected:
+ protected:
 #endif
   /* contitous system state matrices and transfer function */
   double Ac_;
@@ -63,26 +62,21 @@ protected:
 };
 
 class StatespaceSISOSys2nd {
-public:
+ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   void Reset();
   void Update(double u);
   virtual void SwitchBuf(double u, double y);
   double GetOutput();
 
-  void InitSSdiscrete(Eigen::Matrix2d a,
-                      Eigen::Matrix<double, SISO_SYS_ORDER_2ND, 1> b,
-                      Eigen::Matrix<double, 1, SISO_SYS_ORDER_2ND> c,
-                      Eigen::Matrix<double, 1, 1> d);
-  void InitSScontinuous(Eigen::Matrix2d a,
-                        Eigen::Matrix<double, SISO_SYS_ORDER_2ND, 1> b,
-                        Eigen::Matrix<double, 1, SISO_SYS_ORDER_2ND> c,
-                        Eigen::Matrix<double, 1, 1> d, double fs);
-  void InitTFcontinuous(const double *coef_p, const double *coef_z,
-                        const double fs);
+  void InitSSdiscrete(Eigen::Matrix2d a, Eigen::Matrix<double, SISO_SYS_ORDER_2ND, 1> b,
+                      Eigen::Matrix<double, 1, SISO_SYS_ORDER_2ND> c, Eigen::Matrix<double, 1, 1> d);
+  void InitSScontinuous(Eigen::Matrix2d a, Eigen::Matrix<double, SISO_SYS_ORDER_2ND, 1> b,
+                        Eigen::Matrix<double, 1, SISO_SYS_ORDER_2ND> c, Eigen::Matrix<double, 1, 1> d, double fs);
+  void InitTFcontinuous(const double *coef_p, const double *coef_z, const double fs);
 
 #ifndef DEBUG
-protected:
+ protected:
 #endif
   /* contitous system state matrices and transfer function */
   Eigen::Matrix2d Ac_;
@@ -108,26 +102,21 @@ protected:
 };
 
 class StatespaceSISOSys3rd {
-public:
+ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   void Reset();
   void Update(double u);
   virtual void SwitchBuf(double u, double y);
   double GetOutput();
 
-  void InitSSdiscrete(Eigen::Matrix3d a,
-                      Eigen::Matrix<double, SISO_SYS_ORDER_3RD, 1> b,
-                      Eigen::Matrix<double, 1, SISO_SYS_ORDER_3RD> c,
-                      Eigen::Matrix<double, 1, 1> d);
-  void InitSScontinuous(Eigen::Matrix3d a,
-                        Eigen::Matrix<double, SISO_SYS_ORDER_3RD, 1> b,
-                        Eigen::Matrix<double, 1, SISO_SYS_ORDER_3RD> c,
-                        Eigen::Matrix<double, 1, 1> d, double fs);
-  void InitTFcontinuous(const double *coef_p, const double *coef_z,
-                        const double fs);
+  void InitSSdiscrete(Eigen::Matrix3d a, Eigen::Matrix<double, SISO_SYS_ORDER_3RD, 1> b,
+                      Eigen::Matrix<double, 1, SISO_SYS_ORDER_3RD> c, Eigen::Matrix<double, 1, 1> d);
+  void InitSScontinuous(Eigen::Matrix3d a, Eigen::Matrix<double, SISO_SYS_ORDER_3RD, 1> b,
+                        Eigen::Matrix<double, 1, SISO_SYS_ORDER_3RD> c, Eigen::Matrix<double, 1, 1> d, double fs);
+  void InitTFcontinuous(const double *coef_p, const double *coef_z, const double fs);
 
 #ifndef DEBUG
-protected:
+ protected:
 #endif
   /* contitous system state matrices and transfer function */
   Eigen::Matrix3d Ac_;
@@ -153,26 +142,21 @@ protected:
 };
 
 class StatespaceSISOSys4th {
-public:
+ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   void Reset();
   void Update(double u);
   virtual void SwitchBuf(double u, double y);
   double GetOutput();
 
-  void InitSSdiscrete(Eigen::Matrix4d a,
-                      Eigen::Matrix<double, SISO_SYS_ORDER_4TH, 1> b,
-                      Eigen::Matrix<double, 1, SISO_SYS_ORDER_4TH> c,
-                      Eigen::Matrix<double, 1, 1> d);
-  void InitSScontinuous(Eigen::Matrix4d a,
-                        Eigen::Matrix<double, SISO_SYS_ORDER_4TH, 1> b,
-                        Eigen::Matrix<double, 1, SISO_SYS_ORDER_4TH> c,
-                        Eigen::Matrix<double, 1, 1> d, double fs);
-  void InitTFcontinuous(const double *coef_p, const double *coef_z,
-                        const double fs);
+  void InitSSdiscrete(Eigen::Matrix4d a, Eigen::Matrix<double, SISO_SYS_ORDER_4TH, 1> b,
+                      Eigen::Matrix<double, 1, SISO_SYS_ORDER_4TH> c, Eigen::Matrix<double, 1, 1> d);
+  void InitSScontinuous(Eigen::Matrix4d a, Eigen::Matrix<double, SISO_SYS_ORDER_4TH, 1> b,
+                        Eigen::Matrix<double, 1, SISO_SYS_ORDER_4TH> c, Eigen::Matrix<double, 1, 1> d, double fs);
+  void InitTFcontinuous(const double *coef_p, const double *coef_z, const double fs);
 
 #ifndef DEBUG
-protected:
+ protected:
 #endif
   /* contitous system state matrices and transfer function */
   Eigen::Matrix4d Ac_;
@@ -198,28 +182,23 @@ protected:
 };
 
 class StatespaceSISOSys5th {
-public:
+ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   void Reset();
   void Update(double u);
   virtual void SwitchBuf(double u, double y);
   double GetOutput();
 
-  void InitSSdiscrete(
-      Eigen::Matrix<double, SISO_SYS_ORDER_5TH, SISO_SYS_ORDER_5TH> a,
-      Eigen::Matrix<double, SISO_SYS_ORDER_5TH, 1> b,
-      Eigen::Matrix<double, 1, SISO_SYS_ORDER_5TH> c,
-      Eigen::Matrix<double, 1, 1> d);
-  void InitSScontinuous(
-      Eigen::Matrix<double, SISO_SYS_ORDER_5TH, SISO_SYS_ORDER_5TH> a,
-      Eigen::Matrix<double, SISO_SYS_ORDER_5TH, 1> b,
-      Eigen::Matrix<double, 1, SISO_SYS_ORDER_5TH> c,
-      Eigen::Matrix<double, 1, 1> d, double fs);
-  void InitTFcontinuous(const double *coef_p, const double *coef_z,
-                        const double fs);
+  void InitSSdiscrete(Eigen::Matrix<double, SISO_SYS_ORDER_5TH, SISO_SYS_ORDER_5TH> a,
+                      Eigen::Matrix<double, SISO_SYS_ORDER_5TH, 1> b, Eigen::Matrix<double, 1, SISO_SYS_ORDER_5TH> c,
+                      Eigen::Matrix<double, 1, 1> d);
+  void InitSScontinuous(Eigen::Matrix<double, SISO_SYS_ORDER_5TH, SISO_SYS_ORDER_5TH> a,
+                        Eigen::Matrix<double, SISO_SYS_ORDER_5TH, 1> b, Eigen::Matrix<double, 1, SISO_SYS_ORDER_5TH> c,
+                        Eigen::Matrix<double, 1, 1> d, double fs);
+  void InitTFcontinuous(const double *coef_p, const double *coef_z, const double fs);
 
 #ifndef DEBUG
-protected:
+ protected:
 #endif
   /* contitous system state matrices and transfer function */
   Eigen::Matrix<double, SISO_SYS_ORDER_5TH, SISO_SYS_ORDER_5TH> Ac_;
@@ -245,28 +224,23 @@ protected:
 };
 
 class StatespaceSISOSys6th {
-public:
+ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   void Reset();
   void Update(double u);
   virtual void SwitchBuf(double u, double y);
   double GetOutput();
 
-  void InitSSdiscrete(
-      Eigen::Matrix<double, SISO_SYS_ORDER_6TH, SISO_SYS_ORDER_6TH> a,
-      Eigen::Matrix<double, SISO_SYS_ORDER_6TH, 1> b,
-      Eigen::Matrix<double, 1, SISO_SYS_ORDER_6TH> c,
-      Eigen::Matrix<double, 1, 1> d);
-  void InitSScontinuous(
-      Eigen::Matrix<double, SISO_SYS_ORDER_6TH, SISO_SYS_ORDER_6TH> a,
-      Eigen::Matrix<double, SISO_SYS_ORDER_6TH, 1> b,
-      Eigen::Matrix<double, 1, SISO_SYS_ORDER_6TH> c,
-      Eigen::Matrix<double, 1, 1> d, double fs);
-  void InitTFcontinuous(const double *coef_p, const double *coef_z,
-                        const double fs);
+  void InitSSdiscrete(Eigen::Matrix<double, SISO_SYS_ORDER_6TH, SISO_SYS_ORDER_6TH> a,
+                      Eigen::Matrix<double, SISO_SYS_ORDER_6TH, 1> b, Eigen::Matrix<double, 1, SISO_SYS_ORDER_6TH> c,
+                      Eigen::Matrix<double, 1, 1> d);
+  void InitSScontinuous(Eigen::Matrix<double, SISO_SYS_ORDER_6TH, SISO_SYS_ORDER_6TH> a,
+                        Eigen::Matrix<double, SISO_SYS_ORDER_6TH, 1> b, Eigen::Matrix<double, 1, SISO_SYS_ORDER_6TH> c,
+                        Eigen::Matrix<double, 1, 1> d, double fs);
+  void InitTFcontinuous(const double *coef_p, const double *coef_z, const double fs);
 
 #ifndef DEBUG
-protected:
+ protected:
 #endif
   /* contitous system state matrices and transfer function */
   Eigen::Matrix<double, SISO_SYS_ORDER_6TH, SISO_SYS_ORDER_6TH> Ac_;
@@ -292,17 +266,15 @@ protected:
 };
 
 class StatespaceMIMO {
-public:
+ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  StatespaceMIMO(const Eigen::MatrixXd &Ac, const Eigen::MatrixXd &Bc,
-                 const Eigen::MatrixXd &Cc, const Eigen::MatrixXd &Dc,
-                 const double fs) {
+  StatespaceMIMO(const Eigen::MatrixXd &Ac, const Eigen::MatrixXd &Bc, const Eigen::MatrixXd &Cc,
+                 const Eigen::MatrixXd &Dc, const double fs) {
     Init(Ac, Bc, Cc, Dc, fs);
     Reset();
   };
 
-  void Init(const Eigen::MatrixXd &Ac, const Eigen::MatrixXd &Bc,
-            const Eigen::MatrixXd &Cc, const Eigen::MatrixXd &Dc,
+  void Init(const Eigen::MatrixXd &Ac, const Eigen::MatrixXd &Bc, const Eigen::MatrixXd &Cc, const Eigen::MatrixXd &Dc,
             const double fs);
   void Reset();
   void SetInitState(const Eigen::MatrixXd &X0);
@@ -311,7 +283,7 @@ public:
   void GetOutput(Eigen::MatrixXd &out);
   virtual void SwitchBuf(Eigen::MatrixXd &U, Eigen::MatrixXd &Y);
 
-private:
+ private:
   bool init_flag_;
   Eigen::MatrixXd U_;
   Eigen::MatrixXd Y_;
@@ -324,7 +296,7 @@ private:
   Eigen::MatrixXd Cd_pinv_;
 };
 
-} // namespace statespace_sys
-} // namespace pnc
+}  // namespace statespace_sys
+}  // namespace pnc
 
 #endif

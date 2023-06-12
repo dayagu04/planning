@@ -66,8 +66,7 @@ namespace common {
 //   return speed_point;
 // }
 
-PathPoint MakePathPoint(const double x, const double y, const double z,
-                        const double theta, const double kappa,
+PathPoint MakePathPoint(const double x, const double y, const double z, const double theta, const double kappa,
                         const double dkappa, const double ddkappa) {
   PathPoint path_point;
   path_point.set_x(x);
@@ -97,8 +96,7 @@ PathPoint MakePathPoint(const double x, const double y, const double z,
 
 static constexpr size_t int_to_str_buf_size = 22U;
 static constexpr size_t double_to_str_buf_size =
-    4U + std::numeric_limits<double>::digits10 -
-    std::numeric_limits<double>::min_exponent10;
+    4U + std::numeric_limits<double>::digits10 - std::numeric_limits<double>::min_exponent10;
 
 std::string to_string(const uint64_t value) {
   char buffer[int_to_str_buf_size];
@@ -128,18 +126,10 @@ std::string to_string(const int32_t value) {
   return std::string{buffer, end};
 }
 
-std::string to_string(const uint16_t value) {
-  return to_string(static_cast<uint32_t>(value));
-}
-std::string to_string(const int16_t value) {
-  return to_string(static_cast<int32_t>(value));
-}
-std::string to_string(const uint8_t value) {
-  return to_string(static_cast<uint32_t>(value));
-}
-std::string to_string(const int8_t value) {
-  return to_string(static_cast<int32_t>(value));
-}
+std::string to_string(const uint16_t value) { return to_string(static_cast<uint32_t>(value)); }
+std::string to_string(const int16_t value) { return to_string(static_cast<int32_t>(value)); }
+std::string to_string(const uint8_t value) { return to_string(static_cast<uint32_t>(value)); }
+std::string to_string(const int8_t value) { return to_string(static_cast<int32_t>(value)); }
 
 std::string to_string(const double value) {
   char buffer[double_to_str_buf_size];

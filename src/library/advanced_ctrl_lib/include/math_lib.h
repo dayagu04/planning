@@ -20,7 +20,8 @@
 namespace pnc {
 namespace mathlib {
 
-template <class T> void ResetVectorElemFromEigen(std::vector<T> &x_vec) {
+template <class T>
+void ResetVectorElemFromEigen(std::vector<T> &x_vec) {
   for (size_t i = 0; i < x_vec.size(); ++i) {
     x_vec[i].setZero();
   }
@@ -40,7 +41,8 @@ void ResizeVectorElemFromEigenMat(std::vector<T> &x_vec, size_t m, size_t n) {
   }
 }
 
-template <class T> T Constrain(T u, T min, T max) {
+template <class T>
+T Constrain(T u, T min, T max) {
   if (u < min) {
     return min;
   } else if (u > max) {
@@ -50,7 +52,8 @@ template <class T> T Constrain(T u, T min, T max) {
   }
 }
 
-template <class T> T Limit(T u, T limit) {
+template <class T>
+T Limit(T u, T limit) {
   if (u < -limit) {
     return -limit;
   } else if (u > limit) {
@@ -80,16 +83,14 @@ T Interp1(const std::vector<T> &xp, const std::vector<T> &fp, T x) {
   }
 
   int high = 0;
-  while (high < n && x > xp1[high])
-    high += 1;
+  while (high < n && x > xp1[high]) high += 1;
   int low = high - 1;
   if (high == n and x > xp1[low]) {
     return fp[static_cast<int>(fp.size()) - 1];
   } else if (high == 0) {
     return fp[0];
   } else {
-    return (x - xp1[low]) * (fp[high] - fp[low]) / (xp1[high] - xp1[low]) +
-           fp[low];
+    return (x - xp1[low]) * (fp[high] - fp[low]) / (xp1[high] - xp1[low]) + fp[low];
   }
 }
 
@@ -107,7 +108,8 @@ T RateLimit(const T current_value, const T last_value, T min, T max) {
   return current_value;
 }
 
-template <typename T> T Clamp(const T value, T bound1, T bound2) {
+template <typename T>
+T Clamp(const T value, T bound1, T bound2) {
   if (bound1 > bound2) {
     std::swap(bound1, bound2);
   }
@@ -121,10 +123,8 @@ template <typename T> T Clamp(const T value, T bound1, T bound2) {
 }
 
 template <class T>
-std::vector<T> Interp1(const std::vector<T> &xp, const std::vector<T> &fp,
-                       std::vector<T> x) {
-  if (x.empty())
-    return {};
+std::vector<T> Interp1(const std::vector<T> &xp, const std::vector<T> &fp, std::vector<T> x) {
+  if (x.empty()) return {};
   auto n = static_cast<int>(xp.size());
   assert(xp.size() > 0);
   assert(fp.size() > 0);
@@ -132,8 +132,7 @@ std::vector<T> Interp1(const std::vector<T> &xp, const std::vector<T> &fp,
   std::vector<T> result;
   for (auto v : x) {
     int high = 0;
-    while (high < n && v > xp[high])
-      high += 1;
+    while (high < n && v > xp[high]) high += 1;
     int low = high - 1;
     T fx = 0;
     if (high == n and x > xp[low]) {
@@ -141,15 +140,15 @@ std::vector<T> Interp1(const std::vector<T> &xp, const std::vector<T> &fp,
     } else if (high == 0) {
       fx = fp[0];
     } else {
-      fx =
-          (x - xp[low]) * (fp[high] - fp[low]) / (xp[high] - xp[low]) + fp[low];
+      fx = (x - xp[low]) * (fp[high] - fp[low]) / (xp[high] - xp[low]) + fp[low];
     }
     result.push_back(fx);
   }
   return result;
 }
 
-template <class T> bool IsInBound(T u, T a, T b) {
+template <class T>
+bool IsInBound(T u, T a, T b) {
   if ((u >= std::min(a, b)) && (u <= std::max(a, b))) {
     return true;
   } else {
@@ -157,10 +156,20 @@ template <class T> bool IsInBound(T u, T a, T b) {
   }
 }
 
-template <typename T> inline T Square(T x) { return x * x; }
-template <typename T> inline T SSquare(T x) { return x * x; }
-template <typename T> inline T Cube(T x) { return x * x * x; }
-template <typename T> inline T FastTan(T x) {
+template <typename T>
+inline T Square(T x) {
+  return x * x;
+}
+template <typename T>
+inline T SSquare(T x) {
+  return x * x;
+}
+template <typename T>
+inline T Cube(T x) {
+  return x * x * x;
+}
+template <typename T>
+inline T FastTan(T x) {
   return x + 1.0 / 3.0 * (x * x * x);
 }
 
@@ -175,7 +184,7 @@ double DeadzoneTypeI(double d0, double k, double u);
 double GetCurvFactor(double c1, double c2, double vel);
 double DeltaAngleFix(double delta_angle);
 
-} // namespace mathlib
-} // namespace pnc
+}  // namespace mathlib
+}  // namespace pnc
 
 #endif

@@ -16,11 +16,11 @@ namespace common {
 
 typedef struct {
   enum Status {
-    CHANGE_LANE_PREPARATION = 0, // before change lane state
-    IN_CHANGE_LANE = 1,          // during change lane state
-    CHANGE_LANE_BACK = 2,        // lane change back
-    CHANGE_LANE_FAILED = 3,      // change lane failed
-    CHANGE_LANE_FINISHED = 4,    // change lane finished
+    CHANGE_LANE_PREPARATION = 0,  // before change lane state
+    IN_CHANGE_LANE = 1,           // during change lane state
+    CHANGE_LANE_BACK = 2,         // lane change back
+    CHANGE_LANE_FAILED = 3,       // change lane failed
+    CHANGE_LANE_FINISHED = 4,     // change lane finished
   };
   Status status{CHANGE_LANE_PREPARATION};
   int path_id;
@@ -41,10 +41,10 @@ typedef struct {
 
 typedef struct {
   enum Status {
-    IN_BORROW_LANE = 1,       // during borrow lane state
-    BORROW_LANE_KEEP = 2,     // stay in borrowed lane
-    BORROW_LANE_FAILED = 3,   // borrow lane failed
-    BORROW_LANE_FINISHED = 4, // borrow lane finished
+    IN_BORROW_LANE = 1,        // during borrow lane state
+    BORROW_LANE_KEEP = 2,      // stay in borrowed lane
+    BORROW_LANE_FAILED = 3,    // borrow lane failed
+    BORROW_LANE_FINISHED = 4,  // borrow lane finished
   };
   Status status{IN_BORROW_LANE};
   int path_id;
@@ -57,9 +57,9 @@ typedef struct {
 
 typedef struct {
   enum Status {
-    LANE_KEEP = 1,   // during change lane state
-    LANE_CHANGE = 2, // change lane failed
-    LANE_BORROW = 3, // change lane finished
+    LANE_KEEP = 1,    // during change lane state
+    LANE_CHANGE = 2,  // change lane failed
+    LANE_BORROW = 3,  // change lane finished
   };
   Status status{LANE_KEEP};
   ChangeLaneStatus change_lane;
@@ -121,8 +121,7 @@ typedef struct {
   int n_prebrake_curv;
 } PreActionResults;
 
-struct AvdInfo
-{
+struct AvdInfo {
   int priority;
   int ignore_loop;
   bool lon_ignore;
@@ -149,7 +148,7 @@ typedef struct {
   std::vector<double> traj_vel_array;
   std::vector<double> traj_acceleration;
 
-  //for control
+  // for control
   std::string extra_json;
 } PlanningResult;
 
@@ -184,7 +183,6 @@ typedef struct {
   double time_consumption = 0.0;
   std::string trigger_msg_id;
 } PlanningStatus;
-
 
 }  // namespace common
 }  // namespace planning

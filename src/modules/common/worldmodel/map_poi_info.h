@@ -18,4 +18,4 @@ struct MSDMapPOIInfo {
   size_t available;
   std::vector<MSDMapPOIInfoData> map_pois_data;
 };
-} // namespace planning
+}  // namespace planning

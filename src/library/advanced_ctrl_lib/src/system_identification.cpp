@@ -11,8 +11,7 @@
 
 namespace pnc {
 namespace identification {
-void FrequencySweepInput::SetParam(double T_stop, double f_start, double f_stop,
-                                   double amp) {
+void FrequencySweepInput::SetParam(double T_stop, double f_start, double f_stop, double amp) {
   T_stop_ = T_stop;
   f_start_ = f_start;
   f_stop_ = f_stop;
@@ -21,7 +20,7 @@ void FrequencySweepInput::SetParam(double T_stop, double f_start, double f_stop,
   Reset();
 }
 
-void FrequencySweepInput::Tick(double time_now) { // time_now is by sec
+void FrequencySweepInput::Tick(double time_now) {  // time_now is by sec
   if (!init_flag_) {
     // init
     t_ = 0.0;
@@ -66,5 +65,5 @@ void FrequencySweepInput::SwitchBuf(double time_now) {
   theta_ = 0.0;
 }
 
-} // namespace identification
-} // namespace pnc
+}  // namespace identification
+}  // namespace pnc

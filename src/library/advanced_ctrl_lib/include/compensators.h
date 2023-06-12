@@ -16,12 +16,12 @@ namespace pnc {
 namespace compensators {
 /* basic ctrl sys: lead */
 class LeadSys : public statespace_sys::StatespaceSISOSys1st {
-public:
+ public:
   void InitLeadSys(double kp, double lead_fc, double lead_gain, double fs);
   void SetOutBound(double out_min, double out_max);
   void UpdatewithSaturation(double u);
 
-protected:
+ protected:
   double kp_;
   double lead_fc_;
   double lead_gain_;
@@ -31,13 +31,12 @@ protected:
 
 /* basic ctrl sys: leadboost */
 class LeadboostSys : public statespace_sys::StatespaceSISOSys2nd {
-public:
-  void InitLeadboostSys(double kp, double lead_fc, double lead_gain,
-                        double boost_fc, double boost_gain, double fs);
+ public:
+  void InitLeadboostSys(double kp, double lead_fc, double lead_gain, double boost_fc, double boost_gain, double fs);
   void SetOutBound(double out_min, double out_max);
   void UpdatewithSaturation(double u);
 
-protected:
+ protected:
   double kp_;
   double lead_fc_;
   double lead_gain_;
@@ -49,9 +48,8 @@ protected:
 
 /* basic ctrl sys: integrade */
 class IntSubsys : public statespace_sys::StatespaceSISOSys1st {
-public:
-  void InitIntSys(double fi, double i_out_min, double i_out_max,
-                  double reset_gain, double reset_dead_zone, double fs);
+ public:
+  void InitIntSys(double fi, double i_out_min, double i_out_max, double reset_gain, double reset_dead_zone, double fs);
   void UpdatewithSaturation(double u);
   void SetDynamicIgain(double i_gain);
   void SetInteOutbound(double i_out_min, double i_out_max);
@@ -61,7 +59,7 @@ public:
   void SetSaturationFlag(bool saturation_flag);
 
 #ifndef DEBUG
-protected:
+ protected:
 #endif
   bool saturation_flag_;
   double fi_;
@@ -77,22 +75,21 @@ protected:
 
 /* derived ctrl sys: PI */
 class PISys {
-public:
+ public:
   void Reset();
   void Update(double u);
   void Update(double u, bool saturation_flag);
   void SwitchBuf(double u, double y);
   double GetOutput();
-  void InitPISys(double kp, double fi, double out_min, double out_max,
-                 double i_out_min, double i_out_max, double reset_gain,
-                 double reset_dead_zone, double fs);
+  void InitPISys(double kp, double fi, double out_min, double out_max, double i_out_min, double i_out_max,
+                 double reset_gain, double reset_dead_zone, double fs);
   double GetkpTerm();
   double GetkiTerm();
   void SetKpGain(double kp_gain) { kp_gain_ = kp_gain; }
   void SetKiGain(double ki_gain) { ki_gain_ = ki_gain; }
 
 #ifndef DEBUG
-protected:
+ protected:
 #endif
   IntSubsys intesys_;
   double kp_;
@@ -108,7 +105,7 @@ protected:
 
 /* derived ctrl sys: PI-lead */
 class PILeadSys {
-public:
+ public:
   void Reset();
   void Update(double u);
   void Update(double u, bool saturation_flag);
@@ -117,18 +114,15 @@ public:
   double GetCompTerm() { return kcomp_term_; }
   double GetKPTerm() { return kp_term_; }
   double GetKITerm() { return ki_term_; }
-  void InitPILeadSys(double kp, double fi, double lead_fc, double lead_gain,
-                     double out_min, double out_max, double i_out_min,
-                     double i_out_max, double reset_gain,
-                     double reset_dead_zone, double fs);
+  void InitPILeadSys(double kp, double fi, double lead_fc, double lead_gain, double out_min, double out_max,
+                     double i_out_min, double i_out_max, double reset_gain, double reset_dead_zone, double fs);
 
-  void InitPILeadSys(double kp, double fi, double lead_fc, double lead_gain,
-                     double out_min, double out_max, double fs);
+  void InitPILeadSys(double kp, double fi, double lead_fc, double lead_gain, double out_min, double out_max, double fs);
   void SetKpGain(double kp_gain) { pi_sys_.SetKpGain(kp_gain); }
   void SetKiGain(double ki_gain) { pi_sys_.SetKiGain(ki_gain); }
 
 #ifndef DEBUG
-protected:
+ protected:
 #endif
   PISys pi_sys_;
   LeadSys lead_sys_;
@@ -144,19 +138,17 @@ protected:
 
 /* derived ctrl sys: PI-leadboost */
 class PILeadboostSys {
-public:
+ public:
   void Reset();
   void Update(double u);
   void SwitchBuf(double u, double y);
   double GetOutput();
-  void InitPILeadboostSys(double kp, double fi, double lead_fc,
-                          double lead_gain, double boost_fc, double boost_gain,
-                          double out_min, double out_max, double i_out_min,
-                          double i_out_max, double reset_gain,
+  void InitPILeadboostSys(double kp, double fi, double lead_fc, double lead_gain, double boost_fc, double boost_gain,
+                          double out_min, double out_max, double i_out_min, double i_out_max, double reset_gain,
                           double reset_dead_zone, double fs);
 
 #ifndef DEBUG
-protected:
+ protected:
 #endif
   PISys pi_sys_;
   LeadboostSys leadboost_sys_;
@@ -172,11 +164,10 @@ protected:
 
 /* vehicle compensator */
 class VehCompSys {
-public:
+ public:
   void Reset(double y0);
   double OneStep(double u);
-  void Config(double pn1, double pn2, double pn3, double pn4, double pd1,
-              double pd2, double pd3, double pd4);
+  void Config(double pn1, double pn2, double pn3, double pn4, double pd1, double pd2, double pd3, double pd4);
   double Output(double u);
   double x1_k_1_ = 0.0;
   double y1_k_1_ = 0.0;
@@ -197,7 +188,7 @@ public:
   double pd_4_ = 0.0;
 };
 
-} // namespace compensators
-} // namespace pnc
+}  // namespace compensators
+}  // namespace pnc
 
 #endif

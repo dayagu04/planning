@@ -63,23 +63,23 @@ struct LaneBorrowDebugInfo {
 };
 
 struct PathBoundsDeciderDebugInfo {
-  std::vector<std::pair<double, double>> lateral_motion_offset; // s, obs_weight
-  std::vector<
-      std::tuple<double, double, std::string, int, double, double, double>>
-      lateral_l_constrain; // s, constraint_l_left, type, id, constraint_start_buffer, constraint_end_buffer, constraint_lat_buffer;   map_id = -1
-  std::vector<
-      std::tuple<double, double, std::string, int, double, double, double>>
-      lateral_r_constrain; // s, constraint_l_right, type, id, constraint_start_buffer, constraint_end_buffer, constraint_lat_buffer;   map_id = -1
-  std::vector<
-      std::tuple<double, double, std::string, int, double, double, double>>
-      lateral_l_offset;    // s, offset_l_left, type, id, offset_start_buffer, offset_end_buffer, offset_lat_buffer;   map_id = -1
-  std::vector<
-      std::tuple<double, double, std::string, int, double, double, double>>
-      lateral_r_offset;    // s, offset_l_right, type, id, offset_start_buffer, offset_end_buffer, offset_lat_buffer;   map_id = -1
+  std::vector<std::pair<double, double>> lateral_motion_offset;  // s, obs_weight
+  std::vector<std::tuple<double, double, std::string, int, double, double, double>>
+      lateral_l_constrain;  // s, constraint_l_left, type, id, constraint_start_buffer, constraint_end_buffer,
+                            // constraint_lat_buffer;   map_id = -1
+  std::vector<std::tuple<double, double, std::string, int, double, double, double>>
+      lateral_r_constrain;  // s, constraint_l_right, type, id, constraint_start_buffer, constraint_end_buffer,
+                            // constraint_lat_buffer;   map_id = -1
+  std::vector<std::tuple<double, double, std::string, int, double, double, double>>
+      lateral_l_offset;  // s, offset_l_left, type, id, offset_start_buffer, offset_end_buffer, offset_lat_buffer;
+                         // map_id = -1
+  std::vector<std::tuple<double, double, std::string, int, double, double, double>>
+      lateral_r_offset;  // s, offset_l_right, type, id, offset_start_buffer, offset_end_buffer, offset_lat_buffer;
+                         // map_id = -1
   std::vector<std::tuple<double, double, double, double>>
       obs_constrain_expand_lists;  // rel_t, front_expand, back_expand, lat_expand
   std::vector<std::tuple<double, double, double, double>>
-      obs_expecation_expand_lists; // rel_t, front_expand, back_expand, lat_expand
+      obs_expecation_expand_lists;  // rel_t, front_expand, back_expand, lat_expand
 };
 
 struct PiecewiseJerkPathOptimizerDebugInfo {
@@ -104,6 +104,6 @@ struct LateralMotionPlannerOutput {
   PiecewiseJerkPathOptimizerDebugInfo pwjDebugInfo{};
 };
 
-} // namespace planning
+}  // namespace planning
 
 #endif

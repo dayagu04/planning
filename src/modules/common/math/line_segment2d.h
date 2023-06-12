@@ -145,8 +145,7 @@ class LineSegment2d {
    * @return Whether the line segment has an intersect
    *         with the input other_segment.
    */
-  bool GetIntersect(const LineSegment2d &other_segment,
-                    Vec2d *const point) const;
+  bool GetIntersect(const LineSegment2d &other_segment, Vec2d *const point) const;
 
   /**
    * @brief Compute the projection of a vector onto the line segment.
@@ -175,8 +174,7 @@ class LineSegment2d {
    *        the straight line expanded from the line segment.
    * @return The distance from the input point to the perpendicular foot.
    */
-  double GetPerpendicularFoot(const Vec2d &point,
-                              Vec2d *const foot_point) const;
+  double GetPerpendicularFoot(const Vec2d &point, Vec2d *const foot_point) const;
 
  private:
   Vec2d start_;

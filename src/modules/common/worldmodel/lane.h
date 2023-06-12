@@ -40,7 +40,7 @@ enum LaneType {
   LANE_TYPE_RAMP = 11,
 };
 
-enum LaneBias{
+enum LaneBias {
   LANE_BIAS_NONE = 0,
   LANE_BIAS_LEFT = 1,
   LANE_BIAS_RIGHT = 2,
@@ -116,7 +116,6 @@ struct MergePoint {
   MergeType merge_type;
 };
 
-
 struct LaneData {
   int32_t relative_id;
 
@@ -138,4 +137,4 @@ struct Lane {
   std::vector<LaneData> lanes_data;
   LaneSource lane_source;
 };
-} // namespace planning
+}  // namespace planning

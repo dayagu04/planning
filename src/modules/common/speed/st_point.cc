@@ -4,8 +4,7 @@ namespace planning {
 
 STPoint::STPoint(const double s, const double t) : Vec2d(t, s) {}
 
-STPoint::STPoint(const planning_math::Vec2d& vec2d_point)
-    : Vec2d(vec2d_point) {}
+STPoint::STPoint(const planning_math::Vec2d& vec2d_point) : Vec2d(vec2d_point) {}
 
 STPoint::STPoint(const STPoint& point) : Vec2d(point.t(), point.s()) {}
 

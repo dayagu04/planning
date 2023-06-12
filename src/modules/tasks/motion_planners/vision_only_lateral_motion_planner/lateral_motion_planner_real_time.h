@@ -2,13 +2,13 @@
 
 #include <dlfcn.h>
 
-#include "utils/pose2d_utils.h"
-#include "virtual_lane_manager.h"
 #include "config/basic_type.h"
 #include "define/planning_status.h"
 #include "lateral_obstacle.h"
 #include "scenario_state_machine.h"
 #include "task.h"
+#include "utils/pose2d_utils.h"
+#include "virtual_lane_manager.h"
 namespace planning {
 typedef enum {
   NO_REJECTION,
@@ -26,9 +26,8 @@ struct LateralSolverOption {
 
 class VisionLateralMotionPlanner : public Task {
  public:
-  explicit VisionLateralMotionPlanner(
-      const EgoPlanningConfigBuilder *config_builder,
-      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+  explicit VisionLateralMotionPlanner(const EgoPlanningConfigBuilder *config_builder,
+                                      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
 
   virtual ~VisionLateralMotionPlanner() = default;
 
@@ -36,28 +35,21 @@ class VisionLateralMotionPlanner : public Task {
 
   bool update_basic_path(const int &status);
 
-  void update_premove_path(
-      int status, bool should_premove, bool should_suspend, bool accident_ahead,
-      const std::array<std::vector<double>, 2> &avd_car_past);
+  void update_premove_path(int status, bool should_premove, bool should_suspend, bool accident_ahead,
+                           const std::array<std::vector<double>, 2> &avd_car_past);
 
-  bool update_avoidance_path(
-      int status, bool flag_avd, bool accident_ahead, bool should_premove,
-      double dist_rblane,
-      const std::array<std::vector<double>, 2> &avd_car_past,
-      const std::array<std::vector<double>, 2> &avd_sp_car_past);
+  bool update_avoidance_path(int status, bool flag_avd, bool accident_ahead, bool should_premove, double dist_rblane,
+                             const std::array<std::vector<double>, 2> &avd_car_past,
+                             const std::array<std::vector<double>, 2> &avd_sp_car_past);
 
-  void calc_desired_path(const std::array<double, 4> &l_poly,
-                         const std::array<double, 4> &r_poly, double l_prob,
-                         double r_prob, double intercept_width,
-                         std::array<double, 4> &d_poly);
+  void calc_desired_path(const std::array<double, 4> &l_poly, const std::array<double, 4> &r_poly, double l_prob,
+                         double r_prob, double intercept_width, std::array<double, 4> &d_poly);
 
-  double calc_lane_width_by_dist(const std::vector<double> &left_poly,
-                                 const std::vector<double> &right_poly,
+  double calc_lane_width_by_dist(const std::vector<double> &left_poly, const std::vector<double> &right_poly,
                                  const double &dist_x);
 
-  bool update(int lane_status, bool flag_avoid, bool exist_accident_ahead,
-              bool execute_premove, bool should_suspend, double dist_rblane,
-              const std::array<std::vector<double>, 2> &avoid_car_info,
+  bool update(int lane_status, bool flag_avoid, bool exist_accident_ahead, bool execute_premove, bool should_suspend,
+              double dist_rblane, const std::array<std::vector<double>, 2> &avoid_car_info,
               const std::array<std::vector<double>, 2> &avoid_sp_car_info);
 
   bool update_planner_output();
@@ -71,30 +63,22 @@ class VisionLateralMotionPlanner : public Task {
   bool create_lateral_behavior_planner_msg(std::string &plan_msg);
 
   void set_left_lane_boundary_poly() {
-    for (auto i = 0;
-         i < flane_->get_left_lane_boundary().poly_coefficient_size(); ++i) {
+    for (auto i = 0; i < flane_->get_left_lane_boundary().poly_coefficient_size(); ++i) {
       if (i < 4) {
-        left_lane_boundary_poly_.push_back(
-            flane_->get_left_lane_boundary().poly_coefficient(i));
+        left_lane_boundary_poly_.push_back(flane_->get_left_lane_boundary().poly_coefficient(i));
       }
     }
   }
 
   void set_right_lane_boundary_poly() {
-    for (auto i = 0;
-         i < flane_->get_right_lane_boundary().poly_coefficient_size(); ++i) {
+    for (auto i = 0; i < flane_->get_right_lane_boundary().poly_coefficient_size(); ++i) {
       if (i < 4) {
-        right_lane_boundary_poly_.push_back(
-            flane_->get_right_lane_boundary().poly_coefficient(i));
+        right_lane_boundary_poly_.push_back(flane_->get_right_lane_boundary().poly_coefficient(i));
       }
     }
   }
-  const std::vector<double> &left_lane_boundary_poly() {
-    return left_lane_boundary_poly_;
-  };
-  const std::vector<double> &right_lane_boundary_poly() {
-    return right_lane_boundary_poly_;
-  };
+  const std::vector<double> &left_lane_boundary_poly() { return left_lane_boundary_poly_; };
+  const std::vector<double> &right_lane_boundary_poly() { return right_lane_boundary_poly_; };
 
  private:
   VisionLateralMotionPlannerConfig config_;

@@ -25,4 +25,4 @@ struct MSDLaneStratery {
   size_t available;
   MSDLaneStrateryData lane_stratery_data;
 };
-} // namespace planning
+}  // namespace planning

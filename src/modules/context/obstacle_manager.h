@@ -1,21 +1,19 @@
 #pragma once
 
 #include "ego_planning_config.h"
-#include "session.h"
-#include "utils/index_list.h"
+#include "environmental_model.h"
 #include "frenet_obstacle.h"
+#include "fusion_objects.pb.h"
 #include "obstacle.h"
 #include "reference_path.h"
-#include "environmental_model.h"
-#include "fusion_objects.pb.h"
+#include "session.h"
+#include "utils/index_list.h"
 
 namespace planning {
 
 class ObstacleManager {
-
-  public:
-  ObstacleManager(const EgoPlanningConfigBuilder *config_builder,
-                  planning::framework::Session *session);
+ public:
+  ObstacleManager(const EgoPlanningConfigBuilder *config_builder, planning::framework::Session *session);
 
   void update();
 
@@ -34,33 +32,25 @@ class ObstacleManager {
     return road_edge_obstacles_.Add(obstacle.id(), obstacle);
   }
 
-  const IndexedList<int, Obstacle> &get_road_edge_obstacles() const {
-    return road_edge_obstacles_;
-  }
+  const IndexedList<int, Obstacle> &get_road_edge_obstacles() const { return road_edge_obstacles_; }
 
   Obstacle *add_groundline_obstacle(const Obstacle &obstacle) {
     return groundline_obstacles_.Add(obstacle.id(), obstacle);
   }
 
-  const IndexedList<int, Obstacle> &get_groundline_obstacles() const {
-    return groundline_obstacles_;
-  }
+  const IndexedList<int, Obstacle> &get_groundline_obstacles() const { return groundline_obstacles_; }
 
   Obstacle *add_map_static_obstacle(const Obstacle &obstacle) {
     return map_static_obstacles_.Add(obstacle.id(), obstacle);
   }
 
-  const IndexedList<int, Obstacle> &get_map_static_obstacles() const {
-    return map_static_obstacles_;
-  }
+  const IndexedList<int, Obstacle> &get_map_static_obstacles() const { return map_static_obstacles_; }
 
   Obstacle *add_parking_space(const Obstacle &obstacle) {
     return parking_space_obstacles_.Add(obstacle.id(), obstacle);
   }
 
-  const IndexedList<int, Obstacle> &get_parking_space() const {
-    return parking_space_obstacles_;
-  }
+  const IndexedList<int, Obstacle> &get_parking_space() const { return parking_space_obstacles_; }
 
  private:
   void clear();
@@ -78,4 +68,4 @@ class ObstacleManager {
   std::unordered_map<int, std::vector<int>> lanes_virtual_obstacles_;
 };
 
-} // namespace planning
+}  // namespace planning

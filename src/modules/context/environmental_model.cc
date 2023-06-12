@@ -1,30 +1,23 @@
 #include "environmental_model.h"
-#include "trajectory/trajectory_stitcher.h"
 #include "ego_planning_config.h"
-#include "frenet_ego_state.h"
 #include "ego_state_manager.h"
+#include "frenet_ego_state.h"
+#include "lateral_obstacle.h"
 #include "obstacle_manager.h"
 #include "reference_path_manager.h"
 #include "traffic_light_decision_manager.h"
+#include "trajectory/trajectory_stitcher.h"
 #include "virtual_lane_manager.h"
-#include "lateral_obstacle.h"
 
 namespace planning {
 EnvironmentalModel::EnvironmentalModel() {}
 
 // EnvironmentalModel::~EnvironmentalModel() {}
 
-bool EnvironmentalModel::Init(common::SceneType scene_type) {
-  return true;
-}
+bool EnvironmentalModel::Init(common::SceneType scene_type) { return true; }
 
-bool EnvironmentalModel::Update() {
+bool EnvironmentalModel::Update() { return true; }
 
-  return true;
-}
-
-void EnvironmentalModel::UpdateMembers() {
-
-}
+void EnvironmentalModel::UpdateMembers() {}
 
 }  // namespace planning

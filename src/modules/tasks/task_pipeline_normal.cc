@@ -7,19 +7,16 @@
 
 namespace planning {
 
-TaskPipelineNormal::TaskPipelineNormal(
-    const EgoPlanningConfigBuilder *config_builder, framework::Frame *frame)
+TaskPipelineNormal::TaskPipelineNormal(const EgoPlanningConfigBuilder *config_builder, framework::Frame *frame)
     : TaskPipeline(config_builder, frame) {
   name_ = "TaskPipelineNormal";
   config_ = config_builder->cast<EgoPlanningTaskPipelineNormalConfig>();
-  version_to_tasks_["v1"] = {
-      // TaskType::OBSTACLE_DECIDER,
-      TaskType::GENERAL_LATERAL_DECIDER, TaskType::LATERAL_MOTION_PLANNER,
-      // TaskType::LATERAL_OPTIMIZER_V2,
-      TaskType::GENERAL_LONGITUDINAL_DECIDER,
-      // TaskType::PWJ_LONGITUDINAL_MOTION_PLANNER,
-      TaskType::LONGITUDINAL_MOTION_PLANNER,
-      TaskType::RESULT_TRAJECTORY_GENERATOR};
+  version_to_tasks_["v1"] = {// TaskType::OBSTACLE_DECIDER,
+                             TaskType::GENERAL_LATERAL_DECIDER, TaskType::LATERAL_MOTION_PLANNER,
+                             // TaskType::LATERAL_OPTIMIZER_V2,
+                             TaskType::GENERAL_LONGITUDINAL_DECIDER,
+                             // TaskType::PWJ_LONGITUDINAL_MOTION_PLANNER,
+                             TaskType::LONGITUDINAL_MOTION_PLANNER, TaskType::RESULT_TRAJECTORY_GENERATOR};
   CreatePlanningTasks(config_builder);
 }
 
@@ -38,8 +35,7 @@ bool TaskPipelineNormal::Run(const EgoPlanningCandidate &candidate) {
     return false;
   }
 
-  pipeline_context_->Init(frame_, reference_path, trajectory_points,
-                          coarse_planning_info);
+  pipeline_context_->Init(frame_, reference_path, trajectory_points, coarse_planning_info);
 
   auto &ego_prediction_status_info = pipeline_context_->status_info;
 
@@ -48,12 +44,11 @@ bool TaskPipelineNormal::Run(const EgoPlanningCandidate &candidate) {
     auto start_timestamp = IflyTime::Now_ms();
     if (task.second->Execute(frame_)) {
       auto end_timestamp = IflyTime::Now_ms();
-      printf("%s| TASK_DONE =============== TIME_COST: [%f] ms \n",
-             task.second->Name().c_str(), (end_timestamp - start_timestamp));
+      printf("%s| TASK_DONE =============== TIME_COST: [%f] ms \n", task.second->Name().c_str(),
+             (end_timestamp - start_timestamp));
     } else {
       ego_prediction_status_info.error_info =
-          "ERROR|" + task.second->Name() + "|" +
-          ego_prediction_status_info.error_info;
+          "ERROR|" + task.second->Name() + "|" + ego_prediction_status_info.error_info;
       printf("%s| FAIL =============== \n", task.second->Name().c_str());
       return false;
     }
@@ -67,14 +62,12 @@ bool TaskPipelineNormal::Run(const EgoPlanningCandidate &candidate) {
   return true;
 }
 
-void TaskPipelineNormal::CreatePlanningTasks(
-    const EgoPlanningConfigBuilder *config_builder) {
+void TaskPipelineNormal::CreatePlanningTasks(const EgoPlanningConfigBuilder *config_builder) {
   auto version_it = version_to_tasks_.find(config_.pipeline_version);
   assert(version_it != version_to_tasks_.end());
   if (version_it != version_to_tasks_.end()) {
     for (auto &task_type : version_it->second) {
-      std::shared_ptr<Task> task_ptr =
-          Task::Make(task_type, config_builder, pipeline_context_);
+      std::shared_ptr<Task> task_ptr = Task::Make(task_type, config_builder, pipeline_context_);
       planning_tasks_.emplace_back(task_type, task_ptr);
     }
   }

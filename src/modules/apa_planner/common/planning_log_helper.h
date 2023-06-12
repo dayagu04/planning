@@ -14,14 +14,13 @@ class PlanningLogHelper {
   static std::ofstream& GetOfs();
 
  private:
-   static void Init();
+  static void Init();
 
  private:
-
   static std::ofstream ofs_;
   static bool is_init_;
 };
 
 #define PLANNING_LOG PlanningLogHelper::GetOfs()
 
-} // namespace planning
+}  // namespace planning

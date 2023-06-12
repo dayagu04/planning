@@ -35,10 +35,8 @@ namespace math {
 class QpSolver {
  public:
   QpSolver(const Eigen::MatrixXd& kernel_matrix, const Eigen::MatrixXd& offset,
-           const Eigen::MatrixXd& affine_inequality_matrix,
-           const Eigen::MatrixXd& affine_inequality_boundary,
-           const Eigen::MatrixXd& affine_equality_matrix,
-           const Eigen::MatrixXd& affine_equality_boundary);
+           const Eigen::MatrixXd& affine_inequality_matrix, const Eigen::MatrixXd& affine_inequality_boundary,
+           const Eigen::MatrixXd& affine_equality_matrix, const Eigen::MatrixXd& affine_equality_boundary);
   virtual ~QpSolver() = default;
 
   virtual void set_pos_semi_definite_hessian() {}

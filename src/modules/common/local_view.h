@@ -2,19 +2,19 @@
 
 #include <memory>
 
-#include "vehicle_service.pb.h"
-#include "fusion_objects.pb.h"
-#include "localization.pb.h"
-#include "planning_plan.pb.h"
 #include "control_command.pb.h"
+#include "func_state_machine.pb.h"
+#include "fusion_objects.pb.h"
+#include "fusion_road.pb.h"
+#include "hmi_mcu_inner.pb.h"
+#include "localization.pb.h"
 #include "parking_fusion.pb.h"
 #include "parking_slot_list.pb.h"
 #include "parking_slot_select.pb.h"
+#include "planning_plan.pb.h"
 #include "prediction.pb.h"
-#include "fusion_road.pb.h"
 #include "radar_perception_objects.pb.h"
-#include "hmi_mcu_inner.pb.h"
-#include "func_state_machine.pb.h"
+#include "vehicle_service.pb.h"
 
 namespace planning {
 /**
@@ -46,7 +46,7 @@ struct LocalView {
 
   HmiMcuInner::HmiMcuInner hmi_mcu_inner_info;
   double hmi_mcu_inner_info_recv_time = 0.0;
-  
+
   ParkingFusion::ParkingFusionInfo parking_fusion_info;
   double parking_fusion_info_recv_time = 0.0;
 

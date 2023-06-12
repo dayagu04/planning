@@ -24,4 +24,4 @@ struct MSDSceneObjects {
   size_t available;
   std::vector<MSDScenePolygonObject> polygon_objects;
 };
-} // namespace planning
+}  // namespace planning

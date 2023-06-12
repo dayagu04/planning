@@ -25,8 +25,7 @@ void SimpleKinematicsModel::SetInitInput(const SimpleKinematicsInput &input) {
   Gdelta_.SwitchBuf(input_.delta_cmd_, state_.delta_);
 }
 
-void SimpleKinematicsModel::SetInitStateInput(
-    const SimpleKinematicsState &state, const SimpleKinematicsInput &input) {
+void SimpleKinematicsModel::SetInitStateInput(const SimpleKinematicsState &state, const SimpleKinematicsInput &input) {
   state_ = state;
   input_ = input;
   Gacc_.SwitchBuf(input_.acc_cmd_, state_.a_);
@@ -39,9 +38,7 @@ void SimpleKinematicsModel::SetParam(const SimpleKinematicsParameters &param) {
   InitDynamicSys();
 }
 
-void SimpleKinematicsModel::GetState(SimpleKinematicsState &state) {
-  state = state_;
-}
+void SimpleKinematicsModel::GetState(SimpleKinematicsState &state) { state = state_; }
 
 void SimpleKinematicsModel::InitDynamicSys() {
   double num_Gacc[] = {param_.tau_acc_, 1.0};
@@ -60,15 +57,13 @@ void SimpleKinematicsModel::InitDynamicSys() {
   Gdelta_.SwitchBuf(state_.delta_, state_.delta_);
 }
 
-void SimpleKinematicsModel::CalStateDot(Eigen::VectorXd &state_dot,
-                                        Eigen::VectorXd &state) {
+void SimpleKinematicsModel::CalStateDot(Eigen::VectorXd &state_dot, Eigen::VectorXd &state) {
   state_dot[0] = state_.v_ * cos(state[2] + state_.beta_);
   state_dot[1] = state_.v_ * sin(state[2] + state_.beta_);
   state_dot[2] = state_.v_ / param_.L_ * tan(state_.delta_);
 }
 
-void SimpleKinematicsModel::Rk4update(Eigen::VectorXd &state_dot,
-                                      Eigen::VectorXd &state) {
+void SimpleKinematicsModel::Rk4update(Eigen::VectorXd &state_dot, Eigen::VectorXd &state) {
   Eigen::VectorXd K1 = state_dot;
   Eigen::VectorXd K2 = state_dot;
   Eigen::VectorXd K3 = state_dot;
@@ -92,8 +87,7 @@ void SimpleKinematicsModel::Rk4update(Eigen::VectorXd &state_dot,
 
 double SimpleKinematicsModel::get_max_inc_acc(double v) {
   v = v / param_.vel_max_;
-  double acc_inc_max = -8.8732 * (v * v * v * v) + 22.4502 * (v * v * v) -
-                       18.6281 * (v * v) + 4.4017 * (v) + 0.6630;
+  double acc_inc_max = -8.8732 * (v * v * v * v) + 22.4502 * (v * v * v) - 18.6281 * (v * v) + 4.4017 * (v) + 0.6630;
   return acc_inc_max * (param_.acc_inc_max_);
 }
 
@@ -104,8 +98,7 @@ void SimpleKinematicsModel::Update(const SimpleKinematicsInput &input) {
   Gv_.Update(state_.a_);
 
   if (fabs(state_.v_) >= param_.vel_max_) {
-    state_.v_ =
-        mathlib::DoubleConstrain(state_.v_, -param_.vel_max_, param_.vel_max_);
+    state_.v_ = mathlib::DoubleConstrain(state_.v_, -param_.vel_max_, param_.vel_max_);
     Gv_.SwitchBuf(state_.a_, state_.v_);
   } else {
     state_.v_ = Gv_.GetOutput();
@@ -113,8 +106,7 @@ void SimpleKinematicsModel::Update(const SimpleKinematicsInput &input) {
 
   // update acc
   double acc_inc_max = get_max_inc_acc(state_.v_);
-  input_.acc_cmd_ = mathlib::DoubleConstrain(input_.acc_cmd_,
-                                             param_.acc_dec_max_, acc_inc_max);
+  input_.acc_cmd_ = mathlib::DoubleConstrain(input_.acc_cmd_, param_.acc_dec_max_, acc_inc_max);
   Gacc_.Update(input_.acc_cmd_);
   if (state_.a_ > acc_inc_max) {
     state_.a_ = acc_inc_max;
@@ -124,8 +116,7 @@ void SimpleKinematicsModel::Update(const SimpleKinematicsInput &input) {
   }
 
   // updat delta
-  input_.delta_cmd_ = mathlib::DoubleConstrain(
-      input_.delta_cmd_, -param_.delta_max_, param_.delta_max_);
+  input_.delta_cmd_ = mathlib::DoubleConstrain(input_.delta_cmd_, -param_.delta_max_, param_.delta_max_);
   Gdelta_.Update(input_.delta_cmd_);
   state_.delta_ = Gdelta_.GetOutput() + param_.delta_bias_;
 
@@ -144,9 +135,7 @@ void SimpleKinematicsModel::Update(const SimpleKinematicsInput &input) {
   state_.omega_ = state_.v_ / param_.L_ * tan(state_.delta_);
 }
 
-void SimpleKinematicsModel::SetDeltaBias(double bias) {
-  param_.delta_bias_ = bias;
-}
-} // namespace vehicle_dynamics
+void SimpleKinematicsModel::SetDeltaBias(double bias) { param_.delta_bias_ = bias; }
+}  // namespace vehicle_dynamics
 
-} // namespace pnc
+}  // namespace pnc

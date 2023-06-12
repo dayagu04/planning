@@ -9,13 +9,13 @@
 #ifndef __OBSERVERS_H__
 #define __OBSERVERS_H__
 
-#include "statespace_sys.h"
 #include <Eigen/Core>
+#include "statespace_sys.h"
 
 namespace pnc {
 namespace observers {
 class DOBwithIdealModel {
-public:
+ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   DOBwithIdealModel(){};
   DOBwithIdealModel(double fc, double beta2_gain, double model_gain, double fs);
@@ -35,7 +35,7 @@ public:
   double GetModelGain() { return model_gain_; }
   double GetFc() { return fc_; }
 
-private:
+ private:
   void Tick(void);
   double fc_;
   double beta2_gain_;
@@ -57,10 +57,9 @@ private:
 };
 
 class KalmanFilter {
-public:
+ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  void init(const Eigen::MatrixXd &F, const Eigen::MatrixXd &H,
-            const Eigen::MatrixXd &Q, const Eigen::MatrixXd &R,
+  void init(const Eigen::MatrixXd &F, const Eigen::MatrixXd &H, const Eigen::MatrixXd &Q, const Eigen::MatrixXd &R,
             const Eigen::VectorXd &x0);
   void Reset();
 
@@ -79,7 +78,7 @@ public:
   void GetOutput(Eigen::VectorXd &y);
 
 #ifndef DEBUG
-private:
+ private:
 #endif
 
   // system matrix in discrete form
@@ -102,7 +101,7 @@ private:
   Eigen::MatrixXd K_;
 };
 
-} // namespace observers
-} // namespace pnc
+}  // namespace observers
+}  // namespace pnc
 
 #endif

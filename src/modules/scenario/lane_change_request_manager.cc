@@ -6,13 +6,12 @@
 namespace planning {
 
 // class: LaneChangeRequestManager
-LaneChangeRequestManager::LaneChangeRequestManager(
-    framework::Session* session, const EgoPlanningConfigBuilder* config_builder,
-    std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
-    std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
+LaneChangeRequestManager::LaneChangeRequestManager(framework::Session* session,
+                                                   const EgoPlanningConfigBuilder* config_builder,
+                                                   std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
+                                                   std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
     : int_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
-      map_request_(session, config_builder, virtual_lane_mgr,
-                   lane_change_lane_mgr),
+      map_request_(session, config_builder, virtual_lane_mgr, lane_change_lane_mgr),
       act_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       virtual_lane_mgr_(virtual_lane_mgr),
       session_(session) {}
@@ -47,30 +46,24 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     // WB hack:
     bool accident_ahead = false;
     bool not_accident = true;
-    double start_move_distolane = session_->planning_context()
-                                      .scenario_state_machine()
-                                      ->get_start_move_dist_lane();
-    act_request_.Update(lc_status, start_move_distolane, int_request_.tfinish(),
-                        map_request_.tfinish(), accident_ahead, not_accident);
+    double start_move_distolane = session_->planning_context().scenario_state_machine()->get_start_move_dist_lane();
+    act_request_.Update(lc_status, start_move_distolane, int_request_.tfinish(), map_request_.tfinish(), accident_ahead,
+                        not_accident);
   }
 
   LOG_DEBUG(
       "[LaneChangeRequestManager::update] int_request: %d, map_request: %d, "
       "act_request: %d,"
       "int_cancel_reason: %d, turn_signal: %d \n",
-      int_request_.request_type(), map_request_.request_type(),
-      act_request_.request_type(), int_request_cancel_reason_, turn_signal_);
+      int_request_.request_type(), map_request_.request_type(), act_request_.request_type(), int_request_cancel_reason_,
+      turn_signal_);
 
-  if (int_request_cancel_reason_ == MANUAL_CANCEL &&
-      turn_signal_ != NO_CHANGE &&
-      target_lane_virtual_id_ != virtual_lane_mgr_->current_lane_virtual_id() &&
-      request_source_ == MAP_REQUEST) {
+  if (int_request_cancel_reason_ == MANUAL_CANCEL && turn_signal_ != NO_CHANGE &&
+      target_lane_virtual_id_ != virtual_lane_mgr_->current_lane_virtual_id() && request_source_ == MAP_REQUEST) {
     if (turn_signal_ == LEFT_CHANGE) {
-      int_request_.set_left_cancel_freeze_cnt(
-          DisplayStateConfig::DefaultCancelFreezeCnt);
+      int_request_.set_left_cancel_freeze_cnt(DisplayStateConfig::DefaultCancelFreezeCnt);
     } else if (turn_signal_ == RIGHT_CHANGE) {
-      int_request_.set_right_cancel_freeze_cnt(
-          DisplayStateConfig::DefaultCancelFreezeCnt);
+      int_request_.set_right_cancel_freeze_cnt(DisplayStateConfig::DefaultCancelFreezeCnt);
     }
     map_request_.Finish();
     LOG_DEBUG(
@@ -97,18 +90,14 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     LOG_WARNING("[LCRequestManager::update] request: None \n");
     // MDEBUG_JSON_ADD_ITEM(request_shape, "========", LaneChangeRequestManager)
   } else if (request_ == LEFT_CHANGE) {
-    LOG_WARNING(
-        "[LCRequestManager::update] request: Left Change <<<<<<<<<<<<<<<<< \n");
+    LOG_WARNING("[LCRequestManager::update] request: Left Change <<<<<<<<<<<<<<<<< \n");
     LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
   } else {
-    LOG_WARNING(
-        "[LCRequestManager::update] request: Right Change >>>>>>>>>>>>>>>> \n");
+    LOG_WARNING("[LCRequestManager::update] request: Right Change >>>>>>>>>>>>>>>> \n");
     LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
   }
   if (virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)) {
-    int target_lane_order_id =
-        virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)
-            ->get_order_id();
+    int target_lane_order_id = virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)->get_order_id();
     LOG_DEBUG("[LCRequestManager::update] final :target_lane_order_id %d, target_lane_virtual_id: %d \n",
               target_lane_order_id, target_lane_virtual_id_);
   } else {

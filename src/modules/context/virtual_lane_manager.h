@@ -1,13 +1,13 @@
 #ifndef ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_MANAGER_H_
 #define ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_MANAGER_H_
 
-#include "virtual_lane.h"
-#include "virtual_lane_manager.h"
-#include "intersection.h"
+#include <vector>
 #include "Ramp.h"
 #include "fusion_road.pb.h"
+#include "intersection.h"
 #include "log.h"
-#include <vector>
+#include "virtual_lane.h"
+#include "virtual_lane_manager.h"
 
 namespace planning {
 
@@ -21,15 +21,15 @@ class VirtualLaneManager {
  public:
   VirtualLaneManager(planning::framework::Session *session);
   // VirtualLaneManager() = default;
-  ~VirtualLaneManager() {};
+  ~VirtualLaneManager(){};
 
   std::shared_ptr<VirtualLane> get_left_neighbor(std::shared_ptr<VirtualLane> this_lane) const {
-    return this_lane->get_order_id() > 0
-           ? relative_id_lanes_[this_lane->get_order_id() - 1] : nullptr;
+    return this_lane->get_order_id() > 0 ? relative_id_lanes_[this_lane->get_order_id() - 1] : nullptr;
   }
   std::shared_ptr<VirtualLane> get_right_neighbor(std::shared_ptr<VirtualLane> this_lane) const {
-     return this_lane->get_order_id() < static_cast<int>(relative_id_lanes_.size()) - 1
-              ? relative_id_lanes_[this_lane->get_order_id() + 1] : nullptr;
+    return this_lane->get_order_id() < static_cast<int>(relative_id_lanes_.size()) - 1
+               ? relative_id_lanes_[this_lane->get_order_id() + 1]
+               : nullptr;
   }
 
   const std::shared_ptr<VirtualLane> get_current_lane() const {
@@ -57,11 +57,11 @@ class VirtualLaneManager {
       LOG_DEBUG("get mutable lane virtual %d id\n", virtual_id);
       return virtual_id_mapped_lane_[virtual_id];
     } else {
-    LOG_DEBUG("mutable lane virtual %d id is null\n", virtual_id);
-    return nullptr;
+      LOG_DEBUG("mutable lane virtual %d id is null\n", virtual_id);
+      return nullptr;
+    }
   }
-  }
-  std::vector<std::shared_ptr<VirtualLane>>& get_virtual_lanes() { return relative_id_lanes_; }
+  std::vector<std::shared_ptr<VirtualLane>> &get_virtual_lanes() { return relative_id_lanes_; }
   uint get_lane_num() const { return relative_id_lanes_.size(); };
   std::vector<std::shared_ptr<Obstacle>> get_current_lane_obstacle();
   std::vector<std::shared_ptr<Obstacle>> get_left_lane_obstacle();
@@ -70,11 +70,11 @@ class VirtualLaneManager {
   const Intersection &get_intersection_info() const { return intersection_; }
   const Ramp &get_ramp() const { return ramp_; }
 
-  //Destination destination_;
+  // Destination destination_;
 
-  //void update_current_lane();
-  void update_last_fix_lane_id(int flane_virtual_id) { last_fix_lane_virtual_id_ = flane_virtual_id;  }
-  bool update(const FusionRoad::RoadInfo& roads);
+  // void update_current_lane();
+  void update_last_fix_lane_id(int flane_virtual_id) { last_fix_lane_virtual_id_ = flane_virtual_id; }
+  bool update(const FusionRoad::RoadInfo &roads);
   void reset();
 
   double get_distance_to_dash_line(const RequestType direction, uint order_id) const {
@@ -88,7 +88,7 @@ class VirtualLaneManager {
   bool must_change_lane(const std::shared_ptr<VirtualLane> virtual_lane, double on_route_distance_threshold) const;
   int lc_map_decision(const std::shared_ptr<VirtualLane> virtual_lane) const;
   double lc_map_decision_offset(const std::shared_ptr<VirtualLane> virtual_lane) const {
-    //HACK
+    // HACK
     return 5000.;
   };
 
@@ -97,7 +97,7 @@ class VirtualLaneManager {
   void update_virtual_id();
 
   planning::framework::Session *session_ = nullptr;
-  //ReferencePathManager reference_path_manager_;
+  // ReferencePathManager reference_path_manager_;
   int last_fix_lane_virtual_id_ = 0;
   int current_lane_virtual_id_ = 0;
   std::unordered_map<int, std::shared_ptr<VirtualLane>> virtual_id_mapped_lane_;
@@ -111,5 +111,5 @@ class VirtualLaneManager {
   Intersection intersection_;
   Ramp ramp_;
 };
-}
+}  // namespace planning
 #endif

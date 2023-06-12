@@ -1,45 +1,40 @@
 #pragma once
 
 #include "basic_types.pb.h"
+#include "common/local_view.h"
 #include "scheduler.h"
 #include "session.h"
-#include "common/local_view.h"
 
 #include "common/define/debug_output.h"
-#include "planning_plan.pb.h"
 #include "planning_hmi.pb.h"
+#include "planning_plan.pb.h"
 
 namespace planning {
 
 class GeneralPlanning {
-
  public:
   GeneralPlanning();
   virtual ~GeneralPlanning();
 
   void Init();
-  bool RunOnce(const LocalView& local_view,
-               PlanningOutput::PlanningOutput* const planning_output,
-               DebugOutput &debug_info,
-               PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info);
-//   void ResetState() override;
-  planning::framework::Session* MutableSession() {
-    return &session_;
-  }
+  bool RunOnce(const LocalView &local_view, PlanningOutput::PlanningOutput *const planning_output,
+               DebugOutput &debug_info, PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info);
+  //   void ResetState() override;
+  planning::framework::Session *MutableSession() { return &session_; }
+
  private:
   // 解析障碍物
-  void FillPredictionTrajectoryPoint(
-      const std::vector<Prediction::PredictionTrajectoryPoint> &input,
-      Prediction::PredictionTrajectory &output);
+  void FillPredictionTrajectoryPoint(const std::vector<Prediction::PredictionTrajectoryPoint> &input,
+                                     Prediction::PredictionTrajectory &output);
 
-  void FillPredictionTrajectory(
-      const std::vector<Prediction::PredictionTrajectory> &input,
-      Prediction::PredictionObject &output);
+  void FillPredictionTrajectory(const std::vector<Prediction::PredictionTrajectory> &input,
+                                Prediction::PredictionObject &output);
 
-  void FillPredictionObjectInfo(const std::shared_ptr<Prediction::PredictionResult> &prediction_result_raw,
-                                const std::shared_ptr<FusionObjects::FusionObjectsInfo> &fusion_objects_info_raw,
-                                const std::shared_ptr<RadarPerceptionObjects::RadarPerceptionObjectsInfo> &radar_objects_raw,
-                                Prediction::PredictionResult &output_prediction_ojects);
+  void FillPredictionObjectInfo(
+      const std::shared_ptr<Prediction::PredictionResult> &prediction_result_raw,
+      const std::shared_ptr<FusionObjects::FusionObjectsInfo> &fusion_objects_info_raw,
+      const std::shared_ptr<RadarPerceptionObjects::RadarPerceptionObjectsInfo> &radar_objects_raw,
+      Prediction::PredictionResult &output_prediction_ojects);
 
   void UpdateChassisReport(double current_time);
   void UpdateWheelReport(double current_time);
@@ -47,18 +42,14 @@ class GeneralPlanning {
   void UpdateEgoPose(double current_time);
   void UpdateVehicleStatus(double current_time);
 
-  void FillEgoPlanningTrajectoryPoint(
-      const std::vector<Prediction::PredictionTrajectoryPoint> &input,
-      std::vector<planning::common::TrajectoryPoint> &output);
+  void FillEgoPlanningTrajectoryPoint(const std::vector<Prediction::PredictionTrajectoryPoint> &input,
+                                      std::vector<planning::common::TrajectoryPoint> &output);
 
-  void FillEgoPlanningTrajectory(
-      const Prediction::PredictionTrajectory &pred_traj,
-      planning::common::EgoPredictionTrajectory &ego_prediction_traj);
+  void FillEgoPlanningTrajectory(const Prediction::PredictionTrajectory &pred_traj,
+                                 planning::common::EgoPredictionTrajectory &ego_prediction_traj);
 
-  void FillEgoPlanningInfo(
-      const std::shared_ptr<Prediction::PredictionObject>
-          &prediction_object,
-      planning::common::EgoPredictionObject &ego_prediction_info);
+  void FillEgoPlanningInfo(const std::shared_ptr<Prediction::PredictionObject> &prediction_object,
+                           planning::common::EgoPredictionObject &ego_prediction_info);
 
   void FillControlInfo();
   void FillFusionRoadInfo();
@@ -73,8 +64,8 @@ class GeneralPlanning {
   void FillPlanningHmiInfo(double start_timestamp, PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info);
 
  private:
-//   std::shared_ptr<EnvironmentalModel> environmental_model_ = nullptr;
-//   std::shared_ptr<ScenarioManager> scenario_manager_;
+  //   std::shared_ptr<EnvironmentalModel> environmental_model_ = nullptr;
+  //   std::shared_ptr<ScenarioManager> scenario_manager_;
   // planning::framework::Frame *frame_ = nullptr;
   planning::framework::Session session_;
   planning::framework::Scheduler scheduler_;

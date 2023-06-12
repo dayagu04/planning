@@ -31,4 +31,4 @@ struct MSDPerceptionObjects {
   MSDObjectsInterface world_model_result;
   std::vector<MSDPerceptionVisionObject> perception_vision_objects;
 };
-} // namespace planning
+}  // namespace planning

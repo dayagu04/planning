@@ -2,9 +2,9 @@
 
 #include "planning_plan.pb.h"
 
-#include "frame.h"
 #include "apa_planner/apa_planner_base.h"
 #include "apa_planner/diagonal/diagonal_in_trajectory_generator.h"
+#include "frame.h"
 
 namespace planning {
 namespace apa_planner {
@@ -22,5 +22,5 @@ class DiagonalInPlanner : public ApaPlannerBase {
   bool is_stop_planning_ = false;
 };
 
-} // namespace apa_planner
-} // namespace planning
+}  // namespace apa_planner
+}  // namespace planning

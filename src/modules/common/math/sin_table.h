@@ -33,4 +33,4 @@ namespace planning_math {
 extern const float SIN_TABLE[SIN_TABLE_SIZE];
 
 }  // namespace math
-}  // namespace common
+}  // namespace planning

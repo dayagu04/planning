@@ -6,14 +6,12 @@ namespace planning {
 
 class TaskPipelineVisionOnly final : public TaskPipeline {
  public:
-  explicit TaskPipelineVisionOnly(const EgoPlanningConfigBuilder *config_builder,
-                              framework::Frame *frame);
+  explicit TaskPipelineVisionOnly(const EgoPlanningConfigBuilder *config_builder, framework::Frame *frame);
 
   bool Run(const EgoPlanningCandidate &candidate) override;
 
  protected:
-  void CreatePlanningTasks(
-      const EgoPlanningConfigBuilder *config_builder) override;
+  void CreatePlanningTasks(const EgoPlanningConfigBuilder *config_builder) override;
 
  private:
   EgoPlanningTaskPipelineVisionOnlyConfig config_;

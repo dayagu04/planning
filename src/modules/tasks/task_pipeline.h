@@ -12,29 +12,22 @@ enum class TaskPipelineType {
 class EgoPlanningCandidate;
 class TaskPipeline {
  public:
-  explicit TaskPipeline(const EgoPlanningConfigBuilder *config_builder,
-                        framework::Frame *frame);
+  explicit TaskPipeline(const EgoPlanningConfigBuilder *config_builder, framework::Frame *frame);
   virtual ~TaskPipeline() = default;
 
   inline const std::string &Name() const { return name_; }
 
-  std::shared_ptr<TaskPipelineContext> get_pipeline_context() const {
-    return pipeline_context_;
-  }
+  std::shared_ptr<TaskPipelineContext> get_pipeline_context() const { return pipeline_context_; }
 
-  void SetFrame(framework::Frame *frame) {
-    frame_ = frame;
-  }
+  void SetFrame(framework::Frame *frame) { frame_ = frame; }
 
   virtual bool Run(const EgoPlanningCandidate &candidate) = 0;
 
-  static std::shared_ptr<TaskPipeline> Make(
-      const TaskPipelineType &task_type,
-      const EgoPlanningConfigBuilder *config_builder, framework::Frame *frame);
+  static std::shared_ptr<TaskPipeline> Make(const TaskPipelineType &task_type,
+                                            const EgoPlanningConfigBuilder *config_builder, framework::Frame *frame);
 
  protected:
-  virtual void CreatePlanningTasks(
-      const EgoPlanningConfigBuilder *config_builder) = 0;
+  virtual void CreatePlanningTasks(const EgoPlanningConfigBuilder *config_builder) = 0;
 
   std::shared_ptr<TaskPipelineContext> pipeline_context_;
   std::string name_;

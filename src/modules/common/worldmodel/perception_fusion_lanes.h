@@ -28,4 +28,4 @@ struct PerceptionFusionLanes {
   std::vector<PerceptionFusionLaneData> perception_fusion_lanes_data;
 };
 
-} // namespace planning
+}  // namespace planning

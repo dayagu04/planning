@@ -25,12 +25,9 @@ double iLqrModel::UpateDynamics(StateVec &x0, const ControlVec &u0) {
   return cost;
 }
 
-void iLqrModel::AddCost(std::shared_ptr<BaseCostTerm> cost_term) {
-  cost_stack_.emplace_back(std::move(cost_term));
-}
+void iLqrModel::AddCost(std::shared_ptr<BaseCostTerm> cost_term) { cost_stack_.emplace_back(std::move(cost_term)); }
 
-double iLqrModel::GetCost(const State &x, const Control &u,
-                          const size_t &step) {
+double iLqrModel::GetCost(const State &x, const Control &u, const size_t &step) {
   double cost = 0.0;
   double result = 0.0;
   for (auto &each_cost : cost_stack_) {
@@ -58,25 +55,22 @@ double iLqrModel::GetTerminalCost(const State &x) {
 
     // update cost map
 #ifdef __ILQR_DEBUG__
-    cost_map_ptr_->at(each_cost->GetCostId())[solver_config_ptr_->horizon] =
-        result;
+    cost_map_ptr_->at(each_cost->GetCostId())[solver_config_ptr_->horizon] = result;
 #endif
   }
   return cost;
 }
 
 // Updates cx, cu
-void iLqrModel::GetGradientHessian(const State &x, const Control &u,
-                                   const size_t &step, LxMT &lx, LuMT &lu,
-                                   LxxMT &lxx, LxuMT &lxu, LuuMT &luu) {
+void iLqrModel::GetGradientHessian(const State &x, const Control &u, const size_t &step, LxMT &lx, LuMT &lu, LxxMT &lxx,
+                                   LxuMT &lxu, LuuMT &luu) {
   for (auto &each_cost : cost_stack_) {
     each_cost->SetConfig(&cost_config_vec_ptr_->at(step));
     each_cost->GetGradientHessian(x, u, lx, lu, lxx, lxu, luu);
   }
 }
 
-void iLqrModel::GetTerminalGradientHessian(const State &x, LxMT &lx, LuMT &lu,
-                                           LxxMT &lxx, LxuMT &lxu, LuuMT &luu) {
+void iLqrModel::GetTerminalGradientHessian(const State &x, LxMT &lx, LuMT &lu, LxxMT &lxx, LxuMT &lxu, LuuMT &luu) {
   Control u = u_.setZero();
 
   for (auto &each_cost : cost_stack_) {
@@ -85,8 +79,7 @@ void iLqrModel::GetTerminalGradientHessian(const State &x, LxMT &lx, LuMT &lu,
   }
 }
 
-void iLqrModel::InitGuess(StateVec &x0_vec, ControlVec &u0_vec,
-                          double &init_cost) {
+void iLqrModel::InitGuess(StateVec &x0_vec, ControlVec &u0_vec, double &init_cost) {
   if (solver_config_ptr_->warm_start_enable && solver_success_) {
     // use last warm start result
     u0_vec = uk_vec_;
@@ -101,4 +94,4 @@ void iLqrModel::InitGuess(StateVec &x0_vec, ControlVec &u0_vec,
     init_cost = UpateDynamics(x0_vec, u0_vec);
   }
 }
-} // namespace ilqr_solver
+}  // namespace ilqr_solver

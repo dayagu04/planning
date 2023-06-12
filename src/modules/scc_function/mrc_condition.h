@@ -2,18 +2,17 @@
 
 #include <math.h>
 
-#include "session.h"
 #include "ego_planning_config.h"
-#include "planning_context.h"
 #include "mrc_types.h"
+#include "planning_context.h"
+#include "session.h"
 #include "task_basic_types.h"
 
 namespace planning {
 
 class MrcCondition {
  public:
-  MrcCondition(const EgoPlanningConfigBuilder *config_builder,
-               framework::Session *session)
+  MrcCondition(const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
       : config_(config_builder->cast<MrcConditionConfig>()), session_(session) {
     init();
   }
@@ -27,24 +26,18 @@ class MrcCondition {
   bool mrc_request_changed() { return request_type_change_; }
   const int mrc_request() { return static_cast<int>(mrc_request_type_); }
   const int mrc_execute_type() { return static_cast<int>(mrc_execute_type_); }
-  const int execute_type_output() {
-    return static_cast<int>(execute_type_output_);
-  }
+  const int execute_type_output() { return static_cast<int>(execute_type_output_); }
   const MrcBrakeType mrc_brake_type() { return mrc_brake_type_; }
   void mrc_engage_p_gear(double ego_v);
   const bool obtain_mrc_p_gear() { return mrc_engage_p_gear_; }
   void set_mrc_request(const MrcRequestType type) { mrc_request_type_ = type; }
   void clear_mrc_request() { mrc_request_type_ = MrcRequestType::NO_RQT; }
-  void mrc_brake_execute(LonRefPath &lon_ref_path,
-                         PlanningResult &ego_prediction_result,
+  void mrc_brake_execute(LonRefPath &lon_ref_path, PlanningResult &ego_prediction_result,
                          PlanningInitPoint &planning_init_point);
-  void update_inline_brake_by_obstacle(
-      LonDecisionInfo &lon_decision_information,
-      PlanningInitPoint &planning_init_point);
+  void update_inline_brake_by_obstacle(LonDecisionInfo &lon_decision_information,
+                                       PlanningInitPoint &planning_init_point);
   std::pair<double, double> calculate_max_acc(double ego_v);
-  const bool enable_mrc_pull_over() const {
-    return mrc_execute_type_ == MrcExecuteType::PULL_OVER;
-  }
+  const bool enable_mrc_pull_over() const { return mrc_execute_type_ == MrcExecuteType::PULL_OVER; }
 
  private:
   void init();

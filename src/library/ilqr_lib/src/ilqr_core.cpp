@@ -1,15 +1,14 @@
 #include "ilqr_core.h"
-#include "math_lib.h"
 #include <Eigen/Cholesky>
 #include <Eigen/LU>
 #include <cstddef>
 #include <iostream>
 #include <numeric>
+#include "math_lib.h"
 
 using namespace pnc::mathlib;
 namespace ilqr_solver {
-void iLqr::Init(const std::shared_ptr<iLqrModel> ilqr_model,
-                const iLqrSolverConfig &ilqr_sovler_config) {
+void iLqr::Init(const std::shared_ptr<iLqrModel> ilqr_model, const iLqrSolverConfig &ilqr_sovler_config) {
   // init first to make core share config_ptr with model
   Init(ilqr_model);
 
@@ -133,8 +132,7 @@ void iLqr::Solve(const State &x0) {
 
   // calculate t_init_guess_ms
 #ifdef __ILQR_TIMER__
-  time_info_.t_init_guess_ms +=
-      time_info_.GetElapsed(time_info_.all_start, false);
+  time_info_.t_init_guess_ms += time_info_.GetElapsed(time_info_.all_start, false);
 #endif
 
   // update advanced info after init guess
@@ -198,8 +196,7 @@ bool iLqr::BackwardPass() {
 
   dV_.fill(0);
 
-  for (int i = (static_cast<int>(solver_config_ptr_->horizon) - 1); i >= 0;
-       i--) { // back up from end of trajectory
+  for (int i = (static_cast<int>(solver_config_ptr_->horizon) - 1); i >= 0; i--) {  // back up from end of trajectory
 
     const Eigen::MatrixXd fut = fu_vec_[i].transpose();
     const Eigen::MatrixXd fxt = fx_vec_[i].transpose();
@@ -250,15 +247,13 @@ bool iLqr::ForwardPass(double &new_cost, double &expected, const size_t &iter) {
   uk_new_vec_ = uk_vec_;
 
   size_t linsearch_start_index = 0;
-  if (iter > 0 &&
-      solver_info_.iteration_info_vec[iter - 1].linesearch_success == false) {
+  if (iter > 0 && solver_info_.iteration_info_vec[iter - 1].linesearch_success == false) {
     linsearch_start_index = solver_config_ptr_->alpha_vec.size() - 2;
   }
 
   solver_info_.iteration_info_vec[iter].linesearch_count = 0;
   // linesearch process
-  for (size_t i = linsearch_start_index;
-       i < solver_config_ptr_->alpha_vec.size(); ++i) {
+  for (size_t i = linsearch_start_index; i < solver_config_ptr_->alpha_vec.size(); ++i) {
     // set linesearch count for info
     solver_info_.iteration_info_vec[iter].linesearch_count++;
 
@@ -266,25 +261,20 @@ bool iLqr::ForwardPass(double &new_cost, double &expected, const size_t &iter) {
     new_cost = 0.0;
 
     for (size_t i = 0; i < solver_config_ptr_->horizon; ++i) {
-      const auto du =
-          alpha * k_vec_[i] + K_vec_[i] * (xk_new_vec_[i] - xk_vec_[i]);
+      const auto du = alpha * k_vec_[i] + K_vec_[i] * (xk_new_vec_[i] - xk_vec_[i]);
 
       uk_new_vec_[i] = uk_vec_[i] + du;
       du_norm_vec_[i] = du.norm();
 
       new_cost += ilqr_model_ptr_->GetCost(xk_new_vec_[i], uk_new_vec_[i], i);
 
-      xk_new_vec_[i + 1] = ilqr_model_ptr_->UpdateDynamicsOneStep(
-          xk_new_vec_[i], uk_new_vec_[i], i);
+      xk_new_vec_[i + 1] = ilqr_model_ptr_->UpdateDynamicsOneStep(xk_new_vec_[i], uk_new_vec_[i], i);
     }
 
-    const double du_norm =
-        std::accumulate(du_norm_vec_.begin(), du_norm_vec_.end(), 0.0) /
-        du_norm_vec_.size();
+    const double du_norm = std::accumulate(du_norm_vec_.begin(), du_norm_vec_.end(), 0.0) / du_norm_vec_.size();
     solver_info_.iteration_info_vec[iter].du_norm = du_norm;
 
-    new_cost += ilqr_model_ptr_->GetTerminalCost(
-        xk_new_vec_[solver_config_ptr_->horizon]);
+    new_cost += ilqr_model_ptr_->GetTerminalCost(xk_new_vec_[solver_config_ptr_->horizon]);
 
     expected = -alpha * (dV_[0] + alpha * dV_[1]);
 
@@ -316,7 +306,7 @@ void iLqr::SetMaxIter(size_t max_iter) {
 }
 
 void iLqr::InitAdvancedInfo() {
-  // init advanced info
+// init advanced info
 #ifdef __ILQR_DEBUG__
   // +1 means considering init cost
   solver_info_.cost_map_vec.resize(solver_config_ptr_->max_iter + 1);
@@ -342,14 +332,12 @@ void iLqr::InitAdvancedInfo() {
 }
 
 void iLqr::IncreaseLambda() {
-  lambda_gain_ = std::max(solver_config_ptr_->lambda_factor,
-                          lambda_gain_ * solver_config_ptr_->lambda_factor);
+  lambda_gain_ = std::max(solver_config_ptr_->lambda_factor, lambda_gain_ * solver_config_ptr_->lambda_factor);
   lambda_ = std::max(solver_config_ptr_->lambda_start, lambda_ * lambda_gain_);
 }
 
 void iLqr::DecreaseLambda() {
-  lambda_gain_ = std::min(1.0 / solver_config_ptr_->lambda_factor,
-                          lambda_gain_ / solver_config_ptr_->lambda_factor);
+  lambda_gain_ = std::min(1.0 / solver_config_ptr_->lambda_factor, lambda_gain_ / solver_config_ptr_->lambda_factor);
   lambda_ = lambda_ * lambda_gain_ * (lambda_ > solver_config_ptr_->lambda_min);
 }
 
@@ -363,16 +351,13 @@ void iLqr::UpdateDynamicsDerivatives() {
     luu_vec_[i].setZero();
 
     if (i < solver_config_ptr_->horizon) {
-      ilqr_model_ptr_->GetDynamicsDerivatives(xk_vec_[i], uk_vec_[i],
-                                              fx_vec_[i], fu_vec_[i], i);
+      ilqr_model_ptr_->GetDynamicsDerivatives(xk_vec_[i], uk_vec_[i], fx_vec_[i], fu_vec_[i], i);
 
-      ilqr_model_ptr_->GetGradientHessian(xk_vec_[i], uk_vec_[i], i, lx_vec_[i],
-                                          lu_vec_[i], lxx_vec_[i], lxu_vec_[i],
+      ilqr_model_ptr_->GetGradientHessian(xk_vec_[i], uk_vec_[i], i, lx_vec_[i], lu_vec_[i], lxx_vec_[i], lxu_vec_[i],
                                           luu_vec_[i]);
     } else {
-      ilqr_model_ptr_->GetTerminalGradientHessian(xk_vec_[i], lx_vec_[i],
-                                                  lu_vec_[i], lxx_vec_[i],
-                                                  lxu_vec_[i], luu_vec_[i]);
+      ilqr_model_ptr_->GetTerminalGradientHessian(xk_vec_[i], lx_vec_[i], lu_vec_[i], lxx_vec_[i], lxu_vec_[i],
+                                                  luu_vec_[i]);
     }
   }
 }
@@ -395,7 +380,7 @@ bool iLqr::iLqrIteration() {
   bool solver_success = false;
   bool update_success = true;
   for (size_t iter = 0; iter < solver_config_ptr_->max_iter; ++iter) {
-    // timer tag for iteration start
+  // timer tag for iteration start
 #ifdef __ILQR_TIMER__
     time_info_.UpdateStart();
 #endif
@@ -415,10 +400,9 @@ bool iLqr::iLqrIteration() {
       update_success = false;
     }
 
-    // calculate t_compute_deriv_ms
+      // calculate t_compute_deriv_ms
 #ifdef __ILQR_TIMER__
-    time_info_.t_compute_deriv_ms +=
-        time_info_.GetElapsed(time_info_.start, true);
+    time_info_.t_compute_deriv_ms += time_info_.GetElapsed(time_info_.start, true);
 #endif
 
     // STEP 1: backward pass
@@ -427,8 +411,7 @@ bool iLqr::iLqrIteration() {
       backward_pass_count++;
 
       // set backward pass count for info
-      solver_info_.iteration_info_vec[iter].backward_pass_count =
-          backward_pass_count;
+      solver_info_.iteration_info_vec[iter].backward_pass_count = backward_pass_count;
 
       // Update Vx, Vxx, l, L, dV with back_pass
       const bool is_converged = BackwardPass();
@@ -436,21 +419,18 @@ bool iLqr::iLqrIteration() {
         break;
       } else {
         if (lambda_ > solver_config_ptr_->lambda_max ||
-            backward_pass_count >=
-                solver_config_ptr_->max_backward_pass_count) {
+            backward_pass_count >= solver_config_ptr_->max_backward_pass_count) {
           // backward pass failed, this should not happen when input_size = 1
-          solver_info_.solver_condition =
-              iLqrSolveCondition::BACKWARD_PASS_FAIL;
+          solver_info_.solver_condition = iLqrSolveCondition::BACKWARD_PASS_FAIL;
           return false;
         }
         IncreaseLambda();
       }
     }
 
-    // calculate t_backward_pass_ms
+      // calculate t_backward_pass_ms
 #ifdef __ILQR_TIMER__
-    time_info_.t_backward_pass_ms +=
-        time_info_.GetElapsed(time_info_.start, true);
+    time_info_.t_backward_pass_ms += time_info_.GetElapsed(time_info_.start, true);
 #endif
 
     // STEP 2: forward pass
@@ -460,8 +440,7 @@ bool iLqr::iLqrIteration() {
     const double dcost = cost_ - new_cost;
 
     // solver info recording
-    solver_info_.iteration_info_vec[iter].linesearch_success =
-        forward_pass_success;
+    solver_info_.iteration_info_vec[iter].linesearch_success = forward_pass_success;
 
     solver_info_.iteration_info_vec[iter].cost = new_cost;
     solver_info_.iteration_info_vec[iter].dcost = dcost;
@@ -470,8 +449,7 @@ bool iLqr::iLqrIteration() {
 
     // calculate t_forward_pass_ms
 #ifdef __ILQR_TIMER__
-    time_info_.t_forward_pass_ms +=
-        time_info_.GetElapsed(time_info_.start, true);
+    time_info_.t_forward_pass_ms += time_info_.GetElapsed(time_info_.start, true);
 #endif
 
     // update advanced info after forward pass
@@ -505,24 +483,20 @@ bool iLqr::iLqrIteration() {
       if (lambda_ > solver_config_ptr_->lambda_max) {
         solver_success = true;
         if (iter > 0) {
-          solver_info_.solver_condition =
-              iLqrSolveCondition::LINESEARCH_TERMINATE;
+          solver_info_.solver_condition = iLqrSolveCondition::LINESEARCH_TERMINATE;
         } else {
           solver_info_.solver_condition = iLqrSolveCondition::INIT_TERMINATE;
         }
         break;
-      } else if (solver_info_.solver_condition ==
-                 iLqrSolveCondition::NON_POSITIVE_EXPECT) {
+      } else if (solver_info_.solver_condition == iLqrSolveCondition::NON_POSITIVE_EXPECT) {
         solver_success = false;
       } else {
-        if (solver_info_.iteration_info_vec[iter].du_norm <
-            solver_config_ptr_->du_tol) {
+        if (solver_info_.iteration_info_vec[iter].du_norm < solver_config_ptr_->du_tol) {
           // should be considered next
           // when linesearch cannot result in reduced cost, terminate
           solver_success = true;
           if (iter > 0) {
-            solver_info_.solver_condition =
-                iLqrSolveCondition::CONST_CONTROL_TERMINATE;
+            solver_info_.solver_condition = iLqrSolveCondition::CONST_CONTROL_TERMINATE;
           } else {
             solver_info_.solver_condition = iLqrSolveCondition::INIT_TERMINATE;
           }
@@ -533,15 +507,14 @@ bool iLqr::iLqrIteration() {
 
     if (iter == solver_config_ptr_->max_iter - 1) {
       solver_info_.solver_condition = iLqrSolveCondition::MAX_ITER_TERMINATE;
-      solver_success =
-          true; // This situation should not belong to solver success;
+      solver_success = true;  // This situation should not belong to solver success;
     }
-  } // end of iteration loop
+  }  // end of iteration loop
 
   ilqr_model_ptr_->UpdateWarmStart(solver_success, uk_vec_);
 
   return solver_success;
-} // generate_trajectory
+}  // generate_trajectory
 
 void iLqr::UpdateAdvancedInfo(size_t iter) {
   // record x_vec and u_vec for each iteration
@@ -554,37 +527,29 @@ void iLqr::UpdateAdvancedInfo(size_t iter) {
   size_t i = 0;
   for (auto &each_cost : *(ilqr_model_ptr_->GetCostStackPtr())) {
     auto const &vec = cost_map[each_cost->GetCostId()];
-    solver_info_.cost_iter_vec[iter].at(i++) =
-        std::accumulate(vec.begin(), vec.end(), 0.0);
+    solver_info_.cost_iter_vec[iter].at(i++) = std::accumulate(vec.begin(), vec.end(), 0.0);
   }
 }
 
 void iLqr::PrintSolverInfo() {
-  std::cout
-      << "--------------------------------------------------- iLqr solver info "
-         "--------------------------------------------------- "
-      << std::endl;
+  std::cout << "--------------------------------------------------- iLqr solver info "
+               "--------------------------------------------------- "
+            << std::endl;
 
   // iteration info
-  std::cout << "cost size = " << solver_info_.cost_size
-            << ", init cost = " << solver_info_.init_cost
+  std::cout << "cost size = " << solver_info_.cost_size << ", init cost = " << solver_info_.init_cost
             << ", iteration count = " << solver_info_.iter_count
-            << ", solver condition = "
-            << static_cast<size_t>(solver_info_.solver_condition) << std::endl;
+            << ", solver condition = " << static_cast<size_t>(solver_info_.solver_condition) << std::endl;
 
   std::cout << "iteration\tcost\t\treduction\texpect\t\tlambda\t\tLS_count\tLS_"
                "success\tdu_norm\n";
 
   for (size_t iter = 0; iter < solver_info_.iter_count; ++iter) {
-    printf(
-        "%-12ld\t%-12.5g\t%-12.5f\t%-12.5f\t%-12.5f\t%-12ld\t%-12d\t%-12.5f\n",
-        iter, solver_info_.iteration_info_vec[iter].cost,
-        solver_info_.iteration_info_vec[iter].dcost,
-        solver_info_.iteration_info_vec[iter].expect,
-        solver_info_.iteration_info_vec[iter].lambda,
-        solver_info_.iteration_info_vec[iter].linesearch_count,
-        solver_info_.iteration_info_vec[iter].linesearch_success,
-        solver_info_.iteration_info_vec[iter].du_norm);
+    printf("%-12ld\t%-12.5g\t%-12.5f\t%-12.5f\t%-12.5f\t%-12ld\t%-12d\t%-12.5f\n", iter,
+           solver_info_.iteration_info_vec[iter].cost, solver_info_.iteration_info_vec[iter].dcost,
+           solver_info_.iteration_info_vec[iter].expect, solver_info_.iteration_info_vec[iter].lambda,
+           solver_info_.iteration_info_vec[iter].linesearch_count,
+           solver_info_.iteration_info_vec[iter].linesearch_success, solver_info_.iteration_info_vec[iter].du_norm);
   }
 }
 
@@ -616,11 +581,9 @@ void iLqr::PrintCostInfo() {
   std::cout << "cost list: [";
   for (size_t i = 0; i < ilqr_model_ptr_->GetCostStackPtr()->size(); ++i) {
     if (i < ilqr_model_ptr_->GetCostStackPtr()->size() - 1) {
-      std::cout << ilqr_model_ptr_->GetCostStackPtr()->at(i)->GetCostString()
-                << ", ";
+      std::cout << ilqr_model_ptr_->GetCostStackPtr()->at(i)->GetCostString() << ", ";
     } else {
-      std::cout << ilqr_model_ptr_->GetCostStackPtr()->at(i)->GetCostString()
-                << "]" << std::endl;
+      std::cout << ilqr_model_ptr_->GetCostStackPtr()->at(i)->GetCostString() << "]" << std::endl;
     }
   }
   for (size_t iter = 0; iter < solver_info_.iter_count + 1; ++iter) {
@@ -644,15 +607,13 @@ void iLqr::PrintTimeInfo() {
   // time info
   std::cout << "\n-----time info:" << std::endl;
   std::cout << "Total time: " << time_info_.t_one_step_ms << std::endl;
-  std::cout << "compute_derivatives: " << time_info_.t_compute_deriv_ms
-            << std::endl;
+  std::cout << "compute_derivatives: " << time_info_.t_compute_deriv_ms << std::endl;
   std::cout << "backward pass: " << time_info_.t_backward_pass_ms << std::endl;
   std::cout << "forward pass: " << time_info_.t_forward_pass_ms << std::endl;
   std::cout << "other stuff: "
-            << time_info_.t_one_step_ms - (time_info_.t_compute_deriv_ms +
-                                           time_info_.t_backward_pass_ms +
-                                           time_info_.t_forward_pass_ms)
+            << time_info_.t_one_step_ms -
+                   (time_info_.t_compute_deriv_ms + time_info_.t_backward_pass_ms + time_info_.t_forward_pass_ms)
             << std::endl;
 #endif
 }
-} // namespace ilqr_solver
+}  // namespace ilqr_solver

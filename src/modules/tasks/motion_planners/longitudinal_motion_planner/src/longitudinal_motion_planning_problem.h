@@ -72,9 +72,7 @@ class LongitudinalMotionPlanningProblem {
   void SetMaxIter(size_t max_iter) { ilqr_core_ptr_->SetMaxIter(max_iter); };
 
   void Reset();
-  const std::shared_ptr<ilqr_solver::iLqr> GetiLqrCorePtr() const {
-    return ilqr_core_ptr_;
-  }
+  const std::shared_ptr<ilqr_solver::iLqr> GetiLqrCorePtr() const { return ilqr_core_ptr_; }
 
  private:
   std::shared_ptr<ilqr_solver::iLqr> ilqr_core_ptr_;

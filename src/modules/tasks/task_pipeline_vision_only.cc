@@ -7,15 +7,13 @@
 
 namespace planning {
 
-TaskPipelineVisionOnly::TaskPipelineVisionOnly(
-    const EgoPlanningConfigBuilder *config_builder, framework::Frame *frame)
+TaskPipelineVisionOnly::TaskPipelineVisionOnly(const EgoPlanningConfigBuilder *config_builder, framework::Frame *frame)
     : TaskPipeline(config_builder, frame) {
   name_ = "TaskPipelineVisionOnly";
   config_ = config_builder->cast<EgoPlanningTaskPipelineVisionOnlyConfig>();
   version_to_tasks_["v1"] = {
       // TaskType::OBSTACLE_DECIDER,
-      TaskType::LATERAL_DECIDER,
-      TaskType::VISION_LATERAL_MOTION_PLANNER,
+      TaskType::LATERAL_DECIDER, TaskType::VISION_LATERAL_MOTION_PLANNER,
       TaskType::VISION_ONLY_LONGITUDINAL_BEHAVIOR_PLANNER,
       // TaskType::RESULT_TRAJECTORY_GENERATOR
   };
@@ -37,8 +35,7 @@ bool TaskPipelineVisionOnly::Run(const EgoPlanningCandidate &candidate) {
     return false;
   }
 
-  pipeline_context_->Init(frame_, reference_path, trajectory_points,
-                          coarse_planning_info);
+  pipeline_context_->Init(frame_, reference_path, trajectory_points, coarse_planning_info);
 
   auto &ego_prediction_status_info = pipeline_context_->status_info;
 
@@ -47,12 +44,11 @@ bool TaskPipelineVisionOnly::Run(const EgoPlanningCandidate &candidate) {
     auto start_timestamp = IflyTime::Now_ms();
     if (task.second->Execute(frame_)) {
       auto end_timestamp = IflyTime::Now_ms();
-      printf("%s| TASK_DONE =============== TIME_COST: [%f] ms \n",
-             task.second->Name().c_str(), (end_timestamp - start_timestamp));
+      printf("%s| TASK_DONE =============== TIME_COST: [%f] ms \n", task.second->Name().c_str(),
+             (end_timestamp - start_timestamp));
     } else {
       ego_prediction_status_info.error_info =
-          "ERROR|" + task.second->Name() + "|" +
-          ego_prediction_status_info.error_info;
+          "ERROR|" + task.second->Name() + "|" + ego_prediction_status_info.error_info;
       printf("%s| FAIL =============== \n", task.second->Name().c_str());
       return false;
     }
@@ -66,14 +62,12 @@ bool TaskPipelineVisionOnly::Run(const EgoPlanningCandidate &candidate) {
   return true;
 }
 
-void TaskPipelineVisionOnly::CreatePlanningTasks(
-    const EgoPlanningConfigBuilder *config_builder) {
+void TaskPipelineVisionOnly::CreatePlanningTasks(const EgoPlanningConfigBuilder *config_builder) {
   auto version_it = version_to_tasks_.find(config_.pipeline_version);
   assert(version_it != version_to_tasks_.end());
   if (version_it != version_to_tasks_.end()) {
     for (auto &task_type : version_it->second) {
-      std::shared_ptr<Task> task_ptr =
-          Task::Make(task_type, config_builder, pipeline_context_);
+      std::shared_ptr<Task> task_ptr = Task::Make(task_type, config_builder, pipeline_context_);
       planning_tasks_.emplace_back(task_type, task_ptr);
     }
   }

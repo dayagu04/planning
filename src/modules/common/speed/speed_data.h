@@ -16,16 +16,13 @@ class SpeedData : public std::vector<SpeedPoint> {
 
   explicit SpeedData(std::vector<SpeedPoint> speed_points);
 
-  void AppendSpeedPoint(const double s, const double time, const double v,
-                        const double a, const double da);
+  void AppendSpeedPoint(const double s, const double time, const double v, const double a, const double da);
 
   bool EvaluateByTime(const double time, SpeedPoint* const speed_point) const;
 
-  bool EvaluateByTimeWithConstAcc(const double time,
-                                  SpeedPoint* const speed_point) const;
+  bool EvaluateByTimeWithConstAcc(const double time, SpeedPoint* const speed_point) const;
 
-  bool EvaluateByTimeWithConstJerk(const double time,
-                                   SpeedPoint* const speed_point) const;
+  bool EvaluateByTimeWithConstJerk(const double time, SpeedPoint* const speed_point) const;
 
   double TotalTime() const;
 };

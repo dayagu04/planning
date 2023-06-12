@@ -10,9 +10,7 @@ namespace apa_planner {
 
 using framework::Frame;
 
-ApaPlannerDispatcher::ApaPlannerDispatcher() {
-  RegisterPlanners();
-}
+ApaPlannerDispatcher::ApaPlannerDispatcher() { RegisterPlanners(); }
 
 void ApaPlannerDispatcher::RegisterPlanners() {
   planner_list_.clear();
@@ -21,8 +19,7 @@ void ApaPlannerDispatcher::RegisterPlanners() {
 }
 
 bool ApaPlannerDispatcher::Update(Frame* const frame) {
-  const auto& parking_fusion = frame->session()->environmental_model().\
-      get_local_view().parking_fusion_info;
+  const auto& parking_fusion = frame->session()->environmental_model().get_local_view().parking_fusion_info;
   if (!parking_fusion.has_select_slot_id()) {
     PLANNING_LOG << "no select_slot_id" << std::endl;
     return false;
@@ -38,8 +35,7 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
   PLANNING_LOG << "selected_slot_id:" << selected_slot_id << std::endl;
   const auto& slots = parking_fusion.parking_fusion_slot_lists();
   for (int i = 0; i < parking_fusion.parking_fusion_slot_lists_size(); ++i) {
-    if (selected_slot_id ==
-        parking_fusion.parking_fusion_slot_lists()[i].id()) {
+    if (selected_slot_id == parking_fusion.parking_fusion_slot_lists()[i].id()) {
       is_select_slot_id_valid = true;
       PLANNING_LOG << "selected slot type:" << slots[i].type() << std::endl;
       break;
@@ -60,5 +56,5 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
   return is_planning_ok;
 }
 
-} // namespace apa_planner
-} // namespace planning
+}  // namespace apa_planner
+}  // namespace planning

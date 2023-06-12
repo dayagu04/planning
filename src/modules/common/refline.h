@@ -8,8 +8,8 @@
 #include "utils/spline.h"
 // #include "worldmodel/lane.h"
 #include "define/geometry.h"
-#include "path_point.h"
 #include "define/lateral_behavior_planner_output.h"
+#include "path_point.h"
 #include "utils/pose2d_utils.h"
 
 namespace planning {
@@ -136,13 +136,11 @@ const double kInvalidDist = NL_NMAX;
 
 bool equal_zero(double a);
 
-void calc_cartesian_frenet(const std::vector<PathPoint> &path_points, double x,
-                           double y, double &s, double &l, double &v_s,
-                           double &v_l, double &theta, bool get_theta,
-                           double *v = nullptr, double *yaw = nullptr);
+void calc_cartesian_frenet(const std::vector<PathPoint> &path_points, double x, double y, double &s, double &l,
+                           double &v_s, double &v_l, double &theta, bool get_theta, double *v = nullptr,
+                           double *yaw = nullptr);
 
-void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s,
-                           double l, double &x, double &y);
+void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s, double l, double &x, double &y);
 
 // void discrete(double start, double end, double gap,
 //               std::vector<double> &output) {
@@ -153,8 +151,7 @@ void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s,
 // }
 
 template <size_t SIZE>
-double interp(double x, const std::array<double, SIZE> &xp,
-              const std::array<double, SIZE> &fp) {
+double interp(double x, const std::array<double, SIZE> &xp, const std::array<double, SIZE> &fp) {
   int n = xp.size();
 
   int hi = 0;
@@ -168,12 +165,11 @@ double interp(double x, const std::array<double, SIZE> &xp,
   } else {
     if (hi == 0) {
       return fp[0];
-    } else{
+    } else {
       if (equal_zero(xp[hi] - xp[low])) {
         return 0;
       } else {
-        return (x - xp[low]) * (fp[hi] - fp[low]) / (xp[hi] - xp[low]) +
-               fp[low];
+        return (x - xp[low]) * (fp[hi] - fp[low]) / (xp[hi] - xp[low]) + fp[low];
       }
     }
   }
@@ -255,5 +251,4 @@ double interp(double x, const std::array<double, SIZE> &xp,
 //   // int position_;
 // };
 
-} // namespace planning
-
+}  // namespace planning

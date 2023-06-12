@@ -1,11 +1,11 @@
 #include "vehicle_model/vehicle_model.h"
-#include "config/vehicle_param_tmp.h"
-#include "mjson/mjson.hpp"
-#include "config_context.h"
-#include <iterator>
-#include <fstream>
 #include <assert.h>
+#include <fstream>
 #include <iostream>
+#include <iterator>
+#include "config/vehicle_param_tmp.h"
+#include "config_context.h"
+#include "mjson/mjson.hpp"
 // #include <hocon/config_list.hpp>
 // #include <hocon/config_exception.hpp>
 // #include <hocon/config_parse_options.hpp>
@@ -15,10 +15,10 @@ namespace common {
 
 VehicleModelConfig VehicleModel::vehicle_model_config_;
 
-void VehicleModel::RearCenteredKinematicBicycleModel(
-    const VehicleModelConfig& vehicle_model_config,
-    const double predicted_time_horizon, const VehicleState& cur_vehicle_state,
-    VehicleState* predicted_vehicle_state) {
+void VehicleModel::RearCenteredKinematicBicycleModel(const VehicleModelConfig& vehicle_model_config,
+                                                     const double predicted_time_horizon,
+                                                     const VehicleState& cur_vehicle_state,
+                                                     VehicleState* predicted_vehicle_state) {
   // Kinematic bicycle model centered at rear axis center by Euler forward
   // discretization
   // Assume constant control command and constant z axis position
@@ -47,14 +47,10 @@ void VehicleModel::RearCenteredKinematicBicycleModel(
       dt = countdown_time + dt;
       finish_flag = true;
     }
-    double intermidiate_phi =
-        cur_phi + 0.5 * dt * cur_v * cur_vehicle_state.kappa;
-    next_phi =
-        cur_phi + dt * (cur_v + 0.5 * dt * cur_a) * cur_vehicle_state.kappa;
-    next_x =
-        cur_x + dt * (cur_v + 0.5 * dt * cur_a) * std::cos(intermidiate_phi);
-    next_y =
-        cur_y + dt * (cur_v + 0.5 * dt * cur_a) * std::sin(intermidiate_phi);
+    double intermidiate_phi = cur_phi + 0.5 * dt * cur_v * cur_vehicle_state.kappa;
+    next_phi = cur_phi + dt * (cur_v + 0.5 * dt * cur_a) * cur_vehicle_state.kappa;
+    next_x = cur_x + dt * (cur_v + 0.5 * dt * cur_a) * std::cos(intermidiate_phi);
+    next_y = cur_y + dt * (cur_v + 0.5 * dt * cur_a) * std::sin(intermidiate_phi);
 
     next_v = cur_v + dt * cur_a;
     cur_x = next_x;
@@ -69,29 +65,24 @@ void VehicleModel::RearCenteredKinematicBicycleModel(
   predicted_vehicle_state->heading = next_phi;
   predicted_vehicle_state->kappa = cur_vehicle_state.kappa;
   predicted_vehicle_state->linear_velocity = next_v;
-  predicted_vehicle_state->linear_acceleration =
-      cur_vehicle_state.linear_acceleration;
+  predicted_vehicle_state->linear_acceleration = cur_vehicle_state.linear_acceleration;
 }
 
-VehicleState VehicleModel::Predict(const double predicted_time_horizon,
-                                   const VehicleState& cur_vehicle_state) {
+VehicleState VehicleModel::Predict(const double predicted_time_horizon, const VehicleState& cur_vehicle_state) {
   VehicleModelConfig vehicle_model_config;
 
   // Some models not supported for now
-  assert(vehicle_model_config.model_type !=
-         VehicleModelConfig::COM_CENTERED_DYNAMIC_BICYCLE_MODEL);
+  assert(vehicle_model_config.model_type != VehicleModelConfig::COM_CENTERED_DYNAMIC_BICYCLE_MODEL);
   assert(vehicle_model_config.model_type != VehicleModelConfig::MLP_MODEL);
 
   VehicleState predicted_vehicle_state;
-  if (vehicle_model_config.model_type ==
-      VehicleModelConfig::REAR_CENTERED_KINEMATIC_BICYCLE_MODEL) {
+  if (vehicle_model_config.model_type == VehicleModelConfig::REAR_CENTERED_KINEMATIC_BICYCLE_MODEL) {
     auto rear_center_state = cur_vehicle_state;
     // rear_center_state.x -= std::cos(rear_center_state.yaw) *
     //     (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
     // rear_center_state.y -= std::sin(rear_center_state.yaw) *
     //     (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
-    RearCenteredKinematicBicycleModel(vehicle_model_config,
-                                      predicted_time_horizon, rear_center_state,
+    RearCenteredKinematicBicycleModel(vehicle_model_config, predicted_time_horizon, rear_center_state,
                                       &predicted_vehicle_state);
     // predicted_vehicle_state.x += std::cos(rear_center_state.yaw) *
     //     (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
@@ -108,11 +99,10 @@ bool VehicleModel::LoadVehicleModelConfig(std::string config_file_dir) {
   if (!fjson.is_open()) {
     return false;
   }
-  std::string json_str((std::istreambuf_iterator<char>(fjson)),
-                        std::istreambuf_iterator<char>());
+  std::string json_str((std::istreambuf_iterator<char>(fjson)), std::istreambuf_iterator<char>());
   mjson::Reader reader(json_str);
   auto model_type = reader.get<mjson::Json>("model_type").string_value();
-  std::cout<<"vehicle_model :"<<model_type<<std::endl;
+  std::cout << "vehicle_model :" << model_type << std::endl;
   if (model_type == "REAR_CENTERED_KINEMATIC_BICYCLE_MODEL") {
     vehicle_model_config_.model_type = VehicleModelConfig::REAR_CENTERED_KINEMATIC_BICYCLE_MODEL;
     vehicle_model_config_.rc_kinematic_bicycle_model.dt =
@@ -123,8 +113,7 @@ bool VehicleModel::LoadVehicleModelConfig(std::string config_file_dir) {
         reader.get<mjson::Json>("comc_dynamic_bicycle_model").object_value()["dt"].number_value();
   } else if (model_type == "MLP_MODEL") {
     vehicle_model_config_.model_type = VehicleModelConfig::MLP_MODEL;
-    vehicle_model_config_.mlp_model.dt =
-        reader.get<mjson::Json>("mlp_model").object_value()["dt"].number_value();
+    vehicle_model_config_.mlp_model.dt = reader.get<mjson::Json>("mlp_model").object_value()["dt"].number_value();
   } else {
     vehicle_model_config_.model_type = VehicleModelConfig::REAR_CENTERED_KINEMATIC_BICYCLE_MODEL;
     // LOG_NOTICE("Failed to load vehicle model config file %s", config_path.c_str());

@@ -54,4 +54,4 @@ struct MSDTargetPosition {
   MSDParkingTargetPosition parking_target_position;
 };
 
-} // namespace planning
+}  // namespace planning

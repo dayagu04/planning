@@ -40,5 +40,5 @@ struct PathPoint {
   void set_ddkappa(double ddkappa_) { ddkappa = ddkappa_; }
 };
 
-} // namespace planning
+}  // namespace planning
 #endif

@@ -12,12 +12,7 @@ enum class LatObstacleDecisionType { LEFT, RIGHT, IGNORE };
 
 enum class LonObstacleDecisionType { OVERTAKE, YIELD, IGNORE };
 
-enum class LatIngoreType {
-  IGNORE_BOTH,
-  IGNORE_LEFT,
-  IGNORE_RIGHT,
-  IGNORE_NONE
-};
+enum class LatIngoreType { IGNORE_BOTH, IGNORE_LEFT, IGNORE_RIGHT, IGNORE_NONE };
 
 enum class ObsRelPosType { FRONT, CUTIN, CROSSING, ADJACENT, REAR, UNDEFINED };
 
@@ -120,8 +115,7 @@ struct LonRefPath {
 
   std::vector<WeightedBounds> bounds;
   std::vector<WeightedLonLeadBounds> lon_lead_bounds;
-  std::unordered_map<int, std::vector<LonObstacleOverlapInfo>>
-      lon_obstacle_overlap_info;
+  std::unordered_map<int, std::vector<LonObstacleOverlapInfo>> lon_obstacle_overlap_info;
   std::vector<LonObstalceYieldInfo> lon_obstacle_yield_info;
 
   Bounds lon_bound_v;

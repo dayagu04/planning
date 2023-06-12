@@ -3,16 +3,16 @@
 #include <array>
 #include <iostream>
 
-#include "utils/lateral_utils.h"
-#include "virtual_lane_manager.h"
 #include "frame.h"
 #include "ifly_time.h"
-#include "log.h"
-#include "machine_single.hpp"
 #include "lane_change_request_manager.h"
 #include "lane_change_requests/lane_change_lane_manager.h"
+#include "log.h"
+#include "machine_single.hpp"
 #include "session.h"
 #include "task_pipeline.h"
+#include "utils/lateral_utils.h"
+#include "virtual_lane_manager.h"
 
 namespace planning {
 
@@ -32,9 +32,11 @@ struct FsmContext {
 
 using M = hfsm::Machine<FsmContext>;
 
-template <typename T> struct type2int {};
+template <typename T>
+struct type2int {};
 
-template <typename T> struct type2name {};
+template <typename T>
+struct type2name {};
 
 struct StateTransitionContext {
   ScenarioStateEnum source_state;
@@ -69,8 +71,7 @@ struct StateBase : M::Base {
       return;
     }
 
-    LOG_DEBUG("change_state from [%s] to [%s]", context.name.c_str(),
-              type2name<T>::name);
+    LOG_DEBUG("change_state from [%s] to [%s]", context.name.c_str(), type2name<T>::name);
 
     control.changeTo<T>();
     context.state = type2int<T>::value;
@@ -78,23 +79,18 @@ struct StateBase : M::Base {
     context.entry_time = IflyTime::Now_s();
   }
 
-  void change_state(ScenarioStateEnum next_state, Control &control,
-                    FsmContext &context);
+  void change_state(ScenarioStateEnum next_state, Control &control, FsmContext &context);
 
   // wait for TaskPipeline
-  virtual std::shared_ptr<TaskPipeline>
-  get_ego_planning_task_pipeline(planning::framework::Frame *frame) {
+  virtual std::shared_ptr<TaskPipeline> get_ego_planning_task_pipeline(planning::framework::Frame *frame) {
     common::SceneType scene_type = frame->session()->get_scene_type();
-    auto config_builder =
-        frame->session()->environmental_model().config_builder(scene_type);
+    auto config_builder = frame->session()->environmental_model().config_builder(scene_type);
     // 根据定位状态切换实时、长时
-    auto location_valid =
-        frame->session()->environmental_model().location_valid();
+    auto location_valid = frame->session()->environmental_model().location_valid();
     if (location_valid) {
       return TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, frame);
     } else {
-      return TaskPipeline::Make(
-          TaskPipelineType::VISION_ONLY, config_builder, frame);
+      return TaskPipeline::Make(TaskPipelineType::VISION_ONLY, config_builder, frame);
     }
   }
 
@@ -102,8 +98,7 @@ struct StateBase : M::Base {
 
   virtual bool is_leaf() { return false; }
 
-  virtual void get_state_transition_candidates(
-      FsmContext &context, StateTransitionContexts &transition_contexts) {}
+  virtual void get_state_transition_candidates(FsmContext &context, StateTransitionContexts &transition_contexts) {}
 };
 
-} // namespace planning
+}  // namespace planning

@@ -25,7 +25,7 @@ Eigen::Matrix2d Angle2Rotm2d(const double &angle);
 Eigen::Vector2d Vector2dFrom3d(const Eigen::Vector3d v3d);
 double GetAngleFromTwoVec(Eigen::Vector2d a, Eigen::Vector2d b);
 
-} // namespace transform
-} // namespace pnc
+}  // namespace transform
+}  // namespace pnc
 
 #endif

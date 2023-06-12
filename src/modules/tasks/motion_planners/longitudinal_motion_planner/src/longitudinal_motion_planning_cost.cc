@@ -1,26 +1,21 @@
 #include "longitudinal_motion_planning_cost.h"
 
-#include "math_lib.h"
 #include <iostream>
+#include "math_lib.h"
 
 using namespace pnc::mathlib;
 namespace pnc {
 namespace longitudinal_planning {
 // reference cost for s and v
 double ReferenceCostTerm::GetCost(const State &x, const Control &) {
-  return 0.5 * (cost_config_ptr_->at(W_REF_POS) *
-                    Square(x[POS] - cost_config_ptr_->at(REF_POS)) +
-                cost_config_ptr_->at(W_REF_VEL) *
-                    Square(x[VEL] - cost_config_ptr_->at(REF_VEL)));
+  return 0.5 * (cost_config_ptr_->at(W_REF_POS) * Square(x[POS] - cost_config_ptr_->at(REF_POS)) +
+                cost_config_ptr_->at(W_REF_VEL) * Square(x[VEL] - cost_config_ptr_->at(REF_VEL)));
 }
 
-void ReferenceCostTerm::GetGradientHessian(const State &x, const Control &,
-                                           LxMT &lx, LuMT &, LxxMT &lxx,
-                                           LxuMT &, LuuMT &) {
-  lx(POS) += -cost_config_ptr_->at(W_REF_POS) *
-             (cost_config_ptr_->at(REF_POS) - x[POS]);
-  lx(VEL) += -cost_config_ptr_->at(W_REF_VEL) *
-             (cost_config_ptr_->at(REF_VEL) - x[VEL]);
+void ReferenceCostTerm::GetGradientHessian(const State &x, const Control &, LxMT &lx, LuMT &, LxxMT &lxx, LxuMT &,
+                                           LuuMT &) {
+  lx(POS) += -cost_config_ptr_->at(W_REF_POS) * (cost_config_ptr_->at(REF_POS) - x[POS]);
+  lx(VEL) += -cost_config_ptr_->at(W_REF_VEL) * (cost_config_ptr_->at(REF_VEL) - x[VEL]);
 
   lxx(POS, POS) += cost_config_ptr_->at(W_REF_POS);
   lxx(VEL, VEL) += cost_config_ptr_->at(W_REF_VEL);
@@ -31,8 +26,7 @@ double LonAccCostTerm::GetCost(const State &x, const Control &) {
   return 0.5 * cost_config_ptr_->at(W_ACC) * Square(x[ACC]);
 }
 
-void LonAccCostTerm::GetGradientHessian(const State &x, const Control &,
-                                        LxMT &lx, LuMT &, LxxMT &lxx, LxuMT &,
+void LonAccCostTerm::GetGradientHessian(const State &x, const Control &, LxMT &lx, LuMT &, LxxMT &lxx, LxuMT &,
                                         LuuMT &) {
   lx(ACC) += cost_config_ptr_->at(W_ACC) * x[ACC];
   lxx(ACC, ACC) += cost_config_ptr_->at(W_ACC);
@@ -43,8 +37,7 @@ double LonJerkCostTerm::GetCost(const State &x, const Control & /*u*/) {
   return 0.5 * cost_config_ptr_->at(W_JERK) * Square(x[JERK]);
 }
 
-void LonJerkCostTerm::GetGradientHessian(const State &x, const Control & /*u*/,
-                                         LxMT &lx, LuMT & /*lu*/, LxxMT &lxx,
+void LonJerkCostTerm::GetGradientHessian(const State &x, const Control & /*u*/, LxMT &lx, LuMT & /*lu*/, LxxMT &lxx,
                                          LxuMT & /*lxu*/, LuuMT & /*luu*/) {
   lx(JERK) += cost_config_ptr_->at(W_JERK) * x[JERK];
   lxx(JERK, JERK) += cost_config_ptr_->at(W_JERK);
@@ -54,10 +47,8 @@ double LonSnapCostTerm::GetCost(const State & /*x*/, const Control &u) {
   return 0.5 * cost_config_ptr_->at(W_SNAP) * Square(u[SNAP]);
 }
 
-void LonSnapCostTerm::GetGradientHessian(const State & /*x*/, const Control &u,
-                                         LxMT & /*lx*/, LuMT &lu,
-                                         LxxMT & /*lxx*/, LxuMT & /*lxu*/,
-                                         LuuMT &luu) {
+void LonSnapCostTerm::GetGradientHessian(const State & /*x*/, const Control &u, LxMT & /*lx*/, LuMT &lu,
+                                         LxxMT & /*lxx*/, LxuMT & /*lxu*/, LuuMT &luu) {
   lu(SNAP) += cost_config_ptr_->at(W_SNAP) * u[SNAP];
   luu(SNAP, SNAP) += cost_config_ptr_->at(W_SNAP);
 }
@@ -66,27 +57,22 @@ void LonSnapCostTerm::GetGradientHessian(const State & /*x*/, const Control &u,
 double LonPosBoundCostTerm::GetCost(const State &x, const Control &) {
   double cost = 0.0;
   if (x[POS] > cost_config_ptr_->at(POS_MAX)) {
-    cost = 0.5 * cost_config_ptr_->at(W_POS_BOUND) *
-           Square(x[POS] - cost_config_ptr_->at(POS_MAX));
+    cost = 0.5 * cost_config_ptr_->at(W_POS_BOUND) * Square(x[POS] - cost_config_ptr_->at(POS_MAX));
   } else if (x[POS] < cost_config_ptr_->at(POS_MIN)) {
-    cost = 0.5 * cost_config_ptr_->at(W_POS_BOUND) *
-           Square(x[POS] - cost_config_ptr_->at(POS_MIN));
+    cost = 0.5 * cost_config_ptr_->at(W_POS_BOUND) * Square(x[POS] - cost_config_ptr_->at(POS_MIN));
   }
 
   return cost;
 }
 
-void LonPosBoundCostTerm::GetGradientHessian(const State &x, const Control &,
-                                             LxMT &lx, LuMT &, LxxMT &lxx,
-                                             LxuMT &, LuuMT &) {
+void LonPosBoundCostTerm::GetGradientHessian(const State &x, const Control &, LxMT &lx, LuMT &, LxxMT &lxx, LxuMT &,
+                                             LuuMT &) {
   if (x[POS] > cost_config_ptr_->at(POS_MAX)) {
-    lx(POS) += cost_config_ptr_->at(W_POS_BOUND) *
-               (x[POS] - cost_config_ptr_->at(POS_MAX));
+    lx(POS) += cost_config_ptr_->at(W_POS_BOUND) * (x[POS] - cost_config_ptr_->at(POS_MAX));
 
     lxx(POS, POS) += cost_config_ptr_->at(W_POS_BOUND);
   } else if (x[POS] < cost_config_ptr_->at(POS_MIN)) {
-    lx(POS) += cost_config_ptr_->at(W_POS_BOUND) *
-               (x[POS] - cost_config_ptr_->at(POS_MIN));
+    lx(POS) += cost_config_ptr_->at(W_POS_BOUND) * (x[POS] - cost_config_ptr_->at(POS_MIN));
 
     lxx(POS, POS) += cost_config_ptr_->at(W_POS_BOUND);
   }
@@ -96,27 +82,22 @@ void LonPosBoundCostTerm::GetGradientHessian(const State &x, const Control &,
 double LonVelBoundCostTerm::GetCost(const State &x, const Control &) {
   double cost = 0.0;
   if (x[VEL] > cost_config_ptr_->at(VEL_MAX)) {
-    cost = 0.5 * cost_config_ptr_->at(W_VEL_BOUND) *
-           Square(x[VEL] - cost_config_ptr_->at(VEL_MAX));
+    cost = 0.5 * cost_config_ptr_->at(W_VEL_BOUND) * Square(x[VEL] - cost_config_ptr_->at(VEL_MAX));
   } else if (x[VEL] < cost_config_ptr_->at(VEL_MIN)) {
-    cost = 0.5 * cost_config_ptr_->at(W_VEL_BOUND) *
-           Square(x[VEL] - cost_config_ptr_->at(VEL_MIN));
+    cost = 0.5 * cost_config_ptr_->at(W_VEL_BOUND) * Square(x[VEL] - cost_config_ptr_->at(VEL_MIN));
   }
 
   return cost;
 }
 
-void LonVelBoundCostTerm::GetGradientHessian(const State &x, const Control &,
-                                             LxMT &lx, LuMT &, LxxMT &lxx,
-                                             LxuMT &, LuuMT &) {
+void LonVelBoundCostTerm::GetGradientHessian(const State &x, const Control &, LxMT &lx, LuMT &, LxxMT &lxx, LxuMT &,
+                                             LuuMT &) {
   if (x[VEL] > cost_config_ptr_->at(VEL_MAX)) {
-    lx(VEL) += cost_config_ptr_->at(W_VEL_BOUND) *
-               (x[VEL] - cost_config_ptr_->at(VEL_MAX));
+    lx(VEL) += cost_config_ptr_->at(W_VEL_BOUND) * (x[VEL] - cost_config_ptr_->at(VEL_MAX));
 
     lxx(VEL, VEL) += cost_config_ptr_->at(W_VEL_BOUND);
   } else if (x[VEL] < cost_config_ptr_->at(VEL_MIN)) {
-    lx(VEL) += cost_config_ptr_->at(W_VEL_BOUND) *
-               (x[VEL] - cost_config_ptr_->at(VEL_MIN));
+    lx(VEL) += cost_config_ptr_->at(W_VEL_BOUND) * (x[VEL] - cost_config_ptr_->at(VEL_MIN));
 
     lxx(VEL, VEL) += cost_config_ptr_->at(W_VEL_BOUND);
   }
@@ -126,27 +107,22 @@ void LonVelBoundCostTerm::GetGradientHessian(const State &x, const Control &,
 double LonAccBoundCostTerm::GetCost(const State &x, const Control &) {
   double cost = 0.0;
   if (x[ACC] > cost_config_ptr_->at(ACC_MAX)) {
-    cost = 0.5 * cost_config_ptr_->at(W_ACC_BOUND) *
-           Square(x[ACC] - cost_config_ptr_->at(ACC_MAX));
+    cost = 0.5 * cost_config_ptr_->at(W_ACC_BOUND) * Square(x[ACC] - cost_config_ptr_->at(ACC_MAX));
   } else if (x[ACC] < cost_config_ptr_->at(ACC_MIN)) {
-    cost = 0.5 * cost_config_ptr_->at(W_ACC_BOUND) *
-           Square(x[ACC] - cost_config_ptr_->at(ACC_MIN));
+    cost = 0.5 * cost_config_ptr_->at(W_ACC_BOUND) * Square(x[ACC] - cost_config_ptr_->at(ACC_MIN));
   }
 
   return cost;
 }
 
-void LonAccBoundCostTerm::GetGradientHessian(const State &x, const Control &,
-                                             LxMT &lx, LuMT &, LxxMT &lxx,
-                                             LxuMT &, LuuMT &) {
+void LonAccBoundCostTerm::GetGradientHessian(const State &x, const Control &, LxMT &lx, LuMT &, LxxMT &lxx, LxuMT &,
+                                             LuuMT &) {
   if (x[ACC] > cost_config_ptr_->at(ACC_MAX)) {
-    lx(ACC) += cost_config_ptr_->at(W_ACC_BOUND) *
-               (x[ACC] - cost_config_ptr_->at(ACC_MAX));
+    lx(ACC) += cost_config_ptr_->at(W_ACC_BOUND) * (x[ACC] - cost_config_ptr_->at(ACC_MAX));
 
     lxx(ACC, ACC) += cost_config_ptr_->at(W_ACC_BOUND);
   } else if (x[ACC] < cost_config_ptr_->at(ACC_MIN)) {
-    lx(ACC) += cost_config_ptr_->at(W_ACC_BOUND) *
-               (x[ACC] - cost_config_ptr_->at(ACC_MIN));
+    lx(ACC) += cost_config_ptr_->at(W_ACC_BOUND) * (x[ACC] - cost_config_ptr_->at(ACC_MIN));
 
     lxx(ACC, ACC) += cost_config_ptr_->at(W_ACC_BOUND);
   }
@@ -156,29 +132,22 @@ void LonAccBoundCostTerm::GetGradientHessian(const State &x, const Control &,
 double LonJerkBoundCostTerm::GetCost(const State &x, const Control & /*u*/) {
   double cost = 0.0;
   if (x[JERK] > cost_config_ptr_->at(JERK_MAX)) {
-    cost = 0.5 * cost_config_ptr_->at(W_JERK_BOUND) *
-           Square(x[JERK] - cost_config_ptr_->at(JERK_MAX));
+    cost = 0.5 * cost_config_ptr_->at(W_JERK_BOUND) * Square(x[JERK] - cost_config_ptr_->at(JERK_MAX));
   } else if (x[JERK] < cost_config_ptr_->at(JERK_MIN)) {
-    cost = 0.5 * cost_config_ptr_->at(W_JERK_BOUND) *
-           Square(x[JERK] - cost_config_ptr_->at(JERK_MIN));
+    cost = 0.5 * cost_config_ptr_->at(W_JERK_BOUND) * Square(x[JERK] - cost_config_ptr_->at(JERK_MIN));
   }
 
   return cost;
 }
 
-void LonJerkBoundCostTerm::GetGradientHessian(const State &x,
-                                              const Control & /*u*/, LxMT &lx,
-                                              LuMT & /*lu*/, LxxMT &lxx,
-                                              LxuMT & /*lxu*/,
-                                              LuuMT & /*luu*/) {
+void LonJerkBoundCostTerm::GetGradientHessian(const State &x, const Control & /*u*/, LxMT &lx, LuMT & /*lu*/,
+                                              LxxMT &lxx, LxuMT & /*lxu*/, LuuMT & /*luu*/) {
   if (x[JERK] > cost_config_ptr_->at(JERK_MAX)) {
-    lx(JERK) += cost_config_ptr_->at(W_JERK_BOUND) *
-                (x[JERK] - cost_config_ptr_->at(JERK_MAX));
+    lx(JERK) += cost_config_ptr_->at(W_JERK_BOUND) * (x[JERK] - cost_config_ptr_->at(JERK_MAX));
 
     lxx(JERK, JERK) += cost_config_ptr_->at(W_JERK_BOUND);
   } else if (x[JERK] < cost_config_ptr_->at(JERK_MIN)) {
-    lx(JERK) += cost_config_ptr_->at(W_JERK_BOUND) *
-                (x[JERK] - cost_config_ptr_->at(JERK_MIN));
+    lx(JERK) += cost_config_ptr_->at(W_JERK_BOUND) * (x[JERK] - cost_config_ptr_->at(JERK_MIN));
 
     lxx(JERK, JERK) += cost_config_ptr_->at(W_JERK_BOUND);
   }
@@ -195,8 +164,7 @@ double LonStopPointCost::GetCost(const State &x, const Control &) {
   return cost;
 }
 
-void LonStopPointCost::GetGradientHessian(const State &x, const Control &,
-                                          LxMT &lx, LuMT &, LxxMT &lxx, LxuMT &,
+void LonStopPointCost::GetGradientHessian(const State &x, const Control &, LxMT &lx, LuMT &, LxxMT &lxx, LxuMT &,
                                           LuuMT &) {
   if ((x[POS] <= cost_config_ptr_->at(S_STOP) && x[VEL] <= 0.0) ||
       (x[POS] > cost_config_ptr_->at(S_STOP) && x[VEL] >= 0.0)) {

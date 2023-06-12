@@ -5,17 +5,17 @@
 #include <typeinfo>
 #include <unordered_map>
 
-#include "log.h"
-#include "local_view.h"
-#include "ego_planning_config.h"
-#include "prediction_object.h"
-#include "parking_slot_manager.h"
-#include "vehicle_service.pb.h"
-#include "planning_config.pb.h"
-#include "vehicle_status.pb.h"
-#include "fusion_objects.pb.h"
-#include "prediction.pb.h"
 #include "config/vehicle_param.h"
+#include "ego_planning_config.h"
+#include "fusion_objects.pb.h"
+#include "local_view.h"
+#include "log.h"
+#include "parking_slot_manager.h"
+#include "planning_config.pb.h"
+#include "prediction.pb.h"
+#include "prediction_object.h"
+#include "vehicle_service.pb.h"
+#include "vehicle_status.pb.h"
 
 namespace planning {
 
@@ -74,16 +74,10 @@ class EnvironmentalModel {
 
   const planning::VehicleParam &vehicle_param() const { return vehicle_param_; }
 
-  void set_vehicle_param(const planning::VehicleParam &vehicle_param) {
-    vehicle_param_ = vehicle_param;
-  }
+  void set_vehicle_param(const planning::VehicleParam &vehicle_param) { vehicle_param_ = vehicle_param; }
 
-  const std::vector<PredictionObject> &get_prediction_info() const {
-    return prediction_info_;
-  }
-  std::vector<PredictionObject> &get_mutable_prediction_info() {
-    return prediction_info_;
-  }
+  const std::vector<PredictionObject> &get_prediction_info() const { return prediction_info_; }
+  std::vector<PredictionObject> &get_mutable_prediction_info() { return prediction_info_; }
 
   const std::unordered_map<Common::SensorType, std::vector<PredictionObject>> &get_surr_radar_prediction_info() const {
     return surr_radar_map_info_;
@@ -95,27 +89,14 @@ class EnvironmentalModel {
 
   const std::shared_ptr<EgoStateManager> &get_ego_state_manager() const { return ego_state_manager_; }
 
-  void set_ego_state(std::shared_ptr<EgoStateManager> ego_state_manager) {
-    ego_state_manager_ = ego_state_manager;
-  }
+  void set_ego_state(std::shared_ptr<EgoStateManager> ego_state_manager) { ego_state_manager_ = ego_state_manager; }
 
-  const std::shared_ptr<ObstacleManager> &get_obstacle_manager() const{
-    return obstacle_manager_;
-  }
-  std::shared_ptr<ObstacleManager> &mutable_obstacle_manager() {
-    return obstacle_manager_;
-  }
-  void set_obstacle_manager(
-      std::shared_ptr<ObstacleManager> obstacle_manager) {
-    obstacle_manager_ = obstacle_manager;
-  }
+  const std::shared_ptr<ObstacleManager> &get_obstacle_manager() const { return obstacle_manager_; }
+  std::shared_ptr<ObstacleManager> &mutable_obstacle_manager() { return obstacle_manager_; }
+  void set_obstacle_manager(std::shared_ptr<ObstacleManager> obstacle_manager) { obstacle_manager_ = obstacle_manager; }
 
-  const std::shared_ptr<VirtualLaneManager> &get_virtual_lane_manager() const {
-    return virtual_lane_manager_;
-  }
-  std::shared_ptr<VirtualLaneManager> &mutable_virtual_lane_manager() {
-    return virtual_lane_manager_;
-  }
+  const std::shared_ptr<VirtualLaneManager> &get_virtual_lane_manager() const { return virtual_lane_manager_; }
+  std::shared_ptr<VirtualLaneManager> &mutable_virtual_lane_manager() { return virtual_lane_manager_; }
   void set_virtual_lane_manager(std::shared_ptr<VirtualLaneManager> virtual_lane_manager) {
     virtual_lane_manager_ = virtual_lane_manager;
   }
@@ -123,43 +104,28 @@ class EnvironmentalModel {
   const std::shared_ptr<TrafficLightDecisionManager> &get_traffic_light_decision_manager() const {
     return traffic_light_decision_manager_;
   }
-  void set_traffic_light_decision_manager(
-      std::shared_ptr<TrafficLightDecisionManager> traffic_light_decision_manager) {
+  void set_traffic_light_decision_manager(std::shared_ptr<TrafficLightDecisionManager> traffic_light_decision_manager) {
     traffic_light_decision_manager_ = traffic_light_decision_manager;
   }
 
-  const std::shared_ptr<ReferencePathManager> &get_reference_path_manager() const {
-    return reference_path_manager_;
-  }
-  void set_reference_path_manager(
-      std::shared_ptr<ReferencePathManager> reference_path_manager) {
+  const std::shared_ptr<ReferencePathManager> &get_reference_path_manager() const { return reference_path_manager_; }
+  void set_reference_path_manager(std::shared_ptr<ReferencePathManager> reference_path_manager) {
     reference_path_manager_ = reference_path_manager;
   }
 
-  const std::shared_ptr<LateralObstacle> &get_lateral_obstacle() const {
-    return lateral_obstacle_;
-  }
-  void set_lateral_obstacle(
-      std::shared_ptr<LateralObstacle> lateral_obstacle) {
-    lateral_obstacle_ = lateral_obstacle;
-  }
-  
-  const std::shared_ptr<LaneTracksManager> &get_lane_tracks_manager() const {
-    return lane_tracks_manager_;
-  }
-  void set_lane_tracks_manager(
-      std::shared_ptr<LaneTracksManager> lane_tracks_manager) {
+  const std::shared_ptr<LateralObstacle> &get_lateral_obstacle() const { return lateral_obstacle_; }
+  void set_lateral_obstacle(std::shared_ptr<LateralObstacle> lateral_obstacle) { lateral_obstacle_ = lateral_obstacle; }
+
+  const std::shared_ptr<LaneTracksManager> &get_lane_tracks_manager() const { return lane_tracks_manager_; }
+  void set_lane_tracks_manager(std::shared_ptr<LaneTracksManager> lane_tracks_manager) {
     lane_tracks_manager_ = lane_tracks_manager;
   }
 
   const std::string &get_module_config_file_dir() const { return config_file_dir_; }
 
-  void set_module_config_file_dir(const std::string &config_file_dir) {
-    config_file_dir_ = config_file_dir;
-  }
+  void set_module_config_file_dir(const std::string &config_file_dir) { config_file_dir_ = config_file_dir; }
 
-  EgoPlanningConfigBuilder *config_builder(
-      common::SceneType scene_type) const {
+  EgoPlanningConfigBuilder *config_builder(common::SceneType scene_type) const {
     if (scene_type == common::SceneType::PARKING) {
       return parking_config_builder_ptr_;
     } else if (scene_type == common::SceneType::URBAN) {
@@ -169,78 +135,71 @@ class EnvironmentalModel {
     }
   }
 
-  void set_urban_config_builder(
-      EgoPlanningConfigBuilder *urban_config_builder_ptr) {
+  void set_urban_config_builder(EgoPlanningConfigBuilder *urban_config_builder_ptr) {
     urban_config_builder_ptr_ = urban_config_builder_ptr;
   }
-  void set_parking_config_builder(
-      EgoPlanningConfigBuilder *parking_config_builder_ptr) {
+  void set_parking_config_builder(EgoPlanningConfigBuilder *parking_config_builder_ptr) {
     parking_config_builder_ptr_ = parking_config_builder_ptr;
   }
-  void set_highway_config_builder(
-      EgoPlanningConfigBuilder *highway_config_builder_ptr) {
+  void set_highway_config_builder(EgoPlanningConfigBuilder *highway_config_builder_ptr) {
     highway_config_builder_ptr_ = highway_config_builder_ptr;
   }
 
-  void feed_local_view(const LocalView& local_view) {
-    local_view_ = local_view;
-  }
-  void set_location_valid(bool flag) {location_valid_ = flag; }
+  void feed_local_view(const LocalView &local_view) { local_view_ = local_view; }
+  void set_location_valid(bool flag) { location_valid_ = flag; }
   bool location_valid() const { return location_valid_; }
-  const LocalView& get_local_view() const { return local_view_; }
+  const LocalView &get_local_view() const { return local_view_; }
 
   bool get_hdmap_valid() const { return hdmap_valid_; }
-  bool is_on_highway() const { return true; } //hack
-  const HmiMcuInner::HmiMcuInner& get_hmi_info() const { return local_view_.hmi_mcu_inner_info; }
-private:
+  bool is_on_highway() const { return true; }  // hack
+  const HmiMcuInner::HmiMcuInner &get_hmi_info() const { return local_view_.hmi_mcu_inner_info; }
+
+ private:
   // planning::framework::Session *session_ = nullptr;
   // planning::framework::Frame *frame_ = nullptr;
   LocalView local_view_;
   bool vehicle_dbw_status_{false};
   std::shared_ptr<EgoStateManager> ego_state_manager_ = nullptr;
   std::shared_ptr<ObstacleManager> obstacle_manager_ = nullptr;
-  std::shared_ptr<VirtualLaneManager> virtual_lane_manager_ =
-      nullptr;
-  std::shared_ptr<ReferencePathManager> reference_path_manager_ =
-      nullptr;
+  std::shared_ptr<VirtualLaneManager> virtual_lane_manager_ = nullptr;
+  std::shared_ptr<ReferencePathManager> reference_path_manager_ = nullptr;
   std::shared_ptr<TrafficLightDecisionManager> traffic_light_decision_manager_ = nullptr;
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
   std::shared_ptr<LaneTracksManager> lane_tracks_manager_ = nullptr;
-//  private:
-//   std::unique_ptr<LateralObstacle> lateral_obstacle_;
-//   std::shared_ptr<TrafficLightDecision> traffic_light_decision_;
+  //  private:
+  //   std::unique_ptr<LateralObstacle> lateral_obstacle_;
+  //   std::shared_ptr<TrafficLightDecision> traffic_light_decision_;
 
-//   common::SceneType scene_type_ = common::SceneType::HIGHWAY;
-//   EgoStateManager ego_state_manager_;
-//   std::vector<MSDPerceptionFusionObjectData> fusion_info_;
+  //   common::SceneType scene_type_ = common::SceneType::HIGHWAY;
+  //   EgoStateManager ego_state_manager_;
+  //   std::vector<MSDPerceptionFusionObjectData> fusion_info_;
   std::vector<PredictionObject> prediction_info_;
   std::unordered_map<Common::SensorType, std::vector<PredictionObject>> surr_radar_map_info_;
-//   std::vector<PredictionObject> truncated_prediction_info_;
-  //std::vector<PredictionObject> mixed_prediction_info_;
+  //   std::vector<PredictionObject> truncated_prediction_info_;
+  // std::vector<PredictionObject> mixed_prediction_info_;
 
-//   TrafficLight traffic_light_info_;
-//   MapInfoManager map_info_manager_;
-//   std::shared_ptr<PerceptionRangeEstimator> perception_range_;
+  //   TrafficLight traffic_light_info_;
+  //   MapInfoManager map_info_manager_;
+  //   std::shared_ptr<PerceptionRangeEstimator> perception_range_;
 
-//   std::unordered_map<int, std::array<std::vector<RefPointFrenet>, 3>> map_info_frenet_;
+  //   std::unordered_map<int, std::array<std::vector<RefPointFrenet>, 3>> map_info_frenet_;
 
-//   // baseline info
-//   std::unordered_map<int, std::shared_ptr<BaseLineInfo>> baseline_infos_;
-//   FrenetCoordinateSystemParameters frenet_parameters_;
+  //   // baseline info
+  //   std::unordered_map<int, std::shared_ptr<BaseLineInfo>> baseline_infos_;
+  //   FrenetCoordinateSystemParameters frenet_parameters_;
 
-//   bool hdmap_enable_status_{false};
+  //   bool hdmap_enable_status_{false};
   bool hdmap_valid_{false};
   bool location_valid_{true};
-//   bool vehicle_dbw_status_{false};
-//   bool dbw_status_{false};
-//   bool pretreatment_status_{true};
-//   int ignore_obs_id_ = -10000;
+  //   bool vehicle_dbw_status_{false};
+  //   bool dbw_status_{false};
+  //   bool pretreatment_status_{true};
+  //   int ignore_obs_id_ = -10000;
 
-//   // Leadone perception range
-//   double leadone_perception_range_ = 0;
+  //   // Leadone perception range
+  //   double leadone_perception_range_ = 0;
 
-
-//   common::WheelVelocity4d wheel_speed_report_;
+  //   common::WheelVelocity4d wheel_speed_report_;
   // common::VehicleStatus vehicle_status_;
   planning::VehicleParam vehicle_param_;
   std::string config_file_dir_;
@@ -248,7 +207,6 @@ private:
   EgoPlanningConfigBuilder *urban_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *parking_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *highway_config_builder_ptr_ = nullptr;
-
 };
 
 }  // namespace planning

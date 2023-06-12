@@ -10,4 +10,4 @@ struct MSDObjectStatus {
   float turn_confidence;
 };
 
-} // namespace planning
+}  // namespace planning

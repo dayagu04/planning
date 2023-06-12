@@ -1,8 +1,8 @@
 #ifndef ZNQC_MODULES_GENERAL_PLANNER_MODULE_H
 #define ZNQC_MODULES_GENERAL_PLANNER_MODULE_H
 
-#include "module.h"
 #include "general_planner.h"
+#include "module.h"
 
 namespace planning {
 namespace modules {
@@ -14,8 +14,7 @@ class GeneralPlannerModule : public planning::framework::PlanningModule {
 
   planning::framework::BaseModule* clone() const override;
 
-  bool init(const ::google::protobuf::Message* config,
-           planning::framework::Session* session) override;
+  bool init(const ::google::protobuf::Message* config, planning::framework::Session* session) override;
 
   bool reset(const ::google::protobuf::Message* config) override;
 
@@ -24,8 +23,7 @@ class GeneralPlannerModule : public planning::framework::PlanningModule {
  private:
   planning::planner::GeneralPlanner general_planner_;
 
-  EgoPlanningConfigBuilder* load_config_builder(
-      planning::framework::Session* session, const char* file_name);
+  EgoPlanningConfigBuilder* load_config_builder(planning::framework::Session* session, const char* file_name);
 };
 
 REGISTER_MODULE_FACTORY(GeneralPlannerModule)

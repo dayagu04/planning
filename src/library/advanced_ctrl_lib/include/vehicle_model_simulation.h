@@ -1,8 +1,8 @@
 #ifndef __VEHICLE_MODEL_SIMULATION_H__
 #define __VEHICLE_MODEL_SIMULATION_H__
 
-#include "vehicle_dynamics.h"
 #include <iostream>
+#include "vehicle_dynamics.h"
 
 namespace pnc {
 
@@ -27,12 +27,12 @@ struct VehicleParameter {
 };
 
 class VehicleSimulation {
-public:
+ public:
   void Init(const VehicleState &state);
   void Update(const VehicleControl &control, const VehicleParameter &param);
   VehicleState GetState() { return state_; }
 
-private:
+ private:
   void CalStateDot(Eigen::VectorXd &state_dot, Eigen::VectorXd &state);
   void Rk4update(Eigen::VectorXd &state_dot, Eigen::VectorXd &state);
 
@@ -41,8 +41,8 @@ private:
   VehicleParameter param_;
 };
 
-} // namespace steerModel
+}  // namespace steerModel
 
-} // namespace pnc
+}  // namespace pnc
 
 #endif

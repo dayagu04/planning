@@ -22,17 +22,17 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
+#include <chrono>
+#include <cstdio>
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <chrono>
-#include <cassert>
-#include <cstdio>
-#include <sstream>
 
 // #include "google/protobuf/util/message_differencer.h"
 
@@ -41,8 +41,8 @@
 
 // #include "cyber/common/log.h"
 // #include "cyber/common/types.h"
-#include "vec2d.h"
 #include "path_point.h"
+#include "vec2d.h"
 
 // The helper function "std::make_unique()" is defined since C++14.
 // The definition of "std::make_unique()" borrowed from C++14 is given here
@@ -87,11 +87,9 @@ inline typename _MakeUniq<_Tp>::__invalid_type make_unique(_Args&&...) = delete;
 }  // namespace std
 #endif
 
-#define READ_STR_PARA(param_reader, key) \
-  planning::common::trim(param_reader.get<std::string>(key)).c_str()
+#define READ_STR_PARA(param_reader, key) planning::common::trim(param_reader.get<std::string>(key)).c_str()
 
-#define READ_STR_PARA_OPT(param_reader, key) \
-  planning::common::trim(param_reader.get<std::string>(key, false)).c_str()
+#define READ_STR_PARA_OPT(param_reader, key) planning::common::trim(param_reader.get<std::string>(key, false)).c_str()
 
 /**
  * @namespace planning::common::util
@@ -101,8 +99,7 @@ namespace planning {
 namespace common {
 template <typename ProtoA, typename ProtoB>
 bool IsProtoEqual(const ProtoA& a, const ProtoB& b) {
-  return a.GetTypeName() == b.GetTypeName() &&
-         a.SerializeAsString() == b.SerializeAsString();
+  return a.GetTypeName() == b.GetTypeName() && a.SerializeAsString() == b.SerializeAsString();
   // Test shows that the above method is 5 times faster than the
   // API: google::protobuf::util::MessageDifferencer::Equals(a, b);
 }
@@ -141,8 +138,7 @@ bool WithinBound(T start, T end, T value) {
 // SpeedPoint MakeSpeedPoint(const double s, const double t, const double v,
 //                           const double a, const double da);
 
-PathPoint MakePathPoint(const double x, const double y, const double z,
-                        const double theta, const double kappa,
+PathPoint MakePathPoint(const double x, const double y, const double z, const double theta, const double kappa,
                         const double dkappa, const double ddkappa);
 
 /**
@@ -151,8 +147,7 @@ PathPoint MakePathPoint(const double x, const double y, const double z,
  * segment. `start` and `end` will be the first and last element in `sliced`.
  */
 template <typename T>
-void uniform_slice(const T start, const T end, uint32_t num,
-                   std::vector<T>* sliced) {
+void uniform_slice(const T start, const T end, uint32_t num, std::vector<T>* sliced) {
   if (!sliced || num == 0) {
     return;
   }
@@ -176,8 +171,7 @@ typename Container::value_type MinElement(const Container& elements) {
 }
 
 template <typename T>
-std::unordered_set<T> Intersection(const std::unordered_set<T>& s1,
-                                   const std::unordered_set<T>& s2) {
+std::unordered_set<T> Intersection(const std::unordered_set<T>& s1, const std::unordered_set<T>& s2) {
   if (s1.size() < s2.size()) {
     std::unordered_set<T> result;
     for (const auto& v : s1) {
@@ -214,8 +208,7 @@ double DistanceXY(const U& u, const V& v) {
 template <typename U, typename V>
 bool SamePointXY(const U& u, const V& v) {
   constexpr double kMathEpsilonSqr = 1e-8 * 1e-8;
-  return (u.x() - v.x()) * (u.x() - v.x()) < kMathEpsilonSqr &&
-         (u.y() - v.y()) * (u.y() - v.y()) < kMathEpsilonSqr;
+  return (u.x() - v.x()) * (u.x() - v.x()) < kMathEpsilonSqr && (u.y() - v.y()) * (u.y() - v.y()) < kMathEpsilonSqr;
 }
 
 // PathPoint GetWeightedAverageOfTwoPathPoints(const PathPoint& p1,
@@ -267,12 +260,10 @@ void QuaternionToRotationMatrix(const T* quat, T* R) {
 // Test whether two float or double numbers are equal.
 // ulp: units in the last place.
 template <typename T>
-typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type
-IsFloatEqual(T x, T y, int ulp = 2) {
+typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type IsFloatEqual(T x, T y, int ulp = 2) {
   // the machine epsilon has to be scaled to the magnitude of the values used
   // and multiplied by the desired precision in ULPs (units in the last place)
-  return std::fabs(x - y) <
-             std::numeric_limits<T>::epsilon() * std::fabs(x + y) * ulp
+  return std::fabs(x - y) < std::numeric_limits<T>::epsilon() * std::fabs(x + y) * ulp
          // unless the result is subnormal
          || std::fabs(x - y) < std::numeric_limits<T>::min();
 }
@@ -358,25 +349,20 @@ class StopWatch {
 
   uint64_t elapsed_milliseconds() {
     const auto end_time = std::chrono::steady_clock::now();
-    return std::chrono::duration_cast<std::chrono::milliseconds>(end_time -
-                                                                 start_time_)
-        .count();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time_).count();
   }
 
   uint64_t elapsed_microseconds() {
     const auto end_time = std::chrono::steady_clock::now();
-    return std::chrono::duration_cast<std::chrono::microseconds>(end_time -
-                                                                 start_time_)
-        .count();
+    return std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time_).count();
   }
 
  private:
   std::chrono::time_point<std::chrono::steady_clock> start_time_;
 };
 
-
 }  // namespace common
-}  // namesoace planning
+}  // namespace planning
 
 template <typename T>
 class FunctionInfo {
@@ -397,8 +383,7 @@ class FunctionInfo {
 //   return true;
 // }
 
-#define EXEC_ALL_FUNS(type, obj, list) \
-  ExcuteAllFunctions<type, sizeof(list) / sizeof(FunctionInfo<type>)>(obj, list)
+#define EXEC_ALL_FUNS(type, obj, list) ExcuteAllFunctions<type, sizeof(list) / sizeof(FunctionInfo<type>)>(obj, list)
 
 template <typename A, typename B>
 std::ostream& operator<<(std::ostream& os, std::pair<A, B>& p) {

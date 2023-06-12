@@ -9,17 +9,18 @@
 #ifndef __WINDOW_LIB__
 #define __WINDOW_LIB__
 
-#include "controller/common/math.h"
-#include "math_lib.h"
 #include <cmath>
 #include <queue>
 #include <vector>
+#include "controller/common/math.h"
+#include "math_lib.h"
 
 namespace pnc {
 namespace windows {
 #define eps 1e-6
-template <typename T> class CircleQueue {
-public:
+template <typename T>
+class CircleQueue {
+ public:
   bool Init(int size) {
     if (size < 0) {
       return false;
@@ -172,9 +173,7 @@ public:
     }
   }
 
-  bool IsEmpty() {
-    return ((back_index_ == front_index_) && (back_index_ == -1));
-  }
+  bool IsEmpty() { return ((back_index_ == front_index_) && (back_index_ == -1)); }
 
   bool IsFull() { return (front_index_ == (back_index_ + 1) % size_); }
 
@@ -189,7 +188,7 @@ public:
   T GetMin() { return min_; }
   T GetPeak2Peak() { return peak2peak_; }
 
-private:
+ private:
   std::vector<T> data_ = {};
   int size_ = 0;
   int front_index_ = -1;
@@ -209,8 +208,9 @@ private:
   T min_{};
 };
 
-template <typename T> class SlidingWindow {
-public:
+template <typename T>
+class SlidingWindow {
+ public:
   void Init(int size) {
     size_ = size;
     Reset();
@@ -322,7 +322,7 @@ public:
   T GetMin() { return min_; }
   T GetPeak2Peak() { return peak2peak_; }
 
-private:
+ private:
   int size_ = 0;
   int count_ = 0;
   int div_ = 1;
@@ -341,7 +341,7 @@ private:
   T min_{};
 };
 
-} // namespace windows
-} // namespace pnc
+}  // namespace windows
+}  // namespace pnc
 
 #endif

@@ -2,9 +2,8 @@
 
 namespace ilqr_solver {
 static const double eps_value = 1e-4;
-void BaseCostTerm::GetDiffGradientHessian(const State &x, const Control &u,
-                                          LxMT &lx, LuMT &lu, LxxMT &lxx,
-                                          LxuMT &lxu, LuuMT &luu) {
+void BaseCostTerm::GetDiffGradientHessian(const State &x, const Control &u, LxMT &lx, LuMT &lu, LxxMT &lxx, LxuMT &lxu,
+                                          LuuMT &luu) {
   size_t x_size = x.size();
   size_t u_size = u.size();
 
@@ -32,8 +31,8 @@ void BaseCostTerm::GetDiffGradientHessian(const State &x, const Control &u,
     for (size_t j = 0; j < x_size; ++j) {
       dxi(i) = eps_value;
       dxj(j) = eps_value;
-      lxx(i, j) = (GetCost(x + dxi + dxj, u) - GetCost(x - dxi + dxj, u) -
-                   GetCost(x + dxi - dxj, u) + GetCost(x - dxi - dxj, u)) /
+      lxx(i, j) = (GetCost(x + dxi + dxj, u) - GetCost(x - dxi + dxj, u) - GetCost(x + dxi - dxj, u) +
+                   GetCost(x - dxi - dxj, u)) /
                   (4.0 * eps_value * eps_value);
       dxi(i) = 0.0;
       dxj(j) = 0.0;
@@ -47,8 +46,8 @@ void BaseCostTerm::GetDiffGradientHessian(const State &x, const Control &u,
     for (size_t j = 0; j < u_size; ++j) {
       dui(i) = eps_value;
       duj(j) = eps_value;
-      luu(i, j) = (GetCost(x, u + dui + duj) - GetCost(x, u - dui + duj) -
-                   GetCost(x, u + dui - duj) + GetCost(x, u - dui - duj)) /
+      luu(i, j) = (GetCost(x, u + dui + duj) - GetCost(x, u - dui + duj) - GetCost(x, u + dui - duj) +
+                   GetCost(x, u - dui - duj)) /
                   (4.0 * eps_value * eps_value);
       dui(i) = 0.0;
       duj(j) = 0.0;
@@ -62,12 +61,12 @@ void BaseCostTerm::GetDiffGradientHessian(const State &x, const Control &u,
     for (size_t j = 0; j < u_size; ++j) {
       dxi(i) = eps_value;
       duj(j) = eps_value;
-      lxu(i, j) = (GetCost(x + dxi, u + duj) - GetCost(x + dxi, u - duj) -
-                   GetCost(x - dxi, u + duj) + GetCost(x - dxi, u - duj)) /
+      lxu(i, j) = (GetCost(x + dxi, u + duj) - GetCost(x + dxi, u - duj) - GetCost(x - dxi, u + duj) +
+                   GetCost(x - dxi, u - duj)) /
                   (4.0 * eps_value * eps_value);
       dxi(i) = 0.0;
       duj(j) = 0.0;
     }
   }
 }
-} // namespace ilqr_solver
+}  // namespace ilqr_solver

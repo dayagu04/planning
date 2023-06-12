@@ -60,8 +60,7 @@ class band_matrix {
   void lu_decompose();
   std::vector<double> r_solve(const std::vector<double> &b) const;
   std::vector<double> l_solve(const std::vector<double> &b) const;
-  std::vector<double> lu_solve(const std::vector<double> &b,
-                               bool is_lu_decomposed = false);
+  std::vector<double> lu_solve(const std::vector<double> &b, bool is_lu_decomposed = false);
 };
 
 const int DISCRETIZATION = 50;
@@ -92,16 +91,13 @@ class spline {
   }
 
   // optional, but if called it has to come be before set_points()
-  void set_boundary(bd_type left, double left_value, bd_type right,
-                    double right_value,
+  void set_boundary(bd_type left, double left_value, bd_type right, double right_value,
                     bool force_linear_extrapolation = false);
 
-  void set_points(const std::vector<double> &x, const std::vector<double> &y,
-                  bool cubic_spline = true);
+  void set_points(const std::vector<double> &x, const std::vector<double> &y, bool cubic_spline = true);
   double operator()(double x) const;
 
-  void set_points_old(const std::vector<double> &x,
-                      const std::vector<double> &y, bool cubic_spline = true);
+  void set_points_old(const std::vector<double> &x, const std::vector<double> &y, bool cubic_spline = true);
   double calc_old(double x) const;
 
   double deriv(int order, double x) const;

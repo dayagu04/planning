@@ -6,8 +6,8 @@
 
 //#include "boost/thread/shared_mutex.hpp"
 //#include "google/protobuf/stubs/map_util.h"
-#include "map_util.h"
 #include <iostream>
+#include "map_util.h"
 
 namespace planning {
 
@@ -50,8 +50,9 @@ using google::protobuf::InsertKeysFromMap;
 using google::protobuf::InsertOrReturnExisting;
 using google::protobuf::UpdateReturnCopy;
 
-template <typename I, typename T> class IndexedList {
-public:
+template <typename I, typename T>
+class IndexedList {
+ public:
   /**
    * @brief copy object into the container. If the id is already exist,
    * overwrite the object in the container.
@@ -114,7 +115,7 @@ public:
     return *this;
   }
 
-private:
+ private:
   std::vector<const T *> object_list_;
   std::unordered_map<I, T> object_dict_;
 };
@@ -142,6 +143,6 @@ private:
 //  mutable boost::shared_mutex mutex_;
 //};
 
-} // namespace planning
+}  // namespace planning
 
 #endif /* MODULES_PLANNING_OPTIMIZERS_INDEX_LIST_H_ */
