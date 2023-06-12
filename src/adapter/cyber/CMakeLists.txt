@@ -11,6 +11,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   proto_interface
   common
   modules
+  autoplt
 )
 
 include_directories(
