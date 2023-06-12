@@ -1,9 +1,11 @@
 #ifndef MSQUARE_VISION_ONLY_DECISION_PLANNING_PLANNER_LANE_CHANGE_DECIDER_H_
 #define MSQUARE_VISION_ONLY_DECISION_PLANNING_PLANNER_LANE_CHANGE_DECIDER_H_
 
+#include "environmental_model.h"
 #include "frame.h"
-#include "context/lateral_obstacle.h"
+#include "lateral_obstacle.h"
 #include "fusion_road.pb.h"
+#include "behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner_output.h"
 namespace planning {
 
 struct LaneChangeParams {

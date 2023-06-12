@@ -3,8 +3,8 @@
 
 #include "Platform_Types.h"
 #include "frame.h"
-#include "context/virtual_lane_manager.h"
-#include "context/obstacle_manager.h"
+#include "virtual_lane_manager.h"
+#include "obstacle_manager.h"
 #include <math.h>
 
 #ifdef __cplusplus

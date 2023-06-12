@@ -2,12 +2,12 @@
 
 #include "ifly_time.h"
 #include "session.h"
-#include "common/config/basic_type.h"
-#include "context/ego_planning_config.h"
-#include "scenario/lane_change_requests/active_lane_change_request.h"
-#include "scenario/lane_change_requests/interactive_lane_change_request.h"
-#include "scenario/lane_change_requests/lane_change_request.h"
-#include "scenario/lane_change_requests/map_lane_change_request.h"
+#include "config/basic_type.h"
+#include "ego_planning_config.h"
+#include "lane_change_requests/active_lane_change_request.h"
+#include "lane_change_requests/interactive_lane_change_request.h"
+#include "lane_change_requests/lane_change_request.h"
+#include "lane_change_requests/map_lane_change_request.h"
 
 namespace planning {
 

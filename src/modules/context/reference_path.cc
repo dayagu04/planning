@@ -1,9 +1,9 @@
-#include "context/reference_path.h"
+#include "reference_path.h"
 #include <cmath>
 #include "session.h"
-#include "context/ego_state_manager.h"
-#include "context/obstacle_manager.h"
-#include "common/math/math_utils.h"
+#include "ego_state_manager.h"
+#include "obstacle_manager.h"
+#include "math/math_utils.h"
 #include "vec2d.h"
 #include "ifly_time.h"
 namespace planning {

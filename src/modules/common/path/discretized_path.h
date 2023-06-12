@@ -3,8 +3,8 @@
 
 #include <vector>
 
-#include "common/config/message_type.h"
-#include "common/math/linear_interpolation.h"
+#include "config/message_type.h"
+#include "math/linear_interpolation.h"
 
 namespace planning {
 

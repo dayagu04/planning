@@ -1,8 +1,8 @@
 #ifndef PREDICTION_OBJECT_H
 #define PREDICTION_OBJECT_H
 
-#include "common/common.h"
-#include "common/config/basic_type.h"
+#include "common.h"
+#include "config/basic_type.h"
 #include "common.pb.h"
 #include <string>
 #include <vector>

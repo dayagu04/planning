@@ -3,10 +3,10 @@
 #include <math.h>
 
 #include "session.h"
-#include "context/ego_planning_config.h"
-#include "context/planning_context.h"
-#include "scc_function/mrc_types.h"
-#include "tasks/task_basic_types.h"
+#include "ego_planning_config.h"
+#include "planning_context.h"
+#include "mrc_types.h"
+#include "task_basic_types.h"
 
 namespace planning {
 

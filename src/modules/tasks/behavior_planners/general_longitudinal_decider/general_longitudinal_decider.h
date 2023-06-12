@@ -12,9 +12,9 @@
 #include <string>
 #include <vector>
 
-#include "common/trajectory1d/bounded_constant_jerk_trajectory1d.h"
-#include "tasks/task.h"
-#include "tasks/task_basic_types.h"
+#include "trajectory1d/bounded_constant_jerk_trajectory1d.h"
+#include "task.h"
+#include "task_basic_types.h"
 
 namespace planning {
 

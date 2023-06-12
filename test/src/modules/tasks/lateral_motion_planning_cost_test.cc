@@ -1,7 +1,7 @@
 #include <Eigen/Dense>
 #include <random>
 
-#include "lateral_motion_planning_cost.h"
+#include "motion_planners/lateral_motion_planner/src/lateral_motion_planning_cost.h"
 #include "gtest/gtest.h"
 
 using namespace std;

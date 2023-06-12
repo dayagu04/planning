@@ -1,12 +1,10 @@
 #include <tuple>
 
-#include "common/math/math_utils.h"
-
-#include "context/obstacle_manager.h"
-#include "context/ego_state_manager.h"
-// #include "context/groundline_decider.h"
-#include "context/reference_path_manager.h"
-#include "context/virtual_lane_manager.h"
+#include "math/math_utils.h"
+#include "obstacle_manager.h"
+#include "ego_state_manager.h"
+#include "reference_path_manager.h"
+#include "virtual_lane_manager.h"
 
 namespace planning {
 

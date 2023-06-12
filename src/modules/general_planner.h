@@ -3,7 +3,11 @@
 #include <cmath>
 #include <vector>
 
+#include "common/config/basic_type.h"
+#include "common/define/planning_status.h"
 #include "frame.h"
+#include "scenario/lateral_behavior_object_selector.h"
+#include "scenario/scenario_state_machine.h"
 #include "session.h"
 #include "context/ego_planning_config.h"
 #include "ifly_time.h"

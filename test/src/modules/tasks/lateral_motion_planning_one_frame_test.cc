@@ -4,8 +4,8 @@
 
 #include "gtest/gtest.h"
 // #include "ilqr_define.h"
-#include "lateral_motion_planning_cost.h"
-#include "lateral_motion_planning_problem.h"
+#include "motion_planners/lateral_motion_planner/src/lateral_motion_planning_cost.h"
+#include "motion_planners/lateral_motion_planner/src/lateral_motion_planning_problem.h"
 
 using namespace std;
 using namespace pnc::lateral_planning;

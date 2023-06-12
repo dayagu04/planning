@@ -1,4 +1,4 @@
-#include "scc_function/mrc_condition.h"
+#include "mrc_condition.h"
 
 namespace planning {
 void MrcCondition::init() { set_mrc_config(); }

@@ -2,8 +2,10 @@
 
 #include <math.h>
 
+#include "config/basic_type.h"
+#include "ego_planning_config.h"
 #include "frame.h"
-#include "tasks/task_basic_types.h"
+#include "task_basic_types.h"
 
 namespace planning {
 class AdaptiveCruiseControl {

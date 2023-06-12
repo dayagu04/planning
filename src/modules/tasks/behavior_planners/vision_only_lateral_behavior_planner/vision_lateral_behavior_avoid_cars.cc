@@ -1,4 +1,5 @@
-#include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
+#include "environmental_model.h"
+#include "behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 
 #include "ifly_time.h"
 

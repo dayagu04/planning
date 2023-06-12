@@ -1,16 +1,11 @@
-#pragma once
-
 #include "general_planning.h"
 
-#include <string.h>
-
-#include <iostream>
-
-#ifdef CYBER_ENV
-#include "autoplt/include/ADSTime.h"
-#endif
-#include "common/config_context.h"
-#include "context/environmental_model.h"
+#include "config/vehicle_param.h"
+#include "environmental_model.h"
+#include "ifly_time.h"
+#include "planning_context.h"
+#include "planning_output_context.h"
+#include "vehicle_config_context.h"
 
 namespace planning {
 

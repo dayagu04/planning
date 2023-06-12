@@ -4,12 +4,12 @@
 #include <map>
 #include <set>
 
-#include "common/prediction_object.h"
-#include "common/refline.h"
-#include "context/ego_state_manager.h"
+#include "prediction_object.h"
+#include "refline.h"
+#include "ego_state_manager.h"
 // #include "path_point.h"
-#include "common/tracked_object.h"
-#include "common/utils/lateral_utils.h"
+#include "tracked_object.h"
+#include "utils/lateral_utils.h"
 #include "session.h"
 #include "fusion_objects.pb.h"
 

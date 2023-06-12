@@ -3,6 +3,7 @@
 #include "apa_planner/common/planning_log_helper.h"
 #include "apa_planner/diagonal/diagonal_in_planner.h"
 #include "apa_planner/parallel/parallel_in_planner.h"
+#include "context/environmental_model.h"
 
 namespace planning {
 namespace apa_planner {

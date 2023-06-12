@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "common/math/polygon2d.h"
-#include "common/math/math_utils.h"
+#include "math/polygon2d.h"
+#include "math/math_utils.h"
 
 namespace planning {
 

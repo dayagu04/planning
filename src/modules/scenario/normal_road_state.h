@@ -1,6 +1,6 @@
 #pragma once
 
-#include "scenario/scenario_state.h"
+#include "scenario_state.h"
 
 namespace planning {
 

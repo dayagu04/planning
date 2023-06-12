@@ -5,8 +5,8 @@
 #include <utility>
 
 #include "session.h"
-#include "common/config/basic_type.h"
-#include "context/lane_reference_path.h"
+#include "config/basic_type.h"
+#include "lane_reference_path.h"
 
 namespace planning {
 

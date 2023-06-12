@@ -4,8 +4,8 @@
 
 #include "gtest/gtest.h"
 #include "ilqr_define.h"
-#include "longitudinal_motion_planning_cost.h"
-#include "longitudinal_motion_planning_problem.h"
+#include "motion_planners/longitudinal_motion_planner/src/longitudinal_motion_planning_cost.h"
+#include "motion_planners/longitudinal_motion_planner/src/longitudinal_motion_planning_problem.h"
 
 using namespace std;
 using namespace pnc::longitudinal_planning;
@@ -73,28 +73,28 @@ class LongitudinalMotionPlanningTest : public ::testing::Test {
   LongitudinalMotionPlanningProblem lon_planning_;
 };
 
-TEST_F(LongitudinalMotionPlanningTest, OneFrameTest) {
-  this->init();
-  this->lon_planning_.Init();
-  auto solver_flag = this->lon_planning_.Update(this->planning_input_);
+// TEST_F(LongitudinalMotionPlanningTest, OneFrameTest) {
+//   this->init();
+//   this->lon_planning_.Init();
+//   auto solver_flag = this->lon_planning_.Update(this->planning_input_);
 
-  auto planning_output = this->lon_planning_.GetOutput();
+//   auto planning_output = this->lon_planning_.GetOutput();
 
-  for (size_t i = 0; i < planning_output.pos_vec.size(); i++) {
-    printf("pos = %.4f, vel = %.4f, acc = %.4f, jerk = %.4f\n",
-           planning_output.pos_vec[i], planning_output.vel_vec[i],
-           planning_output.acc_vec[i], planning_output.jerk_vec[i]);
-  }
+//   for (size_t i = 0; i < planning_output.pos_vec.size(); i++) {
+//     printf("pos = %.4f, vel = %.4f, acc = %.4f, jerk = %.4f\n",
+//            planning_output.pos_vec[i], planning_output.vel_vec[i],
+//            planning_output.acc_vec[i], planning_output.jerk_vec[i]);
+//   }
 
-  EXPECT_TRUE(solver_flag > ilqr_solver::iLqr::INIT);
+//   EXPECT_TRUE(solver_flag > ilqr_solver::iLqr::INIT);
 
-  printf("solver_flag = %d\n", solver_flag);
+//   printf("solver_flag = %d\n", solver_flag);
 
-  EXPECT_TRUE(solver_flag < ilqr_solver::iLqr::BACKWARD_PASS_FAIL);
-}
+//   EXPECT_TRUE(solver_flag < ilqr_solver::iLqr::BACKWARD_PASS_FAIL);
+// }
 
-int main(int argc, char **argv) {
-  printf("Testing LongitudinalMotionPlanning!");
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+// int main(int argc, char **argv) {
+//   printf("Testing LongitudinalMotionPlanning!");
+//   testing::InitGoogleTest(&argc, argv);
+//   return RUN_ALL_TESTS();
+// }

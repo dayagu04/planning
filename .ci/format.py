@@ -5,7 +5,7 @@ import subprocess
 import argparse
 
 sub_folders = [
-    "src/common", "src/framework", "src/library", "src/modules", "src/planning_component.cc", "src/planning_component.h",
+    "src/common", "src/framework", "src/library", "src/modules", "src/adapter",
   ]
 
 clang_format_path = ".ci/clang-format/wrapper"

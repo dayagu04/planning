@@ -1,9 +1,14 @@
 #pragma once
 
+#include "common/local_view.h"
+#include "common/prediction_object.h"
+#include "context/ego_state_manager.h"
+#include "context/obstacle_manager.h"
 #include "frame.h"
 #include "session.h"
 #include "context/ego_planning_config.h"
 #include "ifly_time.h"
+#include "vehicle_status.pb.h"
 namespace planning {
 namespace planner {
 

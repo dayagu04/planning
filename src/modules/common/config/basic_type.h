@@ -5,8 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "common/utils/cartesian_coordinate_system.h"
-#include "common/utils/frenet_coordinate_system.h"
+#include "utils/cartesian_coordinate_system.h"
+#include "utils/frenet_coordinate_system.h"
 #include "lateral_motion_planner.pb.h"
 #include "longitudinal_motion_planner.pb.h"
 #include "mjson/mjson.hpp"

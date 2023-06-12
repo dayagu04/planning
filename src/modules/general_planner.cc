@@ -2,6 +2,7 @@
 
 #include <math.h>
 
+#include "context/planning_output_context.h"
 #include "scc_function/adaptive_cruise_control.h"
 #include "scc_function/mrc_condition.h"
 #include "scc_function/start_stop_enable.h"

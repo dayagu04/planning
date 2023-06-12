@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/common.h"
+#include "common.h"
 #include "object_status.h"
 #include "object_type.h"
 #include "object_type_info.h"

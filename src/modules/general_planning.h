@@ -1,21 +1,13 @@
 #pragma once
 
-#include <memory>
-// #include <string>
-#include <vector>
-
-#include "ifly_time.h"
-
-#include "context/environmental_model.h"
-#include "scenario/scenario_manager.h"
-#include "utils_math.h"
-
-#include "session.h"
+#include "basic_types.pb.h"
 #include "scheduler.h"
+#include "session.h"
 #include "common/local_view.h"
 
 #include "common/define/debug_output.h"
 #include "planning_plan.pb.h"
+#include "planning_hmi.pb.h"
 
 namespace planning {
 

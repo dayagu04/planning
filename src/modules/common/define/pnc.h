@@ -6,4 +6,4 @@
 #include "define/planning_status.h"
 // #include "define/recognize_info.h" // 给hmi用？
 // #include "define/trigger_status.h" // 给hmi用？
-#include "common/common.h"
+#include "common.h"

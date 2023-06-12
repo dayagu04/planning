@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tasks/task_pipeline.h"
+#include "task_pipeline.h"
 
 namespace planning {
 

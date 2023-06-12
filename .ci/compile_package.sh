@@ -8,7 +8,7 @@ cd $SRC_DIR
 mkdir build
 cd build
 cmake ..
-make
+make -j
 make install
 cd ..
 

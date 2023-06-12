@@ -1,14 +1,14 @@
 #ifndef ZNQC_MODULES_CONTEXT_EGO_STATE_MANAGER_H_
 #define ZNQC_MODULES_CONTEXT_EGO_STATE_MANAGER_H_
 
-#include "common/config/basic_type.h"
-#include "common/config/message_type.h"
-#include "common/config/vehicle_param.h"
-#include "common/define/geometry.h"
-#include "common/math/polygon2d.h"
-#include "common/refline.h"
-#include "common/transform.h"
-#include "context/vehicle_config_context.h"
+#include "config/basic_type.h"
+#include "config/message_type.h"
+#include "config/vehicle_param.h"
+#include "define/geometry.h"
+#include "math/polygon2d.h"
+#include "refline.h"
+#include "transform.h"
+#include "vehicle_config_context.h"
 #include "vehicle_status.pb.h"
 #include "session.h"
 

@@ -5,15 +5,16 @@
 #include <sstream>
 #include <vector>
 
+#include "environmental_model.h"
 #include "ifly_time.h"
 
 // #include "core/common/trace.h"
 // #include "core/modules/common/ego_prediction_utils.h"
 // #include "core/modules/context/ego_state.h"
-#include "common/math/piecewise_jerk/piecewise_problem.h"
+#include "math/piecewise_jerk/piecewise_problem.h"
 #include "debug_info_log.h"
 #include "ifly_time.h"
-#include "scc_function/mrc_condition.h"
+#include "mrc_condition.h"
 
 namespace planning {
 

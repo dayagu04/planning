@@ -1,10 +1,10 @@
-#include "common/utils/lateral_utils.h"
+#include "utils/lateral_utils.h"
 
 #include <algorithm>
 
-#include "common/config/vehicle_param_tmp.h"
-#include "common/define/geometry.h"
-#include "common/utils/pose2d_utils.h"
+#include "config/vehicle_param_tmp.h"
+#include "define/geometry.h"
+#include "utils/pose2d_utils.h"
 namespace planning {
 
 double calc_poly1d(const std::vector<double> &coefs, double x) {

@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "common/config/message_type.h"
+#include "config/message_type.h"
 
 namespace planning {
 

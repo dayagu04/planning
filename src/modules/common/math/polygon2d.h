@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "common/math/box2d.h"
-#include "common/math/line_segment2d.h"
+#include "math/box2d.h"
+#include "math/line_segment2d.h"
 #include "vec2d.h"
 
 namespace planning {

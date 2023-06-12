@@ -3,10 +3,10 @@
 
 #include <cmath>
 #include <iostream>
-#include "common/config/message_type.h"
+#include "config/message_type.h"
 #include "path_point.h"
-#include "common/config/basic_type.h"
-#include "common/prediction_object.h"
+#include "config/basic_type.h"
+#include "prediction_object.h"
 /**
  * @namespace apollo::common::math
  * @brief apollo::common::math

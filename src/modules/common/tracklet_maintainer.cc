@@ -1,12 +1,12 @@
 #define _USE_MATH_DEFINES
-#include "common/tracklet_maintainer.h"
+#include "tracklet_maintainer.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
 
 #include "ifly_time.h"
-#include "context/planning_context.h"
+#include "planning_context.h"
 #include "environment_model_debug_info.pb.h"
 #include "debug_info_log.h"
 namespace planning {
@@ -668,7 +668,7 @@ void TrackletMaintainer::calc(
   auto environment_model_debug_info = planning_debug_data->mutable_environment_model_info();
   environment_model_debug_info->set_ego_s(s_ego_);
   environment_model_debug_info->set_ego_l(l_ego_);
-  environment_model_debug_info->obstacle().Clear();
+  environment_model_debug_info->mutable_obstacle()->Clear();
   for (auto tr : tracked_objects) {
     planning::common::Obstacle *obstacle = environment_model_debug_info->add_obstacle();
     obstacle->set_id(tr->track_id);

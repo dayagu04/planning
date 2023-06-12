@@ -1,5 +1,6 @@
-#include "context/virtual_lane_manager.h"
-#include "context/reference_path_manager.h"
+#include "virtual_lane_manager.h"
+#include "environmental_model.h"
+#include "reference_path_manager.h"
 #include "debug_info_log.h"
 
 namespace planning {

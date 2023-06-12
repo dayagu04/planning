@@ -1,7 +1,8 @@
 #pragma once
 
-#include "context/ego_state_manager.h"
-#include "context/virtual_lane_manager.h"
+#include "ego_state_manager.h"
+#include "environmental_model.h"
+#include "virtual_lane_manager.h"
 
 namespace planning {
 

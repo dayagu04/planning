@@ -9,9 +9,12 @@
 #include <vector>
 
 #include "debug_info_log.h"
-#include "scc_function/adaptive_cruise_control.h"
-#include "scc_function/mrc_condition.h"
-#include "scc_function/start_stop_enable.h"
+#include "environmental_model.h"
+#include "ifly_time.h"
+#include "mrc_condition.h"
+#include "adaptive_cruise_control.h"
+#include "start_stop_enable.h"
+#include "frame.h"
 
 namespace planning {
 

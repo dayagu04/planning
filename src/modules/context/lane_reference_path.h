@@ -1,5 +1,5 @@
 #pragma once
-#include "context/reference_path.h"
+#include "reference_path.h"
 
 namespace planning {
 

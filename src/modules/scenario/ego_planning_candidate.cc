@@ -1,17 +1,17 @@
-#include "scenario/ego_planning_candidate.h"
+#include "ego_planning_candidate.h"
 
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 
-#include "common/math/math_utils.h"
-#include "context/reference_path_manager.h"
+#include "math/math_utils.h"
+#include "reference_path_manager.h"
 #include "debug_info_log.h"
 #include "math_lib.h"
 #include "spline.h"
 #include "spline_projection.h"
-#include "tasks/task_pipeline_context.h"
+#include "task_pipeline_context.h"
 namespace planning {
 using namespace pnc;
 

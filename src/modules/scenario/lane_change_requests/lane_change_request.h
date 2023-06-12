@@ -7,10 +7,10 @@
 
 #include "ifly_time.h"
 #include "session.h"
-#include "common/config/basic_type.h"
-#include "context/virtual_lane_manager.h"
-#include "scc_function/display_state_types.h"
-#include "scenario/lane_change_requests/lane_change_lane_manager.h"
+#include "config/basic_type.h"
+#include "virtual_lane_manager.h"
+#include "display_state_types.h"
+#include "lane_change_requests/lane_change_lane_manager.h"
 
 namespace planning {
 /// @brief 换道请求的基类，生成、结束换道请求等

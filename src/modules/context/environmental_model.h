@@ -6,26 +6,16 @@
 #include <unordered_map>
 
 #include "log.h"
-#include "common/local_view.h"
-#include "context/ego_planning_config.h"
-#include "common/prediction_object.h"
-// #include "planning/common/common.h"
-// #include "common/baseline_info.h"
-
-// #include "context/virtual_lane_manager.h"
-// #include "context/frenet_ego_state.h"
-// #include "context/ego_state_manager.h"
-// #include "context/obstacle_manager.h"
-// #include "context/reference_path_manager.h"
-// #include "context/traffic_light_decision_manager.h"
-#include "context/parking_slot_manager.h"
-
+#include "local_view.h"
+#include "ego_planning_config.h"
+#include "prediction_object.h"
+#include "parking_slot_manager.h"
 #include "vehicle_service.pb.h"
 #include "planning_config.pb.h"
 #include "vehicle_status.pb.h"
 #include "fusion_objects.pb.h"
 #include "prediction.pb.h"
-#include "common/config/vehicle_param.h"
+#include "config/vehicle_param.h"
 
 namespace planning {
 

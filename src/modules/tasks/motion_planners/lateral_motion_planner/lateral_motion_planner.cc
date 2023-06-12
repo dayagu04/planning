@@ -6,7 +6,7 @@
 
 #include "debug_info_log.h"
 #include "lateral_motion_planner.pb.h"
-#include "lateral_motion_planning_cost.h"
+#include "src/lateral_motion_planning_cost.h"
 #include "spline.h"
 
 namespace planning {

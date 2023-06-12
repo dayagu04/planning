@@ -7,9 +7,9 @@
 
 #include <vector>
 
-#include "common/config/message_type.h"
-#include "common/speed/speed_limit.h"
-#include "common/speed/st_boundary.h"
+#include "config/message_type.h"
+#include "speed/speed_limit.h"
+#include "speed/st_boundary.h"
 
 namespace planning {
 

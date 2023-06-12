@@ -11,6 +11,7 @@
 #include "context/lateral_obstacle.h"
 #include "context/obstacle_manager.h"
 #include "context/parking_slot_manager.h"
+#include "context/planning_output_context.h"
 #include "context/reference_path_manager.h"
 #include "context/traffic_light_decision_manager.h"
 #include "context/virtual_lane_manager.h"

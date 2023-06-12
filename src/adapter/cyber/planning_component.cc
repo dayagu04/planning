@@ -1,9 +1,9 @@
 #include "planning_component.h"
 
-#include "common/Platform_Types.h"
-#include "common/debug_info_log.h"
+#include "Platform_Types.h"
+#include "debug_info_log.h"
 #include "general_planning.h"
-#include "modules/common/config_context.h"
+#include "common/config_context.h"
 
 namespace planning {
 

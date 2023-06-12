@@ -1,10 +1,10 @@
-#include "tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
+#include "behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
 
 #include <array>
 #include <cmath>
 
 #include "gtest/gtest.h"
-#include "tasks/task_pipeline_context.h"
+#include "task_pipeline_context.h"
 #include "log.h"
 
 namespace planning {

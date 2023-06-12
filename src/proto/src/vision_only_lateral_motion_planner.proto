@@ -1,7 +1,6 @@
 syntax = "proto2";
 
 package planning.common;
-import "basic_types.proto"; 
 
 message VOLatMotionPlan {
   repeated double basic_dpoly = 1;

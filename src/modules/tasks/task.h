@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "frame.h"
-#include "common/config_context.h"
-#include "context/ego_planning_config.h"
-#include "tasks/task_pipeline_context.h"
+#include "config_context.h"
+#include "ego_planning_config.h"
+#include "task_pipeline_context.h"
 
 namespace planning {
 

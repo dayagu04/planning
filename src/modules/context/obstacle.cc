@@ -1,9 +1,8 @@
-#include "context/obstacle.h"
+#include "obstacle.h"
 
 #include "log.h"
-#include "common/math/linear_interpolation.h"
-#include "common/common.h"
-// #include "core/modules/common/trajectory/discretized_trajectory.h"
+#include "math/linear_interpolation.h"
+#include "common.h"
 
 namespace planning {
 

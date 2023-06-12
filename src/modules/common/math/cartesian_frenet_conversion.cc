@@ -14,12 +14,12 @@
  * limitations under the License.
  *****************************************************************************/
 
-#include "common/math/cartesian_frenet_conversion.h"
+#include "math/cartesian_frenet_conversion.h"
 
 #include <cmath>
 
 // #include "cyber/common/log.h"
-#include "common/math/math_utils.h"
+#include "math/math_utils.h"
 
 namespace planning {
 namespace planning_math {

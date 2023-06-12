@@ -2,13 +2,13 @@
 
 #include <dlfcn.h>
 
-#include "common/utils/pose2d_utils.h"
-#include "context/virtual_lane_manager.h"
-#include "common/config/basic_type.h"
-#include "common/define/planning_status.h"
-#include "context/lateral_obstacle.h"
-#include "scenario/scenario_state_machine.h"
-#include "tasks/task.h"
+#include "utils/pose2d_utils.h"
+#include "virtual_lane_manager.h"
+#include "config/basic_type.h"
+#include "define/planning_status.h"
+#include "lateral_obstacle.h"
+#include "scenario_state_machine.h"
+#include "task.h"
 namespace planning {
 typedef enum {
   NO_REJECTION,

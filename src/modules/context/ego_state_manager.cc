@@ -1,10 +1,10 @@
-#include "context/ego_state_manager.h"
+#include "ego_state_manager.h"
 
-#include <cmath>
-#include <cstdint>
-
-#include "common/trajectory/trajectory_stitcher.h"
-#include "common/utils/pose2d_utils.h"
+#include "utils/pose2d_utils.h"
+#include "trajectory/trajectory_stitcher.h"
+#include "environmental_model.h"
+#include "planning_context.h"
+#include "planning_output_context.h"
 #include "debug_info_log.h"
 #include "math_lib.h"
 #include "spline_projection.h"

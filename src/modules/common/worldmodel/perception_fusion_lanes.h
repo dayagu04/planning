@@ -2,8 +2,8 @@
 
 // 等common proto出来，
 // #include "common.pb.h"
-#include "common/common.h"
-#include "common/worldmodel/lane.h"
+#include "common.h"
+#include "worldmodel/lane.h"
 
 namespace planning {
 

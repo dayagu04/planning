@@ -1,7 +1,7 @@
 #include <algorithm>
-#include "common/trajectory/trajectory_stitcher.h"
-#include "common/math/math_utils.h"
-#include "common/vehicle_model/vehicle_model.h"
+#include "trajectory/trajectory_stitcher.h"
+#include "math/math_utils.h"
+#include "vehicle_model/vehicle_model.h"
 
 namespace planning {
 

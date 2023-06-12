@@ -1,9 +1,9 @@
 #pragma once
 
 #include <math.h>
-#include "scenario/ego_planning_candidate.h"
+#include "ego_planning_candidate.h"
 
-#include "context/ego_planning_config.h"
+#include "ego_planning_config.h"
 #include "session.h"
 
 namespace planning {

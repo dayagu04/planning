@@ -4,15 +4,14 @@
 #include <unordered_map>
 #include <vector>
 
-// #include "common/config/basic_types.h"
-#include "common/config/message_type.h"
-#include "common/math/box2d.h"
-#include "common/math/math_utils.h"
-#include "common/math/polygon2d.h"
+#include "config/message_type.h"
+#include "math/box2d.h"
+#include "math/math_utils.h"
+#include "math/polygon2d.h"
 #include "vec2d.h"
 #include "prediction.pb.h"
 #include "fusion_objects.pb.h"
-#include "common/prediction_object.h"
+#include "prediction_object.h"
 
 namespace planning {
 

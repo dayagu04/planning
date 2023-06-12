@@ -2,7 +2,7 @@
 #include <cstddef>
 #include <random>
 
-#include "longitudinal_motion_planning_cost.h"
+#include "motion_planners/longitudinal_motion_planner/src/longitudinal_motion_planning_cost.h"
 #include "gtest/gtest.h"
 
 using namespace std;

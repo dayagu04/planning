@@ -1,4 +1,4 @@
-#include "common/math/piecewise_jerk/piecewise_problem.h"
+#include "math/piecewise_jerk/piecewise_problem.h"
 
 #include "log.h"
 #include "assert.h"

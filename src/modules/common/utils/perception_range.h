@@ -3,10 +3,10 @@
 #include <memory>
 
 // #include "context/ego_state_manager.h"
-// #include "common/map_info_manager.h"
-#include "common/tracked_object.h"
-#include "common/transform.h"
-#include "common/utils/frenet_coordinate_system.h"
+// #include "map_info_manager.h"
+#include "tracked_object.h"
+#include "transform.h"
+#include "utils/frenet_coordinate_system.h"
 
 namespace planning {
 

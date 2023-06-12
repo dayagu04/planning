@@ -1,12 +1,12 @@
 #ifndef ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_H_
 #define ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_H_
 
-#include "common/config/basic_type.h"
+#include "config/basic_type.h"
 #include "lane_lines.pb.h"
 #include "fusion_road.pb.h"
-#include "context/reference_path_manager.h"
-#include "context/lane_reference_path.h"
-#include "common/refline.h"
+#include "reference_path_manager.h"
+#include "lane_reference_path.h"
+#include "refline.h"
 #include <float.h>
 #include <limits.h>
 

@@ -1,5 +1,4 @@
-#include "context/frenet_ego_state.h"
-// #include "ego_state_info.pb.h"
+#include "frenet_ego_state.h"
 
 #include "session.h"
 

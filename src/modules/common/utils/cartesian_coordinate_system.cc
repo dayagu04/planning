@@ -1,6 +1,6 @@
 
 
-#include "common/utils/cartesian_coordinate_system.h"
+#include "utils/cartesian_coordinate_system.h"
 
 double
 CrossProduct(const Segment2D& s1, const Segment2D& s2) {

@@ -1,8 +1,8 @@
-#include "scenario/normal_road_state.h"
+#include "normal_road_state.h"
 
-#include "context/reference_path_manager.h"
+#include "reference_path_manager.h"
 #include "ifly_time.h"
-#include "scenario/scenario_state_machine.h"
+#include "scenario_state_machine.h"
 
 namespace planning {
 

@@ -1,6 +1,6 @@
 
 // #include
-// "tasks/motion_planners/lateral_motion_planner_real_time/lateral_motion_planner_real_time.h"
+// "motion_planners/lateral_motion_planner_real_time/lateral_motion_planner_real_time.h"
 
 #include <iomanip>
 #include <vector>
@@ -9,6 +9,7 @@
 // #include "core/modules/common/ego_prediction_utils.h"
 // #include "core/modules/context/ego_state.h"
 // #include "core/modules/np_functions/mrc_condition.h"
+#include "planning_output_context.h"
 #include "lateral_motion_planner_real_time.h"
 #include "debug_info_log.h"
 namespace planning {

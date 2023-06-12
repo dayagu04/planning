@@ -1,5 +1,6 @@
 #include "general_planner_module.h"
 
+#include "context/planning_output_context.h"
 #include "log.h"
 #include "common/vehicle_model/vehicle_model.h"
 // #include "context/vehicle_config_context.h"

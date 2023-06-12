@@ -1,5 +1,5 @@
-#include "tasks/motion_planners/longitudinal_motion_planner/pwj_longitudinal_motion_planner.h"
-#include "tasks/task_pipeline_context.h"
+#include "motion_planners/longitudinal_motion_planner/pwj_longitudinal_motion_planner.h"
+#include "task_pipeline_context.h"
 
 #include <array>
 #include <cmath>

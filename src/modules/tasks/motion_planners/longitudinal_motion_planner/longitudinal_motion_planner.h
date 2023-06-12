@@ -13,19 +13,19 @@
 #include <string>
 #include <vector>
 
-#include "context/environmental_model.h"
-#include "context/frenet_ego_state.h"
-#include "context/obstacle_manager.h"
+#include "environmental_model.h"
+#include "frenet_ego_state.h"
+#include "obstacle_manager.h"
 #include "ilqr_core.h"
 #include "longitudinal_motion_planner.pb.h"
-#include "longitudinal_motion_planning_cost.h"
-#include "longitudinal_motion_planning_model.h"
-#include "longitudinal_motion_planning_problem.h"
+#include "src/longitudinal_motion_planning_cost.h"
+#include "src/longitudinal_motion_planning_model.h"
+#include "src/longitudinal_motion_planning_problem.h"
 #include "math_lib.h"
-#include "scc_function/mrc_condition.h"
-#include "scenario/scenario_state_machine.h"
-#include "tasks/task.h"
-#include "tasks/task_basic_types.h"
+#include "mrc_condition.h"
+#include "scenario_state_machine.h"
+#include "task.h"
+#include "task_basic_types.h"
 
 namespace planning {
 

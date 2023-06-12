@@ -1,12 +1,12 @@
-#include "tasks/task_pipeline.h"
+#include "task_pipeline.h"
 
 #include <array>
 #include <cmath>
 
 #include "gtest/gtest.h"
-#include "src/common/log.h"
-#include "tasks/task_pipeline_context.h"
-#include "scenario/ego_planning_candidate.h"
+#include "log.h"
+#include "task_pipeline_context.h"
+#include "ego_planning_candidate.h"
 
 namespace planning {
 

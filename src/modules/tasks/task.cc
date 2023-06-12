@@ -1,15 +1,15 @@
-#include "tasks/task.h"
+#include "task.h"
 
-#include "context/vehicle_config_context.h"
-#include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
-#include "tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
-#include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
-#include "tasks/behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner.h"
-#include "lateral_motion_planner.h"
-#include "longitudinal_motion_planner.h"
-#include "tasks/motion_planners/longitudinal_motion_planner/pwj_longitudinal_motion_planner.h"
-#include "tasks/motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
-#include "tasks/trajectory_generator/result_trajectory_generator.h"
+#include "vehicle_config_context.h"
+#include "behavior_planners/general_lateral_decider/general_lateral_decider.h"
+#include "behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
+#include "behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
+#include "behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner.h"
+#include "motion_planners/lateral_motion_planner/lateral_motion_planner.h"
+#include "motion_planners/longitudinal_motion_planner/longitudinal_motion_planner.h"
+#include "motion_planners/longitudinal_motion_planner/pwj_longitudinal_motion_planner.h"
+#include "motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
+#include "trajectory_generator/result_trajectory_generator.h"
 
 namespace planning {
 

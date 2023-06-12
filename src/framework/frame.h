@@ -4,9 +4,6 @@
 #include "macro.h"
 #include "arena.h"
 #include "session.h"
-#include "context/planning_context.h"
-#include "context/planning_output_context.h"
-#include "context/environmental_model.h"
 
 namespace planning {
 namespace framework {

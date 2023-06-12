@@ -1,9 +1,9 @@
-#include "tasks/task_pipeline_normal.h"
+#include "task_pipeline_normal.h"
 
 #include "ifly_time.h"
 // #include "trace.h"
-#include "scenario/ego_planning_candidate.h"
-#include "tasks/task.h"
+#include "ego_planning_candidate.h"
+#include "task.h"
 
 namespace planning {
 

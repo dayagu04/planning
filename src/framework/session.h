@@ -3,12 +3,14 @@
 #include "arena.h"
 #include "macro.h"
 #include "planning_def.h"
-#include "context/planning_context.h"
-#include "context/planning_output_context.h"
-#include "context/environmental_model.h"
-#include "context/vehicle_config_context.h"
 
 namespace planning {
+
+class PlanningContext;
+class PlanningOutputContext;
+class EnvironmentalModel;
+class VehicleConfigurationContext;
+
 namespace framework {
 
 class Session : public planning::common::Arena {

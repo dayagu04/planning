@@ -1,6 +1,6 @@
-#include "common/math/linear_interpolation.h"
-#include "common/math/math_utils.h"
-#include "common/common.h"
+#include "math/linear_interpolation.h"
+#include "math/math_utils.h"
+#include "common.h"
 
 #include <cmath>
 #include <iostream>

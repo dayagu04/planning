@@ -2,8 +2,8 @@
 
 #include <dlfcn.h>
 
-#include "common/config/basic_type.h"
-#include "tasks/task.h"
+#include "config/basic_type.h"
+#include "task.h"
 
 namespace planning {
 

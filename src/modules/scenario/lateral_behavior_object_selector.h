@@ -3,13 +3,13 @@
 
 #include "ifly_time.h"
 #include "session.h"
-#include "common/config/basic_type.h"
-#include "context/ego_planning_config.h"
-#include "context/ego_state_manager.h"
-#include "context/lateral_obstacle.h"
-#include "context/virtual_lane_manager.h"
-#include "context/reference_path_manager.h"
-#include "context/obstacle_manager.h"
+#include "config/basic_type.h"
+#include "ego_planning_config.h"
+#include "ego_state_manager.h"
+#include "lateral_obstacle.h"
+#include "virtual_lane_manager.h"
+#include "reference_path_manager.h"
+#include "obstacle_manager.h"
 
 namespace planning {
 

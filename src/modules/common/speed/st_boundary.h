@@ -7,12 +7,12 @@
 #include <utility>
 #include <vector>
 
-#include "common/math/box2d.h"
-#include "common/math/polygon2d.h"
+#include "math/box2d.h"
+#include "math/polygon2d.h"
 #include "vec2d.h"
-// #include "common/config/dp_st_speed_config.h"
-#include "common/speed/st_point.h"
-#include "common/math/math_utils.h"
+// #include "config/dp_st_speed_config.h"
+#include "speed/st_point.h"
+#include "math/math_utils.h"
 
 namespace planning {
 

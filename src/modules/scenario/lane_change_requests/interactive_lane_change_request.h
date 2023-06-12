@@ -1,6 +1,6 @@
 #pragma once
 
-#include "scenario/lane_change_requests/lane_change_request.h"
+#include "lane_change_requests/lane_change_request.h"
 
 namespace planning {
 

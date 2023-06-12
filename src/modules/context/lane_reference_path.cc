@@ -1,8 +1,8 @@
-#include "context/lane_reference_path.h"
+#include "lane_reference_path.h"
 
 #include "session.h"
-#include "context/obstacle_manager.h"
-#include "context/virtual_lane_manager.h"
+#include "obstacle_manager.h"
+#include "virtual_lane_manager.h"
 #include "ifly_time.h"
 
 namespace planning {

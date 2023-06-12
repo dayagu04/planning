@@ -1,12 +1,11 @@
 #ifndef LATERAL_OBSTACLE_H
 #define LATERAL_OBSTACLE_H
 
-// #include "common/ego_state_manager.h"
-// #include "common/map_info_manager.h"
-#include "common/prediction_object.h"
-#include "common/tracked_object.h"
-#include "common/tracklet_maintainer.h"
-#include "common/config/basic_type.h"
+#include "prediction_object.h"
+#include "tracked_object.h"
+#include "tracklet_maintainer.h"
+#include "config/basic_type.h"
+#include "ego_planning_config.h"
 
 #include <utility>
 

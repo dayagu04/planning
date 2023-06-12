@@ -1,10 +1,10 @@
-#include "common/speed/st_boundary.h"
-#include "common/math/math_utils.h"
-#include "common/config/dp_st_speed_config.h"
+#include "speed/st_boundary.h"
+#include "math/math_utils.h"
+#include "config/dp_st_speed_config.h"
 
 #include <iostream>
 #include "assert.h"
-#include "common/common.h"
+#include "common.h"
 
 namespace planning {
 

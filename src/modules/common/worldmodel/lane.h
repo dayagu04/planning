@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "common/common.h"
+#include "common.h"
 
 namespace planning {
 

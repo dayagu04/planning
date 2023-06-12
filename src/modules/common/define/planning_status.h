@@ -5,8 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "common/define/geometry.h"
-// #include "common/define/plan.h"
+#include "define/geometry.h"
+// #include "define/plan.h"
 // #include "vehicle_status.pb.h"
 #include "common.pb.h"
 #include "planning_plan.pb.h"

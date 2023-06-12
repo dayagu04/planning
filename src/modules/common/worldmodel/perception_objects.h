@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "common/common.h"
+#include "common.h"
 #include "object_interface.h"
 #include "perception_fusion_result.h"
 

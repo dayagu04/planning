@@ -1,8 +1,9 @@
 #include "vision_longitudinal_behavior_planner.h"
 
+#include "planning_output_context.h"
 #include "debug_info_log.h"
 #include "ifly_time.h"
-#include "scenario/scenario_state_machine.h"
+#include "scenario_state_machine.h"
 
 namespace planning {
 

@@ -1,4 +1,4 @@
-#include "common/speed/st_point.h"
+#include "speed/st_point.h"
 
 namespace planning {
 

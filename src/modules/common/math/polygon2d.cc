@@ -1,4 +1,4 @@
-#include "common/math/polygon2d.h"
+#include "math/polygon2d.h"
 
 #include <algorithm>
 #include <cmath>
@@ -7,8 +7,8 @@
 #include "assert.h"
 #include <iostream>
 
-#include "common/math/math_utils.h"
-#include "common/common.h"
+#include "math/math_utils.h"
+#include "common.h"
 
 namespace planning {
 namespace planning_math {

@@ -3,7 +3,7 @@
 
 #include <algorithm>
 
-#include "common/path/discretized_path.h"
+#include "path/discretized_path.h"
 
 namespace planning {
 

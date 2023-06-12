@@ -1,7 +1,7 @@
 #ifndef MODULES_PLANNING_OUTPUT_CONTEXT_
 #define MODULES_PLANNING_OUTPUT_CONTEXT_
 
-#include "common/define/planning_status.h"
+#include "define/planning_status.h"
 #include "planning_hmi.pb.h"
 
 namespace planning {

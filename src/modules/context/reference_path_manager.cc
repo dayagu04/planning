@@ -1,9 +1,10 @@
-#include "context/reference_path_manager.h"
+#include "reference_path_manager.h"
 
+#include "environmental_model.h"
 #include "session.h"
-#include "common/config/basic_type.h"
-#include "context/lane_reference_path.h"
-#include "context/virtual_lane_manager.h"
+#include "config/basic_type.h"
+#include "lane_reference_path.h"
+#include "virtual_lane_manager.h"
 
 namespace planning {
 

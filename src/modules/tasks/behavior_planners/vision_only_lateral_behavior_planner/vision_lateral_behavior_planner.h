@@ -8,11 +8,11 @@
 #include <string>
 #include <vector>
 
-#include "tasks/task.h"
-#include "tasks/task_basic_types.h"
-#include "common/config/basic_type.h"
-#include "context/reference_path.h"
-#include "context/lateral_obstacle.h" // TODO(Rui):include object_selector.h
+#include "task.h"
+#include "task_basic_types.h"
+#include "config/basic_type.h"
+#include "reference_path.h"
+#include "lateral_obstacle.h" // TODO(Rui):include object_selector.h
 
 namespace planning {
 

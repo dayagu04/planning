@@ -5,10 +5,12 @@
 #include <string>
 
 #include "utils.h"
-#include "context/vehicle_config_context.h"
-#include "context/environmental_model.h"
-#include "context/ego_planning_config.h"
-#include "common/config_context.h"
+#include "planning_context.h"
+#include "planning_output_context.h"
+#include "vehicle_config_context.h"
+#include "environmental_model.h"
+#include "ego_planning_config.h"
+#include "config_context.h"
 // #include "ego_planning_config.pb.h"
 
 namespace planning {

@@ -1,12 +1,12 @@
-#include "scenario/scenario_state.h"
+#include "scenario_state.h"
 
-#include "context/ego_planning_config.h"
-#include "context/reference_path_manager.h"
+#include "ego_planning_config.h"
+#include "reference_path_manager.h"
 #include "debug_info_log.h"
 #include "ifly_time.h"
-#include "scenario/ego_planning_candidate.h"
-#include "scenario/evaluator.h"
-#include "scenario/scenario_state_machine.h"
+#include "ego_planning_candidate.h"
+#include "evaluator.h"
+#include "scenario_state_machine.h"
 namespace planning {
 
 std::shared_ptr<Evaluator> StateBase::get_evaluator(framework::Frame *frame) {

@@ -2,7 +2,7 @@
  * @file speed_limit.cc
  **/
 
-#include "common/speed/speed_limit.h"
+#include "speed/speed_limit.h"
 
 #include <algorithm>
 #include <cassert>

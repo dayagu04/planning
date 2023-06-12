@@ -1,4 +1,5 @@
-#include "scenario/lateral_behavior_object_selector.h"
+#include "lateral_behavior_object_selector.h"
+#include "planning_context.h"
 
 namespace planning {
 

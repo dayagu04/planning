@@ -2,9 +2,9 @@
 #include <iostream>
 
 #include "frame.h"
-#include "common/config/basic_type.h"
-#include "context/ego_planning_config.h"
-#include "scenario/scenario_state.h"
+#include "config/basic_type.h"
+#include "ego_planning_config.h"
+#include "scenario_state.h"
 
 namespace planning {
 

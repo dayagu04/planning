@@ -1,7 +1,8 @@
-#include "context/lateral_obstacle.h"
-#include "context/virtual_lane_manager.h"
+#include "lateral_obstacle.h"
+#include "environmental_model.h"
+#include "virtual_lane_manager.h"
 #include "ifly_time.h"
-#include "common/common.h"
+#include "common.h"
 
 namespace planning {
 

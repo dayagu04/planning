@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <vector>
 
-#include "common/config/basic_type.h"
+#include "config/basic_type.h"
 #include "ilqr_core.h"
 #include "lateral_motion_planner.pb.h"
 #include "lateral_motion_planning_cost.h"

@@ -1,5 +1,6 @@
-#include "tasks/behavior_planners/vision_only_lane_change_decider/vision_only_lane_change_decider.h"
-#include "context/virtual_lane_manager.h"
+#include "behavior_planners/vision_only_lane_change_decider/vision_only_lane_change_decider.h"
+#include "planning_output_context.h"
+#include "virtual_lane_manager.h"
 
 namespace planning {
 

@@ -1,13 +1,12 @@
 #pragma once
 
-#include "context/ego_planning_config.h"
+#include "ego_planning_config.h"
 #include "session.h"
-#include "common/utils/index_list.h"
-#include "context/frenet_obstacle.h"
-#include "context/obstacle.h"
-#include "context/reference_path.h"
-#include "context/environmental_model.h"
-
+#include "utils/index_list.h"
+#include "frenet_obstacle.h"
+#include "obstacle.h"
+#include "reference_path.h"
+#include "environmental_model.h"
 #include "fusion_objects.pb.h"
 
 namespace planning {

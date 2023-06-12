@@ -1,4 +1,4 @@
-#include "common/trajectory1d/bounded_constant_jerk_trajectory1d.h"
+#include "trajectory1d/bounded_constant_jerk_trajectory1d.h"
 
 #include <algorithm>
 #include <limits>

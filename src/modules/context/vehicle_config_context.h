@@ -10,7 +10,7 @@
 #include "log.h"
 #include "macro.h"
 #include "utils.h"
-#include "common/config/vehicle_param.h"
+#include "config/vehicle_param.h"
 
 namespace planning {
 

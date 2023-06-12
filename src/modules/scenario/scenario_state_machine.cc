@@ -4,14 +4,14 @@
 #include <limits>
 #include <numeric>
 
-#include "common/utils/pose2d_utils.h"
-#include "context/ego_state_manager.h"
-#include "context/obstacle_manager.h"
-#include "context/reference_path.h"
-#include "context/reference_path_manager.h"
-#include "context/vehicle_config_context.h"
+#include "utils/pose2d_utils.h"
+#include "ego_state_manager.h"
+#include "obstacle_manager.h"
+#include "reference_path.h"
+#include "reference_path_manager.h"
+#include "vehicle_config_context.h"
 #include "debug_info_log.h"
-#include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
+#include "behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 
 namespace planning {
 

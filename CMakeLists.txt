@@ -12,22 +12,30 @@ set(INSTALL_TO_SYSTEM ON)
 # settings
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g -fPIC -fpermissive -DCYBER_ENV")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g -fPIC -fpermissive")
+
+# adapter
+set(ADAPTER "cyber")
+if (ADAPTER STREQUAL "cyber")
+  # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCYBER_ENV")
+elseif (ADAPTER STREQUAL "ap")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DAP_ENV")
+endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   # release mode
   message("Building in Release mode")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
-  add_subdirectory(src)
 else()
   # debug mode
   message("Building in Debug mode")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -DX86")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
-  add_subdirectory(src)
-  add_subdirectory(test)
 endif()
+
+add_subdirectory(src)
+add_subdirectory(test)
 
 # install to current directory
 if (INSTALL_TO_CURRENT)

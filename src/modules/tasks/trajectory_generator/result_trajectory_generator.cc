@@ -1,8 +1,8 @@
-#include "tasks/trajectory_generator/result_trajectory_generator.h"
+#include "trajectory_generator/result_trajectory_generator.h"
 
 // #include "core/common/trace.h"
-#include "common/define/geometry.h"
-#include "common/math/math_utils.h"
+#include "define/geometry.h"
+#include "math/math_utils.h"
 
 namespace planning {
 

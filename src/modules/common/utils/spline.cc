@@ -1,4 +1,4 @@
-#include "common/utils/spline.h"
+#include "utils/spline.h"
 
 // ---------------------------------------------------------------------
 // implementation part, which could be separated into a cpp file

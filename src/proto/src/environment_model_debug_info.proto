@@ -1,7 +1,6 @@
 syntax = "proto2";
 
 package planning.common;
-import "basic_types.proto"; 
 
 message EnvironmentModelInfo {
   optional int32 currrent_lane_vitual_id = 1;
