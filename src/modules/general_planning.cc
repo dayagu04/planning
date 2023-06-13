@@ -37,7 +37,6 @@ bool GeneralPlanning::RunOnce(const LocalView &local_view, PlanningOutput::Plann
   planning_status->pre_planning_result = planning_status->planning_result;
   planning_status->planning_result.next_timestamp = start_timestamp;
 
-  session_.mutable_planning_context()->mutable_planning_success() = false;
 
   printf("VERSION: 2023-03-31 \n");
   // 1.校验输入 TBD

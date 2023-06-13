@@ -2,6 +2,7 @@
 
 #include "common/vehicle_model/vehicle_model.h"
 #include "log.h"
+#include "planning_context.h"
 // #include "context/vehicle_config_context.h"
 
 namespace planning {
@@ -65,6 +66,7 @@ bool EnvironmentalModelModule::compute(planning::framework::Frame* frame) {
 
   if (!success) {
     LOG_ERROR("%s planning run failed\n", name().c_str());
+    frame->mutable_session()->mutable_planning_context()->clear();
     return false;
   }
   return true;
