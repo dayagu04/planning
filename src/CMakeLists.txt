@@ -72,6 +72,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     hfsm
     planning_proto
     NanoLog
+    glog
   )
 else()
   # debug for X86
@@ -90,6 +91,7 @@ else()
     nlohmann_json
     hfsm
     planning_proto
+    glog
   )
 endif()
 

@@ -1,5 +1,6 @@
 #include "apa_planner/apa_planner_dispatcher.h"
 
+#include "../../common/log_glog.h"
 #include "apa_planner/common/apa_utils.h"
 #include "apa_planner/common/planning_log_helper.h"
 #include "apa_planner/diagonal/diagonal_in_planner.h"
@@ -31,7 +32,7 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
   if (func_state_machine.has_current_state()
       && func_state_machine.current_state()
           == FunctionalState::PARK_IN_COMPLETED) {
-    PLANNING_LOG << "apa parking in is finished" << std::endl;
+    AERROR << "apa parking in is finished";
     return true;
   }
 
@@ -51,7 +52,7 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
   const auto& parking_fusion = frame->session()->environmental_model().\
       get_local_view().parking_fusion_info;
   if (parking_fusion.parking_fusion_slot_lists_size() == 0) {
-    PLANNING_LOG << "parking_fusion_slot_lists size is 0" << std::endl;
+    AERROR << "parking_fusion_slot_lists size is 0";
     return false;
   }
 
@@ -68,12 +69,11 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
 bool ApaPlannerDispatcher::IsStateMachineStateValid(
     const FuncStateMachine& func_state_machine) const {
   if (!func_state_machine.has_current_state()) {
-    PLANNING_LOG << "func_state_machine is invalid" << std::endl;
+    AERROR << "func_state_machine is invalid";
     return false;
   }
 
-  PLANNING_LOG << "current_state:"
-      << func_state_machine.current_state() << std::endl;
+  AINFO << "current_state:" << func_state_machine.current_state();
 
   if (func_state_machine.current_state()
           == FunctionalState::PARK_IN_SEARCHING
@@ -96,8 +96,8 @@ bool ApaPlannerDispatcher::IsStateMachineStateValid(
     return true;
   }
 
-  PLANNING_LOG << "func_state_machine is invalid:"
-      << func_state_machine.current_state() << std::endl;
+  AERROR << "func_state_machine is invalid:"
+      << func_state_machine.current_state();
 
   return false;
 }

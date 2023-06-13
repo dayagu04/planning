@@ -35,12 +35,13 @@ class PlanningComponent final : public autoplt::ADSTimerCoponent {
  public:
   PlanningComponent() = default;
 
-  ~PlanningComponent() = default;
+  ~PlanningComponent();
 
  public:
   bool Init() override;
   bool Proc() override;
   DebugOutput GetDebugInfo();
+  void InitLogger();
 
  private:
   std::mutex msg_mutex_;

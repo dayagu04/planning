@@ -1,6 +1,10 @@
 #include "planning_component.h"
 
+#include "cyber/scheduler/scheduler.h"
+
 #include "common/Platform_Types.h"
+#include "common/cyber/logger/async_logger.h"
+#include "common/log_glog.h"
 #include "common/debug_info_log.h"
 #include "general_planning.h"
 #include "modules/common/config_context.h"
@@ -9,6 +13,12 @@ namespace planning {
 
 using FuncStateMachine::FuncStateMachine;
 using ParkingFusion::ParkingFusionInfo;
+
+logger::AsyncLogger* async_logger = nullptr;
+
+PlanningComponent::~PlanningComponent() {
+  delete async_logger;
+}
 
 bool PlanningComponent::Init() {
   std::cout << "The planning component init!!!" << std::endl;
@@ -42,6 +52,9 @@ bool PlanningComponent::Init() {
   std::cout << "log_level!!!" << engine_config.log_conf.log_level << std::endl;
   bst::Log::getInstance().setConfig("Planning_Log", log_file.c_str(),
                                     log_level);
+
+  InitLogger();
+
   LOG_DEBUG("The planning component init!!! \n");
 
   // 1.定义cyber node
@@ -269,5 +282,29 @@ bool PlanningComponent::Proc() {
 }
 
 DebugOutput PlanningComponent::GetDebugInfo() { return debug_info_; }
+
+void PlanningComponent::InitLogger() {
+  FLAGS_log_dir = "/asw/planning/log";
+  FLAGS_alsologtostderr = false;
+  FLAGS_colorlogtostderr = true;
+  FLAGS_max_log_size = 500;
+  FLAGS_minloglevel = 0;
+  FLAGS_v = 0;
+
+  // Init glog
+  google::InitGoogleLogging("");
+  google::SetLogDestination(google::ERROR, "");
+  google::SetLogDestination(google::WARNING, "");
+  google::SetLogDestination(google::FATAL, "");
+
+  // Init async logger
+  async_logger = new ::apollo::cyber::logger::AsyncLogger(
+      google::base::GetLogger(FLAGS_minloglevel));
+  google::base::SetLogger(FLAGS_minloglevel, async_logger);
+  async_logger->Start();
+
+  auto thread = const_cast<std::thread*>(async_logger->LogThread());
+  scheduler::Instance()->SetInnerThreadAttr("async_log", thread);
+}
 
 } // namespace planning
