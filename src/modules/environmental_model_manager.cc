@@ -1,3 +1,5 @@
+#include "environmental_model_manager.h"
+
 #include <memory>
 #include <set>
 #include <string>
@@ -15,7 +17,6 @@
 #include "context/reference_path_manager.h"
 #include "context/traffic_light_decision_manager.h"
 #include "context/virtual_lane_manager.h"
-#include "environmental_model_manager.h"
 #include "log.h"
 #include "planning_config.pb.h"
 #include "prediction.pb.h"
@@ -103,7 +104,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
     LOG_ERROR("virtual_lane_manager update failed");
     return false;
   } else {
-    //后面需要判断是否为地图
+    // 后面需要判断是否为地图
     last_feed_time_[FEED_FUSION_LANES_INFO] = local_view.road_info_recv_time;
   }
 
@@ -173,7 +174,10 @@ bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, 
       if (num > local_view.fusion_objects_info.fusion_object_num()) {
         break;
       }
-      if (obj.additional_info().fusion_source() == FusionSource::RADAR_ONLY) {
+      // WB HACK： Only use front obstacles in long time planning
+      if (obj.additional_info().fusion_source() != FusionSource::FUSION &&
+          obj.additional_info().fusion_source() != FusionSource::CAMERA_ONLY) {
+        LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n", obj.additional_info().track_id());
         continue;
       }
       if (prediction_obj_id_set.find(obj.additional_info().track_id()) == prediction_obj_id_set.end()) {
@@ -187,8 +191,11 @@ bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, 
       if (num > local_view.fusion_objects_info.fusion_object_num()) {
         break;
       }
+      // WB HACK: 不使用单前radar、左前、右前radar
       if (obj.additional_info().fusion_source() == FusionSource::RADAR_ONLY ||
+          obj.additional_info().fusion_source() == 4 || obj.additional_info().fusion_source() == 8 ||
           obj.common_info().shape().length() == 0 || obj.common_info().shape().width() == 0) {
+        LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n", obj.additional_info().track_id());
         continue;
       }
       transform_fusion_to_prediction(obj, (double)local_view.fusion_objects_info.header().timestamp());
@@ -262,12 +269,11 @@ void EnvironmentalModelManager::vehicle_status_adaptor(double current_time, cons
 
   if (vehicel_service_output_info.yaw_rate_available()) {
     vehicle_status.mutable_angular_velocity()->set_available(true);
-    vehicle_status.mutable_angular_velocity()->mutable_heading_yaw_rate()
-                            ->set_value_rps(vehicel_service_output_info.yaw_rate());
+    vehicle_status.mutable_angular_velocity()->mutable_heading_yaw_rate()->set_value_rps(
+        vehicel_service_output_info.yaw_rate());
   } else {
     vehicle_status.mutable_angular_velocity()->set_available(false);
-    vehicle_status.mutable_angular_velocity()->mutable_heading_yaw_rate()
-                            ->set_value_rps(0.);
+    vehicle_status.mutable_angular_velocity()->mutable_heading_yaw_rate()->set_value_rps(0.);
   }
 
   if (vehicel_service_output_info.vehicle_speed_available()) {
