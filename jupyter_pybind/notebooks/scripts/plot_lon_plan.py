@@ -6,8 +6,8 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-#bag_path = "/docker_share/urban_bag_0213/0607_2/longplanning/20220901131143.record.00000"
-bag_path = "/docker_share/urban_bag_0213/0607_2/realtime/20220901124141.record.00000"
+bag_path = "/docker_share/0612_pnc/real_time_genche_4.00000"
+#bag_path = "/docker_share/urban_bag_0213/0607_2/realtime/20220901124141.record.00000"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -20,7 +20,7 @@ fig1, local_view_data = load_local_view_figure()
 velocity_fig, acc_fig = load_lon_global_figure(bag_loader)
 
 # load lateral planning (behavior and motion)
-fig2, fig3, fig4, fig5, fig6, fig7, tab1, lon_plan_data = load_lon_plan_figure(fig1)
+pans, lon_plan_data = load_lon_plan_figure(fig1, velocity_fig, acc_fig)
 
 ### sliders config
 class LocalViewSlider:
@@ -37,5 +37,5 @@ def slider_callback(bag_time):
 
   push_notebook()
 
-bkp.show(column(row(fig1, column(fig2, fig3), column(fig4, fig5, fig6, fig7)),row(tab1, velocity_fig, acc_fig)), notebook_handle=True)
+bkp.show(row(fig1, pans), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)

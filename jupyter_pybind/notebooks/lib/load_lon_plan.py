@@ -5,7 +5,7 @@ import ipywidgets
 from bokeh.io import output_notebook, push_notebook
 from bokeh.layouts import layout, column, row
 from IPython.core.display import display, HTML
-from bokeh.models import Label, LabelSet, DataTable, DateFormatter, TableColumn
+from bokeh.models import Label, LabelSet, DataTable, DateFormatter, TableColumn, Panel, Tabs
 import ipywidgets as widgets
 from IPython.display import display
 from ipywidgets import Button, HBox
@@ -271,7 +271,7 @@ def load_lon_global_figure(bag_loader):
                                 legend_label='acc_max', color="red")
    return velocity_fig, acc_fig
 
-def load_lon_plan_figure(fig1):
+def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
   data_st = ColumnDataSource(data = {'t':[], 's':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s':[], 'v':[], 'v_low':[], 'v_high':[]})
@@ -420,10 +420,15 @@ def load_lon_plan_figure(fig1):
   fig7.toolbar.active_scroll = fig7.select_one(WheelZoomTool)
   fig7.legend.click_policy = 'hide'
 
+  pan1 = Panel(child=row(column(fig2, fig3), column(fig4, fig5, fig6, fig7)), title="Longtime")
+
   tab1 = DataTable(source=data_text, columns=columns, width=500, height=400)
+  
+  pan2 = Panel(child=row(tab1, column(velocity_fig, acc_fig)), title="Realtime")
 
+  pans = Tabs(tabs=[ pan1, pan2 ])
 
-  return fig2, fig3, fig4, fig5, fig6, fig7, tab1, lon_plan_data
+  return pans, lon_plan_data
 
 
 
