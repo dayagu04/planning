@@ -1,4 +1,5 @@
 #include "longitudinal_motion_planner.h"
+#include <algorithm>
 #include <cstddef>
 
 #include "debug_info_log.h"
@@ -44,13 +45,6 @@ void LongitudinalMotionPlanner::Init() {
   planning_output_.mutable_acc_vec()->Resize(N, 0.0);
   planning_output_.mutable_jerk_vec()->Resize(N, 0.0);
   planning_output_.mutable_snap_vec()->Resize(N, 0.0);
-
-  // init state vector
-  s_vec_.resize(N);
-  v_vec_.resize(N);
-  a_vec_.resize(N);
-  j_vec_.resize(N);
-  t_vec_.resize(N);
 }
 
 bool LongitudinalMotionPlanner::Execute(planning::framework::Frame *frame) {
@@ -163,11 +157,8 @@ void LongitudinalMotionPlanner::GeneratePlanningInput() {
 
   // init s uses frenet state
   planning_input_.mutable_init_state()->set_s(planning_init_point.frenet_state.s);
-
   planning_input_.mutable_init_state()->set_v(planning_init_point.lon_init_state.v());
-
   planning_input_.mutable_init_state()->set_a(planning_init_point.lon_init_state.a());
-
   planning_input_.mutable_init_state()->set_j(planning_init_point.lon_init_state.j());
 
   // set weights
@@ -194,26 +185,38 @@ void LongitudinalMotionPlanner::GeneratePlanningOutput() {
   const size_t N = planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon + 1;
   const auto &dt = planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->model_dt;
 
-  double t = 0.;
+  // state vector
+  std::vector<double> s_vec(N);
+  std::vector<double> v_vec(N);
+  std::vector<double> a_vec(N);
+  std::vector<double> j_vec(N);
+  std::vector<double> t_vec(N);
 
   // assemble proto for pnc tools
+  double t = 0.0;
   for (size_t i = 0; i < N; ++i) {
     planning_output_.mutable_time_vec()->Set(i, t);
-    t_vec_[i] = t;
+    t_vec[i] = t;
 
     t += dt;
 
-    s_vec_[i] = state_result->at(i)[pnc::longitudinal_planning::StateId::POS];
-    planning_output_.mutable_pos_vec()->Set(i, s_vec_[i]);
+    s_vec[i] = state_result->at(i)[pnc::longitudinal_planning::StateId::POS];
+    v_vec[i] = state_result->at(i)[pnc::longitudinal_planning::StateId::VEL];
+    a_vec[i] = state_result->at(i)[pnc::longitudinal_planning::StateId::ACC];
+    j_vec[i] = state_result->at(i)[pnc::longitudinal_planning::StateId::JERK];
 
-    v_vec_[i] = state_result->at(i)[pnc::longitudinal_planning::StateId::VEL];
-    planning_output_.mutable_vel_vec()->Set(i, v_vec_[i]);
+    // post process for longitudinal motion planning, ensure non-negative vel
+    if (v_vec[i] < 0.0 && i > 0) {
+      s_vec[i] = s_vec[i - 1];
+      v_vec[i] = 0.0;
+      a_vec[i] = 0.0;
+      j_vec[i] = 0.0;
+    }
 
-    a_vec_[i] = state_result->at(i)[pnc::longitudinal_planning::StateId::ACC];
-    planning_output_.mutable_acc_vec()->Set(i, a_vec_[i]);
-
-    j_vec_[i] = state_result->at(i)[pnc::longitudinal_planning::StateId::JERK];
-    planning_output_.mutable_jerk_vec()->Set(i, j_vec_[i]);
+    planning_output_.mutable_pos_vec()->Set(i, s_vec[i]);
+    planning_output_.mutable_vel_vec()->Set(i, v_vec[i]);
+    planning_output_.mutable_acc_vec()->Set(i, a_vec[i]);
+    planning_output_.mutable_jerk_vec()->Set(i, j_vec[i]);
 
     if (i < N - 1) {
       planning_output_.mutable_snap_vec()->Set(i, control_result->at(i)[pnc::longitudinal_planning::ControlId::SNAP]);
@@ -223,13 +226,15 @@ void LongitudinalMotionPlanner::GeneratePlanningOutput() {
   }
 
   // generate motion planning output into planning_context
-  auto &traj_spline = frame_->mutable_session()->mutable_planning_context()->mutable_planning_result().traj_spline;
+  auto &motion_planning_info =
+      frame_->mutable_session()->mutable_planning_context()->mutable_planning_result().motion_planning_info;
 
-  traj_spline.s_t_spline.set_points(t_vec_, s_vec_);
-  traj_spline.v_t_spline.set_points(t_vec_, v_vec_);
-  traj_spline.a_t_spline.set_points(t_vec_, a_vec_);
-  traj_spline.j_t_spline.set_points(t_vec_, j_vec_);
-  traj_spline.lon_enable_flag = true;
+  // motion_planning_info.s_t_spline.set_points(t_vec, s_vec);
+  motion_planning_info.v_t_spline.set_points(t_vec, v_vec);
+  motion_planning_info.a_t_spline.set_points(t_vec, a_vec);
+  motion_planning_info.j_t_spline.set_points(t_vec, j_vec);
+
+  motion_planning_info.lon_enable_flag = true;
   // respline the lateral path a.c. longitudinal result
   std::vector<double> assembled_x(N);
   std::vector<double> assembled_y(N);
@@ -238,24 +243,30 @@ void LongitudinalMotionPlanner::GeneratePlanningOutput() {
   std::vector<double> assembled_omega(N);
 
   // s postprocess
-  for (size_t i = 1; i < s_vec_.size(); ++i) {
-    s_vec_[i] = std::max(s_vec_[i], s_vec_[i - 1] + 1e-3);
+  for (size_t i = 1; i < s_vec.size(); ++i) {
+    s_vec[i] = std::max(s_vec[i], s_vec[i - 1]);  // 1e-3 to avoid non-inremental spline input
   }
 
-  // assemble trajectory that combining lateral and longitudinal planning_result
+  // assemble trajectory that combines lateral and longitudinal planning_result
   auto &traj_points = pipeline_context_->planning_result.traj_points;
+  const auto &s0 = s_vec[0];
   for (size_t i = 0; i < N; ++i) {
-    traj_points[i].v = v_vec_[i];
-    traj_points[i].a = a_vec_[i];
+    traj_points[i].v = v_vec[i];
+    traj_points[i].a = a_vec[i];
     traj_points[i].t = planning_output_.time_vec(i);
 
     // lateral path resampling
     // s is lateral path rather than longitudinal path (frenet)
     // considering an offset that equals to init s
-    const auto &s = std::max(s_vec_[i] - s_vec_[0], 0.0);
-    traj_points[i].x = traj_spline.x_s_spline(s);
-    traj_points[i].y = traj_spline.y_s_spline(s);
-    traj_points[i].heading_angle = traj_spline.theta_s_spline(s);
+    // note that lateral s_spline starts from zero
+    auto s = std::max(s_vec[i] - s0, 0.0);
+
+    // limit s to avoid outer spline
+    s = std::min(s, motion_planning_info.s_lat_vec.back());
+
+    traj_points[i].x = motion_planning_info.x_s_spline(s);
+    traj_points[i].y = motion_planning_info.y_s_spline(s);
+    traj_points[i].heading_angle = motion_planning_info.theta_s_spline(s);
 
     // frenet state update
     Point2D cart_pt(traj_points[i].x, traj_points[i].y);
@@ -276,16 +287,19 @@ void LongitudinalMotionPlanner::GeneratePlanningOutput() {
     assembled_x[i] = traj_points[i].x;
     assembled_y[i] = traj_points[i].y;
     assembled_theta[i] = traj_points[i].heading_angle;
-    assembled_delta[i] = traj_spline.delta_s_spline(s);
-    assembled_omega[i] = traj_spline.omega_s_spline(s);
+    assembled_delta[i] = motion_planning_info.delta_s_spline(s);
+    assembled_omega[i] = motion_planning_info.omega_s_spline(s);
   }
 
-  traj_spline.x_t_spline.set_points(t_vec_, assembled_x);
-  traj_spline.y_t_spline.set_points(t_vec_, assembled_y);
-  traj_spline.theta_t_spline.set_points(t_vec_, assembled_theta);
-  traj_spline.delta_t_spline.set_points(t_vec_, assembled_delta);
-  traj_spline.omega_t_spline.set_points(t_vec_, assembled_omega);
-  traj_spline.lat_enable_flag = true;
+  motion_planning_info.x_t_spline.set_points(t_vec, assembled_x);
+  motion_planning_info.y_t_spline.set_points(t_vec, assembled_y);
+  motion_planning_info.theta_t_spline.set_points(t_vec, assembled_theta);
+  motion_planning_info.delta_t_spline.set_points(t_vec, assembled_delta);
+  motion_planning_info.omega_t_spline.set_points(t_vec, assembled_omega);
+  motion_planning_info.lat_enable_flag = true;
+
+  JSON_DEBUG_VECTOR("assembled_delta", assembled_delta, 4)
+  JSON_DEBUG_VECTOR("assembled_omega", assembled_omega, 4)
 
   // bool LongitudinalMotionPlanner::RecheckPlanningResult() {
   //   const auto &lon_ref_path = // result from lon decision

@@ -108,6 +108,15 @@ void iLqr::AddCost(std::shared_ptr<BaseCostTerm> cost_term) {
   solver_info_.cost_size++;
 }
 
+void iLqr::Simulation(const State &x0, const ControlVec &u_vec) {
+  // set init x
+  xk_vec_[0] = x0;
+
+  // use last warm start result
+  uk_vec_ = u_vec;
+  ilqr_model_ptr_->UpateDynamics(xk_vec_, uk_vec_);
+}
+
 void iLqr::Solve(const State &x0) {
 // TODO: check feasibility of input and avoid coredump
 // InputFeasibilityCheck(xk, uk);

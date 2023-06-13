@@ -48,7 +48,10 @@ void EgoPlanningCandidate::set_coarse_planning_info(const StateTransitionContext
 
   // Step 3) calculate trajectory points
   // generate reference path
-  const auto &v_cruise = frame_->session()->environmental_model().get_ego_state_manager()->ego_v_cruise();
+  static const double min_ego_v_cruise = 2.0;
+  const auto &v_ref_cruise =
+      std::fmax(frame_->session()->environmental_model().get_ego_state_manager()->ego_v_cruise(), min_ego_v_cruise);
+  // config_.reference_point_velocity ignored
 
   static const size_t &N = config_.num_point;
   const auto &delta_time = config_.delta_t;
@@ -99,7 +102,8 @@ void EgoPlanningCandidate::set_coarse_planning_info(const StateTransitionContext
 
   s_ref = std::min(s_ref, frenet_length * 0.95);
   const double delta_s = frenet_length - s_ref;
-  const double v_cruise_scale = std::min(delta_s / (v_cruise * 5.0), 1.0);
+  const double v_cruise_scale = std::min(delta_s / (v_ref_cruise * 5.0), 1.0);
+  frame_->mutable_session()->mutable_planning_context()->set_v_ref_cruise(v_cruise_scale * v_ref_cruise);
 
   coarse_planning_info_.trajectory_points.clear();
   TrajectoryPoint point;
@@ -120,7 +124,7 @@ void EgoPlanningCandidate::set_coarse_planning_info(const StateTransitionContext
     point.l = frenet_pt.y;
     point.t = static_cast<double>(i) * delta_time;
 
-    s_ref += v_cruise_scale * v_cruise * delta_time;
+    s_ref += v_cruise_scale * v_ref_cruise * delta_time;
     coarse_planning_info_.trajectory_points.emplace_back(point);
   }
 }

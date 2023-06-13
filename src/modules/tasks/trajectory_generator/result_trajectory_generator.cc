@@ -1,6 +1,8 @@
 #include "trajectory_generator/result_trajectory_generator.h"
+#include <vector>
 
 // #include "core/common/trace.h"
+#include "debug_info_log.h"
 #include "define/geometry.h"
 #include "math/math_utils.h"
 
@@ -18,16 +20,7 @@ ResultTrajectoryGenerator::ResultTrajectoryGenerator(const EgoPlanningConfigBuil
   Init();
 }
 
-void ResultTrajectoryGenerator::Init() {
-  // auto &num_point = pipeline_context_->planning_result.traj_points.size();
-  const size_t num_point = 26;
-  t_vec_.resize(num_point);
-  s_vec_.resize(num_point);
-  l_vec_.resize(num_point);
-  curvature_vec_.resize(num_point);
-  dkappa_vec_.resize(num_point);
-  ddkappa_vec_.resize(num_point);
-}
+void ResultTrajectoryGenerator::Init() {}
 
 bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
   // NTRACE_CALL(7);
@@ -39,8 +32,9 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
   auto &ego_planning_result = pipeline_context_->planning_result;
   // Step 1) get x,y of trajectory points
   auto &traj_points = ego_planning_result.traj_points;
-  const auto &num_point = traj_points.size();
-  auto &traj_spline = frame_->mutable_session()->mutable_planning_context()->mutable_planning_result().traj_spline;
+  // const auto &num_point = traj_points.size();
+  auto &motion_planning_info =
+      frame_->mutable_session()->mutable_planning_context()->mutable_planning_result().motion_planning_info;
 
   pnc::mathlib::spline s_t_spline;
   pnc::mathlib::spline l_t_spline;
@@ -48,6 +42,15 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
   pnc::mathlib::spline curvature_t_spline;
   pnc::mathlib::spline dkappa_t_spline;
   pnc::mathlib::spline ddkappa_t_spline;
+
+  auto const N = traj_points.size();
+
+  std::vector<double> t_vec(N);
+  std::vector<double> s_vec(N);
+  std::vector<double> l_vec(N);
+  std::vector<double> curvature_vec(N);
+  std::vector<double> dkappa_vec(N);
+  std::vector<double> ddkappa_vec(N);
 
   for (size_t i = 0; i < traj_points.size(); i++) {
     if (config_.is_pwj_planning) {
@@ -64,23 +67,24 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
       LOG_DEBUG("result traj_point s=%f, l=%f, x=%f, y=%f \n", traj_points[i].s, traj_points[i].l, traj_points[i].x,
                 traj_points[i].y);
     }
-    t_vec_[i] = traj_points[i].t;
-    s_vec_[i] = traj_points[i].s;
-    l_vec_[i] = traj_points[i].l;
-    curvature_vec_[i] = traj_points[i].curvature;
-    dkappa_vec_[i] = traj_points[i].dkappa;
-    ddkappa_vec_[i] = traj_points[i].ddkappa;
+    t_vec[i] = traj_points[i].t;
+    s_vec[i] = traj_points[i].s;
+    l_vec[i] = traj_points[i].l;
+    curvature_vec[i] = traj_points[i].curvature;
+    dkappa_vec[i] = traj_points[i].dkappa;
+    ddkappa_vec[i] = traj_points[i].ddkappa;
   }
 
-  s_t_spline.set_points(t_vec_, s_vec_);
-  l_t_spline.set_points(t_vec_, l_vec_);
+  s_t_spline.set_points(t_vec, s_vec);
+  l_t_spline.set_points(t_vec, l_vec);
 
-  curvature_t_spline.set_points(t_vec_, curvature_vec_);
-  dkappa_t_spline.set_points(t_vec_, dkappa_vec_);
-  ddkappa_t_spline.set_points(t_vec_, ddkappa_vec_);
+  curvature_t_spline.set_points(t_vec, curvature_vec);
+  dkappa_t_spline.set_points(t_vec, dkappa_vec);
+  ddkappa_t_spline.set_points(t_vec, ddkappa_vec);
+
   // Step 2) get dense trajectory points
   auto &planning_init_point = reference_path_ptr_->get_frenet_ego_state().planning_init_point();
-  double init_point_relative_time = planning_init_point.relative_time;
+  // double init_point_relative_time = planning_init_point.relative_time;
 
   std::vector<TrajectoryPoint> dense_traj_points;
   int dense_num_points = int(traj_points.back().t / config_.planning_result_delta_time) + 1;
@@ -92,12 +96,12 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
     // traj_pt.t = init_point_relative_time + t;
     traj_pt.t = t;
     traj_pt.s = s_t_spline(t);
-    traj_pt.x = traj_spline.x_t_spline(t);
-    traj_pt.y = traj_spline.y_t_spline(t);
-    traj_pt.v = traj_spline.v_t_spline(t);
-    traj_pt.a = traj_spline.a_t_spline(t);
+    traj_pt.x = motion_planning_info.x_t_spline(t);
+    traj_pt.y = motion_planning_info.y_t_spline(t);
+    traj_pt.v = motion_planning_info.v_t_spline(t);
+    traj_pt.a = motion_planning_info.a_t_spline(t);
     traj_pt.l = l_t_spline(t);
-    traj_pt.heading_angle = traj_spline.theta_t_spline(t);
+    traj_pt.heading_angle = motion_planning_info.theta_t_spline(t);
     traj_pt.curvature = curvature_t_spline(t);
     traj_pt.dkappa = dkappa_t_spline(t);
     traj_pt.ddkappa = ddkappa_t_spline(t);
@@ -122,13 +126,25 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
 
     traj_pt.x = cart_pt.x;
     traj_pt.y = cart_pt.y;
-    dense_traj_points.push_back(std::move(traj_pt));
+    dense_traj_points.emplace_back(std::move(traj_pt));
   }
+
+  const auto N_ext = dense_traj_points.size();
+  std::vector<double> traj_x_vec(N_ext);
+  std::vector<double> traj_y_vec(N_ext);
+
+  for (size_t i = 0; i < N_ext; ++i) {
+    traj_x_vec[i] = dense_traj_points[i].x;
+    traj_y_vec[i] = dense_traj_points[i].y;
+  }
+
+  JSON_DEBUG_VECTOR("traj_x_vec", traj_x_vec, 3)
+  JSON_DEBUG_VECTOR("traj_y_vec", traj_y_vec, 3)
 
   ego_planning_result.traj_points = dense_traj_points;
 
   // record some results
-  ego_planning_result.traj_spline = traj_spline;
+  ego_planning_result.motion_planning_info = motion_planning_info;
 
   return true;
 }

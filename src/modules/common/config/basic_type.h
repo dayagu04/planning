@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "ilqr_define.h"
 #include "lateral_motion_planner.pb.h"
 #include "longitudinal_motion_planner.pb.h"
 #include "mjson/mjson.hpp"
@@ -336,7 +337,7 @@ struct AdaptiveCruiseControlInfo {
   AccInfo navi_time_distance_info;
 };
 
-struct TrajectorySpline {
+struct MotionPlanningInfo {
   bool lat_enable_flag = false;
   bool lon_enable_flag = false;
   pnc::mathlib::spline x_s_spline;
@@ -359,6 +360,8 @@ struct TrajectorySpline {
   pnc::mathlib::spline omega_t_spline;
 
   std::vector<double> s_lat_vec;
+
+  ControlVec u_vec;
 };
 
 struct PlanningResult {
@@ -366,7 +369,7 @@ struct PlanningResult {
   ScenarioStateEnum target_scenario_state = ROAD_NONE;
   TrajectoryPoints raw_traj_points;
   TrajectoryPoints traj_points;
-  TrajectorySpline traj_spline;
+  MotionPlanningInfo motion_planning_info;
   RequestType turn_signal = NO_CHANGE;
   CurvatureInfo curvature_info;
   int use_backup_cnt = 0;

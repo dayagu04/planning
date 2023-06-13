@@ -157,9 +157,9 @@ class LoadCyberbag:
       json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'VisionLonBehavior_a_target_high',
                          "VisionLonBehavior_a_target_low", "VisionLonBehavior_v_target", "VisionLonBehavior_lead_one_id",
                          "VisionLonBehavior_lead_one_dis", "VisionLonBehavior_lead_one_vel", "VisionLonBehavior_lead_two_id",
-                         "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel"]
+                         "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel", "solver_condition", "dist_err"]
 
-      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec"]
+      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec"]
 
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
         self.plan_debug_msg['t'].append(msg.timestamp / 1e6)
@@ -268,8 +268,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     local_view_data['data_ego'].data.update({
       'ego_xb': ego_xb,
       'ego_yb': ego_yb,
-      # 'ego_xn': ego_xn,
-      # 'ego_yn': ego_yn,
+      'ego_xn': ego_xn,
+      'ego_yn': ego_yn,
     })
     # car pos in global coordinates
     car_xn = []

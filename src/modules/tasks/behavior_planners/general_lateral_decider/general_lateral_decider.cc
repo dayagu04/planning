@@ -24,7 +24,7 @@ bool GeneralLateralDecider::InitInfo() {
 
   ego_cart_state_manager_ = frame_->session()->environmental_model().get_ego_state_manager();
 
-  cruise_vel_ = ego_cart_state_manager_->ego_v_cruise();
+  cruise_vel_ = frame_->session()->planning_context().v_ref_cruise();
 
   is_lane_change_scene_ = false;
 

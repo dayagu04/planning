@@ -1,4 +1,6 @@
 #include "ego_state_manager.h"
+#include <algorithm>
+#include <cmath>
 
 #include "debug_info_log.h"
 #include "environmental_model.h"
@@ -155,7 +157,8 @@ bool EgoStateManager::update(const planning::common::VehicleStatus &vehicle_stat
 
 uint8_t EgoStateManager::ReplanProcess(bool lat_replan, bool lon_replan) {
   const auto &ego_state = session_->environmental_model().get_ego_state_manager();
-  const auto &traj_spline = session_->mutable_planning_context()->mutable_planning_result().traj_spline;
+  const auto &motion_planning_info =
+      session_->mutable_planning_context()->mutable_planning_result().motion_planning_info;
 
   const auto &traj_points = session_->mutable_planning_context()->mutable_planning_result().traj_points;
 
@@ -165,43 +168,69 @@ uint8_t EgoStateManager::ReplanProcess(bool lat_replan, bool lon_replan) {
   Eigen::Vector2d cur_pos(ego_state->ego_pose_raw().x, ego_state->ego_pose_raw().y);
 
   pnc::spline::Projection projection_spline;
-  projection_spline.CalProjectionPoint(traj_spline.x_s_spline, traj_spline.y_s_spline, traj_spline.s_lat_vec.front(),
-                                       traj_spline.s_lat_vec.back(), cur_pos);
+  projection_spline.CalProjectionPoint(motion_planning_info.x_s_spline, motion_planning_info.y_s_spline,
+                                       motion_planning_info.s_lat_vec.front(), motion_planning_info.s_lat_vec.back(),
+                                       cur_pos);
 
   const double &lat_err = projection_spline.GetOutput().dist_proj;
 
-  // FBI WARNING
-  // const double ds = ego_state->ego_v() * 0.8 * planning_loop_dt;
   const double ds = traj_points.front().v * planning_loop_dt;
+  const double &lon_err = projection_spline.GetOutput().s_proj - (motion_planning_info.s_lat_vec.front() + ds);
 
-  const double &lon_err = projection_spline.GetOutput().s_proj - (traj_spline.s_lat_vec.front() + ds);
+  const double dist =
+      std::hypot(lat_init_state.x() - ego_state->ego_pose_raw().x, lat_init_state.y() - ego_state->ego_pose_raw().y);
 
   uint8_t out = 0;
 
-  // lateral replan
-  if (lat_err > 0.6 || lat_replan) {
-    // when lateral replan, delta and omega use stitch result
+  JSON_DEBUG_VALUE("lat_err", lat_err)
+  JSON_DEBUG_VALUE("lon_err", lon_err)
+  JSON_DEBUG_VALUE("dist_err", dist)
+  // since lateral plan path has no backward extension, lon err is wrong
+  // so set replan init point to vehicle state both lat and lat replan
+
+  if (dist > 0.8 || lat_replan || lon_replan) {
     lat_init_state.set_x(ego_state->ego_pose_raw().x);
     lat_init_state.set_y(ego_state->ego_pose_raw().y);
-    lat_init_state.set_theta(traj_spline.theta_s_spline(projection_spline.GetOutput().s_proj));
+    lat_init_state.set_theta(ego_state->ego_pose().theta);
+    static const double steer_ratio = 15.7;
+    lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio);
+    lat_init_state.set_omega(0.0);
 
-    out += ReplanStatus::LAT_REPLAN;
-  }
-
-  // longitudinal replan
-  if (lon_err > 1.0 || lon_replan) {
-    lat_init_state.set_x(projection_spline.GetOutput().point_proj.x());
-    lat_init_state.set_y(projection_spline.GetOutput().point_proj.y());
-    lat_init_state.set_theta(traj_spline.theta_s_spline(projection_spline.GetOutput().s_proj));
-
-    // s is fakely frenet, cannot be obtained
     lon_init_state.set_s(0.0);
-
-    // when longitudinal replan, acc and jerk use stitch result
     lon_init_state.set_v(ego_state->ego_v());
 
-    out += ReplanStatus::LON_REPLAN;
+    out += ReplanStatus::LAT_REPLAN + ReplanStatus::LON_REPLAN;
+    // a and j use stitch result
   }
+
+  // TODO
+  // lateral replan
+  // if (lat_err > 0.6 || lat_replan) {
+  //   // when lateral replan, delta and omega use stitch result
+  //   lat_init_state.set_x(ego_state->ego_pose_raw().x);
+  //   lat_init_state.set_y(ego_state->ego_pose_raw().y);
+  //   // lat_init_state.set_theta(motion_planning_info.theta_s_spline(projection_spline.GetOutput().s_proj));
+  //   lat_init_state.set_theta(ego_state->ego_pose().theta);
+  //   lat_init_state.set_delta(projection_spline.GetOutput().s_proj);
+  //   lat_init_state.set_omega(projection_spline.GetOutput().s_proj);
+
+  //   out += ReplanStatus::LAT_REPLAN;
+  // }
+
+  // // longitudinal replan
+  // if (lon_err > 1.0 || lon_replan) {
+  //   lat_init_state.set_x(projection_spline.GetOutput().point_proj.x());
+  //   lat_init_state.set_y(projection_spline.GetOutput().point_proj.y());
+  //   lat_init_state.set_theta(motion_planning_info.theta_s_spline(projection_spline.GetOutput().s_proj));
+
+  //   // s is fakely frenet, cannot be obtained
+  //   lon_init_state.set_s(0.0);
+
+  //   // when longitudinal replan, acc and jerk use stitch result
+  //   lon_init_state.set_v(ego_state->ego_v());
+
+  //   out += ReplanStatus::LON_REPLAN;
+  // }
 
   return out;
 }
@@ -233,34 +262,33 @@ void EgoStateManager::LongitudinalReset() {
   lon_init_state.set_j(0.0);
 }
 
-void EgoStateManager::TrajectorySplineReset() {
-  auto &traj_spline = session_->mutable_planning_context()->mutable_planning_result().traj_spline;
+void EgoStateManager::MotionPlanningInfoReset() {
+  auto &motion_planning_info = session_->mutable_planning_context()->mutable_planning_result().motion_planning_info;
 
   if (!session_->environmental_model().location_valid()) {
-    traj_spline.lat_enable_flag = false;
-    traj_spline.lon_enable_flag = false;
+    motion_planning_info.lat_enable_flag = false;
+    motion_planning_info.lon_enable_flag = false;
   }
 }
 
 bool EgoStateManager::LateralStitch() {
   auto &lat_init_state = planning_init_point_.lat_init_state;
-  const auto &traj_spline = session_->mutable_planning_context()->mutable_planning_result().traj_spline;
-  const auto &traj_points = session_->mutable_planning_context()->mutable_planning_result().traj_points;
+  const auto &motion_planning_info =
+      session_->mutable_planning_context()->mutable_planning_result().motion_planning_info;
 
-  if (traj_spline.lat_enable_flag) {
+  if (motion_planning_info.lat_enable_flag) {
     // note that s is only for lateral path rather than frenet
-    // const double s = traj_spline.s_t_spline(planning_loop_dt);
+    // const double s = motion_planning_info.s_t_spline(planning_loop_dt);
 
-    // FBI WARNING
-    // const auto &ego_state =
-    // session_->environmental_model().get_ego_state_manager();
-    // auto const ds = ego_state->ego_v() * 0.8 * planning_loop_dt;
+    // max delta as equivalent steer angle = 120 deg
+    static const double max_delta = 120.0 / 57.3 / 15.7;
+    static const double max_omega = 60.0 / 57.3 / 15.7;
 
-    lat_init_state.set_x(traj_spline.x_t_spline(planning_loop_dt));
-    lat_init_state.set_y(traj_spline.y_t_spline(planning_loop_dt));
-    lat_init_state.set_theta(traj_spline.theta_t_spline(planning_loop_dt));
-    lat_init_state.set_delta(traj_spline.delta_t_spline(planning_loop_dt));
-    lat_init_state.set_omega(traj_spline.omega_t_spline(planning_loop_dt));
+    lat_init_state.set_x(motion_planning_info.x_t_spline(planning_loop_dt));
+    lat_init_state.set_y(motion_planning_info.y_t_spline(planning_loop_dt));
+    lat_init_state.set_theta(motion_planning_info.theta_t_spline(planning_loop_dt));
+    lat_init_state.set_delta(pnc::mathlib::Limit(motion_planning_info.delta_t_spline(planning_loop_dt), max_delta));
+    lat_init_state.set_omega(pnc::mathlib::Limit(motion_planning_info.omega_t_spline(planning_loop_dt), max_omega));
     lat_init_state.set_curv(0.0);
     lat_init_state.set_d_curv(0.0);
 
@@ -272,14 +300,16 @@ bool EgoStateManager::LateralStitch() {
 
 bool EgoStateManager::LongitudinalStitch() {
   auto &lon_init_state = planning_init_point_.lon_init_state;
-  const auto &traj_spline = session_->mutable_planning_context()->mutable_planning_result().traj_spline;
+  const auto &motion_planning_info =
+      session_->mutable_planning_context()->mutable_planning_result().motion_planning_info;
 
-  if (traj_spline.lon_enable_flag) {
-    // s is fakely frenet, cannot be obtained
+  if (motion_planning_info.lon_enable_flag) {
+    // note that longtitudinal s is in frenet, but lateral s is not in frenet
+    // so set zero here and set right value in longitudinal planning
     lon_init_state.set_s(0.0);
-    lon_init_state.set_v(traj_spline.v_t_spline(planning_loop_dt));
-    lon_init_state.set_a(traj_spline.a_t_spline(planning_loop_dt));
-    lon_init_state.set_j(traj_spline.j_t_spline(planning_loop_dt));
+    lon_init_state.set_v(std::max(motion_planning_info.v_t_spline(planning_loop_dt), 0.0));
+    lon_init_state.set_a(motion_planning_info.a_t_spline(planning_loop_dt));
+    lon_init_state.set_j(motion_planning_info.j_t_spline(planning_loop_dt));
     return true;
   } else {
     return false;
@@ -292,7 +322,7 @@ void EgoStateManager::UpdatePlanningInitState() {
   uint8_t replan_status = 0;
 
   // reset trajectory spline
-  TrajectorySplineReset();
+  MotionPlanningInfoReset();
 
   // stitch process
   if (!LateralStitch()) {
@@ -313,6 +343,8 @@ void EgoStateManager::UpdatePlanningInitState() {
 
   // JSON_DEBUG_VALUE("reset_flag", reset_flag)
   JSON_DEBUG_VALUE("replan_status", replan_status)
+  JSON_DEBUG_VALUE("lon_reset_flag", lon_reset_flag)
+  JSON_DEBUG_VALUE("lat_reset_flag", lat_reset_flag)
 
   // assebling init state
   auto const &lat_init_state = planning_init_point_.lat_init_state;

@@ -42,14 +42,41 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
     planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
-    # try:
-    #   json_pos_x = planning_json['ego_pos_x']
-    #   json_pos_y = planning_json['ego_pos_y']
-    #   json_yaw = planning_json['ego_pos_yaw']
-    #   coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
-    # except:
-    #   coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
-    coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+    ego_xn, ego_yn = [], []
+    ### global variables
+    # pos offset
+    for i in range(len(bag_loader.loc_msg['data'])):
+      pos_xn_i = bag_loader.loc_msg['data'][i].pose.local_position.x
+      pos_yn_i = bag_loader.loc_msg['data'][i].pose.local_position.y
+
+      ego_xn.append(pos_xn_i)
+      ego_yn.append(pos_yn_i)
+
+    lat_plan_data['data_ego'].data.update({
+      'ego_xn': ego_xn,
+      'ego_yn': ego_yn,
+    })
+
+    car_xn = []
+    car_yn = []
+    for i in range(len(car_xb)):
+        tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], cur_pos_xn, cur_pos_yn, cur_yaw)
+        car_xn.append(tmp_x)
+        car_yn.append(tmp_y)
+
+    lat_plan_data['data_car'].data.update({
+      'car_xn': car_xn,
+      'car_yn': car_yn,
+    })
+
+    try:
+      json_pos_x = planning_json['ego_pos_x']
+      json_pos_y = planning_json['ego_pos_y']
+      json_yaw = planning_json['ego_pos_yaw']
+      coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
+    except:
+      coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+    # coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
   if bag_loader.plan_debug_msg['enable'] == True:
     lat_motion_plan_input = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_input
@@ -72,7 +99,8 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
     lat_plan_data['data_lat_motion_plan_input'].data.update({
       'ref_x': ref_x,
       'ref_y': ref_y,
-
+      'ref_xn': lat_motion_plan_input.ref_x_vec,
+      'ref_yn': lat_motion_plan_input.ref_y_vec,
       'soft_upper_bound_x0_vec': soft_upper_bound_x0_vec,
       'soft_upper_bound_y0_vec': soft_upper_bound_y0_vec,
       'soft_lower_bound_x0_vec': soft_lower_bound_x0_vec,
@@ -105,8 +133,8 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
     for i in range(len(time_vec)):
       ref_theta_deg_vec.append(lat_motion_plan_input.ref_theta_vec[i] * 57.3)
       theta_deg_vec.append(lat_motion_plan_output.theta_vec[i] * 57.3)
-      steer_deg_vec.append(lat_motion_plan_output.delta_vec[i] * 57.3)
-      steer_dot_deg_vec.append(lat_motion_plan_output.omega_vec[i] * 57.3)
+      steer_deg_vec.append(lat_motion_plan_output.delta_vec[i] * 57.3 * 15.7)
+      steer_dot_deg_vec.append(lat_motion_plan_output.omega_vec[i] * 57.3 * 15.7)
 
     acc_vec = lat_motion_plan_output.acc_vec
     jerk_vec = lat_motion_plan_output.jerk_vec
@@ -115,6 +143,8 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
       'time_vec': time_vec,
       'x_vec': x_vec,
       'y_vec': y_vec,
+      'xn_vec': lat_motion_plan_output.x_vec,
+      'yn_vec': lat_motion_plan_output.y_vec,
       'ref_theta_deg_vec': ref_theta_deg_vec,
       'theta_deg_vec': theta_deg_vec,
       'steer_deg_vec': steer_deg_vec,
@@ -122,6 +152,17 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
       'acc_vec': acc_vec,
       'jerk_vec': jerk_vec,
     })
+
+    assembled_delta = []
+    assembled_omega = []
+    for i in range(len(planning_json['assembled_delta'])):
+      assembled_delta.append(planning_json['assembled_delta'][i] * 57.3 * 15.7)
+      assembled_omega.append(planning_json['assembled_omega'][i] * 57.3 * 15.7)
+
+    print("replan_status = ", planning_json['replan_status'])
+    print("solver_condition = ", planning_json['solver_condition'])
+    print("assembled_delta = ", assembled_delta)
+    print("assembled_omega = ", assembled_omega)
 
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
@@ -135,12 +176,14 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
         plan_x.append(trajectory.trajectory_points[i].x)
         plan_y.append(trajectory.trajectory_points[i].y)
 
-      plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
+      plan_traj_x, plan_traj_y = coord_tf.global_to_local(planning_json['traj_x_vec'], planning_json['traj_y_vec'])
 
     lat_plan_data['data_planning'].data.update({
       'plan_traj_y' : plan_traj_y,
       'plan_traj_x' : plan_traj_x,
-      })
+      'plan_traj_xn':planning_json['traj_x_vec'],
+      'plan_traj_yn':planning_json['traj_y_vec'],
+    })
 
 
 def load_lat_plan_figure(fig1):
@@ -149,6 +192,8 @@ def load_lat_plan_figure(fig1):
 
   data_lat_motion_plan_input = ColumnDataSource(data = {'ref_x':[],
                                                         'ref_y':[],
+                                                        'ref_xn':[],
+                                                        'ref_yn':[],
                                                         'soft_upper_bound_x0_vec':[],
                                                         'soft_upper_bound_y0_vec':[],
                                                         'soft_lower_bound_x0_vec':[],
@@ -162,6 +207,8 @@ def load_lat_plan_figure(fig1):
   data_lat_motion_plan_output = ColumnDataSource(data = {'time_vec':[],
                                                          'x_vec':[],
                                                          'y_vec':[],
+                                                         'xn_vec':[],
+                                                         'yn_vec':[],
                                                          'ref_theta_deg_vec':[],
                                                          'theta_deg_vec':[],
                                                          'steer_deg_vec':[],
@@ -169,13 +216,22 @@ def load_lat_plan_figure(fig1):
                                                          'acc_vec':[],
                                                          'jerk_vec':[]
                                                         })
-  data_planning = ColumnDataSource(data = {'plan_traj_y':[],
-                                    'plan_traj_x':[],})
 
+  data_planning = ColumnDataSource(data = {'plan_traj_y':[],
+                                           'plan_traj_x':[],
+                                           'plan_traj_xn':[],
+                                           'plan_traj_yn':[],})
+
+  data_ego = ColumnDataSource(data = {'ego_xn':[],
+                                      'ego_yn':[],})
+  data_car = ColumnDataSource(data = {'car_xn':[],
+                                      'car_yn':[],})
   lat_plan_data = {'data_lat_motion_plan_input':data_lat_motion_plan_input,
                    'data_lat_motion_plan_output':data_lat_motion_plan_output,
                    'data_refline':data_refline,
                    'data_planning':data_planning,
+                   'data_ego': data_ego,
+                   'data_car': data_car,
   }
 
 
@@ -189,13 +245,22 @@ def load_lat_plan_figure(fig1):
   fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=False)
   fig1.line('y_vec', 'x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
 
-  # fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan_debug')
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug')
 
   fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 5.2], width=600, height=160)
   fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=600, height=160)
   fig4 = bkp.figure(x_axis_label='time', y_axis_label='lat jerk',x_range = fig2.x_range, width=600, height=160)
   fig5 = bkp.figure(x_axis_label='time', y_axis_label='steer',x_range = fig2.x_range, width=600, height=160)
   fig6 = bkp.figure(x_axis_label='time', y_axis_label='steer dot',x_range = fig2.x_range, width=600, height=160)
+
+  fig7 = bkp.figure(x_axis_label='y', y_axis_label='x', width=800, height=600, match_aspect = True, aspect_scale=1)
+  fig7.x_range.flipped = True
+
+  fig7.line('ref_yn', 'ref_xn', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path')
+  fig7.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
+  fig7.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
+  fig7.line('yn_vec', 'xn_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
+  fig7.line('plan_traj_yn', 'plan_traj_xn', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
 
   f2 = fig2.line('time_vec', 'ref_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'ref_theta')
   fig2.line('time_vec', 'theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'theta')
@@ -223,12 +288,13 @@ def load_lat_plan_figure(fig1):
   fig4.toolbar.active_scroll = fig4.select_one(WheelZoomTool)
   fig5.toolbar.active_scroll = fig5.select_one(WheelZoomTool)
   fig6.toolbar.active_scroll = fig6.select_one(WheelZoomTool)
-
+  fig7.toolbar.active_scroll = fig7.select_one(WheelZoomTool)
 
   fig2.legend.click_policy = 'hide'
   fig3.legend.click_policy = 'hide'
   fig4.legend.click_policy = 'hide'
   fig5.legend.click_policy = 'hide'
   fig6.legend.click_policy = 'hide'
+  fig7.legend.click_policy = 'hide'
 
-  return fig1, fig2, fig3, fig4, fig5, fig6, lat_plan_data
+  return fig1, fig2, fig3, fig4, fig5, fig6, fig7, lat_plan_data

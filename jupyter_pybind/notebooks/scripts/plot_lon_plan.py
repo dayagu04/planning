@@ -6,8 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/docker_share/0612_pnc/real_time_genche_4.00000"
-#bag_path = "/docker_share/urban_bag_0213/0607_2/realtime/20220901124141.record.00000"
+bag_path = "/root/bag/20230613133258.record.00000"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

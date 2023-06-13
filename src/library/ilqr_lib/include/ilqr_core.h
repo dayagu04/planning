@@ -95,6 +95,9 @@ class iLqr {
   // usually do not need init cost
   void Solve(const State &x0);
 
+  // simulation dynamics with given init state x0 and input u_vec
+  void Simulation(const State &x0, const ControlVec &u_vec);
+
   // void InputFeasibilityCheck(const StateVec &xk, const ControlVec &uk);
 
   void SetWarmStart(bool flag) { solver_config_ptr_->warm_start_enable = flag; }

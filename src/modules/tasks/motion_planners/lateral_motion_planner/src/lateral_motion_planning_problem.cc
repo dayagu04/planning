@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include "debug_info_log.h"
+#include "ilqr_core.h"
 
 using namespace ilqr_solver;
 using namespace pnc::mathlib;
@@ -43,6 +45,13 @@ void LateralMotionPlanningProblem::Init() {
 
   // STEP 3: init debug info, must run after add cost
   ilqr_core_ptr_->InitAdvancedInfo();
+
+  // init u_vec_
+  u_vec_.resize(solver_config.horizon + 1);
+  for (size_t i = 0; i < u_vec_.size(); ++i) {
+    u_vec_[i].resize(solver_config.input_size);
+    u_vec_[i].setZero();
+  }
 }
 
 uint8_t LateralMotionPlanningProblem::Update(planning::common::LateralPlanningInput &planning_input) {
@@ -59,7 +68,7 @@ uint8_t LateralMotionPlanningProblem::Update(planning::common::LateralPlanningIn
                                                                                    Square(planning_input.ref_vel())));
 
   for (size_t i = 0; i < N; ++i) {
-    // // reference
+    // reference
     cost_config_vec.at(i)[REF_X] = planning_input.ref_x_vec(i);
     cost_config_vec.at(i)[REF_Y] = planning_input.ref_y_vec(i);
     cost_config_vec.at(i)[REF_THETA] = planning_input.ref_theta_vec(i);
@@ -122,7 +131,24 @@ uint8_t LateralMotionPlanningProblem::Update(planning::common::LateralPlanningIn
 
   ilqr_core_ptr_->Solve(init_state_);
 
-  return true;
+  // fail protection
+  const uint8_t solver_condition = ilqr_core_ptr_->GetSolverInfoPtr()->solver_condition;
+  const auto solver_config = ilqr_core_ptr_->GetSolverConfigPtr();
+
+  if (solver_condition >= iLqr::BACKWARD_PASS_FAIL) {
+    if (u_vec_.size() != ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1) {
+      // init u_vec_
+      u_vec_.resize(solver_config->horizon + 1);
+      for (size_t i = 0; i < u_vec_.size(); ++i) {
+        u_vec_[i].resize(solver_config->input_size);
+        u_vec_[i].setZero();
+      }
+    }
+
+    ilqr_core_ptr_->Simulation(init_state_, u_vec_);
+  }
+
+  return solver_condition;
 }
 
 }  // namespace lateral_planning

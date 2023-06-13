@@ -43,16 +43,6 @@ class LateralMotionPlanner : public Task {
   std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningProblem> planning_problem_ptr_;
   planning::common::LateralPlanningOutput planning_output_;
   planning::common::LateralPlanningInput planning_input_;
-
-  // state vector
-  std::vector<double> x_vec_;
-  std::vector<double> y_vec_;
-  std::vector<double> theta_vec_;
-  std::vector<double> delta_vec_;
-  std::vector<double> omega_vec_;
-  std::vector<double> curv_vec;
-  std::vector<double> d_curv_vec;
-  std::vector<double> s_vec_;
 };
 
 }  // namespace planning

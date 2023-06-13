@@ -51,13 +51,6 @@ class LongitudinalMotionPlanner : public Task {
   std::shared_ptr<pnc::longitudinal_planning::LongitudinalMotionPlanningProblem> planning_problem_ptr_;
   planning::common::LongitudinalPlanningOutput planning_output_;
   planning::common::LongitudinalPlanningInput planning_input_;
-
-  // state vector
-  std::vector<double> s_vec_;
-  std::vector<double> v_vec_;
-  std::vector<double> a_vec_;
-  std::vector<double> j_vec_;
-  std::vector<double> t_vec_;
 };
 
 }  // namespace planning

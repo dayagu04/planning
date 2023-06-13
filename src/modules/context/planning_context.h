@@ -145,6 +145,10 @@ class PlanningContext {
 
   SpeedLimit &mutable_speed_limit() { return speed_limit_; }
 
+  const double &v_ref_cruise() const { return v_ref_cruise_; }
+
+  void set_v_ref_cruise(const double &v_ref_cruise) { v_ref_cruise_ = v_ref_cruise; }
+
   void clear() {
     last_planning_success_ = planning_success_;
     planning_success_ = false;
@@ -168,6 +172,7 @@ class PlanningContext {
   bool planning_success_{false};
   bool last_planning_success_{false};
   bool replan_trajectory_{false};
+  double v_ref_cruise_;
   PlanningResult planning_result_;
   common::PlanningResult last_frame_planning_result_;
   std::shared_ptr<PlanningResult> last_planning_result_;

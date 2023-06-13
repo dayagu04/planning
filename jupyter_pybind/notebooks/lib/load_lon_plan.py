@@ -192,15 +192,15 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
     planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
-   #  try:
-   #    json_pos_x = planning_json['ego_pos_x']
-   #    json_pos_y = planning_json['ego_pos_y']
-   #    json_yaw = planning_json['ego_pos_yaw']
-   #    coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
-   #  except:
-   #    coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+    try:
+      json_pos_x = planning_json['ego_pos_x']
+      json_pos_y = planning_json['ego_pos_y']
+      json_yaw = planning_json['ego_pos_yaw']
+      coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
+    except:
+      coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
-    coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+   #  coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
@@ -215,7 +215,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
         plan_x.append(trajectory.trajectory_points[i].x)
         plan_y.append(trajectory.trajectory_points[i].y)
 
-      plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
+      # plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
+      plan_traj_x, plan_traj_y = coord_tf.global_to_local(planning_json['traj_x_vec'], planning_json['traj_y_vec'])
 
     lon_plan_data['data_planning'].data.update({
       'plan_traj_y' : plan_traj_y,
@@ -225,7 +226,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 def load_lon_global_figure(bag_loader):
    velocity_fig = bkp.figure(title='车速',x_axis_label='time/s',
                   y_axis_label='velocity/(m/s)',width=600,height=400)
-   
+
    ego_velocity_vec = []
    target_velocity_vec = []
    leadone_velocity_vec = []
@@ -251,11 +252,11 @@ def load_lon_global_figure(bag_loader):
 
    acc_fig = bkp.figure(title='加速度',x_axis_label='time/s',
                   y_axis_label='acc/(m/s2)',width=600,height=400)
-   
+
    ego_acc_vec = []
    acc_min_vec = []
    acc_max_vec = []
-   
+
    t_vs_vec = bag_loader.vs_msg['t']
    for ind in range(len(bag_loader.plan_debug_msg['json'])):
       acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_low'], 2))
@@ -322,7 +323,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
      ('low_type','@obs_low_type'),
      ('high_type','@obs_high_type'),
   ])
-#   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan_debug')
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug')
 
   # fig2 S-T
   fig2 = bkp.figure(x_axis_label='t', y_axis_label='s', x_range = [-0.1, 7.0], width=600, height=400, tools=[hover,'pan,wheel_zoom,box_zoom,reset'], match_aspect = True, aspect_scale=1)
