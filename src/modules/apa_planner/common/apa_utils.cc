@@ -1,7 +1,7 @@
 #include "apa_planner/common/apa_utils.h"
 
+#include "../../../common/log_glog.h"
 #include "apa_planner/common/apa_cos_sin.h"
-#include "apa_planner/common/planning_log_helper.h"
 #include "apa_planner/common/vehicle_param_helper.h"
 #include "func_state_machine.pb.h"
 
@@ -101,7 +101,7 @@ bool IsSlotSelected(Frame* const frame) {
       get_local_view().function_state_machine_info;
 
   if (!func_state_machine.has_current_state()) {
-    PLANNING_LOG << "func_state_machine is invalid" << std::endl;
+    AERROR << "func_state_machine is invalid";
     return false;
   }
 
@@ -128,7 +128,7 @@ bool IsRoughCalc(Frame* const frame) {
       get_local_view().function_state_machine_info;
 
   if (!func_state_machine.has_current_state()) {
-    PLANNING_LOG << "func_state_machine is invalid" << std::endl;
+    AERROR << "func_state_machine is invalid";
     return false;
   }
 
@@ -148,7 +148,7 @@ bool IsRoughCalc(Frame* const frame) {
 
 bool IsReplanEachFrame(const FuncStateMachine& func_state_machine) {
   if (!func_state_machine.has_current_state()) {
-    PLANNING_LOG << "func_state_machine is invalid" << std::endl;
+    AERROR << "func_state_machine is invalid";
     return false;
   }
 
@@ -168,7 +168,7 @@ bool IsReplanEachFrame(const FuncStateMachine& func_state_machine) {
 
 bool IsReplanNecessary(const FuncStateMachine& func_state_machine) {
   if (!func_state_machine.has_current_state()) {
-    PLANNING_LOG << "func_state_machine is invalid" << std::endl;
+    AERROR << "func_state_machine is invalid";
     return false;
   }
 

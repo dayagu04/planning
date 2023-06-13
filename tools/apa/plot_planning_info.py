@@ -158,8 +158,14 @@ class PlotPlanningInfo(object):
     def read_file(self):
         file_object = open(self.data_path, 'r')
         lines = file_object.readlines()
-        for line in lines:
-            self.get_values(line)
+        is_glog = lines[0].startswith("Log file created at")
+        if is_glog:
+            for line in lines[3:]:
+                splited_line = line.split(']', 1)[1].strip()
+                self.get_values(splited_line)
+        else:
+            for line in lines:
+                self.get_values(line)
         file_object.close()
 
     def get_closed_veh_box(self, x, y, theta):

@@ -5,7 +5,7 @@
 #include <vector>
 #include <utility>
 
-#include "apa_planner/common/planning_log_helper.h"
+#include "../../../common/log_glog.h"
 #include "apa_planner/speed_smoother/apa_speed_limit_decider.h"
 #include "common/math/linear_interpolation.h"
 #include "common/math/piecewise_jerk/piecewise_problem.h"
@@ -42,8 +42,7 @@ bool ApaSpeedSmoother::Smooth(
   int resample_point_num = static_cast<int>(path_length / delta_s_) + 1;
   resample_point_num = std::max(resample_point_num, 5);
   delta_s_ = path_length / (resample_point_num - 1);
-  PLANNING_LOG << "path_length:" << path_length
-      << ", delta_s_:" << delta_s_ << std::endl;
+  AINFO << "path_length:" << path_length << ", delta_s_:" << delta_s_;
 
   std::vector<double> s_vev;
   s_vev.reserve(resample_point_num);
@@ -72,8 +71,8 @@ bool ApaSpeedSmoother::Smooth(
     s_vev.emplace_back(path_s);
     path_s += delta_s_;
   }
-  PLANNING_LOG << "traj_point_num:" << traj_point_num
-      << ", resample_point_num:" << resample_point_num << std::endl;
+  AINFO << "traj_point_num:" << traj_point_num
+      << ", resample_point_num:" << resample_point_num;
 
   // get speed limit data
   ApaSpeedLimit speed_limit_data;
@@ -90,12 +89,12 @@ bool ApaSpeedSmoother::Smooth(
   piecewise_jerk_problem.set_weight_dddx(config_.weight_dddv());
   piecewise_jerk_problem.set_weight_slack(config_.weight_slack());
 
-  PLANNING_LOG << "weight_v:" << config_.weight_v()
+  AINFO << "weight_v:" << config_.weight_v()
       << ", weight_dv:" << config_.weight_dv()
       << ", set_weight_ddx:" << config_.weight_ddv()
       << ", weight_dddv:" << config_.weight_dddv()
       << ", weight_slack:" << config_.weight_slack()
-      << ", weight_ref_v:" << config_.weight_ref_v() << std::endl;
+      << ", weight_ref_v:" << config_.weight_ref_v();
 
   // calculate bounds
   std::vector<WeightedBounds> v_bounds(resample_point_num,
@@ -129,8 +128,7 @@ bool ApaSpeedSmoother::Smooth(
   bool success =
       piecewise_jerk_problem.optimize(config_.max_iter(), status);
   if (!success) {
-    PLANNING_LOG << "apa piecewise problem solve failed, starus:"
-        << status << std::endl;
+    AERROR << "apa piecewise problem solve failed, starus:" << status;
     return false;
   }
 
@@ -143,10 +141,10 @@ bool ApaSpeedSmoother::Smooth(
         speed_limit_data.speed_limit_points()[i].second * motion_sign;
     smooothed_trajectory->mutable_trajectory_points(i)->set_v(v);
     const auto& pt = smooothed_trajectory->trajectory_points()[i];
-    PLANNING_LOG << "smoothed traj pt [" << i << "], x:" << pt.x()
+    AINFO << "smoothed traj pt [" << i << "], x:" << pt.x()
         << ", y:" << pt.y() << ", theta:" << pt.heading_yaw()
         << ", kappa:" << pt.curvature() << ", v:" << pt.v()
-        << ", v limit:" << v_limit << ", s:" << pt.distance() << std::endl;
+        << ", v limit:" << v_limit << ", s:" << pt.distance();
   }
   smooothed_trajectory->mutable_trajectory_points()->rbegin()->set_v(0.0);
   *planning_output = smoothed_planning_output;

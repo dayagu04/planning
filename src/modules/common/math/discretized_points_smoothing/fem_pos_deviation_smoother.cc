@@ -22,7 +22,7 @@
 
 #include <iostream>
 
-#include "apa_planner/common/planning_log_helper.h"
+#include "../../../../common/log_glog.h"
 #include "common/math/discretized_points_smoothing/fem_pos_deviation_osqp_interface.h"
 #include "common/math/discretized_points_smoothing/fem_pos_deviation_sqp_osqp_interface.h"
 
@@ -56,7 +56,7 @@ bool FemPosDeviationSmoother::QpWithOsqp(
     const std::vector<double>& bounds, std::vector<double>* opt_x,
     std::vector<double>* opt_y) {
   if (opt_x == nullptr || opt_y == nullptr) {
-    PLANNING_LOG << "opt_x or opt_y is nullptr" << std::endl;
+    AERROR << "opt_x or opt_y is nullptr";
     return false;
   }
 
@@ -91,7 +91,7 @@ bool FemPosDeviationSmoother::SqpWithOsqp(
     const std::vector<double>& bounds, std::vector<double>* opt_x,
     std::vector<double>* opt_y) {
   if (opt_x == nullptr || opt_y == nullptr) {
-    PLANNING_LOG << "opt_x or opt_y is nullptr" << std::endl;
+    AERROR << "opt_x or opt_y is nullptr";
     return false;
   }
 

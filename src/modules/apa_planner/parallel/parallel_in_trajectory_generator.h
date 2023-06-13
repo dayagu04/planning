@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../../../common/log_glog.h"
 #include "frame.h"
 #include "apa_planner/common/geometry_planning_io.h"
-#include "apa_planner/common/planning_log_helper.h"
 #include "apa_planner/parallel/parallel_in_geometry_plan.h"
 #include "apa_planner/path_smoother/iterative_anchoring_smoother.h"
 #include "apa_planner/speed_smoother/apa_speed_smoother.h"
@@ -136,7 +136,7 @@ class ParallelInTrajectoryGenerator {
       const ParallelInGeometryPlan& geometry_planning) {
     target_point_in_slot_  = geometry_planning.GetUpdatedTargetPoint();
 
-    PLANNING_LOG << "updated target_point_in_slot_ x:"
+    AINFO << "updated target_point_in_slot_ x:"
         << target_point_in_slot_.x << ", y:" << target_point_in_slot_.y
         << ", theta:" << target_point_in_slot_.theta << std::endl;
   }

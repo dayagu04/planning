@@ -24,7 +24,7 @@
 #include <iostream>
 #include <limits>
 
-#include "apa_planner/common/planning_log_helper.h"
+#include "../../../../common/log_glog.h"
 
 namespace planning {
 namespace planning_math {
@@ -32,27 +32,22 @@ namespace planning_math {
 bool FemPosDeviationOsqpInterface::Solve() {
   // Sanity Check
   if (ref_points_.empty()) {
-    PLANNING_LOG << "reference points empty, solver early terminates"
-        << std::endl;
+    AERROR << "reference points empty, solver early terminates";
     return false;
   }
 
   if (ref_points_.size() != bounds_around_refs_.size()) {
-    PLANNING_LOG
-        << "ref_points and bounds size not equal, solver early terminates"
-        << std::endl;
+    AERROR << "ref_points and bounds size not equal, solver early terminates";
     return false;
   }
 
   if (ref_points_.size() < 3) {
-    PLANNING_LOG << "ref_points size smaller than 3, solver early terminates"
-         << std::endl;
+    AERROR << "ref_points size smaller than 3, solver early terminates";
     return false;
   }
 
   if (ref_points_.size() > std::numeric_limits<int>::max()) {
-    PLANNING_LOG << "ref_points size too large, solver early terminates"
-        << std::endl;
+    AERROR << "ref_points size too large, solver early terminates";
     return false;
   }
 
@@ -103,7 +98,7 @@ bool FemPosDeviationOsqpInterface::Solve() {
                               &A_indptr, &lower_bounds, &upper_bounds, &q,
                               &primal_warm_start, data, &work, settings);
   if (res == false || work == nullptr || work->solution == nullptr) {
-    PLANNING_LOG << "Failed to find solution." << std::endl;
+    AERROR << "Failed to find solution.";
     // Cleanup
     osqp_cleanup(work);
     c_free(data->A);
@@ -331,14 +326,12 @@ bool FemPosDeviationOsqpInterface::OptimizeWithOsqp(
   auto status = (*work)->info->status_val;
 
   if (status < 0) {
-    PLANNING_LOG << "failed optimization status:\t" << (*work)->info->status
-        << std::endl;
+    AERROR << "failed optimization status:\t" << (*work)->info->status;
     return false;
   }
 
   if (status != 1 && status != 2) {
-    PLANNING_LOG << "failed optimization status:\t" << (*work)->info->status
-        << std::endl;
+    AERROR << "failed optimization status:\t" << (*work)->info->status;
     return false;
   }
 

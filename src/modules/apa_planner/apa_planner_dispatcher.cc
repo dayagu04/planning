@@ -2,7 +2,6 @@
 
 #include "../../common/log_glog.h"
 #include "apa_planner/common/apa_utils.h"
-#include "apa_planner/common/planning_log_helper.h"
 #include "apa_planner/diagonal/diagonal_in_planner.h"
 #include "apa_planner/parallel/parallel_in_planner.h"
 #include "func_state_machine.pb.h"

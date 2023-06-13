@@ -25,10 +25,10 @@
 #include <limits>
 #include <string>
 
+#include "../../common/log_glog.h"
 #include "apa_planner/common/apa_cos_sin.h"
 #include "apa_planner/common/apa_utils.h"
 #include "apa_planner/common/geometry_planning_io.h"
-#include "apa_planner/common/planning_log_helper.h"
 #include "common/math/discrete_points_math.h"
 #include "common/math/discretized_points_smoothing/fem_pos_deviation_smoother.h"
 #include "common/math/math_utils.h"
@@ -55,8 +55,7 @@ bool IterativeAnchoringSmoother::Smooth(
       PlanningOutput *const planning_output) {
   size_t traj_point_num = planning_output->trajectory().trajectory_points_size();
   if (traj_point_num < 4) {
-    PLANNING_LOG << "reference points size smaller than four, smoother early "
-        "returned" << std::endl;
+    AWARN << "reference points size smaller than four, smoother early returned";
     return false;
   }
 
@@ -98,22 +97,21 @@ bool IterativeAnchoringSmoother::Smooth(
   DiscretizedPath interpolated_warm_start_path;
   if (!SetPathProfile(*planning_output, interpolated_warm_start_point2ds,
       &interpolated_warm_start_path)) {
-    PLANNING_LOG << "Set path profile fails" << std::endl;
+    AERROR << "Set path profile fails";
     return false;
   }
 
   // Generate feasible bounds for each path point
   std::vector<double> bounds;
   if (!GenerateInitialBounds(interpolated_warm_start_path, &bounds)) {
-    PLANNING_LOG << "Generate initial bounds failed" << std::endl;
+    AERROR << "Generate initial bounds failed";
     return false;
   }
 
   // Check initial path collision avoidance, if it fails, smoother assumption
   // fails. Try reanchoring
   if (CheckCollisionAvoidance(interpolated_warm_start_path)) {
-    PLANNING_LOG << "Interpolated input path points colliding with obstacle"
-        << std::endl;
+    AERROR << "Interpolated input path points colliding with obstacle";
     return false;
   }
 
@@ -128,15 +126,14 @@ bool IterativeAnchoringSmoother::Smooth(
   const uint64_t path_smooth_end_timestamp = IflyTime::Now_ms();
   const uint64_t path_smooth_diff =
       path_smooth_end_timestamp - path_smooth_start_timestamp;
-  PLANNING_LOG << "iterative anchoring path smoother time: "
-      << path_smooth_diff << " ms." << std::endl;
+  AINFO << "iterative anchoring path smoother time: "
+      << path_smooth_diff << " ms.";
 
   UpdatePlanningOutput(smoothed_path_points, planning_output);
 
   const uint64_t end_timestamp = IflyTime::Now_ms();
   const uint64_t diff = end_timestamp - start_timestamp;
-  PLANNING_LOG << "iterative anchoring smoother total time: "
-      << diff << " ms." << std::endl;
+  AINFO << "iterative anchoring smoother total time: " << diff << " ms.";
 
   return true;
 }
@@ -174,8 +171,7 @@ bool IterativeAnchoringSmoother::SmoothPath(
 
   while (is_collision) {
     if (counter > max_iteration_num) {
-      PLANNING_LOG << "Maximum iteration reached, path smoother early stops"
-          << std::endl;
+      AERROR << "Maximum iteration reached, path smoother early stops";
       return true;
     }
 
@@ -184,13 +180,12 @@ bool IterativeAnchoringSmoother::SmoothPath(
     std::vector<double> opt_x;
     std::vector<double> opt_y;
     if (!fem_pos_smoother.Solve(raw_point2d, flexible_bounds, &opt_x, &opt_y)) {
-      PLANNING_LOG << "Smoothing path fails" << std::endl;
+      AERROR << "Smoothing path fails";
       return false;
     }
 
     if (opt_x.size() < 2 || opt_y.size() < 2) {
-      PLANNING_LOG << "Return by fem_pos_smoother is wrong. Size smaller than 2 "
-          << std::endl;
+      AERROR << "Return by fem_pos_smoother is wrong. Size smaller than 2";
       return false;
     }
 
@@ -201,13 +196,13 @@ bool IterativeAnchoringSmoother::SmoothPath(
 
     if (!SetPathProfile(planning_output, smoothed_point2d,
         smoothed_path_points)) {
-      PLANNING_LOG << "Set path profile fails" << std::endl;
+      AERROR << "Set path profile fails";
       return false;
     }
 
     is_collision = CheckCollisionAvoidance(*smoothed_path_points);
 
-    PLANNING_LOG << "loop iteration number is " << counter << std::endl;
+    AINFO << "loop iteration number is " << counter;
     ++counter;
   }
 
@@ -237,8 +232,7 @@ bool IterativeAnchoringSmoother::CheckCollisionAvoidance(
       Vec2d(point_i.x - point_0.x, point_i.y - point_0.y));
     for (const auto& obstacle_linesegment : obstacles_linesegments_vec_) {
       if (ego_polygon.HasOverlap(obstacle_linesegment)) {
-        PLANNING_LOG << "point at " << i << " collied with LineSegment"
-            << std::endl;
+        AINFO << "point at " << i << " collied with LineSegment";
         return true;
       }
     }

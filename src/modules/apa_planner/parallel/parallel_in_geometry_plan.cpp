@@ -3,9 +3,9 @@
 #include <limits>
 #include <math.h>
 
+#include "../../../common/log_glog.h"
 #include "apa_planner/common/apa_cos_sin.h"
 #include "apa_planner/common/apa_utils.h"
-#include "apa_planner/common/planning_log_helper.h"
 #include "common/math/box2d.h"
 #include "common/math/math_utils.h"
 
@@ -63,7 +63,7 @@ bool ParallelInGeometryPlan::ABSegment(const PlanningPoint &point_a,
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
   if (CheckSlotOpenSideWrong(point_a)) {
-    PLANNING_LOG << "open side wrong" << std::endl;
+    AERROR << "open side wrong";
     return false;
   }
 
@@ -82,8 +82,8 @@ bool ParallelInGeometryPlan::ABSegment(const PlanningPoint &point_a,
   int dense_step_num = (ab_len - sparse_len) / min_l_step;
   dense_step_num = std::max(dense_step_num, 0);
   const int point_num = std::max(sparse_step_num + dense_step_num, 1);
-  PLANNING_LOG << "sparse_step_num:" << sparse_step_num
-      << ", dense_step_num:" << dense_step_num << std::endl;
+  AINFO << "sparse_step_num:" << sparse_step_num
+      << ", dense_step_num:" << dense_step_num;
 
   const double cos_point_a_theta = apa_cos(point_a.theta);
   const double sin_point_a_theta = apa_sin(point_a.theta);
@@ -158,11 +158,10 @@ bool ParallelInGeometryPlan::ABSegment(const PlanningPoint &point_a,
     }
   }
 
-  // PLANNING_LOG << "total_cnt:" << point_num
+  // AINFO << "total_cnt:" << point_num
   //     << ", collide_cnt:" << collide_cnt
   //     << ", bc_fail_cnt:" << zb_fail_cnt
-  //     << ", total_cost_nan_cnt:" << total_cost_nan_cnt
-  //     << std::endl;
+  //     << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
 
   if (std::isinf(segments_info->total_cost)) {
     return false;
@@ -175,15 +174,17 @@ bool ParallelInGeometryPlan::ReverseABSegment(const PlanningPoint &point_a,
     bool is_start, bool is_rough_calc, ParallelSegmentsInfo *segments_info) {
 
   if (CheckSlotOpenSideWrong(point_a)) {
-    PLANNING_LOG << "open side wrong" << std::endl;
+    AERROR << "open side wrong";
     return false;
   }
   const double rear_axle_over_dis = 4.0;
   if (point_a.x > kMaxXRearAxle) {
-    PLANNING_LOG << "ego car's X coordination is larger than upper limit of backward A-B plan " << std::endl;
+    AINFO << "ego car's X coordination is larger than "
+        "upper limit of backward A-B plan";
     return false;
   } else if (point_a.x <= 0) {
-    PLANNING_LOG << "ego car's X coordination is smaller than lower limit of backward A-B plan" << std::endl;
+    AINFO << "ego car's X coordination is smaller than "
+        "lower limit of backward A-B plan";
     return false;
   }
 
@@ -201,10 +202,10 @@ bool ParallelInGeometryPlan::ReverseABSegment(const PlanningPoint &point_a,
   int dense_step_num = (ab_len - sparse_len) / min_l_step;
   dense_step_num = std::max(dense_step_num, 0);
   const int point_num = std::max(sparse_step_num + dense_step_num, 1);
-  PLANNING_LOG << "sparse_step_num:" << sparse_step_num
-      << ", dense_step_num:" << dense_step_num << std::endl;
-  PLANNING_LOG << "sparse_step: " << sparse_len << ", dense_step: " 
-      << ab_len - sparse_len << std::endl;
+  AINFO << "sparse_step_num:" << sparse_step_num
+      << ", dense_step_num:" << dense_step_num;
+  AINFO << "sparse_step: " << sparse_len << ", dense_step: "
+      << ab_len - sparse_len;
 
   const double cos_point_a_theta = apa_cos(point_a.theta);
   const double sin_point_a_theta = apa_sin(point_a.theta);
@@ -278,11 +279,10 @@ bool ParallelInGeometryPlan::ReverseABSegment(const PlanningPoint &point_a,
     }
   }
 
-  // PLANNING_LOG << "total_cnt:" << point_num
+  // AINFO << "total_cnt:" << point_num
   //     << ", collide_cnt:" << collide_cnt
   //     << ", bc_fail_cnt:" << zb_fail_cnt
-  //     << ", total_cost_nan_cnt:" << total_cost_nan_cnt
-  //     << std::endl;
+  //     << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
 
   if (std::isinf(segments_info->total_cost)) {
     return false;
@@ -378,11 +378,10 @@ bool ParallelInGeometryPlan::BCSegment(const PlanningPoint &point_b,
 
   }
 
-  // PLANNING_LOG << "total_cnt:" << point_num
+  // AINFO << "total_cnt:" << point_num
   //     << ", collide_cnt:" << collide_cnt
   //     << ", bc_fail_cnt:" << bc_fail_cnt
-  //     << ", total_cost_nan_cnt:" << total_cost_nan_cnt
-  //     << std::endl;
+  //     << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
 
   if (std::isinf(segments_info->total_cost)) {
     return false;
@@ -480,11 +479,10 @@ bool ParallelInGeometryPlan::CDSegment(const PlanningPoint &point_c,
   }
 
   // if (is_start) {
-  //   PLANNING_LOG << "total_cnt:" << (radius_num * point_num)
+  //   AINFO << "total_cnt:" << (radius_num * point_num)
   //       << ", collide_cnt:" << collide_cnt
   //       << ", de_fail_cnt:" << de_fail_cnt
-  //       << ", total_cost_nan_cnt:" << total_cost_nan_cnt
-  //       << std::endl;
+  //       << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
   // }
 
   if (std::isinf(segments_info->total_cost)) {
@@ -567,11 +565,10 @@ bool ParallelInGeometryPlan::DESegment(const PlanningPoint &point_d,
 
   }
 
-  // PLANNING_LOG << "total_cnt:" << point_num
+  // AINFO << "total_cnt:" << point_num
   //     << ", collide_cnt:" << collide_cnt
   //     << ", ef_fail_cnt:" << ef_fail_cnt
-  //     << ", total_cost_nan_cnt:" << total_cost_nan_cnt
-  //     << std::endl;
+  //     << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
 
   if (std::isinf(segments_info->total_cost)) {
     return false;
@@ -589,7 +586,7 @@ bool ParallelInGeometryPlan::EFSegment(const PlanningPoint &point_e,
     segments_info->total_cost = tmp_segments_info.total_cost;
     segments_info->opt_radius_ef = tmp_segments_info.opt_radius_ef;
     segments_info->opt_point_f = tmp_segments_info.opt_point_f;
-    // PLANNING_LOG << "ef1 success" << std::endl;
+    // AINFO << "ef1 success";
     return true;
   }
 
@@ -597,7 +594,7 @@ bool ParallelInGeometryPlan::EFSegment(const PlanningPoint &point_e,
     segments_info->total_cost = tmp_segments_info.total_cost + kSegmentCost;
     segments_info->opt_radius_ef = tmp_segments_info.opt_radius_ef;
     segments_info->opt_point_f = tmp_segments_info.opt_point_f;
-    // PLANNING_LOG << "ef2 success" << std::endl;
+    // AINFO << "ef2 success";
     return true;
   }
 
@@ -606,7 +603,7 @@ bool ParallelInGeometryPlan::EFSegment(const PlanningPoint &point_e,
         tmp_segments_info.total_cost + 2.0 * kSegmentCost;
     segments_info->opt_radius_ef = tmp_segments_info.opt_radius_ef;
     segments_info->opt_point_f = tmp_segments_info.opt_point_f;
-    // PLANNING_LOG << "ef3 success" << std::endl;
+    // AINFO << "ef3 success";
     return true;
   }
 
@@ -689,11 +686,10 @@ bool ParallelInGeometryPlan::EF1Segment(const PlanningPoint &point_e,
   }
 
   if (is_start) {
-    PLANNING_LOG << "total_cnt1:" << target_y_vec_.size()
+    AINFO << "total_cnt1:" << target_y_vec_.size()
         << ", radius_cnt1:" << radius_cnt1
         << ", fx_cnt1:" << fx_cnt1
-        << ", collide_cnt1:" << collide_cnt1
-        << std::endl;
+        << ", collide_cnt1:" << collide_cnt1;
   }
 
   const int radius_ef_num = is_start ? 10 : 1;
@@ -746,11 +742,10 @@ bool ParallelInGeometryPlan::EF1Segment(const PlanningPoint &point_e,
   }
 
   if (is_start) {
-    PLANNING_LOG << "total_cnt2:" << radius_ef_num
+    AINFO << "total_cnt2:" << radius_ef_num
         << ", fy_cnt2:" << fy_cnt2
         << ", fx_cnt2:" << fx_cnt2
-        << ", collide_cnt2:" << collide_cnt2
-        << std::endl;
+        << ", collide_cnt2:" << collide_cnt2;
   }
 
   if (std::isinf(segments_info->total_cost)) {
@@ -924,10 +919,9 @@ bool ParallelInGeometryPlan::FGSegment(const PlanningPoint &point_f,
     }
   }
   if (is_start) {
-    PLANNING_LOG << "total_cnt1:" << target_y_vec_.size()
+    AINFO << "total_cnt1:" << target_y_vec_.size()
         << ", fg_radius_cnt1:" << radius_cnt1
-        << ", collide_cnt1:" << collide_cnt1
-        << std::endl;
+        << ", collide_cnt1:" << collide_cnt1;
   }
 
   const int radius_fg_num = is_start ? 10 : 1;
@@ -966,10 +960,9 @@ bool ParallelInGeometryPlan::FGSegment(const PlanningPoint &point_f,
     }
   }
   if (is_start) {
-    PLANNING_LOG << "total_cnt2:" << radius_fg_num
+    AINFO << "total_cnt2:" << radius_fg_num
         << ", gx_cnt2:" << gx_cnt2
-        << ", collide_cnt2:" << collide_cnt2
-        << std::endl;
+        << ", collide_cnt2:" << collide_cnt2;
   }
 
   if (std::isinf(segments_info->total_cost)) {
@@ -1064,14 +1057,13 @@ bool ParallelInGeometryPlan::EF3Segment(const PlanningPoint &point_e,
   }
 
   if (is_start) {
-    PLANNING_LOG << "total_cnt:" << (point_num * radius_ef_num)
+    AINFO << "total_cnt:" << (point_num * radius_ef_num)
         << ", collide_cnt:" << collide_cnt
         << ", fx_cnt1:" << fx_cnt1
         << ", fx_cnt2:" << fx_cnt2
         << ", fy_cnt1:" << fy_cnt1
         << ", fy_cnt2:" << fy_cnt2
-        << ", total_cost_nan_cnt:" << total_cost_nan_cnt
-        << std::endl;
+        << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
   }
 
   if (std::isinf(segments_info->total_cost)) {
@@ -1090,7 +1082,7 @@ bool ParallelInGeometryPlan::FHSegment(const PlanningPoint &point_f,
     segments_info->total_cost = tmp_segments_info.total_cost;
     segments_info->opt_radius_fh = tmp_segments_info.opt_radius_fh;
     segments_info->opt_point_h = tmp_segments_info.opt_point_h;
-    // PLANNING_LOG << "fh1 success" << std::endl;
+    // AINFO << "fh1 success";
     return true;
   }
 
@@ -1098,7 +1090,7 @@ bool ParallelInGeometryPlan::FHSegment(const PlanningPoint &point_f,
     segments_info->total_cost = tmp_segments_info.total_cost + kSegmentCost;
     segments_info->opt_radius_fh = tmp_segments_info.opt_radius_fh;
     segments_info->opt_point_h = tmp_segments_info.opt_point_h;
-    // PLANNING_LOG << "fh2 success" << std::endl;
+    // AINFO << "fh2 success";
     return true;
   }
 
@@ -1107,7 +1099,7 @@ bool ParallelInGeometryPlan::FHSegment(const PlanningPoint &point_f,
         tmp_segments_info.total_cost + 2.0 * kSegmentCost;
     segments_info->opt_radius_fh = tmp_segments_info.opt_radius_fh;
     segments_info->opt_point_h = tmp_segments_info.opt_point_h;
-    // PLANNING_LOG << "fh3 success" << std::endl;
+    // AINFO << "fh3 success";
     return true;
   }
 
@@ -1324,14 +1316,13 @@ bool ParallelInGeometryPlan::FH3Segment(const PlanningPoint &point_f,
   }
 
   if (is_start) {
-    PLANNING_LOG << "total_cnt:" << (point_num * radius_fh_num)
+    AINFO << "total_cnt:" << (point_num * radius_fh_num)
         << ", collide_cnt:" << collide_cnt
         << ", h3x_cnt1:" << h3x_cnt1
         << ", h3x_cnt2:" << h3x_cnt2
         << ", h3y_cnt1:" << h3y_cnt1
         << ", h3y_cnt2:" << h3y_cnt2
-        << ", total_cost_nan_cnt:" << total_cost_nan_cnt
-        << std::endl;
+        << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
   }
 
   if (std::isinf(segments_info->total_cost)) {
@@ -1607,7 +1598,7 @@ void ParallelInGeometryPlan::CalTargetYVec() {
     const double target_y =
         target_point_.y + (i - half_target_y_num) * kTargetYStep;
     target_y_vec_.push_back(target_y);
-    // PLANNING_LOG << "target_y:" << target_y << std::endl;
+    // AINFO << "target_y:" << target_y;
   }
 }
 
