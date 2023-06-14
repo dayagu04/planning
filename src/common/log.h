@@ -43,7 +43,7 @@ class Log {
   void setConfig(const char* modulename, const char* logpath, LogLevel loglevel) {
     m_logDebug = fopen(logpath, "w");
     if (!m_logDebug) {
-      printf("path is not exist,write file failed!\n");
+      printf("path is not exist,write file failed! %s\n", logpath);
     }
   };
   inline FILE* getModulePointer() { return m_logDebug; }

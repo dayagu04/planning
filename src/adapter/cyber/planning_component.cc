@@ -1,9 +1,6 @@
 #include "planning_component.h"
 
-#include "Platform_Types.h"
 #include "common/config_context.h"
-#include "debug_info_log.h"
-#include "general_planning.h"
 
 // This file compile modules register map and constructor and link to .so
 // When .so loads, static vairiables will init and module constructors will register.
@@ -12,6 +9,7 @@
 namespace planning {
 
 bool PlanningComponent::Init() {
+  (void)common::ConfigurationContext::Instance();
   planning_adapter_ = std::make_unique<PlanningAdapter>();
   planning_adapter_->Init();
 
