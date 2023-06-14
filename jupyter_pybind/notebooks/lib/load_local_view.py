@@ -51,6 +51,12 @@ class LoadCyberbag:
     # planning debug msg
     self.plan_debug_msg = {'t':[], 'data':[], 'json':[], 'enable':[]}
 
+    # control msg
+    self.ctrl_msg = {'t':[], 'data':[], 'enable':[]}
+
+    # control debug msg
+    self.ctrl_debug_msg = {'t':[], 'data':[], 'json':[], 'enable':[]}
+
   def load_all_data(self):
     max_time = 0.0
     # load localization msg
@@ -184,6 +190,59 @@ class LoadCyberbag:
     except:
       self.plan_debug_msg['enable'] = False
       print("missing /iflytek/planning/debug_info !!!")
+
+
+    # load control msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/iflytek/control/control_command"):
+        self.ctrl_msg['t'].append(msg.header.timestamp / 1e6)
+        self.ctrl_msg['data'].append(msg)
+      self.ctrl_msg['t'] = [tmp - self.ctrl_msg['t'][0]  for tmp in self.ctrl_msg['t']]
+      max_time = max(max_time, self.ctrl_msg['t'][-1])
+      print('ctrl_msg time:',self.ctrl_msg['t'][-1])
+      if len(self.ctrl_msg['t']) > 0:
+        self.ctrl_msg['enable'] = True
+      else:
+        self.ctrl_msg['enable'] = False
+    except:
+      self.ctrl_msg['enable'] = False
+      print("missing /iflytek/control/control_command !!!")
+
+
+    # load control debug msg
+    try:
+      json_value_list = ["steer_angle_cmd", "steer_angle", "acc_ego", "acc_vel", "vel_ego", "vel_wheel", "wheel_angle_cmd",
+        "slope_acc", "vel_cmd",  "vel_raw_cmd","vel_error", "vel_fdbk_out", "vel_raw_error", "vel_ffwd_out", "vel_out",
+        "vel_raw_out", "lon_err", "lat_err", "phi_err", "controller_status", "driver_hand_torque", "lat_enable", "lon_enable",
+        "lat_mpc_status", "planning_type", "planning_time_offset", "planning_update_flag", "vel_KP_term", "vel_KI_term" ]
+
+      json_vector_list = ["dx_ref_mpc_vec", "dy_ref_mpc_vec", "dphi_ref_mpc_vec", "dx_mpc_vec", "dy_mpc_vec", "delta_mpc_vec", "dphi_mpc_vec"]
+
+      for topic, msg, t in self.bag.read_messages("/iflytek/control/debug_info"):
+        self.ctrl_debug_msg['t'].append(msg.timestamp / 1e6)
+        self.ctrl_debug_msg['data'].append(msg)
+        try:
+          json_struct = json.loads(msg.extra_json, strict = False)
+          json_data = {}
+          LoadScalarList(json_data, json_value_list, json_struct)
+          LoadVectorList(json_data, json_vector_list, json_struct)
+
+          self.ctrl_debug_msg['json'].append(json_data)
+        except json.decoder.JSONDecodeError as jserr:
+          print('except',jserr)
+
+      self.ctrl_debug_msg['t'] = [tmp - self.ctrl_debug_msg['t'][0]  for tmp in self.ctrl_debug_msg['t']]
+      max_time = max(max_time, self.ctrl_debug_msg['t'][-1])
+      print('ctrl_debug_msg time:',self.ctrl_debug_msg['t'][-1])
+      if len(self.ctrl_debug_msg['t']) > 0:
+        self.ctrl_debug_msg['enable'] = True
+      else:
+        self.ctrl_debug_msg['enable'] = False
+    except:
+      self.ctrl_debug_msg['enable'] = False
+      print("missing /iflytek/control/debug_info !!!")
+
+
     return max_time
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
@@ -231,6 +290,17 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         pred_msg_idx = pred_msg_idx + 1
   local_view_data['data_index']['pred_msg_idx'] = pred_msg_idx
 
+  ctrl_msg_idx = 0
+  if bag_loader.ctrl_msg['enable'] == True:
+    while bag_loader.ctrl_msg['t'][ctrl_msg_idx] <= bag_time and ctrl_msg_idx < (len(bag_loader.ctrl_msg['t'])-2):
+        ctrl_msg_idx = ctrl_msg_idx + 1
+  local_view_data['data_index']['ctrl_msg_idx'] = ctrl_msg_idx
+
+  ctrl_debug_msg_idx = 0
+  if bag_loader.ctrl_debug_msg['enable'] == True:
+    while bag_loader.ctrl_debug_msg['t'][ctrl_debug_msg_idx] <= bag_time and ctrl_debug_msg_idx < (len(bag_loader.ctrl_debug_msg['t'])-2):
+        ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
+  local_view_data['data_index']['ctrl_debug_msg_idx'] = ctrl_debug_msg_idx
 
   ### step 2: 加载定位信息
   cur_pos_xn0 = 0
@@ -520,6 +590,22 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       })
     except:
       pass
+
+
+  # load control
+  if bag_loader.ctrl_msg['enable'] == True:
+    control_result_points = bag_loader.ctrl_msg['data'][ctrl_msg_idx].control_trajectory.control_result_points
+    mpc_dx = []
+    mpc_dy = []
+    for i in range(len(control_result_points)):
+      mpc_dx.append(control_result_points[i].x)
+      mpc_dy.append(control_result_points[i].y)
+
+    local_view_data['data_control'].data.update({
+        'mpc_dx' : mpc_dx,
+        'mpc_dy' : mpc_dy,
+    })
+
   return local_view_data
 
 def load_local_view_figure():
@@ -556,7 +642,8 @@ def load_local_view_figure():
                                         'obs_label':[]})
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
                                       'plan_traj_x':[],})
-
+  data_control = ColumnDataSource(data = {'mpc_dx':[],
+                                          'mpc_dy':[],})
   data_prediction = ColumnDataSource(data = {'prediction_y':[],
                                              'prediction_x':[],})
   data_index = {'loc_msg_idx': 0,
@@ -566,6 +653,8 @@ def load_local_view_figure():
                 'plan_msg_idx': 0,
                 'plan_debug_msg_idx': 0,
                 'pred_msg_idx': 0,
+                'ctrl_msg_idx': 0,
+                'ctrl_debug_msg_idx': 0,
                }
 
   local_view_data = {'data_car':data_car, \
@@ -593,6 +682,7 @@ def load_local_view_figure():
                      'data_fus_obj':data_fus_obj, \
                      'data_snrd_obj':data_snrd_obj, \
                      'data_planning':data_planning,\
+                     'data_control':data_control,\
                      'data_index': data_index, \
                      }
   ### figures config
@@ -627,6 +717,7 @@ def load_local_view_figure():
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fusion_info')
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
+  fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 5, line_color = 'green', line_dash = 'dashed', line_alpha = 0.8, legend_label = 'ctrl_traj')
   fig1.multi_line('prediction_y', 'prediction_x', source = data_prediction, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'prediction')
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
