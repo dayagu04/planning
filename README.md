@@ -30,6 +30,23 @@ mainboard -d /asw/planning/planning.dag
 2.VSCode插件:
 - clangd 用于代码跳转和自动补全(需要先`cd build && cmake ..`一下)
 
+3.Planning Player 本地播包
+- 编译
+```
+cd build && cmake ..
+make pp -j
+make install
+```
+- 跑planning，新bag生成在/mnt/xxxxx/xxxx.0000.xxxx.plan
+```
+tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000
+```
+- 跑planning，新bag生成在xxx.bag
+```
+tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000 --out-bag xxx.bag
+```
+- 修改`.vscode/launch.json`中的bag路径，在VSCode调试界面选择planning player，可以断点调试代码
+
 # Test
 1.单元测试:
 ```

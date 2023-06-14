@@ -107,6 +107,9 @@ void PlanningAdapter::Proc() {
     parking_fusion_info_msg_.Clear();
 
     local_view_.function_state_machine_info = func_state_machine_msg_;
+    input_topic_timestamp->set_function_state_machine(func_state_machine_msg_.header().timestamp());
+    input_topic_latency->set_function_state_machine(start_time -
+                                                    func_state_machine_msg_.header().timestamp() / US_PER_MS);
     func_state_machine_msg_.Clear();
   }
 
@@ -118,12 +121,14 @@ void PlanningAdapter::Proc() {
   bool run_success = planning_base_->RunOnce(local_view_, &planning_output, debug_output, planning_hmi_Info);
 
   // 3.get output & publish
-  planning_debug_data->set_timestamp(IflyTime::Now_us());
-  auto debug_info_json = *DebugInfoManager::GetInstance().GetDebugJson();
-  planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
-  planning_debug_writer_(*planning_debug_data);
+  if (planning_debug_writer_) {
+    planning_debug_data->set_timestamp(IflyTime::Now_us());
+    auto debug_info_json = *DebugInfoManager::GetInstance().GetDebugJson();
+    planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
+    planning_debug_writer_(*planning_debug_data);
+  }
 
-  if (run_success) {
+  if (planning_writer_ && run_success) {
     auto time_stamp_us = IflyTime::Now_us();
     auto header = planning_output.mutable_meta()->mutable_header();
     header->set_timestamp(time_stamp_us);
@@ -131,7 +136,9 @@ void PlanningAdapter::Proc() {
     planning_writer_(planning_output);
   }
 
-  planning_hmi_Info_writer_(planning_hmi_Info);
+  if (planning_hmi_Info_writer_) {
+    planning_hmi_Info_writer_(planning_hmi_Info);
+  }
   double planning_cost_time = IflyTime::Now_ms() - start_time;
   LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);
 }

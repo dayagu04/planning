@@ -1,30 +1,22 @@
-project (planning_component)
+project (pp)
 cmake_minimum_required (VERSION 3.0)
+
+set(CMAKE_CXX_FLAGS "-O2 -DX86 -g")
 
 file(GLOB_RECURSE SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/*.cc
 )
 
-add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
+add_executable(${PROJECT_NAME} EXCLUDE_FROM_ALL ${SRC_FILES})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
   modules
+  cyber
+  fastrtps #?
   autoplt
-  osqpstatic
-)
-
-include_directories(
-  ${EIGEN3_INCLUDE_DIR}
-  ${cyber_SOURCE_DIR}
-  ${cyber_BINARY_DIR}
+  cyber_proto
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
-
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  target_link_libraries(${PROJECT_NAME} PUBLIC
-    NanoLog
-  )
-endif()
 
 set(CONFIG_PATH "/asw/planning/res/conf" CACHE INTERNEL "config file path")

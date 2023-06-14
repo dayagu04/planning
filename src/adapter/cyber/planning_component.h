@@ -3,7 +3,7 @@
 #include "autoplt/include/ADSComponent.h"
 #include "autoplt/include/ADSNode.h"
 
-#include "../planning_adapter.h"
+#include "planning_adapter.h"
 
 namespace planning {
 

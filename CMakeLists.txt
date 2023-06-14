@@ -5,10 +5,6 @@ cmake_minimum_required(VERSION 3.0)
 # Debug: X86  Release: FDC
 # set(CMAKE_BUILD_TYPE Release)
 
-# install config
-set(INSTALL_TO_CURRENT ON)
-set(INSTALL_TO_SYSTEM ON)
-
 # settings
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -17,7 +13,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g -fPIC -fpermissive")
 # adapter
 set(ADAPTER "cyber")
 if (ADAPTER STREQUAL "cyber")
-  # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCYBER_ENV")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCYBER_ENV")
 elseif (ADAPTER STREQUAL "ap")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DAP_ENV")
 endif()
@@ -36,29 +32,20 @@ endif()
 
 add_subdirectory(src)
 add_subdirectory(test)
+add_subdirectory(tools/planning_player)
 
-# install to current directory
-if (INSTALL_TO_CURRENT)
-  file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME})
-  file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME}/res)
-
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME})
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME}/res)
+install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/res/conf
+  DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME}/res)
+if (ADAPTER STREQUAL "cyber")
   install(TARGETS ${PROJECT_NAME}_component
     LIBRARY DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME}/Lib)
-  install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/res/conf
-    DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME}/res)
   install(FILES ${CMAKE_CURRENT_LIST_DIR}/res/dag/${PROJECT_NAME}.dag
     DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME})
+elseif (ADAPTER STREQUAL "ap")
+  # to be add
 endif()
 
-# install to system
-if (INSTALL_TO_SYSTEM)
-  file(MAKE_DIRECTORY /asw/${PROJECT_NAME})
-  file(MAKE_DIRECTORY /asw/${PROJECT_NAME}/res)
-
-  install(TARGETS ${PROJECT_NAME}_component
-    LIBRARY DESTINATION /asw/${PROJECT_NAME}/Lib)
-  install(FILES ${CMAKE_CURRENT_LIST_DIR}/res/dag/${PROJECT_NAME}.dag
-    DESTINATION /asw/${PROJECT_NAME})
-  install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/res/conf
-    DESTINATION /asw/${PROJECT_NAME}/res)
-endif()
+install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME}
+  DESTINATION /asw)

@@ -20,6 +20,7 @@ message TopicTimeList {
   optional uint64 control_output = 7;
   optional uint64 hmi = 8;
   optional uint64 parking_fusion = 9;
+  optional uint64 function_state_machine = 10;
 }
 
 message PlanningDebugInfo {

@@ -23,5 +23,4 @@ target_link_libraries(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-    CONFIG_PATH="/asw/planning/res/conf")
+set(CONFIG_PATH "/asw/planning/res/conf" CACHE INTERNEL "config file path")

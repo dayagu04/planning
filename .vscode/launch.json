@@ -9,7 +9,10 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "/usr/bin/mainboard",
-            "args": ["-d", "/asw/planning/planning.dag"],
+            "args": [
+                "-d",
+                "/asw/planning/planning.dag"
+            ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",
             "environment": [],
@@ -31,6 +34,30 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/test/unit_test",
             "args": [],
+            "stopAtEntry": false, // 不在调试入口停留
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            // "preLaunchTask": "make unit_test",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
+            "name": "(gdb) planning_player",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/tools/planning_player/pp",
+            "args": [
+                "--play",
+                "bags/real_time_genche.00000"
+            ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",
             "environment": [],
