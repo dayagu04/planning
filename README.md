@@ -43,9 +43,14 @@ tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000
 ```
 - 跑planning，新bag生成在xxx.bag
 ```
-tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000 --out-bag xxx.bag
+tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000 --out-bag=xxx.bag[注意要有等号]
 ```
 - 修改`.vscode/launch.json`中的bag路径，在VSCode调试界面选择planning player，可以断点调试代码
+
+4.通过jupyter看bag
+``
+jupyter notebook --ip 0.0.0.0 --port 8080 --allow-root
+``
 
 # Test
 1.单元测试:

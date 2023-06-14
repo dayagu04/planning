@@ -30,6 +30,7 @@ class PlanningPlayer {
 
   std::unique_ptr<PlanningAdapter> planning_adapter_ = nullptr;
   TopicMsgCache msg_cache_{};
+  TopicMsgCache output_msg_cache_{};
   std::map<std::string, std::string> proto_desc_map_{};
   uint64_t planning_timestamp_us_ = 0;
 };

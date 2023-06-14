@@ -31,24 +31,25 @@ void PlanningPlayer::Init() {
 
   // -------------- writter topics --------------
   planning_adapter_->RegisterOutputWriter([this](const PlanningOutput::PlanningOutput& planning_output) {
-    msg_cache_["/iflytek/planning/plan"][planning_timestamp_us_] =
+    output_msg_cache_["/iflytek/planning/plan"][planning_timestamp_us_] =
         std::make_shared<PlanningOutput::PlanningOutput>(planning_output);
   });
 
   planning_adapter_->RegisterDebugInfoWriter([this](const planning::common::PlanningDebugInfo& planning_debug_info) {
-    msg_cache_["/iflytek/planning/debug_info"][planning_timestamp_us_] =
+    output_msg_cache_["/iflytek/planning/debug_info"][planning_timestamp_us_] =
         std::make_shared<planning::common::PlanningDebugInfo>(planning_debug_info);
   });
 
   planning_adapter_->RegisterHMIOutputInfoWriter(
       [this](const PlanningHMI::PlanningHMIOutputInfoStr& planning_hmi_ouput_info) {
-        msg_cache_["/iflytek/planning/hmi"][planning_timestamp_us_] =
+        output_msg_cache_["/iflytek/planning/hmi"][planning_timestamp_us_] =
             std::make_shared<PlanningHMI::PlanningHMIOutputInfoStr>(planning_hmi_ouput_info);
       });
 }
 
 void PlanningPlayer::Clear() {
   msg_cache_.clear();
+  output_msg_cache_.clear();
   proto_desc_map_.clear();
   planning_timestamp_us_ = 0;
 }
@@ -132,28 +133,31 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
     std::cerr << "open writer file failed: " << bag_path << std::endl;
     return;
   }
-  write_topic_msg<FusionObjects::FusionObjectsInfo>(msg_cache_, proto_desc_map_, record_writer,
+  write_topic_msg<FusionObjects::FusionObjectsInfo>(output_msg_cache_, proto_desc_map_, record_writer,
                                                     "/iflytek/fusion/objects");
-  write_topic_msg<FusionRoad::RoadInfo>(msg_cache_, proto_desc_map_, record_writer, "/iflytek/fusion/road_fusion");
-  write_topic_msg<LocalizationOutput::LocalizationEstimate>(msg_cache_, proto_desc_map_, record_writer,
+  write_topic_msg<FusionRoad::RoadInfo>(output_msg_cache_, proto_desc_map_, record_writer,
+                                        "/iflytek/fusion/road_fusion");
+  write_topic_msg<LocalizationOutput::LocalizationEstimate>(output_msg_cache_, proto_desc_map_, record_writer,
                                                             "/iflytek/localization/ego_pose");
-  write_topic_msg<Prediction::PredictionResult>(msg_cache_, proto_desc_map_, record_writer,
+  write_topic_msg<Prediction::PredictionResult>(output_msg_cache_, proto_desc_map_, record_writer,
                                                 "/iflytek/prediction/prediction_result");
-  write_topic_msg<VehicleService::VehicleServiceOutputInfo>(msg_cache_, proto_desc_map_, record_writer,
+  write_topic_msg<VehicleService::VehicleServiceOutputInfo>(output_msg_cache_, proto_desc_map_, record_writer,
                                                             "/iflytek/vehicle_service");
-  write_topic_msg<RadarPerceptionObjects::RadarPerceptionObjectsInfo>(msg_cache_, proto_desc_map_, record_writer,
+  write_topic_msg<RadarPerceptionObjects::RadarPerceptionObjectsInfo>(output_msg_cache_, proto_desc_map_, record_writer,
                                                                       "/iflytek/radar_perception_info");
-  write_topic_msg<ControlCommand::ControlOutput>(msg_cache_, proto_desc_map_, record_writer,
+  write_topic_msg<ControlCommand::ControlOutput>(output_msg_cache_, proto_desc_map_, record_writer,
                                                  "/iflytek/control/control_command");
-  write_topic_msg<HmiMcuInner::HmiMcuInner>(msg_cache_, proto_desc_map_, record_writer, "/iflytek/hmi/mcu_inner");
-  write_topic_msg<ParkingFusion::ParkingFusionInfo>(msg_cache_, proto_desc_map_, record_writer,
+  write_topic_msg<HmiMcuInner::HmiMcuInner>(output_msg_cache_, proto_desc_map_, record_writer,
+                                            "/iflytek/hmi/mcu_inner");
+  write_topic_msg<ParkingFusion::ParkingFusionInfo>(output_msg_cache_, proto_desc_map_, record_writer,
                                                     "/iflytek/fusion/parking_slot");
-  write_topic_msg<FuncStateMachine::FuncStateMachine>(msg_cache_, proto_desc_map_, record_writer,
+  write_topic_msg<FuncStateMachine::FuncStateMachine>(output_msg_cache_, proto_desc_map_, record_writer,
                                                       "/iflytek/system_state/soc_state");
-  write_topic_msg<PlanningOutput::PlanningOutput>(msg_cache_, proto_desc_map_, record_writer, "/iflytek/planning/plan");
-  write_topic_msg<planning::common::PlanningDebugInfo>(msg_cache_, proto_desc_map_, record_writer,
+  write_topic_msg<PlanningOutput::PlanningOutput>(output_msg_cache_, proto_desc_map_, record_writer,
+                                                  "/iflytek/planning/plan");
+  write_topic_msg<planning::common::PlanningDebugInfo>(output_msg_cache_, proto_desc_map_, record_writer,
                                                        "/iflytek/planning/debug_info");
-  write_topic_msg<PlanningHMI::PlanningHMIOutputInfoStr>(msg_cache_, proto_desc_map_, record_writer,
+  write_topic_msg<PlanningHMI::PlanningHMIOutputInfoStr>(output_msg_cache_, proto_desc_map_, record_writer,
                                                          "/iflytek/planning/hmi");
 
   std::cout << "write bag:" << record_writer.GetFile() << std::endl;
@@ -161,12 +165,15 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
 }
 
 template <class T>
-std::shared_ptr<T> find_topic_msg(const TopicMsgCache& msg_cache, const std::string& topic, uint64_t time) {
+std::shared_ptr<T> find_topic_msg(const TopicMsgCache& msg_cache, TopicMsgCache& output_msg_cache,
+                                  const std::string& topic, uint64_t time) {
   auto it_topic = msg_cache.find(topic);
   if (it_topic != msg_cache.end()) {
     auto it_time = it_topic->second.find(time);
     if (it_time != it_topic->second.end()) {
-      return std::dynamic_pointer_cast<T>(it_time->second);
+      auto msg = std::dynamic_pointer_cast<T>(it_time->second);
+      output_msg_cache[topic][time] = msg;
+      return msg;
     }
   }
   return nullptr;
@@ -176,57 +183,63 @@ void PlanningPlayer::PlayOneFrame(int frame_num, const planning::common::TopicTi
   std::cout << "==================== frame " << frame_num << "====================\n"
             << input_time_list.DebugString() << std::endl;
 
-  auto fusion_object_msg = find_topic_msg<FusionObjects::FusionObjectsInfo>(msg_cache_, "/iflytek/fusion/objects",
-                                                                            input_time_list.fusion_object());
+  auto fusion_object_msg = find_topic_msg<FusionObjects::FusionObjectsInfo>(
+      msg_cache_, output_msg_cache_, "/iflytek/fusion/objects", input_time_list.fusion_object());
   if (fusion_object_msg) {
     planning_adapter_->FeedFusionObjects(fusion_object_msg);
   }
 
-  auto fusion_road_msg =
-      find_topic_msg<FusionRoad::RoadInfo>(msg_cache_, "/iflytek/fusion/road_fusion", input_time_list.fusion_road());
+  auto fusion_road_msg = find_topic_msg<FusionRoad::RoadInfo>(
+      msg_cache_, output_msg_cache_, "/iflytek/fusion/road_fusion", input_time_list.fusion_road());
   if (fusion_road_msg) {
     planning_adapter_->FeedFusionRoad(fusion_road_msg);
   }
 
   auto localization_msg = find_topic_msg<LocalizationOutput::LocalizationEstimate>(
-      msg_cache_, "/iflytek/localization/ego_pose", input_time_list.localization());
+      msg_cache_, output_msg_cache_, "/iflytek/localization/ego_pose", input_time_list.localization());
   if (localization_msg) {
     planning_adapter_->FeedLocalizationOutput(localization_msg);
   }
 
   auto prediction_msg = find_topic_msg<Prediction::PredictionResult>(
-      msg_cache_, "/iflytek/prediction/prediction_result", input_time_list.prediction());
+      msg_cache_, output_msg_cache_, "/iflytek/prediction/prediction_result", input_time_list.prediction());
   if (prediction_msg) {
     planning_adapter_->FeedPredictionResult(prediction_msg);
   }
 
   auto vehicle_service_msg = find_topic_msg<VehicleService::VehicleServiceOutputInfo>(
-      msg_cache_, "/iflytek/vehicle_service", input_time_list.vehicle_service());
+      msg_cache_, output_msg_cache_, "/iflytek/vehicle_service", input_time_list.vehicle_service());
   if (vehicle_service_msg) {
     planning_adapter_->FeedVehicleService(vehicle_service_msg);
   }
 
   auto radar_perception_msg = find_topic_msg<RadarPerceptionObjects::RadarPerceptionObjectsInfo>(
-      msg_cache_, "/iflytek/radar_perception_info", input_time_list.radar_perception());
+      msg_cache_, output_msg_cache_, "/iflytek/radar_perception_info", input_time_list.radar_perception());
   if (radar_perception_msg) {
     planning_adapter_->FeedRadarPerceptionObjects(radar_perception_msg);
   }
 
   auto control_output_msg = find_topic_msg<ControlCommand::ControlOutput>(
-      msg_cache_, "/iflytek/control/control_command", input_time_list.control_output());
+      msg_cache_, output_msg_cache_, "/iflytek/control/control_command", input_time_list.control_output());
   if (control_output_msg) {
     planning_adapter_->FeedControlCommand(control_output_msg);
   }
 
-  auto hmi_mcu_msg =
-      find_topic_msg<HmiMcuInner::HmiMcuInner>(msg_cache_, "/iflytek/hmi/mcu_inner", input_time_list.hmi());
+  auto hmi_mcu_msg = find_topic_msg<HmiMcuInner::HmiMcuInner>(msg_cache_, output_msg_cache_, "/iflytek/hmi/mcu_inner",
+                                                              input_time_list.hmi());
   if (hmi_mcu_msg) {
     planning_adapter_->FeedHmiMcuInner(hmi_mcu_msg);
   }
 
+  auto parking_fusion_msg = find_topic_msg<ParkingFusion::ParkingFusionInfo>(
+      msg_cache_, output_msg_cache_, "/iflytek/fusion/parking_slot", input_time_list.hmi());
+  if (parking_fusion_msg) {
+    planning_adapter_->FeedParkingFusion(parking_fusion_msg);
+  }
+
   if (input_time_list.has_function_state_machine()) {
     auto func_state_machine_msg = find_topic_msg<FuncStateMachine::FuncStateMachine>(
-        msg_cache_, "/iflytek/system_state/soc_state", input_time_list.function_state_machine());
+        msg_cache_, output_msg_cache_, "/iflytek/system_state/soc_state", input_time_list.function_state_machine());
     if (func_state_machine_msg) {
       planning_adapter_->FeedFuncStateMachine(func_state_machine_msg);
     }
