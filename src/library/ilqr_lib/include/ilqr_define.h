@@ -45,17 +45,17 @@ typedef Eigen::VectorXd kMT;
 typedef Eigen::MatrixXd KMT;
 
 // vector of definition of ilqr matrix for all iteration
-typedef std::vector<State> StateVec;
-typedef std::vector<Control> ControlVec;
-typedef std::vector<LxMT> LxMTVec;
-typedef std::vector<LuMT> LuMTVec;
-typedef std::vector<LxxMT> LxxMTVec;
-typedef std::vector<LxuMT> LxuMTVec;
-typedef std::vector<LuuMT> LuuMTVec;
-typedef std::vector<FxMT> FxMTVec;
-typedef std::vector<FuMT> FuMTVec;
-typedef std::vector<kMT> kMTVec;
-typedef std::vector<KMT> KMTVec;
+typedef std::vector<Eigen::VectorXd> StateVec;
+typedef std::vector<Eigen::VectorXd> ControlVec;
+typedef std::vector<Eigen::VectorXd> LxMTVec;
+typedef std::vector<Eigen::VectorXd> LuMTVec;
+typedef std::vector<Eigen::MatrixXd> LxxMTVec;
+typedef std::vector<Eigen::MatrixXd> LxuMTVec;
+typedef std::vector<Eigen::MatrixXd> LuuMTVec;
+typedef std::vector<Eigen::MatrixXd> FxMTVec;
+typedef std::vector<Eigen::MatrixXd> FuMTVec;
+typedef std::vector<Eigen::VectorXd> kMTVec;
+typedef std::vector<Eigen::MatrixXd> KMTVec;
 
 // ilqr cost config: use array instead of vector
 typedef std::array<double, MAX_COST_CONFIG_SIZE> IlqrCostConfig;
