@@ -81,13 +81,6 @@ void PlanningAdapter::Proc() {
                                              vehicel_service_output_info_msg_.header().timestamp() / US_PER_MS);
     vehicel_service_output_info_msg_.Clear();
 
-    local_view_.radar_perception_objects_info = radar_perception_objects_info_msg_;
-    local_view_.radar_perception_objects_info_recv_time = radar_perception_objects_info_msg_recv_time_;
-    input_topic_timestamp->set_radar_perception(radar_perception_objects_info_msg_.header().timestamp());
-    input_topic_latency->set_radar_perception(start_time -
-                                              radar_perception_objects_info_msg_.header().timestamp() / US_PER_MS);
-    radar_perception_objects_info_msg_.Clear();
-
     local_view_.control_output = control_output_msg_;
     local_view_.control_output_recv_time = control_output_msg_recv_time_;
     input_topic_timestamp->set_control_output(control_output_msg_.header().timestamp());

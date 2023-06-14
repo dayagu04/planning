@@ -50,14 +50,6 @@ bool PlanningComponent::Init() {
         planning_adapter_->FeedVehicleService(vehicel_service_output_info_msg);
       });
 
-  auto radar_perception_objects_reader_ =
-      planning_node_->CreateReader<RadarPerceptionObjects::RadarPerceptionObjectsInfo>(
-          "/iflytek/radar_perception_info",
-          [this](const std::shared_ptr<RadarPerceptionObjects::RadarPerceptionObjectsInfo>
-                     &radar_perception_objects_info_msg) {
-            planning_adapter_->FeedRadarPerceptionObjects(radar_perception_objects_info_msg);
-          });
-
   auto control_output_reader_ = planning_node_->CreateReader<ControlCommand::ControlOutput>(
       "/iflytek/control/control_command",
       [this](const std::shared_ptr<ControlCommand::ControlOutput> &control_output_msg) {

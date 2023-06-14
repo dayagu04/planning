@@ -22,7 +22,6 @@ enum FeedType {
   FEED_MISC_REPORT,
   FEED_MAP_INFO,
   FEED_FUSION_INFO,
-  FEED_SURR_RADAR_INFO,
   FEED_PREDICTION_INFO,
   FEED_FUSION_LANES_INFO,
   FEED_TYPE_MAX,
@@ -47,9 +46,6 @@ class EnvironmentalModelManager {
   void truncate_prediction_info(const Prediction::PredictionResult &prediction_result, double cur_timestamp_us,
                                 std::unordered_set<uint> &prediction_obj_id_set);
   bool transform_fusion_to_prediction(const FusionObjects::FusionObject &fusion_object, double timestamp);
-  void transform_surround_radar_to_prediction(
-      const RadarPerceptionObjects::RadarPerceptionObject radar_perception_objects,
-      const Common::SensorType sensor_type);
   bool obstacle_prediction_update(double current_time, const LocalView &local_view);
   bool InputReady(double current_time, std::string &error_msg);
   PredictionTrajectoryPoint GetPointAtTime(const std::vector<PredictionTrajectoryPoint> &trajectory_points,

@@ -13,7 +13,6 @@
 #include "parking_slot_select.pb.h"
 #include "planning_plan.pb.h"
 #include "prediction.pb.h"
-#include "radar_perception_objects.pb.h"
 #include "vehicle_service.pb.h"
 
 namespace planning {
@@ -37,9 +36,6 @@ struct LocalView {
 
   VehicleService::VehicleServiceOutputInfo vehicel_service_output_info;
   double vehicel_service_output_info_recv_time = 0.0;
-
-  RadarPerceptionObjects::RadarPerceptionObjectsInfo radar_perception_objects_info;
-  double radar_perception_objects_info_recv_time = 0.0;
 
   ControlCommand::ControlOutput control_output;
   double control_output_recv_time = 0.0;

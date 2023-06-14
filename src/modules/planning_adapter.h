@@ -18,7 +18,6 @@
 #include "planning_hmi.pb.h"
 #include "planning_plan.pb.h"
 #include "prediction.pb.h"
-#include "radar_perception_objects.pb.h"
 #include "vehicle_service.pb.h"
 
 namespace planning {
@@ -67,15 +66,6 @@ class PlanningAdapter {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     vehicel_service_output_info_msg_.CopyFrom(*vehicel_service_output_info_msg);
     vehicel_service_output_info_msg_recv_time_ = IflyTime::Now_ms();
-  }
-
-  void FeedRadarPerceptionObjects(
-      const std::shared_ptr<RadarPerceptionObjects::RadarPerceptionObjectsInfo>& radar_perception_objects_info_msg) {
-    std::cout << "receive radar_perception_objects_info " << radar_perception_objects_info_msg->header().timestamp()
-              << std::endl;
-    std::lock_guard<std::mutex> lock(msg_mutex_);
-    radar_perception_objects_info_msg_.CopyFrom(*radar_perception_objects_info_msg);
-    radar_perception_objects_info_msg_recv_time_ = IflyTime::Now_ms();
   }
 
   void FeedControlCommand(const std::shared_ptr<ControlCommand::ControlOutput>& control_output_msg) {
@@ -131,9 +121,6 @@ class PlanningAdapter {
 
   VehicleService::VehicleServiceOutputInfo vehicel_service_output_info_msg_;
   int64_t vehicel_service_output_info_msg_recv_time_;
-
-  RadarPerceptionObjects::RadarPerceptionObjectsInfo radar_perception_objects_info_msg_;
-  int64_t radar_perception_objects_info_msg_recv_time_;
 
   ControlCommand::ControlOutput control_output_msg_;
   int64_t control_output_msg_recv_time_;

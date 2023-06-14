@@ -61,6 +61,7 @@ struct PredictionTrajectory {
 struct PredictionObject {
   uint id;
   Common::ObjectType type;
+  uint fusion_source;
   double timestamp_us;
   double delay_time{0.0};
   ObstacleIntentType intention;

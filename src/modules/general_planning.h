@@ -33,7 +33,6 @@ class GeneralPlanning {
   void FillPredictionObjectInfo(
       const std::shared_ptr<Prediction::PredictionResult> &prediction_result_raw,
       const std::shared_ptr<FusionObjects::FusionObjectsInfo> &fusion_objects_info_raw,
-      const std::shared_ptr<RadarPerceptionObjects::RadarPerceptionObjectsInfo> &radar_objects_raw,
       Prediction::PredictionResult &output_prediction_ojects);
 
   void UpdateChassisReport(double current_time);

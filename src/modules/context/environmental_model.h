@@ -79,14 +79,6 @@ class EnvironmentalModel {
   const std::vector<PredictionObject> &get_prediction_info() const { return prediction_info_; }
   std::vector<PredictionObject> &get_mutable_prediction_info() { return prediction_info_; }
 
-  const std::unordered_map<Common::SensorType, std::vector<PredictionObject>> &get_surr_radar_prediction_info() const {
-    return surr_radar_map_info_;
-  }
-
-  std::unordered_map<Common::SensorType, std::vector<PredictionObject>> &get_mutable_surr_radar_prediction_info() {
-    return surr_radar_map_info_;
-  }
-
   const std::shared_ptr<EgoStateManager> &get_ego_state_manager() const { return ego_state_manager_; }
 
   void set_ego_state(std::shared_ptr<EgoStateManager> ego_state_manager) { ego_state_manager_ = ego_state_manager; }
@@ -166,41 +158,9 @@ class EnvironmentalModel {
   std::shared_ptr<TrafficLightDecisionManager> traffic_light_decision_manager_ = nullptr;
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
   std::shared_ptr<LaneTracksManager> lane_tracks_manager_ = nullptr;
-  //  private:
-  //   std::unique_ptr<LateralObstacle> lateral_obstacle_;
-  //   std::shared_ptr<TrafficLightDecision> traffic_light_decision_;
-
-  //   common::SceneType scene_type_ = common::SceneType::HIGHWAY;
-  //   EgoStateManager ego_state_manager_;
-  //   std::vector<MSDPerceptionFusionObjectData> fusion_info_;
   std::vector<PredictionObject> prediction_info_;
-  std::unordered_map<Common::SensorType, std::vector<PredictionObject>> surr_radar_map_info_;
-  //   std::vector<PredictionObject> truncated_prediction_info_;
-  // std::vector<PredictionObject> mixed_prediction_info_;
-
-  //   TrafficLight traffic_light_info_;
-  //   MapInfoManager map_info_manager_;
-  //   std::shared_ptr<PerceptionRangeEstimator> perception_range_;
-
-  //   std::unordered_map<int, std::array<std::vector<RefPointFrenet>, 3>> map_info_frenet_;
-
-  //   // baseline info
-  //   std::unordered_map<int, std::shared_ptr<BaseLineInfo>> baseline_infos_;
-  //   FrenetCoordinateSystemParameters frenet_parameters_;
-
-  //   bool hdmap_enable_status_{false};
   bool hdmap_valid_{false};
   bool location_valid_{true};
-  //   bool vehicle_dbw_status_{false};
-  //   bool dbw_status_{false};
-  //   bool pretreatment_status_{true};
-  //   int ignore_obs_id_ = -10000;
-
-  //   // Leadone perception range
-  //   double leadone_perception_range_ = 0;
-
-  //   common::WheelVelocity4d wheel_speed_report_;
-  // common::VehicleStatus vehicle_status_;
   planning::VehicleParam vehicle_param_;
   std::string config_file_dir_;
 

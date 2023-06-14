@@ -180,6 +180,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, 
         LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n", obj.additional_info().track_id());
         continue;
       }
+
       if (prediction_obj_id_set.find(obj.additional_info().track_id()) == prediction_obj_id_set.end()) {
         transform_fusion_to_prediction(obj, (double)local_view.fusion_objects_info.header().timestamp());
       }
@@ -203,20 +204,6 @@ bool EnvironmentalModelManager::obstacle_prediction_update(double current_time, 
   }
   last_feed_time_[FEED_FUSION_INFO] = local_view.fusion_objects_info_recv_time;
   last_feed_time_[FEED_PREDICTION_INFO] = local_view.prediction_result_recv_time;
-
-  auto &prediction_map_info = session_->mutable_environmental_model()->get_mutable_surr_radar_prediction_info();
-  prediction_map_info.clear();
-  // surround_radar update
-  // surround_radar检测到的障碍物会统一从fusion_objdets发出，这部分逻辑后续可取消
-  int num = local_view.radar_perception_objects_info.num();
-  for (auto &obj : local_view.radar_perception_objects_info.radar_perception_object_list()) {
-    num++;
-    if (num > local_view.fusion_objects_info.fusion_object_num()) {
-      break;
-    }
-    transform_surround_radar_to_prediction(obj, local_view.radar_perception_objects_info.sensor_type());
-    last_feed_time_[FEED_SURR_RADAR_INFO] = local_view.radar_perception_objects_info_recv_time;
-  }
   return true;
 }
 
@@ -378,6 +365,7 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
     cur_predicion_obj.id = prediction_object.fusion_obstacle().additional_info().track_id();
     prediction_obj_id_set.emplace(cur_predicion_obj.id);
     cur_predicion_obj.type = prediction_object.fusion_obstacle().common_info().type();
+    cur_predicion_obj.fusion_source = prediction_object.fusion_obstacle().additional_info().fusion_source();
     // todo:后面接口变化时，取trajectory的时间戳
     cur_predicion_obj.timestamp_us = prediction_result.header().timestamp();
     double prediction_relative_time =
@@ -516,6 +504,7 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
   PredictionObject prediction_object;
   prediction_object.id = fusion_object.additional_info().track_id();
   prediction_object.type = fusion_object.common_info().type();
+  prediction_object.fusion_source = fusion_object.additional_info().fusion_source();
   prediction_object.timestamp_us = timestamp;
 
   prediction_object.delay_time = 0.0;
@@ -564,46 +553,6 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(const FusionObjec
   return true;
 }
 
-void EnvironmentalModelManager::transform_surround_radar_to_prediction(
-    RadarPerceptionObjects::RadarPerceptionObject radar_perception_objects, Common::SensorType sensor_type) {
-  auto &prediction_map_info = session_->mutable_environmental_model()->get_mutable_surr_radar_prediction_info();
-  PredictionObject prediction_object;
-  double ego_v = session_->environmental_model().get_ego_state_manager()->ego_v();
-  double ego_v_angle = session_->environmental_model().get_ego_state_manager()->ego_v_angle();
-  double ego_acc = session_->environmental_model().get_ego_state_manager()->ego_acc();
-  // prediction_object.id = radar_perception_objects.additional_info().track_id(); //proto暂时无track_id
-  prediction_object.type = radar_perception_objects.type();
-  // prediction_object.timestamp_us = ;
-  // double delay_time{0.0};
-  // std::string intention;
-
-  prediction_object.cutin_score = 0;
-  prediction_object.position_x = radar_perception_objects.relative_position().x();
-  prediction_object.position_y = radar_perception_objects.relative_position().y();
-  prediction_object.length = radar_perception_objects.shape().length();
-  prediction_object.width = radar_perception_objects.shape().width();
-  prediction_object.speed = std::hypot(radar_perception_objects.relative_velocity().x() + ego_v * cos(ego_v_angle),
-                                       radar_perception_objects.relative_velocity().y()) +
-                            ego_v * sin(ego_v_angle);
-  prediction_object.yaw = 0;
-  prediction_object.acc = std::hypot(radar_perception_objects.relative_acceleration().x() + ego_acc,
-                                     radar_perception_objects.relative_acceleration().y());
-  // add relative info for highway
-  prediction_object.relative_position_x = radar_perception_objects.relative_position().x();
-  prediction_object.relative_position_y = radar_perception_objects.relative_position().y();
-  prediction_object.relative_speed_x = radar_perception_objects.relative_velocity().x();
-  prediction_object.relative_speed_y = radar_perception_objects.relative_velocity().y();
-  prediction_object.relative_acceleration_x = radar_perception_objects.relative_acceleration().x();
-  prediction_object.relative_acceleration_y = radar_perception_objects.relative_acceleration().y();
-  prediction_object.acceleration_relative_to_ground_x = radar_perception_objects.relative_acceleration().x() + ego_acc;
-  prediction_object.acceleration_relative_to_ground_y = radar_perception_objects.relative_acceleration().y();
-  ;
-  prediction_object.relative_theta = 0;
-  // std::vector<Point3d> bottom_polygon_points;
-  // std::vector<Point3d> top_polygon_points;
-  prediction_map_info[sensor_type].emplace_back(prediction_object);
-}
-
 bool EnvironmentalModelManager::InputReady(double current_time, std::string &error_msg) {
   auto to_string = [](FeedType feed_type) -> const char * {
     switch (feed_type) {
@@ -623,8 +572,6 @@ bool EnvironmentalModelManager::InputReady(double current_time, std::string &err
         return "misc_report";
       case FEED_MAP_INFO:
         return "map_info";
-      case FEED_SURR_RADAR_INFO:
-        return "surr_radar_info";
       case FEED_FUSION_INFO:
         return "fusion_info";
       case FEED_PREDICTION_INFO:
@@ -648,7 +595,6 @@ bool EnvironmentalModelManager::InputReady(double current_time, std::string &err
       FEED_MISC_REPORT,
       FEED_FUSION_INFO,
       FEED_PREDICTION_INFO,
-      // FEED_SURR_RADAR_INFO,
       FEED_MAP_INFO,
   };
 
@@ -662,7 +608,6 @@ bool EnvironmentalModelManager::InputReady(double current_time, std::string &err
       FEED_MISC_REPORT,
       FEED_FUSION_INFO,
       FEED_PREDICTION_INFO,
-      // FEED_SURR_RADAR_INFO,
       FEED_FUSION_LANES_INFO,
   };
 
@@ -675,7 +620,6 @@ bool EnvironmentalModelManager::InputReady(double current_time, std::string &err
       FEED_EGO_ACC,
       FEED_MISC_REPORT,
       FEED_FUSION_INFO,
-      // FEED_SURR_RADAR_INFO,
       FEED_MAP_INFO,
   };
 
@@ -688,7 +632,6 @@ bool EnvironmentalModelManager::InputReady(double current_time, std::string &err
       FEED_EGO_ACC,
       FEED_MISC_REPORT,
       FEED_FUSION_INFO,
-      // FEED_SURR_RADAR_INFO,
       FEED_FUSION_LANES_INFO,
   };
 
