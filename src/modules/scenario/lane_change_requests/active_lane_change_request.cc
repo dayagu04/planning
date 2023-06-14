@@ -49,6 +49,20 @@ void ActRequest::Update(int lc_status, double start_move_distolane, double lc_in
     default_int_delay = 0.;
     default_ma_delay = 0.;
   }
+
+  auto current_lane_virtual_id = virtual_lane_mgr_->current_lane_virtual_id();
+  if (lane_change_lane_mgr_->has_origin_lane()) {
+    auto origin_lane = lane_change_lane_mgr_->olane();
+    origin_lane_virtual_id_ = origin_lane->get_virtual_id();
+  } else {
+    origin_lane_virtual_id_ = current_lane_virtual_id;
+  }
+  int target_lane_virtual_id_tmp{current_lane_virtual_id};
+
+  LOG_DEBUG(
+      "[ActRequest::update] current_lane_virtual_id: %d, "
+      "origin_lane_virtual_id_: %d, target_lane_virtual_id_: %d \n",
+      current_lane_virtual_id, origin_lane_virtual_id_, target_lane_virtual_id_);
   // if (olane.has_master() && !map_info.is_in_intersection()) {
   //   olane_width = olane.width();
   // } else if (map_info.is_in_intersection()) {
@@ -233,9 +247,11 @@ void ActRequest::Update(int lc_status, double start_move_distolane, double lc_in
         //      (map_info.lanes_y_point_type(left_lane_index) ==
         //           MSD_MERGE_TYPE_MERGE_FROM_LEFT &&
         //       map_info.distance_to_lanes_y_point(left_lane_index) < 1200))) {
+        target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
         if (is_on_highway && (is_nearby_right_merge_point || is_nearby_right_y_point)) {
         } else {
           GenerateRequest(LEFT_CHANGE);
+          set_target_lane_virtual_id(target_lane_virtual_id_tmp);
           act_request_source_ = "act";
           LOG_DEBUG("[ActRequest::update] Ask for active changing lane to left \n");
         }
@@ -247,6 +263,7 @@ void ActRequest::Update(int lc_status, double start_move_distolane, double lc_in
             (lane_change_lane_mgr_->has_origin_lane() && lane_change_lane_mgr_->is_ego_on(olane))))) {
         Finish();
         Reset();
+        set_target_lane_virtual_id(current_lane_virtual_id);
         LOG_DEBUG("[ActRequest::update] %s:%d finish request, dash not enough \n", __FUNCTION__, __LINE__);
       }
     } else if (right_alc_car.size() > 0) {
@@ -260,9 +277,11 @@ void ActRequest::Update(int lc_status, double start_move_distolane, double lc_in
         //           MSD_MERGE_TYPE_MERGE_FROM_RIGHT &&
         //       map_info.distance_to_lanes_y_point(right_lane_index) < 1200)))
         //       {
+        target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
         if (is_on_highway && (is_nearby_right_merge_point || is_nearby_right_y_point)) {
         } else {
           GenerateRequest(RIGHT_CHANGE);
+          set_target_lane_virtual_id(target_lane_virtual_id_tmp);
           act_request_source_ = "act";
           LOG_DEBUG("[ActRequest::update] Ask for active changing lane to right \n");
         }
@@ -274,10 +293,12 @@ void ActRequest::Update(int lc_status, double start_move_distolane, double lc_in
             (lane_change_lane_mgr_->has_origin_lane() && lane_change_lane_mgr_->is_ego_on(olane))))) {
         Finish();
         Reset();
+        set_target_lane_virtual_id(current_lane_virtual_id);
         LOG_DEBUG("[ActRequest::update] %s:%d finish request, dash not enough \n", __FUNCTION__, __LINE__);
       }
     } else if (request_type_ != NO_CHANGE && status_cond) {
       Finish();
+      set_target_lane_virtual_id(current_lane_virtual_id);
       act_request_source_ = "none";
       LOG_DEBUG("[ActRequest::update] %s:%d finish request, no alc cars \n", __FUNCTION__, __LINE__);
     }
@@ -285,6 +306,7 @@ void ActRequest::Update(int lc_status, double start_move_distolane, double lc_in
     if (neg_left_alc_car && status_cond) {
       if (request_type_ == LEFT_CHANGE) {
         Finish();
+        set_target_lane_virtual_id(current_lane_virtual_id);
         act_request_source_ = "none";
         LOG_DEBUG("[ActRequest::update] %s:%d finish request, neg_left_alc_car \n", __FUNCTION__, __LINE__);
       }
@@ -293,6 +315,7 @@ void ActRequest::Update(int lc_status, double start_move_distolane, double lc_in
     if (neg_right_alc_car && status_cond) {
       if (request_type_ == RIGHT_CHANGE) {
         Finish();
+        set_target_lane_virtual_id(current_lane_virtual_id);
         act_request_source_ = "none";
         LOG_DEBUG("[ActRequest::update] %s:%d finish request, neg_right_alc_car \n", __FUNCTION__, __LINE__);
       }

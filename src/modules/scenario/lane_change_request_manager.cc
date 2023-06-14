@@ -1,5 +1,6 @@
 #include "lane_change_request_manager.h"
 
+#include "config/basic_type.h"
 #include "mrc_condition.h"
 #include "scenario_state_machine.h"
 
@@ -74,16 +75,26 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     if (map_request_.request_type() != NO_CHANGE) {
       map_request_.Finish();
     }
+    if (act_request_.request_type() != NO_CHANGE) {
+      act_request_.Finish();
+      act_request_.Reset();
+    }
     request_ = int_request_.request_type();
     request_source_ = INT_REQUEST;
     target_lane_virtual_id_ = int_request_.target_lane_virtual_id();
   } else if (map_request_.request_type() != NO_CHANGE) {
+    if (act_request_.request_type() != NO_CHANGE) {
+      act_request_.Finish();
+      act_request_.Reset();
+    }
     request_ = map_request_.request_type();
     request_source_ = MAP_REQUEST;
     target_lane_virtual_id_ = map_request_.target_lane_virtual_id();
   } else {
-    request_ = NO_CHANGE;
-    request_source_ = NO_REQUEST;
+    request_ = act_request_.request_type();
+    request_source_ = (request_ != NO_CHANGE) ? ACT_REQUEST : NO_REQUEST;
+    target_lane_virtual_id_ =
+        (request_ != NO_CHANGE) ? act_request_.target_lane_virtual_id() : virtual_lane_mgr_->current_lane_virtual_id();
   }
 
   if (request_ == NO_CHANGE) {

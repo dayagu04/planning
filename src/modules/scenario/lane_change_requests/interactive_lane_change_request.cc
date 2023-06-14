@@ -97,12 +97,14 @@ void IntRequest::Update(int lc_status) {
           "lane and continue lc state  \n");
     } else {
       Finish();
+      set_target_lane_virtual_id(current_lane_virtual_id);
       counter_left_ = 0;
       counter_right_ = 0;
     }
   } else if (lane_change_cmd_ == common::TurnSignalType::NONE ||
              lane_change_cmd_ == common::TurnSignalType::EMERGENCY_FLASHER) {
     Finish();
+    set_target_lane_virtual_id(current_lane_virtual_id);
     counter_left_ = 0;
     counter_right_ = 0;
   }
