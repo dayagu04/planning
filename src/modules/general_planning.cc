@@ -144,7 +144,7 @@ void GeneralPlanning::FillPlanningTrajectory(double start_time, PlanningOutput::
     const double lat_offset_rate = 0.2;
     const double max_lat_offset = 2;
     static double limited_polynomial_3 = 0.0;
-    const auto& d_polynomial = lateral_output.d_poly;
+    const auto &d_polynomial = lateral_output.d_poly;
     if (d_polynomial.size() == 4) {
       if (std::fabs(d_polynomial[3]) > max_lat_offset) {
         limited_polynomial_3 += planning_math::Clamp(d_polynomial[3], -lat_offset_rate, lat_offset_rate);

@@ -361,6 +361,13 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
   prediction_info.clear();
 
   for (const auto &prediction_object : prediction_result.prediction_obstacle_list()) {
+    // HACK: 不使用左前、右前radar
+    if (prediction_object.fusion_obstacle().additional_info().fusion_source() == 4 ||
+        prediction_object.fusion_obstacle().additional_info().fusion_source() == 8 ||
+        prediction_object.fusion_obstacle().common_info().shape().length() == 0 ||
+        prediction_object.fusion_obstacle().common_info().shape().width() == 0) {
+      continue;
+    }
     PredictionObject cur_predicion_obj;
     cur_predicion_obj.id = prediction_object.fusion_obstacle().additional_info().track_id();
     prediction_obj_id_set.emplace(cur_predicion_obj.id);
@@ -586,52 +593,26 @@ bool EnvironmentalModelManager::InputReady(double current_time, std::string &err
   static const double kCheckTimeDiff = 2000.0;
 
   static const std::vector<FeedType> input_longtime_with_hdmap{
-      FEED_VEHICLE_DBW_STATUS,
-      FEED_EGO_VEL,
-      FEED_EGO_STEER_ANGLE,
-      FEED_EGO_ENU,
-      FEED_WHEEL_SPEED_REPORT,
-      FEED_EGO_ACC,
-      FEED_MISC_REPORT,
-      FEED_FUSION_INFO,
-      FEED_PREDICTION_INFO,
-      FEED_MAP_INFO,
+      FEED_VEHICLE_DBW_STATUS, FEED_EGO_VEL,  FEED_EGO_STEER_ANGLE, FEED_EGO_ENU,
+      FEED_WHEEL_SPEED_REPORT, FEED_EGO_ACC,  FEED_MISC_REPORT,     FEED_FUSION_INFO,
+      FEED_PREDICTION_INFO,    FEED_MAP_INFO,
   };
 
   static const std::vector<FeedType> input_longtime_without_hdmap{
-      FEED_VEHICLE_DBW_STATUS,
-      FEED_EGO_VEL,
-      FEED_EGO_STEER_ANGLE,
-      FEED_EGO_ENU,
-      FEED_WHEEL_SPEED_REPORT,
-      FEED_EGO_ACC,
-      FEED_MISC_REPORT,
-      FEED_FUSION_INFO,
-      FEED_PREDICTION_INFO,
-      FEED_FUSION_LANES_INFO,
+      FEED_VEHICLE_DBW_STATUS, FEED_EGO_VEL,           FEED_EGO_STEER_ANGLE, FEED_EGO_ENU,
+      FEED_WHEEL_SPEED_REPORT, FEED_EGO_ACC,           FEED_MISC_REPORT,     FEED_FUSION_INFO,
+      FEED_PREDICTION_INFO,    FEED_FUSION_LANES_INFO,
   };
 
   static const std::vector<FeedType> input_realtime_with_hdmap{
-      FEED_VEHICLE_DBW_STATUS,
-      FEED_EGO_VEL,
-      FEED_EGO_STEER_ANGLE,
-      FEED_EGO_ENU,
-      FEED_WHEEL_SPEED_REPORT,
-      FEED_EGO_ACC,
-      FEED_MISC_REPORT,
-      FEED_FUSION_INFO,
+      FEED_VEHICLE_DBW_STATUS, FEED_EGO_VEL, FEED_EGO_STEER_ANGLE, FEED_EGO_ENU,
+      FEED_WHEEL_SPEED_REPORT, FEED_EGO_ACC, FEED_MISC_REPORT,     FEED_FUSION_INFO,
       FEED_MAP_INFO,
   };
 
   static const std::vector<FeedType> input_realtime_without_hdmap{
-      FEED_VEHICLE_DBW_STATUS,
-      FEED_EGO_VEL,
-      FEED_EGO_STEER_ANGLE,
-      FEED_EGO_ENU,
-      FEED_WHEEL_SPEED_REPORT,
-      FEED_EGO_ACC,
-      FEED_MISC_REPORT,
-      FEED_FUSION_INFO,
+      FEED_VEHICLE_DBW_STATUS, FEED_EGO_VEL, FEED_EGO_STEER_ANGLE, FEED_EGO_ENU,
+      FEED_WHEEL_SPEED_REPORT, FEED_EGO_ACC, FEED_MISC_REPORT,     FEED_FUSION_INFO,
       FEED_FUSION_LANES_INFO,
   };
 

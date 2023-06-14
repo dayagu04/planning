@@ -30,10 +30,9 @@ class GeneralPlanning {
   void FillPredictionTrajectory(const std::vector<Prediction::PredictionTrajectory> &input,
                                 Prediction::PredictionObject &output);
 
-  void FillPredictionObjectInfo(
-      const std::shared_ptr<Prediction::PredictionResult> &prediction_result_raw,
-      const std::shared_ptr<FusionObjects::FusionObjectsInfo> &fusion_objects_info_raw,
-      Prediction::PredictionResult &output_prediction_ojects);
+  void FillPredictionObjectInfo(const std::shared_ptr<Prediction::PredictionResult> &prediction_result_raw,
+                                const std::shared_ptr<FusionObjects::FusionObjectsInfo> &fusion_objects_info_raw,
+                                Prediction::PredictionResult &output_prediction_ojects);
 
   void UpdateChassisReport(double current_time);
   void UpdateWheelReport(double current_time);
