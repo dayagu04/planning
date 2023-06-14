@@ -59,6 +59,7 @@ bool ParallelInTrajectoryGenerator::Plan(framework::Frame* const frame) {
     AINFO << "apa is finished";
     return true;
   }
+  frame_ = frame;
   local_view_ = &(frame->session()->environmental_model().get_local_view());
 
   UpdateStandstillTime();
@@ -146,7 +147,7 @@ bool ParallelInTrajectoryGenerator::SingleSlotPlan(const int slot_index,
 
   if (IsApaFinished()) {
     AINFO << "apa is finished";
-    SetFinishedPlanningOutput(planning_output);
+    SetFinishedPlanningOutput(frame_);
     return true;
   }
 
@@ -174,13 +175,13 @@ bool ParallelInTrajectoryGenerator::GeometryPlan(
   bool is_planning_ok = false;
   planning_output->mutable_trajectory()->mutable_trajectory_points()->Clear();
   if (last_segment_name_.empty()) {
-    if (ABSegmentPlan(start_point, false, idx,
+    if (ABSegmentPlan(start_point, true, idx,
         &geometry_planning_, planning_output)) {
       if (current_state_ == FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
         last_segment_name_ = "BC";
       }
       is_planning_ok = true;
-    } else if (ReverseABSegmentPlan(start_point, false, idx,
+    } else if (ReverseABSegmentPlan(start_point, true, idx,
         &geometry_planning_, planning_output)) {
       if (current_state_ == FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
         last_segment_name_ = "EF";
@@ -188,37 +189,37 @@ bool ParallelInTrajectoryGenerator::GeometryPlan(
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "AB") {
-    if (BCSegmentPlan(start_point, false, idx,
+    if (BCSegmentPlan(start_point, true, idx,
         &geometry_planning_, planning_output)) {
       last_segment_name_ = "BC";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "BC") {
-    if (CDSegmentPlan(start_point, false, idx,
+    if (CDSegmentPlan(start_point, true, idx,
         &geometry_planning_, planning_output)) {
       last_segment_name_ = "EF";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "CD") {
-    if (DESegmentPlan(start_point, false, idx,
+    if (DESegmentPlan(start_point, true, idx,
         &geometry_planning_, planning_output)) {
       last_segment_name_ = "DE";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "DE") {
-    if (EFSegmentPlan(start_point, false, idx,
+    if (EFSegmentPlan(start_point, true, idx,
         &geometry_planning_, planning_output)) {
       last_segment_name_ = "EF";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "EF") {
-    if (FHSegmentPlan(start_point, false, idx,
+    if (FHSegmentPlan(start_point, true, idx,
         &geometry_planning_, planning_output)) {
       last_segment_name_ = "FH";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "FH") {
-    if (EFSegmentPlan(start_point, false, idx,
+    if (EFSegmentPlan(start_point, true, idx,
         &geometry_planning_, planning_output)) {
       last_segment_name_ = "EF";
       is_planning_ok = true;
@@ -1308,29 +1309,6 @@ bool ParallelInTrajectoryGenerator::IsApaFinished() const {
       && fabs(target_point_in_slot_.y - cur_pos_in_slot_.y) < kMaxYOffset
       && fabs(target_point_in_slot_.theta - cur_pos_in_slot_.theta)
           < kMaxThetaOffset;
-}
-
-void ParallelInTrajectoryGenerator::SetFinishedPlanningOutput(
-    PlanningOutput *const planning_output) const {
-  planning_output->mutable_planning_status()->set_apa_planning_status(
-      ::PlanningOutput::ApaPlanningStatus::FINISHED);
-  auto trajectory = planning_output->mutable_trajectory();
-  trajectory->mutable_trajectory_points()->Clear();
-  trajectory->set_trajectory_type(
-      Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
-  auto gear_command = planning_output->mutable_gear_command();
-  gear_command->set_available(true);
-  gear_command->set_gear_command_value(
-      Common::GearCommandValue::GEAR_COMMAND_VALUE_PARKING);
-  TrajectoryPoint *trajectory_point = trajectory->add_trajectory_points();
-  trajectory_point->set_x(cur_pos_in_odom_.x);
-  trajectory_point->set_y(cur_pos_in_odom_.y);
-  trajectory_point->set_heading_yaw(cur_pos_in_odom_.theta);
-  trajectory_point->set_curvature(0.0);
-  trajectory_point->set_t(0.0);
-  trajectory_point->set_v(0.0);
-  trajectory_point->set_a(0.0);
-  trajectory_point->set_distance(0.0);
 }
 
 void ParallelInTrajectoryGenerator::PrintTrajectoryPoints(

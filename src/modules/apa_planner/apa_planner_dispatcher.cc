@@ -31,8 +31,26 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
   if (func_state_machine.has_current_state()
       && func_state_machine.current_state()
           == FunctionalState::PARK_IN_COMPLETED) {
-    AERROR << "apa parking in is finished";
+    AINFO << "apa parking in is finished";
     return true;
+  }
+
+  const auto& planning_output = frame->session()->planning_output_context().
+      planning_status().planning_result.planning_output;
+  if (planning_output.has_planning_status()
+      && planning_output.planning_status().has_apa_planning_status()) {
+    const auto& apa_planning_status =
+        planning_output.planning_status().apa_planning_status();
+    if (apa_planning_status == ::PlanningOutput::ApaPlanningStatus::FINISHED) {
+      SetFinishedPlanningOutput(frame);
+      AINFO << "apa parking in is finished, stop planning";
+      return true;
+    }
+    if (apa_planning_status == ::PlanningOutput::ApaPlanningStatus::FAILED) {
+      SetFailedPlanningOutput(frame);
+      AERROR << "apa parking in is failed, stop planning";
+      return true;
+    }
   }
 
   if (!IsStateMachineStateValid(func_state_machine)) {
@@ -60,6 +78,9 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
     if (planner->Update(frame)) {
       is_planning_ok = true;
     }
+  }
+  if (!is_planning_ok) {
+    SetFailedPlanningOutput(frame);
   }
 
   return is_planning_ok;

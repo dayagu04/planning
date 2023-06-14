@@ -126,9 +126,6 @@ class ParallelInTrajectoryGenerator {
 
   bool IsApaFinished() const;
 
-  void SetFinishedPlanningOutput(
-      PlanningOutput::PlanningOutput *const planning_output) const;
-
   void PrintTrajectoryPoints(
       const PlanningOutput::PlanningOutput& planning_output) const;
 
@@ -149,6 +146,7 @@ class ParallelInTrajectoryGenerator {
   int slot_sign_ = 0;  // 1:Right,(default),-1:Left
 
   const LocalView *local_view_ = nullptr;
+  framework::Frame* frame_ = nullptr;
 
   PlanningPoint slot_origin_in_odom_;
 

@@ -114,9 +114,6 @@ class DiagonalInTrajectoryGenerator {
 
   bool IsApaFinished() const;
 
-  void SetFinishedPlanningOutput(
-      PlanningOutput::PlanningOutput *const planning_output) const;
-
   void PrintTrajectoryPoints(
       const PlanningOutput::PlanningOutput& planning_output) const;
 
@@ -128,6 +125,7 @@ class DiagonalInTrajectoryGenerator {
   int slot_sign_ = 0;  // 1:Right ,-1:Left, 0:Invalid
 
   const LocalView* local_view_ = nullptr;
+  framework::Frame* frame_ = nullptr;
 
   PlanningPoint slot_origin_in_odom_;
 

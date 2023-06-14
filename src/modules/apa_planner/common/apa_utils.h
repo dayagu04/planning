@@ -1,5 +1,8 @@
 #pragma once
 
+#include "parking_fusion.pb.h"
+#include "planning_plan.pb.h"
+
 #include "apa_planner/common/geometry_planning_io.h"
 #include "common/math/polygon2d.h"
 #include "frame.h"
@@ -27,4 +30,12 @@ planning_math::Polygon2d ConstructVehiclePolygonWithBuffer(
   bool IsReplanNecessary(
       const FuncStateMachine::FuncStateMachine& func_state_machine);
 
+  bool IsSlotLineCrossable(
+      const ParkingFusion::ParkingFusionSlot& parking_fusion_slot);
+
+  void SetStoppingPlanningOutput(framework::Frame* const frame);
+
+  void SetFinishedPlanningOutput(framework::Frame* const frame);
+
+  void SetFailedPlanningOutput(framework::Frame* const frame);
 } // namespace  planning

@@ -11,9 +11,6 @@ class ApaPlannerBase {
   virtual ~ApaPlannerBase() = default;
 
   virtual bool Update(framework::Frame* const frame) = 0;
-
- protected:
-  void SetFailedPlanningOutput(framework::Frame* const frame) const;
 };
 
 } // namespace apa_planner

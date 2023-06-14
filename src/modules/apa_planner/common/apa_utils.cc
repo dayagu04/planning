@@ -12,6 +12,8 @@ using planning::planning_math::Polygon2d;
 using planning::planning_math::Vec2d;
 using ::FuncStateMachine::FuncStateMachine;
 using ::FuncStateMachine::FunctionalState;
+using ::ParkingFusion::ParkingFusionSlot;
+using ::PlanningOutput::PlanningOutput;
 
 Polygon2d ConstructVehiclePolygon(
     const PlanningPoint &rear_center, const double half_width,
@@ -175,6 +177,70 @@ bool IsReplanNecessary(const FuncStateMachine& func_state_machine) {
   return IsReplanEachFrame(func_state_machine)
       || func_state_machine.current_state()
           == FunctionalState::PARK_IN_ACTIVATE_CONTROL;
+}
+
+bool IsSlotLineCrossable(const ParkingFusionSlot& parking_fusion_slot) {
+  if (!parking_fusion_slot.has_fusion_source()) {
+    return false;
+  }
+
+  // 0 means invalid source, 1 means camera only, 2 means uss only,
+  // 3 means both camera and uss
+  if (parking_fusion_slot.fusion_source() == 1) {
+    return true;
+  }
+
+  return false;
+}
+
+void SetStoppingPlanningOutput(Frame* const frame) {
+  auto planning_output_context =
+      frame->mutable_session()->mutable_planning_output_context();
+  auto planning_output = &(planning_output_context->mutable_planning_status()\
+      ->planning_result.planning_output);
+
+  auto trajectory = planning_output->mutable_trajectory();
+  trajectory->set_available(true);
+  trajectory->set_trajectory_type(
+      Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
+  trajectory->mutable_trajectory_points()->Clear();
+  auto gear_command = planning_output->mutable_gear_command();
+  gear_command->set_available(true);
+  gear_command->set_gear_command_value(
+      Common::GearCommandValue::GEAR_COMMAND_VALUE_PARKING);
+  const auto& pose = frame->session()->environmental_model().\
+      get_local_view().localization_estimate.pose();
+  ::PlanningOutput::TrajectoryPoint *trajectory_point =
+      trajectory->add_trajectory_points();
+  trajectory_point->set_x(pose.local_position().x());
+  trajectory_point->set_y(pose.local_position().y());
+  trajectory_point->set_heading_yaw(pose.euler_angles().yaw());
+  trajectory_point->set_curvature(0.0);
+  trajectory_point->set_t(0.0);
+  trajectory_point->set_v(0.0);
+  trajectory_point->set_a(0.0);
+  trajectory_point->set_distance(0.0);
+  trajectory_point->set_jerk(0.0);
+}
+
+void SetFinishedPlanningOutput(Frame* const frame) {
+  auto planning_output_context =
+      frame->mutable_session()->mutable_planning_output_context();
+  auto planning_output = &(planning_output_context->mutable_planning_status()\
+      ->planning_result.planning_output);
+  planning_output->mutable_planning_status()->set_apa_planning_status(
+      ::PlanningOutput::ApaPlanningStatus::FINISHED);
+  SetStoppingPlanningOutput(frame);
+}
+
+void SetFailedPlanningOutput(Frame* const frame) {
+  auto planning_output_context =
+      frame->mutable_session()->mutable_planning_output_context();
+  auto planning_output = &(planning_output_context->mutable_planning_status()\
+      ->planning_result.planning_output);
+  planning_output->mutable_planning_status()->set_apa_planning_status(
+      ::PlanningOutput::ApaPlanningStatus::FAILED);
+  SetStoppingPlanningOutput(frame);
 }
 
 } // namespace  planning

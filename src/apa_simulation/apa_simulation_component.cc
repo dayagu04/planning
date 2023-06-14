@@ -66,8 +66,8 @@ bool ApaSimulationComponent::Proc() {
   uint64_t start_time = IflyTime::Now_ms();
   // APA_SIM_LOG << "start time(ms):" << start_time << std::endl;
 
-  MockParkingFusionInfo();
-  MockLocalizationAndVehicleService();
+  // MockParkingFusionInfo();
+  // MockLocalizationAndVehicleService();
   MockFuncStateMachine();
 
   const uint64_t simulation_cost_time = IflyTime::Now_ms() - start_time;
