@@ -173,7 +173,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
         acc_function->acc_update_ds_refs(acc_info, lon_ref_path, ego_planning_result, planning_init_point);
         acc_update_s_bound = true;
       } else {
-        lon_ref_path.ds_refs.emplace_back(ego_v, 0.0);
+        lon_ref_path.ds_refs.emplace_back(ego_state->ego_v_cruise(), 0.0);
       }
     }
     // adjust s_limit

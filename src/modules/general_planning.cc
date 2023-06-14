@@ -1,8 +1,11 @@
 #include "general_planning.h"
+#include <cmath>
 
 #include "config/vehicle_param.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
+#include "log.h"
+#include "math/math_utils.h"
 #include "planning_context.h"
 #include "planning_output_context.h"
 #include "vehicle_config_context.h"
@@ -135,8 +138,33 @@ void GeneralPlanning::FillPlanningTrajectory(double start_time, PlanningOutput::
 
     auto target_ref = trajectory->mutable_target_reference();
     // add polynomial
-    for (size_t i = 0; i < lateral_output.d_poly.size(); i++) {
-      target_ref->add_polynomial(lateral_output.d_poly[i]);
+    // clip the polynomial C_3
+    // const double lat_offset_rate = config.lat_offset_rate();
+    // const double max_lat_offset = config.max_lat_offset();
+    const double lat_offset_rate = 0.2;
+    const double max_lat_offset = 2;
+    static double limited_polynomial_3 = 0.0;
+    const auto& d_polynomial = lateral_output.d_poly;
+    if (d_polynomial.size() == 4) {
+      if (std::fabs(d_polynomial[3]) > max_lat_offset) {
+        limited_polynomial_3 += planning_math::Clamp(d_polynomial[3], -lat_offset_rate, lat_offset_rate);
+      } else {
+        limited_polynomial_3 = planning_math::Clamp(d_polynomial[3], -max_lat_offset, max_lat_offset);
+      }
+      limited_polynomial_3 = planning_math::Clamp(limited_polynomial_3, -max_lat_offset, max_lat_offset);
+    }
+    LOG_DEBUG("limited_polynomial_3: [%f]: \n", limited_polynomial_3);
+    LOG_DEBUG("lateral_output.d_poly C0: [%f] C1: [%f] C2: [%f] C3: [%f] \n", lateral_output.d_poly[0],
+              lateral_output.d_poly[1], lateral_output.d_poly[2], lateral_output.d_poly[3]);
+    std::vector<double> polynomial_limited(4);
+    polynomial_limited[0] = d_polynomial[0];
+    polynomial_limited[2] = d_polynomial[1];
+    polynomial_limited[2] = d_polynomial[2];
+    polynomial_limited[3] = limited_polynomial_3;
+    LOG_DEBUG("limited_polynomial C0: [%f] C1: [%f] C2: [%f] C3: [%f] \n", polynomial_limited[0], polynomial_limited[1],
+              polynomial_limited[2], polynomial_limited[3]);
+    for (size_t i = 0; i < polynomial_limited.size(); i++) {
+      target_ref->add_polynomial(polynomial_limited[i]);
     }
 
     target_ref->set_target_velocity(vision_only_longitudinal_outputs.velocity_target);
