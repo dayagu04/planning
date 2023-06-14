@@ -432,6 +432,14 @@ bool ParallelInTrajectoryGenerator::GenerateABSegmentTrajectory(
   double line_step = kStep;
   const auto& point_a = segments_info.opt_point_a;
   const auto& point_b = segments_info.opt_point_b;
+  double spd_sign = 0.0;
+  if (point_a.x > point_b.x + kEps) {
+    spd_sign = -1.0;
+  } else if (point_a.x < point_b.x - kEps) {
+    spd_sign = 1.0;
+  } else {
+    spd_sign = 0.0;
+  }
 
   const double segment_len = std::hypot(
       point_b.x - point_a.x, point_b.y - point_a.y);
@@ -466,7 +474,7 @@ bool ParallelInTrajectoryGenerator::GenerateABSegmentTrajectory(
     trajectory_point->set_heading_yaw(point_tmp_in_odom.theta);
     trajectory_point->set_curvature(0.0);
     // GetCurPtSpeed(segment_len, s, 1.0, trajectory_point);
-    GetCurPtSpeed(segment_len, 1.0, trajectory_point);
+    GetCurPtSpeed(segment_len, spd_sign, trajectory_point);
     trajectory_point->set_distance(s);
     s += line_step;
   }
