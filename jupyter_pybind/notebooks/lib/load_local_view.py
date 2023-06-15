@@ -163,7 +163,7 @@ class LoadCyberbag:
       json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'VisionLonBehavior_a_target_high',
                          "VisionLonBehavior_a_target_low", "VisionLonBehavior_v_target", "VisionLonBehavior_lead_one_id",
                          "VisionLonBehavior_lead_one_dis", "VisionLonBehavior_lead_one_vel", "VisionLonBehavior_lead_two_id",
-                         "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel", "solver_condition", "dist_err"]
+                         "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel", "solver_condition", "dist_err", "lat_err", "lon_err"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec"]
 

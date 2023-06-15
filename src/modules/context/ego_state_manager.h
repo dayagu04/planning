@@ -86,7 +86,7 @@ class EgoStateManager {
  private:
   void update_transform();
   void UpdatePlanningInitState();
-  uint8_t ReplanProcess(bool lat_replan, bool lon_replan);
+  uint8_t ReplanProcess(const bool &lat_reset_flag, const bool &lon_reset_flag);
 
   void LateralReset();
   void LongitudinalReset();

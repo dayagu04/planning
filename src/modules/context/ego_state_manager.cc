@@ -1,4 +1,5 @@
 #include "ego_state_manager.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -14,6 +15,7 @@
 namespace planning {
 
 static const double planning_loop_dt = 0.1;
+static const double steer_ratio = 15.7;
 
 EgoStateManager::EgoStateManager(planning::framework::Session *session) : session_(session) {
   vehicle_param_ = session_->vehicle_config_context().get_vehicle_param();
@@ -155,15 +157,20 @@ bool EgoStateManager::update(const planning::common::VehicleStatus &vehicle_stat
   return true;
 }
 
-uint8_t EgoStateManager::ReplanProcess(bool lat_replan, bool lon_replan) {
+uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag, const bool &lon_reset_flag) {
+  // note that lon_reset_flag and lat_reset_flag reserved for acc and override
+
   const auto &ego_state = session_->environmental_model().get_ego_state_manager();
   const auto &motion_planning_info =
       session_->mutable_planning_context()->mutable_planning_result().motion_planning_info;
 
-  const auto &traj_points = session_->mutable_planning_context()->mutable_planning_result().traj_points;
+  // const auto &traj_points = session_->mutable_planning_context()->mutable_planning_result().traj_points;
 
   auto &lat_init_state = planning_init_point_.lat_init_state;
   auto &lon_init_state = planning_init_point_.lon_init_state;
+  bool lat_replan = false;
+  bool lon_replan = false;
+  bool dist_replan = false;
 
   Eigen::Vector2d cur_pos(ego_state->ego_pose_raw().x, ego_state->ego_pose_raw().y);
 
@@ -172,65 +179,74 @@ uint8_t EgoStateManager::ReplanProcess(bool lat_replan, bool lon_replan) {
                                        motion_planning_info.s_lat_vec.front(), motion_planning_info.s_lat_vec.back(),
                                        cur_pos);
 
-  const double &lat_err = projection_spline.GetOutput().dist_proj;
+  const auto &lat_err = projection_spline.GetOutput().dist_proj;
+  const auto &s_proj = projection_spline.GetOutput().s_proj;
+  const auto &proj_point = projection_spline.GetOutput().point_proj;
+  Eigen::Vector2d init_point(lat_init_state.x(), lat_init_state.y());
+  // TODO: maybe more solid
+  // projection_spline.CalProjectionPoint(motion_planning_info.x_s_spline, motion_planning_info.y_s_spline,
+  //                                      motion_planning_info.s_lat_vec.front(), motion_planning_info.s_lat_vec.back(),
+  //                                      init_point);
+  // const auto s_init = projection_spline.GetOutput().s_proj;
+  // const double &lon_err = s_init - s_proj;
 
-  const double ds = traj_points.front().v * planning_loop_dt;
-  const double &lon_err = projection_spline.GetOutput().s_proj - (motion_planning_info.s_lat_vec.front() + ds);
-
-  const double dist =
+  const auto lon_err = std::hypot(init_point.x() - proj_point.x(), init_point.y() - proj_point.y());
+  const double dist_err =
       std::hypot(lat_init_state.x() - ego_state->ego_pose_raw().x, lat_init_state.y() - ego_state->ego_pose_raw().y);
-
-  uint8_t out = 0;
 
   JSON_DEBUG_VALUE("lat_err", lat_err)
   JSON_DEBUG_VALUE("lon_err", lon_err)
-  JSON_DEBUG_VALUE("dist_err", dist)
-  // since lateral plan path has no backward extension, lon err is wrong
-  // so set replan init point to vehicle state both lat and lat replan
+  JSON_DEBUG_VALUE("dist_err", dist_err)
 
-  if (dist > 0.8 || lat_replan || lon_replan) {
+  if (fabs(lat_err) > 0.6 || lat_reset_flag) {
+    lat_replan = true;
+  }
+
+  if (fabs(lon_err) > 1.0 || lon_reset_flag) {
+    lon_replan = true;
+  }
+
+  if (fabs(dist_replan) > 1.5) {
+    dist_replan = true;
+  }
+
+  uint8_t out = 0;
+
+  if (lat_replan) {
+    // update lat init state
     lat_init_state.set_x(ego_state->ego_pose_raw().x);
     lat_init_state.set_y(ego_state->ego_pose_raw().y);
     lat_init_state.set_theta(ego_state->ego_pose().theta);
-    static const double steer_ratio = 15.7;
     lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio);
     lat_init_state.set_omega(0.0);
 
-    lon_init_state.set_s(0.0);
-    lon_init_state.set_v(ego_state->ego_v());
-
-    out += ReplanStatus::LAT_REPLAN + ReplanStatus::LON_REPLAN;
-    // a and j use stitch result
+    // lon use stitch result when lat replan
+    out = ReplanStatus::LAT_REPLAN;
   }
 
-  // TODO
-  // lateral replan
-  // if (lat_err > 0.6 || lat_replan) {
-  //   // when lateral replan, delta and omega use stitch result
-  //   lat_init_state.set_x(ego_state->ego_pose_raw().x);
-  //   lat_init_state.set_y(ego_state->ego_pose_raw().y);
-  //   // lat_init_state.set_theta(motion_planning_info.theta_s_spline(projection_spline.GetOutput().s_proj));
-  //   lat_init_state.set_theta(ego_state->ego_pose().theta);
-  //   lat_init_state.set_delta(projection_spline.GetOutput().s_proj);
-  //   lat_init_state.set_omega(projection_spline.GetOutput().s_proj);
+  if (lon_replan) {
+    // update lat init state
+    lat_init_state.set_x(motion_planning_info.x_s_spline(s_proj));
+    lat_init_state.set_y(motion_planning_info.y_s_spline(s_proj));
+    lat_init_state.set_theta(motion_planning_info.theta_s_spline(s_proj));
+    lat_init_state.set_delta(motion_planning_info.delta_s_spline(s_proj));
+    lat_init_state.set_omega(motion_planning_info.omega_s_spline(s_proj));
 
-  //   out += ReplanStatus::LAT_REPLAN;
-  // }
+    // update lon init state
+    lon_init_state.set_s(0.0);
+    lon_init_state.set_v(ego_state->ego_v());
+    // lon_init_state.set_a(ego_state->ego_acc());
+    // lon_init_state.set_j(0.0);
+    out = ReplanStatus::LON_REPLAN;
+  }
 
-  // // longitudinal replan
-  // if (lon_err > 1.0 || lon_replan) {
-  //   lat_init_state.set_x(projection_spline.GetOutput().point_proj.x());
-  //   lat_init_state.set_y(projection_spline.GetOutput().point_proj.y());
-  //   lat_init_state.set_theta(motion_planning_info.theta_s_spline(projection_spline.GetOutput().s_proj));
+  if (dist_replan || (lon_replan && lat_replan)) {
+    LateralReset();
+    LongitudinalReset();
 
-  //   // s is fakely frenet, cannot be obtained
-  //   lon_init_state.set_s(0.0);
-
-  //   // when longitudinal replan, acc and jerk use stitch result
-  //   lon_init_state.set_v(ego_state->ego_v());
-
-  //   out += ReplanStatus::LON_REPLAN;
-  // }
+    out = ReplanStatus::LAT_REPLAN + ReplanStatus::LON_REPLAN;
+    // a and j use stitch result
+  }
 
   return out;
 }
@@ -245,7 +261,7 @@ void EgoStateManager::LateralReset() {
   lat_init_state.set_theta(ego_state->ego_pose_raw().theta);
 
   // TODO: need estimated delta and omega for large curv condition
-  lat_init_state.set_delta(0.0);
+  lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio);
   lat_init_state.set_omega(0.0);
   lat_init_state.set_curv(0.0);
   lat_init_state.set_d_curv(0.0);
@@ -258,7 +274,7 @@ void EgoStateManager::LongitudinalReset() {
   // s is fakely frenet, cannot be obtained
   lon_init_state.set_s(0.0);
   lon_init_state.set_v(ego_state->ego_v());
-  lon_init_state.set_a(ego_state->ego_acc());
+  lon_init_state.set_a(0.0);
   lon_init_state.set_j(0.0);
 }
 
@@ -317,38 +333,42 @@ bool EgoStateManager::LongitudinalStitch() {
 }
 
 void EgoStateManager::UpdatePlanningInitState() {
-  bool lat_reset_flag = false;
-  bool lon_reset_flag = false;
+  bool stitch_success = false;
   uint8_t replan_status = 0;
 
   // reset trajectory spline
   MotionPlanningInfoReset();
 
   // stitch process
-  if (!LateralStitch()) {
+  if (LateralStitch() && LongitudinalStitch()) {
+    stitch_success = true;
+
+    // replan process
+    bool set_lat_replan = false;
+    bool set_lon_replan = false;
+
+    // TODO: acc should be considered here
+    if (!session_->environmental_model().GetVehicleDbwStatus()) {
+      set_lat_replan = true;
+      set_lon_replan = true;
+    }
+
+    replan_status = ReplanProcess(set_lat_replan, set_lon_replan);
+  } else {
+    stitch_success = false;
     LateralReset();
-    lat_reset_flag = true;
-  }
-
-  if (!LongitudinalStitch()) {
     LongitudinalReset();
-    lon_reset_flag = true;
+
+    replan_status = ReplanStatus::LAT_REPLAN + ReplanStatus::LON_REPLAN;
   }
 
-  // replan process
-  if (!lat_reset_flag && !lon_reset_flag) {
-    // leave a protocal for acc (lat_replan default true)
-    replan_status = ReplanProcess(false, false);
-  }
-
-  // JSON_DEBUG_VALUE("reset_flag", reset_flag)
   JSON_DEBUG_VALUE("replan_status", replan_status)
-  JSON_DEBUG_VALUE("lon_reset_flag", lon_reset_flag)
-  JSON_DEBUG_VALUE("lat_reset_flag", lat_reset_flag)
+  JSON_DEBUG_VALUE("stitch_success", stitch_success)
+  JSON_DEBUG_VALUE("dbw_status", session_->environmental_model().GetVehicleDbwStatus())
 
   // assebling init state
-  auto const &lat_init_state = planning_init_point_.lat_init_state;
-  auto const &lon_init_state = planning_init_point_.lon_init_state;
+  const auto &lat_init_state = planning_init_point_.lat_init_state;
+  const auto &lon_init_state = planning_init_point_.lon_init_state;
 
   planning_init_point_.x = lat_init_state.x();
   planning_init_point_.y = lat_init_state.y();

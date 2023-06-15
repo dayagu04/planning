@@ -153,16 +153,17 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
       'jerk_vec': jerk_vec,
     })
 
-    assembled_delta = []
-    assembled_omega = []
-    for i in range(len(planning_json['assembled_delta'])):
-      assembled_delta.append(planning_json['assembled_delta'][i] * 57.3 * 15.7)
-      assembled_omega.append(planning_json['assembled_omega'][i] * 57.3 * 15.7)
+    # assembled_delta = []
+    # assembled_omega = []
+    # for i in range(len(planning_json['assembled_delta'])):
+    #   assembled_delta.append(planning_json['assembled_delta'][i] * 57.3 * 15.7)
+    #   assembled_omega.append(planning_json['assembled_omega'][i] * 57.3 * 15.7)
 
     print("replan_status = ", planning_json['replan_status'])
+    print("lat_err = ", planning_json['lat_err'])
+    print("lon_err = ", planning_json['lon_err'])
+    print("dist_err = ", planning_json['dist_err'])
     print("solver_condition = ", planning_json['solver_condition'])
-    print("assembled_delta = ", assembled_delta)
-    print("assembled_omega = ", assembled_omega)
 
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
@@ -219,7 +220,9 @@ def load_lat_plan_figure(fig1):
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
                                            'plan_traj_x':[],
-                                           'plan_traj_xn':[],
+                                           })
+
+  data_planning_n = ColumnDataSource(data = {'plan_traj_xn':[],
                                            'plan_traj_yn':[],})
 
   data_ego = ColumnDataSource(data = {'ego_xn':[],
@@ -230,6 +233,7 @@ def load_lat_plan_figure(fig1):
                    'data_lat_motion_plan_output':data_lat_motion_plan_output,
                    'data_refline':data_refline,
                    'data_planning':data_planning,
+                   'data_planning_n': data_planning_n,
                    'data_ego': data_ego,
                    'data_car': data_car,
   }
@@ -260,7 +264,7 @@ def load_lat_plan_figure(fig1):
   fig7.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig7.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
   fig7.line('yn_vec', 'xn_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
-  fig7.line('plan_traj_yn', 'plan_traj_xn', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
+  fig7.line('plan_traj_yn', 'plan_traj_xn', source = data_planning_n, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
 
   f2 = fig2.line('time_vec', 'ref_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'ref_theta')
   fig2.line('time_vec', 'theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'theta')

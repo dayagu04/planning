@@ -96,7 +96,10 @@ uint8_t LateralMotionPlanningProblem::Update(planning::common::LateralPlanningIn
     // weights
     cost_config_vec.at(i)[W_REF_X] = planning_input.q_ref_x();
     cost_config_vec.at(i)[W_REF_Y] = planning_input.q_ref_y();
-    cost_config_vec.at(i)[W_REF_THETA] = planning_input.q_ref_theta();
+
+    const auto &ref_vel = planning_input.ref_vel();
+
+    cost_config_vec.at(i)[W_REF_THETA] = planning_input.q_ref_theta() * (1.0 + ref_vel * ref_vel);
     cost_config_vec.at(i)[W_CONTINUITY_X] = planning_input.q_ref_x() * planning_input.q_continuity();
     cost_config_vec.at(i)[W_CONTINUITY_Y] = planning_input.q_ref_y() * planning_input.q_continuity();
     cost_config_vec.at(i)[W_CONTINUITY_THETA] = planning_input.q_ref_theta() * planning_input.q_continuity();

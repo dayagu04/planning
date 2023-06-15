@@ -235,7 +235,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
 
   double q_ref_x = 15.0;
   double q_ref_y = 15.0;
-  double q_ref_theta = 0.0;  // FBI WARNING
+  double q_ref_theta = 10.0;
 
   double q_continuity = 0.;
   double q_acc = 1.0;
