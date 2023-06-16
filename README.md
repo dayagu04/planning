@@ -22,6 +22,10 @@ make install
 mainboard -d /asw/planning/planning.dag
 ```
 
+# 版本集成
+1.系统调用各个模块`target/build.sh`进行编译打包，产物为Release版本
+2.产物生成在`install/planning/`下
+
 # Tools
 1.代码格式化（.ci/clang-format/clang-format-5.0）：
 ```

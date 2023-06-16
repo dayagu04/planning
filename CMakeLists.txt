@@ -33,19 +33,3 @@ endif()
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(tools/planning_player)
-
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME})
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME}/res)
-install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/res/conf
-  DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME}/res)
-if (ADAPTER STREQUAL "cyber")
-  install(TARGETS ${PROJECT_NAME}_component
-    LIBRARY DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME}/Lib)
-  install(FILES ${CMAKE_CURRENT_LIST_DIR}/res/dag/${PROJECT_NAME}.dag
-    DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME})
-elseif (ADAPTER STREQUAL "ap")
-  # to be add
-endif()
-
-install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/install/${PROJECT_NAME}
-  DESTINATION /asw)

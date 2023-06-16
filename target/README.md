@@ -1,7 +1,8 @@
 版本目录说明
----Interface
+---planning
  |---Lib
- | |--- *.so             // Planning的动态库
- |---Inc
- | |--- *.h              // Planning的头文件
- |---CHANGELOG.MD        // changelog
+ | |--- libplanning_component.so             // Planning的动态库
+ |---res
+ | |--- conf/*           // Planning配置文件
+ |---CHANGELOG.md        // changelog
+ |---planning.dag        // cyberRT的启动配置

@@ -5,12 +5,7 @@ SRC_DIR=$SCRIPT_DIR/..
 
 cd $SRC_DIR
 
-mkdir build
-cd build
-cmake ..
-make -j
-make install
-cd ..
+sh target/build.sh
 
 rm target/Planning.tar
 cd install

@@ -23,3 +23,19 @@ add_subdirectory(thirdparty/osqp EXCLUDE_FROM_ALL)
 add_subdirectory(thirdparty/nlohmann_json EXCLUDE_FROM_ALL)
 add_subdirectory(thirdparty/hfsm EXCLUDE_FROM_ALL)
 add_subdirectory(thirdparty/interface/src/proto EXCLUDE_FROM_ALL)
+
+file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning)
+file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning/res)
+install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../res/conf
+  DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/res)
+if (ADAPTER STREQUAL "cyber")
+  install(TARGETS planning_component
+    LIBRARY DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/Lib)
+  install(FILES ${CMAKE_CURRENT_LIST_DIR}/../res/dag/planning.dag
+    DESTINATION ${PROJECT_SOURCE_DIR}/install/planning)
+elseif (ADAPTER STREQUAL "ap")
+  # to be add
+endif()
+
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning
+  DESTINATION /asw)
