@@ -39,15 +39,33 @@ endif()
 
 # install to current directory
 if (INSTALL_TO_CURRENT)
-  file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/install/Lib)
-  file(MAKE_DIRECTORY /asw/${PROJECT_NAME}/res/conf)
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/install/apa_planning/Lib)
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/install/apa_planning/res)
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/install/apa_planning/log)
 
-  install(TARGETS ${PROJECT_NAME}_component
-    LIBRARY DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/Lib)
+  install(TARGETS
+    planning_component
+    apa_simulation_component
+    LIBRARY DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/apa_planning/Lib)
+
+  install(FILES
+    ${CMAKE_CURRENT_LIST_DIR}/res/dag/apa_simulation_and_planning.dag
+    ${CMAKE_CURRENT_LIST_DIR}/res/dag/apa_simulation.dag
+    ${CMAKE_CURRENT_LIST_DIR}/res/dag/planning_and_control.dag
+    ${CMAKE_CURRENT_LIST_DIR}/res/dag/planning.dag
+    DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/apa_planning)
+
   install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/res/conf
-    DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/res)
-  install(FILES ${CMAKE_CURRENT_LIST_DIR}/res/dag/${PROJECT_NAME}.dag
-    DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install)
+    DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/apa_planning/res)
+  install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/res/scripts
+    DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/apa_planning/res)
+  install(FILES ${CMAKE_CURRENT_LIST_DIR}/CHANGELOG.md
+    DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/apa_planning/log)
+
+  install(FILES
+    ${CMAKE_CURRENT_LIST_DIR}/CHANGELOG.md
+    ${CMAKE_CURRENT_LIST_DIR}/README.md
+    DESTINATION ${CMAKE_CURRENT_LIST_DIR}/install/apa_planning)
 endif()
 
 # install to system
