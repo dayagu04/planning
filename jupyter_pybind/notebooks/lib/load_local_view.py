@@ -20,42 +20,50 @@ from collections import namedtuple
 from functools import  partial
 from bokeh.models import ColumnDataSource
 import bokeh.plotting as bkp
-from bokeh.models import WheelZoomTool, HoverTool
+from bokeh.models import WheelZoomTool, HoverTool, TapTool, CustomJS
 from cyber_record.record import Record
+from google.protobuf.json_format import MessageToJson
 
 car_xb, car_yb = load_car_params_patch()
 coord_tf = coord_transformer()
 
 class LoadCyberbag:
   def __init__(self, path) -> None:
+    self.bag_path = path
     self.bag = Record(path)
     # loclization msg
-    self.loc_msg = {'t':[], 'data':[], 'enable':[]}
+    self.loc_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
     # road msg
-    self.road_msg = {'t':[], 'data':[], 'enable':[]}
+    self.road_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
     # fusion object msg
-    self.fus_msg = {'t':[], 'data':[], 'enable':[]}
+    self.fus_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
     # vehicle service msg
-    self.vs_msg = {'t':[], 'data':[], 'enable':[]}
+    self.vs_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
     # car pos in local coordinates
 
     # prediction_msg
-    self.prediction_msg = {'t':[], 'data':[], 'enable':[]}
+    self.prediction_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
     # planning msg
-    self.plan_msg = {'t':[], 'data':[], 'enable':[]}
+    self.plan_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
     # planning debug msg
-    self.plan_debug_msg = {'t':[], 'data':[], 'json':[], 'enable':[]}
+    self.plan_debug_msg = {'abs_t':[], 't':[], 'data':[], 'json':[], 'enable':[]}
 
     # control msg
-    self.ctrl_msg = {'t':[], 'data':[], 'enable':[]}
+    self.ctrl_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
     # control debug msg
-    self.ctrl_debug_msg = {'t':[], 'data':[], 'json':[], 'enable':[]}
+    self.ctrl_debug_msg = {'abs_t':[], 't':[], 'data':[], 'json':[], 'enable':[]}
+
+    # parking fusion msg
+    self.fus_parking_msg = {'abs_t':[], 't':[], 'data':[], 'json':[], 'enable':[]}
+
+    # soc state machine
+    self.soc_state_msg = {'abs_t':[], 't':[], 'data':[], 'json':[], 'enable':[]}
 
   def load_all_data(self):
     max_time = 0.0
@@ -64,6 +72,7 @@ class LoadCyberbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
         # load timestamp
         self.loc_msg['t'].append(msg.header.timestamp / 1e6)
+        self.loc_msg['abs_t'].append(msg.header.timestamp / 1e6)
         self.loc_msg['data'].append(msg)
       self.loc_msg['t'] = [tmp - self.loc_msg['t'][0]  for tmp in self.loc_msg['t']]
       max_time = max(max_time, self.loc_msg['t'][-1])
@@ -80,6 +89,7 @@ class LoadCyberbag:
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/road_fusion"):
         self.road_msg['t'].append(msg.header.timestamp / 1e6)
+        self.road_msg['abs_t'].append(msg.header.timestamp / 1e6)
         self.road_msg['data'].append(msg)
       self.road_msg['t'] = [tmp - self.road_msg['t'][0]  for tmp in self.road_msg['t']]
       print('road_msg time:',self.road_msg['t'][-1])
@@ -95,6 +105,7 @@ class LoadCyberbag:
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/objects"):
         self.fus_msg['t'].append(msg.header.timestamp / 1e6)
+        self.fus_msg['abs_t'].append(msg.header.timestamp / 1e6)
         self.fus_msg['data'].append(msg)
       self.fus_msg['t'] = [tmp - self.fus_msg['t'][0]  for tmp in self.fus_msg['t']]
       print('fus_msg time:',self.fus_msg['t'][-1])
@@ -110,6 +121,7 @@ class LoadCyberbag:
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/vehicle_service"):
         self.vs_msg['t'].append(msg.header.timestamp / 1e6)
+        self.vs_msg['abs_t'].append(msg.header.timestamp / 1e6)
         self.vs_msg['data'].append(msg)
       self.vs_msg['t'] = [tmp - self.vs_msg['t'][0]  for tmp in self.vs_msg['t']]
       self.vs_msg['enable'] = True
@@ -127,6 +139,7 @@ class LoadCyberbag:
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
         self.plan_msg['t'].append(msg.meta.header.timestamp / 1e6)
+        self.plan_msg['abs_t'].append(msg.meta.header.timestamp / 1e6)
         self.plan_msg['data'].append(msg)
       self.plan_msg['t'] = [tmp - self.plan_msg['t'][0]  for tmp in self.plan_msg['t']]
       max_time = max(max_time, self.plan_msg['t'][-1])
@@ -144,6 +157,7 @@ class LoadCyberbag:
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/prediction/prediction_result"):
         self.prediction_msg['t'].append(msg.header.timestamp / 1e6)
+        self.prediction_msg['abs_t'].append(msg.header.timestamp / 1e6)
         self.prediction_msg['data'].append(msg)
       self.prediction_msg['t'] = [tmp - self.prediction_msg['t'][0]  for tmp in self.prediction_msg['t']]
       self.prediction_msg['enable'] = True
@@ -169,6 +183,7 @@ class LoadCyberbag:
 
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
         self.plan_debug_msg['t'].append(msg.timestamp / 1e6)
+        self.plan_debug_msg['abs_t'].append(msg.timestamp / 1e6)
         self.plan_debug_msg['data'].append(msg)
         try:
           json_struct = json.loads(msg.data_json, strict = False)
@@ -196,6 +211,7 @@ class LoadCyberbag:
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/control/control_command"):
         self.ctrl_msg['t'].append(msg.header.timestamp / 1e6)
+        self.ctrl_msg['abs_t'].append(msg.header.timestamp / 1e6)
         self.ctrl_msg['data'].append(msg)
       self.ctrl_msg['t'] = [tmp - self.ctrl_msg['t'][0]  for tmp in self.ctrl_msg['t']]
       max_time = max(max_time, self.ctrl_msg['t'][-1])
@@ -220,6 +236,7 @@ class LoadCyberbag:
 
       for topic, msg, t in self.bag.read_messages("/iflytek/control/debug_info"):
         self.ctrl_debug_msg['t'].append(msg.timestamp / 1e6)
+        self.ctrl_debug_msg['abs_t'].append(msg.timestamp / 1e6)
         self.ctrl_debug_msg['data'].append(msg)
         try:
           json_struct = json.loads(msg.extra_json, strict = False)
@@ -242,8 +259,125 @@ class LoadCyberbag:
       self.ctrl_debug_msg['enable'] = False
       print("missing /iflytek/control/debug_info !!!")
 
+    # load parking fusion msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/parking_slot"):
+        # load timestamp
+        self.fus_parking_msg['t'].append(msg.header.timestamp / 1e6)
+        self.fus_parking_msg['abs_t'].append(msg.header.timestamp / 1e6)
+        self.fus_parking_msg['data'].append(msg)
+      self.fus_parking_msg['t'] = [tmp - self.fus_parking_msg['t'][0]  for tmp in self.fus_parking_msg['t']]
+      max_time = max(max_time, self.fus_parking_msg['t'][-1])
+      print('loc_msg time:',self.fus_parking_msg['t'][-1])
+      if len(self.fus_parking_msg['t']) > 0:
+        self.fus_parking_msg['enable'] = True
+      else:
+        self.fus_parking_msg['enable'] = False
+    except:
+      self.fus_parking_msg['enable'] = False
+      print('missing /iflytek/fusion/parking_slot !!!')
 
+    # load state machine msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/iflytek/system_state/soc_state"):
+        # load timestamp
+        self.soc_state_msg['t'].append(msg.header.timestamp / 1e6)
+        self.soc_state_msg['abs_t'].append(msg.header.timestamp / 1e6)
+        self.soc_state_msg['data'].append(msg)
+      self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
+      max_time = max(max_time, self.soc_state_msg['t'][-1])
+      print('soc_state_msg time:',self.soc_state_msg['t'][-1])
+      if len(self.soc_state_msg['t']) > 0:
+        self.soc_state_msg['enable'] = True
+      else:
+        self.soc_state_msg['enable'] = False
+    except:
+      self.soc_state_msg['enable'] = False
+      print('missing /iflytek/system_state/soc_state !!!')
     return max_time
+
+  def msg_timeline_figure(self):
+    topic_list = [
+      '/iflytek/localization/ego_pose',
+      '/iflytek/fusion/road_fusion',
+      '/iflytek/fusion/objects',
+      '/iflytek/vehicle_service',
+      '/iflytek/prediction/prediction_result',
+      '/iflytek/planning/plan',
+      '/iflytek/planning/debug_info',
+      '/iflytek/control/control_command',
+      '/iflytek/control/debug_info',
+      '/iflytek/fusion/parking_slot',
+      '/iflytek/system_state/soc_state',
+    ]
+    detail_list = [
+      '/iflytek/planning/plan',
+      '/iflytek/planning/debug_info',
+      '/iflytek/system_state/soc_state',
+    ]
+    print("========【使用说明】========")
+    print("========鼠标滚轮缩放时间轴，鼠标悬停或点击以下topic的点，可以在浏览器控制台（F12打开）查看该msg具体内容: ")
+    print("========", detail_list)
+    data_list = [
+      self.loc_msg,
+      self.road_msg,
+      self.fus_msg,
+      self.vs_msg,
+      self.prediction_msg,
+      self.plan_msg,
+      self.plan_debug_msg,
+      self.ctrl_msg,
+      self.ctrl_debug_msg,
+      self.fus_parking_msg,
+      self.soc_state_msg,
+    ]
+
+    data = {'topic':[], 't':[], 'msg':[]}
+    min_time = sys.maxsize
+    for i in range(len(topic_list)):
+      for j in range(len(data_list[i]['abs_t'])):
+        data['topic'].append(topic_list[i])
+        if topic_list[i] in detail_list:
+          data['msg'].append(MessageToJson(data_list[i]['data'][j]))
+        else:
+          data['msg'].append('')
+        t = data_list[i]['abs_t'][j]
+        data['t'].append(t)
+        if t != 0 and t < min_time:
+          min_time = t
+
+    # if header time is 0, don't minus
+    for i in range(len(data['t'])):
+      if data['t'][i] == 0:
+        data['t'][i] = 0
+      else:
+        data['t'][i] = data['t'][i] - min_time
+
+    source = ColumnDataSource(data=data)
+    hover = HoverTool(tooltips=[('topic', '@topic'), ('t', '@t'), ('msg', '@msg')])
+    #args=dict(msg_data=msg_data),
+    callback = CustomJS(code="""
+        //console.log(cb_obj);
+        //console.log(cb_data);
+
+        var data = cb_data.source.data;
+        var indices = cb_data.source.selected.indices;
+        var selected_msgs='';
+
+        for (let i = 0; i < indices.length; i++) {
+            const index = indices[i]
+            selected_msgs += data['msg'][index];
+        }
+
+        console.log(selected_msgs);
+    """)
+    taptool = TapTool(callback=callback)
+
+    fig1 = bkp.figure(plot_width=1200, plot_height=300,
+              y_range=topic_list, x_axis_type='datetime', title=self.bag_path,
+              tools=[hover, taptool, "xwheel_zoom,reset"], active_scroll='xwheel_zoom')
+    fig1.circle(x='t', y='topic', source=source)
+    return fig1
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
