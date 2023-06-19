@@ -22,7 +22,7 @@ class PlanningComponent final : public autoplt::ADSTimerCoponent {
   std::shared_ptr<ADSNode> planning_node_ = nullptr;
   std::shared_ptr<Writer<PlanningOutput::PlanningOutput>> planning_writer_ = nullptr;
   std::shared_ptr<Writer<planning::common::PlanningDebugInfo>> planning_debug_writer_ = nullptr;
-  std::shared_ptr<Writer<PlanningHMI::PlanningHMIOutputInfoStr>> planning_hmi_Info_writer_ = nullptr;
+  std::shared_ptr<Writer<PlanningHMI::PlanningHMIOutputInfoStr>> planning_hmi_info_writer_ = nullptr;
 
   std::unique_ptr<PlanningAdapter> planning_adapter_ = nullptr;
 };

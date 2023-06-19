@@ -82,11 +82,11 @@ bool PlanningComponent::Init() {
     planning_debug_writer_->Write(planning_debug_info);
   });
 
-  planning_hmi_Info_writer_ =
+  planning_hmi_info_writer_ =
       planning_node_->CreateWriter<PlanningHMI::PlanningHMIOutputInfoStr>("/iflytek/planning/hmi");
   planning_adapter_->RegisterHMIOutputInfoWriter(
       [this](const PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_ouput_info) {
-        planning_hmi_Info_writer_->Write(planning_hmi_ouput_info);
+        planning_hmi_info_writer_->Write(planning_hmi_ouput_info);
       });
 
   return true;

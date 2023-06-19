@@ -21,13 +21,13 @@ class PlanningOutputContext {
 
   const common::PlanningStatus &prev_planning_status() const { return prev_planning_status_; }
   common::PlanningStatus *mutable_prev_planning_status() { return &prev_planning_status_; }
-  const PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_info() const { return planning_hmi_Info_; }
-  PlanningHMI::PlanningHMIOutputInfoStr *mutable_planning_hmi_Info() { return &planning_hmi_Info_; }
+  const PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_info() const { return planning_hmi_info_; }
+  PlanningHMI::PlanningHMIOutputInfoStr *mutable_planning_hmi_info() { return &planning_hmi_info_; }
 
  private:
   FallBackInfo fallback_info_;
   common::PlanningStatus planning_status_;
-  PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_Info_;
+  PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_info_;
   common::PlanningStatus prev_planning_status_;
 };
 

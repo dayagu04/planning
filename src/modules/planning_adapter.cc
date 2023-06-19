@@ -129,8 +129,8 @@ void PlanningAdapter::Proc() {
     planning_writer_(planning_output);
   }
 
-  if (planning_hmi_Info_writer_) {
-    planning_hmi_Info_writer_(planning_hmi_info);
+  if (planning_hmi_info_writer_) {
+    planning_hmi_info_writer_(planning_hmi_info);
   }
   double planning_cost_time = IflyTime::Now_ms() - start_time;
   LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);

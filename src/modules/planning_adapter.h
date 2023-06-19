@@ -100,8 +100,8 @@ class PlanningAdapter {
     planning_debug_writer_ = planning_debug_writer;
   }
   void RegisterHMIOutputInfoWriter(
-      const std::function<void(PlanningHMI::PlanningHMIOutputInfoStr)>& planning_hmi_Info_writer) {
-    planning_hmi_Info_writer_ = planning_hmi_Info_writer;
+      const std::function<void(PlanningHMI::PlanningHMIOutputInfoStr)>& planning_hmi_info_writer) {
+    planning_hmi_info_writer_ = planning_hmi_info_writer;
   }
 
  private:
@@ -135,7 +135,7 @@ class PlanningAdapter {
 
   std::function<void(PlanningOutput::PlanningOutput)> planning_writer_ = nullptr;
   std::function<void(planning::common::PlanningDebugInfo)> planning_debug_writer_ = nullptr;
-  std::function<void(PlanningHMI::PlanningHMIOutputInfoStr)> planning_hmi_Info_writer_ = nullptr;
+  std::function<void(PlanningHMI::PlanningHMIOutputInfoStr)> planning_hmi_info_writer_ = nullptr;
 
   LocalView local_view_;
   std::unique_ptr<GeneralPlanning> planning_base_ = nullptr;
