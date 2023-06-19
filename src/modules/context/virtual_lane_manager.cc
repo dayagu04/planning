@@ -18,7 +18,8 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     LOG_ERROR("!!!roads' lanes are empty \n");
     return false;
   }
-  // todo:clren 添加enu是否有效的标志位
+
+  is_local_valid_ = roads.local_point_valid();
   for (auto& lane : roads.lanes()) {
     std::shared_ptr<VirtualLane> virtual_lane_tmp = std::make_shared<VirtualLane>();
     virtual_lane_tmp->update_data(lane);

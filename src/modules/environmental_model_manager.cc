@@ -74,11 +74,12 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
 
   // 通过配置项进行实时长时的切换 true: 长时规划
   bool enable_NOA = ego_config_.enable_NOA;
-  // todo 后续加入车道线，障碍物的local_point是否有效
   auto location_valid =
       local_view.localization_estimate.msf_status().available() &&
       (local_view.localization_estimate.msf_status().msf_status() != LocalizationOutput::MsfStatus::ERROR) &&
-      enable_NOA;
+       local_view.road_info.local_point_valid() &&
+       local_view.fusion_objects_info.local_point_valid() &&
+      enable_NOA ;
   session_->mutable_environmental_model()->set_location_valid(location_valid);
   // 长时，实时切换，临时hack
   // session_->mutable_environmental_model()->set_location_valid(false);

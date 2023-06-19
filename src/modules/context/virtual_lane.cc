@@ -1,4 +1,5 @@
 #include "virtual_lane.h"
+#include <cassert>
 #include "math/linear_interpolation.h"
 #include "virtual_lane.h"
 namespace planning {
@@ -33,15 +34,18 @@ void VirtualLane::update_data(const FusionRoad::Lane &lane) {
     }
   }
 
-  calc_c_poly(c_poly_);
-
+  for (auto poly_coefficient : lane.lane_reference_line().poly_coefficient_car()) {
+    c_poly_.emplace_back(poly_coefficient);
+  }
+  assert(c_poly_.size() == 4);
+  
   center_line_points_track_id_.clear();
   for (auto &virtual_lane_refine_point : lane_reference_line_.virtual_lane_refline_points()) {
     // center_line_points_track_id_.emplace_back(virtual_lane_refine_point.track_id()); // todo
   }
 }
 
-bool VirtualLane::calc_c_poly(std::vector<double> &output) {
+bool VirtualLane::calc_c_poly(std::vector<double> &output) { // 该函数先保留着
   output.clear();
 
   if (lane_status_ == BOTH_MISSING) {

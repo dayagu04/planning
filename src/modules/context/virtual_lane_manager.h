@@ -97,6 +97,7 @@ class VirtualLaneManager {
     return 5000.;
   };
 
+  bool is_local_valid() const { return is_local_valid_; }
  private:
   LaneChangeStatus is_lane_change();
   void update_virtual_id();
@@ -115,6 +116,7 @@ class VirtualLaneManager {
   double last_right_diff_ = 0;
   Intersection intersection_;
   Ramp ramp_;
+  bool is_local_valid_ = false;
 };
 }  // namespace planning
 #endif

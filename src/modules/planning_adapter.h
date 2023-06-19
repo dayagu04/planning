@@ -13,7 +13,6 @@
 #include "localization.pb.h"
 #include "parking_fusion.pb.h"
 #include "parking_slot_list.pb.h"
-#include "parking_slot_select.pb.h"
 #include "planning_debug_info.pb.h"
 #include "planning_hmi.pb.h"
 #include "planning_plan.pb.h"
