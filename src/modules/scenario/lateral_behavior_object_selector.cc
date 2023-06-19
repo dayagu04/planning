@@ -3012,6 +3012,14 @@ void ObjectSelector::update(int status, double start_move_distolane, bool accide
       right_lb_car_cnt_.clear();
     }
 
+    double v_target_final = session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
+    if (v_target_final <= 16.7) {
+      left_alc_car_.clear();
+      left_alc_car_cnt_.clear();
+      right_alc_car_.clear();
+      right_alc_car_cnt_.clear();
+    }
+
   } else {
     left_lb_car_.clear();
     left_lb_car_cnt_.clear();
