@@ -45,12 +45,12 @@ TEST(GeneralPlanning, RunOnce) {
   LocalView local_view_;
   PlanningOutput::PlanningOutput planning_output;
   DebugOutput debug_output;
-  PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_Info;
+  PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_info;
 
   std::unique_ptr<GeneralPlanning> planning_base =
       std::make_unique<GeneralPlanning>();
   std::cout << "==============The planning enters RunOnce============="
             << std::endl;
-  planning_base->RunOnce(local_view_, &planning_output, debug_output, planning_hmi_Info);
+  planning_base->RunOnce(local_view_, &planning_output, debug_output, planning_hmi_info);
 }
 }  // namespace planning

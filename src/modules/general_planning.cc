@@ -27,8 +27,7 @@ void GeneralPlanning::Init() {
 }
 
 bool GeneralPlanning::RunOnce(const LocalView &local_view, PlanningOutput::PlanningOutput *const planning_output,
-                              DebugOutput &debug_info, PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info) {
-  // using namespace FeiMa::SystemFunc;
+                              DebugOutput &debug_info, PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
   LOG_ERROR("GeneralPlanning::RunOnce \n");
   local_view_ = local_view;
   double start_timestamp = IflyTime::Now_ms();
@@ -64,7 +63,7 @@ bool GeneralPlanning::RunOnce(const LocalView &local_view, PlanningOutput::Plann
   if (planning_status->planning_success) {
     FillPlanningTrajectory(start_timestamp, planning_output);
     FillPlanningDebugInfo(start_timestamp, debug_info);
-    FillPlanningHmiInfo(start_timestamp, planning_hmi_Info);
+    FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
     std::cout << "The RunOnce is successed !!!!:" << std::endl;
   } else {
     LOG_DEBUG("RunOnce failed !!!! \n");
@@ -245,5 +244,15 @@ void GeneralPlanning::GenerateStopTrajectory(double start_time, PlanningOutput::
 void GeneralPlanning::FillPlanningDebugInfo(double start_time, DebugOutput &debug_info) {}
 
 void GeneralPlanning::FillPlanningHmiInfo(double start_timestamp,
-                                          PlanningHMI::PlanningHMIOutputInfoStr &planning_hmi_Info) {}
+                                          PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+  const auto &lateral_output = session_.planning_context().lateral_behavior_planner_output();
+  const auto &state_machine_output = session_.mutable_planning_context()->mutable_lat_behavior_state_machine_output();
+
+  // WB: 待alc_output_info合入interface后，可启用
+  // auto &alc_output_pb = planning_hmi_info->mutable_alc_output_info();
+  // alc_output_pb->set_lc_request(lateral_output.lc_request);
+  // alc_output_pb->set_lc_status(lateral_output.lc_status);
+  // alc_output_pb->set_lc_invalid_reason(state_machine_output.lc_invalid_reason);
+  // alc_output_pb->set_lc_back_reason(state_machine_output.lc_back_invalid_reason);
+}
 }  // namespace planning

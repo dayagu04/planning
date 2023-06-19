@@ -109,9 +109,9 @@ void PlanningAdapter::Proc() {
   // 2.planning run
   PlanningOutput::PlanningOutput planning_output;
   DebugOutput debug_output;
-  PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_Info;
+  PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_info;
   std::cout << "==============The planning enters RunOnce=============" << std::endl;
-  bool run_success = planning_base_->RunOnce(local_view_, &planning_output, debug_output, planning_hmi_Info);
+  bool run_success = planning_base_->RunOnce(local_view_, &planning_output, debug_output, &planning_hmi_info);
 
   // 3.get output & publish
   if (planning_debug_writer_) {
@@ -130,7 +130,7 @@ void PlanningAdapter::Proc() {
   }
 
   if (planning_hmi_Info_writer_) {
-    planning_hmi_Info_writer_(planning_hmi_Info);
+    planning_hmi_Info_writer_(planning_hmi_info);
   }
   double planning_cost_time = IflyTime::Now_ms() - start_time;
   LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);
