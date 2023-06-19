@@ -137,7 +137,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object, const bool
   yaw_ = planning_math::NormalizeAngle(prediction_object.yaw);
   relative_yaw_ = planning_math::NormalizeAngle(prediction_object.relative_theta);
   velocity_ = prediction_object.speed;
-  // todo, 看是否存在象限问题，以及都为0的情况
+  velocity_angle_ = prediction_object.theta;
   relative_velocity_angle_ = std::atan2(prediction_object.relative_speed_y, prediction_object.relative_speed_x);
   x_relative_velocity_ = prediction_object.relative_speed_x;
   y_relative_velocity_ = prediction_object.relative_speed_y;

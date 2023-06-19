@@ -130,27 +130,18 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   LOG_DEBUG("EnvironmentalModelManager run time:%f\n", end_time - current_time);
   current_time = end_time;
 
-  // obstacle_manager_ptr_->assign_obstacles_to_lanes();
-  // end_time = IflyTime::Now_ms();
-  // LOG_DEBUG("assign_obstacles_to_lanes update time:%f\n", end_time - current_time);
-  // current_time = end_time;
-  //   traffic_light_decision_manager_ptr_->update();
-
-  // TODO(Rui):lateral_obstacle_ptr_->update() only for real time planner
-  lateral_obstacle_ptr_->update();
-  lane_tracks_mgr_ptr_->update_lane_tracks();
-  // end_time = IflyTime::Now_ms();
-  // LOG_DEBUG("lateral_obstacle_ptr update time:%f\n", end_time - current_time);
-  // current_time = end_time;
-
   end_time = IflyTime::Now_ms();
   LOG_DEBUG("update time:%f\n", end_time - current_time);
+
+  lateral_obstacle_ptr_->update();
+  lane_tracks_mgr_ptr_->update_lane_tracks();
 
   std::string status_msg;
   if (!InputReady(current_time, status_msg)) {
     LOG_ERROR("InputReady is failed !!!! \n");
     return false;
   }
+
   return true;
 }
 
@@ -416,8 +407,9 @@ void EnvironmentalModelManager::truncate_prediction_info(const Prediction::Predi
     cur_predicion_obj.width = prediction_object.fusion_obstacle().common_info().shape().width();
     cur_predicion_obj.speed = std::hypot(prediction_object.fusion_obstacle().common_info().velocity().x(),
                                          prediction_object.fusion_obstacle().common_info().velocity().y());
-    ;
     cur_predicion_obj.yaw = prediction_object.fusion_obstacle().common_info().heading_angle();
+    cur_predicion_obj.theta = std::atan2(prediction_object.fusion_obstacle().common_info().velocity().y(),
+                                         prediction_object.fusion_obstacle().common_info().velocity().x());
     cur_predicion_obj.acc = std::hypot(prediction_object.fusion_obstacle().common_info().acceleration().x(),
                                        prediction_object.fusion_obstacle().common_info().acceleration().y());
     ;

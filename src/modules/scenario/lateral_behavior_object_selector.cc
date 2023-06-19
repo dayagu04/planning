@@ -97,9 +97,9 @@ double ObjectSelector::get_vrel_close(int side, int status) {
     lane = rlane;
   }
 
+  int leadone_id = lane->get_reference_path()->get_lane_leadone_obstacle();
   for (TrackedObject obstacle : lateral_obstacle->front_tracks()) {
     auto &obj_tmp = obstacle;
-    int leadone_id = lane->get_reference_path()->get_lane_leadone_obstacle();
     if (obj_tmp.track_id == leadone_id) {
       front_tracks.push_back(obj_tmp);
       break;
@@ -107,7 +107,7 @@ double ObjectSelector::get_vrel_close(int side, int status) {
   }
 
   if (front_tracks.size() == 0) {
-    LOG_ERROR("[LaneTracksManager::get_vrel_close] front tracks is null \n");
+    LOG_ERROR("[LaneTracksManager::get_vrel_close] %d tracks is null \n", side);
     return v_rel_close;
   }
 
@@ -225,13 +225,10 @@ void ObjectSelector::update(int status, double start_move_distolane, bool accide
   double max_perception_range = 70.0;
 
   const std::vector<TrackedObject> &front_tracks = lateral_obstacle->front_tracks();
-  // TODO(Rui):tmp hack front_tracks_l = lateral_obstale->front_tracks_l()
-  // const std::vector<TrackedObject> &front_tracks_l = lane_tracks_mgr_.front_tracks_l();
-  // const std::vector<TrackedObject> &front_tracks_r = lane_tracks_mgr_.front_tracks_r();
-  // const std::vector<TrackedObject> &front_tracks_c = lane_tracks_mgr_.front_tracks_c();
-  const std::vector<TrackedObject> &front_tracks_l = lateral_obstacle->front_tracks_l();
-  const std::vector<TrackedObject> &front_tracks_r = lateral_obstacle->front_tracks_r();
-  const std::vector<TrackedObject> &front_tracks_c = lateral_obstacle->front_tracks();  // hack front_tracks_c()
+  auto &lane_tracks_mgr = session_->environmental_model().get_lane_tracks_manager();
+  const std::vector<TrackedObject> &front_tracks_l = lane_tracks_mgr->front_tracks_l();
+  const std::vector<TrackedObject> &front_tracks_r = lane_tracks_mgr->front_tracks_r();
+  const std::vector<TrackedObject> &front_tracks_c = lane_tracks_mgr->front_tracks_c();
   front_tracks_l_cnt_ = front_tracks_l.size();
   front_tracks_r_cnt_ = front_tracks_r.size();
 
@@ -539,7 +536,7 @@ void ObjectSelector::update(int status, double start_move_distolane, bool accide
         }
 
         if (l_enable || r_enable) {
-          double v_target = session_->environmental_model().get_ego_state_manager()->ego_hmi_v();
+          double v_target = session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
 
           if (((l_enable && llane != nullptr) ||
                (tlane != nullptr && tlane->get_virtual_id() == clane->get_virtual_id()))) {

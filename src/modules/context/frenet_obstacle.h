@@ -14,7 +14,7 @@ class ReferencePath;
 class FrenetObstacle {
  public:
   FrenetObstacle(const Obstacle* obstacle_ptr, const ReferencePath& reference_path,
-                 const std::shared_ptr<EgoStateManager> ego_state_info);
+                 const std::shared_ptr<EgoStateManager> ego_state_info, bool is_location_valid);
 
   int id() const { return id_; }
   Common::ObjectType type() const { return obstacle_ptr_->type(); }
@@ -43,6 +43,7 @@ class FrenetObstacle {
                            planning_math::Polygon2d& obstacle_polygon) const;
 
  private:
+  void compute_frenet_obstacle(const ReferencePath& reference_path);
   void compute_frenet_obstacle_boundary(const ReferencePath& reference_path);
 
   void compute_frenet_polygon_sequence(const ReferencePath& reference_path);
@@ -52,8 +53,6 @@ class FrenetObstacle {
 
  private:
   int id_;
-  double adc_cart_x_;
-  double adc_cart_y_;
   double frenet_s_;
   double frenet_l_;
   double frenet_velocity_s_;
@@ -74,6 +73,7 @@ class FrenetObstacle {
 
   bool b_frenet_valid_ = false;
   bool b_frenet_polygon_sequence_invalid_ = false;
+  bool is_location_valid_ = false;
 };
 
 }  // namespace planning

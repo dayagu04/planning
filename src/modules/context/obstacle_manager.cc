@@ -94,7 +94,7 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
     }
     // construct frenet_obstacle
     std::shared_ptr<FrenetObstacle> frenet_obstacle = std::make_shared<FrenetObstacle>(
-        obstacle_ptr, reference_path, session_->environmental_model().get_ego_state_manager());
+        obstacle_ptr, reference_path, session_->environmental_model().get_ego_state_manager(), is_location_valid);
     frenet_obstacles.emplace_back(frenet_obstacle);
     frenet_obstacles_map[obstacle_ptr->id()] = frenet_obstacle;
   }

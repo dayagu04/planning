@@ -7,8 +7,10 @@
 
 #include "debug_info_log.h"
 #include "environment_model_debug_info.pb.h"
+#include "environmental_model.h"
 #include "ifly_time.h"
 #include "planning_context.h"
+#include "virtual_lane_manager.h"
 namespace planning {
 
 TrackletSequentialState *LifecycleDict::get(int uid) {
@@ -106,20 +108,46 @@ void TrackletMaintainer::apply_update(const EgoStateManager &ego_state,
   ego_state_ = ego_state;
   LeadCars leadcars;
   std::vector<TrackedObject *> objects;
+  std::vector<PathPoint> path_points;
 
-  if (hdmap_valid_) {
-    recv_prediction_objects(predictions, objects);
-  } else {
-    recv_relative_prediction_objects(predictions, objects);
-  }
+  bool is_location_valid = session_->environmental_model().location_valid();
   auto &lateral_output = session_->planning_context().lateral_behavior_planner_output();
 
-  calc(objects, lateral_output.path_points, lateral_output.scenario, lateral_output.flane_width,
-       lateral_output.lat_offset, lateral_output.borrow_bicycle_lane, lateral_output.enable_intersection_planner,
-       lateral_output.dist_rblane, lateral_output.tleft_lane, lateral_output.rightest_lane,
-       lateral_output.dist_intersect, lateral_output.intersect_length, lateral_output.left_faster,
-       lateral_output.right_faster, leadcars, isRedLightStop, lateral_output.isFasterStaticAvd,
-       lateral_output.isOnHighway, lateral_output.d_poly, lateral_output.c_poly);
+  auto flane = session_->environmental_model().get_virtual_lane_manager()->get_last_fix_lane();
+  if (is_location_valid) {
+    recv_prediction_objects(predictions, objects);
+    if (flane != nullptr) {
+      auto &ref_path = flane->get_reference_path();
+      for (auto ref_point : ref_path->get_points()) {
+        double ego_fx = std::cos(ego_state_.ego_pose_raw().theta);
+        double ego_fy = std::sin(ego_state_.ego_pose_raw().theta);
+        double ego_lx = -ego_fy;
+        double ego_ly = ego_fx;
+        double dx = ref_point.path_point.x - ego_state_.ego_pose_raw().x;
+        double dy = ref_point.path_point.y - ego_state_.ego_pose_raw().y;
+
+        ref_point.path_point.x = dx * ego_fx + dy * ego_fy;
+        ref_point.path_point.y = dx * ego_lx + dy * ego_ly;
+        path_points.emplace_back(ref_point.path_point);
+      }
+    }
+  } else {
+    recv_relative_prediction_objects(predictions, objects);
+    if (flane != nullptr) {
+      auto &ref_path = flane->get_reference_path();
+      for (auto &ref_point : ref_path->get_points()) {
+        path_points.emplace_back(ref_point.path_point);
+      }
+    }
+  }
+
+  // 长时暂时无lateral_output
+  calc(objects, path_points, lateral_output.scenario, lateral_output.flane_width, lateral_output.lat_offset,
+       lateral_output.borrow_bicycle_lane, lateral_output.enable_intersection_planner, lateral_output.dist_rblane,
+       lateral_output.tleft_lane, lateral_output.rightest_lane, lateral_output.dist_intersect,
+       lateral_output.intersect_length, lateral_output.left_faster, lateral_output.right_faster, leadcars,
+       isRedLightStop, lateral_output.isFasterStaticAvd, lateral_output.isOnHighway, lateral_output.d_poly,
+       lateral_output.c_poly);
 
   set_default_value(objects);
 
@@ -157,7 +185,7 @@ void TrackletMaintainer::recv_prediction_objects(const std::vector<PredictionObj
     double rel_x = dx * ego_fx + dy * ego_fy;
     double rel_y = dx * ego_lx + dy * ego_ly;
 
-    if (rel_x < -50 || rel_x > 80 || p.trajectory_array.size() == 0) {
+    if (rel_x < -50 || rel_x > 150 || p.trajectory_array.size() == 0) {
       continue;
     }
 
@@ -179,7 +207,8 @@ void TrackletMaintainer::recv_prediction_objects(const std::vector<PredictionObj
     origin->type = p.type;
     origin->fusion_type = 2;
 
-    double speed_yaw = p.trajectory_array[0].trajectory[0].yaw;
+    double speed_yaw = p.trajectory_array[0].trajectory[0].yaw;  //现在yaw这个字段为姿态角
+
     double abs_vx = p.speed * std::cos(speed_yaw);
     double abs_vy = p.speed * std::sin(speed_yaw);
     double rot_vx = abs_vx * ego_fx + abs_vy * ego_fy;
@@ -203,6 +232,7 @@ void TrackletMaintainer::recv_prediction_objects(const std::vector<PredictionObj
     origin->center_x = rel_x;
     origin->center_y = rel_y;
     origin->theta = theta;
+    origin->speed_yaw = speed_yaw;  // p.trajectory_array[0].trajectory[0].theta
     origin->y_rel_ori = rel_y;
 
     origin->a = p.acc;
@@ -301,7 +331,14 @@ void TrackletMaintainer::recv_prediction_objects(const std::vector<PredictionObj
 
         object->trajectory.relative_ego_x[i] = tr.trajectory[i].relative_ego_x;
         object->trajectory.relative_ego_y[i] = tr.trajectory[i].relative_ego_y;
-        object->trajectory.relative_ego_yaw[i] = tr.trajectory[i].relative_ego_yaw;
+        double theta = tr.trajectory[i].yaw - ego_state_.ego_pose_raw().theta;
+        if (theta > pi) {
+          theta -= 2 * pi;
+        } else if (theta < -pi) {
+          theta += 2 * pi;
+        }
+        // object->trajectory.relative_ego_yaw[i] = tr.trajectory[i].relative_ego_yaw;
+        object->trajectory.relative_ego_yaw[i] = theta;
         object->trajectory.relative_ego_speed[i] = tr.trajectory[i].relative_ego_speed;
 
         object->trajectory.relative_ego_std_dev_x[i] = tr.trajectory[i].relative_ego_std_dev_x;
@@ -574,9 +611,8 @@ void TrackletMaintainer::calc(std::vector<TrackedObject *> &tracked_objects, con
   seq_state_.remove_clean();
   simple_refline_.update_pathpoints(path_points);
 
-  // TODO: ego_state relative
-  // double v_ego = ego_state_.ego_vel;
-  double v_ego = 20.;
+  auto ego_state_manager = session_->environmental_model().get_ego_state_manager();
+  double v_ego = ego_state_manager->ego_v();
   double ego_rear_axis_to_front_edge = session_->vehicle_config_context().get_vehicle_param().rear_axis_to_front_edge;
   if (simple_refline_.has_update()) {
     double yaw = 0;

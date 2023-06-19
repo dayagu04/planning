@@ -10,58 +10,37 @@
 namespace planning {
 
 FrenetObstacle::FrenetObstacle(const Obstacle *obstacle_ptr, const ReferencePath &reference_path,
-                               const std::shared_ptr<EgoStateManager> ego_state_info)
-    : id_(obstacle_ptr->id()), obstacle_ptr_(obstacle_ptr) {
-  adc_cart_x_ = ego_state_info->ego_pose().x;
-  adc_cart_y_ = ego_state_info->ego_pose().y;
-  compute_frenet_obstacle_boundary(reference_path);
-  compute_frenet_polygon_sequence(reference_path);
+                               const std::shared_ptr<EgoStateManager> ego_state_info, bool is_location_valid)
+    : id_(obstacle_ptr->id()), obstacle_ptr_(obstacle_ptr), is_location_valid_(is_location_valid) {
+  compute_frenet_obstacle(reference_path);
+  if (is_location_valid_) {
+    compute_frenet_obstacle_boundary(reference_path);
+    compute_frenet_polygon_sequence(reference_path);
+  }
 }
 
-void FrenetObstacle::compute_frenet_obstacle_boundary(const ReferencePath &reference_path) {
+void FrenetObstacle::compute_frenet_obstacle(const ReferencePath &reference_path) {
   FrenetEgoState frenet_ego_state = reference_path.get_frenet_ego_state();
   double ego_l = frenet_ego_state.l();
 
   const auto &frenet_coord = reference_path.get_frenet_coord();
-  double obs_start_s(std::numeric_limits<double>::max());
-  double obs_end_s(std::numeric_limits<double>::lowest());
-  double obs_start_l(std::numeric_limits<double>::max());
-  double obs_end_l(std::numeric_limits<double>::lowest());
-
-  std::vector<planning_math::Vec2d> obstacle_points;
-  auto perception_bounding_box = obstacle_ptr_->perception_bounding_box();
-  perception_bounding_box.GetAllCorners(&obstacle_points);
-
-  for (const planning_math::Vec2d &obs_point : obstacle_points) {
-    Point2D frenet_point, carte_point;
-    carte_point.x = obs_point.x();
-    carte_point.y = obs_point.y();
-    if (frenet_coord->CartCoord2FrenetCoord(carte_point, frenet_point) == TRANSFORM_FAILED ||
-        std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
-      b_frenet_valid_ = false;
-      return;
-    }
-    obs_start_s = std::min(obs_start_s, frenet_point.x);
-    obs_end_s = std::max(obs_end_s, frenet_point.x);
-    obs_start_l = std::min(obs_start_l, frenet_point.y);
-    obs_end_l = std::max(obs_end_l, frenet_point.y);
-  }
-  // boundary frenet
-  frenet_obstacle_boundary_.s_start = obs_start_s;
-  frenet_obstacle_boundary_.s_end = obs_end_s;
-  frenet_obstacle_boundary_.l_start = obs_start_l;
-  frenet_obstacle_boundary_.l_end = obs_end_l;
-
   // center frenet
+
   Point2D frenet_point, carte_point;
-  carte_point.x = obstacle_ptr_->x_center();
-  carte_point.y = obstacle_ptr_->y_center();
+  if (is_location_valid_) {
+    carte_point.x = obstacle_ptr_->x_center();
+    carte_point.y = obstacle_ptr_->y_center();
+  } else {
+    carte_point.x = obstacle_ptr_->x_relative_center();
+    carte_point.y = obstacle_ptr_->y_relative_center();
+  }
+
   if (frenet_coord->CartCoord2FrenetCoord(carte_point, frenet_point) == TRANSFORM_FAILED ||
       std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
-    frenet_s_ = obs_end_s;
-    frenet_l_ = obs_end_l;
+    // frenet_s_ = obs_end_s;
+    // frenet_l_ = obs_end_l;
     frenet_relative_velocity_angle_ = 0.0;
-    b_frenet_valid_ = false;
+    b_frenet_valid_ = false;  // TODO: 注意这个标志位的使用
     return;
   } else {
     frenet_s_ = frenet_point.x;
@@ -90,9 +69,7 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(const ReferencePath &refer
       frenet_l_ - obs_length / 2.0 * std::sin(obs_relative_heading) - obs_width / 2.0 * std::cos(obs_relative_heading);
 
   double curve_heading = frenet_coord->GetRefCurveHeading(frenet_s_);
-  // todo:clren ,现在无velocity_angle
-  // frenet_relative_velocity_angle_ = planning_math::NormalizeAngle(
-  //     obstacle_ptr_->velocity_angle() - curve_heading);
+  frenet_relative_velocity_angle_ = planning_math::NormalizeAngle(obstacle_ptr_->velocity_angle() - curve_heading);
   frenet_velocity_s_ = obstacle_ptr_->velocity() * std::cos(frenet_relative_velocity_angle_);
   frenet_velocity_l_ = obstacle_ptr_->velocity() * std::sin(frenet_relative_velocity_angle_);
   b_frenet_valid_ = true;
@@ -134,6 +111,38 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(const ReferencePath &refer
   } else {
     l_relative_to_ego_ = min_corners_l_relative_ego < 0 ? min_corners_l_relative_ego : 0;
   }
+}
+void FrenetObstacle::compute_frenet_obstacle_boundary(const ReferencePath &reference_path) {
+  const auto &frenet_coord = reference_path.get_frenet_coord();
+
+  double obs_start_s(std::numeric_limits<double>::max());
+  double obs_end_s(std::numeric_limits<double>::lowest());
+  double obs_start_l(std::numeric_limits<double>::max());
+  double obs_end_l(std::numeric_limits<double>::lowest());
+
+  std::vector<planning_math::Vec2d> obstacle_points;
+  auto perception_bounding_box = obstacle_ptr_->perception_bounding_box();
+  perception_bounding_box.GetAllCorners(&obstacle_points);
+
+  for (const planning_math::Vec2d &obs_point : obstacle_points) {
+    Point2D frenet_point, carte_point;
+    carte_point.x = obs_point.x();
+    carte_point.y = obs_point.y();
+    if (frenet_coord->CartCoord2FrenetCoord(carte_point, frenet_point) == TRANSFORM_FAILED ||
+        std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
+      b_frenet_valid_ = false;
+      return;
+    }
+    obs_start_s = std::min(obs_start_s, frenet_point.x);
+    obs_end_s = std::max(obs_end_s, frenet_point.x);
+    obs_start_l = std::min(obs_start_l, frenet_point.y);
+    obs_end_l = std::max(obs_end_l, frenet_point.y);
+  }
+  // boundary frenet
+  frenet_obstacle_boundary_.s_start = obs_start_s;
+  frenet_obstacle_boundary_.s_end = obs_end_s;
+  frenet_obstacle_boundary_.l_start = obs_start_l;
+  frenet_obstacle_boundary_.l_end = obs_end_l;
 }
 
 void FrenetObstacle::compute_frenet_polygon_sequence(const ReferencePath &reference_path) {

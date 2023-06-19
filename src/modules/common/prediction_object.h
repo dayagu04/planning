@@ -72,7 +72,8 @@ struct PredictionObject {
   float length;
   float width;
   float speed;
-  float yaw;
+  float yaw;    // for obj
+  float theta;  // for velocity
   float acc;
   // add relative info for highway
   float relative_position_x;
