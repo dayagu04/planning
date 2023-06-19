@@ -14,7 +14,7 @@ TaskPipelineVisionOnly::TaskPipelineVisionOnly(const EgoPlanningConfigBuilder *c
   version_to_tasks_["v1"] = {
       // TaskType::OBSTACLE_DECIDER,
       TaskType::LATERAL_DECIDER, TaskType::VISION_LATERAL_MOTION_PLANNER,
-      TaskType::VISION_ONLY_LONGITUDINAL_BEHAVIOR_PLANNER,
+      TaskType::VISION_ONLY_LONGITUDINAL_BEHAVIOR_PLANNER, TaskType::ADAS_FUNCTION_TASK,
       // TaskType::RESULT_TRAJECTORY_GENERATOR
   };
   CreatePlanningTasks(config_builder);

@@ -8,9 +8,12 @@
 #include "context/ego_planning_config.h"
 #include "frame.h"
 #include "ifly_time.h"
+#include "ihc_function/intelligent_headlight_control.h"
+#include "lkas_function/lane_keep_assist_manager.h"
 #include "scenario/lateral_behavior_object_selector.h"
 #include "scenario/scenario_state_machine.h"
 #include "session.h"
+#include "tsr_function/traffic_sign_recognition.h"
 
 namespace planning {
 namespace planner {
@@ -40,6 +43,9 @@ class GeneralPlanner {
   std::shared_ptr<AdaptiveCruiseControl> adaptive_cruise_control_ = nullptr;
   std::shared_ptr<StartStopEnable> start_stop_ = nullptr;
   std::shared_ptr<MrcCondition> mrc_condition_ = nullptr;
+  std::shared_ptr<LaneKeepAssistManager> lane_keep_assit_;
+  std::shared_ptr<IntelligentHeadlightControl> intelligent_headlight_control_;
+  std::shared_ptr<TrafficSignRecognition> traffic_sign_recognition_;
 };
 
 }  // namespace planner

@@ -42,6 +42,15 @@ void GeneralPlanner::InitContext() {
 
   mrc_condition_ = std::make_shared<MrcCondition>(config_builder, session_);
   session_->mutable_planning_context()->set_mrc_condition(mrc_condition_);
+
+  lane_keep_assit_ = std::make_shared<LaneKeepAssistManager>(session_);
+  session_->mutable_planning_context()->set_lane_keep_assit_function(lane_keep_assit_);
+
+  intelligent_headlight_control_ = std::make_shared<IntelligentHeadlightControl>(session_);
+  session_->mutable_planning_context()->set_intelligent_headlight_control_function(intelligent_headlight_control_);
+
+  traffic_sign_recognition_ = std::make_shared<TrafficSignRecognition>(session_);
+  session_->mutable_planning_context()->set_traffic_sign_recognition_function(traffic_sign_recognition_);
 }
 
 void GeneralPlanner::UpdateFixLaneVirtualId() {

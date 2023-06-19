@@ -17,6 +17,9 @@ class ScenarioStateMachine;
 class AdaptiveCruiseControl;
 class StartStopEnable;
 class MrcCondition;
+class LaneKeepAssistManager;
+class IntelligentHeadlightControl;
+class TrafficSignRecognition;
 
 struct StatusInfo {
   std::string error_info;
@@ -112,6 +115,26 @@ class PlanningContext {
     mrc_condition_ptr_ = mrc_condition_ptr;
   }
 
+  const std::shared_ptr<LaneKeepAssistManager> &lane_keep_assit_function() { return lane_keep_assit_ptr_; }
+  void set_lane_keep_assit_function(std::shared_ptr<LaneKeepAssistManager> lane_keep_assit) {
+    lane_keep_assit_ptr_ = lane_keep_assit;
+  }
+
+  const std::shared_ptr<class IntelligentHeadlightControl> &intelligent_headlight_control_function() {
+    return intelligent_headlight_control_;
+  }
+  void set_intelligent_headlight_control_function(
+      std::shared_ptr<class IntelligentHeadlightControl> intelligent_headlight_control) {
+    intelligent_headlight_control_ = intelligent_headlight_control;
+  }
+
+  const std::shared_ptr<TrafficSignRecognition> &traffic_sign_recognition_function() {
+    return traffic_sign_recognition_;
+  }
+  void set_traffic_sign_recognition_function(std::shared_ptr<TrafficSignRecognition> traffic_sign_recognition) {
+    traffic_sign_recognition_ = traffic_sign_recognition;
+  }
+
   void set_last_planning_result(const std::shared_ptr<PlanningResult> planning_result) {
     last_planning_result_ = planning_result;
   }
@@ -197,6 +220,9 @@ class PlanningContext {
   std::shared_ptr<MrcCondition> mrc_condition_ptr_;
   std::shared_ptr<StartStopEnable> start_stop_ptr_;
   std::shared_ptr<AdaptiveCruiseControl> adaptive_cruise_control_ptr_;
+  std::shared_ptr<LaneKeepAssistManager> lane_keep_assit_ptr_;
+  std::shared_ptr<IntelligentHeadlightControl> intelligent_headlight_control_;
+  std::shared_ptr<TrafficSignRecognition> traffic_sign_recognition_;
 };
 
 }  // namespace planning

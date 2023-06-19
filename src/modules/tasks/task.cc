@@ -2,6 +2,7 @@
 
 #include "behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
+#include "behavior_planners/vision_only_adas_function_task/vision_only_adas_function_task.h"
 #include "behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 #include "behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner.h"
 #include "motion_planners/lateral_motion_planner/lateral_motion_planner.h"
@@ -82,6 +83,10 @@ std::shared_ptr<Task> Task::Make(const TaskType &task_type, const EgoPlanningCon
 
     case TaskType::RESULT_TRAJECTORY_GENERATOR: {
       return std::make_shared<ResultTrajectoryGenerator>(config_builder, pipeline_context);
+    }
+
+    case TaskType::ADAS_FUNCTION_TASK: {
+      return std::make_shared<VisionOnlyAdasFunctionTask>(config_builder, pipeline_context);
     }
     default: { /*LOG_ERROR*/
       return nullptr;

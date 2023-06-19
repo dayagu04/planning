@@ -1,38 +1,60 @@
-#include "ihc.h"
-// #include <stdio.h>
+#include "intelligent_headlight_control.h"
 
-IHCSys ihc_sys;
-#define IHC_StateMachine_IN_ACTIVE 1   // IHC一级主状态
-#define IHC_StateMachine_IN_FAULT 2    // IHC一级主状态
-#define IHC_StateMachine_IN_OFF 3      // IHC一级主状态
-#define IHC_StateMachine_IN_STANDBY 4  // IHC一级主状态
+namespace planning {
 
-// 更新输入信息
-void IHCUpdateInput(planning::framework::Session *session, IHCSys *sys) {
+void IntelligentHeadlightControl::RunOnce() {
+  // 更新输入信息
+  Update();
+
+  // 状态机跳转
+  ihc_sys_.state.ihc_enable_code = IHCEnableCode();
+  ihc_sys_.state.ihc_disable_code = IHCDisableCode();
+  ihc_sys_.state.ihc_fault_code = IHCFaultCode();
+  ihc_sys_.state.ihc_state = IHCStateMachine();
+
+  // IHC功能处于激活状态
+  if (ihc_sys_.state.ihc_state == 3) {
+    ihc_sys_.state.ihc_request_status = TRUE;
+    ihc_sys_.state.ihc_request = IHCRequest();
+  } else {
+    ihc_sys_.state.ihc_request_status = FALSE;
+    ihc_sys_.state.ihc_request = FALSE;
+  }
+  set_ihc_output_info();
+
+  JSON_DEBUG_VALUE("ihc_function::ihc_enable_code", ihc_sys_.state.ihc_enable_code);
+  JSON_DEBUG_VALUE("ihc_function::ihc_disable_code", ihc_sys_.state.ihc_disable_code);
+  JSON_DEBUG_VALUE("ihc_function::ihc_fault_code", ihc_sys_.state.ihc_fault_code);
+  JSON_DEBUG_VALUE("ihc_function::ihc_state", ihc_sys_.state.ihc_state);
+  JSON_DEBUG_VALUE("ihc_function::ihc_request_status", ihc_sys_.state.ihc_request_status);
+  JSON_DEBUG_VALUE("ihc_function::ihc_request", ihc_sys_.state.ihc_request);
+  JSON_DEBUG_VALUE("ihc_function::ihc_main_switch", ihc_sys_.input.ihc_main_switch);
+  JSON_DEBUG_VALUE("ihc_function::auto_light_state", ihc_sys_.input.auto_light_state);
+}
+void IntelligentHeadlightControl::Update() {
   // 获取IHC开关状态
-  sys->input.ihc_main_switch = session->mutable_environmental_model()->get_hmi_info().ihc_main_switch();
+  ihc_sys_.input.ihc_main_switch = session_->mutable_environmental_model()->get_hmi_info().ihc_main_switch();
 
   // 获取当前仪表车速
-  auto ptr_ego_state_manager = session->mutable_environmental_model()->get_ego_state_manager();
-  sys->input.vehicle_speed_display_kph = ptr_ego_state_manager->ego_hmi_v() * 3.6F;  // 当前车速 单位:m/s
+  auto ptr_ego_state_manager = session_->mutable_environmental_model()->get_ego_state_manager();
+  ihc_sys_.input.vehicle_speed_display_kph = ptr_ego_state_manager->ego_hmi_v() * 3.6F;  // 当前车速 单位:m/s
 
   // 获取自动灯光控制状态
-  sys->input.auto_light_state = FALSE;
+  ihc_sys_.input.auto_light_state = FALSE;
 }
-
-uint16 IHCEnableCode(IHCSys *sys) {
+uint16 IntelligentHeadlightControl::IHCEnableCode() {
   uint16 uint16_bit[16] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
   uint16 ihc_enable_code_temp = 0;
 
   // condition0
-  if (sys->input.vehicle_speed_display_kph < 40.0F) {
+  if (ihc_sys_.input.vehicle_speed_display_kph < 40.0F) {
     ihc_enable_code_temp += uint16_bit[0];
   } else {
     // do nothing
   }
 
   // condition1
-  if (sys->input.auto_light_state == FALSE) {
+  if (ihc_sys_.input.auto_light_state == FALSE) {
     ihc_enable_code_temp += uint16_bit[1];
   } else {
     // do nothing
@@ -40,20 +62,19 @@ uint16 IHCEnableCode(IHCSys *sys) {
 
   return ihc_enable_code_temp;
 }
-
-uint16 IHCDisableCode(IHCSys *sys) {
+uint16 IntelligentHeadlightControl::IHCDisableCode() {
   uint16 uint16_bit[16] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
   uint16 ihc_disable_code_temp = 0;
 
   // condition0
-  if (sys->input.vehicle_speed_display_kph < 25.0F) {
+  if (ihc_sys_.input.vehicle_speed_display_kph < 25.0F) {
     ihc_disable_code_temp += uint16_bit[0];
   } else {
     // do nothing
   }
 
   // condition1
-  if (sys->input.auto_light_state == FALSE) {
+  if (ihc_sys_.input.auto_light_state == FALSE) {
     ihc_disable_code_temp += uint16_bit[1];
   } else {
     // do nothing
@@ -61,20 +82,17 @@ uint16 IHCDisableCode(IHCSys *sys) {
 
   return ihc_disable_code_temp;
 }
-
-uint16 IHCFaultCode(IHCSys *sys) {
+uint16 IntelligentHeadlightControl::IHCFaultCode() {
   uint16 uint16_bit[16] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
   uint16 ihc_fault_code_temp = 0;
 
   return ihc_fault_code_temp;
 }
-
-// IHC状态机
-uint8 IHCStateMachine(IHCSys *sys) {
-  boolean main_switch = sys->input.ihc_main_switch;
-  uint16 fault_code = sys->state.ihc_fault_code;
-  uint16 enable_code = sys->state.ihc_enable_code;
-  uint16 disable_code = sys->state.ihc_disable_code;
+uint8 IntelligentHeadlightControl::IHCStateMachine() {
+  boolean main_switch = ihc_sys_.input.ihc_main_switch;
+  uint16 fault_code = ihc_sys_.state.ihc_fault_code;
+  uint16 enable_code = ihc_sys_.state.ihc_enable_code;
+  uint16 disable_code = ihc_sys_.state.ihc_disable_code;
 
   static uint8 ihc_state_machine_init_flag = 0;  // IHC状态机初始化状态 0:未初始化过 1:已完成过初始化
   static uint8 ihc_state_fault_off_standby_active = 0;  // IHC一级主状态 FAULT OFF STANDBY ACTIVE
@@ -144,11 +162,12 @@ uint8 IHCStateMachine(IHCSys *sys) {
   }
   return ihc_state_temp;
 }
-
-// 更新输出信息
-void IHCUpdateOutput(planning::framework::Session *session, IHCSys *sys) {}
-
-boolean IHCRequest(planning::framework::Session *session, IHCSys *sys) {
+void IntelligentHeadlightControl::set_ihc_output_info() {
+  ihc_request_status_ = ihc_sys_.state.ihc_request_status;  // IHC请求状态 0:No Request 1:Request
+  ihc_request_ = ihc_sys_.state.ihc_request;                // IHC请求 0:LowBeam 1:HighBeam
+  ihc_state_ = ihc_sys_.state.ihc_state;                    // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
+}
+boolean IntelligentHeadlightControl::IHCRequest() {
   boolean ihc_request_temp = TRUE;
 
   // 如果本车道、左车道、右车道检测到移动物体,则禁止请求远光灯
@@ -157,7 +176,7 @@ boolean IHCRequest(planning::framework::Session *session, IHCSys *sys) {
   float32 x_max = 100.0F;  // 检测区域:x最大值 单位:m
   float32 y_min = -5.0F;   // 检测区域:y最小值 单位:m
   float32 y_max = 5.0F;    // 检测区域:y最大值 单位:m
-  auto ptr_obstacles = session->mutable_environmental_model()->get_obstacle_manager()->get_obstacles();
+  auto ptr_obstacles = session_->mutable_environmental_model()->get_obstacle_manager()->get_obstacles();
   float32 obstacle_x = 255.0F;                                                 // 目标物中心的x坐标 单位:m
   float32 obstacle_y = 255.0F;                                                 // 目标物中心的y坐标 单位:m
   float32 obstacle_v = 255.0F;                                                 // 目标物的速度 单位:m/s
@@ -220,25 +239,4 @@ boolean IHCRequest(planning::framework::Session *session, IHCSys *sys) {
   return ihc_request_temp;
 }
 
-void IHCStep(planning::framework::Session *session) {
-  // 更新输入信息
-  IHCUpdateInput(session, &ihc_sys);
-
-  // 状态机跳转
-  ihc_sys.state.ihc_enable_code = IHCEnableCode(&ihc_sys);
-  ihc_sys.state.ihc_disable_code = IHCDisableCode(&ihc_sys);
-  ihc_sys.state.ihc_fault_code = IHCFaultCode(&ihc_sys);
-  ihc_sys.state.ihc_state = IHCStateMachine(&ihc_sys);
-
-  // IHC功能处于激活状态
-  if (ihc_sys.state.ihc_state == 3) {
-    ihc_sys.state.ihc_request_status = TRUE;
-    ihc_sys.state.ihc_request = IHCRequest(session, &ihc_sys);
-  } else {
-    ihc_sys.state.ihc_request_status = FALSE;
-    ihc_sys.state.ihc_request = FALSE;
-  }
-
-  // 更新输出信息
-  IHCUpdateOutput(session, &ihc_sys);
-}
+}  // namespace planning

@@ -644,4 +644,8 @@ struct EgoPlanningUrgentChangeEvaluatorConfig : public EgoPlanningEvaluatorConfi
     kCarePredictionTime = 1.0;
   }
 };
+
+struct VisionOnlyAdasFunctionTaskConfig : public EgoPlanningConfig {
+  void init(const Json &json) override { EgoPlanningConfig::init(json); }
+};
 }  // namespace planning

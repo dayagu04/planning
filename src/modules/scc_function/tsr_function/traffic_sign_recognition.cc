@@ -1,54 +1,81 @@
-#include "tsr.h"
-#include "environmental_model.h"
-//#include <stdio.h>
+#include "traffic_sign_recognition.h"
 
-TSRSys tsr_sys;
-#define TSR_StateMachine_IN_ACTIVE 1   // TSR一级主状态
-#define TSR_StateMachine_IN_FAULT 2    // TSR一级主状态
-#define TSR_StateMachine_IN_OFF 3      // TSR一级主状态
-#define TSR_StateMachine_IN_STANDBY 4  // TSR一级主状态
+namespace planning {
 
-// 更新输入信息
-void TSRUpdateInput(planning::framework::Session *session, TSRSys *sys) {
+void TrafficSignRecognition::Update() {
   // 获取TSR开关状态
-  sys->input.tsr_main_switch = session->mutable_environmental_model()->get_hmi_info().tsr_main_switch();
+  tsr_sys_.input.tsr_main_switch = session_->mutable_environmental_model()->get_hmi_info().tsr_main_switch();
 
   // 当前车道的限速值 缺少接口
-  auto ptr_current_lane = session->mutable_environmental_model()->get_virtual_lane_manager()->get_current_lane();
-  sys->input.tsr_speed_limit = ptr_current_lane->get_ego_lateral_offset();
+  auto ptr_current_lane = session_->mutable_environmental_model()->get_virtual_lane_manager()->get_current_lane();
+  tsr_sys_.input.tsr_speed_limit = ptr_current_lane->get_ego_lateral_offset();
 
   // 获取当前仪表车速
-  auto ptr_ego_state_manager = session->mutable_environmental_model()->get_ego_state_manager();
-  sys->input.vehicle_speed_display_kph = ptr_ego_state_manager->ego_hmi_v() * 3.6F;  // 当前车速 单位:m/s
+  auto ptr_ego_state_manager = session_->mutable_environmental_model()->get_ego_state_manager();
+  tsr_sys_.input.vehicle_speed_display_kph = ptr_ego_state_manager->ego_hmi_v() * 3.6F;  // 当前车速 单位:m/s
 }
 
-uint16 TSREnableCode(TSRSys *sys) {
+void TrafficSignRecognition::RunOnce() {
+  // 更新输入信息
+  Update();
+
+  // 状态机跳转
+  tsr_sys_.state.tsr_enable_code = TSREnableCode();
+  tsr_sys_.state.tsr_disable_code = TSRDisableCode();
+  tsr_sys_.state.tsr_fault_code = TSRFaultCode();
+  tsr_sys_.state.tsr_state = TSRStateMachine();
+
+  // TSR功能处于激活状态
+  if (tsr_sys_.state.tsr_state == 3) {
+    // TSR识别到的限速标识牌赋值
+    tsr_sys_.state.tsr_speed_limit = tsr_sys_.input.tsr_speed_limit;
+
+    // TSR超速报警标志位赋值
+    if (tsr_sys_.input.vehicle_speed_display_kph > tsr_sys_.state.tsr_speed_limit) {
+      tsr_sys_.state.tsr_warning = TRUE;
+    } else {
+      tsr_sys_.state.tsr_warning = FALSE;
+    }
+  } else {
+    tsr_sys_.state.tsr_speed_limit = 0;
+    tsr_sys_.state.tsr_warning = FALSE;
+  }
+  set_tsr_output_info();
+
+  JSON_DEBUG_VALUE("tsr_function::tsr_enable_code", tsr_sys_.state.tsr_enable_code);
+  JSON_DEBUG_VALUE("tsr_function::tsr_disable_code", tsr_sys_.state.tsr_disable_code);
+  JSON_DEBUG_VALUE("tsr_function::tsr_fault_code", tsr_sys_.state.tsr_fault_code);
+  JSON_DEBUG_VALUE("tsr_function::tsr_state", tsr_sys_.state.tsr_state);
+  JSON_DEBUG_VALUE("tsr_function::tsr_warning", tsr_sys_.state.tsr_warning);
+  JSON_DEBUG_VALUE("tsr_function::tsr_main_switch", tsr_sys_.input.tsr_main_switch);
+}
+
+uint16 TrafficSignRecognition::TSREnableCode() {
   uint16 uint16_bit[16] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
   uint16 tsr_enable_code_temp = 0;
 
   return tsr_enable_code_temp;
 }
 
-uint16 TSRDisableCode(TSRSys *sys) {
+uint16 TrafficSignRecognition::TSRDisableCode() {
   uint16 uint16_bit[16] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
   uint16 tsr_disable_code_temp = 0;
 
   return tsr_disable_code_temp;
 }
 
-uint16 TSRFaultCode(TSRSys *sys) {
+uint16 TrafficSignRecognition::TSRFaultCode() {
   uint16 uint16_bit[16] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
   uint16 tsr_fault_code_temp = 0;
 
   return tsr_fault_code_temp;
 }
 
-// TSR状态机
-uint8 TSRStateMachine(TSRSys *sys) {
-  boolean main_switch = sys->input.tsr_main_switch;
-  uint16 fault_code = sys->state.tsr_fault_code;
-  uint16 enable_code = sys->state.tsr_enable_code;
-  uint16 disable_code = sys->state.tsr_disable_code;
+uint8 TrafficSignRecognition::TSRStateMachine() {
+  boolean main_switch = tsr_sys_.input.tsr_main_switch;
+  uint16 fault_code = tsr_sys_.state.tsr_fault_code;
+  uint16 enable_code = tsr_sys_.state.tsr_enable_code;
+  uint16 disable_code = tsr_sys_.state.tsr_disable_code;
 
   static uint8 tsr_state_machine_init_flag = 0;  // TSR状态机初始化状态 0:未初始化过 1:已完成过初始化
   static uint8 tsr_state_fault_off_standby_active = 0;  // tsr一级主状态 FAULT OFF STANDBY ACTIVE
@@ -119,35 +146,10 @@ uint8 TSRStateMachine(TSRSys *sys) {
   return tsr_state_temp;
 }
 
-// 更新输出信息
-void TSRUpdateOutput(planning::framework::Session *session, TSRSys *sys) {}
-
-void TSRStep(planning::framework::Session *session) {
-  // 更新输入信息
-  TSRUpdateInput(session, &tsr_sys);
-
-  // 状态机跳转
-  tsr_sys.state.tsr_enable_code = TSREnableCode(&tsr_sys);
-  tsr_sys.state.tsr_disable_code = TSRDisableCode(&tsr_sys);
-  tsr_sys.state.tsr_fault_code = TSRFaultCode(&tsr_sys);
-  tsr_sys.state.tsr_state = TSRStateMachine(&tsr_sys);
-
-  // TSR功能处于激活状态
-  if (tsr_sys.state.tsr_state == 3) {
-    // TSR识别到的限速标识牌赋值
-    tsr_sys.state.tsr_speed_limit = tsr_sys.input.tsr_speed_limit;
-
-    // TSR超速报警标志位赋值
-    if (tsr_sys.input.vehicle_speed_display_kph > tsr_sys.state.tsr_speed_limit) {
-      tsr_sys.state.tsr_warning = TRUE;
-    } else {
-      tsr_sys.state.tsr_warning = FALSE;
-    }
-  } else {
-    tsr_sys.state.tsr_speed_limit = 0;
-    tsr_sys.state.tsr_warning = FALSE;
-  }
-
-  // 更新输出信息
-  TSRUpdateOutput(session, &tsr_sys);
+void TrafficSignRecognition::set_tsr_output_info() {
+  tsr_state_ = tsr_sys_.state.tsr_state;              // TSR功能状态 0:Unavailable 1:Off 2:Standby 3:Active
+  tsr_speed_limit_ = tsr_sys_.state.tsr_speed_limit;  // TSR识别到的限速标识牌 单位:km/h
+  tsr_warning_ = tsr_sys_.state.tsr_warning;          // TSR超速报警标志位 0:No Warning 1:Warning
 }
+
+}  // namespace planning
