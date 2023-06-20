@@ -77,9 +77,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   auto location_valid =
       local_view.localization_estimate.msf_status().available() &&
       (local_view.localization_estimate.msf_status().msf_status() != LocalizationOutput::MsfStatus::ERROR) &&
-       local_view.road_info.local_point_valid() &&
-       local_view.fusion_objects_info.local_point_valid() &&
-      enable_NOA ;
+      local_view.road_info.local_point_valid() && local_view.fusion_objects_info.local_point_valid() && enable_NOA;
   session_->mutable_environmental_model()->set_location_valid(location_valid);
   // 长时，实时切换，临时hack
   // session_->mutable_environmental_model()->set_location_valid(false);

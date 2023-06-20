@@ -98,6 +98,7 @@ class VirtualLaneManager {
   };
 
   bool is_local_valid() const { return is_local_valid_; }
+
  private:
   LaneChangeStatus is_lane_change();
   void update_virtual_id();

@@ -635,8 +635,10 @@ void TrackletMaintainer::calc(std::vector<TrackedObject *> &tracked_objects, con
         fill_deriv_info(*item);
         fill_possibility_of_cutin(*item);
       }
-      if (item->type != 0)  // hack MSD_OBJECT_TYPE_RADAR_ONLY type
+      // only use obstacle with camera source
+      if ((item->fusion_source == OBSTACLE_SOURCE_CAMERA) || (item->fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
         is_potential_lead_one(*item, v_ego);
+      }
       calc_intersection_with_refline(*item, enable_intersection_planner, simple_refline_);
     }
   }
@@ -653,7 +655,10 @@ void TrackletMaintainer::calc(std::vector<TrackedObject *> &tracked_objects, con
   }
 
   for (auto tr : tracked_objects) {
-    if (tr->type == 0) continue;  // hack MSD_OBJECT_TYPE_RADAR_ONLY type
+    // ignore obj without camera source
+    if ((tr->fusion_source != OBSTACLE_SOURCE_CAMERA) && (tr->fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+      continue;
+    }
     tr->is_avd_car = is_potential_avoiding_car(*tr, lead_cars.lead_one, v_ego, lane_width, scenario,
                                                borrow_bicycle_lane, dist_rblane, tleft_lane, rightest_lane,
                                                dist_intersect, intersect_length, isRedLightStop);
@@ -924,8 +929,8 @@ void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
 
   double k_v_lat = 2 * pi * 0.2 * interval / (1 + 2 * pi * 0.2 * interval);
   item.v_lat = k_v_lat * v_lat_unfiltered + (1 - k_v_lat) * item.v_lat;
-  // for radar only, set to zero
-  if (item.type == 0) {  // hack MSD_OBJECT_TYPE_RADAR_ONLY type
+  // obstacle without camera source, set to zero
+  if ((item.fusion_source != OBSTACLE_SOURCE_CAMERA) && (item.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
     item.v_lat = 0.0;
   }
   item.v_lat_self = item.v_lat;

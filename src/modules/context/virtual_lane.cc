@@ -38,14 +38,14 @@ void VirtualLane::update_data(const FusionRoad::Lane &lane) {
     c_poly_.emplace_back(poly_coefficient);
   }
   assert(c_poly_.size() == 4);
-  
+
   center_line_points_track_id_.clear();
   for (auto &virtual_lane_refine_point : lane_reference_line_.virtual_lane_refline_points()) {
     // center_line_points_track_id_.emplace_back(virtual_lane_refine_point.track_id()); // todo
   }
 }
 
-bool VirtualLane::calc_c_poly(std::vector<double> &output) { // 该函数先保留着
+bool VirtualLane::calc_c_poly(std::vector<double> &output) {  // 该函数先保留着
   output.clear();
 
   if (lane_status_ == BOTH_MISSING) {
