@@ -6,11 +6,15 @@
 
 #include "environmental_model.h"
 #include "frenet_ego_state.h"
+#include "lateral_obstacle.h"
 #include "math/linear_interpolation.h"
 #include "math/quintic_poly_2d.h"
 #include "obstacle_manager.h"
 #include "task.h"
 #include "task_basic_types.h"
+#include "virtual_lane.h"
+#include "virtual_lane_manager.h"
+
 namespace planning {
 
 // struct LatYieldInfo {
@@ -79,10 +83,6 @@ class GeneralLateralDecider : public Task {
   // 3. construct the lane and boundary bound
   void ConstructlaneAndBoundaryBounds(MapObstacleDecision &map_obstacle_decisions);
 
-  // void construct_lat_behavior_output(
-  //     const ObstacleDecisions
-  //         &obstacle_decisions);  // output the info for lat motion planner
-
   bool CheckObstacleNudgeCondition(const std::shared_ptr<FrenetObstacle> &obstacle);
 
   bool CheckObstacleCrossingCondition(const std::shared_ptr<FrenetObstacle> obstacle, bool &is_cross_obj);
@@ -106,6 +106,8 @@ class GeneralLateralDecider : public Task {
   void GenerateEnuReferenceTheta(LatDeciderOutput &lat_decider_output);
 
   void HandleLaneChangeScene();
+
+  void CalcLateralBehaviorOutput();
 
   GeneralLateralDeciderConfig config_;
 

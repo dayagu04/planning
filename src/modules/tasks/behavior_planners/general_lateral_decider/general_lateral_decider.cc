@@ -85,6 +85,8 @@ bool GeneralLateralDecider::Execute(planning::framework::Frame *frame) {
 
   GenerateEnuReferenceTraj(lat_decider_output);
 
+  CalcLateralBehaviorOutput();
+
   return true;
 }
 
@@ -723,6 +725,108 @@ void GeneralLateralDecider::sample_road_distance_info(const double &s_target, do
       right_road_distance = std::fmin(refpath_pt.distance_to_right_road_border, right_road_distance);
     }
   }
+}
+
+void GeneralLateralDecider::CalcLateralBehaviorOutput() {
+  auto &coarse_planning_info = pipeline_context_->coarse_planning_info;
+  auto &lateral_output =
+      frame_->mutable_session()->mutable_planning_context()->mutable_lateral_behavior_planner_output();
+  auto &state_machine_output =
+      frame_->mutable_session()->mutable_planning_context()->mutable_lat_behavior_state_machine_output();
+
+  const std::shared_ptr<VirtualLane> flane =
+      frame_->session()->environmental_model().get_virtual_lane_manager()->get_lane_with_virtual_id(
+          coarse_planning_info.target_lane_id);
+  const std::shared_ptr<VirtualLaneManager> virtual_lane_manager =
+      frame_->session()->environmental_model().get_virtual_lane_manager();
+
+  // path points
+  std::vector<PathPoint> path_points;
+  if (flane != nullptr) {
+    auto &ref_path = flane->get_reference_path();
+    for (auto &ref_point : ref_path->get_points()) {
+      path_points.emplace_back(ref_point.path_point);
+    }
+  }
+  // scenario, left_faster, right_is_faster
+  lateral_output.scenario = state_machine_output.scenario;
+  lateral_output.left_faster = state_machine_output.left_is_faster;
+  lateral_output.right_faster = state_machine_output.right_is_faster;
+  // flane width
+  lateral_output.flane_width = flane->width();
+  // lat offset, attention!
+  lateral_output.lat_offset = 0.0;
+  // borrow_bicycle_lane
+  bool isRedLightStop = false;  // attention again!!!
+  TrackedObject *lead_one = frame_->mutable_session()->mutable_environmental_model()->get_lateral_obstacle()->leadone();
+
+  if (((virtual_lane_manager->current_lane_virtual_id() == virtual_lane_manager->get_lane_num() - 1) ||
+       (virtual_lane_manager->current_lane_virtual_id() == virtual_lane_manager->get_lane_num() - 2 &&
+        virtual_lane_manager->get_right_lane() != nullptr &&
+        virtual_lane_manager->get_right_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR)) &&
+      ((!isRedLightStop && lateral_output.accident_ahead && lead_one != nullptr && lead_one->type == 20001))) {
+    lateral_output.borrow_bicycle_lane = true;
+  } else {
+    lateral_output.borrow_bicycle_lane = false;
+  }
+  // enable intersection planner
+  lateral_output.enable_intersection_planner = false;  // attention again!!!
+  // dist rblane
+  lateral_output.dist_rblane = 10.;  // attention again!!!
+
+  // tleft_lane
+  bool left_direct_exist = true;  // attention agagin!!!
+  if (virtual_lane_manager->get_left_lane() == nullptr || left_direct_exist == false) {
+    lateral_output.tleft_lane = true;
+  } else {
+    lateral_output.tleft_lane = false;
+  }
+
+  // rightest_lane
+  if (((virtual_lane_manager->current_lane_virtual_id() == virtual_lane_manager->get_lane_num() - 1) ||
+       (virtual_lane_manager->current_lane_virtual_id() == virtual_lane_manager->get_lane_num() - 2 &&
+        virtual_lane_manager->get_right_lane() != nullptr &&
+        virtual_lane_manager->get_right_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR)) &&
+      virtual_lane_manager->current_lane_virtual_id() - 1 >= 0) {
+    lateral_output.rightest_lane = true;
+  } else {
+    lateral_output.rightest_lane = false;
+  }
+
+  // dist_intersect, attention again!!!
+  lateral_output.dist_intersect = 1000;
+
+  // intersect length, attention again!!!
+  if (virtual_lane_manager->get_intersection_info().intsect_length() != DBL_MAX) {
+    lateral_output.intersect_length = virtual_lane_manager->get_intersection_info().intsect_length();
+  } else {
+    lateral_output.intersect_length = 1000;
+  }
+
+  // isFasterStaticAvd, attention!
+  bool right_direct_exist = true;
+  bool curr_direct_has_right = false;
+  bool curr_direct_has_straight = true;
+  bool is_right_turn = false;
+  bool left_direct_has_straight = true;
+  lateral_output.isFasterStaticAvd = (left_direct_exist && lateral_output.left_faster) ||
+                                     (right_direct_exist && lateral_output.right_faster) ||
+                                     (curr_direct_has_right && !curr_direct_has_straight) ||
+                                     (is_right_turn && left_direct_has_straight && lateral_output.left_faster);
+  // is on highway
+  lateral_output.isOnHighway = frame_->session()->environmental_model().is_on_highway();
+
+  // d_poly ,c_poly
+  auto &d_poly = lateral_output.d_poly;
+  auto &c_poly = lateral_output.c_poly;
+
+  d_poly.resize(flane->get_center_line().poly_coefficient_car().size());
+  c_poly.resize(flane->get_center_line().poly_coefficient_car().size());
+
+  std::reverse_copy(flane->get_center_line().poly_coefficient_car().begin(),
+                    flane->get_center_line().poly_coefficient_car().end(), d_poly.begin());
+  std::reverse_copy(flane->get_center_line().poly_coefficient_car().begin(),
+                    flane->get_center_line().poly_coefficient_car().end(), c_poly.begin());
 }
 
 }  // namespace planning
