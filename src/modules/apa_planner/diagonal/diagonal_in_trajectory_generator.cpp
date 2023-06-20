@@ -3,10 +3,12 @@
 #include <limits>
 
 #include "common/apa_cos_sin.h"
+#include "common/apa_utils.h"
 #include "common/planning_log_helper.h"
 #include "common/vehicle_param_helper.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
+#include "log_glog.h"
 #include "math/line_segment2d.h"
 #include "math/math_utils.h"
 #include "planning_output_context.h"
@@ -16,6 +18,7 @@ namespace planning {
 namespace apa_planner {
 
 using ::Common::GearCommandValue;
+using ::FuncStateMachine::FunctionalState;
 using ::PlanningOutput::PlanningOutput;
 using ::PlanningOutput::Trajectory;
 using ::PlanningOutput::TrajectoryPoint;
@@ -46,9 +49,10 @@ bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
                                ->planning_result.planning_output);
   if (planning_output->has_planning_status() && planning_output->planning_status().has_apa_planning_status() &&
       planning_output->planning_status().apa_planning_status() == ::PlanningOutput::ApaPlanningStatus::FINISHED) {
-    PLANNING_LOG << "apa is finished" << std::endl;
+    AINFO << "apa is finished";
     return true;
   }
+  frame_ = frame;
   local_view_ = &(frame->session()->environmental_model().get_local_view());
 
   UpdateStandstillTime();
@@ -59,68 +63,91 @@ bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
 
   const int slots_size = parking_fusion_info.parking_fusion_slot_lists_size();
   if (slots_size == 0) {
-    PLANNING_LOG << "Error: slot size is 0" << std::endl;
+    AERROR << "Error: slot size is 0";
     return false;
   }
+
+  current_state_ = FunctionalState::INIT;
+  if (local_view_->function_state_machine_info.has_current_state()) {
+    current_state_ = local_view_->function_state_machine_info.current_state();
+  }
+
+  is_rough_calc_ = IsRoughCalc(frame);
 
   const auto& slots = parking_fusion_info.parking_fusion_slot_lists();
-  const int select_slot_id = parking_fusion_info.select_slot_id();
-  int select_slot_index = -1;
-  for (int i = 0; i < slots_size; ++i) {
-    if (select_slot_id == slots[i].id()) {
-      select_slot_index = i;
-      break;
-    }
-  }
-  if (select_slot_index == -1) {
-    PLANNING_LOG << "select_slot_id is invalid" << std::endl;
-    return false;
-  }
-
-  CalSlotPointsInM(select_slot_index);
-
-  if (slot_sign_ == 0) {
-    const double slot_heading_in_odom =
-        std::atan2(slot_points_in_m_[2].y - slot_points_in_m_[0].y, slot_points_in_m_[2].x - slot_points_in_m_[0].x);
-    const double ego_heading_in_odom = local_view_->localization_estimate.pose().euler_angles().yaw();
-    const double heading_diff = planning_math::NormalizeAngle(ego_heading_in_odom - slot_heading_in_odom);
-    if (heading_diff < -M_PI_4) {
-      slot_sign_ = -1;
-    } else if (heading_diff > M_PI_4) {
-      slot_sign_ = 1;
-    } else {
-      PLANNING_LOG << "Error: slot side is invalid" << std::endl;
+  if (IsSlotSelected(frame)) {
+    if (!parking_fusion_info.has_select_slot_id()) {
+      AERROR << "no select_slot_id";
       return false;
     }
+
+    int select_slot_index = -1;
+    const size_t selected_slot_id = parking_fusion_info.select_slot_id();
+    AINFO << "selected_slot_id:" << selected_slot_id;
+    for (int i = 0; i < parking_fusion_info.parking_fusion_slot_lists_size(); ++i) {
+      if (selected_slot_id != slots[i].id()) {
+        continue;
+      }
+      if (slots[i].type() == Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL ||
+          slots[i].type() == Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
+        select_slot_index = i;
+        AINFO << "diagonal slot selected";
+        break;
+      }
+    }
+    if (select_slot_index == -1) {
+      AERROR << "selected slot is not diagonal";
+      return false;
+    }
+    return SingleSlotPlan(select_slot_index, planning_output);
+  } else {
+    bool is_planning_ok = false;
+    for (int i = 0; i < parking_fusion_info.parking_fusion_slot_lists_size(); ++i) {
+      if (slots[i].type() == Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL ||
+          slots[i].type() == Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
+        AINFO << "diagonal slot id:" << slots[i].id();
+        is_planning_ok = SingleSlotPlan(i, planning_output) || is_planning_ok;
+      }
+    }
+    return is_planning_ok;
   }
 
-  PLANNING_LOG << "slot_sign_:" << slot_sign_ << std::endl;
+  return true;
+}
 
-  CalSlotOriginInodom(select_slot_index);
+bool DiagonalInTrajectoryGenerator::SingleSlotPlan(const int slot_index, PlanningOutput* const planning_output) {
+  CalSlotPointsInM(slot_index);
 
-  CalApaTargetInSlot(select_slot_index);
+  const auto& slots = local_view_->parking_fusion_info.parking_fusion_slot_lists();
 
-  CalEgoPostionInSlotAndOdom(select_slot_index);
+  slot_sign_ = slots[slot_index].slot_side() == 0 ? -1.0 : 1.0;
+
+  AINFO << "slot_sign_:" << slot_sign_;
+
+  CalSlotOriginInodom(slot_index);
+
+  CalApaTargetInSlot(slot_index);
+
+  CalEgoPostionInSlotAndOdom(slot_index);
 
   if (IsApaFinished()) {
-    PLANNING_LOG << "apa is finished" << std::endl;
-    SetFinishedPlanningOutput(planning_output);
+    AINFO << "apa is finished";
+    SetFinishedPlanningOutput(frame_);
     return true;
   }
 
   if (!IsReplan(planning_output)) {
     return true;
   }
-  PLANNING_LOG << "diagonal replan triggered" << std::endl;
-  PLANNING_LOG << "cur segment name:" << last_segment_name_ << std::endl;
+  AINFO << "diagonal replan triggered";
+  AINFO << "cur segment name:" << last_segment_name_;
 
-  if (!GeometryPlan(cur_pos_in_slot_, select_slot_index, planning_output)) {
-    PLANNING_LOG << "geometry diagonal plan failed" << std::endl;
+  if (!GeometryPlan(cur_pos_in_slot_, slot_index, planning_output)) {
+    AERROR << "geometry diagonal plan failed";
     return false;
   }
 
   SetPlanningOutputInfo(planning_output);
-
   return true;
 }
 
@@ -131,45 +158,61 @@ bool DiagonalInTrajectoryGenerator::GeometryPlan(const PlanningPoint& start_poin
   bool is_planning_ok = false;
   planning_output->mutable_trajectory()->mutable_trajectory_points()->Clear();
   if (last_segment_name_.empty()) {
-    if (ABSegmentPlan(start_point, true, false, idx, &geometry_planning_, planning_output)) {
+    if (ABSegmentPlan(start_point, true, idx, &geometry_planning_, planning_output)) {
       last_segment_name_ = "BC";
+      is_planning_ok = true;
+    } else if (ReverseABSegmentPlan(start_point, true, idx, &geometry_planning_, planning_output)) {
+      last_segment_name_ = "CD";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "AB") {
-    if (BCSegmentPlan(start_point, true, false, idx, &geometry_planning_, planning_output)) {
+    if (BCSegmentPlan(start_point, true, idx, &geometry_planning_, planning_output)) {
       last_segment_name_ = "BC";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "BC") {
-    if (CDSegmentPlan(start_point, true, false, idx, &geometry_planning_, planning_output)) {
+    if (CDSegmentPlan(start_point, true, idx, &geometry_planning_, planning_output)) {
       last_segment_name_ = "CD";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "CD") {
-    if (DESegmentPlan(start_point, true, false, idx, &geometry_planning_, planning_output)) {
+    if (DESegmentPlan(start_point, true, idx, &geometry_planning_, planning_output)) {
       last_segment_name_ = "DE";
       is_planning_ok = true;
     }
   } else if (last_segment_name_ == "DE") {
-    if (CDSegmentPlan(start_point, true, false, idx, &geometry_planning_, planning_output)) {
+    if (CDSegmentPlan(start_point, true, idx, &geometry_planning_, planning_output)) {
       last_segment_name_ = "CD";
       is_planning_ok = true;
     }
   } else {
-    PLANNING_LOG << "Invalid parallel segment name" << std::endl;
+    AERROR << "Invalid parallel segment name";
     return false;
   }
+
+  if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
+    last_segment_name_.clear();
+  }
+
+  // if (is_planning_ok) {
+  //   apa_speed_smoother_.Smooth(objects_map_in_global_cor_, planning_output);
+  // }
 
   return is_planning_ok;
 }
 
-bool DiagonalInTrajectoryGenerator::ABSegmentPlan(const PlanningPoint& point_a, bool is_start, bool is_search, int idx,
+bool DiagonalInTrajectoryGenerator::ABSegmentPlan(const PlanningPoint& point_a, bool is_start, int idx,
                                                   DiagonalInGeometryPlan* const geometry_planning,
                                                   PlanningOutput* const planning_output) const {
   DiagonalSegmentsInfo segments_info;
   segments_info.opt_point_a = point_a;
-  if (geometry_planning->ABSegment(point_a, is_start, is_search, &segments_info)) {
-    PLANNING_LOG << "plan a-b success" << std::endl;
+  if (geometry_planning->ABSegment(point_a, is_start, is_rough_calc_, &segments_info)) {
+    AINFO << "plan a-b success, slot index:" << idx;
+    if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
+      planning_output->add_successful_slot_info_list()->set_id(
+          local_view_->parking_fusion_info.parking_fusion_slot_lists()[idx].id());
+      return true;
+    }
     GenerateABSegmentTrajectory(segments_info, planning_output);
     GenerateBCSegmentTrajectory(segments_info, planning_output);
 
@@ -177,71 +220,91 @@ bool DiagonalInTrajectoryGenerator::ABSegmentPlan(const PlanningPoint& point_a, 
 
     return true;
   } else {
-    PLANNING_LOG << "point_a, x:" << point_a.x << ", y:" << point_a.y << ", theta:" << point_a.theta << std::endl;
-    PLANNING_LOG << "plan a-b fail" << std::endl;
+    AERROR << "plan a-b fail, point_a, x:" << point_a.x << ", y:" << point_a.y << ", theta:" << point_a.theta;
     return false;
   }
 
   return true;
 }
 
-bool DiagonalInTrajectoryGenerator::BCSegmentPlan(const PlanningPoint& point_b, bool is_start, bool is_search, int idx,
+bool DiagonalInTrajectoryGenerator::ReverseABSegmentPlan(const PlanningPoint& point_a, bool is_start, int idx,
+                                                         DiagonalInGeometryPlan* const geometry_planning,
+                                                         PlanningOutput* const planning_output) const {
+  DiagonalSegmentsInfo segments_info;
+  segments_info.opt_point_a = point_a;
+  if (geometry_planning->ReverseABSegment(point_a, is_start, is_rough_calc_, &segments_info)) {
+    AINFO << "plan r_a-c success";
+    if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
+      planning_output->add_successful_slot_info_list()->set_id(
+          local_view_->parking_fusion_info.parking_fusion_slot_lists()[idx].id());
+      return true;
+    }
+    GenerateRACSegmentTrajectory(segments_info, planning_output);
+    GenerateCDSegmentTrajectory(segments_info, planning_output);
+    PrintTrajectoryPoints(*planning_output);
+
+    return true;
+  } else {
+    AERROR << "plan r_a_c fail, point_a, x:" << point_a.x << ", y:" << point_a.y << ", theta:" << point_a.theta;
+    return false;
+  }
+  return true;
+}
+
+bool DiagonalInTrajectoryGenerator::BCSegmentPlan(const PlanningPoint& point_b, bool is_start, int idx,
                                                   DiagonalInGeometryPlan* const geometry_planning,
                                                   PlanningOutput* const planning_output) const {
   DiagonalSegmentsInfo segments_info;
   segments_info.opt_point_b = point_b;
-  if (geometry_planning->BCSegment(point_b, is_start, is_search, 0.0, &segments_info)) {
-    PLANNING_LOG << "plan b-c success" << std::endl;
+  if (geometry_planning->BCSegment(point_b, is_start, is_rough_calc_, 0.0, &segments_info)) {
+    AINFO << "plan b-c success";
     GenerateBCSegmentTrajectory(segments_info, planning_output);
 
     PrintTrajectoryPoints(*planning_output);
 
     return true;
   } else {
-    PLANNING_LOG << "point_b, x:" << point_b.x << ", y:" << point_b.y << ", theta:" << point_b.theta << std::endl;
-    PLANNING_LOG << "plan b-c fail" << std::endl;
+    AERROR << "plan b-c fail, point_b, x:" << point_b.x << ", y:" << point_b.y << ", theta:" << point_b.theta;
     return false;
   }
 
   return true;
 }
 
-bool DiagonalInTrajectoryGenerator::CDSegmentPlan(const PlanningPoint& point_c, bool is_start, bool is_search, int idx,
+bool DiagonalInTrajectoryGenerator::CDSegmentPlan(const PlanningPoint& point_c, bool is_start, int idx,
                                                   DiagonalInGeometryPlan* const geometry_planning,
                                                   PlanningOutput* const planning_output) const {
   DiagonalSegmentsInfo segments_info;
   segments_info.opt_point_c = point_c;
-  if (geometry_planning->CDSegment(point_c, is_start, is_search, &segments_info)) {
-    PLANNING_LOG << "plan c-d success" << std::endl;
+  if (geometry_planning->CDSegment(point_c, is_start, is_rough_calc_, &segments_info)) {
+    AINFO << "plan c-d success";
     GenerateCDSegmentTrajectory(segments_info, planning_output);
 
     PrintTrajectoryPoints(*planning_output);
 
     return true;
   } else {
-    PLANNING_LOG << "point_c, x:" << point_c.x << ", y:" << point_c.y << ", theta:" << point_c.theta << std::endl;
-    PLANNING_LOG << "plan c-d fail" << std::endl;
+    AERROR << "plan c-d fail, point_c, x:" << point_c.x << ", y:" << point_c.y << ", theta:" << point_c.theta;
     return false;
   }
 
   return true;
 }
 
-bool DiagonalInTrajectoryGenerator::DESegmentPlan(const PlanningPoint& point_d, bool is_start, bool is_search, int idx,
+bool DiagonalInTrajectoryGenerator::DESegmentPlan(const PlanningPoint& point_d, bool is_start, int idx,
                                                   DiagonalInGeometryPlan* const geometry_planning,
                                                   PlanningOutput* const planning_output) const {
   DiagonalSegmentsInfo segments_info;
   segments_info.opt_point_d = point_d;
-  if (geometry_planning->DESegment(point_d, is_start, is_search, &segments_info)) {
-    PLANNING_LOG << "plan d-e success" << std::endl;
+  if (geometry_planning->DESegment(point_d, is_start, is_rough_calc_, &segments_info)) {
+    AINFO << "plan d-e success";
     GenerateDESegmentTrajectory(segments_info, planning_output);
 
     PrintTrajectoryPoints(*planning_output);
 
     return true;
   } else {
-    PLANNING_LOG << "point_d, x:" << point_d.x << ", y:" << point_d.y << ", theta:" << point_d.theta << std::endl;
-    PLANNING_LOG << "plan d-e fail" << std::endl;
+    AERROR << "plan d-e fail, point_d, x:" << point_d.x << ", y:" << point_d.y << ", theta:" << point_d.theta;
     return false;
   }
 
@@ -282,8 +345,49 @@ bool DiagonalInTrajectoryGenerator::GenerateABSegmentTrajectory(const DiagonalSe
     trajectory_point->set_y(point_tmp_in_odom.y);
     trajectory_point->set_heading_yaw(point_tmp_in_odom.theta);
     trajectory_point->set_curvature(0.0);
-    // GetCurPtSpeed(segment_len, s, 1.0, trajectory_point);
     GetCurPtSpeed(1.0, trajectory_point);
+    trajectory_point->set_distance(s);
+    trajectory_point->set_jerk(0.0);
+    s += line_step;
+  }
+  return true;
+}
+
+bool DiagonalInTrajectoryGenerator::GenerateRACSegmentTrajectory(const DiagonalSegmentsInfo& segments_info,
+                                                                 PlanningOutput* const planning_output) const {
+  double line_step = kStep;
+  const auto& point_a = segments_info.opt_point_a;
+  const auto& point_b = segments_info.opt_point_c;
+
+  const double segment_len = std::hypot(point_b.x - point_a.x, point_b.y - point_a.y);
+  int size_i_ab = static_cast<int>(segment_len / line_step);
+  if (!IsSamePoint(point_a, point_b)) {
+    size_i_ab = std::max(size_i_ab, 1);
+  }
+  if (size_i_ab > 0) {
+    line_step = segment_len / size_i_ab;
+  }
+
+  const double cos_point_a_theta = apa_cos(point_a.theta);
+  const double sin_point_a_theta = apa_sin(point_a.theta);
+
+  auto trajectory = planning_output->mutable_trajectory();
+  trajectory->set_available(true);
+  trajectory->set_trajectory_type(Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
+  double s = 0.0;
+  PlanningPoint point_tmp_in_odom;
+  PlanningPoint point_tmp_in_slot;
+  for (int i = 0; i <= size_i_ab; ++i) {
+    point_tmp_in_slot.x = point_a.x - cos_point_a_theta * line_step * i;
+    point_tmp_in_slot.y = point_a.y - sin_point_a_theta * line_step * i;
+    point_tmp_in_slot.theta = point_a.theta;
+    point_tmp_in_odom = FromLocal2GlobalCor(slot_origin_in_odom_, point_tmp_in_slot);
+    TrajectoryPoint* trajectory_point = trajectory->add_trajectory_points();
+    trajectory_point->set_x(point_tmp_in_odom.x);
+    trajectory_point->set_y(point_tmp_in_odom.y);
+    trajectory_point->set_heading_yaw(point_tmp_in_odom.theta);
+    trajectory_point->set_curvature(0.0);
+    GetCurPtSpeed(-1.0, trajectory_point);
     trajectory_point->set_distance(s);
     trajectory_point->set_jerk(0.0);
     s += line_step;
@@ -435,20 +539,20 @@ bool DiagonalInTrajectoryGenerator::GenerateDESegmentTrajectory(const DiagonalSe
 }
 
 void DiagonalInTrajectoryGenerator::SetApaObjectInfo(int idx, DiagonalInGeometryPlan* geometry_planning) const {
-  std::vector<LineSegment2d> objects_map;
-  objects_map.reserve(4);
+  objects_map_in_global_cor_.clear();
+  objects_map_in_global_cor_.reserve(4);
 
   const auto& slots = local_view_->parking_fusion_info.parking_fusion_slot_lists();
+
   // consider slot line as obstacle
-  PlanningPoint p0 = FromGlobal2LocalCor(slot_origin_in_odom_, raw_slot_points_in_m_[0]);
-  PlanningPoint p1 = FromGlobal2LocalCor(slot_origin_in_odom_, raw_slot_points_in_m_[1]);
-  PlanningPoint p2 = FromGlobal2LocalCor(slot_origin_in_odom_, raw_slot_points_in_m_[2]);
-  PlanningPoint p3 = FromGlobal2LocalCor(slot_origin_in_odom_, raw_slot_points_in_m_[3]);
   // TODO(xjli32): use real obstacles instead
-  objects_map.emplace_back(Vec2d(p2.x, p2.y), Vec2d(p3.x, p3.y));
+  objects_map_in_global_cor_.emplace_back(Vec2d(raw_slot_points_in_m_[2].x, raw_slot_points_in_m_[2].y),
+                                          Vec2d(raw_slot_points_in_m_[3].x, raw_slot_points_in_m_[3].y));
   if (slots[idx].type() != Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
-    objects_map.emplace_back(Vec2d(p0.x, p0.y), Vec2d(p2.x, p2.y));
-    objects_map.emplace_back(Vec2d(p3.x, p3.y), Vec2d(p1.x, p1.y));
+    objects_map_in_global_cor_.emplace_back(Vec2d(raw_slot_points_in_m_[0].x, raw_slot_points_in_m_[0].y),
+                                            Vec2d(raw_slot_points_in_m_[2].x, raw_slot_points_in_m_[2].y));
+    objects_map_in_global_cor_.emplace_back(Vec2d(raw_slot_points_in_m_[3].x, raw_slot_points_in_m_[3].y),
+                                            Vec2d(raw_slot_points_in_m_[1].x, raw_slot_points_in_m_[1].y));
   }
 
   // mocked obstacle to avoid collision with opposite object
@@ -474,18 +578,24 @@ void DiagonalInTrajectoryGenerator::SetApaObjectInfo(int idx, DiagonalInGeometry
   const double obj_center_x = center_10_x + rotated_unit_10_x * mocked_obj_y_offset;
   const double obj_center_y = center_10_y + rotated_unit_10_y * mocked_obj_y_offset;
 
-  PlanningPoint p4;
-  PlanningPoint p5;
-  p4.x = obj_center_x + obj_half_len * unit_10_x;
-  p4.y = obj_center_y + obj_half_len * unit_10_y;
-  p5.x = obj_center_x - obj_half_len * unit_10_x;
-  p5.y = obj_center_y - obj_half_len * unit_10_y;
-  PLANNING_LOG << "mocked obj x:" << p4.x << ", y:" << p4.y << ", x:" << p5.x << ", y:" << p5.y << std::endl;
+  PlanningPoint mocked_obj_pt0;
+  PlanningPoint mocked_obj_pt1;
+  mocked_obj_pt0.x = obj_center_x + obj_half_len * unit_10_x;
+  mocked_obj_pt0.y = obj_center_y + obj_half_len * unit_10_y;
+  mocked_obj_pt1.x = obj_center_x - obj_half_len * unit_10_x;
+  mocked_obj_pt1.y = obj_center_y - obj_half_len * unit_10_y;
+  AINFO << "mocked obj x:" << mocked_obj_pt0.x << ", y:" << mocked_obj_pt0.y << ", x:" << mocked_obj_pt1.x
+        << ", y:" << mocked_obj_pt1.y;
+  objects_map_in_global_cor_.emplace_back(Vec2d(mocked_obj_pt0.x, mocked_obj_pt0.y),
+                                          Vec2d(mocked_obj_pt1.x, mocked_obj_pt1.y));
 
-  p4 = FromGlobal2LocalCor(slot_origin_in_odom_, p4);
-  p5 = FromGlobal2LocalCor(slot_origin_in_odom_, p5);
-
-  objects_map.emplace_back(Vec2d(p4.x, p4.y), Vec2d(p5.x, p5.y));
+  std::vector<LineSegment2d> objects_map;
+  objects_map.reserve(objects_map_in_global_cor_.size());
+  for (const auto& obs : objects_map_in_global_cor_) {
+    PlanningPoint p0 = FromGlobal2LocalCor(slot_origin_in_odom_, PlanningPoint(obs.start().x(), obs.start().y(), 0.0));
+    PlanningPoint p1 = FromGlobal2LocalCor(slot_origin_in_odom_, PlanningPoint(obs.end().x(), obs.end().y(), 0.0));
+    objects_map.emplace_back(Vec2d(p0.x, p0.y), Vec2d(p1.x, p1.y));
+  }
 
   geometry_planning->SetObjectMap(objects_map);
 }
@@ -542,12 +652,12 @@ void DiagonalInTrajectoryGenerator::CalApaTargetInSlot(int idx) {
   target_point_in_slot_.x = CalApaTargetX(idx);
   target_point_in_slot_.y = CalApaTargetY();
   target_point_in_slot_.theta = M_PI_2 * slot_sign_;
-  PLANNING_LOG << "target_point_in_slot_ x:" << target_point_in_slot_.x << ", y:" << target_point_in_slot_.y
-               << ", theta:" << target_point_in_slot_.theta << std::endl;
+  AINFO << "target_point_in_slot_ x:" << target_point_in_slot_.x << ", y:" << target_point_in_slot_.y
+        << ", theta:" << target_point_in_slot_.theta;
 
   target_point_in_odom_ = FromLocal2GlobalCor(slot_origin_in_odom_, target_point_in_slot_);
-  PLANNING_LOG << "target_point_in_odom_ x:" << target_point_in_odom_.x << ", y:" << target_point_in_odom_.y
-               << ", theta:" << target_point_in_odom_.theta << std::endl;
+  AINFO << "target_point_in_odom_ x:" << target_point_in_odom_.x << ", y:" << target_point_in_odom_.y
+        << ", theta:" << target_point_in_odom_.theta;
 }
 
 void DiagonalInTrajectoryGenerator::CalEgoPostionInSlotAndOdom(int idx) {
@@ -557,11 +667,11 @@ void DiagonalInTrajectoryGenerator::CalEgoPostionInSlotAndOdom(int idx) {
   cur_pos_in_odom_.theta = pose.euler_angles().yaw();
   cur_pos_in_slot_ = FromGlobal2LocalCor(slot_origin_in_odom_, cur_pos_in_odom_);
 
-  PLANNING_LOG << "cur_pos_in_odom_ x:" << cur_pos_in_odom_.x << ", y:" << cur_pos_in_odom_.y
-               << ", theta:" << cur_pos_in_odom_.theta << std::endl;
+  AINFO << "cur_pos_in_odom_ x:" << cur_pos_in_odom_.x << ", y:" << cur_pos_in_odom_.y
+        << ", theta:" << cur_pos_in_odom_.theta;
 
-  PLANNING_LOG << "cur_pos_in_slot_ x:" << cur_pos_in_slot_.x << ", y:" << cur_pos_in_slot_.y
-               << ", theta:" << cur_pos_in_slot_.theta << std::endl;
+  AINFO << "cur_pos_in_slot_ x:" << cur_pos_in_slot_.x << ", y:" << cur_pos_in_slot_.y
+        << ", theta:" << cur_pos_in_slot_.theta;
 }
 
 void DiagonalInTrajectoryGenerator::GetCurPtSpeed(const double segment_len, const double cur_s, const double spd_sign,
@@ -613,8 +723,8 @@ void DiagonalInTrajectoryGenerator::CalSlotOriginInodom(const int idx) {
   slot_origin_in_odom_.theta =
       std::atan2(slot_points_in_m_[0].y - slot_points_in_m_[1].y, slot_points_in_m_[0].x - slot_points_in_m_[1].x);
 
-  PLANNING_LOG << "slot origin in odom x:" << slot_origin_in_odom_.x << ", y:" << slot_origin_in_odom_.y
-               << ", theta:" << slot_origin_in_odom_.theta << std::endl;
+  AINFO << "slot origin in odom x:" << slot_origin_in_odom_.x << ", y:" << slot_origin_in_odom_.y
+        << ", theta:" << slot_origin_in_odom_.theta;
 }
 
 void DiagonalInTrajectoryGenerator::CalSlotPointsInM(const int idx) {
@@ -635,15 +745,14 @@ void DiagonalInTrajectoryGenerator::CalSlotPointsInM(const int idx) {
   raw_slot_points_in_m_.emplace_back(x3, y3, 0.0);
   slot_points_in_m_ = raw_slot_points_in_m_;
 
-  PLANNING_LOG << "raw slot_points_in_m_ x0:" << x0 << ", y0:" << y0 << ", x1:" << x1 << ", y1:" << y1 << ", x2:" << x2
-               << ", y2:" << y2 << ", x3:" << x3 << ", y3:" << y3 << std::endl;
+  AINFO << "raw slot_points_in_m_ x0:" << x0 << ", y0:" << y0 << ", x1:" << x1 << ", y1:" << y1 << ", x2:" << x2
+        << ", y2:" << y2 << ", x3:" << x3 << ", y3:" << y3;
 
   SquareSlot();
 
-  PLANNING_LOG << "slot_points_in_m_ x0:" << slot_points_in_m_[0].x << ", y0:" << slot_points_in_m_[0].y
-               << ", x1:" << slot_points_in_m_[1].x << ", y1:" << slot_points_in_m_[1].y
-               << ", x2:" << slot_points_in_m_[2].x << ", y2:" << slot_points_in_m_[2].y
-               << ", x3:" << slot_points_in_m_[3].x << ", y3:" << slot_points_in_m_[3].y << std::endl;
+  AINFO << "slot_points_in_m_ x0:" << slot_points_in_m_[0].x << ", y0:" << slot_points_in_m_[0].y
+        << ", x1:" << slot_points_in_m_[1].x << ", y1:" << slot_points_in_m_[1].y << ", x2:" << slot_points_in_m_[2].x
+        << ", y2:" << slot_points_in_m_[2].y << ", x3:" << slot_points_in_m_[3].x << ", y3:" << slot_points_in_m_[3].y;
 }
 
 // assume slot is parallelogram
@@ -678,16 +787,21 @@ void DiagonalInTrajectoryGenerator::SquareSlot() {
       std::hypot(slot_points_in_m_[0].x - slot_points_in_m_[1].x, slot_points_in_m_[0].y - slot_points_in_m_[1].y);
   slot_length_ =
       std::hypot(slot_points_in_m_[0].x - slot_points_in_m_[2].x, slot_points_in_m_[0].y - slot_points_in_m_[2].y);
-  PLANNING_LOG << "slot_width_:" << slot_width_ << ", slot_length_:" << slot_length_ << std::endl;
+  AINFO << "slot_width_:" << slot_width_ << ", slot_length_:" << slot_length_;
 }
 
 bool DiagonalInTrajectoryGenerator::IsReplan(PlanningOutput* const planning_output) {
+  if (IsReplanEachFrame(local_view_->function_state_machine_info)) {
+    AINFO << "replan state:" << current_state_;
+    return true;
+  }
+
   planning_output->mutable_planning_status()->set_apa_planning_status(::PlanningOutput::ApaPlanningStatus::IN_PROGRESS);
   const auto& local_position = local_view_->localization_estimate.pose().local_position();
   const double ego_x = local_position.x();
   const double ego_y = local_position.y();
-  PLANNING_LOG << "ego x:" << ego_x << ", y:" << ego_y << std::endl;
-  PLANNING_LOG << "veh_spd:" << local_view_->vehicel_service_output_info.vehicle_speed() << std::endl;
+  AINFO << "ego x:" << ego_x << ", y:" << ego_y;
+  AINFO << "veh_spd:" << local_view_->vehicel_service_output_info.vehicle_speed();
 
   if (!planning_output->has_trajectory() || planning_output->trajectory().trajectory_points_size() == 0) {
     is_replan_ = true;
@@ -708,12 +822,12 @@ bool DiagonalInTrajectoryGenerator::IsReplan(PlanningOutput* const planning_outp
     }
   }
   if (min_dis_index == -1) {
-    PLANNING_LOG << "nearest traj pt not found" << std::endl;
+    AERROR << "nearest traj pt not found";
     return false;
   }
-  PLANNING_LOG << "min_dis_index:" << min_dis_index << ", min_dis:" << std::sqrt(min_dis_sq) << std::endl;
+  AINFO << "min_dis_index:" << min_dis_index << ", min_dis:" << std::sqrt(min_dis_sq);
   const double remaining_s = traj_points.rbegin()->distance() - traj_points[min_dis_index].distance();
-  PLANNING_LOG << "remaining_s:" << remaining_s << std::endl;
+  AINFO << "remaining_s:" << remaining_s;
 
   if (standstill_time_ >= kMinStandstillTime && pos_unchanged_cnt_ >= kMinPosUnchangedCount) {
     if (remaining_s <= kRemainingDisThreshold) {
@@ -725,6 +839,10 @@ bool DiagonalInTrajectoryGenerator::IsReplan(PlanningOutput* const planning_outp
 }
 
 void DiagonalInTrajectoryGenerator::SetPlanningOutputInfo(PlanningOutput* const planning_output) const {
+  if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
+    return;
+  }
+
   auto gear_command = planning_output->mutable_gear_command();
   gear_command->set_available(true);
   if (planning_output->trajectory().trajectory_points()[0].v() >= 0.0) {
@@ -732,7 +850,7 @@ void DiagonalInTrajectoryGenerator::SetPlanningOutputInfo(PlanningOutput* const 
   } else {
     gear_command->set_gear_command_value(Common::GearCommandValue::GEAR_COMMAND_VALUE_REVERSE);
   }
-  PLANNING_LOG << "gear:" << gear_command->gear_command_value() << std::endl;
+  AINFO << "gear:" << gear_command->gear_command_value();
 }
 
 bool DiagonalInTrajectoryGenerator::IsSamePoint(const PlanningPoint& p1, const PlanningPoint& p2) const {
@@ -763,30 +881,10 @@ void DiagonalInTrajectoryGenerator::UpdatePosUnchangedCount() {
 }
 
 bool DiagonalInTrajectoryGenerator::IsApaFinished() const {
-  return standstill_time_ >= kMinStandstillTime && fabs(target_point_in_slot_.x - cur_pos_in_slot_.x) < kMaxXOffset &&
+  return current_state_ == FunctionalState::PARK_IN_ACTIVATE_CONTROL && standstill_time_ >= kMinStandstillTime &&
+         fabs(target_point_in_slot_.x - cur_pos_in_slot_.x) < kMaxXOffset &&
          fabs(target_point_in_slot_.y - cur_pos_in_slot_.y) < kMaxYOffset &&
          fabs(target_point_in_slot_.theta - cur_pos_in_slot_.theta) < kMaxThetaOffset;
-}
-
-void DiagonalInTrajectoryGenerator::SetFinishedPlanningOutput(PlanningOutput* const planning_output) const {
-  planning_output->mutable_planning_status()->set_apa_planning_status(::PlanningOutput::ApaPlanningStatus::FINISHED);
-  auto trajectory = planning_output->mutable_trajectory();
-  trajectory->mutable_trajectory_points()->Clear();
-  trajectory->set_available(true);
-  trajectory->set_trajectory_type(Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
-  auto gear_command = planning_output->mutable_gear_command();
-  gear_command->set_available(true);
-  gear_command->set_gear_command_value(Common::GearCommandValue::GEAR_COMMAND_VALUE_PARKING);
-  TrajectoryPoint* trajectory_point = trajectory->add_trajectory_points();
-  trajectory_point->set_x(cur_pos_in_odom_.x);
-  trajectory_point->set_y(cur_pos_in_odom_.y);
-  trajectory_point->set_heading_yaw(cur_pos_in_odom_.theta);
-  trajectory_point->set_curvature(0.0);
-  trajectory_point->set_t(0.0);
-  trajectory_point->set_v(0.0);
-  trajectory_point->set_a(0.0);
-  trajectory_point->set_distance(0.0);
-  trajectory_point->set_jerk(0.0);
 }
 
 void DiagonalInTrajectoryGenerator::PrintTrajectoryPoints(const PlanningOutput& planning_output) const {
@@ -794,8 +892,8 @@ void DiagonalInTrajectoryGenerator::PrintTrajectoryPoints(const PlanningOutput& 
   const int traj_point_num = traj.trajectory_points_size();
   for (int i = 0; i < traj_point_num; ++i) {
     const auto& pt = traj.trajectory_points()[i];
-    PLANNING_LOG << "seg traj pt [" << i << "], x:" << pt.x() << ", y:" << pt.y() << ", theta:" << pt.heading_yaw()
-                 << ", kappa:" << pt.curvature() << ", v:" << pt.v() << ", s:" << pt.distance() << std::endl;
+    AINFO << "seg traj pt [" << i << "], x:" << pt.x() << ", y:" << pt.y() << ", theta:" << pt.heading_yaw()
+          << ", kappa:" << pt.curvature() << ", v:" << pt.v() << ", s:" << pt.distance();
   }
 }
 

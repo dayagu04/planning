@@ -1,4 +1,4 @@
-project (apa_simulation)
+project (apa_simulation_component)
 cmake_minimum_required (VERSION 3.0)
 
 file(GLOB_RECURSE SRC_FILES
@@ -6,9 +6,10 @@ file(GLOB_RECURSE SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/**.cpp
 )
 
-add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
+add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
+  autoplt
   proto_interface
   common
   modules_common

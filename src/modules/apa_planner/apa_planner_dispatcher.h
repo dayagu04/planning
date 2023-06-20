@@ -2,8 +2,9 @@
 
 #include <memory>
 
-#include "apa_planner_base.h"
+#include "func_state_machine.pb.h"
 
+#include "apa_planner_base.h"
 #include "frame.h"
 
 namespace planning {

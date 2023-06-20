@@ -11,7 +11,9 @@ using common::VehicleParam;
 VehicleParam VehicleParamHelper::vehicle_param_;
 bool VehicleParamHelper::is_init_ = false;
 
-void VehicleParamHelper::Init() { Init("/asw/Planning/Res/config/vehicle_param.pb.txt"); }
+void VehicleParamHelper::Init() {
+  Init("/asw/planning/res/conf/vehicle_param.pb.txt");
+}
 
 void VehicleParamHelper::Init(const std::string& config_file) {
   common::util::GetProtoFromFile(config_file, &vehicle_param_);

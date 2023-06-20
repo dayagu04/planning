@@ -6,6 +6,7 @@
 #include "common/apa_cos_sin.h"
 #include "common/apa_utils.h"
 #include "common/planning_log_helper.h"
+#include "log_glog.h"
 #include "math/box2d.h"
 #include "math/math_utils.h"
 
@@ -30,6 +31,8 @@ constexpr double kTargetXStep = 0.01;
 constexpr int kTargetXNum = 11;
 constexpr int kHalfTargetXNum = kTargetXNum / 2;
 constexpr double kMaxXOffset = kTargetXStep * kHalfTargetXNum;
+constexpr double kMaxXOffsetInDE3 = 0.5;
+constexpr double kMaxXOffsetInCD2 = 0.15;
 constexpr double kMaxYOffset = 0.2;
 constexpr double kMaxThetaDiff = 0.02;
 constexpr double kMaxYBackwardPos = -2.5;
@@ -40,6 +43,8 @@ constexpr double kEndThetaWeight = 100.0;
 constexpr double kSegmentCost = 10000.0;
 constexpr double kBCThetaDiffCost = 10.0;
 constexpr double kPointDThetaCost = 10.0;
+constexpr double kDELengthWeight = 100;
+constexpr double kDEStandardLength = 1.0;
 }  // namespace
 
 bool DiagonalInGeometryPlan::CheckSlotOpenSideWrong(const PlanningPoint &start_point) {
@@ -53,12 +58,12 @@ bool DiagonalInGeometryPlan::CheckSlotOpenSideWrong(const PlanningPoint &start_p
   return side_wrong;
 }
 
-bool DiagonalInGeometryPlan::ABSegment(const PlanningPoint &point_a, bool is_start, bool is_search,
+bool DiagonalInGeometryPlan::ABSegment(const PlanningPoint &point_a, bool is_start, bool is_rough_calc,
                                        DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
   if (CheckSlotOpenSideWrong(point_a)) {
-    PLANNING_LOG << "open side wrong" << std::endl;
+    AERROR << "open side wrong";
     return false;
   }
 
@@ -75,7 +80,7 @@ bool DiagonalInGeometryPlan::ABSegment(const PlanningPoint &point_a, bool is_sta
   }
   const int dense_step_num = (ab_len - sparse_len) / min_l_step;
   const int point_num = std::max(sparse_step_num + dense_step_num, 1);
-  PLANNING_LOG << "sparse_step_num:" << sparse_step_num << ", dense_step_num:" << dense_step_num << std::endl;
+  AINFO << "sparse_step_num:" << sparse_step_num << ", dense_step_num:" << dense_step_num;
 
   const double cos_point_a_theta = apa_cos(point_a.theta);
   const double sin_point_a_theta = apa_sin(point_a.theta);
@@ -106,7 +111,7 @@ bool DiagonalInGeometryPlan::ABSegment(const PlanningPoint &point_a, bool is_sta
     }
 
     DiagonalSegmentsInfo tmp_segments_info;
-    if (!BCSegment(point_b, l_ab, false, is_search, &tmp_segments_info)) {
+    if (!BCSegment(point_b, l_ab, false, is_rough_calc, &tmp_segments_info)) {
       ++bc_fail_cnt;
       continue;
     }
@@ -142,14 +147,14 @@ bool DiagonalInGeometryPlan::ABSegment(const PlanningPoint &point_a, bool is_sta
       segments_info->opt_radius_ef = tmp_segments_info.opt_radius_ef;
       segments_info->opt_point_f = tmp_segments_info.opt_point_f;
 
-      if (is_search) {
+      if (is_rough_calc) {
         return true;
       }
     }
   }
 
-  PLANNING_LOG << "totoal_cnt:" << point_num << ", collide_cnt:" << collide_cnt << ", bc_fail_cnt:" << bc_fail_cnt
-               << ", total_cost_nan_cnt:" << total_cost_nan_cnt << std::endl;
+  AINFO << "total_cnt:" << point_num << ", collide_cnt:" << collide_cnt << ", bc_fail_cnt:" << bc_fail_cnt
+        << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
 
   if (std::isinf(segments_info->total_cost)) {
     return false;
@@ -158,7 +163,98 @@ bool DiagonalInGeometryPlan::ABSegment(const PlanningPoint &point_a, bool is_sta
   return true;
 }
 
-bool DiagonalInGeometryPlan::BCSegment(const PlanningPoint &point_b, double len_ab, bool is_start, bool is_search,
+bool DiagonalInGeometryPlan::ReverseABSegment(const PlanningPoint &point_a, bool is_start, bool is_rough_calc,
+                                              DiagonalSegmentsInfo *segments_info) {
+  AINFO << "ReverseABSegment start!!!";
+  segments_info->total_cost = std::numeric_limits<double>::infinity();
+  if (CheckSlotOpenSideWrong(point_a)) {
+    AERROR << "open side wrong";
+    return false;
+  }
+  const double min_l_step = 0.2;
+  double max_l_step = 2.0;
+  int sparse_step_num = 0;
+  const double sparse_len = std::fmax(point_a.x - 3.0, 0.0);
+  if (sparse_len > 0.0) {
+    sparse_step_num = sparse_len / max_l_step + 1;
+    max_l_step = sparse_len / sparse_step_num;
+  }
+  const double slot_with = 1.2;
+  const int dense_step_num = (point_a.x - sparse_len + slot_with) / min_l_step;
+  const int point_num = std::max(sparse_step_num + dense_step_num, 1);
+  AINFO << "sparse_step_num:" << sparse_step_num << ", dense_step_num:" << dense_step_num;
+
+  const double cos_point_a_theta = apa_cos(point_a.theta);
+  const double sin_point_a_theta = apa_sin(point_a.theta);
+
+  PlanningPoint point_b;
+  size_t collide_cnt = 0;
+  size_t cd_fail_cnt = 0;
+  size_t total_cost_nan_cnt = 0;
+  const double front_buffer = 0.0;
+  const double rear_buffer = kLonBuffer;
+  const double lat_buffer = kLatBuffer;
+  Polygon2d init_ego_polygon =
+      std::move(ConstructVehiclePolygonWithBuffer(point_a, front_buffer, rear_buffer, lat_buffer));
+
+  for (int i = 0; i < point_num; ++i) {
+    double l_ab = 0.0;
+    if (i <= sparse_step_num) {
+      l_ab = i * max_l_step;
+    } else {
+      l_ab = (i - sparse_step_num) * min_l_step + sparse_len;
+    }
+    point_b.x = point_a.x - l_ab * cos_point_a_theta;
+    point_b.y = point_a.y - l_ab * sin_point_a_theta;
+    point_b.theta = point_a.theta;
+    if (CollideWithObjectsByPolygon(point_a, point_b, init_ego_polygon)) {
+      ++collide_cnt;
+      break;
+    }
+    DiagonalSegmentsInfo tmp_segments_info;
+    if (!CDSegment(point_b, false, is_rough_calc, &tmp_segments_info)) {
+      ++cd_fail_cnt;
+      continue;
+    }
+    const double r_len_ab = std::fabs(point_b.x - point_a.x);
+    const double len_cost = CalSegmentLengthCost(r_len_ab);
+    const double total_cost = len_cost + tmp_segments_info.total_cost;
+    if (std::isinf(total_cost)) {
+      ++total_cost_nan_cnt;
+      continue;
+    }
+
+    if (total_cost < segments_info->total_cost) {
+      segments_info->total_cost = total_cost;
+
+      // r_ac
+      segments_info->opt_point_c = point_b;
+
+      // cd
+      segments_info->opt_radius_cd = tmp_segments_info.opt_radius_cd;
+      segments_info->opt_point_d = tmp_segments_info.opt_point_d;
+
+      // de
+      segments_info->opt_radius_de = tmp_segments_info.opt_radius_de;
+      segments_info->opt_point_e = tmp_segments_info.opt_point_e;
+
+      // ef
+      segments_info->opt_radius_ef = tmp_segments_info.opt_radius_ef;
+      segments_info->opt_point_f = tmp_segments_info.opt_point_f;
+
+      if (is_rough_calc) {
+        return true;
+      }
+    }
+  }
+  AINFO << "totoal_cnt:" << point_num << ", collide_cnt:" << collide_cnt << ", bc_fail_cnt:" << cd_fail_cnt
+        << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
+  if (std::isinf(segments_info->total_cost)) {
+    return false;
+  }
+  return true;
+}
+bool DiagonalInGeometryPlan::BCSegment(const PlanningPoint &point_b, double len_ab, bool is_start, bool is_rough_calc,
                                        DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -193,7 +289,7 @@ bool DiagonalInGeometryPlan::BCSegment(const PlanningPoint &point_b, double len_
     }
 
     DiagonalSegmentsInfo tmp_segments_info;
-    if (!CDSegment(point_c, false, is_search, &tmp_segments_info)) {
+    if (!CDSegment(point_c, false, is_rough_calc, &tmp_segments_info)) {
       ++cd_fail_cnt;
       continue;
     }
@@ -228,17 +324,14 @@ bool DiagonalInGeometryPlan::BCSegment(const PlanningPoint &point_b, double len_
       segments_info->opt_radius_ef = tmp_segments_info.opt_radius_ef;
       segments_info->opt_point_f = tmp_segments_info.opt_point_f;
 
-      if (is_search) {
+      if (is_rough_calc) {
         return true;
       }
     }
   }
 
-  // PLANNING_LOG << "totoal_cnt:" << size_step
-  //     << ", collide_cnt:" << collide_cnt
-  //     << ", pa_fail_cnt:" << pa_fail_cnt
-  //     << ", total_cost_nan_cnt:" << total_cost_nan_cnt
-  //     << std::endl;
+  AINFO << "total_cnt:" << size_step << ", collide_cnt:" << collide_cnt << ", cd_fail_cnt:" << cd_fail_cnt
+        << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
 
   if (std::isinf(segments_info->total_cost)) {
     return false;
@@ -247,39 +340,39 @@ bool DiagonalInGeometryPlan::BCSegment(const PlanningPoint &point_b, double len_
   return true;
 }
 
-bool DiagonalInGeometryPlan::CDSegment(const PlanningPoint &point_c, bool is_start, bool is_search,
+bool DiagonalInGeometryPlan::CDSegment(const PlanningPoint &point_c, bool is_start, bool is_rough_calc,
                                        DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
   DiagonalSegmentsInfo tmp_segments_info;
-  if (CD1Segment(point_c, is_start, is_search, &tmp_segments_info)) {
+  if (CD1Segment(point_c, is_start, is_rough_calc, &tmp_segments_info)) {
     segments_info->total_cost = tmp_segments_info.total_cost;
     segments_info->opt_radius_cd = tmp_segments_info.opt_radius_cd;
     segments_info->opt_point_d = tmp_segments_info.opt_point_d;
-    // PLANNING_LOG << "cd1 success" << std::endl;
+    // AINFO << "cd1 success";
     return true;
   }
 
-  if (CD2Segment(point_c, is_start, is_search, &tmp_segments_info)) {
+  if (CD2Segment(point_c, is_start, is_rough_calc, &tmp_segments_info)) {
     segments_info->total_cost = tmp_segments_info.total_cost + kSegmentCost;
     segments_info->opt_radius_cd = tmp_segments_info.opt_radius_cd;
     segments_info->opt_point_d = tmp_segments_info.opt_point_d;
-    // PLANNING_LOG << "cd2 success" << std::endl;
+    // AINFO << "cd2 success";
     return true;
   }
 
-  if (CD3Segment(point_c, is_start, is_search, &tmp_segments_info)) {
+  if (CD3Segment(point_c, is_start, is_rough_calc, &tmp_segments_info)) {
     segments_info->total_cost = tmp_segments_info.total_cost + 2.0 * kSegmentCost;
     segments_info->opt_radius_cd = tmp_segments_info.opt_radius_cd;
     segments_info->opt_point_d = tmp_segments_info.opt_point_d;
-    // PLANNING_LOG << "cd3 success" << std::endl;
+    // AINFO << "cd3 success";
     return true;
   }
 
   return false;
 }
 
-bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c, bool is_start, bool is_search,
+bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c, bool is_start, bool is_rough_calc,
                                         DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -342,15 +435,15 @@ bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c, bool is_st
       segments_info->opt_point_d = point_d;
       segments_info->opt_radius_cd = radius_cd_tmp;
 
-      if (is_search) {
+      if (is_rough_calc) {
         return true;
       }
     }
   }
 
   if (is_start) {
-    PLANNING_LOG << "total_cnt1:" << target_x_vec_.size() << ", radius_cnt1:" << radius_cnt1 << ", dy_cnt1:" << dy_cnt1
-                 << ", collide_cnt1:" << collide_cnt1 << std::endl;
+    AINFO << "total_cnt1:" << target_x_vec_.size() << ", radius_cnt1:" << radius_cnt1 << ", dy_cnt1:" << dy_cnt1
+          << ", collide_cnt1:" << collide_cnt1;
   }
 
   const int radius_cd_num = is_start ? 10 : 1;
@@ -392,15 +485,15 @@ bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c, bool is_st
       segments_info->opt_radius_cd = radius_cd_tmp;
       segments_info->opt_point_d = point_d;
 
-      if (is_search) {
+      if (is_rough_calc) {
         return true;
       }
     }
   }
 
   if (is_start) {
-    PLANNING_LOG << "total_cnt2:" << radius_cd_num << ", dx_cnt2:" << dx_cnt2 << ", dy_cnt2:" << dy_cnt2
-                 << ", collide_cnt2:" << collide_cnt2 << std::endl;
+    AINFO << "total_cnt2:" << radius_cd_num << ", dx_cnt2:" << dx_cnt2 << ", dy_cnt2:" << dy_cnt2
+          << ", collide_cnt2:" << collide_cnt2;
   }
 
   if (std::isinf(segments_info->total_cost)) {
@@ -410,7 +503,7 @@ bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c, bool is_st
   return true;
 }
 
-bool DiagonalInGeometryPlan::CD2Segment(const PlanningPoint &point_c, bool is_start, bool is_search,
+bool DiagonalInGeometryPlan::CD2Segment(const PlanningPoint &point_c, bool is_start, bool is_rough_calc,
                                         DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -445,12 +538,12 @@ bool DiagonalInGeometryPlan::CD2Segment(const PlanningPoint &point_c, bool is_st
         break;
       }
 
-      if (point_d.x < target_point_.x - kMaxXOffset) {
+      if (point_d.x > target_point_.x + kMaxXOffsetInCD2) {
         continue;
       }
 
       DiagonalSegmentsInfo tmp_segments_info;
-      if (!DE1Segment(point_d, false, is_search, &tmp_segments_info)) {
+      if (!DE1Segment(point_d, false, is_rough_calc, &tmp_segments_info)) {
         ++de_fail_cnt;
         continue;
       }
@@ -482,7 +575,7 @@ bool DiagonalInGeometryPlan::CD2Segment(const PlanningPoint &point_c, bool is_st
         segments_info->opt_radius_ef = tmp_segments_info.opt_radius_ef;
         segments_info->opt_point_f = tmp_segments_info.opt_point_f;
 
-        if (is_search) {
+        if (is_rough_calc) {
           return true;
         }
       }
@@ -490,8 +583,8 @@ bool DiagonalInGeometryPlan::CD2Segment(const PlanningPoint &point_c, bool is_st
   }
 
   if (is_start) {
-    PLANNING_LOG << "total_cnt:" << (size_radius_cd * size_step) << ", collide_cnt:" << collide_cnt
-                 << ", de_fail_cnt:" << de_fail_cnt << ", total_cost_nan_cnt:" << total_cost_nan_cnt << std::endl;
+    AINFO << "total_cnt:" << (size_radius_cd * size_step) << ", collide_cnt:" << collide_cnt
+          << ", de_fail_cnt:" << de_fail_cnt << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
   }
 
   if (std::isinf(segments_info->total_cost)) {
@@ -501,7 +594,7 @@ bool DiagonalInGeometryPlan::CD2Segment(const PlanningPoint &point_c, bool is_st
   return true;
 }
 
-bool DiagonalInGeometryPlan::DE1Segment(const PlanningPoint &point_d, bool is_start, bool is_search,
+bool DiagonalInGeometryPlan::DE1Segment(const PlanningPoint &point_d, bool is_start, bool is_rough_calc,
                                         DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -550,7 +643,7 @@ bool DiagonalInGeometryPlan::DE1Segment(const PlanningPoint &point_d, bool is_st
       }
 
       DiagonalSegmentsInfo tmp_segments_info;
-      if (!EFSegment(point_e, false, is_search, &tmp_segments_info)) {
+      if (!EFSegment(point_e, false, is_rough_calc, &tmp_segments_info)) {
         continue;
       }
 
@@ -559,8 +652,9 @@ bool DiagonalInGeometryPlan::DE1Segment(const PlanningPoint &point_d, bool is_st
       }
 
       const double len_de = std::fabs(point_d.theta - point_e.theta) * radius_de_tmp;
-
-      const double len_cost = CalSegmentLengthCost(len_de);
+      // const double len_cost = CalSegmentLengthCost(len_de);
+      // TODO(fengwang31):updata the CalDESegmentLengthCost
+      const double len_cost = CalDESegmentLengthCost(len_de);
       const double radius_cost = CalRadiusCost(radius_de_tmp, len_de);
 
       const double total_cost = len_cost + radius_cost + tmp_segments_info.total_cost;
@@ -579,7 +673,7 @@ bool DiagonalInGeometryPlan::DE1Segment(const PlanningPoint &point_d, bool is_st
         segments_info->opt_radius_ef = tmp_segments_info.opt_radius_ef;
         segments_info->opt_point_f = tmp_segments_info.opt_point_f;
 
-        if (is_search) {
+        if (is_rough_calc) {
           return true;
         }
       }
@@ -592,12 +686,12 @@ bool DiagonalInGeometryPlan::DE1Segment(const PlanningPoint &point_d, bool is_st
   return true;
 }
 
-bool DiagonalInGeometryPlan::EFSegment(const PlanningPoint &point_e, bool is_start, bool is_search,
+bool DiagonalInGeometryPlan::EFSegment(const PlanningPoint &point_e, bool is_start, bool is_rough_calc,
                                        DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
   DiagonalSegmentsInfo tmp_segments_info;
-  if (!CD1Segment(point_e, false, is_search, &tmp_segments_info)) {
+  if (!CD1Segment(point_e, false, is_rough_calc, &tmp_segments_info)) {
     return false;
   }
 
@@ -608,7 +702,7 @@ bool DiagonalInGeometryPlan::EFSegment(const PlanningPoint &point_e, bool is_sta
   return true;
 }
 
-bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c, bool is_start, bool is_search,
+bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c, bool is_start, bool is_rough_calc,
                                         DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -619,9 +713,10 @@ bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c, bool is_st
   const double sin_point_c_theta = apa_sin(point_c.theta);
   const double cos_point_c_theta = apa_cos(point_c.theta);
   PlanningPoint point_d;
-  // size_t collide_cnt = 0;
-  // size_t ab_fail_cnt = 0;
-  // size_t total_cost_nan_cnt = 0;
+  size_t collide_cnt = 0;
+  size_t ex1_cnt = 0;
+  size_t ex2_cnt = 0;
+  size_t total_cost_nan_cnt = 0;
   const double radius_cd_step = 1;
   const double theta_step = kDefaultThetaStep * slot_sign_;
   const int size_step = std::max(static_cast<int>((target_point_.theta - point_c.theta) / theta_step), 1);
@@ -639,15 +734,17 @@ bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c, bool is_st
       point_d.y = point_c.y + slot_sign_ * radius_cd_tmp * (apa_cos(point_d.theta) - cos_point_c_theta);
 
       if (CollideWithObjectsByPolygon(point_c, point_d, init_ego_polygon)) {
-        // ++collide_cnt;
+        ++collide_cnt;
         break;
       }
 
       if (point_d.x < target_point_.x - kMaxXOffset) {
+        ++ex1_cnt;
         break;
       }
 
       if (point_d.x > target_point_.x + kMaxXOffset) {
+        ++ex2_cnt;
         continue;
       }
 
@@ -665,59 +762,57 @@ bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c, bool is_st
         segments_info->opt_radius_cd = radius_cd_tmp;
         segments_info->opt_point_d = point_d;
 
-        if (is_search) {
+        if (is_rough_calc) {
           return true;
         }
       }
     }
   }
 
-  // PLANNING_LOG << "totoal_cnt:" << size_i
-  //     << ", collide_cnt:" << collide_cnt
-  //     << ", ab_fail_cnt:" << ab_fail_cnt
-  //     << ", total_cost_nan_cnt:" << total_cost_nan_cnt
-  //     << std::endl;
+  if (is_start) {
+    AINFO << "total_cnt:" << (size_radius_cd * size_step) << ", collide_cnt:" << collide_cnt << ", ex1_cnt:" << ex1_cnt
+          << ", ex2_cnt:" << ex2_cnt << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
+  }
 
   if (std::isinf(segments_info->total_cost)) {
     return false;
   }
-
   return true;
 }
 
-bool DiagonalInGeometryPlan::DESegment(const PlanningPoint &point_d, bool is_start, bool is_search,
+bool DiagonalInGeometryPlan::DESegment(const PlanningPoint &point_d, bool is_start, bool is_rough_calc,
                                        DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
   DiagonalSegmentsInfo tmp_segments_info;
-  if (DE1Segment(point_d, is_start, is_search, &tmp_segments_info)) {
+  if (DE1Segment(point_d, is_start, is_rough_calc, &tmp_segments_info)) {
     segments_info->total_cost = tmp_segments_info.total_cost;
     segments_info->opt_radius_de = tmp_segments_info.opt_radius_de;
     segments_info->opt_point_e = tmp_segments_info.opt_point_e;
-    // PLANNING_LOG << "de1 success" << std::endl;
+    // AINFO << "de1 success";
     return true;
   }
 
-  if (DE2Segment(point_d, is_start, is_search, &tmp_segments_info)) {
+  if (DE2Segment(point_d, is_start, is_rough_calc, &tmp_segments_info)) {
     segments_info->total_cost = tmp_segments_info.total_cost + kSegmentCost;
     segments_info->opt_radius_de = tmp_segments_info.opt_radius_de;
     segments_info->opt_point_e = tmp_segments_info.opt_point_e;
-    // PLANNING_LOG << "de2 success" << std::endl;
+    // AINFO << "de2 success";
     return true;
   }
 
-  if (DE3Segment(point_d, is_start, is_search, &tmp_segments_info)) {
+  if (DE3Segment(point_d, is_start, is_rough_calc, &tmp_segments_info)) {
     segments_info->total_cost = tmp_segments_info.total_cost + 2.0 * kSegmentCost;
     segments_info->opt_radius_de = tmp_segments_info.opt_radius_de;
     segments_info->opt_point_e = tmp_segments_info.opt_point_e;
-    // PLANNING_LOG << "de3 success" << std::endl;
+    // AINFO << "de3 success";
     return true;
   }
 
   return false;
 }
 
-bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d, bool is_start, bool is_search,
+bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d, bool is_start, bool is_rough_calc,
                                         DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -762,13 +857,13 @@ bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d, bool is_st
       }
 
       DiagonalSegmentsInfo tmp_segments_info;
-      if (!EFSegment(point_e, false, is_search, &tmp_segments_info)) {
+      if (!EFSegment(point_e, false, is_rough_calc, &tmp_segments_info)) {
         ++ef_fail_cnt;
         continue;
       }
 
       const double len_de = std::fabs(point_d.theta - point_e.theta) * radius_de;
-      const double len_cost = CalSegmentLengthCost(len_de);
+      const double len_cost = CalDESegmentLengthCost(len_de);
       const double radius_cost = CalRadiusCost(radius_de, len_de);
 
       const double total_cost = len_cost + radius_cost + tmp_segments_info.total_cost;
@@ -788,7 +883,7 @@ bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d, bool is_st
         segments_info->opt_radius_ef = tmp_segments_info.opt_radius_ef;
         segments_info->opt_point_f = tmp_segments_info.opt_point_f;
 
-        if (is_search) {
+        if (is_rough_calc) {
           return true;
         }
       }
@@ -796,9 +891,8 @@ bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d, bool is_st
   }
 
   if (is_start) {
-    PLANNING_LOG << "total_cnt:" << (point_num * radius_de_num) << ", collide_cnt:" << collide_cnt
-                 << ", ex_cnt1:" << ex_cnt1 << ", ef_fail_cnt:" << ef_fail_cnt
-                 << ", total_cost_nan_cnt:" << total_cost_nan_cnt << std::endl;
+    AINFO << "total_cnt:" << (point_num * radius_de_num) << ", collide_cnt:" << collide_cnt << ", ex_cnt1:" << ex_cnt1
+          << ", ef_fail_cnt:" << ef_fail_cnt << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
   }
 
   if (std::isinf(segments_info->total_cost)) {
@@ -808,7 +902,7 @@ bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d, bool is_st
   return true;
 }
 
-bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d, bool is_start, bool is_search,
+bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d, bool is_start, bool is_rough_calc,
                                         DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -839,10 +933,11 @@ bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d, bool is_st
     for (int j = 0; j < point_num; ++j) {
       point_e.theta = point_d.theta + yaw_step * j;
       point_e.x = point_d.x + slot_sign_ * radius_de * (-sin_point_d_theta + apa_sin(point_e.theta));
-      // if (point_e.x > target_point_.x + kMaxXOffset) {
-      //   ++ex_cnt2;
-      //   break;
-      // }
+
+      if (point_e.x > target_point_.x + kMaxXOffsetInDE3) {
+        ++ex_cnt2;
+        break;
+      }
 
       point_e.y = point_d.y + slot_sign_ * radius_de * (cos_point_d_theta - apa_cos(point_e.theta));
 
@@ -857,7 +952,7 @@ bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d, bool is_st
       }
 
       const double len_de = std::fabs(point_d.theta - point_e.theta) * radius_de;
-      const double len_cost = CalSegmentLengthCost(len_de);
+      const double len_cost = CalDESegmentLengthCost(len_de);
       const double radius_cost = CalRadiusCost(radius_de, len_de);
       const double theta_cost = CalEndThetaCost(point_e.theta);
 
@@ -874,7 +969,7 @@ bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d, bool is_st
         segments_info->opt_radius_de = radius_de;
         segments_info->opt_point_e = point_e;
 
-        if (is_search) {
+        if (is_rough_calc) {
           return true;
         }
       }
@@ -882,9 +977,8 @@ bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d, bool is_st
   }
 
   if (is_start) {
-    PLANNING_LOG << "total_cnt:" << (point_num * radius_de_num) << ", collide_cnt:" << collide_cnt
-                 << ", theta_cnt:" << theta_cnt << ", ex_cnt2:" << ex_cnt2
-                 << ", total_cost_nan_cnt:" << total_cost_nan_cnt << std::endl;
+    AINFO << "total_cnt:" << (point_num * radius_de_num) << ", collide_cnt:" << collide_cnt
+          << ", theta_cnt:" << theta_cnt << ", ex_cnt2:" << ex_cnt2 << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
   }
 
   if (std::isinf(segments_info->total_cost)) {
@@ -1046,17 +1140,6 @@ bool DiagonalInGeometryPlan::CollideWithObjectsByPolygon(const PlanningPoint &ve
   return false;
 }
 
-Polygon2d DiagonalInGeometryPlan::ConstructVehiclePolygonWithBuffer(const PlanningPoint &veh_point,
-                                                                    const double front_buffer, const double rear_buffer,
-                                                                    const double lat_buffer) const {
-  const double front_edge_to_center_with_safe_dst = front_edge_to_center_ + front_buffer;
-  const double back_edge_to_center_with_safe_dst = back_edge_to_center_ + rear_buffer;
-  const double half_width_with_safe_dis = half_width_veh_ + lat_buffer;
-  return ConstructVehiclePolygon(veh_point, half_width_with_safe_dis, front_edge_to_center_with_safe_dst,
-                                 back_edge_to_center_with_safe_dst, front_shrink_dis_, front_side_shrink_dis_,
-                                 rear_shrink_dis_, rear_side_shrink_dis_);
-}
-
 bool DiagonalInGeometryPlan::CEndCollideCheck(const PlanningPoint &point_c, const double safe_dst) const {
   if (objects_map_line_segments_.empty()) {
     return false;
@@ -1100,7 +1183,7 @@ void DiagonalInGeometryPlan::CalTargetXVec() {
   for (int i = 0; i < kTargetXNum; ++i) {
     const double target_x = target_point_.x + (i - kHalfTargetXNum) * kTargetXStep;
     target_x_vec_.push_back(target_x);
-    // PLANNING_LOG << "target_x:" << target_x << std::endl;
+    // AINFO << "target_x:" << target_x;
   }
 }
 
@@ -1136,6 +1219,19 @@ double DiagonalInGeometryPlan::CalBCThetaDiffCost(const double theta_diff) const
 
 double DiagonalInGeometryPlan::CalPointDThetaCost(const double theta) const {
   return std::fabs(target_point_.theta - theta) * kPointDThetaCost;
+}
+
+double DiagonalInGeometryPlan::CalDESegmentLengthCost(const double segment_len) const {
+  if (segment_len < kMinSegmentLen) {
+    return std::numeric_limits<double>::infinity();
+  } else {
+    if (segment_len < kDEStandardLength) {
+      return kSegmentLengthWeight * (1 / segment_len) * kDELengthWeight;
+    } else {
+      return kSegmentLengthWeight * segment_len * kDELengthWeight;
+    }
+  }
+  return 0.0;
 }
 
 }  // namespace apa_planner

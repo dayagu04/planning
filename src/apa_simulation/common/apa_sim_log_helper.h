@@ -14,14 +14,13 @@ class ApaSimLogHelper {
   static std::ofstream& GetOfs();
 
  private:
-   static void Init();
+  static void Init();
 
  private:
-
   static std::ofstream ofs_;
   static bool is_init_;
 };
 
 #define APA_SIM_LOG ApaSimLogHelper::GetOfs()
 
-} // namespace planning
+}  // namespace planning

@@ -1,6 +1,7 @@
 #include "general_planning.h"
 #include <cmath>
 
+#include "apa_planner/common/apa_utils.h"
 #include "config/vehicle_param.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
@@ -33,6 +34,20 @@ bool GeneralPlanning::RunOnce(const LocalView &local_view, PlanningOutput::Plann
   double start_timestamp = IflyTime::Now_ms();
   EnvironmentalModel *environmental_model = session_.mutable_environmental_model();
   environmental_model->feed_local_view(local_view);  // todo
+
+  // for apa planner test
+  const auto& func_state_machine = local_view.function_state_machine_info;
+  session_.set_default_scene_type(planning::common::SceneType::HIGHWAY);
+  if (IsValidPakingState(func_state_machine)) {
+    session_.set_default_scene_type(planning::common::SceneType::PARKING);
+  }
+  if (session_.is_parking_scene()) {
+    scheduler_.RunOnce();
+    *planning_output = session_.planning_output_context()\
+        .planning_status().planning_result.planning_output;
+    return true;
+  }
+
   auto pre_planning_status = session_.mutable_planning_output_context()->mutable_prev_planning_status();
   *pre_planning_status = session_.mutable_planning_output_context()->planning_status();
   auto *planning_status = session_.mutable_planning_output_context()->mutable_planning_status();

@@ -18,8 +18,6 @@ class DiagonalInPlanner : public ApaPlannerBase {
 
  private:
   DiagonalInTrajectoryGenerator trajectory_generator_;
-  bool is_planning_ok_ = false;
-  bool is_stop_planning_ = false;
 };
 
 }  // namespace apa_planner

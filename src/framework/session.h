@@ -52,6 +52,10 @@ class Session : public planning::common::Arena {
     return default_scene_type_;
   }
   const std::string &get_scene_type_name() const { return planning::common::SceneType_Name(get_scene_type()); }
+  void set_default_scene_type(
+      const planning::common::SceneType& default_scene_type) {
+    default_scene_type_ = default_scene_type;
+  }
   planning::common::SceneType default_scene_type() const { return default_scene_type_; }
   const std::string &default_scene_type_name() const { return planning::common::SceneType_Name(default_scene_type()); }
 

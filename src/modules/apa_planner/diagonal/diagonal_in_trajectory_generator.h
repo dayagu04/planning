@@ -5,6 +5,7 @@
 #include "frame.h"
 #include "local_view.h"
 #include "math/box2d.h"
+#include "speed_smoother/apa_speed_smoother.h"
 
 namespace planning {
 namespace apa_planner {
@@ -17,26 +18,35 @@ class DiagonalInTrajectoryGenerator {
   bool Plan(framework::Frame *const frame);
 
  private:
+  bool SingleSlotPlan(const int slot_index, PlanningOutput::PlanningOutput *const planning_output);
+
   bool GeometryPlan(const PlanningPoint &start_point, int idx, PlanningOutput::PlanningOutput *const planning_output);
 
-  bool ABSegmentPlan(const PlanningPoint &point_a, bool is_start, bool is_search, int idx,
+  bool ABSegmentPlan(const PlanningPoint &point_a, bool is_start, int idx,
                      DiagonalInGeometryPlan *const geometry_planning,
                      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool BCSegmentPlan(const PlanningPoint &point_b, bool is_start, bool is_search, int idx,
+  bool ReverseABSegmentPlan(const PlanningPoint &point_a, bool is_start, int idx,
+                            DiagonalInGeometryPlan *const geometry_planning,
+                            PlanningOutput::PlanningOutput *const planning_output) const;
+
+  bool BCSegmentPlan(const PlanningPoint &point_b, bool is_start, int idx,
                      DiagonalInGeometryPlan *const geometry_planning,
                      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool CDSegmentPlan(const PlanningPoint &point_c, bool is_start, bool is_search, int idx,
+  bool CDSegmentPlan(const PlanningPoint &point_c, bool is_start, int idx,
                      DiagonalInGeometryPlan *const geometry_planning,
                      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool DESegmentPlan(const PlanningPoint &point_d, bool is_start, bool is_search, int idx,
+  bool DESegmentPlan(const PlanningPoint &point_d, bool is_start, int idx,
                      DiagonalInGeometryPlan *const geometry_planning,
                      PlanningOutput::PlanningOutput *const planning_output) const;
 
   bool GenerateABSegmentTrajectory(const DiagonalSegmentsInfo &segments_info,
                                    PlanningOutput::PlanningOutput *const planning_output) const;
+
+  bool GenerateRACSegmentTrajectory(const DiagonalSegmentsInfo &segments_info,
+                                    PlanningOutput::PlanningOutput *const planning_output) const;
 
   bool GenerateBCSegmentTrajectory(const DiagonalSegmentsInfo &segments_info,
                                    PlanningOutput::PlanningOutput *const planning_output) const;
@@ -86,9 +96,9 @@ class DiagonalInTrajectoryGenerator {
 
   bool IsApaFinished() const;
 
-  void SetFinishedPlanningOutput(PlanningOutput::PlanningOutput *const planning_output) const;
-
   void PrintTrajectoryPoints(const PlanningOutput::PlanningOutput &planning_output) const;
+
+  bool IsSelectedSlotValid(framework::Frame *const frame) const;
 
  private:
   DiagonalInGeometryPlan geometry_planning_;
@@ -96,6 +106,7 @@ class DiagonalInTrajectoryGenerator {
   int slot_sign_ = 0;  // 1:Right ,-1:Left, 0:Invalid
 
   const LocalView *local_view_ = nullptr;
+  framework::Frame *frame_ = nullptr;
 
   PlanningPoint slot_origin_in_odom_;
 
@@ -117,6 +128,14 @@ class DiagonalInTrajectoryGenerator {
   uint64_t standstill_time_ = 0;
   uint64_t last_time_ = 0;
   uint64_t pos_unchanged_cnt_ = 0;
+
+  bool is_rough_calc_ = false;
+
+  ::FuncStateMachine::FunctionalState current_state_ = ::FuncStateMachine::FunctionalState::INIT;
+
+  std::vector<planning_math::LineSegment2d> objects_map_in_global_cor_;
+
+  ApaSpeedSmoother apa_speed_smoother_;
 };
 
 }  // namespace apa_planner

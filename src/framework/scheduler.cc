@@ -33,6 +33,11 @@ void Scheduler::RunOnce() {
   Frame frame{session_};
 
   for (auto &module_ptr : module_list_) {
+    if (frame.session()->is_parking_scene()) {
+      if (module_ptr->name() != "planning.modules.ApaPlanningModule") {
+        continue;
+      }
+    }
     PlanningModule *p = dynamic_cast<PlanningModule *>(module_ptr);
     if (p != nullptr) {
       if (p->compute(&frame) != true) {
@@ -52,7 +57,7 @@ bool Scheduler::InitModuleList(Session *session) {
   std::vector<const char *> module_names{
       "planning.modules.EnvironmentalModelModule", "planning.modules.GeneralPlannerModule",
       // "planning.modules.CandidatesRunner",
-      // "planning.modules.ApaPlanningModule"
+      "planning.modules.ApaPlanningModule"
   };
 
   // init modules

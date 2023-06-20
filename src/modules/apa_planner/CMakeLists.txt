@@ -10,6 +10,7 @@ add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
   framework
+  common
   modules_context
   modules_common
 )
