@@ -141,6 +141,9 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(const doub
         std::abs(d_poly[0] * std::pow(preview_x, 3) + d_poly[1] * std::pow(preview_x, 2) + d_poly[2] * preview_x),
         0.001);
     double road_radius = preview_x * std::sqrt(std::pow(preview_x, 2) + std::pow(abs_y, 2)) / (2 * abs_y);
+    if (road_radius < 680){
+      a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+    } 
     double v_limit_road = std::sqrt(a_y_max * road_radius) * 0.9;
     v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
     LOG_DEBUG("road_radius is : [%f], a_y_max: [%f]\n", road_radius, a_y_max);
