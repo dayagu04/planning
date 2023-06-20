@@ -52,6 +52,7 @@ class Obstacle {
   double x_relative_velocity() const { return x_relative_velocity_; }
   double y_relative_velocity() const { return y_relative_velocity_; }
   double relative_velocity_angle() const { return relative_velocity_angle_; }
+  unsigned int fusion_source() const { return fusion_source_; };
 
   // double perception_velocity() const { return perception_velocity_; }
   double acceleration() const { return acc_; }
@@ -112,6 +113,7 @@ class Obstacle {
   planning_math::Polygon2d obstacle_ego_polygon_;
   planning_math::Polygon2d car_ego_polygon_;
   std::vector<planning_math::Vec2d> perception_points_;
+  unsigned int fusion_source_;
 };
 
 struct HistoryObstacle {

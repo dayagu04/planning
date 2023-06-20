@@ -205,6 +205,7 @@ void TrackletMaintainer::recv_prediction_objects(const std::vector<PredictionObj
 
     origin->timestamp = IflyTime::Now_s();
     origin->type = p.type;
+    origin->fusion_source = p.fusion_source;
     origin->fusion_type = 2;
 
     double speed_yaw = p.trajectory_array[0].trajectory[0].yaw;  //现在yaw这个字段为姿态角
@@ -412,6 +413,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(const std::vector<Pred
 
     origin->timestamp = IflyTime::Now_s();
     origin->type = p.type;
+    origin->fusion_source = p.fusion_source;
     origin->fusion_type = 2;
 
     // double speed_yaw = p.trajectory_array[0].trajectory[0].yaw;

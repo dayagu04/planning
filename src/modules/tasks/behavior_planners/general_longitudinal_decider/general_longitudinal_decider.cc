@@ -583,6 +583,13 @@ bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(const std::s
         obstacle->id());
     return false;
   }
+
+  if ((obstacle->obstacle()->fusion_source() != OBSTACLE_SOURCE_CAMERA) &&
+      (obstacle->obstacle()->fusion_source() != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+    LOG_ERROR("The obstacle's fusion source is no camera whose id : %d \n", obstacle->id());
+    return true;
+  }
+
   // behind ego car
   if ((frame_->session()->is_parking_scene() && obstacle->type() != Common::ObjectType::OBJECT_TYPE_PEDESTRIAN)) {
     // the obstacle will be ignored when it behind rear axle for PNP

@@ -47,6 +47,7 @@ struct TrackedObject {
   int track_id = 0;
   int type = 0;
   int fusion_type = 0;
+  int fusion_source = 0;
   int position_type = 0;
 
   double length = 0;

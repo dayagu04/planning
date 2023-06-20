@@ -190,9 +190,8 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(const std
   // filter near cars from front && side tracks
   near_cars.clear();
   for (auto &track : front_tracks) {
-    // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle,
-    // MSD_OBJECT_TYPE_RADAR_ONLY == 0
-    if (track.type == 0) {
+    // ignore obj without camera source
+    if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) && (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
       continue;
     };
     if (std::abs(track.y_rel) < 10.0 && std::abs(track.d_rel) < 20.0 && track.type == 1) {
@@ -200,8 +199,8 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(const std
     }
   }
   for (auto &track : side_tracks) {
-    // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle
-    if (track.type == 0) {
+    // ignore obj without camera source
+    if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) && (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
       continue;
     };
     if (std::abs(track.y_rel) < 10.0 && std::abs(track.d_rel) < 20.0 && track.type == 1) {
@@ -795,8 +794,8 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
   double cutinp_threshold = lc_request != "none" ? 0.6 : 0.2;
   front_cut_in_track_id.clear();
   for (auto &track : front_tracks) {
-    // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle
-    if (track.type == 0) {
+    // ignore obj without camera source
+    if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) && (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
       continue;
     };
     if (!track.is_lead && track.cutinp > cutinp_threshold && track.v_lat < -0.01 && track.type < 50000) {
@@ -1120,8 +1119,9 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(const Tracked
       std::vector<TrackedObject> *front_target_tracks =
           lane_tracks_mgr->get_lane_tracks(lane_change_lane_manager->tlane_virtual_id(), FRONT_TRACK);
       for (auto &track : *front_target_tracks) {
-        // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle
-        if (track.type == 0) {
+        // ignore obj without camera source
+        if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
+            (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
           continue;
         };
         lane_changing_cars.push_back(&track);
@@ -1129,8 +1129,9 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(const Tracked
       std::vector<TrackedObject> *side_target_tracks =
           lane_tracks_mgr->get_lane_tracks(lane_change_lane_manager->tlane_virtual_id(), SIDE_TRACK);
       for (auto &track : *side_target_tracks) {
-        // ignore the MSD_OBJECT_TYPE_RADAR_ONLY obstacle
-        if (track.type == 0) {
+        // ignore obj without camera source
+        if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
+            (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
           continue;
         };
         lane_changing_cars.push_back(&track);

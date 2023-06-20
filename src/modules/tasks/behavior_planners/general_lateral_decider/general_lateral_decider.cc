@@ -186,6 +186,11 @@ void GeneralLateralDecider::ConstructLateralObstacleDecisions(
   const auto &obs_vec = reference_path_ptr_->get_obstacles();
   for (auto &obstacle : obs_vec) {
     const auto &otype = obstacle->type();
+    const auto ofusion_source = obstacle->obstacle()->fusion_source();
+    if ((ofusion_source != OBSTACLE_SOURCE_CAMERA) && (ofusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+      LOG_ERROR("The obstacle's fusion source is no camera whose id : %d \n", obstacle->id());
+      continue;
+    }
     if (otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
                                                              // obstacle type
         otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or

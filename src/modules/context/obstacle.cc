@@ -142,6 +142,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object, const bool
   x_relative_velocity_ = prediction_object.relative_speed_x;
   y_relative_velocity_ = prediction_object.relative_speed_y;
   acc_ = prediction_object.acc;
+  fusion_source_ = prediction_object.fusion_source;
 
   std::vector<planning_math::Vec2d> polygon_points;
   if (prediction_object.bottom_polygon_points.size() < 3) {
