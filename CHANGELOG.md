@@ -1,10 +1,9 @@
-# planning.2.0.0.2
+# apa_planning2.0.0.2
 
 ####  修改说明
-1. 适配interface0.0.0.4 ed1d77e6fd6bf7f73a5b12898627b782b47b641d
-2. 增加adas功能实现
-3. 添加换道信息hmi输出
-4. 修复长时lateral_obstacle参考线拿不到问题，修复target_select取障碍物错误的问题
+1. interface更新至interface0.0.0.4
+2. 代码rebase至develop
+3. 增加泊车场景判断
 
 ####  已知问题
 无
@@ -12,13 +11,13 @@
 ####  兼容性
 无
 
-# planning.2.0.0.1
+# apa_planning2.0.0.1
+
 ####  修改说明
-1. 初始版本，支持行车规划
+1. 初始版本，支持泊车规划
 
 ####  已知问题
 无
 
 ####  兼容性
 无
-
