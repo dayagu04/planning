@@ -5,8 +5,11 @@ cmake_minimum_required(VERSION 3.0)
 # Debug: X86  Release: FDC
 # set(CMAKE_BUILD_TYPE Release)
 
-# settings
+# json_compile and pybind
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(PYBIND_TOOL_ENABLE OFF)
+
+# compile settings
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g -fPIC -fpermissive")
 
@@ -33,3 +36,7 @@ endif()
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(tools/planning_player)
+
+if (PYBIND_TOOL_ENABLE)
+  add_subdirectory(jupyter_pybind)
+endif()

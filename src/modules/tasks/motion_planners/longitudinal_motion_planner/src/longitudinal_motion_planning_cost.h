@@ -44,8 +44,8 @@ enum iLqrCostId {
   COST_SIZE,
 };
 
-enum StateId { POS = 0, VEL = 1, ACC = 2, JERK = 3, STATE_SIZE };
-enum ControlId { SNAP = 0, INPUT_SIZE };
+enum StateId { POS = 0, VEL = 1, ACC = 2, STATE_SIZE };
+enum ControlId { JERK = 0, INPUT_SIZE };
 
 // reference cost for s and v
 class ReferenceCostTerm : public ilqr_solver::BaseCostTerm {
@@ -73,21 +73,11 @@ class LonAccCostTerm : public ilqr_solver::BaseCostTerm {
 class LonJerkCostTerm : public ilqr_solver::BaseCostTerm {
  public:
   LonJerkCostTerm() = default;
-  double GetCost(const State &x, const Control & /*u*/) override;
-  void GetGradientHessian(const State &x, const Control & /*u*/, LxMT &lx, LuMT & /*lu*/, LxxMT &lxx, LxuMT & /*lxu*/,
-                          LuuMT & /*luu*/) override;
-  std::string GetCostString() override { return typeid(this).name(); }
-  uint8_t GetCostId() override { return LON_JERK_COST; }
-};
-
-class LonSnapCostTerm : public ilqr_solver::BaseCostTerm {
- public:
-  LonSnapCostTerm() = default;
   double GetCost(const State & /*x*/, const Control &u) override;
   void GetGradientHessian(const State & /*x*/, const Control &u, LxMT & /*lx*/, LuMT &lu, LxxMT & /*lxx*/,
                           LxuMT & /*lxu*/, LuuMT &luu) override;
   std::string GetCostString() override { return typeid(this).name(); }
-  uint8_t GetCostId() override { return LON_SNAP_COST; }
+  uint8_t GetCostId() override { return LON_JERK_COST; }
 };
 
 // longitudinal pos bound cost
@@ -127,9 +117,9 @@ class LonAccBoundCostTerm : public ilqr_solver::BaseCostTerm {
 class LonJerkBoundCostTerm : public ilqr_solver::BaseCostTerm {
  public:
   LonJerkBoundCostTerm() = default;
-  double GetCost(const State &x, const Control & /*u*/) override;
-  void GetGradientHessian(const State &x, const Control & /*u*/, LxMT &lx, LuMT & /*lu*/, LxxMT &lxx, LxuMT & /*lxu*/,
-                          LuuMT & /*luu*/) override;
+  double GetCost(const State & /*x*/, const Control &u) override;
+  void GetGradientHessian(const State & /*x*/, const Control &u, LxMT & /*lx*/, LuMT &lu, LxxMT & /*lxx*/,
+                          LxuMT & /*lxu*/, LuuMT &luu) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return LON_JERK_BOUND_COST; }
 };

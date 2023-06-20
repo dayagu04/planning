@@ -117,6 +117,11 @@ void iLqr::Simulation(const State &x0, const ControlVec &u_vec) {
   ilqr_model_ptr_->UpateDynamics(xk_vec_, uk_vec_);
 }
 
+void iLqr::Solve(const State &x0, const ControlVec &u_vec) {
+  uk_vec_ = u_vec;
+  Solve(x0);
+}
+
 void iLqr::Solve(const State &x0) {
 // TODO: check feasibility of input and avoid coredump
 // InputFeasibilityCheck(xk, uk);
@@ -544,6 +549,8 @@ void iLqr::PrintSolverInfo() {
   std::cout << "--------------------------------------------------- iLqr solver info "
                "--------------------------------------------------- "
             << std::endl;
+  // init info
+  std::cout << "init state = " << xk_vec_[0].transpose() << std::endl;
 
   // iteration info
   std::cout << "cost size = " << solver_info_.cost_size << ", init cost = " << solver_info_.init_cost

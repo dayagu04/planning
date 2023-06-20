@@ -37,14 +37,6 @@ void LongitudinalMotionPlanner::Init() {
   planning_input_.mutable_acc_min_vec()->Resize(N, 0.0);
   planning_input_.mutable_jerk_max_vec()->Resize(N, 0.0);
   planning_input_.mutable_jerk_min_vec()->Resize(N, 0.0);
-
-  // init planning output
-  planning_output_.mutable_time_vec()->Resize(N, 0.0);
-  planning_output_.mutable_pos_vec()->Resize(N, 0.0);
-  planning_output_.mutable_vel_vec()->Resize(N, 0.0);
-  planning_output_.mutable_acc_vec()->Resize(N, 0.0);
-  planning_output_.mutable_jerk_vec()->Resize(N, 0.0);
-  planning_output_.mutable_snap_vec()->Resize(N, 0.0);
 }
 
 bool LongitudinalMotionPlanner::Execute(planning::framework::Frame *frame) {
@@ -54,23 +46,21 @@ bool LongitudinalMotionPlanner::Execute(planning::framework::Frame *frame) {
     return false;
   }
 
-  GeneratePlanningInput();
+  AssembleInput();
 
-  planning_problem_ptr_->Update(planning_input_);
-
-  GeneratePlanningOutput();
+  Update();
 
   // record input and output
   DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_longitudinal_motion_planning_input()->CopyFrom(
       planning_input_);
 
   DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_longitudinal_motion_planning_output()->CopyFrom(
-      planning_output_);
+      planning_problem_ptr_->GetOutput());
 
   return true;
 }
 
-void LongitudinalMotionPlanner::GeneratePlanningInput() {
+void LongitudinalMotionPlanner::AssembleInput() {
   const auto &lon_ref_path =  // result from lon decision
       pipeline_context_->planning_info.lon_ref_path;
 
@@ -159,14 +149,12 @@ void LongitudinalMotionPlanner::GeneratePlanningInput() {
   planning_input_.mutable_init_state()->set_s(planning_init_point.frenet_state.s);
   planning_input_.mutable_init_state()->set_v(planning_init_point.lon_init_state.v());
   planning_input_.mutable_init_state()->set_a(planning_init_point.lon_init_state.a());
-  planning_input_.mutable_init_state()->set_j(planning_init_point.lon_init_state.j());
 
   // set weights
   planning_input_.set_q_ref_pos(config_.q_ref_pos);
   planning_input_.set_q_ref_vel(config_.q_ref_vel);
   planning_input_.set_q_acc(config_.q_acc);
   planning_input_.set_q_jerk(config_.q_jerk);
-  planning_input_.set_q_snap(config_.q_snap);
   planning_input_.set_q_stop_s(config_.q_stop_s);
 
   planning_input_.set_q_pos_bound(config_.q_pos_bound);
@@ -178,12 +166,14 @@ void LongitudinalMotionPlanner::GeneratePlanningInput() {
   planning_input_.set_s_stop(1.0e4);  // TBD: hack for input;
 }
 
-void LongitudinalMotionPlanner::GeneratePlanningOutput() {
+void LongitudinalMotionPlanner::Update() {
   // assembling planning output proto
-  const auto &state_result = planning_problem_ptr_->GetiLqrCorePtr()->GetStateResultPtr();
-  const auto &control_result = planning_problem_ptr_->GetiLqrCorePtr()->GetControlResultPtr();
+  planning_problem_ptr_->Update(planning_input_);
+
   const size_t N = planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon + 1;
   const auto &dt = planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->model_dt;
+
+  const auto &planning_output = planning_problem_ptr_->GetOutput();
 
   // state vector
   std::vector<double> s_vec(N);
@@ -195,34 +185,14 @@ void LongitudinalMotionPlanner::GeneratePlanningOutput() {
   // assemble proto for pnc tools
   double t = 0.0;
   for (size_t i = 0; i < N; ++i) {
-    planning_output_.mutable_time_vec()->Set(i, t);
     t_vec[i] = t;
 
     t += dt;
 
-    s_vec[i] = state_result->at(i)[pnc::longitudinal_planning::StateId::POS];
-    v_vec[i] = state_result->at(i)[pnc::longitudinal_planning::StateId::VEL];
-    a_vec[i] = state_result->at(i)[pnc::longitudinal_planning::StateId::ACC];
-    j_vec[i] = state_result->at(i)[pnc::longitudinal_planning::StateId::JERK];
-
-    // post process for longitudinal motion planning, ensure non-negative vel
-    if (v_vec[i] < 0.0 && i > 0) {
-      s_vec[i] = s_vec[i - 1];
-      v_vec[i] = 0.0;
-      a_vec[i] = 0.0;
-      j_vec[i] = 0.0;
-    }
-
-    planning_output_.mutable_pos_vec()->Set(i, s_vec[i]);
-    planning_output_.mutable_vel_vec()->Set(i, v_vec[i]);
-    planning_output_.mutable_acc_vec()->Set(i, a_vec[i]);
-    planning_output_.mutable_jerk_vec()->Set(i, j_vec[i]);
-
-    if (i < N - 1) {
-      planning_output_.mutable_snap_vec()->Set(i, control_result->at(i)[pnc::longitudinal_planning::ControlId::SNAP]);
-    } else {
-      planning_output_.mutable_snap_vec()->Set(i, planning_output_.snap_vec(i - 1));
-    };
+    s_vec[i] = planning_output.pos_vec(i);
+    v_vec[i] = planning_output.vel_vec(i);
+    a_vec[i] = planning_output.acc_vec(i);
+    j_vec[i] = planning_output.jerk_vec(i);
   }
 
   // generate motion planning output into planning_context
@@ -253,7 +223,7 @@ void LongitudinalMotionPlanner::GeneratePlanningOutput() {
   for (size_t i = 0; i < N; ++i) {
     traj_points[i].v = v_vec[i];
     traj_points[i].a = a_vec[i];
-    traj_points[i].t = planning_output_.time_vec(i);
+    traj_points[i].t = t_vec[i];
 
     // lateral path resampling
     // s is lateral path rather than longitudinal path (frenet)

@@ -35,13 +35,12 @@ class LateralMotionPlanner : public Task {
   bool Execute(planning::framework::Frame *frame);
 
  private:
-  void GeneratePlanningInput();
-  void GeneratePlanningOutput();
+  void AssembleInput();
+  void Update();
 
   LateralMotionPlannerConfig config_;
   string name_;
   std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningProblem> planning_problem_ptr_;
-  planning::common::LateralPlanningOutput planning_output_;
   planning::common::LateralPlanningInput planning_input_;
 };
 

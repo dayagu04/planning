@@ -1,17 +1,17 @@
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include "lateral_motion_planner.pb.h"
-#include "motion_planners/lateral_motion_planner/src/lateral_motion_planning_problem.h"
+#include "longitudinal_motion_planner.pb.h"
+#include "motion_planners/longitudinal_motion_planner/src/longitudinal_motion_planning_problem.h"
 #include "planning_debug_info.pb.h"
 
 namespace py = pybind11;
-using namespace pnc::lateral_planning;
+using namespace pnc::longitudinal_planning;
 
-static LateralMotionPlanningProblem *pBase = nullptr;
+static LongitudinalMotionPlanningProblem *pBase = nullptr;
 
 int Init() {
-  pBase = new LateralMotionPlanningProblem();
+  pBase = new LongitudinalMotionPlanningProblem();
   pBase->Init();
   return 0;
 }
@@ -30,8 +30,8 @@ inline T BytesToProto(py::bytes &bytes) {
 }
 
 int UpdateBytes(py::bytes &planning_input_bytes) {
-  planning::common::LateralPlanningInput planning_input =
-      BytesToProto<planning::common::LateralPlanningInput>(planning_input_bytes);
+  planning::common::LongitudinalPlanningInput planning_input =
+      BytesToProto<planning::common::LongitudinalPlanningInput>(planning_input_bytes);
 
   pBase->Update(planning_input);
 
@@ -46,34 +46,29 @@ py::bytes GetOutputBytes() {
   return serialized_message;
 }
 
-int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy, double q_ref_theta, double q_acc, double q_jerk,
-                   double q_acc_bound, double q_jerk_bound, double acc_bound, double jerk_bound) {
-  planning::common::LateralPlanningInput planning_input =
-      BytesToProto<planning::common::LateralPlanningInput>(planning_input_bytes);
-  planning_input.set_acc_bound(acc_bound);
-  planning_input.set_jerk_bound(jerk_bound);
+int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_pos, double q_ref_vel, double q_acc, double q_jerk,
+                   double q_pos_bound, double q_vel_bound, double q_acc_bound, double q_jerk_bound, double q_stop_s) {
+  planning::common::LongitudinalPlanningInput planning_input =
+      BytesToProto<planning::common::LongitudinalPlanningInput>(planning_input_bytes);
+  planning_input.set_q_ref_pos(q_ref_pos);
+  planning_input.set_q_ref_vel(q_ref_vel);
 
-  planning_input.set_q_ref_x(q_ref_xy);
-  planning_input.set_q_ref_y(q_ref_xy);
-  planning_input.set_q_ref_theta(q_ref_theta);
   planning_input.set_q_acc(q_acc);
   planning_input.set_q_jerk(q_jerk);
 
+  planning_input.set_q_pos_bound(q_pos_bound);
+  planning_input.set_q_vel_bound(q_vel_bound);
   planning_input.set_q_acc_bound(q_acc_bound);
   planning_input.set_q_jerk_bound(q_jerk_bound);
+
+  planning_input.set_q_stop_s(q_stop_s);
 
   pBase->Update(planning_input);
 
   return 0;
 }
 
-// planning::common::LateralPlanningOutput GetOutput() {
-//   auto res = pBase->GetOutput();
-
-//   return res;
-// }
-
-PYBIND11_MODULE(lateral_motion_planning_py, m) {
+PYBIND11_MODULE(longitudinal_motion_planning_py, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)

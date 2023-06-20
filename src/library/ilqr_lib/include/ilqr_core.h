@@ -94,7 +94,7 @@ class iLqr {
 
   // usually do not need init cost
   void Solve(const State &x0);
-
+  void Solve(const State &x0, const ControlVec &u_vec);
   // simulation dynamics with given init state x0 and input u_vec
   void Simulation(const State &x0, const ControlVec &u_vec);
 

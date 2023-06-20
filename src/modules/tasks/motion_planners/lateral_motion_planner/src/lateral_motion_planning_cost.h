@@ -53,8 +53,8 @@ enum iLqrCostId {
   COST_SIZE,
 };
 
-enum StateId { X = 0, Y = 1, THETA = 2, DELTA = 3, OMEGA = 4, STATE_SIZE };
-enum ControlId { OMEGA_DOT = 0, INPUT_SIZE };
+enum StateId { X = 0, Y = 1, THETA = 2, DELTA = 3, STATE_SIZE };
+enum ControlId { OMEGA = 0, INPUT_SIZE };
 
 class ReferenceCostTerm : public ilqr_solver::BaseCostTerm {
  public:
@@ -126,15 +126,6 @@ class PathSoftCorridorCostTerm : public ilqr_solver::BaseCostTerm {
   uint8_t GetCostId() override { return PATH_SOFT_CORRIDOR_COST; }
 };
 
-class LatSnapCostTerm : public ilqr_solver::BaseCostTerm {
- public:
-  LatSnapCostTerm() = default;
-  double GetCost(const State & /*x*/, const Control &u) override;
-  void GetGradientHessian(const State & /*x*/, const Control &u, LxMT & /*lx*/, LuMT &lu, LxxMT & /*lxx*/,
-                          LxuMT & /*lxu*/, LuuMT &luu) override;
-  std::string GetCostString() override { return typeid(this).name(); }
-  uint8_t GetCostId() override { return LAT_SNAP_COST; }
-};
 }  // namespace lateral_planning
 }  // namespace pnc
 #endif

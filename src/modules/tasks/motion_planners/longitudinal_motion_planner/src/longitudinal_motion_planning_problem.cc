@@ -38,13 +38,19 @@ void LongitudinalMotionPlanningProblem::Init() {
   ilqr_core_ptr_->AddCost(std::make_shared<LonPosBoundCostTerm>());   // longitudinal pos bound cost
   ilqr_core_ptr_->AddCost(std::make_shared<LonVelBoundCostTerm>());   // longitudinal vel bound cost
   ilqr_core_ptr_->AddCost(std::make_shared<LonAccBoundCostTerm>());   // longitudinal acc bound cost
-  ilqr_core_ptr_->AddCost(std::make_shared<LonJerkBoundCostTerm>());  // longitudinal jerk bound
-                                                                      // cost
+  ilqr_core_ptr_->AddCost(std::make_shared<LonJerkBoundCostTerm>());  // longitudinal jerk bound cost
   ilqr_core_ptr_->AddCost(std::make_shared<LonStopPointCost>());      // longitudinal stop point cost
-  ilqr_core_ptr_->AddCost(std::make_shared<LonSnapCostTerm>());       // longitudinal snap cost cost
 
   // STEP 3: init debug info, must run after add cost
   ilqr_core_ptr_->InitAdvancedInfo();
+
+  // init planning output
+  const auto &N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
+  planning_output_.mutable_time_vec()->Resize(N, 0.0);
+  planning_output_.mutable_pos_vec()->Resize(N, 0.0);
+  planning_output_.mutable_vel_vec()->Resize(N, 0.0);
+  planning_output_.mutable_acc_vec()->Resize(N, 0.0);
+  planning_output_.mutable_jerk_vec()->Resize(N, 0.0);
 }
 
 uint8_t LongitudinalMotionPlanningProblem::Update(planning::common::LongitudinalPlanningInput &planning_input) {
@@ -94,9 +100,44 @@ uint8_t LongitudinalMotionPlanningProblem::Update(planning::common::Longitudinal
   ilqr_core_ptr_->SetCostConfig(cost_config_vec);
 
   // solve the ilqr problem
-  init_state_ << planning_input.init_state().s(), planning_input.init_state().v(), planning_input.init_state().a(),
-      planning_input.init_state().j();
+  init_state_ << planning_input.init_state().s(), planning_input.init_state().v(), planning_input.init_state().a();
   ilqr_core_ptr_->Solve(init_state_);
+
+  // assemble planning result
+  const auto &state_result = ilqr_core_ptr_->GetStateResultPtr();
+  const auto &control_result = ilqr_core_ptr_->GetControlResultPtr();
+  const auto &dt = ilqr_core_ptr_->GetSolverConfigPtr()->model_dt;
+
+  double t = 0.0;
+  for (size_t i = 0; i < N; ++i) {
+    planning_output_.mutable_time_vec()->Set(i, t);
+    t += dt;
+
+    auto s = state_result->at(i)[pnc::longitudinal_planning::StateId::POS];
+    auto v = state_result->at(i)[pnc::longitudinal_planning::StateId::VEL];
+    auto a = state_result->at(i)[pnc::longitudinal_planning::StateId::ACC];
+
+    double j = 0.0;
+
+    if (i < N - 1) {
+      j = control_result->at(i)[pnc::longitudinal_planning::ControlId::JERK];
+    } else {
+      j = control_result->at(i - 1)[pnc::longitudinal_planning::ControlId::JERK];
+    }
+
+    // post process for longitudinal motion planning, ensure non-negative vel
+    if (v < 0.0 && i > 0) {
+      s = state_result->at(i - 1)[pnc::longitudinal_planning::StateId::POS];
+      v = 0.0;
+      a = 0.0;
+      j = 0.0;
+    }
+
+    planning_output_.mutable_pos_vec()->Set(i, s);
+    planning_output_.mutable_vel_vec()->Set(i, v);
+    planning_output_.mutable_acc_vec()->Set(i, a);
+    planning_output_.mutable_jerk_vec()->Set(i, j);
+  }
 
   return true;
 }

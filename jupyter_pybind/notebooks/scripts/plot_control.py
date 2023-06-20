@@ -285,7 +285,7 @@ fig9.legend.click_policy = 'hide'
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
+    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=0.02, step=frame_dt)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider)
 
 ### sliders callback

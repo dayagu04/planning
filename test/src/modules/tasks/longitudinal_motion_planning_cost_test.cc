@@ -134,7 +134,7 @@ void Generate() {
   std::mt19937 gen(rd());
 
   x << GetRandomDouble(-10, 10.0), GetRandomDouble(-10, 10.0),
-      GetRandomDouble(-10.0, 10.0), GetRandomDouble(-10.0, 10.0);
+      GetRandomDouble(-10.0, 10.0);
   u << GetRandomDouble(-10.0, 10.0);
 
   if (fabs(fabs(x(POS)) - 5.0) < 0.02) {
@@ -232,10 +232,6 @@ TEST(LonAccCostTerm, LonAccCostTerm) {
 
 TEST(LonJerkCostTerm, LonJerkCostTerm) {
   ApplyCostTest(std::make_shared<LonJerkCostTerm>());
-}
-
-TEST(LonSnapCostTerm, LonSnapCostTerm) {
-  ApplyCostTest(std::make_shared<LonSnapCostTerm>());
 }
 
 TEST(LonPosBoundCostTerm, LonPosBoundCostTerm) {

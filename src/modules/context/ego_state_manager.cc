@@ -218,7 +218,6 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag, const bool &l
     lat_init_state.set_y(ego_state->ego_pose_raw().y);
     lat_init_state.set_theta(ego_state->ego_pose().theta);
     lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio);
-    lat_init_state.set_omega(0.0);
 
     // lon use stitch result when lat replan
     out = ReplanStatus::LAT_REPLAN;
@@ -228,15 +227,11 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag, const bool &l
     // update lat init state
     lat_init_state.set_x(motion_planning_info.x_s_spline(s_proj));
     lat_init_state.set_y(motion_planning_info.y_s_spline(s_proj));
-    lat_init_state.set_theta(motion_planning_info.theta_s_spline(s_proj));
-    lat_init_state.set_delta(motion_planning_info.delta_s_spline(s_proj));
-    lat_init_state.set_omega(motion_planning_info.omega_s_spline(s_proj));
 
     // update lon init state
     lon_init_state.set_s(0.0);
     lon_init_state.set_v(ego_state->ego_v());
     // lon_init_state.set_a(ego_state->ego_acc());
-    // lon_init_state.set_j(0.0);
     out = ReplanStatus::LON_REPLAN;
   }
 
@@ -262,7 +257,6 @@ void EgoStateManager::LateralReset() {
 
   // TODO: need estimated delta and omega for large curv condition
   lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio);
-  lat_init_state.set_omega(0.0);
   lat_init_state.set_curv(0.0);
   lat_init_state.set_d_curv(0.0);
 }
@@ -275,7 +269,6 @@ void EgoStateManager::LongitudinalReset() {
   lon_init_state.set_s(0.0);
   lon_init_state.set_v(ego_state->ego_v());
   lon_init_state.set_a(0.0);
-  lon_init_state.set_j(0.0);
 }
 
 void EgoStateManager::MotionPlanningInfoReset() {
@@ -298,13 +291,11 @@ bool EgoStateManager::LateralStitch() {
 
     // max delta as equivalent steer angle = 120 deg
     static const double max_delta = 120.0 / 57.3 / 15.7;
-    static const double max_omega = 60.0 / 57.3 / 15.7;
 
     lat_init_state.set_x(motion_planning_info.x_t_spline(planning_loop_dt));
     lat_init_state.set_y(motion_planning_info.y_t_spline(planning_loop_dt));
     lat_init_state.set_theta(motion_planning_info.theta_t_spline(planning_loop_dt));
     lat_init_state.set_delta(pnc::mathlib::Limit(motion_planning_info.delta_t_spline(planning_loop_dt), max_delta));
-    lat_init_state.set_omega(pnc::mathlib::Limit(motion_planning_info.omega_t_spline(planning_loop_dt), max_omega));
     lat_init_state.set_curv(0.0);
     lat_init_state.set_d_curv(0.0);
 
@@ -325,7 +316,6 @@ bool EgoStateManager::LongitudinalStitch() {
     lon_init_state.set_s(0.0);
     lon_init_state.set_v(std::max(motion_planning_info.v_t_spline(planning_loop_dt), 0.0));
     lon_init_state.set_a(motion_planning_info.a_t_spline(planning_loop_dt));
-    lon_init_state.set_j(motion_planning_info.j_t_spline(planning_loop_dt));
     return true;
   } else {
     return false;

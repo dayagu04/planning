@@ -6,8 +6,8 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/root/code/0609/record_bag/20230613140624.record.00000"
-frame_dt = 0.2 # sec
+bag_path = "/home/xlwang71/Downloads/0614/long_time_hualong_1.00000.1687105422.plan"
+frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
@@ -22,7 +22,7 @@ fig1, fig2, fig3, fig4, fig5, fig6, fig7, lat_plan_data = load_lat_plan_figure(f
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
+    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=0.1, step=frame_dt)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider)
 
 

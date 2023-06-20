@@ -3,32 +3,29 @@
 
 #include <cstddef>
 #include <vector>
-
-#include "config/basic_type.h"
 #include "ilqr_core.h"
 #include "ilqr_define.h"
 #include "lateral_motion_planner.pb.h"
 #include "lateral_motion_planning_cost.h"
 #include "lateral_motion_planning_model.h"
-#include "math_lib.h"
 namespace pnc {
 namespace lateral_planning {
 class LateralMotionPlanningProblem {
  public:
   void Init();
   uint8_t Update(planning::common::LateralPlanningInput &planning_input);
+  const planning::common::LateralPlanningOutput &GetOutput() { return planning_output_; }
+  void Reset();
+  
   void SetWarmStart(bool flag) { ilqr_core_ptr_->SetWarmStart(flag); }
   void SetMaxIter(size_t max_iter) { ilqr_core_ptr_->SetMaxIter(max_iter); }
-  void SetUvec(const ControlVec &u_vec) { u_vec_ = u_vec; }
-
-  void Reset();
 
   const std::shared_ptr<ilqr_solver::iLqr> GetiLqrCorePtr() const { return ilqr_core_ptr_; }
 
  private:
   std::shared_ptr<ilqr_solver::iLqr> ilqr_core_ptr_;
+  planning::common::LateralPlanningOutput planning_output_;
   State init_state_;
-  ControlVec u_vec_;
 };
 
 }  // namespace lateral_planning

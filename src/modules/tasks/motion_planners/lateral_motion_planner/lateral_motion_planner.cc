@@ -30,7 +30,7 @@ void LateralMotionPlanner::Init() {
   planning_problem_ptr_->Init();
 
   // init planning input and ouput
-  auto const N = planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon + 1;
+  const auto N = planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon + 1;
 
   // init planning input
   planning_input_.mutable_ref_x_vec()->Resize(N, 0.0);
@@ -61,16 +61,7 @@ void LateralMotionPlanner::Init() {
   planning_input_.mutable_hard_lower_bound_x1_vec()->Resize(N, 0.0);
   planning_input_.mutable_hard_lower_bound_y1_vec()->Resize(N, 0.0);
 
-  // init planning output
-  planning_output_.mutable_time_vec()->Resize(N, 0.0);
-  planning_output_.mutable_x_vec()->Resize(N, 0.0);
-  planning_output_.mutable_y_vec()->Resize(N, 0.0);
-  planning_output_.mutable_theta_vec()->Resize(N, 0.0);
-  planning_output_.mutable_delta_vec()->Resize(N, 0.0);
-  planning_output_.mutable_omega_vec()->Resize(N, 0.0);
-  planning_output_.mutable_omega_dot_vec()->Resize(N, 0.0);
-  planning_output_.mutable_acc_vec()->Resize(N, 0.0);
-  planning_output_.mutable_jerk_vec()->Resize(N, 0.0);
+  planning_input_.mutable_control_vec()->Resize(N, 0.0);
 }
 
 bool LateralMotionPlanner::Execute(planning::framework::Frame *frame) {
@@ -80,26 +71,21 @@ bool LateralMotionPlanner::Execute(planning::framework::Frame *frame) {
     return false;
   }
 
-  // generate input
-  GeneratePlanningInput();
+  // assemble input
+  AssembleInput();
 
   // update
-  auto solver_condition = planning_problem_ptr_->Update(planning_input_);
-  JSON_DEBUG_VALUE("solver_condition", solver_condition)
-
-  // get output
-  GeneratePlanningOutput();
+  Update();
 
   // record input and output
   DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_lateral_motion_planning_input()->CopyFrom(planning_input_);
-
   DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_lateral_motion_planning_output()->CopyFrom(
-      planning_output_);
+      planning_problem_ptr_->GetOutput());
 
   return true;
 }
 
-void LateralMotionPlanner::GeneratePlanningInput() {
+void LateralMotionPlanner::AssembleInput() {
   // set init state
   const auto &planning_init_point = reference_path_ptr_->get_frenet_ego_state().planning_init_point();
 
@@ -107,14 +93,9 @@ void LateralMotionPlanner::GeneratePlanningInput() {
   JSON_DEBUG_VALUE("init_pos_y1", planning_init_point.lat_init_state.y())
 
   planning_input_.mutable_init_state()->set_x(planning_init_point.lat_init_state.x());
-
   planning_input_.mutable_init_state()->set_y(planning_init_point.lat_init_state.y());
-
   planning_input_.mutable_init_state()->set_theta(planning_init_point.lat_init_state.theta());
-
   planning_input_.mutable_init_state()->set_delta(planning_init_point.lat_init_state.delta());
-
-  planning_input_.mutable_init_state()->set_omega(planning_init_point.lat_init_state.omega());
 
   // set reference
   const auto &lat_decider_output =  // result from lat decision
@@ -226,76 +207,44 @@ void LateralMotionPlanner::GeneratePlanningInput() {
   planning_input_.set_q_continuity(config_.q_continuity);
   planning_input_.set_q_acc(config_.q_acc);
   planning_input_.set_q_jerk(config_.q_jerk);
-  planning_input_.set_q_snap(config_.q_snap);
   planning_input_.set_q_acc_bound(config_.q_acc_bound);
   planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
   planning_input_.set_q_soft_corridor(config_.q_soft_corridor);
   planning_input_.set_q_hard_corridor(config_.q_hard_corridor);
 
-  // set u_vec for warm start
-  const auto &motion_planning_info =
-      frame_->mutable_session()->mutable_planning_context()->mutable_planning_result().motion_planning_info;
-  planning_problem_ptr_->SetUvec(motion_planning_info.u_vec);
+  // TODO: set control vec for warm start
 }
 
-void LateralMotionPlanner::GeneratePlanningOutput() {
+void LateralMotionPlanner::Update() {
+  auto solver_condition = planning_problem_ptr_->Update(planning_input_);
+  JSON_DEBUG_VALUE("solver_condition", solver_condition)
+
+  // update planning_output
+  const auto &planning_output = planning_problem_ptr_->GetOutput();
+
   // assembling planning output proto
-  const auto &state_result = planning_problem_ptr_->GetiLqrCorePtr()->GetStateResultPtr();
-  const auto &control_result = planning_problem_ptr_->GetiLqrCorePtr()->GetControlResultPtr();
-  const auto &N = planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon + 1;
-
-  const auto &dt = planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->model_dt;
-
-  double t = 0.0;
-  double s = 0.0;
-  const double kv2 = planning_input_.curv_factor() * pnc::mathlib::Square(planning_input_.ref_vel());
+  const auto N = planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon + 1;
 
   std::vector<double> x_vec(N + 1);
   std::vector<double> y_vec(N + 1);
   std::vector<double> theta_vec(N + 1);
   std::vector<double> delta_vec(N + 1);
   std::vector<double> omega_vec(N + 1);
-  std::vector<double> snap_vec(N + 1);
   std::vector<double> curv_vec(N + 1);
   std::vector<double> d_curv_vec(N + 1);
   std::vector<double> s_vec(N + 1);
 
-  // assemble proto for pnc tools
+  double s = 0.0;
   for (size_t i = 0; i < N; ++i) {
-    planning_output_.mutable_time_vec()->Set(i, t);
-    t += dt;
+    x_vec[i + 1] = planning_output.x_vec(i);
+    y_vec[i + 1] = planning_output.y_vec(i);
+    theta_vec[i + 1] = planning_output.theta_vec(i);  // note that theta cannot be limited with [-pi, pi]
+                                                      // to avoid incorrect spline
+    delta_vec[i + 1] = planning_output.delta_vec(i);
+    curv_vec[i + 1] = planning_input_.curv_factor() * planning_output.delta_vec(i);
 
-    x_vec[i + 1] = state_result->at(i)[pnc::lateral_planning::StateId::X];
-    y_vec[i + 1] = state_result->at(i)[pnc::lateral_planning::StateId::Y];
-    theta_vec[i + 1] =
-        state_result->at(i)[pnc::lateral_planning::StateId::THETA];  // note that theta cannot be limited with [-pi, pi]
-                                                                     // to avoid incorrect spline
-    delta_vec[i + 1] = state_result->at(i)[pnc::lateral_planning::StateId::DELTA];
-    omega_vec[i + 1] = state_result->at(i)[pnc::lateral_planning::StateId::OMEGA];
-    curv_vec[i + 1] = planning_input_.curv_factor() * state_result->at(i)[pnc::lateral_planning::StateId::DELTA];
-    snap_vec[i + 1] = control_result->at(i)[pnc::lateral_planning::ControlId::OMEGA_DOT];
-
-    if (i < N) {
-      planning_output_.mutable_x_vec()->Set(i, state_result->at(i)[pnc::lateral_planning::StateId::X]);
-      planning_output_.mutable_y_vec()->Set(i, state_result->at(i)[pnc::lateral_planning::StateId::Y]);
-      planning_output_.mutable_theta_vec()->Set(i, state_result->at(i)[pnc::lateral_planning::StateId::THETA]);
-      planning_output_.mutable_delta_vec()->Set(i, state_result->at(i)[pnc::lateral_planning::StateId::DELTA]);
-      planning_output_.mutable_omega_vec()->Set(i, state_result->at(i)[pnc::lateral_planning::StateId::OMEGA]);
-      planning_output_.mutable_acc_vec()->Set(i, kv2 * state_result->at(i)[pnc::lateral_planning::StateId::DELTA]);
-      planning_output_.mutable_jerk_vec()->Set(i, kv2 * state_result->at(i)[pnc::lateral_planning::StateId::OMEGA]);
-
-      if (i < N - 1) {
-        planning_output_.mutable_omega_dot_vec()->Set(
-            i, control_result->at(i)[pnc::lateral_planning::ControlId::OMEGA_DOT]);
-
-        d_curv_vec[i + 1] =
-            planning_input_.curv_factor() * control_result->at(i)[pnc::lateral_planning::ControlId::OMEGA_DOT];
-      } else {
-        planning_output_.mutable_omega_dot_vec()->Set(i, planning_output_.omega_dot_vec(i - 1));
-
-        d_curv_vec[i + 1] = d_curv_vec[i];
-      }
-    }
+    omega_vec[i + 1] = planning_output.omega_vec(i);
+    d_curv_vec[i + 1] = planning_input_.curv_factor() * omega_vec[i + 1];
 
     if (i == 0) {
       s = 0.0;
@@ -304,28 +253,6 @@ void LateralMotionPlanner::GeneratePlanningOutput() {
       s += std::max(ds, 1e-3);
     }
     s_vec[i + 1] = s;
-  }
-
-  // load solver and iteration info
-  planning_output_.clear_solver_info();
-
-  const auto &soler_info_ptr = planning_problem_ptr_->GetiLqrCorePtr()->GetSolverInfoPtr();
-
-  planning_output_.mutable_solver_info()->set_solver_condition(soler_info_ptr->solver_condition);
-  planning_output_.mutable_solver_info()->set_cost_size(soler_info_ptr->cost_size);
-  planning_output_.mutable_solver_info()->set_iter_count(soler_info_ptr->iter_count);
-  planning_output_.mutable_solver_info()->set_init_cost(soler_info_ptr->init_cost);
-
-  for (size_t i = 0; i < soler_info_ptr->iter_count; ++i) {
-    const auto &iter_info = planning_output_.mutable_solver_info()->add_iter_info();
-
-    iter_info->set_linesearch_success(soler_info_ptr->iteration_info_vec[i].linesearch_success);
-    iter_info->set_backward_pass_count(soler_info_ptr->iteration_info_vec[i].backward_pass_count);
-    iter_info->set_lambda(soler_info_ptr->iteration_info_vec[i].lambda);
-    iter_info->set_cost(soler_info_ptr->iteration_info_vec[i].cost);
-    iter_info->set_dcost(soler_info_ptr->iteration_info_vec[i].dcost);
-    iter_info->set_expect(soler_info_ptr->iteration_info_vec[i].expect);
-    iter_info->set_du_norm(soler_info_ptr->iteration_info_vec[i].du_norm);
   }
 
   // generate motion planning output into planning_context
@@ -345,7 +272,6 @@ void LateralMotionPlanner::GeneratePlanningOutput() {
   omega_vec[0] = omega_vec[1];
   theta_vec[0] = theta_vec[1];
   curv_vec[0] = curv_vec[1];
-  snap_vec[0] = snap_vec[1];
   d_curv_vec[0] = d_curv_vec[1];
 
   // set state spline
@@ -359,12 +285,13 @@ void LateralMotionPlanner::GeneratePlanningOutput() {
   motion_planning_info.s_lat_vec = s_vec;
 
   ControlVec u_vec;
-  u_vec.resize(snap_vec.size());
+  u_vec.resize(N);
 
-  for (size_t i = 0; i < snap_vec.size(); ++i) {
+  // set u_vec to motion_planning_info for warm start
+  for (size_t i = 0; i < N; ++i) {
     Control u;
     u.resize(1);
-    u[0] = snap_vec[i];
+    u[0] = omega_vec[i];
     u_vec[i] = u;
   }
   motion_planning_info.u_vec = u_vec;
@@ -381,7 +308,7 @@ void LateralMotionPlanner::GeneratePlanningOutput() {
     traj_points[i].curvature = planning_input_.curv_factor() * delta_vec[i + 1];
 
     traj_points[i].v = lat_decider_output.v_cruise;
-    traj_points[i].t = planning_output_.time_vec(i);
+    traj_points[i].t = planning_output.time_vec(i);
 
     // frenet state update
     Point2D cart_pt(traj_points[i].x, traj_points[i].y);

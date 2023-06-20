@@ -233,14 +233,13 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double jerk_bound = 3.5;
   double curv_factor = 0.35;
 
-  double q_ref_x = 15.0;
-  double q_ref_y = 15.0;
-  double q_ref_theta = 10.0;
+  double q_ref_x = 35.0;
+  double q_ref_y = 35.0;
+  double q_ref_theta = 15.0;
 
   double q_continuity = 0.;
-  double q_acc = 1.0;
-  double q_jerk = 1.0;
-  double q_snap = 1.0;
+  double q_acc = 0.5;
+  double q_jerk = 0.6;
 
   double q_acc_bound = 200.0;
   double q_jerk_bound = 500.0;
@@ -259,7 +258,6 @@ struct LongitudinalMotionPlannerConfig : public EgoPlanningConfig {
   double q_ref_vel = 1.0;
   double q_acc = 1.0;
   double q_jerk = 1.0;
-  double q_snap = 1.0;
 
   double q_pos_bound = 2000.0;
   double q_vel_bound = 2000.0;

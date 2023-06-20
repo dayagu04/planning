@@ -63,6 +63,8 @@ message LateralPlanningInput {
 
   optional double q_soft_corridor = 37;
   optional double q_hard_corridor = 38;
+
+  repeated double control_vec = 39;
 }
 
 message SolverIterationInfo {

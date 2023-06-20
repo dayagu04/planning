@@ -38,8 +38,8 @@ class LongitudinalMotionPlanner : public Task {
   bool Execute(planning::framework::Frame *frame);
 
  private:
-  void GeneratePlanningInput();
-  void GeneratePlanningOutput();
+  void AssembleInput();
+  void Update();
 
   Bound s_limit_;
   LongitudinalMotionPlannerConfig config_;
@@ -49,7 +49,6 @@ class LongitudinalMotionPlanner : public Task {
 
   string name_;
   std::shared_ptr<pnc::longitudinal_planning::LongitudinalMotionPlanningProblem> planning_problem_ptr_;
-  planning::common::LongitudinalPlanningOutput planning_output_;
   planning::common::LongitudinalPlanningInput planning_input_;
 };
 

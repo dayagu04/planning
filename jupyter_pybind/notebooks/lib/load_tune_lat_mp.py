@@ -118,6 +118,8 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
     lat_plan_data['data_refline'].data.update({
       'raw_refline_x': raw_refline_x,
       'raw_refline_y': raw_refline_y,
+      'raw_refline_xn': planning_json['raw_refline_x_vec'],
+      'raw_refline_yn': planning_json['raw_refline_y_vec'],
     })
 
     lat_motion_plan_output = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_output
@@ -159,13 +161,6 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
     #   assembled_delta.append(planning_json['assembled_delta'][i] * 57.3 * 15.7)
     #   assembled_omega.append(planning_json['assembled_omega'][i] * 57.3 * 15.7)
 
-    print("dbw_status = ", planning_json['dbw_status'])
-    print("replan_status = ", planning_json['replan_status'])
-    print("lat_err = ", planning_json['lat_err'])
-    print("lon_err = ", planning_json['lon_err'])
-    print("dist_err = ", planning_json['dist_err'])
-    print("solver_condition = ", planning_json['solver_condition'])
-
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
     try:
@@ -189,9 +184,12 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
       'plan_traj_x' : plan_traj_x,
     })
 
+
 def load_lat_plan_figure(fig1):
   data_refline = ColumnDataSource(data = {'raw_refline_x':[],
-                                          'raw_refline_y':[],})
+                                          'raw_refline_y':[],
+                                          'raw_refline_xn':[],
+                                          'raw_refline_yn':[],})
 
   data_lat_motion_plan_input = ColumnDataSource(data = {'ref_x':[],
                                                         'ref_y':[],
@@ -217,7 +215,17 @@ def load_lat_plan_figure(fig1):
                                                          'steer_deg_vec':[],
                                                          'steer_dot_deg_vec':[],
                                                          'acc_vec':[],
-                                                         'jerk_vec':[]
+                                                         'jerk_vec':[],
+                                                         'x_vec_t':[],
+                                                         'y_vec_t':[],
+                                                         'xn_vec_t':[],
+                                                         'yn_vec_t':[],
+                                                         'ref_theta_deg_vec_t':[],
+                                                         'theta_deg_vec_t':[],
+                                                         'steer_deg_vec_t':[],
+                                                         'steer_dot_deg_vec_t':[],
+                                                         'acc_vec_t':[],
+                                                         'jerk_vec_t':[]
                                                         })
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
@@ -243,15 +251,16 @@ def load_lat_plan_figure(fig1):
 
 
   # motion planning
-  fig1.line('ref_y', 'ref_x', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path', visible=False)
+  fig1.line('ref_y', 'ref_x', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path', visible=True)
   fig1.line('soft_upper_bound_y0_vec', 'soft_upper_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 5, line_color = "#90EE90", line_dash = 'solid', line_alpha = 0.7, legend_label = 'soft bound', visible=False)
   fig1.line('soft_lower_bound_y0_vec', 'soft_lower_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 5, line_color = "#90EE90", line_dash = 'solid', line_alpha = 0.7, legend_label = 'soft bound', visible=False)
   fig1.line('hard_upper_bound_y0_vec', 'hard_upper_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 5, line_color = 'black', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard bound', visible=False)
   fig1.line('hard_lower_bound_y0_vec', 'hard_lower_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 5, line_color = 'black', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard bound', visible=False)
   fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=False)
   fig1.line('y_vec', 'x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
+  fig1.line('y_vec_t', 'x_vec_t', source = data_lat_motion_plan_output, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.4, legend_label = 'tuned plan path')
 
-  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
+  # fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
 
   fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 5.2], width=600, height=160)
   fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=600, height=160)
@@ -259,28 +268,38 @@ def load_lat_plan_figure(fig1):
   fig5 = bkp.figure(x_axis_label='time', y_axis_label='steer',x_range = fig2.x_range, width=600, height=160)
   fig6 = bkp.figure(x_axis_label='time', y_axis_label='steer dot',x_range = fig2.x_range, width=600, height=160)
 
-  fig7 = bkp.figure(x_axis_label='y', y_axis_label='x', width=800, height=600, match_aspect = True, aspect_scale=1)
-  fig7.x_range.flipped = True
+  fig7 = bkp.figure(x_axis_label='x', y_axis_label='y', width=800, height=600, match_aspect = True, aspect_scale=1)
+  # fig7.x_range.flipped = True
 
-  fig7.line('ref_yn', 'ref_xn', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path')
-  fig7.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
-  fig7.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
-  fig7.line('yn_vec', 'xn_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
-  fig7.line('plan_traj_yn', 'plan_traj_xn', source = data_planning_n, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
+  fig7.line('ref_xn', 'ref_yn', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path')
+  fig7.line('ego_xn', 'ego_yn', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
+  fig7.patch('car_xn', 'car_yn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
+  fig7.line('xn_vec', 'yn_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
+  fig7.line('xn_vec_t', 'yn_vec_t', source = data_lat_motion_plan_output, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.4, legend_label = 'tuned plan path')
+  fig7.line('raw_refline_xn', 'raw_refline_yn', source = data_refline, line_width = 3, line_color = 'green', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=True)
 
   f2 = fig2.line('time_vec', 'ref_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'ref_theta')
-  fig2.line('time_vec', 'theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'theta')
-  f3 = fig3.line('time_vec', 'acc_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat acc')
-  f4 = fig4.line('time_vec', 'jerk_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat jerk')
-  f5 = fig5.line('time_vec', 'steer_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer deg')
-  f6 = fig6.line('time_vec', 'steer_dot_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer dot deg')
+  fig2.line('time_vec', 'theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin theta')
+  fig2.line('time_vec', 'theta_deg_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned theta')
+
+  f3 = fig3.line('time_vec', 'acc_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin lat acc')
+  fig3.line('time_vec', 'acc_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned lat acc')
+
+  f4 = fig4.line('time_vec', 'jerk_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin lat jerk')
+  fig4.line('time_vec', 'jerk_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned lat jerk')
+
+  f5 = fig5.line('time_vec', 'steer_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin steer deg')
+  fig5.line('time_vec', 'steer_deg_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned steer deg')
+
+  f6 = fig6.line('time_vec', 'steer_dot_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin steer dot deg')
+  fig6.line('time_vec', 'steer_dot_deg_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned steer dot deg')
 
 
-  hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time_vec'), ('ref_theta', '@ref_theta_deg_vec'), ('theta', '@theta_deg_vec')], mode='vline')
-  hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time_vec'), ('acc', '@acc_vec')], mode='vline')
-  hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('jerk', '@jerk_vec')], mode='vline')
-  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('steer', '@steer_deg_vec')], mode='vline')
-  hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('steer dot', '@steer_dot_deg_vec')], mode='vline')
+  hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time_vec'), ('ref_theta', '@ref_theta_deg_vec'), ('origin theta', '@theta_deg_vec'), ('tuned theta', '@theta_deg_vec_t')], mode='vline')
+  hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time_vec'), ('origin acc', '@acc_vec'), ('tuned acc', '@acc_vec_t')], mode='vline')
+  hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('origin jerk', '@jerk_vec'), ('tuned jerk', '@jerk_vec_t')], mode='vline')
+  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('origin steer', '@steer_deg_vec'), ('tuned steer', '@steer_deg_vec_t')], mode='vline')
+  hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('origin steer dot', '@steer_dot_deg_vec'), ('tuned steer dot', '@steer_dot_deg_vec_t')], mode='vline')
 
   fig2.add_tools(hover2)
   fig3.add_tools(hover3)

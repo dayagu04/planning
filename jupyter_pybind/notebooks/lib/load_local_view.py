@@ -65,6 +65,9 @@ class LoadCyberbag:
     # soc state machine
     self.soc_state_msg = {'abs_t':[], 't':[], 'data':[], 'json':[], 'enable':[]}
 
+    # time offset
+    t0 = 0
+
   def load_all_data(self):
     max_time = 0.0
     # load localization msg
@@ -74,7 +77,8 @@ class LoadCyberbag:
         self.loc_msg['t'].append(msg.header.timestamp / 1e6)
         self.loc_msg['abs_t'].append(msg.header.timestamp / 1e6)
         self.loc_msg['data'].append(msg)
-      self.loc_msg['t'] = [tmp - self.loc_msg['t'][0]  for tmp in self.loc_msg['t']]
+      t0 = self.loc_msg['t'][0]
+      self.loc_msg['t'] = [tmp - t0  for tmp in self.loc_msg['t']]
       max_time = max(max_time, self.loc_msg['t'][-1])
       print('loc_msg time:',self.loc_msg['t'][-1])
       if len(self.loc_msg['t']) > 0:
@@ -91,7 +95,7 @@ class LoadCyberbag:
         self.road_msg['t'].append(msg.header.timestamp / 1e6)
         self.road_msg['abs_t'].append(msg.header.timestamp / 1e6)
         self.road_msg['data'].append(msg)
-      self.road_msg['t'] = [tmp - self.road_msg['t'][0]  for tmp in self.road_msg['t']]
+      self.road_msg['t'] = [tmp - t0  for tmp in self.road_msg['t']]
       print('road_msg time:',self.road_msg['t'][-1])
       if len(self.road_msg['t']) > 0:
         self.road_msg['enable'] = True
@@ -107,7 +111,7 @@ class LoadCyberbag:
         self.fus_msg['t'].append(msg.header.timestamp / 1e6)
         self.fus_msg['abs_t'].append(msg.header.timestamp / 1e6)
         self.fus_msg['data'].append(msg)
-      self.fus_msg['t'] = [tmp - self.fus_msg['t'][0]  for tmp in self.fus_msg['t']]
+      self.fus_msg['t'] = [tmp - t0  for tmp in self.fus_msg['t']]
       print('fus_msg time:',self.fus_msg['t'][-1])
       if len(self.fus_msg['t']) > 0:
         self.fus_msg['enable'] = True
@@ -123,7 +127,7 @@ class LoadCyberbag:
         self.vs_msg['t'].append(msg.header.timestamp / 1e6)
         self.vs_msg['abs_t'].append(msg.header.timestamp / 1e6)
         self.vs_msg['data'].append(msg)
-      self.vs_msg['t'] = [tmp - self.vs_msg['t'][0]  for tmp in self.vs_msg['t']]
+      self.vs_msg['t'] = [tmp - t0  for tmp in self.vs_msg['t']]
       self.vs_msg['enable'] = True
       print('vs time:',self.vs_msg['t'][-1])
       max_time = max(max_time, self.vs_msg['t'][-1])
@@ -141,7 +145,7 @@ class LoadCyberbag:
         self.plan_msg['t'].append(msg.meta.header.timestamp / 1e6)
         self.plan_msg['abs_t'].append(msg.meta.header.timestamp / 1e6)
         self.plan_msg['data'].append(msg)
-      self.plan_msg['t'] = [tmp - self.plan_msg['t'][0]  for tmp in self.plan_msg['t']]
+      self.plan_msg['t'] = [tmp - t0  for tmp in self.plan_msg['t']]
       max_time = max(max_time, self.plan_msg['t'][-1])
       print('plan_msg time:',self.plan_msg['t'][-1])
       if len(self.plan_msg['t']) > 0:
@@ -159,7 +163,7 @@ class LoadCyberbag:
         self.prediction_msg['t'].append(msg.header.timestamp / 1e6)
         self.prediction_msg['abs_t'].append(msg.header.timestamp / 1e6)
         self.prediction_msg['data'].append(msg)
-      self.prediction_msg['t'] = [tmp - self.prediction_msg['t'][0]  for tmp in self.prediction_msg['t']]
+      self.prediction_msg['t'] = [tmp - t0  for tmp in self.prediction_msg['t']]
       self.prediction_msg['enable'] = True
       max_time = max(max_time, self.prediction_msg['t'][-1])
       print('prediction_msg time:',self.prediction_msg['t'][-1])
@@ -177,7 +181,8 @@ class LoadCyberbag:
       json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'VisionLonBehavior_a_target_high',
                          "VisionLonBehavior_a_target_low", "VisionLonBehavior_v_target", "VisionLonBehavior_lead_one_id",
                          "VisionLonBehavior_lead_one_dis", "VisionLonBehavior_lead_one_vel", "VisionLonBehavior_lead_two_id",
-                         "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel", "solver_condition", "dist_err", "lat_err", "lon_err"]
+                         "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel", "solver_condition", "dist_err", "lat_err", "lon_err",
+                         "dbw_status"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec"]
 
@@ -195,7 +200,7 @@ class LoadCyberbag:
         except json.decoder.JSONDecodeError as jserr:
           print('except',jserr)
 
-      self.plan_debug_msg['t'] = [tmp - self.plan_debug_msg['t'][0]  for tmp in self.plan_debug_msg['t']]
+      self.plan_debug_msg['t'] = [tmp - t0  for tmp in self.plan_debug_msg['t']]
       max_time = max(max_time, self.plan_debug_msg['t'][-1])
       print('plan_debug_msg time:',self.plan_debug_msg['t'][-1])
       if len(self.plan_debug_msg['t']) > 0:
@@ -213,7 +218,7 @@ class LoadCyberbag:
         self.ctrl_msg['t'].append(msg.header.timestamp / 1e6)
         self.ctrl_msg['abs_t'].append(msg.header.timestamp / 1e6)
         self.ctrl_msg['data'].append(msg)
-      self.ctrl_msg['t'] = [tmp - self.ctrl_msg['t'][0]  for tmp in self.ctrl_msg['t']]
+      self.ctrl_msg['t'] = [tmp - t0  for tmp in self.ctrl_msg['t']]
       max_time = max(max_time, self.ctrl_msg['t'][-1])
       print('ctrl_msg time:',self.ctrl_msg['t'][-1])
       if len(self.ctrl_msg['t']) > 0:
@@ -578,6 +583,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             fig1.renderers[13 + i].glyph.line_dash = 'dotted'
             fig1.renderers[13 + i].glyph.line_alpha = 0.8
             fig1.renderers[13 + i].glyph.line_width = 1
+            
+          if center_line_list[i]['relative_id'] == 1000:  # 车道不存在
+            center_line_list[i]['line_x_vec'] = []
+            center_line_list[i]['line_y_vec'] = []
           data_center_line.data.update({
             'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
             'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
@@ -841,8 +850,8 @@ def load_local_view_figure():
   fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
-  fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
-  fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  # fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  # fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   fig1.line('fix_lane_y', 'fix_lane_x', source = data_fix_lane, line_width = 1, line_color = 'red', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
   fig1.line('target_lane_y', 'target_lane_x', source = data_target_lane, line_width = 1, line_color = 'orange', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'taget_lane')
   fig1.line('origin_lane_y', 'origin_lane_x', source = data_origin_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'origin_lane')

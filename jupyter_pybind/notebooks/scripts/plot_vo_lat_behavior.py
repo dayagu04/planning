@@ -24,7 +24,7 @@ obj_id = 0
 ### sliders config
 class LatBehaviorSlider:
   def __init__(self,  slider_callback):
-    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
+    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=0.1, step=frame_dt)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider)
 
 # 障碍物的id选择
@@ -107,8 +107,8 @@ def obj_id_handler(id):
       'name': names,
       'data': datas,
     })
-    
-  push_notebook()  
+
+  push_notebook()
 
 def update_data(lat_behavior_common, vo_lat_motion_plan):
   vars = ['fix_lane_virtual_id','target_lane_virtual_id','origin_lane_virtual_id',\
@@ -129,7 +129,7 @@ def update_data(lat_behavior_common, vo_lat_motion_plan):
       names.append(name)
     except:
       pass
-  
+
   # 横向运动规划offset 可视化
   names.append('premove_dpoly_c0')
   names.append('avoid_dpoly_c0')
@@ -140,7 +140,7 @@ def update_data(lat_behavior_common, vo_lat_motion_plan):
   behavior_data.data.update({
     'name': names,
     'data': datas,
-  })    
+  })
   push_notebook()
 
 def slider_callback(bag_time):
@@ -150,7 +150,7 @@ def slider_callback(bag_time):
   if bag_loader.plan_debug_msg['enable'] == True:
     while bag_loader.plan_debug_msg['t'][plan_debug_msg_idx] <= bag_time and plan_debug_msg_idx < (len(bag_loader.plan_debug_msg['t'])-2):
         plan_debug_msg_idx = plan_debug_msg_idx + 1
-  
+
   obj_id_handler(obj_id)
   if bag_loader.plan_debug_msg['enable'] == True:
     vo_lat_motion_plan = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].vo_lat_motion_plan
@@ -160,12 +160,12 @@ def slider_callback(bag_time):
     #   'd_poly_y':d_poly_y,
     #   'd_poly_x':d_poly_x
     # })
-    
+
     lat_behavior_common = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lat_behavior_common
     update_data(lat_behavior_common, vo_lat_motion_plan)
 
     lat_behavior_plan = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].vo_lat_behavior_plan
-    
+
     # 可视化avoid cars
     pos_y_rels = []
     pos_x_rels = []
@@ -183,7 +183,7 @@ def slider_callback(bag_time):
       'pos_y':pos_y_rels,
       'pos_x':pos_x_rels,
     })
-    
+
   push_notebook()
 
 
