@@ -40,6 +40,7 @@ void LongitudinalMotionPlanningProblem::Init() {
   ilqr_core_ptr_->AddCost(std::make_shared<LonAccBoundCostTerm>());   // longitudinal acc bound cost
   ilqr_core_ptr_->AddCost(std::make_shared<LonJerkBoundCostTerm>());  // longitudinal jerk bound cost
   ilqr_core_ptr_->AddCost(std::make_shared<LonStopPointCost>());      // longitudinal stop point cost
+  ilqr_core_ptr_->AddCost(std::make_shared<NonNegativeVelCost>());    // longitudinal non-negative vel cost
 
   // STEP 3: init debug info, must run after add cost
   ilqr_core_ptr_->InitAdvancedInfo();
@@ -87,6 +88,8 @@ uint8_t LongitudinalMotionPlanningProblem::Update(planning::common::Longitudinal
     cost_config_vec.at(i)[W_ACC_BOUND] = planning_input.q_acc_bound();
     cost_config_vec.at(i)[W_JERK_BOUND] = planning_input.q_jerk_bound();
     cost_config_vec.at(i)[W_S_STOP] = planning_input.q_stop_s();
+
+    cost_config_vec.at(i)[W_NON_NEGATIVE_VEL] = 2000.0;
 
     if (i == N - 1) {
       cost_config_vec.at(i)[TERMINAL_FLAG] = 1;

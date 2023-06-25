@@ -254,14 +254,14 @@ struct LongitudinalMotionPlannerConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
   }
-  double q_ref_pos = 0.065;
+  double q_ref_pos = 0.06;
   double q_ref_vel = 1.0;
   double q_acc = 1.0;
-  double q_jerk = 1.0;
+  double q_jerk = 2.0;
 
-  double q_pos_bound = 2000.0;
-  double q_vel_bound = 2000.0;
-  double q_acc_bound = 500.0;
+  double q_pos_bound = 1000.0;
+  double q_vel_bound = 400.0;
+  double q_acc_bound = 400.0;
   double q_jerk_bound = 100.0;
   double q_stop_s = 2000.0;
 };

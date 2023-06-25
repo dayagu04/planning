@@ -194,6 +194,12 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
     planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
+    print("dbw_status = ", planning_json['dbw_status'])
+    print("replan_status = ", planning_json['replan_status'])
+    print("lat_err = ", planning_json['lat_err'])
+    print("lon_err = ", planning_json['lon_err'])
+    print("dist_err = ", planning_json['dist_err'])
+
     try:
       json_pos_x = planning_json['ego_pos_x']
       json_pos_y = planning_json['ego_pos_y']

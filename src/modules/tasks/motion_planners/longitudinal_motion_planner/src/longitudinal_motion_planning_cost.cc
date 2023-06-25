@@ -93,6 +93,25 @@ void LonVelBoundCostTerm::GetGradientHessian(const State &x, const Control &, Lx
   }
 }
 
+// non-negative vel cost
+double NonNegativeVelCost::GetCost(const State &x, const Control &) {
+  double cost = 0.0;
+  if (x[VEL] < 0.0) {
+    cost = 0.5 * cost_config_ptr_->at(W_NON_NEGATIVE_VEL) * Square(x[VEL]);
+  }
+
+  return cost;
+}
+
+void NonNegativeVelCost::GetGradientHessian(const State &x, const Control &, LxMT &lx, LuMT &, LxxMT &lxx, LxuMT &,
+                                            LuuMT &) {
+  if (x[VEL] < 0.0) {
+    lx(VEL) += cost_config_ptr_->at(W_NON_NEGATIVE_VEL) * (x[VEL]);
+
+    lxx(VEL, VEL) += cost_config_ptr_->at(W_NON_NEGATIVE_VEL);
+  }
+}
+
 // longitudinal acc bound cost
 double LonAccBoundCostTerm::GetCost(const State &x, const Control &) {
   double cost = 0.0;

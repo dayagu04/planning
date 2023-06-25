@@ -28,6 +28,7 @@ enum iLqrCostconfigId {
   W_JERK_BOUND,
   W_S_STOP,
   TERMINAL_FLAG,
+  W_NON_NEGATIVE_VEL,
   COST_CONFIG_SIZE,
 };
 
@@ -95,6 +96,17 @@ class LonPosBoundCostTerm : public ilqr_solver::BaseCostTerm {
 class LonVelBoundCostTerm : public ilqr_solver::BaseCostTerm {
  public:
   LonVelBoundCostTerm() = default;
+  double GetCost(const State &x, const Control & /*u*/) override;
+  void GetGradientHessian(const State &x, const Control & /*u*/, LxMT &lx, LuMT & /*lu*/, LxxMT &lxx, LxuMT & /*lxu*/,
+                          LuuMT & /*luu*/) override;
+  std::string GetCostString() override { return typeid(this).name(); }
+  uint8_t GetCostId() override { return LON_VEL_BOUND_COST; }
+};
+
+// non-negative vel cost
+class NonNegativeVelCost : public ilqr_solver::BaseCostTerm {
+ public:
+  NonNegativeVelCost() = default;
   double GetCost(const State &x, const Control & /*u*/) override;
   void GetGradientHessian(const State &x, const Control & /*u*/, LxMT &lx, LuMT & /*lu*/, LxxMT &lxx, LxuMT & /*lxu*/,
                           LuuMT & /*luu*/) override;

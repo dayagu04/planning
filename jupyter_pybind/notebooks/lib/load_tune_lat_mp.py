@@ -160,6 +160,11 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
     # for i in range(len(planning_json['assembled_delta'])):
     #   assembled_delta.append(planning_json['assembled_delta'][i] * 57.3 * 15.7)
     #   assembled_omega.append(planning_json['assembled_omega'][i] * 57.3 * 15.7)
+    print("dbw_status = ", planning_json['dbw_status'])
+    print("replan_status = ", planning_json['replan_status'])
+    print("lat_err = ", planning_json['lat_err'])
+    print("lon_err = ", planning_json['lon_err'])
+    print("dist_err = ", planning_json['dist_err'])
 
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
