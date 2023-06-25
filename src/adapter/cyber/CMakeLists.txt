@@ -26,5 +26,3 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     NanoLog
   )
 endif()
-
-set(CONFIG_PATH "/asw/planning/res/conf" CACHE INTERNEL "config file path")

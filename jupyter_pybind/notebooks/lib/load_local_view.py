@@ -337,11 +337,18 @@ class LoadCyberbag:
       self.soc_state_msg,
     ]
 
+    topic_list_with_hz = topic_list
+    for i in range(len(topic_list)):
+      if len(data_list[i]['t']) != 0:
+        time_span = max(data_list[i]['abs_t']) - min(data_list[i]['abs_t'])
+        hz = int(len(data_list[i]['t']) / time_span) if time_span != 0.0 else 0
+        topic_list_with_hz[i] += ' (' + str(hz) + 'hz)'
+
     data = {'topic':[], 't':[], 'msg':[]}
     min_time = sys.maxsize
     for i in range(len(topic_list)):
       for j in range(len(data_list[i]['abs_t'])):
-        data['topic'].append(topic_list[i])
+        data['topic'].append(topic_list_with_hz[i])
         if topic_list[i] in detail_list:
           data['msg'].append(MessageToJson(data_list[i]['data'][j]))
         else:

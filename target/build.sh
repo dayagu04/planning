@@ -3,12 +3,7 @@
 SCRIPT_DIR=$(dirname "$0")
 cd $SCRIPT_DIR/..
 
-mkdir build
-cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j
-make install
-cd ..
+make build BUILD_TYPE=Release PLATFORM=BZT
 
 cp target/README.md install/planning/
 cp CHANGELOG.md install/planning/

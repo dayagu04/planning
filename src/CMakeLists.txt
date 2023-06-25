@@ -1,12 +1,37 @@
 cmake_minimum_required(VERSION 3.0)
 # no project name in src
 
-if(ADAPTER STREQUAL "cyber")
-  add_subdirectory(adapter/cyber)
-  add_subdirectory(apa_simulation)
-elseif(ADAPTER STREQUAL "ap")
-  # add_subdirectory((adapter/ap)
+if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
+  message (STATUS "Set CMAKE_BUILD_TYPE to default: ${CMAKE_BUILD_TYPE}")
 endif()
+
+if(NOT ADAPTER OR ADAPTER STREQUAL "")
+  set(ADAPTER "cyber" CACHE STRING "" FORCE)
+  message (STATUS "Set ADAPTER to default: ${ADAPTER}")
+endif()
+
+if(NOT PLATFORM OR ADAPTER STREQUAL "")
+  set(PLATFORM "BZT" CACHE STRING "" FORCE)
+  message (STATUS "Set PLATFORM to default: ${PLATFORM}")
+endif()
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g -fPIC -fpermissive")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D${PLATFORM}")
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  message("Building in Release mode")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
+else()
+  message("Building in Debug mode")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
+endif()
+
+message("CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}")
 
 add_subdirectory(proto EXCLUDE_FROM_ALL)
 add_subdirectory(common EXCLUDE_FROM_ALL)
@@ -23,6 +48,15 @@ add_subdirectory(thirdparty/osqp EXCLUDE_FROM_ALL)
 add_subdirectory(thirdparty/nlohmann_json EXCLUDE_FROM_ALL)
 add_subdirectory(thirdparty/hfsm EXCLUDE_FROM_ALL)
 add_subdirectory(thirdparty/interface/src/proto EXCLUDE_FROM_ALL)
+
+if(ADAPTER STREQUAL "cyber")
+  add_subdirectory(adapter/cyber)
+  add_subdirectory(apa_simulation)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCYBER_ENV")
+elseif(ADAPTER STREQUAL "ap")
+  # add_subdirectory((adapter/ap)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DAP_ENV")
+endif()
 
 file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning)
 file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning/res)
@@ -50,3 +84,5 @@ endif()
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning
   DESTINATION /asw)
+
+set(CONFIG_PATH "/asw/planning/res/conf" CACHE INTERNEL "config file path")

@@ -1,3 +1,6 @@
 [submodule "src/thirdparty/interface"]
 	path = src/thirdparty/interface
 	url = ../interface.git
+[submodule ".ci"]
+	path = .ci
+	url = ../../nywang/ci.git
