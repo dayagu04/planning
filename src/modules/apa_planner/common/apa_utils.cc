@@ -194,7 +194,7 @@ void SetFailedPlanningOutput(Frame* const frame) {
   SetStoppingPlanningOutput(frame);
 }
 
-bool IsValidPakingState(const FuncStateMachine& func_state_machine) {
+bool IsValidParkingState(const FuncStateMachine& func_state_machine) {
   if (!func_state_machine.has_current_state()) {
     AERROR << "func_state_machine is invalid";
     return false;
