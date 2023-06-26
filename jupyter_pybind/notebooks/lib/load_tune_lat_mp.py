@@ -26,7 +26,13 @@ from cyber_record.record import Record
 car_xb, car_yb = load_car_params_patch()
 coord_tf = coord_transformer()
 
-def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
+def normalize_vector(v):
+    norm = np.linalg.norm(v)
+    if norm == 0:
+        return v
+    return v / norm
+
+def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, upper_safe_bound, lower_safe_bound):
 
   loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
   road_msg_idx = local_view_data['data_index']['road_msg_idx']
@@ -84,11 +90,36 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
     ref_x, ref_y = coord_tf.global_to_local(lat_motion_plan_input.ref_x_vec, \
       lat_motion_plan_input.ref_y_vec)
 
-    soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_upper_bound_x0_vec, \
-      lat_motion_plan_input.soft_upper_bound_y0_vec)
+    # tune the path bound and soft bound
+    tmp_soft_upper_bound_x0_vec = []
+    tmp_soft_upper_bound_y0_vec = []
 
-    soft_lower_bound_x0_vec, soft_lower_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_lower_bound_x0_vec, \
-      lat_motion_plan_input.soft_lower_bound_y0_vec)
+    tmp_soft_lower_bound_x0_vec = []
+    tmp_soft_lower_bound_y0_vec = []
+    for i in range(len(lat_motion_plan_input.soft_upper_bound_x0_vec)):
+      upper_unit_vector = [lat_motion_plan_input.soft_upper_bound_x0_vec[i] - lat_motion_plan_input.soft_lower_bound_x0_vec[i], lat_motion_plan_input.soft_upper_bound_y0_vec[i] - lat_motion_plan_input.soft_lower_bound_y0_vec[i]]
+      upper_unit_vector = list(normalize_vector(upper_unit_vector))
+      #lat_motion_plan_input.soft_upper_bound_x0_vec[i] = lat_motion_plan_input.soft_upper_bound_x0_vec[i] + upper_unit_vector[0]*upper_safe_bound
+      #lat_motion_plan_input.soft_upper_bound_y0_vec[i] = lat_motion_plan_input.soft_upper_bound_y0_vec[i] + upper_unit_vector[1]*upper_safe_bound
+      tmp_soft_upper_bound_x0_vec.append(lat_motion_plan_input.soft_upper_bound_x0_vec[i] + upper_unit_vector[0]*upper_safe_bound)
+      tmp_soft_upper_bound_y0_vec.append(lat_motion_plan_input.soft_upper_bound_y0_vec[i] + upper_unit_vector[1]*upper_safe_bound)
+
+      lower_unit_vector = [lat_motion_plan_input.soft_lower_bound_x0_vec[i] - lat_motion_plan_input.soft_upper_bound_x0_vec[i], lat_motion_plan_input.soft_lower_bound_y0_vec[i] - lat_motion_plan_input.soft_upper_bound_y0_vec[i]]
+      lower_unit_vector = list(normalize_vector(lower_unit_vector))
+      tmp_soft_lower_bound_x0_vec.append(lat_motion_plan_input.soft_lower_bound_x0_vec[i] + lower_unit_vector[0]*lower_safe_bound)
+      tmp_soft_lower_bound_y0_vec.append(lat_motion_plan_input.soft_lower_bound_y0_vec[i] + lower_unit_vector[1]*lower_safe_bound)
+    try:
+      soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = coord_tf.global_to_local(tmp_soft_upper_bound_x0_vec, \
+        tmp_soft_upper_bound_y0_vec)
+
+      soft_lower_bound_x0_vec, soft_lower_bound_y0_vec = coord_tf.global_to_local(tmp_soft_lower_bound_x0_vec, \
+        tmp_soft_lower_bound_y0_vec)
+    except:
+      soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_upper_bound_x0_vec, \
+        lat_motion_plan_input.soft_upper_bound_y0_vec)
+
+      soft_lower_bound_x0_vec, soft_lower_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_lower_bound_x0_vec, \
+        lat_motion_plan_input.soft_lower_bound_y0_vec)
 
     hard_upper_bound_x0_vec, hard_upper_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.hard_upper_bound_x0_vec, \
       lat_motion_plan_input.hard_upper_bound_y0_vec)

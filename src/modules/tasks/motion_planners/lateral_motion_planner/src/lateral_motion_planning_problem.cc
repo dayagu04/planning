@@ -1,9 +1,12 @@
 #include "lateral_motion_planning_problem.h"
+
 #include <stdio.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <memory>
+
 #include "ilqr_core.h"
 
 using namespace ilqr_solver;
@@ -35,8 +38,8 @@ void LateralMotionPlanningProblem::Init() {
   ilqr_core_ptr_->AddCost(std::make_shared<LatAccBoundCostTerm>());   // lateral acc bound cost
   ilqr_core_ptr_->AddCost(std::make_shared<LatJerkBoundCostTerm>());  // lateral jerk bound cost
   // ilqr_core_ptr_->AddCost(
-  //     std::make_shared<PathSoftCorridorCostTerm>()); // path soft corridor
-  //                                                    // cost
+  //      std::make_shared<PathSoftCorridorCostTerm>()); // path soft corridor
+  //                                                     // cost
 
   // STEP 3: init debug info, must run after add cost
   ilqr_core_ptr_->InitAdvancedInfo();

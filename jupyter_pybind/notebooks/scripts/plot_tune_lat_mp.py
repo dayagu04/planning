@@ -11,7 +11,7 @@ from python_proto import common_pb2, lateral_motion_planner_pb2
 from jupyter_pybind import lateral_motion_planning_py
 
 # bag path and frame dt
-bag_path = "/home/xlwang71/Downloads/0614/long_time_hualong_1.00000.1687105422.plan"
+bag_path = "/home/cailiu2/docker_share/0616/long_time_1.00000"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -44,6 +44,10 @@ class LocalViewSlider:
     self.q_jerk_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_jerk_bound",min=0.0, max=1000.0, value=lat_motion_plan_input0.q_jerk_bound, step=0.1)
     self.acc_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "acc_bound",min=0.0, max=10.0, value=lat_motion_plan_input0.acc_bound, step=0.1)
     self.jerk_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "jerk_bound",min=0.0, max=10.0, value=lat_motion_plan_input0.jerk_bound, step=0.1)
+    self.q_safe_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_safe_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_soft_corridor, step=0.1) # fbi warning
+    self.q_hard_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_hard_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_hard_corridor, step=0.1) # fbi warning
+    self.upper_safe_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "upper_safe_bound",min=-10., max=10.0, value=0.0, step=0.1) # fbi warning
+    self.lower_safe_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "lower_safe_bound",min=-10., max=10.0, value=0.0, step=0.1) # fbi warning
 
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
                                          q_ref_xy = self.q_ref_xy_slider,
@@ -54,14 +58,18 @@ class LocalViewSlider:
                                          q_jerk_bound = self.q_jerk_bound_slider,
                                          acc_bound = self.acc_bound_slider,
                                          jerk_bound = self.jerk_bound_slider,
+                                         q_safe_bound = self.q_safe_bound_slider,
+                                         q_hard_bound = self.q_hard_bound_slider,
+                                         upper_safe_bound = self.upper_safe_bound,
+                                         lower_safe_bound = self.lower_safe_bound
                                          )
 
 
 ### sliders callback
-def slider_callback(bag_time, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound):
+def slider_callback(bag_time, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound,q_hard_bound, upper_safe_bound, lower_safe_bound):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
-  update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data)
+  update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data,upper_safe_bound, lower_safe_bound)
 
   plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
   loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
@@ -69,7 +77,7 @@ def slider_callback(bag_time, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound,
   lat_motion_plan_input = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_input
 
   input_string = lat_motion_plan_input.SerializeToString()
-  lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound)
+  lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound, upper_safe_bound, lower_safe_bound)
 
   planning_output = lateral_motion_planner_pb2.LateralPlanningOutput()
   output_string_tmp = lateral_motion_planning_py.GetOutputBytes()
