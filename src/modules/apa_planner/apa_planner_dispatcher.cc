@@ -27,6 +27,14 @@ void ApaPlannerDispatcher::RegisterPlanners() {
 bool ApaPlannerDispatcher::Update(Frame* const frame) {
   const auto& func_state_machine = frame->session()->environmental_model().get_local_view().function_state_machine_info;
 
+  if (!IsValidParkingState(func_state_machine)) {
+    frame->mutable_session()
+        ->mutable_planning_output_context()
+        ->mutable_planning_status()
+        ->planning_result.planning_output.Clear();
+    return false;
+  }
+
   if (func_state_machine.has_current_state() &&
       func_state_machine.current_state() == FunctionalState::PARK_IN_COMPLETED) {
     AINFO << "apa parking in is finished";
@@ -47,10 +55,6 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
       AERROR << "apa parking in is failed, stop planning";
       return true;
     }
-  }
-
-  if (!IsValidPakingState(func_state_machine)) {
-    return false;
   }
 
   if (!IsReplanNecessary(func_state_machine)) {

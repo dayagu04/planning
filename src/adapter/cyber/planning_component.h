@@ -13,10 +13,13 @@ using autoplt::ADSNode;
 class PlanningComponent final : public autoplt::ADSTimerCoponent {
  public:
   PlanningComponent() = default;
-  ~PlanningComponent() = default;
+  ~PlanningComponent();
 
   bool Init() override;
   bool Proc() override;
+
+ private:
+  void InitLogger();
 
  private:
   std::shared_ptr<ADSNode> planning_node_ = nullptr;

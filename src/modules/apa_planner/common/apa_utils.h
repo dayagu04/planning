@@ -34,5 +34,5 @@ void SetFinishedPlanningOutput(framework::Frame* const frame);
 
 void SetFailedPlanningOutput(framework::Frame* const frame);
 
-bool IsValidPakingState(const FuncStateMachine::FuncStateMachine& func_state_machine);
+bool IsValidParkingState(const FuncStateMachine::FuncStateMachine& func_state_machine);
 }  // namespace  planning

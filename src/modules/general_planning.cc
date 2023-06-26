@@ -38,7 +38,7 @@ bool GeneralPlanning::RunOnce(const LocalView &local_view, PlanningOutput::Plann
   // for apa planner test
   const auto& func_state_machine = local_view.function_state_machine_info;
   session_.set_default_scene_type(planning::common::SceneType::HIGHWAY);
-  if (IsValidPakingState(func_state_machine)) {
+  if (IsValidParkingState(func_state_machine)) {
     session_.set_default_scene_type(planning::common::SceneType::PARKING);
   }
   if (session_.is_parking_scene()) {
