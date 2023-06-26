@@ -73,9 +73,10 @@ bool IsDoubleEqual(double a, double b, double eps) {
   }
 }
 
-bool PolynomialFitting(size_t order, std::vector<double> &coef_vec, std::vector<double> &x_vec,
-                       std::vector<double> &y_vec) {
-  if (order < 1 || x_vec.size() < order + 1 || y_vec.size() < order + 1 || x_vec.size() != y_vec.size()) {
+bool PolynomialFitting(size_t order, std::vector<double> &coef_vec,
+                       std::vector<double> &x_vec, std::vector<double> &y_vec) {
+  if (order < 1 || x_vec.size() < order + 1 || y_vec.size() < order + 1 ||
+      x_vec.size() != y_vec.size()) {
     return false;
   }
 
@@ -86,9 +87,11 @@ bool PolynomialFitting(size_t order, std::vector<double> &coef_vec, std::vector<
   Eigen::Map<Eigen::VectorXd> sampleX(x_vec.data(), x_vec.size());
   Eigen::Map<Eigen::VectorXd> sampleY(y_vec.data(), y_vec.size());
 
-  Eigen::MatrixXd mtxVandermonde(x_vec.size(),
-                                 order + 1);  // Vandermonde matrix of X-axis coordinate vector of sample data
-  Eigen::VectorXd colVandermonde = sampleX;   // Vandermonde column
+  Eigen::MatrixXd mtxVandermonde(
+      x_vec.size(),
+      order +
+          1);  // Vandermonde matrix of X-axis coordinate vector of sample data
+  Eigen::VectorXd colVandermonde = sampleX;  // Vandermonde column
 
   // construct Vandermonde matrix column by column
   for (size_t i = 0; i < order + 1; ++i) {
@@ -106,7 +109,8 @@ bool PolynomialFitting(size_t order, std::vector<double> &coef_vec, std::vector<
 
   // calculate coefficients vector of fitted polynomial
   Eigen::VectorXd result =
-      (mtxVandermonde.transpose() * mtxVandermonde).inverse() * (mtxVandermonde.transpose()) * sampleY;
+      (mtxVandermonde.transpose() * mtxVandermonde).inverse() *
+      (mtxVandermonde.transpose()) * sampleY;
 
   // Eigen::VectorXd::Map(&coef_vec[0], result.size()) = result;
   for (size_t i = 0; i < order + 1; ++i) {

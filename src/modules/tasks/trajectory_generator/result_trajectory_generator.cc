@@ -12,8 +12,9 @@ using namespace std;
 using namespace planning::planning_math;
 using namespace pnc::mathlib;
 
-ResultTrajectoryGenerator::ResultTrajectoryGenerator(const EgoPlanningConfigBuilder *config_builder,
-                                                     const std::shared_ptr<TaskPipelineContext> &pipeline_context)
+ResultTrajectoryGenerator::ResultTrajectoryGenerator(
+    const EgoPlanningConfigBuilder *config_builder,
+    const std::shared_ptr<TaskPipelineContext> &pipeline_context)
     : Task(config_builder, pipeline_context) {
   config_ = config_builder->cast<ResultTrajectoryGeneratorConfig>();
   name_ = "ResultTrajectoryGenerator";
@@ -33,8 +34,10 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
   // Step 1) get x,y of trajectory points
   auto &traj_points = ego_planning_result.traj_points;
   // const auto &num_point = traj_points.size();
-  auto &motion_planning_info =
-      frame_->mutable_session()->mutable_planning_context()->mutable_planning_result().motion_planning_info;
+  auto &motion_planning_info = frame_->mutable_session()
+                                   ->mutable_planning_context()
+                                   ->mutable_planning_result()
+                                   .motion_planning_info;
 
   pnc::mathlib::spline s_t_spline;
   pnc::mathlib::spline l_t_spline;
@@ -56,7 +59,8 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
     if (config_.is_pwj_planning) {
       Point2D frenet_pt{traj_points[i].s, traj_points[i].l};
       Point2D cart_pt;
-      if (frenet_coord_->FrenetCoord2CartCoord(frenet_pt, cart_pt) != TRANSFORM_SUCCESS) {
+      if (frenet_coord_->FrenetCoord2CartCoord(frenet_pt, cart_pt) !=
+          TRANSFORM_SUCCESS) {
         LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
         return false;
       }
@@ -64,8 +68,8 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
       traj_points[i].x = cart_pt.x;
       traj_points[i].y = cart_pt.y;
 
-      LOG_DEBUG("result traj_point s=%f, l=%f, x=%f, y=%f \n", traj_points[i].s, traj_points[i].l, traj_points[i].x,
-                traj_points[i].y);
+      LOG_DEBUG("result traj_point s=%f, l=%f, x=%f, y=%f \n", traj_points[i].s,
+                traj_points[i].l, traj_points[i].x, traj_points[i].y);
     }
     t_vec[i] = traj_points[i].t;
     s_vec[i] = traj_points[i].s;
@@ -83,11 +87,13 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
   ddkappa_t_spline.set_points(t_vec, ddkappa_vec);
 
   // Step 2) get dense trajectory points
-  auto &planning_init_point = reference_path_ptr_->get_frenet_ego_state().planning_init_point();
+  auto &planning_init_point =
+      reference_path_ptr_->get_frenet_ego_state().planning_init_point();
   // double init_point_relative_time = planning_init_point.relative_time;
 
   std::vector<TrajectoryPoint> dense_traj_points;
-  int dense_num_points = int(traj_points.back().t / config_.planning_result_delta_time) + 1;
+  int dense_num_points =
+      int(traj_points.back().t / config_.planning_result_delta_time) + 1;
 
   for (int j = 0; j < dense_num_points; ++j) {
     TrajectoryPoint traj_pt;
@@ -110,7 +116,8 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
   }
 
   // Step 3) extends to max length if needed
-  double desired_length = planning_init_point.frenet_state.s + config_.min_path_length;
+  double desired_length =
+      planning_init_point.frenet_state.s + config_.min_path_length;
 
   while (dense_traj_points.back().s < desired_length) {
     auto traj_pt = dense_traj_points.back();
@@ -119,7 +126,8 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
 
     Point2D frenet_pt{traj_pt.s, traj_pt.l};
     Point2D cart_pt;
-    if (frenet_coord_->FrenetCoord2CartCoord(frenet_pt, cart_pt) != TRANSFORM_SUCCESS) {
+    if (frenet_coord_->FrenetCoord2CartCoord(frenet_pt, cart_pt) !=
+        TRANSFORM_SUCCESS) {
       LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
       return false;
     }

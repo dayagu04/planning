@@ -19,19 +19,26 @@
   { 1.0f, 2.0f, 2.0f, 1.0f }
 #define BUTTER_COEF_4TH \
   { 1.0f, 2.613125929752753f, 3.414213562373095f, 2.613125929752753f, 1.0f }
-#define BUTTER_COEF_5TH \
-  { 1.0f, 3.236067977499789f, 5.236067977499789f, 5.236067977499789f, 3.236067977499789f, 1.0f }
-#define BUTTER_COEF_6TH \
-  { 1.0f, 3.863703305156273f, 7.464101615137753f, 9.141620172685640f, 7.464101615137753f, 3.863703305156273f, 1.0f }
-#define BUTTER_COEF_7TH                                                                                           \
-  {                                                                                                               \
-    1.0f, 4.493959207434933f, 10.097834679044610f, 14.591793886479543f, 14.591793886479543f, 10.097834679044610f, \
-        4.493959207434933f, 1.0f                                                                                  \
+#define BUTTER_COEF_5TH                                               \
+  {                                                                   \
+    1.0f, 3.236067977499789f, 5.236067977499789f, 5.236067977499789f, \
+        3.236067977499789f, 1.0f                                      \
   }
-#define BUTTER_COEF_8TH                                                                                           \
-  {                                                                                                               \
-    1.0f, 5.125830895483012f, 13.137071184544089f, 21.846150969207624f, 25.688355931461274f, 21.846150969207628f, \
-        13.137071184544089f, 5.125830895483013f, 1.0f                                                             \
+#define BUTTER_COEF_6TH                                               \
+  {                                                                   \
+    1.0f, 3.863703305156273f, 7.464101615137753f, 9.141620172685640f, \
+        7.464101615137753f, 3.863703305156273f, 1.0f                  \
+  }
+#define BUTTER_COEF_7TH                                                    \
+  {                                                                        \
+    1.0f, 4.493959207434933f, 10.097834679044610f, 14.591793886479543f,    \
+        14.591793886479543f, 10.097834679044610f, 4.493959207434933f, 1.0f \
+  }
+#define BUTTER_COEF_8TH                                                 \
+  {                                                                     \
+    1.0f, 5.125830895483012f, 13.137071184544089f, 21.846150969207624f, \
+        25.688355931461274f, 21.846150969207628f, 13.137071184544089f,  \
+        5.125830895483013f, 1.0f                                        \
   }
 
 #ifndef C_PI_F
@@ -43,7 +50,8 @@ namespace filters {
 /* ------------------------------------------ Butterworth filters
  * ------------------------------------------ */
 using namespace mathlib;
-void ButterworthFilter::SetBasicCoef(double *coef, int Np, double fc, double fs) {
+void ButterworthFilter::SetBasicCoef(double *coef, int Np, double fc,
+                                     double fs) {
   /* predistoration to ensure accurate phase in fc */
   double fd = Predistoration(fc, fs);
 
@@ -87,7 +95,8 @@ void ButterworthFilter::SetBasicCoef(double *coef, int Np, double fc, double fs)
   }
 }
 
-void ButterworthFilter::SetTFCoef(int Np, int Nz, double fp, double fz, double fs) {
+void ButterworthFilter::SetTFCoef(int Np, int Nz, double fp, double fz,
+                                  double fs) {
   Np_ = Np;
   Nz_ = Nz;
   fp_ = fp;
@@ -102,7 +111,9 @@ void ButterworthFilter::GetCoefPolesZeros(double *coef_p, double *coef_z) {
   memcpy(coef_z, coef_z_, (Nz_ + 1) * sizeof(double));
 }
 
-double ButterworthFilter::Predistoration(double fc, double fs) { return (fs / C_PI_F) * tanf(C_PI_F / fs * fc); }
+double ButterworthFilter::Predistoration(double fc, double fs) {
+  return (fs / C_PI_F) * tanf(C_PI_F / fs * fc);
+}
 
 void ButterworthFilter::Set1stCoef(double *coef) {
   double coef_norm[] = BUTTER_COEF_1ST;
@@ -144,7 +155,8 @@ void ButterworthFilter::Set8thCoef(double *coef) {
   memcpy(coef, coef_norm, 9 * sizeof(double));
 }
 
-void ButterworthFilter1st::InitButterSysLowpass(int Nz, double fp, double fz, double fs) {
+void ButterworthFilter1st::InitButterSysLowpass(int Nz, double fp, double fz,
+                                                double fs) {
   if (Nz > 1) {
     Nz = 1;
   }
@@ -171,7 +183,8 @@ void ButterworthFilter1st::SwitchBuf(double u, double y) {
   x_ = 1.0 / (1 - Ad_) * Bd_ * u_;
 }
 
-void ButterworthFilter2nd::InitButterSysLowpass(int Nz, double fp, double fz, double fs) {
+void ButterworthFilter2nd::InitButterSysLowpass(int Nz, double fp, double fz,
+                                                double fs) {
   if (Nz > 2) {
     Nz = 2;
   }
@@ -198,7 +211,8 @@ void ButterworthFilter2nd::SwitchBuf(double u, double y) {
   x_ = tmp.inverse() * Bd_ * u_;
 }
 
-void ButterworthFilter3rd::InitButterSysLowpass(int Nz, double fp, double fz, double fs) {
+void ButterworthFilter3rd::InitButterSysLowpass(int Nz, double fp, double fz,
+                                                double fs) {
   if (Nz > 3) {
     Nz = 3;
   }
@@ -225,7 +239,8 @@ void ButterworthFilter3rd::SwitchBuf(double u, double y) {
   x_ = tmp.inverse() * Bd_ * u_;
 }
 
-void ButterworthFilter4th::InitButterSysLowpass(int Nz, double fp, double fz, double fs) {
+void ButterworthFilter4th::InitButterSysLowpass(int Nz, double fp, double fz,
+                                                double fs) {
   if (Nz > 4) {
     Nz = 4;
   }
@@ -252,7 +267,8 @@ void ButterworthFilter4th::SwitchBuf(double u, double y) {
   x_ = tmp.inverse() * Bd_ * u_;
 }
 
-void ButterworthFilter5th::InitButterSysLowpass(int Nz, double fp, double fz, double fs) {
+void ButterworthFilter5th::InitButterSysLowpass(int Nz, double fp, double fz,
+                                                double fs) {
   if (Nz > 5) {
     Nz = 5;
   }
@@ -275,11 +291,13 @@ void ButterworthFilter5th::SwitchBuf(double u, double y) {
   u_(0, 0) = u;
   y_(0, 0) = y;
   // x_ = Ad_ * x_ + Bd_ * u_;
-  Eigen::Matrix<double, 5, 5> tmp = Eigen::Matrix<double, 5, 5>::Identity() - Ad_;
+  Eigen::Matrix<double, 5, 5> tmp =
+      Eigen::Matrix<double, 5, 5>::Identity() - Ad_;
   x_ = tmp.inverse() * Bd_ * u_;
 }
 
-void ButterworthFilter6th::InitButterSysLowpass(int Nz, double fp, double fz, double fs) {
+void ButterworthFilter6th::InitButterSysLowpass(int Nz, double fp, double fz,
+                                                double fs) {
   if (Nz > 6) {
     Nz = 6;
   }
@@ -302,7 +320,8 @@ void ButterworthFilter6th::SwitchBuf(double u, double y) {
   u_(0, 0) = u;
   y_(0, 0) = y;
   // x_ = Ad_ * x_ + Bd_ * u_;
-  Eigen::Matrix<double, 6, 6> tmp = Eigen::Matrix<double, 6, 6>::Identity() - Ad_;
+  Eigen::Matrix<double, 6, 6> tmp =
+      Eigen::Matrix<double, 6, 6>::Identity() - Ad_;
   x_ = tmp.inverse() * Bd_ * u_;
 }
 
@@ -313,8 +332,9 @@ void SlopeFilter::Reset() {
   last_state_ = 0.0;
 }
 
-void SlopeFilter::Init(double state, double min_update_rate, double max_update_rate, double min_limit, double max_limit,
-                       double dt) {
+void SlopeFilter::Init(double state, double min_update_rate,
+                       double max_update_rate, double min_limit,
+                       double max_limit, double dt) {
   init_flag_ = true;
   state_ = state;
   last_state_ = state;
@@ -325,7 +345,8 @@ void SlopeFilter::Init(double state, double min_update_rate, double max_update_r
   dt_ = dt;
 }
 
-void SlopeFilter::Init(double min_update_rate, double max_update_rate, double min_limit, double max_limit, double dt) {
+void SlopeFilter::Init(double min_update_rate, double max_update_rate,
+                       double min_limit, double max_limit, double dt) {
   min_update_rate_ = min_update_rate;
   max_update_rate_ = max_update_rate;
   max_limit_ = max_limit;
@@ -464,7 +485,8 @@ void Differentiator5th::SwitchBuf(double u, double y) {
   u_(0, 0) = u;
   y_(0, 0) = y;
   // x_ = Ad_ * x_ + Bd_ * u_;
-  Eigen::Matrix<double, 5, 5> tmp = Eigen::Matrix<double, 5, 5>::Identity() - Ad_;
+  Eigen::Matrix<double, 5, 5> tmp =
+      Eigen::Matrix<double, 5, 5>::Identity() - Ad_;
   x_ = tmp.inverse() * Bd_ * u_;
 }
 
@@ -483,13 +505,17 @@ void Differentiator6th::SwitchBuf(double u, double y) {
   u_(0, 0) = u;
   y_(0, 0) = y;
   // x_ = Ad_ * x_ + Bd_ * u_;
-  Eigen::Matrix<double, 6, 6> tmp = Eigen::Matrix<double, 6, 6>::Identity() - Ad_;
+  Eigen::Matrix<double, 6, 6> tmp =
+      Eigen::Matrix<double, 6, 6>::Identity() - Ad_;
   x_ = tmp.inverse() * Bd_ * u_;
 }
 
-double NotchFilter::Predistoration(double fc, double fs) { return (fs / C_PI_F) * tanf(C_PI_F / fs * fc); }
+double NotchFilter::Predistoration(double fc, double fs) {
+  return (fs / C_PI_F) * tanf(C_PI_F / fs * fc);
+}
 
-void NotchFilter::InitNotchFilter(double fn, double bw, double gain, double fs) {
+void NotchFilter::InitNotchFilter(double fn, double bw, double gain,
+                                  double fs) {
   fn_ = fn;
   gain_ = gain;
   bw_ = bw;

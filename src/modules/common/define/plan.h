@@ -47,9 +47,10 @@ enum MSDVelocityAvailable {
 
 struct MSDVelocityPoint {
   double target_velocity;  // target velocity in current point
-  double relative_time;    // relative time from start point of plan to current point.
-  double distance;         // trajectory distance from start point of plan to current
+  double relative_time;    // relative time from start point of plan to current
                            // point.
+  double distance;  // trajectory distance from start point of plan to current
+                    // point.
 };
 
 struct MSDVelocity {
@@ -130,24 +131,27 @@ enum MSDScene {
 };
 
 enum MSDAction {
-  MSD_ACTION_LANE_CHANGE_LEFT = 1,                     // lane change left
-  MSD_ACTION_LANE_CHANGE_RIGHT = 2,                    // lane change right
-  MSD_ACTION_LANE_BORROW_LEFT = 4,                     // lane borrow left
-  MSD_ACTION_LANE_BORROW_RIGHT = 8,                    // lane borrow right
-  MSD_ACTION_INTERSECT_GO_STRAIGHT = 16,               // go straight in intersect scene
-  MSD_ACTION_INTERSECT_TURN_LEFT = 32,                 // turn left in intersect scene
-  MSD_ACTION_INTERSECT_TURN_RIGHT = 64,                // turn right in intersect scene
-  MSD_ACTION_INTERSECT_U_TURN = 128,                   // u-turn in intersect scene
-  MSD_ACTION_LANE_BORROW_IN_NON_MOTORIZED_LANE = 256,  // lane borrow in non-motorized-lane
+  MSD_ACTION_LANE_CHANGE_LEFT = 1,        // lane change left
+  MSD_ACTION_LANE_CHANGE_RIGHT = 2,       // lane change right
+  MSD_ACTION_LANE_BORROW_LEFT = 4,        // lane borrow left
+  MSD_ACTION_LANE_BORROW_RIGHT = 8,       // lane borrow right
+  MSD_ACTION_INTERSECT_GO_STRAIGHT = 16,  // go straight in intersect scene
+  MSD_ACTION_INTERSECT_TURN_LEFT = 32,    // turn left in intersect scene
+  MSD_ACTION_INTERSECT_TURN_RIGHT = 64,   // turn right in intersect scene
+  MSD_ACTION_INTERSECT_U_TURN = 128,      // u-turn in intersect scene
+  MSD_ACTION_LANE_BORROW_IN_NON_MOTORIZED_LANE =
+      256,  // lane borrow in non-motorized-lane
 };
 
 enum MSDActionStatus {
-  MSD_ACTION_STATUS_LANE_CHANGE_WAITING = 1,   //  waiting the lane changing
-  MSD_ACTION_STATUS_LANE_CHANGEING = 2,        //  changing lane
-  MSD_ACTION_STATUS_LANE_CHANGE_BACK = 4,      //  lane changing back
-  MSD_ACTION_STATUS_LANE_BORROWING = 8,        //  borrowing lane
-  MSD_ACTION_STATUS_LANE_BORROW_BACK = 16,     //  lane borrow back to the back of target car
-  MSD_ACTION_STATUS_LANE_BORROW_RETURN = 32,   //  lane borrow back to the front of target car
+  MSD_ACTION_STATUS_LANE_CHANGE_WAITING = 1,  //  waiting the lane changing
+  MSD_ACTION_STATUS_LANE_CHANGEING = 2,       //  changing lane
+  MSD_ACTION_STATUS_LANE_CHANGE_BACK = 4,     //  lane changing back
+  MSD_ACTION_STATUS_LANE_BORROWING = 8,       //  borrowing lane
+  MSD_ACTION_STATUS_LANE_BORROW_BACK =
+      16,  //  lane borrow back to the back of target car
+  MSD_ACTION_STATUS_LANE_BORROW_RETURN =
+      32,  //  lane borrow back to the front of target car
   MSD_ACTION_STATUS_LANE_BORROW_SUSPEND = 64,  //  lane borrow suspend
 };
 

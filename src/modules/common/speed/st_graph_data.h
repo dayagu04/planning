@@ -13,7 +13,14 @@
 
 namespace planning {
 
-enum class ObstacleTag : int { TRAVERSE = 0, CONVERGE = 1, MERGE = 2, FRONT = 3, BACK = 4, UNKNOWN = -1 };
+enum class ObstacleTag : int {
+  TRAVERSE = 0,
+  CONVERGE = 1,
+  MERGE = 2,
+  FRONT = 3,
+  BACK = 4,
+  UNKNOWN = -1
+};
 
 // a struct for obstacles
 struct Barrier {
@@ -45,15 +52,20 @@ class StGraphData {
  public:
   StGraphData() = default;
 
-  void LoadData(const std::vector<const STBoundary*>& st_boundaries, const double min_s_on_st_boundaries,
-                const PncTrajectoryPoint& init_point, const SpeedLimit& speed_limit, const double path_data_length,
+  void LoadData(const std::vector<const STBoundary*>& st_boundaries,
+                const double min_s_on_st_boundaries,
+                const PncTrajectoryPoint& init_point,
+                const SpeedLimit& speed_limit, const double path_data_length,
                 const double total_time_by_conf);
 
-  void load_output_data(const BarrierPairList& lane_keep_sv, const BarrierArray& normal_sv, const BarrierList& rear_sv,
-                        const BarrierList& yield_sv, const BarrierList& lane_keep_potential_sv,
-                        const ObstacleTagList& obstacle_tag_list,
-                        const IntObstacleTypeUmap& obstacle_first_time_state_map, bool dynamic_prebrake_signal,
-                        bool static_prebrake_signal, bool is_prebrake_target_transverse);
+  void load_output_data(
+      const BarrierPairList& lane_keep_sv, const BarrierArray& normal_sv,
+      const BarrierList& rear_sv, const BarrierList& yield_sv,
+      const BarrierList& lane_keep_potential_sv,
+      const ObstacleTagList& obstacle_tag_list,
+      const IntObstacleTypeUmap& obstacle_first_time_state_map,
+      bool dynamic_prebrake_signal, bool static_prebrake_signal,
+      bool is_prebrake_target_transverse);
 
   bool is_initialized() const { return init_; }
 

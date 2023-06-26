@@ -18,22 +18,29 @@ class ReferenceLineProvider {
   bool Init(std::vector<ReferenceLinePointDerived> &trajtory);
   // Input: reference now
   bool GetReferenceLine(bool borrow_flag);
-  void SetLatBound(double smooth_lat_bound) { smooth_lat_bound_ = smooth_lat_bound; };
-  void SetTrajectoryPoints(std::vector<ReferenceLinePointDerived> trajtory) { ref_trajectory = trajtory; };
+  void SetLatBound(double smooth_lat_bound) {
+    smooth_lat_bound_ = smooth_lat_bound;
+  };
+  void SetTrajectoryPoints(std::vector<ReferenceLinePointDerived> trajtory) {
+    ref_trajectory = trajtory;
+  };
   void SetOrigin(Pose2D navi) {
     navi_x_ = navi.x;
     navi_y_ = navi.y;
     navi_theta_ = navi.theta;
   };
 
-  // void SetFrenetCoorSystemPre(std::shared_ptr<FrenetCoordinateSystem> frenet_coord_pre_){
+  // void SetFrenetCoorSystemPre(std::shared_ptr<FrenetCoordinateSystem>
+  // frenet_coord_pre_){
   //     frenet_coord_pre = frenet_coord_pre_;
   // }
 
-  // void SetWorldModel(const std::shared_ptr<WorldModel> &world_model) { // @zyl
+  // void SetWorldModel(const std::shared_ptr<WorldModel> &world_model) { //
+  // @zyl
   //     world_model_= world_model;
   // }
-  void Setcar2enu_ref(const define::Transform &car2enu_ref, const define::Transform &enu2car_ref) {  // @zyl
+  void Setcar2enu_ref(const define::Transform &car2enu_ref,
+                      const define::Transform &enu2car_ref) {  // @zyl
     car2enu_ = car2enu_ref;
     enu2car_ = enu2car_ref;
   }
@@ -44,10 +51,12 @@ class ReferenceLineProvider {
   //     }
   // }
 
-  // void GetSmoothTrajectory(std::vector<RefLinePoint> &ref_trajectory_smooth) {
-  //     std::cout << "GetSmoothTrajectory : " << smoother_vx.size() << std::endl;
-  //     std::cout << "ref_trajectory_smooth.size() :" << ref_trajectory_smooth.size() << std::endl;
-  //     std::vector<double> smoother_vx, smoother_vy
+  // void GetSmoothTrajectory(std::vector<RefLinePoint> &ref_trajectory_smooth)
+  // {
+  //     std::cout << "GetSmoothTrajectory : " << smoother_vx.size() <<
+  //     std::endl; std::cout << "ref_trajectory_smooth.size() :" <<
+  //     ref_trajectory_smooth.size() << std::endl; std::vector<double>
+  //     smoother_vx, smoother_vy
   //     ref_trajectory_smooth.resize(smoother_vx.size());
   //     // // int i = 0;
   //     // for (int i = 0; i < ref_trajectory_smooth.size() ;i++) {
@@ -57,7 +66,8 @@ class ReferenceLineProvider {
   //     // }
   // }
 
-  void GetSmoothTrajectory(std::vector<double> &smoother_vx_m, std::vector<double> &smoother_vy_m) {
+  void GetSmoothTrajectory(std::vector<double> &smoother_vx_m,
+                           std::vector<double> &smoother_vy_m) {
     for (int i = 0; i < smoother_vx.size(); i++) {
       smoother_vx_m.push_back(smoother_vx[i]);
     }
@@ -65,8 +75,10 @@ class ReferenceLineProvider {
       smoother_vy_m.push_back(smoother_vy[i]);
     }
   }
-  // void GetSmoothTrajectoryMoreInfo(std::vector<double> &smoother_x, std::vector<double> &smoother_y,
-  //                      std::vector<double> &smoother_theta, std::vector<double> &smoother_curv) {
+  // void GetSmoothTrajectoryMoreInfo(std::vector<double> &smoother_x,
+  // std::vector<double> &smoother_y,
+  //                      std::vector<double> &smoother_theta,
+  //                      std::vector<double> &smoother_curv) {
   //     for (int i = 0; i < smooth_points_out.size(); i++) {
   //         smoother_x.push_back(smooth_points_out[i].x);
   //         smoother_y.push_back(smooth_points_out[i].y);
@@ -78,28 +90,38 @@ class ReferenceLineProvider {
   void GetSolveStatus(int &solver_status_) { solver_status_ = solve_status; }
 
   // private:
-  // void linear_interpolation_interval(std::vector<ReferenceLinePointDerived> &trajectory, std::vector<AnchorPoint>
-  // &anchor_points);
-  void interpolation_refpoint(ReferenceLinePointDerived &p1, ReferenceLinePointDerived &p2, double s_offset,
-                              ReferenceLinePointDerived &ref_point, double heading_p1, double heading_p2,
+  // void linear_interpolation_interval(std::vector<ReferenceLinePointDerived>
+  // &trajectory, std::vector<AnchorPoint> &anchor_points);
+  void interpolation_refpoint(ReferenceLinePointDerived &p1,
+                              ReferenceLinePointDerived &p2, double s_offset,
+                              ReferenceLinePointDerived &ref_point,
+                              double heading_p1, double heading_p2,
                               double &heading);
 
-  void get_reference_point_traj(std::vector<double> &ref_s, double s_ref, int &index_ref_s, double &ref_s_offset);
+  void get_reference_point_traj(std::vector<double> &ref_s, double s_ref,
+                                int &index_ref_s, double &ref_s_offset);
   void set_range_of_Anchor(std::vector<AnchorPoint> &anchor_points);
-  // void frame_trans_from_car2enu(std::vector<double> &vx, std::vector<double> &vy);
-  // void frame_trans_from_enu2car(std::vector<double> &vx, std::vector<double> &vy);
-  // void frame_trans_from_enu2car(Point2D &p_enu, Point2D &p_car);
-  // void frame_trans_from_car2enu(Point2D &p_enu, Point2D &p_car);
-  void frame_trans_from_car2enu(std::vector<double> &vx, std::vector<double> &vy);  //@zyl
-  void frame_trans_from_car2enu(Point2D &p_enu, Point2D &p_car);                    // @zyl
-  void frame_trans_from_enu2car(std::vector<double> &vx, std::vector<double> &vy);  //@zyl
-  void frame_trans_from_enu2car(Point2D &p_enu, Point2D &p_car);                    //@zyl
+  // void frame_trans_from_car2enu(std::vector<double> &vx, std::vector<double>
+  // &vy); void frame_trans_from_enu2car(std::vector<double> &vx,
+  // std::vector<double> &vy); void frame_trans_from_enu2car(Point2D &p_enu,
+  // Point2D &p_car); void frame_trans_from_car2enu(Point2D &p_enu, Point2D
+  // &p_car);
+  void frame_trans_from_car2enu(std::vector<double> &vx,
+                                std::vector<double> &vy);         //@zyl
+  void frame_trans_from_car2enu(Point2D &p_enu, Point2D &p_car);  // @zyl
+  void frame_trans_from_enu2car(std::vector<double> &vx,
+                                std::vector<double> &vy);         //@zyl
+  void frame_trans_from_enu2car(Point2D &p_enu, Point2D &p_car);  //@zyl
 
   // for extend
   bool GetStartPoint(AnchorPoint &anchor_start);  // start point on last refline
   bool GetAnchorPoints(AnchorPoint &anchor_start,
-                       std::vector<AnchorPoint> &anchor_points);   // get anchor points with start point
-  bool GetSmootherPoint(std::vector<AnchorPoint> &anchor_points);  // set refline smoother to smoother point
+                       std::vector<AnchorPoint> &anchor_points);  // get anchor
+                                                                  // points with
+                                                                  // start point
+  bool GetSmootherPoint(
+      std::vector<AnchorPoint>
+          &anchor_points);  // set refline smoother to smoother point
   // bool ExtendPoints();        // connect line with old refline
   void set_range_of_smoother(std::vector<double> &vx, std::vector<double> &vy);
 

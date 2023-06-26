@@ -25,8 +25,8 @@ class TrajectoryStitcher {
   //     const bool replan_by_offset, PlanningResult* prev_planning_result,
   //     std::string* replan_reason);
 
-  static std::vector<PncTrajectoryPoint> ComputeReinitStitchingTrajectory(const double planning_cycle_time,
-                                                                          const VehicleState& vehicle_state);
+  static std::vector<PncTrajectoryPoint> ComputeReinitStitchingTrajectory(
+      const double planning_cycle_time, const VehicleState& vehicle_state);
 
   //   static PublishedTrajectory TransformToPublishedTraj(
   //       std::vector<TrajectoryPoint> trajectory);
@@ -36,7 +36,8 @@ class TrajectoryStitcher {
   //       const double x, const double y,
   //       const TrajectoryPoint& matched_trajectory_point);
 
-  static PncTrajectoryPoint ComputeTrajectoryPointFromVehicleState(const VehicleState& vehicle_state);
+  static PncTrajectoryPoint ComputeTrajectoryPointFromVehicleState(
+      const VehicleState& vehicle_state);
 };
 
 }  // namespace planning

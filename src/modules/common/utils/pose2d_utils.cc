@@ -27,7 +27,9 @@ T dist(T x1, T y1, T x2, T y2) {
   return std::sqrt(dist_squared(x1, y1, x2, y2));
 }
 
-double get_dis(const Pose2D &p1, const Pose2D &p2) { return dist(p1.x, p1.y, p2.x, p2.y); }
+double get_dis(const Pose2D &p1, const Pose2D &p2) {
+  return dist(p1.x, p1.y, p2.x, p2.y);
+}
 
 double get_dis(const Pose2D &p0, const Pose2D &p1, const Pose2D &p2) {
   const double A = p1.y - p2.y;
@@ -57,7 +59,8 @@ double get_dis(const Pose2D &pose, const vector<Pose2D> &pose_array) {
   return get_dis(pose, pose_array[index]);
 }
 
-double get_dis(const vector<Pose2D> &pose_array1, const vector<Pose2D> &pose_array2) {
+double get_dis(const vector<Pose2D> &pose_array1,
+               const vector<Pose2D> &pose_array2) {
   if (pose_array1.size() == 0 || pose_array2.size() == 0) {
     return (numeric_limits<double>::max)();
   }
@@ -70,7 +73,8 @@ double get_dis(const vector<Pose2D> &pose_array1, const vector<Pose2D> &pose_arr
 
 double get_dis(const vector<Pose2D> &pose_array, int start_ind, int end_ind) {
   double sum_dis = 0.0f;
-  for (int i = max(start_ind + 1, 1); i <= (min(end_ind, (int)pose_array.size() - 1)); i++) {
+  for (int i = max(start_ind + 1, 1);
+       i <= (min(end_ind, (int)pose_array.size() - 1)); i++) {
     sum_dis += get_dis(pose_array[i - 1], pose_array[i]);
   }
   return sum_dis;
@@ -89,7 +93,8 @@ int get_nearest_index(const Pose2D &pose, const vector<Pose2D> &pose_array) {
   return index;
 }
 
-int get_nearest_index(const Pose2D &pose, const vector<Pose2D> &pose_array, int from, int to) {
+int get_nearest_index(const Pose2D &pose, const vector<Pose2D> &pose_array,
+                      int from, int to) {
   int index = -1;
   double min_dis = (numeric_limits<double>::max)();
   for (size_t i = max(0, from); i < min(pose_array.size(), (size_t)to); i++) {
@@ -102,7 +107,8 @@ int get_nearest_index(const Pose2D &pose, const vector<Pose2D> &pose_array, int 
   return index;
 }
 
-tuple<int, int> get_nearest_index2(const Pose2D &pose, const vector<Pose2D> &pose_array) {
+tuple<int, int> get_nearest_index2(const Pose2D &pose,
+                                   const vector<Pose2D> &pose_array) {
   int index = get_nearest_index(pose, pose_array);
   double dist1, dist2;
   int index2;
@@ -125,7 +131,8 @@ tuple<int, int> get_nearest_index2(const Pose2D &pose, const vector<Pose2D> &pos
   return make_tuple(index, index2);
 }
 
-double get_dis_to(const vector<Pose2D> &pose_array1, const vector<Pose2D> &pose_array2, double to) {
+double get_dis_to(const vector<Pose2D> &pose_array1,
+                  const vector<Pose2D> &pose_array2, double to) {
   if (pose_array1.size() == 0 || pose_array2.size() == 0) {
     return (numeric_limits<double>::max)();
   }
@@ -159,7 +166,8 @@ double get_sig_dis(const Pose2D &pose, const vector<Pose2D> &pose_array) {
   return get_sig_dis(pose, pose_array[index]);
 }
 
-double get_sig_dis(const vector<Pose2D> &pose_array1, const vector<Pose2D> &pose_array2) {
+double get_sig_dis(const vector<Pose2D> &pose_array1,
+                   const vector<Pose2D> &pose_array2) {
   if (pose_array1.size() == 0 || pose_array2.size() == 0) {
     return (numeric_limits<double>::max)();
   }
@@ -170,7 +178,8 @@ double get_sig_dis(const vector<Pose2D> &pose_array1, const vector<Pose2D> &pose
   return sum / pose_array1.size();
 }
 
-double get_sig_dis_to(const vector<Pose2D> &pose_array1, const vector<Pose2D> &pose_array2, double to) {
+double get_sig_dis_to(const vector<Pose2D> &pose_array1,
+                      const vector<Pose2D> &pose_array2, double to) {
   if (pose_array1.size() == 0 || pose_array2.size() == 0) {
     return (numeric_limits<double>::max)();
   }
@@ -284,7 +293,8 @@ double go2target(double in, double step, double target) {
   }
 }
 
-int get_preview_index(const vector<Pose2D> &pose_array, const Pose2D &pose, double preview_dis) {
+int get_preview_index(const vector<Pose2D> &pose_array, const Pose2D &pose,
+                      double preview_dis) {
   if (pose_array.size() == 0) return -1;
 
   int start_index = get_nearest_index(pose, pose_array);
@@ -300,7 +310,8 @@ int get_preview_index(const vector<Pose2D> &pose_array, const Pose2D &pose, doub
   return pose_array.size() - 1;
 }
 
-int get_preview_index_4planning(const vector<Pose2D> &pose_array, const Pose2D &pose, double preview_dis) {
+int get_preview_index_4planning(const vector<Pose2D> &pose_array,
+                                const Pose2D &pose, double preview_dis) {
   if (pose_array.size() == 0) return -1;
   int start_index = get_nearest_index(pose, pose_array);
   double ldis = get_dis(pose, pose_array[start_index]);
@@ -346,12 +357,14 @@ void forward_pose(Pose2D &pose, double l) {
   pose.y += l * cos(pose.theta);
 }
 
-bool sim_pose_array(const vector<Pose2D> &in_array, vector<Pose2D> &out_array, const Pose2D &car_pose, double car_vel) {
+bool sim_pose_array(const vector<Pose2D> &in_array, vector<Pose2D> &out_array,
+                    const Pose2D &car_pose, double car_vel) {
   out_array.clear();
   if (in_array.size() == 0) {
     return false;
   }
-  const double theta = abs(in_array.back().theta - in_array.front().theta) / 80.0;
+  const double theta =
+      abs(in_array.back().theta - in_array.front().theta) / 80.0;
   const double dtheta = max(theta, (double)(0.3 / 180 * M_PI));
   const double dl = 0.3f;
 
@@ -362,7 +375,8 @@ bool sim_pose_array(const vector<Pose2D> &in_array, vector<Pose2D> &out_array, c
   out_array.push_back(sim_pose);
   while (sum_dis < 80.0f) {
     const double preview_dis = car_vel + 4.0f;
-    const int preview_index = get_preview_index_4planning(in_array, sim_pose, preview_dis);
+    const int preview_index =
+        get_preview_index_4planning(in_array, sim_pose, preview_dis);
 
     if (preview_index == -1) {
       break;
@@ -385,8 +399,9 @@ bool sim_pose_array(const vector<Pose2D> &in_array, vector<Pose2D> &out_array, c
   return true;
 }
 
-bool concat(double dis1, double dis2, const vector<Pose2D> &pose_array1, const vector<Pose2D> &pose_array2,
-            vector<Pose2D> &pose_array3, const Pose2D &car_pose) {
+bool concat(double dis1, double dis2, const vector<Pose2D> &pose_array1,
+            const vector<Pose2D> &pose_array2, vector<Pose2D> &pose_array3,
+            const Pose2D &car_pose) {
   const int start1 = get_nearest_index(car_pose, pose_array1);
   if (start1 == -1) return false;
 
@@ -492,7 +507,8 @@ double fhan(double x1, double x2, double r, double h) {
 /* fal */
 double fal(double error, double alpha, double delta) {
   double sed = (sign(error + delta) - sign(error - delta)) / 2.0f;
-  double fal_val = error * sed / pow(delta, 1.0f - alpha) + pow(fabs(error), alpha) * sign(error) * (1.0f - sed);
+  double fal_val = error * sed / pow(delta, 1.0f - alpha) +
+                   pow(fabs(error), alpha) * sign(error) * (1.0f - sed);
   return fal_val;
 }
 
@@ -503,7 +519,8 @@ string get_current_date() {
   time_t tt = time(0);
   // generate “YYYY-MM-DD hh:mm:ss” format string
   char current_date[32];
-  /*i = */ strftime(current_date, sizeof(current_date), "%Y%m%d-%H%M%S", localtime(&tt));
+  /*i = */ strftime(current_date, sizeof(current_date), "%Y%m%d-%H%M%S",
+                    localtime(&tt));
   return current_date;
 }
 

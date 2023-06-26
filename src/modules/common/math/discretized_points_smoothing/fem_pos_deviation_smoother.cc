@@ -22,9 +22,9 @@
 
 #include <iostream>
 
-#include "log_glog.h"
 #include "fem_pos_deviation_osqp_interface.h"
 #include "fem_pos_deviation_sqp_osqp_interface.h"
+#include "log_glog.h"
 
 namespace planning {
 namespace planning_math {

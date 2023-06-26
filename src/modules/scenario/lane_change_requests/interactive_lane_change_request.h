@@ -7,13 +7,16 @@ namespace planning {
 /// @brief 交互式(Interactive)换道请求
 class IntRequest : public LaneChangeRequest {
  public:
-  IntRequest(planning::framework::Session* session, std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
+  IntRequest(planning::framework::Session* session,
+             std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
              std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
   virtual ~IntRequest() = default;
 
   void Update(int lc_status);
 
-  IntCancelReasonType request_cancel_reason() { return request_cancel_reason_; };
+  IntCancelReasonType request_cancel_reason() {
+    return request_cancel_reason_;
+  };
 
   void reset_freeze_cnt() {
     left_cancel_freeze_cnt_ = 0;
@@ -26,13 +29,22 @@ class IntRequest : public LaneChangeRequest {
 
   void finish_and_clear();
 
-  const int get_left_cancel_freeze_cnt() const { return left_cancel_freeze_cnt_; }
-  const int get_right_cancel_freeze_cnt() const { return right_cancel_freeze_cnt_; }
-  void set_left_cancel_freeze_cnt(int freeze_cnt) { left_cancel_freeze_cnt_ = freeze_cnt; }
-  void set_right_cancel_freeze_cnt(int freeze_cnt) { right_cancel_freeze_cnt_ = freeze_cnt; }
+  const int get_left_cancel_freeze_cnt() const {
+    return left_cancel_freeze_cnt_;
+  }
+  const int get_right_cancel_freeze_cnt() const {
+    return right_cancel_freeze_cnt_;
+  }
+  void set_left_cancel_freeze_cnt(int freeze_cnt) {
+    left_cancel_freeze_cnt_ = freeze_cnt;
+  }
+  void set_right_cancel_freeze_cnt(int freeze_cnt) {
+    right_cancel_freeze_cnt_ = freeze_cnt;
+  }
 
  private:
-  void PrintForbidGeneratingReason(const std::vector<std::string> forbid_generating_reason);
+  void PrintForbidGeneratingReason(
+      const std::vector<std::string> forbid_generating_reason);
 
   // void check_lc_forbid_reason(
   //     std::vector<std::string>& forbid_generating_left_reason,

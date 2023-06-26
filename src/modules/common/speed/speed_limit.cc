@@ -17,15 +17,21 @@ void SpeedLimit::AppendSpeedLimit(const double t, const double v) {
   speed_limit_points_.emplace_back(t, v);
 }
 
-const std::vector<std::pair<double, double>>& SpeedLimit::speed_limit_points() const { return speed_limit_points_; }
+const std::vector<std::pair<double, double>>& SpeedLimit::speed_limit_points()
+    const {
+  return speed_limit_points_;
+}
 
 double SpeedLimit::GetSpeedLimitByT(const double t) const {
   assert(int(speed_limit_points_.size()) >= 2);
   assert(t >= speed_limit_points_.front().first);
 
-  auto compare_t = [](const std::pair<double, double>& point, const double t) { return point.first < t; };
+  auto compare_t = [](const std::pair<double, double>& point, const double t) {
+    return point.first < t;
+  };
 
-  auto it_lower = std::lower_bound(speed_limit_points_.begin(), speed_limit_points_.end(), t, compare_t);
+  auto it_lower = std::lower_bound(speed_limit_points_.begin(),
+                                   speed_limit_points_.end(), t, compare_t);
 
   if (it_lower == speed_limit_points_.end()) {
     return (it_lower - 1)->second;

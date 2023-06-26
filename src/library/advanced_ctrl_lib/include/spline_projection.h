@@ -15,8 +15,10 @@ class Projection {
   };
 
  public:
-  void CalProjectionPoint(const mathlib::spline &x_s_spline, const mathlib::spline &y_s_spline, const double s_start,
-                          const double s_end, const Eigen::Vector2d &x);
+  void CalProjectionPoint(const mathlib::spline &x_s_spline,
+                          const mathlib::spline &y_s_spline,
+                          const double s_start, const double s_end,
+                          const Eigen::Vector2d &x);
 
   const Result &GetOutput() const { return result_; }
 

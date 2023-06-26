@@ -28,8 +28,9 @@ namespace planning {
 
 class LateralMotionPlanner : public Task {
  public:
-  LateralMotionPlanner(const EgoPlanningConfigBuilder *config_builder,
-                       const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+  LateralMotionPlanner(
+      const EgoPlanningConfigBuilder *config_builder,
+      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
 
   void Init();
   bool Execute(planning::framework::Frame *frame);
@@ -40,7 +41,8 @@ class LateralMotionPlanner : public Task {
 
   LateralMotionPlannerConfig config_;
   string name_;
-  std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningProblem> planning_problem_ptr_;
+  std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningProblem>
+      planning_problem_ptr_;
   planning::common::LateralPlanningInput planning_input_;
 };
 

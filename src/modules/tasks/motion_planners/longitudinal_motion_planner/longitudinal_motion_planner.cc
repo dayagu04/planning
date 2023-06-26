@@ -6,8 +6,9 @@
 #include "math_lib.h"
 
 namespace planning {
-LongitudinalMotionPlanner::LongitudinalMotionPlanner(const EgoPlanningConfigBuilder *config_builder,
-                                                     const std::shared_ptr<TaskPipelineContext> &pipeline_context)
+LongitudinalMotionPlanner::LongitudinalMotionPlanner(
+    const EgoPlanningConfigBuilder *config_builder,
+    const std::shared_ptr<TaskPipelineContext> &pipeline_context)
     : Task(config_builder, pipeline_context) {
   config_ = config_builder->cast<LongitudinalMotionPlannerConfig>();
   config_start_stop_ = config_builder->cast<StartStopEnableConfig>();
@@ -19,11 +20,14 @@ LongitudinalMotionPlanner::LongitudinalMotionPlanner(const EgoPlanningConfigBuil
 
 void LongitudinalMotionPlanner::Init() {
   // init planning problem
-  planning_problem_ptr_ = std::make_shared<pnc::longitudinal_planning::LongitudinalMotionPlanningProblem>();
+  planning_problem_ptr_ = std::make_shared<
+      pnc::longitudinal_planning::LongitudinalMotionPlanningProblem>();
   planning_problem_ptr_->Init();
 
   // init planning input and output
-  auto const N = planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon + 1;
+  auto const N =
+      planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon +
+      1;
 
   // init planning input
   planning_input_.mutable_ref_pos_vec()->Resize(N, 0.0);
@@ -51,11 +55,15 @@ bool LongitudinalMotionPlanner::Execute(planning::framework::Frame *frame) {
   Update();
 
   // record input and output
-  DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_longitudinal_motion_planning_input()->CopyFrom(
-      planning_input_);
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_longitudinal_motion_planning_input()
+      ->CopyFrom(planning_input_);
 
-  DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_longitudinal_motion_planning_output()->CopyFrom(
-      planning_problem_ptr_->GetOutput());
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_longitudinal_motion_planning_output()
+      ->CopyFrom(planning_problem_ptr_->GetOutput());
 
   return true;
 }
@@ -93,7 +101,8 @@ void LongitudinalMotionPlanner::AssembleInput() {
 
   // set ref_pos and ref_vel
   for (size_t i = 0; i < s_refs.size(); ++i) {
-    auto const &dt = planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->model_dt;
+    auto const &dt =
+        planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->model_dt;
 
     auto const &v_ref = v_refs[i].first;
     auto s_ref = s_refs[i].first;
@@ -117,8 +126,10 @@ void LongitudinalMotionPlanner::AssembleInput() {
       tmp_bound.upper = std::fmin(bound.upper, tmp_bound.upper);
     }
 
-    s_limit_.lower = tmp_bound.lower > s_limit_.lower ? tmp_bound.lower : s_limit_.lower;
-    s_limit_.upper = tmp_bound.upper < s_limit_.upper ? tmp_bound.upper : s_limit_.upper;
+    s_limit_.lower =
+        tmp_bound.lower > s_limit_.lower ? tmp_bound.lower : s_limit_.lower;
+    s_limit_.upper =
+        tmp_bound.upper < s_limit_.upper ? tmp_bound.upper : s_limit_.upper;
 
     planning_input_.mutable_pos_max_vec()->Set(i, tmp_bound.upper);
     planning_input_.mutable_pos_min_vec()->Set(i, tmp_bound.lower);
@@ -143,12 +154,16 @@ void LongitudinalMotionPlanner::AssembleInput() {
   }
 
   // set init state
-  const auto &planning_init_point = reference_path_ptr_->get_frenet_ego_state().planning_init_point();
+  const auto &planning_init_point =
+      reference_path_ptr_->get_frenet_ego_state().planning_init_point();
 
   // init s uses frenet state
-  planning_input_.mutable_init_state()->set_s(planning_init_point.frenet_state.s);
-  planning_input_.mutable_init_state()->set_v(planning_init_point.lon_init_state.v());
-  planning_input_.mutable_init_state()->set_a(planning_init_point.lon_init_state.a());
+  planning_input_.mutable_init_state()->set_s(
+      planning_init_point.frenet_state.s);
+  planning_input_.mutable_init_state()->set_v(
+      planning_init_point.lon_init_state.v());
+  planning_input_.mutable_init_state()->set_a(
+      planning_init_point.lon_init_state.a());
 
   // set weights
   planning_input_.set_q_ref_pos(config_.q_ref_pos);
@@ -170,8 +185,11 @@ void LongitudinalMotionPlanner::Update() {
   // assembling planning output proto
   planning_problem_ptr_->Update(planning_input_);
 
-  const size_t N = planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon + 1;
-  const auto &dt = planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->model_dt;
+  const size_t N =
+      planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon +
+      1;
+  const auto &dt =
+      planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->model_dt;
 
   const auto &planning_output = planning_problem_ptr_->GetOutput();
 
@@ -196,8 +214,10 @@ void LongitudinalMotionPlanner::Update() {
   }
 
   // generate motion planning output into planning_context
-  auto &motion_planning_info =
-      frame_->mutable_session()->mutable_planning_context()->mutable_planning_result().motion_planning_info;
+  auto &motion_planning_info = frame_->mutable_session()
+                                   ->mutable_planning_context()
+                                   ->mutable_planning_result()
+                                   .motion_planning_info;
 
   // motion_planning_info.s_t_spline.set_points(t_vec, s_vec);
   motion_planning_info.v_t_spline.set_points(t_vec, v_vec);
@@ -214,7 +234,8 @@ void LongitudinalMotionPlanner::Update() {
 
   // s postprocess
   for (size_t i = 1; i < s_vec.size(); ++i) {
-    s_vec[i] = std::max(s_vec[i], s_vec[i - 1]);  // 1e-3 to avoid non-inremental spline input
+    s_vec[i] = std::max(
+        s_vec[i], s_vec[i - 1]);  // 1e-3 to avoid non-inremental spline input
   }
 
   // assemble trajectory that combines lateral and longitudinal planning_result
@@ -243,8 +264,8 @@ void LongitudinalMotionPlanner::Update() {
     Point2D frenet_pt;
 
     if (reference_path_ptr_->get_frenet_coord() != nullptr &&
-        reference_path_ptr_->get_frenet_coord()->CartCoord2FrenetCoord(cart_pt, frenet_pt) ==
-            TRANSFORM_STATUS::TRANSFORM_SUCCESS) {
+        reference_path_ptr_->get_frenet_coord()->CartCoord2FrenetCoord(
+            cart_pt, frenet_pt) == TRANSFORM_STATUS::TRANSFORM_SUCCESS) {
       traj_points[i].s = frenet_pt.x;
       traj_points[i].l = frenet_pt.y;
     } else {

@@ -46,32 +46,51 @@ class PlanningContext {
 
   bool &mutable_replan_trajectory() { return replan_trajectory_; }
 
-  const LatDecisionInfos &lateral_decisions_for_show() const { return lateral_decisions_for_show_; }
+  const LatDecisionInfos &lateral_decisions_for_show() const {
+    return lateral_decisions_for_show_;
+  }
 
-  LatDecisionInfos &mutable_lateral_decisions_for_show() { return lateral_decisions_for_show_; }
+  LatDecisionInfos &mutable_lateral_decisions_for_show() {
+    return lateral_decisions_for_show_;
+  }
 
   const StartStopInfo &start_stop_result() const { return start_stop_result_; }
 
   StartStopInfo &mutable_start_stop_result() { return start_stop_result_; }
 
-  const AdaptiveCruiseControlInfo &adaptive_cruise_control_result() const { return adaptive_cruise_control_result_; }
+  const AdaptiveCruiseControlInfo &adaptive_cruise_control_result() const {
+    return adaptive_cruise_control_result_;
+  }
 
-  AdaptiveCruiseControlInfo &mutable_adaptive_cruise_control_result() { return adaptive_cruise_control_result_; }
+  AdaptiveCruiseControlInfo &mutable_adaptive_cruise_control_result() {
+    return adaptive_cruise_control_result_;
+  }
 
   const PlanningResult &planning_result() const { return planning_result_; }
 
   PlanningResult &mutable_planning_result() { return planning_result_; }
 
-  const LonDecisionInfo &lon_decision_result() const { return lon_decision_result_; }
-  LonDecisionInfo &mutable_lon_decision_result() { return lon_decision_result_; }
+  const LonDecisionInfo &lon_decision_result() const {
+    return lon_decision_result_;
+  }
+  LonDecisionInfo &mutable_lon_decision_result() {
+    return lon_decision_result_;
+  }
 
-  const FaultDiagnosisInfo &fault_diagnosis_result() const { return fault_diagnosis_result_; }
-  FaultDiagnosisInfo &mutable_fault_diagnosis_result() { return fault_diagnosis_result_; }
-  const LatBehaviorInfo &lat_behavior_info() const { return lat_behavior_info_; }
+  const FaultDiagnosisInfo &fault_diagnosis_result() const {
+    return fault_diagnosis_result_;
+  }
+  FaultDiagnosisInfo &mutable_fault_diagnosis_result() {
+    return fault_diagnosis_result_;
+  }
+  const LatBehaviorInfo &lat_behavior_info() const {
+    return lat_behavior_info_;
+  }
 
   LatBehaviorInfo &mutable_lat_behavior_info() { return lat_behavior_info_; }
 
-  const LatBehaviorStateMachineOutput &lat_behavior_state_machine_output() const {
+  const LatBehaviorStateMachineOutput &lat_behavior_state_machine_output()
+      const {
     return lat_behavior_state_machine_output_;
   }
 
@@ -83,80 +102,128 @@ class PlanningContext {
     return lateral_behavior_planner_output_;
   }
 
-  LateralBehaviorPlannerOutput &mutable_lateral_behavior_planner_output() { return lateral_behavior_planner_output_; }
+  LateralBehaviorPlannerOutput &mutable_lateral_behavior_planner_output() {
+    return lateral_behavior_planner_output_;
+  }
 
-  const std::shared_ptr<ObjectSelector> &object_selector() const { return object_selector_ptr_; }
-  void set_object_selector(std::shared_ptr<ObjectSelector> object_selector) { object_selector_ptr_ = object_selector; }
+  const std::shared_ptr<ObjectSelector> &object_selector() const {
+    return object_selector_ptr_;
+  }
+  void set_object_selector(std::shared_ptr<ObjectSelector> object_selector) {
+    object_selector_ptr_ = object_selector;
+  }
 
-  const VisionLongitudinalBehaviorPlannerOutput &vision_longitudinal_behavior_planner_output() const {
+  const VisionLongitudinalBehaviorPlannerOutput &
+  vision_longitudinal_behavior_planner_output() const {
     return vision_longitudinal_behavior_planner_output_;
   }
 
-  VisionLongitudinalBehaviorPlannerOutput &mutable_vision_longitudinal_behavior_planner_output() {
+  VisionLongitudinalBehaviorPlannerOutput &
+  mutable_vision_longitudinal_behavior_planner_output() {
     return vision_longitudinal_behavior_planner_output_;
   }
 
-  const LatDeciderOutput &lat_decider_output() const { return lat_decider_output_; }
+  const LatDeciderOutput &lat_decider_output() const {
+    return lat_decider_output_;
+  }
 
   LatDeciderOutput &mutable_lat_decider_output() { return lat_decider_output_; }
 
-  const std::shared_ptr<AdaptiveCruiseControl> &adaptive_cruise_control_function() {
+  const std::shared_ptr<AdaptiveCruiseControl>
+      &adaptive_cruise_control_function() {
     return adaptive_cruise_control_ptr_;
   }
-  void set_adaptive_cruise_control_function(std::shared_ptr<AdaptiveCruiseControl> adaptive_cruise_control) {
+  void set_adaptive_cruise_control_function(
+      std::shared_ptr<AdaptiveCruiseControl> adaptive_cruise_control) {
     adaptive_cruise_control_ptr_ = adaptive_cruise_control;
   }
 
-  const std::shared_ptr<StartStopEnable> &start_stop() { return start_stop_ptr_; }
-  void set_start_stop_enable(std::shared_ptr<StartStopEnable> start_stop_ptr) { start_stop_ptr_ = start_stop_ptr; }
+  const std::shared_ptr<StartStopEnable> &start_stop() {
+    return start_stop_ptr_;
+  }
+  void set_start_stop_enable(std::shared_ptr<StartStopEnable> start_stop_ptr) {
+    start_stop_ptr_ = start_stop_ptr;
+  }
 
-  const std::shared_ptr<MrcCondition> &mrc_condition() { return mrc_condition_ptr_; }
-  void set_mrc_condition(const std::shared_ptr<MrcCondition> &mrc_condition_ptr) {
+  const std::shared_ptr<MrcCondition> &mrc_condition() {
+    return mrc_condition_ptr_;
+  }
+  void set_mrc_condition(
+      const std::shared_ptr<MrcCondition> &mrc_condition_ptr) {
     mrc_condition_ptr_ = mrc_condition_ptr;
   }
 
-  const std::shared_ptr<LaneKeepAssistManager> &lane_keep_assit_function() { return lane_keep_assit_ptr_; }
-  void set_lane_keep_assit_function(std::shared_ptr<LaneKeepAssistManager> lane_keep_assit) {
+  const std::shared_ptr<LaneKeepAssistManager> &lane_keep_assit_function() {
+    return lane_keep_assit_ptr_;
+  }
+  void set_lane_keep_assit_function(
+      std::shared_ptr<LaneKeepAssistManager> lane_keep_assit) {
     lane_keep_assit_ptr_ = lane_keep_assit;
   }
 
-  const std::shared_ptr<class IntelligentHeadlightControl> &intelligent_headlight_control_function() {
+  const std::shared_ptr<class IntelligentHeadlightControl>
+      &intelligent_headlight_control_function() {
     return intelligent_headlight_control_;
   }
   void set_intelligent_headlight_control_function(
-      std::shared_ptr<class IntelligentHeadlightControl> intelligent_headlight_control) {
+      std::shared_ptr<class IntelligentHeadlightControl>
+          intelligent_headlight_control) {
     intelligent_headlight_control_ = intelligent_headlight_control;
   }
 
-  const std::shared_ptr<TrafficSignRecognition> &traffic_sign_recognition_function() {
+  const std::shared_ptr<TrafficSignRecognition>
+      &traffic_sign_recognition_function() {
     return traffic_sign_recognition_;
   }
-  void set_traffic_sign_recognition_function(std::shared_ptr<TrafficSignRecognition> traffic_sign_recognition) {
+  void set_traffic_sign_recognition_function(
+      std::shared_ptr<TrafficSignRecognition> traffic_sign_recognition) {
     traffic_sign_recognition_ = traffic_sign_recognition;
   }
 
-  void set_last_planning_result(const std::shared_ptr<PlanningResult> planning_result) {
+  void set_last_planning_result(
+      const std::shared_ptr<PlanningResult> planning_result) {
     last_planning_result_ = planning_result;
   }
 
-  const std::shared_ptr<PlanningResult> &last_planning_result() const { return last_planning_result_; }
+  const std::shared_ptr<PlanningResult> &last_planning_result() const {
+    return last_planning_result_;
+  }
 
-  const common::PlanningResult &last_frame_planning_result() const { return last_frame_planning_result_; }
-  common::PlanningResult &mutable_last_frame_planning_result() { return last_frame_planning_result_; }
+  const common::PlanningResult &last_frame_planning_result() const {
+    return last_frame_planning_result_;
+  }
+  common::PlanningResult &mutable_last_frame_planning_result() {
+    return last_frame_planning_result_;
+  }
 
-  const std::vector<std::pair<double, double>> &last_lat_enu_ref_path() const { return last_enu_ref_path_; }
-  std::vector<std::pair<double, double>> &mutable_last_lat_enu_ref_path() { return last_enu_ref_path_; }
+  const std::vector<std::pair<double, double>> &last_lat_enu_ref_path() const {
+    return last_enu_ref_path_;
+  }
+  std::vector<std::pair<double, double>> &mutable_last_lat_enu_ref_path() {
+    return last_enu_ref_path_;
+  }
 
-  const std::vector<double> &last_enu_ref_theta() const { return last_enu_ref_theta_; }
-  std::vector<double> &mutable_last_enu_ref_theta() { return last_enu_ref_theta_; }
+  const std::vector<double> &last_enu_ref_theta() const {
+    return last_enu_ref_theta_;
+  }
+  std::vector<double> &mutable_last_enu_ref_theta() {
+    return last_enu_ref_theta_;
+  }
 
   const VehicleParam &vehicle_param() const { return vehicle_param_; }
 
-  void set_vehicle_param(const VehicleParam &vehicle_param) { vehicle_param_ = vehicle_param; }
+  void set_vehicle_param(const VehicleParam &vehicle_param) {
+    vehicle_param_ = vehicle_param;
+  }
 
-  const std::shared_ptr<ScenarioStateMachine> &scenario_state_machine() const { return scenario_state_machine_ptr_; }
-  std::shared_ptr<ScenarioStateMachine> mutable_scenario_state_machine() { return scenario_state_machine_ptr_; }
-  void set_scenario_state_machine(std::shared_ptr<ScenarioStateMachine> scenario_state_machine) {
+  const std::shared_ptr<ScenarioStateMachine> &scenario_state_machine() const {
+    return scenario_state_machine_ptr_;
+  }
+  std::shared_ptr<ScenarioStateMachine> mutable_scenario_state_machine() {
+    return scenario_state_machine_ptr_;
+  }
+  void set_scenario_state_machine(
+      std::shared_ptr<ScenarioStateMachine> scenario_state_machine) {
     scenario_state_machine_ptr_ = scenario_state_machine;
   }
 
@@ -170,7 +237,9 @@ class PlanningContext {
 
   const double &v_ref_cruise() const { return v_ref_cruise_; }
 
-  void set_v_ref_cruise(const double &v_ref_cruise) { v_ref_cruise_ = v_ref_cruise; }
+  void set_v_ref_cruise(const double &v_ref_cruise) {
+    v_ref_cruise_ = v_ref_cruise;
+  }
 
   void clear() {
     last_planning_success_ = planning_success_;
@@ -213,7 +282,8 @@ class PlanningContext {
   LatBehaviorStateMachineOutput lat_behavior_state_machine_output_;
   LatDeciderOutput lat_decider_output_;
   LateralBehaviorPlannerOutput lateral_behavior_planner_output_;
-  VisionLongitudinalBehaviorPlannerOutput vision_longitudinal_behavior_planner_output_;
+  VisionLongitudinalBehaviorPlannerOutput
+      vision_longitudinal_behavior_planner_output_;
   std::shared_ptr<ScenarioManager> scenario_manager_ptr_;
   std::shared_ptr<ObjectSelector> object_selector_ptr_;
   std::shared_ptr<ScenarioStateMachine> scenario_state_machine_ptr_;

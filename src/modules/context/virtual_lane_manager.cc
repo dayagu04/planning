@@ -5,7 +5,9 @@
 
 namespace planning {
 
-VirtualLaneManager::VirtualLaneManager(planning::framework::Session* session) { session_ = session; }
+VirtualLaneManager::VirtualLaneManager(planning::framework::Session* session) {
+  session_ = session;
+}
 
 bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   LOG_DEBUG("update VirtualLaneManager\n");
@@ -21,20 +23,24 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
 
   is_local_valid_ = roads.local_point_valid();
   for (auto& lane : roads.lanes()) {
-    std::shared_ptr<VirtualLane> virtual_lane_tmp = std::make_shared<VirtualLane>();
+    std::shared_ptr<VirtualLane> virtual_lane_tmp =
+        std::make_shared<VirtualLane>();
     virtual_lane_tmp->update_data(lane);
-    printf("lane relative_id:%d, order_id:%d\n", lane.relative_id(), lane.order_id());
+    printf("lane relative_id:%d, order_id:%d\n", lane.relative_id(),
+           lane.order_id());
     relative_id_lanes_.emplace_back(virtual_lane_tmp);
   }
 
-  auto compare_relative_id = [&](std::shared_ptr<VirtualLane> lane1, std::shared_ptr<VirtualLane> lane2) {
+  auto compare_relative_id = [&](std::shared_ptr<VirtualLane> lane1,
+                                 std::shared_ptr<VirtualLane> lane2) {
     return lane1->get_relative_id() < lane2->get_relative_id();
   };
-  std::sort(relative_id_lanes_.begin(), relative_id_lanes_.end(), compare_relative_id);
+  std::sort(relative_id_lanes_.begin(), relative_id_lanes_.end(),
+            compare_relative_id);
 
   // if (relative_id_lanes_.size() == 0) {
-  //   std::shared_ptr<VirtualLane> virtual_lane_tmp = std::make_shared<VirtualLane>();
-  //   FusionRoad::Lane lane;
+  //   std::shared_ptr<VirtualLane> virtual_lane_tmp =
+  //   std::make_shared<VirtualLane>(); FusionRoad::Lane lane;
   //   lane.set_order_id(0);
   //   lane.set_relative_id(0);
   //   lane.set_ego_lateral_offset(0);
@@ -68,19 +74,24 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   LOG_DEBUG("input lane:");
   auto& debug_info_manager = DebugInfoManager::GetInstance();
   auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
-  auto environment_model_debug_info = planning_debug_data->mutable_environment_model_info();
-  environment_model_debug_info->set_currrent_lane_vitual_id(current_lane_virtual_id_);
+  auto environment_model_debug_info =
+      planning_debug_data->mutable_environment_model_info();
+  environment_model_debug_info->set_currrent_lane_vitual_id(
+      current_lane_virtual_id_);
   LOG_DEBUG("current lane virtual id:%d\n", current_lane_virtual_id_);
   for (auto lane : relative_id_lanes_) {
-    LOG_DEBUG(" relative id:%d, virtual id: %d,", lane->get_relative_id(), lane->get_virtual_id());
+    LOG_DEBUG(" relative id:%d, virtual id: %d,", lane->get_relative_id(),
+              lane->get_virtual_id());
   }
 
   LOG_DEBUG("\n");
   return true;
 }
 
-const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(int virtual_id) const {
-  if (virtual_id_mapped_lane_.find(virtual_id) != virtual_id_mapped_lane_.end()) {
+const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(
+    int virtual_id) const {
+  if (virtual_id_mapped_lane_.find(virtual_id) !=
+      virtual_id_mapped_lane_.end()) {
     LOG_DEBUG("get lane virtual %d id\n", virtual_id);
     return virtual_id_mapped_lane_[virtual_id];
   } else {
@@ -89,7 +100,8 @@ const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(
   }
 }
 
-const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_order_id(uint order_id) const {
+const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_order_id(
+    uint order_id) const {
   if (order_id > relative_id_lanes_.size() - 1) {
     return nullptr;
   }
@@ -120,17 +132,20 @@ LaneChangeStatus VirtualLaneManager::is_lane_change() {
   LaneChangeStatus change_status = LaneChangeStatus::NO_LANE_CHANGE;
   const float lane_change_thre = 1;
 
-  if (virtual_id_mapped_lane_.find(current_lane_virtual_id_) != virtual_id_mapped_lane_.end()) {
+  if (virtual_id_mapped_lane_.find(current_lane_virtual_id_) !=
+      virtual_id_mapped_lane_.end()) {
     auto last_virtual_lane = virtual_id_mapped_lane_[current_lane_virtual_id_];
     double left_C0, right_C0, last_left_C0, last_right_C0;
     if (last_virtual_lane->get_left_lane_boundary().existence()) {
-      last_left_C0 = last_virtual_lane->get_left_lane_boundary().poly_coefficient(0);
+      last_left_C0 =
+          last_virtual_lane->get_left_lane_boundary().poly_coefficient(0);
     } else {
       last_left_C0 = 8.0;
     }
 
     if (last_virtual_lane->get_right_lane_boundary().existence()) {
-      last_right_C0 = last_virtual_lane->get_right_lane_boundary().poly_coefficient(0);
+      last_right_C0 =
+          last_virtual_lane->get_right_lane_boundary().poly_coefficient(0);
     } else {
       last_right_C0 = -8.0;
     }
@@ -150,17 +165,22 @@ LaneChangeStatus VirtualLaneManager::is_lane_change() {
     double left_diff = left_C0 - last_left_C0;
     double right_diff = right_C0 - last_right_C0;
 
-    if (left_diff > lane_change_thre && right_diff > lane_change_thre && last_left_diff_ < lane_change_thre) {
+    if (left_diff > lane_change_thre && right_diff > lane_change_thre &&
+        last_left_diff_ < lane_change_thre) {
       change_status = ON_LEFT_LANE;
-    } else if (left_diff < -lane_change_thre && right_diff < -lane_change_thre &&
+    } else if (left_diff < -lane_change_thre &&
+               right_diff < -lane_change_thre &&
                last_right_diff_ > -lane_change_thre) {
       change_status = ON_RIGHT_LANE;
     }
     last_left_diff_ = left_diff;
     last_right_diff_ = right_diff;
-    std::cout << "last_left_C0: " << last_left_C0 << " left_C0: " << left_C0 << " left_diff: " << left_diff
-              << " last_right_C0: " << last_right_C0 << " right_C0: " << right_C0 << " right_diff: " << right_diff
-              << " last_left_diff_: " << last_left_diff_ << " change_status: " << change_status << std::endl;
+    std::cout << "last_left_C0: " << last_left_C0 << " left_C0: " << left_C0
+              << " left_diff: " << left_diff
+              << " last_right_C0: " << last_right_C0
+              << " right_C0: " << right_C0 << " right_diff: " << right_diff
+              << " last_left_diff_: " << last_left_diff_
+              << " change_status: " << change_status << std::endl;
 
   } else {
     last_left_diff_ = 0;
@@ -183,51 +203,62 @@ void VirtualLaneManager::reset() {
   last_right_diff_ = 0;
 }
 
-std::vector<std::shared_ptr<Obstacle>> VirtualLaneManager::get_current_lane_obstacle() {
+std::vector<std::shared_ptr<Obstacle>>
+VirtualLaneManager::get_current_lane_obstacle() {
   std::vector<std::shared_ptr<Obstacle>> tr;
   if (current_lane_ == nullptr) {
     return tr;
   }
   int virtual_id = current_lane_->get_virtual_id();
-  auto reference_path_manager = session_->environmental_model().get_reference_path_manager();
-  std::shared_ptr<ReferencePath> reference_path = reference_path_manager->get_reference_path_by_lane(virtual_id);
+  auto reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  std::shared_ptr<ReferencePath> reference_path =
+      reference_path_manager->get_reference_path_by_lane(virtual_id);
   // tr = reference_path->cal_obstacles_on_lane() //todo
   return tr;
 }
 
-std::vector<std::shared_ptr<Obstacle>> VirtualLaneManager::get_left_lane_obstacle() {
+std::vector<std::shared_ptr<Obstacle>>
+VirtualLaneManager::get_left_lane_obstacle() {
   std::vector<std::shared_ptr<Obstacle>> tr;
   if (left_lane_ == nullptr) {
     return tr;
   }
   int virtual_id = left_lane_->get_virtual_id();
-  auto reference_path_manager = session_->environmental_model().get_reference_path_manager();
-  std::shared_ptr<ReferencePath> reference_path = reference_path_manager->get_reference_path_by_lane(virtual_id);
+  auto reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  std::shared_ptr<ReferencePath> reference_path =
+      reference_path_manager->get_reference_path_by_lane(virtual_id);
   // tr = reference_path->cal_obstacles_on_lane() //todo
   return tr;
 }
 
-std::vector<std::shared_ptr<Obstacle>> VirtualLaneManager::get_right_lane_obstacle() {
+std::vector<std::shared_ptr<Obstacle>>
+VirtualLaneManager::get_right_lane_obstacle() {
   std::vector<std::shared_ptr<Obstacle>> tr;
   if (right_lane_ == nullptr) {
     return tr;
   }
   int virtual_id = right_lane_->get_virtual_id();
-  auto reference_path_manager = session_->environmental_model().get_reference_path_manager();
-  std::shared_ptr<ReferencePath> reference_path = reference_path_manager->get_reference_path_by_lane(virtual_id);
+  auto reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  std::shared_ptr<ReferencePath> reference_path =
+      reference_path_manager->get_reference_path_by_lane(virtual_id);
   // tr = reference_path->cal_obstacles_on_lane() //todo
   return tr;
 }
 
 bool VirtualLaneManager::has_lane(int virtual_lane_id) {
-  if (virtual_id_mapped_lane_.find(virtual_lane_id) != virtual_id_mapped_lane_.end()) {
+  if (virtual_id_mapped_lane_.find(virtual_lane_id) !=
+      virtual_id_mapped_lane_.end()) {
     return true;
   } else {
     return false;
   }
 }
 
-double VirtualLaneManager::get_distance_to_final_dash_line(const RequestType direction, uint order_id) const {
+double VirtualLaneManager::get_distance_to_final_dash_line(
+    const RequestType direction, uint order_id) const {
   auto virtual_lane = get_lane_with_order_id(order_id);
   if (virtual_lane == nullptr) {
     return std::numeric_limits<double>::max();
@@ -235,14 +266,17 @@ double VirtualLaneManager::get_distance_to_final_dash_line(const RequestType dir
   return lc_map_decision_offset(virtual_lane);
 }
 
-int VirtualLaneManager::get_lane_index(const std::shared_ptr<VirtualLane> virtual_lane) const {
+int VirtualLaneManager::get_lane_index(
+    const std::shared_ptr<VirtualLane> virtual_lane) const {
   if (virtual_lane != nullptr) {
-    return virtual_lane->get_relative_id() - relative_id_lanes_.at(0)->get_relative_id();
+    return virtual_lane->get_relative_id() -
+           relative_id_lanes_.at(0)->get_relative_id();
   }
   return 0;
 }
 
-int VirtualLaneManager::get_tasks(const std::shared_ptr<VirtualLane> virtual_lane) const {
+int VirtualLaneManager::get_tasks(
+    const std::shared_ptr<VirtualLane> virtual_lane) const {
   int current_tasks = 0;
   if (virtual_lane != nullptr) {
     auto current_tasks_vector = virtual_lane->get_current_tasks();
@@ -259,22 +293,26 @@ int VirtualLaneManager::get_tasks(const std::shared_ptr<VirtualLane> virtual_lan
     int lane_index = get_lane_index(virtual_lane);
     int right_lane_nums = std::max((int)get_lane_num() - lane_index - 1, 0);
     int left_lane_nums = lane_index;
-    current_tasks = std::max(std::min(current_tasks, right_lane_nums), -left_lane_nums);
+    current_tasks =
+        std::max(std::min(current_tasks, right_lane_nums), -left_lane_nums);
     return current_tasks;
   } else {
     return 0;
   }
 }
 
-bool VirtualLaneManager::must_change_lane(const std::shared_ptr<VirtualLane> virtual_lane,
-                                          double on_route_distance_threshold) const {
+bool VirtualLaneManager::must_change_lane(
+    const std::shared_ptr<VirtualLane> virtual_lane,
+    double on_route_distance_threshold) const {
   if (virtual_lane == nullptr) {
     return 0;
   }
-  return lc_map_decision(virtual_lane) != 0 && lc_map_decision_offset(virtual_lane) < on_route_distance_threshold;
+  return lc_map_decision(virtual_lane) != 0 &&
+         lc_map_decision_offset(virtual_lane) < on_route_distance_threshold;
 }
 
-int VirtualLaneManager::lc_map_decision(const std::shared_ptr<VirtualLane> virtual_lane) const {
+int VirtualLaneManager::lc_map_decision(
+    const std::shared_ptr<VirtualLane> virtual_lane) const {
   if (virtual_lane == nullptr) {
     return 0;
   }

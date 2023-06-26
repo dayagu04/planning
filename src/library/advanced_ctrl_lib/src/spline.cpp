@@ -10,7 +10,8 @@ namespace mathlib {
 // spline implementation
 // -----------------------
 
-void spline::set_boundary(spline::bd_type left, double left_value, spline::bd_type right, double right_value) {
+void spline::set_boundary(spline::bd_type left, double left_value,
+                          spline::bd_type right, double right_value) {
   assert(m_x.size() == 0);  // set_points() must not have happened yet
   m_left = left;
   m_right = right;
@@ -29,7 +30,8 @@ void spline::set_coeffs_from_b() {
   for (size_t i = 0; i < n - 1; i++) {
     const double h = m_x[i + 1] - m_x[i];
     // from continuity and differentiability condition
-    m_c[i] = (3.0 * (m_y[i + 1] - m_y[i]) / h - (2.0 * m_b[i] + m_b[i + 1])) / h;
+    m_c[i] =
+        (3.0 * (m_y[i + 1] - m_y[i]) / h - (2.0 * m_b[i] + m_b[i + 1])) / h;
     // from differentiability condition
     m_d[i] = ((m_b[i + 1] - m_b[i]) / (3.0 * h) - 2.0 / 3.0 * m_c[i]) / h;
   }
@@ -38,7 +40,8 @@ void spline::set_coeffs_from_b() {
   m_c0 = (m_left == first_deriv) ? 0.0 : m_c[0];
 }
 
-void spline::set_points(const std::vector<double> &x, const std::vector<double> &y, spline_type type) {
+void spline::set_points(const std::vector<double> &x,
+                        const std::vector<double> &y, spline_type type) {
   assert(x.size() == y.size());
   assert(x.size() >= 3);
   // not-a-knot with 3 points has many solutions
@@ -81,7 +84,8 @@ void spline::set_points(const std::vector<double> &x, const std::vector<double> 
       A(i, i - 1) = 1.0 / 3.0 * (x[i] - x[i - 1]);
       A(i, i) = 2.0 / 3.0 * (x[i + 1] - x[i - 1]);
       A(i, i + 1) = 1.0 / 3.0 * (x[i + 1] - x[i]);
-      rhs[i] = (y[i + 1] - y[i]) / (x[i + 1] - x[i]) - (y[i] - y[i - 1]) / (x[i] - x[i - 1]);
+      rhs[i] = (y[i + 1] - y[i]) / (x[i + 1] - x[i]) -
+               (y[i] - y[i - 1]) / (x[i] - x[i - 1]);
     }
     // boundary conditions
     if (m_left == spline::second_deriv) {
@@ -116,7 +120,8 @@ void spline::set_points(const std::vector<double> &x, const std::vector<double> 
       // = 3 (f' - (y[n-1]-y[n-2])/(x[n-1]-x[n-2]))
       A(n - 1, n - 1) = 2.0 * (x[n - 1] - x[n - 2]);
       A(n - 1, n - 2) = 1.0 * (x[n - 1] - x[n - 2]);
-      rhs[n - 1] = 3.0 * (m_right_value - (y[n - 1] - y[n - 2]) / (x[n - 1] - x[n - 2]));
+      rhs[n - 1] =
+          3.0 * (m_right_value - (y[n - 1] - y[n - 2]) / (x[n - 1] - x[n - 2]));
     } else if (m_right == spline::not_a_knot) {
       // f'''(x[n-2]) exists, i.e. d[n-3]=d[n-2], or re-expressed in c:
       // -h_{n-2}*c[n-3] + (h_{n-3}+h_{n-2})*c[n-2] - h_{n-3}*c[n-1] = 0
@@ -136,15 +141,17 @@ void spline::set_points(const std::vector<double> &x, const std::vector<double> 
     m_b.resize(n);
     for (int i = 0; i < n - 1; i++) {
       m_d[i] = 1.0 / 3.0 * (m_c[i + 1] - m_c[i]) / (x[i + 1] - x[i]);
-      m_b[i] = (y[i + 1] - y[i]) / (x[i + 1] - x[i]) - 1.0 / 3.0 * (2.0 * m_c[i] + m_c[i + 1]) * (x[i + 1] - x[i]);
+      m_b[i] = (y[i + 1] - y[i]) / (x[i + 1] - x[i]) -
+               1.0 / 3.0 * (2.0 * m_c[i] + m_c[i + 1]) * (x[i + 1] - x[i]);
     }
     // for the right extrapolation coefficients (zero cubic term)
     // f_{n-1}(x) = y_{n-1} + b*(x-x_{n-1}) + c*(x-x_{n-1})^2
     double h = x[n - 1] - x[n - 2];
     // m_c[n-1] is determined by the boundary condition
     m_d[n - 1] = 0.0;
-    m_b[n - 1] = 3.0 * m_d[n - 2] * h * h + 2.0 * m_c[n - 2] * h + m_b[n - 2];  // = f'_{n-2}(x_{n-1})
-    if (m_right == first_deriv) m_c[n - 1] = 0.0;                               // force linear extrapolation
+    m_b[n - 1] = 3.0 * m_d[n - 2] * h * h + 2.0 * m_c[n - 2] * h +
+                 m_b[n - 2];                       // = f'_{n-2}(x_{n-1})
+    if (m_right == first_deriv) m_c[n - 1] = 0.0;  // force linear extrapolation
 
   } else if (type == cspline_hermite) {
     // hermite cubic splines which are C^1 (cont. differentiable)
@@ -157,20 +164,23 @@ void spline::set_points(const std::vector<double> &x, const std::vector<double> 
     for (int i = 1; i < n - 1; i++) {
       const double h = m_x[i + 1] - m_x[i];
       const double hl = m_x[i] - m_x[i - 1];
-      m_b[i] = -h / (hl * (hl + h)) * m_y[i - 1] + (h - hl) / (hl * h) * m_y[i] + hl / (h * (hl + h)) * m_y[i + 1];
+      m_b[i] = -h / (hl * (hl + h)) * m_y[i - 1] +
+               (h - hl) / (hl * h) * m_y[i] + hl / (h * (hl + h)) * m_y[i + 1];
     }
     // boundary conditions determine b[0] and b[n-1]
     if (m_left == first_deriv) {
       m_b[0] = m_left_value;
     } else if (m_left == second_deriv) {
       const double h = m_x[1] - m_x[0];
-      m_b[0] = 0.5 * (-m_b[1] - 0.5 * m_left_value * h + 3.0 * (m_y[1] - m_y[0]) / h);
+      m_b[0] = 0.5 *
+               (-m_b[1] - 0.5 * m_left_value * h + 3.0 * (m_y[1] - m_y[0]) / h);
     } else if (m_left == not_a_knot) {
       // f''' continuous at x[1]
       const double h0 = m_x[1] - m_x[0];
       const double h1 = m_x[2] - m_x[1];
       m_b[0] = -m_b[1] + 2.0 * (m_y[1] - m_y[0]) / h0 +
-               h0 * h0 / (h1 * h1) * (m_b[1] + m_b[2] - 2.0 * (m_y[2] - m_y[1]) / h1);
+               h0 * h0 / (h1 * h1) *
+                   (m_b[1] + m_b[2] - 2.0 * (m_y[2] - m_y[1]) / h1);
     } else {
       assert(false);
     }
@@ -179,16 +189,20 @@ void spline::set_points(const std::vector<double> &x, const std::vector<double> 
       m_c[n - 1] = 0.0;
     } else if (m_right == second_deriv) {
       const double h = m_x[n - 1] - m_x[n - 2];
-      m_b[n - 1] = 0.5 * (-m_b[n - 2] + 0.5 * m_right_value * h + 3.0 * (m_y[n - 1] - m_y[n - 2]) / h);
+      m_b[n - 1] = 0.5 * (-m_b[n - 2] + 0.5 * m_right_value * h +
+                          3.0 * (m_y[n - 1] - m_y[n - 2]) / h);
       m_c[n - 1] = 0.5 * m_right_value;
     } else if (m_right == not_a_knot) {
       // f''' continuous at x[n-2]
       const double h0 = m_x[n - 2] - m_x[n - 3];
       const double h1 = m_x[n - 1] - m_x[n - 2];
-      m_b[n - 1] = -m_b[n - 2] + 2.0 * (m_y[n - 1] - m_y[n - 2]) / h1 +
-                   h1 * h1 / (h0 * h0) * (m_b[n - 3] + m_b[n - 2] - 2.0 * (m_y[n - 2] - m_y[n - 3]) / h0);
+      m_b[n - 1] =
+          -m_b[n - 2] + 2.0 * (m_y[n - 1] - m_y[n - 2]) / h1 +
+          h1 * h1 / (h0 * h0) *
+              (m_b[n - 3] + m_b[n - 2] - 2.0 * (m_y[n - 2] - m_y[n - 3]) / h0);
       // f'' continuous at x[n-1]: c[n-1] = 3*d[n-2]*h[n-2] + c[n-1]
-      m_c[n - 1] = (m_b[n - 2] + 2.0 * m_b[n - 1]) / h1 - 3.0 * (m_y[n - 1] - m_y[n - 2]) / (h1 * h1);
+      m_c[n - 1] = (m_b[n - 2] + 2.0 * m_b[n - 1]) / h1 -
+                   3.0 * (m_y[n - 1] - m_y[n - 2]) / (h1 * h1);
     } else {
       assert(false);
     }
@@ -229,13 +243,16 @@ void spline::make_monotonic() {
     double h = m_x[i + 1] - m_x[i];
     double avg = (m_y[i + 1] - m_y[i]) / h;
     double EPS = get_eps();
-    if (std::fabs(avg) <= EPS && (std::fabs(m_b[i]) > EPS || std::fabs(m_b[i + 1]) > EPS)) {
+    if (std::fabs(avg) <= EPS &&
+        (std::fabs(m_b[i]) > EPS || std::fabs(m_b[i + 1]) > EPS)) {
       modified = true;
       m_b[i] = 0.0;
       m_b[i + 1] = 0.0;
-    } else if ((m_b[i] >= 0.0 && m_b[i + 1] >= 0.0 && avg > 0.0) || (m_b[i] <= 0.0 && m_b[i + 1] <= 0.0 && avg < 0.0)) {
+    } else if ((m_b[i] >= 0.0 && m_b[i + 1] >= 0.0 && avg > 0.0) ||
+               (m_b[i] <= 0.0 && m_b[i + 1] <= 0.0 && avg < 0.0)) {
       // input data is monotonic
-      double r = sqrt(m_b[i] * m_b[i] + m_b[i + 1] * m_b[i + 1]) / std::fabs(avg);
+      double r =
+          sqrt(m_b[i] * m_b[i] + m_b[i + 1] * m_b[i + 1]) / std::fabs(avg);
       if (r > 3.0) {
         // sufficient criteria for monotonicity: r<=3
         // adjust b[i] and b[i+1]
@@ -472,7 +489,8 @@ void band_matrix::lu_decompose() {
       j_max = std::min(this->dim() - 1, k + this->num_upper());
       for (int j = k + 1; j <= j_max; j++) {
         // assembly part of R
-        this->operator()(i, j) = this->operator()(i, j) + x * this->operator()(k, j);
+        this->operator()(i, j) =
+            this->operator()(i, j) + x * this->operator()(k, j);
       }
     }
   }
@@ -506,7 +524,8 @@ std::vector<double> band_matrix::r_solve(const std::vector<double> &b) const {
   return x;
 }
 
-std::vector<double> band_matrix::lu_solve(const std::vector<double> &b, bool is_lu_decomposed) {
+std::vector<double> band_matrix::lu_solve(const std::vector<double> &b,
+                                          bool is_lu_decomposed) {
   assert(this->dim() == (int)b.size());
   std::vector<double> x, y;
   if (is_lu_decomposed == false) {
@@ -544,7 +563,8 @@ std::vector<double> solve_linear(double a, double b) {
 }
 
 // solutions for a + b*x + c*x^2 = 0
-std::vector<double> solve_quadratic(double a, double b, double c, int newton_iter = 0) {
+std::vector<double> solve_quadratic(double a, double b, double c,
+                                    int newton_iter = 0) {
   if (std::fabs(c) <= get_eps()) {
     return solve_linear(a, b);
   }
@@ -591,7 +611,8 @@ std::vector<double> solve_quadratic(double a, double b, double c, int newton_ite
 // see also
 //   gsl: gsl_poly_solve_cubic() in solve_cubic.c
 //   octave: roots.m - via eigenvalues of the Frobenius companion matrix
-std::vector<double> solve_cubic(double a, double b, double c, double d, int newton_iter) {
+std::vector<double> solve_cubic(double a, double b, double c, double d,
+                                int newton_iter) {
   if (std::fabs(d) <= get_eps()) {
     return solve_quadratic(a, b, c, newton_iter);
   }
@@ -616,11 +637,15 @@ std::vector<double> solve_cubic(double a, double b, double c, double d, int newt
   //  - p_err << |p|, q_err << |q|, ... (this is violated in rare cases)
   // would be more elegant to use boost::numeric::interval<double>
   const double eps = get_eps();
-  double p_err = eps * ((3.0 / 3.0) * fabs(b) + (4.0 / 9.0) * (c * c) + fabs(p));
+  double p_err =
+      eps * ((3.0 / 3.0) * fabs(b) + (4.0 / 9.0) * (c * c) + fabs(p));
   double r_err = eps * (6.0 * (c * c) + 18.0 * fabs(b) + fabs(r));
-  double q_err = 0.5 * fabs(a) * eps + (1.0 / 54.0) * fabs(c) * (r_err + fabs(r) * 3.0 * eps) + fabs(q) * eps;
-  double discr_err =
-      (p * p) * (3.0 * p_err + fabs(p) * 2.0 * eps) + fabs(q) * (2.0 * q_err + fabs(q) * eps) + fabs(discr) * eps;
+  double q_err = 0.5 * fabs(a) * eps +
+                 (1.0 / 54.0) * fabs(c) * (r_err + fabs(r) * 3.0 * eps) +
+                 fabs(q) * eps;
+  double discr_err = (p * p) * (3.0 * p_err + fabs(p) * 2.0 * eps) +
+                     fabs(q) * (2.0 * q_err + fabs(q) * eps) +
+                     fabs(discr) * eps;
 
   // depending on the discriminant we get different solutions
   if (fabs(discr) <= discr_err) {

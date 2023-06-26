@@ -22,7 +22,8 @@ class SLPolygonSeq : public std::vector<PolygonWithT> {
 
   bool EvaluateByTime(const double t, PolygonWithT* const polygon_t) const;
 
-  void set_invalid_time_sections(const std::vector<std::pair<double, double>>& secs);
+  void set_invalid_time_sections(
+      const std::vector<std::pair<double, double>>& secs);
 
   double TotalTime() const;
 

@@ -4,14 +4,15 @@
 #include <cmath>
 
 #include "gtest/gtest.h"
-#include "task_pipeline_context.h"
 #include "log.h"
+#include "task_pipeline_context.h"
 
 namespace planning {
 
 TEST(TestLongBehavior, general_longitudinal_decider) {
   std::string log_file = "/asw/Planning/log/planning_log";
-  bst::Log::getInstance().setConfig("Planning_Log", log_file.c_str(), bst::DEBUG);
+  bst::Log::getInstance().setConfig("Planning_Log", log_file.c_str(),
+                                    bst::DEBUG);
 
   auto kk = 10.0;
   printf("TestLongBehavior: general_longitudinal_decider");

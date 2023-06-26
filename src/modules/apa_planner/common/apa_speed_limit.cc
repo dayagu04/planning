@@ -32,15 +32,21 @@ void ApaSpeedLimit::AppendSpeedLimit(const double s, const double v) {
   speed_limit_points_.emplace_back(s, v);
 }
 
-const std::vector<std::pair<double, double>>& ApaSpeedLimit::speed_limit_points() const { return speed_limit_points_; }
+const std::vector<std::pair<double, double>>&
+ApaSpeedLimit::speed_limit_points() const {
+  return speed_limit_points_;
+}
 
 double ApaSpeedLimit::GetSpeedLimitByS(const double s) const {
   assert(speed_limit_points_.size() >= 2U);
   assert(s >= speed_limit_points_.front().first);
 
-  auto compare_s = [](const std::pair<double, double>& point, const double s) { return point.first < s; };
+  auto compare_s = [](const std::pair<double, double>& point, const double s) {
+    return point.first < s;
+  };
 
-  auto it_lower = std::lower_bound(speed_limit_points_.begin(), speed_limit_points_.end(), s, compare_s);
+  auto it_lower = std::lower_bound(speed_limit_points_.begin(),
+                                   speed_limit_points_.end(), s, compare_s);
 
   if (it_lower == speed_limit_points_.end()) {
     return (it_lower - 1)->second;

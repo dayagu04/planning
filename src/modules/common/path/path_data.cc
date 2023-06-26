@@ -2,8 +2,10 @@
 
 namespace planning {
 
-PolygonalLine::PolygonalLine(std::vector<SLPoint> sl_points) : std::vector<SLPoint>(std::move(sl_points)) {
-  std::sort(begin(), end(), [](const SLPoint& p1, const SLPoint& p2) { return p1.s < p2.s; });
+PolygonalLine::PolygonalLine(std::vector<SLPoint> sl_points)
+    : std::vector<SLPoint>(std::move(sl_points)) {
+  std::sort(begin(), end(),
+            [](const SLPoint& p1, const SLPoint& p2) { return p1.s < p2.s; });
 }
 
 bool PolygonalLine::EvaluateByS(const double s, double* border) const {
@@ -37,14 +39,19 @@ double PolygonalLine::TotalLength() const {
   return back().s - front().s;
 }
 
-void PathData::SetDiscretizedPath(DiscretizedPath path) { discretized_path_ = std::move(path); }
+void PathData::SetDiscretizedPath(DiscretizedPath path) {
+  discretized_path_ = std::move(path);
+}
 
-void PathData::SetPathBorder(PolygonalLine left_border, PolygonalLine right_border) {
+void PathData::SetPathBorder(PolygonalLine left_border,
+                             PolygonalLine right_border) {
   left_border_ = std::move(left_border);
   right_border_ = std::move(right_border);
 }
 
-const DiscretizedPath& PathData::discretized_path() const { return discretized_path_; }
+const DiscretizedPath& PathData::discretized_path() const {
+  return discretized_path_;
+}
 
 const PolygonalLine& PathData::LeftBorder() const { return left_border_; }
 
@@ -61,7 +68,9 @@ std::pair<double, double> PathData::getWidth(const double path_s) const {
 
 bool PathData::Empty() const { return discretized_path_.empty(); }
 
-PathPoint PathData::GetPathPointWithPathS(const double s) const { return discretized_path_.Evaluate(s); }
+PathPoint PathData::GetPathPointWithPathS(const double s) const {
+  return discretized_path_.Evaluate(s);
+}
 
 void PathData::Clear() {
   discretized_path_.clear();

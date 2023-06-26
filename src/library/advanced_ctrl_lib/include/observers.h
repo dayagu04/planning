@@ -59,7 +59,8 @@ class DOBwithIdealModel {
 class KalmanFilter {
  public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  void init(const Eigen::MatrixXd &F, const Eigen::MatrixXd &H, const Eigen::MatrixXd &Q, const Eigen::MatrixXd &R,
+  void init(const Eigen::MatrixXd &F, const Eigen::MatrixXd &H,
+            const Eigen::MatrixXd &Q, const Eigen::MatrixXd &R,
             const Eigen::VectorXd &x0);
   void Reset();
 

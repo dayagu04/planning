@@ -57,9 +57,11 @@ class ConfigurationContext {
 
   AlgorithmParam algorithm_config() { return algorithm_conf_; }
 
-  bool reset_synthetic_config(SyntheticConfiguration synthetic_config, std::string config_file_dir) {
+  bool reset_synthetic_config(SyntheticConfiguration synthetic_config,
+                              std::string config_file_dir) {
     if (synthetic_config.scene_type != synthetic_conf_.scene_type) {
-      LOG_DEBUG("ConfigContext: reset scene_type %s \n", synthetic_config.scene_type.c_str());
+      LOG_DEBUG("ConfigContext: reset scene_type %s \n",
+                synthetic_config.scene_type.c_str());
       std::string target_scene_config_dir;
       if (synthetic_config.scene_type == "highway") {
         std::cout << "---------------+ " << std::endl;
@@ -78,7 +80,8 @@ class ConfigurationContext {
       synthetic_conf_ = synthetic_config;
       return true;
     } else {
-      LOG_DEBUG("scene_type is no changed: %s\n", synthetic_conf_.scene_type.c_str());
+      LOG_DEBUG("scene_type is no changed: %s\n",
+                synthetic_conf_.scene_type.c_str());
       synthetic_conf_ = synthetic_config;
       return false;
     }
@@ -94,15 +97,18 @@ class ConfigurationContext {
       std::cout << config_file_dir << "/scene.pb.txt not exist!" << std::endl;
       return false;
     }
-    common::util::GetProtoFromFile(config_file_dir + "/scene.pb.txt", &task_config);
+    common::util::GetProtoFromFile(config_file_dir + "/scene.pb.txt",
+                                   &task_config);
     auto scene_type = task_config.scene_type();
     synthetic_conf_.scene_type = scene_type;
     synthetic_conf_.sensor_configuration = task_config.sensor_configuration();
     synthetic_conf_.cpu_configuration = task_config.cpu_configuration();
 
     std::string target_scene_config_dir;
-    LOG_DEBUG("ConfigContext: scene_type %s", task_config.scene_type().c_str(), "\n");
-    std::cout << "ConfigContext: scene_type ====" << task_config.scene_type() << std::endl;
+    LOG_DEBUG("ConfigContext: scene_type %s", task_config.scene_type().c_str(),
+              "\n");
+    std::cout << "ConfigContext: scene_type ====" << task_config.scene_type()
+              << std::endl;
     if (scene_type == "highway") {
       scene_type_ = common::SceneType::HIGHWAY;
       target_scene_config_dir = config_file_dir + "/highway";
@@ -158,7 +164,8 @@ class ConfigurationContext {
       return false;
     }
     std::string scenario_cfg_dir = json_data["scenario_cfg_dir"];
-    std::cout << "json scenario_cfg_dir: !!!====" << scenario_cfg_dir << std::endl;
+    std::cout << "json scenario_cfg_dir: !!!====" << scenario_cfg_dir
+              << std::endl;
     engine_conf_.scenario_cfg_dir = scenario_cfg_dir;
 
     // 加载车辆模型配置文件路径
@@ -167,7 +174,8 @@ class ConfigurationContext {
       return false;
     }
     auto vehicle_cfg_dir = json_data["vehicle_cfg_dir"];
-    std::cout << "json vehicle_cfg_dir: !!!====" << vehicle_cfg_dir << std::endl;
+    std::cout << "json vehicle_cfg_dir: !!!====" << vehicle_cfg_dir
+              << std::endl;
     engine_conf_.vehicle_cfg_dir = vehicle_cfg_dir;
 
     std::cout << "Load engine config DONE!" << std::endl;

@@ -7,7 +7,8 @@ void StartStopEnable::init() {
   enable_hnp_functions_ = config_.enable_hnp_functions;
 }
 
-void StartStopEnable::go_trajectory(LonDecisionInfo& lon_decision_information, int& start_stop_information,
+void StartStopEnable::go_trajectory(LonDecisionInfo& lon_decision_information,
+                                    int& start_stop_information,
                                     StartStopInfo& start_stop_result) {}
 
 }  // namespace planning

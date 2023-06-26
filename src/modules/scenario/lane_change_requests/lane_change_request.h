@@ -16,8 +16,10 @@ namespace planning {
 /// @brief 换道请求的基类，生成、结束换道请求等
 class LaneChangeRequest {
  public:
-  LaneChangeRequest(planning::framework::Session* session, std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
-                    std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
+  LaneChangeRequest(
+      planning::framework::Session* session,
+      std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
+      std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
   virtual ~LaneChangeRequest() = default;
 
   void GenerateRequest(RequestType direction);
@@ -28,7 +30,9 @@ class LaneChangeRequest {
 
   RequestType request_type() const { return request_type_; }
   int target_lane_virtual_id() { return target_lane_virtual_id_; }
-  void set_target_lane_virtual_id(int target_lane_virtual_id) { target_lane_virtual_id_ = target_lane_virtual_id; }
+  void set_target_lane_virtual_id(int target_lane_virtual_id) {
+    target_lane_virtual_id_ = target_lane_virtual_id;
+  }
   RequestType turn_signal() const { return turn_signal_; }
   double tstart() const { return tstart_; }
   double tfinish() const { return tfinish_; }

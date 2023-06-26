@@ -22,9 +22,13 @@ class DebugInfoManager : public planning::common::Arena {
     return instance;
   }
   // 获取proto内容
-  std::unique_ptr<planning::common::PlanningDebugInfo> &GetDebugInfoPb() { return debug_info_pb_; }
+  std::unique_ptr<planning::common::PlanningDebugInfo> &GetDebugInfoPb() {
+    return debug_info_pb_;
+  }
   // 获取json内容
-  std::unique_ptr<mjson::Json::object> &GetDebugJson() { return debug_info_json_; }
+  std::unique_ptr<mjson::Json::object> &GetDebugJson() {
+    return debug_info_json_;
+  }
 
  private:
   DebugInfoManager()
@@ -39,25 +43,30 @@ class DebugInfoManager : public planning::common::Arena {
 #define LOG_ARRAY_CACHE 5000
 #endif
 
-#define JSON_DEBUG_VALUE(var_name, var_value)                                                               \
-  if (std::isnan(var_value))                                                                                \
-    (*DebugInfoManager::GetInstance().GetDebugJson())[var_name] = mjson::Json(static_cast<int>(1000));      \
-  else if (sizeof(var_value) <= 4)                                                                          \
-    (*DebugInfoManager::GetInstance().GetDebugJson())[var_name] = mjson::Json(static_cast<int>(var_value)); \
-  else                                                                                                      \
-    (*DebugInfoManager::GetInstance().GetDebugJson())[var_name] = mjson::Json(static_cast<double>(var_value));
+#define JSON_DEBUG_VALUE(var_name, var_value)                     \
+  if (std::isnan(var_value))                                      \
+    (*DebugInfoManager::GetInstance().GetDebugJson())[var_name] = \
+        mjson::Json(static_cast<int>(1000));                      \
+  else if (sizeof(var_value) <= 4)                                \
+    (*DebugInfoManager::GetInstance().GetDebugJson())[var_name] = \
+        mjson::Json(static_cast<int>(var_value));                 \
+  else                                                            \
+    (*DebugInfoManager::GetInstance().GetDebugJson())[var_name] = \
+        mjson::Json(static_cast<double>(var_value));
 
 #define JSON_DEBUG_VECTOR(var_name, var_value, keep_length)     \
   (*DebugInfoManager::GetInstance().GetDebugJson())[var_name] = \
       mjson::Json(Utils::vec_to_char_array(var_value, keep_length));
 
-#define JSON_READ_VALUE(var_name, type, json_name) var_name = config.get<type>(json_name, false, var_name)
+#define JSON_READ_VALUE(var_name, type, json_name) \
+  var_name = config.get<type>(json_name, false, var_name)
 
 class Utils {
  public:
   Utils(){};
   ~Utils(){};
-  static char *vec_to_char_array(const std::vector<double> &vec, const unsigned char &precision) {
+  static char *vec_to_char_array(const std::vector<double> &vec,
+                                 const unsigned char &precision) {
     static char s[LOG_ARRAY_CACHE];
     static char format1[] = "%.6f,";  // support 0~9 precision
     static char format2[] = "%.6f";

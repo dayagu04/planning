@@ -25,20 +25,29 @@ int main(int argc, char **argv) {
 
   int opt, lopt, loidx;
   const char *optstring = "";
-  const struct option long_options[] = {{"help", no_argument, &lopt, 1},
-                                        {"play", required_argument, &lopt, 2},
-                                        {"close-loop", optional_argument, &lopt, 3},
-                                        {"out-bag", optional_argument, &lopt, 4}};
+  const struct option long_options[] = {
+      {"help", no_argument, &lopt, 1},
+      {"play", required_argument, &lopt, 2},
+      {"close-loop", optional_argument, &lopt, 3},
+      {"out-bag", optional_argument, &lopt, 4}};
 
-  while ((opt = getopt_long(argc, argv, optstring, long_options, &loidx)) != -1) {
+  while ((opt = getopt_long(argc, argv, optstring, long_options, &loidx)) !=
+         -1) {
     if (opt == 0) opt = lopt;
     switch (opt) {
       case 1:
         std::cout << "--help             print this message" << std::endl;
-        std::cout << "--play [bag path]  origin bag path, required" << std::endl;
-        std::cout << "--close-loop       run close loop(not implemented), default false" << std::endl;
-        std::cout << "--out-bag          generated bag path, default [bag path].[timestamp].plan" << std::endl;
-        std::cout << "--log-file         generated log path, default [bag paht].[timestamp].log" << std::endl;
+        std::cout << "--play [bag path]  origin bag path, required"
+                  << std::endl;
+        std::cout << "--close-loop       run close loop(not implemented), "
+                     "default false"
+                  << std::endl;
+        std::cout << "--out-bag          generated bag path, default [bag "
+                     "path].[timestamp].plan"
+                  << std::endl;
+        std::cout << "--log-file         generated log path, default [bag "
+                     "paht].[timestamp].log"
+                  << std::endl;
         break;
       case 2:
         bag_path = std::string(optarg);
@@ -59,8 +68,10 @@ int main(int argc, char **argv) {
     }
   }
 
-  auto tp =
-      std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now()).time_since_epoch().count();
+  auto tp = std::chrono::time_point_cast<std::chrono::seconds>(
+                std::chrono::system_clock::now())
+                .time_since_epoch()
+                .count();
   if (out_bag.empty()) {
     out_bag = bag_path + "." + std::to_string(tp) + ".plan";
   }

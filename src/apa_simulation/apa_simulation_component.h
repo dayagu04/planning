@@ -55,14 +55,19 @@ class ApaSimulationComponent final : public autoplt::ADSTimerCoponent {
   ParkingFusionInfo parking_fusion_info_msg_;
 
   // output signals
-  std::shared_ptr<Writer<LocalizationEstimate>> localization_estimate_writer_ = nullptr;
-  std::shared_ptr<Writer<ParkingFusionInfo>> parking_fusion_info_writer_ = nullptr;
-  std::shared_ptr<Writer<VehicleServiceOutputInfo>> vehicle_service_output_info_writer_ = nullptr;
-  std::shared_ptr<Writer<FuncStateMachine>> func_state_machine_writer_ = nullptr;
+  std::shared_ptr<Writer<LocalizationEstimate>> localization_estimate_writer_ =
+      nullptr;
+  std::shared_ptr<Writer<ParkingFusionInfo>> parking_fusion_info_writer_ =
+      nullptr;
+  std::shared_ptr<Writer<VehicleServiceOutputInfo>>
+      vehicle_service_output_info_writer_ = nullptr;
+  std::shared_ptr<Writer<FuncStateMachine>> func_state_machine_writer_ =
+      nullptr;
 
   int traj_pt_index_ = 0;
   PlanningOutput cur_planning_output_;
-  Common::GearCommandValue last_planning_gear_ = Common::GearCommandValue::GEAR_COMMAND_VALUE_NONE;
+  Common::GearCommandValue last_planning_gear_ =
+      Common::GearCommandValue::GEAR_COMMAND_VALUE_NONE;
 
   double last_ego_x_ = 0.0;
   double last_ego_y_ = 0.0;

@@ -23,9 +23,11 @@ class Line {
   Point2D operator*(const Line &line) const {
     double d = a_ * line.b_ - line.a_ * b_;
     if (std::abs(d) < std::numeric_limits<double>::epsilon()) {
-      return {std::numeric_limits<double>::min(), std::numeric_limits<double>::min()};
+      return {std::numeric_limits<double>::min(),
+              std::numeric_limits<double>::min()};
     } else {
-      return {(b_ * line.c_ - line.b_ * c_) / d, (c_ * line.a_ - line.c_ * a_) / d};
+      return {(b_ * line.c_ - line.b_ * c_) / d,
+              (c_ * line.a_ - line.c_ * a_) / d};
     }
   }
 
@@ -51,7 +53,10 @@ class PerceptionRangeEstimatorImpl : public PerceptionRangeEstimator {
   PerceptionRangeEstimatorImpl() : ego_yaw_(0.0), ego_frenet_s_(0.0){};
   ~PerceptionRangeEstimatorImpl() = default;
 
-  void updateFrenet(const std::shared_ptr<FrenetCoordinateSystem> &frenet) override { frenet_coord_ = frenet; };
+  void updateFrenet(
+      const std::shared_ptr<FrenetCoordinateSystem> &frenet) override {
+    frenet_coord_ = frenet;
+  };
 
   // void feedMapInfo(const MSDMapInfo &map_info) override {
   //   refline_points_.clear();
@@ -116,14 +121,16 @@ class PerceptionRangeEstimatorImpl : public PerceptionRangeEstimator {
 
   //   // Bird view
   //   Point2D lidar_origin(config_.lidar_position_x, 0);
-  //   auto cross_1_l = findReflineCrossing(lidar_origin, p1, left_bound_points_);
-  //   auto cross_1_r = findReflineCrossing(lidar_origin, p1, right_bound_points_);
-  //   auto cross_2_l = findReflineCrossing(lidar_origin, p2, left_bound_points_);
-  //   auto cross_2_r = findReflineCrossing(lidar_origin, p2, right_bound_points_);
-  //   auto cross_3_l = findReflineCrossing(lidar_origin, p3, left_bound_points_);
-  //   auto cross_3_r = findReflineCrossing(lidar_origin, p3, right_bound_points_);
-  //   auto cross_4_l = findReflineCrossing(lidar_origin, p4, left_bound_points_);
-  //   auto cross_4_r = findReflineCrossing(lidar_origin, p4, right_bound_points_);
+  //   auto cross_1_l = findReflineCrossing(lidar_origin, p1,
+  //   left_bound_points_); auto cross_1_r = findReflineCrossing(lidar_origin,
+  //   p1, right_bound_points_); auto cross_2_l =
+  //   findReflineCrossing(lidar_origin, p2, left_bound_points_); auto cross_2_r
+  //   = findReflineCrossing(lidar_origin, p2, right_bound_points_); auto
+  //   cross_3_l = findReflineCrossing(lidar_origin, p3, left_bound_points_);
+  //   auto cross_3_r = findReflineCrossing(lidar_origin, p3,
+  //   right_bound_points_); auto cross_4_l = findReflineCrossing(lidar_origin,
+  //   p4, left_bound_points_); auto cross_4_r =
+  //   findReflineCrossing(lidar_origin, p4, right_bound_points_);
   //   LOG_DEBUG("lymdbg: 1_l(%.3f, %.3f)", cross_1_l.x, cross_1_l.y);
   //   LOG_DEBUG("lymdbg: 1_r(%.3f, %.3f)", cross_1_r.x, cross_1_r.y);
   //   LOG_DEBUG("lymdbg: 2_l(%.3f, %.3f)", cross_2_l.x, cross_2_l.y);
@@ -199,28 +206,36 @@ class PerceptionRangeEstimatorImpl : public PerceptionRangeEstimator {
 
   // Rotate a point
   // Param angle should be in radius
-  static Point2D rotatePoint(const Point2D &origin, const Point2D &point, double angle) {
+  static Point2D rotatePoint(const Point2D &origin, const Point2D &point,
+                             double angle) {
     double sin_yaw = std::sin(angle);
     double cos_yaw = std::cos(angle);
-    return {cos_yaw * (point.x - origin.x) - sin_yaw * (point.y - origin.y) + origin.x,
-            sin_yaw * (point.x - origin.x) + cos_yaw * (point.y - origin.y) + origin.y};
+    return {cos_yaw * (point.x - origin.x) - sin_yaw * (point.y - origin.y) +
+                origin.x,
+            sin_yaw * (point.x - origin.x) + cos_yaw * (point.y - origin.y) +
+                origin.y};
   }
 
-  static Point2D findReflineCrossing(double x, const std::vector<Point2D> &refline) {
+  static Point2D findReflineCrossing(double x,
+                                     const std::vector<Point2D> &refline) {
     for (size_t i = 0; (i + 1) < refline.size(); ++i) {
-      if ((i == 0 && x < refline[i].x) || (i == refline.size() - 2 && x > refline[i + 1].x) ||
+      if ((i == 0 && x < refline[i].x) ||
+          (i == refline.size() - 2 && x > refline[i + 1].x) ||
           (refline[i].x <= x && refline[i + 1].x >= x)) {
-        Line curr_segment(Point2D(refline[i].x, refline[i].y), Point2D(refline[i + 1].x, refline[i + 1].y));
+        Line curr_segment(Point2D(refline[i].x, refline[i].y),
+                          Point2D(refline[i + 1].x, refline[i + 1].y));
         return curr_segment(x);
       }
     }
     return {0, 0};
   }
 
-  static Point2D findReflineCrossing(const Point2D &A, const Point2D &B, const std::vector<Point2D> &refline) {
+  static Point2D findReflineCrossing(const Point2D &A, const Point2D &B,
+                                     const std::vector<Point2D> &refline) {
     Line line_a(A, B);
     for (size_t i = 0; (i + 1) < refline.size(); ++i) {
-      Line curr_segment(Point2D(refline[i].x, refline[i].y), Point2D(refline[i + 1].x, refline[i + 1].y));
+      Line curr_segment(Point2D(refline[i].x, refline[i].y),
+                        Point2D(refline[i + 1].x, refline[i + 1].y));
       auto cross_point = line_a * curr_segment;
       if (cross_point.x >= refline[i].x && cross_point.x <= refline[i + 1].x &&
           cross_point.y >= std::min({refline[i].y, refline[i + 1].y}) &&
@@ -228,7 +243,8 @@ class PerceptionRangeEstimatorImpl : public PerceptionRangeEstimator {
         return cross_point;
       }
     }
-    return {std::numeric_limits<double>::min(), std::numeric_limits<double>::min()};
+    return {std::numeric_limits<double>::min(),
+            std::numeric_limits<double>::min()};
   }
 };
 

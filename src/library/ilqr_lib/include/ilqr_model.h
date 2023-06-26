@@ -20,9 +20,11 @@ class iLqrModel {
 
   ~iLqrModel() = default;
 
-  virtual State UpdateDynamicsOneStep(const State &x, const Control &u, const size_t &step) const = 0;
+  virtual State UpdateDynamicsOneStep(const State &x, const Control &u,
+                                      const size_t &step) const = 0;
 
-  virtual void GetDynamicsDerivatives(const State &x, const Control & /*u*/, FxMT &f_x, FuMT &f_u,
+  virtual void GetDynamicsDerivatives(const State &x, const Control & /*u*/,
+                                      FxMT &f_x, FuMT &f_u,
                                       const size_t &step) const = 0;
 
   void InitGuess(StateVec &x0, ControlVec &u0, double &init_cost);
@@ -33,10 +35,12 @@ class iLqrModel {
   double GetCost(const State &x, const Control &u, const size_t &step);
   double GetTerminalCost(const State &x);
 
-  void GetGradientHessian(const State &x, const Control &u, const size_t &step, LxMT &lx, LuMT &lu, LxxMT &lxx,
-                          LxuMT &lxu, LuuMT &luu);
+  void GetGradientHessian(const State &x, const Control &u, const size_t &step,
+                          LxMT &lx, LuMT &lu, LxxMT &lxx, LxuMT &lxu,
+                          LuuMT &luu);
 
-  void GetTerminalGradientHessian(const State &x, LxMT &lx, LuMT &lu, LxxMT &lxx, LxuMT &lxu, LuuMT &luu);
+  void GetTerminalGradientHessian(const State &x, LxMT &lx, LuMT &lu,
+                                  LxxMT &lxx, LxuMT &lxu, LuuMT &luu);
 
   void AddCost(std::shared_ptr<BaseCostTerm> cost_term);
   double UpateDynamics(StateVec &x0, const ControlVec &u0);
@@ -49,15 +53,25 @@ class iLqrModel {
     uk_vec_ = uk;
   }
 
-  void SetCostConfig(const std::vector<IlqrCostConfig> &cost_config) { *cost_config_vec_ptr_ = cost_config; }
+  void SetCostConfig(const std::vector<IlqrCostConfig> &cost_config) {
+    *cost_config_vec_ptr_ = cost_config;
+  }
 
-  std::shared_ptr<std::vector<IlqrCostConfig>> GetiLqrCostConfigPtr() { return cost_config_vec_ptr_; }
+  std::shared_ptr<std::vector<IlqrCostConfig>> GetiLqrCostConfigPtr() {
+    return cost_config_vec_ptr_;
+  }
 
-  std::shared_ptr<iLqrSolverConfig> GetSolverConfigPtr() { return solver_config_ptr_; }
+  std::shared_ptr<iLqrSolverConfig> GetSolverConfigPtr() {
+    return solver_config_ptr_;
+  }
 
-  void SetCostMapPtr(ILqrCostMap *cost_map_ptr) { cost_map_ptr_ = cost_map_ptr; }
+  void SetCostMapPtr(ILqrCostMap *cost_map_ptr) {
+    cost_map_ptr_ = cost_map_ptr;
+  }
 
-  std::vector<std::shared_ptr<BaseCostTerm>> *GetCostStackPtr() { return &cost_stack_; }
+  std::vector<std::shared_ptr<BaseCostTerm>> *GetCostStackPtr() {
+    return &cost_stack_;
+  }
 
  protected:
   bool solver_success_ = false;

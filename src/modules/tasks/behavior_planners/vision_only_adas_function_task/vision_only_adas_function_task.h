@@ -10,8 +10,9 @@ namespace planning {
 
 class VisionOnlyAdasFunctionTask : public Task {
  public:
-  explicit VisionOnlyAdasFunctionTask(const EgoPlanningConfigBuilder *config_builder,
-                                      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+  explicit VisionOnlyAdasFunctionTask(
+      const EgoPlanningConfigBuilder *config_builder,
+      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
   virtual ~VisionOnlyAdasFunctionTask() = default;
 
   bool Execute(framework::Frame *frame) override;

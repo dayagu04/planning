@@ -6,7 +6,9 @@ namespace planning {
 class LaneDepartWarning {
  public:
   LaneDepartWarning() = default;
-  LaneDepartWarning(planning::LkasInput *lkas_input) { lkas_input_ = lkas_input; }
+  LaneDepartWarning(planning::LkasInput *lkas_input) {
+    lkas_input_ = lkas_input;
+  }
   void Init(planning::LkasInput *lkas_input);
 
   void RunOnce();
@@ -42,10 +44,13 @@ class LaneDepartWarning {
  private:
   planning::MeasurementPoint measurement_str_;
   planning::CalibrationParameter calribration_str_;
-  uint32 ldw_state_{0}; /* LDW功能状态 0:Unavailable 1:Off 2:Standby 3:Active(No Intervention) 4:Active(Left
-                           Intervention) 5:Active(Right Intervention) */
-  boolean ldw_left_warning_{FALSE};  /* LDW功能触发左侧报警标志位 0:No Warning 1:Left Warning */
-  boolean ldw_right_warning_{FALSE}; /* LDW功能触发右侧报警标志位 0:No Warning 1:Rirht Warning */
+  uint32 ldw_state_{0}; /* LDW功能状态 0:Unavailable 1:Off 2:Standby 3:Active(No
+                           Intervention) 4:Active(Left Intervention)
+                           5:Active(Right Intervention) */
+  boolean ldw_left_warning_{
+      FALSE}; /* LDW功能触发左侧报警标志位 0:No Warning 1:Left Warning */
+  boolean ldw_right_warning_{
+      FALSE}; /* LDW功能触发右侧报警标志位 0:No Warning 1:Rirht Warning */
   planning::LkasInput *lkas_input_ = nullptr;
 };
 

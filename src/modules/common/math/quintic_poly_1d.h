@@ -15,17 +15,21 @@ class QuinticPoly1d {
     coef_ = {};
   }
 
-  QuinticPoly1d(const std::array<double, 3> &start, const std::array<double, 3> &end, const double end_s)
-      : QuinticPoly1d(start[0], start[1], start[2], end[0], end[1], end[2], end_s) {}
+  QuinticPoly1d(const std::array<double, 3> &start,
+                const std::array<double, 3> &end, const double end_s)
+      : QuinticPoly1d(start[0], start[1], start[2], end[0], end[1], end[2],
+                      end_s) {}
 
-  QuinticPoly1d(const double &x0, const double &dx0, const double &ddx0, const double &x1, const double &dx1,
-                const double &ddx1, const double &end_s) {
+  QuinticPoly1d(const double &x0, const double &dx0, const double &ddx0,
+                const double &x1, const double &dx1, const double &ddx1,
+                const double &end_s) {
     ComputeCoefficients(x0, dx0, ddx0, x1, dx1, ddx1, end_s);
     end_s_ = end_s;
   }
 
   // dx0 = 0; ddx0 = 0; dx1 = 0; ddx1 = 0;
-  QuinticPoly1d(const double &x0, const double &x1, const double &third_derivative) {
+  QuinticPoly1d(const double &x0, const double &x1,
+                const double &third_derivative) {
     coef_[0] = x0;
     coef_[1] = 0.;
     coef_[2] = 0.;
@@ -45,13 +49,24 @@ class QuinticPoly1d {
   double Evaluate(const uint32_t order, const double p) const {
     switch (order) {
       case 0: {
-        return ((((coef_[5] * p + coef_[4]) * p + coef_[3]) * p + coef_[2]) * p + coef_[1]) * p + coef_[0];
+        return ((((coef_[5] * p + coef_[4]) * p + coef_[3]) * p + coef_[2]) *
+                    p +
+                coef_[1]) *
+                   p +
+               coef_[0];
       }
       case 1: {
-        return (((5.0 * coef_[5] * p + 4.0 * coef_[4]) * p + 3.0 * coef_[3]) * p + 2.0 * coef_[2]) * p + coef_[1];
+        return (((5.0 * coef_[5] * p + 4.0 * coef_[4]) * p + 3.0 * coef_[3]) *
+                    p +
+                2.0 * coef_[2]) *
+                   p +
+               coef_[1];
       }
       case 2: {
-        return (((20.0 * coef_[5] * p + 12.0 * coef_[4]) * p) + 6.0 * coef_[3]) * p + 2.0 * coef_[2];
+        return (((20.0 * coef_[5] * p + 12.0 * coef_[4]) * p) +
+                6.0 * coef_[3]) *
+                   p +
+               2.0 * coef_[2];
       }
       case 3: {
         return (60.0 * coef_[5] * p + 24.0 * coef_[4]) * p + 6.0 * coef_[3];
@@ -70,8 +85,9 @@ class QuinticPoly1d {
   const double &get_end_s() const { return end_s_; }
 
  private:
-  void ComputeCoefficients(const double x0, const double dx0, const double ddx0, const double x1, const double dx1,
-                           const double ddx1, const double s_end) {
+  void ComputeCoefficients(const double x0, const double dx0, const double ddx0,
+                           const double x1, const double dx1, const double ddx1,
+                           const double s_end) {
     coef_[0] = x0;
     coef_[1] = dx0;
     coef_[2] = ddx0 / 2.0;

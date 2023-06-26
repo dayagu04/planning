@@ -8,8 +8,9 @@ namespace planning {
 
 class VisionLongitudinalBehaviorPlanner : public Task {
  public:
-  explicit VisionLongitudinalBehaviorPlanner(const EgoPlanningConfigBuilder *config_builder,
-                                             const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+  explicit VisionLongitudinalBehaviorPlanner(
+      const EgoPlanningConfigBuilder *config_builder,
+      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
   virtual ~VisionLongitudinalBehaviorPlanner() = default;
 
   bool Execute(framework::Frame *frame);
@@ -19,38 +20,59 @@ class VisionLongitudinalBehaviorPlanner : public Task {
   bool update();
 
   bool calc_cruise_accel_limits(const double v_ego);
-  bool limit_accel_velocity_in_turns(const double v_ego, const double angle_steers, const std::vector<double> &d_poly);
+  bool limit_accel_velocity_in_turns(const double v_ego,
+                                     const double angle_steers,
+                                     const std::vector<double> &d_poly);
 
-  bool limit_accel_velocity_for_cutin(const std::vector<TrackedObject> &front_tracks,
-                                      const std::vector<TrackedObject> &side_tracks, const string &lc_status,
-                                      const double v_ego);
-  bool calc_speed_with_leads(const TrackedObject *lead_one, const TrackedObject *lead_two, const string &lc_request,
-                             const double v_ego);
-  bool calc_speed_with_temp_leads(const TrackedObject *temp_lead_one, const TrackedObject *temp_lead_two,
-                                  const double v_ego, const bool close_to_accident, const string &lc_request,
+  bool limit_accel_velocity_for_cutin(
+      const std::vector<TrackedObject> &front_tracks,
+      const std::vector<TrackedObject> &side_tracks, const string &lc_status,
+      const double v_ego);
+  bool calc_speed_with_leads(const TrackedObject *lead_one,
+                             const TrackedObject *lead_two,
+                             const string &lc_request, const double v_ego);
+  bool calc_speed_with_temp_leads(const TrackedObject *temp_lead_one,
+                                  const TrackedObject *temp_lead_two,
+                                  const double v_ego,
+                                  const bool close_to_accident,
+                                  const string &lc_request,
                                   const string &lc_status);
   // bool compute_speed_4_ramp(int lc_map_decision, double lc_end_dis,
   //                           double ramp_max_speed,
   //                           MSDLaneType current_lane_type,
   //                           std::string lc_status, double v_target_in_turns,
   //                           double v_ego);
-  bool calc_speed_with_potential_cutin_car(const std::vector<TrackedObject> &front_tracks, const string &lc_request,
-                                           const double v_cruise, const double v_ego);
+  bool calc_speed_with_potential_cutin_car(
+      const std::vector<TrackedObject> &front_tracks, const string &lc_request,
+      const double v_cruise, const double v_ego);
 
-  bool calc_speed_for_lane_change(const TrackedObject *lead_one, const double v_cruise, const double v_ego,
-                                  const string &lc_request, const string &lc_status);
+  bool calc_speed_for_lane_change(const TrackedObject *lead_one,
+                                  const double v_cruise, const double v_ego,
+                                  const string &lc_request,
+                                  const string &lc_status);
 
-  double interp(const double x, const std::vector<double> &xp, const std::vector<double> &fp);
+  double interp(const double x, const std::vector<double> &xp,
+                const std::vector<double> &fp);
   double process_a_lead(const double a_lead);
-  double calc_desired_distance(const double v_lead, const double v_ego, const std::string &lc_request,
-                               const bool is_accident_car = false, const bool is_temp_lead = false);
-  double calc_desired_speed(const double d_rel, const double d_des, const double v_lead);
-  bool calc_acc_accel_limits(const double d_lead, const double d_des, const double v_ego, const double v_lead,
-                             const double v_rel_const, const double a_lead, const double v_target,
-                             std::pair<double, double> &a_target, const double y_min);
-  double calc_positive_accel_limit(const double d_lead, const double d_des, const double v_ego, const double v_rel,
-                                   const double v_target, const double a_lead_contr, const double a_max_const);
-  double calc_critical_decel(const double d_lead, const double v_rel, const double d_offset, const double v_offset);
+  double calc_desired_distance(const double v_lead, const double v_ego,
+                               const std::string &lc_request,
+                               const bool is_accident_car = false,
+                               const bool is_temp_lead = false);
+  double calc_desired_speed(const double d_rel, const double d_des,
+                            const double v_lead);
+  bool calc_acc_accel_limits(const double d_lead, const double d_des,
+                             const double v_ego, const double v_lead,
+                             const double v_rel_const, const double a_lead,
+                             const double v_target,
+                             std::pair<double, double> &a_target,
+                             const double y_min);
+  double calc_positive_accel_limit(const double d_lead, const double d_des,
+                                   const double v_ego, const double v_rel,
+                                   const double v_target,
+                                   const double a_lead_contr,
+                                   const double a_max_const);
+  double calc_critical_decel(const double d_lead, const double v_rel,
+                             const double d_offset, const double v_offset);
   double clip(const double x, const double lo, const double hi);
 
  private:

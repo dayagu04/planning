@@ -45,7 +45,8 @@ class PiecewiseQuinticSpiralPath : public Curve1d {
 
   double ParamLength() const override;
 
-  // std::string ToString() const override { return "PiecewiseQuinticSpiralPath"; }
+  // std::string ToString() const override { return
+  // "PiecewiseQuinticSpiralPath"; }
 
  private:
   size_t LocatePiece(const double param) const;

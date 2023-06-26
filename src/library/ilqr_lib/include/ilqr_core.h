@@ -60,9 +60,12 @@ class iLqr {
       t_one_step_ms = 0.0;
     }
 
-    double GetElapsed(std::chrono::time_point<std::chrono::system_clock> &start, const bool is_overlay) {
+    double GetElapsed(std::chrono::time_point<std::chrono::system_clock> &start,
+                      const bool is_overlay) {
       auto now = std::chrono::system_clock::now();
-      auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(now - start).count();
+      auto elapsed =
+          std::chrono::duration_cast<std::chrono::nanoseconds>(now - start)
+              .count();
 
       if (is_overlay) {
         start = now;
@@ -88,7 +91,8 @@ class iLqr {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   iLqr() = default;
   ~iLqr() = default;
-  void Init(const std::shared_ptr<iLqrModel> ilqr_model, const iLqrSolverConfig &ilqr_sovler_config);
+  void Init(const std::shared_ptr<iLqrModel> ilqr_model,
+            const iLqrSolverConfig &ilqr_sovler_config);
 
   void Init(const std::shared_ptr<iLqrModel> ilqr_model);
 
@@ -123,15 +127,21 @@ class iLqr {
 
   void AddCost(std::shared_ptr<BaseCostTerm> cost_term);
 
-  void SetSolverConfig(const iLqrSolverConfig &ilqr_sovler_config) { *solver_config_ptr_ = ilqr_sovler_config; }
+  void SetSolverConfig(const iLqrSolverConfig &ilqr_sovler_config) {
+    *solver_config_ptr_ = ilqr_sovler_config;
+  }
 
-  void SetCostConfig(const std::vector<IlqrCostConfig> &cost_config) { ilqr_model_ptr_->SetCostConfig(cost_config); }
+  void SetCostConfig(const std::vector<IlqrCostConfig> &cost_config) {
+    ilqr_model_ptr_->SetCostConfig(cost_config);
+  }
 
   void InitSolverConfig();
 
   std::shared_ptr<iLqrModel> GetiLqrModelPtr() const { return ilqr_model_ptr_; }
 
-  std::shared_ptr<iLqrSolverConfig> GetSolverConfigPtr() { return solver_config_ptr_; }
+  std::shared_ptr<iLqrSolverConfig> GetSolverConfigPtr() {
+    return solver_config_ptr_;
+  }
 
   // init cost map
   void InitAdvancedInfo();

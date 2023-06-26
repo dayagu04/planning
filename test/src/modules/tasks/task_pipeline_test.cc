@@ -3,10 +3,10 @@
 #include <array>
 #include <cmath>
 
+#include "ego_planning_candidate.h"
 #include "gtest/gtest.h"
 #include "log.h"
 #include "task_pipeline_context.h"
-#include "ego_planning_candidate.h"
 
 namespace planning {
 

@@ -20,15 +20,18 @@ class STBoundary : public planning_math::Polygon2d {
  public:
   STBoundary() = default;
 
-  explicit STBoundary(const std::vector<std::pair<STPoint, STPoint>>& point_pairs);
+  explicit STBoundary(
+      const std::vector<std::pair<STPoint, STPoint>>& point_pairs);
 
   explicit STBoundary(const planning_math::Box2d& box) = delete;
 
   explicit STBoundary(std::vector<planning_math::Vec2d> points) = delete;
 
-  static STBoundary CreateInstance(const std::vector<STPoint>& lower_points, const std::vector<STPoint>& upper_points);
+  static STBoundary CreateInstance(const std::vector<STPoint>& lower_points,
+                                   const std::vector<STPoint>& upper_points);
 
-  static std::unique_ptr<STBoundary> CreateInstance(const std::vector<std::pair<STPoint, STPoint>>& point_pairs);
+  static std::unique_ptr<STBoundary> CreateInstance(
+      const std::vector<std::pair<STPoint, STPoint>>& point_pairs);
 
   ~STBoundary() = default;
 
@@ -75,9 +78,11 @@ class STBoundary : public planning_math::Polygon2d {
   void SetBoundaryType(const BoundaryType& boundary_type);
   void SetCharacteristicLength(const double characteristic_length);
 
-  bool GetUnblockSRange(const double curr_time, double* s_upper, double* s_lower) const;
+  bool GetUnblockSRange(const double curr_time, double* s_upper,
+                        double* s_lower) const;
 
-  bool GetBoundarySRange(const double curr_time, double* s_upper, double* s_lower) const;
+  bool GetBoundarySRange(const double curr_time, double* s_upper,
+                         double* s_lower) const;
 
   double min_s() const;
   double min_t() const;
@@ -89,16 +94,23 @@ class STBoundary : public planning_math::Polygon2d {
 
   STBoundary CutOffByT(const double t) const;
 
-  void set_invalid_time_sections(const std::vector<std::pair<double, double>>& secs) { invalid_time_sections_ = secs; }
+  void set_invalid_time_sections(
+      const std::vector<std::pair<double, double>>& secs) {
+    invalid_time_sections_ = secs;
+  }
 
  private:
-  bool IsValid(const std::vector<std::pair<STPoint, STPoint>>& point_pairs) const;
+  bool IsValid(
+      const std::vector<std::pair<STPoint, STPoint>>& point_pairs) const;
 
-  bool IsPointNear(const planning_math::LineSegment2d& seg, const planning_math::Vec2d& point, const double max_dist);
+  bool IsPointNear(const planning_math::LineSegment2d& seg,
+                   const planning_math::Vec2d& point, const double max_dist);
 
-  void RemoveRedundantPoints(std::vector<std::pair<STPoint, STPoint>>* point_pairs);
+  void RemoveRedundantPoints(
+      std::vector<std::pair<STPoint, STPoint>>* point_pairs);
 
-  bool GetIndexRange(const std::vector<STPoint>& points, const double t, size_t* left, size_t* right) const;
+  bool GetIndexRange(const std::vector<STPoint>& points, const double t,
+                     size_t* left, size_t* right) const;
 
  private:
   BoundaryType boundary_type_ = BoundaryType::UNKNOWN;

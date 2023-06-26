@@ -13,7 +13,8 @@ namespace planning {
 
 class ObstacleManager {
  public:
-  ObstacleManager(const EgoPlanningConfigBuilder *config_builder, planning::framework::Session *session);
+  ObstacleManager(const EgoPlanningConfigBuilder *config_builder,
+                  planning::framework::Session *session);
 
   void update();
 
@@ -32,29 +33,38 @@ class ObstacleManager {
     return road_edge_obstacles_.Add(obstacle.id(), obstacle);
   }
 
-  const IndexedList<int, Obstacle> &get_road_edge_obstacles() const { return road_edge_obstacles_; }
+  const IndexedList<int, Obstacle> &get_road_edge_obstacles() const {
+    return road_edge_obstacles_;
+  }
 
   Obstacle *add_groundline_obstacle(const Obstacle &obstacle) {
     return groundline_obstacles_.Add(obstacle.id(), obstacle);
   }
 
-  const IndexedList<int, Obstacle> &get_groundline_obstacles() const { return groundline_obstacles_; }
+  const IndexedList<int, Obstacle> &get_groundline_obstacles() const {
+    return groundline_obstacles_;
+  }
 
   Obstacle *add_map_static_obstacle(const Obstacle &obstacle) {
     return map_static_obstacles_.Add(obstacle.id(), obstacle);
   }
 
-  const IndexedList<int, Obstacle> &get_map_static_obstacles() const { return map_static_obstacles_; }
+  const IndexedList<int, Obstacle> &get_map_static_obstacles() const {
+    return map_static_obstacles_;
+  }
 
   Obstacle *add_parking_space(const Obstacle &obstacle) {
     return parking_space_obstacles_.Add(obstacle.id(), obstacle);
   }
 
-  const IndexedList<int, Obstacle> &get_parking_space() const { return parking_space_obstacles_; }
+  const IndexedList<int, Obstacle> &get_parking_space() const {
+    return parking_space_obstacles_;
+  }
 
  private:
   void clear();
-  // bool is_potential_current_leadone_leadtwo_to_ego(const std::shared_ptr<FrenetObstacle> &frenet_obstacle);
+  // bool is_potential_current_leadone_leadtwo_to_ego(const
+  // std::shared_ptr<FrenetObstacle> &frenet_obstacle);
  private:
   planning::framework::Session *session_ = nullptr;
   IndexedList<int, Obstacle> obstacles_;

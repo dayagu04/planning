@@ -2,8 +2,8 @@
 #include <cstddef>
 #include <random>
 
-#include "motion_planners/longitudinal_motion_planner/src/longitudinal_motion_planning_cost.h"
 #include "gtest/gtest.h"
+#include "motion_planners/longitudinal_motion_planner/src/longitudinal_motion_planning_cost.h"
 
 using namespace std;
 using namespace pnc::longitudinal_planning;
@@ -274,5 +274,5 @@ int main(int argc, char **argv) {
   cout << "out = " << out << ", i = " << i << endl;
   return out;
 }
-} // namespace longitudinal_planning
-} // namespace pnc
+}  // namespace longitudinal_planning
+}  // namespace pnc

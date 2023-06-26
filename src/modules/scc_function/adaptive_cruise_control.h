@@ -10,16 +10,22 @@
 namespace planning {
 class AdaptiveCruiseControl {
  public:
-  AdaptiveCruiseControl(const EgoPlanningConfigBuilder *config_builder, framework::Session *session);
+  AdaptiveCruiseControl(const EgoPlanningConfigBuilder *config_builder,
+                        framework::Session *session);
   virtual ~AdaptiveCruiseControl() = default;
 
-  void adaptive_cruise_control(LonDecisionInfo &lon_decision_information, AdaptiveCruiseControlInfo &acc_info,
+  void adaptive_cruise_control(LonDecisionInfo &lon_decision_information,
+                               AdaptiveCruiseControlInfo &acc_info,
                                PlanningResult &ego_prediction_result);
   std::pair<double, double> calculate_max_acc(double ego_v);
-  void acc_update_ds_refs(AdaptiveCruiseControlInfo &acc_info, LonRefPath &lon_ref_path,
-                          PlanningResult &ego_prediction_result, PlanningInitPoint &planning_init_point);
-  void acc_update_jerk_bound(AdaptiveCruiseControlInfo &acc_info, LonRefPath &lon_ref_path,
-                             PlanningResult &ego_prediction_result, PlanningInitPoint &planning_init_point);
+  void acc_update_ds_refs(AdaptiveCruiseControlInfo &acc_info,
+                          LonRefPath &lon_ref_path,
+                          PlanningResult &ego_prediction_result,
+                          PlanningInitPoint &planning_init_point);
+  void acc_update_jerk_bound(AdaptiveCruiseControlInfo &acc_info,
+                             LonRefPath &lon_ref_path,
+                             PlanningResult &ego_prediction_result,
+                             PlanningInitPoint &planning_init_point);
   bool recognize_model_speed_up(PlanningResult &ego_prediction_result);
 
  private:

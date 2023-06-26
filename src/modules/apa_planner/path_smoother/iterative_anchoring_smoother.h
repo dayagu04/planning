@@ -26,10 +26,10 @@
 #include "iterative_anchoring_config.pb.h"
 #include "planning_plan.pb.h"
 
-#include "vec2d.h"
 #include "math/box2d.h"
 #include "math/line_segment2d.h"
 #include "path/discretized_path.h"
+#include "vec2d.h"
 
 namespace planning {
 
@@ -43,24 +43,31 @@ class IterativeAnchoringSmoother {
               ::PlanningOutput::PlanningOutput* const planning_output);
 
  private:
-  bool GenerateInitialBounds(const DiscretizedPath& path_points, std::vector<double>* initial_bounds);
+  bool GenerateInitialBounds(const DiscretizedPath& path_points,
+                             std::vector<double>* initial_bounds);
 
-  bool SmoothPath(const ::PlanningOutput::PlanningOutput& planning_output, const DiscretizedPath& raw_path_points,
-                  const std::vector<double>& bounds, DiscretizedPath* smoothed_path_points);
+  bool SmoothPath(const ::PlanningOutput::PlanningOutput& planning_output,
+                  const DiscretizedPath& raw_path_points,
+                  const std::vector<double>& bounds,
+                  DiscretizedPath* smoothed_path_points);
 
   bool CheckCollisionAvoidance(const DiscretizedPath& path_points);
 
   void AdjustPathBounds(std::vector<double>* bounds);
 
   bool SetPathProfile(const ::PlanningOutput::PlanningOutput& planning_output,
-                      const std::vector<std::pair<double, double>>& point2d, DiscretizedPath* raw_path_points);
+                      const std::vector<std::pair<double, double>>& point2d,
+                      DiscretizedPath* raw_path_points);
 
-  bool ComputePathProfile(const ::PlanningOutput::PlanningOutput& planning_output,
-                          const std::vector<std::pair<double, double>>& xy_points, std::vector<double>* headings,
-                          std::vector<double>* accumulated_s, std::vector<double>* kappas) const;
+  bool ComputePathProfile(
+      const ::PlanningOutput::PlanningOutput& planning_output,
+      const std::vector<std::pair<double, double>>& xy_points,
+      std::vector<double>* headings, std::vector<double>* accumulated_s,
+      std::vector<double>* kappas) const;
 
-  bool UpdatePlanningOutput(const DiscretizedPath& raw_path_points,
-                            ::PlanningOutput::PlanningOutput* const planning_output) const;
+  bool UpdatePlanningOutput(
+      const DiscretizedPath& raw_path_points,
+      ::PlanningOutput::PlanningOutput* const planning_output) const;
 
  private:
   std::vector<planning_math::LineSegment2d> obstacles_linesegments_vec_;
@@ -71,7 +78,8 @@ class IterativeAnchoringSmoother {
 
   IterativeAnchoringConfig iterative_anchoring_config_;
 
-  double motion_sign_ = 0.0;  // 1.0 means move forward, -1.0 means move backward
+  double motion_sign_ =
+      0.0;  // 1.0 means move forward, -1.0 means move backward
 };
 
 }  // namespace planning

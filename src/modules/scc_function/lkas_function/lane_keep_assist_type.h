@@ -16,11 +16,14 @@ namespace planning {
 #define LKA_StateMachine_IN_NoIntervention 2     // LKA ACTIVE子状态
 #define LKA_StateMachine_IN_RightIntervention 3  // LKA ACTIVE子状态
 #define Common_Cycle_Time 20                     // 系统训话周期计数
-#define Common_FrontCamera_PosX 1.817            // 前视摄像头光轴距前保的水平距离，单位：m
-#define Common_FrontCamera_PosYL 0.967     // 前视摄像头光轴距左侧轮胎外边缘的横向距离，单位：m
-#define Common_FrontCamera_PosYR 0.967     // 前视摄像头光轴距右侧轮胎外边缘的横向距离，单位：m
-#define k_lka_enable_lane_width_max 4.5F   // LDW激活的最大车道宽度，单位：m
-#define k_lka_enable_lane_width_min 2.8F   // LDW激活的最小车道宽度，单位：m
+#define Common_FrontCamera_PosX \
+  1.817  // 前视摄像头光轴距前保的水平距离，单位：m
+#define Common_FrontCamera_PosYL \
+  0.967  // 前视摄像头光轴距左侧轮胎外边缘的横向距离，单位：m
+#define Common_FrontCamera_PosYR \
+  0.967  // 前视摄像头光轴距右侧轮胎外边缘的横向距离，单位：m
+#define k_lka_enable_lane_width_max 4.5F  // LDW激活的最大车道宽度，单位：m
+#define k_lka_enable_lane_width_min 2.8F  // LDW激活的最小车道宽度，单位：m
 #define k_lka_disable_lane_width_max 4.8F  // LDW退出的最大车道宽度，单位：m
 #define k_lka_disable_lane_width_min 2.5F  // LDW退出的最小车道宽度，单位：m
 // for bsd&lca
@@ -47,49 +50,51 @@ typedef struct MeasurementPoint {
 } MeasurementPoint;
 
 typedef struct CalibrationParameter {
-  boolean enable_roadedge_switch;        // 是否使能功能的路沿场景开关 0:不使能  1:使能
-  float32 enable_vehspd_display_min;     // 激活的最小仪表车速，单位：m/s
-  float32 enable_vehspd_display_max;     // 激活的最大仪表车速，单位：m/s
-  float32 disable_vehspd_display_min;    // 退出的最小仪表车速，单位：m/s
-  float32 disable_vehspd_display_max;    // 退出的最大仪表车速，单位：m/s
+  boolean enable_roadedge_switch;  // 是否使能功能的路沿场景开关 0:不使能 1:使能
+  float32 enable_vehspd_display_min;  // 激活的最小仪表车速，单位：m/s
+  float32 enable_vehspd_display_max;  // 激活的最大仪表车速，单位：m/s
+  float32 disable_vehspd_display_min;  // 退出的最小仪表车速，单位：m/s
+  float32 disable_vehspd_display_max;  // 退出的最大仪表车速，单位：m/s
   uint16 supp_turn_light_recovery_time;  // 转向灯抑制恢复时长，单位：ms
-  float32 earliest_warning_line;         // 触发的最早报警线，单位：m
-  float32 latest_warning_line;           // 触发的最晚报警线，单位：m
-  float32 reset_warning_line;            // 触发的报警重置线，单位：m
-  uint16 warning_time_max;               // 最大报警时长，单位：ms
-  float32 tlc_line_far;                  // 针对道线触发报警的高灵敏度阈值，单位：s
-  float32 tlc_line_medium;               // 针对道线触发报警的中灵敏度阈值，单位：s
-  float32 tlc_line_near;                 // 针对道线触发报警的低灵敏度阈值，单位：s
-  float32 suppression_driver_hand_trq;   // 抑制报警的驾驶员手力矩(绝对值)阈值，单位：Nm
-  float32 kickdown_driver_hand_trq;      // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  float32 earliest_warning_line;  // 触发的最早报警线，单位：m
+  float32 latest_warning_line;    // 触发的最晚报警线，单位：m
+  float32 reset_warning_line;     // 触发的报警重置线，单位：m
+  uint16 warning_time_max;        // 最大报警时长，单位：ms
+  float32 tlc_line_far;  // 针对道线触发报警的高灵敏度阈值，单位：s
+  float32 tlc_line_medium;  // 针对道线触发报警的中灵敏度阈值，单位：s
+  float32 tlc_line_near;  // 针对道线触发报警的低灵敏度阈值，单位：s
+  float32
+      suppression_driver_hand_trq;  // 抑制报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  float32
+      kickdown_driver_hand_trq;  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
 } CalibrationParameter;
 
 typedef struct RoadInfo {
-  boolean left_line_valid;       // 本车道左侧道线有效性 0:Invalid 1:Valid
-  uint8 left_line_type;          // 本车道左侧车道线类型 0：虚线  1：实线
-  double left_line_c0;           // 本车道左侧道线方程系数c0
-  double left_line_c1;           // 本车道左侧道线方程系数c1
-  double left_line_c2;           // 本车道左侧道线方程系数c3
-  double left_line_c3;           // 本车道左侧道线方程系数c3
-  boolean right_line_valid;      // 本车道右侧道线有效性 0:Invalid 1:Valid
-  uint8 right_line_type;         // 本车道右侧车道线类型 0：虚线  1：实线
-  double right_line_c0;          // 本车道右侧道线方程系数c0
-  double right_line_c1;          // 本车道右侧道线方程系数c1
-  double right_line_c2;          // 本车道右侧道线方程系数c2
-  double right_line_c3;          // 本车道右侧道线方程系数c3
-  boolean left_roadedge_valid;   // 本车道左侧路缘有效性 0:Invalid 1:Valid
-  double left_roadedge_c0;       // 本车道左侧路缘方程系数c0
-  double left_roadedge_c1;       // 本车道左侧路缘方程系数c1
-  double left_roadedge_c2;       // 本车道左侧路缘方程系数c3
-  double left_roadedge_c3;       // 本车道左侧路缘方程系数c3
+  boolean left_line_valid;  // 本车道左侧道线有效性 0:Invalid 1:Valid
+  uint8 left_line_type;  // 本车道左侧车道线类型 0：虚线  1：实线
+  double left_line_c0;   // 本车道左侧道线方程系数c0
+  double left_line_c1;   // 本车道左侧道线方程系数c1
+  double left_line_c2;   // 本车道左侧道线方程系数c3
+  double left_line_c3;   // 本车道左侧道线方程系数c3
+  boolean right_line_valid;  // 本车道右侧道线有效性 0:Invalid 1:Valid
+  uint8 right_line_type;  // 本车道右侧车道线类型 0：虚线  1：实线
+  double right_line_c0;         // 本车道右侧道线方程系数c0
+  double right_line_c1;         // 本车道右侧道线方程系数c1
+  double right_line_c2;         // 本车道右侧道线方程系数c2
+  double right_line_c3;         // 本车道右侧道线方程系数c3
+  boolean left_roadedge_valid;  // 本车道左侧路缘有效性 0:Invalid 1:Valid
+  double left_roadedge_c0;      // 本车道左侧路缘方程系数c0
+  double left_roadedge_c1;      // 本车道左侧路缘方程系数c1
+  double left_roadedge_c2;      // 本车道左侧路缘方程系数c3
+  double left_roadedge_c3;      // 本车道左侧路缘方程系数c3
   boolean right_roadedge_valid;  // 本车道右侧路缘有效性 0:Invalid 1:Valid
   double right_roadedge_c0;      // 本车道右侧路缘方程系数c0
   double right_roadedge_c1;      // 本车道右侧路缘方程系数c1
   double right_roadedge_c2;      // 本车道右侧路缘方程系数c2
   double right_roadedge_c3;      // 本车道右侧路缘方程系数c3
-  boolean lane_width_valid;      // 当前车道宽度信息有效性 0:Invalid 1:Valid
-  float32 lane_width;            // 当前车道宽度,单位:m
-} RoadInfo;                      // 道线和路缘信息结构体定义
+  boolean lane_width_valid;  // 当前车道宽度信息有效性 0:Invalid 1:Valid
+  float32 lane_width;        // 当前车道宽度,单位:m
+} RoadInfo;                  // 道线和路缘信息结构体定义
 
 typedef struct VehInfo {
   float32 veh_display_speed;
@@ -154,10 +159,14 @@ typedef struct {
   float32 obstacle_velocity_limit;
 } AeraVel;
 
-boolean LKALineLeftIntervention(float32 tlc_to_line_threshold, planning::LkasInput *lkas_input);
-boolean LKARoadEdgeLeftIntervention(float32 tlc_to_roadedge_threshold, planning::LkasInput *lkas_input);
-boolean LKALineRightIntervention(float32 tlc_to_line_threshold, planning::LkasInput *lkas_input);
-boolean LKARoadEdgeRightIntervention(float32 tlc_to_roadedge_threshold, planning::LkasInput *lkas_input);
+boolean LKALineLeftIntervention(float32 tlc_to_line_threshold,
+                                planning::LkasInput *lkas_input);
+boolean LKARoadEdgeLeftIntervention(float32 tlc_to_roadedge_threshold,
+                                    planning::LkasInput *lkas_input);
+boolean LKALineRightIntervention(float32 tlc_to_line_threshold,
+                                 planning::LkasInput *lkas_input);
+boolean LKARoadEdgeRightIntervention(float32 tlc_to_roadedge_threshold,
+                                     planning::LkasInput *lkas_input);
 
 }  // namespace planning
 

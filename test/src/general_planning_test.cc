@@ -1,20 +1,23 @@
 #include <array>
 #include <cmath>
 
+#include "common/config_context.h"
 #include "define/debug_output.h"
 #include "general_planning.h"
 #include "gtest/gtest.h"
 #include "local_view.h"
-#include "common/config_context.h"
 
 namespace planning {
 
 static void init_planning() {
   std::cout << "The planning component init!!!" << std::endl;
-  std::string engine_config_path = std::string(CONFIG_PATH) + "/planning_engine_config.json";
-  common::ConfigurationContext::Instance()->load_engine_config_from_json(engine_config_path);
+  std::string engine_config_path =
+      std::string(CONFIG_PATH) + "/planning_engine_config.json";
+  common::ConfigurationContext::Instance()->load_engine_config_from_json(
+      engine_config_path);
 
-  auto engine_config = common::ConfigurationContext::Instance()->engine_config();
+  auto engine_config =
+      common::ConfigurationContext::Instance()->engine_config();
 
   std::string log_file = engine_config.log_conf.log_file_dir + "/planning_log";
   std::cout << "log_file!!!" << log_file << std::endl;
@@ -35,7 +38,8 @@ static void init_planning() {
   }
 
   std::cout << "log_level!!!" << engine_config.log_conf.log_level << std::endl;
-  bst::Log::getInstance().setConfig("Planning_Log", log_file.c_str(), log_level);
+  bst::Log::getInstance().setConfig("Planning_Log", log_file.c_str(),
+                                    log_level);
   LOG_DEBUG("The planning component init!!! \n");
 }
 
@@ -51,6 +55,7 @@ TEST(GeneralPlanning, RunOnce) {
       std::make_unique<GeneralPlanning>();
   std::cout << "==============The planning enters RunOnce============="
             << std::endl;
-  planning_base->RunOnce(local_view_, &planning_output, debug_output, &planning_hmi_info);
+  planning_base->RunOnce(local_view_, &planning_output, debug_output,
+                         &planning_hmi_info);
 }
 }  // namespace planning

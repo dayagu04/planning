@@ -47,7 +47,8 @@ constexpr double kDELengthWeight = 100;
 constexpr double kDEStandardLength = 1.0;
 }  // namespace
 
-bool DiagonalInGeometryPlan::CheckSlotOpenSideWrong(const PlanningPoint &start_point) {
+bool DiagonalInGeometryPlan::CheckSlotOpenSideWrong(
+    const PlanningPoint &start_point) {
   bool side_wrong = false;
   if (slot_sign_ * start_point.y < 0) {
     side_wrong = true;
@@ -58,7 +59,8 @@ bool DiagonalInGeometryPlan::CheckSlotOpenSideWrong(const PlanningPoint &start_p
   return side_wrong;
 }
 
-bool DiagonalInGeometryPlan::ABSegment(const PlanningPoint &point_a, bool is_start, bool is_rough_calc,
+bool DiagonalInGeometryPlan::ABSegment(const PlanningPoint &point_a,
+                                       bool is_start, bool is_rough_calc,
                                        DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -69,7 +71,8 @@ bool DiagonalInGeometryPlan::ABSegment(const PlanningPoint &point_a, bool is_sta
 
   const double rear_axle_over_dis = 3.0;
   const double max_ab_len = 7.0;
-  const double ab_len = planning_math::Clamp(max_ab_len, 0.0, rear_axle_over_dis - point_a.x);
+  const double ab_len =
+      planning_math::Clamp(max_ab_len, 0.0, rear_axle_over_dis - point_a.x);
   const double min_l_step = 0.2;
   double max_l_step = 4.0;
   int sparse_step_num = 0;
@@ -80,7 +83,8 @@ bool DiagonalInGeometryPlan::ABSegment(const PlanningPoint &point_a, bool is_sta
   }
   const int dense_step_num = (ab_len - sparse_len) / min_l_step;
   const int point_num = std::max(sparse_step_num + dense_step_num, 1);
-  AINFO << "sparse_step_num:" << sparse_step_num << ", dense_step_num:" << dense_step_num;
+  AINFO << "sparse_step_num:" << sparse_step_num
+        << ", dense_step_num:" << dense_step_num;
 
   const double cos_point_a_theta = apa_cos(point_a.theta);
   const double sin_point_a_theta = apa_sin(point_a.theta);
@@ -92,8 +96,8 @@ bool DiagonalInGeometryPlan::ABSegment(const PlanningPoint &point_a, bool is_sta
   const double front_buffer = kLonBuffer;
   const double rear_buffer = 0.0;
   const double lat_buffer = kLatBuffer;
-  Polygon2d init_ego_polygon =
-      std::move(ConstructVehiclePolygonWithBuffer(point_a, front_buffer, rear_buffer, lat_buffer));
+  Polygon2d init_ego_polygon = std::move(ConstructVehiclePolygonWithBuffer(
+      point_a, front_buffer, rear_buffer, lat_buffer));
   for (int i = 0; i < point_num; ++i) {
     double l_ab = 0.0;
     if (i <= sparse_step_num) {
@@ -153,7 +157,8 @@ bool DiagonalInGeometryPlan::ABSegment(const PlanningPoint &point_a, bool is_sta
     }
   }
 
-  AINFO << "total_cnt:" << point_num << ", collide_cnt:" << collide_cnt << ", bc_fail_cnt:" << bc_fail_cnt
+  AINFO << "total_cnt:" << point_num << ", collide_cnt:" << collide_cnt
+        << ", bc_fail_cnt:" << bc_fail_cnt
         << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
 
   if (std::isinf(segments_info->total_cost)) {
@@ -163,8 +168,9 @@ bool DiagonalInGeometryPlan::ABSegment(const PlanningPoint &point_a, bool is_sta
   return true;
 }
 
-bool DiagonalInGeometryPlan::ReverseABSegment(const PlanningPoint &point_a, bool is_start, bool is_rough_calc,
-                                              DiagonalSegmentsInfo *segments_info) {
+bool DiagonalInGeometryPlan::ReverseABSegment(
+    const PlanningPoint &point_a, bool is_start, bool is_rough_calc,
+    DiagonalSegmentsInfo *segments_info) {
   AINFO << "ReverseABSegment start!!!";
   segments_info->total_cost = std::numeric_limits<double>::infinity();
   if (CheckSlotOpenSideWrong(point_a)) {
@@ -182,7 +188,8 @@ bool DiagonalInGeometryPlan::ReverseABSegment(const PlanningPoint &point_a, bool
   const double slot_with = 1.2;
   const int dense_step_num = (point_a.x - sparse_len + slot_with) / min_l_step;
   const int point_num = std::max(sparse_step_num + dense_step_num, 1);
-  AINFO << "sparse_step_num:" << sparse_step_num << ", dense_step_num:" << dense_step_num;
+  AINFO << "sparse_step_num:" << sparse_step_num
+        << ", dense_step_num:" << dense_step_num;
 
   const double cos_point_a_theta = apa_cos(point_a.theta);
   const double sin_point_a_theta = apa_sin(point_a.theta);
@@ -194,8 +201,8 @@ bool DiagonalInGeometryPlan::ReverseABSegment(const PlanningPoint &point_a, bool
   const double front_buffer = 0.0;
   const double rear_buffer = kLonBuffer;
   const double lat_buffer = kLatBuffer;
-  Polygon2d init_ego_polygon =
-      std::move(ConstructVehiclePolygonWithBuffer(point_a, front_buffer, rear_buffer, lat_buffer));
+  Polygon2d init_ego_polygon = std::move(ConstructVehiclePolygonWithBuffer(
+      point_a, front_buffer, rear_buffer, lat_buffer));
 
   for (int i = 0; i < point_num; ++i) {
     double l_ab = 0.0;
@@ -247,14 +254,17 @@ bool DiagonalInGeometryPlan::ReverseABSegment(const PlanningPoint &point_a, bool
       }
     }
   }
-  AINFO << "totoal_cnt:" << point_num << ", collide_cnt:" << collide_cnt << ", bc_fail_cnt:" << cd_fail_cnt
+  AINFO << "totoal_cnt:" << point_num << ", collide_cnt:" << collide_cnt
+        << ", bc_fail_cnt:" << cd_fail_cnt
         << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
   if (std::isinf(segments_info->total_cost)) {
     return false;
   }
   return true;
 }
-bool DiagonalInGeometryPlan::BCSegment(const PlanningPoint &point_b, double len_ab, bool is_start, bool is_rough_calc,
+bool DiagonalInGeometryPlan::BCSegment(const PlanningPoint &point_b,
+                                       double len_ab, bool is_start,
+                                       bool is_rough_calc,
                                        DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -264,7 +274,8 @@ bool DiagonalInGeometryPlan::BCSegment(const PlanningPoint &point_b, double len_
 
   const double yaw_step = kDefaultThetaStep * slot_sign_;
   const double max_theta_diff = M_PI_4 * slot_sign_;
-  const int size_step = std::max(static_cast<int>(max_theta_diff / yaw_step), 1);
+  const int size_step =
+      std::max(static_cast<int>(max_theta_diff / yaw_step), 1);
 
   const double cos_point_b_theta = apa_cos(point_b.theta);
   const double sin_point_b_theta = apa_sin(point_b.theta);
@@ -276,12 +287,14 @@ bool DiagonalInGeometryPlan::BCSegment(const PlanningPoint &point_b, double len_
   const double front_buffer = kLonBuffer;
   const double rear_buffer = 0.0;
   const double lat_buffer = kLatBuffer;
-  Polygon2d init_ego_polygon =
-      std::move(ConstructVehiclePolygonWithBuffer(point_b, front_buffer, rear_buffer, lat_buffer));
+  Polygon2d init_ego_polygon = std::move(ConstructVehiclePolygonWithBuffer(
+      point_b, front_buffer, rear_buffer, lat_buffer));
   for (int i = 0; i < size_step; ++i) {
     point_c.theta = point_b.theta + yaw_step * i;
-    point_c.x = point_b.x + slot_sign_ * min_turn_radius_ * (apa_sin(point_c.theta) - sin_point_b_theta);
-    point_c.y = point_b.y + slot_sign_ * min_turn_radius_ * (cos_point_b_theta - apa_cos(point_c.theta));
+    point_c.x = point_b.x + slot_sign_ * min_turn_radius_ *
+                                (apa_sin(point_c.theta) - sin_point_b_theta);
+    point_c.y = point_b.y + slot_sign_ * min_turn_radius_ *
+                                (cos_point_b_theta - apa_cos(point_c.theta));
 
     if (CollideWithObjectsByPolygon(point_b, point_c, init_ego_polygon)) {
       ++collide_cnt;
@@ -294,12 +307,14 @@ bool DiagonalInGeometryPlan::BCSegment(const PlanningPoint &point_b, double len_
       continue;
     }
 
-    const double len_bc = std::fabs(point_b.theta - point_c.theta) * min_turn_radius_;
+    const double len_bc =
+        std::fabs(point_b.theta - point_c.theta) * min_turn_radius_;
     const double len_cost = CalSegmentLengthCost(len_bc + len_ab);
     const double radius_cost = CalRadiusCost(min_turn_radius_, len_bc);
     const double theta_diff = std::fabs(point_b.theta - point_c.theta);
     const double theta_diff_cost = CalBCThetaDiffCost(theta_diff);
-    const double total_cost = len_cost + radius_cost + theta_diff_cost + tmp_segments_info.total_cost;
+    const double total_cost =
+        len_cost + radius_cost + theta_diff_cost + tmp_segments_info.total_cost;
     if (std::isinf(total_cost)) {
       ++total_cost_nan_cnt;
       continue;
@@ -330,7 +345,8 @@ bool DiagonalInGeometryPlan::BCSegment(const PlanningPoint &point_b, double len_
     }
   }
 
-  AINFO << "total_cnt:" << size_step << ", collide_cnt:" << collide_cnt << ", cd_fail_cnt:" << cd_fail_cnt
+  AINFO << "total_cnt:" << size_step << ", collide_cnt:" << collide_cnt
+        << ", cd_fail_cnt:" << cd_fail_cnt
         << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
 
   if (std::isinf(segments_info->total_cost)) {
@@ -340,7 +356,8 @@ bool DiagonalInGeometryPlan::BCSegment(const PlanningPoint &point_b, double len_
   return true;
 }
 
-bool DiagonalInGeometryPlan::CDSegment(const PlanningPoint &point_c, bool is_start, bool is_rough_calc,
+bool DiagonalInGeometryPlan::CDSegment(const PlanningPoint &point_c,
+                                       bool is_start, bool is_rough_calc,
                                        DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -362,7 +379,8 @@ bool DiagonalInGeometryPlan::CDSegment(const PlanningPoint &point_c, bool is_sta
   }
 
   if (CD3Segment(point_c, is_start, is_rough_calc, &tmp_segments_info)) {
-    segments_info->total_cost = tmp_segments_info.total_cost + 2.0 * kSegmentCost;
+    segments_info->total_cost =
+        tmp_segments_info.total_cost + 2.0 * kSegmentCost;
     segments_info->opt_radius_cd = tmp_segments_info.opt_radius_cd;
     segments_info->opt_point_d = tmp_segments_info.opt_point_d;
     // AINFO << "cd3 success";
@@ -372,11 +390,13 @@ bool DiagonalInGeometryPlan::CDSegment(const PlanningPoint &point_c, bool is_sta
   return false;
 }
 
-bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c, bool is_start, bool is_rough_calc,
+bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c,
+                                        bool is_start, bool is_rough_calc,
                                         DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
-  if (is_start && std::fabs(point_c.theta - target_point_.theta) <= kMaxThetaDiff &&
+  if (is_start &&
+      std::fabs(point_c.theta - target_point_.theta) <= kMaxThetaDiff &&
       std::fabs(point_c.x - target_point_.x) <= kMaxYOffset) {
     segments_info->total_cost = 0.0;
     segments_info->opt_point_d.x = point_c.x;
@@ -397,26 +417,29 @@ bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c, bool is_st
   const double front_buffer = is_start ? kLonReverseBuffer : 0.0;
   const double rear_buffer = kLonBuffer;
   const double lat_buffer = kLatBuffer;
-  Polygon2d init_ego_polygon =
-      std::move(ConstructVehiclePolygonWithBuffer(point_c, front_buffer, rear_buffer, lat_buffer));
+  Polygon2d init_ego_polygon = std::move(ConstructVehiclePolygonWithBuffer(
+      point_c, front_buffer, rear_buffer, lat_buffer));
   // const std::vector<double> target_x_vec =
   //     is_start ? target_x_vec_ : std::vector<double>{target_point_.x};
   for (const double x : target_x_vec_) {
     point_d.x = x;
-    double radius_cd_tmp = slot_sign_ * (point_c.x - point_d.x) / (sin_target_point_theta_ - sin_point_c_theta);
+    double radius_cd_tmp = slot_sign_ * (point_c.x - point_d.x) /
+                           (sin_target_point_theta_ - sin_point_c_theta);
     if (radius_cd_tmp < min_turn_radius_) {
       ++radius_cnt1;
       continue;
     }
 
-    point_d.y = point_c.y + slot_sign_ * radius_cd_tmp * (cos_target_point_theta_ - cos_point_c_theta);
+    point_d.y = point_c.y + slot_sign_ * radius_cd_tmp *
+                                (cos_target_point_theta_ - cos_point_c_theta);
 
     if (point_d.y * slot_sign_ < kMaxYBackwardPos) {
       ++dy_cnt1;
       continue;
     }
 
-    if (CollideWithObjectsByPolygon(point_c, point_d, radius_cd_tmp, init_ego_polygon)) {
+    if (CollideWithObjectsByPolygon(point_c, point_d, radius_cd_tmp,
+                                    init_ego_polygon)) {
       ++collide_cnt1;
       continue;
     }
@@ -424,7 +447,8 @@ bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c, bool is_st
     const double x_diff = std::fabs(x - target_point_.x);
     const double bias_cost = CalPointxBiasCost(x_diff);
 
-    const double len_bc = std::fabs(point_c.theta - point_d.theta) * radius_cd_tmp;
+    const double len_bc =
+        std::fabs(point_c.theta - point_d.theta) * radius_cd_tmp;
     const double len_c_end = std::fabs(point_d.y - target_point_.y);
     const double len_cost = CalSegmentLengthCost(len_bc + len_c_end);
     const double radius_cost = CalRadiusCost(radius_cd_tmp, len_bc);
@@ -442,7 +466,8 @@ bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c, bool is_st
   }
 
   if (is_start) {
-    AINFO << "total_cnt1:" << target_x_vec_.size() << ", radius_cnt1:" << radius_cnt1 << ", dy_cnt1:" << dy_cnt1
+    AINFO << "total_cnt1:" << target_x_vec_.size()
+          << ", radius_cnt1:" << radius_cnt1 << ", dy_cnt1:" << dy_cnt1
           << ", collide_cnt1:" << collide_cnt1;
   }
 
@@ -453,19 +478,22 @@ bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c, bool is_st
   size_t collide_cnt2 = 0;
   for (int i = 0; i < radius_cd_num; ++i) {
     const double radius_cd_tmp = min_turn_radius_ + radius_step * i;
-    point_d.x = point_c.x + slot_sign_ * radius_cd_tmp * (sin_point_c_theta - sin_target_point_theta_);
+    point_d.x = point_c.x + slot_sign_ * radius_cd_tmp *
+                                (sin_point_c_theta - sin_target_point_theta_);
     if (std::fabs(point_d.x - target_point_.x) > kMaxXOffset) {
       ++dx_cnt2;
       continue;
     }
 
-    point_d.y = point_c.y + slot_sign_ * radius_cd_tmp * (-cos_point_c_theta + cos_target_point_theta_);
+    point_d.y = point_c.y + slot_sign_ * radius_cd_tmp *
+                                (-cos_point_c_theta + cos_target_point_theta_);
     if (point_d.y * slot_sign_ < kMaxYBackwardPos) {
       ++dy_cnt2;
       continue;
     }
 
-    if (CollideWithObjectsByPolygon(point_c, point_d, radius_cd_tmp, init_ego_polygon)) {
+    if (CollideWithObjectsByPolygon(point_c, point_d, radius_cd_tmp,
+                                    init_ego_polygon)) {
       ++collide_cnt2;
       continue;
     }
@@ -473,7 +501,8 @@ bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c, bool is_st
     const double x_diff = std::fabs(point_d.x - target_point_.x);
     const double bias_cost = CalPointxBiasCost(x_diff);
 
-    const double len_bc = std::fabs(point_c.theta - point_d.theta) * radius_cd_tmp;
+    const double len_bc =
+        std::fabs(point_c.theta - point_d.theta) * radius_cd_tmp;
     const double len_c_end = std::fabs(point_d.y - target_point_.y);
     const double len_cost = CalSegmentLengthCost(len_bc + len_c_end);
     const double radius_cost = CalRadiusCost(radius_cd_tmp, len_bc);
@@ -492,8 +521,8 @@ bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c, bool is_st
   }
 
   if (is_start) {
-    AINFO << "total_cnt2:" << radius_cd_num << ", dx_cnt2:" << dx_cnt2 << ", dy_cnt2:" << dy_cnt2
-          << ", collide_cnt2:" << collide_cnt2;
+    AINFO << "total_cnt2:" << radius_cd_num << ", dx_cnt2:" << dx_cnt2
+          << ", dy_cnt2:" << dy_cnt2 << ", collide_cnt2:" << collide_cnt2;
   }
 
   if (std::isinf(segments_info->total_cost)) {
@@ -503,7 +532,8 @@ bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c, bool is_st
   return true;
 }
 
-bool DiagonalInGeometryPlan::CD2Segment(const PlanningPoint &point_c, bool is_start, bool is_rough_calc,
+bool DiagonalInGeometryPlan::CD2Segment(const PlanningPoint &point_c,
+                                        bool is_start, bool is_rough_calc,
                                         DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -519,19 +549,22 @@ bool DiagonalInGeometryPlan::CD2Segment(const PlanningPoint &point_c, bool is_st
   size_t total_cost_nan_cnt = 0;
   const double radius_cd_step = 1;
   const double theta_step = kDefaultThetaStep * slot_sign_;
-  const int size_step = std::max(static_cast<int>((target_point_.theta - point_c.theta) / theta_step), 1);
+  const int size_step = std::max(
+      static_cast<int>((target_point_.theta - point_c.theta) / theta_step), 1);
   const int size_radius_cd = is_start ? 10 : 1;
   const double front_buffer = is_start ? kLonReverseBuffer : 0.0;
   const double rear_buffer = kLonBuffer;
   const double lat_buffer = kLatBuffer;
-  Polygon2d init_ego_polygon =
-      std::move(ConstructVehiclePolygonWithBuffer(point_c, front_buffer, rear_buffer, lat_buffer));
+  Polygon2d init_ego_polygon = std::move(ConstructVehiclePolygonWithBuffer(
+      point_c, front_buffer, rear_buffer, lat_buffer));
   for (int i = 0; i < size_radius_cd; ++i) {
     const double radius_cd_tmp = min_turn_radius_ + i * radius_cd_step;
     for (int j = 0; j < size_step; ++j) {
       point_d.theta = point_c.theta + theta_step * j;
-      point_d.x = point_c.x + slot_sign_ * radius_cd_tmp * (sin_point_c_theta - apa_sin(point_d.theta));
-      point_d.y = point_c.y + slot_sign_ * radius_cd_tmp * (apa_cos(point_d.theta) - cos_point_c_theta);
+      point_d.x = point_c.x + slot_sign_ * radius_cd_tmp *
+                                  (sin_point_c_theta - apa_sin(point_d.theta));
+      point_d.y = point_c.y + slot_sign_ * radius_cd_tmp *
+                                  (apa_cos(point_d.theta) - cos_point_c_theta);
 
       if (CollideWithObjectsByPolygon(point_c, point_d, init_ego_polygon)) {
         ++collide_cnt;
@@ -553,12 +586,14 @@ bool DiagonalInGeometryPlan::CD2Segment(const PlanningPoint &point_c, bool is_st
         continue;
       }
 
-      const double len_cd = std::fabs(point_c.theta - point_d.theta) * radius_cd_tmp;
+      const double len_cd =
+          std::fabs(point_c.theta - point_d.theta) * radius_cd_tmp;
       const double len_cost = CalSegmentLengthCost(len_cd);
       const double radius_cost = CalRadiusCost(radius_cd_tmp, len_cd);
       const double theta_cost = CalPointDThetaCost(point_d.theta);
 
-      const double total_cost = len_cost + radius_cost + theta_cost + tmp_segments_info.total_cost;
+      const double total_cost =
+          len_cost + radius_cost + theta_cost + tmp_segments_info.total_cost;
 
       if (total_cost < segments_info->total_cost) {
         segments_info->total_cost = total_cost;
@@ -583,8 +618,9 @@ bool DiagonalInGeometryPlan::CD2Segment(const PlanningPoint &point_c, bool is_st
   }
 
   if (is_start) {
-    AINFO << "total_cnt:" << (size_radius_cd * size_step) << ", collide_cnt:" << collide_cnt
-          << ", de_fail_cnt:" << de_fail_cnt << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
+    AINFO << "total_cnt:" << (size_radius_cd * size_step)
+          << ", collide_cnt:" << collide_cnt << ", de_fail_cnt:" << de_fail_cnt
+          << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
   }
 
   if (std::isinf(segments_info->total_cost)) {
@@ -594,7 +630,8 @@ bool DiagonalInGeometryPlan::CD2Segment(const PlanningPoint &point_c, bool is_st
   return true;
 }
 
-bool DiagonalInGeometryPlan::DE1Segment(const PlanningPoint &point_d, bool is_start, bool is_rough_calc,
+bool DiagonalInGeometryPlan::DE1Segment(const PlanningPoint &point_d,
+                                        bool is_start, bool is_rough_calc,
                                         DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -611,13 +648,14 @@ bool DiagonalInGeometryPlan::DE1Segment(const PlanningPoint &point_d, bool is_st
   const double front_buffer = kLonBuffer;
   const double rear_buffer = is_start ? kLonReverseBuffer : 0.0;
   const double lat_buffer = kLatBuffer;
-  Polygon2d init_ego_polygon =
-      std::move(ConstructVehiclePolygonWithBuffer(point_d, front_buffer, rear_buffer, lat_buffer));
+  Polygon2d init_ego_polygon = std::move(ConstructVehiclePolygonWithBuffer(
+      point_d, front_buffer, rear_buffer, lat_buffer));
   for (int i = 0; i < radius_de_num; i++) {
     const double radius_de_tmp = min_turn_radius_ + radius_step * i;
     for (int j = 0; j < radius_ef_num; j++) {
       const double radius_ef_tmp = min_turn_radius_ + radius_step * j;
-      const double sin_e_tmp = ((target_point_.x - point_d.x) * slot_sign_ + radius_de_tmp * sin_point_d_theta +
+      const double sin_e_tmp = ((target_point_.x - point_d.x) * slot_sign_ +
+                                radius_de_tmp * sin_point_d_theta +
                                 radius_ef_tmp * sin_target_point_theta_) /
                                (radius_de_tmp + radius_ef_tmp);
 
@@ -635,10 +673,13 @@ bool DiagonalInGeometryPlan::DE1Segment(const PlanningPoint &point_d, bool is_st
 
       const double sin_point_e_theta = sin_e_tmp;
       const double cos_point_e_theta = apa_cos(point_e.theta);
-      point_e.x = point_d.x + slot_sign_ * radius_de_tmp * (sin_point_e_theta - sin_point_d_theta);
-      point_e.y = point_d.y + slot_sign_ * radius_de_tmp * (cos_point_d_theta - cos_point_e_theta);
+      point_e.x = point_d.x + slot_sign_ * radius_de_tmp *
+                                  (sin_point_e_theta - sin_point_d_theta);
+      point_e.y = point_d.y + slot_sign_ * radius_de_tmp *
+                                  (cos_point_d_theta - cos_point_e_theta);
 
-      if (CollideWithObjectsByPolygon(point_d, point_e, radius_de_tmp, init_ego_polygon)) {
+      if (CollideWithObjectsByPolygon(point_d, point_e, radius_de_tmp,
+                                      init_ego_polygon)) {
         continue;
       }
 
@@ -651,13 +692,15 @@ bool DiagonalInGeometryPlan::DE1Segment(const PlanningPoint &point_d, bool is_st
         continue;
       }
 
-      const double len_de = std::fabs(point_d.theta - point_e.theta) * radius_de_tmp;
+      const double len_de =
+          std::fabs(point_d.theta - point_e.theta) * radius_de_tmp;
       // const double len_cost = CalSegmentLengthCost(len_de);
       // TODO(fengwang31):updata the CalDESegmentLengthCost
       const double len_cost = CalDESegmentLengthCost(len_de);
       const double radius_cost = CalRadiusCost(radius_de_tmp, len_de);
 
-      const double total_cost = len_cost + radius_cost + tmp_segments_info.total_cost;
+      const double total_cost =
+          len_cost + radius_cost + tmp_segments_info.total_cost;
       if (std::isinf(total_cost)) {
         continue;
       }
@@ -686,7 +729,8 @@ bool DiagonalInGeometryPlan::DE1Segment(const PlanningPoint &point_d, bool is_st
   return true;
 }
 
-bool DiagonalInGeometryPlan::EFSegment(const PlanningPoint &point_e, bool is_start, bool is_rough_calc,
+bool DiagonalInGeometryPlan::EFSegment(const PlanningPoint &point_e,
+                                       bool is_start, bool is_rough_calc,
                                        DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -702,7 +746,8 @@ bool DiagonalInGeometryPlan::EFSegment(const PlanningPoint &point_e, bool is_sta
   return true;
 }
 
-bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c, bool is_start, bool is_rough_calc,
+bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c,
+                                        bool is_start, bool is_rough_calc,
                                         DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -719,19 +764,22 @@ bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c, bool is_st
   size_t total_cost_nan_cnt = 0;
   const double radius_cd_step = 1;
   const double theta_step = kDefaultThetaStep * slot_sign_;
-  const int size_step = std::max(static_cast<int>((target_point_.theta - point_c.theta) / theta_step), 1);
+  const int size_step = std::max(
+      static_cast<int>((target_point_.theta - point_c.theta) / theta_step), 1);
   const int size_radius_cd = is_start ? 10 : 1;
   const double front_buffer = is_start ? kLonReverseBuffer : 0.0;
   const double rear_buffer = kLonBuffer;
   const double lat_buffer = kLatBuffer;
-  Polygon2d init_ego_polygon =
-      std::move(ConstructVehiclePolygonWithBuffer(point_c, front_buffer, rear_buffer, lat_buffer));
+  Polygon2d init_ego_polygon = std::move(ConstructVehiclePolygonWithBuffer(
+      point_c, front_buffer, rear_buffer, lat_buffer));
   for (int i = 0; i < size_radius_cd; ++i) {
     const double radius_cd_tmp = min_turn_radius_ + i * radius_cd_step;
     for (int j = 0; j < size_step; ++j) {
       point_d.theta = point_c.theta + theta_step * j;
-      point_d.x = point_c.x + slot_sign_ * radius_cd_tmp * (-apa_sin(point_d.theta) + sin_point_c_theta);
-      point_d.y = point_c.y + slot_sign_ * radius_cd_tmp * (apa_cos(point_d.theta) - cos_point_c_theta);
+      point_d.x = point_c.x + slot_sign_ * radius_cd_tmp *
+                                  (-apa_sin(point_d.theta) + sin_point_c_theta);
+      point_d.y = point_c.y + slot_sign_ * radius_cd_tmp *
+                                  (apa_cos(point_d.theta) - cos_point_c_theta);
 
       if (CollideWithObjectsByPolygon(point_c, point_d, init_ego_polygon)) {
         ++collide_cnt;
@@ -748,7 +796,8 @@ bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c, bool is_st
         continue;
       }
 
-      const double len_cd = std::fabs(point_c.theta - point_d.theta) * radius_cd_tmp;
+      const double len_cd =
+          std::fabs(point_c.theta - point_d.theta) * radius_cd_tmp;
       const double len_cost = CalSegmentLengthCost(len_cd);
       const double radius_cost = CalRadiusCost(radius_cd_tmp, len_cd);
       const double theta_cost = CalEndThetaCost(point_d.theta);
@@ -770,8 +819,10 @@ bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c, bool is_st
   }
 
   if (is_start) {
-    AINFO << "total_cnt:" << (size_radius_cd * size_step) << ", collide_cnt:" << collide_cnt << ", ex1_cnt:" << ex1_cnt
-          << ", ex2_cnt:" << ex2_cnt << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
+    AINFO << "total_cnt:" << (size_radius_cd * size_step)
+          << ", collide_cnt:" << collide_cnt << ", ex1_cnt:" << ex1_cnt
+          << ", ex2_cnt:" << ex2_cnt
+          << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
   }
 
   if (std::isinf(segments_info->total_cost)) {
@@ -780,7 +831,8 @@ bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c, bool is_st
   return true;
 }
 
-bool DiagonalInGeometryPlan::DESegment(const PlanningPoint &point_d, bool is_start, bool is_rough_calc,
+bool DiagonalInGeometryPlan::DESegment(const PlanningPoint &point_d,
+                                       bool is_start, bool is_rough_calc,
                                        DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -802,7 +854,8 @@ bool DiagonalInGeometryPlan::DESegment(const PlanningPoint &point_d, bool is_sta
   }
 
   if (DE3Segment(point_d, is_start, is_rough_calc, &tmp_segments_info)) {
-    segments_info->total_cost = tmp_segments_info.total_cost + 2.0 * kSegmentCost;
+    segments_info->total_cost =
+        tmp_segments_info.total_cost + 2.0 * kSegmentCost;
     segments_info->opt_radius_de = tmp_segments_info.opt_radius_de;
     segments_info->opt_point_e = tmp_segments_info.opt_point_e;
     // AINFO << "de3 success";
@@ -812,7 +865,8 @@ bool DiagonalInGeometryPlan::DESegment(const PlanningPoint &point_d, bool is_sta
   return false;
 }
 
-bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d, bool is_start, bool is_rough_calc,
+bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d,
+                                        bool is_start, bool is_rough_calc,
                                         DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -822,7 +876,8 @@ bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d, bool is_st
 
   const double max_point_e_theta = 0.0;
   const double yaw_step = kDefaultThetaStep * slot_sign_;
-  const int point_num = std::max(static_cast<int>((max_point_e_theta - point_d.theta) / yaw_step), 1);
+  const int point_num = std::max(
+      static_cast<int>((max_point_e_theta - point_d.theta) / yaw_step), 1);
 
   const double cos_point_d_theta = apa_cos(point_d.theta);
   const double sin_point_d_theta = apa_sin(point_d.theta);
@@ -837,19 +892,21 @@ bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d, bool is_st
   const double front_buffer = kLonBuffer;
   const double rear_buffer = is_start ? kLonReverseBuffer : 0.0;
   const double lat_buffer = kLatBuffer;
-  Polygon2d init_ego_polygon =
-      std::move(ConstructVehiclePolygonWithBuffer(point_d, front_buffer, rear_buffer, lat_buffer));
+  Polygon2d init_ego_polygon = std::move(ConstructVehiclePolygonWithBuffer(
+      point_d, front_buffer, rear_buffer, lat_buffer));
   for (int i = 0; i < radius_de_num; ++i) {
     const double radius_de = min_turn_radius_ + radius_step * i;
     for (int j = 0; j < point_num; ++j) {
       point_e.theta = point_d.theta + yaw_step * j;
-      point_e.x = point_d.x + slot_sign_ * radius_de * (-sin_point_d_theta + apa_sin(point_e.theta));
+      point_e.x = point_d.x + slot_sign_ * radius_de *
+                                  (-sin_point_d_theta + apa_sin(point_e.theta));
       if (point_e.x > target_point_.x + kMaxXOffset) {
         ++ex_cnt1;
         break;
       }
 
-      point_e.y = point_d.y + slot_sign_ * radius_de * (cos_point_d_theta - apa_cos(point_e.theta));
+      point_e.y = point_d.y + slot_sign_ * radius_de *
+                                  (cos_point_d_theta - apa_cos(point_e.theta));
 
       if (CollideWithObjectsByPolygon(point_e, point_e, init_ego_polygon)) {
         ++collide_cnt;
@@ -862,11 +919,13 @@ bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d, bool is_st
         continue;
       }
 
-      const double len_de = std::fabs(point_d.theta - point_e.theta) * radius_de;
+      const double len_de =
+          std::fabs(point_d.theta - point_e.theta) * radius_de;
       const double len_cost = CalDESegmentLengthCost(len_de);
       const double radius_cost = CalRadiusCost(radius_de, len_de);
 
-      const double total_cost = len_cost + radius_cost + tmp_segments_info.total_cost;
+      const double total_cost =
+          len_cost + radius_cost + tmp_segments_info.total_cost;
 
       if (std::isinf(total_cost)) {
         ++total_cost_nan_cnt;
@@ -891,8 +950,10 @@ bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d, bool is_st
   }
 
   if (is_start) {
-    AINFO << "total_cnt:" << (point_num * radius_de_num) << ", collide_cnt:" << collide_cnt << ", ex_cnt1:" << ex_cnt1
-          << ", ef_fail_cnt:" << ef_fail_cnt << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
+    AINFO << "total_cnt:" << (point_num * radius_de_num)
+          << ", collide_cnt:" << collide_cnt << ", ex_cnt1:" << ex_cnt1
+          << ", ef_fail_cnt:" << ef_fail_cnt
+          << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
   }
 
   if (std::isinf(segments_info->total_cost)) {
@@ -902,7 +963,8 @@ bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d, bool is_st
   return true;
 }
 
-bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d, bool is_start, bool is_rough_calc,
+bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d,
+                                        bool is_start, bool is_rough_calc,
                                         DiagonalSegmentsInfo *segments_info) {
   segments_info->total_cost = std::numeric_limits<double>::infinity();
 
@@ -910,8 +972,10 @@ bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d, bool is_st
     return false;
   }
 
-  const double yaw_step = is_start ? kMinThetaStep * slot_sign_ : kDefaultThetaStep * slot_sign_;
-  const int point_num = std::max(static_cast<int>((target_point_.theta - point_d.theta) / yaw_step), 1);
+  const double yaw_step =
+      is_start ? kMinThetaStep * slot_sign_ : kDefaultThetaStep * slot_sign_;
+  const int point_num = std::max(
+      static_cast<int>((target_point_.theta - point_d.theta) / yaw_step), 1);
 
   const double cos_point_d_theta = apa_cos(point_d.theta);
   const double sin_point_d_theta = apa_sin(point_d.theta);
@@ -926,20 +990,22 @@ bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d, bool is_st
   const double front_buffer = is_start ? kLonReverseBuffer : 0.0;
   const double rear_buffer = kLonBuffer;
   const double lat_buffer = kLatBuffer;
-  Polygon2d init_ego_polygon =
-      std::move(ConstructVehiclePolygonWithBuffer(point_d, front_buffer, rear_buffer, lat_buffer));
+  Polygon2d init_ego_polygon = std::move(ConstructVehiclePolygonWithBuffer(
+      point_d, front_buffer, rear_buffer, lat_buffer));
   for (int i = 0; i < radius_de_num; ++i) {
     const double radius_de = min_turn_radius_ + radius_step * i;
     for (int j = 0; j < point_num; ++j) {
       point_e.theta = point_d.theta + yaw_step * j;
-      point_e.x = point_d.x + slot_sign_ * radius_de * (-sin_point_d_theta + apa_sin(point_e.theta));
+      point_e.x = point_d.x + slot_sign_ * radius_de *
+                                  (-sin_point_d_theta + apa_sin(point_e.theta));
 
       if (point_e.x > target_point_.x + kMaxXOffsetInDE3) {
         ++ex_cnt2;
         break;
       }
 
-      point_e.y = point_d.y + slot_sign_ * radius_de * (cos_point_d_theta - apa_cos(point_e.theta));
+      point_e.y = point_d.y + slot_sign_ * radius_de *
+                                  (cos_point_d_theta - apa_cos(point_e.theta));
 
       if (CollideWithObjectsByPolygon(point_d, point_e, init_ego_polygon)) {
         ++collide_cnt;
@@ -951,7 +1017,8 @@ bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d, bool is_st
         break;
       }
 
-      const double len_de = std::fabs(point_d.theta - point_e.theta) * radius_de;
+      const double len_de =
+          std::fabs(point_d.theta - point_e.theta) * radius_de;
       const double len_cost = CalDESegmentLengthCost(len_de);
       const double radius_cost = CalRadiusCost(radius_de, len_de);
       const double theta_cost = CalEndThetaCost(point_e.theta);
@@ -977,8 +1044,10 @@ bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d, bool is_st
   }
 
   if (is_start) {
-    AINFO << "total_cnt:" << (point_num * radius_de_num) << ", collide_cnt:" << collide_cnt
-          << ", theta_cnt:" << theta_cnt << ", ex_cnt2:" << ex_cnt2 << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
+    AINFO << "total_cnt:" << (point_num * radius_de_num)
+          << ", collide_cnt:" << collide_cnt << ", theta_cnt:" << theta_cnt
+          << ", ex_cnt2:" << ex_cnt2
+          << ", total_cost_nan_cnt:" << total_cost_nan_cnt;
   }
 
   if (std::isinf(segments_info->total_cost)) {
@@ -988,20 +1057,27 @@ bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d, bool is_st
   return true;
 }
 
-bool DiagonalInGeometryPlan::CollideWithObjectsByBox(const PlanningPoint &veh_point, const double front_buffer,
-                                                     const double rear_buffer, const double lat_buffer) const {
+bool DiagonalInGeometryPlan::CollideWithObjectsByBox(
+    const PlanningPoint &veh_point, const double front_buffer,
+    const double rear_buffer, const double lat_buffer) const {
   if (objects_map_line_segments_.empty()) {
     return false;
   }
 
-  const double front_edge_to_center_with_safe_dst = front_edge_to_center_ + front_buffer;
-  const double back_edge_to_center_with_safe_dst = back_edge_to_center_ + rear_buffer;
-  const double shift_distance = (front_edge_to_center_with_safe_dst - back_edge_to_center_with_safe_dst) * 0.5;
-  const double veh_length_with_safe_dst = front_edge_to_center_with_safe_dst + back_edge_to_center_with_safe_dst;
+  const double front_edge_to_center_with_safe_dst =
+      front_edge_to_center_ + front_buffer;
+  const double back_edge_to_center_with_safe_dst =
+      back_edge_to_center_ + rear_buffer;
+  const double shift_distance =
+      (front_edge_to_center_with_safe_dst - back_edge_to_center_with_safe_dst) *
+      0.5;
+  const double veh_length_with_safe_dst =
+      front_edge_to_center_with_safe_dst + back_edge_to_center_with_safe_dst;
   const double veh_width_with_safe_dis = width_veh_ + lat_buffer * 2.0;
   double veh_x = veh_point.x + shift_distance * apa_cos(veh_point.theta);
   double veh_y = veh_point.y + shift_distance * apa_sin(veh_point.theta);
-  Box2d ego_box({veh_x, veh_y}, veh_point.theta, veh_length_with_safe_dst, veh_width_with_safe_dis);
+  Box2d ego_box({veh_x, veh_y}, veh_point.theta, veh_length_with_safe_dst,
+                veh_width_with_safe_dis);
   for (const auto &line_segment : objects_map_line_segments_) {
     if (ego_box.HasOverlap(line_segment)) {
       return true;
@@ -1011,9 +1087,10 @@ bool DiagonalInGeometryPlan::CollideWithObjectsByBox(const PlanningPoint &veh_po
   return false;
 }
 
-bool DiagonalInGeometryPlan::CollideWithObjectsByBox(const PlanningPoint &veh_point1, const PlanningPoint &veh_point2,
-                                                     const double radius, const double front_buffer,
-                                                     const double rear_buffer, const double lat_buffer) const {
+bool DiagonalInGeometryPlan::CollideWithObjectsByBox(
+    const PlanningPoint &veh_point1, const PlanningPoint &veh_point2,
+    const double radius, const double front_buffer, const double rear_buffer,
+    const double lat_buffer) const {
   if (objects_map_line_segments_.empty()) {
     return false;
   }
@@ -1039,10 +1116,15 @@ bool DiagonalInGeometryPlan::CollideWithObjectsByBox(const PlanningPoint &veh_po
     theta_sign = -1.0;
   }
 
-  const double front_edge_to_center_with_safe_dst = front_edge_to_center_ + front_buffer;
-  const double back_edge_to_center_with_safe_dst = back_edge_to_center_ + rear_buffer;
-  const double shift_distance = (front_edge_to_center_with_safe_dst - back_edge_to_center_with_safe_dst) * 0.5;
-  const double veh_length_with_safe_dst = front_edge_to_center_with_safe_dst + back_edge_to_center_with_safe_dst;
+  const double front_edge_to_center_with_safe_dst =
+      front_edge_to_center_ + front_buffer;
+  const double back_edge_to_center_with_safe_dst =
+      back_edge_to_center_ + rear_buffer;
+  const double shift_distance =
+      (front_edge_to_center_with_safe_dst - back_edge_to_center_with_safe_dst) *
+      0.5;
+  const double veh_length_with_safe_dst =
+      front_edge_to_center_with_safe_dst + back_edge_to_center_with_safe_dst;
   const double veh_width_with_safe_dis = width_veh_ + lat_buffer * 2.0;
 
   for (int i = 0; i <= size_theta; ++i) {
@@ -1050,10 +1132,15 @@ bool DiagonalInGeometryPlan::CollideWithObjectsByBox(const PlanningPoint &veh_po
     const double sin_veh_theta = apa_sin(veh_theta);
     const double cos_veh_theta = apa_cos(veh_theta);
     double veh_x =
-        veh_point1.x + x_sign * radius * std::fabs(-sin_point_1_theta + sin_veh_theta) + shift_distance * cos_veh_theta;
+        veh_point1.x +
+        x_sign * radius * std::fabs(-sin_point_1_theta + sin_veh_theta) +
+        shift_distance * cos_veh_theta;
     double veh_y =
-        veh_point1.y + y_sign * radius * std::fabs(cos_point_1_theta - cos_veh_theta) + shift_distance * sin_veh_theta;
-    Box2d ego_box({veh_x, veh_y}, veh_theta, veh_length_with_safe_dst, veh_width_with_safe_dis);
+        veh_point1.y +
+        y_sign * radius * std::fabs(cos_point_1_theta - cos_veh_theta) +
+        shift_distance * sin_veh_theta;
+    Box2d ego_box({veh_x, veh_y}, veh_theta, veh_length_with_safe_dst,
+                  veh_width_with_safe_dis);
     for (const auto &line_segment : objects_map_line_segments_) {
       if (ego_box.HasOverlap(line_segment)) {
         return true;
@@ -1064,9 +1151,9 @@ bool DiagonalInGeometryPlan::CollideWithObjectsByBox(const PlanningPoint &veh_po
   return false;
 }
 
-bool DiagonalInGeometryPlan::CollideWithObjectsByPolygon(const PlanningPoint &veh_point1,
-                                                         const PlanningPoint &veh_point2,
-                                                         const Polygon2d &init_ego_polygon) const {
+bool DiagonalInGeometryPlan::CollideWithObjectsByPolygon(
+    const PlanningPoint &veh_point1, const PlanningPoint &veh_point2,
+    const Polygon2d &init_ego_polygon) const {
   if (objects_map_line_segments_.empty()) {
     return false;
   }
@@ -1075,8 +1162,9 @@ bool DiagonalInGeometryPlan::CollideWithObjectsByPolygon(const PlanningPoint &ve
   const double rotate_angle = veh_point2.theta - veh_point1.theta;
   const double sin_rotate_angle = apa_sin(rotate_angle);
   const double cos_rotate_angle = apa_cos(rotate_angle);
-  ego_polygon.RotateAndTranslate(Vec2d(veh_point1.x, veh_point1.y), sin_rotate_angle, cos_rotate_angle,
-                                 Vec2d(veh_point2.x - veh_point1.x, veh_point2.y - veh_point1.y));
+  ego_polygon.RotateAndTranslate(
+      Vec2d(veh_point1.x, veh_point1.y), sin_rotate_angle, cos_rotate_angle,
+      Vec2d(veh_point2.x - veh_point1.x, veh_point2.y - veh_point1.y));
 
   for (const auto &line_segment : objects_map_line_segments_) {
     if (ego_polygon.HasOverlap(line_segment)) {
@@ -1087,9 +1175,9 @@ bool DiagonalInGeometryPlan::CollideWithObjectsByPolygon(const PlanningPoint &ve
   return false;
 }
 
-bool DiagonalInGeometryPlan::CollideWithObjectsByPolygon(const PlanningPoint &veh_point1,
-                                                         const PlanningPoint &veh_point2, const double radius,
-                                                         const Polygon2d &init_ego_polygon) const {
+bool DiagonalInGeometryPlan::CollideWithObjectsByPolygon(
+    const PlanningPoint &veh_point1, const PlanningPoint &veh_point2,
+    const double radius, const Polygon2d &init_ego_polygon) const {
   if (objects_map_line_segments_.empty()) {
     return false;
   }
@@ -1120,15 +1208,20 @@ bool DiagonalInGeometryPlan::CollideWithObjectsByPolygon(const PlanningPoint &ve
     veh_point.theta = veh_point1.theta + theta_sign * yaw_step * i;
     const double sin_veh_theta = apa_sin(veh_point.theta);
     const double cos_veh_theta = apa_cos(veh_point.theta);
-    veh_point.x = veh_point1.x + x_sign * radius * std::fabs(-sin_point_1_theta + sin_veh_theta);
-    veh_point.y = veh_point1.y + y_sign * radius * std::fabs(cos_point_1_theta - cos_veh_theta);
+    veh_point.x =
+        veh_point1.x +
+        x_sign * radius * std::fabs(-sin_point_1_theta + sin_veh_theta);
+    veh_point.y =
+        veh_point1.y +
+        y_sign * radius * std::fabs(cos_point_1_theta - cos_veh_theta);
 
     Polygon2d ego_polygon(init_ego_polygon);
     const double rotate_angle = veh_point.theta - veh_point1.theta;
     const double sin_rotate_angle = apa_sin(rotate_angle);
     const double cos_rotate_angle = apa_cos(rotate_angle);
-    ego_polygon.RotateAndTranslate(Vec2d(veh_point1.x, veh_point1.y), sin_rotate_angle, cos_rotate_angle,
-                                   Vec2d(veh_point.x - veh_point1.x, veh_point.y - veh_point1.y));
+    ego_polygon.RotateAndTranslate(
+        Vec2d(veh_point1.x, veh_point1.y), sin_rotate_angle, cos_rotate_angle,
+        Vec2d(veh_point.x - veh_point1.x, veh_point.y - veh_point1.y));
 
     for (const auto &line_segment : objects_map_line_segments_) {
       if (ego_polygon.HasOverlap(line_segment)) {
@@ -1140,16 +1233,21 @@ bool DiagonalInGeometryPlan::CollideWithObjectsByPolygon(const PlanningPoint &ve
   return false;
 }
 
-bool DiagonalInGeometryPlan::CEndCollideCheck(const PlanningPoint &point_c, const double safe_dst) const {
+bool DiagonalInGeometryPlan::CEndCollideCheck(const PlanningPoint &point_c,
+                                              const double safe_dst) const {
   if (objects_map_line_segments_.empty()) {
     return false;
   }
 
-  const double front_edge_to_center_with_safe_dst = front_edge_to_center_ + safe_dst;
-  const double back_edge_to_center_with_safe_dst = back_edge_to_center_ + safe_dst;
+  const double front_edge_to_center_with_safe_dst =
+      front_edge_to_center_ + safe_dst;
+  const double back_edge_to_center_with_safe_dst =
+      back_edge_to_center_ + safe_dst;
   const double shift_distance =
-      (front_edge_to_center_with_safe_dst - back_edge_to_center_with_safe_dst) * 0.5 * sin_target_point_theta_;
-  const double veh_length_with_safe_dst = front_edge_to_center_with_safe_dst + back_edge_to_center_with_safe_dst;
+      (front_edge_to_center_with_safe_dst - back_edge_to_center_with_safe_dst) *
+      0.5 * sin_target_point_theta_;
+  const double veh_length_with_safe_dst =
+      front_edge_to_center_with_safe_dst + back_edge_to_center_with_safe_dst;
   const double veh_width_with_safe_dis = width_veh_ + safe_dst * 2.0;
 
   double y_step = veh_length_with_safe_dst;
@@ -1159,7 +1257,8 @@ bool DiagonalInGeometryPlan::CEndCollideCheck(const PlanningPoint &point_c, cons
 
   for (int i = 0; i <= size_y; ++i) {
     const double veh_y = point_c.y - slot_sign_ * y_step * i + shift_distance;
-    Box2d ego_box({point_c.x, veh_y}, target_point_.theta, veh_length_with_safe_dst, veh_width_with_safe_dis);
+    Box2d ego_box({point_c.x, veh_y}, target_point_.theta,
+                  veh_length_with_safe_dst, veh_width_with_safe_dis);
     for (const auto &line_segment : objects_map_line_segments_) {
       if (ego_box.HasOverlap(line_segment)) {
         return true;
@@ -1181,15 +1280,19 @@ void DiagonalInGeometryPlan::CalTargetXVec() {
   target_x_vec_.clear();
   target_x_vec_.reserve(kTargetXNum);
   for (int i = 0; i < kTargetXNum; ++i) {
-    const double target_x = target_point_.x + (i - kHalfTargetXNum) * kTargetXStep;
+    const double target_x =
+        target_point_.x + (i - kHalfTargetXNum) * kTargetXStep;
     target_x_vec_.push_back(target_x);
     // AINFO << "target_x:" << target_x;
   }
 }
 
-double DiagonalInGeometryPlan::CalPointxBiasCost(const double x_bias) const { return kPointxBiasWeight * x_bias; }
+double DiagonalInGeometryPlan::CalPointxBiasCost(const double x_bias) const {
+  return kPointxBiasWeight * x_bias;
+}
 
-double DiagonalInGeometryPlan::CalSegmentLengthCost(const double segment_len) const {
+double DiagonalInGeometryPlan::CalSegmentLengthCost(
+    const double segment_len) const {
   if (segment_len < kMinSegmentLen) {
     return std::numeric_limits<double>::infinity();
   } else {
@@ -1199,7 +1302,8 @@ double DiagonalInGeometryPlan::CalSegmentLengthCost(const double segment_len) co
   return std::numeric_limits<double>::infinity();
 }
 
-double DiagonalInGeometryPlan::CalRadiusCost(const double radius, const double len) const {
+double DiagonalInGeometryPlan::CalRadiusCost(const double radius,
+                                             const double len) const {
   if (radius < min_turn_radius_) {
     return std::numeric_limits<double>::infinity();
   } else {
@@ -1213,7 +1317,8 @@ double DiagonalInGeometryPlan::CalEndThetaCost(const double theta) const {
   return std::fabs(target_point_.theta - theta) * kEndThetaWeight;
 }
 
-double DiagonalInGeometryPlan::CalBCThetaDiffCost(const double theta_diff) const {
+double DiagonalInGeometryPlan::CalBCThetaDiffCost(
+    const double theta_diff) const {
   return theta_diff * kBCThetaDiffCost;
 }
 
@@ -1221,7 +1326,8 @@ double DiagonalInGeometryPlan::CalPointDThetaCost(const double theta) const {
   return std::fabs(target_point_.theta - theta) * kPointDThetaCost;
 }
 
-double DiagonalInGeometryPlan::CalDESegmentLengthCost(const double segment_len) const {
+double DiagonalInGeometryPlan::CalDESegmentLengthCost(
+    const double segment_len) const {
   if (segment_len < kMinSegmentLen) {
     return std::numeric_limits<double>::infinity();
   } else {

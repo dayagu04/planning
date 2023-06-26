@@ -156,7 +156,7 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
       bool iterative_solve_res = OptimizeWithOsqp(primal_warm_start, &work);
       if (!iterative_solve_res) {
         AERROR << "iteration at " << sub_itr
-            << ", solving fails with max sub iter " << sqp_sub_max_iter_;
+               << ", solving fails with max sub iter " << sqp_sub_max_iter_;
         weight_curvature_constraint_slack_var_ = original_slack_penalty;
         osqp_cleanup(work);
         c_free(data->A);
@@ -174,7 +174,7 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
       if (ftol < sqp_ftol_) {
         AINFO << "merit function value converges at sub iter num " << sub_itr;
         AINFO << "merit function value converges to " << cur_fvalue
-            << ", with ftol " << ftol << ", under max_ftol " << sqp_ftol_;
+              << ", with ftol " << ftol << ", under max_ftol " << sqp_ftol_;
         fconverged = true;
         break;
       }
@@ -196,8 +196,8 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
 
     ctol = CalculateConstraintViolation(opt_xy_);
 
-    AINFO << "ctol is " << ctol << ", pre_ctol:" << pre_ctol
-        << ", at pen itr " << pen_itr;
+    AINFO << "ctol is " << ctol << ", pre_ctol:" << pre_ctol << ", at pen itr "
+          << pen_itr;
 
     if (ctol < sqp_ctol_) {
       AINFO << "constraint satisfied";
@@ -248,38 +248,31 @@ void FemPosDeviationSqpOsqpInterface::CalculateKernel(
   // |0,      0,        0,        X,        -2X-Y,    X+Y+Z|
   // |0,      0,        0,        0,        0,        0,       0,       ...|
   // |0,      0,        0,        0,        0,        0,       0, 0,       ...|
-  // |0,      0,        0,        0,        0,        0,       0, 0, 0,       ...|
-  // |0,      0,        0,        0,        0,        0,       0, 0, 0, 0,       ...|
+  // |0,      0,        0,        0,        0,        0,       0, 0, 0, ...| |0,
+  // 0,        0,        0,        0,        0,       0, 0, 0, 0,       ...|
   std::vector<std::vector<std::pair<c_int, c_float>>> columns;
   columns.resize(num_of_variables_);
   int col_num = 0;
 
   for (int col = 0; col < 2; ++col) {
+    columns[col].emplace_back(col, weight_fem_pos_deviation_ +
+                                       weight_path_length_ +
+                                       weight_ref_deviation_);
     columns[col].emplace_back(
-        col, weight_fem_pos_deviation_ +
-             weight_path_length_ +
-             weight_ref_deviation_);
-    columns[col].emplace_back(
-        col + 2, -2.0 * weight_fem_pos_deviation_ -
-                 weight_path_length_);
-    columns[col].emplace_back(
-        col + 4, weight_fem_pos_deviation_);
+        col + 2, -2.0 * weight_fem_pos_deviation_ - weight_path_length_);
+    columns[col].emplace_back(col + 4, weight_fem_pos_deviation_);
     ++col_num;
   }
 
   for (int col = 2; col < 4; ++col) {
     columns[col].emplace_back(
-        col - 2, -2.0 * weight_fem_pos_deviation_ -
-                 weight_path_length_);
+        col - 2, -2.0 * weight_fem_pos_deviation_ - weight_path_length_);
+    columns[col].emplace_back(col, 5.0 * weight_fem_pos_deviation_ +
+                                       2.0 * weight_path_length_ +
+                                       weight_ref_deviation_);
     columns[col].emplace_back(
-        col, 5.0 * weight_fem_pos_deviation_ +
-             2.0 * weight_path_length_ +
-             weight_ref_deviation_);
-    columns[col].emplace_back(
-        col + 2, -4.0 * weight_fem_pos_deviation_ -
-                 weight_path_length_);
-    columns[col].emplace_back(
-        col + 4, weight_fem_pos_deviation_);
+        col + 2, -4.0 * weight_fem_pos_deviation_ - weight_path_length_);
+    columns[col].emplace_back(col + 4, weight_fem_pos_deviation_);
     ++col_num;
   }
 
@@ -289,20 +282,17 @@ void FemPosDeviationSqpOsqpInterface::CalculateKernel(
     int col_index = point_index * 2;
     for (int col = 0; col < 2; ++col) {
       col_index += col;
+      columns[col_index].emplace_back(col_index - 4, weight_fem_pos_deviation_);
       columns[col_index].emplace_back(
-          col_index - 4, weight_fem_pos_deviation_);
-      columns[col_index].emplace_back(
-          col_index - 2, -4.0 * weight_fem_pos_deviation_ -
-                         weight_path_length_);
+          col_index - 2,
+          -4.0 * weight_fem_pos_deviation_ - weight_path_length_);
       columns[col_index].emplace_back(
           col_index, 6.0 * weight_fem_pos_deviation_ +
-                     2.0 * weight_path_length_ +
-                     weight_ref_deviation_);
+                         2.0 * weight_path_length_ + weight_ref_deviation_);
       columns[col_index].emplace_back(
-          col_index + 2, -4.0 * weight_fem_pos_deviation_ -
-                         weight_path_length_);
-      columns[col_index].emplace_back(
-          col_index + 4, weight_fem_pos_deviation_);
+          col_index + 2,
+          -4.0 * weight_fem_pos_deviation_ - weight_path_length_);
+      columns[col_index].emplace_back(col_index + 4, weight_fem_pos_deviation_);
       ++col_num;
     }
   }
@@ -311,32 +301,25 @@ void FemPosDeviationSqpOsqpInterface::CalculateKernel(
   int last_point_col_from_last_col = num_of_pos_variables_ - 2;
   for (int col = second_point_col_from_last_col;
        col < last_point_col_from_last_col; ++col) {
+    columns[col].emplace_back(col - 4, weight_fem_pos_deviation_);
     columns[col].emplace_back(
-        col - 4, weight_fem_pos_deviation_);
+        col - 2, -4.0 * weight_fem_pos_deviation_ - weight_path_length_);
+    columns[col].emplace_back(col, 5.0 * weight_fem_pos_deviation_ +
+                                       2.0 * weight_path_length_ +
+                                       weight_ref_deviation_);
     columns[col].emplace_back(
-        col - 2, -4.0 * weight_fem_pos_deviation_ -
-                 weight_path_length_);
-    columns[col].emplace_back(
-        col, 5.0 * weight_fem_pos_deviation_ +
-             2.0 * weight_path_length_ +
-             weight_ref_deviation_);
-    columns[col].emplace_back(
-        col + 2, -2.0 * weight_fem_pos_deviation_ -
-                 weight_path_length_);
+        col + 2, -2.0 * weight_fem_pos_deviation_ - weight_path_length_);
     ++col_num;
   }
 
   for (int col = last_point_col_from_last_col; col < num_of_pos_variables_;
        ++col) {
+    columns[col].emplace_back(col - 4, weight_fem_pos_deviation_);
     columns[col].emplace_back(
-        col - 4, weight_fem_pos_deviation_);
-    columns[col].emplace_back(
-        col - 2, -2.0 * weight_fem_pos_deviation_ -
-                 weight_path_length_);
-    columns[col].emplace_back(
-        col, weight_fem_pos_deviation_ +
-             weight_path_length_ +
-             weight_ref_deviation_);
+        col - 2, -2.0 * weight_fem_pos_deviation_ - weight_path_length_);
+    columns[col].emplace_back(col, weight_fem_pos_deviation_ +
+                                       weight_path_length_ +
+                                       weight_ref_deviation_);
     ++col_num;
   }
 
@@ -506,8 +489,8 @@ void FemPosDeviationSqpOsqpInterface::SetPrimalWarmStart(
   auto pre_point = points.front();
   for (int i = 1; i < num_of_points_; ++i) {
     const auto& cur_point = points[i];
-    total_length += std::hypot(
-        pre_point.first - cur_point.first, pre_point.second - cur_point.second);
+    total_length += std::hypot(pre_point.first - cur_point.first,
+                               pre_point.second - cur_point.second);
     pre_point = cur_point;
   }
   average_interval_length_ = total_length / (num_of_points_ - 1);
@@ -556,8 +539,8 @@ double FemPosDeviationSqpOsqpInterface::CalculateConstraintViolation(
   auto pre_point = points.front();
   for (int i = 1; i < num_of_points_; ++i) {
     const auto& cur_point = points[i];
-    total_length += std::hypot(
-        pre_point.first - cur_point.first, pre_point.second - cur_point.second);
+    total_length += std::hypot(pre_point.first - cur_point.first,
+                               pre_point.second - cur_point.second);
     pre_point = cur_point;
   }
   double average_interval_length = total_length / (num_of_points_ - 1);

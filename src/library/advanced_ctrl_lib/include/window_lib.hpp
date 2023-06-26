@@ -173,7 +173,9 @@ class CircleQueue {
     }
   }
 
-  bool IsEmpty() { return ((back_index_ == front_index_) && (back_index_ == -1)); }
+  bool IsEmpty() {
+    return ((back_index_ == front_index_) && (back_index_ == -1));
+  }
 
   bool IsFull() { return (front_index_ == (back_index_ + 1) % size_); }
 

@@ -11,16 +11,21 @@ namespace planning {
 
 struct TaskPipelineContext {
  public:
-  void Init(planning::framework::Frame *frame, const std::shared_ptr<ReferencePath> &reference_path,
-            const TrajectoryPoints &traj_points, const CoarsePlanningInfo &coarse_planning_info_) {
+  void Init(planning::framework::Frame *frame,
+            const std::shared_ptr<ReferencePath> &reference_path,
+            const TrajectoryPoints &traj_points,
+            const CoarsePlanningInfo &coarse_planning_info_) {
     Clear();
     // Step 1) reference path
     reference_path_ptr = reference_path;
 
     // Step 2) traj points
     planning_result.raw_traj_points = traj_points;
-    (void)reference_path_ptr->transform_trajectory_points(planning_result.raw_traj_points);
-    auto delta_s = reference_path->get_frenet_ego_state().planning_init_point().frenet_state.s -
+    (void)reference_path_ptr->transform_trajectory_points(
+        planning_result.raw_traj_points);
+    auto delta_s = reference_path->get_frenet_ego_state()
+                       .planning_init_point()
+                       .frenet_state.s -
                    planning_result.raw_traj_points.front().s;
     for (auto &pt : planning_result.raw_traj_points) {
       pt.s = pt.s + delta_s;
@@ -39,7 +44,8 @@ struct TaskPipelineContext {
     planning_target_state = coarse_planning_info.target_state;
 
     // Step 5) status info
-    status_info = frame->mutable_session()->mutable_planning_context()->status_info();
+    status_info =
+        frame->mutable_session()->mutable_planning_context()->status_info();
 
     // Step 6) traffic light decision
     // const auto &traffic_light_decider = frame->mutable_session()

@@ -96,7 +96,9 @@ static int hash_prediction_id(int perception_id, int traj_index) {
   return perception_id + traj_index * kPredictionHashBit;
 }
 
-static int inverse_hash_prediction_id(int prediction_id) { return prediction_id % kPredictionHashBit; }
+static int inverse_hash_prediction_id(int prediction_id) {
+  return prediction_id % kPredictionHashBit;
+}
 
 }  // namespace planning
 #endif

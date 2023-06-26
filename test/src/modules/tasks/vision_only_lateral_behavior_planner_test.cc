@@ -1,25 +1,20 @@
 #include "behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
-#include "task_pipeline_context.h"
+#include "ego_planning_config.h"
+#include "ego_state_manager.h"
+#include "frenet_ego_state.h"
 #include "general_planning.h"
-#include "virtual_lane_manager.h"
-#include "ego_state_manager.h"
-#include "frenet_ego_state.h"
-#include "ego_state_manager.h"
-#include "frenet_ego_state.h"
 #include "lateral_obstacle.h"
+#include "log.h"
+#include "math/linear_interpolation.h"
 #include "obstacle_manager.h"
 #include "parking_slot_manager.h"
-#include "reference_path_manager.h"
-#include "traffic_light_decision_manager.h"
-#include "parking_slot_manager.h"
-#include "lateral_obstacle.h"
-#include "ego_planning_config.h"
-#include "math/linear_interpolation.h"
-#include "vehicle_service.pb.h"
 #include "planning_config.pb.h"
+#include "reference_path_manager.h"
+#include "task_pipeline_context.h"
+#include "traffic_light_decision_manager.h"
+#include "vehicle_service.pb.h"
 #include "vehicle_status.pb.h"
-#include "log.h"
-
+#include "virtual_lane_manager.h"
 
 #include <array>
 #include <cmath>
@@ -30,7 +25,8 @@ namespace planning {
 
 TEST(TestLateralBehavior, vision_lateral_behavior_planner) {
   std::string log_file = "/asw/Planning/log/planning_log";
-  bst::Log::getInstance().setConfig("Planning_Log", log_file.c_str(), bst::DEBUG);
+  bst::Log::getInstance().setConfig("Planning_Log", log_file.c_str(),
+                                    bst::DEBUG);
 
   printf("TestLateralBehavior: vision_lateral_behavior_planner");
   // std::unique_ptr<GeneralPlanning> planning_base_ = nullptr;
@@ -56,32 +52,39 @@ TEST(TestLateralBehavior, vision_lateral_behavior_planner) {
 
   virtual_lane_manager_ptr_ =
       std::make_shared<planning::VirtualLaneManager>(&session);
-  (&frame)->mutable_session()->mutable_environmental_model()->set_virtual_lane_manager(
-      virtual_lane_manager_ptr_);
+  (&frame)
+      ->mutable_session()
+      ->mutable_environmental_model()
+      ->set_virtual_lane_manager(virtual_lane_manager_ptr_);
 
   obstacle_manager_ptr_ =
       std::make_shared<planning::ObstacleManager>(config_builder, &session);
-  (&frame)->mutable_session()->mutable_environmental_model()->set_obstacle_manager(
-      obstacle_manager_ptr_);
+  (&frame)
+      ->mutable_session()
+      ->mutable_environmental_model()
+      ->set_obstacle_manager(obstacle_manager_ptr_);
 
   reference_path_manager_ptr_ =
       std::make_shared<planning::ReferencePathManager>(&session);
-  (&frame)->mutable_session()->mutable_environmental_model()->set_reference_path_manager(
-      reference_path_manager_ptr_);
+  (&frame)
+      ->mutable_session()
+      ->mutable_environmental_model()
+      ->set_reference_path_manager(reference_path_manager_ptr_);
 
   lateral_obstacle_ptr_ =
       std::make_shared<planning::LateralObstacle>(config_builder, &session);
-  (&frame)->mutable_session()->mutable_environmental_model()->set_lateral_obstacle(
-      lateral_obstacle_ptr_);
+  (&frame)
+      ->mutable_session()
+      ->mutable_environmental_model()
+      ->set_lateral_obstacle(lateral_obstacle_ptr_);
 
   std::shared_ptr<TaskPipelineContext> pipeline_context = nullptr;
   pipeline_context = std::make_shared<TaskPipelineContext>();
 
-  auto vision_lateral_behavior_planner_ptr = std::make_shared<VisionLateralBehaviorPlanner>(
-      config_builder, pipeline_context);
+  auto vision_lateral_behavior_planner_ptr =
+      std::make_shared<VisionLateralBehaviorPlanner>(config_builder,
+                                                     pipeline_context);
 
   vision_lateral_behavior_planner_ptr->Execute(&frame);
-
-
 }
 }  // namespace planning

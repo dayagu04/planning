@@ -12,8 +12,9 @@ namespace planning {
 
 class ResultTrajectoryGenerator : public Task {
  public:
-  explicit ResultTrajectoryGenerator(const EgoPlanningConfigBuilder *config_builder,
-                                     const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+  explicit ResultTrajectoryGenerator(
+      const EgoPlanningConfigBuilder *config_builder,
+      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
   virtual ~ResultTrajectoryGenerator() = default;
 
   bool Execute(planning::framework::Frame *frame) override;
@@ -22,7 +23,9 @@ class ResultTrajectoryGenerator : public Task {
   bool GenerateTrajecotryVisionOnly(planning::framework::Frame *frame);
   void Init();
 
-  inline bool is_abnormal_number(double number) { return (isnan(number) == 1) || (isinf(number) != 0); }
+  inline bool is_abnormal_number(double number) {
+    return (isnan(number) == 1) || (isinf(number) != 0);
+  }
 
  private:
   ResultTrajectoryGeneratorConfig config_;

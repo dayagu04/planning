@@ -84,7 +84,7 @@ class QuarticPolynomialCurve1d : public PolynomialCurve1d {
 
   double ParamLength() const override { return param_; }
 
-//   std::string ToString() const override;
+  //   std::string ToString() const override;
 
   double Coef(const size_t order) const override;
 

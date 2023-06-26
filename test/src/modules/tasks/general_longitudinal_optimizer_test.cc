@@ -19,7 +19,5 @@ TEST(TestLongMotion, longitudinal_motion_planner) {
       config_builder, pipeline_context);
 
   long_motion_planner_ptr->Execute(frame);
-
-
 }
 }  // namespace planning

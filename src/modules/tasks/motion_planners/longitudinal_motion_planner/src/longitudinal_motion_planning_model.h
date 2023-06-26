@@ -6,10 +6,11 @@ namespace pnc {
 namespace longitudinal_planning {
 class LongitudinalMotionPlanningModel : public ilqr_solver::iLqrModel {
  public:
-  State UpdateDynamicsOneStep(const State &x, const Control &u, const size_t &step) const override;
-
-  void GetDynamicsDerivatives(const State &x, const Control & /*u*/, FxMT &f_x, FuMT &f_u,
+  State UpdateDynamicsOneStep(const State &x, const Control &u,
                               const size_t &step) const override;
+
+  void GetDynamicsDerivatives(const State &x, const Control & /*u*/, FxMT &f_x,
+                              FuMT &f_u, const size_t &step) const override;
 };
 }  // namespace longitudinal_planning
 }  // namespace pnc

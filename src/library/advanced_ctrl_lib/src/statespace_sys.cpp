@@ -21,7 +21,8 @@ void StatespaceSISOSys1st::Reset() {
   x_ = 0.0f;
 }
 
-void StatespaceSISOSys1st::InitSSdiscrete(double a, double b, double c, double d) {
+void StatespaceSISOSys1st::InitSSdiscrete(double a, double b, double c,
+                                          double d) {
   Reset();
   inited_flag_ = true;
   Ad_ = a;
@@ -31,7 +32,8 @@ void StatespaceSISOSys1st::InitSSdiscrete(double a, double b, double c, double d
   Cd_pinv_ = 1 / c;
 }
 
-void StatespaceSISOSys1st::InitSScontinuous(double a, double b, double c, double d, double fs) {
+void StatespaceSISOSys1st::InitSScontinuous(double a, double b, double c,
+                                            double d, double fs) {
   Ac_ = a;
   Bc_ = b;
   Cc_ = c;
@@ -48,7 +50,9 @@ void StatespaceSISOSys1st::InitSScontinuous(double a, double b, double c, double
   InitSSdiscrete(Ad_, Bd_, Cd_, Dd_);
 }
 
-void StatespaceSISOSys1st::InitTFcontinuous(const double *coef_p, const double *coef_z, const double fs) {
+void StatespaceSISOSys1st::InitTFcontinuous(const double *coef_p,
+                                            const double *coef_z,
+                                            const double fs) {
   for (int i = 0; i < 2; i++) {
     num_[i] = coef_z[i];
     den_[i] = coef_p[i];
@@ -98,9 +102,10 @@ void StatespaceSISOSys2nd::Reset() {
   x_.setZero();
 }
 
-void StatespaceSISOSys2nd::InitSSdiscrete(Eigen::Matrix2d a, Eigen::Matrix<double, SISO_SYS_ORDER_2ND, 1> b,
-                                          Eigen::Matrix<double, 1, SISO_SYS_ORDER_2ND> c,
-                                          Eigen::Matrix<double, 1, 1> d) {
+void StatespaceSISOSys2nd::InitSSdiscrete(
+    Eigen::Matrix2d a, Eigen::Matrix<double, SISO_SYS_ORDER_2ND, 1> b,
+    Eigen::Matrix<double, 1, SISO_SYS_ORDER_2ND> c,
+    Eigen::Matrix<double, 1, 1> d) {
   Reset();
   inited_flag_ = true;
   Ad_ = a;
@@ -113,9 +118,10 @@ void StatespaceSISOSys2nd::InitSSdiscrete(Eigen::Matrix2d a, Eigen::Matrix<doubl
   }
 }
 
-void StatespaceSISOSys2nd::InitSScontinuous(Eigen::Matrix2d a, Eigen::Matrix<double, SISO_SYS_ORDER_2ND, 1> b,
-                                            Eigen::Matrix<double, 1, SISO_SYS_ORDER_2ND> c,
-                                            Eigen::Matrix<double, 1, 1> d, double fs) {
+void StatespaceSISOSys2nd::InitSScontinuous(
+    Eigen::Matrix2d a, Eigen::Matrix<double, SISO_SYS_ORDER_2ND, 1> b,
+    Eigen::Matrix<double, 1, SISO_SYS_ORDER_2ND> c,
+    Eigen::Matrix<double, 1, 1> d, double fs) {
   Ac_ = a;
   Bc_ = b;
   Cc_ = c;
@@ -145,7 +151,9 @@ void StatespaceSISOSys2nd::InitSScontinuous(Eigen::Matrix2d a, Eigen::Matrix<dou
   InitSSdiscrete(Ad_, Bd_, Cd_, Dd_);
 }
 
-void StatespaceSISOSys2nd::InitTFcontinuous(const double *coef_p, const double *coef_z, const double fs) {
+void StatespaceSISOSys2nd::InitTFcontinuous(const double *coef_p,
+                                            const double *coef_z,
+                                            const double fs) {
   for (int i = 0; i < 3; i++) {
     num_[i] = coef_z[i];
     den_[i] = coef_p[i];
@@ -209,22 +217,28 @@ void StatespaceSISOSys3rd::Reset() {
   x_.setZero();
 }
 
-void StatespaceSISOSys3rd::InitSSdiscrete(Eigen::Matrix3d a, Eigen::Matrix<double, 3, 1> b,
-                                          Eigen::Matrix<double, 1, 3> c, Eigen::Matrix<double, 1, 1> d) {
+void StatespaceSISOSys3rd::InitSSdiscrete(Eigen::Matrix3d a,
+                                          Eigen::Matrix<double, 3, 1> b,
+                                          Eigen::Matrix<double, 1, 3> c,
+                                          Eigen::Matrix<double, 1, 1> d) {
   Reset();
   inited_flag_ = true;
   Ad_ = a;
   Bd_ = b;
   Cd_ = c;
   Dd_ = d;
-  double tmp = Cd_(0, 0) * Cd_(0, 0) + Cd_(0, 1) * Cd_(0, 1) + Cd_(0, 2) * Cd_(0, 2);
+  double tmp =
+      Cd_(0, 0) * Cd_(0, 0) + Cd_(0, 1) * Cd_(0, 1) + Cd_(0, 2) * Cd_(0, 2);
   for (int i = 0; i < 3; i++) {
     Cd_pinv_(i, 0) = c(0, i) / tmp;
   }
 }
 
-void StatespaceSISOSys3rd::InitSScontinuous(Eigen::Matrix3d a, Eigen::Matrix<double, 3, 1> b,
-                                            Eigen::Matrix<double, 1, 3> c, Eigen::Matrix<double, 1, 1> d, double fs) {
+void StatespaceSISOSys3rd::InitSScontinuous(Eigen::Matrix3d a,
+                                            Eigen::Matrix<double, 3, 1> b,
+                                            Eigen::Matrix<double, 1, 3> c,
+                                            Eigen::Matrix<double, 1, 1> d,
+                                            double fs) {
   Ac_ = a;
   Bc_ = b;
   Cc_ = c;
@@ -254,7 +268,9 @@ void StatespaceSISOSys3rd::InitSScontinuous(Eigen::Matrix3d a, Eigen::Matrix<dou
   InitSSdiscrete(Ad_, Bd_, Cd_, Dd_);
 }
 
-void StatespaceSISOSys3rd::InitTFcontinuous(const double *coef_p, const double *coef_z, const double fs) {
+void StatespaceSISOSys3rd::InitTFcontinuous(const double *coef_p,
+                                            const double *coef_z,
+                                            const double fs) {
   for (int i = 0; i < 4; i++) {
     num_[i] = coef_z[i];
     den_[i] = coef_p[i];
@@ -319,22 +335,28 @@ void StatespaceSISOSys4th::Reset() {
   x_.setZero();
 }
 
-void StatespaceSISOSys4th::InitSSdiscrete(Eigen::Matrix4d a, Eigen::Matrix<double, 4, 1> b,
-                                          Eigen::Matrix<double, 1, 4> c, Eigen::Matrix<double, 1, 1> d) {
+void StatespaceSISOSys4th::InitSSdiscrete(Eigen::Matrix4d a,
+                                          Eigen::Matrix<double, 4, 1> b,
+                                          Eigen::Matrix<double, 1, 4> c,
+                                          Eigen::Matrix<double, 1, 1> d) {
   Reset();
   inited_flag_ = true;
   Ad_ = a;
   Bd_ = b;
   Cd_ = c;
   Dd_ = d;
-  double tmp = Cd_(0, 0) * Cd_(0, 0) + Cd_(0, 1) * Cd_(0, 1) + Cd_(0, 2) * Cd_(0, 2) + Cd_(0, 3) * Cd_(0, 3);
+  double tmp = Cd_(0, 0) * Cd_(0, 0) + Cd_(0, 1) * Cd_(0, 1) +
+               Cd_(0, 2) * Cd_(0, 2) + Cd_(0, 3) * Cd_(0, 3);
   for (int i = 0; i < 4; i++) {
     Cd_pinv_(i, 0) = c(0, i) / tmp;
   }
 }
 
-void StatespaceSISOSys4th::InitSScontinuous(Eigen::Matrix4d a, Eigen::Matrix<double, 4, 1> b,
-                                            Eigen::Matrix<double, 1, 4> c, Eigen::Matrix<double, 1, 1> d, double fs) {
+void StatespaceSISOSys4th::InitSScontinuous(Eigen::Matrix4d a,
+                                            Eigen::Matrix<double, 4, 1> b,
+                                            Eigen::Matrix<double, 1, 4> c,
+                                            Eigen::Matrix<double, 1, 1> d,
+                                            double fs) {
   Ac_ = a;
   Bc_ = b;
   Cc_ = c;
@@ -364,7 +386,9 @@ void StatespaceSISOSys4th::InitSScontinuous(Eigen::Matrix4d a, Eigen::Matrix<dou
   InitSSdiscrete(Ad_, Bd_, Cd_, Dd_);
 }
 
-void StatespaceSISOSys4th::InitTFcontinuous(const double *coef_p, const double *coef_z, const double fs) {
+void StatespaceSISOSys4th::InitTFcontinuous(const double *coef_p,
+                                            const double *coef_z,
+                                            const double fs) {
   for (int i = 0; i < 5; i++) {
     num_[i] = coef_z[i];
     den_[i] = coef_p[i];
@@ -388,7 +412,8 @@ void StatespaceSISOSys4th::InitTFcontinuous(const double *coef_p, const double *
   h[3] = b[1] - a[3] * h[2] - a[2] * h[1] - a[1] * h[0];
   h[4] = b[0] - a[3] * h[3] - a[2] * h[2] - a[1] * h[1] - a[0] * h[0];
 
-  Ac_ << 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, -a[0], -a[1], -a[2], -a[3];
+  Ac_ << 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+      -a[0], -a[1], -a[2], -a[3];
 
   Bc_ << h[1], h[2], h[3], h[4];
 
@@ -430,26 +455,29 @@ void StatespaceSISOSys5th::Reset() {
   x_.setZero();
 }
 
-void StatespaceSISOSys5th::InitSSdiscrete(Eigen::Matrix<double, SISO_SYS_ORDER_5TH, SISO_SYS_ORDER_5TH> a,
-                                          Eigen::Matrix<double, SISO_SYS_ORDER_5TH, 1> b,
-                                          Eigen::Matrix<double, 1, SISO_SYS_ORDER_5TH> c,
-                                          Eigen::Matrix<double, 1, 1> d) {
+void StatespaceSISOSys5th::InitSSdiscrete(
+    Eigen::Matrix<double, SISO_SYS_ORDER_5TH, SISO_SYS_ORDER_5TH> a,
+    Eigen::Matrix<double, SISO_SYS_ORDER_5TH, 1> b,
+    Eigen::Matrix<double, 1, SISO_SYS_ORDER_5TH> c,
+    Eigen::Matrix<double, 1, 1> d) {
   Reset();
   inited_flag_ = true;
   Ad_ = a;
   Bd_ = b;
   Cd_ = c;
   Dd_ = d;
-  double tmp = Cd_(0, 0) * Cd_(0, 0) + Cd_(0, 1) * Cd_(0, 1) + Cd_(0, 2) * Cd_(0, 2) + Cd_(0, 3) * Cd_(0, 3) +
+  double tmp = Cd_(0, 0) * Cd_(0, 0) + Cd_(0, 1) * Cd_(0, 1) +
+               Cd_(0, 2) * Cd_(0, 2) + Cd_(0, 3) * Cd_(0, 3) +
                Cd_(0, 4) * Cd_(0, 4);
   for (int i = 0; i < 5; i++) {
     Cd_pinv_(i, 0) = c(0, i) / tmp;
   }
 }
 
-void StatespaceSISOSys5th::InitSScontinuous(Eigen::Matrix<double, SISO_SYS_ORDER_5TH, SISO_SYS_ORDER_5TH> a,
-                                            Eigen::Matrix<double, 5, 1> b, Eigen::Matrix<double, 1, 5> c,
-                                            Eigen::Matrix<double, 1, 1> d, double fs) {
+void StatespaceSISOSys5th::InitSScontinuous(
+    Eigen::Matrix<double, SISO_SYS_ORDER_5TH, SISO_SYS_ORDER_5TH> a,
+    Eigen::Matrix<double, 5, 1> b, Eigen::Matrix<double, 1, 5> c,
+    Eigen::Matrix<double, 1, 1> d, double fs) {
   Ac_ = a;
   Bc_ = b;
   Cc_ = c;
@@ -470,7 +498,8 @@ void StatespaceSISOSys5th::InitSScontinuous(Eigen::Matrix<double, SISO_SYS_ORDER
   Eigen::Matrix<double, SISO_SYS_ORDER_5TH, SISO_SYS_ORDER_5TH> tmp;
   tmp = Eye_alpha - Ac_;
 
-  Eigen::Matrix<double, SISO_SYS_ORDER_5TH, SISO_SYS_ORDER_5TH> tmp_inv = tmp.inverse();
+  Eigen::Matrix<double, SISO_SYS_ORDER_5TH, SISO_SYS_ORDER_5TH> tmp_inv =
+      tmp.inverse();
   Ad_ = tmp_inv * (Eye_alpha + Ac_);
   Bd_ = tmp_inv * Bc_;
   Cd_ = Cc_ * (Ad_ + Eye);
@@ -479,7 +508,9 @@ void StatespaceSISOSys5th::InitSScontinuous(Eigen::Matrix<double, SISO_SYS_ORDER
   InitSSdiscrete(Ad_, Bd_, Cd_, Dd_);
 }
 
-void StatespaceSISOSys5th::InitTFcontinuous(const double *coef_p, const double *coef_z, const double fs) {
+void StatespaceSISOSys5th::InitTFcontinuous(const double *coef_p,
+                                            const double *coef_z,
+                                            const double fs) {
   for (int i = 0; i < 6; i++) {
     num_[i] = coef_z[i];
     den_[i] = coef_p[i];
@@ -502,10 +533,12 @@ void StatespaceSISOSys5th::InitTFcontinuous(const double *coef_p, const double *
   h[2] = b[3] - a[4] * h[1] - a[3] * h[0];
   h[3] = b[2] - a[4] * h[2] - a[3] * h[1] - a[2] * h[0];
   h[4] = b[1] - a[4] * h[3] - a[3] * h[2] - a[2] * h[1] - a[1] * h[0];
-  h[5] = b[0] - a[4] * h[4] - a[3] * h[3] - a[2] * h[2] - a[1] * h[1] - a[0] * h[0];
+  h[5] = b[0] - a[4] * h[4] - a[3] * h[3] - a[2] * h[2] - a[1] * h[1] -
+         a[0] * h[0];
 
-  Ac_ << 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-      0.0f, 1.0f, -a[0], -a[1], -a[2], -a[3], -a[4];
+  Ac_ << 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+      0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, -a[0], -a[1], -a[2],
+      -a[3], -a[4];
 
   Bc_ << h[1], h[2], h[3], h[4], h[5];
 
@@ -547,27 +580,30 @@ void StatespaceSISOSys6th::Reset() {
   x_.setZero();
 }
 
-void StatespaceSISOSys6th::InitSSdiscrete(Eigen::Matrix<double, SISO_SYS_ORDER_6TH, SISO_SYS_ORDER_6TH> a,
-                                          Eigen::Matrix<double, SISO_SYS_ORDER_6TH, 1> b,
-                                          Eigen::Matrix<double, 1, SISO_SYS_ORDER_6TH> c,
-                                          Eigen::Matrix<double, 1, 1> d) {
+void StatespaceSISOSys6th::InitSSdiscrete(
+    Eigen::Matrix<double, SISO_SYS_ORDER_6TH, SISO_SYS_ORDER_6TH> a,
+    Eigen::Matrix<double, SISO_SYS_ORDER_6TH, 1> b,
+    Eigen::Matrix<double, 1, SISO_SYS_ORDER_6TH> c,
+    Eigen::Matrix<double, 1, 1> d) {
   Reset();
   inited_flag_ = true;
   Ad_ = a;
   Bd_ = b;
   Cd_ = c;
   Dd_ = d;
-  double tmp = Cd_(0, 0) * Cd_(0, 0) + Cd_(0, 1) * Cd_(0, 1) + Cd_(0, 2) * Cd_(0, 2) + Cd_(0, 3) * Cd_(0, 3) +
+  double tmp = Cd_(0, 0) * Cd_(0, 0) + Cd_(0, 1) * Cd_(0, 1) +
+               Cd_(0, 2) * Cd_(0, 2) + Cd_(0, 3) * Cd_(0, 3) +
                Cd_(0, 4) * Cd_(0, 4) + Cd_(0, 5) * Cd_(0, 5);
   for (int i = 0; i < 6; i++) {
     Cd_pinv_(i, 0) = c(0, i) / tmp;
   }
 }
 
-void StatespaceSISOSys6th::InitSScontinuous(Eigen::Matrix<double, SISO_SYS_ORDER_6TH, SISO_SYS_ORDER_6TH> a,
-                                            Eigen::Matrix<double, SISO_SYS_ORDER_6TH, 1> b,
-                                            Eigen::Matrix<double, 1, SISO_SYS_ORDER_6TH> c,
-                                            Eigen::Matrix<double, 1, 1> d, double fs) {
+void StatespaceSISOSys6th::InitSScontinuous(
+    Eigen::Matrix<double, SISO_SYS_ORDER_6TH, SISO_SYS_ORDER_6TH> a,
+    Eigen::Matrix<double, SISO_SYS_ORDER_6TH, 1> b,
+    Eigen::Matrix<double, 1, SISO_SYS_ORDER_6TH> c,
+    Eigen::Matrix<double, 1, 1> d, double fs) {
   Ac_ = a;
   Bc_ = b;
   Cc_ = c;
@@ -588,7 +624,8 @@ void StatespaceSISOSys6th::InitSScontinuous(Eigen::Matrix<double, SISO_SYS_ORDER
   Eigen::Matrix<double, SISO_SYS_ORDER_6TH, SISO_SYS_ORDER_6TH> tmp;
   tmp = Eye_alpha - Ac_;
 
-  Eigen::Matrix<double, SISO_SYS_ORDER_6TH, SISO_SYS_ORDER_6TH> tmp_inv = tmp.inverse();
+  Eigen::Matrix<double, SISO_SYS_ORDER_6TH, SISO_SYS_ORDER_6TH> tmp_inv =
+      tmp.inverse();
   Ad_ = tmp_inv * (Eye_alpha + Ac_);
   Bd_ = tmp_inv * Bc_;
   Cd_ = Cc_ * (Ad_ + Eye);
@@ -597,7 +634,9 @@ void StatespaceSISOSys6th::InitSScontinuous(Eigen::Matrix<double, SISO_SYS_ORDER
   InitSSdiscrete(Ad_, Bd_, Cd_, Dd_);
 }
 
-void StatespaceSISOSys6th::InitTFcontinuous(const double *coef_p, const double *coef_z, const double fs) {
+void StatespaceSISOSys6th::InitTFcontinuous(const double *coef_p,
+                                            const double *coef_z,
+                                            const double fs) {
   for (int i = 0; i < 7; i++) {
     num_[i] = coef_z[i];
     den_[i] = coef_p[i];
@@ -620,11 +659,15 @@ void StatespaceSISOSys6th::InitTFcontinuous(const double *coef_p, const double *
   h[2] = b[4] - a[5] * h[1] - a[4] * h[0];
   h[3] = b[3] - a[5] * h[2] - a[4] * h[1] - a[3] * h[0];
   h[4] = b[2] - a[5] * h[3] - a[4] * h[2] - a[3] * h[1] - a[2] * h[0];
-  h[5] = b[1] - a[5] * h[4] - a[4] * h[3] - a[3] * h[2] - a[2] * h[1] - a[1] * h[0];
-  h[6] = b[0] - a[5] * h[5] - a[4] * h[4] - a[3] * h[3] - a[2] * h[2] - a[1] * h[1] - a[0] * h[0];
+  h[5] = b[1] - a[5] * h[4] - a[4] * h[3] - a[3] * h[2] - a[2] * h[1] -
+         a[1] * h[0];
+  h[6] = b[0] - a[5] * h[5] - a[4] * h[4] - a[3] * h[3] - a[2] * h[2] -
+         a[1] * h[1] - a[0] * h[0];
 
-  Ac_ << 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-      0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, -a[0], -a[1], -a[2], -a[3], -a[4], -a[5];
+  Ac_ << 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+      0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+      0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, -a[0], -a[1], -a[2], -a[3], -a[4],
+      -a[5];
 
   Bc_ << h[1], h[2], h[3], h[4], h[5], h[6];
 
@@ -659,8 +702,9 @@ void StatespaceSISOSys6th::SwitchBuf(double u, double y) {
 
 double StatespaceSISOSys6th::GetOutput() { return y_(0, 0); }
 
-void StatespaceMIMO::Init(const Eigen::MatrixXd &Ac, const Eigen::MatrixXd &Bc, const Eigen::MatrixXd &Cc,
-                          const Eigen::MatrixXd &Dc, const double fs) {
+void StatespaceMIMO::Init(const Eigen::MatrixXd &Ac, const Eigen::MatrixXd &Bc,
+                          const Eigen::MatrixXd &Cc, const Eigen::MatrixXd &Dc,
+                          const double fs) {
   int n_state = Ac.cols();
   int n_input = Bc.cols();
   int n_ouput = Cc.rows();

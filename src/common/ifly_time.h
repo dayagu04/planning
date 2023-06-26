@@ -55,11 +55,13 @@ static inline double Now_s() {
 }
 
 static inline std::string DateString() {
-  auto tp = std::chrono::time_point<std::chrono::system_clock, std::chrono::microseconds>(
+  auto tp = std::chrono::time_point<std::chrono::system_clock,
+                                    std::chrono::microseconds>(
       std::chrono::microseconds((int64_t)Now_us()));
   auto tt = std::chrono::system_clock::to_time_t(tp);
   std::tm* now = std::gmtime(&tt);
-  return std::to_string(now->tm_year + 1900) + std::to_string(now->tm_mon + 1) + std::to_string(now->tm_mday);
+  return std::to_string(now->tm_year + 1900) + std::to_string(now->tm_mon + 1) +
+         std::to_string(now->tm_mday);
 }
 
 }  // namespace IflyTime

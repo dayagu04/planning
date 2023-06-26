@@ -56,7 +56,8 @@ namespace planning_math {
 template <typename T>
 class Angle {
  public:
-  static_assert(std::numeric_limits<T>::is_integer && std::numeric_limits<T>::is_signed,
+  static_assert(std::numeric_limits<T>::is_integer &&
+                    std::numeric_limits<T>::is_signed,
                 "T must be a signed integer type");
 
   /**
@@ -64,14 +65,18 @@ class Angle {
    * @param value Angle in degrees
    * @return Angle object
    */
-  static Angle from_deg(const double value) { return Angle(static_cast<T>(std::lround(value * DEG_TO_RAW))); }
+  static Angle from_deg(const double value) {
+    return Angle(static_cast<T>(std::lround(value * DEG_TO_RAW)));
+  }
 
   /**
    * @brief Constructs an Angle object from an angle in radians (factory).
    * @param value Angle in radians
    * @return Angle object
    */
-  static Angle from_rad(const double value) { return Angle(static_cast<T>(std::lround(value * RAD_TO_RAW))); }
+  static Angle from_rad(const double value) {
+    return Angle(static_cast<T>(std::lround(value * RAD_TO_RAW)));
+  }
 
   /**
    * @brief Constructs an Angle object from raw internal value.
@@ -84,7 +89,8 @@ class Angle {
   static constexpr T RAW_PI = std::numeric_limits<T>::min();
 
   /// Internal representation of pi/2
-  static constexpr T RAW_PI_2 = static_cast<T>(-(std::numeric_limits<T>::min() >> 1));
+  static constexpr T RAW_PI_2 =
+      static_cast<T>(-(std::numeric_limits<T>::min() >> 1));
 
   /// Used for converting angle units
   static constexpr double DEG_TO_RAW = RAW_PI / -180.0;

@@ -60,12 +60,14 @@ class band_matrix {
   void lu_decompose();
   std::vector<double> r_solve(const std::vector<double> &b) const;
   std::vector<double> l_solve(const std::vector<double> &b) const;
-  std::vector<double> lu_solve(const std::vector<double> &b, bool is_lu_decomposed = false);
+  std::vector<double> lu_solve(const std::vector<double> &b,
+                               bool is_lu_decomposed = false);
 };
 
 double get_eps();
 
-std::vector<double> solve_cubic(double a, double b, double c, double d, int newton_iter = 0);
+std::vector<double> solve_cubic(double a, double b, double c, double d,
+                                int newton_iter = 0);
 
 // spline interpolation
 class spline {
@@ -106,8 +108,9 @@ class spline {
         m_made_monotonic(false) {
     ;
   }
-  spline(const std::vector<double> &X, const std::vector<double> &Y, spline_type type = cspline,
-         bool make_monotonic = false, bd_type left = second_deriv, double left_value = 0.0,
+  spline(const std::vector<double> &X, const std::vector<double> &Y,
+         spline_type type = cspline, bool make_monotonic = false,
+         bd_type left = second_deriv, double left_value = 0.0,
          bd_type right = second_deriv, double right_value = 0.0)
       : m_type(type),
         m_left(left),
@@ -123,10 +126,12 @@ class spline {
   }
 
   // modify boundary conditions: if called it must be before set_points()
-  void set_boundary(bd_type left, double left_value, bd_type right, double right_value);
+  void set_boundary(bd_type left, double left_value, bd_type right,
+                    double right_value);
 
   // set all data points (cubic_spline=false means linear interpolation)
-  void set_points(const std::vector<double> &x, const std::vector<double> &y, spline_type type = cspline);
+  void set_points(const std::vector<double> &x, const std::vector<double> &y,
+                  spline_type type = cspline);
 
   // adjust coefficients so that the spline becomes piecewise monotonic
   // where possible

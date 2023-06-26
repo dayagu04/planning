@@ -13,11 +13,15 @@ class PlanningResult;
 class EgoPlanningCandidate {
  public:
   EgoPlanningCandidate(planning::framework::Frame *frame);
-  const CoarsePlanningInfo &coarse_planning_info() const { return coarse_planning_info_; }
+  const CoarsePlanningInfo &coarse_planning_info() const {
+    return coarse_planning_info_;
+  }
 
   // prepare candidate information
-  void set_coarse_planning_info(const StateTransitionContext &transition_context);
-  void set_last_planning_result(const std::shared_ptr<PlanningResult> &planning_result);
+  void set_coarse_planning_info(
+      const StateTransitionContext &transition_context);
+  void set_last_planning_result(
+      const std::shared_ptr<PlanningResult> &planning_result);
 
   // check and refine
   bool pre_check();

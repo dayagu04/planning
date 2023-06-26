@@ -28,9 +28,10 @@ constexpr double kMaxObsDis = 1.0;
 constexpr double kMinObsDis = 0.2;
 }  // namespace
 
-bool ApaSpeedLimitDecider::GetSpeedLimits(const PlanningOutput& planning_output,
-                                          const std::vector<LineSegment2d>& obstacles,
-                                          ApaSpeedLimit* const speed_limit_data) const {
+bool ApaSpeedLimitDecider::GetSpeedLimits(
+    const PlanningOutput& planning_output,
+    const std::vector<LineSegment2d>& obstacles,
+    ApaSpeedLimit* const speed_limit_data) const {
   assert(speed_limit_data != nullptr);
 
   const int traj_num = planning_output.trajectory().trajectory_points_size();
@@ -44,19 +45,25 @@ bool ApaSpeedLimitDecider::GetSpeedLimits(const PlanningOutput& planning_output,
   const double rear_buffer = motion_sign < 0.0 ? kLonBuffer : 0.0;
   const double lat_buffer = kLatBuffer;
 
-  PlanningPoint point_0(traj_points[0].x(), traj_points[0].y(), traj_points[0].heading_yaw());
-  Polygon2d init_ego_polygon =
-      std::move(ConstructVehiclePolygonWithBuffer(point_0, front_buffer, rear_buffer, lat_buffer));
+  PlanningPoint point_0(traj_points[0].x(), traj_points[0].y(),
+                        traj_points[0].heading_yaw());
+  Polygon2d init_ego_polygon = std::move(ConstructVehiclePolygonWithBuffer(
+      point_0, front_buffer, rear_buffer, lat_buffer));
   for (int i = 0; i < traj_num; ++i) {
-    const auto& traj_point_i = planning_output.trajectory().trajectory_points()[i];
-    PlanningPoint point_i(traj_point_i.x(), traj_point_i.y(), traj_point_i.heading_yaw());
+    const auto& traj_point_i =
+        planning_output.trajectory().trajectory_points()[i];
+    PlanningPoint point_i(traj_point_i.x(), traj_point_i.y(),
+                          traj_point_i.heading_yaw());
     Polygon2d ego_polygon(init_ego_polygon);
     const double rotate_angle = point_i.theta - point_0.theta;
-    ego_polygon.RotateAndTranslate(Vec2d(point_0.x, point_0.y), apa_sin(rotate_angle), apa_cos(rotate_angle),
-                                   Vec2d(point_i.x - point_0.x, point_i.y - point_0.y));
+    ego_polygon.RotateAndTranslate(
+        Vec2d(point_0.x, point_0.y), apa_sin(rotate_angle),
+        apa_cos(rotate_angle),
+        Vec2d(point_i.x - point_0.x, point_i.y - point_0.y));
     const double abs_curvatrue = std::fabs(traj_point_i.curvature());
     // 1. speed limit from curvature
-    const double speed_limit_from_lat_acc = std::sqrt(kMaxLatAcc / std::fmax(kEps, abs_curvatrue));
+    const double speed_limit_from_lat_acc =
+        std::sqrt(kMaxLatAcc / std::fmax(kEps, abs_curvatrue));
 
     // 2. speed limit from obstacles
     double min_dis_from_obs = std::numeric_limits<double>::infinity();
@@ -64,9 +71,11 @@ bool ApaSpeedLimitDecider::GetSpeedLimits(const PlanningOutput& planning_output,
       const double dis_from_obs = ego_polygon.DistanceTo(obs);
       min_dis_from_obs = std::fmin(min_dis_from_obs, dis_from_obs);
     }
-    const double speed_limit_from_obs = CalSpeedLimitFromObstacleDistance(min_dis_from_obs);
+    const double speed_limit_from_obs =
+        CalSpeedLimitFromObstacleDistance(min_dis_from_obs);
 
-    const double speed_limit = std::min({kMaxSpd, speed_limit_from_lat_acc, speed_limit_from_obs});
+    const double speed_limit =
+        std::min({kMaxSpd, speed_limit_from_lat_acc, speed_limit_from_obs});
 
     speed_limit_data->AppendSpeedLimit(traj_point_i.distance(), speed_limit);
   }
@@ -74,8 +83,10 @@ bool ApaSpeedLimitDecider::GetSpeedLimits(const PlanningOutput& planning_output,
   return true;
 }
 
-double ApaSpeedLimitDecider::CalSpeedLimitFromObstacleDistance(const double dis_from_obstacle) const {
-  const double speed = planning_math::lerp(kMinSpd, kMinObsDis, kMaxSpd, kMaxObsDis, dis_from_obstacle);
+double ApaSpeedLimitDecider::CalSpeedLimitFromObstacleDistance(
+    const double dis_from_obstacle) const {
+  const double speed = planning_math::lerp(kMinSpd, kMinObsDis, kMaxSpd,
+                                           kMaxObsDis, dis_from_obstacle);
   return planning_math::Clamp(speed, kMinSpd, kMaxSpd);
 }
 

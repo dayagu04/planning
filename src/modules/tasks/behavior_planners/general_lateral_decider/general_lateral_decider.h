@@ -55,8 +55,9 @@ struct LatDeciderInfo {
 
 class GeneralLateralDecider : public Task {
  public:
-  explicit GeneralLateralDecider(const EgoPlanningConfigBuilder *config_builder,
-                                 const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+  explicit GeneralLateralDecider(
+      const EgoPlanningConfigBuilder *config_builder,
+      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
 
   virtual ~GeneralLateralDecider() = default;
 
@@ -78,28 +79,39 @@ class GeneralLateralDecider : public Task {
       // const TrajectoryPoints &traj_points,
       ObstacleDecisions &obstacle_decisions);
 
-  void ConstructLateralObstacleDecision(const std::shared_ptr<FrenetObstacle> obstacle,
-                                        ObstacleDecision &obstacle_decision);
+  void ConstructLateralObstacleDecision(
+      const std::shared_ptr<FrenetObstacle> obstacle,
+      ObstacleDecision &obstacle_decision);
   // 3. construct the lane and boundary bound
-  void ConstructlaneAndBoundaryBounds(MapObstacleDecision &map_obstacle_decisions);
+  void ConstructlaneAndBoundaryBounds(
+      MapObstacleDecision &map_obstacle_decisions);
 
-  bool CheckObstacleNudgeCondition(const std::shared_ptr<FrenetObstacle> &obstacle);
+  bool CheckObstacleNudgeCondition(
+      const std::shared_ptr<FrenetObstacle> &obstacle);
 
-  bool CheckObstacleCrossingCondition(const std::shared_ptr<FrenetObstacle> obstacle, bool &is_cross_obj);
+  bool CheckObstacleCrossingCondition(
+      const std::shared_ptr<FrenetObstacle> obstacle, bool &is_cross_obj);
 
-  void RefineConflictLatDecisions(const double &ego_l, ObstacleDecision &obstacle_decision);
+  void RefineConflictLatDecisions(const double &ego_l,
+                                  ObstacleDecision &obstacle_decision);
 
-  void ExtractBoundary(const MapObstacleDecision &map_obstacle_decision, const ObstacleDecisions &obstacle_decisions,
-                       std::vector<std::pair<double, double>> &frenet_safe_bounds,
-                       std::vector<std::pair<double, double>> &frenet_path_bounds);
+  void ExtractBoundary(
+      const MapObstacleDecision &map_obstacle_decision,
+      const ObstacleDecisions &obstacle_decisions,
+      std::vector<std::pair<double, double>> &frenet_safe_bounds,
+      std::vector<std::pair<double, double>> &frenet_path_bounds);
 
   void GenerateEnuBoundaryPoints(
 
       const std::vector<std::pair<double, double>> &frenet_safe_bounds,
-      const std::vector<std::pair<double, double>> &frenet_path_bounds, LatDeciderOutput &lat_decider_output);
+      const std::vector<std::pair<double, double>> &frenet_path_bounds,
+      LatDeciderOutput &lat_decider_output);
 
-  void sample_road_distance_info(const double &s_target, double &left_lane_distance, double &right_lane_distance,
-                                 double &left_road_distance, double &right_road_distance);
+  void sample_road_distance_info(const double &s_target,
+                                 double &left_lane_distance,
+                                 double &right_lane_distance,
+                                 double &left_road_distance,
+                                 double &right_road_distance);
 
   void GenerateEnuReferenceTraj(LatDeciderOutput &lat_decider_output);
 

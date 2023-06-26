@@ -15,12 +15,14 @@ class ApaSpeedLimitDecider {
 
   ~ApaSpeedLimitDecider() = default;
 
-  bool GetSpeedLimits(const ::PlanningOutput::PlanningOutput& planning_output,
-                      const std::vector<planning_math::LineSegment2d>& obstacles,
-                      ApaSpeedLimit* const speed_limit_data) const;
+  bool GetSpeedLimits(
+      const ::PlanningOutput::PlanningOutput& planning_output,
+      const std::vector<planning_math::LineSegment2d>& obstacles,
+      ApaSpeedLimit* const speed_limit_data) const;
 
  private:
-  double CalSpeedLimitFromObstacleDistance(const double dis_from_obstacle) const;
+  double CalSpeedLimitFromObstacleDistance(
+      const double dis_from_obstacle) const;
 };
 
 }  // namespace planning

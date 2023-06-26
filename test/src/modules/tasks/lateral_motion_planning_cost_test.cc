@@ -146,8 +146,10 @@ void Generate() {
   // SetRandomVec(x);
   // SetRandomVec(u);
 
-  x << GetRandomDouble(-5.0, 5.0), GetRandomDouble(-5.0, 5.0), GetRandomDouble(-0.8, 0.8),
-      GetRandomDouble(-1.0, 1.0) * 200.0 / 57.3 / 14.5, u << GetRandomDouble(-1.0, 1.0) * 1;
+  x << GetRandomDouble(-5.0, 5.0), GetRandomDouble(-5.0, 5.0),
+      GetRandomDouble(-0.8, 0.8),
+      GetRandomDouble(-1.0, 1.0) * 200.0 / 57.3 / 14.5,
+      u << GetRandomDouble(-1.0, 1.0) * 1;
 
   if (std::abs(std::abs(x(3)) - cost_config[DELTA_BOUND]) < 0.02) {
     x(3) += 0.05;
@@ -156,9 +158,14 @@ void Generate() {
     u(0) += 0.1;
   }
 
-  cout << "lat_acc = " << std::tan(x(3)) * cost_config[CURV_FACTOR] * (cost_config[REF_VEL] * cost_config[REF_VEL])
+  cout << "lat_acc = "
+       << std::tan(x(3)) * cost_config[CURV_FACTOR] *
+              (cost_config[REF_VEL] * cost_config[REF_VEL])
        << endl;
-  cout << "lat_jerk = " << u(0) * cost_config[CURV_FACTOR] * (cost_config[REF_VEL] * cost_config[REF_VEL]) << endl;
+  cout << "lat_jerk = "
+       << u(0) * cost_config[CURV_FACTOR] *
+              (cost_config[REF_VEL] * cost_config[REF_VEL])
+       << endl;
   // u.setRandom(gen);
 
   Eigen::MatrixXd A;
@@ -215,7 +222,8 @@ void Compare() {
 }
 
 TEST(ReferenceCostTerm, ref_cost_term) {
-  std::shared_ptr<ilqr_solver::BaseCostTerm> ref_cost_term_ptr = std::make_shared<ReferenceCostTerm>();
+  std::shared_ptr<ilqr_solver::BaseCostTerm> ref_cost_term_ptr =
+      std::make_shared<ReferenceCostTerm>();
   clear();
   Init();
   Generate();
@@ -224,13 +232,15 @@ TEST(ReferenceCostTerm, ref_cost_term) {
 
   Print("ref_cost_term");
 
-  ref_cost_term_ptr->GetDiffGradientHessian(x, u, lx_dif, lu_dif, lxx_dif, lxu_dif, luu_dif);
+  ref_cost_term_ptr->GetDiffGradientHessian(x, u, lx_dif, lu_dif, lxx_dif,
+                                            lxu_dif, luu_dif);
   Print_dif("ref_cost_term_diff");
   Compare();
 }
 
 TEST(ContinuityCostTerm, continuity_ref_cost_term) {
-  std::shared_ptr<ilqr_solver::BaseCostTerm> continuity_ref_cost_term_ptr = std::make_shared<ContinuityCostTerm>();
+  std::shared_ptr<ilqr_solver::BaseCostTerm> continuity_ref_cost_term_ptr =
+      std::make_shared<ContinuityCostTerm>();
   clear();
   Init();
   Generate();
@@ -240,7 +250,8 @@ TEST(ContinuityCostTerm, continuity_ref_cost_term) {
 
   Print("continuity_ref_cost_term");
 
-  continuity_ref_cost_term_ptr->GetDiffGradientHessian(x, u, lx_dif, lu_dif, lxx_dif, lxu_dif, luu_dif);
+  continuity_ref_cost_term_ptr->GetDiffGradientHessian(
+      x, u, lx_dif, lu_dif, lxx_dif, lxu_dif, luu_dif);
 
   Print_dif("ref_cost_term_diff");
 
@@ -248,7 +259,8 @@ TEST(ContinuityCostTerm, continuity_ref_cost_term) {
 }
 
 TEST(LatAccCostTerm, lat_acc_cost_term) {
-  std::shared_ptr<ilqr_solver::BaseCostTerm> lat_acc_cost_term_ptr = std::make_shared<LatAccCostTerm>();
+  std::shared_ptr<ilqr_solver::BaseCostTerm> lat_acc_cost_term_ptr =
+      std::make_shared<LatAccCostTerm>();
   clear();
   Init();
   Generate();
@@ -257,7 +269,8 @@ TEST(LatAccCostTerm, lat_acc_cost_term) {
 
   Print("lat_acc_cost_term");
 
-  lat_acc_cost_term_ptr->GetDiffGradientHessian(x, u, lx_dif, lu_dif, lxx_dif, lxu_dif, luu_dif);
+  lat_acc_cost_term_ptr->GetDiffGradientHessian(x, u, lx_dif, lu_dif, lxx_dif,
+                                                lxu_dif, luu_dif);
 
   Print_dif("lat_acc_cost_term_diff");
 
@@ -268,14 +281,16 @@ TEST(LatJerkCostTerm, lat_jerk_cost_term) {
   clear();
   Init();
   Generate();
-  std::shared_ptr<ilqr_solver::BaseCostTerm> lat_jerk_cost_term_ptr = std::make_shared<LatJerkCostTerm>();
+  std::shared_ptr<ilqr_solver::BaseCostTerm> lat_jerk_cost_term_ptr =
+      std::make_shared<LatJerkCostTerm>();
 
   lat_jerk_cost_term_ptr->SetConfig(&cost_config);
   lat_jerk_cost_term_ptr->GetGradientHessian(x, u, lx, lu, lxx, lxu, luu);
 
   Print("lat_jerk_cost_term");
 
-  lat_jerk_cost_term_ptr->GetDiffGradientHessian(x, u, lx_dif, lu_dif, lxx_dif, lxu_dif, luu_dif);
+  lat_jerk_cost_term_ptr->GetDiffGradientHessian(x, u, lx_dif, lu_dif, lxx_dif,
+                                                 lxu_dif, luu_dif);
 
   Print_dif("lat_jerk_cost_term_diff");
   Compare();
@@ -285,14 +300,16 @@ TEST(LatAccBoundCostTerm, lat_acc_bound_cost_term) {
   clear();
   Init();
   Generate();
-  std::shared_ptr<ilqr_solver::BaseCostTerm> lat_acc_bound_cost_term = std::make_shared<LatAccBoundCostTerm>();
+  std::shared_ptr<ilqr_solver::BaseCostTerm> lat_acc_bound_cost_term =
+      std::make_shared<LatAccBoundCostTerm>();
 
   lat_acc_bound_cost_term->SetConfig(&cost_config);
   lat_acc_bound_cost_term->GetGradientHessian(x, u, lx, lu, lxx, lxu, luu);
 
   Print("lat_acc_bound_cost_term");
 
-  lat_acc_bound_cost_term->GetDiffGradientHessian(x, u, lx_dif, lu_dif, lxx_dif, lxu_dif, luu_dif);
+  lat_acc_bound_cost_term->GetDiffGradientHessian(x, u, lx_dif, lu_dif, lxx_dif,
+                                                  lxu_dif, luu_dif);
 
   Print_dif("lat_acc_bound_cost_term_diff");
 
@@ -303,14 +320,16 @@ TEST(LatJerkBoundCostTerm, lat_jerk_bound_cost_term) {
   clear();
   Init();
   Generate();
-  std::shared_ptr<ilqr_solver::BaseCostTerm> lat_jerk_bound_cost_term = std::make_shared<LatJerkBoundCostTerm>();
+  std::shared_ptr<ilqr_solver::BaseCostTerm> lat_jerk_bound_cost_term =
+      std::make_shared<LatJerkBoundCostTerm>();
 
   lat_jerk_bound_cost_term->SetConfig(&cost_config);
   lat_jerk_bound_cost_term->GetGradientHessian(x, u, lx, lu, lxx, lxu, luu);
 
   Print("lat_jerk_bound_cost_term");
 
-  lat_jerk_bound_cost_term->GetDiffGradientHessian(x, u, lx_dif, lu_dif, lxx_dif, lxu_dif, luu_dif);
+  lat_jerk_bound_cost_term->GetDiffGradientHessian(x, u, lx_dif, lu_dif,
+                                                   lxx_dif, lxu_dif, luu_dif);
 
   Print_dif("lat_jerk_bound_cost_term_diff");
 
@@ -329,7 +348,8 @@ TEST(PathSoftCorridorCostTerm, path_soft_corridor_cost_term) {
 
   Print("path_soft_corridor_cost_term");
 
-  path_soft_corridor_cost_term->GetDiffGradientHessian(x, u, lx_dif, lu_dif, lxx_dif, lxu_dif, luu_dif);
+  path_soft_corridor_cost_term->GetDiffGradientHessian(
+      x, u, lx_dif, lu_dif, lxx_dif, lxu_dif, luu_dif);
 
   Print_dif("path_soft_corridor_cost_term");
 

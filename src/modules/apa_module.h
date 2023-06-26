@@ -16,12 +16,14 @@ class ApaPlanningModule : public framework::PlanningModule {
 
   planning::framework::BaseModule* clone() const override;
 
-  bool init(const ::google::protobuf::Message* config, planning::framework::Session* session) override;
+  bool init(const ::google::protobuf::Message* config,
+            planning::framework::Session* session) override;
 
   bool reset(const ::google::protobuf::Message* config) override;
 
  private:
-  std::unique_ptr<apa_planner::ApaPlannerDispatcher> planner_dispatcher_ = nullptr;
+  std::unique_ptr<apa_planner::ApaPlannerDispatcher> planner_dispatcher_ =
+      nullptr;
 };
 
 // REGISTER_MODULE_FACTORY(ApaPlanningModule)

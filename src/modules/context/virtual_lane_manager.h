@@ -23,11 +23,16 @@ class VirtualLaneManager {
   // VirtualLaneManager() = default;
   ~VirtualLaneManager(){};
 
-  std::shared_ptr<VirtualLane> get_left_neighbor(std::shared_ptr<VirtualLane> this_lane) const {
-    return this_lane->get_order_id() > 0 ? relative_id_lanes_[this_lane->get_order_id() - 1] : nullptr;
+  std::shared_ptr<VirtualLane> get_left_neighbor(
+      std::shared_ptr<VirtualLane> this_lane) const {
+    return this_lane->get_order_id() > 0
+               ? relative_id_lanes_[this_lane->get_order_id() - 1]
+               : nullptr;
   }
-  std::shared_ptr<VirtualLane> get_right_neighbor(std::shared_ptr<VirtualLane> this_lane) const {
-    return this_lane->get_order_id() < static_cast<int>(relative_id_lanes_.size()) - 1
+  std::shared_ptr<VirtualLane> get_right_neighbor(
+      std::shared_ptr<VirtualLane> this_lane) const {
+    return this_lane->get_order_id() <
+                   static_cast<int>(relative_id_lanes_.size()) - 1
                ? relative_id_lanes_[this_lane->get_order_id() + 1]
                : nullptr;
   }
@@ -39,10 +44,16 @@ class VirtualLaneManager {
     }
     return current_lane_;
   }
-  const std::shared_ptr<VirtualLane> get_left_lane() const { return left_lane_; }
-  const std::shared_ptr<VirtualLane> get_right_lane() const { return right_lane_; }
-  const std::shared_ptr<VirtualLane> get_lane_with_virtual_id(int virtual_id) const;
-  const std::shared_ptr<VirtualLane> get_lane_with_order_id(uint order_id) const;
+  const std::shared_ptr<VirtualLane> get_left_lane() const {
+    return left_lane_;
+  }
+  const std::shared_ptr<VirtualLane> get_right_lane() const {
+    return right_lane_;
+  }
+  const std::shared_ptr<VirtualLane> get_lane_with_virtual_id(
+      int virtual_id) const;
+  const std::shared_ptr<VirtualLane> get_lane_with_order_id(
+      uint order_id) const;
   int current_lane_virtual_id() {
     // assert(current_lane_ != nullptr);
     if (current_lane_ == nullptr) {
@@ -53,7 +64,8 @@ class VirtualLaneManager {
     return current_lane_->get_virtual_id();
   }
   std::shared_ptr<VirtualLane> mutable_lane_with_virtual_id(int virtual_id) {
-    if (virtual_id_mapped_lane_.find(virtual_id) != virtual_id_mapped_lane_.end()) {
+    if (virtual_id_mapped_lane_.find(virtual_id) !=
+        virtual_id_mapped_lane_.end()) {
       LOG_DEBUG("get mutable lane virtual %d id\n", virtual_id);
       return virtual_id_mapped_lane_[virtual_id];
     } else {
@@ -61,7 +73,9 @@ class VirtualLaneManager {
       return nullptr;
     }
   }
-  std::vector<std::shared_ptr<VirtualLane>> &get_virtual_lanes() { return relative_id_lanes_; }
+  std::vector<std::shared_ptr<VirtualLane>> &get_virtual_lanes() {
+    return relative_id_lanes_;
+  }
   uint get_lane_num() const { return relative_id_lanes_.size(); };
   std::vector<std::shared_ptr<Obstacle>> get_current_lane_obstacle();
   std::vector<std::shared_ptr<Obstacle>> get_left_lane_obstacle();
@@ -73,7 +87,9 @@ class VirtualLaneManager {
   // Destination destination_;
 
   // void update_current_lane();
-  void update_last_fix_lane_id(int flane_virtual_id) { last_fix_lane_virtual_id_ = flane_virtual_id; }
+  void update_last_fix_lane_id(int flane_virtual_id) {
+    last_fix_lane_virtual_id_ = flane_virtual_id;
+  }
   int get_last_fix_lane_id() const { return last_fix_lane_virtual_id_; }
   const std::shared_ptr<VirtualLane> get_last_fix_lane() const {
     return get_lane_with_virtual_id(last_fix_lane_virtual_id_);
@@ -82,17 +98,21 @@ class VirtualLaneManager {
   bool update(const FusionRoad::RoadInfo &roads);
   void reset();
 
-  double get_distance_to_dash_line(const RequestType direction, uint order_id) const {
+  double get_distance_to_dash_line(const RequestType direction,
+                                   uint order_id) const {
     return std::numeric_limits<double>::max();
   }
 
-  double get_distance_to_final_dash_line(const RequestType direction, uint order_id) const;
+  double get_distance_to_final_dash_line(const RequestType direction,
+                                         uint order_id) const;
 
   int get_lane_index(const std::shared_ptr<VirtualLane> virtual_lane) const;
   int get_tasks(const std::shared_ptr<VirtualLane> virtual_lane) const;
-  bool must_change_lane(const std::shared_ptr<VirtualLane> virtual_lane, double on_route_distance_threshold) const;
+  bool must_change_lane(const std::shared_ptr<VirtualLane> virtual_lane,
+                        double on_route_distance_threshold) const;
   int lc_map_decision(const std::shared_ptr<VirtualLane> virtual_lane) const;
-  double lc_map_decision_offset(const std::shared_ptr<VirtualLane> virtual_lane) const {
+  double lc_map_decision_offset(
+      const std::shared_ptr<VirtualLane> virtual_lane) const {
     // HACK
     return 5000.;
   };

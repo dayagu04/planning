@@ -17,7 +17,8 @@ namespace planning {
 static const double planning_loop_dt = 0.1;
 static const double steer_ratio = 15.7;
 
-EgoStateManager::EgoStateManager(planning::framework::Session *session) : session_(session) {
+EgoStateManager::EgoStateManager(planning::framework::Session *session)
+    : session_(session) {
   vehicle_param_ = session_->vehicle_config_context().get_vehicle_param();
 }
 
@@ -26,7 +27,8 @@ void EgoStateManager::set_ego_carte(const Point2D &ego_carte) {
   ego_carte_.y = ego_carte.y;
 }
 
-void EgoStateManager::set_ego_pose_and_vel(const planning::common::VehicleStatus &vehicle_status) {
+void EgoStateManager::set_ego_pose_and_vel(
+    const planning::common::VehicleStatus &vehicle_status) {
   ego_pose_.x = vehicle_status.location().location_enu().x();
   ego_pose_.y = vehicle_status.location().location_enu().y();
   ego_pose_.theta = vehicle_status.heading_yaw().heading_yaw_data().value_rad();
@@ -40,17 +42,21 @@ void EgoStateManager::set_ego_pose_and_vel(const planning::common::VehicleStatus
   ego_v_ = vehicle_status.velocity().heading_velocity().value_mps();
   ego_v_angle_ = vehicle_status.heading_yaw().heading_yaw_data().value_rad();
   ego_hmi_v_ = vehicle_status.velocity().hmi_speed();
-  ego_yaw_rate_ = vehicle_status.angular_velocity().heading_yaw_rate().value_rps();
+  ego_yaw_rate_ =
+      vehicle_status.angular_velocity().heading_yaw_rate().value_rps();
 }
 
-void EgoStateManager::set_ego_position_llh(const planning::common::VehicleStatus &vehicle_status) {
-  const auto &location_geographic = vehicle_status.location().location_geographic();
+void EgoStateManager::set_ego_position_llh(
+    const planning::common::VehicleStatus &vehicle_status) {
+  const auto &location_geographic =
+      vehicle_status.location().location_geographic();
   position_llh_.Longitude = location_geographic.longitude_degree();
   position_llh_.Latitude = location_geographic.latitude_degree();
   position_llh_.height = location_geographic.altitude_meter();
 }
 
-void EgoStateManager::set_ego_enu(const planning::common::VehicleStatus &vehicle_status) {
+void EgoStateManager::set_ego_enu(
+    const planning::common::VehicleStatus &vehicle_status) {
   const auto &location_enu = vehicle_status.location().location_enu();
   location_enu_.position.x = location_enu.x();
   location_enu_.position.y = location_enu.y();
@@ -61,46 +67,63 @@ void EgoStateManager::set_ego_enu(const planning::common::VehicleStatus &vehicle
   location_enu_.orientation.w = location_enu.orientation().w();
 }
 
-void EgoStateManager::set_ego_steer_angle(const planning::common::VehicleStatus &vehicle_status) {
-  ego_steer_angle_ = vehicle_status.steering_wheel().steering_wheel_data().steering_wheel_rad();
+void EgoStateManager::set_ego_steer_angle(
+    const planning::common::VehicleStatus &vehicle_status) {
+  ego_steer_angle_ = vehicle_status.steering_wheel()
+                         .steering_wheel_data()
+                         .steering_wheel_rad();
 }
 
-void EgoStateManager::set_ego_acc(const planning::common::VehicleStatus &vehicle_status) {
+void EgoStateManager::set_ego_acc(
+    const planning::common::VehicleStatus &vehicle_status) {
   ego_acc_last_ = ego_acc_;
-  ego_acc_ = vehicle_status.brake_info().brake_info_data().acceleration_on_vehicle_wheel();
+  ego_acc_ = vehicle_status.brake_info()
+                 .brake_info_data()
+                 .acceleration_on_vehicle_wheel();
 }
 
-void EgoStateManager::set_ego_v_cruise(const planning::common::VehicleStatus &vehicle_status) {
+void EgoStateManager::set_ego_v_cruise(
+    const planning::common::VehicleStatus &vehicle_status) {
   ego_v_cruise_ = vehicle_status.velocity().cruise_velocity().value_mps();
 }
 
-void EgoStateManager::set_ego_t_distance(const planning::common::VehicleStatus &vehicle_status) {
+void EgoStateManager::set_ego_t_distance(
+    const planning::common::VehicleStatus &vehicle_status) {
   ego_t_distance_ = vehicle_status.navi_time_distance();
 }
 
-void EgoStateManager::set_ego_start_stop(const planning::common::VehicleStatus &vehicle_status) {
+void EgoStateManager::set_ego_start_stop(
+    const planning::common::VehicleStatus &vehicle_status) {
   ego_start_stop_ = vehicle_status.start_stop_info();
 }
 
-void EgoStateManager::set_throttle_override(const planning::common::VehicleStatus &vehicle_status) {
+void EgoStateManager::set_throttle_override(
+    const planning::common::VehicleStatus &vehicle_status) {
   throttle_override_ = vehicle_status.throttle().throttle_data().override();
 }
 
-void EgoStateManager::set_ego_blinker(const planning::common::VehicleStatus &vehicle_status) {
-  ego_blinker_ = vehicle_status.vehicle_light().vehicle_light_data().turn_signal().value();
+void EgoStateManager::set_ego_blinker(
+    const planning::common::VehicleStatus &vehicle_status) {
+  ego_blinker_ =
+      vehicle_status.vehicle_light().vehicle_light_data().turn_signal().value();
 }
 
-void EgoStateManager::set_ego_blinker(const planning::common::VehicleLight &vehicle_light) {
+void EgoStateManager::set_ego_blinker(
+    const planning::common::VehicleLight &vehicle_light) {
   ego_blinker_ = vehicle_light.vehicle_light_data().turn_signal().value();
 }
 
-void EgoStateManager::set_ego_auto_light_state(const planning::common::VehicleStatus &vehicle_status) {
-  ego_auto_light_state_ = vehicle_status.vehicle_light().vehicle_light_data().auto_light_state();
+void EgoStateManager::set_ego_auto_light_state(
+    const planning::common::VehicleStatus &vehicle_status) {
+  ego_auto_light_state_ =
+      vehicle_status.vehicle_light().vehicle_light_data().auto_light_state();
 }
 
-void EgoStateManager::set_driver_hand_state(const planning::common::VehicleStatus &vehicle_status) {
+void EgoStateManager::set_driver_hand_state(
+    const planning::common::VehicleStatus &vehicle_status) {
   driver_hand_torque_ = vehicle_status.driver_hand_state().driver_hand_torque();
-  driver_hands_off_state_ = vehicle_status.driver_hand_state().driver_hands_off_state();
+  driver_hands_off_state_ =
+      vehicle_status.driver_hand_state().driver_hands_off_state();
 }
 
 void EgoStateManager::update_transform() {
@@ -119,11 +142,13 @@ void EgoStateManager::update_transform() {
   enu2car_ = define::Transform(q, v).inverse();
 }
 
-void EgoStateManager::set_timestamp_us(const planning::common::VehicleStatus &vehicle_status) {
+void EgoStateManager::set_timestamp_us(
+    const planning::common::VehicleStatus &vehicle_status) {
   timestamp_us_last_ = timestamp_us_;
   timestamp_us_ = vehicle_status.header().timestamp_us();
 }
-bool EgoStateManager::update(const planning::common::VehicleStatus &vehicle_status) {
+bool EgoStateManager::update(
+    const planning::common::VehicleStatus &vehicle_status) {
   set_timestamp_us(vehicle_status);
   set_ego_position_llh(vehicle_status);
   set_ego_enu(vehicle_status);
@@ -142,12 +167,17 @@ bool EgoStateManager::update(const planning::common::VehicleStatus &vehicle_stat
   if (timestamp_us_ == timestamp_us_last_) {
     jerk_ = 0;
   } else {
-    jerk_ = (ego_acc_ - ego_acc_last_) / ((timestamp_us_ - timestamp_us_last_) / 1000000.0);
+    jerk_ = (ego_acc_ - ego_acc_last_) /
+            ((timestamp_us_ - timestamp_us_last_) / 1000000.0);
   }
 
-  planning_math::Vec2d center(ego_pose_.x + std::cos(ego_pose_.theta) * vehicle_param_.rear_axis_to_center,
-                              ego_pose_.y + std::sin(ego_pose_.theta) * vehicle_param_.rear_axis_to_center);
-  planning_math::Box2d ego_box(center, ego_pose_.theta, vehicle_param_.length, vehicle_param_.width);
+  planning_math::Vec2d center(
+      ego_pose_.x +
+          std::cos(ego_pose_.theta) * vehicle_param_.rear_axis_to_center,
+      ego_pose_.y +
+          std::sin(ego_pose_.theta) * vehicle_param_.rear_axis_to_center);
+  planning_math::Box2d ego_box(center, ego_pose_.theta, vehicle_param_.length,
+                               vehicle_param_.width);
   polygon_ = planning_math::Polygon2d(ego_box);
 
   update_transform();
@@ -157,14 +187,18 @@ bool EgoStateManager::update(const planning::common::VehicleStatus &vehicle_stat
   return true;
 }
 
-uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag, const bool &lon_reset_flag) {
+uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
+                                       const bool &lon_reset_flag) {
   // note that lon_reset_flag and lat_reset_flag reserved for acc and override
 
-  const auto &ego_state = session_->environmental_model().get_ego_state_manager();
-  const auto &motion_planning_info =
-      session_->mutable_planning_context()->mutable_planning_result().motion_planning_info;
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto &motion_planning_info = session_->mutable_planning_context()
+                                         ->mutable_planning_result()
+                                         .motion_planning_info;
 
-  // const auto &traj_points = session_->mutable_planning_context()->mutable_planning_result().traj_points;
+  // const auto &traj_points =
+  // session_->mutable_planning_context()->mutable_planning_result().traj_points;
 
   auto &lat_init_state = planning_init_point_.lat_init_state;
   auto &lon_init_state = planning_init_point_.lon_init_state;
@@ -172,27 +206,33 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag, const bool &l
   bool lon_replan = false;
   bool dist_replan = false;
 
-  Eigen::Vector2d cur_pos(ego_state->ego_pose_raw().x, ego_state->ego_pose_raw().y);
+  Eigen::Vector2d cur_pos(ego_state->ego_pose_raw().x,
+                          ego_state->ego_pose_raw().y);
 
   pnc::spline::Projection projection_spline;
-  projection_spline.CalProjectionPoint(motion_planning_info.x_s_spline, motion_planning_info.y_s_spline,
-                                       motion_planning_info.s_lat_vec.front(), motion_planning_info.s_lat_vec.back(),
-                                       cur_pos);
+  projection_spline.CalProjectionPoint(
+      motion_planning_info.x_s_spline, motion_planning_info.y_s_spline,
+      motion_planning_info.s_lat_vec.front(),
+      motion_planning_info.s_lat_vec.back(), cur_pos);
 
   const auto &lat_err = projection_spline.GetOutput().dist_proj;
   const auto &s_proj = projection_spline.GetOutput().s_proj;
   const auto &proj_point = projection_spline.GetOutput().point_proj;
   Eigen::Vector2d init_point(lat_init_state.x(), lat_init_state.y());
   // TODO: maybe more solid
-  // projection_spline.CalProjectionPoint(motion_planning_info.x_s_spline, motion_planning_info.y_s_spline,
-  //                                      motion_planning_info.s_lat_vec.front(), motion_planning_info.s_lat_vec.back(),
+  // projection_spline.CalProjectionPoint(motion_planning_info.x_s_spline,
+  // motion_planning_info.y_s_spline,
+  //                                      motion_planning_info.s_lat_vec.front(),
+  //                                      motion_planning_info.s_lat_vec.back(),
   //                                      init_point);
   // const auto s_init = projection_spline.GetOutput().s_proj;
   // const double &lon_err = s_init - s_proj;
 
-  const auto lon_err = std::hypot(init_point.x() - proj_point.x(), init_point.y() - proj_point.y());
+  const auto lon_err = std::hypot(init_point.x() - proj_point.x(),
+                                  init_point.y() - proj_point.y());
   const double dist_err =
-      std::hypot(lat_init_state.x() - ego_state->ego_pose_raw().x, lat_init_state.y() - ego_state->ego_pose_raw().y);
+      std::hypot(lat_init_state.x() - ego_state->ego_pose_raw().x,
+                 lat_init_state.y() - ego_state->ego_pose_raw().y);
 
   JSON_DEBUG_VALUE("lat_err", lat_err)
   JSON_DEBUG_VALUE("lon_err", lon_err)
@@ -250,7 +290,8 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag, const bool &l
 }
 
 void EgoStateManager::LateralReset() {
-  const auto &ego_state = session_->environmental_model().get_ego_state_manager();
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
 
   auto &lat_init_state = planning_init_point_.lat_init_state;
 
@@ -265,7 +306,8 @@ void EgoStateManager::LateralReset() {
 }
 
 void EgoStateManager::LongitudinalReset() {
-  const auto &ego_state = session_->environmental_model().get_ego_state_manager();
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
   auto &lon_init_state = planning_init_point_.lon_init_state;
 
   // s is fakely frenet, cannot be obtained
@@ -275,7 +317,9 @@ void EgoStateManager::LongitudinalReset() {
 }
 
 void EgoStateManager::MotionPlanningInfoReset() {
-  auto &motion_planning_info = session_->mutable_planning_context()->mutable_planning_result().motion_planning_info;
+  auto &motion_planning_info = session_->mutable_planning_context()
+                                   ->mutable_planning_result()
+                                   .motion_planning_info;
 
   if (!session_->environmental_model().location_valid()) {
     motion_planning_info.lat_enable_flag = false;
@@ -285,8 +329,9 @@ void EgoStateManager::MotionPlanningInfoReset() {
 
 bool EgoStateManager::LateralStitch() {
   auto &lat_init_state = planning_init_point_.lat_init_state;
-  const auto &motion_planning_info =
-      session_->mutable_planning_context()->mutable_planning_result().motion_planning_info;
+  const auto &motion_planning_info = session_->mutable_planning_context()
+                                         ->mutable_planning_result()
+                                         .motion_planning_info;
 
   if (motion_planning_info.lat_enable_flag) {
     // note that s is only for lateral path rather than frenet
@@ -297,8 +342,10 @@ bool EgoStateManager::LateralStitch() {
 
     lat_init_state.set_x(motion_planning_info.x_t_spline(planning_loop_dt));
     lat_init_state.set_y(motion_planning_info.y_t_spline(planning_loop_dt));
-    lat_init_state.set_theta(motion_planning_info.theta_t_spline(planning_loop_dt));
-    lat_init_state.set_delta(pnc::mathlib::Limit(motion_planning_info.delta_t_spline(planning_loop_dt), max_delta));
+    lat_init_state.set_theta(
+        motion_planning_info.theta_t_spline(planning_loop_dt));
+    lat_init_state.set_delta(pnc::mathlib::Limit(
+        motion_planning_info.delta_t_spline(planning_loop_dt), max_delta));
     lat_init_state.set_curv(0.0);
     lat_init_state.set_d_curv(0.0);
 
@@ -310,14 +357,16 @@ bool EgoStateManager::LateralStitch() {
 
 bool EgoStateManager::LongitudinalStitch() {
   auto &lon_init_state = planning_init_point_.lon_init_state;
-  const auto &motion_planning_info =
-      session_->mutable_planning_context()->mutable_planning_result().motion_planning_info;
+  const auto &motion_planning_info = session_->mutable_planning_context()
+                                         ->mutable_planning_result()
+                                         .motion_planning_info;
 
   if (motion_planning_info.lon_enable_flag) {
     // note that longtitudinal s is in frenet, but lateral s is not in frenet
     // so set zero here and set right value in longitudinal planning
     lon_init_state.set_s(0.0);
-    lon_init_state.set_v(std::max(motion_planning_info.v_t_spline(planning_loop_dt), 0.0));
+    lon_init_state.set_v(
+        std::max(motion_planning_info.v_t_spline(planning_loop_dt), 0.0));
     lon_init_state.set_a(motion_planning_info.a_t_spline(planning_loop_dt));
     return true;
   } else {
@@ -357,7 +406,8 @@ void EgoStateManager::UpdatePlanningInitState() {
 
   JSON_DEBUG_VALUE("replan_status", replan_status)
   JSON_DEBUG_VALUE("stitch_success", stitch_success)
-  JSON_DEBUG_VALUE("dbw_status", session_->environmental_model().GetVehicleDbwStatus())
+  JSON_DEBUG_VALUE("dbw_status",
+                   session_->environmental_model().GetVehicleDbwStatus())
 
   // assebling init state
   const auto &lat_init_state = planning_init_point_.lat_init_state;
@@ -375,13 +425,17 @@ void EgoStateManager::UpdatePlanningInitState() {
   planning_init_point_.relative_time = 0.0;
 }
 
-std::vector<PncTrajectoryPoint> EgoStateManager::compute_stitching_trajectory() {
+std::vector<PncTrajectoryPoint>
+EgoStateManager::compute_stitching_trajectory() {
   // pnc planning_status
   // TODO
-  auto *pnc_planning_status = session_->mutable_planning_output_context()->mutable_planning_status();
-  const auto &last_planning_result = session_->mutable_planning_context()->last_planning_result();
+  auto *pnc_planning_status =
+      session_->mutable_planning_output_context()->mutable_planning_status();
+  const auto &last_planning_result =
+      session_->mutable_planning_context()->last_planning_result();
   bool dbw_status = session_->environmental_model().GetVehicleDbwStatus();
-  bool last_planning_success = session_->mutable_planning_context()->last_planning_success();
+  bool last_planning_success =
+      session_->mutable_planning_context()->last_planning_success();
 
   const double planning_loop_rate = 10.0;
   const double planning_cycle_time = 1.0 / planning_loop_rate;
@@ -393,17 +447,23 @@ std::vector<PncTrajectoryPoint> EgoStateManager::compute_stitching_trajectory() 
   vehicle_state.yaw = ego_pose_.theta;
   vehicle_state.linear_acceleration = ego_acc_;
   vehicle_state.linear_velocity = ego_v_;
-  vehicle_state.kappa = tan(ego_steer_angle_ / vehicle_param_.steer_ratio) / vehicle_param_.wheel_base;
+  vehicle_state.kappa = tan(ego_steer_angle_ / vehicle_param_.steer_ratio) /
+                        vehicle_param_.wheel_base;
   vehicle_state.heading = ego_pose_.theta;  // todo
-  vehicle_state.driving_mode = dbw_status ? DrivingMode::AUTO : DrivingMode::MANUAL;
+  vehicle_state.driving_mode =
+      dbw_status ? DrivingMode::AUTO : DrivingMode::MANUAL;
 
   // hack
-  auto stitch_trajectory = TrajectoryStitcher::ComputeReinitStitchingTrajectory(planning_cycle_time, vehicle_state);
+  auto stitch_trajectory = TrajectoryStitcher::ComputeReinitStitchingTrajectory(
+      planning_cycle_time, vehicle_state);
   // reinit
-  auto &replan_trajectory = session_->mutable_planning_context()->mutable_replan_trajectory();
+  auto &replan_trajectory =
+      session_->mutable_planning_context()->mutable_replan_trajectory();
   replan_trajectory = false;
   if (dbw_status == false || last_planning_success == false) {
-    auto stitch_trajectory = TrajectoryStitcher::ComputeReinitStitchingTrajectory(planning_cycle_time, vehicle_state);
+    auto stitch_trajectory =
+        TrajectoryStitcher::ComputeReinitStitchingTrajectory(
+            planning_cycle_time, vehicle_state);
     replan_trajectory = true;
     jerk_ = 0.0;
     return stitch_trajectory;
@@ -412,8 +472,9 @@ std::vector<PncTrajectoryPoint> EgoStateManager::compute_stitching_trajectory() 
   // compute stitch trajectory
   // relative time to last planning trajectory, timeline starts at first point
   // of last planning trajectory
-  double init_point_relative_time = (pnc_planning_status->planning_result.next_timestamp -
-                                     pnc_planning_status->planning_result.timestamp);  // todo .sec();
+  double init_point_relative_time =
+      (pnc_planning_status->planning_result.next_timestamp -
+       pnc_planning_status->planning_result.timestamp);  // todo .sec();
 
   vehicle_state.timestamp = init_point_relative_time;
   LOG_DEBUG("init_point_relative_time: %f", init_point_relative_time);

@@ -26,7 +26,8 @@ void Session::Reset() {
   planning_output_context_->reset();
 }
 
-// static inline planning::common::SceneType parse_scene_type(const std::string &str) {
+// static inline planning::common::SceneType parse_scene_type(const std::string
+// &str) {
 //   std::string scene_type = planning::common::trim(str);
 //   if (scene_type == "HNP") {
 //     return planning::common::SceneType::HIGHWAY;
@@ -47,16 +48,21 @@ void Session::Reset() {
 // }
 
 bool Session::Init() {
-  auto engine_config = common::ConfigurationContext::Instance()->engine_config();
+  auto engine_config =
+      common::ConfigurationContext::Instance()->engine_config();
   auto scenario_config_file_dir = engine_config.scenario_cfg_dir;
   auto module_config_file_dir = engine_config.module_cfg_dir;
-  LOG_NOTICE("ScenarioManager scenario_config_file_dir is: %s \n", scenario_config_file_dir.c_str());
-  if (!common::ConfigurationContext::Instance()->load_params_from_json(scenario_config_file_dir)) {
+  LOG_NOTICE("ScenarioManager scenario_config_file_dir is: %s \n",
+             scenario_config_file_dir.c_str());
+  if (!common::ConfigurationContext::Instance()->load_params_from_json(
+          scenario_config_file_dir)) {
     LOG_ERROR("ConfigurationContext load_params_from_json : %s \n", "ERROR");
     return false;
   }
-  auto synthetic_config = common::ConfigurationContext::Instance()->synthetic_config();
-  planning::common::SceneType init_scene_type = planning::common::SceneType::HIGHWAY;
+  auto synthetic_config =
+      common::ConfigurationContext::Instance()->synthetic_config();
+  planning::common::SceneType init_scene_type =
+      planning::common::SceneType::HIGHWAY;
   if (synthetic_config.scene_type == "apa") {
     init_scene_type = planning::common::SceneType::PARKING_APA;
   }
@@ -65,7 +71,8 @@ bool Session::Init() {
   if (init_scene_type == planning::common::SceneType::NOT_DEFINED) {
     init_scene_type = default_scene_type_;
   }
-  LOG_DEBUG("init_scene_type %s\n", planning::common::SceneType_Name(init_scene_type).c_str());
+  LOG_DEBUG("init_scene_type %s\n",
+            planning::common::SceneType_Name(init_scene_type).c_str());
 
   environmental_model_ = alloc<EnvironmentalModel>();
   (void)environmental_model_->Init(init_scene_type);

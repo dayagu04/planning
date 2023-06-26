@@ -27,7 +27,7 @@ typedef struct IHCSysState {
   uint16 ihc_enable_code;
   uint16 ihc_disable_code;
   uint16 ihc_fault_code;
-  uint8 ihc_state;             // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
+  uint8 ihc_state;  // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
   boolean ihc_request_status;  // IHC请求状态 0:No Request 1:Request
   boolean ihc_request;         // IHC请求 0:LowBeam 1:HighBeam
 } IHCSysState;
@@ -40,7 +40,9 @@ typedef struct IHCSys {
 
 class IntelligentHeadlightControl {
  public:
-  IntelligentHeadlightControl(planning::framework::Session *session) { session_ = session; }
+  IntelligentHeadlightControl(planning::framework::Session *session) {
+    session_ = session;
+  }
   void init(planning::framework::Session *session) { session_ = session; }
   void RunOnce();
   void Update();
@@ -59,7 +61,7 @@ class IntelligentHeadlightControl {
   IHCSys ihc_sys_;
   boolean ihc_request_status_;  // IHC请求状态 0:No Request 1:Request
   boolean ihc_request_;         // IHC请求 0:LowBeam 1:HighBeam
-  uint8 ihc_state_;             // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
+  uint8 ihc_state_;  // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
 };
 }
 #endif

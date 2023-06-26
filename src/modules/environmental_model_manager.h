@@ -42,24 +42,33 @@ class EnvironmentalModelManager {
 
  private:
   bool ego_state_update(double current_time, const LocalView &local_view);
-  void vehicle_status_adaptor(double current_time, const LocalView &local_view, common::VehicleStatus &vehicle_status);
-  void truncate_prediction_info(const Prediction::PredictionResult &prediction_result, double cur_timestamp_us,
-                                std::unordered_set<uint> &prediction_obj_id_set);
-  bool transform_fusion_to_prediction(const FusionObjects::FusionObject &fusion_object, double timestamp);
-  bool obstacle_prediction_update(double current_time, const LocalView &local_view);
+  void vehicle_status_adaptor(double current_time, const LocalView &local_view,
+                              common::VehicleStatus &vehicle_status);
+  void truncate_prediction_info(
+      const Prediction::PredictionResult &prediction_result,
+      double cur_timestamp_us, std::unordered_set<uint> &prediction_obj_id_set);
+  bool transform_fusion_to_prediction(
+      const FusionObjects::FusionObject &fusion_object, double timestamp);
+  bool obstacle_prediction_update(double current_time,
+                                  const LocalView &local_view);
   bool InputReady(double current_time, std::string &error_msg);
-  PredictionTrajectoryPoint GetPointAtTime(const std::vector<PredictionTrajectoryPoint> &trajectory_points,
-                                           const double relative_time) const;
-  // std::shared_ptr<EnvironmentalModel> environmental_model_ = nullptr; session已包含
+  PredictionTrajectoryPoint GetPointAtTime(
+      const std::vector<PredictionTrajectoryPoint> &trajectory_points,
+      const double relative_time) const;
+  // std::shared_ptr<EnvironmentalModel> environmental_model_ = nullptr;
+  // session已包含
   planning::framework::Session *session_ = nullptr;
   planning::framework::Frame *frame_ = nullptr;
-  //   std::shared_ptr<PlanningResultManager> planning_result_manager_ = nullptr;
-  //   std::shared_ptr<EgoPoseManager> ego_pose_manager_ = nullptr;
+  //   std::shared_ptr<PlanningResultManager> planning_result_manager_ =
+  //   nullptr; std::shared_ptr<EgoPoseManager> ego_pose_manager_ = nullptr;
   std::shared_ptr<planning::EgoStateManager> ego_state_manager_ptr_ = nullptr;
   std::shared_ptr<planning::ObstacleManager> obstacle_manager_ptr_ = nullptr;
-  std::shared_ptr<planning::VirtualLaneManager> virtual_lane_manager_ptr_ = nullptr;
-  std::shared_ptr<planning::ReferencePathManager> reference_path_manager_ptr_ = nullptr;
-  std::shared_ptr<planning::TrafficLightDecisionManager> traffic_light_decision_manager_ptr_ = nullptr;
+  std::shared_ptr<planning::VirtualLaneManager> virtual_lane_manager_ptr_ =
+      nullptr;
+  std::shared_ptr<planning::ReferencePathManager> reference_path_manager_ptr_ =
+      nullptr;
+  std::shared_ptr<planning::TrafficLightDecisionManager>
+      traffic_light_decision_manager_ptr_ = nullptr;
   std::shared_ptr<planning::LateralObstacle> lateral_obstacle_ptr_ = nullptr;
   std::shared_ptr<planning::LaneTracksManager> lane_tracks_mgr_ptr_ = nullptr;
   double last_feed_time_[FEED_TYPE_MAX]{};

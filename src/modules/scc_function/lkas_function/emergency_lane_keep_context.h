@@ -13,8 +13,12 @@ class EmergencyLaneKeep {
   }
   void Init(LkasInput *lkas_input, framework::Session *session);
   void RunOnce();
-  boolean get_elk_left_intervention_flag_info() { return elk_left_intervention_flag_; }
-  boolean get_elk_right_intervention_flag_info() { return elk_right_intervention_flag_; }
+  boolean get_elk_left_intervention_flag_info() {
+    return elk_left_intervention_flag_;
+  }
+  boolean get_elk_right_intervention_flag_info() {
+    return elk_right_intervention_flag_;
+  }
   uint16 get_elk_state() { return elk_state_; }
   ~EmergencyLaneKeep() = default;
 
@@ -47,10 +51,15 @@ class EmergencyLaneKeep {
   planning::MeasurementPoint measurement_str_;
   planning::CalibrationParameter calribration_str_;
   planning::EmergencyLaneKeepAlert bsd_lca_;
-  uint32 elk_state_{0}; /* ELK功能状态 0:Unavailable 1:Off 2:Standby 3:Active(No Intervention) 4:Active(Left
-                           Intervention) 5:Active(Right Intervention) */
-  boolean elk_left_intervention_flag_{FALSE}; /* ELK功能触发左侧报警标志位 0:No Intervention 1:Left Intervention */
-  boolean elk_right_intervention_flag_{FALSE}; /* ELK功能触发右侧报警标志位 0:No Intervention 1:Rirht Intervention */
+  uint32 elk_state_{0}; /* ELK功能状态 0:Unavailable 1:Off 2:Standby 3:Active(No
+                           Intervention) 4:Active(Left Intervention)
+                           5:Active(Right Intervention) */
+  boolean
+      elk_left_intervention_flag_{FALSE}; /* ELK功能触发左侧报警标志位 0:No
+                                             Intervention 1:Left Intervention */
+  boolean elk_right_intervention_flag_{
+      FALSE}; /* ELK功能触发右侧报警标志位 0:No Intervention 1:Rirht
+                 Intervention */
   planning::LkasInput *lkas_input_ = nullptr;
   // planning::LkasOutput *lkas_output;
 };

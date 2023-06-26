@@ -22,11 +22,14 @@ bool IsWithin(double val, double bound1, double bound2) {
 
 LineSegment2d::LineSegment2d() { unit_direction_ = Vec2d(1, 0); }
 
-LineSegment2d::LineSegment2d(const Vec2d &start, const Vec2d &end) : start_(start), end_(end) {
+LineSegment2d::LineSegment2d(const Vec2d &start, const Vec2d &end)
+    : start_(start), end_(end) {
   const double dx = end_.x() - start_.x();
   const double dy = end_.y() - start_.y();
   length_ = hypot(dx, dy);
-  unit_direction_ = (length_ <= kMathEpsilon ? Vec2d(0, 0) : Vec2d(dx / length_, dy / length_));
+  unit_direction_ =
+      (length_ <= kMathEpsilon ? Vec2d(0, 0)
+                               : Vec2d(dx / length_, dy / length_));
   heading_ = unit_direction_.Angle();
 }
 
@@ -50,7 +53,8 @@ double LineSegment2d::DistanceTo(const Vec2d &point) const {
   return std::abs(x0 * unit_direction_.y() - y0 * unit_direction_.x());
 }
 
-double LineSegment2d::DistanceTo(const Vec2d &point, Vec2d *const nearest_pt) const {
+double LineSegment2d::DistanceTo(const Vec2d &point,
+                                 Vec2d *const nearest_pt) const {
   assert(nearest_pt != nullptr);
   if (length_ <= kMathEpsilon) {
     *nearest_pt = start_;
@@ -87,7 +91,8 @@ double LineSegment2d::DistanceSquareTo(const Vec2d &point) const {
   return Square(x0 * unit_direction_.y() - y0 * unit_direction_.x());
 }
 
-double LineSegment2d::DistanceSquareTo(const Vec2d &point, Vec2d *const nearest_pt) const {
+double LineSegment2d::DistanceSquareTo(const Vec2d &point,
+                                       Vec2d *const nearest_pt) const {
   assert(nearest_pt != nullptr);
   if (length_ <= kMathEpsilon) {
     *nearest_pt = start_;
@@ -110,25 +115,32 @@ double LineSegment2d::DistanceSquareTo(const Vec2d &point, Vec2d *const nearest_
 
 bool LineSegment2d::IsPointIn(const Vec2d &point) const {
   if (length_ <= kMathEpsilon) {
-    return std::abs(point.x() - start_.x()) <= kMathEpsilon && std::abs(point.y() - start_.y()) <= kMathEpsilon;
+    return std::abs(point.x() - start_.x()) <= kMathEpsilon &&
+           std::abs(point.y() - start_.y()) <= kMathEpsilon;
   }
   const double prod = CrossProd(point, start_, end_);
   if (std::abs(prod) > kMathEpsilon) {
     return false;
   }
-  return IsWithin(point.x(), start_.x(), end_.x()) && IsWithin(point.y(), start_.y(), end_.y());
+  return IsWithin(point.x(), start_.x(), end_.x()) &&
+         IsWithin(point.y(), start_.y(), end_.y());
 }
 
-double LineSegment2d::ProjectOntoUnit(const Vec2d &point) const { return unit_direction_.InnerProd(point - start_); }
+double LineSegment2d::ProjectOntoUnit(const Vec2d &point) const {
+  return unit_direction_.InnerProd(point - start_);
+}
 
-double LineSegment2d::ProductOntoUnit(const Vec2d &point) const { return unit_direction_.CrossProd(point - start_); }
+double LineSegment2d::ProductOntoUnit(const Vec2d &point) const {
+  return unit_direction_.CrossProd(point - start_);
+}
 
 bool LineSegment2d::HasIntersect(const LineSegment2d &other_segment) const {
   Vec2d point;
   return GetIntersect(other_segment, &point);
 }
 
-bool LineSegment2d::GetIntersect(const LineSegment2d &other_segment, Vec2d *const point) const {
+bool LineSegment2d::GetIntersect(const LineSegment2d &other_segment,
+                                 Vec2d *const point) const {
   assert(point != nullptr);
   if (IsPointIn(other_segment.start())) {
     *point = other_segment.start();
@@ -154,18 +166,22 @@ bool LineSegment2d::GetIntersect(const LineSegment2d &other_segment, Vec2d *cons
   if (cc1 * cc2 >= -kMathEpsilon) {
     return false;
   }
-  const double cc3 = CrossProd(other_segment.start(), other_segment.end(), start_);
-  const double cc4 = CrossProd(other_segment.start(), other_segment.end(), end_);
+  const double cc3 =
+      CrossProd(other_segment.start(), other_segment.end(), start_);
+  const double cc4 =
+      CrossProd(other_segment.start(), other_segment.end(), end_);
   if (cc3 * cc4 >= -kMathEpsilon) {
     return false;
   }
   const double ratio = cc4 / (cc4 - cc3);
-  *point = Vec2d(start_.x() * ratio + end_.x() * (1.0 - ratio), start_.y() * ratio + end_.y() * (1.0 - ratio));
+  *point = Vec2d(start_.x() * ratio + end_.x() * (1.0 - ratio),
+                 start_.y() * ratio + end_.y() * (1.0 - ratio));
   return true;
 }
 
 // return distance with perpendicular foot point.
-double LineSegment2d::GetPerpendicularFoot(const Vec2d &point, Vec2d *const foot_point) const {
+double LineSegment2d::GetPerpendicularFoot(const Vec2d &point,
+                                           Vec2d *const foot_point) const {
   assert(foot_point != nullptr);
   if (length_ <= kMathEpsilon) {
     *foot_point = start_;

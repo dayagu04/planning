@@ -11,7 +11,15 @@
 #define CONCAT(x) CONCAT2(x)
 
 namespace bst {
-enum LogLevel { LOGLEVEL_START = 0, FETAL, ERROR, WARNING, NOTICE, DEBUG, LOGLEVEL_END };
+enum LogLevel {
+  LOGLEVEL_START = 0,
+  FETAL,
+  ERROR,
+  WARNING,
+  NOTICE,
+  DEBUG,
+  LOGLEVEL_END
+};
 
 #ifndef X86
 class Log {
@@ -20,7 +28,8 @@ class Log {
     static Log instance;
     return instance;
   };
-  void setConfig(const char* modulename, const char* filename, LogLevel loglevel);
+  void setConfig(const char* modulename, const char* filename,
+                 LogLevel loglevel);
   inline const char* getModuleName() { return m_moduleName.c_str(); }
   void sync();
 
@@ -40,7 +49,8 @@ class Log {
     static Log instance;
     return instance;
   };
-  void setConfig(const char* modulename, const char* logpath, LogLevel loglevel) {
+  void setConfig(const char* modulename, const char* logpath,
+                 LogLevel loglevel) {
     m_logDebug = fopen(logpath, "w");
     if (!m_logDebug) {
       printf("path is not exist,write file failed! %s\n", logpath);
@@ -60,9 +70,10 @@ class Log {
 #endif
 // bst::Log::getInstance().getModulePointer(),
 #ifndef X86
-#define LOG_BST_RELEASE(severity, format, ...)                                                  \
-  do {                                                                                          \
-    NANO_LOG(severity, CONCAT(format), bst::Log::getInstance().getModuleName(), ##__VA_ARGS__); \
+#define LOG_BST_RELEASE(severity, format, ...)                        \
+  do {                                                                \
+    NANO_LOG(severity, CONCAT(format),                                \
+             bst::Log::getInstance().getModuleName(), ##__VA_ARGS__); \
   } while (0)
 
 #define LOG_BST_DEBUG(severity, format, ...) \
@@ -70,10 +81,11 @@ class Log {
     printf(format, ##__VA_ARGS__);           \
   } while (0)
 #else
-#define LOG_BST_RELEASE(severity, format, ...)                                  \
-  do {                                                                          \
-    fprintf(bst::Log::getInstance().getModulePointer(), format, ##__VA_ARGS__); \
-    fflush(bst::Log::getInstance().getModulePointer());                         \
+#define LOG_BST_RELEASE(severity, format, ...)                  \
+  do {                                                          \
+    fprintf(bst::Log::getInstance().getModulePointer(), format, \
+            ##__VA_ARGS__);                                     \
+    fflush(bst::Log::getInstance().getModulePointer());         \
   } while (0)
 
 #define LOG_BST_DEBUG(severity, format, ...) \
@@ -90,8 +102,10 @@ class Log {
 #endif
 
 #define LOG_DEBUG(format, ...) LOG_BST(LogLevels::DEBUG, format, ##__VA_ARGS__)
-#define LOG_NOTICE(format, ...) LOG_BST(LogLevels::NOTICE, format, ##__VA_ARGS__)
-#define LOG_WARNING(format, ...) LOG_BST(LogLevels::WARNING, format, ##__VA_ARGS__)
+#define LOG_NOTICE(format, ...) \
+  LOG_BST(LogLevels::NOTICE, format, ##__VA_ARGS__)
+#define LOG_WARNING(format, ...) \
+  LOG_BST(LogLevels::WARNING, format, ##__VA_ARGS__)
 #define LOG_ERROR(format, ...) LOG_BST(LogLevels::ERROR, format, ##__VA_ARGS__)
 
 }  // namespace bst

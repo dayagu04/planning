@@ -6,7 +6,8 @@ namespace planning {
 
 class BoundedConstantJerkTrajectory1d {
  public:
-  BoundedConstantJerkTrajectory1d(const double p0, const double v0, const double a0, const double jerk,
+  BoundedConstantJerkTrajectory1d(const double p0, const double v0,
+                                  const double a0, const double jerk,
                                   const double delta);
 
   virtual ~BoundedConstantJerkTrajectory1d() = default;

@@ -21,29 +21,36 @@ class ParallelInTrajectoryGenerator {
   bool Plan(framework::Frame *const frame);
 
  private:
-  bool SingleSlotPlan(const int slot_index, PlanningOutput::PlanningOutput *const planning_output);
+  bool SingleSlotPlan(const int slot_index,
+                      PlanningOutput::PlanningOutput *const planning_output);
 
-  bool GeometryPlan(const PlanningPoint &start_point, int idx, PlanningOutput::PlanningOutput *const planning_output);
+  bool GeometryPlan(const PlanningPoint &start_point, int idx,
+                    PlanningOutput::PlanningOutput *const planning_output);
 
-  bool ABSegmentPlan(const PlanningPoint &point_a, bool is_start, int idx,
-                     ParallelInGeometryPlan *const geometry_planning,
-                     PlanningOutput::PlanningOutput *const planning_output) const;
+  bool ABSegmentPlan(
+      const PlanningPoint &point_a, bool is_start, int idx,
+      ParallelInGeometryPlan *const geometry_planning,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool ReverseABSegmentPlan(const PlanningPoint &point_a, bool is_start, int idx,
-                            ParallelInGeometryPlan *const geometry_planning,
-                            PlanningOutput::PlanningOutput *const planning_output) const;
+  bool ReverseABSegmentPlan(
+      const PlanningPoint &point_a, bool is_start, int idx,
+      ParallelInGeometryPlan *const geometry_planning,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool BCSegmentPlan(const PlanningPoint &point_b, bool is_start, int idx,
-                     ParallelInGeometryPlan *const geometry_planning,
-                     PlanningOutput::PlanningOutput *const planning_output) const;
+  bool BCSegmentPlan(
+      const PlanningPoint &point_b, bool is_start, int idx,
+      ParallelInGeometryPlan *const geometry_planning,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool CDSegmentPlan(const PlanningPoint &point_c, bool is_start, int idx,
-                     ParallelInGeometryPlan *const geometry_planning,
-                     PlanningOutput::PlanningOutput *const planning_output) const;
+  bool CDSegmentPlan(
+      const PlanningPoint &point_c, bool is_start, int idx,
+      ParallelInGeometryPlan *const geometry_planning,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool DESegmentPlan(const PlanningPoint &point_d, bool is_start, int idx,
-                     ParallelInGeometryPlan *const geometry_planning,
-                     PlanningOutput::PlanningOutput *const planning_output) const;
+  bool DESegmentPlan(
+      const PlanningPoint &point_d, bool is_start, int idx,
+      ParallelInGeometryPlan *const geometry_planning,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
   bool EFSegmentPlan(const PlanningPoint &point_e, bool is_start, int idx,
                      ParallelInGeometryPlan *const geometry_planning,
@@ -53,39 +60,51 @@ class ParallelInTrajectoryGenerator {
                      ParallelInGeometryPlan *const geometry_planning,
                      PlanningOutput::PlanningOutput *const planning_output);
 
-  bool GenerateABSegmentTrajectory(const ParallelSegmentsInfo &segments_info,
-                                   PlanningOutput::PlanningOutput *const planning_output) const;
+  bool GenerateABSegmentTrajectory(
+      const ParallelSegmentsInfo &segments_info,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool GenerateBCSegmentTrajectory(const ParallelSegmentsInfo &segments_info,
-                                   PlanningOutput::PlanningOutput *const planning_output) const;
+  bool GenerateBCSegmentTrajectory(
+      const ParallelSegmentsInfo &segments_info,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool GenerateCDSegmentTrajectory(const ParallelSegmentsInfo &segments_info,
-                                   PlanningOutput::PlanningOutput *const planning_output) const;
+  bool GenerateCDSegmentTrajectory(
+      const ParallelSegmentsInfo &segments_info,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool GenerateDESegmentTrajectory(const ParallelSegmentsInfo &segments_info,
-                                   PlanningOutput::PlanningOutput *const planning_output) const;
+  bool GenerateDESegmentTrajectory(
+      const ParallelSegmentsInfo &segments_info,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool GenerateEFSegmentTrajectory(const ParallelSegmentsInfo &segments_info,
-                                   PlanningOutput::PlanningOutput *const planning_output) const;
+  bool GenerateEFSegmentTrajectory(
+      const ParallelSegmentsInfo &segments_info,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool GenerateFHSegmentTrajectory(const ParallelSegmentsInfo &segments_info,
-                                   PlanningOutput::PlanningOutput *const planning_output) const;
+  bool GenerateFHSegmentTrajectory(
+      const ParallelSegmentsInfo &segments_info,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  void SetApaObjectInfo(int idx, ParallelInGeometryPlan *geometry_planning) const;
+  void SetApaObjectInfo(int idx,
+                        ParallelInGeometryPlan *geometry_planning) const;
 
-  void SetGeometryPlanningParameter(int idx, ParallelInGeometryPlan *geometry_planning);
+  void SetGeometryPlanningParameter(int idx,
+                                    ParallelInGeometryPlan *geometry_planning);
 
-  void GetCurPtSpeed(const double segment_len, const double cur_s, const double spd_sign,
+  void GetCurPtSpeed(const double segment_len, const double cur_s,
+                     const double spd_sign,
                      PlanningOutput::TrajectoryPoint *trajectory_point) const;
 
-  void GetCurPtSpeed(const double spd_sign, PlanningOutput::TrajectoryPoint *trajectory_point) const;
+  void GetCurPtSpeed(const double spd_sign,
+                     PlanningOutput::TrajectoryPoint *trajectory_point) const;
 
   void GetCurPtSpeed(const double segment_len, const double spd_sign,
                      PlanningOutput::TrajectoryPoint *trajectory_point) const;
 
-  PlanningPoint FromLocal2GlobalCor(const PlanningPoint &ego, const PlanningPoint &local) const;
+  PlanningPoint FromLocal2GlobalCor(const PlanningPoint &ego,
+                                    const PlanningPoint &local) const;
 
-  PlanningPoint FromGlobal2LocalCor(const PlanningPoint &ego, const PlanningPoint &global) const;
+  PlanningPoint FromGlobal2LocalCor(const PlanningPoint &ego,
+                                    const PlanningPoint &global) const;
 
   double CalApaTargetY() const;
 
@@ -103,7 +122,8 @@ class ParallelInTrajectoryGenerator {
 
   bool IsReplan(PlanningOutput::PlanningOutput *const planning_output);
 
-  void SetPlanningOutputInfo(PlanningOutput::PlanningOutput *const planning_output) const;
+  void SetPlanningOutputInfo(
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
   bool IsSamePoint(const PlanningPoint &p1, const PlanningPoint &p2) const;
 
@@ -113,12 +133,15 @@ class ParallelInTrajectoryGenerator {
 
   bool IsApaFinished() const;
 
-  void PrintTrajectoryPoints(const PlanningOutput::PlanningOutput &planning_output) const;
+  void PrintTrajectoryPoints(
+      const PlanningOutput::PlanningOutput &planning_output) const;
 
-  void UpdateTargetPointInSlot(const ParallelInGeometryPlan &geometry_planning) {
+  void UpdateTargetPointInSlot(
+      const ParallelInGeometryPlan &geometry_planning) {
     target_point_in_slot_ = geometry_planning.GetUpdatedTargetPoint();
 
-    AINFO << "updated target_point_in_slot_ x:" << target_point_in_slot_.x << ", y:" << target_point_in_slot_.y
+    AINFO << "updated target_point_in_slot_ x:" << target_point_in_slot_.x
+          << ", y:" << target_point_in_slot_.y
           << ", theta:" << target_point_in_slot_.theta << std::endl;
   }
 
@@ -155,9 +178,11 @@ class ParallelInTrajectoryGenerator {
 
   bool is_rough_calc_ = false;
 
-  ::FuncStateMachine::FunctionalState current_state_ = ::FuncStateMachine::FunctionalState::INIT;
+  ::FuncStateMachine::FunctionalState current_state_ =
+      ::FuncStateMachine::FunctionalState::INIT;
 
-  std::unique_ptr<IterativeAnchoringSmoother> iterative_anchoring_smoother_ = nullptr;
+  std::unique_ptr<IterativeAnchoringSmoother> iterative_anchoring_smoother_ =
+      nullptr;
 
   std::vector<planning_math::LineSegment2d> objects_map_in_global_cor_;
 

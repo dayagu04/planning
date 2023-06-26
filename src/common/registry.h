@@ -12,7 +12,9 @@ namespace planning {
 namespace common {
 
 struct StringLesser {
-  bool operator()(const char *lhs, const char *rhs) const { return strcmp(lhs, rhs) < 0; }
+  bool operator()(const char *lhs, const char *rhs) const {
+    return strcmp(lhs, rhs) < 0;
+  }
 };
 
 // Stores all modules' factories

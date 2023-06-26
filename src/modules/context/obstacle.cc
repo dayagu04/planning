@@ -17,7 +17,8 @@ namespace planning {
 //           prediction_object.fusion_obstacle().common_info().center_position().y()},
 //           prediction_object.fusion_obstacle().common_info().heading_angle(),
 //           prediction_object.fusion_obstacle().common_info().shape().length(),
-//           prediction_object.fusion_obstacle().common_info().shape().width()) {
+//           prediction_object.fusion_obstacle().common_info().shape().width())
+//           {
 
 //   perception_obstacle_.CopyFrom(prediction_object.fusion_obstacle());
 //   x_center_ = perception_obstacle_.common_info().center_position().x();
@@ -25,16 +26,23 @@ namespace planning {
 //   perception_velocity_ = perception_obstacle_.common_info().velocity().x();
 //   velocity_angle_ = perception_obstacle_.common_info().heading_angle();
 //   // perception_obstacle_.heading_yaw =
-//   //     planning_math::NormalizeAngle(prediction_object.perception_obstacle().heading_angle());
+//   //
+//   planning_math::NormalizeAngle(prediction_object.perception_obstacle().heading_angle());
 
 //   std::vector<planning_math::Vec2d> polygon_points;
-//   if (prediction_object.fusion_obstacle().additional_info().polygon().points_size() < 3) {
+//   if
+//   (prediction_object.fusion_obstacle().additional_info().polygon().points_size()
+//   < 3) {
 //     perception_bounding_box_.GetAllCorners(&polygon_points);
 //   } else {
-//     for (int i = 0; i < prediction_object.fusion_obstacle().additional_info().polygon().points_size()  - 1;
+//     for (int i = 0; i <
+//     prediction_object.fusion_obstacle().additional_info().polygon().points_size()
+//     - 1;
 //          ++i) {
-//       auto &point = prediction_object.fusion_obstacle().additional_info().polygon().points(i);
-//       polygon_points.emplace_back(planning_math::Vec2d(point.x(), point.y()));
+//       auto &point =
+//       prediction_object.fusion_obstacle().additional_info().polygon().points(i);
+//       polygon_points.emplace_back(planning_math::Vec2d(point.x(),
+//       point.y()));
 //     }
 //   }
 
@@ -50,8 +58,10 @@ namespace planning {
 //   std::vector<planning_math::Vec2d> ego_polygon_points;
 //   for (const auto &point : perception_polygon_.points()) {
 //     ego_polygon_points.emplace_back(
-//         planning_math::Vec2d(point.x() - perception_obstacle_.common_info().center_position().x(),
-//                              point.y() - perception_obstacle_.common_info().center_position().y()));
+//         planning_math::Vec2d(point.x() -
+//         perception_obstacle_.common_info().center_position().x(),
+//                              point.y() -
+//                              perception_obstacle_.common_info().center_position().y()));
 //   }
 //   // LOG_DEBUG("obstacle[%d] last polygon size : %d", polygon_points.size());
 //   if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
@@ -59,8 +69,9 @@ namespace planning {
 //     LOG_DEBUG("polygon_debug invalid ego polygon");
 //   }
 
-//   velocity_ = prediction_object.fusion_obstacle().common_info().velocity().x();
-//   acc_ = prediction_object.fusion_obstacle().common_info().acceleration().x();
+//   velocity_ =
+//   prediction_object.fusion_obstacle().common_info().velocity().x(); acc_ =
+//   prediction_object.fusion_obstacle().common_info().acceleration().x();
 //   // acc_signed_ = acc_ > 0 ? 1 : -1 ;
 
 //   if (is_static) {
@@ -87,11 +98,12 @@ namespace planning {
 //     tp.sigma_x = traj_point.gaussian_info().sigma_x();
 //     tp.sigma_y = traj_point.gaussian_info().sigma_y();
 //     tp.path_point.theta = planning_math::NormalizeAngle(traj_point.yaw());
-//     tp.velocity_direction = planning_math::NormalizeAngle(traj_point.theta());
-//     tp.relative_ego_x = traj_point.relative_position().x();
-//     tp.relative_ego_y = traj_point.relative_position().y();
-//     tp.relative_ego_yaw = traj_point.relative_yaw();
-//     tp.relative_ego_speed = traj_point.relative_velocity().x(); //TODO：补成相对绝对速度
+//     tp.velocity_direction =
+//     planning_math::NormalizeAngle(traj_point.theta()); tp.relative_ego_x =
+//     traj_point.relative_position().x(); tp.relative_ego_y =
+//     traj_point.relative_position().y(); tp.relative_ego_yaw =
+//     traj_point.relative_yaw(); tp.relative_ego_speed =
+//     traj_point.relative_velocity().x(); //TODO：补成相对绝对速度
 //     tp.relative_ego_std_dev_x = 0.; // hack
 //     tp.relative_ego_std_dev_y = 0.;
 //     tp.relative_ego_std_dev_yaw = 0.;
@@ -102,7 +114,8 @@ namespace planning {
 //     relative_time += 0.2;  // prediction time step
 //     if (i >= 1) {
 //       cumulative_s +=
-//           planning_math::fast_hypot(trajectory_[i - 1].path_point.x - tp.path_point.x,
+//           planning_math::fast_hypot(trajectory_[i - 1].path_point.x -
+//           tp.path_point.x,
 //                           trajectory_[i - 1].path_point.y - tp.path_point.y);
 //     }
 //     trajectory_.push_back(tp);
@@ -122,12 +135,15 @@ namespace planning {
 //   velocity_angle_ = init_point.velocity_direction;
 // }
 
-Obstacle::Obstacle(int id, const PredictionObject &prediction_object, const bool is_static, double start_timestamp)
+Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
+                   const bool is_static, double start_timestamp)
     : id_(id),
       perception_id_(prediction_object.id),
       is_static_(is_static),
-      perception_bounding_box_({prediction_object.position_x, prediction_object.position_y}, prediction_object.yaw,
-                               prediction_object.length, prediction_object.width) {
+      perception_bounding_box_(
+          {prediction_object.position_x, prediction_object.position_y},
+          prediction_object.yaw, prediction_object.length,
+          prediction_object.width) {
   x_center_ = prediction_object.position_x;
   y_center_ = prediction_object.position_y;
   x_relative_center_ = prediction_object.relative_position_x;
@@ -135,10 +151,12 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object, const bool
   width_ = prediction_object.width;
   length_ = prediction_object.length;
   yaw_ = planning_math::NormalizeAngle(prediction_object.yaw);
-  relative_yaw_ = planning_math::NormalizeAngle(prediction_object.relative_theta);
+  relative_yaw_ =
+      planning_math::NormalizeAngle(prediction_object.relative_theta);
   velocity_ = prediction_object.speed;
   velocity_angle_ = prediction_object.theta;
-  relative_velocity_angle_ = std::atan2(prediction_object.relative_speed_y, prediction_object.relative_speed_x);
+  relative_velocity_angle_ = std::atan2(prediction_object.relative_speed_y,
+                                        prediction_object.relative_speed_x);
   x_relative_velocity_ = prediction_object.relative_speed_x;
   y_relative_velocity_ = prediction_object.relative_speed_y;
   acc_ = prediction_object.acc;
@@ -149,11 +167,14 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object, const bool
     perception_bounding_box_.GetAllCorners(&polygon_points);
   } else {
     LOG_DEBUG("raw size %d", prediction_object.bottom_polygon_points.size());
-    for (size_t i = 0; i < prediction_object.bottom_polygon_points.size() - 1; ++i) {
+    for (size_t i = 0; i < prediction_object.bottom_polygon_points.size() - 1;
+         ++i) {
       auto &point = prediction_object.bottom_polygon_points[i];
       polygon_points.emplace_back(planning_math::Vec2d(point.x, point.y));
-      LOG_DEBUG("point x %f y %f", polygon_points[i].x(), polygon_points[i].y());
-      LOG_DEBUG("rel point x %f y %f", polygon_points[i].x() - x_center_, polygon_points[i].y() - y_center_);
+      LOG_DEBUG("point x %f y %f", polygon_points[i].x(),
+                polygon_points[i].y());
+      LOG_DEBUG("rel point x %f y %f", polygon_points[i].x() - x_center_,
+                polygon_points[i].y() - y_center_);
     }
     // polygon_points.erase(polygon_points.begin());
   }
@@ -163,25 +184,31 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object, const bool
     extracted_polygon_points = polygon_points;
   }
 
-  if (!planning_math::Polygon2d::ComputeConvexHull(extracted_polygon_points, &perception_polygon_)) {
+  if (!planning_math::Polygon2d::ComputeConvexHull(extracted_polygon_points,
+                                                   &perception_polygon_)) {
     LOG_DEBUG("polygon_debug invalid cart polygon");
   }
   std::vector<planning_math::Vec2d> ego_polygon_points;
-  LOG_DEBUG("obstacle[%d] polygon size : %d %d, ego x %f y %f\n", id_, prediction_object.bottom_polygon_points.size(),
+  LOG_DEBUG("obstacle[%d] polygon size : %d %d, ego x %f y %f\n", id_,
+            prediction_object.bottom_polygon_points.size(),
             polygon_points.size(), x_center_, y_center_);
   for (const auto &point : perception_polygon_.points()) {
-    ego_polygon_points.emplace_back(planning_math::Vec2d(point.x() - x_center_, point.y() - y_center_));
-    // LOG_DEBUG("ego point x %f y %f", ego_polygon_points.back().x(), ego_polygon_points.back().y());
+    ego_polygon_points.emplace_back(
+        planning_math::Vec2d(point.x() - x_center_, point.y() - y_center_));
+    // LOG_DEBUG("ego point x %f y %f", ego_polygon_points.back().x(),
+    // ego_polygon_points.back().y());
   }
   // LOG_DEBUG("obstacle[%d] last polygon size : %d", polygon_points.size());
-  if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points, &obstacle_ego_polygon_)) {
+  if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
+                                                   &obstacle_ego_polygon_)) {
     LOG_DEBUG("polygon_debug invalid ego polygon\n");
   }
   is_virtual_ = id_ < 0;
 
   if (prediction_object.trajectory_array.empty()) return;
   //轨迹默认选第一条
-  auto &prediction_trajectory = prediction_object.trajectory_array[0].trajectory;
+  auto &prediction_trajectory =
+      prediction_object.trajectory_array[0].trajectory;
   if (prediction_trajectory.empty()) {
     return;
   }
@@ -218,12 +245,14 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object, const bool
     // relative_time += 0.2; // prediction time step
 
     if (i >= 1) {
-      cumulative_s += planning_math::fast_hypot(trajectory_[i - 1].path_point.x - tp.path_point.x,
-                                                trajectory_[i - 1].path_point.y - tp.path_point.y);
+      cumulative_s += planning_math::fast_hypot(
+          trajectory_[i - 1].path_point.x - tp.path_point.x,
+          trajectory_[i - 1].path_point.y - tp.path_point.y);
     }
     trajectory_.emplace_back(tp);
   }
-  is_static_ = std::fabs(trajectory_.back().path_point.s - trajectory_.front().path_point.s) < 5.e-3;
+  is_static_ = std::fabs(trajectory_.back().path_point.s -
+                         trajectory_.front().path_point.s) < 5.e-3;
   //  DiscretizedTrajectory::CompensateTrajectory(trajectory_, 5.0);
 
   // reset perception info matched with current timestamp
@@ -236,7 +265,8 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object, const bool
 // Obstacle::Obstacle(int id,
 //                    const FusionObjects::FusionObject &perception_obstacle,
 //                    const bool is_static)
-//     : id_(id), perception_id_(perception_obstacle.additional_info().track_id()),
+//     : id_(id),
+//     perception_id_(perception_obstacle.additional_info().track_id()),
 //       is_static_(is_static),
 //       perception_bounding_box_(
 //           {perception_obstacle.common_info().center_position().x(),
@@ -252,24 +282,32 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object, const bool
 //   if (perception_obstacle.additional_info().polygon().points_size() < 3) {
 //     perception_bounding_box_.GetAllCorners(&polygon_points);
 //   } else {
-//     for (const auto &point : perception_obstacle.additional_info().polygon().points()) {
-//       polygon_points.emplace_back(planning_math::Vec2d(point.x(), point.y()));
+//     for (const auto &point :
+//     perception_obstacle.additional_info().polygon().points()) {
+//       polygon_points.emplace_back(planning_math::Vec2d(point.x(),
+//       point.y()));
 //     }
 //     polygon_points.erase(polygon_points.begin());
-//     for (size_t i = 0; i < perception_obstacle.additional_info().polygon().points_size()-1; ++i) {
-//       auto &point = perception_obstacle.additional_info().polygon().points(i);
-//       polygon_points.emplace_back(planning_math::Vec2d(point.x(), point.y()));
+//     for (size_t i = 0; i <
+//     perception_obstacle.additional_info().polygon().points_size()-1; ++i) {
+//       auto &point =
+//       perception_obstacle.additional_info().polygon().points(i);
+//       polygon_points.emplace_back(planning_math::Vec2d(point.x(),
+//       point.y()));
 //     }
 //   }
-//   // LOG_DEBUG("cone type %d points raw size %d static: %d", perception_obstacle.type, polygon_points.size(),
-//   is_static); auto extracted_polygon_points = polygon_points;
+//   // LOG_DEBUG("cone type %d points raw size %d static: %d",
+//   perception_obstacle.type, polygon_points.size(), is_static); auto
+//   extracted_polygon_points = polygon_points;
 //   extract_point_at_specified_resolution(extracted_polygon_points);
 //   if (extracted_polygon_points.size() < 3) {
 //     extracted_polygon_points = polygon_points;
 //   }
 //   // for (auto point : extracted_polygon_points) {
-//   //   LOG_DEBUG("cone after remove redundant point x %f y %f", point.x(), point.y());
-//   //   LOG_DEBUG("cone after remove redundant rel point x %f y %f", point.x() - perception_obstacle_.position.x,
+//   //   LOG_DEBUG("cone after remove redundant point x %f y %f", point.x(),
+//   point.y());
+//   //   LOG_DEBUG("cone after remove redundant rel point x %f y %f", point.x()
+//   - perception_obstacle_.position.x,
 //   //         point.y()-perception_obstacle_.position.y);
 //   // }
 //   if (!planning_math::Polygon2d::ComputeConvexHull(extracted_polygon_points,
@@ -279,8 +317,10 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object, const bool
 //   std::vector<planning_math::Vec2d> ego_polygon_points;
 //   for (const auto &point : perception_polygon_.points()) {
 //     ego_polygon_points.emplace_back(planning_math::Vec2d(
-//                                     point.x() - perception_obstacle.common_info().center_position().x(),
-//                                     point.y() - perception_obstacle.common_info().center_position().y()));
+//                                     point.x() -
+//                                     perception_obstacle.common_info().center_position().x(),
+//                                     point.y() -
+//                                     perception_obstacle.common_info().center_position().y()));
 //   }
 //   if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
 //                                                      &car_ego_polygon_)) {
@@ -292,7 +332,8 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object, const bool
 //   speed_ = perception_obstacle.common_info().velocity().x(); // TODO:绝对速度
 //   acc_ = std::hypot(0.,
 //                       std::hypot(perception_obstacle.common_info().acceleration().x(),
-//                                  perception_obstacle.common_info().acceleration().y())); //加速度需要有z信息
+//                                  perception_obstacle.common_info().acceleration().y()));
+//                                  //加速度需要有z信息
 // }
 
 // Obstacle::Obstacle(int id, const std::vector<Point3d> &points)
@@ -324,7 +365,8 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object, const bool
 //   velocity_ = 0.0;
 // }
 
-void Obstacle::extract_point_at_specified_resolution(std::vector<planning_math::Vec2d> &points) const {
+void Obstacle::extract_point_at_specified_resolution(
+    std::vector<planning_math::Vec2d> &points) const {
   constexpr double PI = std::atan(1.0) * 4.0;
   constexpr int kMinPointsNum = 4;
   constexpr double kMinDist = 0.5;
@@ -336,10 +378,13 @@ void Obstacle::extract_point_at_specified_resolution(std::vector<planning_math::
   size_t j = 1;
   while (i < points.size() && j + 1 < points.size()) {
     planning_math::LineSegment2d seg(points.at(i), points.at(j + 1));
-    double cos_theta = planning_math::InnerProd(points.at(j), points.at(i), points.at(j + 1)) /
-                       (points.at(j).DistanceTo(points.at(i)) * points.at(j).DistanceTo(points.at(j + 1)));
+    double cos_theta =
+        planning_math::InnerProd(points.at(j), points.at(i), points.at(j + 1)) /
+        (points.at(j).DistanceTo(points.at(i)) *
+         points.at(j).DistanceTo(points.at(j + 1)));
 
-    if (cos_theta > kMinCosTheta || seg.DistanceSquareTo(points.at(j)) > kMinDist * kMinDist) {
+    if (cos_theta > kMinCosTheta ||
+        seg.DistanceSquareTo(points.at(j)) > kMinDist * kMinDist) {
       ++i;
       if (i != j) {
         points.at(i) = points.at(j);
@@ -351,7 +396,8 @@ void Obstacle::extract_point_at_specified_resolution(std::vector<planning_math::
   points.resize(i + 1);
 }
 
-PncTrajectoryPoint Obstacle::get_point_at_time(const double relative_time) const {
+PncTrajectoryPoint Obstacle::get_point_at_time(
+    const double relative_time) const {
   const auto &points = trajectory_;
   if (points.size() < 2) {
     PncTrajectoryPoint point;
@@ -377,39 +423,51 @@ PncTrajectoryPoint Obstacle::get_point_at_time(const double relative_time) const
     point.relative_ego_speed = 0.0;
     return point;
   } else {
-    auto comp = [](const PncTrajectoryPoint &p, const double time) { return p.relative_time < time; };
+    auto comp = [](const PncTrajectoryPoint &p, const double time) {
+      return p.relative_time < time;
+    };
 
-    auto it_lower = std::lower_bound(points.begin(), points.end(), relative_time, comp);
+    auto it_lower =
+        std::lower_bound(points.begin(), points.end(), relative_time, comp);
 
     if (it_lower == points.begin()) {
       return *points.begin();
     } else if (it_lower == points.end()) {
       return *points.rbegin();
     }
-    return planning_math::InterpolateUsingLinearApproximation(*(it_lower - 1), *it_lower, relative_time);
+    return planning_math::InterpolateUsingLinearApproximation(
+        *(it_lower - 1), *it_lower, relative_time);
   }
 }
 
-planning_math::Box2d Obstacle::get_bounding_box(const PncTrajectoryPoint &point) const {
-  return planning_math::Box2d({point.path_point.x, point.path_point.y}, point.path_point.theta, length_, width_);
+planning_math::Box2d Obstacle::get_bounding_box(
+    const PncTrajectoryPoint &point) const {
+  return planning_math::Box2d({point.path_point.x, point.path_point.y},
+                              point.path_point.theta, length_, width_);
 }
 
-planning_math::Polygon2d Obstacle::get_polygon_at_point(const PncTrajectoryPoint &point) const {
+planning_math::Polygon2d Obstacle::get_polygon_at_point(
+    const PncTrajectoryPoint &point) const {
   std::vector<planning_math::Vec2d> polygon_points;
   double rel_theta = point.path_point.theta - yaw_;
 
   for (const auto &ego_point : obstacle_ego_polygon_.points()) {
-    polygon_points.emplace_back(
-        planning_math::Vec2d(ego_point.x() * cos(rel_theta) - ego_point.y() * sin(rel_theta) + point.path_point.x,
-                             ego_point.y() * cos(rel_theta) + ego_point.x() * sin(rel_theta) + point.path_point.y));
+    polygon_points.emplace_back(planning_math::Vec2d(
+        ego_point.x() * cos(rel_theta) - ego_point.y() * sin(rel_theta) +
+            point.path_point.x,
+        ego_point.y() * cos(rel_theta) + ego_point.x() * sin(rel_theta) +
+            point.path_point.y));
   }
   planning_math::Polygon2d polygon;
   if (!planning_math::Polygon2d::ComputeConvexHull(polygon_points, &polygon)) {
-    LOG_DEBUG("polygon_debug : get position %f %f failed\n", point.path_point.x, point.path_point.y);
+    LOG_DEBUG("polygon_debug : get position %f %f failed\n", point.path_point.x,
+              point.path_point.y);
     for (auto p : polygon_points) {
-      LOG_DEBUG("polygon_debug invald point x %f y %f", p.x() - point.path_point.x, p.y() - point.path_point.y);
+      LOG_DEBUG("polygon_debug invald point x %f y %f",
+                p.x() - point.path_point.x, p.y() - point.path_point.y);
     }
-    if (!planning_math::Polygon2d::ComputeConvexHull(get_bounding_box(point).GetAllCorners(), &polygon)) {
+    if (!planning_math::Polygon2d::ComputeConvexHull(
+            get_bounding_box(point).GetAllCorners(), &polygon)) {
       LOG_DEBUG("polygon_debug : invalid box polygon\n");
     }
   }

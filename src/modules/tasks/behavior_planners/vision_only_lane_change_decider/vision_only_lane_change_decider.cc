@@ -4,8 +4,8 @@
 
 namespace planning {
 
-// VisionOnlyLaneChangeDecider::VisionOnlyLaneChangeDecider(const TaskConfig &config)
-// : Decider(config) {
+// VisionOnlyLaneChangeDecider::VisionOnlyLaneChangeDecider(const TaskConfig
+// &config) : Decider(config) {
 //   assert(config.has_lane_change_decider_config());
 // }
 
@@ -17,10 +17,10 @@ VisionOnlyLaneChangeDecider::VisionOnlyLaneChangeDecider() {}
 //   Task::init(world_model, baseline_info);
 // }
 
-void VisionOnlyLaneChangeDecider::feed_config_and_target_cars(bool is_merging, LaneChangeParams params,
-                                                              double dis_to_change_point,
-                                                              std::vector<TrackedObject *> &target_cars,
-                                                              const TrackedObject *lead_one, double v_ego) {
+void VisionOnlyLaneChangeDecider::feed_config_and_target_cars(
+    bool is_merging, LaneChangeParams params, double dis_to_change_point,
+    std::vector<TrackedObject *> &target_cars, const TrackedObject *lead_one,
+    double v_ego) {
   is_merging_ = is_merging;
   params_ = params;
   dis_to_change_point_ = dis_to_change_point;
@@ -44,7 +44,8 @@ bool VisionOnlyLaneChangeDecider::process() {
   // cur_lane_.clear();
   // target_lane_.clear();
 
-  const auto &planning_status = frame_->session()->planning_output_context().planning_status();
+  const auto &planning_status =
+      frame_->session()->planning_output_context().planning_status();
 
   // only enable in lane change preparation stage
   // if (planning_status.lane_status.status != LaneStatus::Status::LANE_CHANGE
@@ -58,7 +59,10 @@ bool VisionOnlyLaneChangeDecider::process() {
   // }
   // current_lane_id_ = planning_status.lane_status.target_lane_id;
   // dis_to_change_point_ = std::numeric_limits<double>::max();
-  const auto current_v_lane = frame_->session()->environmental_model().get_virtual_lane_manager()->get_current_lane();
+  const auto current_v_lane = frame_->session()
+                                  ->environmental_model()
+                                  .get_virtual_lane_manager()
+                                  ->get_current_lane();
   // bool is_in_dash_line = false;
   // if (planning_status.lane_status.change_lane.direction == "left") {
   //   lane_change_direction_ = 1;
@@ -81,8 +85,10 @@ bool VisionOnlyLaneChangeDecider::process() {
   // }
   // LOG_NOTICE("gap debug dis %f", dis_to_change_point_);
   // dis_to_change_point_ = map_info.lc_end_dis();
-  lc_map_decision_ =
-      frame_->session()->environmental_model().get_virtual_lane_manager()->lc_map_decision(current_v_lane);
+  lc_map_decision_ = frame_->session()
+                         ->environmental_model()
+                         .get_virtual_lane_manager()
+                         ->lc_map_decision(current_v_lane);
   current_lane_type_ = current_v_lane->get_lane_type();
 
   v_limit_ = planning_status.v_limit;
@@ -231,7 +237,8 @@ bool VisionOnlyLaneChangeDecider::process() {
     obstacle_on_target_.push_back(target_obs);
   }
 
-  std::sort(obstacle_on_target_.begin(), obstacle_on_target_.end(), compare_distance_asc);
+  std::sort(obstacle_on_target_.begin(), obstacle_on_target_.end(),
+            compare_distance_asc);
 
   double preview_distance = 20 + std::max((v_ego_ - 10.0) / 15.0 * 20.0, 0.0);
   nearest_rear_car_track_ = obstacle_on_target_[0];
@@ -240,7 +247,8 @@ bool VisionOnlyLaneChangeDecider::process() {
     if (lead_car_.id > 0) {
       d_lead = lead_car_.d_rel;
     }
-    if (obstacle_on_target_.at(i).d_rel > preview_distance || obstacle_on_target_.at(i).d_rel > d_lead) {
+    if (obstacle_on_target_.at(i).d_rel > preview_distance ||
+        obstacle_on_target_.at(i).d_rel > d_lead) {
       break;
     }
     if (is_merging_ && (obstacle_on_target_.at(i).d_rel < -60.0)) {
@@ -250,16 +258,23 @@ bool VisionOnlyLaneChangeDecider::process() {
     if (obstacle_on_target_.at(i).d_rel < -5.0) {
       nearest_rear_car_track_ = obstacle_on_target_.at(i);
     }
-    LOG_NOTICE("obstacle_on_target[%d]'s d_rel: [%f], v_rel: [%f] \n", i, obstacle_on_target_.at(i).d_rel,
+    LOG_NOTICE("obstacle_on_target[%d]'s d_rel: [%f], v_rel: [%f] \n", i,
+               obstacle_on_target_.at(i).d_rel,
                obstacle_on_target_.at(i).v_rel);
-    LOG_NOTICE("obstacle_on_target[%d]'s d_rel: [%f], v_rel: [%f] \n", i + 1, obstacle_on_target_.at(i + 1).d_rel,
+    LOG_NOTICE("obstacle_on_target[%d]'s d_rel: [%f], v_rel: [%f] \n", i + 1,
+               obstacle_on_target_.at(i + 1).d_rel,
                obstacle_on_target_.at(i + 1).v_rel);
-    GapInfo gap_info = check_gap_valid(obstacle_on_target_.at(i), obstacle_on_target_.at(i + 1));
-    std::cout << "TBDEBUG Gap Info: valid: " << gap_info.valid << " front_id:" << gap_info.front_id
-              << " rear_id: " << gap_info.rear_id << " cost: " << gap_info.cost << std::endl;
+    GapInfo gap_info = check_gap_valid(obstacle_on_target_.at(i),
+                                       obstacle_on_target_.at(i + 1));
+    std::cout << "TBDEBUG Gap Info: valid: " << gap_info.valid
+              << " front_id:" << gap_info.front_id
+              << " rear_id: " << gap_info.rear_id << " cost: " << gap_info.cost
+              << std::endl;
     if (gap_info.valid) {
-      if (gap_info.front_id == planning_status.lane_status.change_lane.target_gap_obs.first &&
-          gap_info.rear_id == planning_status.lane_status.change_lane.target_gap_obs.second) {
+      if (gap_info.front_id ==
+              planning_status.lane_status.change_lane.target_gap_obs.first &&
+          gap_info.rear_id ==
+              planning_status.lane_status.change_lane.target_gap_obs.second) {
         gap_info.cost -= params_.cost_minus;
       }
       gap_list_.push_back(gap_info);
@@ -267,7 +282,8 @@ bool VisionOnlyLaneChangeDecider::process() {
   }
   if (gap_list_.size() > 0) {
     std::sort(gap_list_.begin(), gap_list_.end(), compare_cost_asc);
-    target_gap_ = std::make_pair(gap_list_.at(0).front_id, gap_list_.at(0).rear_id);
+    target_gap_ =
+        std::make_pair(gap_list_.at(0).front_id, gap_list_.at(0).rear_id);
     target_gap_cost_ = gap_list_.at(0).cost;
   }
   LOG_DEBUG("Target gap: [%d], [%d]\n", target_gap_.first, target_gap_.second);
@@ -297,22 +313,27 @@ bool VisionOnlyLaneChangeDecider::process() {
   return true;
 }
 
-bool VisionOnlyLaneChangeDecider::is_on_target(const FrenetObstacleBoundary &sl_boundary) {
+bool VisionOnlyLaneChangeDecider::is_on_target(
+    const FrenetObstacleBoundary &sl_boundary) {
   double s = (sl_boundary.s_end + sl_boundary.s_start) / 2.0;
-  max_l_threshold_ = calc_lane_width(s, cur_lane_) / 2.0 + calc_lane_width(s, target_lane_) / 2.0 + 1.3;
+  max_l_threshold_ = calc_lane_width(s, cur_lane_) / 2.0 +
+                     calc_lane_width(s, target_lane_) / 2.0 + 1.3;
   // ROS_INFO("TBDEBUG: %f %f %d %f %f", s, max_l_threshold_,
   // lane_change_direction_, sl_boundary.start_l, sl_boundary.end_l);
-  if (lane_change_direction_ > 0 && sl_boundary.l_start > lane_change_direction_ * min_l_threshold_ &&
+  if (lane_change_direction_ > 0 &&
+      sl_boundary.l_start > lane_change_direction_ * min_l_threshold_ &&
       sl_boundary.l_start < lane_change_direction_ * max_l_threshold_) {
     return true;
-  } else if (lane_change_direction_ < 0 && sl_boundary.l_end < lane_change_direction_ * min_l_threshold_ &&
+  } else if (lane_change_direction_ < 0 &&
+             sl_boundary.l_end < lane_change_direction_ * min_l_threshold_ &&
              sl_boundary.l_end > lane_change_direction_ * max_l_threshold_) {
     return true;
   }
   return false;
 }
 
-GapInfo VisionOnlyLaneChangeDecider::check_gap_valid(const TargetObstacle &rear_car, const TargetObstacle &front_car) {
+GapInfo VisionOnlyLaneChangeDecider::check_gap_valid(
+    const TargetObstacle &rear_car, const TargetObstacle &front_car) {
   double buffer = 2.0;
   double t_gap = 0.1;
   double car_length = 5.0;
@@ -327,7 +348,8 @@ GapInfo VisionOnlyLaneChangeDecider::check_gap_valid(const TargetObstacle &rear_
   gap_info.rear_id = rear_car.id;
   gap_info.acc_valid = false;
 
-  if (std::abs(front_car.d_rel) < std::abs(std::min(rear_car.d_rel + 5.0, front_car.d_rel - 0.1))) {
+  if (std::abs(front_car.d_rel) <
+      std::abs(std::min(rear_car.d_rel + 5.0, front_car.d_rel - 0.1))) {
     base_car = front_car;
     v_ego_p = std::min(v_ego_ + base_car.v_rel - 1.0, v_limit_);
     v_ego_p_rel = std::min(base_car.v_rel - 1.0, v_limit_ - v_ego_);
@@ -348,48 +370,62 @@ GapInfo VisionOnlyLaneChangeDecider::check_gap_valid(const TargetObstacle &rear_
     gap_info.base_car_vrel = front_car.v_rel;
   }
 
-  double mssf = std::pow(std::max(-(front_car.v_rel - v_ego_p_rel), 0.0), 2) / 2.0 + safety_distance;
-  double mssr = (rear_car.v_rel - v_ego_p_rel) * 2.0 +
-                std::pow(std::max((rear_car.v_rel - v_ego_p_rel), 0.0), 2) / 2.0 + safety_distance;
+  double mssf =
+      std::pow(std::max(-(front_car.v_rel - v_ego_p_rel), 0.0), 2) / 2.0 +
+      safety_distance;
+  double mssr =
+      (rear_car.v_rel - v_ego_p_rel) * 2.0 +
+      std::pow(std::max((rear_car.v_rel - v_ego_p_rel), 0.0), 2) / 2.0 +
+      safety_distance;
   if (is_merging_) {
     mssf = -(front_car.v_rel - v_ego_p_rel) * 2.0 + safety_distance;
-    mssr = (rear_car.v_rel - v_ego_p_rel) * 1.0 + std::pow(std::max((rear_car.v_rel - v_ego_p_rel), 0.0), 2) / 2.0 +
+    mssr = (rear_car.v_rel - v_ego_p_rel) * 1.0 +
+           std::pow(std::max((rear_car.v_rel - v_ego_p_rel), 0.0), 2) / 2.0 +
            safety_distance;
   }
-  double acc_time = calc_time_for_lane_change(base_car, front_car, gap_info, safety_distance, v_limit_ - v_ego_ - 0.5);
+  double acc_time = calc_time_for_lane_change(
+      base_car, front_car, gap_info, safety_distance, v_limit_ - v_ego_ - 0.5);
   gap_info.acc_time = acc_time;
   // ROS_INFO("TBDEBUG: acc_time %f", acc_time);
   double v_target_p = 100.0;
   double d_p = 100.0;
   if (lead_car_.id > 0) {
     double d_des = calc_desired_distance(lead_car_.v_rel + v_ego_, v_ego_p);
-    double gap_p = (acc_time + 2.0) * (lead_car_.v_rel + v_ego_ - (v_ego_ + rear_car.v_rel)) + lead_car_.d_rel -
-                   rear_car.d_rel - car_length;
+    double gap_p = (acc_time + 2.0) *
+                       (lead_car_.v_rel + v_ego_ - (v_ego_ + rear_car.v_rel)) +
+                   lead_car_.d_rel - rear_car.d_rel - car_length;
     d_p = gap_p - safety_distance;
     v_target_p = calc_desired_speed(d_p, d_des, lead_car_.v_rel + v_ego_);
   }
 
   if (v_ego_p_rel < rear_car.v_rel + params_.v_rel_bufer &&
-      rear_car.d_rel > -std::max(mssr + ego_car_length, safety_distance + ego_car_length)) {
+      rear_car.d_rel >
+          -std::max(mssr + ego_car_length, safety_distance + ego_car_length)) {
     d_p = -1;
   }
 
   double mss = mssf + mssr + ego_car_length;
   double mss0 = 2 * safety_distance + ego_car_length;
-  double gap = front_car.d_rel - rear_car.d_rel + acc_time * (front_car.v_rel - rear_car.v_rel);
+  double gap = front_car.d_rel - rear_car.d_rel +
+               acc_time * (front_car.v_rel - rear_car.v_rel);
   double lc_end_dis = dis_to_change_point_;
   double l_end_dis = 100.0;
   if ((lc_end_dis < 200.0) && (!is_merging_)) {
-    double gap_end_dis = lc_end_dis - (acc_time + 2.0) * (v_ego_ + rear_car.v_rel) - rear_car.d_rel - car_length -
-                         safety_distance - 10 * v_ego_p * std::max(lc_map_decision_ - 1, 0);
-    double ego_end_dis = lc_end_dis - acc_time * v_ego_ - 10 * v_ego_p * std::max(lc_map_decision_ - 1, 0);
-    if ((lc_map_decision_ == -1) && (current_lane_type_ == FusionRoad::LANE_TYPE_NORMAL)) {
+    double gap_end_dis = lc_end_dis -
+                         (acc_time + 2.0) * (v_ego_ + rear_car.v_rel) -
+                         rear_car.d_rel - car_length - safety_distance -
+                         10 * v_ego_p * std::max(lc_map_decision_ - 1, 0);
+    double ego_end_dis = lc_end_dis - acc_time * v_ego_ -
+                         10 * v_ego_p * std::max(lc_map_decision_ - 1, 0);
+    if ((lc_map_decision_ == -1) &&
+        (current_lane_type_ == FusionRoad::LANE_TYPE_NORMAL)) {
       ego_end_dis = lc_end_dis - acc_time * v_ego_ - 3.0 * v_ego_p - 20.0;
     }
     l_end_dis = std::min(gap_end_dis, ego_end_dis);
   }
   if (is_merging_) {
-    double gap_end_dis = lc_end_dis - acc_time * (v_ego_ + rear_car.v_rel) - rear_car.d_rel;
+    double gap_end_dis =
+        lc_end_dis - acc_time * (v_ego_ + rear_car.v_rel) - rear_car.d_rel;
     d_p = std::min(gap_end_dis, d_p);
   }
   // ROS_INFO("TBDEBUG lc_debug: %f %f %f %f %f %f", gap, mss0, mss, d_p,
@@ -397,16 +433,22 @@ GapInfo VisionOnlyLaneChangeDecider::check_gap_valid(const TargetObstacle &rear_
   if (gap > mss0 && gap > mss && d_p > 0 && v_target_p >= v_ego_p) {
     gap_info.valid = true;
     if (gap_info.acc_valid) {
-      v_ego_p = std::min(std::max(0.0, v_ego_ + front_car.v_rel - 1.0), v_limit_);
+      v_ego_p =
+          std::min(std::max(0.0, v_ego_ + front_car.v_rel - 1.0), v_limit_);
       v_ego_p_rel = v_ego_p - v_ego_;
     }
-    double dis_offset = (gap_info.rear_id == base_car.id) ? car_length : -car_length;
+    double dis_offset =
+        (gap_info.rear_id == base_car.id) ? car_length : -car_length;
     double gap_cost =
-        ((10.0 > rear_car.d_rel && rear_car.d_rel > -20.0) or (20.0 > front_car.d_rel && front_car.d_rel > -10.0))
-            ? -std::min(std::max(front_car.d_rel - rear_car.d_rel - 20.0, 0.0), 20.0)
+        ((10.0 > rear_car.d_rel && rear_car.d_rel > -20.0) or
+         (20.0 > front_car.d_rel && front_car.d_rel > -10.0))
+            ? -std::min(std::max(front_car.d_rel - rear_car.d_rel - 20.0, 0.0),
+                        20.0)
             : 0.0;
-    double cost = std::pow(v_ego_p_rel, 2) + std::abs(base_car.d_rel + base_car.v_rel * 1.0 + dis_offset) * 1.5 +
-                  acc_time + std::abs(v_limit_ - v_ego_p) + gap_cost;
+    double cost =
+        std::pow(v_ego_p_rel, 2) +
+        std::abs(base_car.d_rel + base_car.v_rel * 1.0 + dis_offset) * 1.5 +
+        acc_time + std::abs(v_limit_ - v_ego_p) + gap_cost;
     if (l_end_dis < 0.0) {
       cost += 100.0;
       if (rear_car.d_rel > 5.0) {
@@ -414,9 +456,11 @@ GapInfo VisionOnlyLaneChangeDecider::check_gap_valid(const TargetObstacle &rear_
       }
     }
     if (is_merging_) {
-      double cost_minus =
-          ((-40.0 < rear_car.d_rel) && (rear_car.d_rel) < 20.0) ? -std::min(std::max(gap - 20.0, 0.0), 20.0) : 0.0;
-      cost = std::pow(v_ego_p_rel, 2) + std::abs(base_car.d_rel + base_car.v_rel * 1.0) * 1.5 + acc_time +
+      double cost_minus = ((-40.0 < rear_car.d_rel) && (rear_car.d_rel) < 20.0)
+                              ? -std::min(std::max(gap - 20.0, 0.0), 20.0)
+                              : 0.0;
+      cost = std::pow(v_ego_p_rel, 2) +
+             std::abs(base_car.d_rel + base_car.v_rel * 1.0) * 1.5 + acc_time +
              abs(v_limit_ - v_ego_p) + cost_minus;
     }
     gap_info.cost = cost;
@@ -428,14 +472,16 @@ GapInfo VisionOnlyLaneChangeDecider::check_gap_valid(const TargetObstacle &rear_
   return gap_info;
 }
 
-double VisionOnlyLaneChangeDecider::calc_time_for_lane_change(TargetObstacle base_car, TargetObstacle front_car,
-                                                              GapInfo gap_info, const double safety_distance,
-                                                              const double max_v) {
+double VisionOnlyLaneChangeDecider::calc_time_for_lane_change(
+    TargetObstacle base_car, TargetObstacle front_car, GapInfo gap_info,
+    const double safety_distance, const double max_v) {
   bool is_base_car_rear = gap_info.rear_id == base_car.id;
-  double v_diff_max = (is_base_car_rear) ? std::min(3.0, max_v - base_car.v_rel) : 3.0;
+  double v_diff_max =
+      (is_base_car_rear) ? std::min(3.0, max_v - base_car.v_rel) : 3.0;
   double v_diff_end = std::min(1.0, v_diff_max);
   if (gap_info.acc_valid) {
-    v_diff_max = std::max(std::min(front_car.v_rel - 1.0, max_v) - base_car.v_rel, v_diff_max);
+    v_diff_max = std::max(
+        std::min(front_car.v_rel - 1.0, max_v) - base_car.v_rel, v_diff_max);
     v_diff_end = v_diff_max;
   }
   double a = 1.0;
@@ -468,8 +514,11 @@ double VisionOnlyLaneChangeDecider::calc_time_for_lane_change(TargetObstacle bas
   } else {
     d += std::pow(std::min(vrel, 0.0), 2) / (2 * a);
     double d_dec = std::pow(v_diff_max - v_diff_end, 2) / (2 * a);
-    if (d < d_dec + (std::pow(v_diff_max, 2) - std::pow(std::max(vrel, 0.0), 2)) / (2 * a)) {
-      double v_m = std::sqrt(d + std::pow(std::max(vrel, 0.0), 2) / (2 * a) + std::pow(v_diff_end, 2) / (2 * a));
+    if (d <
+        d_dec + (std::pow(v_diff_max, 2) - std::pow(std::max(vrel, 0.0), 2)) /
+                    (2 * a)) {
+      double v_m = std::sqrt(d + std::pow(std::max(vrel, 0.0), 2) / (2 * a) +
+                             std::pow(v_diff_end, 2) / (2 * a));
       if (v_m >= vrel && v_m >= v_diff_end) {
         acc_time = (v_m - vrel + v_m - v_diff_end) / a;
       } else if (vrel > v_diff_end) {
@@ -478,18 +527,22 @@ double VisionOnlyLaneChangeDecider::calc_time_for_lane_change(TargetObstacle bas
         acc_time = (std::sqrt(std::pow(vrel, 2) + 2 * d * a) - vrel) / a;
       }
     } else {
-      acc_time = (d + std::pow(v_diff_max - std::max(vrel, 0.0), 2) / (2 * a) + d_dec) / v_diff_max +
+      acc_time = (d + std::pow(v_diff_max - std::max(vrel, 0.0), 2) / (2 * a) +
+                  d_dec) /
+                     v_diff_max +
                  std::abs(std::min(vrel / a, 0.0));
     }
   }
   return acc_time;
 }
 
-double VisionOnlyLaneChangeDecider::clip(const double x, const double lo, const double hi) {
+double VisionOnlyLaneChangeDecider::clip(const double x, const double lo,
+                                         const double hi) {
   return std::max(lo, std::min(hi, x));
 }
 
-double VisionOnlyLaneChangeDecider::calc_lane_width(const double &s, const std::vector<RefPointFrenet> &ref_line) {
+double VisionOnlyLaneChangeDecider::calc_lane_width(
+    const double &s, const std::vector<RefPointFrenet> &ref_line) {
   double lane_width = 3.8;
   if (ref_line.size() == 0) {
     return lane_width;
@@ -502,14 +555,18 @@ double VisionOnlyLaneChangeDecider::calc_lane_width(const double &s, const std::
   }
   for (int i = 0; i < ref_line.size() - 1; i++) {
     if (s >= ref_line.at(i).s && s <= ref_line.at(i + 1).s) {
-      double k = (s - ref_line.at(i).s) / (ref_line.at(i + 1).s - ref_line.at(i).s);
-      lane_width = ref_line.at(i).lane_width + (ref_line.at(i + 1).lane_width - ref_line.at(i).lane_width) * k;
+      double k =
+          (s - ref_line.at(i).s) / (ref_line.at(i + 1).s - ref_line.at(i).s);
+      lane_width =
+          ref_line.at(i).lane_width +
+          (ref_line.at(i + 1).lane_width - ref_line.at(i).lane_width) * k;
     }
   }
   return clip(lane_width, 3.0, 4.0);
 }
 
-double VisionOnlyLaneChangeDecider::calc_desired_distance(const double v_lead, const double v_ego) {
+double VisionOnlyLaneChangeDecider::calc_desired_distance(const double v_lead,
+                                                          const double v_ego) {
   double t_gap = interp(v_ego, _T_GAP_VEGO_BP, _T_GAP_VEGO_V);
   // if (lc_request != "none") {
   //   t_gap = t_gap * (0.6 + v_ego * 0.01);
@@ -529,7 +586,9 @@ double VisionOnlyLaneChangeDecider::calc_desired_distance(const double v_lead, c
   return d_offset + v_lead * t_gap;
 }
 
-double VisionOnlyLaneChangeDecider::calc_desired_speed(const double d_lead, const double d_des, const double v_lead) {
+double VisionOnlyLaneChangeDecider::calc_desired_speed(const double d_lead,
+                                                       const double d_des,
+                                                       const double v_lead) {
   // *** compute desired speed ***
   // the desired speed curve is divided in 4 portions:
   // 1-constant
@@ -567,7 +626,9 @@ double VisionOnlyLaneChangeDecider::calc_desired_speed(const double d_lead, cons
   return v_target;
 }
 
-double VisionOnlyLaneChangeDecider::interp(double x, const std::vector<double> &xp, const std::vector<double> &fp) {
+double VisionOnlyLaneChangeDecider::interp(double x,
+                                           const std::vector<double> &xp,
+                                           const std::vector<double> &fp) {
   const int N = xp.size() - 1;
 
   if (x < xp[0]) {
@@ -575,17 +636,20 @@ double VisionOnlyLaneChangeDecider::interp(double x, const std::vector<double> &
   }
   for (int i = 0; i <= N; ++i) {
     if (x < xp[i]) {
-      return ((x - xp[i - 1]) * (fp[i] - fp[i - 1]) / (xp[i] - xp[i - 1]) + fp[i - 1]);
+      return ((x - xp[i - 1]) * (fp[i] - fp[i - 1]) / (xp[i] - xp[i - 1]) +
+              fp[i - 1]);
     }
   }
 
   return fp[N];
 }
 
-bool VisionOnlyLaneChangeDecider::compare_distance_asc(const TargetObstacle &obs1, const TargetObstacle &obs2) {
+bool VisionOnlyLaneChangeDecider::compare_distance_asc(
+    const TargetObstacle &obs1, const TargetObstacle &obs2) {
   return obs1.d_rel < obs2.d_rel;
 }
-bool VisionOnlyLaneChangeDecider::compare_cost_asc(const GapInfo &gap1, const GapInfo &gap2) {
+bool VisionOnlyLaneChangeDecider::compare_cost_asc(const GapInfo &gap1,
+                                                   const GapInfo &gap2) {
   return gap1.cost < gap2.cost;
 }
 }  // namespace planning

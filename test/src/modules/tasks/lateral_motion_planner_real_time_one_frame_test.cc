@@ -1,9 +1,9 @@
 #include <array>
 #include <cmath>
 
-#include "session.h"
 #include "gtest/gtest.h"
 #include "motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
+#include "session.h"
 #include "task_pipeline_context.h"
 
 namespace planning {

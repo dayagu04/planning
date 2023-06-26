@@ -6,8 +6,10 @@
 namespace pnc {
 namespace spline {
 
-void Projection::CalProjectionPoint(const mathlib::spline &x_s_spline, const mathlib::spline &y_s_spline,
-                                    const double s_start, const double s_end, const Eigen::Vector2d &x) {
+void Projection::CalProjectionPoint(const mathlib::spline &x_s_spline,
+                                    const mathlib::spline &y_s_spline,
+                                    const double s_start, const double s_end,
+                                    const Eigen::Vector2d &x) {
   // newton iteration to calculate projection point
   double s_proj = 0.0;
   static const size_t newton_iter = 5;
@@ -26,9 +28,11 @@ void Projection::CalProjectionPoint(const mathlib::spline &x_s_spline, const mat
     double ys_derv_1st = y_s_spline.deriv(1, s_proj);
     double ys_derv_2nd = y_s_spline.deriv(2, s_proj);
 
-    double deriv_1st = xs * xs_derv_1st + ys * ys_derv_1st - x0 * xs_derv_1st - y0 * ys_derv_1st;
+    double deriv_1st = xs * xs_derv_1st + ys * ys_derv_1st - x0 * xs_derv_1st -
+                       y0 * ys_derv_1st;
 
-    double deriv_2nd = xs_derv_1st * xs_derv_1st + xs * xs_derv_2nd + ys_derv_1st * ys_derv_1st + ys * ys_derv_2nd -
+    double deriv_2nd = xs_derv_1st * xs_derv_1st + xs * xs_derv_2nd +
+                       ys_derv_1st * ys_derv_1st + ys * ys_derv_2nd -
                        x0 * xs_derv_2nd - y0 * ys_derv_2nd;
 
     if (mathlib::IsDoubleEqual(deriv_2nd, 0.0, 1e-9)) {

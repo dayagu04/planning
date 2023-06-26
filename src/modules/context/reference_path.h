@@ -39,55 +39,84 @@ class ReferencePath {
   virtual void update(planning::framework::Session *session);
   virtual void update_obstacles();
 
-  const std::vector<ReferencePathPoint> &get_points() const { return refined_ref_path_points_; }
+  const std::vector<ReferencePathPoint> &get_points() const {
+    return refined_ref_path_points_;
+  }
 
-  const std::shared_ptr<FrenetCoordinateSystem> &get_frenet_coord() const { return frenet_coord_; }
+  const std::shared_ptr<FrenetCoordinateSystem> &get_frenet_coord() const {
+    return frenet_coord_;
+  }
 
-  const FrenetEgoState &get_frenet_ego_state() const { return frenet_ego_state_; }
+  const FrenetEgoState &get_frenet_ego_state() const {
+    return frenet_ego_state_;
+  }
 
-  const FrenetBoundary &get_ego_frenet_boundary() const { return frenet_ego_state_.boundary(); }
+  const FrenetBoundary &get_ego_frenet_boundary() const {
+    return frenet_ego_state_.boundary();
+  }
 
-  const std::vector<std::shared_ptr<FrenetObstacle>> &get_obstacles() const { return frenet_obstacles_; }
+  const std::vector<std::shared_ptr<FrenetObstacle>> &get_obstacles() const {
+    return frenet_obstacles_;
+  }
 
-  std::vector<std::shared_ptr<FrenetObstacle>> &mutable_obstacles() { return frenet_obstacles_; }
+  std::vector<std::shared_ptr<FrenetObstacle>> &mutable_obstacles() {
+    return frenet_obstacles_;
+  }
 
-  std::unordered_map<int, std::shared_ptr<FrenetObstacle>> &mutable_obstacles_map() { return frenet_obstacles_map_; }
-
-  const std::unordered_map<int, std::shared_ptr<FrenetObstacle>> &get_obstacles_map() const {
+  std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+      &mutable_obstacles_map() {
     return frenet_obstacles_map_;
   }
-  virtual bool is_obstacle_ignorable(const std::shared_ptr<FrenetObstacle> obstacle);
 
-  const std::vector<const Obstacle *> &get_parking_space() const { return parking_spaces_; }
+  const std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+      &get_obstacles_map() const {
+    return frenet_obstacles_map_;
+  }
+  virtual bool is_obstacle_ignorable(
+      const std::shared_ptr<FrenetObstacle> obstacle);
 
-  const std::vector<const Obstacle *> &get_free_space_ground_lines() const { return free_space_ground_lines_; }
+  const std::vector<const Obstacle *> &get_parking_space() const {
+    return parking_spaces_;
+  }
 
-  const std::vector<const Obstacle *> &get_road_edges() const { return road_edges_; }
+  const std::vector<const Obstacle *> &get_free_space_ground_lines() const {
+    return free_space_ground_lines_;
+  }
 
-  bool get_reference_point_by_lon(double s, ReferencePathPoint &reference_path_point) const;
+  const std::vector<const Obstacle *> &get_road_edges() const {
+    return road_edges_;
+  }
+
+  bool get_reference_point_by_lon(
+      double s, ReferencePathPoint &reference_path_point) const;
   bool transform_trajectory_points(TrajectoryPoints &trajectory_points) const;
   bool transform_trajectory_point(TrajectoryPoint &trajectory_point) const;
 
  public:
   // 用在sort函数中，应使用全局量或Lambda函数
-  inline static bool compare_obstacle_s_descend(const std::shared_ptr<FrenetObstacle> o1,
-                                                const std::shared_ptr<FrenetObstacle> o2) {
+  inline static bool compare_obstacle_s_descend(
+      const std::shared_ptr<FrenetObstacle> o1,
+      const std::shared_ptr<FrenetObstacle> o2) {
     return (o1->frenet_s() > o2->frenet_s());
   }
 
-  inline static bool compare_obstacle_s_ascend(const std::shared_ptr<FrenetObstacle> o1,
-                                               const std::shared_ptr<FrenetObstacle> o2) {
+  inline static bool compare_obstacle_s_ascend(
+      const std::shared_ptr<FrenetObstacle> o1,
+      const std::shared_ptr<FrenetObstacle> o2) {
     return (o1->frenet_s() < o2->frenet_s());
   }
 
  protected:
   void init();
-  void update_refpath_points(ReferencePathPoints &raw_reference_path_points, bool is_need_density = false);
-  void densifying_refined_path_points(ReferencePathPoints &refined_ref_path_points);
-  bool get_reference_point_by_lon_from_raw_ref_path_points(double s,
-                                                           const ReferencePathPoints &raw_reference_path_point,
-                                                           ReferencePathPoint &reference_path_point);
-  void discrete(double start, double end, double gap, std::vector<double> &output) {
+  void update_refpath_points(ReferencePathPoints &raw_reference_path_points,
+                             bool is_need_density = false);
+  void densifying_refined_path_points(
+      ReferencePathPoints &refined_ref_path_points);
+  bool get_reference_point_by_lon_from_raw_ref_path_points(
+      double s, const ReferencePathPoints &raw_reference_path_point,
+      ReferencePathPoint &reference_path_point);
+  void discrete(double start, double end, double gap,
+                std::vector<double> &output) {
     output.clear();
     for (double value = start; value < end; value += gap) {
       output.push_back(value);
@@ -107,7 +136,8 @@ class ReferencePath {
   // obstacles
   std::vector<std::shared_ptr<FrenetObstacle>> frenet_obstacles_;
 
-  std::unordered_map<int, std::shared_ptr<FrenetObstacle>> frenet_obstacles_map_;
+  std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+      frenet_obstacles_map_;
 
   std::vector<const Obstacle *> parking_spaces_;
   std::vector<const Obstacle *> free_space_ground_lines_;

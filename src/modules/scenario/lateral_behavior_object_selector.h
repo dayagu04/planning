@@ -15,7 +15,8 @@ namespace planning {
 
 class ObjectSelector {
  public:
-  ObjectSelector(const EgoPlanningConfigBuilder *config_builder, framework::Session *session);
+  ObjectSelector(const EgoPlanningConfigBuilder *config_builder,
+                 framework::Session *session);
 
   virtual ~ObjectSelector() = default;
 
@@ -25,9 +26,10 @@ class ObjectSelector {
 
   bool check_map_alc_enable(int direction, bool accident_ahead);
 
-  void update(int status, double start_move_distolane, bool accident_ahead, double perception_range, bool disable_l,
-              bool disable_r, bool upstream_enable_l, bool upstream_enable_r, bool upstream_enable_lb,
-              int upstream_enable_id);
+  void update(int status, double start_move_distolane, bool accident_ahead,
+              double perception_range, bool disable_l, bool disable_r,
+              bool upstream_enable_l, bool upstream_enable_r,
+              bool upstream_enable_lb, int upstream_enable_id);
 
   bool enable_l() const { return enable_l_; }
   bool enable_r() const { return enable_r_; }
@@ -80,7 +82,9 @@ class ObjectSelector {
 
   const std::vector<int> &left_close_objs() const { return left_close_objs_; }
   const std::vector<int> &right_close_objs() const { return right_close_objs_; }
-  const std::vector<int> &current_close_objs() const { return current_close_objs_; }
+  const std::vector<int> &current_close_objs() const {
+    return current_close_objs_;
+  }
 
   double get_vrel_close(int side, int status);
 

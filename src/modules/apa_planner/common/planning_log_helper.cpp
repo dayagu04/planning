@@ -10,7 +10,8 @@ std::ofstream PlanningLogHelper::ofs_;
 bool PlanningLogHelper::is_init_ = false;
 
 void PlanningLogHelper::Init() {
-  std::string log_file = "/asw/Planning/log/planning.log." + IflyTime::DateString();
+  std::string log_file =
+      "/asw/Planning/log/planning.log." + IflyTime::DateString();
   ofs_.open(log_file);
   is_init_ = true;
 }

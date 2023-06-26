@@ -11,8 +11,10 @@
 
 using namespace ilqr_solver;
 
-static const double kMaxWheelAngle = 360.0 / 14.5 / 57.3;      // 360 deg steering angle for scc
-static const double kMaxWheelAngleRate = 240.0 / 14.5 / 57.3;  // 240 deg/s steering angle rate for scc
+static const double kMaxWheelAngle =
+    360.0 / 14.5 / 57.3;  // 360 deg steering angle for scc
+static const double kMaxWheelAngleRate =
+    240.0 / 14.5 / 57.3;  // 240 deg/s steering angle rate for scc
 namespace pnc {
 namespace lateral_planning {
 void LateralMotionPlanningProblem::Init() {
@@ -27,16 +29,22 @@ void LateralMotionPlanningProblem::Init() {
   init_state_.resize(STATE_SIZE);
   // STEP 1: init core with solver config
   ilqr_core_ptr_ = std::make_shared<iLqr>();
-  ilqr_core_ptr_->Init(std::make_shared<LateralMotionPlanningModel>(), solver_config);
+  ilqr_core_ptr_->Init(std::make_shared<LateralMotionPlanningModel>(),
+                       solver_config);
 
   // STEP 2: add cost
-  ilqr_core_ptr_->AddCost(std::make_shared<ReferenceCostTerm>());  // reference cost
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<ReferenceCostTerm>());  // reference cost
   // ilqr_core_ptr_->AddCost(
   //     std::make_shared<ContinuityCostTerm>()); // continuity cost
-  ilqr_core_ptr_->AddCost(std::make_shared<LatAccCostTerm>());        // lateral acc cost
-  ilqr_core_ptr_->AddCost(std::make_shared<LatJerkCostTerm>());       // lateral jerk cost
-  ilqr_core_ptr_->AddCost(std::make_shared<LatAccBoundCostTerm>());   // lateral acc bound cost
-  ilqr_core_ptr_->AddCost(std::make_shared<LatJerkBoundCostTerm>());  // lateral jerk bound cost
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<LatAccCostTerm>());  // lateral acc cost
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<LatJerkCostTerm>());  // lateral jerk cost
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<LatAccBoundCostTerm>());  // lateral acc bound cost
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<LatJerkBoundCostTerm>());  // lateral jerk bound cost
   // ilqr_core_ptr_->AddCost(
   //      std::make_shared<PathSoftCorridorCostTerm>()); // path soft corridor
   //                                                     // cost
@@ -56,7 +64,8 @@ void LateralMotionPlanningProblem::Init() {
   planning_output_.mutable_jerk_vec()->Resize(N, 0.0);
 }
 
-uint8_t LateralMotionPlanningProblem::Update(planning::common::LateralPlanningInput &planning_input) {
+uint8_t LateralMotionPlanningProblem::Update(
+    planning::common::LateralPlanningInput &planning_input) {
   // set cost config
   const size_t N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
   const auto v2 = planning_input.ref_vel() * planning_input.ref_vel();
@@ -65,8 +74,12 @@ uint8_t LateralMotionPlanningProblem::Update(planning::common::LateralPlanningIn
   cost_config_vec.resize(N);
 
   // calculate delta_bound and omega_bound
-  double delta_bound = std::min(kMaxWheelAngle, planning_input.acc_bound() / (planning_input.curv_factor() * v2));
-  double omega_bound = std::min(kMaxWheelAngleRate, planning_input.jerk_bound() / (planning_input.curv_factor() * v2));
+  double delta_bound =
+      std::min(kMaxWheelAngle, planning_input.acc_bound() /
+                                   (planning_input.curv_factor() * v2));
+  double omega_bound =
+      std::min(kMaxWheelAngleRate, planning_input.jerk_bound() /
+                                       (planning_input.curv_factor() * v2));
 
   for (size_t i = 0; i < N; ++i) {
     // reference
@@ -84,15 +97,23 @@ uint8_t LateralMotionPlanningProblem::Update(planning::common::LateralPlanningIn
     cost_config_vec.at(i)[DELTA_BOUND] = delta_bound;
     cost_config_vec.at(i)[OMEGA_BOUND] = omega_bound;
 
-    cost_config_vec.at(i)[SOFT_UPPER_BOUND_X0] = planning_input.soft_upper_bound_x0_vec(i);
-    cost_config_vec.at(i)[SOFT_UPPER_BOUND_Y0] = planning_input.soft_upper_bound_y0_vec(i);
-    cost_config_vec.at(i)[SOFT_UPPER_BOUND_X1] = planning_input.soft_upper_bound_x1_vec(i);
-    cost_config_vec.at(i)[SOFT_UPPER_BOUND_Y1] = planning_input.soft_upper_bound_y1_vec(i);
+    cost_config_vec.at(i)[SOFT_UPPER_BOUND_X0] =
+        planning_input.soft_upper_bound_x0_vec(i);
+    cost_config_vec.at(i)[SOFT_UPPER_BOUND_Y0] =
+        planning_input.soft_upper_bound_y0_vec(i);
+    cost_config_vec.at(i)[SOFT_UPPER_BOUND_X1] =
+        planning_input.soft_upper_bound_x1_vec(i);
+    cost_config_vec.at(i)[SOFT_UPPER_BOUND_Y1] =
+        planning_input.soft_upper_bound_y1_vec(i);
 
-    cost_config_vec.at(i)[SOFT_LOWER_BOUND_X0] = planning_input.soft_lower_bound_x0_vec(i);
-    cost_config_vec.at(i)[SOFT_LOWER_BOUND_Y0] = planning_input.soft_lower_bound_y0_vec(i);
-    cost_config_vec.at(i)[SOFT_LOWER_BOUND_X1] = planning_input.soft_lower_bound_x1_vec(i);
-    cost_config_vec.at(i)[SOFT_LOWER_BOUND_Y1] = planning_input.soft_lower_bound_y1_vec(i);
+    cost_config_vec.at(i)[SOFT_LOWER_BOUND_X0] =
+        planning_input.soft_lower_bound_x0_vec(i);
+    cost_config_vec.at(i)[SOFT_LOWER_BOUND_Y0] =
+        planning_input.soft_lower_bound_y0_vec(i);
+    cost_config_vec.at(i)[SOFT_LOWER_BOUND_X1] =
+        planning_input.soft_lower_bound_x1_vec(i);
+    cost_config_vec.at(i)[SOFT_LOWER_BOUND_Y1] =
+        planning_input.soft_lower_bound_y1_vec(i);
 
     // weights
     cost_config_vec.at(i)[W_REF_X] = planning_input.q_ref_x();
@@ -100,10 +121,14 @@ uint8_t LateralMotionPlanningProblem::Update(planning::common::LateralPlanningIn
 
     const auto &ref_vel = planning_input.ref_vel();
 
-    cost_config_vec.at(i)[W_REF_THETA] = planning_input.q_ref_theta() * (1.0 + ref_vel * ref_vel);
-    cost_config_vec.at(i)[W_CONTINUITY_X] = planning_input.q_ref_x() * planning_input.q_continuity();
-    cost_config_vec.at(i)[W_CONTINUITY_Y] = planning_input.q_ref_y() * planning_input.q_continuity();
-    cost_config_vec.at(i)[W_CONTINUITY_THETA] = planning_input.q_ref_theta() * planning_input.q_continuity();
+    cost_config_vec.at(i)[W_REF_THETA] =
+        planning_input.q_ref_theta() * (1.0 + ref_vel * ref_vel);
+    cost_config_vec.at(i)[W_CONTINUITY_X] =
+        planning_input.q_ref_x() * planning_input.q_continuity();
+    cost_config_vec.at(i)[W_CONTINUITY_Y] =
+        planning_input.q_ref_y() * planning_input.q_continuity();
+    cost_config_vec.at(i)[W_CONTINUITY_THETA] =
+        planning_input.q_ref_theta() * planning_input.q_continuity();
 
     cost_config_vec.at(i)[W_ACC] = planning_input.q_acc();
     cost_config_vec.at(i)[W_JERK] = planning_input.q_jerk();
@@ -129,13 +154,15 @@ uint8_t LateralMotionPlanningProblem::Update(planning::common::LateralPlanningIn
   ilqr_core_ptr_->SetCostConfig(cost_config_vec);
 
   // solve the ilqr problem
-  init_state_ << planning_input.init_state().x(), planning_input.init_state().y(), planning_input.init_state().theta(),
+  init_state_ << planning_input.init_state().x(),
+      planning_input.init_state().y(), planning_input.init_state().theta(),
       planning_input.init_state().delta();
 
   ilqr_core_ptr_->Solve(init_state_);
 
   // fail protection
-  const uint8_t solver_condition = ilqr_core_ptr_->GetSolverInfoPtr()->solver_condition;
+  const uint8_t solver_condition =
+      ilqr_core_ptr_->GetSolverInfoPtr()->solver_condition;
   const auto solver_config = ilqr_core_ptr_->GetSolverConfigPtr();
 
   ControlVec u_vec;
@@ -164,18 +191,28 @@ uint8_t LateralMotionPlanningProblem::Update(planning::common::LateralPlanningIn
     planning_output_.mutable_time_vec()->Set(i, t);
     t += dt;
 
-    planning_output_.mutable_x_vec()->Set(i, state_result->at(i)[pnc::lateral_planning::StateId::X]);
-    planning_output_.mutable_y_vec()->Set(i, state_result->at(i)[pnc::lateral_planning::StateId::Y]);
-    planning_output_.mutable_theta_vec()->Set(i, state_result->at(i)[pnc::lateral_planning::StateId::THETA]);
-    planning_output_.mutable_delta_vec()->Set(i, state_result->at(i)[pnc::lateral_planning::StateId::DELTA]);
-    planning_output_.mutable_acc_vec()->Set(i, kv2 * state_result->at(i)[pnc::lateral_planning::StateId::DELTA]);
+    planning_output_.mutable_x_vec()->Set(
+        i, state_result->at(i)[pnc::lateral_planning::StateId::X]);
+    planning_output_.mutable_y_vec()->Set(
+        i, state_result->at(i)[pnc::lateral_planning::StateId::Y]);
+    planning_output_.mutable_theta_vec()->Set(
+        i, state_result->at(i)[pnc::lateral_planning::StateId::THETA]);
+    planning_output_.mutable_delta_vec()->Set(
+        i, state_result->at(i)[pnc::lateral_planning::StateId::DELTA]);
+    planning_output_.mutable_acc_vec()->Set(
+        i, kv2 * state_result->at(i)[pnc::lateral_planning::StateId::DELTA]);
 
     if (i < N - 1) {
-      planning_output_.mutable_omega_vec()->Set(i, control_result->at(i)[pnc::lateral_planning::ControlId::OMEGA]);
-      planning_output_.mutable_jerk_vec()->Set(i, kv2 * control_result->at(i)[pnc::lateral_planning::ControlId::OMEGA]);
+      planning_output_.mutable_omega_vec()->Set(
+          i, control_result->at(i)[pnc::lateral_planning::ControlId::OMEGA]);
+      planning_output_.mutable_jerk_vec()->Set(
+          i,
+          kv2 * control_result->at(i)[pnc::lateral_planning::ControlId::OMEGA]);
     } else {
-      planning_output_.mutable_omega_vec()->Set(i, planning_output_.omega_vec(i - 1));
-      planning_output_.mutable_jerk_vec()->Set(i, planning_output_.jerk_vec(i - 1));
+      planning_output_.mutable_omega_vec()->Set(
+          i, planning_output_.omega_vec(i - 1));
+      planning_output_.mutable_jerk_vec()->Set(
+          i, planning_output_.jerk_vec(i - 1));
     }
   }
 
@@ -184,16 +221,23 @@ uint8_t LateralMotionPlanningProblem::Update(planning::common::LateralPlanningIn
 
   const auto &soler_info_ptr = ilqr_core_ptr_->GetSolverInfoPtr();
 
-  planning_output_.mutable_solver_info()->set_solver_condition(soler_info_ptr->solver_condition);
-  planning_output_.mutable_solver_info()->set_cost_size(soler_info_ptr->cost_size);
-  planning_output_.mutable_solver_info()->set_iter_count(soler_info_ptr->iter_count);
-  planning_output_.mutable_solver_info()->set_init_cost(soler_info_ptr->init_cost);
+  planning_output_.mutable_solver_info()->set_solver_condition(
+      soler_info_ptr->solver_condition);
+  planning_output_.mutable_solver_info()->set_cost_size(
+      soler_info_ptr->cost_size);
+  planning_output_.mutable_solver_info()->set_iter_count(
+      soler_info_ptr->iter_count);
+  planning_output_.mutable_solver_info()->set_init_cost(
+      soler_info_ptr->init_cost);
 
   for (size_t i = 0; i < soler_info_ptr->iter_count; ++i) {
-    const auto &iter_info = planning_output_.mutable_solver_info()->add_iter_info();
+    const auto &iter_info =
+        planning_output_.mutable_solver_info()->add_iter_info();
 
-    iter_info->set_linesearch_success(soler_info_ptr->iteration_info_vec[i].linesearch_success);
-    iter_info->set_backward_pass_count(soler_info_ptr->iteration_info_vec[i].backward_pass_count);
+    iter_info->set_linesearch_success(
+        soler_info_ptr->iteration_info_vec[i].linesearch_success);
+    iter_info->set_backward_pass_count(
+        soler_info_ptr->iteration_info_vec[i].backward_pass_count);
     iter_info->set_lambda(soler_info_ptr->iteration_info_vec[i].lambda);
     iter_info->set_cost(soler_info_ptr->iteration_info_vec[i].cost);
     iter_info->set_dcost(soler_info_ptr->iteration_info_vec[i].dcost);

@@ -7,7 +7,9 @@ namespace planning {
 
 namespace planning_math {
 
-Vec2d Vec2d::CreateUnitVec2d(const double angle) { return Vec2d(cos(angle), sin(angle)); }
+Vec2d Vec2d::CreateUnitVec2d(const double angle) {
+  return Vec2d(cos(angle), sin(angle));
+}
 
 double Vec2d::Length() const { return std::hypot(x_, y_); }
 
@@ -23,7 +25,9 @@ void Vec2d::Normalize() {
   }
 }
 
-double Vec2d::DistanceTo(const Vec2d &other) const { return std::hypot(x_ - other.x_, y_ - other.y_); }
+double Vec2d::DistanceTo(const Vec2d &other) const {
+  return std::hypot(x_ - other.x_, y_ - other.y_);
+}
 
 double Vec2d::DistanceSquareTo(const Vec2d &other) const {
   const double dx = x_ - other.x_;
@@ -31,12 +35,17 @@ double Vec2d::DistanceSquareTo(const Vec2d &other) const {
   return dx * dx + dy * dy;
 }
 
-double Vec2d::CrossProd(const Vec2d &other) const { return x_ * other.y() - y_ * other.x(); }
+double Vec2d::CrossProd(const Vec2d &other) const {
+  return x_ * other.y() - y_ * other.x();
+}
 
-double Vec2d::InnerProd(const Vec2d &other) const { return x_ * other.x() + y_ * other.y(); }
+double Vec2d::InnerProd(const Vec2d &other) const {
+  return x_ * other.x() + y_ * other.y();
+}
 
 Vec2d Vec2d::rotate(const double angle) const {
-  return Vec2d(x_ * cos(angle) - y_ * sin(angle), x_ * sin(angle) + y_ * cos(angle));
+  return Vec2d(x_ * cos(angle) - y_ * sin(angle),
+               x_ * sin(angle) + y_ * cos(angle));
 }
 
 void Vec2d::SelfRotate(const double angle) {
@@ -45,11 +54,17 @@ void Vec2d::SelfRotate(const double angle) {
   y_ = tmp_x * sin(angle) + y_ * cos(angle);
 }
 
-Vec2d Vec2d::operator+(const Vec2d &other) const { return Vec2d(x_ + other.x(), y_ + other.y()); }
+Vec2d Vec2d::operator+(const Vec2d &other) const {
+  return Vec2d(x_ + other.x(), y_ + other.y());
+}
 
-Vec2d Vec2d::operator-(const Vec2d &other) const { return Vec2d(x_ - other.x(), y_ - other.y()); }
+Vec2d Vec2d::operator-(const Vec2d &other) const {
+  return Vec2d(x_ - other.x(), y_ - other.y());
+}
 
-Vec2d Vec2d::operator*(const double ratio) const { return Vec2d(x_ * ratio, y_ * ratio); }
+Vec2d Vec2d::operator*(const double ratio) const {
+  return Vec2d(x_ * ratio, y_ * ratio);
+}
 
 Vec2d Vec2d::operator/(const double ratio) const {
   assert(std::abs(ratio) > kMathEpsilon);
@@ -82,7 +97,8 @@ Vec2d &Vec2d::operator/=(const double ratio) {
 }
 
 bool Vec2d::operator==(const Vec2d &other) const {
-  return (std::abs(x_ - other.x()) < kMathEpsilon && std::abs(y_ - other.y()) < kMathEpsilon);
+  return (std::abs(x_ - other.x()) < kMathEpsilon &&
+          std::abs(y_ - other.y()) < kMathEpsilon);
 }
 
 Vec2d operator*(const double ratio, const Vec2d &vec) { return vec * ratio; }

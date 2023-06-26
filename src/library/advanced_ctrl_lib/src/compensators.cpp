@@ -21,7 +21,8 @@
 namespace pnc {
 namespace compensators {
 using namespace mathlib;
-void LeadSys::InitLeadSys(double kp, double lead_fc, double lead_gain, double fs) {
+void LeadSys::InitLeadSys(double kp, double lead_fc, double lead_gain,
+                          double fs) {
   lead_fc_ = lead_fc;
   lead_gain_ = lead_gain;
   kp_ = kp;
@@ -47,7 +48,8 @@ void LeadSys::UpdatewithSaturation(double u) {
   y_ = DoubleConstrain(y_, out_min_, out_max_);
 }
 
-void LeadboostSys::InitLeadboostSys(double kp, double lead_fc, double lead_gain, double boost_fc, double boost_gain,
+void LeadboostSys::InitLeadboostSys(double kp, double lead_fc, double lead_gain,
+                                    double boost_fc, double boost_gain,
                                     double fs) {
   kp_ = kp;
   lead_fc_ = lead_fc;
@@ -59,11 +61,14 @@ void LeadboostSys::InitLeadboostSys(double kp, double lead_fc, double lead_gain,
   double coef_p[3] = {};
 
   coef_z[0] = kp * boost_gain * lead_gain;
-  coef_z[1] = kp * 2.0f * C_PI_F * boost_fc * boost_gain * lead_gain + 2.0f * C_PI_F * boost_gain * lead_fc * lead_gain;
-  coef_z[2] = kp * 4.0f * SQUARE(C_PI_F) * boost_fc * boost_gain * lead_fc * lead_gain;
+  coef_z[1] = kp * 2.0f * C_PI_F * boost_fc * boost_gain * lead_gain +
+              2.0f * C_PI_F * boost_gain * lead_fc * lead_gain;
+  coef_z[2] =
+      kp * 4.0f * SQUARE(C_PI_F) * boost_fc * boost_gain * lead_fc * lead_gain;
 
   coef_p[0] = boost_gain;
-  coef_p[1] = 2.0f * C_PI_F * boost_fc + 2.0f * C_PI_F * boost_gain * lead_fc * lead_gain;
+  coef_p[1] = 2.0f * C_PI_F * boost_fc +
+              2.0f * C_PI_F * boost_gain * lead_fc * lead_gain;
   coef_p[2] = 4.0f * SQUARE(C_PI_F) * boost_fc * lead_fc * lead_gain;
 
   InitTFcontinuous(coef_p, coef_z, fs);
@@ -79,7 +84,8 @@ void LeadboostSys::UpdatewithSaturation(double u) {
   y_(0, 0) = DoubleConstrain(y_(0, 0), out_min_, out_max_);
 }
 
-void IntSubsys::InitIntSys(double fi, double i_out_min, double i_out_max, double reset_gain, double reset_dead_zone,
+void IntSubsys::InitIntSys(double fi, double i_out_min, double i_out_max,
+                           double reset_gain, double reset_dead_zone,
                            double fs) {
   i_out_min_ = i_out_min;
   i_out_max_ = i_out_max;
@@ -93,7 +99,9 @@ void IntSubsys::InitIntSys(double fi, double i_out_min, double i_out_max, double
   InitTFcontinuous(coef_p, coef_z, fs);
 }
 
-void IntSubsys::SetSaturationFlag(bool saturation_flag) { saturation_flag_ = saturation_flag; }
+void IntSubsys::SetSaturationFlag(bool saturation_flag) {
+  saturation_flag_ = saturation_flag;
+}
 
 void IntSubsys::SetDynamicIgain(double dynamic_i_gain) {
   if (std::fabs(dynamic_i_gain_ - dynamic_i_gain) <= eps) {
@@ -114,7 +122,8 @@ void IntSubsys::SetDynamicIgain(double dynamic_i_gain) {
 }
 
 void IntSubsys::UpdatewithSaturation(double u) {
-  if ((u * (GetOutput() + reset_dead_zone_) < 0.0f) && (u * (GetOutput() - reset_dead_zone_) < 0.0f)) {
+  if ((u * (GetOutput() + reset_dead_zone_) < 0.0f) &&
+      (u * (GetOutput() - reset_dead_zone_) < 0.0f)) {
     SetDynamicIgain(reset_gain_);
   } else {
     SetDynamicIgain(1.0f);
@@ -134,12 +143,14 @@ void IntSubsys::UpdatewithSaturation(double u) {
 double IntSubsys::GetIoutMin() { return i_out_min_; }
 double IntSubsys::GetIoutMax() { return i_out_max_; }
 
-void PISys::InitPISys(double kp, double fi, double out_min, double out_max, double i_out_min, double i_out_max,
-                      double reset_gain, double reset_dead_zone, double fs) {
+void PISys::InitPISys(double kp, double fi, double out_min, double out_max,
+                      double i_out_min, double i_out_max, double reset_gain,
+                      double reset_dead_zone, double fs) {
   kp_ = kp;
   out_min_ = out_min;
   out_max_ = out_max;
-  intesys_.InitIntSys(fi, i_out_min, i_out_max, reset_gain, reset_dead_zone, fs);
+  intesys_.InitIntSys(fi, i_out_min, i_out_max, reset_gain, reset_dead_zone,
+                      fs);
   u_ = 0.0f;
   y_ = 0.0f;
   kp_term_ = 0.0f;
@@ -179,7 +190,8 @@ void PISys::SwitchBuf(double u, double y) {
   u_ = u;
   kp_term_ = kp_ * u;
   double ki_term = y - kp_term_;
-  ki_term_ = DoubleConstrain(ki_term, intesys_.GetIoutMin(), intesys_.GetIoutMax());
+  ki_term_ =
+      DoubleConstrain(ki_term, intesys_.GetIoutMin(), intesys_.GetIoutMax());
   intesys_.SwitchBuf(u, ki_term_);
   y_ = DoubleConstrain(kp_term_ + ki_term_, out_min_, out_max_);
 }
@@ -190,13 +202,16 @@ double PISys::GetkpTerm() { return kp_term_; }
 
 double PISys::GetkiTerm() { return ki_term_; }
 
-void PILeadSys::InitPILeadSys(double kp, double fi, double lead_fc, double lead_gain, double out_min, double out_max,
-                              double i_out_min, double i_out_max, double reset_gain, double reset_dead_zone,
+void PILeadSys::InitPILeadSys(double kp, double fi, double lead_fc,
+                              double lead_gain, double out_min, double out_max,
+                              double i_out_min, double i_out_max,
+                              double reset_gain, double reset_dead_zone,
                               double fs) {
   kp_ = kp;
   out_min_ = out_min;
   out_max_ = out_max;
-  pi_sys_.InitPISys(kp, fi, out_min, out_max, i_out_min, i_out_max, reset_gain, reset_dead_zone, fs);
+  pi_sys_.InitPISys(kp, fi, out_min, out_max, i_out_min, i_out_max, reset_gain,
+                    reset_dead_zone, fs);
   lead_sys_.InitLeadSys(1.0f, lead_fc, lead_gain, fs); /* lead kp = 1.0 */
   u_ = 0.0f;
   y_ = 0.0f;
@@ -205,7 +220,8 @@ void PILeadSys::InitPILeadSys(double kp, double fi, double lead_fc, double lead_
   kcomp_term_ = 0.0f;
 }
 
-void PILeadSys::InitPILeadSys(double kp, double fi, double lead_fc, double lead_gain, double out_min, double out_max,
+void PILeadSys::InitPILeadSys(double kp, double fi, double lead_fc,
+                              double lead_gain, double out_min, double out_max,
                               double fs) {
   kp_ = kp;
   out_min_ = out_min;
@@ -271,14 +287,19 @@ void PILeadSys::SwitchBuf(double u, double y) {
 
 double PILeadSys::GetOutput() { return y_; }
 
-void PILeadboostSys::InitPILeadboostSys(double kp, double fi, double lead_fc, double lead_gain, double boost_fc,
-                                        double boost_gain, double out_min, double out_max, double i_out_min,
-                                        double i_out_max, double reset_gain, double reset_dead_zone, double fs) {
+void PILeadboostSys::InitPILeadboostSys(double kp, double fi, double lead_fc,
+                                        double lead_gain, double boost_fc,
+                                        double boost_gain, double out_min,
+                                        double out_max, double i_out_min,
+                                        double i_out_max, double reset_gain,
+                                        double reset_dead_zone, double fs) {
   kp_ = kp;
   out_min_ = out_min;
   out_max_ = out_max;
-  pi_sys_.InitPISys(kp, fi, out_min, out_max, i_out_min, i_out_max, reset_gain, reset_dead_zone, fs);
-  leadboost_sys_.InitLeadboostSys(1.0f, lead_fc, lead_gain, boost_fc, boost_gain, fs); /* lead kp = 1.0 */
+  pi_sys_.InitPISys(kp, fi, out_min, out_max, i_out_min, i_out_max, reset_gain,
+                    reset_dead_zone, fs);
+  leadboost_sys_.InitLeadboostSys(1.0f, lead_fc, lead_gain, boost_fc,
+                                  boost_gain, fs); /* lead kp = 1.0 */
   u_ = 0.0f;
   y_ = 0.0f;
   kp_term_ = 0.0f;
@@ -351,8 +372,8 @@ double VehCompSys::OneStep(double u) {
   return y;
 }
 
-void VehCompSys::Config(double pn1, double pn2, double pn3, double pn4, double pd1, double pd2, double pd3,
-                        double pd4) {
+void VehCompSys::Config(double pn1, double pn2, double pn3, double pn4,
+                        double pd1, double pd2, double pd3, double pd4) {
   pn_1_ = pn1;
   pn_2_ = pn2;
   pn_3_ = pn3;

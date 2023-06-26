@@ -42,7 +42,8 @@ class Box2d {
    * @param length The size of the heading-axis.
    * @param width The size of the axis perpendicular to the heading-axis.
    */
-  Box2d(const Vec2d &center, const double heading, const double length, const double width);
+  Box2d(const Vec2d &center, const double heading, const double length,
+        const double width);
 
   /**
    * @brief Constructor which takes the heading-axis and the width of the box
@@ -64,7 +65,8 @@ class Box2d {
    * @param opposite_corner The opposite corner to the first one
    * @return An axes-aligned Box2d
    */
-  static Box2d CreateAABox(const Vec2d &one_corner, const Vec2d &opposite_corner);
+  static Box2d CreateAABox(const Vec2d &one_corner,
+                           const Vec2d &opposite_corner);
 
   /**
    * @brief Getter of the center of the box

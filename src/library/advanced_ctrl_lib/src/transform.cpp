@@ -14,10 +14,12 @@ Eigen::Matrix3d Quat2Rotm(Eigen::Quaterniond q) { return q.toRotationMatrix(); }
 // There is a bug for Eigen to transform quaternion to euler angle
 Eigen::Vector3d Quat2EulerZYX(Eigen::Quaterniond q) {
   Eigen::Vector3d euler_zyx;
-  euler_zyx << std::atan2(2.0 * (q.w() * q.z() + q.x() * q.y()), 1.0 - 2.0 * (q.y() * q.y() + q.z() * q.z())),
+  euler_zyx << std::atan2(2.0 * (q.w() * q.z() + q.x() * q.y()),
+                          1.0 - 2.0 * (q.y() * q.y() + q.z() * q.z())),
       std::asin(mathlib::Limit(2.0 * (q.w() * q.y() - q.x() * q.z()),
                                1.0)),  // limit to avoid input of asin over 1
-      std::atan2(2.0 * (q.w() * q.x() + q.y() * q.z()), 1.0 - 2.0 * (q.x() * q.x() + q.y() * q.y()));
+      std::atan2(2.0 * (q.w() * q.x() + q.y() * q.z()),
+                 1.0 - 2.0 * (q.x() * q.x() + q.y() * q.y()));
   return euler_zyx;
 }
 
@@ -31,7 +33,9 @@ Eigen::AngleAxisd Rotm2AxisAngle(const Eigen::Matrix3d &R) {
   return rotation_vector.fromRotationMatrix(R);
 }
 
-Eigen::Vector3d Rotm2EulerZYX(Eigen::Matrix3d &R) { return Quat2EulerZYX(Rotm2Quat(R)); }
+Eigen::Vector3d Rotm2EulerZYX(Eigen::Matrix3d &R) {
+  return Quat2EulerZYX(Rotm2Quat(R));
+}
 
 // There is a bug for Eigen to transform euler angle to quaternion, never
 // EulerZYX2Quat by Eigen
@@ -42,7 +46,8 @@ Eigen::Quaterniond EulerZYX2Quat(Eigen::Vector3d &euler_zyx) {
   double s1 = std::sin(euler_zyx.x() / 2.0);
   double s2 = std::sin(euler_zyx.y() / 2.0);
   double s3 = std::sin(euler_zyx.z() / 2.0);
-  Eigen::Quaterniond q(c1 * c2 * c3 + s1 * s2 * s3, c1 * c2 * s3 - c3 * s1 * s2, c1 * c3 * s2 + c2 * s1 * s3,
+  Eigen::Quaterniond q(c1 * c2 * c3 + s1 * s2 * s3, c1 * c2 * s3 - c3 * s1 * s2,
+                       c1 * c3 * s2 + c2 * s1 * s3,
                        c2 * c3 * s1 - c1 * s2 * s3);
   return q;
 }

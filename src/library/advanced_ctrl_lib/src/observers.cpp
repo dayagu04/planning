@@ -13,7 +13,8 @@
 
 namespace pnc {
 namespace observers {
-DOBwithIdealModel::DOBwithIdealModel(double fc, double beta2_gain, double model_gain, double fs) {
+DOBwithIdealModel::DOBwithIdealModel(double fc, double beta2_gain,
+                                     double model_gain, double fs) {
   Reset();
   InitDob(fc, beta2_gain, model_gain, fs);
 }
@@ -27,7 +28,8 @@ void DOBwithIdealModel::Reset(void) {
   X_.setZero();
 }
 
-void DOBwithIdealModel::InitDob(double fc, double beta2_gain, double model_gain, double fs) {
+void DOBwithIdealModel::InitDob(double fc, double beta2_gain, double model_gain,
+                                double fs) {
   fs_ = fs;
   fc_ = fc;
   beta2_gain_ = beta2_gain;
@@ -164,8 +166,9 @@ void KalmanFilter::Reset() {
   K_.setZero();
 }
 
-void KalmanFilter::init(const Eigen::MatrixXd &F, const Eigen::MatrixXd &H, const Eigen::MatrixXd &Q,
-                        const Eigen::MatrixXd &R, const Eigen::VectorXd &x0) {
+void KalmanFilter::init(const Eigen::MatrixXd &F, const Eigen::MatrixXd &H,
+                        const Eigen::MatrixXd &Q, const Eigen::MatrixXd &R,
+                        const Eigen::VectorXd &x0) {
   F_ = F;
   H_ = H;
 
@@ -202,7 +205,8 @@ void KalmanFilter::SetNoiseMatrixQ(const Eigen::MatrixXd &Q) { Q_ = Q; }
 
 void KalmanFilter::SetNoiseMatrixR(const Eigen::MatrixXd &R) { R_ = R; }
 
-void KalmanFilter::SetNoiseMatrix(const Eigen::MatrixXd &Q, const Eigen::MatrixXd &R) {
+void KalmanFilter::SetNoiseMatrix(const Eigen::MatrixXd &Q,
+                                  const Eigen::MatrixXd &R) {
   SetNoiseMatrixQ(Q);
   SetNoiseMatrixR(R);
 }

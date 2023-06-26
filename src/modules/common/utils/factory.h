@@ -26,7 +26,8 @@ namespace util {
  * @param MapContainer Internal implementation of the function mapping
  * IdentifierType to ProductCreator, by default std::unordered_map
  */
-template <typename IdentifierType, class AbstractProduct, class ProductCreator = AbstractProduct *(*)(),
+template <typename IdentifierType, class AbstractProduct,
+          class ProductCreator = AbstractProduct *(*)(),
           class MapContainer = std::map<IdentifierType, ProductCreator>>
 class Factory {
  public:
@@ -42,13 +43,17 @@ class Factory {
     return producers_.insert(std::make_pair(id, creator)).second;
   }
 
-  bool Contains(const IdentifierType &id) { return producers_.find(id) != producers_.end(); }
+  bool Contains(const IdentifierType &id) {
+    return producers_.find(id) != producers_.end();
+  }
 
   /**
    * @brief Unregisters the class with the given identifier
    * @param id The identifier of the class to be unregistered
    */
-  bool Unregister(const IdentifierType &id) { return producers_.erase(id) == 1; }
+  bool Unregister(const IdentifierType &id) {
+    return producers_.erase(id) == 1;
+  }
 
   void Clear() { producers_.clear(); }
 
@@ -62,12 +67,15 @@ class Factory {
    * @param args the object construction arguments
    */
   template <typename... Args>
-  std::unique_ptr<AbstractProduct> CreateObjectOrNull(const IdentifierType &id, Args &&... args) {
+  std::unique_ptr<AbstractProduct> CreateObjectOrNull(const IdentifierType &id,
+                                                      Args &&... args) {
     auto id_iter = producers_.find(id);
     if (id_iter != producers_.end()) {
-      return std::unique_ptr<AbstractProduct>((id_iter->second)(std::forward<Args>(args)...));
+      return std::unique_ptr<AbstractProduct>(
+          (id_iter->second)(std::forward<Args>(args)...));
     } else {
-      std::cout << "Factory do not contain Object of type : " << id << std::endl;
+      std::cout << "Factory do not contain Object of type : " << id
+                << std::endl;
     }
     return nullptr;
   }
@@ -79,10 +87,12 @@ class Factory {
    * @param args the object construction arguments
    */
   template <typename... Args>
-  std::unique_ptr<AbstractProduct> CreateObject(const IdentifierType &id, Args &&... args) {
+  std::unique_ptr<AbstractProduct> CreateObject(const IdentifierType &id,
+                                                Args &&... args) {
     auto result = CreateObjectOrNull(id, std::forward<Args>(args)...);
     if (result == nullptr) {
-      std::cout << "Factory could not create Object of type : " << id << std::endl;
+      std::cout << "Factory could not create Object of type : " << id
+                << std::endl;
     }
     return result;
   }

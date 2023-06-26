@@ -8,7 +8,8 @@ static const double kOneSix = 1.0 / 6.0;
 namespace pnc {
 namespace longitudinal_planning {
 
-State LongitudinalMotionPlanningModel::UpdateDynamicsOneStep(const State &x, const Control &u, const size_t &) const {
+State LongitudinalMotionPlanningModel::UpdateDynamicsOneStep(
+    const State &x, const Control &u, const size_t &) const {
   const double &dt = solver_config_ptr_->model_dt;
   State x1 = x;
 
@@ -29,8 +30,9 @@ State LongitudinalMotionPlanningModel::UpdateDynamicsOneStep(const State &x, con
   return x1;
 }
 
-void LongitudinalMotionPlanningModel::GetDynamicsDerivatives(const State &, const Control &, FxMT &f_x, FuMT &f_u,
-                                                             const size_t &) const {
+void LongitudinalMotionPlanningModel::GetDynamicsDerivatives(
+    const State &, const Control &, FxMT &f_x, FuMT &f_u,
+    const size_t &) const {
   const double &dt = solver_config_ptr_->model_dt;
   const auto dt2 = dt * dt;
   const auto dt3 = dt2 * dt;

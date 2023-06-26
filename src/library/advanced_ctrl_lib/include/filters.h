@@ -46,48 +46,60 @@ class ButterworthFilter {
   void Set8thCoef(double *coef);
 };
 
-class ButterworthFilter1st : public statespace_sys::StatespaceSISOSys1st, public ButterworthFilter {
+class ButterworthFilter1st : public statespace_sys::StatespaceSISOSys1st,
+                             public ButterworthFilter {
  public:
-  void InitButterSysLowpass(int Nz, double fp, double fz, double fs); /* Np is 1 for first-order filter */
+  void InitButterSysLowpass(int Nz, double fp, double fz,
+                            double fs); /* Np is 1 for first-order filter */
   void SwitchBuf(double u, double y) override;
 
  protected:
 };
 
-class ButterworthFilter2nd : public statespace_sys::StatespaceSISOSys2nd, public ButterworthFilter {
+class ButterworthFilter2nd : public statespace_sys::StatespaceSISOSys2nd,
+                             public ButterworthFilter {
  public:
-  void InitButterSysLowpass(int Nz, double fp, double fz, double fs); /* Np is 1 for first-order filter */
+  void InitButterSysLowpass(int Nz, double fp, double fz,
+                            double fs); /* Np is 1 for first-order filter */
   void SwitchBuf(double u, double y) override;
 
  protected:
 };
 
-class ButterworthFilter3rd : public statespace_sys::StatespaceSISOSys3rd, public ButterworthFilter {
+class ButterworthFilter3rd : public statespace_sys::StatespaceSISOSys3rd,
+                             public ButterworthFilter {
  public:
-  void InitButterSysLowpass(int Nz, double fp, double fz, double fs); /* Np is 1 for first-order filter */
+  void InitButterSysLowpass(int Nz, double fp, double fz,
+                            double fs); /* Np is 1 for first-order filter */
   void SwitchBuf(double u, double y) override;
 
  protected:
 };
-class ButterworthFilter4th : public statespace_sys::StatespaceSISOSys4th, public ButterworthFilter {
+class ButterworthFilter4th : public statespace_sys::StatespaceSISOSys4th,
+                             public ButterworthFilter {
  public:
-  void InitButterSysLowpass(int Nz, double fp, double fz, double fs); /* Np is 1 for first-order filter */
+  void InitButterSysLowpass(int Nz, double fp, double fz,
+                            double fs); /* Np is 1 for first-order filter */
   void SwitchBuf(double u, double y) override;
 
  protected:
 };
 
-class ButterworthFilter5th : public statespace_sys::StatespaceSISOSys5th, public ButterworthFilter {
+class ButterworthFilter5th : public statespace_sys::StatespaceSISOSys5th,
+                             public ButterworthFilter {
  public:
-  void InitButterSysLowpass(int Nz, double fp, double fz, double fs); /* Np is 1 for first-order filter */
+  void InitButterSysLowpass(int Nz, double fp, double fz,
+                            double fs); /* Np is 1 for first-order filter */
   void SwitchBuf(double u, double y) override;
 
  protected:
 };
 
-class ButterworthFilter6th : public statespace_sys::StatespaceSISOSys6th, public ButterworthFilter {
+class ButterworthFilter6th : public statespace_sys::StatespaceSISOSys6th,
+                             public ButterworthFilter {
  public:
-  void InitButterSysLowpass(int Nz, double fp, double fz, double fs); /* Np is 1 for first-order filter */
+  void InitButterSysLowpass(int Nz, double fp, double fz,
+                            double fs); /* Np is 1 for first-order filter */
   void SwitchBuf(double u, double y) override;
 
  protected:
@@ -97,9 +109,10 @@ class ButterworthFilter6th : public statespace_sys::StatespaceSISOSys6th, public
  * ------------------------------------------ */
 class SlopeFilter {
  public:
-  void Init(double state, double min_update_rate, double max_update_rate, double min_limit, double max_limit,
-            double dt);
-  void Init(double min_update_rate, double max_update_rate, double min_limit, double max_limit, double dt);
+  void Init(double state, double min_update_rate, double max_update_rate,
+            double min_limit, double max_limit, double dt);
+  void Init(double min_update_rate, double max_update_rate, double min_limit,
+            double max_limit, double dt);
   void SetRate(double min_update_rate, double max_update_rate);
   void SetLimit(double min_limit, double max_limit);
   void SetState(double state);
@@ -120,7 +133,8 @@ class SlopeFilter {
 
 /* ------------------------------------------ Differentiators
  * ------------------------------------------ */
-class Differentiator1st : public statespace_sys::StatespaceSISOSys1st, public ButterworthFilter {
+class Differentiator1st : public statespace_sys::StatespaceSISOSys1st,
+                          public ButterworthFilter {
  public:
   void InitDifferentiator(double fc, double fs);
   void SwitchBuf(double u, double y) override;
@@ -131,7 +145,8 @@ class Differentiator1st : public statespace_sys::StatespaceSISOSys1st, public Bu
   double fc_;
 };
 
-class Differentiator2nd : public statespace_sys::StatespaceSISOSys2nd, public ButterworthFilter {
+class Differentiator2nd : public statespace_sys::StatespaceSISOSys2nd,
+                          public ButterworthFilter {
  public:
   void InitDifferentiator(double fc, double fs);
   void SwitchBuf(double u, double y) override;
@@ -142,7 +157,8 @@ class Differentiator2nd : public statespace_sys::StatespaceSISOSys2nd, public Bu
   double fc_;
 };
 
-class Differentiator3rd : public statespace_sys::StatespaceSISOSys3rd, public ButterworthFilter {
+class Differentiator3rd : public statespace_sys::StatespaceSISOSys3rd,
+                          public ButterworthFilter {
  public:
   void InitDifferentiator(double fc, double fs);
   void SwitchBuf(double u, double y) override;
@@ -153,7 +169,8 @@ class Differentiator3rd : public statespace_sys::StatespaceSISOSys3rd, public Bu
   double fc_;
 };
 
-class Differentiator4th : public statespace_sys::StatespaceSISOSys4th, public ButterworthFilter {
+class Differentiator4th : public statespace_sys::StatespaceSISOSys4th,
+                          public ButterworthFilter {
  public:
   void InitDifferentiator(double fc, double fs);
   void SwitchBuf(double u, double y) override;
@@ -164,7 +181,8 @@ class Differentiator4th : public statespace_sys::StatespaceSISOSys4th, public Bu
   double fc_;
 };
 
-class Differentiator5th : public statespace_sys::StatespaceSISOSys5th, public ButterworthFilter {
+class Differentiator5th : public statespace_sys::StatespaceSISOSys5th,
+                          public ButterworthFilter {
  public:
   void InitDifferentiator(double fc, double fs);
   void SwitchBuf(double u, double y) override;
@@ -175,7 +193,8 @@ class Differentiator5th : public statespace_sys::StatespaceSISOSys5th, public Bu
   double fc_;
 };
 
-class Differentiator6th : public statespace_sys::StatespaceSISOSys6th, public ButterworthFilter {
+class Differentiator6th : public statespace_sys::StatespaceSISOSys6th,
+                          public ButterworthFilter {
  public:
   void InitDifferentiator(double fc, double fs);
   void SwitchBuf(double u, double y) override;

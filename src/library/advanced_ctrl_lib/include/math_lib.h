@@ -90,7 +90,8 @@ T Interp1(const std::vector<T> &xp, const std::vector<T> &fp, T x) {
   } else if (high == 0) {
     return fp[0];
   } else {
-    return (x - xp1[low]) * (fp[high] - fp[low]) / (xp1[high] - xp1[low]) + fp[low];
+    return (x - xp1[low]) * (fp[high] - fp[low]) / (xp1[high] - xp1[low]) +
+           fp[low];
   }
 }
 
@@ -123,7 +124,8 @@ T Clamp(const T value, T bound1, T bound2) {
 }
 
 template <class T>
-std::vector<T> Interp1(const std::vector<T> &xp, const std::vector<T> &fp, std::vector<T> x) {
+std::vector<T> Interp1(const std::vector<T> &xp, const std::vector<T> &fp,
+                       std::vector<T> x) {
   if (x.empty()) return {};
   auto n = static_cast<int>(xp.size());
   assert(xp.size() > 0);
@@ -140,7 +142,8 @@ std::vector<T> Interp1(const std::vector<T> &xp, const std::vector<T> &fp, std::
     } else if (high == 0) {
       fx = fp[0];
     } else {
-      fx = (x - xp[low]) * (fp[high] - fp[low]) / (xp[high] - xp[low]) + fp[low];
+      fx =
+          (x - xp[low]) * (fp[high] - fp[low]) / (xp[high] - xp[low]) + fp[low];
     }
     result.push_back(fx);
   }

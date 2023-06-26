@@ -18,57 +18,75 @@ class DiagonalInTrajectoryGenerator {
   bool Plan(framework::Frame *const frame);
 
  private:
-  bool SingleSlotPlan(const int slot_index, PlanningOutput::PlanningOutput *const planning_output);
+  bool SingleSlotPlan(const int slot_index,
+                      PlanningOutput::PlanningOutput *const planning_output);
 
-  bool GeometryPlan(const PlanningPoint &start_point, int idx, PlanningOutput::PlanningOutput *const planning_output);
+  bool GeometryPlan(const PlanningPoint &start_point, int idx,
+                    PlanningOutput::PlanningOutput *const planning_output);
 
-  bool ABSegmentPlan(const PlanningPoint &point_a, bool is_start, int idx,
-                     DiagonalInGeometryPlan *const geometry_planning,
-                     PlanningOutput::PlanningOutput *const planning_output) const;
+  bool ABSegmentPlan(
+      const PlanningPoint &point_a, bool is_start, int idx,
+      DiagonalInGeometryPlan *const geometry_planning,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool ReverseABSegmentPlan(const PlanningPoint &point_a, bool is_start, int idx,
-                            DiagonalInGeometryPlan *const geometry_planning,
-                            PlanningOutput::PlanningOutput *const planning_output) const;
+  bool ReverseABSegmentPlan(
+      const PlanningPoint &point_a, bool is_start, int idx,
+      DiagonalInGeometryPlan *const geometry_planning,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool BCSegmentPlan(const PlanningPoint &point_b, bool is_start, int idx,
-                     DiagonalInGeometryPlan *const geometry_planning,
-                     PlanningOutput::PlanningOutput *const planning_output) const;
+  bool BCSegmentPlan(
+      const PlanningPoint &point_b, bool is_start, int idx,
+      DiagonalInGeometryPlan *const geometry_planning,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool CDSegmentPlan(const PlanningPoint &point_c, bool is_start, int idx,
-                     DiagonalInGeometryPlan *const geometry_planning,
-                     PlanningOutput::PlanningOutput *const planning_output) const;
+  bool CDSegmentPlan(
+      const PlanningPoint &point_c, bool is_start, int idx,
+      DiagonalInGeometryPlan *const geometry_planning,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool DESegmentPlan(const PlanningPoint &point_d, bool is_start, int idx,
-                     DiagonalInGeometryPlan *const geometry_planning,
-                     PlanningOutput::PlanningOutput *const planning_output) const;
+  bool DESegmentPlan(
+      const PlanningPoint &point_d, bool is_start, int idx,
+      DiagonalInGeometryPlan *const geometry_planning,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool GenerateABSegmentTrajectory(const DiagonalSegmentsInfo &segments_info,
-                                   PlanningOutput::PlanningOutput *const planning_output) const;
+  bool GenerateABSegmentTrajectory(
+      const DiagonalSegmentsInfo &segments_info,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool GenerateRACSegmentTrajectory(const DiagonalSegmentsInfo &segments_info,
-                                    PlanningOutput::PlanningOutput *const planning_output) const;
+  bool GenerateRACSegmentTrajectory(
+      const DiagonalSegmentsInfo &segments_info,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool GenerateBCSegmentTrajectory(const DiagonalSegmentsInfo &segments_info,
-                                   PlanningOutput::PlanningOutput *const planning_output) const;
+  bool GenerateBCSegmentTrajectory(
+      const DiagonalSegmentsInfo &segments_info,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool GenerateCDSegmentTrajectory(const DiagonalSegmentsInfo &segments_info,
-                                   PlanningOutput::PlanningOutput *const planning_output) const;
+  bool GenerateCDSegmentTrajectory(
+      const DiagonalSegmentsInfo &segments_info,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  bool GenerateDESegmentTrajectory(const DiagonalSegmentsInfo &segments_info,
-                                   PlanningOutput::PlanningOutput *const planning_output) const;
+  bool GenerateDESegmentTrajectory(
+      const DiagonalSegmentsInfo &segments_info,
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
-  void SetApaObjectInfo(int idx, DiagonalInGeometryPlan *geometry_planning) const;
+  void SetApaObjectInfo(int idx,
+                        DiagonalInGeometryPlan *geometry_planning) const;
 
-  void SetGeometryPlanningParameter(int idx, DiagonalInGeometryPlan *geometry_planning) const;
+  void SetGeometryPlanningParameter(
+      int idx, DiagonalInGeometryPlan *geometry_planning) const;
 
-  void GetCurPtSpeed(const double segment_len, const double cur_s, const double spd_sign,
+  void GetCurPtSpeed(const double segment_len, const double cur_s,
+                     const double spd_sign,
                      PlanningOutput::TrajectoryPoint *trajectory_point) const;
 
-  void GetCurPtSpeed(const double spd_sign, PlanningOutput::TrajectoryPoint *trajectory_point) const;
+  void GetCurPtSpeed(const double spd_sign,
+                     PlanningOutput::TrajectoryPoint *trajectory_point) const;
 
-  PlanningPoint FromLocal2GlobalCor(const PlanningPoint &ego, const PlanningPoint &local) const;
+  PlanningPoint FromLocal2GlobalCor(const PlanningPoint &ego,
+                                    const PlanningPoint &local) const;
 
-  PlanningPoint FromGlobal2LocalCor(const PlanningPoint &ego, const PlanningPoint &global) const;
+  PlanningPoint FromGlobal2LocalCor(const PlanningPoint &ego,
+                                    const PlanningPoint &global) const;
 
   double CalApaTargetY() const;
 
@@ -86,7 +104,8 @@ class DiagonalInTrajectoryGenerator {
 
   bool IsReplan(PlanningOutput::PlanningOutput *const planning_output);
 
-  void SetPlanningOutputInfo(PlanningOutput::PlanningOutput *const planning_output) const;
+  void SetPlanningOutputInfo(
+      PlanningOutput::PlanningOutput *const planning_output) const;
 
   bool IsSamePoint(const PlanningPoint &p1, const PlanningPoint &p2) const;
 
@@ -96,7 +115,8 @@ class DiagonalInTrajectoryGenerator {
 
   bool IsApaFinished() const;
 
-  void PrintTrajectoryPoints(const PlanningOutput::PlanningOutput &planning_output) const;
+  void PrintTrajectoryPoints(
+      const PlanningOutput::PlanningOutput &planning_output) const;
 
   bool IsSelectedSlotValid(framework::Frame *const frame) const;
 
@@ -131,7 +151,8 @@ class DiagonalInTrajectoryGenerator {
 
   bool is_rough_calc_ = false;
 
-  ::FuncStateMachine::FunctionalState current_state_ = ::FuncStateMachine::FunctionalState::INIT;
+  ::FuncStateMachine::FunctionalState current_state_ =
+      ::FuncStateMachine::FunctionalState::INIT;
 
   std::vector<planning_math::LineSegment2d> objects_map_in_global_cor_;
 

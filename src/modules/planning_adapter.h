@@ -29,77 +29,101 @@ class PlanningAdapter {
   void Init();
   void Proc();
 
-  void FeedFusionObjects(const std::shared_ptr<FusionObjects::FusionObjectsInfo>& fusion_objects_info_msg) {
-    std::cout << "receive fusion fusion_objects_info " << fusion_objects_info_msg->header().timestamp() << std::endl;
+  void FeedFusionObjects(
+      const std::shared_ptr<FusionObjects::FusionObjectsInfo>&
+          fusion_objects_info_msg) {
+    std::cout << "receive fusion fusion_objects_info "
+              << fusion_objects_info_msg->header().timestamp() << std::endl;
     std::lock_guard<std::mutex> lock(msg_mutex_);
     fusion_objects_info_msg_.CopyFrom(*fusion_objects_info_msg);
     fusion_objects_info_msg_recv_time_ = IflyTime::Now_ms();
   }
 
-  void FeedFusionRoad(const std::shared_ptr<FusionRoad::RoadInfo>& road_info_msg) {
-    std::cout << "receive fusion road_info " << road_info_msg->header().timestamp() << std::endl;
+  void FeedFusionRoad(
+      const std::shared_ptr<FusionRoad::RoadInfo>& road_info_msg) {
+    std::cout << "receive fusion road_info "
+              << road_info_msg->header().timestamp() << std::endl;
     std::lock_guard<std::mutex> lock(msg_mutex_);
     road_info_msg_.CopyFrom(*road_info_msg);
     road_info_msg_recv_time_ = IflyTime::Now_ms();
   }
 
   void FeedLocalizationOutput(
-      const std::shared_ptr<LocalizationOutput::LocalizationEstimate>& localization_estimate_msg) {
-    std::cout << "receive localization_estimate " << localization_estimate_msg->header().timestamp() << std::endl;
+      const std::shared_ptr<LocalizationOutput::LocalizationEstimate>&
+          localization_estimate_msg) {
+    std::cout << "receive localization_estimate "
+              << localization_estimate_msg->header().timestamp() << std::endl;
     std::lock_guard<std::mutex> lock(msg_mutex_);
     localization_estimate_msg_.CopyFrom(*localization_estimate_msg);
     localization_estimate_msg_recv_time_ = IflyTime::Now_ms();
   }
 
-  void FeedPredictionResult(const std::shared_ptr<Prediction::PredictionResult>& prediction_result_msg) {
-    std::cout << "receive prediction_result " << prediction_result_msg->header().timestamp() << std::endl;
+  void FeedPredictionResult(const std::shared_ptr<Prediction::PredictionResult>&
+                                prediction_result_msg) {
+    std::cout << "receive prediction_result "
+              << prediction_result_msg->header().timestamp() << std::endl;
     std::lock_guard<std::mutex> lock(msg_mutex_);
     prediction_result_msg_.CopyFrom(*prediction_result_msg);
     prediction_result_msg_recv_time_ = IflyTime::Now_ms();
   }
 
   void FeedVehicleService(
-      const std::shared_ptr<VehicleService::VehicleServiceOutputInfo>& vehicel_service_output_info_msg) {
-    std::cout << "receive vehicel_service_output_info " << vehicel_service_output_info_msg->header().timestamp()
+      const std::shared_ptr<VehicleService::VehicleServiceOutputInfo>&
+          vehicel_service_output_info_msg) {
+    std::cout << "receive vehicel_service_output_info "
+              << vehicel_service_output_info_msg->header().timestamp()
               << std::endl;
     std::lock_guard<std::mutex> lock(msg_mutex_);
     vehicel_service_output_info_msg_.CopyFrom(*vehicel_service_output_info_msg);
     vehicel_service_output_info_msg_recv_time_ = IflyTime::Now_ms();
   }
 
-  void FeedControlCommand(const std::shared_ptr<ControlCommand::ControlOutput>& control_output_msg) {
-    std::cout << "receive control_output " << control_output_msg->header().timestamp() << std::endl;
+  void FeedControlCommand(const std::shared_ptr<ControlCommand::ControlOutput>&
+                              control_output_msg) {
+    std::cout << "receive control_output "
+              << control_output_msg->header().timestamp() << std::endl;
     std::lock_guard<std::mutex> lock(msg_mutex_);
     control_output_msg_.CopyFrom(*control_output_msg);
     control_output_msg_recv_time_ = IflyTime::Now_ms();
   }
 
-  void FeedHmiMcuInner(const std::shared_ptr<HmiMcuInner::HmiMcuInner>& hmi_mcu_inner_info_msg) {
-    std::cout << "receive hmi_mcu_inner_info_output " << hmi_mcu_inner_info_msg->header().timestamp() << std::endl;
+  void FeedHmiMcuInner(
+      const std::shared_ptr<HmiMcuInner::HmiMcuInner>& hmi_mcu_inner_info_msg) {
+    std::cout << "receive hmi_mcu_inner_info_output "
+              << hmi_mcu_inner_info_msg->header().timestamp() << std::endl;
     std::lock_guard<std::mutex> lock(msg_mutex_);
     hmi_mcu_inner_info_msg_.CopyFrom(*hmi_mcu_inner_info_msg);
     hmi_mcu_inner_info_msg_recv_time_ = IflyTime::Now_ms();
   }
 
-  void FeedParkingFusion(const std::shared_ptr<ParkingFusion::ParkingFusionInfo>& parking_fusion_info_msg) {
+  void FeedParkingFusion(
+      const std::shared_ptr<ParkingFusion::ParkingFusionInfo>&
+          parking_fusion_info_msg) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     parking_fusion_info_msg_.CopyFrom(*parking_fusion_info_msg);
     parking_fusion_info_msg_recv_time_ = IflyTime::Now_ms();
   }
 
-  void FeedFuncStateMachine(const std::shared_ptr<FuncStateMachine::FuncStateMachine>& func_state_machine_msg) {
+  void FeedFuncStateMachine(
+      const std::shared_ptr<FuncStateMachine::FuncStateMachine>&
+          func_state_machine_msg) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     func_state_machine_msg_.CopyFrom(*func_state_machine_msg);
   }
 
-  void RegisterOutputWriter(const std::function<void(PlanningOutput::PlanningOutput)>& planning_writer) {
+  void RegisterOutputWriter(
+      const std::function<void(PlanningOutput::PlanningOutput)>&
+          planning_writer) {
     planning_writer_ = planning_writer;
   }
-  void RegisterDebugInfoWriter(const std::function<void(planning::common::PlanningDebugInfo)>& planning_debug_writer) {
+  void RegisterDebugInfoWriter(
+      const std::function<void(planning::common::PlanningDebugInfo)>&
+          planning_debug_writer) {
     planning_debug_writer_ = planning_debug_writer;
   }
   void RegisterHMIOutputInfoWriter(
-      const std::function<void(PlanningHMI::PlanningHMIOutputInfoStr)>& planning_hmi_info_writer) {
+      const std::function<void(PlanningHMI::PlanningHMIOutputInfoStr)>&
+          planning_hmi_info_writer) {
     planning_hmi_info_writer_ = planning_hmi_info_writer;
   }
 
@@ -132,9 +156,12 @@ class PlanningAdapter {
 
   FuncStateMachine::FuncStateMachine func_state_machine_msg_;
 
-  std::function<void(PlanningOutput::PlanningOutput)> planning_writer_ = nullptr;
-  std::function<void(planning::common::PlanningDebugInfo)> planning_debug_writer_ = nullptr;
-  std::function<void(PlanningHMI::PlanningHMIOutputInfoStr)> planning_hmi_info_writer_ = nullptr;
+  std::function<void(PlanningOutput::PlanningOutput)> planning_writer_ =
+      nullptr;
+  std::function<void(planning::common::PlanningDebugInfo)>
+      planning_debug_writer_ = nullptr;
+  std::function<void(PlanningHMI::PlanningHMIOutputInfoStr)>
+      planning_hmi_info_writer_ = nullptr;
 
   LocalView local_view_;
   std::unique_ptr<GeneralPlanning> planning_base_ = nullptr;

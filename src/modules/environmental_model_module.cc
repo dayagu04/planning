@@ -8,17 +8,23 @@
 namespace planning {
 namespace modules {
 
-EnvironmentalModelModule::EnvironmentalModelModule() : environmental_model_manager_() {
+EnvironmentalModelModule::EnvironmentalModelModule()
+    : environmental_model_manager_() {
   LOG_DEBUG("%s constructed\n", name().c_str());
 }
 
-EnvironmentalModelModule::~EnvironmentalModelModule() { LOG_DEBUG("%s destructed\n", name().c_str()); }
+EnvironmentalModelModule::~EnvironmentalModelModule() {
+  LOG_DEBUG("%s destructed\n", name().c_str());
+}
 
-planning::framework::BaseModule* EnvironmentalModelModule::clone() const { return nullptr; }
+planning::framework::BaseModule* EnvironmentalModelModule::clone() const {
+  return nullptr;
+}
 
-EgoPlanningConfigBuilder* EnvironmentalModelModule::load_config_builder(planning::framework::Session* session,
-                                                                        const char* file_name) {
-  auto config_file_dir = session->environmental_model().get_module_config_file_dir();
+EgoPlanningConfigBuilder* EnvironmentalModelModule::load_config_builder(
+    planning::framework::Session* session, const char* file_name) {
+  auto config_file_dir =
+      session->environmental_model().get_module_config_file_dir();
   auto ego_planning_config_json_file = config_file_dir + "/" + file_name;
   LOG_DEBUG("%s\n", ego_planning_config_json_file.c_str());
 
@@ -27,29 +33,39 @@ EgoPlanningConfigBuilder* EnvironmentalModelModule::load_config_builder(planning
   fin >> ego_planning_config_json;
   fin.close();
 
-  return session->alloc<EgoPlanningConfigBuilder>(ego_planning_config_json, file_name);
+  return session->alloc<EgoPlanningConfigBuilder>(ego_planning_config_json,
+                                                  file_name);
 }
 
-bool EnvironmentalModelModule::init(const ::google::protobuf::Message* config, planning::framework::Session* session) {
+bool EnvironmentalModelModule::init(const ::google::protobuf::Message* config,
+                                    planning::framework::Session* session) {
   LOG_DEBUG("%s init\n", name().c_str());
-  std::string config_file_dir = session->mutable_environmental_model()->get_module_config_file_dir();
+  std::string config_file_dir =
+      session->mutable_environmental_model()->get_module_config_file_dir();
   // planning::planner::ConfigurationContext::Instance()->load_vehicle_param();
   (void)planning::common::VehicleModel::LoadVehicleModelConfig(config_file_dir);
 
-  auto urban_config_builder = load_config_builder(session, "general_planner_module_urban.json");
-  session->mutable_environmental_model()->set_urban_config_builder(urban_config_builder);
+  auto urban_config_builder =
+      load_config_builder(session, "general_planner_module_urban.json");
+  session->mutable_environmental_model()->set_urban_config_builder(
+      urban_config_builder);
 
-  auto parking_config_builder = load_config_builder(session, "general_planner_module_parking.json");
-  session->mutable_environmental_model()->set_parking_config_builder(parking_config_builder);
+  auto parking_config_builder =
+      load_config_builder(session, "general_planner_module_parking.json");
+  session->mutable_environmental_model()->set_parking_config_builder(
+      parking_config_builder);
 
-  auto highway_config_builder = load_config_builder(session, "general_planner_module_highway.json");
-  session->mutable_environmental_model()->set_highway_config_builder(highway_config_builder);
+  auto highway_config_builder =
+      load_config_builder(session, "general_planner_module_highway.json");
+  session->mutable_environmental_model()->set_highway_config_builder(
+      highway_config_builder);
 
   environmental_model_manager_.Init(session);
   return true;
 }
 
-bool EnvironmentalModelModule::reset(const ::google::protobuf::Message* config) {
+bool EnvironmentalModelModule::reset(
+    const ::google::protobuf::Message* config) {
   environmental_model_manager_.InitContext();
   return true;
 }

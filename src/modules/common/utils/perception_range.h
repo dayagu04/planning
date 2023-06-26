@@ -13,10 +13,12 @@ namespace planning {
 class PerceptionRangeEstimator {
  public:
   // Update frenet coordinate transformer
-  virtual void updateFrenet(const std::shared_ptr<FrenetCoordinateSystem> &frenet) = 0;
+  virtual void updateFrenet(
+      const std::shared_ptr<FrenetCoordinateSystem> &frenet) = 0;
 
   // Feed ego state to estimator
-  // virtual void feedEgoState(const EgoStateManager &ego_state, const Transform &car2enu) = 0;
+  // virtual void feedEgoState(const EgoStateManager &ego_state, const Transform
+  // &car2enu) = 0;
 
   // Feed map info to estimator
 

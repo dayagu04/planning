@@ -48,7 +48,8 @@ bool SetProtoToASCIIFile(const MessageType &message, int file_descriptor) {
  * @return If the action is successful.
  */
 template <typename MessageType>
-bool SetProtoToASCIIFile(const MessageType &message, const std::string &file_name) {
+bool SetProtoToASCIIFile(const MessageType &message,
+                         const std::string &file_name) {
   int fd = open(file_name.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
   if (fd < 0) {
     // AERROR << "Unable to open file " << file_name << " to write.";
@@ -95,8 +96,10 @@ bool GetProtoFromASCIIFile(const std::string &file_name, MessageType *message) {
  * @return If the action is successful.
  */
 template <typename MessageType>
-bool SetProtoToBinaryFile(const MessageType &message, const std::string &file_name) {
-  std::fstream output(file_name, std::ios::out | std::ios::trunc | std::ios::binary);
+bool SetProtoToBinaryFile(const MessageType &message,
+                          const std::string &file_name) {
+  std::fstream output(file_name,
+                      std::ios::out | std::ios::trunc | std::ios::binary);
   return message.SerializeToOstream(&output);
 }
 
@@ -109,7 +112,8 @@ bool SetProtoToBinaryFile(const MessageType &message, const std::string &file_na
  * @return If the action is successful.
  */
 template <typename MessageType>
-bool GetProtoFromBinaryFile(const std::string &file_name, MessageType *message) {
+bool GetProtoFromBinaryFile(const std::string &file_name,
+                            MessageType *message) {
   std::fstream input(file_name, std::ios::in | std::ios::binary);
   if (!input.good()) {
     // AERROR << "Failed to open file " << file_name << " in binary mode.";
@@ -138,7 +142,8 @@ bool GetProtoFromFile(const std::string &file_name, MessageType *message) {
   //          GetProtoFromASCIIFile(file_name, message);
   // }
 
-  return GetProtoFromASCIIFile(file_name, message) || GetProtoFromBinaryFile(file_name, message);
+  return GetProtoFromASCIIFile(file_name, message) ||
+         GetProtoFromBinaryFile(file_name, message);
 }
 
 /**
@@ -162,7 +167,8 @@ std::string TranslatePath(const std::string &src_path);
  * @brief Get absolute path by concatenating prefix and relative_path.
  * @return The absolute path.
  */
-std::string GetAbsolutePath(const std::string &prefix, const std::string &relative_path);
+std::string GetAbsolutePath(const std::string &prefix,
+                            const std::string &relative_path);
 
 /**
  * @brief Check if the path exists.
@@ -226,11 +232,13 @@ bool RemoveAllFiles(const std::string &directory_path);
  * @param d_type Sub-path type, DT_DIR for directory, or DT_REG for file.
  * @return A vector of sub-paths, without the directory_path prefix.
  */
-std::vector<std::string> ListSubPaths(const std::string &directory_path, const unsigned char d_type = DT_DIR);
+std::vector<std::string> ListSubPaths(const std::string &directory_path,
+                                      const unsigned char d_type = DT_DIR);
 
 std::string GetFileName(const std::string &path);
 
-void GetFileNamesInFolderById(const std::string &folder, const std::string &ext, std::vector<std::string> *ret);
+void GetFileNamesInFolderById(const std::string &folder, const std::string &ext,
+                              std::vector<std::string> *ret);
 
 }  // namespace util
 }  // namespace common

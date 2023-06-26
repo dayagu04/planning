@@ -31,8 +31,9 @@ namespace planning {
 
 class LongitudinalMotionPlanner : public Task {
  public:
-  LongitudinalMotionPlanner(const EgoPlanningConfigBuilder *config_builder,
-                            const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+  LongitudinalMotionPlanner(
+      const EgoPlanningConfigBuilder *config_builder,
+      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
 
   void Init();
   bool Execute(planning::framework::Frame *frame);
@@ -48,7 +49,8 @@ class LongitudinalMotionPlanner : public Task {
   StartStopEnableConfig config_start_stop_;
 
   string name_;
-  std::shared_ptr<pnc::longitudinal_planning::LongitudinalMotionPlanningProblem> planning_problem_ptr_;
+  std::shared_ptr<pnc::longitudinal_planning::LongitudinalMotionPlanningProblem>
+      planning_problem_ptr_;
   planning::common::LongitudinalPlanningInput planning_input_;
 };
 

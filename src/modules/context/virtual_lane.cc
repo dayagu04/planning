@@ -34,14 +34,17 @@ void VirtualLane::update_data(const FusionRoad::Lane &lane) {
     }
   }
 
-  for (auto poly_coefficient : lane.lane_reference_line().poly_coefficient_car()) {
+  for (auto poly_coefficient :
+       lane.lane_reference_line().poly_coefficient_car()) {
     c_poly_.emplace_back(poly_coefficient);
   }
   assert(c_poly_.size() == 4);
 
   center_line_points_track_id_.clear();
-  for (auto &virtual_lane_refine_point : lane_reference_line_.virtual_lane_refline_points()) {
-    // center_line_points_track_id_.emplace_back(virtual_lane_refine_point.track_id()); // todo
+  for (auto &virtual_lane_refine_point :
+       lane_reference_line_.virtual_lane_refline_points()) {
+    // center_line_points_track_id_.emplace_back(virtual_lane_refine_point.track_id());
+    // // todo
   }
 }
 
@@ -59,8 +62,11 @@ bool VirtualLane::calc_c_poly(std::vector<double> &output) {  // 该函数先保
     for (size_t i = 0; i < left_lane_boundary_.poly_coefficient_size(); i++) {
       output.push_back((left_lane_boundary_.poly_coefficient(i)));
       if (i == 0) {
-        output[0] = left_lane_boundary_.poly_coefficient(0) -
-                    0.5 * width() * std::sqrt(1 + std::pow(left_lane_boundary_.poly_coefficient(1), 2));
+        output[0] =
+            left_lane_boundary_.poly_coefficient(0) -
+            0.5 * width() *
+                std::sqrt(1 +
+                          std::pow(left_lane_boundary_.poly_coefficient(1), 2));
       }
     }
   } else if (lane_status_ == RIGHT_AVAILABLE) {
@@ -71,14 +77,20 @@ bool VirtualLane::calc_c_poly(std::vector<double> &output) {  // 该函数先保
     for (size_t i = 0; i < right_lane_boundary_.poly_coefficient_size(); i++) {
       output.push_back((right_lane_boundary_.poly_coefficient(i)));
       if (i == 0) {
-        output[0] = right_lane_boundary_.poly_coefficient(0) +
-                    0.5 * width() * std::sqrt(1 + std::pow(right_lane_boundary_.poly_coefficient(1), 2));
+        output[0] =
+            right_lane_boundary_.poly_coefficient(0) +
+            0.5 * width() *
+                std::sqrt(
+                    1 + std::pow(right_lane_boundary_.poly_coefficient(1), 2));
       }
     }
   } else {
-    for (size_t i = 0;
-         i < left_lane_boundary_.poly_coefficient_size() && i < right_lane_boundary_.poly_coefficient_size(); i++) {
-      output.push_back((left_lane_boundary_.poly_coefficient(i) + right_lane_boundary_.poly_coefficient(i)) / 2.0);
+    for (size_t i = 0; i < left_lane_boundary_.poly_coefficient_size() &&
+                       i < right_lane_boundary_.poly_coefficient_size();
+         i++) {
+      output.push_back((left_lane_boundary_.poly_coefficient(i) +
+                        right_lane_boundary_.poly_coefficient(i)) /
+                       2.0);
     }
   }
 
@@ -89,20 +101,24 @@ bool VirtualLane::has_lines(LineDirection direction) const {
   assert(direction == LEFT || direction == RIGHT);
 
   if (direction == LEFT) {
-    return (lane_status_ == LaneStatusEx::BOTH_AVAILABLE || lane_status_ == LaneStatusEx::LEFT_AVAILABLE);
+    return (lane_status_ == LaneStatusEx::BOTH_AVAILABLE ||
+            lane_status_ == LaneStatusEx::LEFT_AVAILABLE);
   } else {
-    return (lane_status_ == LaneStatusEx::BOTH_AVAILABLE || lane_status_ == LaneStatusEx::RIGHT_AVAILABLE);
+    return (lane_status_ == LaneStatusEx::BOTH_AVAILABLE ||
+            lane_status_ == LaneStatusEx::RIGHT_AVAILABLE);
   }
 
   return false;
 }
 
-// double VirtualLane::distance_to_line(double s, double l, LineDirection direction) {
+// double VirtualLane::distance_to_line(double s, double l, LineDirection
+// direction) {
 //   assert(direction == LEFT || direction == RIGHT);
 
 //   Point2D frenet_point(s,l);
 //   Point2D cart_point;
-//   reference_path_->get_frenet_coord()->FrenetCoord2CartCoord(frenet_point, cart_point);
+//   reference_path_->get_frenet_coord()->FrenetCoord2CartCoord(frenet_point,
+//   cart_point);
 
 //   double distance_ref, distance_line, distance_line_ref;
 //   if (has_lines(direction)) {
@@ -135,16 +151,19 @@ bool VirtualLane::has_lines(LineDirection direction) const {
 //   }
 // }
 
-uint VirtualLane::get_common_point_num(const std::shared_ptr<VirtualLane> &other) {
+uint VirtualLane::get_common_point_num(
+    const std::shared_ptr<VirtualLane> &other) {
   if (other == nullptr) {
     return 0;
   }
 
-  const std::vector<std::string> &other_point_ids = other->center_line_points_track_id();
+  const std::vector<std::string> &other_point_ids =
+      other->center_line_points_track_id();
 
   uint common_point_num = 0;
   for (auto &p : other_point_ids) {  // todo
-    // if (center_line_points_track_id_.find(p) != center_line_points_track_id_.end()) {
+    // if (center_line_points_track_id_.find(p) !=
+    // center_line_points_track_id_.end()) {
     //   common_point_num++;
     // }
   }
@@ -156,19 +175,25 @@ double VirtualLane::width() { return width(0); }
 
 double VirtualLane::width(double x) {
   double width = 0;
-  auto virtual_lane_refline_points = lane_reference_line_.virtual_lane_refline_points();
+  auto virtual_lane_refline_points =
+      lane_reference_line_.virtual_lane_refline_points();
   if (virtual_lane_refline_points.size() < 1) {
   } else {
-    auto comp = [](const FusionRoad::VirtualLanePoint &p, const double x) { return p.car_point().x() < x; };
+    auto comp = [](const FusionRoad::VirtualLanePoint &p, const double x) {
+      return p.car_point().x() < x;
+    };
     auto p_first_point =
-        std::lower_bound(virtual_lane_refline_points.begin(), virtual_lane_refline_points.end(), x, comp);
+        std::lower_bound(virtual_lane_refline_points.begin(),
+                         virtual_lane_refline_points.end(), x, comp);
     if (p_first_point == virtual_lane_refline_points.begin()) {
       width = virtual_lane_refline_points.begin()->lane_width();
     } else if (p_first_point == virtual_lane_refline_points.end()) {
       width = std::prev(virtual_lane_refline_points.end())->lane_width();
     } else {
-      width = planning_math::lerp((p_first_point - 1)->lane_width(), (p_first_point - 1)->car_point().x(),
-                                  p_first_point->lane_width(), p_first_point->car_point().x(), x);
+      width = planning_math::lerp((p_first_point - 1)->lane_width(),
+                                  (p_first_point - 1)->car_point().x(),
+                                  p_first_point->lane_width(),
+                                  p_first_point->car_point().x(), x);
     }
   }
   return std::max(width, 2.8);
@@ -179,25 +204,32 @@ double VirtualLane::width_by_s(double s) {
     auto &reference_path_points = reference_path_->get_points();
     if (reference_path_points.size() < 1) {
     } else {
-      auto comp = [](const ReferencePathPoint &p, const double s) { return p.path_point.s < s; };
-      auto p_first_point = std::lower_bound(reference_path_points.begin(), reference_path_points.end(), s, comp);
+      auto comp = [](const ReferencePathPoint &p, const double s) {
+        return p.path_point.s < s;
+      };
+      auto p_first_point = std::lower_bound(
+          reference_path_points.begin(), reference_path_points.end(), s, comp);
       if (p_first_point == reference_path_points.begin()) {
         width = reference_path_points.begin()->lane_width;
       } else if (p_first_point == reference_path_points.end()) {
         width = reference_path_points.end()->lane_width;
       } else {
-        width = planning_math::lerp((p_first_point - 1)->lane_width, (p_first_point - 1)->path_point.s,
-                                    p_first_point->lane_width, p_first_point->path_point.s, s);
+        width = planning_math::lerp(
+            (p_first_point - 1)->lane_width, (p_first_point - 1)->path_point.s,
+            p_first_point->lane_width, p_first_point->path_point.s, s);
       }
     }
   }
   return std::max(width, 2.8);
 }
 
-bool VirtualLane::get_point_by_distance(double distance, FusionRoad::VirtualLanePoint *point) {
+bool VirtualLane::get_point_by_distance(double distance,
+                                        FusionRoad::VirtualLanePoint *point) {
   double min_distance_diff = std::numeric_limits<double>::max();
-  for (auto virtual_lane_refine_point : lane_reference_line_.virtual_lane_refline_points()) {
-    double distance_diff = fabs(distance - virtual_lane_refine_point.car_point().x());
+  for (auto virtual_lane_refine_point :
+       lane_reference_line_.virtual_lane_refline_points()) {
+    double distance_diff =
+        fabs(distance - virtual_lane_refine_point.car_point().x());
     if (distance_diff < min_distance_diff) {
       min_distance_diff = distance_diff;
       point->CopyFrom(virtual_lane_refine_point);
@@ -235,12 +267,14 @@ bool VirtualLane::is_solid_line(int side) const {
   assert(side == 0 || side == 1);
   if (side == 0) {
     if (left_lane_boundary_.segment_size() > 0 &&
-        left_lane_boundary_.segment(0).type() == Common::LaneBoundaryType::MARKING_SOLID) {
+        left_lane_boundary_.segment(0).type() ==
+            Common::LaneBoundaryType::MARKING_SOLID) {
       return true;
     }
   } else if (side == 1) {
     if (right_lane_boundary_.segment_size() > 0 &&
-        right_lane_boundary_.segment(0).type() == Common::LaneBoundaryType::MARKING_SOLID) {
+        right_lane_boundary_.segment(0).type() ==
+            Common::LaneBoundaryType::MARKING_SOLID) {
       return true;
     }
   }
@@ -267,7 +301,8 @@ double VirtualLane::min_width() {
   }
 }
 
-void VirtualLane::update_speed_limit(double ego_vel, double ego_v_cruise) {  // todo
+void VirtualLane::update_speed_limit(double ego_vel,
+                                     double ego_v_cruise) {  // todo
   // update vision only v_cruise_
   if (get_lane_source() == FusionRoad::LaneSource::SOURCE_FUSION) {
     v_cruise_ = ego_v_cruise;
@@ -281,7 +316,8 @@ void VirtualLane::update_speed_limit(double ego_vel, double ego_v_cruise) {  // 
     bool find_change = false;
     double acc_brake_min = 100.0;
     for (size_t i = 1; i < referece_path_points.size(); ++i) {
-      if (!find_last && referece_path_points[i].path_point.s > 0.0) {  // hack: frenet_point
+      if (!find_last &&
+          referece_path_points[i].path_point.s > 0.0) {  // hack: frenet_point
         find_last = true;
         last_speed = referece_path_points[i - 1].max_velocity;
         current_lane_speed_limit_ = last_speed;
@@ -289,7 +325,8 @@ void VirtualLane::update_speed_limit(double ego_vel, double ego_v_cruise) {  // 
       }
 
       if (find_last && referece_path_points[i].max_velocity != last_speed) {
-        double acc_brake = (std::pow(referece_path_points[i].max_velocity, 2) - std::pow(ego_vel, 2)) /
+        double acc_brake = (std::pow(referece_path_points[i].max_velocity, 2) -
+                            std::pow(ego_vel, 2)) /
                            std::max(1.0, referece_path_points[i].path_point.s);
         if (acc_brake < acc_brake_min) {
           acc_brake_min = acc_brake;

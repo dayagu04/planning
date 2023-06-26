@@ -14,13 +14,17 @@ class LateralMotionPlanningProblem {
  public:
   void Init();
   uint8_t Update(planning::common::LateralPlanningInput &planning_input);
-  const planning::common::LateralPlanningOutput &GetOutput() { return planning_output_; }
+  const planning::common::LateralPlanningOutput &GetOutput() {
+    return planning_output_;
+  }
   void Reset();
 
   void SetWarmStart(bool flag) { ilqr_core_ptr_->SetWarmStart(flag); }
   void SetMaxIter(size_t max_iter) { ilqr_core_ptr_->SetMaxIter(max_iter); }
 
-  const std::shared_ptr<ilqr_solver::iLqr> GetiLqrCorePtr() const { return ilqr_core_ptr_; }
+  const std::shared_ptr<ilqr_solver::iLqr> GetiLqrCorePtr() const {
+    return ilqr_core_ptr_;
+  }
 
  private:
   std::shared_ptr<ilqr_solver::iLqr> ilqr_core_ptr_;

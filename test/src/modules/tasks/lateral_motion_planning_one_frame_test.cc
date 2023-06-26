@@ -11,7 +11,7 @@ using namespace std;
 using namespace pnc::lateral_planning;
 
 class LateralMotionPlanningTest : public ::testing::Test {
-protected:
+ protected:
   void init() {
     // planning_input_.init_state.resize(STATE_SIZE);
     planning_input_.mutable_init_state()->set_x(0.0);
@@ -91,7 +91,7 @@ protected:
     // set weights: use default
   }
 
-public:
+ public:
   planning::common::LateralPlanningInput planning_input_;
   LateralMotionPlanningProblem lat_planning_;
 };

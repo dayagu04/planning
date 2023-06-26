@@ -26,7 +26,8 @@ class GeneralPlanner {
   ~GeneralPlanner() = default;
 
  private:
-  void SetPlanningResult(const PlanningResult &ego_prediction_result, common::PlanningResult &pnc_result);
+  void SetPlanningResult(const PlanningResult &ego_prediction_result,
+                         common::PlanningResult &pnc_result);
   void ClearPlanningResult(common::PlanningResult &pnc_result);
 
   void UpdateFixLaneVirtualId();

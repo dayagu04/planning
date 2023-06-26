@@ -14,8 +14,9 @@
 #include "planning_output_context.h"
 namespace planning {
 
-VisionLateralMotionPlanner::VisionLateralMotionPlanner(const EgoPlanningConfigBuilder *config_builder,
-                                                       const std::shared_ptr<TaskPipelineContext> &pipeline_context)
+VisionLateralMotionPlanner::VisionLateralMotionPlanner(
+    const EgoPlanningConfigBuilder *config_builder,
+    const std::shared_ptr<TaskPipelineContext> &pipeline_context)
     : Task(config_builder, pipeline_context) {
   config_ = config_builder->cast<VisionLateralMotionPlannerConfig>();
   name_ = "VisionLateralMotionPlanner";
@@ -41,7 +42,8 @@ bool VisionLateralMotionPlanner::Execute(planning::framework::Frame *frame) {
   bool b_success = false;
 
   // obtain the session information
-  const auto &state_machine_output = planning_context.lat_behavior_state_machine_output();
+  const auto &state_machine_output =
+      planning_context.lat_behavior_state_machine_output();
   const auto &lat_behavior_info = planning_context.lat_behavior_info();
   const auto &status = state_machine_output.curr_state;
   const auto &accident_ahead = state_machine_output.accident_ahead;
@@ -53,19 +55,24 @@ bool VisionLateralMotionPlanner::Execute(planning::framework::Frame *frame) {
   const auto &dist_rblane = lat_behavior_info.dist_rblane;
 
   // init info
-  flane_ = frame_->session()->environmental_model().get_virtual_lane_manager()->get_lane_with_virtual_id(
-      coarse_planning_info.target_lane_id);
+  flane_ = frame_->session()
+               ->environmental_model()
+               .get_virtual_lane_manager()
+               ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
 
   ego_frenet_state_ = reference_path_ptr_->get_frenet_ego_state();
-  ego_cart_state_manager_ = frame_->session()->environmental_model().get_ego_state_manager();
+  ego_cart_state_manager_ =
+      frame_->session()->environmental_model().get_ego_state_manager();
 
-  virtual_lane_manager_ = frame_->session()->environmental_model().get_virtual_lane_manager();
+  virtual_lane_manager_ =
+      frame_->session()->environmental_model().get_virtual_lane_manager();
 
   set_left_lane_boundary_poly();   // hack left_lane_boundary_poly
   set_right_lane_boundary_poly();  // hack right_lane_boundary_poly
 
-  b_success = update(status, flag_avd, accident_ahead, should_premove, should_suspend, dist_rblane, avd_car_past,
-                     avd_sp_car_past);
+  b_success =
+      update(status, flag_avd, accident_ahead, should_premove, should_suspend,
+             dist_rblane, avd_car_past, avd_sp_car_past);
 
   if (!b_success) {
     // TBD : add logs
@@ -80,15 +87,17 @@ bool VisionLateralMotionPlanner::Execute(planning::framework::Frame *frame) {
   return b_success;
 }
 
-bool VisionLateralMotionPlanner::update(int status, bool flag_avd, bool accident_ahead, bool should_premove,
-                                        bool should_suspend, double dist_rblane,
-                                        const std::array<std::vector<double>, 2> &avd_car_past,
-                                        const std::array<std::vector<double>, 2> &avd_sp_car_past) {
+bool VisionLateralMotionPlanner::update(
+    int status, bool flag_avd, bool accident_ahead, bool should_premove,
+    bool should_suspend, double dist_rblane,
+    const std::array<std::vector<double>, 2> &avd_car_past,
+    const std::array<std::vector<double>, 2> &avd_sp_car_past) {
   std::reverse_copy(flane_->c_poly().begin(), flane_->c_poly().end(),
                     c_poly_.begin());  // c_poly should
 
   if (flane_->status() == LaneStatusEx::BOTH_MISSING) {
-    std::reverse_copy(flane_->c_poly().begin(), flane_->c_poly().end(), d_poly_.begin());
+    std::reverse_copy(flane_->c_poly().begin(), flane_->c_poly().end(),
+                      d_poly_.begin());
   }
 
   l_poly_.fill(0);
@@ -103,18 +112,24 @@ bool VisionLateralMotionPlanner::update(int status, bool flag_avd, bool accident
   for (auto value : d_poly_) {
     lat_motion_plan->add_basic_dpoly(value);
   }
-  if (status == ROAD_LC_LWAIT || status == ROAD_LC_RWAIT || status == ROAD_LC_LBACK || status == ROAD_LC_RBACK ||
-      status == INTER_GS_LC_LWAIT || status == INTER_GS_LC_RWAIT || status == INTER_TR_LC_LWAIT ||
-      status == INTER_TR_LC_RWAIT || status == INTER_TL_LC_LWAIT || status == INTER_TL_LC_RWAIT) {
-    update_premove_path(status, should_premove, should_suspend, accident_ahead, avd_car_past);
+  if (status == ROAD_LC_LWAIT || status == ROAD_LC_RWAIT ||
+      status == ROAD_LC_LBACK || status == ROAD_LC_RBACK ||
+      status == INTER_GS_LC_LWAIT || status == INTER_GS_LC_RWAIT ||
+      status == INTER_TR_LC_LWAIT || status == INTER_TR_LC_RWAIT ||
+      status == INTER_TL_LC_LWAIT || status == INTER_TL_LC_RWAIT) {
+    update_premove_path(status, should_premove, should_suspend, accident_ahead,
+                        avd_car_past);
   } else {
     premoving_ = false;
   }
   lat_motion_plan->set_premove_dpoly_c0(d_poly_[3]);
-  if ((status >= ROAD_NONE && status <= INTER_GS_NONE) || status == INTER_TR_NONE || status == INTER_TL_NONE ||
-      status == INTER_GS_LC_LCHANGE || status == INTER_GS_LC_RCHANGE || status == INTER_TR_LC_LCHANGE ||
-      status == INTER_TR_LC_RCHANGE || status == INTER_TL_LC_LCHANGE || status == INTER_TL_LC_RCHANGE) {
-    update_avoidance_path(status, flag_avd, accident_ahead, should_premove, dist_rblane, avd_car_past, avd_sp_car_past);
+  if ((status >= ROAD_NONE && status <= INTER_GS_NONE) ||
+      status == INTER_TR_NONE || status == INTER_TL_NONE ||
+      status == INTER_GS_LC_LCHANGE || status == INTER_GS_LC_RCHANGE ||
+      status == INTER_TR_LC_LCHANGE || status == INTER_TR_LC_RCHANGE ||
+      status == INTER_TL_LC_LCHANGE || status == INTER_TL_LC_RCHANGE) {
+    update_avoidance_path(status, flag_avd, accident_ahead, should_premove,
+                          dist_rblane, avd_car_past, avd_sp_car_past);
   } else {
     lat_offset_ = 0;
   }
@@ -150,13 +165,15 @@ bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
       l_prob = 1;
       r_prob = 0;
 
-      std::reverse_copy(left_lane_boundary_poly().begin(), left_lane_boundary_poly().end(), l_poly_.begin());
+      std::reverse_copy(left_lane_boundary_poly().begin(),
+                        left_lane_boundary_poly().end(), l_poly_.begin());
       r_poly_.fill(0.0);
 
       lane_width = clip(lane_width, max_width, min_width);
       intercept_width = lane_width * std::sqrt(1 + l_poly_[2] * l_poly_[2]);
 
-      calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width, d_poly_);
+      calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width,
+                        d_poly_);
     }
   } else if (lane_status == RIGHT_AVAILABLE) {
     if (lane_width > min_width && lane_width < max_width) {
@@ -168,13 +185,15 @@ bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
       r_prob = 1;
 
       l_poly_.fill(0.0);
-      std::reverse_copy(right_lane_boundary_poly().begin(), right_lane_boundary_poly().end(), r_poly_.begin());
+      std::reverse_copy(right_lane_boundary_poly().begin(),
+                        right_lane_boundary_poly().end(), r_poly_.begin());
 
       l_poly_.begin();
       lane_width = clip(lane_width, max_width, min_width);
       intercept_width = lane_width * std::sqrt(1 + r_poly_[2] * r_poly_[2]);
 
-      calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width, d_poly_);
+      calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width,
+                        d_poly_);
     }
   } else {
     l_prob = 1;
@@ -194,29 +213,34 @@ bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
     double gap_distance = 1.0;
 
     if (lane_width > max_width) {
-      if (std::fabs(r_intercept) < std::fabs(l_intercept) - gap_distance && status != ROAD_LC_LWAIT &&
-          status != ROAD_LC_LBACK) {
+      if (std::fabs(r_intercept) < std::fabs(l_intercept) - gap_distance &&
+          status != ROAD_LC_LWAIT && status != ROAD_LC_LBACK) {
         l_reject = true;
         reject_reason_ = WIDE_REJECTION_L;
-      } else if (std::fabs(r_intercept) >= std::fabs(l_intercept) - gap_distance && status != ROAD_LC_RWAIT &&
-                 status != ROAD_LC_RBACK) {
+      } else if (std::fabs(r_intercept) >=
+                     std::fabs(l_intercept) - gap_distance &&
+                 status != ROAD_LC_RWAIT && status != ROAD_LC_RBACK) {
         r_reject = true;
         reject_reason_ = WIDE_REJECTION_R;
       }
     }
 
-    if ((!l_reject && !r_reject) || reject_reason_ == BIAS_L || reject_reason_ == BIAS_R) {
+    if ((!l_reject && !r_reject) || reject_reason_ == BIAS_L ||
+        reject_reason_ == BIAS_R) {
       if (lane_width < min_width) {
         if (frame_->session()->environmental_model().is_on_highway()) {
           double FRONT_DISTANCE_CHECK = 30.0;
           double REAR_DISTANCE_CHECK = -15.0;
           double MIN_WIDTH = 2.2;
 
-          double front_lane_witdh =
-              calc_lane_width_by_dist(left_lane_boundary_poly(), right_lane_boundary_poly(), FRONT_DISTANCE_CHECK);
-          double rear_lane_witdh =
-              calc_lane_width_by_dist(left_lane_boundary_poly(), right_lane_boundary_poly(), REAR_DISTANCE_CHECK);
-          if (lane_width > MIN_WIDTH && front_lane_witdh > MIN_WIDTH && rear_lane_witdh > MIN_WIDTH) {
+          double front_lane_witdh = calc_lane_width_by_dist(
+              left_lane_boundary_poly(), right_lane_boundary_poly(),
+              FRONT_DISTANCE_CHECK);
+          double rear_lane_witdh = calc_lane_width_by_dist(
+              left_lane_boundary_poly(), right_lane_boundary_poly(),
+              REAR_DISTANCE_CHECK);
+          if (lane_width > MIN_WIDTH && front_lane_witdh > MIN_WIDTH &&
+              rear_lane_witdh > MIN_WIDTH) {
           } else {
             if (status == ROAD_LC_LCHANGE) {
               l_reject = true;
@@ -246,8 +270,10 @@ bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
       }
     }
 
-    if (lane_width > min_width && lane_width < max_width && !l_reject && !r_reject) {
-      std::reverse_copy(flane_->c_poly().begin(), flane_->c_poly().end(), d_poly_.begin());
+    if (lane_width > min_width && lane_width < max_width && !l_reject &&
+        !r_reject) {
+      std::reverse_copy(flane_->c_poly().begin(), flane_->c_poly().end(),
+                        d_poly_.begin());
     } else {
       lane_width = clip(lane_width, max_width, min_width);
 
@@ -256,33 +282,42 @@ bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
         r_prob = 1;
 
         l_poly_.fill(0.0);
-        std::reverse_copy(right_lane_boundary_poly().begin(), right_lane_boundary_poly().end(), r_poly_.begin());
+        std::reverse_copy(right_lane_boundary_poly().begin(),
+                          right_lane_boundary_poly().end(), r_poly_.begin());
 
         intercept_width = lane_width * std::sqrt(1 + r_poly_[2] * r_poly_[2]);
 
-        calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width, d_poly_);
+        calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width,
+                          d_poly_);
       } else if (r_reject) {
         l_prob = 1;
         r_prob = 0;
 
-        std::reverse_copy(left_lane_boundary_poly().begin(), left_lane_boundary_poly().end(), l_poly_.begin());
+        std::reverse_copy(left_lane_boundary_poly().begin(),
+                          left_lane_boundary_poly().end(), l_poly_.begin());
 
         r_poly_.fill(0.0);
 
         intercept_width = lane_width * std::sqrt(1 + l_poly_[2] * l_poly_[2]);
 
-        calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width, d_poly_);
+        calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width,
+                          d_poly_);
       } else {
         l_prob = 1;
         r_prob = 1;
 
-        std::reverse_copy(left_lane_boundary_poly().begin(), left_lane_boundary_poly().end(), l_poly_.begin());
+        std::reverse_copy(left_lane_boundary_poly().begin(),
+                          left_lane_boundary_poly().end(), l_poly_.begin());
 
-        std::reverse_copy(right_lane_boundary_poly().begin(), right_lane_boundary_poly().end(), r_poly_.begin());
+        std::reverse_copy(right_lane_boundary_poly().begin(),
+                          right_lane_boundary_poly().end(), r_poly_.begin());
 
-        intercept_width = lane_width * std::sqrt(1 + std::pow(l_poly_[2] + r_poly_[2], 2) / 4);
+        intercept_width =
+            lane_width *
+            std::sqrt(1 + std::pow(l_poly_[2] + r_poly_[2], 2) / 4);
 
-        calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width, d_poly_);
+        calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width,
+                          d_poly_);
       }
       l_reject_ = l_reject;
       r_reject_ = r_reject;
@@ -292,9 +327,9 @@ bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
   return true;
 }
 
-void VisionLateralMotionPlanner::update_premove_path(int status, bool should_premove, bool should_suspend,
-                                                     bool accident_ahead,
-                                                     const std::array<std::vector<double>, 2> &avd_car_past) {
+void VisionLateralMotionPlanner::update_premove_path(
+    int status, bool should_premove, bool should_suspend, bool accident_ahead,
+    const std::array<std::vector<double>, 2> &avd_car_past) {
   if (flane_->status() == BOTH_MISSING) {
     return;
   }
@@ -308,14 +343,17 @@ void VisionLateralMotionPlanner::update_premove_path(int status, bool should_pre
   l_poly_.fill(0);
   r_poly_.fill(0);
 
-  std::reverse_copy(left_lane_boundary_poly().begin(), left_lane_boundary_poly().end(), l_poly_.begin());
+  std::reverse_copy(left_lane_boundary_poly().begin(),
+                    left_lane_boundary_poly().end(), l_poly_.begin());
 
-  std::reverse_copy(right_lane_boundary_poly().begin(), right_lane_boundary_poly().end(), r_poly_.begin());
+  std::reverse_copy(right_lane_boundary_poly().begin(),
+                    right_lane_boundary_poly().end(), r_poly_.begin());
 
   std::array<double, 3> xp1{10, 20, 30};
   std::array<double, 3> fp1{0.15, 0.3, 0.45};
 
-  double norminal_move = 0.5 * (lane_width - car_width) - interp(v_ego, xp1, fp1);
+  double norminal_move =
+      0.5 * (lane_width - car_width) - interp(v_ego, xp1, fp1);
 
   std::array<double, 2> xp2{0.5 * lane_width, 0.5 * (lane_width + car_width)};
   std::array<double, 2> fp2{0, norminal_move};
@@ -323,14 +361,17 @@ void VisionLateralMotionPlanner::update_premove_path(int status, bool should_pre
   double temp_ego = std::min(10.0 / std::max(v_ego, 0.1), 1.0);
   double temp_poly = std::sqrt(1 + std::pow(l_poly_[2] + r_poly_[2], 2) / 4);
 
-  if ((status == ROAD_LC_LWAIT && (should_premove || accident_ahead)) || status == ROAD_LC_LBACK ||
-      status == INTER_GS_LC_LWAIT || status == INTER_TR_LC_LWAIT || status == INTER_TL_LC_LWAIT) {
+  if ((status == ROAD_LC_LWAIT && (should_premove || accident_ahead)) ||
+      status == ROAD_LC_LBACK || status == INTER_GS_LC_LWAIT ||
+      status == INTER_TR_LC_LWAIT || status == INTER_TL_LC_LWAIT) {
     premoving_ = true;
 
-    if (avd_car_past[0].size() > 0 && avd_car_past[0][5] > 0 && avd_car_past[0][5] < lane_width) {
+    if (avd_car_past[0].size() > 0 && avd_car_past[0][5] > 0 &&
+        avd_car_past[0][5] < lane_width) {
       lat_offset_ = interp(avd_car_past[0][5], xp2, fp2) * temp_ego * temp_poly;
       d_poly_[3] = c_poly_[3] + lat_offset_;
-    } else if (avd_car_past[1].size() > 0 && avd_car_past[1][5] > 0 && avd_car_past[1][5] < lane_width) {
+    } else if (avd_car_past[1].size() > 0 && avd_car_past[1][5] > 0 &&
+               avd_car_past[1][5] < lane_width) {
       lat_offset_ = interp(avd_car_past[1][5], xp2, fp2) * temp_ego * temp_poly;
       d_poly_[3] = c_poly_[3] + lat_offset_;
 
@@ -343,15 +384,20 @@ void VisionLateralMotionPlanner::update_premove_path(int status, bool should_pre
 
       d_poly_[3] += lat_offset_;
     }
-  } else if ((status == ROAD_LC_RWAIT && (should_premove || accident_ahead)) || status == ROAD_LC_RBACK ||
-             status == INTER_GS_LC_RWAIT || status == INTER_TR_LC_RWAIT || status == INTER_TL_LC_RWAIT) {
+  } else if ((status == ROAD_LC_RWAIT && (should_premove || accident_ahead)) ||
+             status == ROAD_LC_RBACK || status == INTER_GS_LC_RWAIT ||
+             status == INTER_TR_LC_RWAIT || status == INTER_TL_LC_RWAIT) {
     premoving_ = true;
 
-    if (avd_car_past[0].size() > 0 && avd_car_past[0][6] < 0 && avd_car_past[0][6] > -lane_width) {
-      lat_offset_ = -interp(avd_car_past[0][6], xp2, fp2) * temp_ego * temp_poly;
+    if (avd_car_past[0].size() > 0 && avd_car_past[0][6] < 0 &&
+        avd_car_past[0][6] > -lane_width) {
+      lat_offset_ =
+          -interp(avd_car_past[0][6], xp2, fp2) * temp_ego * temp_poly;
       d_poly_[3] = c_poly_[3] + lat_offset_;
-    } else if (avd_car_past[1].size() > 0 && avd_car_past[1][6] < 0 && avd_car_past[1][6] > -lane_width_) {
-      lat_offset_ = -interp(avd_car_past[1][6], xp2, fp2) * temp_ego * temp_poly;
+    } else if (avd_car_past[1].size() > 0 && avd_car_past[1][6] < 0 &&
+               avd_car_past[1][6] > -lane_width_) {
+      lat_offset_ =
+          -interp(avd_car_past[1][6], xp2, fp2) * temp_ego * temp_poly;
       d_poly_[3] = c_poly_[3] + lat_offset_;
     } else {
       lat_offset_ = -norminal_move * temp_poly;
@@ -368,10 +414,10 @@ void VisionLateralMotionPlanner::update_premove_path(int status, bool should_pre
   LOG_NOTICE("WR: premoving_[%d]", premoving_);
 }
 
-bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd, bool accident_ahead,
-                                                       bool should_premove, double dist_rblane,
-                                                       const std::array<std::vector<double>, 2> &avd_car_past,
-                                                       const std::array<std::vector<double>, 2> &avd_sp_car_past) {
+bool VisionLateralMotionPlanner::update_avoidance_path(
+    int status, bool flag_avd, bool accident_ahead, bool should_premove,
+    double dist_rblane, const std::array<std::vector<double>, 2> &avd_car_past,
+    const std::array<std::vector<double>, 2> &avd_sp_car_past) {
   const auto &v_cruise = ego_cart_state_manager_->ego_v_cruise();
   double lane_width = flane_->width();
   const auto &min_width = flane_->min_width();
@@ -390,14 +436,18 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
   l_poly_.fill(0);
   r_poly_.fill(0);
   if (flane_->status() != LaneStatusEx::BOTH_MISSING) {
-    std::reverse_copy(left_lane_boundary_poly().begin(), left_lane_boundary_poly().end(), l_poly_.begin());
-    std::reverse_copy(right_lane_boundary_poly().begin(), right_lane_boundary_poly().end(), r_poly_.begin());
+    std::reverse_copy(left_lane_boundary_poly().begin(),
+                      left_lane_boundary_poly().end(), l_poly_.begin());
+    std::reverse_copy(right_lane_boundary_poly().begin(),
+                      right_lane_boundary_poly().end(), r_poly_.begin());
   }
 
-  std::array<double, 3> near_car_vrel_v{0.06 * lane_width, 0.02 * lane_width, 0};
+  std::array<double, 3> near_car_vrel_v{0.06 * lane_width, 0.02 * lane_width,
+                                        0};
   std::array<double, 3> near_car_vrel_bp{-7.5, -3.5, 1};
 
-  std::array<double, 3> near_car_drel_v{0.08 * lane_width, 0.05 * lane_width, 0};
+  std::array<double, 3> near_car_drel_v{0.08 * lane_width, 0.05 * lane_width,
+                                        0};
   std::array<double, 3> near_car_drel_bp{0, 20, 60};
 
   std::array<double, 3> t_gap_vego_v{1.35, 1.55, 2.0};
@@ -410,7 +460,8 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
   double lat_offsetl = 0;
   double lat_offsetr = 0;
 
-  int two_nudge_car = -1000;  // 这个为啥是int 类型？应该和desired_poly_[3]类型一致？
+  int two_nudge_car =
+      -1000;  // 这个为啥是int 类型？应该和desired_poly_[3]类型一致？
   int one_nudge_left_car = -1000;
   int one_nudge_right_car = -1000;
 
@@ -437,19 +488,31 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
   force_pause_ = false;
   avd_car_past_ = avd_car_past;
   avd_sp_car_past_ = avd_sp_car_past;
-  if (status == ScenarioStateEnum::ROAD_NONE || status == ScenarioStateEnum::ROAD_LC_LCHANGE ||
-      status == ScenarioStateEnum::ROAD_LC_RCHANGE || status == ScenarioStateEnum::ROAD_LC_LWAIT ||
-      status == ScenarioStateEnum::ROAD_LC_RWAIT || status == ScenarioStateEnum::ROAD_LC_LBACK ||
-      status == ScenarioStateEnum::ROAD_LC_RBACK || status == ScenarioStateEnum::ROAD_LB_LBACK ||
-      status == ScenarioStateEnum::ROAD_LB_RBACK || status == ScenarioStateEnum::ROAD_LB_LRETURN ||
-      status == ScenarioStateEnum::ROAD_LB_RRETURN || status == ScenarioStateEnum::INTER_GS_NONE ||
-      status == ScenarioStateEnum::INTER_TR_NONE || status == ScenarioStateEnum::INTER_TL_NONE ||
-      status == ScenarioStateEnum::INTER_GS_LC_LCHANGE || status == ScenarioStateEnum::INTER_GS_LC_RCHANGE ||
-      status == ScenarioStateEnum::INTER_TR_LC_LCHANGE || status == ScenarioStateEnum::INTER_TR_LC_RCHANGE ||
-      status == ScenarioStateEnum::INTER_TL_LC_LCHANGE || status == ScenarioStateEnum::INTER_TL_LC_RCHANGE) {
+  if (status == ScenarioStateEnum::ROAD_NONE ||
+      status == ScenarioStateEnum::ROAD_LC_LCHANGE ||
+      status == ScenarioStateEnum::ROAD_LC_RCHANGE ||
+      status == ScenarioStateEnum::ROAD_LC_LWAIT ||
+      status == ScenarioStateEnum::ROAD_LC_RWAIT ||
+      status == ScenarioStateEnum::ROAD_LC_LBACK ||
+      status == ScenarioStateEnum::ROAD_LC_RBACK ||
+      status == ScenarioStateEnum::ROAD_LB_LBACK ||
+      status == ScenarioStateEnum::ROAD_LB_RBACK ||
+      status == ScenarioStateEnum::ROAD_LB_LRETURN ||
+      status == ScenarioStateEnum::ROAD_LB_RRETURN ||
+      status == ScenarioStateEnum::INTER_GS_NONE ||
+      status == ScenarioStateEnum::INTER_TR_NONE ||
+      status == ScenarioStateEnum::INTER_TL_NONE ||
+      status == ScenarioStateEnum::INTER_GS_LC_LCHANGE ||
+      status == ScenarioStateEnum::INTER_GS_LC_RCHANGE ||
+      status == ScenarioStateEnum::INTER_TR_LC_LCHANGE ||
+      status == ScenarioStateEnum::INTER_TR_LC_RCHANGE ||
+      status == ScenarioStateEnum::INTER_TL_LC_LCHANGE ||
+      status == ScenarioStateEnum::INTER_TL_LC_RCHANGE) {
     if (avd_car_past[0].size() > 0) {
-      double plus1 = interp(avd_car_past[0][2], near_car_vrel_bp, near_car_vrel_v);
-      double plus1_rel = interp(avd_car_past[0][3], near_car_drel_bp, near_car_drel_v);
+      double plus1 =
+          interp(avd_car_past[0][2], near_car_vrel_bp, near_car_vrel_v);
+      double plus1_rel =
+          interp(avd_car_past[0][3], near_car_drel_bp, near_car_drel_v);
       double lat_compen1 = 0.5 * plus1 + 0.5 * plus1_rel;
 
       if (avd_car_past[1].size() > 0) {
@@ -471,25 +534,33 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
           t_avd_car1 = (v_ego < 1) ? 5. : 0.;
         }
 
-        double plus2 = interp(avd_car_past[1][2], near_car_vrel_bp, near_car_vrel_v);
-        double plus2_rel = interp(avd_car_past[1][3], near_car_drel_bp, near_car_drel_v);
+        double plus2 =
+            interp(avd_car_past[1][2], near_car_vrel_bp, near_car_vrel_v);
+        double plus2_rel =
+            interp(avd_car_past[1][3], near_car_drel_bp, near_car_drel_v);
         double lat_compen2 = 0.5 * plus2 + 0.5 * plus2_rel;
 
         if (t_avd_car1 > 0) {
           diff_dist_nudge_car += diff_vel_nudge_car * t_avd_car1;
           if (avd_car_past[0][5] > 0 && avd_car_past[1][5] < 0) {
-            if (diff_dist_nudge_car < desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego &&
+            if (diff_dist_nudge_car <
+                    desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego &&
                 avd_car_past[0][5] - avd_car_past[1][6] > 2.8) {
-              lat_offset = avd_car_past[0][5] - (avd_car_past[0][5] - avd_car_past[1][6]) / 2;
+              lat_offset = avd_car_past[0][5] -
+                           (avd_car_past[0][5] - avd_car_past[1][6]) / 2;
 
               if (lat_compen1 > lat_compen2) {
-                if (lat_offset - (lat_compen1 - lat_compen2) - avd_car_past[1][6] >= 1.4) {
+                if (lat_offset - (lat_compen1 - lat_compen2) -
+                        avd_car_past[1][6] >=
+                    1.4) {
                   lat_offset -= lat_compen1 - lat_compen2;
                 } else {
                   lat_offset -= 0.1;
                 }
               } else if (lat_compen1 < lat_compen2) {
-                if (avd_car_past[0][5] - (lat_offset - (lat_compen1 - lat_compen2)) >= 1.4) {
+                if (avd_car_past[0][5] -
+                        (lat_offset - (lat_compen1 - lat_compen2)) >=
+                    1.4) {
                   lat_offset -= lat_compen1 - lat_compen2;
                 } else {
                   lat_offset += 0.1;
@@ -498,61 +569,93 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
 
               if (lat_offset >= 0) {
                 if (avd_normal_thr > 0) {
-                  lat_offset = std::min(lat_offset, std::min(avd_normal_thr, avd_car_past[0][9]));
+                  lat_offset = std::min(
+                      lat_offset, std::min(avd_normal_thr, avd_car_past[0][9]));
                 } else {
-                  lat_offset = std::min(lat_offset, std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
+                  lat_offset = std::min(
+                      lat_offset,
+                      std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
                 }
               } else {
                 if (avd_normal_thr > 0) {
-                  lat_offset = -std::min(std::fabs(lat_offset), std::min(avd_normal_thr, avd_car_past[0][9]));
+                  lat_offset =
+                      -std::min(std::fabs(lat_offset),
+                                std::min(avd_normal_thr, avd_car_past[0][9]));
                 } else {
-                  lat_offset = -std::min(std::fabs(lat_offset), std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
+                  lat_offset = -std::min(
+                      std::fabs(lat_offset),
+                      std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
                 }
               }
 
               curr_time_ = IflyTime::Now_s();
             } else if (avd_car_past[1][6] < -1.5 &&
-                       diff_dist_nudge_car >= desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
+                       diff_dist_nudge_car >=
+                           desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
               if (IflyTime::Now_s() - curr_time_ > 2) {
-                lat_offset = 0.5 * (lane_width - car_width / 2 - std::fabs(avd_car_past[0][5])) + lat_compen1;
+                lat_offset = 0.5 * (lane_width - car_width / 2 -
+                                    std::fabs(avd_car_past[0][5])) +
+                             lat_compen1;
 
                 lat_offset = std::max(lat_offset, 0.0);
 
                 if (avd_normal_thr > 0) {
-                  lat_offset = -std::min(lat_offset, std::min(avd_normal_thr, avd_car_past[0][9]));
+                  lat_offset = -std::min(
+                      lat_offset, std::min(avd_normal_thr, avd_car_past[0][9]));
                 } else {
-                  lat_offset = -std::min(lat_offset, std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
+                  lat_offset = -std::min(
+                      lat_offset,
+                      std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
                 }
               } else {
                 lat_offset = -d_poly_[3];
               }
             } else {  // add some comments
-              if (avd_car_past[0][2] <= avd_car_past[1][2] || avd_car_past[0][2] - avd_car_past[1][2] < 2) {
+              if (avd_car_past[0][2] <= avd_car_past[1][2] ||
+                  avd_car_past[0][2] - avd_car_past[1][2] < 2) {
                 if (avd_car_past[0][5] != 100) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 - std::fabs(avd_car_past[0][5])) + lat_compen1;
+                  lat_offset = 0.9 * (lane_width - car_width / 2 -
+                                      std::fabs(avd_car_past[0][5])) +
+                               lat_compen1;
                 }
 
                 lat_offset = std::max(lat_offset, 0.0);
-                lat_offset = -std::min(lat_offset, std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
+                lat_offset = -std::min(
+                    lat_offset,
+                    std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
 
                 if (avd_car_past[1][6] >= 0 && avd_car_past[1][6] != 100 &&
-                    (avd_car_past[1][2] + v_ego < 1.5 || avd_car_past[0][3] < 0) && avd_car_past[0][4] > -0.5 &&
-                    avd_car_past_[0][4] < 0.3 && avd_car_past[0][1] == 0) {
-                  lat_offset = avd_car_past[1][5] - (avd_car_past[1][5] + 1.8 + avd_car_past[0][9]) / 2;
+                    (avd_car_past[1][2] + v_ego < 1.5 ||
+                     avd_car_past[0][3] < 0) &&
+                    avd_car_past[0][4] > -0.5 && avd_car_past_[0][4] < 0.3 &&
+                    avd_car_past[0][1] == 0) {
+                  lat_offset =
+                      avd_car_past[1][5] -
+                      (avd_car_past[1][5] + 1.8 + avd_car_past[0][9]) / 2;
                   if (((virtual_lane_manager_->current_lane_virtual_id() ==
                         virtual_lane_manager_->get_lane_num() - 1) ||
-                       (virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 2 &&
+                       (virtual_lane_manager_->current_lane_virtual_id() ==
+                            virtual_lane_manager_->get_lane_num() - 2 &&
                         virtual_lane_manager_->get_right_lane() != nullptr &&
-                        virtual_lane_manager_->get_right_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR)) &&
-                      !frame_->session()->environmental_model().is_on_highway() &&
-                      ((avd_car_past[0][3] < 15 && v_ego < 5) || (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
+                        virtual_lane_manager_->get_right_lane()
+                                ->get_lane_type() ==
+                            MSD_LANE_TYPE_NON_MOTOR)) &&
+                      !frame_->session()
+                           ->environmental_model()
+                           .is_on_highway() &&
+                      ((avd_car_past[0][3] < 15 && v_ego < 5) ||
+                       (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
                        avd_car_past[0][3] < 1)) {
                     if (-lat_offset - avd_car_past[0][9] > 0.4) {
-                      lat_offset = std::max(std::max(lat_offset, -0.15 * lane_width - dist_rblane),
-                                            std::max(-avd_car_past[0][9], -2.0 + avd_car_past[0][5]));
-                    } else {
                       lat_offset =
-                          std::max(lat_offset, std::max(-0.15 * lane_width - dist_rblane, -2.0 + avd_car_past[0][5]));
+                          std::max(std::max(lat_offset,
+                                            -0.15 * lane_width - dist_rblane),
+                                   std::max(-avd_car_past[0][9],
+                                            -2.0 + avd_car_past[0][5]));
+                    } else {
+                      lat_offset = std::max(
+                          lat_offset, std::max(-0.15 * lane_width - dist_rblane,
+                                               -2.0 + avd_car_past[0][5]));
                     }
 
                     if (lat_offset == -avd_car_past[0][9]) {
@@ -562,44 +665,65 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                     if (dist_rblane > 1.0) {
                       sb_blane_ = true;
                     }
-                    if (std::pow(avd_car_past[0][2] - 1.0, 2) / 4 > avd_car_past[0][3] - 2 && avd_car_past[0][3] > -5 &&
-                        d_poly_[3] < -0.7) {
+                    if (std::pow(avd_car_past[0][2] - 1.0, 2) / 4 >
+                            avd_car_past[0][3] - 2 &&
+                        avd_car_past[0][3] > -5 && d_poly_[3] < -0.7) {
                       lat_offset = -1.3 + avd_car_past[0][5];
                       force_pause_ = true;
                     }
-                  } else if ((avd_car_past[1][5] > -0.65 || avd_car_past[1][7] == 20001) &&
-                             (status == INTER_GS_NONE || status == INTER_TR_NONE || status == INTER_TL_NONE)) {
-                    lat_offset = std::max(lat_offset, -1.6 + avd_car_past[1][5]);
+                  } else if ((avd_car_past[1][5] > -0.65 ||
+                              avd_car_past[1][7] == 20001) &&
+                             (status == INTER_GS_NONE ||
+                              status == INTER_TR_NONE ||
+                              status == INTER_TL_NONE)) {
+                    lat_offset =
+                        std::max(lat_offset, -1.6 + avd_car_past[1][5]);
                     sb_lane_ = true;
                   }
 
                   if (!sb_blane_ || !force_pause_ || !sb_lane_) {
                     lat_offset = std::max(lat_offset, -0.5 * lane_width + 0.9);
                   }
-                } else if (avd_car_past[1][6] < 0 && (avd_car_past[1][2] + v_ego < 0.5 || avd_car_past[1][3] < 1.0) &&
+                } else if (avd_car_past[1][6] < 0 &&
+                           (avd_car_past[1][2] + v_ego < 0.5 ||
+                            avd_car_past[1][3] < 1.0) &&
                            std::fabs(avd_car_past[1][4]) < 0.3 &&
                            ((virtual_lane_manager_->current_lane_virtual_id() ==
                                  virtual_lane_manager_->get_lane_num() - 1 &&
-                             ((virtual_lane_manager_->get_current_lane()->get_lane_type() != MSD_LANE_TYPE_NON_MOTOR &&
-                               virtual_lane_manager_->current_lane_virtual_id() >= 1) ||
-                              (virtual_lane_manager_->get_current_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR &&
-                               virtual_lane_manager_->current_lane_virtual_id() >= 2))) ||
+                             ((virtual_lane_manager_->get_current_lane()
+                                       ->get_lane_type() !=
+                                   MSD_LANE_TYPE_NON_MOTOR &&
+                               virtual_lane_manager_
+                                       ->current_lane_virtual_id() >= 1) ||
+                              (virtual_lane_manager_->get_current_lane()
+                                       ->get_lane_type() ==
+                                   MSD_LANE_TYPE_NON_MOTOR &&
+                               virtual_lane_manager_
+                                       ->current_lane_virtual_id() >= 2))) ||
                             (virtual_lane_manager_->current_lane_virtual_id() ==
                                  virtual_lane_manager_->get_lane_num() - 2 &&
-                             virtual_lane_manager_->get_right_lane() != nullptr &&
-                             virtual_lane_manager_->get_right_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR &&
-                             virtual_lane_manager_->current_lane_virtual_id() >= 1))) {
-                  lat_offset =
-                      std::min(1.5 + avd_car_past[1][6], std::min(avd_car_past[1][9], avd_car_past[0][5] - 1.4));
+                             virtual_lane_manager_->get_right_lane() !=
+                                 nullptr &&
+                             virtual_lane_manager_->get_right_lane()
+                                     ->get_lane_type() ==
+                                 MSD_LANE_TYPE_NON_MOTOR &&
+                             virtual_lane_manager_->current_lane_virtual_id() >=
+                                 1))) {
+                  lat_offset = std::min(
+                      1.5 + avd_car_past[1][6],
+                      std::min(avd_car_past[1][9], avd_car_past[0][5] - 1.4));
                   if (lat_offset >= lane_width / 2 - 1.1) {
                     large_lat_ = true;
-                  } else if (std::pow(avd_car_past[1][2] - 1.0, 2) / 4 > avd_car_past[1][3] - 2 &&
+                  } else if (std::pow(avd_car_past[1][2] - 1.0, 2) / 4 >
+                                 avd_car_past[1][3] - 2 &&
                              avd_car_past[1][3] > -10 && d_poly_[3] < -0.5) {
                     lat_offset = 1.3 + avd_car_past[1][6];
                     force_pause_ = true;
                   }
-                } else if ((avd_car_past[0][7] == 20001 || avd_car_past[1][7] == 20001)) {
-                  if (std::fabs(avd_car_past[1][5] - 1.0) > (avd_car_past[0][6] + 1.3)) {
+                } else if ((avd_car_past[0][7] == 20001 ||
+                            avd_car_past[1][7] == 20001)) {
+                  if (std::fabs(avd_car_past[1][5] - 1.0) >
+                      (avd_car_past[0][6] + 1.3)) {
                     lat_offset = avd_car_past[0][6] + 1.3;
                   } else {
                     lat_offset = avd_car_past[1][5] - 1.3;
@@ -609,11 +733,15 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                 }
               } else {
                 if (avd_car_past[1][6] != 100) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 - std::fabs(avd_car_past[1][6])) + lat_compen1;
+                  lat_offset = 0.9 * (lane_width - car_width / 2 -
+                                      std::fabs(avd_car_past[1][6])) +
+                               lat_compen1;
                 }
 
                 lat_offset = std::max(lat_offset, 0.0);
-                lat_offset = std::min(lat_offset, std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
+                lat_offset = std::min(
+                    lat_offset,
+                    std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
                 avd_car_past_[0] = avd_car_past[1];
                 avd_car_past_[1].clear();
               }
@@ -622,10 +750,12 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                 // map_info.dist_to_intsect() - avd_car_past[0][3] >= -5 && //
                 // hack! map_info.dist_to_intsect() - avd_car_past[0][3] < 50 &&
                 (avd_car_past[0][5] <= ((car_width + 0.3) - lane_width / 2))) {
-              if (virtual_lane_manager_->current_lane_virtual_id() != virtual_lane_manager_->get_lane_num() - 1 ||
+              if (virtual_lane_manager_->current_lane_virtual_id() !=
+                      virtual_lane_manager_->get_lane_num() - 1 ||
                   dist_rblane > 1.5) {
                 cross_right_solid_line_ = true;
-              } else if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
+              } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+                             0 ||
                          flane_->get_relative_id() == RIGHT_POS) {
                 cross_left_solid_line_ = true;
               }
@@ -636,17 +766,21 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                        // &&
                        // map_info.dist_to_intsect() - avd_car_past[1][3] < 50
                        // &&
-                       (avd_car_past[1][6] >= (lane_width / 2 - (car_width + 0.3)))) {
+                       (avd_car_past[1][6] >=
+                        (lane_width / 2 - (car_width + 0.3)))) {
               if (avd_car_past[1][6] >= 0) {
-                if (virtual_lane_manager_->current_lane_virtual_id() != virtual_lane_manager_->get_lane_num() - 1 ||
+                if (virtual_lane_manager_->current_lane_virtual_id() !=
+                        virtual_lane_manager_->get_lane_num() - 1 ||
                     dist_rblane > 1.5) {
                   cross_right_solid_line_ = true;
-                } else if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
+                } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+                               0 ||
                            flane_->get_relative_id() == RIGHT_POS) {
                   cross_left_solid_line_ = true;
                 }
               } else {
-                if (virtual_lane_manager_->current_lane_virtual_id() != 0 || flane_->get_relative_id() == RIGHT_POS) {
+                if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
+                    flane_->get_relative_id() == RIGHT_POS) {
                   cross_left_solid_line_ = true;
                 } else if (virtual_lane_manager_->current_lane_virtual_id() !=
                                virtual_lane_manager_->get_lane_num() - 1 ||
@@ -657,17 +791,23 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
               lat_offset = 0.;
             }
           } else if (avd_car_past[0][5] < 0 && avd_car_past[1][5] > 0) {
-            if (diff_dist_nudge_car < desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego &&
+            if (diff_dist_nudge_car <
+                    desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego &&
                 std::fabs(avd_car_past[0][6] - avd_car_past[1][5]) > 2.8) {
-              lat_offset = avd_car_past[0][6] - (avd_car_past[0][6] - avd_car_past[1][5]) / 2;
+              lat_offset = avd_car_past[0][6] -
+                           (avd_car_past[0][6] - avd_car_past[1][5]) / 2;
               if (lat_compen1 > lat_compen2) {
-                if (avd_car_past[1][5] - (lat_offset + (lat_compen1 - lat_compen2)) >= 1.4) {
+                if (avd_car_past[1][5] -
+                        (lat_offset + (lat_compen1 - lat_compen2)) >=
+                    1.4) {
                   lat_offset += lat_compen1 - lat_compen2;
                 } else {
                   lat_offset += 0.1;
                 }
               } else if (lat_compen1 < lat_compen2) {
-                if (lat_offset + (lat_compen1 - lat_compen2) - avd_car_past[0][6] >= 1.4) {
+                if (lat_offset + (lat_compen1 - lat_compen2) -
+                        avd_car_past[0][6] >=
+                    1.4) {
                   lat_offset += lat_compen1 - lat_compen2;
                 } else {
                   lat_offset -= 0.1;
@@ -676,63 +816,96 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
 
               if (lat_offset >= 0) {
                 if (avd_normal_thr > 0) {
-                  lat_offset = std::min(lat_offset, std::min(avd_normal_thr, avd_car_past[0][9]));
+                  lat_offset = std::min(
+                      lat_offset, std::min(avd_normal_thr, avd_car_past[0][9]));
                 } else {
-                  lat_offset = std::min(lat_offset, std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
+                  lat_offset = std::min(
+                      lat_offset,
+                      std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
                 }
               } else {
                 if (avd_normal_thr > 0) {
-                  lat_offset = -std::min(std::fabs(lat_offset), std::min(avd_normal_thr, avd_car_past[0][9]));
+                  lat_offset =
+                      -std::min(std::fabs(lat_offset),
+                                std::min(avd_normal_thr, avd_car_past[0][9]));
                 } else {
-                  lat_offset = -std::min(std::fabs(lat_offset), std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
+                  lat_offset = -std::min(
+                      std::fabs(lat_offset),
+                      std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
                 }
               }
 
               curr_time_ = IflyTime::Now_s();
             } else if (avd_car_past[0][6] < -1.5 &&
-                       diff_dist_nudge_car >= desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
+                       diff_dist_nudge_car >=
+                           desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
               if (IflyTime::Now_s() - curr_time_ > 2) {
-                lat_offset = 0.5 * (lane_width - car_width / 2 - std::fabs(avd_car_past[0][6])) + lat_compen1;
+                lat_offset = 0.5 * (lane_width - car_width / 2 -
+                                    std::fabs(avd_car_past[0][6])) +
+                             lat_compen1;
                 lat_offset = std::max(lat_offset, 0.0);
 
                 if (avd_normal_thr > 0) {
-                  lat_offset = std::min(lat_offset, std::min(avd_normal_thr, avd_car_past[0][9]));
+                  lat_offset = std::min(
+                      lat_offset, std::min(avd_normal_thr, avd_car_past[0][9]));
                 } else {
-                  lat_offset = std::min(lat_offset, std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
+                  lat_offset = std::min(
+                      lat_offset,
+                      std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
                 }
               } else {
                 lat_offset = -d_poly_[3];
               }
             } else {
-              if (avd_car_past[0][2] <= avd_car_past[1][2] || avd_car_past[0][2] - avd_car_past[1][2] < 2) {
+              if (avd_car_past[0][2] <= avd_car_past[1][2] ||
+                  avd_car_past[0][2] - avd_car_past[1][2] < 2) {
                 if (avd_car_past[0][6] != 100) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 - std::fabs(avd_car_past[0][6])) + lat_compen1;
+                  lat_offset = 0.9 * (lane_width - car_width / 2 -
+                                      std::fabs(avd_car_past[0][6])) +
+                               lat_compen1;
                 }
 
                 lat_offset = std::max(lat_offset, 0.0);
-                lat_offset = std::min(lat_offset, std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
+                lat_offset = std::min(
+                    lat_offset,
+                    std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
 
                 if (avd_car_past[0][6] >= 0 && avd_car_past[0][6] != 100 &&
-                    (avd_car_past[0][2] + v_ego < 1.5 || avd_car_past[0][3] < 0) && avd_car_past[0][4] > -0.5 &&
-                    avd_car_past[0][4] < 0.3 && avd_car_past[0][1] == 0) {
-                  lat_offset = avd_car_past[0][5] - (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
+                    (avd_car_past[0][2] + v_ego < 1.5 ||
+                     avd_car_past[0][3] < 0) &&
+                    avd_car_past[0][4] > -0.5 && avd_car_past[0][4] < 0.3 &&
+                    avd_car_past[0][1] == 0) {
+                  lat_offset =
+                      avd_car_past[0][5] -
+                      (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
 
-                  if ((virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 1) ||
-                      (virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 2 &&
+                  if ((virtual_lane_manager_->current_lane_virtual_id() ==
+                       virtual_lane_manager_->get_lane_num() - 1) ||
+                      (virtual_lane_manager_->current_lane_virtual_id() ==
+                           virtual_lane_manager_->get_lane_num() - 2 &&
                        virtual_lane_manager_->get_right_lane() != nullptr &&
-                       virtual_lane_manager_->get_right_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR)) {
-                    if (!frame_->session()->environmental_model().is_on_highway() &&
+                       virtual_lane_manager_->get_right_lane()
+                               ->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR)) {
+                    if (!frame_->session()
+                             ->environmental_model()
+                             .is_on_highway() &&
                         // map_info.dist_to_intsect() > 80 &&  // hack
                         // map_info.dist_to_intsect() - avd_car_past[0][3] > 80
                         // &&
-                        ((avd_car_past[0][3] < 15 && v_ego < 5) || (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
+                        ((avd_car_past[0][3] < 15 && v_ego < 5) ||
+                         (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
                          avd_car_past[0][3] < 1)) {
                       if (-lat_offset - avd_car_past[0][9] > 0.4) {
-                        lat_offset = std::max(std::max(lat_offset, -0.15 * lane_width - dist_rblane),
-                                              std::max(-avd_car_past[0][9], -2.0 + avd_car_past[0][5]));
+                        lat_offset =
+                            std::max(std::max(lat_offset,
+                                              -0.15 * lane_width - dist_rblane),
+                                     std::max(-avd_car_past[0][9],
+                                              -2.0 + avd_car_past[0][5]));
                       } else {
                         lat_offset =
-                            std::max(lat_offset, std::max(-0.15 * lane_width - dist_rblane, -2.0 + avd_car_past[0][5]));
+                            std::max(lat_offset,
+                                     std::max(-0.15 * lane_width - dist_rblane,
+                                              -2.0 + avd_car_past[0][5]));
                       }
 
                       if (lat_offset == -avd_car_past[0][9]) {
@@ -742,7 +915,8 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                       if (dist_rblane > 1.0) {
                         sb_blane_ = true;
                       }
-                      if (std::pow(avd_car_past[0][2] - 1.0, 2) / 4 > avd_car_past[0][3] - 2 &&
+                      if (std::pow(avd_car_past[0][2] - 1.0, 2) / 4 >
+                              avd_car_past[0][3] - 2 &&
                           avd_car_past[0][3] > -5 && d_poly_[3] < -0.7) {
                         lat_offset = -1.3 + avd_car_past[0][5];
                         force_pause_ = true;
@@ -750,42 +924,62 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                     } else {
                       lat_offset = 0;
                     }
-                  } else if ((avd_car_past[0][5] > -0.65 || avd_car_past[0][7] == 20001) &&
-                             (status == INTER_GS_NONE || status == INTER_TR_NONE || status == INTER_TL_NONE)) {
-                    lat_offset = std::max(lat_offset, -1.6 + avd_car_past[0][5]);
+                  } else if ((avd_car_past[0][5] > -0.65 ||
+                              avd_car_past[0][7] == 20001) &&
+                             (status == INTER_GS_NONE ||
+                              status == INTER_TR_NONE ||
+                              status == INTER_TL_NONE)) {
+                    lat_offset =
+                        std::max(lat_offset, -1.6 + avd_car_past[0][5]);
                     sb_lane_ = true;
                   }
 
                   if (!sb_blane_ || !force_pause_ || !sb_lane_) {
                     lat_offset = std::max(lat_offset, -0.5 * lane_width + 0.9);
                   }
-                } else if (avd_car_past[0][6] < 0 && (avd_car_past[0][2] + v_ego < 0.5 || avd_car_past[0][3] < 1) &&
+                } else if (avd_car_past[0][6] < 0 &&
+                           (avd_car_past[0][2] + v_ego < 0.5 ||
+                            avd_car_past[0][3] < 1) &&
                            std::fabs(avd_car_past[0][4]) < 0.3 &&
                            ((virtual_lane_manager_->current_lane_virtual_id() ==
                                  virtual_lane_manager_->get_lane_num() - 1 &&
-                             ((virtual_lane_manager_->get_current_lane()->get_lane_type() != MSD_LANE_TYPE_NON_MOTOR &&
-                               virtual_lane_manager_->current_lane_virtual_id() >= 1) ||
-                              (virtual_lane_manager_->get_current_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR &&
-                               virtual_lane_manager_->current_lane_virtual_id() >= 2))) ||
+                             ((virtual_lane_manager_->get_current_lane()
+                                       ->get_lane_type() !=
+                                   MSD_LANE_TYPE_NON_MOTOR &&
+                               virtual_lane_manager_
+                                       ->current_lane_virtual_id() >= 1) ||
+                              (virtual_lane_manager_->get_current_lane()
+                                       ->get_lane_type() ==
+                                   MSD_LANE_TYPE_NON_MOTOR &&
+                               virtual_lane_manager_
+                                       ->current_lane_virtual_id() >= 2))) ||
                             (virtual_lane_manager_->current_lane_virtual_id() ==
                                  virtual_lane_manager_->get_lane_num() - 2 &&
-                             virtual_lane_manager_->get_right_lane() != nullptr &&
-                             virtual_lane_manager_->get_right_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR &&
-                             virtual_lane_manager_->current_lane_virtual_id() >= 1))) {
-                  lat_offset =
-                      std::min(1.5 + avd_car_past[0][6], std::min(avd_car_past[0][9], avd_car_past[1][5] - 1.4));
+                             virtual_lane_manager_->get_right_lane() !=
+                                 nullptr &&
+                             virtual_lane_manager_->get_right_lane()
+                                     ->get_lane_type() ==
+                                 MSD_LANE_TYPE_NON_MOTOR &&
+                             virtual_lane_manager_->current_lane_virtual_id() >=
+                                 1))) {
+                  lat_offset = std::min(
+                      1.5 + avd_car_past[0][6],
+                      std::min(avd_car_past[0][9], avd_car_past[1][5] - 1.4));
 
                   if (lat_offset >= lane_width / 2 - 1.1) {
                     large_lat_ = true;
-                  } else if (std::pow(avd_car_past[0][2] - 1, 2) / 4 > avd_car_past[0][3] - 2 &&
+                  } else if (std::pow(avd_car_past[0][2] - 1, 2) / 4 >
+                                 avd_car_past[0][3] - 2 &&
                              avd_car_past[0][3] > -10 && d_poly_[3] < -0.5) {
                     lat_offset = 1.3 + avd_car_past[0][6];
                     force_pause_ = true;
                   }
-                } else if ((avd_car_past[0][7] == 20001 || avd_car_past[1][7] == 20001)
+                } else if ((avd_car_past[0][7] == 20001 ||
+                            avd_car_past[1][7] == 20001)
                            //&&map_info.is_in_intersection() // hack
                 ) {
-                  if (std::fabs(avd_car_past[0][5] - 1.0) > (avd_car_past[1][6] + 1.3)) {  //
+                  if (std::fabs(avd_car_past[0][5] - 1.0) >
+                      (avd_car_past[1][6] + 1.3)) {  //
                     // need consider more
                     lat_offset = avd_car_past[1][6] + 1.3;
                   } else {
@@ -796,11 +990,15 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                 }
               } else {
                 if (avd_car_past[1][5] != 100) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 - std::fabs(avd_car_past[1][5])) + lat_compen1;
+                  lat_offset = 0.9 * (lane_width - car_width / 2 -
+                                      std::fabs(avd_car_past[1][5])) +
+                               lat_compen1;
                 }
 
                 lat_offset = std::max(lat_offset, 0.0);
-                lat_offset = -std::min(lat_offset, std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
+                lat_offset = -std::min(
+                    lat_offset,
+                    std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
 
                 avd_car_past_[0] = avd_car_past[1];
                 avd_car_past_[1].clear();
@@ -812,10 +1010,12 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                 // map_info.dist_to_intsect() - avd_car_past[1][3] < 50 &&  //
                 // hcak
                 (avd_car_past[1][5] <= ((car_width + 0.3) - lane_width / 2))) {
-              if (virtual_lane_manager_->current_lane_virtual_id() != virtual_lane_manager_->get_lane_num() - 1 ||
+              if (virtual_lane_manager_->current_lane_virtual_id() !=
+                      virtual_lane_manager_->get_lane_num() - 1 ||
                   dist_rblane > 1.5) {
                 cross_right_solid_line_ = true;
-              } else if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
+              } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+                             0 ||
                          flane_->get_relative_id() == RIGHT_POS) {
                 cross_left_solid_line_ = true;
               }
@@ -825,17 +1025,21 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                        //   -5 &&  // hcak
                        //  map_info.dist_to_intsect() - avd_car_past[0][3] < 50
                        //  &&
-                       (avd_car_past[0][6] >= (lane_width / 2 - (car_width + 0.3)))) {
+                       (avd_car_past[0][6] >=
+                        (lane_width / 2 - (car_width + 0.3)))) {
               if (avd_car_past[0][6] >= 0) {
-                if (virtual_lane_manager_->current_lane_virtual_id() != virtual_lane_manager_->get_lane_num() - 1 ||
+                if (virtual_lane_manager_->current_lane_virtual_id() !=
+                        virtual_lane_manager_->get_lane_num() - 1 ||
                     dist_rblane > 1.5) {
                   cross_right_solid_line_ = true;
-                } else if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
+                } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+                               0 ||
                            flane_->get_relative_id() == RIGHT_POS) {
                   cross_left_solid_line_ = true;
                 }
               } else {
-                if (virtual_lane_manager_->current_lane_virtual_id() != 0 || flane_->get_relative_id() == RIGHT_POS) {
+                if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
+                    flane_->get_relative_id() == RIGHT_POS) {
                   cross_left_solid_line_ = true;
                 } else if (virtual_lane_manager_->current_lane_virtual_id() !=
                                virtual_lane_manager_->get_lane_num() - 1 ||
@@ -846,84 +1050,115 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
               lat_offset = 0.;
             }
           } else if (avd_car_past[0][5] > 0 && avd_car_past[1][5] > 0) {
-            if (diff_dist_nudge_car < desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
+            if (diff_dist_nudge_car <
+                desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
               if (avd_car_past[0][5] != 100 || avd_car_past[1][5] != 100) {
-                lat_offset =
-                    0.5 * (lane_width - car_width / 2 - std::fabs(std::min(avd_car_past[0][5], avd_car_past[1][5]))) +
-                    lat_compen1;
+                lat_offset = 0.5 * (lane_width - car_width / 2 -
+                                    std::fabs(std::min(avd_car_past[0][5],
+                                                       avd_car_past[1][5]))) +
+                             lat_compen1;
               }
             } else {
               if (avd_car_past[0][5] != 100) {
-                lat_offset = 0.5 * (lane_width - car_width / 2 - std::fabs(avd_car_past[0][5])) + lat_compen1;
+                lat_offset = 0.5 * (lane_width - car_width / 2 -
+                                    std::fabs(avd_car_past[0][5])) +
+                             lat_compen1;
               }
             }
 
             lat_offset = std::max(lat_offset, 0.0);
 
-            if ((virtual_lane_manager_->current_lane_virtual_id() != virtual_lane_manager_->get_lane_num() - 1 &&
+            if ((virtual_lane_manager_->current_lane_virtual_id() !=
+                     virtual_lane_manager_->get_lane_num() - 1 &&
                  (virtual_lane_manager_->get_right_lane() == nullptr ||
                   (virtual_lane_manager_->get_right_lane() != nullptr &&
-                   virtual_lane_manager_->get_right_lane()->get_lane_type() != MSD_LANE_TYPE_NON_MOTOR))) ||
-                avd_limit_left == 0.2 || (avd_car_past[0][2] + v_ego >= 1.5 && avd_car_past[0][3] >= 0)
+                   virtual_lane_manager_->get_right_lane()->get_lane_type() !=
+                       MSD_LANE_TYPE_NON_MOTOR))) ||
+                avd_limit_left == 0.2 ||
+                (avd_car_past[0][2] + v_ego >= 1.5 && avd_car_past[0][3] >= 0)
                 //||
                 //  map_info.dist_to_intsect() <= 80 ||  // hack
                 // map_info.dist_to_intsect() - avd_car_past[0][3] <= 80 // hack
             ) {
               if (avd_normal_thr > 0) {
                 lat_offset =
-                    -std::min(std::min(lat_offset, avd_normal_thr), std::min(avd_car_past[0][9], avd_limit_left));
+                    -std::min(std::min(lat_offset, avd_normal_thr),
+                              std::min(avd_car_past[0][9], avd_limit_left));
               } else {
-                lat_offset = -std::min(std::min(lat_offset, 0.5 * lane_width - 0.9),
-                                       std::min(avd_car_past[0][9], avd_limit_left));
+                lat_offset =
+                    -std::min(std::min(lat_offset, 0.5 * lane_width - 0.9),
+                              std::min(avd_car_past[0][9], avd_limit_left));
               }
-              if ((virtual_lane_manager_->current_lane_virtual_id() != virtual_lane_manager_->get_lane_num() - 1) &&
+              if ((virtual_lane_manager_->current_lane_virtual_id() !=
+                   virtual_lane_manager_->get_lane_num() - 1) &&
                   avd_car_past[0][2] + v_ego < 0.5 &&
 
                   abs(avd_car_past[0][4]) < 0.2 &&
                   //! isRedLightStop && // hack!
-                  ((avd_car_past[0][5] <= ((car_width + 0.3) - lane_width / 2)) ||
-                   (avd_car_past[1][5] <= ((car_width + 0.3) - lane_width / 2)))) {
+                  ((avd_car_past[0][5] <=
+                    ((car_width + 0.3) - lane_width / 2)) ||
+                   (avd_car_past[1][5] <=
+                    ((car_width + 0.3) - lane_width / 2)))) {
                 cross_right_solid_line_ = true;
                 lat_offset = 0.;
               }
               if ((avd_car_past[0][7] == 20001 &&
 
-                   (avd_car_past[0][5] <= ((car_width + 0.3) - lane_width / 2))) ||
+                   (avd_car_past[0][5] <=
+                    ((car_width + 0.3) - lane_width / 2))) ||
                   (avd_car_past[1][7] == 20001 &&
 
-                   (avd_car_past[1][5] <= ((car_width + 0.3) - lane_width / 2)))) {
-                if (virtual_lane_manager_->current_lane_virtual_id() != virtual_lane_manager_->get_lane_num() - 1 ||
+                   (avd_car_past[1][5] <=
+                    ((car_width + 0.3) - lane_width / 2)))) {
+                if (virtual_lane_manager_->current_lane_virtual_id() !=
+                        virtual_lane_manager_->get_lane_num() - 1 ||
                     dist_rblane > 1.5) {
                   cross_right_solid_line_ = true;
-                } else if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
+                } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+                               0 ||
                            flane_->get_relative_id() == RIGHT_POS) {
                   cross_left_solid_line_ = true;
                 }
                 lat_offset = 0.;
               }
 
-              if ((status == INTER_GS_NONE || status == INTER_TR_NONE || status == INTER_TL_NONE) &&
-                  avd_car_past[0][5] < 1.1 && (avd_car_past[0][2] + v_ego < 1.5 || avd_car_past[0][3] < 0) &&
-                  avd_car_past[0][4] > -0.5 && avd_car_past[0][4] < 0.3 && avd_car_past[0][1] == 0) {
-                lat_offset = avd_car_past[0][5] - (avd_car_past[0][5] + 2.0 + avd_car_past[0][9]) / 2;
+              if ((status == INTER_GS_NONE || status == INTER_TR_NONE ||
+                   status == INTER_TL_NONE) &&
+                  avd_car_past[0][5] < 1.1 &&
+                  (avd_car_past[0][2] + v_ego < 1.5 ||
+                   avd_car_past[0][3] < 0) &&
+                  avd_car_past[0][4] > -0.5 && avd_car_past[0][4] < 0.3 &&
+                  avd_car_past[0][1] == 0) {
+                lat_offset =
+                    avd_car_past[0][5] -
+                    (avd_car_past[0][5] + 2.0 + avd_car_past[0][9]) / 2;
                 lat_offset = std::max(lat_offset, -1.6 + avd_car_past[0][5]);
 
                 sb_lane_ = true;
               }
-            } else if (!frame_->session()->environmental_model().is_on_highway() && abs(avd_car_past[0][4]) < 0.45) {
-              if ((avd_car_past[0][3] < 15 && v_ego < 5) || (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
+            } else if (!frame_->session()
+                            ->environmental_model()
+                            .is_on_highway() &&
+                       abs(avd_car_past[0][4]) < 0.45) {
+              if ((avd_car_past[0][3] < 15 && v_ego < 5) ||
+                  (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
                   avd_car_past[0][3] < 1) {
-                lat_offset = -std::min(std::min(lat_offset, 0.1 * lane_width + dist_rblane),
-                                       std::min(avd_car_past[0][9], 2 - avd_car_past[0][5]));
+                lat_offset = -std::min(
+                    std::min(lat_offset, 0.1 * lane_width + dist_rblane),
+                    std::min(avd_car_past[0][9], 2 - avd_car_past[0][5]));
               }
 
-              if (dist_rblane > 1.0 && 0.5 * lane_width + std::min(avd_car_past[0][5], avd_car_past[1][5]) <
-                                           3.0 + 0.02 * std::fabs(std::min(avd_car_past[0][2], avd_car_past[1][2]))) {
+              if (dist_rblane > 1.0 &&
+                  0.5 * lane_width +
+                          std::min(avd_car_past[0][5], avd_car_past[1][5]) <
+                      3.0 + 0.02 * std::fabs(std::min(avd_car_past[0][2],
+                                                      avd_car_past[1][2]))) {
                 sb_blane_ = true;
               }
 
-              if (std::pow(avd_car_past[0][2] - 1, 2) / 4 > avd_car_past[0][3] - 2 && avd_car_past[0][3] > -5 &&
-                  d_poly_[3] < -0.7) {
+              if (std::pow(avd_car_past[0][2] - 1, 2) / 4 >
+                      avd_car_past[0][3] - 2 &&
+                  avd_car_past[0][3] > -5 && d_poly_[3] < -0.7) {
                 lat_offset = -1.3 + avd_car_past[0][5];
                 force_pause_ = true;
               }
@@ -933,29 +1168,41 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
               lat_offset = -d_poly_[3];
             }
 
-            if (flane_->status() != LaneStatusEx::BOTH_MISSING && r_poly_[3] < 0 && r_poly_[3] > -1.0 &&
-                (virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 1 &&
+            if (flane_->status() != LaneStatusEx::BOTH_MISSING &&
+                r_poly_[3] < 0 && r_poly_[3] > -1.0 &&
+                (virtual_lane_manager_->current_lane_virtual_id() ==
+                     virtual_lane_manager_->get_lane_num() - 1 &&
                  (dist_rblane < 0.5 || avd_limit_left == 0.2)) &&
                 !special_lane_type) {
               lat_offset = std::min(lat_offset + r_poly_[3] + 1.0, 0.0);
             }
           } else if (avd_car_past[0][5] < 0 && avd_car_past[1][5] < 0) {
-            if (diff_dist_nudge_car < desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
-              if (avd_car_past[0][6] != 100 && avd_car_past[1][6] != 100 && avd_car_past[0][6] < 0 &&
-                  avd_car_past[1][6] < 0) {
-                lat_offset =
-                    0.5 * (lane_width - car_width / 2 - std::fabs(std::max(avd_car_past[0][6], avd_car_past[1][6]))) +
-                    lat_compen1;
+            if (diff_dist_nudge_car <
+                desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
+              if (avd_car_past[0][6] != 100 && avd_car_past[1][6] != 100 &&
+                  avd_car_past[0][6] < 0 && avd_car_past[1][6] < 0) {
+                lat_offset = 0.5 * (lane_width - car_width / 2 -
+                                    std::fabs(std::max(avd_car_past[0][6],
+                                                       avd_car_past[1][6]))) +
+                             lat_compen1;
               } else if (avd_car_past[0][6] != 100 && avd_car_past[0][6] < 0) {
-                lat_offset = 0.5 * (lane_width - car_width / 2 - std::fabs(avd_car_past[0][6])) + lat_compen1;
+                lat_offset = 0.5 * (lane_width - car_width / 2 -
+                                    std::fabs(avd_car_past[0][6])) +
+                             lat_compen1;
               } else if (avd_car_past[1][6] != 100 && avd_car_past[1][6] < 0) {
-                lat_offset = 0.5 * (lane_width - car_width / 2 - std::fabs(avd_car_past[1][6])) + lat_compen1;
+                lat_offset = 0.5 * (lane_width - car_width / 2 -
+                                    std::fabs(avd_car_past[1][6])) +
+                             lat_compen1;
               }
 
-              if ((status == INTER_GS_NONE || status == INTER_TR_NONE || status == INTER_TL_NONE) &&
-                  (avd_car_past[0][6] > 0 || (avd_car_past[1][7] == 20001 && avd_car_past[1][6] > 0)) &&
-                  (avd_car_past[0][2] + v_ego < 1.5 || avd_car_past[0][3] < 0) && avd_car_past[0][4] > -0.5 &&
-                  avd_car_past[0][4] < 0.3 && avd_car_past[0][1] == 0) {
+              if ((status == INTER_GS_NONE || status == INTER_TR_NONE ||
+                   status == INTER_TL_NONE) &&
+                  (avd_car_past[0][6] > 0 ||
+                   (avd_car_past[1][7] == 20001 && avd_car_past[1][6] > 0)) &&
+                  (avd_car_past[0][2] + v_ego < 1.5 ||
+                   avd_car_past[0][3] < 0) &&
+                  avd_car_past[0][4] > -0.5 && avd_car_past[0][4] < 0.3 &&
+                  avd_car_past[0][1] == 0) {
                 if (((avd_car_past[0][7] != 20001 || status != INTER_TL_NONE
                       //||
                       //   map_info.dist_to_last_intsect() - avd_car_past[0][3]
@@ -964,50 +1211,70 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                       ) &&
                      avd_car_past[0][5] - l_ego > -0.6) ||
                     (avd_car_past[0][7] == 20001 &&
-                     (status == INTER_TL_NONE && std::fabs(std::min(avd_car_past[0][5],
-                                                                    avd_car_past[1][5])) +
-                                                         0.3 <
-                                                     avd_car_past[0][6] ||
+                     (status == INTER_TL_NONE &&
+                          std::fabs(std::min(avd_car_past[0][5],
+                                             avd_car_past[1][5])) +
+                                  0.3 <
+                              avd_car_past[0][6] ||
                       (avd_car_past[1][7] != 20001 &&
-                       avd_car_past[1][5] - l_ego > -1.)))) {  // need a history record for
-                                                               // avd_car_past[0][5]
-                  lat_offset = std::min(avd_car_past[0][5], avd_car_past[1][5]) -
-                               (std::min(avd_car_past[0][5], avd_car_past[1][5]) + 2.0 + avd_car_past[0][9]) / 2;
-                  lat_offset = std::max(lat_offset, -1.6 + std::min(avd_car_past[0][5], avd_car_past[1][5]));
+                       avd_car_past[1][5] - l_ego >
+                           -1.)))) {  // need a history record for
+                                      // avd_car_past[0][5]
+                  lat_offset =
+                      std::min(avd_car_past[0][5], avd_car_past[1][5]) -
+                      (std::min(avd_car_past[0][5], avd_car_past[1][5]) + 2.0 +
+                       avd_car_past[0][9]) /
+                          2;
+                  lat_offset = std::max(
+                      lat_offset,
+                      -1.6 + std::min(avd_car_past[0][5], avd_car_past[1][5]));
 
                   sb_lane_ = true;
-                } else if (avd_car_past[0][6] < 0.65 || avd_car_past[0][7] == 20001) {
-                  lat_offset =
-                      std::min(std::max(avd_car_past[0][6], avd_car_past[1][6]) -
-                                   (std::max(avd_car_past[0][6], avd_car_past[1][6]) - 1.8 - avd_car_past[0][9]) / 2,
-                               1.6 - std::max(avd_car_past[0][6], avd_car_past[1][6]));
+                } else if (avd_car_past[0][6] < 0.65 ||
+                           avd_car_past[0][7] == 20001) {
+                  lat_offset = std::min(
+                      std::max(avd_car_past[0][6], avd_car_past[1][6]) -
+                          (std::max(avd_car_past[0][6], avd_car_past[1][6]) -
+                           1.8 - avd_car_past[0][9]) /
+                              2,
+                      1.6 - std::max(avd_car_past[0][6], avd_car_past[1][6]));
                   lat_offset = std::min(lat_offset, 1.1);
                 }
               }
 
               if (avd_car_past[0][6] >= 0 && avd_car_past[0][6] != 100 &&
-                  (avd_car_past[0][2] + v_ego < 1.5 || avd_car_past[0][3] < 0) &&
+                  (avd_car_past[0][2] + v_ego < 1.5 ||
+                   avd_car_past[0][3] < 0) &&
                   std::fabs(avd_car_past[0][4]) < 0.45 &&
-                  ((virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 1) ||
-                   (virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 2 &&
+                  ((virtual_lane_manager_->current_lane_virtual_id() ==
+                    virtual_lane_manager_->get_lane_num() - 1) ||
+                   (virtual_lane_manager_->current_lane_virtual_id() ==
+                        virtual_lane_manager_->get_lane_num() - 2 &&
                     virtual_lane_manager_->get_right_lane() != nullptr &&
-                    virtual_lane_manager_->get_right_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR))) {
+                    virtual_lane_manager_->get_right_lane()->get_lane_type() ==
+                        MSD_LANE_TYPE_NON_MOTOR))) {
                 if (((!frame_->session()->environmental_model().is_on_highway()
                       //    &&  // hack
                       //  map_info.dist_to_intsect() > 80 &&
                       //  map_info.dist_to_intsect() - avd_car_past[0][3] > 80
                       ) ||
                      accident_ahead) &&
-                    ((avd_car_past[0][3] < 15 && v_ego < 5) || (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
+                    ((avd_car_past[0][3] < 15 && v_ego < 5) ||
+                     (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
                      avd_car_past[0][3] < 1)) {
-                  lat_offset = avd_car_past[0][5] - (avd_car_past[0][5] + 2.0 + avd_car_past[0][9]) / 2;
+                  lat_offset =
+                      avd_car_past[0][5] -
+                      (avd_car_past[0][5] + 2.0 + avd_car_past[0][9]) / 2;
 
                   if (-lat_offset - avd_car_past[0][9] > 0.4) {
-                    lat_offset = std::max(std::max(lat_offset, -0.15 * lane_width - dist_rblane),
-                                          std::max(-avd_car_past[0][9], -2.0 + avd_car_past[0][5]));
+                    lat_offset = std::max(
+                        std::max(lat_offset, -0.15 * lane_width - dist_rblane),
+                        std::max(-avd_car_past[0][9],
+                                 -2.0 + avd_car_past[0][5]));
                   } else {
-                    lat_offset =
-                        std::max(std::max(lat_offset, -0.15 * lane_width - dist_rblane), -2.0 + avd_car_past[0][5]);
+                    lat_offset = std::max(
+                        std::max(lat_offset, -0.15 * lane_width - dist_rblane),
+                        -2.0 + avd_car_past[0][5]);
                   }
 
                   if (lat_offset == -avd_car_past[0][9]) {
@@ -1017,8 +1284,9 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                   if (dist_rblane > 1.0) {
                     sb_blane_ = true;
                   }
-                  if (std::pow(avd_car_past[0][2] - 1, 2) / 4 > avd_car_past[0][3] - 2 && avd_car_past[0][3] > -5 &&
-                      d_poly_[3] < -0.7) {
+                  if (std::pow(avd_car_past[0][2] - 1, 2) / 4 >
+                          avd_car_past[0][3] - 2 &&
+                      avd_car_past[0][3] > -5 && d_poly_[3] < -0.7) {
                     lat_offset = -1.3 + avd_car_past[0][5];
                     force_pause_ = true;
                   }
@@ -1028,27 +1296,44 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
               }
             } else {
               if (avd_car_past[0][6] != 100) {
-                lat_offset = 0.5 * (lane_width - car_width / 2 - std::fabs(avd_car_past[0][6])) + lat_compen1;
+                lat_offset = 0.5 * (lane_width - car_width / 2 -
+                                    std::fabs(avd_car_past[0][6])) +
+                             lat_compen1;
 
-                if (avd_car_past[0][6] >= 0 && (avd_car_past[0][2] + v_ego < 1.5 || avd_car_past[0][3] < 0) &&
+                if (avd_car_past[0][6] >= 0 &&
+                    (avd_car_past[0][2] + v_ego < 1.5 ||
+                     avd_car_past[0][3] < 0) &&
                     std::fabs(avd_car_past[0][4]) < 0.45 &&
-                    ((virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 1) ||
-                     (virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 2 &&
+                    ((virtual_lane_manager_->current_lane_virtual_id() ==
+                      virtual_lane_manager_->get_lane_num() - 1) ||
+                     (virtual_lane_manager_->current_lane_virtual_id() ==
+                          virtual_lane_manager_->get_lane_num() - 2 &&
                       virtual_lane_manager_->get_right_lane() != nullptr &&
-                      virtual_lane_manager_->get_right_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR))) {
-                  if (!frame_->session()->environmental_model().is_on_highway() &&
+                      virtual_lane_manager_->get_right_lane()
+                              ->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR))) {
+                  if (!frame_->session()
+                           ->environmental_model()
+                           .is_on_highway() &&
                       // map_info.dist_to_intsect() > 80 &&  //hack
                       // map_info.dist_to_intsect() - avd_car_past[0][3] > 80 &&
-                      ((avd_car_past[0][3] < 15 && v_ego < 5) || (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
+                      ((avd_car_past[0][3] < 15 && v_ego < 5) ||
+                       (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
                        avd_car_past[0][3] < 1)) {
-                    lat_offset = avd_car_past[0][5] - (avd_car_past[0][5] + 2.3 + avd_car_past[0][9]) / 2;
+                    lat_offset =
+                        avd_car_past[0][5] -
+                        (avd_car_past[0][5] + 2.3 + avd_car_past[0][9]) / 2;
 
                     if (-lat_offset - avd_car_past[0][9] > 0.4) {
-                      lat_offset = std::max(std::max(lat_offset, -0.15 * lane_width - dist_rblane),
-                                            std::max(-avd_car_past[0][9], -2.0 + avd_car_past[0][5]));
+                      lat_offset =
+                          std::max(std::max(lat_offset,
+                                            -0.15 * lane_width - dist_rblane),
+                                   std::max(-avd_car_past[0][9],
+                                            -2.0 + avd_car_past[0][5]));
                     } else {
                       lat_offset =
-                          std::max(std::max(lat_offset, -0.15 * lane_width - dist_rblane), -2.0 + avd_car_past[0][5]);
+                          std::max(std::max(lat_offset,
+                                            -0.15 * lane_width - dist_rblane),
+                                   -2.0 + avd_car_past[0][5]);
                     }
 
                     if (lat_offset == -avd_car_past[0][9]) {
@@ -1058,8 +1343,9 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                     if (dist_rblane > 1.0) {
                       sb_blane_ = true;
                     }
-                    if (std::pow(avd_car_past[0][2] - 1, 2) / 4 > avd_car_past[0][3] - 2 && avd_car_past[0][3] > -5 &&
-                        d_poly_[3] < -0.7) {
+                    if (std::pow(avd_car_past[0][2] - 1, 2) / 4 >
+                            avd_car_past[0][3] - 2 &&
+                        avd_car_past[0][3] > -5 && d_poly_[3] < -0.7) {
                       lat_offset = -1.3 + avd_car_past[0][5];
                       force_pause_ = true;
                     }
@@ -1073,21 +1359,31 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
             if (avd_car_past[0][6] < 0 || avd_car_past[1][6] < 0) {
               lat_offset = std::max(lat_offset, 0.0);
 
-              if ((avd_car_past[0][2] + v_ego < 0.5 || avd_car_past[0][3] < 1) && std::fabs(avd_car_past[0][4]) < 0.3 &&
+              if ((avd_car_past[0][2] + v_ego < 0.5 ||
+                   avd_car_past[0][3] < 1) &&
+                  std::fabs(avd_car_past[0][4]) < 0.3 &&
                   std::fabs(avd_car_past[1][4]) < 0.3 &&
-                  ((virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 1 &&
-                    ((virtual_lane_manager_->get_current_lane()->get_lane_type() != MSD_LANE_TYPE_NON_MOTOR &&
+                  ((virtual_lane_manager_->current_lane_virtual_id() ==
+                        virtual_lane_manager_->get_lane_num() - 1 &&
+                    ((virtual_lane_manager_->get_current_lane()
+                              ->get_lane_type() != MSD_LANE_TYPE_NON_MOTOR &&
                       virtual_lane_manager_->current_lane_virtual_id() >= 1) ||
-                     (virtual_lane_manager_->get_current_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR &&
-                      virtual_lane_manager_->current_lane_virtual_id() >= 2))) ||
-                   (virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 2 &&
+                     (virtual_lane_manager_->get_current_lane()
+                              ->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR &&
+                      virtual_lane_manager_->current_lane_virtual_id() >=
+                          2))) ||
+                   (virtual_lane_manager_->current_lane_virtual_id() ==
+                        virtual_lane_manager_->get_lane_num() - 2 &&
                     virtual_lane_manager_->get_right_lane() != nullptr &&
-                    virtual_lane_manager_->get_right_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR &&
+                    virtual_lane_manager_->get_right_lane()->get_lane_type() ==
+                        MSD_LANE_TYPE_NON_MOTOR &&
                     virtual_lane_manager_->current_lane_virtual_id() >= 1))) {
-                lat_offset = std::min(lat_offset, std::min(avd_car_past[0][9], avd_car_past[1][9]));
+                lat_offset = std::min(lat_offset, std::min(avd_car_past[0][9],
+                                                           avd_car_past[1][9]));
                 if (lat_offset >= lane_width / 2 - 1.1) {
                   large_lat_ = true;
-                } else if (std::pow(avd_car_past[0][2] - 1, 2) / 4 > avd_car_past[0][3] - 2 &&
+                } else if (std::pow(avd_car_past[0][2] - 1, 2) / 4 >
+                               avd_car_past[0][3] - 2 &&
                            avd_car_past[0][3] > -10 && d_poly_[3] < -0.5) {
                   lat_offset = 1.3 + avd_car_past[0][6];
                   force_pause_ = true;
@@ -1095,15 +1391,18 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
               } else {
                 if (avd_normal_thr > 0) {
                   lat_offset =
-                      std::min(std::min(lat_offset, avd_normal_thr), std::min(avd_car_past[0][9], avd_limit_right));
+                      std::min(std::min(lat_offset, avd_normal_thr),
+                               std::min(avd_car_past[0][9], avd_limit_right));
                 } else {
-                  lat_offset = std::min(std::min(lat_offset, 0.5 * lane_width - 0.9),
-                                        std::min(avd_car_past[0][9], avd_limit_right));
+                  lat_offset =
+                      std::min(std::min(lat_offset, 0.5 * lane_width - 0.9),
+                               std::min(avd_car_past[0][9], avd_limit_right));
                 }
               }
             }
 
-            if ((virtual_lane_manager_->current_lane_virtual_id() != virtual_lane_manager_->get_lane_num() - 1 &&
+            if ((virtual_lane_manager_->current_lane_virtual_id() !=
+                     virtual_lane_manager_->get_lane_num() - 1 &&
                  virtual_lane_manager_->current_lane_virtual_id() != 0) &&
                 avd_car_past[0][2] + v_ego < 0.5 &&
                 // map_info.dist_to_intsect() > 0 &&
@@ -1111,7 +1410,8 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                 abs(avd_car_past[0][4]) < 0.2 &&
                 //! isRedLightStop && // hack
                 ((avd_car_past[0][6] >= (lane_width / 2 - (car_width + 0.3))) ||
-                 (avd_car_past[1][6] >= (lane_width / 2 - (car_width + 0.3)))) &&
+                 (avd_car_past[1][6] >=
+                  (lane_width / 2 - (car_width + 0.3)))) &&
                 avd_car_past[0][6] < 0 && avd_car_past[1][6] < 0) {
               cross_left_solid_line_ = true;
               lat_offset = 0.;
@@ -1119,12 +1419,15 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
             if ((avd_car_past[0][7] == 20001 &&
                  //   map_info.dist_to_intsect() - avd_car_past[0][3] >= -5 &&
                  //   map_info.dist_to_intsect() - avd_car_past[0][3] < 50 &&
-                 (avd_car_past[0][6] >= (lane_width / 2 - (car_width + 0.3)))) ||
+                 (avd_car_past[0][6] >=
+                  (lane_width / 2 - (car_width + 0.3)))) ||
                 (avd_car_past[1][7] == 20001 &&
                  //    map_info.dist_to_intsect() - avd_car_past[1][3] >= -5 &&
                  //    map_info.dist_to_intsect() - avd_car_past[1][3] < 50 &&
-                 (avd_car_past[1][6] >= (lane_width / 2 - (car_width + 0.3))))) {
-              if (virtual_lane_manager_->current_lane_virtual_id() != 0 || flane_->get_relative_id() == RIGHT_POS) {
+                 (avd_car_past[1][6] >=
+                  (lane_width / 2 - (car_width + 0.3))))) {
+              if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
+                  flane_->get_relative_id() == RIGHT_POS) {
                 cross_left_solid_line_ = true;
               } else if (virtual_lane_manager_->current_lane_virtual_id() !=
                          virtual_lane_manager_->get_lane_num() - 1) {
@@ -1137,9 +1440,10 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
               lat_offset = -d_poly_[3];
             }
 
-            if (flane_->status() != LaneStatusEx::BOTH_MISSING && l_poly_[3] > 0 && l_poly_[3] < 1.0 &&
-                virtual_lane_manager_->current_lane_virtual_id() == 0 && !special_lane_type && !large_lat_ &&
-                !force_pause_) {
+            if (flane_->status() != LaneStatusEx::BOTH_MISSING &&
+                l_poly_[3] > 0 && l_poly_[3] < 1.0 &&
+                virtual_lane_manager_->current_lane_virtual_id() == 0 &&
+                !special_lane_type && !large_lat_ && !force_pause_) {
               lat_offset = std::max(lat_offset + l_poly_[3] - 1.0, 0.0);
             }
           }
@@ -1149,19 +1453,27 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
           pre_str_dist = interp(avd_car_past[0][2], avd_vRel_bp, avd_vRel_v);
           if (avd_car_past[0][0] != -1 && avd_car_past[0][0] != -2) {
             if (lat_offset >= 0) {
-              lat_offset =
-                  std::min((avd_car_past[0][7] - (avd_car_past[0][3] - pre_str_dist)) / avd_car_past[0][7] * lat_offset,
-                           lat_offset);
+              lat_offset = std::min(
+                  (avd_car_past[0][7] - (avd_car_past[0][3] - pre_str_dist)) /
+                      avd_car_past[0][7] * lat_offset,
+                  lat_offset);
             } else {
-              lat_offset =
-                  std::max((avd_car_past[0][7] - (avd_car_past[0][3] - pre_str_dist)) / avd_car_past[0][7] * lat_offset,
-                           lat_offset);
+              lat_offset = std::max(
+                  (avd_car_past[0][7] - (avd_car_past[0][3] - pre_str_dist)) /
+                      avd_car_past[0][7] * lat_offset,
+                  lat_offset);
             }
           } else {
             if (lat_offset >= 0.) {
-              lat_offset = std::min((5. / std::max(std::fabs(avd_car_past[0][3]), 5.)) * lat_offset, lat_offset);
+              lat_offset =
+                  std::min((5. / std::max(std::fabs(avd_car_past[0][3]), 5.)) *
+                               lat_offset,
+                           lat_offset);
             } else {
-              lat_offset = std::max((5. / std::max(std::fabs(avd_car_past[0][3]), 5.)) * lat_offset, lat_offset);
+              lat_offset =
+                  std::max((5. / std::max(std::fabs(avd_car_past[0][3]), 5.)) *
+                               lat_offset,
+                           lat_offset);
             }
           }
           if (lat_offset < 0. && d_poly_[3] + lat_offset < -0.3) {
@@ -1174,18 +1486,25 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
         if (dist_rblane == 0 && (lat_offset > 0.8 || lat_offset < -0.8)) {
         } else {
           if (std::fabs(lat_offset1) >= std::fabs(d_poly_[3]) &&
-              ((d_poly_[3] > 0 && lat_offset < 0 && d_poly_[3] + lat_offset > 0) ||
-               (d_poly_[3] < 0 && lat_offset > 0 && d_poly_[3] + lat_offset < 0))) {
+              ((d_poly_[3] > 0 && lat_offset < 0 &&
+                d_poly_[3] + lat_offset > 0) ||
+               (d_poly_[3] < 0 && lat_offset > 0 &&
+                d_poly_[3] + lat_offset < 0))) {
             d_poly_[3] = 0;
-          } else if (std::pow(avd_car_past[0][2] - 1, 2) / 4 > avd_car_past[0][3] - 2 && avd_car_past[0][3] > -5) {
-            if (avd_car_past[0][5] > 0 && std::fabs(lat_offset - avd_car_past[0][5]) < 1.3) {
-              lat_offset = std::max(-1.3 + avd_car_past[0][5], -0.15 * lane_width - dist_rblane);
+          } else if (std::pow(avd_car_past[0][2] - 1, 2) / 4 >
+                         avd_car_past[0][3] - 2 &&
+                     avd_car_past[0][3] > -5) {
+            if (avd_car_past[0][5] > 0 &&
+                std::fabs(lat_offset - avd_car_past[0][5]) < 1.3) {
+              lat_offset = std::max(-1.3 + avd_car_past[0][5],
+                                    -0.15 * lane_width - dist_rblane);
               force_pause_ = true;
             } else if (avd_car_past[0][5] < 0 && avd_car_past[0][6] < 0 &&
                        std::fabs(lat_offset - avd_car_past[0][6]) < 1.3) {
               lat_offset = 1.3 + avd_car_past[0][6];
               if (virtual_lane_manager_->current_lane_virtual_id() == 0) {
-                lat_offset = std::min(1.3 + avd_car_past[0][6], 0.5 * lane_width - 0.9);
+                lat_offset =
+                    std::min(1.3 + avd_car_past[0][6], 0.5 * lane_width - 0.9);
               }
               force_pause_ = true;
             } else {
@@ -1199,11 +1518,13 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
         }
       } else if (avd_car_past[0][5] > 0) {
         if ((int)avd_car_past[0][1] == -100) {
-          lat_offset = -0.15 * lane_width * std::fabs(avd_car_past[0][10]) / 3.2;
+          lat_offset =
+              -0.15 * lane_width * std::fabs(avd_car_past[0][10]) / 3.2;
 
           if (lane_type == 3 || std::fabs(d_poly_[1]) > 0.0001 ||
               (virtual_lane_manager_->get_lane_num() > 1 &&
-               virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 1)) {
+               virtual_lane_manager_->current_lane_virtual_id() ==
+                   virtual_lane_manager_->get_lane_num() - 1)) {
             lat_offset = 0.8 * lat_offset;
           }
 
@@ -1211,64 +1532,85 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
             lat_offset = std::max(lat_offset, -avd_limit_left);
           }
 
-          if (flane_->status() != LaneStatusEx::BOTH_MISSING && r_poly_[3] < 0 && r_poly_[3] > -1.0 &&
-              !special_lane_type) {
+          if (flane_->status() != LaneStatusEx::BOTH_MISSING &&
+              r_poly_[3] < 0 && r_poly_[3] > -1.0 && !special_lane_type) {
             lat_offset += r_poly_[3] + 1.0;
           }
 
           if (d_poly_[3] > 1.0) {
             lat_offset = -d_poly_[3] - 0.5;
           }
-        } else if (((int)avd_car_past[0][0] == 0 && avd_car_past[0][3] > -6.0) ||
-                   ((int)avd_car_past[0][0] != 0 && avd_car_past[0][3] >= -3.0)) {
-          if (status != INTER_GS_NONE && status != INTER_TR_NONE && status != INTER_TL_NONE) {
+        } else if (((int)avd_car_past[0][0] == 0 &&
+                    avd_car_past[0][3] > -6.0) ||
+                   ((int)avd_car_past[0][0] != 0 &&
+                    avd_car_past[0][3] >= -3.0)) {
+          if (status != INTER_GS_NONE && status != INTER_TR_NONE &&
+              status != INTER_TL_NONE) {
             if (avd_car_past[0][5] != 100) {
-              lat_offset = 0.5 * (lane_width - car_width / 2 - std::fabs(avd_car_past[0][5])) + lat_compen1;
+              lat_offset = 0.5 * (lane_width - car_width / 2 -
+                                  std::fabs(avd_car_past[0][5])) +
+                           lat_compen1;
             }
 
             lat_offset = std::max(lat_offset, 0.0);
             if (avd_normal_thr > 0) {
               lat_offset =
-                  -std::min(std::min(lat_offset, avd_normal_thr), std::min(avd_car_past[0][9], avd_limit_left));
+                  -std::min(std::min(lat_offset, avd_normal_thr),
+                            std::min(avd_car_past[0][9], avd_limit_left));
             } else {
               lat_offset =
-                  -std::min(std::min(lat_offset, 0.5 * lane_width - 0.9), std::min(avd_car_past[0][9], avd_limit_left));
+                  -std::min(std::min(lat_offset, 0.5 * lane_width - 0.9),
+                            std::min(avd_car_past[0][9], avd_limit_left));
             }
 
             if (avd_car_past[0][5] < 1.5) {
-              if ((virtual_lane_manager_->current_lane_virtual_id() != virtual_lane_manager_->get_lane_num() - 1 &&
+              if ((virtual_lane_manager_->current_lane_virtual_id() !=
+                       virtual_lane_manager_->get_lane_num() - 1 &&
                    (virtual_lane_manager_->get_right_lane() == nullptr ||
                     (virtual_lane_manager_->get_right_lane() != nullptr &&
-                     virtual_lane_manager_->get_right_lane()->get_lane_type() != MSD_LANE_TYPE_NON_MOTOR))) ||
+                     virtual_lane_manager_->get_right_lane()->get_lane_type() !=
+                         MSD_LANE_TYPE_NON_MOTOR))) ||
                   (avd_car_past[0][2] + v_ego >= 1.5 && avd_car_past[0][3] >= 0)
                   // ||
                   //  map_info.dist_to_intsect() <= 80 ||
                   //  map_info.dist_to_intsect() - avd_car_past[0][3] <= 80  //
                   //  hack
               ) {
-                lat_offset = avd_car_past[0][5] - (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
+                lat_offset =
+                    avd_car_past[0][5] -
+                    (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
                 lat_offset = std::max(lat_offset, -0.5 * lane_width + 0.9);
-              } else if (!frame_->session()->environmental_model().is_on_highway() && abs(avd_car_past[0][4]) < 0.45) {
-                if ((avd_car_past[0][3] < 15 && v_ego < 5) || (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
+              } else if (!frame_->session()
+                              ->environmental_model()
+                              .is_on_highway() &&
+                         abs(avd_car_past[0][4]) < 0.45) {
+                if ((avd_car_past[0][3] < 15 && v_ego < 5) ||
+                    (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
                     avd_car_past[0][3] < 1) {
-                  lat_offset = avd_car_past[0][5] - (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
-
                   lat_offset =
-                      std::max(lat_offset, std::max(-0.15 * lane_width - dist_rblane, -2.0 + avd_car_past[0][5]));
+                      avd_car_past[0][5] -
+                      (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
+
+                  lat_offset = std::max(
+                      lat_offset, std::max(-0.15 * lane_width - dist_rblane,
+                                           -2.0 + avd_car_past[0][5]));
                 }
 
-                if (dist_rblane > 1.0 && 0.5 * lane_width + avd_car_past[0][5] < 3.0 + 0.02 * avd_car_past[0][2]) {
+                if (dist_rblane > 1.0 && 0.5 * lane_width + avd_car_past[0][5] <
+                                             3.0 + 0.02 * avd_car_past[0][2]) {
                   sb_blane_ = true;
                 }
-                if (std::pow(avd_car_past[0][2] - 1, 2) / 4 > avd_car_past[0][3] - 2 && avd_car_past[0][3] > -5 &&
-                    d_poly_[3] < -0.7) {
+                if (std::pow(avd_car_past[0][2] - 1, 2) / 4 >
+                        avd_car_past[0][3] - 2 &&
+                    avd_car_past[0][3] > -5 && d_poly_[3] < -0.7) {
                   lat_offset = -1.3 + avd_car_past[0][5];
                   force_pause_ = true;
                 }
               }
 
               if (virtual_lane_manager_->get_lane_num() > 1 &&
-                  virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 1 &&
+                  virtual_lane_manager_->current_lane_virtual_id() ==
+                      virtual_lane_manager_->get_lane_num() - 1 &&
                   dist_rblane < 0.5) {
                 lat_offset *= 0.8;
               }
@@ -1278,28 +1620,36 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
               lat_offset = std::max(lat_offset, -avd_limit_left);
             }
 
-            if (flane_->status() != LaneStatusEx::BOTH_MISSING && r_poly_[3] < 0 && r_poly_[3] > -1.0 &&
-                (virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 1 &&
+            if (flane_->status() != LaneStatusEx::BOTH_MISSING &&
+                r_poly_[3] < 0 && r_poly_[3] > -1.0 &&
+                (virtual_lane_manager_->current_lane_virtual_id() ==
+                     virtual_lane_manager_->get_lane_num() - 1 &&
                  (dist_rblane < 0.5 || avd_limit_left == 0.2)) &&
                 !special_lane_type) {
               lat_offset = std::min(lat_offset + r_poly_[3] + 1.0, 0.0);
             }
           } else {
             if (avd_car_past[0][5] != 100) {
-              lat_offset = 0.5 * (lane_width - car_width / 2 - std::fabs(avd_car_past[0][5])) + lat_compen1;
+              lat_offset = 0.5 * (lane_width - car_width / 2 -
+                                  std::fabs(avd_car_past[0][5])) +
+                           lat_compen1;
             }
 
             lat_offset = std::max(lat_offset, 0.0);
-            lat_offset = -std::min(lat_offset, std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
+            lat_offset = -std::min(lat_offset, std::min(0.5 * lane_width - 0.9,
+                                                        avd_car_past[0][9]));
 
             if (avd_car_past[0][5] < 1.5) {
-              lat_offset = avd_car_past[0][5] - (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
+              lat_offset = avd_car_past[0][5] -
+                           (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
 
               if (avd_car_past[0][5] >= 1.1) {
                 lat_offset = std::max(lat_offset, -0.5 * lane_width + 0.9);
               } else if (lane_width <= 3.8) {
-                if ((avd_car_past[0][2] + v_ego < 1.5 || avd_car_past[0][3] < 0) && avd_car_past[0][4] > -0.5 &&
-                    avd_car_past[0][4] < 0.3 && avd_car_past[0][1] == 0) {
+                if ((avd_car_past[0][2] + v_ego < 1.5 ||
+                     avd_car_past[0][3] < 0) &&
+                    avd_car_past[0][4] > -0.5 && avd_car_past[0][4] < 0.3 &&
+                    avd_car_past[0][1] == 0) {
                   lat_offset = std::max(lat_offset, -1.6 + avd_car_past[0][5]);
                   sb_lane_ = true;
                 } else {
@@ -1310,9 +1660,12 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                   }
                 }
               } else {
-                lat_offset = std::max(lat_offset, -0.24 * lane_width / 4.4 * lane_width);
-                if ((avd_car_past[0][2] + v_ego < 1.5 || avd_car_past[0][3] < 0) && avd_car_past[0][4] > -0.5 &&
-                    avd_car_past[0][4] < 0.3 && avd_car_past[0][1] == 0) {
+                lat_offset =
+                    std::max(lat_offset, -0.24 * lane_width / 4.4 * lane_width);
+                if ((avd_car_past[0][2] + v_ego < 1.5 ||
+                     avd_car_past[0][3] < 0) &&
+                    avd_car_past[0][4] > -0.5 && avd_car_past[0][4] < 0.3 &&
+                    avd_car_past[0][1] == 0) {
                   lat_offset = std::max(lat_offset, -1.8 + avd_car_past[0][5]);
                   sb_lane_ = true;
                 }
@@ -1320,17 +1673,20 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
             }
           }
 
-          if ((virtual_lane_manager_->current_lane_virtual_id() != virtual_lane_manager_->get_lane_num() - 1) &&
+          if ((virtual_lane_manager_->current_lane_virtual_id() !=
+               virtual_lane_manager_->get_lane_num() - 1) &&
               avd_car_past[0][2] + v_ego < 0.5 &&
 
-              abs(avd_car_past[0][4]) < 0.2 && (avd_car_past[0][5] <= ((car_width + 0.3) - lane_width / 2))) {
+              abs(avd_car_past[0][4]) < 0.2 &&
+              (avd_car_past[0][5] <= ((car_width + 0.3) - lane_width / 2))) {
             cross_right_solid_line_ = true;
             lat_offset = 0.;
           }
           if (avd_car_past[0][7] == 20001 &&
 
               (avd_car_past[0][5] <= ((car_width + 0.3) - lane_width / 2))) {
-            if (virtual_lane_manager_->current_lane_virtual_id() != virtual_lane_manager_->get_lane_num() - 1 ||
+            if (virtual_lane_manager_->current_lane_virtual_id() !=
+                    virtual_lane_manager_->get_lane_num() - 1 ||
                 dist_rblane > 1.5) {
               cross_right_solid_line_ = true;
             } else if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
@@ -1345,17 +1701,25 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
           pre_str_dist = interp(avd_car_past[0][2], avd_vRel_bp, avd_vRel_v);
           if (avd_car_past[0][0] > 0 && avd_car_past[0][7] != 0.) {
             if (avd_car_past[0][7] >= avd_car_past[0][3]) {
-              lat_offset =
-                  std::max((avd_car_past[0][7] - (avd_car_past[0][3] - pre_str_dist)) / avd_car_past[0][7] * lat_offset,
-                           lat_offset);
+              lat_offset = std::max(
+                  (avd_car_past[0][7] - (avd_car_past[0][3] - pre_str_dist)) /
+                      avd_car_past[0][7] * lat_offset,
+                  lat_offset);
             } else if (avd_car_past[0][3] != 0.) {
-              lat_offset = (1 - avd_car_past[0][7] / avd_car_past[0][3]) * lat_offset;
+              lat_offset =
+                  (1 - avd_car_past[0][7] / avd_car_past[0][3]) * lat_offset;
             }
           } else {
             if (avd_car_past[0][5] < 1.5) {
-              lat_offset = std::max((5. / std::max(std::abs(avd_car_past[0][3]), 5.)) * lat_offset, lat_offset);
+              lat_offset =
+                  std::max((5. / std::max(std::abs(avd_car_past[0][3]), 5.)) *
+                               lat_offset,
+                           lat_offset);
             } else {
-              lat_offset = std::max((5. / std::max(std::abs(avd_car_past[0][3]), 5.)) * lat_offset, lat_offset);
+              lat_offset =
+                  std::max((5. / std::max(std::abs(avd_car_past[0][3]), 5.)) *
+                               lat_offset,
+                           lat_offset);
             }
           }
           if (d_poly_[3] + lat_offset < -0.3) {
@@ -1363,17 +1727,24 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
           }
         } else {
           lat_offset = std::min(-d_poly_[3], 0.);
-          if (std::fabs(lat_offset) > 0.5 * lane_width - 0.9 && dist_rblane < 0.5) {
+          if (std::fabs(lat_offset) > 0.5 * lane_width - 0.9 &&
+              dist_rblane < 0.5) {
             lat_offset = -0.5 * lane_width + 0.9;
           }
         }
-        if ((dist_rblane == 0 || sb_lane_ == false) && (lat_offset < -0.8 || lat_offset > 0.8)) {
+        if ((dist_rblane == 0 || sb_lane_ == false) &&
+            (lat_offset < -0.8 || lat_offset > 0.8)) {
         } else {
-          if (std::fabs(lat_offsetl) >= std::fabs(d_poly_[3]) && d_poly_[3] > 0 && d_poly_[3] + lat_offset > 0) {
+          if (std::fabs(lat_offsetl) >= std::fabs(d_poly_[3]) &&
+              d_poly_[3] > 0 && d_poly_[3] + lat_offset > 0) {
             d_poly_[3] = 0;
-          } else if (std::pow(avd_car_past[0][2] - 1, 2) / 4 > avd_car_past[0][3] - 2 && avd_car_past[0][3] > -5) {
-            if (avd_car_past[0][5] > 0 && std::fabs(lat_offset - avd_car_past[0][5]) < 1.3) {
-              lat_offset = std::max(-1.3 + avd_car_past[0][5], -0.15 * lane_width - dist_rblane);
+          } else if (std::pow(avd_car_past[0][2] - 1, 2) / 4 >
+                         avd_car_past[0][3] - 2 &&
+                     avd_car_past[0][3] > -5) {
+            if (avd_car_past[0][5] > 0 &&
+                std::fabs(lat_offset - avd_car_past[0][5]) < 1.3) {
+              lat_offset = std::max(-1.3 + avd_car_past[0][5],
+                                    -0.15 * lane_width - dist_rblane);
               force_pause_ = true;
             } else {
               d_poly_[3] += lat_offset;
@@ -1389,8 +1760,10 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
         if ((int)avd_car_past[0][1] == -200) {
           lat_offset = 0.15 * lane_width * std::fabs(avd_car_past[0][10]) / 3.2;
 
-          if (lane_type == MSD_LANE_TYPE_PARKING || std::fabs(d_poly_[1]) > 0.0001 ||
-              (virtual_lane_manager_->get_lane_num() > 1 && virtual_lane_manager_->current_lane_virtual_id() == 0)) {
+          if (lane_type == MSD_LANE_TYPE_PARKING ||
+              std::fabs(d_poly_[1]) > 0.0001 ||
+              (virtual_lane_manager_->get_lane_num() > 1 &&
+               virtual_lane_manager_->current_lane_virtual_id() == 0)) {
             lat_offset *= 0.8;
           }
 
@@ -1398,57 +1771,77 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
             lat_offset = std::min(lat_offset, avd_limit_right);
           }
 
-          if (flane_->status() != LaneStatusEx::BOTH_MISSING && l_poly_[3] > 0 && l_poly_[3] < 1.0 &&
-              !special_lane_type) {
+          if (flane_->status() != LaneStatusEx::BOTH_MISSING &&
+              l_poly_[3] > 0 && l_poly_[3] < 1.0 && !special_lane_type) {
             lat_offset += l_poly_[3] - 1.0;
           }
-        } else if (((int)avd_car_past[0][0] == 0 && avd_car_past[0][3] > -6.0) ||
-                   ((int)avd_car_past[0][0] != 0 && avd_car_past[0][3] >= -3.0)) {
-          if (status != INTER_GS_NONE && status != INTER_TR_NONE && status != INTER_TL_NONE) {
+        } else if (((int)avd_car_past[0][0] == 0 &&
+                    avd_car_past[0][3] > -6.0) ||
+                   ((int)avd_car_past[0][0] != 0 &&
+                    avd_car_past[0][3] >= -3.0)) {
+          if (status != INTER_GS_NONE && status != INTER_TR_NONE &&
+              status != INTER_TL_NONE) {
             if (avd_car_past[0][6] != 100) {
-              lat_offset = 0.5 * (lane_width - car_width / 2 - std::fabs(avd_car_past[0][6])) + lat_compen1;
+              lat_offset = 0.5 * (lane_width - car_width / 2 -
+                                  std::fabs(avd_car_past[0][6])) +
+                           lat_compen1;
             }
 
             lat_offset = std::max(lat_offset, 0.0);
 
             if (avd_normal_thr > 0) {
               lat_offset =
-                  std::min(std::min(lat_offset, avd_normal_thr), std::min(avd_car_past[0][9], avd_limit_right));
+                  std::min(std::min(lat_offset, avd_normal_thr),
+                           std::min(avd_car_past[0][9], avd_limit_right));
             } else {
               lat_offset =
-                  std::min(std::min(lat_offset, 0.5 * lane_width - 0.9), std::min(avd_car_past[0][9], avd_limit_right));
+                  std::min(std::min(lat_offset, 0.5 * lane_width - 0.9),
+                           std::min(avd_car_past[0][9], avd_limit_right));
             }
 
-            if (avd_car_past[0][6] < -0.9 + std::max(lane_width / 2 - 1.8, 0.0) && avd_car_past[0][6] > -1.5) {
-              lat_offset = avd_car_past[0][6] - (avd_car_past[0][6] - 1.8 - avd_car_past[0][9]) / 2;
+            if (avd_car_past[0][6] <
+                    -0.9 + std::max(lane_width / 2 - 1.8, 0.0) &&
+                avd_car_past[0][6] > -1.5) {
+              lat_offset = avd_car_past[0][6] -
+                           (avd_car_past[0][6] - 1.8 - avd_car_past[0][9]) / 2;
               lat_offset = std::min(lat_offset, 0.15 * lane_width);
 
-              if (virtual_lane_manager_->get_lane_num() > 1 && virtual_lane_manager_->current_lane_virtual_id() == 0) {
+              if (virtual_lane_manager_->get_lane_num() > 1 &&
+                  virtual_lane_manager_->current_lane_virtual_id() == 0) {
                 lat_offset *= 0.8;
               }
-            } else if (avd_car_past[0][6] >= 0 && (avd_car_past[0][2] + v_ego < 1.5 || avd_car_past[0][3] < 1) &&
+            } else if (avd_car_past[0][6] >= 0 &&
+                       (avd_car_past[0][2] + v_ego < 1.5 ||
+                        avd_car_past[0][3] < 1) &&
                        std::fabs(avd_car_past[0][4]) < 0.5 &&
                        ((virtual_lane_manager_->current_lane_virtual_id() ==
                          virtual_lane_manager_->get_lane_num() - 1) ||
                         (virtual_lane_manager_->current_lane_virtual_id() ==
                              virtual_lane_manager_->get_lane_num() - 2 &&
                          virtual_lane_manager_->get_right_lane() != nullptr &&
-                         virtual_lane_manager_->get_right_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR))) {
+                         virtual_lane_manager_->get_right_lane()
+                                 ->get_lane_type() ==
+                             MSD_LANE_TYPE_NON_MOTOR))) {
               if (((!frame_->session()->environmental_model().is_on_highway()
                     //  &&map_info.dist_to_intsect() > 80 &&
                     // map_info.dist_to_intsect() - avd_car_past[0][3] > 80
                     ) ||
                    (d_poly_[3] > 1 && avd_car_past[0][3] < 3)) &&
-                  ((avd_car_past[0][3] < 15 && v_ego < 5) || (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
+                  ((avd_car_past[0][3] < 15 && v_ego < 5) ||
+                   (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
                    avd_car_past[0][3] < 1)) {
-                lat_offset = avd_car_past[0][5] - (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
+                lat_offset =
+                    avd_car_past[0][5] -
+                    (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
 
                 if (-lat_offset - avd_car_past[0][9] > 0.4) {
-                  lat_offset = std::max(std::max(lat_offset, -0.15 * lane_width - dist_rblane),
-                                        std::max(-avd_car_past[0][9], -2.0 + avd_car_past[0][5]));
+                  lat_offset = std::max(
+                      std::max(lat_offset, -0.15 * lane_width - dist_rblane),
+                      std::max(-avd_car_past[0][9], -2.0 + avd_car_past[0][5]));
                 } else {
-                  lat_offset =
-                      std::max(lat_offset, std::max(-0.15 * lane_width - dist_rblane, -2.0 + avd_car_past[0][5]));
+                  lat_offset = std::max(
+                      lat_offset, std::max(-0.15 * lane_width - dist_rblane,
+                                           -2.0 + avd_car_past[0][5]));
                 }
 
                 if (lat_offset == -avd_car_past[0][9]) {
@@ -1458,34 +1851,48 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                 if (dist_rblane > 1.0) {
                   sb_blane_ = true;
                 }
-                if (std::pow(avd_car_past[0][2] - 1, 2) / 4 > avd_car_past[0][3] - 2 && avd_car_past[0][3] > -5 &&
-                    d_poly_[3] < -0.7) {
+                if (std::pow(avd_car_past[0][2] - 1, 2) / 4 >
+                        avd_car_past[0][3] - 2 &&
+                    avd_car_past[0][3] > -5 && d_poly_[3] < -0.7) {
                   lat_offset = -1.3 + avd_car_past[0][5];
                   force_pause_ = true;
                 }
               } else {
                 lat_offset = 0;
               }
-            } else if (avd_car_past[0][6] >= -0.9 + std::max(lane_width / 2 - 1.8, 0.0) && avd_car_past[0][6] < 0 &&
-                       (avd_car_past[0][2] + v_ego < 0.5 || avd_car_past[0][3] < 1) &&
+            } else if (avd_car_past[0][6] >=
+                           -0.9 + std::max(lane_width / 2 - 1.8, 0.0) &&
+                       avd_car_past[0][6] < 0 &&
+                       (avd_car_past[0][2] + v_ego < 0.5 ||
+                        avd_car_past[0][3] < 1) &&
                        std::fabs(avd_car_past[0][4]) < 0.5 &&
                        ((virtual_lane_manager_->current_lane_virtual_id() ==
                              virtual_lane_manager_->get_lane_num() - 1 &&
-                         ((virtual_lane_manager_->get_current_lane()->get_lane_type() != MSD_LANE_TYPE_NON_MOTOR &&
-                           virtual_lane_manager_->current_lane_virtual_id() >= 1) ||
-                          (virtual_lane_manager_->get_current_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR &&
-                           virtual_lane_manager_->current_lane_virtual_id() >= 2))) ||
+                         ((virtual_lane_manager_->get_current_lane()
+                                   ->get_lane_type() !=
+                               MSD_LANE_TYPE_NON_MOTOR &&
+                           virtual_lane_manager_->current_lane_virtual_id() >=
+                               1) ||
+                          (virtual_lane_manager_->get_current_lane()
+                                   ->get_lane_type() ==
+                               MSD_LANE_TYPE_NON_MOTOR &&
+                           virtual_lane_manager_->current_lane_virtual_id() >=
+                               2))) ||
                         (virtual_lane_manager_->current_lane_virtual_id() ==
                              virtual_lane_manager_->get_lane_num() - 2 &&
                          virtual_lane_manager_->get_right_lane() != nullptr &&
-                         virtual_lane_manager_->get_right_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR &&
-                         virtual_lane_manager_->current_lane_virtual_id() >= 1))) {
-              lat_offset = std::min(1.5 + avd_car_past[0][6], avd_car_past[0][9]);
+                         virtual_lane_manager_->get_right_lane()
+                                 ->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR &&
+                         virtual_lane_manager_->current_lane_virtual_id() >=
+                             1))) {
+              lat_offset =
+                  std::min(1.5 + avd_car_past[0][6], avd_car_past[0][9]);
 
               if (lat_offset >= lane_width / 2 - 1.1) {
                 large_lat_ = true;
-              } else if (std::pow(avd_car_past[0][2] - 1, 2) / 4 > avd_car_past[0][3] - 2 && avd_car_past[0][3] > -10 &&
-                         d_poly_[3] < -0.5) {
+              } else if (std::pow(avd_car_past[0][2] - 1, 2) / 4 >
+                             avd_car_past[0][3] - 2 &&
+                         avd_car_past[0][3] > -10 && d_poly_[3] < -0.5) {
                 lat_offset = 1.3 + avd_car_past[0][6];
                 force_pause_ = true;
               }
@@ -1495,21 +1902,26 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
               lat_offset = std::min(lat_offset, avd_limit_right);
             }
 
-            if (flane_->status() != LaneStatusEx::BOTH_MISSING && l_poly_[3] > 0 && l_poly_[3] < 1.0 &&
-                virtual_lane_manager_->current_lane_virtual_id() == 0 && !special_lane_type && !large_lat_ &&
-                !force_pause_) {
+            if (flane_->status() != LaneStatusEx::BOTH_MISSING &&
+                l_poly_[3] > 0 && l_poly_[3] < 1.0 &&
+                virtual_lane_manager_->current_lane_virtual_id() == 0 &&
+                !special_lane_type && !large_lat_ && !force_pause_) {
               lat_offset = std::max(lat_offset + l_poly_[3] - 1.0, 0.0);
             }
           } else {
             if (avd_car_past[0][6] != 100) {
-              lat_offset = 0.5 * (lane_width - car_width / 2 - std::fabs(avd_car_past[0][6])) + lat_compen1;
+              lat_offset = 0.5 * (lane_width - car_width / 2 -
+                                  std::fabs(avd_car_past[0][6])) +
+                           lat_compen1;
             }
 
             lat_offset = std::max(lat_offset, 0.0);
-            lat_offset = std::min(lat_offset, std::min(0.5 * lane_width - 0.9, avd_car_past[0][9]));
+            lat_offset = std::min(lat_offset, std::min(0.5 * lane_width - 0.9,
+                                                       avd_car_past[0][9]));
 
             if (avd_car_past[0][6] > -1.5) {
-              lat_offset = avd_car_past[0][6] - (avd_car_past[0][6] - 1.8 - avd_car_past[0][9]) / 2;
+              lat_offset = avd_car_past[0][6] -
+                           (avd_car_past[0][6] - 1.8 - avd_car_past[0][9]) / 2;
 
               if (avd_car_past[0][6] < -1.1) {
                 // if (map_info.left_refline_points().size() != 0 || // hack
@@ -1524,15 +1936,20 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                 //}
               } else if (lane_width <= 3.8) {
                 if (avd_car_past[0][6] > 0 && avd_car_past[0][5] > -0.65 &&
-                    (avd_car_past[0][2] + v_ego < 1.5 || avd_car_past[0][3] < 0) && avd_car_past[0][4] > -0.5 &&
-                    avd_car_past[0][4] < 0.3 && avd_car_past[0][1] == 0) {
-                  lat_offset = avd_car_past[0][5] - (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
+                    (avd_car_past[0][2] + v_ego < 1.5 ||
+                     avd_car_past[0][3] < 0) &&
+                    avd_car_past[0][4] > -0.5 && avd_car_past[0][4] < 0.3 &&
+                    avd_car_past[0][1] == 0) {
+                  lat_offset =
+                      avd_car_past[0][5] -
+                      (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
 
                   lat_offset = std::max(lat_offset, -1.6 + avd_car_past[0][5]);
                   sb_lane_ = true;
                 } else {
                   //    if (map_info.dist_to_last_intsect() > -10) {
-                  lat_offset = std::min(lat_offset, std::min(0.5 * lane_width - 0.9, 0.7));
+                  lat_offset = std::min(lat_offset,
+                                        std::min(0.5 * lane_width - 0.9, 0.7));
                   // } else {
                   //   if (avd_normal_thr > 0) {
                   //     lat_offset = std::min(lat_offset, avd_normal_thr);
@@ -1543,12 +1960,17 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                   // }
                 }
               } else {
-                lat_offset = std::min(lat_offset, 0.24 * lane_width / 4.4 * lane_width);
+                lat_offset =
+                    std::min(lat_offset, 0.24 * lane_width / 4.4 * lane_width);
 
                 if (avd_car_past[0][6] > 0 && avd_car_past[0][5] > -0.65 &&
-                    (avd_car_past[0][2] + v_ego < 1.5 || avd_car_past[0][3] < 0) && avd_car_past[0][4] > -0.5 &&
-                    avd_car_past[0][4] < 0.3 && avd_car_past[0][1] == 0) {
-                  lat_offset = avd_car_past[0][5] - (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
+                    (avd_car_past[0][2] + v_ego < 1.5 ||
+                     avd_car_past[0][3] < 0) &&
+                    avd_car_past[0][4] > -0.5 && avd_car_past[0][4] < 0.3 &&
+                    avd_car_past[0][1] == 0) {
+                  lat_offset =
+                      avd_car_past[0][5] -
+                      (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
                   lat_offset = std::max(lat_offset, -1.8 + avd_car_past[0][5]);
                   sb_lane_ = true;
                 }
@@ -1556,12 +1978,14 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
             }
           }
 
-          if ((virtual_lane_manager_->current_lane_virtual_id() != virtual_lane_manager_->get_lane_num() - 1 &&
+          if ((virtual_lane_manager_->current_lane_virtual_id() !=
+                   virtual_lane_manager_->get_lane_num() - 1 &&
                virtual_lane_manager_->current_lane_virtual_id() != 0) &&
               avd_car_past[0][2] + v_ego < 0.5 &&
               // map_info.dist_to_intsect() > 0 &&
               // map_info.dist_to_intsect() - avd_car_past[0][3] < 50 &&
-              abs(avd_car_past[0][4]) < 0.2 && (avd_car_past[0][6] >= (lane_width / 2 - (car_width + 0.3))) &&
+              abs(avd_car_past[0][4]) < 0.2 &&
+              (avd_car_past[0][6] >= (lane_width / 2 - (car_width + 0.3))) &&
               avd_car_past[0][6] < 0) {
             cross_left_solid_line_ = true;
             lat_offset = 0.;
@@ -1570,9 +1994,11 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
               // map_info.dist_to_intsect() - avd_car_past[0][3] >= -5 &&
               //  map_info.dist_to_intsect() - avd_car_past[0][3] < 50 &&
               (avd_car_past[0][6] >= (lane_width / 2 - (car_width + 0.3)))) {
-            if (virtual_lane_manager_->current_lane_virtual_id() != 0 || flane_->get_relative_id() == RIGHT_POS) {
+            if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
+                flane_->get_relative_id() == RIGHT_POS) {
               cross_left_solid_line_ = true;
-            } else if (virtual_lane_manager_->current_lane_virtual_id() != virtual_lane_manager_->get_lane_num() - 1) {
+            } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+                       virtual_lane_manager_->get_lane_num() - 1) {
               cross_right_solid_line_ = true;
             }
             lat_offset = 0.;
@@ -1583,42 +2009,58 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
           pre_str_dist = interp(avd_car_past[0][2], avd_vRel_bp, avd_vRel_v);
           if (avd_car_past[0][0] > 0 && avd_car_past[0][7] != 0.) {
             if (avd_car_past[0][7] >= avd_car_past[0][3]) {
-              lat_offset =
-                  std::min((avd_car_past[0][7] - (avd_car_past[0][3] - pre_str_dist)) / avd_car_past[0][7] * lat_offset,
-                           lat_offset);
+              lat_offset = std::min(
+                  (avd_car_past[0][7] - (avd_car_past[0][3] - pre_str_dist)) /
+                      avd_car_past[0][7] * lat_offset,
+                  lat_offset);
             } else if (avd_car_past[0][3] != 0.) {
-              lat_offset = (1 - avd_car_past[0][7] / avd_car_past[0][3]) * lat_offset;
+              lat_offset =
+                  (1 - avd_car_past[0][7] / avd_car_past[0][3]) * lat_offset;
             }
           } else {
             if (avd_car_past[0][5] < 1.5) {
-              lat_offset = std::max((5. / std::max(std::abs(avd_car_past[0][3]), 5.)) * lat_offset, lat_offset);
+              lat_offset =
+                  std::max((5. / std::max(std::abs(avd_car_past[0][3]), 5.)) *
+                               lat_offset,
+                           lat_offset);
             } else {
-              lat_offset = std::max((5. / std::max(std::abs(avd_car_past[0][3]), 5.)) * lat_offset, lat_offset);
+              lat_offset =
+                  std::max((5. / std::max(std::abs(avd_car_past[0][3]), 5.)) *
+                               lat_offset,
+                           lat_offset);
             }
           }
           if (d_poly_[3] + lat_offset > 0.3) {
             lat_offset = -d_poly_[3] + 0.3;
           }
         } else {
-          lat_offset = std::max(std::min(1.6 + avd_car_past[0][6],
-                                         avd_car_past[0][6] - (avd_car_past[0][6] - 1.8 - avd_car_past[0][9]) / 2),
-                                0.0);
+          lat_offset = std::max(
+              std::min(1.6 + avd_car_past[0][6],
+                       avd_car_past[0][6] -
+                           (avd_car_past[0][6] - 1.8 - avd_car_past[0][9]) / 2),
+              0.0);
 
-          if (std::fabs(lat_offset) > 0.5 * lane_width - 0.9 && avd_car_past[0][6] < 0) {
+          if (std::fabs(lat_offset) > 0.5 * lane_width - 0.9 &&
+              avd_car_past[0][6] < 0) {
             lat_offset = 0.5 * lane_width - 0.9;
           }
         }
 
         if (dist_rblane == 0 && (lat_offset > 0.8 || lat_offset < -0.8)) {
         } else {
-          if (std::fabs(lat_offsetr) >= std::fabs(d_poly_[3]) && d_poly_[3] < 0 && d_poly_[3] + lat_offset < 0) {
+          if (std::fabs(lat_offsetr) >= std::fabs(d_poly_[3]) &&
+              d_poly_[3] < 0 && d_poly_[3] + lat_offset < 0) {
             d_poly_[3] = 0;
-          } else if (std::pow(avd_car_past[0][2] - 1, 2) / 4 > avd_car_past[0][3] - 2 && avd_car_past[0][3] > -5) {
-            if (avd_car_past[0][5] < 0 && avd_car_past[0][6] < 0 && std::fabs(lat_offset - avd_car_past[0][6]) < 1.3) {
+          } else if (std::pow(avd_car_past[0][2] - 1, 2) / 4 >
+                         avd_car_past[0][3] - 2 &&
+                     avd_car_past[0][3] > -5) {
+            if (avd_car_past[0][5] < 0 && avd_car_past[0][6] < 0 &&
+                std::fabs(lat_offset - avd_car_past[0][6]) < 1.3) {
               lat_offset = 1.3 + avd_car_past[0][6];
 
               if (virtual_lane_manager_->current_lane_virtual_id() == 0) {
-                lat_offset = std::min(1.3 + avd_car_past[0][6], 0.5 * lane_width - 0.9);
+                lat_offset =
+                    std::min(1.3 + avd_car_past[0][6], 0.5 * lane_width - 0.9);
               }
 
               force_pause_ = true;
@@ -1633,16 +2075,20 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
           one_nudge_right_car = d_poly_[3];
         }
       }
-    } else if (flag_avd == 1 && status != ROAD_LB_LBACK && status != ROAD_LB_RBACK && status != ROAD_LB_LRETURN &&
-               status != ROAD_LB_RRETURN && status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE) {
+    } else if (flag_avd == 1 && status != ROAD_LB_LBACK &&
+               status != ROAD_LB_RBACK && status != ROAD_LB_LRETURN &&
+               status != ROAD_LB_RRETURN && status != ROAD_LC_LCHANGE &&
+               status != ROAD_LC_RCHANGE) {
       double path_gap = 0.2;
       std::array<double, 2> xp1{0, 0.02};
       std::array<double, 2> xp2{0, 0.003};
       std::array<double, 2> fp1{1, 5};
       std::array<double, 2> fp2{1, 3};
 
-      double min_factor = std::max(interp(std::fabs(d_poly_[2]), xp1, fp1), interp(std::fabs(d_poly_[1]), xp2, fp1));
-      double max_factor = std::max(interp(std::fabs(d_poly_[2]), xp1, fp2), interp(std::fabs(d_poly_[1]), xp2, fp2));
+      double min_factor = std::max(interp(std::fabs(d_poly_[2]), xp1, fp1),
+                                   interp(std::fabs(d_poly_[1]), xp2, fp1));
+      double max_factor = std::max(interp(std::fabs(d_poly_[2]), xp1, fp2),
+                                   interp(std::fabs(d_poly_[1]), xp2, fp2));
 
       if (d_poly_[3] < -min_factor * path_gap) {
         d_poly_[3] = -min_factor * path_gap;
@@ -1656,14 +2102,17 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
 
   } else if (status == ROAD_LB_LBORROW || status == ROAD_LB_RBORROW) {
     if (avd_sp_car_past[0].size() > 0) {
-      double plus1 = interp(avd_sp_car_past[0][2], near_car_vrel_bp, near_car_vrel_v);
-      double plus1_rel = interp(avd_sp_car_past[0][3], near_car_drel_bp, near_car_drel_v);
+      double plus1 =
+          interp(avd_sp_car_past[0][2], near_car_vrel_bp, near_car_vrel_v);
+      double plus1_rel =
+          interp(avd_sp_car_past[0][3], near_car_drel_bp, near_car_drel_v);
       double lat_compen1 = 0.5 * plus1 + 0.5 * plus1_rel;
 
       if (avd_sp_car_past[1].size() > 0) {
         double v_near_car2 = v_ego + avd_sp_car_past[1][2];
         double desired_dist2 = dist_offset + v_near_car2 * t_gap;
-        double diff_dist_nudge_car = avd_sp_car_past[1][3] - avd_sp_car_past[0][3];
+        double diff_dist_nudge_car =
+            avd_sp_car_past[1][3] - avd_sp_car_past[0][3];
         double dist_avd_nudge_car1 = avd_sp_car_past[0][3] + 5.0 + safety_dist;
 
         double t_avdcar1 = 0;
@@ -1679,11 +2128,16 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
 
         if (t_avdcar1 > 0) {
           diff_dist_nudge_car += diff_dist_nudge_car * t_avdcar1;
-          if ((int)avd_sp_car_past[0][9] == RIGHT_CHANGE && (int)avd_sp_car_past[1][9] == LEFT_CHANGE) {
-            if (diff_dist_nudge_car < desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
-              if (avd_sp_car_past[0][2] <= avd_sp_car_past[1][2] || avd_sp_car_past[0][2] - avd_sp_car_past[1][2] < 2) {
+          if ((int)avd_sp_car_past[0][9] == RIGHT_CHANGE &&
+              (int)avd_sp_car_past[1][9] == LEFT_CHANGE) {
+            if (diff_dist_nudge_car <
+                desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
+              if (avd_sp_car_past[0][2] <= avd_sp_car_past[1][2] ||
+                  avd_sp_car_past[0][2] - avd_sp_car_past[1][2] < 2) {
                 if (avd_sp_car_past[0][5] != 100) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 - std::fabs(avd_sp_car_past[0][5])) + lat_compen1;
+                  lat_offset = 0.9 * (lane_width - car_width / 2 -
+                                      std::fabs(avd_sp_car_past[0][5])) +
+                               lat_compen1;
                 }
 
                 lat_offset = -std::max(lat_offset, 0.0);
@@ -1693,7 +2147,9 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                 }
               } else {
                 if (avd_sp_car_past[1][6] != 100) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 - std::fabs(avd_sp_car_past[1][6])) + lat_compen1;
+                  lat_offset = 0.9 * (lane_width - car_width / 2 -
+                                      std::fabs(avd_sp_car_past[1][6])) +
+                               lat_compen1;
                 }
 
                 lat_offset = std::max(lat_offset, 0.0);
@@ -1703,18 +2159,26 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                 }
               }
             } else {
-              lat_offset = 0.9 * (lane_width - car_width / 2 - std::fabs(avd_sp_car_past[0][5])) + lat_compen1;
+              lat_offset = 0.9 * (lane_width - car_width / 2 -
+                                  std::fabs(avd_sp_car_past[0][5])) +
+                           lat_compen1;
 
               lat_offset = -std::max(lat_offset, 0.0);
-              if (lane_type == MSD_LANE_TYPE_PARKING || std::fabs(d_poly_[1]) > 0.0001) {
+              if (lane_type == MSD_LANE_TYPE_PARKING ||
+                  std::fabs(d_poly_[1]) > 0.0001) {
                 lat_offset *= 0.7;
               }
             }
-          } else if ((int)avd_sp_car_past[0][9] == LEFT_CHANGE && (int)avd_sp_car_past[1][9] == RIGHT_CHANGE) {
-            if (diff_dist_nudge_car < desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
-              if (avd_sp_car_past[0][2] <= avd_sp_car_past[1][2] || avd_sp_car_past[0][2] - avd_sp_car_past[1][2] < 2) {
+          } else if ((int)avd_sp_car_past[0][9] == LEFT_CHANGE &&
+                     (int)avd_sp_car_past[1][9] == RIGHT_CHANGE) {
+            if (diff_dist_nudge_car <
+                desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
+              if (avd_sp_car_past[0][2] <= avd_sp_car_past[1][2] ||
+                  avd_sp_car_past[0][2] - avd_sp_car_past[1][2] < 2) {
                 if (avd_sp_car_past[0][6] != 100) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 - std::fabs(avd_sp_car_past[0][6])) + lat_compen1;
+                  lat_offset = 0.9 * (lane_width - car_width / 2 -
+                                      std::fabs(avd_sp_car_past[0][6])) +
+                               lat_compen1;
                 }
 
                 lat_offset = std::max(lat_offset, 0.0);
@@ -1725,7 +2189,9 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                 }
               } else {
                 if (avd_sp_car_past[1][5] != 100) {
-                  lat_offset = 0.9 * (lane_width - car_width - std::fabs(avd_sp_car_past[1][5])) + lat_compen1;
+                  lat_offset = 0.9 * (lane_width - car_width -
+                                      std::fabs(avd_sp_car_past[1][5])) +
+                               lat_compen1;
                 }
 
                 lat_offset = -std::max(lat_offset, 0.0);
@@ -1736,11 +2202,14 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                 }
               }
             } else {
-              lat_offset = 0.9 * (lane_width - car_width / 2 - std::fabs(avd_sp_car_past[0][6])) + lat_compen1;
+              lat_offset = 0.9 * (lane_width - car_width / 2 -
+                                  std::fabs(avd_sp_car_past[0][6])) +
+                           lat_compen1;
 
               lat_offset = std::max(lat_offset, 0.0);
 
-              if (lane_type == MSD_LANE_TYPE_PARKING || std::fabs(d_poly_[1]) > 0.0001) {
+              if (lane_type == MSD_LANE_TYPE_PARKING ||
+                  std::fabs(d_poly_[1]) > 0.0001) {
                 lat_offset *= 0.7;
               }
 
@@ -1749,17 +2218,25 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
                 d_poly_[3] += lane_width - lat_offset;
               }
             }
-          } else if ((int)avd_sp_car_past[0][9] == RIGHT_CHANGE && (int)avd_sp_car_past[1][9] == RIGHT_CHANGE) {
-            if (diff_dist_nudge_car < desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
-              if (avd_sp_car_past[0][5] != 100 || avd_sp_car_past[1][5] != 100) {
-                if (std::fabs(avd_sp_car_past[0][5]) < 1.9 || std::fabs(avd_sp_car_past[1][5]) < 1.9) {
-                  lat_offset =
-                      0.9 * (lane_width - car_width / 2 - std::min(avd_sp_car_past[0][5], avd_sp_car_past[1][5])) +
-                      lat_compen1;
+          } else if ((int)avd_sp_car_past[0][9] == RIGHT_CHANGE &&
+                     (int)avd_sp_car_past[1][9] == RIGHT_CHANGE) {
+            if (diff_dist_nudge_car <
+                desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
+              if (avd_sp_car_past[0][5] != 100 ||
+                  avd_sp_car_past[1][5] != 100) {
+                if (std::fabs(avd_sp_car_past[0][5]) < 1.9 ||
+                    std::fabs(avd_sp_car_past[1][5]) < 1.9) {
+                  lat_offset = 0.9 * (lane_width - car_width / 2 -
+                                      std::min(avd_sp_car_past[0][5],
+                                               avd_sp_car_past[1][5])) +
+                               lat_compen1;
                 } else {
-                  if (avd_sp_car_past[0][5] >= 1.9 || avd_sp_car_past[1][5] >= 1.9) {
+                  if (avd_sp_car_past[0][5] >= 1.9 ||
+                      avd_sp_car_past[1][5] >= 1.9) {
                     lat_offset = 0.9 * (lane_width - car_width / 2 -
-                                        std::min(avd_sp_car_past[0][5], avd_sp_car_past[1][5]) + lane_width) +
+                                        std::min(avd_sp_car_past[0][5],
+                                                 avd_sp_car_past[1][5]) +
+                                        lane_width) +
                                  lat_compen1;
                   }
                 }
@@ -1767,10 +2244,14 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
             } else {
               if (avd_sp_car_past[0][5] != 100) {
                 if (std::fabs(avd_sp_car_past[0][5]) < 1.9) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 - avd_sp_car_past[0][5]) + lat_compen1;
+                  lat_offset = 0.9 * (lane_width - car_width / 2 -
+                                      avd_sp_car_past[0][5]) +
+                               lat_compen1;
                 } else {
                   if (avd_sp_car_past[0][5] >= 1.9) {
-                    lat_offset = 0.9 * (lane_width - car_width / 2 - avd_sp_car_past[0][5] + lane_width) + lat_compen1;
+                    lat_offset = 0.9 * (lane_width - car_width / 2 -
+                                        avd_sp_car_past[0][5] + lane_width) +
+                                 lat_compen1;
                   }
                 }
               }
@@ -1779,44 +2260,65 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
             lat_offset = -std::max(lat_offset, 0.0);
             lat_offset = std::max(-1.2 * lane_width, lat_offset);
             d_poly_[3] += lat_offset;
-          } else if ((int)avd_sp_car_past[0][9] == LEFT_CHANGE && (int)avd_sp_car_past[1][9] == LEFT_CHANGE) {
-            if (diff_dist_nudge_car < desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
-              if (avd_sp_car_past[0][6] != 100 && avd_sp_car_past[1][6] != 100) {
-                if (std::fabs(avd_sp_car_past[0][6]) < 1.9 || std::fabs(avd_sp_car_past[1][6]) < 1.9) {
+          } else if ((int)avd_sp_car_past[0][9] == LEFT_CHANGE &&
+                     (int)avd_sp_car_past[1][9] == LEFT_CHANGE) {
+            if (diff_dist_nudge_car <
+                desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
+              if (avd_sp_car_past[0][6] != 100 &&
+                  avd_sp_car_past[1][6] != 100) {
+                if (std::fabs(avd_sp_car_past[0][6]) < 1.9 ||
+                    std::fabs(avd_sp_car_past[1][6]) < 1.9) {
                   lat_offset = 0.9 * (lane_width - car_width / 2 +
-                                      std::max(avd_sp_car_past[0][6], avd_sp_car_past[1][6]) + lane_width) +
+                                      std::max(avd_sp_car_past[0][6],
+                                               avd_sp_car_past[1][6]) +
+                                      lane_width) +
                                lat_compen1;
                 } else {
-                  if (avd_sp_car_past[0][6] <= -1.9 || avd_sp_car_past[1][6] <= -1.9) {
+                  if (avd_sp_car_past[0][6] <= -1.9 ||
+                      avd_sp_car_past[1][6] <= -1.9) {
                     lat_offset = 0.9 * (lane_width - car_width / 2 +
-                                        std::max(avd_sp_car_past[0][6], avd_sp_car_past[1][6]) + lane_width) +
+                                        std::max(avd_sp_car_past[0][6],
+                                                 avd_sp_car_past[1][6]) +
+                                        lane_width) +
                                  lat_compen1;
                   }
                 }
               } else if (avd_sp_car_past[0][6] != 100) {
                 if (std::fabs(avd_sp_car_past[0][6]) < 1.9) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 + avd_sp_car_past[0][6]) + lat_compen1;
+                  lat_offset = 0.9 * (lane_width - car_width / 2 +
+                                      avd_sp_car_past[0][6]) +
+                               lat_compen1;
                 } else {
                   if (avd_sp_car_past[0][6] <= -1.9) {
-                    lat_offset = 0.9 * (lane_width - car_width / 2 + avd_sp_car_past[0][6] + lane_width) + lat_compen1;
+                    lat_offset = 0.9 * (lane_width - car_width / 2 +
+                                        avd_sp_car_past[0][6] + lane_width) +
+                                 lat_compen1;
                   }
                 }
               } else if (avd_sp_car_past[1][6] != 100) {
                 if (std::fabs(avd_sp_car_past[1][6]) < 1.9) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 + avd_sp_car_past[1][6]) + lat_compen1;
+                  lat_offset = 0.9 * (lane_width - car_width / 2 +
+                                      avd_sp_car_past[1][6]) +
+                               lat_compen1;
                 } else {
                   if (avd_sp_car_past[1][6] <= -1.9) {
-                    lat_offset = 0.9 * (lane_width - car_width / 2 + avd_sp_car_past[1][6] + lane_width) + lat_compen1;
+                    lat_offset = 0.9 * (lane_width - car_width / 2 +
+                                        avd_sp_car_past[1][6] + lane_width) +
+                                 lat_compen1;
                   }
                 }
               }
             } else {
               if (avd_sp_car_past[0][6] != 100) {
                 if (std::fabs(avd_sp_car_past[0][6]) < 1.9) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 + avd_sp_car_past[0][6]) + lat_compen1;
+                  lat_offset = 0.9 * (lane_width - car_width / 2 +
+                                      avd_sp_car_past[0][6]) +
+                               lat_compen1;
                 } else {
                   if (avd_sp_car_past[0][6] <= -1.9) {
-                    lat_offset = 0.9 * (lane_width - car_width / 2 + avd_sp_car_past[0][6] + lane_width) + lat_compen1;
+                    lat_offset = 0.9 * (lane_width - car_width / 2 +
+                                        avd_sp_car_past[0][6] + lane_width) +
+                                 lat_compen1;
                   }
                 }
               }
@@ -1830,10 +2332,14 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
       } else if ((int)avd_sp_car_past[0][9] == RIGHT_CHANGE) {
         if (avd_sp_car_past[0][5] != 100) {
           if (std::fabs(avd_sp_car_past[0][5]) < 1.9) {
-            lat_offset = 0.9 * (lane_width - car_width / 2 - avd_sp_car_past[0][5]) + lat_compen1;
+            lat_offset =
+                0.9 * (lane_width - car_width / 2 - avd_sp_car_past[0][5]) +
+                lat_compen1;
           } else {
             if (avd_sp_car_past[0][5] >= 1.9) {
-              lat_offset = 0.9 * (lane_width - car_width / 2 - avd_sp_car_past[0][5]) + lat_compen1;
+              lat_offset =
+                  0.9 * (lane_width - car_width / 2 - avd_sp_car_past[0][5]) +
+                  lat_compen1;
             }
           }
 
@@ -1847,10 +2353,14 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
       } else {
         if (avd_sp_car_past[0][6] != 100) {
           if (std::fabs(avd_sp_car_past[0][6]) < 1.9) {
-            lat_offset = 0.9 * (lane_width - car_width / 2 + avd_sp_car_past[0][6]) + lat_compen1;
+            lat_offset =
+                0.9 * (lane_width - car_width / 2 + avd_sp_car_past[0][6]) +
+                lat_compen1;
           } else {
             if (avd_sp_car_past[0][6] <= -1.9) {
-              lat_offset = 0.9 * (lane_width - car_width / 2 + avd_sp_car_past[0][6]) + lat_compen1;
+              lat_offset =
+                  0.9 * (lane_width - car_width / 2 + avd_sp_car_past[0][6]) +
+                  lat_compen1;
             }
           }
 
@@ -1889,7 +2399,9 @@ bool VisionLateralMotionPlanner::update_avoidance_path(int status, bool flag_avd
   } else {
     lat_offset_ = lat_offset;
   }
-  LOG_DEBUG("vision_only_lateral_motion_palnner:: lat_offset_[%f], d_poly_[3][%f]\n", lat_offset_, d_poly_[3]);
+  LOG_DEBUG(
+      "vision_only_lateral_motion_palnner:: lat_offset_[%f], d_poly_[3][%f]\n",
+      lat_offset_, d_poly_[3]);
   return true;
 }
 
@@ -1897,11 +2409,14 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   //   auto &map_info = world_model_->get_map_info();
   //   auto &map_info_mgr =
   // world_model_->get_map_info_manager();
-  auto &lateral_output =
-      frame_->mutable_session()->mutable_planning_context()->mutable_lateral_behavior_planner_output();
+  auto &lateral_output = frame_->mutable_session()
+                             ->mutable_planning_context()
+                             ->mutable_lateral_behavior_planner_output();
   // lateral_output = context_->mutable_lateral_behavior_planner_output();
   auto &state_machine_output =
-      frame_->mutable_session()->mutable_planning_context()->mutable_lat_behavior_state_machine_output();
+      frame_->mutable_session()
+          ->mutable_planning_context()
+          ->mutable_lat_behavior_state_machine_output();
 
   //   //   auto &flane = virtual_lane_mgr_->get_fix_lane();
   //   //
@@ -1956,7 +2471,10 @@ bool VisionLateralMotionPlanner::update_planner_output() {
 
   lateral_output.lane_borrow = false;        // attention!! hack!
   lateral_output.lane_borrow_range = -1000;  // attention!! hack!
-  TrackedObject *lead_one = frame_->mutable_session()->mutable_environmental_model()->get_lateral_obstacle()->leadone();
+  TrackedObject *lead_one = frame_->mutable_session()
+                                ->mutable_environmental_model()
+                                ->get_lateral_obstacle()
+                                ->leadone();
 
   if (flane_->get_relative_id() == LEFT_POS ||  // 判断fix refline
                                                 //   在自车的方位？ 左或者右？
@@ -1990,23 +2508,23 @@ bool VisionLateralMotionPlanner::update_planner_output() {
     lateral_output.lc_request = "right";
   }
 
-  if (state == ROAD_LC_LCHANGE || state == INTER_GS_LC_LCHANGE || state == INTER_TR_LC_LCHANGE ||
-      state == INTER_TL_LC_LCHANGE) {
+  if (state == ROAD_LC_LCHANGE || state == INTER_GS_LC_LCHANGE ||
+      state == INTER_TR_LC_LCHANGE || state == INTER_TL_LC_LCHANGE) {
     lateral_output.lc_status = "left_lane_change";
-  } else if (state == ROAD_LC_LBACK || state == INTER_GS_LC_LBACK || state == INTER_TR_LC_LBACK ||
-             state == INTER_TL_LC_LBACK) {
+  } else if (state == ROAD_LC_LBACK || state == INTER_GS_LC_LBACK ||
+             state == INTER_TR_LC_LBACK || state == INTER_TL_LC_LBACK) {
     lateral_output.lc_status = "left_lane_change_back";
-  } else if (state == ROAD_LC_RCHANGE || state == INTER_GS_LC_RCHANGE || state == INTER_TR_LC_RCHANGE ||
-             state == INTER_TL_LC_RCHANGE) {
+  } else if (state == ROAD_LC_RCHANGE || state == INTER_GS_LC_RCHANGE ||
+             state == INTER_TR_LC_RCHANGE || state == INTER_TL_LC_RCHANGE) {
     lateral_output.lc_status = "right_lane_change";
-  } else if (state == ROAD_LC_RBACK || state == INTER_GS_LC_RBACK || state == INTER_TR_LC_RBACK ||
-             state == INTER_TL_LC_RBACK) {
+  } else if (state == ROAD_LC_RBACK || state == INTER_GS_LC_RBACK ||
+             state == INTER_TR_LC_RBACK || state == INTER_TL_LC_RBACK) {
     lateral_output.lc_status = "right_lane_change_back";
-  } else if (state == ROAD_LC_LWAIT || state == INTER_GS_LC_LWAIT || state == INTER_TR_LC_LWAIT ||
-             state == INTER_TL_LC_LWAIT) {
+  } else if (state == ROAD_LC_LWAIT || state == INTER_GS_LC_LWAIT ||
+             state == INTER_TR_LC_LWAIT || state == INTER_TL_LC_LWAIT) {
     lateral_output.lc_status = "left_lane_change_wait";
-  } else if (state == ROAD_LC_RWAIT || state == INTER_GS_LC_RWAIT || state == INTER_TR_LC_RWAIT ||
-             state == INTER_TL_LC_RWAIT) {
+  } else if (state == ROAD_LC_RWAIT || state == INTER_GS_LC_RWAIT ||
+             state == INTER_TR_LC_RWAIT || state == INTER_TL_LC_RWAIT) {
     lateral_output.lc_status = "right_lane_change_wait";
   } else {
     lateral_output.lc_status = "none";
@@ -2044,11 +2562,15 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   //     flane_->get_refined_lane_points();  // attention! transform
   //                                         // RerencePathPoint 2 PathPoint
 
-  if (((virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 1) ||
-       (virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 2 &&
+  if (((virtual_lane_manager_->current_lane_virtual_id() ==
+        virtual_lane_manager_->get_lane_num() - 1) ||
+       (virtual_lane_manager_->current_lane_virtual_id() ==
+            virtual_lane_manager_->get_lane_num() - 2 &&
         virtual_lane_manager_->get_right_lane() != nullptr &&
-        virtual_lane_manager_->get_right_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR)) &&
-      ((!isRedLightStop && lateral_output.accident_ahead && lead_one != nullptr && lead_one->type == 20001))) {
+        virtual_lane_manager_->get_right_lane()->get_lane_type() ==
+            MSD_LANE_TYPE_NON_MOTOR)) &&
+      ((!isRedLightStop && lateral_output.accident_ahead &&
+        lead_one != nullptr && lead_one->type == 20001))) {
     lateral_output.borrow_bicycle_lane = true;
   } else {
     lateral_output.borrow_bicycle_lane = false;
@@ -2068,16 +2590,20 @@ bool VisionLateralMotionPlanner::update_planner_output() {
 
   bool is_right_turn = false;
 
-  if (virtual_lane_manager_->get_left_lane() == nullptr || left_direct_exist == false) {
+  if (virtual_lane_manager_->get_left_lane() == nullptr ||
+      left_direct_exist == false) {
     lateral_output.tleft_lane = true;
   } else {
     lateral_output.tleft_lane = false;
   }
 
-  if (((virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 1) ||
-       (virtual_lane_manager_->current_lane_virtual_id() == virtual_lane_manager_->get_lane_num() - 2 &&
+  if (((virtual_lane_manager_->current_lane_virtual_id() ==
+        virtual_lane_manager_->get_lane_num() - 1) ||
+       (virtual_lane_manager_->current_lane_virtual_id() ==
+            virtual_lane_manager_->get_lane_num() - 2 &&
         virtual_lane_manager_->get_right_lane() != nullptr &&
-        virtual_lane_manager_->get_right_lane()->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR)) &&
+        virtual_lane_manager_->get_right_lane()->get_lane_type() ==
+            MSD_LANE_TYPE_NON_MOTOR)) &&
       virtual_lane_manager_->current_lane_virtual_id() - 1 >= 0) {
     lateral_output.rightest_lane = true;
   } else {
@@ -2086,23 +2612,28 @@ bool VisionLateralMotionPlanner::update_planner_output() {
 
   lateral_output.dist_intersect = 1000;  // attention !
 
-  if (virtual_lane_manager_->get_intersection_info().intsect_length() != DBL_MAX) {  // attention !
+  if (virtual_lane_manager_->get_intersection_info().intsect_length() !=
+      DBL_MAX) {  // attention !
 
-    lateral_output.intersect_length = virtual_lane_manager_->get_intersection_info().intsect_length();
+    lateral_output.intersect_length =
+        virtual_lane_manager_->get_intersection_info().intsect_length();
   } else {
     lateral_output.intersect_length = 1000;
   }
 
-  if (virtual_lane_manager_->lc_map_decision_offset(virtual_lane_manager_->get_current_lane()) !=
+  if (virtual_lane_manager_->lc_map_decision_offset(
+          virtual_lane_manager_->get_current_lane()) !=
       DBL_MAX) {  // attention !
-    lateral_output.lc_end_dis =
-        virtual_lane_manager_->lc_map_decision_offset(virtual_lane_manager_->get_current_lane());
+    lateral_output.lc_end_dis = virtual_lane_manager_->lc_map_decision_offset(
+        virtual_lane_manager_->get_current_lane());
   } else {
     lateral_output.lc_end_dis = 10000;
   }
 
-  if (virtual_lane_manager_->get_ramp().dis_to_ramp() != DBL_MAX) {  // attention !
-    lateral_output.dis_to_ramp = virtual_lane_manager_->get_ramp().dis_to_ramp();
+  if (virtual_lane_manager_->get_ramp().dis_to_ramp() !=
+      DBL_MAX) {  // attention !
+    lateral_output.dis_to_ramp =
+        virtual_lane_manager_->get_ramp().dis_to_ramp();
   } else {
     lateral_output.dis_to_ramp = 10000;
   }
@@ -2124,13 +2655,17 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   lateral_output.left_faster = state_machine_output.left_is_faster;
 
   lateral_output.right_faster = state_machine_output.right_is_faster;
-  lateral_output.premove = (state_machine_output.premovel || state_machine_output.premover);
+  lateral_output.premove =
+      (state_machine_output.premovel || state_machine_output.premover);
   lateral_output.premove_dist = state_machine_output.premove_dist;
   lateral_output.isFasterStaticAvd =
-      (left_direct_exist && lateral_output.left_faster) || (right_direct_exist && lateral_output.right_faster) ||
+      (left_direct_exist && lateral_output.left_faster) ||
+      (right_direct_exist && lateral_output.right_faster) ||
       (curr_direct_has_right && !curr_direct_has_straight) ||
-      (is_right_turn && left_direct_has_straight && lateral_output.left_faster);  // attention!
-  lateral_output.isOnHighway = frame_->session()->environmental_model().is_on_highway();
+      (is_right_turn && left_direct_has_straight &&
+       lateral_output.left_faster);  // attention!
+  lateral_output.isOnHighway =
+      frame_->session()->environmental_model().is_on_highway();
 
   lateral_output.c_poly.assign(c_poly_.begin(), c_poly_.end());
 
@@ -2151,7 +2686,8 @@ bool VisionLateralMotionPlanner::update_planner_output() {
 
   lateral_output.state_name = state_name;
 
-  lateral_output.scenario_name = (scenario == LOCATION_ROAD) ? "Road" : "Intersect";
+  lateral_output.scenario_name =
+      (scenario == LOCATION_ROAD) ? "Road" : "Intersect";
 
   if (turn_light == 1) {
     lateral_output.turn_light = "Left";  //
@@ -2201,7 +2737,8 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   lateral_output.avd_sp_car_past = avd_sp_car_past_;
 
   lateral_output.vel_sequence.resize(1);
-  lateral_output.vel_sequence[0] = ego_cart_state_manager_->ego_v_cruise();  // attention ! or ego_v() ?
+  lateral_output.vel_sequence[0] =
+      ego_cart_state_manager_->ego_v_cruise();  // attention ! or ego_v() ?
 
   lateral_output.cross_lsolid_line = cross_lsolid_line_;
   lateral_output.cross_rsolid_line = cross_rsolid_line_;
@@ -2210,10 +2747,12 @@ bool VisionLateralMotionPlanner::update_planner_output() {
 
   lateral_output.r_poly = r_poly_;
 
-  lateral_output.behavior_suspension = state_machine_output.behavior_suspend;  //
-                                                                               //   lateral suspend
-  lateral_output.suspension_obs.assign(state_machine_output.suspend_obs.begin(),
-                                       state_machine_output.suspend_obs.end());  //
+  lateral_output.behavior_suspension =
+      state_machine_output.behavior_suspend;  //
+                                              //   lateral suspend
+  lateral_output.suspension_obs.assign(
+      state_machine_output.suspend_obs.begin(),
+      state_machine_output.suspend_obs.end());  //
   //   lateral suspend
   //   //       obstacles
   if (!update_lateral_info()) {  // 这里进入
@@ -2226,7 +2765,8 @@ bool VisionLateralMotionPlanner::update_planner_output() {
 }
 
 void VisionLateralMotionPlanner::save_to_debug_info() {
-  const auto &lateral_output = frame_->session()->planning_context().lateral_behavior_planner_output();
+  const auto &lateral_output =
+      frame_->session()->planning_context().lateral_behavior_planner_output();
   auto &debug_info_manager = DebugInfoManager::GetInstance();
   auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
 
@@ -2266,10 +2806,12 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
   // //   auto &map_info =
   // world_model_->mutable_map_info_manager().get_map_info();
 
-  auto planning_status =
-      frame_->mutable_session()->mutable_planning_output_context()->mutable_planning_status();  // attention!
-  auto &lateral_output =
-      frame_->mutable_session()->mutable_planning_context()->mutable_lateral_behavior_planner_output();
+  auto planning_status = frame_->mutable_session()
+                             ->mutable_planning_output_context()
+                             ->mutable_planning_status();  // attention!
+  auto &lateral_output = frame_->mutable_session()
+                             ->mutable_planning_context()
+                             ->mutable_lateral_behavior_planner_output();
   auto lc_request = lateral_output.lc_request;
   auto lc_status = lateral_output.lc_status;
   // auto lb_status = lateral_output.lane_borrow;
@@ -2284,21 +2826,27 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
   // lb_info);
 
   auto &state_machine_output =
-      frame_->mutable_session()->mutable_planning_context()->mutable_lat_behavior_state_machine_output();
+      frame_->mutable_session()
+          ->mutable_planning_context()
+          ->mutable_lat_behavior_state_machine_output();
 
   int scenario = state_machine_output.scenario;
   int state = state_machine_output.curr_state;
   planning::common::LaneStatus default_lane_status;
   // //   // scenario input info
-  default_lane_status.change_lane.target_gap_obs = planning_status->lane_status.change_lane.target_gap_obs;
+  default_lane_status.change_lane.target_gap_obs =
+      planning_status->lane_status.change_lane.target_gap_obs;
   planning_status->lane_status = default_lane_status;
 
-  if (state == ROAD_NONE || state == INTER_GS_NONE || state == INTER_TR_NONE || state == INTER_TL_NONE) {
-    planning_status->lane_status.status = planning::common::LaneStatus::Status::LANE_KEEP;
+  if (state == ROAD_NONE || state == INTER_GS_NONE || state == INTER_TR_NONE ||
+      state == INTER_TL_NONE) {
+    planning_status->lane_status.status =
+        planning::common::LaneStatus::Status::LANE_KEEP;
   } else {
     if (lc_request == "none") {
       if (lb_request != "none") {
-        planning_status->lane_status.status = planning::common::LaneStatus::Status::LANE_BORROW;
+        planning_status->lane_status.status =
+            planning::common::LaneStatus::Status::LANE_BORROW;
         // TODO: BORROW_LANE_KEEP state to be set
         // accordingly
         if (lb_request == "left") {
@@ -2306,9 +2854,12 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
         } else if (lb_request == "right") {
           planning_status->lane_status.borrow_lane.direction = "right";
         }
-        if (lb_status == "left_lane_borrow" || lb_status == "right_lane_borrow") {
-          planning_status->lane_status.borrow_lane.status = planning::common::BorrowLaneStatus::Status::IN_BORROW_LANE;
-        } else if (lb_status == "left_lane_suspend" || lb_status == "right_lane_suspend") {
+        if (lb_status == "left_lane_borrow" ||
+            lb_status == "right_lane_borrow") {
+          planning_status->lane_status.borrow_lane.status =
+              planning::common::BorrowLaneStatus::Status::IN_BORROW_LANE;
+        } else if (lb_status == "left_lane_suspend" ||
+                   lb_status == "right_lane_suspend") {
           planning_status->lane_status.borrow_lane.status =
               planning::common::BorrowLaneStatus::Status::BORROW_LANE_KEEP;
         } else {
@@ -2316,18 +2867,22 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
               planning::common::BorrowLaneStatus::Status::BORROW_LANE_FINISHED;
         }
       } else {
-        planning_status->lane_status.status = planning::common::LaneStatus::Status::LANE_KEEP;
+        planning_status->lane_status.status =
+            planning::common::LaneStatus::Status::LANE_KEEP;
         planning_status->lane_status.change_lane.status =
             planning::common::ChangeLaneStatus::Status::CHANGE_LANE_FINISHED;
         planning_status->lane_status.borrow_lane.status =
             planning::common::BorrowLaneStatus::Status::BORROW_LANE_FINISHED;
       }
     } else {
-      planning_status->lane_status.status = planning::common::LaneStatus::Status::LANE_CHANGE;
+      planning_status->lane_status.status =
+          planning::common::LaneStatus::Status::LANE_CHANGE;
 
-      if (virtual_lane_manager_->get_tasks(virtual_lane_manager_->get_current_lane()) <
+      if (virtual_lane_manager_->get_tasks(
+              virtual_lane_manager_->get_current_lane()) <
               0 ||  // get_tasks(virtual_lane_manager_->get_current_lane)
-          virtual_lane_manager_->get_tasks(virtual_lane_manager_->get_current_lane()) > 0) {  // attention!!
+          virtual_lane_manager_->get_tasks(
+              virtual_lane_manager_->get_current_lane()) > 0) {  // attention!!
 
         planning_status->lane_status.change_lane.is_active_lane_change = false;
       } else {
@@ -2342,21 +2897,26 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
         } else if (lc_request == "right") {
           planning_status->lane_status.change_lane.direction = "right";
         }
-      } else if (lc_status == "left_lane_change" || lc_status == "right_lane_change") {
-        planning_status->lane_status.change_lane.status = planning::common::ChangeLaneStatus::Status::IN_CHANGE_LANE;
+      } else if (lc_status == "left_lane_change" ||
+                 lc_status == "right_lane_change") {
+        planning_status->lane_status.change_lane.status =
+            planning::common::ChangeLaneStatus::Status::IN_CHANGE_LANE;
         if (lc_status == "left_lane_change") {
           planning_status->lane_status.change_lane.direction = "left";
         } else if (lc_status == "right_lane_change") {
           planning_status->lane_status.change_lane.direction = "right";
         }
-      } else if (lc_status == "left_lane_change_back" || lc_status == "right_lane_change_back") {
-        planning_status->lane_status.change_lane.status = planning::common::ChangeLaneStatus::Status::CHANGE_LANE_BACK;
+      } else if (lc_status == "left_lane_change_back" ||
+                 lc_status == "right_lane_change_back") {
+        planning_status->lane_status.change_lane.status =
+            planning::common::ChangeLaneStatus::Status::CHANGE_LANE_BACK;
         if (lc_status == "left_lane_change_back") {
           planning_status->lane_status.change_lane.direction = "left";
         } else if (lc_status == "right_lane_change_back") {
           planning_status->lane_status.change_lane.direction = "right";
         }
-      } else if (lc_status == "left_lane_change_wait" || lc_status == "right_lane_change_wait") {
+      } else if (lc_status == "left_lane_change_wait" ||
+                 lc_status == "right_lane_change_wait") {
         planning_status->lane_status.change_lane.status =
             planning::common::ChangeLaneStatus::Status::CHANGE_LANE_PREPARATION;
         if (lc_status == "left_lane_change_wait") {
@@ -2379,9 +2939,11 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
   }
   planning_status->lane_status.target_lane_id = target_lane_id;
   planning_status->lane_status.change_lane.path_id = target_lane_id;
-  if (planning_status->lane_status.status == planning::common::LaneStatus::Status::LANE_CHANGE &&
+  if (planning_status->lane_status.status ==
+          planning::common::LaneStatus::Status::LANE_CHANGE &&
       (planning_status->lane_status.change_lane.status ==
-           planning::common::ChangeLaneStatus::Status::CHANGE_LANE_PREPARATION ||
+           planning::common::ChangeLaneStatus::Status::
+               CHANGE_LANE_PREPARATION ||
        planning_status->lane_status.change_lane.status ==
            planning::common::ChangeLaneStatus::Status::CHANGE_LANE_BACK)) {
     if (lc_request == "left") {
@@ -2390,7 +2952,8 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
       planning_status->lane_status.change_lane.path_id = target_lane_id + 1;
     }
   }
-  planning_status->lane_status.target_lane_lat_offset = lateral_output.lat_offset;
+  planning_status->lane_status.target_lane_lat_offset =
+      lateral_output.lat_offset;
 
   // //   auto baseline_info =
   // world_model_->get_baseline_info(target_lane_id);
@@ -2408,10 +2971,13 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
   return true;
 }
 bool VisionLateralMotionPlanner::update_planner_status() {
-  auto &lateral_output =
-      frame_->mutable_session()->mutable_planning_context()->mutable_lateral_behavior_planner_output();
+  auto &lateral_output = frame_->mutable_session()
+                             ->mutable_planning_context()
+                             ->mutable_lateral_behavior_planner_output();
   auto &state_machine_output =
-      frame_->mutable_session()->mutable_planning_context()->mutable_lat_behavior_state_machine_output();
+      frame_->mutable_session()
+          ->mutable_planning_context()
+          ->mutable_lat_behavior_state_machine_output();
 
   lateral_output.planner_scene = 0;
   lateral_output.planner_action = 0;
@@ -2513,37 +3079,43 @@ bool VisionLateralMotionPlanner::update_planner_status() {
 
     case INTER_GS_LC_LWAIT:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT | AlgorithmAction::LANE_CHANGE_LEFT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
+                                      AlgorithmAction::LANE_CHANGE_LEFT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
       break;
 
     case INTER_GS_LC_RWAIT:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT | AlgorithmAction::LANE_CHANGE_RIGHT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
+                                      AlgorithmAction::LANE_CHANGE_RIGHT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
       break;
 
     case INTER_GS_LC_LCHANGE:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT | AlgorithmAction::LANE_CHANGE_LEFT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
+                                      AlgorithmAction::LANE_CHANGE_LEFT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
       break;
 
     case INTER_GS_LC_RCHANGE:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT | AlgorithmAction::LANE_CHANGE_RIGHT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
+                                      AlgorithmAction::LANE_CHANGE_RIGHT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
       break;
 
     case INTER_GS_LC_LBACK:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT | AlgorithmAction::LANE_CHANGE_LEFT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
+                                      AlgorithmAction::LANE_CHANGE_LEFT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
       break;
 
     case INTER_GS_LC_RBACK:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT | AlgorithmAction::LANE_CHANGE_RIGHT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
+                                      AlgorithmAction::LANE_CHANGE_RIGHT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
       break;
 
@@ -2554,37 +3126,43 @@ bool VisionLateralMotionPlanner::update_planner_status() {
 
     case INTER_TR_LC_LWAIT:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT | AlgorithmAction::LANE_CHANGE_LEFT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
+                                      AlgorithmAction::LANE_CHANGE_LEFT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
       break;
 
     case INTER_TR_LC_RWAIT:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT | AlgorithmAction::LANE_CHANGE_RIGHT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
+                                      AlgorithmAction::LANE_CHANGE_RIGHT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
       break;
 
     case INTER_TR_LC_LCHANGE:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT | AlgorithmAction::LANE_CHANGE_LEFT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
+                                      AlgorithmAction::LANE_CHANGE_LEFT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
       break;
 
     case INTER_TR_LC_RCHANGE:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT | AlgorithmAction::LANE_CHANGE_RIGHT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
+                                      AlgorithmAction::LANE_CHANGE_RIGHT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
       break;
 
     case INTER_TR_LC_LBACK:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT | AlgorithmAction::LANE_CHANGE_LEFT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
+                                      AlgorithmAction::LANE_CHANGE_LEFT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
       break;
 
     case INTER_TR_LC_RBACK:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT | AlgorithmAction::LANE_CHANGE_RIGHT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
+                                      AlgorithmAction::LANE_CHANGE_RIGHT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
       break;
       //
@@ -2595,37 +3173,43 @@ bool VisionLateralMotionPlanner::update_planner_status() {
 
     case INTER_TL_LC_LWAIT:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT | AlgorithmAction::LANE_CHANGE_LEFT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
+                                      AlgorithmAction::LANE_CHANGE_LEFT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
       break;
 
     case INTER_TL_LC_RWAIT:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT | AlgorithmAction::LANE_CHANGE_RIGHT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
+                                      AlgorithmAction::LANE_CHANGE_RIGHT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
       break;
 
     case INTER_TL_LC_LCHANGE:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT | AlgorithmAction::LANE_CHANGE_LEFT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
+                                      AlgorithmAction::LANE_CHANGE_LEFT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
       break;
 
     case INTER_TL_LC_RCHANGE:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT | AlgorithmAction::LANE_CHANGE_RIGHT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
+                                      AlgorithmAction::LANE_CHANGE_RIGHT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
       break;
 
     case INTER_TL_LC_LBACK:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT | AlgorithmAction::LANE_CHANGE_LEFT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
+                                      AlgorithmAction::LANE_CHANGE_LEFT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
       break;
 
     case INTER_TL_LC_RBACK:
       lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT | AlgorithmAction::LANE_CHANGE_RIGHT;
+      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
+                                      AlgorithmAction::LANE_CHANGE_RIGHT;
       lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
       break;
 
@@ -3195,24 +3779,26 @@ bool VisionLateralMotionPlanner::update_planner_status() {
 //   //   plan_msg = std::string(jsonBuffer.GetString(),
 //   jsonBuffer.GetSize());
 
-void VisionLateralMotionPlanner::calc_desired_path(const std::array<double, 4> &l_poly,
-                                                   const std::array<double, 4> &r_poly, double l_prob, double r_prob,
-                                                   double intercept_width, std::array<double, 4> &d_poly) {
+void VisionLateralMotionPlanner::calc_desired_path(
+    const std::array<double, 4> &l_poly, const std::array<double, 4> &r_poly,
+    double l_prob, double r_prob, double intercept_width,
+    std::array<double, 4> &d_poly) {
   std::array<double, 4> half_lane_poly{0, 0, 0, intercept_width / 2};
 
   if (l_prob + r_prob > 0) {
     for (size_t i = 0; i < d_poly.size(); i++) {
-      d_poly[i] =
-          ((l_poly[i] - half_lane_poly[i]) * l_prob + (r_poly[i] + half_lane_poly[i]) * r_prob) / (l_prob + r_prob);
+      d_poly[i] = ((l_poly[i] - half_lane_poly[i]) * l_prob +
+                   (r_poly[i] + half_lane_poly[i]) * r_prob) /
+                  (l_prob + r_prob);
     }
   } else {
     d_poly.fill(0);
   }
 }
 
-double VisionLateralMotionPlanner::calc_lane_width_by_dist(const std::vector<double> &left_poly,
-                                                           const std::vector<double> &right_poly,
-                                                           const double &dist_x) {
+double VisionLateralMotionPlanner::calc_lane_width_by_dist(
+    const std::vector<double> &left_poly, const std::vector<double> &right_poly,
+    const double &dist_x) {
   std::vector<double> left_poly_yx, r_poly_yx;
   left_poly_yx.resize(left_poly.size());
   r_poly_yx.resize(right_poly.size());
@@ -3223,7 +3809,8 @@ double VisionLateralMotionPlanner::calc_lane_width_by_dist(const std::vector<dou
   double right_intercept = calc_poly1d(r_poly_yx, dist_x);
 
   if (left_poly_yx.size() >= 2 && r_poly_yx.size() >= 2) {
-    return (left_intercept - right_intercept) / std::sqrt(1 + std::pow(0.5 * (left_poly_yx[1] + r_poly_yx[1]), 2));
+    return (left_intercept - right_intercept) /
+           std::sqrt(1 + std::pow(0.5 * (left_poly_yx[1] + r_poly_yx[1]), 2));
   } else {
     return 3.8;
   }

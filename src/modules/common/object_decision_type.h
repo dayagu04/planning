@@ -198,9 +198,20 @@ class ObjectDecisionType {
     ignore_ = ignore;
     object_tag_case_ = kIgnore;
   }
-  void setDecisionSource(std::string module_name) { decision_source_ = module_name; }
+  void setDecisionSource(std::string module_name) {
+    decision_source_ = module_name;
+  }
 
-  enum ObjectTagCase { kIgnore, kOvertake, kFollow, kYield, kStop, kNudge, kAvoid, OBJECT_TAG_NOT_SET };
+  enum ObjectTagCase {
+    kIgnore,
+    kOvertake,
+    kFollow,
+    kYield,
+    kStop,
+    kNudge,
+    kAvoid,
+    OBJECT_TAG_NOT_SET
+  };
 
   ObjectTagCase object_tag_case() const { return object_tag_case_; }
 

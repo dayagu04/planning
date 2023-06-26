@@ -23,8 +23,10 @@ class DiscretizedPath : public std::vector<PathPoint> {
   double QueryMatchedS(const PathPoint& path_point) const;
 
  protected:
-  std::vector<PathPoint>::const_iterator QueryLowerBound(const double path_s) const;
-  std::vector<PathPoint>::const_iterator QueryUpperBound(const double path_s) const;
+  std::vector<PathPoint>::const_iterator QueryLowerBound(
+      const double path_s) const;
+  std::vector<PathPoint>::const_iterator QueryUpperBound(
+      const double path_s) const;
 };
 
 }  // namespace planning

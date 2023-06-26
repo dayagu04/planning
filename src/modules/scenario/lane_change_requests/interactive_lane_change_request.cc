@@ -6,10 +6,13 @@
 
 namespace planning {
 // class: IntRequest
-IntRequest::IntRequest(planning::framework::Session* session, std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
-                       std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
+IntRequest::IntRequest(
+    planning::framework::Session* session,
+    std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
+    std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
     : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {
-  auto config_builder = session_->mutable_environmental_model()->config_builder(planning::common::SceneType::HIGHWAY);
+  auto config_builder = session_->mutable_environmental_model()->config_builder(
+      planning::common::SceneType::HIGHWAY);
   auto int_request_config = config_builder->cast<ScenarioDisplayStateConfig>();
   enable_int_request_ = int_request_config.enable_int_request_function;
   count_threshold_ = int_request_config.int_rqt_cnt_threshold;
@@ -17,7 +20,9 @@ IntRequest::IntRequest(planning::framework::Session* session, std::shared_ptr<Vi
 
 void IntRequest::Update(int lc_status) {
   // ego_blinker 0-lane follow, 1-left, 2-reght
-  lane_change_cmd_ = session_->mutable_environmental_model()->get_ego_state_manager()->ego_blinker();
+  lane_change_cmd_ = session_->mutable_environmental_model()
+                         ->get_ego_state_manager()
+                         ->ego_blinker();
   // init lanes with id
   auto current_lane_virtual_id = virtual_lane_mgr_->current_lane_virtual_id();
 
@@ -33,24 +38,31 @@ void IntRequest::Update(int lc_status) {
   LOG_DEBUG(
       "[IntRequest::update] current_lane_virtual_id: %d, "
       "origin_lane_virtual_id_: %d, target_lane_virtual_id_: %d \n",
-      current_lane_virtual_id, origin_lane_virtual_id_, target_lane_virtual_id_);
+      current_lane_virtual_id, origin_lane_virtual_id_,
+      target_lane_virtual_id_);
 
-  if (lane_change_cmd_ == common::TurnSignalType::LEFT && request_type_ != LEFT_CHANGE) {
+  if (lane_change_cmd_ == common::TurnSignalType::LEFT &&
+      request_type_ != LEFT_CHANGE) {
     counter_right_ = 0;
     counter_left_++;
     // 获取左车道线型
-    auto left_boundary_type = virtual_lane_mgr_->get_current_lane()->get_left_lane_boundary().segment(0).type();
+    auto left_boundary_type = virtual_lane_mgr_->get_current_lane()
+                                  ->get_left_lane_boundary()
+                                  .segment(0)
+                                  .type();
     // 实线禁止换道
     if (left_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) {
       counter_left_ = -5;
     }
     if (counter_left_ > count_threshold_) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
-      auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_tmp);
+      auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(
+          target_lane_virtual_id_tmp);
       if (tlane != nullptr) {
         GenerateRequest(LEFT_CHANGE);
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-        LOG_DEBUG("[IntRequest::update] Ask for interactive changing lane to left\n");
+        LOG_DEBUG(
+            "[IntRequest::update] Ask for interactive changing lane to left\n");
       } else {
         LOG_WARNING(
             "[IntRequest::update] Ask for interactive changing lane to left "
@@ -61,17 +73,22 @@ void IntRequest::Update(int lc_status) {
           "[IntRequest::update] waiting counter for interactive changing lane "
           "to left \n");
     }
-  } else if (lane_change_cmd_ == common::TurnSignalType::RIGHT && request_type_ != RIGHT_CHANGE) {
+  } else if (lane_change_cmd_ == common::TurnSignalType::RIGHT &&
+             request_type_ != RIGHT_CHANGE) {
     counter_left_ = 0;
     counter_right_ = counter_right_ + 1;
     // 获取右车道线型,实线禁止换道
-    auto right_boundary_type = virtual_lane_mgr_->get_current_lane()->get_right_lane_boundary().segment(0).type();
+    auto right_boundary_type = virtual_lane_mgr_->get_current_lane()
+                                   ->get_right_lane_boundary()
+                                   .segment(0)
+                                   .type();
     if (right_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) {
       counter_left_ = -5;
     }
     if (counter_right_ > count_threshold_) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
-      auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_tmp);
+      auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(
+          target_lane_virtual_id_tmp);
       if (tlane != nullptr) {
         GenerateRequest(RIGHT_CHANGE);
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
@@ -88,9 +105,11 @@ void IntRequest::Update(int lc_status) {
           "[IntRequest::update] waiting counter for interactive changing lane "
           "to right \n");
     }
-  } else if (lane_change_cmd_ == common::TurnSignalType::NONE && request_type_ != NO_CHANGE) {
+  } else if (lane_change_cmd_ == common::TurnSignalType::NONE &&
+             request_type_ != NO_CHANGE) {
     // 3.换道过程中取消拨杆
-    if (lane_change_lane_mgr_->has_target_lane() && lane_change_lane_mgr_->is_ego_on(lane_change_lane_mgr_->tlane())) {
+    if (lane_change_lane_mgr_->has_target_lane() &&
+        lane_change_lane_mgr_->is_ego_on(lane_change_lane_mgr_->tlane())) {
       // 取消换道，但此时已经进入目标车道，则保持至换道完成
       LOG_DEBUG(
           "[IntRequest::update]: Cancel int lc blinker when ego car on target "
@@ -121,9 +140,11 @@ void IntRequest::finish_and_clear() {
       __FUNCTION__);
 }
 
-void IntRequest::PrintForbidGeneratingReason(const std::vector<std::string> forbid_generating_reason) {
+void IntRequest::PrintForbidGeneratingReason(
+    const std::vector<std::string> forbid_generating_reason) {
   for (const auto& reason : forbid_generating_reason) {
-    std::cout << "[IntRequest], Disable Reason: " << reason.c_str() << std::endl;
+    std::cout << "[IntRequest], Disable Reason: " << reason.c_str()
+              << std::endl;
   }
 }
 

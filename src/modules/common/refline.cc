@@ -3,15 +3,16 @@
 namespace planning {
 
 bool equal_zero(double a) {
-  if (a > -std::numeric_limits<double>::epsilon() && a < std::numeric_limits<double>::epsilon()) {
+  if (a > -std::numeric_limits<double>::epsilon() &&
+      a < std::numeric_limits<double>::epsilon()) {
     return true;
   }
 
   return false;
 }
 
-bool calc_projection(double x, double y, double x0, double y0, double x1, double y1, double &v_x, double &v_y,
-                     double &t) {
+bool calc_projection(double x, double y, double x0, double y0, double x1,
+                     double y1, double &v_x, double &v_y, double &t) {
   double diff_x = x - x0;
   double diff_y = y - y0;
   double diff_x1 = x1 - x0;
@@ -20,7 +21,8 @@ bool calc_projection(double x, double y, double x0, double y0, double x1, double
   if (equal_zero(diff_x1) && equal_zero(diff_y1)) {
     t = 0.0;
   } else {
-    t = (diff_x * diff_x1 + diff_y * diff_y1) / (diff_x1 * diff_x1 + diff_y1 * diff_y1);
+    t = (diff_x * diff_x1 + diff_y * diff_y1) /
+        (diff_x1 * diff_x1 + diff_y1 * diff_y1);
   }
 
   t = clip(t, 1.0, 0.0);
@@ -30,14 +32,18 @@ bool calc_projection(double x, double y, double x0, double y0, double x1, double
   return true;
 }
 
-void calc_cartesian_frenet(const std::vector<PathPoint> &path_points, double x, double y, double &s, double &l,
-                           double &v_s, double &v_l, double &theta, bool get_theta, double *v, double *yaw) {
+void calc_cartesian_frenet(const std::vector<PathPoint> &path_points, double x,
+                           double y, double &s, double &l, double &v_s,
+                           double &v_l, double &theta, bool get_theta,
+                           double *v, double *yaw) {
   int index_min = 0;
 
-  double min_dist = std::pow(path_points[0].x - x, 2) + std::pow(path_points[0].y - y, 2);
+  double min_dist =
+      std::pow(path_points[0].x - x, 2) + std::pow(path_points[0].y - y, 2);
 
   for (size_t i = 1; i < path_points.size(); i++) {
-    double temp_dist = std::pow(path_points[i].x - x, 2) + std::pow(path_points[i].y - y, 2);
+    double temp_dist =
+        std::pow(path_points[i].x - x, 2) + std::pow(path_points[i].y - y, 2);
 
     if (temp_dist < min_dist) {
       min_dist = temp_dist;
@@ -67,26 +73,35 @@ void calc_cartesian_frenet(const std::vector<PathPoint> &path_points, double x, 
     y1 = path_points[index_min].y;
 
     calc_projection(x, y, x0, y0, x1, y1, matched_x, matched_y, t);
-    s = path_points[index_min - 1].s + (path_points[index_min].s - path_points[index_min - 1].s) * t;
+    s = path_points[index_min - 1].s +
+        (path_points[index_min].s - path_points[index_min - 1].s) * t;
 
     if (get_theta || v != nullptr) {
-      if (path_points[index_min - 1].theta > pi / 2 && path_points[index_min].theta < -pi / 2) {
+      if (path_points[index_min - 1].theta > pi / 2 &&
+          path_points[index_min].theta < -pi / 2) {
         theta = path_points[index_min - 1].theta +
-                (path_points[index_min].theta + 2 * pi - path_points[index_min - 1].theta) * t;
+                (path_points[index_min].theta + 2 * pi -
+                 path_points[index_min - 1].theta) *
+                    t;
 
         if (theta > 2 * pi) {
           theta -= 2 * pi;
         }
-      } else if (path_points[index_min - 1].theta < -pi / 2 && path_points[index_min].theta > pi / 2) {
+      } else if (path_points[index_min - 1].theta < -pi / 2 &&
+                 path_points[index_min].theta > pi / 2) {
         theta = path_points[index_min - 1].theta +
-                (path_points[index_min].theta - 2 * pi - path_points[index_min - 1].theta) * t;
+                (path_points[index_min].theta - 2 * pi -
+                 path_points[index_min - 1].theta) *
+                    t;
 
         if (theta < -2 * pi) {
           theta += 2 * pi;
         }
       } else {
         theta =
-            path_points[index_min - 1].theta + (path_points[index_min].theta - path_points[index_min - 1].theta) * t;
+            path_points[index_min - 1].theta +
+            (path_points[index_min].theta - path_points[index_min - 1].theta) *
+                t;
       }
     }
   }
@@ -103,7 +118,8 @@ void calc_cartesian_frenet(const std::vector<PathPoint> &path_points, double x, 
   }
 }
 
-void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s, double l, double &x, double &y) {
+void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s,
+                           double l, double &x, double &y) {
   size_t index = 0;
   size_t i_low = 0;
   size_t i_upp = path_points.size() - 1;
@@ -131,24 +147,33 @@ void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s, 
     double s1 = path_points[index + 1].s;
     double t = equal_zero(s1 - s0) ? 0 : ((s - s0) / (s1 - s0));
 
-    if (path_points[index].theta > pi / 2 && path_points[index + 1].theta < -pi / 2) {
-      theta_r = path_points[index].theta + (path_points[index + 1].theta + 2 * pi - path_points[index].theta) * t;
+    if (path_points[index].theta > pi / 2 &&
+        path_points[index + 1].theta < -pi / 2) {
+      theta_r = path_points[index].theta + (path_points[index + 1].theta +
+                                            2 * pi - path_points[index].theta) *
+                                               t;
 
       if (theta_r > 2 * pi) {
         theta_r -= 2 * pi;
       }
-    } else if (path_points[index].theta < -pi / 2 && path_points[index + 1].theta > pi / 2) {
-      theta_r = path_points[index].theta + (path_points[index + 1].theta - 2 * pi - path_points[index].theta) * t;
+    } else if (path_points[index].theta < -pi / 2 &&
+               path_points[index + 1].theta > pi / 2) {
+      theta_r = path_points[index].theta + (path_points[index + 1].theta -
+                                            2 * pi - path_points[index].theta) *
+                                               t;
 
       if (theta_r < -2 * pi) {
         theta_r += 2 * pi;
       }
     } else {
-      theta_r = path_points[index].theta + (path_points[index + 1].theta - path_points[index].theta) * t;
+      theta_r = path_points[index].theta +
+                (path_points[index + 1].theta - path_points[index].theta) * t;
     }
 
-    x_r = path_points[index].x + (path_points[index + 1].x - path_points[index].x) * t;
-    y_r = path_points[index].y + (path_points[index + 1].y - path_points[index].y) * t;
+    x_r = path_points[index].x +
+          (path_points[index + 1].x - path_points[index].x) * t;
+    y_r = path_points[index].y +
+          (path_points[index + 1].y - path_points[index].y) * t;
   } else {
     theta_r = path_points[index].theta;
     x_r = path_points[index].x;
@@ -393,9 +418,8 @@ void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s, 
 //       index++;
 //     }
 
-//     pp.theta = std::atan2(y_spline.deriv(1, us[i]), x_spline.deriv(1, us[i]));
-//     pp.kappa = 0;
-//     path_points_.push_back(pp);
+//     pp.theta = std::atan2(y_spline.deriv(1, us[i]), x_spline.deriv(1,
+//     us[i])); pp.kappa = 0; path_points_.push_back(pp);
 //   }
 
 //   set_ppath(u_points, x_spline, y_spline);
@@ -404,7 +428,8 @@ void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s, 
 // // void RefLine::set_ppath(const std::vector<double> &u_points,
 // //                         const planning::planning_math::spline &x_spline,
 // //                         const planning::planning_math::spline &y_spline) {
-// //   ppath_.reset(new PPath(u_points[0], u_points.back(), x_spline, y_spline));
+// //   ppath_.reset(new PPath(u_points[0], u_points.back(), x_spline,
+// y_spline));
 // // }
 
 // void RefLine::cartesian_frenet(double x, double y, double &s, double &l,
@@ -415,7 +440,8 @@ void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s, 
 
 //   double v_s = 0;
 //   double v_l = 0;
-//   calc_cartesian_frenet(path_points_, x, y, s, l, v_s, v_l, theta, get_theta);
+//   calc_cartesian_frenet(path_points_, x, y, s, l, v_s, v_l, theta,
+//   get_theta);
 // }
 
 // void RefLine::frenet_cartesian(double s, double l, double &x, double &y) {

@@ -86,7 +86,9 @@ struct CarCount {
     return *this;
   }
 
-  bool operator==(const CarCount &car_cnt) const { return (pos == car_cnt.pos && neg == car_cnt.neg); }
+  bool operator==(const CarCount &car_cnt) const {
+    return (pos == car_cnt.pos && neg == car_cnt.neg);
+  }
 };
 
 struct PathPlannerContext {

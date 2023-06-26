@@ -93,7 +93,8 @@ void band_matrix::lu_decompose() {
       j_max = std::min(this->dim() - 1, k + this->num_upper());
       for (int j = k + 1; j <= j_max; j++) {
         // assembly part of R
-        this->operator()(i, j) = this->operator()(i, j) + x * this->operator()(k, j);
+        this->operator()(i, j) =
+            this->operator()(i, j) + x * this->operator()(k, j);
       }
     }
   }
@@ -127,7 +128,8 @@ std::vector<double> band_matrix::r_solve(const std::vector<double> &b) const {
   return x;
 }
 
-std::vector<double> band_matrix::lu_solve(const std::vector<double> &b, bool is_lu_decomposed) {
+std::vector<double> band_matrix::lu_solve(const std::vector<double> &b,
+                                          bool is_lu_decomposed) {
   assert(this->dim() == (int)b.size());
   std::vector<double> x, y;
   if (is_lu_decomposed == false) {
@@ -141,7 +143,8 @@ std::vector<double> band_matrix::lu_solve(const std::vector<double> &b, bool is_
 // spline implementation
 // -----------------------
 
-void spline::set_boundary(spline::bd_type left, double left_value, spline::bd_type right, double right_value,
+void spline::set_boundary(spline::bd_type left, double left_value,
+                          spline::bd_type right, double right_value,
                           bool force_linear_extrapolation) {
   assert(m_x.size() == 0);  // set_points() must not have happened yet
   m_left = left;
@@ -151,7 +154,8 @@ void spline::set_boundary(spline::bd_type left, double left_value, spline::bd_ty
   m_force_linear_extrapolation = force_linear_extrapolation;
 }
 
-void spline::set_points(const std::vector<double> &x, const std::vector<double> &y, bool cubic_spline) {
+void spline::set_points(const std::vector<double> &x,
+                        const std::vector<double> &y, bool cubic_spline) {
   set_points_old(x, y, cubic_spline);
   double x_min = x[0];
   double x_max = x.back();
@@ -204,7 +208,8 @@ double spline::calc_old(double x) const {
   }
   return interpol;
 }
-void spline::set_points_old(const std::vector<double> &x, const std::vector<double> &y, bool cubic_spline) {
+void spline::set_points_old(const std::vector<double> &x,
+                            const std::vector<double> &y, bool cubic_spline) {
   assert(x.size() == y.size());
   assert(x.size() > 2);
   m_x = x;
@@ -224,7 +229,8 @@ void spline::set_points_old(const std::vector<double> &x, const std::vector<doub
       A(i, i - 1) = 1.0 / 3.0 * (x[i] - x[i - 1]);
       A(i, i) = 2.0 / 3.0 * (x[i + 1] - x[i - 1]);
       A(i, i + 1) = 1.0 / 3.0 * (x[i + 1] - x[i]);
-      rhs[i] = (y[i + 1] - y[i]) / (x[i + 1] - x[i]) - (y[i] - y[i - 1]) / (x[i] - x[i - 1]);
+      rhs[i] = (y[i + 1] - y[i]) / (x[i + 1] - x[i]) -
+               (y[i] - y[i - 1]) / (x[i] - x[i - 1]);
     }
     // boundary conditions
     if (m_left == spline::second_deriv) {
@@ -252,7 +258,8 @@ void spline::set_points_old(const std::vector<double> &x, const std::vector<doub
       // = 3 (f' - (y[n-1]-y[n-2])/(x[n-1]-x[n-2]))
       A(n - 1, n - 1) = 2.0 * (x[n - 1] - x[n - 2]);
       A(n - 1, n - 2) = 1.0 * (x[n - 1] - x[n - 2]);
-      rhs[n - 1] = 3.0 * (m_right_value - (y[n - 1] - y[n - 2]) / (x[n - 1] - x[n - 2]));
+      rhs[n - 1] =
+          3.0 * (m_right_value - (y[n - 1] - y[n - 2]) / (x[n - 1] - x[n - 2]));
     } else {
       assert(false);
     }
@@ -265,7 +272,8 @@ void spline::set_points_old(const std::vector<double> &x, const std::vector<doub
     m_c.resize(n);
     for (int i = 0; i < n - 1; i++) {
       m_a[i] = 1.0 / 3.0 * (m_b[i + 1] - m_b[i]) / (x[i + 1] - x[i]);
-      m_c[i] = (y[i + 1] - y[i]) / (x[i + 1] - x[i]) - 1.0 / 3.0 * (2.0 * m_b[i] + m_b[i + 1]) * (x[i + 1] - x[i]);
+      m_c[i] = (y[i + 1] - y[i]) / (x[i + 1] - x[i]) -
+               1.0 / 3.0 * (2.0 * m_b[i] + m_b[i + 1]) * (x[i + 1] - x[i]);
     }
   } else {  // linear interpolation
     m_a.resize(n);
@@ -287,7 +295,8 @@ void spline::set_points_old(const std::vector<double> &x, const std::vector<doub
   double h = x[n - 1] - x[n - 2];
   // m_b[n-1] is determined by the boundary condition
   m_a[n - 1] = 0.0;
-  m_c[n - 1] = 3.0 * m_a[n - 2] * h * h + 2.0 * m_b[n - 2] * h + m_c[n - 2];  // = f'_{n-2}(x_{n-1})
+  m_c[n - 1] = 3.0 * m_a[n - 2] * h * h + 2.0 * m_b[n - 2] * h +
+               m_c[n - 2];  // = f'_{n-2}(x_{n-1})
   if (m_force_linear_extrapolation == true) m_b[n - 1] = 0.0;
 }
 

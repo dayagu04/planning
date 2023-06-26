@@ -3,14 +3,16 @@ namespace pnc {
 
 namespace steerModel {
 
-void VehicleSimulation::CalStateDot(Eigen::VectorXd &state_dot, Eigen::VectorXd &state) {
+void VehicleSimulation::CalStateDot(Eigen::VectorXd &state_dot,
+                                    Eigen::VectorXd &state) {
   state_dot[0] = control_.v_ * cos(state[2] + param_.phi_bias_ / 57.3);
   state_dot[1] = control_.v_ * sin(state[2] + param_.phi_bias_ / 57.3);
-  state_dot[2] =
-      param_.c1_ / (1 + param_.c2_ * control_.v_ * control_.v_) * control_.v_ * tan(control_.delta_ + param_.bias_);
+  state_dot[2] = param_.c1_ / (1 + param_.c2_ * control_.v_ * control_.v_) *
+                 control_.v_ * tan(control_.delta_ + param_.bias_);
 }
 
-void VehicleSimulation::Rk4update(Eigen::VectorXd &state_dot, Eigen::VectorXd &state) {
+void VehicleSimulation::Rk4update(Eigen::VectorXd &state_dot,
+                                  Eigen::VectorXd &state) {
   Eigen::VectorXd K1 = state_dot;
   Eigen::VectorXd K2 = state_dot;
   Eigen::VectorXd K3 = state_dot;
@@ -32,7 +34,8 @@ void VehicleSimulation::Rk4update(Eigen::VectorXd &state_dot, Eigen::VectorXd &s
   state += state_dot * dt;
 }
 
-void VehicleSimulation::Update(const VehicleControl &control, const VehicleParameter &param) {
+void VehicleSimulation::Update(const VehicleControl &control,
+                               const VehicleParameter &param) {
   Eigen::VectorXd state(3);
   state << state_.x_, state_.y_, state_.phi_;
   Eigen::VectorXd state_dot = state;

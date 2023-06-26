@@ -35,18 +35,23 @@ class VehicleConfigurationContext {
 
   void load_vehicle_param() {
     std::string vehicle_param_path = get_vehicle_param_dir() + "/vehicle.yaml";
-    LOG_DEBUG("load_vehicle_param: vehicle_param_path: %s", vehicle_param_path.c_str());
+    LOG_DEBUG("load_vehicle_param: vehicle_param_path: %s",
+              vehicle_param_path.c_str());
     if (access(vehicle_param_path.c_str(), F_OK) == -1) {
       LOG_DEBUG("ConfigContext: vehicle.yaml not exist!");
       return;
     }
   }
 
-  void reset_which_car(const std::string which_car) { this->which_car_ = which_car; }
+  void reset_which_car(const std::string which_car) {
+    this->which_car_ = which_car;
+  }
 
   const VehicleParam &get_vehicle_param() const { return vehicle_param_; }
 
-  void set_vehicle_param(const VehicleParam &vehicle_param) { vehicle_param_ = vehicle_param; }
+  void set_vehicle_param(const VehicleParam &vehicle_param) {
+    vehicle_param_ = vehicle_param;
+  }
 
   void write_params(std::string path) {}
 

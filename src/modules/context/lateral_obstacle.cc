@@ -6,7 +6,8 @@
 
 namespace planning {
 
-LateralObstacle::LateralObstacle(const EgoPlanningConfigBuilder *config_builder, planning::framework::Session *session)
+LateralObstacle::LateralObstacle(const EgoPlanningConfigBuilder *config_builder,
+                                 planning::framework::Session *session)
     : session_(session) {
   // TODO: add config
   config_ = config_builder->cast<LateralObstacleConfig>();
@@ -27,21 +28,24 @@ LateralObstacle::LateralObstacle(const EgoPlanningConfigBuilder *config_builder,
 LateralObstacle::~LateralObstacle() { lead_cars_.clear(); }
 
 bool LateralObstacle::update() {
-  update_sensors(session_->environmental_model().get_ego_state_manager(),
-                 session_->environmental_model().get_prediction_info(), false,
-                 false);  // TODO session_->environmental_model().get_hdmap_valid()
+  update_sensors(
+      session_->environmental_model().get_ego_state_manager(),
+      session_->environmental_model().get_prediction_info(), false,
+      false);  // TODO session_->environmental_model().get_hdmap_valid()
   return true;
 }
 
-bool LateralObstacle::update_sensors(const std::shared_ptr<EgoStateManager> &ego_state,
-                                     const std::vector<PredictionObject> &predictions, bool isRedLightStop,
-                                     bool hdmap_valid) {
+bool LateralObstacle::update_sensors(
+    const std::shared_ptr<EgoStateManager> &ego_state,
+    const std::vector<PredictionObject> &predictions, bool isRedLightStop,
+    bool hdmap_valid) {
   double fusion_timeout = 0.5;
   double curr_time = IflyTime::Now_ms();
   std::vector<TrackedObject> tracked_objects;
 
   if (prediction_update_ || !hdmap_valid) {
-    maintainer_->apply_update(*ego_state, predictions, tracked_objects, lead_cars_, isRedLightStop, hdmap_valid);
+    maintainer_->apply_update(*ego_state, predictions, tracked_objects,
+                              lead_cars_, isRedLightStop, hdmap_valid);
     update_tracks(tracked_objects);
 
     prediction_update_ = false;
@@ -65,12 +69,14 @@ bool LateralObstacle::update_sensors(const std::shared_ptr<EgoStateManager> &ego
 
     double abs_time = IflyTime::Now_ms();
     if (abs_time - warning_timer_[2] > 5.0) {
-      LOG_ERROR("[LateralObstacle::update_sensors] frontview fusion unavailable");
+      LOG_ERROR(
+          "[LateralObstacle::update_sensors] frontview fusion unavailable");
       warning_timer_[2] = abs_time;
     }
 
     if (abs_time - warning_timer_[1] > 5.0) {
-      LOG_ERROR("[LateralObstacle::update_sensors] sideview fusion unavailable");
+      LOG_ERROR(
+          "[LateralObstacle::update_sensors] sideview fusion unavailable");
       warning_timer_[1] = abs_time;
     }
   }
@@ -78,7 +84,8 @@ bool LateralObstacle::update_sensors(const std::shared_ptr<EgoStateManager> &ego
   return true;
 }
 
-void LateralObstacle::update_tracks(const std::vector<TrackedObject> &tracked_objects) {
+void LateralObstacle::update_tracks(
+    const std::vector<TrackedObject> &tracked_objects) {
   front_tracks_.clear();
   front_tracks_copy_.clear();
   front_tracks_l_.clear();
@@ -150,12 +157,17 @@ bool LateralObstacle::find_track(int track_id, TrackedObject &dest) {
   return false;
 }
 
-LaneTracksManager::LaneTracksManager(LateralObstacle &lateral_obstacle, VirtualLaneManager &virtual_lane_mgr,
+LaneTracksManager::LaneTracksManager(LateralObstacle &lateral_obstacle,
+                                     VirtualLaneManager &virtual_lane_mgr,
                                      planning::framework::Session *session)
-    : lateral_obstacle_(lateral_obstacle), virtual_lane_mgr_(virtual_lane_mgr), session_(session) {}
+    : lateral_obstacle_(lateral_obstacle),
+      virtual_lane_mgr_(virtual_lane_mgr),
+      session_(session) {}
 
-std::vector<TrackedObject> *LaneTracksManager::get_lane_tracks(int virtual_id, TrackType track_type) {
-  const auto &virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
+std::vector<TrackedObject> *LaneTracksManager::get_lane_tracks(
+    int virtual_id, TrackType track_type) {
+  const auto &virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
   const auto &current_lane = virtual_lane_manager->get_current_lane();
   const auto &left_lane = virtual_lane_manager->get_left_lane();
   const auto &right_lane = virtual_lane_manager->get_right_lane();
@@ -188,7 +200,8 @@ std::vector<TrackedObject> *LaneTracksManager::get_lane_tracks(int virtual_id, T
 }
 
 void LaneTracksManager::update_lane_tracks() {
-  const auto &virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
+  const auto &virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
   const auto &current_lane = virtual_lane_manager->get_current_lane();
   const auto &left_lane = virtual_lane_manager->get_left_lane();
   const auto &right_lane = virtual_lane_manager->get_right_lane();
@@ -202,7 +215,8 @@ void LaneTracksManager::update_lane_tracks() {
   }
 
   if (current_lane != nullptr) {
-    auto obstacles_id = current_lane->get_reference_path()->get_lane_obstacles_ids();
+    auto obstacles_id =
+        current_lane->get_reference_path()->get_lane_obstacles_ids();
     for (auto obstacle_id : obstacles_id) {
       if (tracks_map.find(obstacle_id) != tracks_map.end()) {
         auto d_rel = tracks_map[obstacle_id].d_rel;
@@ -216,7 +230,8 @@ void LaneTracksManager::update_lane_tracks() {
   }
 
   if (left_lane != nullptr) {
-    auto obstacles_id = left_lane->get_reference_path()->get_lane_obstacles_ids();
+    auto obstacles_id =
+        left_lane->get_reference_path()->get_lane_obstacles_ids();
     for (auto obstacle_id : obstacles_id) {
       if (tracks_map.find(obstacle_id) != tracks_map.end()) {
         auto d_rel = tracks_map[obstacle_id].d_rel;
@@ -230,7 +245,8 @@ void LaneTracksManager::update_lane_tracks() {
   }
 
   if (right_lane != nullptr) {
-    auto obstacles_id = right_lane->get_reference_path()->get_lane_obstacles_ids();
+    auto obstacles_id =
+        right_lane->get_reference_path()->get_lane_obstacles_ids();
     for (auto obstacle_id : obstacles_id) {
       if (tracks_map.find(obstacle_id) != tracks_map.end()) {
         auto d_rel = tracks_map[obstacle_id].d_rel;

@@ -3,8 +3,8 @@
 #include "apa_speed_smoother_config.pb.h"
 #include "planning_plan.pb.h"
 
-#include "speed_smoother/apa_speed_limit_decider.h"
 #include "math/line_segment2d.h"
+#include "speed_smoother/apa_speed_limit_decider.h"
 
 namespace planning {
 

@@ -40,6 +40,7 @@ struct MSDLaneMergingSplittingPointData {
 
 struct MSDLaneMergingSplittingPoint {
   size_t available;
-  std::vector<MSDLaneMergingSplittingPointData> lane_merging_splitting_points_data;
+  std::vector<MSDLaneMergingSplittingPointData>
+      lane_merging_splitting_points_data;
 };
 }  // namespace planning

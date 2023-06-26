@@ -35,9 +35,13 @@ class CartesianCoordinateSystem {
 
  public:
   CartesianCoordinateSystem(Pose2D origin);
-  Point2D CartCoord2CurCartCoord(const Pose2D& prev_origin, const Point2D& prev_rel_coord);
-  Pose2D CartPose2CurCartPose(const Pose2D& prev_origin, const Pose2D& prev_rel_pos);
-  Point2D CurCartCoord2CartCoord(const Pose2D& future_origin, const Point2D& cur_rel_coord);
-  Pose2D CurCartPose2CartPose(const Pose2D& future_origin, const Pose2D& cur_rel_pos);
+  Point2D CartCoord2CurCartCoord(const Pose2D& prev_origin,
+                                 const Point2D& prev_rel_coord);
+  Pose2D CartPose2CurCartPose(const Pose2D& prev_origin,
+                              const Pose2D& prev_rel_pos);
+  Point2D CurCartCoord2CartCoord(const Pose2D& future_origin,
+                                 const Point2D& cur_rel_coord);
+  Pose2D CurCartPose2CartPose(const Pose2D& future_origin,
+                              const Pose2D& cur_rel_pos);
 };
 #endif

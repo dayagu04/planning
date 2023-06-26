@@ -46,13 +46,16 @@ using planning_math::Polygon2d;
 using planning_math::Vec2d;
 
 IterativeAnchoringSmoother::IterativeAnchoringSmoother() {
-  const std::string config_file = "/asw/planning/res/conf/iterative_anchoring_smoother_config.pb.txt";
+  const std::string config_file =
+      "/asw/planning/res/conf/iterative_anchoring_smoother_config.pb.txt";
   common::util::GetProtoFromFile(config_file, &iterative_anchoring_config_);
 }
 
-bool IterativeAnchoringSmoother::Smooth(const std::vector<LineSegment2d>& obstacles,
-                                        PlanningOutput* const planning_output) {
-  size_t traj_point_num = planning_output->trajectory().trajectory_points_size();
+bool IterativeAnchoringSmoother::Smooth(
+    const std::vector<LineSegment2d>& obstacles,
+    PlanningOutput* const planning_output) {
+  size_t traj_point_num =
+      planning_output->trajectory().trajectory_points_size();
   if (traj_point_num < 4) {
     AWARN << "reference points size smaller than four, smoother early returned";
     return false;
@@ -94,7 +97,8 @@ bool IterativeAnchoringSmoother::Smooth(const std::vector<LineSegment2d>& obstac
 
   // Reset path profile by discrete point heading and curvature estimation
   DiscretizedPath interpolated_warm_start_path;
-  if (!SetPathProfile(*planning_output, interpolated_warm_start_point2ds, &interpolated_warm_start_path)) {
+  if (!SetPathProfile(*planning_output, interpolated_warm_start_point2ds,
+                      &interpolated_warm_start_path)) {
     AERROR << "Set path profile fails";
     return false;
   }
@@ -116,13 +120,16 @@ bool IterativeAnchoringSmoother::Smooth(const std::vector<LineSegment2d>& obstac
   const uint64_t path_smooth_start_timestamp = IflyTime::Now_ms();
   // Smooth path to have smoothed x, y, phi, kappa and s
   DiscretizedPath smoothed_path_points;
-  if (!SmoothPath(*planning_output, interpolated_warm_start_path, bounds, &smoothed_path_points)) {
+  if (!SmoothPath(*planning_output, interpolated_warm_start_path, bounds,
+                  &smoothed_path_points)) {
     return false;
   }
 
   const uint64_t path_smooth_end_timestamp = IflyTime::Now_ms();
-  const uint64_t path_smooth_diff = path_smooth_end_timestamp - path_smooth_start_timestamp;
-  AINFO << "iterative anchoring path smoother time: " << path_smooth_diff << " ms.";
+  const uint64_t path_smooth_diff =
+      path_smooth_end_timestamp - path_smooth_start_timestamp;
+  AINFO << "iterative anchoring path smoother time: " << path_smooth_diff
+        << " ms.";
 
   UpdatePlanningOutput(smoothed_path_points, planning_output);
 
@@ -133,8 +140,8 @@ bool IterativeAnchoringSmoother::Smooth(const std::vector<LineSegment2d>& obstac
   return true;
 }
 
-bool IterativeAnchoringSmoother::GenerateInitialBounds(const DiscretizedPath& path_points,
-                                                       std::vector<double>* initial_bounds) {
+bool IterativeAnchoringSmoother::GenerateInitialBounds(
+    const DiscretizedPath& path_points, std::vector<double>* initial_bounds) {
   // CHECK_NOTNULL(initial_bounds);
   initial_bounds->clear();
   const double default_bound = iterative_anchoring_config_.default_bound();
@@ -142,9 +149,10 @@ bool IterativeAnchoringSmoother::GenerateInitialBounds(const DiscretizedPath& pa
   return true;
 }
 
-bool IterativeAnchoringSmoother::SmoothPath(const PlanningOutput& planning_output,
-                                            const DiscretizedPath& raw_path_points, const std::vector<double>& bounds,
-                                            DiscretizedPath* smoothed_path_points) {
+bool IterativeAnchoringSmoother::SmoothPath(
+    const PlanningOutput& planning_output,
+    const DiscretizedPath& raw_path_points, const std::vector<double>& bounds,
+    DiscretizedPath* smoothed_path_points) {
   std::vector<std::pair<double, double>> raw_point2d;
   const size_t point_num = raw_path_points.size();
   raw_point2d.reserve(point_num);
@@ -153,7 +161,8 @@ bool IterativeAnchoringSmoother::SmoothPath(const PlanningOutput& planning_outpu
   }
   std::vector<double> flexible_bounds(bounds);
 
-  FemPosDeviationSmoother fem_pos_smoother(iterative_anchoring_config_.fem_pos_deviation_smoother_config());
+  FemPosDeviationSmoother fem_pos_smoother(
+      iterative_anchoring_config_.fem_pos_deviation_smoother_config());
 
   const size_t max_iteration_num = 50;
 
@@ -187,7 +196,8 @@ bool IterativeAnchoringSmoother::SmoothPath(const PlanningOutput& planning_outpu
       smoothed_point2d.emplace_back(opt_x[i], opt_y[i]);
     }
 
-    if (!SetPathProfile(planning_output, smoothed_point2d, smoothed_path_points)) {
+    if (!SetPathProfile(planning_output, smoothed_point2d,
+                        smoothed_path_points)) {
       AERROR << "Set path profile fails";
       return false;
     }
@@ -201,21 +211,28 @@ bool IterativeAnchoringSmoother::SmoothPath(const PlanningOutput& planning_outpu
   return true;
 }
 
-bool IterativeAnchoringSmoother::CheckCollisionAvoidance(const DiscretizedPath& path_points) {
+bool IterativeAnchoringSmoother::CheckCollisionAvoidance(
+    const DiscretizedPath& path_points) {
   const size_t path_points_size = path_points.size();
-  const double front_buffer = motion_sign_ > 0.0 ? iterative_anchoring_config_.lon_buffer() : 0.0;
-  const double rear_buffer = motion_sign_ < 0.0 ? iterative_anchoring_config_.lon_buffer() : 0.0;
+  const double front_buffer =
+      motion_sign_ > 0.0 ? iterative_anchoring_config_.lon_buffer() : 0.0;
+  const double rear_buffer =
+      motion_sign_ < 0.0 ? iterative_anchoring_config_.lon_buffer() : 0.0;
   const double lat_buffer = iterative_anchoring_config_.lat_buffer();
 
-  PlanningPoint point_0(path_points[0].x, path_points[0].y, path_points[0].theta);
-  Polygon2d init_ego_polygon =
-      std::move(ConstructVehiclePolygonWithBuffer(point_0, front_buffer, rear_buffer, lat_buffer));
+  PlanningPoint point_0(path_points[0].x, path_points[0].y,
+                        path_points[0].theta);
+  Polygon2d init_ego_polygon = std::move(ConstructVehiclePolygonWithBuffer(
+      point_0, front_buffer, rear_buffer, lat_buffer));
   for (size_t i = 0; i < path_points_size; ++i) {
-    PlanningPoint point_i(path_points[i].x, path_points[i].y, path_points[i].theta);
+    PlanningPoint point_i(path_points[i].x, path_points[i].y,
+                          path_points[i].theta);
     Polygon2d ego_polygon(init_ego_polygon);
     const double rotate_angle = point_i.theta - point_0.theta;
-    ego_polygon.RotateAndTranslate(Vec2d(point_0.x, point_0.y), apa_sin(rotate_angle), apa_cos(rotate_angle),
-                                   Vec2d(point_i.x - point_0.x, point_i.y - point_0.y));
+    ego_polygon.RotateAndTranslate(
+        Vec2d(point_0.x, point_0.y), apa_sin(rotate_angle),
+        apa_cos(rotate_angle),
+        Vec2d(point_i.x - point_0.x, point_i.y - point_0.y));
     for (const auto& obstacle_linesegment : obstacles_linesegments_vec_) {
       if (ego_polygon.HasOverlap(obstacle_linesegment)) {
         AINFO << "point at " << i << " collied with LineSegment";
@@ -228,7 +245,8 @@ bool IterativeAnchoringSmoother::CheckCollisionAvoidance(const DiscretizedPath& 
 }
 
 void IterativeAnchoringSmoother::AdjustPathBounds(std::vector<double>* bounds) {
-  const double collision_decrease_ratio = iterative_anchoring_config_.collision_decrease_ratio();
+  const double collision_decrease_ratio =
+      iterative_anchoring_config_.collision_decrease_ratio();
 
   for (auto& bound : *bounds) {
     bound *= collision_decrease_ratio;
@@ -242,9 +260,10 @@ void IterativeAnchoringSmoother::AdjustPathBounds(std::vector<double>* bounds) {
   bounds->at(bounds->size() - 2) = 0.0;
 }
 
-bool IterativeAnchoringSmoother::SetPathProfile(const PlanningOutput& planning_output,
-                                                const std::vector<std::pair<double, double>>& point2d,
-                                                DiscretizedPath* raw_path_points) {
+bool IterativeAnchoringSmoother::SetPathProfile(
+    const PlanningOutput& planning_output,
+    const std::vector<std::pair<double, double>>& point2d,
+    DiscretizedPath* raw_path_points) {
   const size_t points_size = point2d.size();
   raw_path_points->clear();
   raw_path_points->reserve(points_size);
@@ -252,7 +271,8 @@ bool IterativeAnchoringSmoother::SetPathProfile(const PlanningOutput& planning_o
   std::vector<double> headings;
   std::vector<double> kappas;
   std::vector<double> accumulated_s;
-  if (!ComputePathProfile(planning_output, point2d, &headings, &accumulated_s, &kappas)) {
+  if (!ComputePathProfile(planning_output, point2d, &headings, &accumulated_s,
+                          &kappas)) {
     return false;
   }
 
@@ -269,10 +289,11 @@ bool IterativeAnchoringSmoother::SetPathProfile(const PlanningOutput& planning_o
   return true;
 }
 
-bool IterativeAnchoringSmoother::ComputePathProfile(const PlanningOutput& planning_output,
-                                                    const std::vector<std::pair<double, double>>& xy_points,
-                                                    std::vector<double>* headings, std::vector<double>* accumulated_s,
-                                                    std::vector<double>* kappas) const {
+bool IterativeAnchoringSmoother::ComputePathProfile(
+    const PlanningOutput& planning_output,
+    const std::vector<std::pair<double, double>>& xy_points,
+    std::vector<double>* headings, std::vector<double>* accumulated_s,
+    std::vector<double>* kappas) const {
   headings->clear();  // heading means orientation of the car
   accumulated_s->clear();
   kappas->clear();
@@ -293,7 +314,9 @@ bool IterativeAnchoringSmoother::ComputePathProfile(const PlanningOutput& planni
     const double x_delta = (xy_points[i].first - xy_points[i - 1].first);
     const double y_delta = (xy_points[i].second - xy_points[i - 1].second);
     const double raw_heading = std::atan2(y_delta, x_delta);
-    const double heading = motion_sign_ > 0.0 ? raw_heading : planning_math::NormalizeAngle(raw_heading + M_PI);
+    const double heading =
+        motion_sign_ > 0.0 ? raw_heading
+                           : planning_math::NormalizeAngle(raw_heading + M_PI);
     headings->push_back(heading);
   }
   headings->push_back(traj_pts[end_index].heading_yaw());
@@ -318,7 +341,8 @@ bool IterativeAnchoringSmoother::ComputePathProfile(const PlanningOutput& planni
   kappas->push_back(traj_pts[1].curvature());
   for (int i = 2; i < points_size - 2; ++i) {
     const double heading_diff = (*headings)[i + 1] - (*headings)[i - 1];
-    const double abs_kappa = std::fabs(heading_diff / ((*accumulated_s)[i + 1] - (*accumulated_s)[i - 1]));
+    const double abs_kappa = std::fabs(
+        heading_diff / ((*accumulated_s)[i + 1] - (*accumulated_s)[i - 1]));
     // kappa > 0 for turn left
     if (heading_diff * motion_sign_ >= 0.0) {
       kappas->push_back(abs_kappa);
@@ -332,13 +356,15 @@ bool IterativeAnchoringSmoother::ComputePathProfile(const PlanningOutput& planni
   return true;
 }
 
-bool IterativeAnchoringSmoother::UpdatePlanningOutput(const DiscretizedPath& raw_path_points,
-                                                      PlanningOutput* const planning_output) const {
+bool IterativeAnchoringSmoother::UpdatePlanningOutput(
+    const DiscretizedPath& raw_path_points,
+    PlanningOutput* const planning_output) const {
   const size_t points_size = raw_path_points.size();
   auto trajectory = planning_output->mutable_trajectory();
 
   for (size_t i = 0; i < points_size; ++i) {
-    auto trajectory_point = planning_output->mutable_trajectory()->mutable_trajectory_points(i);
+    auto trajectory_point =
+        planning_output->mutable_trajectory()->mutable_trajectory_points(i);
     trajectory_point->set_x(raw_path_points[i].x);
     trajectory_point->set_y(raw_path_points[i].y);
     trajectory_point->set_heading_yaw(raw_path_points[i].theta);

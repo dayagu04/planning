@@ -11,7 +11,8 @@
 
 namespace pnc {
 namespace identification {
-void FrequencySweepInput::SetParam(double T_stop, double f_start, double f_stop, double amp) {
+void FrequencySweepInput::SetParam(double T_stop, double f_start, double f_stop,
+                                   double amp) {
   T_stop_ = T_stop;
   f_start_ = f_start;
   f_stop_ = f_stop;
