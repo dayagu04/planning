@@ -204,7 +204,7 @@ void GeneralPlanning::FillPlanningTrajectory(
               lateral_output.d_poly[2], lateral_output.d_poly[3]);
     std::vector<double> polynomial_limited(4);
     polynomial_limited[0] = d_polynomial[0];
-    polynomial_limited[2] = d_polynomial[1];
+    polynomial_limited[1] = d_polynomial[1];
     polynomial_limited[2] = d_polynomial[2];
     polynomial_limited[3] = limited_polynomial_3;
     LOG_DEBUG("limited_polynomial C0: [%f] C1: [%f] C2: [%f] C3: [%f] \n",
