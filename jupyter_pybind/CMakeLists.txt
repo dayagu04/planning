@@ -21,11 +21,13 @@ pybind11_add_module(lateral_motion_planning_py MODULE src/lateral_motion_plannin
 target_link_libraries(lateral_motion_planning_py PRIVATE
   autoplt
   modules_common
+  modules_context
   modules_tasks)
 
 pybind11_add_module(longitudinal_motion_planning_py MODULE src/longitudinal_motion_planning_pybind.cc)
 target_link_libraries(longitudinal_motion_planning_py PRIVATE
   autoplt
   modules_common
+  modules_context
   modules_tasks)
 

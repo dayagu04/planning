@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/mnt/xlwang71/0613/real_time_1.00000"
+bag_path = "/home/xlwang71/Downloads/0627/real_time_18.00004"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
