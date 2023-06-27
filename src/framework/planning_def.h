@@ -5,7 +5,7 @@
 #include <string>
 
 #include "macro.h"
-#include "planning_config.pb.h"
+#include "scene_type_config.pb.h"
 
 namespace planning {
 namespace framework {

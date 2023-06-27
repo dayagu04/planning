@@ -11,9 +11,9 @@
 #include "local_view.h"
 #include "log.h"
 #include "parking_slot_manager.h"
-#include "planning_config.pb.h"
 #include "prediction.pb.h"
 #include "prediction_object.h"
+#include "scene_type_config.pb.h"
 #include "vehicle_service.pb.h"
 #include "vehicle_status.pb.h"
 
@@ -157,19 +157,13 @@ class EnvironmentalModel {
   }
 
   EgoPlanningConfigBuilder *config_builder(common::SceneType scene_type) const {
-    if (scene_type == common::SceneType::PARKING) {
+    if (scene_type == common::SceneType::PARKING_APA) {
       return parking_config_builder_ptr_;
-    } else if (scene_type == common::SceneType::URBAN) {
-      return urban_config_builder_ptr_;
     } else {
       return highway_config_builder_ptr_;
     }
   }
 
-  void set_urban_config_builder(
-      EgoPlanningConfigBuilder *urban_config_builder_ptr) {
-    urban_config_builder_ptr_ = urban_config_builder_ptr;
-  }
   void set_parking_config_builder(
       EgoPlanningConfigBuilder *parking_config_builder_ptr) {
     parking_config_builder_ptr_ = parking_config_builder_ptr;
@@ -211,7 +205,6 @@ class EnvironmentalModel {
   planning::VehicleParam vehicle_param_;
   std::string config_file_dir_;
 
-  EgoPlanningConfigBuilder *urban_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *parking_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *highway_config_builder_ptr_ = nullptr;
 };

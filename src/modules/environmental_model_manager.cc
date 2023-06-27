@@ -18,8 +18,8 @@
 #include "context/traffic_light_decision_manager.h"
 #include "context/virtual_lane_manager.h"
 #include "log.h"
-#include "planning_config.pb.h"
 #include "prediction.pb.h"
+#include "scene_type_config.pb.h"
 #include "vehicle_service.pb.h"
 #include "vehicle_status.pb.h"
 

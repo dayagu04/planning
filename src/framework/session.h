@@ -3,6 +3,7 @@
 #include "arena.h"
 #include "macro.h"
 #include "planning_def.h"
+#include "scene_type_config.pb.h"
 
 namespace planning {
 
@@ -50,41 +51,22 @@ class Session : public planning::common::Arena {
     return vehicle_config_context_;
   }
 
-  bool is_highway_scene() const {
-    return get_scene_type() == planning::common::SceneType::HIGHWAY;
-  }
-  bool is_urban_scene() const {
-    return get_scene_type() == planning::common::SceneType::URBAN;
-  }
   bool is_parking_scene() const {
-    return get_scene_type() == planning::common::SceneType::PARKING;
+    return get_scene_type() == planning::common::SceneType::PARKING_APA;
   }
 
-  void feed_scene_type(planning::common::SceneType value) {
-    // environmental_model_->mutable_local_view()->set_scene_type(value);
+  planning::common::SceneType get_scene_type() const { return scene_type_; }
+  void set_scene_type(const planning::common::SceneType &default_scene_type) {
+    scene_type_ = default_scene_type;
   }
 
-  planning::common::SceneType get_scene_type() const {
-    // return environmental_model_->get_local_view().scene_type();
-    // hack
-    return default_scene_type_;
+  common::ModuleList module_name_list() const {
+    auto it = module_name_map_.find(scene_type_);
+    if (it == module_name_map_.end()) {
+      return {};
+    }
+    return it->second;
   }
-  const std::string &get_scene_type_name() const {
-    return planning::common::SceneType_Name(get_scene_type());
-  }
-  void set_default_scene_type(
-      const planning::common::SceneType &default_scene_type) {
-    default_scene_type_ = default_scene_type;
-  }
-  planning::common::SceneType default_scene_type() const {
-    return default_scene_type_;
-  }
-  const std::string &default_scene_type_name() const {
-    return planning::common::SceneType_Name(default_scene_type());
-  }
-
-  // void feed_function_mode(uint8_t value) { function_mode_ = value; }
-  // std::string get_function_mode_name() const;
 
   const PlanningInitConfig &planning_init_config() const {
     return planning_init_config_;
@@ -95,8 +77,8 @@ class Session : public planning::common::Arena {
   PlanningContext *planning_context_;
   PlanningOutputContext *planning_output_context_;
   VehicleConfigurationContext *vehicle_config_context_;
-  planning::common::SceneType default_scene_type_;
-  // uint8_t function_mode_ = planning::common::FunctionModeEnum::NOA;
+  planning::common::SceneType scene_type_;
+  std::map<common::SceneType, common::ModuleList> module_name_map_;
   PlanningInitConfig planning_init_config_;
 
   DISALLOW_COPY_AND_ASSIGN(Session);

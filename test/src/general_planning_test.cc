@@ -11,8 +11,8 @@ namespace planning {
 
 static void init_planning() {
   std::cout << "The planning component init!!!" << std::endl;
-  std::string engine_config_path =
-      std::string(CONFIG_PATH) + "/planning_engine_config.json";
+  const std::string CONFIG_PATH = "/asw/planning/res/conf";
+  std::string engine_config_path = CONFIG_PATH + "/planning_engine_config.json";
   common::ConfigurationContext::Instance()->load_engine_config_from_json(
       engine_config_path);
 

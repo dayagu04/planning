@@ -45,11 +45,6 @@ bool EnvironmentalModelModule::init(const ::google::protobuf::Message* config,
   // planning::planner::ConfigurationContext::Instance()->load_vehicle_param();
   (void)planning::common::VehicleModel::LoadVehicleModelConfig(config_file_dir);
 
-  auto urban_config_builder =
-      load_config_builder(session, "general_planner_module_urban.json");
-  session->mutable_environmental_model()->set_urban_config_builder(
-      urban_config_builder);
-
   auto parking_config_builder =
       load_config_builder(session, "general_planner_module_parking.json");
   session->mutable_environmental_model()->set_parking_config_builder(

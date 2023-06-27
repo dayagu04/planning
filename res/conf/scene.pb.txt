@@ -1,0 +1,22 @@
+default_scene_type : "highway",
+module_name_map: [
+    {
+        key: "highway"
+        value: {
+            module_list: 
+            [
+                "planning.modules.EnvironmentalModelModule",
+                "planning.modules.GeneralPlannerModule"
+            ]
+        }
+    },
+    {
+        key: "apa"
+        value: {
+            module_list:
+            [
+                "planning.modules.ApaPlanningModule"
+            ]
+        }
+    }
+]

@@ -1,39 +1,10 @@
 #include "scenario_state_machine.h"
-#include "lateral_behavior_object_selector.h"
-#include "planning_output_context.h"
-
-// #include <array>
-// #include <cmath>
-
-// #include "config_context.h"
-// #include "math/linear_interpolation.h"
-// #include "ego_planning_config.h"
-// #include "ego_state_manager.h"
-// #include "frenet_ego_state.h"
-// #include "lateral_obstacle.h"
-// #include "obstacle_manager.h"
-// #include "parking_slot_manager.h"
-// #include "reference_path_manager.h"
-// #include "traffic_light_decision_manager.h"
-// #include "virtual_lane_manager.h"
-// #include "environmental_model_manager.h"
-// #include "fusion_objects.pb.h"
-// #include "fusion_road.pb.h"
-// #include "general_planning.h"
-#include "gtest/gtest.h"
-// #include "ifly_time.h"
-// #include "log.h"
-// #include "planning_config.pb.h"
-// #include "planning_output_context.h"
 #include "adaptive_cruise_control.h"
+#include "gtest/gtest.h"
+#include "lateral_behavior_object_selector.h"
 #include "mrc_condition.h"
+#include "planning_output_context.h"
 #include "start_stop_enable.h"
-// #include "lateral_behavior_object_selector.h"
-// #include "task_pipeline_context.h"
-// #include "vehicle_service.pb.h"
-// #include "vehicle_status.pb.h"
-// #include "debug_info_log.h"
-
 namespace planning {
 
 // bool transform_fusion_to_prediction(const FusionObjects::FusionObject
@@ -104,8 +75,8 @@ bool transform_fusion_to_prediction(
 TEST(TestScenarioStateMachine, scenario_state_machine) {
   framework::Session session;
   // load engine configuration
-  std::string engine_config_path =
-      std::string(CONFIG_PATH) + "/planning_engine_config.json";
+  const std::string CONFIG_PATH = "/asw/planning/res/conf";
+  std::string engine_config_path = CONFIG_PATH + "/planning_engine_config.json";
   common::ConfigurationContext::Instance()->load_engine_config_from_json(
       engine_config_path);
   auto engine_config =

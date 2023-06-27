@@ -29,18 +29,8 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
                                        ->environmental_model()
                                        .get_local_view()
                                        .function_state_machine_info;
-
-  if (!IsValidParkingState(func_state_machine)) {
-    frame->mutable_session()
-        ->mutable_planning_output_context()
-        ->mutable_planning_status()
-        ->planning_result.planning_output.Clear();
-    return false;
-  }
-
-  if (func_state_machine.has_current_state() &&
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_COMPLETED) {
+  if (func_state_machine.current_state() ==
+      FunctionalState::PARK_IN_COMPLETED) {
     AINFO << "apa parking in is finished";
     return true;
   }

@@ -243,35 +243,21 @@ void SetFailedPlanningOutput(Frame* const frame) {
   SetStoppingPlanningOutput(frame);
 }
 
-bool IsValidParkingState(const FuncStateMachine& func_state_machine) {
-  if (!func_state_machine.has_current_state()) {
-    AERROR << "func_state_machine is invalid";
-    return false;
-  }
+bool IsValidParkingState(
+    const ::FuncStateMachine::FunctionalState& current_state) {
+  AINFO << "current_state:" << current_state;
 
-  AINFO << "current_state:" << func_state_machine.current_state();
-
-  if (func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_SEARCHING ||
-      func_state_machine.current_state() == FunctionalState::PARK_IN_NO_READY ||
-      func_state_machine.current_state() == FunctionalState::PARK_IN_READY ||
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_ACTIVATE_WAIT ||
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_ACTIVATE_CONTROL ||
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_SUSPEND_ACTIVATE ||
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_SUSPEND_CLOSE ||
-      func_state_machine.current_state() == FunctionalState::PARK_IN_SECURE ||
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_COMPLETED) {
+  if (current_state == FunctionalState::PARK_IN_SEARCHING ||
+      current_state == FunctionalState::PARK_IN_NO_READY ||
+      current_state == FunctionalState::PARK_IN_READY ||
+      current_state == FunctionalState::PARK_IN_ACTIVATE_WAIT ||
+      current_state == FunctionalState::PARK_IN_ACTIVATE_CONTROL ||
+      current_state == FunctionalState::PARK_IN_SUSPEND_ACTIVATE ||
+      current_state == FunctionalState::PARK_IN_SUSPEND_CLOSE ||
+      current_state == FunctionalState::PARK_IN_SECURE ||
+      current_state == FunctionalState::PARK_IN_COMPLETED) {
     return true;
   }
-
-  AERROR << "func_state_machine is invalid:"
-         << func_state_machine.current_state();
-
   return false;
 }
 

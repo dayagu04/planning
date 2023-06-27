@@ -1,9 +1,7 @@
 #ifndef ZNQC_FRAMEWORK_SCHEDULER_H
 #define ZNQC_FRAMEWORK_SCHEDULER_H
 
-#include <list>
 #include <map>
-#include <string>
 
 #include "module.h"
 #include "registry.h"
@@ -26,7 +24,7 @@ class Scheduler {
   bool InitModuleList(Session *session);
 
   Session *session_;
-  std::list<BaseModule *> module_list_;
+  std::map<const char *, BaseModule *, common::StringLesser> module_map_{};
   int64_t run_count_;
 
   DISALLOW_COPY_AND_ASSIGN(Scheduler);

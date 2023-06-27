@@ -84,5 +84,3 @@ endif()
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning
   DESTINATION /asw)
-
-set(CONFIG_PATH "/asw/planning/res/conf" CACHE INTERNEL "config file path")

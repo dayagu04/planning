@@ -10,17 +10,12 @@ AdaptiveCruiseControl::AdaptiveCruiseControl(
     framework::Session* session) {
   session_ = session;
   config_ = config_builder->cast<AdaptiveCruiseControlConfig>();
-  // common::SceneType scene_type = session_->get_scene_type();
-  // auto config_all =
-  // session_->environmental_model().config_builder(scene_type); config_lon_ =
-  // config_all->cast<LongitudinalDeciderV3Config>();
 }
 
 void AdaptiveCruiseControl::adaptive_cruise_control(
     LonDecisionInfo& lon_decision_information,
     AdaptiveCruiseControlInfo& acc_info,
     PlanningResult& ego_prediction_result) {
-  // auto ego_state = session_->environmental_model().get_ego_state_manager();
   auto& ego_state = session_->environmental_model().get_ego_state_manager();
 
   const double ego_v = ego_state->ego_v();

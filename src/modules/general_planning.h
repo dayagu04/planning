@@ -75,6 +75,10 @@ class GeneralPlanning {
       double start_timestamp,
       PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info);
 
+  void ClearParkingInfo(PlanningOutput::PlanningOutput *const planning_output);
+  bool IsUndefinedScene(
+      const ::FuncStateMachine::FunctionalState& current_state);
+
  private:
   //   std::shared_ptr<EnvironmentalModel> environmental_model_ = nullptr;
   //   std::shared_ptr<ScenarioManager> scenario_manager_;

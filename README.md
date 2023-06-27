@@ -39,11 +39,11 @@ make pp_build
 ```
 - 跑planning，新bag生成在/mnt/xxxxx/xxxx.0000.xxxx.plan
 ```
-tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000
+build/tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000
 ```
 - 跑planning，新bag生成在xxx.bag
 ```
-tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000 --out-bag=xxx.bag[注意要有等号]
+build/tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000 --out-bag=xxx.bag[注意要有等号]
 ```
 - 修改`.vscode/launch.json`中的bag路径，在VSCode调试界面选择planning player，可以断点调试代码
 

@@ -1,4 +1,5 @@
 #include "general_planning.h"
+
 #include <cmath>
 
 #include "apa_planner/common/apa_utils.h"
@@ -12,6 +13,8 @@
 #include "vehicle_config_context.h"
 
 namespace planning {
+
+using ::FuncStateMachine::FunctionalState;
 
 GeneralPlanning::GeneralPlanning() { Init(); }
 
@@ -41,12 +44,19 @@ bool GeneralPlanning::RunOnce(
       session_.mutable_environmental_model();
   environmental_model->feed_local_view(local_view);  // todo
 
-  // for apa planner test
-  const auto &func_state_machine = local_view.function_state_machine_info;
-  session_.set_default_scene_type(planning::common::SceneType::HIGHWAY);
-  if (IsValidParkingState(func_state_machine)) {
-    session_.set_default_scene_type(planning::common::SceneType::PARKING);
+  const auto& state_machine = local_view.function_state_machine_info;
+  if (state_machine.has_current_state()) {
+    if (IsUndefinedScene(state_machine.current_state())) {
+      session_.set_scene_type(planning::common::SceneType::NOT_DEFINED);
+      ClearParkingInfo(planning_output);
+      return true;
+    } else if (IsValidParkingState(state_machine.current_state())) {
+      session_.set_scene_type(planning::common::SceneType::PARKING_APA);
+    } else {
+      session_.set_scene_type(planning::common::SceneType::HIGHWAY);
+    }
   }
+
   if (session_.is_parking_scene()) {
     scheduler_.RunOnce();
     *planning_output = session_.planning_output_context()
@@ -312,4 +322,23 @@ void GeneralPlanning::FillPlanningHmiInfo(
   // alc_output_pb->set_lc_invalid_reason(state_machine_output.lc_invalid_reason);
   // alc_output_pb->set_lc_back_reason(state_machine_output.lc_back_invalid_reason);
 }
+
+void GeneralPlanning::ClearParkingInfo(
+    PlanningOutput::PlanningOutput *const planning_output) {
+    session_.planning_output_context().planning_status().planning_result.
+        planning_output.mutable_planning_status()->set_apa_planning_status(
+        PlanningOutput::ApaPlanningStatus::NONE);
+    session_.planning_output_context().planning_status().planning_result.
+        planning_output.mutable_successful_slot_info_list()->Clear();
+    planning_output->mutable_planning_status()->set_apa_planning_status(
+        PlanningOutput::ApaPlanningStatus::NONE);
+}
+
+bool GeneralPlanning::IsUndefinedScene(
+    const ::FuncStateMachine::FunctionalState& current_state) {
+  return current_state == FunctionalState::INIT ||
+      current_state == FunctionalState::STANDBY ||
+      current_state == FunctionalState::ERROR;
+}
+
 }  // namespace planning

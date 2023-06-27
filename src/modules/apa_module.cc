@@ -21,9 +21,7 @@ bool ApaPlanningModule::reset(const ::google::protobuf::Message* config) {
 }
 
 bool ApaPlanningModule::compute(framework::Frame* frame) {
-  bool success = false;
-  success = planner_dispatcher_->Update(frame);
-  return success;
+  return planner_dispatcher_->Update(frame);
 }
 
 }  // namespace modules

@@ -22,7 +22,3 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
-
-target_compile_definitions(${PROJECT_NAME} PUBLIC
-    CONFIG_PATH="${CONFIG_PATH}")
-message("CONFIG_PATH=${CONFIG_PATH}")
