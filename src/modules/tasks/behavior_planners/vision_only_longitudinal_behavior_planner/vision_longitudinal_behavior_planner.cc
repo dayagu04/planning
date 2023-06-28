@@ -180,12 +180,15 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
     LOG_DEBUG(
         "angle_steers: [%f], angle_steers_deg: [%f], v_limit_road: [%f]\n",
         angle_steers, angle_steers_deg, v_limit_road);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_road", v_limit_road);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_in_turns", v_limit_in_turns);
   }
 
   double a_target_in_turns = 0.0;
   if (v_limit_in_turns < v_ego - 2) {
-    // a_target_in_turns = -0.8;
-    a_target_in_turns = -0.2;  // hack : 调低减速度
+    a_target_in_turns = -0.8;
+    // hack : 减速度-0.2，每次析构无法使用static，周期100ms，速度衰减限幅
+    v_limit_in_turns = v_ego - 0.08;
   }
 
   a_target_.first = std::min(a_target_.first, a_target_in_turns);
