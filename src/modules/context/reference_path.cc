@@ -107,8 +107,8 @@ void ReferencePath::update_refpath_points(
           int num_point = ceil(dist / interp_gap_s - 1);
           double interpolate_s = dist / (num_point + 1);
           ReferencePathPoints ref_path_pts;
-          for (double dis = (iter - 1)->path_point.s;
-               dis < iter->path_point.s;) {
+          double dis = (iter - 1)->path_point.s;
+          for (int num = 0; num < num_point; num++) {
             ReferencePathPoint ref_path_pt;
             dis += interpolate_s;
             get_reference_point_by_lon_from_raw_ref_path_points(
@@ -119,6 +119,12 @@ void ReferencePath::update_refpath_points(
                                             ref_path_pts.end());
           iter += ref_path_pts.size();
         }
+      } else {
+        iter->path_point.s = frenet_point.x;
+        iter->path_point.kappa =
+            frenet_coord_->GetRefCurveCurvature(frenet_point.x);
+        iter->path_point.theta =
+            frenet_coord_->GetRefCurveHeading(frenet_point.x);
       }
     } else {
       LOG_ERROR("trasform raw_ref_path_points frenet Failed");
@@ -321,8 +327,7 @@ bool ReferencePath::get_reference_point_by_lon(
 bool ReferencePath::get_reference_point_by_lon_from_raw_ref_path_points(
     double s, const ReferencePathPoints &raw_reference_path_point,
     ReferencePathPoint &reference_path_point) {
-  if (std::isnan(s) || s < raw_reference_path_point.front().path_point.s ||
-      s > raw_reference_path_point.back().path_point.s) {
+  if (std::isnan(s) || s < raw_reference_path_point.front().path_point.s) {
     return false;
   }
 
@@ -337,6 +342,11 @@ bool ReferencePath::get_reference_point_by_lon_from_raw_ref_path_points(
 
   auto &pre_reference_point = raw_reference_path_point[pos_idx];
   auto &next_reference_point = raw_reference_path_point[pos_idx + 1];
+
+  if (pre_reference_point.path_point.s > s ||
+      next_reference_point.path_point.s < s) {  // 防止未搜索到满足条件的pos_idx
+    return false;
+  }
 
   auto interpolate_ratio =
       (next_reference_point.path_point.s - s) /

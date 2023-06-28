@@ -54,9 +54,9 @@ class EmergencyLaneKeep {
   uint32 elk_state_{0}; /* ELK功能状态 0:Unavailable 1:Off 2:Standby 3:Active(No
                            Intervention) 4:Active(Left Intervention)
                            5:Active(Right Intervention) */
-  boolean
-      elk_left_intervention_flag_{FALSE}; /* ELK功能触发左侧报警标志位 0:No
-                                             Intervention 1:Left Intervention */
+  boolean elk_left_intervention_flag_{
+      FALSE}; /* ELK功能触发左侧报警标志位 0:No
+                 Intervention 1:Left Intervention */
   boolean elk_right_intervention_flag_{
       FALSE}; /* ELK功能触发右侧报警标志位 0:No Intervention 1:Rirht
                  Intervention */

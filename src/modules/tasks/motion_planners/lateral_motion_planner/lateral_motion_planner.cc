@@ -160,7 +160,8 @@ void LateralMotionPlanner::AssembleInput() {
   }
 
   // set init theta by ref_theta
-  planning_input_.mutable_init_state()->set_theta(planning_input_.ref_theta_vec(0));
+  planning_input_.mutable_init_state()->set_theta(
+      planning_input_.ref_theta_vec(0));
 
   // set last trajectory: temporarily same as reference: TODO
   for (size_t i = 0; i < enu_ref_path.size(); ++i) {
