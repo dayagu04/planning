@@ -257,9 +257,9 @@ def load_lon_global_figure(bag_loader):
     ego_velocity_vec.append(round(bag_loader.loc_msg['data'][ind].pose.linear_velocity_from_wheel, 2))
 
   velocity_fig.line(t_plan_vec, velocity_limit_road_vec, line_width=1,
-                              legend_label='target_velocity', color="grey")
+                              legend_label='velocity_limit_road', color="grey")
   velocity_fig.line(t_plan_vec, velocity_limit_turn_vec, line_width=1,
-                              legend_label='target_velocity', color="yellow")
+                              legend_label='velocity_limit_turn', color="yellow")
   velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
                               legend_label='target_velocity', color="green")
   velocity_fig.line(t_loc_vec, ego_velocity_vec, line_width=1,
