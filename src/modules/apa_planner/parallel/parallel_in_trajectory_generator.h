@@ -147,6 +147,8 @@ class ParallelInTrajectoryGenerator {
 
   bool IsSelectedSlotValid(framework::Frame *const frame) const;
 
+  void PrintSlotInfo() const;
+
  private:
   ParallelInGeometryPlan geometry_planning_;
 

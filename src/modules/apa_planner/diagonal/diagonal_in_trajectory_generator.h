@@ -120,6 +120,8 @@ class DiagonalInTrajectoryGenerator {
 
   bool IsSelectedSlotValid(framework::Frame *const frame) const;
 
+  void PrintSlotInfo() const;
+
  private:
   DiagonalInGeometryPlan geometry_planning_;
 

@@ -65,7 +65,6 @@ class PlotPlanningInfo(object):
         self.mocked_obj_y0 = None
         self.mocked_obj_x1 = None
         self.mocked_obj_y1 = None
-        self.is_replan = False
 
     def get_values(self, line):
         if line.startswith("current time(ms)"):
@@ -146,7 +145,7 @@ class PlotPlanningInfo(object):
             self.raw_slot3_x = float(strs2[1])
             strs2 = strs1[7].split(":")
             self.raw_slot3_y = float(strs2[1])
-        elif line.startswith("slot_points_in_m_") and self.is_replan:
+        elif line.startswith("slot_points_in_m_"):
             strs1 = line.split(",")
             strs2 = strs1[0].split(":")
             self.slot0_x = float(strs2[1])
@@ -172,7 +171,6 @@ class PlotPlanningInfo(object):
             strs2 = strs1[7].split(":")
             self.slot3_y = float(strs2[1])
             self.slot3_y_list.append(self.slot3_y)
-            self.is_replan = False
         elif line.startswith("smoothed traj pt"):
             strs1 = line.split(",")
             strs2 = strs1[5].split(":")
@@ -181,8 +179,6 @@ class PlotPlanningInfo(object):
             self.v_limit_list.append(float(strs2[1]))
             strs2 = strs1[7].split(":")
             self.smoothed_s_list.append(float(strs2[1]))
-        elif "replan triggered" in line:
-            self.is_replan = True
 
     def read_file(self):
         file_object = open(self.data_path, 'r')

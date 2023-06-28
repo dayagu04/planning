@@ -17,13 +17,13 @@ namespace planning {
 namespace apa_planner {
 
 using ::Common::GearCommandValue;
+using framework::Frame;
 using ::FuncStateMachine::FunctionalState;
+using planning::planning_math::LineSegment2d;
+using planning::planning_math::Vec2d;
 using ::PlanningOutput::PlanningOutput;
 using ::PlanningOutput::Trajectory;
 using ::PlanningOutput::TrajectoryPoint;
-using framework::Frame;
-using planning::planning_math::LineSegment2d;
-using planning::planning_math::Vec2d;
 
 namespace {
 constexpr double kEps = 1e-6;
@@ -158,8 +158,10 @@ bool ParallelInTrajectoryGenerator::SingleSlotPlan(
   if (!IsReplan(planning_output)) {
     return true;
   }
-  AINFO << "parallel replan triggered";
+  AINFO << "parallel replan triggered, replan state:" << current_state_;
   AINFO << "cur segment name:" << last_segment_name_;
+
+  PrintSlotInfo();
 
   if (!GeometryPlan(cur_pos_in_slot_, slot_index, planning_output)) {
     AERROR << "geometry parallel plan failed";
@@ -1018,15 +1020,9 @@ void ParallelInTrajectoryGenerator::CalApaTargetInSlot(int idx) {
   target_point_in_slot_.x = CalApaTargetX();
   target_point_in_slot_.y = CalApaTargetY();
   target_point_in_slot_.theta = 0.0;
-  AINFO << "target_point_in_slot_ x:" << target_point_in_slot_.x
-        << ", y:" << target_point_in_slot_.y
-        << ", theta:" << target_point_in_slot_.theta;
 
   target_point_in_odom_ =
       FromLocal2GlobalCor(slot_origin_in_odom_, target_point_in_slot_);
-  AINFO << "target_point_in_odom_ x:" << target_point_in_odom_.x
-        << ", y:" << target_point_in_odom_.y
-        << ", theta:" << target_point_in_odom_.theta;
 }
 
 void ParallelInTrajectoryGenerator::CalEgoPostionInSlotAndOdom(int idx) {
@@ -1116,10 +1112,6 @@ void ParallelInTrajectoryGenerator::CalSlotOriginInodom(const int idx) {
   slot_origin_in_odom_.theta =
       std::atan2(slot_points_in_m_[0].y - slot_points_in_m_[1].y,
                  slot_points_in_m_[0].x - slot_points_in_m_[1].x);
-
-  AINFO << "slot origin in odom x:" << slot_origin_in_odom_.x
-        << ", y:" << slot_origin_in_odom_.y
-        << ", theta:" << slot_origin_in_odom_.theta;
 }
 
 void ParallelInTrajectoryGenerator::CalSlotPointsInM(const int idx) {
@@ -1151,16 +1143,6 @@ void ParallelInTrajectoryGenerator::CalSlotPointsInM(const int idx) {
                            slot_points_in_m_[0].y - slot_points_in_m_[2].y);
   slot_length_ = std::hypot(slot_points_in_m_[0].x - slot_points_in_m_[1].x,
                             slot_points_in_m_[0].y - slot_points_in_m_[1].y);
-  AINFO << "slot_width_:" << slot_width_ << ", slot_length_:" << slot_length_;
-
-  AINFO << "slot_points_in_m_ x0:" << slot_points_in_m_[0].x
-        << ", y0:" << slot_points_in_m_[0].y
-        << ", x1:" << slot_points_in_m_[1].x
-        << ", y1:" << slot_points_in_m_[1].y
-        << ", x2:" << slot_points_in_m_[2].x
-        << ", y2:" << slot_points_in_m_[2].y
-        << ", x3:" << slot_points_in_m_[3].x
-        << ", y3:" << slot_points_in_m_[3].y;
 }
 
 // assume slot is parallelogram
@@ -1316,6 +1298,35 @@ void ParallelInTrajectoryGenerator::PrintTrajectoryPoints(
           << ", theta:" << pt.heading_yaw() << ", kappa:" << pt.curvature()
           << ", v:" << pt.v() << ", s:" << pt.distance();
   }
+}
+
+void ParallelInTrajectoryGenerator::PrintSlotInfo() const {
+  if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
+    return;
+  }
+
+  AINFO << "slot_points_in_m_ x0:" << slot_points_in_m_[0].x
+        << ", y0:" << slot_points_in_m_[0].y
+        << ", x1:" << slot_points_in_m_[1].x
+        << ", y1:" << slot_points_in_m_[1].y
+        << ", x2:" << slot_points_in_m_[2].x
+        << ", y2:" << slot_points_in_m_[2].y
+        << ", x3:" << slot_points_in_m_[3].x
+        << ", y3:" << slot_points_in_m_[3].y;
+
+  AINFO << "slot_width_:" << slot_width_ << ", slot_length_:" << slot_length_;
+
+  AINFO << "slot origin in odom x:" << slot_origin_in_odom_.x
+        << ", y:" << slot_origin_in_odom_.y
+        << ", theta:" << slot_origin_in_odom_.theta;
+
+  AINFO << "target_point_in_slot_ x:" << target_point_in_slot_.x
+        << ", y:" << target_point_in_slot_.y
+        << ", theta:" << target_point_in_slot_.theta;
+
+  AINFO << "target_point_in_odom_ x:" << target_point_in_odom_.x
+        << ", y:" << target_point_in_odom_.y
+        << ", theta:" << target_point_in_odom_.theta;
 }
 
 }  // namespace apa_planner
