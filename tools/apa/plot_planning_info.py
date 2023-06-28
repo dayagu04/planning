@@ -3,6 +3,7 @@
 
 import matplotlib.pyplot as plt
 import math
+
 import numpy as np
 
 
@@ -36,6 +37,14 @@ class PlotPlanningInfo(object):
         self.raw_slot2_y = None
         self.raw_slot3_x = None
         self.raw_slot3_y = None
+        self.raw_slot0_x_list = []
+        self.raw_slot0_y_list = []
+        self.raw_slot1_x_list = []
+        self.raw_slot1_y_list = []
+        self.raw_slot2_x_list = []
+        self.raw_slot2_y_list = []
+        self.raw_slot3_x_list = []
+        self.raw_slot3_y_list = []
         self.slot0_x = None
         self.slot0_y = None
         self.slot1_x = None
@@ -44,10 +53,19 @@ class PlotPlanningInfo(object):
         self.slot2_y = None
         self.slot3_x = None
         self.slot3_y = None
+        self.slot0_x_list = []
+        self.slot0_y_list = []
+        self.slot1_x_list = []
+        self.slot1_y_list = []
+        self.slot2_x_list = []
+        self.slot2_y_list = []
+        self.slot3_x_list = []
+        self.slot3_y_list = []
         self.mocked_obj_x0 = None
         self.mocked_obj_y0 = None
         self.mocked_obj_x1 = None
         self.mocked_obj_y1 = None
+        self.is_replan = False
 
     def get_values(self, line):
         if line.startswith("current time(ms)"):
@@ -128,24 +146,33 @@ class PlotPlanningInfo(object):
             self.raw_slot3_x = float(strs2[1])
             strs2 = strs1[7].split(":")
             self.raw_slot3_y = float(strs2[1])
-        elif line.startswith("slot_points_in_m_"):
+        elif line.startswith("slot_points_in_m_") and self.is_replan:
             strs1 = line.split(",")
             strs2 = strs1[0].split(":")
             self.slot0_x = float(strs2[1])
+            self.slot0_x_list.append(self.slot0_x)
             strs2 = strs1[1].split(":")
             self.slot0_y = float(strs2[1])
+            self.slot0_y_list.append(self.slot0_y)
             strs2 = strs1[2].split(":")
             self.slot1_x = float(strs2[1])
+            self.slot1_x_list.append(self.slot1_x)
             strs2 = strs1[3].split(":")
             self.slot1_y = float(strs2[1])
+            self.slot1_y_list.append(self.slot1_y)
             strs2 = strs1[4].split(":")
             self.slot2_x = float(strs2[1])
+            self.slot2_x_list.append(self.slot2_x)
             strs2 = strs1[5].split(":")
             self.slot2_y = float(strs2[1])
+            self.slot2_y_list.append(self.slot2_y)
             strs2 = strs1[6].split(":")
             self.slot3_x = float(strs2[1])
+            self.slot3_x_list.append(self.slot3_x)
             strs2 = strs1[7].split(":")
             self.slot3_y = float(strs2[1])
+            self.slot3_y_list.append(self.slot3_y)
+            self.is_replan = False
         elif line.startswith("smoothed traj pt"):
             strs1 = line.split(",")
             strs2 = strs1[5].split(":")
@@ -154,6 +181,8 @@ class PlotPlanningInfo(object):
             self.v_limit_list.append(float(strs2[1]))
             strs2 = strs1[7].split(":")
             self.smoothed_s_list.append(float(strs2[1]))
+        elif "replan triggered" in line:
+            self.is_replan = True
 
     def read_file(self):
         file_object = open(self.data_path, 'r')
@@ -205,10 +234,18 @@ class PlotPlanningInfo(object):
         plt.subplot(1, 1, 1)
         plt.plot(self.x_ego_list, self.y_ego_list, label="ego pos", c='b')
         plt.plot(self.x_traj_list, self.y_traj_list, label="traj pos", c='g')
-        plt.plot([self.raw_slot0_x, self.raw_slot2_x, self.raw_slot3_x, self.raw_slot1_x],
-                 [self.raw_slot0_y, self.raw_slot2_y, self.raw_slot3_y, self.raw_slot1_y], label="raw slot")
-        plt.plot([self.slot0_x, self.slot2_x, self.slot3_x, self.slot1_x],
-                 [self.slot0_y, self.slot2_y, self.slot3_y, self.slot1_y], label="slot")
+        # plt.plot([self.raw_slot0_x, self.raw_slot2_x, self.raw_slot3_x, self.raw_slot1_x],
+        #          [self.raw_slot0_y, self.raw_slot2_y, self.raw_slot3_y, self.raw_slot1_y], label="raw slot")
+        # plt.plot([self.slot0_x, self.slot2_x, self.slot3_x, self.slot1_x],
+        #          [self.slot0_y, self.slot2_y, self.slot3_y, self.slot1_y], label="slot")
+        replan_num = len(self.slot0_x_list)
+        for i in np.arange(replan_num):
+            line_width = 0.5
+            if i == replan_num - 1:
+                line_width = 1.5
+            plt.plot([self.slot0_x_list[i], self.slot2_x_list[i], self.slot3_x_list[i], self.slot1_x_list[i]],
+                     [self.slot0_y_list[i], self.slot2_y_list[i], self.slot3_y_list[i], self.slot1_y_list[i]],
+                     linewidth=line_width, label="slot at seg "+str(i), marker=".")
         # plt.plot([self.mocked_obj_x0, self.mocked_obj_x1],
         #          [self.mocked_obj_y0, self.mocked_obj_y1], label="mocked obj")
         traj_len = len(self.x_traj_list)
@@ -230,18 +267,18 @@ class PlotPlanningInfo(object):
             traj_y0 = self.y_traj_list[0]
             traj_theta0 = self.theta_traj_list[0]
             traj_box0 = self.get_closed_veh_box(traj_x0, traj_y0, traj_theta0)
-            plt.plot(traj_box0[0], traj_box0[1], c='r', linewidth=1.0, label="first traj box")
+            plt.plot(traj_box0[0], traj_box0[1], c='r', linewidth=1.5, label="first traj box")
             traj_x_1 = self.x_traj_list[-1]
             traj_y_1 = self.y_traj_list[-1]
             traj_theta_1 = self.theta_traj_list[-1]
             traj_box_1 = self.get_closed_veh_box(traj_x_1, traj_y_1, traj_theta_1)
-            plt.plot(traj_box_1[0], traj_box_1[1], c='r', linewidth=1.0, label="last traj box")
+            plt.plot(traj_box_1[0], traj_box_1[1], c='r', linewidth=1.5, label="last traj box")
         if len(self.x_ego_list) != 0:
             ego_x_1 = self.x_ego_list[-1]
             ego_y_1 = self.y_ego_list[-1]
             ego_theta_1 = self.theta_ego_list[-1]
             ego_box_1 = self.get_closed_veh_box(ego_x_1, ego_y_1, ego_theta_1)
-            plt.plot(ego_box_1[0], ego_box_1[1], c='y', linewidth=1.0, label="last ego box")
+            plt.plot(ego_box_1[0], ego_box_1[1], c='y', linewidth=1.5, label="last ego box")
             plt.plot(self.x_ego_list[0], self.y_ego_list[0], marker="x", label="ego start point")
         plt.plot(self.target_x, self.target_y, marker="x", label="target point")
         plt.axis('equal')
