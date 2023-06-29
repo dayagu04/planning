@@ -13,6 +13,7 @@
 #include "environmental_model.h"
 #include "frame.h"
 #include "ifly_time.h"
+#include "log.h"
 #include "mrc_condition.h"
 #include "start_stop_enable.h"
 
@@ -843,6 +844,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
   auto care_width = vehicle_param_.width;
   auto dt_square = config_.delta_time * config_.delta_time;
   auto dt_cube = dt_square * config_.delta_time;
+  auto
 
   // TBD: 超车buffer应该根据自车和障碍物速度变换，确保安全
   // TBD: 到CIPV也应该根据车速来计算
@@ -860,6 +862,9 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
   const bool is_cross_obj =
       obstacle_decision.rel_pos_type == ObsRelPosType::CROSSING;
 
+  double follow_distance = 0.0;
+  follow_distance = calc_desired_distance(obstacle, );
+
   for (size_t i = 0; i < traj_points.size(); i++) {
     auto &traj_pt = traj_points[i];
     auto t = traj_pt.t;
@@ -872,6 +877,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
     auto ok = obstacle->get_polygon_at_time(t, reference_path_ptr_,
                                             obstacle_sl_polygon);
     if (not ok) {
+      LOG_WARNING("Can't get obstacle [%i]'s polygon ! \n", obstacle->id());
       continue;
     }
 

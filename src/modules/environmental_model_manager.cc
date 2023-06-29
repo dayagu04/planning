@@ -551,7 +551,6 @@ void EnvironmentalModelManager::truncate_prediction_info(
     cur_predicion_obj.acc = std::hypot(
         prediction_object.fusion_obstacle().common_info().acceleration().x(),
         prediction_object.fusion_obstacle().common_info().acceleration().y());
-    ;
     // cur_predicion_obj.bottom_polygon_points =
     // prediction_object.bottom_polygon_points();
     // cur_predicion_obj.top_polygon_points =
@@ -577,7 +576,6 @@ void EnvironmentalModelManager::truncate_prediction_info(
         trajectory_point.std_dev_y = point.gaussian_info().sigma_y();
         // trajectory_point.std_dev_yaw = point.std_dev_yaw();
         // trajectory_point.std_dev_speed = point.std_dev_speed();
-
         trajectory_point.relative_ego_x = point.relative_position().x();
         trajectory_point.relative_ego_y = point.relative_position().y();
         trajectory_point.relative_ego_yaw = point.relative_yaw();

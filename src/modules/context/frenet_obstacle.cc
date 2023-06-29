@@ -468,8 +468,9 @@ bool FrenetObstacle::get_polygon_at_time(
     Point2D frenet_point, carte_point;
     carte_point.x = pt.x();
     carte_point.y = pt.y();
-    if (frenet_coord->CartCoord2FrenetCoord(carte_point, frenet_point) ==
-        TRANSFORM_FAILED) {
+    if (frenet_coord->CartCoord2FrenetCoord(carte_point, frenet_point) == TRANSFORM_FAILED) {
+      LOG_DEBUG("Frenet_coord failed, the obstacle [%i]'s enu ploygon min_x: [%f], max_x: [%f], min_y: [%f], max_y: [%f] \n",
+            obstacle_ptr_->id(), enu_polygon.min_x(), enu_polygon.max_x(), enu_polygon.min_y(), enu_polygon.max_y());
       continue;
     }
     frenet_points.push_back(
