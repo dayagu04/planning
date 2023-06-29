@@ -161,14 +161,4 @@ uint8 TrafficSignRecognition::TSRStateMachine() {
   return tsr_state_temp;
 }
 
-void TrafficSignRecognition::set_tsr_output_info() {
-  tsr_state_ =
-      tsr_sys_.state
-          .tsr_state;  // TSR功能状态 0:Unavailable 1:Off 2:Standby 3:Active
-  tsr_speed_limit_ =
-      tsr_sys_.state.tsr_speed_limit;  // TSR识别到的限速标识牌 单位:km/h
-  tsr_warning_ =
-      tsr_sys_.state.tsr_warning;  // TSR超速报警标志位 0:No Warning 1:Warning
-}
-
 }  // namespace planning

@@ -3,8 +3,10 @@
 #include "Platform_Types.h"
 // #include "context/virtual_lane_manager.h"
 #include <cmath>
+
 #include "debug_info_log.h"
 #include "frame.h"
+#include "planning_hmi.pb.h"
 
 namespace planning {
 #define LKA_StateMachine_IN_ACTIVE 1             // LKA一级主状态
@@ -100,8 +102,8 @@ typedef struct VehInfo {
   float32 veh_display_speed;
   float32 veh_yaw_rate;
   float32 driver_hand_torque;
-  uint8 left_turn_light_state;
-  uint8 right_turn_light_state;
+  boolean left_turn_light_state;
+  boolean right_turn_light_state;
   boolean ldw_main_switch;
   boolean ldp_main_switch;
   boolean elk_main_switch;
@@ -146,6 +148,8 @@ typedef struct {
   float32 obj_y;
   float32 obj_vx;
   float32 obj_vy;
+  float32 obj_length;
+  float32 obj_width;
 } RadarObjData;
 
 typedef struct {

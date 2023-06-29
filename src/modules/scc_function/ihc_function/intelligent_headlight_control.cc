@@ -176,14 +176,7 @@ uint8 IntelligentHeadlightControl::IHCStateMachine() {
   }
   return ihc_state_temp;
 }
-void IntelligentHeadlightControl::set_ihc_output_info() {
-  ihc_request_status_ =
-      ihc_sys_.state.ihc_request_status;  // IHC请求状态 0:No Request 1:Request
-  ihc_request_ = ihc_sys_.state.ihc_request;  // IHC请求 0:LowBeam 1:HighBeam
-  ihc_state_ =
-      ihc_sys_.state
-          .ihc_state;  // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
-}
+
 boolean IntelligentHeadlightControl::IHCRequest() {
   boolean ihc_request_temp = TRUE;
 

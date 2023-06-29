@@ -1,5 +1,6 @@
 #include "emergency_lane_keep_alert_context.h"
 
+#include "Platform_Types.h"
 #include "environmental_model.h"
 namespace planning {
 void EmergencyLaneKeepAlert::Init(planning::LkasInput *lkas_input,
@@ -39,10 +40,13 @@ void EmergencyLaneKeepAlert::Init(planning::LkasInput *lkas_input,
   r_lca_aera_vel_.l_y = 0.0F;
   r_lca_aera_vel_.k_y = 0.0F;
   r_lca_aera_vel_.obstacle_velocity_limit = 0.0F;
+  // for ego_curvature
+  ego_curvature = 0.0F;
 
   // LOG_DEBUG("LaneKeepAssistManager::elk:: bsd_lca has been inited \n");
 }
 void EmergencyLaneKeepAlert::Update() {
+  float32 temp32 = 0.0F;
   // 区域划分
   if (lkas_input_->vehicle_info.veh_display_speed <= (60.0F / 3.6F)) {
     f_bsd_aera_vel_.area_length_distance = 4.0F;
@@ -140,9 +144,24 @@ void EmergencyLaneKeepAlert::Update() {
     f_bsd_aera_vel_.obstacle_velocity_limit = (15.0F / 3.6F);
     r_bsd_aera_vel_.obstacle_velocity_limit = -(15.0F / 3.6F);
   }
+
   f_lca_aera_vel_.obstacle_velocity_limit =
       -30.0F / 3.6F;  // 单位需要统一转换成m/s
   r_lca_aera_vel_.obstacle_velocity_limit = 30.0F / 3.6F;
+
+  // for ego_curvature
+  if (fabs(lkas_input_->vehicle_info.veh_display_speed) < 0.0001) {
+    temp32 = 0.0001;
+  } else {
+    temp32 = (lkas_input_->vehicle_info.veh_yaw_rate /
+              lkas_input_->vehicle_info.veh_display_speed) *
+                 0.5 +
+             0.5 * ego_curvature;
+    if (fabs(temp32) <= 0.000001) {  // 除0保护
+      temp32 = 0.0001;
+    }
+  }
+  ego_curvature = temp32;
 }
 uint8 EmergencyLaneKeepAlert::RunOnce() {
   Update();
@@ -217,178 +236,176 @@ boolean EmergencyLaneKeepAlert::RightAlertJudge() {
 // sigle radar judge
 boolean EmergencyLaneKeepAlert::LeftAlertJudgeFL() {
   // 雷达信息
-  RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F};
+  RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
   // 状态标志位
   uint8 select_state = 0;
   boolean condition_bsd_state = FALSE;
   boolean condition_lca_state = FALSE;
-
   auto &radar_vector_fl =
       session_->mutable_environmental_model()->get_prediction_info();
-  // auto iter = radar_map.find('3');
-  if (false) {
-    // auto &radar_vector_fl = iter->second;
-    uint8 objs_nmu = radar_vector_fl.size();
-
-    if (objs_nmu > max_objs_num) {  // 限制校验目标物数量
-      objs_nmu = max_objs_num;
+  // auto &radar_vector_fl = iter->second;
+  uint8 objs_nmu = 0;
+  for (uint8 i = 0; i < radar_vector_fl.size(); i++) {  // 遍历目标物
+    // select fusion_source
+    if (radar_vector_fl[i].fusion_source != 4) {
+      // not rl radar
+      continue;
     }
-
-    for (uint8 i = 0; i < objs_nmu; i++) {  // 遍历目标物
-      // 读取目标物信息
-      // objs_nmu = 0;
-      radar_obj_data.pos = 0;  // 0代表左，1代表右
-      radar_obj_data.obj_class = radar_vector_fl[i].type;
-      radar_obj_data.obj_x = radar_vector_fl[i].relative_position_x;
-      radar_obj_data.obj_y = radar_vector_fl[i].relative_position_y;
-      radar_obj_data.obj_vx = radar_vector_fl[i].relative_speed_x;
-      radar_obj_data.obj_vx = radar_vector_fl[i].relative_speed_y;
-      // 筛选
-      select_state = ObjSelect(&radar_obj_data);
-      // 条件判断
-      condition_bsd_state = ObjBsdFL(&radar_obj_data);
-      condition_lca_state = ObjLcaFL(&radar_obj_data);
-      // 风险判断
-      if ((select_state == 0) &&
-          ((condition_bsd_state == TRUE) || (condition_lca_state == TRUE))) {
-        return TRUE;
-      }
+    objs_nmu++;
+    if (objs_nmu > max_objs_num) {
+      // just judge max_objs_num objs
+      break;
     }
-    return FALSE;
-  } else {
-    return FALSE;
+    // 读取目标物信息
+    radar_obj_data.pos = 0;  // 0代表左，1代表右
+    radar_obj_data.obj_class = radar_vector_fl[i].type;
+    radar_obj_data.obj_x = radar_vector_fl[i].relative_position_x;
+    radar_obj_data.obj_y = radar_vector_fl[i].relative_position_y;
+    radar_obj_data.obj_vx = radar_vector_fl[i].relative_speed_x;
+    radar_obj_data.obj_vy = radar_vector_fl[i].relative_speed_y;
+    radar_obj_data.obj_length = radar_vector_fl[i].length;
+    radar_obj_data.obj_width = radar_vector_fl[i].width;
+    // 筛选
+    select_state = ObjSelect(&radar_obj_data);
+    // 条件判断
+    condition_bsd_state = ObjBsdFL(&radar_obj_data);
+    condition_lca_state = ObjLcaFL(&radar_obj_data);
+    // 风险判断
+    if ((select_state == 0) &&
+        ((condition_bsd_state == TRUE) || (condition_lca_state == TRUE))) {
+      return TRUE;
+    }
   }
+  return FALSE;
 }
 boolean EmergencyLaneKeepAlert::LeftAlertJudgeRL() {
   // 雷达信息
-  RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F};
+  RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
   // 状态标志位
   uint8 select_state = 0;
   boolean condition_bsd_state = FALSE;
   boolean condition_lca_state = FALSE;
-
   auto &radar_vector_rl =
       session_->mutable_environmental_model()->get_prediction_info();
-  if (false) {
-    // auto &radar_vector_rl = iter->second;
-    uint8 objs_nmu = radar_vector_rl.size();
-
-    // uint8 alert_state = 0;
-    if (objs_nmu > max_objs_num) {  // 限制校验目标物数量
-      objs_nmu = max_objs_num;
+  uint8 objs_nmu = 0;
+  for (uint8 i = 0; i < radar_vector_rl.size(); i++) {  // 遍历目标物
+    // select fusion_source
+    if (radar_vector_rl[i].fusion_source != 16) {
+      // not rl radar
+      continue;
     }
-
-    for (uint8 i = 0; i < objs_nmu; i++) {  // 遍历目标物
-      // 读取目标物信息
-      // objs_nmu = 0;
-      radar_obj_data.pos = 0;
-      radar_obj_data.obj_class = radar_vector_rl[i].type;
-      radar_obj_data.obj_x = radar_vector_rl[i].relative_position_x;
-      radar_obj_data.obj_y = radar_vector_rl[i].relative_position_y;
-      radar_obj_data.obj_vx = radar_vector_rl[i].relative_speed_x;
-      radar_obj_data.obj_vx = radar_vector_rl[i].relative_speed_y;
-      // 筛选
-      select_state = ObjSelect(&radar_obj_data);
-      // 条件判断
-      condition_bsd_state = ObjBsdRL(&radar_obj_data);
-      condition_lca_state = ObjLcaRL(&radar_obj_data);
-      // 风险判断
-      if ((select_state == 0) &&
-          ((condition_bsd_state == TRUE) || (condition_lca_state == TRUE))) {
-        return TRUE;
-      }
+    objs_nmu++;
+    if (objs_nmu > max_objs_num) {
+      // just judge max_objs_num objs
+      break;
     }
-    return FALSE;
-  } else {
-    return FALSE;
+    // 读取目标物信息
+    radar_obj_data.pos = 0;
+    radar_obj_data.obj_class = radar_vector_rl[i].type;
+    radar_obj_data.obj_x = radar_vector_rl[i].relative_position_x;
+    radar_obj_data.obj_y = radar_vector_rl[i].relative_position_y;
+    radar_obj_data.obj_vx = radar_vector_rl[i].relative_speed_x;
+    radar_obj_data.obj_vy = radar_vector_rl[i].relative_speed_y;
+    radar_obj_data.obj_length = radar_vector_rl[i].length;
+    radar_obj_data.obj_width = radar_vector_rl[i].width;
+    // 筛选
+    select_state = ObjSelect(&radar_obj_data);
+    // 条件判断
+    condition_bsd_state = ObjBsdRL(&radar_obj_data);
+    condition_lca_state = ObjLcaRL(&radar_obj_data);
+    // 风险判断
+    if ((select_state == 0) &&
+        ((condition_bsd_state == TRUE) || (condition_lca_state == TRUE))) {
+      return TRUE;
+    }
   }
+  return FALSE;
 }
 boolean EmergencyLaneKeepAlert::RightAlertJudgeFR() {
   // 雷达信息
-  RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F};
+  RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
   // 状态标志位
   uint8 select_state = 0;
   boolean condition_bsd_state = FALSE;
   boolean condition_lca_state = FALSE;
-
   auto &radar_vector_fr =
       session_->mutable_environmental_model()->get_prediction_info();
-  // auto iter = radar_map.find(5);
-  if (false) {
-    // auto &radar_vector_fr = iter->second;
-    uint8 objs_nmu = radar_vector_fr.size();
-    // uint8 alert_state = 0;
-    if (objs_nmu > max_objs_num) {  // 限制校验目标物数量
-      objs_nmu = max_objs_num;
+  uint8 objs_nmu = 0;
+  for (uint8 i = 0; i < radar_vector_fr.size(); i++) {  // 遍历目标物
+    // select fusion_source
+    if (radar_vector_fr[i].fusion_source != 8) {
+      // not rl radar
+      continue;
     }
-
-    for (uint8 i = 0; i < objs_nmu; i++) {  // 遍历目标物
-      // 读取目标物信息
-      radar_obj_data.pos = 1;
-      radar_obj_data.obj_class = radar_vector_fr[i].type;
-      radar_obj_data.obj_x = radar_vector_fr[i].relative_position_x;
-      radar_obj_data.obj_y = radar_vector_fr[i].relative_position_y;
-      radar_obj_data.obj_vx = radar_vector_fr[i].relative_speed_x;
-      radar_obj_data.obj_vx = radar_vector_fr[i].relative_speed_y;
-      // 筛选
-      select_state = ObjSelect(&radar_obj_data);
-      // 条件判断
-      condition_bsd_state = ObjBsdFR(&radar_obj_data);
-      condition_lca_state = ObjLcaFR(&radar_obj_data);
-      // 风险判断
-      if ((select_state == 0) &&
-          ((condition_bsd_state == TRUE) || (condition_lca_state == TRUE))) {
-        return TRUE;
-      }
+    objs_nmu++;
+    if (objs_nmu > max_objs_num) {
+      // just judge max_objs_num objs
+      break;
     }
-    return FALSE;
-  } else {
-    return FALSE;
+    // 读取目标物信息
+    radar_obj_data.pos = 1;
+    radar_obj_data.obj_class = radar_vector_fr[i].type;
+    radar_obj_data.obj_x = radar_vector_fr[i].relative_position_x;
+    radar_obj_data.obj_y = radar_vector_fr[i].relative_position_y;
+    radar_obj_data.obj_vx = radar_vector_fr[i].relative_speed_x;
+    radar_obj_data.obj_vy = radar_vector_fr[i].relative_speed_y;
+    radar_obj_data.obj_length = radar_vector_fr[i].length;
+    radar_obj_data.obj_width = radar_vector_fr[i].width;
+    // 筛选
+    select_state = ObjSelect(&radar_obj_data);
+    // 条件判断
+    condition_bsd_state = ObjBsdFR(&radar_obj_data);
+    condition_lca_state = ObjLcaFR(&radar_obj_data);
+    // 风险判断
+    if ((select_state == 0) &&
+        ((condition_bsd_state == TRUE) || (condition_lca_state == TRUE))) {
+      return TRUE;
+    }
   }
+  return FALSE;
 }
 boolean EmergencyLaneKeepAlert::RightAlertJudgeRR() {
   // 雷达信息
-  RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F};
+  RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
   // 状态标志位
   uint8 select_state = 0;
   boolean condition_bsd_state = FALSE;
   boolean condition_lca_state = FALSE;
-
   auto &radar_vector_rr =
       session_->mutable_environmental_model()->get_prediction_info();
-  //   auto iter = radar_map.find(6);
-  if (false) {
-    // auto &radar_vector_rr = iter->second;
-    uint8 objs_nmu = radar_vector_rr.size();
-
-    // uint8 alert_state = 0;
-    if (objs_nmu > max_objs_num) {  // 限制校验目标物数量
-      objs_nmu = max_objs_num;
+  uint8 objs_nmu = 0;
+  for (uint8 i = 0; i < radar_vector_rr.size(); i++) {  // 遍历目标物
+    // select fusion_source
+    if (radar_vector_rr[i].fusion_source != 32) {
+      // not rl radar
+      continue;
     }
-
-    for (uint8 i = 0; i < objs_nmu; i++) {  // 遍历目标物
-      // 读取目标物信息
-      radar_obj_data.pos = 1;
-      radar_obj_data.obj_class = radar_vector_rr[i].type;
-      radar_obj_data.obj_x = radar_vector_rr[i].relative_position_x;
-      radar_obj_data.obj_y = radar_vector_rr[i].relative_position_y;
-      radar_obj_data.obj_vx = radar_vector_rr[i].relative_speed_x;
-      radar_obj_data.obj_vx = radar_vector_rr[i].relative_speed_y;
-      // 筛选
-      select_state = ObjSelect(&radar_obj_data);
-      // 条件判断
-      condition_bsd_state = ObjBsdRR(&radar_obj_data);
-      condition_lca_state = ObjLcaRR(&radar_obj_data);
-      // 风险判断
-      if ((select_state == 0) &&
-          ((condition_bsd_state == TRUE) || (condition_lca_state == TRUE))) {
-        return TRUE;
-      }
+    objs_nmu++;
+    if (objs_nmu > max_objs_num) {
+      // just judge max_objs_num objs
+      break;
     }
-    return FALSE;
-  } else {
-    return FALSE;
+    // 读取目标物信息
+    radar_obj_data.pos = 1;
+    radar_obj_data.obj_class = radar_vector_rr[i].type;
+    radar_obj_data.obj_x = radar_vector_rr[i].relative_position_x;
+    radar_obj_data.obj_y = radar_vector_rr[i].relative_position_y;
+    radar_obj_data.obj_vx = radar_vector_rr[i].relative_speed_x;
+    radar_obj_data.obj_vy = radar_vector_rr[i].relative_speed_y;
+    radar_obj_data.obj_length = radar_vector_rr[i].length;
+    radar_obj_data.obj_width = radar_vector_rr[i].width;
+    // 筛选
+    select_state = ObjSelect(&radar_obj_data);
+    // 条件判断
+    condition_bsd_state = ObjBsdRR(&radar_obj_data);
+    condition_lca_state = ObjLcaRR(&radar_obj_data);
+    // 风险判断
+    if ((select_state == 0) &&
+        ((condition_bsd_state == TRUE) || (condition_lca_state == TRUE))) {
+      return TRUE;
+    }
   }
+  return FALSE;
 }
 // single function judge of each radar
 boolean EmergencyLaneKeepAlert::ObjBsdFL(RadarObjData *radar) {
@@ -442,15 +459,28 @@ boolean EmergencyLaneKeepAlert::ObjLcaRR(RadarObjData *radar) {
 // single obj judge
 uint8 EmergencyLaneKeepAlert::ObjSelect(RadarObjData *radar) {
   uint16 class_code = 0;
-  if (radar->obj_class >= 11 || radar->obj_class <= 2) {
+  if ((radar->obj_class >= 11) || (radar->obj_class == 2) ||
+      (radar->obj_class == 1) ||
+      ((radar->obj_class == 0) &&
+       (radar->obj_length <= 3.0F || (radar->obj_width <= 1.6F)))) {
     class_code += uint16_bit[0];
   }
   return (class_code);
 }
 uint8 EmergencyLaneKeepAlert::ObjBsdConditionF(RadarObjData *radar) {
   uint8 condition_code = 0;
-  // uint8 velocity_code = 0;
-  // uint8 approach_code = 0; // 航向角判断
+  boolean turning_radius_flag = FALSE;  // 转弯半径对应相对速度满足标志位。
+  if ((fabs(1.0 / ego_curvature) >= 500) && (radar->obj_vx > (-20.0 / 3.6))) {
+    turning_radius_flag = TRUE;
+  } else if ((fabs(1.0 / ego_curvature) >= 250) &&
+             (radar->obj_vx > (-15.0 / 3.6))) {
+    turning_radius_flag = TRUE;
+  } else if ((fabs(1.0 / ego_curvature) >= 125) &&
+             (radar->obj_vx > (-10.0 / 3.6))) {
+    turning_radius_flag = TRUE;
+  } else {
+    // do nothing
+  }
   // condition1
   if ((radar->obj_x < f_bsd_aera_vel_.b_x) ||
       (radar->obj_x > f_bsd_aera_vel_.c_x)) {  // 纵向距离不满足要求
@@ -468,9 +498,7 @@ uint8 EmergencyLaneKeepAlert::ObjBsdConditionF(RadarObjData *radar) {
     }
   }
   // condition2
-  if ((radar->obj_vx > f_bsd_aera_vel_.obstacle_velocity_limit) ||
-      (fabs(radar->obj_vx + lkas_input_->vehicle_info.veh_display_speed) <
-       (5.0F / 3.6F))) {
+  if (radar->obj_vx > f_bsd_aera_vel_.obstacle_velocity_limit) {
     condition_code += uint16_bit[2];
   }
   // condition3
@@ -480,12 +508,27 @@ uint8 EmergencyLaneKeepAlert::ObjBsdConditionF(RadarObjData *radar) {
       condition_code = uint16_bit[3];
     }
   }
+  // condition4
+  if (turning_radius_flag == FALSE) {
+    condition_code = uint16_bit[4];
+  }
+
   return (condition_code);
 }
 uint8 EmergencyLaneKeepAlert::ObjBsdConditionR(RadarObjData *radar) {
   uint8 condition_code = 0;
-  // uint8 velocity_code = 0;
-  // uint8 approach_code = 0; // 航向角判断
+  boolean turning_radius_flag = FALSE;  // 转弯半径对应相对速度满足标志位。
+  if ((fabs(1.0 / ego_curvature) >= 500) && (radar->obj_vx > (-20.0 / 3.6))) {
+    turning_radius_flag = TRUE;
+  } else if ((fabs(1.0 / ego_curvature) >= 250) &&
+             (radar->obj_vx > (-15.0 / 3.6))) {
+    turning_radius_flag = TRUE;
+  } else if ((fabs(1.0 / ego_curvature) >= 125) &&
+             (radar->obj_vx > (-10.0 / 3.6))) {
+    turning_radius_flag = TRUE;
+  } else {
+    // do nothing
+  }
   // condition1
   if ((radar->obj_x < r_bsd_aera_vel_.b_x) ||
       (radar->obj_x > r_bsd_aera_vel_.c_x)) {  // 纵向距离不满足要求
@@ -515,10 +558,26 @@ uint8 EmergencyLaneKeepAlert::ObjBsdConditionR(RadarObjData *radar) {
       condition_code = uint16_bit[3];
     }
   }
+  // condition4
+  if (turning_radius_flag == FALSE) {
+    condition_code = uint16_bit[4];
+  }
   return (condition_code);
 }
 uint8 EmergencyLaneKeepAlert::ObjLcaConditionF(RadarObjData *radar) {
   uint8 condition_code = 0;
+  boolean turning_radius_flag = FALSE;  // 转弯半径对应相对速度满足标志位。
+  if ((fabs(1.0 / ego_curvature) >= 500) && (radar->obj_vx > (-20.0 / 3.6))) {
+    turning_radius_flag = TRUE;
+  } else if ((fabs(1.0 / ego_curvature) >= 250) &&
+             (radar->obj_vx > (-15.0 / 3.6))) {
+    turning_radius_flag = TRUE;
+  } else if ((fabs(1.0 / ego_curvature) >= 125) &&
+             (radar->obj_vx > (-10.0 / 3.6))) {
+    turning_radius_flag = TRUE;
+  } else {
+    // do nothing
+  }
   // condition1
   if ((radar->obj_x < f_lca_aera_vel_.c_x) ||
       (radar->obj_x > f_lca_aera_vel_.b_x)) {  // 纵向距离不满足要求
@@ -536,9 +595,7 @@ uint8 EmergencyLaneKeepAlert::ObjLcaConditionF(RadarObjData *radar) {
     }
   }
   // condition2
-  if ((radar->obj_vx > f_lca_aera_vel_.obstacle_velocity_limit) ||
-      (fabs(radar->obj_vx + lkas_input_->vehicle_info.veh_display_speed) <
-       (5.0F / 3.6F))) {
+  if (radar->obj_vx > 0) {
     condition_code += uint16_bit[2];
   }
   // condition3
@@ -547,6 +604,10 @@ uint8 EmergencyLaneKeepAlert::ObjLcaConditionF(RadarObjData *radar) {
     if (fabs(radar->obj_vx / radar->obj_vy) < 1.0F) {
       condition_code = uint16_bit[3];
     }
+  }
+  // condition4
+  if (turning_radius_flag == FALSE) {
+    condition_code = uint16_bit[4];
   }
   return (condition_code);
 }
@@ -565,23 +626,28 @@ uint8 EmergencyLaneKeepAlert::ObjLcaAlertF(RadarObjData *radar) {
   } else if ((radar->obj_x < f_lca_aera_vel_.b_x) && (radar->obj_x > 25)) {
     lca_ttc = 3.5;
   } else {
-    lca_ttc = 0;
+    lca_ttc = 0.0F;
   }
-  ttc = fabs(obj_to_front_x / radar->obj_vx);
+
+  if (radar->obj_vx < 0) {
+    ttc = fabs(obj_to_front_x / radar->obj_vx);
+  } else {
+    ttc = 100.0F;
+  }
 
   crash_y = radar->obj_y + ttc * radar->obj_vy;
   // condition1
   if (ttc > lca_ttc) {
     alert_code += uint16_bit[0];
   }
-  if (radar->pos = 0) {  // 左侧
+  if (radar->pos == 0) {  // 左侧
     if ((crash_y < -0.5 * lkas_input_->vehicle_info.common_veh_width) ||
         (crash_y > (f_lca_aera_vel_.g_y + 1.0F))) {
       alert_code += uint16_bit[1];
     }
   } else {  // 右侧
     if ((crash_y > 0.5 * lkas_input_->vehicle_info.common_veh_width) ||
-        (crash_y < -(f_lca_aera_vel_.l_y + 1.0F))) {
+        (crash_y < (f_lca_aera_vel_.l_y - 1.0F))) {
       alert_code += uint16_bit[1];
     }
   }
@@ -590,10 +656,20 @@ uint8 EmergencyLaneKeepAlert::ObjLcaAlertF(RadarObjData *radar) {
 }
 uint8 EmergencyLaneKeepAlert::ObjLcaConditionR(RadarObjData *radar) {
   uint8 condition_code = 0;
-  // uint8 velocity_code = 0;
-  // uint8 approach_code = 0; // 航向角判断
+  boolean turning_radius_flag = FALSE;  // 转弯半径对应相对速度满足标志位。
+  if ((fabs(1.0 / ego_curvature) >= 500) && (radar->obj_vx > (-20.0 / 3.6))) {
+    turning_radius_flag = TRUE;
+  } else if ((fabs(1.0 / ego_curvature) >= 250) &&
+             (radar->obj_vx > (-15.0 / 3.6))) {
+    turning_radius_flag = TRUE;
+  } else if ((fabs(1.0 / ego_curvature) >= 125) &&
+             (radar->obj_vx > (-10.0 / 3.6))) {
+    turning_radius_flag = TRUE;
+  } else {
+    // do nothing
+  }
   // condition1
-  if ((radar->obj_x < r_lca_aera_vel_.c_x) &&
+  if ((radar->obj_x < r_lca_aera_vel_.c_x) ||
       (radar->obj_x > r_lca_aera_vel_.b_x)) {  // 纵向距离不满足要求
     condition_code += uint16_bit[0];
   }
@@ -609,9 +685,7 @@ uint8 EmergencyLaneKeepAlert::ObjLcaConditionR(RadarObjData *radar) {
     }
   }
   // condition2
-  if (((radar->obj_vx + lkas_input_->vehicle_info.veh_display_speed) <
-       f_lca_aera_vel_.obstacle_velocity_limit) ||
-      (radar->obj_vx < 0.0F)) {
+  if (radar->obj_vx < 0.0F) {
     condition_code += uint16_bit[2];
   }
   // condition3
@@ -620,6 +694,10 @@ uint8 EmergencyLaneKeepAlert::ObjLcaConditionR(RadarObjData *radar) {
     if (fabs(radar->obj_vx / radar->obj_vy) < 1.0F) {
       condition_code = uint16_bit[3];
     }
+  }
+  // condition4
+  if (turning_radius_flag == FALSE) {
+    condition_code = uint16_bit[4];
   }
   return (condition_code);
 }
@@ -638,21 +716,26 @@ uint8 EmergencyLaneKeepAlert::ObjLcaAlertR(RadarObjData *radar) {
   } else {
     lca_ttc = 0;
   }
-  ttc = fabs(obj_to_front_x / radar->obj_vx);
+  if (radar->obj_vx > 0) {
+    ttc = fabs(obj_to_front_x / radar->obj_vx);
+  } else {
+    ttc = 100.0F;
+  }
 
   crash_y = radar->obj_y + ttc * radar->obj_vy;
   // condition1
   if (ttc > lca_ttc) {
     alert_code += uint16_bit[0];
   }
-  if (radar->pos = 0) {
+  // condition2
+  if (radar->pos == 0) {
     if ((crash_y < -0.5 * lkas_input_->vehicle_info.common_veh_width) ||
         (crash_y > (r_lca_aera_vel_.g_y + 1.0F))) {
       alert_code += uint16_bit[1];
     }
   } else {
     if ((crash_y > 0.5 * lkas_input_->vehicle_info.common_veh_width) ||
-        (crash_y < -(r_lca_aera_vel_.l_y + 1.0F))) {
+        (crash_y < (r_lca_aera_vel_.l_y - 1.0F))) {
       alert_code += uint16_bit[1];
     }
   }

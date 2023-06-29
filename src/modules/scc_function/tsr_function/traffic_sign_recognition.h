@@ -1,3 +1,4 @@
+
 #ifndef _TSR_STEP_H_
 #define _TSR_STEP_H_
 
@@ -5,6 +6,7 @@
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "frame.h"
+#include "planning_hmi.pb.h"
 #include "planning_output_context.h"
 #include "virtual_lane_manager.h"
 
@@ -43,14 +45,8 @@ class TrafficSignRecognition {
     session_ = session;
   }
   void init(planning::framework::Session *session) { session_ = session; }
-  void Update();
   void RunOnce();
-  uint16 TSREnableCode();
-  uint16 TSRDisableCode();
-  uint16 TSRFaultCode();
-  uint8 TSRStateMachine();
-  void set_tsr_output_info();
-  uint8 get_tsr_state_info() {
+  PlanningHMI::TSROutputInfoStr_TSRFunctionFSMWorkState get_tsr_state_info() {
     return tsr_state_;  // TSR功能状态 0:Unavailable 1:Off 2:Standby 3:Active
   }
   uint8 get_tsr_speed_limit_info() {
@@ -59,11 +55,48 @@ class TrafficSignRecognition {
   boolean get_tsr_warning_info() {
     return tsr_warning_;  // TSR超速报警标志位 0:No Warning 1:Warning
   }
+  ~TrafficSignRecognition() = default;
+
+ private:
+  void Update();
+  uint16 TSREnableCode();
+  uint16 TSRDisableCode();
+  uint16 TSRFaultCode();
+  uint8 TSRStateMachine();
+  void set_tsr_output_info() {
+    // TSR功能状态 0:Unavailable 1:Off 2:Standby 3:Active
+    switch (tsr_sys_.state.tsr_state) {
+      case 0:
+        tsr_state_ = PlanningHMI::
+            TSROutputInfoStr_TSRFunctionFSMWorkState_TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+        break;
+      case 1:
+        tsr_state_ = PlanningHMI::
+            TSROutputInfoStr_TSRFunctionFSMWorkState_TSR_FUNCTION_FSM_WORK_STATE_OFF;
+        break;
+      case 2:
+        tsr_state_ = PlanningHMI::
+            TSROutputInfoStr_TSRFunctionFSMWorkState_TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
+        break;
+      default:
+        tsr_state_ = PlanningHMI::
+            TSROutputInfoStr_TSRFunctionFSMWorkState_TSR_FUNCTION_FSM_WORK_STATE_ACTIVE;
+        break;
+    }
+    tsr_speed_limit_ =
+        tsr_sys_.state.tsr_speed_limit;  // TSR识别到的限速标识牌 单位:km/h
+    tsr_warning_ =
+        tsr_sys_.state.tsr_warning;  // TSR超速报警标志位 0:No Warning 1:Warning
+  }
 
  private:
   planning::framework::Session *session_;
   TSRSys tsr_sys_;
-  uint8 tsr_state_;  // TSR功能状态 0:Unavailable 1:Off 2:Standby 3:Active
+  PlanningHMI::TSROutputInfoStr_TSRFunctionFSMWorkState tsr_state_{
+      PlanningHMI::
+          TSROutputInfoStr_TSRFunctionFSMWorkState_TSR_FUNCTION_FSM_WORK_STATE_OFF};  // TSR功能状态
+                                                                                      // 0:Unavailable 1:Off
+                                                                                      // 2:Standby 3:Active
   uint8 tsr_speed_limit_;  // TSR识别到的限速标识牌 单位:km/h
   boolean tsr_warning_;    // TSR超速报警标志位 0:No Warning 1:Warning
 };

@@ -186,12 +186,7 @@ void LaneKeepAssistManager::Update() {
   auto ptr_ego_state_manager =
       session_->mutable_environmental_model()->get_ego_state_manager();
   lkas_input_.vehicle_info.veh_display_speed = ptr_ego_state_manager->ego_v();
-  lkas_input_.vehicle_info.veh_yaw_rate =
-      ptr_ego_state_manager->ego_pose().theta * 0.174F;
-  lkas_input_.vehicle_info.veh_yaw_rate =
-      session_->mutable_environmental_model()
-          ->get_local_view()
-          .vehicel_service_output_info.yaw_rate();
+  lkas_input_.vehicle_info.veh_yaw_rate = ptr_ego_state_manager->ego_yaw_rate();
   lkas_input_.vehicle_info.driver_hand_torque =
       ptr_ego_state_manager->driver_hand_torque();
   uint8 turn_light_flag = ptr_ego_state_manager->ego_blinker();
@@ -221,7 +216,7 @@ void LaneKeepAssistManager::Update() {
   lkas_input_.vehicle_info.ldp_main_switch =
       TRUE;  // session_->mutable_environmental_model()
              //  ->get_hmi_info()
-             //  .ldw_main_switch();
+             //  .ldp_main_switch();
   // elk switch
   lkas_input_.vehicle_info.elk_main_switch =
       TRUE;  // session_->mutable_environmental_model()
@@ -266,15 +261,32 @@ void LaneKeepAssistManager::Update() {
                    lkas_input_.road_info.right_line_c3);
 }
 void LaneKeepAssistManager::RunOnce() {
+  static uint16 ldw_l_warn_count = 0;
+  static uint16 ldw_r_warn_count = 0;
   Update();
   lane_depart_warning_.RunOnce();
   lane_depart_prevention_.RunOnce();
   emergency_lane_keep_.RunOnce();
   set_lka_output_info();
-  // LOG_DEBUG("LaneKeepAssistManager::RunOnce \n");
-  // LOG_DEBUG("LaneKeepAssistManager::ldw_state = %d \n", ldw_state_);
-  // LOG_DEBUG("LaneKeepAssistManager::ldp_state = %d \n", ldp_state_);
-  // LOG_DEBUG("LaneKeepAssistManager::elk_state = %d \n", elk_state_);
+
+  if (ldw_state_ == 4) {
+    ldw_l_warn_count++;
+  }
+  if (ldw_state_ == 5) {
+    ldw_l_warn_count++;
+  }
+  if (ldw_l_warn_count > 10000) {
+    ldw_l_warn_count = 10000;
+  }
+  if (ldw_r_warn_count > 10000) {
+    ldw_r_warn_count = 10000;
+  }
+  LOG_DEBUG("LaneKeepAssistManager::RunOnce \n");
+  LOG_DEBUG("LaneKeepAssistManager::ldw_state = %d \n", ldw_state_);
+  LOG_DEBUG("LaneKeepAssistManager::ldp_state = %d \n", ldp_state_);
+  LOG_DEBUG("LaneKeepAssistManager::elk_state = %d \n", elk_state_);
+  LOG_DEBUG("LaneKeepAssistManager::ldw_count_l = %d \n", ldw_l_warn_count);
+  LOG_DEBUG("LaneKeepAssistManager::ldw_count_r = %d \n", ldw_r_warn_count);
 }
 void LaneKeepAssistManager::CalculateWheelToLine() {
   /*fl_wheel_distance_to_line*/
@@ -331,8 +343,8 @@ void LaneKeepAssistManager::CalculateWheelToLine() {
       Common_FrontCamera_PosYR;
 }
 void LaneKeepAssistManager::Output() {
-  auto &lka_output_str =
-      session_->mutable_planning_output_context()->planning_hmi_info();
+  auto lka_output_str =
+      session_->mutable_planning_output_context()->mutable_planning_hmi_info();
   /*
   0:Unavailable
   1:Off
@@ -342,126 +354,79 @@ void LaneKeepAssistManager::Output() {
   5:Active(Right Intervention)
   */
   /*update ldw result*/
-  lka_output_str.mutable_ldw_output_info()->set_ldw_state(
+  lka_output_str->mutable_ldw_output_info()->set_ldw_state(
       lane_depart_warning_.get_ldw_state());
-  if (lane_depart_warning_.get_ldw_state() == 4) {
-    lka_output_str.mutable_ldw_output_info()->set_ldw_left_warning(TRUE);
+  if (lane_depart_warning_.get_ldw_state() ==
+      PlanningHMI::
+          LDWOutputInfoStr_LDWFunctionFSMWorkState_LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION) {
+    lka_output_str->mutable_ldw_output_info()->set_ldw_left_warning(TRUE);
   } else {
-    lka_output_str.mutable_ldw_output_info()->set_ldw_left_warning(FALSE);
+    lka_output_str->mutable_ldw_output_info()->set_ldw_left_warning(FALSE);
   }
-  if (lane_depart_warning_.get_ldw_state() == 5) {
-    lka_output_str.mutable_ldw_output_info()->set_ldw_right_warning(TRUE);
+  if (lane_depart_warning_.get_ldw_state() ==
+      PlanningHMI::
+          LDWOutputInfoStr_LDWFunctionFSMWorkState_LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
+    lka_output_str->mutable_ldw_output_info()->set_ldw_right_warning(TRUE);
   } else {
-    lka_output_str.mutable_ldw_output_info()->set_ldw_right_warning(FALSE);
+    lka_output_str->mutable_ldw_output_info()->set_ldw_right_warning(FALSE);
   }
   /*update ldp result*/  /////////////////////////
-  lka_output_str.mutable_ldp_output_info()->set_ldp_state(
+  lka_output_str->mutable_ldp_output_info()->set_ldp_state(
       lane_depart_prevention_.get_ldp_state());
 
-  if (lane_depart_prevention_.get_ldp_state() == 4) {
-    lka_output_str.mutable_ldp_output_info()->set_ldp_left_intervention_flag(
+  if (lane_depart_prevention_.get_ldp_state() ==
+      PlanningHMI::
+          LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION) {
+    lka_output_str->mutable_ldp_output_info()->set_ldp_left_intervention_flag(
         TRUE);
   } else {
-    lka_output_str.mutable_ldp_output_info()->set_ldp_left_intervention_flag(
+    lka_output_str->mutable_ldp_output_info()->set_ldp_left_intervention_flag(
         FALSE);
   }
-  if (lane_depart_prevention_.get_ldp_state() == 5) {
-    lka_output_str.mutable_ldp_output_info()->set_ldp_right_intervention_flag(
+  if (lane_depart_prevention_.get_ldp_state() ==
+      PlanningHMI::
+          LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
+    lka_output_str->mutable_ldp_output_info()->set_ldp_right_intervention_flag(
         TRUE);
   } else {
-    lka_output_str.mutable_ldp_output_info()->set_ldp_right_intervention_flag(
+    lka_output_str->mutable_ldp_output_info()->set_ldp_right_intervention_flag(
         FALSE);
   }
   /*update elk result*/  ////////////////////////
-  lka_output_str.mutable_elk_output_info()->set_elk_state(
+  lka_output_str->mutable_elk_output_info()->set_elk_state(
       emergency_lane_keep_.get_elk_state());
-  if (emergency_lane_keep_.get_elk_state() == 4) {
-    lka_output_str.mutable_elk_output_info()->set_elk_left_intervention_flag(
+  if (emergency_lane_keep_.get_elk_state() ==
+      PlanningHMI::
+          ELKOutputInfoStr_ELKFunctionFSMWorkState_ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION) {
+    lka_output_str->mutable_elk_output_info()->set_elk_left_intervention_flag(
         TRUE);
   } else {
-    lka_output_str.mutable_elk_output_info()->set_elk_left_intervention_flag(
+    lka_output_str->mutable_elk_output_info()->set_elk_left_intervention_flag(
         FALSE);
   }
-  if (emergency_lane_keep_.get_elk_state() == 5) {
-    lka_output_str.mutable_elk_output_info()->set_elk_right_intervention_flag(
+  if (emergency_lane_keep_.get_elk_state() ==
+      PlanningHMI::
+          ELKOutputInfoStr_ELKFunctionFSMWorkState_ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
+    lka_output_str->mutable_elk_output_info()->set_elk_right_intervention_flag(
         TRUE);
   } else {
-    lka_output_str.mutable_elk_output_info()->set_elk_right_intervention_flag(
+    lka_output_str->mutable_elk_output_info()->set_elk_right_intervention_flag(
         FALSE);
   }
 }
 
 void LaneKeepAssistManager::set_lka_output_info() {
-  /*
-  0:Unavailable
-  1:Off
-  2:Standby
-  3:Active(No Intervention)
-  4:Active(Left Intervention)
-  5:Active(Right Intervention)
-  */
-  /*update ldw result*/
-  // ldw_state = lkas_output.lkas_state.ldw_state;
-  // if (lkas_output.lkas_state.ldw_state == 4)
-  // {
-  //     ldw_left_warning = TRUE;
-  // }
-  // else
-  // {
-  //     ldw_left_warning = FALSE;
-  // }
-  // if (lkas_output.lkas_state.ldw_state == 5)
-  // {
-  //     ldw_right_warning = TRUE;
-  // }
-  // else
-  // {
-  //     ldw_right_warning = FALSE;
-  // }
+  /*for ldw output info*/
   ldw_state_ = lane_depart_warning_.get_ldw_state();
   ldw_left_warning_ = lane_depart_warning_.get_ldw_left_warning_info();
   ldw_right_warning_ = lane_depart_warning_.get_ldw_right_warning_info();
-  /*update ldp result*/  /////////////////////////
-  // ldp_state = lkas_output.lkas_state.ldp_state;
-  // if (lkas_output.lkas_state.ldp_state == 4)
-  // {
-  //     ldp_left_intervention_flag = TRUE;
-  // }
-  // else
-  // {
-  //     ldp_left_intervention_flag = FALSE;
-  // }
-  // if (lkas_output.lkas_state.ldp_state == 5)
-  // {
-  //     ldp_right_intervention_flag = TRUE;
-  // }
-  // else
-  // {
-  //     ldp_right_intervention_flag = FALSE;
-  // }
+  /*for ldp output info*/
   ldp_state_ = lane_depart_prevention_.get_ldp_state();
   ldp_left_intervention_flag_ =
       lane_depart_prevention_.get_ldp_left_intervention_flag_info();
   ldp_right_intervention_flag_ =
       lane_depart_prevention_.get_ldp_right_intervention_flag_info();
-  /*update elk result*/  ////////////////////////
-  // elk_state = lkas_output.lkas_state.elk_state;
-  // if (lkas_output.lkas_state.elk_state == 4)
-  // {
-  //     elk_left_intervention_flag = TRUE;
-  // }
-  // else
-  // {
-  //     elk_left_intervention_flag = FALSE;
-  // }
-  // if (lkas_output.lkas_state.elk_state == 5)
-  // {
-  //     elk_right_intervention_flag = TRUE;
-  // }
-  // else
-  // {
-  //     elk_right_intervention_flag = FALSE;
-  // }
+  /*for elk output info*/
   elk_state_ = emergency_lane_keep_.get_elk_state();
   elk_left_intervention_flag_ =
       emergency_lane_keep_.get_elk_left_intervention_flag_info();

@@ -6,8 +6,11 @@ namespace planning {
 class EmergencyLaneKeepAlert {
  public:
   void Init(planning::LkasInput *lkas_input, framework::Session *session);
-  void Update();
   uint8 RunOnce();
+  ~EmergencyLaneKeepAlert() = default;
+
+ private:
+  void Update();
   boolean LeftAlertJudgeFL();
   boolean LeftAlertJudgeRL();
   boolean RightAlertJudgeFR();
@@ -30,8 +33,6 @@ class EmergencyLaneKeepAlert {
   uint8 ObjLcaConditionR(planning::RadarObjData *radar);
   uint8 ObjLcaAlertR(planning::RadarObjData *radar);
 
-  ~EmergencyLaneKeepAlert() = default;
-
  private:
   framework::Session *session_ = nullptr;
   // MeasurementPoint measurement_str;
@@ -41,7 +42,7 @@ class EmergencyLaneKeepAlert {
   planning::AeraVel r_bsd_aera_vel_;
   planning::AeraVel f_lca_aera_vel_;
   planning::AeraVel r_lca_aera_vel_;
-  // LkasInput *lkas_output;
+  float32 ego_curvature;
 };
 
 }  // namespace planning

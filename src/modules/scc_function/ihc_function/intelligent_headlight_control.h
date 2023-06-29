@@ -6,6 +6,7 @@
 #include "environmental_model.h"
 #include "frame.h"
 #include "obstacle_manager.h"
+#include "planning_hmi.pb.h"
 #include "planning_output_context.h"
 #include "virtual_lane_manager.h"
 
@@ -45,23 +46,58 @@ class IntelligentHeadlightControl {
   }
   void init(planning::framework::Session *session) { session_ = session; }
   void RunOnce();
+  boolean get_ihc_request_status_info() { return ihc_request_status_; }
+  boolean get_ihc_request_info() { return ihc_request_; }
+  PlanningHMI::IHCOutputInfoStr_IHCFunctionFSMWorkState get_ihc_state_info() {
+    return ihc_state_;
+  }
+  ~IntelligentHeadlightControl() = default;
+
+ private:
   void Update();
   uint16 IHCEnableCode();
   uint16 IHCDisableCode();
   uint16 IHCFaultCode();
   uint8 IHCStateMachine();
   boolean IHCRequest();
-  void set_ihc_output_info();
-  boolean get_ihc_request_status_info() { return ihc_request_status_; }
-  boolean get_ihc_request_info() { return ihc_request_; }
-  uint8 get_ihc_state_info() { return ihc_state_; }
+  void set_ihc_output_info() {
+    ihc_request_status_ =
+        ihc_sys_.state
+            .ihc_request_status;  // IHC请求状态 0:No Request 1:Request
+    ihc_request_ =
+        ihc_sys_.state
+            .ihc_request;  // IHC请求 0:LowBeam 1:HighBeam
+                           // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
+    switch (ihc_sys_.state.ihc_state) {
+      case 0:
+        ihc_state_ = PlanningHMI::
+            IHCOutputInfoStr_IHCFunctionFSMWorkState_IHC_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+        break;
+      case 1:
+        ihc_state_ = PlanningHMI::
+            IHCOutputInfoStr_IHCFunctionFSMWorkState_IHC_FUNCTION_FSM_WORK_STATE_OFF;
+        break;
+      case 2:
+        ihc_state_ = PlanningHMI::
+            IHCOutputInfoStr_IHCFunctionFSMWorkState_IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
+        break;
+      default:
+        ihc_state_ = PlanningHMI::
+            IHCOutputInfoStr_IHCFunctionFSMWorkState_IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
+        break;
+    }
+  }
 
  private:
   planning::framework::Session *session_;
   IHCSys ihc_sys_;
-  boolean ihc_request_status_;  // IHC请求状态 0:No Request 1:Request
-  boolean ihc_request_;         // IHC请求 0:LowBeam 1:HighBeam
-  uint8 ihc_state_;  // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
+  boolean ihc_request_status_{TRUE};  // IHC请求状态 0:No Request 1:Request
+  boolean ihc_request_{FALSE};        // IHC请求 0:LowBeam 1:HighBeam
+  PlanningHMI::IHCOutputInfoStr_IHCFunctionFSMWorkState ihc_state_{
+      PlanningHMI::
+          IHCOutputInfoStr_IHCFunctionFSMWorkState_IHC_FUNCTION_FSM_WORK_STATE_OFF};  // IHC功能状态
+                                                                                      // 0:Unavailable 1:Off
+                                                                                      // 2:Standby 3:Active
 };
 }
 #endif

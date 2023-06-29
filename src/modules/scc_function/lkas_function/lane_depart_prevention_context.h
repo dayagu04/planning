@@ -17,7 +17,9 @@ class LaneDepartPrevention {
   boolean get_ldp_right_intervention_flag_info() {
     return ldp_right_intervention_flag_;
   }
-  uint16 get_ldp_state() { return ldp_state_; }
+  PlanningHMI::LDPOutputInfoStr_LDPFunctionFSMWorkState get_ldp_state() {
+    return ldp_state_;
+  }
   ~LaneDepartPrevention() = default;
 
  private:
@@ -31,7 +33,32 @@ class LaneDepartPrevention {
   uint16 RightKickDownCode();
   uint8 StateMachine();
   void set_ldp_output_info() {
-    ldp_state_ = measurement_str_.state;
+    switch (measurement_str_.state) {
+      case 0:
+        ldp_state_ = PlanningHMI::
+            LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+        break;
+      case 1:
+        ldp_state_ = PlanningHMI::
+            LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_OFF;
+        break;
+      case 2:
+        ldp_state_ = PlanningHMI::
+            LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_STANDBY;
+        break;
+      case 3:
+        ldp_state_ = PlanningHMI::
+            LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
+        break;
+      case 4:
+        ldp_state_ = PlanningHMI::
+            LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION;
+        break;
+      default:
+        ldp_state_ = PlanningHMI::
+            LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION;
+        break;
+    }
     if (measurement_str_.state == 4) {
       ldp_left_intervention_flag_ = TRUE;
     } else {
@@ -47,17 +74,18 @@ class LaneDepartPrevention {
  private:
   planning::MeasurementPoint measurement_str_;
   planning::CalibrationParameter calribration_str_;
-  uint32 ldp_state_{0}; /* LDP功能状态 0:Unavailable 1:Off 2:Standby 3:Active(No
-                           Intervention) 4:Active(Left Intervention)
-                           5:Active(Right Intervention) */
-  boolean ldp_left_intervention_flag_{
-      FALSE}; /* LDP功能触发左侧报警标志位 0:No
-                 Intervention 1:Left Intervention */
+  PlanningHMI::LDPOutputInfoStr_LDPFunctionFSMWorkState ldp_state_{
+      PlanningHMI::
+          LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_OFF}; /* LDP功能状态
+0:Unavailable 1:Off 2:Standby 3:Active(No Intervention) 4:Active(Left
+Intervention) 5:Active(Right Intervention) */
+  boolean
+      ldp_left_intervention_flag_{FALSE}; /* LDP功能触发左侧报警标志位 0:No
+                                             Intervention 1:Left Intervention */
   boolean ldp_right_intervention_flag_{
       FALSE}; /* LDP功能触发右侧报警标志位 0:No Intervention 1:Rirht
                  Intervention */
   planning::LkasInput *lkas_input_ = nullptr;
-  // planning::LkasOutput *lkas_output;
 };
 
 }  // namespace planning

@@ -5,11 +5,11 @@ void LaneDepartPrevention::Init(planning::LkasInput *lkas_input) {
   calribration_str_.enable_roadedge_switch =
       FALSE;  // 是否使能功能的路沿场景开关 0:不使能  1:使能
   calribration_str_.enable_vehspd_display_min =
-      10.0F / 3.6F;  // 激活的最小仪表车速，单位：m/s
+      5.0F / 3.6F;  // 激活的最小仪表车速，单位：m/s
   calribration_str_.enable_vehspd_display_max =
       150.0F / 3.6F;  // 激活的最大仪表车速，单位：m/s
   calribration_str_.disable_vehspd_display_min =
-      5.0F / 3.6F;  // 退出的最小仪表车速，单位：m/s
+      2.0F / 3.6F;  // 退出的最小仪表车速，单位：m/s
   calribration_str_.disable_vehspd_display_max =
       155.0F / 3.6F;  // 退出的最大仪表车速，单位：m/s
   calribration_str_.supp_turn_light_recovery_time =

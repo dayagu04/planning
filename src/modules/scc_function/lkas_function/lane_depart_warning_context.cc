@@ -1,15 +1,16 @@
 #include "lane_depart_warning_context.h"
+#include "log.h"
 namespace planning {
 void LaneDepartWarning::Init(planning::LkasInput *lkas_input) {
   lkas_input_ = lkas_input;
   calribration_str_.enable_roadedge_switch =
       FALSE;  // 是否使能功能的路沿场景开关 0:不使能  1:使能
   calribration_str_.enable_vehspd_display_min =
-      10.0F / 3.6F;  // 激活的最小仪表车速，单位：m/s
+      3.0F / 3.6F;  // 激活的最小仪表车速，单位：m/s
   calribration_str_.enable_vehspd_display_max =
       150.0F / 3.6F;  // 激活的最大仪表车速，单位：m/s
   calribration_str_.disable_vehspd_display_min =
-      5.0F / 3.6F;  // 退出的最小仪表车速，单位：m/s
+      2.0F / 3.6F;  // 退出的最小仪表车速，单位：m/s
   calribration_str_.disable_vehspd_display_max =
       155.0F / 3.6F;  // 退出的最大仪表车速，单位：m/s
   calribration_str_.supp_turn_light_recovery_time =
@@ -99,6 +100,30 @@ void LaneDepartWarning::RunOnce() {
   JSON_DEBUG_VALUE("lkas_function::ldw::right_kickdown_code",
                    measurement_str_.right_kickdown_code);
   JSON_DEBUG_VALUE("lkas_function::ldw::state", measurement_str_.state);
+
+  LOG_DEBUG("lkas_function::ldw::left_intervention = %d \n",
+            measurement_str_.left_intervention);
+  LOG_DEBUG("lkas_function::ldw::left_intervention = %d \n",
+            measurement_str_.left_intervention);
+  LOG_DEBUG("lkas_function::ldw::right_intervention = %d \n",
+            measurement_str_.right_intervention);
+  LOG_DEBUG("lkas_function::ldw::main_switch = %d \n",
+            measurement_str_.main_switch);
+  LOG_DEBUG("lkas_function::ldw::enable_code = %d \n",
+            measurement_str_.enable_code);
+  LOG_DEBUG("lkas_function::ldw::disable_code = %d \n",
+            measurement_str_.disable_code);
+  LOG_DEBUG("lkas_function::ldw::fault_code = %d \n",
+            measurement_str_.fault_code);
+  LOG_DEBUG("lkas_function::ldw::left_suppression_code = %d \n",
+            measurement_str_.left_suppression_code);
+  LOG_DEBUG("lkas_function::ldw::left_kickdown_code = %d \n",
+            measurement_str_.left_kickdown_code);
+  LOG_DEBUG("lkas_function::ldw::right_suppression_code = %d \n",
+            measurement_str_.right_suppression_code);
+  LOG_DEBUG("lkas_function::ldw::right_kickdown_code = %d \n",
+            measurement_str_.right_kickdown_code);
+  LOG_DEBUG("lkas_function::ldw::state = %d \n", measurement_str_.state);
 }
 
 uint16 LaneDepartWarning::EnableCode() {
