@@ -247,6 +247,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    q_continuity = read_json_key<double>(json, "ilqr_q_continuity");
   }
   bool warm_start_enable = true;
   double acc_bound = 6.0;
@@ -264,7 +265,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_bound = 200.0;
   double q_jerk_bound = 500.0;
 
-  double q_soft_corridor = 0.0;
+  double q_soft_corridor = 200.0;
   double q_hard_corridor = 0.0;
   double delta_t = 0.2;
 };

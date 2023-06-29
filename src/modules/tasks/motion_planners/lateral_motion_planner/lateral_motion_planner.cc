@@ -13,7 +13,7 @@
 #include "src/lateral_motion_planning_cost.h"
 
 static const double pi_const = 3.141592654;
-
+static const double planning_loop_dt = 0.1;
 namespace planning {
 LateralMotionPlanner::LateralMotionPlanner(
     const EgoPlanningConfigBuilder *config_builder,
@@ -98,6 +98,10 @@ void LateralMotionPlanner::AssembleInput() {
   // set init state
   const auto &planning_init_point =
       reference_path_ptr_->get_frenet_ego_state().planning_init_point();
+  const auto &motion_planning_info = frame_->mutable_session()
+                                         ->mutable_planning_context()
+                                         ->mutable_planning_result()
+                                         .motion_planning_info;
 
   JSON_DEBUG_VALUE("init_pos_x1", planning_init_point.lat_init_state.x())
   JSON_DEBUG_VALUE("init_pos_y1", planning_init_point.lat_init_state.y())
@@ -164,10 +168,25 @@ void LateralMotionPlanner::AssembleInput() {
       planning_input_.ref_theta_vec(0));
 
   // set last trajectory: temporarily same as reference: TODO
-  for (size_t i = 0; i < enu_ref_path.size(); ++i) {
-    planning_input_.mutable_last_x_vec()->Set(i, enu_ref_path[i].first);
-    planning_input_.mutable_last_y_vec()->Set(i, enu_ref_path[i].second);
-    planning_input_.mutable_last_theta_vec()->Set(i, enu_ref_theta[i]);
+  double final_t = 5.0;  // hack now
+  double tmp_t = 0.0;
+  if (motion_planning_info.lat_init_flag == true) {
+    for (size_t i = 0; i < enu_ref_path.size(); ++i) {
+      tmp_t = std::fmin(planning_loop_dt + i * 0.2, final_t);
+      planning_input_.mutable_last_x_vec()->Set(
+          i, motion_planning_info.lateral_x_t_spline(tmp_t));
+      planning_input_.mutable_last_y_vec()->Set(
+          i, motion_planning_info.lateral_y_t_spline(tmp_t));
+      planning_input_.mutable_last_theta_vec()->Set(
+          i, motion_planning_info.lateral_theta_t_spline(tmp_t));
+    }
+
+  } else {
+    for (size_t i = 0; i < enu_ref_path.size(); ++i) {
+      planning_input_.mutable_last_x_vec()->Set(i, enu_ref_path[i].first);
+      planning_input_.mutable_last_y_vec()->Set(i, enu_ref_path[i].second);
+      planning_input_.mutable_last_theta_vec()->Set(i, enu_ref_theta[i]);
+    }
   }
 
   // set safe (hard) and path (soft) bound
@@ -274,14 +293,16 @@ void LateralMotionPlanner::Update() {
   std::vector<double> curv_vec(N + 1);
   std::vector<double> d_curv_vec(N + 1);
   std::vector<double> s_vec(N + 1);
+  std::vector<double> t_vec(N + 1);
 
   double s = 0.0;
+  double t = 0.0;
   for (size_t i = 0; i < N; ++i) {
     x_vec[i + 1] = planning_output.x_vec(i);
     y_vec[i + 1] = planning_output.y_vec(i);
-    theta_vec[i + 1] = planning_output.theta_vec(
-        i);  // note that theta cannot be limited with [-pi, pi]
-             // to avoid incorrect spline
+    theta_vec[i + 1] =
+        planning_output.theta_vec(i);  // note that theta cannot be limited with
+                                       // [-pi, pi] to avoid incorrect spline
     delta_vec[i + 1] = planning_output.delta_vec(i);
     curv_vec[i + 1] =
         planning_input_.curv_factor() * planning_output.delta_vec(i);
@@ -291,12 +312,15 @@ void LateralMotionPlanner::Update() {
 
     if (i == 0) {
       s = 0.0;
+      t = 0.0;
     } else {
       const double ds =
           std::hypot(x_vec[i + 1] - x_vec[i], y_vec[i + 1] - y_vec[i]);
       s += std::max(ds, 1e-3);
+      t += 0.2;
     }
     s_vec[i + 1] = s;
+    t_vec[i + 1] = t;
   }
 
   // generate motion planning output into planning_context
@@ -319,6 +343,7 @@ void LateralMotionPlanner::Update() {
   theta_vec[0] = theta_vec[1];
   curv_vec[0] = curv_vec[1];
   d_curv_vec[0] = d_curv_vec[1];
+  t_vec[0] = -0.2;
 
   // set state spline
   motion_planning_info.x_s_spline.set_points(s_vec, x_vec);
@@ -328,7 +353,11 @@ void LateralMotionPlanner::Update() {
   motion_planning_info.omega_s_spline.set_points(s_vec, omega_vec);
   motion_planning_info.curv_s_spline.set_points(s_vec, curv_vec);
   motion_planning_info.d_curv_s_spline.set_points(s_vec, d_curv_vec);
+  motion_planning_info.lateral_x_t_spline.set_points(t_vec, x_vec);
+  motion_planning_info.lateral_y_t_spline.set_points(t_vec, y_vec);
+  motion_planning_info.lateral_theta_t_spline.set_points(t_vec, theta_vec);
   motion_planning_info.s_lat_vec = s_vec;
+  motion_planning_info.lat_init_flag = true;
 
   ControlVec u_vec;
   u_vec.resize(N);

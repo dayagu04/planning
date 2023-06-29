@@ -193,9 +193,9 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
 
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
-  const auto &motion_planning_info = session_->mutable_planning_context()
-                                         ->mutable_planning_result()
-                                         .motion_planning_info;
+  auto &motion_planning_info = session_->mutable_planning_context()
+                                   ->mutable_planning_result()
+                                   .motion_planning_info;
 
   // const auto &traj_points =
   // session_->mutable_planning_context()->mutable_planning_result().traj_points;
@@ -261,6 +261,7 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
 
     // lon use stitch result when lat replan
     out = ReplanStatus::LAT_REPLAN;
+    motion_planning_info.lat_init_flag = false;
   }
 
   if (lon_replan) {
@@ -282,6 +283,7 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
     LateralReset();
     LongitudinalReset();
 
+    motion_planning_info.lat_init_flag = false;
     out = ReplanStatus::LAT_REPLAN + ReplanStatus::LON_REPLAN;
     // a and j use stitch result
   }

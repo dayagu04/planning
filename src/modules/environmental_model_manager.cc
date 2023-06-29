@@ -96,7 +96,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
       local_view.fusion_objects_info.local_point_valid() && enable_NOA;
   session_->mutable_environmental_model()->set_location_valid(location_valid);
   // 长时，实时切换，临时hack
-  // session_->mutable_environmental_model()->set_location_valid(false);
+  // session_->mutable_environmental_model()->set_location_valid(true); 
   // Step 1) update vehicleDbwStatus
   session_->mutable_environmental_model()->UpdateVehicleDbwStatus(
       local_view.function_state_machine_info.current_state() ==

@@ -358,6 +358,7 @@ struct AdaptiveCruiseControlInfo {
 struct MotionPlanningInfo {
   bool lat_enable_flag = false;
   bool lon_enable_flag = false;
+  bool lat_init_flag = false;
   pnc::mathlib::spline x_s_spline;
   pnc::mathlib::spline y_s_spline;
   pnc::mathlib::spline theta_s_spline;
@@ -365,6 +366,10 @@ struct MotionPlanningInfo {
   pnc::mathlib::spline omega_s_spline;
   pnc::mathlib::spline curv_s_spline;
   pnc::mathlib::spline d_curv_s_spline;
+
+  pnc::mathlib::spline lateral_x_t_spline;
+  pnc::mathlib::spline lateral_y_t_spline;
+  pnc::mathlib::spline lateral_theta_t_spline;
 
   pnc::mathlib::spline s_t_spline;
   pnc::mathlib::spline v_t_spline;

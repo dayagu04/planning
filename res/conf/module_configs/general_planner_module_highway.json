@@ -54,6 +54,7 @@
   "ilqr_enable_ref_tracking_prerun": true,
   "ilqr_enable_warm_start": true,
   "ilqr_enable_initial_u_guess": false,
+  "ilqr_q_continuity":0.2,
   "lane_change_request_threshold": 5.0,
   "lane_change_cancel_threshold": 12.0,
   "lane_change_cancel_min_threshold": -30.0,
