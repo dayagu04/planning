@@ -235,7 +235,8 @@ class LoadCyberbag:
       json_value_list = ["steer_angle_cmd", "steer_angle", "acc_ego", "acc_vel", "vel_ego", "vel_wheel", "wheel_angle_cmd",
         "slope_acc", "vel_cmd",  "vel_raw_cmd","vel_error", "vel_fdbk_out", "vel_raw_error", "vel_ffwd_out", "vel_out",
         "vel_raw_out", "lon_err", "lat_err", "phi_err", "controller_status", "driver_hand_torque", "lat_enable", "lon_enable",
-        "lat_mpc_status", "planning_type", "planning_time_offset", "planning_update_flag", "vel_KP_term", "vel_KI_term" ]
+        "lat_mpc_status", "planning_type", "planning_time_offset", "planning_update_flag", "vel_KP_term", "vel_KI_term", "yaw_conti",
+        "steer_angle_bias_deg", "steer_bias_deg", "axle_torque", "throttle_brake", "euler_angle_pitch", "euler_angle_yaw" ]
 
       json_vector_list = ["dx_ref_mpc_vec", "dy_ref_mpc_vec", "dphi_ref_mpc_vec", "dx_mpc_vec", "dy_mpc_vec", "delta_mpc_vec", "dphi_mpc_vec"]
 
@@ -590,7 +591,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             fig1.renderers[13 + i].glyph.line_dash = 'dotted'
             fig1.renderers[13 + i].glyph.line_alpha = 0.8
             fig1.renderers[13 + i].glyph.line_width = 1
-            
+
           if center_line_list[i]['relative_id'] == 1000:  # 车道不存在
             center_line_list[i]['line_x_vec'] = []
             center_line_list[i]['line_y_vec'] = []

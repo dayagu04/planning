@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/home/xlwang71/Downloads/0627/real_time_18.00004"
+bag_path = "/home/xlwang71/Downloads/0628_night/longtime2.00000"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -25,7 +25,7 @@ data_control_command = ColumnDataSource(data ={
   'vel_ego':[],
   'vel_cmd':[],
   'vel_raw_cmd':[],
-  # 'vel_error':[],
+  'vel_error':[],
   # 'vel_fdbk_out':[],
   # 'vel_ffwd_out':[],
   # 'vel_out':[],
@@ -49,6 +49,8 @@ data_control_command = ColumnDataSource(data ={
   'acc_ego': [],
   'acc_vel': [],
   'slope_acc': [],
+  'euler_angle_yaw': [],
+  'euler_angle_pitch': [],
 })
 
 data_cursor_fig2 = ColumnDataSource(data ={
@@ -76,6 +78,11 @@ data_cursor_fig9 = ColumnDataSource(data ={
   'y': [],
 })
 
+data_cursor_fig11 = ColumnDataSource(data ={
+  'x': [],
+  'y': [],
+})
+
 data_mpc = ColumnDataSource(data ={
   'time_vec': [],
   'dx_ref_mpc_vec':[],
@@ -91,6 +98,7 @@ steering_cmd_deg = []
 vel_ego = []
 vel_cmd = []
 vel_raw_cmd = []
+vel_error = []
 lat_err = []
 steering_deg = []
 acceleration = []
@@ -114,6 +122,13 @@ vel_KI_term = []
 acc_ego = []
 acc_vel = []
 slope_acc = []
+yaw_conti = []
+steer_angle_bias_deg = []
+steer_bias_deg = []
+axle_torque = []
+throttle_brake = []
+euler_angle_yaw = []
+euler_angle_pitch = []
 
 t = 0.0
 
@@ -129,6 +144,7 @@ for i in range(len(ctrl_json_data)):
   vel_ego.append(ctrl_json_data[i]['vel_ego'])
   vel_cmd.append(ctrl_json_data[i]['vel_cmd'])
   vel_raw_cmd.append(ctrl_json_data[i]['vel_raw_cmd'])
+  vel_error.append(ctrl_json_data[i]['vel_error'])
   lat_err.append(ctrl_json_data[i]['lat_err'])
   controller_status.append(ctrl_json_data[i]['controller_status'])
   lat_enable.append(ctrl_json_data[i]['lat_enable'])
@@ -148,6 +164,16 @@ for i in range(len(ctrl_json_data)):
   acc_ego.append(ctrl_json_data[i]['acc_ego'])
   acc_vel.append(ctrl_json_data[i]['acc_vel'])
   slope_acc.append(ctrl_json_data[i]['slope_acc'])
+  yaw_conti.append(ctrl_json_data[i]['yaw_conti'] * 57.3)
+  steer_angle_bias_deg.append(-ctrl_json_data[i]['steer_angle_bias_deg'])
+  steer_bias_deg.append(-ctrl_json_data[i]['steer_bias_deg'])
+  axle_torque.append(ctrl_json_data[i]['axle_torque'] / 1000)
+  tmp_throttle_brake = ctrl_json_data[i]['throttle_brake']
+  if tmp_throttle_brake > 0.0:
+    tmp_throttle_brake = tmp_throttle_brake / 1000
+  throttle_brake.append(tmp_throttle_brake)
+  euler_angle_yaw.append(ctrl_json_data[i]['euler_angle_yaw'] * 57.3)
+  euler_angle_pitch.append(ctrl_json_data[i]['euler_angle_pitch'] * 57.3)
 
   t = t + 0.02
 
@@ -160,7 +186,7 @@ data_control_command.data.update({
   'vel_ego': vel_ego,
   'vel_cmd': vel_cmd,
   'vel_raw_cmd': vel_raw_cmd,
-  # 'vel_error':[],
+  'vel_error':vel_error,
   # 'vel_fdbk_out':[],
   # 'vel_ffwd_out':[],
   # 'vel_out':[],
@@ -185,6 +211,13 @@ data_control_command.data.update({
   'acc_ego': acc_ego,
   'acc_vel': acc_vel,
   'slope_acc': slope_acc,
+  'yaw_conti': yaw_conti,
+  'steer_angle_bias_deg': steer_angle_bias_deg,
+  'steer_bias_deg': steer_bias_deg,
+  'axle_torque': axle_torque,
+  'throttle_brake': throttle_brake,
+  'euler_angle_yaw': euler_angle_yaw,
+  'euler_angle_pitch': euler_angle_pitch
 })
 
 # figures
@@ -193,16 +226,18 @@ fig1.line('dy_mpc_vec', 'dx_mpc_vec', source = data_mpc, line_width = 5, line_co
 fig1.width = 600
 fig1.height = 1000
 
-fig2 = bkp.figure(x_axis_label='time', y_axis_label='status',x_range = [t_ctrl_debug[0], t_ctrl_debug[-1]], width=700, height=250)
-fig3 = bkp.figure(x_axis_label='time', y_axis_label='steering angle',x_range = fig2.x_range, width=700, height=250)
-fig4 = bkp.figure(x_axis_label='time', y_axis_label='vel',x_range = fig2.x_range, width=700, height=250)
+fig2 = bkp.figure(x_axis_label='time', y_axis_label='status',x_range = [t_ctrl_debug[0], t_ctrl_debug[-1]], width=700, height=200)
+fig3 = bkp.figure(x_axis_label='time', y_axis_label='steering angle',x_range = fig2.x_range, width=700, height=200)
+fig4 = bkp.figure(x_axis_label='time', y_axis_label='vel',x_range = fig2.x_range, width=700, height=200)
 
-fig5 = bkp.figure(x_axis_label='time', y_axis_label='dy',x_range = [-0.1, 2.6], width=600, height=250)
-fig6 = bkp.figure(x_axis_label='time', y_axis_label='dphi',x_range = fig5.x_range, width=600, height=250)
-fig7 = bkp.figure(x_axis_label='time', y_axis_label='delta',x_range = fig5.x_range, width=600, height=250)
+fig5 = bkp.figure(x_axis_label='time', y_axis_label='dy',x_range = [-0.1, 2.6], width=600, height=200)
+fig6 = bkp.figure(x_axis_label='time', y_axis_label='dphi',x_range = fig5.x_range, width=600, height=200)
+fig7 = bkp.figure(x_axis_label='time', y_axis_label='delta',x_range = fig5.x_range, width=600, height=200)
 
-fig8 = bkp.figure(x_axis_label='time', y_axis_label='vel ctrl',x_range = fig2.x_range, width=700, height=250)
-fig9 = bkp.figure(x_axis_label='time', y_axis_label='acc state',x_range = fig2.x_range, width=700, height=250)
+fig8 = bkp.figure(x_axis_label='time', y_axis_label='vel ctrl',x_range = fig2.x_range, width=700, height=200)
+fig9 = bkp.figure(x_axis_label='time', y_axis_label='acc state',x_range = fig2.x_range, width=700, height=200)
+fig10 = bkp.figure(x_axis_label='time', y_axis_label='atti',x_range = fig2.x_range, width=700, height=200)
+fig11 = bkp.figure(x_axis_label='time', y_axis_label='err',x_range = fig2.x_range, width=700, height=200)
 
 f2 = fig2.line('time', 'controller_status', source = data_control_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'controller_status')
 fig2.line('time', 'lat_mpc_status', source = data_control_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat_mpc_status')
@@ -215,6 +250,8 @@ f3 = fig3.line('time', 'steering_cmd_deg', source = data_control_command, line_w
 fig3.line('time', 'steering_deg', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'steering_deg')
 fig3.line('time', 'wheel_angle_cmd', source = data_control_command, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'wheel_angle_cmd')
 fig3.line('time', 'driver_hand_torque', source = data_control_command, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'driver_hand_torque')
+fig3.line('time', 'steer_angle_bias_deg', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'dashed', legend_label = 'steer_angle_bias_deg')
+fig3.line('time', 'steer_bias_deg', source = data_control_command, line_width = 1, line_color = 'red', line_dash = 'dashed', legend_label = 'steer_bias_deg')
 fig3.line('x', 'y', source = data_cursor_fig3, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'cursor')
 
 f4 = fig4.line('time', 'vel_raw_cmd', source = data_control_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'vel_raw_cmd')
@@ -242,18 +279,29 @@ f9 = fig9.line('time', 'vel_out', source = data_control_command, line_width = 1,
 fig9.line('time', 'acc_vel', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'acc_vel')
 fig9.line('time', 'acc_ego', source = data_control_command, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'acc_ego')
 fig9.line('time', 'slope_acc', source = data_control_command, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'slope_acc')
+fig9.line('time', 'throttle_brake', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'dashed', legend_label = 'throttle_brake')
 fig9.line('x', 'y', source = data_cursor_fig9, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'cursor')
 
+f10 = fig10.line('time', 'yaw_conti', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'yaw_conti')
+fig10.line('time', 'euler_angle_yaw', source = data_control_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'euler_angle_yaw')
+fig10.line('time', 'euler_angle_pitch', source = data_control_command, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'euler_angle_pitch')
+
+f11 = fig11.line('time', 'lat_err', source = data_control_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat_err')
+fig11.line('time', 'vel_error', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'vel_error')
+fig11.line('x', 'y', source = data_cursor_fig11, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'cursor')
+
 hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time'), ('controller_status', '@controller_status'), ('lat_enable', '@lat_enable'), ('lon_enable', '@lon_enable'), ('planning_type', '@planning_type')], mode='vline')
-hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time'), ('steering_cmd_deg', '@steering_cmd_deg'), ('steering_deg', '@steering_deg'), ('driver_hand_torque', '@driver_hand_torque')], mode='vline')
+hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time'), ('steering_cmd_deg', '@steering_cmd_deg'), ('steering_deg', '@steering_deg'),
+                                             ('driver_hand_torque', '@driver_hand_torque'), ('steer_angle_bias_deg', '@steer_angle_bias_deg'), ('steer_bias_deg', '@steer_bias_deg')], mode='vline')
 hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time'), ('vel_raw_cmd', '@vel_raw_cmd'), ('vel_cmd', '@vel_cmd'), ('vel_ego', '@vel_ego')], mode='vline')
 hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('dy_ref_mpc', '@dy_ref_mpc_vec'), ('dy_mpc', '@dy_mpc_vec')], mode='vline')
 hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('dphi_ref_mpc', '@dphi_ref_mpc_vec'), ('dphi_mpc', '@dphi_mpc_vec')], mode='vline')
 hover7 = HoverTool(renderers=[f7], tooltips=[('time', '@time_vec'), ('delta_mpc', '@delta_mpc_vec')], mode='vline')
 hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time'), ('vel_out', '@vel_out'), ('vel_raw_out', '@vel_raw_out'), ('vel_ffwd_out', '@vel_ffwd_out'), ('vel_KP_term', '@vel_KP_term'), \
     ('vel_KI_term', '@vel_KI_term')], mode='vline')
-hover9 = HoverTool(renderers=[f9], tooltips=[('time', '@time'), ('acc_cmd', '@vel_out'), ('acc_vel', '@acc_vel'), ('acc_ego', '@acc_ego'), ('slope_acc', '@slope_acc')], mode='vline')
-
+hover9 = HoverTool(renderers=[f9], tooltips=[('time', '@time'), ('acc_cmd', '@vel_out'), ('acc_vel', '@acc_vel'), ('acc_ego', '@acc_ego'), ('slope_acc', '@slope_acc'), ('throttle_brake', '@throttle_brake')], mode='vline')
+hover10 = HoverTool(renderers=[f10], tooltips=[('time', '@time'), ('yaw_conti', '@yaw_conti'), ('yaw', '@euler_angle_yaw'), ('pitch', '@euler_angle_pitch')], mode='vline')
+hover11 = HoverTool(renderers=[f11], tooltips=[('time', '@time'), ('lat_err', '@lat_err'), ('vel_error', '@vel_error')], mode='vline')
 
 fig2.add_tools(hover2)
 fig3.add_tools(hover3)
@@ -263,6 +311,8 @@ fig6.add_tools(hover6)
 fig7.add_tools(hover7)
 fig8.add_tools(hover8)
 fig9.add_tools(hover9)
+fig10.add_tools(hover10)
+fig11.add_tools(hover11)
 
 fig2.toolbar.active_scroll = fig2.select_one(WheelZoomTool)
 fig3.toolbar.active_scroll = fig3.select_one(WheelZoomTool)
@@ -272,6 +322,8 @@ fig6.toolbar.active_scroll = fig6.select_one(WheelZoomTool)
 fig7.toolbar.active_scroll = fig7.select_one(WheelZoomTool)
 fig8.toolbar.active_scroll = fig8.select_one(WheelZoomTool)
 fig9.toolbar.active_scroll = fig9.select_one(WheelZoomTool)
+fig10.toolbar.active_scroll = fig10.select_one(WheelZoomTool)
+fig11.toolbar.active_scroll = fig11.select_one(WheelZoomTool)
 
 fig2.legend.click_policy = 'hide'
 fig3.legend.click_policy = 'hide'
@@ -281,6 +333,8 @@ fig6.legend.click_policy = 'hide'
 fig7.legend.click_policy = 'hide'
 fig8.legend.click_policy = 'hide'
 fig9.legend.click_policy = 'hide'
+fig10.legend.click_policy = 'hide'
+fig11.legend.click_policy = 'hide'
 
 ### sliders config
 class LocalViewSlider:
@@ -340,7 +394,7 @@ def slider_callback(bag_time):
 
   data_cursor_fig4.data.update({
     'x':[bag_time, bag_time],
-    'y':[-2, 20],
+    'y':[-2, 30],
   })
 
   data_cursor_fig8.data.update({
@@ -353,7 +407,12 @@ def slider_callback(bag_time):
     'y':[-5.2, 5.2],
   })
 
+  data_cursor_fig11.data.update({
+    'x':[bag_time, bag_time],
+    'y':[-4, 4],
+  })
+
   push_notebook()
 
-bkp.show(row(fig1, column(fig2, fig3, fig4, fig8), column(fig5, fig6, fig7, fig9)), notebook_handle=True)
+bkp.show(row(fig1, column(fig2, fig3, fig10, fig4, fig8), column(fig5, fig6, fig7, fig9, fig11)), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)
