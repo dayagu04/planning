@@ -72,10 +72,13 @@ class LoadCyberbag:
     max_time = 0.0
     # load localization msg
     try:
+      loc_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
-        # load timestamp
-        self.loc_msg['t'].append(msg.header.timestamp / 1e6)
-        self.loc_msg['abs_t'].append(msg.header.timestamp / 1e6)
+        loc_msg_dict[msg.header.timestamp / 1e6] = msg
+      loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in loc_msg_dict.items():
+        self.loc_msg['t'].append(t)
+        self.loc_msg['abs_t'].append(t)
         self.loc_msg['data'].append(msg)
       t0 = self.loc_msg['t'][0]
       self.loc_msg['t'] = [tmp - t0  for tmp in self.loc_msg['t']]
@@ -91,9 +94,13 @@ class LoadCyberbag:
 
     # load road_fusion msg
     try:
+      road_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/road_fusion"):
-        self.road_msg['t'].append(msg.header.timestamp / 1e6)
-        self.road_msg['abs_t'].append(msg.header.timestamp / 1e6)
+        road_msg_dict[msg.header.timestamp / 1e6] = msg
+      road_msg_dict = {key: val for key, val in sorted(road_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in road_msg_dict.items():
+        self.road_msg['t'].append(t)
+        self.road_msg['abs_t'].append(t)
         self.road_msg['data'].append(msg)
       self.road_msg['t'] = [tmp - t0  for tmp in self.road_msg['t']]
       print('road_msg time:',self.road_msg['t'][-1])
@@ -107,9 +114,13 @@ class LoadCyberbag:
 
     # load fusion objects msg
     try:
+      fus_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/objects"):
-        self.fus_msg['t'].append(msg.header.timestamp / 1e6)
-        self.fus_msg['abs_t'].append(msg.header.timestamp / 1e6)
+        fus_msg_dict[msg.header.timestamp / 1e6] = msg
+      fus_msg_dict = {key: val for key, val in sorted(fus_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in fus_msg_dict.items():
+        self.fus_msg['t'].append(t)
+        self.fus_msg['abs_t'].append(t)
         self.fus_msg['data'].append(msg)
       self.fus_msg['t'] = [tmp - t0  for tmp in self.fus_msg['t']]
       print('fus_msg time:',self.fus_msg['t'][-1])
@@ -123,9 +134,13 @@ class LoadCyberbag:
 
     # load vehicle service msg
     try:
+      vs_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/vehicle_service"):
-        self.vs_msg['t'].append(msg.header.timestamp / 1e6)
-        self.vs_msg['abs_t'].append(msg.header.timestamp / 1e6)
+        vs_msg_dict[msg.header.timestamp / 1e6] = msg
+      vs_msg_dict = {key: val for key, val in sorted(vs_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in vs_msg_dict.items():
+        self.vs_msg['t'].append(t)
+        self.vs_msg['abs_t'].append(t)
         self.vs_msg['data'].append(msg)
       self.vs_msg['t'] = [tmp - t0  for tmp in self.vs_msg['t']]
       self.vs_msg['enable'] = True
@@ -141,9 +156,13 @@ class LoadCyberbag:
 
     # load planning msg
     try:
+      plan_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
-        self.plan_msg['t'].append(msg.meta.header.timestamp / 1e6)
-        self.plan_msg['abs_t'].append(msg.meta.header.timestamp / 1e6)
+        plan_msg_dict[msg.meta.header.timestamp / 1e6] = msg
+      plan_msg_dict = {key: val for key, val in sorted(plan_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in plan_msg_dict.items():
+        self.plan_msg['t'].append(t)
+        self.plan_msg['abs_t'].append(t)
         self.plan_msg['data'].append(msg)
       self.plan_msg['t'] = [tmp - t0  for tmp in self.plan_msg['t']]
       max_time = max(max_time, self.plan_msg['t'][-1])
@@ -159,9 +178,13 @@ class LoadCyberbag:
 
     # load prediction msg
     try:
+      prediction_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/prediction/prediction_result"):
-        self.prediction_msg['t'].append(msg.header.timestamp / 1e6)
-        self.prediction_msg['abs_t'].append(msg.header.timestamp / 1e6)
+        prediction_msg_dict[msg.header.timestamp / 1e6] = msg
+      prediction_msg_dict = {key: val for key, val in sorted(prediction_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in prediction_msg_dict.items():
+        self.prediction_msg['t'].append(t)
+        self.prediction_msg['abs_t'].append(t)
         self.prediction_msg['data'].append(msg)
       self.prediction_msg['t'] = [tmp - t0  for tmp in self.prediction_msg['t']]
       self.prediction_msg['enable'] = True
@@ -186,9 +209,13 @@ class LoadCyberbag:
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec"]
 
+      plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
-        self.plan_debug_msg['t'].append(msg.timestamp / 1e6)
-        self.plan_debug_msg['abs_t'].append(msg.timestamp / 1e6)
+        plan_debug_msg_dict[msg.timestamp / 1e6] = msg
+      plan_debug_msg_dict = {key: val for key, val in sorted(plan_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in plan_debug_msg_dict.items():
+        self.plan_debug_msg['t'].append(t)
+        self.plan_debug_msg['abs_t'].append(t)
         self.plan_debug_msg['data'].append(msg)
         try:
           json_struct = json.loads(msg.data_json, strict = False)
@@ -214,9 +241,13 @@ class LoadCyberbag:
 
     # load control msg
     try:
+      ctrl_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/control/control_command"):
-        self.ctrl_msg['t'].append(msg.header.timestamp / 1e6)
-        self.ctrl_msg['abs_t'].append(msg.header.timestamp / 1e6)
+        ctrl_msg_dict[msg.header.timestamp / 1e6] = msg
+      ctrl_msg_dict = {key: val for key, val in sorted(ctrl_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in ctrl_msg_dict.items():
+        self.ctrl_msg['t'].append(t)
+        self.ctrl_msg['abs_t'].append(t)
         self.ctrl_msg['data'].append(msg)
       self.ctrl_msg['t'] = [tmp - t0  for tmp in self.ctrl_msg['t']]
       max_time = max(max_time, self.ctrl_msg['t'][-1])
@@ -240,9 +271,13 @@ class LoadCyberbag:
 
       json_vector_list = ["dx_ref_mpc_vec", "dy_ref_mpc_vec", "dphi_ref_mpc_vec", "dx_mpc_vec", "dy_mpc_vec", "delta_mpc_vec", "dphi_mpc_vec"]
 
+      ctrl_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/control/debug_info"):
-        self.ctrl_debug_msg['t'].append(msg.timestamp / 1e6)
-        self.ctrl_debug_msg['abs_t'].append(msg.timestamp / 1e6)
+        ctrl_debug_msg_dict[msg.timestamp / 1e6] = msg
+      ctrl_debug_msg_dict = {key: val for key, val in sorted(ctrl_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in ctrl_debug_msg_dict.items():
+        self.ctrl_debug_msg['t'].append(t)
+        self.ctrl_debug_msg['abs_t'].append(t)
         self.ctrl_debug_msg['data'].append(msg)
         try:
           json_struct = json.loads(msg.extra_json, strict = False)
@@ -267,14 +302,17 @@ class LoadCyberbag:
 
     # load parking fusion msg
     try:
+      fus_parking_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/parking_slot"):
-        # load timestamp
-        self.fus_parking_msg['t'].append(msg.header.timestamp / 1e6)
-        self.fus_parking_msg['abs_t'].append(msg.header.timestamp / 1e6)
+        fus_parking_msg_dict[msg.header.timestamp / 1e6] = msg
+      fus_parking_msg_dict = {key: val for key, val in sorted(fus_parking_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in fus_parking_msg_dict.items():
+        self.fus_parking_msg['t'].append(t)
+        self.fus_parking_msg['abs_t'].append(t)
         self.fus_parking_msg['data'].append(msg)
       self.fus_parking_msg['t'] = [tmp - self.fus_parking_msg['t'][0]  for tmp in self.fus_parking_msg['t']]
       max_time = max(max_time, self.fus_parking_msg['t'][-1])
-      print('loc_msg time:',self.fus_parking_msg['t'][-1])
+      print('fus_parking_msg time:',self.fus_parking_msg['t'][-1])
       if len(self.fus_parking_msg['t']) > 0:
         self.fus_parking_msg['enable'] = True
       else:
@@ -285,10 +323,13 @@ class LoadCyberbag:
 
     # load state machine msg
     try:
+      soc_state_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/system_state/soc_state"):
-        # load timestamp
-        self.soc_state_msg['t'].append(msg.header.timestamp / 1e6)
-        self.soc_state_msg['abs_t'].append(msg.header.timestamp / 1e6)
+        soc_state_msg_dict[msg.header.timestamp / 1e6] = msg
+      soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in soc_state_msg_dict.items():
+        self.soc_state_msg['t'].append(t)
+        self.soc_state_msg['abs_t'].append(t)
         self.soc_state_msg['data'].append(msg)
       self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
       max_time = max(max_time, self.soc_state_msg['t'][-1])
@@ -338,18 +379,18 @@ class LoadCyberbag:
       self.soc_state_msg,
     ]
 
-    topic_list_with_hz = topic_list
+    topic_list_with_hz = topic_list[:]
     for i in range(len(topic_list)):
       if len(data_list[i]['t']) != 0:
         time_span = max(data_list[i]['abs_t']) - min(data_list[i]['abs_t'])
         hz = int(len(data_list[i]['t']) / time_span) if time_span != 0.0 else 0
         topic_list_with_hz[i] += ' (' + str(hz) + 'hz)'
 
-    data = {'topic':[], 't':[], 'msg':[]}
+    data = {'topic_with_hz':[], 't':[], 'msg':[]}
     min_time = sys.maxsize
     for i in range(len(topic_list)):
       for j in range(len(data_list[i]['abs_t'])):
-        data['topic'].append(topic_list_with_hz[i])
+        data['topic_with_hz'].append(topic_list_with_hz[i])
         if topic_list[i] in detail_list:
           data['msg'].append(MessageToJson(data_list[i]['data'][j]))
         else:
@@ -367,7 +408,7 @@ class LoadCyberbag:
         data['t'][i] = data['t'][i] - min_time
 
     source = ColumnDataSource(data=data)
-    hover = HoverTool(tooltips=[('topic', '@topic'), ('t', '@t'), ('msg', '@msg')])
+    hover = HoverTool(tooltips=[('topic_with_hz', '@topic_with_hz'), ('t', '@t'), ('msg', '@msg')])
     #args=dict(msg_data=msg_data),
     callback = CustomJS(code="""
         //console.log(cb_obj);
@@ -387,9 +428,9 @@ class LoadCyberbag:
     taptool = TapTool(callback=callback)
 
     fig1 = bkp.figure(plot_width=1200, plot_height=300,
-              y_range=topic_list, x_axis_type='datetime', title=self.bag_path,
+              y_range=topic_list_with_hz, x_axis_type='datetime', title=self.bag_path,
               tools=[hover, taptool, "xwheel_zoom,reset"], active_scroll='xwheel_zoom')
-    fig1.circle(x='t', y='topic', source=source)
+    fig1.circle(x='t', y='topic_with_hz', source=source)
     return fig1
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
@@ -604,6 +645,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       #   pass
   # fix_lane,origin_lane
   if bag_loader.plan_debug_msg['enable'] == True:
+    # print("planning debug info:", bag_loader.plan_debug_msg['data'][plan_debug_msg_idx])
     lat_behavior_common = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lat_behavior_common
     environment_model_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].environment_model_info
     current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id

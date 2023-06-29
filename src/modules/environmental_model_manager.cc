@@ -94,6 +94,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
        LocalizationOutput::MsfStatus::ERROR) &&
       local_view.road_info.local_point_valid() &&
       local_view.fusion_objects_info.local_point_valid() && enable_NOA;
+  // location_valid = true;
   session_->mutable_environmental_model()->set_location_valid(location_valid);
   // 长时，实时切换，临时hack
   // session_->mutable_environmental_model()->set_location_valid(true); 
@@ -142,7 +143,10 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   // LOG_DEBUG("obstacle_manager update time:%f\n", end_time - current_time);
   // current_time = end_time;
 
-  reference_path_manager_ptr_->update();
+  if (!reference_path_manager_ptr_->update()) {
+    LOG_ERROR("reference_path_manager update fail\n");
+    return false;
+  }
   auto end_time = IflyTime::Now_ms();
   LOG_DEBUG("EnvironmentalModelManager run time:%f\n", end_time - current_time);
   current_time = end_time;

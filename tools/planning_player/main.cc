@@ -6,11 +6,12 @@
 #include "modules_register.h"
 #include "planning_player.h"
 
-int run_open_loop(const std::string &bag_path, const std::string &out_bag) {
+int run_planning_player(const std::string &bag_path, const std::string &out_bag,
+                        bool is_close_loop, int auto_frame,
+                        const std::string &scene_type) {
   planning::planning_player::PlanningPlayer player;
-  player.Init();
+  player.Init(is_close_loop, auto_frame, scene_type);
 
-  player.Clear();
   if (!player.LoadCyberBag(bag_path)) {
     return -1;
   }
@@ -22,6 +23,8 @@ int run_open_loop(const std::string &bag_path, const std::string &out_bag) {
 int main(int argc, char **argv) {
   std::string bag_path, out_bag, log_file;
   bool is_close_loop = false;
+  int auto_frame = 15;
+  std::string scene_type = "acc";
 
   int opt, lopt, loidx;
   const char *optstring = "";
@@ -29,7 +32,9 @@ int main(int argc, char **argv) {
       {"help", no_argument, &lopt, 1},
       {"play", required_argument, &lopt, 2},
       {"close-loop", optional_argument, &lopt, 3},
-      {"out-bag", optional_argument, &lopt, 4}};
+      {"out-bag", optional_argument, &lopt, 4},
+      {"auto-frame", optional_argument, &lopt, 5},
+      {"scene-type", optional_argument, &lopt, 6}};
 
   while ((opt = getopt_long(argc, argv, optstring, long_options, &loidx)) !=
          -1) {
@@ -39,7 +44,7 @@ int main(int argc, char **argv) {
         std::cout << "--help             print this message" << std::endl;
         std::cout << "--play [bag path]  origin bag path, required"
                   << std::endl;
-        std::cout << "--close-loop       run close loop(not implemented), "
+        std::cout << "--close-loop       run close loop, "
                      "default false"
                   << std::endl;
         std::cout << "--out-bag          generated bag path, default [bag "
@@ -48,6 +53,9 @@ int main(int argc, char **argv) {
         std::cout << "--log-file         generated log path, default [bag "
                      "paht].[timestamp].log"
                   << std::endl;
+        std::cout << "--auto-frame       frame num when enter auto, default 15"
+                  << std::endl;
+        std::cout << "--scene-type       acc/apa" << std::endl;
         break;
       case 2:
         bag_path = std::string(optarg);
@@ -61,6 +69,12 @@ int main(int argc, char **argv) {
         break;
       case 4:
         out_bag = std::string(optarg);
+        break;
+      case 5:
+        auto_frame = std::stoi(optarg);
+        break;
+      case 6:
+        scene_type = std::string(optarg);
         break;
       default:
         std::cerr << "unknown option " << opt << std::endl;
@@ -76,10 +90,6 @@ int main(int argc, char **argv) {
     out_bag = bag_path + "." + std::to_string(tp) + ".plan";
   }
 
-  if (!is_close_loop) {
-    return run_open_loop(bag_path, out_bag);
-  } else {
-    std::cerr << "closed loop not implemented" << std::endl;
-    return -1;
-  }
+  return run_planning_player(bag_path, out_bag, is_close_loop, auto_frame,
+                             scene_type);
 }

@@ -77,7 +77,7 @@ class GeneralPlanning {
 
   void ClearParkingInfo(PlanningOutput::PlanningOutput *const planning_output);
   bool IsUndefinedScene(
-      const ::FuncStateMachine::FunctionalState& current_state);
+      const ::FuncStateMachine::FunctionalState &current_state);
 
  private:
   //   std::shared_ptr<EnvironmentalModel> environmental_model_ = nullptr;

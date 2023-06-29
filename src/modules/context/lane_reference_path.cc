@@ -154,7 +154,8 @@ bool LaneReferencePath::get_points_by_lane_id(
       Vec2d cur_direction =
           Vec2d::CreateUnitVec2d(ref_path_pt.path_point.theta);
       if (cur_direction.InnerProd(delta) < 0) {
-        continue;
+        // temporaly skip direction check since input data is bad @clren
+        // continue;
       }
     }
     ref_path_points.emplace_back(std::move(ref_path_pt));

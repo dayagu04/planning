@@ -11,9 +11,11 @@ make submodules
 ```
 make build
 ```
-3.实车产物编译，生成产物在build文件夹内
+3.实车产物编译，生成产物在build文件夹内，打包至target/planning.tar
 ```
+make clean
 make build BUILD_TYPE=Release PLATFORM=BZT
+make package
 ```
 4.启动：
 ```
@@ -23,6 +25,16 @@ mainboard -d /asw/planning/planning.dag
 # 版本集成
 1.系统调用各个模块`target/build.sh`进行编译打包，产物为Release版本
 2.产物生成在`install/planning/`下
+
+# 实车调试
+1.部署产物包至/asw，原有/asw/planning会被备份为/asw/planning.时间戳（使用target/下的脚本）
+```
+deploy.sh
+```
+2.录包，没有时长限制，自动递增序号，需要传入两个参数：路径和bag名前缀
+```
+record.sh /user_data/ long_time
+```
 
 # Tools
 1.代码格式化（.ci/clang-format/clang-format-5.0）：
@@ -37,13 +49,21 @@ make clang-format
 ```
 make pp_build
 ```
-- 跑planning，新bag生成在/mnt/xxxxx/xxxx.0000.xxxx.plan
+- 跑planning，新bag生成在/mnt/xxxxx/xxxx.0000.xxxx.plan, log重定向到指定文件
 ```
-build/tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000
+build/tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000 > planning.log
 ```
-- 跑planning，新bag生成在xxx.bag
+- 新bag生成在xxx.bag
 ```
-build/tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000 --out-bag=xxx.bag[注意要有等号]
+--out-bag=xxx.bag[注意要有等号]
+```
+- 修改进自动帧数，默认15（1.5s）
+```
+--auto-frame=15
+```
+支持指定场景，行车/泊车，默认行车
+```
+--scene-type=acc 或 apa
 ```
 - 修改`.vscode/launch.json`中的bag路径，在VSCode调试界面选择planning player，可以断点调试代码
 

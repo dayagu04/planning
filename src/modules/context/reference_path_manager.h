@@ -28,7 +28,7 @@ class ReferencePathManager {
   std::shared_ptr<ReferencePath> get_reference_path_by_current_lane();
 
   // update
-  void update();
+  bool update();
   std::shared_ptr<ReferencePath> make_map_lane_reference_path(
       int virtual_lane_id);
 

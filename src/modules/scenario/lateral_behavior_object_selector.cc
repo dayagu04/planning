@@ -194,7 +194,7 @@ bool ObjectSelector::check_map_alc_enable(int direction, bool accident_ahead) {
   return true;
 }
 
-void ObjectSelector::update(int status, double start_move_distolane,
+bool ObjectSelector::update(int status, double start_move_distolane,
                             bool accident_ahead, double perception_range,
                             bool disable_l, bool disable_r,
                             bool upstream_enable_l, bool upstream_enable_r,
@@ -228,6 +228,10 @@ void ObjectSelector::update(int status, double start_move_distolane,
       session_->mutable_environmental_model()->get_reference_path_manager();
   auto fix_reference_path =
       reference_path_mgr->get_reference_path_by_lane(flane_virtual_id);
+  if (!fix_reference_path) {
+    LOG_ERROR("fix_reference_path is null\n");
+    return false;
+  }
   auto frenet_ego_state = fix_reference_path->get_frenet_ego_state();
   auto flane = virtual_lane_mgr->get_lane_with_virtual_id(flane_virtual_id);
   auto olane = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id);
@@ -3912,6 +3916,7 @@ void ObjectSelector::update(int status, double start_move_distolane,
       }
     }
   }
+  return true;
 }
 
 // void ObjectSelector::restore_context(const ObjectSelectorContext &context) {

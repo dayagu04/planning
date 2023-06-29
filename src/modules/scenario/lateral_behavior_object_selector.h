@@ -26,7 +26,7 @@ class ObjectSelector {
 
   bool check_map_alc_enable(int direction, bool accident_ahead);
 
-  void update(int status, double start_move_distolane, bool accident_ahead,
+  bool update(int status, double start_move_distolane, bool accident_ahead,
               double perception_range, bool disable_l, bool disable_r,
               bool upstream_enable_l, bool upstream_enable_r,
               bool upstream_enable_lb, int upstream_enable_id);

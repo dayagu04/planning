@@ -1,5 +1,5 @@
-#ifndef __TRANSFORM_H__
-#define __TRANSFORM_H__
+#ifndef __TRANSFORM_LIB_H__
+#define __TRANSFORM_LIB_H__
 
 #include "Eigen/Geometry"
 

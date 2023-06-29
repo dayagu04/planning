@@ -165,6 +165,7 @@ class PlanningAdapter {
 
   LocalView local_view_;
   std::unique_ptr<GeneralPlanning> planning_base_ = nullptr;
+  PlanningOutput::PlanningOutput last_planning_output_;
 };
 
 }  // namespace planning

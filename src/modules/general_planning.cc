@@ -44,16 +44,16 @@ bool GeneralPlanning::RunOnce(
       session_.mutable_environmental_model();
   environmental_model->feed_local_view(local_view);  // todo
 
-  const auto& state_machine = local_view.function_state_machine_info;
+  const auto &state_machine = local_view.function_state_machine_info;
   if (state_machine.has_current_state()) {
     if (IsUndefinedScene(state_machine.current_state())) {
-      session_.set_scene_type(planning::common::SceneType::NOT_DEFINED);
+      session_.set_scene_type(planning::common::SceneType::HIGHWAY);
       ClearParkingInfo(planning_output);
-      return true;
     } else if (IsValidParkingState(state_machine.current_state())) {
       session_.set_scene_type(planning::common::SceneType::PARKING_APA);
     } else {
       session_.set_scene_type(planning::common::SceneType::HIGHWAY);
+      ClearParkingInfo(planning_output);
     }
   }
 
@@ -325,20 +325,23 @@ void GeneralPlanning::FillPlanningHmiInfo(
 
 void GeneralPlanning::ClearParkingInfo(
     PlanningOutput::PlanningOutput *const planning_output) {
-    session_.planning_output_context().planning_status().planning_result.
-        planning_output.mutable_planning_status()->set_apa_planning_status(
-        PlanningOutput::ApaPlanningStatus::NONE);
-    session_.planning_output_context().planning_status().planning_result.
-        planning_output.mutable_successful_slot_info_list()->Clear();
-    planning_output->mutable_planning_status()->set_apa_planning_status(
-        PlanningOutput::ApaPlanningStatus::NONE);
+  session_.planning_output_context()
+      .planning_status()
+      .planning_result.planning_output.mutable_planning_status()
+      ->set_apa_planning_status(PlanningOutput::ApaPlanningStatus::NONE);
+  session_.planning_output_context()
+      .planning_status()
+      .planning_result.planning_output.mutable_successful_slot_info_list()
+      ->Clear();
+  planning_output->mutable_planning_status()->set_apa_planning_status(
+      PlanningOutput::ApaPlanningStatus::NONE);
 }
 
 bool GeneralPlanning::IsUndefinedScene(
-    const ::FuncStateMachine::FunctionalState& current_state) {
+    const ::FuncStateMachine::FunctionalState &current_state) {
   return current_state == FunctionalState::INIT ||
-      current_state == FunctionalState::STANDBY ||
-      current_state == FunctionalState::ERROR;
+         current_state == FunctionalState::STANDBY ||
+         current_state == FunctionalState::ERROR;
 }
 
 }  // namespace planning

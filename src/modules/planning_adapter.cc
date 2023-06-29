@@ -151,7 +151,15 @@ void PlanningAdapter::Proc() {
     planning_debug_writer_(*planning_debug_data);
   }
 
-  if (planning_writer_ && run_success) {
+  if (planning_writer_) {
+    if (run_success) {
+      last_planning_output_ = planning_output;
+    } else {
+      // use last succ planning output when planning not succ
+      // if never succeed, output will bi empty
+      planning_output = last_planning_output_;
+      LOG_WARNING("planning failed, use last planning output\n");
+    }
     auto time_stamp_us = IflyTime::Now_us();
     auto header = planning_output.mutable_meta()->mutable_header();
     header->set_timestamp(time_stamp_us);

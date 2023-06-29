@@ -104,20 +104,22 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
   common::PlanningResult &pnc_result = pnc_status->planning_result;
   session_->mutable_planning_context()->clear();
 
-  bool dbw_status = session_->environmental_model().GetVehicleDbwStatus();
-
   auto updated_time = IflyTime::Now_ms();
   LOG_DEBUG("update time:%f", updated_time - start_time);
 
   UpdateFixLaneVirtualId();
 
-  object_selector_->update(session_->planning_context()
-                               .lat_behavior_state_machine_output()
-                               .curr_state,
-                           session_->planning_context()
-                               .scenario_state_machine()
-                               ->get_start_move_dist_lane(),
-                           false, 80., false, false, false, false, false, -1);
+  if (!object_selector_->update(session_->planning_context()
+                                    .lat_behavior_state_machine_output()
+                                    .curr_state,
+                                session_->planning_context()
+                                    .scenario_state_machine()
+                                    ->get_start_move_dist_lane(),
+                                false, 80., false, false, false, false, false,
+                                -1)) {
+    LOG_DEBUG("object_selector_update fail\n");
+    return false;
+  }
   LOG_DEBUG("object_selector_update end\n");
 
   // Step 2) update state machine

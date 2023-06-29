@@ -5,6 +5,7 @@
 #include "ego_planning_config.h"
 #include "evaluator.h"
 #include "ifly_time.h"
+#include "log.h"
 #include "reference_path_manager.h"
 #include "scenario_state_machine.h"
 namespace planning {
@@ -31,7 +32,11 @@ void StateBase::process(Control &control, FsmContext &context) {
   state_machine->set_entry_time(context.entry_time);
   StateTransitionContexts transition_contexts;
   get_state_transition_candidates(context, transition_contexts);
-  assert(transition_contexts.size() > 0);
+  if (transition_contexts.size() == 0) {
+    LOG_ERROR("transition_contexts is empty");
+    // return;
+  }
+
   auto candidates_time = IflyTime::Now_ms();
   LOG_DEBUG("[StateBase] get candidates time: %f \n",
             candidates_time - start_time);

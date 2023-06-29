@@ -59,7 +59,7 @@ bool GeneralPlannerModule::compute(planning::framework::Frame* frame) {
   success = general_planner_.Run(frame);
 
   if (!success) {
-    LOG_ERROR("%s planning run failed", name().c_str());
+    LOG_ERROR("%s planning run failed\n", name().c_str());
     return false;
   }
 

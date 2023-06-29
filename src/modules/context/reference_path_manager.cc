@@ -39,7 +39,7 @@ ReferencePathManager::get_reference_path_by_current_lane() {
       virtual_lane_manager->current_lane_virtual_id(), false);
 }
 
-void ReferencePathManager::update() {
+bool ReferencePathManager::update() {
   reference_paths_.clear();
   auto &virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
@@ -49,17 +49,20 @@ void ReferencePathManager::update() {
   auto &right_lane = virtual_lane_manager->get_right_lane();
   assert(current_lane != nullptr);
   auto lane_virtual_id = current_lane->get_virtual_id();
-  get_reference_path_by_lane(lane_virtual_id, true);
+  if (!get_reference_path_by_lane(lane_virtual_id, true)) {
+    LOG_DEBUG("--------- for current_lane: update %d\n", lane_virtual_id);
+    return false;
+  }
   LOG_DEBUG("--------- for lane_virtual_id: update %d\n", lane_virtual_id);
   if (left_lane != nullptr) {
     lane_virtual_id = left_lane->get_virtual_id();
     get_reference_path_by_lane(lane_virtual_id, true);
-    LOG_DEBUG("--------- for lane_virtual_id: update %d\n", lane_virtual_id);
+    LOG_DEBUG("--------- for left_lane: update %d\n", lane_virtual_id);
   }
   if (right_lane != nullptr) {
     lane_virtual_id = right_lane->get_virtual_id();
     get_reference_path_by_lane(lane_virtual_id, true);
-    LOG_DEBUG("--------- for lane_virtual_id: update %d\n", lane_virtual_id);
+    LOG_DEBUG("--------- for right_lane: update %d\n", lane_virtual_id);
   }
 
   // step2 check reference_paths_'s history, and update data
@@ -83,6 +86,7 @@ void ReferencePathManager::update() {
       it = reference_paths_.erase(it);
     }
   }
+  return true;
 }
 
 std::shared_ptr<ReferencePath>
