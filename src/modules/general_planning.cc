@@ -328,6 +328,48 @@ void GeneralPlanning::FillPlanningHmiInfo(
   // alc_output_pb->set_lc_status(lateral_output.lc_status);
   // alc_output_pb->set_lc_invalid_reason(state_machine_output.lc_invalid_reason);
   // alc_output_pb->set_lc_back_reason(state_machine_output.lc_back_invalid_reason);
+
+  /*hmi for ldw*/
+  auto lkas_info =
+      session_.mutable_planning_context()->lane_keep_assit_function();
+  planning_hmi_info->mutable_ldw_output_info()->set_ldw_state(
+      lkas_info->get_ldw_state_info());
+  planning_hmi_info->mutable_ldw_output_info()->set_ldw_left_warning(
+      lkas_info->get_ldw_left_warning_info());
+  planning_hmi_info->mutable_ldw_output_info()->set_ldw_right_warning(
+      lkas_info->get_ldw_right_warning_info());
+  /*hmi for ldp*/
+  planning_hmi_info->mutable_ldp_output_info()->set_ldp_state(
+      lkas_info->get_ldp_state_info());
+  planning_hmi_info->mutable_ldp_output_info()->set_ldp_left_intervention_flag(
+      lkas_info->get_ldp_left_intervention_flag_info());
+  planning_hmi_info->mutable_ldp_output_info()->set_ldp_right_intervention_flag(
+      lkas_info->get_ldp_right_intervention_flag_info());
+  /*hmi for elk*/
+  planning_hmi_info->mutable_elk_output_info()->set_elk_state(
+      lkas_info->get_elk_state_info());
+  planning_hmi_info->mutable_elk_output_info()->set_elk_left_intervention_flag(
+      lkas_info->get_elk_left_intervention_flag_info());
+  planning_hmi_info->mutable_elk_output_info()->set_elk_right_intervention_flag(
+      lkas_info->get_elk_right_intervention_flag_info());
+  /*hmi for ihc*/
+  auto ihc_info = session_.mutable_planning_context()
+                      ->intelligent_headlight_control_function();
+  planning_hmi_info->mutable_ihc_output_info()->set_ihc_state(
+      ihc_info->get_ihc_state_info());
+  planning_hmi_info->mutable_ihc_output_info()->set_ihc_request(
+      ihc_info->get_ihc_request_info());
+  planning_hmi_info->mutable_ihc_output_info()->set_ihc_request_status(
+      ihc_info->get_ihc_request_status_info());
+  /*hmi for tsr*/
+  auto tsr_info =
+      session_.mutable_planning_context()->traffic_sign_recognition_function();
+  planning_hmi_info->mutable_tsr_output_info()->set_tsr_state(
+      tsr_info->get_tsr_state_info());
+  planning_hmi_info->mutable_tsr_output_info()->set_tsr_warning(
+      tsr_info->get_tsr_warning_info());
+  planning_hmi_info->mutable_tsr_output_info()->set_tsr_speed_limit(
+      tsr_info->get_tsr_speed_limit_info());
 }
 
 void GeneralPlanning::ClearParkingInfo(
