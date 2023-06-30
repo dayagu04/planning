@@ -14,11 +14,11 @@ void IntelligentHeadlightControl::RunOnce() {
 
   // IHC功能处于激活状态
   if (ihc_sys_.state.ihc_state == 3) {
-    ihc_sys_.state.ihc_request_status = TRUE;
+    ihc_sys_.state.ihc_request_status = true;
     ihc_sys_.state.ihc_request = IHCRequest();
   } else {
-    ihc_sys_.state.ihc_request_status = FALSE;
-    ihc_sys_.state.ihc_request = FALSE;
+    ihc_sys_.state.ihc_request_status = false;
+    ihc_sys_.state.ihc_request = false;
   }
   set_ihc_output_info();
 
@@ -49,7 +49,7 @@ void IntelligentHeadlightControl::Update() {
       ptr_ego_state_manager->ego_hmi_v() * 3.6F;  // 当前车速 单位:m/s
 
   // 获取自动灯光控制状态
-  ihc_sys_.input.auto_light_state = FALSE;
+  ihc_sys_.input.auto_light_state = false;
 }
 uint16 IntelligentHeadlightControl::IHCEnableCode() {
   uint16 uint16_bit[16] = {1,   2,   4,    8,    16,   32,   64,    128,
@@ -64,7 +64,7 @@ uint16 IntelligentHeadlightControl::IHCEnableCode() {
   }
 
   // condition1
-  if (ihc_sys_.input.auto_light_state == FALSE) {
+  if (ihc_sys_.input.auto_light_state == false) {
     ihc_enable_code_temp += uint16_bit[1];
   } else {
     // do nothing
@@ -85,7 +85,7 @@ uint16 IntelligentHeadlightControl::IHCDisableCode() {
   }
 
   // condition1
-  if (ihc_sys_.input.auto_light_state == FALSE) {
+  if (ihc_sys_.input.auto_light_state == false) {
     ihc_disable_code_temp += uint16_bit[1];
   } else {
     // do nothing
@@ -178,7 +178,7 @@ uint8 IntelligentHeadlightControl::IHCStateMachine() {
 }
 
 boolean IntelligentHeadlightControl::IHCRequest() {
-  boolean ihc_request_temp = TRUE;
+  boolean ihc_request_temp = true;
 
   // 如果本车道、左车道、右车道检测到移动物体,则禁止请求远光灯
   // 坐标系:本车后轴中心 左正右负
@@ -243,7 +243,7 @@ boolean IntelligentHeadlightControl::IHCRequest() {
     }
 
     if (obstacle_code == 0) {
-      ihc_request_temp = FALSE;
+      ihc_request_temp = false;
       break;
     } else {
       // do nothing

@@ -62,14 +62,14 @@ class EmergencyLaneKeep {
         break;
     }
     if (measurement_str_.state == 4) {
-      elk_left_intervention_flag_ = TRUE;
+      elk_left_intervention_flag_ = true;
     } else {
-      elk_left_intervention_flag_ = FALSE;
+      elk_left_intervention_flag_ = false;
     }
     if (measurement_str_.state == 5) {
-      elk_right_intervention_flag_ = TRUE;
+      elk_right_intervention_flag_ = true;
     } else {
-      elk_right_intervention_flag_ = FALSE;
+      elk_right_intervention_flag_ = false;
     }
   }
 
@@ -84,10 +84,10 @@ class EmergencyLaneKeep {
 0:Unavailable 1:Off 2:Standby 3:Active(No Intervention) 4:Active(Left
 Intervention) 5:Active(Right Intervention) */
   boolean
-      elk_left_intervention_flag_{FALSE}; /* ELK功能触发左侧报警标志位 0:No
+      elk_left_intervention_flag_{false}; /* ELK功能触发左侧报警标志位 0:No
                                              Intervention 1:Left Intervention */
   boolean elk_right_intervention_flag_{
-      FALSE}; /* ELK功能触发右侧报警标志位 0:No Intervention 1:Rirht
+      false}; /* ELK功能触发右侧报警标志位 0:No Intervention 1:Rirht
                  Intervention */
   planning::LkasInput *lkas_input_ = nullptr;
   // planning::LkasOutput *lkas_output;

@@ -60,14 +60,14 @@ class LaneDepartPrevention {
         break;
     }
     if (measurement_str_.state == 4) {
-      ldp_left_intervention_flag_ = TRUE;
+      ldp_left_intervention_flag_ = true;
     } else {
-      ldp_left_intervention_flag_ = FALSE;
+      ldp_left_intervention_flag_ = false;
     }
     if (measurement_str_.state == 5) {
-      ldp_right_intervention_flag_ = TRUE;
+      ldp_right_intervention_flag_ = true;
     } else {
-      ldp_right_intervention_flag_ = FALSE;
+      ldp_right_intervention_flag_ = false;
     }
   }
 
@@ -80,10 +80,10 @@ class LaneDepartPrevention {
 0:Unavailable 1:Off 2:Standby 3:Active(No Intervention) 4:Active(Left
 Intervention) 5:Active(Right Intervention) */
   boolean
-      ldp_left_intervention_flag_{FALSE}; /* LDP功能触发左侧报警标志位 0:No
+      ldp_left_intervention_flag_{false}; /* LDP功能触发左侧报警标志位 0:No
                                              Intervention 1:Left Intervention */
   boolean ldp_right_intervention_flag_{
-      FALSE}; /* LDP功能触发右侧报警标志位 0:No Intervention 1:Rirht
+      false}; /* LDP功能触发右侧报警标志位 0:No Intervention 1:Rirht
                  Intervention */
   planning::LkasInput *lkas_input_ = nullptr;
 };

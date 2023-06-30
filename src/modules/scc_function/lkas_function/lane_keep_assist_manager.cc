@@ -209,17 +209,17 @@ void LaneKeepAssistManager::Update() {
   }
   // ldw switch
   lkas_input_.vehicle_info.ldw_main_switch =
-      TRUE;  // session_->mutable_environmental_model()
+      true;  // session_->mutable_environmental_model()
              //->get_hmi_info()
              //.ldw_main_switch();
   // ldp switch
   lkas_input_.vehicle_info.ldp_main_switch =
-      TRUE;  // session_->mutable_environmental_model()
+      true;  // session_->mutable_environmental_model()
              //  ->get_hmi_info()
              //  .ldp_main_switch();
   // elk switch
   lkas_input_.vehicle_info.elk_main_switch =
-      TRUE;  // session_->mutable_environmental_model()
+      true;  // session_->mutable_environmental_model()
              //->get_hmi_info()
   // .elk_main_switch();
   // ldw sensitvity set
@@ -359,16 +359,16 @@ void LaneKeepAssistManager::Output() {
   if (lane_depart_warning_.get_ldw_state() ==
       PlanningHMI::
           LDWOutputInfoStr_LDWFunctionFSMWorkState_LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION) {
-    lka_output_str->mutable_ldw_output_info()->set_ldw_left_warning(TRUE);
+    lka_output_str->mutable_ldw_output_info()->set_ldw_left_warning(true);
   } else {
-    lka_output_str->mutable_ldw_output_info()->set_ldw_left_warning(FALSE);
+    lka_output_str->mutable_ldw_output_info()->set_ldw_left_warning(false);
   }
   if (lane_depart_warning_.get_ldw_state() ==
       PlanningHMI::
           LDWOutputInfoStr_LDWFunctionFSMWorkState_LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
-    lka_output_str->mutable_ldw_output_info()->set_ldw_right_warning(TRUE);
+    lka_output_str->mutable_ldw_output_info()->set_ldw_right_warning(true);
   } else {
-    lka_output_str->mutable_ldw_output_info()->set_ldw_right_warning(FALSE);
+    lka_output_str->mutable_ldw_output_info()->set_ldw_right_warning(false);
   }
   /*update ldp result*/  /////////////////////////
   lka_output_str->mutable_ldp_output_info()->set_ldp_state(
@@ -378,19 +378,19 @@ void LaneKeepAssistManager::Output() {
       PlanningHMI::
           LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION) {
     lka_output_str->mutable_ldp_output_info()->set_ldp_left_intervention_flag(
-        TRUE);
+        true);
   } else {
     lka_output_str->mutable_ldp_output_info()->set_ldp_left_intervention_flag(
-        FALSE);
+        false);
   }
   if (lane_depart_prevention_.get_ldp_state() ==
       PlanningHMI::
           LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
     lka_output_str->mutable_ldp_output_info()->set_ldp_right_intervention_flag(
-        TRUE);
+        true);
   } else {
     lka_output_str->mutable_ldp_output_info()->set_ldp_right_intervention_flag(
-        FALSE);
+        false);
   }
   /*update elk result*/  ////////////////////////
   lka_output_str->mutable_elk_output_info()->set_elk_state(
@@ -399,19 +399,19 @@ void LaneKeepAssistManager::Output() {
       PlanningHMI::
           ELKOutputInfoStr_ELKFunctionFSMWorkState_ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION) {
     lka_output_str->mutable_elk_output_info()->set_elk_left_intervention_flag(
-        TRUE);
+        true);
   } else {
     lka_output_str->mutable_elk_output_info()->set_elk_left_intervention_flag(
-        FALSE);
+        false);
   }
   if (emergency_lane_keep_.get_elk_state() ==
       PlanningHMI::
           ELKOutputInfoStr_ELKFunctionFSMWorkState_ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
     lka_output_str->mutable_elk_output_info()->set_elk_right_intervention_flag(
-        TRUE);
+        true);
   } else {
     lka_output_str->mutable_elk_output_info()->set_elk_right_intervention_flag(
-        FALSE);
+        false);
   }
 }
 

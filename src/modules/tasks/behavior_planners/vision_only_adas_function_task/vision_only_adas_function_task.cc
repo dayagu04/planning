@@ -30,7 +30,7 @@ bool VisionOnlyAdasFunctionTask::Execute(framework::Frame *frame) {
                               ->traffic_sign_recognition_function();
   tsr_function_ptr->RunOnce();
 
-  return TRUE;
+  return true;
 }
 
 }  // namespace planning

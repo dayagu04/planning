@@ -70,19 +70,19 @@ class LaneKeepAssistManager {
 0:Unavailable 1:Off 2:Standby 3:Active(No Intervention) 4:Active(Left
 Intervention) 5:Active(Right Intervention) */
   boolean ldw_left_warning_{
-      FALSE}; /* LDW功能触发左侧报警标志位 0:No Warning 1:Left Warning */
+      false}; /* LDW功能触发左侧报警标志位 0:No Warning 1:Left Warning */
   boolean ldw_right_warning_{
-      FALSE}; /* LDW功能触发右侧报警标志位 0:No Warning 1:Rirht Warning */
+      false}; /* LDW功能触发右侧报警标志位 0:No Warning 1:Rirht Warning */
   PlanningHMI::LDPOutputInfoStr_LDPFunctionFSMWorkState ldp_state_{
       PlanningHMI::
           LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_OFF}; /* LDP功能状态
 0:Unavailable 1:Off 2:Standby 3:Active(No Intervention) 4:Active(Left
 Intervention) 5:Active(Right Intervention) */
   boolean
-      ldp_left_intervention_flag_{FALSE}; /* LDP功能触发左侧报警标志位 0:No
+      ldp_left_intervention_flag_{false}; /* LDP功能触发左侧报警标志位 0:No
                                              Intervention 1:Left Intervention */
   boolean ldp_right_intervention_flag_{
-      FALSE}; /* LDP功能触发右侧报警标志位 0:No Intervention 1:Rirht
+      false}; /* LDP功能触发右侧报警标志位 0:No Intervention 1:Rirht
                  Intervention */
   PlanningHMI::ELKOutputInfoStr_ELKFunctionFSMWorkState elk_state_{
       PlanningHMI::
@@ -90,10 +90,10 @@ Intervention) 5:Active(Right Intervention) */
 0:Unavailable 1:Off 2:Standby 3:Active(No Intervention) 4:Active(Left
 Intervention) 5:Active(Right Intervention) */
   boolean
-      elk_left_intervention_flag_{FALSE}; /* ELK功能触发左侧报警标志位 0:No
+      elk_left_intervention_flag_{false}; /* ELK功能触发左侧报警标志位 0:No
                                              Intervention 1:Left Intervention */
   boolean elk_right_intervention_flag_{
-      FALSE}; /* ELK功能触发右侧报警标志位 0:No Intervention 1:Rirht
+      false}; /* ELK功能触发右侧报警标志位 0:No Intervention 1:Rirht
                  Intervention */
 };
 }  // namespace planning

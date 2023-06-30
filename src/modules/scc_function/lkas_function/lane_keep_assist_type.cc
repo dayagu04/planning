@@ -30,9 +30,9 @@ boolean LKALineLeftIntervention(float32 tlc_to_line_threshold,
                        tlc_to_line_threshold * tlc_to_line_threshold;
 
   if ((front_left_wheel_distance_to_line - preview_distance_y) < 0) {
-    return TRUE;
+    return true;
   } else {
-    return FALSE;
+    return false;
   }
 }
 boolean LKARoadEdgeLeftIntervention(float32 tlc_to_roadedge_threshold,
@@ -63,9 +63,9 @@ boolean LKARoadEdgeLeftIntervention(float32 tlc_to_roadedge_threshold,
                        tlc_to_roadedge_threshold * tlc_to_roadedge_threshold;
 
   if ((front_left_wheel_distance_to_roadedge - preview_distance_y) < 0) {
-    return TRUE;
+    return true;
   } else {
-    return FALSE;
+    return false;
   }
 }
 boolean LKALineRightIntervention(float32 tlc_to_line_threshold,
@@ -96,9 +96,9 @@ boolean LKALineRightIntervention(float32 tlc_to_line_threshold,
                        tlc_to_line_threshold * tlc_to_line_threshold;
 
   if ((front_right_wheel_distance_to_line - preview_distance_y) > 0) {
-    return TRUE;
+    return true;
   } else {
-    return FALSE;
+    return false;
   }
 }
 boolean LKARoadEdgeRightIntervention(float32 tlc_to_roadedge_threshold,
@@ -129,9 +129,9 @@ boolean LKARoadEdgeRightIntervention(float32 tlc_to_roadedge_threshold,
                        tlc_to_roadedge_threshold * tlc_to_roadedge_threshold;
 
   if ((front_right_wheel_distance_to_roadedge - preview_distance_y) > 0) {
-    return TRUE;
+    return true;
   } else {
-    return FALSE;
+    return false;
   }
 }
 }  // namespace planning

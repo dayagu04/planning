@@ -38,13 +38,13 @@ void TrafficSignRecognition::RunOnce() {
     // TSR超速报警标志位赋值
     if (tsr_sys_.input.vehicle_speed_display_kph >
         tsr_sys_.state.tsr_speed_limit) {
-      tsr_sys_.state.tsr_warning = TRUE;
+      tsr_sys_.state.tsr_warning = true;
     } else {
-      tsr_sys_.state.tsr_warning = FALSE;
+      tsr_sys_.state.tsr_warning = false;
     }
   } else {
     tsr_sys_.state.tsr_speed_limit = 0;
-    tsr_sys_.state.tsr_warning = FALSE;
+    tsr_sys_.state.tsr_warning = false;
   }
   set_tsr_output_info();
 

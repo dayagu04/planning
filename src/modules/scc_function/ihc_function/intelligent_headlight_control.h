@@ -91,7 +91,7 @@ class IntelligentHeadlightControl {
  private:
   planning::framework::Session *session_;
   IHCSys ihc_sys_;
-  boolean ihc_request_status_{TRUE};  // IHC请求状态 0:No Request 1:Request
+  boolean ihc_request_status_{true};  // IHC请求状态 0:No Request 1:Request
   boolean ihc_request_{FALSE};        // IHC请求 0:LowBeam 1:HighBeam
   PlanningHMI::IHCOutputInfoStr_IHCFunctionFSMWorkState ihc_state_{
       PlanningHMI::

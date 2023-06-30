@@ -58,14 +58,14 @@ class LaneDepartWarning {
         break;
     }
     if (measurement_str_.state == 4) {
-      ldw_left_warning_ = TRUE;
+      ldw_left_warning_ = true;
     } else {
-      ldw_left_warning_ = FALSE;
+      ldw_left_warning_ = false;
     }
     if (measurement_str_.state == 5) {
-      ldw_right_warning_ = TRUE;
+      ldw_right_warning_ = true;
     } else {
-      ldw_right_warning_ = FALSE;
+      ldw_right_warning_ = false;
     }
   }
 
@@ -78,9 +78,9 @@ class LaneDepartWarning {
 0:Unavailable 1:Off 2:Standby 3:Active(No Intervention) 4:Active(Left
 Intervention) 5:Active(Right Intervention) */
   boolean ldw_left_warning_{
-      FALSE}; /* LDW功能触发左侧报警标志位 0:No Warning 1:Left Warning */
+      false}; /* LDW功能触发左侧报警标志位 0:No Warning 1:Left Warning */
   boolean ldw_right_warning_{
-      FALSE}; /* LDW功能触发右侧报警标志位 0:No Warning 1:Rirht Warning */
+      false}; /* LDW功能触发右侧报警标志位 0:No Warning 1:Rirht Warning */
   planning::LkasInput *lkas_input_ = nullptr;
 };
 
