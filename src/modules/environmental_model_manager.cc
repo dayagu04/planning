@@ -94,10 +94,8 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
        LocalizationOutput::MsfStatus::ERROR) &&
       local_view.road_info.local_point_valid() &&
       local_view.fusion_objects_info.local_point_valid() && enable_NOA;
-  // location_valid = true;
+  // location_valid = true; //hack
   session_->mutable_environmental_model()->set_location_valid(location_valid);
-  // 长时，实时切换，临时hack
-  // session_->mutable_environmental_model()->set_location_valid(true);
   // Step 1) update vehicleDbwStatus
   session_->mutable_environmental_model()->UpdateVehicleDbwStatus(
       local_view.function_state_machine_info.current_state() ==
@@ -114,9 +112,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
     LOG_ERROR("ego_state_update false\n");
     return false;
   }
-  // auto end_time = IflyTime::Now_ms();
-  // LOG_DEBUG("ego_state_update time:%f\n", end_time - current_time);
-  // current_time = end_time;
+
   // Step 3) update virtual_lane
   if (!virtual_lane_manager_ptr_->update(local_view.road_info)) {
     LOG_ERROR("virtual_lane_manager update failed");
@@ -126,36 +122,24 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
     last_feed_time_[FEED_FUSION_LANES_INFO] = local_view.road_info_recv_time;
   }
 
-  // end_time = IflyTime::Now_ms();
-  // LOG_DEBUG("virtual_lane_manager time:%f\n", end_time - current_time);
-  // current_time = end_time;
-
   // Step 4) update obstacle
   if (!obstacle_prediction_update(current_time, local_view)) {
     return false;
   }
-  // end_time = IflyTime::Now_ms();
-  // LOG_DEBUG("obstacle_prediction_update time:%f\n", end_time - current_time);
-  // current_time = end_time;
-
   obstacle_manager_ptr_->update();
-  // current_time = IflyTime::Now_ms();
-  // LOG_DEBUG("obstacle_manager update time:%f\n", end_time - current_time);
-  // current_time = end_time;
 
+  // Step 5) update reference path
   if (!reference_path_manager_ptr_->update()) {
     LOG_ERROR("reference_path_manager update fail\n");
     return false;
   }
-  auto end_time = IflyTime::Now_ms();
-  LOG_DEBUG("EnvironmentalModelManager run time:%f\n", end_time - current_time);
-  current_time = end_time;
-
-  end_time = IflyTime::Now_ms();
-  LOG_DEBUG("update time:%f\n", end_time - current_time);
 
   lateral_obstacle_ptr_->update();
   lane_tracks_mgr_ptr_->update_lane_tracks();
+
+  auto end_time = IflyTime::Now_ms();
+  LOG_DEBUG("EnvironmentalModelManager::Run cost time:%f\n",
+            end_time - current_time);
 
   std::string status_msg;
   if (!InputReady(current_time, status_msg)) {
@@ -213,8 +197,8 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
         break;
       }
       // 未与相机融合， 过滤7.5m以外的障碍物
-      if ((((obj.additional_info().fusion_source() & 0x01) != 0x01) && 
-          obj.common_info().relative_center_position().x() > 7.5) ||
+      if ((((obj.additional_info().fusion_source() & 0x01) != 0x01) &&
+           obj.common_info().relative_center_position().x() > 7.5) ||
           obj.common_info().shape().length() == 0 ||
           obj.common_info().shape().width() == 0) {
         LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",

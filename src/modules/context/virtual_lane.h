@@ -7,6 +7,7 @@
 #include "fusion_road.pb.h"
 #include "lane_lines.pb.h"
 #include "lane_reference_path.h"
+#include "log.h"
 #include "reference_path_manager.h"
 #include "refline.h"
 
@@ -75,10 +76,9 @@ class VirtualLane {
   void update_reference_path(
       std::shared_ptr<LaneReferencePath> reference_path) {
     // assert(reference_path != nullptr);
-    if (reference_path == nullptr)
-      std::cout << "reference_path is null" << std::endl;
-    // printf("reference_path_:%p\n",reference_path_);
-    // printf("reference_path:%p\n",reference_path);
+    if (reference_path == nullptr) {
+      LOG_ERROR("reference_path is null! \n");
+    }
     reference_path_ = reference_path;
   };
 

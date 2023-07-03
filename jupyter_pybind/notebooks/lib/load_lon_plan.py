@@ -33,7 +33,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
   pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
 
-  print(bag_loader.road_msg['data'][road_msg_idx])
+  # print(bag_loader.road_msg['data'][road_msg_idx])
 
   planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
                             'VisionLonBehavior_v_limit_road', 'VisionLonBehavior_v_limit_in_turns','VisionLonBehavior_v_target', \

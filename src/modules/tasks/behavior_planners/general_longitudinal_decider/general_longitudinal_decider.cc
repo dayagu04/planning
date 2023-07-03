@@ -844,7 +844,6 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
   auto care_width = vehicle_param_.width;
   auto dt_square = config_.delta_time * config_.delta_time;
   auto dt_cube = dt_square * config_.delta_time;
-  auto
 
   // TBD: 超车buffer应该根据自车和障碍物速度变换，确保安全
   // TBD: 到CIPV也应该根据车速来计算
@@ -862,8 +861,8 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
   const bool is_cross_obj =
       obstacle_decision.rel_pos_type == ObsRelPosType::CROSSING;
 
-  double follow_distance = 0.0;
-  follow_distance = calc_desired_distance(obstacle, );
+  // double follow_distance = 0.0;
+  // follow_distance = calc_desired_distance(obstacle, );
 
   for (size_t i = 0; i < traj_points.size(); i++) {
     auto &traj_pt = traj_points[i];
@@ -1161,6 +1160,9 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
                                   fabs(obstacle->frenet_l())) < 1.5;
 
     auto distance_safe = 2.0;
+    // distance_safe应该是停车安全距离+跟车完全距离
+    // double follow_distance = 0.0;
+    // follow_distance = calc_desired_distance(obstacle, );
     if (frame_->session()->is_parking_scene()) {
       static constexpr double kSafeDistanceInverse = 3.0;
       static constexpr double kDistanceInverseTTC = 0.3;
@@ -1321,8 +1323,8 @@ void GeneralLongitudinalDecider::construct_longitudinal_outer_decision(
   bool b_enable_lane_wait_adjust_speed = false;
   // Step 1) wait speed
   if (b_enable_lane_wait_adjust_speed &&
-          coarse_planning_info.target_state == ROAD_LC_LWAIT ||
-      coarse_planning_info.target_state == ROAD_LC_RWAIT) {
+      (coarse_planning_info.target_state == ROAD_LC_LWAIT ||
+       coarse_planning_info.target_state == ROAD_LC_RWAIT)) {
     auto overtake_obstacle_id = -1;
     auto yield_obstacle_id = -1;
     if (not coarse_planning_info.overtake_obstacles.empty()) {
