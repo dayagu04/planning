@@ -9,6 +9,7 @@ import "environment_model_debug_info.proto";
 import "lateral_motion_planner.proto";
 import "longitudinal_motion_planner.proto";
 import "lat_behavior_common.proto";
+import "scene_type_config.proto";
 
 message TopicTimeList {
   optional uint64 fusion_object = 1;
@@ -21,6 +22,14 @@ message TopicTimeList {
   optional uint64 hmi = 8;
   optional uint64 parking_fusion = 9;
   optional uint64 function_state_machine = 10;
+}
+
+message FrameInfo {
+  optional uint64 frame_num = 1;
+  optional string version = 2;
+  optional string scene_type = 3;
+  optional uint64 frame_duration_ms = 4;
+  optional bool planning_succ = 5;
 }
 
 message PlanningDebugInfo {
@@ -41,4 +50,5 @@ message PlanningDebugInfo {
 
   optional TopicTimeList input_topic_timestamp = 12;
   optional TopicTimeList input_topic_latency = 13;
+  optional FrameInfo frame_info = 14;
 }

@@ -112,7 +112,6 @@ bool PlanningPlayer::LoadCyberBag(const std::string& bag_path) {
               << " number:" << record_reader->GetMessageNumber(channel_name)
               << " type:" << record_reader->GetMessageType(channel_name)
               << std::endl;
-    proto_desc_map_[channel_name] = record_reader->GetProtoDesc(channel_name);
   }
 
   for (const auto& msg : *record_viewer) {

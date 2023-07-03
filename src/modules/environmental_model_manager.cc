@@ -97,7 +97,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   // location_valid = true;
   session_->mutable_environmental_model()->set_location_valid(location_valid);
   // 长时，实时切换，临时hack
-  // session_->mutable_environmental_model()->set_location_valid(true); 
+  // session_->mutable_environmental_model()->set_location_valid(true);
   // Step 1) update vehicleDbwStatus
   session_->mutable_environmental_model()->UpdateVehicleDbwStatus(
       local_view.function_state_machine_info.current_state() ==

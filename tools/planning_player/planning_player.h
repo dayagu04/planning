@@ -60,6 +60,15 @@ class PlanningPlayer {
   std::shared_ptr<T> find_msg_with_header_time(const std::string &topic,
                                                uint64_t time);
 
+  inline const std::string &get_proto_desc(const google::protobuf::Message &msg,
+                                           const std::string &topic) {
+    if (proto_desc_map_[topic].empty()) {
+      apollo::cyber::message::ProtobufFactory::GetDescriptorString(
+          msg, &proto_desc_map_[topic]);
+    }
+    return proto_desc_map_[topic];
+  }
+
   inline bool check_msg_exist(TopicMsgCache &msg_cache,
                               const std::string &topic_name) {
     if (msg_cache.find(topic_name) == msg_cache.end()) {
@@ -106,7 +115,7 @@ void PlanningPlayer::write_topic_msg(
     }
     if (!record_writer.WriteMessage(
             topic_name, *std::dynamic_pointer_cast<T>(it_msg.second),
-            it_msg.first, proto_desc_map_[topic_name])) {
+            it_msg.first, get_proto_desc(*it_msg.second, topic_name))) {
       std::cerr << "write msg failed: " << topic_name << std::endl;
       return;
     }

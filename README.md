@@ -51,7 +51,11 @@ make pp_build
 ```
 - 跑planning，新bag生成在/mnt/xxxxx/xxxx.0000.xxxx.plan, log重定向到指定文件
 ```
-build/tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000 > planning.log
+build/tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000 --close-loop > planning.log
+```
+- 闭环仿真（车辆完美跟随，仅在长时有效），不加此参数默认开环
+```
+--close-loop
 ```
 - 新bag生成在xxx.bag
 ```
@@ -66,6 +70,7 @@ build/tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000 > planning.log
 --scene-type=acc 或 apa
 ```
 - 修改`.vscode/launch.json`中的bag路径，在VSCode调试界面选择planning player，可以断点调试代码
+- localview画图中会打印当前帧号frame_num，据此可以在planning log中找到对应帧日志
 
 4.通过jupyter看bag
 ``

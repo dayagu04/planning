@@ -648,7 +648,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       #   pass
   # fix_lane,origin_lane
   if bag_loader.plan_debug_msg['enable'] == True:
-    # print("planning debug info:", bag_loader.plan_debug_msg['data'][plan_debug_msg_idx])
+    print("planning debug info:", bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].frame_info)
     lat_behavior_common = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lat_behavior_common
     environment_model_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].environment_model_info
     current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id

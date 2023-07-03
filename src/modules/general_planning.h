@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include "basic_types.pb.h"
 #include "common/local_view.h"
 #include "scheduler.h"
@@ -19,7 +20,7 @@ class GeneralPlanning {
   void Init();
   bool RunOnce(const LocalView &local_view,
                PlanningOutput::PlanningOutput *const planning_output,
-               DebugOutput &debug_info,
+               common::PlanningDebugInfo &debug_info,
                PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info);
   //   void ResetState() override;
   planning::framework::Session *MutableSession() { return &session_; }
@@ -70,7 +71,6 @@ class GeneralPlanning {
   void GenerateStopTrajectory(
       double start_time, PlanningOutput::PlanningOutput *const planning_output);
 
-  void FillPlanningDebugInfo(double start_time, DebugOutput &debug_info);
   void FillPlanningHmiInfo(
       double start_timestamp,
       PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info);
@@ -89,6 +89,7 @@ class GeneralPlanning {
   bool reset_pnc_{false};
   bool last_can_run_{false};
   int hdmap_valid_count_;
+  uint64_t frame_num_ = 0;
 
  protected:
   enum FeedType {

@@ -9,7 +9,9 @@
 #include "log.h"
 #include "math/math_utils.h"
 #include "planning_context.h"
+#include "planning_debug_info.pb.h"
 #include "planning_output_context.h"
+#include "scene_type_config.pb.h"
 #include "vehicle_config_context.h"
 
 namespace planning {
@@ -35,9 +37,10 @@ void GeneralPlanning::Init() {
 bool GeneralPlanning::RunOnce(
     const LocalView &local_view,
     PlanningOutput::PlanningOutput *const planning_output,
-    DebugOutput &debug_info,
+    common::PlanningDebugInfo &debug_info,
     PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
   LOG_ERROR("GeneralPlanning::RunOnce \n");
+  frame_num_++;
   local_view_ = local_view;
   double start_timestamp = IflyTime::Now_ms();
   EnvironmentalModel *environmental_model =
@@ -99,15 +102,22 @@ bool GeneralPlanning::RunOnce(
   // when planning succeed, update the planning_output
   if (planning_status->planning_success) {
     FillPlanningTrajectory(start_timestamp, planning_output);
-    FillPlanningDebugInfo(start_timestamp, debug_info);
     FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
     std::cout << "The RunOnce is successed !!!!:" << std::endl;
   } else {
     LOG_DEBUG("RunOnce failed !!!! \n");
   }
 
-  double end_time = IflyTime::Now_ms();
-  LOG_DEBUG("The time cost of RunOnce is: %f \n", end_time - start_timestamp);
+  int64_t frame_duration = IflyTime::Now_ms() - start_timestamp;
+  LOG_DEBUG("The time cost of RunOnce is: %d\n", (int)frame_duration);
+
+  auto frame_info = debug_info.mutable_frame_info();
+  frame_info->set_frame_num(frame_num_);
+  frame_info->set_version("");
+  frame_info->set_scene_type(common::SceneType_Name(session_.get_scene_type()));
+  frame_info->set_frame_duration_ms(frame_duration);
+  frame_info->set_planning_succ(planning_success);
+  std::cout << "frame_info=" << frame_info->ShortDebugString() << std::endl;
 
   return planning_status->planning_success;
 }
@@ -302,9 +312,6 @@ void GeneralPlanning::GenerateStopTrajectory(
     path_point->set_jerk(0.0);  // TBD
   }
 }
-
-void GeneralPlanning::FillPlanningDebugInfo(double start_time,
-                                            DebugOutput &debug_info) {}
 
 void GeneralPlanning::FillPlanningHmiInfo(
     double start_timestamp,
