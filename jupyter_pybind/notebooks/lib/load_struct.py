@@ -19,7 +19,6 @@ def load_lane_lines(lanes):
       left_line_coef = left_line.poly_coefficient
       line_x, line_y = gen_line(left_line_coef[0], left_line_coef[1], left_line_coef[2], left_line_coef[3], \
         left_line.begin, left_line.end)
-
       lane_info_l['line_x_vec'] = line_x
       lane_info_l['line_y_vec'] = line_y
       lane_info_l['type'] = left_line.segment[0].type
@@ -83,9 +82,11 @@ def load_obstacle_params(obstacle_list):
   num = 0
   for i in range(obs_num):
     source = obstacle_list[i].additional_info.fusion_source
-    if source == 1 or source == 3: # 融合障碍物
-        source = 1
-    elif source > 3: # 角雷达
+    if source & 0x01 == 0x01: #相机融合障碍物
+      source = 1
+    elif obstacle_list[i].common_info.relative_center_position.x > 7.5: # 雷达： 超过7.5m的障碍物过滤掉
+      continue
+    else: 
       source = 4
     if (source in obs_info_all.keys()) == False:
       obs_info = {
@@ -110,8 +111,8 @@ def load_obstacle_params(obstacle_list):
     theta = obstacle_list[i].common_info.relative_heading_angle
     half_width = obstacle_list[i].common_info.shape.width /2
     half_length = obstacle_list[i].common_info.shape.length / 2
-    if half_width == 0 or half_length == 0:
-      continue
+    # if half_width == 0 or half_length == 0:
+    #   continue
     cos_heading = math.cos(theta)
     sin_heading = math.sin(theta)
     dx1 = cos_heading * half_length
@@ -151,7 +152,6 @@ def load_obstacle_params(obstacle_list):
               lat_pos - dy1 + dy2,
               lat_pos + dy1 + dy2]
 
-    # if source == 1 or source == 3:
     num = num + 1
     obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
     obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
@@ -169,7 +169,6 @@ def load_obstacle_params(obstacle_list):
     obs_info_all[source]['pos_x'].append(long_pos)
     obs_info_all[source]['pos_y'].append(lat_pos)
 
-  # print(num)
   return obs_info_all
 
 def gen_line(c0, c1, c2, c3, start, end):

@@ -513,6 +513,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     ### global variables
     # pos offset
     for i in range(len(bag_loader.loc_msg['data'])):
+      if (i % 10 != 0): # 下采样 10
+        continue
       pos_xn_i = bag_loader.loc_msg['data'][i].pose.local_position.x
       pos_yn_i = bag_loader.loc_msg['data'][i].pose.local_position.y
 
@@ -523,6 +525,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       ego_xn.append(pos_xn_i - cur_pos_xn0)
       ego_yn.append(pos_yn_i - cur_pos_yn0)
 
+    
     local_view_data['data_ego'].data.update({
       'ego_xb': ego_xb,
       'ego_yb': ego_yb,

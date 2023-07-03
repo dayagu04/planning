@@ -212,10 +212,9 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
       if (num > local_view.fusion_objects_info.fusion_object_num()) {
         break;
       }
-      // WB HACK: 不使用单前radar、左前、右前radar
-      if (obj.additional_info().fusion_source() == FusionSource::RADAR_ONLY ||
-          obj.additional_info().fusion_source() == 4 ||
-          obj.additional_info().fusion_source() == 8 ||
+      // 未与相机融合， 过滤7.5m以外的障碍物
+      if ((((obj.additional_info().fusion_source() & 0x01) != 0x01) && 
+          obj.common_info().relative_center_position().x() > 7.5) ||
           obj.common_info().shape().length() == 0 ||
           obj.common_info().shape().width() == 0) {
         LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",

@@ -8,7 +8,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/docker_share/data/clren/bag/planning_bag/20230530150709.record.00000"
+bag_path = "/share/mnt/0628_night/realtime14.00000"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
 
@@ -136,7 +136,6 @@ def update_data(lat_behavior_common, vo_lat_motion_plan):
   basic_dpoly = vo_lat_motion_plan.basic_dpoly
   datas.append(vo_lat_motion_plan.premove_dpoly_c0 - basic_dpoly[3])
   datas.append(vo_lat_motion_plan.avoid_dpoly_c0 - basic_dpoly[3])
-  # print(vo_lat_behavior_plan.avoid_car_ids)
   behavior_data.data.update({
     'name': names,
     'data': datas,
@@ -171,14 +170,14 @@ def slider_callback(bag_time):
     pos_x_rels = []
     for id in lat_behavior_plan.avoid_car_ids:
       tmp_str = '(' + str(id) + ')'
-      for index, obs_label in enumerate(local_view_data_['data_snrd_obj'].data['obs_label']):
+      for index, obs_label in enumerate(local_view_data_['data_fus_obj'].data['obs_label']):
         if tmp_str in obs_label:
-          pos_x_rel = local_view_data_['data_snrd_obj'].data['pos_x_rel'][index]
-          pos_y_rel = local_view_data_['data_snrd_obj'].data['pos_y_rel'][index]
+          pos_x_rel = local_view_data_['data_fus_obj'].data['pos_x_rel'][index]
+          pos_y_rel = local_view_data_['data_fus_obj'].data['pos_y_rel'][index]
           pos_y_rels.append(pos_y_rel)
           pos_x_rels.append(pos_x_rel)
           break
-      # print('avoid obstacle: ', id)
+    print('avoid obstacle: ', lat_behavior_plan.avoid_car_ids)
     data_avd_cars.data.update({
       'pos_y':pos_y_rels,
       'pos_x':pos_x_rels,
