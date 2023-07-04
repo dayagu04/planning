@@ -82,9 +82,11 @@ def load_obstacle_params(obstacle_list):
   num = 0
   for i in range(obs_num):
     source = obstacle_list[i].additional_info.fusion_source
-    if source & 0x01 == 0x01: #相机融合障碍物
+    if source & 0x01: #相机融合障碍物
       source = 1
-    elif obstacle_list[i].common_info.relative_center_position.x > 7.5: # 雷达： 超过7.5m的障碍物过滤掉
+    elif (obstacle_list[i].common_info.relative_center_position.x > 0 and \
+      math.tan(25) > math.fabs(obstacle_list[i].common_info.relative_center_position.y / obstacle_list[i].common_info.relative_center_position.x)) or \
+      math.fabs(obstacle_list[i].common_info.relative_center_position.y) > 10: 
       continue
     else: 
       source = 4
@@ -109,6 +111,8 @@ def load_obstacle_params(obstacle_list):
     long_pos_rel = obstacle_list[i].common_info.relative_center_position.x
     lat_pos_rel = obstacle_list[i].common_info.relative_center_position.y
     theta = obstacle_list[i].common_info.relative_heading_angle
+    if theta == 255:
+      theta = 0
     half_width = obstacle_list[i].common_info.shape.width /2
     half_length = obstacle_list[i].common_info.shape.length / 2
     # if half_width == 0 or half_length == 0:
