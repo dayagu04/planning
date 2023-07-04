@@ -124,6 +124,10 @@ void StateBase::process(Control &control, FsmContext &context) {
 
   // Step 7) change state
   auto next_state = best_transition_context.target_state;
+  auto &lat_behavior_state_machine_output =
+      context.frame->mutable_session()->mutable_planning_context()->mutable_lat_behavior_state_machine_output();
+
+  // lc timer logic
   if (best_transition_context.target_state != context.state) {
     if (next_state == ROAD_NONE) {
       state_machine->clear_lc_variables();
@@ -139,17 +143,16 @@ void StateBase::process(Control &control, FsmContext &context) {
     context.state = next_state;
   }
 
+  if (next_state == ROAD_LC_LCHANGE || next_state == ROAD_LC_RCHANGE) {
+    lat_behavior_state_machine_output.lc_timer += 0.1;  // cumulative lc time
+  } else {
+    lat_behavior_state_machine_output.lc_timer = 0.;  // reset
+  }
+
   // TODO(Rui):fix me  与上面的命名一致
-  auto &lat_behavior_state_machine_output =
-      context.frame->mutable_session()
-          ->mutable_planning_context()
-          ->mutable_lat_behavior_state_machine_output();
-  lat_behavior_state_machine_output.fix_lane_virtual_id =
-      lane_change_lane_manager->flane_virtual_id();
-  lat_behavior_state_machine_output.origin_lane_virtual_id =
-      lane_change_lane_manager->olane_virtual_id();
-  lat_behavior_state_machine_output.target_lane_virtual_id =
-      lane_change_lane_manager->tlane_virtual_id();
+  lat_behavior_state_machine_output.fix_lane_virtual_id = lane_change_lane_manager->flane_virtual_id();
+  lat_behavior_state_machine_output.origin_lane_virtual_id = lane_change_lane_manager->olane_virtual_id();
+  lat_behavior_state_machine_output.target_lane_virtual_id = lane_change_lane_manager->tlane_virtual_id();
 
   {
     const auto &state_machine_output = context.frame->session()

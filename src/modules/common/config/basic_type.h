@@ -525,6 +525,7 @@ struct LatBehaviorStateMachineOutput {
 
   bool lc_pause;
   int lc_pause_id;
+  double lc_timer;
   double tr_pause_l;
   double tr_pause_s;
 

@@ -19,6 +19,7 @@ class QuinticPolynominalPath {
                  const double T);
 
   Eigen::Vector2d operator()(double t) const;
+  double heading(double t) const;
 
  private:
   Eigen::Matrix<double, 6, 1> coef_x_;

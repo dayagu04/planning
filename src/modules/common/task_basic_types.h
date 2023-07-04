@@ -21,6 +21,12 @@ enum class LatIngoreType {
 
 enum class ObsRelPosType { FRONT, CUTIN, CROSSING, ADJACENT, REAR, UNDEFINED };
 
+enum class LatDeciderLaneChangeInfo{
+  NONE,
+  LEFT_LANE_CHANGE,
+  RIGHT_LANE_CHANGE
+};
+
 struct Bound {
   double lower{std::numeric_limits<double>::min()};
   double upper{std::numeric_limits<double>::max()};

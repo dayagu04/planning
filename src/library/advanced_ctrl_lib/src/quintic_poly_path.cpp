@@ -1,4 +1,5 @@
 #include "quintic_poly_path.h"
+
 #include <Eigen/LU>
 
 namespace pnc {
@@ -62,5 +63,15 @@ Eigen::Vector2d QuinticPolynominalPath::operator()(double t) const {
                          coef_y_[5] * t5 + coef_y_[4] * t4 + coef_y_[3] * t3 +
                              coef_y_[2] * t2 + coef_y_[1] * t + coef_y_[0]);
 }
+
+double QuinticPolynominalPath::heading(double t) const {
+  const double t2 = t * t;
+  const double t3 = t2 * t;
+  const double t4 = t3 * t;
+
+  return std::atan2(5 * coef_y_[5] * t4 + 4 * coef_y_[4] * t3 + 3 * coef_y_[3] * t2 + 2 * coef_y_[2] * t + coef_y_[1],
+                    5 * coef_x_[5] * t4 + 4 * coef_x_[4] * t3 + 3 * coef_x_[3] * t2 + 2 * coef_x_[2] * t + coef_x_[1]);
+}
+
 }  // namespace spline
 }  // namespace pnc

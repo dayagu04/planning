@@ -242,6 +242,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double delta_t = 0.2;
   double sample_step = 0.2;
   double sample_forward_distance = 2.0;
+  double lane_change_duration = 6.6;
+  double care_object_t_threshold = 3.0;
 };
 struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {

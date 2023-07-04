@@ -25,7 +25,6 @@ void IntRequest::Update(int lc_status) {
                          ->ego_blinker();
   // init lanes with id
   auto current_lane_virtual_id = virtual_lane_mgr_->current_lane_virtual_id();
-
   if (lane_change_lane_mgr_->has_origin_lane()) {
     auto origin_lane = lane_change_lane_mgr_->olane();
     origin_lane_virtual_id_ = origin_lane->get_virtual_id();

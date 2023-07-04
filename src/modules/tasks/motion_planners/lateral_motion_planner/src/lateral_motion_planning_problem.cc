@@ -140,11 +140,11 @@ uint8_t LateralMotionPlanningProblem::Update(
 
     if (i == N - 1) {
       cost_config_vec.at(i)[TERMINAL_FLAG] = 1;
-      cost_config_vec.at(i)[W_REF_X] *= 10.0;
-      cost_config_vec.at(i)[W_REF_Y] *= 10.0;
-      cost_config_vec.at(i)[W_REF_THETA] *= 10.0;
-      cost_config_vec.at(i)[W_SOFT_CORRIDOR] *= 10.0;
-      cost_config_vec.at(i)[W_HARD_CORRIDOR] *= 10.0;
+      cost_config_vec.at(i)[W_REF_X] *= 1.;
+      cost_config_vec.at(i)[W_REF_Y] *= 1.;
+      cost_config_vec.at(i)[W_REF_THETA] *= 1.;
+      cost_config_vec.at(i)[W_SOFT_CORRIDOR] *= 1.;
+      cost_config_vec.at(i)[W_HARD_CORRIDOR] *= 1.;
     } else {
       cost_config_vec.at(i)[TERMINAL_FLAG] = 0;
     }

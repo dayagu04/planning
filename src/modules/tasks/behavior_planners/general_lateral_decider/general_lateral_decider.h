@@ -8,8 +8,10 @@
 #include "frenet_ego_state.h"
 #include "lateral_obstacle.h"
 #include "math/linear_interpolation.h"
-#include "math/quintic_poly_2d.h"
 #include "obstacle_manager.h"
+#include "quintic_poly_path.h"
+#include "scenario_state_machine.h"
+#include "spline_projection.h"
 #include "task.h"
 #include "task_basic_types.h"
 #include "virtual_lane.h"
@@ -83,8 +85,7 @@ class GeneralLateralDecider : public Task {
       const std::shared_ptr<FrenetObstacle> obstacle,
       ObstacleDecision &obstacle_decision);
   // 3. construct the lane and boundary bound
-  void ConstructlaneAndBoundaryBounds(
-      MapObstacleDecision &map_obstacle_decisions);
+  void ConstructLaneAndBoundaryBounds(MapObstacleDecision &map_obstacle_decisions);
 
   bool CheckObstacleNudgeCondition(
       const std::shared_ptr<FrenetObstacle> &obstacle);
@@ -104,20 +105,15 @@ class GeneralLateralDecider : public Task {
   void GenerateEnuBoundaryPoints(
 
       const std::vector<std::pair<double, double>> &frenet_safe_bounds,
-      const std::vector<std::pair<double, double>> &frenet_path_bounds,
-      LatDeciderOutput &lat_decider_output);
+      const std::vector<std::pair<double, double>> &frenet_path_bounds, LatDeciderOutput &lat_decider_output);
 
-  void sample_road_distance_info(const double &s_target,
-                                 double &left_lane_distance,
-                                 double &right_lane_distance,
-                                 double &left_road_distance,
-                                 double &right_road_distance);
+  void SampleRoadDistanceInfo(const double &s_target, ReferencePathPoint &sample_path_point);
 
   void GenerateEnuReferenceTraj(LatDeciderOutput &lat_decider_output);
 
   void GenerateEnuReferenceTheta(LatDeciderOutput &lat_decider_output);
 
-  void HandleLaneChangeScene();
+  void HandleLaneChangeScene(TrajectoryPoints &traj_points);
 
   void CalcLateralBehaviorOutput();
 
@@ -133,6 +129,7 @@ class GeneralLateralDecider : public Task {
   std::shared_ptr<ReferencePath> cur_reference_path_ptr_;
   double cruise_vel_ = 0.0;
   bool is_lane_change_scene_ = false;
+  LatDeciderLaneChangeInfo lat_lane_change_info_ = LatDeciderLaneChangeInfo::NONE;
 };
 
 }  // namespace planning
