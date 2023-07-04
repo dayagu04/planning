@@ -8,3 +8,4 @@ jupyter_pybind/notebooks/**/.ipynb_checkpoints
 jupyter_pybind/notebooks/**/python_proto
 target/*.tar
 bags/
+src/modules/version.h

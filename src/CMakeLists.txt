@@ -54,7 +54,7 @@ if(ADAPTER STREQUAL "cyber")
   add_subdirectory(apa_simulation)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCYBER_ENV")
 elseif(ADAPTER STREQUAL "ap")
-  # add_subdirectory((adapter/ap)
+  # add_subdirectory(adapter/ap)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DAP_ENV")
 endif()
 
@@ -64,7 +64,7 @@ file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning/log)
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../res/conf
   DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/res)
 install(FILES ${CMAKE_CURRENT_LIST_DIR}/../CHANGELOG.md
-    DESTINATION ${PROJECT_SOURCE_DIR}/../install/planning/log)
+    DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/log)
 if (ADAPTER STREQUAL "cyber")
   install(TARGETS
     apa_simulation_component

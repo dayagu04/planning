@@ -11,6 +11,9 @@
 // register.
 #include "modules_register.h"
 
+// This file add version string to .so
+#include "version.h"
+
 namespace planning {
 
 logger::AsyncLogger *async_logger = nullptr;
