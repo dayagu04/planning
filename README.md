@@ -9,12 +9,17 @@ make submodules
 ```
 2.本地调试，编译、部署：采用gcc编译器，生成产物在build文件夹内
 ```
+.ci/dev.py --platform=X86
+cd planning
+sudo make clean 可以删除原有build内容
 make build
 ```
 3.实车产物编译，生成产物在build文件夹内，打包至target/planning.tar
 ```
+.ci/dev.py --platform=BZT --root
+cd /home/用户名/planning
 make clean
-make build BUILD_TYPE=Release PLATFORM=BZT
+make build BUILD_TYPE=Release
 make package
 ```
 4.启动：
