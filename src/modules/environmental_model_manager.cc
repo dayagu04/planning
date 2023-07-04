@@ -196,9 +196,12 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
       if (num > local_view.fusion_objects_info.fusion_object_num()) {
         break;
       }
-      // 未与相机融合， 过滤7.5m以外的障碍物
-      if ((((obj.additional_info().fusion_source() & 0x01) != 0x01) &&
-           obj.common_info().relative_center_position().x() > 7.5) ||
+
+      // 过滤未与相机融合， 且在相机FOV之内的
+      if ((!(obj.additional_info().fusion_source() & 0x01)) && 
+          (obj.common_info().relative_center_position().x() > 0 && 
+          tan(25) > fabs(obj.common_info().relative_center_position().y() / obj.common_info().relative_center_position().x())) ||
+          fabs(obj.common_info().relative_center_position().y()) > 10 ||
           obj.common_info().shape().length() == 0 ||
           obj.common_info().shape().width() == 0) {
         LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
@@ -529,6 +532,9 @@ void EnvironmentalModelManager::truncate_prediction_info(
         prediction_object.fusion_obstacle().common_info().velocity().y());
     cur_predicion_obj.yaw =
         prediction_object.fusion_obstacle().common_info().heading_angle();
+    if ((int)cur_predicion_obj.yaw == 255) {
+      cur_predicion_obj.yaw = 0;
+    }
     cur_predicion_obj.theta = std::atan2(
         prediction_object.fusion_obstacle().common_info().velocity().y(),
         prediction_object.fusion_obstacle().common_info().velocity().x());
@@ -664,6 +670,9 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
       std::hypot(fusion_object.common_info().velocity().x(),
                  fusion_object.common_info().velocity().y());
   prediction_object.yaw = fusion_object.common_info().heading_angle();
+  if ((int)prediction_object.yaw == 255) {
+    prediction_object.yaw = 0;
+  }
   prediction_object.acc =
       std::hypot(fusion_object.common_info().acceleration().x(),
                  fusion_object.common_info().acceleration().y());
@@ -688,6 +697,9 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   // TODO:clren  后面感知会直接给出yaw和theta;   这部分赋值需要重新更改
   prediction_object.relative_theta =
       fusion_object.common_info().relative_heading_angle();
+  if ((int)prediction_object.relative_theta == 255) {
+    prediction_object.relative_theta = 0;
+  }
 
   PredictionTrajectoryPoint trajectory_point;
   trajectory_point.relative_time = 0;

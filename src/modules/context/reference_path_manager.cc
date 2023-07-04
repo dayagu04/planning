@@ -3,6 +3,7 @@
 #include "config/basic_type.h"
 #include "environmental_model.h"
 #include "lane_reference_path.h"
+#include "log.h"
 #include "session.h"
 #include "virtual_lane_manager.h"
 
@@ -47,12 +48,19 @@ bool ReferencePathManager::update() {
   auto &current_lane = virtual_lane_manager->get_current_lane();
   auto &left_lane = virtual_lane_manager->get_left_lane();
   auto &right_lane = virtual_lane_manager->get_right_lane();
+  auto &fix_lane = virtual_lane_manager->get_last_fix_lane();
   assert(current_lane != nullptr);
   auto lane_virtual_id = current_lane->get_virtual_id();
   if (!get_reference_path_by_lane(lane_virtual_id, true)) {
     LOG_DEBUG("--------- for current_lane: update %d\n", lane_virtual_id);
     return false;
   }
+  // if fix_lane is empty, set current_lane to fix_lane
+  if (fix_lane == nullptr) {
+    LOG_NOTICE("fix lane is empty\n");
+    virtual_lane_manager->update_last_fix_lane_id(lane_virtual_id);
+  }
+
   LOG_DEBUG("--------- for lane_virtual_id: update %d\n", lane_virtual_id);
   if (left_lane != nullptr) {
     lane_virtual_id = left_lane->get_virtual_id();
