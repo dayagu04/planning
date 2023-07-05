@@ -33,8 +33,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
   pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
 
-  # print(bag_loader.road_msg['data'][road_msg_idx])
-
   planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
                             'VisionLonBehavior_v_limit_road', 'VisionLonBehavior_v_limit_in_turns','VisionLonBehavior_v_target', \
                             'VisionLonBehavior_lead_one_id', 'VisionLonBehavior_lead_one_dis', 'VisionLonBehavior_lead_one_vel', \
@@ -65,14 +63,15 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   obs_high_id_vec = []
   obs_low_type_vec = []
   obs_high_type_vec = []
-  for item in (plan_debug_info.long_ref_path.bounds):
-     low_bound = item.bound[0].lower
-     high_bound = item.bound[0].upper
-     low_bound_type = item.bound[0].bound_info.type
-     high_bound_type = item.bound[0].bound_info.type
-     low_bound_id = item.bound[0].bound_info.id
-     high_bound_id = item.bound[0].bound_info.id
-     for one_bound in item.bound:
+  obs_st_dict = {'-1':dict({'t':[], 's':[]})}
+  for idx in range(len(plan_debug_info.long_ref_path.bounds)):
+     low_bound = plan_debug_info.long_ref_path.bounds[idx].bound[0].lower
+     high_bound = plan_debug_info.long_ref_path.bounds[idx].bound[0].upper
+     low_bound_type = plan_debug_info.long_ref_path.bounds[idx].bound[0].bound_info.type
+     high_bound_type = plan_debug_info.long_ref_path.bounds[idx].bound[0].bound_info.type
+     low_bound_id = plan_debug_info.long_ref_path.bounds[idx].bound[0].bound_info.id
+     high_bound_id = plan_debug_info.long_ref_path.bounds[idx].bound[0].bound_info.id
+     for one_bound in plan_debug_info.long_ref_path.bounds[idx].bound:
         if one_bound.lower > low_bound:
            low_bound = one_bound.lower
            low_bound_type = one_bound.bound_info.type
@@ -81,6 +80,15 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
            high_bound = one_bound.upper
            high_bound_type = one_bound.bound_info.type
            high_bound_id = one_bound.bound_info.id
+        if one_bound.bound_info.type == 'obstacle':
+           if(str(one_bound.bound_info.id) in obs_st_dict.keys()):
+              obs_st_dict[str(one_bound.bound_info.id)]['t'].append(t_vec[idx])
+              obs_st_dict[str(one_bound.bound_info.id)]['s'].append(one_bound.upper)
+           else:
+              ons_obs_st = dict({'t':[], 's':[]})
+              ons_obs_st['t'].append(t_vec[idx])
+              ons_obs_st['s'].append(one_bound.upper)
+              obs_st_dict[str(one_bound.bound_info.id)] = ons_obs_st
      obs_low_vec.append(low_bound)
      obs_high_vec.append(high_bound)
      if low_bound_type == 'default':
@@ -126,6 +134,35 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'obs_low_type': obs_low_type_vec,
     'obs_high_type': obs_high_type_vec
   })
+
+  #lon_plan_data['data_obs_st'].clear()
+  #print(obs_st_dict)
+  for obs_id in lon_plan_data['data_obs_st'].keys():
+     """ if(obs_id not in lon_plan_data['data_obs_st'].keys()):
+        one_obs_st_cds = ColumnDataSource(data = {'obs_t':[], 'obs_s':[]})
+        lon_plan_data['data_obs_st'][obs_id] = one_obs_st_cds
+        lon_plan_data['data_obs_st'][obs_id].data.update({
+           'obs_t':obs_st_dict[obs_id]['t'], 
+           'obs_s':obs_st_dict[obs_id]['s']
+        }) """
+     if obs_id in obs_st_dict.keys():
+       lon_plan_data['data_obs_st'][obs_id].data.update({
+           'obs_t':obs_st_dict[obs_id]['t'], 
+           'obs_s':obs_st_dict[obs_id]['s'],
+           'obs_high_id':[obs_id] * len(obs_st_dict[obs_id]['s']),
+           'obs_high_type':['obstacle'] * len(obs_st_dict[obs_id]['s'])
+        })
+     else:
+        lon_plan_data['data_obs_st'][obs_id].data.update({
+           'obs_t':[], 
+           'obs_s':[],
+           'obs_high_id':[],
+           'obs_high_type':[]
+        })
+  
+  #print(lon_plan_data['data_obs_st'].values())
+  #for item in lon_plan_data['data_obs_st'].values():
+  #   print(item.data)
 
   lon_plan_data['data_st_plan'].data.update({
     't_long': t_long_vec,
@@ -235,63 +272,64 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       })
 
 def load_lon_global_figure(bag_loader):
-  velocity_fig = bkp.figure(title='车速',x_axis_label='time/s',
-                y_axis_label='velocity/(m/s)',width=600,height=400)
+   #real time global figure data process
+   velocity_fig = bkp.figure(title='车速',x_axis_label='time/s',
+                  y_axis_label='velocity/(m/s)',width=600,height=400)
 
-  ego_velocity_vec = []
-  velocity_limit_road_vec = []
-  velocity_limit_turn_vec = []
-  target_velocity_vec = []
-  leadone_velocity_vec = []
-  leadtwo_velocity_vec = []
-  t_plan_vec = bag_loader.plan_debug_msg['t']
-  t_loc_vec = bag_loader.loc_msg['t']
-  for ind in range(len(bag_loader.plan_debug_msg['json'])):
-    velocity_limit_road_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_v_limit_road'], 2))
-    velocity_limit_turn_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_v_limit_in_turns'], 2))
-    target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_v_target'], 2))
-    leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_lead_one_vel'], 2))
-    leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_lead_two_vel'], 2))
+   ego_velocity_vec = []
+   target_velocity_vec = []
+   leadone_velocity_vec = []
+   leadtwo_velocity_vec = []
+   t_plan_vec = bag_loader.plan_debug_msg['t']
+   t_loc_vec = bag_loader.loc_msg['t']
+   for ind in range(len(bag_loader.plan_debug_msg['json'])):
+      target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_v_target'], 2))
+      leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_lead_one_vel'], 2))
+      leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_lead_two_vel'], 2))
 
-  for ind in range(len(bag_loader.loc_msg['data'])):
-    ego_velocity_vec.append(round(bag_loader.loc_msg['data'][ind].pose.linear_velocity_from_wheel, 2))
+   for ind in range(len(bag_loader.loc_msg['data'])):
+      ego_velocity_vec.append(round(bag_loader.loc_msg['data'][ind].pose.linear_velocity_from_wheel, 2))
 
-  velocity_fig.line(t_plan_vec, velocity_limit_road_vec, line_width=1,
-                              legend_label='velocity_limit_road', color="grey")
-  velocity_fig.line(t_plan_vec, velocity_limit_turn_vec, line_width=1,
-                              legend_label='velocity_limit_turn', color="yellow")
-  velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
-                              legend_label='target_velocity', color="green")
-  velocity_fig.line(t_loc_vec, ego_velocity_vec, line_width=1,
-                                legend_label='ego_velocity',color="blue")
-  velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
-                              legend_label='leadone_velocity', color="red")
-  velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,
-                                legend_label='leadtwo_velocity',color="orange")
+   velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
+                                legend_label='target_velocity', color="green")
+   velocity_fig.line(t_loc_vec, ego_velocity_vec, line_width=1,
+                                  legend_label='ego_velocity',color="blue")
+   velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
+                                legend_label='leadone_velocity', color="red")
+   velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,
+                                  legend_label='leadtwo_velocity',color="orange")
 
-  acc_fig = bkp.figure(title='加速度',x_axis_label='time/s',
-                y_axis_label='acc/(m/s2)',width=600,height=400)
+   acc_fig = bkp.figure(title='加速度',x_axis_label='time/s',
+                  y_axis_label='acc/(m/s2)',width=600,height=400)
 
-  ego_acc_vec = []
-  acc_min_vec = []
-  acc_max_vec = []
+   ego_acc_vec = []
+   acc_min_vec = []
+   acc_max_vec = []
 
-  t_vs_vec = bag_loader.vs_msg['t']
-  for ind in range(len(bag_loader.plan_debug_msg['json'])):
-    acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_low'], 2))
-    acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_high'], 2))
-  for ind in range(len(bag_loader.vs_msg['data'])):
-    ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
+   t_vs_vec = bag_loader.vs_msg['t']
+   for ind in range(len(bag_loader.plan_debug_msg['json'])):
+      acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_low'], 2))
+      acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_high'], 2))
+   for ind in range(len(bag_loader.vs_msg['data'])):
+      ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
 
-  acc_fig.line(t_plan_vec, acc_min_vec, line_width=1,
-                              legend_label='acc_min', color="brown")
-  acc_fig.line(t_vs_vec, ego_acc_vec, line_width=1,
-                                legend_label='ego_acc',color="blue")
-  acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
-                              legend_label='acc_max', color="red")
-  return velocity_fig, acc_fig
+   acc_fig.line(t_plan_vec, acc_min_vec, line_width=1,
+                                legend_label='acc_min', color="brown")
+   acc_fig.line(t_vs_vec, ego_acc_vec, line_width=1,
+                                  legend_label='ego_acc',color="blue")
+   acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
+                                legend_label='acc_max', color="red")
+   
+   #get longtime obstacle id list in st-graph
+   obs_st_ids = []
+   for ind in range(len(bag_loader.plan_debug_msg['data'])):
+     for item in bag_loader.plan_debug_msg['data'][ind].long_ref_path.bounds:
+        for one_bound in item.bound:
+           if(one_bound.bound_info.type == 'obstacle' and one_bound.bound_info.id > 0 and one_bound.bound_info.id not in obs_st_ids):
+              obs_st_ids.append(one_bound.bound_info.id)
+   return velocity_fig, acc_fig, obs_st_ids
 
-def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
+def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
   data_st = ColumnDataSource(data = {'t':[], 's':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s':[], 'v':[], 'v_low':[], 'v_high':[]})
@@ -299,6 +337,12 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
   data_ta = ColumnDataSource(data = {'t':[], 'acc':[]})
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
   data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
+  
+  #obstacles st data, key is id, value is time and s list
+  data_obs_st = {}
+  for it in obs_st_ids:
+     one_cds = ColumnDataSource(data = {'obs_t':[], 'obs_s':[], 'obs_high_id':[], 'obs_high_type':[]})
+     data_obs_st[str(it)] = one_cds
 
   data_lon_motion_plan = ColumnDataSource(data = {'time_vec': [],
                                                   'ref_pos_vec_origin': [],
@@ -328,6 +372,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
                    'data_tv':data_tv, \
                    'data_ta':data_ta, \
                    'data_tj':data_tj, \
+                   'data_obs_st':data_obs_st, \
                    'data_lon_motion_plan': data_lon_motion_plan, \
                    'data_planning':data_planning,
   }
@@ -367,6 +412,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
   fig2.triangle('t', 'obs_low', source = data_st, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
   fig2.inverted_triangle ('t', 'obs_high', source = data_st, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
 
+  for obs_id in data_obs_st.keys():
+     if(obs_id != ''):
+        fig2.line('obs_t', 'obs_s', source = data_obs_st[obs_id], line_width = 2, line_color = 'firebrick', line_dash = 'solid')
+  
   #label_low_id = LabelSet(x='t', y='obs_low', text='obs_low_id', x_offset=2, y_offset=2, source=data_st)
   #fig2.add_layout(label_low_id)
   #label_high_id = LabelSet(x='t', y='obs_high', text='obs_high_id', x_offset=2, y_offset=2, source=data_st)
