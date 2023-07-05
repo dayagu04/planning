@@ -163,9 +163,9 @@ void LateralMotionPlanner::AssembleInput() {
     }
   }
 
-  // set init theta by ref_theta
-  planning_input_.mutable_init_state()->set_theta(
-      planning_input_.ref_theta_vec(0));
+  // set init theta by ref_theta: not solid
+  // planning_input_.mutable_init_state()->set_theta(
+  //     planning_input_.ref_theta_vec(0));
 
   // set last trajectory: temporarily same as reference: TODO
   double final_t = 5.0;  // hack now
