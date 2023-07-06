@@ -18,9 +18,9 @@ namespace planning {
 
 // IHC算法输入信号结构体定义
 typedef struct IHCSysInput {
-  boolean ihc_main_switch;            // IHC开关 0:Off 1:On
+  bool ihc_main_switch;            // IHC开关 0:Off 1:On
   float32 vehicle_speed_display_kph;  // 本车车速 单位:kph
-  boolean auto_light_state;           // 自动灯光控制状态 0:Off 1:On
+  bool auto_light_state;           // 自动灯光控制状态 0:Off 1:On
 } IHCSysInput;
 
 // IHC算法状态结构体定义
@@ -29,8 +29,8 @@ typedef struct IHCSysState {
   uint16 ihc_disable_code;
   uint16 ihc_fault_code;
   uint8 ihc_state;  // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
-  boolean ihc_request_status;  // IHC请求状态 0:No Request 1:Request
-  boolean ihc_request;         // IHC请求 0:LowBeam 1:HighBeam
+  bool ihc_request_status;  // IHC请求状态 0:No Request 1:Request
+  bool ihc_request;         // IHC请求 0:LowBeam 1:HighBeam
 } IHCSysState;
 
 // IHC算法结构体定义
@@ -46,8 +46,8 @@ class IntelligentHeadlightControl {
   }
   void init(planning::framework::Session *session) { session_ = session; }
   void RunOnce();
-  boolean get_ihc_request_status_info() { return ihc_request_status_; }
-  boolean get_ihc_request_info() { return ihc_request_; }
+  bool get_ihc_request_status_info() { return ihc_request_status_; }
+  bool get_ihc_request_info() { return ihc_request_; }
   PlanningHMI::IHCOutputInfoStr_IHCFunctionFSMWorkState get_ihc_state_info() {
     return ihc_state_;
   }
@@ -59,7 +59,7 @@ class IntelligentHeadlightControl {
   uint16 IHCDisableCode();
   uint16 IHCFaultCode();
   uint8 IHCStateMachine();
-  boolean IHCRequest();
+  bool IHCRequest();
   void set_ihc_output_info() {
     ihc_request_status_ =
         ihc_sys_.state
@@ -91,8 +91,8 @@ class IntelligentHeadlightControl {
  private:
   planning::framework::Session *session_;
   IHCSys ihc_sys_;
-  boolean ihc_request_status_{true};  // IHC请求状态 0:No Request 1:Request
-  boolean ihc_request_{FALSE};        // IHC请求 0:LowBeam 1:HighBeam
+  bool ihc_request_status_{true};  // IHC请求状态 0:No Request 1:Request
+  bool ihc_request_{FALSE};        // IHC请求 0:LowBeam 1:HighBeam
   PlanningHMI::IHCOutputInfoStr_IHCFunctionFSMWorkState ihc_state_{
       PlanningHMI::
           IHCOutputInfoStr_IHCFunctionFSMWorkState_IHC_FUNCTION_FSM_WORK_STATE_OFF};  // IHC功能状态

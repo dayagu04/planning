@@ -101,7 +101,7 @@ uint16 IntelligentHeadlightControl::IHCFaultCode() {
   return ihc_fault_code_temp;
 }
 uint8 IntelligentHeadlightControl::IHCStateMachine() {
-  boolean main_switch = ihc_sys_.input.ihc_main_switch;
+  bool main_switch = ihc_sys_.input.ihc_main_switch;
   uint16 fault_code = ihc_sys_.state.ihc_fault_code;
   uint16 enable_code = ihc_sys_.state.ihc_enable_code;
   uint16 disable_code = ihc_sys_.state.ihc_disable_code;
@@ -177,8 +177,8 @@ uint8 IntelligentHeadlightControl::IHCStateMachine() {
   return ihc_state_temp;
 }
 
-boolean IntelligentHeadlightControl::IHCRequest() {
-  boolean ihc_request_temp = true;
+bool IntelligentHeadlightControl::IHCRequest() {
+  bool ihc_request_temp = true;
 
   // 如果本车道、左车道、右车道检测到移动物体,则禁止请求远光灯
   // 坐标系:本车后轴中心 左正右负

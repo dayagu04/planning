@@ -85,7 +85,7 @@ uint16 TrafficSignRecognition::TSRFaultCode() {
 }
 
 uint8 TrafficSignRecognition::TSRStateMachine() {
-  boolean main_switch = tsr_sys_.input.tsr_main_switch;
+  bool main_switch = tsr_sys_.input.tsr_main_switch;
   uint16 fault_code = tsr_sys_.state.tsr_fault_code;
   uint16 enable_code = tsr_sys_.state.tsr_enable_code;
   uint16 disable_code = tsr_sys_.state.tsr_disable_code;
