@@ -11,21 +11,21 @@ class EmergencyLaneKeepAlert {
 
  private:
   void Update();
-  boolean LeftAlertJudgeFL();
-  boolean LeftAlertJudgeRL();
-  boolean RightAlertJudgeFR();
-  boolean RightAlertJudgeRR();
-  boolean LeftAlertJudge();
-  boolean RightAlertJudge();
+  bool LeftAlertJudgeFL();
+  bool LeftAlertJudgeRL();
+  bool RightAlertJudgeFR();
+  bool RightAlertJudgeRR();
+  bool LeftAlertJudge();
+  bool RightAlertJudge();
   uint8 ObjSelect(planning::RadarObjData *radar);
-  boolean ObjBsdFL(planning::RadarObjData *radar);
-  boolean ObjLcaFL(planning::RadarObjData *radar);
-  boolean ObjBsdFR(planning::RadarObjData *radar);
-  boolean ObjLcaFR(planning::RadarObjData *radar);
-  boolean ObjBsdRL(planning::RadarObjData *radar);
-  boolean ObjLcaRL(planning::RadarObjData *radar);
-  boolean ObjBsdRR(planning::RadarObjData *radar);
-  boolean ObjLcaRR(planning::RadarObjData *radar);
+  bool ObjBsdFL(planning::RadarObjData *radar);
+  bool ObjLcaFL(planning::RadarObjData *radar);
+  bool ObjBsdFR(planning::RadarObjData *radar);
+  bool ObjLcaFR(planning::RadarObjData *radar);
+  bool ObjBsdRL(planning::RadarObjData *radar);
+  bool ObjLcaRL(planning::RadarObjData *radar);
+  bool ObjBsdRR(planning::RadarObjData *radar);
+  bool ObjLcaRR(planning::RadarObjData *radar);
   uint8 ObjBsdConditionF(planning::RadarObjData *radar);
   uint8 ObjBsdConditionR(planning::RadarObjData *radar);
   uint8 ObjLcaConditionF(planning::RadarObjData *radar);

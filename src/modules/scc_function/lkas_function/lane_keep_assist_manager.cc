@@ -207,21 +207,15 @@ void LaneKeepAssistManager::Update() {
   } else {
     lkas_input_.vehicle_info.right_turn_light_state = 0;
   }
-  // ldw switch
+    // ldw switch
   lkas_input_.vehicle_info.ldw_main_switch =
-      true;  // session_->mutable_environmental_model()
-             //->get_hmi_info()
-             //.ldw_main_switch();
+      session_->mutable_environmental_model()->get_hmi_info().ldw_main_switch();
   // ldp switch
   lkas_input_.vehicle_info.ldp_main_switch =
-      true;  // session_->mutable_environmental_model()
-             //  ->get_hmi_info()
-             //  .ldp_main_switch();
+      session_->mutable_environmental_model()->get_hmi_info().ldp_main_switch();
   // elk switch
   lkas_input_.vehicle_info.elk_main_switch =
-      true;  // session_->mutable_environmental_model()
-             //->get_hmi_info()
-  // .elk_main_switch();
+      session_->mutable_environmental_model()->get_hmi_info().elk_main_switch();
   // ldw sensitvity set
   lkas_input_.vehicle_info.ldw_tlc_level =
       session_->mutable_environmental_model()

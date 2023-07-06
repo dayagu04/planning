@@ -2,6 +2,8 @@
 #include "task.h"
 // #include "lane_keep_assist_manager.h"
 #include "Platform_Types.h"
+#include "debug_info_log.h"
+#include "ifly_time.h"
 #include "ihc_function/intelligent_headlight_control.h"
 #include "lkas_function/lane_keep_assist_manager.h"
 #include "tsr_function/traffic_sign_recognition.h"

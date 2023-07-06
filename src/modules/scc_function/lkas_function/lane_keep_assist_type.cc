@@ -2,7 +2,7 @@
 namespace planning {
 uint16 uint16_bit[16] = {1,   2,   4,    8,    16,   32,   64,    128,
                          256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
-boolean LKALineLeftIntervention(float32 tlc_to_line_threshold,
+bool LKALineLeftIntervention(float32 tlc_to_line_threshold,
                                 planning::LkasInput *lkas_input) {
   float32 preview_distance_x =
       0;  // 在tlc_to_line_threshold秒后,车辆左前轮所处的纵向坐标,单位：m
@@ -35,7 +35,7 @@ boolean LKALineLeftIntervention(float32 tlc_to_line_threshold,
     return false;
   }
 }
-boolean LKARoadEdgeLeftIntervention(float32 tlc_to_roadedge_threshold,
+bool LKARoadEdgeLeftIntervention(float32 tlc_to_roadedge_threshold,
                                     planning::LkasInput *lkas_input) {
   float32 preview_distance_x =
       0;  // 在tlc_to_roadedge_threshold秒后,车辆左前轮所处的纵向坐标,单位：m
@@ -68,7 +68,7 @@ boolean LKARoadEdgeLeftIntervention(float32 tlc_to_roadedge_threshold,
     return false;
   }
 }
-boolean LKALineRightIntervention(float32 tlc_to_line_threshold,
+bool LKALineRightIntervention(float32 tlc_to_line_threshold,
                                  planning::LkasInput *lkas_input) {
   float32 preview_distance_x =
       0.0F;  // 在tlc_to_line_threshold秒后,车辆右前轮所处的纵向坐标,单位：m
@@ -101,7 +101,7 @@ boolean LKALineRightIntervention(float32 tlc_to_line_threshold,
     return false;
   }
 }
-boolean LKARoadEdgeRightIntervention(float32 tlc_to_roadedge_threshold,
+bool LKARoadEdgeRightIntervention(float32 tlc_to_roadedge_threshold,
                                      planning::LkasInput *lkas_input) {
   float32 preview_distance_x =
       0;  // 在tlc_to_roadedge_threshold秒后,车辆右前轮所处的纵向坐标,单位：m

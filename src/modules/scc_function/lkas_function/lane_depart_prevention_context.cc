@@ -216,7 +216,7 @@ uint16 LaneDepartPrevention::LeftSuppressionCode() {
     }
   }
 
-  static boolean left_suppress_repeat_warning_flag =
+  static bool left_suppress_repeat_warning_flag =
       0;  // 是否抑制重复报警的标志位 0:不抑制 1:抑制
   if (measurement_str_.state == 4) {  // 检测到左侧报警
     left_suppress_repeat_warning_flag = true;
@@ -379,7 +379,7 @@ uint16 LaneDepartPrevention::RightSuppressionCode() {
     }
   }
 
-  static boolean right_suppress_repeat_warning_flag =
+  static bool right_suppress_repeat_warning_flag =
       0;  // 是否抑制重复报警的标志位 0:不抑制 1:抑制
   if (measurement_str_.state == 5) {  // 检测到右侧报警
     right_suppress_repeat_warning_flag = true;

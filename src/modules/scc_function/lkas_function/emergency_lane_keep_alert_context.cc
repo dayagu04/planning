@@ -219,28 +219,28 @@ uint8 EmergencyLaneKeepAlert::RunOnce() {
   return elk_bsd_lca_code_temp;
 }
 // single side judge
-boolean EmergencyLaneKeepAlert::LeftAlertJudge() {
-  boolean FLAlertState = false;
+bool EmergencyLaneKeepAlert::LeftAlertJudge() {
+  bool FLAlertState = false;
   FLAlertState = LeftAlertJudgeFL();
-  boolean RLAlertState = false;
+  bool RLAlertState = false;
   RLAlertState = LeftAlertJudgeRL();
   return (FLAlertState || RLAlertState);
 }
-boolean EmergencyLaneKeepAlert::RightAlertJudge() {
-  boolean FRAlertState = false;
+bool EmergencyLaneKeepAlert::RightAlertJudge() {
+  bool FRAlertState = false;
   FRAlertState = RightAlertJudgeFR();
-  boolean RRAlertState = false;
+  bool RRAlertState = false;
   RRAlertState = RightAlertJudgeRR();
   return (FRAlertState || RRAlertState);
 }
 // sigle radar judge
-boolean EmergencyLaneKeepAlert::LeftAlertJudgeFL() {
+bool EmergencyLaneKeepAlert::LeftAlertJudgeFL() {
   // 雷达信息
   RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
   // 状态标志位
   uint8 select_state = 0;
-  boolean condition_bsd_state = false;
-  boolean condition_lca_state = false;
+  bool condition_bsd_state = false;
+  bool condition_lca_state = false;
   auto &radar_vector_fl =
       session_->mutable_environmental_model()->get_prediction_info();
   // auto &radar_vector_fl = iter->second;
@@ -278,13 +278,13 @@ boolean EmergencyLaneKeepAlert::LeftAlertJudgeFL() {
   }
   return false;
 }
-boolean EmergencyLaneKeepAlert::LeftAlertJudgeRL() {
+bool EmergencyLaneKeepAlert::LeftAlertJudgeRL() {
   // 雷达信息
   RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
   // 状态标志位
   uint8 select_state = 0;
-  boolean condition_bsd_state = false;
-  boolean condition_lca_state = false;
+  bool condition_bsd_state = false;
+  bool condition_lca_state = false;
   auto &radar_vector_rl =
       session_->mutable_environmental_model()->get_prediction_info();
   uint8 objs_nmu = 0;
@@ -321,13 +321,13 @@ boolean EmergencyLaneKeepAlert::LeftAlertJudgeRL() {
   }
   return false;
 }
-boolean EmergencyLaneKeepAlert::RightAlertJudgeFR() {
+bool EmergencyLaneKeepAlert::RightAlertJudgeFR() {
   // 雷达信息
   RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
   // 状态标志位
   uint8 select_state = 0;
-  boolean condition_bsd_state = false;
-  boolean condition_lca_state = false;
+  bool condition_bsd_state = false;
+  bool condition_lca_state = false;
   auto &radar_vector_fr =
       session_->mutable_environmental_model()->get_prediction_info();
   uint8 objs_nmu = 0;
@@ -364,13 +364,13 @@ boolean EmergencyLaneKeepAlert::RightAlertJudgeFR() {
   }
   return false;
 }
-boolean EmergencyLaneKeepAlert::RightAlertJudgeRR() {
+bool EmergencyLaneKeepAlert::RightAlertJudgeRR() {
   // 雷达信息
   RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
   // 状态标志位
   uint8 select_state = 0;
-  boolean condition_bsd_state = false;
-  boolean condition_lca_state = false;
+  bool condition_bsd_state = false;
+  bool condition_lca_state = false;
   auto &radar_vector_rr =
       session_->mutable_environmental_model()->get_prediction_info();
   uint8 objs_nmu = 0;
@@ -408,48 +408,48 @@ boolean EmergencyLaneKeepAlert::RightAlertJudgeRR() {
   return false;
 }
 // single function judge of each radar
-boolean EmergencyLaneKeepAlert::ObjBsdFL(RadarObjData *radar) {
+bool EmergencyLaneKeepAlert::ObjBsdFL(RadarObjData *radar) {
   uint8 bsd_condition_code = 0;
   bsd_condition_code = ObjBsdConditionF(radar);
   return (bsd_condition_code == 0);
 }
-boolean EmergencyLaneKeepAlert::ObjLcaFL(RadarObjData *radar) {
+bool EmergencyLaneKeepAlert::ObjLcaFL(RadarObjData *radar) {
   uint8 lca_condition_code = 0;
   uint8 lca_alert_code = 0;
   lca_condition_code = ObjLcaConditionF(radar);
   lca_alert_code = ObjLcaAlertF(radar);
   return ((lca_condition_code == 0) && (lca_alert_code == 0));
 }
-boolean EmergencyLaneKeepAlert::ObjBsdFR(RadarObjData *radar) {
+bool EmergencyLaneKeepAlert::ObjBsdFR(RadarObjData *radar) {
   uint8 bsd_condition_code = 0;
   bsd_condition_code = ObjBsdConditionF(radar);
   return (bsd_condition_code == 0);
 }
-boolean EmergencyLaneKeepAlert::ObjLcaFR(RadarObjData *radar) {
+bool EmergencyLaneKeepAlert::ObjLcaFR(RadarObjData *radar) {
   uint8 lca_condition_code = 0;
   uint8 lca_alert_code = 0;
   lca_condition_code = ObjLcaConditionF(radar);
   lca_alert_code = ObjLcaAlertF(radar);
   return ((lca_condition_code == 0) && (lca_alert_code == 0));
 }
-boolean EmergencyLaneKeepAlert::ObjBsdRL(RadarObjData *radar) {
+bool EmergencyLaneKeepAlert::ObjBsdRL(RadarObjData *radar) {
   uint8 bsd_condition_code = 0;
   bsd_condition_code = ObjBsdConditionR(radar);
   return (bsd_condition_code == 0);
 }
-boolean EmergencyLaneKeepAlert::ObjLcaRL(RadarObjData *radar) {
+bool EmergencyLaneKeepAlert::ObjLcaRL(RadarObjData *radar) {
   uint8 lca_condition_code = 0;
   uint8 lca_alert_code = 0;
   lca_condition_code = ObjLcaConditionR(radar);
   lca_alert_code = ObjLcaAlertR(radar);
   return ((lca_condition_code == 0) && (lca_alert_code == 0));
 }
-boolean EmergencyLaneKeepAlert::ObjBsdRR(RadarObjData *radar) {
+bool EmergencyLaneKeepAlert::ObjBsdRR(RadarObjData *radar) {
   uint8 bsd_condition_code = 0;
   bsd_condition_code = ObjBsdConditionR(radar);
   return (bsd_condition_code == 0);
 }
-boolean EmergencyLaneKeepAlert::ObjLcaRR(RadarObjData *radar) {
+bool EmergencyLaneKeepAlert::ObjLcaRR(RadarObjData *radar) {
   uint8 lca_condition_code = 0;
   uint8 lca_alert_code = 0;
   lca_condition_code = ObjLcaConditionR(radar);
@@ -469,7 +469,7 @@ uint8 EmergencyLaneKeepAlert::ObjSelect(RadarObjData *radar) {
 }
 uint8 EmergencyLaneKeepAlert::ObjBsdConditionF(RadarObjData *radar) {
   uint8 condition_code = 0;
-  boolean turning_radius_flag = false;  // 转弯半径对应相对速度满足标志位。
+  bool turning_radius_flag = false;  // 转弯半径对应相对速度满足标志位。
   if ((fabs(1.0 / ego_curvature) >= 500) && (radar->obj_vx > (-20.0 / 3.6))) {
     turning_radius_flag = true;
   } else if ((fabs(1.0 / ego_curvature) >= 250) &&
@@ -517,7 +517,7 @@ uint8 EmergencyLaneKeepAlert::ObjBsdConditionF(RadarObjData *radar) {
 }
 uint8 EmergencyLaneKeepAlert::ObjBsdConditionR(RadarObjData *radar) {
   uint8 condition_code = 0;
-  boolean turning_radius_flag = false;  // 转弯半径对应相对速度满足标志位。
+  bool turning_radius_flag = false;  // 转弯半径对应相对速度满足标志位。
   if ((fabs(1.0 / ego_curvature) >= 500) && (radar->obj_vx > (-20.0 / 3.6))) {
     turning_radius_flag = true;
   } else if ((fabs(1.0 / ego_curvature) >= 250) &&
@@ -566,7 +566,7 @@ uint8 EmergencyLaneKeepAlert::ObjBsdConditionR(RadarObjData *radar) {
 }
 uint8 EmergencyLaneKeepAlert::ObjLcaConditionF(RadarObjData *radar) {
   uint8 condition_code = 0;
-  boolean turning_radius_flag = false;  // 转弯半径对应相对速度满足标志位。
+  bool turning_radius_flag = false;  // 转弯半径对应相对速度满足标志位。
   if ((fabs(1.0 / ego_curvature) >= 500) && (radar->obj_vx > (-20.0 / 3.6))) {
     turning_radius_flag = true;
   } else if ((fabs(1.0 / ego_curvature) >= 250) &&
@@ -656,7 +656,7 @@ uint8 EmergencyLaneKeepAlert::ObjLcaAlertF(RadarObjData *radar) {
 }
 uint8 EmergencyLaneKeepAlert::ObjLcaConditionR(RadarObjData *radar) {
   uint8 condition_code = 0;
-  boolean turning_radius_flag = false;  // 转弯半径对应相对速度满足标志位。
+  bool turning_radius_flag = false;  // 转弯半径对应相对速度满足标志位。
   if ((fabs(1.0 / ego_curvature) >= 500) && (radar->obj_vx > (-20.0 / 3.6))) {
     turning_radius_flag = true;
   } else if ((fabs(1.0 / ego_curvature) >= 250) &&

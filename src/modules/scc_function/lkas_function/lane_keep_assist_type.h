@@ -36,7 +36,7 @@ extern uint16 uint16_bit[16];
 
 typedef struct MeasurementPoint {
   uint8 state;
-  boolean main_switch;  // LDW功能开关状态 0:Off  1:On
+  bool main_switch;  // LDW功能开关状态 0:Off  1:On
   uint16 enable_code;
   uint16 disable_code;
   uint16 fault_code;
@@ -44,15 +44,15 @@ typedef struct MeasurementPoint {
   uint16 left_kickdown_code;
   uint16 right_suppression_code;
   uint16 right_kickdown_code;
-  boolean left_intervention;
-  boolean right_intervention;
+  bool left_intervention;
+  bool right_intervention;
   float32 tlc_line_threshold;
   uint8 left_bsd_lca_code;   // 0,无风险，1有风险
   uint8 right_bsd_lca_code;  // 0,无风险，1有风险
 } MeasurementPoint;
 
 typedef struct CalibrationParameter {
-  boolean enable_roadedge_switch;  // 是否使能功能的路沿场景开关 0:不使能 1:使能
+  bool enable_roadedge_switch;  // 是否使能功能的路沿场景开关 0:不使能 1:使能
   float32 enable_vehspd_display_min;  // 激活的最小仪表车速，单位：m/s
   float32 enable_vehspd_display_max;  // 激活的最大仪表车速，单位：m/s
   float32 disable_vehspd_display_min;  // 退出的最小仪表车速，单位：m/s
@@ -72,29 +72,29 @@ typedef struct CalibrationParameter {
 } CalibrationParameter;
 
 typedef struct RoadInfo {
-  boolean left_line_valid;  // 本车道左侧道线有效性 0:Invalid 1:Valid
+  bool left_line_valid;  // 本车道左侧道线有效性 0:Invalid 1:Valid
   uint8 left_line_type;  // 本车道左侧车道线类型 0：虚线  1：实线
   double left_line_c0;   // 本车道左侧道线方程系数c0
   double left_line_c1;   // 本车道左侧道线方程系数c1
   double left_line_c2;   // 本车道左侧道线方程系数c3
   double left_line_c3;   // 本车道左侧道线方程系数c3
-  boolean right_line_valid;  // 本车道右侧道线有效性 0:Invalid 1:Valid
+  bool right_line_valid;  // 本车道右侧道线有效性 0:Invalid 1:Valid
   uint8 right_line_type;  // 本车道右侧车道线类型 0：虚线  1：实线
   double right_line_c0;         // 本车道右侧道线方程系数c0
   double right_line_c1;         // 本车道右侧道线方程系数c1
   double right_line_c2;         // 本车道右侧道线方程系数c2
   double right_line_c3;         // 本车道右侧道线方程系数c3
-  boolean left_roadedge_valid;  // 本车道左侧路缘有效性 0:Invalid 1:Valid
+  bool left_roadedge_valid;  // 本车道左侧路缘有效性 0:Invalid 1:Valid
   double left_roadedge_c0;      // 本车道左侧路缘方程系数c0
   double left_roadedge_c1;      // 本车道左侧路缘方程系数c1
   double left_roadedge_c2;      // 本车道左侧路缘方程系数c3
   double left_roadedge_c3;      // 本车道左侧路缘方程系数c3
-  boolean right_roadedge_valid;  // 本车道右侧路缘有效性 0:Invalid 1:Valid
+  bool right_roadedge_valid;  // 本车道右侧路缘有效性 0:Invalid 1:Valid
   double right_roadedge_c0;      // 本车道右侧路缘方程系数c0
   double right_roadedge_c1;      // 本车道右侧路缘方程系数c1
   double right_roadedge_c2;      // 本车道右侧路缘方程系数c2
   double right_roadedge_c3;      // 本车道右侧路缘方程系数c3
-  boolean lane_width_valid;  // 当前车道宽度信息有效性 0:Invalid 1:Valid
+  bool lane_width_valid;  // 当前车道宽度信息有效性 0:Invalid 1:Valid
   float32 lane_width;        // 当前车道宽度,单位:m
 } RoadInfo;                  // 道线和路缘信息结构体定义
 
@@ -102,11 +102,11 @@ typedef struct VehInfo {
   float32 veh_display_speed;
   float32 veh_yaw_rate;
   float32 driver_hand_torque;
-  boolean left_turn_light_state;
-  boolean right_turn_light_state;
-  boolean ldw_main_switch;
-  boolean ldp_main_switch;
-  boolean elk_main_switch;
+  bool left_turn_light_state;
+  bool right_turn_light_state;
+  bool ldw_main_switch;
+  bool ldp_main_switch;
+  bool elk_main_switch;
   uint8 ldw_tlc_level;
   float32 common_front_over;
   float32 common_rear_over;
@@ -163,13 +163,13 @@ typedef struct {
   float32 obstacle_velocity_limit;
 } AeraVel;
 
-boolean LKALineLeftIntervention(float32 tlc_to_line_threshold,
+bool LKALineLeftIntervention(float32 tlc_to_line_threshold,
                                 planning::LkasInput *lkas_input);
-boolean LKARoadEdgeLeftIntervention(float32 tlc_to_roadedge_threshold,
+bool LKARoadEdgeLeftIntervention(float32 tlc_to_roadedge_threshold,
                                     planning::LkasInput *lkas_input);
-boolean LKALineRightIntervention(float32 tlc_to_line_threshold,
+bool LKALineRightIntervention(float32 tlc_to_line_threshold,
                                  planning::LkasInput *lkas_input);
-boolean LKARoadEdgeRightIntervention(float32 tlc_to_roadedge_threshold,
+bool LKARoadEdgeRightIntervention(float32 tlc_to_roadedge_threshold,
                                      planning::LkasInput *lkas_input);
 
 }  // namespace planning

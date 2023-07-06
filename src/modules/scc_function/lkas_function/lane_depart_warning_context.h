@@ -12,8 +12,8 @@ class LaneDepartWarning {
   void Init(planning::LkasInput *lkas_input);
 
   void RunOnce();
-  boolean get_ldw_left_warning_info() { return ldw_left_warning_; }
-  boolean get_ldw_right_warning_info() { return ldw_right_warning_; }
+  bool get_ldw_left_warning_info() { return ldw_left_warning_; }
+  bool get_ldw_right_warning_info() { return ldw_right_warning_; }
   PlanningHMI::LDWOutputInfoStr_LDWFunctionFSMWorkState get_ldw_state() {
     return ldw_state_;
   }
@@ -77,9 +77,9 @@ class LaneDepartWarning {
           LDWOutputInfoStr_LDWFunctionFSMWorkState_LDW_FUNCTION_FSM_WORK_STATE_OFF}; /* LDW功能状态
 0:Unavailable 1:Off 2:Standby 3:Active(No Intervention) 4:Active(Left
 Intervention) 5:Active(Right Intervention) */
-  boolean ldw_left_warning_{
+  bool ldw_left_warning_{
       false}; /* LDW功能触发左侧报警标志位 0:No Warning 1:Left Warning */
-  boolean ldw_right_warning_{
+  bool ldw_right_warning_{
       false}; /* LDW功能触发右侧报警标志位 0:No Warning 1:Rirht Warning */
   planning::LkasInput *lkas_input_ = nullptr;
 };

@@ -11,10 +11,10 @@ class LaneDepartPrevention {
   }
   void Init(planning::LkasInput *lkas_input);
   void RunOnce();
-  boolean get_ldp_left_intervention_flag_info() {
+  bool get_ldp_left_intervention_flag_info() {
     return ldp_left_intervention_flag_;
   }
-  boolean get_ldp_right_intervention_flag_info() {
+  bool get_ldp_right_intervention_flag_info() {
     return ldp_right_intervention_flag_;
   }
   PlanningHMI::LDPOutputInfoStr_LDPFunctionFSMWorkState get_ldp_state() {
@@ -79,10 +79,10 @@ class LaneDepartPrevention {
           LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_OFF}; /* LDP功能状态
 0:Unavailable 1:Off 2:Standby 3:Active(No Intervention) 4:Active(Left
 Intervention) 5:Active(Right Intervention) */
-  boolean
+  bool
       ldp_left_intervention_flag_{false}; /* LDP功能触发左侧报警标志位 0:No
                                              Intervention 1:Left Intervention */
-  boolean ldp_right_intervention_flag_{
+  bool ldp_right_intervention_flag_{
       false}; /* LDP功能触发右侧报警标志位 0:No Intervention 1:Rirht
                  Intervention */
   planning::LkasInput *lkas_input_ = nullptr;
