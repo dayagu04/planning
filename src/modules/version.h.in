@@ -1,1 +1,0 @@
-inline __attribute__((unused)) char __version_str__[] = "auto_version=@PACKAGE_VERSION@_@SOURCE_COMMIT@_@PLATFORM@";

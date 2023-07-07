@@ -26,3 +26,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     NanoLog
   )
 endif()
+
+set(ci_dir ${CMAKE_CURRENT_LIST_DIR}/../../../.ci)
+include(${CMAKE_CURRENT_LIST_DIR}/../../../.ci/version.cmake)
+GenVersionHeaderHere(${ci_dir})
