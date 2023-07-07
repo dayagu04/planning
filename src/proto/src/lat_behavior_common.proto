@@ -42,5 +42,5 @@ message LatBehaviorCommon {
   optional int32 lc_turn_light = 39;
   optional string act_request_source = 40;
   optional string lc_back_invalid_reason = 41;
-
+  optional int32 current_state = 42;
 }

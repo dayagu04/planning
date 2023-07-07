@@ -162,6 +162,8 @@ void StateBase::process(Control &control, FsmContext &context) {
     auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
     auto lat_behavior_common =
         planning_debug_data->mutable_lat_behavior_common();
+    lat_behavior_common->set_current_state(
+        state_machine_output.curr_state);
     lat_behavior_common->set_lc_invalid_obj_id(
         state_machine_output.lc_invalid_track.track_id);
     lat_behavior_common->set_lc_back_obj_id(
