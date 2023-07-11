@@ -52,7 +52,7 @@ void StateBase::process(Control &control, FsmContext &context) {
     auto last_planning_result = context.frame->mutable_session()
                                     ->mutable_planning_context()
                                     ->last_planning_result();
-    auto state_machine_output =
+    auto &state_machine_output =
         context.frame->mutable_session()
             ->mutable_planning_context()
             ->mutable_lat_behavior_state_machine_output();
