@@ -44,6 +44,14 @@ class VirtualLaneManager {
     }
     return current_lane_;
   }
+
+  int current_lane_index() const {
+    if (relative_id_lanes_.size() > 0) {
+      return 0 - relative_id_lanes_[0]->get_relative_id();
+    }
+    return 0;
+  }
+  
   const std::shared_ptr<VirtualLane> get_left_lane() const {
     return left_lane_;
   }

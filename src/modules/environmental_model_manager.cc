@@ -198,7 +198,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
       }
 
       // 过滤未与相机融合， 且在相机FOV之内的
-      if ((!(obj.additional_info().fusion_source() & 0x01)) && 
+      if ((!(obj.additional_info().fusion_source() & OBSTACLE_SOURCE_CAMERA)) && 
           (obj.common_info().relative_center_position().x() > 0 && 
           tan(25) > fabs(obj.common_info().relative_center_position().y() / obj.common_info().relative_center_position().x())) ||
           fabs(obj.common_info().relative_center_position().y()) > 10 ||

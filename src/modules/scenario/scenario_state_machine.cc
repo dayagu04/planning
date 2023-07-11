@@ -10,6 +10,7 @@
 #include "obstacle_manager.h"
 #include "reference_path.h"
 #include "reference_path_manager.h"
+#include "lateral_behavior_object_selector.h"
 #include "utils/pose2d_utils.h"
 #include "vehicle_config_context.h"
 
@@ -1269,21 +1270,18 @@ void ScenarioStateMachine::generate_state_machine_output(
   state_machine_output.premove_dist = 0.;
 
   // TODO(Rui):待加入object_selector
-  //  state_machine_output.left_is_faster = object_selector_->left_is_faster();
-  //  state_machine_output.right_is_faster =
-  //  object_selector_->right_is_faster();
+  auto &object_selector = session_->planning_context().object_selector();
+  state_machine_output.left_is_faster = object_selector->left_is_faster();
+  state_machine_output.right_is_faster = object_selector->right_is_faster();
+  state_machine_output.neg_left_lb_car = object_selector->neg_left_lb_car();
+  state_machine_output.neg_right_lb_car = object_selector->neg_right_lb_car(); 
+  state_machine_output.neg_left_alc_car  = object_selector->neg_left_alc_car();
+  state_machine_output.neg_right_alc_car = object_selector->neg_right_alc_car();
 
-  // state_machine_output.neg_left_lb_car = object_selector_->neg_left_lb_car();
-  // state_machine_output.neg_right_lb_car =
-  // object_selector_->neg_right_lb_car(); state_machine_output.neg_left_alc_car
-  // = object_selector_->neg_left_alc_car();
-  // state_machine_output.neg_right_alc_car =
-  // object_selector_->neg_right_alc_car();
-
-  // state_machine_output.left_lb_car = object_selector_->left_lb_car();
-  // state_machine_output.left_alc_car = object_selector_->left_alc_car();
-  // state_machine_output.right_lb_car = object_selector_->right_lb_car();
-  // state_machine_output.right_alc_car = object_selector_->right_alc_car();
+  state_machine_output.left_lb_car = object_selector->left_lb_car();
+  state_machine_output.left_alc_car = object_selector->left_alc_car();
+  state_machine_output.right_lb_car = object_selector->right_lb_car();
+  state_machine_output.right_alc_car = object_selector->right_alc_car();
 
   state_machine_output.enable_alc_car_protection = false;
   // state_machine_output.alc_cars_ = alc_cars_; //TODO(Rui):待添加

@@ -7,8 +7,9 @@ sys.path.append('../..')
 sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
-# bag path and frame dt
-bag_path = "/share/mnt/0628_night/realtime14.00000"
+# bag path and frame dt 
+bag_path = "/share/mnt/0704_night/real_time_0704_18.00000.1688563546.plan" #.1688547247.plan
+# bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
 
@@ -37,7 +38,11 @@ obstacle_data = ColumnDataSource({
   'name':[],
   'data':[]
 })
-behavior_data = ColumnDataSource({
+behavior_data_1 = ColumnDataSource({
+  'name':[],
+  'data':[]
+})
+behavior_data_2 = ColumnDataSource({
   'name':[],
   'data':[]
 })
@@ -58,7 +63,9 @@ columns = [
         TableColumn(field="data", title="data"),
     ]
 data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=400, height=800)
-data_behavior_table = DataTable(source=behavior_data, columns=columns, width=400, height=800)
+data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=800)
+data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=400, height=800)
+
 fig1.line('d_poly_y', 'd_poly_x', source = data_d_poly, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'd_poly')
 fig1.line('fixlane_y', 'fixlane_x', source = data_fix_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
 fig1.circle('pos_y', 'pos_x', source = data_avd_cars, color='red',radius=1,fill_color='yellow',line_color='green',fill_alpha = 0.3, legend_label = 'avoid_car')
@@ -129,14 +136,32 @@ def update_data(lat_behavior_common, vo_lat_motion_plan):
       names.append(name)
     except:
       pass
-
+  behavior_data_1.data.update({
+    'name': names,
+    'data': datas,
+  })
+  
+  names  = []
+  datas = []  
   # 横向运动规划offset 可视化
   names.append('premove_dpoly_c0')
   names.append('avoid_dpoly_c0')
   basic_dpoly = vo_lat_motion_plan.basic_dpoly
   datas.append(vo_lat_motion_plan.premove_dpoly_c0 - basic_dpoly[3])
   datas.append(vo_lat_motion_plan.avoid_dpoly_c0 - basic_dpoly[3])
-  behavior_data.data.update({
+  
+  # 添加可视化left_alc_car_ids、right_alc_car_ids可视化
+  names.append('left_alc_car_ids')
+  names.append('right_alc_car_ids')
+  left_alc_car_id_str = ""
+  right_alc_car_id_str = ""
+  for left_alc_car_id in lat_behavior_common.left_alc_car_ids:
+    left_alc_car_id_str = left_alc_car_id_str + str(left_alc_car_id) + ' '
+  for right_alc_car_id in lat_behavior_common.right_alc_car_ids:
+    right_alc_car_id_str = right_alc_car_id_str + str(right_alc_car_id) + ' '
+  datas.append(left_alc_car_id_str)
+  datas.append(right_alc_car_id_str)
+  behavior_data_2.data.update({
     'name': names,
     'data': datas,
   })
@@ -186,6 +211,6 @@ def slider_callback(bag_time):
   push_notebook()
 
 
-bkp.show(row(fig1,data_obstacle_table,data_behavior_table), notebook_handle=True)
+bkp.show(row(fig1,data_obstacle_table,data_behavior_table_1,data_behavior_table_2), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
 slider_class = ObjText(obj_id_handler)

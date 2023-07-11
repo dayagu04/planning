@@ -476,7 +476,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
   double avd_normal_thr = lane_width / 2 - 0.3 - car_width * 0.5;
   double pre_str_dist = 100.;
 
-  if (flane_->get_virtual_id() != 0) {  // hack !
+  if (virtual_lane_manager_->current_lane_index() != 0) {  
     avd_normal_thr = lane_width * 0.5 - 0.1 - car_width * 0.5;
   }
 
@@ -632,9 +632,9 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                   lat_offset =
                       avd_car_past[1][5] -
                       (avd_car_past[1][5] + 1.8 + avd_car_past[0][9]) / 2;
-                  if (((virtual_lane_manager_->current_lane_virtual_id() ==
+                  if (((virtual_lane_manager_->current_lane_index() ==
                         virtual_lane_manager_->get_lane_num() - 1) ||
-                       (virtual_lane_manager_->current_lane_virtual_id() ==
+                       (virtual_lane_manager_->current_lane_index() ==
                             virtual_lane_manager_->get_lane_num() - 2 &&
                         virtual_lane_manager_->get_right_lane() != nullptr &&
                         virtual_lane_manager_->get_right_lane()
@@ -688,26 +688,26 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                            (avd_car_past[1][2] + v_ego < 0.5 ||
                             avd_car_past[1][3] < 1.0) &&
                            std::fabs(avd_car_past[1][4]) < 0.3 &&
-                           ((virtual_lane_manager_->current_lane_virtual_id() ==
+                           ((virtual_lane_manager_->current_lane_index() ==
                                  virtual_lane_manager_->get_lane_num() - 1 &&
                              ((virtual_lane_manager_->get_current_lane()
                                        ->get_lane_type() !=
                                    MSD_LANE_TYPE_NON_MOTOR &&
                                virtual_lane_manager_
-                                       ->current_lane_virtual_id() >= 1) ||
+                                       ->current_lane_index() >= 1) ||
                               (virtual_lane_manager_->get_current_lane()
                                        ->get_lane_type() ==
                                    MSD_LANE_TYPE_NON_MOTOR &&
                                virtual_lane_manager_
-                                       ->current_lane_virtual_id() >= 2))) ||
-                            (virtual_lane_manager_->current_lane_virtual_id() ==
+                                       ->current_lane_index() >= 2))) ||
+                            (virtual_lane_manager_->current_lane_index() ==
                                  virtual_lane_manager_->get_lane_num() - 2 &&
                              virtual_lane_manager_->get_right_lane() !=
                                  nullptr &&
                              virtual_lane_manager_->get_right_lane()
                                      ->get_lane_type() ==
                                  MSD_LANE_TYPE_NON_MOTOR &&
-                             virtual_lane_manager_->current_lane_virtual_id() >=
+                             virtual_lane_manager_->current_lane_index() >=
                                  1))) {
                   lat_offset = std::min(
                       1.5 + avd_car_past[1][6],
@@ -750,11 +750,11 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                 // map_info.dist_to_intsect() - avd_car_past[0][3] >= -5 && //
                 // hack! map_info.dist_to_intsect() - avd_car_past[0][3] < 50 &&
                 (avd_car_past[0][5] <= ((car_width + 0.3) - lane_width / 2))) {
-              if (virtual_lane_manager_->current_lane_virtual_id() !=
+              if (virtual_lane_manager_->current_lane_index() !=
                       virtual_lane_manager_->get_lane_num() - 1 ||
                   dist_rblane > 1.5) {
                 cross_right_solid_line_ = true;
-              } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+              } else if (virtual_lane_manager_->current_lane_index() !=
                              0 ||
                          flane_->get_relative_id() == RIGHT_POS) {
                 cross_left_solid_line_ = true;
@@ -769,20 +769,20 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                        (avd_car_past[1][6] >=
                         (lane_width / 2 - (car_width + 0.3)))) {
               if (avd_car_past[1][6] >= 0) {
-                if (virtual_lane_manager_->current_lane_virtual_id() !=
+                if (virtual_lane_manager_->current_lane_index() !=
                         virtual_lane_manager_->get_lane_num() - 1 ||
                     dist_rblane > 1.5) {
                   cross_right_solid_line_ = true;
-                } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+                } else if (virtual_lane_manager_->current_lane_index() !=
                                0 ||
                            flane_->get_relative_id() == RIGHT_POS) {
                   cross_left_solid_line_ = true;
                 }
               } else {
-                if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
+                if (virtual_lane_manager_->current_lane_index() != 0 ||
                     flane_->get_relative_id() == RIGHT_POS) {
                   cross_left_solid_line_ = true;
-                } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+                } else if (virtual_lane_manager_->current_lane_index() !=
                                virtual_lane_manager_->get_lane_num() - 1 ||
                            dist_rblane > 1.5) {
                   cross_right_solid_line_ = true;
@@ -879,9 +879,9 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                       avd_car_past[0][5] -
                       (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
 
-                  if ((virtual_lane_manager_->current_lane_virtual_id() ==
+                  if ((virtual_lane_manager_->current_lane_index() ==
                        virtual_lane_manager_->get_lane_num() - 1) ||
-                      (virtual_lane_manager_->current_lane_virtual_id() ==
+                      (virtual_lane_manager_->current_lane_index() ==
                            virtual_lane_manager_->get_lane_num() - 2 &&
                        virtual_lane_manager_->get_right_lane() != nullptr &&
                        virtual_lane_manager_->get_right_lane()
@@ -941,26 +941,26 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                            (avd_car_past[0][2] + v_ego < 0.5 ||
                             avd_car_past[0][3] < 1) &&
                            std::fabs(avd_car_past[0][4]) < 0.3 &&
-                           ((virtual_lane_manager_->current_lane_virtual_id() ==
+                           ((virtual_lane_manager_->current_lane_index() ==
                                  virtual_lane_manager_->get_lane_num() - 1 &&
                              ((virtual_lane_manager_->get_current_lane()
                                        ->get_lane_type() !=
                                    MSD_LANE_TYPE_NON_MOTOR &&
                                virtual_lane_manager_
-                                       ->current_lane_virtual_id() >= 1) ||
+                                       ->current_lane_index() >= 1) ||
                               (virtual_lane_manager_->get_current_lane()
                                        ->get_lane_type() ==
                                    MSD_LANE_TYPE_NON_MOTOR &&
                                virtual_lane_manager_
-                                       ->current_lane_virtual_id() >= 2))) ||
-                            (virtual_lane_manager_->current_lane_virtual_id() ==
+                                       ->current_lane_index() >= 2))) ||
+                            (virtual_lane_manager_->current_lane_index() ==
                                  virtual_lane_manager_->get_lane_num() - 2 &&
                              virtual_lane_manager_->get_right_lane() !=
                                  nullptr &&
                              virtual_lane_manager_->get_right_lane()
                                      ->get_lane_type() ==
                                  MSD_LANE_TYPE_NON_MOTOR &&
-                             virtual_lane_manager_->current_lane_virtual_id() >=
+                             virtual_lane_manager_->current_lane_index() >=
                                  1))) {
                   lat_offset = std::min(
                       1.5 + avd_car_past[0][6],
@@ -1010,11 +1010,11 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                 // map_info.dist_to_intsect() - avd_car_past[1][3] < 50 &&  //
                 // hcak
                 (avd_car_past[1][5] <= ((car_width + 0.3) - lane_width / 2))) {
-              if (virtual_lane_manager_->current_lane_virtual_id() !=
+              if (virtual_lane_manager_->current_lane_index() !=
                       virtual_lane_manager_->get_lane_num() - 1 ||
                   dist_rblane > 1.5) {
                 cross_right_solid_line_ = true;
-              } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+              } else if (virtual_lane_manager_->current_lane_index() !=
                              0 ||
                          flane_->get_relative_id() == RIGHT_POS) {
                 cross_left_solid_line_ = true;
@@ -1028,20 +1028,20 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                        (avd_car_past[0][6] >=
                         (lane_width / 2 - (car_width + 0.3)))) {
               if (avd_car_past[0][6] >= 0) {
-                if (virtual_lane_manager_->current_lane_virtual_id() !=
+                if (virtual_lane_manager_->current_lane_index() !=
                         virtual_lane_manager_->get_lane_num() - 1 ||
                     dist_rblane > 1.5) {
                   cross_right_solid_line_ = true;
-                } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+                } else if (virtual_lane_manager_->current_lane_index() !=
                                0 ||
                            flane_->get_relative_id() == RIGHT_POS) {
                   cross_left_solid_line_ = true;
                 }
               } else {
-                if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
+                if (virtual_lane_manager_->current_lane_index() != 0 ||
                     flane_->get_relative_id() == RIGHT_POS) {
                   cross_left_solid_line_ = true;
-                } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+                } else if (virtual_lane_manager_->current_lane_index() !=
                                virtual_lane_manager_->get_lane_num() - 1 ||
                            dist_rblane > 1.5) {
                   cross_right_solid_line_ = true;
@@ -1068,7 +1068,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
 
             lat_offset = std::max(lat_offset, 0.0);
 
-            if ((virtual_lane_manager_->current_lane_virtual_id() !=
+            if ((virtual_lane_manager_->current_lane_index() !=
                      virtual_lane_manager_->get_lane_num() - 1 &&
                  (virtual_lane_manager_->get_right_lane() == nullptr ||
                   (virtual_lane_manager_->get_right_lane() != nullptr &&
@@ -1089,7 +1089,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                     -std::min(std::min(lat_offset, 0.5 * lane_width - 0.9),
                               std::min(avd_car_past[0][9], avd_limit_left));
               }
-              if ((virtual_lane_manager_->current_lane_virtual_id() !=
+              if ((virtual_lane_manager_->current_lane_index() !=
                    virtual_lane_manager_->get_lane_num() - 1) &&
                   avd_car_past[0][2] + v_ego < 0.5 &&
 
@@ -1110,11 +1110,11 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
 
                    (avd_car_past[1][5] <=
                     ((car_width + 0.3) - lane_width / 2)))) {
-                if (virtual_lane_manager_->current_lane_virtual_id() !=
+                if (virtual_lane_manager_->current_lane_index() !=
                         virtual_lane_manager_->get_lane_num() - 1 ||
                     dist_rblane > 1.5) {
                   cross_right_solid_line_ = true;
-                } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+                } else if (virtual_lane_manager_->current_lane_index() !=
                                0 ||
                            flane_->get_relative_id() == RIGHT_POS) {
                   cross_left_solid_line_ = true;
@@ -1170,7 +1170,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
 
             if (flane_->status() != LaneStatusEx::BOTH_MISSING &&
                 r_poly_[3] < 0 && r_poly_[3] > -1.0 &&
-                (virtual_lane_manager_->current_lane_virtual_id() ==
+                (virtual_lane_manager_->current_lane_index() ==
                      virtual_lane_manager_->get_lane_num() - 1 &&
                  (dist_rblane < 0.5 || avd_limit_left == 0.2)) &&
                 !special_lane_type) {
@@ -1246,9 +1246,9 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                   (avd_car_past[0][2] + v_ego < 1.5 ||
                    avd_car_past[0][3] < 0) &&
                   std::fabs(avd_car_past[0][4]) < 0.45 &&
-                  ((virtual_lane_manager_->current_lane_virtual_id() ==
+                  ((virtual_lane_manager_->current_lane_index() ==
                     virtual_lane_manager_->get_lane_num() - 1) ||
-                   (virtual_lane_manager_->current_lane_virtual_id() ==
+                   (virtual_lane_manager_->current_lane_index() ==
                         virtual_lane_manager_->get_lane_num() - 2 &&
                     virtual_lane_manager_->get_right_lane() != nullptr &&
                     virtual_lane_manager_->get_right_lane()->get_lane_type() ==
@@ -1304,9 +1304,9 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                     (avd_car_past[0][2] + v_ego < 1.5 ||
                      avd_car_past[0][3] < 0) &&
                     std::fabs(avd_car_past[0][4]) < 0.45 &&
-                    ((virtual_lane_manager_->current_lane_virtual_id() ==
+                    ((virtual_lane_manager_->current_lane_index() ==
                       virtual_lane_manager_->get_lane_num() - 1) ||
-                     (virtual_lane_manager_->current_lane_virtual_id() ==
+                     (virtual_lane_manager_->current_lane_index() ==
                           virtual_lane_manager_->get_lane_num() - 2 &&
                       virtual_lane_manager_->get_right_lane() != nullptr &&
                       virtual_lane_manager_->get_right_lane()
@@ -1363,21 +1363,21 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                    avd_car_past[0][3] < 1) &&
                   std::fabs(avd_car_past[0][4]) < 0.3 &&
                   std::fabs(avd_car_past[1][4]) < 0.3 &&
-                  ((virtual_lane_manager_->current_lane_virtual_id() ==
+                  ((virtual_lane_manager_->current_lane_index() ==
                         virtual_lane_manager_->get_lane_num() - 1 &&
                     ((virtual_lane_manager_->get_current_lane()
                               ->get_lane_type() != MSD_LANE_TYPE_NON_MOTOR &&
-                      virtual_lane_manager_->current_lane_virtual_id() >= 1) ||
+                      virtual_lane_manager_->current_lane_index() >= 1) ||
                      (virtual_lane_manager_->get_current_lane()
                               ->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR &&
-                      virtual_lane_manager_->current_lane_virtual_id() >=
+                      virtual_lane_manager_->current_lane_index() >=
                           2))) ||
-                   (virtual_lane_manager_->current_lane_virtual_id() ==
+                   (virtual_lane_manager_->current_lane_index() ==
                         virtual_lane_manager_->get_lane_num() - 2 &&
                     virtual_lane_manager_->get_right_lane() != nullptr &&
                     virtual_lane_manager_->get_right_lane()->get_lane_type() ==
                         MSD_LANE_TYPE_NON_MOTOR &&
-                    virtual_lane_manager_->current_lane_virtual_id() >= 1))) {
+                    virtual_lane_manager_->current_lane_index() >= 1))) {
                 lat_offset = std::min(lat_offset, std::min(avd_car_past[0][9],
                                                            avd_car_past[1][9]));
                 if (lat_offset >= lane_width / 2 - 1.1) {
@@ -1401,9 +1401,9 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
               }
             }
 
-            if ((virtual_lane_manager_->current_lane_virtual_id() !=
+            if ((virtual_lane_manager_->current_lane_index() !=
                      virtual_lane_manager_->get_lane_num() - 1 &&
-                 virtual_lane_manager_->current_lane_virtual_id() != 0) &&
+                 virtual_lane_manager_->current_lane_index() != 0) &&
                 avd_car_past[0][2] + v_ego < 0.5 &&
                 // map_info.dist_to_intsect() > 0 &&
                 // map_info.dist_to_intsect() - avd_car_past[0][3] < 50 &&
@@ -1426,10 +1426,10 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                  //    map_info.dist_to_intsect() - avd_car_past[1][3] < 50 &&
                  (avd_car_past[1][6] >=
                   (lane_width / 2 - (car_width + 0.3))))) {
-              if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
+              if (virtual_lane_manager_->current_lane_index() != 0 ||
                   flane_->get_relative_id() == RIGHT_POS) {
                 cross_left_solid_line_ = true;
-              } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+              } else if (virtual_lane_manager_->current_lane_index() !=
                          virtual_lane_manager_->get_lane_num() - 1) {
                 cross_right_solid_line_ = true;
               }
@@ -1442,7 +1442,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
 
             if (flane_->status() != LaneStatusEx::BOTH_MISSING &&
                 l_poly_[3] > 0 && l_poly_[3] < 1.0 &&
-                virtual_lane_manager_->current_lane_virtual_id() == 0 &&
+                virtual_lane_manager_->current_lane_index() == 0 &&
                 !special_lane_type && !large_lat_ && !force_pause_) {
               lat_offset = std::max(lat_offset + l_poly_[3] - 1.0, 0.0);
             }
@@ -1502,7 +1502,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
             } else if (avd_car_past[0][5] < 0 && avd_car_past[0][6] < 0 &&
                        std::fabs(lat_offset - avd_car_past[0][6]) < 1.3) {
               lat_offset = 1.3 + avd_car_past[0][6];
-              if (virtual_lane_manager_->current_lane_virtual_id() == 0) {
+              if (virtual_lane_manager_->current_lane_index() == 0) {
                 lat_offset =
                     std::min(1.3 + avd_car_past[0][6], 0.5 * lane_width - 0.9);
               }
@@ -1523,7 +1523,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
 
           if (lane_type == 3 || std::fabs(d_poly_[1]) > 0.0001 ||
               (virtual_lane_manager_->get_lane_num() > 1 &&
-               virtual_lane_manager_->current_lane_virtual_id() ==
+               virtual_lane_manager_->current_lane_index() ==
                    virtual_lane_manager_->get_lane_num() - 1)) {
             lat_offset = 0.8 * lat_offset;
           }
@@ -1564,7 +1564,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
             }
 
             if (avd_car_past[0][5] < 1.5) {
-              if ((virtual_lane_manager_->current_lane_virtual_id() !=
+              if ((virtual_lane_manager_->current_lane_index() !=
                        virtual_lane_manager_->get_lane_num() - 1 &&
                    (virtual_lane_manager_->get_right_lane() == nullptr ||
                     (virtual_lane_manager_->get_right_lane() != nullptr &&
@@ -1609,7 +1609,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
               }
 
               if (virtual_lane_manager_->get_lane_num() > 1 &&
-                  virtual_lane_manager_->current_lane_virtual_id() ==
+                  virtual_lane_manager_->current_lane_index() ==
                       virtual_lane_manager_->get_lane_num() - 1 &&
                   dist_rblane < 0.5) {
                 lat_offset *= 0.8;
@@ -1622,7 +1622,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
 
             if (flane_->status() != LaneStatusEx::BOTH_MISSING &&
                 r_poly_[3] < 0 && r_poly_[3] > -1.0 &&
-                (virtual_lane_manager_->current_lane_virtual_id() ==
+                (virtual_lane_manager_->current_lane_index() ==
                      virtual_lane_manager_->get_lane_num() - 1 &&
                  (dist_rblane < 0.5 || avd_limit_left == 0.2)) &&
                 !special_lane_type) {
@@ -1673,7 +1673,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
             }
           }
 
-          if ((virtual_lane_manager_->current_lane_virtual_id() !=
+          if ((virtual_lane_manager_->current_lane_index() !=
                virtual_lane_manager_->get_lane_num() - 1) &&
               avd_car_past[0][2] + v_ego < 0.5 &&
 
@@ -1685,11 +1685,11 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
           if (avd_car_past[0][7] == 20001 &&
 
               (avd_car_past[0][5] <= ((car_width + 0.3) - lane_width / 2))) {
-            if (virtual_lane_manager_->current_lane_virtual_id() !=
+            if (virtual_lane_manager_->current_lane_index() !=
                     virtual_lane_manager_->get_lane_num() - 1 ||
                 dist_rblane > 1.5) {
               cross_right_solid_line_ = true;
-            } else if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
+            } else if (virtual_lane_manager_->current_lane_index() != 0 ||
                        flane_->get_relative_id() == RIGHT_POS) {
               cross_left_solid_line_ = true;
             }
@@ -1763,7 +1763,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
           if (lane_type == MSD_LANE_TYPE_PARKING ||
               std::fabs(d_poly_[1]) > 0.0001 ||
               (virtual_lane_manager_->get_lane_num() > 1 &&
-               virtual_lane_manager_->current_lane_virtual_id() == 0)) {
+               virtual_lane_manager_->current_lane_index() == 0)) {
             lat_offset *= 0.8;
           }
 
@@ -1807,16 +1807,16 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
               lat_offset = std::min(lat_offset, 0.15 * lane_width);
 
               if (virtual_lane_manager_->get_lane_num() > 1 &&
-                  virtual_lane_manager_->current_lane_virtual_id() == 0) {
+                  virtual_lane_manager_->current_lane_index() == 0) {
                 lat_offset *= 0.8;
               }
             } else if (avd_car_past[0][6] >= 0 &&
                        (avd_car_past[0][2] + v_ego < 1.5 ||
                         avd_car_past[0][3] < 1) &&
                        std::fabs(avd_car_past[0][4]) < 0.5 &&
-                       ((virtual_lane_manager_->current_lane_virtual_id() ==
+                       ((virtual_lane_manager_->current_lane_index() ==
                          virtual_lane_manager_->get_lane_num() - 1) ||
-                        (virtual_lane_manager_->current_lane_virtual_id() ==
+                        (virtual_lane_manager_->current_lane_index() ==
                              virtual_lane_manager_->get_lane_num() - 2 &&
                          virtual_lane_manager_->get_right_lane() != nullptr &&
                          virtual_lane_manager_->get_right_lane()
@@ -1866,24 +1866,24 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                        (avd_car_past[0][2] + v_ego < 0.5 ||
                         avd_car_past[0][3] < 1) &&
                        std::fabs(avd_car_past[0][4]) < 0.5 &&
-                       ((virtual_lane_manager_->current_lane_virtual_id() ==
+                       ((virtual_lane_manager_->current_lane_index() ==
                              virtual_lane_manager_->get_lane_num() - 1 &&
                          ((virtual_lane_manager_->get_current_lane()
                                    ->get_lane_type() !=
                                MSD_LANE_TYPE_NON_MOTOR &&
-                           virtual_lane_manager_->current_lane_virtual_id() >=
+                           virtual_lane_manager_->current_lane_index() >=
                                1) ||
                           (virtual_lane_manager_->get_current_lane()
                                    ->get_lane_type() ==
                                MSD_LANE_TYPE_NON_MOTOR &&
-                           virtual_lane_manager_->current_lane_virtual_id() >=
+                           virtual_lane_manager_->current_lane_index() >=
                                2))) ||
-                        (virtual_lane_manager_->current_lane_virtual_id() ==
+                        (virtual_lane_manager_->current_lane_index() ==
                              virtual_lane_manager_->get_lane_num() - 2 &&
                          virtual_lane_manager_->get_right_lane() != nullptr &&
                          virtual_lane_manager_->get_right_lane()
                                  ->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR &&
-                         virtual_lane_manager_->current_lane_virtual_id() >=
+                         virtual_lane_manager_->current_lane_index() >=
                              1))) {
               lat_offset =
                   std::min(1.5 + avd_car_past[0][6], avd_car_past[0][9]);
@@ -1904,7 +1904,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
 
             if (flane_->status() != LaneStatusEx::BOTH_MISSING &&
                 l_poly_[3] > 0 && l_poly_[3] < 1.0 &&
-                virtual_lane_manager_->current_lane_virtual_id() == 0 &&
+                virtual_lane_manager_->current_lane_index() == 0 &&
                 !special_lane_type && !large_lat_ && !force_pause_) {
               lat_offset = std::max(lat_offset + l_poly_[3] - 1.0, 0.0);
             }
@@ -1978,9 +1978,9 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
             }
           }
 
-          if ((virtual_lane_manager_->current_lane_virtual_id() !=
+          if ((virtual_lane_manager_->current_lane_index() !=
                    virtual_lane_manager_->get_lane_num() - 1 &&
-               virtual_lane_manager_->current_lane_virtual_id() != 0) &&
+               virtual_lane_manager_->current_lane_index() != 0) &&
               avd_car_past[0][2] + v_ego < 0.5 &&
               // map_info.dist_to_intsect() > 0 &&
               // map_info.dist_to_intsect() - avd_car_past[0][3] < 50 &&
@@ -1994,10 +1994,10 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
               // map_info.dist_to_intsect() - avd_car_past[0][3] >= -5 &&
               //  map_info.dist_to_intsect() - avd_car_past[0][3] < 50 &&
               (avd_car_past[0][6] >= (lane_width / 2 - (car_width + 0.3)))) {
-            if (virtual_lane_manager_->current_lane_virtual_id() != 0 ||
+            if (virtual_lane_manager_->current_lane_index() != 0 ||
                 flane_->get_relative_id() == RIGHT_POS) {
               cross_left_solid_line_ = true;
-            } else if (virtual_lane_manager_->current_lane_virtual_id() !=
+            } else if (virtual_lane_manager_->current_lane_index() !=
                        virtual_lane_manager_->get_lane_num() - 1) {
               cross_right_solid_line_ = true;
             }
@@ -2058,7 +2058,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                 std::fabs(lat_offset - avd_car_past[0][6]) < 1.3) {
               lat_offset = 1.3 + avd_car_past[0][6];
 
-              if (virtual_lane_manager_->current_lane_virtual_id() == 0) {
+              if (virtual_lane_manager_->current_lane_index() == 0) {
                 lat_offset =
                     std::min(1.3 + avd_car_past[0][6], 0.5 * lane_width - 0.9);
               }
@@ -2562,9 +2562,9 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   //     flane_->get_refined_lane_points();  // attention! transform
   //                                         // RerencePathPoint 2 PathPoint
 
-  if (((virtual_lane_manager_->current_lane_virtual_id() ==
+  if (((virtual_lane_manager_->current_lane_index() ==
         virtual_lane_manager_->get_lane_num() - 1) ||
-       (virtual_lane_manager_->current_lane_virtual_id() ==
+       (virtual_lane_manager_->current_lane_index() ==
             virtual_lane_manager_->get_lane_num() - 2 &&
         virtual_lane_manager_->get_right_lane() != nullptr &&
         virtual_lane_manager_->get_right_lane()->get_lane_type() ==
@@ -2597,14 +2597,14 @@ bool VisionLateralMotionPlanner::update_planner_output() {
     lateral_output.tleft_lane = false;
   }
 
-  if (((virtual_lane_manager_->current_lane_virtual_id() ==
+  if (((virtual_lane_manager_->current_lane_index() ==
         virtual_lane_manager_->get_lane_num() - 1) ||
-       (virtual_lane_manager_->current_lane_virtual_id() ==
+       (virtual_lane_manager_->current_lane_index() ==
             virtual_lane_manager_->get_lane_num() - 2 &&
         virtual_lane_manager_->get_right_lane() != nullptr &&
         virtual_lane_manager_->get_right_lane()->get_lane_type() ==
             MSD_LANE_TYPE_NON_MOTOR)) &&
-      virtual_lane_manager_->current_lane_virtual_id() - 1 >= 0) {
+      virtual_lane_manager_->current_lane_index() - 1 >= 0) {
     lateral_output.rightest_lane = true;
   } else {
     lateral_output.rightest_lane = false;
