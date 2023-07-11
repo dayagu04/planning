@@ -1,3 +1,12 @@
+# planning.2.0.0.5
+
+####  修改说明
+1. 适配interface2.0.0.1
+2. map lane bound protect: clip for short lane distance
+3. 修复state_machine_output未加&，导致下游task获取当前状态信息错误的bug
+4. fixed avd radar obj bug & avd_car_past_ keep bug
+5. 修复当前车道index的bug
+
 # planning.2.0.0.3
 
 ####  修改说明
