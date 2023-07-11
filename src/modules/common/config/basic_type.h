@@ -132,7 +132,12 @@ struct LatBehaviorInfo {
   std::array<std::vector<double>, 2> avd_car_past;
   std::array<std::vector<double>, 2> avd_sp_car_past;
   bool flag_avd;
+  int ncar_change;
+  int avd_back_cnt;
+  int avd_leadone;
+  int pre_leadone_id;
   double dist_rblane;
+  double final_y_rel;
 };
 
 enum ObstacleIntentType { COMMON = 0, CUT_IN = 1 };

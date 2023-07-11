@@ -49,6 +49,8 @@ void RoadBase::prepare_for_change_state(
       candidate_states.push_back(ROAD_LC_LBACK);
     } else if (lc_req_manager->request() == RIGHT_CHANGE) {
       candidate_states.push_back(ROAD_LC_RBACK);
+    } else {
+      candidate_states.push_back(ROAD_NONE);
     }
   } else {
     if (!lc_lane_manager_tmp->has_origin_lane()) {
@@ -59,6 +61,8 @@ void RoadBase::prepare_for_change_state(
       candidate_states.push_back(ROAD_LC_LCHANGE);
     } else if (lc_req_manager->request() == RIGHT_CHANGE) {
       candidate_states.push_back(ROAD_LC_RCHANGE);
+    } else {
+      candidate_states.push_back(ROAD_NONE);
     }
   }
 
@@ -99,6 +103,8 @@ void RoadBase::prepare_for_back_state(
       candidate_states.push_back(ROAD_LC_LBACK);
     } else if (lc_req_manager->request() == RIGHT_CHANGE) {
       candidate_states.push_back(ROAD_LC_RBACK);
+    } else {
+      candidate_states.push_back(ROAD_NONE);
     }
   } else {
     lc_lane_manager_tmp->reset_lc_lanes();

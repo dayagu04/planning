@@ -335,6 +335,9 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
                         ->mutable_environmental_model()
                         ->get_ego_state_manager();
   auto &frenet_ego_state = reference_path_ptr_->get_frenet_ego_state();
+  auto &lat_behavior_info = frame_->mutable_session()
+                                ->mutable_planning_context()
+                                ->mutable_lat_behavior_info();
 
   // const auto &lon_output =
   //     frame_->mutable_session()->mutable_planning_context()->vision_only_longitudinal_motion_planner_output();
@@ -359,6 +362,13 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
   for (auto &tr : lateral_obstacle->side_tracks()) {
     front_side_tracks.emplace_back(tr);
   }
+  avd_car_past_ = lat_behavior_info.avd_car_past;
+  flag_avd_ = lat_behavior_info.flag_avd;
+  final_y_rel_ = lat_behavior_info.final_y_rel;
+  ncar_change_ = lat_behavior_info.ncar_change;
+  avd_back_cnt_ = lat_behavior_info.avd_back_cnt;
+  avd_leadone_ = lat_behavior_info.avd_leadone;
+  pre_leadone_id_ = lat_behavior_info.pre_leadone_id;
 
   if (front_side_tracks.size() > 0) {
     // if (lon_output.cutin_msg.cutin_dir == "left") {
@@ -399,117 +409,120 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
 
     if (lateral_obstacle->front_tracks_copy().size() > 0) {
       for (auto &tr : lateral_obstacle->front_tracks_copy()) {
-        if (state == ROAD_NONE || state == INTER_GS_NONE ||
-            state == INTER_TR_NONE || state == INTER_TL_NONE) {
-          if (((tr.d_rel < 3.0 && tr.v_rel < 1.0) || tr.d_rel < 1.0) &&
-              ((tr.d_min_cpath > 1.0 && tr.d_min_cpath < 1.7 &&
-                tr.d_min_cpath < std::fabs(fs_y_rel)) ||
-               (tr.d_max_cpath - l_ego > -1.7 && tr.d_max_cpath - l_ego < -1 &&
-                std::fabs(tr.d_max_cpath) < std::fabs(fs_y_rel)))) {
-            is_ncar_ = true;
+        if ((tr.fusion_source == OBSTACLE_SOURCE_CAMERA) ||
+            (tr.fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+          if (state == ROAD_NONE || state == INTER_GS_NONE ||
+              state == INTER_TR_NONE || state == INTER_TL_NONE) {
+            if (((tr.d_rel < 3.0 && tr.v_rel < 1.0) || tr.d_rel < 1.0) &&
+                ((tr.d_min_cpath > 1.0 && tr.d_min_cpath < 1.7 &&
+                  tr.d_min_cpath < std::fabs(fs_y_rel)) ||
+                (tr.d_max_cpath - l_ego > -1.7 && tr.d_max_cpath - l_ego < -1 &&
+                  std::fabs(tr.d_max_cpath) < std::fabs(fs_y_rel)))) {
+              is_ncar_ = true;
 
-            if (tr.d_min_cpath > 0) {
+              if (tr.d_min_cpath > 0) {
+                fs_y_rel = tr.d_min_cpath;
+              } else {
+                fs_y_rel = -tr.d_max_cpath;
+              }
+
+              avd_car_past_[0].clear();
+              avd_car_past_[1].clear();
+
+              double temp[] = {0,
+                              (double)tr.trajectory.intersection,
+                              tr.v_rel,
+                              tr.d_rel,
+                              tr.v_lat,
+                              tr.d_min_cpath,
+                              tr.d_max_cpath,
+                              5,
+                              curr_time,
+                              final_y_rel_,
+                              (double)tr.track_id};
+
+              avd_car_past_[0].assign(std::begin(temp), std::end(temp));
+
+              // if (path_planner_->d_poly()[3] > 2) {
+              //   is_ncar_ = false;
+              // } // TODO(Rui):add path_planner_
+            }
+          } else if (state == ROAD_LC_LWAIT) {
+            if (tr.d_rel < 5.0 && tr.v_rel < 1.0 && tr.d_min_cpath > 1.0 &&
+                tr.d_min_cpath < 2.5 && tr.d_min_cpath < fs_y_rel) {
+              is_ncar_ = true;
               fs_y_rel = tr.d_min_cpath;
-            } else {
+
+              avd_car_past_[0].clear();
+              avd_car_past_[1].clear();
+
+              double temp[] = {0,
+                              (double)tr.trajectory.intersection,
+                              tr.v_rel,
+                              tr.d_rel,
+                              tr.v_lat,
+                              tr.d_min_cpath,
+                              tr.d_max_cpath,
+                              5,
+                              curr_time,
+                              final_y_rel_,
+                              (double)tr.track_id};
+
+              avd_car_past_[0].assign(std::begin(temp), std::end(temp));
+            } else if (avd_car_past_[0].size() > 0 &&
+                      (avd_car_past_[0][3] > 10 ||
+                        (avd_car_past_[0][3] < 10 && avd_car_past_[0][5] < 0))) {
+              if (avd_car_past_[1].size() > 0 && avd_car_past_[1][3] < 10 &&
+                  avd_car_past_[1][5] > 0) {
+                avd_car_past_[0] = avd_car_past_[1];
+                avd_car_past_[1].clear();
+              } else {
+                avd_car_past_[0].clear();
+                avd_car_past_[1].clear();
+              }
+            } else if (avd_car_past_[1].size() > 0 &&
+                      (avd_car_past_[1][3] > 10 ||
+                        (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] < 0))) {
+              avd_car_past_[1].clear();
+            }
+          } else if (state == ROAD_LC_RWAIT) {
+            if (tr.d_rel < 5.0 && tr.v_rel < 1.0 && tr.d_max_cpath > -2.5 &&
+                tr.d_max_cpath < -1.0 && tr.d_max_cpath > -fs_y_rel) {
+              is_ncar_ = true;
               fs_y_rel = -tr.d_max_cpath;
-            }
 
-            avd_car_past_[0].clear();
-            avd_car_past_[1].clear();
-
-            double temp[] = {0,
-                             (double)tr.trajectory.intersection,
-                             tr.v_rel,
-                             tr.d_rel,
-                             tr.v_lat,
-                             tr.d_min_cpath,
-                             tr.d_max_cpath,
-                             5,
-                             curr_time,
-                             final_y_rel_,
-                             (double)tr.track_id};
-
-            avd_car_past_[0].assign(std::begin(temp), std::end(temp));
-
-            // if (path_planner_->d_poly()[3] > 2) {
-            //   is_ncar_ = false;
-            // } // TODO(Rui):add path_planner_
-          }
-        } else if (state == ROAD_LC_LWAIT) {
-          if (tr.d_rel < 5.0 && tr.v_rel < 1.0 && tr.d_min_cpath > 1.0 &&
-              tr.d_min_cpath < 2.5 && tr.d_min_cpath < fs_y_rel) {
-            is_ncar_ = true;
-            fs_y_rel = tr.d_min_cpath;
-
-            avd_car_past_[0].clear();
-            avd_car_past_[1].clear();
-
-            double temp[] = {0,
-                             (double)tr.trajectory.intersection,
-                             tr.v_rel,
-                             tr.d_rel,
-                             tr.v_lat,
-                             tr.d_min_cpath,
-                             tr.d_max_cpath,
-                             5,
-                             curr_time,
-                             final_y_rel_,
-                             (double)tr.track_id};
-
-            avd_car_past_[0].assign(std::begin(temp), std::end(temp));
-          } else if (avd_car_past_[0].size() > 0 &&
-                     (avd_car_past_[0][3] > 10 ||
-                      (avd_car_past_[0][3] < 10 && avd_car_past_[0][5] < 0))) {
-            if (avd_car_past_[1].size() > 0 && avd_car_past_[1][3] < 10 &&
-                avd_car_past_[1][5] > 0) {
-              avd_car_past_[0] = avd_car_past_[1];
-              avd_car_past_[1].clear();
-            } else {
               avd_car_past_[0].clear();
               avd_car_past_[1].clear();
-            }
-          } else if (avd_car_past_[1].size() > 0 &&
-                     (avd_car_past_[1][3] > 10 ||
-                      (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] < 0))) {
-            avd_car_past_[1].clear();
-          }
-        } else if (state == ROAD_LC_RWAIT) {
-          if (tr.d_rel < 5.0 && tr.v_rel < 1.0 && tr.d_max_cpath > -2.5 &&
-              tr.d_max_cpath < -1.0 && tr.d_max_cpath > -fs_y_rel) {
-            is_ncar_ = true;
-            fs_y_rel = -tr.d_max_cpath;
 
-            avd_car_past_[0].clear();
-            avd_car_past_[1].clear();
+              double temp[] = {0,
+                              (double)tr.trajectory.intersection,
+                              tr.v_rel,
+                              tr.d_rel,
+                              tr.v_lat,
+                              tr.d_min_cpath,
+                              tr.d_max_cpath,
+                              5,
+                              curr_time,
+                              final_y_rel_,
+                              (double)tr.track_id};
 
-            double temp[] = {0,
-                             (double)tr.trajectory.intersection,
-                             tr.v_rel,
-                             tr.d_rel,
-                             tr.v_lat,
-                             tr.d_min_cpath,
-                             tr.d_max_cpath,
-                             5,
-                             curr_time,
-                             final_y_rel_,
-                             (double)tr.track_id};
-
-            avd_car_past_[0].assign(std::begin(temp), std::end(temp));
-          } else if (avd_car_past_[0].size() > 0 &&
-                     (avd_car_past_[0][3] > 10 ||
-                      (avd_car_past_[0][3] < 10 && avd_car_past_[0][5] > 0))) {
-            if (avd_car_past_[1].size() > 0 &&
-                (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] < 0)) {
-              avd_car_past_[0] = avd_car_past_[1];
-              avd_car_past_[1].clear();
-            } else {
-              avd_car_past_[0].clear();
+              avd_car_past_[0].assign(std::begin(temp), std::end(temp));
+            } else if (avd_car_past_[0].size() > 0 &&
+                      (avd_car_past_[0][3] > 10 ||
+                        (avd_car_past_[0][3] < 10 && avd_car_past_[0][5] > 0))) {
+              if (avd_car_past_[1].size() > 0 &&
+                  (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] < 0)) {
+                avd_car_past_[0] = avd_car_past_[1];
+                avd_car_past_[1].clear();
+              } else {
+                avd_car_past_[0].clear();
+                avd_car_past_[1].clear();
+              }
+            } else if (avd_car_past_[1].size() > 0 &&
+                      (avd_car_past_[1][3] > 10 ||
+                        (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] > 0))) {
               avd_car_past_[1].clear();
             }
-          } else if (avd_car_past_[1].size() > 0 &&
-                     (avd_car_past_[1][3] > 10 ||
-                      (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] > 0))) {
-            avd_car_past_[1].clear();
           }
         }
       }
@@ -517,117 +530,120 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
 
     if (lateral_obstacle->side_tracks().size() > 0) {
       for (auto &tr : lateral_obstacle->side_tracks()) {
-        if (state == ROAD_NONE || state == INTER_GS_NONE ||
-            state == INTER_TR_NONE || state == INTER_TL_NONE) {
-          if (tr.d_rel > -6.0 && tr.v_rel > -1.0 &&
-              ((tr.d_min_cpath > 1.0 && tr.d_min_cpath < 1.7 &&
-                tr.d_min_cpath < std::fabs(fs_y_rel)) ||
-               (tr.d_max_cpath > -1.7 && tr.d_max_cpath < -1 &&
-                std::fabs(tr.d_max_cpath) < std::fabs(fs_y_rel)))) {
-            is_ncar_ = true;
+        if ((tr.fusion_source == OBSTACLE_SOURCE_CAMERA) ||
+            (tr.fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+          if (state == ROAD_NONE || state == INTER_GS_NONE ||
+              state == INTER_TR_NONE || state == INTER_TL_NONE) {
+            if (tr.d_rel > -6.0 && tr.v_rel > -1.0 &&
+                ((tr.d_min_cpath > 1.0 && tr.d_min_cpath < 1.7 &&
+                  tr.d_min_cpath < std::fabs(fs_y_rel)) ||
+                (tr.d_max_cpath > -1.7 && tr.d_max_cpath < -1 &&
+                  std::fabs(tr.d_max_cpath) < std::fabs(fs_y_rel)))) {
+              is_ncar_ = true;
 
-            if (tr.d_min_cpath > 0) {
+              if (tr.d_min_cpath > 0) {
+                fs_y_rel = tr.d_min_cpath;
+              } else {
+                fs_y_rel = -tr.d_max_cpath;
+              }
+
+              avd_car_past_[0].clear();
+              avd_car_past_[1].clear();
+
+              double temp[] = {0,
+                              (double)tr.trajectory.intersection,
+                              tr.v_rel,
+                              tr.d_rel,
+                              tr.v_lat,
+                              tr.d_min_cpath,
+                              tr.d_max_cpath,
+                              5,
+                              curr_time,
+                              final_y_rel_,
+                              (double)tr.track_id};
+
+              avd_car_past_[0].assign(std::begin(temp), std::end(temp));
+
+              // if (path_planner_->d_poly()[3] > 2) {
+              //   is_ncar_ = false;
+              // } // TODO(Rui):add path_planner_
+            }
+          } else if (state == ROAD_LC_LWAIT) {
+            if (tr.d_rel > -10.0 && tr.v_rel < 1.0 && tr.d_min_cpath > 1.0 &&
+                tr.d_min_cpath < 2.5 && tr.d_min_cpath < fs_y_rel) {
+              is_ncar_ = true;
               fs_y_rel = tr.d_min_cpath;
-            } else {
+
+              avd_car_past_[0].clear();
+              avd_car_past_[1].clear();
+
+              double temp[] = {0,
+                              (double)tr.trajectory.intersection,
+                              tr.v_rel,
+                              tr.d_rel,
+                              tr.v_lat,
+                              tr.d_min_cpath,
+                              tr.d_max_cpath,
+                              5,
+                              curr_time,
+                              final_y_rel_,
+                              (double)tr.track_id};
+
+              avd_car_past_[0].assign(std::begin(temp), std::end(temp));
+            } else if (avd_car_past_[0].size() > 0 &&
+                      (avd_car_past_[0][3] > 10 ||
+                        (avd_car_past_[0][3] < 10 && avd_car_past_[0][5] < 0))) {
+              if (avd_car_past_[1].size() > 0 &&
+                  (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] > 0)) {
+                avd_car_past_[0] = avd_car_past_[1];
+                avd_car_past_[1].clear();
+              } else {
+                avd_car_past_[0].clear();
+                avd_car_past_[1].clear();
+              }
+            } else if (avd_car_past_[1].size() > 0 &&
+                      (avd_car_past_[1][3] > 10 ||
+                        (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] < 0))) {
+              avd_car_past_[1].clear();
+            }
+          } else if (state == ROAD_LC_RWAIT) {
+            if (tr.d_rel > -10.0 && tr.v_rel < 1.0 && tr.d_max_cpath > -2.5 &&
+                tr.d_max_cpath < -1.0 && tr.d_max_cpath > -fs_y_rel) {
+              is_ncar_ = true;
               fs_y_rel = -tr.d_max_cpath;
-            }
 
-            avd_car_past_[0].clear();
-            avd_car_past_[1].clear();
-
-            double temp[] = {0,
-                             (double)tr.trajectory.intersection,
-                             tr.v_rel,
-                             tr.d_rel,
-                             tr.v_lat,
-                             tr.d_min_cpath,
-                             tr.d_max_cpath,
-                             5,
-                             curr_time,
-                             final_y_rel_,
-                             (double)tr.track_id};
-
-            avd_car_past_[0].assign(std::begin(temp), std::end(temp));
-
-            // if (path_planner_->d_poly()[3] > 2) {
-            //   is_ncar_ = false;
-            // } // TODO(Rui):add path_planner_
-          }
-        } else if (state == ROAD_LC_LWAIT) {
-          if (tr.d_rel > -10.0 && tr.v_rel < 1.0 && tr.d_min_cpath > 1.0 &&
-              tr.d_min_cpath < 2.5 && tr.d_min_cpath < fs_y_rel) {
-            is_ncar_ = true;
-            fs_y_rel = tr.d_min_cpath;
-
-            avd_car_past_[0].clear();
-            avd_car_past_[1].clear();
-
-            double temp[] = {0,
-                             (double)tr.trajectory.intersection,
-                             tr.v_rel,
-                             tr.d_rel,
-                             tr.v_lat,
-                             tr.d_min_cpath,
-                             tr.d_max_cpath,
-                             5,
-                             curr_time,
-                             final_y_rel_,
-                             (double)tr.track_id};
-
-            avd_car_past_[0].assign(std::begin(temp), std::end(temp));
-          } else if (avd_car_past_[0].size() > 0 &&
-                     (avd_car_past_[0][3] > 10 ||
-                      (avd_car_past_[0][3] < 10 && avd_car_past_[0][5] < 0))) {
-            if (avd_car_past_[1].size() > 0 &&
-                (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] > 0)) {
-              avd_car_past_[0] = avd_car_past_[1];
-              avd_car_past_[1].clear();
-            } else {
               avd_car_past_[0].clear();
               avd_car_past_[1].clear();
-            }
-          } else if (avd_car_past_[1].size() > 0 &&
-                     (avd_car_past_[1][3] > 10 ||
-                      (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] < 0))) {
-            avd_car_past_[1].clear();
-          }
-        } else if (state == ROAD_LC_RWAIT) {
-          if (tr.d_rel > -10.0 && tr.v_rel < 1.0 && tr.d_max_cpath > -2.5 &&
-              tr.d_max_cpath < -1.0 && tr.d_max_cpath > -fs_y_rel) {
-            is_ncar_ = true;
-            fs_y_rel = -tr.d_max_cpath;
 
-            avd_car_past_[0].clear();
-            avd_car_past_[1].clear();
+              double temp[] = {0,
+                              (double)tr.trajectory.intersection,
+                              tr.v_rel,
+                              tr.d_rel,
+                              tr.v_lat,
+                              tr.d_min_cpath,
+                              tr.d_max_cpath,
+                              5,
+                              curr_time,
+                              final_y_rel_,
+                              (double)tr.track_id};
 
-            double temp[] = {0,
-                             (double)tr.trajectory.intersection,
-                             tr.v_rel,
-                             tr.d_rel,
-                             tr.v_lat,
-                             tr.d_min_cpath,
-                             tr.d_max_cpath,
-                             5,
-                             curr_time,
-                             final_y_rel_,
-                             (double)tr.track_id};
-
-            avd_car_past_[0].assign(std::begin(temp), std::end(temp));
-          } else if (avd_car_past_[0].size() > 0 &&
-                     (avd_car_past_[0][3] > 10 ||
-                      (avd_car_past_[0][3] < 10 && avd_car_past_[0][5] > 0))) {
-            if (avd_car_past_[1].size() > 0 &&
-                (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] < 0)) {
-              avd_car_past_[0] = avd_car_past_[1];
-              avd_car_past_[1].clear();
-            } else {
-              avd_car_past_[0].clear();
+              avd_car_past_[0].assign(std::begin(temp), std::end(temp));
+            } else if (avd_car_past_[0].size() > 0 &&
+                      (avd_car_past_[0][3] > 10 ||
+                        (avd_car_past_[0][3] < 10 && avd_car_past_[0][5] > 0))) {
+              if (avd_car_past_[1].size() > 0 &&
+                  (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] < 0)) {
+                avd_car_past_[0] = avd_car_past_[1];
+                avd_car_past_[1].clear();
+              } else {
+                avd_car_past_[0].clear();
+                avd_car_past_[1].clear();
+              }
+            } else if (avd_car_past_[1].size() > 0 &&
+                      (avd_car_past_[1][3] > 10 ||
+                        (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] > 0))) {
               avd_car_past_[1].clear();
             }
-          } else if (avd_car_past_[1].size() > 0 &&
-                     (avd_car_past_[1][3] > 10 ||
-                      (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] > 0))) {
-            avd_car_past_[1].clear();
           }
         }
       }
@@ -1481,11 +1497,13 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
     if (avd_car.size() != 0) LOG_DEBUG("avd_car id :%d ", (int)avd_car[0]);
   }
   lateral_avd_cars_info.avd_car_past = avd_car_past_;
-  auto &lat_behavior_info = frame_->mutable_session()
-                                ->mutable_planning_context()
-                                ->mutable_lat_behavior_info();
   lat_behavior_info.flag_avd = flag_avd_;
   lat_behavior_info.avd_car_past = avd_car_past_;
+  lat_behavior_info.final_y_rel = final_y_rel_;
+  lat_behavior_info.ncar_change = ncar_change_;
+  lat_behavior_info.avd_back_cnt = avd_back_cnt_;
+  lat_behavior_info.avd_leadone = avd_leadone_;
+  lat_behavior_info.pre_leadone_id = pre_leadone_id_;
 }
 
 }  // namespace planning
