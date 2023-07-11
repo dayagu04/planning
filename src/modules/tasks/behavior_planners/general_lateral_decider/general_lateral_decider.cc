@@ -330,6 +330,25 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
     double right_road_distance = 10.;
 
     SampleRoadDistanceInfo(map_obstacle_decision.tp.s, ref_path_points_[i]);
+    // distance to lane is unaccurate near end of the ref line
+    // need to avoid the intersection of lane bound
+    size_t lower_truncation_idx = 0;
+    size_t upper_truncation_idx = 0;
+    if (ref_path_points_[i].distance_to_left_lane_border >
+        0.5 * vehicle_param.width + config_.buffer2lane) {
+      upper_truncation_idx = i;
+    } else {
+      ref_path_points_[i].distance_to_left_lane_border =
+          ref_path_points_[upper_truncation_idx].distance_to_left_lane_border;
+    }
+
+    if (ref_path_points_[i].distance_to_right_lane_border >
+        0.5 * vehicle_param.width + config_.buffer2lane) {
+      lower_truncation_idx = i;
+    } else {
+      ref_path_points_[i].distance_to_right_lane_border =
+          ref_path_points_[lower_truncation_idx].distance_to_right_lane_border;
+    }
     if (lat_lane_change_info_ == LatDeciderLaneChangeInfo::NONE) {
       safe_bound.upper =
           std::fmin(ref_path_points_[i].distance_to_left_lane_border -
