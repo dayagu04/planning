@@ -142,24 +142,24 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
         one_obs_st_cds = ColumnDataSource(data = {'obs_t':[], 'obs_s':[]})
         lon_plan_data['data_obs_st'][obs_id] = one_obs_st_cds
         lon_plan_data['data_obs_st'][obs_id].data.update({
-           'obs_t':obs_st_dict[obs_id]['t'], 
+           'obs_t':obs_st_dict[obs_id]['t'],
            'obs_s':obs_st_dict[obs_id]['s']
         }) """
      if obs_id in obs_st_dict.keys():
        lon_plan_data['data_obs_st'][obs_id].data.update({
-           'obs_t':obs_st_dict[obs_id]['t'], 
+           'obs_t':obs_st_dict[obs_id]['t'],
            'obs_s':obs_st_dict[obs_id]['s'],
            'obs_high_id':[obs_id] * len(obs_st_dict[obs_id]['s']),
            'obs_high_type':['obstacle'] * len(obs_st_dict[obs_id]['s'])
         })
      else:
         lon_plan_data['data_obs_st'][obs_id].data.update({
-           'obs_t':[], 
+           'obs_t':[],
            'obs_s':[],
            'obs_high_id':[],
            'obs_high_type':[]
         })
-  
+
   #print(lon_plan_data['data_obs_st'].values())
   #for item in lon_plan_data['data_obs_st'].values():
   #   print(item.data)
@@ -319,7 +319,7 @@ def load_lon_global_figure(bag_loader):
                                   legend_label='ego_acc',color="blue")
    acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
                                 legend_label='acc_max', color="red")
-   
+
    #get longtime obstacle id list in st-graph
    obs_st_ids = []
    for ind in range(len(bag_loader.plan_debug_msg['data'])):
@@ -337,7 +337,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
   data_ta = ColumnDataSource(data = {'t':[], 'acc':[]})
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
   data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
-  
+
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
   for it in obs_st_ids:
@@ -388,7 +388,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
      ('low_type','@obs_low_type'),
      ('high_type','@obs_high_type'),
   ])
-  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug')
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
 
   # fig2 S-T
   fig2 = bkp.figure(x_axis_label='t', y_axis_label='s', x_range = [-0.1, 7.0], width=600, height=400, tools=[hover,'pan,wheel_zoom,box_zoom,reset'], match_aspect = True, aspect_scale=1)
@@ -415,7 +415,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
   for obs_id in data_obs_st.keys():
      if(obs_id != ''):
         fig2.line('obs_t', 'obs_s', source = data_obs_st[obs_id], line_width = 2, line_color = 'firebrick', line_dash = 'solid')
-  
+
   #label_low_id = LabelSet(x='t', y='obs_low', text='obs_low_id', x_offset=2, y_offset=2, source=data_st)
   #fig2.add_layout(label_low_id)
   #label_high_id = LabelSet(x='t', y='obs_high', text='obs_high_id', x_offset=2, y_offset=2, source=data_st)

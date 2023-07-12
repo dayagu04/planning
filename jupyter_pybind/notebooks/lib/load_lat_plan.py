@@ -26,6 +26,50 @@ from cyber_record.record import Record
 car_xb, car_yb = load_car_params_patch()
 coord_tf = coord_transformer()
 
+def load_local_lane_lines(lanes):
+  line_info_list = []
+
+  for i in range(10):
+    lane_info_l = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+    if i< len(lanes):
+      lane = lanes[i]
+      left_line = lane.left_lane_boundary
+      enu_points = left_line.enu_points
+      line_x = []
+      line_y = []
+      for index in range(enu_points.num):
+        line_x.append(enu_points.points[index].x)
+        line_y.append(enu_points.points[index].y)
+      lane_info_l['line_x_vec'] = line_x
+      lane_info_l['line_y_vec'] = line_y
+      lane_info_l['type'] = left_line.segment[0].type
+
+      line_info_list.append(lane_info_l)
+
+      lane_info_r = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+      right_line = lane.right_lane_boundary
+      enu_points = right_line.enu_points
+      line_x = []
+      line_y = []
+      for index in range(enu_points.num):
+        line_x.append(enu_points.points[index].x)
+        line_y.append(enu_points.points[index].y)
+
+      lane_info_r['line_x_vec'] = line_x
+      lane_info_r['line_y_vec'] = line_y
+      lane_info_r['type'] = right_line.segment[0].type
+      line_info_list.append(lane_info_r)
+    else:
+      line_x = []
+      line_y = []
+      # line_x, line_y = gen_line(0,0,0,0,0,0)
+      lane_info_l['line_x_vec'] = line_x
+      lane_info_l['line_y_vec'] = line_y
+      lane_info_l['type'] = []
+      line_info_list.append(lane_info_l)
+
+  return line_info_list
+
 def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
 
   loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
@@ -189,6 +233,51 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
       'plan_traj_x' : plan_traj_x,
     })
 
+  ### step 3: 加载车道线信息
+  if bag_loader.road_msg['enable'] == True:
+    # load lane info
+    line_info_list = load_local_lane_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
+    # update lane info
+    data_lane_dict = {
+      0:lat_plan_data['data_lane_0'],
+      1:lat_plan_data['data_lane_1'],
+      2:lat_plan_data['data_lane_2'],
+      3:lat_plan_data['data_lane_3'],
+      4:lat_plan_data['data_lane_4'],
+      5:lat_plan_data['data_lane_5'],
+      6:lat_plan_data['data_lane_6'],
+      7:lat_plan_data['data_lane_7'],
+      8:lat_plan_data['data_lane_8'],
+      9:lat_plan_data['data_lane_9'],
+    }
+
+    data_center_line_dict = {
+      0:lat_plan_data['data_center_line_0'],
+      1:lat_plan_data['data_center_line_1'],
+      2:lat_plan_data['data_center_line_2'],
+      3:lat_plan_data['data_center_line_3'],
+      4:lat_plan_data['data_center_line_4'],
+    }
+
+    for i in range(10):
+      try:
+        data_lane = data_lane_dict[i]
+        data_lane.data.update({
+          'line_{}_x'.format(i): line_info_list[i]['line_x_vec'],
+          'line_{}_y'.format(i): line_info_list[i]['line_y_vec'],
+        })
+      except:
+        print('error')
+        pass
+    
+    center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
+    # print(center_line_list)
+    for i in range(5):
+        data_center_line = data_center_line_dict[i]
+        data_center_line.data.update({
+          'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
+          'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
+        })
 def load_lat_plan_figure(fig1):
   data_refline = ColumnDataSource(data = {'raw_refline_x':[],
                                           'raw_refline_y':[],})
@@ -231,6 +320,22 @@ def load_lat_plan_figure(fig1):
                                       'ego_yn':[],})
   data_car = ColumnDataSource(data = {'car_xn':[],
                                       'car_yn':[],})
+
+  data_lane_0 = ColumnDataSource(data = {'line_0_y':[], 'line_0_x':[]})
+  data_lane_1 = ColumnDataSource(data = {'line_1_y':[], 'line_1_x':[]})
+  data_lane_2 = ColumnDataSource(data = {'line_2_y':[], 'line_2_x':[]})
+  data_lane_3 = ColumnDataSource(data = {'line_3_y':[], 'line_3_x':[]})
+  data_lane_4 = ColumnDataSource(data = {'line_4_y':[], 'line_4_x':[]})
+  data_lane_5 = ColumnDataSource(data = {'line_5_y':[], 'line_5_x':[]})
+  data_lane_6 = ColumnDataSource(data = {'line_6_y':[], 'line_6_x':[]})
+  data_lane_7 = ColumnDataSource(data = {'line_7_y':[], 'line_7_x':[]})
+  data_lane_8 = ColumnDataSource(data = {'line_8_y':[], 'line_8_x':[]})
+  data_lane_9 = ColumnDataSource(data = {'line_9_y':[], 'line_9_x':[]})
+  data_center_line_0 = ColumnDataSource(data = {'center_line_0_y':[], 'center_line_0_x':[]})
+  data_center_line_1 = ColumnDataSource(data = {'center_line_1_y':[], 'center_line_1_x':[]})
+  data_center_line_2 = ColumnDataSource(data = {'center_line_2_y':[], 'center_line_2_x':[]})
+  data_center_line_3 = ColumnDataSource(data = {'center_line_3_y':[], 'center_line_3_x':[]})
+  data_center_line_4 = ColumnDataSource(data = {'center_line_4_y':[], 'center_line_4_x':[]})
   lat_plan_data = {'data_lat_motion_plan_input':data_lat_motion_plan_input,
                    'data_lat_motion_plan_output':data_lat_motion_plan_output,
                    'data_refline':data_refline,
@@ -238,6 +343,21 @@ def load_lat_plan_figure(fig1):
                    'data_planning_n': data_planning_n,
                    'data_ego': data_ego,
                    'data_car': data_car,
+                   'data_lane_0':data_lane_0, \
+                   'data_lane_1':data_lane_1, \
+                   'data_lane_2':data_lane_2, \
+                   'data_lane_3':data_lane_3, \
+                   'data_lane_4':data_lane_4, \
+                   'data_lane_5':data_lane_5, \
+                   'data_lane_6':data_lane_6, \
+                   'data_lane_7':data_lane_7, \
+                   'data_lane_8':data_lane_8, \
+                   'data_lane_9':data_lane_9, \
+                   'data_center_line_0':data_center_line_0, \
+                   'data_center_line_1':data_center_line_1, \
+                   'data_center_line_2':data_center_line_2, \
+                   'data_center_line_3':data_center_line_3, \
+                   'data_center_line_4':data_center_line_4, \
   }
 
 
@@ -268,14 +388,27 @@ def load_lat_plan_figure(fig1):
   fig7.line('yn_vec', 'xn_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
   fig7.line('plan_traj_yn', 'plan_traj_xn', source = data_planning_n, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
 
+  fig7.line('line_0_y', 'line_0_x', source = data_lane_0, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig7.line('line_1_y', 'line_1_x', source = data_lane_1, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig7.line('line_2_y', 'line_2_x', source = data_lane_2, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig7.line('line_3_y', 'line_3_x', source = data_lane_3, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig7.line('line_4_y', 'line_4_x', source = data_lane_4, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig7.line('line_5_y', 'line_5_x', source = data_lane_5, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig7.line('line_6_y', 'line_6_x', source = data_lane_6, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig7.line('line_7_y', 'line_7_x', source = data_lane_7, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig7.line('line_8_y', 'line_8_x', source = data_lane_8, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig7.line('line_9_y', 'line_9_x', source = data_lane_9, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig7.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  fig7.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  fig7.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  
   f2 = fig2.line('time_vec', 'ref_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'ref_theta')
   fig2.line('time_vec', 'theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'theta')
   f3 = fig3.line('time_vec', 'acc_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat acc')
   f4 = fig4.line('time_vec', 'jerk_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat jerk')
   f5 = fig5.line('time_vec', 'steer_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer deg')
   f6 = fig6.line('time_vec', 'steer_dot_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer dot deg')
-
-
+  
   hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time_vec'), ('ref_theta', '@ref_theta_deg_vec'), ('theta', '@theta_deg_vec')], mode='vline')
   hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time_vec'), ('acc', '@acc_vec')], mode='vline')
   hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('jerk', '@jerk_vec')], mode='vline')
