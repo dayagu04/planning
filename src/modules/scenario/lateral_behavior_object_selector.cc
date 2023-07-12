@@ -593,7 +593,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
 
           enable_l_ = false;
           enable_r_ = false;
-          return;
+          return true;
         } else if (!l_enable) {
           if (left_alc_car_.size() > 0 &&
               front_tracks_r_ids.find(left_alc_car_[0]) !=
@@ -3851,10 +3851,10 @@ bool ObjectSelector::update(int status, double start_move_distolane,
 
   if (upstream_enable_r || upstream_enable_l) {
     if (!(upstream_enable_lb)) {
-      if (left_alc_car_.size() > 0) return;
-      if (right_alc_car_.size() > 0) return;
-      if (left_lb_car_.size() > 0) return;
-      if (right_lb_car_.size() > 0) return;
+      if (left_alc_car_.size() > 0) return true;
+      if (right_alc_car_.size() > 0) return true;
+      if (left_lb_car_.size() > 0) return true;
+      if (right_lb_car_.size() > 0) return true;
     }
     if (upstream_enable_l) {
       if (right_alc_car_.size() > 0 || right_lb_car_.size() > 0) {
@@ -3865,10 +3865,10 @@ bool ObjectSelector::update(int status, double start_move_distolane,
             right_lb_car_.clear();
           }
         } else {
-          return;
+          return true;
         }
       } else if (left_alc_car_.size() > 0 || left_lb_car_.size() > 0) {
-        return;
+        return true;
       }
       if (left_alc_car_.size() == 0 && left_lb_car_.size() == 0 &&
           !(upstream_enable_lb)) {
@@ -3895,10 +3895,10 @@ bool ObjectSelector::update(int status, double start_move_distolane,
             left_lb_car_.clear();
           }
         } else {
-          return;
+          return true;
         }
       } else if (right_alc_car_.size() > 0 || right_lb_car_.size() > 0) {
-        return;
+        return true;
       }
       if (right_alc_car_.size() == 0 && right_lb_car_.size() == 0 &&
           !(upstream_enable_lb)) {
