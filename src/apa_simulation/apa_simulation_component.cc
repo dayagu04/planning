@@ -120,6 +120,7 @@ void ApaSimulationComponent::MockLocalizationAndVehicleService() {
   euler_angles->set_yaw(ego_theta);
   euler_angles->set_pitch(0.0);
   euler_angles->set_roll(0.0);
+  localization_estimate_msg.mutable_header()->set_timestamp(IflyTime::Now_us());
   localization_estimate_writer_->Write(localization_estimate_msg);
 
   VehicleServiceOutputInfo vehicle_service_output_info_msg;
@@ -127,6 +128,7 @@ void ApaSimulationComponent::MockLocalizationAndVehicleService() {
   vehicle_service_output_info_msg.set_vehicle_speed_available(true);
   vehicle_service_output_info_msg.set_steering_wheel_angle(0.0);
   vehicle_service_output_info_msg.set_steering_wheel_angle_available(true);
+  vehicle_service_output_info_msg.mutable_header()->set_timestamp(IflyTime::Now_us());
   vehicle_service_output_info_writer_->Write(vehicle_service_output_info_msg);
 
   last_planning_gear_ =
@@ -139,6 +141,7 @@ void ApaSimulationComponent::MockLocalizationAndVehicleService() {
 
 void ApaSimulationComponent::MockParkingFusionInfo() {
   // mock parking fusion
+  parking_fusion_info_msg_.mutable_header()->set_timestamp(IflyTime::Now_us());
   parking_fusion_info_writer_->Write(parking_fusion_info_msg_);
 }
 
@@ -201,6 +204,7 @@ void ApaSimulationComponent::MockFuncStateMachine() {
     func_state = func_state_;
   }
   func_state_machine.set_current_state(func_state);
+  func_state_machine.mutable_header()->set_timestamp(IflyTime::Now_us());
   func_state_machine_writer_->Write(func_state_machine);
 }
 

@@ -35,6 +35,7 @@ cyber_recorder record -c \
     /iflytek/sensor/gnss \
     /iflytek/sensor/imu \
     /iflytek/camera_perception/lane_lines \
+    /iflytek/fusion/parking_slot \
     /mobileye/camera_perception/lane_lines \
     /mobileye/camera_perception/objects \
     -i 3600 \
