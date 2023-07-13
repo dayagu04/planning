@@ -103,9 +103,9 @@ class ApaInfoPlotter(object):
   def load_data(self):
     # load localization msg
     for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
-      self.max_time = max(self.max_time, t)
-      self.min_time = min(self.min_time, t)
-      self.pos_t_vec.append(t)
+      self.max_time = max(self.max_time, msg.header.timestamp)
+      self.min_time = min(self.min_time, msg.header.timestamp)
+      self.pos_t_vec.append(msg.header.timestamp)
       self.pos_x_vec.append(msg.pose.local_position.x)
       self.pos_y_vec.append(msg.pose.local_position.y)
       self.pos_yaw_vec.append(msg.pose.euler_angles.yaw)
@@ -115,12 +115,12 @@ class ApaInfoPlotter(object):
     pre_gear = None
     for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
       cur_gear = msg.gear_command.gear_command_value
-      self.max_time = max(self.max_time, t)
-      self.min_time = min(self.min_time, t)
+      self.max_time = max(self.max_time, msg.meta.header.timestamp)
+      self.min_time = min(self.min_time, msg.meta.header.timestamp)
       if len(msg.trajectory.trajectory_points) <= 1:
         continue
       if pre_gear is None or pre_gear != cur_gear:
-        plan_segment_t = t
+        plan_segment_t = msg.meta.header.timestamp
         plan_segment_x_vec = []
         plan_segment_y_vec = []
         plan_segment_yaw_vec = []
@@ -142,9 +142,9 @@ class ApaInfoPlotter(object):
   
     # load slot
     for topic, msg, t in self.bag.read_messages("/iflytek/fusion/parking_slot"):
-      self.max_time = max(self.max_time, t)
-      self.min_time = min(self.min_time, t)
-      self.slots_t_vec.append(t)
+      self.max_time = max(self.max_time, msg.header.timestamp)
+      self.min_time = min(self.min_time, msg.header.timestamp)
+      self.slots_t_vec.append(msg.header.timestamp)
       self.slots_select_id_vec.append(msg.select_slot_id)
       slot_vec = []
       for i in range(len(msg.parking_fusion_slot_lists)):
@@ -167,9 +167,9 @@ class ApaInfoPlotter(object):
 
     # load objects
     for topic, msg, t in self.bag.read_messages("/iflytek/fusion/objects"):
-      self.max_time = max(self.max_time, t)
-      self.min_time = min(self.min_time, t)
-      self.uss_objects_t_vec.append(t)
+      self.max_time = max(self.max_time, msg.header.timestamp)
+      self.min_time = min(self.min_time, msg.header.timestamp)
+      self.uss_objects_t_vec.append(msg.header.timestamp)
       uss_object_vec = []
       for i in range(len(msg.uss_only_object_list)):
         uss_object = SingleUssObject()
@@ -311,7 +311,7 @@ class ApaInfoSlider:
   def __init__(self):
     self.apa_info_plotter = ApaInfoPlotter()
     self.apa_info_plotter.load_data()
-    frame_dt = 0.01 * 1e6 # 0.1s
+    frame_dt = 0.1 * 1e6 # 0.1s
     bag_duration_t_in_us = self.apa_info_plotter.max_time - self.apa_info_plotter.min_time
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description="bag_time", min=0.0, max=bag_duration_t_in_us , value=0.02, step=frame_dt)
     ipywidgets.interact(self.apa_info_plotter.update_figure, bag_time=self.time_slider)
