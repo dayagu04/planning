@@ -69,6 +69,12 @@ bool GeneralLateralDecider::Execute(planning::framework::Frame *frame) {
 
   traj_points = pipeline_context_->coarse_planning_info.trajectory_points;
 
+  LatDeciderOutput &lat_decider_output = frame_->mutable_session()
+                                             ->mutable_planning_context()
+                                             ->mutable_lat_decider_output();
+  lat_decider_output.complete_follow =
+      false;  // fusion is unsteady, lane keep weight need decay in end of ref
+  lat_decider_output.v_cruise = cruise_vel_;
   HandleLaneChangeScene(traj_points);  // TODO:handle the lane change info;
 
   ConstructReferencePathPoints(traj_points);
@@ -81,11 +87,6 @@ bool GeneralLateralDecider::Execute(planning::framework::Frame *frame) {
   ConstructLaneAndBoundaryBounds(map_obstacle_decisions);
 
   ConstructLateralObstacleDecisions(obstacle_decisions);
-
-  LatDeciderOutput &lat_decider_output = frame_->mutable_session()
-                                             ->mutable_planning_context()
-                                             ->mutable_lat_decider_output();
-  lat_decider_output.v_cruise = cruise_vel_;
 
   std::vector<std::pair<double, double>> frenet_safe_bounds;
   std::vector<std::pair<double, double>> frenet_path_bounds;
@@ -117,6 +118,9 @@ void GeneralLateralDecider::HandleLaneChangeScene(
   const auto &target_state = coarse_planning_info.target_state;
   const auto &ego_state =
       frame_->session()->environmental_model().get_ego_state_manager();
+  LatDeciderOutput &lat_decider_output = frame_->mutable_session()
+                                             ->mutable_planning_context()
+                                             ->mutable_lat_decider_output();
 
   auto &timer = frame_->mutable_session()
                     ->mutable_planning_context()
@@ -127,9 +131,11 @@ void GeneralLateralDecider::HandleLaneChangeScene(
   if (target_state == ROAD_LC_LCHANGE) {
     lat_lane_change_info_ = LatDeciderLaneChangeInfo::LEFT_LANE_CHANGE;
     lane_change_flag = true;
+    lat_decider_output.complete_follow = true;
   } else if (target_state == ROAD_LC_RCHANGE) {
     lat_lane_change_info_ = LatDeciderLaneChangeInfo::RIGHT_LANE_CHANGE;
     lane_change_flag = true;
+    lat_decider_output.complete_follow = true;
   }
 
   // protect lane change duration, if total lc time > 8.0s then aggresively lane
@@ -155,12 +161,8 @@ void GeneralLateralDecider::HandleLaneChangeScene(
     }
 
     // refine velocity if frenet length is short
-    const auto curvature =
-        reference_path_ptr_->get_frenet_coord()->GetRefCurveCurvature(
-            frenet_init_point.x);
-    const auto heading_angle =
-        reference_path_ptr_->get_frenet_coord()->GetRefCurveHeading(
-            frenet_init_point.x);
+    const auto curvature = lat_state.curv();
+    const auto heading_angle = lat_state.theta();
 
     const auto normal_acc = ego_v * ego_v * curvature;
 

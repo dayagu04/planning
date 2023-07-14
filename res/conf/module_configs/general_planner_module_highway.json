@@ -96,6 +96,7 @@
   "dynamic_obj_safe_buffer": 0.5,
   "curv_threshold": 0.1,
   "max_ref_curvature": 0.5,
+  "motion_plan_concerned_index": 20,
   "pnp_obstacle_max_buffer": 0.4,
   "velocity_limit_parking": 10.0,
   "narrow_space_width_stop_thrshld": -0.1,

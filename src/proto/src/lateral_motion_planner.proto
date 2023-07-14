@@ -65,6 +65,8 @@ message LateralPlanningInput {
   optional double q_hard_corridor = 38;
 
   repeated double control_vec = 39;
+  optional bool complete_follow = 40;
+  optional uint32 motion_plan_concerned_index = 41;
 }
 
 message SolverIterationInfo {

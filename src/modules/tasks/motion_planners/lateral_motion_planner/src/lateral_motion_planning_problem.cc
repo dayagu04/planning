@@ -138,13 +138,17 @@ uint8_t LateralMotionPlanningProblem::Update(
     cost_config_vec.at(i)[W_SOFT_CORRIDOR] = planning_input.q_soft_corridor();
     cost_config_vec.at(i)[W_HARD_CORRIDOR] = planning_input.q_hard_corridor();
 
+    if (!planning_input.complete_follow() &&
+        i > planning_input.motion_plan_concerned_index()) {
+      cost_config_vec.at(i)[W_REF_X] *= 0.2;
+      cost_config_vec.at(i)[W_REF_Y] *= 0.2;
+      cost_config_vec.at(i)[W_REF_THETA] *= 0.2;
+      cost_config_vec.at(i)[W_SOFT_CORRIDOR] *= 0.2;
+      cost_config_vec.at(i)[W_HARD_CORRIDOR] *= 0.2;
+    }
+
     if (i == N - 1) {
       cost_config_vec.at(i)[TERMINAL_FLAG] = 1;
-      cost_config_vec.at(i)[W_REF_X] *= 1.;
-      cost_config_vec.at(i)[W_REF_Y] *= 1.;
-      cost_config_vec.at(i)[W_REF_THETA] *= 1.;
-      cost_config_vec.at(i)[W_SOFT_CORRIDOR] *= 1.;
-      cost_config_vec.at(i)[W_HARD_CORRIDOR] *= 1.;
     } else {
       cost_config_vec.at(i)[TERMINAL_FLAG] = 0;
     }

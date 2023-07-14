@@ -596,6 +596,7 @@ struct LatDeciderOutput {
   std::vector<double> enu_ref_theta;
   std::vector<double> last_enu_ref_theta;
   double v_cruise;
+  bool complete_follow = true;
 };
 
 struct LateralMotionPlanningOutput {

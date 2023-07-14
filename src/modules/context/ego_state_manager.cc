@@ -17,6 +17,7 @@ namespace planning {
 
 static const double planning_loop_dt = 0.1;
 static const double steer_ratio = 15.7;
+static const double curve_factor = 0.30;
 
 EgoStateManager::EgoStateManager(planning::framework::Session *session)
     : session_(session) {
@@ -305,7 +306,7 @@ void EgoStateManager::LateralReset() {
 
   // TODO: need estimated delta and omega for large curv condition
   lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio);
-  lat_init_state.set_curv(0.0);
+  lat_init_state.set_curv(curve_factor * lat_init_state.delta());
   lat_init_state.set_d_curv(0.0);
 }
 
@@ -350,7 +351,7 @@ bool EgoStateManager::LateralStitch() {
         motion_planning_info.theta_t_spline(planning_loop_dt));
     lat_init_state.set_delta(pnc::mathlib::Limit(
         motion_planning_info.delta_t_spline(planning_loop_dt), max_delta));
-    lat_init_state.set_curv(0.0);
+    lat_init_state.set_curv(curve_factor * lat_init_state.delta());
     lat_init_state.set_d_curv(0.0);
 
     return true;

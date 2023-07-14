@@ -121,6 +121,7 @@ void LateralMotionPlanner::AssembleInput() {
 
   const auto &enu_ref_path = lat_decider_output.enu_ref_path;
   const auto &enu_ref_theta = lat_decider_output.enu_ref_theta;
+  const bool &complete_follow = lat_decider_output.complete_follow;
   assert(enu_ref_path.size() == enu_ref_theta.size());
 
   // set reference trajectory
@@ -271,6 +272,11 @@ void LateralMotionPlanner::AssembleInput() {
   planning_input_.set_q_hard_corridor(config_.q_hard_corridor);
 
   // TODO: set control vec for warm start
+
+  // set complete hold flag, concerned index
+  planning_input_.set_complete_follow(complete_follow);
+  planning_input_.set_motion_plan_concerned_index(
+      config_.motion_plan_concerned_index);
 }
 
 void LateralMotionPlanner::Update() {
