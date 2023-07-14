@@ -583,6 +583,8 @@ struct VisionLongitudinalBehaviorPlannerConfig : public EgoPlanningConfig {
   double dis_zero_speed = 3.5;
   double dis_zero_speed_accident = 6;
   double ttc_brake_hysteresis = 0.3;
+  double t_curv = 3.0;
+  double dis_curv = 50;
 };
 
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {

@@ -163,14 +163,9 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
   double v_limit_in_turns = v_limit_steering;
   // calculate the velocity limit according to the road curvature
   if (d_poly.size() == 4) {
-    double preview_x = config_.preview_x;  // 150
-    double abs_y = std::max(
-        std::abs(d_poly[0] * std::pow(preview_x, 3) +
-                 d_poly[1] * std::pow(preview_x, 2) + d_poly[2] * preview_x),
-        0.001);
-    double road_radius =
-        preview_x * std::sqrt(std::pow(preview_x, 2) + std::pow(abs_y, 2)) /
-        (2 * abs_y);
+    double preview_x = config_.dis_curv + config_.t_curv * v_ego;
+    double curv = std::fabs(2 * d_poly[0] * preview_x + d_poly[1]) / std::pow(std::pow(2 * d_poly[0] * preview_x + d_poly[1],2) + 1, 1.5);
+    double road_radius = 1 / std::max(curv, 0.0001);
     if (road_radius < 680) {
       a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
     }
@@ -181,14 +176,16 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
         "angle_steers: [%f], angle_steers_deg: [%f], v_limit_road: [%f]\n",
         angle_steers, angle_steers_deg, v_limit_road);
     JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_road", v_limit_road);
-    JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_in_turns", v_limit_in_turns);
+    JSON_DEBUG_VALUE("VisionLonBehavior_road_radius", road_radius);
   }
 
   double a_target_in_turns = 0.0;
   if (v_limit_in_turns < v_ego - 2) {
-    // a_target_in_turns = -0.8;
-    a_target_in_turns = -0.2;  // hack : 调低减速度
+    a_target_in_turns = -0.2;
   }
+
+  JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_steering", v_limit_steering);
+  JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_in_turns", v_limit_in_turns);
 
   a_target_.first = std::min(a_target_.first, a_target_in_turns);
   a_target_.second = std::min(a_target_.second, a_x_allowed);
