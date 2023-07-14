@@ -4,6 +4,8 @@
 using namespace pnc::mathlib;
 namespace pnc {
 namespace lateral_planning {
+static const double kEps = 1e-8;
+
 double ReferenceCostTerm::GetCost(const State &x, const Control & /*u*/) {
   const double cost_x = 0.5 * cost_config_ptr_->at(W_REF_X) *
                         Square(x[X] - cost_config_ptr_->at(REF_X));
@@ -179,12 +181,9 @@ double PathSoftCorridorCostTerm::GetCost(const State &x,
                         cost_config_ptr_->at(SOFT_UPPER_BOUND_X1) -
                     cost_config_ptr_->at(SOFT_UPPER_BOUND_X0) *
                         cost_config_ptr_->at(SOFT_UPPER_BOUND_Y1);
-  const double d1 = Square(cost_config_ptr_->at(SOFT_UPPER_BOUND_Y1) -
-                           cost_config_ptr_->at(SOFT_UPPER_BOUND_Y0)) +
-                    Square(cost_config_ptr_->at(SOFT_UPPER_BOUND_X1) -
-                           cost_config_ptr_->at(SOFT_UPPER_BOUND_X0));
+  const double d1 = Square(a1) + Square(b1);
 
-  if (a1 * x[X] + b1 * x[Y] + c1 < 0.) {
+  if (a1 * x[X] + b1 * x[Y] + c1 < 0. && d1 > kEps) {
     cost = 0.5 * cost_config_ptr_->at(W_SOFT_CORRIDOR) *
            Square(a1 * x[X] + b1 * x[Y] + c1) / d1;
   }
@@ -198,12 +197,9 @@ double PathSoftCorridorCostTerm::GetCost(const State &x,
                         cost_config_ptr_->at(SOFT_LOWER_BOUND_X1) -
                     cost_config_ptr_->at(SOFT_LOWER_BOUND_X0) *
                         cost_config_ptr_->at(SOFT_LOWER_BOUND_Y1);
-  const double d2 = Square(cost_config_ptr_->at(SOFT_LOWER_BOUND_Y1) -
-                           cost_config_ptr_->at(SOFT_LOWER_BOUND_Y0)) +
-                    Square(cost_config_ptr_->at(SOFT_LOWER_BOUND_X1) -
-                           cost_config_ptr_->at(SOFT_LOWER_BOUND_X0));
+  const double d2 = Square(a2) + Square(b2);
 
-  if (a2 * x[X] + b2 * x[Y] + c2 > 0.) {
+  if (a2 * x[X] + b2 * x[Y] + c2 > 0. && d2 > kEps) {
     cost += 0.5 * cost_config_ptr_->at(W_SOFT_CORRIDOR) *
             Square(a2 * x[X] + b2 * x[Y] + c2) / d2;
   }
@@ -225,12 +221,9 @@ void PathSoftCorridorCostTerm::GetGradientHessian(const State &x,
                         cost_config_ptr_->at(SOFT_UPPER_BOUND_X1) -
                     cost_config_ptr_->at(SOFT_UPPER_BOUND_X0) *
                         cost_config_ptr_->at(SOFT_UPPER_BOUND_Y1);
-  const double d1 = Square(cost_config_ptr_->at(SOFT_UPPER_BOUND_Y1) -
-                           cost_config_ptr_->at(SOFT_UPPER_BOUND_Y0)) +
-                    Square(cost_config_ptr_->at(SOFT_UPPER_BOUND_X1) -
-                           cost_config_ptr_->at(SOFT_UPPER_BOUND_X0));
+  const double d1 = Square(a1) + Square(b1);
 
-  if (a1 * x[X] + b1 * x[Y] + c1 < 0.) {
+  if (a1 * x[X] + b1 * x[Y] + c1 < 0. && d1 > kEps) {
     lx(X) += cost_config_ptr_->at(W_SOFT_CORRIDOR) * a1 *
              (a1 * x[X] + b1 * x[Y] + c1) / d1;
     lx(Y) += cost_config_ptr_->at(W_SOFT_CORRIDOR) * b1 *
@@ -248,12 +241,9 @@ void PathSoftCorridorCostTerm::GetGradientHessian(const State &x,
                         cost_config_ptr_->at(SOFT_LOWER_BOUND_X1) -
                     cost_config_ptr_->at(SOFT_LOWER_BOUND_X0) *
                         cost_config_ptr_->at(SOFT_LOWER_BOUND_Y1);
-  const double d2 = Square(cost_config_ptr_->at(SOFT_LOWER_BOUND_Y1) -
-                           cost_config_ptr_->at(SOFT_LOWER_BOUND_Y0)) +
-                    Square(cost_config_ptr_->at(SOFT_LOWER_BOUND_X1) -
-                           cost_config_ptr_->at(SOFT_LOWER_BOUND_X0));
+  const double d2 = Square(a2) + Square(b2);
 
-  if (a2 * x[X] + b2 * x[Y] + c2 > 0.) {
+  if (a2 * x[X] + b2 * x[Y] + c2 > 0. && d2 > kEps) {
     lx(X) += cost_config_ptr_->at(W_SOFT_CORRIDOR) * a2 *
              (a2 * x[X] + b2 * x[Y] + c2) / d2;
     lx(Y) += cost_config_ptr_->at(W_SOFT_CORRIDOR) * b2 *
