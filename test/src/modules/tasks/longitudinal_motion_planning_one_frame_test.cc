@@ -24,8 +24,8 @@ class LongitudinalMotionPlanningTest : public ::testing::Test {
       planning_input_.ref_pos_vec.emplace_back(15.0);
     }
 
-    planning_input_.pos_max_vec.reserve(26);
-    planning_input_.pos_min_vec.reserve(26);
+    planning_input_.soft_pos_max_vec.reserve(26);
+    planning_input_.soft_pos_min_vec.reserve(26);
     planning_input_.vel_max_vec.reserve(26);
     planning_input_.vel_min_vec.reserve(26);
     planning_input_.acc_max_vec.reserve(26);
@@ -34,8 +34,8 @@ class LongitudinalMotionPlanningTest : public ::testing::Test {
     planning_input_.jerk_min_vec.reserve(26);
 
     for (size_t i = 0; i < 26; ++i) {
-      planning_input_.pos_max_vec.emplace_back(12.0);
-      planning_input_.pos_min_vec.emplace_back(0.0);
+      planning_input_.soft_pos_max_vec.emplace_back(12.0);
+      planning_input_.soft_pos_min_vec.emplace_back(0.0);
       planning_input_.vel_max_vec.emplace_back(11.0);
       planning_input_.vel_min_vec.emplace_back(6.0);
 
@@ -60,7 +60,7 @@ class LongitudinalMotionPlanningTest : public ::testing::Test {
     planning_input_.q_acc = 1.5;
     planning_input_.q_jerk = 1.5;
     planning_input_.q_snap = 2000.0;
-    planning_input_.q_pos_bound = 100.0;
+    planning_input_.q_soft_pos_bound = 100.0;
     planning_input_.q_vel_bound = 100.0;
     planning_input_.q_acc_bound = 100.0;
     planning_input_.q_jerk_bound = 100.0;

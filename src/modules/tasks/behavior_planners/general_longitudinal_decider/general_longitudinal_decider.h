@@ -112,6 +112,12 @@ class GeneralLongitudinalDecider : public Task {
 
   double get_s_bound_by_target_parking_space();
 
+  // refer to the Responibility, Sensitive Safety (RSS) model from Intel and
+  // Mobileye
+  double GetRSSDistance(const std::shared_ptr<FrenetObstacle> &CIPV_obstacle,
+                        double ego_velocity,
+                        const AdaptiveCruiseControlConfig &config);
+
   /**
    * @brief 将纵向输出转存为proto后存入planning debug info
    */

@@ -1,6 +1,7 @@
 #include "longitudinal_motion_planning_cost.h"
 
 #include <iostream>
+
 #include "math_lib.h"
 
 using namespace pnc::mathlib;
@@ -51,36 +52,65 @@ void LonJerkCostTerm::GetGradientHessian(const State & /*x*/, const Control &u,
   luu(JERK, JERK) += cost_config_ptr_->at(W_JERK);
 }
 
-// longitudinal pos bound cost
-double LonPosBoundCostTerm::GetCost(const State &x, const Control &) {
+// longitudinal pos soft bound cost
+double LonSoftPosBoundCostTerm::GetCost(const State &x, const Control &) {
   double cost = 0.0;
-  if (x[POS] > cost_config_ptr_->at(POS_MAX)) {
+  if (x[POS] > cost_config_ptr_->at(SOFT_POS_MAX)) {
     cost = 0.5 * cost_config_ptr_->at(W_POS_BOUND) *
-           Square(x[POS] - cost_config_ptr_->at(POS_MAX));
-  } else if (x[POS] < cost_config_ptr_->at(POS_MIN)) {
+           Square(x[POS] - cost_config_ptr_->at(SOFT_POS_MAX));
+  } else if (x[POS] < cost_config_ptr_->at(SOFT_POS_MIN)) {
     cost = 0.5 * cost_config_ptr_->at(W_POS_BOUND) *
-           Square(x[POS] - cost_config_ptr_->at(POS_MIN));
+           Square(x[POS] - cost_config_ptr_->at(SOFT_POS_MIN));
   }
 
   return cost;
 }
 
-void LonPosBoundCostTerm::GetGradientHessian(const State &x, const Control &,
+void LonSoftPosBoundCostTerm::GetGradientHessian(const State &x, const Control &,
                                              LxMT &lx, LuMT &, LxxMT &lxx,
                                              LxuMT &, LuuMT &) {
-  if (x[POS] > cost_config_ptr_->at(POS_MAX)) {
+  if (x[POS] > cost_config_ptr_->at(SOFT_POS_MAX)) {
     lx(POS) += cost_config_ptr_->at(W_POS_BOUND) *
-               (x[POS] - cost_config_ptr_->at(POS_MAX));
+               (x[POS] - cost_config_ptr_->at(SOFT_POS_MAX));
 
     lxx(POS, POS) += cost_config_ptr_->at(W_POS_BOUND);
-  } else if (x[POS] < cost_config_ptr_->at(POS_MIN)) {
+  } else if (x[POS] < cost_config_ptr_->at(SOFT_POS_MIN)) {
     lx(POS) += cost_config_ptr_->at(W_POS_BOUND) *
-               (x[POS] - cost_config_ptr_->at(POS_MIN));
+               (x[POS] - cost_config_ptr_->at(SOFT_POS_MIN));
 
     lxx(POS, POS) += cost_config_ptr_->at(W_POS_BOUND);
   }
 }
 
+// longitudinal pos hard bound cost
+double LonHardPosBoundCostTerm::GetCost(const State &x, const Control &) {
+  double cost = 0.0;
+  if (x[POS] > cost_config_ptr_->at(HARD_POS_MAX)) {
+    cost = 0.5 * cost_config_ptr_->at(W_HARD_POS_BOUND) *
+           Square(x[POS] - cost_config_ptr_->at(HARD_POS_MAX));
+  } else if (x[POS] < cost_config_ptr_->at(HARD_POS_MIN)) {
+    cost = 0.5 * cost_config_ptr_->at(W_HARD_POS_BOUND) *
+           Square(x[POS] - cost_config_ptr_->at(HARD_POS_MIN));
+  }
+  return cost;
+}
+
+void LonHardPosBoundCostTerm::GetGradientHessian(const State &x,
+                                                 const Control &, LxMT &lx,
+                                                 LuMT &, LxxMT &lxx, LxuMT &,
+                                                 LuuMT &) {
+  if (x[POS] > cost_config_ptr_->at(HARD_POS_MAX)) {
+    lx(POS) += cost_config_ptr_->at(W_HARD_POS_BOUND) *
+               (x[POS] - cost_config_ptr_->at(HARD_POS_MAX));
+
+    lxx(POS, POS) += cost_config_ptr_->at(W_HARD_POS_BOUND);
+  } else if (x[POS] < cost_config_ptr_->at(HARD_POS_MIN)) {
+    lx(POS) += cost_config_ptr_->at(W_HARD_POS_BOUND) *
+               (x[POS] - cost_config_ptr_->at(HARD_POS_MIN));
+
+    lxx(POS, POS) += cost_config_ptr_->at(W_HARD_POS_BOUND);
+  }
+}
 // longitudinal vel bound cost
 double LonVelBoundCostTerm::GetCost(const State &x, const Control &) {
   double cost = 0.0;

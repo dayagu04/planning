@@ -40,20 +40,11 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
     return false;
   }
 
-  // auto config_builder =
-  //     frame->session()->mutable_environmental_model()->config_builder(
-  //         planning::common::SceneType::HIGHWAY);
-  // config_acc_ = config_builder->cast<AdaptiveCruiseControlConfig>();
-  // config_start_stop_ = config_builder->cast<StartStopEnableConfig>();
-
   lon_yield_info_.min_ds = 1000.0;
   lon_yield_info_.min_ttc = 100.0;
   lon_yield_info_.min_acc = 100.0;
   lon_yield_info_.min_jerk = 100.0;
   lon_yield_info_.keep_stop = false;
-
-  double time_tmp = IflyTime::Now_ms();
-  LOG_DEBUG("config_builder cost is [%f]ms:\n", time_tmp - start_time);
 
   auto &ego_planning_result = pipeline_context_->planning_result;
   auto &ego_planning_info = pipeline_context_->planning_info;
@@ -70,7 +61,6 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
 
   // Step 1)
   double time_0 = IflyTime::Now_ms();
-  LOG_DEBUG("time_0 cost is [%f]ms:\n", time_0 - time_tmp);
   ReferencePathPoints refpath_points;
   construct_refpath_points(ego_planning_result.traj_points, refpath_points);
   double time_1 = IflyTime::Now_ms();
@@ -363,6 +353,10 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
       if (bound.weight < 0) {
         s_ref = std::min(s_ref, bound.upper);
       }
+    }
+    // use lead_bound
+    for (auto &lead_bound : lon_ref_path.lon_lead_bounds[i]) {
+        s_ref = std::min(s_ref, lead_bound.s_lead);
     }
     s_ref = std::max(s_ref, 0.0);
     LOG_DEBUG("s_ref: = %f, index = %d \n", s_ref, i);
@@ -861,9 +855,6 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
   const bool is_cross_obj =
       obstacle_decision.rel_pos_type == ObsRelPosType::CROSSING;
 
-  // double follow_distance = 0.0;
-  // follow_distance = calc_desired_distance(obstacle, );
-
   for (size_t i = 0; i < traj_points.size(); i++) {
     auto &traj_pt = traj_points[i];
     auto t = traj_pt.t;
@@ -1034,11 +1025,12 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
   bool is_CIPV = !(obstacle_sl_boundary.l_start > ego_sl_boundary.l_end ||
                    obstacle_sl_boundary.l_end < ego_sl_boundary.l_start);
   auto ego_velocity = reference_path_ptr_->get_frenet_ego_state().velocity_s();
+
   auto distance_buff =
-      is_CIPV ? std::min(5.0, std::max(0.0, ego_velocity -
-                                                obstacle->frenet_velocity_s()) *
-                                  0.5)
-              : 0.0;
+      is_CIPV
+          ? std::max(1.0, std::max(0.0, GetRSSDistance(obstacle, ego_velocity,
+                                                       config_acc_)))
+          : 0.0;
   auto ini_ds = obstacle_sl_boundary.s_start - ego_sl_boundary.s_end;
   auto lat_overlap_ratio =
       is_CIPV
@@ -1192,6 +1184,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
           LOG_DEBUG(
               "[GeneralLongitudinalDecider]: keep stop for close leadone");
         }
+        break;
       }
     }
 
@@ -1602,16 +1595,12 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
       } else {
         continue;
       }
+      double distance_to_obstacle = frenet_obstacle->frenet_s() - ego_s -
+                                    vehicle_param_.rear_axis_to_front_edge;
       const bool satisfy_s_leadone =
-          (frenet_obstacle->frenet_s() - ego_s -
-               vehicle_param_.rear_axis_to_front_edge <
-           leadone_min_s_leadone) &&
-          frenet_obstacle->frenet_s() - ego_s -
-                  vehicle_param_.rear_axis_to_front_edge >
-              0;
-      const bool satisfy_s_CIPV = frenet_obstacle->frenet_s() - ego_s -
-                                      vehicle_param_.rear_axis_to_front_edge >
-                                  0;
+          (distance_to_obstacle < leadone_min_s_leadone) &&
+          (distance_to_obstacle > 0);
+      const bool satisfy_s_CIPV = distance_to_obstacle > 0.0;
       const bool polygen_out_lane =
           frenet_obstacle->frenet_obstacle_boundary().l_start > ego_l_end ||
           frenet_obstacle->frenet_obstacle_boundary().l_end < ego_l_start;
@@ -1631,8 +1620,7 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
         lon_decision_information.leadone_info.has_leadone = true;
         if (satisfy_s_leadone) {
           lon_decision_information.leadone_info.leadone_information.obstacle_s =
-              frenet_obstacle->frenet_s() - ego_s -
-              vehicle_param_.rear_axis_to_front_edge;
+              distance_to_obstacle;
           lon_decision_information.leadone_info.leadone_information
               .obstacle_id = obstacle_decision.first;
           lon_decision_information.leadone_info.leadone_information
@@ -1658,8 +1646,7 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
         // obtain CIPV information
         if (satisfy_s_CIPV) {
           lon_decision_information.CIPV_info.has_CIPV = true;
-          CIPV_object.obstacle_s = frenet_obstacle->frenet_s() - ego_s -
-                                   vehicle_param_.rear_axis_to_front_edge;
+          CIPV_object.obstacle_s = distance_to_obstacle;
           CIPV_object.obstacle_id = obstacle_decision.first;
           CIPV_object.obstacle_v = frenet_obstacle->velocity();
           if (frenet_obstacle->type() ==
@@ -1685,8 +1672,7 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
         } else {
           cutin_object.obstacle_type = 1;
         }
-        cutin_object.obstacle_s = frenet_obstacle->frenet_s() - ego_s -
-                                  vehicle_param_.rear_axis_to_front_edge;
+        cutin_object.obstacle_s = distance_to_obstacle;
         cutin_object.obstacle_v = frenet_obstacle->velocity();
         cutin_object.obstacle_id = obstacle_decision.first;
         lon_decision_information.cutin_info.cutin_information.emplace_back(
@@ -1999,6 +1985,31 @@ double GeneralLongitudinalDecider::get_s_bound_by_target_parking_space() {
 
   // return s_bound_upper;
   return true;
+}
+
+double GeneralLongitudinalDecider::GetRSSDistance(
+    const std::shared_ptr<FrenetObstacle> &CIPV_obstacle, double ego_velocity,
+    const AdaptiveCruiseControlConfig &config) {
+  double follow_distance{0.0};
+  double cipv_velocity = CIPV_obstacle->frenet_velocity_s();
+  double t_actuator_delay = config.t_actuator_delay;  // actuator delay
+  const double a_max_accel =
+      3.0;  // maximum comfortable acceleration of the ego
+  const double a_max_brake =
+      -3.0;  // maximum comfortable braking deceleration of the ego
+  const double CIPV_max_brake =
+      -4.0;  // maximum braking deceleration of the CIPV
+
+  follow_distance =
+      ego_velocity * t_actuator_delay +
+      0.5 * a_max_accel * std::pow(t_actuator_delay, 2) +
+      (std::pow((ego_velocity + t_actuator_delay * a_max_accel), 2) / 2.0 /
+           std::fabs(a_max_brake) -
+       std::pow(cipv_velocity, 2) / 2.0 / std::fabs(CIPV_max_brake));
+  follow_distance = std::max(follow_distance, 0.0);
+  LOG_DEBUG("obstacle [%i] GetRSSDistance: [%f]m \n", CIPV_obstacle->id(),
+            follow_distance);
+  return follow_distance;
 }
 
 void GeneralLongitudinalDecider::GenerateLonRefPathPB(

@@ -11,7 +11,7 @@ from python_proto import common_pb2, longitudinal_motion_planner_pb2
 from jupyter_pybind import longitudinal_motion_planning_py
 
 # bag path and frame dt
-bag_path = "/home/xlwang71/Downloads/0614/long_time_hualong_1.00000.1687105422.plan"
+bag_path = "/mnt/0713/long_time_4.00000.1689494018.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -40,7 +40,8 @@ class LocalViewSlider:
     self.q_ref_vel_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_ref_vel",min=0.02, max=100.0, value=lon_motion_plan_input0.q_ref_vel, step=0.01)
     self.q_acc_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_acc",min=0.0, max=100.0, value=lon_motion_plan_input0.q_acc, step=frame_dt)
     self.q_jerk_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_jerk",min=0.0, max=100.0, value=lon_motion_plan_input0.q_jerk, step=frame_dt)
-    self.q_pos_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_pos_bound",min=0.0, max=3000.0, value=lon_motion_plan_input0.q_pos_bound, step=1.0)
+    self.q_soft_pos_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_soft_pos_bound",min=0.0, max=3000.0, value=lon_motion_plan_input0.q_soft_pos_bound, step=1.0)
+    self.q_hard_pos_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_hard_pos_bound",min=0.0, max=3000.0, value=lon_motion_plan_input0.q_hard_pos_bound, step=1.0)
     self.q_vel_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_vel_bound",min=0.0, max=3000.0, value=lon_motion_plan_input0.q_vel_bound, step=1.0)
     self.q_acc_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_acc_bound",min=0.0, max=3000.0, value=lon_motion_plan_input0.q_acc_bound, step=1.0)
     self.q_jerk_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_jerk_bound",min=0.0, max=3000.0, value=lon_motion_plan_input0.q_jerk_bound, step=1.0)
@@ -51,7 +52,8 @@ class LocalViewSlider:
                                         q_ref_vel = self.q_ref_vel_slider,
                                         q_acc = self.q_acc_slider,
                                         q_jerk = self.q_jerk_slider,
-                                        q_pos_bound = self.q_pos_bound_slider,
+                                        q_soft_pos_bound = self.q_soft_pos_bound_slider,
+                                        q_hard_pos_bound = self.q_hard_pos_bound_slider,
                                         q_vel_bound = self.q_vel_bound_slider,
                                         q_acc_bound = self.q_acc_bound_slider,
                                         q_jerk_bound = self.q_jerk_bound_slider,
@@ -60,7 +62,7 @@ class LocalViewSlider:
 
 
 ### sliders callback
-def slider_callback(bag_time, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_pos_bound, q_vel_bound, q_acc_bound, q_jerk_bound, q_stop_s):
+def slider_callback(bag_time, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_soft_pos_bound, q_hard_pos_bound, q_vel_bound, q_acc_bound, q_jerk_bound, q_stop_s):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
   update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data)
@@ -71,7 +73,7 @@ def slider_callback(bag_time, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_pos_bound, 
   lon_motion_plan_input = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].longitudinal_motion_planning_input
 
   input_string = lon_motion_plan_input.SerializeToString()
-  longitudinal_motion_planning_py.UpdateByParams(input_string, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_pos_bound, q_vel_bound, q_acc_bound, q_jerk_bound, q_stop_s)
+  longitudinal_motion_planning_py.UpdateByParams(input_string, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_soft_pos_bound, q_hard_pos_bound, q_vel_bound, q_acc_bound, q_jerk_bound, q_stop_s)
 
   planning_output = longitudinal_motion_planner_pb2.LongitudinalPlanningOutput()
   output_string_tmp = longitudinal_motion_planning_py.GetOutputBytes()

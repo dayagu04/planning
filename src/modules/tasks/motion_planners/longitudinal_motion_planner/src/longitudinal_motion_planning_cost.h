@@ -8,8 +8,10 @@ namespace longitudinal_planning {
 enum iLqrCostconfigId {
   REF_POS,
   REF_VEL,
-  POS_MAX,
-  POS_MIN,
+  SOFT_POS_MAX,
+  SOFT_POS_MIN,
+  HARD_POS_MAX,
+  HARD_POS_MIN,
   VEL_MAX,
   VEL_MIN,
   ACC_MAX,
@@ -23,6 +25,7 @@ enum iLqrCostconfigId {
   W_JERK,
   W_SNAP,
   W_POS_BOUND,
+  W_HARD_POS_BOUND,
   W_VEL_BOUND,
   W_ACC_BOUND,
   W_JERK_BOUND,
@@ -37,7 +40,8 @@ enum iLqrCostId {
   LON_ACC_COST,
   LON_JERK_COST,
   LON_SNAP_COST,
-  LON_POS_BOUND_COST,
+  LON_POS_SOFT_BOUND_COST,
+  LON_POS_HARD_BOUND_COST,
   LON_VEL_BOUND_COST,
   LON_ACC_BOUND_COST,
   LON_JERK_BOUND_COST,
@@ -85,15 +89,27 @@ class LonJerkCostTerm : public ilqr_solver::BaseCostTerm {
 };
 
 // longitudinal pos bound cost
-class LonPosBoundCostTerm : public ilqr_solver::BaseCostTerm {
+class LonSoftPosBoundCostTerm : public ilqr_solver::BaseCostTerm {
  public:
-  LonPosBoundCostTerm() = default;
+  LonSoftPosBoundCostTerm() = default;
   double GetCost(const State &x, const Control & /*u*/) override;
   void GetGradientHessian(const State &x, const Control & /*u*/, LxMT &lx,
                           LuMT & /*lu*/, LxxMT &lxx, LxuMT & /*lxu*/,
                           LuuMT & /*luu*/) override;
   std::string GetCostString() override { return typeid(this).name(); }
-  uint8_t GetCostId() override { return LON_POS_BOUND_COST; }
+  uint8_t GetCostId() override { return LON_POS_SOFT_BOUND_COST; }
+};
+
+class LonHardPosBoundCostTerm : public ilqr_solver::BaseCostTerm {
+ public:
+  LonHardPosBoundCostTerm() = default;
+
+  double GetCost(const State &x, const Control & /*u*/) override;
+  void GetGradientHessian(const State &x, const Control & /*u*/, LxMT &lx,
+                          LuMT & /*lu*/, LxxMT &lxx, LxuMT & /*lxu*/,
+                          LuuMT & /*luu*/) override;
+  std::string GetCostString() override { return typeid(this).name(); }
+  uint8_t GetCostId() override { return LON_POS_HARD_BOUND_COST; }
 };
 
 // longitudinal vel bound cost

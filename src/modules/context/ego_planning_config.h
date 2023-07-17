@@ -281,17 +281,19 @@ struct LongitudinalMotionPlannerConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
   }
-  double q_ref_pos = 0.06;
-  double q_ref_vel = 1.0;
-  double q_acc = 1.0;
-  double q_jerk = 2.0;
+  double q_ref_pos = 1.0;
+  double q_ref_vel = 0.05;
+  double q_acc = 10.0;
+  double q_jerk = 5.0;
 
-  double q_pos_bound = 1000.0;
+  double q_soft_pos_bound = 2.0;
+  double q_hard_pos_bound = 1000.0;
   double q_vel_bound = 400.0;
   double q_acc_bound = 400.0;
   double q_jerk_bound = 100.0;
   double q_stop_s = 2000.0;
 };
+
 struct LateralOptimizerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -379,8 +381,8 @@ struct AdaptiveCruiseControlConfig : public EgoPlanningConfig {
                                        "enable_navi_time_distance_control"});
     v_ratio_threshold = read_json_keys<double>(
         json, std::vector<std::string>{"acc_control", "v_ratio_threshold"});
-    t_cons = read_json_keys<double>(
-        json, std::vector<std::string>{"acc_control", "t_cons"});
+    t_actuator_delay = read_json_keys<double>(
+        json, std::vector<std::string>{"acc_control", "t_actuator_delay"});
     gain_tg = read_json_keys<double>(
         json, std::vector<std::string>{"acc_control", "gain_tg"});
     dv_down = read_json_keys<double>(
@@ -430,7 +432,7 @@ struct AdaptiveCruiseControlConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"acc_control", "max_curvatrue_fixed"});
   }
 
-  double t_cons = 0.9;
+  double t_actuator_delay = 0.9;
   double gain_tg = 1.5;
   double dv_down = 0.1;
   double gain_s = 1.5;

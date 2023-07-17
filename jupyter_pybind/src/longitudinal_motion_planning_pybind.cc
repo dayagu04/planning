@@ -47,7 +47,7 @@ py::bytes GetOutputBytes() {
 }
 
 int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_pos, double q_ref_vel, double q_acc, double q_jerk,
-                   double q_pos_bound, double q_vel_bound, double q_acc_bound, double q_jerk_bound, double q_stop_s) {
+                   double q_soft_pos_bound, double q_hard_pos_bound, double q_vel_bound, double q_acc_bound, double q_jerk_bound, double q_stop_s) {
   planning::common::LongitudinalPlanningInput planning_input =
       BytesToProto<planning::common::LongitudinalPlanningInput>(planning_input_bytes);
   planning_input.set_q_ref_pos(q_ref_pos);
@@ -56,7 +56,8 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_pos, double q_r
   planning_input.set_q_acc(q_acc);
   planning_input.set_q_jerk(q_jerk);
 
-  planning_input.set_q_pos_bound(q_pos_bound);
+  planning_input.set_q_soft_pos_bound(q_soft_pos_bound);
+  planning_input.set_q_hard_pos_bound(q_hard_pos_bound);
   planning_input.set_q_vel_bound(q_vel_bound);
   planning_input.set_q_acc_bound(q_acc_bound);
   planning_input.set_q_jerk_bound(q_jerk_bound);

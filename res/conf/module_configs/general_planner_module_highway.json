@@ -156,7 +156,7 @@
     "leadone_v_threshold": 2.5
   },
   "acc_control": {
-    "t_cons": 0.9,
+    "t_actuator_delay": 0.4,
     "gain_tg": 1.5,
     "dv_down": 0.1,
     "gain_s": 1.5,

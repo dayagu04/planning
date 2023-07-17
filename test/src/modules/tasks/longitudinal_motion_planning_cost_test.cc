@@ -75,8 +75,8 @@ void Init() {
 
   cost_config[S_STOP] = 5.0;
 
-  cost_config[POS_MAX] = 5.0 * 1.0;
-  cost_config[POS_MIN] = -5.0 * 1.0;
+  cost_config[SOFT_POS_MAX] = 5.0 * 1.0;
+  cost_config[SOFT_POS_MIN] = -5.0 * 1.0;
   cost_config[VEL_MAX] = 5.0 * 1.0;
   cost_config[VEL_MIN] = -5.0 * 1.0;
   cost_config[ACC_MAX] = 5.0 * 1.0;
@@ -234,8 +234,8 @@ TEST(LonJerkCostTerm, LonJerkCostTerm) {
   ApplyCostTest(std::make_shared<LonJerkCostTerm>());
 }
 
-TEST(LonPosBoundCostTerm, LonPosBoundCostTerm) {
-  ApplyCostTest(std::make_shared<LonPosBoundCostTerm>());
+TEST(LonSoftPosBoundCostTerm, LonSoftPosBoundCostTerm) {
+  ApplyCostTest(std::make_shared<LonSoftPosBoundCostTerm>());
 }
 
 TEST(LonVelBoundCostTerm, LonVelBoundCostTerm) {

@@ -45,17 +45,21 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   t_long_vec = []
   for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
-     t_long_vec.append(item.t)
+    t_long_vec.append(item.t)
   s_plan_vec =  []
   for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
-     s_plan_vec.append(item.distance)
+    s_plan_vec.append(item.distance)
   v_plan_vec =  []
   for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
      v_plan_vec.append(item.v)
-
   s_ref_vec = []
   for item in (plan_debug_info.long_ref_path.s_refs):
-     s_ref_vec.append(item.first)
+    s_ref_vec.append(item.first)
+  s_lead_vec = []
+  for idx in range(len(plan_debug_info.long_ref_path.lon_lead_bounds)):
+    s_lead_vec.append(plan_debug_info.long_ref_path.lon_lead_bounds[idx].bound[0].s_lead)
+    print("s_lead_vec: ", plan_debug_info.long_ref_path.lon_lead_bounds[idx].bound[0].s_lead)
+  print("the s_lead_vec size: ",len(s_lead_vec))
 
   obs_low_vec = []
   obs_high_vec = []
@@ -127,6 +131,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lon_plan_data['data_st'].data.update({
     't': t_vec,
     's': s_ref_vec,
+    's_lead': s_lead_vec,
     'obs_low': obs_low_vec,
     'obs_high': obs_high_vec,
     'obs_low_id': obs_low_id_vec,
@@ -189,8 +194,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   init_state = lon_motion_plan_input.init_state
   ref_pos_vec = lon_motion_plan_input.ref_pos_vec
   ref_vel_vec = lon_motion_plan_input.ref_vel_vec
-  pos_max_vec = lon_motion_plan_input.pos_max_vec
-  pos_min_vec = lon_motion_plan_input.pos_min_vec
+  soft_pos_max_vec = lon_motion_plan_input.soft_pos_max_vec
+  soft_pos_min_vec = lon_motion_plan_input.soft_pos_min_vec
   vel_max_vec = lon_motion_plan_input.vel_max_vec
   vel_min_vec = lon_motion_plan_input.vel_min_vec
   acc_max_vec = lon_motion_plan_input.acc_max_vec
@@ -214,8 +219,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'ref_pos_vec_origin': s_ref_vec,
     'ref_pos_vec': ref_pos_vec,
     'ref_vel_vec': ref_vel_vec,
-    'pos_max_vec': pos_max_vec,
-    'pos_min_vec': pos_min_vec,
+    'soft_pos_max_vec': soft_pos_max_vec,
+    'soft_pos_min_vec': soft_pos_min_vec,
     'vel_max_vec': vel_max_vec,
     'vel_min_vec': vel_min_vec,
     'acc_max_vec': acc_max_vec,
@@ -330,7 +335,7 @@ def load_lon_global_figure(bag_loader):
    return velocity_fig, acc_fig, obs_st_ids
 
 def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
-  data_st = ColumnDataSource(data = {'t':[], 's':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
+  data_st = ColumnDataSource(data = {'t':[], 's':[], 's_lead':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s':[], 'v':[], 'v_low':[], 'v_high':[]})
   data_tv = ColumnDataSource(data = {'t':[], 'vel':[]})
@@ -348,8 +353,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
                                                   'ref_pos_vec_origin': [],
                                                   'ref_pos_vec':[],
                                                   'ref_vel_vec':[],
-                                                  'pos_max_vec':[],
-                                                  'pos_min_vec':[],
+                                                  'soft_pos_max_vec':[],
+                                                  'soft_pos_min_vec':[],
                                                   'vel_max_vec':[],
                                                   'vel_min_vec':[],
                                                   'acc_max_vec':[],
@@ -404,14 +409,16 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
   fig7 = bkp.figure(x_axis_label='time', y_axis_label='jerk',x_range = fig6.x_range, width=600, height=200)
 
   f2 = fig2.line('t', 's', source = data_st, line_width = 2, line_color = 'green', line_dash = 'dashed', legend_label = 'origin s_ref')
+  fig2.line('t', 's_lead', source = data_st, line_width = 3, line_color = 'yellow', line_dash = 'solid', legend_label = 'origin s_lead')
   fig2.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')
-#   fig2.line('t_long', 's_plan', source = data_st_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
+  #fig2.line('t_long', 's_plan', source = data_st_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
   fig2.line('time_vec', 'pos_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
   fig2.line('t', 'obs_low', source = data_st, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_lb')
   fig2.line('t', 'obs_high', source = data_st, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_ub')
   fig2.triangle('t', 'obs_low', source = data_st, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
   fig2.inverted_triangle ('t', 'obs_high', source = data_st, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
 
+  # 添加障碍物s-t bound
   for obs_id in data_obs_st.keys():
      if(obs_id != ''):
         fig2.line('obs_t', 'obs_s', source = data_obs_st[obs_id], line_width = 2, line_color = 'firebrick', line_dash = 'solid')
@@ -434,10 +441,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
   fig4.line('time_vec', 'ref_pos_vec_origin', source = data_lon_motion_plan, line_width = 2, line_color = 'green', line_dash = 'dashed', legend_label = 'origin s_ref')
   fig4.line('time_vec', 'pos_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
 
-  fig4.line('time_vec', 'pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_lb')
-  fig4.triangle ('time_vec', 'pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_lb')
-  fig4.line('time_vec', 'pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_ub')
-  fig4.inverted_triangle ('time_vec', 'pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_ub')
+  fig4.line('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_lb')
+  fig4.triangle ('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_lb')
+  fig4.line('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_ub')
+  fig4.inverted_triangle ('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_ub')
 
   # vel
   f5 = fig5.line('time_vec', 'ref_vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')
@@ -463,7 +470,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
   fig7.inverted_triangle ('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'j_ub')
 
 
-  hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('s_lb', '@pos_min_vec'), ('origin s_ref', '@ref_pos_vec_origin'), ('s_ref', '@ref_pos_vec'), ('s_plan', '@pos_vec'), ('s_ub', '@pos_max_vec')], mode='vline')
+  hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('s_lb', '@soft_pos_min_vec'), ('origin s_ref', '@ref_pos_vec_origin'), ('s_ref', '@ref_pos_vec'), ('s_plan', '@pos_vec'), ('s_ub', '@soft_pos_max_vec')], mode='vline')
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('v_plan', '@vel_vec'), ('v_ub', '@vel_max_vec')], mode='vline')
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec')], mode='vline')
   hover7 = HoverTool(renderers=[f7], tooltips=[('time', '@time_vec'), ('j_lb', '@jerk_min_vec'), ('j_plan', '@jerk_vec'), ('j_ub', '@jerk_max_vec')], mode='vline')

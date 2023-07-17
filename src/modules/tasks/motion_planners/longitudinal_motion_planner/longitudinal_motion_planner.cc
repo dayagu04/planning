@@ -1,5 +1,7 @@
 #include "longitudinal_motion_planner.h"
+
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 
 #include "debug_info_log.h"
@@ -33,8 +35,10 @@ void LongitudinalMotionPlanner::Init() {
   planning_input_.mutable_ref_pos_vec()->Resize(N, 0.0);
   planning_input_.mutable_ref_vel_vec()->Resize(N, 0.0);
 
-  planning_input_.mutable_pos_max_vec()->Resize(N, 0.0);
-  planning_input_.mutable_pos_min_vec()->Resize(N, 0.0);
+  planning_input_.mutable_soft_pos_max_vec()->Resize(N, 0.0);
+  planning_input_.mutable_soft_pos_min_vec()->Resize(N, 0.0);
+  planning_input_.mutable_hard_pos_max_vec()->Resize(N, 0.0);
+  planning_input_.mutable_hard_pos_min_vec()->Resize(N, 0.0);
   planning_input_.mutable_vel_max_vec()->Resize(N, 0.0);
   planning_input_.mutable_vel_min_vec()->Resize(N, 0.0);
   planning_input_.mutable_acc_max_vec()->Resize(N, 0.0);
@@ -75,6 +79,7 @@ void LongitudinalMotionPlanner::AssembleInput() {
   const auto &s_refs = lon_ref_path.s_refs;
   const auto &v_refs = lon_ref_path.ds_refs;
   const auto &s_bounds = lon_ref_path.bounds;
+  const auto &s_lead_bounds = lon_ref_path.lon_lead_bounds;
   const auto &v_bounds = lon_ref_path.lon_bound_v;
   const auto &a_bounds = lon_ref_path.lon_bound_a;
   const auto &jerk_bounds = lon_ref_path.lon_bound_jerk;
@@ -117,8 +122,7 @@ void LongitudinalMotionPlanner::AssembleInput() {
     planning_input_.mutable_ref_vel_vec()->Set(i, v_ref);
   }
 
-  // TODO: s bound should know soft or hard
-  // set s bounds
+  // set hard bound: s bounds
   for (size_t i = 0; i < s_bounds.size(); ++i) {
     Bound tmp_bound{-1.0e4, 1.0e4};
     for (auto &bound : s_bounds[i]) {
@@ -131,8 +135,38 @@ void LongitudinalMotionPlanner::AssembleInput() {
     s_limit_.upper =
         tmp_bound.upper < s_limit_.upper ? tmp_bound.upper : s_limit_.upper;
 
-    planning_input_.mutable_pos_max_vec()->Set(i, tmp_bound.upper);
-    planning_input_.mutable_pos_min_vec()->Set(i, tmp_bound.lower);
+    planning_input_.mutable_hard_pos_max_vec()->Set(i, tmp_bound.upper);
+    planning_input_.mutable_hard_pos_min_vec()->Set(i, tmp_bound.lower);
+  }
+
+  // set soft bound: s lead bounds
+  // attention: s_lead_bounds size < s_bounds size
+  for (size_t i = 0; i < s_lead_bounds.size(); i++) {
+    Bound tmp_bound{-1.0e4, 1.0e4};
+    Bound tmp_lead_bounds{-1.0e4, 1.0e4};
+    Bound cal_bound{-1.0e4, 1.0e4};
+    // get minimum s lead bound
+    for (auto &lead_bound : s_lead_bounds[i]) {
+      tmp_lead_bounds.lower = 0.0;
+      tmp_lead_bounds.upper =
+          std::fmin(lead_bound.s_lead, tmp_lead_bounds.upper);
+    }
+    // get minimum s bound
+    for (auto &bound : s_bounds[i]) {
+      tmp_bound.lower = std::fmax(bound.lower, tmp_bound.lower);
+      tmp_bound.upper = std::fmin(bound.upper, tmp_bound.upper);
+    }
+    // get final bound
+    cal_bound.lower = std::fmax(tmp_lead_bounds.lower, tmp_bound.lower);
+    cal_bound.upper = std::fmin(tmp_lead_bounds.upper, tmp_bound.upper);
+
+    s_limit_.lower =
+        cal_bound.lower > s_limit_.lower ? cal_bound.lower : s_limit_.lower;
+    s_limit_.upper =
+        cal_bound.upper < s_limit_.upper ? cal_bound.upper : s_limit_.upper;
+
+    planning_input_.mutable_soft_pos_max_vec()->Set(i, cal_bound.upper);
+    planning_input_.mutable_soft_pos_min_vec()->Set(i, cal_bound.lower);
   }
 
   // set vel bounds
@@ -172,7 +206,8 @@ void LongitudinalMotionPlanner::AssembleInput() {
   planning_input_.set_q_jerk(config_.q_jerk);
   planning_input_.set_q_stop_s(config_.q_stop_s);
 
-  planning_input_.set_q_pos_bound(config_.q_pos_bound);
+  planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound);
+  planning_input_.set_q_hard_pos_bound(config_.q_hard_pos_bound);
   planning_input_.set_q_vel_bound(config_.q_vel_bound);
   planning_input_.set_q_acc_bound(config_.q_acc_bound);
   planning_input_.set_q_jerk_bound(config_.q_jerk_bound);

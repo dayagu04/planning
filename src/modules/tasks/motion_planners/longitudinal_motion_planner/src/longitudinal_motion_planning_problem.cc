@@ -40,7 +40,11 @@ void LongitudinalMotionPlanningProblem::Init() {
   ilqr_core_ptr_->AddCost(
       std::make_shared<LonJerkCostTerm>());  // longitudinal jerk cost
   ilqr_core_ptr_->AddCost(
-      std::make_shared<LonPosBoundCostTerm>());  // longitudinal pos bound cost
+      std::make_shared<LonSoftPosBoundCostTerm>());  // longitudinal soft pos
+                                                     // bound cost
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<LonHardPosBoundCostTerm>());  // longitudinal hard pos
+                                                     // bound cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LonVelBoundCostTerm>());  // longitudinal vel bound cost
   ilqr_core_ptr_->AddCost(
@@ -52,7 +56,6 @@ void LongitudinalMotionPlanningProblem::Init() {
       std::make_shared<LonStopPointCost>());  // longitudinal stop point cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<NonNegativeVelCost>());  // longitudinal non-negative vel
-                                                // cost
 
   // STEP 3: init debug info, must run after add cost
   ilqr_core_ptr_->InitAdvancedInfo();
@@ -81,8 +84,10 @@ uint8_t LongitudinalMotionPlanningProblem::Update(
     cost_config_vec.at(i)[S_STOP] = planning_input.s_stop();
 
     // bounds
-    cost_config_vec.at(i)[POS_MAX] = planning_input.pos_max_vec(i);
-    cost_config_vec.at(i)[POS_MIN] = planning_input.pos_min_vec(i);
+    cost_config_vec.at(i)[SOFT_POS_MAX] = planning_input.soft_pos_max_vec(i);
+    cost_config_vec.at(i)[SOFT_POS_MIN] = planning_input.soft_pos_min_vec(i);
+    cost_config_vec.at(i)[HARD_POS_MAX] = planning_input.hard_pos_max_vec(i);
+    cost_config_vec.at(i)[HARD_POS_MIN] = planning_input.hard_pos_min_vec(i);
     cost_config_vec.at(i)[VEL_MAX] = planning_input.vel_max_vec(i);
     cost_config_vec.at(i)[VEL_MIN] = planning_input.vel_min_vec(i);
     cost_config_vec.at(i)[ACC_MAX] = planning_input.acc_max_vec(i);
@@ -96,11 +101,12 @@ uint8_t LongitudinalMotionPlanningProblem::Update(
     cost_config_vec.at(i)[W_ACC] = planning_input.q_acc();
     cost_config_vec.at(i)[W_JERK] = planning_input.q_jerk();
     cost_config_vec.at(i)[W_SNAP] = planning_input.q_snap();
-    cost_config_vec.at(i)[W_POS_BOUND] = planning_input.q_pos_bound();
+    cost_config_vec.at(i)[W_POS_BOUND] = planning_input.q_soft_pos_bound();
     cost_config_vec.at(i)[W_VEL_BOUND] = planning_input.q_vel_bound();
     cost_config_vec.at(i)[W_ACC_BOUND] = planning_input.q_acc_bound();
     cost_config_vec.at(i)[W_JERK_BOUND] = planning_input.q_jerk_bound();
     cost_config_vec.at(i)[W_S_STOP] = planning_input.q_stop_s();
+    cost_config_vec.at(i)[W_HARD_POS_BOUND] = planning_input.q_hard_pos_bound();
 
     cost_config_vec.at(i)[W_NON_NEGATIVE_VEL] = 2000.0;
 

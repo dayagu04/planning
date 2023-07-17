@@ -23,8 +23,11 @@ struct LongitudinalMotionPlanningInput {
   std::vector<double> ref_vel_vec;
 
   // longitudinal bound
-  std::vector<double> pos_max_vec;
-  std::vector<double> pos_min_vec;
+  std::vector<double> soft_pos_max_vec;
+  std::vector<double> soft_pos_min_vec;
+
+  std::vector<double> hard_pos_max_vec;
+  std::vector<double> hard_pos_min_vec;
 
   std::vector<double> vel_max_vec;
   std::vector<double> vel_min_vec;
@@ -46,7 +49,7 @@ struct LongitudinalMotionPlanningInput {
   double q_jerk = 2.0;
   double q_snap = 0.7;
 
-  double q_pos_bound = 500.0;
+  double q_soft_pos_bound = 500.0;
   double q_vel_bound = 500.0;
   double q_acc_bound = 500.0;
   double q_jerk_bound = 500.0;

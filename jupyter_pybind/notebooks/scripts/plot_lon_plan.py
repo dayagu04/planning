@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/docker_share/urban_bag_0213/longtime10.00001"
+bag_path = "/mnt/0713/long_time_4.00000.1689494018.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

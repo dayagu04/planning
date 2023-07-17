@@ -149,8 +149,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   init_state = lon_motion_plan_input.init_state
   ref_pos_vec = lon_motion_plan_input.ref_pos_vec
   ref_vel_vec = lon_motion_plan_input.ref_vel_vec
-  pos_max_vec = lon_motion_plan_input.pos_max_vec
-  pos_min_vec = lon_motion_plan_input.pos_min_vec
+  soft_pos_max_vec = lon_motion_plan_input.soft_pos_max_vec
+  soft_pos_min_vec = lon_motion_plan_input.soft_pos_min_vec
   vel_max_vec = lon_motion_plan_input.vel_max_vec
   vel_min_vec = lon_motion_plan_input.vel_min_vec
   acc_max_vec = lon_motion_plan_input.acc_max_vec
@@ -174,8 +174,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'ref_pos_vec_origin': s_ref_vec,
     'ref_pos_vec': ref_pos_vec,
     'ref_vel_vec': ref_vel_vec,
-    'pos_max_vec': pos_max_vec,
-    'pos_min_vec': pos_min_vec,
+    'soft_pos_max_vec': soft_pos_max_vec,
+    'soft_pos_min_vec': soft_pos_min_vec,
     'vel_max_vec': vel_max_vec,
     'vel_min_vec': vel_min_vec,
     'acc_max_vec': acc_max_vec,
@@ -293,8 +293,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
                                                   'ref_pos_vec_origin': [],
                                                   'ref_pos_vec':[],
                                                   'ref_vel_vec':[],
-                                                  'pos_max_vec':[],
-                                                  'pos_min_vec':[],
+                                                  'soft_pos_max_vec':[],
+                                                  'soft_pos_min_vec':[],
                                                   'vel_max_vec':[],
                                                   'vel_min_vec':[],
                                                   'acc_max_vec':[],
@@ -381,10 +381,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
   fig4.line('time_vec', 'pos_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'green', line_dash = 'solid', legend_label = 'origin s_plan')
   fig4.line('time_vec', 'pos_vec_t', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned s_plan')
 
-  fig4.line('time_vec', 'pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_lb')
-  fig4.triangle ('time_vec', 'pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_lb')
-  fig4.line('time_vec', 'pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_ub')
-  fig4.inverted_triangle ('time_vec', 'pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_ub')
+  fig4.line('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_lb')
+  fig4.triangle ('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_lb')
+  fig4.line('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_ub')
+  fig4.inverted_triangle ('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_ub')
 
   # vel
   f5 = fig5.line('time_vec', 'ref_vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')
@@ -413,7 +413,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
   fig7.inverted_triangle ('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'j_ub')
 
 
-  hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('s_lb', '@pos_min_vec'), ('raw s_ref', '@ref_pos_vec_origin'), ('s_ref', '@ref_pos_vec'), ('origin s_plan', '@pos_vec'), ('tuned s_plan', '@pos_vec_t'), ('s_ub', '@pos_max_vec')], mode='vline')
+  hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('s_lb', '@soft_pos_min_vec'), ('raw s_ref', '@ref_pos_vec_origin'), ('s_ref', '@ref_pos_vec'), ('origin s_plan', '@pos_vec'), ('tuned s_plan', '@pos_vec_t'), ('s_ub', '@soft_pos_max_vec')], mode='vline')
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('origin v_plan', '@vel_vec'), ('tuned v_plan', '@vel_vec_t'), ('v_ub', '@vel_max_vec')], mode='vline')
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('origin a_plan', '@acc_vec'), ('tuned a_plan', '@acc_vec_t'), ('a_ub', '@acc_max_vec')], mode='vline')
   hover7 = HoverTool(renderers=[f7], tooltips=[('time', '@time_vec'), ('j_lb', '@jerk_min_vec'), ('origin j_plan', '@jerk_vec'), ('tuned j_plan', '@jerk_vec_t'), ('j_ub', '@jerk_max_vec')], mode='vline')

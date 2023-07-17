@@ -30,7 +30,7 @@ class AdaptiveCruiseControl {
 
  private:
   double s_rel_{-1.0};
-  double t_cons_{0.9};
+  double t_actuator_delay_{0.9};
   double gain_s_{1.5};
   double gain_tg_{1.2};
   double v_map_{-1.0};
