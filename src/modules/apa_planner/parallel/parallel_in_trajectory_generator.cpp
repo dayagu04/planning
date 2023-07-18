@@ -44,6 +44,7 @@ constexpr double kMinSlotLength = 5.8;
 constexpr double kMaxLenOfSmallSpeed = 1.0;
 constexpr double kMaxSpdInLineStep = 0.5;
 constexpr double kMinSpdInCircleStep = 0.4;
+constexpr double kMockedObjYOffset = 4.0;
 }  // namespace
 
 ParallelInTrajectoryGenerator::ParallelInTrajectoryGenerator() {
@@ -914,9 +915,7 @@ void ParallelInTrajectoryGenerator::SetApaObjectInfo(
       Vec2d(raw_slot_points_in_m_[1].x, raw_slot_points_in_m_[1].y));
 
   // mocked obstacle to avoid collision with opposite object
-  const double mocked_obj_y_offset = VehicleParamHelper::Instance()
-                                         ->GetParam()
-                                         .mocked_obj_y_offset_for_diagonal();
+  const double mocked_obj_y_offset = kMockedObjYOffset;
   const double obj_half_len = 10.0;
 
   const double vec_10_x =
@@ -998,14 +997,14 @@ PlanningPoint ParallelInTrajectoryGenerator::FromGlobal2LocalCor(
 }
 
 double ParallelInTrajectoryGenerator::CalApaTargetX() const {
-  const double dst_front_edge_to_center =
-      VehicleParamHelper::Instance()->GetParam().front_edge_to_center();
-  const double dst_back_edge_to_center =
-      VehicleParamHelper::Instance()->GetParam().back_edge_to_center();
+  const double dst_front_edge_to_rear_axle =
+      VehicleParamHelper::Instance()->GetParam().front_edge_to_rear_axle();
+  const double dst_rear_edge_to_rear_axle =
+      VehicleParamHelper::Instance()->GetParam().rear_edge_to_rear_axle();
 
   const double center_y = -slot_length_ * 0.5;
   const double target_y =
-      center_y - (dst_front_edge_to_center - dst_back_edge_to_center) * 0.5;
+      center_y - (dst_front_edge_to_rear_axle - dst_rear_edge_to_rear_axle) * 0.5;
   return target_y;
 }
 

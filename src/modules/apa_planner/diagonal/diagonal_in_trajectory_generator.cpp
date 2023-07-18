@@ -40,6 +40,7 @@ constexpr uint64_t kMinPosUnchangedCount = 5;
 constexpr double kMaxXOffset = 0.2;
 constexpr double kMaxYOffset = 0.2;
 constexpr double kMaxThetaOffset = 0.05;
+constexpr double kMockedObjYOffset = 4.0;
 }  // namespace
 
 bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
@@ -623,9 +624,7 @@ void DiagonalInTrajectoryGenerator::SetApaObjectInfo(
   double mocked_obj_y_offset = 10.0;
   if (slots[idx].type() ==
       Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
-    mocked_obj_y_offset = VehicleParamHelper::Instance()
-                              ->GetParam()
-                              .mocked_obj_y_offset_for_diagonal();
+    mocked_obj_y_offset = kMockedObjYOffset;
   }
   const double obj_half_len = 10.0;
 
@@ -708,17 +707,17 @@ PlanningPoint DiagonalInTrajectoryGenerator::FromGlobal2LocalCor(
 }
 
 double DiagonalInTrajectoryGenerator::CalApaTargetY() const {
-  const double dst_front_edge_to_center =
-      VehicleParamHelper::Instance()->GetParam().front_edge_to_center();
-  const double dst_back_edge_to_center =
-      VehicleParamHelper::Instance()->GetParam().back_edge_to_center();
+  const double dst_front_edge_to_rear_axle =
+      VehicleParamHelper::Instance()->GetParam().front_edge_to_rear_axle();
+  const double dst_rear_edge_to_rear_axle =
+      VehicleParamHelper::Instance()->GetParam().rear_edge_to_rear_axle();
   const double stop_buffer = 0.10;
-  double end_point_y_by_veh = dst_front_edge_to_center + stop_buffer;
+  double end_point_y_by_veh = dst_front_edge_to_rear_axle + stop_buffer;
   const double slot_depth =
       std::hypot(slot_points_in_m_[0].x - slot_points_in_m_[2].x,
                  slot_points_in_m_[0].y - slot_points_in_m_[2].y);
   double end_point_y_by_slot =
-      slot_depth - stop_buffer - dst_back_edge_to_center;
+      slot_depth - stop_buffer - dst_rear_edge_to_rear_axle;
   return -slot_sign_ * std::fmin(end_point_y_by_veh, end_point_y_by_slot);
 }
 

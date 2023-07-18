@@ -1,5 +1,7 @@
 #include "planning_component.h"
 
+#include "gflags/gflags.h"
+
 #include "cyber/scheduler/scheduler.h"
 
 #include "../common/cyber/logger/async_logger.h"
@@ -21,6 +23,7 @@ logger::AsyncLogger *async_logger = nullptr;
 PlanningComponent::~PlanningComponent() { delete async_logger; }
 
 bool PlanningComponent::Init() {
+  InitGflags();
   (void)common::ConfigurationContext::Instance();
   planning_adapter_ = std::make_unique<PlanningAdapter>();
   planning_adapter_->Init();
@@ -162,6 +165,11 @@ void PlanningComponent::InitLogger() {
 
   auto thread = const_cast<std::thread *>(async_logger->LogThread());
   scheduler::Instance()->SetInnerThreadAttr("async_log", thread);
+}
+
+void PlanningComponent::InitGflags() const {
+  const std::string flag_file_path = "/asw/planning/res/conf/planning_gflags.conf";
+  google::SetCommandLineOption("flagfile", flag_file_path.c_str());
 }
 
 }  // namespace planning

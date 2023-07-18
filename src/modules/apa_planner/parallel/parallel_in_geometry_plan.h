@@ -106,15 +106,13 @@ class ParallelInGeometryPlan {
  private:
   double min_turn_radius_ =
       VehicleParamHelper::Instance()->GetParam().min_turn_radius();
-  double min_segment_len_ =
-      VehicleParamHelper::Instance()->GetParam().min_segment_len_for_parallel();
   double width_veh_ = VehicleParamHelper::Instance()->GetParam().width();
   double half_width_veh_ =
       VehicleParamHelper::Instance()->GetParam().width() * 0.5;
-  double front_edge_to_center_ =
-      VehicleParamHelper::Instance()->GetParam().front_edge_to_center();
-  double back_edge_to_center_ =
-      VehicleParamHelper::Instance()->GetParam().back_edge_to_center();
+  double front_edge_to_rear_axle_ =
+      VehicleParamHelper::Instance()->GetParam().front_edge_to_rear_axle();
+  double rear_edge_to_rear_axle_ =
+      VehicleParamHelper::Instance()->GetParam().rear_edge_to_rear_axle();
 
   int slot_sign_ = 1;  // 1:Right,(default),-1:Left
 

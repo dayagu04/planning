@@ -74,10 +74,10 @@ Polygon2d ConstructVehiclePolygonWithBuffer(const PlanningPoint& veh_point,
                                             const double lat_buffer) {
   const double half_width_veh =
       VehicleParamHelper::Instance()->GetParam().width() * 0.5;
-  const double front_edge_to_center =
-      VehicleParamHelper::Instance()->GetParam().front_edge_to_center();
-  const double back_edge_to_center =
-      VehicleParamHelper::Instance()->GetParam().back_edge_to_center();
+  const double front_edge_to_rear_axle =
+      VehicleParamHelper::Instance()->GetParam().front_edge_to_rear_axle();
+  const double rear_edge_to_rear_axle =
+      VehicleParamHelper::Instance()->GetParam().rear_edge_to_rear_axle();
   const double front_shrink_dis =
       VehicleParamHelper::Instance()->GetParam().front_shrink_dis();
   const double front_side_shrink_dis =
@@ -87,14 +87,14 @@ Polygon2d ConstructVehiclePolygonWithBuffer(const PlanningPoint& veh_point,
   const double rear_side_shrink_dis =
       VehicleParamHelper::Instance()->GetParam().rear_side_shrink_dis();
 
-  const double front_edge_to_center_with_safe_dst =
-      front_edge_to_center + front_buffer;
-  const double back_edge_to_center_with_safe_dst =
-      back_edge_to_center + rear_buffer;
+  const double front_edge_to_rear_axle_with_safe_dst =
+      front_edge_to_rear_axle + front_buffer;
+  const double rear_edge_to_rear_axle_with_safe_dst =
+      rear_edge_to_rear_axle + rear_buffer;
   const double half_width_with_safe_dis = half_width_veh + lat_buffer;
   return ConstructVehiclePolygon(
-      veh_point, half_width_with_safe_dis, front_edge_to_center_with_safe_dst,
-      back_edge_to_center_with_safe_dst, front_shrink_dis,
+      veh_point, half_width_with_safe_dis, front_edge_to_rear_axle_with_safe_dst,
+      rear_edge_to_rear_axle_with_safe_dst, front_shrink_dis,
       front_side_shrink_dis, rear_shrink_dis, rear_side_shrink_dis);
 }
 

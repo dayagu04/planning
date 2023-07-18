@@ -3,46 +3,19 @@ syntax = "proto2";
 package planning.common;
 
 message VehicleParam {
-  optional double front_edge_to_center = 1;
-  optional double back_edge_to_center = 2;
-  optional double left_edge_to_center = 3;
-  optional double right_edge_to_center = 4;
-
-  optional double from_front_bumper_to_front_axle = 5;
-  optional double rear_bumper_to_rear_axle = 6;
-
-  optional double length = 7;
-  optional double width = 8;
-  optional double height = 9;
-  optional double min_turn_radius = 10;
-  optional double max_acceleration = 11;
-  optional double max_deceleration = 12;
-  optional double max_steer_angle = 13;
-  optional double max_steer_angle_rate = 14;
-  optional double min_steer_angle_rate = 15;
-  optional double steer_ratio = 16;
-  optional double wheel_base = 17;
-  optional double front_wheel_rolling_radius = 18;
-  optional double rear_wheel_rolling_radius = 19;
-  optional double max_abs_speed_when_stopped = 20;
-
-  optional double brake_deadzone = 21;
-  optional double throttle_deadzone = 22;
-
-  optional double max_front_wheel_angle = 23;
-
-  optional double mass = 24;
-  optional double rolling_resistance_coeff = 25;
-  optional double air_drag_coeff = 26;
-  optional double windward_area = 27;
-  optional double equivalent_mass_coeff = 28;
-  optional double front_shrink_dis = 29;
-  optional double front_side_shrink_dis = 30;
-  optional double rear_shrink_dis = 31;
-  optional double rear_side_shrink_dis = 32;
-
-  // for parking test
-  optional double mocked_obj_y_offset_for_diagonal = 50;
-  optional double min_segment_len_for_parallel = 51; // m
-  optional double min_second_segment_radius_for_parallel = 52; // m
+  optional double front_edge_to_rear_axle = 1;
+  optional double rear_edge_to_rear_axle = 2;
+  optional double length = 3;
+  optional double width = 4;
+  optional double height = 5;
+  optional double min_turn_radius = 6;
+  optional double steer_ratio = 7;
+  optional double wheel_base = 8;
+  optional double front_wheel_rolling_radius = 9;
+  optional double rear_wheel_rolling_radius = 10;
+  optional double mass = 11;
+  optional double front_shrink_dis = 12;
+  optional double front_side_shrink_dis = 13;
+  optional double rear_shrink_dis = 14;
+  optional double rear_side_shrink_dis = 15;
 }

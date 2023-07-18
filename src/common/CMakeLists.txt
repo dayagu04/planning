@@ -8,6 +8,7 @@ file(GLOB_RECURSE SRC_FILES
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
+  gflags
   glog
   ilqr_lib
   rapidjson

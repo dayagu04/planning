@@ -20,6 +20,7 @@ class PlanningComponent final : public autoplt::ADSTimerCoponent {
 
  private:
   void InitLogger();
+  void InitGflags() const;
 
  private:
   std::shared_ptr<ADSNode> planning_node_ = nullptr;

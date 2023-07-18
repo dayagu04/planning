@@ -45,6 +45,7 @@ constexpr double kEndYWeight = 100.0;
 constexpr double kEndThetaWeight = 100.0;
 constexpr double kSegmentCost = 10000.0;
 constexpr double kMaxXRearAxle = 12.0;
+constexpr double kMinSegmentLen = 0.3;
 }  // namespace
 
 bool ParallelInGeometryPlan::CheckSlotOpenSideWrong(
@@ -76,7 +77,7 @@ bool ParallelInGeometryPlan::ABSegment(const PlanningPoint &point_a,
   const double min_l_step = 0.2;
   double max_l_step = 4.0;
   int sparse_step_num = 0;
-  const double sparse_len = std::fmax(back_edge_to_center_ - point_a.x, 0.0);
+  const double sparse_len = std::fmax(rear_edge_to_rear_axle_ - point_a.x, 0.0);
   if (sparse_len > 0.0) {
     sparse_step_num = sparse_len / max_l_step + 1;
     max_l_step = sparse_len / sparse_step_num;
@@ -1340,15 +1341,15 @@ bool ParallelInGeometryPlan::CollideWithObjectsByBox(
     return false;
   }
 
-  const double front_edge_to_center_with_safe_dst =
-      front_edge_to_center_ + front_buffer;
-  const double back_edge_to_center_with_safe_dst =
-      back_edge_to_center_ + rear_buffer;
+  const double front_edge_to_rear_axle_with_safe_dst =
+      front_edge_to_rear_axle_ + front_buffer;
+  const double rear_edge_to_rear_axle_with_safe_dst =
+      rear_edge_to_rear_axle_ + rear_buffer;
   const double shift_distance =
-      (front_edge_to_center_with_safe_dst - back_edge_to_center_with_safe_dst) *
+      (front_edge_to_rear_axle_with_safe_dst - rear_edge_to_rear_axle_with_safe_dst) *
       0.5;
   const double veh_length_with_safe_dst =
-      front_edge_to_center_with_safe_dst + back_edge_to_center_with_safe_dst;
+      front_edge_to_rear_axle_with_safe_dst + rear_edge_to_rear_axle_with_safe_dst;
   const double veh_width_with_safe_dis = width_veh_ + lat_buffer * 2.0;
   double veh_x = veh_point.x + shift_distance * apa_cos(veh_point.theta);
   double veh_y = veh_point.y + shift_distance * apa_sin(veh_point.theta);
@@ -1392,15 +1393,15 @@ bool ParallelInGeometryPlan::CollideWithObjectsByBox(
     theta_sign = -1.0;
   }
 
-  const double front_edge_to_center_with_safe_dst =
-      front_edge_to_center_ + front_buffer;
-  const double back_edge_to_center_with_safe_dst =
-      back_edge_to_center_ + rear_buffer;
+  const double front_edge_to_rear_axle_with_safe_dst =
+      front_edge_to_rear_axle_ + front_buffer;
+  const double rear_edge_to_rear_axle_with_safe_dst =
+      rear_edge_to_rear_axle_ + rear_buffer;
   const double shift_distance =
-      (front_edge_to_center_with_safe_dst - back_edge_to_center_with_safe_dst) *
+      (front_edge_to_rear_axle_with_safe_dst - rear_edge_to_rear_axle_with_safe_dst) *
       0.5;
   const double veh_length_with_safe_dst =
-      front_edge_to_center_with_safe_dst + back_edge_to_center_with_safe_dst;
+      front_edge_to_rear_axle_with_safe_dst + rear_edge_to_rear_axle_with_safe_dst;
   const double veh_width_with_safe_dis = width_veh_ + lat_buffer * 2.0;
 
   for (int i = 0; i <= size_theta; ++i) {
@@ -1515,15 +1516,15 @@ bool ParallelInGeometryPlan::CEndCollideCheck(const PlanningPoint &point_c,
     return false;
   }
 
-  const double front_edge_to_center_with_safe_dst =
-      front_edge_to_center_ + safe_dst;
-  const double back_edge_to_center_with_safe_dst =
-      back_edge_to_center_ + safe_dst;
+  const double front_edge_to_rear_axle_with_safe_dst =
+      front_edge_to_rear_axle_ + safe_dst;
+  const double rear_edge_to_rear_axle_with_safe_dst =
+      rear_edge_to_rear_axle_ + safe_dst;
   const double shift_distance =
-      (front_edge_to_center_with_safe_dst - back_edge_to_center_with_safe_dst) *
+      (front_edge_to_rear_axle_with_safe_dst - rear_edge_to_rear_axle_with_safe_dst) *
       0.5 * sin_target_point_theta_;
   const double veh_length_with_safe_dst =
-      front_edge_to_center_with_safe_dst + back_edge_to_center_with_safe_dst;
+      front_edge_to_rear_axle_with_safe_dst + rear_edge_to_rear_axle_with_safe_dst;
   const double veh_width_with_safe_dis = width_veh_ + safe_dst * 2.0;
 
   double y_step = veh_length_with_safe_dst;
@@ -1551,7 +1552,7 @@ double ParallelInGeometryPlan::CalPointYBiasCost(const double y_bias) const {
 
 double ParallelInGeometryPlan::CalSegmentLengthCost(
     const double segment_len) const {
-  if (segment_len < min_segment_len_) {
+  if (segment_len < kMinSegmentLen) {
     return std::numeric_limits<double>::infinity();
   } else {
     return kSegmentLengthWeight * segment_len;
@@ -1620,9 +1621,9 @@ double ParallelInGeometryPlan::CalFGSegmentCost(
   double gear_shift_cost = 0.0;
   if (point_g.x <= target_point_.x) {
     double total_len = len_fg + len_g_end;
-    if (total_len < min_segment_len_) {
+    if (total_len < kMinSegmentLen) {
       const double extending_len =
-          std::min(kMaxXOffset, min_segment_len_ - total_len);
+          std::min(kMaxXOffset, kMinSegmentLen - total_len);
       total_len += extending_len;
       updated_target_point->x = target_point_.x + extending_len;
     }
@@ -1648,9 +1649,9 @@ double ParallelInGeometryPlan::CalEFSegmentCost(
   double gear_shift_cost = 0.0;
   if (point_f.x >= target_point_.x) {
     double total_len = len_ef + len_f_end;
-    if (total_len < min_segment_len_) {
+    if (total_len < kMinSegmentLen) {
       const double extending_len =
-          std::min(kMaxXOffset, min_segment_len_ - total_len);
+          std::min(kMaxXOffset, kMinSegmentLen - total_len);
       total_len += extending_len;
       updated_target_point->x = target_point_.x - extending_len;
     }

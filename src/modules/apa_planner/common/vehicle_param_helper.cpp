@@ -3,6 +3,7 @@
 #include <string>
 
 #include "utils/file.h"
+#include "../../common/planning_gflags.h"
 
 namespace planning {
 
@@ -12,7 +13,7 @@ VehicleParam VehicleParamHelper::vehicle_param_;
 bool VehicleParamHelper::is_init_ = false;
 
 void VehicleParamHelper::Init() {
-  Init("/asw/planning/res/conf/vehicle_param.pb.txt");
+  Init(FLAGS_vehicle_param_config_file);
 }
 
 void VehicleParamHelper::Init(const std::string& config_file) {

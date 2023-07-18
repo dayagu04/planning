@@ -1064,15 +1064,15 @@ bool DiagonalInGeometryPlan::CollideWithObjectsByBox(
     return false;
   }
 
-  const double front_edge_to_center_with_safe_dst =
-      front_edge_to_center_ + front_buffer;
-  const double back_edge_to_center_with_safe_dst =
-      back_edge_to_center_ + rear_buffer;
+  const double front_edge_to_rear_axle_with_safe_dst =
+      front_edge_to_rear_axle_ + front_buffer;
+  const double rear_edge_to_rear_axle_with_safe_dst =
+      rear_edge_to_rear_axle_ + rear_buffer;
   const double shift_distance =
-      (front_edge_to_center_with_safe_dst - back_edge_to_center_with_safe_dst) *
+      (front_edge_to_rear_axle_with_safe_dst - rear_edge_to_rear_axle_with_safe_dst) *
       0.5;
   const double veh_length_with_safe_dst =
-      front_edge_to_center_with_safe_dst + back_edge_to_center_with_safe_dst;
+      front_edge_to_rear_axle_with_safe_dst + rear_edge_to_rear_axle_with_safe_dst;
   const double veh_width_with_safe_dis = width_veh_ + lat_buffer * 2.0;
   double veh_x = veh_point.x + shift_distance * apa_cos(veh_point.theta);
   double veh_y = veh_point.y + shift_distance * apa_sin(veh_point.theta);
@@ -1116,15 +1116,15 @@ bool DiagonalInGeometryPlan::CollideWithObjectsByBox(
     theta_sign = -1.0;
   }
 
-  const double front_edge_to_center_with_safe_dst =
-      front_edge_to_center_ + front_buffer;
-  const double back_edge_to_center_with_safe_dst =
-      back_edge_to_center_ + rear_buffer;
+  const double front_edge_to_rear_axle_with_safe_dst =
+      front_edge_to_rear_axle_ + front_buffer;
+  const double rear_edge_to_rear_axle_with_safe_dst =
+      rear_edge_to_rear_axle_ + rear_buffer;
   const double shift_distance =
-      (front_edge_to_center_with_safe_dst - back_edge_to_center_with_safe_dst) *
+      (front_edge_to_rear_axle_with_safe_dst - rear_edge_to_rear_axle_with_safe_dst) *
       0.5;
   const double veh_length_with_safe_dst =
-      front_edge_to_center_with_safe_dst + back_edge_to_center_with_safe_dst;
+      front_edge_to_rear_axle_with_safe_dst + rear_edge_to_rear_axle_with_safe_dst;
   const double veh_width_with_safe_dis = width_veh_ + lat_buffer * 2.0;
 
   for (int i = 0; i <= size_theta; ++i) {
@@ -1239,15 +1239,15 @@ bool DiagonalInGeometryPlan::CEndCollideCheck(const PlanningPoint &point_c,
     return false;
   }
 
-  const double front_edge_to_center_with_safe_dst =
-      front_edge_to_center_ + safe_dst;
-  const double back_edge_to_center_with_safe_dst =
-      back_edge_to_center_ + safe_dst;
+  const double front_edge_to_rear_axle_with_safe_dst =
+      front_edge_to_rear_axle_ + safe_dst;
+  const double rear_edge_to_rear_axle_with_safe_dst =
+      rear_edge_to_rear_axle_ + safe_dst;
   const double shift_distance =
-      (front_edge_to_center_with_safe_dst - back_edge_to_center_with_safe_dst) *
+      (front_edge_to_rear_axle_with_safe_dst - rear_edge_to_rear_axle_with_safe_dst) *
       0.5 * sin_target_point_theta_;
   const double veh_length_with_safe_dst =
-      front_edge_to_center_with_safe_dst + back_edge_to_center_with_safe_dst;
+      front_edge_to_rear_axle_with_safe_dst + rear_edge_to_rear_axle_with_safe_dst;
   const double veh_width_with_safe_dis = width_veh_ + safe_dst * 2.0;
 
   double y_step = veh_length_with_safe_dst;
