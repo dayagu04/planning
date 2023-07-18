@@ -5,7 +5,7 @@ from IPython.core.display import display, HTML
 from cyber_record.record import Record
 from bokeh.io import output_notebook, push_notebook
 from bokeh.layouts import layout, column, row
-from bokeh.models import WheelZoomTool, HoverTool
+from bokeh.models import WheelZoomTool, HoverTool, ColumnDataSource
 import bokeh.plotting as bkp
 import ipywidgets
 import math
@@ -21,22 +21,24 @@ class SingleSlot:
     self.slot_side = 0
     self.limiter_position_x_vec = []
     self.limiter_position_y_vec = []
-    self.fig1 = None
 
 
 class SingleUssObject:
   def __init__(self):
     self.id = 0 
     self.x_vec = []
+    self.y_vec = []
 
 
 class ApaInfoPlotter(object):
   def __init__(self):
     # bag path and frame dt
-    path = "/asw/planning/apa_3.00000"
+    path = '/asw/planning/apa_0.00000'
     self.bag = Record(path)
-    display(HTML("<style>.container { width:95% !important;  }</style>"))
+    display(HTML('<style>.container { width:95% !important;  }</style>'))
     output_notebook()
+    self.all_frame_fig = bkp.figure(x_axis_label='x(m)', y_axis_label='y(m)', width=800, height=400, match_aspect=True, aspect_scale=1.0)
+    self.cur_frame_fig = bkp.figure(x_axis_label='x(m)', y_axis_label='y(m)', width=800, height=400, match_aspect=True, aspect_scale=1.0)
     self.max_time = 0.0
     self.min_time = float('inf')
     # localization
@@ -45,6 +47,8 @@ class ApaInfoPlotter(object):
     self.pos_x_vec = []
     self.pos_y_vec = []
     self.pos_yaw_vec = []
+    self.data_cur_pos_point = ColumnDataSource(data = {'x':[], 'y':[]})
+    self.data_cur_pos_box = ColumnDataSource(data = {'x':[], 'y':[]})
     # all plan points
     self.plan_point_x_vec = []
     self.plan_point_y_vec = []
@@ -56,17 +60,34 @@ class ApaInfoPlotter(object):
     self.plan_segment_y_vec = []
     self.plan_segment_yaw_vec = []
     self.plan_segment_gear_vec = []
+    self.data_cur_plan_seg = ColumnDataSource(data = {
+        'x':[],
+        'y':[]})
     # slots
     self.slots_index = 0
     self.slots_t_vec = []
     self.slots_select_id_vec = []
     self.slots_vec = []
     self.replan_slot_vec = []
+    self.replan_t_vec = []
+    self.max_slot_num = 20
+    self.data_slot_ids = [
+        ColumnDataSource(data = {'id': [], 'id_text_x': [], 'id_text_y': []})
+        for i in range(self.max_slot_num)]
+    self.data_slot_points = [
+        ColumnDataSource(data = {'corner_point_x': [], 'corner_point_y': []})
+        for i in range(self.max_slot_num)]
     # objects
     self.uss_objects_index = 0
     self.uss_objects_t_vec = []
     self.uss_objects_vec = []
-
+    self.max_uss_obj_num = 20
+    self.data_uss_obj_ids = [
+        ColumnDataSource(data = {'id': [], 'id_text_x': [], 'id_text_y': []})
+        for i in range(self.max_uss_obj_num)]
+    self.data_uss_obj_points = [
+        ColumnDataSource(data = {'x': [], 'y': []})
+        for i in range(self.max_uss_obj_num)]
 
   def get_closed_veh_box(self, x, y, theta):
     # params for E40X
@@ -102,46 +123,47 @@ class ApaInfoPlotter(object):
 
   def load_data(self):
     # load localization msg
-    for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
+    for topic, msg, t in self.bag.read_messages('/iflytek/localization/ego_pose'):
       self.max_time = max(self.max_time, msg.header.timestamp)
       self.min_time = min(self.min_time, msg.header.timestamp)
       self.pos_t_vec.append(msg.header.timestamp)
       self.pos_x_vec.append(msg.pose.local_position.x)
       self.pos_y_vec.append(msg.pose.local_position.y)
       self.pos_yaw_vec.append(msg.pose.euler_angles.yaw)
-    print('localization msg length: ', len(self.pos_t_vec))
+    # print('localization msg length: ', len(self.pos_t_vec))
 
     # load planning msg
     pre_gear = None
-    for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
+    for topic, msg, t in self.bag.read_messages('/iflytek/planning/plan'):
       cur_gear = msg.gear_command.gear_command_value
       self.max_time = max(self.max_time, msg.meta.header.timestamp)
       self.min_time = min(self.min_time, msg.meta.header.timestamp)
       if len(msg.trajectory.trajectory_points) <= 1:
         continue
+      plan_segment_x_vec = []
+      plan_segment_y_vec = []
+      plan_segment_yaw_vec = []
+      plan_segment_t = msg.meta.header.timestamp
+      for i in range(len(msg.trajectory.trajectory_points)):
+        plan_segment_x_vec.append(msg.trajectory.trajectory_points[i].x)
+        plan_segment_y_vec.append(msg.trajectory.trajectory_points[i].y)
+        plan_segment_yaw_vec.append(msg.trajectory.trajectory_points[i].heading_yaw)
+      self.plan_segment_t_vec.append(plan_segment_t)
+      self.plan_segment_gear_vec.append(cur_gear)
+      self.plan_segment_x_vec.append(plan_segment_x_vec)
+      self.plan_segment_y_vec.append(plan_segment_y_vec)
+      self.plan_segment_yaw_vec.append(plan_segment_yaw_vec)
       if pre_gear is None or pre_gear != cur_gear:
-        plan_segment_t = msg.meta.header.timestamp
-        plan_segment_x_vec = []
-        plan_segment_y_vec = []
-        plan_segment_yaw_vec = []
-        for i in range(len(msg.trajectory.trajectory_points)):
-          plan_segment_x_vec.append(msg.trajectory.trajectory_points[i].x)
-          plan_segment_y_vec.append(msg.trajectory.trajectory_points[i].y)
-          plan_segment_yaw_vec.append(msg.trajectory.trajectory_points[i].heading_yaw)
-        self.plan_segment_t_vec.append(plan_segment_t)
-        self.plan_segment_x_vec.append(plan_segment_x_vec)
-        self.plan_segment_y_vec.append(plan_segment_y_vec)
-        self.plan_segment_yaw_vec.append(plan_segment_yaw_vec)
         self.plan_point_x_vec.extend(plan_segment_x_vec)
         self.plan_point_y_vec.extend(plan_segment_y_vec)
         self.plan_point_yaw_vec.extend(plan_segment_yaw_vec)
-        self.plan_segment_gear_vec.append(cur_gear)
+        self.replan_t_vec.append(plan_segment_t)
       pre_gear = cur_gear
-    print('planning points number: ', len(self.plan_point_x_vec))
-    print('planning segments number: ', len(self.plan_segment_t_vec))
+    # print('planning points number: ', len(self.plan_point_x_vec))
+    # print('planning segments number: ', len(self.plan_segment_t_vec))
   
     # load slot
-    for topic, msg, t in self.bag.read_messages("/iflytek/fusion/parking_slot"):
+    for topic, msg, t in self.bag.read_messages('/iflytek/fusion/parking_slot'):
       self.max_time = max(self.max_time, msg.header.timestamp)
       self.min_time = min(self.min_time, msg.header.timestamp)
       self.slots_t_vec.append(msg.header.timestamp)
@@ -163,10 +185,10 @@ class ApaInfoPlotter(object):
           slot.limiter_position_y_vec.append(limiter_position[j].y)
         slot_vec.append(slot)
       self.slots_vec.append(slot_vec)
-    print('parking slot msg number: ', len(self.slots_vec))
+    # print('parking slot msg number: ', len(self.slots_vec))
 
     # load objects
-    for topic, msg, t in self.bag.read_messages("/iflytek/fusion/objects"):
+    for topic, msg, t in self.bag.read_messages('/iflytek/fusion/objects'):
       self.max_time = max(self.max_time, msg.header.timestamp)
       self.min_time = min(self.min_time, msg.header.timestamp)
       self.uss_objects_t_vec.append(msg.header.timestamp)
@@ -179,17 +201,13 @@ class ApaInfoPlotter(object):
         uss_object.y_vec.append(msg.uss_only_object_list[i].obj_point1.y)
         uss_object.y_vec.append(msg.uss_only_object_list[i].obj_point2.y)
         uss_object_vec.append(uss_object)
-      self.uss_objects_vec.extend(uss_object_vec)
-    print('fusion objects msg number: ', len(self.uss_objects_vec))
-
-    self.get_replan_slot_vec()
-    # self.plot_all_frame()
-
+      self.uss_objects_vec.append(uss_object_vec)
+    # print('fusion objects msg number: ', len(self.uss_objects_vec))
 
   def get_replan_slot_vec(self):
-    for i in range(len(self.plan_segment_t_vec)):
-      slot_index = 0
+    for i in range(len(self.replan_t_vec)):
       replan_time = self.plan_segment_t_vec[i]
+      slot_index = 0
       while slot_index + 1 < len(self.slots_vec) and self.slots_t_vec[slot_index] < replan_time:
         slot_index = slot_index + 1
       slot_index = max(slot_index - 1, 0)
@@ -199,8 +217,14 @@ class ApaInfoPlotter(object):
           break
 
 
+  def plot_figure(self):
+    self.load_data()
+    self.get_replan_slot_vec()
+    # self.plot_all_frame()
+    self.plot_cur_frame()
+
   def update_index(self, bag_time):
-    absolute_bag_time = self.min_time + bag_time
+    absolute_bag_time = self.min_time + bag_time * 1e6
     self.pos_index = 0
     while self.pos_index + 1 < len(self.pos_t_vec) and self.pos_t_vec[self.pos_index] < absolute_bag_time:
       self.pos_index = self.pos_index + 1
@@ -220,101 +244,164 @@ class ApaInfoPlotter(object):
     while self.uss_objects_index + 1 < len(self.uss_objects_t_vec) and self.uss_objects_t_vec[self.uss_objects_index] < absolute_bag_time:
       self.uss_objects_index = self.uss_objects_index + 1
     self.uss_objects_index = max(self.uss_objects_index - 1, 0)
-    
-
-  def plot_all_frame(self):
-    self.fig1 = bkp.figure(x_axis_label='x(m)', y_axis_label='y(m)', width=800, height=400, match_aspect=True, aspect_scale=1.0)
-    # plot all localization position
-    f1 = self.fig1.line(self.pos_x_vec, self.pos_y_vec, line_width=1, line_color='blue', line_dash='solid', legend_label='loc pos')
-    for i in range(len(self.pos_x_vec)):
-      pos_x = self.pos_x_vec[i]
-      pos_y = self.pos_y_vec[i]
-      pos_yaw = self.pos_yaw_vec[i]
-      pos_box = self.get_closed_veh_box(pos_x, pos_y, pos_yaw)
-      self.fig1.line(pos_box[0], pos_box[1], line_width=1, line_color='blue', line_dash='solid')
-    # plot all trajectory points
-    self.fig1.line(self.plan_point_x_vec, self.plan_point_y_vec, line_width=1, line_color='green', line_dash='solid', legend_label='traj pos')
-    for i in range(len(self.plan_point_x_vec)):
-      traj_x = self.plan_point_x_vec[i]
-      traj_y = self.plan_point_y_vec[i]
-      traj_yaw = self.plan_point_yaw_vec[i]
-      pos_box = self.get_closed_veh_box(traj_x, traj_y, traj_yaw)
-      self.fig1.line(pos_box[0], pos_box[1], line_width=1, line_color='green', line_dash='solid')
-    for i in range(len(self.replan_slot_vec)):
-      slot = self.replan_slot_vec[i]
-      x_vec = [slot.corner_point_x_vec[0], slot.corner_point_x_vec[2], slot.corner_point_x_vec[3], slot.corner_point_x_vec[1]]
-      y_vec = [slot.corner_point_y_vec[0], slot.corner_point_y_vec[2], slot.corner_point_y_vec[3], slot.corner_point_y_vec[1]]
-      self.fig1.line(x_vec, y_vec, line_width=1, line_dash='solid', legend_label='seg: '+str(i))
 
 
-    self.fig1.toolbar.active_scroll = self.fig1.select_one(WheelZoomTool)
-    self.fig1.legend.click_policy = 'hide'
-    bkp.show(self.fig1, notebook_handle=True)
-
-
-  def plot_cur_frame(self):
-    fig1 = bkp.figure(x_axis_label='x(m)', y_axis_label='y(m)', width=800, height=400, match_aspect=True, aspect_scale=1.0)
-    # plot cur localization position
+  def update_data(self):
+    # localization
+    self.data_cur_pos_point.data.update({
+      'x': [],
+      'y': [],
+    })
+    self.data_cur_pos_box.data.update({
+      'x': [],
+      'y': [],
+    })
     if len(self.pos_x_vec) != 0:
       pos_x = self.pos_x_vec[self.pos_index]
       pos_y = self.pos_y_vec[self.pos_index]
       pos_yaw = self.pos_yaw_vec[self.pos_index]
       pos_box = self.get_closed_veh_box(pos_x, pos_y, pos_yaw)
-      # plot cur point of rear axle center
-      fig1.circle([pos_x], [pos_y], color='blue', size=5, legend_label='rear axle center')
-      # plot ego box
-      fig1.line(pos_box[0], pos_box[1], line_width=1, line_color='blue', line_dash='solid', legend_label='cur box')
+      self.data_cur_pos_point.data.update({
+        'x': [pos_x],
+        'y': [pos_y],
+      })
+      self.data_cur_pos_box.data.update({
+        'x': pos_box[0],
+        'y': pos_box[1],
+      })
 
-    # plot current plan segment
+    # planning
+    self.data_cur_plan_seg.data.update({
+        'x': [],
+        'y': [],
+    })
     if len(self.plan_segment_x_vec) != 0:
-      color = 'green'
-      if self.plan_segment_gear_vec[self.plan_segment_index] == 2:
-        color = 'indigo'
-      fig1.line(self.plan_segment_x_vec[self.plan_segment_index], self.plan_segment_y_vec[self.plan_segment_index], line_width=1, line_color=color, line_dash='solid', legend_label='cur traj seg')
-
-    # plot slots
+      self.data_cur_plan_seg.data.update({
+          'x': self.plan_segment_x_vec[self.plan_segment_index],
+          'y': self.plan_segment_y_vec[self.plan_segment_index],
+      })
+    
+    # slot
+    for i in range(self.max_slot_num):
+      self.data_slot_ids[i].data.update({
+          'id':[],
+          'id_text_x':[],
+          'id_text_y':[],
+      })
+      self.data_slot_points[i].data.update({
+          'corner_point_x':[],
+          'corner_point_y':[],
+      })
     if len(self.slots_vec) != 0:
+      # update data
       for i in range(len(self.slots_vec[self.slots_index])):
         slot = self.slots_vec[self.slots_index][i]
-        x_vec = [slot.corner_point_x_vec[0], slot.corner_point_x_vec[2], slot.corner_point_x_vec[3], slot.corner_point_x_vec[1]]
-        y_vec = [slot.corner_point_y_vec[0], slot.corner_point_y_vec[2], slot.corner_point_y_vec[3], slot.corner_point_y_vec[1]]
-        text_x = (slot.corner_point_x_vec[0] + slot.corner_point_x_vec[2] + slot.corner_point_x_vec[3] + slot.corner_point_x_vec[1]) * 0.25
-        text_y = (slot.corner_point_y_vec[0] + slot.corner_point_y_vec[2] + slot.corner_point_y_vec[3] + slot.corner_point_y_vec[1]) * 0.25
-        if slot.id == self.slots_select_id_vec[self.slots_index]:
-          fig1.line(x_vec, y_vec, line_width=1, line_color='red', line_dash='solid')
-          fig1.text(text_x, text_y, text=[str(slot.id)], text_color="red", text_align="center", text_font_size="12pt")
-        else:
-          fig1.line(x_vec, y_vec, line_width=1, line_color='yellow', line_dash='solid')
-          fig1.text(text_x, text_y, text=[str(slot.id)], text_color="yellow", text_align="center", text_font_size="12pt")
+        self.data_slot_ids[i].data.update({
+            'id':[slot.id],
+            'id_text_x':[(slot.corner_point_x_vec[0] + slot.corner_point_x_vec[2] + slot.corner_point_x_vec[3] + slot.corner_point_x_vec[1]) * 0.25],
+            'id_text_y':[(slot.corner_point_y_vec[0] + slot.corner_point_y_vec[2] + slot.corner_point_y_vec[3] + slot.corner_point_y_vec[1]) * 0.25],
+        })
+        self.data_slot_points[i].data.update({
+            'corner_point_x':[slot.corner_point_x_vec[0], slot.corner_point_x_vec[2], slot.corner_point_x_vec[3], slot.corner_point_x_vec[1]],
+            'corner_point_y':[slot.corner_point_y_vec[0], slot.corner_point_y_vec[2], slot.corner_point_y_vec[3], slot.corner_point_y_vec[1]],
+        })
 
-    # plot uss objects
+    # uss objects
+    for i in range(self.max_uss_obj_num):
+      self.data_uss_obj_ids[i].data.update({
+          'id':[],
+          'id_text_x':[],
+          'id_text_y':[],
+      })
+      self.data_uss_obj_points[i].data.update({
+          'x':[],
+          'y':[],
+      })
     if len(self.uss_objects_vec) != 0:
       for i in range(len(self.uss_objects_vec[self.uss_objects_index])):
         object_vec = self.uss_objects_vec[self.uss_objects_index][i]
-        text_x = (object_vec.x_vec[0] + object_vec.x_vec[1]) * 0.5
-        text_y = (object_vec.y_vec[0] + object_vec.y_vec[1]) * 0.5
-        fig1.line(object_vec.x_vec, object_vec.y_vec, line_width=1, line_color='red', line_dash='solid')
-        # fig1.text(text_x, text_y, text=[str(object_vec.id)], text_color="red", text_align="center", text_font_size="10pt")
+        self.data_uss_obj_ids[i].data.update({
+            'id':[slot.id],
+            'id_text_x':[(object_vec.x_vec[0] + object_vec.x_vec[1]) * 0.5],
+            'id_text_y':[(object_vec.y_vec[0] + object_vec.y_vec[1]) * 0.5],
+        })
+        self.data_uss_obj_points[i].data.update({
+            'x':object_vec.x_vec,
+            'y':object_vec.y_vec,
+        })
 
-    fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
-    fig1.legend.click_policy = 'hide'
-    push_notebook()
-    bkp.show(fig1, notebook_handle=True)
+
+  def plot_all_frame(self):
+    # plot all localization position
+    f1 = self.all_frame_fig.line(self.pos_x_vec, self.pos_y_vec, line_width=1, line_color='blue', line_dash='solid', legend_label='loc pos')
+    for i in range(len(self.pos_x_vec)):
+      pos_x = self.pos_x_vec[i]
+      pos_y = self.pos_y_vec[i]
+      pos_yaw = self.pos_yaw_vec[i]
+      pos_box = self.get_closed_veh_box(pos_x, pos_y, pos_yaw)
+      self.all_frame_fig.line(pos_box[0], pos_box[1], line_width=1, line_color='blue', line_dash='solid')
+    # plot all trajectory points
+    self.all_frame_fig.line(self.plan_point_x_vec, self.plan_point_y_vec, line_width=1, line_color='green', line_dash='solid', legend_label='traj pos')
+    for i in range(len(self.plan_point_x_vec)):
+      traj_x = self.plan_point_x_vec[i]
+      traj_y = self.plan_point_y_vec[i]
+      traj_yaw = self.plan_point_yaw_vec[i]
+      pos_box = self.get_closed_veh_box(traj_x, traj_y, traj_yaw)
+      self.all_frame_fig.line(pos_box[0], pos_box[1], line_width=1, line_color='green', line_dash='solid')
+    for i in range(len(self.replan_slot_vec)):
+      slot = self.replan_slot_vec[i]
+      x_vec = [slot.corner_point_x_vec[0], slot.corner_point_x_vec[2], slot.corner_point_x_vec[3], slot.corner_point_x_vec[1]]
+      y_vec = [slot.corner_point_y_vec[0], slot.corner_point_y_vec[2], slot.corner_point_y_vec[3], slot.corner_point_y_vec[1]]
+      self.all_frame_fig.line(x_vec, y_vec, line_width=1, line_dash='solid', legend_label='seg: '+str(i))
+
+    self.all_frame_fig.toolbar.active_scroll = self.all_frame_fig.select_one(WheelZoomTool)
+    self.all_frame_fig.legend.click_policy = 'hide'
+    bkp.show(self.all_frame_fig, notebook_handle=True)
 
 
-  def update_figure(self, bag_time):
+  def plot_cur_frame(self):
+    # plot cur localization position
+    if len(self.pos_x_vec) != 0:
+      # plot cur point of rear axle center
+      self.cur_frame_fig.circle('x', 'y', source=self.data_cur_pos_point, color='blue', size=5, legend_label='rear axle center')
+      # plot ego box
+      self.cur_frame_fig.line('x', 'y', source=self.data_cur_pos_box, line_width=1, line_color='blue', line_dash='solid', legend_label='cur box')
+
+    # plot current plan segment
+    if len(self.plan_segment_x_vec) != 0:
+      self.cur_frame_fig.line('x', 'y', source=self.data_cur_plan_seg, line_width=1, line_color='green', line_dash='solid', legend_label='cur traj seg')
+
+    # plot slots    
+    if len(self.slots_vec) != 0:
+      for i in range(self.max_slot_num):
+        self.cur_frame_fig.line('corner_point_x', 'corner_point_y', source=self.data_slot_points[i], line_color='red', line_width=1, line_dash='solid')
+        self.cur_frame_fig.text(x = 'id_text_x', y = 'id_text_y', text = 'id', source=self.data_slot_ids[i], text_color='red', text_align='center', text_font_size='10pt')
+
+    # plot uss objects    
+    if len(self.uss_objects_vec) != 0:
+      for i in range(self.max_uss_obj_num):
+        self.cur_frame_fig.line('x', 'y', source=self.data_uss_obj_points[i], line_color='purple', line_width=1, line_dash='solid')
+        self.cur_frame_fig.text(x = 'id_text_x', y = 'id_text_y', text = 'id', source=self.data_uss_obj_ids[i], text_color='purple', text_align='center', text_font_size='10pt')
+
+    self.cur_frame_fig.toolbar.active_scroll = self.cur_frame_fig.select_one(WheelZoomTool)
+    self.cur_frame_fig.legend.click_policy = 'hide'
+    bkp.show(self.cur_frame_fig, notebook_handle=True)
+
+
+  def update(self, bag_time):
     self.update_index(bag_time)
-    self.plot_cur_frame()
+    self.update_data()
+    push_notebook()
 
 
 class ApaInfoSlider:
   def __init__(self):
     self.apa_info_plotter = ApaInfoPlotter()
-    self.apa_info_plotter.load_data()
-    frame_dt = 0.1 * 1e6 # 0.1s
-    bag_duration_t_in_us = self.apa_info_plotter.max_time - self.apa_info_plotter.min_time
-    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description="bag_time", min=0.0, max=bag_duration_t_in_us , value=0.02, step=frame_dt)
-    ipywidgets.interact(self.apa_info_plotter.update_figure, bag_time=self.time_slider)
+    self.apa_info_plotter.plot_figure()
+    frame_dt = 0.1 # s
+    bag_duration_t_in_s = (self.apa_info_plotter.max_time - self.apa_info_plotter.min_time) / 1e6
+    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description='bag_time(s)', min=0.0, max=bag_duration_t_in_s , value=0.02, step=frame_dt)
+    ipywidgets.interact(self.apa_info_plotter.update, bag_time=self.time_slider)
 
 
 if __name__ == '__main__':
