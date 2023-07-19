@@ -77,10 +77,19 @@ build/tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000 --close-loop > planni
 - 修改`.vscode/launch.json`中的bag路径，在VSCode调试界面选择planning player，可以断点调试代码
 - localview画图中会打印当前帧号frame_num，据此可以在planning log中找到对应帧日志
 
-4.通过jupyter看bag
-``
+4.启动jupyter服务器：
+
+```
+启动容器：
+.ci/dev.py --platform=X86
+
+vscode连接到容器后，在终端中运行：
+sudo su
 make jupyter_start
-``
+
+浏览器打开屏幕上链接，打开tools/common/jupyter/scripts/下文件，修改bag路径后运行所有即可可视化
+图标bag解析和图标显示逻辑在tools/common/jupyter/lib下
+```
 
 # Test
 1.单元测试:

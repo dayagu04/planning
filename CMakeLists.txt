@@ -9,5 +9,5 @@ if (PP_ENABLE)
 endif()
 
 if (PYBIND_TOOL_ENABLE)
-  add_subdirectory(jupyter_pybind)
+  add_subdirectory(tools/pybind)
 endif()

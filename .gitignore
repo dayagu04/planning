@@ -2,10 +2,7 @@ build
 install
 bin
 .cache
-jupyter_pybind/notebooks/lib/__pycache__
-jupyter_pybind/notebooks/**/.ipynb_checkpoints
-jupyter_pybind/notebooks/**/.ipynb_checkpoints
-jupyter_pybind/notebooks/**/python_proto
+tools/pybind/**/python_proto
 target/*.tar
 bags/
 src/adapter/cyber/version.h
