@@ -25,6 +25,12 @@ void ObstacleManager::update() {
   for (int i = 0;
        i < session_->environmental_model().get_prediction_info().size(); i++) {
     auto prediction_object = prediction_objects[i];
+    if (prediction_object.fusion_source != FusionSource::FUSION &&
+        prediction_object.fusion_source != FusionSource::CAMERA_ONLY) {
+      LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
+                prediction_object.id);
+      continue;
+    }
     bool is_static = prediction_object.speed < 0.1 ||
                      prediction_object.trajectory_array.size() == 0;
     double prediction_relative_time =

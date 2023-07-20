@@ -191,6 +191,13 @@ void TrackletMaintainer::recv_prediction_objects(
       continue;
     }
 
+    // WB HACK： Only use front obstacles in long time planning
+    if (p.type == 0 || (p.fusion_source != FusionSource::FUSION &&
+                        p.fusion_source != FusionSource::CAMERA_ONLY)) {
+      LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
+                p.id);
+      continue;
+    }
     double dx = p.position_x - ego_state_.ego_pose_raw().x;
     double dy = p.position_y - ego_state_.ego_pose_raw().y;
 
@@ -393,7 +400,14 @@ void TrackletMaintainer::recv_relative_prediction_objects(
   // double ego_ly = ego_fx;
 
   for (auto &p : predictions) {
-    if (p.type == 0) {
+    // 过滤未与相机融合， 且在相机FOV之内的
+    if (p.type == 0 ||
+        (!(p.fusion_source & OBSTACLE_SOURCE_CAMERA)) &&
+            (p.relative_position_x > 0 &&
+             tan(25) > fabs(p.relative_position_y / p.relative_position_x)) ||
+        fabs(p.relative_position_y) > 10 || p.length == 0 || p.width == 0) {
+      LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
+                p.id);
       continue;
     }
 

@@ -175,14 +175,6 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
       if (num > local_view.fusion_objects_info.fusion_object_num()) {
         break;
       }
-      // WB HACK： Only use front obstacles in long time planning
-      if (obj.additional_info().fusion_source() != FusionSource::FUSION &&
-          obj.additional_info().fusion_source() != FusionSource::CAMERA_ONLY) {
-        LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
-                  obj.additional_info().track_id());
-        continue;
-      }
-
       if (prediction_obj_id_set.find(obj.additional_info().track_id()) ==
           prediction_obj_id_set.end()) {
         transform_fusion_to_prediction(
@@ -195,18 +187,6 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
       num++;
       if (num > local_view.fusion_objects_info.fusion_object_num()) {
         break;
-      }
-
-      // 过滤未与相机融合， 且在相机FOV之内的
-      if ((!(obj.additional_info().fusion_source() & OBSTACLE_SOURCE_CAMERA)) &&
-          (obj.common_info().relative_center_position().x() > 0 &&
-          tan(25) > fabs(obj.common_info().relative_center_position().y() / obj.common_info().relative_center_position().x())) ||
-          fabs(obj.common_info().relative_center_position().y()) > 10 ||
-          obj.common_info().shape().length() == 0 ||
-          obj.common_info().shape().width() == 0) {
-        LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
-                  obj.additional_info().track_id());
-        continue;
       }
       transform_fusion_to_prediction(
           obj, (double)local_view.fusion_objects_info.header().timestamp());
