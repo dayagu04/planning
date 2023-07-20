@@ -67,13 +67,13 @@ bool PlanningComponent::Init() {
             planning_adapter_->FeedPredictionResult(prediction_result_msg);
           });
 
-  auto vehicel_service_reader_ =
+  auto vehicle_service_reader_ =
       planning_node_->CreateReader<VehicleService::VehicleServiceOutputInfo>(
           "/iflytek/vehicle_service",
           [this](const std::shared_ptr<VehicleService::VehicleServiceOutputInfo>
-                     &vehicel_service_output_info_msg) {
+                     &vehicle_service_output_info_msg) {
             planning_adapter_->FeedVehicleService(
-                vehicel_service_output_info_msg);
+                vehicle_service_output_info_msg);
           });
 
   auto control_output_reader_ =

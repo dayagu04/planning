@@ -73,14 +73,12 @@ void PlanningAdapter::Proc() {
         prediction_result_msg_.header().timestamp());
     input_topic_latency->set_prediction(
         get_latency(start_time, prediction_result_msg_.header().timestamp()));
-    prediction_result_msg_.Clear();
 
     local_view_.road_info = road_info_msg_;
     local_view_.road_info_recv_time = road_info_msg_recv_time_;
     input_topic_timestamp->set_fusion_road(road_info_msg_.header().timestamp());
     input_topic_latency->set_fusion_road(
         get_latency(start_time, road_info_msg_.header().timestamp()));
-    road_info_msg_.Clear();
 
     local_view_.localization_estimate = localization_estimate_msg_;
     local_view_.localization_estimate_recv_time =
@@ -89,7 +87,6 @@ void PlanningAdapter::Proc() {
         localization_estimate_msg_.header().timestamp());
     input_topic_latency->set_localization(get_latency(
         start_time, localization_estimate_msg_.header().timestamp()));
-    localization_estimate_msg_.Clear();
 
     local_view_.fusion_objects_info = fusion_objects_info_msg_;
     local_view_.fusion_objects_info_recv_time =
@@ -98,16 +95,14 @@ void PlanningAdapter::Proc() {
         fusion_objects_info_msg_.header().timestamp());
     input_topic_latency->set_fusion_object(
         get_latency(start_time, fusion_objects_info_msg_.header().timestamp()));
-    fusion_objects_info_msg_.Clear();
 
-    local_view_.vehicel_service_output_info = vehicel_service_output_info_msg_;
-    local_view_.vehicel_service_output_info_recv_time =
-        vehicel_service_output_info_msg_recv_time_;
+    local_view_.vehicle_service_output_info = vehicle_service_output_info_msg_;
+    local_view_.vehicle_service_output_info_recv_time =
+        vehicle_service_output_info_msg_recv_time_;
     input_topic_timestamp->set_vehicle_service(
-        vehicel_service_output_info_msg_.header().timestamp());
+        vehicle_service_output_info_msg_.header().timestamp());
     input_topic_latency->set_vehicle_service(get_latency(
-        start_time, vehicel_service_output_info_msg_.header().timestamp()));
-    vehicel_service_output_info_msg_.Clear();
+        start_time, vehicle_service_output_info_msg_.header().timestamp()));
 
     local_view_.control_output = control_output_msg_;
     local_view_.control_output_recv_time = control_output_msg_recv_time_;
@@ -115,7 +110,6 @@ void PlanningAdapter::Proc() {
         control_output_msg_.header().timestamp());
     input_topic_latency->set_control_output(
         get_latency(start_time, control_output_msg_.header().timestamp()));
-    control_output_msg_.Clear();
 
     local_view_.hmi_mcu_inner_info = hmi_mcu_inner_info_msg_;
     local_view_.hmi_mcu_inner_info_recv_time =
@@ -124,7 +118,6 @@ void PlanningAdapter::Proc() {
         hmi_mcu_inner_info_msg_.header().timestamp());
     input_topic_latency->set_hmi(
         get_latency(start_time, hmi_mcu_inner_info_msg_.header().timestamp()));
-    hmi_mcu_inner_info_msg_.Clear();
 
     local_view_.parking_fusion_info = parking_fusion_info_msg_;
     local_view_.parking_fusion_info_recv_time =
@@ -133,14 +126,12 @@ void PlanningAdapter::Proc() {
         parking_fusion_info_msg_.header().timestamp());
     input_topic_latency->set_parking_fusion(
         get_latency(start_time, parking_fusion_info_msg_.header().timestamp()));
-    parking_fusion_info_msg_.Clear();
 
     local_view_.function_state_machine_info = func_state_machine_msg_;
     input_topic_timestamp->set_function_state_machine(
         func_state_machine_msg_.header().timestamp());
     input_topic_latency->set_function_state_machine(
         get_latency(start_time, func_state_machine_msg_.header().timestamp()));
-    func_state_machine_msg_.Clear();
   }
 
   // 2.planning run

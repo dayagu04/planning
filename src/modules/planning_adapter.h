@@ -69,13 +69,13 @@ class PlanningAdapter {
 
   void FeedVehicleService(
       const std::shared_ptr<VehicleService::VehicleServiceOutputInfo>&
-          vehicel_service_output_info_msg) {
-    std::cout << "receive vehicel_service_output_info "
-              << vehicel_service_output_info_msg->header().timestamp()
+          vehicle_service_output_info_msg) {
+    std::cout << "receive vehicle_service_output_info "
+              << vehicle_service_output_info_msg->header().timestamp()
               << std::endl;
     std::lock_guard<std::mutex> lock(msg_mutex_);
-    vehicel_service_output_info_msg_.CopyFrom(*vehicel_service_output_info_msg);
-    vehicel_service_output_info_msg_recv_time_ = IflyTime::Now_ms();
+    vehicle_service_output_info_msg_.CopyFrom(*vehicle_service_output_info_msg);
+    vehicle_service_output_info_msg_recv_time_ = IflyTime::Now_ms();
   }
 
   void FeedControlCommand(const std::shared_ptr<ControlCommand::ControlOutput>&
@@ -142,8 +142,8 @@ class PlanningAdapter {
   FusionObjects::FusionObjectsInfo fusion_objects_info_msg_;
   int64_t fusion_objects_info_msg_recv_time_;
 
-  VehicleService::VehicleServiceOutputInfo vehicel_service_output_info_msg_;
-  int64_t vehicel_service_output_info_msg_recv_time_;
+  VehicleService::VehicleServiceOutputInfo vehicle_service_output_info_msg_;
+  int64_t vehicle_service_output_info_msg_recv_time_;
 
   ControlCommand::ControlOutput control_output_msg_;
   int64_t control_output_msg_recv_time_;

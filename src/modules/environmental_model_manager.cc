@@ -163,7 +163,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   auto &prediction_info =
       session_->mutable_environmental_model()->get_mutable_prediction_info();
   prediction_info.clear();
-  if (local_view.prediction_result.prediction_obstacle_list_size() > 0) {
+  if (session_->environmental_model().location_valid()) {
     std::unordered_set<uint> prediction_obj_id_set;
     truncate_prediction_info(
         local_view.prediction_result,
@@ -190,8 +190,9 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
       }
       transform_fusion_to_prediction(
           obj, (double)local_view.fusion_objects_info.header().timestamp());
-    }
+    }    
   }
+  
   last_feed_time_[FEED_FUSION_INFO] = local_view.fusion_objects_info_recv_time;
   last_feed_time_[FEED_PREDICTION_INFO] =
       local_view.prediction_result_recv_time;
@@ -201,12 +202,12 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
 void EnvironmentalModelManager::vehicle_status_adaptor(
     double current_time, const LocalView &local_view,
     common::VehicleStatus &vehicle_status) {
-  const auto &vehicel_service_output_info =
-      local_view.vehicel_service_output_info;
+  const auto &vehicle_service_output_info =
+      local_view.vehicle_service_output_info;
   const auto &localization_estimate = local_view.localization_estimate;
   const auto &hmi_mcu_inner_info = local_view.hmi_mcu_inner_info;
   vehicle_status.mutable_header()->set_timestamp_us(
-      vehicel_service_output_info.header().timestamp());
+      vehicle_service_output_info.header().timestamp());
 
   if (session_->environmental_model().location_valid()) {
     vehicle_status.mutable_heading_yaw()
@@ -275,11 +276,11 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   // vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
   //     18.0);
 
-  if (vehicel_service_output_info.yaw_rate_available()) {
+  if (vehicle_service_output_info.yaw_rate_available()) {
     vehicle_status.mutable_angular_velocity()->set_available(true);
     vehicle_status.mutable_angular_velocity()
         ->mutable_heading_yaw_rate()
-        ->set_value_rps(vehicel_service_output_info.yaw_rate());
+        ->set_value_rps(vehicle_service_output_info.yaw_rate());
   } else {
     vehicle_status.mutable_angular_velocity()->set_available(false);
     vehicle_status.mutable_angular_velocity()
@@ -287,28 +288,28 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
         ->set_value_rps(0.);
   }
 
-  if (vehicel_service_output_info.vehicle_speed_available()) {
+  if (vehicle_service_output_info.vehicle_speed_available()) {
     vehicle_status.mutable_velocity()->set_available(true);
     vehicle_status.mutable_velocity()
         ->mutable_heading_velocity()
-        ->set_value_mps(vehicel_service_output_info.vehicle_speed());
+        ->set_value_mps(vehicle_service_output_info.vehicle_speed());
     last_feed_time_[FEED_EGO_VEL] =
-        local_view.vehicel_service_output_info_recv_time;
+        local_view.vehicle_service_output_info_recv_time;
   }
 
-  if (vehicel_service_output_info.long_acceleration_available()) {
+  if (vehicle_service_output_info.long_acceleration_available()) {
     vehicle_status.mutable_brake_info()
         ->mutable_brake_info_data()
         ->set_acceleration_on_vehicle_wheel(
-            vehicel_service_output_info.long_acceleration());
+            vehicle_service_output_info.long_acceleration());
     last_feed_time_[FEED_EGO_ACC] =
-        local_view.vehicel_service_output_info_recv_time;
+        local_view.vehicle_service_output_info_recv_time;
   }
 
-  if (vehicel_service_output_info.vehicle_speed_display_available()) {
+  if (vehicle_service_output_info.vehicle_speed_display_available()) {
     vehicle_status.mutable_velocity()->set_available(true);
     vehicle_status.mutable_velocity()->set_hmi_speed(
-        vehicel_service_output_info.vehicle_speed_display());
+        vehicle_service_output_info.vehicle_speed_display());
   }
 
   if (session_->environmental_model().get_hdmap_valid()) {
@@ -319,48 +320,48 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
         ->set_value_mps(linear_velocity_from_wheel);
   }
 
-  if (vehicel_service_output_info.steering_wheel_angle_available()) {
+  if (vehicle_service_output_info.steering_wheel_angle_available()) {
     auto steering_data = vehicle_status.mutable_steering_wheel();
     steering_data->set_available(true);
     steering_data->mutable_steering_wheel_data()->set_steering_wheel_rad(
-        vehicel_service_output_info.steering_wheel_angle());
+        vehicle_service_output_info.steering_wheel_angle());
     steering_data->mutable_steering_wheel_data()->set_steering_wheel_torque(
-        vehicel_service_output_info.power_train_current_torque());
+        vehicle_service_output_info.power_train_current_torque());
 
     last_feed_time_[FEED_EGO_STEER_ANGLE] =
-        local_view.vehicel_service_output_info_recv_time;
+        local_view.vehicle_service_output_info_recv_time;
   }
 
-  if (vehicel_service_output_info.fl_wheel_speed_available() &&
-      vehicel_service_output_info.fr_wheel_speed_available() &&
-      vehicel_service_output_info.rl_wheel_speed_available() &&
-      vehicel_service_output_info.rr_wheel_speed_available()) {
+  if (vehicle_service_output_info.fl_wheel_speed_available() &&
+      vehicle_service_output_info.fr_wheel_speed_available() &&
+      vehicle_service_output_info.rl_wheel_speed_available() &&
+      vehicle_service_output_info.rr_wheel_speed_available()) {
     vehicle_status.mutable_wheel_velocity()->set_available(true);  // hack
     auto wheel_velocity4d =
         vehicle_status.mutable_wheel_velocity()->mutable_wheel_velocity4d();
     wheel_velocity4d->set_front_left(
-        vehicel_service_output_info.fl_wheel_speed());
+        vehicle_service_output_info.fl_wheel_speed());
     wheel_velocity4d->set_front_right(
-        vehicel_service_output_info.fr_wheel_speed());
+        vehicle_service_output_info.fr_wheel_speed());
     wheel_velocity4d->set_rear_left(
-        vehicel_service_output_info.rl_wheel_speed());
+        vehicle_service_output_info.rl_wheel_speed());
     wheel_velocity4d->set_rear_right(
-        vehicel_service_output_info.rr_wheel_speed());
+        vehicle_service_output_info.rr_wheel_speed());
     last_feed_time_[FEED_WHEEL_SPEED_REPORT] =
-        local_view.vehicel_service_output_info_recv_time;
+        local_view.vehicle_service_output_info_recv_time;
   }
 
-  if (vehicel_service_output_info.power_train_override_flag_available()) {
+  if (vehicle_service_output_info.power_train_override_flag_available()) {
     vehicle_status.mutable_throttle()->mutable_throttle_data()->set_override(
-        vehicel_service_output_info.power_train_override_flag());
+        vehicle_service_output_info.power_train_override_flag());
   }
 
   auto vehicle_light = vehicle_status.mutable_vehicle_light();
   // 临时hack wiper_state为拨杆状态
-  if (vehicel_service_output_info.wiper_state_available()) {
-    if (vehicel_service_output_info.wiper_state() == 0) {
-      if (vehicel_service_output_info.hazard_light_state() &&
-          vehicel_service_output_info.hazard_light_state_available()) {
+  if (vehicle_service_output_info.wiper_state_available()) {
+    if (vehicle_service_output_info.wiper_state() == 0) {
+      if (vehicle_service_output_info.hazard_light_state() &&
+          vehicle_service_output_info.hazard_light_state_available()) {
         vehicle_light->mutable_vehicle_light_data()
             ->mutable_turn_signal()
             ->set_value(common::TurnSignalType::EMERGENCY_FLASHER);
@@ -370,35 +371,35 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
             ->set_value(common::TurnSignalType::NONE);
       }
     } else {
-      if (vehicel_service_output_info.wiper_state() == 1) {
+      if (vehicle_service_output_info.wiper_state() == 1) {
         vehicle_light->mutable_vehicle_light_data()
             ->mutable_turn_signal()
             ->set_value(common::TurnSignalType::LEFT);
-      } else if (vehicel_service_output_info.wiper_state() == 2) {
+      } else if (vehicle_service_output_info.wiper_state() == 2) {
         vehicle_light->mutable_vehicle_light_data()
             ->mutable_turn_signal()
             ->set_value(common::TurnSignalType::RIGHT);
       }
     }
     last_feed_time_[FEED_MISC_REPORT] =
-        local_view.vehicel_service_output_info_recv_time;
+        local_view.vehicle_service_output_info_recv_time;
   }
 
-  if (vehicel_service_output_info.auto_light_state_available()) {
+  if (vehicle_service_output_info.auto_light_state_available()) {
     vehicle_light->mutable_vehicle_light_data()->set_auto_light_state(
-        vehicel_service_output_info.auto_light_state());
+        vehicle_service_output_info.auto_light_state());
     last_feed_time_[FEED_MISC_REPORT] =
-        local_view.vehicel_service_output_info_recv_time;
+        local_view.vehicle_service_output_info_recv_time;
   }
 
-  if (vehicel_service_output_info.driver_hand_torque_available()) {
+  if (vehicle_service_output_info.driver_hand_torque_available()) {
     vehicle_status.mutable_driver_hand_state()->set_driver_hand_torque(
-        vehicel_service_output_info.driver_hand_torque());
+        vehicle_service_output_info.driver_hand_torque());
   }
 
-  if (vehicel_service_output_info.driver_hands_off_state_available()) {
+  if (vehicle_service_output_info.driver_hands_off_state_available()) {
     vehicle_status.mutable_driver_hand_state()->set_driver_hands_off_state(
-        vehicel_service_output_info.driver_hands_off_state());
+        vehicle_service_output_info.driver_hands_off_state());
   }
 }
 

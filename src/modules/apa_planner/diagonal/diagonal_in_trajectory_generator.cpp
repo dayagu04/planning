@@ -883,7 +883,7 @@ bool DiagonalInTrajectoryGenerator::IsReplan(
   const double ego_y = local_position.y();
   AINFO << "ego x:" << ego_x << ", y:" << ego_y;
   AINFO << "veh_spd:"
-        << local_view_->vehicel_service_output_info.vehicle_speed();
+        << local_view_->vehicle_service_output_info.vehicle_speed();
 
   if (!planning_output->has_trajectory() ||
       planning_output->trajectory().trajectory_points_size() == 0) {
@@ -952,7 +952,7 @@ bool DiagonalInTrajectoryGenerator::IsSamePoint(const PlanningPoint& p1,
 void DiagonalInTrajectoryGenerator::UpdateStandstillTime() {
   const uint64_t cur_time = IflyTime::Now_ms();
   const double veh_spd_mps =
-      fabs(local_view_->vehicel_service_output_info.vehicle_speed());
+      fabs(local_view_->vehicle_service_output_info.vehicle_speed());
   if (veh_spd_mps < kStanstillSpd) {
     if (last_time_ != 0) {
       standstill_time_ += cur_time - last_time_;

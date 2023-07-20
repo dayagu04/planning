@@ -33,8 +33,8 @@ struct LocalView {
   FusionObjects::FusionObjectsInfo fusion_objects_info;
   double fusion_objects_info_recv_time = 0.0;
 
-  VehicleService::VehicleServiceOutputInfo vehicel_service_output_info;
-  double vehicel_service_output_info_recv_time = 0.0;
+  VehicleService::VehicleServiceOutputInfo vehicle_service_output_info;
+  double vehicle_service_output_info_recv_time = 0.0;
 
   ControlCommand::ControlOutput control_output;
   double control_output_recv_time = 0.0;
