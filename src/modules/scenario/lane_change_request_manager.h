@@ -46,7 +46,7 @@ class LaneChangeRequestManager {
     int_request_.set_target_lane_virtual_id(target_lane_virtual_id);
     act_request_.set_target_lane_virtual_id(target_lane_virtual_id);
   }
-  RequestType turn_signal() const { return turn_signal_; }
+  RequestType turn_signal() const { return gen_turn_signal_; }
   bool AggressiveChange() const {
     if (request_source_ == NO_REQUEST) {
       return false;
@@ -63,7 +63,7 @@ class LaneChangeRequestManager {
  private:
   RequestType request_ = NO_CHANGE;
   RequestSource request_source_ = NO_REQUEST;
-  RequestType turn_signal_ = NO_CHANGE;
+  RequestType gen_turn_signal_ = NO_CHANGE;
   IntCancelReasonType int_request_cancel_reason_ = NO_CANCEL;
   int target_lane_virtual_id_ = -1;
   IntRequest int_request_;

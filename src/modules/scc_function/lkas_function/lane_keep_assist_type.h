@@ -80,23 +80,23 @@ typedef struct RoadInfo {
   double left_line_c3;   // 本车道左侧道线方程系数c3
   bool right_line_valid;  // 本车道右侧道线有效性 0:Invalid 1:Valid
   uint8 right_line_type;  // 本车道右侧车道线类型 0：虚线  1：实线
-  double right_line_c0;         // 本车道右侧道线方程系数c0
-  double right_line_c1;         // 本车道右侧道线方程系数c1
-  double right_line_c2;         // 本车道右侧道线方程系数c2
-  double right_line_c3;         // 本车道右侧道线方程系数c3
+  double right_line_c0;      // 本车道右侧道线方程系数c0
+  double right_line_c1;      // 本车道右侧道线方程系数c1
+  double right_line_c2;      // 本车道右侧道线方程系数c2
+  double right_line_c3;      // 本车道右侧道线方程系数c3
   bool left_roadedge_valid;  // 本车道左侧路缘有效性 0:Invalid 1:Valid
-  double left_roadedge_c0;      // 本车道左侧路缘方程系数c0
-  double left_roadedge_c1;      // 本车道左侧路缘方程系数c1
-  double left_roadedge_c2;      // 本车道左侧路缘方程系数c3
-  double left_roadedge_c3;      // 本车道左侧路缘方程系数c3
+  double left_roadedge_c0;   // 本车道左侧路缘方程系数c0
+  double left_roadedge_c1;   // 本车道左侧路缘方程系数c1
+  double left_roadedge_c2;   // 本车道左侧路缘方程系数c3
+  double left_roadedge_c3;   // 本车道左侧路缘方程系数c3
   bool right_roadedge_valid;  // 本车道右侧路缘有效性 0:Invalid 1:Valid
-  double right_roadedge_c0;      // 本车道右侧路缘方程系数c0
-  double right_roadedge_c1;      // 本车道右侧路缘方程系数c1
-  double right_roadedge_c2;      // 本车道右侧路缘方程系数c2
-  double right_roadedge_c3;      // 本车道右侧路缘方程系数c3
+  double right_roadedge_c0;   // 本车道右侧路缘方程系数c0
+  double right_roadedge_c1;   // 本车道右侧路缘方程系数c1
+  double right_roadedge_c2;   // 本车道右侧路缘方程系数c2
+  double right_roadedge_c3;   // 本车道右侧路缘方程系数c3
   bool lane_width_valid;  // 当前车道宽度信息有效性 0:Invalid 1:Valid
-  float32 lane_width;        // 当前车道宽度,单位:m
-} RoadInfo;                  // 道线和路缘信息结构体定义
+  float32 lane_width;     // 当前车道宽度,单位:m
+} RoadInfo;               // 道线和路缘信息结构体定义
 
 typedef struct VehInfo {
   float32 veh_display_speed;
@@ -164,13 +164,13 @@ typedef struct {
 } AeraVel;
 
 bool LKALineLeftIntervention(float32 tlc_to_line_threshold,
-                                planning::LkasInput *lkas_input);
+                             planning::LkasInput *lkas_input);
 bool LKARoadEdgeLeftIntervention(float32 tlc_to_roadedge_threshold,
-                                    planning::LkasInput *lkas_input);
-bool LKALineRightIntervention(float32 tlc_to_line_threshold,
                                  planning::LkasInput *lkas_input);
+bool LKALineRightIntervention(float32 tlc_to_line_threshold,
+                              planning::LkasInput *lkas_input);
 bool LKARoadEdgeRightIntervention(float32 tlc_to_roadedge_threshold,
-                                     planning::LkasInput *lkas_input);
+                                  planning::LkasInput *lkas_input);
 
 }  // namespace planning
 

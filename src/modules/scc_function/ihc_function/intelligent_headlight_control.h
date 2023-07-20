@@ -18,9 +18,9 @@ namespace planning {
 
 // IHC算法输入信号结构体定义
 typedef struct IHCSysInput {
-  bool ihc_main_switch;            // IHC开关 0:Off 1:On
+  bool ihc_main_switch;               // IHC开关 0:Off 1:On
   float32 vehicle_speed_display_kph;  // 本车车速 单位:kph
-  bool auto_light_state;           // 自动灯光控制状态 0:Off 1:On
+  bool auto_light_state;              // 自动灯光控制状态 0:Off 1:On
 } IHCSysInput;
 
 // IHC算法状态结构体定义

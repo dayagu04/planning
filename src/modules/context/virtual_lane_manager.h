@@ -51,7 +51,7 @@ class VirtualLaneManager {
     }
     return 0;
   }
-  
+
   const std::shared_ptr<VirtualLane> get_left_lane() const {
     return left_lane_;
   }

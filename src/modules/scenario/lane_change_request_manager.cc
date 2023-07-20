@@ -25,7 +25,7 @@ void LaneChangeRequestManager::FinishRequest() {
 
   request_ = NO_CHANGE;
   request_source_ = NO_REQUEST;
-  turn_signal_ = NO_CHANGE;
+  gen_turn_signal_ = NO_CHANGE;
 }
 
 void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
@@ -60,16 +60,17 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       "act_request: %d,"
       "int_cancel_reason: %d, turn_signal: %d \n",
       int_request_.request_type(), map_request_.request_type(),
-      act_request_.request_type(), int_request_cancel_reason_, turn_signal_);
+      act_request_.request_type(), int_request_cancel_reason_,
+      gen_turn_signal_);
 
   if (int_request_cancel_reason_ == MANUAL_CANCEL &&
-      turn_signal_ != NO_CHANGE &&
+      gen_turn_signal_ != NO_CHANGE &&
       target_lane_virtual_id_ != virtual_lane_mgr_->current_lane_virtual_id() &&
       request_source_ == MAP_REQUEST) {
-    if (turn_signal_ == LEFT_CHANGE) {
+    if (gen_turn_signal_ == LEFT_CHANGE) {
       int_request_.set_left_cancel_freeze_cnt(
           DisplayStateConfig::DefaultCancelFreezeCnt);
-    } else if (turn_signal_ == RIGHT_CHANGE) {
+    } else if (gen_turn_signal_ == RIGHT_CHANGE) {
       int_request_.set_right_cancel_freeze_cnt(
           DisplayStateConfig::DefaultCancelFreezeCnt);
     }
@@ -133,13 +134,11 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
         target_lane_virtual_id_);
   }
   if (request_source_ == MAP_REQUEST) {
-    turn_signal_ = map_request_.turn_signal();
-  } else if (request_source_ == INT_REQUEST) {
-    turn_signal_ = int_request_.turn_signal();
+    gen_turn_signal_ = map_request_.turn_signal();
   } else if (request_source_ == ACT_REQUEST) {
-    turn_signal_ = act_request_.turn_signal();
+    gen_turn_signal_ = act_request_.turn_signal();
   } else {
-    turn_signal_ = NO_CHANGE;
+    gen_turn_signal_ = NO_CHANGE;
   }
   LOG_WARNING("[LCRequestManager::update] ===cur_state: %d=== \n", lc_status);
 }

@@ -356,31 +356,30 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   }
 
   auto vehicle_light = vehicle_status.mutable_vehicle_light();
-  if (vehicel_service_output_info.left_turn_light_state() &&
-      vehicel_service_output_info.left_turn_light_state_available()) {
-    vehicle_light->mutable_vehicle_light_data()
-        ->mutable_turn_signal()
-        ->set_value(common::TurnSignalType::LEFT);
-    last_feed_time_[FEED_MISC_REPORT] =
-        local_view.vehicel_service_output_info_recv_time;
-  } else if (vehicel_service_output_info.right_turn_light_state() &&
-             vehicel_service_output_info.right_turn_light_state_available()) {
-    vehicle_light->mutable_vehicle_light_data()
-        ->mutable_turn_signal()
-        ->set_value(common::TurnSignalType::RIGHT);
-    last_feed_time_[FEED_MISC_REPORT] =
-        local_view.vehicel_service_output_info_recv_time;
-  } else if (vehicel_service_output_info.hazard_light_state() &&
-             vehicel_service_output_info.hazard_light_state_available()) {
-    vehicle_light->mutable_vehicle_light_data()
-        ->mutable_turn_signal()
-        ->set_value(common::TurnSignalType::EMERGENCY_FLASHER);
-    last_feed_time_[FEED_MISC_REPORT] =
-        local_view.vehicel_service_output_info_recv_time;
-  } else {
-    vehicle_light->mutable_vehicle_light_data()
-        ->mutable_turn_signal()
-        ->set_value(common::TurnSignalType::NONE);
+  // 临时hack wiper_state为拨杆状态
+  if (vehicel_service_output_info.wiper_state_available()) {
+    if (vehicel_service_output_info.wiper_state() == 0) {
+      if (vehicel_service_output_info.hazard_light_state() &&
+          vehicel_service_output_info.hazard_light_state_available()) {
+        vehicle_light->mutable_vehicle_light_data()
+            ->mutable_turn_signal()
+            ->set_value(common::TurnSignalType::EMERGENCY_FLASHER);
+      } else {
+        vehicle_light->mutable_vehicle_light_data()
+            ->mutable_turn_signal()
+            ->set_value(common::TurnSignalType::NONE);
+      }
+    } else {
+      if (vehicel_service_output_info.wiper_state() == 1) {
+        vehicle_light->mutable_vehicle_light_data()
+            ->mutable_turn_signal()
+            ->set_value(common::TurnSignalType::LEFT);
+      } else if (vehicel_service_output_info.wiper_state() == 2) {
+        vehicle_light->mutable_vehicle_light_data()
+            ->mutable_turn_signal()
+            ->set_value(common::TurnSignalType::RIGHT);
+      }
+    }
     last_feed_time_[FEED_MISC_REPORT] =
         local_view.vehicel_service_output_info_recv_time;
   }

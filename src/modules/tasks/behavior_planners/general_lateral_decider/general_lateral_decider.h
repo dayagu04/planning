@@ -85,7 +85,8 @@ class GeneralLateralDecider : public Task {
       const std::shared_ptr<FrenetObstacle> obstacle,
       ObstacleDecision &obstacle_decision);
   // 3. construct the lane and boundary bound
-  void ConstructLaneAndBoundaryBounds(MapObstacleDecision &map_obstacle_decisions);
+  void ConstructLaneAndBoundaryBounds(
+      MapObstacleDecision &map_obstacle_decisions);
 
   bool CheckObstacleNudgeCondition(
       const std::shared_ptr<FrenetObstacle> &obstacle);
@@ -105,9 +106,11 @@ class GeneralLateralDecider : public Task {
   void GenerateEnuBoundaryPoints(
 
       const std::vector<std::pair<double, double>> &frenet_safe_bounds,
-      const std::vector<std::pair<double, double>> &frenet_path_bounds, LatDeciderOutput &lat_decider_output);
+      const std::vector<std::pair<double, double>> &frenet_path_bounds,
+      LatDeciderOutput &lat_decider_output);
 
-  void SampleRoadDistanceInfo(const double &s_target, ReferencePathPoint &sample_path_point);
+  void SampleRoadDistanceInfo(const double &s_target,
+                              ReferencePathPoint &sample_path_point);
 
   void GenerateEnuReferenceTraj(LatDeciderOutput &lat_decider_output);
 
@@ -129,7 +132,8 @@ class GeneralLateralDecider : public Task {
   std::shared_ptr<ReferencePath> cur_reference_path_ptr_;
   double cruise_vel_ = 0.0;
   bool is_lane_change_scene_ = false;
-  LatDeciderLaneChangeInfo lat_lane_change_info_ = LatDeciderLaneChangeInfo::NONE;
+  LatDeciderLaneChangeInfo lat_lane_change_info_ =
+      LatDeciderLaneChangeInfo::NONE;
 };
 
 }  // namespace planning

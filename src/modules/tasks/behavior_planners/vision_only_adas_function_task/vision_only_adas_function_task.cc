@@ -11,7 +11,6 @@ VisionOnlyAdasFunctionTask::VisionOnlyAdasFunctionTask(
 }
 
 bool VisionOnlyAdasFunctionTask::Execute(framework::Frame *frame) {
-
   double start_time = IflyTime::Now_ms();
   if (Task::Execute(frame) == false) {
     return false;
@@ -25,8 +24,7 @@ bool VisionOnlyAdasFunctionTask::Execute(framework::Frame *frame) {
   lkas_function_ptr->RunOnce();
   double time_1 = IflyTime::Now_ms();
   LOG_DEBUG("lka_function cost is [%f]ms:\n", (time_1 - time_0));
-  JSON_DEBUG_VALUE("lka_function time cost is:",
-                   (time_1 - time_0));
+  JSON_DEBUG_VALUE("lka_function time cost is:", (time_1 - time_0));
   // ihc_function test
   auto ihc_function_ptr = frame->session()
                               ->mutable_planning_context()
@@ -34,8 +32,7 @@ bool VisionOnlyAdasFunctionTask::Execute(framework::Frame *frame) {
   ihc_function_ptr->RunOnce();
   double time_2 = IflyTime::Now_ms();
   LOG_DEBUG("ihc_function cost is [%f]ms:\n", (time_2 - time_1));
-  JSON_DEBUG_VALUE("ihc_function time cost is:",
-                   (time_2 - time_1));
+  JSON_DEBUG_VALUE("ihc_function time cost is:", (time_2 - time_1));
   // tsr_function test
   auto tsr_function_ptr = frame->session()
                               ->mutable_planning_context()
@@ -43,8 +40,7 @@ bool VisionOnlyAdasFunctionTask::Execute(framework::Frame *frame) {
   tsr_function_ptr->RunOnce();
   double time_3 = IflyTime::Now_ms();
   LOG_DEBUG("tsr_function cost is [%f]ms:\n", (time_3 - time_2));
-  JSON_DEBUG_VALUE("tsr_function time cost is:",
-                   (time_3 - time_2));
+  JSON_DEBUG_VALUE("tsr_function time cost is:", (time_3 - time_2));
   return true;
 }
 

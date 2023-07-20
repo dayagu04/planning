@@ -416,7 +416,8 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
             if (((tr.d_rel < 3.0 && tr.v_rel < 1.0) || tr.d_rel < 1.0) &&
                 ((tr.d_min_cpath > 1.0 && tr.d_min_cpath < 1.7 &&
                   tr.d_min_cpath < std::fabs(fs_y_rel)) ||
-                (tr.d_max_cpath - l_ego > -1.7 && tr.d_max_cpath - l_ego < -1 &&
+                 (tr.d_max_cpath - l_ego > -1.7 &&
+                  tr.d_max_cpath - l_ego < -1 &&
                   std::fabs(tr.d_max_cpath) < std::fabs(fs_y_rel)))) {
               is_ncar_ = true;
 
@@ -430,16 +431,16 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
               avd_car_past_[1].clear();
 
               double temp[] = {0,
-                              (double)tr.trajectory.intersection,
-                              tr.v_rel,
-                              tr.d_rel,
-                              tr.v_lat,
-                              tr.d_min_cpath,
-                              tr.d_max_cpath,
-                              5,
-                              curr_time,
-                              final_y_rel_,
-                              (double)tr.track_id};
+                               (double)tr.trajectory.intersection,
+                               tr.v_rel,
+                               tr.d_rel,
+                               tr.v_lat,
+                               tr.d_min_cpath,
+                               tr.d_max_cpath,
+                               5,
+                               curr_time,
+                               final_y_rel_,
+                               (double)tr.track_id};
 
               avd_car_past_[0].assign(std::begin(temp), std::end(temp));
 
@@ -457,21 +458,22 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
               avd_car_past_[1].clear();
 
               double temp[] = {0,
-                              (double)tr.trajectory.intersection,
-                              tr.v_rel,
-                              tr.d_rel,
-                              tr.v_lat,
-                              tr.d_min_cpath,
-                              tr.d_max_cpath,
-                              5,
-                              curr_time,
-                              final_y_rel_,
-                              (double)tr.track_id};
+                               (double)tr.trajectory.intersection,
+                               tr.v_rel,
+                               tr.d_rel,
+                               tr.v_lat,
+                               tr.d_min_cpath,
+                               tr.d_max_cpath,
+                               5,
+                               curr_time,
+                               final_y_rel_,
+                               (double)tr.track_id};
 
               avd_car_past_[0].assign(std::begin(temp), std::end(temp));
             } else if (avd_car_past_[0].size() > 0 &&
-                      (avd_car_past_[0][3] > 10 ||
-                        (avd_car_past_[0][3] < 10 && avd_car_past_[0][5] < 0))) {
+                       (avd_car_past_[0][3] > 10 ||
+                        (avd_car_past_[0][3] < 10 &&
+                         avd_car_past_[0][5] < 0))) {
               if (avd_car_past_[1].size() > 0 && avd_car_past_[1][3] < 10 &&
                   avd_car_past_[1][5] > 0) {
                 avd_car_past_[0] = avd_car_past_[1];
@@ -481,8 +483,9 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
                 avd_car_past_[1].clear();
               }
             } else if (avd_car_past_[1].size() > 0 &&
-                      (avd_car_past_[1][3] > 10 ||
-                        (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] < 0))) {
+                       (avd_car_past_[1][3] > 10 ||
+                        (avd_car_past_[1][3] < 10 &&
+                         avd_car_past_[1][5] < 0))) {
               avd_car_past_[1].clear();
             }
           } else if (state == ROAD_LC_RWAIT) {
@@ -495,21 +498,22 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
               avd_car_past_[1].clear();
 
               double temp[] = {0,
-                              (double)tr.trajectory.intersection,
-                              tr.v_rel,
-                              tr.d_rel,
-                              tr.v_lat,
-                              tr.d_min_cpath,
-                              tr.d_max_cpath,
-                              5,
-                              curr_time,
-                              final_y_rel_,
-                              (double)tr.track_id};
+                               (double)tr.trajectory.intersection,
+                               tr.v_rel,
+                               tr.d_rel,
+                               tr.v_lat,
+                               tr.d_min_cpath,
+                               tr.d_max_cpath,
+                               5,
+                               curr_time,
+                               final_y_rel_,
+                               (double)tr.track_id};
 
               avd_car_past_[0].assign(std::begin(temp), std::end(temp));
             } else if (avd_car_past_[0].size() > 0 &&
-                      (avd_car_past_[0][3] > 10 ||
-                        (avd_car_past_[0][3] < 10 && avd_car_past_[0][5] > 0))) {
+                       (avd_car_past_[0][3] > 10 ||
+                        (avd_car_past_[0][3] < 10 &&
+                         avd_car_past_[0][5] > 0))) {
               if (avd_car_past_[1].size() > 0 &&
                   (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] < 0)) {
                 avd_car_past_[0] = avd_car_past_[1];
@@ -519,8 +523,9 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
                 avd_car_past_[1].clear();
               }
             } else if (avd_car_past_[1].size() > 0 &&
-                      (avd_car_past_[1][3] > 10 ||
-                        (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] > 0))) {
+                       (avd_car_past_[1][3] > 10 ||
+                        (avd_car_past_[1][3] < 10 &&
+                         avd_car_past_[1][5] > 0))) {
               avd_car_past_[1].clear();
             }
           }
@@ -537,7 +542,7 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
             if (tr.d_rel > -6.0 && tr.v_rel > -1.0 &&
                 ((tr.d_min_cpath > 1.0 && tr.d_min_cpath < 1.7 &&
                   tr.d_min_cpath < std::fabs(fs_y_rel)) ||
-                (tr.d_max_cpath > -1.7 && tr.d_max_cpath < -1 &&
+                 (tr.d_max_cpath > -1.7 && tr.d_max_cpath < -1 &&
                   std::fabs(tr.d_max_cpath) < std::fabs(fs_y_rel)))) {
               is_ncar_ = true;
 
@@ -551,16 +556,16 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
               avd_car_past_[1].clear();
 
               double temp[] = {0,
-                              (double)tr.trajectory.intersection,
-                              tr.v_rel,
-                              tr.d_rel,
-                              tr.v_lat,
-                              tr.d_min_cpath,
-                              tr.d_max_cpath,
-                              5,
-                              curr_time,
-                              final_y_rel_,
-                              (double)tr.track_id};
+                               (double)tr.trajectory.intersection,
+                               tr.v_rel,
+                               tr.d_rel,
+                               tr.v_lat,
+                               tr.d_min_cpath,
+                               tr.d_max_cpath,
+                               5,
+                               curr_time,
+                               final_y_rel_,
+                               (double)tr.track_id};
 
               avd_car_past_[0].assign(std::begin(temp), std::end(temp));
 
@@ -578,21 +583,22 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
               avd_car_past_[1].clear();
 
               double temp[] = {0,
-                              (double)tr.trajectory.intersection,
-                              tr.v_rel,
-                              tr.d_rel,
-                              tr.v_lat,
-                              tr.d_min_cpath,
-                              tr.d_max_cpath,
-                              5,
-                              curr_time,
-                              final_y_rel_,
-                              (double)tr.track_id};
+                               (double)tr.trajectory.intersection,
+                               tr.v_rel,
+                               tr.d_rel,
+                               tr.v_lat,
+                               tr.d_min_cpath,
+                               tr.d_max_cpath,
+                               5,
+                               curr_time,
+                               final_y_rel_,
+                               (double)tr.track_id};
 
               avd_car_past_[0].assign(std::begin(temp), std::end(temp));
             } else if (avd_car_past_[0].size() > 0 &&
-                      (avd_car_past_[0][3] > 10 ||
-                        (avd_car_past_[0][3] < 10 && avd_car_past_[0][5] < 0))) {
+                       (avd_car_past_[0][3] > 10 ||
+                        (avd_car_past_[0][3] < 10 &&
+                         avd_car_past_[0][5] < 0))) {
               if (avd_car_past_[1].size() > 0 &&
                   (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] > 0)) {
                 avd_car_past_[0] = avd_car_past_[1];
@@ -602,8 +608,9 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
                 avd_car_past_[1].clear();
               }
             } else if (avd_car_past_[1].size() > 0 &&
-                      (avd_car_past_[1][3] > 10 ||
-                        (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] < 0))) {
+                       (avd_car_past_[1][3] > 10 ||
+                        (avd_car_past_[1][3] < 10 &&
+                         avd_car_past_[1][5] < 0))) {
               avd_car_past_[1].clear();
             }
           } else if (state == ROAD_LC_RWAIT) {
@@ -616,21 +623,22 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
               avd_car_past_[1].clear();
 
               double temp[] = {0,
-                              (double)tr.trajectory.intersection,
-                              tr.v_rel,
-                              tr.d_rel,
-                              tr.v_lat,
-                              tr.d_min_cpath,
-                              tr.d_max_cpath,
-                              5,
-                              curr_time,
-                              final_y_rel_,
-                              (double)tr.track_id};
+                               (double)tr.trajectory.intersection,
+                               tr.v_rel,
+                               tr.d_rel,
+                               tr.v_lat,
+                               tr.d_min_cpath,
+                               tr.d_max_cpath,
+                               5,
+                               curr_time,
+                               final_y_rel_,
+                               (double)tr.track_id};
 
               avd_car_past_[0].assign(std::begin(temp), std::end(temp));
             } else if (avd_car_past_[0].size() > 0 &&
-                      (avd_car_past_[0][3] > 10 ||
-                        (avd_car_past_[0][3] < 10 && avd_car_past_[0][5] > 0))) {
+                       (avd_car_past_[0][3] > 10 ||
+                        (avd_car_past_[0][3] < 10 &&
+                         avd_car_past_[0][5] > 0))) {
               if (avd_car_past_[1].size() > 0 &&
                   (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] < 0)) {
                 avd_car_past_[0] = avd_car_past_[1];
@@ -640,8 +648,9 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
                 avd_car_past_[1].clear();
               }
             } else if (avd_car_past_[1].size() > 0 &&
-                      (avd_car_past_[1][3] > 10 ||
-                        (avd_car_past_[1][3] < 10 && avd_car_past_[1][5] > 0))) {
+                       (avd_car_past_[1][3] > 10 ||
+                        (avd_car_past_[1][3] < 10 &&
+                         avd_car_past_[1][5] > 0))) {
               avd_car_past_[1].clear();
             }
           }
