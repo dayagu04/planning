@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(PYBIND11_PYTHON_VERSION 3.7)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
-set(WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/scripts/")
+set(WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/notebooks/scripts/")
 set(SH_COMMAND "python proto_gen.py")
 
 execute_process(
