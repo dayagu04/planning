@@ -31,6 +31,11 @@ mainboard -d /asw/planning/planning.dag
 1.系统调用各个模块`target/build.sh`进行编译打包，产物为Release版本
 2.产物生成在`install/planning/`下
 
+查看产物版本号：
+```
+strings install/xxx/Lib/libxxx_component.so | grep auto_version
+```
+
 # 实车调试
 1.部署产物包至/asw，原有/asw/planning会被备份为/asw/planning.时间戳（使用target/下的脚本）
 ```

@@ -8,6 +8,8 @@
 #include "debug_info_log.h"
 #include "ifly_time.h"
 
+#include "version.h"
+
 namespace planning {
 
 void PlanningAdapter::Init() {
@@ -144,8 +146,10 @@ void PlanningAdapter::Proc() {
       local_view_, &planning_output, *planning_debug_data, &planning_hmi_info);
 
   // 3.get output & publish
+  uint64_t output_time_us = (uint64_t)IflyTime::Now_us();
   if (planning_debug_writer_) {
-    planning_debug_data->set_timestamp(IflyTime::Now_us());
+    planning_debug_data->set_timestamp(output_time_us);
+    planning_debug_data->mutable_frame_info()->set_version(__version_str__);
     auto debug_info_json = *DebugInfoManager::GetInstance().GetDebugJson();
     planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
     planning_debug_writer_(*planning_debug_data);
@@ -160,14 +164,15 @@ void PlanningAdapter::Proc() {
       planning_output = last_planning_output_;
       LOG_WARNING("planning failed, use last planning output\n");
     }
-    auto time_stamp_us = IflyTime::Now_us();
     auto header = planning_output.mutable_meta()->mutable_header();
-    header->set_timestamp(time_stamp_us);
-    header->set_version("TEST");
+    header->set_timestamp(output_time_us);
+    header->set_version(__version_str__);
     planning_writer_(planning_output);
   }
 
   if (planning_hmi_info_writer_) {
+    planning_hmi_info.mutable_header()->set_timestamp(output_time_us);
+    planning_hmi_info.mutable_header()->set_version(__version_str__);
     planning_hmi_info_writer_(planning_hmi_info);
   }
   double planning_cost_time = IflyTime::Now_ms() - start_time;

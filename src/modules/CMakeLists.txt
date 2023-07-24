@@ -22,3 +22,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
+
+set(ci_dir ${CMAKE_CURRENT_LIST_DIR}/../../.ci)
+include(${CMAKE_CURRENT_LIST_DIR}/../../.ci/version.cmake)
+GenVersionHeaderHere(${ci_dir})

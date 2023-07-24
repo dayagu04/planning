@@ -8,7 +8,9 @@ file(GLOB_RECURSE SRC_FILES
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
+  -Wl,-whole-archive
   modules
+  -Wl,-no-whole-archive
   autoplt
   osqpstatic
 )
@@ -26,7 +28,3 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     NanoLog
   )
 endif()
-
-set(ci_dir ${CMAKE_CURRENT_LIST_DIR}/../../../.ci)
-include(${CMAKE_CURRENT_LIST_DIR}/../../../.ci/version.cmake)
-GenVersionHeaderHere(${ci_dir})

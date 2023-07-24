@@ -113,7 +113,6 @@ bool GeneralPlanning::RunOnce(
 
   auto frame_info = debug_info.mutable_frame_info();
   frame_info->set_frame_num(frame_num_);
-  frame_info->set_version("");
   frame_info->set_scene_type(common::SceneType_Name(session_.get_scene_type()));
   frame_info->set_frame_duration_ms(frame_duration);
   frame_info->set_planning_succ(planning_success);

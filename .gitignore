@@ -7,4 +7,4 @@ jupyter_pybind/notebooks/scripts/python_proto/*.py
 jupyter_pybind/notebooks/lib/__pycache__
 target/*.tar
 bags/
-src/adapter/cyber/version.h
+src/modules/version.h
