@@ -4,6 +4,7 @@
 #include <limits>
 #include <numeric>
 
+#include "../../common/planning_gflags.h"
 #include "behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 #include "debug_info_log.h"
 #include "ego_state_manager.h"
@@ -13,7 +14,6 @@
 #include "reference_path_manager.h"
 #include "utils/pose2d_utils.h"
 #include "vehicle_config_context.h"
-#include "../../common/planning_gflags.h"
 
 namespace planning {
 

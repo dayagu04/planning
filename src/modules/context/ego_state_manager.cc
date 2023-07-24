@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "../../common/planning_gflags.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "log.h"
@@ -12,7 +13,6 @@
 #include "spline_projection.h"
 #include "trajectory/trajectory_stitcher.h"
 #include "utils/pose2d_utils.h"
-#include "../../common/planning_gflags.h"
 
 namespace planning {
 

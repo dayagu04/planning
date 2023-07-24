@@ -165,7 +165,8 @@ void PlanningComponent::InitLogger() {
 }
 
 void PlanningComponent::InitGflags() const {
-  const std::string flag_file_path = "/asw/planning/res/conf/planning_gflags.conf";
+  const std::string flag_file_path =
+      "/asw/planning/res/conf/planning_gflags.conf";
   google::SetCommandLineOption("flagfile", flag_file_path.c_str());
 }
 

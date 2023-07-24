@@ -356,7 +356,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
     }
     // use lead_bound
     for (auto &lead_bound : lon_ref_path.lon_lead_bounds[i]) {
-        s_ref = std::min(s_ref, lead_bound.s_lead);
+      s_ref = std::min(s_ref, lead_bound.s_lead);
     }
     s_ref = std::max(s_ref, 0.0);
     LOG_DEBUG("s_ref: = %f, index = %d \n", s_ref, i);

@@ -1004,7 +1004,8 @@ double ParallelInTrajectoryGenerator::CalApaTargetX() const {
 
   const double center_y = -slot_length_ * 0.5;
   const double target_y =
-      center_y - (dst_front_edge_to_rear_axle - dst_rear_edge_to_rear_axle) * 0.5;
+      center_y -
+      (dst_front_edge_to_rear_axle - dst_rear_edge_to_rear_axle) * 0.5;
   return target_y;
 }
 

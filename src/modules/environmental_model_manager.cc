@@ -190,9 +190,9 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
       }
       transform_fusion_to_prediction(
           obj, (double)local_view.fusion_objects_info.header().timestamp());
-    }    
+    }
   }
-  
+
   last_feed_time_[FEED_FUSION_INFO] = local_view.fusion_objects_info_recv_time;
   last_feed_time_[FEED_PREDICTION_INFO] =
       local_view.prediction_result_recv_time;

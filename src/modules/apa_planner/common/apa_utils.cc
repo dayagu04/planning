@@ -92,10 +92,11 @@ Polygon2d ConstructVehiclePolygonWithBuffer(const PlanningPoint& veh_point,
   const double rear_edge_to_rear_axle_with_safe_dst =
       rear_edge_to_rear_axle + rear_buffer;
   const double half_width_with_safe_dis = half_width_veh + lat_buffer;
-  return ConstructVehiclePolygon(
-      veh_point, half_width_with_safe_dis, front_edge_to_rear_axle_with_safe_dst,
-      rear_edge_to_rear_axle_with_safe_dst, front_shrink_dis,
-      front_side_shrink_dis, rear_shrink_dis, rear_side_shrink_dis);
+  return ConstructVehiclePolygon(veh_point, half_width_with_safe_dis,
+                                 front_edge_to_rear_axle_with_safe_dst,
+                                 rear_edge_to_rear_axle_with_safe_dst,
+                                 front_shrink_dis, front_side_shrink_dis,
+                                 rear_shrink_dis, rear_side_shrink_dis);
 }
 
 bool IsSlotSelected(Frame* const frame) {

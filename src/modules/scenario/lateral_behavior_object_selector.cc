@@ -1,6 +1,6 @@
 #include "lateral_behavior_object_selector.h"
-#include "planning_context.h"
 #include "../../common/planning_gflags.h"
+#include "planning_context.h"
 
 namespace planning {
 

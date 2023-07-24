@@ -111,14 +111,14 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
 
   bool active = session_->environmental_model().GetVehicleDbwStatus();
 
-  if (active && !object_selector_->update(session_->planning_context()
-                                    .lat_behavior_state_machine_output()
-                                    .curr_state,
-                                session_->planning_context()
-                                    .scenario_state_machine()
-                                    ->get_start_move_dist_lane(),
-                                false, 80., false, false, false, false, false,
-                                -1)) {
+  if (active && !object_selector_->update(
+                    session_->planning_context()
+                        .lat_behavior_state_machine_output()
+                        .curr_state,
+                    session_->planning_context()
+                        .scenario_state_machine()
+                        ->get_start_move_dist_lane(),
+                    false, 80., false, false, false, false, false, -1)) {
     LOG_DEBUG("object_selector_update fail\n");
     return false;
   }

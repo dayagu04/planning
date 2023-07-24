@@ -73,7 +73,6 @@ if (ADAPTER STREQUAL "cyber")
   install(FILES
     ${CMAKE_CURRENT_LIST_DIR}/../res/dag/apa_simulation.dag
     ${CMAKE_CURRENT_LIST_DIR}/../res/dag/apa_simulation_and_planning.dag
-    ${CMAKE_CURRENT_LIST_DIR}/../res/dag/planning_and_control.dag
     ${CMAKE_CURRENT_LIST_DIR}/../res/dag/planning.dag
     DESTINATION ${PROJECT_SOURCE_DIR}/install/planning)
   install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../res/scripts

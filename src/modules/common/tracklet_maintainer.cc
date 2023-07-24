@@ -5,13 +5,13 @@
 #include <cmath>
 #include <cstdlib>
 
+#include "../../common/planning_gflags.h"
 #include "debug_info_log.h"
 #include "environment_model_debug_info.pb.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
 #include "planning_context.h"
 #include "virtual_lane_manager.h"
-#include "../../common/planning_gflags.h"
 namespace planning {
 
 TrackletSequentialState *LifecycleDict::get(int uid) {
@@ -997,8 +997,7 @@ void TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
 
 void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
   LOG_DEBUG("----fill_deriv_info-----\n");
-  double planning_cycle_time =
-      1.0 / FLAGS_planning_loop_rate;
+  double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   if (!item.has_history) {
     return;
   }
@@ -1060,8 +1059,7 @@ void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
 
 void TrackletMaintainer::fill_possibility_of_cutin(TrackedObject &item) {
   LOG_DEBUG("----fill_possibility_of_cutin-----\n");
-  double planning_cycle_time =
-      1.0 / FLAGS_planning_loop_rate;
+  double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   double ttc = std::max(item.d_path - 1.5, 0.0) / std::max(-item.v_lat, 0.01);
   ttc = std::min(15.0, ttc);
 
@@ -1389,8 +1387,7 @@ void TrackletMaintainer::check_accident_car(
     double intersect_length, bool left_faster, bool right_faster,
     bool isRedLightStop, bool isFasterStaticAvd, bool isOnHighway) {
   LOG_DEBUG("----check_accident_car-----\n");
-  double planning_cycle_time =
-      1.0 / FLAGS_planning_loop_rate;
+  double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   std::array<double, 5> xp{0, 10, 15, 20, 30};
   std::array<double, 5> fp{250, 200, 170, 140, 100};
   std::array<double, 5> xp_lat{-1.0, -0.7, -0.5, 0.0, 0.5};
@@ -1489,8 +1486,7 @@ void TrackletMaintainer::check_prebrk_object(TrackedObject &item, double v_ego,
 bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
                                                double v_ego) {
   LOG_DEBUG("----is_potential_lead_one-----\n");
-  double planning_cycle_time =
-      1.0 / FLAGS_planning_loop_rate;
+  double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   LOG_DEBUG("planning_cycle_time is: [%f]\n", planning_cycle_time);
   std::array<double, 5> xp1{1.5, 5.0, 10.0, 40.0, 60.0 + v_ego / 1.2};
   std::array<double, 5> fp1{0.8, 1.0, 0.8, 0.7, 0.0};
@@ -1578,8 +1574,7 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
 bool TrackletMaintainer::is_potential_lead_two(TrackedObject &item,
                                                TrackedObject *lead_one) {
   LOG_DEBUG("----is_potential_lead_two-----\n");
-  double planning_cycle_time =
-      1.0 / FLAGS_planning_loop_rate;
+  double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   if (lead_one == nullptr) {
     return false;
   }
@@ -1621,8 +1616,7 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
                                                     double v_ego,
                                                     bool refline_update) {
   LOG_DEBUG("----is_potential_temp_lead_one-----\n");
-  double planning_cycle_time =
-      1.0 / FLAGS_planning_loop_rate;
+  double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   std::array<double, 5> xp1{1.5, 5.0, 10.0, 40.0, 60.0 + v_ego / 1.2};
   std::array<double, 5> fp1{0.8, 1.0, 0.8, 0.7, 0.0};
   double t_lookahead = interp(item.d_rel, xp1, fp1);
@@ -1712,8 +1706,7 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
 bool TrackletMaintainer::is_potential_temp_lead_two(
     TrackedObject &item, TrackedObject *temp_lead_one) {
   LOG_DEBUG("----is_potential_temp_lead_two-----\n");
-  double planning_cycle_time =
-      1.0 / FLAGS_planning_loop_rate;
+  double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   if (temp_lead_one == nullptr) {
     return false;
   }
@@ -1758,8 +1751,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
     double dist_rblane, bool tleft_lane, bool rightest_lane,
     double dist_intersect, double intersect_length, bool isRedLightStop) {
   LOG_DEBUG("----is_potential_avoiding_car-----\n");
-  double planning_cycle_time =
-      1.0 / FLAGS_planning_loop_rate;
+  double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   item.is_ncar = false;
   double ego_car_width = 2.2;
   double lat_safety_buffer = 0.2;

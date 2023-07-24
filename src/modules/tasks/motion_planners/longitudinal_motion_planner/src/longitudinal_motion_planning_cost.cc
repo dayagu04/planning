@@ -66,9 +66,10 @@ double LonSoftPosBoundCostTerm::GetCost(const State &x, const Control &) {
   return cost;
 }
 
-void LonSoftPosBoundCostTerm::GetGradientHessian(const State &x, const Control &,
-                                             LxMT &lx, LuMT &, LxxMT &lxx,
-                                             LxuMT &, LuuMT &) {
+void LonSoftPosBoundCostTerm::GetGradientHessian(const State &x,
+                                                 const Control &, LxMT &lx,
+                                                 LuMT &, LxxMT &lxx, LxuMT &,
+                                                 LuuMT &) {
   if (x[POS] > cost_config_ptr_->at(SOFT_POS_MAX)) {
     lx(POS) += cost_config_ptr_->at(W_POS_BOUND) *
                (x[POS] - cost_config_ptr_->at(SOFT_POS_MAX));

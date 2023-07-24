@@ -164,7 +164,9 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
   // calculate the velocity limit according to the road curvature
   if (d_poly.size() == 4) {
     double preview_x = config_.dis_curv + config_.t_curv * v_ego;
-    double curv = std::fabs(2 * d_poly[0] * preview_x + d_poly[1]) / std::pow(std::pow(2 * d_poly[0] * preview_x + d_poly[1],2) + 1, 1.5);
+    double curv =
+        std::fabs(2 * d_poly[0] * preview_x + d_poly[1]) /
+        std::pow(std::pow(2 * d_poly[0] * preview_x + d_poly[1], 2) + 1, 1.5);
     double road_radius = 1 / std::max(curv, 0.0001);
     if (road_radius < 680) {
       a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);

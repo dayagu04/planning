@@ -128,7 +128,8 @@ void ApaSimulationComponent::MockLocalizationAndVehicleService() {
   vehicle_service_output_info_msg.set_vehicle_speed_available(true);
   vehicle_service_output_info_msg.set_steering_wheel_angle(0.0);
   vehicle_service_output_info_msg.set_steering_wheel_angle_available(true);
-  vehicle_service_output_info_msg.mutable_header()->set_timestamp(IflyTime::Now_us());
+  vehicle_service_output_info_msg.mutable_header()->set_timestamp(
+      IflyTime::Now_us());
   vehicle_service_output_info_writer_->Write(vehicle_service_output_info_msg);
 
   last_planning_gear_ =
