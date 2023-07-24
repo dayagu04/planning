@@ -2082,10 +2082,12 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
       double max_factor = std::max(interp(std::fabs(d_poly_[2]), xp1, fp2),
                                    interp(std::fabs(d_poly_[1]), xp2, fp2));
 
-      if (d_poly_[3] < -min_factor * path_gap) {
-        d_poly_[3] = -min_factor * path_gap;
-      } else if (d_poly_[3] > max_factor * path_gap) {
-        d_poly_[3] = max_factor * path_gap;
+      if (d_poly_[3] < -path_gap) {
+        // d_poly_[3] = -min_factor * path_gap;
+        d_poly_[3] = -path_gap;
+      } else if (d_poly_[3] > path_gap) {
+        // d_poly_[3] = max_factor * path_gap;
+        d_poly_[3] = path_gap;
       }
     }
 

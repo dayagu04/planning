@@ -352,7 +352,7 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
 
   double v_ego = ego_state->ego_v();
   double l_ego = frenet_ego_state.l();
-  double curr_time = IflyTime::Now_ms();
+  double curr_time = IflyTime::Now_s();
 
   std::vector<TrackedObject> front_side_tracks;
   for (auto &tr : lateral_obstacle->front_tracks_copy()) {
@@ -757,7 +757,7 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
               avd_cars.push_back(
                   {(double)tr.track_id, (double)tr.trajectory.intersection,
                    tr.v_rel, tr.d_rel, tr.v_lat, tr.d_min_cpath, tr.d_max_cpath,
-                   double(tr.type), curr_time, final_y_rel_});
+                   double(tr.d_rel), curr_time, final_y_rel_});
             }
           }
 
@@ -1496,7 +1496,7 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
 
     if (flag_avd_ == 1) {
       avd_back_cnt_ += 1;
-      if (avd_back_cnt_ == 150) {
+      if (avd_back_cnt_ == 30) {
         flag_avd_ = 0;
         avd_back_cnt_ = 0;
       }
