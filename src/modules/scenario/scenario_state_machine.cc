@@ -13,6 +13,7 @@
 #include "reference_path_manager.h"
 #include "utils/pose2d_utils.h"
 #include "vehicle_config_context.h"
+#include "../../common/planning_gflags.h"
 
 namespace planning {
 
@@ -441,7 +442,7 @@ void ScenarioStateMachine::compute_lc_valid_info(RequestType direction) {
 
   // side_approaching_ = true;
 
-  double coefficient = 20. / 25;  // hack FLAGS_planning_loop_rate = 20.
+  double coefficient = FLAGS_planning_loop_rate / 25.;
 
   if (!lateral_obstacle->sensors_okay()) {
     if (lateral_obstacle->fvf_dead()) {
@@ -704,7 +705,7 @@ LaneChangeStageInfo ScenarioStateMachine::decide_lc_valid_info(
     RequestType direction) {
   clear_lc_stage_info();
   compute_lc_valid_info(direction);
-  double coefficient = 20. / 25;  // TODO(Rui): FLAGS_planning_loop_rate = 20.
+  double coefficient = FLAGS_planning_loop_rate / 25.;
   int lc_valid_thre = static_cast<int>(10.0 * coefficient);
   // int lc_valid_thre = 1;
   if (lane_change_stage_info_.gap_insertable) {
@@ -1103,7 +1104,7 @@ LaneChangeStageInfo ScenarioStateMachine::decide_lc_back_info(
     RequestType direction) {
   clear_lc_stage_info();
   compute_lc_back_info(direction);
-  double coefficient = 20. / 25;  // TODO(Rui): FLAGS_planning_loop_rate = 20.
+  double coefficient = FLAGS_planning_loop_rate / 25.;
   int lc_back_thre = static_cast<int>(5 * coefficient);
   if (lane_change_stage_info_.lc_should_back) {
     lc_back_cnt_ += 1;

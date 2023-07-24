@@ -1,5 +1,6 @@
 #include "lateral_behavior_object_selector.h"
 #include "planning_context.h"
+#include "../../common/planning_gflags.h"
 
 namespace planning {
 
@@ -244,7 +245,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
   int request_source = state_machine_output.lc_request_source;
   int request = state_machine_output.lc_request;
 
-  double coefficient = 20. / 15;  // TODO(Rui):FLAGS_planning_loop_rate = 20.
+  double coefficient = FLAGS_planning_loop_rate / 15.;
 
   std::array<double, 5> lead_confidence_v{1 * coefficient, 2 * coefficient,
                                           4 * coefficient, 20 * coefficient,

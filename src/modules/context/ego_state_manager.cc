@@ -12,6 +12,7 @@
 #include "spline_projection.h"
 #include "trajectory/trajectory_stitcher.h"
 #include "utils/pose2d_utils.h"
+#include "../../common/planning_gflags.h"
 
 namespace planning {
 
@@ -442,8 +443,7 @@ EgoStateManager::compute_stitching_trajectory() {
   bool last_planning_success =
       session_->mutable_planning_context()->last_planning_success();
 
-  const double planning_loop_rate = 10.0;
-  const double planning_cycle_time = 1.0 / planning_loop_rate;
+  const double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
 
   // make vehicle state
   VehicleState vehicle_state;
