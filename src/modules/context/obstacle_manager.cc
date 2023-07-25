@@ -25,8 +25,11 @@ void ObstacleManager::update() {
   for (int i = 0;
        i < session_->environmental_model().get_prediction_info().size(); i++) {
     auto prediction_object = prediction_objects[i];
-    if (prediction_object.fusion_source != FusionSource::FUSION &&
-        prediction_object.fusion_source != FusionSource::CAMERA_ONLY) {
+    if (prediction_object.type == 0 ||
+        (!(prediction_object.fusion_source & OBSTACLE_SOURCE_CAMERA)) &&
+            (prediction_object.relative_position_x > 0 &&
+             tan(25) > fabs(prediction_object.relative_position_y / prediction_object.relative_position_x)) ||
+        fabs(prediction_object.relative_position_y) > 10 || prediction_object.length == 0 || prediction_object.width == 0) {
       LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
                 prediction_object.id);
       continue;
