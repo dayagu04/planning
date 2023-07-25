@@ -4,7 +4,7 @@ bin
 .cache
 tools/pybind/**/python_proto
 jupyter_pybind/notebooks/scripts/python_proto/*.py
-jupyter_pybind/notebooks/lib/__pycache__
+jupyter_pybind/notebooks/**/__pycache__
 target/*.tar
 bags/
 src/modules/version.h

@@ -95,10 +95,21 @@ make jupyter_start
 浏览器打开屏幕上链接，打开tools/common/jupyter/scripts/下文件，修改bag路径后运行所有即可可视化
 图标bag解析和图标显示逻辑在tools/common/jupyter/lib下
 ```
+5.html生成方法：
 
-# Test
-1.单元测试:
 ```
-make unittest_build
-make unittest_run
+进入文件夹
+jupyter_pybind/notebooks/scripts
+
+运行 html_generator.py 脚本
+```
+针对单个bag文件生成html
+```
+python html_generator.py plot_ctrl_html /home/xlwang71/Downloads/0713/long_time_1.00000
+```
+其中plot_ctrl_html代表脚本类型，目前支持plot_ctrl_html, plot_lat_plan_html, plot_lon_plan_html
+
+若想针对某一路径下的所有bag均生成脚本,则可采用如下方式
+```
+python html_generator.py plot_ctrl_html /home/xlwang71/Downloads/0713/
 ```
