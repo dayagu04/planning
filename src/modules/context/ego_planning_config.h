@@ -167,6 +167,16 @@ struct ObstacleDeciderConfig : public EgoPlanningConfig {
   }
 };
 
+struct ScenarioStateMachineConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    lc_t_actuator_delay =
+        read_json_key<double>(json, "lc_t_actuator_delay");
+  }
+  double lc_t_actuator_delay = 0.03;
+};
+
 struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
