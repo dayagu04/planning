@@ -96,6 +96,9 @@
   "care_area_s_len": 0.0,
   "min_desired_target_s": 4.5,
   "enable_hnp_functions": true,
+  "lc_t_actuator_delay": 0.02,
+  "lc_back_smooth_thr": 0.3,
+  "lc_back_consider_smooth_dpoly_thr": 0.6,
   "mrc_condition": {
     "enable_mrc_condition": false,
     "fcw_threshold": 2.5,

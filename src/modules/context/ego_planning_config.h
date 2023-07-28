@@ -120,6 +120,19 @@ struct EgoPlanningConfig : public Config {
   bool enable_NOA = false;
 };
 
+struct GeneralPlanningConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    lc_back_smooth_thr =
+        read_json_key<double>(json, "lc_back_smooth_thr");
+    lc_back_consider_smooth_dpoly_thr =
+        read_json_key<double>(json, "lc_back_consider_smooth_dpoly_thr");
+  }
+  double lc_back_smooth_thr = 0.3;
+  double lc_back_consider_smooth_dpoly_thr = 0.6;
+};
+
 struct EgoPlanningCandidateConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

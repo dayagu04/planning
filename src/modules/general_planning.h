@@ -88,6 +88,7 @@ class GeneralPlanning {
   // planning::framework::Frame *frame_ = nullptr;
   planning::framework::Session session_;
   planning::framework::Scheduler scheduler_;
+  GeneralPlanningConfig config_;
   bool hdmap_valid_ = false;
   bool reset_pnc_{false};
   bool last_can_run_{false};

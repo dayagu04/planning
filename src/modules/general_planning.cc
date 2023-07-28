@@ -13,6 +13,7 @@
 #include "planning_output_context.h"
 #include "scene_type_config.pb.h"
 #include "vehicle_config_context.h"
+#include "ego_planning_config.h"
 
 namespace planning {
 
@@ -30,6 +31,10 @@ void GeneralPlanning::Init() {
   session_.mutable_vehicle_config_context()->set_vehicle_param(vehicle_param);
   EnvironmentalModel *environmental_model =
       session_.mutable_environmental_model();
+  planning::common::SceneType scene_type = session_.get_scene_type();
+  auto config_builder =
+      session_.environmental_model().config_builder(scene_type);
+  config_ = config_builder->cast<GeneralPlanningConfig>();
   environmental_model->set_vehicle_param(
       session_.vehicle_config_context().get_vehicle_param());
 }
@@ -201,8 +206,16 @@ void GeneralPlanning::FillPlanningTrajectory(
         limited_polynomial_3 += planning_math::Clamp(
             d_polynomial[3], -lat_offset_rate, lat_offset_rate);
       } else {
-        limited_polynomial_3 = planning_math::Clamp(
+        if ((lateral_output.lc_status == "left_lane_change_back" ||
+            lateral_output.lc_status == "right_lane_change_back" ||
+            lateral_output.lc_status == "none") && 
+            std::fabs(d_polynomial[3]) > config_.lc_back_consider_smooth_dpoly_thr) {
+            limited_polynomial_3 = planning_math::Clamp(
+            d_polynomial[3], -config_.lc_back_smooth_thr, config_.lc_back_smooth_thr);
+        } else {
+            limited_polynomial_3 = planning_math::Clamp(
             d_polynomial[3], -max_lat_offset, max_lat_offset);
+        }
       }
       limited_polynomial_3 = planning_math::Clamp(
           limited_polynomial_3, -max_lat_offset, max_lat_offset);
