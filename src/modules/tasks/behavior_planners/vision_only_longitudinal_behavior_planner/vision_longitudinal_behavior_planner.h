@@ -76,7 +76,7 @@ class VisionLongitudinalBehaviorPlanner : public Task {
   double clip(const double x, const double lo, const double hi);
 
   // 计算启停状态，避免二次起步
-  StartStopInfo::state_type UpdateStartStopState(const TrackedObject *lead_one,
+  StartStopInfo::StateType UpdateStartStopState(const TrackedObject *lead_one,
                                                  const double v_ego);
 
  private:

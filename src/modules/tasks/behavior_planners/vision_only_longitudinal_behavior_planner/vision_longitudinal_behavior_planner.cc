@@ -121,7 +121,7 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   JSON_DEBUG_VALUE("VisionLonBehavior_v_target", v_target_);
 
   // get start & stop state
-  StartStopInfo::state_type stop_start_state =
+  StartStopInfo::StateType stop_start_state =
       UpdateStartStopState(lateral_obstacle->leadone(), v_ego);
   v_target_ = (stop_start_state == StartStopInfo::STOP) ? 0.0 : v_target_;
   JSON_DEBUG_VALUE("VisionLonBehavior_stop_start_state", (int)stop_start_state);
@@ -1597,7 +1597,7 @@ double VisionLongitudinalBehaviorPlanner::clip(const double x, const double lo,
   return std::max(lo, std::min(hi, x));
 }
 
-StartStopInfo::state_type
+StartStopInfo::StateType
 VisionLongitudinalBehaviorPlanner::UpdateStartStopState(
     const TrackedObject *lead_one, const double v_ego) {
   // The AION's resolution of vehicle speed is 0.3m/s
