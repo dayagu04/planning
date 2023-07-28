@@ -201,6 +201,10 @@ void GeneralPlanning::FillPlanningTrajectory(
     const double max_lat_offset = 2;
     static double limited_polynomial_3 = 0.0;
     const auto &d_polynomial = lateral_output.d_poly;
+    std::cout << "@@@@@@@@@@@@@@@@@: d_polynomial.size(): " << d_polynomial.size() << " d_polynomial[3]: " << d_polynomial[3] << " config_.lc_back_consider_smooth_dpoly_thr: " << config_.lc_back_consider_smooth_dpoly_thr << " lateral_output.lc_status: "  << lateral_output.lc_status << std::endl;
+    std::cout << "!!!!!!!!!!!!!!!!!!!!!!: (lateral_output.lc_status == left_lane_change_back): " << (lateral_output.lc_status == "left_lane_change_back") << std::endl;
+    std::cout << "#################: (lateral_output.lc_status == right_lane_change_back): " << (lateral_output.lc_status == "right_lane_change_back") << std::endl;
+    std::cout << "$$$$$$$$$$$$$$$$$$: (lateral_output.lc_status == none): " << (lateral_output.lc_status == "none") << std::endl;
     if (d_polynomial.size() == 4) {
       if (std::fabs(d_polynomial[3]) > max_lat_offset) {
         limited_polynomial_3 += planning_math::Clamp(
@@ -212,6 +216,7 @@ void GeneralPlanning::FillPlanningTrajectory(
             std::fabs(d_polynomial[3]) > config_.lc_back_consider_smooth_dpoly_thr) {
             limited_polynomial_3 = planning_math::Clamp(
             d_polynomial[3], -config_.lc_back_smooth_thr, config_.lc_back_smooth_thr);
+            std::cout << "^^^^^config_.lc_back_smooth_thr: " << config_.lc_back_smooth_thr << " limited_polynomial_3: " << limited_polynomial_3 <<  std::endl;
         } else {
             limited_polynomial_3 = planning_math::Clamp(
             d_polynomial[3], -max_lat_offset, max_lat_offset);
@@ -229,6 +234,7 @@ void GeneralPlanning::FillPlanningTrajectory(
     polynomial_limited[1] = d_polynomial[1];
     polynomial_limited[2] = d_polynomial[2];
     polynomial_limited[3] = limited_polynomial_3;
+    std::cout << "polynomial_limited[3]: " << polynomial_limited[3] << " limited_polynomial_3: " << limited_polynomial_3 << " lateral_output.d_poly[3]: " << lateral_output.d_poly[3] << std::endl;
     LOG_DEBUG("limited_polynomial C0: [%f] C1: [%f] C2: [%f] C3: [%f] \n",
               polynomial_limited[0], polynomial_limited[1],
               polynomial_limited[2], polynomial_limited[3]);

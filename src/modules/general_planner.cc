@@ -121,6 +121,16 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
                     false, 80., false, false, false, false, false, -1)) {
     LOG_DEBUG("object_selector_update fail\n");
     return false;
+  } else {
+    if (!active) {
+        object_selector_->left_alc_car().clear();
+        object_selector_->right_alc_car().clear();
+        object_selector_->left_alc_car_cnt().clear();
+        object_selector_->right_alc_car_cnt().clear();
+        LOG_DEBUG("object_selector_ cleared\n");
+    } else {
+        LOG_DEBUG("object_selector_updated \n");
+    }
   }
   LOG_DEBUG("object_selector_update end\n");
 
