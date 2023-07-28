@@ -38,33 +38,12 @@ void RoadBase::prepare_for_change_state(
     lc_lane_manager_tmp->reset_origin_lane();
   }
 
-  if (!lc_lane_manager_tmp->has_target_lane() &&
-      !lc_lane_manager_tmp->has_origin_lane()) {
-    candidate_states.push_back(ROAD_NONE);
-    lc_lane_manager_tmp->reset_lc_lanes();
-  } else if (!lc_lane_manager_tmp->has_target_lane()) {
-    lc_lane_manager_tmp->set_fix_lane_to_origin();
-    if (lc_req_manager->request() == LEFT_CHANGE) {
-      candidate_states.push_back(ROAD_LC_LBACK);
-    } else if (lc_req_manager->request() == RIGHT_CHANGE) {
-      candidate_states.push_back(ROAD_LC_RBACK);
-    } else {
-      candidate_states.push_back(ROAD_NONE);
-      lc_lane_manager_tmp->reset_lc_lanes();
-    }
+  if (lc_req_manager->request() == LEFT_CHANGE) {
+    candidate_states.push_back(ROAD_LC_LCHANGE);
+  } else if (lc_req_manager->request() == RIGHT_CHANGE) {
+    candidate_states.push_back(ROAD_LC_RCHANGE);
   } else {
-    if (!lc_lane_manager_tmp->has_origin_lane()) {
-      lc_lane_manager_tmp->reset_origin_lane();
-    }
-
-    if (lc_req_manager->request() == LEFT_CHANGE) {
-      candidate_states.push_back(ROAD_LC_LCHANGE);
-    } else if (lc_req_manager->request() == RIGHT_CHANGE) {
-      candidate_states.push_back(ROAD_LC_RCHANGE);
-    } else {
-      candidate_states.push_back(ROAD_NONE);
-      lc_lane_manager_tmp->reset_lc_lanes();
-    }
+    candidate_states.push_back(ROAD_NONE);
   }
 
   lc_lane_managers.emplace_back(lc_lane_manager_tmp);
