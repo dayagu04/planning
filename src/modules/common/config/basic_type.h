@@ -319,9 +319,12 @@ struct CurvatureInfo {
 };
 
 struct StartStopInfo {
+  enum StateType { CRUISE, STOP, START };
   bool is_stop{false};
   bool is_start{false};
   bool enable_stop{false};
+  StateType state{CRUISE};
+  double stop_distance_of_leadone{0.0};
 };
 
 struct LatDecisionInfo {

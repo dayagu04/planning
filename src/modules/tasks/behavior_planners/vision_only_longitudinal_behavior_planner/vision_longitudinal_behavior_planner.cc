@@ -1,7 +1,10 @@
 #include "vision_longitudinal_behavior_planner.h"
+#include <cmath>
+#include <string>
 
 #include "debug_info_log.h"
 #include "ifly_time.h"
+#include "log.h"
 #include "planning_output_context.h"
 #include "scenario_state_machine.h"
 
@@ -103,11 +106,11 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   a_target_.first = std::min(a_target_.first, decel_base);
 
   // debug info
-  auto &highway_longitudinal_output =
+  auto &real_time_longitudinal_output =
       frame_->mutable_session()
           ->mutable_planning_context()
           ->mutable_vision_longitudinal_behavior_planner_output();
-  highway_longitudinal_output.decel_base = decel_base;
+  real_time_longitudinal_output.decel_base = decel_base;
 
   a_target_.first = clip(a_target_.first, _A_MIN, _A_MAX);
   a_target_.second = clip(a_target_.second, _A_MIN, _A_MAX);
@@ -116,6 +119,13 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   JSON_DEBUG_VALUE("VisionLonBehavior_a_target_high", a_target_.second);
   JSON_DEBUG_VALUE("VisionLonBehavior_a_target_low", a_target_.first);
   JSON_DEBUG_VALUE("VisionLonBehavior_v_target", v_target_);
+
+  // get start & stop state
+  StartStopInfo::state_type stop_start_state =
+      UpdateStartStopState(lateral_obstacle->leadone(), v_ego);
+  v_target_ = (stop_start_state == StartStopInfo::STOP) ? 0.0 : v_target_;
+  JSON_DEBUG_VALUE("VisionLonBehavior_stop_start_state", (int)stop_start_state);
+  JSON_DEBUG_VALUE("VisionLonBehavior_v_target_start_stop", v_target_);
 
   std::cout << a_target_.first << "< final a_target_ < " << a_target_.second
             << std::endl;
@@ -1585,6 +1595,65 @@ double VisionLongitudinalBehaviorPlanner::calc_critical_decel(
 double VisionLongitudinalBehaviorPlanner::clip(const double x, const double lo,
                                                const double hi) {
   return std::max(lo, std::min(hi, x));
+}
+
+StartStopInfo::state_type
+VisionLongitudinalBehaviorPlanner::UpdateStartStopState(
+    const TrackedObject *lead_one, const double v_ego) {
+  // The AION's resolution of vehicle speed is 0.3m/s
+  double v_start = config_.v_start;
+  double distance_stop = config_.distance_stop;
+  double distance_start = config_.distance_start;
+
+  StartStopInfo &start_stop_state_info = frame_->mutable_session()
+                                             ->mutable_planning_context()
+                                             ->mutable_start_stop_result();
+  bool dbw_status =
+      frame_->session()->environmental_model().GetVehicleDbwStatus();
+  if (lead_one == nullptr || dbw_status == false) {
+    // reset state as default
+    start_stop_state_info.state = StartStopInfo::CRUISE;
+  } else {
+    // 1. Calculate the condition
+    std::string lc_request = "none";
+    double desire_distance =
+        calc_desired_distance(lead_one->v_lead, v_ego, lc_request);
+    bool is_lead_static = std::fabs(lead_one->v_lead) < v_start;
+    bool stop_condition =
+        (v_ego < v_start && is_lead_static &&
+         std::fabs(lead_one->d_rel - desire_distance) < distance_stop);
+    bool cruise_condition = v_ego > v_start;
+    bool lead_one_start =
+        (lead_one->v_lead > v_start &&
+         (lead_one->d_rel - start_stop_state_info.stop_distance_of_leadone) >
+             distance_start);
+    // lead_one change: obj stopped adc by cut_in, then leaved
+    bool lead_one_change =
+        (lead_one->d_rel - desire_distance) > (distance_stop + 1.0);
+    bool start_condition = lead_one_start || lead_one_change;
+
+    // 2. Update the state
+    if (start_stop_state_info.state == StartStopInfo::CRUISE &&
+        stop_condition) {
+      // CRUISE --> STOP
+      start_stop_state_info.state = StartStopInfo::STOP;
+      // store the distance of leadone
+      start_stop_state_info.stop_distance_of_leadone = lead_one->d_rel;
+      LOG_DEBUG("The distance error of STOP is [%f]m \n",
+                lead_one->d_rel - desire_distance);
+    } else if (start_stop_state_info.state == StartStopInfo::STOP &&
+               start_condition) {
+      // STOP --> START
+      start_stop_state_info.state = StartStopInfo::START;
+    } else if (start_stop_state_info.state == StartStopInfo::START &&
+               cruise_condition) {
+      // START --> CRUISE
+      start_stop_state_info.state = StartStopInfo::CRUISE;
+    }
+  }
+  LOG_DEBUG("The start_stop_state_info is [%d] \n",
+            start_stop_state_info.state);
+  return start_stop_state_info.state;
 }
 
 }  // namespace planning

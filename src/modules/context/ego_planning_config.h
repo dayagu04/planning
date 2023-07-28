@@ -250,9 +250,39 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    q_continuity = read_json_key<double>(json, "ilqr_q_continuity");
-    motion_plan_concerned_index =
-        read_json_key<size_t>(json, "motion_plan_concerned_index");
+    warm_start_enable = read_json_keys<bool>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "warm_start_enable"});
+    acc_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "acc_bound"});
+    jerk_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "jerk_bound"});
+    curv_factor = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "curv_factor"});
+    q_ref_x = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_x"});
+    q_ref_y = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_y"});
+    q_ref_theta = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_theta"});
+    q_continuity = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_continuity"});
+    q_acc = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_acc"});
+    q_jerk = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk"});
+    q_acc_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_bound"});
+    q_jerk_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_bound"});
+    q_soft_corridor = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_soft_corridor"});
+    q_hard_corridor = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_hard_corridor"});
+    delta_t = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "delta_t"});
+    motion_plan_concerned_index = read_json_keys<size_t>(
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "motion_plan_concerned_index"});
   }
   bool warm_start_enable = true;
   double acc_bound = 6.0;
@@ -280,6 +310,26 @@ struct LongitudinalMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    q_ref_pos = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_ref_pos"});
+    q_ref_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_ref_vel"});
+    q_acc = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_acc"});
+    q_jerk = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_jerk"});
+    q_soft_pos_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_soft_pos_bound"});
+    q_hard_pos_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_hard_pos_bound"});
+    q_vel_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_vel_bound"});
+    q_acc_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_acc_bound"});
+    q_jerk_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_jerk_bound"});
+    q_stop_s = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_stop_s"});
   }
   double q_ref_pos = 1.0;
   double q_ref_vel = 0.05;
@@ -573,13 +623,33 @@ struct VisionLongitudinalBehaviorPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    // 目前实时无法拿到自己的配置文件
-    // preview_x = read_json_key<double>(json, "preview_x");
-    // dis_zero_speed = read_json_key<double>(json, "dis_zero_speed");
-    // dis_zero_speed_accident =
-    //     read_json_key<double>(json, "dis_zero_speed_accident");
-    // ttc_brake_hysteresis = read_json_key<double>(json,
-    // "ttc_brake_hysteresis");
+    preview_x = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "preview_x"});
+    dis_zero_speed = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "dis_zero_speed"});
+    dis_zero_speed_accident = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "dis_zero_speed_accident"});
+    ttc_brake_hysteresis = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "ttc_brake_hysteresis"});
+    t_curv = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"real_time_long_behavior_planner", "t_curv"});
+    dis_curv = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "dis_curv"});
+    v_start = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"real_time_long_behavior_planner", "v_start"});
+    distance_stop = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "distance_stop"});
+    distance_start = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "distance_start"});
   }
   double preview_x = 80.0;
   double dis_zero_speed = 3.5;
@@ -587,6 +657,10 @@ struct VisionLongitudinalBehaviorPlannerConfig : public EgoPlanningConfig {
   double ttc_brake_hysteresis = 0.3;
   double t_curv = 3.0;
   double dis_curv = 50;
+  // The param for StartStopState
+  double v_start = 0.3;
+  double distance_stop = 1.0;
+  double distance_start = 0.3;
 };
 
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {

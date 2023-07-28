@@ -449,7 +449,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
       LOG_DEBUG(
           "[prediction delay time] obstacle[%d] absolute start time %llu "
           "relative time %f start time %f "
-          "init_relative_time %f",
+          "init_relative_time %f \n",
           cur_predicion_obj.id, prediction_result.header().timestamp(),
           prediction_result.header().timestamp() / 1.e+6 - current_time / 1.e+3,
           prediction_relative_time, init_relative_time);

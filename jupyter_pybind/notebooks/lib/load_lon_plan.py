@@ -36,7 +36,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
                             'VisionLonBehavior_v_limit_road', 'VisionLonBehavior_v_limit_in_turns','VisionLonBehavior_v_target', \
                             'VisionLonBehavior_lead_one_id', 'VisionLonBehavior_lead_one_dis', 'VisionLonBehavior_lead_one_vel', \
-                            'VisionLonBehavior_lead_two_id', 'VisionLonBehavior_lead_two_dis', 'VisionLonBehavior_lead_two_vel']
+                            'VisionLonBehavior_lead_two_id', 'VisionLonBehavior_lead_two_dis', 'VisionLonBehavior_lead_two_vel', \
+                            'VisionLonBehavior_stop_start_state']
 
   plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
   plan_debug_json_info = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
@@ -57,9 +58,10 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     s_ref_vec.append(item.first)
   s_lead_vec = []
   for idx in range(len(plan_debug_info.long_ref_path.lon_lead_bounds)):
-    s_lead_vec.append(plan_debug_info.long_ref_path.lon_lead_bounds[idx].bound[0].s_lead)
-    print("s_lead_vec: ", plan_debug_info.long_ref_path.lon_lead_bounds[idx].bound[0].s_lead)
-  print("the s_lead_vec size: ",len(s_lead_vec))
+    try:
+      s_lead_vec.append(plan_debug_info.long_ref_path.lon_lead_bounds[idx].bound[0].s_lead)
+    except:
+      print("the s_lead_vec size: ",len(s_lead_vec))
 
   obs_low_vec = []
   obs_high_vec = []
