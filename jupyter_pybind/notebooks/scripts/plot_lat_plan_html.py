@@ -117,13 +117,15 @@ def draw_lat(dataLoader, layer_manager):
 
       names  = []
       datas = []
-      # 横向运动规划offset 可视化
-      names.append('premove_dpoly_c0')
-      names.append('avoid_dpoly_c0')
-      basic_dpoly = vo_lat_motion_plan.basic_dpoly
-      datas.append(vo_lat_motion_plan.premove_dpoly_c0 - basic_dpoly[3])
-      datas.append(vo_lat_motion_plan.avoid_dpoly_c0 - basic_dpoly[3])
-
+      try:
+        # 横向运动规划offset 可视化
+        names.append('premove_dpoly_c0')
+        names.append('avoid_dpoly_c0')
+        basic_dpoly = vo_lat_motion_plan.basic_dpoly
+        datas.append(vo_lat_motion_plan.premove_dpoly_c0 - basic_dpoly[3])
+        datas.append(vo_lat_motion_plan.avoid_dpoly_c0 - basic_dpoly[3])
+      except:
+        pass
       # 添加可视化left_alc_car_ids、right_alc_car_ids可视化
       names.append('left_alc_car_ids')
       names.append('right_alc_car_ids')

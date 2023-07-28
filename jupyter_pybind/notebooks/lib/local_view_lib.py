@@ -814,27 +814,30 @@ def draw_local_view(dataLoader, layer_manager):
     # for plan_debug_t in plan_debug_timestamps:
     #   flag, plan_msg = find(dataLoader.plan_msg, plan_debug_t)
     for i, plan_msg in enumerate(dataLoader.plan_msg['data']):
+      
       trajectory = plan_msg.trajectory
       try:
         planning_polynomial = trajectory.target_reference.polynomial
         plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
       except:
-        loc_msg_idx = 0
-        if dataLoader.loc_msg['enable'] == True:
-          while dataLoader.loc_msg['t'][loc_msg_idx] <= t and loc_msg_idx < (len(dataLoader.loc_msg['t'])-2):
-              loc_msg_idx = loc_msg_idx + 1
-        # flag, loc_msg = find(dataLoader.loc_msg, localization_timestamp)
-        cur_pos_xn = dataLoader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-        cur_pos_yn = dataLoader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-        cur_yaw = dataLoader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
-        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-        plan_x = []
-        plan_y = []
-        for i in range(len(trajectory.trajectory_points)):
-          plan_x.append(trajectory.trajectory_points[i].x)
-          plan_y.append(trajectory.trajectory_points[i].y)
+        if dataLoader.loc_msg['enable'] == True:       
+          flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
+          if not flag:
+            plan_traj_x, plan_traj_y = [], []
+          else:
+            cur_pos_xn = loc_msg.pose.local_position.x
+            cur_pos_yn = loc_msg.pose.local_position.y
+            cur_yaw = loc_msg.pose.euler_angles.yaw
+            coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+            plan_x = []
+            plan_y = []
+            for i in range(len(trajectory.trajectory_points)):
+              plan_x.append(trajectory.trajectory_points[i].x)
+              plan_y.append(trajectory.trajectory_points[i].y)
 
-        plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
+            plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
+        else:
+          plan_traj_x, plan_traj_y = [], []
       plan_generator.xys.append((plan_traj_y, plan_traj_x))
     plan_generator.ts = np.array(plan_debug_timestamps)
     plan_layer = CurveLayer(fig_local_view, plan_params)
