@@ -43,7 +43,7 @@ void RoadBase::prepare_for_change_state(
   } else if (lc_req_manager->request() == RIGHT_CHANGE) {
     candidate_states.push_back(ROAD_LC_RCHANGE);
   } else {
-    candidate_states.push_back(ROAD_NONE);
+    // candidate_states.push_back(ROAD_NONE);
   }
 
   lc_lane_managers.emplace_back(lc_lane_manager_tmp);
@@ -255,6 +255,13 @@ void RoadBase::process_change(FsmContext &context,
   RequestType lc_request = lc_req_manager->request();
   bool gap_available{true};
   bool hdmap_valid = context.session->environmental_model().get_hdmap_valid();
+  int flane_virtual_id = lc_lane_manager->flane_virtual_id();
+  auto virtual_lane_mgr =
+      context.session->environmental_model().get_virtual_lane_manager();
+  auto flane = virtual_lane_mgr->get_lane_with_virtual_id(flane_virtual_id);
+  //
+  double move_thr = 1.5;
+  double flane_width = flane->width();
   std::vector<int> overtake_obstacles;
   std::vector<int> yield_obstacles;
   LaneChangeStageInfo lc_back_info;
@@ -265,7 +272,8 @@ void RoadBase::process_change(FsmContext &context,
     lc_req_manager->FinishRequest();
   } else if ((lc_request != NO_CHANGE && lc_request == context.direction) ||
              (lc_request == NO_CHANGE &&
-              lc_lane_manager->is_ego_on(lc_lane_manager->tlane()))) {
+             (lc_lane_manager->is_ego_on(lc_lane_manager->tlane()) ||
+              std::fabs(flane->get_ego_lateral_offset()) < (flane_width / 2 + move_thr)))) {
     int target_lane_virtual_id = lc_req_manager->target_lane_virtual_id();
     if (!lc_lane_manager->has_target_lane() ||
         target_lane_virtual_id != lc_lane_manager->tlane_virtual_id()) {
@@ -292,6 +300,15 @@ void RoadBase::process_change(FsmContext &context,
       } else {
         prepare_for_change_state(lc_lane_manager, lc_req_manager,
                                  candidate_states, lc_lane_managers);
+        if (lc_request == NO_CHANGE && context.direction != NO_CHANGE) {
+          candidate_states.clear();
+          if (context.direction == LEFT_CHANGE) {
+            candidate_states.push_back(ROAD_LC_LCHANGE);
+          } else if (context.direction == RIGHT_CHANGE) {
+            candidate_states.push_back(ROAD_LC_RCHANGE);
+          }
+        }
+        std::cout << "Coming to prepare for change state !!!!! lc_request: " << lc_request << " context.direction: " << context.direction << " target_lane_virtual_id: " << target_lane_virtual_id << std::endl;
         if (candidate_states.size() > 0 &&
             (candidate_states[0] == ROAD_LC_LCHANGE ||
              candidate_states[0] == ROAD_LC_RCHANGE) &&

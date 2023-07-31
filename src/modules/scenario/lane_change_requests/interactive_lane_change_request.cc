@@ -107,8 +107,10 @@ void IntRequest::Update(int lc_status) {
   } else if (lane_change_cmd_ == common::TurnSignalType::NONE &&
              request_type_ != NO_CHANGE) {
     // 3.换道过程中取消拨杆
+    auto tlane = lane_change_lane_mgr_->tlane();
     if (lane_change_lane_mgr_->has_target_lane() &&
-        lane_change_lane_mgr_->is_ego_on(lane_change_lane_mgr_->tlane())) {
+       (lane_change_lane_mgr_->is_ego_on(tlane) ||
+        std::fabs(tlane->get_ego_lateral_offset()) < tlane->width() / 2 + 1.5)) {
       // 取消换道，但此时已经进入目标车道，则保持至换道完成
       LOG_DEBUG(
           "[IntRequest::update]: Cancel int lc blinker when ego car on target "

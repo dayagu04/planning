@@ -173,8 +173,11 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
     /* read config from json */
     lc_t_actuator_delay =
         read_json_key<double>(json, "lc_t_actuator_delay");
+    lc_back_available_thr =
+        read_json_key<double>(json, "lc_back_available_thr");
   }
   double lc_t_actuator_delay = 0.03;
+  double lc_back_available_thr = 1.5;
 };
 
 struct ScenarioDisplayStateConfig : public EgoPlanningConfig {

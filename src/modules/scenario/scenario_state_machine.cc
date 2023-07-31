@@ -790,7 +790,7 @@ void ScenarioStateMachine::compute_lc_back_info(RequestType direction) {
     c1 = target_lane->get_left_lane_boundary().poly_coefficient()[1];
   }
   
-  double move_thre = interp(std::fabs(c1), xp_heading, fp_l) + ego_state->ego_v() * config_.lc_t_actuator_delay;
+  double move_thre = std::max(interp(std::fabs(c1), xp_heading, fp_l) + ego_state->ego_v() * config_.lc_t_actuator_delay, config_.lc_back_available_thr);
   double lane_width = 3.8;  // TODO(Rui):use fix_lne->get_lane_width()
   double left_lane_width = 3.8;
   double right_lane_width = 3.8;
