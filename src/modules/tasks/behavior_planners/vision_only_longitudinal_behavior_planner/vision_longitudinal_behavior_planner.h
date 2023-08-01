@@ -77,7 +77,7 @@ class VisionLongitudinalBehaviorPlanner : public Task {
 
   // 计算启停状态，避免二次起步
   StartStopInfo::StateType UpdateStartStopState(const TrackedObject *lead_one,
-                                                 const double v_ego);
+                                                const double v_ego);
 
  private:
   void update_planner_output();

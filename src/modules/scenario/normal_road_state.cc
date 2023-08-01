@@ -111,7 +111,7 @@ void RoadBase::prepare_for_back_state(
       candidate_states.push_back(ROAD_NONE);
       lc_lane_manager_tmp->reset_lc_lanes();
     }
-  } else { 
+  } else {
     candidate_states.push_back(ROAD_NONE);
     lc_lane_manager_tmp->reset_lc_lanes();
   }

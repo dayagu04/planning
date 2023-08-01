@@ -129,6 +129,8 @@ void GeneralPlanning::FillPlanningTrajectory(
   const auto &vision_only_longitudinal_outputs =
       session_.planning_context().vision_longitudinal_behavior_planner_output();
   auto &planning_result = session_.planning_context().planning_result();
+  auto &planning_context = session_.planning_context();
+  auto &ego_state = session_.environmental_model().get_ego_state_manager();
 
   // 更新输出
   auto time_stamp_us = IflyTime::Now_us();
@@ -278,8 +280,10 @@ void GeneralPlanning::FillPlanningTrajectory(
 
   // 8.Planning status
   auto planning_status = planning_output->mutable_planning_status();
-  planning_status->set_standstill(false);
-  planning_status->set_ready_to_go(true);
+  planning_status->set_standstill(std::fabs(ego_state->ego_v()) < 0.1);
+  // 启停状态机
+  planning_status->set_ready_to_go(planning_context.start_stop_result().state !=
+                                   StartStopInfo::STOP);
   planning_status->set_apa_planning_status(
       PlanningOutput::ApaPlanningStatus::NONE);
   // WB end:--------临时hack以上信号--------
