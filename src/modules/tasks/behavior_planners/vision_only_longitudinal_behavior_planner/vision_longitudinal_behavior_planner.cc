@@ -245,7 +245,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
       continue;
     };
     if (std::abs(track.y_rel) < 10.0 && std::abs(track.d_rel) < 20.0 &&
-        track.type == 1) {
+        track.type != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
       near_cars.push_back(&track);
     }
   }
@@ -256,7 +256,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
       continue;
     };
     if (std::abs(track.y_rel) < 10.0 && std::abs(track.d_rel) < 20.0 &&
-        track.type == 1) {
+        track.type != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
       near_cars.push_back(&track);
     }
   }
