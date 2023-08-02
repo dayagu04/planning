@@ -357,9 +357,9 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   }
 
   auto vehicle_light = vehicle_status.mutable_vehicle_light();
-  // 临时hack wiper_state为拨杆状态
-  if (vehicle_service_output_info.wiper_state_available()) {
-    if (vehicle_service_output_info.wiper_state() == 0) {
+  // 转向拨杆状态
+  if (vehicle_service_output_info.turn_switch_state_available()) {
+    if (vehicle_service_output_info.turn_switch_state() == 0) {
       if (vehicle_service_output_info.hazard_light_state() &&
           vehicle_service_output_info.hazard_light_state_available()) {
         vehicle_light->mutable_vehicle_light_data()
@@ -371,11 +371,11 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
             ->set_value(common::TurnSignalType::NONE);
       }
     } else {
-      if (vehicle_service_output_info.wiper_state() == 1) {
+      if (vehicle_service_output_info.turn_switch_state() == 1) {
         vehicle_light->mutable_vehicle_light_data()
             ->mutable_turn_signal()
             ->set_value(common::TurnSignalType::LEFT);
-      } else if (vehicle_service_output_info.wiper_state() == 2) {
+      } else if (vehicle_service_output_info.turn_switch_state() == 2) {
         vehicle_light->mutable_vehicle_light_data()
             ->mutable_turn_signal()
             ->set_value(common::TurnSignalType::RIGHT);
