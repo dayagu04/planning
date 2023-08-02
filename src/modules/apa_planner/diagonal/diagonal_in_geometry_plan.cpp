@@ -987,8 +987,8 @@ bool DiagonalInGeometryPlan::DE3Segment(const PlanningPoint &point_d,
   size_t total_cost_nan_cnt = 0;
   const int radius_de_num = is_start ? 20 : 1;
   const double radius_step = 1.0;
-  const double front_buffer = is_start ? kLonReverseBuffer : 0.0;
-  const double rear_buffer = kLonBuffer;
+  const double front_buffer = kLonBuffer;
+  const double rear_buffer = is_start ? kLonReverseBuffer : 0.0;
   const double lat_buffer = kLatBuffer;
   Polygon2d init_ego_polygon = std::move(ConstructVehiclePolygonWithBuffer(
       point_d, front_buffer, rear_buffer, lat_buffer));
