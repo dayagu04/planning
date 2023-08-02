@@ -104,6 +104,10 @@
   "care_area_s_len": 0.0,
   "min_desired_target_s": 4.5,
   "enable_hnp_functions": true,
+  "lc_t_actuator_delay": 0.02,
+  "lc_back_available_thr": 1.5,
+  "lc_back_smooth_thr": 0.3,
+  "lc_back_consider_smooth_dpoly_thr": 0.6,
   "mrc_condition": {
     "enable_mrc_condition": false,
     "fcw_threshold": 2.5,
@@ -153,6 +157,7 @@
     "leadone_s_upper": 5.0,
     "leadone_v_threshold": 2.5
   },
+  
   "acc_control": {
     "t_actuator_delay": 0.4,
     "gain_tg": 1.5,

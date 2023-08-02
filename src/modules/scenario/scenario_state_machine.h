@@ -143,6 +143,7 @@ class ScenarioStateMachine
   FsmContext fsm_context_;
   ScenarioFsm scenario_fsm_;
   planning::framework::Session* session_;
+  ScenarioStateMachineConfig config_;
   std::shared_ptr<LaneChangeRequestManager> lc_req_mgr_;
   std::shared_ptr<LaneChangeLaneManager> lc_lane_mgr_;
   std::shared_ptr<ObjectSelector> object_selector_;

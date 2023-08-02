@@ -143,6 +143,12 @@ void StateBase::process(Control &control, FsmContext &context) {
     }
     change_state(next_state, control, context);
     context.state = next_state;
+  } else if (context.direction == NO_CHANGE) {
+    if (context.state == ROAD_LC_LCHANGE) {
+      context.direction = LEFT_CHANGE;
+    } else if (context.state == ROAD_LC_RCHANGE) {
+      context.direction = RIGHT_CHANGE;
+    }
   }
 
   if (next_state == ROAD_LC_LCHANGE || next_state == ROAD_LC_RCHANGE) {
