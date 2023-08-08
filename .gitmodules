@@ -4,6 +4,3 @@
 [submodule ".ci"]
 	path = .ci
 	url = ../../nywang/ci.git
-[submodule "tools/common"]
-	path = tools/common
-	url = ../common_tools.git

@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/home/xlwang71/Downloads/0721/long_tme_9.00000"
+bag_path = "/home/xlwang71/Downloads/0628_night/longtime2.00000"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -248,10 +248,10 @@ fig2.line('x', 'y', source = data_cursor_fig2, line_width = 1, line_color = 'gre
 
 f3 = fig3.line('time', 'steering_cmd_deg', source = data_control_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steering_cmd_deg')
 fig3.line('time', 'steering_deg', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'steering_deg')
-fig3.line('time', 'wheel_angle_cmd', source = data_control_command, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'wheel_angle_cmd')
+fig3.line('time', 'wheel_angle_cmd', source = data_control_command, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'wheel_angle_cmd', visible=False)
 fig3.line('time', 'driver_hand_torque', source = data_control_command, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'driver_hand_torque')
-fig3.line('time', 'steer_angle_bias_deg', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'dashed', legend_label = 'steer_angle_bias_deg')
-fig3.line('time', 'steer_bias_deg', source = data_control_command, line_width = 1, line_color = 'red', line_dash = 'dashed', legend_label = 'steer_bias_deg')
+fig3.line('time', 'steer_angle_bias_deg', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'dashed', legend_label = 'steer_angle_bias_deg', visible=False)
+fig3.line('time', 'steer_bias_deg', source = data_control_command, line_width = 1, line_color = 'red', line_dash = 'dashed', legend_label = 'steer_bias_deg', visible=False)
 fig3.line('x', 'y', source = data_cursor_fig3, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'cursor')
 
 f4 = fig4.line('time', 'vel_raw_cmd', source = data_control_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'vel_raw_cmd')
