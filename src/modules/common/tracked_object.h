@@ -52,7 +52,7 @@ struct PredictionTrajectoryEx {
 };
 
 struct TrackedObject {
-  double timestamp = 0;
+  double timestamp = 0; // 单位：s
 
   int track_id = 0;
   int type = 0;

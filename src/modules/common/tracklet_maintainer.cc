@@ -58,35 +58,6 @@ void LifecycleDict::remove_clean() {
   dirty_set_.clear();
 }
 
-SimpleRefLine::SimpleRefLine() { update_ = false; }
-
-void SimpleRefLine::update_pathpoints(
-    const std::vector<PathPoint> &path_points) {
-  if (path_points.size() < 2) {
-    update_ = false;
-    path_points_.clear();
-    return;
-  }
-
-  path_points_ = path_points;
-  update_ = true;
-}
-
-void SimpleRefLine::cartesian_frenet(double x, double y, double &s, double &l,
-                                     double &v_s, double &v_l, double &theta,
-                                     bool get_theta, double *v, double *yaw) {
-  if (path_points_.size() < 2) {
-    return;
-  }
-
-  calc_cartesian_frenet(path_points_, x, y, s, l, v_s, v_l, theta, get_theta, v,
-                        yaw);
-}
-
-void SimpleRefLine::frenet_cartesian(double s, double l, double &x, double &y) {
-  calc_frenet_cartesian(path_points_, s, l, x, y);
-}
-
 TrackletMaintainer::TrackletMaintainer(planning::framework::Session *session)
     : ego_state_(session) {
   session_ = session;
@@ -115,7 +86,7 @@ void TrackletMaintainer::apply_update(
   LeadCars leadcars;
   std::vector<TrackedObject *> objects;
   std::vector<PathPoint> path_points;
-
+  frenet_coord_ = nullptr;
   bool is_location_valid = session_->environmental_model().location_valid();
   auto &lateral_output =
       session_->planning_context().lateral_behavior_planner_output();
@@ -126,7 +97,16 @@ void TrackletMaintainer::apply_update(
   if (is_location_valid) {
     recv_prediction_objects(predictions, objects);
     if (flane != nullptr) {
+      FrenetCoordinateSystemParameters frenet_parameters;
+      // init frenet parameters
+      frenet_parameters.zero_speed_threshold = 0.1;
+      frenet_parameters.coord_transform_precision = 0.01;
+      frenet_parameters.step_s = 0.3;
+      frenet_parameters.coarse_step_s = 1.0;
+      frenet_parameters.optimization_gamma = 0.5;
+      frenet_parameters.max_iter = 15;
       auto &ref_path = flane->get_reference_path();
+      std::vector<Point2D> coord_points;
       for (auto ref_point : ref_path->get_points()) {
         double ego_fx = std::cos(ego_state_.ego_pose_raw().theta);
         double ego_fy = std::sin(ego_state_.ego_pose_raw().theta);
@@ -138,21 +118,21 @@ void TrackletMaintainer::apply_update(
         ref_point.path_point.x = dx * ego_fx + dy * ego_fy;
         ref_point.path_point.y = dx * ego_lx + dy * ego_ly;
         path_points.emplace_back(ref_point.path_point);
+        coord_points.emplace_back(Point2D(ref_point.path_point.x ,ref_point.path_point.y)); 
       }
+      frenet_coord_ = std::make_shared<FrenetCoordinateSystem>(coord_points,
+                                                           frenet_parameters);
     }
   } else {
     recv_relative_prediction_objects(predictions, objects);
     if (flane != nullptr) {
-      auto &ref_path = flane->get_reference_path();
-      for (auto &ref_point : ref_path->get_points()) {
-        path_points.emplace_back(ref_point.path_point);
-      }
+      frenet_coord_ = flane->get_reference_path()->get_frenet_coord();
     }
   }
 
   // 长时暂时无lateral_output
   calc(
-      objects, path_points, lateral_output.scenario, lateral_output.flane_width,
+      objects, lateral_output.scenario, lateral_output.flane_width,
       lateral_output.lat_offset, lateral_output.borrow_bicycle_lane,
       lateral_output.enable_intersection_planner, lateral_output.dist_rblane,
       lateral_output.tleft_lane, lateral_output.rightest_lane,
@@ -164,13 +144,9 @@ void TrackletMaintainer::apply_update(
   set_default_value(objects);
 
   tracked_objects.resize(objects.size());
-
-  double curr_time = IflyTime::Now_ms();
-
   for (size_t i = 0; i < objects.size(); i++) {
     tracked_objects[i] = *objects[i];
-
-    objects[i]->last_recv_time = curr_time;
+    objects[i]->last_recv_time = objects[i]->timestamp;
   }
 
   lead_cars = leadcars;
@@ -226,7 +202,7 @@ void TrackletMaintainer::recv_prediction_objects(
       new_map.insert(std::make_pair(origin->track_id, origin));
     }
 
-    origin->timestamp = IflyTime::Now_s();
+    origin->timestamp = p.timestamp_us / 1000000.0;
     origin->type = p.type;
     origin->fusion_source = p.fusion_source;
     origin->fusion_type = 2;
@@ -356,6 +332,7 @@ void TrackletMaintainer::recv_prediction_objects(
 
         object->trajectory.relative_ego_x[i] = tr.trajectory[i].relative_ego_x;
         object->trajectory.relative_ego_y[i] = tr.trajectory[i].relative_ego_y;
+        // Todo:clren 后续根据情况修改成与recv_relative_prediction_objects类似的写法
         double theta = tr.trajectory[i].yaw - ego_state_.ego_pose_raw().theta;
         if (theta > pi) {
           theta -= 2 * pi;
@@ -449,7 +426,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
       origin->has_history = false;
     }
 
-    origin->timestamp = IflyTime::Now_s();
+    origin->timestamp = p.timestamp_us / 1000000.0;
     origin->type = p.type;
     origin->fusion_source = p.fusion_source;
     origin->fusion_type = 2;
@@ -574,9 +551,12 @@ void TrackletMaintainer::recv_relative_prediction_objects(
         object->trajectory.relative_ego_y[i] = tr.trajectory[i].relative_ego_y;
         object->trajectory.relative_ego_yaw[i] =
             tr.trajectory[i].relative_ego_yaw;
+        if (origin->fusion_source & OBSTACLE_SOURCE_CAMERA) {
+          object->trajectory.relative_ego_yaw[i] = origin->speed_yaw;
+        }
+
         object->trajectory.relative_ego_speed[i] =
             tr.trajectory[i].relative_ego_speed;
-
         object->trajectory.relative_ego_std_dev_x[i] =
             tr.trajectory[i].relative_ego_std_dev_x;
         object->trajectory.relative_ego_std_dev_y[i] =
@@ -657,8 +637,7 @@ void TrackletMaintainer::fisheye_helper(const PredictionObject &prediction,
 }
 
 void TrackletMaintainer::calc(
-    std::vector<TrackedObject *> &tracked_objects,
-    const std::vector<PathPoint> &path_points, int scenario, double lane_width,
+    std::vector<TrackedObject *> &tracked_objects, int scenario, double lane_width,
     double lat_offset, bool borrow_bicycle_lane,
     bool enable_intersection_planner, double dist_rblane, bool tleft_lane,
     bool rightest_lane, double dist_intersect, double intersect_length,
@@ -666,19 +645,23 @@ void TrackletMaintainer::calc(
     bool isRedLightStop, bool isFasterStaticAvd, bool isOnHighway,
     std::vector<double> d_poly, std::vector<double> c_poly) {
   seq_state_.remove_clean();
-  simple_refline_.update_pathpoints(path_points);
-
   auto ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   double v_ego = ego_state_manager->ego_v();
   double ego_rear_axis_to_front_edge = session_->vehicle_config_context()
                                            .get_vehicle_param()
                                            .rear_axis_to_front_edge;
-  if (simple_refline_.has_update()) {
-    double yaw = 0;
-    simple_refline_.cartesian_frenet(ego_rear_axis_to_front_edge, 0, s_ego_,
-                                     l_ego_, vs_ego_, vl_ego_, theta_ego_, true,
-                                     &v_ego, &yaw);
+  if (frenet_coord_ != nullptr) {
+    Point2D frenet_point;                                
+    if (frenet_coord_->CartCoord2FrenetCoord(
+            Point2D(ego_rear_axis_to_front_edge, 0), frenet_point) ==
+        TRANSFORM_SUCCESS) {
+      s_ego_ = frenet_point.x;
+      l_ego_ = frenet_point.y;
+      double theta = frenet_coord_->GetRefCurveHeading(frenet_point.x);
+      vl_ego_ = v_ego * std::sin(-theta);
+      vs_ego_ = v_ego * std::cos(-theta);
+    }
 
     for (auto item : tracked_objects) {
       item->v_ego = v_ego;
@@ -689,7 +672,7 @@ void TrackletMaintainer::calc(
         d_poly_offset = d_poly[3] - c_poly[3];
       }
 
-      fill_info_with_refline(*item, simple_refline_, d_poly_offset);
+      fill_info_with_refline(*item, d_poly_offset);
       if (!hdmap_valid_) {
         fill_deriv_info(*item);
         fill_possibility_of_cutin(*item);
@@ -699,8 +682,7 @@ void TrackletMaintainer::calc(
           (item->fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
         is_potential_lead_one(*item, v_ego);
       }
-      calc_intersection_with_refline(*item, enable_intersection_planner,
-                                     simple_refline_);
+      calc_intersection_with_refline(*item, enable_intersection_planner);
     }
   }
 
@@ -764,8 +746,7 @@ void TrackletMaintainer::calc(
   }
 }
 
-void TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
-                                                SimpleRefLine &simple_refline,
+void TrackletMaintainer::fill_info_with_refline(TrackedObject &item, 
                                                 double lat_offset) {
   double half_length = item.length * 0.5;
 
@@ -790,9 +771,16 @@ void TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
   }
 
   double s, l, v_s, v_l, theta;
-  simple_refline.cartesian_frenet(item.center_x, item.center_y, s, l, v_s, v_l,
-                                  theta, true, &item.v, &speed_yaw);
-
+  Point2D frenet_point;                                
+  if (frenet_coord_->CartCoord2FrenetCoord(
+            Point2D(item.center_x, item.center_y), frenet_point) ==
+        TRANSFORM_SUCCESS) {
+    s = frenet_point.x;
+    l = frenet_point.y;
+    theta = frenet_coord_->GetRefCurveHeading(frenet_point.x);
+    v_l = item.v * std::sin(speed_yaw - theta);
+    v_s = item.v * std::cos(speed_yaw - theta);
+  }
   item.vs_rel = v_s - vs_ego_;
   item.v_lead = v_s;
   item.v_lead_k = v_s;
@@ -1005,10 +993,9 @@ void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
     return;
   }
 
-  double curr_time = IflyTime::Now_ms();
   double interval = (item.last_recv_time == 0.0)
                         ? planning_cycle_time
-                        : (curr_time - item.last_recv_time);
+                        : (item.timestamp - item.last_recv_time);
 
   double pi = std::atan(1.0) * 4;
 
@@ -1083,9 +1070,8 @@ void TrackletMaintainer::fill_possibility_of_cutin(TrackedObject &item) {
   double is_in_range =
       (temp > lower_dist_threshold && temp < upper_dist_threshold);
 
-  double curr_time = IflyTime::Now_ms();
   double gap = (item.last_recv_time == 0.0) ? planning_cycle_time
-                                            : (curr_time - item.last_recv_time);
+                                            : (item.timestamp - item.last_recv_time);
 
   if (is_need_consider && is_in_range) {
     item.cutinp = item.cutinp - gap * std::max(item.v_lat, -1.0) /
@@ -1111,8 +1097,7 @@ void TrackletMaintainer::fill_possibility_of_cutin(TrackedObject &item) {
 }
 
 void TrackletMaintainer::calc_intersection_with_refline(
-    TrackedObject &item, bool enable_intersection_planner,
-    SimpleRefLine &simple_refline) {
+    TrackedObject &item, bool enable_intersection_planner) {
   if (0 == item.type) {
     item.trajectory.intersection = 0;
     return;
@@ -1175,9 +1160,13 @@ void TrackletMaintainer::calc_intersection_with_refline(
       item.trajectory.intersection = 0;
       return;
     }
-
-    simple_refline.cartesian_frenet(ego_x[0], ego_y[0], s0, l0, v_s, v_l, theta,
-                                    false);
+    Point2D frenet_point;                                
+    if (frenet_coord_->CartCoord2FrenetCoord(
+              Point2D(ego_x[0], ego_y[0]), frenet_point) ==
+          TRANSFORM_SUCCESS) {
+      s0 = frenet_point.x;
+      l0 = frenet_point.y;
+    }
 
     if (std::fabs(l0) <= ignorance_threshold) {
       if ((item.prediction.still_prob > 0.9 ||
@@ -1201,8 +1190,13 @@ void TrackletMaintainer::calc_intersection_with_refline(
         // double *yaw;
         // *v = ego_speed[max_idx];
         // *yaw = ego_yaw[max_idx];
-        simple_refline.cartesian_frenet(ego_x[max_idx], ego_y[max_idx], smax,
-                                        lmax, v_s, v_l, theta, false);
+        if (frenet_coord_->CartCoord2FrenetCoord(
+              Point2D(ego_x[max_idx], ego_y[max_idx]), frenet_point) ==
+          TRANSFORM_SUCCESS) {
+          smax = frenet_point.x;
+          lmax = frenet_point.y;
+        }
+
         if (std::fabs(lmax) > ignorance_threshold) {
           item.trajectory.intersection = 10000;
         } else {
@@ -1248,14 +1242,28 @@ void TrackletMaintainer::calc_intersection_with_refline(
       end_speed_yaw =
           item.trajectory.yaw[end_idx] - ego_state_.ego_pose_raw().theta;
     }
+    if (frenet_coord_->CartCoord2FrenetCoord(
+              Point2D(ego_x[min_idx], ego_y[min_idx]), frenet_point) ==
+      TRANSFORM_SUCCESS) {
+      smin = frenet_point.x;
+      lmin = frenet_point.y;
+    }
+    if (frenet_coord_->CartCoord2FrenetCoord(
+              Point2D(ego_x[max_idx], ego_y[max_idx]), frenet_point) ==
+      TRANSFORM_SUCCESS) {
+      smax = frenet_point.x;
+      lmax = frenet_point.y;
+    }
+    if (frenet_coord_->CartCoord2FrenetCoord(
+              Point2D(ego_x[end_idx], ego_y[end_idx]), frenet_point) ==
+      TRANSFORM_SUCCESS) {
+      send = frenet_point.x;
+      lend = frenet_point.y;
+      theta = frenet_coord_->GetRefCurveHeading(frenet_point.x);
+      v_l = item.v * std::sin(end_speed_yaw - theta);
+      v_s = item.v * std::cos(end_speed_yaw - theta);
+    }    
 
-    simple_refline.cartesian_frenet(ego_x[min_idx], ego_y[min_idx], smin, lmin,
-                                    v_s, v_l, theta, false);
-    simple_refline.cartesian_frenet(ego_x[max_idx], ego_y[max_idx], smax, lmax,
-                                    v_s, v_l, theta, false);
-    simple_refline.cartesian_frenet(
-        ego_x[end_idx], ego_y[end_idx], send, lend, v_s, v_l, theta, true,
-        &item.trajectory.speed[end_idx], &end_speed_yaw);
     double v_l_end = (lend > 0) ? v_l : -v_l;
     double v_s_end = v_s;
     bool is_same_side = ((lmin > 0 && lend > 0) || (lmin <= 0 && lend <= 0));
@@ -1288,9 +1296,12 @@ void TrackletMaintainer::calc_intersection_with_refline(
       double smid = 0.0;
       double lmid = 0.0;
       int mid_idx = (min_idx + max_idx) / 2;
-
-      simple_refline.cartesian_frenet(ego_x[mid_idx], ego_y[mid_idx], smid,
-                                      lmid, v_s, v_l, theta, false);
+      if (frenet_coord_->CartCoord2FrenetCoord(
+              Point2D(ego_x[mid_idx], ego_y[mid_idx]), frenet_point) ==
+        TRANSFORM_SUCCESS) {
+        smid = frenet_point.x;
+        lmid = frenet_point.y;
+      }
       min_ignore_thre = calc_ignorance_threshold(item, min_idx, sgn,
                                                  enable_intersection_planner);
       double mid_ignore_thre = calc_ignorance_threshold(
@@ -1312,9 +1323,12 @@ void TrackletMaintainer::calc_intersection_with_refline(
       double smid = 0.0;
       double lmid = 0.0;
       int mid_idx = (min_idx + max_idx) / 2;
-
-      simple_refline.cartesian_frenet(ego_x[mid_idx], ego_y[mid_idx], smid,
-                                      lmid, v_s, v_l, theta, false);
+      if (frenet_coord_->CartCoord2FrenetCoord(
+              Point2D(ego_x[mid_idx], ego_y[mid_idx]), frenet_point) ==
+        TRANSFORM_SUCCESS) {
+        smid = frenet_point.x;
+        lmid = frenet_point.y;
+      }
 
       double min_ignore_thre = calc_ignorance_threshold(
           item, min_idx, sgn, enable_intersection_planner);
@@ -1418,9 +1432,8 @@ void TrackletMaintainer::check_accident_car(
     accident_discern_threshold = std::max(accident_discern_threshold, 25.0);
   }
 
-  double curr_time = IflyTime::Now_ms();
   double gap = (item.last_recv_time == 0.0) ? planning_cycle_time
-                                            : (curr_time - item.last_recv_time);
+                                            : (item.timestamp - item.last_recv_time);
 
   if (item.type == 20001 && (item.is_lead || item.is_temp_lead) &&
       item.d_rel < 40.0 && item.v_lead > -3 && item.v_lead < 0.5 &&
@@ -1540,10 +1553,9 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
     item.leadone_confidence_cnt = 0.0;
     item.is_lead = d_path < lead_d_path_thr && item.d_rel >= 0.0;
   } else {
-    double curr_time = IflyTime::Now_ms();
     double gap = (item.last_recv_time == 0.0)
                      ? planning_cycle_time
-                     : (curr_time - item.last_recv_time);
+                     : (item.timestamp - item.last_recv_time);
     LOG_DEBUG("the gap is : [%f]ms \n", gap);
     if (d_path < lead_d_path_thr && item.d_rel > 0.0) {
       item.leadone_confidence_cnt =
@@ -1592,10 +1604,9 @@ bool TrackletMaintainer::is_potential_lead_two(TrackedObject &item,
     return (is_diff_d_rel || is_diff_v_rel || is_diff_y_rel) &&
            item.d_rel > 0.0;
   } else {
-    double curr_time = IflyTime::Now_ms();
     double gap = (item.last_recv_time == 0.0)
                      ? planning_cycle_time
-                     : (curr_time - item.last_recv_time);
+                     : (item.timestamp - item.last_recv_time);
 
     if ((is_diff_d_rel || is_diff_v_rel || is_diff_y_rel) && item.d_rel > 0.0) {
       item.leadtwo_confidence_cnt =
@@ -1681,10 +1692,9 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
     item.tleadone_confidence_cnt = 0.0;
     item.is_temp_lead = (is_get_threshold || is_in_range) && item.d_rel >= 0.0;
   } else {
-    double curr_time = IflyTime::Now_ms();
     double gap = (item.last_recv_time == 0.0)
                      ? planning_cycle_time
-                     : (curr_time - item.last_recv_time);
+                     : (item.timestamp - item.last_recv_time);
 
     if ((is_get_threshold || is_in_range) && item.d_rel >= 0.0) {
       item.tleadone_confidence_cnt = std::min(
@@ -1725,10 +1735,9 @@ bool TrackletMaintainer::is_potential_temp_lead_two(
     return (is_diff_d_rel || is_diff_v_rel || is_diff_y_rel) &&
            item.d_rel > 0.0;
   } else {
-    double curr_time = IflyTime::Now_ms();
     double gap = (item.last_recv_time == 0.0)
                      ? planning_cycle_time
-                     : (curr_time - item.last_recv_time);
+                     : (item.timestamp - item.last_recv_time);
 
     if ((is_diff_d_rel || is_diff_v_rel || is_diff_y_rel) && item.d_rel > 0.0) {
       item.tleadtwo_confidence_cnt = std::min(
@@ -1900,9 +1909,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
         fp4);
   }
 
-  double curr_time = IflyTime::Now_ms();
   double gap = (item.last_recv_time == 0.0) ? planning_cycle_time
-                                            : (curr_time - item.last_recv_time);
+                                            : (item.timestamp - item.last_recv_time);
   int count = (int)((gap + 0.01) / planning_cycle_time);
 
   if (item.is_ncar) {
@@ -2042,7 +2050,7 @@ void TrackletMaintainer::select_lead_cars(
 
   for (auto tr : tracked_objects) {
     if (tr->is_lead == true ||
-        is_potential_temp_lead_one(*tr, v_ego, simple_refline_.has_update()) ==
+        is_potential_temp_lead_one(*tr, v_ego, frenet_coord_ != nullptr) ==
             false) {
       continue;
     }
@@ -2054,7 +2062,7 @@ void TrackletMaintainer::select_lead_cars(
 
   for (auto tr : tracked_objects) {
     if (tr->is_lead == true || temp_lead_one == tr ||
-        is_potential_temp_lead_one(*tr, v_ego, simple_refline_.has_update()) ==
+        is_potential_temp_lead_one(*tr, v_ego, frenet_coord_ != nullptr) ==
             false ||
         is_potential_temp_lead_two(*tr, temp_lead_one) == false) {
       continue;

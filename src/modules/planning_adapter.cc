@@ -57,7 +57,7 @@ static uint64_t get_latency(double now, uint64_t input_time) {
 
 void PlanningAdapter::Proc() {
   LOG_DEBUG("GeneralPlanning::RunOnce \n");
-  double start_time = IflyTime::Now_ms();
+  double start_time = IflyTime::Now_us();
 
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
 

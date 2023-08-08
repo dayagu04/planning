@@ -42,26 +42,6 @@ class LifecycleDict {
   std::set<int> dirty_set_;
 };
 
-class SimpleRefLine {
- public:
-  SimpleRefLine();
-  virtual ~SimpleRefLine() = default;
-
-  void update_pathpoints(const std::vector<PathPoint> &path_points);
-
-  void cartesian_frenet(double x, double y, double &s, double &l, double &v_s,
-                        double &v_l, double &theta, bool get_theta = false,
-                        double *v = nullptr, double *yaw = nullptr);
-
-  void frenet_cartesian(double s, double l, double &x, double &y);
-
-  bool has_update() const { return update_; }
-
- private:
-  std::vector<PathPoint> path_points_;
-  bool update_;
-};
-
 class TrackletMaintainer {
  public:
   TrackletMaintainer(planning::framework::Session *session);
@@ -82,8 +62,7 @@ class TrackletMaintainer {
   void fisheye_helper(const PredictionObject &prediction,
                       TrackedObject &object);
 
-  void calc(std::vector<TrackedObject *> &tracked_objects,
-            const std::vector<PathPoint> &path_points, int scenario,
+  void calc(std::vector<TrackedObject *> &tracked_objects, int scenario,
             double lane_width, double lat_offset, bool borrow_bicycle_lane,
             bool enable_intersection_planner, double dist_rblane,
             bool tleft_lane, bool rightest_lane, double dist_intersect,
@@ -92,16 +71,14 @@ class TrackletMaintainer {
             bool isOnHighway, std::vector<double> d_poly,
             std::vector<double> c_poly);
 
-  void fill_info_with_refline(TrackedObject &item,
-                              SimpleRefLine &simple_refline, double lat_offset);
+  void fill_info_with_refline(TrackedObject &item, double lat_offset);
 
   void fill_deriv_info(TrackedObject &item);
 
   void fill_possibility_of_cutin(TrackedObject &item);
 
   void calc_intersection_with_refline(TrackedObject &item,
-                                      bool enable_intersection_planner,
-                                      SimpleRefLine &simple_refline);
+                                      bool enable_intersection_planner);
 
   double calc_ignorance_threshold(TrackedObject &item, int idx, int sgn,
                                   bool enable_intersection_planner);
@@ -145,8 +122,8 @@ class TrackletMaintainer {
   void set_default_value(const std::vector<TrackedObject *> &tracked_objects);
 
   planning::framework::Session *session_ = nullptr;
+  std::shared_ptr<FrenetCoordinateSystem> frenet_coord_;
   LifecycleDict seq_state_;
-  SimpleRefLine simple_refline_;
   std::map<int, TrackedObject *> object_map_;
   EgoStateManager ego_state_;
   bool hdmap_valid_{false};
