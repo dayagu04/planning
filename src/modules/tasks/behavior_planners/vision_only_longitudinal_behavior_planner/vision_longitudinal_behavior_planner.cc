@@ -976,6 +976,9 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
       LOG_DEBUG(
           "d_des: [%f], v_target_car: [%f], v_target_potental_cutin: [%f]\n",
           d_des, v_target_car, v_target_potental_cutin);
+      // debug info
+      JSON_DEBUG_VALUE("VisionLonBehavior_v_cut_in", v_target_potental_cutin);
+      JSON_DEBUG_VALUE("VisionLonBehavior_cut_in_track_id", track.track_id);
     }
   }
 

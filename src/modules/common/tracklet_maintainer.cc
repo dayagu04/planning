@@ -1628,6 +1628,11 @@ bool TrackletMaintainer::is_potential_lead_two(TrackedObject &item,
 bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
                                                     double v_ego,
                                                     bool refline_update) {
+  // Only use obstacle fusion with camera
+  if (!(item.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+    item.is_temp_lead = false;
+    return item.is_temp_lead;
+  }
   LOG_DEBUG("----is_potential_temp_lead_one-----\n");
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   std::array<double, 5> xp1{1.5, 5.0, 10.0, 40.0, 60.0 + v_ego / 1.2};
@@ -1720,6 +1725,10 @@ bool TrackletMaintainer::is_potential_temp_lead_two(
   LOG_DEBUG("----is_potential_temp_lead_two-----\n");
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   if (temp_lead_one == nullptr) {
+    return false;
+  }
+  // Only use obstacle fusion with camera
+  if (!(item.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
     return false;
   }
 
