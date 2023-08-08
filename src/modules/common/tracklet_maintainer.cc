@@ -700,8 +700,7 @@ void TrackletMaintainer::calc(
 
   for (auto tr : tracked_objects) {
     // ignore obj without camera source
-    if ((tr->fusion_source != OBSTACLE_SOURCE_CAMERA) &&
-        (tr->fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+    if (!(tr->fusion_source & OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }
     tr->is_avd_car = is_potential_avoiding_car(

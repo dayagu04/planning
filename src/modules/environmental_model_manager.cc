@@ -18,6 +18,7 @@
 #include "context/traffic_light_decision_manager.h"
 #include "context/virtual_lane_manager.h"
 #include "log.h"
+#include "debug_info_log.h"
 #include "prediction.pb.h"
 #include "scene_type_config.pb.h"
 #include "vehicle_service.pb.h"
@@ -150,7 +151,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   auto end_time = IflyTime::Now_ms();
   LOG_DEBUG("EnvironmentalModelManager::Run cost time:%f\n",
             end_time - current_time);
-
+  JSON_DEBUG_VALUE("EnvironmentalModelManagerCost", end_time - current_time);
   std::string status_msg;
   if (!InputReady(current_time, status_msg)) {
     LOG_ERROR("InputReady is failed !!!! \n");

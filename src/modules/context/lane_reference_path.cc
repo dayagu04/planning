@@ -29,7 +29,7 @@ void LaneReferencePath::update(planning::framework::Session *session) {
 
   // Step 2) get reference_points
   ReferencePathPoints raw_reference_path_points;
-  bool ok = get_points_by_lane_id(lane_virtual_id_, raw_reference_path_points);
+  bool ok = get_ref_points(raw_reference_path_points);
 
   // Step 3) update
   if (ok) {
@@ -52,6 +52,7 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   }
 }
 
+// TODO:clren   这个函数还没有使用   判断逻辑可以更改
 bool LaneReferencePath::is_obstacle_ignorable(
     const std::shared_ptr<FrenetObstacle> obstacle) {
   bool res{false};
@@ -98,15 +99,11 @@ void LaneReferencePath::update_obstacles() {
   road_edges_ = obstacle_manager->get_road_edge_obstacles().Items();
 }
 
-bool LaneReferencePath::get_points_by_lane_id(
-    int target_lane_virtual_id, ReferencePathPoints &ref_path_points) {
+bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
   auto virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   auto virtual_lane =
-      virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
-  if (virtual_lane == nullptr) {
-    return false;
-  }
+      virtual_lane_manager->get_lane_with_virtual_id(lane_virtual_id_);
   auto &lane_points = virtual_lane->lane_points();
   std::cout << "lane_points.size(): " << lane_points.size() << std::endl;
 
@@ -165,19 +162,13 @@ bool LaneReferencePath::get_points_by_lane_id(
 }
 
 void LaneReferencePath::assign_obstacles_to_lane() {
-  const double HALF_LANE_WIDTH = 1.8;
   lane_obstacles_id_.clear();
   lane_leadone_obstacle_ = -1;  //需要注意id是否为负数 todo
   lane_leadtwo_obstacle_ = -1;
 
   std::vector<std::shared_ptr<FrenetObstacle>> sorted_obstacles;
   for (auto &frenet_obstacle : frenet_obstacles_) {
-    ReferencePathPoint point;
-    // Get the width of the lane at the obstacle's position
-    bool valid = get_reference_point_by_lon(frenet_obstacle->frenet_s(), point);
-    auto half_lane_width =
-        valid == true ? (point.lane_width / 2) : HALF_LANE_WIDTH;
-    if (std::fabs(frenet_obstacle->frenet_l()) < half_lane_width) {
+    if (IsObstacleOn(frenet_obstacle)) {
       sorted_obstacles.push_back(frenet_obstacle);
     }
   }
@@ -189,17 +180,70 @@ void LaneReferencePath::assign_obstacles_to_lane() {
   double s_ego = get_frenet_ego_state().s();
   for (auto &frenet_obstacle : sorted_obstacles) {
     lane_obstacles_id_.emplace_back(frenet_obstacle->id());
-    if (frenet_obstacle->frenet_s() > s_ego && leadone == -1) {
-      leadone = frenet_obstacle->id();
-      continue;
-    }
-    if (frenet_obstacle->frenet_s() > s_ego && leadone != -1 && leadtwo == -1) {
-      leadtwo = frenet_obstacle->id();
-      break;
+    auto fusion_source = frenet_obstacle->obstacle()->fusion_source();
+    if (fusion_source & OBSTACLE_SOURCE_CAMERA) {
+      if (frenet_obstacle->frenet_s() > s_ego && leadone == -1) {
+        leadone = frenet_obstacle->id();
+        continue;
+      }
+      if (frenet_obstacle->frenet_s() > s_ego && leadone != -1 &&
+          leadtwo == -1) {
+        leadtwo = frenet_obstacle->id();
+        break;
+      }
     }
   }
   lane_leadone_obstacle_ = leadone;
   lane_leadtwo_obstacle_ = leadtwo;
+}
+
+bool LaneReferencePath::IsObstacleOn(
+    std::shared_ptr<FrenetObstacle> frenet_obstacle) {
+  if (frenet_obstacle->rel_s() > 80 || frenet_obstacle->rel_s() < -50 ||
+      frenet_obstacle->s_min_l().x > 15 || frenet_obstacle->s_max_l().x < -15) {
+    return false;
+  }
+  double check_offset = 0;
+  double lane_width = 3.8;
+  auto virtual_lane_manager =
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
+  auto virtual_lane =
+      virtual_lane_manager->get_lane_with_virtual_id(lane_virtual_id_);
+  lane_width = virtual_lane->width_by_s(frenet_obstacle->frenet_s());
+  double distance_to_left_line =
+      frenet_obstacle->s_min_l().x - lane_width / 2.0;
+  double distance_to_right_line =
+      frenet_obstacle->s_max_l().x + lane_width / 2.0;
+  std::array<double, 3> xp_vs{0., 3., 5.};
+  std::array<double, 3> fp_l1{std::max(lane_width / 2 - 1.45, 0.0),
+                              std::max(lane_width / 2 - 1.65, 0.0), 0.0};
+
+  // 可以根据不同的fusion_source障碍物的横向速度的准确度选择不同的逻辑
+  if (1) {
+    std::array<double, 5> xp_rel_s{-30, -20, 20, 30, 60};
+    std::array<double, 5> fp_l2{0.45, 0.2, 0.3, 0.45, 0.6};
+    check_offset = interp(frenet_obstacle->rel_s(), xp_rel_s, fp_l2) +
+                   interp(frenet_obstacle->frenet_velocity_s(), xp_vs, fp_l1);
+
+    return (distance_to_left_line < -check_offset &&
+            distance_to_right_line > check_offset);
+  } else {
+    double prediction_time = 1.5;
+    double check_offset =
+        (frenet_obstacle->rel_s() > -10)
+            ? 0.2
+            : 0.4 + interp(frenet_obstacle->frenet_velocity_s(), xp_vs, fp_l1);
+
+    double predict_distance_min_l =
+        distance_to_left_line +
+        frenet_obstacle->frenet_velocity_l() * prediction_time;
+    double predict_distance_max_r =
+        distance_to_right_line +
+        frenet_obstacle->frenet_velocity_l() * prediction_time;
+
+    return (predict_distance_min_l < -check_offset &&
+            predict_distance_max_r > check_offset);
+  }
 }
 
 void LaneReferencePath::cal_current_leadone_leadtwo_to_ego() {

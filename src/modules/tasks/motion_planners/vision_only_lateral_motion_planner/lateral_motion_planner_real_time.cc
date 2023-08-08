@@ -24,6 +24,7 @@ VisionLateralMotionPlanner::VisionLateralMotionPlanner(
 
 bool VisionLateralMotionPlanner::Execute(planning::framework::Frame *frame) {
   // NTRACE_CALL(7);
+  auto current_time = IflyTime::Now_ms();
   frame_ = frame;
 
   if (Task::Execute(frame) == false) {
@@ -83,7 +84,8 @@ bool VisionLateralMotionPlanner::Execute(planning::framework::Frame *frame) {
   if (!update_planner_output()) {
     // TBD : add logs
   }
-
+  auto end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("VisionLateralMotionPlannerCost", end_time - current_time);
   return b_success;
 }
 

@@ -56,9 +56,12 @@ void FrenetObstacle::compute_frenet_obstacle(
   // corner frenet
   const double obs_length = obstacle_ptr_->length();
   const double obs_width = obstacle_ptr_->width();
-  const double obs_relative_heading =
-      obstacle_ptr_->heading_angle() -
-      frenet_coord->GetRefCurveHeading(frenet_s_);
+  double obs_relative_heading = obstacle_ptr_->heading_angle() -
+                                frenet_coord->GetRefCurveHeading(frenet_s_);
+  if (not is_location_valid_) {
+    obs_relative_heading = obstacle_ptr_->relative_heading_angle() -
+                           frenet_coord->GetRefCurveHeading(frenet_s_);
+  }
   frenet_obstacle_corners_.s_front_left =
       frenet_s_ + obs_length / 2.0 * std::cos(obs_relative_heading) -
       obs_width / 2.0 * std::sin(obs_relative_heading);
@@ -109,7 +112,7 @@ void FrenetObstacle::compute_frenet_obstacle(
     s_with_max_l_.y = std::max(corners_s[index], 0.0);
   }
 
-  s_with_min_l_.x = *std::max_element(corners_l.begin(), corners_l.end());
+  s_with_min_l_.x = *std::min_element(corners_l.begin(), corners_l.end());
   it = std::find(corners_l.begin(), corners_l.end(), s_with_min_l_.x);
   index = (size_t)(it - corners_l.begin());
 

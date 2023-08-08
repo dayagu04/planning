@@ -43,6 +43,7 @@ bool VisionLongitudinalBehaviorPlanner::Execute(framework::Frame *frame) {
 }
  */
 bool VisionLongitudinalBehaviorPlanner::calculate() {
+  
   update();
 
   update_planner_output();
@@ -52,6 +53,7 @@ bool VisionLongitudinalBehaviorPlanner::calculate() {
 }
 
 bool VisionLongitudinalBehaviorPlanner::update() {
+  auto current_time = IflyTime::Now_ms();
   LOG_DEBUG("=======VisionLongitudinalBehaviorPlanner======= \n");
   auto &ego_state_mgr =
       frame_->session()->environmental_model().get_ego_state_manager();
@@ -135,6 +137,8 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   int CIPV_id = GetCIPV(lateral_obstacle, lateral_outputs.lc_status);
   JSON_DEBUG_VALUE("CIPV_id", CIPV_id);
 
+  auto end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("VisionLateralMotionPlannerCost", end_time - current_time);
   return true;
 }
 

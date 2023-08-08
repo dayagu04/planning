@@ -172,6 +172,7 @@ class ScenarioStateMachine
 
   double start_move_dist_lane_ = 0.;
   LaneChangeStageInfo lane_change_stage_info_;
+  bool last_should_premove_{false};
 };
 
 /* struct GapInfo {

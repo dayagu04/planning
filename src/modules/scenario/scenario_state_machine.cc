@@ -432,7 +432,7 @@ void ScenarioStateMachine::compute_lc_valid_info(RequestType direction) {
   lane_change_stage_info_.gap_approached = true;
   lane_change_stage_info_.gap_valid = true;
   lane_change_stage_info_.side_approach = false;
-  lane_change_stage_info_.should_premove = false;
+  lane_change_stage_info_.should_premove = last_should_premove_;
   lane_change_stage_info_.gap = {-10, -10};
 
   // lc_valid_ = true;
@@ -704,6 +704,7 @@ void ScenarioStateMachine::compute_lc_valid_info(RequestType direction) {
 
 LaneChangeStageInfo ScenarioStateMachine::decide_lc_valid_info(
     RequestType direction) {
+  last_should_premove_ = lane_change_stage_info_.should_premove;
   clear_lc_stage_info();
   compute_lc_valid_info(direction);
   double coefficient = FLAGS_planning_loop_rate / 25.;

@@ -41,12 +41,12 @@ class LaneReferencePath
   int get_current_leadtwo_obstacle_to_ego() const {
     return current_leadtwo_obstacle_to_ego_;
   }
+  bool IsObstacleOn(std::shared_ptr<FrenetObstacle> frenet_obstacle);
 
  private:
   void update_refined_lane_points();
   virtual void update_obstacles();
-  bool get_points_by_lane_id(int target_lane_virtual_id,
-                             ReferencePathPoints &points);
+  bool get_ref_points(ReferencePathPoints &points);
 
   int lane_virtual_id_ = 0;
   std::vector<int> lane_obstacles_id_;
