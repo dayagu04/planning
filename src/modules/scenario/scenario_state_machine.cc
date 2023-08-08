@@ -779,18 +779,25 @@ void ScenarioStateMachine::compute_lc_back_info(RequestType direction) {
   auto &target_lane_frenet_ego_state =
       target_reference_path->get_frenet_ego_state();
 
-  // 可以考虑自车heading(姿态,最近点、最远点)， 以及横向速度. (heading越大, move_thre越大)
+  // 可以考虑自车heading(姿态,最近点、最远点)， 以及横向速度. (heading越大,
+  // move_thre越大)
   std::array<double, 3> xp_heading{0, 0.5, 1};
   std::array<double, 3> fp_l{0, 0.4, 0.6};
   double c1 = 0;
-  
-  if (direction == LEFT_CHANGE && target_lane->get_right_lane_boundary().poly_coefficient_size() == 4) {
+
+  if (direction == LEFT_CHANGE &&
+      target_lane->get_right_lane_boundary().poly_coefficient_size() == 4) {
     c1 = target_lane->get_right_lane_boundary().poly_coefficient()[1];
-  } else if (direction == RIGHT_CHANGE && target_lane->get_left_lane_boundary().poly_coefficient_size() == 4) {
+  } else if (direction == RIGHT_CHANGE &&
+             target_lane->get_left_lane_boundary().poly_coefficient_size() ==
+                 4) {
     c1 = target_lane->get_left_lane_boundary().poly_coefficient()[1];
   }
-  
-  double move_thre = std::max(interp(std::fabs(c1), xp_heading, fp_l) + ego_state->ego_v() * config_.lc_t_actuator_delay, config_.lc_back_available_thr);
+
+  double move_thre =
+      std::max(interp(std::fabs(c1), xp_heading, fp_l) +
+                   ego_state->ego_v() * config_.lc_t_actuator_delay,
+               config_.lc_back_available_thr);
   double lane_width = 3.8;  // TODO(Rui):use fix_lne->get_lane_width()
   double left_lane_width = 3.8;
   double right_lane_width = 3.8;
@@ -900,7 +907,7 @@ void ScenarioStateMachine::compute_lc_back_info(RequestType direction) {
       int end_idx = 0;
       if (tr.trajectory.intersection == 0) {
         for (int i = 0; i < x.size(); i++) {
-          double dx = x[i] - ego_state->ego_pose().x; // TODO:有问题
+          double dx = x[i] - ego_state->ego_pose().x;  // TODO:有问题
           double dy = y[i] - ego_state->ego_pose().y;
 
           double rel_x = dx * ego_fx + dy * ego_fy;

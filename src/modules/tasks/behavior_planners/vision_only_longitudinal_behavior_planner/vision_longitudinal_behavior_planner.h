@@ -79,6 +79,9 @@ class VisionLongitudinalBehaviorPlanner : public Task {
   StartStopInfo::StateType UpdateStartStopState(const TrackedObject *lead_one,
                                                 const double v_ego);
 
+  int GetCIPV(const std::shared_ptr<LateralObstacle> &lateral_obstacle,
+              const std::string &lc_status);
+
  private:
   void update_planner_output();
   void log_planner_debug_info();

@@ -124,8 +124,7 @@ struct GeneralPlanningConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    lc_back_smooth_thr =
-        read_json_key<double>(json, "lc_back_smooth_thr");
+    lc_back_smooth_thr = read_json_key<double>(json, "lc_back_smooth_thr");
     lc_back_consider_smooth_dpoly_thr =
         read_json_key<double>(json, "lc_back_consider_smooth_dpoly_thr");
   }
@@ -171,8 +170,7 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    lc_t_actuator_delay =
-        read_json_key<double>(json, "lc_t_actuator_delay");
+    lc_t_actuator_delay = read_json_key<double>(json, "lc_t_actuator_delay");
     lc_back_available_thr =
         read_json_key<double>(json, "lc_back_available_thr");
   }

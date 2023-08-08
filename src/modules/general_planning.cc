@@ -4,6 +4,7 @@
 
 #include "apa_planner/common/apa_utils.h"
 #include "config/vehicle_param.h"
+#include "ego_planning_config.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
 #include "log.h"
@@ -13,7 +14,6 @@
 #include "planning_output_context.h"
 #include "scene_type_config.pb.h"
 #include "vehicle_config_context.h"
-#include "ego_planning_config.h"
 
 namespace planning {
 
@@ -210,14 +210,16 @@ void GeneralPlanning::FillPlanningTrajectory(
             d_polynomial[3], -lat_offset_rate, lat_offset_rate);
       } else {
         if ((lateral_output.lc_status == "left_lane_change_back" ||
-            lateral_output.lc_status == "right_lane_change_back" ||
-            lateral_output.lc_status == "none") && 
-            std::fabs(d_polynomial[3]) > config_.lc_back_consider_smooth_dpoly_thr) {
-            limited_polynomial_3 = planning_math::Clamp(
-            d_polynomial[3], -config_.lc_back_smooth_thr, config_.lc_back_smooth_thr);
+             lateral_output.lc_status == "right_lane_change_back" ||
+             lateral_output.lc_status == "none") &&
+            std::fabs(d_polynomial[3]) >
+                config_.lc_back_consider_smooth_dpoly_thr) {
+          limited_polynomial_3 =
+              planning_math::Clamp(d_polynomial[3], -config_.lc_back_smooth_thr,
+                                   config_.lc_back_smooth_thr);
         } else {
-            limited_polynomial_3 = planning_math::Clamp(
-            d_polynomial[3], -max_lat_offset, max_lat_offset);
+          limited_polynomial_3 = planning_math::Clamp(
+              d_polynomial[3], -max_lat_offset, max_lat_offset);
         }
       }
       limited_polynomial_3 = planning_math::Clamp(

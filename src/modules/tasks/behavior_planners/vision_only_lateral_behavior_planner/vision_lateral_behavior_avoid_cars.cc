@@ -614,7 +614,8 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
     //           avd_car_past_[1].clear();
     //         }
     //       } else if (state == ROAD_LC_RWAIT) {
-    //         if (tr.d_rel > -10.0 && tr.v_rel < 1.0 && tr.d_max_cpath > -2.5 &&
+    //         if (tr.d_rel > -10.0 && tr.v_rel < 1.0 && tr.d_max_cpath > -2.5
+    //         &&
     //             tr.d_max_cpath < -1.0 && tr.d_max_cpath > -fs_y_rel) {
     //           is_ncar_ = true;
     //           fs_y_rel = -tr.d_max_cpath;

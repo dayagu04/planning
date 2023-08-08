@@ -272,8 +272,9 @@ void RoadBase::process_change(FsmContext &context,
     lc_req_manager->FinishRequest();
   } else if ((lc_request != NO_CHANGE && lc_request == context.direction) ||
              (lc_request == NO_CHANGE &&
-             (lc_lane_manager->is_ego_on(lc_lane_manager->tlane()) ||
-              std::fabs(flane->get_ego_lateral_offset()) < (flane_width / 2 + move_thr)))) {
+              (lc_lane_manager->is_ego_on(lc_lane_manager->tlane()) ||
+               std::fabs(flane->get_ego_lateral_offset()) <
+                   (flane_width / 2 + move_thr)))) {
     int target_lane_virtual_id = lc_req_manager->target_lane_virtual_id();
     if (!lc_lane_manager->has_target_lane() ||
         target_lane_virtual_id != lc_lane_manager->tlane_virtual_id()) {
@@ -308,7 +309,10 @@ void RoadBase::process_change(FsmContext &context,
             candidate_states.push_back(ROAD_LC_RCHANGE);
           }
         }
-        std::cout << "Coming to prepare for change state !!!!! lc_request: " << lc_request << " context.direction: " << context.direction << " target_lane_virtual_id: " << target_lane_virtual_id << std::endl;
+        std::cout << "Coming to prepare for change state !!!!! lc_request: "
+                  << lc_request << " context.direction: " << context.direction
+                  << " target_lane_virtual_id: " << target_lane_virtual_id
+                  << std::endl;
         if (candidate_states.size() > 0 &&
             (candidate_states[0] == ROAD_LC_LCHANGE ||
              candidate_states[0] == ROAD_LC_RCHANGE) &&

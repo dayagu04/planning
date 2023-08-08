@@ -131,6 +131,10 @@ bool VisionLongitudinalBehaviorPlanner::update() {
             << std::endl;
   std::cout << "final v_target_ = : " << v_target_ << std::endl;
 
+  // hack: get CIPV 临时方案，后续使用hmi proto输出
+  int CIPV_id = GetCIPV(lateral_obstacle, lateral_outputs.lc_status);
+  JSON_DEBUG_VALUE("CIPV_id", CIPV_id);
+
   return true;
 }
 
@@ -1656,4 +1660,21 @@ VisionLongitudinalBehaviorPlanner::UpdateStartStopState(
   return start_stop_state_info.state;
 }
 
+int VisionLongitudinalBehaviorPlanner::GetCIPV(
+    const std::shared_ptr<LateralObstacle> &lateral_obstacle,
+    const std::string &lc_status) {
+  int error_id = -1;
+  if ((lc_status != "left_lane_change") && (lc_status != "right_lane_change")) {
+    if (lateral_obstacle->leadone() != nullptr &&
+        lateral_obstacle->leadone()->type != 0) {
+      return lateral_obstacle->leadone()->track_id;
+    }
+  } else {
+    if (lateral_obstacle->tleadone() != nullptr &&
+        lateral_obstacle->tleadone()->type != 0) {
+      return lateral_obstacle->tleadone()->track_id;
+    }
+  }
+  return error_id;
+}
 }  // namespace planning
