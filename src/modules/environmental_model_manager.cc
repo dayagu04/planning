@@ -97,11 +97,21 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   // location_valid = true; //hack
   session_->mutable_environmental_model()->set_location_valid(location_valid);
   // Step 1) update vehicleDbwStatus
-  session_->mutable_environmental_model()->UpdateVehicleDbwStatus(
-      local_view.function_state_machine_info.current_state() ==
-          FuncStateMachine::FunctionalState::SCC_ACTIVATE ||
-      local_view.function_state_machine_info.current_state() ==
-          FuncStateMachine::FunctionalState::ACC_ACTIVATE);
+  auto fsm_state = local_view.function_state_machine_info.current_state();
+  bool acc_active =
+      (fsm_state == FuncStateMachine::FunctionalState::ACC_ACTIVATE) ||
+      (fsm_state == FuncStateMachine::FunctionalState::ACC_STAND_ACTIVATE) ||
+      (fsm_state == FuncStateMachine::FunctionalState::ACC_STAND_WAIT) ||
+      (fsm_state == FuncStateMachine::FunctionalState::ACC_OVERRIDE) ||
+      (fsm_state == FuncStateMachine::FunctionalState::ACC_SECURE);
+  bool scc_active =
+      (fsm_state == FuncStateMachine::FunctionalState::SCC_ACTIVATE) ||
+      (fsm_state == FuncStateMachine::FunctionalState::SCC_STAND_ACTIVATE) ||
+      (fsm_state == FuncStateMachine::FunctionalState::SCC_STAND_WAIT) ||
+      (fsm_state == FuncStateMachine::FunctionalState::SCC_OVERRIDE) ||
+      (fsm_state == FuncStateMachine::FunctionalState::SCC_SECURE);
+  session_->mutable_environmental_model()->UpdateVehicleDbwStatus(acc_active ||
+                                                                  scc_active);
 
   // 自动有效，临时hack
   // session_->mutable_environmental_model()->UpdateVehicleDbwStatus(true);

@@ -108,6 +108,8 @@
   "lc_back_available_thr": 1.5,
   "lc_back_smooth_thr": 0.3,
   "lc_back_consider_smooth_dpoly_thr": 0.6,
+  "none_consider_slope_thr": 0.003,
+  "enable_none_smooth": true,
   "mrc_condition": {
     "enable_mrc_condition": false,
     "fcw_threshold": 2.5,

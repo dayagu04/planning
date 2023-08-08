@@ -225,6 +225,10 @@ void GeneralPlanning::FillPlanningTrajectory(
       limited_polynomial_3 = planning_math::Clamp(
           limited_polynomial_3, -max_lat_offset, max_lat_offset);
     }
+    std::cout << "smooth dpoly enable_none_smooth: "
+              << config_.enable_none_smooth
+              << "   config_.none_consider_slope_thr:   "
+              << config_.none_consider_slope_thr << std::endl;
     LOG_DEBUG("limited_polynomial_3: [%f]: \n", limited_polynomial_3);
     LOG_DEBUG("lateral_output.d_poly C0: [%f] C1: [%f] C2: [%f] C3: [%f] \n",
               lateral_output.d_poly[0], lateral_output.d_poly[1],

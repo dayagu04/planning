@@ -127,9 +127,14 @@ struct GeneralPlanningConfig : public EgoPlanningConfig {
     lc_back_smooth_thr = read_json_key<double>(json, "lc_back_smooth_thr");
     lc_back_consider_smooth_dpoly_thr =
         read_json_key<double>(json, "lc_back_consider_smooth_dpoly_thr");
+    enable_none_smooth = read_json_key<bool>(json, "enable_none_smooth");
+    none_consider_slope_thr =
+        read_json_key<double>(json, "none_consider_slope_thr");
   }
   double lc_back_smooth_thr = 0.3;
   double lc_back_consider_smooth_dpoly_thr = 0.6;
+  bool enable_none_smooth = true;
+  double none_consider_slope_thr = 0.003;
 };
 
 struct EgoPlanningCandidateConfig : public EgoPlanningConfig {
