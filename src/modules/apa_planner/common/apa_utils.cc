@@ -73,19 +73,23 @@ Polygon2d ConstructVehiclePolygonWithBuffer(const PlanningPoint& veh_point,
                                             const double rear_buffer,
                                             const double lat_buffer) {
   const double half_width_veh =
-      VehicleParamHelper::Instance()->GetParam().width() * 0.5;
+      VehicleParamHelper::Instance()->GetParam().vehicle_width() * 0.5;
   const double front_edge_to_rear_axle =
-      VehicleParamHelper::Instance()->GetParam().front_edge_to_rear_axle();
+      VehicleParamHelper::Instance()
+          ->GetParam()
+          .lon_distance_from_front_edge_to_rear_axis();
   const double rear_edge_to_rear_axle =
-      VehicleParamHelper::Instance()->GetParam().rear_edge_to_rear_axle();
+      VehicleParamHelper::Instance()
+          ->GetParam()
+          .lon_distance_from_back_edge_to_rear_axis();
   const double front_shrink_dis =
-      VehicleParamHelper::Instance()->GetParam().front_shrink_dis();
+      VehicleParamHelper::Instance()->GetParam().front_shrink_distance();
   const double front_side_shrink_dis =
-      VehicleParamHelper::Instance()->GetParam().front_side_shrink_dis();
+      VehicleParamHelper::Instance()->GetParam().front_shrink_distance();
   const double rear_shrink_dis =
-      VehicleParamHelper::Instance()->GetParam().rear_shrink_dis();
+      VehicleParamHelper::Instance()->GetParam().rear_shrink_distance();
   const double rear_side_shrink_dis =
-      VehicleParamHelper::Instance()->GetParam().rear_side_shrink_dis();
+      VehicleParamHelper::Instance()->GetParam().rear_side_shrink_distance();
 
   const double front_edge_to_rear_axle_with_safe_dst =
       front_edge_to_rear_axle + front_buffer;

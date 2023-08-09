@@ -899,7 +899,7 @@ bool ParallelInTrajectoryGenerator::GenerateFHSegmentTrajectory(
 }
 
 void ParallelInTrajectoryGenerator::SetApaObjectInfo(
-    int idx, ParallelInGeometryPlan *geometry_planning) const {
+    int idx, ParallelInGeometryPlan *geometry_planning) {
   objects_map_in_global_cor_.clear();
   objects_map_in_global_cor_.reserve(4);
 
@@ -998,9 +998,13 @@ PlanningPoint ParallelInTrajectoryGenerator::FromGlobal2LocalCor(
 
 double ParallelInTrajectoryGenerator::CalApaTargetX() const {
   const double dst_front_edge_to_rear_axle =
-      VehicleParamHelper::Instance()->GetParam().front_edge_to_rear_axle();
+      VehicleParamHelper::Instance()
+          ->GetParam()
+          .lon_distance_from_front_edge_to_rear_axis();
   const double dst_rear_edge_to_rear_axle =
-      VehicleParamHelper::Instance()->GetParam().rear_edge_to_rear_axle();
+      VehicleParamHelper::Instance()
+          ->GetParam()
+          .lon_distance_from_front_edge_to_rear_axis();
 
   const double center_y = -slot_length_ * 0.5;
   const double target_y =
@@ -1011,7 +1015,7 @@ double ParallelInTrajectoryGenerator::CalApaTargetX() const {
 
 double ParallelInTrajectoryGenerator::CalApaTargetY() const {
   const double half_width =
-      VehicleParamHelper::Instance()->GetParam().width() * 0.5;
+      VehicleParamHelper::Instance()->GetParam().vehicle_width() * 0.5;
   return -slot_sign_ * std::fmin(slot_width_ * 0.5,
                                  slot_width_ - half_width - kLateralBuffer);
 }

@@ -90,14 +90,19 @@ class DiagonalInGeometryPlan {
 
  private:
   double min_turn_radius_ =
-      VehicleParamHelper::Instance()->GetParam().min_turn_radius();
-  double width_veh_ = VehicleParamHelper::Instance()->GetParam().width();
+      VehicleParamHelper::Instance()->GetParam().turn_radius_min();
+  double width_veh_ =
+      VehicleParamHelper::Instance()->GetParam().vehicle_width();
   double half_width_veh_ =
-      VehicleParamHelper::Instance()->GetParam().width() * 0.5;
+      VehicleParamHelper::Instance()->GetParam().vehicle_width() * 0.5;
   double front_edge_to_rear_axle_ =
-      VehicleParamHelper::Instance()->GetParam().front_edge_to_rear_axle();
+      VehicleParamHelper::Instance()
+          ->GetParam()
+          .lon_distance_from_front_edge_to_rear_axis();
   double rear_edge_to_rear_axle_ =
-      VehicleParamHelper::Instance()->GetParam().rear_edge_to_rear_axle();
+      VehicleParamHelper::Instance()
+          ->GetParam()
+          .lon_distance_from_front_edge_to_rear_axis();
 
   int slot_sign_ = 1;  // 1:Right,(default),-1:Left
 

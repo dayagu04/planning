@@ -84,8 +84,7 @@ class ParallelInTrajectoryGenerator {
       const ParallelSegmentsInfo &segments_info,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
-  void SetApaObjectInfo(int idx,
-                        ParallelInGeometryPlan *geometry_planning) const;
+  void SetApaObjectInfo(int idx, ParallelInGeometryPlan *geometry_planning);
 
   void SetGeometryPlanningParameter(int idx,
                                     ParallelInGeometryPlan *geometry_planning);

@@ -23,14 +23,12 @@ struct DiagonalSegmentsInfo {
   PlanningPoint opt_point_e;
   PlanningPoint opt_point_f;
 
-  double opt_radius_bc =
-      VehicleParamHelper::Instance()->GetParam().min_turn_radius();
-  double opt_radius_cd =
-      VehicleParamHelper::Instance()->GetParam().min_turn_radius();
-  double opt_radius_de =
-      VehicleParamHelper::Instance()->GetParam().min_turn_radius();
-  double opt_radius_ef =
-      VehicleParamHelper::Instance()->GetParam().min_turn_radius();
+  double turn_radius_min =
+      VehicleParamHelper::Instance()->GetParam().turn_radius_min();
+  double opt_radius_bc = turn_radius_min;
+  double opt_radius_cd = turn_radius_min;
+  double opt_radius_de = turn_radius_min;
+  double opt_radius_ef = turn_radius_min;
 
   double total_cost = std::numeric_limits<double>::infinity();
 };
@@ -46,18 +44,14 @@ struct ParallelSegmentsInfo {
   PlanningPoint opt_point_h;
   PlanningPoint opt_point_i;
 
-  double opt_radius_bc =
-      VehicleParamHelper::Instance()->GetParam().min_turn_radius();
-  double opt_radius_cd =
-      VehicleParamHelper::Instance()->GetParam().min_turn_radius();
-  double opt_radius_ef =
-      VehicleParamHelper::Instance()->GetParam().min_turn_radius();
-  double opt_radius_fg =
-      VehicleParamHelper::Instance()->GetParam().min_turn_radius();
-  double opt_radius_fh =
-      VehicleParamHelper::Instance()->GetParam().min_turn_radius();
-  double opt_radius_hi =
-      VehicleParamHelper::Instance()->GetParam().min_turn_radius();
+  double turn_radius_min =
+      VehicleParamHelper::Instance()->GetParam().turn_radius_min();
+  double opt_radius_bc = turn_radius_min;
+  double opt_radius_cd = turn_radius_min;
+  double opt_radius_ef = turn_radius_min;
+  double opt_radius_fg = turn_radius_min;
+  double opt_radius_fh = turn_radius_min;
+  double opt_radius_hi = turn_radius_min;
 
   double total_cost = std::numeric_limits<double>::infinity();
 };

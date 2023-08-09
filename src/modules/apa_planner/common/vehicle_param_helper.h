@@ -2,8 +2,8 @@
 
 #include <string>
 
+#include "common_vehicle_param.pb.h"
 #include "macro.h"
-#include "vehicle_param.pb.h"
 
 namespace planning {
 
@@ -16,10 +16,10 @@ class VehicleParamHelper {
 
   static void Init(const std::string& config_file);
 
-  static const common::VehicleParam& GetParam();
+  static const CommonVehicleParam::CommonVehicleParam& GetParam();
 
  private:
-  static common::VehicleParam vehicle_param_;
+  static CommonVehicleParam::CommonVehicleParam vehicle_param_;
   static bool is_init_;
 };
 
