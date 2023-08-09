@@ -21,7 +21,7 @@ from lib.bag_loader import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/docker_share/urban_bag_0213/genting_2.00000"
+bag_path = "/docker_share/urban_bag_0213/real_time_17.00000"
 html_file = bag_path +".lonplan.html"
 
 # bokeh创建的html在jupyter中显示
@@ -244,6 +244,11 @@ target_vel_start_stop_params = {
     'line_width': 1,
     'color': 'brown',
     'legend_label': 'target_velocity_start_stop'
+}
+
+lon_rt_table_params={
+    'width': 700,
+    'height':500,
 }
 
 ego_acc_params = {
@@ -512,6 +517,7 @@ class TextGenerator4Lon(DataGeneratorBase):
                            'VisionLonBehavior_v_target', \
                            'VisionLonBehavior_v_limit_road', 'VisionLonBehavior_v_limit_in_turns', 'VisionLonBehavior_road_radius', \
                            'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', \
+                           'VisionLonBehavior_temp_leadone_id', 'VisionLonBehavior_temp_leadtwo_id', \
                             'VisionLonBehavior_lead_one_id', 'VisionLonBehavior_lead_one_dis', 'VisionLonBehavior_lead_one_vel', \
                             'VisionLonBehavior_lead_two_id', 'VisionLonBehavior_lead_two_dis', 'VisionLonBehavior_lead_two_vel']
 
@@ -886,7 +892,7 @@ def draw_rt_table(plan_debug_msg, layer_manager):
 
     tab_rt = TextGenerator4Lon(plan_debug_msg, 'real_time_json_value')
     tab_attr_list = ['VisionLonAttr', 'VisionLonVal', 'others']
-    tab_rt_layer = TableLayer(None, tab_attr_list, table_params)
+    tab_rt_layer = TableLayer(None, tab_attr_list, lon_rt_table_params)
     layer_manager.AddLayer(
         tab_rt_layer, 'rt_table_source', tab_rt, 'rt_table', 3)
 
