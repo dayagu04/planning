@@ -211,7 +211,9 @@ void GeneralPlanning::FillPlanningTrajectory(
       } else {
         if ((lateral_output.lc_status == "left_lane_change_back" ||
              lateral_output.lc_status == "right_lane_change_back" ||
-             lateral_output.lc_status == "none") &&
+             (lateral_output.lc_status == "none" &&
+              config_.enable_none_smooth &&
+              std::fabs(d_polynomial[2]) < config_.none_consider_slope_thr)) &&
             std::fabs(d_polynomial[3]) >
                 config_.lc_back_consider_smooth_dpoly_thr) {
           limited_polynomial_3 =
