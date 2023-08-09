@@ -82,7 +82,7 @@ void IntRequest::Update(int lc_status) {
                                    .segment(0)
                                    .type();
     if (right_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) {
-      counter_left_ = -5;
+      counter_right_ = -5;
     }
     if (counter_right_ > count_threshold_) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;

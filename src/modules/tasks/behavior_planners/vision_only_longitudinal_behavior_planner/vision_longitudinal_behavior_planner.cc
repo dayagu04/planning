@@ -43,7 +43,7 @@ bool VisionLongitudinalBehaviorPlanner::Execute(framework::Frame *frame) {
 }
  */
 bool VisionLongitudinalBehaviorPlanner::calculate() {
-  
+
   update();
 
   update_planner_output();
