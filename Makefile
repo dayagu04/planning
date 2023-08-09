@@ -13,3 +13,11 @@ pp_build:
 	/bin/bash -c "cmake $(CMAKE_ARGS) -DPP_ENABLE=True .. && \
 	make -j $(NUM_JOB) && \
 	make install"
+
+submodules_update:
+	/bin/bash -c " \
+	git submodule deinit src/thirdparty/interface; \
+	git rm --cached src/thirdparty/interface; \
+	git submodule add ../interface.git interface; \
+	git submodule add ../ad_third_party_libraries.git thirdparty; \
+	git submodule update --init --recursive"
