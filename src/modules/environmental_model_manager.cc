@@ -282,7 +282,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   }
 
   vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
-      hmi_mcu_inner_info.acc_set_disp_speed());
+      hmi_mcu_inner_info.acc_set_real_speed());
 
   // vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
   //     18.0);
