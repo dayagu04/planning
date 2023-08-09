@@ -92,10 +92,13 @@ double ObjectSelector::get_vrel_close(int side, int status) {
     return v_rel_close;
   }
 
-  if (tlane == nullptr || tlane->get_virtual_id() != flane->get_virtual_id()) {
+  if (clane->get_virtual_id() == flane->get_virtual_id()) {
     if (lead_cars.lead_one != nullptr) {
       fvf_drel_confident = lead_cars.lead_one->d_rel +
                            std::max(30., lead_cars.lead_one->v_lead * 5.);
+    } else if (lead_cars.temp_lead_one != nullptr) {
+      fvf_drel_confident = lead_cars.temp_lead_one->d_rel +
+                           std::max(30., lead_cars.temp_lead_one->v_lead * 5.);
     }
   } else {
     fvf_drel_confident = 30;
