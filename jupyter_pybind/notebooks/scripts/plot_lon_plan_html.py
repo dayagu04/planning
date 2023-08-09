@@ -21,7 +21,7 @@ from lib.bag_loader import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/docker_share/urban_bag_0213/long_tme_6.00000"
+bag_path = "/docker_share/urban_bag_0213/genting_2.00000"
 html_file = bag_path +".lonplan.html"
 
 # bokeh创建的html在jupyter中显示
@@ -240,6 +240,12 @@ leadtwo_vel_params = {
     'legend_label': 'leadtwo_velocity'
 }
 
+target_vel_start_stop_params = {
+    'line_width': 1,
+    'color': 'brown',
+    'legend_label': 'target_velocity_start_stop'
+}
+
 ego_acc_params = {
     'line_width': 1,
     'color': 'blue',
@@ -312,6 +318,11 @@ class ScalarGenerator(DataGeneratorBase):
                     ys.append(round(v['VisionLonBehavior_a_target_low'], 2))
                 elif val_type == 'acc_max':
                     ys.append(round(v['VisionLonBehavior_a_target_high'], 2))
+                elif val_type == 'target_velocity_start_stop':
+                    if hasattr(v, 'VisionLonBehavior_v_target_start_stop'):
+                        ys.append(round(v['VisionLonBehavior_v_target_start_stop'], 2))
+                    else:
+                        ys.append(0)
                 else:
                     pass
 
@@ -499,6 +510,8 @@ class TextGenerator4Lon(DataGeneratorBase):
         if text_type == "real_time_json_value":
             planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
                            'VisionLonBehavior_v_target', \
+                           'VisionLonBehavior_v_limit_road', 'VisionLonBehavior_v_limit_in_turns', 'VisionLonBehavior_road_radius', \
+                           'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', \
                             'VisionLonBehavior_lead_one_id', 'VisionLonBehavior_lead_one_dis', 'VisionLonBehavior_lead_one_vel', \
                             'VisionLonBehavior_lead_two_id', 'VisionLonBehavior_lead_two_dis', 'VisionLonBehavior_lead_two_vel']
 
@@ -506,7 +519,10 @@ class TextGenerator4Lon(DataGeneratorBase):
                 ts.append(data["t"][i])
                 val_vec = []
                 for key in planning_json_value_list:
-                    val_vec.append(v[key])
+                    if key in v.keys():
+                        val_vec.append(v[key])
+                    else:
+                        val_vec.append(0)
                 xys.append((planning_json_value_list, val_vec, [None] * len(planning_json_value_list)))
             if len(xys) == 0:
                 xys = [([], [], [])]
@@ -823,16 +839,19 @@ def draw_rt_vel(plan_debug_msg, loc_msg, layer_manager):
     rt_ego_vel = ScalarGenerator(loc_msg, 'ego_velocity', accu=True, name="rt_ego_vel")
     rt_leadone_vel = ScalarGenerator(plan_debug_msg, 'leadone_velocity', accu=True, name="rt_leadone_vel")
     rt_leadtwo_vel = ScalarGenerator(plan_debug_msg, 'leadtwo_velocity', accu=True, name="rt_leadtwo_vel")
+    rt_target_vel_start_stop = ScalarGenerator(plan_debug_msg, 'target_velocity_start_stop', accu=True, name="rt_target_vel_start_stop")
 
     target_vel_layer = CurveLayer(fig_rtv, target_vel_params)
     ego_vel_layer = CurveLayer(fig_rtv, ego_vel_params)
     leadone_vel_layer = CurveLayer(fig_rtv, leadone_vel_params)
     leadtwo_vel_layer = CurveLayer(fig_rtv, leadtwo_vel_params)
+    target_vel_start_stop_layer = CurveLayer(fig_rtv, target_vel_start_stop_params)
 
     layer_manager.AddLayer(target_vel_layer, 'global_target_vel', rt_target_vel)
     layer_manager.AddLayer(ego_vel_layer, 'global_ego_vel', rt_ego_vel)
     layer_manager.AddLayer(leadone_vel_layer, 'global_leadone_vel', rt_leadone_vel)
     layer_manager.AddLayer(leadtwo_vel_layer, 'global_leadtwo_vel', rt_leadtwo_vel)
+    layer_manager.AddLayer(target_vel_start_stop_layer, 'global_target_vel_start_stop', rt_target_vel_start_stop)
 
     fig_rtv.toolbar.active_scroll = fig_rtv.select_one(WheelZoomTool)
     fig_rtv.legend.click_policy = "hide"
@@ -894,7 +913,7 @@ def plotOnce(bag_path, html_file):
     vs_msg = dataLoader.vs_msg
     layer_manager = LayerManager()
 
-    fig_lv = draw_local_view(dataLoader, layer_manager)
+    fig_lv, _ = draw_local_view(dataLoader, layer_manager)
     fig_st = draw_lon_st(plan_debug_msg, layer_manager)
     fig_sv = draw_lon_sv(plan_debug_msg, layer_manager)
     fig_tp = draw_lon_tp(plan_debug_msg, layer_manager)

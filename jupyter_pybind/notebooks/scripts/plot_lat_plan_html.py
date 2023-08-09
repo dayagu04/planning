@@ -4,7 +4,7 @@ import sys
 import os
 from abc import ABC, abstractmethod
 import bokeh.plotting as bkp
-from bokeh.models import HoverTool, Slider, CustomJS, Div, WheelZoomTool, DataTable, TableColumn, Panel, Tabs
+from bokeh.models import HoverTool, Slider, CustomJS, Div, WheelZoomTool, NumericInput, DataTable, TableColumn, Panel, Tabs
 from bokeh.io import output_notebook, push_notebook, output_file, export_png
 from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure, output_file, show, ColumnDataSource
@@ -20,9 +20,10 @@ from lib.basic_layers import *
 from lib.bag_loader import *
 
 # 先手动写死bag
+bag_path = "/share/mnt/0801/realtime_0801_7.00000"
 
-bag_path = "/share/mnt/0713/long_time_1.00000"
-html_file = bag_path +".lat_plan.html"
+html_file = bag_path +".lat_plan.html" 
+# -
 
 # bokeh创建的html在jupyter中显示
 if isINJupyter():
@@ -94,6 +95,7 @@ def draw_lat(dataLoader, layer_manager):
       plan_debug_ts.append(t)
 
       vo_lat_motion_plan = plan_debug.vo_lat_motion_plan
+      vo_lat_behavior_plan = plan_debug.vo_lat_behavior_plan
       lat_behavior_common = plan_debug.lat_behavior_common
       vars = ['fix_lane_virtual_id','target_lane_virtual_id','origin_lane_virtual_id',\
               'lc_request','lc_request_source','turn_light','map_turn_light','lc_turn_light','act_request_source','lc_back_invalid_reason','lc_status',\
@@ -118,14 +120,22 @@ def draw_lat(dataLoader, layer_manager):
       names  = []
       datas = []
       try:
-        # 横向运动规划offset 可视化
-        names.append('premove_dpoly_c0')
-        names.append('avoid_dpoly_c0')
+      # 横向运动规划offset 可视化
         basic_dpoly = vo_lat_motion_plan.basic_dpoly
         datas.append(vo_lat_motion_plan.premove_dpoly_c0 - basic_dpoly[3])
+        names.append('premove_dpoly_c0')
         datas.append(vo_lat_motion_plan.avoid_dpoly_c0 - basic_dpoly[3])
+        names.append('avoid_dpoly_c0')
+        
+        
       except:
         pass
+      
+      names.append('avoid_car_id')
+      avoid_car_id_str = ""
+      for avoid_car_id in vo_lat_behavior_plan.avoid_car_ids:
+        avoid_car_id_str = avoid_car_id_str + str(avoid_car_id) + ' '
+      datas.append(avoid_car_id_str)
       # 添加可视化left_alc_car_ids、right_alc_car_ids可视化
       names.append('left_alc_car_ids')
       names.append('right_alc_car_ids')
@@ -174,14 +184,22 @@ def draw_lat(dataLoader, layer_manager):
   global fusion_object_timestamps
   for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
     flag, fus_msg = find(dataLoader.fus_msg, fusion_object_timestamps[i])
+    # if not flag:
+    #     # print('find fus_msg error')
+    #     obstacle_fusion_generate.xys.append(([], []))
+    #     obstacle_snrd_generate.xys.append(([], []))
+    #     obstacle_fusion_text_generate.xys.append(([], [], []))
+    #     obstacle_snrd_text_generate.xys.append(([], [], []))
+    #     continue
     environment_model_info = plan_debug.environment_model_info
-    for obstacle_id in obstacle_ids:
-
+    for obstacle_id in obstacle_ids:   
       obstacle_generate = obstacle_generates['obstacle_generate_table_' + str(obstacle_id)]
       names  = []
       datas = []
+      flag_obj = False
       for obstacle in environment_model_info.obstacle:
-        if obstacle_id == obstacle.id:
+        if obstacle_id == obstacle.id: 
+          flag_obj = True
           for name in obj_vars:
             try:
               # print(getattr(obstacle,name))
@@ -190,17 +208,18 @@ def draw_lat(dataLoader, layer_manager):
             except:
               pass
           # 加载对应的笛卡尔下的障碍物速度
-          for obj in fus_msg.fusion_object:
-            if obstacle_id == obj.additional_info.track_id:
-              names.append('v_x')
-              names.append('v_y')
-              datas.append(obj.common_info.relative_velocity.x)
-              datas.append(obj.common_info.relative_velocity.y)
-              break
-          break
-        else:
-          obstacle_generate.xys.append((names, datas, [None] * len(names)))
-          pass
+          if flag:
+            for obj in fus_msg.fusion_object:
+              if obstacle_id == obj.additional_info.track_id:
+                names.append('v_x')
+                names.append('v_y')
+                datas.append(obj.common_info.relative_velocity.x)
+                datas.append(obj.common_info.relative_velocity.y)
+                break 
+           
+          obstacle_generate.xys.append((names, datas, [None] * len(names)))    
+          break 
+      if not flag_obj:
         obstacle_generate.xys.append((names, datas, [None] * len(names)))
   tab_attr_list = ['Attr', 'Val']
   tab_lat_rt_obstacle_layer = TableLayerV2(None, tab_attr_list, table_params)
@@ -224,7 +243,7 @@ def plotOnce(bag_path, html_file):
     max_time = dataLoader.load_all_data(False)
     layer_manager = LayerManager()
 
-    fig_local_view = draw_local_view(dataLoader, layer_manager)
+    fig_local_view, plan_debug_table_view = draw_local_view(dataLoader, layer_manager)
     tab_rt1, tab_rt2,tab_lat_rt_obstacle, obstacle_generates = draw_lat(dataLoader, layer_manager)
     min_t = sys.maxsize
     max_t = 0
@@ -287,14 +306,37 @@ def plotOnce(bag_path, html_file):
             console.log(Object.keys(bag_source.data));
             const step = cb_obj.value;
             const data = bag_source.data;
+            var obstacle_selector_value=0
+            console.log("obstacle_selector", obstacle_selector.value);
+            obstacle_selector_value = obstacle_selector.value
 
     """
 
     codes = (layer_manager.code) % (code0) % (binary_search)
+    codes +="""
+    let obstacle_generate_table_index = "obstacle_generate_table_"+obstacle_selector_value+"s"
+    if (obstacle_generate_table_index in data){
+      lat_rt_obstacle_table_source.data['pts_xs'] = data[obstacle_generate_table_index][0][lat_rt_obstacle_table_index][0];
+      lat_rt_obstacle_table_source.data['pts_ys'] = data[obstacle_generate_table_index][0][lat_rt_obstacle_table_index][1];
+      lat_rt_obstacle_table_source.change.emit();
+    }else{
+    lat_rt_obstacle_table_source.data["id"]="not exist"
+    }
+  """
     callback = CustomJS(args=callback_arg.arg, code=codes)
-
+    selector_callback=CustomJS(args=dict(
+       car_slider=car_slider
+    ),code="""
+    console.log("obstacle_selector")
+    console.log(cb_obj)
+    console.log("car_slider",car_slider.value);
+    let val = car_slider.value;
+    car_slider.value=val-1.0;
+    car_slider.value=val;
+    """)
     car_slider.js_on_change('value', callback)
-
+    obstacle_selector.js_on_change('value',selector_callback)
+    
     for gdlabel in layer_manager.gds.keys():
         gd = layer_manager.gds[gdlabel]
         if gdlabel is 'ep_source' or gdlabel is 'ep_source2' or gdlabel.startswith('global'):
@@ -324,7 +366,8 @@ def plotOnce(bag_path, html_file):
     # pan_lt = Panel(child=row(column(fig_local_view, fig_sv), column(fig_tp, fig_tv, fig_ta, fig_tj)), title="Longtime")
     # pan_rt = Panel(child=row(tab_rt, column(fig_rtv)), title="Realtime")
     # pans = Tabs(tabs=[ pan_lt, pan_rt ])
-    bkp.show(layout(car_slider, row(fig_local_view, tab_lat_rt_obstacle, tab_rt1, tab_rt2)))
+    bkp.show(layout(car_slider, row(column(fig_local_view,row(plan_debug_table_view[0],plan_debug_table_view[1],obstacle_selector))
+                                                       , tab_lat_rt_obstacle, tab_rt1, tab_rt2)))
 
 
 def printHelp():

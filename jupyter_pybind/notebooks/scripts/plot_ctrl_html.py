@@ -69,7 +69,7 @@ def plotOnce(bag_path, html_file):
 
     # fig1: local view
     try:
-        fig_local_view = draw_local_view(dataLoader, layer_manager)
+        fig_local_view, _ = draw_local_view(dataLoader, layer_manager)
     except:
         print("fig_local_view plot error!")
         fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=600, height=1000, match_aspect = True, aspect_scale=1)

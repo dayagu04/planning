@@ -4,7 +4,7 @@ import sys
 import os
 from abc import ABC, abstractmethod
 import bokeh.plotting as bkp
-from bokeh.models import HoverTool, Slider, CustomJS, Div, WheelZoomTool, DataTable, TableColumn, Panel, Tabs
+from bokeh.models import HoverTool, Slider, CustomJS, Div, WheelZoomTool, NumericInput, DataTable, TableColumn, Panel, Tabs
 from bokeh.io import output_notebook, push_notebook, output_file, export_png
 from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure, output_file, show, ColumnDataSource
@@ -19,9 +19,6 @@ sys.path.append('../../..')
 from lib.basic_layers import *
 from lib.bag_loader import *
 
-
-WIDTH = 1200
-HEIGHT = 800
 plan_debug_timestamps = []
 fusion_object_timestamps = []
 fusion_road_timestamps = []
@@ -138,8 +135,8 @@ control_params = {
 }
 
 table_params={
-    'width': 500,
-    'height':400,
+    'width': 300,
+    'height':200,
 }
 
 # 判断是否在jupyter中运行
@@ -375,14 +372,14 @@ class LayerManager():
                 layer_code = (layer_append) % (layer_code)
 
             if plotdim == 3 and  hasattr(gd, 'obj_txt'):
-                layer_append = """%s
-            console.log( data['{}s'][0][{}_index][1]);
-            {}.data['pts_xs'] = data['{}s'][0][{}_index][0];
-            {}.data['pts_ys'] = data['{}s'][0][{}_index][1];
-            """.format('obstacle_generate_table_295', data_key, \
-                       layer_label, 'obstacle_generate_table_295', data_key,\
-                       layer_label, 'obstacle_generate_table_295', data_key)
-                layer_code = (layer_append) % (layer_code)
+            #     layer_append = """%s
+            # console.log( data['{}s'][0][{}_index][1]);
+            # {}.data['pts_xs'] = data['{}s'][0][{}_index][0];
+            # {}.data['pts_ys'] = data['{}s'][0][{}_index][1];
+            # """.format('obstacle_generate_table_295', data_key, \
+            #            layer_label, 'obstacle_generate_table_295', data_key,\
+            #            layer_label, 'obstacle_generate_table_295', data_key)
+            #     layer_code = (layer_append) % (layer_code)
                 pass
             elif plotdim == 3 and hasattr(gd, 'txt'):
                 layer_append = """%s
@@ -399,11 +396,14 @@ class LayerManager():
 
             self.code = (layer_code) % (self.code)
 
+obstacle_selector = NumericInput(value=0,title="obstacle_selector",width=100)
+
 # bag进度条播放的回调函数
 class slider_callback_arg():
     def __init__(self, bag_data):
         self.arg = dict()
         self.arg['bag_source'] = bag_data
+        self.arg["obstacle_selector"] = obstacle_selector
 
     def AddSource(self, arg_name, layer):
         self.arg[arg_name] = layer.data_source
@@ -413,7 +413,7 @@ def find(data, t):
   for index, timestamp in enumerate(data['timestamp']):
     if t == timestamp:
       return True, data['data'][index]
-  return False, data['data'][0]
+  return False, ""
 
 def load_obstacle_params(obstacle_list, environment_model_info):
 
@@ -539,11 +539,18 @@ def load_obstacle_params(obstacle_list, environment_model_info):
     
   return obs_info_all
 
-
+def draw_local_view_debug(dataLoader, layer_manager):
+    #define figure
+    # 定义 debug
+    table_attr_list = ['Attr', 'Val']
+    table_layer = TableLayerV2(None, table_attr_list, table_params)
+    layer_manager.AddLayer(
+      table_layer, 'table_layer', lat_behavior_table1, 'lat_behavior_table1', 3)
+    pass
 def draw_local_view(dataLoader, layer_manager):
     #define figure
     # 定义 local_view fig
-    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=600, height=1000, match_aspect = True, aspect_scale=1)
+    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=600, height=800, match_aspect = True, aspect_scale=1)
     fig_local_view.x_range.flipped = True
     # toolbar
     fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
@@ -624,6 +631,12 @@ def draw_local_view(dataLoader, layer_manager):
             # 5代表5条车道
             fig_index = 5 * derection + index + 1
             lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+            lane_generator_key = 'lane_' + str(index) + '_' + str(derection)
+            if (lane_generator_key in lane_generator_dict.keys()) == False:
+              lane_generator_dict[lane_generator_key] = LineGenerator('line')
+            if not flag:
+              lane_generator_dict[lane_generator_key].xys.append(([] , [] ,[], []))
+              continue
             if index < len(fusion_road_msg.lanes):
               lane = fusion_road_msg.lanes[index]
               if derection == 0:
@@ -648,21 +661,19 @@ def draw_local_view(dataLoader, layer_manager):
               lane_info['line_y_vec'] = line_y
               lane_info['type'] = ['dashed']
               lane_info['fix_index'] = [fig_index]
-            lane_generator_key = 'lane_' + str(index) + '_' + str(derection)
-            if (lane_generator_key in lane_generator_dict.keys()) == False:
-              lane_generator_dict[lane_generator_key] = LineGenerator('line')
-            if not flag:
-              lane_generator_dict[lane_generator_key].xys.append(([] , [] ,[], []))
-              continue
             lane_generator_dict[lane_generator_key].xys.append((lane_info['line_y_vec'] , lane_info['line_x_vec'] ,lane_info['type'], lane_info['fix_index']))
 
         # 加载车道中心线
-        center_line_list = load_lane_center_lines(fusion_road_msg.lanes)
+        if flag:
+          center_line_list = load_lane_center_lines(fusion_road_msg.lanes)
         for index in range(5):
           line_generator_key = 'centerline_' + str(index)
           fig_index = 10 + index + 1
           if (line_generator_key in centerline_generator_dict.keys()) == False:
             centerline_generator_dict[line_generator_key] = LineGenerator('center_line')
+          if not flag:
+            centerline_generator_dict[line_generator_key].xys.append(([] , [] ,[], []))
+            continue
           centerline_generator_dict[line_generator_key].xys.append((center_line_list[index]['line_y_vec'], center_line_list[index]['line_x_vec'], [center_line_list[index]['relative_id']], [fig_index]))
 
       for lane_generator_key in lane_generator_dict.keys():
@@ -684,7 +695,6 @@ def draw_local_view(dataLoader, layer_manager):
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
       flag, fusion_road_msg = find(dataLoader.road_msg, fusion_road_timestamps[i])
       if not flag:
-        # print('find fusion_road_msg error')
         continue
       center_line_list = load_lane_center_lines(fusion_road_msg.lanes)
       lat_behavior_common = plan_debug.lat_behavior_common
@@ -736,7 +746,7 @@ def draw_local_view(dataLoader, layer_manager):
     for vehicle_service_timestamp in vehicle_service_timestamps:
       flag, vs_msg = find(dataLoader.vs_msg, vehicle_service_timestamp)
       if not flag:
-        print('find vs_msg error')
+        # print('find vs_msg error')
         ego_info_generate.xys.append(([0],[-2],['']))
         continue
       steer_deg = vs_msg.steering_wheel_angle * 57.3
@@ -814,7 +824,6 @@ def draw_local_view(dataLoader, layer_manager):
     # for plan_debug_t in plan_debug_timestamps:
     #   flag, plan_msg = find(dataLoader.plan_msg, plan_debug_t)
     for i, plan_msg in enumerate(dataLoader.plan_msg['data']):
-      
       trajectory = plan_msg.trajectory
       try:
         planning_polynomial = trajectory.target_reference.polynomial
@@ -866,7 +875,47 @@ def draw_local_view(dataLoader, layer_manager):
 
     # legend
     fig_local_view.legend.click_policy = 'hide'
-    return fig_local_view
+    
+    plan_debug_table1 = TextGenerator()
+    plan_debug_table2 = TextGenerator()
+    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+      names1 = []
+      datas1 = []
+      names2 = []
+      datas2 = []
+      names1.append('frame_num')
+      datas1.append(plan_debug.frame_info.frame_num - dataLoader.plan_debug_msg['data'][0].frame_info.frame_num) 
+      names1.append('frame_duration_ms')
+      datas1.append(plan_debug.frame_info.frame_duration_ms)
+      
+      names1.append('planning_succ')
+      datas1.append(plan_debug.frame_info.planning_succ)
+      
+      names1.append('fusion_object_latancy')
+      datas1.append(plan_debug.input_topic_latency.fusion_object)
+      
+      names2.append('fusion_road_latancy')
+      datas2.append(plan_debug.input_topic_latency.fusion_road)
+      names2.append('localization_latancy')
+      datas2.append(plan_debug.input_topic_latency.localization)
+      names2.append('prediction_latancy')
+      datas2.append(plan_debug.input_topic_latency.prediction)
+      names2.append('vehicle_service_latancy')
+      datas2.append(plan_debug.input_topic_latency.vehicle_service)
+      names2.append('hmi_latancy')
+      datas2.append(plan_debug.input_topic_latency.hmi)
+      plan_debug_table1.xys.append((names1, datas1, [None] * len(names1)))
+      plan_debug_table2.xys.append((names2, datas2, [None] * len(names2)))
+    plan_debug_table1.ts = np.array(plan_debug_timestamps)
+    plan_debug_table2.ts = np.array(plan_debug_timestamps)
+    tab_attr_list = ['Attr', 'Val']
+    tab_debug_layer1 = TableLayerV2(None, tab_attr_list, table_params)
+    tab_debug_layer2 = TableLayerV2(None, tab_attr_list, table_params)
+    layer_manager.AddLayer(
+      tab_debug_layer1, 'tab_debug_layer1', plan_debug_table1, 'plan_debug_table1', 3)
+    layer_manager.AddLayer(
+      tab_debug_layer2, 'tab_debug_layer2', plan_debug_table2, 'plan_debug_table2', 3)
+    return fig_local_view, (tab_debug_layer1.plot, tab_debug_layer2.plot)
 
 def GenerateJsonValueData(json_data, json_time_list, json_value_list):
     json_value_xys_dict = {}
