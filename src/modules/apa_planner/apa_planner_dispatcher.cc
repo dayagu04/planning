@@ -59,20 +59,22 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
     return false;
   }
 
-  if (IsReplanEachFrame(func_state_machine)) {
+  const bool is_replan_each_frame = IsReplanEachFrame(func_state_machine);
+  AINFO << "is_replan_each_frame:" << is_replan_each_frame;
+  if (is_replan_each_frame) {
     frame->mutable_session()
         ->mutable_planning_output_context()
         ->mutable_planning_status()
         ->planning_result.planning_output.Clear();
-  }
-
-  const auto& parking_fusion = frame->session()
-                                   ->environmental_model()
-                                   .get_local_view()
-                                   .parking_fusion_info;
-  if (parking_fusion.parking_fusion_slot_lists_size() == 0) {
-    AERROR << "parking_fusion_slot_lists size is 0";
-    return false;
+  } else {
+    const auto& parking_fusion = frame->session()
+                                    ->environmental_model()
+                                    .get_local_view()
+                                    .parking_fusion_info;
+    if (parking_fusion.parking_fusion_slot_lists_size() == 0) {
+      AERROR << "parking_fusion_slot_lists size is 0";
+      return false;
+    }
   }
 
   bool is_planning_ok = false;
@@ -81,7 +83,8 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
       is_planning_ok = true;
     }
   }
-  if (!is_planning_ok) {
+  AINFO << "is_planning_ok:" << is_planning_ok;
+  if (!is_planning_ok && !is_replan_each_frame) {
     SetFailedPlanningOutput(frame);
   }
 

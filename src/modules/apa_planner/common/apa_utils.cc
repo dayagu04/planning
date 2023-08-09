@@ -236,6 +236,7 @@ void SetFinishedPlanningOutput(Frame* const frame) {
   planning_output->mutable_planning_status()->set_apa_planning_status(
       ::PlanningOutput::ApaPlanningStatus::FINISHED);
   SetStoppingPlanningOutput(frame);
+  AINFO << "set finished planning output";
 }
 
 void SetFailedPlanningOutput(Frame* const frame) {
@@ -246,6 +247,7 @@ void SetFailedPlanningOutput(Frame* const frame) {
   planning_output->mutable_planning_status()->set_apa_planning_status(
       ::PlanningOutput::ApaPlanningStatus::FAILED);
   SetStoppingPlanningOutput(frame);
+  AINFO << "set failed planning output";
 }
 
 bool IsValidParkingState(
