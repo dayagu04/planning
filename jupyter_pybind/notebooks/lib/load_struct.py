@@ -74,10 +74,10 @@ def load_lane_center_lines(lanes):
 
   return line_info_list
 
-def load_obstacle_params(obstacle_list):
+def load_obstacle_paramsV1(obstacle_list):
 
   obs_info_all = dict()
-
+  
   obs_num = len(obstacle_list)
   num = 0
   for i in range(obs_num):
@@ -172,7 +172,6 @@ def load_obstacle_params(obstacle_list):
     obs_info_all[source]['obstacles_y'].append(obs_y)
     obs_info_all[source]['pos_x'].append(long_pos)
     obs_info_all[source]['pos_y'].append(lat_pos)
-
   return obs_info_all
 
 def gen_line(c0, c1, c2, c3, start, end):

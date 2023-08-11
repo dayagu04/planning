@@ -685,9 +685,31 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # load fus_obj
   if bag_loader.fus_msg['enable'] == True:
     fusion_objects = bag_loader.fus_msg['data'][fus_msg_idx].fusion_object
-    obstacles_info_all = load_obstacle_params(fusion_objects)
+    obstacles_info_all = load_obstacle_paramsV1(fusion_objects)
+    local_view_data['data_fus_obj'].data.update({
+            'obstacles_x_rel': [],
+            'obstacles_y_rel': [],
+            'pos_x_rel' : [],
+            'pos_y_rel' : [],
+            'obstacles_x': [],
+            'obstacles_y': [],
+            'pos_x' : [],
+            'pos_y' : [],
+            'obs_label' : [],
+          })
+    local_view_data['data_snrd_obj'].data.update({
+            'obstacles_x_rel': [],
+            'obstacles_y_rel': [],
+            'pos_x_rel' : [],
+            'pos_y_rel' : [],
+            'obstacles_x': [],
+            'obstacles_y': [],
+            'pos_x' : [],
+            'pos_y' : [],
+            'obs_label' : [],
+          })
     # 加载自车坐标系下的数据
-    if 0:
+    if 1:
       for key in obstacles_info_all:
         obstacles_info = obstacles_info_all[key]
         if key == 1:

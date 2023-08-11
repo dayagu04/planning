@@ -156,7 +156,9 @@ class LoadCyberbag:
                          "VisionLonBehavior_temp_leadone_id", "VisionLonBehavior_temp_leadtwo_id",
                          "VisionLonBehavior_v_limit_road", "VisionLonBehavior_v_limit_in_turns", "VisionLonBehavior_road_radius",
                          "VisionLonBehavior_stop_start_state", "VisionLonBehavior_v_target_start_stop", 
-                         "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel"]
+                         "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel",
+                         "EnvironmentalModelManagerCost","VisionLateralBehaviorPlannerCost","VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost"
+                         ]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec"]
 

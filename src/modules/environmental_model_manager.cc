@@ -119,12 +119,16 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   last_feed_time_[FEED_VEHICLE_DBW_STATUS] = current_time;
 
   // Step 2) update ego_state
+  auto time_start = IflyTime::Now_ms();
   if (!ego_state_update(current_time, local_view)) {
     LOG_ERROR("ego_state_update false\n");
     return false;
   }
+  auto time_end = IflyTime::Now_ms();
+  LOG_DEBUG("ego_state_update cost:%f\n", time_end - time_start);
 
   // Step 3) update virtual_lane
+  time_start = IflyTime::Now_ms();
   if (!virtual_lane_manager_ptr_->update(local_view.road_info)) {
     LOG_ERROR("virtual_lane_manager update failed");
     return false;
@@ -132,20 +136,32 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
     // 后面需要判断是否为地图
     last_feed_time_[FEED_FUSION_LANES_INFO] = local_view.road_info_recv_time;
   }
+  time_end = IflyTime::Now_ms();
+  LOG_DEBUG("virtual_lane_manager update cost:%f\n", time_end - time_start);
 
   // Step 4) update obstacle
+  time_start = IflyTime::Now_ms();
   if (!obstacle_prediction_update(current_time, local_view)) {
     return false;
   }
   obstacle_manager_ptr_->update();
+  time_end = IflyTime::Now_ms();
+  LOG_DEBUG("obstacle_prediction update cost:%f\n", time_end - time_start);
 
   // Step 5) update reference path
+  time_start = IflyTime::Now_ms();
   if (!reference_path_manager_ptr_->update()) {
     LOG_ERROR("reference_path_manager update fail\n");
     return false;
   }
+  time_end = IflyTime::Now_ms();
+  LOG_DEBUG("reference_path_manager update cost:%f\n", time_end - time_start);
 
+  time_start = IflyTime::Now_ms();
   lateral_obstacle_ptr_->update();
+  time_end = IflyTime::Now_ms();
+  LOG_DEBUG("lateral_obstacle update cost:%f\n", time_end - time_start);
+
   lane_tracks_mgr_ptr_->update_lane_tracks();
 
   auto end_time = IflyTime::Now_ms();

@@ -1,6 +1,6 @@
 #include "behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
-#include "environmental_model.h"
 #include "debug_info_log.h"
+#include "environmental_model.h"
 #include "ifly_time.h"
 namespace planning {
 
@@ -40,7 +40,7 @@ bool VisionLateralBehaviorPlanner::Execute(planning::framework::Frame *frame) {
     LOG_DEBUG("VisionLateralBehaviorPlanner::execute failed");
   }
   auto end_time = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("VisionLateralMotionPlannerCost", end_time - current_time);
+  JSON_DEBUG_VALUE("VisionLateralBehaviorPlanner", end_time - current_time);
   return success;
 }
 

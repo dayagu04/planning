@@ -78,7 +78,7 @@ def obj_id_handler(id):
     obj_vars = ['id','s','l','s_to_ego','max_l_to_ref','min_l_to_ref','nearest_l_to_desire_path', \
             'nearest_l_to_ego', 'vs_lat_relative','vs_lon_relative','vs_lon',
               'nearest_y_to_desired_path','is_accident_car','is_accident_cnt','is_avoid_car','is_lane_lead_obstacle',
-              'current_lead_obstacle_to_ego','cutin_p']
+              'current_lead_obstacle_to_ego']
 
     names  = []
     datas = []

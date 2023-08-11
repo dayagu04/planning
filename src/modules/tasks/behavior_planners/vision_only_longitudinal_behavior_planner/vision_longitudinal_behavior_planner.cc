@@ -43,7 +43,6 @@ bool VisionLongitudinalBehaviorPlanner::Execute(framework::Frame *frame) {
 }
  */
 bool VisionLongitudinalBehaviorPlanner::calculate() {
-
   update();
 
   update_planner_output();
@@ -138,7 +137,8 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   JSON_DEBUG_VALUE("CIPV_id", CIPV_id);
 
   auto end_time = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("VisionLateralMotionPlannerCost", end_time - current_time);
+  JSON_DEBUG_VALUE("VisionLongitudinalBehaviorPlannerCost",
+                   end_time - current_time);
   return true;
 }
 

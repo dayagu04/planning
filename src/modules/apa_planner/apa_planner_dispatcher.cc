@@ -68,9 +68,9 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
         ->planning_result.planning_output.Clear();
   } else {
     const auto& parking_fusion = frame->session()
-                                    ->environmental_model()
-                                    .get_local_view()
-                                    .parking_fusion_info;
+                                     ->environmental_model()
+                                     .get_local_view()
+                                     .parking_fusion_info;
     if (parking_fusion.parking_fusion_slot_lists_size() == 0) {
       AERROR << "parking_fusion_slot_lists size is 0";
       return false;

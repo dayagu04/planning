@@ -879,6 +879,7 @@ def draw_local_view(dataLoader, layer_manager):
     plan_debug_table1 = TextGenerator()
     plan_debug_table2 = TextGenerator()
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+      plan_debug_json = dataLoader.plan_debug_msg['json'][i]
       names1 = []
       datas1 = []
       names2 = []
@@ -891,19 +892,29 @@ def draw_local_view(dataLoader, layer_manager):
       names1.append('planning_succ')
       datas1.append(plan_debug.frame_info.planning_succ)
       
-      names1.append('fusion_object_latancy')
+      names1.append('fusion_object_latency')
       datas1.append(plan_debug.input_topic_latency.fusion_object)
+      names1.append('fusion_road_latency')
+      datas1.append(plan_debug.input_topic_latency.fusion_road)
+      names1.append('localization_latency')
+      datas1.append(plan_debug.input_topic_latency.localization)
       
-      names2.append('fusion_road_latancy')
-      datas2.append(plan_debug.input_topic_latency.fusion_road)
-      names2.append('localization_latancy')
-      datas2.append(plan_debug.input_topic_latency.localization)
-      names2.append('prediction_latancy')
+      names2.append('prediction_latency')
       datas2.append(plan_debug.input_topic_latency.prediction)
-      names2.append('vehicle_service_latancy')
+      names2.append('vehicle_service_latency')
       datas2.append(plan_debug.input_topic_latency.vehicle_service)
-      names2.append('hmi_latancy')
+      names2.append('hmi_latency')
       datas2.append(plan_debug.input_topic_latency.hmi)
+      
+      names2.append('EnvironmentalModelManagerCost')
+      datas2.append(plan_debug_json['EnvironmentalModelManagerCost'])
+      names2.append('VisionLateralBehaviorPlannerCost')
+      datas2.append(plan_debug_json['VisionLateralBehaviorPlannerCost'])
+      names2.append('VisionLateralMotionPlannerCost')
+      datas2.append(plan_debug_json['VisionLateralMotionPlannerCost'])
+      names2.append('VisionLongitudinalBehaviorPlannerCost')
+      datas2.append(plan_debug_json['VisionLongitudinalBehaviorPlannerCost'])
+      
       plan_debug_table1.xys.append((names1, datas1, [None] * len(names1)))
       plan_debug_table2.xys.append((names2, datas2, [None] * len(names2)))
     plan_debug_table1.ts = np.array(plan_debug_timestamps)

@@ -20,7 +20,7 @@ from lib.basic_layers import *
 from lib.bag_loader import *
 
 # 先手动写死bag
-bag_path = "/share/mnt/0809/real_time_8.00000"
+bag_path = "/share/mnt/0809/real_time_21.00000"
 
 html_file = bag_path +".lat_plan.html" 
 # -
@@ -166,7 +166,7 @@ def draw_lat(dataLoader, layer_manager):
   obj_vars = ['id','s','l','s_to_ego','max_l_to_ref','min_l_to_ref','nearest_l_to_desire_path', \
             'nearest_l_to_ego','vs_lon',
               'nearest_y_to_desired_path','is_accident_car','is_accident_cnt','is_avoid_car','is_lane_lead_obstacle',
-              'current_lead_obstacle_to_ego','cutin_p']
+              'current_lead_obstacle_to_ego']
   # 'vs_lat_relative','vs_lon_relative'
   obstacle_ids = set()
   obstacle_generates = {}
