@@ -641,6 +641,10 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_id", lead_two->track_id);
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_dis", lead_two->d_rel);
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_vel", lead_two->v_lead);
+    } else {
+      JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_id", 0);
+      JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_dis", 0);
+      JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_vel", 0);
     }
     // listen to lead that makes you go slower
     if ((v_target_lead_2 < v_target_lead) && (lead_two != nullptr)) {
@@ -725,9 +729,19 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
 
     a_target_.first = std::min(a_target_.first, a_target_temp.first);
     v_target_ = std::min(v_target_, v_target_temp_lead);
+
+    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_id",
+                     temp_lead_one->track_id);
+    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_dis",
+                     temp_lead_one->d_rel);
+    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_vel",
+                     temp_lead_one->v_lead);
   } else {
     a_target_temp.first = 0.0;
     a_target_temp.second = 0.0;
+    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_id", 0);
+    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_dis", 0);
+    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_vel", 0);
   }
   // tleadtwo
   if (temp_lead_two != nullptr && lc_status == "none" &&
@@ -751,9 +765,19 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
     a_target_.first =
         std::min(a_target_.first, std::max(a_target_temp2.first, -0.6));
     v_target_ = std::min(v_target_, std::max(v_target_temp_lead_2, v_ego - 2));
+
+    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_id",
+                     temp_lead_two->track_id);
+    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_dis",
+                     temp_lead_two->d_rel);
+    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_vel",
+                     temp_lead_two->v_lead);
   } else {
     a_target_temp2.first = 0.0;
     a_target_temp2.second = 0.0;
+    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_id", 0);
+    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_dis", 0);
+    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_vel", 0);
   }
 
   // debug info
@@ -977,8 +1001,13 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
           "d_des: [%f], v_target_car: [%f], v_target_potental_cutin: [%f]\n",
           d_des, v_target_car, v_target_potental_cutin);
       // debug info
-      JSON_DEBUG_VALUE("VisionLonBehavior_v_cut_in", v_target_potental_cutin);
-      JSON_DEBUG_VALUE("VisionLonBehavior_cut_in_track_id", track.track_id);
+      JSON_DEBUG_VALUE("VisionLonBehavior_potental_cutin_v_target",
+                       v_target_potental_cutin);
+      JSON_DEBUG_VALUE("VisionLonBehavior_potental_cutin_track_id",
+                       track.track_id);
+    } else {
+      JSON_DEBUG_VALUE("VisionLonBehavior_potental_cutin_v_target", 0);
+      JSON_DEBUG_VALUE("VisionLonBehavior_potental_cutin_track_id", 0);
     }
   }
 
@@ -997,6 +1026,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
 
   LOG_DEBUG("v_target_: [%f], a_target_.first: [%f]\n", v_target_,
             a_target_.first);
+  JSON_DEBUG_VALUE("VisionLonBehavior_potental_cutin_v_target", v_target_);
 
   return true;
 }
@@ -1613,6 +1643,7 @@ VisionLongitudinalBehaviorPlanner::UpdateStartStopState(
     const TrackedObject *lead_one, const double v_ego) {
   // The AION's resolution of vehicle speed is 0.3m/s
   double v_start = config_.v_start;
+  double obstacle_v_start = config_.obstacle_v_start;
   double distance_stop = config_.distance_stop;
   double distance_start = config_.distance_start;
 
@@ -1629,13 +1660,13 @@ VisionLongitudinalBehaviorPlanner::UpdateStartStopState(
     std::string lc_request = "none";
     double desire_distance =
         calc_desired_distance(lead_one->v_lead, v_ego, lc_request);
-    bool is_lead_static = std::fabs(lead_one->v_lead) < v_start;
+    bool is_lead_static = std::fabs(lead_one->v_lead) < obstacle_v_start;
     bool stop_condition =
         (v_ego < v_start && is_lead_static &&
          std::fabs(lead_one->d_rel - desire_distance) < distance_stop);
     bool cruise_condition = v_ego > v_start;
     bool lead_one_start =
-        (lead_one->v_lead > v_start &&
+        (lead_one->v_lead > obstacle_v_start &&
          (lead_one->d_rel - start_stop_state_info.stop_distance_of_leadone) >
              distance_start);
     // lead_one change: obj stopped adc by cut_in, then leaved

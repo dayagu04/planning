@@ -248,7 +248,7 @@ target_vel_start_stop_params = {
 
 lon_rt_table_params={
     'width': 700,
-    'height':500,
+    'height':800,
 }
 
 ego_acc_params = {
@@ -514,12 +514,13 @@ class TextGenerator4Lon(DataGeneratorBase):
         xys = []
         if text_type == "real_time_json_value":
             planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
-                           'VisionLonBehavior_v_target', \
-                           'VisionLonBehavior_v_limit_road', 'VisionLonBehavior_v_limit_in_turns', 'VisionLonBehavior_road_radius', \
-                           'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', \
-                           'VisionLonBehavior_temp_leadone_id', 'VisionLonBehavior_temp_leadtwo_id', \
-                            'VisionLonBehavior_lead_one_id', 'VisionLonBehavior_lead_one_dis', 'VisionLonBehavior_lead_one_vel', \
-                            'VisionLonBehavior_lead_two_id', 'VisionLonBehavior_lead_two_dis', 'VisionLonBehavior_lead_two_vel']
+                          'VisionLonBehavior_v_limit_road', 'VisionLonBehavior_v_limit_in_turns','VisionLonBehavior_v_target', \
+                          'VisionLonBehavior_lead_one_id', 'VisionLonBehavior_lead_one_dis', 'VisionLonBehavior_lead_one_vel', \
+                          'VisionLonBehavior_lead_two_id', 'VisionLonBehavior_lead_two_dis', 'VisionLonBehavior_lead_two_vel', \
+                          'VisionLonBehavior_temp_lead_one_id', 'VisionLonBehavior_temp_lead_one_dis', 'VisionLonBehavior_temp_lead_one_vel', \
+                          'VisionLonBehavior_temp_lead_two_id', 'VisionLonBehavior_temp_lead_two_dis', 'VisionLonBehavior_temp_lead_two_vel', \
+                          'VisionLonBehavior_potental_cutin_track_id', 'VisionLonBehavior_potental_cutin_v_target', \
+                          'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop']
 
             for i, v in enumerate(data["json"]):
                 ts.append(data["t"][i])
@@ -885,7 +886,7 @@ def draw_rt_acc(plan_debug_msg, vs_msg, layer_manager):
 
     fig_rta.toolbar.active_scroll = fig_rta.select_one(WheelZoomTool)
     fig_rta.legend.click_policy = "hide"
-    
+
     return fig_rta
 
 def draw_rt_table(plan_debug_msg, layer_manager):

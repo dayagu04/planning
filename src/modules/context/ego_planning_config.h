@@ -673,6 +673,9 @@ struct VisionLongitudinalBehaviorPlannerConfig : public EgoPlanningConfig {
     v_start = read_json_keys<double>(
         json,
         std::vector<std::string>{"real_time_long_behavior_planner", "v_start"});
+    obstacle_v_start = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "obstacle_v_start"});
     distance_stop = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "distance_stop"});
@@ -688,6 +691,7 @@ struct VisionLongitudinalBehaviorPlannerConfig : public EgoPlanningConfig {
   double dis_curv = 50;
   // The param for StartStopState
   double v_start = 0.3;
+  double obstacle_v_start = 0.5;  // start of obstacle
   double distance_stop = 1.0;
   double distance_start = 0.3;
 };

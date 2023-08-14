@@ -159,7 +159,7 @@
     "leadone_s_upper": 5.0,
     "leadone_v_threshold": 2.5
   },
-  
+
   "acc_control": {
     "t_actuator_delay": 0.4,
     "gain_tg": 1.5,
@@ -226,6 +226,7 @@
     "t_curv": 3.0,
     "dis_curv": 50.0,
     "v_start": 0.3,
+    "obstacle_v_start": 0.5,
     "distance_stop": 1.0,
     "distance_start": 0.3
   },

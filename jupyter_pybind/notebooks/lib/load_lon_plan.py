@@ -37,7 +37,10 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                             'VisionLonBehavior_v_limit_road', 'VisionLonBehavior_v_limit_in_turns','VisionLonBehavior_v_target', \
                             'VisionLonBehavior_lead_one_id', 'VisionLonBehavior_lead_one_dis', 'VisionLonBehavior_lead_one_vel', \
                             'VisionLonBehavior_lead_two_id', 'VisionLonBehavior_lead_two_dis', 'VisionLonBehavior_lead_two_vel', \
-                            'VisionLonBehavior_stop_start_state']
+                            'VisionLonBehavior_temp_lead_one_id', 'VisionLonBehavior_temp_lead_one_dis', 'VisionLonBehavior_temp_lead_one_vel', \
+                            'VisionLonBehavior_temp_lead_two_id', 'VisionLonBehavior_temp_lead_two_dis', 'VisionLonBehavior_temp_lead_two_vel', \
+                            'VisionLonBehavior_potental_cutin_track_id', 'VisionLonBehavior_potental_cutin_v_target', \
+                            'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop']
 
   plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
   plan_debug_json_info = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
@@ -502,7 +505,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
 
   pan1 = Panel(child=row(column(fig2, fig3), column(fig4, fig5, fig6, fig7)), title="Longtime")
 
-  tab1 = DataTable(source=data_text, columns=columns, width=500, height=400)
+  tab1 = DataTable(source=data_text, columns=columns, width=500, height=800)
 
   pan2 = Panel(child=row(tab1, column(velocity_fig, acc_fig)), title="Realtime")
 
