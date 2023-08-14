@@ -59,6 +59,10 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
     return false;
   }
 
+  const auto& parking_fusion = frame->session()
+                                   ->environmental_model()
+                                   .get_local_view()
+                                   .parking_fusion_info;
   const bool is_replan_each_frame = IsReplanEachFrame(func_state_machine);
   AINFO << "is_replan_each_frame:" << is_replan_each_frame;
   if (is_replan_each_frame) {
@@ -67,10 +71,6 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
         ->mutable_planning_status()
         ->planning_result.planning_output.Clear();
   } else {
-    const auto& parking_fusion = frame->session()
-                                     ->environmental_model()
-                                     .get_local_view()
-                                     .parking_fusion_info;
     if (parking_fusion.parking_fusion_slot_lists_size() == 0) {
       AERROR << "parking_fusion_slot_lists size is 0";
       return false;
@@ -84,7 +84,8 @@ bool ApaPlannerDispatcher::Update(Frame* const frame) {
     }
   }
   AINFO << "is_planning_ok:" << is_planning_ok;
-  if (!is_planning_ok && !is_replan_each_frame) {
+  if (!is_planning_ok && !is_replan_each_frame &&
+      parking_fusion.select_slot_id() != 0) {
     SetFailedPlanningOutput(frame);
   }
 
