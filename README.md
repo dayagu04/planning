@@ -82,27 +82,42 @@ build/tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000 --close-loop > planni
 - 修改`.vscode/launch.json`中的bag路径，在VSCode调试界面选择planning player，可以断点调试代码
 - localview画图中会打印当前帧号frame_num，据此可以在planning log中找到对应帧日志
 
-4.启动jupyter服务器：
-
+4.Planning Player 本地批量生成包
 ```
-启动容器：
-.ci/dev.py --platform=X86
+python tools/planning_player/pp.py --dir=xxxxx --suffix=xxxx --close_loop=True
+```
+- 闭环仿真（车辆完美跟随，仅在长时有效），不加此参数默认开环
+```
+--close-loop
+```
+- 文件夹(仅支持对.00000结尾的文件生成)
+```
+--dir
+```
+- 指定生成的包的后缀
+```
+--suffix
+```
+5.启动jupyter服务器：
 
+启动容器：
+```
+.ci/dev.py --platform=X86
+```
 vscode连接到容器后，在终端中运行：
+```
 sudo su
 make jupyter_start
-
+```
 浏览器打开屏幕上链接，打开tools/common/jupyter/scripts/下文件，修改bag路径后运行所有即可可视化
 图标bag解析和图标显示逻辑在tools/common/jupyter/lib下
-```
-5.html生成方法：
 
-```
+6.html生成方法：
+
 进入文件夹
 jupyter_pybind/notebooks/scripts
-
 运行 html_generator.py 脚本
-```
+
 针对单个bag文件生成html
 ```
 python html_generator.py plot_ctrl_html /home/xlwang71/Downloads/0713/long_time_1.00000
