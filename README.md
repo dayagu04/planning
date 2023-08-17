@@ -90,13 +90,17 @@ python tools/planning_player/pp.py --dir=xxxxx --suffix=xxxx --close_loop=True
 ```
 --close-loop
 ```
-- 文件夹(仅支持对.00000结尾的文件生成)
+- 指定包的文件夹
 ```
 --dir
 ```
+- 自定义对xxx后缀包的进行处理 (默认处理.00000或.record的结尾文件)
+```
+--input_suffix
+```
 - 指定生成的包的后缀
 ```
---suffix
+--out_suffix
 ```
 5.启动jupyter服务器：
 
