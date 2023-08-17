@@ -1,6 +1,8 @@
 import sys
 import os
 import subprocess
+import multiprocessing
+from concurrent.futures import ThreadPoolExecutor
 
 def run_command_by_path(file_path):
     if command == "plot_ctrl_html":
@@ -12,20 +14,24 @@ def run_command_by_path(file_path):
     else:
         print(f"未知的命令: {command}")
         return
-      
+
     print(f"运行命令{run_command}处理文件{file_path}")
     subprocess.run(run_command)
 
-
 def find_and_run_files(path, command):
     if os.path.isfile(path):
-      run_command_by_path(path)
+        run_command_by_path(path)
     else:
-      for root, dirs, files in os.walk(path):
-          for file in files:
-              if ".0000" in file:
-                  file_path = os.path.join(root, file)
-                  run_command_by_path(file_path)
+        with multiprocessing.Pool(processes=6) as pool:
+            with ThreadPoolExecutor() as executor:
+                for root, dirs, files in os.walk(path):
+                    for file in files:
+                        if ".0000" in file or ".record" in file:
+                            file_path = os.path.join(root, file)
+                            executor.submit(run_command_by_path, file_path)
+
+def process_file(file_path):
+    run_command_by_path(file_path)
 
 # 获取命令行参数
 if len(sys.argv) != 3:
