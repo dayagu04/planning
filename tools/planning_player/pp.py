@@ -23,7 +23,7 @@ if __name__ == '__main__':
     else:
       
       commands = []
-      pool = multiprocessing.Pool()
+      pool = multiprocessing.Pool(processes=8)
       for file_name in os.listdir(bag_dir):
         if input_suffix != "" and not file_name.endswith(input_suffix):
           continue
