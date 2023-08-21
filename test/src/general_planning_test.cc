@@ -19,7 +19,7 @@ static void init_planning() {
   auto engine_config =
       common::ConfigurationContext::Instance()->engine_config();
 
-  std::string log_file = engine_config.log_conf.log_file_dir + "/planning_log";
+  std::string log_file = engine_config.log_conf.log_file;
   std::cout << "log_file!!!" << log_file << std::endl;
   // Nanolog
   bst::LogLevel log_level;

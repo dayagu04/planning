@@ -2,7 +2,7 @@
   "module_cfg_dir": "/asw/planning/res/conf/module_configs",
   "vehicle_cfg_dir": "/asw/planning/res/conf",
   "log_cfg":{
-    "log_file_dir": "/asw/planning/log",
+    "log_file": "/dev/null",
     "log_level": "DEBUG"
   }
 }

@@ -616,4 +616,23 @@ struct LateralMotionPlanningOutput {
   // ilqr_solver::iLqr::iLqrSolverInfo solver_info;  // to be removed
 };
 
+enum DrivingFunctionMode {
+  ACC = 0,
+  SCC = 1,
+  NOA = 2,
+  HPP = 3,
+};
+
+enum DrivingFunctionstate {
+  ACTIVATE = 0,
+  STANDSTILL = 1,
+  OVERRIDE = 2,
+  SECURE = 3,
+};
+
+struct DrivingFunctionInfo {
+  DrivingFunctionMode function_mode;
+  DrivingFunctionstate function_state;
+};
+
 }  // namespace planning

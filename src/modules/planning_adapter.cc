@@ -4,10 +4,11 @@
 
 #include <cstdint>
 
+#include "common.pb.h"
 #include "common/config_context.h"
 #include "debug_info_log.h"
 #include "ifly_time.h"
-
+#include "planning_debug_info.pb.h"
 #include "version.h"
 
 namespace planning {
@@ -22,7 +23,7 @@ void PlanningAdapter::Init() {
   auto engine_config =
       common::ConfigurationContext::Instance()->engine_config();
 
-  std::string log_file = engine_config.log_conf.log_file_dir + "/planning_log";
+  std::string log_file = engine_config.log_conf.log_file;
   // Nanolog
   bst::LogLevel log_level;
   if (engine_config.log_conf.log_level == "FETAL") {
@@ -53,6 +54,106 @@ static uint64_t get_latency(double now, uint64_t input_time) {
     return 0;
   }
   return (now - input_time) / US_PER_MS;
+}
+
+static void calc_fusion_latency(
+    uint64 planning_in_time_us,
+    const google::protobuf::RepeatedPtrField<Common::InputHistoryTimestamp>
+        &input_timestamp_list,
+    planning::common::ImageLatency *latency,
+    Common::InputHistoryTimestamp::InputHistoryTimestampSourceType
+        fusion_type) {
+  constexpr uint64_t US_PER_MS = 1000;
+
+  uint64 image_expose_time_us = 0;
+  uint64 perception_in_time_us = 0;
+  uint64 perception_out_time_us = 0;
+  uint64 fusion_in_time_us = 0;
+  uint64 fusion_out_time_us = 0;
+
+  for (auto &input : input_timestamp_list) {
+    switch (input.input_type()) {
+      case Common::InputHistoryTimestamp::
+          INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_CAMERA: {
+        perception_in_time_us = input.in_ts_us();
+        break;
+      }
+      case Common::InputHistoryTimestamp::
+          INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PERCEPTION: {
+        perception_in_time_us = input.in_ts_us();
+        perception_out_time_us = input.out_ts_us();
+        break;
+      }
+      case Common::InputHistoryTimestamp::
+          INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_OBSTACLE_FUSION: {
+        if (fusion_type ==
+            Common::InputHistoryTimestamp::
+                INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_OBSTACLE_FUSION) {
+          fusion_in_time_us = input.in_ts_us();
+          fusion_out_time_us = input.out_ts_us();
+        }
+        break;
+      }
+      case Common::InputHistoryTimestamp::
+          INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_ROAD_FUSION: {
+        if (fusion_type ==
+            Common::InputHistoryTimestamp::
+                INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_ROAD_FUSION) {
+          fusion_in_time_us = input.in_ts_us();
+          fusion_out_time_us = input.out_ts_us();
+        }
+        break;
+      }
+      default: { break; }
+    }
+  }
+
+  latency->set_image_com_latency_ms(
+      (perception_in_time_us - image_expose_time_us) / US_PER_MS);
+  latency->set_perception_latency_ms(
+      (perception_out_time_us - perception_in_time_us) / US_PER_MS);
+  latency->set_perception_com_latency_ms(
+      (fusion_in_time_us - perception_out_time_us) / US_PER_MS);
+  latency->set_fusion_lantency_ms((fusion_out_time_us - fusion_in_time_us) /
+                                  US_PER_MS);
+  latency->set_fusion_com_lantency_ms(
+      (planning_in_time_us - fusion_out_time_us) / US_PER_MS);
+}
+
+static void calc_location_latency(
+    uint64 planning_in_time_us,
+    const google::protobuf::RepeatedPtrField<Common::InputHistoryTimestamp>
+        &input_timestamp_list,
+    planning::common::LocationLatency *latency) {
+  constexpr uint64_t US_PER_MS = 1000;
+
+  uint64 sensor_time_us = 0;
+  uint64 location_in_time_us = 0;
+  uint64 location_out_time_us = 0;
+
+  for (auto &input : input_timestamp_list) {
+    switch (input.input_type()) {
+      case Common::InputHistoryTimestamp::
+          INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_IMU: {
+        sensor_time_us = input.in_ts_us();
+        break;
+      }
+      case Common::InputHistoryTimestamp::
+          INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_LOCALIZATION: {
+        location_in_time_us = input.in_ts_us();
+        location_out_time_us = input.out_ts_us();
+        break;
+      }
+      default: { break; }
+    }
+  }
+
+  latency->set_sensor_mcu_latency_ms(0);
+  latency->set_sensor_soc_latency_ms(0);
+  latency->set_sensor_com_latency_ms((location_in_time_us - sensor_time_us) /
+                                     US_PER_MS);
+  latency->set_location_latency((location_out_time_us - location_in_time_us) /
+                                US_PER_MS);
 }
 
 void PlanningAdapter::Proc() {
@@ -137,9 +238,9 @@ void PlanningAdapter::Proc() {
 
     local_view_.static_map_info = map_info_msg_;
     local_view_.static_map_info_recv_time = map_info_msg_recv_time_;
-    input_topic_timestamp->set_map(map_info_msg_.header().timestamp());
-    input_topic_latency->set_map(
-        get_latency(start_time, map_info_msg_.header().timestamp()));
+    // input_topic_timestamp->set_map(map_info_msg_.header().timestamp());
+    // input_topic_latency->set_map(
+    //     get_latency(start_time, map_info_msg_.header().timestamp()));
     local_view_.hdmap_time = map_info_msg_recv_time_;
   }
 
@@ -154,11 +255,30 @@ void PlanningAdapter::Proc() {
 
   // 3.get output & publish
   uint64_t output_time_us = (uint64_t)IflyTime::Now_us();
+  google::protobuf::RepeatedPtrField<::Common::InputHistoryTimestamp>
+      input_timestamp_list{};
+  input_timestamp_list.MergeFrom(
+      fusion_objects_info_msg_.header().input_list());
+  input_timestamp_list.MergeFrom(road_info_msg_.header().input_list());
+  input_timestamp_list.MergeFrom(
+      localization_estimate_msg_.header().input_list());
+
   if (planning_debug_writer_) {
     planning_debug_data->set_timestamp(output_time_us);
     planning_debug_data->mutable_frame_info()->set_version(__version_str__);
     auto debug_info_json = *DebugInfoManager::GetInstance().GetDebugJson();
     planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
+    calc_fusion_latency(start_time, input_timestamp_list,
+                        planning_debug_data->mutable_road_fusion_latency(),
+                        Common::InputHistoryTimestamp::
+                            INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_ROAD_FUSION);
+    calc_fusion_latency(
+        start_time, input_timestamp_list,
+        planning_debug_data->mutable_obstacle_fusion_latency(),
+        Common::InputHistoryTimestamp::
+            INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_OBSTACLE_FUSION);
+    calc_location_latency(start_time, input_timestamp_list,
+                          planning_debug_data->mutable_location_latency());
     planning_debug_writer_(*planning_debug_data);
   }
 
@@ -174,6 +294,13 @@ void PlanningAdapter::Proc() {
     auto header = planning_output.mutable_meta()->mutable_header();
     header->set_timestamp(output_time_us);
     header->set_version(__version_str__);
+    header->mutable_input_list()->CopyFrom(input_timestamp_list);
+    auto planning_latency = header->mutable_input_list()->Add();
+    planning_latency->set_input_type(
+        Common::InputHistoryTimestamp::
+            INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PLANNING);
+    planning_latency->set_in_ts_us(start_time);
+    planning_latency->set_out_ts_us(output_time_us);
     planning_writer_(planning_output);
   }
 

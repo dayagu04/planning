@@ -1,4 +1,5 @@
 #include "vision_longitudinal_behavior_planner.h"
+
 #include <cmath>
 #include <string>
 
@@ -64,6 +65,8 @@ bool VisionLongitudinalBehaviorPlanner::update() {
       frame_->session()->planning_context().lateral_behavior_planner_output();
   auto virtual_lane_manager =
       frame_->session()->environmental_model().get_virtual_lane_manager();
+  auto &function_info =
+      frame_->session()->environmental_model().function_info();
 
   // modify
   // lane_tracks_mgr_->update_ego_state(ego_state);
@@ -159,11 +162,16 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   JSON_DEBUG_VALUE("VisionLonBehavior_stop_start_state", (int)stop_start_state);
   JSON_DEBUG_VALUE("VisionLonBehavior_v_target_start_stop", v_target_);
 
-  std::cout << a_target_.first << "< final a_target_ < " << a_target_.second
-            << std::endl;
-  std::cout << "final v_target_ = : " << v_target_ << std::endl;
+  // ACC : STANDSTILL to ACTIVE need confirmed by driver
+  JSON_DEBUG_VALUE("VisionLonBehavior_STANDSTILL", 0.0);
+  if (v_ego < 1.0 && function_info.function_mode == DrivingFunctionMode::ACC &&
+      function_info.function_state == DrivingFunctionstate::STANDSTILL) {
+    v_target_ = 0.0;
+    JSON_DEBUG_VALUE("VisionLonBehavior_STANDSTILL", 1.0);
+  }
+  JSON_DEBUG_VALUE("VisionLonBehavior_final_v_target", v_target_);
 
-  // hack: get CIPV 临时方案，后续使用hmi proto输出
+  // HMI: CIPV
   int CIPV_id = GetCIPV(lateral_obstacle, lateral_outputs.lc_status);
   JSON_DEBUG_VALUE("CIPV_id", CIPV_id);
 
@@ -645,6 +653,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
   LOG_DEBUG("a_target_.first : [%f] ,a_target_.second : [%f]\n",
             a_target_.first, a_target_.second);
 
+  JSON_DEBUG_VALUE("VisionLonBehavior_cutin_v_target", v_target_);
   return true;
 }
 
@@ -677,6 +686,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
     JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_id", lead_one->track_id);
     JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_dis", lead_one->d_rel);
     JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_vel", lead_one->v_lead);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_one", v_target_lead);
 
     // leadtwo
     if (lead_two != nullptr && lead_two->type != 0) {
@@ -694,10 +704,12 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_id", lead_two->track_id);
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_dis", lead_two->d_rel);
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_vel", lead_two->v_lead);
+      JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_two", v_target_lead_2);
     } else {
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_id", 0);
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_dis", 0);
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_vel", 0);
+      JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_two", 0);
     }
     // listen to lead that makes you go slower
     if ((v_target_lead_2 < v_target_lead) && (lead_two != nullptr)) {
@@ -727,8 +739,8 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
   }
 
   // debug info
-  JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_one", v_target_lead);
-  JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_two", v_target_lead_2);
+  // JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_one", v_target_lead);
+  // JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_two", v_target_lead_2);
 
   auto &highway_longitudinal_output =
       frame_->mutable_session()
@@ -789,12 +801,14 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
                      temp_lead_one->d_rel);
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_vel",
                      temp_lead_one->v_lead);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_temp_lead_one", v_target_);
   } else {
     a_target_temp.first = 0.0;
     a_target_temp.second = 0.0;
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_id", 0);
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_dis", 0);
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_vel", 0);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_temp_lead_one", 0);
   }
   // tleadtwo
   if (temp_lead_two != nullptr && lc_status == "none" &&
@@ -825,12 +839,14 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
                      temp_lead_two->d_rel);
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_vel",
                      temp_lead_two->v_lead);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_temp_lead_two", v_target_);
   } else {
     a_target_temp2.first = 0.0;
     a_target_temp2.second = 0.0;
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_id", 0);
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_dis", 0);
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_vel", 0);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_temp_lead_two", 0);
   }
 
   // debug info
@@ -1791,18 +1807,30 @@ VisionLongitudinalBehaviorPlanner::UpdateStartStopState(
 int VisionLongitudinalBehaviorPlanner::GetCIPV(
     const std::shared_ptr<LateralObstacle> &lateral_obstacle,
     const std::string &lc_status) {
+  auto hmi_info = frame_->mutable_session()
+                      ->mutable_planning_output_context()
+                      ->mutable_planning_hmi_info();
+
   int error_id = -1;
   if ((lc_status != "left_lane_change") && (lc_status != "right_lane_change")) {
     if (lateral_obstacle->leadone() != nullptr &&
         lateral_obstacle->leadone()->type != 0) {
+      hmi_info->mutable_cipv_info()->set_has_cipv(true);
+      hmi_info->mutable_cipv_info()->set_cipv_id(
+          lateral_obstacle->leadone()->track_id);
       return lateral_obstacle->leadone()->track_id;
     }
   } else {
     if (lateral_obstacle->tleadone() != nullptr &&
         lateral_obstacle->tleadone()->type != 0) {
+      hmi_info->mutable_cipv_info()->set_has_cipv(true);
+      hmi_info->mutable_cipv_info()->set_cipv_id(
+          lateral_obstacle->tleadone()->track_id);
       return lateral_obstacle->tleadone()->track_id;
     }
   }
+  hmi_info->mutable_cipv_info()->set_has_cipv(false);
+  hmi_info->mutable_cipv_info()->set_cipv_id(error_id);
   return error_id;
 }
 }  // namespace planning

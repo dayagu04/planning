@@ -14,7 +14,7 @@ namespace planning {
 namespace common {
 
 struct LogConfiguration {
-  std::string log_file_dir;
+  std::string log_file;
   std::string log_level;
 };
 
@@ -84,11 +84,11 @@ class ConfigurationContext {
       LOG_ERROR("There is no log config file! \n");
       return false;
     }
-    std::string log_file_dir = json_data["log_cfg"]["log_file_dir"];
-    std::cout << "json log_file_dir: !!!====" << log_file_dir << std::endl;
+    std::string log_file = json_data["log_cfg"]["log_file"];
+    std::cout << "json log_file: !!!====" << log_file << std::endl;
     std::string log_level = json_data["log_cfg"]["log_level"];
     std::cout << "json log_level: !!!====" << log_level << std::endl;
-    engine_conf_.log_conf.log_file_dir = log_file_dir;
+    engine_conf_.log_conf.log_file = log_file;
     engine_conf_.log_conf.log_level = log_level;
 
     // 加载车辆模型配置文件路径

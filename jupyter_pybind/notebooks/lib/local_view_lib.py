@@ -19,6 +19,7 @@ sys.path.append('../../..')
 from lib.basic_layers import *
 from lib.bag_loader import *
 
+plan_debug_ts = []
 plan_debug_timestamps = []
 fusion_object_timestamps = []
 fusion_road_timestamps = []
@@ -26,8 +27,42 @@ localization_timestamps = []
 prediction_timestamps = []
 vehicle_service_timestamps = []
 control_output_timestamps = []
+slot_timestamps = []
+mobileye_lane_lines_timestamps = []
+mobileye_objects_timestamps = []
 
 # params 控制fig的样式
+ego_pose_polygon_params_apa ={
+  'fill_color' : None,
+  'line_color' : "black",
+  'line_width' : 1,
+  'legend_label' : 'car_polygon'
+}
+ego_pose_params_apa ={
+  'fill_color' : "red",
+  'line_color' : "black",
+  'line_width' : 1,
+  'legend_label' : 'car_rear_alxe_center'
+}
+slot_params_apa = {
+  'fill_color' : None,
+  'line_color' : "red",
+  'line_width' : 1,
+  'legend_label' : 'slot'
+}
+slot_params_apa = {
+  'fill_color' : None,
+  'line_color' : "red",
+  'line_width' : 1,
+  'legend_label' : 'slot'
+}
+location_params_apa = {
+  'line_width' : 1,
+  'line_color' : 'orange',
+  'line_dash' : 'solid',
+  'legend_label' : 'ego_real_trajectory'
+}
+slot_id_params_apa = { 'text_color' : "firebrick", 'text_align':"center", 'text_font_size':"12pt", 'legend_label' : 'id' }
 ego_pose_polygon_params_apa ={
   'fill_color' : None,
   'line_color' : "black",
@@ -130,6 +165,14 @@ origin_lane_params = {
     'line_alpha' : 0.8
 }
 
+mobileye_lane_lines_params = {
+  'legend_label': 'mlane',
+  'line_width' : 1.3,
+  'line_color' : 'chocolate',
+  'line_dash' : 'dashed',
+  'line_alpha' : 1.0
+}
+
 obstacle_fusion_params = {
     'fill_color' : "gray",
     'line_color' : "black",
@@ -149,6 +192,21 @@ obstacle_snrd_params = {
 obstacle_text_params = {
   'legend_label' : 'obj_info',
   'text_color' : "red",
+  'text_align':"center",
+  'text_font_size':"10pt"
+}
+
+obstacle_mobileye_params = {
+  'fill_color' : "sienna",
+  'line_color' : "black",
+  'line_width' : 1,
+  'fill_alpha' : 0.5,
+  'legend_label' : 'mobj'
+}
+
+obstacle_mobileye_text_params = {
+  'legend_label' : 'mobj_info',
+  'text_color' : "salmon",
   'text_align':"center",
   'text_font_size':"10pt"
 }
@@ -444,8 +502,18 @@ def find(data, t):
   for index, timestamp in enumerate(data['timestamp']):
     if t == timestamp:
       return True, data['data'][index]
+    # if t < timestamp:
+    #   if ((index > 0) & (abs(t - data['timestamp'][index - 1]) < abs(data['timestamp'][index] - t))):
+    #     index = index - 1
+    #   return True, data['data'][index]
   return False, ""
-
+def findME(data, t):
+  for index, timestamp in enumerate(data['timestamp']):
+    if t < timestamp:
+      if ((index > 0) & (abs(t - data['timestamp'][index - 1]) < abs(data['timestamp'][index] - t))):
+        index = index - 1
+      return True, data['data'][index]
+  return False, ""
 def load_obstacle_params(obstacle_list, environment_model_info):
 
   obs_info_all = dict()
@@ -547,7 +615,7 @@ def load_obstacle_params(obstacle_list, environment_model_info):
     obs_info_all[source]['obstacles_y'].append(obs_y)
     obs_info_all[source]['pos_x'].append(long_pos)
     obs_info_all[source]['pos_y'].append(lat_pos)
-  
+
   obs_info = {
     'obstacles_x_rel': [],
     'obstacles_y_rel': [],
@@ -567,8 +635,57 @@ def load_obstacle_params(obstacle_list, environment_model_info):
     obs_info_all[1] = obs_info
   if (4 in obs_info_all.keys()) == False:
     obs_info_all[4] = obs_info
-    
+
   return obs_info_all
+
+def load_obstacle_mobileye_params(obstacle_list):
+  obstacles_mobileye_info = {
+    'obstacles_x_rel': [],
+    'obstacles_y_rel': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'obstacles_vel': [],
+    'obstacles_acc': [],
+    'obstacles_id': [],
+    'obs_label': []
+  }
+  obs_num = len(obstacle_list)
+  for i in range(obs_num):
+    # frenet_vs, frenet_vl = 255, 255
+    half_length = obstacle_list[i].common_info.shape.length / 2
+    half_width = obstacle_list[i].common_info.shape.width /2
+    long_pos_rel = obstacle_list[i].common_info.relative_position.x + half_length
+    lat_pos_rel = obstacle_list[i].common_info.relative_position.y
+    theta = obstacle_list[i].common_info.relative_heading_angle
+    if theta == 255:
+      theta = 0
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+    obs_x_rel = [long_pos_rel + dx1 + dx2,
+              long_pos_rel + dx1 - dx2,
+              long_pos_rel- dx1 - dx2,
+              long_pos_rel - dx1 + dx2,
+              long_pos_rel + dx1 + dx2]
+    obs_y_rel = [lat_pos_rel + dy1 + dy2,
+              lat_pos_rel + dy1 - dy2,
+              lat_pos_rel - dy1 - dy2,
+              lat_pos_rel - dy1 + dy2,
+              lat_pos_rel + dy1 + dy2]
+    obstacles_mobileye_info['obstacles_x_rel'].append(obs_x_rel)
+    obstacles_mobileye_info['obstacles_y_rel'].append(obs_y_rel)
+    obstacles_mobileye_info['pos_x_rel'].append(long_pos_rel)
+    obstacles_mobileye_info['pos_y_rel'].append(lat_pos_rel)
+    obstacles_mobileye_info['obstacles_vel'].append(obstacle_list[i].common_info.relative_velocity.x)
+    obstacles_mobileye_info['obstacles_acc'].append(obstacle_list[i].common_info.relative_acceleration.x)
+    obstacles_mobileye_info['obstacles_id'].append(obstacle_list[i].common_info.id)
+    obstacles_mobileye_info['obs_label'].append('v(' + str(obstacle_list[i].common_info.id) + ')')  # ')=' \
+        # + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4)))
+
+  return obstacles_mobileye_info
 
 def draw_local_view_debug(dataLoader, layer_manager):
     #define figure
@@ -590,6 +707,7 @@ def draw_local_view(dataLoader, layer_manager):
     fix_lane_xys = []
     origin_lane_xys = []
     target_lane_xys = []
+    global plan_debug_ts
     global plan_debug_timestamps
     global fusion_object_timestamps
     global fusion_road_timestamps
@@ -597,9 +715,12 @@ def draw_local_view(dataLoader, layer_manager):
     global prediction_timestamps
     global vehicle_service_timestamps
     global control_output_timestamps
+    global mobileye_lane_lines_timestamps
+    global mobileye_objects_timestamps
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
       t = dataLoader.plan_debug_msg["t"][i]
-      plan_debug_timestamps.append(t)
+      plan_debug_ts.append(t)
+      plan_debug_timestamps.append(dataLoader.plan_debug_msg["timestamp"][i])
       input_topic_timestamp = plan_debug.input_topic_timestamp
       fusion_object_timestamp = input_topic_timestamp.fusion_object
       fusion_road_timestamp = input_topic_timestamp.fusion_road
@@ -644,7 +765,7 @@ def draw_local_view(dataLoader, layer_manager):
         ego_xn.append(pos_xn_i - cur_pos_xn0)
         ego_yn.append(pos_yn_i - cur_pos_yn0)
       location_generator.xys.append((ego_yb,ego_xb))
-    location_generator.ts = np.array(plan_debug_timestamps)
+    location_generator.ts = np.array(plan_debug_ts)
     location_layer = CurveLayer(fig_local_view, location_params)
     layer_manager.AddLayer(location_layer, 'location_layer', location_generator, 'location_generator', 2)
 
@@ -708,12 +829,12 @@ def draw_local_view(dataLoader, layer_manager):
           centerline_generator_dict[line_generator_key].xys.append((center_line_list[index]['line_y_vec'], center_line_list[index]['line_x_vec'], [center_line_list[index]['relative_id']], [fig_index]))
 
       for lane_generator_key in lane_generator_dict.keys():
-          lane_generator_dict[lane_generator_key].ts = np.array(plan_debug_timestamps)
+          lane_generator_dict[lane_generator_key].ts = np.array(plan_debug_ts)
           lane_layer = CurveLayer(fig_local_view, lane_params)
           layer_manager.AddLayer(lane_layer, lane_generator_key.replace('lane_', 'lane_layer_'), lane_generator_dict[lane_generator_key], lane_generator_key , 2)
 
       for line_generator_key in centerline_generator_dict.keys():
-          centerline_generator_dict[line_generator_key].ts = np.array(plan_debug_timestamps)
+          centerline_generator_dict[line_generator_key].ts = np.array(plan_debug_ts)
           lane_layer = CurveLayer(fig_local_view, center_line_params)
           layer_manager.AddLayer(lane_layer, line_generator_key.replace('centerline_', 'centerline_layer_'), centerline_generator_dict[line_generator_key], line_generator_key , 2)
 
@@ -750,26 +871,26 @@ def draw_local_view(dataLoader, layer_manager):
     fix_lane_generate.xys = fix_lane_xys
     target_lane_generate.xys = fix_lane_xys
     origin_lane_generate.xys = fix_lane_xys
-    fix_lane_generate.ts = np.array(plan_debug_timestamps)
-    target_lane_generate.ts = np.array(plan_debug_timestamps)
-    origin_lane_generate.ts = np.array(plan_debug_timestamps)
+    fix_lane_generate.ts = np.array(plan_debug_ts)
+    target_lane_generate.ts = np.array(plan_debug_ts)
+    origin_lane_generate.ts = np.array(plan_debug_ts)
     fix_lane_layer = CurveLayer(fig_local_view ,fix_lane_params)
     target_lane_layer = CurveLayer(fig_local_view ,target_lane_params)
     origin_lane_layer = CurveLayer(fig_local_view ,origin_lane_params)
     layer_manager.AddLayer(fix_lane_layer, 'fix_lane_layer', fix_lane_generate, 'fix_lane_generate', 2)
     layer_manager.AddLayer(target_lane_layer, 'target_lane_layer', target_lane_generate, 'target_lane_generate', 2)
     layer_manager.AddLayer(origin_lane_layer, 'origin_lane_layer', origin_lane_generate, 'origin_lane_generate', 2)
-    
-    ego_info_generatev2.ts = np.array(plan_debug_timestamps)
+
+    ego_info_generatev2.ts = np.array(plan_debug_ts)
     ego_info_layerv2 = TextLayer(fig_local_view ,ego_info_paramsv2)
     layer_manager.AddLayer(ego_info_layerv2, 'ego_info_layerv2', ego_info_generatev2, 'ego_info_generatev2', 3)
 
     # # 加载自车信息
     ego_generate = CommonGenerator()
     car_xb, car_yb = load_car_params_patch()
-    for i in range(len(plan_debug_timestamps)):
+    for i in range(len(plan_debug_ts)):
       ego_generate.xys.append(([car_yb],[car_xb]))
-    ego_generate.ts = np.array(plan_debug_timestamps)
+    ego_generate.ts = np.array(plan_debug_ts)
     ego_pose_layer = PatchLayer(fig_local_view ,ego_pose_params)
     layer_manager.AddLayer(ego_pose_layer, 'ego_pose_layer', ego_generate, 'ego_generate', 2)
 
@@ -784,7 +905,7 @@ def draw_local_view(dataLoader, layer_manager):
       vel_ego = vs_msg.vehicle_speed
       text = 'v={:.2f}\nsteer={:.2f}'.format(round(vel_ego, 2), round(steer_deg, 2))
       ego_info_generate.xys.append(([0],[-2], [text]))
-    ego_info_generate.ts = np.array(plan_debug_timestamps)
+    ego_info_generate.ts = np.array(plan_debug_ts)
     ego_info_layer = TextLayer(fig_local_view ,ego_info_params)
     layer_manager.AddLayer(ego_info_layer, 'ego_info_layer', ego_info_generate, 'ego_info_generate', 3)
 
@@ -812,15 +933,15 @@ def draw_local_view(dataLoader, layer_manager):
       obstacle_fusion_text_generate.xys.append((obstacles_info_all[1]['pos_y_rel'], obstacles_info_all[1]['pos_x_rel'], obstacles_info_all[1]['obs_label']))
       obstacle_snrd_text_generate.xys.append((obstacles_info_all[4]['pos_y_rel'], obstacles_info_all[4]['pos_x_rel'], obstacles_info_all[4]['obs_label']))
 
-    obstacle_fusion_generate.ts = np.array(plan_debug_timestamps)
-    obstacle_snrd_generate.ts = np.array(plan_debug_timestamps)
+    obstacle_fusion_generate.ts = np.array(plan_debug_ts)
+    obstacle_snrd_generate.ts = np.array(plan_debug_ts)
     obstacle_fusion_layer = PatchLayer(fig_local_view ,obstacle_fusion_params)
     obstacle_snrd_layer = PatchLayer(fig_local_view ,obstacle_snrd_params)
     layer_manager.AddLayer(obstacle_fusion_layer, 'obstacle_fusion_layer', obstacle_fusion_generate, 'obstacle_fusion_generate', 2)
     layer_manager.AddLayer(obstacle_snrd_layer, 'obstacle_snrd_layer', obstacle_snrd_generate, 'obstacle_snrd_generate', 2)
 
-    obstacle_fusion_text_generate.ts = np.array(plan_debug_timestamps)
-    obstacle_snrd_text_generate.ts = np.array(plan_debug_timestamps)
+    obstacle_fusion_text_generate.ts = np.array(plan_debug_ts)
+    obstacle_snrd_text_generate.ts = np.array(plan_debug_ts)
     obstacle_text_layer1 = TextLayer(fig_local_view, obstacle_text_params)
     obstacle_text_layer2 = TextLayer(fig_local_view, obstacle_text_params)
     layer_manager.AddLayer(obstacle_text_layer1, 'obstacle_text_layer1', obstacle_fusion_text_generate, 'obstacle_fusion_text_generate', 3)
@@ -828,7 +949,7 @@ def draw_local_view(dataLoader, layer_manager):
 
     # # # 加载预测
     prediction_generator = CommonGenerator()
-    
+
     for index, prediction_timestamp in enumerate(prediction_timestamps):
       flag, prediction_msg = find(dataLoader.prediction_msg, prediction_timestamp)
       loc_flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[index])
@@ -845,41 +966,51 @@ def draw_local_view(dataLoader, layer_manager):
         prediction_generator.xys.append(([], []))
         pass
 
-    prediction_generator.ts = np.array(plan_debug_timestamps)
+    prediction_generator.ts = np.array(plan_debug_ts)
     prediction_layer = MultiLinesLayer(fig_local_view, prediction_params)
     layer_manager.AddLayer(prediction_layer, 'prediction_layer', prediction_generator, 'prediction_generator', 2)
 
     # # # 加载plan轨迹
     plan_generator = CommonGenerator()
     coord_tf = coord_transformer()
-    # for plan_debug_t in plan_debug_timestamps:
-    #   flag, plan_msg = find(dataLoader.plan_msg, plan_debug_t)
-    for i, plan_msg in enumerate(dataLoader.plan_msg['data']):
-      trajectory = plan_msg.trajectory
-      try:
-        planning_polynomial = trajectory.target_reference.polynomial
-        plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
-      except:
-        if dataLoader.loc_msg['enable'] == True:       
-          flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
-          if not flag:
-            plan_traj_x, plan_traj_y = [], []
-          else:
-            cur_pos_xn = loc_msg.pose.local_position.x
-            cur_pos_yn = loc_msg.pose.local_position.y
-            cur_yaw = loc_msg.pose.euler_angles.yaw
-            coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-            plan_x = []
-            plan_y = []
-            for i in range(len(trajectory.trajectory_points)):
-              plan_x.append(trajectory.trajectory_points[i].x)
-              plan_y.append(trajectory.trajectory_points[i].y)
+    # print(dataLoader.plan_msg)
+    # print(plan_debug_ts)
+    for i, plan_debug_t in enumerate(plan_debug_ts):
+      flag, plan_msg = find(dataLoader.plan_msg, plan_debug_timestamps[i])
+    # for i, plan_msg in enumerate(dataLoader.plan_msg['data']):
+      if not flag:
+        # print('find plan error')
+        plan_traj_x, plan_traj_y = [], []
+      else:
+        trajectory = plan_msg.trajectory
+        try:
+          planning_polynomial = trajectory.target_reference.polynomial
+          plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
+        except:
+          if dataLoader.loc_msg['enable'] == True:
+            flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
+            if not flag:
+              plan_traj_x, plan_traj_y = [], []
+            else:
+              cur_pos_xn = loc_msg.pose.local_position.x
+              cur_pos_yn = loc_msg.pose.local_position.y
+              cur_yaw = loc_msg.pose.euler_angles.yaw
+              coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+              plan_x = []
+              plan_y = []
+              for i in range(len(trajectory.trajectory_points)):
+                plan_x.append(trajectory.trajectory_points[i].x)
+                plan_y.append(trajectory.trajectory_points[i].y)
 
-            plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
-        else:
-          plan_traj_x, plan_traj_y = [], []
+              if trajectory.target_reference.lateral_maneuver_gear == 2:
+                plan_traj_x = plan_x
+                plan_traj_y = plan_y
+              else:
+                plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
+          else:
+            plan_traj_x, plan_traj_y = [], []
       plan_generator.xys.append((plan_traj_y, plan_traj_x))
-    plan_generator.ts = np.array(plan_debug_timestamps)
+    plan_generator.ts = np.array(plan_debug_ts)
     plan_layer = CurveLayer(fig_local_view, plan_params)
     layer_manager.AddLayer(plan_layer, 'plan_layer', plan_generator, 'plane_generator', 2)
 
@@ -900,13 +1031,13 @@ def draw_local_view(dataLoader, layer_manager):
           mpc_dx.append(control_result_points[i].x)
           mpc_dy.append(control_result_points[i].y)
         control_generator.xys.append((mpc_dy, mpc_dx))
-    control_generator.ts = np.array(plan_debug_timestamps)
+    control_generator.ts = np.array(plan_debug_ts)
     control_layer = CurveLayer(fig_local_view, control_params)
     layer_manager.AddLayer(control_layer, 'control_layer', control_generator, 'control_generator', 2)
 
     # legend
     fig_local_view.legend.click_policy = 'hide'
-    
+
     plan_debug_table1 = TextGenerator()
     plan_debug_table2 = TextGenerator()
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
@@ -916,27 +1047,27 @@ def draw_local_view(dataLoader, layer_manager):
       names2 = []
       datas2 = []
       names1.append('frame_num')
-      datas1.append(plan_debug.frame_info.frame_num - dataLoader.plan_debug_msg['data'][0].frame_info.frame_num) 
+      datas1.append(plan_debug.frame_info.frame_num - dataLoader.plan_debug_msg['data'][0].frame_info.frame_num)
       names1.append('frame_duration_ms')
       datas1.append(plan_debug.frame_info.frame_duration_ms)
-      
+
       names1.append('planning_succ')
       datas1.append(plan_debug.frame_info.planning_succ)
-      
+
       names1.append('fusion_object_latency')
       datas1.append(plan_debug.input_topic_latency.fusion_object)
       names1.append('fusion_road_latency')
       datas1.append(plan_debug.input_topic_latency.fusion_road)
       names1.append('localization_latency')
       datas1.append(plan_debug.input_topic_latency.localization)
-      
+
       names2.append('prediction_latency')
       datas2.append(plan_debug.input_topic_latency.prediction)
       names2.append('vehicle_service_latency')
       datas2.append(plan_debug.input_topic_latency.vehicle_service)
       names2.append('hmi_latency')
       datas2.append(plan_debug.input_topic_latency.hmi)
-      
+
       names2.append('EnvironmentalModelManagerCost')
       datas2.append(plan_debug_json['EnvironmentalModelManagerCost'])
       names2.append('VisionLateralBehaviorPlannerCost')
@@ -945,11 +1076,11 @@ def draw_local_view(dataLoader, layer_manager):
       datas2.append(plan_debug_json['VisionLateralMotionPlannerCost'])
       names2.append('VisionLongitudinalBehaviorPlannerCost')
       datas2.append(plan_debug_json['VisionLongitudinalBehaviorPlannerCost'])
-      
+
       plan_debug_table1.xys.append((names1, datas1, [None] * len(names1)))
       plan_debug_table2.xys.append((names2, datas2, [None] * len(names2)))
-    plan_debug_table1.ts = np.array(plan_debug_timestamps)
-    plan_debug_table2.ts = np.array(plan_debug_timestamps)
+    plan_debug_table1.ts = np.array(plan_debug_ts)
+    plan_debug_table2.ts = np.array(plan_debug_ts)
     tab_attr_list = ['Attr', 'Val']
     tab_debug_layer1 = TableLayerV2(None, tab_attr_list, table_params)
     tab_debug_layer2 = TableLayerV2(None, tab_attr_list, table_params)
@@ -957,7 +1088,303 @@ def draw_local_view(dataLoader, layer_manager):
       tab_debug_layer1, 'tab_debug_layer1', plan_debug_table1, 'plan_debug_table1', 3)
     layer_manager.AddLayer(
       tab_debug_layer2, 'tab_debug_layer2', plan_debug_table2, 'plan_debug_table2', 3)
+
+    # 加载mobileye车道线
+    mobileye_lane_lines_generator_dict = {}
+    if dataLoader.mobileye_lane_lines_msg['enable'] == True:
+      for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+        flag, mobileye_lane_lines_msg = findME(dataLoader.mobileye_lane_lines_msg, fusion_road_timestamps[i])
+        for index in range(mobileye_lane_lines_msg.num) :
+          mobileye_lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+          mobileye_lane_generator_key = 'mobileye_lane_' + str(index)
+          if (mobileye_lane_generator_key in mobileye_lane_lines_generator_dict.keys()) == False:
+            mobileye_lane_lines_generator_dict[mobileye_lane_generator_key] = LineGenerator('mobileye_line')
+          if not flag:
+            mobileye_lane_lines_generator_dict[mobileye_lane_generator_key].xys.append(([] , [] ,[], []))
+            continue
+          lane = mobileye_lane_lines_msg.lane_line[index]
+          fig_index = lane.pos_type
+          line_x, line_y = gen_line(lane.a0, lane.a1, lane.a2, lane.a3, lane.start, lane.end)
+          mobileye_lane_info['line_x_vec'] = line_x
+          mobileye_lane_info['line_y_vec'] = line_y
+          tp = lane.marking_segments[0].marking
+          if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+            mobileye_lane_info['type'] = ['dashed']
+          else:
+            mobileye_lane_info['type'] = ['solid']
+          mobileye_lane_info['fix_index'] = [fig_index]
+          mobileye_lane_lines_generator_dict[mobileye_lane_generator_key].xys.append((mobileye_lane_info['line_y_vec'] , \
+                                                                                      mobileye_lane_info['line_x_vec'] , \
+                                                                                      mobileye_lane_info['type'], \
+                                                                                      mobileye_lane_info['fix_index']))
+      for mobileye_lane_generator_key in mobileye_lane_lines_generator_dict.keys():
+          mobileye_lane_lines_generator_dict[mobileye_lane_generator_key].ts = np.array(plan_debug_ts)
+          mobileye_lane_layer = CurveLayer(fig_local_view, mobileye_lane_lines_params)
+          layer_manager.AddLayer(mobileye_lane_layer, mobileye_lane_generator_key.replace('mobileye_lane_', 'mobileye_lane_layer_'), \
+                                 mobileye_lane_lines_generator_dict[mobileye_lane_generator_key], \
+                                 mobileye_lane_generator_key , 2)
+
+    # 加载mobileye障碍物
+    obstacle_mobileye_generate = CommonGenerator()
+    obstacle_mobileye_text_generate = TextGenerator()
+    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+      flag, mobileye_objects_msg = findME(dataLoader.mobileye_objects_msg, fusion_object_timestamps[i])
+      if not flag:
+        # print('find mobileye_objects_msg error')
+        obstacle_mobileye_generate.xys.append(([], []))
+        obstacle_mobileye_text_generate.xys.append(([], [], []))
+        continue
+      # obstacles_mobileye_info = load_obstacle_params(mobileye_objects_msg.camera_perception_object_list, plan_debug.environment_model_info)
+      obstacles_mobileye_info = load_obstacle_mobileye_params(mobileye_objects_msg.camera_perception_object_list)
+      obstacle_mobileye_generate.xys.append((obstacles_mobileye_info['obstacles_y_rel'], obstacles_mobileye_info['obstacles_x_rel']))
+      obstacle_mobileye_text_generate.xys.append((obstacles_mobileye_info['pos_y_rel'], obstacles_mobileye_info['pos_x_rel'], obstacles_mobileye_info['obs_label']))
+    obstacle_mobileye_generate.ts = np.array(plan_debug_ts)
+    obstacle_mobileye_layer = PatchLayer(fig_local_view ,obstacle_mobileye_params)
+    layer_manager.AddLayer(obstacle_mobileye_layer, 'obstacle_mobileye_layer', obstacle_mobileye_generate, 'obstacle_mobileye_generate', 2)
+    obstacle_mobileye_text_generate.ts = np.array(plan_debug_ts)
+    obstacle_mobileye_text_layer = TextLayer(fig_local_view, obstacle_mobileye_text_params)
+    layer_manager.AddLayer(obstacle_mobileye_text_layer, 'obstacle_mobileye_text_layer', obstacle_mobileye_text_generate, 'obstacle_mobileye_text_generate', 3)
+
     return fig_local_view, (tab_debug_layer1.plot, tab_debug_layer2.plot)
+
+def apa_draw_local_view(dataLoader, layer_manager):
+    #define figure
+    # 定义 local_view fig
+    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=1500, height=1000, match_aspect = True, aspect_scale=1)
+    fig_local_view.x_range.flipped = True
+    # toolbar
+    fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
+    # 加载planning debug部分信息, 加载planning 输入topic的时间戳
+    fix_lane_xys = []
+    origin_lane_xys = []
+    target_lane_xys = []
+    global plan_debug_ts
+    global fusion_object_timestamps
+    global fusion_road_timestamps
+    global localization_timestamps
+    global prediction_timestamps
+    global vehicle_service_timestamps
+    global control_output_timestamps
+    global slot_timestamps
+    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+      t = dataLoader.plan_debug_msg["t"][i]
+      plan_debug_ts.append(t)
+      input_topic_timestamp = plan_debug.input_topic_timestamp
+      fusion_object_timestamp = input_topic_timestamp.fusion_object
+      fusion_road_timestamp = input_topic_timestamp.fusion_road
+      localization_timestamp = input_topic_timestamp.localization
+      prediction_timestamp = input_topic_timestamp.prediction
+      vehicle_service_timestamp = input_topic_timestamp.vehicle_service
+      control_output_timestamp = input_topic_timestamp.control_output
+      slot_timestamp = input_topic_timestamp.parking_fusion
+      fusion_object_timestamps.append(fusion_object_timestamp)
+      fusion_road_timestamps.append(fusion_road_timestamp)
+      localization_timestamps.append(localization_timestamp)
+      prediction_timestamps.append(prediction_timestamp)
+      vehicle_service_timestamps.append(vehicle_service_timestamp)
+      control_output_timestamps.append(control_output_timestamp)
+      slot_timestamps.append(slot_timestamp)
+    # 加载定位
+    location_generator = CommonGenerator()
+    cur_pos_xn0 = cur_pos_xn = dataLoader.loc_msg['data'][0].pose.local_position.x
+    cur_pos_yn0 = cur_pos_yn = dataLoader.loc_msg['data'][0].pose.local_position.y
+    for localization_timestamp in localization_timestamps:
+      flag, loc_msg = find(dataLoader.loc_msg, localization_timestamp)
+      if not flag:
+        # print('find loc_msg error')
+        location_generator.xys.append(([],[]))
+        continue
+      cur_pos_xn = loc_msg.pose.local_position.x
+      cur_pos_yn = loc_msg.pose.local_position.y
+      cur_yaw = loc_msg.pose.euler_angles.yaw
+      ego_xb, ego_yb = [], []
+      ego_xn, ego_yn = [], []
+      ### global variables
+      # pos offset
+      for i in range(len(dataLoader.loc_msg['data'])):
+        if (i % 10 != 0): # 下采样 10
+          continue
+        pos_xn_i = dataLoader.loc_msg['data'][i].pose.local_position.x
+        pos_yn_i = dataLoader.loc_msg['data'][i].pose.local_position.y
+
+        # ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+
+        ego_xb.append(pos_xn_i)
+        ego_yb.append(pos_yn_i)
+        ego_xn.append(pos_xn_i - cur_pos_xn0)
+        ego_yn.append(pos_yn_i - cur_pos_yn0)
+      location_generator.xys.append((ego_yb,ego_xb))
+    location_generator.ts = np.array(plan_debug_ts)
+    location_layer = CurveLayer(fig_local_view, location_params_apa)
+    layer_manager.AddLayer(location_layer, 'location_layer', location_generator, 'location_generator', 2)
+
+
+    # 加载自车信息
+    ego_polygon_generate = CommonGenerator()
+    ego_pose_generate = CommonGenerator()
+    # for i in range(len(plan_debug_ts)):
+    #   ego_generate.xys.append(([car_yb],[car_xb]))
+    for localization_timestamp in localization_timestamps:
+      flag, loc_msg = find(dataLoader.loc_msg, localization_timestamp)
+      if not flag:
+        # print('find loc_msg error')
+        # location_generator.xys.append(([],[]))
+        continue
+      cur_pos_xn = loc_msg.pose.local_position.x
+      cur_pos_yn = loc_msg.pose.local_position.y
+      cur_pos_theta = loc_msg.pose.euler_angles.yaw
+      temp_cur_pos_xn = []
+      temp_cur_pos_yn = []
+      temp_cur_pos_xn.append(cur_pos_xn)
+      temp_cur_pos_yn.append(cur_pos_yn)
+      ego_box = get_closed_veh_box(cur_pos_xn,cur_pos_yn,cur_pos_theta)
+      ego_box_for_ego_point = get_closed_veh_box_for_ego_point(cur_pos_xn,cur_pos_yn,cur_pos_theta)
+      ego_polygon_generate.xys.append(([ego_box[1]],[ego_box[0]]))
+      ego_pose_generate.xys.append(([ego_box_for_ego_point[1]],[ego_box_for_ego_point[0]]))
+    ego_polygon_generate.ts = np.array(plan_debug_ts)
+    ego_pose_generate.ts = np.array(plan_debug_ts)
+    ego_pose_polygon_layer = PatchLayer(fig_local_view ,ego_pose_polygon_params_apa)
+    ego_pose_layer = PatchLayer(fig_local_view ,ego_pose_params_apa)
+    layer_manager.AddLayer(ego_pose_polygon_layer, 'ego_pose_polygon_layer', ego_polygon_generate, 'ego_polygon_generate', 2)
+    layer_manager.AddLayer(ego_pose_layer, 'ego_pose_layer', ego_pose_generate, 'ego_pose_generate', 2)
+
+    ###加载apa车位
+    slot_generate = CommonGenerator()
+    slot_id_generate = TextGenerator()
+    for slot_timestamp in slot_timestamps:
+        flag, slot_msg = find(dataLoader.slot_msg, slot_timestamp)
+        if not flag:
+            print('find slot_msg error')
+            slot_generate.xys.append(([], []))
+            slot_id_generate.xys.append(([],[]))
+            continue
+        temp_corner_x_list = []
+        temp_corner_y_list = []
+        temp_slot_id_list = []
+        temp_slot_id_x_list = []
+        temp_slot_id_y_list = []
+        for slot in slot_msg.parking_fusion_slot_lists:
+            temp_corner_x = []
+            temp_corner_y = []
+            for corner_point in slot.corner_points:
+                temp_corner_x.append(corner_point.x)
+                temp_corner_y.append(corner_point.y)
+            temp_x = temp_corner_x[2]
+            temp_y = temp_corner_y[2]
+            temp_corner_x[2] = temp_corner_x[3]
+            temp_corner_y[2] = temp_corner_y[3]
+            temp_corner_x[3] = temp_x
+            temp_corner_y[3] = temp_y
+            temp_corner_x_list.append(temp_corner_x)
+            temp_corner_y_list.append(temp_corner_y)
+            # add slot id
+            temp_slot_id = slot.id
+            text = 'id={:.2f}'.format(round(temp_slot_id, 2))
+            temp_slot_id_list.append(text)
+            temp_slot_id_x_list.append((temp_corner_x[0]+temp_corner_x[3])/2)
+            temp_slot_id_y_list.append((temp_corner_y[0]+temp_corner_y[1])/2)
+        slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
+        slot_id_generate.xys.append((temp_slot_id_y_list,temp_slot_id_x_list,temp_slot_id_list))
+    slot_generate.ts = np.array(plan_debug_ts)
+    slot_id_generate.ts = np.array(plan_debug_ts)
+    slot_layer = PatchLayer(fig_local_view ,slot_params_apa)
+    slot_id_layer = TextLayer(fig_local_view,slot_id_params_apa)
+    layer_manager.AddLayer(slot_layer, 'slot_layer', slot_generate, 'slot_generate', 2)
+    layer_manager.AddLayer(slot_id_layer, 'slot_id_layer',slot_id_generate,'slot_id_generate',3)
+
+    ###加载apa规划plan
+    plan_generator = CommonGenerator()
+    coord_tf = coord_transformer()
+
+    for plan_debug_t in plan_debug_ts:
+      flag, plan_msg = find(dataLoader.plan_msg, plan_debug_t)
+      if not flag:
+            # print('find plan_msg error')
+            slot_generate.xys.append(([], []))
+            continue
+    # for i, plan_msg in enumerate(dataLoader.plan_msg['data']):
+      trajectory = plan_msg.trajectory
+      trajectory_points_x = []
+      trajectory_points_y = []
+      try:
+         trajectory_points = trajectory.trajectory_points
+         for point in trajectory_points:
+            trajectory_points_x.append(point.x)
+            trajectory_points_y.append(point.y)
+            print(point.x,point.y,sep=':')
+            print("运行到此!")
+      except:
+        print("plan points err!")
+      plan_generator.xys.append(([trajectory_points_y], [trajectory_points_x]))
+    plan_generator.ts = np.array(plan_debug_ts)
+    plan_layer = CurveLayer(fig_local_view, plan_params)
+    layer_manager.AddLayer(plan_layer, 'plan_layer', plan_generator, 'plane_generator', 2)
+    # legend
+    fig_local_view.legend.click_policy = 'hide'
+    return fig_local_view
+
+def get_closed_veh_box(x, y, theta):
+    # params for E40X
+    # length = 4.41
+    # width = 1.8
+    # shift_dis = 1.325
+
+    # params for AIONLX
+    length = 4.786
+    width = 1.935
+    shift_dis = (3.846 - 0.94) * 0.5
+
+    half_length = length * 0.5
+    half_width = width * 0.5
+    cos_ego_start_theta = math.cos(theta)
+    sin_ego_start_theta = math.sin(theta)
+    shift_ego_start_x = x + shift_dis * cos_ego_start_theta
+    shift_ego_start_y = y + shift_dis * sin_ego_start_theta
+    dx1 = cos_ego_start_theta * half_length
+    dy1 = sin_ego_start_theta * half_length
+    dx2 = sin_ego_start_theta * half_width
+    dy2 = -cos_ego_start_theta * half_width
+    pt0_x = shift_ego_start_x + dx1 + dx2
+    pt0_y = shift_ego_start_y + dy1 + dy2
+    pt1_x = shift_ego_start_x + dx1 - dx2
+    pt1_y = shift_ego_start_y + dy1 - dy2
+    pt2_x = shift_ego_start_x - dx1 - dx2
+    pt2_y = shift_ego_start_y - dy1 - dy2
+    pt3_x = shift_ego_start_x - dx1 + dx2
+    pt3_y = shift_ego_start_y - dy1 + dy2
+    return [[pt0_x, pt1_x, pt2_x, pt3_x, pt0_x], [pt0_y, pt1_y, pt2_y, pt3_y, pt0_y]]
+
+def get_closed_veh_box_for_ego_point(x, y, theta):
+    # params for E40X
+    # length = 4.41
+    # width = 1.8
+    # shift_dis = 1.325
+
+    # params for AIONLX
+    scale = 3    #缩小的倍数，将自车的polygon缩小n倍后作为后轴中心点
+    length = 4.786 / scale
+    width = 1.935 / scale
+    shift_dis = (3.846 - 0.94) * 0.5 / scale
+
+    half_length = length * 0.5 / scale
+    half_width = width * 0.5 / scale
+    cos_ego_start_theta = math.cos(theta)
+    sin_ego_start_theta = math.sin(theta)
+    shift_ego_start_x = x + shift_dis * cos_ego_start_theta
+    shift_ego_start_y = y + shift_dis * sin_ego_start_theta
+    dx1 = cos_ego_start_theta * half_length
+    dy1 = sin_ego_start_theta * half_length
+    dx2 = sin_ego_start_theta * half_width
+    dy2 = -cos_ego_start_theta * half_width
+    pt0_x = shift_ego_start_x + dx1 + dx2
+    pt0_y = shift_ego_start_y + dy1 + dy2
+    pt1_x = shift_ego_start_x + dx1 - dx2
+    pt1_y = shift_ego_start_y + dy1 - dy2
+    pt2_x = shift_ego_start_x - dx1 - dx2
+    pt2_y = shift_ego_start_y - dy1 - dy2
+    pt3_x = shift_ego_start_x - dx1 + dx2
+    pt3_y = shift_ego_start_y - dy1 + dy2
+    return [[pt0_x, pt1_x, pt2_x, pt3_x, pt0_x], [pt0_y, pt1_y, pt2_y, pt3_y, pt0_y]]
 
 def apa_draw_local_view(dataLoader, layer_manager):
     #define figure
@@ -1196,7 +1623,10 @@ def GenerateJsonValueData(json_data, json_time_list, json_value_list):
             try:
                 scale = 1.0
                 if json_value_list[i] == "throttle_brake":
-                    scale = 0.001
+                    if json_data[j][json_value_list[i]]>0:
+                       scale = 0.001
+                    else:
+                       scale = 1.0
                 tmp.append(json_data[j][json_value_list[i]] * scale)
             except:
                 tmp.append(0.0)

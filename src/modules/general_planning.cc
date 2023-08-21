@@ -137,6 +137,8 @@ void GeneralPlanning::FillPlanningTrajectory(
   auto &planning_result = session_.planning_context().planning_result();
   auto &planning_context = session_.planning_context();
   auto &ego_state = session_.environmental_model().get_ego_state_manager();
+  auto function_info = session_.environmental_model().function_info();
+  const bool active = session_.environmental_model().GetVehicleDbwStatus();
 
   // 更新输出
   auto time_stamp_us = IflyTime::Now_us();
@@ -146,7 +148,8 @@ void GeneralPlanning::FillPlanningTrajectory(
 
   // 2.Trajectory
   auto trajectory = planning_output->mutable_trajectory();
-  trajectory->set_available(true);
+  // set trajectory false when dbw is false
+  trajectory->set_available(active);
 
   // 根据定位有效性决定实时、长时
   auto location_valid = session_.environmental_model().location_valid();
@@ -301,11 +304,13 @@ void GeneralPlanning::FillPlanningTrajectory(
   // 8.Planning status
   auto planning_status = planning_output->mutable_planning_status();
   planning_status->set_standstill(false);
-  planning_status->set_ready_to_go(true);
-  // planning_status->set_standstill(std::fabs(ego_state->ego_v()) < 0.1);
-  // // 启停状态机
-  // planning_status->set_ready_to_go(planning_context.start_stop_result().state
-  // != StartStopInfo::STOP);
+  if (function_info.function_mode == DrivingFunctionMode::ACC ||
+      function_info.function_mode == DrivingFunctionMode::SCC) {
+    planning_status->set_standstill(std::fabs(ego_state->ego_v()) < 0.1);
+  }
+  // 启停状态机
+  planning_status->set_ready_to_go(planning_context.start_stop_result().state !=
+                                   StartStopInfo::STOP);
   planning_status->set_apa_planning_status(
       PlanningOutput::ApaPlanningStatus::NONE);
   // WB end:--------临时hack以上信号--------
@@ -400,12 +405,18 @@ void GeneralPlanning::FillPlanningHmiInfo(
   // HMI for NOA
   auto virtual_lane_manager =
       session_.environmental_model().get_virtual_lane_manager();
-  auto noa_info = planning_hmi_info->mutable_noa_output_info();
-  noa_info->set_dis_to_ramp(virtual_lane_manager->dis_to_ramp());
-  noa_info->set_dis_to_split(
+  auto noa_info = planning_hmi_info->mutable_ad_info();
+  noa_info->set_distance_to_ramp(virtual_lane_manager->dis_to_ramp());
+  noa_info->set_distance_to_split(
       virtual_lane_manager->distance_to_first_road_split());
-  noa_info->set_dis_to_merge(
+  noa_info->set_distance_to_merge(
       virtual_lane_manager->distance_to_first_road_merge());
+  // HMI for CIPV
+  // TBD: 后续需要丰富障碍物的信息，后车、侧方车辆等
+  auto cipv_info =
+      session_.planning_output_context().planning_hmi_info().cipv_info();
+  planning_hmi_info->mutable_cipv_info()->set_has_cipv(cipv_info.has_cipv());
+  planning_hmi_info->mutable_cipv_info()->set_cipv_id(cipv_info.cipv_id());
 }
 
 void GeneralPlanning::ClearParkingInfo(

@@ -96,23 +96,50 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
       local_view.road_info.local_point_valid() &&
       local_view.fusion_objects_info.local_point_valid() && enable_NOA;
   // location_valid = true; //hack
-  session_->mutable_environmental_model()->set_location_valid(location_valid);
+  auto environmental_model = session_->mutable_environmental_model();
+  environmental_model->set_location_valid(location_valid);
   // Step 1) update vehicleDbwStatus
   auto fsm_state = local_view.function_state_machine_info.current_state();
-  bool acc_active =
+  bool acc_mode =
       (fsm_state == FuncStateMachine::FunctionalState::ACC_ACTIVATE) ||
       (fsm_state == FuncStateMachine::FunctionalState::ACC_STAND_ACTIVATE) ||
       (fsm_state == FuncStateMachine::FunctionalState::ACC_STAND_WAIT) ||
       (fsm_state == FuncStateMachine::FunctionalState::ACC_OVERRIDE) ||
       (fsm_state == FuncStateMachine::FunctionalState::ACC_SECURE);
-  bool scc_active =
+  bool scc_mode =
       (fsm_state == FuncStateMachine::FunctionalState::SCC_ACTIVATE) ||
       (fsm_state == FuncStateMachine::FunctionalState::SCC_STAND_ACTIVATE) ||
       (fsm_state == FuncStateMachine::FunctionalState::SCC_STAND_WAIT) ||
       (fsm_state == FuncStateMachine::FunctionalState::SCC_OVERRIDE) ||
       (fsm_state == FuncStateMachine::FunctionalState::SCC_SECURE);
-  session_->mutable_environmental_model()->UpdateVehicleDbwStatus(acc_active ||
-                                                                  scc_active);
+  bool noa_mode =
+      (fsm_state == FuncStateMachine::FunctionalState::NOA_ACTIVATE) ||
+      (fsm_state == FuncStateMachine::FunctionalState::NOA_OVERRIDE) ||
+      (fsm_state == FuncStateMachine::FunctionalState::NOA_SECUR);
+  environmental_model->UpdateVehicleDbwStatus(acc_mode || scc_mode);
+
+  DrivingFunctionstate function_state = DrivingFunctionstate::ACTIVATE;
+  if (fsm_state == FuncStateMachine::FunctionalState::ACC_ACTIVATE ||
+      fsm_state == FuncStateMachine::FunctionalState::SCC_ACTIVATE ||
+      fsm_state == FuncStateMachine::FunctionalState::NOA_ACTIVATE) {
+    function_state = DrivingFunctionstate::ACTIVATE;
+  } else if (fsm_state == FuncStateMachine::FunctionalState::ACC_STAND_WAIT ||
+             fsm_state == FuncStateMachine::FunctionalState::SCC_STAND_WAIT) {
+    function_state = DrivingFunctionstate::STANDSTILL;
+  }
+
+  if (scc_mode) {
+    environmental_model->set_function_info(DrivingFunctionMode::SCC,
+                                           function_state);
+  } else if (acc_mode) {
+    environmental_model->set_function_info(DrivingFunctionMode::ACC,
+                                           function_state);
+  } else if (noa_mode) {
+    environmental_model->set_function_info(DrivingFunctionMode::NOA,
+                                           function_state);
+  } else {
+    LOG_ERROR("function mode error\n");
+  }
 
   // 自动有效，临时hack
   // session_->mutable_environmental_model()->UpdateVehicleDbwStatus(true);

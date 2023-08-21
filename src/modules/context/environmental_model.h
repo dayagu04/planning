@@ -116,8 +116,8 @@ class EnvironmentalModel {
     virtual_lane_manager_ = virtual_lane_manager;
   }
 
-  const std::shared_ptr<TrafficLightDecisionManager>
-      &get_traffic_light_decision_manager() const {
+  const std::shared_ptr<TrafficLightDecisionManager> &
+  get_traffic_light_decision_manager() const {
     return traffic_light_decision_manager_;
   }
   void set_traffic_light_decision_manager(
@@ -202,9 +202,16 @@ class EnvironmentalModel {
     return local_view_.hmi_mcu_inner_info;
   }
 
+  // update function by system function state
+  void set_function_info(DrivingFunctionMode mode, DrivingFunctionstate state) {
+    function_info_.function_mode = mode;
+    function_info_.function_state = state;
+  }
+  const DrivingFunctionInfo function_info() const {
+    return function_info_;
+  }
+
  private:
-  // planning::framework::Session *session_ = nullptr;
-  // planning::framework::Frame *frame_ = nullptr;
   LocalView local_view_;
   ad_common::hdmap::HDMap hd_map_;
   bool vehicle_dbw_status_{false};
@@ -224,6 +231,8 @@ class EnvironmentalModel {
 
   EgoPlanningConfigBuilder *parking_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *highway_config_builder_ptr_ = nullptr;
+
+  DrivingFunctionInfo function_info_;
 };
 
 }  // namespace planning

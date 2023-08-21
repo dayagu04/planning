@@ -384,7 +384,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
 
   for (auto &p : predictions) {
     // 过滤未与相机融合， 且在相机FOV之内的
-    if (p.type == 0 ||
+    if ((p.type == 0 && p.relative_speed_x + ego_state_.ego_v() < 1.) ||
         (!(p.fusion_source & OBSTACLE_SOURCE_CAMERA)) &&
             (p.relative_position_x > 0 &&
              tan(25) > fabs(p.relative_position_y / p.relative_position_x)) ||
@@ -677,7 +677,6 @@ void TrackletMaintainer::calc(
       fill_info_with_refline(*item, d_poly_offset);
       if (!hdmap_valid_) {
         fill_deriv_info(*item);
-        fill_possibility_of_cutin(*item);
       }
       // only use obstacle with camera source
       if ((item->fusion_source == OBSTACLE_SOURCE_CAMERA) ||
@@ -703,6 +702,7 @@ void TrackletMaintainer::calc(
   for (auto tr : tracked_objects) {
     // ignore obj without camera source
     if (!(tr->fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+      tr->is_avd_car = false;
       continue;
     }
     tr->is_avd_car = is_potential_avoiding_car(
@@ -744,7 +744,7 @@ void TrackletMaintainer::calc(
     obstacle->set_is_avoid_car(tr->is_avd_car);
     obstacle->set_is_lane_lead_obstacle(tr->is_lead);
     obstacle->set_current_lead_obstacle_to_ego(tr->is_temp_lead);
-    obstacle->set_cutin_p(tr->cutinp);
+    // obstacle->set_cutin_p(tr->cutinp);
   }
 }
 
@@ -1026,7 +1026,8 @@ void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
   // item.v_lat += (sequential_state->v_lat_deriv + 3.2 * v_lat_error) *
   // interval;
 
-  double k_v_lat = 2 * pi * 0.2 * interval / (1 + 2 * pi * 0.2 * interval);
+  // double k_v_lat = 2 * pi * 0.2 * interval / (1 + 2 * pi * 0.2 * interval);
+  double k_v_lat = 0.4;
   item.v_lat = k_v_lat * v_lat_unfiltered + (1 - k_v_lat) * item.v_lat;
   // obstacle without camera source, set to zero
   if ((item.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
@@ -1047,56 +1048,6 @@ void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
   // a_rel_unfiltered)); double k_a_lead = 2 * pi * 0.5 * interval / (1 + 2 * pi
   // * 0.5 * interval); item.a_rel = (k_a_lead == 1.0) ? 0.0 :
   //     (k_a_lead * a_rel_unfiltered + (1 - k_a_lead) *item.a_rel);
-}
-
-void TrackletMaintainer::fill_possibility_of_cutin(TrackedObject &item) {
-  LOG_DEBUG("----fill_possibility_of_cutin-----\n");
-  double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
-  double ttc = std::max(item.d_path - 1.5, 0.0) / std::max(-item.v_lat, 0.01);
-  ttc = std::min(15.0, ttc);
-
-  double new_ttc;
-  if (item.last_ttc == std::numeric_limits<double>::min()) {
-    new_ttc = ttc;
-    item.last_ttc = ttc;
-  } else {
-    double ttc_decay_rate = 0.5;
-    new_ttc = ttc * (1.0 - ttc_decay_rate) + item.last_ttc * ttc_decay_rate;
-  }
-
-  double lower_dist_threshold = (item.v_lead > -1.0) ? -10.0 : -5.0;
-  double upper_dist_threshold = 20 + 2 * std::pow(std::min(item.v_rel, 0.0), 2);
-
-  double is_need_consider = (item.v_lat < -0.1) && (new_ttc < 10.0);
-  double temp = item.d_rel + new_ttc * item.v_rel;
-  double is_in_range =
-      (temp > lower_dist_threshold && temp < upper_dist_threshold);
-
-  double gap = (item.last_recv_time == 0.0)
-                   ? planning_cycle_time
-                   : (item.timestamp - item.last_recv_time);
-
-  if (is_need_consider && is_in_range) {
-    item.cutinp = item.cutinp - gap * std::max(item.v_lat, -1.0) /
-                                    std::max(item.d_path, 0.01);
-  } else {
-    item.cutinp = item.cutinp - std::max(0.1, item.v_lat / 3);
-  }
-
-  double ttc_slope = equal_zero(gap) ? 0.0 : (new_ttc - item.last_ttc) / gap;
-  item.last_ttc = new_ttc;
-
-  if (ttc_slope > 0.1) {
-    item.cutinp *=
-        std::exp(-gap * (0.4 + std::pow(std::min(50.0, ttc_slope), 0.5) * 0.3));
-  } else {
-    item.cutinp *= std::exp(-gap * 0.4);
-  }
-
-  item.cutinp = std::max(0.0, std::min(1.0, item.cutinp));
-  if (item.oncoming) {
-    item.cutinp = 0.0;
-  }
 }
 
 void TrackletMaintainer::calc_intersection_with_refline(
@@ -1506,9 +1457,13 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
                                                double v_ego) {
   LOG_DEBUG("----is_potential_lead_one-----\n");
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
-  LOG_DEBUG("planning_cycle_time is: [%f]\n", planning_cycle_time);
+  double gap = (item.last_recv_time == 0.0)
+                   ? planning_cycle_time
+                   : std::max((item.timestamp - item.last_recv_time),
+                              planning_cycle_time);
+  LOG_DEBUG("the gap is : [%f]ms \n", gap);
   std::array<double, 5> xp1{1.5, 5.0, 10.0, 40.0, 60.0 + v_ego / 1.2};
-  std::array<double, 5> fp1{0.8, 1.0, 0.8, 0.7, 0.0};
+  std::array<double, 5> fp1{0.3, 0.4, 0.3, 0.25, 0.0};
   double t_lookahead = interp(item.d_rel, xp1, fp1);
 
   std::array<double, 3> xp2{1.5, 5.0, 10.0};
@@ -1556,9 +1511,6 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
     item.leadone_confidence_cnt = 0.0;
     item.is_lead = d_path < lead_d_path_thr && item.d_rel >= 0.0;
   } else {
-    double gap = (item.last_recv_time == 0.0)
-                     ? planning_cycle_time
-                     : (item.timestamp - item.last_recv_time);
     LOG_DEBUG("the gap is : [%f]ms \n", gap);
     if (d_path < lead_d_path_thr && item.d_rel > 0.0) {
       item.leadone_confidence_cnt =
@@ -1586,6 +1538,81 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
                    lead_confidence_thrshld * planning_cycle_time;
   }
   LOG_DEBUG("item.is_lead: [%d]\n", item.is_lead);
+
+  // calculate cutin
+  if (hdmap_valid_) {
+  } else {
+    LOG_DEBUG("----fill_possibility_of_cutin-----\n");
+    double ttc = std::max(item.d_path - 1.5, 0.0) / std::max(-item.v_lat, 0.01);
+    ttc = std::min(15.0, ttc);
+
+    double new_ttc;
+    if (item.last_ttc == std::numeric_limits<double>::min()) {
+      new_ttc = ttc;
+      item.last_ttc = ttc;
+    } else {
+      double ttc_decay_rate = 0.5;
+      new_ttc = ttc * (1.0 - ttc_decay_rate) + item.last_ttc * ttc_decay_rate;
+    }
+    double lower_dist_threshold = (item.v_lead > -1.0) ? -10.0 : -5.0;
+    double upper_dist_threshold =
+        20 + 2 * std::pow(std::min(item.v_rel, 0.0), 2);
+
+    double is_need_consider = (item.v_lat < -0.2) && (new_ttc < 10.0);
+    double temp = item.d_rel + new_ttc * item.v_rel;
+    double is_in_range =
+        (temp > lower_dist_threshold && temp < upper_dist_threshold);
+
+    std::array<double, 5> xp5{1.5, 5.0, 10.0, 40.0, 60.0 + v_ego / 1.2};
+    std::array<double, 5> fp5{0.8, 1.0, 0.8, 0.7, 0.0};
+    t_lookahead = interp(item.d_rel, xp5, fp5);
+    lat_corr = std::max(max_d_offset, std::min(0.0, t_lookahead * item.v_lat)) *
+               item.lat_coeff;
+    if (item.oncoming && item.d_rel >= 0) {
+      lat_corr = 0.0;
+    }
+
+    d_path = std::max(item.d_path_pos + lat_corr, 0.0);
+    if (d_path < lead_d_path_thr && item.d_rel > 0.0) {
+      item.cutin_confidence_cnt =
+          std::min(item.cutin_confidence_cnt + gap, 50 * planning_cycle_time);
+    } else {
+      int count = (int)((gap + 0.01) / planning_cycle_time);
+      item.cutin_confidence_cnt = std::max(
+          item.cutin_confidence_cnt - 10 * count * planning_cycle_time, 0.0);
+      LOG_DEBUG("!!!!!!!cutin_confidence_cnt is : [%f] \n",
+                item.cutin_confidence_cnt);
+    }
+
+    std::array<double, 5> xp4{0, 30, 60, 90, 120};
+    std::array<double, 5> fp4{1, 1, 1, 5, 10};
+    std::array<double, 5> fp4_2{1, 1, 1, 1, 1};
+    double cutin_confidence_cnt = 1.0;
+    if (item.type == 1) {
+      cutin_confidence_cnt = interp(item.d_rel, xp4, fp4_2);
+    } else {
+      cutin_confidence_cnt = interp(item.d_rel, xp4, fp4);
+    }
+    LOG_DEBUG("cutin_confidence_cnt is : [%f]\n", cutin_confidence_cnt);
+    if (is_need_consider && is_in_range) {
+      if (item.cutin_confidence_cnt >=
+          cutin_confidence_cnt * planning_cycle_time) {
+        item.cutinp =
+            std::max(0.2, item.cutinp - gap * std::max(item.v_lat, -1.0) /
+                                            std::max(item.d_path, 0.01));
+      } else {
+        item.cutinp = item.cutinp - std::max(0.1, item.v_lat / 3);
+      }
+    } else {
+      item.cutinp = item.cutinp - std::max(0.1, item.v_lat / 3);
+    }
+    item.last_ttc = new_ttc;
+    item.cutinp = std::max(0.0, std::min(1.0, item.cutinp));
+    if (item.oncoming) {
+      item.cutinp = 0.0;
+    }
+    LOG_DEBUG("cutin_p is : [%f]\n", item.cutinp);
+  }
   return item.is_lead;
 }
 

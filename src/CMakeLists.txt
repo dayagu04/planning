@@ -33,6 +33,12 @@ endif()
 
 message("CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}")
 
+if(ADAPTER STREQUAL "cyber")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCYBER_ENV")
+elseif(ADAPTER STREQUAL "ap")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DAP_ENV")
+endif()
+
 add_subdirectory(proto EXCLUDE_FROM_ALL)
 add_subdirectory(common EXCLUDE_FROM_ALL)
 add_subdirectory(modules EXCLUDE_FROM_ALL)
@@ -48,14 +54,13 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/osqp thirdparty/osqp.out EXCLU
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/nlohmann_json thirdparty/nlohmann_json.out EXCLUDE_FROM_ALL)
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/hfsm thirdparty/hfsm.out EXCLUDE_FROM_ALL)
 add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/proto interface.out EXCLUDE_FROM_ALL)
+add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/private/planning interface_planning.out EXCLUDE_FROM_ALL)
 
 if(ADAPTER STREQUAL "cyber")
   add_subdirectory(adapter/cyber)
   add_subdirectory(apa_simulation)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCYBER_ENV")
 elseif(ADAPTER STREQUAL "ap")
   # add_subdirectory(adapter/ap)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DAP_ENV")
 endif()
 
 file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning)

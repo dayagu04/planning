@@ -16,7 +16,7 @@ void LaneKeepAssistManager::Init(framework::Session *session) {
 void LaneKeepAssistManager::Update() {
   // input update
   lkas_input_.road_info.left_line_valid =
-      0;  // 本车道左侧道线有效性 0:Invalid 1:Valid
+      false;  // 本车道左侧道线有效性 0:Invalid 1:Valid
   lkas_input_.road_info.left_line_type =
       0;  // 本车道左侧车道线类型 0：虚线  1：实线
   lkas_input_.road_info.left_line_c0 = 0.0F;  // 本车道左侧道线方程系数c0
@@ -24,7 +24,7 @@ void LaneKeepAssistManager::Update() {
   lkas_input_.road_info.left_line_c2 = 0.0F;  // 本车道左侧道线方程系数c3
   lkas_input_.road_info.left_line_c3 = 0.0F;  // 本车道左侧道线方程系数c3
   lkas_input_.road_info.right_line_valid =
-      0;  // 本车道右侧道线有效性 0:Invalid 1:Valid
+      false;  // 本车道右侧道线有效性 0:Invalid 1:Valid
   lkas_input_.road_info.right_line_type =
       0;  // 本车道右侧车道线类型 0：虚线  1：实线
   lkas_input_.road_info.right_line_c0 = 0.0F;  // 本车道右侧道线方程系数c0
@@ -32,157 +32,185 @@ void LaneKeepAssistManager::Update() {
   lkas_input_.road_info.right_line_c2 = 0.0F;  // 本车道右侧道线方程系数c2
   lkas_input_.road_info.right_line_c3 = 0.0F;  // 本车道右侧道线方程系数c3
   lkas_input_.road_info.left_roadedge_valid =
-      0;  // 本车道左侧路缘有效性 0:Invalid 1:Valid
+      false;  // 本车道左侧路缘有效性 0:Invalid 1:Valid
   lkas_input_.road_info.left_roadedge_c0 = 0.0F;  // 本车道左侧路缘方程系数c0
   lkas_input_.road_info.left_roadedge_c1 = 0.0F;  // 本车道左侧路缘方程系数c1
   lkas_input_.road_info.left_roadedge_c2 = 0.0F;  // 本车道左侧路缘方程系数c3
   lkas_input_.road_info.left_roadedge_c3 = 0.0F;  // 本车道左侧路缘方程系数c3
   lkas_input_.road_info.right_roadedge_valid =
-      0;  // 本车道右侧路缘有效性 0:Invalid 1:Valid
+      false;  // 本车道右侧路缘有效性 0:Invalid 1:Valid
   lkas_input_.road_info.right_roadedge_c0 = 0.0F;  // 本车道右侧路缘方程系数c0
   lkas_input_.road_info.right_roadedge_c1 = 0.0F;  // 本车道右侧路缘方程系数c1
   lkas_input_.road_info.right_roadedge_c2 = 0.0F;  // 本车道右侧路缘方程系数c2
   lkas_input_.road_info.right_roadedge_c3 = 0.0F;  // 本车道右侧路缘方程系数c3
   lkas_input_.road_info.lane_width_valid =
-      0;  // 当前车道宽度信息有效性 0:Invalid 1:Valid
+      false;  // 当前车道宽度信息有效性 0:Invalid 1:Valid
   lkas_input_.road_info.lane_width = 0.0F;  // 当前车道宽度,单位:m
 
   // 车道线信息初始化
   // 当前车道地址
   // auto ptr_environmental_model = session_->mutable_environmental_model();
-  auto ptr_current_lane = session_->mutable_environmental_model()
-                              ->get_virtual_lane_manager()
-                              ->get_current_lane();
-  // 左侧边界结构体
-  auto ptr_current_lane_left_boundary =
-      ptr_current_lane->get_left_lane_boundary();
-  // 判断边界是路沿还是道线
-  uint8 left_boundary_existence = ptr_current_lane_left_boundary.existence();
-  /*
-  LineType_LINE_TYPE_UNKNOWN = 0,
-  LineType_LINE_TYPE_LANELINE = 1,//车道线
-  LineType_LINE_TYPE_BORDERLINE = 2, 路沿，边沿线，物理隔离障碍物统称
-  LineType_LINE_TYPE_CENTER = 3
-   */
-  uint8 left_boundary_type = ptr_current_lane_left_boundary.type();
-
-  left_boundary_type = 1;
-
-  if ((left_boundary_type == 1) && left_boundary_existence == 1) {
-    lkas_input_.road_info.left_line_valid = 1;
-  } else {
-    lkas_input_.road_info.left_line_valid = 0;
-  }
-
-  if (left_boundary_type == 2 && left_boundary_existence == 1) {
-    lkas_input_.road_info.left_roadedge_valid = 1;
-  } else {
-    lkas_input_.road_info.left_roadedge_valid = 0;
-  }
-
-  if (lkas_input_.road_info.left_line_valid == 1)  // 判断为道线
-  {
-    // LaneBoundaryType_MARKING_UNKNOWN = 0, /* 未知线型 */
-    // LaneBoundaryType_MARKING_DASHED = 1, /* 虚线 */
-    // LaneBoundaryType_MARKING_SOLID = 2, /* 实线 */
-    // LaneBoundaryType_MARKING_SHORT_DASHED = 3, /* 短虚线 */
-    // LaneBoundaryType_MARKING_DOUBLE_DASHED = 4, /* 双虚线 */
-    // LaneBoundaryType_MARKING_DOUBLE_SOLID = 5, /* 双实线 */
-    // LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID = 6, /* 左虚右实线 */
-    // LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED = 7 /* 左实右虚线 */
-    auto left_line_type =
-        ptr_current_lane_left_boundary.type_segments(0).type();
-    if (left_line_type == 1 || left_line_type == 3 || left_line_type == 4 ||
-        left_line_type == 7) {
-      lkas_input_.road_info.left_line_type = 0;  // 可跨越道线
-    } else {
-      lkas_input_.road_info.left_line_type = 1;  // 不可跨越道线
-    }
-
-    lkas_input_.road_info.left_line_c0 =
-        ptr_current_lane_left_boundary.poly_coefficient(0);
-    lkas_input_.road_info.left_line_c1 =
-        ptr_current_lane_left_boundary.poly_coefficient(1);
-    lkas_input_.road_info.left_line_c2 =
-        ptr_current_lane_left_boundary.poly_coefficient(2);
-    lkas_input_.road_info.left_line_c3 =
-        ptr_current_lane_left_boundary.poly_coefficient(3);
-  } else if (lkas_input_.road_info.left_roadedge_valid == 1)  // 判断为路沿
-  {
-    lkas_input_.road_info.left_roadedge_c0 =
-        ptr_current_lane_left_boundary.poly_coefficient(0);
-    lkas_input_.road_info.left_roadedge_c1 =
-        ptr_current_lane_left_boundary.poly_coefficient(1);
-    lkas_input_.road_info.left_roadedge_c2 =
-        ptr_current_lane_left_boundary.poly_coefficient(2);
-    lkas_input_.road_info.left_roadedge_c3 =
-        ptr_current_lane_left_boundary.poly_coefficient(3);
+  std::shared_ptr<VirtualLane> ptr_current_lane = nullptr;
+  auto ptr_virtual_lane_manager =
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
+  if (ptr_virtual_lane_manager != nullptr) {
+    ptr_current_lane = session_->mutable_environmental_model()
+                           ->get_virtual_lane_manager()
+                           ->get_current_lane();
   } else {
     /*do nothing*/
   }
-  // 右侧边界
-  auto ptr_current_lane_right_boundary =
-      ptr_current_lane->get_right_lane_boundary();
-  uint8 right_boundary_existence = ptr_current_lane_right_boundary.existence();
-  /*
-  LineType_LINE_TYPE_UNKNOWN = 0,
-  LineType_LINE_TYPE_LANELINE = 1,//车道线
-  LineType_LINE_TYPE_BORDERLINE = 2, 路沿，边沿线，物理隔离障碍物统称
-  LineType_LINE_TYPE_CENTER = 3
-   */
-  uint8 right_boundary_type = ptr_current_lane_right_boundary.type();
-  right_boundary_type = 1;
-  if ((right_boundary_type == 1) && right_boundary_existence == 1) {
-    lkas_input_.road_info.right_line_valid = 1;
-  } else {
-    lkas_input_.road_info.right_line_valid = 0;
-  }
 
-  if (right_boundary_type == 2 && right_boundary_existence == 1) {
-    lkas_input_.road_info.right_roadedge_valid = 1;
-  } else {
-    lkas_input_.road_info.right_roadedge_valid = 0;
-  }
+  if (ptr_current_lane != nullptr) {
+    // 左侧边界结构体
+    auto ptr_current_lane_left_boundary =
+        ptr_current_lane->get_left_lane_boundary();
+    // 判断边界是路沿还是道线
+    uint8 left_boundary_existence = ptr_current_lane_left_boundary.existence();
+    /*
+    LineType_LINE_TYPE_UNKNOWN = 0,
+    LineType_LINE_TYPE_LANELINE = 1,//车道线
+    LineType_LINE_TYPE_BORDERLINE = 2, 路沿，边沿线，物理隔离障碍物统称
+    LineType_LINE_TYPE_CENTER = 3
+     */
+    FusionRoad::LineType left_boundary_type =
+        ptr_current_lane_left_boundary.type();
+    left_boundary_type = FusionRoad::LineType::LINE_TYPE_LANELINE;
 
-  if (lkas_input_.road_info.right_line_valid == 1) {
-    // LaneBoundaryType_MARKING_UNKNOWN = 0, /* 未知线型 */
-    // LaneBoundaryType_MARKING_DASHED = 1, /* 虚线 */
-    // LaneBoundaryType_MARKING_SOLID = 2, /* 实线 */
-    // LaneBoundaryType_MARKING_SHORT_DASHED = 3, /* 短虚线 */
-    // LaneBoundaryType_MARKING_DOUBLE_DASHED = 4, /* 双虚线 */
-    // LaneBoundaryType_MARKING_DOUBLE_SOLID = 5, /* 双实线 */
-    // LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID = 6, /* 左虚右实线 */
-    // LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED = 7 /* 左实右虚线 */
-    auto right_line_type =
-        ptr_current_lane_right_boundary.type_segments(0).type();
-    if ((right_line_type == 1) || (right_line_type == 3) ||
-        (right_line_type == 4) || (right_line_type == 6)) {
-      lkas_input_.road_info.right_line_type = 0;
+    if ((left_boundary_type == FusionRoad::LineType::LINE_TYPE_LANELINE) &&
+        left_boundary_existence == 1) {
+      lkas_input_.road_info.left_line_valid = true;
     } else {
-      lkas_input_.road_info.right_line_type = 1;
+      lkas_input_.road_info.left_line_valid = false;
     }
-    lkas_input_.road_info.right_line_c0 =
-        ptr_current_lane_right_boundary.poly_coefficient(0);
-    lkas_input_.road_info.right_line_c1 =
-        ptr_current_lane_right_boundary.poly_coefficient(1);
-    lkas_input_.road_info.right_line_c2 =
-        ptr_current_lane_right_boundary.poly_coefficient(2);
-    lkas_input_.road_info.right_line_c3 =
-        ptr_current_lane_right_boundary.poly_coefficient(3);
-  } else if (lkas_input_.road_info.right_roadedge_valid == 1) {
-    lkas_input_.road_info.right_roadedge_c0 =
-        ptr_current_lane_right_boundary.poly_coefficient(0);
-    lkas_input_.road_info.right_roadedge_c1 =
-        ptr_current_lane_right_boundary.poly_coefficient(1);
-    lkas_input_.road_info.right_roadedge_c2 =
-        ptr_current_lane_right_boundary.poly_coefficient(2);
-    lkas_input_.road_info.right_roadedge_c3 =
-        ptr_current_lane_right_boundary.poly_coefficient(3);
+
+    if (left_boundary_type == FusionRoad::LineType::LINE_TYPE_BORDERLINE &&
+        left_boundary_existence == 1) {
+      lkas_input_.road_info.left_roadedge_valid = true;
+    } else {
+      lkas_input_.road_info.left_roadedge_valid = false;
+    }
+
+    if (lkas_input_.road_info.left_line_valid == true)  // 判断为道线
+    {
+      // LaneBoundaryType_MARKING_UNKNOWN = 0, /* 未知线型 */
+      // LaneBoundaryType_MARKING_DASHED = 1, /* 虚线 */
+      // LaneBoundaryType_MARKING_SOLID = 2, /* 实线 */
+      // LaneBoundaryType_MARKING_SHORT_DASHED = 3, /* 短虚线 */
+      // LaneBoundaryType_MARKING_DOUBLE_DASHED = 4, /* 双虚线 */
+      // LaneBoundaryType_MARKING_DOUBLE_SOLID = 5, /* 双实线 */
+      // LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID = 6, /* 左虚右实线 */
+      // LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED = 7 /* 左实右虚线 */
+      auto left_line_type = ptr_current_lane_left_boundary.type_segments(0).type();
+      if (left_line_type == Common::LaneBoundaryType::MARKING_DASHED ||
+          left_line_type == Common::LaneBoundaryType::MARKING_SHORT_DASHED ||
+          left_line_type == Common::LaneBoundaryType::MARKING_DOUBLE_DASHED ||
+          left_line_type ==
+              Common::LaneBoundaryType::MARKING_LEFT_SOLID_RIGHT_DASHED) {
+        lkas_input_.road_info.left_line_type = 0;  // 可跨越道线
+      } else {
+        lkas_input_.road_info.left_line_type = 1;  // 不可跨越道线
+      }
+
+      lkas_input_.road_info.left_line_c0 =
+          ptr_current_lane_left_boundary.poly_coefficient(0);
+      lkas_input_.road_info.left_line_c1 =
+          ptr_current_lane_left_boundary.poly_coefficient(1);
+      lkas_input_.road_info.left_line_c2 =
+          ptr_current_lane_left_boundary.poly_coefficient(2);
+      lkas_input_.road_info.left_line_c3 =
+          ptr_current_lane_left_boundary.poly_coefficient(3);
+    } else if (lkas_input_.road_info.left_roadedge_valid == true)  // 判断为路沿
+    {
+      lkas_input_.road_info.left_roadedge_c0 =
+          ptr_current_lane_left_boundary.poly_coefficient(0);
+      lkas_input_.road_info.left_roadedge_c1 =
+          ptr_current_lane_left_boundary.poly_coefficient(1);
+      lkas_input_.road_info.left_roadedge_c2 =
+          ptr_current_lane_left_boundary.poly_coefficient(2);
+      lkas_input_.road_info.left_roadedge_c3 =
+          ptr_current_lane_left_boundary.poly_coefficient(3);
+    } else {
+      /*do nothing*/
+    }
+    // 右侧边界
+    auto ptr_current_lane_right_boundary =
+        ptr_current_lane->get_right_lane_boundary();
+    uint8 right_boundary_existence =
+        ptr_current_lane_right_boundary.existence();
+    /*
+    LineType_LINE_TYPE_UNKNOWN = 0,
+    LineType_LINE_TYPE_LANELINE = 1,//车道线
+    LineType_LINE_TYPE_BORDERLINE = 2, 路沿，边沿线，物理隔离障碍物统称
+    LineType_LINE_TYPE_CENTER = 3
+     */
+    FusionRoad::LineType right_boundary_type =
+        ptr_current_lane_right_boundary.type();
+    right_boundary_type = FusionRoad::LineType::LINE_TYPE_LANELINE;
+
+    if ((right_boundary_type == FusionRoad::LineType::LINE_TYPE_LANELINE) &&
+        right_boundary_existence == 1) {
+      lkas_input_.road_info.right_line_valid = true;
+    } else {
+      lkas_input_.road_info.right_line_valid = false;
+    }
+
+    if (right_boundary_type == FusionRoad::LineType::LINE_TYPE_BORDERLINE &&
+        right_boundary_existence == 1) {
+      lkas_input_.road_info.right_roadedge_valid = true;
+    } else {
+      lkas_input_.road_info.right_roadedge_valid = false;
+    }
+
+    if (lkas_input_.road_info.right_line_valid == true) {
+      // LaneBoundaryType_MARKING_UNKNOWN = 0, /* 未知线型 */
+      // LaneBoundaryType_MARKING_DASHED = 1, /* 虚线 */
+      // LaneBoundaryType_MARKING_SOLID = 2, /* 实线 */
+      // LaneBoundaryType_MARKING_SHORT_DASHED = 3, /* 短虚线 */
+      // LaneBoundaryType_MARKING_DOUBLE_DASHED = 4, /* 双虚线 */
+      // LaneBoundaryType_MARKING_DOUBLE_SOLID = 5, /* 双实线 */
+      // LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID = 6, /* 左虚右实线 */
+      // LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED = 7 /* 左实右虚线 */
+      auto right_line_type = ptr_current_lane_right_boundary.type_segments(0).type();
+      if ((right_line_type == Common::LaneBoundaryType::MARKING_DASHED) ||
+          (right_line_type == Common::LaneBoundaryType::MARKING_SHORT_DASHED) ||
+          (right_line_type ==
+           Common::LaneBoundaryType::MARKING_DOUBLE_DASHED) ||
+          (right_line_type ==
+           Common::LaneBoundaryType::MARKING_LEFT_DASHED_RIGHT_SOLID)) {
+        lkas_input_.road_info.right_line_type = 0;
+      } else {
+        lkas_input_.road_info.right_line_type = 1;
+      }
+      lkas_input_.road_info.right_line_c0 =
+          ptr_current_lane_right_boundary.poly_coefficient(0);
+      lkas_input_.road_info.right_line_c1 =
+          ptr_current_lane_right_boundary.poly_coefficient(1);
+      lkas_input_.road_info.right_line_c2 =
+          ptr_current_lane_right_boundary.poly_coefficient(2);
+      lkas_input_.road_info.right_line_c3 =
+          ptr_current_lane_right_boundary.poly_coefficient(3);
+    } else if (lkas_input_.road_info.right_roadedge_valid == 1) {
+      lkas_input_.road_info.right_roadedge_c0 =
+          ptr_current_lane_right_boundary.poly_coefficient(0);
+      lkas_input_.road_info.right_roadedge_c1 =
+          ptr_current_lane_right_boundary.poly_coefficient(1);
+      lkas_input_.road_info.right_roadedge_c2 =
+          ptr_current_lane_right_boundary.poly_coefficient(2);
+      lkas_input_.road_info.right_roadedge_c3 =
+          ptr_current_lane_right_boundary.poly_coefficient(3);
+    } else {
+      /*do nothing*/
+    }
+    // 道路宽度
+    lkas_input_.road_info.lane_width_valid = true;
+    lkas_input_.road_info.lane_width = ptr_current_lane->width();
+
+    // update
+    CalculateWheelToLine();
   } else {
     /*do nothing*/
   }
-  // 道路宽度
-  lkas_input_.road_info.lane_width = ptr_current_lane->width();
 
   // 车辆信息初始化、参数初始化
   auto ptr_ego_state_manager =
@@ -237,8 +265,7 @@ void LaneKeepAssistManager::Update() {
       session_->mutable_environmental_model()->vehicle_param().wheel_base;
   lkas_input_.vehicle_info.common_veh_width =
       session_->mutable_environmental_model()->vehicle_param().width;
-  // update
-  CalculateWheelToLine();
+
   JSON_DEBUG_VALUE("lkas_function::left_line_c0",
                    lkas_input_.road_info.left_line_c0);
   JSON_DEBUG_VALUE("lkas_function::left_line_c1",

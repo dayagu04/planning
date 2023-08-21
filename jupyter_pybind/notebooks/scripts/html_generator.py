@@ -11,6 +11,8 @@ def run_command_by_path(file_path):
         run_command = ["python", "plot_lat_plan_html.py", file_path]
     elif command == "plot_lon_plan_html":
         run_command = ["python", "plot_lon_plan_html.py", file_path]
+    elif command == "plot_apa_html":
+        run_command = ["python", "plot_apa_html.py", file_path]
     else:
         print(f"未知的命令: {command}")
         return
