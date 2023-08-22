@@ -39,6 +39,24 @@ class LoadCyberbag:
 
     # fusion object msg
     self.fus_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+    
+    # me object msg
+    self.me_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+    
+    # radar_fm object msg
+    self.radar_fm_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+    
+    # radar_fl object msg
+    self.radar_fl_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+    
+    # radar_fr object msg
+    self.radar_fr_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+    
+    # radar_rl object msg
+    self.radar_rl_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+    
+    # radar_rr object msg
+    self.radar_rr_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
     # vehicle service msg
     self.vs_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
@@ -131,6 +149,87 @@ class LoadCyberbag:
     except:
       self.fus_msg['enable'] = False
       print('missing /iflytek/fusion/objects !!!')
+      
+    # load mobile_eye_camera objects msg
+    try:
+      me_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/mobileye/camera_perception/objects"):
+        me_msg_dict[msg.header.timestamp / 1e6] = msg
+      me_msg_dict = {key: val for key, val in sorted(me_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in me_msg_dict.items():
+        self.me_msg['t'].append(t)
+        self.me_msg['abs_t'].append(t)
+        self.me_msg['data'].append(msg)
+      self.me_msg['t'] = [tmp - t0  for tmp in self.me_msg['t']]
+      print('me_msg time:',self.me_msg['t'][-1])
+      if len(self.me_msg['t']) > 0:
+        self.me_msg['enable'] = True
+      else:
+        self.me_msg['enable'] = False
+    except:
+      self.me_msg['enable'] = False
+      print('missing /mobileye/camera_perception/objects !!!')
+      
+    # load radar objects msg
+    radar_msg = [self.radar_fm_msg,self.radar_fl_msg,self.radar_fr_msg,self.radar_rl_msg,self.radar_rr_msg]
+    topic = ["/iflytek/radar_fm_perception_info","/iflytek/radar_fl_perception_info","/iflytek/radar_fr_perception_info","/iflytek/radar_rl_perception_info","/iflytek/radar_rr_perception_info"]
+    # for i in range(5):
+    #   print(topic[i])
+    for i in range(5):
+      try:
+        radar_msg_dict = {}
+        if i == 0:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_fm_perception_info"):
+            radar_msg_dict[msg.header.timestamp / 1e6] = msg
+        elif i == 1:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_fl_perception_info"):
+            radar_msg_dict[msg.header.timestamp / 1e6] = msg
+        elif i == 2:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_fr_perception_info"):
+            radar_msg_dict[msg.header.timestamp / 1e6] = msg
+        elif i == 3:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_rl_perception_info"):
+            radar_msg_dict[msg.header.timestamp / 1e6] = msg
+        elif i == 4:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_rr_perception_info"):
+            radar_msg_dict[msg.header.timestamp / 1e6] = msg
+        radar_msg_dict = {key: val for key, val in sorted(radar_msg_dict.items(), key = lambda ele: ele[0])}
+        for t, msg in radar_msg_dict.items():
+          radar_msg[i]['t'].append(t)
+          radar_msg[i]['abs_t'].append(t)
+          radar_msg[i]['data'].append(msg)
+          temp_t = radar_msg[i]['t']
+        radar_msg[i]['t'] = [tmp - t0  for tmp in temp_t]
+          # print("load message:",i)
+        # print(i,'_time:',radar_msg[i]['t'][-1])
+        if len(radar_msg[i]['t']) > 0:
+          radar_msg[i]['enable'] = True
+          # print("true:",i)
+        else:
+          radar_msg[i]['enable'] = False
+      except:
+        radar_msg[i]['enable'] = False
+        print('missing',topic[i])
+      
+    # # load radar_fl objects msg
+    # try:
+    #   radar_fl_msg_dict = {}
+    #   for topic, msg, t in self.bag.read_messages("/iflytek/radar_fl_perception_info"):
+    #     radar_fl_msg_dict[msg.header.timestamp / 1e6] = msg
+    #   radar_fl_msg_dict = {key: val for key, val in sorted(radar_fl_msg_dict.items(), key = lambda ele: ele[0])}
+    #   for t, msg in radar_fl_msg_dict.items():
+    #     self.radar_fl_msg['t'].append(t)
+    #     self.radar_fl_msg['abs_t'].append(t)
+    #     self.radar_fl_msg['data'].append(msg)
+    #   self.radar_fl_msg['t'] = [tmp - t0  for tmp in self.radar_fl_msg['t']]
+    #   print('radar_fl_msg time:',self.radar_fl_msg['t'][-1])
+    #   if len(self.radar_fl_msg['t']) > 0:
+    #     self.radar_fl_msg['enable'] = True
+    #   else:
+    #     self.radar_fl_msg['enable'] = False
+    # except:
+    #   self.radar_fl_msg['enable'] = False
+    #   print('missing /iflytek/radar_fl/objects !!!')
 
     # load vehicle service msg
     try:
@@ -348,12 +447,18 @@ class LoadCyberbag:
       self.soc_state_msg['enable'] = False
       print('missing /iflytek/system_state/soc_state !!!')
     return max_time
-
+#/mobileye/camera_perception/objects
   def msg_timeline_figure(self):
     topic_list = [
       '/iflytek/localization/ego_pose',
       '/iflytek/fusion/road_fusion',
       '/iflytek/fusion/objects',
+      '/mobileye/camera_perception/objects',
+      '/iflytek/radar_fm_perception_info',
+      '/iflytek/radar_fl_perception_info',
+      '/iflytek/radar_fr_perception_info',
+      '/iflytek/radar_rl_perception_info',
+      '/iflytek/radar_rr_perception_info',
       '/iflytek/vehicle_service',
       '/iflytek/prediction/prediction_result',
       '/iflytek/planning/plan',
@@ -375,6 +480,12 @@ class LoadCyberbag:
       self.loc_msg,
       self.road_msg,
       self.fus_msg,
+      self.me_msg,
+      self.radar_fm_msg,
+      self.radar_fl_msg,
+      self.radar_fr_msg,
+      self.radar_rl_msg,
+      self.radar_rr_msg,
       self.vs_msg,
       self.prediction_msg,
       self.plan_msg,
@@ -459,6 +570,36 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     while bag_loader.fus_msg['t'][fus_msg_idx] <= bag_time and fus_msg_idx < (len(bag_loader.fus_msg['t'])-2):
         fus_msg_idx = fus_msg_idx + 1
   local_view_data['data_index']['fus_msg_idx'] = fus_msg_idx
+  
+  me_msg_idx = 0
+  if bag_loader.me_msg['enable'] == True:
+    while bag_loader.me_msg['t'][me_msg_idx] <= bag_time and me_msg_idx < (len(bag_loader.me_msg['t'])-2):
+        me_msg_idx = me_msg_idx + 1
+        # print("bag_loader.me_msg['t'][me_msg_idx]:",bag_loader.me_msg['t'][me_msg_idx])
+    # print("me_msg_idx:",me_msg_idx)
+  local_view_data['data_index']['me_msg_idx'] = me_msg_idx
+  
+  # radar_msg_idx = dict()
+  radar_msg_idx_list = ['radar_fm_msg_idx','radar_fl_msg_idx','radar_fr_msg_idx','radar_rl_msg_idx','radar_rr_msg_idx']
+  radar_msg_idx = [0,0,0,0,0]
+  bag_loader_radar_msg = [bag_loader.radar_fm_msg, bag_loader.radar_fl_msg, bag_loader.radar_fr_msg,
+                          bag_loader.radar_rl_msg, bag_loader.radar_rr_msg]
+  # print("bag_loader.radar_fm_msg:",bag_loader.radar_fm_msg['t'][0])
+  for i in range(5):
+    if bag_loader_radar_msg[i]['enable'] == True:
+      while bag_loader_radar_msg[i]['t'][radar_msg_idx[i]] <= bag_time and radar_msg_idx[i] < (len(bag_loader_radar_msg[i]['t'])-2):
+          radar_msg_idx[i] = radar_msg_idx[i] + 1
+          # print("bag_loader_radar_msg[i]['t'][radar_msg_idx[i]]:",bag_loader_radar_msg[i]['t'][radar_msg_idx[i]])
+          # print("bag_time:",bag_time)
+          # print("radar_msg_idx[i]:",radar_msg_idx[i])
+      print('radar_msg_idx:',i,radar_msg_idx[i])
+    local_view_data['data_index'][radar_msg_idx_list[i]] = radar_msg_idx[i]
+  
+  # radar_fm_msg_idx = 0
+  # if bag_loader.radar_fm_msg['enable'] == True:
+  #   while bag_loader.radar_fm_msg['t'][radar_fm_msg_idx] <= bag_time and radar_fm_msg_idx < (len(bag_loader.radar_fm_msg['t'])-2):
+  #       radar_fm_msg_idx = radar_fm_msg_idx + 1
+  # local_view_data['data_index']['radar_fm_msg_idx'] = radar_fm_msg_idx
 
   vs_msg_idx = 0
   if bag_loader.vs_msg['enable'] == True:
@@ -781,6 +922,162 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             'pos_y' : obstacles_info['pos_y'],
             'obs_label' : obstacles_info['obs_label'],
           })
+  
+  # load me_obj
+  if bag_loader.me_msg['enable'] == True:
+    # print("me_msg_idx:",me_msg_idx)
+    me_camera_objects = bag_loader.me_msg['data'][me_msg_idx].camera_perception_object_list
+    # print(me_camera_objects.size())
+    obstacles_info_all1 = load_obstacle_me(me_camera_objects)
+    # 加载自车坐标系下的数据
+    if 0:
+      for key in obstacles_info_all1:
+        obstacles_info = obstacles_info_all1[key]
+        if key == 1:
+          local_view_data['data_me_obj'].data.update({
+            'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
+            'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
+            'pos_x_rel' : obstacles_info['pos_x_rel'],
+            'pos_y_rel' : obstacles_info['pos_y_rel'],
+            'obstacles_x': obstacles_info['obstacles_x'],
+            'obstacles_y': obstacles_info['obstacles_y'],
+            'pos_x' : obstacles_info['pos_x'],
+            'pos_y' : obstacles_info['pos_y'],
+            'obs_label' : obstacles_info['obs_label'],
+          })
+        else :
+          local_view_data['data_snrd_obj'].data.update({
+            'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
+            'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
+            'pos_x_rel' : obstacles_info['pos_x_rel'],
+            'pos_y_rel' : obstacles_info['pos_y_rel'],
+            'obstacles_x': obstacles_info['obstacles_x'],
+            'obstacles_y': obstacles_info['obstacles_y'],
+            'pos_x' : obstacles_info['pos_x'],
+            'pos_y' : obstacles_info['pos_y'],
+            'obs_label' : obstacles_info['obs_label'],
+          })
+    else :
+      for key in obstacles_info_all1:
+        obstacles_info = obstacles_info_all1[key]
+        poses_x = obstacles_info['pos_x']
+        poses_y = obstacles_info['pos_y']
+        poses_x_rel = []
+        poses_y_rel = []
+        # print(obstacles_info['obstacles_x_rel'])
+        # print(cur_pos_xn, cur_pos_yn, cur_yaw)
+        for index in range(len(poses_x)):
+          pos_xn_i, pos_yn_i = poses_x[index], poses_y[index]
+          ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+          poses_x_rel.append(pos_xn_i)
+          poses_y_rel.append(pos_yn_i)
+        obstacles_info['pos_x_rel'] = poses_x_rel
+        obstacles_info['pos_y_rel'] = poses_y_rel
+        if key == 1:
+          local_view_data['data_me_obj'].data.update({
+            'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
+            'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
+            'pos_x_rel' : obstacles_info['pos_x_rel'],
+            'pos_y_rel' : obstacles_info['pos_y_rel'],
+            'obstacles_x': obstacles_info['obstacles_x'],
+            'obstacles_y': obstacles_info['obstacles_y'],
+            'pos_x' : obstacles_info['pos_x'],
+            'pos_y' : obstacles_info['pos_y'],
+            'obs_label' : obstacles_info['obs_label'],
+          })
+        else :
+          local_view_data['data_snrd_obj'].data.update({
+            'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
+            'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
+            'pos_x_rel' : obstacles_info['pos_x_rel'],
+            'pos_y_rel' : obstacles_info['pos_y_rel'],
+            'obstacles_x': obstacles_info['obstacles_x'],
+            'obstacles_y': obstacles_info['obstacles_y'],
+            'pos_x' : obstacles_info['pos_x'],
+            'pos_y' : obstacles_info['pos_y'],
+            'obs_label' : obstacles_info['obs_label'],
+          })
+          
+  # load radar_obj
+  data_radar_obj = ['data_radar_fm_obj','data_radar_fl_obj','data_radar_fr_obj','data_radar_rl_obj','data_radar_rr_obj']
+  for i in range(5):
+    # print(data_radar_obj[i])
+    if bag_loader_radar_msg[i]['enable'] == True:
+      print(radar_msg_idx[i])
+      radar_objects = bag_loader_radar_msg[i]['data'][radar_msg_idx[i]].radar_perception_object_list
+      # print(me_camera_objects.length())
+      obstacles_info_all2 = load_obstacle_radar(radar_objects,i)
+      # 加载自车坐标系下的数据
+      if 0:
+        for key in obstacles_info_all2:
+          obstacles_info = obstacles_info_all2[key]
+          if key == 1:
+            local_view_data[data_radar_obj[i]].data.update({
+              'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
+              'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
+              'pos_x_rel' : obstacles_info['pos_x_rel'],
+              'pos_y_rel' : obstacles_info['pos_y_rel'],
+              'obstacles_x': obstacles_info['obstacles_x'],
+              'obstacles_y': obstacles_info['obstacles_y'],
+              'pos_x' : obstacles_info['pos_x'],
+              'pos_y' : obstacles_info['pos_y'],
+              'obs_label' : obstacles_info['obs_label'],
+            })
+            print("key=1")
+          else :
+            local_view_data['data_snrd_obj'].data.update({
+              'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
+              'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
+              'pos_x_rel' : obstacles_info['pos_x_rel'],
+              'pos_y_rel' : obstacles_info['pos_y_rel'],
+              'obstacles_x': obstacles_info['obstacles_x'],
+              'obstacles_y': obstacles_info['obstacles_y'],
+              'pos_x' : obstacles_info['pos_x'],
+              'pos_y' : obstacles_info['pos_y'],
+              'obs_label' : obstacles_info['obs_label'],
+            })
+            print("key=",key)
+      else :
+        for key in obstacles_info_all2:
+          obstacles_info = obstacles_info_all2[key]
+          poses_x = obstacles_info['pos_x']
+          poses_y = obstacles_info['pos_y']
+          poses_x_rel = []
+          poses_y_rel = []
+          # print(poses_x)
+          # print(cur_pos_xn, cur_pos_yn, cur_yaw)
+          for index in range(len(poses_x)):
+            pos_xn_i, pos_yn_i = poses_x[index], poses_y[index]
+            # ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+            poses_x_rel.append(pos_xn_i)
+            poses_y_rel.append(pos_yn_i)
+          obstacles_info['pos_x_rel'] = poses_x_rel
+          obstacles_info['pos_y_rel'] = poses_y_rel
+          if key == 11 or key == 12 or key == 13 or key == 14 or key == 15 :
+            local_view_data[data_radar_obj[i]].data.update({
+              'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
+              'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
+              'pos_x_rel' : obstacles_info['pos_x_rel'],
+              'pos_y_rel' : obstacles_info['pos_y_rel'],
+              'obstacles_x': obstacles_info['obstacles_x'],
+              'obstacles_y': obstacles_info['obstacles_y'],
+              'pos_x' : obstacles_info['pos_x'],
+              'pos_y' : obstacles_info['pos_y'],
+              'obs_label' : obstacles_info['obs_label'],
+            })
+            # print(obstacles_info['obstacles_x_rel'])
+          else :
+            local_view_data['data_snrd_obj'].data.update({
+              'obstacles_x_rel': obstacles_info['obstacles_x_rel'],
+              'obstacles_y_rel': obstacles_info['obstacles_y_rel'],
+              'pos_x_rel' : obstacles_info['pos_x_rel'],
+              'pos_y_rel' : obstacles_info['pos_y_rel'],
+              'obstacles_x': obstacles_info['obstacles_x'],
+              'obstacles_y': obstacles_info['obstacles_y'],
+              'pos_x' : obstacles_info['pos_x'],
+              'pos_y' : obstacles_info['pos_y'],
+              'obs_label' : obstacles_info['obs_label'],
+            })
 
   #  加载fix_lane, target_lane信息
   ### step 3: 加载planning轨迹信息
@@ -862,6 +1159,36 @@ def load_local_view_figure():
                                         'obstacles_y_rel':[], 'obstacles_x_rel':[],
                                         'pos_y_rel':[], 'pos_x_rel':[],
                                         'obs_label':[]})
+  data_me_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
+                                        'pos_y':[], 'pos_x':[],
+                                        'obstacles_y_rel':[], 'obstacles_x_rel':[],
+                                        'pos_y_rel':[], 'pos_x_rel':[],
+                                        'obs_label':[]})
+  data_radar_fm_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
+                                        'pos_y':[], 'pos_x':[],
+                                        'obstacles_y_rel':[], 'obstacles_x_rel':[],
+                                        'pos_y_rel':[], 'pos_x_rel':[],
+                                        'obs_label':[]})
+  data_radar_fl_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
+                                        'pos_y':[], 'pos_x':[],
+                                        'obstacles_y_rel':[], 'obstacles_x_rel':[],
+                                        'pos_y_rel':[], 'pos_x_rel':[],
+                                        'obs_label':[]})
+  data_radar_fr_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
+                                        'pos_y':[], 'pos_x':[],
+                                        'obstacles_y_rel':[], 'obstacles_x_rel':[],
+                                        'pos_y_rel':[], 'pos_x_rel':[],
+                                        'obs_label':[]})
+  data_radar_rl_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
+                                        'pos_y':[], 'pos_x':[],
+                                        'obstacles_y_rel':[], 'obstacles_x_rel':[],
+                                        'pos_y_rel':[], 'pos_x_rel':[],
+                                        'obs_label':[]})
+  data_radar_rr_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
+                                        'pos_y':[], 'pos_x':[],
+                                        'obstacles_y_rel':[], 'obstacles_x_rel':[],
+                                        'pos_y_rel':[], 'pos_x_rel':[],
+                                        'obs_label':[]})
   data_snrd_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obstacles_y_rel':[], 'obstacles_x_rel':[],
@@ -876,6 +1203,12 @@ def load_local_view_figure():
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
                 'fus_msg_idx': 0,
+                'me_msg_idx':0,
+                'radar_fm_msg_idx':0,
+                'radar_fl_msg_idx':0,
+                'radar_fr_msg_idx':0,
+                'radar_rl_msg_idx':0,
+                'radar_rr_msg_idx':0,
                 'vs_msg_idx': 0,
                 'plan_msg_idx': 0,
                 'plan_debug_msg_idx': 0,
@@ -907,6 +1240,12 @@ def load_local_view_figure():
                      'data_origin_lane': data_origin_lane ,\
                      'data_prediction' : data_prediction ,\
                      'data_fus_obj':data_fus_obj, \
+                     'data_me_obj':data_me_obj, \
+                     'data_radar_fm_obj':data_radar_fm_obj, \
+                     'data_radar_fl_obj':data_radar_fl_obj, \
+                     'data_radar_fr_obj':data_radar_fr_obj, \
+                     'data_radar_rl_obj':data_radar_rl_obj, \
+                     'data_radar_rr_obj':data_radar_rr_obj, \
                      'data_snrd_obj':data_snrd_obj, \
                      'data_planning':data_planning,\
                      'data_control':data_control,\
@@ -940,6 +1279,20 @@ def load_local_view_figure():
   fig1.line('target_lane_y', 'target_lane_x', source = data_target_lane, line_width = 1, line_color = 'orange', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'taget_lane')
   fig1.line('origin_lane_y', 'origin_lane_x', source = data_origin_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'origin_lane')
   fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'obj')
+  if 0:
+    fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_me_obj, fill_color = "orange", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'me_obj')
+    fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_radar_fm_obj, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fm_obj')
+    fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_radar_fl_obj, fill_color = "red", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fl_obj')
+    fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_radar_fr_obj, fill_color = "blue", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fr_obj')
+    fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_radar_rl_obj, fill_color = "yellow", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_rl_obj')
+    fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_radar_rr_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_rr_obj')
+    fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_me_obj, text_color="orange", text_align="center", text_font_size="8pt", legend_label = 'me_info')
+    fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_radar_fm_obj, text_color="palegreen", text_align="center", text_font_size="8pt", legend_label = 'radar_fm_info')
+    fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_radar_fl_obj, text_color="red", text_align="center", text_font_size="8pt", legend_label = 'radar_fl_info')
+    fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_radar_fr_obj, text_color="blue", text_align="center", text_font_size="8pt", legend_label = 'radar_fr_info')
+    fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_radar_rl_obj, text_color="yellow", text_align="center", text_font_size="8pt", legend_label = 'radar_rl_info')
+    fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_radar_rr_obj, text_color="black", text_align="center", text_font_size="8pt", legend_label = 'radar_rr_info')
+  
   fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd')
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fusion_info')
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info')
@@ -952,3 +1305,95 @@ def load_local_view_figure():
   # legend
   fig1.legend.click_policy = 'hide'
   return fig1, local_view_data
+
+
+#start
+def update_local_view_data_index(fig1, bag_loader, bag_time, local_view_data):
+
+  ### step 1: 时间戳对齐
+  loc_msg_idx = 0
+  if bag_loader.loc_msg['enable'] == True:
+    while bag_loader.loc_msg['t'][loc_msg_idx] <= bag_time and loc_msg_idx < (len(bag_loader.loc_msg['t'])-2):
+        loc_msg_idx = loc_msg_idx + 1
+  local_view_data['data_index']['loc_msg_idx'] = loc_msg_idx
+
+  road_msg_idx = 0
+  if bag_loader.road_msg['enable'] == True:
+    while bag_loader.road_msg['t'][road_msg_idx] <= bag_time and road_msg_idx < (len(bag_loader.road_msg['t'])-2):
+        road_msg_idx = road_msg_idx + 1
+  local_view_data['data_index']['road_msg_idx'] = road_msg_idx
+
+  fus_msg_idx = 0
+  if bag_loader.fus_msg['enable'] == True:
+    while bag_loader.fus_msg['t'][fus_msg_idx] <= bag_time and fus_msg_idx < (len(bag_loader.fus_msg['t'])-2):
+        fus_msg_idx = fus_msg_idx + 1
+    # print("fus_msg_idx:",fus_msg_idx)
+  local_view_data['data_index']['fus_msg_idx'] = fus_msg_idx
+  
+  me_msg_idx = 0
+  if bag_loader.me_msg['enable'] == True:
+    while bag_loader.me_msg['t'][me_msg_idx] <= bag_time and me_msg_idx < (len(bag_loader.me_msg['t'])-2):
+        me_msg_idx = me_msg_idx + 1
+        # print("bag_loader.me_msg['t'][me_msg_idx]:",bag_loader.me_msg['t'][me_msg_idx])
+    # print("me_msg_idx:",me_msg_idx)
+  local_view_data['data_index']['me_msg_idx'] = me_msg_idx
+  
+  # radar_msg_idx = dict()
+  radar_msg_idx_list = ['radar_fm_msg_idx','radar_fl_msg_idx','radar_fr_msg_idx','radar_rl_msg_idx','radar_rr_msg_idx']
+  radar_msg_idx = [0,0,0,0,0]
+  bag_loader_radar_msg = [bag_loader.radar_fm_msg, bag_loader.radar_fl_msg, bag_loader.radar_fr_msg,
+                          bag_loader.radar_rl_msg, bag_loader.radar_rr_msg]
+  # print("bag_loader.radar_fm_msg:",bag_loader.radar_fm_msg['t'][0])
+  for i in range(5):
+    if bag_loader_radar_msg[i]['enable'] == True:
+      while bag_loader_radar_msg[i]['t'][radar_msg_idx[i]] <= bag_time and radar_msg_idx[i] < (len(bag_loader_radar_msg[i]['t'])-2):
+          radar_msg_idx[i] = radar_msg_idx[i] + 1
+          # print("bag_loader_radar_msg[i]['t'][radar_msg_idx[i]]:",bag_loader_radar_msg[i]['t'][radar_msg_idx[i]])
+          # print("bag_time:",bag_time)
+          # print("radar_msg_idx[i]:",radar_msg_idx[i])
+      #print('radar_msg_idx:',i,radar_msg_idx[i])
+    local_view_data['data_index'][radar_msg_idx_list[i]] = radar_msg_idx[i]
+  
+  # radar_fm_msg_idx = 0
+  # if bag_loader.radar_fm_msg['enable'] == True:
+  #   while bag_loader.radar_fm_msg['t'][radar_fm_msg_idx] <= bag_time and radar_fm_msg_idx < (len(bag_loader.radar_fm_msg['t'])-2):
+  #       radar_fm_msg_idx = radar_fm_msg_idx + 1
+  # local_view_data['data_index']['radar_fm_msg_idx'] = radar_fm_msg_idx
+
+  vs_msg_idx = 0
+  if bag_loader.vs_msg['enable'] == True:
+    while bag_loader.vs_msg['t'][vs_msg_idx] <= bag_time and vs_msg_idx < (len(bag_loader.vs_msg['t'])-2):
+        vs_msg_idx = vs_msg_idx + 1
+  local_view_data['data_index']['vs_msg_idx'] = vs_msg_idx
+
+  plan_msg_idx = 0
+  if bag_loader.plan_msg['enable'] == True:
+    while bag_loader.plan_msg['t'][plan_msg_idx] <= bag_time and plan_msg_idx < (len(bag_loader.plan_msg['t'])-2):
+        plan_msg_idx = plan_msg_idx + 1
+  local_view_data['data_index']['plan_msg_idx'] = plan_msg_idx
+
+  plan_debug_msg_idx = 0
+  if bag_loader.plan_debug_msg['enable'] == True:
+    while bag_loader.plan_debug_msg['t'][plan_debug_msg_idx] <= bag_time and plan_debug_msg_idx < (len(bag_loader.plan_debug_msg['t'])-2):
+        plan_debug_msg_idx = plan_debug_msg_idx + 1
+  local_view_data['data_index']['plan_debug_msg_idx'] = plan_debug_msg_idx
+
+  pred_msg_idx = 0
+  if bag_loader.prediction_msg['enable'] == True:
+    while bag_loader.prediction_msg['t'][pred_msg_idx] <= bag_time and pred_msg_idx < (len(bag_loader.prediction_msg['t'])-2):
+        pred_msg_idx = pred_msg_idx + 1
+  local_view_data['data_index']['pred_msg_idx'] = pred_msg_idx
+
+  ctrl_msg_idx = 0
+  if bag_loader.ctrl_msg['enable'] == True:
+    while bag_loader.ctrl_msg['t'][ctrl_msg_idx] <= bag_time and ctrl_msg_idx < (len(bag_loader.ctrl_msg['t'])-2):
+        ctrl_msg_idx = ctrl_msg_idx + 1
+  local_view_data['data_index']['ctrl_msg_idx'] = ctrl_msg_idx
+
+  ctrl_debug_msg_idx = 0
+  if bag_loader.ctrl_debug_msg['enable'] == True:
+    while bag_loader.ctrl_debug_msg['t'][ctrl_debug_msg_idx] <= bag_time and ctrl_debug_msg_idx < (len(bag_loader.ctrl_debug_msg['t'])-2):
+        ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
+  local_view_data['data_index']['ctrl_debug_msg_idx'] = ctrl_debug_msg_idx
+
+  return local_view_data
