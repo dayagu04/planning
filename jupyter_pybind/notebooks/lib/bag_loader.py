@@ -35,6 +35,10 @@ class LoadCyberbag:
     # control debug msg
     self.ctrl_debug_msg = {'t':[], 'data':[], 'json':[], 'enable':[], 'timestamp':[]}
 
+    # slot msg
+    self.slot_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+
   def load_all_data(self, normal_print = True):
     max_time = 0.0
     # load localization msg
@@ -246,5 +250,23 @@ class LoadCyberbag:
       self.ctrl_debug_msg['enable'] = False
       print("missing /iflytek/control/debug_info !!!")
 
-
+    # load slot msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/parking_slot"):
+        # load timestamp
+        self.slot_msg['t'].append(msg.header.timestamp / 1e6)
+        self.slot_msg['timestamp'].append(msg.header.timestamp)
+        self.slot_msg['data'].append(msg)
+      self.slot_msg['t'] = [tmp - self.slot_msg['t'][0]  for tmp in self.slot_msg['t']]
+      max_time = max(max_time, self.slot_msg['t'][-1])
+      if normal_print == True:
+        print('slot_msg time:',self.slot_msg['t'][-1])
+      if len(self.slot_msg['t']) > 0:
+        self.slot_msg['enable'] = True
+      else:
+        self.slot_msg['enable'] = False
+    except:
+      self.slot_msg['enable'] = False
+      print('missing /iflytek/fusion/parking_slot !!!')
+      
     return max_time
