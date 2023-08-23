@@ -27,6 +27,8 @@ prediction_timestamps = []
 vehicle_service_timestamps = []
 control_output_timestamps = []
 slot_timestamps = []
+mobileye_lane_lines_timestamps = []
+mobileye_objects_timestamps = []
 
 # params 控制fig的样式
 ego_pose_polygon_params_apa ={
@@ -131,6 +133,14 @@ origin_lane_params = {
     'line_alpha' : 0.8
 }
 
+mobileye_lane_lines_params = {
+  'legend_label': 'mlane',
+  'line_width' : 1.3,
+  'line_color' : 'chocolate',
+  'line_dash' : 'dashed',
+  'line_alpha' : 1.0
+}
+
 obstacle_fusion_params = {
     'fill_color' : "gray",
     'line_color' : "black",
@@ -150,6 +160,21 @@ obstacle_snrd_params = {
 obstacle_text_params = {
   'legend_label' : 'obj_info',
   'text_color' : "red",
+  'text_align':"center",
+  'text_font_size':"10pt"
+}
+
+obstacle_mobileye_params = {
+  'fill_color' : "sienna",
+  'line_color' : "black",
+  'line_width' : 1,
+  'fill_alpha' : 0.5,
+  'legend_label' : 'mobj'
+}
+
+obstacle_mobileye_text_params = {
+  'legend_label' : 'mobj_info',
+  'text_color' : "salmon",
   'text_align':"center",
   'text_font_size':"10pt"
 }
@@ -445,6 +470,10 @@ def find(data, t):
   for index, timestamp in enumerate(data['timestamp']):
     if t == timestamp:
       return True, data['data'][index]
+    if t < timestamp:
+      if ((index > 0) & (abs(t - data['timestamp'][index - 1]) < abs(data['timestamp'][index] - t))):
+        index = index - 1
+      return True, data['data'][index]
   return False, ""
 
 def load_obstacle_params(obstacle_list, environment_model_info):
@@ -571,6 +600,55 @@ def load_obstacle_params(obstacle_list, environment_model_info):
     
   return obs_info_all
 
+def load_obstacle_mobileye_params(obstacle_list):
+  obstacles_mobileye_info = {
+    'obstacles_x_rel': [],
+    'obstacles_y_rel': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'obstacles_vel': [],
+    'obstacles_acc': [],
+    'obstacles_id': [],
+    'obs_label': []
+  }
+  obs_num = len(obstacle_list)
+  for i in range(obs_num):
+    # frenet_vs, frenet_vl = 255, 255
+    half_length = obstacle_list[i].common_info.shape.length / 2
+    half_width = obstacle_list[i].common_info.shape.width /2
+    long_pos_rel = obstacle_list[i].common_info.relative_position.x + half_length
+    lat_pos_rel = obstacle_list[i].common_info.relative_position.y
+    theta = obstacle_list[i].common_info.relative_heading_angle
+    if theta == 255:
+      theta = 0
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+    obs_x_rel = [long_pos_rel + dx1 + dx2,
+              long_pos_rel + dx1 - dx2,
+              long_pos_rel- dx1 - dx2,
+              long_pos_rel - dx1 + dx2,
+              long_pos_rel + dx1 + dx2]
+    obs_y_rel = [lat_pos_rel + dy1 + dy2,
+              lat_pos_rel + dy1 - dy2,
+              lat_pos_rel - dy1 - dy2,
+              lat_pos_rel - dy1 + dy2,
+              lat_pos_rel + dy1 + dy2]
+    obstacles_mobileye_info['obstacles_x_rel'].append(obs_x_rel)
+    obstacles_mobileye_info['obstacles_y_rel'].append(obs_y_rel)
+    obstacles_mobileye_info['pos_x_rel'].append(long_pos_rel)
+    obstacles_mobileye_info['pos_y_rel'].append(lat_pos_rel)
+    obstacles_mobileye_info['obstacles_vel'].append(obstacle_list[i].common_info.relative_velocity.x)
+    obstacles_mobileye_info['obstacles_acc'].append(obstacle_list[i].common_info.relative_acceleration.x)
+    obstacles_mobileye_info['obstacles_id'].append(obstacle_list[i].common_info.id)
+    obstacles_mobileye_info['obs_label'].append('v(' + str(obstacle_list[i].common_info.id) + ')')  # ')=' \
+        # + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4)))
+    
+  return obstacles_mobileye_info
+
 def draw_local_view_debug(dataLoader, layer_manager):
     #define figure
     # 定义 debug
@@ -598,6 +676,8 @@ def draw_local_view(dataLoader, layer_manager):
     global prediction_timestamps
     global vehicle_service_timestamps
     global control_output_timestamps
+    global mobileye_lane_lines_timestamps
+    global mobileye_objects_timestamps
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
       t = dataLoader.plan_debug_msg["t"][i]
       plan_debug_timestamps.append(t)
@@ -958,6 +1038,63 @@ def draw_local_view(dataLoader, layer_manager):
       tab_debug_layer1, 'tab_debug_layer1', plan_debug_table1, 'plan_debug_table1', 3)
     layer_manager.AddLayer(
       tab_debug_layer2, 'tab_debug_layer2', plan_debug_table2, 'plan_debug_table2', 3)
+    
+    # 加载mobileye车道线
+    mobileye_lane_lines_generator_dict = {}
+    if dataLoader.mobileye_lane_lines_msg['enable'] == True:
+      for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+        flag, mobileye_lane_lines_msg = find(dataLoader.mobileye_lane_lines_msg, fusion_road_timestamps[i])
+        for index in range(mobileye_lane_lines_msg.num) :
+          mobileye_lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+          mobileye_lane_generator_key = 'mobileye_lane_' + str(index)
+          if (mobileye_lane_generator_key in mobileye_lane_lines_generator_dict.keys()) == False:
+            mobileye_lane_lines_generator_dict[mobileye_lane_generator_key] = LineGenerator('mobileye_line')
+          if not flag:
+            mobileye_lane_lines_generator_dict[mobileye_lane_generator_key].xys.append(([] , [] ,[], []))
+            continue
+          lane = mobileye_lane_lines_msg.lane_line[index]
+          fig_index = lane.pos_type
+          line_x, line_y = gen_line(lane.a0, lane.a1, lane.a2, lane.a3, lane.start, lane.end)
+          mobileye_lane_info['line_x_vec'] = line_x
+          mobileye_lane_info['line_y_vec'] = line_y
+          tp = lane.marking_segments[0].marking
+          if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+            mobileye_lane_info['type'] = ['dashed']
+          else:
+            mobileye_lane_info['type'] = ['solid']
+          mobileye_lane_info['fix_index'] = [fig_index]
+          mobileye_lane_lines_generator_dict[mobileye_lane_generator_key].xys.append((mobileye_lane_info['line_y_vec'] , \
+                                                                                      mobileye_lane_info['line_x_vec'] , \
+                                                                                      mobileye_lane_info['type'], \
+                                                                                      mobileye_lane_info['fix_index']))
+      for mobileye_lane_generator_key in mobileye_lane_lines_generator_dict.keys():
+          mobileye_lane_lines_generator_dict[mobileye_lane_generator_key].ts = np.array(plan_debug_timestamps)
+          mobileye_lane_layer = CurveLayer(fig_local_view, mobileye_lane_lines_params)
+          layer_manager.AddLayer(mobileye_lane_layer, mobileye_lane_generator_key.replace('mobileye_lane_', 'mobileye_lane_layer_'), \
+                                 mobileye_lane_lines_generator_dict[mobileye_lane_generator_key], \
+                                 mobileye_lane_generator_key , 2)
+    
+    # 加载mobileye障碍物
+    obstacle_mobileye_generate = CommonGenerator()
+    obstacle_mobileye_text_generate = TextGenerator()
+    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+      flag, mobileye_objects_msg = find(dataLoader.mobileye_objects_msg, fusion_object_timestamps[i])
+      if not flag:
+        # print('find mobileye_objects_msg error')
+        obstacle_mobileye_generate.xys.append(([], []))
+        obstacle_mobileye_text_generate.xys.append(([], [], []))
+        continue
+      # obstacles_mobileye_info = load_obstacle_params(mobileye_objects_msg.camera_perception_object_list, plan_debug.environment_model_info)
+      obstacles_mobileye_info = load_obstacle_mobileye_params(mobileye_objects_msg.camera_perception_object_list)
+      obstacle_mobileye_generate.xys.append((obstacles_mobileye_info['obstacles_y_rel'], obstacles_mobileye_info['obstacles_x_rel']))
+      obstacle_mobileye_text_generate.xys.append((obstacles_mobileye_info['pos_y_rel'], obstacles_mobileye_info['pos_x_rel'], obstacles_mobileye_info['obs_label']))
+    obstacle_mobileye_generate.ts = np.array(plan_debug_timestamps)
+    obstacle_mobileye_layer = PatchLayer(fig_local_view ,obstacle_mobileye_params)
+    layer_manager.AddLayer(obstacle_mobileye_layer, 'obstacle_mobileye_layer', obstacle_mobileye_generate, 'obstacle_mobileye_generate', 2)
+    obstacle_mobileye_text_generate.ts = np.array(plan_debug_timestamps)
+    obstacle_mobileye_text_layer = TextLayer(fig_local_view, obstacle_mobileye_text_params)
+    layer_manager.AddLayer(obstacle_mobileye_text_layer, 'obstacle_mobileye_text_layer', obstacle_mobileye_text_generate, 'obstacle_mobileye_text_generate', 3)
+    
     return fig_local_view, (tab_debug_layer1.plot, tab_debug_layer2.plot)
 
 def apa_draw_local_view(dataLoader, layer_manager):

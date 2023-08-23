@@ -37,7 +37,12 @@ class LoadCyberbag:
 
     # slot msg
     self.slot_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
-
+    
+    # mobileye lane lines msg
+    self.mobileye_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+    
+    # mobileye objects msg
+    self.mobileye_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}    
 
   def load_all_data(self, normal_print = True):
     max_time = 0.0
@@ -268,5 +273,41 @@ class LoadCyberbag:
     except:
       self.slot_msg['enable'] = False
       print('missing /iflytek/fusion/parking_slot !!!')
+    
+    
+    # load mobileye lane_lines msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/mobileye/camera_perception/lane_lines"):
+        self.mobileye_lane_lines_msg['t'].append(msg.header.timestamp / 1e6)
+        self.mobileye_lane_lines_msg['timestamp'].append(msg.header.timestamp)
+        self.mobileye_lane_lines_msg['data'].append(msg)
+      self.mobileye_lane_lines_msg['t'] = [tmp - self.mobileye_lane_lines_msg['t'][0]  for tmp in self.mobileye_lane_lines_msg['t']]
+      if normal_print == True:
+        print('mobileye_lane_lines_msg time:',self.mobileye_lane_lines_msg['t'][-1])
+      if len(self.mobileye_lane_lines_msg['t']) > 0:
+        self.mobileye_lane_lines_msg['enable'] = True
+      else:
+        self.mobileye_lane_lines_msg['enable'] = False
+    except:
+      self.mobileye_lane_lines_msg['enable'] = False
+      print('missing /mobileye/camera_perception/lane_lines !!!')
+
+
+    # load mobileye objects msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/mobileye/camera_perception/objects"):
+        self.mobileye_objects_msg['t'].append(msg.header.timestamp / 1e6)
+        self.mobileye_objects_msg['timestamp'].append(msg.header.timestamp)
+        self.mobileye_objects_msg['data'].append(msg)
+      self.mobileye_objects_msg['t'] = [tmp - self.mobileye_objects_msg['t'][0]  for tmp in self.mobileye_objects_msg['t']]
+      if normal_print == True:
+        print('mobileye_objects_msg time:',self.mobileye_objects_msg['t'][-1])
+      if len(self.mobileye_objects_msg['t']) > 0:
+        self.mobileye_objects_msg['enable'] = True
+      else:
+        self.mobileye_objects_msg['enable'] = False
+    except:
+      self.mobileye_objects_msg['enable'] = False
+      print('missing /mobileye/camera_perception/objects !!!')
       
     return max_time
