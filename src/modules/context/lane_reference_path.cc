@@ -117,15 +117,14 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
       ref_path_pt.path_point.y = refline_pt.local_point().y();
       ref_path_pt.path_point.z = refline_pt.local_point().z();
       ref_path_pt.path_point.theta = refline_pt.enu_heading();
-      ref_path_pt.path_point.kappa = refline_pt.enu_curvature();
+      
     } else {
       ref_path_pt.path_point.x = refline_pt.car_point().x();
       ref_path_pt.path_point.y = refline_pt.car_point().y();
-      ref_path_pt.path_point.theta = refline_pt.heading();
-      ref_path_pt.path_point.kappa = refline_pt.curvature();
       ref_path_pt.path_point.z = 0;
+      ref_path_pt.path_point.theta = refline_pt.car_heading();
     }
-
+    ref_path_pt.path_point.kappa = refline_pt.curvature();
     ref_path_pt.distance_to_left_lane_border = std::fmin(
         refline_pt.distance_to_left_lane_border(), kDefaultLaneBorderDis);
     ref_path_pt.distance_to_right_lane_border = std::fmin(
@@ -139,7 +138,8 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
     ref_path_pt.left_lane_border_type = refline_pt.left_lane_border_type();
     ref_path_pt.right_lane_border_type = refline_pt.right_lane_border_type();
     ref_path_pt.lane_width = refline_pt.lane_width();
-    ref_path_pt.max_velocity = refline_pt.speed_limit();
+    ref_path_pt.max_velocity = refline_pt.speed_limit_max();
+    ref_path_pt.min_velocity = refline_pt.speed_limit_min();
     ref_path_pt.type = ReferencePathPointType::MAP;
     ref_path_pt.is_in_intersection = refline_pt.is_in_intersection();
 

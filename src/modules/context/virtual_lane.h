@@ -3,10 +3,12 @@
 
 #include <float.h>
 #include <limits.h>
+#include <vector>
 #include "config/basic_type.h"
 #include "fusion_road.pb.h"
 #include "lane_lines.pb.h"
 #include "lane_reference_path.h"
+#include "map_info_manager.h"
 #include "log.h"
 #include "reference_path_manager.h"
 #include "refline.h"
@@ -20,21 +22,21 @@ struct SpeedChangePoint {
 };
 
 // hack :clren
-struct VirtualLaneMember {
-  int order_id_ = -1;
-  int virtual_id_ = 0;
-  int relative_id_ = 0;
-  float ego_lateral_offset_ = 0;
-  LaneStatusEx lane_status_;
-  FusionRoad::LaneType lane_type_;
-  FusionRoad::LaneDrivableDirection lane_marks_;
-  FusionRoad::LaneSource lane_source_;
-  FusionRoad::LaneReferenceLine lane_reference_line_;
-  std::vector<double> c_poly_;
-  FusionRoad::LaneMergeSplitPoint lane_merge_split_point_;
-  FusionRoad::LaneBoundary left_lane_boundary_;
-  FusionRoad::LaneBoundary right_lane_boundary_;
-};
+// struct VirtualLaneMember {
+//   int order_id_ = -1;
+//   int virtual_id_ = 0;
+//   int relative_id_ = 0;
+//   float ego_lateral_offset_ = 0;
+//   LaneStatusEx lane_status_;
+//   FusionRoad::LaneType lane_type_;
+//   FusionRoad::LaneDrivableDirection lane_marks_;
+//   FusionRoad::LaneSource lane_source_;
+//   FusionRoad::LaneReferenceLine lane_reference_line_;
+//   std::vector<double> c_poly_;
+//   FusionRoad::LaneMergeSplitPoint lane_merge_split_point_;
+//   FusionRoad::LaneBoundary left_lane_boundary_;
+//   FusionRoad::LaneBoundary right_lane_boundary_;
+// };
 
 class VirtualLane {
  public:
@@ -42,7 +44,7 @@ class VirtualLane {
   ~VirtualLane() = default;
 
  public:
-  void update_data(const FusionRoad::Lane &lane);
+  void update_data(const FusionRoad::ReferenceLineMsg &lane);
   void set_order_id(uint order_id) { order_id_ = order_id; };
   void set_virtual_id(int virtual_id) { virtual_id_ = virtual_id; };
   void set_relative_id(int relative_id) { relative_id_ = relative_id; };
@@ -63,13 +65,13 @@ class VirtualLane {
   const FusionRoad::LaneBoundary &get_right_lane_boundary() {
     return right_lane_boundary_;
   }
-  const FusionRoad::LaneReferenceLine &get_center_line() const {
+  const FusionRoad::ReferenceLine &get_center_line() const {
     return lane_reference_line_;
   };
   const FusionRoad::LaneMergeSplitPoint &get_lane_merge_split_point() {
     return lane_merge_split_point_;
   }
-  const google::protobuf::RepeatedPtrField<FusionRoad::VirtualLanePoint>
+  const google::protobuf::RepeatedPtrField<FusionRoad::ReferencePoint>
       &lane_points() const {
     return lane_reference_line_.virtual_lane_refline_points();
   }
@@ -86,11 +88,11 @@ class VirtualLane {
     return reference_path_;
   }
   double get_ego_lateral_offset() const { return ego_lateral_offset_; };
-  FusionRoad::LaneType get_lane_type() const { return lane_type_; };
+  FusionRoad::LaneType get_lane_type() const { return lane_types_.size() > 0 ? lane_types_[0].type() : FusionRoad::LANE_TYPE_UNKNOWN; };
   FusionRoad::LaneDrivableDirection get_lane_marks() const {
-    return lane_marks_;
+    return lane_marks_.size() > 0 ? lane_marks_[0].lane_mark() : FusionRoad::DIRECTION_UNKNOWN;
   };
-  FusionRoad::LaneSource get_lane_source() const { return lane_source_; };
+  FusionRoad::LaneSource get_lane_source() const { return lane_sources_.size() > 0 ? lane_sources_[0].source() : FusionRoad::SOURCE_UNKNOWN;; };
 
   // 能让车沿着route形式，在当前位置所在的lanegroup中，最少需要变道几次
   // +： right; -: left
@@ -100,7 +102,7 @@ class VirtualLane {
   uint get_common_point_num(const std::shared_ptr<VirtualLane> &other);
 
   bool get_point_by_distance(double distance,
-                             FusionRoad::VirtualLanePoint *point);
+                             FusionRoad::ReferencePoint *point);
 
   const std::vector<std::string> &center_line_points_track_id() const {
     return center_line_points_track_id_;
@@ -109,9 +111,10 @@ class VirtualLane {
   // side: 0-left, 1-right
   bool is_solid_line(int side) const;
 
-  double min_width();
-  double max_width();
+  double min_width() const;
+  double max_width() const;
   bool hack() const { return hack_; }
+  void update_lane_tasks(MapInfoManager &map_info_manager, uint lane_num);
   const std::vector<int> &get_current_tasks() const { return current_tasks_; };
   // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离
 
@@ -127,10 +130,10 @@ class VirtualLane {
   int relative_id_ = 0;
   float ego_lateral_offset_ = 0;
   LaneStatusEx lane_status_;
-  FusionRoad::LaneType lane_type_;
-  FusionRoad::LaneDrivableDirection lane_marks_;
-  FusionRoad::LaneSource lane_source_;
-  FusionRoad::LaneReferenceLine lane_reference_line_;
+  std::vector<FusionRoad::LaneTypeMsg> lane_types_;
+  std::vector<FusionRoad::LaneMarkMsg> lane_marks_;
+  std::vector<FusionRoad::LaneSourceMsg> lane_sources_;
+  FusionRoad::ReferenceLine lane_reference_line_;
   std::vector<double> c_poly_;
   FusionRoad::LaneMergeSplitPoint lane_merge_split_point_;
   FusionRoad::LaneBoundary left_lane_boundary_;

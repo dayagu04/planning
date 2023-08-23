@@ -326,7 +326,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
        status == INTER_TR_LC_RCHANGE || status == INTER_TL_LC_RCHANGE);
   bool isRedLightStop = false;
 
-  if ((llane == nullptr || left_boundary_info.segment(0).type() ==
+  if ((llane == nullptr || left_boundary_info.type_segments(0).type() ==
                                Common::LaneBoundaryType::MARKING_SOLID) &&
       (status == ROAD_NONE ||
        (olane != nullptr &&
@@ -335,7 +335,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
     l_enable = false;
   }
 
-  if ((rlane == nullptr || right_boundary_info.segment(0).type() ==
+  if ((rlane == nullptr || right_boundary_info.type_segments(0).type() ==
                                Common::LaneBoundaryType::MARKING_SOLID) &&
       (status == ROAD_NONE ||
        (olane != nullptr &&
@@ -433,29 +433,29 @@ bool ObjectSelector::update(int status, double start_move_distolane,
   double l_dash_length = 0;
   double r_dash_length = 0;
 
-  for (int i = 0; i < left_boundary_info.segment_size(); i++) {
-    if (left_boundary_info.segment(i).type() !=
+  for (int i = 0; i < left_boundary_info.type_segments_size(); i++) {
+    if (left_boundary_info.type_segments(i).type() !=
         Common::LaneBoundaryType::MARKING_SOLID) {
-      l_dash_length += left_boundary_info.segment(i).length();
+      l_dash_length += left_boundary_info.type_segments(i).length();
     } else {
       break;
     }
   }
-  for (int i = 0; i < right_boundary_info.segment_size(); i++) {
-    if (right_boundary_info.segment(i).type() !=
+  for (int i = 0; i < right_boundary_info.type_segments_size(); i++) {
+    if (right_boundary_info.type_segments(i).type() !=
         Common::LaneBoundaryType::MARKING_SOLID) {
-      r_dash_length += right_boundary_info.segment(i).length();
+      r_dash_length += right_boundary_info.type_segments(i).length();
     } else {
       break;
     }
   }
 
   if ((in_alc_range() ||
-       (left_boundary_info.segment_size() > 0 &&
-        left_boundary_info.segment(0).type() ==
+       (left_boundary_info.type_segments_size() > 0 &&
+        left_boundary_info.type_segments(0).type() ==
             Common::LaneBoundaryType::MARKING_DASHED &&
         dist_to_intsect > 0 &&
-        (left_boundary_info.segment(0).length() - dist_to_intsect > -10 ||
+        (left_boundary_info.type_segments(0).length() - dist_to_intsect > -10 ||
          (status == ROAD_LC_LCHANGE) || (status == ROAD_LC_RCHANGE))) ||
        dist_to_intsect < -5 || accident_ahead) &&
       lateral_obstacle->sensors_okay()) {
@@ -537,10 +537,10 @@ bool ObjectSelector::update(int status, double start_move_distolane,
         if (tr.d_max_cpath < lane_width && tr.d_min_cpath > 0 &&
             ((curr_direct_exist &&
               (right_direct_exist ||
-               (right_boundary_info.segment_size() > 0 &&
-                right_boundary_info.segment(0).type() ==
+               (right_boundary_info.type_segments_size() > 0 &&
+                right_boundary_info.type_segments(0).type() ==
                     Common::LaneBoundaryType::MARKING_DASHED &&
-                right_boundary_info.segment(0).length() - tr.d_rel > 60))) ||
+                right_boundary_info.type_segments(0).length() - tr.d_rel > 60))) ||
              (!curr_direct_exist &&
               (right_direct_exist || dist_to_intsect - tr.d_rel > 200)))) {
           std::array<double, 4> d_expect_bp{0., tr.d_min_cpath};
@@ -554,10 +554,10 @@ bool ObjectSelector::update(int status, double start_move_distolane,
         } else if (tr.d_min_cpath > -lane_width && tr.d_max_cpath < 0 &&
                    ((curr_direct_exist &&
                      (left_direct_exist ||
-                      (left_boundary_info.segment_size() > 0 &&
-                       left_boundary_info.segment(0).type() ==
+                      (left_boundary_info.type_segments_size() > 0 &&
+                       left_boundary_info.type_segments(0).type() ==
                            Common::LaneBoundaryType::MARKING_DASHED &&
-                       left_boundary_info.segment(0).length() - tr.d_rel >
+                       left_boundary_info.type_segments(0).length() - tr.d_rel >
                            60))) ||
                     (!curr_direct_exist &&
                      (left_direct_exist ||
@@ -646,20 +646,20 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                    request_source == INT_REQUEST))) &&
                 (r_accident_cnt_ != 1 || rlane == nullptr) &&
                 (dist_to_intsect - tr.d_rel >= 35 ||
-                 (left_boundary_info.segment_size() > 0 &&
-                  left_boundary_info.segment(0).type() ==
+                 (left_boundary_info.type_segments_size() > 0 &&
+                  left_boundary_info.type_segments(0).type() ==
                       Common::LaneBoundaryType::MARKING_DASHED &&
                   dist_to_intsect > 0 &&
-                  left_boundary_info.segment(0).length() - dist_to_intsect >
+                  left_boundary_info.type_segments(0).length() - dist_to_intsect >
                       -10) ||
                  dist_to_intsect < -5)) {
               if (dist_to_intsect > 0 || dist_to_intsect < -5) {
-                if (((left_boundary_info.segment_size() == 2 ||
-                      left_boundary_info.segment_size() == 1) &&
-                     left_boundary_info.segment(0).type() ==
+                if (((left_boundary_info.type_segments_size() == 2 ||
+                      left_boundary_info.type_segments_size() == 1) &&
+                     left_boundary_info.type_segments(0).type() ==
                          Common::LaneBoundaryType::MARKING_DASHED &&
                      ((!left_direct_exist &&
-                       ((left_boundary_info.segment(0).length() - tr.d_rel >
+                       ((left_boundary_info.type_segments(0).length() - tr.d_rel >
                              80 &&
                          !right_direct_exist &&
                          (olane == nullptr ||
@@ -667,8 +667,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                            olane->get_virtual_id() ==
                                clane->get_virtual_id()))))) ||
                       (left_direct_exist &&
-                       left_boundary_info.segment(0).length() > tr.d_rel))) ||
-                    left_boundary_info.segment_size() > 3 ||
+                       left_boundary_info.type_segments(0).length() > tr.d_rel))) ||
+                    left_boundary_info.type_segments_size() > 3 ||
                     dist_to_intsect < -5 ||
                     (tlane != nullptr &&
                      tlane->get_virtual_id() == clane->get_virtual_id())) {
@@ -732,8 +732,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                       left_alc_car_cnt_[tr.track_id].neg = 0;
                     }
                   }
-                } else if (left_boundary_info.segment_size() > 0 &&
-                           left_boundary_info.segment(0).type() ==
+                } else if (left_boundary_info.type_segments_size() > 0 &&
+                           left_boundary_info.type_segments(0).type() ==
                                Common::LaneBoundaryType::MARKING_SOLID) {
                   left_lb_car_.clear();
                   left_alc_car_.clear();
@@ -864,8 +864,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                     (dist_to_intsect - tr.d_rel > 40 ||
                      (std::fabs(tr.v_lead) < 1 && dist_to_intsect < -5))) {
                   double d_stop = 0;
-                  if (left_boundary_info.segment_size() > 0 &&
-                      left_boundary_info.segment(0).type() ==
+                  if (left_boundary_info.type_segments_size() > 0 &&
+                      left_boundary_info.type_segments(0).type() ==
                           Common::LaneBoundaryType::MARKING_DASHED) {
                     if (!is_on_highway) {
                       if (lane_merge_split_point.existence() == 0 ||
@@ -881,20 +881,20 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                                .is_split() &&
                            !lane_merge_split_point.merge_split_point_data(0)
                                 .is_continue())) {
-                        d_stop = left_boundary_info.segment(0).length();
+                        d_stop = left_boundary_info.type_segments(0).length();
                       } else if (lane_merge_split_point
                                      .merge_split_point_data(0)
                                      .distance() > 0) {
                         d_stop = std::min(
                             lane_merge_split_point.merge_split_point_data(0)
                                 .distance(),
-                            left_boundary_info.segment(0).length());
+                            left_boundary_info.type_segments(0).length());
                       } else {
                         d_stop = -10000;
                       }
                     } else {
                       d_stop = std::min(
-                          (double)left_boundary_info.segment(0).length(),
+                          (double)left_boundary_info.type_segments(0).length(),
                           dis_to_ramp - 200.);
                     }
                   } else if (dist_to_intsect < -5) {
@@ -1894,10 +1894,10 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                           pos_thr_lb_l);
 
                 double neg_d_stop = 0.0;
-                if (left_boundary_info.segment_size() > 0 &&
-                    left_boundary_info.segment(0).type() ==
+                if (left_boundary_info.type_segments_size() > 0 &&
+                    left_boundary_info.type_segments(0).type() ==
                         Common::LaneBoundaryType::MARKING_DASHED) {
-                  neg_d_stop = left_boundary_info.segment(0).length();
+                  neg_d_stop = left_boundary_info.type_segments(0).length();
                 } else if (dist_to_intsect < -5) {
                   neg_d_stop = dist_to_last_intsect;
                 } else {
@@ -2127,20 +2127,20 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                 (l_accident_cnt_ != 1 || llane == nullptr) &&
                 (dist_to_intsect - tr.d_rel >= 35 || dist_to_intsect < -5)) {
               if (dist_to_intsect > 0 || dist_to_intsect < -5) {
-                if (((right_boundary_info.segment_size() == 2 ||
-                      right_boundary_info.segment_size() == 1) &&
-                     right_boundary_info.segment(0).type() ==
+                if (((right_boundary_info.type_segments_size() == 2 ||
+                      right_boundary_info.type_segments_size() == 1) &&
+                     right_boundary_info.type_segments(0).type() ==
                          Common::LaneBoundaryType::MARKING_DASHED &&
                      ((!right_direct_exist &&
-                       right_boundary_info.segment(0).length() - tr.d_rel >
+                       right_boundary_info.type_segments(0).length() - tr.d_rel >
                            80 &&
                        !left_direct_exist &&
                        (olane == nullptr ||
                         (olane != nullptr && olane->get_virtual_id() ==
                                                  clane->get_virtual_id()))) ||
                       (right_direct_exist &&
-                       right_boundary_info.segment(0).length() > tr.d_rel))) ||
-                    right_boundary_info.segment_size() > 3 ||
+                       right_boundary_info.type_segments(0).length() > tr.d_rel))) ||
+                    right_boundary_info.type_segments_size() > 3 ||
                     dist_to_intsect < -5 ||
                     (tlane != nullptr &&
                      tlane->get_virtual_id() == clane->get_virtual_id())) {
@@ -2205,8 +2205,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                       right_alc_car_cnt_[tr.track_id].neg = 0;
                     }
                   }
-                } else if (right_boundary_info.segment_size() > 0 &&
-                           right_boundary_info.segment(0).type() ==
+                } else if (right_boundary_info.type_segments_size() > 0 &&
+                           right_boundary_info.type_segments(0).type() ==
                                Common::LaneBoundaryType::MARKING_SOLID) {
                   right_lb_car_.clear();
                   right_alc_car_.clear();
@@ -2340,8 +2340,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                     (dist_to_intsect - tr.d_rel > 50 ||
                      (std::fabs(tr.v_lead) < 1 && dist_to_intsect < -5))) {
                   double d_stop = 0;
-                  if (right_boundary_info.segment_size() > 0 &&
-                      right_boundary_info.segment(0).type() ==
+                  if (right_boundary_info.type_segments_size() > 0 &&
+                      right_boundary_info.type_segments(0).type() ==
                           Common::LaneBoundaryType::MARKING_DASHED) {
                     if (!is_on_highway) {
                       if (lane_merge_split_point.existence() == 0 ||
@@ -2357,20 +2357,20 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                                .is_split() &&
                            !lane_merge_split_point.merge_split_point_data(0)
                                 .is_continue())) {
-                        d_stop = right_boundary_info.segment(0).length();
+                        d_stop = right_boundary_info.type_segments(0).length();
                       } else if (lane_merge_split_point
                                      .merge_split_point_data(0)
                                      .distance() > 0) {
                         d_stop = std::min(
                             lane_merge_split_point.merge_split_point_data(0)
                                 .distance(),
-                            right_boundary_info.segment(0).length());
+                            right_boundary_info.type_segments(0).length());
                       } else {
                         d_stop = -10000;
                       }
                     } else {
                       d_stop = std::min(
-                          (double)right_boundary_info.segment(0).length(),
+                          (double)right_boundary_info.type_segments(0).length(),
                           dis_to_ramp - 200.);
                       if (!is_on_ramp &&
                           lane_merge_split_point.merge_split_point_data_size() >
@@ -3373,10 +3373,10 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                           pos_thr_lb_r);
 
                 double neg_d_stop = 0.0;
-                if (right_boundary_info.segment_size() > 0 &&
-                    right_boundary_info.segment(0).type() ==
+                if (right_boundary_info.type_segments_size() > 0 &&
+                    right_boundary_info.type_segments(0).type() ==
                         Common::LaneBoundaryType::MARKING_DASHED) {
-                  neg_d_stop = right_boundary_info.segment(0).length();
+                  neg_d_stop = right_boundary_info.type_segments(0).length();
                 } else if (dist_to_intsect < -5) {
                   neg_d_stop = dist_to_last_intsect;
                 } else {

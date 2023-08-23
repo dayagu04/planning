@@ -16,19 +16,40 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   right_lane_ = nullptr;
   relative_id_lanes_.clear();
 
-  if (roads.lanes().size() == 0) {
-    LOG_ERROR("!!!roads' lanes are empty \n");
+  if (roads.reference_line_msg().size() == 0) {
+    LOG_ERROR("!!!roads' reference_line_msg are empty \n");
     return false;
   }
 
   is_local_valid_ = roads.local_point_valid();
-  for (auto& lane : roads.lanes()) {
+  for (auto& lane : roads.reference_line_msg()) {
     std::shared_ptr<VirtualLane> virtual_lane_tmp =
         std::make_shared<VirtualLane>();
-    virtual_lane_tmp->update_data(lane);
+    if (lane.lane_merge_split_point().merge_split_point_data_size() == 0) {
+      virtual_lane_tmp->update_data(lane);
+    } else {
+      double dis_to_ramp = ramp_.dis_to_ramp();
+      auto lane_merge_split_point_data = lane.lane_merge_split_point().merge_split_point_data()[0];
+      double lane_merge_split_point_distance = lane_merge_split_point_data.distance();
+      const double allow_error = 5;
+      if (fabs(dis_to_ramp - lane_merge_split_point_distance) < allow_error) {
+        if (lane_merge_split_point_data.is_split()) {
+          virtual_lane_tmp->update_data(lane);
+        }
+      } else {
+        if (lane_merge_split_point_data.is_continue()) {
+          virtual_lane_tmp->update_data(lane);
+        }
+      }
+    }
+    
     printf("lane relative_id:%d, order_id:%d\n", lane.relative_id(),
            lane.order_id());
     relative_id_lanes_.emplace_back(virtual_lane_tmp);
+  }
+
+  for (auto relative_id_lane : relative_id_lanes_) {
+    // virtual_lane_tmp->update_lane_tasks(relative_id_lane.size());
   }
 
   auto compare_relative_id = [&](std::shared_ptr<VirtualLane> lane1,
@@ -275,6 +296,7 @@ int VirtualLaneManager::get_lane_index(
   return 0;
 }
 
+
 int VirtualLaneManager::get_tasks(
     const std::shared_ptr<VirtualLane> virtual_lane) const {
   int current_tasks = 0;
@@ -327,6 +349,18 @@ int VirtualLaneManager::lc_map_decision(
   }
 
   return tasks_id;
+}
+
+double VirtualLaneManager::get_distance_to_first_road_merge() const {
+  double distance_to_first_road_merge = 5000.;
+
+  return distance_to_first_road_merge;
+}
+
+double VirtualLaneManager::get_distance_to_first_road_split() const {
+ double distance_to_first_road_split = 5000.;
+
+ return distance_to_first_road_split;
 }
 
 }  // namespace planning

@@ -2,7 +2,7 @@
 #define ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_MANAGER_H_
 
 #include <vector>
-#include "Ramp.h"
+#include "ramp.h"
 #include "fusion_road.pb.h"
 #include "intersection.h"
 #include "log.h"
@@ -113,7 +113,8 @@ class VirtualLaneManager {
 
   double get_distance_to_final_dash_line(const RequestType direction,
                                          uint order_id) const;
-
+  double get_distance_to_first_road_merge() const;
+  double get_distance_to_first_road_split() const;
   int get_lane_index(const std::shared_ptr<VirtualLane> virtual_lane) const;
   int get_tasks(const std::shared_ptr<VirtualLane> virtual_lane) const;
   bool must_change_lane(const std::shared_ptr<VirtualLane> virtual_lane,
