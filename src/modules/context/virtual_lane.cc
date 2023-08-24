@@ -51,6 +51,8 @@ void VirtualLane::update_data(const FusionRoad::ReferenceLineMsg &lane) {
     // center_line_points_track_id_.emplace_back(virtual_lane_refine_point.track_id());
     // // todo
   }
+
+  width_ = width(0);
 }
 
 bool VirtualLane::calc_c_poly(std::vector<double> &output) {  // 该函数先保留着
@@ -175,8 +177,6 @@ uint VirtualLane::get_common_point_num(
 
   return common_point_num;
 }
-
-double VirtualLane::width() { return width(0); }
 
 double VirtualLane::width(double x) {
   double width = 0;
@@ -361,31 +361,29 @@ void VirtualLane::update_speed_limit(double ego_vel,
   v_cruise_ = std::min(current_lane_speed_limit_, speed_change_point_.speed);
 }
 
-void VirtualLane::update_lane_tasks(MapInfoManager &map_info_manager,
-                                    uint lane_num) {
-  double dis_to_ramp = map_info_manager.dis_to_ramp();
-  double dis_to_first_road_split =
-      map_info_manager.distance_to_first_road_split();
-  double dis_between_first_road_split_and_ramp =
-      dis_to_first_road_split - dis_to_ramp;
-  int reverse_task_num = std::max((int)std::floor((lane_num - 1) * 0.5), 0);
+void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp, uint lane_num) {
+  int reverse_task_num = std::max((int)std::floor((lane_num - 1) * 0.5), 0); // clren: hack
   current_tasks_.clear();
-  if (dis_to_first_road_split < 3000.) {
-    if (std::fabs(dis_between_first_road_split_and_ramp) < 1.) {
-      for (int i = 0; i < lane_num - order_id_ - 1; i++) {
-        current_tasks_.emplace_back(1);
+  if (is_nearing_ramp) {
+    for (int i = 0; i < lane_num - order_id_ - 1; i++) {
+      current_tasks_.emplace_back(1);
+    }
+  } else {
+    if (lane_num - order_id_ - 1 < reverse_task_num) {
+      for (int i = 0; i < (order_id_ + 1 - (lane_num - reverse_task_num));
+            i++) {
+        current_tasks_.emplace_back(-1);
       }
     } else {
-      if (lane_num - order_id_ - 1 < reverse_task_num) {
-        for (int i = 0; i < (order_id_ + 1 - (lane_num - reverse_task_num));
-             i++) {
-          current_tasks_.emplace_back(-1);
+      if (dis_to_ramp < 3000.0) { // TODO:clren 后续考虑安全性，根据距离，车流量，对task做调整
+        for (int i = 0; i < (lane_num - reverse_task_num) - order_id_ - 1; i++) {
+          current_tasks_.emplace_back(1);
         }
       }
     }
-  } else {
   }
 }
+
 void VirtualLane::save_context(VirtualLaneContext &context) const {
   // todo: clren
 }

@@ -5,7 +5,6 @@
 #include "fusion_road.pb.h"
 #include "intersection.h"
 #include "log.h"
-#include "ramp.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
 
@@ -84,13 +83,13 @@ class VirtualLaneManager {
   std::vector<std::shared_ptr<VirtualLane>> &get_virtual_lanes() {
     return relative_id_lanes_;
   }
-  uint get_lane_num() const { return relative_id_lanes_.size(); };
+  uint get_lane_num() const { return lane_num_; };
   std::vector<std::shared_ptr<Obstacle>> get_current_lane_obstacle();
   std::vector<std::shared_ptr<Obstacle>> get_left_lane_obstacle();
   std::vector<std::shared_ptr<Obstacle>> get_right_lane_obstacle();
   bool has_lane(int virtual_lane_id);
   const Intersection &get_intersection_info() const { return intersection_; }
-  const Ramp &get_ramp() const { return ramp_; }
+  // const Ramp &get_ramp() const { return ramp_; }
 
   // Destination destination_;
 
@@ -126,6 +125,10 @@ class VirtualLaneManager {
     return 5000.;
   };
 
+  double dis_to_ramp() const { return dis_to_ramp_; }
+  double distance_to_first_road_merge();
+  double distance_to_first_road_split();
+
   bool is_local_valid() const { return is_local_valid_; }
 
  private:
@@ -141,11 +144,12 @@ class VirtualLaneManager {
   std::shared_ptr<VirtualLane> current_lane_ = nullptr;
   std::shared_ptr<VirtualLane> left_lane_ = nullptr;
   std::shared_ptr<VirtualLane> right_lane_ = nullptr;
-
+  uint lane_num_ = 0;
   double last_left_diff_ = 0;
   double last_right_diff_ = 0;
   Intersection intersection_;
-  Ramp ramp_;
+  // Ramp ramp_;
+  double dis_to_ramp_ = NL_NMAX; 
   bool is_local_valid_ = false;
 };
 }  // namespace planning

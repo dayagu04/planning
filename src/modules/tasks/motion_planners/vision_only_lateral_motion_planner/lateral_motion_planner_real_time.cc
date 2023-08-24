@@ -2626,10 +2626,10 @@ bool VisionLateralMotionPlanner::update_planner_output() {
     lateral_output.lc_end_dis = 10000;
   }
 
-  if (virtual_lane_manager_->get_ramp().dis_to_ramp() !=
+  if (virtual_lane_manager_->dis_to_ramp() !=
       DBL_MAX) {  // attention !
     lateral_output.dis_to_ramp =
-        virtual_lane_manager_->get_ramp().dis_to_ramp();
+        virtual_lane_manager_->dis_to_ramp();
   } else {
     lateral_output.dis_to_ramp = 10000;
   }

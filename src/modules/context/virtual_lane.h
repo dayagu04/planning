@@ -54,7 +54,7 @@ class VirtualLane {
   int get_relative_id() const { return relative_id_; };
   double width_by_s(double s);
   double width(double x);
-  double width();
+  double width() { return width_; };
   // WB：用户设置巡航车速不应与地图限速耦合
   double velocity_limit() const { return v_cruise_; };
   const std::vector<double> &c_poly() const { return c_poly_; }
@@ -122,7 +122,7 @@ class VirtualLane {
   double min_width() const;
   double max_width() const;
   bool hack() const { return hack_; }
-  void update_lane_tasks(MapInfoManager &map_info_manager, uint lane_num);
+  void update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp, uint lane_num);
   const std::vector<int> &get_current_tasks() const { return current_tasks_; };
   // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离
 
@@ -137,6 +137,7 @@ class VirtualLane {
   int virtual_id_ = 0;
   int relative_id_ = 0;
   float ego_lateral_offset_ = 0;
+  double width_ = 2.8;
   LaneStatusEx lane_status_;
   std::vector<FusionRoad::LaneTypeMsg> lane_types_;
   std::vector<FusionRoad::LaneMarkMsg> lane_marks_;

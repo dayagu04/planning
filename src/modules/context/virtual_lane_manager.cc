@@ -11,6 +11,7 @@ VirtualLaneManager::VirtualLaneManager(planning::framework::Session* session) {
 
 bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   LOG_DEBUG("update VirtualLaneManager\n");
+  const double allow_error = 5;
   current_lane_ = nullptr;
   left_lane_ = nullptr;
   right_lane_ = nullptr;
@@ -22,19 +23,22 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   }
 
   is_local_valid_ = roads.local_point_valid();
+
+  double dis_to_first_road_split = distance_to_first_road_split();
+  double dis_between_first_road_split_and_ramp =
+      dis_to_first_road_split - dis_to_ramp_;
+  bool is_nearing_ramp = fabs(dis_between_first_road_split_and_ramp) < allow_error;
+  LOG_DEBUG("is_nearing_ramp:%d \n", is_nearing_ramp);
+
   for (auto& lane : roads.reference_line_msg()) {
     std::shared_ptr<VirtualLane> virtual_lane_tmp =
         std::make_shared<VirtualLane>();
     if (lane.lane_merge_split_point().merge_split_point_data_size() == 0) {
       virtual_lane_tmp->update_data(lane);
     } else {
-      double dis_to_ramp = ramp_.dis_to_ramp();
       auto lane_merge_split_point_data =
           lane.lane_merge_split_point().merge_split_point_data()[0];
-      double lane_merge_split_point_distance =
-          lane_merge_split_point_data.distance();
-      const double allow_error = 5;
-      if (fabs(dis_to_ramp - lane_merge_split_point_distance) < allow_error) {
+      if (is_nearing_ramp) {
         if (lane_merge_split_point_data.is_split()) {
           virtual_lane_tmp->update_data(lane);
         }
@@ -50,8 +54,11 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     relative_id_lanes_.emplace_back(virtual_lane_tmp);
   }
 
+  lane_num_ = relative_id_lanes_.size();
   for (auto relative_id_lane : relative_id_lanes_) {
-    // virtual_lane_tmp->update_lane_tasks(relative_id_lane.size());
+    if (dis_to_first_road_split < 3000.0) {
+      relative_id_lane->update_lane_tasks(dis_to_ramp_, is_nearing_ramp, lane_num_);
+    }
   }
 
   auto compare_relative_id = [&](std::shared_ptr<VirtualLane> lane1,
@@ -106,7 +113,6 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     LOG_DEBUG(" relative id:%d, virtual id: %d,", lane->get_relative_id(),
               lane->get_virtual_id());
   }
-
   LOG_DEBUG("\n");
   return true;
 }
@@ -125,7 +131,7 @@ const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(
 
 const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_order_id(
     uint order_id) const {
-  if (order_id > relative_id_lanes_.size() - 1) {
+  if (order_id > lane_num_ - 1) {
     return nullptr;
   }
   return relative_id_lanes_.at(order_id);
@@ -314,7 +320,7 @@ int VirtualLaneManager::get_tasks(
     }
     // clip tasks according to lane nums
     int lane_index = get_lane_index(virtual_lane);
-    int right_lane_nums = std::max((int)get_lane_num() - lane_index - 1, 0);
+    int right_lane_nums = std::max((int)lane_num_ - lane_index - 1, 0);
     int left_lane_nums = lane_index;
     current_tasks =
         std::max(std::min(current_tasks, right_lane_nums), -left_lane_nums);
@@ -343,7 +349,7 @@ int VirtualLaneManager::lc_map_decision(
   int lane_index = get_lane_index(virtual_lane);
 
   // hack valid and on rightest way
-  if (virtual_lane->hack() && lane_index == (get_lane_num() - 1)) {
+  if (virtual_lane->hack() && lane_index == (lane_num_ - 1)) {
     if (tasks_id <= 0) {
       tasks_id = std::min(tasks_id, -1);
     }
