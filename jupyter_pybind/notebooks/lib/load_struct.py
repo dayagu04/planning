@@ -74,7 +74,7 @@ def load_lane_center_lines(lanes):
 
   return line_info_list
 
-def load_obstacle_params(obstacle_list):
+def load_obstacle_paramsV1(obstacle_list):
 
   obs_info_all = dict()
 
