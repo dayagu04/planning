@@ -8,8 +8,8 @@
 #include "fusion_road.pb.h"
 #include "lane_lines.pb.h"
 #include "lane_reference_path.h"
-#include "map_info_manager.h"
 #include "log.h"
+#include "map_info_manager.h"
 #include "reference_path_manager.h"
 #include "refline.h"
 
@@ -88,11 +88,19 @@ class VirtualLane {
     return reference_path_;
   }
   double get_ego_lateral_offset() const { return ego_lateral_offset_; };
-  FusionRoad::LaneType get_lane_type() const { return lane_types_.size() > 0 ? lane_types_[0].type() : FusionRoad::LANE_TYPE_UNKNOWN; };
-  FusionRoad::LaneDrivableDirection get_lane_marks() const {
-    return lane_marks_.size() > 0 ? lane_marks_[0].lane_mark() : FusionRoad::DIRECTION_UNKNOWN;
+  FusionRoad::LaneType get_lane_type() const {
+    return lane_types_.size() > 0 ? lane_types_[0].type()
+                                  : ::FusionRoad::LaneType::LANETYPE_UNKNOWN;
   };
-  FusionRoad::LaneSource get_lane_source() const { return lane_sources_.size() > 0 ? lane_sources_[0].source() : FusionRoad::SOURCE_UNKNOWN;; };
+  FusionRoad::LaneDrivableDirection get_lane_marks() const {
+    return lane_marks_.size() > 0
+               ? lane_marks_[0].lane_mark()
+               : ::FusionRoad::LaneDrivableDirection::DIRECTION_UNKNOWN;
+  };
+  FusionRoad::LaneSource get_lane_source() const {
+    return lane_sources_.size() > 0 ? lane_sources_[0].source()
+                                    : ::FusionRoad::LaneSource::SOURCE_UNKNOWN;
+  };
 
   // 能让车沿着route形式，在当前位置所在的lanegroup中，最少需要变道几次
   // +： right; -: left

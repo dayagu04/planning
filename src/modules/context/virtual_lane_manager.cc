@@ -29,8 +29,10 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       virtual_lane_tmp->update_data(lane);
     } else {
       double dis_to_ramp = ramp_.dis_to_ramp();
-      auto lane_merge_split_point_data = lane.lane_merge_split_point().merge_split_point_data()[0];
-      double lane_merge_split_point_distance = lane_merge_split_point_data.distance();
+      auto lane_merge_split_point_data =
+          lane.lane_merge_split_point().merge_split_point_data()[0];
+      double lane_merge_split_point_distance =
+          lane_merge_split_point_data.distance();
       const double allow_error = 5;
       if (fabs(dis_to_ramp - lane_merge_split_point_distance) < allow_error) {
         if (lane_merge_split_point_data.is_split()) {
@@ -42,7 +44,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
         }
       }
     }
-    
+
     printf("lane relative_id:%d, order_id:%d\n", lane.relative_id(),
            lane.order_id());
     relative_id_lanes_.emplace_back(virtual_lane_tmp);
@@ -296,7 +298,6 @@ int VirtualLaneManager::get_lane_index(
   return 0;
 }
 
-
 int VirtualLaneManager::get_tasks(
     const std::shared_ptr<VirtualLane> virtual_lane) const {
   int current_tasks = 0;
@@ -358,9 +359,9 @@ double VirtualLaneManager::get_distance_to_first_road_merge() const {
 }
 
 double VirtualLaneManager::get_distance_to_first_road_split() const {
- double distance_to_first_road_split = 5000.;
+  double distance_to_first_road_split = 5000.;
 
- return distance_to_first_road_split;
+  return distance_to_first_road_split;
 }
 
 }  // namespace planning

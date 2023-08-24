@@ -85,7 +85,7 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
   // auto traffic_light_direction = map_info.traffic_light_direction();
   bool curr_direct_exist =
       (current_lane->get_lane_marks() == DIRECTION_UNKNOWN &&
-       current_lane->get_lane_type() == FusionRoad::LaneType::LANE_TYPE_NORMAL);
+       current_lane->get_lane_type() == FusionRoad::LaneType::LANETYPE_NORMAL);
   // 获取左右车道的index 换成获取id
   if (current_lane_index > 0) {
     left_lane_index = current_lane_index - 1;
@@ -104,7 +104,7 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
   // 判断是否为最左侧车道
   bool is_not_on_most_left_lane = current_lane_index != 0;
   bool is_normal_lane =
-      current_lane->get_lane_type() == FusionRoad::LaneType::LANE_TYPE_NORMAL;
+      current_lane->get_lane_type() == FusionRoad::LaneType::LANETYPE_NORMAL;
 
   auto distance_to_merge_point =
       current_lane->get_lane_merge_split_point().merge_split_point_data_size() >

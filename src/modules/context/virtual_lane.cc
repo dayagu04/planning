@@ -251,18 +251,17 @@ bool VirtualLane::get_point_by_distance(double distance,
 double VirtualLane::max_width() const {
   if (lane_types_.size() > 0) {
     switch (lane_types_[0].type()) {
-      case FusionRoad::LaneType::LANE_TYPE_UNKNOWN:;
-      case FusionRoad::LaneType::LANE_TYPE_NORMAL:;
-      case FusionRoad::LaneType::LANE_TYPE_VIRTUAL:;
-      case FusionRoad::LaneType::LANE_TYPE_PARKING:;
-      case FusionRoad::LaneType::LANE_TYPE_ACCELERATE:;
-      case FusionRoad::LaneType::LANE_TYPE_DECELERATE:;
-      case FusionRoad::LaneType::LANE_TYPE_BUS:;
-      case FusionRoad::LaneType::LANE_TYPE_EMERGENCY:;
-      case FusionRoad::LaneType::LANE_TYPE_ACCELERATE_DECELERATE:;
-      case FusionRoad::LaneType::LANE_TYPE_LEFT_TURN_WAITTING_AREA:;
-      case FusionRoad::LaneType::LANE_TYPE_NON_MOTOR:;
-      case FusionRoad::LaneType::LANE_TYPE_RAMP:
+      case FusionRoad::LaneType::LANETYPE_UNKNOWN:;
+      case FusionRoad::LaneType::LANETYPE_NORMAL:;
+      case FusionRoad::LaneType::LANETYPE_VIRTUAL:;
+      case FusionRoad::LaneType::LANETYPE_PARKING:;
+      case FusionRoad::LaneType::LANETYPE_ACCELERATE:;
+      case FusionRoad::LaneType::LANETYPE_DECELERATE:;
+      case FusionRoad::LaneType::LANETYPE_BUS:;
+      case FusionRoad::LaneType::LANETYPE_EMERGENCY:;
+      case FusionRoad::LaneType::LANETYPE_ACCELERATE_DECELERATE:;
+      case FusionRoad::LaneType::LANETYPE_LEFT_TURN_WAITTING_AREA:;
+      case FusionRoad::LaneType::LANETYPE_NON_MOTOR:;
         return 4.2;
       default:
         return DBL_MAX;
@@ -292,25 +291,24 @@ bool VirtualLane::is_solid_line(int side) const {
 
 double VirtualLane::min_width() const {
   if (lane_types_.size() > 0) {
-      switch (lane_types_[0].type()) {
-      case FusionRoad::LaneType::LANE_TYPE_UNKNOWN:;
-      case FusionRoad::LaneType::LANE_TYPE_NORMAL:;
-      case FusionRoad::LaneType::LANE_TYPE_VIRTUAL:;
-      case FusionRoad::LaneType::LANE_TYPE_PARKING:;
-      case FusionRoad::LaneType::LANE_TYPE_ACCELERATE:;
-      case FusionRoad::LaneType::LANE_TYPE_DECELERATE:;
-      case FusionRoad::LaneType::LANE_TYPE_BUS:;
-      case FusionRoad::LaneType::LANE_TYPE_EMERGENCY:;
-      case FusionRoad::LaneType::LANE_TYPE_ACCELERATE_DECELERATE:;
-      case FusionRoad::LaneType::LANE_TYPE_LEFT_TURN_WAITTING_AREA:;
-      case FusionRoad::LaneType::LANE_TYPE_NON_MOTOR:;
-      case FusionRoad::LaneType::LANE_TYPE_RAMP:
+    switch (lane_types_[0].type()) {
+      case FusionRoad::LaneType::LANETYPE_UNKNOWN:;
+      case FusionRoad::LaneType::LANETYPE_NORMAL:;
+      case FusionRoad::LaneType::LANETYPE_VIRTUAL:;
+      case FusionRoad::LaneType::LANETYPE_PARKING:;
+      case FusionRoad::LaneType::LANETYPE_ACCELERATE:;
+      case FusionRoad::LaneType::LANETYPE_DECELERATE:;
+      case FusionRoad::LaneType::LANETYPE_BUS:;
+      case FusionRoad::LaneType::LANETYPE_EMERGENCY:;
+      case FusionRoad::LaneType::LANETYPE_ACCELERATE_DECELERATE:;
+      case FusionRoad::LaneType::LANETYPE_LEFT_TURN_WAITTING_AREA:;
+      case FusionRoad::LaneType::LANETYPE_NON_MOTOR:;
         return 2.8;
       default:
         return DBL_MAX;
     }
   } else {
-     return DBL_MAX;
+    return DBL_MAX;
   }
 }
 
@@ -363,10 +361,13 @@ void VirtualLane::update_speed_limit(double ego_vel,
   v_cruise_ = std::min(current_lane_speed_limit_, speed_change_point_.speed);
 }
 
-void VirtualLane::update_lane_tasks(MapInfoManager &map_info_manager, uint lane_num) {
+void VirtualLane::update_lane_tasks(MapInfoManager &map_info_manager,
+                                    uint lane_num) {
   double dis_to_ramp = map_info_manager.dis_to_ramp();
-  double dis_to_first_road_split = map_info_manager.distance_to_first_road_split();
-  double dis_between_first_road_split_and_ramp = dis_to_first_road_split - dis_to_ramp;
+  double dis_to_first_road_split =
+      map_info_manager.distance_to_first_road_split();
+  double dis_between_first_road_split_and_ramp =
+      dis_to_first_road_split - dis_to_ramp;
   int reverse_task_num = std::max((int)std::floor((lane_num - 1) * 0.5), 0);
   current_tasks_.clear();
   if (dis_to_first_road_split < 3000.) {
@@ -376,13 +377,13 @@ void VirtualLane::update_lane_tasks(MapInfoManager &map_info_manager, uint lane_
       }
     } else {
       if (lane_num - order_id_ - 1 < reverse_task_num) {
-        for (int i = 0; i < (order_id_ + 1 - (lane_num - reverse_task_num)); i++) {
+        for (int i = 0; i < (order_id_ + 1 - (lane_num - reverse_task_num));
+             i++) {
           current_tasks_.emplace_back(-1);
         }
       }
     }
   } else {
-
   }
 }
 void VirtualLane::save_context(VirtualLaneContext &context) const {

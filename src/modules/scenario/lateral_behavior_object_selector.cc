@@ -540,7 +540,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                (right_boundary_info.type_segments_size() > 0 &&
                 right_boundary_info.type_segments(0).type() ==
                     Common::LaneBoundaryType::MARKING_DASHED &&
-                right_boundary_info.type_segments(0).length() - tr.d_rel > 60))) ||
+                right_boundary_info.type_segments(0).length() - tr.d_rel >
+                    60))) ||
              (!curr_direct_exist &&
               (right_direct_exist || dist_to_intsect - tr.d_rel > 200)))) {
           std::array<double, 4> d_expect_bp{0., tr.d_min_cpath};
@@ -650,7 +651,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                   left_boundary_info.type_segments(0).type() ==
                       Common::LaneBoundaryType::MARKING_DASHED &&
                   dist_to_intsect > 0 &&
-                  left_boundary_info.type_segments(0).length() - dist_to_intsect >
+                  left_boundary_info.type_segments(0).length() -
+                          dist_to_intsect >
                       -10) ||
                  dist_to_intsect < -5)) {
               if (dist_to_intsect > 0 || dist_to_intsect < -5) {
@@ -659,7 +661,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                      left_boundary_info.type_segments(0).type() ==
                          Common::LaneBoundaryType::MARKING_DASHED &&
                      ((!left_direct_exist &&
-                       ((left_boundary_info.type_segments(0).length() - tr.d_rel >
+                       ((left_boundary_info.type_segments(0).length() -
+                                 tr.d_rel >
                              80 &&
                          !right_direct_exist &&
                          (olane == nullptr ||
@@ -667,7 +670,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                            olane->get_virtual_id() ==
                                clane->get_virtual_id()))))) ||
                       (left_direct_exist &&
-                       left_boundary_info.type_segments(0).length() > tr.d_rel))) ||
+                       left_boundary_info.type_segments(0).length() >
+                           tr.d_rel))) ||
                     left_boundary_info.type_segments_size() > 3 ||
                     dist_to_intsect < -5 ||
                     (tlane != nullptr &&
@@ -2132,14 +2136,16 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                      right_boundary_info.type_segments(0).type() ==
                          Common::LaneBoundaryType::MARKING_DASHED &&
                      ((!right_direct_exist &&
-                       right_boundary_info.type_segments(0).length() - tr.d_rel >
+                       right_boundary_info.type_segments(0).length() -
+                               tr.d_rel >
                            80 &&
                        !left_direct_exist &&
                        (olane == nullptr ||
                         (olane != nullptr && olane->get_virtual_id() ==
                                                  clane->get_virtual_id()))) ||
                       (right_direct_exist &&
-                       right_boundary_info.type_segments(0).length() > tr.d_rel))) ||
+                       right_boundary_info.type_segments(0).length() >
+                           tr.d_rel))) ||
                     right_boundary_info.type_segments_size() > 3 ||
                     dist_to_intsect < -5 ||
                     (tlane != nullptr &&

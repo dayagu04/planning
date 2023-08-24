@@ -117,7 +117,7 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
       ref_path_pt.path_point.y = refline_pt.local_point().y();
       ref_path_pt.path_point.z = refline_pt.local_point().z();
       ref_path_pt.path_point.theta = refline_pt.enu_heading();
-      
+
     } else {
       ref_path_pt.path_point.x = refline_pt.car_point().x();
       ref_path_pt.path_point.y = refline_pt.car_point().y();

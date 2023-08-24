@@ -2,10 +2,10 @@
 #define ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_MANAGER_H_
 
 #include <vector>
-#include "ramp.h"
 #include "fusion_road.pb.h"
 #include "intersection.h"
 #include "log.h"
+#include "ramp.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
 
