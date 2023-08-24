@@ -14,6 +14,11 @@ pp_build:
 	make -j $(NUM_JOB) && \
 	make install"
 
+ut_build:
+	mkdir -p build && cd build && \
+	/bin/bash -c "cmake $(CMAKE_ARGS) -DUNIT_TEST_ENABLE=True .. && \
+	make -j $(NUM_JOB)"
+
 submodules_update:
 	/bin/bash -c " \
 	git submodule deinit src/thirdparty/interface; \

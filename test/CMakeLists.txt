@@ -1,17 +1,24 @@
 project (unit_test)
 cmake_minimum_required (VERSION 3.0)
 
-set(CMAKE_CXX_FLAGS "-O0 -DX86 -g")
+add_definitions(-DX86)
+add_definitions(-DCYBER_ENV)
+
+include_directories(
+  ${cyber_SOURCE_DIR}
+  ${cyber_BINARY_DIR}
+)
+
 
 file(GLOB_RECURSE SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/src/**.cc
 )
 
-add_executable(${PROJECT_NAME} EXCLUDE_FROM_ALL
+add_executable(${PROJECT_NAME}
   ${CMAKE_CURRENT_LIST_DIR}/main_test.cc
   ${SRC_FILES})
 
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME} PRIVATE
   common
   modules
   modules_scenario
@@ -19,6 +26,7 @@ target_link_libraries(${PROJECT_NAME}
   modules_common
   modules_context
   fastrtps
+  cyber
+  autoplt
   gtest)
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
