@@ -12,9 +12,10 @@ class MapRequest : public LaneChangeRequest {
              std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
              std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
   virtual ~MapRequest() = default;
-  void update(int lc_status, int left_int_freeze_cnt, int right_int_freeze_cnt);
+  void update(int lc_status, double lc_map_tfinish);
 
  private:
+  bool check_mlc_enable(double lc_map_tfinish);
   void print_forbid_generating_reason(
       const std::vector<std::string> forbid_generating_reason);
   void check_lc_forbid_reason(

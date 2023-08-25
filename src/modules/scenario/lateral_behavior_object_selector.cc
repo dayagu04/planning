@@ -301,7 +301,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
   auto dist_to_last_intsect = intersection_info.dist_to_last_intsect();
   auto dist_to_intsect = intersection_info.dist_to_intsect();
   bool is_in_intersection = intersection_info.is_in_intersection();
-  double dis_to_ramp = intersection_info.dis_to_ramp();
+  double dis_to_ramp = virtual_lane_mgr->dis_to_ramp();
+  double distance_to_first_road_split = virtual_lane_mgr->distance_to_first_road_split();
   double intersect_length = intersection_info.intsect_length();
   bool is_on_ramp = false;  // hack map_info.is_on_ramp()
   double lc_end_dis = virtual_lane_mgr->lc_map_decision_offset(clane);
@@ -470,6 +471,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
     double min_d_rel = 0.;
     double accident_drel = 1000.;
     double c_final_drel = 0.;
+    const double kInputBoundaryLenLimit = 145.;
+    const double kDefaultBoundaryLen = 5000.;
     bool accident_front = false;
 
     for (auto &tr : front_tracks_l) {
@@ -898,7 +901,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                       }
                     } else {
                       d_stop = std::min(
-                          (double)left_boundary_info.type_segments(0).length(),
+                          (double)left_boundary_info.type_segments(0).length() > kInputBoundaryLenLimit ? kDefaultBoundaryLen : left_boundary_info.type_segments(0).length(),
                           dis_to_ramp - 200.);
                     }
                   } else if (dist_to_intsect < -5) {
@@ -2376,8 +2379,11 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                       }
                     } else {
                       d_stop = std::min(
-                          (double)right_boundary_info.type_segments(0).length(),
+                          (double)right_boundary_info.type_segments(0).length() > kInputBoundaryLenLimit ? kDefaultBoundaryLen : right_boundary_info.type_segments(0).length(),
                           dis_to_ramp - 200.);
+                      if (right_lane_tasks_id == -1) {
+                        d_stop = std::min(d_stop, distance_to_first_road_split - 200.);
+                      }
                       if (!is_on_ramp &&
                           lane_merge_split_point.merge_split_point_data_size() >
                               0 &&
@@ -3014,9 +3020,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                       remove_car(right_alc_car_, tr.track_id);
                       remove_car(right_lb_car_, tr.track_id);
                     }
-                  } else if ((right_lane_tasks_id == -2 &&
-                              current_lane_tasks_id == -1) ||
-                             (is_on_highway && !is_on_ramp &&
+                  } else if ((is_on_highway && !is_on_ramp &&
                               right_lane_tasks_id == 0 &&
                               current_lane_tasks_id == 1)) {
                     std::array<double, 4> xp{0, 50, 100, 200};

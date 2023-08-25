@@ -42,8 +42,7 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   }
   if (int_request_.request_type() == NO_CHANGE) {
     if (hd_map_valid) {
-      map_request_.update(lc_status, int_request_.get_left_cancel_freeze_cnt(),
-                          int_request_.get_right_cancel_freeze_cnt());
+      map_request_.update(lc_status, map_request_.tfinish());
     }
     // WB hack:
     bool accident_ahead = false;

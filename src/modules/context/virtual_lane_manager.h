@@ -1,6 +1,7 @@
 #ifndef ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_MANAGER_H_
 #define ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_MANAGER_H_
 
+#include <climits>
 #include <vector>
 #include "fusion_road.pb.h"
 #include "intersection.h"
@@ -122,12 +123,16 @@ class VirtualLaneManager {
   double lc_map_decision_offset(
       const std::shared_ptr<VirtualLane> virtual_lane) const {
     // HACK
-    return 5000.;
+    double lc_end_dis = dis_to_ramp_;
+    if (lc_map_decision(virtual_lane) < 0) {
+      lc_end_dis = distance_to_first_road_split_;
+    }
+    return lc_end_dis;
   };
 
   double dis_to_ramp() const { return dis_to_ramp_; }
-  double distance_to_first_road_merge();
-  double distance_to_first_road_split();
+  double distance_to_first_road_merge() const { return distance_to_first_road_merge_; }
+  double distance_to_first_road_split() const { return distance_to_first_road_split_;}
 
   bool is_local_valid() const { return is_local_valid_; }
 
@@ -149,7 +154,9 @@ class VirtualLaneManager {
   double last_right_diff_ = 0;
   Intersection intersection_;
   // Ramp ramp_;
-  double dis_to_ramp_ = NL_NMAX; 
+  double dis_to_ramp_ = NL_NMAX;
+  double distance_to_first_road_merge_ = NL_NMAX;
+  double distance_to_first_road_split_ = NL_NMAX;
   bool is_local_valid_ = false;
 };
 }  // namespace planning
