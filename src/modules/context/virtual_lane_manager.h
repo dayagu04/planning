@@ -3,6 +3,7 @@
 
 #include <climits>
 #include <vector>
+#include "ad_common/hdmap/hdmap.h"
 #include "fusion_road.pb.h"
 #include "intersection.h"
 #include "log.h"
@@ -10,6 +11,10 @@
 #include "virtual_lane_manager.h"
 
 namespace planning {
+
+using Map::CurrentRouting;
+using Map::CurrentRouting;
+using ad_common::hdmap::LaneGroupConstPtr;
 
 enum LaneChangeStatus {
   NO_LANE_CHANGE = 0,
@@ -106,8 +111,10 @@ class VirtualLaneManager {
   bool update(const FusionRoad::RoadInfo &roads);
   void reset();
 
-  double get_distance_to_dash_line(const RequestType direction, uint order_id) const;
-  double get_distance_to_final_dash_line(const RequestType direction, uint order_id) const;
+  double get_distance_to_dash_line(const RequestType direction,
+                                   uint order_id) const;
+  double get_distance_to_final_dash_line(const RequestType direction,
+                                         uint order_id) const;
 
   double get_distance_to_first_road_merge() const;
   double get_distance_to_first_road_split() const;
@@ -136,9 +143,24 @@ class VirtualLaneManager {
 
   bool is_local_valid() const { return is_local_valid_; }
 
+  void calculate_distance_to_ramp(planning::framework::Session *session);
+  void calculate_distance_to_first_road_split(
+      planning::framework::Session *session);
+  void calculate_distance_to_first_road_merge(
+      planning::framework::Session *session);
+
  private:
   LaneChangeStatus is_lane_change();
   void update_virtual_id();
+
+  double judge_if_the_ramp(const int current_index,
+                           const CurrentRouting &current_routing) const;
+  double judge_if_the_first_split(const int current_index,
+                                  const CurrentRouting &current_routing) const;
+  double judge_if_the_first_merge(const int current_index,
+                                  const CurrentRouting &current_routing) const;
+  bool get_current_index_and_dis(int &current_index, double &remaining_dis,
+                                 planning::framework::Session *session) const;
 
   planning::framework::Session *session_ = nullptr;
   // ReferencePathManager reference_path_manager_;
@@ -158,6 +180,7 @@ class VirtualLaneManager {
   double distance_to_first_road_merge_ = NL_NMAX;
   double distance_to_first_road_split_ = NL_NMAX;
   bool is_local_valid_ = false;
+  ad_common::hdmap::HDMap hd_map_;
 };
 }  // namespace planning
 #endif

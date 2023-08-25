@@ -22,6 +22,8 @@ message TopicTimeList {
   optional uint64 hmi = 8;
   optional uint64 parking_fusion = 9;
   optional uint64 function_state_machine = 10;
+  optional uint64 map = 11;
+
 }
 
 message FrameInfo {

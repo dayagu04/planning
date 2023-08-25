@@ -104,6 +104,12 @@ bool PlanningComponent::Init() {
             planning_adapter_->FeedFuncStateMachine(func_state_machine_msg);
           });
 
+  auto map_reader_ = planning_node_->CreateReader<Map::StaticMap>(
+      "/iflytek/ehr/static_map",
+      [this](const std::shared_ptr<Map::StaticMap> &map_msg) {
+        planning_adapter_->FeedMap(map_msg);
+      });
+
   // -------------- writter topics --------------
   planning_writer_ =
       planning_node_->CreateWriter<PlanningOutput::PlanningOutput>(
