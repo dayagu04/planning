@@ -91,8 +91,9 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
   auto olane = virtual_lane_mgr_->get_lane_with_virtual_id(
                 origin_lane_virtual_id_);
 
-  if ((lc_map_decision > 0 && !current_lane->is_solid_line(1)) ||
-      (lc_map_decision < 0 && !current_lane->is_solid_line(0))) {
+  if (current_lane != nullptr && 
+     ((lc_map_decision > 0 && !current_lane->is_solid_line(1)) ||
+      (lc_map_decision < 0 && !current_lane->is_solid_line(0)))) {
     LOG_DEBUG("!!!!!!!!!!! lc_map_decision is %d", lc_map_decision);
     if (check_mlc_enable(lc_map_tfinish) == true && allow_generate == true) {
       if (lc_map_decision < 0) {
