@@ -122,7 +122,8 @@ class VirtualLane {
   double min_width() const;
   double max_width() const;
   bool hack() const { return hack_; }
-  void update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp, uint lane_num);
+  void update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
+                         uint lane_num);
   const std::vector<int> &get_current_tasks() const { return current_tasks_; };
   // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离
 

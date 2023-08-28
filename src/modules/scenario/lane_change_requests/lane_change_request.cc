@@ -98,17 +98,15 @@ bool LaneChangeRequest::IsDashedLineEnough(
     LOG_ERROR("!dashed_enough \n");
     return false;
   }
-  dash_length = (dash_length > kInputBoundaryLenLimit) ? kDefaultBoundaryLen : dash_length;
+  dash_length = (dash_length > kInputBoundaryLenLimit) ? kDefaultBoundaryLen
+                                                       : dash_length;
   double error_buffer = std::fmin(ego_vel * 0.5, 5);
   dash_length -= error_buffer;
 
-  double v_target = session_->environmental_model()
-                                .get_ego_state_manager()
-                                ->ego_v_cruise();
+  double v_target =
+      session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
 
-  double distance_thld =
-              std::max(v_target,
-              ego_vel) * 4.0;
+  double distance_thld = std::max(v_target, ego_vel) * 4.0;
   // bool must_change_lane =
   //     virtual_lane_mgr->get_current_lane()->must_change_lane(distance_thld);
   auto current_lane = virtual_lane_mgr_->get_current_lane();

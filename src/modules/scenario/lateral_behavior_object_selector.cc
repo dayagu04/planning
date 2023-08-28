@@ -302,7 +302,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
   auto dist_to_intsect = intersection_info.dist_to_intsect();
   bool is_in_intersection = intersection_info.is_in_intersection();
   double dis_to_ramp = virtual_lane_mgr->dis_to_ramp();
-  double distance_to_first_road_split = virtual_lane_mgr->distance_to_first_road_split();
+  double distance_to_first_road_split =
+      virtual_lane_mgr->distance_to_first_road_split();
   double intersect_length = intersection_info.intsect_length();
   bool is_on_ramp = false;  // hack map_info.is_on_ramp()
   double lc_end_dis = virtual_lane_mgr->lc_map_decision_offset(clane);
@@ -901,7 +902,10 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                       }
                     } else {
                       d_stop = std::min(
-                          (double)left_boundary_info.type_segments(0).length() > kInputBoundaryLenLimit ? kDefaultBoundaryLen : left_boundary_info.type_segments(0).length(),
+                          (double)left_boundary_info.type_segments(0).length() >
+                                  kInputBoundaryLenLimit
+                              ? kDefaultBoundaryLen
+                              : left_boundary_info.type_segments(0).length(),
                           dis_to_ramp - 200.);
                     }
                   } else if (dist_to_intsect < -5) {
@@ -2379,10 +2383,14 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                       }
                     } else {
                       d_stop = std::min(
-                          (double)right_boundary_info.type_segments(0).length() > kInputBoundaryLenLimit ? kDefaultBoundaryLen : right_boundary_info.type_segments(0).length(),
+                          (double)right_boundary_info.type_segments(0)
+                                      .length() > kInputBoundaryLenLimit
+                              ? kDefaultBoundaryLen
+                              : right_boundary_info.type_segments(0).length(),
                           dis_to_ramp - 200.);
                       if (right_lane_tasks_id == -1) {
-                        d_stop = std::min(d_stop, distance_to_first_road_split - 200.);
+                        d_stop = std::min(d_stop,
+                                          distance_to_first_road_split - 200.);
                       }
                       if (!is_on_ramp &&
                           lane_merge_split_point.merge_split_point_data_size() >

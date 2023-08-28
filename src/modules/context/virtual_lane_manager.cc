@@ -27,7 +27,8 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   double dis_to_first_road_split = distance_to_first_road_split();
   double dis_between_first_road_split_and_ramp =
       dis_to_first_road_split - dis_to_ramp_;
-  bool is_nearing_ramp = fabs(dis_between_first_road_split_and_ramp) < allow_error;
+  bool is_nearing_ramp =
+      fabs(dis_between_first_road_split_and_ramp) < allow_error;
   LOG_DEBUG("is_nearing_ramp:%d \n", is_nearing_ramp);
 
   for (auto& lane : roads.reference_line_msg()) {
@@ -57,7 +58,8 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   lane_num_ = relative_id_lanes_.size();
   for (auto relative_id_lane : relative_id_lanes_) {
     if (dis_to_first_road_split < 3000.0) {
-      relative_id_lane->update_lane_tasks(dis_to_ramp_, is_nearing_ramp, lane_num_);
+      relative_id_lane->update_lane_tasks(dis_to_ramp_, is_nearing_ramp,
+                                          lane_num_);
     }
   }
 

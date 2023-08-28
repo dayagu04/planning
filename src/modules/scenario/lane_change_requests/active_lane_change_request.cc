@@ -149,8 +149,7 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
               .orientation() ==
           FusionRoad::LaneOrientation::ORIENTATION_RIGHT &&
       distance_to_y_point > 0 && distance_to_y_point < kDistanceBuffer &&
-      distance_to_y_point + kDistanceBuffer <
-          virtual_lane_mgr_->dis_to_ramp();
+      distance_to_y_point + kDistanceBuffer < virtual_lane_mgr_->dis_to_ramp();
   bool is_from_right_y_point_lc_decision_valid =
       (virtual_lane_mgr_->lc_map_decision(current_lane) >= 0 &&
        distance_to_y_point + kDistanceBuffer <

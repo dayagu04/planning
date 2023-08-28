@@ -5,12 +5,12 @@
 #include "gtest/gtest.h"
 // #include "ilqr_define.h"
 // #include "lane_change_requests/map_lane_change_request.h"
-#include "scenario_state_machine.h"
 #include "adaptive_cruise_control.h"
 #include "gtest/gtest.h"
 #include "lateral_behavior_object_selector.h"
 #include "mrc_condition.h"
 #include "planning_output_context.h"
+#include "scenario_state_machine.h"
 #include "start_stop_enable.h"
 
 using namespace std;
@@ -80,14 +80,15 @@ bool transform_fusion_to_prediction(
   prediction_object.trajectory_array.emplace_back(tra);
   prediction_info.emplace_back(prediction_object);
 }
-}
+}  // namespace map_request_test
 
 class MapLaneChangeRequestTest : public ::testing::Test {
  protected:
   void update() {
     // load engine configuration
     const std::string CONFIG_PATH = "/asw/planning/res/conf";
-    std::string engine_config_path = CONFIG_PATH + "/planning_engine_config.json";
+    std::string engine_config_path =
+        CONFIG_PATH + "/planning_engine_config.json";
     common::ConfigurationContext::Instance()->load_engine_config_from_json(
         engine_config_path);
     auto engine_config =
@@ -102,7 +103,8 @@ class MapLaneChangeRequestTest : public ::testing::Test {
     // planning_base_ = std::make_unique<GeneralPlanning>();
     session.Init();
 
-    auto config_builder = std::make_unique<EgoPlanningConfigBuilder>("", "empty");
+    auto config_builder =
+        std::make_unique<EgoPlanningConfigBuilder>("", "empty");
     framework::Frame frame{&session};
     LocalView local_view;
     double time_stamp = IflyTime::Now_ms();
@@ -112,25 +114,26 @@ class MapLaneChangeRequestTest : public ::testing::Test {
       // road->set_virtual_id(i);
       road->set_relative_id(i - 3);
       // road->set_ego_lateral_offset(std::fabs(1 - i) * 3.8);
-      auto lane_types =  road->add_lane_types();
+      auto lane_types = road->add_lane_types();
       lane_types->set_type(FusionRoad::LaneType::LANETYPE_NORMAL);
       lane_types->set_begin(0.);
       lane_types->set_end(200.);
 
-      auto lane_marks =  road->add_lane_marks();
-      lane_marks->set_lane_mark(FusionRoad::LaneDrivableDirection::DIRECTION_STRAIGHT);
+      auto lane_marks = road->add_lane_marks();
+      lane_marks->set_lane_mark(
+          FusionRoad::LaneDrivableDirection::DIRECTION_STRAIGHT);
       lane_marks->set_begin(0.);
       lane_marks->set_begin(200.);
 
-      auto lane_sources =  road->add_lane_sources();
+      auto lane_sources = road->add_lane_sources();
       lane_sources->set_source(FusionRoad::LaneSource::SOURCE_FUSION);
       lane_sources->set_begin(0.);
       lane_sources->set_begin(200.);
 
       if (road->order_id() == 2) {
         road->mutable_lane_merge_split_point()->set_existence(true);
-        auto merge_split_point_data =
-            road->mutable_lane_merge_split_point()->add_merge_split_point_data();
+        auto merge_split_point_data = road->mutable_lane_merge_split_point()
+                                          ->add_merge_split_point_data();
         merge_split_point_data->set_distance(1000.);
         merge_split_point_data->set_length(100.);
         merge_split_point_data->set_is_split(true);
@@ -146,13 +149,14 @@ class MapLaneChangeRequestTest : public ::testing::Test {
       //   auto poly_coefficients =
       //   road->mutable_left_lane_boundary()->add_poly_coefficient(-1.9);
       road->mutable_left_lane_boundary()->add_poly_coefficient(1.9 +
-                                                              (3 - i) * 3.8);
+                                                               (3 - i) * 3.8);
       road->mutable_left_lane_boundary()->add_poly_coefficient(0.);
       road->mutable_left_lane_boundary()->add_poly_coefficient(0.);
       road->mutable_left_lane_boundary()->add_poly_coefficient(0.);
       road->mutable_left_lane_boundary()->set_begin(0.);
       road->mutable_left_lane_boundary()->set_end(200.);
-      auto left_type_segments = road->mutable_left_lane_boundary()->add_type_segments();
+      auto left_type_segments =
+          road->mutable_left_lane_boundary()->add_type_segments();
       left_type_segments->set_length(200.);
       left_type_segments->set_type(Common::LaneBoundaryType::MARKING_DASHED);
       road->mutable_right_lane_boundary()->set_existence(true);
@@ -167,17 +171,18 @@ class MapLaneChangeRequestTest : public ::testing::Test {
       road->mutable_right_lane_boundary()->add_poly_coefficient(0.);
       road->mutable_right_lane_boundary()->set_begin(0.);
       road->mutable_right_lane_boundary()->set_end(200.);
-      auto right_type_segments = road->mutable_right_lane_boundary()->add_type_segments();
+      auto right_type_segments =
+          road->mutable_right_lane_boundary()->add_type_segments();
       right_type_segments->set_length(200.);
       right_type_segments->set_type(Common::LaneBoundaryType::MARKING_DASHED);
-      road->mutable_lane_reference_line()->add_poly_coefficient_car(0. +
-                                                                    (3 - i) * 3.8);
+      road->mutable_lane_reference_line()->add_poly_coefficient_car(
+          0. + (3 - i) * 3.8);
       road->mutable_lane_reference_line()->add_poly_coefficient_car(0.);
       road->mutable_lane_reference_line()->add_poly_coefficient_car(0.);
       road->mutable_lane_reference_line()->add_poly_coefficient_car(0.);
       for (int j = 0; j < 200; j++) {
         auto point = road->mutable_lane_reference_line()
-                        ->add_virtual_lane_refline_points();
+                         ->add_virtual_lane_refline_points();
         point->set_track_id(0);
         point->mutable_car_point()->set_x(0. + j);
         point->mutable_car_point()->set_y(0. + (3 - i) * 3.8);
@@ -208,10 +213,12 @@ class MapLaneChangeRequestTest : public ::testing::Test {
     }
 
     common::VehicleStatus vehicle_status;
-    auto location_enu = vehicle_status.mutable_location()->mutable_location_enu();
+    auto location_enu =
+        vehicle_status.mutable_location()->mutable_location_enu();
     location_enu->set_x(10.0);
-    vehicle_status.mutable_velocity()->mutable_heading_velocity()->set_value_mps(
-        5.0);
+    vehicle_status.mutable_velocity()
+        ->mutable_heading_velocity()
+        ->set_value_mps(5.0);
 
     local_view.fusion_objects_info.mutable_header()->set_timestamp(time_stamp);
     local_view.fusion_objects_info.set_fusion_object_num(2);
@@ -224,10 +231,11 @@ class MapLaneChangeRequestTest : public ::testing::Test {
       // fusion_obj->mutable_common_info()->mutable_position()->set_y(fusion_object.lat_position());
       fusion_obj->mutable_common_info()->mutable_velocity()->set_x(0.1);
       fusion_obj->mutable_common_info()->mutable_velocity()->set_y(0.);
-      fusion_obj->mutable_common_info()->mutable_relative_velocity()->set_x(-5.);
+      fusion_obj->mutable_common_info()->mutable_relative_velocity()->set_x(
+          -5.);
       fusion_obj->mutable_common_info()->mutable_relative_velocity()->set_y(0.);
-      fusion_obj->mutable_common_info()->mutable_center_position()->set_x(20. +
-                                                                          i * 10);
+      fusion_obj->mutable_common_info()->mutable_center_position()->set_x(
+          20. + i * 10);
       fusion_obj->mutable_common_info()->mutable_center_position()->set_y(
           0. + i * 2.8);
       fusion_obj->mutable_common_info()
@@ -244,7 +252,6 @@ class MapLaneChangeRequestTest : public ::testing::Test {
 
     // framework::Frame *frame;
     // frame(session);
-    
 
     ego_state_manager_ptr_ =
         std::make_shared<planning::EgoStateManager>(&session);
@@ -309,13 +316,16 @@ class MapLaneChangeRequestTest : public ::testing::Test {
 
     object_selector_ =
         std::make_shared<ObjectSelector>(config_builder.get(), &session);
-    (&frame)->mutable_session()->mutable_planning_context()->set_object_selector(
-        object_selector_);
+    (&frame)
+        ->mutable_session()
+        ->mutable_planning_context()
+        ->set_object_selector(object_selector_);
 
-    lc_lane_mgr_ =
-      std::make_shared<LaneChangeLaneManager>(virtual_lane_manager_ptr_, &session);
+    lc_lane_mgr_ = std::make_shared<LaneChangeLaneManager>(
+        virtual_lane_manager_ptr_, &session);
     lc_req_mgr_ = std::make_shared<LaneChangeRequestManager>(
-      &session, config_builder.get(), virtual_lane_manager_ptr_, lc_lane_mgr_);
+        &session, config_builder.get(), virtual_lane_manager_ptr_,
+        lc_lane_mgr_);
 
     ego_state_manager_ptr_->update(vehicle_status);
     virtual_lane_manager_ptr_->update(local_view.road_info);
@@ -354,14 +364,13 @@ class MapLaneChangeRequestTest : public ::testing::Test {
     //     ->mutable_planning_context()
     //     ->set_scenario_state_machine(scenario_state_machine_);
 
-
-
     object_selector_->update((&frame)
-                                ->session()
-                                ->planning_context()
-                                .lat_behavior_state_machine_output()
-                                .curr_state, 0.,
-                            false, 80., false, false, false, false, false, -1);
+                                 ->session()
+                                 ->planning_context()
+                                 .lat_behavior_state_machine_output()
+                                 .curr_state,
+                             0., false, 80., false, false, false, false, false,
+                             -1);
 
     // (void)scenario_state_machine_->update(&frame);
     lc_req_mgr_->Update(ROAD_NONE, true);
@@ -381,13 +390,12 @@ class MapLaneChangeRequestTest : public ::testing::Test {
   std::shared_ptr<AdaptiveCruiseControl> adaptive_cruise_control_ = nullptr;
   std::shared_ptr<StartStopEnable> start_stop_ptr_ = nullptr;
   std::shared_ptr<ObjectSelector> object_selector_ = nullptr;
-  std::shared_ptr<planning::ScenarioStateMachine> scenario_state_machine_ = nullptr;
+  std::shared_ptr<planning::ScenarioStateMachine> scenario_state_machine_ =
+      nullptr;
   std::shared_ptr<LaneChangeRequestManager> lc_req_mgr_ = nullptr;
   std::shared_ptr<LaneChangeLaneManager> lc_lane_mgr_;
 };
 
-TEST_F(MapLaneChangeRequestTest, OneFrameTest) {
-  this->update();
-}
+TEST_F(MapLaneChangeRequestTest, OneFrameTest) { this->update(); }
 
-}
+}  // namespace planning

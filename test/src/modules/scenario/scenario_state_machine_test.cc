@@ -101,17 +101,18 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
     // road->set_virtual_id(i);
     road->set_relative_id(i - 1);
     // road->set_ego_lateral_offset(std::fabs(1 - i) * 3.8);
-    auto lane_types =  road->add_lane_types();
+    auto lane_types = road->add_lane_types();
     lane_types->set_type(FusionRoad::LaneType::LANETYPE_NORMAL);
     lane_types->set_begin(0.);
     lane_types->set_end(200.);
 
-    auto lane_marks =  road->add_lane_marks();
-    lane_marks->set_lane_mark(FusionRoad::LaneDrivableDirection::DIRECTION_STRAIGHT);
+    auto lane_marks = road->add_lane_marks();
+    lane_marks->set_lane_mark(
+        FusionRoad::LaneDrivableDirection::DIRECTION_STRAIGHT);
     lane_marks->set_begin(0.);
     lane_marks->set_begin(200.);
 
-    auto lane_sources =  road->add_lane_sources();
+    auto lane_sources = road->add_lane_sources();
     lane_sources->set_source(FusionRoad::LaneSource::SOURCE_FUSION);
     lane_sources->set_begin(0.);
     lane_sources->set_begin(200.);
@@ -133,13 +134,14 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
     //   auto poly_coefficients =
     //   road->mutable_left_lane_boundary()->add_poly_coefficient(-1.9);
     road->mutable_left_lane_boundary()->add_poly_coefficient(1.9 +
-                                                            (1 - i) * 3.8);
+                                                             (1 - i) * 3.8);
     road->mutable_left_lane_boundary()->add_poly_coefficient(0.);
     road->mutable_left_lane_boundary()->add_poly_coefficient(0.);
     road->mutable_left_lane_boundary()->add_poly_coefficient(0.);
     road->mutable_left_lane_boundary()->set_begin(0.);
     road->mutable_left_lane_boundary()->set_end(200.);
-    auto left_type_segments = road->mutable_left_lane_boundary()->add_type_segments();
+    auto left_type_segments =
+        road->mutable_left_lane_boundary()->add_type_segments();
     left_type_segments->set_length(200.);
     left_type_segments->set_type(Common::LaneBoundaryType::MARKING_DASHED);
     road->mutable_right_lane_boundary()->set_existence(true);
@@ -148,44 +150,45 @@ TEST(TestScenarioStateMachine, scenario_state_machine) {
     road->mutable_right_lane_boundary()->set_type(
         FusionRoad::LineType::LINE_TYPE_LANELINE);
     road->mutable_right_lane_boundary()->add_poly_coefficient(-1.9 +
-                                                            (1 - i) * 3.8);
+                                                              (1 - i) * 3.8);
     road->mutable_right_lane_boundary()->add_poly_coefficient(0.);
     road->mutable_right_lane_boundary()->add_poly_coefficient(0.);
     road->mutable_right_lane_boundary()->add_poly_coefficient(0.);
     road->mutable_right_lane_boundary()->set_begin(0.);
     road->mutable_right_lane_boundary()->set_end(200.);
-    auto right_type_segments = road->mutable_right_lane_boundary()->add_type_segments();
+    auto right_type_segments =
+        road->mutable_right_lane_boundary()->add_type_segments();
     right_type_segments->set_length(200.);
     right_type_segments->set_type(Common::LaneBoundaryType::MARKING_DASHED);
     for (int j = 0; j < 200; j++) {
-    auto point = road->mutable_lane_reference_line()
-                    ->add_virtual_lane_refline_points();
-    point->set_track_id(0);
-    point->mutable_car_point()->set_x(0. + j);
-    point->mutable_car_point()->set_y(0. + (1 - i) * 3.8);
-    point->mutable_enu_point()->set_x(0. + j);
-    point->mutable_enu_point()->set_y(0. + (1 - i) * 3.8);
-    point->mutable_enu_point()->set_z(0.);
-    point->set_curvature(0.);
-    point->set_car_heading(0.);
-    point->set_distance_to_left_road_border(10.);
-    point->set_distance_to_right_road_border(10.);
-    point->set_distance_to_left_lane_border(1.9);
-    point->set_distance_to_right_lane_border(1.9);
-    point->set_lane_width(3.8);
-    point->set_speed_limit_max(22.22);  // m/s
-    point->set_speed_limit_min(0.);
-    point->set_left_road_border_type(
-        Common::LaneBoundaryType::MARKING_DASHED);
-    point->set_right_road_border_type(
-        Common::LaneBoundaryType::MARKING_DASHED);
-    point->set_left_lane_border_type(
-        Common::LaneBoundaryType::MARKING_DASHED);
-    point->set_right_lane_border_type(
-        Common::LaneBoundaryType::MARKING_DASHED);
-    point->set_is_in_intersection(false);
-    point->set_lane_type(FusionRoad::LaneType::LANETYPE_NORMAL);
-    point->set_s(0. + j);
+      auto point = road->mutable_lane_reference_line()
+                       ->add_virtual_lane_refline_points();
+      point->set_track_id(0);
+      point->mutable_car_point()->set_x(0. + j);
+      point->mutable_car_point()->set_y(0. + (1 - i) * 3.8);
+      point->mutable_enu_point()->set_x(0. + j);
+      point->mutable_enu_point()->set_y(0. + (1 - i) * 3.8);
+      point->mutable_enu_point()->set_z(0.);
+      point->set_curvature(0.);
+      point->set_car_heading(0.);
+      point->set_distance_to_left_road_border(10.);
+      point->set_distance_to_right_road_border(10.);
+      point->set_distance_to_left_lane_border(1.9);
+      point->set_distance_to_right_lane_border(1.9);
+      point->set_lane_width(3.8);
+      point->set_speed_limit_max(22.22);  // m/s
+      point->set_speed_limit_min(0.);
+      point->set_left_road_border_type(
+          Common::LaneBoundaryType::MARKING_DASHED);
+      point->set_right_road_border_type(
+          Common::LaneBoundaryType::MARKING_DASHED);
+      point->set_left_lane_border_type(
+          Common::LaneBoundaryType::MARKING_DASHED);
+      point->set_right_lane_border_type(
+          Common::LaneBoundaryType::MARKING_DASHED);
+      point->set_is_in_intersection(false);
+      point->set_lane_type(FusionRoad::LaneType::LANETYPE_NORMAL);
+      point->set_s(0. + j);
     }
   }
 

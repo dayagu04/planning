@@ -131,8 +131,12 @@ class VirtualLaneManager {
   };
 
   double dis_to_ramp() const { return dis_to_ramp_; }
-  double distance_to_first_road_merge() const { return distance_to_first_road_merge_; }
-  double distance_to_first_road_split() const { return distance_to_first_road_split_;}
+  double distance_to_first_road_merge() const {
+    return distance_to_first_road_merge_;
+  }
+  double distance_to_first_road_split() const {
+    return distance_to_first_road_split_;
+  }
 
   bool is_local_valid() const { return is_local_valid_; }
 
