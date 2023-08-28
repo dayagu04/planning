@@ -118,7 +118,6 @@ class VirtualLane {
 
   // side: 0-left, 1-right
   bool is_solid_line(int side) const;
-
   double min_width() const;
   double max_width() const;
   bool hack() const { return hack_; }

@@ -106,13 +106,9 @@ class VirtualLaneManager {
   bool update(const FusionRoad::RoadInfo &roads);
   void reset();
 
-  double get_distance_to_dash_line(const RequestType direction,
-                                   uint order_id) const {
-    return std::numeric_limits<double>::max();
-  }
+  double get_distance_to_dash_line(const RequestType direction, uint order_id) const;
+  double get_distance_to_final_dash_line(const RequestType direction, uint order_id) const;
 
-  double get_distance_to_final_dash_line(const RequestType direction,
-                                         uint order_id) const;
   double get_distance_to_first_road_merge() const;
   double get_distance_to_first_road_split() const;
   int get_lane_index(const std::shared_ptr<VirtualLane> virtual_lane) const;

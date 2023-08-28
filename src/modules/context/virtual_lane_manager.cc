@@ -288,6 +288,42 @@ bool VirtualLaneManager::has_lane(int virtual_lane_id) {
   }
 }
 
+double VirtualLaneManager::get_distance_to_dash_line(const RequestType direction, uint order_id) const {
+  assert(direction == RIGHT_CHANGE || direction == LEFT_CHANGE);
+  
+  double distance_to_dash_line = 0.0; 
+  auto lane = get_lane_with_order_id(order_id);
+  if (lane == nullptr) {
+    return distance_to_dash_line;
+  }                
+                 
+  if (direction == LEFT_CHANGE) {
+    for (auto type_segment : lane->get_left_lane_boundary().type_segments()) {
+      if (type_segment.type() == Common::MARKING_DASHED || 
+          type_segment.type() == Common::MARKING_SHORT_DASHED ||
+          type_segment.type() == Common::MARKING_DOUBLE_DASHED ||
+          type_segment.type() == Common::MARKING_LEFT_SOLID_RIGHT_DASHED) {
+        distance_to_dash_line += type_segment.length();
+      } else {
+        break;
+      }
+    }
+  } else if (direction == RIGHT_CHANGE) {
+    for (auto type_segment : lane->get_right_lane_boundary().type_segments()) {
+      if (type_segment.type() == Common::MARKING_DASHED || 
+          type_segment.type() == Common::MARKING_SHORT_DASHED ||
+          type_segment.type() == Common::MARKING_DOUBLE_DASHED ||
+          type_segment.type() == Common::MARKING_LEFT_DASHED_RIGHT_SOLID) {
+        distance_to_dash_line += type_segment.length();
+      } else {
+        break;
+      }
+    }
+  }
+  LOG_DEBUG("get_distance_to_dash_line :%f\n", distance_to_dash_line);
+  return distance_to_dash_line;
+}
+
 double VirtualLaneManager::get_distance_to_final_dash_line(
     const RequestType direction, uint order_id) const {
   auto virtual_lane = get_lane_with_order_id(order_id);
