@@ -139,7 +139,7 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   } else {
     gen_turn_signal_ = NO_CHANGE;
   }
-  LOG_WARNING("[LCRequestManager::update] ===cur_state: %d=== \n", lc_status);
+  LOG_WARNING("[LCRequestManager::update] ===cur_state: %d=== gen_turn_signal_: %d \n", lc_status, gen_turn_signal_);
 }
 
 double LaneChangeRequestManager::GetReqStartTime(int source) const {

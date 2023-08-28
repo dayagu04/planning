@@ -362,7 +362,7 @@ void VirtualLane::update_speed_limit(double ego_vel,
 }
 
 void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp, uint lane_num) {
-  int reverse_task_num = std::max((int)std::floor((lane_num - 1) * 0.5), 0); // clren: hack
+  int reverse_task_num = lane_num > 3 ? std::max((int)std::floor((lane_num - 1) * 0.5), 0) : 0; // clren: hack
   current_tasks_.clear();
   if (is_nearing_ramp) {
     for (int i = 0; i < lane_num - order_id_ - 1; i++) {
