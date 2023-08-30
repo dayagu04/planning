@@ -22,7 +22,7 @@ void PlanningAdapter::Init() {
   auto engine_config =
       common::ConfigurationContext::Instance()->engine_config();
 
-  std::string log_file = engine_config.log_conf.log_file_dir + "/planning_log";
+  std::string log_file = engine_config.log_conf.log_file;
   // Nanolog
   bst::LogLevel log_level;
   if (engine_config.log_conf.log_level == "FETAL") {
