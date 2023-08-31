@@ -6,6 +6,7 @@
 #include "ad_common/hdmap/hdmap.h"
 #include "fusion_road.pb.h"
 #include "intersection.h"
+#include "local_view.h"
 #include "log.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
@@ -143,24 +144,25 @@ class VirtualLaneManager {
 
   bool is_local_valid() const { return is_local_valid_; }
 
-  void calculate_distance_to_ramp(planning::framework::Session *session);
-  void calculate_distance_to_first_road_split(
-      planning::framework::Session *session);
-  void calculate_distance_to_first_road_merge(
-      planning::framework::Session *session);
+  void CalculateDistanceToRamp(planning::framework::Session *session);
+  void CalculateDistanceToFirstRoadSplit(planning::framework::Session *session);
+  void CalculateDistanceToFirstRoadMerge(planning::framework::Session *session);
 
  private:
   LaneChangeStatus is_lane_change();
   void update_virtual_id();
 
-  double judge_if_the_ramp(const int current_index,
-                           const CurrentRouting &current_routing) const;
-  double judge_if_the_first_split(const int current_index,
-                                  const CurrentRouting &current_routing) const;
-  double judge_if_the_first_merge(const int current_index,
-                                  const CurrentRouting &current_routing) const;
-  bool get_current_index_and_dis(int &current_index, double &remaining_dis,
-                                 planning::framework::Session *session) const;
+  double JudgeIfTheRamp(const int current_index,
+                        const CurrentRouting &current_routing,
+                        const ad_common::hdmap::HDMap *hd_map) const;
+  double JudgeIfTheFirstSplit(const int current_index,
+                              const CurrentRouting &current_routing,
+                              const ad_common::hdmap::HDMap *hd_map) const;
+  double JudgeIfTheFirstMerge(const int current_index,
+                              const CurrentRouting &current_routing,
+                              const ad_common::hdmap::HDMap *hd_map) const;
+  bool GetCurrentIndexAndDis(const planning::framework::Session &session,
+                             int *current_index, double *remaining_dis);
 
   planning::framework::Session *session_ = nullptr;
   // ReferencePathManager reference_path_manager_;
@@ -180,7 +182,6 @@ class VirtualLaneManager {
   double distance_to_first_road_merge_ = NL_NMAX;
   double distance_to_first_road_split_ = NL_NMAX;
   bool is_local_valid_ = false;
-  ad_common::hdmap::HDMap hd_map_;
 };
 }  // namespace planning
 #endif

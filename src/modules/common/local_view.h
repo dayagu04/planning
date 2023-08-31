@@ -51,6 +51,8 @@ struct LocalView {
 
   Map::StaticMap static_map_info;
   double static_map_info_recv_time = 0.0;
+
+  double hdmap_time = 0.0;
 };
 
 }  // namespace planning
