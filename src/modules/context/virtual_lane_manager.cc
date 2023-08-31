@@ -598,7 +598,11 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
       }
     }
   }
+<<<<<<< HEAD
   LOG_DEBUG("no road merge in current routing for merge\n");
+=======
+  LOG_DEBUG("no road merge in current routing for merge");
+>>>>>>> update function of calculate distance to ramp split merge
   return NL_NMAX;
 }
 
