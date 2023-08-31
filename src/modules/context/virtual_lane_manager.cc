@@ -61,13 +61,18 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     printf("lane relative_id:%d, order_id:%d\n", lane.relative_id(),
            lane.order_id());
     relative_id_lanes_.emplace_back(virtual_lane_tmp);
+    if (virtual_lane_tmp->get_lane_type() == FusionRoad::LaneType::LANETYPE_EMERGENCY) break;
   }
 
   lane_num_ = relative_id_lanes_.size();
+  double lane_num_except_emergency = lane_num_;
+  if (relative_id_lanes_[lane_num_ - 1]->get_lane_type() == FusionRoad::LaneType::LANETYPE_EMERGENCY) lane_num_except_emergency -= 1;
   for (auto relative_id_lane : relative_id_lanes_) {
+    std::cout << "VirtualLaneManager::update_lane_tasks():: order_id_: " << relative_id_lane->get_order_id() << " lane_type: " << relative_id_lane->get_lane_type() << std::endl;
+    if (relative_id_lane->get_lane_type() == FusionRoad::LaneType::LANETYPE_EMERGENCY) break;
     if (dis_to_first_road_split < 3000.0) {
       relative_id_lane->update_lane_tasks(dis_to_ramp_, is_nearing_ramp,
-                                          lane_num_);
+                                          lane_num_except_emergency);
     }
   }
 
