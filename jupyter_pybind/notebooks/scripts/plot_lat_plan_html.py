@@ -20,7 +20,7 @@ from lib.basic_layers import *
 from lib.bag_loader import *
 
 # 先手动写死bag
-bag_path = "/share/mnt/0809/real_time_8.00000"
+bag_path = "/share/mnt/s811_1_0824_1/realtime_cutin_9.00000"
 
 html_file = bag_path +".lat_plan.html" 
 # -
@@ -126,8 +126,6 @@ def draw_lat(dataLoader, layer_manager):
         names.append('premove_dpoly_c0')
         datas.append(vo_lat_motion_plan.avoid_dpoly_c0 - basic_dpoly[3])
         names.append('avoid_dpoly_c0')
-        
-        
       except:
         pass
       
@@ -293,7 +291,7 @@ def plotOnce(bag_path, html_file):
     """
 
     car_slider = Slider(start=0, end=max_time-0,
-                        value=0, step=0.01, title="time")
+                        value=0, step=0.05, title="time")
     code0 = """
     %s
             console.log("cb_objS");

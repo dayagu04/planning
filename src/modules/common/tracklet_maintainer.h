@@ -75,8 +75,6 @@ class TrackletMaintainer {
 
   void fill_deriv_info(TrackedObject &item);
 
-  void fill_possibility_of_cutin(TrackedObject &item);
-
   void calc_intersection_with_refline(TrackedObject &item,
                                       bool enable_intersection_planner);
 

@@ -124,6 +124,7 @@ struct TrackedObject {
 
   bool is_lead = false;
   bool is_temp_lead = false;
+  double cutin_confidence_cnt = 0;
   double leadone_confidence_cnt = 0;
   double leadtwo_confidence_cnt = 0;
   double tleadone_confidence_cnt = 0;
