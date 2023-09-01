@@ -1,3 +1,9 @@
+# planning.2.1.0.4
+
+####  修改说明
+1. Release版本默认打日志到/dev/null
+2. 优化leadone&cutin障碍物筛选逻辑，减少对cutin障碍物制动过晚、制动过重问题
+
 # planning.2.1.0.3
 
 ####  修改说明
