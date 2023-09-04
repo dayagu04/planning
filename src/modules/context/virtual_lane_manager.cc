@@ -1,4 +1,5 @@
 #include "virtual_lane_manager.h"
+#include <iostream>
 #include "ad_common/hdmap/hdmap.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
@@ -10,7 +11,9 @@ using Map::CurrentRouting;
 using Map::FormOfWayType::RAMP;
 using ad_common::hdmap::LaneGroupConstPtr;
 
-VirtualLaneManager::VirtualLaneManager(const EgoPlanningConfigBuilder *config_builder,planning::framework::Session* session) {
+VirtualLaneManager::VirtualLaneManager(
+    const EgoPlanningConfigBuilder* config_builder,
+    planning::framework::Session* session) {
   session_ = session;
   config_ = config_builder->cast<EgoPlanningVirtualLaneManagerConfig>();
   is_select_split_nearing_ramp_ = config_.is_select_split_nearing_ramp;
@@ -31,22 +34,35 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
 
   is_local_valid_ = roads.local_point_valid();
   if (session_->environmental_model().get_hdmap_valid()) {
+    std::cout << "hdmap_valid is true,current timestamp:"
+              << session_->environmental_model()
+                     .get_local_view()
+                     .static_map_info.header()
+                     .timestamp()
+              << std::endl;
     CalculateDistanceToRamp(session_);
     CalculateDistanceToFirstRoadSplit(session_);
     CalculateDistanceToFirstRoadMerge(session_);
   }
-  
   double dis_to_first_road_split = distance_to_first_road_split();
   double dis_between_first_road_split_and_ramp =
       dis_to_first_road_split - dis_to_ramp_;
   bool is_nearing_ramp =
-      fabs(dis_between_first_road_split_and_ramp) < allow_error && dis_to_ramp_ < 3000.;
-  LOG_DEBUG("dis_to_ramp: %f, dis_to_first_road_split: %f, distance_to_first_road_merge_: %f \n", dis_to_ramp_, dis_to_first_road_split, distance_to_first_road_merge_);
-  std::cout << " dis_to_ramp: " << dis_to_ramp_ << " dis_to_first_road_split: " << dis_to_first_road_split << " distance_to_first_road_merge_: " << distance_to_first_road_merge_ << std::endl;
+      fabs(dis_between_first_road_split_and_ramp) < allow_error &&
+      dis_to_ramp_ < 3000.;
+  LOG_DEBUG(
+      "dis_to_ramp: %f, dis_to_first_road_split: %f, "
+      "distance_to_first_road_merge_: %f \n",
+      dis_to_ramp_, dis_to_first_road_split, distance_to_first_road_merge_);
+  std::cout << " dis_to_ramp: " << dis_to_ramp_
+            << " dis_to_first_road_split: " << dis_to_first_road_split
+            << " distance_to_first_road_merge_: "
+            << distance_to_first_road_merge_ << std::endl;
   LOG_DEBUG("is_nearing_ramp:%d \n", is_nearing_ramp);
-  
+
   // 后续删除该打印
-  std::cout << "is_select_split_nearing_ramp:" << is_select_split_nearing_ramp_ << std::endl;
+  std::cout << "is_select_split_nearing_ramp:" << is_select_split_nearing_ramp_
+            << std::endl;
   for (auto& lane : roads.reference_line_msg()) {
     std::shared_ptr<VirtualLane> virtual_lane_tmp =
         std::make_shared<VirtualLane>();
@@ -57,13 +73,15 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       auto lane_merge_split_point_data =
           lane.lane_merge_split_point().merge_split_point_data()[0];
       if (is_nearing_ramp) {
-        if ((is_select_split_nearing_ramp_ && lane_merge_split_point_data.is_split()) ||
-            (!is_select_split_nearing_ramp_ && lane_merge_split_point_data.is_continue())) {
+        if ((is_select_split_nearing_ramp_ &&
+             lane_merge_split_point_data.is_split()) ||
+            (!is_select_split_nearing_ramp_ &&
+             lane_merge_split_point_data.is_continue())) {
           virtual_lane_tmp->update_data(lane);
           std::cout << "22222222222222222222222" << std::endl;
         } else {
           continue;
-        } 
+        }
       } else {
         if (lane_merge_split_point_data.is_continue()) {
           virtual_lane_tmp->update_data(lane);
@@ -77,15 +95,25 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     printf("lane relative_id:%d, order_id:%d\n", lane.relative_id(),
            lane.order_id());
     relative_id_lanes_.emplace_back(virtual_lane_tmp);
-    if (virtual_lane_tmp->get_lane_type() == FusionRoad::LaneType::LANETYPE_EMERGENCY) break;
+    if (virtual_lane_tmp->get_lane_type() ==
+        FusionRoad::LaneType::LANETYPE_EMERGENCY)
+      break;
   }
 
   lane_num_ = relative_id_lanes_.size();
   double lane_num_except_emergency = lane_num_;
-  if (relative_id_lanes_[lane_num_ - 1]->get_lane_type() == FusionRoad::LaneType::LANETYPE_EMERGENCY) lane_num_except_emergency -= 1;
+  if (relative_id_lanes_[lane_num_ - 1]->get_lane_type() ==
+      FusionRoad::LaneType::LANETYPE_EMERGENCY)
+    lane_num_except_emergency -= 1;
   for (auto relative_id_lane : relative_id_lanes_) {
-    std::cout << "VirtualLaneManager::update_lane_tasks():: order_id_: " << relative_id_lane->get_order_id() << " lane_type: " << relative_id_lane->get_lane_type() << " lane_num_except_emergency: " << lane_num_except_emergency << std::endl;
-    if (relative_id_lane->get_lane_type() == FusionRoad::LaneType::LANETYPE_EMERGENCY) break;
+    std::cout << "VirtualLaneManager::update_lane_tasks():: order_id_: "
+              << relative_id_lane->get_order_id()
+              << " lane_type: " << relative_id_lane->get_lane_type()
+              << " lane_num_except_emergency: " << lane_num_except_emergency
+              << std::endl;
+    if (relative_id_lane->get_lane_type() ==
+        FusionRoad::LaneType::LANETYPE_EMERGENCY)
+      break;
     if (dis_to_first_road_split < 3000.0) {
       relative_id_lane->update_lane_tasks(dis_to_ramp_, is_nearing_ramp,
                                           lane_num_except_emergency);
@@ -529,7 +557,7 @@ double VirtualLaneManager::JudgeIfTheRamp(
       }
     }
   }
-  LOG_DEBUG("no ramp in current routing");
+  LOG_DEBUG("no ramp in current routing\n");
   return NL_NMAX;
 }
 
@@ -560,7 +588,7 @@ double VirtualLaneManager::JudgeIfTheFirstSplit(
       return accumulate_distance_for_lane_group;
     }
   }
-  LOG_DEBUG("no split in current routing");
+  LOG_DEBUG("no split in current routing\n");
   return NL_NMAX;
 }
 
@@ -598,11 +626,7 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
       }
     }
   }
-<<<<<<< HEAD
   LOG_DEBUG("no road merge in current routing for merge\n");
-=======
-  LOG_DEBUG("no road merge in current routing for merge");
->>>>>>> update function of calculate distance to ramp split merge
   return NL_NMAX;
 }
 
@@ -617,7 +641,8 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   const double ego_pose_x = pose.local_position().x();
   const double ego_pose_y = pose.local_position().y();
   ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
-  std::cout<<"ego_pose_x:"<<ego_pose_x<<",ego_pose_y:"<<ego_pose_x<<std::endl;
+  std::cout << "ego_pose_x:" << ego_pose_x << ",ego_pose_y:" << ego_pose_x
+            << std::endl;
 
   // get nearest lane
   ad_common::hdmap::LaneInfoConstPtr nearest_lane;
@@ -636,6 +661,7 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
 
   // judge the ramp lane group
   uint64_t nearest_lane_group_id = nearest_lane->lane_group_id();
+  std::cout << "nearest_lane_group_id:" << nearest_lane_group_id << std::endl;
   const CurrentRouting& current_routing = map.current_routing();
   const int lane_groups_num = current_routing.lane_groups_in_route().size();
   LOG_DEBUG("lane_groups_num nums:%d\n", lane_groups_num);
@@ -643,6 +669,9 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   // get the current lane group
   int current_lane_group_index = -1;
   for (int i = 0; i < lane_groups_num; i++) {
+    std::cout << "every_lane_groups_id:"
+              << current_routing.lane_groups_in_route()[i].lane_group_id()
+              << ",No:" << i << std::endl;
     if (nearest_lane_group_id ==
         current_routing.lane_groups_in_route()[i].lane_group_id()) {
       current_lane_group_index = i;

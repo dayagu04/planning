@@ -814,7 +814,9 @@ bool EnvironmentalModelManager::InputReady(double current_time,
     const char *feed_type_str = to_string(feed_type);
     if (last_feed_time_[i] > 0.0) {
       if (current_time - last_feed_time_[i] > kCheckTimeDiff) {
-        if (feed_type == FEED_MAP_INFO && current_time - last_feed_time_[i] <= kMapCheckTimeDiff) continue;
+        if (feed_type == FEED_MAP_INFO &&
+            current_time - last_feed_time_[i] <= kMapCheckTimeDiff)
+          continue;
         LOG_ERROR("(%s)feed delay: %d, %s", __FUNCTION__, i, feed_type_str,
                   "\n");
         error_msg += std::string(feed_type_str) + "; ";

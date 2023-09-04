@@ -1,10 +1,10 @@
 #ifndef ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_MANAGER_H_
 #define ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_MANAGER_H_
 
-#include "ego_planning_config.h"
 #include <climits>
 #include <vector>
 #include "ad_common/hdmap/hdmap.h"
+#include "ego_planning_config.h"
 #include "fusion_road.pb.h"
 #include "intersection.h"
 #include "local_view.h"
@@ -25,7 +25,7 @@ enum LaneChangeStatus {
 class VirtualLaneManager {
  public:
   VirtualLaneManager(const EgoPlanningConfigBuilder *config_builder,
-    planning::framework::Session *session);
+                     planning::framework::Session *session);
   // VirtualLaneManager() = default;
   ~VirtualLaneManager(){};
 

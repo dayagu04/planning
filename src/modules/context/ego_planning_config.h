@@ -746,8 +746,7 @@ struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
     is_select_split_nearing_ramp = read_json_key<bool>(
-        json, "is_select_split_nearing_ramp",
-        is_select_split_nearing_ramp);
+        json, "is_select_split_nearing_ramp", is_select_split_nearing_ramp);
   }
   bool is_select_split_nearing_ramp = true;
 };

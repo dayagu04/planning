@@ -85,9 +85,12 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
   // auto traffic_light_direction = map_info.traffic_light_direction();
   // bool curr_direct_exist =
   //     (current_lane->get_lane_marks() == DIRECTION_UNKNOWN &&
-  //      current_lane->get_lane_type() == FusionRoad::LaneType::LANETYPE_NORMAL);
-  //hack curr_direct_exist until intersection info ready
-  bool curr_direct_exist = (current_lane->get_lane_marks() == FusionRoad::LaneDrivableDirection::DIRECTION_STRAIGHT);
+  //      current_lane->get_lane_type() ==
+  //      FusionRoad::LaneType::LANETYPE_NORMAL);
+  // hack curr_direct_exist until intersection info ready
+  bool curr_direct_exist =
+      (current_lane->get_lane_marks() ==
+       FusionRoad::LaneDrivableDirection::DIRECTION_STRAIGHT);
   // 获取左右车道的index 换成获取id
   if (current_lane_index > 0) {
     left_lane_index = current_lane_index - 1;
