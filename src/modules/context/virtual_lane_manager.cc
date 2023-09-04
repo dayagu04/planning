@@ -28,10 +28,11 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   }
 
   is_local_valid_ = roads.local_point_valid();
-
-  CalculateDistanceToRamp(session_);
-  CalculateDistanceToFirstRoadSplit(session_);
-  CalculateDistanceToFirstRoadMerge(session_);
+  if (session_->environmental_model().get_hdmap_valid()) {
+    CalculateDistanceToRamp(session_);
+    CalculateDistanceToFirstRoadSplit(session_);
+    CalculateDistanceToFirstRoadMerge(session_);
+  }
 
   double dis_to_first_road_split = distance_to_first_road_split();
   double dis_between_first_road_split_and_ramp =
@@ -483,7 +484,7 @@ double VirtualLaneManager::JudgeIfTheRamp(
   const int lane_groups_num = current_routing.lane_groups_in_route_size();
   double accumulate_distance_for_lane_group = 0;
   for (int i = current_index; i < lane_groups_num; i++) {
-    const int lane_group_id =
+    const uint64_t lane_group_id =
         current_routing.lane_groups_in_route()[i].lane_group_id();
     LaneGroupConstPtr lane_group_ptr = hd_map->GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
@@ -497,7 +498,7 @@ double VirtualLaneManager::JudgeIfTheRamp(
     const int successor_lane_group_size =
         lane_group_ptr->successor_lane_group_ids().size();
     if (successor_lane_group_size > 1 && (i + 1) < lane_groups_num) {
-      int lane_group_id_next =
+      uint64_t lane_group_id_next =
           current_routing.lane_groups_in_route()[i + 1].lane_group_id();
       LaneGroupConstPtr lane_group_ptr_next =
           hd_map->GetLaneGroupById(lane_group_id_next);
@@ -525,7 +526,7 @@ double VirtualLaneManager::JudgeIfTheFirstSplit(
   const int lane_groups_num = current_routing.lane_groups_in_route_size();
   double accumulate_distance_for_lane_group = 0;
   for (int i = current_index; i < lane_groups_num; i++) {
-    const int lane_group_id =
+    const uint64_t lane_group_id =
         current_routing.lane_groups_in_route()[i].lane_group_id();
     LaneGroupConstPtr lane_group_ptr = hd_map->GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
@@ -555,7 +556,7 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
   const int lane_groups_num = current_routing.lane_groups_in_route_size();
   double accumulate_distance_for_lane_group = 0;
   for (int i = current_index; i < lane_groups_num; i++) {
-    const int lane_group_id =
+    const uint64_t lane_group_id =
         current_routing.lane_groups_in_route()[i].lane_group_id();
     LaneGroupConstPtr lane_group_ptr = hd_map->GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
@@ -568,7 +569,7 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
 
     // judge if the road merge according to the predecessor_lane_group_ids_size
     if (i + 1 < lane_groups_num) {
-      int lane_group_id_next =
+      uint64_t lane_group_id_next =
           current_routing.lane_groups_in_route()[i + 1].lane_group_id();
       LaneGroupConstPtr lane_group_ptr_next =
           hd_map->GetLaneGroupById(lane_group_id_next);
@@ -583,7 +584,7 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
       }
     }
   }
-  LOG_DEBUG("no road merge in current routing for merge");
+  LOG_DEBUG("no road merge in current routing for merge\n");
   return NL_NMAX;
 }
 
@@ -595,12 +596,13 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   const auto& map = local_view.static_map_info;
   const auto& pose = local_view.localization_estimate.pose();
 
-  const double ego_pose_x = pose.enu_position().x();
-  const double ego_pose_y = pose.enu_position().y();
+  const double ego_pose_x = pose.local_position().x();
+  const double ego_pose_y = pose.local_position().y();
   ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
+  std::cout<<"ego_pose_x:"<<ego_pose_x<<",ego_pose_y:"<<ego_pose_x<<std::endl;
 
   // get nearest lane
-  ad_common::hdmap::LaneInfoConstPtr nearest_lane = nullptr;
+  ad_common::hdmap::LaneInfoConstPtr nearest_lane;
   double nearest_s = 0.0;
   double nearest_l = 0.0;
   const int res =
@@ -615,7 +617,7 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   *remaining_dis = nearest_lane_total_length - nearest_s;
 
   // judge the ramp lane group
-  int nearest_lane_group_id = nearest_lane->lane_group_id();
+  uint64_t nearest_lane_group_id = nearest_lane->lane_group_id();
   const CurrentRouting& current_routing = map.current_routing();
   const int lane_groups_num = current_routing.lane_groups_in_route().size();
   LOG_DEBUG("lane_groups_num nums:%d\n", lane_groups_num);

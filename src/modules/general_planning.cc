@@ -50,6 +50,7 @@ bool GeneralPlanning::RunOnce(
   double start_timestamp = IflyTime::Now_ms();
   EnvironmentalModel *environmental_model =
       session_.mutable_environmental_model();
+  
   environmental_model->feed_local_view(local_view);  // todo
 
   const auto &state_machine = local_view.function_state_machine_info;
