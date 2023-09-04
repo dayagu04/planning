@@ -487,7 +487,7 @@ double VirtualLaneManager::JudgeIfTheRamp(
         current_routing.lane_groups_in_route()[i].lane_group_id();
     LaneGroupConstPtr lane_group_ptr = hd_map->GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
-      LOG_DEBUG("fail get lane group by id!!!\n");
+      LOG_DEBUG("fail get lane group by id for ramp!!!\n");
       return NL_NMAX;
     }
     if (i > current_index) {
@@ -502,12 +502,12 @@ double VirtualLaneManager::JudgeIfTheRamp(
       LaneGroupConstPtr lane_group_ptr_next =
           hd_map->GetLaneGroupById(lane_group_id_next);
       if (lane_group_ptr_next == nullptr) {
-        LOG_DEBUG("fail get lane group by id!!!\n");
+        LOG_DEBUG("fail get lane group by id for ramp!!!\n");
         return NL_NMAX;
       }
       for (int j = 0; j < lane_group_ptr_next->way_forms().size(); j++) {
         if (lane_group_ptr_next->way_forms()[j] == RAMP) {
-          LOG_DEBUG("accumulate_distance_for_lane_group :%f\n",
+          LOG_DEBUG("accumulate_distance_for_lane_group for ramp :%f\n",
                     accumulate_distance_for_lane_group);
           return accumulate_distance_for_lane_group;
         }
@@ -529,7 +529,7 @@ double VirtualLaneManager::JudgeIfTheFirstSplit(
         current_routing.lane_groups_in_route()[i].lane_group_id();
     LaneGroupConstPtr lane_group_ptr = hd_map->GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
-      LOG_DEBUG("fail get lane group by id!!!\n");
+      LOG_DEBUG("fail get lane group by id for split!!!\n");
       return NL_NMAX;
     }
     if (i > current_index) {
@@ -540,7 +540,7 @@ double VirtualLaneManager::JudgeIfTheFirstSplit(
     const int successor_lane_group_size =
         lane_group_ptr->successor_lane_group_ids().size();
     if (successor_lane_group_size > 1) {
-      LOG_DEBUG("accumulate_distance_for_lane_group :%f\n",
+      LOG_DEBUG("accumulate_distance_for_lane_group for split :%f\n",
                 accumulate_distance_for_lane_group);
       return accumulate_distance_for_lane_group;
     }
@@ -559,7 +559,7 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
         current_routing.lane_groups_in_route()[i].lane_group_id();
     LaneGroupConstPtr lane_group_ptr = hd_map->GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
-      LOG_DEBUG("fail get lane group by id!!!\n");
+      LOG_DEBUG("fail get lane group by id for merge!!!\n");
       return NL_NMAX;
     }
     if (i > current_index) {
@@ -573,17 +573,17 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
       LaneGroupConstPtr lane_group_ptr_next =
           hd_map->GetLaneGroupById(lane_group_id_next);
       if (lane_group_ptr_next == nullptr) {
-        LOG_DEBUG("fail get lane group by id!!!\n");
+        LOG_DEBUG("fail get lane group by id for merge!!!\n");
         return NL_NMAX;
       }
       if (lane_group_ptr_next->predecessor_lane_group_ids_size() > 1) {
-        LOG_DEBUG("accumulate_distance_for_lane_group :%f\n",
+        LOG_DEBUG("accumulate_distance_for_lane_group for merge :%f\n",
                   accumulate_distance_for_lane_group);
         return accumulate_distance_for_lane_group;
       }
     }
   }
-  LOG_DEBUG("no road merge in current routing");
+  LOG_DEBUG("no road merge in current routing for merge");
   return NL_NMAX;
 }
 

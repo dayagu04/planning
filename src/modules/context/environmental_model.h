@@ -176,7 +176,7 @@ class EnvironmentalModel {
   }
 
   void feed_local_view(const LocalView &local_view) {
-    if (local_view.hdmap_time != local_view_.hdmap_time) {
+    if (local_view.static_map_info.header().timestamp() != local_view_.static_map_info.header().timestamp()) {
       hd_map_.LoadMapFromProto(local_view.static_map_info.road_map());
     }
     local_view_ = local_view;
