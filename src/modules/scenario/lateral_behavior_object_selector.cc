@@ -310,6 +310,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
   int current_lane_tasks_id = virtual_lane_mgr->get_tasks(clane);
   int left_lane_tasks_id = virtual_lane_mgr->get_tasks(llane);
   int right_lane_tasks_id = virtual_lane_mgr->get_tasks(rlane);
+  std::cout << "current_lane_tasks_id: " << current_lane_tasks_id << " left_lane_tasks_id: " << left_lane_tasks_id << " right_lane_tasks_id: " << right_lane_tasks_id << std::endl;
 
   double car_width = 2.2;
   double lb_width_l = 0.4;

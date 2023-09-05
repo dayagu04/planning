@@ -129,6 +129,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
 
   // Step 3) update virtual_lane
   time_start = IflyTime::Now_ms();
+  last_feed_time_[FEED_MAP_INFO] = local_view.hdmap_time;
   if (!virtual_lane_manager_ptr_->update(local_view.road_info)) {
     LOG_ERROR("virtual_lane_manager update failed");
     return false;
@@ -339,7 +340,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
         vehicle_service_output_info.vehicle_speed_display());
   }
 
-  if (session_->environmental_model().get_hdmap_valid()) {
+  if (session_->environmental_model().location_valid()) {
     auto linear_velocity_from_wheel =
         localization_estimate.pose().linear_velocity_from_wheel();
     vehicle_status.mutable_velocity()
@@ -763,6 +764,7 @@ bool EnvironmentalModelManager::InputReady(double current_time,
   };
 
   static const double kCheckTimeDiff = 2000.0;
+  static const double kMapCheckTimeDiff = 5000.0;
 
   static const std::vector<FeedType> input_longtime_with_hdmap{
       FEED_VEHICLE_DBW_STATUS, FEED_EGO_VEL,
@@ -808,9 +810,11 @@ bool EnvironmentalModelManager::InputReady(double current_time,
                  ? input_longtime_without_hdmap
                  : input_realtime_without_hdmap);
   for (int i : input_list) {
-    const char *feed_type_str = to_string(static_cast<FeedType>(i));
+    auto feed_type = static_cast<FeedType>(i);
+    const char *feed_type_str = to_string(feed_type);
     if (last_feed_time_[i] > 0.0) {
       if (current_time - last_feed_time_[i] > kCheckTimeDiff) {
+        if (feed_type == FEED_MAP_INFO && current_time - last_feed_time_[i] <= kMapCheckTimeDiff) continue;
         LOG_ERROR("(%s)feed delay: %d, %s", __FUNCTION__, i, feed_type_str,
                   "\n");
         error_msg += std::string(feed_type_str) + "; ";

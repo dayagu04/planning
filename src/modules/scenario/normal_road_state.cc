@@ -167,7 +167,9 @@ void RoadBase::process_wait(FsmContext &context,
   RequestSource lc_source = lc_req_manager->request_source();
   bool aggressive_change{lc_req_manager->AggressiveChange()};
   bool gap_available{true};
-  bool hdmap_valid = context.session->environmental_model().get_hdmap_valid();
+  // bool hdmap_valid = context.session->environmental_model().get_hdmap_valid();
+  // hack: tmp hack enable_arbitrator == false, until add arbitrator logic
+  bool enable_arbitrator = false;
   double lc_tstart = lc_req_manager->GetReqStartTime(lc_source);
   double delay_time = 2.0;  // TODO(Rui):后面根据请求来源做成配置项
   double curr_time = IflyTime::Now_ms();  // 注意
@@ -198,7 +200,7 @@ void RoadBase::process_wait(FsmContext &context,
       if (candidate_states.size() > 0 &&
           (candidate_states[0] == ROAD_LC_LCHANGE ||
            candidate_states[0] == ROAD_LC_RCHANGE) &&
-          hdmap_valid) {
+          enable_arbitrator) {
         prepare_for_wait_state(lc_lane_manager, lc_req_manager,
                                candidate_states, lc_lane_managers);
       }
@@ -254,7 +256,9 @@ void RoadBase::process_change(FsmContext &context,
 
   RequestType lc_request = lc_req_manager->request();
   bool gap_available{true};
-  bool hdmap_valid = context.session->environmental_model().get_hdmap_valid();
+  // bool hdmap_valid = context.session->environmental_model().get_hdmap_valid();
+  // hack: tmp hack enable_arbitrator == false, until add arbitrator logic
+  bool enable_arbitrator = false;
   int flane_virtual_id = lc_lane_manager->flane_virtual_id();
   auto virtual_lane_mgr =
       context.session->environmental_model().get_virtual_lane_manager();
@@ -294,7 +298,7 @@ void RoadBase::process_change(FsmContext &context,
         if (candidate_states.size() > 0 &&
             (candidate_states[0] == ROAD_LC_LBACK ||
              candidate_states[0] == ROAD_LC_RBACK) &&
-            lc_lane_manager->has_target_lane() && hdmap_valid) {
+            lc_lane_manager->has_target_lane() && enable_arbitrator) {
           prepare_for_change_state(lc_lane_manager, lc_req_manager,
                                    candidate_states, lc_lane_managers);
         }
@@ -317,7 +321,7 @@ void RoadBase::process_change(FsmContext &context,
             (candidate_states[0] == ROAD_LC_LCHANGE ||
              candidate_states[0] == ROAD_LC_RCHANGE) &&
             !lc_lane_manager->is_ego_on(lc_lane_manager->tlane()) &&
-            hdmap_valid) {
+            enable_arbitrator) {
           prepare_for_back_state(lc_lane_manager, lc_req_manager,
                                  candidate_states, lc_lane_managers);
         }
