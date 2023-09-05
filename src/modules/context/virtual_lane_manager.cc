@@ -35,11 +35,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     CalculateDistanceToFirstRoadSplit(session_);
     CalculateDistanceToFirstRoadMerge(session_);
   }
-  LOG_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-  LOG_DEBUG("dis_to_ramp_:%f\n", dis_to_ramp_);
-  LOG_DEBUG("distance_to_first_road_split_:%f\n", distance_to_first_road_split_);
-  LOG_DEBUG("distance_to_first_road_merge_:%f\n", distance_to_first_road_merge_);
-
+  
   double dis_to_first_road_split = distance_to_first_road_split();
   double dis_between_first_road_split_and_ramp =
       dis_to_first_road_split - dis_to_ramp_;
