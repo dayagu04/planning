@@ -48,7 +48,7 @@ void EnvironmentalModelManager::InitContext() {
       ego_state_manager_ptr_);
 
   virtual_lane_manager_ptr_ =
-      std::make_shared<planning::VirtualLaneManager>(session_);
+      std::make_shared<planning::VirtualLaneManager>(config_builder, session_);
   session_->mutable_environmental_model()->set_virtual_lane_manager(
       virtual_lane_manager_ptr_);
 

@@ -741,6 +741,17 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
   bool enable_bbox_mode = true;
 };
 
+struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    is_select_split_nearing_ramp = read_json_key<bool>(
+        json, "is_select_split_nearing_ramp",
+        is_select_split_nearing_ramp);
+  }
+  bool is_select_split_nearing_ramp = true;
+};
+
 struct EgoPlanningMapInfoManagerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

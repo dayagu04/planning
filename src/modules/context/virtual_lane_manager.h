@@ -1,6 +1,7 @@
 #ifndef ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_MANAGER_H_
 #define ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_MANAGER_H_
 
+#include "ego_planning_config.h"
 #include <climits>
 #include <vector>
 #include "ad_common/hdmap/hdmap.h"
@@ -9,8 +10,6 @@
 #include "local_view.h"
 #include "log.h"
 #include "virtual_lane.h"
-#include "virtual_lane_manager.h"
-
 namespace planning {
 
 using Map::CurrentRouting;
@@ -25,7 +24,8 @@ enum LaneChangeStatus {
 
 class VirtualLaneManager {
  public:
-  VirtualLaneManager(planning::framework::Session *session);
+  VirtualLaneManager(const EgoPlanningConfigBuilder *config_builder,
+    planning::framework::Session *session);
   // VirtualLaneManager() = default;
   ~VirtualLaneManager(){};
 
@@ -165,7 +165,7 @@ class VirtualLaneManager {
                              int *current_index, double *remaining_dis);
 
   planning::framework::Session *session_ = nullptr;
-  // ReferencePathManager reference_path_manager_;
+  EgoPlanningVirtualLaneManagerConfig config_;
   int last_fix_lane_virtual_id_ = 0;
   int current_lane_virtual_id_ = 0;
   std::unordered_map<int, std::shared_ptr<VirtualLane>> virtual_id_mapped_lane_;
@@ -182,6 +182,7 @@ class VirtualLaneManager {
   double distance_to_first_road_merge_ = NL_NMAX;
   double distance_to_first_road_split_ = NL_NMAX;
   bool is_local_valid_ = false;
+  bool is_select_split_nearing_ramp_ = true;
 };
 }  // namespace planning
 #endif

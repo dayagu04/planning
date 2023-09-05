@@ -10,8 +10,10 @@ using Map::CurrentRouting;
 using Map::FormOfWayType::RAMP;
 using ad_common::hdmap::LaneGroupConstPtr;
 
-VirtualLaneManager::VirtualLaneManager(planning::framework::Session* session) {
+VirtualLaneManager::VirtualLaneManager(const EgoPlanningConfigBuilder *config_builder,planning::framework::Session* session) {
   session_ = session;
+  config_ = config_builder->cast<EgoPlanningVirtualLaneManagerConfig>();
+  is_select_split_nearing_ramp_ = config_.is_select_split_nearing_ramp;
 }
 
 bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
@@ -33,6 +35,10 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     CalculateDistanceToFirstRoadSplit(session_);
     CalculateDistanceToFirstRoadMerge(session_);
   }
+  LOG_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  LOG_DEBUG("dis_to_ramp_:%f\n", dis_to_ramp_);
+  LOG_DEBUG("distance_to_first_road_split_:%f\n", distance_to_first_road_split_);
+  LOG_DEBUG("distance_to_first_road_merge_:%f\n", distance_to_first_road_merge_);
 
   double dis_to_first_road_split = distance_to_first_road_split();
   double dis_between_first_road_split_and_ramp =
@@ -42,7 +48,9 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   LOG_DEBUG("dis_to_ramp: %f, dis_to_first_road_split: %f, distance_to_first_road_merge_: %f \n", dis_to_ramp_, dis_to_first_road_split, distance_to_first_road_merge_);
   std::cout << " dis_to_ramp: " << dis_to_ramp_ << " dis_to_first_road_split: " << dis_to_first_road_split << " distance_to_first_road_merge_: " << distance_to_first_road_merge_ << std::endl;
   LOG_DEBUG("is_nearing_ramp:%d \n", is_nearing_ramp);
-
+  
+  // 后续删除该打印
+  std::cout << "is_select_split_nearing_ramp:" << is_select_split_nearing_ramp_ << std::endl;
   for (auto& lane : roads.reference_line_msg()) {
     std::shared_ptr<VirtualLane> virtual_lane_tmp =
         std::make_shared<VirtualLane>();
@@ -53,12 +61,13 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       auto lane_merge_split_point_data =
           lane.lane_merge_split_point().merge_split_point_data()[0];
       if (is_nearing_ramp) {
-        if (lane_merge_split_point_data.is_split()) {
+        if ((is_select_split_nearing_ramp_ && lane_merge_split_point_data.is_split()) ||
+            (!is_select_split_nearing_ramp_ && lane_merge_split_point_data.is_continue())) {
           virtual_lane_tmp->update_data(lane);
           std::cout << "22222222222222222222222" << std::endl;
         } else {
           continue;
-        }
+        } 
       } else {
         if (lane_merge_split_point_data.is_continue()) {
           virtual_lane_tmp->update_data(lane);
