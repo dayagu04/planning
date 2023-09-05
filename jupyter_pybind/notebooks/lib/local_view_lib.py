@@ -28,6 +28,37 @@ vehicle_service_timestamps = []
 control_output_timestamps = []
 
 # params 控制fig的样式
+ego_pose_polygon_params_apa ={
+  'fill_color' : None,
+  'line_color' : "black",
+  'line_width' : 1,
+  'legend_label' : 'car_polygon'
+}
+ego_pose_params_apa ={
+  'fill_color' : "red",
+  'line_color' : "black",
+  'line_width' : 3,
+  'legend_label' : 'car_rear_alxe_center'
+}
+slot_params_apa = {
+  'fill_color' : None,
+  'line_color' : "red",
+  'line_width' : 1,
+  'legend_label' : 'slot'
+}
+slot_params_apa = {
+  'fill_color' : None,
+  'line_color' : "red",
+  'line_width' : 1,
+  'legend_label' : 'slot'
+}
+location_params_apa = {
+  'line_width' : 3,
+  'line_color' : 'orange',
+  'line_dash' : 'solid',
+  'legend_label' : 'ego_real_trajectory'
+}
+slot_id_params_apa = { 'text_color' : "firebrick", 'text_align':"center", 'text_font_size':"12pt", 'legend_label' : 'id' }
 ego_pose_params ={
   'fill_color' : "palegreen",
   'line_color' : "black",
@@ -127,7 +158,7 @@ prediction_params = {
 }
 
 plan_params = {
-  'line_width' : 5, 'line_color' : 'blue', 'line_dash' : 'solid', 'line_alpha' : 0.6, 'legend_label' : 'plan'
+  'line_width' : 3, 'line_color' : 'blue', 'line_dash' : 'solid', 'line_alpha' : 0.6, 'legend_label' : 'plan'
 }
 
 control_params = {
@@ -927,6 +958,233 @@ def draw_local_view(dataLoader, layer_manager):
     layer_manager.AddLayer(
       tab_debug_layer2, 'tab_debug_layer2', plan_debug_table2, 'plan_debug_table2', 3)
     return fig_local_view, (tab_debug_layer1.plot, tab_debug_layer2.plot)
+
+def apa_draw_local_view(dataLoader, layer_manager):
+    #define figure
+    # 定义 local_view fig
+    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=1500, height=1000, match_aspect = True, aspect_scale=1)
+    fig_local_view.x_range.flipped = True
+    # toolbar
+    fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
+    # 加载planning debug部分信息, 加载planning 输入topic的时间戳
+    fix_lane_xys = []
+    origin_lane_xys = []
+    target_lane_xys = []
+    global plan_debug_ts
+    global fusion_object_timestamps
+    global fusion_road_timestamps
+    global localization_timestamps
+    global prediction_timestamps
+    global vehicle_service_timestamps
+    global control_output_timestamps
+    global slot_timestamps
+    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+      t = dataLoader.plan_debug_msg["t"][i]
+      plan_debug_ts.append(t)
+      input_topic_timestamp = plan_debug.input_topic_timestamp
+      fusion_object_timestamp = input_topic_timestamp.fusion_object
+      fusion_road_timestamp = input_topic_timestamp.fusion_road
+      localization_timestamp = input_topic_timestamp.localization
+      prediction_timestamp = input_topic_timestamp.prediction
+      vehicle_service_timestamp = input_topic_timestamp.vehicle_service
+      control_output_timestamp = input_topic_timestamp.control_output
+      slot_timestamp = input_topic_timestamp.parking_fusion
+      fusion_object_timestamps.append(fusion_object_timestamp)
+      fusion_road_timestamps.append(fusion_road_timestamp)
+      localization_timestamps.append(localization_timestamp)
+      prediction_timestamps.append(prediction_timestamp)
+      vehicle_service_timestamps.append(vehicle_service_timestamp)
+      control_output_timestamps.append(control_output_timestamp)
+      slot_timestamps.append(slot_timestamp)
+    # 加载定位
+    location_generator = CommonGenerator()
+    cur_pos_xn0 = cur_pos_xn = dataLoader.loc_msg['data'][0].pose.local_position.x
+    cur_pos_yn0 = cur_pos_yn = dataLoader.loc_msg['data'][0].pose.local_position.y
+    for localization_timestamp in localization_timestamps:
+      flag, loc_msg = find(dataLoader.loc_msg, localization_timestamp)
+      if not flag:
+        # print('find loc_msg error')
+        location_generator.xys.append(([],[]))
+        continue
+      cur_pos_xn = loc_msg.pose.local_position.x
+      cur_pos_yn = loc_msg.pose.local_position.y
+      cur_yaw = loc_msg.pose.euler_angles.yaw
+      ego_xb, ego_yb = [], []
+      ego_xn, ego_yn = [], []
+      ### global variables
+      # pos offset
+      for i in range(len(dataLoader.loc_msg['data'])):
+        if (i % 10 != 0): # 下采样 10
+          continue
+        pos_xn_i = dataLoader.loc_msg['data'][i].pose.local_position.x
+        pos_yn_i = dataLoader.loc_msg['data'][i].pose.local_position.y
+
+        # ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+
+        ego_xb.append(pos_xn_i)
+        ego_yb.append(pos_yn_i)
+        ego_xn.append(pos_xn_i - cur_pos_xn0)
+        ego_yn.append(pos_yn_i - cur_pos_yn0)
+      location_generator.xys.append((ego_yb,ego_xb))
+    location_generator.ts = np.array(plan_debug_ts)
+    location_layer = CurveLayer(fig_local_view, location_params_apa)
+    layer_manager.AddLayer(location_layer, 'location_layer', location_generator, 'location_generator', 2)
+
+
+    # 加载自车信息
+    ego_polygon_generate = CommonGenerator()
+    ego_pose_generate = CommonGenerator()
+    # for i in range(len(plan_debug_ts)):
+    #   ego_generate.xys.append(([car_yb],[car_xb]))
+    for localization_timestamp in localization_timestamps:
+      flag, loc_msg = find(dataLoader.loc_msg, localization_timestamp)
+      if not flag:
+        # print('find loc_msg error')
+        # location_generator.xys.append(([],[]))
+        continue
+      cur_pos_xn = loc_msg.pose.local_position.x
+      cur_pos_yn = loc_msg.pose.local_position.y
+      cur_pos_theta = loc_msg.pose.euler_angles.yaw
+      temp_cur_pos_xn = []
+      temp_cur_pos_yn = []
+      temp_cur_pos_xn.append(cur_pos_xn)
+      temp_cur_pos_yn.append(cur_pos_yn)
+      ego_box = get_closed_veh_box(cur_pos_xn,cur_pos_yn,cur_pos_theta)
+      ego_box_for_ego_point = get_closed_veh_box_for_ego_point(cur_pos_xn,cur_pos_yn,cur_pos_theta)
+      ego_polygon_generate.xys.append(([ego_box[1]],[ego_box[0]]))
+      # ego_pose_generate.xys.append(([ego_box_for_ego_point[1]],[ego_box_for_ego_point[0]]))
+      ego_pose_generate.xys.append(([cur_pos_yn],[cur_pos_xn]))
+    ego_polygon_generate.ts = np.array(plan_debug_timestamps)
+    ego_pose_generate.ts = np.array(plan_debug_timestamps)
+    ego_pose_polygon_layer = PatchLayer(fig_local_view ,ego_pose_polygon_params_apa)
+    ego_pose_layer = PointsLayer(fig_local_view ,ego_pose_params_apa)
+    layer_manager.AddLayer(ego_pose_polygon_layer, 'ego_pose_polygon_layer', ego_polygon_generate, 'ego_polygon_generate', 2)
+    layer_manager.AddLayer(ego_pose_layer, 'ego_pose_layer', ego_pose_generate, 'ego_pose_generate', 2)
+# CircleLayer
+    ###加载apa车位
+    slot_generate = CommonGenerator()
+    slot_id_generate = TextGenerator()
+    for slot_timestamp in slot_timestamps:
+        flag, slot_msg = find(dataLoader.slot_msg, slot_timestamp)
+        if not flag:
+            print('find slot_msg error')
+            slot_generate.xys.append(([], []))
+            slot_id_generate.xys.append(([],[]))
+            continue
+        temp_corner_x_list = []
+        temp_corner_y_list = []
+        temp_slot_id_list = []
+        temp_slot_id_x_list = []
+        temp_slot_id_y_list = []
+        for slot in slot_msg.parking_fusion_slot_lists:
+            temp_corner_x = []
+            temp_corner_y = []
+            for corner_point in slot.corner_points:
+                temp_corner_x.append(corner_point.x)
+                temp_corner_y.append(corner_point.y)
+            temp_x = temp_corner_x[2]
+            temp_y = temp_corner_y[2]
+            temp_corner_x[2] = temp_corner_x[3]
+            temp_corner_y[2] = temp_corner_y[3]
+            temp_corner_x[3] = temp_x
+            temp_corner_y[3] = temp_y
+            temp_corner_x_list.append(temp_corner_x)
+            temp_corner_y_list.append(temp_corner_y)
+            # add slot id
+            temp_slot_id = slot.id
+            text = 'id={:.2f}'.format(round(temp_slot_id, 2))
+            temp_slot_id_list.append(text)
+            temp_slot_id_x_list.append((temp_corner_x[0]+temp_corner_x[3])/2)
+            temp_slot_id_y_list.append((temp_corner_y[0]+temp_corner_y[1])/2)
+        slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
+        slot_id_generate.xys.append((temp_slot_id_y_list,temp_slot_id_x_list,temp_slot_id_list))
+    slot_generate.ts = np.array(plan_debug_ts)
+    slot_id_generate.ts = np.array(plan_debug_ts)
+    slot_layer = PatchLayer(fig_local_view ,slot_params_apa)
+    slot_id_layer = TextLayer(fig_local_view,slot_id_params_apa)
+    layer_manager.AddLayer(slot_layer, 'slot_layer', slot_generate, 'slot_generate', 2)
+    layer_manager.AddLayer(slot_id_layer, 'slot_id_layer',slot_id_generate,'slot_id_generate',3)
+
+    ###加载apa规划plan
+    plan_generator = CommonGenerator()
+    for i, plan_msg in enumerate(dataLoader.plan_msg['data']):
+      trajectory = plan_msg.trajectory
+      trajectory_points_x = []
+      trajectory_points_y = []
+      trajectory_points = trajectory.trajectory_points
+      for point in trajectory_points:
+        trajectory_points_x.append(point.x)
+        trajectory_points_y.append(point.y)
+      plan_generator.xys.append((trajectory_points_y, trajectory_points_x))
+    plan_generator.ts = np.array(plan_debug_timestamps)
+    plan_layer = CurveLayer(fig_local_view, plan_params)
+    layer_manager.AddLayer(plan_layer, 'plan_layer', plan_generator, 'plane_generator', 2)
+    # legend
+    fig_local_view.legend.click_policy = 'hide'
+    return fig_local_view
+
+def get_closed_veh_box(x, y, theta):
+    # params for E40X
+    # length = 4.41
+    # width = 1.8
+    # shift_dis = 1.325
+
+    # params for AIONLX
+    length = 4.786
+    width = 1.935
+    shift_dis = (3.846 - 0.94) * 0.5
+
+    half_length = length * 0.5
+    half_width = width * 0.5
+    cos_ego_start_theta = math.cos(theta)
+    sin_ego_start_theta = math.sin(theta)
+    shift_ego_start_x = x + shift_dis * cos_ego_start_theta
+    shift_ego_start_y = y + shift_dis * sin_ego_start_theta
+    dx1 = cos_ego_start_theta * half_length
+    dy1 = sin_ego_start_theta * half_length
+    dx2 = sin_ego_start_theta * half_width
+    dy2 = -cos_ego_start_theta * half_width
+    pt0_x = shift_ego_start_x + dx1 + dx2
+    pt0_y = shift_ego_start_y + dy1 + dy2
+    pt1_x = shift_ego_start_x + dx1 - dx2
+    pt1_y = shift_ego_start_y + dy1 - dy2
+    pt2_x = shift_ego_start_x - dx1 - dx2
+    pt2_y = shift_ego_start_y - dy1 - dy2
+    pt3_x = shift_ego_start_x - dx1 + dx2
+    pt3_y = shift_ego_start_y - dy1 + dy2
+    return [[pt0_x, pt1_x, pt2_x, pt3_x, pt0_x], [pt0_y, pt1_y, pt2_y, pt3_y, pt0_y]]
+
+def get_closed_veh_box_for_ego_point(x, y, theta):
+    # params for E40X
+    # length = 4.41
+    # width = 1.8
+    # shift_dis = 1.325
+
+    # params for AIONLX
+    scale = 5    #缩小的倍数，将自车的polygon缩小n倍后作为后轴中心点
+    length = 4.786 / scale
+    width = 1.935 / scale
+    shift_dis = (3.846 - 0.94) * 0.5 / scale
+
+    half_length = length * 0.5 / scale
+    half_width = width * 0.5 / scale
+    cos_ego_start_theta = math.cos(theta)
+    sin_ego_start_theta = math.sin(theta)
+    shift_ego_start_x = x + shift_dis * cos_ego_start_theta
+    shift_ego_start_y = y + shift_dis * sin_ego_start_theta
+    dx1 = cos_ego_start_theta * half_length
+    dy1 = sin_ego_start_theta * half_length
+    dx2 = sin_ego_start_theta * half_width
+    dy2 = -cos_ego_start_theta * half_width
+    pt0_x = shift_ego_start_x + dx1 + dx2
+    pt0_y = shift_ego_start_y + dy1 + dy2
+    pt1_x = shift_ego_start_x + dx1 - dx2
+    pt1_y = shift_ego_start_y + dy1 - dy2
+    pt2_x = shift_ego_start_x - dx1 - dx2
+    pt2_y = shift_ego_start_y - dy1 - dy2
+    pt3_x = shift_ego_start_x - dx1 + dx2
+    pt3_y = shift_ego_start_y - dy1 + dy2
+    return [[pt0_x, pt1_x, pt2_x, pt3_x, pt0_x], [pt0_y, pt1_y, pt2_y, pt3_y, pt0_y]]
 
 def GenerateJsonValueData(json_data, json_time_list, json_value_list):
     json_value_xys_dict = {}
