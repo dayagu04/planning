@@ -398,6 +398,12 @@ void GeneralPlanning::FillPlanningHmiInfo(
       tsr_info->get_tsr_warning_info());
   planning_hmi_info->mutable_tsr_output_info()->set_tsr_speed_limit(
       tsr_info->get_tsr_speed_limit_info());
+  // HMI for CIPV
+  // TBD: 后续需要丰富障碍物的信息，后车、侧方车辆等
+  auto cipv_info =
+      session_.planning_output_context().planning_hmi_info().cipv_info();
+  planning_hmi_info->mutable_cipv_info()->set_has_cipv(cipv_info.has_cipv());
+  planning_hmi_info->mutable_cipv_info()->set_cipv_id(cipv_info.cipv_id());
 }
 
 void GeneralPlanning::ClearParkingInfo(

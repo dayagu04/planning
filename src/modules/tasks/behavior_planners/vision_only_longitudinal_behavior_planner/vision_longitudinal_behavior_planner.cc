@@ -1,4 +1,5 @@
 #include "vision_longitudinal_behavior_planner.h"
+
 #include <cmath>
 #include <string>
 
@@ -1709,18 +1710,28 @@ VisionLongitudinalBehaviorPlanner::UpdateStartStopState(
 int VisionLongitudinalBehaviorPlanner::GetCIPV(
     const std::shared_ptr<LateralObstacle> &lateral_obstacle,
     const std::string &lc_status) {
+  auto hmi_info = frame_->mutable_session()
+                      ->mutable_planning_output_context()
+                      ->mutable_planning_hmi_info();
+
   int error_id = -1;
   if ((lc_status != "left_lane_change") && (lc_status != "right_lane_change")) {
     if (lateral_obstacle->leadone() != nullptr &&
         lateral_obstacle->leadone()->type != 0) {
+      hmi_info->mutable_cipv_info()->set_has_cipv(true);
+      hmi_info->mutable_cipv_info()->set_cipv_id(lateral_obstacle->leadone()->track_id);
       return lateral_obstacle->leadone()->track_id;
     }
   } else {
     if (lateral_obstacle->tleadone() != nullptr &&
         lateral_obstacle->tleadone()->type != 0) {
+      hmi_info->mutable_cipv_info()->set_has_cipv(true);
+      hmi_info->mutable_cipv_info()->set_cipv_id(lateral_obstacle->tleadone()->track_id);
       return lateral_obstacle->tleadone()->track_id;
     }
   }
+  hmi_info->mutable_cipv_info()->set_has_cipv(false);
+  hmi_info->mutable_cipv_info()->set_cipv_id(error_id);
   return error_id;
 }
 }  // namespace planning
