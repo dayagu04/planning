@@ -1719,14 +1719,16 @@ int VisionLongitudinalBehaviorPlanner::GetCIPV(
     if (lateral_obstacle->leadone() != nullptr &&
         lateral_obstacle->leadone()->type != 0) {
       hmi_info->mutable_cipv_info()->set_has_cipv(true);
-      hmi_info->mutable_cipv_info()->set_cipv_id(lateral_obstacle->leadone()->track_id);
+      hmi_info->mutable_cipv_info()->set_cipv_id(
+          lateral_obstacle->leadone()->track_id);
       return lateral_obstacle->leadone()->track_id;
     }
   } else {
     if (lateral_obstacle->tleadone() != nullptr &&
         lateral_obstacle->tleadone()->type != 0) {
       hmi_info->mutable_cipv_info()->set_has_cipv(true);
-      hmi_info->mutable_cipv_info()->set_cipv_id(lateral_obstacle->tleadone()->track_id);
+      hmi_info->mutable_cipv_info()->set_cipv_id(
+          lateral_obstacle->tleadone()->track_id);
       return lateral_obstacle->tleadone()->track_id;
     }
   }

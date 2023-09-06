@@ -12,6 +12,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   modules_context
   proto_interface
   planning_proto
+  proto_interface_planning
   mjson
   framework
   advanced_ctrl_lib
