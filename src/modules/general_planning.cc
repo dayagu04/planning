@@ -141,7 +141,7 @@ void GeneralPlanning::FillPlanningTrajectory(
   auto time_stamp_us = IflyTime::Now_us();
 
   planning_output->mutable_meta()->set_plan_timestamp_us(time_stamp_us);
-  planning_output->mutable_meta()->set_plan_strategy_name("Test");
+  planning_output->mutable_meta()->set_plan_strategy_name("Real Time Planning");
 
   // 2.Trajectory
   auto trajectory = planning_output->mutable_trajectory();
@@ -149,7 +149,8 @@ void GeneralPlanning::FillPlanningTrajectory(
 
   // 根据定位有效性决定实时、长时
   auto location_valid = session_.environmental_model().location_valid();
-  if (location_valid) {
+  // FBI WARNING
+  if (location_valid || true) {
     trajectory->set_trajectory_type(
         Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
     trajectory->mutable_trajectory_points()->Clear();
@@ -174,8 +175,12 @@ void GeneralPlanning::FillPlanningTrajectory(
         target_ref->mutable_acceleration_range_limit();
     acceleration_range_limit->set_min_a(-4.0);
     acceleration_range_limit->set_max_a(4.0);
+    // target_ref->set_lateral_maneuver_gear(
+    //     Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
+
+    // use fast lateral actuator to let control know real_time motion
     target_ref->set_lateral_maneuver_gear(
-        Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
+        Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_FAST);
   } else {
     // set vision_only_longitudinal_outputs if hdmpa valid is false
     trajectory->set_trajectory_type(
@@ -303,11 +308,12 @@ void GeneralPlanning::FillPlanningTrajectory(
   // 8.Planning status
   auto planning_status = planning_output->mutable_planning_status();
   planning_status->set_standstill(false);
-  planning_status->set_ready_to_go(true);
+  // planning_status->set_ready_to_go(true);
   // planning_status->set_standstill(std::fabs(ego_state->ego_v()) < 0.1);
-  // // 启停状态机
-  // planning_status->set_ready_to_go(planning_context.start_stop_result().state
-  // != StartStopInfo::STOP);
+  // 启停状态机
+  planning_status->set_ready_to_go(
+      planning_context.start_stop_result().state() !=
+      common::StartStopInfo::STOP);
   planning_status->set_apa_planning_status(
       PlanningOutput::ApaPlanningStatus::NONE);
   // WB end:--------临时hack以上信号--------

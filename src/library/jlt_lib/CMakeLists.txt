@@ -1,0 +1,7 @@
+project(jlt_lib)
+
+file(GLOB_RECURSE CPP_FILES src/*.cc)
+
+add_library (${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${CPP_FILES})
+message(${CPP_FILES})
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

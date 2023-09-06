@@ -106,6 +106,13 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   for item in (plan_debug_info.long_ref_path.lon_bound_v.bound):
      v_bound_high_vec.append(item.upper)
 
+  # get sv_bound:
+  sv_bound_s_vec = []
+  sv_bound_v_vec = []
+  for item in (plan_debug_info.long_ref_path.lon_sv_boundary.sv_bounds):
+    sv_bound_s_vec.append(item.s)
+    sv_bound_v_vec.append(item.v_bound.upper)
+
   a_bound_low_vec = []
   for item in (plan_debug_info.long_ref_path.lon_bound_a.bound):
      a_bound_low_vec.append(item.lower)
@@ -136,10 +143,12 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   })
 
   lon_plan_data['data_sv'].data.update({
-    's': s_ref_vec,
-    'v': v_ref_vec,
+    's_ref': s_ref_vec,
+    'v_ref': v_ref_vec,
     'v_low': v_bound_low_vec,
     'v_high': v_bound_high_vec,
+    'sv_bound_s': sv_bound_s_vec,
+    'sv_bound_v': sv_bound_v_vec,
   })
 
   lon_plan_data['data_text'].data.update({
@@ -288,7 +297,7 @@ def load_lon_global_figure(bag_loader):
 def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
   data_st = ColumnDataSource(data = {'t':[], 's':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
-  data_sv = ColumnDataSource(data = {'s':[], 'v':[], 'v_low':[], 'v_high':[]})
+  data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[], 'sv_bound_s':[], 'sv_bound_v':[]})
   data_tv = ColumnDataSource(data = {'t':[], 'vel':[]})
   data_ta = ColumnDataSource(data = {'t':[], 'acc':[]})
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
@@ -372,13 +381,13 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
   #fig2.add_layout(label_high_id)
 
   f3 = fig3.line('s', 'v', source = data_sv, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')
-#   fig3.line('s_plan', 'v_plan', source = data_st_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'v_plan')
+  fig3.line('sv_bound_s', 'sv_bound_v', source = data_sv, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'sv_bound_v_upper')
   fig3.line('pos_vec', 'vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'green', line_dash = 'solid', legend_label = 'origin v_plan')
   fig3.line('pos_vec_t', 'vel_vec_t', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned v_plan')
-  fig3.line('s', 'v_low', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_lb')
-  fig3.line('s', 'v_high', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_ub')
-  fig3.triangle('s', 'v_low', source = data_sv, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
-  fig3.inverted_triangle ('s', 'v_high', source = data_sv, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
+  fig3.line('s_ref', 'v_low', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_lb')
+  fig3.line('s_ref', 'v_high', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_ub')
+  fig3.triangle('s_ref', 'v_low', source = data_sv, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
+  fig3.inverted_triangle ('s_ref', 'v_high', source = data_sv, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
 
   # pos
   f4 = fig4.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')

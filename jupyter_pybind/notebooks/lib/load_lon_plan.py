@@ -59,12 +59,18 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   s_ref_vec = []
   for item in (plan_debug_info.long_ref_path.s_refs):
     s_ref_vec.append(item.first)
-  s_lead_vec = []
-  for idx in range(len(plan_debug_info.long_ref_path.lon_lead_bounds)):
-    try:
-      s_lead_vec.append(plan_debug_info.long_ref_path.lon_lead_bounds[idx].bound[0].s_lead)
-    except:
-      print("the s_lead_vec size: ",len(s_lead_vec))
+  s_soft_bound_vec = []
+  try:
+    for idx in range(len(plan_debug_info.long_ref_path.soft_bounds)):
+      high_bound = plan_debug_info.long_ref_path.soft_bounds[idx].bound[0].upper
+      try:
+        for one_soft_bound in plan_debug_info.long_ref_path.soft_bounds[idx].bound:
+           high_bound = min(high_bound, one_soft_bound.upper)
+        s_soft_bound_vec.append(high_bound)
+      except:
+        print("the s_soft_bound_vec size: ",len(s_soft_bound_vec))
+  except:
+        print("there is no long_ref_path.soft_bounds")
 
   obs_low_vec = []
   obs_high_vec = []
@@ -114,12 +120,24 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
      v_ref_vec.append(item.first)
 
   v_bound_low_vec = []
-  for item in (plan_debug_info.long_ref_path.lon_bound_v.bound):
-     v_bound_low_vec.append(item.lower)
+  try:
+    for item in (plan_debug_info.long_ref_path.lon_bound_v.bound):
+      v_bound_low_vec.append(item.lower)
+    v_bound_high_vec = []
+    for item in (plan_debug_info.long_ref_path.lon_bound_v.bound):
+      v_bound_high_vec.append(item.upper)
+  except:
+    print("there is no lon_ref_path.lon_bound_v.bound")
 
-  v_bound_high_vec = []
-  for item in (plan_debug_info.long_ref_path.lon_bound_v.bound):
-     v_bound_high_vec.append(item.upper)
+  # get sv_bound:
+  sv_bound_s_vec = []
+  sv_bound_v_vec = []
+  try:
+    for item in (plan_debug_info.long_ref_path.lon_sv_boundary.sv_bounds):
+      sv_bound_s_vec.append(item.s)
+      sv_bound_v_vec.append(item.v_bound.upper)
+  except:
+    print("there is no lon_ref_path.lon_sv_boundary.sv_bounds")
 
   a_bound_low_vec = []
   for item in (plan_debug_info.long_ref_path.lon_bound_a.bound):
@@ -136,7 +154,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lon_plan_data['data_st'].data.update({
     't': t_vec,
     's': s_ref_vec,
-    's_lead': s_lead_vec,
+    's_soft_bound': s_soft_bound_vec,
     'obs_low': obs_low_vec,
     'obs_high': obs_high_vec,
     'obs_low_id': obs_low_id_vec,
@@ -181,10 +199,12 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   })
 
   lon_plan_data['data_sv'].data.update({
-    's': s_ref_vec,
-    'v': v_ref_vec,
+    's_ref': s_ref_vec,
+    'v_ref': v_ref_vec,
     'v_low': v_bound_low_vec,
     'v_high': v_bound_high_vec,
+    'sv_bound_s': sv_bound_s_vec,
+    'sv_bound_v': sv_bound_v_vec,
   })
 
   lon_plan_data['data_text'].data.update({
@@ -218,6 +238,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   vel_vec = lon_motion_plan_output.vel_vec
   acc_vec = lon_motion_plan_output.acc_vec
   jerk_vec = lon_motion_plan_output.jerk_vec
+
+  print("lon_motion_plan_output:=", lon_motion_plan_output)
 
   lon_plan_data['data_lon_motion_plan'].data.update({
     'time_vec': time_vec,
@@ -281,6 +303,146 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       'plan_traj_x' : plan_traj_x,
       })
 
+def update_lon_ref_path(lon_ref_path, lon_plan_data):
+  # behavior planning
+  t_vec = list(lon_ref_path.t_list)
+
+  s_ref_vec = []
+  for item in (lon_ref_path.s_refs):
+    s_ref_vec.append(item.first)
+  s_soft_bound_vec = []
+  try:
+    for idx in range(len(lon_ref_path.soft_bounds)):
+      high_bound = lon_ref_path.soft_bounds[idx].bound[0].upper
+      try:
+        for one_soft_bound in lon_ref_path.soft_bounds[idx].bound:
+           high_bound = min(high_bound, one_soft_bound.upper)
+        s_soft_bound_vec.append(high_bound)
+      except:
+        print("the s_soft_bound_vec size: ",len(s_soft_bound_vec))
+  except:
+        print("there is no lon_ref_path.soft_bounds")
+
+  obs_low_vec = []
+  obs_high_vec = []
+  obs_low_id_vec = []
+  obs_high_id_vec = []
+  obs_low_type_vec = []
+  obs_high_type_vec = []
+  obs_st_dict = {'-1':dict({'t':[], 's':[]})}
+  for idx in range(len(lon_ref_path.bounds)):
+     low_bound = lon_ref_path.bounds[idx].bound[0].lower
+     high_bound = lon_ref_path.bounds[idx].bound[0].upper
+     low_bound_type = lon_ref_path.bounds[idx].bound[0].bound_info.type
+     high_bound_type = lon_ref_path.bounds[idx].bound[0].bound_info.type
+     low_bound_id = lon_ref_path.bounds[idx].bound[0].bound_info.id
+     high_bound_id = lon_ref_path.bounds[idx].bound[0].bound_info.id
+     for one_bound in lon_ref_path.bounds[idx].bound:
+        if one_bound.lower > low_bound:
+           low_bound = one_bound.lower
+           low_bound_type = one_bound.bound_info.type
+           low_bound_id = one_bound.bound_info.id
+        if one_bound.upper < high_bound:
+           high_bound = one_bound.upper
+           high_bound_type = one_bound.bound_info.type
+           high_bound_id = one_bound.bound_info.id
+        if one_bound.bound_info.type == 'obstacle':
+           if(str(one_bound.bound_info.id) in obs_st_dict.keys()):
+              obs_st_dict[str(one_bound.bound_info.id)]['t'].append(t_vec[idx])
+              obs_st_dict[str(one_bound.bound_info.id)]['s'].append(one_bound.upper)
+           else:
+              ons_obs_st = dict({'t':[], 's':[]})
+              ons_obs_st['t'].append(t_vec[idx])
+              ons_obs_st['s'].append(one_bound.upper)
+              obs_st_dict[str(one_bound.bound_info.id)] = ons_obs_st
+     obs_low_vec.append(low_bound)
+     obs_high_vec.append(high_bound)
+     if low_bound_type == 'default':
+        low_bound_id = -1
+     if high_bound_type == 'default':
+        high_bound_id = -1
+     obs_low_id_vec.append(low_bound_id)
+     obs_high_id_vec.append(high_bound_id)
+     obs_low_type_vec.append(low_bound_type)
+     obs_high_type_vec.append(high_bound_type)
+
+  v_ref_vec = []
+  for item in (lon_ref_path.ds_refs):
+     v_ref_vec.append(item.first)
+
+  v_bound_low_vec = []
+  for item in (lon_ref_path.lon_bound_v.bound):
+     v_bound_low_vec.append(item.lower)
+
+  v_bound_high_vec = []
+  for item in (lon_ref_path.lon_bound_v.bound):
+     v_bound_high_vec.append(item.upper)
+
+  # get sv_bound:
+  sv_bound_s_vec = []
+  sv_bound_v_vec = []
+  for item in (lon_ref_path.lon_sv_boundary.sv_bounds):
+    sv_bound_s_vec.append(item.s)
+    sv_bound_v_vec.append(item.v_bound.upper)
+
+  a_bound_low_vec = []
+  for item in (lon_ref_path.lon_bound_a.bound):
+     a_bound_low_vec.append(item.lower)
+
+  a_bound_high_vec = []
+  for item in (lon_ref_path.lon_bound_a.bound):
+     a_bound_high_vec.append(item.upper)
+
+  lon_plan_data['data_st'].data.update({
+    't': t_vec,
+    's': s_ref_vec,
+    's_soft_bound': s_soft_bound_vec,
+    'obs_low': obs_low_vec,
+    'obs_high': obs_high_vec,
+    'obs_low_id': obs_low_id_vec,
+    'obs_high_id': obs_high_id_vec,
+    'obs_low_type': obs_low_type_vec,
+    'obs_high_type': obs_high_type_vec
+  })
+
+  #lon_plan_data['data_obs_st'].clear()
+  #print(obs_st_dict)
+  for obs_id in lon_plan_data['data_obs_st'].keys():
+     """ if(obs_id not in lon_plan_data['data_obs_st'].keys()):
+        one_obs_st_cds = ColumnDataSource(data = {'obs_t':[], 'obs_s':[]})
+        lon_plan_data['data_obs_st'][obs_id] = one_obs_st_cds
+        lon_plan_data['data_obs_st'][obs_id].data.update({
+           'obs_t':obs_st_dict[obs_id]['t'],
+           'obs_s':obs_st_dict[obs_id]['s']
+        }) """
+     if obs_id in obs_st_dict.keys():
+       lon_plan_data['data_obs_st'][obs_id].data.update({
+           'obs_t':obs_st_dict[obs_id]['t'],
+           'obs_s':obs_st_dict[obs_id]['s'],
+           'obs_high_id':[obs_id] * len(obs_st_dict[obs_id]['s']),
+           'obs_high_type':['obstacle'] * len(obs_st_dict[obs_id]['s'])
+        })
+     else:
+        lon_plan_data['data_obs_st'][obs_id].data.update({
+           'obs_t':[],
+           'obs_s':[],
+           'obs_high_id':[],
+           'obs_high_type':[]
+        })
+
+  #print(lon_plan_data['data_obs_st'].values())
+  #for item in lon_plan_data['data_obs_st'].values():
+  #   print(item.data)
+
+  lon_plan_data['data_sv'].data.update({
+    's_ref': s_ref_vec,
+    'v_ref': v_ref_vec,
+    'v_low': v_bound_low_vec,
+    'v_high': v_bound_high_vec,
+    'sv_bound_s': sv_bound_s_vec,
+    'sv_bound_v': sv_bound_v_vec,
+  })
+
 def load_lon_global_figure(bag_loader):
    #real time global figure data process
    velocity_fig = bkp.figure(title='车速',x_axis_label='time/s',
@@ -340,9 +502,9 @@ def load_lon_global_figure(bag_loader):
    return velocity_fig, acc_fig, obs_st_ids
 
 def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
-  data_st = ColumnDataSource(data = {'t':[], 's':[], 's_lead':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
+  data_st = ColumnDataSource(data = {'t':[], 's':[], 's_soft_bound':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
-  data_sv = ColumnDataSource(data = {'s':[], 'v':[], 'v_low':[], 'v_high':[]})
+  data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[], 'sv_bound_s':[], 'sv_bound_v':[]})
   data_tv = ColumnDataSource(data = {'t':[], 'vel':[]})
   data_ta = ColumnDataSource(data = {'t':[], 'acc':[]})
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
@@ -414,7 +576,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
   fig7 = bkp.figure(x_axis_label='time', y_axis_label='jerk',x_range = fig6.x_range, width=600, height=200)
 
   f2 = fig2.line('t', 's', source = data_st, line_width = 2, line_color = 'green', line_dash = 'dashed', legend_label = 'origin s_ref')
-  fig2.line('t', 's_lead', source = data_st, line_width = 3, line_color = 'yellow', line_dash = 'solid', legend_label = 'origin s_lead')
+  fig2.line('t', 's_soft_bound', source = data_st, line_width = 3, line_color = 'yellow', line_dash = 'solid', legend_label = 'origin s_soft_bound')
   fig2.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')
   #fig2.line('t_long', 's_plan', source = data_st_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
   fig2.line('time_vec', 'pos_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
@@ -433,13 +595,13 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
   #label_high_id = LabelSet(x='t', y='obs_high', text='obs_high_id', x_offset=2, y_offset=2, source=data_st)
   #fig2.add_layout(label_high_id)
 
-  f3 = fig3.line('s', 'v', source = data_sv, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')
-#   fig3.line('s_plan', 'v_plan', source = data_st_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'v_plan')
+  f3 = fig3.line('s_ref', 'v_ref', source = data_sv, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')
+  fig3.line('sv_bound_s', 'sv_bound_v', source = data_sv, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'sv_bound_v_upper')
   fig3.line('pos_vec', 'vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'v_plan')
-  fig3.line('s', 'v_low', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_lb')
-  fig3.line('s', 'v_high', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_ub')
-  fig3.triangle('s', 'v_low', source = data_sv, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
-  fig3.inverted_triangle ('s', 'v_high', source = data_sv, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
+  fig3.line('s_ref', 'v_low', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_lb')
+  fig3.line('s_ref', 'v_high', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_ub')
+  fig3.triangle('s_ref', 'v_low', source = data_sv, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
+  fig3.inverted_triangle ('s_ref', 'v_high', source = data_sv, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
 
   # pos
   f4 = fig4.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')

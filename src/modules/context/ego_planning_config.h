@@ -335,6 +335,66 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   size_t motion_plan_concerned_index = 20;
 };
 
+struct RealtimeLateralMotionPlannerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    warm_start_enable = read_json_keys<bool>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "warm_start_enable"});
+    acc_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "acc_bound"});
+    jerk_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "jerk_bound"});
+    curv_factor = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "curv_factor"});
+    q_ref_x = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_x"});
+    q_ref_y = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_y"});
+    q_ref_theta = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_theta"});
+    q_continuity = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_continuity"});
+    q_acc = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_acc"});
+    q_jerk = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk"});
+    q_acc_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_bound"});
+    q_jerk_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_bound"});
+    q_soft_corridor = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_soft_corridor"});
+    q_hard_corridor = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_hard_corridor"});
+    delta_t = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "delta_t"});
+    motion_plan_concerned_index = read_json_keys<size_t>(
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "motion_plan_concerned_index"});
+  }
+  bool warm_start_enable = true;
+  double acc_bound = 6.0;
+  double jerk_bound = 3.5;
+  double curv_factor = 0.35;
+
+  double q_ref_x = 20.0;
+  double q_ref_y = 20.0;
+  double q_ref_theta = 15.0;
+
+  double q_continuity = 0.;
+  double q_acc = 0.5;
+  double q_jerk = 0.6;
+
+  double q_acc_bound = 200.0;
+  double q_jerk_bound = 500.0;
+
+  double q_soft_corridor = 200.0;
+  double q_hard_corridor = 0.0;
+  double delta_t = 0.2;
+  size_t motion_plan_concerned_index = 20;
+};
+
 struct LongitudinalMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -351,6 +411,8 @@ struct LongitudinalMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"long_motion_ilqr", "q_soft_pos_bound"});
     q_hard_pos_bound = read_json_keys<double>(
         json, std::vector<std::string>{"long_motion_ilqr", "q_hard_pos_bound"});
+    q_sv_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_sv_bound"});
     q_vel_bound = read_json_keys<double>(
         json, std::vector<std::string>{"long_motion_ilqr", "q_vel_bound"});
     q_acc_bound = read_json_keys<double>(
@@ -367,6 +429,7 @@ struct LongitudinalMotionPlannerConfig : public EgoPlanningConfig {
 
   double q_soft_pos_bound = 2.0;
   double q_hard_pos_bound = 1000.0;
+  double q_sv_bound = 1000.0;
   double q_vel_bound = 400.0;
   double q_acc_bound = 400.0;
   double q_jerk_bound = 100.0;
@@ -696,13 +759,95 @@ struct VisionLongitudinalBehaviorPlannerConfig : public EgoPlanningConfig {
   double distance_start = 0.3;
 };
 
+struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    // 目前实时无法拿到自己的配置文件
+    // preview_x = read_json_key<double>(json, "preview_x");
+    // dis_zero_speed = read_json_key<double>(json, "dis_zero_speed");
+    // dis_zero_speed_accident =
+    //     read_json_key<double>(json, "dis_zero_speed_accident");
+    // ttc_brake_hysteresis = read_json_key<double>(json,
+    // "ttc_brake_hysteresis");
+  }
+  int lon_num_step = 25;
+  double delta_time = 0.2;
+  bool enable_lead_two = false;
+  double safe_distance_base = 3.0;          // 静止跟车距离
+  double safe_distance_ttc = 0.3;           // 安全距离ttc
+  bool enable_rss_model = false;            // 是否采用RSS跟车模型
+  double t_actuator_delay = 0.4;            // 纵向执行响应延时
+  double lane_keep_cutinp_threshold = 0.2;  // 车道保持时cut in车辆判断阈值
+  double lane_change_cutinp_threshold = 0.6;  // 换道时cut in车辆判断阈值
+  double corridor_width = 1.5;  // 通道半个宽度，用于判断cut in车辆是否侵入
+  double cruise_set_acc = 0.8;   // 巡航车速增加速率 0.8m/s2
+  double cruise_set_dec = -1.0;  // 巡航车速减小速率 -1m/s2
+
+  double preview_x = 80.0;
+  double dis_zero_speed = 3.5;
+  double dis_zero_speed_accident = 6;
+  double ttc_brake_hysteresis = 0.3;
+  double t_curv = 3.0;
+  double dis_curv = 0.0;
+  double velocity_upper_bound = 33.33;  // 120km/h
+  // The param for StartStopState
+  double v_start = 0.3;
+  double obstacle_v_start = 0.5;  // start of obstacle
+  double distance_stop = 1.0;
+  double distance_start = 0.3;
+  // param for st graph
+  double lead_desired_distance_step = 0.5; // lead跟车距离膨胀速率0.5m/s
+
+};
+
+struct RealTimeLonMotionPlannerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    q_ref_pos = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_ref_pos"});
+    q_ref_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_ref_vel"});
+    q_acc = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_acc"});
+    q_jerk = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_jerk"});
+    q_soft_pos_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_soft_pos_bound"});
+    q_hard_pos_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_hard_pos_bound"});
+    q_sv_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_sv_bound"});
+    q_vel_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_vel_bound"});
+    q_acc_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_acc_bound"});
+    q_jerk_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_jerk_bound"});
+    q_stop_s = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_stop_s"});
+  }
+  double q_ref_pos = 1.0;
+  double q_ref_vel = 0.05;
+  double q_acc = 10.0;
+  double q_jerk = 5.0;
+
+  double q_soft_pos_bound = 2.0;
+  double q_hard_pos_bound = 1000.0;
+  double q_sv_bound = 1000.0;
+  double q_vel_bound = 400.0;
+  double q_acc_bound = 400.0;
+  double q_jerk_bound = 100.0;
+  double q_stop_s = 2000.0;
+};
+
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
   }
   double planning_result_delta_time = 0.025;
-  double min_path_length = 10.0;
   bool is_pwj_planning = false;
 };
 
@@ -781,6 +926,18 @@ struct EgoPlanningTaskPipelineVisionOnlyConfig
     /* read config from json */
     pipeline_version =
         read_json_key<std::string>(json, "pipeline_version_vision_only", "v1");
+  }
+
+  std::string pipeline_version = "v1";
+};
+
+struct EgoPlanningTaskPipelineRealTimeConfig
+    : public EgoPlanningTaskPipelineConfig {
+  void init(const Json &json) override {
+    EgoPlanningTaskPipelineConfig::init(json);
+    /* read config from json */
+    pipeline_version =
+        read_json_key<std::string>(json, "pipeline_version_real_time", "v1");
   }
 
   std::string pipeline_version = "v1";

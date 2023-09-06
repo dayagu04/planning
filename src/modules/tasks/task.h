@@ -23,8 +23,11 @@ enum TaskType {
   GENERAL_LONGITUDINAL_DECIDER,
   PWJ_LONGITUDINAL_MOTION_PLANNER,
   VISION_ONLY_LONGITUDINAL_BEHAVIOR_PLANNER,
+  REAL_TIME_LONGITUDINAL_BEHAVIOR_PLANNER,
   RESULT_TRAJECTORY_GENERATOR,
   ADAS_FUNCTION_TASK,
+  REALTIME_LATERAL_MOTION_PLANNER,
+  REALTIME_LONGITUDINAL_MOTION_PLANNER,
 };
 using PlanningTaskTypes = std::vector<TaskType>;
 
@@ -32,6 +35,7 @@ class Task {
  public:
   explicit Task(const EgoPlanningConfigBuilder *config_builder,
                 const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+  explicit Task(const EgoPlanningConfigBuilder *config_builder);
 
   virtual ~Task() = default;
 

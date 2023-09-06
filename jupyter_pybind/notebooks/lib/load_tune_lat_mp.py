@@ -127,6 +127,16 @@ def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_da
     hard_lower_bound_x0_vec, hard_lower_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.hard_lower_bound_x0_vec, \
       lat_motion_plan_input.hard_lower_bound_y0_vec)
 
+    if len(soft_upper_bound_x0_vec) == 0:
+      soft_upper_bound_x0_vec = ref_x
+      soft_upper_bound_y0_vec = ref_y
+      soft_lower_bound_x0_vec = ref_x
+      soft_lower_bound_y0_vec = ref_y
+      hard_upper_bound_x0_vec = ref_x
+      hard_upper_bound_y0_vec = ref_y
+      hard_lower_bound_x0_vec = ref_x
+      hard_lower_bound_y0_vec = ref_y
+
     lat_plan_data['data_lat_motion_plan_input'].data.update({
       'ref_x': ref_x,
       'ref_y': ref_y,
@@ -261,7 +271,9 @@ def load_lat_plan_figure(fig1):
                                                          'steer_deg_vec_t':[],
                                                          'steer_dot_deg_vec_t':[],
                                                          'acc_vec_t':[],
-                                                         'jerk_vec_t':[]
+                                                         'jerk_vec_t':[],
+                                                         'comb_x_vec': [],
+                                                         'comb_y_vec': [],
                                                         })
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
@@ -295,8 +307,9 @@ def load_lat_plan_figure(fig1):
   fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=False)
   fig1.line('y_vec', 'x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
   fig1.line('y_vec_t', 'x_vec_t', source = data_lat_motion_plan_output, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.4, legend_label = 'tuned plan path')
+  fig1.line('comb_y_vec', 'comb_x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.7, legend_label = 'combined path')
 
-  # fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
 
   fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 5.2], width=600, height=160)
   fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=600, height=160)

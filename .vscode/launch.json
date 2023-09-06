@@ -56,7 +56,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/mnt/0625/long_time_gj2.00001"
+                "/mnt/0808_night/real_time_18.00000"
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",

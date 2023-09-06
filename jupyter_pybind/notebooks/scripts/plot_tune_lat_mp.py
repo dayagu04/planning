@@ -11,7 +11,7 @@ from python_proto import common_pb2, lateral_motion_planner_pb2
 from jupyter_pybind import lateral_motion_planning_py
 
 # bag path and frame dt
-bag_path = "/home/xlwang71/Downloads/0713/long_time_12.00000"
+bag_path = "/home/xlwang71/Downloads/0830/lane_change_65_4.00000"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

@@ -1,4 +1,4 @@
-syntax = "proto3";
+syntax = "proto2";
 
 package planning.common;
 
@@ -32,31 +32,31 @@ message ObjectType{
     VIRTUAL_SOILD = 10;
     VIRTUAL_BUS = 11;
   }
-  ObjectTypeEnum value = 1;
+  optional ObjectTypeEnum value = 1;
 }
 
 message Shape3d {
-  double length = 1;
-  double width = 2;
-  double height = 3;
+  optional double length = 1;
+  optional double width = 2;
+  optional double height = 3;
 }
 
 message Shape {
-  double length = 1;
-  double width = 2;
-  double height = 3;
+  optional double length = 1;
+  optional double width = 2;
+  optional double height = 3;
 }
 
 message Point3d {
-  double x = 1;
-  double y = 2;
-  double z = 3;
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
 }
 
 message Point {
-  double x = 1;
-  double y = 2;
-  double z = 3;
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
 }
 
 message Points {
@@ -64,44 +64,44 @@ message Points {
 }
 
 message Vector3d {
-  double x = 1;
-  double y = 2;
-  double z = 3;
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
 }
 
 message Point2d {
-  double x = 1;
-  double y = 2;
+  optional double x = 1;
+  optional double y = 2;
 }
 
 message Pose2d {
-  double x = 1;
-  double y = 2;
-  double theta = 3;
+  optional double x = 1;
+  optional double y = 2;
+  optional double theta = 3;
 }
 
 message Quaternion {
-  double x = 1;
-  double y = 2;
-  double z = 3;
-  double w = 4;
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
+  optional double w = 4;
 }
 
 message Pose {
-  Point3d position = 1;
-  Quaternion orientation = 2;
+  optional Point3d position = 1;
+  optional Quaternion orientation = 2;
 }
 
 message Transform {
-  Point3d position = 1;
-  Quaternion orientation = 2;
+  optional Point3d position = 1;
+  optional Quaternion orientation = 2;
 }
 
 message EgoPose {
-  double timestamp = 1;
-  Point3d position = 2;
-  Vector3d velocity = 3;
-  double heading_angle = 4;
+  optional double timestamp = 1;
+  optional Point3d position = 2;
+  optional Vector3d velocity = 3;
+  optional double heading_angle = 4;
 }
 
 message EgoPoses {
@@ -125,20 +125,20 @@ enum LineType {
 }
 
 message Node {
-  Point start_point = 1;
-  Point end_point = 2;
-  LineType type = 3;
-  int32 id = 4;
-  bool b_in_intersection = 5;
+  optional Point start_point = 1;
+  optional Point end_point = 2;
+  optional LineType type = 3;
+  optional int32 id = 4;
+  optional bool b_in_intersection = 5;
 }
 
 message NodeLane {
   repeated Node nodes = 1;
-  string id = 2;
-  LineType type = 3;
-  int32 color = 4;
-  float min_distance_to_ego = 5;
-  float on_route_dis = 6;
+  optional string id = 2;
+  optional LineType type = 3;
+  optional int32 color = 4;
+  optional float min_distance_to_ego = 5;
+  optional float on_route_dis = 6;
 }
 
 message NodeLanes {
@@ -146,30 +146,30 @@ message NodeLanes {
 }
 
 message VirtualPoint2D {
-  double x = 1;
-  double y = 2;
+  optional double x = 1;
+  optional double y = 2;
 }
 
 message VirtualPoint3D {
-  double x = 1;
-  double y = 2;
-  double z = 3;
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
 }
 
 message TrajectoryPoint {
   // enu
-  double x = 1;
-  double y = 2;
-  double heading_angle = 3;
-  double curvature = 4;
-  double t = 5;
-  double v = 6;
-  double a = 7;
+  optional double x = 1;
+  optional double y = 2;
+  optional double heading_angle = 3;
+  optional double curvature = 4;
+  optional double t = 5;
+  optional double v = 6;
+  optional double a = 7;
 
   // frenet
-  double s = 8;
-  double l = 9;
-  bool frenet_valid = 10;
+  optional double s = 8;
+  optional double l = 9;
+  optional bool frenet_valid = 10;
 }
 
 message TrajectoryPoints {
@@ -196,15 +196,15 @@ enum TrajectoryTypeEnum {
 }
 
 message EgoPredictionTrajectory {
-  TrajectoryPoints trajectory = 1;
-  TrajectoryTypeEnum type = 2;
-  double logit = 3;
+  optional TrajectoryPoints trajectory = 1;
+  optional TrajectoryTypeEnum type = 2;
+  optional double logit = 3;
   repeated EgoPredictionTrajectory trajectory_array = 4;
 }
 message EgoPredictionObject {
-  double timestamp_us = 1;
-  double timestamp = 2;
-  bool ego_prediction_valid = 3;
+  optional double timestamp_us = 1;
+  optional double timestamp = 2;
+  optional bool ego_prediction_valid = 3;
   repeated EgoPredictionTrajectory trajectory_array = 4;
 }
 
@@ -215,28 +215,28 @@ enum ResultTrajectoryType {
 }
 
 message FrenetBoundary {
-  double s_start = 1;
-  double s_end = 2;
-  double l_start = 3;
-  double l_end = 4;
+  optional double s_start = 1;
+  optional double s_end = 2;
+  optional double l_start = 3;
+  optional double l_end = 4;
 }
 
 message FrenetBoundaryCorners {
-  double s_front_left = 1;
-  double l_front_left = 2;
-  double s_front_right = 3;
-  double l_front_right = 4;
-  double s_rear_left = 5;
-  double l_rear_left = 6;
-  double s_rear_right = 7;
-  double l_rear_right = 8;
+  optional double s_front_left = 1;
+  optional double l_front_left = 2;
+  optional double s_front_right = 3;
+  optional double l_front_right = 4;
+  optional double s_rear_left = 5;
+  optional double l_rear_left = 6;
+  optional double s_rear_right = 7;
+  optional double l_rear_right = 8;
 }
 
 message FrenetObstacleBoundary {
-  double s_start = 1;
-  double s_end = 2;
-  double l_start = 3;
-  double l_end = 4;
+  optional double s_start = 1;
+  optional double s_end = 2;
+  optional double l_start = 3;
+  optional double l_end = 4;
 }
 
 enum TrafficLightState {  // origin: CurrentState
@@ -252,22 +252,35 @@ enum TrafficLightState {  // origin: CurrentState
 enum FrenetState { TODO = 0; }
 
 message PlanningInitPoint {
-  double x = 1;
-  double y = 2;
-  double heading_angle = 3;
-  double curvature = 4;
-  double v = 5;
-  double a = 6;
-  double relative_time = 7;
-  FrenetState frenet_state = 8;
+  optional double x = 1;
+  optional double y = 2;
+  optional double heading_angle = 3;
+  optional double curvature = 4;
+  optional double v = 5;
+  optional double a = 6;
+  optional double relative_time = 7;
+  optional FrenetState frenet_state = 8;
 }
 
 message TimeDurationFlag {
-  double duration_time = 1;
-  bool flag = 2;
-  double last_time = 3;
+  optional double duration_time = 1;
+  optional bool flag = 2;
+  optional double last_time = 3;
 }
 
 message PathPoint {
-  int32 todo = 1;  // TODO
+  optional int32 todo = 1;  // TODO
+}
+
+message StartStopInfo {
+  enum StateType {
+    CRUISE = 0;
+    STOP = 1;
+    START = 2;
+  }
+  optional bool is_stop = 1 [default = false];
+  optional bool is_start = 2 [default = false];
+  optional bool enable_stop = 3 [default = false];
+  optional StateType state = 4 [default = CRUISE];
+  optional double stop_distance_of_leadone = 5 [default = 0.0];
 }

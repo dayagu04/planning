@@ -132,3 +132,9 @@ python html_generator.py plot_ctrl_html /home/xlwang71/Downloads/0713/long_time_
 ```
 python html_generator.py plot_ctrl_html /home/xlwang71/Downloads/0713/
 ```
+
+6.pybind调试编译方法：
+
+```
+make pybind_build
+```

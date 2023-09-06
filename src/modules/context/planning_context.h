@@ -5,7 +5,9 @@
 #include "config/vehicle_param.h"
 #include "define/lateral_behavior_planner_output.h"
 #include "define/planning_status.h"
+#include "lon_behavior_planner.pb.h"
 #include "macro.h"
+#include "real_time_lon_behavior_planner.pb.h"
 #include "speed/speed_limit.h"
 
 namespace planning {
@@ -54,9 +56,12 @@ class PlanningContext {
     return lateral_decisions_for_show_;
   }
 
-  const StartStopInfo &start_stop_result() const { return start_stop_result_; }
-
-  StartStopInfo &mutable_start_stop_result() { return start_stop_result_; }
+  const common::StartStopInfo &start_stop_result() const {
+    return start_stop_result_;
+  }
+  common::StartStopInfo &mutable_start_stop_result() {
+    return start_stop_result_;
+  }
 
   const AdaptiveCruiseControlInfo &adaptive_cruise_control_result() const {
     return adaptive_cruise_control_result_;
@@ -70,10 +75,10 @@ class PlanningContext {
 
   PlanningResult &mutable_planning_result() { return planning_result_; }
 
-  const LonDecisionInfo &lon_decision_result() const {
+  const common::LonDecisionInfo &lon_decision_result() const {
     return lon_decision_result_;
   }
-  LonDecisionInfo &mutable_lon_decision_result() {
+  common::LonDecisionInfo &mutable_lon_decision_result() {
     return lon_decision_result_;
   }
 
@@ -129,8 +134,8 @@ class PlanningContext {
 
   LatDeciderOutput &mutable_lat_decider_output() { return lat_decider_output_; }
 
-  const std::shared_ptr<AdaptiveCruiseControl>
-      &adaptive_cruise_control_function() {
+  const std::shared_ptr<AdaptiveCruiseControl> &
+  adaptive_cruise_control_function() {
     return adaptive_cruise_control_ptr_;
   }
   void set_adaptive_cruise_control_function(
@@ -161,8 +166,8 @@ class PlanningContext {
     lane_keep_assit_ptr_ = lane_keep_assit;
   }
 
-  const std::shared_ptr<class IntelligentHeadlightControl>
-      &intelligent_headlight_control_function() {
+  const std::shared_ptr<class IntelligentHeadlightControl> &
+  intelligent_headlight_control_function() {
     return intelligent_headlight_control_;
   }
   void set_intelligent_headlight_control_function(
@@ -171,8 +176,8 @@ class PlanningContext {
     intelligent_headlight_control_ = intelligent_headlight_control;
   }
 
-  const std::shared_ptr<TrafficSignRecognition>
-      &traffic_sign_recognition_function() {
+  const std::shared_ptr<TrafficSignRecognition> &
+  traffic_sign_recognition_function() {
     return traffic_sign_recognition_;
   }
   void set_traffic_sign_recognition_function(
@@ -253,8 +258,8 @@ class PlanningContext {
     last_planning_success_ = false;
     planning_result_ = PlanningResult();
     adaptive_cruise_control_result_ = AdaptiveCruiseControlInfo();
-    start_stop_result_ = StartStopInfo();
-    lon_decision_result_ = LonDecisionInfo();
+    start_stop_result_.Clear();
+    lon_decision_result_.Clear();
     fault_diagnosis_result_ = FaultDiagnosisInfo();
     lateral_decisions_for_show_ = LatDecisionInfos();
     status_info_ = StatusInfo();
@@ -271,8 +276,8 @@ class PlanningContext {
   std::vector<std::pair<double, double>> last_enu_ref_path_;
   std::vector<double> last_enu_ref_theta_;
   AdaptiveCruiseControlInfo adaptive_cruise_control_result_;
-  StartStopInfo start_stop_result_;
-  LonDecisionInfo lon_decision_result_;
+  common::StartStopInfo start_stop_result_;
+  common::LonDecisionInfo lon_decision_result_;
   FaultDiagnosisInfo fault_diagnosis_result_;
   LatDecisionInfos lateral_decisions_for_show_;
   VehicleParam vehicle_param_;

@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "ego_planning_config.h"
+#include "lon_behavior_planner.pb.h"
 #include "mrc_types.h"
 #include "planning_context.h"
 #include "session.h"
@@ -39,7 +40,7 @@ class MrcCondition {
                          PlanningResult &ego_prediction_result,
                          PlanningInitPoint &planning_init_point);
   void update_inline_brake_by_obstacle(
-      LonDecisionInfo &lon_decision_information,
+      common::LonDecisionInfo &lon_decision_information,
       PlanningInitPoint &planning_init_point);
   std::pair<double, double> calculate_max_acc(double ego_v);
   const bool enable_mrc_pull_over() const {

@@ -96,7 +96,12 @@ struct StateBase : M::Base {
       return TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder,
                                 frame);
     } else {
-      return TaskPipeline::Make(TaskPipelineType::VISION_ONLY, config_builder,
+      // return TaskPipeline::Make(TaskPipelineType::VISION_ONLY,
+      // config_builder,
+      //                          frame);
+      // TODO, 通过配置切换
+      // FBI WARNING
+      return TaskPipeline::Make(TaskPipelineType::REAL_TIME, config_builder,
                                 frame);
     }
   }

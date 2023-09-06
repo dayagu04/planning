@@ -5,6 +5,7 @@ package planning.common;
 import "task_basic_types.proto";
 import "vision_only_lateral_behavior_planner.proto";
 import "vision_only_lateral_motion_planner.proto";
+import "real_time_lon_behavior_planner.proto";
 import "environment_model_debug_info.proto";
 import "lateral_motion_planner.proto";
 import "longitudinal_motion_planner.proto";
@@ -51,4 +52,5 @@ message PlanningDebugInfo {
   optional TopicTimeList input_topic_timestamp = 12;
   optional TopicTimeList input_topic_latency = 13;
   optional FrameInfo frame_info = 14;
+  optional RealTimeLonBehaviorInput real_time_lon_behavior_planning_input = 15;
 }

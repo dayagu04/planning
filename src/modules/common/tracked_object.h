@@ -3,6 +3,7 @@
 
 #include <float.h>
 #include <vector>
+#include "common.pb.h"
 #include "define/geometry.h"
 
 namespace planning {

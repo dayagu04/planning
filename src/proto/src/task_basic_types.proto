@@ -41,16 +41,3 @@ message WeightedLonLeadBound {
 message WeightedLonLeadBounds {
   repeated WeightedLonLeadBound bound = 1;
 }
-
-message LonRefPath {
-  repeated double t_list = 1;
-  repeated DoublePair s_refs = 2; // <offset, weight>
-  repeated DoublePair ds_refs = 3;
-
-  repeated WeightedBounds bounds = 4;
-  repeated WeightedLonLeadBounds lon_lead_bounds = 5;
-
-  optional Bounds lon_bound_v = 6;
-  optional Bounds lon_bound_a = 7;
-  optional Bounds lon_bound_jerk = 8;
-}

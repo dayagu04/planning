@@ -757,7 +757,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     # print(center_line_list)
     for i in range(5):
       # try:
-        if 0:
+        if 1:
           data_center_line = data_center_line_dict[i]
           data_center_line.data.update({
             'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
@@ -1083,6 +1083,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   ### step 3: 加载planning轨迹信息
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
+    # print("trajectory:", trajectory)
     try:
       planning_polynomial = trajectory.target_reference.polynomial
       plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
@@ -1093,8 +1094,14 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       for i in range(len(trajectory.trajectory_points)):
         plan_x.append(trajectory.trajectory_points[i].x)
         plan_y.append(trajectory.trajectory_points[i].y)
-
-      plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
+      try:
+        if plan_x[0] == 0.0 and plan_y[0] == 0.0:
+          plan_traj_x = plan_x
+          plan_traj_y = plan_y
+        else:
+          plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
+      except:
+        pass
 
     local_view_data['data_planning'].data.update({
         'plan_traj_y' : plan_traj_y,
