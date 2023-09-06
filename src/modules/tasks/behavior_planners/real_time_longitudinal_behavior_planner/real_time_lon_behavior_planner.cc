@@ -224,12 +224,14 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
         lateral_obstacles->tleadtwo()->is_temp_lead);
     temp_lead_two->set_cutinp(lateral_obstacles->tleadtwo()->cutinp);
   }
-  
+
   auto lat_obs_info = lon_behav_plan_input_->mutable_lat_obs_info();
   lat_obs_info->mutable_front_tracks()->Clear();
-  lat_obs_info->mutable_front_tracks()->Reserve(lateral_obstacles->front_tracks().size());
+  lat_obs_info->mutable_front_tracks()->Reserve(
+      lateral_obstacles->front_tracks().size());
   for (auto &track : lateral_obstacles->front_tracks()) {
-    planning::common::TrackedObjectInfo *one_obs = lat_obs_info->add_front_tracks();
+    planning::common::TrackedObjectInfo *one_obs =
+        lat_obs_info->add_front_tracks();
     one_obs->set_track_id(track.track_id);
     one_obs->set_type(track.type);
     one_obs->set_fusion_source(track.fusion_source);
@@ -281,54 +283,56 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
   std::vector<TrackedObject> *front_target_tracks =
       lane_tracks_mgr->get_lane_tracks(
           lane_change_lane_manager->tlane_virtual_id(), FRONT_TRACK);
-  for (auto &track : *front_target_tracks) {
-    // ignore obj without camera source
-    if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
-        (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
-      continue;
-    };
-    planning::common::TrackedObjectInfo *one_obs =
-        lane_change_info->add_lc_cars();
-    one_obs->set_track_id(track.track_id);
-    one_obs->set_type(track.type);
-    one_obs->set_fusion_source(track.fusion_source);
-    one_obs->set_v_lead(track.v_lead);
-    one_obs->set_v_rel(track.v_rel);
-    one_obs->set_a_lead_k(track.a_lead_k);
-    one_obs->set_d_rel(track.d_rel);
-    one_obs->set_d_path(track.d_path);
-    one_obs->set_d_path_self(track.d_path_self);
-    one_obs->set_v_lat(track.v_lat);
-    one_obs->set_is_accident_car(track.is_accident_car);
-    one_obs->set_is_lead(track.is_lead);
-    one_obs->set_is_temp_lead(track.is_temp_lead);
-    one_obs->set_cutinp(track.cutinp);
-  }
-  std::vector<TrackedObject> *side_target_tracks =
-      lane_tracks_mgr->get_lane_tracks(
-          lane_change_lane_manager->tlane_virtual_id(), SIDE_TRACK);
-  for (auto &track : *side_target_tracks) {
-    // ignore obj without camera source
-    if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
-        (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
-      continue;
-    };
-    planning::common::TrackedObjectInfo *one_obs =
-        lane_change_info->add_lc_cars();
-    one_obs->set_track_id(track.track_id);
-    one_obs->set_type(track.type);
-    one_obs->set_fusion_source(track.fusion_source);
-    one_obs->set_v_lead(track.v_lead);
-    one_obs->set_v_rel(track.v_rel);
-    one_obs->set_a_lead_k(track.a_lead_k);
-    one_obs->set_d_rel(track.d_rel);
-    one_obs->set_d_path(track.d_path);
-    one_obs->set_d_path_self(track.d_path_self);
-    one_obs->set_v_lat(track.v_lat);
-    one_obs->set_is_accident_car(track.is_accident_car);
-    one_obs->set_is_lead(track.is_lead);
-    one_obs->set_is_temp_lead(track.is_temp_lead);
-    one_obs->set_cutinp(track.cutinp);
+  if (front_target_tracks != nullptr) {
+    for (auto &track : *front_target_tracks) {
+      // ignore obj without camera source
+      if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
+          (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+        continue;
+      };
+      planning::common::TrackedObjectInfo *one_obs =
+          lane_change_info->add_lc_cars();
+      one_obs->set_track_id(track.track_id);
+      one_obs->set_type(track.type);
+      one_obs->set_fusion_source(track.fusion_source);
+      one_obs->set_v_lead(track.v_lead);
+      one_obs->set_v_rel(track.v_rel);
+      one_obs->set_a_lead_k(track.a_lead_k);
+      one_obs->set_d_rel(track.d_rel);
+      one_obs->set_d_path(track.d_path);
+      one_obs->set_d_path_self(track.d_path_self);
+      one_obs->set_v_lat(track.v_lat);
+      one_obs->set_is_accident_car(track.is_accident_car);
+      one_obs->set_is_lead(track.is_lead);
+      one_obs->set_is_temp_lead(track.is_temp_lead);
+      one_obs->set_cutinp(track.cutinp);
+    }
+    std::vector<TrackedObject> *side_target_tracks =
+        lane_tracks_mgr->get_lane_tracks(
+            lane_change_lane_manager->tlane_virtual_id(), SIDE_TRACK);
+    for (auto &track : *side_target_tracks) {
+      // ignore obj without camera source
+      if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
+          (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+        continue;
+      };
+      planning::common::TrackedObjectInfo *one_obs =
+          lane_change_info->add_lc_cars();
+      one_obs->set_track_id(track.track_id);
+      one_obs->set_type(track.type);
+      one_obs->set_fusion_source(track.fusion_source);
+      one_obs->set_v_lead(track.v_lead);
+      one_obs->set_v_rel(track.v_rel);
+      one_obs->set_a_lead_k(track.a_lead_k);
+      one_obs->set_d_rel(track.d_rel);
+      one_obs->set_d_path(track.d_path);
+      one_obs->set_d_path_self(track.d_path_self);
+      one_obs->set_v_lat(track.v_lat);
+      one_obs->set_is_accident_car(track.is_accident_car);
+      one_obs->set_is_lead(track.is_lead);
+      one_obs->set_is_temp_lead(track.is_temp_lead);
+      one_obs->set_cutinp(track.cutinp);
+    }
   }
 
   // 5. set state of start & stop

@@ -11,7 +11,7 @@ from python_proto import common_pb2, longitudinal_motion_planner_pb2
 from jupyter_pybind import realtime_longitudinal_motion_planning_py
 
 # bag path and frame dt
-bag_path = "/mnt/0808_night/real_time_18.00000.1692764770.plan"
+bag_path = "/home/xlwang71/Downloads/new_motion/10_10.00000"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

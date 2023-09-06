@@ -239,7 +239,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   acc_vec = lon_motion_plan_output.acc_vec
   jerk_vec = lon_motion_plan_output.jerk_vec
 
-  print("lon_motion_plan_output:=", lon_motion_plan_output)
+#   print("lon_motion_plan_output:=", lon_motion_plan_output)
 
   lon_plan_data['data_lon_motion_plan'].data.update({
     'time_vec': time_vec,

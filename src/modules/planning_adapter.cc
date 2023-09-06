@@ -143,7 +143,7 @@ void PlanningAdapter::Proc() {
   std::cout << "==============The planning enters RunOnce============="
             << std::endl;
   bool run_success = planning_base_->RunOnce(
-      local_view_, &planning_output, *planning_debug_data, &planning_hmi_info);
+      &local_view_, &planning_output, *planning_debug_data, &planning_hmi_info);
 
   // 3.get output & publish
   uint64_t output_time_us = (uint64_t)IflyTime::Now_us();

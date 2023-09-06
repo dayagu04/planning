@@ -40,19 +40,19 @@ void GeneralPlanning::Init() {
 }
 
 bool GeneralPlanning::RunOnce(
-    const LocalView &local_view,
+    const LocalView *local_view,
     PlanningOutput::PlanningOutput *const planning_output,
     common::PlanningDebugInfo &debug_info,
     PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
   LOG_ERROR("GeneralPlanning::RunOnce \n");
   frame_num_++;
-  local_view_ = local_view;
+
   double start_timestamp = IflyTime::Now_ms();
   EnvironmentalModel *environmental_model =
       session_.mutable_environmental_model();
   environmental_model->feed_local_view(local_view);  // todo
 
-  const auto &state_machine = local_view.function_state_machine_info;
+  const auto &state_machine = local_view->function_state_machine_info;
   if (state_machine.has_current_state()) {
     if (IsUndefinedScene(state_machine.current_state())) {
       session_.set_scene_type(planning::common::SceneType::HIGHWAY);

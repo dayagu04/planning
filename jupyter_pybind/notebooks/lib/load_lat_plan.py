@@ -141,7 +141,7 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
     hard_lower_bound_x0_vec, hard_lower_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.hard_lower_bound_x0_vec, \
       lat_motion_plan_input.hard_lower_bound_y0_vec)
 
-    if len(soft_upper_bound_x0_vec) == 0:
+    if len(soft_upper_bound_x0_vec) == 0 or bag_loader.plan_msg['data'][plan_msg_idx].trajectory.target_reference.lateral_maneuver_gear == 2:
       soft_upper_bound_x0_vec = ref_x
       soft_upper_bound_y0_vec = ref_y
       soft_lower_bound_x0_vec = ref_x

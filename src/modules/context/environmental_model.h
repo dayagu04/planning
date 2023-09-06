@@ -114,8 +114,8 @@ class EnvironmentalModel {
     virtual_lane_manager_ = virtual_lane_manager;
   }
 
-  const std::shared_ptr<TrafficLightDecisionManager>
-      &get_traffic_light_decision_manager() const {
+  const std::shared_ptr<TrafficLightDecisionManager> &
+  get_traffic_light_decision_manager() const {
     return traffic_light_decision_manager_;
   }
   void set_traffic_light_decision_manager(
@@ -173,23 +173,21 @@ class EnvironmentalModel {
     highway_config_builder_ptr_ = highway_config_builder_ptr;
   }
 
-  void feed_local_view(const LocalView &local_view) {
+  void feed_local_view(const LocalView *local_view) {
     local_view_ = local_view;
   }
   void set_location_valid(bool flag) { location_valid_ = flag; }
   bool location_valid() const { return location_valid_; }
-  const LocalView &get_local_view() const { return local_view_; }
+  const LocalView &get_local_view() const { return *local_view_; }
 
   bool get_hdmap_valid() const { return hdmap_valid_; }
   bool is_on_highway() const { return true; }  // hack
   const HmiMcuInner::HmiMcuInner &get_hmi_info() const {
-    return local_view_.hmi_mcu_inner_info;
+    return local_view_->hmi_mcu_inner_info;
   }
 
  private:
-  // planning::framework::Session *session_ = nullptr;
-  // planning::framework::Frame *frame_ = nullptr;
-  LocalView local_view_;
+  const LocalView *local_view_;
   bool vehicle_dbw_status_{false};
   std::shared_ptr<EgoStateManager> ego_state_manager_ = nullptr;
   std::shared_ptr<ObstacleManager> obstacle_manager_ = nullptr;
