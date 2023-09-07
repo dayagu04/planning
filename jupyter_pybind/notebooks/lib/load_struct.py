@@ -4,8 +4,8 @@ import math
 from lib.load_rotate import *
 
 def load_car_params_patch():
-  car_x = [4.015, 4.015, -1.083, -1.083, 4.015]
-  car_y = [0.98, -0.98, -0.98, 0.98, 0.98]
+  car_x = [3.624, 3.624, -0.947, -0.947, 3.624]
+  car_y = [1.89*0.5, -1.89*0.5, -1.89*0.5, 1.89*0.5, 1.89*0.5]
   return car_x, car_y
 
 def load_lane_lines(lanes):
@@ -86,9 +86,9 @@ def load_obstacle_paramsV1(obstacle_list):
       source = 1
     elif (obstacle_list[i].common_info.relative_center_position.x > 0 and \
       math.tan(25) > math.fabs(obstacle_list[i].common_info.relative_center_position.y / obstacle_list[i].common_info.relative_center_position.x)) or \
-      math.fabs(obstacle_list[i].common_info.relative_center_position.y) > 10: 
+      math.fabs(obstacle_list[i].common_info.relative_center_position.y) > 10:
       continue
-    else: 
+    else:
       source = 4
     if (source in obs_info_all.keys()) == False:
       obs_info = {
@@ -187,9 +187,9 @@ def load_obstacle_me(obstacle_list):
     #   source = 1
     # elif (obstacle_list[i].common_info.relative_center_position.x > 0 and \
     #   math.tan(25) > math.fabs(obstacle_list[i].common_info.relative_center_position.y / obstacle_list[i].common_info.relative_center_position.x)) or \
-    #   math.fabs(obstacle_list[i].common_info.relative_center_position.y) > 10: 
+    #   math.fabs(obstacle_list[i].common_info.relative_center_position.y) > 10:
     #   continue
-    # else: 
+    # else:
     #   source = 4
     if (source in obs_info_all.keys()) == False:
       obs_info = {
@@ -302,10 +302,10 @@ def load_obstacle_radar(obstacle_list,type):
     #   source = 1
     # elif (obstacle_list[i].common_info.relative_center_position.x > 0 and \
     #   math.tan(25) > math.fabs(obstacle_list[i].common_info.relative_center_position.y / obstacle_list[i].common_info.relative_center_position.x)) or \
-    #   math.fabs(obstacle_list[i].common_info.relative_center_position.y) > 10: 
+    #   math.fabs(obstacle_list[i].common_info.relative_center_position.y) > 10:
     #   continue
-    # else: 
-    
+    # else:
+
     if (source in obs_info_all.keys()) == False:
       obs_info = {
         'obstacles_x_rel': [],
@@ -350,7 +350,7 @@ def load_obstacle_radar(obstacle_list,type):
               lat_pos_rel - dy1 - dy2,
               lat_pos_rel - dy1 + dy2,
               lat_pos_rel + dy1 + dy2]
-    
+
     #print(obs_x_rel)
     # 绝对坐标系下的数据
     long_pos = obstacle_list[i].relative_position.x
