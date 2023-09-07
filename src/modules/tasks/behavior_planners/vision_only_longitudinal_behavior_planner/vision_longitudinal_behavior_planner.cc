@@ -592,6 +592,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
   LOG_DEBUG("a_target_.first : [%f] ,a_target_.second : [%f]\n",
             a_target_.first, a_target_.second);
 
+  JSON_DEBUG_VALUE("VisionLonBehavior_cutin_v_target", v_target_);
   return true;
 }
 
@@ -624,6 +625,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
     JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_id", lead_one->track_id);
     JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_dis", lead_one->d_rel);
     JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_vel", lead_one->v_lead);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_one", v_target_lead);
 
     // leadtwo
     if (lead_two != nullptr && lead_two->type != 0) {
@@ -641,10 +643,12 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_id", lead_two->track_id);
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_dis", lead_two->d_rel);
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_vel", lead_two->v_lead);
+      JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_two", v_target_lead_2);
     } else {
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_id", 0);
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_dis", 0);
       JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_vel", 0);
+      JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_two", 0);
     }
     // listen to lead that makes you go slower
     if ((v_target_lead_2 < v_target_lead) && (lead_two != nullptr)) {
@@ -674,8 +678,8 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
   }
 
   // debug info
-  JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_one", v_target_lead);
-  JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_two", v_target_lead_2);
+  // JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_one", v_target_lead);
+  // JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_two", v_target_lead_2);
 
   auto &highway_longitudinal_output =
       frame_->mutable_session()
@@ -736,12 +740,14 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
                      temp_lead_one->d_rel);
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_vel",
                      temp_lead_one->v_lead);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_temp_lead_one", v_target_);
   } else {
     a_target_temp.first = 0.0;
     a_target_temp.second = 0.0;
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_id", 0);
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_dis", 0);
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_vel", 0);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_temp_lead_one", 0);
   }
   // tleadtwo
   if (temp_lead_two != nullptr && lc_status == "none" &&
@@ -772,12 +778,14 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
                      temp_lead_two->d_rel);
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_vel",
                      temp_lead_two->v_lead);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_temp_lead_two", v_target_);
   } else {
     a_target_temp2.first = 0.0;
     a_target_temp2.second = 0.0;
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_id", 0);
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_dis", 0);
     JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_vel", 0);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_temp_lead_two", 0);
   }
 
   // debug info
