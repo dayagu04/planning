@@ -23,7 +23,7 @@ std::shared_ptr<TaskPipeline> TaskPipeline::Make(
     case TaskPipelineType::VISION_ONLY: {
       return std::make_shared<TaskPipelineVisionOnly>(config_builder, frame);
     }
-    case TaskPipelineType::REAL_TIME: {
+    case TaskPipelineType::REALTIME: {
       return std::make_shared<TaskPipelineRealTime>(config_builder, frame);
     }
     default: { /*LOG_ERROR*/

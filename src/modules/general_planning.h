@@ -25,6 +25,8 @@ class GeneralPlanning {
                PlanningOutput::PlanningOutput *const planning_output,
                common::PlanningDebugInfo &debug_info,
                PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info);
+
+  void SyncParameters(planning::common::SceneType scene_type);
   //   void ResetState() override;
   planning::framework::Session *MutableSession() { return &session_; }
 

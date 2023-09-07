@@ -57,7 +57,7 @@ void StGraphGenerator::Update(
                             lon_behav_input_->lat_obs_info().temp_lead_two(),
                             v_ego, lon_behav_input_->lat_output(),
                             temp_leads_st_info);
-  
+
   // 2.3 计算cut in
   std::vector<common::RealTimeLonObstacleSTInfo> cut_in_st_info;
   // 对障碍物进行cut in决策
@@ -74,7 +74,8 @@ void StGraphGenerator::Update(
                        lane_change_st_info);
 
   std::vector<common::RealTimeLonObstacleSTInfo> st_infos;
-  int st_infos_num = leads_st_info.size() + temp_leads_st_info.size() + cut_in_st_info.size() + lane_change_st_info.size();
+  int st_infos_num = leads_st_info.size() + temp_leads_st_info.size() +
+                     cut_in_st_info.size() + lane_change_st_info.size();
   st_infos.resize(st_infos_num);
   for (int i = 0; i < leads_st_info.size(); ++i) {
     st_infos[i].CopyFrom(leads_st_info[i]);
@@ -83,11 +84,13 @@ void StGraphGenerator::Update(
     st_infos[leads_st_info.size() + i].CopyFrom(temp_leads_st_info[i]);
   }
   for (int i = 0; i < cut_in_st_info.size(); ++i) {
-    st_infos[leads_st_info.size() + temp_leads_st_info.size() + i].CopyFrom(cut_in_st_info[i]);
+    st_infos[leads_st_info.size() + temp_leads_st_info.size() + i].CopyFrom(
+        cut_in_st_info[i]);
   }
   for (int i = 0; i < lane_change_st_info.size(); ++i) {
-    st_infos[leads_st_info.size() + temp_leads_st_info.size() + cut_in_st_info.size() + i].CopyFrom(
-      lane_change_st_info[i]);
+    st_infos[leads_st_info.size() + temp_leads_st_info.size() +
+             cut_in_st_info.size() + i]
+        .CopyFrom(lane_change_st_info[i]);
   }
 
   // 3. update STboundaries & sref
@@ -139,9 +142,9 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     if (fast_car) {
       lead_desired_distance_filter_.Update(lead_one_desired_distance);
       lead_one_desired_distance = lead_desired_distance_filter_.GetOutput();
-      leadone_info->mutable_leadone_information()->set_desired_distance(
-          lead_one_desired_distance);
     }
+    leadone_info->mutable_leadone_information()->set_desired_distance(
+        lead_one_desired_distance);
     // update lead one st
     common::RealTimeLonObstacleSTInfo lead_one_st_info;
     lead_one_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
@@ -200,7 +203,8 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
     const planning::common::TrackedObjectInfo &temp_lead_one,
     const planning::common::TrackedObjectInfo &temp_lead_two, double v_ego,
     const planning::common::LatOutputInfo &lateral_outputs,
-    std::vector<planning::common::RealTimeLonObstacleSTInfo> &temp_leads_st_info) {
+    std::vector<planning::common::RealTimeLonObstacleSTInfo>
+        &temp_leads_st_info) {
   double lead_one_a_processed = 0.0;
   double lead_one_desired_distance = 0.0;
   double safe_distance = 0.0;
@@ -288,7 +292,8 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
 
       // update lead two st
       planning::common::RealTimeLonObstacleSTInfo lead_two_st_info;
-      lead_two_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::TEMP_LEADS);
+      lead_two_st_info.set_st_type(
+          common::RealTimeLonObstacleSTInfo::TEMP_LEADS);
       lead_two_st_info.set_id(temp_lead_two.track_id());
       lead_two_st_info.set_a_lead(lead_two_a_processed);
       lead_two_st_info.set_v_lead(temp_lead_two.v_lead());
@@ -320,8 +325,8 @@ void StGraphGenerator::CalcSpeedInfoWithCutin(
   // 更新周围障碍物的cut in信息，纵向评估的cut in,不用做计算
   UpdateNearObstacles(lateral_obstacles, lc_request, v_ego);
 
-  UpdateSpeedWithPotentialCutinCar(lateral_obstacles, lc_request, v_cruise, v_ego,
-                                   cut_in_st_info);
+  UpdateSpeedWithPotentialCutinCar(lateral_obstacles, lc_request, v_cruise,
+                                   v_ego, cut_in_st_info);
 }
 
 void StGraphGenerator::UpdateSTRefs(const std::vector<double> &sref_vec) {
@@ -648,7 +653,8 @@ double StGraphGenerator::CalcDesiredVelocity(const double d_rel,
 void StGraphGenerator::CalcSpeedInfoWithGap(
     const planning::common::TrackedObjectInfo &lead_one, const double v_cruise,
     const double v_ego, const string &lc_request, const string &lc_status,
-    std::vector<planning::common::RealTimeLonObstacleSTInfo> &lane_change_st_info) {
+    std::vector<planning::common::RealTimeLonObstacleSTInfo>
+        &lane_change_st_info) {
   LOG_DEBUG("----entering CalcSpeedInfoWithGap--- \n");
   double a_processed = 0.0;
   double desired_distance = 0.0;
@@ -903,7 +909,8 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
   return start_stop_info_.state();
 }
 
-void StGraphGenerator::SetConfig(planning::common::RealTimeLonBehaviorTunedParams &tuned_params) {
+void StGraphGenerator::SetConfig(
+    planning::common::RealTimeLonBehaviorTunedParams &tuned_params) {
   config_.safe_distance_base = tuned_params.safe_distance_base();
   config_.safe_distance_ttc = tuned_params.safe_distance_ttc();
   config_.t_actuator_delay = tuned_params.t_actuator_delay();

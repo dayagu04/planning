@@ -7,6 +7,7 @@
 
 #include "log.h"
 #include "nlohmann_json.hpp"
+#include "general_planning_context.h"
 
 namespace planning {
 
@@ -112,12 +113,12 @@ struct EgoPlanningConfig : public Config {
     enable_dagger = read_json_key<bool>(json, "enable_dagger");
     use_ego_prediction_model_in_planning = read_json_key<bool>(
         json, "use_ego_prediction_model_in_planning", false);
-    enable_NOA = read_json_key<bool>(json, "enable_NOA");
+    planner_type = read_json_key<int>(json, "planner_type");
   }
   bool enable_raw_ego_prediction = false;
   bool enable_dagger = false;
   bool use_ego_prediction_model_in_planning = false;
-  bool enable_NOA = false;
+  int planner_type = planning::context::PlannerType::REALTIME_PLANNER;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
@@ -797,8 +798,7 @@ struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double distance_stop = 1.0;
   double distance_start = 0.3;
   // param for st graph
-  double lead_desired_distance_step = 0.5; // lead跟车距离膨胀速率0.5m/s
-
+  double lead_desired_distance_step = 0.5;  // lead跟车距离膨胀速率0.5m/s
 };
 
 struct RealTimeLonMotionPlannerConfig : public EgoPlanningConfig {

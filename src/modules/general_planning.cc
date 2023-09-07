@@ -6,6 +6,7 @@
 #include "config/vehicle_param.h"
 #include "ego_planning_config.h"
 #include "environmental_model.h"
+#include "general_planning_context.h"
 #include "ifly_time.h"
 #include "log.h"
 #include "math/math_utils.h"
@@ -39,6 +40,45 @@ void GeneralPlanning::Init() {
       session_.vehicle_config_context().get_vehicle_param());
 }
 
+static std::string ReadFile(const std::string &path) {
+  FILE *file = fopen(path.c_str(), "r");
+  assert(file != nullptr);
+  std::shared_ptr<FILE> fp(file, [](FILE *file) { fclose(file); });
+  fseek(fp.get(), 0, SEEK_END);
+  std::vector<char> content(ftell(fp.get()));
+  fseek(fp.get(), 0, SEEK_SET);
+  auto read_bytes = fread(content.data(), 1, content.size(), fp.get());
+  assert(read_bytes == content.size());
+  (void)read_bytes;
+  return std::string(content.begin(), content.end());
+}
+
+void GeneralPlanning::SyncParameters(planning::common::SceneType scene_type) {
+  std::string path;
+  switch (scene_type) {
+    case planning::common::SceneType::HIGHWAY:
+      path =
+          "/asw/planning/res/conf/module_configs/"
+          "general_planner_module_highway.json";
+      break;
+    case planning::common::SceneType::PARKING_APA:
+      path =
+          "/asw/planning/res/conf/module_configs/"
+          "general_planner_module_parking.json";
+      break;
+    default:
+      path =
+          "/asw/planning/res/conf/module_configs/"
+          "general_planner_module_highway.json";
+  }
+
+  std::string config_file = ReadFile(path);
+  auto config = mjson::Reader(config_file);
+
+  // all parameters can be changed here
+  JSON_READ_VALUE(g_context.MutablePram().planner_type, int, "planner_type");
+}
+
 bool GeneralPlanning::RunOnce(
     const LocalView *local_view,
     PlanningOutput::PlanningOutput *const planning_output,
@@ -48,24 +88,53 @@ bool GeneralPlanning::RunOnce(
   frame_num_++;
 
   double start_timestamp = IflyTime::Now_ms();
+
   EnvironmentalModel *environmental_model =
       session_.mutable_environmental_model();
-  environmental_model->feed_local_view(local_view);  // todo
+
+  environmental_model->feed_local_view(local_view);  //
+
+  auto scene_type = planning::common::SceneType::HIGHWAY;
 
   const auto &state_machine = local_view->function_state_machine_info;
   if (state_machine.has_current_state()) {
     if (IsUndefinedScene(state_machine.current_state())) {
-      session_.set_scene_type(planning::common::SceneType::HIGHWAY);
+      scene_type = planning::common::SceneType::HIGHWAY;
       ClearParkingInfo(planning_output);
     } else if (IsValidParkingState(state_machine.current_state())) {
-      session_.set_scene_type(planning::common::SceneType::PARKING_APA);
+      scene_type = planning::common::SceneType::PARKING_APA;
     } else {
-      session_.set_scene_type(planning::common::SceneType::HIGHWAY);
+      scene_type = planning::common::SceneType::HIGHWAY;
       ClearParkingInfo(planning_output);
     }
   }
 
-  if (session_.is_parking_scene()) {
+  auto fsm_state = local_view->function_state_machine_info.current_state();
+
+  bool acc_active =
+      (fsm_state >= FuncStateMachine::FunctionalState::ACC_ACTIVATE) &&
+      (fsm_state <= FuncStateMachine::FunctionalState::ACC_SECURE);
+
+  bool scc_active =
+      (fsm_state >= FuncStateMachine::FunctionalState::SCC_ACTIVATE) &&
+      (fsm_state <= FuncStateMachine::FunctionalState::SCC_SECURE);
+
+  const auto dbw_status = (acc_active || scc_active);
+
+  // sync parameters only if scene_type or dbw_status changes
+  if ((scene_type != g_context.GetStatemachine().scene_type ||
+       (dbw_status != g_context.GetStatemachine().dbw_status))) {
+    SyncParameters(scene_type);
+  }
+
+  // update general planning context
+  g_context.MutableStatemachine().dbw_status = dbw_status;
+  g_context.MutableStatemachine().scene_type = scene_type;
+
+  // to be removed
+  session_.set_scene_type(scene_type);
+
+  if (scene_type == common::PARKING_APA) {
     scheduler_.RunOnce();
     *planning_output = session_.planning_output_context()
                            .planning_status()
@@ -149,8 +218,10 @@ void GeneralPlanning::FillPlanningTrajectory(
 
   // 根据定位有效性决定实时、长时
   auto location_valid = session_.environmental_model().location_valid();
-  // FBI WARNING
-  if (location_valid || true) {
+
+  if (location_valid ||
+      g_context.GetParam().planner_type ==
+          planning::context::PlannerType::REALTIME_PLANNER_WITH_MOTION) {
     trajectory->set_trajectory_type(
         Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
     trajectory->mutable_trajectory_points()->Clear();
