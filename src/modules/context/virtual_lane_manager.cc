@@ -92,12 +92,19 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       auto lane_merge_split_point_data =
           lane.lane_merge_split_point().merge_split_point_data()[0];
       if (is_nearing_ramp) {
-        if ((is_select_split_nearing_ramp_ &&
+        if (((is_select_split_nearing_ramp_ &&
              lane_merge_split_point_data.is_split()) ||
             (!is_select_split_nearing_ramp_ &&
-             lane_merge_split_point_data.is_continue())) {
+             lane_merge_split_point_data.is_continue())) &&
+             lane.relative_id() == 0) {
           virtual_lane_tmp->update_data(lane);
           std::cout << "22222222222222222222222" << std::endl;
+        } else if (lane.relative_id() == 1 && lane_merge_split_point_data.is_split() && lane_merge_split_point_data.distance() < -20.) {
+          virtual_lane_tmp->update_data(lane);
+          std::cout << "444444444444444444444444" << std::endl;
+        } else if (lane_merge_split_point_data.is_continue()) {
+          virtual_lane_tmp->update_data(lane);
+          std::cout << "555555555555555555555555" << std::endl;
         } else {
           continue;
         }
