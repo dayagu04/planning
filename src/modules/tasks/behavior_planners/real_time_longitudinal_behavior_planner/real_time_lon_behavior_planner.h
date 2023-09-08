@@ -8,6 +8,7 @@
 #include "task_basic_types.pb.h"
 #include "virtual_lane_manager.h"
 #include "filters.h"
+#include "debug_info_log.h"
 
 namespace planning {
 

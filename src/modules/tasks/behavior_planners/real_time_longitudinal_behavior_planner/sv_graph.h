@@ -1,3 +1,4 @@
+#include "debug_info_log.h"
 #include "define/lateral_behavior_planner_output.h"
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"
@@ -5,6 +6,7 @@
 #include "real_time_lon_behavior_planner.pb.h"
 #include "real_time_lon_behavior_types.h"
 #include "task_basic_types.h"
+
 namespace planning {
 
 class SvGraphGenerator {
@@ -16,7 +18,8 @@ class SvGraphGenerator {
   void Update(std::shared_ptr<common::RealTimeLonBehaviorInput>);
   const SVBoundaries &GetSVBoundaries() { return sv_boundaries_; }
 
-  void SetConfig(planning::common::RealTimeLonBehaviorTunedParams &tuned_params);
+  void SetConfig(
+      planning::common::RealTimeLonBehaviorTunedParams &tuned_params);
 
  private:
   void CalculateCurvSvs(const double v_ego, const double v_cruise,

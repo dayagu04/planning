@@ -775,7 +775,7 @@ struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
   int lon_num_step = 25;
   double delta_time = 0.2;
   bool enable_lead_two = false;
-  double safe_distance_base = 3.0;          // 静止跟车距离
+  double safe_distance_base = 0.5;          // 最小安全距离
   double safe_distance_ttc = 0.3;           // 安全距离ttc
   bool enable_rss_model = false;            // 是否采用RSS跟车模型
   double t_actuator_delay = 0.4;            // 纵向执行响应延时
@@ -798,7 +798,7 @@ struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double distance_stop = 1.0;
   double distance_start = 0.3;
   // param for st graph
-  double lead_desired_distance_step = 0.5;  // lead跟车距离膨胀速率0.5m/s
+  double lead_desired_distance_step = 1.0;  // lead跟车距离膨胀速率1.0m/s
 };
 
 struct RealTimeLonMotionPlannerConfig : public EgoPlanningConfig {
@@ -833,7 +833,7 @@ struct RealTimeLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc = 10.0;
   double q_jerk = 5.0;
 
-  double q_soft_pos_bound = 2.0;
+  double q_soft_pos_bound = 5.0;
   double q_hard_pos_bound = 1000.0;
   double q_sv_bound = 1000.0;
   double q_vel_bound = 400.0;

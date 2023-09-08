@@ -5,6 +5,7 @@
 #include "planning_context.h"
 #include "scenario_state_machine.h"
 #include "task_basic_types.h"
+#include "task_basic_types.pb.h"
 #include "virtual_lane_manager.h"
 
 namespace planning {
@@ -12,7 +13,7 @@ namespace planning {
 StGraphGenerator::StGraphGenerator(
     const RealTimeLonBehaviorPlannerConfig &config)
     : config_(config) {
-  lead_desired_distance_filter_.Init(0.0, config_.lead_desired_distance_step,
+  lead_desired_distance_filter_.Init(-0.2, config_.lead_desired_distance_step,
                                      0.0, 150.0, 0.1);
 }
 
@@ -109,9 +110,8 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   double lead_two_a_processed = 0.0;
   double lead_two_desired_distance = 0.0;
   double lead_two_desired_velocity = 0.0;
+  double desired_distance_filtered = 0.0;
 
-  auto leadone_info =
-      lon_behav_input_->mutable_lon_decision_info()->mutable_leadone_info();
   LOG_DEBUG("----compute_speed_with_leads--- \n");
   if (lead_one.track_id() != 0 &&
       lead_one.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
@@ -125,26 +125,9 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     lead_one_desired_velocity = CalcDesiredVelocity(
         lead_one.d_rel(), lead_one_desired_distance, lead_one.v_lead());
 
-    // 更新lead信息
-    if (leadone_info->leadone_information().obstacle_id() !=
-        lead_one.track_id()) {
-      leadone_info->set_has_leadone(true);
-      leadone_info->mutable_leadone_information()->set_obstacle_id(
-          lead_one.track_id());
-      leadone_info->mutable_leadone_information()->set_desired_distance(
-          lead_one.d_rel() + safe_distance);
-    }
-    // 快车切入，从切入距离开始膨胀
-    bool fast_car = (lead_one.v_rel() > 0.5 &&
-                     lead_one.d_rel() < lead_one_desired_distance);
-    lead_desired_distance_filter_.SetState(
-        leadone_info->leadone_information().desired_distance());
-    if (fast_car) {
-      lead_desired_distance_filter_.Update(lead_one_desired_distance);
-      lead_one_desired_distance = lead_desired_distance_filter_.GetOutput();
-    }
-    leadone_info->mutable_leadone_information()->set_desired_distance(
-        lead_one_desired_distance);
+    desired_distance_filtered = DesiredDistanceFilter(
+        lead_one, v_ego, safe_distance, lead_one_desired_distance);
+
     // update lead one st
     common::RealTimeLonObstacleSTInfo lead_one_st_info;
     lead_one_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
@@ -152,7 +135,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     lead_one_st_info.set_a_lead(lead_one_a_processed);
     lead_one_st_info.set_v_lead(lead_one.v_lead());
     lead_one_st_info.set_s_lead(lead_one.d_rel());
-    lead_one_st_info.set_desired_distance(lead_one_desired_distance);
+    lead_one_st_info.set_desired_distance(desired_distance_filtered);
     lead_one_st_info.set_desired_velocity(lead_one_desired_velocity);
     lead_one_st_info.set_safe_distance(safe_distance);
     lead_one_st_info.set_start_time(0.0);  // TBD:使用可配置参数
@@ -193,7 +176,9 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     }
   } else {
     LOG_DEBUG("There is no lead \n");
-    leadone_info->set_has_leadone(false);
+    lon_behav_input_->mutable_lon_decision_info()
+        ->mutable_leadone_info()
+        ->set_has_leadone(false);
   }
   return true;
 }
@@ -238,6 +223,7 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
     // 更新lead信息
     if (leadone_info->leadone_information().obstacle_id() !=
         temp_lead_one.track_id()) {
+      // WBTBD: 需要改名字不？
       leadone_info->set_has_leadone(true);
       leadone_info->mutable_leadone_information()->set_obstacle_id(
           temp_lead_one.track_id());
@@ -389,11 +375,13 @@ void StGraphGenerator::UpdateSTGraphs(
               st.s_lead() - st.safe_distance() + st.v_lead() * sample_time;
           hard_bound.lower = 0.0;  // 应该至少使用自车s-10
           st_boundary.hard_bound.emplace_back(hard_bound);
-          s_ref_update =
-              std::min(hard_bound.upper, std::min(sref_update[i], s_ref));
+          s_ref_update = std::min(
+              hard_bound.upper, std::min(sref_update[i], std::max(s_ref, 0.0)));
           // soft bound先使用期望跟车距离+buffer
           soft_bound.upper =
-              std::min(hard_bound.upper, s_ref_update + st.v_lead() * 0.5);
+              std::min(hard_bound.upper,
+                       std::min(0.5 * (hard_bound.upper + s_ref_update),
+                                s_ref_update + st.v_lead() * 0.3));
           soft_bound.lower = 0.0;  // 应该至少使用自车s-10
           st_boundary.soft_bound.emplace_back(soft_bound);
           // 根据障碍物跟车距离刷新s_refs
@@ -516,8 +504,9 @@ double StGraphGenerator::CalcSafeDistance(const double obstacle_velocity,
                                           const double v_ego) {
   double safe_distance_base = config_.safe_distance_base;
   double safe_distance_ttc = config_.safe_distance_ttc;
-  return std::max(0.0,
-                  safe_distance_base + std::fabs(v_ego) * safe_distance_ttc);
+  return std::max(
+      0.0, safe_distance_base +
+               std::max(v_ego - obstacle_velocity, 0.0) * safe_distance_ttc);
 }
 
 void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
@@ -852,6 +841,55 @@ void StGraphGenerator::CalculateCruiseSrefs(const double v_ego,
       s_refs.emplace_back(one_s);
     }
   }
+}
+
+double StGraphGenerator::DesiredDistanceFilter(
+    const planning::common::TrackedObjectInfo &lead_obstacle,
+    const double v_ego, double safe_distance, double desired_distance) {
+  double desired_distance_new = desired_distance;
+  auto leadone_info =
+      lon_behav_input_->mutable_lon_decision_info()->mutable_leadone_info();
+
+  // 更新lead初始信息
+  if (leadone_info->leadone_information().obstacle_id() !=
+      lead_obstacle.track_id()) {
+    leadone_info->set_has_leadone(true);
+    leadone_info->mutable_leadone_information()->set_obstacle_id(
+        lead_obstacle.track_id());
+    leadone_info->mutable_leadone_information()->set_desired_distance(
+        lead_obstacle.d_rel() + safe_distance);
+  }
+
+  // TBD: 目前cut in和lead区分不明显，cut in会被判断为cut in
+  bool slow_car_cut_in = false;
+  bool fast_car_cut_in = false;
+  if (lead_obstacle.d_rel() < desired_distance) {
+    if (lead_obstacle.v_rel() > 0.5) {
+      fast_car_cut_in = true;
+    } else {
+      slow_car_cut_in = true;
+    }
+  }
+  lead_desired_distance_filter_.SetState(
+      leadone_info->leadone_information().desired_distance());
+  if (fast_car_cut_in) {
+    // 快车切入，从切入距离开始膨胀
+    lead_desired_distance_filter_.SetRate(0.0,
+                                          config_.lead_desired_distance_step);
+    lead_desired_distance_filter_.Update(desired_distance);
+    desired_distance_new = lead_desired_distance_filter_.GetOutput();
+    JSON_DEBUG_VALUE("REALTIME_fast_lead_id", lead_obstacle.track_id());
+  } else if (slow_car_cut_in) {
+    // 快车切入，从切入距离开始膨胀
+    lead_desired_distance_filter_.SetRate(
+        0.0, config_.lead_desired_distance_step - lead_obstacle.v_rel());
+    lead_desired_distance_filter_.Update(desired_distance);
+    desired_distance_new = lead_desired_distance_filter_.GetOutput();
+    JSON_DEBUG_VALUE("REALTIME_slow_lead_id", lead_obstacle.track_id());
+  }
+  leadone_info->mutable_leadone_information()->set_desired_distance(
+      desired_distance_new);
+  return desired_distance_new;
 }
 
 common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(

@@ -4,12 +4,13 @@
  *velocity planning
  **/
 #include "behavior_planners/real_time_lane_change_decider/real_time_lane_change_decider.h"
+#include "debug_info_log.h"
+#include "filters.h"
 #include "lateral_obstacle.h"
 #include "lon_behavior_planner.pb.h"
 #include "real_time_lon_behavior_planner.pb.h"
 #include "real_time_lon_behavior_types.h"
 #include "task_basic_types.h"
-#include "filters.h"
 
 namespace planning {
 
@@ -26,7 +27,8 @@ class StGraphGenerator {
   void Update(
       std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input);
 
-  void SetConfig(planning::common::RealTimeLonBehaviorTunedParams &tuned_params);
+  void SetConfig(
+      planning::common::RealTimeLonBehaviorTunedParams &tuned_params);
 
   // 获取所有关心的障碍物都st boundaries
   const real_time::STboundaries &GetSTboundaries() const {
@@ -55,7 +57,8 @@ class StGraphGenerator {
       const planning::common::TrackedObjectInfo &lead_one,
       const planning::common::TrackedObjectInfo &lead_two, double v_ego,
       const planning::common::LatOutputInfo &lateral_outputs,
-      std::vector<planning::common::RealTimeLonObstacleSTInfo> &temp_leads_st_info);
+      std::vector<planning::common::RealTimeLonObstacleSTInfo>
+          &temp_leads_st_info);
 
   void CalcSpeedInfoWithCutin(
       const planning::common::LatObsInfo &lateral_obstacles,
@@ -64,8 +67,9 @@ class StGraphGenerator {
 
   void UpdateSTRefs(const std::vector<double> &sref_vec);
 
-  void UpdateSTGraphs(const std::vector<common::RealTimeLonObstacleSTInfo> &st_infos,
-                      const std::vector<double> &sref_vec);
+  void UpdateSTGraphs(
+      const std::vector<common::RealTimeLonObstacleSTInfo> &st_infos,
+      const std::vector<double> &sref_vec);
 
   // 对障碍物加速度进行降噪处理，吸收0.5m/s2的波动
   double ProcessObstacleAcc(const double a_lead);
@@ -100,7 +104,12 @@ class StGraphGenerator {
       const planning::common::TrackedObjectInfo &lead_one,
       const double v_cruise, const double v_ego, const string &lc_request,
       const string &lc_status,
-      std::vector<planning::common::RealTimeLonObstacleSTInfo> &lane_change_st_info);
+      std::vector<planning::common::RealTimeLonObstacleSTInfo>
+          &lane_change_st_info);
+
+  double DesiredDistanceFilter(
+      const planning::common::TrackedObjectInfo &lead_obstacle,
+      const double v_ego, double safe_distance, double desired_distance);
 
   // 计算启停状态，避免二次起步
   common::StartStopInfo::StateType UpdateStartStopState(
