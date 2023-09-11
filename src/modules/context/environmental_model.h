@@ -178,8 +178,13 @@ class EnvironmentalModel {
   void feed_local_view(const LocalView &local_view) {
     if (local_view.static_map_info.header().timestamp() !=
         local_view_.static_map_info.header().timestamp()) {
-      hd_map_.LoadMapFromProto(local_view.static_map_info.road_map());
-      hdmap_valid_ = true;
+      ad_common::hdmap::HDMap hd_map_tmp;
+      const int res =
+          hd_map_tmp.LoadMapFromProto(local_view.static_map_info.road_map());
+      if (res == 0) {
+        hd_map_ = std::move(hd_map_tmp);
+        hdmap_valid_ = true;
+      }
     }
     local_view_ = local_view;
   }
