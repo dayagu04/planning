@@ -309,8 +309,8 @@ class LoadCyberbag:
                          "VisionLonBehavior_potental_cutin_track_id", "VisionLonBehavior_potental_cutin_v_target", "VisionLonBehavior_cutin_v_target",
                          "VisionLonBehavior_v_limit_road", "VisionLonBehavior_v_limit_in_turns",
                          'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop',
-                         "solver_condition", "dist_err", "lat_err", "lon_err",
-                         "dbw_status"]
+                         "solver_condition", "dist_err", "lat_err", "lon_err", "dbw_status",
+                         "REALTIME_fast_lead_id", "REALTIME_slow_lead_id"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec"]
 

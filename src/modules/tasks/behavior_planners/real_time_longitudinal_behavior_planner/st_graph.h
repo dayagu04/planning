@@ -111,6 +111,11 @@ class StGraphGenerator {
       const planning::common::TrackedObjectInfo &lead_obstacle,
       const double v_ego, double safe_distance, double desired_distance);
 
+  double CutInDesiredDistanceFilter(
+      const planning::common::TrackedObjectInfo &lead_obstacle,
+      const double v_ego, double safe_distance, double predict_distance,
+      double desired_distance);
+
   // 计算启停状态，避免二次起步
   common::StartStopInfo::StateType UpdateStartStopState(
       const planning::common::TrackedObjectInfo &lead_one, const double v_ego);
@@ -125,6 +130,8 @@ class StGraphGenerator {
 
   // lead障碍物期望距离膨胀速率
   pnc::filters::SlopeFilter lead_desired_distance_filter_;
+  // cut in障碍物期望距离膨胀速率
+  pnc::filters::SlopeFilter cut_in_desired_distance_filter_;
 
   // 需要进行优化和剔除
  private:
@@ -175,7 +182,7 @@ class StGraphGenerator {
   const double _A_MAX = 2.0;
   const double _A_MIN = -4.0;
 
-  const double _J_MAX = 3.0;
+  const double _J_MAX = 7.0;
   const double _J_MIN = -3.0;
 };
 

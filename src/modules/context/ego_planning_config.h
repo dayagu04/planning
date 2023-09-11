@@ -777,8 +777,11 @@ struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
   bool enable_lead_two = false;
   double safe_distance_base = 0.5;          // 最小安全距离
   double safe_distance_ttc = 0.3;           // 安全距离ttc
-  bool enable_rss_model = false;            // 是否采用RSS跟车模型
-  double t_actuator_delay = 0.4;            // 纵向执行响应延时
+  bool enable_rss_model = true;            // 是否采用RSS跟车模型
+  double t_actuator_delay = 0.2;            // 纵向执行响应延时
+  double a_max_comfort_accel = 2.0;  // maximum comfortable acceleration of the ego
+  double a_max_comfort_brake = -2.5; // maximum comfortable braking deceleration of the ego
+  double CIPV_max_brake = -3.0;  // maximum braking deceleration of the CIPV
   double lane_keep_cutinp_threshold = 0.2;  // 车道保持时cut in车辆判断阈值
   double lane_change_cutinp_threshold = 0.6;  // 换道时cut in车辆判断阈值
   double corridor_width = 1.5;  // 通道半个宽度，用于判断cut in车辆是否侵入
@@ -799,6 +802,7 @@ struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double distance_start = 0.3;
   // param for st graph
   double lead_desired_distance_step = 1.0;  // lead跟车距离膨胀速率1.0m/s
+  double cut_in_desired_distance_step = 1.0;
 };
 
 struct RealTimeLonMotionPlannerConfig : public EgoPlanningConfig {
