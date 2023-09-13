@@ -5,9 +5,9 @@
 #include <set>
 #include <vector>
 
+#include "general_planning_context.h"
 #include "log.h"
 #include "nlohmann_json.hpp"
-#include "general_planning_context.h"
 
 namespace planning {
 
@@ -764,23 +764,63 @@ struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    // 目前实时无法拿到自己的配置文件
-    // preview_x = read_json_key<double>(json, "preview_x");
-    // dis_zero_speed = read_json_key<double>(json, "dis_zero_speed");
-    // dis_zero_speed_accident =
-    //     read_json_key<double>(json, "dis_zero_speed_accident");
-    // ttc_brake_hysteresis = read_json_key<double>(json,
-    // "ttc_brake_hysteresis");
+    preview_x = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "preview_x"});
+    dis_zero_speed = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "dis_zero_speed"});
+    dis_zero_speed_accident = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "dis_zero_speed_accident"});
+    safe_distance_ttc = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "safe_distance_ttc"});
+    enable_lead_two = read_json_keys<bool>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "enable_lead_two"});
+    enable_rss_model = read_json_keys<bool>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "enable_rss_model"});
+    cruise_set_acc = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "cruise_set_acc"});
+    cruise_set_dec = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "cruise_set_dec"});
+    v_start = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"real_time_long_behavior_planner", "v_start"});
+    obstacle_v_start = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "obstacle_v_start"});
+    distance_stop = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "distance_stop"});
+    distance_start = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "distance_start"});
+    lead_desired_distance_step = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "lead_desired_distance_step"});
+    cut_in_desired_distance_step = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "cut_in_desired_distance_step"});
+    soft_bound_corridor_t = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "soft_bound_corridor_t"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
   bool enable_lead_two = false;
-  double safe_distance_base = 0.5;          // 最小安全距离
-  double safe_distance_ttc = 0.3;           // 安全距离ttc
-  bool enable_rss_model = true;            // 是否采用RSS跟车模型
-  double t_actuator_delay = 0.2;            // 纵向执行响应延时
-  double a_max_comfort_accel = 2.0;  // maximum comfortable acceleration of the ego
-  double a_max_comfort_brake = -2.5; // maximum comfortable braking deceleration of the ego
+  double safe_distance_base = 0.5;  // 最小安全距离
+  double safe_distance_ttc = 0.3;   // 安全距离ttc
+  bool enable_rss_model = true;     // 是否采用RSS跟车模型
+  double t_actuator_delay = 0.2;    // 纵向执行响应延时
+  double a_max_comfort_accel =
+      2.0;  // maximum comfortable acceleration of the ego
+  double a_max_comfort_brake =
+      -2.5;  // maximum comfortable braking deceleration of the ego
   double CIPV_max_brake = -3.0;  // maximum braking deceleration of the CIPV
   double lane_keep_cutinp_threshold = 0.2;  // 车道保持时cut in车辆判断阈值
   double lane_change_cutinp_threshold = 0.6;  // 换道时cut in车辆判断阈值
@@ -803,6 +843,7 @@ struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
   // param for st graph
   double lead_desired_distance_step = 1.0;  // lead跟车距离膨胀速率1.0m/s
   double cut_in_desired_distance_step = 1.0;
+  double soft_bound_corridor_t = 0.3;
 };
 
 struct RealTimeLonMotionPlannerConfig : public EgoPlanningConfig {

@@ -230,7 +230,16 @@
     "v_start": 0.3,
     "obstacle_v_start": 0.5,
     "distance_stop": 1.0,
-    "distance_start": 0.3
+    "distance_start": 0.3,
+
+    "safe_distance_ttc": 0.3,
+    "enable_lead_two": false,
+    "enable_rss_model": true,
+    "cruise_set_acc": 0.8,
+    "cruise_set_dec": -1.0,
+    "lead_desired_distance_step": 1.0,
+    "cut_in_desired_distance_step": 1.0,
+    "soft_bound_corridor_t": 0.3
   },
   "pnp_precise_lat_bound_care_threshold": 5.0,
   "pnp_lower_speed_protect_threshold": 0.3,

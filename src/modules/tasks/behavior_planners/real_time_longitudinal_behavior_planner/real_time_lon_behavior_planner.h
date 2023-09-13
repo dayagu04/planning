@@ -1,5 +1,7 @@
 #include <memory>
 
+#include "debug_info_log.h"
+#include "filters.h"
 #include "lateral_obstacle.h"
 #include "real_time_lon_behavior_planner.pb.h"
 #include "st_graph.h"
@@ -7,8 +9,6 @@
 #include "task.h"
 #include "task_basic_types.pb.h"
 #include "virtual_lane_manager.h"
-#include "filters.h"
-#include "debug_info_log.h"
 
 namespace planning {
 
@@ -26,7 +26,8 @@ class RealTimeLonBehaviorPlanner : public Task {
   bool Execute(framework::Frame *frame);
 
   bool Update();
-  void SetConfig(planning::common::RealTimeLonBehaviorTunedParams &tuned_params);
+  void SetConfig(
+      planning::common::RealTimeLonBehaviorTunedParams &tuned_params);
   planning::common::LonRefPath GetOutput() { return lon_behav_output_pb_; }
 
   // This func is for pybind to set input
@@ -55,7 +56,7 @@ class RealTimeLonBehaviorPlanner : public Task {
  private:
   RealTimeLonBehaviorPlannerConfig config_;
   std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_plan_input_;
-  pnc::filters::SlopeFilter v_cruise_filter_; // 对巡航车速变化速率限制
+  pnc::filters::SlopeFilter v_cruise_filter_;  // 对巡航车速变化速率限制
   std::shared_ptr<StGraphGenerator> st_graph_;
   std::shared_ptr<SvGraphGenerator> sv_graph_;
 

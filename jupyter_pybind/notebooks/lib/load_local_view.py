@@ -310,7 +310,13 @@ class LoadCyberbag:
                          "VisionLonBehavior_v_limit_road", "VisionLonBehavior_v_limit_in_turns",
                          'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop',
                          "solver_condition", "dist_err", "lat_err", "lon_err", "dbw_status",
-                         "REALTIME_fast_lead_id", "REALTIME_slow_lead_id"]
+                         "RealTime_v_ego", "RealTime_gap_v_limit_lc",
+                         "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_car_cut_in_id",
+                         "RealTime_lead_one_id", "RealTime_lead_one_distance", "RealTime_lead_one_velocity", "RealTime_lead_one_desire_vel",
+                         "RealTime_lead_two_id", "RealTime_lead_two_distance", "RealTime_lead_two_velocity", "RealTime_lead_two_desire_vel",
+                         "RealTime_temp_lead_one_id", "RealTime_temp_lead_one_distance", "RealTime_temp_lead_one_velocity", "RealTime_temp_lead_one_desire_vel",
+                         "RealTime_temp_lead_two_id", "RealTime_temp_lead_two_distance", "RealTime_temp_lead_two_velocity", "RealTime_temp_lead_two_desire_vel",
+                         "RealTime_potential_cutin_track_id", "RealTime_potential_cutin_v_target"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec"]
 

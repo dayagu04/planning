@@ -1,5 +1,6 @@
 #include "st_graph.h"
 
+#include "debug_info_log.h"
 #include "ego_planning_config.h"
 #include "lane_change_requests/lane_change_lane_manager.h"
 #include "planning_context.h"
@@ -34,6 +35,7 @@ void StGraphGenerator::Update(
 
   st_refs_.clear();
   st_boundaries_.clear();
+  JSON_DEBUG_VALUE("RealTime_v_ego", v_ego);
 
   // 0. get start & stop state
   common::StartStopInfo::StateType stop_start_state =
@@ -145,6 +147,12 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     lead_one_st_info.set_start_s(lead_one.d_rel());
     leads_st_info.emplace_back(lead_one_st_info);
 
+    JSON_DEBUG_VALUE("RealTime_lead_one_id", lead_one.track_id());
+    JSON_DEBUG_VALUE("RealTime_lead_one_distance", lead_one.d_rel());
+    JSON_DEBUG_VALUE("RealTime_lead_one_velocity", lead_one.v_lead());
+    JSON_DEBUG_VALUE("RealTime_lead_one_desire_vel", lead_one_desired_velocity);
+    JSON_DEBUG_VALUE("REALTIME_desired_distance", desired_distance_filtered);
+
     // 对lead two进行类似的计算
     if (config_.enable_lead_two && lead_two.track_id() != 0 &&
         lead_two.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
@@ -175,12 +183,27 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
       lead_two_st_info.set_end_time(5.0);    // TBD:使用可配置参数
       lead_two_st_info.set_start_s(lead_two.d_rel());
       leads_st_info.emplace_back(lead_two_st_info);
+
+      JSON_DEBUG_VALUE("RealTime_lead_two_id", lead_two.track_id());
+      JSON_DEBUG_VALUE("RealTime_lead_two_distance", lead_two.d_rel());
+      JSON_DEBUG_VALUE("RealTime_lead_two_velocity", lead_two.v_lead());
+      JSON_DEBUG_VALUE("RealTime_lead_two_desire_vel",
+                       lead_two_desired_velocity);
     }
   } else {
     LOG_DEBUG("There is no lead \n");
     lon_behav_input_->mutable_lon_decision_info()
         ->mutable_leadone_info()
         ->set_has_leadone(false);
+
+    JSON_DEBUG_VALUE("RealTime_lead_one_id", 0);
+    JSON_DEBUG_VALUE("RealTime_lead_one_distance", 0);
+    JSON_DEBUG_VALUE("RealTime_lead_one_velocity", 0);
+    JSON_DEBUG_VALUE("RealTime_lead_one_desire_vel", 0);
+    JSON_DEBUG_VALUE("RealTime_lead_two_id", 0);
+    JSON_DEBUG_VALUE("RealTime_lead_two_distance", 0);
+    JSON_DEBUG_VALUE("RealTime_lead_two_velocity", 0);
+    JSON_DEBUG_VALUE("RealTime_lead_two_desire_vel", 0);
   }
   return true;
 }
@@ -236,6 +259,12 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
     lead_one_st_info.set_start_s(temp_lead_one.d_rel());
     temp_leads_st_info.emplace_back(lead_one_st_info);
 
+    JSON_DEBUG_VALUE("RealTime_temp_lead_one_id", temp_lead_one.track_id());
+    JSON_DEBUG_VALUE("RealTime_temp_lead_one_distance", temp_lead_one.d_rel());
+    JSON_DEBUG_VALUE("RealTime_temp_lead_one_velocity", temp_lead_one.v_lead());
+    JSON_DEBUG_VALUE("RealTime_temp_lead_one_desire_vel",
+                     lead_one_desired_velocity);
+
     // 对lead two进行类似的计算
     if (config_.enable_lead_two && temp_lead_two.track_id() != 0 &&
         temp_lead_two.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
@@ -269,9 +298,26 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
       lead_two_st_info.set_end_time(5.0);    // TBD:使用可配置参数
       lead_two_st_info.set_start_s(temp_lead_two.d_rel());
       temp_leads_st_info.emplace_back(lead_two_st_info);
+
+      JSON_DEBUG_VALUE("RealTime_temp_lead_two_id", temp_lead_two.track_id());
+      JSON_DEBUG_VALUE("RealTime_temp_lead_two_distance",
+                       temp_lead_two.d_rel());
+      JSON_DEBUG_VALUE("RealTime_temp_lead_two_velocity",
+                       temp_lead_two.v_lead());
+      JSON_DEBUG_VALUE("RealTime_temp_lead_two_desire_vel",
+                       lead_two_desired_velocity);
     }
   } else {
     LOG_DEBUG("There is no temp lead \n");
+
+    JSON_DEBUG_VALUE("RealTime_temp_lead_one_id", 0);
+    JSON_DEBUG_VALUE("RealTime_temp_lead_one_distance", 0);
+    JSON_DEBUG_VALUE("RealTime_temp_lead_one_velocity", 0);
+    JSON_DEBUG_VALUE("RealTime_temp_lead_one_desire_vel", 0);
+    JSON_DEBUG_VALUE("RealTime_temp_lead_two_id", 0);
+    JSON_DEBUG_VALUE("RealTime_temp_lead_two_distance", 0);
+    JSON_DEBUG_VALUE("RealTime_temp_lead_two_velocity", 0);
+    JSON_DEBUG_VALUE("RealTime_temp_lead_two_desire_vel", 0);
   }
   return true;
 }
@@ -300,6 +346,7 @@ void StGraphGenerator::UpdateSTRefs(const std::vector<double> &sref_vec) {
 void StGraphGenerator::UpdateSTGraphs(
     const std::vector<common::RealTimeLonObstacleSTInfo> &st_infos,
     const std::vector<double> &sref_vec) {
+  const double soft_bound_corridor_t = config_.soft_bound_corridor_t;
   // local variables
   double sample_time = 0;
   Bound soft_bound;
@@ -342,15 +389,15 @@ void StGraphGenerator::UpdateSTGraphs(
         // 考虑decision type是overtake的情况
         if (st.decision() == common::RealTimeLonObstacleSTInfo::YIELD) {
           if (st.st_type() == common::RealTimeLonObstacleSTInfo::GAP) {
-            s_ref = st.s_lead() - st.desired_distance() +
+            s_ref = st.start_s() - st.desired_distance() +
                     st.desired_velocity() * sample_time;
           } else {
-            s_ref =
-                st.s_lead() - st.desired_distance() + st.v_lead() * sample_time;
+            s_ref = st.start_s() - st.desired_distance() +
+                    st.v_lead() * sample_time;
           }
           // hard bound使用安全距离
           hard_bound.upper =
-              st.s_lead() - st.safe_distance() + st.v_lead() * sample_time;
+              st.start_s() - st.safe_distance() + st.v_lead() * sample_time;
           hard_bound.lower = 0.0;  // 应该至少使用自车s-10
           st_boundary.hard_bound.emplace_back(hard_bound);
           s_ref_update = std::min(
@@ -359,18 +406,18 @@ void StGraphGenerator::UpdateSTGraphs(
           soft_bound.upper =
               std::min(hard_bound.upper,
                        std::min(0.5 * (hard_bound.upper + s_ref_update),
-                                s_ref_update + st.v_lead() * 0.2));
+                                s_ref_update + st.v_lead() * soft_bound_corridor_t));
           soft_bound.lower = 0.0;  // 应该至少使用自车s-10
           st_boundary.soft_bound.emplace_back(soft_bound);
           // 根据障碍物跟车距离刷新s_refs
           sref_update[i] = s_ref_update;
         } else {
           s_ref =
-              st.s_lead() + st.desired_distance() + st.v_lead() * sample_time;
+              st.start_s() + st.desired_distance() + st.v_lead() * sample_time;
           // hard bound使用安全距离
           hard_bound.upper = 150;
           hard_bound.lower =
-              st.s_lead() + st.safe_distance() + st.v_lead() * sample_time;
+              st.start_s() + st.safe_distance() + st.v_lead() * sample_time;
           st_boundary.hard_bound.emplace_back(hard_bound);
           s_ref_update = std::max(
               hard_bound.lower, s_ref_update = std::max(sref_update[i], s_ref));
@@ -416,7 +463,7 @@ double StGraphGenerator::CalcDesiredDistance(
   double desired_distance = 50.0;  // default value
 
   // 跟车距离两种方式：RSS和标定
-  if (config_.enable_rss_model) {
+  if (config_.enable_rss_model && lc_request == "none") {
     desired_distance = GetRSSDistance(lead_obstacle.v_lead(), v_ego);
   } else {
     desired_distance = GetCalibratedDistance(
@@ -428,6 +475,7 @@ double StGraphGenerator::CalcDesiredDistance(
 
 double StGraphGenerator::GetRSSDistance(const double obstacle_velocity,
                                         double ego_velocity) {
+  const double stop_distance = config_.dis_zero_speed;
   double follow_distance{0.0};
   double cipv_velocity = obstacle_velocity;
   const double t_actuator_delay = config_.t_actuator_delay;  // actuator delay
@@ -444,7 +492,7 @@ double StGraphGenerator::GetRSSDistance(const double obstacle_velocity,
       (std::pow((ego_velocity + t_actuator_delay * a_max_comfort_accel), 2) /
            2.0 / std::fabs(a_max_comfort_brake) -
        std::pow(cipv_velocity, 2) / 2.0 / std::fabs(CIPV_max_brake));
-  follow_distance = std::max(follow_distance, 0.0);
+  follow_distance = std::max(follow_distance, stop_distance);
   return follow_distance;
 }
 
@@ -569,7 +617,7 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
       st_info.set_safe_distance(safe_distance);
       st_info.set_start_time(time_to_entry);  // TBD:使用可配置参数
       st_info.set_end_time(5.0);              // TBD:使用可配置参数
-      st_info.set_start_s(predict_distance);
+      st_info.set_start_s(time_to_entry*v_ego + predict_distance);
       cut_in_st_info.emplace_back(st_info);
 
       LOG_DEBUG("potential_cutin_car's id: [%d], track.v_lat is: [%f]\n",
@@ -578,10 +626,17 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
           "desired_distance: [%f], desired_velocity: [%f], "
           "v_target_potential_cutin: [%f]\n",
           desired_distance, desired_velocity, v_target_potential_cutin);
-      JSON_DEBUG_VALUE("REALTIME_potential_cutin_id", track.track_id());
+
+      JSON_DEBUG_VALUE("RealTime_potential_cutin_track_id", track.track_id());
+      JSON_DEBUG_VALUE("RealTime_potential_cutin_v_target",
+                       v_target_potential_cutin);
+      JSON_DEBUG_VALUE("REALTIME_cutin_desired_distance",
+                       desired_distance_filtered);
+
     } else {
       cut_in_info->Clear();
-      JSON_DEBUG_VALUE("REALTIME_potential_cutin_id", -1.0);
+      JSON_DEBUG_VALUE("RealTime_potential_cutin_track_id", 0);
+      JSON_DEBUG_VALUE("RealTime_potential_cutin_v_target", 0);
     }
   }
 };
@@ -722,6 +777,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       if (v_limit_lc < 6.0) {
         v_limit_lc = 6.0;
       }
+      JSON_DEBUG_VALUE("RealTime_gap_v_limit_lc", v_limit_lc);
       // gap front st
       planning::common::RealTimeLonObstacleSTInfo front_st_info;
       front_st_info.set_id(gap.front_id);
@@ -767,6 +823,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       v_limit_lc = std::max({v_ego - 3.2, v_ego + v_limit_lc,
                              6.0 + 4.0 * std::max(lc_map_decision - 2, 0)});
 
+      JSON_DEBUG_VALUE("RealTime_gap_v_limit_lc", v_limit_lc);
       planning::common::RealTimeLonObstacleSTInfo st_info;
       st_info.set_id(lane_changing_nearest_rear_car_track_id);
       st_info.set_st_type(common::RealTimeLonObstacleSTInfo::GAP);
@@ -781,6 +838,8 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       st_info.set_start_s(nearest_rear_car.start_s);
       lane_change_st_info.emplace_back(st_info);
     }
+  } else {
+      JSON_DEBUG_VALUE("RealTime_gap_v_limit_lc", 0);
   }
 }
 
@@ -849,7 +908,8 @@ double StGraphGenerator::DesiredDistanceFilter(
 
   // 更新lead初始信息
   if (leadone_info->leadone_information().obstacle_id() !=
-  lead_obstacle.track_id() || leadone_info->has_leadone() != true) {
+          lead_obstacle.track_id() ||
+      leadone_info->has_leadone() != true) {
     leadone_info->set_has_leadone(true);
     leadone_info->mutable_leadone_information()->set_obstacle_id(
         lead_obstacle.track_id());
@@ -884,8 +944,8 @@ double StGraphGenerator::DesiredDistanceFilter(
     desired_distance_new = lead_desired_distance_filter_.GetOutput();
     JSON_DEBUG_VALUE("REALTIME_slow_lead_id", lead_obstacle.track_id());
   } else {
-    JSON_DEBUG_VALUE("REALTIME_fast_lead_id", 0);
-    JSON_DEBUG_VALUE("REALTIME_slow_lead_id", 0);
+    JSON_DEBUG_VALUE("REALTIME_fast_lead_id", -1.0);
+    JSON_DEBUG_VALUE("REALTIME_slow_lead_id", -1.0);
   }
   leadone_info->mutable_leadone_information()->set_desired_distance(
       desired_distance_new);
@@ -930,15 +990,19 @@ double StGraphGenerator::CutInDesiredDistanceFilter(
         0.0, config_.cut_in_desired_distance_step);
     cut_in_desired_distance_filter_.Update(desired_distance);
     desired_distance_new = cut_in_desired_distance_filter_.GetOutput();
-    JSON_DEBUG_VALUE("REALTIME_fast_lead_id", cut_in_obstacle.track_id());
+    JSON_DEBUG_VALUE("REALTIME_fast_car_cut_in_id", cut_in_obstacle.track_id());
   } else if (slow_car_cut_in) {
     // 快车切入，从切入距离开始膨胀
     cut_in_desired_distance_filter_.SetRate(
         0.0, config_.cut_in_desired_distance_step - cut_in_obstacle.v_rel());
     cut_in_desired_distance_filter_.Update(desired_distance);
     desired_distance_new = cut_in_desired_distance_filter_.GetOutput();
-    JSON_DEBUG_VALUE("REALTIME_slow_lead_id", cut_in_obstacle.track_id());
+    JSON_DEBUG_VALUE("REALTIME_slow_car_cut_in_id", cut_in_obstacle.track_id());
+  } else {
+    JSON_DEBUG_VALUE("REALTIME_fast_car_cut_in_id", -1.0);
+    JSON_DEBUG_VALUE("REALTIME_slow_car_cut_in_id", -1.0);
   }
+
   cutin_information->set_desired_distance(desired_distance_new);
   return desired_distance_new;
 }

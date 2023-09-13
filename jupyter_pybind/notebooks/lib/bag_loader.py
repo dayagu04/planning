@@ -170,8 +170,13 @@ class LoadCyberbag:
                          "VisionLonBehavior_stop_start_state", "VisionLonBehavior_v_target_start_stop",
                          "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel",
                          "EnvironmentalModelManagerCost","VisionLateralBehaviorPlannerCost","VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost",
-                         "REALTIME_fast_lead_id", "REALTIME_slow_lead_id"
-                         ]
+                         "RealTime_v_ego", "RealTime_gap_v_limit_lc",
+                         "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_car_cut_in_id",
+                         "RealTime_lead_one_id", "RealTime_lead_one_distance", "RealTime_lead_one_velocity", "RealTime_lead_one_desire_vel",
+                         "RealTime_lead_two_id", "RealTime_lead_two_distance", "RealTime_lead_two_velocity", "RealTime_lead_two_desire_vel",
+                         "RealTime_temp_lead_one_id", "RealTime_temp_lead_one_distance", "RealTime_temp_lead_one_velocity", "RealTime_temp_lead_one_desire_vel",
+                         "RealTime_temp_lead_two_id", "RealTime_temp_lead_two_distance", "RealTime_temp_lead_two_velocity", "RealTime_temp_lead_two_desire_vel",
+                         "RealTime_potential_cutin_track_id", "RealTime_potential_cutin_v_target"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec"]
 

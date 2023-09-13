@@ -114,8 +114,8 @@ class EnvironmentalModel {
     virtual_lane_manager_ = virtual_lane_manager;
   }
 
-  const std::shared_ptr<TrafficLightDecisionManager> &
-  get_traffic_light_decision_manager() const {
+  const std::shared_ptr<TrafficLightDecisionManager>
+      &get_traffic_light_decision_manager() const {
     return traffic_light_decision_manager_;
   }
   void set_traffic_light_decision_manager(

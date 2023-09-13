@@ -1,7 +1,7 @@
 #include "sv_graph.h"
 
 #include <utility>
-
+#include "debug_info_log.h"
 #include "behavior_planners/real_time_longitudinal_behavior_planner/real_time_lon_behavior_types.h"
 #include "environmental_model.h"
 #include "planning_context.h"
@@ -72,6 +72,7 @@ void SvGraphGenerator::CalculateCurvSvs(const double v_ego,
     sv_bound.v_bound.upper = v_limit_road;
 
     sv_boundary.sv_bounds[i] = sv_bound;
+    JSON_DEBUG_VALUE("RealTime_v_limit_road", v_limit_road);
   }
 }
 
@@ -79,7 +80,8 @@ void SvGraphGenerator::UpdateSVGraphs(const SVBoundaries &sv_boundaries) {
   sv_boundaries_ = sv_boundaries;
 }
 
-void SvGraphGenerator::SetConfig(planning::common::RealTimeLonBehaviorTunedParams &tuned_params) {
+void SvGraphGenerator::SetConfig(
+    planning::common::RealTimeLonBehaviorTunedParams &tuned_params) {
   config_.safe_distance_base = tuned_params.safe_distance_base();
   config_.safe_distance_ttc = tuned_params.safe_distance_ttc();
   config_.t_actuator_delay = tuned_params.t_actuator_delay();

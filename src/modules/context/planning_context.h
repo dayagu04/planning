@@ -134,8 +134,8 @@ class PlanningContext {
 
   LatDeciderOutput &mutable_lat_decider_output() { return lat_decider_output_; }
 
-  const std::shared_ptr<AdaptiveCruiseControl> &
-  adaptive_cruise_control_function() {
+  const std::shared_ptr<AdaptiveCruiseControl>
+      &adaptive_cruise_control_function() {
     return adaptive_cruise_control_ptr_;
   }
   void set_adaptive_cruise_control_function(
@@ -166,8 +166,8 @@ class PlanningContext {
     lane_keep_assit_ptr_ = lane_keep_assit;
   }
 
-  const std::shared_ptr<class IntelligentHeadlightControl> &
-  intelligent_headlight_control_function() {
+  const std::shared_ptr<class IntelligentHeadlightControl>
+      &intelligent_headlight_control_function() {
     return intelligent_headlight_control_;
   }
   void set_intelligent_headlight_control_function(
@@ -176,8 +176,8 @@ class PlanningContext {
     intelligent_headlight_control_ = intelligent_headlight_control;
   }
 
-  const std::shared_ptr<TrafficSignRecognition> &
-  traffic_sign_recognition_function() {
+  const std::shared_ptr<TrafficSignRecognition>
+      &traffic_sign_recognition_function() {
     return traffic_sign_recognition_;
   }
   void set_traffic_sign_recognition_function(
