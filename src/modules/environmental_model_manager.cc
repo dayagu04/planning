@@ -172,7 +172,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   std::string status_msg;
   if (!InputReady(current_time, status_msg)) {
     LOG_ERROR("InputReady is failed !!!! \n");
-    return false;
+    // return false;
   }
 
   return true;

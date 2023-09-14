@@ -92,6 +92,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       auto lane_merge_split_point_data =
           lane.lane_merge_split_point().merge_split_point_data()[0];
       if (is_nearing_ramp) {
+        LOG_DEBUG("lane_merge_split_point_data.distance():%f\n", lane_merge_split_point_data.distance());
         if (((is_select_split_nearing_ramp_ &&
              lane_merge_split_point_data.is_split()) ||
             (!is_select_split_nearing_ramp_ &&

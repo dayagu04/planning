@@ -110,6 +110,7 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
   UpdateFixLaneVirtualId();
 
   bool active = session_->environmental_model().GetVehicleDbwStatus();
+  active = true;
 
   if (active && !object_selector_->update(
                     session_->planning_context()
