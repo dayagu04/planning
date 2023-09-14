@@ -66,16 +66,20 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   s_ref_vec = []
   for item in (plan_debug_info.long_ref_path.s_refs):
     s_ref_vec.append(item.first)
-  s_soft_bound_vec = []
+  s_soft_upper_bound_vec = []
+  s_soft_lower_bound_vec = []
   try:
     for idx in range(len(plan_debug_info.long_ref_path.soft_bounds)):
       high_bound = plan_debug_info.long_ref_path.soft_bounds[idx].bound[0].upper
+      low_bound = plan_debug_info.long_ref_path.soft_bounds[idx].bound[0].lower
       try:
         for one_soft_bound in plan_debug_info.long_ref_path.soft_bounds[idx].bound:
            high_bound = min(high_bound, one_soft_bound.upper)
-        s_soft_bound_vec.append(high_bound)
+           low_bound = max(low_bound, one_soft_bound.lower)
+        s_soft_upper_bound_vec.append(high_bound)
+        s_soft_lower_bound_vec.append(low_bound)
       except:
-        print("the s_soft_bound_vec size: ",len(s_soft_bound_vec))
+        print("the s_soft_upper_bound_vec size: ",len(s_soft_upper_bound_vec))
   except:
         print("there is no long_ref_path.soft_bounds")
 
@@ -161,7 +165,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lon_plan_data['data_st'].data.update({
     't': t_vec,
     's': s_ref_vec,
-    's_soft_bound': s_soft_bound_vec,
+    's_soft_ub': s_soft_upper_bound_vec,
+    's_soft_lb': s_soft_lower_bound_vec,
     'obs_low': obs_low_vec,
     'obs_high': obs_high_vec,
     'obs_low_id': obs_low_id_vec,
@@ -317,16 +322,20 @@ def update_lon_ref_path(lon_ref_path, lon_plan_data):
   s_ref_vec = []
   for item in (lon_ref_path.s_refs):
     s_ref_vec.append(item.first)
-  s_soft_bound_vec = []
+  s_soft_upper_bound_vec = []
+  s_soft_lower_bound_vec = []
   try:
     for idx in range(len(lon_ref_path.soft_bounds)):
       high_bound = lon_ref_path.soft_bounds[idx].bound[0].upper
+      low_bound = lon_ref_path.soft_bounds[idx].bound[0].lower
       try:
         for one_soft_bound in lon_ref_path.soft_bounds[idx].bound:
            high_bound = min(high_bound, one_soft_bound.upper)
-        s_soft_bound_vec.append(high_bound)
+           low_bound = max(low_bound, one_soft_bound.lower)
+        s_soft_upper_bound_vec.append(high_bound)
+        s_soft_lower_bound_vec.append(low_bound)
       except:
-        print("the s_soft_bound_vec size: ",len(s_soft_bound_vec))
+        print("the s_soft_upper_bound_vec size: ",len(s_soft_upper_bound_vec))
   except:
         print("there is no lon_ref_path.soft_bounds")
 
@@ -403,7 +412,8 @@ def update_lon_ref_path(lon_ref_path, lon_plan_data):
   lon_plan_data['data_st'].data.update({
     't': t_vec,
     's': s_ref_vec,
-    's_soft_bound': s_soft_bound_vec,
+    's_soft_ub': s_soft_upper_bound_vec,
+    's_soft_lb': s_soft_lower_bound_vec,
     'obs_low': obs_low_vec,
     'obs_high': obs_high_vec,
     'obs_low_id': obs_low_id_vec,
@@ -453,7 +463,7 @@ def update_lon_ref_path(lon_ref_path, lon_plan_data):
 def load_lon_global_figure(bag_loader):
    #real time global figure data process
    velocity_fig = bkp.figure(title='车速',x_axis_label='time/s',
-                  y_axis_label='velocity/(m/s)',width=600,height=400)
+                  y_axis_label='velocity/(m/s)',width=600,height=300)
 
    ego_velocity_vec = []
    target_velocity_vec = []
@@ -479,7 +489,7 @@ def load_lon_global_figure(bag_loader):
                                   legend_label='leadtwo_velocity',color="orange")
 
    acc_fig = bkp.figure(title='加速度',x_axis_label='time/s',
-                  y_axis_label='acc/(m/s2)',width=600,height=400)
+                  y_axis_label='acc/(m/s2)',width=600,height=300)
 
    ego_acc_vec = []
    acc_min_vec = []
@@ -499,6 +509,25 @@ def load_lon_global_figure(bag_loader):
    acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
                                 legend_label='acc_max', color="red")
 
+   lead_fig = bkp.figure(title='lead_car_distance',x_axis_label='time/s',
+                  y_axis_label='distance/(m)',width=600,height=300)
+
+   lead_one_dis_vec = []
+   lead_two_dis_vec = []
+   temp_lead_one_dis_vec = []
+   temp_lead_two_dis_vec = []
+
+   for ind in range(len(bag_loader.plan_debug_msg['json'])):
+      lead_one_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_lead_one_distance'], 2))
+      lead_two_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_lead_two_distance'], 2))
+      temp_lead_one_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_temp_lead_one_distance'], 2))
+      temp_lead_two_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_temp_lead_two_distance'], 2))      
+
+   lead_fig.line(t_plan_vec, lead_one_dis_vec, line_width=1, legend_label='lead_one_dis', color="red")
+   lead_fig.line(t_plan_vec, lead_two_dis_vec, line_width=1, legend_label='lead_two_dis', color="green")
+   lead_fig.line(t_plan_vec, temp_lead_one_dis_vec, line_width=1, legend_label='temp_lead_one_dis', color="blue")
+   lead_fig.line(t_plan_vec, temp_lead_two_dis_vec, line_width=1, legend_label='temp_lead_two_dis', color="purple")                             
+
    #get longtime obstacle id list in st-graph
    obs_st_ids = []
    for ind in range(len(bag_loader.plan_debug_msg['data'])):
@@ -506,10 +535,10 @@ def load_lon_global_figure(bag_loader):
         for one_bound in item.bound:
            if(one_bound.bound_info.type == 'obstacle' and one_bound.bound_info.id > 0 and one_bound.bound_info.id not in obs_st_ids):
               obs_st_ids.append(one_bound.bound_info.id)
-   return velocity_fig, acc_fig, obs_st_ids
+   return velocity_fig, acc_fig, lead_fig, obs_st_ids
 
-def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
-  data_st = ColumnDataSource(data = {'t':[], 's':[], 's_soft_bound':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
+def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, obs_st_ids):
+  data_st = ColumnDataSource(data = {'t':[], 's':[], 's_soft_ub':[], 's_soft_lb':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[], 'sv_bound_s':[], 'sv_bound_v':[]})
   data_tv = ColumnDataSource(data = {'t':[], 'vel':[]})
@@ -583,7 +612,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
   fig7 = bkp.figure(x_axis_label='time', y_axis_label='jerk',x_range = fig6.x_range, width=600, height=200)
 
   f2 = fig2.line('t', 's', source = data_st, line_width = 2, line_color = 'green', line_dash = 'dashed', legend_label = 'origin s_ref')
-  fig2.line('t', 's_soft_bound', source = data_st, line_width = 3, line_color = 'yellow', line_dash = 'solid', legend_label = 'origin s_soft_bound')
+  fig2.line('t', 's_soft_ub', source = data_st, line_width = 3, line_color = 'yellow', line_dash = 'solid', legend_label = 's_soft_ub')
+  fig2.line('t', 's_soft_lb', source = data_st, line_width = 3, line_color = '#FFA500', line_dash = 'solid', legend_label = 's_soft_lb')
   fig2.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')
   #fig2.line('t_long', 's_plan', source = data_st_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
   fig2.line('time_vec', 'pos_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
@@ -676,7 +706,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
 
   tab1 = DataTable(source=data_text, columns=columns, width=500, height=800)
 
-  pan2 = Panel(child=row(tab1, column(velocity_fig, acc_fig)), title="Realtime")
+  pan2 = Panel(child=row(tab1, column(velocity_fig, acc_fig, lead_fig)), title="Realtime")
 
   pans = Tabs(tabs=[ pan1, pan2 ])
 

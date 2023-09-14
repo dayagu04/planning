@@ -23,7 +23,7 @@ void RealtimeLongitudinalMotionPlanningProblem::Init() {
   solver_config.input_size = INPUT_SIZE;
   solver_config.model_dt = 0.2;
   solver_config.warm_start_enable = false;
-  solver_config.du_tol = 0.001;
+  solver_config.du_tol = 0.005;
   solver_config.max_iter = 15;
   solver_config.lambda_min = 1e-5;
   init_state_.resize(STATE_SIZE);

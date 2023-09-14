@@ -16,10 +16,10 @@ bag_loader = LoadCyberbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 
-velocity_fig, acc_fig, obs_st_ids = load_lon_global_figure(bag_loader)
+velocity_fig, acc_fig, lead_fig, obs_st_ids = load_lon_global_figure(bag_loader)
 
 # load lateral planning (behavior and motion)
-pans, lon_plan_data = load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids)
+pans, lon_plan_data = load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, obs_st_ids)
 
 ### sliders config
 class LocalViewSlider:
