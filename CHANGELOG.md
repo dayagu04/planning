@@ -1,3 +1,10 @@
+# planning.2.2.0.1
+####  修改说明
+1. 适配interface2.2.0
+2. 增加APA专用可视化工具
+3. 增加数据延时统计信息到header
+4. hmi添加cipv信息
+
 # planning.2.1.0.4
 
 ####  修改说明
