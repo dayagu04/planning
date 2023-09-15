@@ -154,13 +154,13 @@ class VirtualLaneManager {
 
   double JudgeIfTheRamp(const int current_index,
                         const CurrentRouting &current_routing,
-                        const ad_common::hdmap::HDMap *hd_map) const;
+                        const ad_common::hdmap::HDMap &hd_map) const;
   double JudgeIfTheFirstSplit(const int current_index,
                               const CurrentRouting &current_routing,
-                              const ad_common::hdmap::HDMap *hd_map) const;
+                              const ad_common::hdmap::HDMap &hd_map) const;
   double JudgeIfTheFirstMerge(const int current_index,
                               const CurrentRouting &current_routing,
-                              const ad_common::hdmap::HDMap *hd_map) const;
+                              const ad_common::hdmap::HDMap &hd_map) const;
   bool GetCurrentIndexAndDis(const planning::framework::Session &session,
                              int *current_index, double *remaining_dis);
 

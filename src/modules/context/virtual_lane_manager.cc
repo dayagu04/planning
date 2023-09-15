@@ -469,10 +469,10 @@ double VirtualLaneManager::get_distance_to_first_road_split() const {
 
 void VirtualLaneManager::CalculateDistanceToRamp(
     planning::framework::Session* session) {
-  auto local_view = &(session->environmental_model().get_local_view());
-  auto hd_map = &(session->environmental_model().get_hd_map());
+  const auto& local_view = session->environmental_model().get_local_view();
+  const auto& hd_map = session->environmental_model().get_hd_map();
   const CurrentRouting& current_routing =
-      local_view->static_map_info.current_routing();
+      local_view.static_map_info.current_routing();
 
   dis_to_ramp_ = NL_NMAX;
   double remaining_dis = 0;
@@ -486,10 +486,10 @@ void VirtualLaneManager::CalculateDistanceToRamp(
 
 void VirtualLaneManager::CalculateDistanceToFirstRoadSplit(
     planning::framework::Session* session) {
-  auto local_view = &(session->environmental_model().get_local_view());
-  auto hd_map = &(session->environmental_model().get_hd_map());
+  const auto& local_view = session->environmental_model().get_local_view();
+  const auto& hd_map = session->environmental_model().get_hd_map();
   const CurrentRouting& current_routing =
-      local_view->static_map_info.current_routing();
+      local_view.static_map_info.current_routing();
 
   distance_to_first_road_split_ = NL_NMAX;
   double remaining_dis = 0;
@@ -504,10 +504,10 @@ void VirtualLaneManager::CalculateDistanceToFirstRoadSplit(
 
 void VirtualLaneManager::CalculateDistanceToFirstRoadMerge(
     planning::framework::Session* session) {
-  auto local_view = &(session->environmental_model().get_local_view());
-  auto hd_map = &(session->environmental_model().get_hd_map());
+  const auto& local_view = session->environmental_model().get_local_view();
+  const auto& hd_map = session->environmental_model().get_hd_map();
   const CurrentRouting& current_routing =
-      local_view->static_map_info.current_routing();
+      local_view.static_map_info.current_routing();
 
   distance_to_first_road_merge_ = NL_NMAX;
   double remaining_dis = 0;
@@ -522,13 +522,13 @@ void VirtualLaneManager::CalculateDistanceToFirstRoadMerge(
 
 double VirtualLaneManager::JudgeIfTheRamp(
     const int current_index, const CurrentRouting& current_routing,
-    const ad_common::hdmap::HDMap* hd_map) const {
+    const ad_common::hdmap::HDMap& hd_map) const {
   const int lane_groups_num = current_routing.lane_groups_in_route_size();
   double accumulate_distance_for_lane_group = 0;
   for (int i = current_index; i < lane_groups_num; i++) {
     const uint64_t lane_group_id =
         current_routing.lane_groups_in_route()[i].lane_group_id();
-    LaneGroupConstPtr lane_group_ptr = hd_map->GetLaneGroupById(lane_group_id);
+    LaneGroupConstPtr lane_group_ptr = hd_map.GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
       LOG_DEBUG("fail get lane group by id for ramp!!!\n");
       return NL_NMAX;
@@ -543,7 +543,7 @@ double VirtualLaneManager::JudgeIfTheRamp(
       uint64_t lane_group_id_next =
           current_routing.lane_groups_in_route()[i + 1].lane_group_id();
       LaneGroupConstPtr lane_group_ptr_next =
-          hd_map->GetLaneGroupById(lane_group_id_next);
+          hd_map.GetLaneGroupById(lane_group_id_next);
       if (lane_group_ptr_next == nullptr) {
         LOG_DEBUG("fail get lane group by id for ramp!!!\n");
         return NL_NMAX;
@@ -563,14 +563,14 @@ double VirtualLaneManager::JudgeIfTheRamp(
 
 double VirtualLaneManager::JudgeIfTheFirstSplit(
     const int current_index, const CurrentRouting& current_routing,
-    const ad_common::hdmap::HDMap* hd_map) const {
+    const ad_common::hdmap::HDMap &hd_map) const {
   // auto& hd_map = local_view->hd_map;
   const int lane_groups_num = current_routing.lane_groups_in_route_size();
   double accumulate_distance_for_lane_group = 0;
   for (int i = current_index; i < lane_groups_num; i++) {
     const uint64_t lane_group_id =
         current_routing.lane_groups_in_route()[i].lane_group_id();
-    LaneGroupConstPtr lane_group_ptr = hd_map->GetLaneGroupById(lane_group_id);
+    LaneGroupConstPtr lane_group_ptr = hd_map.GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
       LOG_DEBUG("fail get lane group by id for split!!!\n");
       return NL_NMAX;
@@ -594,13 +594,13 @@ double VirtualLaneManager::JudgeIfTheFirstSplit(
 
 double VirtualLaneManager::JudgeIfTheFirstMerge(
     const int current_index, const CurrentRouting& current_routing,
-    const ad_common::hdmap::HDMap* hd_map) const {
+    const ad_common::hdmap::HDMap &hd_map) const {
   const int lane_groups_num = current_routing.lane_groups_in_route_size();
   double accumulate_distance_for_lane_group = 0;
   for (int i = current_index; i < lane_groups_num; i++) {
     const uint64_t lane_group_id =
         current_routing.lane_groups_in_route()[i].lane_group_id();
-    LaneGroupConstPtr lane_group_ptr = hd_map->GetLaneGroupById(lane_group_id);
+    LaneGroupConstPtr lane_group_ptr = hd_map.GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
       LOG_DEBUG("fail get lane group by id for merge!!!\n");
       return NL_NMAX;
@@ -614,7 +614,7 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
       uint64_t lane_group_id_next =
           current_routing.lane_groups_in_route()[i + 1].lane_group_id();
       LaneGroupConstPtr lane_group_ptr_next =
-          hd_map->GetLaneGroupById(lane_group_id_next);
+          hd_map.GetLaneGroupById(lane_group_id_next);
       if (lane_group_ptr_next == nullptr) {
         LOG_DEBUG("fail get lane group by id for merge!!!\n");
         return NL_NMAX;
@@ -633,8 +633,8 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
 bool VirtualLaneManager::GetCurrentIndexAndDis(
     const planning::framework::Session& session, int* current_index,
     double* remaining_dis) {
-  auto& local_view = session.environmental_model().get_local_view();
-  auto& hd_map = session.environmental_model().get_hd_map();
+  const auto& local_view = session.environmental_model().get_local_view();
+  const auto& hd_map = session.environmental_model().get_hd_map();
   const auto& map = local_view.static_map_info;
   const auto& pose = local_view.localization_estimate.pose();
 
