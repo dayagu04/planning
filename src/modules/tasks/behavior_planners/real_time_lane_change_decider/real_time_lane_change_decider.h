@@ -34,11 +34,12 @@ class RealTimeLaneChangeDecider {
   // void set_frame(framework::Frame *frame) { frame_ = frame; }
   std::pair<int, int> get_target_gap() { return target_gap_; }
   std::vector<GapInfo> get_gap_list() { return gap_list_; }
+  double get_lc_safe_dist(double buffer, double t_gap, double v_ego_p) { return buffer + v_ego_p * t_gap; }
   double get_target_gap_cost() { return target_gap_cost_; }
 
   void feed_config_and_target_cars(
       bool is_merging_, RTLaneChangeParams params, double dis_to_change_point,
-      std::vector<planning::common::TrackedObjectInfo *> &target_cars,
+      std::vector<const planning::common::TrackedObjectInfo *> &target_cars,
       const planning::common::TrackedObjectInfo &lead_one, double v_ego);
 
   TargetObstacle nearest_rear_car_track() { return nearest_rear_car_track_; };
@@ -93,7 +94,7 @@ class RealTimeLaneChangeDecider {
   int current_lane_id_;
   int leader_car_id_;
 
-  std::vector<planning::common::TrackedObjectInfo *> target_cars_;
+  std::vector<const planning::common::TrackedObjectInfo *> target_cars_;
   const planning::common::TrackedObjectInfo *lead_one_ = nullptr;
   TargetObstacle nearest_rear_car_track_{-1, DBL_MAX, DBL_MAX};
   double v_ego_ = 0.0;

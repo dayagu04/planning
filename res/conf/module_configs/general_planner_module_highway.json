@@ -209,7 +209,7 @@
   },
   "long_motion_ilqr": {
     "q_ref_pos": 2.0,
-    "q_ref_vel": 0.05,
+    "q_ref_vel": 10.0,
     "q_acc": 10.0,
     "q_jerk": 10.0,
     "q_soft_pos_bound": 35.0,

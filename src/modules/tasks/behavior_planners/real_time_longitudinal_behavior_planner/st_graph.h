@@ -36,6 +36,8 @@ class StGraphGenerator {
   }
   const std::vector<double> &GetSTRefs() const { return st_refs_; }
 
+  const std::vector<double> &GetVTRefs() const { return vt_refs_; }
+
   const common::StartStopInfo &GetStartStopState() const {
     return start_stop_info_;
   }
@@ -125,6 +127,7 @@ class StGraphGenerator {
   RealTimeLonBehaviorPlannerConfig config_;
   std::shared_ptr<RealTimeLaneChangeDecider> lane_changing_decider_ = nullptr;
   std::vector<double> st_refs_;
+  std::vector<double> vt_refs_;
   real_time::STboundaries st_boundaries_;
   common::StartStopInfo start_stop_info_;
 

@@ -40,6 +40,7 @@ class RealTimeLonBehaviorPlanner : public Task {
   virtual bool Calculate();
 
   void UpdateLonRefPath(const std::vector<double> &s_refs,
+                        const std::vector<double> &v_refs,
                         const real_time::STboundaries &st_boundaries,
                         const SVBoundaries &sv_boundaries);
 

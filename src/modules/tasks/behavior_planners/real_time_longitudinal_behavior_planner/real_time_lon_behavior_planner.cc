@@ -307,9 +307,11 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
       one_obs->set_is_temp_lead(track.is_temp_lead);
       one_obs->set_cutinp(track.cutinp);
     }
-    std::vector<TrackedObject> *side_target_tracks =
-        lane_tracks_mgr->get_lane_tracks(
-            lane_change_lane_manager->tlane_virtual_id(), SIDE_TRACK);
+  }
+  std::vector<TrackedObject> *side_target_tracks =
+      lane_tracks_mgr->get_lane_tracks(
+          lane_change_lane_manager->tlane_virtual_id(), SIDE_TRACK);
+  if (side_target_tracks != nullptr) {
     for (auto &track : *side_target_tracks) {
       // ignore obj without camera source
       if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
@@ -356,16 +358,18 @@ bool RealTimeLonBehaviorPlanner::Update() {
   // 3.generate bounds
   auto st_boundaries = st_graph_->GetSTboundaries();
   auto s_refs = st_graph_->GetSTRefs();
+  auto v_refs = st_graph_->GetVTRefs();
   auto sv_boundaries = sv_graph_->GetSVBoundaries();
 
   ClearOutput();
-  UpdateLonRefPath(s_refs, st_boundaries, sv_boundaries);
+  UpdateLonRefPath(s_refs, v_refs, st_boundaries, sv_boundaries);
   GenerateLonRefPathPB();
   return true;
 }
 
 void RealTimeLonBehaviorPlanner::UpdateLonRefPath(
     const std::vector<double> &s_refs,
+    const std::vector<double> &v_refs,
     const real_time::STboundaries &st_boundaries,
     const SVBoundaries &sv_boundaries) {
   auto v_cruise = lon_behav_plan_input_->ego_info().ego_cruise();
@@ -391,7 +395,7 @@ void RealTimeLonBehaviorPlanner::UpdateLonRefPath(
     // 2.update s_refs <s_ref, weight>
     lon_behav_output_.s_refs[i] = {s_refs.at(i), 1.0};
     // 3.update ds_refs  临时使用巡航车速，后续用s-v信息
-    lon_behav_output_.ds_refs[i] = {v_cruise, 0.0};
+    lon_behav_output_.ds_refs[i] = {v_refs.at(i), 0.0};
     // 4.construct default s_bounds
     // hack: 先默认自车s = 0
     lon_behav_output_.hard_bounds[i] = s_hard_bounds;

@@ -36,6 +36,12 @@ void StGraphGenerator::Update(
   st_refs_.clear();
   st_boundaries_.clear();
   JSON_DEBUG_VALUE("RealTime_v_ego", v_ego);
+  //初始化v_refs
+  vt_refs_.resize(config_.lon_num_step + 1);
+  for (int i = 0; i < config_.lon_num_step + 1; ++i) {
+    vt_refs_[i] = v_cruise;
+  }
+
 
   // 0. get start & stop state
   common::StartStopInfo::StateType stop_start_state =
@@ -424,8 +430,7 @@ void StGraphGenerator::UpdateSTGraphs(
           // soft bound先使用期望跟车距离+buffer
           soft_bound.upper = 150;
           soft_bound.lower =
-              std::max(hard_bound.lower, s_ref_update + st.v_lead() * 0.5);
-          // std::max(hard_bound.lower, s_ref - st.v_lead() * 0.5);
+              std::max(hard_bound.lower, s_ref + st.v_lead() * 0.5);
           st_boundary.soft_bound.emplace_back(soft_bound);
           // 根据障碍物跟车距离刷新s_refs
           sref_update[i] = s_ref_update;
@@ -693,14 +698,17 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
   LOG_DEBUG("----entering CalcSpeedInfoWithGap--- \n");
   double a_processed = 0.0;
   double desired_distance = 0.0;
-  double safe_distance = 0.0;
+  double lc_t_gap = 0.2;
+  double lc_buffer = 2;
+  double safe_distance = lane_changing_decider_->get_lc_safe_dist(
+                            lc_buffer, lc_t_gap, v_ego);
   double desired_velocity = 0.0;
   double time_to_lc = 0.0;
   double predict_distance = 0.0;
   double v_limit_lc = 40.0;
   lane_change_st_info.clear();
 
-  std::vector<planning::common::TrackedObjectInfo *> lane_changing_cars;
+  std::vector<const planning::common::TrackedObjectInfo *> lane_changing_cars;
   std::vector<GapInfo> available_gap;
   int lane_changing_nearest_rear_car_track_id = -10;
 
@@ -713,7 +721,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
     LOG_DEBUG("!! lang change !! \n");
     // get target line tarcks
     if (lon_behav_input_->lc_info().has_target_lane()) {
-      for (auto track : lon_behav_input_->lc_info().lc_cars()) {
+      for (auto& track : lon_behav_input_->lc_info().lc_cars()) {
         // ignore obj without camera source
         if ((track.fusion_source() != OBSTACLE_SOURCE_CAMERA) &&
             (track.fusion_source() != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
@@ -738,7 +746,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
     if (available_gap.size() > 0) {
       auto gap = available_gap[0];
       if (gap.base_car_id == gap.front_id) {
-        safe_distance = CalcSafeDistance(gap.v_front, v_ego);
+        //safe_distance = CalcSafeDistance(gap.v_front, v_ego);
         v_limit_lc = gap.base_car_vrel -
                      clip((safe_distance - gap.base_car_drel) / safe_distance,
                           0.0, 2.0) -
@@ -756,7 +764,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
 
         v_limit_lc = std::max(v_ego - 3.0, v_ego + v_limit_lc);
       } else {
-        safe_distance = CalcSafeDistance(gap.v_rear, v_ego);
+        //safe_distance = CalcSafeDistance(gap.v_rear, v_ego);
         v_limit_lc =
             gap.base_car_vrel +
             clip((safe_distance + 5.0 + gap.base_car_drel) / safe_distance, 0.0,
@@ -778,6 +786,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
         v_limit_lc = 6.0;
       }
       JSON_DEBUG_VALUE("RealTime_gap_v_limit_lc", v_limit_lc);
+      /*注释掉st 使用v_ref
       // gap front st
       planning::common::RealTimeLonObstacleSTInfo front_st_info;
       front_st_info.set_id(gap.front_id);
@@ -809,11 +818,11 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       rear_st_info.set_end_time(5.0);  // TBD:使用可配置参数
       rear_st_info.set_start_s(gap.s_rear + gap.v_rear * gap.acc_time);
       lane_change_st_info.emplace_back(rear_st_info);
+      */
 
     } else {
       // decelerate to check next interval
       auto nearest_rear_car = lane_changing_decider_->nearest_rear_car_track();
-      safe_distance = CalcSafeDistance(nearest_rear_car.v_rel + v_ego, v_ego);
       lane_changing_nearest_rear_car_track_id = nearest_rear_car.id;
       v_limit_lc =
           nearest_rear_car.v_rel -
@@ -824,6 +833,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
                              6.0 + 4.0 * std::max(lc_map_decision - 2, 0)});
 
       JSON_DEBUG_VALUE("RealTime_gap_v_limit_lc", v_limit_lc);
+      /*
       planning::common::RealTimeLonObstacleSTInfo st_info;
       st_info.set_id(lane_changing_nearest_rear_car_track_id);
       st_info.set_st_type(common::RealTimeLonObstacleSTInfo::GAP);
@@ -837,10 +847,15 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       st_info.set_end_time(5.0);  // TBD:使用可配置参数
       st_info.set_start_s(nearest_rear_car.start_s);
       lane_change_st_info.emplace_back(st_info);
+      */
     }
   } else {
       JSON_DEBUG_VALUE("RealTime_gap_v_limit_lc", 0);
   }
+  for (int i = 0; i < config_.lon_num_step + 1; ++i) {
+    vt_refs_[i] = std::min(vt_refs_[i], v_limit_lc);
+  }
+
 }
 
 void StGraphGenerator::CalculateCruiseSrefs(const double v_ego,

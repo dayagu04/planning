@@ -210,7 +210,7 @@ bool ScenarioStateMachine::GapAvailable(RequestType direction,
   if (origin_lane == nullptr) {
     origin_lane = virtual_lane_manager->get_current_lane();
   }
-  if (target_lane == nullptr) {
+  if (target_lane == nullptr || target_lane->get_reference_path() == nullptr) {
     LOG_WARNING("[GapAvailable] target_lane is null \n");
     return false;
   }

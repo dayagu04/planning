@@ -21,7 +21,7 @@ RealTimeLaneChangeDecider::RealTimeLaneChangeDecider(
 
 void RealTimeLaneChangeDecider::feed_config_and_target_cars(
     bool is_merging, RTLaneChangeParams params, double dis_to_change_point,
-    std::vector<planning::common::TrackedObjectInfo *> &target_cars,
+    std::vector<const planning::common::TrackedObjectInfo *> &target_cars,
     const planning::common::TrackedObjectInfo &lead_one, double v_ego) {
   is_merging_ = is_merging;
   params_ = params;
@@ -358,7 +358,7 @@ GapInfo RealTimeLaneChangeDecider::check_gap_valid(
     v_ego_p = std::min(v_ego_ + base_car.v_rel + 1.0, v_limit_);
     v_ego_p_rel = std::min(base_car.v_rel + 1.0, v_limit_ - v_ego_);
   }
-  safety_distance = buffer + v_ego_p * t_gap;
+  safety_distance = get_lc_safe_dist(buffer, t_gap, v_ego_p);
   gap_info.base_car_id = base_car.id;
   gap_info.base_car_drel = base_car.d_rel;
   gap_info.base_car_vrel = base_car.v_rel;
