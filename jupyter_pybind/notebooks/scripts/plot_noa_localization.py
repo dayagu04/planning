@@ -15,14 +15,25 @@ kRefLon = 116.3880555
 ee = 0.00669342162296594323
 a = 6378245.0
 
+latitude0 = kRefLat
+longitude0 = kRefLon
+altitude0 = 0.0
+
 class LocalizationApaPlotter(object):
   def __init__(self):
   # bag path and frame dt
-    self.file_path = '/mnt/noa/20230911/20230911-18-07-37.bag.record'
+    self.file_path = '/mnt/noa/20230914/20230914-22-30-36.bag.record'
+    self.rtk_file_path = '/mnt/noa/20230914/sensor_navi_navifusion.json'
     display(HTML('<style>.container { width:95% !important;  }</style>'))
     output_notebook()
 
     self.start_time = None
+    # rtk positions
+    self.rtk_latitude_vec = []
+    self.rtk_longitude_vec = []
+    self.rtk_x_vec = []
+    self.rtk_y_vec = []
+
     # positions
     self.positions_accuracy_vec = []
     self.positions_lateral_accuracy_vec = []
@@ -49,6 +60,15 @@ class LocalizationApaPlotter(object):
     self.failsafe_vehicle_status_vec = []
     self.failsafe_imu_status_vec = []
     self.failsafe_time_vec = []
+    # Abnormal points
+    self.abnormal_absolute_x_vec = []
+    self.abnormal_absolute_y_vec = []
+    self.abnormal_absolute_lat_vec = []
+    self.abnormal_absolute_lon_vec = []
+    self.abnormal_positions_x_vec = []
+    self.abnormal_positions_y_vec = []
+    self.abnormal_positions_lat_vec = []
+    self.abnormal_positions_lon_vec = []
 
   def is_out_of_china(self, lla):
     if(not(lla[0] > 0.8293 and lla[0] < 55.8271 and lla[1] > 72.004 and \
@@ -103,25 +123,37 @@ class LocalizationApaPlotter(object):
       if self.start_time is None:
         self.start_time = msg.timestamp
       # positions
+      is_positions_valid = False
+      is_absolute_valid = False
       if len(msg.positions) != 0:
         if abs(msg.positions[0].original_lat) > 90.0:
           continue
+        is_positions_valid = True
         self.positions_accuracy_vec.append(msg.positions[0].accuracy)
         self.positions_lateral_accuracy_vec.append(msg.positions[0].lateral_accuracy)
         self.positions_longitudinal_accuracy_vec.append(msg.positions[0].longitudinal_accuracy)
-        self.positions_original_lon_vec.append(msg.positions[0].original_lon)
-        self.positions_original_lat_vec.append(msg.positions[0].original_lat)
         self.positions_deviation_vec.append(msg.positions[0].deviation)
         self.positions_probability_vec.append(msg.positions[0].probability)
         self.positions_time_vec.append((msg.timestamp - self.start_time) * 0.001)
+        llu_lat, llu_lon, llu_alt = self.gcj02_to_wgs84([msg.positions[0].original_lat, msg.positions[0].original_lon, 0.0])
+        self.positions_original_lon_vec.append(llu_lon)
+        self.positions_original_lat_vec.append(llu_lat)
+        e, n, u = pm.geodetic2enu(llu_lat,llu_lon, llu_alt, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
+        self.positions_x_vec.append(e)
+        self.positions_y_vec.append(n)
       # AbsolutePostion
       if len(msg.absolute_pos) != 0:
         if abs(msg.absolute_pos[0].lat) > 90.0:
           continue
+        is_absolute_valid = True
         self.absolute_pos_original_loc_timestamp_vec.append(msg.absolute_pos[0].original_loc_timestamp)
-        self.absolute_lon_vec.append(msg.absolute_pos[0].lon)
-        self.absolute_lat_vec.append(msg.absolute_pos[0].lat)
         self.absolute_pos_time_vec.append((msg.timestamp - self.start_time) * 0.001)
+        llu_lat, llu_lon, llu_alt = self.gcj02_to_wgs84([msg.absolute_pos[0].lat, msg.absolute_pos[0].lon, 0.0])
+        self.absolute_lon_vec.append(llu_lon)
+        self.absolute_lat_vec.append(llu_lat)
+        e, n, u = pm.geodetic2enu(llu_lat,llu_lon, llu_alt, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
+        self.absolute_x_vec.append(e)
+        self.absolute_y_vec.append(n)
       # PostionFailSafe
       if len(msg.fail_safe) != 0:
         self.failsafe_loc_status_vec.append(msg.fail_safe[0].failsafe_loc_status)
@@ -131,40 +163,64 @@ class LocalizationApaPlotter(object):
         self.failsafe_vehicle_status_vec.append(msg.fail_safe[0].failsafe_vehicle_status)
         self.failsafe_imu_status_vec.append(msg.fail_safe[0].failsafe_imu_status)
         self.failsafe_time_vec.append((msg.timestamp - self.start_time) * 0.001)
-    latitude0 = kRefLat
-    longitude0 = kRefLon
-    altitude0 = 0.0
-    for i in range(len(self.positions_original_lon_vec)):
-      llu_lat, llu_lon, llu_alt = self.gcj02_to_wgs84([self.positions_original_lat_vec[i], self.positions_original_lon_vec[i], 0.0])
-      e, n, u = pm.geodetic2enu(llu_lat,llu_lon, llu_alt, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
-      self.positions_x_vec.append(e)
-      self.positions_y_vec.append(n)
-    for i in range(len(self.absolute_lon_vec)):
-      llu_lat, llu_lon, llu_alt = self.gcj02_to_wgs84([self.absolute_lat_vec[i], self.absolute_lon_vec[i], 0.0])
-      e, n, u = pm.geodetic2enu(llu_lat,llu_lon, llu_alt, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
-      self.absolute_x_vec.append(e)
-      self.absolute_y_vec.append(n)
+        if self.failsafe_loc_status_vec[-1] != 0:
+          if is_positions_valid:
+            self.abnormal_positions_x_vec.append(self.positions_x_vec[-1])
+            self.abnormal_positions_y_vec.append(self.positions_y_vec[-1])
+            self.abnormal_positions_lat_vec.append(self.positions_original_lat_vec[-1])
+            self.abnormal_positions_lon_vec.append(self.positions_original_lon_vec[-1])
+          if is_absolute_valid:
+            self.abnormal_absolute_x_vec.append(self.absolute_x_vec[-1])
+            self.abnormal_absolute_y_vec.append(self.absolute_y_vec[-1])
+            self.abnormal_absolute_lat_vec.append(self.absolute_lat_vec[-1])
+            self.abnormal_absolute_lon_vec.append(self.absolute_lon_vec[-1])
+
+
+  def load_rtk_data(self):
+    # load rtk localization msg
+    ell_wgs84 = pm.Ellipsoid('wgs84')
+    with open(self.rtk_file_path, 'r') as f:
+      data = json.load(f)
+      messages = data['messages']
+      for msg in messages:
+        latitude = float(msg['latitude'])
+        longitude = float(msg['longitude'])
+        altitude = float(msg['altitude'])
+        if self.is_out_of_china([latitude, longitude, altitude]):
+          continue
+        self.rtk_latitude_vec.append(latitude)
+        self.rtk_longitude_vec.append(longitude)
+        e, n, u = pm.geodetic2enu(latitude, longitude, altitude, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
+        self.rtk_x_vec.append(e)
+        self.rtk_y_vec.append(n)
 
 
   def plot_figure(self):
     self.load_position_data()
+    self.load_rtk_data()
     self.plot_data()
 
 
   def plot_data(self):
-    print(len(self.absolute_lat_vec))
-    print(len(self.absolute_lon_vec))
+    normal_size = 2
+    abnormal_size = 2
     fig1 = bkp.figure(x_axis_label='lat', y_axis_label='lon', width=800, height=300, match_aspect=True, aspect_scale=1.0)
-    fig1.triangle(self.absolute_lat_vec, self.absolute_lon_vec, size=10, fill_color='red', line_color='red', alpha=0.5, legend_label='absolute_pos')
-    fig1.inverted_triangle(self.positions_original_lat_vec, self.positions_original_lon_vec, size = 10, fill_color='blue', line_color='blue', alpha = 0.5, legend_label = 'positions')
+    fig1.circle(self.absolute_lat_vec, self.absolute_lon_vec, size=normal_size, fill_color='red', line_color='red', alpha=0.5, legend_label='absolute_pos')
+    fig1.circle(self.abnormal_absolute_lat_vec, self.abnormal_absolute_lon_vec, size=abnormal_size, fill_color='brown', line_color='brown', alpha=0.5, legend_label='abnormal absolute_pos')
+    fig1.circle(self.positions_original_lat_vec, self.positions_original_lon_vec, size = normal_size, fill_color='blue', line_color='blue', alpha = 0.5, legend_label = 'positions')
+    fig1.circle(self.abnormal_positions_lat_vec, self.abnormal_positions_lon_vec, size = abnormal_size, fill_color='green', line_color='green', alpha = 0.5, legend_label = 'abnormal positions')
+    fig1.circle(self.rtk_latitude_vec, self.rtk_longitude_vec, size = normal_size, fill_color='yellow', line_color='yellow', alpha = 0.5, legend_label = 'rtk positions')
 
     fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
     fig1.legend.click_policy = 'hide'
     bkp.show(fig1, notebook_handle=True)
 
     fig2 = bkp.figure(x_axis_label='x(m)', y_axis_label='y(m)', width=800, height=300, match_aspect=True, aspect_scale=1.0)
-    fig2.triangle(self.positions_x_vec, self.positions_y_vec, size=10, fill_color='red', line_color='red', alpha = 0.5, legend_label='absolute_pos')
-    fig2.inverted_triangle(self.absolute_x_vec, self.absolute_y_vec, size=10, fill_color='blue', line_color='blue', alpha=0.5, legend_label='positions')
+    fig2.circle(self.absolute_x_vec, self.absolute_y_vec, size=normal_size, fill_color='red', line_color='red', alpha = 0.5, legend_label='absolute_pos')
+    fig2.circle(self.abnormal_absolute_x_vec, self.abnormal_absolute_y_vec, size=abnormal_size, fill_color='brown', line_color='brown', alpha = 0.5, legend_label='abnormal absolute_pos')
+    fig2.circle(self.positions_x_vec, self.positions_y_vec, size=normal_size, fill_color='blue', line_color='blue', alpha=0.5, legend_label='positions')
+    fig2.circle(self.abnormal_positions_x_vec, self.abnormal_positions_y_vec, size=abnormal_size, fill_color='green', line_color='green', alpha=0.5, legend_label='abnormal positions')
+    fig2.circle(self.rtk_x_vec, self.rtk_y_vec, size=normal_size, fill_color='yellow', line_color='yellow', alpha=0.5, legend_label='rtk positions')
 
     fig2.toolbar.active_scroll = fig2.select_one(WheelZoomTool)
     fig2.legend.click_policy = 'hide'
