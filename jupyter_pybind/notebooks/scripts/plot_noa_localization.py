@@ -8,6 +8,7 @@ from bokeh.models import WheelZoomTool
 import bokeh.plotting as bkp
 import json
 import math
+import os
 import pymap3d as pm
 
 kRefLat = 39.907500
@@ -23,6 +24,7 @@ class LocalizationApaPlotter(object):
   def __init__(self):
   # bag path and frame dt
     self.file_path = '/mnt/noa/20230916/202309163.bag.record'
+    self.abnormal_timestamp_path = '/mnt/noa/20230916/abnormal_timestamp.txt'
     self.rtk_file_path = '/mnt/noa/20230914/sensor_navi_navifusion.json'
     display(HTML('<style>.container { width:95% !important;  }</style>'))
     output_notebook()
@@ -119,65 +121,69 @@ class LocalizationApaPlotter(object):
     ell_wgs84 = pm.Ellipsoid('wgs84')
     # load odem msg
     bag = Record(self.file_path)
-    for topic, msg, t in bag.read_messages('/iflytek/ehr/position'):
-      if self.start_time is None:
-        self.start_time = msg.timestamp
-      # positions
-      is_positions_valid = False
-      is_absolute_valid = False
-      if len(msg.positions) != 0:
-        if abs(msg.positions[0].original_lat) > 90.0:
-          continue
-        llu_lat, llu_lon, llu_alt = self.gcj02_to_wgs84([msg.positions[0].original_lat, msg.positions[0].original_lon, 0.0])
-        if(self.is_out_of_china([llu_lat, llu_lon, llu_alt])):
-          continue
-        is_positions_valid = True
-        self.positions_accuracy_vec.append(msg.positions[0].accuracy)
-        self.positions_lateral_accuracy_vec.append(msg.positions[0].lateral_accuracy)
-        self.positions_longitudinal_accuracy_vec.append(msg.positions[0].longitudinal_accuracy)
-        self.positions_deviation_vec.append(msg.positions[0].deviation)
-        self.positions_probability_vec.append(msg.positions[0].probability)
-        self.positions_time_vec.append((msg.timestamp - self.start_time) * 0.001)
-        self.positions_original_lon_vec.append(llu_lon)
-        self.positions_original_lat_vec.append(llu_lat)
-        e, n, u = pm.geodetic2enu(llu_lat,llu_lon, llu_alt, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
-        self.positions_x_vec.append(e)
-        self.positions_y_vec.append(n)
-      # AbsolutePostion
-      if len(msg.absolute_pos) != 0:
-        if abs(msg.absolute_pos[0].lat) > 90.0:
-          continue
-        llu_lat, llu_lon, llu_alt = self.gcj02_to_wgs84([msg.absolute_pos[0].lat, msg.absolute_pos[0].lon, 0.0])
-        if(self.is_out_of_china([llu_lat, llu_lon, llu_alt])):
-          continue
-        is_absolute_valid = True
-        self.absolute_pos_original_loc_timestamp_vec.append(msg.absolute_pos[0].original_loc_timestamp)
-        self.absolute_pos_time_vec.append((msg.timestamp - self.start_time) * 0.001)
-        self.absolute_lon_vec.append(llu_lon)
-        self.absolute_lat_vec.append(llu_lat)
-        e, n, u = pm.geodetic2enu(llu_lat,llu_lon, llu_alt, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
-        self.absolute_x_vec.append(e)
-        self.absolute_y_vec.append(n)
-      # PostionFailSafe
-      if len(msg.fail_safe) != 0:
-        self.failsafe_loc_status_vec.append(msg.fail_safe[0].failsafe_loc_status)
-        self.failsafe_gnss_status_vec.append(msg.fail_safe[0].failsafe_gnss_status)
-        self.failsafe_camera_status_vec.append(msg.fail_safe[0].failsafe_camera_status)
-        self.failsafe_hdmap_status_vec.append(msg.fail_safe[0].failsafe_hdmap_status)
-        self.failsafe_vehicle_status_vec.append(msg.fail_safe[0].failsafe_vehicle_status)
-        self.failsafe_imu_status_vec.append(msg.fail_safe[0].failsafe_imu_status)
-        self.failsafe_time_vec.append((msg.timestamp - self.start_time) * 0.001)
-        if self.failsafe_loc_status_vec[-1] != 0:
-          if is_positions_valid:
-            self.abnormal_positions_x_vec.append(self.positions_x_vec[-1])
-            self.abnormal_positions_y_vec.append(self.positions_y_vec[-1])
-            self.abnormal_positions_lat_vec.append(self.positions_original_lat_vec[-1])
-            self.abnormal_positions_lon_vec.append(self.positions_original_lon_vec[-1])
-          if is_absolute_valid:
-            self.abnormal_absolute_x_vec.append(self.absolute_x_vec[-1])
-            self.abnormal_absolute_y_vec.append(self.absolute_y_vec[-1])
-            self.abnormal_absolute_lat_vec.append(self.absolute_lat_vec[-1])
-            self.abnormal_absolute_lon_vec.append(self.absolute_lon_vec[-1])
+    if os.path.exists(self.abnormal_timestamp_path):
+      os.remove(self.abnormal_timestamp_path)
+    with open(self.abnormal_timestamp_path, 'a') as file:
+      for topic, msg, t in bag.read_messages('/iflytek/ehr/position'):
+        if self.start_time is None:
+          self.start_time = msg.timestamp
+        # positions
+        is_positions_valid = False
+        is_absolute_valid = False
+        if len(msg.positions) != 0:
+          if abs(msg.positions[0].original_lat) > 90.0:
+            continue
+          llu_lat, llu_lon, llu_alt = self.gcj02_to_wgs84([msg.positions[0].original_lat, msg.positions[0].original_lon, 0.0])
+          if(self.is_out_of_china([llu_lat, llu_lon, llu_alt])):
+            continue
+          is_positions_valid = True
+          self.positions_accuracy_vec.append(msg.positions[0].accuracy)
+          self.positions_lateral_accuracy_vec.append(msg.positions[0].lateral_accuracy)
+          self.positions_longitudinal_accuracy_vec.append(msg.positions[0].longitudinal_accuracy)
+          self.positions_deviation_vec.append(msg.positions[0].deviation)
+          self.positions_probability_vec.append(msg.positions[0].probability)
+          self.positions_time_vec.append((msg.timestamp - self.start_time) * 0.001)
+          self.positions_original_lon_vec.append(llu_lon)
+          self.positions_original_lat_vec.append(llu_lat)
+          e, n, u = pm.geodetic2enu(llu_lat,llu_lon, llu_alt, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
+          self.positions_x_vec.append(e)
+          self.positions_y_vec.append(n)
+        # AbsolutePostion
+        if len(msg.absolute_pos) != 0:
+          if abs(msg.absolute_pos[0].lat) > 90.0:
+            continue
+          llu_lat, llu_lon, llu_alt = self.gcj02_to_wgs84([msg.absolute_pos[0].lat, msg.absolute_pos[0].lon, 0.0])
+          if(self.is_out_of_china([llu_lat, llu_lon, llu_alt])):
+            continue
+          is_absolute_valid = True
+          self.absolute_pos_original_loc_timestamp_vec.append(msg.absolute_pos[0].original_loc_timestamp)
+          self.absolute_pos_time_vec.append((msg.timestamp - self.start_time) * 0.001)
+          self.absolute_lon_vec.append(llu_lon)
+          self.absolute_lat_vec.append(llu_lat)
+          e, n, u = pm.geodetic2enu(llu_lat,llu_lon, llu_alt, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
+          self.absolute_x_vec.append(e)
+          self.absolute_y_vec.append(n)
+        # PostionFailSafe
+        if len(msg.fail_safe) != 0:
+          self.failsafe_loc_status_vec.append(msg.fail_safe[0].failsafe_loc_status)
+          self.failsafe_gnss_status_vec.append(msg.fail_safe[0].failsafe_gnss_status)
+          self.failsafe_camera_status_vec.append(msg.fail_safe[0].failsafe_camera_status)
+          self.failsafe_hdmap_status_vec.append(msg.fail_safe[0].failsafe_hdmap_status)
+          self.failsafe_vehicle_status_vec.append(msg.fail_safe[0].failsafe_vehicle_status)
+          self.failsafe_imu_status_vec.append(msg.fail_safe[0].failsafe_imu_status)
+          self.failsafe_time_vec.append((msg.timestamp - self.start_time) * 0.001)
+          if self.failsafe_loc_status_vec[-1] != 0:
+            file.writelines(str(msg.timestamp)+'\n')
+            if is_positions_valid:
+              self.abnormal_positions_x_vec.append(self.positions_x_vec[-1])
+              self.abnormal_positions_y_vec.append(self.positions_y_vec[-1])
+              self.abnormal_positions_lat_vec.append(self.positions_original_lat_vec[-1])
+              self.abnormal_positions_lon_vec.append(self.positions_original_lon_vec[-1])
+            if is_absolute_valid:
+              self.abnormal_absolute_x_vec.append(self.absolute_x_vec[-1])
+              self.abnormal_absolute_y_vec.append(self.absolute_y_vec[-1])
+              self.abnormal_absolute_lat_vec.append(self.absolute_lat_vec[-1])
+              self.abnormal_absolute_lon_vec.append(self.absolute_lon_vec[-1])
 
 
   def load_rtk_data(self):
