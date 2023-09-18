@@ -22,7 +22,7 @@ altitude0 = 0.0
 class LocalizationApaPlotter(object):
   def __init__(self):
   # bag path and frame dt
-    self.file_path = '/mnt/noa/20230914/20230914-22-30-36.bag.record'
+    self.file_path = '/mnt/noa/20230916/202309163.bag.record'
     self.rtk_file_path = '/mnt/noa/20230914/sensor_navi_navifusion.json'
     display(HTML('<style>.container { width:95% !important;  }</style>'))
     output_notebook()
@@ -128,6 +128,9 @@ class LocalizationApaPlotter(object):
       if len(msg.positions) != 0:
         if abs(msg.positions[0].original_lat) > 90.0:
           continue
+        llu_lat, llu_lon, llu_alt = self.gcj02_to_wgs84([msg.positions[0].original_lat, msg.positions[0].original_lon, 0.0])
+        if(self.is_out_of_china([llu_lat, llu_lon, llu_alt])):
+          continue
         is_positions_valid = True
         self.positions_accuracy_vec.append(msg.positions[0].accuracy)
         self.positions_lateral_accuracy_vec.append(msg.positions[0].lateral_accuracy)
@@ -135,7 +138,6 @@ class LocalizationApaPlotter(object):
         self.positions_deviation_vec.append(msg.positions[0].deviation)
         self.positions_probability_vec.append(msg.positions[0].probability)
         self.positions_time_vec.append((msg.timestamp - self.start_time) * 0.001)
-        llu_lat, llu_lon, llu_alt = self.gcj02_to_wgs84([msg.positions[0].original_lat, msg.positions[0].original_lon, 0.0])
         self.positions_original_lon_vec.append(llu_lon)
         self.positions_original_lat_vec.append(llu_lat)
         e, n, u = pm.geodetic2enu(llu_lat,llu_lon, llu_alt, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
@@ -145,10 +147,12 @@ class LocalizationApaPlotter(object):
       if len(msg.absolute_pos) != 0:
         if abs(msg.absolute_pos[0].lat) > 90.0:
           continue
+        llu_lat, llu_lon, llu_alt = self.gcj02_to_wgs84([msg.absolute_pos[0].lat, msg.absolute_pos[0].lon, 0.0])
+        if(self.is_out_of_china([llu_lat, llu_lon, llu_alt])):
+          continue
         is_absolute_valid = True
         self.absolute_pos_original_loc_timestamp_vec.append(msg.absolute_pos[0].original_loc_timestamp)
         self.absolute_pos_time_vec.append((msg.timestamp - self.start_time) * 0.001)
-        llu_lat, llu_lon, llu_alt = self.gcj02_to_wgs84([msg.absolute_pos[0].lat, msg.absolute_pos[0].lon, 0.0])
         self.absolute_lon_vec.append(llu_lon)
         self.absolute_lat_vec.append(llu_lat)
         e, n, u = pm.geodetic2enu(llu_lat,llu_lon, llu_alt, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
@@ -197,7 +201,7 @@ class LocalizationApaPlotter(object):
 
   def plot_figure(self):
     self.load_position_data()
-    self.load_rtk_data()
+    # self.load_rtk_data()
     self.plot_data()
 
 
