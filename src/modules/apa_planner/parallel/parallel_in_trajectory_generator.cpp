@@ -1,5 +1,6 @@
 #include "parallel/parallel_in_trajectory_generator.h"
 
+#include <iostream>
 #include <limits>
 
 #include "common/apa_cos_sin.h"
@@ -1137,9 +1138,9 @@ void ParallelInTrajectoryGenerator::CalSlotPointsInM(const int idx) {
   raw_slot_points_in_m_.emplace_back(x3, y3, 0.0);
   slot_points_in_m_ = raw_slot_points_in_m_;
 
-  AINFO << "raw slot_points_in_m_ x0:" << x0 << ", y0:" << y0 << ", x1:" << x1
-        << ", y1:" << y1 << ", x2:" << x2 << ", y2:" << y2 << ", x3:" << x3
-        << ", y3:" << y3;
+  std::cout << "raw slot_points_in_m_ x0:" << x0 << ", y0:" << y0
+            << ", x1:" << x1 << ", y1:" << y1 << ", x2:" << x2 << ", y2:" << y2
+            << ", x3:" << x3 << ", y3:" << y3 << std::endl;
 
   // SquareSlot();
   slot_width_ = std::hypot(slot_points_in_m_[0].x - slot_points_in_m_[2].x,

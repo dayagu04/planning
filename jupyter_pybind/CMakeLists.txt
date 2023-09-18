@@ -40,3 +40,11 @@ target_link_libraries(slot_management_py PRIVATE
   modules_common
   modules_context
   modules_tasks)
+
+pybind11_add_module(diag_slot_planning_py MODULE src/diag_slot_planning_pybind.cc)
+target_link_libraries(diag_slot_planning_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)

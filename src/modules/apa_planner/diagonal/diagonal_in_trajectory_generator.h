@@ -1,10 +1,12 @@
 #pragma once
 
+#include "Platform_Types.h"
 #include "common/geometry_planning_io.h"
 #include "diagonal/diagonal_in_geometry_plan.h"
 #include "frame.h"
 #include "local_view.h"
 #include "math/box2d.h"
+#include "planning_plan.pb.h"
 #include "speed_smoother/apa_speed_smoother.h"
 
 namespace planning {
@@ -12,10 +14,24 @@ namespace apa_planner {
 
 class DiagonalInTrajectoryGenerator {
  public:
+  struct SimulationParam {
+    bool clear_seg_name_ = false;
+    int selected_id_ = false;
+    bool force_planning_ = false;
+    uint8_t current_state_ = 0;
+  };
+
   DiagonalInTrajectoryGenerator() = default;
   ~DiagonalInTrajectoryGenerator() = default;
 
   bool Plan(framework::Frame *const frame);
+
+  // for pybind & simulation
+  void SetLocalView(LocalView *local_view_ptr) { local_view_ = local_view_ptr; }
+  PlanningOutput::PlanningOutput GetOutput() { return planning_output_; }
+  void SetSimulationParam(SimulationParam &param) { simu_param_ = param; }
+
+  bool SingleSlotPlanSimulation();
 
  private:
   bool SingleSlotPlan(const int slot_index,
@@ -69,11 +85,10 @@ class DiagonalInTrajectoryGenerator {
       const DiagonalSegmentsInfo &segments_info,
       PlanningOutput::PlanningOutput *const planning_output) const;
 
-  void SetApaObjectInfo(int idx,
-                        DiagonalInGeometryPlan *geometry_planning) const;
+  void SetApaObjectInfo(int idx, DiagonalInGeometryPlan *geometry_planning);
 
-  void SetGeometryPlanningParameter(
-      int idx, DiagonalInGeometryPlan *geometry_planning) const;
+  void SetGeometryPlanningParameter(int idx,
+                                    DiagonalInGeometryPlan *geometry_planning);
 
   void GetCurPtSpeed(const double segment_len, const double cur_s,
                      const double spd_sign,
@@ -153,12 +168,16 @@ class DiagonalInTrajectoryGenerator {
 
   bool is_rough_calc_ = false;
 
-  ::FuncStateMachine::FunctionalState current_state_ =
-      ::FuncStateMachine::FunctionalState::INIT;
+  uint8_t current_state_ = ::FuncStateMachine::FunctionalState::INIT;
 
   std::vector<planning_math::LineSegment2d> objects_map_in_global_cor_;
 
   ApaSpeedSmoother apa_speed_smoother_;
+
+  // for simulation
+  PlanningOutput::PlanningOutput planning_output_;
+  bool simulation_enable_flag_ = false;
+  SimulationParam simu_param_;
 };
 
 }  // namespace apa_planner

@@ -204,7 +204,6 @@ class LoadCyberbag:
       self.ctrl_msg['t'] = [tmp - self.ctrl_msg['t'][0]  for tmp in self.ctrl_msg['t']]
       max_time = max(max_time, self.ctrl_msg['t'][-1])
       print('ctrl_msg time:',self.ctrl_msg['t'][-1])
-      print('ctrl_msg time0:',self.ctrl_msg['t'][0])
       if len(self.ctrl_msg['t']) > 0:
         self.ctrl_msg['enable'] = True
       else:
@@ -632,7 +631,7 @@ def load_local_view_figure_parking():
                      }
   ### figures config
 
-  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1200, height=800, match_aspect = True, aspect_scale=1)
+  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=640, match_aspect = True, aspect_scale=1)
   fig1.x_range.flipped = True
   # figure plot
   f1 = fig1.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')

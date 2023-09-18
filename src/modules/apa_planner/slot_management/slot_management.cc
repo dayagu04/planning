@@ -223,7 +223,8 @@ bool SlotManagement::AngleUpdateCondition(
 
   bool angle_update_condition = pnc::mathlib::IsInBound(
       angle_mag, kPie * 0.5 - angle_dis, kPie * 0.5 + angle_dis);
-  std::cout << "new_slot_info = " << new_slot_info.id() << std::endl;
+
+  std::cout << "id = " << new_slot_info.id() << std::endl;
   std::cout << "angle_update_condition = " << angle_update_condition
             << std::endl;
   std::cout << "angle_mag_deg_dif = " << fabs(angle_mag * 57.3 - 90.0)
