@@ -800,9 +800,13 @@ struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
     distance_start = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "distance_start"});
-    lead_desired_distance_step = read_json_keys<double>(
+    fast_lead_distance_step = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
-                                       "lead_desired_distance_step"});
+                                       "fast_lead_distance_step"});
+    slow_lead_distance_step = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "slow_lead_distance_step"});
+
     cut_in_desired_distance_step = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "cut_in_desired_distance_step"});
@@ -815,8 +819,8 @@ struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
   bool enable_lead_two = false;
   double safe_distance_base = 0.5;  // 最小安全距离
   double safe_distance_ttc = 0.3;   // 安全距离ttc
-  bool enable_rss_model = true;     // 是否采用RSS跟车模型
-  double t_actuator_delay = 0.2;    // 纵向执行响应延时
+  bool enable_rss_model = false;    // 是否采用RSS跟车模型
+  double t_actuator_delay = 0.0;    // 纵向执行响应延时
   double a_max_comfort_accel =
       2.0;  // maximum comfortable acceleration of the ego
   double a_max_comfort_brake =
@@ -841,7 +845,8 @@ struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double distance_stop = 1.0;
   double distance_start = 0.3;
   // param for st graph
-  double lead_desired_distance_step = 1.0;  // lead跟车距离膨胀速率1.0m/s
+  double fast_lead_distance_step = 1.0;  // fast lead跟车距离膨胀速率1.0m/s
+  double slow_lead_distance_step = 2.0;  // slow lead跟车距离膨胀速率2.0m/s
   double cut_in_desired_distance_step = 1.0;
   double soft_bound_corridor_t = 0.3;
 };

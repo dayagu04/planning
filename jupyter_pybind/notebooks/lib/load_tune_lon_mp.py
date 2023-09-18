@@ -252,12 +252,14 @@ def load_lon_global_figure(bag_loader):
 
    ego_velocity_vec = []
    target_velocity_vec = []
+   ref_velocity_vec = []
    leadone_velocity_vec = []
    leadtwo_velocity_vec = []
    t_plan_vec = bag_loader.plan_debug_msg['t']
    t_loc_vec = bag_loader.loc_msg['t']
    for ind in range(len(bag_loader.plan_debug_msg['json'])):
       target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_v_target'], 2))
+      ref_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_v_ref'], 2))
       leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_lead_one_vel'], 2))
       leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_lead_two_vel'], 2))
 
@@ -266,6 +268,8 @@ def load_lon_global_figure(bag_loader):
 
    velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
                                 legend_label='target_velocity', color="green")
+   velocity_fig.line(t_plan_vec, ref_velocity_vec, line_width=1,
+                                legend_label='ref_velocity', color="gray")
    velocity_fig.line(t_loc_vec, ego_velocity_vec, line_width=1,
                                   legend_label='ego_velocity',color="blue")
    velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,

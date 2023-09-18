@@ -33,11 +33,12 @@ message CIPVInfo {
 
 message LonDecisionInfo {
   optional LeadoneInfo leadone_info = 1;
-  optional CutinInfo cutin_info = 2;
-  optional CIPVInfo cipv_info = 3;
-  optional AccSafetyInfo acc_safety_info = 4;
-  optional bool nearby_obstacle = 5 [default = false];
-  optional double map_velocity_limit = 6 [default = 0.0];
-  optional double v_cruise = 7 [default = 0.0];
+  optional LeadoneInfo temp_leadone_info = 2;
+  optional CutinInfo cutin_info = 3;
+  optional CIPVInfo cipv_info = 4;
+  optional AccSafetyInfo acc_safety_info = 5;
+  optional bool nearby_obstacle = 6 [default = false];
+  optional double map_velocity_limit = 7 [default = 0.0];
+  optional double v_cruise = 8 [default = 0.0];
 }
 

@@ -47,7 +47,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                             'RealTime_temp_lead_one_id', 'RealTime_temp_lead_one_distance', 'RealTime_temp_lead_one_velocity', 'RealTime_temp_lead_one_desire_vel', \
                             'RealTime_temp_lead_two_id', 'RealTime_temp_lead_two_distance', 'RealTime_temp_lead_two_velocity', 'RealTime_temp_lead_two_desire_vel', \
                             'RealTime_potential_cutin_track_id', 'RealTime_potential_cutin_v_target',
-                            "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_lead_id"]
+                            "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_lead_id", \
+                            "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate"]
 
   plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
   plan_debug_json_info = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
@@ -467,12 +468,14 @@ def load_lon_global_figure(bag_loader):
 
    ego_velocity_vec = []
    target_velocity_vec = []
+   ref_velocity_vec = []
    leadone_velocity_vec = []
    leadtwo_velocity_vec = []
    t_plan_vec = bag_loader.plan_debug_msg['t']
    t_loc_vec = bag_loader.loc_msg['t']
    for ind in range(len(bag_loader.plan_debug_msg['json'])):
       target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_v_target'], 2))
+      ref_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_v_ref'], 2))
       leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_lead_one_velocity'], 2))
       leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_lead_two_velocity'], 2))
 
@@ -481,6 +484,8 @@ def load_lon_global_figure(bag_loader):
 
    velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
                                 legend_label='target_velocity', color="green")
+   velocity_fig.line(t_plan_vec, ref_velocity_vec, line_width=1,
+                                legend_label='ref_velocity', color="gray")
    velocity_fig.line(t_loc_vec, ego_velocity_vec, line_width=1,
                                   legend_label='ego_velocity',color="blue")
    velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
@@ -516,17 +521,23 @@ def load_lon_global_figure(bag_loader):
    lead_two_dis_vec = []
    temp_lead_one_dis_vec = []
    temp_lead_two_dis_vec = []
+   desired_distance_rss_vec = []
+   desired_distance_calibrate_vec = []
 
    for ind in range(len(bag_loader.plan_debug_msg['json'])):
       lead_one_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_lead_one_distance'], 2))
       lead_two_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_lead_two_distance'], 2))
       temp_lead_one_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_temp_lead_one_distance'], 2))
-      temp_lead_two_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_temp_lead_two_distance'], 2))      
+      temp_lead_two_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_temp_lead_two_distance'], 2))
+      desired_distance_rss_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_desired_distance_rss'], 2))
+      desired_distance_calibrate_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_desired_distance_calibrate'], 2))
 
    lead_fig.line(t_plan_vec, lead_one_dis_vec, line_width=1, legend_label='lead_one_dis', color="red")
    lead_fig.line(t_plan_vec, lead_two_dis_vec, line_width=1, legend_label='lead_two_dis', color="green")
    lead_fig.line(t_plan_vec, temp_lead_one_dis_vec, line_width=1, legend_label='temp_lead_one_dis', color="blue")
-   lead_fig.line(t_plan_vec, temp_lead_two_dis_vec, line_width=1, legend_label='temp_lead_two_dis', color="purple")                             
+   lead_fig.line(t_plan_vec, temp_lead_two_dis_vec, line_width=1, legend_label='temp_lead_two_dis', color="purple")
+   lead_fig.line(t_plan_vec, desired_distance_rss_vec, line_width=1, legend_label='distance_rss', color="yellow")
+   lead_fig.line(t_plan_vec, desired_distance_calibrate_vec, line_width=1, legend_label='distance_cali', color="orange")
 
    #get longtime obstacle id list in st-graph
    obs_st_ids = []

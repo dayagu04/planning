@@ -113,6 +113,10 @@ class StGraphGenerator {
       const planning::common::TrackedObjectInfo &lead_obstacle,
       const double v_ego, double safe_distance, double desired_distance);
 
+  double TmpLeadDesiredDistanceFilter(
+      const planning::common::TrackedObjectInfo &lead_obstacle,
+      const double v_ego, double safe_distance, double desired_distance);
+
   double CutInDesiredDistanceFilter(
       const planning::common::TrackedObjectInfo &lead_obstacle,
       const double v_ego, double safe_distance, double predict_distance,
@@ -122,12 +126,16 @@ class StGraphGenerator {
   common::StartStopInfo::StateType UpdateStartStopState(
       const planning::common::TrackedObjectInfo &lead_one, const double v_ego);
 
+  // update vt_refs_
+  void UpdateVelRefs();
+
  private:
   std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input_;
   RealTimeLonBehaviorPlannerConfig config_;
   std::shared_ptr<RealTimeLaneChangeDecider> lane_changing_decider_ = nullptr;
   std::vector<double> st_refs_;
   std::vector<double> vt_refs_;
+  double v_target_;
   real_time::STboundaries st_boundaries_;
   common::StartStopInfo start_stop_info_;
 

@@ -246,12 +246,16 @@ void GeneralPlanning::FillPlanningTrajectory(
         target_ref->mutable_acceleration_range_limit();
     acceleration_range_limit->set_min_a(-4.0);
     acceleration_range_limit->set_max_a(4.0);
-    // target_ref->set_lateral_maneuver_gear(
-    //     Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
 
-    // use fast lateral actuator to let control know real_time motion
-    target_ref->set_lateral_maneuver_gear(
-        Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_FAST);
+    if (g_context.GetParam().planner_type ==
+        planning::context::PlannerType::REALTIME_PLANNER_WITH_MOTION) {
+      // use fast lateral actuator to let control know real_time motion
+      target_ref->set_lateral_maneuver_gear(
+          Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_FAST);
+    } else {
+      target_ref->set_lateral_maneuver_gear(
+          Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
+    }
   } else {
     // set vision_only_longitudinal_outputs if hdmpa valid is false
     trajectory->set_trajectory_type(
