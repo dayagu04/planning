@@ -10,7 +10,7 @@ import "lateral_motion_planner.proto";
 import "longitudinal_motion_planner.proto";
 import "lat_behavior_common.proto";
 import "scene_type_config.proto";
-import "slot_management.proto";
+import "slot_management_info.proto";
 
 message TopicTimeList {
   optional uint64 fusion_object = 1;

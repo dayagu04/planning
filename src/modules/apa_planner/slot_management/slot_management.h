@@ -1,72 +1,81 @@
 #ifndef __SLOT_MANAGEMENT_H__
 #define __SLOT_MANAGEMENT_H__
 
-#include "define/geometry.h"
-#include "utils_math.h"
+#include <array>
+#include <cstddef>
+#include <memory>
+#include <unordered_map>
+#include <vector>
 
+#include "Eigen/Core"
 #include "func_state_machine.pb.h"
 #include "localization.pb.h"
 #include "parking_fusion.pb.h"
 #include "parking_slot_list.pb.h"
 #include "slot_management_info.pb.h"
 
-#include <array>
-#include <cstddef>
-#include <memory>
-#include <unordered_map>
-#include <vector>
-#include "Eigen/Core"
-
 namespace planning {
 class SlotManagement {
+ public:
   struct Param {
+    double lon_dist_rearview_mirror_to_rear_axle = 1.844;
+    double lat_dist_rearview_mirror_to_center = 1.135;
+
+    bool force_apa_on = false;
+    bool force_clear = false;
     size_t max_slot_size = 100;
-    double max_slot_release_dis = 6.8;
-    double max_nearby_pt_fluctuating_dis = 0.1;
-    double max_remote_pt_fluctuating_dis = 0.3;
-    double max_slot_heading_tol = 2 / 180.0 * M_PI;
-    double lon_dis_mirror_to_rear_axis_center = 2.4;
+    double max_slot_release_dist = 25.0;
+    double max_slots_update_angle_dis_limit_deg = 20.0;
+    double max_slot_boundary_line_angle_dif_deg = 10.0;
+    double max_slot_update_lon_dif_slot_center_to_mirror = 1.6;
+    double min_slot_update_lon_dif_slot_center_to_mirror = 0.35;
   };
 
- public:
+  struct Measurement {
+    double v_ego = 0.0;
+    double heading = 0.0;
+    Eigen::Vector2d ego_pos = Eigen::Vector2d::Zero();
+    Eigen::Vector2d mirror_pos = Eigen::Vector2d::Zero();
+  };
+
   void Reset();
-  bool Update(
-      std::shared_ptr<FuncStateMachine::FuncStateMachine> func_statemachine,
-      std::shared_ptr<ParkingFusion::ParkingFusionInfo> parking_slot_info,
-      std::shared_ptr<LocalizationOutput::LocalizationEstimate>
-          localization_info);
+  void Preprocess();
+  bool Update(FuncStateMachine::FuncStateMachine* func_statemachine,
+              ParkingFusion::ParkingFusionInfo* parking_slot_info,
+              LocalizationOutput::LocalizationEstimate* localization_info);
+
   void SetParam(const Param& param) { param_ = param; }
+  void SetMeasurement(Measurement& measurement) { measurement_ = measurement; }
+
   const common::SlotManagementInfo GetOutput() const {
     return slot_management_info_;
   }
+
   const common::SlotManagementInfo* GetOutputPtr() const {
     return &slot_management_info_;
   }
 
  private:
   bool UpdateSlots();
+  bool IsValidParkingSlot(const common::SlotInfo& slot_info);
   bool IsInParkingState() const;
-  bool GetLocalizationInfo(
-      std::shared_ptr<LocalizationOutput::LocalizationEstimate>
-          localization_info);
   bool ReleaseSlots();
 
   bool ReleaseSlots(FuncStateMachine::FuncStateMachine& func_statemachine,
                     ParkingFusion::ParkingFusionInfo& parking_slot_info);
 
-  bool IfUpdateSlot(const common::SlotInfo& new_slot_info) const;
-  bool IfNewCornerPointsFluctuatingLittle(
-      const common::SlotInfo& new_slot_info) const;
-  double CalSlotHeading(const common::SlotInfo& slot_info) const;
-  bool parking_enable_flag_ = false;
+  bool IfUpdateSlot(const common::SlotInfo& new_slot_info);
+  bool AngleUpdateCondition(const common::SlotInfo& new_slot_info);
+  bool LonDifUpdateCondition(const common::SlotInfo& new_slot_info);
 
   std::unordered_map<int, size_t> slot_info_map_;
   common::SlotManagementInfo slot_management_info_;
 
-  std::shared_ptr<FuncStateMachine::FuncStateMachine> func_state_ptr_;
-  std::shared_ptr<ParkingFusion::ParkingFusionInfo> parking_slot_ptr_;
-  Pose2D local_pos_;
-  Pose2D mirror_center_pos_;
+  FuncStateMachine::FuncStateMachine* func_state_ptr_;
+  ParkingFusion::ParkingFusionInfo* parking_slot_ptr_;
+  LocalizationOutput::LocalizationEstimate* localization_ptr_;
+
+  Measurement measurement_;
   Param param_;
 };
 

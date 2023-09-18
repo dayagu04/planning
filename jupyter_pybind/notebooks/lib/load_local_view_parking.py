@@ -258,7 +258,10 @@ class LoadCyberbag:
         self.fus_parking_msg['t'].append(t)
         self.fus_parking_msg['abs_t'].append(t)
         self.fus_parking_msg['data'].append(msg)
-      self.fus_parking_msg['t'] = [tmp - self.fus_parking_msg['t'][0]  for tmp in self.fus_parking_msg['t']]
+      if (abs(self.fus_parking_msg['t'][0]) < 0.0001):
+        self.fus_parking_msg['t'] = [tmp - self.fus_parking_msg['t'][1]  for tmp in self.fus_parking_msg['t']]
+      else:
+        self.fus_parking_msg['t'] = [tmp - self.fus_parking_msg['t'][0]  for tmp in self.fus_parking_msg['t']]
       max_time = max(max_time, self.fus_parking_msg['t'][-1])
       print('fus_parking_msg time:',self.fus_parking_msg['t'][-1])
       if len(self.fus_parking_msg['t']) > 0:
@@ -274,9 +277,9 @@ class LoadCyberbag:
     try:
       vis_parking_msg_dict = {}
       # origin visual parking slot proto
-      for topic, msg, t in self.bag.read_messages("/parking_slot"):
+      # for topic, msg, t in self.bag.read_messages("/parking_slot"):
       # new visula parking slot proto
-      # for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/parking_slot_list"):
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/parking_slot_list"):
         vis_parking_msg_dict[msg.header.timestamp / 1e6] = msg
       vis_parking_msg_dict = {key: val for key, val in sorted(vis_parking_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in vis_parking_msg_dict.items():
@@ -374,6 +377,12 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
         ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
   local_view_data['data_index']['ctrl_debug_msg_idx'] = ctrl_debug_msg_idx
 
+  soc_state_msg_idx = 0
+  if bag_loader.soc_state_msg['enable'] == True:
+    while bag_loader.soc_state_msg['t'][soc_state_msg_idx] <= bag_time and ctrl_debug_msg_idx < (len(bag_loader.ctrl_debug_msg['t'])-2):
+        soc_state_msg_idx = soc_state_msg_idx + 1
+  local_view_data['data_index']['soc_state_msg_idx'] = soc_state_msg_idx
+
   ### step 2: 加载定位信息
   cur_pos_xn0 = 0
   cur_pos_yn0 = 0
@@ -383,15 +392,12 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
 
   if bag_loader.loc_msg['enable'] == True:
 
-    cur_pos_xn0 = cur_pos_xn = bag_loader.loc_msg['data'][0].pose.local_position.x
-    cur_pos_yn0 = cur_pos_yn = bag_loader.loc_msg['data'][0].pose.local_position.y
     # ego pos in local and global coordinates
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
 
-    coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+    # coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
 
     ego_xn, ego_yn = [], []
     ### global variables
@@ -427,8 +433,10 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
 
     vel_ego =  bag_loader.loc_msg['data'][loc_msg_idx].pose.linear_velocity_from_wheel
 
-
-    steer_deg = bag_loader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
+    if bag_loader.vs_msg['enable'] == True:
+      steer_deg = bag_loader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
+    else:
+      steer_deg = 0.0
 
     local_view_data['data_text'].data.update({
       'vel_ego_text': ['v = {:.2f} m/s\nsteer = {:.1f} deg'.format(round(vel_ego, 2), round(steer_deg, 1))],
@@ -463,98 +471,109 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
         'mpc_dy' : mpc_dy,
     })
 
-    # load fusion slot
-    if bag_loader.fus_parking_msg['enable'] == True:
-      parking_fusion_slot_lists = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].parking_fusion_slot_lists
-      select_slot_id = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].select_slot_id
-      # clear data
-      local_view_data['data_selected_slot'].data.update({'corner_point_x': [], 'corner_point_y': [],})
-      local_view_data['data_fusion_parking'].data.update({'corner_point_x': [], 'corner_point_y': [],})
-      local_view_data['data_fusion_parking_id'].data.update({'id':[], 'id_text_x':[], 'id_text_y':[],})
-      local_view_data['data_fusion_limiter'].data.update({'corner_point_x': [], 'corner_point_y': [],})
-      slots_x_vec = []
-      slots_y_vec = []
-      id_vec = []
-      id_text_x_vec = []
-      id_text_y_vec = []
-      limiter_x_vec = []
-      limiter_y_vec = []
-      for j in range(len(parking_fusion_slot_lists)):
-        slot = parking_fusion_slot_lists[j]
-        single_slot_x_vec = []
-        single_slot_y_vec = []
-        # attention: fusion slots are based on odom system, visual slots are based on vehicle system
-        # 1. update slots corner points
-        for k in range(len(slot.corner_points)):
-          corner_x_global = slot.corner_points[k].x
-          corner_y_global = slot.corner_points[k].y
-          single_slot_x_vec.append(corner_x_global - cur_pos_xn0)
-          single_slot_y_vec.append(corner_y_global - cur_pos_yn0)
-        slot_plot_x_vec = [single_slot_x_vec[0],single_slot_x_vec[2],single_slot_x_vec[3],single_slot_x_vec[1]]
-        slot_plot_y_vec = [single_slot_y_vec[0],single_slot_y_vec[2],single_slot_y_vec[3],single_slot_y_vec[1]]
-        slots_x_vec.append(slot_plot_x_vec)
-        slots_y_vec.append(slot_plot_y_vec)
-        # 2. update selected fusion slot
-        if select_slot_id == slot.id:
-          local_view_data['data_selected_slot'].data.update({
-            'corner_point_x': slot_plot_x_vec,
-            'corner_point_y': slot_plot_y_vec,
-            })
-        # 3. update slot ids' text with their position
-        id_vec.append(slot.id)
-        id_text_x_vec.append((slot_plot_x_vec[0] + slot_plot_x_vec[1] + slot_plot_x_vec[2] + slot_plot_x_vec[3]) * 0.25)
-        id_text_y_vec.append((slot_plot_y_vec[0] + slot_plot_y_vec[1] + slot_plot_y_vec[2] + slot_plot_y_vec[3]) * 0.25)
-        # 4. limiter
-        if len(slot.limiter_position)!= 0:
-          limiter_global_x_vec = [slot.limiter_position[0].x - cur_pos_xn0, slot.limiter_position[1].x - cur_pos_xn0]
-          limiter_global_y_vec = [slot.limiter_position[0].y - cur_pos_yn0, slot.limiter_position[1].y - cur_pos_yn0]
-          limiter_x_vec.append(limiter_global_x_vec)
-          limiter_y_vec.append(limiter_global_y_vec)
-      local_view_data['data_fusion_parking'].data.update({'corner_point_x': slots_x_vec, 'corner_point_y': slots_y_vec,})
-      local_view_data['data_fusion_parking_id'].data.update({'id':id_vec,'id_text_x':id_text_x_vec,'id_text_y':id_text_y_vec,})
-      local_view_data['data_fusion_limiter'].data.update({'corner_point_x': limiter_x_vec, 'corner_point_y': limiter_y_vec,})
+  # load fusion slot
+  if bag_loader.fus_parking_msg['enable'] == True:
+    parking_fusion_slot_lists = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].parking_fusion_slot_lists
+    select_slot_id = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].select_slot_id
+    # clear data
+    local_view_data['data_selected_slot'].data.update({'corner_point_x': [], 'corner_point_y': [],})
+    local_view_data['data_fusion_parking'].data.update({'corner_point_x': [], 'corner_point_y': [],})
+    local_view_data['data_fusion_parking_id'].data.update({'id':[], 'id_text_x':[], 'id_text_y':[],})
+    slots_x_vec = []
+    slots_y_vec = []
+    id_vec = []
+    id_text_x_vec = []
+    id_text_y_vec = []
+    limiter_x_vec = []
+    limiter_y_vec = []
+    for j in range(len(parking_fusion_slot_lists)):
+      slot = parking_fusion_slot_lists[j]
+      single_slot_x_vec = []
+      single_slot_y_vec = []
+      # attention: fusion slots are based on odom system, visual slots are based on vehicle system
+      # 1. update slots corner points
+      for k in range(len(slot.corner_points)):
+        corner_x_global = slot.corner_points[k].x
+        corner_y_global = slot.corner_points[k].y
+        single_slot_x_vec.append(corner_x_global - cur_pos_xn0)
+        single_slot_y_vec.append(corner_y_global - cur_pos_yn0)
+      slot_plot_x_vec = [single_slot_x_vec[0],single_slot_x_vec[2],single_slot_x_vec[3],single_slot_x_vec[1]]
+      slot_plot_y_vec = [single_slot_y_vec[0],single_slot_y_vec[2],single_slot_y_vec[3],single_slot_y_vec[1]]
+      slots_x_vec.append(slot_plot_x_vec)
+      slots_y_vec.append(slot_plot_y_vec)
+      # 1.2 update slots limiter points in same slot_plot_vec
+      single_limiter_x_vec = []
+      single_limiter_y_vec = []
+      if len(slot.limiter_position)!= 0:
+        single_limiter_x_vec.append(slot.limiter_position[0].x - cur_pos_xn0)
+        single_limiter_x_vec.append(slot.limiter_position[1].x - cur_pos_xn0)
+        single_limiter_y_vec.append(slot.limiter_position[0].y - cur_pos_yn0)
+        single_limiter_y_vec.append(slot.limiter_position[1].y - cur_pos_yn0)
+      slots_x_vec.append(single_limiter_x_vec)
+      slots_y_vec.append(single_limiter_y_vec)
+
+      # 2. update selected fusion slot
+      if select_slot_id == slot.id:
+        selected_slot_with_limiter_x_vec = []
+        selected_slot_with_limiter_y_vec = []
+        selected_slot_with_limiter_x_vec.append(slot_plot_x_vec)
+        selected_slot_with_limiter_x_vec.append(single_limiter_x_vec)
+
+        selected_slot_with_limiter_y_vec.append(slot_plot_y_vec)
+        selected_slot_with_limiter_y_vec.append(single_limiter_y_vec)
+
+        local_view_data['data_selected_slot'].data.update({
+          'corner_point_x': selected_slot_with_limiter_x_vec,
+          'corner_point_y': selected_slot_with_limiter_y_vec,
+          })
+      # 3. update slot ids' text with their position
+      id_vec.append(slot.id)
+      id_text_x_vec.append((slot_plot_x_vec[0] + slot_plot_x_vec[1] + slot_plot_x_vec[2] + slot_plot_x_vec[3]) * 0.25)
+      id_text_y_vec.append((slot_plot_y_vec[0] + slot_plot_y_vec[1] + slot_plot_y_vec[2] + slot_plot_y_vec[3]) * 0.25)
+
+    local_view_data['data_fusion_parking'].data.update({'corner_point_x': slots_x_vec, 'corner_point_y': slots_y_vec,})
+    local_view_data['data_fusion_parking_id'].data.update({'id':id_vec,'id_text_x':id_text_x_vec,'id_text_y':id_text_y_vec,})
 
 
-    # load visual slot
-    if bag_loader.vis_parking_msg['enable'] == True:
-        parking_slot = bag_loader.vis_parking_msg['data'][vis_parking_msg_idx].parking_slot
-        local_view_data['data_vision_parking'].data.update({'corner_point_x': [], 'corner_point_y': [],})
-        slots_x_vec = []
-        slots_y_vec = []
-        limiter_x_vec = []
-        limiter_y_vec = []
+  # load visual slot
+  if bag_loader.vis_parking_msg['enable'] == True:
+    parking_slot = bag_loader.vis_parking_msg['data'][vis_parking_msg_idx].parking_slot
+    local_view_data['data_vision_parking'].data.update({'corner_point_x': [], 'corner_point_y': [],})
+    slots_x_vec = []
+    slots_y_vec = []
+    limiter_x_vec = []
+    limiter_y_vec = []
 
-        # attention: vision slots and limiters are based on vehicle system, needed to be transferred into global system
-        # 1. updatge slot points
-        for j in range(len(parking_slot)):
-          slot = parking_slot[j]
-          single_slot_x_vec = []
-          single_slot_y_vec = []
-          slot_plot_x_vec = []
-          slot_plot_y_vec = []
-          for k in range(len(slot.corner_points)):
-            corner_x_local = slot.corner_points[k].x
-            corner_y_local = slot.corner_points[k].y
-            corner_x_global, corner_y_global = local2global(corner_x_local, corner_y_local, cur_pos_xn, cur_pos_yn, cur_yaw)
-            single_slot_x_vec.append(corner_x_global - cur_pos_xn0)
-            single_slot_y_vec.append(corner_y_global - cur_pos_yn0)
-          slot_plot_x_vec = [single_slot_x_vec[0],single_slot_x_vec[2],single_slot_x_vec[3],single_slot_x_vec[1]]
-          slot_plot_y_vec = [single_slot_y_vec[0],single_slot_y_vec[2],single_slot_y_vec[3],single_slot_y_vec[1]]
-          slots_x_vec.append(slot_plot_x_vec)
-          slots_y_vec.append(slot_plot_y_vec)
-        local_view_data['data_vision_parking'].data.update({
-          'corner_point_x': slots_x_vec,
-          'corner_point_y': slots_y_vec,
-        })
-        # 2. update limiters
-        vision_slot_limiter = bag_loader.vis_parking_msg['data'][vis_parking_msg_idx].vision_slot_limiter
-        for j in range(len(vision_slot_limiter)):
-          limiter = vision_slot_limiter[j]
-          global_limiter_x0, global_limiter_y0 = local2global(limiter.limiter_points[0].x, limiter.limiter_points[0].y, cur_pos_xn, cur_pos_yn, cur_yaw)
-          global_limiter_x1, global_limiter_y1 = local2global(limiter.limiter_points[1].x, limiter.limiter_points[1].y, cur_pos_xn, cur_pos_yn, cur_yaw)
-          limiter_x_vec.append([global_limiter_x0 - cur_pos_xn0, global_limiter_x1 - cur_pos_xn0])
-          limiter_y_vec.append([global_limiter_y0 - cur_pos_yn0, global_limiter_y1 - cur_pos_yn0])
-        local_view_data['data_vision_limiter'].data.update({'corner_point_x':limiter_x_vec, 'corner_point_y':limiter_y_vec})
+    # attention: vision slots and limiters are based on vehicle system, needed to be transferred into global system
+    # 1. updatge slot points
+    for j in range(len(parking_slot)):
+      slot = parking_slot[j]
+      single_slot_x_vec = []
+      single_slot_y_vec = []
+      slot_plot_x_vec = []
+      slot_plot_y_vec = []
+      for k in range(len(slot.corner_points)):
+        corner_x_local = slot.corner_points[k].x
+        corner_y_local = slot.corner_points[k].y
+        corner_x_global, corner_y_global = local2global(corner_x_local, corner_y_local, cur_pos_xn, cur_pos_yn, cur_yaw)
+        single_slot_x_vec.append(corner_x_global - cur_pos_xn0)
+        single_slot_y_vec.append(corner_y_global - cur_pos_yn0)
+      slot_plot_x_vec = [single_slot_x_vec[0],single_slot_x_vec[2],single_slot_x_vec[3],single_slot_x_vec[1]]
+      slot_plot_y_vec = [single_slot_y_vec[0],single_slot_y_vec[2],single_slot_y_vec[3],single_slot_y_vec[1]]
+      slots_x_vec.append(slot_plot_x_vec)
+      slots_y_vec.append(slot_plot_y_vec)
+    # 2. update limiters
+    vision_slot_limiter = bag_loader.vis_parking_msg['data'][vis_parking_msg_idx].vision_slot_limiter
+    for j in range(len(vision_slot_limiter)):
+      limiter = vision_slot_limiter[j]
+      global_limiter_x0, global_limiter_y0 = local2global(limiter.limiter_points[0].x, limiter.limiter_points[0].y, cur_pos_xn, cur_pos_yn, cur_yaw)
+      global_limiter_x1, global_limiter_y1 = local2global(limiter.limiter_points[1].x, limiter.limiter_points[1].y, cur_pos_xn, cur_pos_yn, cur_yaw)
+      slots_x_vec.append([global_limiter_x0 - cur_pos_xn0, global_limiter_x1 - cur_pos_xn0])
+      slots_y_vec.append([global_limiter_y0 - cur_pos_yn0, global_limiter_y1 - cur_pos_yn0])
+    local_view_data['data_vision_parking'].data.update({
+      'corner_point_x': slots_x_vec,
+      'corner_point_y': slots_y_vec,
+    })
 
     # car pos in global coordinates
     car_xn = []
@@ -584,8 +603,6 @@ def load_local_view_figure_parking():
   data_fusion_parking = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
   data_vision_parking = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
   data_selected_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
-  data_fusion_limiter = ColumnDataSource(data={'corner_point_y':[], 'corner_point_x':[]})
-  data_vision_limiter = ColumnDataSource(data={'corner_point_y':[], 'corner_point_x':[]})
   data_fusion_parking_id = ColumnDataSource(data = {'id':[], 'id_text_x':[], 'id_text_y':[]})
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
@@ -597,6 +614,7 @@ def load_local_view_figure_parking():
                 'plan_debug_msg_idx': 0,
                 'ctrl_msg_idx': 0,
                 'ctrl_debug_msg_idx': 0,
+                'soc_state_msg_idx': 0,
                }
 
   local_view_data = {'data_car':data_car, \
@@ -608,8 +626,6 @@ def load_local_view_figure_parking():
                      'data_fusion_parking':data_fusion_parking, \
                      'data_vision_parking':data_vision_parking, \
                      'data_selected_slot':data_selected_slot, \
-                     'data_fusion_limiter':data_fusion_limiter, \
-                     'data_vision_limiter':data_vision_limiter, \
                      'data_fusion_parking_id':data_fusion_parking_id, \
                      'data_index': data_index, \
                      }
@@ -626,10 +642,8 @@ def load_local_view_figure_parking():
   fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 2.5, line_color = 'lightgreen', line_dash = 'dashed', line_alpha = 0.8, legend_label = 'mpc')
 
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot')
-  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_limiter, line_width = 3, line_color = 'grey', line_dash = 'dotted',legend_label = 'vision_limiter')
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_parking, line_width = 2, line_color = 'red', line_dash = 'solid',legend_label = 'fusion_parking_slot')
-  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_limiter, line_width = 2, line_color = 'red', line_dash = 'dotted',legend_label = 'fusion_limiter')
-  fig1.line('corner_point_y','corner_point_x', source = data_selected_slot, line_width = 3, line_color = 'green', line_dash = 'solid',legend_label = 'selected_parking_slot')
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_selected_slot, line_width = 3, line_color = 'green', line_dash = 'solid',legend_label = 'selected_parking_slot')
 
   fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_fusion_parking_id, text_color='red', text_align='center', text_font_size='10pt',legend_label = 'fusion_parking_slot_id')
   # toolbar

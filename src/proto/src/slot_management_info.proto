@@ -11,11 +11,11 @@ message SlotInfo {
   optional uint32 id = 1;
   optional CornerPoints corner_points = 2;
   optional Point2d center = 3;
-  optional bool is_release = 5;
+  optional bool is_release = 4;
 
 }
 
 message SlotManagementInfo {
   repeated SlotInfo slot_info_vec = 1;
-  repeated Point2d limiter_points = 4;
+  repeated Point2d limiter_points = 2;
 }
