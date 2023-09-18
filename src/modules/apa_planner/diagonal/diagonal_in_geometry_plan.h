@@ -89,12 +89,9 @@ class DiagonalInGeometryPlan {
   double CalDESegmentLengthCost(const double segment_len) const;
 
  private:
-  double min_turn_radius_ =
-      VehicleParamHelper::Instance()->GetParam().turn_radius_min();
-  double width_veh_ =
-      VehicleParamHelper::Instance()->GetParam().vehicle_width();
-  double half_width_veh_ =
-      VehicleParamHelper::Instance()->GetParam().vehicle_width() * 0.5;
+  double min_turn_radius_ = 5.5;
+  double width_veh_ = 1.89;
+  double half_width_veh_ = 1.89 * 0.5;
   double front_edge_to_rear_axle_ =
       VehicleParamHelper::Instance()
           ->GetParam()

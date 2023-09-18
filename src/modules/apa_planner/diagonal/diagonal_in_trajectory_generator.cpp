@@ -707,14 +707,8 @@ PlanningPoint DiagonalInTrajectoryGenerator::FromGlobal2LocalCor(
 }
 
 double DiagonalInTrajectoryGenerator::CalApaTargetY() const {
-  const double dst_front_edge_to_rear_axle =
-      VehicleParamHelper::Instance()
-          ->GetParam()
-          .lon_distance_from_front_edge_to_rear_axis();
-  const double dst_rear_edge_to_rear_axle =
-      VehicleParamHelper::Instance()
-          ->GetParam()
-          .lon_distance_from_back_edge_to_rear_axis();
+  const double dst_front_edge_to_rear_axle = 3.624;
+  const double dst_rear_edge_to_rear_axle = 0.947;
   const double stop_buffer = 0.10;
   double end_point_y_by_veh = dst_front_edge_to_rear_axle + stop_buffer;
   const double slot_depth =

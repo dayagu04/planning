@@ -1014,8 +1014,7 @@ double ParallelInTrajectoryGenerator::CalApaTargetX() const {
 }
 
 double ParallelInTrajectoryGenerator::CalApaTargetY() const {
-  const double half_width =
-      VehicleParamHelper::Instance()->GetParam().vehicle_width() * 0.5;
+  const double half_width = 1.89 * 0.5;
   return -slot_sign_ * std::fmin(slot_width_ * 0.5,
                                  slot_width_ - half_width - kLateralBuffer);
 }
