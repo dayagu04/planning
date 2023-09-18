@@ -384,7 +384,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
 
   for (auto &p : predictions) {
     // 过滤未与相机融合， 且在相机FOV之内的
-    if (p.type == 0 ||
+    if ((p.type == 0 && p.relative_speed_x + ego_state_.ego_v() < 1.) ||
         (!(p.fusion_source & OBSTACLE_SOURCE_CAMERA)) &&
             (p.relative_position_x > 0 &&
              tan(25) > fabs(p.relative_position_y / p.relative_position_x)) ||
