@@ -107,6 +107,9 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
           virtual_lane_tmp->update_data(lane);
           std::cout << "555555555555555555555555" << std::endl;
         } else {
+          if (lane.relative_id() == -1) {
+            std::cout << "6666666666666666666666666666: lane_merge_split_point_data.is_continue(): " << lane_merge_split_point_data.is_continue() << " lane_merge_split_point_data.is_split(): " << lane_merge_split_point_data.is_split() << std::endl;
+          }
           continue;
         }
       } else {
@@ -374,11 +377,11 @@ bool VirtualLaneManager::has_lane(int virtual_lane_id) {
 }
 
 double VirtualLaneManager::get_distance_to_dash_line(
-    const RequestType direction, uint order_id) const {
+    const RequestType direction, uint virtual_id) const {
   assert(direction == RIGHT_CHANGE || direction == LEFT_CHANGE);
 
   double distance_to_dash_line = 0.0;
-  auto lane = get_lane_with_order_id(order_id);
+  auto lane = get_lane_with_virtual_id(virtual_id);
   if (lane == nullptr) {
     return distance_to_dash_line;
   }

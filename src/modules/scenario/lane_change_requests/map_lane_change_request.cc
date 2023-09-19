@@ -53,12 +53,14 @@ bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
       "MapRequest:: lc_map_tfinish: %f, map_duration: %f, lc_end_dis: %f,  "
       "map_response_dist: %f, delay_map: %f",
       lc_map_tfinish, map_duration, lc_end_dis, map_response_dist, delay_map);
+  std::cout << "[MapRequest::update] : lc_end_dis: " << lc_end_dis << " lc_map_decision: " << lc_map_decision << " map_response_dist: " << map_response_dist << " map_duration: " << map_duration << " delay_map: " << delay_map << std::endl;
 
   return (lc_end_dis < map_response_dist && map_duration > delay_map);
 }
 
 void MapRequest::update(int lc_status, double lc_map_tfinish) {
   LOG_DEBUG("MapRequest::update");
+  std::cout << "MAP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " << std::endl;
 
   auto current_lane_virtual_id = virtual_lane_mgr_->current_lane_virtual_id();
   if (lane_change_lane_mgr_->has_origin_lane()) {

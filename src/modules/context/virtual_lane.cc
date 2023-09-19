@@ -368,13 +368,14 @@ void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
       lane_num > 3 ? std::max((int)std::floor((lane_num - 1) * 0.5), 0)
                    : 0;  // clren: hack
   current_tasks_.clear();
+  if (order_id_ + 1 > lane_num) return;
   if (is_nearing_ramp) {
-    for (int i = 0; i < lane_num - order_id_ - 1; i++) {
+    for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
       current_tasks_.emplace_back(1);
     }
   } else {
-    if (lane_num - order_id_ - 1 < reverse_task_num) {
-      for (int i = 0; i < (order_id_ + 1 - (lane_num - reverse_task_num));
+    if (lane_num < reverse_task_num + order_id_ + 1) {
+      for (int i = 0; i + (lane_num - reverse_task_num) < (order_id_ + 1);
            i++) {
         current_tasks_.emplace_back(-1);
       }
@@ -382,7 +383,7 @@ void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
       if (dis_to_ramp <
           3000.0) {  // TODO:clren
                      // 后续考虑安全性，根据距离，车流量，对task做调整
-        for (int i = 0; i < (lane_num - reverse_task_num) - order_id_ - 1;
+        for (int i = 0; i + order_id_ + 1 + reverse_task_num < lane_num;
              i++) {
           current_tasks_.emplace_back(1);
         }

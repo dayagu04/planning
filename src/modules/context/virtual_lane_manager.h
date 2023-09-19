@@ -113,7 +113,7 @@ class VirtualLaneManager {
   void reset();
 
   double get_distance_to_dash_line(const RequestType direction,
-                                   uint order_id) const;
+                                   uint virtual_id) const;
   double get_distance_to_final_dash_line(const RequestType direction,
                                          uint order_id) const;
 
