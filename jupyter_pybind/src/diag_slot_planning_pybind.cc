@@ -65,7 +65,7 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
                        py::bytes &localization_info_bytes,
                        py::bytes &vehicle_service_output_info_bytes,
                        int selected_id, bool force_planning,
-                       bool clear_seg_name) {
+                       uint8_t force_last_seg_name) {
   auto func_statemachine =
       BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
 
@@ -92,7 +92,7 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
   DiagonalInTrajectoryGenerator::SimulationParam param;
   param.force_planning_ = force_planning;
   param.selected_id_ = selected_id;
-  param.clear_seg_name_ = clear_seg_name;
+  param.force_last_seg_name_ = force_last_seg_name;
 
   pBase->SetSimulationParam(param);
 

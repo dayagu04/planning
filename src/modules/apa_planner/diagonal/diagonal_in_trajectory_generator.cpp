@@ -16,6 +16,7 @@
 #include "math/math_utils.h"
 #include "planning_output_context.h"
 #include "utils_math.h"
+#include "debug_info_log.h"
 
 namespace planning {
 namespace apa_planner {
@@ -211,9 +212,7 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlan(
     }
   } else {
     // when simualtion
-    if (simu_param_.clear_seg_name_) {
-      last_segment_name_.clear();
-    }
+    last_segment_name_ = simu_param_.force_last_seg_name_;
   }
 
   std::cout << "diagonal replan triggered, replan state:"
@@ -238,38 +237,41 @@ bool DiagonalInTrajectoryGenerator::GeometryPlan(
   SetGeometryPlanningParameter(idx, &geometry_planning_);
   bool is_planning_ok = false;
   planning_output->mutable_trajectory()->mutable_trajectory_points()->Clear();
-  if (last_segment_name_.empty()) {
+
+  JSON_DEBUG_VALUE("last_segment_name", last_segment_name_)
+
+  if (last_segment_name_ == SEGMENT_NONE) {
     if (ABSegmentPlan(start_point, true, idx, &geometry_planning_,
                       planning_output)) {
-      last_segment_name_ = "BC";
+      last_segment_name_ = SEGMENT_BC;
       is_planning_ok = true;
     } else if (ReverseABSegmentPlan(start_point, true, idx, &geometry_planning_,
                                     planning_output)) {
-      last_segment_name_ = "CD";
+      last_segment_name_ = SEGMENT_CD;
       is_planning_ok = true;
     }
-  } else if (last_segment_name_ == "AB") {
+  } else if (last_segment_name_ == SEGMENT_AB) {
     if (BCSegmentPlan(start_point, true, idx, &geometry_planning_,
                       planning_output)) {
-      last_segment_name_ = "BC";
+      last_segment_name_ = SEGMENT_BC;
       is_planning_ok = true;
     }
-  } else if (last_segment_name_ == "BC") {
+  } else if (last_segment_name_ == SEGMENT_BC) {
     if (CDSegmentPlan(start_point, true, idx, &geometry_planning_,
                       planning_output)) {
-      last_segment_name_ = "CD";
+      last_segment_name_ = SEGMENT_CD;
       is_planning_ok = true;
     }
-  } else if (last_segment_name_ == "CD") {
+  } else if (last_segment_name_ == SEGMENT_CD) {
     if (DESegmentPlan(start_point, true, idx, &geometry_planning_,
                       planning_output)) {
-      last_segment_name_ = "DE";
+      last_segment_name_ = SEGMENT_DE;
       is_planning_ok = true;
     }
-  } else if (last_segment_name_ == "DE") {
+  } else if (last_segment_name_ == SEGMENT_DE) {
     if (CDSegmentPlan(start_point, true, idx, &geometry_planning_,
                       planning_output)) {
-      last_segment_name_ = "CD";
+      last_segment_name_ = SEGMENT_CD;
       is_planning_ok = true;
     }
   } else {
@@ -279,7 +281,7 @@ bool DiagonalInTrajectoryGenerator::GeometryPlan(
 
   if (!simulation_enable_flag_) {
     if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
-      last_segment_name_.clear();
+      last_segment_name_ = SEGMENT_NONE;
     }
   }
 
@@ -964,7 +966,7 @@ bool DiagonalInTrajectoryGenerator::IsReplan(
   if (!planning_output->has_trajectory() ||
       planning_output->trajectory().trajectory_points_size() == 0) {
     is_replan_ = true;
-    last_segment_name_.clear();
+    last_segment_name_ = SEGMENT_NONE;
     return true;
   }
 

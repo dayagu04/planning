@@ -15,10 +15,18 @@ namespace apa_planner {
 class DiagonalInTrajectoryGenerator {
  public:
   struct SimulationParam {
-    bool clear_seg_name_ = false;
+    uint8_t force_last_seg_name_ = 0;
     int selected_id_ = false;
     bool force_planning_ = false;
     uint8_t current_state_ = 0;
+  };
+
+  enum SegmentName {
+    SEGMENT_NONE,
+    SEGMENT_AB,
+    SEGMENT_BC,
+    SEGMENT_CD,
+    SEGMENT_DE
   };
 
   DiagonalInTrajectoryGenerator() = default;
@@ -161,7 +169,7 @@ class DiagonalInTrajectoryGenerator {
   double slot_length_ = 0.0;
 
   bool is_replan_ = false;
-  std::string last_segment_name_ = "";
+  uint8_t last_segment_name_ = SEGMENT_NONE;
   uint64_t standstill_time_ = 0;
   uint64_t last_time_ = 0;
   uint64_t pos_unchanged_cnt_ = 0;
