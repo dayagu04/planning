@@ -23,13 +23,13 @@ altitude0 = 0.0
 class LocalizationApaPlotter(object):
   def __init__(self):
   # bag path and frame dt
-    self.file_path = '/mnt/noa/20230916/202309163.bag.record'
+    self.file_path = '/mnt/noa/20230918_night/noa_4.00000'
     self.abnormal_timestamp_path = '/mnt/noa/20230916/abnormal_timestamp.txt'
     self.rtk_file_path = '/mnt/noa/20230914/sensor_navi_navifusion.json'
     display(HTML('<style>.container { width:95% !important;  }</style>'))
     output_notebook()
 
-    self.start_time = None
+    self.ehr_start_time = None
     # rtk positions
     self.rtk_latitude_vec = []
     self.rtk_longitude_vec = []
@@ -71,6 +71,13 @@ class LocalizationApaPlotter(object):
     self.abnormal_positions_y_vec = []
     self.abnormal_positions_lat_vec = []
     self.abnormal_positions_lon_vec = []
+
+    # iflytek localization node
+    self.iflytek_start_time = None
+    self.iflytek_local_position_x_vec = []
+    self.iflytek_local_position_y_vec = []
+    self.iflytek_time_vec = []
+    self.iflytek_time_interval_vec = []
 
   def is_out_of_china(self, lla):
     if(not(lla[0] > 0.8293 and lla[0] < 55.8271 and lla[1] > 72.004 and \
@@ -116,6 +123,22 @@ class LocalizationApaPlotter(object):
       mglon = lla[1] + dlon
       return [lla[0] * 2 - mglat, lla[1] * 2 - mglon, lla[2]]
 
+  def load_localization_data(self):
+    # load odem msg
+    bag = Record(self.file_path)
+    for topic, msg, t in bag.read_messages('/iflytek/localization/ego_pose'):
+      self.iflytek_local_position_x_vec.append(msg.pose.local_position.x)
+      self.iflytek_local_position_y_vec.append(msg.pose.local_position.y)
+      if self.iflytek_start_time is None:
+        self.iflytek_start_time = msg.header.timestamp
+      time = (msg.header.timestamp - self.iflytek_start_time) * 0.001
+      time_interval = 0
+      if len(self.iflytek_time_vec) != 0:
+        time_interval = time - self.iflytek_time_vec[-1]
+      self.iflytek_time_vec.append(time)
+      self.iflytek_time_interval_vec.append(time_interval)
+    # print('average time interval:', sum(self.iflytek_time_interval_vec) / len(self.iflytek_time_interval_vec))
+
 
   def load_position_data(self):
     ell_wgs84 = pm.Ellipsoid('wgs84')
@@ -125,8 +148,8 @@ class LocalizationApaPlotter(object):
       os.remove(self.abnormal_timestamp_path)
     with open(self.abnormal_timestamp_path, 'a') as file:
       for topic, msg, t in bag.read_messages('/iflytek/ehr/position'):
-        if self.start_time is None:
-          self.start_time = msg.timestamp
+        if self.ehr_start_time is None:
+          self.ehr_start_time = msg.timestamp
         # positions
         is_positions_valid = False
         is_absolute_valid = False
@@ -142,7 +165,7 @@ class LocalizationApaPlotter(object):
           self.positions_longitudinal_accuracy_vec.append(msg.positions[0].longitudinal_accuracy)
           self.positions_deviation_vec.append(msg.positions[0].deviation)
           self.positions_probability_vec.append(msg.positions[0].probability)
-          self.positions_time_vec.append((msg.timestamp - self.start_time) * 0.001)
+          self.positions_time_vec.append((msg.timestamp - self.ehr_start_time) * 0.001)
           self.positions_original_lon_vec.append(llu_lon)
           self.positions_original_lat_vec.append(llu_lat)
           e, n, u = pm.geodetic2enu(llu_lat,llu_lon, llu_alt, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
@@ -157,7 +180,7 @@ class LocalizationApaPlotter(object):
             continue
           is_absolute_valid = True
           self.absolute_pos_original_loc_timestamp_vec.append(msg.absolute_pos[0].original_loc_timestamp)
-          self.absolute_pos_time_vec.append((msg.timestamp - self.start_time) * 0.001)
+          self.absolute_pos_time_vec.append((msg.timestamp - self.ehr_start_time) * 0.001)
           self.absolute_lon_vec.append(llu_lon)
           self.absolute_lat_vec.append(llu_lat)
           e, n, u = pm.geodetic2enu(llu_lat,llu_lon, llu_alt, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
@@ -171,7 +194,7 @@ class LocalizationApaPlotter(object):
           self.failsafe_hdmap_status_vec.append(msg.fail_safe[0].failsafe_hdmap_status)
           self.failsafe_vehicle_status_vec.append(msg.fail_safe[0].failsafe_vehicle_status)
           self.failsafe_imu_status_vec.append(msg.fail_safe[0].failsafe_imu_status)
-          self.failsafe_time_vec.append((msg.timestamp - self.start_time) * 0.001)
+          self.failsafe_time_vec.append((msg.timestamp - self.ehr_start_time) * 0.001)
           if self.failsafe_loc_status_vec[-1] != 0:
             file.writelines(str(msg.timestamp)+'\n')
             if is_positions_valid:
@@ -207,6 +230,7 @@ class LocalizationApaPlotter(object):
 
   def plot_figure(self):
     self.load_position_data()
+    self.load_localization_data()
     # self.load_rtk_data()
     self.plot_data()
 
@@ -231,6 +255,7 @@ class LocalizationApaPlotter(object):
     fig2.circle(self.positions_x_vec, self.positions_y_vec, size=normal_size, fill_color='blue', line_color='blue', alpha=0.5, legend_label='positions')
     fig2.circle(self.abnormal_positions_x_vec, self.abnormal_positions_y_vec, size=abnormal_size, fill_color='green', line_color='green', alpha=0.5, legend_label='abnormal positions')
     fig2.circle(self.rtk_x_vec, self.rtk_y_vec, size=normal_size, fill_color='yellow', line_color='yellow', alpha=0.5, legend_label='rtk positions')
+    fig2.circle(self.iflytek_local_position_x_vec, self.iflytek_local_position_y_vec, size=normal_size, fill_color='cyan', line_color='cyan', alpha=0.5, legend_label='ilfytek positions')
 
     fig2.toolbar.active_scroll = fig2.select_one(WheelZoomTool)
     fig2.legend.click_policy = 'hide'
@@ -272,6 +297,13 @@ class LocalizationApaPlotter(object):
     fig6.toolbar.active_scroll = fig6.select_one(WheelZoomTool)
     fig6.legend.click_policy = 'hide'
     bkp.show(fig6, notebook_handle=True)
+
+    fig7 = bkp.figure(x_axis_label='time', y_axis_label='time interval', x_range = time_range, width=800, height=300)
+    fig7.line(self.iflytek_time_vec, self.iflytek_time_interval_vec, line_width=1, line_color='blue', line_dash='solid', legend_label='iflytek localization')
+
+    fig7.toolbar.active_scroll = fig7.select_one(WheelZoomTool)
+    fig7.legend.click_policy = 'hide'
+    bkp.show(fig7, notebook_handle=True)
 
 
 if __name__ == '__main__':
