@@ -164,6 +164,9 @@ class VirtualLaneManager {
   bool GetCurrentIndexAndDis(const planning::framework::Session &session,
                              int *current_index, double *remaining_dis);
 
+  bool CalculateSortedLaneGroupIdsInRouting(
+      const planning::framework::Session &session);
+
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
   int last_fix_lane_virtual_id_ = 0;
@@ -183,6 +186,8 @@ class VirtualLaneManager {
   double distance_to_first_road_split_ = NL_NMAX;
   bool is_local_valid_ = false;
   bool is_select_split_nearing_ramp_ = true;
+  std::unordered_set<uint64_t> lane_group_set_;
+  std::vector<uint64_t> sorted_lane_groups_in_route_;
 };
 }  // namespace planning
 #endif

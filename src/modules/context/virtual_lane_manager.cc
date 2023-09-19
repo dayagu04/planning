@@ -3,6 +3,7 @@
 #include "ad_common/hdmap/hdmap.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
+#include "localization.pb.h"
 #include "reference_path_manager.h"
 
 namespace planning {
@@ -34,15 +35,33 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
 
   is_local_valid_ = roads.local_point_valid();
   if (session_->environmental_model().get_hdmap_valid()) {
-    std::cout << "hdmap_valid is true,current timestamp:"
-              << session_->environmental_model()
-                     .get_local_view()
-                     .static_map_info.header()
-                     .timestamp()
-              << std::endl;
-    CalculateDistanceToRamp(session_);
-    CalculateDistanceToFirstRoadSplit(session_);
-    CalculateDistanceToFirstRoadMerge(session_);
+    const auto& local_view = session_->environmental_model().get_local_view();
+    if (local_view.localization_estimate.msf_status().msf_status() !=
+        LocalizationOutput::MsfStatus::ERROR) {
+      std::cout << "hdmap_valid is true,current timestamp:"
+                << session_->environmental_model()
+                       .get_local_view()
+                       .static_map_info.header()
+                       .timestamp()
+                << std::endl;
+      lane_group_set_.clear();
+      const CurrentRouting& current_routing =
+          local_view.static_map_info.current_routing();
+      const int lane_groups_num = current_routing.lane_groups_in_route_size();
+      for (int i = 0; i < lane_groups_num; i++) {
+        lane_group_set_.insert(
+            current_routing.lane_groups_in_route()[i].lane_group_id());
+        std::cout << "every_lane_groups_id:"
+                  << current_routing.lane_groups_in_route()[i].lane_group_id()
+                  << ",No:" << i << std::endl;
+      }
+      CalculateSortedLaneGroupIdsInRouting(*session_);
+      CalculateDistanceToRamp(session_);
+      CalculateDistanceToFirstRoadSplit(session_);
+      CalculateDistanceToFirstRoadMerge(session_);
+    } else {
+      std::cout << "localization invalid" << std::endl;
+    }
   }
   double dis_to_first_road_split = distance_to_first_road_split();
   double dis_between_first_road_split_and_ramp =
@@ -523,11 +542,11 @@ void VirtualLaneManager::CalculateDistanceToFirstRoadMerge(
 double VirtualLaneManager::JudgeIfTheRamp(
     const int current_index, const CurrentRouting& current_routing,
     const ad_common::hdmap::HDMap& hd_map) const {
-  const int lane_groups_num = current_routing.lane_groups_in_route_size();
+  const int sorted_lane_groups_num = sorted_lane_groups_in_route_.size();
   double accumulate_distance_for_lane_group = 0;
-  for (int i = current_index; i < lane_groups_num; i++) {
-    const uint64_t lane_group_id =
-        current_routing.lane_groups_in_route()[i].lane_group_id();
+
+  for (int i = current_index; i < sorted_lane_groups_num; i++) {
+    const uint64_t lane_group_id = sorted_lane_groups_in_route_[i];
     LaneGroupConstPtr lane_group_ptr = hd_map.GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
       LOG_DEBUG("fail get lane group by id for ramp!!!\n");
@@ -539,9 +558,8 @@ double VirtualLaneManager::JudgeIfTheRamp(
     // judge the lane group successor lane groups if more than 1
     const int successor_lane_group_size =
         lane_group_ptr->successor_lane_group_ids().size();
-    if (successor_lane_group_size > 1 && (i + 1) < lane_groups_num) {
-      uint64_t lane_group_id_next =
-          current_routing.lane_groups_in_route()[i + 1].lane_group_id();
+    if (successor_lane_group_size > 1 && (i + 1) < sorted_lane_groups_num) {
+      uint64_t lane_group_id_next = sorted_lane_groups_in_route_[i + 1];
       LaneGroupConstPtr lane_group_ptr_next =
           hd_map.GetLaneGroupById(lane_group_id_next);
       if (lane_group_ptr_next == nullptr) {
@@ -552,6 +570,8 @@ double VirtualLaneManager::JudgeIfTheRamp(
         if (lane_group_ptr_next->way_forms()[j] == RAMP) {
           LOG_DEBUG("accumulate_distance_for_lane_group for ramp :%f\n",
                     accumulate_distance_for_lane_group);
+          std::cout << "current judge ramp lane group id:" << lane_group_id_next
+                    << std::endl;
           return accumulate_distance_for_lane_group;
         }
       }
@@ -563,13 +583,13 @@ double VirtualLaneManager::JudgeIfTheRamp(
 
 double VirtualLaneManager::JudgeIfTheFirstSplit(
     const int current_index, const CurrentRouting& current_routing,
-    const ad_common::hdmap::HDMap &hd_map) const {
+    const ad_common::hdmap::HDMap& hd_map) const {
   // auto& hd_map = local_view->hd_map;
-  const int lane_groups_num = current_routing.lane_groups_in_route_size();
+  // const int lane_groups_num = current_routing.lane_groups_in_route_size();
+  const int sorted_lane_groups_num = sorted_lane_groups_in_route_.size();
   double accumulate_distance_for_lane_group = 0;
-  for (int i = current_index; i < lane_groups_num; i++) {
-    const uint64_t lane_group_id =
-        current_routing.lane_groups_in_route()[i].lane_group_id();
+  for (int i = current_index; i < sorted_lane_groups_num; i++) {
+    const uint64_t lane_group_id = sorted_lane_groups_in_route_[i];
     LaneGroupConstPtr lane_group_ptr = hd_map.GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
       LOG_DEBUG("fail get lane group by id for split!!!\n");
@@ -585,6 +605,8 @@ double VirtualLaneManager::JudgeIfTheFirstSplit(
     if (successor_lane_group_size > 1) {
       LOG_DEBUG("accumulate_distance_for_lane_group for split :%f\n",
                 accumulate_distance_for_lane_group);
+      std::cout << "current judge split lane group id:" << lane_group_id
+                << std::endl;
       return accumulate_distance_for_lane_group;
     }
   }
@@ -594,12 +616,12 @@ double VirtualLaneManager::JudgeIfTheFirstSplit(
 
 double VirtualLaneManager::JudgeIfTheFirstMerge(
     const int current_index, const CurrentRouting& current_routing,
-    const ad_common::hdmap::HDMap &hd_map) const {
-  const int lane_groups_num = current_routing.lane_groups_in_route_size();
+    const ad_common::hdmap::HDMap& hd_map) const {
+  // const int lane_groups_num = current_routing.lane_groups_in_route_size();
+  const int sorted_lane_groups_num = sorted_lane_groups_in_route_.size();
   double accumulate_distance_for_lane_group = 0;
-  for (int i = current_index; i < lane_groups_num; i++) {
-    const uint64_t lane_group_id =
-        current_routing.lane_groups_in_route()[i].lane_group_id();
+  for (int i = current_index; i < sorted_lane_groups_num; i++) {
+    const uint64_t lane_group_id = sorted_lane_groups_in_route_[i];
     LaneGroupConstPtr lane_group_ptr = hd_map.GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
       LOG_DEBUG("fail get lane group by id for merge!!!\n");
@@ -610,9 +632,8 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
     }
 
     // judge if the road merge according to the predecessor_lane_group_ids_size
-    if (i + 1 < lane_groups_num) {
-      uint64_t lane_group_id_next =
-          current_routing.lane_groups_in_route()[i + 1].lane_group_id();
+    if (i + 1 < sorted_lane_groups_num) {
+      uint64_t lane_group_id_next = sorted_lane_groups_in_route_[i + 1];
       LaneGroupConstPtr lane_group_ptr_next =
           hd_map.GetLaneGroupById(lane_group_id_next);
       if (lane_group_ptr_next == nullptr) {
@@ -641,7 +662,7 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   const double ego_pose_x = pose.local_position().x();
   const double ego_pose_y = pose.local_position().y();
   ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
-  std::cout << "ego_pose_x:" << ego_pose_x << ",ego_pose_y:" << ego_pose_x
+  std::cout << "ego_pose_x:" << ego_pose_x << ",ego_pose_y:" << ego_pose_y
             << std::endl;
 
   // get nearest lane
@@ -654,6 +675,10 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
     LOG_DEBUG("no get nearest lane!!!\n");
     return false;
   }
+  const CurrentRouting& current_routing =
+      local_view.static_map_info.current_routing();
+
+  const int lane_groups_num = current_routing.lane_groups_in_route_size();
 
   // get the remaining distance in current lane
   const double nearest_lane_total_length = nearest_lane->total_length();
@@ -661,19 +686,20 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
 
   // judge the ramp lane group
   uint64_t nearest_lane_group_id = nearest_lane->lane_group_id();
+  std::cout << "nearest_lane_id:" << nearest_lane->id() << std::endl;
   std::cout << "nearest_lane_group_id:" << nearest_lane_group_id << std::endl;
-  const CurrentRouting& current_routing = map.current_routing();
-  const int lane_groups_num = current_routing.lane_groups_in_route().size();
+
+  // const CurrentRouting& current_routing = map.current_routing();
+  // const int lane_groups_num = current_routing.lane_groups_in_route().size();
   LOG_DEBUG("lane_groups_num nums:%d\n", lane_groups_num);
 
   // get the current lane group
   int current_lane_group_index = -1;
-  for (int i = 0; i < lane_groups_num; i++) {
+  for (int i = 0; i < sorted_lane_groups_in_route_.size(); i++) {
     std::cout << "every_lane_groups_id:"
               << current_routing.lane_groups_in_route()[i].lane_group_id()
               << ",No:" << i << std::endl;
-    if (nearest_lane_group_id ==
-        current_routing.lane_groups_in_route()[i].lane_group_id()) {
+    if (nearest_lane_group_id == sorted_lane_groups_in_route_[i]) {
       current_lane_group_index = i;
     }
   }
@@ -682,6 +708,57 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
     return false;
   }
   *current_index = current_lane_group_index;
+  return true;
+}
+bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
+    const planning::framework::Session& session) {
+  const auto& local_view = session.environmental_model().get_local_view();
+  const auto& hd_map = session.environmental_model().get_hd_map();
+  const auto& pose = local_view.localization_estimate.pose();
+
+  const double ego_pose_x = pose.local_position().x();
+  const double ego_pose_y = pose.local_position().y();
+  ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
+
+  // get nearest lane
+  ad_common::hdmap::LaneInfoConstPtr nearest_lane;
+  double nearest_s = 0.0;
+  double nearest_l = 0.0;
+  const int res =
+      hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
+  if (res != 0) {
+    LOG_DEBUG("no get nearest lane!!!\n");
+    return false;
+  }
+
+  const uint64_t current_lane_group = nearest_lane->lane_group_id();
+  sorted_lane_groups_in_route_.clear();
+  // sorted_lane_groups_in_route_.reserve(lane_groups_num);
+  sorted_lane_groups_in_route_.emplace_back(current_lane_group);
+  std::cout << "id:" << current_lane_group << std::endl;
+  LaneGroupConstPtr lane_group_ptr =
+      hd_map.GetLaneGroupById(current_lane_group);
+  if (lane_group_ptr == nullptr) {
+    std::cout << "lane_group_ptr is nullprt!!!" << std::endl;
+  }
+  while (lane_group_ptr != nullptr) {
+    bool is_found = false;
+    for (const auto& id : lane_group_ptr->successor_lane_group_ids()) {
+      std::cout << "id:" << id << std::endl;
+      if (lane_group_set_.count(id) != 0) {
+        sorted_lane_groups_in_route_.emplace_back(id);
+        lane_group_ptr = hd_map.GetLaneGroupById(id);
+        is_found = true;
+        break;
+      }
+    }
+    if (!is_found) {
+      std::cout << "not found" << std::endl;
+      break;
+    }
+  }
+  std::cout << "sorted_lane_groups_in_route_ size:"
+            << sorted_lane_groups_in_route_.size() << std::endl;
   return true;
 }
 }  // namespace planning
