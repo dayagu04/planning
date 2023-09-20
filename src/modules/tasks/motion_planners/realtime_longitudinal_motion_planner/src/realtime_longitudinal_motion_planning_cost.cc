@@ -123,7 +123,6 @@ double LonVelBoundCostTerm::GetCost(const State &x, const Control &) {
     cost = 0.5 * cost_config_ptr_->at(W_VEL_BOUND) *
            Square(x[VEL] - cost_config_ptr_->at(VEL_MIN));
   }
-
   return cost;
 }
 

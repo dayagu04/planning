@@ -52,14 +52,15 @@ enum iLqrCostId {
   REFERENCE_COST,
   LON_ACC_COST,
   LON_JERK_COST,
-  LON_SNAP_COST,
   LON_POS_SOFT_BOUND_COST,
   LON_POS_HARD_BOUND_COST,
+  LON_SV_BOUND_COST,
   LON_VEL_BOUND_COST,
   LON_ACC_BOUND_COST,
   LON_JERK_BOUND_COST,
   LON_STOP_POINT_COST,
-  LON_SV_BOUND_COST,
+  LON_SNAP_COST,
+  LON_NON_NEGATIVE_VEL_COST,
   COST_SIZE,
 };
 
@@ -147,7 +148,7 @@ class NonNegativeVelCost : public ilqr_solver::BaseCostTerm {
                           LuMT & /*lu*/, LxxMT &lxx, LxuMT & /*lxu*/,
                           LuuMT & /*luu*/) override;
   std::string GetCostString() override { return typeid(this).name(); }
-  uint8_t GetCostId() override { return LON_VEL_BOUND_COST; }
+  uint8_t GetCostId() override { return LON_NON_NEGATIVE_VEL_COST; }
 };
 
 // longitudinal acc bound cost
