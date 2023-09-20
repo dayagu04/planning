@@ -109,11 +109,20 @@ py::bytes GetOutputBytes() {
   return serialized_message;
 }
 
+py::bytes GetSlotManagementOutputBytes() {
+  auto res = pBase->GetSlotManagementOutput();
+  std::string serialized_message;
+  res.SerializeToString(&serialized_message);
+
+  return serialized_message;
+}
+
 PYBIND11_MODULE(diag_slot_planning_py, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)
       .def("UpdateBytes", &UpdateBytes)
       .def("UpdateBytesByParam", &UpdateBytesByParam)
+      .def("GetSlotManagementOutputBytes", &GetSlotManagementOutputBytes)
       .def("GetOutputBytes", &GetOutputBytes);
 }

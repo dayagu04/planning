@@ -13,6 +13,8 @@
 #include "math_lib.h"
 #include "slot_management_info.pb.h"
 #include "transform_lib.h"
+
+#define __DEBUG_PRINT__
 namespace planning {
 
 static const double kPie = 3.141592653589793;
@@ -40,9 +42,9 @@ void SlotManagement::Preprocess() {
 }
 
 bool SlotManagement::Update(
-    FuncStateMachine::FuncStateMachine *func_statemachine,
-    ParkingFusion::ParkingFusionInfo *parking_slot_info,
-    LocalizationOutput::LocalizationEstimate *localization_info) {
+    const FuncStateMachine::FuncStateMachine *func_statemachine,
+    const ParkingFusion::ParkingFusionInfo *parking_slot_info,
+    const LocalizationOutput::LocalizationEstimate *localization_info) {
   // set ptrs
   func_state_ptr_ = func_statemachine;
   parking_slot_ptr_ = parking_slot_info;
@@ -221,9 +223,10 @@ bool SlotManagement::IsInAPAState() const {
   }
 }
 bool SlotManagement::IsInSearchingState() const {
+#ifdef __DEBUG_PRINT__
   std::cout << "func_state_ptr_->current_state() = "
             << func_state_ptr_->current_state() << std::endl;
-
+#endif
   if ((func_state_ptr_->current_state() >= FuncStateMachine::PARK_IN_APA_IN &&
        func_state_ptr_->current_state() <=
            FuncStateMachine::PARK_IN_NO_READY) ||
@@ -254,11 +257,13 @@ bool SlotManagement::AngleUpdateCondition(
   bool angle_update_condition = pnc::mathlib::IsInBound(
       angle_mag, kPie * 0.5 - angle_dis, kPie * 0.5 + angle_dis);
 
+#ifdef __DEBUG_PRINT__
   std::cout << "id = " << new_slot_info.id() << std::endl;
   std::cout << "angle_update_condition = " << angle_update_condition
             << std::endl;
   std::cout << "angle_mag_deg_dif = " << fabs(angle_mag * 57.3 - 90.0)
             << std::endl;
+#endif
 
   return angle_update_condition;
 }
@@ -317,9 +322,12 @@ bool SlotManagement::LonDifUpdateCondition(
       (lon_dif >= param_.min_slot_update_lon_dif_slot_center_to_mirror &&
        lon_dif <= param_.max_slot_update_lon_dif_slot_center_to_mirror);
 
+#ifdef __DEBUG_PRINT__
   std::cout << "dif_update_condition = " << lon_dif_update_condition
             << std::endl;
   std::cout << "lon dif of slot center to mirror = " << lon_dif << std::endl;
+#endif
+
   return lon_dif_update_condition;
 }
 

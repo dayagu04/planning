@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "Platform_Types.h"
 #include "common/geometry_planning_io.h"
 #include "diagonal/diagonal_in_geometry_plan.h"
@@ -7,6 +9,7 @@
 #include "local_view.h"
 #include "math/box2d.h"
 #include "planning_plan.pb.h"
+#include "slot_management/slot_management.h"
 #include "speed_smoother/apa_speed_smoother.h"
 
 namespace planning {
@@ -29,14 +32,23 @@ class DiagonalInTrajectoryGenerator {
     SEGMENT_DE
   };
 
-  DiagonalInTrajectoryGenerator() = default;
+  DiagonalInTrajectoryGenerator() {
+    managed_parking_fusion_info_ptr_ =
+        std::make_shared<ParkingFusion::ParkingFusionInfo>();
+  };
   ~DiagonalInTrajectoryGenerator() = default;
 
   bool Plan(framework::Frame *const frame);
 
   // for pybind & simulation
   void SetLocalView(LocalView *local_view_ptr) { local_view_ = local_view_ptr; }
+
   PlanningOutput::PlanningOutput GetOutput() { return planning_output_; }
+
+  const common::SlotManagementInfo GetSlotManagementOutput() const {
+    return slot_manager_.GetOutput();
+  }
+
   void SetSimulationParam(SimulationParam &param) { simu_param_ = param; }
 
   bool SingleSlotPlanSimulation();
@@ -113,13 +125,13 @@ class DiagonalInTrajectoryGenerator {
 
   double CalApaTargetY() const;
 
-  double CalApaTargetX(int idx) const;
+  double CalApaTargetX() const;
 
-  void CalApaTargetInSlot(int idx);
+  void CalApaTargetInSlot();
 
-  void CalEgoPostionInSlotAndOdom(int idx);
+  void CalEgoPostionInSlotAndOdom();
 
-  void CalSlotOriginInodom(const int idx);
+  void CalSlotOriginInodom();
 
   void CalSlotPointsInM(const int idx);
 
@@ -144,6 +156,8 @@ class DiagonalInTrajectoryGenerator {
   bool IsSelectedSlotValid(framework::Frame *const frame) const;
 
   void PrintSlotInfo() const;
+
+  void UpdateManagedParkingFusion(const int select_slot_index);
 
  private:
   DiagonalInGeometryPlan geometry_planning_;
@@ -186,6 +200,13 @@ class DiagonalInTrajectoryGenerator {
   PlanningOutput::PlanningOutput planning_output_;
   bool simulation_enable_flag_ = false;
   SimulationParam simu_param_;
+
+  SlotManagement slot_manager_;
+
+  ParkingFusion::ParkingFusionInfo managed_parking_fusion_info_;
+
+  std::shared_ptr<ParkingFusion::ParkingFusionInfo>
+      managed_parking_fusion_info_ptr_;
 };
 
 }  // namespace apa_planner

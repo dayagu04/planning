@@ -124,14 +124,17 @@ class SlotManagement {
     Eigen::Vector2d mirror_pos = Eigen::Vector2d::Zero();
   };
 
-  void Reset();
-  void Preprocess();
-  bool Update(FuncStateMachine::FuncStateMachine* func_statemachine,
-              ParkingFusion::ParkingFusionInfo* parking_slot_info,
-              LocalizationOutput::LocalizationEstimate* localization_info);
+  bool Update(
+      const FuncStateMachine::FuncStateMachine* func_statemachine,
+      const ParkingFusion::ParkingFusionInfo* parking_slot_info,
+      const LocalizationOutput::LocalizationEstimate* localization_info);
 
   void SetParam(const Param& param) { param_ = param; }
-  void SetMeasurement(Measurement& measurement) { measurement_ = measurement; }
+  void Reset();
+
+  const common::SlotInfo GetSelectedSlot(const int selected_id) const {
+    return slot_management_info_.slot_info_vec(slot_info_map_.at(selected_id));
+  }
 
   const common::SlotManagementInfo GetOutput() const {
     return slot_management_info_;
@@ -142,6 +145,7 @@ class SlotManagement {
   }
 
  private:
+  void Preprocess();
   bool UpdateSlotsInSearchingState();
   bool IsValidParkingSlot(const common::SlotInfo& slot_info);
   bool IsInAPAState() const;
@@ -162,9 +166,9 @@ class SlotManagement {
   std::vector<SlotInfoWindow> slot_info_window_vec_;
   common::SlotManagementInfo slot_management_info_;
 
-  FuncStateMachine::FuncStateMachine* func_state_ptr_;
-  ParkingFusion::ParkingFusionInfo* parking_slot_ptr_;
-  LocalizationOutput::LocalizationEstimate* localization_ptr_;
+  const FuncStateMachine::FuncStateMachine* func_state_ptr_;
+  const ParkingFusion::ParkingFusionInfo* parking_slot_ptr_;
+  const LocalizationOutput::LocalizationEstimate* localization_ptr_;
 
   Measurement measurement_;
   Param param_;

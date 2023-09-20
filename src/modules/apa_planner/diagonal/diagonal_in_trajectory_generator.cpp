@@ -9,6 +9,7 @@
 #include "common/apa_utils.h"
 #include "common/planning_log_helper.h"
 #include "common/vehicle_param_helper.h"
+#include "debug_info_log.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
 #include "log_glog.h"
@@ -16,7 +17,8 @@
 #include "math/math_utils.h"
 #include "planning_output_context.h"
 #include "utils_math.h"
-#include "debug_info_log.h"
+
+#define __PYBIND_DEBUG__
 
 namespace planning {
 namespace apa_planner {
@@ -62,11 +64,18 @@ bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
   frame_ = frame;
   local_view_ = &(frame->session()->environmental_model().get_local_view());
 
+  auto& origin_parking_fusion_info = local_view_->parking_fusion_info;
+
+  // slot management update
+  slot_manager_.Update(&local_view_->function_state_machine_info,
+                       &origin_parking_fusion_info,
+                       &local_view_->localization_estimate);
+
   UpdateStandstillTime();
 
   UpdatePosUnchangedCount();
 
-  const auto& parking_fusion_info = local_view_->parking_fusion_info;
+  const auto& parking_fusion_info = origin_parking_fusion_info;
 
   const int slots_size = parking_fusion_info.parking_fusion_slot_lists_size();
   if (slots_size == 0) {
@@ -109,27 +118,75 @@ bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
       AERROR << "selected slot is not diagonal";
       return false;
     }
+
+    // update managed parking fusion info by slot_manager
+    UpdateManagedParkingFusion(select_slot_index);
+
     return SingleSlotPlan(select_slot_index, planning_output);
   } else {
-    bool is_planning_ok = false;
-    for (int i = 0; i < parking_fusion_info.parking_fusion_slot_lists_size();
-         ++i) {
-      if (slots[i].type() ==
-              Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL ||
-          slots[i].type() ==
-              Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
-        AINFO << "diagonal slot id:" << slots[i].id();
-        is_planning_ok = SingleSlotPlan(i, planning_output) || is_planning_ok;
-      }
-    }
-    return is_planning_ok;
+    // bool is_planning_ok = false;
+    // for (int i = 0; i < parking_fusion_info.parking_fusion_slot_lists_size();
+    //      ++i) {
+    //   if (slots[i].type() ==
+    //           Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL ||
+    //       slots[i].type() ==
+    //           Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
+    //     AINFO << "diagonal slot id:" << slots[i].id();
+    //     is_planning_ok = SingleSlotPlan(i, planning_output) ||
+    //     is_planning_ok;
+    //   }
+    // }
+    // return is_planning_ok;
   }
 
   return true;
 }
 
+void DiagonalInTrajectoryGenerator::UpdateManagedParkingFusion(
+    const int select_slot_index) {
+  // std::cout << "local_view_->parking_fusion_info:"
+  //           << local_view_->parking_fusion_info.DebugString() << std::endl;
+  // copy parking fusion info
+  managed_parking_fusion_info_.CopyFrom(local_view_->parking_fusion_info);
+
+  auto fusion_selected_slot =
+      managed_parking_fusion_info_.mutable_parking_fusion_slot_lists(
+          select_slot_index);
+
+  auto managed_selected_slot = slot_manager_.GetSelectedSlot(
+      managed_parking_fusion_info_.select_slot_id());
+
+  // std::cout << "managed_selected_slot = " <<
+  // managed_selected_slot.DebugString()
+  //           << std::endl;
+
+  fusion_selected_slot->mutable_corner_points(0)->set_x(
+      managed_selected_slot.corner_points().corner_point(0).x());
+  fusion_selected_slot->mutable_corner_points(0)->set_y(
+      managed_selected_slot.corner_points().corner_point(0).y());
+
+  fusion_selected_slot->mutable_corner_points(1)->set_x(
+      managed_selected_slot.corner_points().corner_point(1).x());
+  fusion_selected_slot->mutable_corner_points(1)->set_y(
+      managed_selected_slot.corner_points().corner_point(1).y());
+
+  fusion_selected_slot->mutable_corner_points(2)->set_x(
+      managed_selected_slot.corner_points().corner_point(2).x());
+  fusion_selected_slot->mutable_corner_points(2)->set_y(
+      managed_selected_slot.corner_points().corner_point(2).y());
+
+  fusion_selected_slot->mutable_corner_points(3)->set_x(
+      managed_selected_slot.corner_points().corner_point(3).x());
+  fusion_selected_slot->mutable_corner_points(3)->set_y(
+      managed_selected_slot.corner_points().corner_point(3).y());
+}
+
 bool DiagonalInTrajectoryGenerator::SingleSlotPlanSimulation() {
   simulation_enable_flag_ = true;
+
+  if (local_view_->function_state_machine_info.has_current_state()) {
+    current_state_ = local_view_->function_state_machine_info.current_state();
+  }
 
   if (simu_param_.force_planning_) {
     current_state_ = FunctionalState::PARK_IN_ACTIVATE_CONTROL;
@@ -141,26 +198,20 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlanSimulation() {
   std::cout << "current_status = " << static_cast<int>(current_state_)
             << std::endl;
 
-  const auto& parking_fusion_info = local_view_->parking_fusion_info;
-  const auto& slots = parking_fusion_info.parking_fusion_slot_lists();
-
-  if (!parking_fusion_info.has_select_slot_id()) {
-    std::cout << "no select_slot_id" << std::endl;
-    return false;
-  }
+  auto& origin_parking_fusion_info = local_view_->parking_fusion_info;
+  const auto& slots = origin_parking_fusion_info.parking_fusion_slot_lists();
 
   int select_slot_index = -1;
-  size_t selected_slot_id = 0;
+  size_t selected_slot_id = simu_param_.selected_id_;
 
-  if (!simulation_enable_flag_) {
-    selected_slot_id = parking_fusion_info.select_slot_id();
-  } else {
-    selected_slot_id = simu_param_.selected_id_;
-  }
+  // slot management update
+  slot_manager_.Update(&local_view_->function_state_machine_info,
+                       &origin_parking_fusion_info,
+                       &local_view_->localization_estimate);
 
   std::cout << "selected_slot_id:" << selected_slot_id << std::endl;
-  for (int i = 0; i < parking_fusion_info.parking_fusion_slot_lists_size();
-       ++i) {
+  for (int i = 0;
+       i < origin_parking_fusion_info.parking_fusion_slot_lists_size(); ++i) {
     if (selected_slot_id != slots[i].id()) {
       continue;
     }
@@ -178,6 +229,9 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlanSimulation() {
     return false;
   }
 
+  // update managed parking fusion info by slot_manager
+  UpdateManagedParkingFusion(select_slot_index);
+
   SingleSlotPlan(select_slot_index, &planning_output_);
 
   return true;
@@ -187,18 +241,17 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlan(
     const int slot_index, PlanningOutput* const planning_output) {
   CalSlotPointsInM(slot_index);
 
-  const auto& slots =
-      local_view_->parking_fusion_info.parking_fusion_slot_lists();
+  const auto& slots = managed_parking_fusion_info_.parking_fusion_slot_lists();
 
   slot_sign_ = slots[slot_index].slot_side() == 0 ? -1.0 : 1.0;
 
   std::cout << "slot_sign_:" << slot_sign_ << std::endl;
 
-  CalSlotOriginInodom(slot_index);
+  CalSlotOriginInodom();
 
-  CalApaTargetInSlot(slot_index);
+  CalApaTargetInSlot();
 
-  CalEgoPostionInSlotAndOdom(slot_index);
+  CalEgoPostionInSlotAndOdom();
 
   if (!simulation_enable_flag_) {
     if (IsApaFinished()) {
@@ -303,12 +356,15 @@ bool DiagonalInTrajectoryGenerator::ABSegmentPlan(
     std::cout << "plan a-b success, slot index:" << idx << std::endl;
     if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
       planning_output->add_successful_slot_info_list()->set_id(
-          local_view_->parking_fusion_info.parking_fusion_slot_lists()[idx]
-              .id());
+          managed_parking_fusion_info_.parking_fusion_slot_lists()[idx].id());
       return true;
     }
     GenerateABSegmentTrajectory(segments_info, planning_output);
     GenerateBCSegmentTrajectory(segments_info, planning_output);
+
+    // #ifdef __PYBIND_DEBUG__
+    //     GenerateCDSegmentTrajectory(segments_info, planning_output);
+    // #endif
 
     PrintTrajectoryPoints(*planning_output);
 
@@ -334,8 +390,7 @@ bool DiagonalInTrajectoryGenerator::ReverseABSegmentPlan(
     std::cout << "plan r_a-c success" << std::endl;
     if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
       planning_output->add_successful_slot_info_list()->set_id(
-          local_view_->parking_fusion_info.parking_fusion_slot_lists()[idx]
-              .id());
+          managed_parking_fusion_info_.parking_fusion_slot_lists()[idx].id());
       return true;
     }
     GenerateRACSegmentTrajectory(segments_info, planning_output);
@@ -677,8 +732,7 @@ void DiagonalInTrajectoryGenerator::SetApaObjectInfo(
   objects_map_in_global_cor_.clear();
   objects_map_in_global_cor_.reserve(4);
 
-  const auto& slots =
-      local_view_->parking_fusion_info.parking_fusion_slot_lists();
+  const auto& slots = managed_parking_fusion_info_.parking_fusion_slot_lists();
 
   // consider slot line as obstacle
   // TODO(xjli32): use real obstacles instead
@@ -796,7 +850,7 @@ double DiagonalInTrajectoryGenerator::CalApaTargetY() const {
   return -slot_sign_ * std::fmin(end_point_y_by_veh, end_point_y_by_slot);
 }
 
-double DiagonalInTrajectoryGenerator::CalApaTargetX(int idx) const {
+double DiagonalInTrajectoryGenerator::CalApaTargetX() const {
   PlanningPoint mid_point_in_odom;
   mid_point_in_odom.x = (slot_points_in_m_[0].x + slot_points_in_m_[1].x) * 0.5;
   mid_point_in_odom.y = (slot_points_in_m_[0].y + slot_points_in_m_[1].y) * 0.5;
@@ -805,8 +859,8 @@ double DiagonalInTrajectoryGenerator::CalApaTargetX(int idx) const {
   return mid_point_in_slot.x;
 }
 
-void DiagonalInTrajectoryGenerator::CalApaTargetInSlot(int idx) {
-  target_point_in_slot_.x = CalApaTargetX(idx);
+void DiagonalInTrajectoryGenerator::CalApaTargetInSlot() {
+  target_point_in_slot_.x = CalApaTargetX();
   target_point_in_slot_.y = CalApaTargetY();
   target_point_in_slot_.theta = M_PI_2 * slot_sign_;
 
@@ -814,7 +868,7 @@ void DiagonalInTrajectoryGenerator::CalApaTargetInSlot(int idx) {
       FromLocal2GlobalCor(slot_origin_in_odom_, target_point_in_slot_);
 }
 
-void DiagonalInTrajectoryGenerator::CalEgoPostionInSlotAndOdom(int idx) {
+void DiagonalInTrajectoryGenerator::CalEgoPostionInSlotAndOdom() {
   const auto& pose = local_view_->localization_estimate.pose();
   cur_pos_in_odom_.x = pose.local_position().x();
   cur_pos_in_odom_.y = pose.local_position().y();
@@ -877,7 +931,7 @@ void DiagonalInTrajectoryGenerator::GetCurPtSpeed(
   trajectory_point->set_a(0.0);
 }
 
-void DiagonalInTrajectoryGenerator::CalSlotOriginInodom(const int idx) {
+void DiagonalInTrajectoryGenerator::CalSlotOriginInodom() {
   slot_origin_in_odom_.x = slot_points_in_m_[0].x;
   slot_origin_in_odom_.y = slot_points_in_m_[0].y;
   slot_origin_in_odom_.theta =
@@ -887,7 +941,7 @@ void DiagonalInTrajectoryGenerator::CalSlotOriginInodom(const int idx) {
 
 void DiagonalInTrajectoryGenerator::CalSlotPointsInM(const int idx) {
   const auto& slot_points =
-      local_view_->parking_fusion_info.parking_fusion_slot_lists()[idx]
+      managed_parking_fusion_info_.parking_fusion_slot_lists()[idx]
           .corner_points();
   const double x0 = static_cast<double>(slot_points[0].x());
   const double y0 = static_cast<double>(slot_points[0].y());

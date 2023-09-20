@@ -7,11 +7,11 @@ sys.path.append('../../../build')
 sys.path.append('../../../')
 
 sys.path.append('python_proto')
-from python_proto import common_pb2, planning_plan_pb2
+from python_proto import common_pb2, slot_management_info_pb2, planning_plan_pb2
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/20230919/21_16.00000'
+bag_path = '/home/xlwang71/Downloads/APA/20230919/3_17.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -25,26 +25,19 @@ fig1, local_view_data = load_local_view_figure_parking()
 origin_selected_id = bag_loader.fus_parking_msg['data'][int(len(bag_loader.fus_parking_msg['t'])/2)].select_slot_id
 diag_slot_planning_py.Init()
 
+# data source
 data_planning_tune = ColumnDataSource(data = {'plan_traj_x':[],
                                               'plan_traj_y':[],})
 
-# find bag time when planning at real test
-# plan_msg_idx = 0
-# if bag_loader.plan_msg['enable'] == True:
-#   while plan_msg_idx < (len(bag_loader.plan_msg['t'])-1):
-#     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
-#     print(trajectory)
-#     if len(trajectory.trajectory_points) > 1:
-#       break
-#     plan_msg_idx = plan_msg_idx + 1
-# bag_time0 = plan_msg_idx * 0.1
-bag_time0 = 0.0
-fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_tune, line_width = 8, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'tuned plan')
+data_slot_management_vec = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
+
+# fig configs
+fig1.multi_line('corner_point_y', 'corner_point_x', source = data_slot_management_vec, line_width = 1, line_color = 'blue', line_dash = 'solid',legend_label = 'managed slots')
 
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=bag_time0, step=frame_dt)
+    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=0, step=frame_dt)
     self.selected_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='25%'), description= "selected_id",min=0, max=100, value=origin_selected_id, step=1)
     self.force_planning_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "force_planning",min=0, max=1, value=0, step=1)
     self.turn_on_force_last_seg_name_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "turn_on_force_last_seg_name",min=0, max=1, value=0, step=1)
@@ -54,6 +47,28 @@ class LocalViewSlider:
                                         force_planning = self.force_planning_slider,
                                         turn_on_force_last_seg_name = self.turn_on_force_last_seg_name_slider,
                                         force_last_seg_name = self.force_last_seg_name_slider)
+
+def load_slot_management_info(slot_management_info):
+  slots_x_vec = []
+  slots_y_vec = []
+  for slot in slot_management_info.slot_info_vec:
+    single_slot_x_vec = []
+    single_slot_y_vec = []
+    corner_points = slot.corner_points
+    single_slot_x_vec.append(corner_points.corner_point[0].x)
+    single_slot_y_vec.append(corner_points.corner_point[0].y)
+    single_slot_x_vec.append(corner_points.corner_point[2].x)
+    single_slot_y_vec.append(corner_points.corner_point[2].y)
+    single_slot_x_vec.append(corner_points.corner_point[3].x)
+    single_slot_y_vec.append(corner_points.corner_point[3].y)
+    single_slot_x_vec.append(corner_points.corner_point[1].x)
+    single_slot_y_vec.append(corner_points.corner_point[1].y)
+    slots_x_vec.append(single_slot_x_vec)
+    slots_y_vec.append(single_slot_y_vec)
+
+  data_slot_management_vec.data.update({'corner_point_y': [], 'corner_point_x': [],})
+  data_slot_management_vec.data.update({'corner_point_y': slots_y_vec, 'corner_point_x': slots_x_vec,})
+
 
 ### sliders callback
 def slider_callback(bag_time, selected_id, force_planning,turn_on_force_last_seg_name, force_last_seg_name):
@@ -72,11 +87,8 @@ def slider_callback(bag_time, selected_id, force_planning,turn_on_force_last_seg
   vs_msg_input = bag_loader.vs_msg['data'][vs_msg_idx]
   planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
-  # print("soc_state_input = ", soc_state_input)
-  # print("fus_parking_input = ", fus_parking_input)
-  # print("loc_msg_input = ", loc_msg_input)
-  # print("vs_msg_input = ", vs_msg_input)
   planning_output = planning_plan_pb2.PlanningOutput()
+  slot_management_info = slot_management_info_pb2.SlotManagementInfo()
 
   last_seg_name = 0
   if turn_on_force_last_seg_name == 1:
@@ -90,22 +102,18 @@ def slider_callback(bag_time, selected_id, force_planning,turn_on_force_last_seg
                                       fus_parking_input.SerializeToString(),
                                       loc_msg_input.SerializeToString(),
                                       vs_msg_input.SerializeToString(), selected_id, force_planning, last_seg_name)
+
     planning_output.ParseFromString(diag_slot_planning_py.GetOutputBytes())
+    slot_management_info.ParseFromString(diag_slot_planning_py.GetSlotManagementOutputBytes())
   except:
     pass
+  # print(fus_parking_input)
+  # print("-------------------------------------")
 
-  plan_traj_x = []
-  plan_traj_y = []
-  for i in range(len(planning_output.trajectory.trajectory_points)):
-    plan_traj_x.append(planning_output.trajectory.trajectory_points[i].x)
-    plan_traj_y.append(planning_output.trajectory.trajectory_points[i].y)
 
-  data_planning_tune.data.update({
-    'plan_traj_x': plan_traj_x,
-    'plan_traj_y': plan_traj_y,
-  })
 
-  # print("planning_output:\n", planning_output)
+  # print(slot_management_info)
+  load_slot_management_info(slot_management_info)
 
   push_notebook()
 

@@ -669,7 +669,7 @@ def load_local_view_figure_parking():
   fig1.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1.5, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'car')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
-  fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 4.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'mpc')
+  fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'mpc')
 
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot')
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_parking, line_width = 2, line_color = 'red', line_dash = 'solid',legend_label = 'fusion_parking_slot')

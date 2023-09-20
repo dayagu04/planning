@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/apa_0914/test06_9.00000'
+bag_path = '/home/xlwang71/Downloads/APA/20230919/3_17.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 

@@ -11,7 +11,7 @@ from python_proto import common_pb2, slot_management_info_pb2
 from jupyter_pybind import slot_management_py
 
 # bag path and frame dt
-bag_path = '/home/gdbai2/test_data/0919/10_13.00000'
+bag_path = '/home/xlwang71/Downloads/APA/20230919/3_17.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -30,7 +30,7 @@ slot_management_py.Init()
 data_slot_management_vec = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
 
 # fig configs
-fig1.multi_line('corner_point_y', 'corner_point_x', source = data_slot_management_vec, line_width = 2, line_color = 'blue', line_dash = 'dashed',legend_label = 'managed slots')
+fig1.multi_line('corner_point_y', 'corner_point_x', source = data_slot_management_vec, line_width = 1, line_color = 'blue', line_dash = 'solid',legend_label = 'managed slots')
 
 ### sliders config
 class LocalViewSlider:
@@ -102,9 +102,8 @@ def slider_callback(bag_time, force_apa, force_clear,
   slot_management_info = slot_management_info_pb2.SlotManagementInfo()
   slot_management_info.ParseFromString(slot_management_py.GetOutputBytes())
 
-  print(slot_management_info)
+  # print(slot_management_info)
   load_slot_management_info(slot_management_info)
-
 
   push_notebook()
 
