@@ -562,6 +562,7 @@ double VirtualLaneManager::JudgeIfTheRamp(
 
   for (int i = current_index; i < sorted_lane_groups_num; i++) {
     const uint64_t lane_group_id = sorted_lane_groups_in_route_[i];
+    std::cout<< "lane_group_id:"<<lane_group_id << ", i=" << i<<std::endl;
     LaneGroupConstPtr lane_group_ptr = hd_map.GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
       LOG_DEBUG("fail get lane group by id for ramp!!!\n");
@@ -573,6 +574,7 @@ double VirtualLaneManager::JudgeIfTheRamp(
     // judge the lane group successor lane groups if more than 1
     const int successor_lane_group_size =
         lane_group_ptr->successor_lane_group_ids().size();
+    std::cout << "successor_lane_group_size:"<<successor_lane_group_size<<std::endl;
     if (successor_lane_group_size > 1 && (i + 1) < sorted_lane_groups_num) {
       uint64_t lane_group_id_next = sorted_lane_groups_in_route_[i + 1];
       LaneGroupConstPtr lane_group_ptr_next =
@@ -698,6 +700,9 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   // get the remaining distance in current lane
   const double nearest_lane_total_length = nearest_lane->total_length();
   *remaining_dis = nearest_lane_total_length - nearest_s;
+  std::cout << "nearest_lane_total_length:" << nearest_lane_total_length <<
+            ",nearest_s:"<< nearest_s <<
+            ",remaining_dis:"<<*remaining_dis<<std::endl;
 
   // judge the ramp lane group
   uint64_t nearest_lane_group_id = nearest_lane->lane_group_id();
@@ -711,9 +716,9 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   // get the current lane group
   int current_lane_group_index = -1;
   for (int i = 0; i < sorted_lane_groups_in_route_.size(); i++) {
-    std::cout << "every_lane_groups_id:"
-              << current_routing.lane_groups_in_route()[i].lane_group_id()
-              << ",No:" << i << std::endl;
+    // std::cout << "every_lane_groups_id:"
+    //           << current_routing.lane_groups_in_route()[i].lane_group_id()
+    //           << ",No:" << i << std::endl;
     if (nearest_lane_group_id == sorted_lane_groups_in_route_[i]) {
       current_lane_group_index = i;
     }
@@ -759,9 +764,10 @@ bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
   while (lane_group_ptr != nullptr) {
     bool is_found = false;
     for (const auto& id : lane_group_ptr->successor_lane_group_ids()) {
-      std::cout << "id:" << id << std::endl;
       if (lane_group_set_.count(id) != 0) {
         sorted_lane_groups_in_route_.emplace_back(id);
+        std::cout << "sorted lane group id:" << id << ",No:" 
+                  << sorted_lane_groups_in_route_.size()<< std::endl;
         lane_group_ptr = hd_map.GetLaneGroupById(id);
         is_found = true;
         break;
