@@ -62,6 +62,18 @@ class LoadCyberbag:
     # soc state machine
     self.soc_state_msg = {'abs_t':[], 't':[], 'data':[], 'json':[], 'enable':[]}
 
+    # precept_info msg
+    self.precept_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+
+    # precept_debug_info msg
+    self.precept_debug_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+
+    # wave_info msg
+    self.wave_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+
+    # wave_debug_info msg
+    self.wave_debug_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+
     self.parking_flag = parking_flag
 
     self.max_time = 0
@@ -325,6 +337,97 @@ class LoadCyberbag:
       print('missing /iflytek/system_state/soc_state !!!')
 
     self.max_time = max_time
+
+    # add obstacles in plot apa
+    # load precept_info msg
+    try:
+      precept_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/ultrasonic_perception_info"):
+        precept_msg_dict[msg.header.timestamp / 1e6] = msg
+      precept_msg_dict = {key: val for key, val in sorted(precept_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in precept_msg_dict.items():
+        self.precept_msg['t'].append(t)
+        self.precept_msg['abs_t'].append(t)
+        self.precept_msg['data'].append(msg)
+      self.precept_msg['t'] = [tmp - t0 for tmp in self.precept_msg['t']]
+      self.precept_msg['enable'] = True
+      print('precept time:',self.precept_msg['t'][-1])
+      max_time = max(max_time, self.precept_msg['t'][-1])
+      if len(self.precept_msg['t']) > 0:
+        self.precept_msg['enable'] = True
+      else:
+        self.precept_msg['enable'] = False
+    except:
+      self.precept_msg['enable'] = False
+      print("missing /iflytek/ultrasonic_perception_info !!!")
+
+
+    # precept_debug_info msg
+    try:
+      precept_debug_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/ultrasonic_perception_debug_info"):
+        precept_debug_msg_dict[msg.header.timestamp / 1e6] = msg
+      precept_debug_msg_dict = {key: val for key, val in sorted(precept_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in precept_debug_msg_dict.items():
+        self.precept_debug_msg['t'].append(t)
+        self.precept_debug_msg['abs_t'].append(t)
+        self.precept_debug_msg['data'].append(msg)
+      self.precept_debug_msg['t'] = [tmp - t0  for tmp in self.precept_debug_msg['t']]
+      self.precept_debug_msg['enable'] = True
+      print('precept_debug time:',self.precept_debug_msg['t'][-1])
+      max_time = max(max_time, self.precept_debug_msg['t'][-1])
+      if len(self.precept_debug_msg['t']) > 0:
+        self.precept_debug_msg['enable'] = True
+      else:
+        self.precept_debug_msg['enable'] = False
+    except:
+      self.precept_debug_msg['enable'] = False
+      print("missing /iflytek/ultrasonic_perception_debug_info !!!")
+
+    # load wave_info msg
+    try:
+      wave_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/uss/wave_info"):
+        wave_msg_dict[msg.header.timestamp / 1e6] = msg
+      wave_msg_dict = {key: val for key, val in sorted(wave_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in wave_msg_dict.items():
+        self.wave_msg['t'].append(t)
+        self.wave_msg['abs_t'].append(t)
+        self.wave_msg['data'].append(msg)
+      self.wave_msg['t'] = [tmp - t0  for tmp in self.wave_msg['t']]
+      self.wave_msg['enable'] = True
+      print('wave time:',self.wave_msg['t'][-1])
+      max_time = max(max_time, self.wave_msg['t'][-1])
+      if len(self.wave_msg['t']) > 0:
+        self.wave_msg['enable'] = True
+      else:
+        self.wave_msg['enable'] = False
+    except:
+      self.wave_msg['enable'] = False
+      print("missing /iflytek/uss/wave_info !!!")
+
+    # load wave_debug_info msg
+    try:
+      wave_debug_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/uss/ussdriver_debug_info"):
+        wave_debug_msg_dict[msg.header.timestamp / 1e6] = msg
+      wave_debug_msg_dict = {key: val for key, val in sorted(wave_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in wave_debug_msg_dict.items():
+        self.wave_debug_msg['t'].append(t)
+        self.wave_debug_msg['abs_t'].append(t)
+        self.wave_debug_msg['data'].append(msg)
+      self.wave_debug_msg['t'] = [tmp - t0  for tmp in self.wave_debug_msg['t']]
+      self.wave_debug_msg['enable'] = True
+      print('wave_debug time:',self.wave_debug_msg['t'][-1])
+      max_time = max(max_time, self.wave_debug_msg['t'][-1])
+      if len(self.wave_debug_msg['t']) > 0:
+        self.wave_debug_msg['enable'] = True
+      else:
+        self.wave_debug_msg['enable'] = False
+    except:
+      self.wave_debug_msg['enable'] = False
+      print("missing /iflytek/uss/ussdriver_debug_info !!!")
+
     return max_time
 
 def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
@@ -389,6 +492,12 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
     while bag_loader.soc_state_msg['t'][soc_state_msg_idx] <= bag_time and soc_state_msg_idx < (len(bag_loader.soc_state_msg['t'])-1):
         soc_state_msg_idx = soc_state_msg_idx + 1
   local_view_data['data_index']['soc_state_msg_idx'] = soc_state_msg_idx
+
+  wave_msg_idx = 0
+  if bag_loader.wave_msg['enable'] == True:
+    while bag_loader.wave_msg['t'][wave_msg_idx] <= bag_time and wave_msg_idx < (len(bag_loader.wave_msg['t'])-2):
+        wave_msg_idx = wave_msg_idx + 1
+  local_view_data['data_index']['wave_msg_idx'] = wave_msg_idx
 
   ### step 2: 加载定位信息
   cur_pos_xn0 = 0
@@ -615,8 +724,62 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
       'car_xn': car_xn,
       'car_yn': car_yn,
     })
-  return local_view_data
 
+  # load uss wave
+  if bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True:
+    #get cur pose and uss wave
+    upa_dis_info_bufs = bag_loader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+
+    sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
+
+    text_x, text_y = [], []
+    # rs_text = []
+    uss_x, uss_y = load_car_uss_patch()
+    uss_angle = load_uss_angle_patch()
+    wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
+    m = 0
+    for i in range(2):
+      for j in wdis_index[i]:
+          rs0 = ''
+          rs1 = ''
+          if upa_dis_info_bufs[i].wdis[j].wdis_value[0] <= 10 and upa_dis_info_bufs[i].wdis[j].wdis_value[0] != 0:
+              rs1 = round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2)
+              # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
+              rs0 = '{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2))
+              ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
+              uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
+              uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
+              x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
+          elif upa_dis_info_bufs[i].wdis[j].wdis_value[0] == 0 or upa_dis_info_bufs[i].wdis[j].wdis_value[0] > 10:
+              ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
+              x_text, y_text = 0, 0
+          text_x.append(x_text)
+          text_y.append(y_text)
+          sector_x.append(ego_local_x)
+          sector_y.append(ego_local_y)
+          print("rs1:",rs1)
+          rs.append(rs1)
+          print("rs size:",len(rs))
+          length.append(rs0)
+          start_angle.append(uss_angle_start)
+          end_angle.append(uss_angle_end)
+          m += 1
+    local_view_data['data_wave'].data.update({
+      'wave_x':sector_y,
+      'wave_y':sector_x,
+      'radius':rs,
+      'start_angle':start_angle,
+      'end_angle':end_angle,
+    })
+    local_view_data['data_wave_length_text'].data.update({
+      'wave_text_x':text_y,
+      'wave_text_y':text_x,
+      'length':length,
+    })
+  return local_view_data
 
 def load_local_view_figure_parking():
   data_car = ColumnDataSource(data = {'car_yn':[], 'car_xn':[]})
@@ -633,6 +796,10 @@ def load_local_view_figure_parking():
   data_selected_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
   data_final_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
   data_fusion_parking_id = ColumnDataSource(data = {'id':[], 'id_text_x':[], 'id_text_y':[]})
+
+  data_wave = ColumnDataSource(data = {'wave_x': [], 'wave_y': [], 'radius':[], 'start_angle':[], 'end_angle':[]})
+  data_wave_length_text = ColumnDataSource(data = {'wave_text_x': [], 'wave_text_y': [], 'length':[]})
+
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
                 'fus_msg_idx': 0,
@@ -644,6 +811,7 @@ def load_local_view_figure_parking():
                 'ctrl_msg_idx': 0,
                 'ctrl_debug_msg_idx': 0,
                 'soc_state_msg_idx': 0,
+                'wave_msg_idx': 0,
                }
 
   local_view_data = {'data_car':data_car, \
@@ -658,6 +826,8 @@ def load_local_view_figure_parking():
                      'data_final_slot':data_final_slot, \
                      'data_fusion_parking_id':data_fusion_parking_id, \
                      'data_index': data_index, \
+                     'data_wave':data_wave, \
+                     'data_wave_length_text':data_wave_length_text, \
                      }
   ### figures config
 
@@ -677,6 +847,10 @@ def load_local_view_figure_parking():
   fig1.line('corner_point_y', 'corner_point_x', source = data_final_slot, line_width = 3, line_color = '#A52A2A', line_dash = 'dashed',legend_label = 'final_parking_slot')
 
   fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_fusion_parking_id, text_color='red', text_align='center', text_font_size='10pt',legend_label = 'fusion_parking_slot_id')
+
+  fig1.wedge('wave_x','wave_y', 'radius', 'start_angle', 'end_angle',source = data_wave, fill_color="yellow", line_color="black",legend_label = 'uss_wave',alpha = 0.5)
+
+  fig1.text(x = 'wave_text_x', y = 'wave_text_y', text = 'length', source = data_wave_length_text, text_color='red', text_align='center', text_font_size='10pt',legend_label = 'data_wave_length_text')
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 
