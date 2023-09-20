@@ -491,8 +491,6 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
     id_vec = []
     id_text_x_vec = []
     id_text_y_vec = []
-    limiter_x_vec = []
-    limiter_y_vec = []
     for j in range(len(parking_fusion_slot_lists)):
       slot = parking_fusion_slot_lists[j]
       single_slot_x_vec = []

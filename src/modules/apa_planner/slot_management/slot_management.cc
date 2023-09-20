@@ -20,6 +20,7 @@ static const double kPie = 3.141592653589793;
 void SlotManagement::Reset() {
   // reset slot in
   slot_management_info_.Clear();
+  slot_info_window_vec_.clear();
 
   // reset slot_info_map
   slot_info_map_.clear();
@@ -31,11 +32,11 @@ void SlotManagement::Preprocess() {
       localization_ptr_->pose().local_position().y();
   measurement_.heading = localization_ptr_->pose().heading();
 
-  measurement_.mirror_pos << measurement_.ego_pos(0) +
+  measurement_.mirror_pos << measurement_.ego_pos.x() +
                                  param_.lon_dist_rearview_mirror_to_rear_axle *
                                      std::cos(measurement_.heading),
-      measurement_.ego_pos(1) + param_.lon_dist_rearview_mirror_to_rear_axle *
-                                    std::sin(measurement_.heading);
+      measurement_.ego_pos.y() + param_.lon_dist_rearview_mirror_to_rear_axle *
+                                     std::sin(measurement_.heading);
 }
 
 bool SlotManagement::Update(
@@ -47,15 +48,21 @@ bool SlotManagement::Update(
   parking_slot_ptr_ = parking_slot_info;
   localization_ptr_ = localization_info;
 
-  // preprocess
-  Preprocess();
-
-  // update slots
-  if (!UpdateSlots()) {
+  if (!IsInAPAState()) {
+    Reset();
     return false;
   }
 
-  // release slots
+  // preprocess
+  Preprocess();
+
+  // 集成为searching阶段函数
+
+  // update slots
+  if (!UpdateSlotsInSearchingState()) {
+    ReleaseSlots();
+    return false;
+  }
   ReleaseSlots();
 
   // restore slot management info
@@ -67,40 +74,49 @@ bool SlotManagement::Update(
   return true;
 }
 
-bool SlotManagement::UpdateSlots() {
-  if ((!IsInParkingState()) || param_.force_clear) {
+common::SlotInfo SlotManagement::SlotInfoTransfer(
+    const ParkingFusion::ParkingFusionSlot &fusion_slot) {
+  double accumulated_x = 0.0;
+  double accumulated_y = 0.0;
+
+  common::SlotInfo slot_info;
+  static const auto fusion_slots_size = 4;
+  for (auto j = 0; j < fusion_slots_size; j++) {
+    auto add_point = slot_info.mutable_corner_points()->add_corner_point();
+    add_point->set_x(fusion_slot.corner_points(j).x());
+    add_point->set_y(fusion_slot.corner_points(j).y());
+
+    accumulated_x += fusion_slot.corner_points(j).x();
+    accumulated_y += fusion_slot.corner_points(j).y();
+  }
+
+  slot_info.mutable_center()->set_x(accumulated_x /
+                                    static_cast<double>(fusion_slots_size));
+
+  slot_info.mutable_center()->set_y(accumulated_y /
+                                    static_cast<double>(fusion_slots_size));
+
+  slot_info.set_id(fusion_slot.id());
+  slot_info.set_is_release(false);
+
+  return slot_info;
+}
+
+bool SlotManagement::UpdateSlotsInSearchingState() {
+  if (!IsInAPAState() || param_.force_clear) {
     Reset();
     return false;
   }
 
-  // Update slots
-  common::SlotInfo slot_info;
+  if (!IsInSearchingState()) {
+    return false;
+  }
 
+  // Update slots
   for (auto i = 0; i < parking_slot_ptr_->parking_fusion_slot_lists_size();
        ++i) {
     const auto &fusion_slot = parking_slot_ptr_->parking_fusion_slot_lists(i);
-    double accumulated_x = 0.0;
-    double accumulated_y = 0.0;
-
-    slot_info.Clear();
-    static const auto fusion_slots_size = 4;
-    for (auto j = 0; j < fusion_slots_size; j++) {
-      auto add_point = slot_info.mutable_corner_points()->add_corner_point();
-      add_point->set_x(fusion_slot.corner_points(j).x());
-      add_point->set_y(fusion_slot.corner_points(j).y());
-
-      accumulated_x += fusion_slot.corner_points(j).x();
-      accumulated_y += fusion_slot.corner_points(j).y();
-    }
-
-    slot_info.mutable_center()->set_x(accumulated_x /
-                                      static_cast<double>(fusion_slots_size));
-
-    slot_info.mutable_center()->set_y(accumulated_y /
-                                      static_cast<double>(fusion_slots_size));
-
-    slot_info.set_id(fusion_slot.id());
-    slot_info.set_is_release(false);
+    auto slot_info = SlotInfoTransfer(fusion_slot);
 
     // if parking slot is not valid, continue
     const bool is_slot_valid = IsValidParkingSlot(slot_info);
@@ -108,23 +124,27 @@ bool SlotManagement::UpdateSlots() {
       continue;
     }
 
-    const auto slot_info_vec_size = slot_management_info_.slot_info_vec_size();
+    const auto slot_info_vec_size = slot_info_window_vec_.size();
     if (slot_info_map_.count(slot_info.id()) == 0) {  // get new id
-      if (AngleUpdateCondition(slot_info)) {
-        auto add_slot_info_vec = slot_management_info_.add_slot_info_vec();
-        add_slot_info_vec->CopyFrom(slot_info);
+      SlotInfoWindow slot_info_window;
+      slot_info_window.Add(slot_info);
+      slot_info_window_vec_.emplace_back(slot_info_window);
 
-        slot_info_map_.insert(
-            std::make_pair(slot_info.id(), slot_info_vec_size));
-      }
+      slot_info_map_.insert(std::make_pair(slot_info.id(), slot_info_vec_size));
     } else {  // get old id
       // slot update strategy
-      auto slot_idx = slot_info_map_[slot_info.id()];
-
       if (IfUpdateSlot(slot_info)) {
-        *slot_management_info_.mutable_slot_info_vec(slot_idx) = slot_info;
+        auto slot_idx = slot_info_map_[slot_info.id()];
+        slot_info_window_vec_[slot_idx].Add(slot_info);
       }
     }
+  }
+
+  // assemble slot_management_info_
+  slot_management_info_.mutable_slot_info_vec()->Clear();
+  for (size_t j = 0; j < slot_info_window_vec_.size(); ++j) {
+    auto slot = slot_management_info_.add_slot_info_vec();
+    *slot = slot_info_window_vec_[j].GetFusedInfo();
   }
 
   // std::cout << "check!" << std::endl;
@@ -190,18 +210,28 @@ bool SlotManagement::IsValidParkingSlot(const common::SlotInfo &slot_info) {
   }
 }
 
-bool SlotManagement::IsInParkingState() const {
+bool SlotManagement::IsInAPAState() const {
+  if ((func_state_ptr_->current_state() >= FuncStateMachine::PARK_IN_APA_IN &&
+       func_state_ptr_->current_state() <=
+           FuncStateMachine::PARK_IN_COMPLETED) ||
+      param_.force_apa_on) {
+    return true;
+  } else {
+    return false;
+  }
+}
+bool SlotManagement::IsInSearchingState() const {
   std::cout << "func_state_ptr_->current_state() = "
             << func_state_ptr_->current_state() << std::endl;
 
   if ((func_state_ptr_->current_state() >= FuncStateMachine::PARK_IN_APA_IN &&
        func_state_ptr_->current_state() <=
-           FuncStateMachine::PARK_OUT_COMPLETED) ||
+           FuncStateMachine::PARK_IN_NO_READY) ||
       param_.force_apa_on) {
-    std::cout << "apa on!" << std::endl;
+    std::cout << "apa searching on!" << std::endl;
     return true;
   } else {
-    std::cout << "apa off!" << std::endl;
+    std::cout << "apa searching off!" << std::endl;
     return false;
   }
 }

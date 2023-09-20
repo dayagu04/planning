@@ -8,13 +8,99 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "Eigen/src/Core/Matrix.h"
+#include "basic_types.pb.h"
 #include "func_state_machine.pb.h"
 #include "localization.pb.h"
 #include "parking_fusion.pb.h"
 #include "parking_slot_list.pb.h"
 #include "slot_management_info.pb.h"
+#include "task_basic_types.pb.h"
 
+static const size_t slot_corner_pt_nums = 4;
+static const size_t max_slot_window_size = 15;
+static const size_t max_limiter_window_size = 15;
 namespace planning {
+class SlotInfoWindow {
+ public:
+  SlotInfoWindow() { slot_info_vec_.reserve(max_slot_window_size); }
+  void Add(common::SlotInfo& fused_slot_info) {
+    if (slot_info_vec_.size() < max_slot_window_size) {
+      slot_info_vec_.emplace_back(fused_slot_info);
+    } else {
+      slot_info_vec_[front_index_] = fused_slot_info;
+      front_index_++;
+      if (front_index_ >= max_slot_window_size) {
+        front_index_ = 0;
+      }
+    }
+    Fuse();
+  }
+
+  void Fuse() {
+    if (slot_info_vec_.size() == 0) {
+      return;
+    }
+
+    std::vector<double> sum_corner_pts_x_vec;
+    std::vector<double> sum_corner_pts_y_vec;
+    sum_corner_pts_x_vec.resize(4);
+    sum_corner_pts_y_vec.resize(4);
+
+    // TODO 取平均车位
+    for (const auto& slot : slot_info_vec_) {
+      for (int j = 0; j < slot.corner_points().corner_point_size(); ++j) {
+        sum_corner_pts_x_vec[j] += slot.corner_points().corner_point(j).x();
+        sum_corner_pts_y_vec[j] += slot.corner_points().corner_point(j).y();
+      }
+    }
+
+    std::vector<double> fused_corner_pts_x_vec;
+    std::vector<double> fused_corner_pts_y_vec;
+    fused_corner_pts_x_vec.resize(4);
+    fused_corner_pts_y_vec.resize(4);
+
+    const double multiplier = 1.0 / static_cast<double>(slot_info_vec_.size());
+    for (size_t j = 0; j < sum_corner_pts_x_vec.size(); ++j) {
+      fused_corner_pts_x_vec[j] = sum_corner_pts_x_vec[j] * multiplier;
+      fused_corner_pts_y_vec[j] = sum_corner_pts_y_vec[j] * multiplier;
+    }
+
+    common::SlotInfo fused_slot;
+    fused_slot.set_id(slot_info_vec_.back().id());
+    fused_slot.set_is_release(slot_info_vec_.back().is_release());
+
+    double center_x = 0.0;
+    double center_y = 0.0;
+    for (size_t j = 0; j < fused_corner_pts_x_vec.size(); ++j) {
+      auto corner_point =
+          fused_slot.mutable_corner_points()->add_corner_point();
+      corner_point->set_x(fused_corner_pts_x_vec[j]);
+      corner_point->set_y(fused_corner_pts_y_vec[j]);
+
+      center_x += fused_corner_pts_x_vec[j];
+      center_y += fused_corner_pts_y_vec[j];
+    }
+    center_x = center_x * 0.25;
+    center_y = center_y * 0.25;
+
+    fused_slot.mutable_center()->set_x(center_x);
+    fused_slot.mutable_center()->set_y(center_y);
+
+    fused_slot_info_ = fused_slot;
+  }
+
+  common::SlotInfo GetFusedInfo() { return fused_slot_info_; }
+
+ private:
+  // std::vector<double> sum_corner_pts_x_vec_;
+  // std::vector<double> sum_corner_pts_y_vec_;
+
+  size_t front_index_ = 0;
+  common::SlotInfo fused_slot_info_;
+  std::vector<common::SlotInfo> slot_info_vec_;
+};
+
 class SlotManagement {
  public:
   struct Param {
@@ -56,10 +142,14 @@ class SlotManagement {
   }
 
  private:
-  bool UpdateSlots();
+  bool UpdateSlotsInSearchingState();
   bool IsValidParkingSlot(const common::SlotInfo& slot_info);
-  bool IsInParkingState() const;
+  bool IsInAPAState() const;
+  bool IsInSearchingState() const;
   bool ReleaseSlots();
+
+  common::SlotInfo SlotInfoTransfer(
+      const ParkingFusion::ParkingFusionSlot& parking_fusion_slot);
 
   bool ReleaseSlots(FuncStateMachine::FuncStateMachine& func_statemachine,
                     ParkingFusion::ParkingFusionInfo& parking_slot_info);
@@ -69,6 +159,7 @@ class SlotManagement {
   bool LonDifUpdateCondition(const common::SlotInfo& new_slot_info);
 
   std::unordered_map<int, size_t> slot_info_map_;
+  std::vector<SlotInfoWindow> slot_info_window_vec_;
   common::SlotManagementInfo slot_management_info_;
 
   FuncStateMachine::FuncStateMachine* func_state_ptr_;

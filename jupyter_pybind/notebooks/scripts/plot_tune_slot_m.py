@@ -11,7 +11,7 @@ from python_proto import common_pb2, slot_management_info_pb2
 from jupyter_pybind import slot_management_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/apa_0914/test05_8.00000'
+bag_path = '/home/gdbai2/test_data/0919/10_13.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -30,7 +30,7 @@ slot_management_py.Init()
 data_slot_management_vec = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
 
 # fig configs
-fig1.multi_line('corner_point_y', 'corner_point_x', source = data_slot_management_vec, line_width = 1, line_color = 'blue', line_dash = 'solid',legend_label = 'managed slots')
+fig1.multi_line('corner_point_y', 'corner_point_x', source = data_slot_management_vec, line_width = 2, line_color = 'blue', line_dash = 'dashed',legend_label = 'managed slots')
 
 ### sliders config
 class LocalViewSlider:
@@ -39,7 +39,7 @@ class LocalViewSlider:
     self.force_apa_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_apa",min=0, max=1, value=0, step=1)
     self.force_clear_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_clear",min=0, max=1, value=0, step=1)
     self.max_slots_update_angle_dis_limit_deg_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "max_slots_update_angle_dis_limit_deg",min=0, max=60, value=20, step=0.5)
-    self.max_slot_boundary_line_angle_dif_deg_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "slot_angle_dif_deg",min=0, max=60, value=20, step=1)
+    self.max_slot_boundary_line_angle_dif_deg_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "max_slot_boundary_line_angle_dif_deg",min=0, max=60, value=20, step=1)
     self.max_slot_update_lon_dif_slot_center_to_mirror_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "max lon dif",min=0, max=3.0, value=1.6, step=0.05)
     self.min_slot_update_lon_dif_slot_center_to_mirror_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "min lon dif",min=-3.0, max=3.0, value=0.35, step=0.05)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,

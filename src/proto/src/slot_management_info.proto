@@ -12,7 +12,6 @@ message SlotInfo {
   optional CornerPoints corner_points = 2;
   optional Point2d center = 3;
   optional bool is_release = 4;
-
 }
 
 message SlotManagementInfo {
