@@ -544,7 +544,7 @@ class LoadCyberbag:
     """)
     taptool = TapTool(callback=callback)
 
-    fig1 = bkp.figure(plot_width=1200, plot_height=300,
+    fig1 = bkp.figure(plot_width=1600, plot_height=400,
               y_range=topic_list_with_hz, x_axis_type='datetime', title=self.bag_path,
               tools=[hover, taptool, "xwheel_zoom,reset"], active_scroll='xwheel_zoom')
     fig1.circle(x='t', y='topic_with_hz', source=source)

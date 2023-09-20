@@ -64,6 +64,7 @@ class LoadCyberbag:
 
     self.parking_flag = parking_flag
 
+    self.max_time = 0
     # time offset
     t0 = 0
 
@@ -144,7 +145,10 @@ class LoadCyberbag:
         self.plan_msg['t'].append(t)
         self.plan_msg['abs_t'].append(t)
         self.plan_msg['data'].append(msg)
-      self.plan_msg['t'] = [tmp - t0  for tmp in self.plan_msg['t']]
+
+
+      t0_plan = self.plan_msg['t'][0]
+      self.plan_msg['t'] = [tmp - t0_plan  for tmp in self.plan_msg['t']]
       max_time = max(max_time, self.plan_msg['t'][-1])
       print('plan_msg time:',self.plan_msg['t'][-1])
       if len(self.plan_msg['t']) > 0:
@@ -179,7 +183,8 @@ class LoadCyberbag:
         except json.decoder.JSONDecodeError as jserr:
           print('except',jserr)
 
-      self.plan_debug_msg['t'] = [tmp - t0  for tmp in self.plan_debug_msg['t']]
+      t0_plan_debug = self.plan_debug_msg['t'][0]
+      self.plan_debug_msg['t'] = [tmp - t0_plan_debug  for tmp in self.plan_debug_msg['t']]
       max_time = max(max_time, self.plan_debug_msg['t'][-1])
       print('plan_debug_msg time:',self.plan_debug_msg['t'][-1])
       if len(self.plan_debug_msg['t']) > 0:
@@ -318,6 +323,8 @@ class LoadCyberbag:
     except:
       self.soc_state_msg['enable'] = False
       print('missing /iflytek/system_state/soc_state !!!')
+
+    self.max_time = max_time
     return max_time
 
 def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
@@ -325,61 +332,61 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
   ### step 1: 时间戳对齐
   loc_msg_idx = 0
   if bag_loader.loc_msg['enable'] == True:
-    while bag_loader.loc_msg['t'][loc_msg_idx] <= bag_time and loc_msg_idx < (len(bag_loader.loc_msg['t'])-2):
+    while bag_loader.loc_msg['t'][loc_msg_idx] <= bag_time and loc_msg_idx < (len(bag_loader.loc_msg['t'])-1):
         loc_msg_idx = loc_msg_idx + 1
   local_view_data['data_index']['loc_msg_idx'] = loc_msg_idx
 
   fus_msg_idx = 0
   if bag_loader.fus_msg['enable'] == True:
-    while bag_loader.fus_msg['t'][fus_msg_idx] <= bag_time and fus_msg_idx < (len(bag_loader.fus_msg['t'])-2):
+    while bag_loader.fus_msg['t'][fus_msg_idx] <= bag_time and fus_msg_idx < (len(bag_loader.fus_msg['t'])-1):
         fus_msg_idx = fus_msg_idx + 1
   local_view_data['data_index']['fus_msg_idx'] = fus_msg_idx
 
   fus_parking_msg_idx = 0
   if bag_loader.fus_parking_msg['enable'] == True:
-    while bag_loader.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time and fus_parking_msg_idx < (len(bag_loader.fus_parking_msg['t'])-2):
+    while bag_loader.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time and fus_parking_msg_idx < (len(bag_loader.fus_parking_msg['t'])-1):
       fus_parking_msg_idx = fus_parking_msg_idx + 1
   local_view_data['data_index']['fus_parking_msg_idx'] = fus_parking_msg_idx
 
   vis_parking_msg_idx = 0
   if bag_loader.vis_parking_msg['enable'] == True:
-    while bag_loader.vis_parking_msg['t'][vis_parking_msg_idx] <= bag_time and vis_parking_msg_idx < (len(bag_loader.vis_parking_msg['t'])-2):
+    while bag_loader.vis_parking_msg['t'][vis_parking_msg_idx] <= bag_time and vis_parking_msg_idx < (len(bag_loader.vis_parking_msg['t'])-1):
       vis_parking_msg_idx = vis_parking_msg_idx + 1
   local_view_data['data_index']['vis_parking_msg_idx'] = vis_parking_msg_idx
 
   vs_msg_idx = 0
   if bag_loader.vs_msg['enable'] == True:
-    while bag_loader.vs_msg['t'][vs_msg_idx] <= bag_time and vs_msg_idx < (len(bag_loader.vs_msg['t'])-2):
+    while bag_loader.vs_msg['t'][vs_msg_idx] <= bag_time and vs_msg_idx < (len(bag_loader.vs_msg['t'])-1):
         vs_msg_idx = vs_msg_idx + 1
   local_view_data['data_index']['vs_msg_idx'] = vs_msg_idx
 
   plan_msg_idx = 0
   if bag_loader.plan_msg['enable'] == True:
-    while bag_loader.plan_msg['t'][plan_msg_idx] <= bag_time and plan_msg_idx < (len(bag_loader.plan_msg['t'])-2):
+    while bag_loader.plan_msg['t'][plan_msg_idx] <= bag_time and plan_msg_idx < (len(bag_loader.plan_msg['t'])-1):
         plan_msg_idx = plan_msg_idx + 1
   local_view_data['data_index']['plan_msg_idx'] = plan_msg_idx
 
   plan_debug_msg_idx = 0
   if bag_loader.plan_debug_msg['enable'] == True:
-    while bag_loader.plan_debug_msg['t'][plan_debug_msg_idx] <= bag_time and plan_debug_msg_idx < (len(bag_loader.plan_debug_msg['t'])-2):
+    while bag_loader.plan_debug_msg['t'][plan_debug_msg_idx] <= bag_time and plan_debug_msg_idx < (len(bag_loader.plan_debug_msg['t'])-1):
         plan_debug_msg_idx = plan_debug_msg_idx + 1
   local_view_data['data_index']['plan_debug_msg_idx'] = plan_debug_msg_idx
 
   ctrl_msg_idx = 0
   if bag_loader.ctrl_msg['enable'] == True:
-    while bag_loader.ctrl_msg['t'][ctrl_msg_idx] <= bag_time and ctrl_msg_idx < (len(bag_loader.ctrl_msg['t'])-2):
+    while bag_loader.ctrl_msg['t'][ctrl_msg_idx] <= bag_time and ctrl_msg_idx < (len(bag_loader.ctrl_msg['t'])-1):
         ctrl_msg_idx = ctrl_msg_idx + 1
   local_view_data['data_index']['ctrl_msg_idx'] = ctrl_msg_idx
 
   ctrl_debug_msg_idx = 0
   if bag_loader.ctrl_debug_msg['enable'] == True:
-    while bag_loader.ctrl_debug_msg['t'][ctrl_debug_msg_idx] <= bag_time and ctrl_debug_msg_idx < (len(bag_loader.ctrl_debug_msg['t'])-2):
+    while bag_loader.ctrl_debug_msg['t'][ctrl_debug_msg_idx] <= bag_time and ctrl_debug_msg_idx < (len(bag_loader.ctrl_debug_msg['t'])-1):
         ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
   local_view_data['data_index']['ctrl_debug_msg_idx'] = ctrl_debug_msg_idx
 
   soc_state_msg_idx = 0
   if bag_loader.soc_state_msg['enable'] == True:
-    while bag_loader.soc_state_msg['t'][soc_state_msg_idx] <= bag_time and ctrl_debug_msg_idx < (len(bag_loader.ctrl_debug_msg['t'])-2):
+    while bag_loader.soc_state_msg['t'][soc_state_msg_idx] <= bag_time and soc_state_msg_idx < (len(bag_loader.soc_state_msg['t'])-1):
         soc_state_msg_idx = soc_state_msg_idx + 1
   local_view_data['data_index']['soc_state_msg_idx'] = soc_state_msg_idx
 
@@ -534,7 +541,30 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
     local_view_data['data_fusion_parking'].data.update({'corner_point_x': slots_x_vec, 'corner_point_y': slots_y_vec,})
     local_view_data['data_fusion_parking_id'].data.update({'id':id_vec,'id_text_x':id_text_x_vec,'id_text_y':id_text_y_vec,})
 
+    parking_fusion_slot_lists = bag_loader.fus_parking_msg['data'][-1].parking_fusion_slot_lists
+    select_slot_id = bag_loader.fus_parking_msg['data'][-1].select_slot_id
+    slots_x_vec = []
+    slots_y_vec = []
 
+    for j in range(len(parking_fusion_slot_lists)):
+      slot = parking_fusion_slot_lists[j]
+      single_slot_x_vec = []
+      single_slot_y_vec = []
+      # attention: fusion slots are based on odom system, visual slots are based on vehicle system
+      # 1. update slots corner points
+      for k in range(len(slot.corner_points)):
+        corner_x_global = slot.corner_points[k].x
+        corner_y_global = slot.corner_points[k].y
+        single_slot_x_vec.append(corner_x_global - cur_pos_xn0)
+        single_slot_y_vec.append(corner_y_global - cur_pos_yn0)
+      slot_plot_x_vec = [single_slot_x_vec[0],single_slot_x_vec[2],single_slot_x_vec[3],single_slot_x_vec[1]]
+      slot_plot_y_vec = [single_slot_y_vec[0],single_slot_y_vec[2],single_slot_y_vec[3],single_slot_y_vec[1]]
+
+      # 2. update selected fusion slot
+      if select_slot_id == slot.id:
+        local_view_data['data_final_slot'].data.update({'corner_point_x': slot_plot_x_vec,
+                                                        'corner_point_y': slot_plot_y_vec,})
+        break
   # load visual slot
   if bag_loader.vis_parking_msg['enable'] == True:
     parking_slot = bag_loader.vis_parking_msg['data'][vis_parking_msg_idx].parking_slot
@@ -603,6 +633,7 @@ def load_local_view_figure_parking():
   data_fusion_parking = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
   data_vision_parking = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
   data_selected_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
+  data_final_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
   data_fusion_parking_id = ColumnDataSource(data = {'id':[], 'id_text_x':[], 'id_text_y':[]})
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
@@ -626,6 +657,7 @@ def load_local_view_figure_parking():
                      'data_fusion_parking':data_fusion_parking, \
                      'data_vision_parking':data_vision_parking, \
                      'data_selected_slot':data_selected_slot, \
+                     'data_final_slot':data_final_slot, \
                      'data_fusion_parking_id':data_fusion_parking_id, \
                      'data_index': data_index, \
                      }
@@ -639,11 +671,12 @@ def load_local_view_figure_parking():
   fig1.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1.5, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'car')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
-  fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 4.0, line_color = 'red', line_dash = 'dashed', line_alpha = 0.8, legend_label = 'mpc')
+  fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 4.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'mpc')
 
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot')
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_parking, line_width = 2, line_color = 'red', line_dash = 'solid',legend_label = 'fusion_parking_slot')
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_selected_slot, line_width = 3, line_color = 'green', line_dash = 'solid',legend_label = 'selected_parking_slot')
+  fig1.line('corner_point_y', 'corner_point_x', source = data_final_slot, line_width = 3, line_color = '#A52A2A', line_dash = 'dashed',legend_label = 'final_parking_slot')
 
   fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_fusion_parking_id, text_color='red', text_align='center', text_font_size='10pt',legend_label = 'fusion_parking_slot_id')
   # toolbar
