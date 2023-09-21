@@ -12,6 +12,7 @@
 #include "parking_slot_list.pb.h"
 #include "planning_plan.pb.h"
 #include "prediction.pb.h"
+#include "uss_wave_info.pb.h"
 #include "vehicle_service.pb.h"
 
 namespace planning {
@@ -47,6 +48,9 @@ struct LocalView {
 
   FuncStateMachine::FuncStateMachine function_state_machine_info;
   double function_state_machine_info_recv_time = 0.0;
+
+  UssWaveInfo::UssWaveInfo uss_wave_info;
+  double uss_wave_info_recv_time = 0.0;
 };
 
 }  // namespace planning

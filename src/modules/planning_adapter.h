@@ -17,6 +17,7 @@
 #include "planning_hmi.pb.h"
 #include "planning_plan.pb.h"
 #include "prediction.pb.h"
+#include "uss_wave_info.pb.h"
 #include "vehicle_service.pb.h"
 
 namespace planning {
@@ -111,6 +112,13 @@ class PlanningAdapter {
     func_state_machine_msg_.CopyFrom(*func_state_machine_msg);
   }
 
+  void FeedUssWaveInfo(
+      const std::shared_ptr<UssWaveInfo::UssWaveInfo>& uss_wave_info_msg) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    uss_wave_info_msg_.CopyFrom(*uss_wave_info_msg);
+    uss_wave_info_msg_recv_time_ = IflyTime::Now_ms();
+  }
+
   void RegisterOutputWriter(
       const std::function<void(PlanningOutput::PlanningOutput)>&
           planning_writer) {
@@ -155,6 +163,9 @@ class PlanningAdapter {
   int64_t parking_fusion_info_msg_recv_time_;
 
   FuncStateMachine::FuncStateMachine func_state_machine_msg_;
+
+  UssWaveInfo::UssWaveInfo uss_wave_info_msg_;
+  int64_t uss_wave_info_msg_recv_time_;
 
   std::function<void(PlanningOutput::PlanningOutput)> planning_writer_ =
       nullptr;

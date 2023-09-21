@@ -237,6 +237,9 @@ void PlanningAdapter::Proc() {
         func_state_machine_msg_.header().timestamp());
     input_topic_latency->set_function_state_machine(
         get_latency(start_time, func_state_machine_msg_.header().timestamp()));
+
+    local_view_.uss_wave_info = uss_wave_info_msg_;
+    // TODO: add input topic info
   }
 
   // update general context
