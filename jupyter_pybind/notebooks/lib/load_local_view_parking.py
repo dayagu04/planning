@@ -495,7 +495,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
 
   wave_msg_idx = 0
   if bag_loader.wave_msg['enable'] == True:
-    while bag_loader.wave_msg['t'][wave_msg_idx] <= bag_time and wave_msg_idx < (len(bag_loader.wave_msg['t'])-2):
+    while bag_loader.wave_msg['t'][wave_msg_idx] <= bag_time and wave_msg_idx < (len(bag_loader.wave_msg['t'])-1):
         wave_msg_idx = wave_msg_idx + 1
   local_view_data['data_index']['wave_msg_idx'] = wave_msg_idx
 
@@ -760,9 +760,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
           text_y.append(y_text)
           sector_x.append(ego_local_x)
           sector_y.append(ego_local_y)
-          print("rs1:",rs1)
+          # print("rs1:",rs1)
           rs.append(rs1)
-          print("rs size:",len(rs))
+          # print("rs size:",len(rs))
           length.append(rs0)
           start_angle.append(uss_angle_start)
           end_angle.append(uss_angle_end)
@@ -846,11 +846,10 @@ def load_local_view_figure_parking():
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_selected_slot, line_width = 3, line_color = 'green', line_dash = 'solid',legend_label = 'selected_parking_slot')
   fig1.line('corner_point_y', 'corner_point_x', source = data_final_slot, line_width = 3, line_color = '#A52A2A', line_dash = 'dashed',legend_label = 'final_parking_slot')
 
-  fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_fusion_parking_id, text_color='red', text_align='center', text_font_size='10pt',legend_label = 'fusion_parking_slot_id')
+  fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_fusion_parking_id, text_color='red', text_align='center', text_font_size='10pt',legend_label = 'fusion_parking_slot')
 
-  fig1.wedge('wave_x','wave_y', 'radius', 'start_angle', 'end_angle',source = data_wave, fill_color="yellow", line_color="black",legend_label = 'uss_wave',alpha = 0.5)
-
-  fig1.text(x = 'wave_text_x', y = 'wave_text_y', text = 'length', source = data_wave_length_text, text_color='red', text_align='center', text_font_size='10pt',legend_label = 'data_wave_length_text')
+  fig1.wedge('wave_x','wave_y', 'radius', 'start_angle', 'end_angle',source = data_wave, fill_color="lavender", line_color="black",legend_label = 'uss_wave',alpha = 0.5)
+  fig1.text(x = 'wave_text_x', y = 'wave_text_y', text = 'length', source = data_wave_length_text, text_color='black', text_align='center', text_font_size='10pt',legend_label = 'uss_wave')
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 
