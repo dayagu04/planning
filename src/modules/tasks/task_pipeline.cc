@@ -1,6 +1,7 @@
 #include "task_pipeline.h"
 
 #include "task_pipeline_normal.h"
+#include "task_pipeline_real_time.h"
 #include "task_pipeline_vision_only.h"
 
 namespace planning {
@@ -21,6 +22,9 @@ std::shared_ptr<TaskPipeline> TaskPipeline::Make(
     }
     case TaskPipelineType::VISION_ONLY: {
       return std::make_shared<TaskPipelineVisionOnly>(config_builder, frame);
+    }
+    case TaskPipelineType::REALTIME: {
+      return std::make_shared<TaskPipelineRealTime>(config_builder, frame);
     }
     default: { /*LOG_ERROR*/
       return nullptr;

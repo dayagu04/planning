@@ -3,6 +3,7 @@
 #include <math.h>
 #include "ego_planning_candidate.h"
 
+#include "basic_types.pb.h"
 #include "ego_planning_config.h"
 #include "session.h"
 
@@ -19,9 +20,9 @@ class StartStopEnable {
 
   virtual ~StartStopEnable() = default;
 
-  void go_trajectory(LonDecisionInfo &lon_decision_information,
+  void go_trajectory(common::LonDecisionInfo &lon_decision_information,
                      int &start_stop_information,
-                     StartStopInfo &start_stop_result);
+                     common::StartStopInfo &start_stop_result);
   bool enable_start_stop() {
     return enable_hnp_functions_ && enable_start_stop_function_;
   }

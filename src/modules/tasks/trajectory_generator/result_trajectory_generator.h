@@ -19,8 +19,9 @@ class ResultTrajectoryGenerator : public Task {
 
   bool Execute(planning::framework::Frame *frame) override;
 
-  bool GenerateTrajecotry(planning::framework::Frame *frame);
-  bool GenerateTrajecotryVisionOnly(planning::framework::Frame *frame);
+  bool TrajectoryGenerator();
+  bool RealtimeTrajectoryGenerator();
+
   void Init();
 
   inline bool is_abnormal_number(double number) {

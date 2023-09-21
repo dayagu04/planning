@@ -120,7 +120,7 @@ void MrcCondition::mrc_brake_execute(LonRefPath& lon_ref_path,
 }
 
 void MrcCondition::update_inline_brake_by_obstacle(
-    LonDecisionInfo& lon_decision_information,
+    common::LonDecisionInfo& lon_decision_information,
     PlanningInitPoint& planning_init_point) {
   ;
 }

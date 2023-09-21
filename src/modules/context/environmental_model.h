@@ -175,31 +175,18 @@ class EnvironmentalModel {
     highway_config_builder_ptr_ = highway_config_builder_ptr;
   }
 
-  void feed_local_view(const LocalView &local_view) {
-    if (local_view.static_map_info.header().timestamp() !=
-        local_view_.static_map_info.header().timestamp()) {
-      ad_common::hdmap::HDMap hd_map_tmp;
-      const int res =
-          hd_map_tmp.LoadMapFromProto(local_view.static_map_info.road_map());
-      if (res == 0) {
-        // std::cout << "hdmap debugstring:\n"
-        //     << local_view.static_map_info.current_routing().DebugString() <<
-        //     std::endl;
-        hd_map_ = std::move(hd_map_tmp);
-        hdmap_valid_ = true;
-      }
-    }
+  void feed_local_view(const LocalView *local_view) {
     local_view_ = local_view;
   }
   void set_location_valid(bool flag) { location_valid_ = flag; }
   bool location_valid() const { return location_valid_; }
-  const LocalView &get_local_view() const { return local_view_; }
   const ad_common::hdmap::HDMap &get_hd_map() const { return hd_map_; }
+  const LocalView &get_local_view() const { return *local_view_; }
 
   bool get_hdmap_valid() const { return hdmap_valid_; }
   bool is_on_highway() const { return true; }  // hack
   const HmiMcuInner::HmiMcuInner &get_hmi_info() const {
-    return local_view_.hmi_mcu_inner_info;
+    return local_view_->hmi_mcu_inner_info;
   }
 
   // update function by system function state
@@ -210,8 +197,8 @@ class EnvironmentalModel {
   const DrivingFunctionInfo function_info() const { return function_info_; }
 
  private:
-  LocalView local_view_;
   ad_common::hdmap::HDMap hd_map_;
+  const LocalView *local_view_;
   bool vehicle_dbw_status_{false};
   std::shared_ptr<EgoStateManager> ego_state_manager_ = nullptr;
   std::shared_ptr<ObstacleManager> obstacle_manager_ = nullptr;

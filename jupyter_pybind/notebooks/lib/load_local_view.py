@@ -312,7 +312,7 @@ class LoadCyberbag:
     # load planning debug msg
     try:
       json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'VisionLonBehavior_a_target_high',
-                         "VisionLonBehavior_a_target_low", "VisionLonBehavior_v_target",
+                         "VisionLonBehavior_a_target_low", "VisionLonBehavior_v_target", "RealTime_v_ref",
                          "VisionLonBehavior_lead_one_id", "VisionLonBehavior_lead_one_dis", "VisionLonBehavior_lead_one_vel", "VisionLonBehavior_v_target_lead_one",
                          "VisionLonBehavior_lead_two_id", "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel", "VisionLonBehavior_v_target_lead_two",
                          "VisionLonBehavior_temp_lead_one_id", "VisionLonBehavior_temp_lead_one_dis", "VisionLonBehavior_temp_lead_one_vel", "VisionLonBehavior_v_target_temp_lead_one",
@@ -321,7 +321,7 @@ class LoadCyberbag:
                          "VisionLonBehavior_v_limit_road", "VisionLonBehavior_v_limit_in_turns", "VisionLonBehavior_road_radius", "dis_to_ramp",
                          'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', 'VisionLonBehavior_STANDSTILL', "VisionLonBehavior_final_v_target",
                          "solver_condition", "dist_err", "lat_err", "lon_err", "dbw_status",
-                         "RealTime_v_ref", "RealTime_v_ego", "RealTime_gap_v_limit_lc",
+                         "RealTime_v_ego", "RealTime_gap_v_limit_lc",
                          "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_car_cut_in_id",
                          "RealTime_lead_one_id", "RealTime_lead_one_distance", "RealTime_lead_one_velocity", "RealTime_lead_one_desire_vel",
                          "RealTime_lead_two_id", "RealTime_lead_two_distance", "RealTime_lead_two_velocity", "RealTime_lead_two_desire_vel",
@@ -650,7 +650,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           # print("bag_loader_radar_msg[i]['t'][radar_msg_idx[i]]:",bag_loader_radar_msg[i]['t'][radar_msg_idx[i]])
           # print("bag_time:",bag_time)
           # print("radar_msg_idx[i]:",radar_msg_idx[i])
-      print('radar_msg_idx:',i,radar_msg_idx[i])
+      # print('radar_msg_idx:',i,radar_msg_idx[i])
     local_view_data['data_index'][radar_msg_idx_list[i]] = radar_msg_idx[i]
 
   # radar_fm_msg_idx = 0
@@ -840,9 +840,11 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
     center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
     # print(center_line_list)
+    trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
+    
     for i in range(10):
       # try:
-        if 1:
+        if (trajectory.trajectory_type == 0) or (trajectory.trajectory_type == 1 and trajectory.target_reference.lateral_maneuver_gear == 2) :
           data_center_line = data_center_line_dict[i]
           data_center_line.data.update({
             'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
@@ -1089,7 +1091,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   for i in range(5):
     # print(data_radar_obj[i])
     if bag_loader_radar_msg[i]['enable'] == True:
-      print(radar_msg_idx[i])
+      # print(radar_msg_idx[i])
       radar_objects = bag_loader_radar_msg[i]['data'][radar_msg_idx[i]].radar_perception_object_list
       # print(me_camera_objects.length())
       obstacles_info_all2 = load_obstacle_radar(radar_objects,i)
@@ -1169,21 +1171,22 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   ### step 3: 加载planning轨迹信息
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
-    try:
+    if trajectory.trajectory_type == 0:
       planning_polynomial = trajectory.target_reference.polynomial
       plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
 
-    except:
+    else:
       plan_x = []
       plan_y = []
       for i in range(len(trajectory.trajectory_points)):
         plan_x.append(trajectory.trajectory_points[i].x)
         plan_y.append(trajectory.trajectory_points[i].y)
 
-      # plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
-      # 接motion轨迹是相对于自车的
-      plan_traj_x = plan_x
-      plan_traj_y = plan_y
+      if trajectory.target_reference.lateral_maneuver_gear == 2:
+        plan_traj_x = plan_x
+        plan_traj_y = plan_y
+      else:
+        plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
 
     local_view_data['data_planning'].data.update({
         'plan_traj_y' : plan_traj_y,

@@ -1,6 +1,6 @@
 {
   "enable_raw_ego_prediction": false,
-  "enable_NOA": false,
+  "planner_type": 0,
   "enable_dagger": false,
   "pipeline_version": "v1",
   "pipeline_version_vision_only": "v1",

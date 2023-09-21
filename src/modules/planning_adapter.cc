@@ -274,7 +274,7 @@ void PlanningAdapter::Proc() {
   std::cout << "==============The planning enters RunOnce============="
             << std::endl;
   bool run_success = planning_base_->RunOnce(
-      local_view_, &planning_output, *planning_debug_data, &planning_hmi_info);
+      &local_view_, &planning_output, *planning_debug_data, &planning_hmi_info);
 
   // 3.get output & publish
   uint64_t output_time_us = (uint64_t)IflyTime::Now_us();
@@ -332,7 +332,7 @@ void PlanningAdapter::Proc() {
     planning_hmi_info.mutable_header()->set_version(__version_str__);
     planning_hmi_info_writer_(planning_hmi_info);
   }
-  double planning_cost_time = IflyTime::Now_ms() - start_time;
+  double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
   LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);
 }
 

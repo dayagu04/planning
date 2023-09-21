@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "lon_behavior_planner.pb.h"
 #include "task.h"
 #include "task_basic_types.h"
 #include "trajectory1d/bounded_constant_jerk_trajectory1d.h"
@@ -45,7 +46,7 @@ class GeneralLongitudinalDecider : public Task {
   bool Execute(planning::framework::Frame *frame) override;
 
  private:
-  void get_lon_decision_info(LonDecisionInfo &lon_decision_information);
+  void get_lon_decision_info(common::LonDecisionInfo &lon_decision_information);
 
   BoundedConstantJerkTrajectory1d get_velocity_limit(
       const LonRefPath &lon_ref_path);

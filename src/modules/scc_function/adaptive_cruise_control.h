@@ -5,6 +5,7 @@
 #include "config/basic_type.h"
 #include "ego_planning_config.h"
 #include "frame.h"
+#include "lon_behavior_planner.pb.h"
 #include "task_basic_types.h"
 
 namespace planning {
@@ -14,9 +15,10 @@ class AdaptiveCruiseControl {
                         framework::Session *session);
   virtual ~AdaptiveCruiseControl() = default;
 
-  void adaptive_cruise_control(LonDecisionInfo &lon_decision_information,
-                               AdaptiveCruiseControlInfo &acc_info,
-                               PlanningResult &ego_prediction_result);
+  void adaptive_cruise_control(
+      common::LonDecisionInfo &lon_decision_information,
+      AdaptiveCruiseControlInfo &acc_info,
+      PlanningResult &ego_prediction_result);
   std::pair<double, double> calculate_max_acc(double ego_v);
   void acc_update_ds_refs(AdaptiveCruiseControlInfo &acc_info,
                           LonRefPath &lon_ref_path,

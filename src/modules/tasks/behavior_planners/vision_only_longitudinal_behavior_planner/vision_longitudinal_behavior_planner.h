@@ -74,8 +74,8 @@ class VisionLongitudinalBehaviorPlanner : public Task {
   double clip(const double x, const double lo, const double hi);
 
   // 计算启停状态，避免二次起步
-  StartStopInfo::StateType UpdateStartStopState(const TrackedObject *lead_one,
-                                                const double v_ego);
+  common::StartStopInfo::StateType UpdateStartStopState(
+      const TrackedObject *lead_one, const double v_ego);
 
   int GetCIPV(const std::shared_ptr<LateralObstacle> &lateral_obstacle,
               const std::string &lc_status);

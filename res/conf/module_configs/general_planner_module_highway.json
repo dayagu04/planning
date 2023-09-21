@@ -1,9 +1,10 @@
 {
   "enable_raw_ego_prediction": false,
-  "enable_NOA": false,
+  "planner_type": 1,
   "enable_dagger": false,
   "pipeline_version": "v1",
   "pipeline_version_vision_only": "v1",
+  "pipeline_version_real_time": "v1",
   "torch_use_cuda": true,
   "torch_gpu_index": 0,
   "torch_model_cpu_path": "${NPP_RESOURCE_PATH}/pnp_v2_train_0811_epoch_100.pt",
@@ -18,13 +19,13 @@
   "dash_line_bound_buffer": 0.3,
   "lane_border_unilateral_deviation": 0.1,
   "lateral_bound_converge_speed": 0.5,
-  "distance_required_to_right_road_bound":1.7,
-  "distance_required_to_left_road_bound":2.3,
-  "approach_distance_threshold_push_bound":80,
-  "approach_distance_threshold_avoid_obstacle":50,
-  "parking_space_release_dis_max":2.0,
-  "reference_point_velocity":2.0,
-  "approach_distance_threshold_planning":50,
+  "distance_required_to_right_road_bound": 1.7,
+  "distance_required_to_left_road_bound": 2.3,
+  "approach_distance_threshold_push_bound": 80,
+  "approach_distance_threshold_avoid_obstacle": 50,
+  "parking_space_release_dis_max": 2.0,
+  "reference_point_velocity": 2.0,
+  "approach_distance_threshold_planning": 50,
   "velocity_upper_bound": 34.72,
   "velocity_upper_bound_scale_rate": 1.2,
   "acceleration_upper_bound": 1.0,
@@ -160,7 +161,6 @@
     "leadone_s_upper": 5.0,
     "leadone_v_threshold": 2.5
   },
-
   "acc_control": {
     "t_actuator_delay": 0.4,
     "gain_tg": 1.5,
@@ -199,7 +199,7 @@
     "q_ref_theta": 15.0,
     "q_continuity": 0.2,
     "q_acc": 0.5,
-    "q_jerk": 0.6,
+    "q_jerk": 2.0,
     "q_acc_bound": 200,
     "q_jerk_bound": 500,
     "q_soft_corridor": 200,
@@ -208,13 +208,14 @@
     "motion_plan_concerned_index": 20
   },
   "long_motion_ilqr": {
-    "q_ref_pos": 1.0,
-    "q_ref_vel": 0.05,
+    "q_ref_pos": 0.5,
+    "q_ref_vel": 35.0,
     "q_acc": 10.0,
-    "q_jerk": 5.0,
-    "q_soft_pos_bound": 2.0,
+    "q_jerk": 10.0,
+    "q_soft_pos_bound": 35.0,
     "q_hard_pos_bound": 1000.0,
-    "q_vel_bound": 400.0,
+    "q_sv_bound": 10.0,
+    "q_vel_bound": 100.0,
     "q_acc_bound": 400.0,
     "q_jerk_bound": 100.0,
     "q_stop_s": 2000.0
@@ -231,11 +232,20 @@
     "distance_stop": 1.0,
     "distance_start": 0.3,
     "dece_to_ramp": -1.0,
-    "v_limit_ramp": 16.67
+    "v_limit_ramp": 16.67,
+    "safe_distance_ttc": 0.3,
+    "enable_lead_two": false,
+    "enable_rss_model": false,
+    "cruise_set_acc": 1.5,
+    "cruise_set_dec": -1.0,
+    "fast_lead_distance_step": 1.0,
+    "slow_lead_distance_step": 2.0,
+    "cut_in_desired_distance_step": 1.0,
+    "soft_bound_corridor_t": 0.3
   },
   "pnp_precise_lat_bound_care_threshold": 5.0,
   "pnp_lower_speed_protect_threshold": 0.3,
-  "pnp_lat_precise_bound_extend_dis ":0.2,
+  "pnp_lat_precise_bound_extend_dis ": 0.2,
   "lat_collision_check_filter_parking_slot": true,
-  "pnp_lower_speed_filter_threshold":1.0
+  "pnp_lower_speed_filter_threshold": 1.0
 }

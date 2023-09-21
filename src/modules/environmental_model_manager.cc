@@ -18,6 +18,7 @@
 #include "context/traffic_light_decision_manager.h"
 #include "context/virtual_lane_manager.h"
 #include "debug_info_log.h"
+#include "general_planning_context.h"
 #include "log.h"
 #include "prediction.pb.h"
 #include "scene_type_config.pb.h"
@@ -88,13 +89,14 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   auto &local_view = session_->environmental_model().get_local_view();
 
   // 通过配置项进行实时长时的切换 true: 长时规划
-  bool enable_NOA = ego_config_.enable_NOA;
   auto location_valid =
       local_view.localization_estimate.msf_status().available() &&
       (local_view.localization_estimate.msf_status().msf_status() !=
        LocalizationOutput::MsfStatus::ERROR) &&
       local_view.road_info.local_point_valid() &&
-      local_view.fusion_objects_info.local_point_valid() && enable_NOA;
+      local_view.fusion_objects_info.local_point_valid() &&
+      (g_context.GetParam().planner_type ==
+       planning::context::PlannerType::LONGTIME_PLANNER);
   // location_valid = true; //hack
   auto environmental_model = session_->mutable_environmental_model();
   environmental_model->set_location_valid(location_valid);

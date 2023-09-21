@@ -97,9 +97,9 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
 
   // enable start & stop function
   auto start_stop_info = ego_state->start_stop();
-  StartStopInfo &start_stop_result = frame->mutable_session()
-                                         ->mutable_planning_context()
-                                         ->mutable_start_stop_result();
+  common::StartStopInfo &start_stop_result = frame->mutable_session()
+                                                 ->mutable_planning_context()
+                                                 ->mutable_start_stop_result();
   auto start_stop_function =
       frame->session()->mutable_planning_context()->start_stop();
   double stop_weight_dx_config = config_start_stop_.dx_ref_weight;
@@ -112,13 +112,13 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
   //       ego_planning_info.traffic_light_decision.stop_distance < 3.0 &&
   //       ego_v < 0.5;
   bool enable_stop_flag =
-      ((lon_yield_info_.keep_stop || start_stop_result.enable_stop) &&
+      ((lon_yield_info_.keep_stop || start_stop_result.enable_stop()) &&
        !frame->session()->is_parking_scene());
   LOG_DEBUG(
       "HHLDEBUGDB start stop input: %d, enable stop_flag: %d, is_start: %d, "
       "is_stop: % d, enable_stop: % d \n",
-      start_stop_info, enable_stop_flag, start_stop_result.is_start,
-      start_stop_result.is_stop, start_stop_result.enable_stop);
+      start_stop_info, enable_stop_flag, start_stop_result.is_start(),
+      start_stop_result.is_stop(), start_stop_result.enable_stop());
 
   // Step 3: 计算轨迹上的最小减速度，判断是否为紧急制动
   std::vector<double> traj_v_list;
@@ -138,8 +138,9 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
   // Step 4: 初始化纵向参考轨迹
   assert(config_.lon_num_step + 1 ==
          static_cast<int>(ego_planning_result.traj_points.size()));
-  const double s_rel =
-      lon_decision_information.leadone_info.leadone_information.obstacle_s;
+  const double s_rel = lon_decision_information.leadone_info()
+                           .leadone_information()
+                           .obstacle_s();
   bool v_direction =
       // (acc_info.navi_speed_control_info.v_ref - ego_v) > 0 ? true : false;
       true;  // WB: hack
@@ -203,12 +204,12 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
       s_bounds.emplace_back(WeightedBound{
           planning_init_point.frenet_state.s - 10.0,
           ego_planning_result.traj_points.back().s + s_buff, -1.0});
-      lon_ref_path.bounds.emplace_back(s_bounds);
+      lon_ref_path.hard_bounds.emplace_back(s_bounds);
     } else {
       s_bounds.emplace_back(
           WeightedBound{planning_init_point.frenet_state.s - 10.0,
                         ego_planning_result.traj_points.back().s, -1.0});
-      lon_ref_path.bounds.emplace_back(s_bounds);
+      lon_ref_path.hard_bounds.emplace_back(s_bounds);
     }
 
     // adjust v_limit
@@ -280,7 +281,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
   // Step 6) set traffic light bound
   auto stop_line_s = planning_init_point.frenet_state.s +
                      ego_planning_info.traffic_light_decision.stop_distance;
-  lon_ref_path.bounds.back().emplace_back(
+  lon_ref_path.hard_bounds.back().emplace_back(
       WeightedBound{std::numeric_limits<double>::min(), stop_line_s, -1.0,
                     BoundInfo{0, "traffic light"}});
 
@@ -292,12 +293,12 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
     double destination_s = planning_init_point.frenet_state.s +
                            distance_to_destination -
                            stop_distance_to_destination;
-    lon_ref_path.bounds.back().emplace_back(
+    lon_ref_path.hard_bounds.back().emplace_back(
         WeightedBound{std::numeric_limits<double>::min(), destination_s, -1.0,
                       BoundInfo{0, "destination"}});
     // adjust s_limit by target parking space
     auto s_bound_upper = get_s_bound_by_target_parking_space();
-    lon_ref_path.bounds.back().emplace_back(
+    lon_ref_path.hard_bounds.back().emplace_back(
         WeightedBound{std::numeric_limits<double>::min(), s_bound_upper, -1.0,
                       BoundInfo{0, "destination_parking_space"}});
     if (s_bound_upper < std::numeric_limits<double>::max() &&
@@ -316,7 +317,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
       for (size_t i = 0; i < lon_ref_path.t_list.size(); ++i) {
         auto t = lon_ref_path.t_list[i];
         if (std::fabs(t - position_decision.tp.t) < 1e-2) {
-          auto &bounds = lon_ref_path.bounds[i];
+          auto &bounds = lon_ref_path.hard_bounds[i];
           for (auto &lon_bound : position_decision.lon_bounds) {
             bounds.push_back(lon_bound);
             bounds.back().bound_info.type = "obstacle";
@@ -349,7 +350,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
     if (i < static_cast<int>(lon_ref_path.t_list.size()) - 1) {
       s_ref = std::min(s_ref, lon_ref_path.s_refs[i + 1].first);
     }
-    for (auto &bound : lon_ref_path.bounds[i]) {
+    for (auto &bound : lon_ref_path.hard_bounds[i]) {
       if (bound.weight < 0) {
         s_ref = std::min(s_ref, bound.upper);
       }
@@ -1470,7 +1471,7 @@ void GeneralLongitudinalDecider::construct_lon_decision_trajectory(
 }
 
 void GeneralLongitudinalDecider::get_lon_decision_info(
-    LonDecisionInfo &lon_decision_information) {
+    common::LonDecisionInfo &lon_decision_information) {
   // NTRACE_CALL(8);
 
   auto &ego_planning_info = pipeline_context_->planning_info;
@@ -1498,14 +1499,18 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
   auto c_lane = reference_path_manager->get_reference_path_by_current_lane();
   get_lon_success = c_lane->get_reference_point_by_lon(ego_s, refpath_pt);
 
-  lon_decision_information.cutin_info.cutin_information.clear();
-  lon_decision_information.CIPV_info.CIPV_information.clear();
-  lon_decision_information.leadone_info.has_leadone = false;
-  lon_decision_information.CIPV_info.has_CIPV = false;
-  lon_decision_information.cutin_info.has_cutin = false;
-  lon_decision_information.nearby_obstacle = false;
-  ObstacleInformation CIPV_object;
-  ObstacleInformation cutin_object;
+  lon_decision_information.mutable_cutin_info()
+      ->mutable_cutin_information()
+      ->Clear();
+  lon_decision_information.mutable_cipv_info()
+      ->mutable_cipv_information()
+      ->Clear();
+  lon_decision_information.mutable_leadone_info()->set_has_leadone(false);
+  lon_decision_information.mutable_cipv_info()->set_has_cipv(false);
+  lon_decision_information.mutable_cutin_info()->set_has_cutin(false);
+  lon_decision_information.set_nearby_obstacle(false);
+  // ObstacleInformation CIPV_object;
+  // ObstacleInformation cutin_object;
   if (!frenet_obstacles_map.empty()) {
     const double ego_l_start =
         reference_path_ptr_->get_frenet_ego_state().boundary().l_start;
@@ -1527,7 +1532,7 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
       bool right_satisfy =
           frenet_obstacle->frenet_obstacle_boundary().l_end < ego_l_start &&
           frenet_obstacle->frenet_velocity_l() < -lateral_v_threshold;
-      if (!lon_decision_information.nearby_obstacle) {
+      if (!lon_decision_information.has_nearby_obstacle()) {
         if (left_satisfy || right_satisfy) {
           l_away_ego = true;
         }
@@ -1559,9 +1564,9 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
             bool longitual_satisfy =
                 (frenet_obstacle->frenet_s() - ego_s > -10.0) &&
                 (frenet_obstacle->frenet_s() - ego_s < 100.0);
-            lon_decision_information.nearby_obstacle =
-                lon_decision_information.nearby_obstacle ||
-                (lateral_satisfy && longitual_satisfy);
+            lon_decision_information.set_nearby_obstacle(
+                lon_decision_information.nearby_obstacle() ||
+                (lateral_satisfy && longitual_satisfy));
             LOG_DEBUG(
                 "Distance_to_left_road_border: %.2f, "
                 "distance_to_right_road_border: %.2f, lateral_satisfy: "
@@ -1576,14 +1581,14 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
                      ego_l_start) &&
                 (frenet_obstacle->frenet_s() - ego_s > -50.0) &&
                 (frenet_obstacle->frenet_s() - ego_s < 100.0);
-            lon_decision_information.nearby_obstacle =
-                lon_decision_information.nearby_obstacle || s_l_satisfy;
+            lon_decision_information.set_nearby_obstacle(
+                lon_decision_information.nearby_obstacle() || s_l_satisfy);
             LOG_DEBUG("HHLDEBUGW s_l_satisfy: %d \n", s_l_satisfy);
           }
         }
       }
       LOG_DEBUG("nearby_obstacle: %d \n",
-                lon_decision_information.nearby_obstacle);
+                lon_decision_information.nearby_obstacle());
 
       if (!obstacle_decision.second.position_decisions.empty()) {
         has_lon_decision_overtake =
@@ -1617,90 +1622,97 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
           polygen_out_lane);
       if (!polygen_out_lane) {
         // obstain leadone information
-        lon_decision_information.leadone_info.has_leadone = true;
+        lon_decision_information.mutable_leadone_info()->set_has_leadone(true);
         if (satisfy_s_leadone) {
-          lon_decision_information.leadone_info.leadone_information.obstacle_s =
-              distance_to_obstacle;
-          lon_decision_information.leadone_info.leadone_information
-              .obstacle_id = obstacle_decision.first;
-          lon_decision_information.leadone_info.leadone_information
-              .obstacle_length =
+          auto leadone_information =
+              lon_decision_information.mutable_leadone_info()
+                  ->mutable_leadone_information();
+          leadone_information->set_obstacle_s(distance_to_obstacle);
+          leadone_information->set_obstacle_id(obstacle_decision.first);
+          leadone_information->set_obstacle_length(
               std::max(frenet_obstacle->frenet_obstacle_boundary().s_end -
                            frenet_obstacle->frenet_obstacle_boundary().s_start,
-                       4.0);
-          leadone_min_s_leadone = lon_decision_information.leadone_info
-                                      .leadone_information.obstacle_s;
-          lon_decision_information.leadone_info.leadone_information.obstacle_v =
-              frenet_obstacle->velocity();
+                       4.0));
+          leadone_min_s_leadone = leadone_information->obstacle_s();
+          leadone_information->set_obstacle_v(frenet_obstacle->velocity());
           if (frenet_obstacle->type() ==
                   Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
               frenet_obstacle->type() ==
                   Common::ObjectType::OBJECT_TYPE_BICYCLE) {
-            lon_decision_information.leadone_info.leadone_information
-                .obstacle_type = 0;
+            leadone_information->set_obstacle_type(0);
           } else {
-            lon_decision_information.leadone_info.leadone_information
-                .obstacle_type = 1;
+            leadone_information->set_obstacle_type(1);
           }
         }
         // obtain CIPV information
         if (satisfy_s_CIPV) {
-          lon_decision_information.CIPV_info.has_CIPV = true;
-          CIPV_object.obstacle_s = distance_to_obstacle;
-          CIPV_object.obstacle_id = obstacle_decision.first;
-          CIPV_object.obstacle_v = frenet_obstacle->velocity();
+          lon_decision_information.mutable_cipv_info()->set_has_cipv(true);
+          auto CIPV_object = lon_decision_information.mutable_cipv_info()
+                                 ->mutable_cipv_information()
+                                 ->Add();
+          CIPV_object->set_obstacle_s(distance_to_obstacle);
+          CIPV_object->set_obstacle_id(obstacle_decision.first);
+          CIPV_object->set_obstacle_v(frenet_obstacle->velocity());
           if (frenet_obstacle->type() ==
                   Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
               frenet_obstacle->type() ==
                   Common::ObjectType::OBJECT_TYPE_BICYCLE) {
-            CIPV_object.obstacle_type = 0;
+            CIPV_object->set_obstacle_type(0);
           } else {
-            CIPV_object.obstacle_type = 1;
+            CIPV_object->set_obstacle_type(1);
           }
-          lon_decision_information.CIPV_info.CIPV_information.emplace_back(
-              CIPV_object);
         }
       }
       // obstain cutin information
       else if (polygen_out_lane && has_lon_decision_yield) {
-        lon_decision_information.cutin_info.has_cutin = true;
+        lon_decision_information.mutable_cutin_info()->set_has_cutin(true);
+        auto cutin_object = lon_decision_information.mutable_cutin_info()
+                                ->mutable_cutin_information()
+                                ->Add();
         if (frenet_obstacle->type() ==
                 Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
             frenet_obstacle->type() ==
                 Common::ObjectType::OBJECT_TYPE_BICYCLE) {
-          cutin_object.obstacle_type = 0;
+          cutin_object->set_obstacle_type(0);
         } else {
-          cutin_object.obstacle_type = 1;
+          cutin_object->set_obstacle_type(1);
         }
-        cutin_object.obstacle_s = distance_to_obstacle;
-        cutin_object.obstacle_v = frenet_obstacle->velocity();
-        cutin_object.obstacle_id = obstacle_decision.first;
-        lon_decision_information.cutin_info.cutin_information.emplace_back(
-            cutin_object);
+        cutin_object->set_obstacle_s(distance_to_obstacle);
+        cutin_object->set_obstacle_v(frenet_obstacle->velocity());
+        cutin_object->set_obstacle_id(obstacle_decision.first);
       }
     }
   }
   // debug for lon decision information
-  if (lon_decision_information.leadone_info.has_leadone) {
+  if (lon_decision_information.leadone_info().has_leadone()) {
     LOG_DEBUG(
         "HHLDEBUG: has_leadone: %d, s: %.2f, id: %d, v: %.2f, type: %d, "
         "length: %.2f, nearby_obstacle: %d",
-        lon_decision_information.leadone_info.has_leadone,
-        lon_decision_information.leadone_info.leadone_information.obstacle_s,
-        lon_decision_information.leadone_info.leadone_information.obstacle_id,
-        lon_decision_information.leadone_info.leadone_information.obstacle_v,
-        lon_decision_information.leadone_info.leadone_information.obstacle_type,
-        lon_decision_information.leadone_info.leadone_information
-            .obstacle_length,
-        lon_decision_information.nearby_obstacle);
+        lon_decision_information.leadone_info().has_leadone(),
+        lon_decision_information.leadone_info()
+            .leadone_information()
+            .obstacle_s(),
+        lon_decision_information.leadone_info()
+            .leadone_information()
+            .obstacle_id(),
+        lon_decision_information.leadone_info()
+            .leadone_information()
+            .obstacle_v(),
+        lon_decision_information.leadone_info()
+            .leadone_information()
+            .obstacle_type(),
+        lon_decision_information.leadone_info()
+            .leadone_information()
+            .obstacle_length(),
+        lon_decision_information.nearby_obstacle());
   }
-  if (lon_decision_information.CIPV_info.has_CIPV) {
+  if (lon_decision_information.cipv_info().has_cipv()) {
     LOG_DEBUG("HHLDEBUG: has_CIPV: %d",
-              lon_decision_information.leadone_info.has_leadone);
+              lon_decision_information.leadone_info().has_leadone());
   }
-  if (lon_decision_information.cutin_info.has_cutin) {
+  if (lon_decision_information.cutin_info().has_cutin()) {
     LOG_DEBUG("HHLDEBUG: has_cutin: %d",
-              lon_decision_information.cutin_info.has_cutin);
+              lon_decision_information.cutin_info().has_cutin());
   }
   frenet_obstacles_map.clear();
 }
@@ -2037,8 +2049,8 @@ void GeneralLongitudinalDecider::GenerateLonRefPathPB(
     add_ds_ref->set_second(ds_ref.first);  // weight
   }
   // 4.update bounds
-  long_ref_path_pb->mutable_bounds()->Reserve(lon_ref_path.bounds.size());
-  for (const auto &bounds : lon_ref_path.bounds) {
+  long_ref_path_pb->mutable_bounds()->Reserve(lon_ref_path.hard_bounds.size());
+  for (const auto &bounds : lon_ref_path.hard_bounds) {
     auto bounds_pb = long_ref_path_pb->add_bounds();
     for (const auto &bound : bounds) {
       auto bound_pb = bounds_pb->add_bound();

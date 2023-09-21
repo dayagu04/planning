@@ -277,54 +277,9 @@ struct EgoPredictionObject {
 
 enum ResultTrajectoryType { REFERENCE_PATH = 0, RAW_TRAJ, REFINED_TRAJ };
 
-struct AccSafetyInfo {
-  bool need_takeover = false;
-};
-struct ObstacleInformation {
-  int obstacle_id{-1};
-  int obstacle_type{-1};
-  double obstacle_s{-1.0};
-  double obstacle_v{-1.0};
-  double obstacle_length{0.0};
-  double duration{-1.0};
-};
-
-struct LeadoneInfo {
-  bool has_leadone{false};
-  ObstacleInformation leadone_information;
-};
-
-struct CutinInfo {
-  bool has_cutin{false};
-  std::vector<ObstacleInformation> cutin_information;
-};
-
-struct CIPVInfo {
-  bool has_CIPV{false};
-  std::vector<ObstacleInformation> CIPV_information;
-};
-
-struct LonDecisionInfo {
-  LeadoneInfo leadone_info;
-  CutinInfo cutin_info;
-  CIPVInfo CIPV_info;
-  AccSafetyInfo acc_safety_info;
-  bool nearby_obstacle{false};
-  double map_velocity_limit{0.0};
-};
-
 struct CurvatureInfo {
   double max_curvature = 0.0;
   double curv_velocity_limit = 120.0 / 3.6;
-};
-
-struct StartStopInfo {
-  enum StateType { CRUISE, STOP, START };
-  bool is_stop{false};
-  bool is_start{false};
-  bool enable_stop{false};
-  StateType state{CRUISE};
-  double stop_distance_of_leadone{0.0};
 };
 
 struct LatDecisionInfo {
@@ -367,6 +322,8 @@ struct MotionPlanningInfo {
   bool lat_enable_flag = false;
   bool lon_enable_flag = false;
   bool lat_init_flag = false;
+  pnc::mathlib::spline ref_x_s_spline;
+  pnc::mathlib::spline ref_y_s_spline;
   pnc::mathlib::spline x_s_spline;
   pnc::mathlib::spline y_s_spline;
   pnc::mathlib::spline theta_s_spline;
@@ -386,6 +343,10 @@ struct MotionPlanningInfo {
 
   pnc::mathlib::spline x_t_spline;
   pnc::mathlib::spline y_t_spline;
+
+  pnc::mathlib::spline ref_x_t_spline;
+  pnc::mathlib::spline ref_y_t_spline;
+
   pnc::mathlib::spline theta_t_spline;
   pnc::mathlib::spline delta_t_spline;
   pnc::mathlib::spline omega_t_spline;
@@ -421,6 +382,7 @@ struct PlanningInitPoint {
   double a;
   double jerk;
   double relative_time;
+  double lon_pos_err;
   FrenetState frenet_state;
 
   planning::common::LateralInitState lat_init_state;

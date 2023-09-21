@@ -23,8 +23,8 @@ static const double curve_factor = 0.30;
 EgoStateManager::EgoStateManager(planning::framework::Session *session)
     : session_(session) {
   vehicle_param_ = session_->vehicle_config_context().get_vehicle_param();
-  // init v_cruise_filter: -2m/s2, 2m/s2, 0-150km/h, 10hz
-  v_cruise_filter_.Init(-2.0, 2.0, 0.0, 42.0, planning_loop_dt);
+  // init v_cruise_filter: -1.5m/s2, 1.5m/s2, 0-150km/h, 10hz
+  v_cruise_filter_.Init(-1.5, 1.5, 0.0, 42.0, planning_loop_dt);
 }
 
 void EgoStateManager::set_ego_carte(const Point2D &ego_carte) {
@@ -195,8 +195,13 @@ bool EgoStateManager::update(
 
   update_transform();
 
-  // planning start point
-  UpdatePlanningInitState();
+  // planning init state for realtime & longtime decided by location_valid
+  if (session_->environmental_model().location_valid()) {
+    UpdatePlanningInitState();
+  } else {
+    RealtimeUpdatePlanningInitState();
+  }
+
   return true;
 }
 
@@ -389,6 +394,64 @@ bool EgoStateManager::LongitudinalStitch() {
   }
 }
 
+void EgoStateManager::RealtimeUpdatePlanningInitState() {
+  // lateral motion never replans, lateral stitch obeys that (x,y,theta) always
+  // apply current pose, delta uses current delta
+  auto &lat_init_state = planning_init_point_.lat_init_state;
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  lat_init_state.set_x(0.0);
+  lat_init_state.set_y(0.0);
+  lat_init_state.set_theta(0.0);
+  lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio);
+
+  // longitudinal stitch: ignore s, but v & a really stitch
+  auto &lon_init_state = planning_init_point_.lon_init_state;
+  const auto &motion_planning_info = session_->mutable_planning_context()
+                                         ->mutable_planning_result()
+                                         .motion_planning_info;
+  const double vel_ego = ego_state->ego_v();
+
+  if (motion_planning_info.lon_enable_flag) {
+    double vel_stitch =
+        std::max(motion_planning_info.v_t_spline(planning_loop_dt), 0.0);
+    double acc_stitch = motion_planning_info.a_t_spline(planning_loop_dt);
+
+    const double vel_err = vel_stitch - vel_ego;
+
+    planning_init_point_.lon_pos_err += vel_err * planning_loop_dt;
+
+    // longitudinal motion replans due to large lon_pos_err
+    if (fabs(planning_init_point_.lon_pos_err) > 1.5) {
+      planning_init_point_.lon_pos_err = 0.0;
+
+      vel_stitch = vel_ego;
+    }
+
+    lon_init_state.set_s(0.0);
+    lon_init_state.set_v(vel_stitch);
+    lon_init_state.set_a(acc_stitch);
+    lon_init_state.set_j(0.0);
+  } else {
+    lon_init_state.set_s(0.0);
+    lon_init_state.set_v(vel_ego);
+    lon_init_state.set_a(0.0);
+    lon_init_state.set_j(0.0);
+  }
+
+  planning_init_point_.x = lat_init_state.x();
+  planning_init_point_.y = lat_init_state.y();
+  planning_init_point_.heading_angle = lat_init_state.theta();
+  planning_init_point_.curvature = lat_init_state.curv();
+  planning_init_point_.dkappa = lat_init_state.d_curv();
+
+  planning_init_point_.v = lon_init_state.v();
+  planning_init_point_.a = lon_init_state.a();
+  planning_init_point_.jerk = lon_init_state.j();
+
+  planning_init_point_.relative_time = 0.0;
+}
+
 void EgoStateManager::UpdatePlanningInitState() {
   bool stitch_success = false;
   uint8_t replan_status = 0;
@@ -438,65 +501,6 @@ void EgoStateManager::UpdatePlanningInitState() {
   planning_init_point_.jerk = lon_init_state.j();
 
   planning_init_point_.relative_time = 0.0;
-}
-
-std::vector<PncTrajectoryPoint>
-EgoStateManager::compute_stitching_trajectory() {
-  // pnc planning_status
-  // TODO
-  auto *pnc_planning_status =
-      session_->mutable_planning_output_context()->mutable_planning_status();
-  const auto &last_planning_result =
-      session_->mutable_planning_context()->last_planning_result();
-  bool dbw_status = session_->environmental_model().GetVehicleDbwStatus();
-  bool last_planning_success =
-      session_->mutable_planning_context()->last_planning_success();
-
-  const double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
-
-  // make vehicle state
-  VehicleState vehicle_state;
-  vehicle_state.x = ego_pose_.x;
-  vehicle_state.y = ego_pose_.y;
-  vehicle_state.yaw = ego_pose_.theta;
-  vehicle_state.linear_acceleration = ego_acc_;
-  vehicle_state.linear_velocity = ego_v_;
-  vehicle_state.kappa = tan(ego_steer_angle_ / vehicle_param_.steer_ratio) /
-                        vehicle_param_.wheel_base;
-  vehicle_state.heading = ego_pose_.theta;  // todo
-  vehicle_state.driving_mode =
-      dbw_status ? DrivingMode::AUTO : DrivingMode::MANUAL;
-
-  // hack
-  auto stitch_trajectory = TrajectoryStitcher::ComputeReinitStitchingTrajectory(
-      planning_cycle_time, vehicle_state);
-  // reinit
-  auto &replan_trajectory =
-      session_->mutable_planning_context()->mutable_replan_trajectory();
-  replan_trajectory = false;
-  if (dbw_status == false || last_planning_success == false) {
-    auto stitch_trajectory =
-        TrajectoryStitcher::ComputeReinitStitchingTrajectory(
-            planning_cycle_time, vehicle_state);
-    replan_trajectory = true;
-    jerk_ = 0.0;
-    return stitch_trajectory;
-  }
-
-  // compute stitch trajectory
-  // relative time to last planning trajectory, timeline starts at first point
-  // of last planning trajectory
-  double init_point_relative_time =
-      (pnc_planning_status->planning_result.next_timestamp -
-       pnc_planning_status->planning_result.timestamp);  // todo .sec();
-
-  vehicle_state.timestamp = init_point_relative_time;
-  LOG_DEBUG("init_point_relative_time: %f", init_point_relative_time);
-
-  // TODO
-  // auto stitch_trajectory = TrajectoryStitcher::ComputeStitchingTrajectory()
-
-  return stitch_trajectory;
 }
 
 }  // namespace planning
