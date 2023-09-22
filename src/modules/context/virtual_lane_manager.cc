@@ -1,4 +1,6 @@
 #include "virtual_lane_manager.h"
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
 #include "ad_common/hdmap/hdmap.h"
 #include "debug_info_log.h"
@@ -13,6 +15,7 @@ using Map::CurrentRouting;
 using Map::FormOfWayType::RAMP;
 using Map::FormOfWayType::MAIN_ROAD;
 using ad_common::hdmap::LaneGroupConstPtr;
+using ad_common::hdmap::LaneInfoConstPtr;
 
 VirtualLaneManager::VirtualLaneManager(
     const EgoPlanningConfigBuilder* config_builder,
@@ -61,6 +64,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       CalculateDistanceToRamp(session_);
       CalculateDistanceToFirstRoadSplit(session_);
       CalculateDistanceToFirstRoadMerge(session_);
+      std::cout << "is_ramp_on_right_:" << is_ramp_on_right_ << std::endl;
     } else {
       std::cout << "localization invalid" << std::endl;
     }
@@ -591,6 +595,7 @@ double VirtualLaneManager::JudgeIfTheRamp(
                     accumulate_distance_for_lane_group);
           std::cout << "current judge ramp lane group id:" << lane_group_id_next
                     << std::endl;
+          CalculateRampDirection(hd_map, lane_group_ptr);
           return accumulate_distance_for_lane_group;
         }
       }
@@ -598,6 +603,50 @@ double VirtualLaneManager::JudgeIfTheRamp(
   }
   LOG_DEBUG("no ramp in current routing\n");
   return NL_NMAX;
+}
+
+void VirtualLaneManager::CalculateRampDirection(const ad_common::hdmap::HDMap& hd_map,
+    LaneGroupConstPtr lane_group_ptr) {
+  // TODO(fengwang31): only consider groups with 2 successor
+  if (lane_group_ptr == nullptr) {
+    return;
+  }
+  if (lane_group_ptr->successor_lane_group_ids().size() < 2) {
+    return;
+  }
+  ad_common::math::Vec2d group_in_route_dir_vec;
+  ad_common::math::Vec2d group_not_in_route_dir_vec;
+  for (int i = 0; i < 2; ++i) {
+    const uint64_t group_id = lane_group_ptr->successor_lane_group_ids()[i];
+    LaneGroupConstPtr lane_group_ptr = hd_map.GetLaneGroupById(group_id);
+    LaneInfoConstPtr lane_info_ptr = nullptr;
+    for (const auto& lane_id : lane_group_ptr->lane_ids()) {
+      lane_info_ptr = hd_map.GetLaneById(lane_id);
+      if (lane_info_ptr != nullptr) {
+        break;
+      }
+    }
+    if (lane_info_ptr == nullptr) {
+      return;
+    }
+    if (lane_info_ptr->lane().points_on_central_line_size() < 2) {
+      return;
+    }
+    const auto& points_on_central_line = lane_info_ptr->lane().points_on_central_line();
+    ad_common::math::Vec2d group_dir_vec;
+    group_dir_vec.set_x(points_on_central_line[1].x() - points_on_central_line[0].x());
+    group_dir_vec.set_y(points_on_central_line[1].y() - points_on_central_line[0].y());
+    if (lane_group_set_.count(group_id) != 0) {
+      group_in_route_dir_vec = std::move(group_dir_vec);
+    } else {
+      group_not_in_route_dir_vec = std::move(group_dir_vec);
+    }
+  }
+  if (group_in_route_dir_vec.CrossProd(group_not_in_route_dir_vec) > 0.0) {
+    is_ramp_on_right_ = true;
+  } else {
+    is_ramp_on_right_ = false;
+  }
 }
 
 double VirtualLaneManager::JudgeIfTheFirstSplit(

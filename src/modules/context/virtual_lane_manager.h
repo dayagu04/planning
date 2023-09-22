@@ -135,6 +135,7 @@ class VirtualLaneManager {
   };
 
   double dis_to_ramp() const { return dis_to_ramp_; }
+  bool is_ramp_on_right() const { return is_ramp_on_right_; }
   double distance_to_first_road_merge() const {
     return distance_to_first_road_merge_;
   }
@@ -155,6 +156,8 @@ class VirtualLaneManager {
   double JudgeIfTheRamp(const int current_index,
                         const CurrentRouting &current_routing,
                         const ad_common::hdmap::HDMap &hd_map) const;
+  void CalculateRampDirection(const ad_common::hdmap::HDMap& hd_map,
+      LaneGroupConstPtr lane_group_ptr);
   double JudgeIfTheFirstSplit(const int current_index,
                               const CurrentRouting &current_routing,
                               const ad_common::hdmap::HDMap &hd_map) const;
@@ -182,6 +185,7 @@ class VirtualLaneManager {
   Intersection intersection_;
   // Ramp ramp_;
   double dis_to_ramp_ = NL_NMAX;
+  bool is_ramp_on_right_ = false;
   double distance_to_first_road_merge_ = NL_NMAX;
   double distance_to_first_road_split_ = NL_NMAX;
   bool is_local_valid_ = false;
