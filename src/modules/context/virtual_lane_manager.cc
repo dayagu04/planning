@@ -2,6 +2,7 @@
 #include <iostream>
 #include "ad_common/hdmap/hdmap.h"
 #include "debug_info_log.h"
+#include "ehr.pb.h"
 #include "environmental_model.h"
 #include "localization.pb.h"
 #include "reference_path_manager.h"
@@ -10,6 +11,7 @@ namespace planning {
 
 using Map::CurrentRouting;
 using Map::FormOfWayType::RAMP;
+using Map::FormOfWayType::MAIN_ROAD;
 using ad_common::hdmap::LaneGroupConstPtr;
 
 VirtualLaneManager::VirtualLaneManager(
@@ -637,6 +639,7 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
   // const int lane_groups_num = current_routing.lane_groups_in_route_size();
   const int sorted_lane_groups_num = sorted_lane_groups_in_route_.size();
   double accumulate_distance_for_lane_group = 0;
+  bool is_current_is_ramp = false;
   for (int i = current_index; i < sorted_lane_groups_num; i++) {
     const uint64_t lane_group_id = sorted_lane_groups_in_route_[i];
     LaneGroupConstPtr lane_group_ptr = hd_map.GetLaneGroupById(lane_group_id);
@@ -644,12 +647,25 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
       LOG_DEBUG("fail get lane group by id for merge!!!\n");
       return NL_NMAX;
     }
-    if (i > current_index) {
+    if (i == current_index) {
+      accumulate_distance_for_lane_group += 0;
+      for (int index = 0; index < lane_group_ptr->way_forms_size(); index++) {
+        if (lane_group_ptr->way_forms()[index] == RAMP) {
+          std::cout << "currrent in ramp, lane group id:" << lane_group_id << std::endl;
+          is_current_is_ramp = true;
+          break;
+        }
+      }
+      if (!is_current_is_ramp) {
+        std::cout << "current lane group is not in ramp!!!"<< std::endl;
+        return NL_NMAX;
+      }
+    } else {
       accumulate_distance_for_lane_group += lane_group_ptr->length();
     }
 
     // judge if the road merge according to the predecessor_lane_group_ids_size
-    if (i + 1 < sorted_lane_groups_num) {
+    if ((i + 1 < sorted_lane_groups_num) & is_current_is_ramp) {
       uint64_t lane_group_id_next = sorted_lane_groups_in_route_[i + 1];
       LaneGroupConstPtr lane_group_ptr_next =
           hd_map.GetLaneGroupById(lane_group_id_next);
@@ -657,9 +673,20 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
         LOG_DEBUG("fail get lane group by id for merge!!!\n");
         return NL_NMAX;
       }
-      if (lane_group_ptr_next->predecessor_lane_group_ids_size() > 1) {
-        LOG_DEBUG("accumulate_distance_for_lane_group for merge :%f\n",
-                  accumulate_distance_for_lane_group);
+      std::cout <<"lane_group_ptr_next->way_forms size:" <<lane_group_ptr_next->way_forms().size()<<std::endl;
+      bool is_no_ramp = true;
+      for (int j = 0; j < lane_group_ptr_next->way_forms().size(); j++) {
+        std::cout <<"lane_group_ptr_next way_forms:" << lane_group_ptr_next->way_forms()[j]<<",No:"<<j<<std::endl;
+        if (lane_group_ptr_next->way_forms()[j] == RAMP) {
+          is_no_ramp = false;
+          break;
+        }
+      }
+      if (is_no_ramp) {
+        LOG_DEBUG("accumulate_distance_in_lane_group for merge :%f\n",
+                    accumulate_distance_for_lane_group);
+        std::cout << "judge merge lane group id:" << lane_group_id_next
+                  << std::endl;
         return accumulate_distance_for_lane_group;
       }
     }
