@@ -159,6 +159,8 @@ class DiagonalInTrajectoryGenerator {
 
   void UpdateManagedParkingFusion(const int select_slot_index);
 
+  bool IsSegmentExist(const PlanningPoint &end_point) const;
+
  private:
   DiagonalInGeometryPlan geometry_planning_;
 

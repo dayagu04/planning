@@ -270,7 +270,8 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlan(
 
   std::cout << "diagonal replan triggered, replan state:"
             << static_cast<int>(current_state_) << std::endl;
-  std::cout << "cur segment name:" << last_segment_name_ << std::endl;
+  std::cout << "cur segment name:" << static_cast<int>(last_segment_name_)
+            << std::endl;
 
   PrintSlotInfo();
 
@@ -362,11 +363,35 @@ bool DiagonalInTrajectoryGenerator::ABSegmentPlan(
     GenerateABSegmentTrajectory(segments_info, planning_output);
     GenerateBCSegmentTrajectory(segments_info, planning_output);
 
-    // #ifdef __PYBIND_DEBUG__
-    //     GenerateCDSegmentTrajectory(segments_info, planning_output);
-    // #endif
+#ifdef __PYBIND_DEBUG__
 
-    PrintTrajectoryPoints(*planning_output);
+    std::cout << "segments_info A: (" << segments_info.opt_point_a.x << ", "
+              << segments_info.opt_point_a.y << ", "
+              << segments_info.opt_point_a.theta << ")" << std::endl;
+    std::cout << "segments_info B: (" << segments_info.opt_point_b.x << ", "
+              << segments_info.opt_point_b.y << ", "
+              << segments_info.opt_point_b.theta << ")" << std::endl;
+    std::cout << "segments_info C: (" << segments_info.opt_point_c.x << ", "
+              << segments_info.opt_point_c.y << ", "
+              << segments_info.opt_point_c.theta << ")" << std::endl;
+    std::cout << "segments_info D: (" << segments_info.opt_point_d.x << ", "
+              << segments_info.opt_point_d.y << ", "
+              << segments_info.opt_point_d.theta << ")" << std::endl;
+    std::cout << "segments_info E: (" << segments_info.opt_point_e.x << ", "
+              << segments_info.opt_point_e.y << ", "
+              << segments_info.opt_point_e.theta << ")" << std::endl;
+    std::cout << "segments_info F: (" << segments_info.opt_point_f.x << ", "
+              << segments_info.opt_point_f.y << ", "
+              << segments_info.opt_point_f.theta << ")" << std::endl;
+    if (IsSegmentExist(segments_info.opt_point_d)) {
+      GenerateCDSegmentTrajectory(segments_info, planning_output);
+      //   //   if (IsSegmentExist(segments_info.opt_point_e)) {
+      //   //     GenerateDESegmentTrajectory(segments_info, planning_output);
+      //   //   }
+    }
+#endif
+
+    // PrintTrajectoryPoints(*planning_output);
 
     return true;
   } else {
@@ -1124,6 +1149,15 @@ void DiagonalInTrajectoryGenerator::PrintTrajectoryPoints(
     std::cout << "seg traj pt [" << i << "], x:" << pt.x() << ", y:" << pt.y()
               << ", theta:" << pt.heading_yaw() << ", kappa:" << pt.curvature()
               << ", v:" << pt.v() << ", s:" << pt.distance() << std::endl;
+  }
+}
+
+bool DiagonalInTrajectoryGenerator::IsSegmentExist(
+    const PlanningPoint& end_point) const {
+  if (std::fabs(end_point.x) < 1e-6 && std::fabs(end_point.y) < 1e-6) {
+    return false;
+  } else {
+    return true;
   }
 }
 
