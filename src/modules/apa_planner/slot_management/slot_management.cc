@@ -127,7 +127,8 @@ bool SlotManagement::UpdateSlotsInSearchingState() {
     }
 
     const auto slot_info_vec_size = slot_info_window_vec_.size();
-    if (slot_info_map_.count(slot_info.id()) == 0) {  // get new id
+    if (slot_info_map_.count(slot_info.id()) == 0 &&
+        LonDifUpdateCondition(slot_info)) {  // get new id
       SlotInfoWindow slot_info_window;
       slot_info_window.Add(slot_info);
       slot_info_window_vec_.emplace_back(slot_info_window);

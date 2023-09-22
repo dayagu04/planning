@@ -554,8 +554,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
     else:
       steer_deg = 0.0
 
+    current_state = bag_loader.soc_state_msg['data'][soc_state_msg_idx].current_state
     local_view_data['data_text'].data.update({
-      'vel_ego_text': ['v = {:.2f} m/s\nsteer = {:.1f} deg'.format(round(vel_ego, 2), round(steer_deg, 1))],
+      'vel_ego_text': ['v = {:.2f} m/s, steer = {:.1f} deg, state = {:d}'.format(round(vel_ego, 2), round(steer_deg, 1), current_state)],
     })
 
   ### step 3: 加载planning轨迹信息
@@ -717,7 +718,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
   # load plan debug msg
   if bag_loader.plan_debug_msg['enable'] == True and bag_loader.fus_parking_msg['enable'] == True:
     local_view_data['data_target_managed_slot'].data.update({'corner_point_x': [], 'corner_point_y': [],})
-    slot_management_info = plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].slot_management_info
+    slot_management_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].slot_management_info
+
+    # print(slot_management_info)
     # 1. update target managed slot
     for i in range(len(slot_management_info.slot_info_vec)):
       maganed_slot_vec = slot_management_info.slot_info_vec[i]
@@ -845,7 +848,7 @@ def load_local_view_figure_parking():
   f1 = fig1.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
   fig1.circle('current_pos_y','current_pos_x', source = data_current_pos, size=8, color='orange')
   fig1.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1.5, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
-  fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'car')
+  fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'text')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
   fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'mpc')
 
