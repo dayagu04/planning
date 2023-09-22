@@ -126,7 +126,7 @@ def load_lane_lines(lanes):
         left_line.begin, left_line.end)
       lane_info_l['line_x_vec'] = line_x
       lane_info_l['line_y_vec'] = line_y
-      lane_info_l['type'] = left_line.segment[0].type
+      lane_info_l['type'] = left_line.type_segments[0].type
 
       line_info_list.append(lane_info_l)
 
@@ -138,7 +138,7 @@ def load_lane_lines(lanes):
 
       lane_info_r['line_x_vec'] = line_x
       lane_info_r['line_y_vec'] = line_y
-      lane_info_r['type'] = right_line.segment[0].type
+      lane_info_r['type'] = right_line.type_segments[0].type
       line_info_list.append(lane_info_r)
     else:
       line_x, line_y = gen_line(0,0,0,0,0,0)

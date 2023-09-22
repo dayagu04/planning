@@ -29,7 +29,6 @@ coord_tf = coord_transformer()
 Max_line_size = 200
 Road_boundary_max_line_size = 50
 Lane_boundary_max_line_size = 300
-
 class LoadCyberbag:
   def __init__(self, path) -> None:
     self.bag_path = path
@@ -602,125 +601,125 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'text_yn': [text_yn],
     })
 
-  ## step 3: 加载车道线信息
-  # if bag_loader.road_msg['enable'] == True:
-  #   # load lane info
-  #   line_info_list = load_lane_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
+  # step 3: 加载车道线信息
+  if bag_loader.road_msg['enable'] == True:
+    # load lane info
+    line_info_list = load_lane_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
 
-  #   # update lane info
-  #   data_lane_dict = {
-  #     0:local_view_data['data_lane_0'],
-  #     1:local_view_data['data_lane_1'],
-  #     2:local_view_data['data_lane_2'],
-  #     3:local_view_data['data_lane_3'],
-  #     4:local_view_data['data_lane_4'],
-  #     5:local_view_data['data_lane_5'],
-  #     6:local_view_data['data_lane_6'],
-  #     7:local_view_data['data_lane_7'],
-  #     8:local_view_data['data_lane_8'],
-  #     9:local_view_data['data_lane_9'],
-  #   }
-  #   data_center_line_dict = {
-  #     0:local_view_data['data_center_line_0'],
-  #     1:local_view_data['data_center_line_1'],
-  #     2:local_view_data['data_center_line_2'],
-  #     3:local_view_data['data_center_line_3'],
-  #     4:local_view_data['data_center_line_4'],
-  #   }
+    # update lane info
+    data_lane_dict = {
+      0:local_view_data['data_lane_0'],
+      1:local_view_data['data_lane_1'],
+      2:local_view_data['data_lane_2'],
+      3:local_view_data['data_lane_3'],
+      4:local_view_data['data_lane_4'],
+      5:local_view_data['data_lane_5'],
+      6:local_view_data['data_lane_6'],
+      7:local_view_data['data_lane_7'],
+      8:local_view_data['data_lane_8'],
+      9:local_view_data['data_lane_9'],
+    }
+    data_center_line_dict = {
+      0:local_view_data['data_center_line_0'],
+      1:local_view_data['data_center_line_1'],
+      2:local_view_data['data_center_line_2'],
+      3:local_view_data['data_center_line_3'],
+      4:local_view_data['data_center_line_4'],
+    }
 
-  #   for i in range(10):
-  #     try:
-  #       if line_info_list[i]['type'] == 0 or \
-  #         line_info_list[i]['type'] == 1 or \
-  #         line_info_list[i]['type'] == 3 or \
-  #         line_info_list[i]['type'] == 4:
-  #         fig1.renderers[3 + i].glyph.line_dash = 'dashed'
-  #       else:
-  #         fig1.renderers[3 + i].glyph.line_dash = 'solid'
-  #       data_lane = data_lane_dict[i]
-  #       data_lane.data.update({
-  #         'line_{}_x'.format(i): line_info_list[i]['line_x_vec'],
-  #         'line_{}_y'.format(i): line_info_list[i]['line_y_vec'],
-  #       })
-  #     except:
-  #       print('error')
-  #       pass
+    for i in range(10):
+      try:
+        if line_info_list[i]['type'] == 0 or \
+          line_info_list[i]['type'] == 1 or \
+          line_info_list[i]['type'] == 3 or \
+          line_info_list[i]['type'] == 4:
+          fig1.renderers[3 + i].glyph.line_dash = 'dashed'
+        else:
+          fig1.renderers[3 + i].glyph.line_dash = 'solid'
+        data_lane = data_lane_dict[i]
+        data_lane.data.update({
+          'line_{}_x'.format(i): line_info_list[i]['line_x_vec'],
+          'line_{}_y'.format(i): line_info_list[i]['line_y_vec'],
+        })
+      except:
+        print('error')
+        pass
 
-  #   center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
-  #   # print(center_line_list)
-  #   for i in range(5):
-  #     # try:
-  #       if 0:
-  #         data_center_line = data_center_line_dict[i]
-  #         data_center_line.data.update({
-  #           'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
-  #           'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
-  #         })
-  #       else:
-  #         data_center_line = data_center_line_dict[i]
-  #         line_x_rel = []
-  #         line_y_rel = []
-  #         for index in range(len(center_line_list[i]['line_x_vec'])):
-  #           pos_xn_i, pos_yn_i = center_line_list[i]['line_x_vec'][index], center_line_list[i]['line_y_vec'][index]
-  #           ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
-  #           line_x_rel.append(ego_local_x)
-  #           line_y_rel.append(ego_local_y)
-  #         center_line_list[i]['line_x_vec'] = line_x_rel
-  #         center_line_list[i]['line_y_vec'] = line_y_rel
-  #         if center_line_list[i]['relative_id'] == 0:
-  #           fig1.renderers[13 + i].glyph.line_dash = 'dotdash'
-  #           fig1.renderers[13 + i].glyph.line_alpha = 1
-  #           fig1.renderers[13 + i].glyph.line_width = 2
-  #         else:
-  #           fig1.renderers[13 + i].glyph.line_dash = 'dotted'
-  #           fig1.renderers[13 + i].glyph.line_alpha = 0.8
-  #           fig1.renderers[13 + i].glyph.line_width = 1
+    center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
+    # print(center_line_list)
+    for i in range(5):
+      # try:
+        if 0:
+          data_center_line = data_center_line_dict[i]
+          data_center_line.data.update({
+            'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
+            'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
+          })
+        else:
+          data_center_line = data_center_line_dict[i]
+          line_x_rel = []
+          line_y_rel = []
+          for index in range(len(center_line_list[i]['line_x_vec'])):
+            pos_xn_i, pos_yn_i = center_line_list[i]['line_x_vec'][index], center_line_list[i]['line_y_vec'][index]
+            ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+            line_x_rel.append(ego_local_x)
+            line_y_rel.append(ego_local_y)
+          center_line_list[i]['line_x_vec'] = line_x_rel
+          center_line_list[i]['line_y_vec'] = line_y_rel
+          if center_line_list[i]['relative_id'] == 0:
+            fig1.renderers[13 + i].glyph.line_dash = 'dotdash'
+            fig1.renderers[13 + i].glyph.line_alpha = 1
+            fig1.renderers[13 + i].glyph.line_width = 2
+          else:
+            fig1.renderers[13 + i].glyph.line_dash = 'dotted'
+            fig1.renderers[13 + i].glyph.line_alpha = 0.8
+            fig1.renderers[13 + i].glyph.line_width = 1
 
-  #         if center_line_list[i]['relative_id'] == 1000:  # 车道不存在
-  #           center_line_list[i]['line_x_vec'] = []
-  #           center_line_list[i]['line_y_vec'] = []
-  #         data_center_line.data.update({
-  #           'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
-  #           'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
-  #         })
-  #     # except:
-  #     #   print('error')
-  #     #   pass
+          if center_line_list[i]['relative_id'] == 1000:  # 车道不存在
+            center_line_list[i]['line_x_vec'] = []
+            center_line_list[i]['line_y_vec'] = []
+          data_center_line.data.update({
+            'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
+            'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
+          })
+      # except:
+      #   print('error')
+      #   pass
 
-  # # fix_lane,origin_lane
-  # if bag_loader.plan_debug_msg['enable'] == True:
-  #   try:
-  #     print("planning debug info:", bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].frame_info)
-  #   except:
-  #     pass
-  #   lat_behavior_common = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lat_behavior_common
-  #   environment_model_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].environment_model_info
-  #   current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
-  #   fix_lane_ralative_id = lat_behavior_common.fix_lane_virtual_id - current_lane_virtual_id
-  #   target_lane_ralative_id = lat_behavior_common.target_lane_virtual_id - current_lane_virtual_id
-  #   origin_lane_ralative_id = lat_behavior_common.origin_lane_virtual_id - current_lane_virtual_id
-  #   for i in range(5):
-  #     if center_line_list[i]['relative_id'] == fix_lane_ralative_id:
-  #       local_view_data['data_fix_lane'].data.update({
-  #         'fix_lane_x': center_line_list[i]['line_x_vec'],
-  #         'fix_lane_y':center_line_list[i]['line_y_vec']
-  #       })
-  #     if center_line_list[i]['relative_id'] == target_lane_ralative_id:
-  #       local_view_data['data_target_lane'].data.update({
-  #         'target_lane_x': center_line_list[i]['line_x_vec'],
-  #         'target_lane_y':center_line_list[i]['line_y_vec']
-  #       })
-  #     if center_line_list[i]['relative_id'] == origin_lane_ralative_id:
-  #       local_view_data['data_origin_lane'].data.update({
-  #         'origin_lane_x': center_line_list[i]['line_x_vec'],
-  #         'origin_lane_y':center_line_list[i]['line_y_vec']
-  #       })
+  # fix_lane,origin_lane
+  if bag_loader.plan_debug_msg['enable'] == True:
+    try:
+      print("planning debug info:", bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].frame_info)
+    except:
+      pass
+    lat_behavior_common = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lat_behavior_common
+    environment_model_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].environment_model_info
+    current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
+    fix_lane_ralative_id = lat_behavior_common.fix_lane_virtual_id - current_lane_virtual_id
+    target_lane_ralative_id = lat_behavior_common.target_lane_virtual_id - current_lane_virtual_id
+    origin_lane_ralative_id = lat_behavior_common.origin_lane_virtual_id - current_lane_virtual_id
+    for i in range(5):
+      if center_line_list[i]['relative_id'] == fix_lane_ralative_id:
+        local_view_data['data_fix_lane'].data.update({
+          'fix_lane_x': center_line_list[i]['line_x_vec'],
+          'fix_lane_y':center_line_list[i]['line_y_vec']
+        })
+      if center_line_list[i]['relative_id'] == target_lane_ralative_id:
+        local_view_data['data_target_lane'].data.update({
+          'target_lane_x': center_line_list[i]['line_x_vec'],
+          'target_lane_y':center_line_list[i]['line_y_vec']
+        })
+      if center_line_list[i]['relative_id'] == origin_lane_ralative_id:
+        local_view_data['data_origin_lane'].data.update({
+          'origin_lane_x': center_line_list[i]['line_x_vec'],
+          'origin_lane_y':center_line_list[i]['line_y_vec']
+        })
 
-  #   local_view_data['data_text'].data.update({
-  #     'vel_ego_text': ['v={:.2f}({:d})\nsteer={:.2}'.format(round(vel_ego, 2),current_lane_virtual_id, round(steer_deg, 2))],
-  #     'text_xn': [text_xn],
-  #     'text_yn': [text_yn],
-  #   })
+    local_view_data['data_text'].data.update({
+      'vel_ego_text': ['v={:.2f}({:d})\nsteer={:.2}'.format(round(vel_ego, 2),current_lane_virtual_id, round(steer_deg, 2))],
+      'text_xn': [text_xn],
+      'text_yn': [text_yn],
+    })
   ### step 4: 加载障碍物信息
   # load fus_obj
   if bag_loader.fus_msg['enable'] == True:
@@ -868,10 +867,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'mpc_dy' : mpc_dy,
     })
 
-  # 加载ehr的lane信息
-  print("运行到这111")
+  # # 加载ehr的lane信息
   if bag_loader.ehr_static_map_msg['enable'] == True:
-    print("运行到这222")
     #load ehr static map info
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
