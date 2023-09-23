@@ -21,7 +21,8 @@ LaneChangeRequestManager::LaneChangeRequestManager(
 void LaneChangeRequestManager::FinishRequest() {
   int_request_.finish_and_clear();
   // act_request_.finish_and_clear();
-  // map_request_.finish();
+  map_request_.Finish();
+  std::cout << "????????????????? " << std::endl;
 
   request_ = NO_CHANGE;
   request_source_ = NO_REQUEST;
@@ -74,6 +75,7 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
           DisplayStateConfig::DefaultCancelFreezeCnt);
     }
     map_request_.Finish();
+    std::cout << "DDDDDDDDDDDDDDDDDDDDDDD " << std::endl;
     LOG_DEBUG(
         "[LaneChangeRequestManager::update] manual cancel finish dd or map "
         "request! \n");
@@ -81,6 +83,7 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   if (int_request_.request_type() != NO_CHANGE) {
     if (map_request_.request_type() != NO_CHANGE) {
       map_request_.Finish();
+      std::cout << "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB " << std::endl;
     }
     if (act_request_.request_type() != NO_CHANGE) {
       act_request_.Finish();

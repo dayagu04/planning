@@ -19,7 +19,7 @@ IntRequest::IntRequest(
 }
 
 void IntRequest::Update(int lc_status) {
-  // ego_blinker 0-lane follow, 1-left, 2-reght
+  // ego_blinker 0-lane follow, 1-left, 2-right
   lane_change_cmd_ = session_->mutable_environmental_model()
                          ->get_ego_state_manager()
                          ->ego_blinker();

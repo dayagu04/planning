@@ -22,10 +22,6 @@ bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
   const double kDefaultMapDelay = 2.;
 
   double lc_end_dis = virtual_lane_mgr_->dis_to_ramp() - kTmpRampLength;
-  if (lc_map_decision < 0) {
-    lc_end_dis =
-        virtual_lane_mgr_->distance_to_first_road_split() - kTmpRampLength;
-  }
 
   double delay_map = 0;
   double v_limit =
@@ -49,11 +45,16 @@ bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
   }
 
   double map_duration = IflyTime::Now_s() - lc_map_tfinish;
+  if (lc_map_decision < 0) {
+    lc_end_dis =
+        0.;
+    map_duration = 10.; // hack
+  }
   LOG_DEBUG(
       "MapRequest:: lc_map_tfinish: %f, map_duration: %f, lc_end_dis: %f,  "
       "map_response_dist: %f, delay_map: %f",
       lc_map_tfinish, map_duration, lc_end_dis, map_response_dist, delay_map);
-  std::cout << "[MapRequest::update] : lc_end_dis: " << lc_end_dis << " lc_map_decision: " << lc_map_decision << " map_response_dist: " << map_response_dist << " map_duration: " << map_duration << " delay_map: " << delay_map << std::endl;
+  std::cout << "[MapRequest::update] : lc_end_dis: " << lc_end_dis << " lc_map_decision: " << lc_map_decision << " map_response_dist: " << map_response_dist << " map_duration: " << map_duration << " delay_map: " << delay_map << "lc_map_tfinish: " << lc_map_tfinish << " IflyTime::Now_s(): " << IflyTime::Now_s() << std::endl;
 
   return (lc_end_dis < map_response_dist && map_duration > delay_map);
 }
@@ -98,10 +99,11 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
 
   auto olane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
+  std::cout << "lc_map_decision: " << lc_map_decision << " current_lane->is_solid_line(1): " << current_lane->is_solid_line(1) << " current_lane->is_solid_line(0): " << current_lane->is_solid_line(0) << std::endl;
 
   if (current_lane != nullptr &&
-      ((lc_map_decision > 0 && (!current_lane->is_solid_line(1) || virtual_lane_mgr_->dis_to_ramp() < 1000.)) ||
-       (lc_map_decision < 0 && (!current_lane->is_solid_line(0) || virtual_lane_mgr_->dis_to_ramp() < 1000.)))) {
+      ((lc_map_decision > 0 && (!current_lane->is_solid_line(1) || virtual_lane_mgr_->dis_to_ramp() < 500.)) ||
+       (lc_map_decision < 0 && (!current_lane->is_solid_line(0) || virtual_lane_mgr_->dis_to_ramp() < 500.)))) {
     LOG_DEBUG("!!!!!!!!!!! lc_map_decision is %d", lc_map_decision);
     if (check_mlc_enable(lc_map_tfinish) == true && allow_generate == true) {
       if (lc_map_decision < 0) {
@@ -121,18 +123,18 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
           }
         }
 
-        if (!IsDashedLineEnough(LEFT_CHANGE, v_ego, virtual_lane_mgr_) &&
-            request_type_ != NO_CHANGE &&
-            (lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT ||
-             (lc_status == ROAD_LC_LBACK &&
-              (lane_change_lane_mgr_->has_origin_lane() &&
-               lane_change_lane_mgr_->is_ego_on(olane)))) &&
-            virtual_lane_mgr_->distance_to_first_road_split() >
-                300 + 300 * std::fabs(lc_map_decision)) {
-          Finish();
-          set_target_lane_virtual_id(current_lane_virtual_id);
-          LOG_DEBUG("[MapRequest::update] : finish request, dashed not enough");
-        }
+        // if (!IsDashedLineEnough(LEFT_CHANGE, v_ego, virtual_lane_mgr_) &&
+        //     request_type_ != NO_CHANGE &&
+        //     (lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT ||
+        //      (lc_status == ROAD_LC_LBACK &&
+        //       (lane_change_lane_mgr_->has_origin_lane() &&
+        //        lane_change_lane_mgr_->is_ego_on(olane)))) &&
+        //     virtual_lane_mgr_->distance_to_first_road_split() >
+        //         300 + 300 * std::fabs(lc_map_decision)) {
+        //   Finish();
+        //   set_target_lane_virtual_id(current_lane_virtual_id);
+        //   LOG_DEBUG("[MapRequest::update] : finish request, dashed not enough");
+        // }
       } else {
         if (request_type_ != RIGHT_CHANGE) {
           target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;

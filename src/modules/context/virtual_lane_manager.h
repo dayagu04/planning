@@ -192,6 +192,7 @@ class VirtualLaneManager {
   bool is_select_split_nearing_ramp_ = true;
   std::unordered_set<uint64_t> lane_group_set_;
   std::vector<uint64_t> sorted_lane_groups_in_route_;
+  bool is_leaving_ramp_ = false;
 };
 }  // namespace planning
 #endif

@@ -75,6 +75,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   bool is_nearing_ramp =
       fabs(dis_between_first_road_split_and_ramp) < allow_error &&
       dis_to_ramp_ < 3000.;
+  bool is_lane_merging = false;
   LOG_DEBUG(
       "dis_to_ramp: %f, dis_to_first_road_split: %f, "
       "distance_to_first_road_merge_: %f \n",
@@ -95,7 +96,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       virtual_lane_tmp->update_data(lane);
       std::cout << "this lane has no merge_split info" << std::endl;
     } else {
-      auto lane_merge_split_point_data =
+      const auto &lane_merge_split_point_data =
           lane.lane_merge_split_point().merge_split_point_data()[0];
       if (is_nearing_ramp) {
         LOG_DEBUG("lane_merge_split_point_data.distance():%f\n", lane_merge_split_point_data.distance());
@@ -106,13 +107,14 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
              lane.relative_id() == 0) {
           virtual_lane_tmp->update_data(lane);
           std::cout << "22222222222222222222222" << std::endl;
-        } else if (lane.relative_id() == 1 && lane_merge_split_point_data.is_split() && lane_merge_split_point_data.distance() < -20.) {
+        } else if ((lane.relative_id() == 1 && lane_merge_split_point_data.is_split() && lane_merge_split_point_data.distance() < -5. && is_ramp_on_right_) ||
+                   (lane.relative_id() == -1 && lane_merge_split_point_data.is_split() && relative_id_lanes_.size() == lane.order_id() && !is_ramp_on_right_)) {
           virtual_lane_tmp->update_data(lane);
           std::cout << "444444444444444444444444" << std::endl;
         } else if (lane_merge_split_point_data.is_continue()) {
           virtual_lane_tmp->update_data(lane);
           std::cout << "555555555555555555555555" << std::endl;
-        } else if (lane.relative_id() == 0 && lane_merge_split_point_data.orientation() == 2 && lane_merge_split_point_data.distance() < -1. && relative_id_lanes_.size() == lane.order_id()) {
+        } else if (lane.relative_id() <= 0 && relative_id_lanes_.size() == lane.order_id()) {
             virtual_lane_tmp->update_data(lane);
             std::cout << "77777777777777777777777777777" << std::endl;
         } else {
@@ -126,6 +128,13 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
         if (lane_merge_split_point_data.is_continue()) {
           virtual_lane_tmp->update_data(lane);
           std::cout << "333333333333333333333333" << std::endl;
+        } else if (lane.relative_id() == 0 && !lane_merge_split_point_data.is_split() && lane_merge_split_point_data.orientation() == 1 && relative_id_lanes_.size() == lane.order_id() && lane.order_id() >= 3) {
+          virtual_lane_tmp->update_data(lane);
+          is_lane_merging = true;
+          std::cout << "88888888888888888888888888888888888" << std::endl;
+        } else if (lane.relative_id() == 0 && relative_id_lanes_.size() == lane.order_id()) {
+          virtual_lane_tmp->update_data(lane);
+          std::cout << "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM" << std::endl;
         } else {
           continue;
         }
@@ -145,18 +154,24 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   if (relative_id_lanes_[lane_num_ - 1]->get_lane_type() ==
       FusionRoad::LaneType::LANETYPE_EMERGENCY)
     lane_num_except_emergency -= 1;
+  if (distance_to_first_road_merge_ < 100. || is_lane_merging) {
+    is_leaving_ramp_ = true;
+  } else if (lane_num_except_emergency >= 3 && relative_id_lanes_[lane_num_except_emergency - 1]->get_relative_id() >= lane_num_except_emergency - 3) {
+    is_leaving_ramp_ = false;
+  }
   for (auto relative_id_lane : relative_id_lanes_) {
     std::cout << "VirtualLaneManager::update_lane_tasks():: order_id_: "
               << relative_id_lane->get_order_id()
               << " lane_type: " << relative_id_lane->get_lane_type()
               << " lane_num_except_emergency: " << lane_num_except_emergency
+              << " is_leaving_ramp_: " << is_leaving_ramp_
               << std::endl;
     if (relative_id_lane->get_lane_type() ==
         FusionRoad::LaneType::LANETYPE_EMERGENCY)
       break;
-    if (dis_to_first_road_split < 3000.0) {
-      relative_id_lane->update_lane_tasks(dis_to_ramp_, is_nearing_ramp,
-                                          lane_num_except_emergency);
+    if (dis_to_first_road_split < 3000.0 || is_leaving_ramp_) {
+      relative_id_lane->update_lane_tasks(dis_to_ramp_, is_nearing_ramp, is_ramp_on_right_,
+                                          is_leaving_ramp_, lane_num_except_emergency);
     }
   }
 

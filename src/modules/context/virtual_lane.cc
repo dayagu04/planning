@@ -362,16 +362,23 @@ void VirtualLane::update_speed_limit(double ego_vel,
   v_cruise_ = std::min(current_lane_speed_limit_, speed_change_point_.speed);
 }
 
-void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
-                                    uint lane_num) {
+void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp, bool is_ramp_on_right,
+                                    bool is_leaving_ramp, uint lane_num) {
   int reverse_task_num =
       lane_num > 3 ? std::max((int)std::floor((lane_num - 1) * 0.5), 0)
                    : 0;  // clren: hack
   current_tasks_.clear();
   if (order_id_ + 1 > lane_num) return;
   if (is_nearing_ramp) {
-    for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
-      current_tasks_.emplace_back(1);
+    if (is_ramp_on_right) {
+      for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+        current_tasks_.emplace_back(1);
+      }
+    } else {
+      for (int i = order_id_; i > 0; i--) {
+        current_tasks_.emplace_back(-1);
+        std::cout << "9999999999999999999999999999999999999999" << std::endl;
+      }
     }
   } else {
     if (lane_num < reverse_task_num + order_id_ + 1) {
@@ -386,6 +393,11 @@ void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
         for (int i = 0; i + order_id_ + 1 + reverse_task_num < lane_num;
              i++) {
           current_tasks_.emplace_back(1);
+        }
+      } else if (is_leaving_ramp) {
+        if (order_id_ + 1 == lane_num) {
+          current_tasks_.emplace_back(-1);
+          std::cout << "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS" << std::endl;
         }
       }
     }
