@@ -60,7 +60,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
                   << current_routing.lane_groups_in_route()[i].lane_group_id()
                   << ",No:" << i << std::endl;
       }
-      RampDirection ramp_direction_ = RampDirection::RAMP_NONE;
+      ramp_direction_ = RampDirection::RAMP_NONE;
       CalculateSortedLaneGroupIdsInRouting(*session_);
       CalculateDistanceToRamp(session_);
       CalculateDistanceToFirstRoadSplit(session_);
@@ -690,9 +690,9 @@ void VirtualLaneManager::CalculateRampDirection(
     }
   }
   if (group_in_route_dir_vec.CrossProd(group_not_in_route_dir_vec) > 0.0) {
-    ramp_direction_ = RAMP_ON_RIGHT;
+    ramp_direction_ = RampDirection::RAMP_ON_RIGHT;
   } else {
-    ramp_direction_ = RAMP_ON_LEFT;
+    ramp_direction_ = RampDirection::RAMP_ON_LEFT;
   }
 }
 
