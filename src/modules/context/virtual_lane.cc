@@ -362,8 +362,9 @@ void VirtualLane::update_speed_limit(double ego_vel,
   v_cruise_ = std::min(current_lane_speed_limit_, speed_change_point_.speed);
 }
 
-void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp, bool is_ramp_on_right,
-                                    bool is_leaving_ramp, uint lane_num) {
+void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
+                                    bool is_ramp_on_right, bool is_leaving_ramp,
+                                    uint lane_num) {
   int reverse_task_num =
       lane_num > 3 ? std::max((int)std::floor((lane_num - 1) * 0.5), 0)
                    : 0;  // clren: hack
@@ -390,8 +391,7 @@ void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp, bo
       if (dis_to_ramp <
           3000.0) {  // TODO:clren
                      // 后续考虑安全性，根据距离，车流量，对task做调整
-        for (int i = 0; i + order_id_ + 1 + reverse_task_num < lane_num;
-             i++) {
+        for (int i = 0; i + order_id_ + 1 + reverse_task_num < lane_num; i++) {
           current_tasks_.emplace_back(1);
         }
       } else if (is_leaving_ramp) {

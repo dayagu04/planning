@@ -713,7 +713,7 @@ LaneChangeStageInfo ScenarioStateMachine::decide_lc_valid_info(
   auto &virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   double dis_to_ramp = virtual_lane_manager->dis_to_ramp();
-  if (dis_to_ramp < 1000. ) lc_valid_thre = 1;
+  if (dis_to_ramp < 1000.) lc_valid_thre = 1;
   // int lc_valid_thre = 1;
   if (lane_change_stage_info_.gap_insertable) {
     lc_valid_cnt_ += 1;

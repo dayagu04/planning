@@ -173,9 +173,14 @@ void RoadBase::process_wait(FsmContext &context,
   bool enable_arbitrator = false;
   double lc_tstart = lc_req_manager->GetReqStartTime(lc_source);
   double delay_time = 0.;  // TODO(Rui):后面根据请求来源做成配置项
-  double dis_to_ramp = context.session->environmental_model().get_virtual_lane_manager()->dis_to_ramp();
-  if (dis_to_ramp < 1000.) { delay_time = 0.; }
-  std::cout << " normal road state dis_to_ramp: " << dis_to_ramp << " delay_time: " << delay_time << std::endl;
+  double dis_to_ramp = context.session->environmental_model()
+                           .get_virtual_lane_manager()
+                           ->dis_to_ramp();
+  if (dis_to_ramp < 1000.) {
+    delay_time = 0.;
+  }
+  std::cout << " normal road state dis_to_ramp: " << dis_to_ramp
+            << " delay_time: " << delay_time << std::endl;
   double curr_time = IflyTime::Now_ms();  // 注意
   std::vector<int> overtake_obstacles;
   std::vector<int> yield_obstacles;
@@ -279,7 +284,8 @@ void RoadBase::process_change(FsmContext &context,
     prepare_for_none_state(lc_lane_manager, lc_req_manager, candidate_states,
                            lc_lane_managers);
     lc_req_manager->FinishRequest();
-    std::cout << "######################: FINISH!!!!!!!!!!!!!!!!!!!!" << std::endl;
+    std::cout << "######################: FINISH!!!!!!!!!!!!!!!!!!!!"
+              << std::endl;
   } else if ((lc_request != NO_CHANGE && lc_request == context.direction) ||
              (lc_request == NO_CHANGE &&
               (lc_lane_manager->is_ego_on(lc_lane_manager->tlane()) ||

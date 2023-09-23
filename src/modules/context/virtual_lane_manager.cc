@@ -12,8 +12,8 @@
 namespace planning {
 
 using Map::CurrentRouting;
-using Map::FormOfWayType::RAMP;
 using Map::FormOfWayType::MAIN_ROAD;
+using Map::FormOfWayType::RAMP;
 using ad_common::hdmap::LaneGroupConstPtr;
 using ad_common::hdmap::LaneInfoConstPtr;
 
@@ -60,11 +60,12 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
                   << current_routing.lane_groups_in_route()[i].lane_group_id()
                   << ",No:" << i << std::endl;
       }
+      RampDirection ramp_direction_ = RampDirection::NONE;
       CalculateSortedLaneGroupIdsInRouting(*session_);
       CalculateDistanceToRamp(session_);
       CalculateDistanceToFirstRoadSplit(session_);
       CalculateDistanceToFirstRoadMerge(session_);
-      std::cout << "is_ramp_on_right_:" << is_ramp_on_right_ << std::endl;
+      std::cout << "ramp_direction:" << ramp_direction_ << std::endl;
     } else {
       std::cout << "localization invalid" << std::endl;
     }
@@ -96,31 +97,51 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       virtual_lane_tmp->update_data(lane);
       std::cout << "this lane has no merge_split info" << std::endl;
     } else {
-      const auto &lane_merge_split_point_data =
+      const auto& lane_merge_split_point_data =
           lane.lane_merge_split_point().merge_split_point_data()[0];
       if (is_nearing_ramp) {
-        LOG_DEBUG("lane_merge_split_point_data.distance():%f\n", lane_merge_split_point_data.distance());
+        LOG_DEBUG("lane_merge_split_point_data.distance():%f\n",
+                  lane_merge_split_point_data.distance());
         if (((is_select_split_nearing_ramp_ &&
-             lane_merge_split_point_data.is_split()) ||
-            (!is_select_split_nearing_ramp_ &&
-             lane_merge_split_point_data.is_continue())) &&
-             lane.relative_id() == 0) {
+              lane_merge_split_point_data.is_split()) ||
+             (!is_select_split_nearing_ramp_ &&
+              lane_merge_split_point_data.is_continue())) &&
+            lane.relative_id() == 0) {
           virtual_lane_tmp->update_data(lane);
           std::cout << "22222222222222222222222" << std::endl;
-        } else if ((lane.relative_id() == 1 && lane_merge_split_point_data.is_split() && lane_merge_split_point_data.distance() < -5. && is_ramp_on_right_) ||
-                   (lane.relative_id() == -1 && lane_merge_split_point_data.is_split() && relative_id_lanes_.size() == lane.order_id() && !is_ramp_on_right_)) {
+        } else if ((lane.relative_id() == 1 &&
+                    lane_merge_split_point_data.is_split() &&
+                    lane_merge_split_point_data.distance() < -5. &&
+                    is_ramp_on_right_) ||
+                   (lane.relative_id() == -1 &&
+                    lane_merge_split_point_data.is_split() &&
+                    relative_id_lanes_.size() == lane.order_id() &&
+                    !is_ramp_on_right_)) {
           virtual_lane_tmp->update_data(lane);
           std::cout << "444444444444444444444444" << std::endl;
         } else if (lane_merge_split_point_data.is_continue()) {
           virtual_lane_tmp->update_data(lane);
           std::cout << "555555555555555555555555" << std::endl;
-        } else if (lane.relative_id() <= 0 && relative_id_lanes_.size() == lane.order_id()) {
-            virtual_lane_tmp->update_data(lane);
-            std::cout << "77777777777777777777777777777" << std::endl;
+        } else if (lane.relative_id() <= 0 &&
+                   relative_id_lanes_.size() == lane.order_id()) {
+          virtual_lane_tmp->update_data(lane);
+          std::cout << "77777777777777777777777777777" << std::endl;
         } else {
-          std::cout << "lane_merge_split_point_data.orientation(): " << lane_merge_split_point_data.orientation() << " lane_merge_split_point_data.distance(): " << lane_merge_split_point_data.distance() << " relative_id_lanes_.size():  " << relative_id_lanes_.size() << " lane.order_id(): " << lane.order_id() << " lane.relative_id(): " << lane.relative_id() << std::endl;
+          std::cout << "lane_merge_split_point_data.orientation(): "
+                    << lane_merge_split_point_data.orientation()
+                    << " lane_merge_split_point_data.distance(): "
+                    << lane_merge_split_point_data.distance()
+                    << " relative_id_lanes_.size():  "
+                    << relative_id_lanes_.size()
+                    << " lane.order_id(): " << lane.order_id()
+                    << " lane.relative_id(): " << lane.relative_id()
+                    << std::endl;
           if (lane.relative_id() == -1) {
-            std::cout << "6666666666666666666666666666: lane_merge_split_point_data.is_continue(): " << lane_merge_split_point_data.is_continue() << " lane_merge_split_point_data.is_split(): " << lane_merge_split_point_data.is_split() << std::endl;
+            std::cout << "6666666666666666666666666666: "
+                         "lane_merge_split_point_data.is_continue(): "
+                      << lane_merge_split_point_data.is_continue()
+                      << " lane_merge_split_point_data.is_split(): "
+                      << lane_merge_split_point_data.is_split() << std::endl;
           }
           continue;
         }
@@ -128,11 +149,16 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
         if (lane_merge_split_point_data.is_continue()) {
           virtual_lane_tmp->update_data(lane);
           std::cout << "333333333333333333333333" << std::endl;
-        } else if (lane.relative_id() == 0 && !lane_merge_split_point_data.is_split() && lane_merge_split_point_data.orientation() == 1 && relative_id_lanes_.size() == lane.order_id() && lane.order_id() >= 3) {
+        } else if (lane.relative_id() == 0 &&
+                   !lane_merge_split_point_data.is_split() &&
+                   lane_merge_split_point_data.orientation() == 1 &&
+                   relative_id_lanes_.size() == lane.order_id() &&
+                   lane.order_id() >= 3) {
           virtual_lane_tmp->update_data(lane);
           is_lane_merging = true;
           std::cout << "88888888888888888888888888888888888" << std::endl;
-        } else if (lane.relative_id() == 0 && relative_id_lanes_.size() == lane.order_id()) {
+        } else if (lane.relative_id() == 0 &&
+                   relative_id_lanes_.size() == lane.order_id()) {
           virtual_lane_tmp->update_data(lane);
           std::cout << "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM" << std::endl;
         } else {
@@ -156,7 +182,9 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     lane_num_except_emergency -= 1;
   if (distance_to_first_road_merge_ < 100. || is_lane_merging) {
     is_leaving_ramp_ = true;
-  } else if (lane_num_except_emergency >= 3 && relative_id_lanes_[lane_num_except_emergency - 1]->get_relative_id() >= lane_num_except_emergency - 3) {
+  } else if (lane_num_except_emergency >= 3 &&
+             relative_id_lanes_[lane_num_except_emergency - 1]
+                     ->get_relative_id() >= lane_num_except_emergency - 3) {
     is_leaving_ramp_ = false;
   }
   for (auto relative_id_lane : relative_id_lanes_) {
@@ -164,14 +192,14 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
               << relative_id_lane->get_order_id()
               << " lane_type: " << relative_id_lane->get_lane_type()
               << " lane_num_except_emergency: " << lane_num_except_emergency
-              << " is_leaving_ramp_: " << is_leaving_ramp_
-              << std::endl;
+              << " is_leaving_ramp_: " << is_leaving_ramp_ << std::endl;
     if (relative_id_lane->get_lane_type() ==
         FusionRoad::LaneType::LANETYPE_EMERGENCY)
       break;
     if (dis_to_first_road_split < 3000.0 || is_leaving_ramp_) {
-      relative_id_lane->update_lane_tasks(dis_to_ramp_, is_nearing_ramp, is_ramp_on_right_,
-                                          is_leaving_ramp_, lane_num_except_emergency);
+      relative_id_lane->update_lane_tasks(dis_to_ramp_, is_nearing_ramp,
+                                          is_ramp_on_right_, is_leaving_ramp_,
+                                          lane_num_except_emergency);
     }
   }
 
@@ -577,13 +605,13 @@ void VirtualLaneManager::CalculateDistanceToFirstRoadMerge(
 
 double VirtualLaneManager::JudgeIfTheRamp(
     const int current_index, const CurrentRouting& current_routing,
-    const ad_common::hdmap::HDMap& hd_map) const {
+    const ad_common::hdmap::HDMap& hd_map) {
   const int sorted_lane_groups_num = sorted_lane_groups_in_route_.size();
   double accumulate_distance_for_lane_group = 0;
 
   for (int i = current_index; i < sorted_lane_groups_num; i++) {
     const uint64_t lane_group_id = sorted_lane_groups_in_route_[i];
-    std::cout<< "lane_group_id:"<<lane_group_id << ", i=" << i<<std::endl;
+    std::cout << "lane_group_id:" << lane_group_id << ", i=" << i << std::endl;
     LaneGroupConstPtr lane_group_ptr = hd_map.GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
       LOG_DEBUG("fail get lane group by id for ramp!!!\n");
@@ -595,7 +623,8 @@ double VirtualLaneManager::JudgeIfTheRamp(
     // judge the lane group successor lane groups if more than 1
     const int successor_lane_group_size =
         lane_group_ptr->successor_lane_group_ids().size();
-    std::cout << "successor_lane_group_size:"<<successor_lane_group_size<<std::endl;
+    std::cout << "successor_lane_group_size:" << successor_lane_group_size
+              << std::endl;
     if (successor_lane_group_size > 1 && (i + 1) < sorted_lane_groups_num) {
       uint64_t lane_group_id_next = sorted_lane_groups_in_route_[i + 1];
       LaneGroupConstPtr lane_group_ptr_next =
@@ -620,8 +649,8 @@ double VirtualLaneManager::JudgeIfTheRamp(
   return NL_NMAX;
 }
 
-void VirtualLaneManager::CalculateRampDirection(const ad_common::hdmap::HDMap& hd_map,
-    LaneGroupConstPtr lane_group_ptr) {
+void VirtualLaneManager::CalculateRampDirection(
+    const ad_common::hdmap::HDMap& hd_map, LaneGroupConstPtr lane_group_ptr) {
   // TODO(fengwang31): only consider groups with 2 successor
   if (lane_group_ptr == nullptr) {
     return;
@@ -647,10 +676,13 @@ void VirtualLaneManager::CalculateRampDirection(const ad_common::hdmap::HDMap& h
     if (lane_info_ptr->lane().points_on_central_line_size() < 2) {
       return;
     }
-    const auto& points_on_central_line = lane_info_ptr->lane().points_on_central_line();
+    const auto& points_on_central_line =
+        lane_info_ptr->lane().points_on_central_line();
     ad_common::math::Vec2d group_dir_vec;
-    group_dir_vec.set_x(points_on_central_line[1].x() - points_on_central_line[0].x());
-    group_dir_vec.set_y(points_on_central_line[1].y() - points_on_central_line[0].y());
+    group_dir_vec.set_x(points_on_central_line[1].x() -
+                        points_on_central_line[0].x());
+    group_dir_vec.set_y(points_on_central_line[1].y() -
+                        points_on_central_line[0].y());
     if (lane_group_set_.count(group_id) != 0) {
       group_in_route_dir_vec = std::move(group_dir_vec);
     } else {
@@ -658,9 +690,9 @@ void VirtualLaneManager::CalculateRampDirection(const ad_common::hdmap::HDMap& h
     }
   }
   if (group_in_route_dir_vec.CrossProd(group_not_in_route_dir_vec) > 0.0) {
-    is_ramp_on_right_ = true;
+    ramp_direction_ = RAMP_ON_RIGHT;
   } else {
-    is_ramp_on_right_ = false;
+    ramp_direction_ = RAMP_ON_LEFT;
   }
 }
 
@@ -715,13 +747,14 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
       accumulate_distance_for_lane_group += 0;
       for (int index = 0; index < lane_group_ptr->way_forms_size(); index++) {
         if (lane_group_ptr->way_forms()[index] == RAMP) {
-          std::cout << "currrent in ramp, lane group id:" << lane_group_id << std::endl;
+          std::cout << "currrent in ramp, lane group id:" << lane_group_id
+                    << std::endl;
           is_current_is_ramp = true;
           break;
         }
       }
       if (!is_current_is_ramp) {
-        std::cout << "current lane group is not in ramp!!!"<< std::endl;
+        std::cout << "current lane group is not in ramp!!!" << std::endl;
         return NL_NMAX;
       }
     } else {
@@ -737,10 +770,13 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
         LOG_DEBUG("fail get lane group by id for merge!!!\n");
         return NL_NMAX;
       }
-      std::cout <<"lane_group_ptr_next->way_forms size:" <<lane_group_ptr_next->way_forms().size()<<std::endl;
+      std::cout << "lane_group_ptr_next->way_forms size:"
+                << lane_group_ptr_next->way_forms().size() << std::endl;
       bool is_no_ramp = true;
       for (int j = 0; j < lane_group_ptr_next->way_forms().size(); j++) {
-        std::cout <<"lane_group_ptr_next way_forms:" << lane_group_ptr_next->way_forms()[j]<<",No:"<<j<<std::endl;
+        std::cout << "lane_group_ptr_next way_forms:"
+                  << lane_group_ptr_next->way_forms()[j] << ",No:" << j
+                  << std::endl;
         if (lane_group_ptr_next->way_forms()[j] == RAMP) {
           is_no_ramp = false;
           break;
@@ -748,7 +784,7 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
       }
       if (is_no_ramp) {
         LOG_DEBUG("accumulate_distance_in_lane_group for merge :%f\n",
-                    accumulate_distance_for_lane_group);
+                  accumulate_distance_for_lane_group);
         std::cout << "judge merge lane group id:" << lane_group_id_next
                   << std::endl;
         return accumulate_distance_for_lane_group;
@@ -791,9 +827,9 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   // get the remaining distance in current lane
   const double nearest_lane_total_length = nearest_lane->total_length();
   *remaining_dis = nearest_lane_total_length - nearest_s;
-  std::cout << "nearest_lane_total_length:" << nearest_lane_total_length <<
-            ",nearest_s:"<< nearest_s <<
-            ",remaining_dis:"<<*remaining_dis<<std::endl;
+  std::cout << "nearest_lane_total_length:" << nearest_lane_total_length
+            << ",nearest_s:" << nearest_s << ",remaining_dis:" << *remaining_dis
+            << std::endl;
 
   // judge the ramp lane group
   uint64_t nearest_lane_group_id = nearest_lane->lane_group_id();
@@ -857,8 +893,8 @@ bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
     for (const auto& id : lane_group_ptr->successor_lane_group_ids()) {
       if (lane_group_set_.count(id) != 0) {
         sorted_lane_groups_in_route_.emplace_back(id);
-        std::cout << "sorted lane group id:" << id << ",No:" 
-                  << sorted_lane_groups_in_route_.size()<< std::endl;
+        std::cout << "sorted lane group id:" << id
+                  << ",No:" << sorted_lane_groups_in_route_.size() << std::endl;
         lane_group_ptr = hd_map.GetLaneGroupById(id);
         is_found = true;
         break;
