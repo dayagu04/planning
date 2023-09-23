@@ -21,6 +21,12 @@ struct SpeedChangePoint {
   double speed;
 };
 
+enum RampDirection {
+  RAMP_NONE = 0,
+  RAMP_ON_LEFT = 1,
+  RAMP_ON_RIGHT = 2,
+};
+
 // hack :clren
 // struct VirtualLaneMember {
 //   int order_id_ = -1;
@@ -122,7 +128,7 @@ class VirtualLane {
   double max_width() const;
   bool hack() const { return hack_; }
   void update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
-                         bool is_ramp_on_right, bool is_leaving_ramp,
+                         RampDirection ramp_direction, bool is_leaving_ramp,
                          uint lane_num);
   const std::vector<int> &get_current_tasks() const { return current_tasks_; };
   // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离

@@ -22,11 +22,6 @@ enum LaneChangeStatus {
   ON_RIGHT_LANE = 2,
 };
 
-enum RampDirection {
-  NONE = 0,
-  RAMP_ON_LEFT = 1,
-  RAMP_ON_RIGHT = 2,
-};
 
 class VirtualLaneManager {
  public:
@@ -191,7 +186,7 @@ class VirtualLaneManager {
   Intersection intersection_;
   // Ramp ramp_;
   double dis_to_ramp_ = NL_NMAX;
-  RampDirection ramp_direction_ = RampDirection::NONE;
+  RampDirection ramp_direction_ = RampDirection::RAMP_NONE;
   double distance_to_first_road_merge_ = NL_NMAX;
   double distance_to_first_road_split_ = NL_NMAX;
   bool is_local_valid_ = false;

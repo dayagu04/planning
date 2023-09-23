@@ -60,7 +60,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
                   << current_routing.lane_groups_in_route()[i].lane_group_id()
                   << ",No:" << i << std::endl;
       }
-      RampDirection ramp_direction_ = RampDirection::NONE;
+      RampDirection ramp_direction_ = RampDirection::RAMP_NONE;
       CalculateSortedLaneGroupIdsInRouting(*session_);
       CalculateDistanceToRamp(session_);
       CalculateDistanceToFirstRoadSplit(session_);
@@ -112,11 +112,11 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
         } else if ((lane.relative_id() == 1 &&
                     lane_merge_split_point_data.is_split() &&
                     lane_merge_split_point_data.distance() < -5. &&
-                    is_ramp_on_right_) ||
+                    ramp_direction_ == RAMP_ON_RIGHT) ||
                    (lane.relative_id() == -1 &&
                     lane_merge_split_point_data.is_split() &&
                     relative_id_lanes_.size() == lane.order_id() &&
-                    !is_ramp_on_right_)) {
+                    ramp_direction_ == RAMP_ON_LEFT)) {
           virtual_lane_tmp->update_data(lane);
           std::cout << "444444444444444444444444" << std::endl;
         } else if (lane_merge_split_point_data.is_continue()) {
@@ -198,7 +198,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       break;
     if (dis_to_first_road_split < 3000.0 || is_leaving_ramp_) {
       relative_id_lane->update_lane_tasks(dis_to_ramp_, is_nearing_ramp,
-                                          is_ramp_on_right_, is_leaving_ramp_,
+                                          ramp_direction_, is_leaving_ramp_,
                                           lane_num_except_emergency);
     }
   }

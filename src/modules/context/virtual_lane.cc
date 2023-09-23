@@ -363,15 +363,21 @@ void VirtualLane::update_speed_limit(double ego_vel,
 }
 
 void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
-                                    bool is_ramp_on_right, bool is_leaving_ramp,
+                                    RampDirection ramp_direction, bool is_leaving_ramp,
                                     uint lane_num) {
   int reverse_task_num =
       lane_num > 3 ? std::max((int)std::floor((lane_num - 1) * 0.5), 0)
                    : 0;  // clren: hack
   current_tasks_.clear();
+  auto lane_type = get_lane_type();
   if (order_id_ + 1 > lane_num) return;
-  if (is_nearing_ramp) {
-    if (is_ramp_on_right) {
+  if (is_nearing_ramp && !is_leaving_ramp) {
+    if (ramp_direction == RAMP_ON_RIGHT) {
+      if (lane_type == FusionRoad::LaneType::LANETYPE_DECELERATE &&
+          order_id_ > 0 && lane_num > 3) {
+        std::cout << "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN" << std::endl;
+        return;
+      } 
       for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
         current_tasks_.emplace_back(1);
       }
@@ -389,7 +395,7 @@ void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
       }
     } else {
       if (dis_to_ramp <
-          3000.0) {  // TODO:clren
+          3000.0 && !is_leaving_ramp) {  // TODO:clren
                      // 后续考虑安全性，根据距离，车流量，对task做调整
         for (int i = 0; i + order_id_ + 1 + reverse_task_num < lane_num; i++) {
           current_tasks_.emplace_back(1);
