@@ -734,8 +734,6 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
             })
           break
 
-  return local_view_data
-
   # load uss wave
   if bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True:
     #get cur pose and uss wave
