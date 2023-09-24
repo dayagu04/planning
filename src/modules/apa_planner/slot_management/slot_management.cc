@@ -52,6 +52,8 @@ bool SlotManagement::Update(
 
   if (!IsInAPAState()) {
     Reset();
+    // restore slot management info
+    // std::cout << slot_management_info_.slot_info_vec_size() << std::endl;
     return false;
   }
 
@@ -61,10 +63,7 @@ bool SlotManagement::Update(
   // 集成为searching阶段函数
 
   // update slots
-  if (!UpdateSlotsInSearchingState()) {
-    ReleaseSlots();
-    return false;
-  }
+  bool update_searching_flag = UpdateSlotsInSearchingState();
   ReleaseSlots();
 
   // restore slot management info
@@ -73,7 +72,11 @@ bool SlotManagement::Update(
       ->mutable_slot_management_info()
       ->CopyFrom(slot_management_info_);
 
-  return true;
+  if (update_searching_flag) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 common::SlotInfo SlotManagement::SlotInfoTransfer(

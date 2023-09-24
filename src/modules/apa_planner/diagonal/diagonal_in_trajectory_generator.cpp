@@ -18,7 +18,7 @@
 #include "planning_output_context.h"
 #include "utils_math.h"
 
-#define __PYBIND_DEBUG__
+//#define __PYBIND_DEBUG__
 
 namespace planning {
 namespace apa_planner {
@@ -764,15 +764,15 @@ void DiagonalInTrajectoryGenerator::SetApaObjectInfo(
   objects_map_in_global_cor_.emplace_back(
       Vec2d(raw_slot_points_in_m_[2].x, raw_slot_points_in_m_[2].y),
       Vec2d(raw_slot_points_in_m_[3].x, raw_slot_points_in_m_[3].y));
-  if (slots[idx].type() !=
-      Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
-    objects_map_in_global_cor_.emplace_back(
-        Vec2d(raw_slot_points_in_m_[0].x, raw_slot_points_in_m_[0].y),
-        Vec2d(raw_slot_points_in_m_[2].x, raw_slot_points_in_m_[2].y));
-    objects_map_in_global_cor_.emplace_back(
-        Vec2d(raw_slot_points_in_m_[3].x, raw_slot_points_in_m_[3].y),
-        Vec2d(raw_slot_points_in_m_[1].x, raw_slot_points_in_m_[1].y));
-  }
+  // if (slots[idx].type() !=
+  //     Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
+  //   objects_map_in_global_cor_.emplace_back(
+  //       Vec2d(raw_slot_points_in_m_[0].x, raw_slot_points_in_m_[0].y),
+  //       Vec2d(raw_slot_points_in_m_[2].x, raw_slot_points_in_m_[2].y));
+  //   objects_map_in_global_cor_.emplace_back(
+  //       Vec2d(raw_slot_points_in_m_[3].x, raw_slot_points_in_m_[3].y),
+  //       Vec2d(raw_slot_points_in_m_[1].x, raw_slot_points_in_m_[1].y));
+  // }
 
   // mocked obstacle to avoid collision with opposite object
   // TODO(xjli32): use real obstacles instead
