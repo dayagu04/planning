@@ -22,7 +22,8 @@ class VisionLongitudinalBehaviorPlanner : public Task {
   bool calc_cruise_accel_limits(const double v_ego);
   bool limit_accel_velocity_in_turns(const double v_ego,
                                      const double angle_steers,
-                                     const std::vector<double> &d_poly);
+                                     const std::vector<double> &d_poly,
+                                     const std::vector<ReferencePathPoint> &ref_points);
 
   bool limit_accel_velocity_for_cutin(
       const std::vector<TrackedObject> &front_tracks,
@@ -37,11 +38,8 @@ class VisionLongitudinalBehaviorPlanner : public Task {
                                   const bool close_to_accident,
                                   const string &lc_request,
                                   const string &lc_status);
-  // bool compute_speed_4_ramp(int lc_map_decision, double lc_end_dis,
-  //                           double ramp_max_speed,
-  //                           MSDLaneType current_lane_type,
-  //                           std::string lc_status, double v_target_in_turns,
-  //                           double v_ego);
+  bool calc_speed_for_ramp(double dis_to_ramp, double ramp_v_limit,
+                           double acc_to_ramp, double v_ego);
   bool calc_speed_with_potential_cutin_car(
       const std::vector<TrackedObject> &front_tracks, const string &lc_request,
       const double v_cruise, const double v_ego);

@@ -60,6 +60,8 @@ bool VisionLongitudinalBehaviorPlanner::update() {
       frame_->session()->environmental_model().get_lateral_obstacle();
   auto &lateral_outputs =
       frame_->session()->planning_context().lateral_behavior_planner_output();
+  auto virtual_lane_manager =
+      frame_->session()->environmental_model().get_virtual_lane_manager();
 
   // modify
   // lane_tracks_mgr_->update_ego_state(ego_state);
@@ -74,8 +76,16 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   double v_ego = ego_state_mgr->ego_v();
   v_target_ = std::min(ego_state_mgr->ego_v_cruise(), 40.0);
   calc_cruise_accel_limits(v_ego);
+
+  const auto &lane_change_lane_manager = frame_->session()
+                                             ->planning_context()
+                                             .scenario_state_machine()
+                                             ->get_lane_change_lane_manager();
+  const auto fix_lane = virtual_lane_manager->get_lane_with_virtual_id(
+                        lane_change_lane_manager->flane_virtual_id());
+  const std::vector<ReferencePathPoint> &fix_ref_points = fix_lane->get_reference_path()->get_points();
   limit_accel_velocity_in_turns(v_ego, ego_state_mgr->ego_steer_angle(),
-                                lateral_outputs.d_poly);
+                                lateral_outputs.d_poly, fix_ref_points);
   a_target_objective_ = a_target_;
   limit_accel_velocity_for_cutin(lateral_obstacle->front_tracks(),
                                  lateral_obstacle->side_tracks(),
@@ -92,6 +102,10 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   //                      map_info_mgr.get_map_info().v_cruise(),
   //                      map_info_mgr.get_map_info().current_lane_type(),
   //                      lateral_outputs.lc_status, v_limit_in_turns_, v_ego);
+  double distance_to_ramp = virtual_lane_manager->dis_to_ramp();
+  double ramp_v_limit = 60 * 3.6;
+  double acc_to_ramp = -1.0;
+  calc_speed_for_ramp(distance_to_ramp, ramp_v_limit, acc_to_ramp, v_ego);
   calc_speed_with_potential_cutin_car(lateral_obstacle->front_tracks(),
                                       lateral_outputs.lc_request,
                                       ego_state_mgr->ego_v_cruise(), v_ego);
@@ -156,7 +170,8 @@ bool VisionLongitudinalBehaviorPlanner::calc_cruise_accel_limits(
 
 bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
     const double v_ego, const double angle_steers,
-    const std::vector<double> &d_poly) {
+    const std::vector<double> &d_poly,
+    const std::vector<ReferencePathPoint> &ref_points) {
   // *** this function returns a limited long acceleration allowed, depending on
   // the existing lateral acceleration
   //  this should avoid accelerating when losing the target in turns
@@ -197,6 +212,23 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
         angle_steers, angle_steers_deg, v_limit_road);
     JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_road", v_limit_road);
     JSON_DEBUG_VALUE("VisionLonBehavior_road_radius", road_radius);
+  }
+
+  if(ref_points.size() > 0) {
+    double curv_max_pt = -100.0;
+    for (int i = 0; i < ref_points.size(); i++) {
+      if(ref_points[i].path_point.kappa > curv_max_pt) {
+        curv_max_pt = ref_points[i].path_point.kappa;
+      }
+    }
+    double road_radius = 1 / std::max(curv_max_pt, 0.0001);
+    if (road_radius < 680) {
+      a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+    }
+    double v_limit_curv_pt = std::sqrt(a_y_max * road_radius) * 0.9;
+    LOG_DEBUG("ref points calced road_radius is : [%f]\n", road_radius);
+    LOG_DEBUG("v_limit_curv_pt: [%f]\n", v_limit_curv_pt);
+    v_limit_in_turns = std::min(v_limit_in_turns, v_limit_curv_pt);
   }
 
   double a_target_in_turns = 0.0;
@@ -796,6 +828,18 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
             a_target_.first, a_target_.second);
 
   return true;
+}
+
+bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(
+  double dis_to_ramp, double ramp_v_limit, double acc_to_ramp, double v_ego) {
+  LOG_DEBUG("----calc_speed_for_ramp--- \n");
+  double v_temp_limit = std::pow(std::pow(ramp_v_limit,  2.0) - 2 * dis_to_ramp * acc_to_ramp, 0.5);
+  double v_target_ramp = std::min(v_temp_limit, v_ego);
+  v_target_ = std::min(v_target_ramp, v_target_);
+  LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
+  LOG_DEBUG("v_target : [%f] \n", v_target_);
+  return true;
+     
 }
 
 // bool VisionLongitudinalBehaviorPlanner::compute_speed_4_ramp(
