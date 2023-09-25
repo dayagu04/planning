@@ -772,17 +772,29 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
       }
       std::cout << "lane_group_ptr_next->way_forms size:"
                 << lane_group_ptr_next->way_forms().size() << std::endl;
-      bool is_no_ramp = true;
+      bool is_no_ramp_on_next_group = true;
       for (int j = 0; j < lane_group_ptr_next->way_forms().size(); j++) {
         std::cout << "lane_group_ptr_next way_forms:"
                   << lane_group_ptr_next->way_forms()[j] << ",No:" << j
                   << std::endl;
         if (lane_group_ptr_next->way_forms()[j] == RAMP) {
-          is_no_ramp = false;
+          is_no_ramp_on_next_group = false;
           break;
         }
       }
-      if (is_no_ramp) {
+      bool is_predecessor_more_than_one = false;
+
+      // can comment out the code if want to cancel the first change lane ************
+      std::cout <<"predecessor_lane_group_ids size:" 
+            << lane_group_ptr_next->predecessor_lane_group_ids().size() <<std::endl;
+      if (lane_group_ptr_next->predecessor_lane_group_ids().size() > 1) {
+        is_predecessor_more_than_one = true;
+        std::cout <<"is_predecessor_more_than_one:" 
+            << is_predecessor_more_than_one <<std::endl;
+      }
+      //******************************************************************************
+
+      if (is_no_ramp_on_next_group || is_predecessor_more_than_one) {
         LOG_DEBUG("accumulate_distance_in_lane_group for merge :%f\n",
                   accumulate_distance_for_lane_group);
         std::cout << "judge merge lane group id:" << lane_group_id_next
