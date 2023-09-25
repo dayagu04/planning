@@ -819,6 +819,7 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
     LOG_DEBUG("no get nearest lane!!!\n");
     return false;
   }
+  std::cout <<"find current lane to current ego point dis:" << nearest_lane->DistanceTo(point) <<std::endl;
   const CurrentRouting& current_routing =
       local_view.static_map_info.current_routing();
 
@@ -834,6 +835,7 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   // judge the ramp lane group
   uint64_t nearest_lane_group_id = nearest_lane->lane_group_id();
   std::cout << "nearest_lane_id:" << nearest_lane->id() << std::endl;
+  std::cout << "nearest_lane debugstring:\n" << nearest_lane->lane().DebugString() << std::endl;
   std::cout << "nearest_lane_group_id:" << nearest_lane_group_id << std::endl;
 
   // const CurrentRouting& current_routing = map.current_routing();

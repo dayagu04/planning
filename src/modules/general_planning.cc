@@ -399,6 +399,13 @@ void GeneralPlanning::FillPlanningHmiInfo(
       tsr_info->get_tsr_warning_info());
   planning_hmi_info->mutable_tsr_output_info()->set_tsr_speed_limit(
       tsr_info->get_tsr_speed_limit_info());
+
+  // HMI for NOA
+  auto virtual_lane_manager = session_.environmental_model().get_virtual_lane_manager();
+  auto noa_info = planning_hmi_info->mutable_noa_output_info();
+  noa_info->set_dis_to_ramp(virtual_lane_manager->dis_to_ramp());
+  noa_info->set_dis_to_split(virtual_lane_manager->distance_to_first_road_split());
+  noa_info->set_dis_to_merge(virtual_lane_manager->distance_to_first_road_merge());
 }
 
 void GeneralPlanning::ClearParkingInfo(

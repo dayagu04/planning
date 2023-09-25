@@ -182,6 +182,8 @@ class EnvironmentalModel {
       const int res =
           hd_map_tmp.LoadMapFromProto(local_view.static_map_info.road_map());
       if (res == 0) {
+        std::cout << "hdmap debugstring:\n"
+            << local_view.static_map_info.current_routing().DebugString() << std::endl;
         hd_map_ = std::move(hd_map_tmp);
         hdmap_valid_ = true;
       }
