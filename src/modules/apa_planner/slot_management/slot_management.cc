@@ -18,6 +18,7 @@
 namespace planning {
 
 static const double kPie = 3.141592653589793;
+static const double kMinSlotUpdateOccupiedRatio = 0.6;
 
 void SlotManagement::Reset() {
   // reset slot in
@@ -64,6 +65,10 @@ bool SlotManagement::Update(
 
   // update slots
   bool update_searching_flag = UpdateSlotsInSearchingState();
+  std::cout << "update_searching_flag" << update_searching_flag << std::endl;
+  bool update_occupied_flag = UpdateSlotsWhenApproachingTargetPoint();
+  std::cout << "update_occupied_flag" << update_occupied_flag << std::endl;
+
   ReleaseSlots();
 
   // restore slot management info
@@ -72,7 +77,7 @@ bool SlotManagement::Update(
       ->mutable_slot_management_info()
       ->CopyFrom(slot_management_info_);
 
-  if (update_searching_flag) {
+  if (update_searching_flag || update_occupied_flag) {
     return true;
   } else {
     return false;
@@ -164,6 +169,109 @@ bool SlotManagement::UpdateSlotsInSearchingState() {
   return true;
 }
 
+bool SlotManagement::UpdateSlotsWhenApproachingTargetPoint() {
+  if (!IsInAPAState() || param_.force_clear) {
+    Reset();
+    return false;
+  }
+
+  if (func_state_ptr_->current_state() !=
+      FuncStateMachine::PARK_IN_ACTIVATE_CONTROL) {
+    std::cout << "state is not active, " << std::endl;
+    return false;
+  }
+
+  const auto select_slot_id = parking_slot_ptr_->select_slot_id();
+  common::SlotInfo select_slot;
+  for (const auto &fusion_slot :
+       parking_slot_ptr_->parking_fusion_slot_lists()) {
+    if (select_slot_id != fusion_slot.id()) {
+      continue;
+    }
+    select_slot = SlotInfoTransfer(fusion_slot);
+  }
+  if (!select_slot.has_corner_points()) {
+    std::cout << "find no select slot" << std::endl;
+    return false;
+  }
+
+  // calculate occupied ratio
+  CalOccupiedRatio();
+  std::cout << "occupied_ratio in sm: " << slot_occupied_ratio_ << std::endl;
+
+  // if occupied percentage is less than certain value,return
+  if (slot_occupied_ratio_ < kMinSlotUpdateOccupiedRatio) {
+    std::cout << "occupied_ratio is less than min update value " << std::endl;
+    return false;
+  }
+
+  auto slot_idx = slot_info_map_[select_slot_id];
+
+  // update selected slot in slot_management_info_
+
+  auto slot = slot_management_info_.mutable_slot_info_vec(slot_idx);
+
+  slot_info_window_vec_[slot_idx].DirectlyOutputFusionlot(select_slot);
+  *slot = slot_info_window_vec_[slot_idx].GetFusedInfo();
+
+  return true;
+}
+
+bool SlotManagement::CalOccupiedRatio() {
+  Eigen::Vector2d target_pt;
+  Eigen::Vector2d slot01_middle_pt;
+  Eigen::Vector2d slot23_middle_pt;
+  Eigen::Vector2d slot_heading_unit_vec;
+  const int select_slot_id = parking_slot_ptr_->select_slot_id();
+  for (const auto &fusion_slot :
+       parking_slot_ptr_->parking_fusion_slot_lists()) {
+    if (select_slot_id != fusion_slot.id()) {
+      continue;
+    }
+    slot01_middle_pt << (fusion_slot.corner_points(0).x() +
+                         fusion_slot.corner_points(1).x()) *
+                            0.5,
+        (fusion_slot.corner_points(0).y() + fusion_slot.corner_points(1).y()) *
+            0.5;
+
+    slot23_middle_pt << (fusion_slot.corner_points(2).x() +
+                         fusion_slot.corner_points(3).x()) *
+                            0.5,
+        (fusion_slot.corner_points(2).y() + fusion_slot.corner_points(3).y()) *
+            0.5;
+    slot_heading_unit_vec = slot01_middle_pt - slot23_middle_pt;
+    slot_heading_unit_vec.normalize();
+
+    const double dst_rear_edge_to_rear_axle = 0.947;
+    const double buffer = 0.1;
+    target_pt = slot23_middle_pt +
+                (dst_rear_edge_to_rear_axle + buffer) * slot_heading_unit_vec;
+  }
+
+  if (!slot01_middle_pt.allFinite()) {
+    std::cout << "selected slot doesn't exist" << std::endl;
+    return false;
+  }
+
+  std::cout << "current pos: " << measurement_.ego_pos << std::endl;
+  std::cout << "target pos: " << target_pt << std::endl;
+
+  Eigen::Vector2d slot_01_middle_to_ego_pos =
+      measurement_.ego_pos - slot01_middle_pt;
+  Eigen::Vector2d slot_01_middle_to_targt_pos = target_pt - slot01_middle_pt;
+  const double dot = slot_01_middle_to_ego_pos.dot(slot_01_middle_to_targt_pos);
+  if (dot <= 0) {
+    slot_occupied_ratio_ = 0;
+  } else {
+    const double ratio =
+        dot /
+        (slot_01_middle_to_targt_pos.x() * slot_01_middle_to_targt_pos.x() +
+         slot_01_middle_to_targt_pos.y() * slot_01_middle_to_targt_pos.y());
+    slot_occupied_ratio_ = ratio > 1.0 ? 1.0 : ratio;
+  }
+  return true;
+}
+
 bool SlotManagement::IsValidParkingSlot(const common::SlotInfo &slot_info) {
   const auto &pts = slot_info.corner_points();
 
@@ -183,8 +291,8 @@ bool SlotManagement::IsValidParkingSlot(const common::SlotInfo &slot_info) {
       pts.corner_point(1).x() - pts.corner_point(0).x(),
       pts.corner_point(1).y() - pts.corner_point(0).y());
 
-  // 1. Check if the boundary lines 02 and 13 of the parking slot are
-  // approximately parallel
+  // 1. Check if the boundary lines 02 and 13 of the parking
+  // slot are approximately parallel
   const double slot_line_angle_dif = std::fabs(
       pnc::transform::GetAngleFromTwoVec(slot_line02_vec, slot_line13_vec));
   const double slot_line_angle_dif_deg = slot_line_angle_dif * 57.3;
@@ -196,8 +304,8 @@ bool SlotManagement::IsValidParkingSlot(const common::SlotInfo &slot_info) {
     return false;
   }
 
-  // 2.  Check if the nearby boundary lines of the parking slot are
-  // approximately vertical
+  // 2.  Check if the nearby boundary lines of the parking
+  // slot are approximately vertical
   Eigen::Vector2d slot_line20_vec = -slot_line02_vec;
   const double corner2_angle_dif =
       std::fabs(kPie * 0.5 - pnc::transform::GetAngleFromTwoVec(
@@ -325,7 +433,8 @@ bool SlotManagement::LonDifUpdateCondition(
   Eigen::Vector2d new_slot_heading_unit =
       new_slot_heading_vec / new_slot_middle_length;
 
-  // new_slot_heading_unit prod slot_center_to_side_mirror_vec
+  // new_slot_heading_unit prod
+  // slot_center_to_side_mirror_vec
   const double lon_dif =
       new_slot_heading_unit(0) * slot_center_to_side_mirror_vec(1) -
       new_slot_heading_unit(1) * slot_center_to_side_mirror_vec(0);
@@ -344,10 +453,12 @@ bool SlotManagement::LonDifUpdateCondition(
 }
 
 bool SlotManagement::IfUpdateSlot(const common::SlotInfo &new_slot_info) {
-  // update by angle between ego_heading_axis and slot_heading_axis (new slot)
+  // update by angle between ego_heading_axis and
+  // slot_heading_axis (new slot)
   const bool angle_update_condition = AngleUpdateCondition(new_slot_info);
 
-  // update by lon dif between slot center and mirror middle point
+  // update by lon dif between slot center and mirror middle
+  // point
   const bool lon_update_condition = LonDifUpdateCondition(new_slot_info);
 
   return (angle_update_condition && lon_update_condition);

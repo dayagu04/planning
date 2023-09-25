@@ -150,6 +150,8 @@ class DiagonalInTrajectoryGenerator {
 
   bool IsApaFinished() const;
 
+  bool IsSimulatedApaFinished() const;
+
   void PrintTrajectoryPoints(
       const PlanningOutput::PlanningOutput &planning_output) const;
 

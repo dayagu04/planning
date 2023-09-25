@@ -239,6 +239,7 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlanSimulation() {
 
 bool DiagonalInTrajectoryGenerator::SingleSlotPlan(
     const int slot_index, PlanningOutput* const planning_output) {
+  std::cout << "enter SingleSlotPlan" << std::endl;
   CalSlotPointsInM(slot_index);
 
   const auto& slots = managed_parking_fusion_info_.parking_fusion_slot_lists();
@@ -266,6 +267,14 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlan(
   } else {
     // when simualtion
     last_segment_name_ = simu_param_.force_last_seg_name_;
+    if (IsSimulatedApaFinished()) {
+      AINFO << "apa is finished";
+      SetFinishedPlanningOutput(frame_);
+      return true;
+    }
+    if (!IsReplan(planning_output)) {
+      return true;
+    }
   }
 
   std::cout << "diagonal replan triggered, replan state:"
@@ -1135,6 +1144,14 @@ void DiagonalInTrajectoryGenerator::UpdatePosUnchangedCount() {
 bool DiagonalInTrajectoryGenerator::IsApaFinished() const {
   return current_state_ == FunctionalState::PARK_IN_ACTIVATE_CONTROL &&
          standstill_time_ >= kMinStandstillTime &&
+         fabs(target_point_in_slot_.x - cur_pos_in_slot_.x) < kMaxXOffset &&
+         fabs(target_point_in_slot_.y - cur_pos_in_slot_.y) < kMaxYOffset &&
+         fabs(target_point_in_slot_.theta - cur_pos_in_slot_.theta) <
+             kMaxThetaOffset;
+}
+
+bool DiagonalInTrajectoryGenerator::IsSimulatedApaFinished() const {
+  return current_state_ == FunctionalState::PARK_IN_ACTIVATE_CONTROL &&
          fabs(target_point_in_slot_.x - cur_pos_in_slot_.x) < kMaxXOffset &&
          fabs(target_point_in_slot_.y - cur_pos_in_slot_.y) < kMaxYOffset &&
          fabs(target_point_in_slot_.theta - cur_pos_in_slot_.theta) <

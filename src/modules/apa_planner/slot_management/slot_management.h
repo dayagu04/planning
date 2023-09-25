@@ -37,6 +37,12 @@ class SlotInfoWindow {
     Fuse();
   }
 
+  void DirectlyOutputFusionlot(common::SlotInfo& fusion_slot_info) {
+    slot_info_vec_.clear();
+    slot_info_vec_.emplace_back(fusion_slot_info);
+    fused_slot_info_ = fusion_slot_info;
+  }
+
   void Fuse() {
     if (slot_info_vec_.size() == 0) {
       return;
@@ -130,6 +136,7 @@ class SlotManagement {
       const LocalizationOutput::LocalizationEstimate* localization_info);
 
   void SetParam(const Param& param) { param_ = param; }
+
   void Reset();
 
   const common::SlotInfo GetSelectedSlot(const int selected_id) const {
@@ -147,6 +154,8 @@ class SlotManagement {
  private:
   void Preprocess();
   bool UpdateSlotsInSearchingState();
+  bool UpdateSlotsWhenApproachingTargetPoint();
+  bool CalOccupiedRatio();
   bool IsValidParkingSlot(const common::SlotInfo& slot_info);
   bool IsInAPAState() const;
   bool IsInSearchingState() const;
@@ -172,6 +181,7 @@ class SlotManagement {
 
   Measurement measurement_;
   Param param_;
+  double slot_occupied_ratio_ = 0.0;
 };
 
 }  // namespace planning
