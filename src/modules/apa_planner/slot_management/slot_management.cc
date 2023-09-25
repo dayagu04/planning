@@ -230,6 +230,14 @@ bool SlotManagement::IsInSearchingState() const {
 #ifdef __DEBUG_PRINT__
   std::cout << "func_state_ptr_->current_state() = "
             << func_state_ptr_->current_state() << std::endl;
+  // 应该检查一下每帧slot_management_info_车位的值
+  std::cout << "managed slot size:"
+            << slot_management_info_.slot_info_vec_size() << std::endl;
+  std::cout << "magaged slot id: ";
+  for (int i = 0; i < slot_management_info_.slot_info_vec_size(); ++i) {
+    std::cout << slot_management_info_.slot_info_vec(i).id() << ", ";
+  }
+  std::cout << std::endl;
 #endif
   if ((func_state_ptr_->current_state() >= FuncStateMachine::PARK_IN_APA_IN &&
        func_state_ptr_->current_state() <=

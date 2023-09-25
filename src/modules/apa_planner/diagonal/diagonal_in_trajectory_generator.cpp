@@ -18,7 +18,7 @@
 #include "planning_output_context.h"
 #include "utils_math.h"
 
-//#define __PYBIND_DEBUG__
+#define __PYBIND_DEBUG__
 
 namespace planning {
 namespace apa_planner {
@@ -385,10 +385,11 @@ bool DiagonalInTrajectoryGenerator::ABSegmentPlan(
               << segments_info.opt_point_f.theta << ")" << std::endl;
     if (IsSegmentExist(segments_info.opt_point_d)) {
       GenerateCDSegmentTrajectory(segments_info, planning_output);
-      //   //   if (IsSegmentExist(segments_info.opt_point_e)) {
-      //   //     GenerateDESegmentTrajectory(segments_info, planning_output);
-      //   //   }
     }
+    if (IsSegmentExist(segments_info.opt_point_e)) {
+      GenerateDESegmentTrajectory(segments_info, planning_output);
+    }
+
 #endif
 
     // PrintTrajectoryPoints(*planning_output);

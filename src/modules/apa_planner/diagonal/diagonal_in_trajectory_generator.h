@@ -19,7 +19,7 @@ class DiagonalInTrajectoryGenerator {
  public:
   struct SimulationParam {
     uint8_t force_last_seg_name_ = 0;
-    int selected_id_ = false;
+    int selected_id_ = 0;
     bool force_planning_ = false;
     uint8_t current_state_ = 0;
   };

@@ -346,9 +346,9 @@ bool DiagonalInGeometryPlan::BCSegment(const PlanningPoint &point_b,
     }
   }
 
-  std::cout << "total_cnt:" << size_step << ", collide_cnt:" << collide_cnt
-            << ", cd_fail_cnt:" << cd_fail_cnt
-            << ", total_cost_nan_cnt:" << total_cost_nan_cnt << std::endl;
+  // std::cout << "total_cnt:" << size_step << ", collide_cnt:" << collide_cnt
+  //           << ", cd_fail_cnt:" << cd_fail_cnt
+  //           << ", total_cost_nan_cnt:" << total_cost_nan_cnt << std::endl;
 
   if (std::isinf(segments_info->total_cost)) {
     return false;
