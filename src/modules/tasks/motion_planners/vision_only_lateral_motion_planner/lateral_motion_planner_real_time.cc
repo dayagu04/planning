@@ -1472,10 +1472,23 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                            lat_offset);
             }
           }
-          if (lat_offset < 0. && d_poly_[3] + lat_offset < -0.3) {
-            lat_offset = -d_poly_[3] - 0.3;
-          } else if (lat_offset >= 0. && d_poly_[3] + lat_offset > 0.3) {
-            lat_offset = -d_poly_[3] + 0.3;
+
+          if (lat_offset > 0 && d_poly_[3] >= 0) {
+            if (d_poly_[3] > 0.3) {
+              lat_offset = 0;
+            } else {
+              if (d_poly_[3] + lat_offset > 0.3) {
+                lat_offset = -d_poly_[3] + 0.3;
+              }
+            }
+          } else if (lat_offset <= 0 && d_poly_[3] <= 0) {
+            if (d_poly_[3] < -0.3) {
+              lat_offset = 0;
+            } else {
+              if (d_poly_[3] + lat_offset < -0.3) {
+                lat_offset = -d_poly_[3] - 0.3;
+              }
+            }
           }
         }
 
@@ -1718,8 +1731,14 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                            lat_offset);
             }
           }
-          if (d_poly_[3] + lat_offset < -0.3) {
-            lat_offset = -d_poly_[3] - 0.3;
+          if (d_poly_[3] <= 0) {
+            if (d_poly_[3] < -0.3) {
+              lat_offset = 0;
+            } else {
+              if (d_poly_[3] + lat_offset < -0.3) {
+                lat_offset = -d_poly_[3] - 0.3;
+              }
+            }
           }
         } else {
           lat_offset = std::min(-d_poly_[3], 0.);
@@ -2024,8 +2043,14 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                            lat_offset);
             }
           }
-          if (d_poly_[3] + lat_offset > 0.3) {
-            lat_offset = -d_poly_[3] + 0.3;
+          if (d_poly_[3] >= 0) {
+            if (d_poly_[3] > 0.3) {
+              lat_offset = 0;
+            } else {
+              if (d_poly_[3] + lat_offset > 0.3) {
+                lat_offset = -d_poly_[3] + 0.3;
+              }
+            }
           }
         } else {
           lat_offset = std::max(
