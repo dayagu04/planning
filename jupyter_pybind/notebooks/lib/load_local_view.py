@@ -70,6 +70,9 @@ class LoadCyberbag:
     # ehr static map msg
     self.ehr_static_map_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
+    # planning hmi msg
+    self.planning_hmi_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+
     # time offset
     t0 = 0
 
@@ -362,7 +365,6 @@ class LoadCyberbag:
       ehr_static_map_msg_dict = {key: val for key, val in sorted(ehr_static_map_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ehr_static_map_msg_dict.items():
         self.ehr_static_map_msg['t'].append(t)
-        print("self.ehr_static_map_msg['t']:",t)
         self.ehr_static_map_msg['abs_t'].append(t)
         self.ehr_static_map_msg['data'].append(msg)
       self.ehr_static_map_msg['t'] = [tmp - t0  for tmp in self.ehr_static_map_msg['t']]
@@ -374,6 +376,26 @@ class LoadCyberbag:
     except:
       self.ehr_static_map_msg['enable'] = False
       print('missing /iflytek/ehr/static_map topic !!!')
+
+    # load planning hmi msg
+    try:
+      planning_hmi_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/planning/hmi"):
+        planning_hmi_msg_dict[msg.header.timestamp / 1e6] = msg
+      planning_hmi_msg_dict = {key: val for key, val in sorted(planning_hmi_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in planning_hmi_msg_dict.items():
+        self.planning_hmi_msg['t'].append(t)
+        self.planning_hmi_msg['abs_t'].append(t)
+        self.planning_hmi_msg['data'].append(msg)
+      self.planning_hmi_msg['t'] = [tmp - t0  for tmp in self.planning_hmi_msg['t']]
+      print('planning_hmi_msg time:',self.planning_hmi_msg['t'][-1])
+      if len(self.planning_hmi_msg['t']) > 0:
+        self.planning_hmi_msg['enable'] = True
+      else:
+        self.planning_hmi_msg['enable'] = False
+    except:
+      self.planning_hmi_msg['enable'] = False
+      print('missing /iflytek/planning/hmi topic !!!')  
     return max_time
 
   def msg_timeline_figure(self):
@@ -528,6 +550,12 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     while bag_loader.ehr_static_map_msg['t'][ehr_static_map_msg_idx] <= bag_time and ehr_static_map_msg_idx < (len(bag_loader.ehr_static_map_msg['t'])-2):
         ehr_static_map_msg_idx = ehr_static_map_msg_idx + 1
   local_view_data['data_index']['ehr_static_map_msg_idx'] = ehr_static_map_msg_idx
+
+  planning_hmi_msg_idx = 0
+  if bag_loader.planning_hmi_msg['enable'] == True:
+    while bag_loader.planning_hmi_msg['t'][planning_hmi_msg_idx] <= bag_time and planning_hmi_msg_idx < (len(bag_loader.planning_hmi_msg['t'])-2):
+        planning_hmi_msg_idx = planning_hmi_msg_idx + 1
+  local_view_data['data_index']['planning_hmi_msg_idx'] = planning_hmi_msg_idx
 
   ### step 2: 加载定位信息
   cur_pos_xn0 = 0
@@ -874,10 +902,14 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
 
+    if bag_loader.planning_hmi_msg['enable'] ==True:
+      noa_output_info_msg = bag_loader.planning_hmi_msg['data'][planning_hmi_msg_idx].noa_output_info
+      print("dis to ramp:",noa_output_info_msg.dis_to_ramp)
+      print("dis to split:",noa_output_info_msg.dis_to_split)
+      print("dis to merge:",noa_output_info_msg.dis_to_merge)
+
     print("ehr static map timestamp:",bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].header)
-
     print("road_map.lanes len:",len(bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].road_map.lanes))
-
     #load center line 
     ehr_line_info_list = ehr_load_center_lane_lines(bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].road_map.lanes,
                                              cur_pos_xn,cur_pos_yn,cur_yaw,Max_line_size)
@@ -985,6 +1017,7 @@ def load_local_view_figure():
                 'ctrl_msg_idx': 0,
                 'ctrl_debug_msg_idx': 0,
                 'ehr_static_map_msg_idx': 0,
+                'planning_hmi_msg_idx': 0,
                }
 
   local_view_data = {'data_car':data_car, \
