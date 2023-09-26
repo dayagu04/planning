@@ -11,7 +11,7 @@ from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/0926/test_2.00000'
+bag_path = '/home/xlwang71/Downloads/APA/20230926/test_8.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -83,8 +83,9 @@ def slider_callback(bag_time, selected_id, force_planning,turn_on_force_last_seg
   if turn_on_force_last_seg_name == 1:
     last_seg_name = force_last_seg_name
   else:
-    pass
-    # last_seg_name = planning_json['last_segment_name']
+    last_seg_name = planning_json['last_segment_name']
+
+  print("last_seg_name = ", last_seg_name)
 
   try:
     diag_slot_planning_py.UpdateBytesByParam(soc_state_input.SerializeToString(),

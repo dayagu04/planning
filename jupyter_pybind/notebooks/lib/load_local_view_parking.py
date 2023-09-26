@@ -173,7 +173,7 @@ class LoadCyberbag:
 
     # load planning debug msg
     try:
-      json_value_list = ["replan_status", "ego_pos_x"]
+      json_value_list = ["replan_status", "ego_pos_x", "last_segment_name"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec"]
 
