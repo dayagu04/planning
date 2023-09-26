@@ -103,7 +103,7 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   //                      map_info_mgr.get_map_info().current_lane_type(),
   //                      lateral_outputs.lc_status, v_limit_in_turns_, v_ego);
   double distance_to_ramp = virtual_lane_manager->dis_to_ramp();
-  double ramp_v_limit = 60 * 3.6;
+  double ramp_v_limit = 60 / 3.6;
   double acc_to_ramp = -1.0;
   calc_speed_for_ramp(distance_to_ramp, ramp_v_limit, acc_to_ramp, v_ego);
   calc_speed_with_potential_cutin_car(lateral_obstacle->front_tracks(),
@@ -217,8 +217,8 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
   if(ref_points.size() > 0) {
     double curv_max_pt = -100.0;
     for (int i = 0; i < ref_points.size(); i++) {
-      if(ref_points[i].path_point.kappa > curv_max_pt) {
-        curv_max_pt = ref_points[i].path_point.kappa;
+      if(std::abs(ref_points[i].path_point.kappa) > curv_max_pt) {
+        curv_max_pt = std::abs(ref_points[i].path_point.kappa);
       }
     }
     double road_radius = 1 / std::max(curv_max_pt, 0.0001);
@@ -227,7 +227,11 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
     }
     double v_limit_curv_pt = std::sqrt(a_y_max * road_radius) * 0.9;
     LOG_DEBUG("ref points calced road_radius is : [%f]\n", road_radius);
+    LOG_DEBUG("ref points max kappa is : [%f]\n", curv_max_pt);
     LOG_DEBUG("v_limit_curv_pt: [%f]\n", v_limit_curv_pt);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_curv_pt", v_limit_curv_pt);
+    JSON_DEBUG_VALUE("road_radius_in_ref_pt", road_radius);
+    JSON_DEBUG_VALUE("max_kappa_abs", curv_max_pt);
     v_limit_in_turns = std::min(v_limit_in_turns, v_limit_curv_pt);
   }
 
@@ -833,10 +837,12 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
 bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(
   double dis_to_ramp, double ramp_v_limit, double acc_to_ramp, double v_ego) {
   LOG_DEBUG("----calc_speed_for_ramp--- \n");
-  double v_temp_limit = std::pow(std::pow(ramp_v_limit,  2.0) - 2 * dis_to_ramp * acc_to_ramp, 0.5);
-  double v_target_ramp = std::min(v_temp_limit, v_ego);
+  double v_target_ramp = std::pow(std::pow(ramp_v_limit,  2.0) - 2 * dis_to_ramp * acc_to_ramp, 0.5);
   v_target_ = std::min(v_target_ramp, v_target_);
+  LOG_DEBUG("dis_to_ramp : [%f] \n", dis_to_ramp);
   LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
+  JSON_DEBUG_VALUE("VisionLonBehavior_v_target_ramp", v_target_ramp);
+  JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
   LOG_DEBUG("v_target : [%f] \n", v_target_);
   return true;
      
