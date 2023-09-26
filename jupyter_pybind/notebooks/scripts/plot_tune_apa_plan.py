@@ -11,7 +11,7 @@ from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/20230919/21_16.00000'
+bag_path = '/home/xlwang71/Downloads/APA/0926/test_2.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -39,7 +39,7 @@ data_planning_tune = ColumnDataSource(data = {'plan_traj_x':[],
 #     plan_msg_idx = plan_msg_idx + 1
 # bag_time0 = plan_msg_idx * 0.1
 bag_time0 = 0.0
-fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_tune, line_width = 8, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'tuned plan')
+fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'tuned plan')
 
 ### sliders config
 class LocalViewSlider:
@@ -71,6 +71,7 @@ def slider_callback(bag_time, selected_id, force_planning,turn_on_force_last_seg
   loc_msg_input = bag_loader.loc_msg['data'][loc_msg_idx]
   vs_msg_input = bag_loader.vs_msg['data'][vs_msg_idx]
   planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
+  planning_data = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
 
   # print("soc_state_input = ", soc_state_input)
   # print("fus_parking_input = ", fus_parking_input)
@@ -89,9 +90,12 @@ def slider_callback(bag_time, selected_id, force_planning,turn_on_force_last_seg
     diag_slot_planning_py.UpdateBytesByParam(soc_state_input.SerializeToString(),
                                       fus_parking_input.SerializeToString(),
                                       loc_msg_input.SerializeToString(),
-                                      vs_msg_input.SerializeToString(), selected_id, force_planning, last_seg_name)
+                                      vs_msg_input.SerializeToString(),
+                                      planning_data.slot_management_info.SerializeToString(),
+                                      selected_id, force_planning, last_seg_name)
     planning_output.ParseFromString(diag_slot_planning_py.GetOutputBytes())
   except:
+    print("error")
     pass
 
   plan_traj_x = []

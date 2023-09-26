@@ -250,7 +250,6 @@ void PlanningAdapter::Proc() {
 
   const auto &last_state = g_context.GetStatemachine().current_state;
 
-
   if (last_state == FuncStateMachine::STANDBY &&
       (current_state >= FuncStateMachine::PARK_IN_APA_IN &&
        current_state <= FuncStateMachine::PARK_IN_COMPLETED)) {

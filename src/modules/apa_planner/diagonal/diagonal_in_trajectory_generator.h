@@ -10,6 +10,7 @@
 #include "math/box2d.h"
 #include "planning_plan.pb.h"
 #include "slot_management/slot_management.h"
+#include "slot_management_info.pb.h"
 #include "speed_smoother/apa_speed_smoother.h"
 
 namespace planning {
@@ -51,7 +52,9 @@ class DiagonalInTrajectoryGenerator {
 
   void SetSimulationParam(SimulationParam &param) { simu_param_ = param; }
 
-  bool SingleSlotPlanSimulation();
+  bool SingleSlotManagePlanSimulation();
+  bool SingleSlotPlanSimulation(
+      common::SlotManagementInfo &slot_mangement_info);
 
  private:
   bool SingleSlotPlan(const int slot_index,

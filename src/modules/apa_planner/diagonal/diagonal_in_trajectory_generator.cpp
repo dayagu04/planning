@@ -1,5 +1,6 @@
 #include "diagonal/diagonal_in_trajectory_generator.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <limits>
@@ -186,7 +187,104 @@ void DiagonalInTrajectoryGenerator::UpdateManagedParkingFusion(
       managed_selected_slot.corner_points().corner_point(3).y());
 }
 
-bool DiagonalInTrajectoryGenerator::SingleSlotPlanSimulation() {
+bool DiagonalInTrajectoryGenerator::SingleSlotPlanSimulation(
+    common::SlotManagementInfo& slot_mangement_info) {
+  simulation_enable_flag_ = true;
+
+  if (local_view_->function_state_machine_info.has_current_state()) {
+    current_state_ = local_view_->function_state_machine_info.current_state();
+  }
+
+  if (simu_param_.force_planning_) {
+    current_state_ = FunctionalState::PARK_IN_ACTIVATE_CONTROL;
+  }
+
+  std::cout << "-------------------------------------------- frame start "
+               "-------------------------------------------- "
+            << std::endl;
+  std::cout << "current_status = " << static_cast<int>(current_state_)
+            << std::endl;
+
+  auto& origin_parking_fusion_info = local_view_->parking_fusion_info;
+  const auto& slots = origin_parking_fusion_info.parking_fusion_slot_lists();
+
+  int select_slot_index = -1;
+  size_t selected_slot_id = simu_param_.selected_id_;
+
+  std::cout << "selected_slot_id:" << selected_slot_id << std::endl;
+  for (int i = 0;
+       i < origin_parking_fusion_info.parking_fusion_slot_lists_size(); ++i) {
+    if (selected_slot_id != slots[i].id()) {
+      continue;
+    }
+    if (slots[i].type() ==
+            Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL ||
+        slots[i].type() ==
+            Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
+      select_slot_index = i;
+      std::cout << "diagonal slot selected" << std::endl;
+      break;
+    }
+  }
+  if (select_slot_index == -1) {
+    std::cout << "selected slot is not diagonal" << std::endl;
+    return false;
+  }
+
+  // copy parking fusion info
+  managed_parking_fusion_info_.CopyFrom(local_view_->parking_fusion_info);
+
+  auto fusion_selected_slot =
+      managed_parking_fusion_info_.mutable_parking_fusion_slot_lists(
+          select_slot_index);
+  // selected_slot_id
+  int select_slot_index_slm = -1;
+  const auto& slot_info_vec = slot_mangement_info.slot_info_vec();
+  for (size_t i = 0; i < slot_mangement_info.slot_info_vec_size(); ++i) {
+    if (selected_slot_id == slot_info_vec[i].id()) {
+      select_slot_index_slm = i;
+      break;
+    }
+  }
+
+  if (select_slot_index_slm == -1) {
+    std::cout << "selected slot is not diagonal" << std::endl;
+    return false;
+  }
+
+  auto managed_selected_slot =
+      slot_mangement_info.slot_info_vec(select_slot_index_slm);
+
+  // std::cout << "managed_selected_slot = " <<
+  // managed_selected_slot.DebugString()
+  //           << std::endl;
+
+  fusion_selected_slot->mutable_corner_points(0)->set_x(
+      managed_selected_slot.corner_points().corner_point(0).x());
+  fusion_selected_slot->mutable_corner_points(0)->set_y(
+      managed_selected_slot.corner_points().corner_point(0).y());
+
+  fusion_selected_slot->mutable_corner_points(1)->set_x(
+      managed_selected_slot.corner_points().corner_point(1).x());
+  fusion_selected_slot->mutable_corner_points(1)->set_y(
+      managed_selected_slot.corner_points().corner_point(1).y());
+
+  fusion_selected_slot->mutable_corner_points(2)->set_x(
+      managed_selected_slot.corner_points().corner_point(2).x());
+  fusion_selected_slot->mutable_corner_points(2)->set_y(
+      managed_selected_slot.corner_points().corner_point(2).y());
+
+  fusion_selected_slot->mutable_corner_points(3)->set_x(
+      managed_selected_slot.corner_points().corner_point(3).x());
+  fusion_selected_slot->mutable_corner_points(3)->set_y(
+      managed_selected_slot.corner_points().corner_point(3).y());
+
+  SingleSlotPlan(select_slot_index, &planning_output_);
+
+  return true;
+}
+
+bool DiagonalInTrajectoryGenerator::SingleSlotManagePlanSimulation() {
   simulation_enable_flag_ = true;
 
   if (local_view_->function_state_machine_info.has_current_state()) {
@@ -275,9 +373,6 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlan(
     if (IsSimulatedApaFinished()) {
       AINFO << "apa is finished";
       SetFinishedPlanningOutput(frame_);
-      return true;
-    }
-    if (!IsReplan(planning_output)) {
       return true;
     }
   }

@@ -4,6 +4,7 @@
 
 #include "apa_planner/diagonal/diagonal_in_trajectory_generator.h"
 #include "local_view.h"
+#include "slot_management_info.pb.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
@@ -31,7 +32,8 @@ inline T BytesToProto(py::bytes &bytes) {
 int UpdateBytes(py::bytes &func_statemachine_bytes,
                 py::bytes &parking_slot_info_bytes,
                 py::bytes &localization_info_bytes,
-                py::bytes &vehicle_service_output_info_bytes) {
+                py::bytes &vehicle_service_output_info_bytes,
+                py::bytes &slot_management_info_bytes, int selected_id) {
   auto func_statemachine =
       BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
 
@@ -45,6 +47,10 @@ int UpdateBytes(py::bytes &func_statemachine_bytes,
   auto vehicle_service_output_info =
       BytesToProto<VehicleService::VehicleServiceOutputInfo>(
           vehicle_service_output_info_bytes);
+
+  auto slot_management_info =
+      BytesToProto<planning::common::SlotManagementInfo>(
+          slot_management_info_bytes);
 
   static planning::LocalView local_view;
 
@@ -55,7 +61,7 @@ int UpdateBytes(py::bytes &func_statemachine_bytes,
 
   pBase->SetLocalView(&local_view);
 
-  pBase->SingleSlotPlanSimulation();
+  pBase->SingleSlotPlanSimulation(slot_management_info);
 
   return 0;
 }
@@ -64,8 +70,8 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
                        py::bytes &parking_slot_info_bytes,
                        py::bytes &localization_info_bytes,
                        py::bytes &vehicle_service_output_info_bytes,
-                       int selected_id, bool force_planning,
-                       uint8_t force_last_seg_name) {
+                       py::bytes &slot_management_info_bytes, int selected_id,
+                       bool force_planning, uint8_t force_last_seg_name) {
   auto func_statemachine =
       BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
 
@@ -79,6 +85,10 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
   auto vehicle_service_output_info =
       BytesToProto<VehicleService::VehicleServiceOutputInfo>(
           vehicle_service_output_info_bytes);
+
+  auto slot_management_info =
+      BytesToProto<planning::common::SlotManagementInfo>(
+          slot_management_info_bytes);
 
   static planning::LocalView local_view;
 
@@ -96,7 +106,7 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
 
   pBase->SetSimulationParam(param);
 
-  pBase->SingleSlotPlanSimulation();
+  pBase->SingleSlotPlanSimulation(slot_management_info);
 
   return 0;
 }
