@@ -257,7 +257,7 @@ void PlanningPlayer::PlayOneFrame(
   auto functional_state = ::FuncStateMachine::FunctionalState::INIT;
   if (frame_num >= enter_auto_frame_num_) {  // enter auto after 1.5s
     if (scene_type_ == "acc") {
-      functional_state = ::FuncStateMachine::FunctionalState::ACC_ACTIVATE;
+      functional_state = func_state_machine_msg->current_state();
     } else if (scene_type_ == "apa") {
       functional_state =
           ::FuncStateMachine::FunctionalState::PARK_IN_ACTIVATE_CONTROL;

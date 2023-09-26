@@ -47,6 +47,7 @@ void ScenarioStateMachine::init() {
 bool ScenarioStateMachine::update(planning::framework::Frame *frame) {
   fsm_context_.frame = frame;
   bool active = session_->environmental_model().GetVehicleDbwStatus();
+  auto function_info = session_->environmental_model().function_info();
 
   if (!session_->mutable_planning_context()->last_planning_success()) {
     reset_state_machine();
@@ -54,7 +55,8 @@ bool ScenarioStateMachine::update(planning::framework::Frame *frame) {
 
   update_scenario();  // cruise or low speed or ...
 
-  if (active == false) {
+  if (active == false ||
+      function_info.function_mode == DrivingFunctionMode::ACC) {
     lc_req_mgr_->FinishRequest();
     map_turn_signal_ = NO_CHANGE;
     reset_state_machine();

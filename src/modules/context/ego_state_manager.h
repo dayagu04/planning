@@ -11,6 +11,7 @@
 #include "transform.h"
 #include "vehicle_config_context.h"
 #include "vehicle_status.pb.h"
+#include "filters.h"
 
 namespace planning {
 
@@ -147,6 +148,7 @@ class EgoStateManager {
   planning_math::Polygon2d polygon_;
   PlanningInitPoint planning_init_point_;
   bool planning_init_point_valid_ = false;
+  pnc::filters::SlopeFilter v_cruise_filter_;  // 对巡航车速变化速率限制
 
   std::vector<PncTrajectoryPoint> stitch_trajectory_;
 

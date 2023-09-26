@@ -39,22 +39,22 @@ class LoadCyberbag:
 
     # fusion object msg
     self.fus_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
-    
+
     # me object msg
     self.me_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
-    
+
     # radar_fm object msg
     self.radar_fm_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
-    
+
     # radar_fl object msg
     self.radar_fl_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
-    
+
     # radar_fr object msg
     self.radar_fr_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
-    
+
     # radar_rl object msg
     self.radar_rl_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
-    
+
     # radar_rr object msg
     self.radar_rr_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
@@ -149,7 +149,7 @@ class LoadCyberbag:
     except:
       self.fus_msg['enable'] = False
       print('missing /iflytek/fusion/objects !!!')
-      
+
     # load mobile_eye_camera objects msg
     try:
       me_msg_dict = {}
@@ -169,7 +169,7 @@ class LoadCyberbag:
     except:
       self.me_msg['enable'] = False
       print('missing /mobileye/camera_perception/objects !!!')
-      
+
     # load radar objects msg
     radar_msg = [self.radar_fm_msg,self.radar_fl_msg,self.radar_fr_msg,self.radar_rl_msg,self.radar_rr_msg]
     topic = ["/iflytek/radar_fm_perception_info","/iflytek/radar_fl_perception_info","/iflytek/radar_fr_perception_info","/iflytek/radar_rl_perception_info","/iflytek/radar_rr_perception_info"]
@@ -210,7 +210,7 @@ class LoadCyberbag:
       except:
         radar_msg[i]['enable'] = False
         print('missing',topic[i])
-      
+
     # # load radar_fl objects msg
     # try:
     #   radar_fl_msg_dict = {}
@@ -308,7 +308,7 @@ class LoadCyberbag:
                          "VisionLonBehavior_temp_lead_two_id", "VisionLonBehavior_temp_lead_two_dis", "VisionLonBehavior_temp_lead_two_vel", "VisionLonBehavior_v_target_temp_lead_two",
                          "VisionLonBehavior_potental_cutin_track_id", "VisionLonBehavior_potental_cutin_v_target", "VisionLonBehavior_cutin_v_target",
                          "VisionLonBehavior_v_limit_road", "VisionLonBehavior_v_limit_in_turns",
-                         'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop',
+                         'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', 'VisionLonBehavior_STANDSTILL', "VisionLonBehavior_final_v_target",
                          "solver_condition", "dist_err", "lat_err", "lon_err",
                          "dbw_status"]
 
@@ -570,7 +570,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     while bag_loader.fus_msg['t'][fus_msg_idx] <= bag_time and fus_msg_idx < (len(bag_loader.fus_msg['t'])-2):
         fus_msg_idx = fus_msg_idx + 1
   local_view_data['data_index']['fus_msg_idx'] = fus_msg_idx
-  
+
   me_msg_idx = 0
   if bag_loader.me_msg['enable'] == True:
     while bag_loader.me_msg['t'][me_msg_idx] <= bag_time and me_msg_idx < (len(bag_loader.me_msg['t'])-2):
@@ -578,7 +578,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         # print("bag_loader.me_msg['t'][me_msg_idx]:",bag_loader.me_msg['t'][me_msg_idx])
     # print("me_msg_idx:",me_msg_idx)
   local_view_data['data_index']['me_msg_idx'] = me_msg_idx
-  
+
   # radar_msg_idx = dict()
   radar_msg_idx_list = ['radar_fm_msg_idx','radar_fl_msg_idx','radar_fr_msg_idx','radar_rl_msg_idx','radar_rr_msg_idx']
   radar_msg_idx = [0,0,0,0,0]
@@ -594,7 +594,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           # print("radar_msg_idx[i]:",radar_msg_idx[i])
       print('radar_msg_idx:',i,radar_msg_idx[i])
     local_view_data['data_index'][radar_msg_idx_list[i]] = radar_msg_idx[i]
-  
+
   # radar_fm_msg_idx = 0
   # if bag_loader.radar_fm_msg['enable'] == True:
   #   while bag_loader.radar_fm_msg['t'][radar_fm_msg_idx] <= bag_time and radar_fm_msg_idx < (len(bag_loader.radar_fm_msg['t'])-2):
@@ -922,7 +922,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             'pos_y' : obstacles_info['pos_y'],
             'obs_label' : obstacles_info['obs_label'],
           })
-  
+
   # load me_obj
   if bag_loader.me_msg['enable'] == True:
     # print("me_msg_idx:",me_msg_idx)
@@ -997,7 +997,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             'pos_y' : obstacles_info['pos_y'],
             'obs_label' : obstacles_info['obs_label'],
           })
-          
+
   # load radar_obj
   data_radar_obj = ['data_radar_fm_obj','data_radar_fl_obj','data_radar_fr_obj','data_radar_rl_obj','data_radar_rr_obj']
   for i in range(5):
@@ -1292,7 +1292,7 @@ def load_local_view_figure():
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_radar_fr_obj, text_color="blue", text_align="center", text_font_size="8pt", legend_label = 'radar_fr_info',visible = False)
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_radar_rl_obj, text_color="yellow", text_align="center", text_font_size="8pt", legend_label = 'radar_rl_info',visible = False)
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_radar_rr_obj, text_color="black", text_align="center", text_font_size="8pt", legend_label = 'radar_rr_info',visible = False)
-  
+
   fig1.patches('obstacles_y_rel', 'obstacles_x_rel', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd')
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fusion_info')
   fig1.text('pos_y_rel', 'pos_x_rel', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info')
@@ -1329,7 +1329,7 @@ def update_local_view_data_index(fig1, bag_loader, bag_time, local_view_data):
         fus_msg_idx = fus_msg_idx + 1
     # print("fus_msg_idx:",fus_msg_idx)
   local_view_data['data_index']['fus_msg_idx'] = fus_msg_idx
-  
+
   me_msg_idx = 0
   if bag_loader.me_msg['enable'] == True:
     while bag_loader.me_msg['t'][me_msg_idx] <= bag_time and me_msg_idx < (len(bag_loader.me_msg['t'])-2):
@@ -1337,7 +1337,7 @@ def update_local_view_data_index(fig1, bag_loader, bag_time, local_view_data):
         # print("bag_loader.me_msg['t'][me_msg_idx]:",bag_loader.me_msg['t'][me_msg_idx])
     # print("me_msg_idx:",me_msg_idx)
   local_view_data['data_index']['me_msg_idx'] = me_msg_idx
-  
+
   # radar_msg_idx = dict()
   radar_msg_idx_list = ['radar_fm_msg_idx','radar_fl_msg_idx','radar_fr_msg_idx','radar_rl_msg_idx','radar_rr_msg_idx']
   radar_msg_idx = [0,0,0,0,0]
@@ -1353,7 +1353,7 @@ def update_local_view_data_index(fig1, bag_loader, bag_time, local_view_data):
           # print("radar_msg_idx[i]:",radar_msg_idx[i])
       #print('radar_msg_idx:',i,radar_msg_idx[i])
     local_view_data['data_index'][radar_msg_idx_list[i]] = radar_msg_idx[i]
-  
+
   # radar_fm_msg_idx = 0
   # if bag_loader.radar_fm_msg['enable'] == True:
   #   while bag_loader.radar_fm_msg['t'][radar_fm_msg_idx] <= bag_time and radar_fm_msg_idx < (len(bag_loader.radar_fm_msg['t'])-2):

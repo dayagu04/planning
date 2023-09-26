@@ -61,6 +61,8 @@ bool VisionLongitudinalBehaviorPlanner::update() {
       frame_->session()->environmental_model().get_lateral_obstacle();
   auto &lateral_outputs =
       frame_->session()->planning_context().lateral_behavior_planner_output();
+  auto &function_info =
+      frame_->session()->environmental_model().function_info();
 
   // modify
   // lane_tracks_mgr_->update_ego_state(ego_state);
@@ -129,11 +131,16 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   JSON_DEBUG_VALUE("VisionLonBehavior_stop_start_state", (int)stop_start_state);
   JSON_DEBUG_VALUE("VisionLonBehavior_v_target_start_stop", v_target_);
 
-  std::cout << a_target_.first << "< final a_target_ < " << a_target_.second
-            << std::endl;
-  std::cout << "final v_target_ = : " << v_target_ << std::endl;
+  // ACC : STANDSTILL to ACTIVE need confirmed by driver
+  JSON_DEBUG_VALUE("VisionLonBehavior_STANDSTILL", 0.0);
+  if (v_ego < 1.0 && function_info.function_mode == DrivingFunctionMode::ACC &&
+      function_info.function_state == DrivingFunctionstate::STANDSTILL) {
+    v_target_ = 0.0;
+    JSON_DEBUG_VALUE("VisionLonBehavior_STANDSTILL", 1.0);
+  }
+  JSON_DEBUG_VALUE("VisionLonBehavior_final_v_target", v_target_);
 
-  // hack: get CIPV 临时方案，后续使用hmi proto输出
+  // HMI: CIPV
   int CIPV_id = GetCIPV(lateral_obstacle, lateral_outputs.lc_status);
   JSON_DEBUG_VALUE("CIPV_id", CIPV_id);
 

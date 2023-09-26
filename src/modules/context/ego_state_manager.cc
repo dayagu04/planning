@@ -23,6 +23,8 @@ static const double curve_factor = 0.30;
 EgoStateManager::EgoStateManager(planning::framework::Session *session)
     : session_(session) {
   vehicle_param_ = session_->vehicle_config_context().get_vehicle_param();
+  // init v_cruise_filter: -2m/s2, 2m/s2, 0-150km/h, 10hz
+  v_cruise_filter_.Init(-2.0, 2.0, 0.0, 42.0, planning_loop_dt);
 }
 
 void EgoStateManager::set_ego_carte(const Point2D &ego_carte) {
@@ -87,7 +89,14 @@ void EgoStateManager::set_ego_acc(
 
 void EgoStateManager::set_ego_v_cruise(
     const planning::common::VehicleStatus &vehicle_status) {
-  ego_v_cruise_ = vehicle_status.velocity().cruise_velocity().value_mps();
+  if (!session_->environmental_model().GetVehicleDbwStatus()) {
+    v_cruise_filter_.SetState(
+        vehicle_status.velocity().heading_velocity().value_mps());
+  } else {
+    v_cruise_filter_.Update(
+        vehicle_status.velocity().cruise_velocity().value_mps());
+  }
+  ego_v_cruise_ = v_cruise_filter_.GetOutput();
 }
 
 void EgoStateManager::set_ego_t_distance(

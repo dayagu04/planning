@@ -37,12 +37,12 @@ class LoadCyberbag:
 
     # slot msg
     self.slot_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
-    
+
     # mobileye lane lines msg
     self.mobileye_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
-    
+
     # mobileye objects msg
-    self.mobileye_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}    
+    self.mobileye_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
   def load_all_data(self, normal_print = True):
     max_time = 0.0
@@ -167,7 +167,7 @@ class LoadCyberbag:
                          "VisionLonBehavior_temp_lead_two_id", "VisionLonBehavior_temp_lead_two_dis", "VisionLonBehavior_temp_lead_two_vel", "VisionLonBehavior_v_target_temp_lead_two",
                          "VisionLonBehavior_potental_cutin_track_id", "VisionLonBehavior_potental_cutin_v_target", "VisionLonBehavior_cutin_v_target",
                          "VisionLonBehavior_v_limit_road", "VisionLonBehavior_v_limit_in_turns", "VisionLonBehavior_road_radius",
-                         "VisionLonBehavior_stop_start_state", "VisionLonBehavior_v_target_start_stop",
+                         "VisionLonBehavior_stop_start_state", "VisionLonBehavior_v_target_start_stop", "VisionLonBehavior_STANDSTILL", "VisionLonBehavior_final_v_target",
                          "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel",
                          "EnvironmentalModelManagerCost","VisionLateralBehaviorPlannerCost","VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost"
                          ]
@@ -273,8 +273,8 @@ class LoadCyberbag:
     except:
       self.slot_msg['enable'] = False
       print('missing /iflytek/fusion/parking_slot !!!')
-    
-    
+
+
     # load mobileye lane_lines msg
     try:
       for topic, msg, t in self.bag.read_messages("/mobileye/camera_perception/lane_lines"):
@@ -309,5 +309,5 @@ class LoadCyberbag:
     except:
       self.mobileye_objects_msg['enable'] = False
       print('missing /mobileye/camera_perception/objects !!!')
-      
+
     return max_time
