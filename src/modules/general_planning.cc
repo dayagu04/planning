@@ -413,14 +413,16 @@ void GeneralPlanning::FillPlanningHmiInfo(
 
 void GeneralPlanning::ClearParkingInfo(
     PlanningOutput::PlanningOutput *const planning_output) {
-  session_.planning_output_context()
-      .planning_status()
-      .planning_result.planning_output.mutable_planning_status()
+  session_.mutable_planning_output_context()
+      ->mutable_planning_status()
+      ->planning_result.planning_output.mutable_planning_status()
       ->set_apa_planning_status(PlanningOutput::ApaPlanningStatus::NONE);
-  session_.planning_output_context()
-      .planning_status()
-      .planning_result.planning_output.mutable_successful_slot_info_list()
+
+  session_.mutable_planning_output_context()
+      ->mutable_planning_status()
+      ->planning_result.planning_output.mutable_successful_slot_info_list()
       ->Clear();
+
   planning_output->mutable_planning_status()->set_apa_planning_status(
       PlanningOutput::ApaPlanningStatus::NONE);
 }

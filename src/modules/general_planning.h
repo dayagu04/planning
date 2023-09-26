@@ -1,16 +1,16 @@
 #pragma once
 
 #include <cstdint>
-#include "basic_types.pb.h"
-#include "common/local_view.h"
-#include "scheduler.h"
-#include "session.h"
 
+#include "basic_types.pb.h"
 #include "common/define/debug_output.h"
+#include "common/local_view.h"
 #include "ihc_function/intelligent_headlight_control.h"
 #include "lkas_function/lane_keep_assist_manager.h"
 #include "planning_hmi.pb.h"
 #include "planning_plan.pb.h"
+#include "scheduler.h"
+#include "session.h"
 #include "tsr_function/traffic_sign_recognition.h"
 
 namespace planning {
@@ -79,6 +79,7 @@ class GeneralPlanning {
       PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info);
 
   void ClearParkingInfo(PlanningOutput::PlanningOutput *const planning_output);
+
   bool IsUndefinedScene(
       const ::FuncStateMachine::FunctionalState &current_state);
 

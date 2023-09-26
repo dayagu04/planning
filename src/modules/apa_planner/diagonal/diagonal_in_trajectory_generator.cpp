@@ -143,6 +143,7 @@ bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
     //   }
     // }
     // return is_planning_ok;
+    return false;
   }
 
   return true;
