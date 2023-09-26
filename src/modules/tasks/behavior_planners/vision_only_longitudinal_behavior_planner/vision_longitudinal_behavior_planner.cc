@@ -213,7 +213,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
     JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_road", v_limit_road);
     JSON_DEBUG_VALUE("VisionLonBehavior_road_radius", road_radius);
   }
-
+  /*
   if(ref_points.size() > 0) {
     double curv_max_pt = -100.0;
     for (int i = 0; i < ref_points.size(); i++) {
@@ -234,7 +234,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
     JSON_DEBUG_VALUE("max_kappa_abs", curv_max_pt);
     v_limit_in_turns = std::min(v_limit_in_turns, v_limit_curv_pt);
   }
-
+  */
   double a_target_in_turns = 0.0;
   if (v_limit_in_turns < v_ego - 2) {
     a_target_in_turns = -0.2;
