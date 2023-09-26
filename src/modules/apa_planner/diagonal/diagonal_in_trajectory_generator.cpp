@@ -11,6 +11,7 @@
 #include "common/vehicle_param_helper.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
+#include "general_planning_context.h"
 #include "ifly_time.h"
 #include "log_glog.h"
 #include "math/line_segment2d.h"
@@ -18,7 +19,7 @@
 #include "planning_output_context.h"
 #include "utils_math.h"
 
-#define __PYBIND_DEBUG__
+// #define __PYBIND_DEBUG__
 
 namespace planning {
 namespace apa_planner {
@@ -67,6 +68,10 @@ bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
   auto& origin_parking_fusion_info = local_view_->parking_fusion_info;
 
   // slot management update
+  if (g_context.GetStatemachine().apa_reset_flag) {
+    slot_manager_.Reset();
+  }
+
   slot_manager_.Update(&local_view_->function_state_machine_info,
                        &origin_parking_fusion_info,
                        &local_view_->localization_estimate);

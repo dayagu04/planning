@@ -7,6 +7,8 @@
 #include "common.pb.h"
 #include "common/config_context.h"
 #include "debug_info_log.h"
+#include "func_state_machine.pb.h"
+#include "general_planning_context.h"
 #include "ifly_time.h"
 #include "planning_debug_info.pb.h"
 #include "version.h"
@@ -236,6 +238,25 @@ void PlanningAdapter::Proc() {
     input_topic_latency->set_function_state_machine(
         get_latency(start_time, func_state_machine_msg_.header().timestamp()));
   }
+
+  // update general context
+  auto &state_machine_g = g_context.MutableStatemachine();
+
+  const auto &current_state =
+      local_view_.function_state_machine_info.current_state();
+
+  const auto &last_state = g_context.GetStatemachine().current_state;
+
+
+  if (last_state == FuncStateMachine::STANDBY &&
+      (current_state >= FuncStateMachine::PARK_IN_APA_IN &&
+       current_state <= FuncStateMachine::PARK_IN_COMPLETED)) {
+    state_machine_g.apa_reset_flag = true;
+  } else {
+    state_machine_g.apa_reset_flag = false;
+  }
+
+  state_machine_g.current_state = current_state;
 
   // 2.planning run
   PlanningOutput::PlanningOutput planning_output;

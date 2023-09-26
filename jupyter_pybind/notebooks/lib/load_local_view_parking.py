@@ -719,20 +719,32 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
   if bag_loader.plan_debug_msg['enable'] == True and bag_loader.fus_parking_msg['enable'] == True:
     local_view_data['data_target_managed_slot'].data.update({'corner_point_x': [], 'corner_point_y': [],})
     slot_management_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].slot_management_info
-
-    # print(slot_management_info)
+    select_slot_id = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].select_slot_id
+    print("select_slot_id in plan debug", select_slot_id)
+    print(slot_management_info)
+    print("**************************************************")
+    all_managed_slot_x_vec = []
+    all_managed_slot_y_vec = []
     # 1. update target managed slot
     for i in range(len(slot_management_info.slot_info_vec)):
       maganed_slot_vec = slot_management_info.slot_info_vec[i]
+      corner_point = maganed_slot_vec.corner_points.corner_point
       if maganed_slot_vec.id == select_slot_id:
-          corner_point = maganed_slot_vec.corner_points.corner_point
           target_managed_slot_x_vec = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
           target_managed_slot_y_vec = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
           local_view_data['data_target_managed_slot'].data.update({
             'corner_point_x': target_managed_slot_x_vec,
             'corner_point_y': target_managed_slot_y_vec,
             })
-          break
+          #break
+      slot_x = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
+      slot_y = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
+      all_managed_slot_x_vec.append(slot_x)
+      all_managed_slot_y_vec.append(slot_y)
+    local_view_data['data_all_managed_slot'].data.update({
+          'corner_point_x': all_managed_slot_x_vec,
+          'corner_point_y': all_managed_slot_y_vec,
+          })
 
   # load uss wave
   if bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True:
@@ -809,6 +821,7 @@ def load_local_view_figure_parking():
   data_wave = ColumnDataSource(data = {'wave_x': [], 'wave_y': [], 'radius':[], 'start_angle':[], 'end_angle':[]})
   data_wave_length_text = ColumnDataSource(data = {'wave_text_x': [], 'wave_text_y': [], 'length':[]})
 
+  data_all_managed_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
                 'fus_msg_idx': 0,
@@ -837,6 +850,7 @@ def load_local_view_figure_parking():
                      'data_index': data_index, \
                      'data_wave':data_wave, \
                      'data_wave_length_text':data_wave_length_text, \
+                     'data_all_managed_slot':data_all_managed_slot,\
                      }
   ### figures config
 
@@ -859,6 +873,10 @@ def load_local_view_figure_parking():
 
   fig1.wedge('wave_x','wave_y', 'radius', 'start_angle', 'end_angle',source = data_wave, fill_color="lavender", line_color="black",legend_label = 'uss_wave',alpha = 0.5)
   fig1.text(x = 'wave_text_x', y = 'wave_text_y', text = 'length', source = data_wave_length_text, text_color='black', text_align='center', text_font_size='10pt',legend_label = 'uss_wave')
+
+  # debug
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_all_managed_slot, line_width = 2, line_color = 'green', line_dash = 'solid',legend_label = 'all managed slot in plan')
+
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 
