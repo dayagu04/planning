@@ -25,6 +25,7 @@ class UssObstacleAvoidance {
 
   struct Arc {
     Circle circle_info;
+    bool is_considered = true;
     Eigen::Vector2d pA;
     Eigen::Vector2d pB;
   };
@@ -33,7 +34,7 @@ class UssObstacleAvoidance {
     double steer_ratio = 15.7;
     double arc_line_shift_steer_angle_deg = 2.5;
     double c1 = 0.3790;
-    double max_remain_dist = 4.0;
+    double max_remain_dist = 5.01;
     double lat_inflation = 0.1;
   };
 
@@ -58,6 +59,24 @@ class UssObstacleAvoidance {
   void SetLocalView(LocalView *local_view_ptr) {
     local_view_ptr_ = local_view_ptr;
   }
+
+  const size_t GetMinDistVehicleArcIndex() const {
+    return min_dist_vehicle_arc_index_;
+  }
+
+  const size_t GetMinDistUssArcIndex() const { return min_dist_uss_arc_index_; }
+
+  const double GetRemainDist() const { return remain_dist_; }
+
+  const std::vector<Eigen::Vector2d> GetVehicleVertex() const {
+    return vehicle_vertex_vec_;
+  }
+
+  const std::vector<Eigen::Vector2d> GetUssVertex() const {
+    return uss_vertex_vec_;
+  }
+
+  const std::vector<double> GetUssRawDist() const { return uss_raw_dist_vec_; }
 
   bool Update(PlanningOutput::PlanningOutput *const planning_output);
 

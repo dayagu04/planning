@@ -1,5 +1,7 @@
 #include "uss_obstacle_avoidance.h"
 
+#include <stdio.h>
+
 #include <cmath>
 #include <complex>
 #include <cstddef>
@@ -9,6 +11,8 @@
 #include "Eigen/Core"
 #include "math_lib.h"
 #include "transform_lib.h"
+
+// #define __USS_OA_DEBUG__
 
 // vehicle
 static const std::vector<double> vehicle_vertex_x_vec = {
@@ -59,7 +63,7 @@ void UssObstacleAvoidance::InitVertexData() {
     uss_vertex_vec_.emplace_back(
         Eigen::Vector2d(uss_vertex_x_vec[i], uss_vertex_y_vec[i]));
     uss_normal_angle_vec_.emplace_back(
-        pnc::mathlib::Deg2Rad(uss_normal_angle_deg_vec[i]));
+        pnc::mathlib::Deg2Rad(uss_normal_angle_deg_vec[i] - 90.0));
   }
 }
 
@@ -68,9 +72,8 @@ void UssObstacleAvoidance::ConstructVehicleLine() {
   vehicle_arc_vec_.clear();
   vehicle_arc_vec_.reserve(vehicle_vertex_vec_.size());
 
-  Arc vehicle_arc;
-
   for (const auto &vehicle_vertex : vehicle_vertex_vec_) {
+    Arc vehicle_arc;
     vehicle_arc.circle_info.is_circle = false;
     vehicle_arc.pA = vehicle_vertex;
     vehicle_arc.pB = vehicle_arc.pA;
@@ -83,7 +86,7 @@ void UssObstacleAvoidance::ConstructVehicleLine() {
 
     vehicle_arc.circle_info.is_circle = false;
 
-    vehicle_arc_vec_.emplace_back(vehicle_arc);
+    vehicle_arc_vec_.emplace_back(std::move(vehicle_arc));
   }
 }
 
@@ -92,18 +95,36 @@ void UssObstacleAvoidance::ConstructVehicleArc() {
   vehicle_arc_vec_.clear();
   vehicle_arc_vec_.reserve(vehicle_vertex_vec_.size());
 
-  Arc vehicle_arc;
-  const auto rot_angle = param_.max_remain_dist / rear_axle_center_radius_;
+  const double sign = reverse_flag_ ? -1.0 : 1.0;
+  const double rot_angle =
+      param_.max_remain_dist / rear_axle_center_radius_ * sign;
+
   const auto rot_m = pnc::transform::Angle2Rotm2d(rot_angle);
 
   for (const auto &vehicle_vertex : vehicle_vertex_vec_) {
+    Arc vehicle_arc;
     vehicle_arc.circle_info.is_circle = true;
-    vehicle_arc.circle_info.radius = rear_axle_center_radius_;
+    vehicle_arc.circle_info.center = turning_center_;
+    vehicle_arc.circle_info.radius = (vehicle_vertex - turning_center_).norm();
     vehicle_arc.pA = vehicle_vertex;
     const auto vec_OA = vehicle_arc.pA - turning_center_;
-    vehicle_arc.pB = turning_center_ + rot_m * vec_OA;
+    vehicle_arc.pB = turning_center_ + rot_m.transpose() * vec_OA;
+    // std::cout << "-------------------- vehicle_arc info --------------------"
+    //           << std::endl;
+    // std::cout << "vehicle_arc.pA = \n"
+    //           << vehicle_arc.pA << std::endl
+    //           << "vehicle_arc.pB = \n"
+    //           << vehicle_arc.pB << std::endl
+    //           << "vehicle_arc.radius = " << vehicle_arc.circle_info.radius
+    //           << std::endl
+    //           << "vehicle_arc.center = \n"
+    //           << turning_center_ << std::endl
+    //           << "(vehicle_arc.pA - turning_center_) = "
+    //           << (vehicle_arc.pA - turning_center_).norm() << std::endl
+    //           << "(vehicle_arc.pB - turning_center_) = "
+    //           << (vehicle_arc.pB - turning_center_).norm() << std::endl;
 
-    vehicle_arc_vec_.emplace_back(vehicle_arc);
+    vehicle_arc_vec_.emplace_back(std::move(vehicle_arc));
   }
 }
 
@@ -111,24 +132,55 @@ void UssObstacleAvoidance::ConstructUssArc() {
   uss_arc_vec_.clear();
   uss_arc_vec_.reserve(uss_vertex_vec_.size());
 
-  Arc uss_arc;
   const auto rot_m = pnc::transform::Angle2Rotm2d(
       pnc::mathlib::Deg2Rad(uss_scan_angle_deg * 0.5));
 
   for (size_t i = 0; i < uss_vertex_vec_.size(); ++i) {
+    Arc uss_arc;
     const auto &pO = uss_vertex_vec_[i];
+    if (uss_raw_dist_vec_[i] > param_.max_remain_dist) {
+      uss_arc.is_considered = false;
+      uss_arc_vec_.emplace_back(std::move(uss_arc));
+      continue;
+    }
+
+    uss_arc.is_considered = true;
     uss_arc.circle_info.is_circle = true;
     uss_arc.circle_info.center = pO;
     uss_arc.circle_info.radius = uss_raw_dist_vec_[i];
 
     const auto &theta_uss = uss_normal_angle_vec_[i];
     const auto center_of_arc =
-        pO + Eigen::Vector2d(std::cos(theta_uss), std::sin(theta_uss));
+        pO + uss_raw_dist_vec_[i] *
+                 Eigen::Vector2d(std::cos(theta_uss), std::sin(theta_uss));
 
     const auto vec_OC = center_of_arc - pO;
 
-    uss_arc.pA = rot_m * vec_OC + pO;
-    uss_arc.pB = rot_m.transpose() * vec_OC + pO;
+    uss_arc.pA = rot_m.transpose() * vec_OC + pO;
+    uss_arc.pB = rot_m * vec_OC + pO;
+
+    // if (i == 8) {
+    //   std::cout << "-------------------- uss_arc info --------------------"
+    //             << std::endl;
+    //   std::cout << "uss_arc.pA = \n"
+    //             << uss_arc.pA << std::endl
+    //             << "uss_arc.pB = \n"
+    //             << uss_arc.pB << std::endl
+    //             << "uss_arc.radius = " << uss_arc.circle_info.radius
+    //             << std::endl
+    //             << "uss_arc.center = \n"
+    //             << uss_arc.circle_info.center << std::endl
+    //             << "center_of_arc = \n"
+    //             << center_of_arc << std::endl
+    //             << "(uss_arc.pA - uss_arc.circle_info.center) = "
+    //             << (uss_arc.pA - uss_arc.circle_info.center).norm() <<
+    //             std::endl
+    //             << "(uss_arc.pB - uss_arc.circle_info.center) = "
+    //             << (uss_arc.pB - uss_arc.circle_info.center).norm()
+    //             << std::endl;
+    // }
+
+    uss_arc_vec_.emplace_back(std::move(uss_arc));
   }
 }
 
@@ -154,12 +206,14 @@ void UssObstacleAvoidance::Preprocess() {
 
   // front uss
   for (size_t i = 0; i < wdis_index_front.size(); ++i) {
-    uss_raw_dist_vec_.emplace_back(upa_dis_info_buf[0].wdis(i).wdis_value(0));
+    uss_raw_dist_vec_.emplace_back(
+        upa_dis_info_buf[0].wdis(wdis_index_front[i]).wdis_value(0));
   }
 
   // back uss
   for (size_t i = 0; i < wdis_index_back.size(); ++i) {
-    uss_raw_dist_vec_.emplace_back(upa_dis_info_buf[1].wdis(i).wdis_value(0));
+    uss_raw_dist_vec_.emplace_back(
+        upa_dis_info_buf[1].wdis(wdis_index_back[i]).wdis_value(0));
   }
 }
 
@@ -206,7 +260,7 @@ const bool UssObstacleAvoidance::CheckPointLiesOnArc(
   const auto &pO = arc.circle_info.center;
   const auto v_OA = arc.pA - pO;
   const auto v_OB = arc.pB - pO;
-  const auto v_OC = arc.pA - pC;
+  const auto v_OC = pC - pO;
 
   const auto norm_v_OA = v_OA.norm();
   const auto norm_v_OB = v_OB.norm();
@@ -288,12 +342,16 @@ const bool UssObstacleAvoidance::GetArcLineIntersection(
 }
 
 void UssObstacleAvoidance::CalculateRemainDist() {
-  remain_dist_ = 20.0;
-  double dist = 0.0;
+  remain_dist_ = param_.max_remain_dist;
+  double dist = param_.max_remain_dist;
   for (size_t i = 0; i < vehicle_arc_vec_.size(); ++i) {
     for (size_t j = 0; j < uss_arc_vec_.size(); ++j) {
-      Eigen::Vector2d intersection;
+      // skip uss arc for unconsidered
+      if (!uss_arc_vec_[j].is_considered) {
+        continue;
+      }
 
+      Eigen::Vector2d intersection;
       if (vehicle_point_mode_ == LINE_MODE) {
         if (GetArcLineIntersection(intersection, uss_arc_vec_[j],
                                    vehicle_arc_vec_[i])) {
@@ -310,6 +368,7 @@ void UssObstacleAvoidance::CalculateRemainDist() {
         }
       }
 
+      // printf("dist[%ld][%ld] = %.2f\n", i, j, dist);
       if (dist < remain_dist_) {
         remain_dist_ = dist;
         min_dist_vehicle_arc_index_ = i;
@@ -327,25 +386,39 @@ bool UssObstacleAvoidance::Update(
   // preprocess, get some measurement and construct arcs
   Preprocess();
 
+  // if (!reverse_flag_) {
+  //   std::cout << "reverse_flag OFF!" << std::endl;
+  // } else {
+  //   std::cout << "reverse_flag ON!" << std::endl;
+  // }
+
   // line & arc or two arcs, depended on radiuas (i.e. steer angle)
   if (std::abs(steer_angle_) <
       pnc::mathlib::Deg2Rad(param_.arc_line_shift_steer_angle_deg)) {
+    // std::cout << "LINE_MODE!" << std::endl;
+
     // small steer angle results in line & arc
     vehicle_point_mode_ = LINE_MODE;
     rear_axle_center_radius_ = 1.0e4;
     turning_center_.setZero();
     ConstructVehicleLine();
   } else {
+    // std::cout << "ARC_MODE!" << std::endl;
+
     // large steer angle results in two arcs
     vehicle_point_mode_ = ARC_MODE;
     const auto wheel_angle_norm = std::abs(steer_angle_ / param_.steer_ratio);
     rear_axle_center_radius_ = 1.0 / (param_.c1 * std::tan(wheel_angle_norm));
+
+    turning_center_.setZero();
 
     if (steer_angle_ > 0.0) {
       turning_center_.y() = rear_axle_center_radius_;
     } else {
       turning_center_.y() = -rear_axle_center_radius_;
     }
+
+    // std::cout << "turning_center = \n" << turning_center_ << std::endl;
 
     ConstructVehicleArc();
   }

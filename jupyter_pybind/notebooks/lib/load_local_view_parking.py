@@ -720,9 +720,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
     local_view_data['data_target_managed_slot'].data.update({'corner_point_x': [], 'corner_point_y': [],})
     slot_management_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].slot_management_info
     select_slot_id = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].select_slot_id
-    print("select_slot_id in plan debug", select_slot_id)
-    print(slot_management_info)
-    print("**************************************************")
+    # print("select_slot_id in plan debug", select_slot_id)
+    # print(slot_management_info)
+    # print("**************************************************")
     all_managed_slot_x_vec = []
     all_managed_slot_y_vec = []
     # 1. update target managed slot
@@ -858,13 +858,13 @@ def load_local_view_figure_parking():
   fig1.x_range.flipped = True
   # figure plot
   f1 = fig1.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
-  fig1.circle('current_pos_y','current_pos_x', source = data_current_pos, size=8, color='orange')
+  fig1.circle('current_pos_y','current_pos_x', source = data_current_pos, size=8, color='grey')
   fig1.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1.5, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'text')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
   fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'mpc')
 
-  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot')
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot', visible = False)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_parking, line_width = 2, line_color = 'red', line_dash = 'solid',legend_label = 'fusion_parking_slot')
   fig1.line('corner_point_y', 'corner_point_x', source = data_target_managed_slot, line_width = 3, line_color = 'green', line_dash = 'solid',legend_label = 'target_managed_slot')
   fig1.line('corner_point_y', 'corner_point_x', source = data_final_slot, line_width = 3, line_color = '#A52A2A', line_dash = 'dashed',legend_label = 'final_parking_slot')
@@ -875,7 +875,7 @@ def load_local_view_figure_parking():
   fig1.text(x = 'wave_text_x', y = 'wave_text_y', text = 'length', source = data_wave_length_text, text_color='black', text_align='center', text_font_size='10pt',legend_label = 'uss_wave')
 
   # debug
-  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_all_managed_slot, line_width = 2, line_color = 'green', line_dash = 'solid',legend_label = 'all managed slot in plan')
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_all_managed_slot, line_width = 2, line_color = 'green', line_dash = 'solid',legend_label = 'all managed slot', visible = False)
 
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)

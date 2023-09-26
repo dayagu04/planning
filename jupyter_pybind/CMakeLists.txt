@@ -48,3 +48,11 @@ target_link_libraries(diag_slot_planning_py PRIVATE
   modules_common
   modules_context
   modules_tasks)
+
+pybind11_add_module(uss_obstacle_avoidance_py MODULE src/uss_obstacle_avoidance_pybind.cc)
+target_link_libraries(uss_obstacle_avoidance_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)
