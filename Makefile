@@ -1,5 +1,5 @@
 PACKAGE_NAME := planning
-PACKAGE_VERSION := planning.2.2.0.2
+PACKAGE_VERSION := planning.2.2.0.3
 
 include .ci/utils.mk
 
