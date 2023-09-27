@@ -37,10 +37,10 @@ class SlotInfoWindow {
     Fuse();
   }
 
-  void DirectlyOutputFusionlot(common::SlotInfo& fusion_slot_info) {
+  void Reset() {
+    front_index_ = 0;
     slot_info_vec_.clear();
-    slot_info_vec_.emplace_back(fusion_slot_info);
-    fused_slot_info_ = fusion_slot_info;
+    fused_slot_info_.Clear();
   }
 
   void Fuse() {
@@ -188,6 +188,7 @@ class SlotManagement {
   Param param_;
   double slot_occupied_ratio_ = 0.0;
   size_t fusion_order_error_cnt_ = 0;
+  bool last_is_occupied_ = false;
 };
 
 }  // namespace planning

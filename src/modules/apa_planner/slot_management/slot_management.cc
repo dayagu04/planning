@@ -72,8 +72,8 @@ bool SlotManagement::Update(
     update_occupied_flag = UpdateSlotsInParking();
   }
 
-  std::cout << "update_searching_flag" << update_searching_flag << std::endl;
-  std::cout << "update_occupied_flag" << update_occupied_flag << std::endl;
+  std::cout << "update_searching_flag: " << update_searching_flag << std::endl;
+  std::cout << "update_occupied_flag: " << update_occupied_flag << std::endl;
 
   ReleaseSlots();
 
@@ -178,12 +178,14 @@ bool SlotManagement::UpdateSlotsInParking() {
   }
   if (!select_slot.has_corner_points()) {
     std::cout << "find no select slot" << std::endl;
+    last_is_occupied_ = false;
     return false;
   }
 
   const bool is_slot_valid = IsValidParkingSlot(select_slot);
   if (!is_slot_valid) {
     std::cout << "fusion slot is not valid" << std::endl;
+    last_is_occupied_ = false;
     return false;
   }
 
@@ -200,6 +202,7 @@ bool SlotManagement::UpdateSlotsInParking() {
 
   // if occupied percentage is less than certain value,return
   if (slot_occupied_ratio_ < kMinSlotUpdateOccupiedRatio) {
+    last_is_occupied_ = false;
     std::cout << "occupied_ratio is less than min update value " << std::endl;
     return false;
   }
@@ -208,7 +211,13 @@ bool SlotManagement::UpdateSlotsInParking() {
 
   auto slot = slot_management_info_.mutable_slot_info_vec(slot_idx);
 
-  slot_info_window_vec_[slot_idx].DirectlyOutputFusionlot(select_slot);
+  if (!last_is_occupied_ &&
+      slot_occupied_ratio_ >= kMinSlotUpdateOccupiedRatio) {
+    slot_info_window_vec_[slot_idx].Reset();
+  }
+  last_is_occupied_ = true;
+
+  slot_info_window_vec_[slot_idx].Add(select_slot);
   *slot = slot_info_window_vec_[slot_idx].GetFusedInfo();
 
   return true;
