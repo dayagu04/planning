@@ -153,13 +153,15 @@ class SlotManagement {
 
  private:
   void Preprocess();
-  bool UpdateSlotsInSearchingState();
-  bool UpdateSlotsWhenApproachingTargetPoint();
-  bool CalOccupiedRatio();
+  bool UpdateSlotsInSearching();
+  bool UpdateSlotsInParking();
   bool IsValidParkingSlot(const common::SlotInfo& slot_info);
   bool IsInAPAState() const;
   bool IsInSearchingState() const;
+  bool IsInParkingState() const;
   bool ReleaseSlots();
+
+  double CalOccupiedRatio() const;
 
   common::SlotInfo SlotInfoTransfer(
       const ParkingFusion::ParkingFusionSlot& parking_fusion_slot);

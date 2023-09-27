@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <utility>
 
+#include "Eigen/src/Core/Matrix.h"
 #include "basic_types.pb.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
@@ -51,22 +52,24 @@ bool SlotManagement::Update(
   parking_slot_ptr_ = parking_slot_info;
   localization_ptr_ = localization_info;
 
-  if (!IsInAPAState()) {
+  if (!IsInAPAState() || param_.force_clear) {
     Reset();
-    // restore slot management info
-    // std::cout << slot_management_info_.slot_info_vec_size() << std::endl;
     return false;
   }
 
   // preprocess
   Preprocess();
 
-  // 集成为searching阶段函数
-
+  bool update_searching_flag = false;
+  bool update_occupied_flag = false;
   // update slots
-  bool update_searching_flag = UpdateSlotsInSearchingState();
+  if (IsInSearchingState()) {
+    update_searching_flag = UpdateSlotsInSearching();
+  } else if (IsInParkingState()) {
+    update_occupied_flag = UpdateSlotsInParking();
+  }
+
   std::cout << "update_searching_flag" << update_searching_flag << std::endl;
-  bool update_occupied_flag = UpdateSlotsWhenApproachingTargetPoint();
   std::cout << "update_occupied_flag" << update_occupied_flag << std::endl;
 
   ReleaseSlots();
@@ -112,16 +115,7 @@ common::SlotInfo SlotManagement::SlotInfoTransfer(
   return slot_info;
 }
 
-bool SlotManagement::UpdateSlotsInSearchingState() {
-  if (!IsInAPAState() || param_.force_clear) {
-    Reset();
-    return false;
-  }
-
-  if (!IsInSearchingState()) {
-    return false;
-  }
-
+bool SlotManagement::UpdateSlotsInSearching() {
   // Update slots
   for (auto i = 0; i < parking_slot_ptr_->parking_fusion_slot_lists_size();
        ++i) {
@@ -158,29 +152,10 @@ bool SlotManagement::UpdateSlotsInSearchingState() {
     *slot = slot_info_window_vec_[j].GetFusedInfo();
   }
 
-  // std::cout << "check!" << std::endl;
-  // for (auto itr = slot_info_map_.begin(); itr != slot_info_map_.end(); ++itr)
-  // {
-  //   std::cout << "Key: " << itr->first << ", Value: " << itr->second
-  //             << std::endl;
-  // }
-  // std::cout << "slot_management_info_cc = "
-  //           << slot_management_info_.DebugString() << std::endl;
   return true;
 }
 
-bool SlotManagement::UpdateSlotsWhenApproachingTargetPoint() {
-  if (!IsInAPAState() || param_.force_clear) {
-    Reset();
-    return false;
-  }
-
-  if (func_state_ptr_->current_state() !=
-      FuncStateMachine::PARK_IN_ACTIVATE_CONTROL) {
-    std::cout << "state is not active, " << std::endl;
-    return false;
-  }
-
+bool SlotManagement::UpdateSlotsInParking() {
   const auto select_slot_id = parking_slot_ptr_->select_slot_id();
   common::SlotInfo select_slot;
   for (const auto &fusion_slot :
@@ -217,17 +192,20 @@ bool SlotManagement::UpdateSlotsWhenApproachingTargetPoint() {
   return true;
 }
 
-bool SlotManagement::CalOccupiedRatio() {
-  Eigen::Vector2d target_pt;
-  Eigen::Vector2d slot01_middle_pt;
-  Eigen::Vector2d slot23_middle_pt;
-  Eigen::Vector2d slot_heading_unit_vec;
+double SlotManagement::CalOccupiedRatio() const {
+  Eigen::Vector2d target_pt = Eigen::Vector2d::Zero();
+  Eigen::Vector2d slot01_middle_pt = Eigen::Vector2d::Zero();
+  Eigen::Vector2d slot23_middle_pt = Eigen::Vector2d::Zero();
+  Eigen::Vector2d slot_heading_unit_vec = Eigen::Vector2d::Zero();
+
   const int select_slot_id = parking_slot_ptr_->select_slot_id();
+
   for (const auto &fusion_slot :
        parking_slot_ptr_->parking_fusion_slot_lists()) {
     if (select_slot_id != fusion_slot.id()) {
       continue;
     }
+
     slot01_middle_pt << (fusion_slot.corner_points(0).x() +
                          fusion_slot.corner_points(1).x()) *
                             0.5,
@@ -239,6 +217,7 @@ bool SlotManagement::CalOccupiedRatio() {
                             0.5,
         (fusion_slot.corner_points(2).y() + fusion_slot.corner_points(3).y()) *
             0.5;
+
     slot_heading_unit_vec = slot01_middle_pt - slot23_middle_pt;
     slot_heading_unit_vec.normalize();
 
@@ -248,28 +227,26 @@ bool SlotManagement::CalOccupiedRatio() {
                 (dst_rear_edge_to_rear_axle + buffer) * slot_heading_unit_vec;
   }
 
-  if (!slot01_middle_pt.allFinite()) {
-    std::cout << "selected slot doesn't exist" << std::endl;
-    return false;
-  }
-
   std::cout << "current pos: " << measurement_.ego_pos << std::endl;
   std::cout << "target pos: " << target_pt << std::endl;
 
   Eigen::Vector2d slot_01_middle_to_ego_pos =
       measurement_.ego_pos - slot01_middle_pt;
+
   Eigen::Vector2d slot_01_middle_to_targt_pos = target_pt - slot01_middle_pt;
+
   const double dot = slot_01_middle_to_ego_pos.dot(slot_01_middle_to_targt_pos);
+  double slot_occupied_ratio = 0.0;
   if (dot <= 0) {
-    slot_occupied_ratio_ = 0;
+    slot_occupied_ratio = 0.0;
   } else {
     const double ratio =
         dot /
         (slot_01_middle_to_targt_pos.x() * slot_01_middle_to_targt_pos.x() +
          slot_01_middle_to_targt_pos.y() * slot_01_middle_to_targt_pos.y());
-    slot_occupied_ratio_ = ratio > 1.0 ? 1.0 : ratio;
+    slot_occupied_ratio = pnc::mathlib::Clamp(ratio, 0.0, 1.0);
   }
-  return true;
+  return slot_occupied_ratio;
 }
 
 bool SlotManagement::IsValidParkingSlot(const common::SlotInfo &slot_info) {
@@ -347,6 +324,7 @@ bool SlotManagement::IsInSearchingState() const {
   }
   std::cout << std::endl;
 #endif
+
   if ((func_state_ptr_->current_state() >= FuncStateMachine::PARK_IN_APA_IN &&
        func_state_ptr_->current_state() <=
            FuncStateMachine::PARK_IN_NO_READY) ||
@@ -357,6 +335,11 @@ bool SlotManagement::IsInSearchingState() const {
     std::cout << "apa searching off!" << std::endl;
     return false;
   }
+}
+
+bool SlotManagement::IsInParkingState() const {
+  return (func_state_ptr_->current_state() ==
+          FuncStateMachine::PARK_IN_ACTIVATE_CONTROL);
 }
 
 bool SlotManagement::AngleUpdateCondition(

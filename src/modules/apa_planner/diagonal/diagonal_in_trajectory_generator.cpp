@@ -26,13 +26,13 @@ namespace planning {
 namespace apa_planner {
 
 using ::Common::GearCommandValue;
+using framework::Frame;
 using ::FuncStateMachine::FunctionalState;
+using planning::planning_math::LineSegment2d;
+using planning::planning_math::Vec2d;
 using ::PlanningOutput::PlanningOutput;
 using ::PlanningOutput::Trajectory;
 using ::PlanningOutput::TrajectoryPoint;
-using framework::Frame;
-using planning::planning_math::LineSegment2d;
-using planning::planning_math::Vec2d;
 
 namespace {
 constexpr double kEps = 1e-6;
@@ -343,14 +343,10 @@ bool DiagonalInTrajectoryGenerator::SingleSlotManagePlanSimulation() {
 
 bool DiagonalInTrajectoryGenerator::SingleSlotPlan(
     const int slot_index, PlanningOutput* const planning_output) {
-  std::cout << "enter SingleSlotPlan" << std::endl;
   CalSlotPointsInM(slot_index);
 
-  const auto& slots = managed_parking_fusion_info_.parking_fusion_slot_lists();
-
-  slot_sign_ = slots[slot_index].slot_side() == 0 ? -1.0 : 1.0;
-
-  std::cout << "slot_sign_:" << slot_sign_ << std::endl;
+  slot_sign_ = CalSlotSide(slot_index);
+  std::cout << "slot side: " << slot_sign_ << std::endl;
 
   CalSlotOriginInodom();
 
@@ -376,6 +372,7 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlan(
       SetFinishedPlanningOutput(frame_);
       return true;
     }
+    // todo: add simulation  is_replan
   }
 
   std::cout << "diagonal replan triggered, replan state:"
@@ -1100,6 +1097,18 @@ void DiagonalInTrajectoryGenerator::CalSlotPointsInM(const int idx) {
             << ", x3:" << x3 << ", y3:" << y3 << std::endl;
 
   SquareSlot();
+}
+
+int DiagonalInTrajectoryGenerator::CalSlotSide(const int slot_index) {
+  const auto& slots = managed_parking_fusion_info_.parking_fusion_slot_lists();
+
+  PlanningPoint slot_point2_in_odom;
+  slot_point2_in_odom.x = slots[slot_index].corner_points(2).x();
+  slot_point2_in_odom.y = slots[slot_index].corner_points(2).y();
+
+  slot_point2_in_slot_ =
+      FromGlobal2LocalCor(slot_origin_in_odom_, slot_point2_in_odom);
+  return (cur_pos_in_slot_.y >= slot_point2_in_slot_.y ? 1.0 : -1.0);
 }
 
 // assume slot is parallelogram

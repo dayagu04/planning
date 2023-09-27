@@ -138,6 +138,8 @@ class DiagonalInTrajectoryGenerator {
 
   void CalSlotPointsInM(const int idx);
 
+  int CalSlotSide(const int slot_index);
+
   void SquareSlot();
 
   bool IsReplan(PlanningOutput::PlanningOutput *const planning_output);
@@ -175,6 +177,7 @@ class DiagonalInTrajectoryGenerator {
   framework::Frame *frame_ = nullptr;
 
   PlanningPoint slot_origin_in_odom_;
+  PlanningPoint slot_point2_in_slot_;
 
   PlanningPoint target_point_in_slot_;
   PlanningPoint target_point_in_odom_;
