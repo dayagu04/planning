@@ -29,6 +29,9 @@ void SlotManagement::Reset() {
   // reset slot_info_map
   slot_info_map_.clear();
   slot_info_map_.reserve(param_.max_slot_size);
+
+  slot_occupied_ratio_ = 0.0;
+  fusion_order_error_cnt_ = 0;
 }
 
 void SlotManagement::Preprocess() {
@@ -128,6 +131,11 @@ bool SlotManagement::UpdateSlotsInSearching() {
       continue;
     }
 
+    bool correct_slot_order = CorrectSlotPointsOrder(slot_info);
+    if (correct_slot_order) {
+      fusion_order_error_cnt_++;
+    }
+
     const auto slot_info_vec_size = slot_info_window_vec_.size();
     if (slot_info_map_.count(slot_info.id()) == 0 &&
         LonDifUpdateCondition(slot_info)) {  // get new id
@@ -141,7 +149,6 @@ bool SlotManagement::UpdateSlotsInSearching() {
     } else {  // get old id
       // slot update strategy
       if (IfUpdateSlot(slot_info)) {
-        
         auto slot_idx = slot_info_map_[slot_info.id()];
         slot_info_window_vec_[slot_idx].Add(slot_info);
       }
@@ -169,11 +176,23 @@ bool SlotManagement::UpdateSlotsInParking() {
     }
     select_slot = SlotInfoTransfer(fusion_slot);
   }
-
   if (!select_slot.has_corner_points()) {
     std::cout << "find no select slot" << std::endl;
     return false;
   }
+
+  const bool is_slot_valid = IsValidParkingSlot(select_slot);
+  if (!is_slot_valid) {
+    std::cout << "fusion slot is not valid" << std::endl;
+    return false;
+  }
+
+  bool correct_slot_order = CorrectSlotPointsOrder(select_slot);
+  if (correct_slot_order) {
+    fusion_order_error_cnt_++;
+  }
+  std::cout << "fusion_order_error_cnt_: " << fusion_order_error_cnt_
+            << std::endl;
 
   // calculate occupied ratio
   slot_occupied_ratio_ = CalOccupiedRatio();
@@ -197,8 +216,8 @@ bool SlotManagement::UpdateSlotsInParking() {
 
 double SlotManagement::CalOccupiedRatio() const {
   Eigen::Vector2d target_pt = Eigen::Vector2d::Zero();
-  Eigen::Vector2d slot01_middle_pt = Eigen::Vector2d::Zero();
-  Eigen::Vector2d slot23_middle_pt = Eigen::Vector2d::Zero();
+  Eigen::Vector2d middle_pt_01 = Eigen::Vector2d::Zero();
+  Eigen::Vector2d middle_pt_23 = Eigen::Vector2d::Zero();
   Eigen::Vector2d slot_heading_unit_vec = Eigen::Vector2d::Zero();
 
   const int select_slot_id = parking_slot_ptr_->select_slot_id();
@@ -208,24 +227,24 @@ double SlotManagement::CalOccupiedRatio() const {
       continue;
     }
 
-    slot01_middle_pt << (fusion_slot.corner_points(0).x() +
-                         fusion_slot.corner_points(1).x()) *
-                            0.5,
+    middle_pt_01 << (fusion_slot.corner_points(0).x() +
+                     fusion_slot.corner_points(1).x()) *
+                        0.5,
         (fusion_slot.corner_points(0).y() + fusion_slot.corner_points(1).y()) *
             0.5;
 
-    slot23_middle_pt << (fusion_slot.corner_points(2).x() +
-                         fusion_slot.corner_points(3).x()) *
-                            0.5,
+    middle_pt_23 << (fusion_slot.corner_points(2).x() +
+                     fusion_slot.corner_points(3).x()) *
+                        0.5,
         (fusion_slot.corner_points(2).y() + fusion_slot.corner_points(3).y()) *
             0.5;
 
-    slot_heading_unit_vec = slot01_middle_pt - slot23_middle_pt;
+    slot_heading_unit_vec = middle_pt_01 - middle_pt_23;
     slot_heading_unit_vec.normalize();
 
     const double dst_rear_edge_to_rear_axle = 0.947;
     const double buffer = 0.1;
-    target_pt = slot23_middle_pt +
+    target_pt = middle_pt_23 +
                 (dst_rear_edge_to_rear_axle + buffer) * slot_heading_unit_vec;
   }
 
@@ -233,9 +252,9 @@ double SlotManagement::CalOccupiedRatio() const {
   std::cout << "target pos: " << target_pt << std::endl;
 
   Eigen::Vector2d slot_01_middle_to_ego_pos =
-      measurement_.ego_pos - slot01_middle_pt;
+      measurement_.ego_pos - middle_pt_01;
 
-  Eigen::Vector2d slot_01_middle_to_targt_pos = target_pt - slot01_middle_pt;
+  Eigen::Vector2d slot_01_middle_to_targt_pos = target_pt - middle_pt_01;
 
   const double dot = slot_01_middle_to_ego_pos.dot(slot_01_middle_to_targt_pos);
   double slot_occupied_ratio = 0.0;
@@ -251,7 +270,8 @@ double SlotManagement::CalOccupiedRatio() const {
   return slot_occupied_ratio;
 }
 
-bool SlotManagement::IsValidParkingSlot(const common::SlotInfo &slot_info) {
+bool SlotManagement::IsValidParkingSlot(
+    const common::SlotInfo &slot_info) const {
   const auto &pts = slot_info.corner_points();
 
   Eigen::Vector2d slot_line02_vec(
@@ -301,6 +321,54 @@ bool SlotManagement::IsValidParkingSlot(const common::SlotInfo &slot_info) {
   } else {
     return false;
   }
+}
+
+bool SlotManagement::CorrectSlotPointsOrder(common::SlotInfo &slot_info) const {
+  Eigen::Vector2d slot_pt_0(slot_info.corner_points().corner_point(0).x(),
+                            slot_info.corner_points().corner_point(0).y());
+
+  Eigen::Vector2d slot_pt_1(slot_info.corner_points().corner_point(1).x(),
+                            slot_info.corner_points().corner_point(1).y());
+
+  Eigen::Vector2d slot_pt_2(slot_info.corner_points().corner_point(2).x(),
+                            slot_info.corner_points().corner_point(2).y());
+
+  Eigen::Vector2d slot_pt_3(slot_info.corner_points().corner_point(3).x(),
+                            slot_info.corner_points().corner_point(3).y());
+
+  Eigen::Vector2d middle_pt_01 = (slot_pt_0 + slot_pt_1) * 0.5;
+  Eigen::Vector2d middle_pt_23 = (slot_pt_2 + slot_pt_3) * 0.5;
+
+  Eigen::Vector2d slot_middle_vec = middle_pt_01 - middle_pt_23;
+
+  Eigen::Vector2d middle_pt23_to_pt0_vec = slot_pt_0 - middle_pt_23;
+
+  const double cross = slot_middle_vec(0) * middle_pt23_to_pt0_vec(1) -
+                       slot_middle_vec(1) * middle_pt23_to_pt0_vec(0);
+  // slot pt 0 need to change with pt 1   , 2 <->3
+  if (cross > 0) {
+    slot_info.mutable_corner_points()->mutable_corner_point(0)->set_x(
+        slot_pt_1(0));
+    slot_info.mutable_corner_points()->mutable_corner_point(0)->set_y(
+        slot_pt_1(1));
+
+    slot_info.mutable_corner_points()->mutable_corner_point(1)->set_x(
+        slot_pt_0(0));
+    slot_info.mutable_corner_points()->mutable_corner_point(1)->set_y(
+        slot_pt_0(1));
+
+    slot_info.mutable_corner_points()->mutable_corner_point(2)->set_x(
+        slot_pt_3(0));
+    slot_info.mutable_corner_points()->mutable_corner_point(2)->set_y(
+        slot_pt_3(1));
+
+    slot_info.mutable_corner_points()->mutable_corner_point(3)->set_x(
+        slot_pt_2(0));
+    slot_info.mutable_corner_points()->mutable_corner_point(3)->set_y(
+        slot_pt_2(1));
+    return true;
+  }
+  return false;
 }
 
 bool SlotManagement::IsInAPAState() const {

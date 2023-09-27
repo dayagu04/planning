@@ -157,7 +157,8 @@ class SlotManagement {
   void Preprocess();
   bool UpdateSlotsInSearching();
   bool UpdateSlotsInParking();
-  bool IsValidParkingSlot(const common::SlotInfo& slot_info);
+  bool IsValidParkingSlot(const common::SlotInfo& slot_info) const;
+  bool CorrectSlotPointsOrder(common::SlotInfo& slot_info) const;
   bool IsInAPAState() const;
   bool IsInSearchingState() const;
   bool IsInParkingState() const;
@@ -186,6 +187,7 @@ class SlotManagement {
   Measurement measurement_;
   Param param_;
   double slot_occupied_ratio_ = 0.0;
+  size_t fusion_order_error_cnt_ = 0;
 };
 
 }  // namespace planning
