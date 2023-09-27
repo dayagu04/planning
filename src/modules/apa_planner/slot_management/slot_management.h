@@ -151,6 +151,8 @@ class SlotManagement {
     return &slot_management_info_;
   }
 
+  const double GetOccupiedRatio() const { return slot_occupied_ratio_; }
+
  private:
   void Preprocess();
   bool UpdateSlotsInSearching();

@@ -131,14 +131,17 @@ bool SlotManagement::UpdateSlotsInSearching() {
     const auto slot_info_vec_size = slot_info_window_vec_.size();
     if (slot_info_map_.count(slot_info.id()) == 0 &&
         LonDifUpdateCondition(slot_info)) {  // get new id
+
       SlotInfoWindow slot_info_window;
       slot_info_window.Add(slot_info);
+
       slot_info_window_vec_.emplace_back(slot_info_window);
 
       slot_info_map_.insert(std::make_pair(slot_info.id(), slot_info_vec_size));
     } else {  // get old id
       // slot update strategy
       if (IfUpdateSlot(slot_info)) {
+        
         auto slot_idx = slot_info_map_[slot_info.id()];
         slot_info_window_vec_[slot_idx].Add(slot_info);
       }
@@ -158,6 +161,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
 bool SlotManagement::UpdateSlotsInParking() {
   const auto select_slot_id = parking_slot_ptr_->select_slot_id();
   common::SlotInfo select_slot;
+
   for (const auto &fusion_slot :
        parking_slot_ptr_->parking_fusion_slot_lists()) {
     if (select_slot_id != fusion_slot.id()) {
@@ -165,14 +169,15 @@ bool SlotManagement::UpdateSlotsInParking() {
     }
     select_slot = SlotInfoTransfer(fusion_slot);
   }
+
   if (!select_slot.has_corner_points()) {
     std::cout << "find no select slot" << std::endl;
     return false;
   }
 
   // calculate occupied ratio
-  CalOccupiedRatio();
-  std::cout << "occupied_ratio in sm: " << slot_occupied_ratio_ << std::endl;
+  slot_occupied_ratio_ = CalOccupiedRatio();
+  std::cout << "occupied_ratio in slm: " << slot_occupied_ratio_ << std::endl;
 
   // if occupied percentage is less than certain value,return
   if (slot_occupied_ratio_ < kMinSlotUpdateOccupiedRatio) {
@@ -181,8 +186,6 @@ bool SlotManagement::UpdateSlotsInParking() {
   }
 
   auto slot_idx = slot_info_map_[select_slot_id];
-
-  // update selected slot in slot_management_info_
 
   auto slot = slot_management_info_.mutable_slot_info_vec(slot_idx);
 
@@ -199,7 +202,6 @@ double SlotManagement::CalOccupiedRatio() const {
   Eigen::Vector2d slot_heading_unit_vec = Eigen::Vector2d::Zero();
 
   const int select_slot_id = parking_slot_ptr_->select_slot_id();
-
   for (const auto &fusion_slot :
        parking_slot_ptr_->parking_fusion_slot_lists()) {
     if (select_slot_id != fusion_slot.id()) {
