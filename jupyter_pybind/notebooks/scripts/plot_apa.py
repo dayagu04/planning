@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/0924/test_17.00000'
+bag_path = '/pnc_x86_ywwang33/dataAnalysis/20230926/test_17.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -15,7 +15,7 @@ output_notebook()
 
 bag_loader = LoadCyberbag(bag_path, parking_flag)
 max_time = bag_loader.load_all_data()
-fig1, local_view_data = load_local_view_figure_parking()
+fig1, local_view_data, fig2, fig3, fig4, fig5, fig6, fig7, data_ctrl_debug_table = load_local_view_figure_parking(bag_loader)
 
 ### sliders config
 class LocalViewSlider:
@@ -32,10 +32,12 @@ def slider_callback(bag_time):
   # if bag_loader.plan_msg['enable'] == True:
   #   while bag_loader.plan_msg['t'][plan_msg_idx] <= bag_time and plan_msg_idx < (len(bag_loader.plan_msg['t'])-2):
   #       plan_msg_idx = plan_msg_idx + 1
-
-  # bag_loader.plan_msg['data'][plan_msg_idx]
-
+  
+  # index2 = local_view_data['data_index']['vs_msg_idx']
+  # print("vs_msg_idx", index2)
+  # print("parking_long_control_actuator_status", bag_loader.vs_msg['data'][index2].parking_long_control_actuator_status)
+  
   push_notebook()
 
-bkp.show(row(fig1), notebook_handle=True)
+bkp.show(row(fig1, column(fig2, fig3, fig4, fig5), column(fig6, fig7, data_ctrl_debug_table)), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)
