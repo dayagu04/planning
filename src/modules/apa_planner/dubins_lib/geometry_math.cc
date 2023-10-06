@@ -38,38 +38,56 @@ const bool CalInnerTangentPointsOfEqualCircles(TangentOutput &output,
   const auto &pO1 = c1.center;
   const auto &pO2 = c2.center;
   const auto &R = c1.radius;
-  const auto d_O1O2 = (pO2 - pO1).norm();
+  const auto v_O1O2 = pO2 - pO1;
+  const auto d_O1O2 = v_O1O2.norm();
 
   if (!pnc::mathlib::IsDoubleEqual(c1.radius, c2.radius)) {
     std::cout << "two inequal radius!" << std::endl;
   }
 
+  bool inner_tagent = true;
   if (d_O1O2 < c1.radius + c2.radius) {
-    std::cout << "these two circles are too close!" << std::endl;
-    return false;
+    std::cout << "outter tangent!" << std::endl;
+    inner_tagent = false;
+  } else {
+    std::cout << "inner tangent!" << std::endl;
+    inner_tagent = true;
   }
 
-  const auto L = 0.5 * d_O1O2;
+  if (inner_tagent) {
+    // for inner case
+    const auto L = 0.5 * d_O1O2;
 
-  const auto sin_theta = R / L;
-  const auto cos_theta = std::sqrt(1.0 - sin_theta * sin_theta);
+    const auto sin_theta = R / L;
+    const auto cos_theta = std::sqrt(1.0 - sin_theta * sin_theta);
 
-  const auto pM = 0.5 * (pO1 + pO2);
+    const auto pM = 0.5 * (pO1 + pO2);
 
-  Eigen::Matrix2d rot_m;
-  rot_m << cos_theta, -sin_theta, sin_theta, cos_theta;
+    Eigen::Matrix2d rot_m;
+    rot_m << cos_theta, -sin_theta, sin_theta, cos_theta;
 
-  const auto normal_v_MO1 = (pO1 - pM).normalized();
-  const auto norm_MTa1 = L * cos_theta;
+    const auto normal_v_MO1 = (pO1 - pM).normalized();
+    const auto norm_MTa1 = L * cos_theta;
 
-  const auto v_MTa1 = rot_m * normal_v_MO1 * norm_MTa1;
-  const auto v_MTb1 = rot_m.transpose() * normal_v_MO1 * norm_MTa1;
+    const auto v_MTa1 = rot_m * normal_v_MO1 * norm_MTa1;
+    const auto v_MTb1 = rot_m.transpose() * normal_v_MO1 * norm_MTa1;
 
-  output.tagent_points_a.first = pM + v_MTa1;
-  output.tagent_points_a.second = pM - v_MTa1;
+    output.tagent_points_a.first = pM + v_MTa1;
+    output.tagent_points_a.second = pM - v_MTa1;
 
-  output.tagent_points_b.first = pM + v_MTb1;
-  output.tagent_points_b.second = pM - v_MTb1;
+    output.tagent_points_b.first = pM + v_MTb1;
+    output.tagent_points_b.second = pM - v_MTb1;
+  } else {
+    // too close, for outer case
+    const auto normal_v_O1O2 = v_O1O2.normalized();
+    Eigen::Vector2d n_O1(-normal_v_O1O2.y(), normal_v_O1O2.x());
+
+    output.tagent_points_a.first = pO1 + n_O1 * R;
+    output.tagent_points_a.second = pO2 + n_O1 * R;
+
+    output.tagent_points_b.first = pO1 - n_O1 * R;
+    output.tagent_points_b.second = pO2 - n_O1 * R;
+  }
 
   return true;
 }

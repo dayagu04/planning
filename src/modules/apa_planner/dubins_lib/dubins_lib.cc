@@ -13,37 +13,43 @@ namespace dubins_lib {
 bool DubinsLibrary::Solve(uint8_t dubins_type, uint8_t case_type) {
   dubins_type_ = dubins_type;
 
-  double lambda_start = 1.0;
-  double lambda_target = -1.0;
+  // 1: start
+  // 2: target
+  double lambda1 = 1.0;
+  double lambda2 = -1.0;
 
   if (dubins_type == L_S_R) {
-    lambda_start = 1.0;
-    lambda_target = -1.0;
+    lambda1 = 1.0;
+    lambda2 = -1.0;
     std::cout << "L_S_R" << std::endl;
   } else if (dubins_type == R_S_L) {
-    lambda_start = -1.0;
-    lambda_target = 1.0;
+    lambda1 = -1.0;
+    lambda2 = 1.0;
     std::cout << "R_S_L" << std::endl;
+  } else if (dubins_type == L_S_L) {
+    lambda1 = 1.0;
+    lambda2 = 1.0;
+    std::cout << "L_S_L" << std::endl;
+  } else if (dubins_type == R_S_R) {
+    lambda1 = -1.0;
+    lambda2 = -1.0;
+    std::cout << "R_S_R" << std::endl;
   }
 
   // calculate c1 center: start pose
   Circle c1;
-  Eigen::Vector2d t_start(cos(input_.heading_1), sin(input_.heading_1));
+  Eigen::Vector2d n1(-lambda1 * sin(input_.heading1),
+                     lambda1 * cos(input_.heading1));
 
-  Eigen::Vector2d n_start(-lambda_start * t_start.y(),
-                          lambda_start * t_start.x());
-
-  c1.center = input_.P_1 + input_.radius * n_start;
+  c1.center = input_.p1 + input_.radius * n1;
   c1.radius = input_.radius;
 
   // calculate c2 center: target pose
   Circle c2;
-  Eigen::Vector2d t_target(cos(input_.heading_2), sin(input_.heading_2));
+  Eigen::Vector2d n2(-lambda2 * sin(input_.heading2),
+                     lambda2 * cos(input_.heading2));
 
-  Eigen::Vector2d n_target(-lambda_target * t_target.y(),
-                           lambda_target * t_target.x());
-
-  c2.center = input_.P_2 + input_.radius * n_target;
+  c2.center = input_.p2 + input_.radius * n2;
   c2.radius = input_.radius;
 
   // calculate tagent points
@@ -57,14 +63,14 @@ bool DubinsLibrary::Solve(uint8_t dubins_type, uint8_t case_type) {
   // assemble output info
   output_.tangent_result = output;
 
-  // consider P_1, TA1, TB1
+  // consider p1, TA1, TB1
   auto target_points = output.tagent_points_b;
   if (case_type == CASE_A) {
     target_points = output.tagent_points_a;
   }
 
   output_.arc_AB.circle_info = c1;
-  output_.arc_AB.pA = input_.P_1;
+  output_.arc_AB.pA = input_.p1;
   output_.arc_AB.pB = target_points.first;
 
   output_.line_BC.pA = output_.arc_AB.pB;
@@ -72,7 +78,7 @@ bool DubinsLibrary::Solve(uint8_t dubins_type, uint8_t case_type) {
 
   output_.arc_CD.circle_info = c2;
   output_.arc_CD.pA = output_.line_BC.pB;
-  output_.arc_CD.pB = input_.P_2;
+  output_.arc_CD.pB = input_.p2;
 
   return flag;
 }

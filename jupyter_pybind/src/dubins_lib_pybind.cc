@@ -32,10 +32,10 @@ int Update(double x_start, double y_start, double heading_start,
            double radius, uint8_t dubins_type, uint8_t case_type) {
   DubinsLibrary::Input input;
   input.radius = radius;
-  input.heading_1 = heading_start;
-  input.heading_2 = heading_target;
-  input.P_1 << x_start, y_start;
-  input.P_2 << x_target, y_target;
+  input.heading1 = heading_start;
+  input.heading2 = heading_target;
+  input.p1 << x_start, y_start;
+  input.p2 << x_target, y_target;
 
   pBase->SetInput(input);
   pBase->Solve(dubins_type, case_type);

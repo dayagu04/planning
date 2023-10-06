@@ -17,6 +17,8 @@ class DubinsLibrary {
   enum DubinsType {
     L_S_R,
     R_S_L,
+    L_S_L,
+    R_S_R,
   };
 
   enum CaseType {
@@ -24,10 +26,10 @@ class DubinsLibrary {
     CASE_B,
   };
   struct Input {
-    Eigen::Vector2d P_1 = Eigen::Vector2d::Zero();
-    Eigen::Vector2d P_2 = Eigen::Vector2d::Zero();
-    double heading_1 = 0.0;
-    double heading_2 = 0.0;
+    Eigen::Vector2d p1 = Eigen::Vector2d::Zero();
+    Eigen::Vector2d p2 = Eigen::Vector2d::Zero();
+    double heading1 = 0.0;
+    double heading2 = 0.0;
     double radius = 0.0;
   };
 
