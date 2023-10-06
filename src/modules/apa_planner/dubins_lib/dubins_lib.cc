@@ -10,9 +10,9 @@ using namespace pnc::geometry_lib;
 
 namespace pnc {
 namespace dubins_lib {
-bool DubinsLibrary::Solve(uint8_t dubins_type, uint8_t case_type) {
-  dubins_type_ = dubins_type;
 
+const bool DubinsLibrary::DubinsCalculate(DubinsLibrary::DubinsResult &result,
+                                          const uint8_t dubins_type) {
   // 1: start
   // 2: target
   double lambda1 = 1.0;
@@ -53,30 +53,40 @@ bool DubinsLibrary::Solve(uint8_t dubins_type, uint8_t case_type) {
   c2.radius = input_.radius;
 
   // calculate tagent points
-  TangentOutput output;
-  const bool flag = CalInnerTangentPointsOfEqualCircles(output, c1, c2);
+  TangentOutput tangent_result;
+  const bool flag = CalInnerTangentPointsOfEqualCircles(tangent_result, c1, c2);
 
   if (!flag) {
     std::cout << "no tangent points between these two circles!" << std::endl;
   }
 
-  // assemble output info
-  output_.tangent_result = output;
+  result.tangent_result = tangent_result;
+  result.c1 = c1;
+  result.c2 = c2;
 
-  // consider p1, TA1, TB1
-  auto target_points = output.tagent_points_b;
+  return flag;
+}
+
+bool DubinsLibrary::Solve(uint8_t dubins_type, uint8_t case_type) {
+  dubins_type_ = dubins_type;
+
+  DubinsResult dubins_result;
+  const auto flag = DubinsCalculate(dubins_result, dubins_type);
+
+  // assemble output info
+  auto target_points = dubins_result.tangent_result.tagent_points_b;
   if (case_type == CASE_A) {
-    target_points = output.tagent_points_a;
+    target_points = dubins_result.tangent_result.tagent_points_a;
   }
 
-  output_.arc_AB.circle_info = c1;
+  output_.arc_AB.circle_info = dubins_result.c1;
   output_.arc_AB.pA = input_.p1;
   output_.arc_AB.pB = target_points.first;
 
   output_.line_BC.pA = output_.arc_AB.pB;
   output_.line_BC.pB = target_points.second;
 
-  output_.arc_CD.circle_info = c2;
+  output_.arc_CD.circle_info = dubins_result.c2;
   output_.arc_CD.pA = output_.line_BC.pB;
   output_.arc_CD.pB = input_.p2;
 

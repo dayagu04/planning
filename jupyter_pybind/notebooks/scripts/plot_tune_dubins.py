@@ -58,7 +58,7 @@ class LocalViewSlider:
     self.target_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "target_heading",min=-90.0, max=90.0, value=0.0, step=1)
     self.radius_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "radius",min=2.0, max=10.0, value=5.2, step=0.01)
     self.dubins_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='25%'), description= "dubins_type",min=0, max=3, value=0, step=1)
-    self.case_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='25%'), description= "case_type",min=0, max=1, value=0, step=1)
+    self.case_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "case_type",min=0, max=1, value=0, step=1)
     self.set_start_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "set_start",min=0, max=1, value=0, step=1)
     self.reset_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "reset_target",min=0, max=1, value=0, step=1)
     self.fix_result_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "fix_result",min=0, max=1, value=0, step=1)
