@@ -6,6 +6,7 @@
 #include <array>
 #include <cstdint>
 #include <utility>
+#include <vector>
 
 #include "Eigen/Core"
 #include "geometry_math.h"
@@ -28,6 +29,12 @@ class DubinsLibrary {
     CASE_B,
     CASE_COUNT,
   };
+
+  enum GearType {
+    EMPTY,
+    NORMAL,
+    REVERSE,
+  };
   struct Input {
     Eigen::Vector2d p1 = Eigen::Vector2d::Zero();
     Eigen::Vector2d p2 = Eigen::Vector2d::Zero();
@@ -37,6 +44,10 @@ class DubinsLibrary {
   };
 
   struct Output {
+    bool path_available = false;
+    uint8_t gear_change_count = 0;
+    std::vector<uint8_t> gear_cmd_vec;
+    double length = 0.0;
     geometry_lib::Arc arc_AB;
     geometry_lib::LineSegment line_BC;
     geometry_lib::Arc arc_CD;
@@ -46,6 +57,10 @@ class DubinsLibrary {
     geometry_lib::Circle c1;
     geometry_lib::Circle c2;
     geometry_lib::TangentOutput tangent_result;
+    Eigen::Vector2d t1;
+    Eigen::Vector2d t2;
+    Eigen::Vector2d n1;
+    Eigen::Vector2d n2;
   };
 
  public:
@@ -60,8 +75,12 @@ class DubinsLibrary {
   const Output GetOutput() const { return output_; }
 
  private:
-  void SetOutputByCaseType(Output& output, DubinsLibrary::DubinsResult& result,
+  void SetOutputByCaseType(Output& output,
+                           const DubinsLibrary::DubinsResult& result,
                            const uint8_t case_type);
+
+  void SelectOutput(Output& output, const DubinsLibrary::DubinsResult& result);
+
   Input input_;
   Output output_;
   std::array<Output, DUBINS_TYPE_COUNT * CASE_COUNT> output_arr;

@@ -122,16 +122,23 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, targe
   CD_center = dubins_lib_py.GetCDCenter()
   pB = dubins_lib_py.GetpB()
   pC = dubins_lib_py.GetpC()
+  path_length = dubins_lib_py.GetLength()
 
   theta_BC = math.atan2(pC[1] - pB[1], pC[0] - pB[0]) * 57.2958
+  path_availiable = dubins_lib_py.GetPathAvailiable()
+  gear_cmd_vec = dubins_lib_py.GetGearCmdVec()
+  gear_change_count = dubins_lib_py.GetGearChangeCount()
 
+  print("path_availiable = ", path_availiable)
   print("AB_center = ", AB_center)
   print("CD_center = ", CD_center)
   print("pA = ", [x_start, y_start])
   print("pB = ", pB)
   print("pC = ", pC)
   print("theta_BC = ", theta_BC)
-  print("BC length = ", math.sqrt((pB[0] - pC[0]) * (pB[0] - pC[0]) + (pB[1] - pC[1]) * (pB[1] - pC[1])))
+  print("path length = ", path_length)
+  print("gear_cmd_vec = ", gear_cmd_vec)
+  print("gear_change_count = ", gear_change_count)
 
   data_start_pos.data.update({
     'x': [x_start, AB_center[0]],

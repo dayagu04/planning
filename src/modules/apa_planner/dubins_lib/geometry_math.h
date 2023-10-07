@@ -13,6 +13,7 @@ namespace geometry_lib {
 struct LineSegment {
   Eigen::Vector2d pA = Eigen::Vector2d::Zero();
   Eigen::Vector2d pB = Eigen::Vector2d::Zero();
+  double length = 0.0;
 };
 
 struct Circle {
@@ -24,6 +25,7 @@ struct Arc {
   Circle circle_info;
   Eigen::Vector2d pA;
   Eigen::Vector2d pB;
+  double length;
 };
 
 struct TangentOutput {
@@ -36,12 +38,11 @@ const double CalPoint2LineDist(const Eigen::Vector2d &pO,
 
 const bool CheckLineSegmentInCircle(const LineSegment &line, const Circle &c);
 
-const bool CalInnerTangentPointsOfEqualCircles(TangentOutput &output,
-                                               const Circle &c1,
-                                               const Circle &c2);
+const bool CalTangentPointsOfEqualCircles(TangentOutput &output,
+                                          const Circle &c1, const Circle &c2);
 
-const Eigen::Matrix2d GetRotm2dFromTwoVec(Eigen::Vector2d &a,
-                                          Eigen::Vector2d &b);
+const Eigen::Matrix2d GetRotm2dFromTwoVec(const Eigen::Vector2d &a,
+                                          const Eigen::Vector2d &b);
 
 }  // namespace geometry_lib
 }  // namespace pnc

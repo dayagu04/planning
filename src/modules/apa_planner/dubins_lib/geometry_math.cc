@@ -33,9 +33,8 @@ const bool CheckLineSegmentInCircle(const LineSegment &line, const Circle &c) {
   }
 }
 
-const bool CalInnerTangentPointsOfEqualCircles(TangentOutput &output,
-                                               const Circle &c1,
-                                               const Circle &c2) {
+const bool CalTangentPointsOfEqualCircles(TangentOutput &output,
+                                          const Circle &c1, const Circle &c2) {
   const auto &pO1 = c1.center;
   const auto &pO2 = c2.center;
   const auto &R = c1.radius;
@@ -93,8 +92,8 @@ const bool CalInnerTangentPointsOfEqualCircles(TangentOutput &output,
   return true;
 }
 
-const Eigen::Matrix2d GetRotm2dFromTwoVec(Eigen::Vector2d &a,
-                                          Eigen::Vector2d &b) {
+const Eigen::Matrix2d GetRotm2dFromTwoVec(const Eigen::Vector2d &a,
+                                          const Eigen::Vector2d &b) {
   Eigen::Matrix2d rotm;
 
   Eigen::Vector3d a_3d(a.x(), a.y(), 0.0);
@@ -103,12 +102,14 @@ const Eigen::Matrix2d GetRotm2dFromTwoVec(Eigen::Vector2d &a,
   a_3d.normalize();
   b_3d.normalize();
 
-  const auto cos_theta = a.dot(b);
+  // TODO: consider very small a and b
+
+  const auto cos_theta = a_3d.dot(b_3d);
   const auto cross_a_b = a_3d.cross(b_3d);
   const double sign = cross_a_b.z() >= 0.0 ? 1.0 : -1.0;
   const double sin_theta = cross_a_b.norm() * sign;
 
-  rotm << cos_theta, -sin_theta, cos_theta, sin_theta;
+  rotm << cos_theta, -sin_theta, sin_theta, cos_theta;
 
   return rotm;
 }
