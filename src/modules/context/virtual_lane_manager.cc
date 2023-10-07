@@ -16,6 +16,7 @@ using Map::FormOfWayType::MAIN_ROAD;
 using Map::FormOfWayType::RAMP;
 using ad_common::hdmap::LaneGroupConstPtr;
 using ad_common::hdmap::LaneInfoConstPtr;
+const double PI = 3.1415926;
 
 VirtualLaneManager::VirtualLaneManager(
     const EgoPlanningConfigBuilder* config_builder,
@@ -825,8 +826,13 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   ad_common::hdmap::LaneInfoConstPtr nearest_lane;
   double nearest_s = 0.0;
   double nearest_l = 0.0;
+  const double distance = 10.0;
+  const double central_heading = pose.heading();
+  const double max_heading_difference = PI/4;
+  // const int res =
+  //     hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
   const int res =
-      hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
+    hd_map.GetNearestLaneWithHeading(point,distance, central_heading, max_heading_difference, &nearest_lane, &nearest_s, &nearest_l);
   if (res != 0) {
     LOG_DEBUG("no get nearest lane!!!\n");
     return false;
@@ -847,7 +853,7 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   // judge the ramp lane group
   uint64_t nearest_lane_group_id = nearest_lane->lane_group_id();
   std::cout << "nearest_lane_id:" << nearest_lane->id() << std::endl;
-  std::cout << "nearest_lane debugstring:\n" << nearest_lane->lane().DebugString() << std::endl;
+  // std::cout << "nearest_lane debugstring:\n" << nearest_lane->lane().DebugString() << std::endl;
   std::cout << "nearest_lane_group_id:" << nearest_lane_group_id << std::endl;
 
   // const CurrentRouting& current_routing = map.current_routing();
