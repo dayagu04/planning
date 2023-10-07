@@ -2,6 +2,7 @@
 
 #include <math.h>
 
+#include <cstddef>
 #include <iostream>
 
 #include "geometry_math.h"
@@ -11,7 +12,7 @@ using namespace pnc::geometry_lib;
 namespace pnc {
 namespace dubins_lib {
 
-const bool DubinsLibrary::DubinsCalculate(DubinsLibrary::DubinsResult &result,
+const bool DubinsLibrary::DubinsCalculate(DubinsLibrary::DubinsResult& result,
                                           const uint8_t dubins_type) {
   // 1: start
   // 2: target
@@ -79,16 +80,47 @@ bool DubinsLibrary::Solve(uint8_t dubins_type, uint8_t case_type) {
     target_points = dubins_result.tangent_result.tagent_points_a;
   }
 
-  output_.arc_AB.circle_info = dubins_result.c1;
-  output_.arc_AB.pA = input_.p1;
-  output_.arc_AB.pB = target_points.first;
+  SetOutputByCaseType(output_, dubins_result, case_type);
 
-  output_.line_BC.pA = output_.arc_AB.pB;
-  output_.line_BC.pB = target_points.second;
+  return flag;
+}
 
-  output_.arc_CD.circle_info = dubins_result.c2;
-  output_.arc_CD.pA = output_.line_BC.pB;
-  output_.arc_CD.pB = input_.p2;
+void DubinsLibrary::SetOutputByCaseType(Output& output,
+                                        DubinsLibrary::DubinsResult& result,
+                                        const uint8_t case_type) {
+  auto target_points = result.tangent_result.tagent_points_b;
+  if (case_type == CASE_A) {
+    target_points = result.tangent_result.tagent_points_a;
+  }
+
+  output.arc_AB.circle_info = result.c1;
+  output.arc_AB.pA = input_.p1;
+  output.arc_AB.pB = target_points.first;
+
+  output.line_BC.pA = output.arc_AB.pB;
+  output.line_BC.pB = target_points.second;
+
+  output.arc_CD.circle_info = result.c2;
+  output.arc_CD.pA = output.line_BC.pB;
+  output.arc_CD.pB = input_.p2;
+}
+
+bool DubinsLibrary::SolveAll() {
+  auto flag = true;
+
+  DubinsResult dubins_result;
+  Output output;
+
+  for (size_t i = 0; i < DUBINS_TYPE_COUNT; ++i) {
+    flag = flag && DubinsCalculate(dubins_result, i);
+    // set case a
+    SetOutputByCaseType(output, dubins_result, CASE_A);
+    output_arr[2 * i] = output;
+
+    // set case b
+    SetOutputByCaseType(output, dubins_result, CASE_B);
+    output_arr[2 * i + 1] = output;
+  }
 
   return flag;
 }

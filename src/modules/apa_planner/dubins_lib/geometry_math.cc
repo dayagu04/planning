@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iostream>
 
+#include "Eigen/Geometry"
 #include "math_lib.h"
 
 namespace pnc {
@@ -90,6 +91,26 @@ const bool CalInnerTangentPointsOfEqualCircles(TangentOutput &output,
   }
 
   return true;
+}
+
+const Eigen::Matrix2d GetRotm2dFromTwoVec(Eigen::Vector2d &a,
+                                          Eigen::Vector2d &b) {
+  Eigen::Matrix2d rotm;
+
+  Eigen::Vector3d a_3d(a.x(), a.y(), 0.0);
+  Eigen::Vector3d b_3d(b.x(), b.y(), 0.0);
+
+  a_3d.normalize();
+  b_3d.normalize();
+
+  const auto cos_theta = a.dot(b);
+  const auto cross_a_b = a_3d.cross(b_3d);
+  const double sign = cross_a_b.z() >= 0.0 ? 1.0 : -1.0;
+  const double sin_theta = cross_a_b.norm() * sign;
+
+  rotm << cos_theta, -sin_theta, cos_theta, sin_theta;
+
+  return rotm;
 }
 
 }  // namespace geometry_lib

@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "Eigen/Core"
+#include "Eigen/src/Core/Matrix.h"
 
 namespace pnc {
 
@@ -38,6 +39,9 @@ const bool CheckLineSegmentInCircle(const LineSegment &line, const Circle &c);
 const bool CalInnerTangentPointsOfEqualCircles(TangentOutput &output,
                                                const Circle &c1,
                                                const Circle &c2);
+
+const Eigen::Matrix2d GetRotm2dFromTwoVec(Eigen::Vector2d &a,
+                                          Eigen::Vector2d &b);
 
 }  // namespace geometry_lib
 }  // namespace pnc

@@ -55,10 +55,13 @@ class DubinsLibrary {
                              const uint8_t dubins_type);
 
   bool Solve(uint8_t dubins_type, uint8_t case_type);
+  bool SolveAll();
   void Sampling(double ds);
   const Output GetOutput() const { return output_; }
 
  private:
+  void SetOutputByCaseType(Output& output, DubinsLibrary::DubinsResult& result,
+                           const uint8_t case_type);
   Input input_;
   Output output_;
   std::array<Output, DUBINS_TYPE_COUNT * CASE_COUNT> output_arr;
