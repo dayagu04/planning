@@ -11,7 +11,7 @@ from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import uss_obstacle_avoidance_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/0924/test_17.00000'
+bag_path = '/home/xlwang71/Downloads/APA/1007/test_16.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -39,14 +39,12 @@ def slider_callback(bag_time):
   update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data)
 
   soc_state_msg_idx = local_view_data['data_index']['soc_state_msg_idx']
-  fus_parking_msg_idx = local_view_data['data_index']['fus_parking_msg_idx']
   loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
   vs_msg_idx = local_view_data['data_index']['vs_msg_idx']
   wave_msg_idx = local_view_data['data_index']['wave_msg_idx']
   plan_msg_idx = local_view_data['data_index']['plan_msg_idx']
 
   soc_state_input = bag_loader.soc_state_msg['data'][soc_state_msg_idx]
-  fus_parking_input = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx]
   loc_msg_input = bag_loader.loc_msg['data'][loc_msg_idx]
   vs_msg_input = bag_loader.vs_msg['data'][vs_msg_idx]
   wave_msg_input = bag_loader.wave_msg['data'][wave_msg_idx]
@@ -55,7 +53,6 @@ def slider_callback(bag_time):
   # planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
   uss_obstacle_avoidance_py.UpdateBytes(soc_state_input.SerializeToString(),
-                                        fus_parking_input.SerializeToString(),
                                         loc_msg_input.SerializeToString(),
                                         vs_msg_input.SerializeToString(),
                                         wave_msg_input.SerializeToString(),

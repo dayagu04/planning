@@ -32,16 +32,12 @@ inline T BytesToProto(py::bytes &bytes) {
 }
 
 int UpdateBytes(py::bytes &func_statemachine_bytes,
-                py::bytes &parking_slot_info_bytes,
                 py::bytes &localization_info_bytes,
                 py::bytes &vehicle_service_output_info_bytes,
                 py::bytes &uss_wave_info_bytes,
                 py::bytes &planning_output_bytes) {
   auto func_statemachine =
       BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
-
-  auto parking_slot_info =
-      BytesToProto<ParkingFusion::ParkingFusionInfo>(parking_slot_info_bytes);
 
   auto localization_info =
       BytesToProto<LocalizationOutput::LocalizationEstimate>(
@@ -61,7 +57,6 @@ int UpdateBytes(py::bytes &func_statemachine_bytes,
 
   local_view.localization_estimate = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
-  local_view.parking_fusion_info = parking_slot_info;
   local_view.function_state_machine_info = func_statemachine;
   local_view.uss_wave_info = uss_wave_info;
 

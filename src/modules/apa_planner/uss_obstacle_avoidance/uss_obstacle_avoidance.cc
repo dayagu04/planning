@@ -21,9 +21,9 @@ static const std::vector<double> vehicle_vertex_x_vec = {
     -0.879389, -0.798324, -0.476357, 1.96496,   1.916421,  2.177994};
 
 static const std::vector<double> vehicle_vertex_y_vec = {
-    0.887956,  0.681712, 0.334651,  -0.334651, -0.681712, -0.887956,
-    -0.887956, -1.06715, -0.887956, -0.887956, -0.706505, -0.334845,
-    0.334845,  0.706505, 0.887956,  0.887956,  1.06715,   0.887956};
+    0.887956,  0.681712,         0.334651,  -0.334651, -0.681712,     -0.887956,
+    -0.887956, -(1.06715 + 0.1), -0.887956, -0.887956, -0.706505,     -0.334845,
+    0.334845,  0.706505,         0.887956,  0.887956,  1.06715 + 0.1, 0.887956};
 
 // uss data
 static const std::vector<double> uss_vertex_x_vec = {
@@ -95,12 +95,23 @@ void UssObstacleAvoidance::ConstructVehicleArc() {
   vehicle_arc_vec_.clear();
   vehicle_arc_vec_.reserve(vehicle_vertex_vec_.size());
 
-  const double sign = reverse_flag_ ? -1.0 : 1.0;
+  double sign = 1.0;
+  if ((!reverse_flag_ && steer_angle_ > 0.0) ||
+      (reverse_flag_ && steer_angle_ < 0.0)) {
+    sign = 1.0;
+  } else {
+    sign = -1.0;
+  }
+
   const double rot_angle =
       param_.max_remain_dist / rear_axle_center_radius_ * sign;
 
   const auto rot_m = pnc::transform::Angle2Rotm2d(rot_angle);
 
+  // std::cout << "sign = " << sign << std::endl;
+  // std::cout << "rot_angle = " << rot_angle * 57.3 << std::endl;
+
+  // int i = 0;
   for (const auto &vehicle_vertex : vehicle_vertex_vec_) {
     Arc vehicle_arc;
     vehicle_arc.circle_info.is_circle = true;
@@ -108,7 +119,7 @@ void UssObstacleAvoidance::ConstructVehicleArc() {
     vehicle_arc.circle_info.radius = (vehicle_vertex - turning_center_).norm();
     vehicle_arc.pA = vehicle_vertex;
     const auto vec_OA = vehicle_arc.pA - turning_center_;
-    vehicle_arc.pB = turning_center_ + rot_m.transpose() * vec_OA;
+    vehicle_arc.pB = turning_center_ + rot_m * vec_OA;
     // std::cout << "-------------------- vehicle_arc info --------------------"
     //           << std::endl;
     // std::cout << "vehicle_arc.pA = \n"
@@ -132,10 +143,21 @@ void UssObstacleAvoidance::ConstructUssArc() {
   uss_arc_vec_.clear();
   uss_arc_vec_.reserve(uss_vertex_vec_.size());
 
-  const auto rot_m = pnc::transform::Angle2Rotm2d(
+  const auto rot_m_normal = pnc::transform::Angle2Rotm2d(
       pnc::mathlib::Deg2Rad(uss_scan_angle_deg * 0.5));
 
+  const auto rot_m_large = pnc::transform::Angle2Rotm2d(
+      pnc::mathlib::Deg2Rad(1.4 * uss_scan_angle_deg * 0.5));
+
+  Eigen::Matrix2d rot_m;
+
   for (size_t i = 0; i < uss_vertex_vec_.size(); ++i) {
+    if (i == 1 || i == 4 || i == 7 || i == 10) {
+      rot_m = rot_m_large;
+    } else {
+      rot_m = rot_m_normal;
+    }
+
     Arc uss_arc;
     const auto &pO = uss_vertex_vec_[i];
     if (uss_raw_dist_vec_[i] > param_.max_remain_dist) {
@@ -195,6 +217,12 @@ void UssObstacleAvoidance::Preprocess() {
   }
   reverse_flag_ =
       (gear_cmd == Common::GearCommandValue::GEAR_COMMAND_VALUE_REVERSE);
+
+  // reverse_flag_ =
+  //     (local_view_ptr_->vehicle_service_output_info.shift_lever_state() ==
+  //     1);
+
+  // std::cout << "reverse_flag = " << reverse_flag_ << std::endl;
 
   heading_ = local_view_ptr_->localization_estimate.pose().heading();
 
