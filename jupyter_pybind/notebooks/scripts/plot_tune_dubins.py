@@ -58,11 +58,12 @@ class LocalViewSlider:
     self.target_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "target_heading",min=-90.0, max=90.0, value=0.0, step=1)
     self.radius_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "radius",min=2.0, max=10.0, value=5.2, step=0.01)
     self.dubins_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='25%'), description= "dubins_type",min=0, max=3, value=0, step=1)
-    self.case_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "case_type",min=0, max=1, value=0, step=1)
-    self.set_start_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "set_start",min=0, max=1, value=0, step=1)
-    self.reset_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "reset_target",min=0, max=1, value=0, step=1)
-    self.fix_result_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "fix_result",min=0, max=1, value=0, step=1)
-    self.set_pC_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "set_pC",min=0, max=1, value=0, step=1)
+    self.case_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "case_type",min=0, max=1, value=0, step=1)
+    self.set_start_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_start",min=0, max=1, value=0, step=1)
+    self.reset_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "reset_target",min=0, max=1, value=0, step=1)
+    self.fix_result_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "fix_result",min=0, max=1, value=0, step=1)
+    self.set_pC_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pC",min=0, max=1, value=0, step=1)
+    self.set_pD_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pD",min=0, max=1, value=0, step=1)
 
     ipywidgets.interact(slider_callback, ego_x = self.ego_x_slider,
                                          ego_y = self.ego_y_slider,
@@ -77,12 +78,13 @@ class LocalViewSlider:
                                          set_start = self.set_start_slider,
                                          reset_target = self.reset_target_slider,
                                          fix_result = self.fix_result_slider,
-                                         set_pC = self.set_pC_slider)
+                                         set_pC = self.set_pC_slider,
+                                         set_pD = self.set_pD_slider)
 
 
 ### sliders callback
 def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, target_heading, radius,
-                    dubins_type, case_type, set_start, reset_target, fix_result, set_pC):
+                    dubins_type, case_type, set_start, reset_target, fix_result, set_pC, set_pD):
   kwargs = locals()
 
   if set_start == 1:
@@ -122,9 +124,11 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, targe
   CD_center = dubins_lib_py.GetCDCenter()
   pB = dubins_lib_py.GetpB()
   pC = dubins_lib_py.GetpC()
+  pD = dubins_lib_py.GetpD()
   path_length = dubins_lib_py.GetLength()
 
-  theta_BC = math.atan2(pC[1] - pB[1], pC[0] - pB[0]) * 57.2958
+  theta_BC = dubins_lib_py.GetThetaBC() * 57.2958
+  theta_D = dubins_lib_py.GetThetaD() * 57.2958
   path_availiable = dubins_lib_py.GetPathAvailiable()
   gear_cmd_vec = dubins_lib_py.GetGearCmdVec()
   gear_change_count = dubins_lib_py.GetGearChangeCount()
@@ -135,7 +139,9 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, targe
   print("pA = ", [x_start, y_start])
   print("pB = ", pB)
   print("pC = ", pC)
+  print("pD = ", pD)
   print("theta_BC = ", theta_BC)
+  print("theta_D = ", theta_D)
   print("path length = ", path_length)
   print("gear_cmd_vec = ", gear_cmd_vec)
   print("gear_change_count = ", gear_change_count)
@@ -173,6 +179,10 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, targe
     slider_class.ego_y_slider.value = pC[1]
     slider_class.ego_heading_slider.value = theta_BC
 
+  if set_pD:
+    slider_class.ego_x_slider.value = pD[0]
+    slider_class.ego_y_slider.value = pD[1]
+    slider_class.ego_heading_slider.value = theta_D
   push_notebook()
 
 bkp.show(row(fig1), notebook_handle=True)

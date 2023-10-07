@@ -2,6 +2,7 @@
 
 #include <math.h>
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -113,6 +114,35 @@ void DubinsLibrary::SetOutputByCaseType(
   output.arc_CD.circle_info = result.c2;
   output.arc_CD.pA = output.line_BC.pB;
   output.arc_CD.pB = input_.p2;
+}
+
+const double DubinsLibrary::GetThetaBC() const {
+  const auto t1 = Eigen::Vector2d(cos(input_.heading1), sin(input_.heading1));
+
+  // rotation from O1A to O1B, then O2C to O2D, AB does not change heading
+  const auto v_O1A = output_.arc_AB.pA - output_.arc_AB.circle_info.center;
+  const auto v_O1B = output_.arc_AB.pB - output_.arc_AB.circle_info.center;
+
+  const auto rotm_AB = geometry_lib::GetRotm2dFromTwoVec(v_O1A, v_O1B);
+
+  // car heading vector after two rotations
+  const auto t1_out = rotm_AB * t1;
+
+  return atan2(t1_out.y(), t1_out.x());
+}
+
+const double DubinsLibrary::GetThetaD() const {
+  const auto theta_BC = GetThetaBC();
+  const auto t1_after_AB = Eigen::Vector2d(cos(theta_BC), sin(theta_BC));
+
+  const auto v_O2C = output_.arc_CD.pA - output_.arc_CD.circle_info.center;
+  const auto v_O2D = output_.arc_CD.pB - output_.arc_CD.circle_info.center;
+
+  // car heading vector after two rotations
+  const auto rotm_CD = geometry_lib::GetRotm2dFromTwoVec(v_O2C, v_O2D);
+  const auto t1_out = rotm_CD * t1_after_AB;
+
+  return atan2(t1_out.y(), t1_out.x());
 }
 
 void DubinsLibrary::SelectOutput(Output& output,

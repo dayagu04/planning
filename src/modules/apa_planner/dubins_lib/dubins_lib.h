@@ -73,6 +73,8 @@ class DubinsLibrary {
   bool SolveAll();
   void Sampling(double ds);
   const Output GetOutput() const { return output_; }
+  const double GetThetaBC() const;
+  const double GetThetaD() const;
 
  private:
   void SetOutputByCaseType(Output& output,

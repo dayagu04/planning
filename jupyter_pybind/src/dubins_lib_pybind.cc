@@ -49,10 +49,13 @@ Eigen::Vector2d GetABCenter() { return pBase->GetOutput().arc_AB.circle_info.cen
 Eigen::Vector2d GetCDCenter() { return pBase->GetOutput().arc_CD.circle_info.center; }
 Eigen::Vector2d GetpB() { return pBase->GetOutput().line_BC.pA; }
 Eigen::Vector2d GetpC() { return pBase->GetOutput().line_BC.pB; }
+Eigen::Vector2d GetpD() { return pBase->GetOutput().arc_CD.pB; }
 bool GetPathAvailiable() { return pBase->GetOutput().path_available; }
 double GetLength() { return pBase->GetOutput().length; }
 std::vector<uint8_t> GetGearCmdVec() { return pBase->GetOutput().gear_cmd_vec; }
 uint8_t GetGearChangeCount() { return pBase->GetOutput().gear_change_count; }
+double GetThetaBC() { return pBase->GetThetaBC(); }
+double GetThetaD() { return pBase->GetThetaD(); }
 
 PYBIND11_MODULE(dubins_lib_py, m) {
   m.doc() = "m";
@@ -63,6 +66,9 @@ PYBIND11_MODULE(dubins_lib_py, m) {
    .def("GetCDCenter", &GetCDCenter)
    .def("GetpB", &GetpB)
    .def("GetpC", &GetpC)
+   .def("GetpD", &GetpD)
+   .def("GetThetaBC", &GetThetaBC)
+   .def("GetThetaD", &GetThetaD)
    .def("GetPathAvailiable", &GetPathAvailiable)
    .def("GetLength", &GetLength)
    .def("GetGearCmdVec", &GetGearCmdVec)
