@@ -103,7 +103,7 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   //                      map_info_mgr.get_map_info().current_lane_type(),
   //                      lateral_outputs.lc_status, v_limit_in_turns_, v_ego);
   double distance_to_ramp = virtual_lane_manager->dis_to_ramp();
-  double ramp_v_limit = 60 / 3.6;
+  double ramp_v_limit = 40 / 3.6;
   double acc_to_ramp = -1.0;
   calc_speed_for_ramp(distance_to_ramp, ramp_v_limit, acc_to_ramp, v_ego);
   calc_speed_with_potential_cutin_car(lateral_obstacle->front_tracks(),
@@ -201,8 +201,8 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
         std::fabs(2 * d_poly[0] * preview_x + d_poly[1]) /
         std::pow(std::pow(2 * d_poly[0] * preview_x + d_poly[1], 2) + 1, 1.5);
     double road_radius = 1 / std::max(curv, 0.0001);
-    if (road_radius < 680) {
-      a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+    if (road_radius < 720) {
+      a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V) * 0.4;
     }
     double v_limit_road = std::sqrt(a_y_max * road_radius) * 0.9;
     v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);

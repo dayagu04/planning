@@ -95,9 +95,9 @@ class VisionLongitudinalBehaviorPlanner : public Task {
   // change the ay_limit values according to the angle steers
   const std::vector<double> _A_TOTAL_MAX_BP{0., 20., 40.};
   const std::vector<double> _A_TOTAL_MAX_V{1.5, 1.9, 3.2};
-  const std::vector<double> _AY_MAX_ABS_BP{5.0, 10.0, 15.0, 30.0};
-  const std::vector<double> _AY_MAX_STEERS{2.0, 1.8, 1.6, 1.6};
-  const std::vector<double> _AY_MAX_CURV_BP{500, 680};
+  const std::vector<double> _AY_MAX_ABS_BP{5.0, 9.0, 12.0, 15.0, 30.0};
+  const std::vector<double> _AY_MAX_STEERS{2.0, 1.8, 1.2, 0.8, 0.8};
+  const std::vector<double> _AY_MAX_CURV_BP{500, 720};
   const std::vector<double> _AY_MAX_CURV_V{0.6, 0.8};
   const std::vector<double> _T_GAP_VEGO_BP{5.0, 15.0, 30.0};
   const std::vector<double> _T_GAP_VEGO_V{1.35, 1.55, 2.0};
