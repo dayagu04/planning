@@ -126,7 +126,7 @@ void TrackletMaintainer::apply_update(
     }
   } else {
     recv_relative_prediction_objects(predictions, objects);
-    if (flane != nullptr) {
+    if (flane != nullptr && flane->get_reference_path() != nullptr) {
       frenet_coord_ = flane->get_reference_path()->get_frenet_coord();
     }
   }
