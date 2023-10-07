@@ -21,6 +21,8 @@ from functools import  partial
 from bokeh.models import ColumnDataSource
 import bokeh.plotting as bkp
 from bokeh.models import WheelZoomTool, HoverTool, TapTool, CustomJS
+from bokeh.models import DataTable, DateFormatter, TableColumn
+from bokeh.models import TextInput
 from cyber_record.record import Record
 from google.protobuf.json_format import MessageToJson
 
@@ -232,9 +234,16 @@ class LoadCyberbag:
 
     # load control debug msg
     try:
-      json_value_list = ["steer_angle_cmd"]
+      json_value_list = ["controller_status", "lon_enable", "lat_enable", "lat_mpc_status", "gear_plan", "gear_real", "gear_cmd",
+                    "vel_ref", "vel_ref_gain", "vel_cmd", "vel_ego", 
+                    "path_length_plan", "remain_s_plan", "remain_s_prebreak",
+                    "vel_out", "acc_vel", "vel_KP_term", "vel_KI_term", "slope_acc", "throttle_brake",
+                    "steer_angle_cmd", "steer_angle", 'driver_hand_torque',
+                    "lat_err", "phi_err", 
+                    "apa_enable", "emergency_stop_flag", "vehicle_stationary_flag", "apa_finish_flag", "break_override_flag", "gear_shifting_flag"]
 
-      json_vector_list = ["dx_ref_mpc_vec", "dy_ref_mpc_vec", "dphi_ref_mpc_vec", "dx_mpc_vec", "dy_mpc_vec", "delta_mpc_vec", "dphi_mpc_vec"]
+      json_vector_list = ["dx_ref_vec", "dy_ref_vec", "dx_ref_mpc_vec", "dy_ref_mpc_vec", "dphi_ref_mpc_vec", "dx_mpc_vec", "dy_mpc_vec", "delta_mpc_vec", "dphi_mpc_vec"]
+
 
       ctrl_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/control/debug_info"):
@@ -430,7 +439,7 @@ class LoadCyberbag:
 
     return max_time
 
-def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
+def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, plot_ctrl_flag=False):
 
   ### step 1: 时间戳对齐
   loc_msg_idx = 0
@@ -800,6 +809,88 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data):
       'wave_text_y':text_x,
       'length':length,
     })
+  
+  if plot_ctrl_flag == True:
+    names = []
+    datas = []
+    if bag_loader.plan_msg['enable'] == True:
+      names.append("planning_status")
+      datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].planning_status.apa_planning_status))
+        
+      names.append("slots_id")
+      datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].successful_slot_info_list))
+        
+      names.append("plan_gear_cmd")
+      datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].gear_command))
+        
+    # load func_state
+    if bag_loader.soc_state_msg['enable'] == True:
+      names.append("current_state")
+      datas.append(str(bag_loader.soc_state_msg['data'][soc_state_msg_idx].current_state))
+    
+    # load vsg
+    if bag_loader.vs_msg['enable'] == True:
+      names.append("long_control_actuator_status")
+      datas.append(str(bag_loader.vs_msg['data'][vs_msg_idx].parking_long_control_actuator_status))
+      names.append("lat_control_actuator_status")
+      datas.append(str(bag_loader.vs_msg['data'][vs_msg_idx].parking_lat_control_actuator_status))
+      names.append("shift_lever_state")
+      datas.append(str(bag_loader.vs_msg['data'][vs_msg_idx].shift_lever_state))
+      names.append("shift_lever_state_available")
+      datas.append(str(bag_loader.vs_msg['data'][vs_msg_idx].shift_lever_state_available))
+    
+    # load control debug  
+    if bag_loader.ctrl_debug_msg['enable'] == True:
+      ctrl_json_data = bag_loader.ctrl_debug_msg['json']
+      dx_ref_mpc_vec_local = ctrl_json_data[ctrl_debug_msg_idx]['dx_ref_mpc_vec']
+      dy_ref_mpc_vec_local = ctrl_json_data[ctrl_debug_msg_idx]['dy_ref_mpc_vec']
+
+      dx_ref_vec_local = ctrl_json_data[ctrl_debug_msg_idx]['dx_ref_vec']
+      dy_ref_vec_local = ctrl_json_data[ctrl_debug_msg_idx]['dy_ref_vec']
+
+      dx_ref_mpc_vec, dy_ref_mpc_vec = coord_tf.local_to_global(dx_ref_mpc_vec_local, dy_ref_mpc_vec_local)
+      dx_ref_vec, dy_ref_vec = coord_tf.local_to_global(dx_ref_vec_local, dy_ref_vec_local)
+  
+      local_view_data['data_ref_mpc_vec'].data.update({
+        'dx_ref_mpc_vec': dx_ref_mpc_vec,
+        'dy_ref_mpc_vec': dy_ref_mpc_vec,
+      })
+      
+      local_view_data['data_ref_vec'].data.update({
+        'dx_ref_vec': dx_ref_vec,
+        'dy_ref_vec': dy_ref_vec,
+      })
+      
+      names.append("lat_mpc_status")
+      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['lat_mpc_status'])
+      names.append("vel_ref_gain")
+      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['vel_ref_gain'])
+      names.append("acc_vel")
+      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['acc_vel'])
+      names.append("slope_acc")
+      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['slope_acc'])
+      names.append("apa_enable")
+      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['apa_enable'])
+      names.append("vehicle_stationary_flag")
+      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['vehicle_stationary_flag'])
+      names.append("apa_finish_flag")
+      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['apa_finish_flag'])
+      names.append("emergency_stop_flag")
+      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['emergency_stop_flag'])
+      names.append("break_override_flag")
+      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['break_override_flag'])
+      names.append("gear_shifting_flag")
+      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['gear_shifting_flag'])
+      names.append("gear_cmd")
+      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['gear_cmd'])
+      names.append("gear_real")
+      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['gear_real'])
+      
+    local_view_data['ctrl_debug_data'].data.update({
+      'name': names,
+      'data': datas,
+    })
+  
   return local_view_data
 
 def load_local_view_figure_parking():
@@ -812,6 +903,8 @@ def load_local_view_figure_parking():
                                       'plan_traj_x':[],})
   data_control = ColumnDataSource(data = {'mpc_dx':[],
                                           'mpc_dy':[],})
+  data_ref_mpc_vec = ColumnDataSource(data = {'dx_ref_mpc_vec':[], 'dy_ref_mpc_vec':[],})
+  data_ref_vec = ColumnDataSource(data = {'dx_ref_vec':[], 'dy_ref_vec':[],})
   data_fusion_parking = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
   data_vision_parking = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
   data_target_managed_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
@@ -821,6 +914,11 @@ def load_local_view_figure_parking():
   data_wave = ColumnDataSource(data = {'wave_x': [], 'wave_y': [], 'radius':[], 'start_angle':[], 'end_angle':[]})
   data_wave_length_text = ColumnDataSource(data = {'wave_text_x': [], 'wave_text_y': [], 'length':[]})
 
+  ctrl_debug_data = ColumnDataSource({
+    'name':[],
+    'data':[]
+  })
+    
   data_all_managed_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
@@ -842,6 +940,9 @@ def load_local_view_figure_parking():
                      'data_text':data_text, \
                      'data_planning':data_planning,\
                      'data_control':data_control,\
+                     'data_ref_mpc_vec':data_ref_mpc_vec, \
+                     'data_ref_vec':data_ref_vec, \
+                     'ctrl_debug_data':ctrl_debug_data, \
                      'data_fusion_parking':data_fusion_parking, \
                      'data_vision_parking':data_vision_parking, \
                      'data_target_managed_slot':data_target_managed_slot, \
@@ -854,7 +955,7 @@ def load_local_view_figure_parking():
                      }
   ### figures config
 
-  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=640, match_aspect = True, aspect_scale=1)
+  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=800, match_aspect = True, aspect_scale=1)
   fig1.x_range.flipped = True
   # figure plot
   f1 = fig1.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
@@ -863,6 +964,8 @@ def load_local_view_figure_parking():
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'text')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
   fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'mpc')
+  #fig1.line('dy_ref_mpc_vec', 'dx_ref_mpc_vec', source = data_ref_mpc_vec, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_mpc_vec')
+  #fig1.line('dy_ref_vec', 'dx_ref_vec', source = data_ref_vec, line_width = 3.0, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_vec')
 
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot', visible = False)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_parking, line_width = 2, line_color = 'red', line_dash = 'solid',legend_label = 'fusion_parking_slot')
@@ -883,3 +986,207 @@ def load_local_view_figure_parking():
   # legend
   fig1.legend.click_policy = 'hide'
   return fig1, local_view_data
+
+def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
+
+  columns = [
+    TableColumn(field="name", title="name",),
+    TableColumn(field="data", title="data"),
+  ]
+  ctrl_debug_data = local_view_data['ctrl_debug_data']
+  data_ctrl_debug_table = DataTable(source=ctrl_debug_data, columns=columns, width=600, height=500)
+
+  data_control_global = ColumnDataSource(data = {
+  'time': [],
+  
+  'controller_status': [],
+  'lon_enable': [],
+  'lat_enable': [],
+  'gear_plan': [],
+
+  'vel_cmd_plan': [],
+  'vel_cmd_pos': [],
+  'vel_measure': [],
+  
+  'path_length_plan': [],
+  'remain_s_plan': [],
+  'remain_s_prebreak': [],
+  
+  'vel_out': [],
+  'vel_KP_term': [],
+  'vel_KI_term': [],
+  'throttle_brake': [],
+  
+  'steer_angle_cmd': [],
+  'steer_angle_measure': [],
+  'driver_hand_torque': [],
+  
+  'lat_err': [],
+  'phi_err': [],
+  })
+  
+  t_debug = []
+  
+  controller_status = []
+  lon_enable = []
+  lat_enable = []
+  gear_plan = []
+  
+  vel_cmd_plan = []
+  vel_cmd_pos = []
+  vel_measure = []
+
+  path_length_plan = []
+  remain_s_plan = []
+  remain_s_prebreak = []
+  
+  acc_cmd = []
+  vel_kp_term = []
+  vel_ki_term = []
+  throttle_brake = []
+  
+  steer_angle_cmd = []
+  steer_angle_measure = []
+  driver_hand_torque = []
+  
+  lat_err = []
+  phi_err = []
+
+  t = 0.0
+
+  ctrl_json_data = bag_loader.ctrl_debug_msg['json']
+  
+  for i in range(len(ctrl_json_data)):
+    t_debug.append(t)
+      
+    controller_status.append(ctrl_json_data[i]['controller_status'])
+    lon_enable.append(ctrl_json_data[i]['lon_enable'])
+    lat_enable.append(ctrl_json_data[i]['lat_enable'])
+    gear_plan.append(ctrl_json_data[i]['gear_plan'])
+    
+    vel_cmd_plan.append(ctrl_json_data[i]['vel_ref'])
+    vel_cmd_pos.append(ctrl_json_data[i]['vel_cmd'])
+    vel_measure.append(ctrl_json_data[i]['vel_ego'])
+    
+    path_length_plan.append(ctrl_json_data[i]['path_length_plan'])
+    remain_s_plan.append(ctrl_json_data[i]['remain_s_plan'])
+    remain_s_prebreak.append(ctrl_json_data[i]['remain_s_prebreak'])
+    
+    acc_cmd.append(ctrl_json_data[i]['vel_out'])
+    vel_kp_term.append(ctrl_json_data[i]['vel_KP_term'])
+    vel_ki_term.append(ctrl_json_data[i]['vel_KI_term'])
+    tmp_throttle_brake = ctrl_json_data[i]['throttle_brake']
+    if tmp_throttle_brake > 0.0:
+      tmp_throttle_brake = tmp_throttle_brake / 1000
+    throttle_brake.append(tmp_throttle_brake)
+    
+    steer_angle_cmd.append(ctrl_json_data[i]['steer_angle_cmd'] * 57.3)
+    steer_angle_measure.append(ctrl_json_data[i]['steer_angle'] * 57.3)
+    driver_hand_torque.append(ctrl_json_data[i]['driver_hand_torque'])
+    
+    lat_err.append(ctrl_json_data[i]['lat_err'] * 100)
+    phi_err.append(ctrl_json_data[i]['phi_err'] * 57.3)
+    
+    t = t + 0.02
+    
+  data_control_global.data.update({
+    'time': t_debug,
+    
+    'controller_status': controller_status,
+    'lon_enable': lon_enable,
+    'lat_enable': lat_enable,
+    'gear_plan': gear_plan,
+    
+    'vel_cmd_plan': vel_cmd_plan,
+    'vel_cmd_pos': vel_cmd_pos,
+    'vel_measure': vel_measure,
+    
+    'path_length_plan': path_length_plan,
+    'remain_s_plan': remain_s_plan,
+    'remain_s_prebreak': remain_s_prebreak,
+    
+    'vel_out': acc_cmd,
+    'vel_KP_term': vel_kp_term,
+    'vel_KI_term': vel_ki_term,
+    'throttle_brake': throttle_brake,
+    
+    'steer_angle_cmd': steer_angle_cmd,
+    'steer_angle_measure': steer_angle_measure,
+    'driver_hand_torque': driver_hand_torque,
+    
+    'lat_err': lat_err,
+    'phi_err': phi_err,               
+  })
+  
+  # figures
+  fig2 = bkp.figure(x_axis_label='time', y_axis_label='status',x_range = [t_debug[0], t_debug[-1]], width=500, height=200)
+  fig3 = bkp.figure(x_axis_label='time', y_axis_label='vel',x_range = fig2.x_range, width=fig2.width, height=fig2.height)
+  fig4 = bkp.figure(x_axis_label='time', y_axis_label='distance',x_range = fig2.x_range, width=fig2.width, height=fig2.height)
+  fig5 = bkp.figure(x_axis_label='time', y_axis_label='acc',x_range = fig2.x_range, width=fig2.width, height=fig2.height)
+  fig6 = bkp.figure(x_axis_label='time', y_axis_label='steer_angle',x_range = fig2.x_range, width=fig2.width, height=fig2.height)
+  fig7 = bkp.figure(x_axis_label='time', y_axis_label='err',x_range = fig2.x_range, width=fig2.width, height=fig2.height)
+
+  f2 = fig2.line('time', 'controller_status', source = data_control_global, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'controller_status')
+  fig2.line('time', 'lon_enable', source = data_control_global, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'lon_enable')
+  fig2.line('time', 'lat_enable', source = data_control_global, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'lat_enable')
+  fig2.line('time', 'gear_plan', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'gear_plan')
+ 
+  f3 = fig3.line('time', 'vel_cmd_plan', source = data_control_global, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'vel_cmd_plan')
+  fig3.line('time', 'vel_cmd_pos', source = data_control_global, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'vel_cmd_pos')
+  fig3.line('time', 'vel_measure', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'vel_measure')
+
+  f4 = fig4.line('time', 'path_length_plan', source = data_control_global, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'path_length_plan')
+  fig4.line('time', 'remain_s_plan', source = data_control_global, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'remain_s_plan')
+  fig4.line('time', 'remain_s_prebreak', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'remain_s_prebreak')
+
+  f5 = fig5.line('time', 'vel_out', source = data_control_global, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'acc_cmd')
+  fig5.line('time', 'vel_KP_term', source = data_control_global, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'vel_kp_term')
+  fig5.line('time', 'vel_KI_term', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'vel_ki_term')
+  fig5.line('time', 'throttle_brake', source = data_control_global, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'throttle_brake')
+
+  f6 = fig6.line('time', 'steer_angle_cmd', source = data_control_global, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer_angle_cmd')
+  fig6.line('time', 'steer_angle_measure', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'steer_angle_measure')
+  fig6.line('time', 'driver_hand_torque', source = data_control_global, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'driver_hand_torque')
+
+  f7 = fig7.line('time', 'lat_err', source = data_control_global, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat_err')
+  fig7.line('time', 'phi_err', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'phi_err')
+
+  hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time'), ('controller_status', '@controller_status'), ('lon_enable', '@lon_enable'), ('lat_enable', '@lat_enable'),  
+                                              ('gear_plan', '@gear_plan')], mode='vline')
+
+  hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time'), ('vel_cmd_plan', '@vel_cmd_plan'), ('vel_cmd_pos', '@vel_cmd_pos'),  
+                                              ('vel_measure', '@vel_measure')], mode='vline')
+
+  hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time'), ('path_length_plan', '@path_length_plan'), ('remain_s_plan', '@remain_s_plan'), ('remain_s_prebreak', '@remain_s_prebreak')], mode='vline')
+
+  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time'), ('vel_out', '@vel_out'), ('vel_KP_term', '@vel_KP_term'), ('vel_KI_term', '@vel_KI_term'), ('throttle_brake', '@throttle_brake')], mode='vline')
+
+  hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time'), ('steer_angle_cmd', '@steer_angle_cmd'), ('steer_angle_measure', '@steer_angle_measure'), ('driver_hand_torque', '@driver_hand_torque')], mode='vline')
+
+  hover7 = HoverTool(renderers=[f7], tooltips=[('time', '@time'), ('lat_err', '@lat_err'), ('phi_err', '@phi_err')], mode='vline')
+
+  fig2.add_tools(hover2)
+  fig3.add_tools(hover3)
+  fig4.add_tools(hover4)
+  fig5.add_tools(hover5)
+  fig6.add_tools(hover6)
+  fig7.add_tools(hover7)
+
+  fig2.toolbar.active_scroll = fig2.select_one(WheelZoomTool)
+  fig3.toolbar.active_scroll = fig3.select_one(WheelZoomTool)
+  fig4.toolbar.active_scroll = fig4.select_one(WheelZoomTool)
+  fig5.toolbar.active_scroll = fig5.select_one(WheelZoomTool)
+  fig6.toolbar.active_scroll = fig6.select_one(WheelZoomTool)
+  fig7.toolbar.active_scroll = fig7.select_one(WheelZoomTool)
+
+  fig2.legend.click_policy = 'hide'
+  fig3.legend.click_policy = 'hide'
+  fig4.legend.click_policy = 'hide'
+  fig5.legend.click_policy = 'hide'
+  fig6.legend.click_policy = 'hide'
+  fig7.legend.click_policy = 'hide'
+  
+  return fig2, fig3, fig4, fig5, fig6, fig7, data_ctrl_debug_table
+
+  
+  
