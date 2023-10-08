@@ -20,10 +20,10 @@ class VisionLongitudinalBehaviorPlanner : public Task {
   bool update();
 
   bool calc_cruise_accel_limits(const double v_ego);
-  bool limit_accel_velocity_in_turns(const double v_ego,
-                                     const double angle_steers,
-                                     const std::vector<double> &d_poly,
-                                     const std::vector<ReferencePathPoint> &ref_points);
+  bool limit_accel_velocity_in_turns(
+      const double v_ego, const double angle_steers,
+      const std::vector<double> &d_poly,
+      const std::vector<ReferencePathPoint> &ref_points);
 
   bool limit_accel_velocity_for_cutin(
       const std::vector<TrackedObject> &front_tracks,

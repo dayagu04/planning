@@ -22,7 +22,6 @@ enum LaneChangeStatus {
   ON_RIGHT_LANE = 2,
 };
 
-
 class VirtualLaneManager {
  public:
   VirtualLaneManager(const EgoPlanningConfigBuilder *config_builder,

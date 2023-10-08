@@ -785,13 +785,15 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
       }
       bool is_predecessor_more_than_one = false;
 
-      // can comment out the code if want to cancel the first change lane ************
-      std::cout <<"predecessor_lane_group_ids size:" 
-            << lane_group_ptr_next->predecessor_lane_group_ids().size() <<std::endl;
+      // can comment out the code if want to cancel the first change lane
+      // ************
+      std::cout << "predecessor_lane_group_ids size:"
+                << lane_group_ptr_next->predecessor_lane_group_ids().size()
+                << std::endl;
       if (lane_group_ptr_next->predecessor_lane_group_ids().size() > 1) {
         is_predecessor_more_than_one = true;
-        std::cout <<"is_predecessor_more_than_one:" 
-            << is_predecessor_more_than_one <<std::endl;
+        std::cout << "is_predecessor_more_than_one:"
+                  << is_predecessor_more_than_one << std::endl;
       }
       //******************************************************************************
 
@@ -828,16 +830,29 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   double nearest_l = 0.0;
   const double distance = 10.0;
   const double central_heading = pose.heading();
-  const double max_heading_difference = PI/4;
-  // const int res =
-  //     hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
+  const double max_heading_difference = PI / 4;
+
+  auto time_start = IflyTime::Now_us();
   const int res =
-    hd_map.GetNearestLaneWithHeading(point,distance, central_heading, max_heading_difference, &nearest_lane, &nearest_s, &nearest_l);
+      hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
+  auto time_end = IflyTime::Now_us();
+  double cost = time_end - time_start;
+
+  auto time_start1 = IflyTime::Now_us();
+  const int res1 = hd_map.GetNearestLaneWithHeading(
+      point, distance, central_heading, max_heading_difference, &nearest_lane,
+      &nearest_s, &nearest_l);
+  auto time_end1 = IflyTime::Now_us();
+  double cost1 = time_end1 - time_start1;
+  std::cout << "get nearest lane time cost:" << cost << ", time cost1:" << cost1
+            << ",cost gap:" << cost1 - cost << std::endl;
+
   if (res != 0) {
     LOG_DEBUG("no get nearest lane!!!\n");
     return false;
   }
-  std::cout <<"find current lane to current ego point dis:" << nearest_lane->DistanceTo(point) <<std::endl;
+  std::cout << "find current lane to current ego point dis:"
+            << nearest_lane->DistanceTo(point) << std::endl;
   const CurrentRouting& current_routing =
       local_view.static_map_info.current_routing();
 
@@ -853,7 +868,8 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   // judge the ramp lane group
   uint64_t nearest_lane_group_id = nearest_lane->lane_group_id();
   std::cout << "nearest_lane_id:" << nearest_lane->id() << std::endl;
-  // std::cout << "nearest_lane debugstring:\n" << nearest_lane->lane().DebugString() << std::endl;
+  // std::cout << "nearest_lane debugstring:\n" <<
+  // nearest_lane->lane().DebugString() << std::endl;
   std::cout << "nearest_lane_group_id:" << nearest_lane_group_id << std::endl;
 
   // const CurrentRouting& current_routing = map.current_routing();
