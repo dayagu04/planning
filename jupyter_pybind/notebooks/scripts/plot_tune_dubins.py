@@ -62,6 +62,7 @@ class LocalViewSlider:
     self.set_start_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_start",min=0, max=1, value=0, step=1)
     self.reset_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "reset_target",min=0, max=1, value=0, step=1)
     self.fix_result_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "fix_result",min=0, max=1, value=0, step=1)
+    self.set_pB_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pB",min=0, max=1, value=0, step=1)
     self.set_pC_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pC",min=0, max=1, value=0, step=1)
     self.set_pD_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pD",min=0, max=1, value=0, step=1)
 
@@ -78,13 +79,14 @@ class LocalViewSlider:
                                          set_start = self.set_start_slider,
                                          reset_target = self.reset_target_slider,
                                          fix_result = self.fix_result_slider,
+                                         set_pB = self.set_pB_slider,
                                          set_pC = self.set_pC_slider,
                                          set_pD = self.set_pD_slider)
 
 
 ### sliders callback
 def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, target_heading, radius,
-                    dubins_type, case_type, set_start, reset_target, fix_result, set_pC, set_pD):
+                    dubins_type, case_type, set_start, reset_target, fix_result, set_pB, set_pC, set_pD):
   kwargs = locals()
 
   if set_start == 1:
@@ -174,15 +176,25 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, targe
     'y_vec': [CD_center[1], y_target],
   })
 
+
+  if set_pB:
+    slider_class.ego_x_slider.value = pB[0]
+    slider_class.ego_y_slider.value = pB[1]
+    slider_class.ego_heading_slider.value = theta_BC
+    slider_class.s_init_slider.value = 0.0
+
   if set_pC:
     slider_class.ego_x_slider.value = pC[0]
     slider_class.ego_y_slider.value = pC[1]
     slider_class.ego_heading_slider.value = theta_BC
+    slider_class.s_init_slider.value = 0.0
 
   if set_pD:
     slider_class.ego_x_slider.value = pD[0]
     slider_class.ego_y_slider.value = pD[1]
     slider_class.ego_heading_slider.value = theta_D
+    slider_class.s_init_slider.value = 0.0
+
   push_notebook()
 
 bkp.show(row(fig1), notebook_handle=True)
