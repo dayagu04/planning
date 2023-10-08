@@ -833,13 +833,13 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   const double max_heading_difference = PI / 4;
 
   auto time_start = IflyTime::Now_us();
-  const int res =
-      hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
+  // const int res =
+  //     hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
   auto time_end = IflyTime::Now_us();
   double cost = time_end - time_start;
 
   auto time_start1 = IflyTime::Now_us();
-  const int res1 = hd_map.GetNearestLaneWithHeading(
+  const int res = hd_map.GetNearestLaneWithHeading(
       point, distance, central_heading, max_heading_difference, &nearest_lane,
       &nearest_s, &nearest_l);
   auto time_end1 = IflyTime::Now_us();
