@@ -24,6 +24,14 @@ class DubinsLibrary {
     DUBINS_TYPE_COUNT,
   };
 
+  enum LineArcType {
+    S_L,
+    S_R,
+    L_S,
+    R_S,
+    LINEARC_TYPE_COUNT,
+  };
+
   enum CaseType {
     CASE_A,
     CASE_B,
@@ -53,7 +61,11 @@ class DubinsLibrary {
     geometry_lib::Arc arc_CD;
   };
 
-  struct DubinsResult {
+  struct GeometryResult {
+    bool is_line_arc = false;
+    uint8_t dubins_type = 0;
+    uint8_t line_arc_type = 0;
+
     geometry_lib::Circle c1;
     geometry_lib::Circle c2;
     geometry_lib::TangentOutput tangent_result;
@@ -61,15 +73,22 @@ class DubinsLibrary {
     Eigen::Vector2d t2;
     Eigen::Vector2d n1;
     Eigen::Vector2d n2;
+
+    double l = 0.0;
+    double r = 0.0;
   };
 
  public:
   void SetInput(Input& input) { input_ = input; }
 
-  const bool DubinsCalculate(DubinsLibrary::DubinsResult& result,
+  const bool DubinsCalculate(DubinsLibrary::GeometryResult& result,
                              const uint8_t dubins_type);
 
+  const bool LineArcCalculate(DubinsLibrary::GeometryResult& result,
+                              const uint8_t line_arc_type);
+
   bool Solve(uint8_t dubins_type, uint8_t case_type);
+  bool Solve(uint8_t line_arc_type);
   bool SolveAll();
   void Sampling(double ds);
   const Output GetOutput() const { return output_; }
@@ -78,15 +97,21 @@ class DubinsLibrary {
 
  private:
   void SetOutputByCaseType(Output& output,
-                           const DubinsLibrary::DubinsResult& result,
+                           const DubinsLibrary::GeometryResult& result,
                            const uint8_t case_type);
 
-  void SelectOutput(Output& output, const DubinsLibrary::DubinsResult& result);
+  void SetOutputByLineArcType(Output& output,
+                              const DubinsLibrary::GeometryResult& result,
+                              const uint8_t line_arc_type);
+
+  void GenDubinsOutput(Output& output,
+                       const DubinsLibrary::GeometryResult& result);
 
   Input input_;
   Output output_;
   std::array<Output, DUBINS_TYPE_COUNT * CASE_COUNT> output_arr;
   uint8_t dubins_type_ = 0;
+  uint8_t line_arc_type_ = 0;
 };
 }  // namespace dubins_lib
 }  // namespace pnc

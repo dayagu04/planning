@@ -45,6 +45,22 @@ int Update(double x_start, double y_start, double heading_start,
   return 0;
 }
 
+int UpdateLineArc(double x_start, double y_start, double heading_start,
+           double x_target, double y_target, double heading_target,
+           double radius, uint8_t line_arc_type) {
+  DubinsLibrary::Input input;
+  input.radius = radius;
+  input.heading1 = heading_start;
+  input.heading2 = heading_target;
+  input.p1 << x_start, y_start;
+  input.p2 << x_target, y_target;
+
+  pBase->SetInput(input);
+  pBase->Solve(line_arc_type);
+
+  return 0;
+}
+
 Eigen::Vector2d GetABCenter() { return pBase->GetOutput().arc_AB.circle_info.center; }
 Eigen::Vector2d GetCDCenter() { return pBase->GetOutput().arc_CD.circle_info.center; }
 Eigen::Vector2d GetpB() { return pBase->GetOutput().line_BC.pA; }
@@ -56,12 +72,14 @@ std::vector<uint8_t> GetGearCmdVec() { return pBase->GetOutput().gear_cmd_vec; }
 uint8_t GetGearChangeCount() { return pBase->GetOutput().gear_change_count; }
 double GetThetaBC() { return pBase->GetThetaBC(); }
 double GetThetaD() { return pBase->GetThetaD(); }
+double GetRadius() { return pBase->GetOutput().arc_AB.circle_info.radius; }
 
 PYBIND11_MODULE(dubins_lib_py, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)
    .def("Update", &Update)
+   .def("UpdateLineArc", &UpdateLineArc)
    .def("GetABCenter", &GetABCenter)
    .def("GetCDCenter", &GetCDCenter)
    .def("GetpB", &GetpB)
@@ -72,5 +90,6 @@ PYBIND11_MODULE(dubins_lib_py, m) {
    .def("GetPathAvailiable", &GetPathAvailiable)
    .def("GetLength", &GetLength)
    .def("GetGearCmdVec", &GetGearCmdVec)
-   .def("GetGearChangeCount", &GetGearChangeCount);
+   .def("GetGearChangeCount", &GetGearChangeCount)
+   .def("GetRadius", &GetRadius);
 }

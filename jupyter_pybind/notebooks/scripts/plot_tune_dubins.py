@@ -65,6 +65,8 @@ class LocalViewSlider:
     self.set_pB_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pB",min=0, max=1, value=0, step=1)
     self.set_pC_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pC",min=0, max=1, value=0, step=1)
     self.set_pD_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pD",min=0, max=1, value=0, step=1)
+    self.line_arc_enable_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "line_arc_enable",min=0, max=1, value=0, step=1)
+    self.line_arc_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "line_arc_type",min=0, max=3, value=0, step=1)
 
     ipywidgets.interact(slider_callback, ego_x = self.ego_x_slider,
                                          ego_y = self.ego_y_slider,
@@ -81,12 +83,14 @@ class LocalViewSlider:
                                          fix_result = self.fix_result_slider,
                                          set_pB = self.set_pB_slider,
                                          set_pC = self.set_pC_slider,
-                                         set_pD = self.set_pD_slider)
+                                         set_pD = self.set_pD_slider,
+                                         line_arc_enable = self.line_arc_enable_slider,
+                                         line_arc_type = self.line_arc_type_slider)
 
 
 ### sliders callback
 def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, target_heading, radius,
-                    dubins_type, case_type, set_start, reset_target, fix_result, set_pB, set_pC, set_pD):
+                    dubins_type, case_type, set_start, reset_target, fix_result, set_pB, set_pC, set_pD, line_arc_enable, line_arc_type):
   kwargs = locals()
 
   if set_start == 1:
@@ -120,7 +124,11 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, targe
   })
 
   if fix_result == 0:
-    dubins_lib_py.Update(x_start, y_start, ego_heading / 57.2958, x_target, y_target, target_heading / 57.2958, radius, dubins_type, case_type)
+    if line_arc_enable == 0:
+      dubins_lib_py.Update(x_start, y_start, ego_heading / 57.2958, x_target, y_target, target_heading / 57.2958, radius, dubins_type, case_type)
+    else:
+      dubins_lib_py.UpdateLineArc(x_start, y_start, ego_heading / 57.2958, x_target, y_target, target_heading / 57.2958, radius, line_arc_type)
+
 
   AB_center = dubins_lib_py.GetABCenter()
   CD_center = dubins_lib_py.GetCDCenter()
@@ -131,11 +139,12 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, targe
 
   theta_BC = dubins_lib_py.GetThetaBC() * 57.2958
   theta_D = dubins_lib_py.GetThetaD() * 57.2958
-  path_availiable = dubins_lib_py.GetPathAvailiable()
+  path_available= dubins_lib_py.GetPathAvailiable()
   gear_cmd_vec = dubins_lib_py.GetGearCmdVec()
   gear_change_count = dubins_lib_py.GetGearChangeCount()
+  path_radius = dubins_lib_py.GetRadius()
 
-  print("path_availiable = ", path_availiable)
+  print("path_available= ", path_available)
   print("AB_center = ", AB_center)
   print("CD_center = ", CD_center)
   print("pA = ", [x_start, y_start])
@@ -147,6 +156,7 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, targe
   print("path length = ", path_length)
   print("gear_cmd_vec = ", gear_cmd_vec)
   print("gear_change_count = ", gear_change_count)
+  print("path_radius = ", path_radius)
 
   data_start_pos.data.update({
     'x': [x_start, AB_center[0]],
@@ -158,8 +168,8 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, targe
     'y': [y_target, CD_center[1]],
   })
 
-  data_AB.data.update(dict(x=[AB_center[0]], y=[AB_center[1]], radius=[radius]))
-  data_CD.data.update(dict(x=[CD_center[0]], y=[CD_center[1]], radius=[radius]))
+  data_AB.data.update(dict(x=[AB_center[0]], y=[AB_center[1]], radius=[path_radius]))
+  data_CD.data.update(dict(x=[CD_center[0]], y=[CD_center[1]], radius=[path_radius]))
 
   data_BC.data.update({
     'x_vec': [pB[0], pC[0]],

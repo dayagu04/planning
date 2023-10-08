@@ -4,13 +4,16 @@
 #include <utility>
 
 #include "Eigen/Core"
-#include "Eigen/src/Core/Matrix.h"
 
 namespace pnc {
 
 namespace geometry_lib {
 
 struct LineSegment {
+  void SetPoints(const Eigen::Vector2d &p1, const Eigen::Vector2d &p2) {
+    pA = p1;
+    pB = p2;
+  }
   Eigen::Vector2d pA = Eigen::Vector2d::Zero();
   Eigen::Vector2d pB = Eigen::Vector2d::Zero();
   double length = 0.0;
@@ -31,6 +34,7 @@ struct Arc {
 struct TangentOutput {
   std::pair<Eigen::Vector2d, Eigen::Vector2d> tagent_points_a;
   std::pair<Eigen::Vector2d, Eigen::Vector2d> tagent_points_b;
+  Eigen::Vector2d cross_point;
 };
 
 const double CalPoint2LineDist(const Eigen::Vector2d &pO,

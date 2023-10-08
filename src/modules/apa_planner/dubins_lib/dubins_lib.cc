@@ -15,10 +15,96 @@ using namespace pnc::geometry_lib;
 namespace pnc {
 namespace dubins_lib {
 
-const bool DubinsLibrary::DubinsCalculate(DubinsLibrary::DubinsResult& result,
+const bool DubinsLibrary::LineArcCalculate(
+    DubinsLibrary::GeometryResult& result, const uint8_t line_arc_type) {
+  result.is_line_arc = true;
+  result.line_arc_type = line_arc_type;
+
+  const auto& p1 = input_.p1;
+  const auto& p2 = input_.p2;
+
+  const auto t1 = Eigen::Vector2d(cos(input_.heading1), sin(input_.heading1));
+  const auto t2 = Eigen::Vector2d(cos(input_.heading2), sin(input_.heading2));
+
+  // 1: start
+  // 2: target
+  Eigen::Vector2d arc_point;
+  Eigen::Vector2d n1;
+  Eigen::Vector2d n2;
+
+  LineSegment line_segment_t;
+  LineSegment line_segment_n;
+
+  if (line_arc_type == L_S) {
+    arc_point = p1;
+    n1 << -t1.y(), t1.x();
+    n2 << -t2.y(), t2.x();
+    line_segment_t.SetPoints(p2, p2 - t2);
+    line_segment_n.SetPoints(p2, p2 - n2);
+  } else if (line_arc_type == R_S) {
+    arc_point = p1;
+    n1 << t1.y(), -t1.x();
+    n2 << t2.y(), -t2.x();
+    line_segment_t.SetPoints(p2, p2 - t2);
+    line_segment_n.SetPoints(p2, p2 - n2);
+  } else if (line_arc_type == S_L) {
+    arc_point = p2;
+    n1 << -t1.y(), t1.x();
+    n2 << -t2.y(), t2.x();
+    line_segment_t.SetPoints(p1, p1 - t1);
+    line_segment_n.SetPoints(p1, p1 - n1);
+  } else if (line_arc_type == S_R) {
+    arc_point = p2;
+    n1 << t1.y(), -t1.x();
+    n2 << t2.y(), -t2.x();
+    line_segment_t.SetPoints(p1, p1 - t1);
+    line_segment_n.SetPoints(p1, p1 - n1);
+  }
+
+  const auto d_t = CalPoint2LineDist(arc_point, line_segment_t);
+  const auto d_n = CalPoint2LineDist(arc_point, line_segment_n);
+
+  const auto cos_dtheta = t1.dot(t2);
+  const auto sin_dtheta = sqrt(1.0 - cos_dtheta * cos_dtheta);
+
+  const auto r = d_t / (1.0 - cos_dtheta);
+  const auto l = d_n - r * sin_dtheta;
+
+  // std::cout << "d_t = " << d_t << std::endl;
+  // std::cout << "d_n = " << d_n << std::endl;
+  // std::cout << "cos_dtheta = " << cos_dtheta << std::endl;
+  // std::cout << "r = " << r << std::endl;
+  // std::cout << "l = " << l << std::endl;
+
+  if (line_arc_type == L_S || line_arc_type == R_S) {
+    result.c1.radius = r;
+    result.c1.center = p1 + n1 * r;
+    result.c2 = result.c1;
+    result.tangent_result.cross_point = result.c1.center - n2 * r;
+  } else if (line_arc_type == S_L || line_arc_type == S_R) {
+    result.c2.radius = r;
+    result.c2.center = p2 + n2 * r;
+    result.c1 = result.c2;
+    result.tangent_result.cross_point = result.c2.center - n1 * r;
+  }
+
+  result.n1 = n1;
+  result.n2 = n2;
+  result.t1 = t1;
+  result.t2 = t2;
+
+  result.l = l;
+  result.r = r;
+
+  return true;
+}
+
+const bool DubinsLibrary::DubinsCalculate(DubinsLibrary::GeometryResult& result,
                                           const uint8_t dubins_type) {
   // 1: start
   // 2: target
+  result.is_line_arc = false;
+
   double lambda1 = 1.0;
   double lambda2 = -1.0;
 
@@ -39,6 +125,8 @@ const bool DubinsLibrary::DubinsCalculate(DubinsLibrary::DubinsResult& result,
     lambda2 = -1.0;
     std::cout << "R_S_R" << std::endl;
   }
+
+  result.dubins_type = dubins_type;
 
   // calculate c1 center: start pose
   Circle c1;
@@ -74,13 +162,26 @@ const bool DubinsLibrary::DubinsCalculate(DubinsLibrary::DubinsResult& result,
   result.n1 = n1;
   result.n2 = n2;
 
+  result.r = input_.radius;
+
+  return flag;
+}
+
+bool DubinsLibrary::Solve(uint8_t line_arc_type) {
+  line_arc_type_ = line_arc_type;
+  GeometryResult line_arc_result;
+  const auto flag = LineArcCalculate(line_arc_result, line_arc_type);
+
+  SetOutputByLineArcType(output_, line_arc_result, line_arc_type);
+  GenDubinsOutput(output_, line_arc_result);
+
   return flag;
 }
 
 bool DubinsLibrary::Solve(uint8_t dubins_type, uint8_t case_type) {
   dubins_type_ = dubins_type;
 
-  DubinsResult dubins_result;
+  GeometryResult dubins_result;
   const auto flag = DubinsCalculate(dubins_result, dubins_type);
 
   // assemble output info
@@ -90,14 +191,13 @@ bool DubinsLibrary::Solve(uint8_t dubins_type, uint8_t case_type) {
   }
 
   SetOutputByCaseType(output_, dubins_result, case_type);
-
-  SelectOutput(output_, dubins_result);
+  GenDubinsOutput(output_, dubins_result);
 
   return flag;
 }
 
 void DubinsLibrary::SetOutputByCaseType(
-    Output& output, const DubinsLibrary::DubinsResult& result,
+    Output& output, const DubinsLibrary::GeometryResult& result,
     const uint8_t case_type) {
   auto target_points = result.tangent_result.tagent_points_b;
   if (case_type == CASE_A) {
@@ -114,6 +214,33 @@ void DubinsLibrary::SetOutputByCaseType(
   output.arc_CD.circle_info = result.c2;
   output.arc_CD.pA = output.line_BC.pB;
   output.arc_CD.pB = input_.p2;
+}
+
+void DubinsLibrary::SetOutputByLineArcType(
+    Output& output, const DubinsLibrary::GeometryResult& result,
+    const uint8_t line_arc_type) {
+  output.arc_AB.circle_info = result.c1;
+  output.arc_CD.circle_info = result.c2;
+
+  if (line_arc_type == L_S || line_arc_type == R_S) {
+    output.arc_AB.pA = input_.p1;
+    output.arc_AB.pB = result.tangent_result.cross_point;
+
+    output.line_BC.pA = output.arc_AB.pB;
+    output.line_BC.pB = input_.p2;
+
+    output.arc_CD.pA = input_.p2;
+    output.arc_CD.pB = input_.p2;
+  } else if (line_arc_type == S_L || line_arc_type == S_R) {
+    output.arc_AB.pA = input_.p1;
+    output.arc_AB.pB = input_.p1;
+
+    output.line_BC.pA = input_.p1;
+    output.line_BC.pB = result.tangent_result.cross_point;
+
+    output.arc_CD.pA = output.line_BC.pB;
+    output.arc_CD.pB = input_.p2;
+  }
 }
 
 const double DubinsLibrary::GetThetaBC() const {
@@ -145,8 +272,13 @@ const double DubinsLibrary::GetThetaD() const {
   return atan2(t1_out.y(), t1_out.x());
 }
 
-void DubinsLibrary::SelectOutput(Output& output,
-                                 const DubinsLibrary::DubinsResult& result) {
+void DubinsLibrary::GenDubinsOutput(
+    Output& output, const DubinsLibrary::GeometryResult& result) {
+  if (result.is_line_arc && result.r < 0.99 * input_.radius) {
+    output.path_available = false;
+    return;
+  }
+
   // rotation from O1A to O1B, then O2C to O2D, AB does not change heading
   const auto v_O1A = output.arc_AB.pA - output.arc_AB.circle_info.center;
   const auto v_O1B = output.arc_AB.pB - output.arc_AB.circle_info.center;
@@ -171,9 +303,12 @@ void DubinsLibrary::SelectOutput(Output& output,
   const auto cos_CO2D = v_O2C.dot(v_O2D) / (radius * radius);
 
   const auto res = t1_out.dot(result.t2);
-  std::cout << "res = " << res << std::endl;
+
+  // std::cout << "res = " << res << std::endl;
+
   if (res < -0.9 || cos_AO1B < cos_120deg || cos_CO2D < cos_120deg) {
     output.path_available = false;
+    return;
   } else {
     output.path_available = true;
 
@@ -223,7 +358,7 @@ void DubinsLibrary::SelectOutput(Output& output,
       current_gear = EMPTY;
     }
     output.gear_cmd_vec.emplace_back(current_gear);
-    if (last_gear != current_gear) {
+    if (last_gear != current_gear && last_gear != EMPTY) {
       output.gear_change_count++;
     }
     last_gear = current_gear;
@@ -241,29 +376,34 @@ void DubinsLibrary::SelectOutput(Output& output,
     }
 
     output.gear_cmd_vec.emplace_back(current_gear);
-    if (last_gear != current_gear) {
+    if (last_gear != current_gear && last_gear != EMPTY) {
       output.gear_change_count++;
     }
     last_gear = current_gear;
+  }
+
+  if (result.is_line_arc && output.gear_change_count > 0) {
+    output.path_available = false;
+    return;
   }
 }
 
 bool DubinsLibrary::SolveAll() {
   auto flag = true;
 
-  DubinsResult dubins_result;
+  GeometryResult dubins_result;
   Output output;
 
   for (size_t i = 0; i < DUBINS_TYPE_COUNT; ++i) {
     flag = flag && DubinsCalculate(dubins_result, i);
     // set case a
     SetOutputByCaseType(output, dubins_result, CASE_A);
-    SelectOutput(output, dubins_result);
+    GenDubinsOutput(output, dubins_result);
     output_arr[2 * i] = output;
 
     // set case b
     SetOutputByCaseType(output, dubins_result, CASE_B);
-    SelectOutput(output, dubins_result);
+    GenDubinsOutput(output, dubins_result);
     output_arr[2 * i + 1] = output;
   }
 

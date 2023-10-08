@@ -15,7 +15,7 @@ const double CalPoint2LineDist(const Eigen::Vector2d &pO,
   Eigen::Vector2d vec_AO = pO - line.pA;
   const double AC_norm = vec_AO.dot(vec_AB) / vec_AB.norm();
 
-  return std::sqrt(AC_norm * AC_norm - vec_AO.dot(vec_AO));
+  return std::sqrt(vec_AO.dot(vec_AO) - AC_norm * AC_norm);
 }
 
 const bool CheckLineSegmentInCircle(const LineSegment &line, const Circle &c) {
