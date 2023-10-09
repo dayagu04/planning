@@ -56,7 +56,7 @@ class UssObstacleAvoidance {
 
   void Init() { InitVertexData(); }
 
-  void SetLocalView(LocalView *local_view_ptr) {
+  void SetLocalView(const LocalView *local_view_ptr) {
     local_view_ptr_ = local_view_ptr;
   }
 

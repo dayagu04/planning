@@ -6,6 +6,7 @@
 
 #include "Eigen/Core"
 #include "Platform_Types.h"
+#include "collision_detection/collision_detection.h"
 #include "common/geometry_planning_io.h"
 #include "diagonal/diagonal_in_geometry_plan.h"
 #include "dubins_lib/dubins_lib.h"
@@ -17,6 +18,7 @@
 #include "slot_management/slot_management.h"
 #include "slot_management_info.pb.h"
 #include "speed_smoother/apa_speed_smoother.h"
+#include "uss_obstacle_avoidance/uss_obstacle_avoidance.h"
 
 // #define USE_DUBINS_LIB
 
@@ -65,7 +67,10 @@ class DiagonalInTrajectoryGenerator {
   DiagonalInTrajectoryGenerator() {
     managed_parking_fusion_info_ptr_ =
         std::make_shared<ParkingFusion::ParkingFusionInfo>();
+    uss_oa_.Init();
+    collision_detector_.Init();
   };
+
   ~DiagonalInTrajectoryGenerator() = default;
 
   bool Plan(framework::Frame *const frame);
@@ -217,6 +222,8 @@ class DiagonalInTrajectoryGenerator {
 
  private:
   DiagonalInGeometryPlan geometry_planning_;
+  UssObstacleAvoidance uss_oa_;
+  CollisionDetector collision_detector_;
 
   int slot_sign_ = 0;  // 1:Right ,-1:Left, 0:Invalid
 

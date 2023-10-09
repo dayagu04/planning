@@ -75,6 +75,9 @@ bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
   frame_ = frame;
   local_view_ = &(frame->session()->environmental_model().get_local_view());
 
+  uss_oa_.SetLocalView(local_view_);
+  collision_detector_.SetLocalView(local_view_);
+
   auto& origin_parking_fusion_info = local_view_->parking_fusion_info;
 
   // slot management update
@@ -205,6 +208,9 @@ void DiagonalInTrajectoryGenerator::UpdateManagedParkingFusion(
 
 bool DiagonalInTrajectoryGenerator::SingleSlotPlanSimulation(
     common::SlotManagementInfo& slot_mangement_info) {
+  uss_oa_.SetLocalView(local_view_);
+  collision_detector_.SetLocalView(local_view_);
+
   simulation_enable_flag_ = true;
 
   if (local_view_->function_state_machine_info.has_current_state()) {
@@ -351,6 +357,13 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlan(
   }
 
   SetPlanningOutputInfo(planning_output);
+  uss_oa_.Update(planning_output);
+
+  collision_detector_.SetUssOA(&uss_oa_);
+  // TODO: collision_detector_.SetVision();
+
+  collision_detector_.GenObstacles();
+
   return true;
 }
 
