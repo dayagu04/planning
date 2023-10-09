@@ -40,39 +40,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   }
 
   is_local_valid_ = roads.local_point_valid();
-  if (session_->environmental_model().get_hdmap_valid()) {
-    const auto& local_view = session_->environmental_model().get_local_view();
-    if (local_view.localization_estimate.msf_status().msf_status() !=
-        LocalizationOutput::MsfStatus::ERROR) {
-      std::cout << "hdmap_valid is true,current timestamp:"
-                << session_->environmental_model()
-                       .get_local_view()
-                       .static_map_info.header()
-                       .timestamp()
-                << std::endl;
-      lane_group_set_.clear();
-      const CurrentRouting& current_routing =
-          local_view.static_map_info.current_routing();
-      const int lane_groups_num = current_routing.lane_groups_in_route_size();
-      for (int i = 0; i < lane_groups_num; i++) {
-        lane_group_set_.insert(
-            current_routing.lane_groups_in_route()[i].lane_group_id());
-        std::cout << "every_lane_groups_id:"
-                  << current_routing.lane_groups_in_route()[i].lane_group_id()
-                  << ",No:" << i << std::endl;
-      }
-      ramp_direction_ = RampDirection::RAMP_NONE;
-      CalculateSortedLaneGroupIdsInRouting(*session_);
-      CalculateDistanceToRamp(session_);
-      CalculateDistanceToFirstRoadSplit(session_);
-      CalculateDistanceToFirstRoadMerge(session_);
-      is_on_ramp_ = JudgeEgoIfOnRamp(*session_);
-      std::cout << "ramp_direction:" << ramp_direction_ << std::endl;
-      std::cout << "is_on_ramp_:" << is_on_ramp_ << std::endl;
-    } else {
-      std::cout << "localization invalid" << std::endl;
-    }
-  }
+  CalculateDistanceToRampSplitMerge(session_);
   double dis_to_first_road_split = distance_to_first_road_split();
   double dis_between_first_road_split_and_ramp =
       dis_to_first_road_split - dis_to_ramp_;
@@ -702,8 +670,6 @@ void VirtualLaneManager::CalculateRampDirection(
 double VirtualLaneManager::JudgeIfTheFirstSplit(
     const int current_index, const CurrentRouting& current_routing,
     const ad_common::hdmap::HDMap& hd_map) const {
-  // auto& hd_map = local_view->hd_map;
-  // const int lane_groups_num = current_routing.lane_groups_in_route_size();
   const int sorted_lane_groups_num = sorted_lane_groups_in_route_.size();
   double accumulate_distance_for_lane_group = 0;
   for (int i = current_index; i < sorted_lane_groups_num; i++) {
@@ -735,7 +701,6 @@ double VirtualLaneManager::JudgeIfTheFirstSplit(
 double VirtualLaneManager::JudgeIfTheFirstMerge(
     const int current_index, const CurrentRouting& current_routing,
     const ad_common::hdmap::HDMap& hd_map) const {
-  // const int lane_groups_num = current_routing.lane_groups_in_route_size();
   const int sorted_lane_groups_num = sorted_lane_groups_in_route_.size();
   double accumulate_distance_for_lane_group = 0;
   bool is_current_is_ramp = false;
@@ -816,74 +781,27 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
     const planning::framework::Session& session, int* current_index,
     double* remaining_dis) {
   const auto& local_view = session.environmental_model().get_local_view();
-  const auto& hd_map = session.environmental_model().get_hd_map();
-  const auto& map = local_view.static_map_info;
-  const auto& pose = local_view.localization_estimate.pose();
-
-  const double ego_pose_x = pose.local_position().x();
-  const double ego_pose_y = pose.local_position().y();
-  ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
-  std::cout << "ego_pose_x:" << ego_pose_x << ",ego_pose_y:" << ego_pose_y
-            << std::endl;
-
-  // get nearest lane
-  ad_common::hdmap::LaneInfoConstPtr nearest_lane;
-  double nearest_s = 0.0;
-  double nearest_l = 0.0;
-  const double distance = 10.0;
-  const double central_heading = pose.heading();
-  const double max_heading_difference = PI / 4;
-
-  auto time_start = IflyTime::Now_us();
-  const int res =
-      hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
-  auto time_end = IflyTime::Now_us();
-  double cost = time_end - time_start;
-
-  auto time_start1 = IflyTime::Now_us();
-  // const int res = hd_map.GetNearestLaneWithHeading(
-  //     point, distance, central_heading, max_heading_difference, &nearest_lane,
-  //     &nearest_s, &nearest_l);
-  auto time_end1 = IflyTime::Now_us();
-  double cost1 = time_end1 - time_start1;
-  std::cout << "get nearest lane time cost:" << cost << ", time cost1:" << cost1
-            << ",cost gap:" << cost1 - cost << std::endl;
-
-  if (res != 0) {
-    LOG_DEBUG("no get nearest lane!!!\n");
-    return false;
-  }
-  std::cout << "find current lane to current ego point dis:"
-            << nearest_lane->DistanceTo(point) << std::endl;
   const CurrentRouting& current_routing =
       local_view.static_map_info.current_routing();
 
   const int lane_groups_num = current_routing.lane_groups_in_route_size();
 
   // get the remaining distance in current lane
-  const double nearest_lane_total_length = nearest_lane->total_length();
-  *remaining_dis = nearest_lane_total_length - nearest_s;
+  const double nearest_lane_total_length = nearest_lane_->total_length();
+  *remaining_dis = nearest_lane_total_length - nearest_s_;
   std::cout << "nearest_lane_total_length:" << nearest_lane_total_length
-            << ",nearest_s:" << nearest_s << ",remaining_dis:" << *remaining_dis
-            << std::endl;
+            << ",nearest_s:" << nearest_s_
+            << ",remaining_dis:" << *remaining_dis << std::endl;
 
   // judge the ramp lane group
-  uint64_t nearest_lane_group_id = nearest_lane->lane_group_id();
-  std::cout << "nearest_lane_id:" << nearest_lane->id() << std::endl;
-  // std::cout << "nearest_lane debugstring:\n" <<
-  // nearest_lane->lane().DebugString() << std::endl;
+  uint64_t nearest_lane_group_id = nearest_lane_->lane_group_id();
+  std::cout << "nearest_lane_id:" << nearest_lane_->id() << std::endl;
   std::cout << "nearest_lane_group_id:" << nearest_lane_group_id << std::endl;
-
-  // const CurrentRouting& current_routing = map.current_routing();
-  // const int lane_groups_num = current_routing.lane_groups_in_route().size();
   LOG_DEBUG("lane_groups_num nums:%d\n", lane_groups_num);
 
   // get the current lane group
   int current_lane_group_index = -1;
   for (int i = 0; i < sorted_lane_groups_in_route_.size(); i++) {
-    // std::cout << "every_lane_groups_id:"
-    //           << current_routing.lane_groups_in_route()[i].lane_group_id()
-    //           << ",No:" << i << std::endl;
     if (nearest_lane_group_id == sorted_lane_groups_in_route_[i]) {
       current_lane_group_index = i;
     }
@@ -950,6 +868,32 @@ bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
 
 bool VirtualLaneManager::JudgeEgoIfOnRamp(
     const planning::framework::Session& session) {
+  const auto& hd_map = session.environmental_model().get_hd_map();
+  // get the nearest lane group id
+  uint64_t nearest_lane_group_id = nearest_lane_->lane_group_id();
+  std::cout << "nearest_lane_group_id:" << nearest_lane_group_id << std::endl;
+  // get the nearest lan group
+  LaneGroupConstPtr nearest_lane_group_ptr =
+      hd_map.GetLaneGroupById(nearest_lane_group_id);
+  if (nearest_lane_group_ptr == nullptr) {
+    LOG_DEBUG("fail get lane group by id for judge if on ramp!!!\n");
+    return false;
+  }
+  for (int j = 0; j < nearest_lane_group_ptr->way_forms().size(); j++) {
+    std::cout << "nearest_lane_group_ptr way_forms:"
+              << nearest_lane_group_ptr->way_forms()[j] << ",No:" << j
+              << std::endl;
+    if (nearest_lane_group_ptr->way_forms()[j] == RAMP) {
+      std::cout << "current ego on ramp!!!" << std::endl;
+      return true;
+    }
+  }
+  std::cout << "current ego do not on ramp!!!" << std::endl;
+  return false;
+}
+
+bool VirtualLaneManager::GetCurrentNearestLane(
+    const planning::framework::Session& session) {
   const auto& local_view = session.environmental_model().get_local_view();
   const auto& hd_map = session.environmental_model().get_hd_map();
   const auto& pose = local_view.localization_estimate.pose();
@@ -984,32 +928,54 @@ bool VirtualLaneManager::JudgeEgoIfOnRamp(
             << ",cost gap:" << cost1 - cost << std::endl;
 
   if (res != 0) {
-    LOG_DEBUG("no get nearest lane!!!\n");
+    std::cout << "no get nearest lane!!!" << std::endl;
     return false;
   }
-
-  // get the nearest lane group id
-  uint64_t nearest_lane_group_id = nearest_lane->lane_group_id();
-  std::cout << "nearest_lane_group_id:" << nearest_lane_group_id << std::endl;
-
-  // get the nearest lan group
-  LaneGroupConstPtr nearest_lane_group_ptr =
-      hd_map.GetLaneGroupById(nearest_lane_group_id);
-  if (nearest_lane_group_ptr == nullptr) {
-    LOG_DEBUG("fail get lane group by id for judge if on ramp!!!\n");
-    return false;
-  }
-
-  for (int j = 0; j < nearest_lane_group_ptr->way_forms().size(); j++) {
-    std::cout << "nearest_lane_group_ptr way_forms:"
-              << nearest_lane_group_ptr->way_forms()[j] << ",No:" << j
-              << std::endl;
-    if (nearest_lane_group_ptr->way_forms()[j] == RAMP) {
-      std::cout << "current ego on ramp!!!" << std::endl;
-      return true;
+  std::cout << "find current lane to current ego point dis:"
+            << nearest_lane->DistanceTo(point) << std::endl;
+  std::cout << "find the nearest lane!!!" << std::endl;
+  nearest_lane_ = nearest_lane;
+  nearest_s_ = nearest_s;
+  return true;
+}
+void VirtualLaneManager::CalculateDistanceToRampSplitMerge(
+    planning::framework::Session* session) {
+  if (session_->environmental_model().get_hdmap_valid()) {
+    const auto& local_view = session_->environmental_model().get_local_view();
+    if (local_view.localization_estimate.msf_status().msf_status() !=
+        LocalizationOutput::MsfStatus::ERROR) {
+      std::cout << "hdmap_valid is true,current timestamp:"
+                << session_->environmental_model()
+                       .get_local_view()
+                       .static_map_info.header()
+                       .timestamp()
+                << std::endl;
+      if (GetCurrentNearestLane(*session_)) {
+        lane_group_set_.clear();
+        const CurrentRouting& current_routing =
+            local_view.static_map_info.current_routing();
+        const int lane_groups_num = current_routing.lane_groups_in_route_size();
+        for (int i = 0; i < lane_groups_num; i++) {
+          lane_group_set_.insert(
+              current_routing.lane_groups_in_route()[i].lane_group_id());
+          std::cout << "every_lane_groups_id:"
+                    << current_routing.lane_groups_in_route()[i].lane_group_id()
+                    << ",No:" << i << std::endl;
+        }
+        ramp_direction_ = RampDirection::RAMP_NONE;
+        CalculateSortedLaneGroupIdsInRouting(*session_);
+        CalculateDistanceToRamp(session_);
+        CalculateDistanceToFirstRoadSplit(session_);
+        CalculateDistanceToFirstRoadMerge(session_);
+        is_on_ramp_ = JudgeEgoIfOnRamp(*session_);
+        std::cout << "ramp_direction:" << ramp_direction_ << std::endl;
+        std::cout << "is_on_ramp_:" << is_on_ramp_ << std::endl;
+      } else {
+        std::cout << "current do not find nearest lane!!!" << std::endl;
+      }
+    } else {
+      std::cout << "localization invalid" << std::endl;
     }
   }
-  std::cout << "current ego do not on ramp!!!" << std::endl;
-  return false;
 }
 }  // namespace planning

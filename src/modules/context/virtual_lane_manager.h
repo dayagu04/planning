@@ -173,6 +173,9 @@ class VirtualLaneManager {
 
   bool JudgeEgoIfOnRamp(const planning::framework::Session &session);
 
+  bool GetCurrentNearestLane(const planning::framework::Session &session);
+  void CalculateDistanceToRampSplitMerge(planning::framework::Session *session);
+
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
   int last_fix_lane_virtual_id_ = 0;
@@ -197,6 +200,8 @@ class VirtualLaneManager {
   std::vector<uint64_t> sorted_lane_groups_in_route_;
   bool is_leaving_ramp_ = false;
   bool is_on_ramp_ = false;
+  ad_common::hdmap::LaneInfoConstPtr nearest_lane_;
+  double nearest_s_ = 0.0;
 };
 }  // namespace planning
 #endif
