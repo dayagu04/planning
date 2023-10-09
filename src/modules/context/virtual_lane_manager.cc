@@ -835,15 +835,15 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   const double max_heading_difference = PI / 4;
 
   auto time_start = IflyTime::Now_us();
-  // const int res =
-  //     hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
+  const int res =
+      hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
   auto time_end = IflyTime::Now_us();
   double cost = time_end - time_start;
 
   auto time_start1 = IflyTime::Now_us();
-  const int res = hd_map.GetNearestLaneWithHeading(
-      point, distance, central_heading, max_heading_difference, &nearest_lane,
-      &nearest_s, &nearest_l);
+  // const int res = hd_map.GetNearestLaneWithHeading(
+  //     point, distance, central_heading, max_heading_difference, &nearest_lane,
+  //     &nearest_s, &nearest_l);
   auto time_end1 = IflyTime::Now_us();
   double cost1 = time_end1 - time_start1;
   std::cout << "get nearest lane time cost:" << cost << ", time cost1:" << cost1
@@ -969,15 +969,15 @@ bool VirtualLaneManager::JudgeEgoIfOnRamp(
   const double max_heading_difference = PI / 4;
 
   auto time_start = IflyTime::Now_us();
-  // const int res =
-  //     hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
+  const int res =
+      hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
   auto time_end = IflyTime::Now_us();
   double cost = time_end - time_start;
 
   auto time_start1 = IflyTime::Now_us();
-  const int res = hd_map.GetNearestLaneWithHeading(
-      point, distance, central_heading, max_heading_difference, &nearest_lane,
-      &nearest_s, &nearest_l);
+  // const int res = hd_map.GetNearestLaneWithHeading(
+  //     point, distance, central_heading, max_heading_difference, &nearest_lane,
+  //     &nearest_s, &nearest_l);
   auto time_end1 = IflyTime::Now_us();
   double cost1 = time_end1 - time_start1;
   std::cout << "get nearest lane time cost:" << cost << ", time cost1:" << cost1
