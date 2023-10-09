@@ -66,7 +66,9 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       CalculateDistanceToRamp(session_);
       CalculateDistanceToFirstRoadSplit(session_);
       CalculateDistanceToFirstRoadMerge(session_);
+      is_on_ramp_ = JudgeEgoIfOnRamp(*session_);
       std::cout << "ramp_direction:" << ramp_direction_ << std::endl;
+      std::cout << "is_on_ramp_:" << is_on_ramp_ << std::endl;
     } else {
       std::cout << "localization invalid" << std::endl;
     }
@@ -944,5 +946,70 @@ bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
   std::cout << "sorted_lane_groups_in_route_ size:"
             << sorted_lane_groups_in_route_.size() << std::endl;
   return true;
+}
+
+bool VirtualLaneManager::JudgeEgoIfOnRamp(
+    const planning::framework::Session& session) {
+  const auto& local_view = session.environmental_model().get_local_view();
+  const auto& hd_map = session.environmental_model().get_hd_map();
+  const auto& pose = local_view.localization_estimate.pose();
+
+  const double ego_pose_x = pose.local_position().x();
+  const double ego_pose_y = pose.local_position().y();
+  ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
+  std::cout << "ego_pose_x:" << ego_pose_x << ",ego_pose_y:" << ego_pose_y
+            << std::endl;
+
+  // get nearest lane
+  ad_common::hdmap::LaneInfoConstPtr nearest_lane;
+  double nearest_s = 0.0;
+  double nearest_l = 0.0;
+  const double distance = 10.0;
+  const double central_heading = pose.heading();
+  const double max_heading_difference = PI / 4;
+
+  auto time_start = IflyTime::Now_us();
+  // const int res =
+  //     hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
+  auto time_end = IflyTime::Now_us();
+  double cost = time_end - time_start;
+
+  auto time_start1 = IflyTime::Now_us();
+  const int res = hd_map.GetNearestLaneWithHeading(
+      point, distance, central_heading, max_heading_difference, &nearest_lane,
+      &nearest_s, &nearest_l);
+  auto time_end1 = IflyTime::Now_us();
+  double cost1 = time_end1 - time_start1;
+  std::cout << "get nearest lane time cost:" << cost << ", time cost1:" << cost1
+            << ",cost gap:" << cost1 - cost << std::endl;
+
+  if (res != 0) {
+    LOG_DEBUG("no get nearest lane!!!\n");
+    return false;
+  }
+
+  // get the nearest lane group id
+  uint64_t nearest_lane_group_id = nearest_lane->lane_group_id();
+  std::cout << "nearest_lane_group_id:" << nearest_lane_group_id << std::endl;
+
+  // get the nearest lan group
+  LaneGroupConstPtr nearest_lane_group_ptr =
+      hd_map.GetLaneGroupById(nearest_lane_group_id);
+  if (nearest_lane_group_ptr == nullptr) {
+    LOG_DEBUG("fail get lane group by id for judge if on ramp!!!\n");
+    return false;
+  }
+
+  for (int j = 0; j < nearest_lane_group_ptr->way_forms().size(); j++) {
+    std::cout << "nearest_lane_group_ptr way_forms:"
+              << nearest_lane_group_ptr->way_forms()[j] << ",No:" << j
+              << std::endl;
+    if (nearest_lane_group_ptr->way_forms()[j] == RAMP) {
+      std::cout << "current ego on ramp!!!" << std::endl;
+      return true;
+    }
+  }
+  std::cout << "current ego do not on ramp!!!" << std::endl;
+  return false;
 }
 }  // namespace planning

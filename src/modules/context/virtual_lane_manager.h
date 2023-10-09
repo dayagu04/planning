@@ -142,6 +142,7 @@ class VirtualLaneManager {
   double distance_to_first_road_split() const {
     return distance_to_first_road_split_;
   }
+  bool is_on_ramp() const { return is_on_ramp_; }
 
   bool is_local_valid() const { return is_local_valid_; }
 
@@ -170,6 +171,8 @@ class VirtualLaneManager {
   bool CalculateSortedLaneGroupIdsInRouting(
       const planning::framework::Session &session);
 
+  bool JudgeEgoIfOnRamp(const planning::framework::Session &session);
+
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
   int last_fix_lane_virtual_id_ = 0;
@@ -193,6 +196,7 @@ class VirtualLaneManager {
   std::unordered_set<uint64_t> lane_group_set_;
   std::vector<uint64_t> sorted_lane_groups_in_route_;
   bool is_leaving_ramp_ = false;
+  bool is_on_ramp_ = false;
 };
 }  // namespace planning
 #endif
