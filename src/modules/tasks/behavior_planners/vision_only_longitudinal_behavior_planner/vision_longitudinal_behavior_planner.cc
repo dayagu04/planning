@@ -857,9 +857,12 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(
   double v_target_ramp = 40;
   bool is_on_ramp = false;
   is_on_ramp = frame_->session()->environmental_model().get_virtual_lane_manager()->is_on_ramp();
+  double dis_to_merge = frame_->session()->environmental_model().get_virtual_lane_manager()->distance_to_first_road_merge();
   //通过接口获取是否在匝道的信息
   if (is_on_ramp) {
-    v_target_ramp = 50 / 3.6;
+    if (dis_to_merge > 50) {
+      v_target_ramp = 50 / 3.6;
+    }
     v_target_ = std::min(v_target_ramp, v_target_);
     LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
     JSON_DEBUG_VALUE("VisionLonBehavior_v_target_ramp", v_target_ramp);
