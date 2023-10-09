@@ -27,6 +27,7 @@ from cyber_record.record import Record
 from google.protobuf.json_format import MessageToJson
 
 car_xb, car_yb = load_car_params_patch()
+car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord()
 coord_tf = coord_transformer()
 max_slot_num = 20
 class LoadCyberbag:
@@ -555,6 +556,21 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       'current_pos_x': [cur_pos_xn - cur_pos_xn0],
       'current_pos_y': [cur_pos_yn - cur_pos_yn0],
     })
+    
+    car_circle_xn = []
+    car_circle_yn = []
+    car_circle_rn = []
+    for i in range(len(car_circle_x)):
+      tmp_x, tmp_y = local2global(car_circle_x[i], car_circle_y[i], cur_pos_xn, cur_pos_yn, cur_yaw)
+      car_circle_xn.append(tmp_x - cur_pos_xn0)
+      car_circle_yn.append(tmp_y - cur_pos_yn0)
+      car_circle_rn.append(car_circle_r[i])
+    
+    local_view_data['data_car_circle'].data.update({
+      'car_circle_xn': car_circle_xn,
+      'car_circle_yn': car_circle_yn,
+      'car_circle_rn': car_circle_rn,
+    })
 
     vel_ego =  bag_loader.loc_msg['data'][loc_msg_idx].pose.linear_velocity_from_wheel
 
@@ -822,6 +838,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
         
       names.append("plan_gear_cmd")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].gear_command))
+      
+      names.append("plan_traj_available")
+      datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].trajectory.available))
         
     # load func_state
     if bag_loader.soc_state_msg['enable'] == True:
@@ -895,6 +914,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
 
 def load_local_view_figure_parking():
   data_car = ColumnDataSource(data = {'car_yn':[], 'car_xn':[]})
+  data_car_circle = ColumnDataSource(data = {'car_circle_yn':[], 'car_circle_xn':[], 'car_circle_rn':[]})
   data_current_pos = ColumnDataSource(data = {'current_pos_y':[], 'current_pos_x':[]})
   data_ego = ColumnDataSource(data = {'ego_yn':[], 'ego_xn':[]})
   data_text = ColumnDataSource(data = {'vel_ego_text':[]})
@@ -935,6 +955,7 @@ def load_local_view_figure_parking():
                }
 
   local_view_data = {'data_car':data_car, \
+                     'data_car_circle':data_car_circle, \
                      'data_current_pos': data_current_pos, \
                      'data_ego':data_ego, \
                      'data_text':data_text, \
@@ -960,6 +981,7 @@ def load_local_view_figure_parking():
   # figure plot
   f1 = fig1.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
   fig1.circle('current_pos_y','current_pos_x', source = data_current_pos, size=8, color='grey')
+  fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_car_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'car_circle', visible = False)
   fig1.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1.5, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'text')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')

@@ -330,6 +330,15 @@ const bool UssObstacleAvoidance::GetArcLineIntersection(
   // use pA and pB of arc to fake line
   const auto &circle_info = arc1.circle_info;
 
+  // const auto AB = line2.pB - line2.pA;
+  // const Eigen::Vector2d OA(line2.pA.x() - circle_info.center.x(),
+  //                          line2.pA.y() - circle_info.center.y());
+  // // |OA + lambda * AB|^2 = r^2 means that line segment AB intersects at circle
+  // // OA·OA + 2*OA·AB*lambda + AB·AB*lambda^2 = r^2
+  // const auto a = AB.dot(AB);
+  // const auto b = (2 * OA).dot(AB);
+  // const auto c = OA.dot(OA) - pow(circle_info.radius, 2);
+
   const auto dx = line2.pB.x() - line2.pA.x();
   const auto dy = line2.pB.y() - line2.pA.y();
   const auto A = dx * dx + dy * dy;
