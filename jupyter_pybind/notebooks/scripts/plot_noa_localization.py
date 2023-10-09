@@ -23,7 +23,7 @@ altitude0 = 0.0
 class LocalizationApaPlotter(object):
   def __init__(self):
   # bag path and frame dt
-    self.file_path = '/mnt/noa/20230925/output.record'
+    self.file_path = '/mnt/noa/20231008/noa_15.00000'
     self.abnormal_timestamp_path = '/mnt/noa/20230916/abnormal_timestamp.txt'
     self.rtk_file_path = '/mnt/noa/20230925/output_json/sensor_navi_navifusion.json'
     display(HTML('<style>.container { width:95% !important;  }</style>'))
@@ -317,13 +317,15 @@ class LocalizationApaPlotter(object):
 
     fig2 = bkp.figure(x_axis_label='x(m)', y_axis_label='y(m)', width=1500, height=300, match_aspect=True, aspect_scale=1.0)
     fig2.circle(self.absolute_x_vec, self.absolute_y_vec, size=normal_size, fill_color='red', line_color='red', alpha = 0.5, legend_label='absolute_pos')
-    fig1.line(self.absolute_x_vec, self.absolute_y_vec, line_width=1, line_color='red', legend_label = 'absolute_pos')
+    fig2.line(self.absolute_x_vec, self.absolute_y_vec, line_width=1, line_color='red', legend_label = 'absolute_pos')
     fig2.circle(self.abnormal_absolute_x_vec, self.abnormal_absolute_y_vec, size=abnormal_size, fill_color='brown', line_color='brown', alpha = 0.5, legend_label='abnormal absolute_pos')
     fig2.circle(self.positions_x_vec, self.positions_y_vec, size=normal_size, fill_color='blue', line_color='blue', alpha=0.5, legend_label='positions')
-    fig1.line(self.positions_x_vec, self.positions_y_vec, line_width=1, line_color='blue', legend_label = 'positions')
+    fig2.line(self.positions_x_vec, self.positions_y_vec, line_width=1, line_color='blue', legend_label = 'positions')
     fig2.circle(self.abnormal_positions_x_vec, self.abnormal_positions_y_vec, size=abnormal_size, fill_color='green', line_color='green', alpha=0.5, legend_label='abnormal positions')
     fig2.circle(self.rtk_x_vec, self.rtk_y_vec, size=normal_size, fill_color='indigo', line_color='indigo', alpha=0.5, legend_label='rtk positions')
-    # fig2.circle(self.iflytek_local_position_x_vec, self.iflytek_local_position_y_vec, size=normal_size, fill_color='cyan', line_color='cyan', alpha=0.5, legend_label='ilfytek positions')
+    fig2.line(self.rtk_x_vec, self.rtk_y_vec, line_width=1, line_color='indigo', legend_label = 'rtk positions')
+    fig2.circle(self.iflytek_local_position_x_vec, self.iflytek_local_position_y_vec, size=normal_size, fill_color='cyan', line_color='cyan', alpha=0.5, legend_label='ilfytek positions')
+    fig2.line(self.iflytek_local_position_x_vec, self.iflytek_local_position_y_vec, line_width=1, line_color='cyan', legend_label = 'ilfytek positions')
 
     fig2.toolbar.active_scroll = fig2.select_one(WheelZoomTool)
     fig2.legend.click_policy = 'hide'
