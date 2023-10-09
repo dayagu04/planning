@@ -16,6 +16,8 @@ VisionLongitudinalBehaviorPlanner::VisionLongitudinalBehaviorPlanner(
     : Task(config_builder, pipeline_context) {
   config_ = config_builder->cast<VisionLongitudinalBehaviorPlannerConfig>();
   name_ = "VisionLongitudinalBehaviorPlanner";
+
+  accel_vel_filter_.Init(-2.0, 2.0, 0.0, 42.0, 0.1);
 }
 
 bool VisionLongitudinalBehaviorPlanner::Execute(framework::Frame *frame) {
@@ -74,6 +76,12 @@ bool VisionLongitudinalBehaviorPlanner::update() {
             ego_state_mgr->ego_v_cruise(), ego_state_mgr->ego_v(),
             ego_state_mgr->ego_acc());
   double v_ego = ego_state_mgr->ego_v();
+  auto &vision_longitudinal_output =
+      frame_->mutable_session()
+          ->mutable_planning_context()
+          ->mutable_vision_longitudinal_behavior_planner_output();
+  
+  accel_vel_filter_.SetState(vision_longitudinal_output.velocity_target);
   v_target_ = std::min(ego_state_mgr->ego_v_cruise(), 40.0);
   calc_cruise_accel_limits(v_ego);
 
@@ -82,9 +90,8 @@ bool VisionLongitudinalBehaviorPlanner::update() {
                                              .scenario_state_machine()
                                              ->get_lane_change_lane_manager();
   const auto fix_lane = virtual_lane_manager->get_lane_with_virtual_id(
-      lane_change_lane_manager->flane_virtual_id());
-  const std::vector<ReferencePathPoint> &fix_ref_points =
-      fix_lane->get_reference_path()->get_points();
+                        lane_change_lane_manager->flane_virtual_id());
+  const std::vector<ReferencePathPoint> &fix_ref_points = fix_lane->get_reference_path()->get_points();
   limit_accel_velocity_in_turns(v_ego, ego_state_mgr->ego_steer_angle(),
                                 lateral_outputs.d_poly, fix_ref_points);
   a_target_objective_ = a_target_;
@@ -104,7 +111,7 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   //                      map_info_mgr.get_map_info().current_lane_type(),
   //                      lateral_outputs.lc_status, v_limit_in_turns_, v_ego);
   double distance_to_ramp = virtual_lane_manager->dis_to_ramp();
-  double ramp_v_limit = 40 / 3.6;
+  double ramp_v_limit = 50 / 3.6;
   double acc_to_ramp = -1.0;
   calc_speed_for_ramp(distance_to_ramp, ramp_v_limit, acc_to_ramp, v_ego);
   calc_speed_with_potential_cutin_car(lateral_obstacle->front_tracks(),
@@ -131,6 +138,15 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   a_target_.first = clip(a_target_.first, _A_MIN, _A_MAX);
   a_target_.second = clip(a_target_.second, _A_MIN, _A_MAX);
   v_target_ = clip(v_target_, 0.0, 40.0);
+
+  if(v_target_ > v_ego) {
+    accel_vel_filter_.Update(v_target_);
+    v_target_ = accel_vel_filter_.GetOutput();
+    JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_work", 1);
+  }
+  else {
+    JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_work", 0);
+  }
 
   JSON_DEBUG_VALUE("VisionLonBehavior_a_target_high", a_target_.second);
   JSON_DEBUG_VALUE("VisionLonBehavior_a_target_low", a_target_.first);
@@ -202,8 +218,8 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
         std::fabs(2 * d_poly[0] * preview_x + d_poly[1]) /
         std::pow(std::pow(2 * d_poly[0] * preview_x + d_poly[1], 2) + 1, 1.5);
     double road_radius = 1 / std::max(curv, 0.0001);
-    if (road_radius < 720) {
-      a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V) * 0.4;
+    if (road_radius < 750) {
+      a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
     }
     double v_limit_road = std::sqrt(a_y_max * road_radius) * 0.9;
     v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
@@ -835,13 +851,22 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
   return true;
 }
 
-bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(double dis_to_ramp,
-                                                            double ramp_v_limit,
-                                                            double acc_to_ramp,
-                                                            double v_ego) {
+bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(
+  double dis_to_ramp, double ramp_v_limit, double acc_to_ramp, double v_ego) {
   LOG_DEBUG("----calc_speed_for_ramp--- \n");
-  double v_target_ramp = std::pow(
-      std::pow(ramp_v_limit, 2.0) - 2 * dis_to_ramp * acc_to_ramp, 0.5);
+  double v_target_ramp = 40;
+  bool is_on_ramp = false;
+  is_on_ramp = frame_->session()->environmental_model().get_virtual_lane_manager()->is_on_ramp();
+  //通过接口获取是否在匝道的信息
+  if (is_on_ramp) {
+    v_target_ramp = 50 / 3.6;
+    v_target_ = std::min(v_target_ramp, v_target_);
+    LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_ramp", v_target_ramp);
+    LOG_DEBUG("v_target : [%f] \n", v_target_);
+    return true;
+  }
+  v_target_ramp = std::pow(std::pow(ramp_v_limit,  2.0) - 2 * dis_to_ramp * acc_to_ramp, 0.5);
   v_target_ = std::min(v_target_ramp, v_target_);
   LOG_DEBUG("dis_to_ramp : [%f] \n", dis_to_ramp);
   LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
@@ -849,6 +874,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(double dis_to_ramp,
   JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
   LOG_DEBUG("v_target : [%f] \n", v_target_);
   return true;
+     
 }
 
 // bool VisionLongitudinalBehaviorPlanner::compute_speed_4_ramp(

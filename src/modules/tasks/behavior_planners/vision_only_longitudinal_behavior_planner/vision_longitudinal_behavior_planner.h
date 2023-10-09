@@ -3,6 +3,7 @@
 #include "lateral_obstacle.h"
 #include "task.h"
 #include "virtual_lane_manager.h"
+#include "filters.h"
 
 namespace planning {
 
@@ -20,10 +21,10 @@ class VisionLongitudinalBehaviorPlanner : public Task {
   bool update();
 
   bool calc_cruise_accel_limits(const double v_ego);
-  bool limit_accel_velocity_in_turns(
-      const double v_ego, const double angle_steers,
-      const std::vector<double> &d_poly,
-      const std::vector<ReferencePathPoint> &ref_points);
+  bool limit_accel_velocity_in_turns(const double v_ego,
+                                     const double angle_steers,
+                                     const std::vector<double> &d_poly,
+                                     const std::vector<ReferencePathPoint> &ref_points);
 
   bool limit_accel_velocity_for_cutin(
       const std::vector<TrackedObject> &front_tracks,
@@ -97,8 +98,8 @@ class VisionLongitudinalBehaviorPlanner : public Task {
   const std::vector<double> _A_TOTAL_MAX_V{1.5, 1.9, 3.2};
   const std::vector<double> _AY_MAX_ABS_BP{5.0, 9.0, 12.0, 15.0, 30.0};
   const std::vector<double> _AY_MAX_STEERS{2.0, 1.8, 1.2, 0.8, 0.8};
-  const std::vector<double> _AY_MAX_CURV_BP{500, 720};
-  const std::vector<double> _AY_MAX_CURV_V{0.6, 0.8};
+  const std::vector<double> _AY_MAX_CURV_BP{100, 200, 400, 600};
+  const std::vector<double> _AY_MAX_CURV_V{1.2, 0.6, 0.4, 0.3};
   const std::vector<double> _T_GAP_VEGO_BP{5.0, 15.0, 30.0};
   const std::vector<double> _T_GAP_VEGO_V{1.35, 1.55, 2.0};
   // linear slope
@@ -149,5 +150,7 @@ class VisionLongitudinalBehaviorPlanner : public Task {
   VisionLongitudinalBehaviorPlannerConfig config_;
 
   std::shared_ptr<VisionOnlyLaneChangeDecider> lane_changing_decider_ = nullptr;
+  //限制猛加速的滤波器
+  pnc::filters::SlopeFilter accel_vel_filter_;
 };
 }  // namespace planning
