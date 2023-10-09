@@ -59,18 +59,18 @@ def slider_callback(bag_time):
                                         plan_msg_input.SerializeToString())
 
   remain_dist = uss_obstacle_avoidance_py.GetRemainDist()
-  vehicle_arc_index = uss_obstacle_avoidance_py.GetMinDistVehicleArcIndex()
+  car_arc_index = uss_obstacle_avoidance_py.GetMinDistCarArcIndex()
   uss_arc_index = uss_obstacle_avoidance_py.GetMinDistUssArcIndex()
-  vehicle_vertex = uss_obstacle_avoidance_py.GetVehicleVertex()
+  car_vertex = uss_obstacle_avoidance_py.GetCarVertex()
   uss_vertex = uss_obstacle_avoidance_py.GetUssVertex()
   uss_raw_dist = uss_obstacle_avoidance_py.GetUssRawDist()
 
-  # print("vehicle_vertex = ", vehicle_vertex)
+  # print("car_vertex = ", car_vertex)
   # print("uss_vertex = ", uss_vertex)
   # print("uss_raw_dist = ", uss_raw_dist)
 
   print("remain_dist = ", remain_dist)
-  print("vehicle_arc_index = ", vehicle_arc_index)
+  print("car_arc_index = ", car_arc_index)
   print("uss_arc_index = ", uss_arc_index)
 
   push_notebook()

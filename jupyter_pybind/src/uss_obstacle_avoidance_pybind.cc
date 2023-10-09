@@ -67,16 +67,16 @@ int UpdateBytes(py::bytes &func_statemachine_bytes,
   return 0;
 }
 
-const size_t GetMinDistVehicleArcIndex() {
-  return pBase->GetMinDistVehicleArcIndex();
+const size_t GetMinDistCarArcIndex() {
+  return pBase->GetMinDistCarArcIndex();
 }
 
 const size_t GetMinDistUssArcIndex() { return pBase->GetMinDistUssArcIndex(); }
 
 const double GetRemainDist() { return pBase->GetRemainDist(); }
 
-const std::vector<Eigen::Vector2d> GetVehicleVertex() {
-  return pBase->GetVehicleVertex();
+const std::vector<Eigen::Vector2d> GetCarVertex() {
+  return pBase->GetCarVertex();
 }
 
 const std::vector<Eigen::Vector2d> GetUssVertex() {
@@ -90,10 +90,10 @@ PYBIND11_MODULE(uss_obstacle_avoidance_py, m) {
 
   m.def("Init", &Init)
       .def("UpdateBytes", &UpdateBytes)
-      .def("GetMinDistVehicleArcIndex", &GetMinDistVehicleArcIndex)
+      .def("GetMinDistCarArcIndex", &GetMinDistCarArcIndex)
       .def("GetMinDistUssArcIndex", &GetMinDistUssArcIndex)
       .def("GetRemainDist", &GetRemainDist)
-      .def("GetVehicleVertex", &GetVehicleVertex)
+      .def("GetCarVertex", &GetCarVertex)
       .def("GetUssVertex", &GetUssVertex)
       .def("GetUssRawDist", &GetUssRawDist);
 }

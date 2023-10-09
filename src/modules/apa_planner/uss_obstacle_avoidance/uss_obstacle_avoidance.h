@@ -12,7 +12,7 @@
 
 namespace planning {
 class UssObstacleAvoidance {
-  enum VehiclePointMode {
+  enum CarPointMode {
     LINE_MODE = 0,
     ARC_MODE = 1,
     COUNT,
@@ -31,7 +31,7 @@ class UssObstacleAvoidance {
   };
 
   struct Paramters {
-    double steer_ratio = 15.7;
+    double steer_ratio = 16.5;
     double arc_line_shift_steer_angle_deg = 2.5;
     double c1 = 0.3790;
     double max_remain_dist = 5.01;
@@ -40,12 +40,12 @@ class UssObstacleAvoidance {
 
   struct RemainDistInfo {
     double remain_dist = 100.0;
-    size_t vehicle_index = 0;
+    size_t car_index = 0;
     size_t uss_index = 0;
 
     void Reset() {
       remain_dist = 100.0;
-      vehicle_index = 0;
+      car_index = 0;
       uss_index = 0;
     }
   };
@@ -60,16 +60,14 @@ class UssObstacleAvoidance {
     local_view_ptr_ = local_view_ptr;
   }
 
-  const size_t GetMinDistVehicleArcIndex() const {
-    return min_dist_vehicle_arc_index_;
-  }
+  const size_t GetMinDistCarArcIndex() const { return min_dist_car_arc_index_; }
 
   const size_t GetMinDistUssArcIndex() const { return min_dist_uss_arc_index_; }
 
   const double GetRemainDist() const { return remain_dist_; }
 
-  const std::vector<Eigen::Vector2d> GetVehicleVertex() const {
-    return vehicle_vertex_vec_;
+  const std::vector<Eigen::Vector2d> GetCarVertex() const {
+    return car_vertex_vec_;
   }
 
   const std::vector<Eigen::Vector2d> GetUssVertex() const {
@@ -102,13 +100,13 @@ class UssObstacleAvoidance {
 
   void InitVertexData();
 
-  void ConstructVehicleArc();
-  void ConstructVehicleLine();
-  void ConstructUssArc();
+  void GenCarArc();
+  void GenCarLine();
+  void GenUssArc();
 
-  void CalculateRemainDist();
+  void CalRemainDist();
 
-  std::vector<Eigen::Vector2d> vehicle_vertex_vec_;
+  std::vector<Eigen::Vector2d> car_vertex_vec_;
   std::vector<Eigen::Vector2d> uss_vertex_vec_;
   std::vector<double> uss_raw_dist_vec_;
   std::vector<double> uss_normal_angle_vec_;
@@ -120,11 +118,11 @@ class UssObstacleAvoidance {
 
   Paramters param_;
 
-  uint8_t vehicle_point_mode_ = ARC_MODE;
-  std::vector<Arc> vehicle_arc_vec_;
+  uint8_t car_point_mode_ = ARC_MODE;
+  std::vector<Arc> car_arc_vec_;
   std::vector<Arc> uss_arc_vec_;
 
-  size_t min_dist_vehicle_arc_index_ = 0;
+  size_t min_dist_car_arc_index_ = 0;
   size_t min_dist_uss_arc_index_ = 0;
   double remain_dist_ = 20.0;
   double rear_axle_center_radius_ = 1.0e4;

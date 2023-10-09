@@ -14,13 +14,13 @@
 
 // #define __USS_OA_DEBUG__
 
-// vehicle
-static const std::vector<double> vehicle_vertex_x_vec = {
+// car data
+static const std::vector<double> car_vertex_x_vec = {
     3.187342,  3.424531,  3.593071,  3.593071,  3.424531,  3.187342,
     2.177994,  1.916421,  1.96496,   -0.476357, -0.798324, -0.879389,
     -0.879389, -0.798324, -0.476357, 1.96496,   1.916421,  2.177994};
 
-static const std::vector<double> vehicle_vertex_y_vec = {
+static const std::vector<double> car_vertex_y_vec = {
     0.887956,  0.681712,         0.334651,  -0.334651, -0.681712,     -0.887956,
     -0.887956, -(1.06715 + 0.1), -0.887956, -0.887956, -0.706505,     -0.334845,
     0.334845,  0.706505,         0.887956,  0.887956,  1.06715 + 0.1, 0.887956};
@@ -45,12 +45,12 @@ static const std::vector<size_t> wdis_index_back = {0, 1, 3, 6, 9, 11};
 
 namespace planning {
 void UssObstacleAvoidance::InitVertexData() {
-  // init vehicle vertex
-  vehicle_vertex_vec_.clear();
-  vehicle_vertex_vec_.reserve(vehicle_vertex_x_vec.size());
-  for (size_t i = 0; i < vehicle_vertex_x_vec.size(); ++i) {
-    vehicle_vertex_vec_.emplace_back(
-        Eigen::Vector2d(vehicle_vertex_x_vec[i], vehicle_vertex_y_vec[i]));
+  // init car vertex
+  car_vertex_vec_.clear();
+  car_vertex_vec_.reserve(car_vertex_x_vec.size());
+  for (size_t i = 0; i < car_vertex_x_vec.size(); ++i) {
+    car_vertex_vec_.emplace_back(
+        Eigen::Vector2d(car_vertex_x_vec[i], car_vertex_y_vec[i]));
   }
 
   // init uss vertex
@@ -68,32 +68,32 @@ void UssObstacleAvoidance::InitVertexData() {
 }
 
 // only for considerably small steering angle
-void UssObstacleAvoidance::ConstructVehicleLine() {
-  vehicle_arc_vec_.clear();
-  vehicle_arc_vec_.reserve(vehicle_vertex_vec_.size());
+void UssObstacleAvoidance::GenCarLine() {
+  car_arc_vec_.clear();
+  car_arc_vec_.reserve(car_vertex_vec_.size());
 
-  for (const auto &vehicle_vertex : vehicle_vertex_vec_) {
-    Arc vehicle_arc;
-    vehicle_arc.circle_info.is_circle = false;
-    vehicle_arc.pA = vehicle_vertex;
-    vehicle_arc.pB = vehicle_arc.pA;
+  for (const auto &car_vertex : car_vertex_vec_) {
+    Arc car_arc;
+    car_arc.circle_info.is_circle = false;
+    car_arc.pA = car_vertex;
+    car_arc.pB = car_arc.pA;
 
     if (!reverse_flag_) {
-      vehicle_arc.pB.x() += param_.max_remain_dist;
+      car_arc.pB.x() += param_.max_remain_dist;
     } else {
-      vehicle_arc.pB.x() -= param_.max_remain_dist;
+      car_arc.pB.x() -= param_.max_remain_dist;
     }
 
-    vehicle_arc.circle_info.is_circle = false;
+    car_arc.circle_info.is_circle = false;
 
-    vehicle_arc_vec_.emplace_back(std::move(vehicle_arc));
+    car_arc_vec_.emplace_back(std::move(car_arc));
   }
 }
 
 // only for non small steering angle
-void UssObstacleAvoidance::ConstructVehicleArc() {
-  vehicle_arc_vec_.clear();
-  vehicle_arc_vec_.reserve(vehicle_vertex_vec_.size());
+void UssObstacleAvoidance::GenCarArc() {
+  car_arc_vec_.clear();
+  car_arc_vec_.reserve(car_vertex_vec_.size());
 
   double sign = 1.0;
   if ((!reverse_flag_ && steer_angle_ > 0.0) ||
@@ -112,34 +112,34 @@ void UssObstacleAvoidance::ConstructVehicleArc() {
   // std::cout << "rot_angle = " << rot_angle * 57.3 << std::endl;
 
   // int i = 0;
-  for (const auto &vehicle_vertex : vehicle_vertex_vec_) {
-    Arc vehicle_arc;
-    vehicle_arc.circle_info.is_circle = true;
-    vehicle_arc.circle_info.center = turning_center_;
-    vehicle_arc.circle_info.radius = (vehicle_vertex - turning_center_).norm();
-    vehicle_arc.pA = vehicle_vertex;
-    const auto vec_OA = vehicle_arc.pA - turning_center_;
-    vehicle_arc.pB = turning_center_ + rot_m * vec_OA;
-    // std::cout << "-------------------- vehicle_arc info --------------------"
+  for (const auto &car_vertex : car_vertex_vec_) {
+    Arc car_arc;
+    car_arc.circle_info.is_circle = true;
+    car_arc.circle_info.center = turning_center_;
+    car_arc.circle_info.radius = (car_vertex - turning_center_).norm();
+    car_arc.pA = car_vertex;
+    const auto vec_OA = car_arc.pA - turning_center_;
+    car_arc.pB = turning_center_ + rot_m * vec_OA;
+    // std::cout << "-------------------- car_arc info --------------------"
     //           << std::endl;
-    // std::cout << "vehicle_arc.pA = \n"
-    //           << vehicle_arc.pA << std::endl
-    //           << "vehicle_arc.pB = \n"
-    //           << vehicle_arc.pB << std::endl
-    //           << "vehicle_arc.radius = " << vehicle_arc.circle_info.radius
+    // std::cout << "car_arc.pA = \n"
+    //           << car_arc.pA << std::endl
+    //           << "car_arc.pB = \n"
+    //           << car_arc.pB << std::endl
+    //           << "car_arc.radius = " << car_arc.circle_info.radius
     //           << std::endl
-    //           << "vehicle_arc.center = \n"
+    //           << "car_arc.center = \n"
     //           << turning_center_ << std::endl
-    //           << "(vehicle_arc.pA - turning_center_) = "
-    //           << (vehicle_arc.pA - turning_center_).norm() << std::endl
-    //           << "(vehicle_arc.pB - turning_center_) = "
-    //           << (vehicle_arc.pB - turning_center_).norm() << std::endl;
+    //           << "(car_arc.pA - turning_center_) = "
+    //           << (car_arc.pA - turning_center_).norm() << std::endl
+    //           << "(car_arc.pB - turning_center_) = "
+    //           << (car_arc.pB - turning_center_).norm() << std::endl;
 
-    vehicle_arc_vec_.emplace_back(std::move(vehicle_arc));
+    car_arc_vec_.emplace_back(std::move(car_arc));
   }
 }
 
-void UssObstacleAvoidance::ConstructUssArc() {
+void UssObstacleAvoidance::GenUssArc() {
   uss_arc_vec_.clear();
   uss_arc_vec_.reserve(uss_vertex_vec_.size());
 
@@ -333,7 +333,8 @@ const bool UssObstacleAvoidance::GetArcLineIntersection(
   // const auto AB = line2.pB - line2.pA;
   // const Eigen::Vector2d OA(line2.pA.x() - circle_info.center.x(),
   //                          line2.pA.y() - circle_info.center.y());
-  // // |OA + lambda * AB|^2 = r^2 means that line segment AB intersects at circle
+  // // |OA + lambda * AB|^2 = r^2 means that line segment AB intersects at
+  // circle
   // // OA·OA + 2*OA·AB*lambda + AB·AB*lambda^2 = r^2
   // const auto a = AB.dot(AB);
   // const auto b = (2 * OA).dot(AB);
@@ -378,10 +379,10 @@ const bool UssObstacleAvoidance::GetArcLineIntersection(
   return false;
 }
 
-void UssObstacleAvoidance::CalculateRemainDist() {
+void UssObstacleAvoidance::CalRemainDist() {
   remain_dist_ = param_.max_remain_dist;
   double dist = param_.max_remain_dist;
-  for (size_t i = 0; i < vehicle_arc_vec_.size(); ++i) {
+  for (size_t i = 0; i < car_arc_vec_.size(); ++i) {
     for (size_t j = 0; j < uss_arc_vec_.size(); ++j) {
       // skip uss arc for unconsidered
       if (!uss_arc_vec_[j].is_considered) {
@@ -389,17 +390,17 @@ void UssObstacleAvoidance::CalculateRemainDist() {
       }
 
       Eigen::Vector2d intersection;
-      if (vehicle_point_mode_ == LINE_MODE) {
+      if (car_point_mode_ == LINE_MODE) {
         if (GetArcLineIntersection(intersection, uss_arc_vec_[j],
-                                   vehicle_arc_vec_[i])) {
-          dist = (vehicle_arc_vec_[i].pA - intersection).norm();
+                                   car_arc_vec_[i])) {
+          dist = (car_arc_vec_[i].pA - intersection).norm();
         }
       } else {
         if (GetTwoArcIntersection(intersection, uss_arc_vec_[j],
-                                  vehicle_arc_vec_[i])) {
+                                  car_arc_vec_[i])) {
           const auto angle = pnc::transform::GetAngleFromTwoVec(
-              vehicle_arc_vec_[i].pA - vehicle_arc_vec_[i].circle_info.center,
-              intersection - vehicle_arc_vec_[i].circle_info.center);
+              car_arc_vec_[i].pA - car_arc_vec_[i].circle_info.center,
+              intersection - car_arc_vec_[i].circle_info.center);
 
           dist = rear_axle_center_radius_ * angle;
         }
@@ -408,7 +409,7 @@ void UssObstacleAvoidance::CalculateRemainDist() {
       // printf("dist[%ld][%ld] = %.2f\n", i, j, dist);
       if (dist < remain_dist_) {
         remain_dist_ = dist;
-        min_dist_vehicle_arc_index_ = i;
+        min_dist_car_arc_index_ = i;
         min_dist_uss_arc_index_ = j;
       }
     }
@@ -435,15 +436,15 @@ bool UssObstacleAvoidance::Update(
     // std::cout << "LINE_MODE!" << std::endl;
 
     // small steer angle results in line & arc
-    vehicle_point_mode_ = LINE_MODE;
+    car_point_mode_ = LINE_MODE;
     rear_axle_center_radius_ = 1.0e4;
     turning_center_.setZero();
-    ConstructVehicleLine();
+    GenCarLine();
   } else {
     // std::cout << "ARC_MODE!" << std::endl;
 
     // large steer angle results in two arcs
-    vehicle_point_mode_ = ARC_MODE;
+    car_point_mode_ = ARC_MODE;
     const auto wheel_angle_norm = std::abs(steer_angle_ / param_.steer_ratio);
     rear_axle_center_radius_ = 1.0 / (param_.c1 * std::tan(wheel_angle_norm));
 
@@ -457,14 +458,14 @@ bool UssObstacleAvoidance::Update(
 
     // std::cout << "turning_center = \n" << turning_center_ << std::endl;
 
-    ConstructVehicleArc();
+    GenCarArc();
   }
 
   // update Uss arc all the time
-  ConstructUssArc();
+  GenUssArc();
 
   // calculate remaining distance
-  CalculateRemainDist();
+  CalRemainDist();
 
   return true;
 }
