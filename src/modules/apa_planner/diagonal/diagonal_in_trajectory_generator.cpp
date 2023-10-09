@@ -6,11 +6,13 @@
 #include <limits>
 #include <ostream>
 
+#include "Eigen/src/Core/Matrix.h"
 #include "common/apa_cos_sin.h"
 #include "common/apa_utils.h"
 #include "common/planning_log_helper.h"
 #include "common/vehicle_param_helper.h"
 #include "debug_info_log.h"
+#include "dubins_lib/dubins_lib.h"
 #include "environmental_model.h"
 #include "general_planning_context.h"
 #include "ifly_time.h"
@@ -49,6 +51,8 @@ constexpr double kMaxXOffset = 0.2;
 constexpr double kMaxYOffset = 0.2;
 constexpr double kMaxThetaOffset = 0.05;
 constexpr double kMockedObjYOffset = 4.0;
+
+const static double kNormalSlotLength = 4.8;
 }  // namespace
 
 bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
@@ -70,6 +74,7 @@ bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
 
   // slot management update
   if (g_context.GetStatemachine().apa_reset_flag) {
+    plan_state_machine_ = IDLE;
     slot_manager_.Reset();
   }
 
@@ -388,6 +393,83 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlan(
   }
 
   SetPlanningOutputInfo(planning_output);
+  return true;
+}
+
+void DiagonalInTrajectoryGenerator::UpdateSlotInfo(const int slot_index) {
+  const auto& slot_points =
+      managed_parking_fusion_info_.parking_fusion_slot_lists()[slot_index]
+          .corner_points();
+
+  const Eigen::Vector2d p0(slot_points[0].x(), slot_points[0].y());
+  const Eigen::Vector2d p1(slot_points[1].x(), slot_points[1].y());
+  const Eigen::Vector2d p2(slot_points[2].x(), slot_points[2].y());
+  const Eigen::Vector2d p3(slot_points[3].x(), slot_points[3].y());
+
+  const auto pM = 0.5 * (p0 + p1);
+  const auto v_01 = p1 - p0;
+  const auto v_02 = p2 - p0;
+
+  auto n = Eigen::Vector2d(-v_01.y(), v_01.x());
+
+  double k = 1.0;
+  if (n.dot(v_02) < 0.0) {
+    k = -1.0;
+  }
+
+  slot_origin_pos_ = k * n.normalized() * kNormalSlotLength + pM;
+  slot_origin_heading_ = std::atan2(-n.y(), -n.x());
+}
+
+bool DiagonalInTrajectoryGenerator::DubinsPlan() {
+  if (plan_state_machine_ == IDLE) {
+    dubins_planner_.SetRadius(5.5);
+    dubins_planner_.SetTarget(Eigen::Vector2d(target_x_, target_y_), 0.0);
+
+    // dubins_planner_.Solve(uint8_t dubins_type, uint8_t case_type);
+  }
+}
+
+bool DiagonalInTrajectoryGenerator::SingleDubinsSlotPlan(
+    const int slot_index, PlanningOutput* const planning_output) {
+  // update measurement
+  UpdateMeasurement();
+
+  // update slot info for target pose
+  UpdateSlotInfo(slot_index);
+
+  // tf init
+  g2l_tf_.Init(slot_origin_pos_, slot_origin_heading_);
+  l2g_tf_.Init(slot_origin_pos_, slot_origin_heading_);
+
+  const auto ego_pos_slot = g2l_tf_.GetPos(measure_.ego_pos);
+  const auto ego_heading_vec_slot = g2l_tf_.GetHeadingVec(measure_.heading);
+
+  const auto ego_heading_slot =
+      std::atan2(ego_heading_vec_slot.y(), ego_heading_vec_slot.x());
+
+  dubins_planner_.SetStart(ego_pos_slot, ego_heading_slot);
+
+  // main loop
+  if (plan_state_machine_ == IDLE) {
+    if (!DubinsPlan()) {
+      PreparePlan();
+    }
+  } else if (plan_state_machine_ == INIT) {
+    if (!LineArcPlan()) {
+      DubinsPlan();
+    }
+  } else if (plan_state_machine_ == PREPARE) {
+    DubinsPlan();
+  } else if (plan_state_machine_ == FINAL) {
+    if (CheckPose()) {
+      plan_state_machine_ = FINISH;
+    } else {
+      DubinsPlan();
+      plan_state_machine_ = ADJUST;
+    }
+  }
+
   return true;
 }
 
@@ -1092,9 +1174,7 @@ void DiagonalInTrajectoryGenerator::CalSlotPointsInM(const int idx) {
   raw_slot_points_in_m_.emplace_back(x3, y3, 0.0);
   slot_points_in_m_ = raw_slot_points_in_m_;
 
-  std::cout << "raw slot_points_in_m_ x0:" << x0 << ", y0:" << y0
-            << ", x1:" << x1 << ", y1:" << y1 << ", x2:" << x2 << ", y2:" << y2
-            << ", x3:" << x3 << ", y3:" << y3 << std::endl;
+  const auto pO = k * n + pM;
 
   SquareSlot();
 }
@@ -1143,6 +1223,13 @@ void DiagonalInTrajectoryGenerator::SquareSlot() {
                            slot_points_in_m_[0].y - slot_points_in_m_[1].y);
   slot_length_ = std::hypot(slot_points_in_m_[0].x - slot_points_in_m_[2].x,
                             slot_points_in_m_[0].y - slot_points_in_m_[2].y);
+}
+
+void DiagonalInTrajectoryGenerator::UpdateMeasurement() {
+  const auto& pose = local_view_->localization_estimate.pose();
+  measure_.ego_pos << pose.local_position().x(), pose.local_position().y();
+  measure_.heading = pose.heading();
+  measure_.v_ego = local_view_->vehicle_service_output_info.vehicle_speed();
 }
 
 bool DiagonalInTrajectoryGenerator::IsReplan(

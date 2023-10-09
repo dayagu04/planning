@@ -388,27 +388,5 @@ void DubinsLibrary::GenDubinsOutput(
   }
 }
 
-bool DubinsLibrary::SolveAll() {
-  auto flag = true;
-
-  GeometryResult dubins_result;
-  Output output;
-
-  for (size_t i = 0; i < DUBINS_TYPE_COUNT; ++i) {
-    flag = flag && DubinsCalculate(dubins_result, i);
-    // set case a
-    SetOutputByCaseType(output, dubins_result, CASE_A);
-    GenDubinsOutput(output, dubins_result);
-    output_arr[2 * i] = output;
-
-    // set case b
-    SetOutputByCaseType(output, dubins_result, CASE_B);
-    GenDubinsOutput(output, dubins_result);
-    output_arr[2 * i + 1] = output;
-  }
-
-  return flag;
-}
-
 }  // namespace dubins_lib
 }  // namespace pnc

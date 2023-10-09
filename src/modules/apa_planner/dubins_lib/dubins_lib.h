@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "Eigen/src/Core/Matrix.h"
 #include "geometry_math.h"
 
 namespace pnc {
@@ -49,6 +50,14 @@ class DubinsLibrary {
     double heading1 = 0.0;
     double heading2 = 0.0;
     double radius = 0.0;
+
+    void Set(const Eigen::Vector2d& p_start, const Eigen::Vector2d& p_target,
+             const double heading_start, const double heading_target) {
+      p1 = p_start;
+      p2 = p_target;
+      heading1 = heading_start;
+      heading2 = heading_target;
+    }
   };
 
   struct Output {
@@ -81,15 +90,20 @@ class DubinsLibrary {
  public:
   void SetInput(Input& input) { input_ = input; }
 
-  const bool DubinsCalculate(DubinsLibrary::GeometryResult& result,
-                             const uint8_t dubins_type);
+  void SetStart(const Eigen::Vector2d& p_start, const double heading_start) {
+    input_.p1 = p_start;
+    input_.heading1 = heading_start;
+  }
 
-  const bool LineArcCalculate(DubinsLibrary::GeometryResult& result,
-                              const uint8_t line_arc_type);
+  void SetTarget(const Eigen::Vector2d& p_target, const double heading_target) {
+    input_.p2 = p_target;
+    input_.heading2 = heading_target;
+  }
+
+  void SetRadius(const double radius) { input_.radius = radius; }
 
   bool Solve(uint8_t dubins_type, uint8_t case_type);
   bool Solve(uint8_t line_arc_type);
-  bool SolveAll();
   void Sampling(double ds);
   const Output GetOutput() const { return output_; }
   const double GetThetaBC() const;
@@ -100,6 +114,12 @@ class DubinsLibrary {
                            const DubinsLibrary::GeometryResult& result,
                            const uint8_t case_type);
 
+  const bool DubinsCalculate(DubinsLibrary::GeometryResult& result,
+                             const uint8_t dubins_type);
+
+  const bool LineArcCalculate(DubinsLibrary::GeometryResult& result,
+                              const uint8_t line_arc_type);
+
   void SetOutputByLineArcType(Output& output,
                               const DubinsLibrary::GeometryResult& result,
                               const uint8_t line_arc_type);
@@ -109,7 +129,6 @@ class DubinsLibrary {
 
   Input input_;
   Output output_;
-  std::array<Output, DUBINS_TYPE_COUNT * CASE_COUNT> output_arr;
   uint8_t dubins_type_ = 0;
   uint8_t line_arc_type_ = 0;
 };

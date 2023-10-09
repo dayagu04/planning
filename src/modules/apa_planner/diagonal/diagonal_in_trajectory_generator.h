@@ -1,10 +1,15 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 
+#include "Eigen/Core"
 #include "Platform_Types.h"
 #include "common/geometry_planning_io.h"
 #include "diagonal/diagonal_in_geometry_plan.h"
+#include "dubins_lib/dubins_lib.h"
+#include "dubins_lib/geometry_math.h"
 #include "frame.h"
 #include "local_view.h"
 #include "math/box2d.h"
@@ -17,7 +22,29 @@ namespace planning {
 namespace apa_planner {
 
 class DiagonalInTrajectoryGenerator {
+  enum PlanningStateMachine {
+    IDLE,
+    INIT,
+    PREPARE,
+    PAUSE,
+    FINAL,
+    ADJUST,
+    FINISH,
+  };
+
+  enum PlanAlgorithm {
+    DUBINS,
+    LINE_ARC,
+  };
+
+  struct Measurement {
+    double v_ego = 0.0;
+    double heading = 0.0;
+    Eigen::Vector2d ego_pos = Eigen::Vector2d::Zero();
+  };
+
  public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   struct SimulationParam {
     uint8_t force_last_seg_name_ = 0;
     int selected_id_ = 0;
@@ -55,10 +82,23 @@ class DiagonalInTrajectoryGenerator {
   bool SingleSlotManagePlanSimulation();
   bool SingleSlotPlanSimulation(
       common::SlotManagementInfo &slot_mangement_info);
+  bool SingleDubinsSlotPlanSimulation(
+      common::SlotManagementInfo &slot_mangement_info);
 
  private:
+  void UpdateMeasurement();
+  void UpdateSlotInfo(const int slot_index);
   bool SingleSlotPlan(const int slot_index,
                       PlanningOutput::PlanningOutput *const planning_output);
+
+  bool DubinsPlan();
+  bool PreparePlan();
+  bool LineArcPlan();
+  bool CheckPose();
+
+  bool SingleDubinsSlotPlan(
+      const int slot_index,
+      PlanningOutput::PlanningOutput *const planning_output);
 
   bool GeometryPlan(const PlanningPoint &start_point, int idx,
                     PlanningOutput::PlanningOutput *const planning_output);
@@ -217,6 +257,27 @@ class DiagonalInTrajectoryGenerator {
 
   std::shared_ptr<ParkingFusion::ParkingFusionInfo>
       managed_parking_fusion_info_ptr_;
+
+  // for dubins planner
+  pnc::dubins_lib::DubinsLibrary dubins_planner_;
+
+  pnc::geometry_lib::GlobalToLocalTf g2l_tf_;
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf_;
+
+  Eigen::Vector2d slot_origin_pos_ = Eigen::Vector2d::Zero();
+  double slot_origin_heading_ = 0.0;
+  Measurement measure_;
+
+  double target_x_ = 0.0;
+  double target_y_ = 0.0;
+  double target_heading_ = 0.0;
+
+  // for state machine
+  uint8_t plan_state_machine_ = IDLE;
+  uint8_t plan_algorithm_ = DUBINS;
+  size_t replan_in_slot_count_ = 0;
+  pnc::dubins_lib::DubinsLibrary::Input dubins_input_;
+  pnc::dubins_lib::DubinsLibrary::Output plan_result_;
 };
 
 }  // namespace apa_planner
