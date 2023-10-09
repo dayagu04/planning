@@ -47,7 +47,6 @@ void ScenarioStateMachine::init() {
 bool ScenarioStateMachine::update(planning::framework::Frame *frame) {
   fsm_context_.frame = frame;
   bool active = session_->environmental_model().GetVehicleDbwStatus();
-  active = true;
 
   if (!session_->mutable_planning_context()->last_planning_success()) {
     reset_state_machine();
