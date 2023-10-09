@@ -9,6 +9,14 @@
 namespace pnc {
 namespace geometry_lib {
 
+const double NormalizeAngle(const double angle) {
+  double a = std::fmod(angle + M_PI, 2.0 * M_PI);
+  if (a < 0.0) {
+    a += (2.0 * M_PI);
+  }
+  return a - M_PI;
+}
+
 const double CalPoint2LineDist(const Eigen::Vector2d &pO,
                                const LineSegment &line) {
   Eigen::Vector2d vec_AB = line.pB - line.pA;

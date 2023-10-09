@@ -18,6 +18,8 @@
 #include "slot_management_info.pb.h"
 #include "speed_smoother/apa_speed_smoother.h"
 
+// #define USE_DUBINS_LIB
+
 namespace planning {
 namespace apa_planner {
 
@@ -77,17 +79,17 @@ class DiagonalInTrajectoryGenerator {
     return slot_manager_.GetOutput();
   }
 
+  // for pybind simulation
   void SetSimulationParam(SimulationParam &param) { simu_param_ = param; }
 
-  bool SingleSlotManagePlanSimulation();
+  // for apa planner pybind simulation
   bool SingleSlotPlanSimulation(
-      common::SlotManagementInfo &slot_mangement_info);
-  bool SingleDubinsSlotPlanSimulation(
       common::SlotManagementInfo &slot_mangement_info);
 
  private:
   void UpdateMeasurement();
   void UpdateSlotInfo(const int slot_index);
+
   bool SingleSlotPlan(const int slot_index,
                       PlanningOutput::PlanningOutput *const planning_output);
 

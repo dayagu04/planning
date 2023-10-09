@@ -133,7 +133,12 @@ bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
     // update managed parking fusion info by slot_manager
     UpdateManagedParkingFusion(select_slot_index);
 
-    return SingleSlotPlan(select_slot_index, planning_output);
+#ifndef USE_DUBINS_LIB
+    return SingleSlotPlan(select_slot_index, &planning_output_);
+#else
+    return SingleDubinsSlotPlan(select_slot_index, &planning_output_);
+#endif
+
   } else {
     // bool is_planning_ok = false;
     // for (int i = 0; i < parking_fusion_info.parking_fusion_slot_lists_size();
@@ -285,63 +290,11 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlanSimulation(
   fusion_selected_slot->mutable_corner_points(3)->set_y(
       managed_selected_slot.corner_points().corner_point(3).y());
 
+#ifndef USE_DUBINS_LIB
   SingleSlotPlan(select_slot_index, &planning_output_);
-
-  return true;
-}
-
-bool DiagonalInTrajectoryGenerator::SingleSlotManagePlanSimulation() {
-  simulation_enable_flag_ = true;
-
-  if (local_view_->function_state_machine_info.has_current_state()) {
-    current_state_ = local_view_->function_state_machine_info.current_state();
-  }
-
-  if (simu_param_.force_planning_) {
-    current_state_ = FunctionalState::PARK_IN_ACTIVATE_CONTROL;
-  }
-
-  std::cout << "-------------------------------------------- frame start "
-               "-------------------------------------------- "
-            << std::endl;
-  std::cout << "current_status = " << static_cast<int>(current_state_)
-            << std::endl;
-
-  auto& origin_parking_fusion_info = local_view_->parking_fusion_info;
-  const auto& slots = origin_parking_fusion_info.parking_fusion_slot_lists();
-
-  int select_slot_index = -1;
-  size_t selected_slot_id = simu_param_.selected_id_;
-
-  // slot management update
-  slot_manager_.Update(&local_view_->function_state_machine_info,
-                       &origin_parking_fusion_info,
-                       &local_view_->localization_estimate);
-
-  std::cout << "selected_slot_id:" << selected_slot_id << std::endl;
-  for (int i = 0;
-       i < origin_parking_fusion_info.parking_fusion_slot_lists_size(); ++i) {
-    if (selected_slot_id != slots[i].id()) {
-      continue;
-    }
-    if (slots[i].type() ==
-            Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL ||
-        slots[i].type() ==
-            Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
-      select_slot_index = i;
-      std::cout << "diagonal slot selected" << std::endl;
-      break;
-    }
-  }
-  if (select_slot_index == -1) {
-    std::cout << "selected slot is not diagonal" << std::endl;
-    return false;
-  }
-
-  // update managed parking fusion info by slot_manager
-  UpdateManagedParkingFusion(select_slot_index);
-
-  SingleSlotPlan(select_slot_index, &planning_output_);
+#else
+  SingleDubinsSlotPlan(select_slot_index, &planning_output_);
+#endif
 
   return true;
 }
@@ -443,10 +396,7 @@ bool DiagonalInTrajectoryGenerator::SingleDubinsSlotPlan(
   l2g_tf_.Init(slot_origin_pos_, slot_origin_heading_);
 
   const auto ego_pos_slot = g2l_tf_.GetPos(measure_.ego_pos);
-  const auto ego_heading_vec_slot = g2l_tf_.GetHeadingVec(measure_.heading);
-
-  const auto ego_heading_slot =
-      std::atan2(ego_heading_vec_slot.y(), ego_heading_vec_slot.x());
+  const auto ego_heading_slot = g2l_tf_.GetHeading(measure_.heading);
 
   dubins_planner_.SetStart(ego_pos_slot, ego_heading_slot);
 

@@ -61,8 +61,11 @@ int UpdateBytes(py::bytes &func_statemachine_bytes,
 
   pBase->SetLocalView(&local_view);
 
+#ifndef USE_DUBINS_LIB
   pBase->SingleSlotPlanSimulation(slot_management_info);
+#else
 
+#endif
   return 0;
 }
 
@@ -106,8 +109,12 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
 
   pBase->SetSimulationParam(param);
 
-  pBase->SingleSlotPlanSimulation(slot_management_info);
+#ifndef USE_DUBINS_LIB
 
+  pBase->SingleSlotPlanSimulation(slot_management_info);
+#else
+
+#endif
   return 0;
 }
 

@@ -41,43 +41,47 @@ struct TangentOutput {
   Eigen::Vector2d cross_point;
 };
 
+const double NormalizeAngle(const double angle);
 struct GlobalToLocalTf {
-  Eigen::Vector2d pos_n = Eigen::Vector2d::Zero();
+  Eigen::Vector2d pos_n_ori = Eigen::Vector2d::Zero();
   Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
+  double heading_ori = 0.0;
 
-  void Init(Eigen::Vector2d &p_n, double theta) {
-    pos_n = p_n;
-    const double cos_theta = std::cos(theta);
-    const double sin_theta = std::sin(theta);
+  void Init(const Eigen::Vector2d &p_n_ori, double theta_ori) {
+    pos_n_ori = p_n_ori;
+    heading_ori = theta_ori;
+    const double cos_theta = std::cos(theta_ori);
+    const double sin_theta = std::sin(theta_ori);
     rot_m << cos_theta, sin_theta, -sin_theta, cos_theta;
   }
 
-  const Eigen::Vector2d GetPos(const Eigen::Vector2d &pn) const {
-    return rot_m * (pn - pos_n);
+  const Eigen::Vector2d GetPos(const Eigen::Vector2d &p_n) const {
+    return rot_m * (p_n - pos_n_ori);
   }
 
-  const Eigen::Vector2d GetHeadingVec(const double heading) const {
-    return rot_m * Eigen::Vector2d(cos(heading), sin(heading));
+  const double GetHeading(const double heading) const {
+    return NormalizeAngle(heading - heading_ori);
   }
 };
-
 struct LocalToGlobalTf {
-  Eigen::Vector2d pos_n = Eigen::Vector2d::Zero();
+  Eigen::Vector2d pos_n_ori = Eigen::Vector2d::Zero();
   Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
+  double heading_ori = 0.0;
 
-  void Init(const Eigen::Vector2d &p_n, double theta) {
-    pos_n = p_n;
-    const double cos_theta = std::cos(theta);
-    const double sin_theta = std::sin(theta);
+  void Init(const Eigen::Vector2d &p_n_ori, double theta_ori) {
+    pos_n_ori = p_n_ori;
+    heading_ori = theta_ori;
+    const double cos_theta = std::cos(theta_ori);
+    const double sin_theta = std::sin(theta_ori);
     rot_m << cos_theta, -sin_theta, sin_theta, cos_theta;
   }
 
-  const Eigen::Vector2d GetPos(Eigen::Vector2d &pn) const {
-    return (rot_m * pn + pos_n);
+  const Eigen::Vector2d GetPos(Eigen::Vector2d &p_n) const {
+    return (rot_m * p_n + pos_n_ori);
   }
 
-  const Eigen::Vector2d GetHeadingVec(const double heading) const {
-    return rot_m * Eigen::Vector2d(cos(heading), sin(heading));
+  const double GetHeading(const double heading) const {
+    return NormalizeAngle(heading + heading_ori);
   }
 };
 
