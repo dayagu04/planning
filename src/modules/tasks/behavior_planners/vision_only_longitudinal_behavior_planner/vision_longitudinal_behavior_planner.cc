@@ -1408,24 +1408,28 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(
       std::vector<TrackedObject> *front_target_tracks =
           lane_tracks_mgr->get_lane_tracks(
               lane_change_lane_manager->tlane_virtual_id(), FRONT_TRACK);
-      for (auto &track : *front_target_tracks) {
-        // ignore obj without camera source
-        if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
-            (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
-          continue;
-        };
-        lane_changing_cars.push_back(&track);
+      if (front_target_tracks != nullptr) {
+        for (auto &track : *front_target_tracks) {
+          // ignore obj without camera source
+          if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
+              (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+            continue;
+          };
+          lane_changing_cars.push_back(&track);
+        }
       }
       std::vector<TrackedObject> *side_target_tracks =
           lane_tracks_mgr->get_lane_tracks(
               lane_change_lane_manager->tlane_virtual_id(), SIDE_TRACK);
-      for (auto &track : *side_target_tracks) {
-        // ignore obj without camera source
-        if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
-            (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
-          continue;
-        };
-        lane_changing_cars.push_back(&track);
+      if (side_target_tracks != nullptr) {
+        for (auto &track : *side_target_tracks) {
+          // ignore obj without camera source
+          if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
+              (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+            continue;
+          };
+          lane_changing_cars.push_back(&track);
+        }
       }
     }
 
