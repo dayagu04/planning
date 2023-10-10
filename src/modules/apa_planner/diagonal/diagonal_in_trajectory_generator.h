@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "Eigen/Core"
+#include "Eigen/src/Core/Matrix.h"
 #include "Platform_Types.h"
 #include "collision_detection/collision_detection.h"
 #include "common/geometry_planning_io.h"
@@ -19,8 +20,6 @@
 #include "slot_management_info.pb.h"
 #include "speed_smoother/apa_speed_smoother.h"
 #include "uss_obstacle_avoidance/uss_obstacle_avoidance.h"
-
-#define USE_DUBINS_LIB
 
 namespace planning {
 namespace apa_planner {
@@ -41,27 +40,43 @@ class DiagonalInTrajectoryGenerator {
     LINE_ARC,
   };
 
+  enum DubinsPlanLevel {
+    DUBINS_LEVEL_0,
+    DUBINS_LEVEL_1,
+    DUBINS_LEVEL_2,
+    DUBINS_LEVEL_COUNT,
+  };
+
   struct Measurement {
     double v_ego = 0.0;
     double heading = 0.0;
     Eigen::Vector2d ego_pos = Eigen::Vector2d::Zero();
+    double standstill_timer = 0.0;
+    double standstill_timer_by_pos = 0.0;
+  };
+
+  struct PlanInput {
+    Eigen::Vector2d target_pos;
+    double target_heading = 0.0;
+    double path_radius = 0.0;
+  };
+  struct EgoSlotInfo {
+    Eigen::Vector2d slot_origin_pos = Eigen::Vector2d::Zero();
+    double slot_origin_heading = 0.0;
+
+    Eigen::Vector2d ego_pos_slot = Eigen::Vector2d::Zero();
+    double ego_heading_slot = 0.0;
   };
 
  public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   struct SimulationParam {
-    uint8_t force_last_seg_name_ = 0;
+    uint8_t force_plan_stm = 0;
     int selected_id_ = 0;
     bool force_planning_ = false;
     uint8_t current_state_ = 0;
-  };
-
-  enum SegmentName {
-    SEGMENT_NONE,
-    SEGMENT_AB,
-    SEGMENT_BC,
-    SEGMENT_CD,
-    SEGMENT_DE
+    bool is_complete_path = false;
+    double sample_ds = 0.5;
   };
 
   DiagonalInTrajectoryGenerator() {
@@ -73,7 +88,7 @@ class DiagonalInTrajectoryGenerator {
 
   ~DiagonalInTrajectoryGenerator() = default;
 
-  bool Plan(framework::Frame *const frame);
+  const bool Plan(framework::Frame *const frame);
 
   // for pybind & simulation
   void SetLocalView(LocalView *local_view_ptr) { local_view_ = local_view_ptr; }
@@ -88,210 +103,83 @@ class DiagonalInTrajectoryGenerator {
   void SetSimulationParam(SimulationParam &param) { simu_param_ = param; }
 
   // for apa planner pybind simulation
-  bool SingleSlotPlanSimulation(
+  const bool PathPlanOnceSimulation(
       common::SlotManagementInfo &slot_mangement_info);
+
+  pnc::dubins_lib::DubinsLibrary GetDubinsPlanner() { return dubins_planner_; }
 
  private:
   void UpdateMeasurement();
-  void UpdateSlotInfo(const int slot_index);
+  void UpdateEgoSlotInfo(const int slot_index);
 
-  bool SingleSlotPlan(const int slot_index,
-                      PlanningOutput::PlanningOutput *const planning_output);
-
-  bool DubinsPlan();
+  void GeneratePlanningOutput(
+      const bool plan_success,
+      PlanningOutput::PlanningOutput *const planning_output);
 
   // sub function for dubins plan
-  bool DubinsPlanWhenIdle();
-  bool DubinsPlanWhenInit();
+  const bool DubinsPlanOneStep(const PlanInput &plan_input,
+                               const uint8_t plan_algorithm,
+                               const uint8_t level);
 
-  bool PreparePlan();
-  bool LineArcPlan();
-  bool CheckPose();
+  const bool DubinsPlanFuncByLevel(const uint8_t level);
 
-  bool SingleDubinsSlotPlan(
+  void UpdateDubinsInputByLevel(const uint8_t level);
+  const bool PathEvaluateOnce(const uint8_t level);
+
+  void PrintDubinsOutput();
+
+  const bool CheckIfNearTarget() const;
+  const bool CheckIfApaFinished() const;
+
+  const bool CheckIfReplan(
+      PlanningOutput::PlanningOutput *const planning_output) const;
+
+  const bool PathPlanOnce(
       const int slot_index,
       PlanningOutput::PlanningOutput *const planning_output);
 
-  bool GeometryPlan(const PlanningPoint &start_point, int idx,
-                    PlanningOutput::PlanningOutput *const planning_output);
-
-  bool ABSegmentPlan(
-      const PlanningPoint &point_a, bool is_start, int idx,
-      DiagonalInGeometryPlan *const geometry_planning,
-      PlanningOutput::PlanningOutput *const planning_output) const;
-
-  bool ReverseABSegmentPlan(
-      const PlanningPoint &point_a, bool is_start, int idx,
-      DiagonalInGeometryPlan *const geometry_planning,
-      PlanningOutput::PlanningOutput *const planning_output) const;
-
-  bool BCSegmentPlan(
-      const PlanningPoint &point_b, bool is_start, int idx,
-      DiagonalInGeometryPlan *const geometry_planning,
-      PlanningOutput::PlanningOutput *const planning_output) const;
-
-  bool CDSegmentPlan(
-      const PlanningPoint &point_c, bool is_start, int idx,
-      DiagonalInGeometryPlan *const geometry_planning,
-      PlanningOutput::PlanningOutput *const planning_output) const;
-
-  bool DESegmentPlan(
-      const PlanningPoint &point_d, bool is_start, int idx,
-      DiagonalInGeometryPlan *const geometry_planning,
-      PlanningOutput::PlanningOutput *const planning_output) const;
-
-  bool GenerateABSegmentTrajectory(
-      const DiagonalSegmentsInfo &segments_info,
-      PlanningOutput::PlanningOutput *const planning_output) const;
-
-  bool GenerateRACSegmentTrajectory(
-      const DiagonalSegmentsInfo &segments_info,
-      PlanningOutput::PlanningOutput *const planning_output) const;
-
-  bool GenerateBCSegmentTrajectory(
-      const DiagonalSegmentsInfo &segments_info,
-      PlanningOutput::PlanningOutput *const planning_output) const;
-
-  bool GenerateCDSegmentTrajectory(
-      const DiagonalSegmentsInfo &segments_info,
-      PlanningOutput::PlanningOutput *const planning_output) const;
-
-  bool GenerateDESegmentTrajectory(
-      const DiagonalSegmentsInfo &segments_info,
-      PlanningOutput::PlanningOutput *const planning_output) const;
-
-  void SetApaObjectInfo(int idx, DiagonalInGeometryPlan *geometry_planning);
-
-  void SetGeometryPlanningParameter(int idx,
-                                    DiagonalInGeometryPlan *geometry_planning);
-
-  void GetCurPtSpeed(const double segment_len, const double cur_s,
-                     const double spd_sign,
-                     PlanningOutput::TrajectoryPoint *trajectory_point) const;
-
-  void GetCurPtSpeed(const double spd_sign,
-                     PlanningOutput::TrajectoryPoint *trajectory_point) const;
-
-  PlanningPoint FromLocal2GlobalCor(const PlanningPoint &ego,
-                                    const PlanningPoint &local) const;
-
-  PlanningPoint FromGlobal2LocalCor(const PlanningPoint &ego,
-                                    const PlanningPoint &global) const;
-
-  double CalApaTargetY() const;
-
-  double CalApaTargetX() const;
-
-  void CalApaTargetInSlot();
-
-  void CalEgoPostionInSlotAndOdom();
-
-  void CalSlotOriginInodom();
-
-  void CalSlotPointsInM(const int idx);
-
-  int CalSlotSide(const int slot_index);
-
-  void SquareSlot();
-
-  bool IsReplan(PlanningOutput::PlanningOutput *const planning_output);
-
-  void SetPlanningOutputInfo(
-      PlanningOutput::PlanningOutput *const planning_output) const;
-
-  bool IsSamePoint(const PlanningPoint &p1, const PlanningPoint &p2) const;
-
-  void UpdateStandstillTime();
-
-  void UpdatePosUnchangedCount();
-
-  bool IsApaFinished() const;
-
-  bool IsSimulatedApaFinished() const;
-
-  void PrintTrajectoryPoints(
-      const PlanningOutput::PlanningOutput &planning_output) const;
-
-  bool IsSelectedSlotValid(framework::Frame *const frame) const;
-
-  void PrintSlotInfo() const;
-
   void UpdateManagedParkingFusion(const int select_slot_index);
 
-  bool IsSegmentExist(const PlanningPoint &end_point) const;
-
  private:
-  DiagonalInGeometryPlan geometry_planning_;
-  UssObstacleAvoidance uss_oa_;
-  CollisionDetector collision_detector_;
-
-  int slot_sign_ = 0;  // 1:Right ,-1:Left, 0:Invalid
-
+  // local view and frame
   const LocalView *local_view_ = nullptr;
   framework::Frame *frame_ = nullptr;
 
-  PlanningPoint slot_origin_in_odom_;
-  PlanningPoint slot_point2_in_slot_;
+  // uss obstacle avoidance
+  UssObstacleAvoidance uss_oa_;
 
-  PlanningPoint target_point_in_slot_;
-  PlanningPoint target_point_in_odom_;
+  // collision detection
+  CollisionDetector collision_detector_;
 
-  PlanningPoint cur_pos_in_slot_;
-  PlanningPoint cur_pos_in_odom_;
-  PlanningPoint last_pos_in_odom_;
-
-  std::vector<PlanningPoint> raw_slot_points_in_m_;
-  std::vector<PlanningPoint> slot_points_in_m_;
-
-  double slot_width_ = 0.0;
-  double slot_length_ = 0.0;
-
-  bool is_replan_ = false;
-  uint8_t last_segment_name_ = SEGMENT_NONE;
-  uint64_t standstill_time_ = 0;
-  uint64_t last_time_ = 0;
-  uint64_t pos_unchanged_cnt_ = 0;
-
-  bool is_rough_calc_ = false;
-
-  uint8_t current_state_ = ::FuncStateMachine::FunctionalState::INIT;
-
-  std::vector<planning_math::LineSegment2d> objects_map_in_global_cor_;
-
-  ApaSpeedSmoother apa_speed_smoother_;
-
-  // for simulation
-  PlanningOutput::PlanningOutput planning_output_;
-  bool simulation_enable_flag_ = false;
-  SimulationParam simu_param_;
-
+  // slot management
   SlotManagement slot_manager_;
-
   ParkingFusion::ParkingFusionInfo managed_parking_fusion_info_;
-
   std::shared_ptr<ParkingFusion::ParkingFusionInfo>
       managed_parking_fusion_info_ptr_;
 
-  // for dubins planner
+  // for path planner
   pnc::dubins_lib::DubinsLibrary dubins_planner_;
-
-  pnc::geometry_lib::GlobalToLocalTf g2l_tf_;
-  pnc::geometry_lib::LocalToGlobalTf l2g_tf_;
-
-  Eigen::Vector2d slot_origin_pos_ = Eigen::Vector2d::Zero();
-  double slot_origin_heading_ = 0.0;
-  Measurement measure_;
-
-  double target_x_ = 0.0;
-  double target_y_ = 0.0;
-  double target_heading_ = 0.0;
-
-  // for state machine
-  uint8_t plan_state_machine_ = IDLE;
+  PlanInput plan_input_;
   uint8_t plan_algorithm_ = DUBINS;
   size_t replan_in_slot_count_ = 0;
   pnc::dubins_lib::DubinsLibrary::Input dubins_input_;
   pnc::dubins_lib::DubinsLibrary::Output plan_result_;
+
+  // TODO
+  uint8_t current_state_ = ::FuncStateMachine::FunctionalState::INIT;
+
+  // for pybind simulation
+  PlanningOutput::PlanningOutput planning_output_;
+  bool simulation_enable_flag_ = false;
+  SimulationParam simu_param_;
+
+  // system states
+  pnc::geometry_lib::GlobalToLocalTf g2l_tf_;
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf_;
+  Measurement measure_;
+  EgoSlotInfo ego_slot_info_;
+  uint8_t plan_state_machine_ = IDLE;
+  bool extend_path_already_ = false;
 };
 
 }  // namespace apa_planner

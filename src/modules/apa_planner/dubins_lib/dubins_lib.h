@@ -71,6 +71,11 @@ class DubinsLibrary {
 
   struct Output {
     bool path_available = false;
+    bool is_line_arc = false;
+    double dtheta_arc_AB = 0.0;
+    uint8_t dubins_type = 0;
+    uint8_t line_arc_type = 0;
+    uint8_t current_gear_cmd = EMPTY;
     uint8_t gear_change_count = 0;
     uint8_t gear_change_index = 0;
     uint8_t path_seg_count = 0;
@@ -122,12 +127,14 @@ class DubinsLibrary {
 
   void Sampling(const double ds, const bool is_complete_path);
   void Extend(const double extend_s);
+  void Transform(const geometry_lib::LocalToGlobalTf& l2g_tf);
 
+  void SetOutput(const Output& Output) { output_ = Output; }
   const Output& GetOutput() const { return output_; }
   const Output* GetOutputPtr() const { return &output_; }
   const double GetThetaBC() const;
   const double GetThetaD() const;
-  const std::vector<double>& GetPathEle(size_t index) const;
+  const std::vector<double> GetPathEle(size_t index) const;
 
   const std::vector<PathPoint>& GetPathPointVec() const {
     return output_.path_point_vec;

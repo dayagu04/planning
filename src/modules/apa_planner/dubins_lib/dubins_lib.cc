@@ -17,7 +17,7 @@ using namespace pnc::geometry_lib;
 namespace pnc {
 namespace dubins_lib {
 
-static const double dist_tol = 1.0e-2;
+static const double dist_tol = 0.05;
 
 void DubinsLibrary::LineArcCalculate(DubinsLibrary::GeometryResult& result,
                                      const uint8_t line_arc_type) {
@@ -113,19 +113,19 @@ void DubinsLibrary::DubinsCalculate(DubinsLibrary::GeometryResult& result,
   if (dubins_type == L_S_R) {
     lambda1 = 1.0;
     lambda2 = -1.0;
-    std::cout << "L_S_R" << std::endl;
+    // std::cout << "L_S_R" << std::endl;
   } else if (dubins_type == R_S_L) {
     lambda1 = -1.0;
     lambda2 = 1.0;
-    std::cout << "R_S_L" << std::endl;
+    // std::cout << "R_S_L" << std::endl;
   } else if (dubins_type == L_S_L) {
     lambda1 = 1.0;
     lambda2 = 1.0;
-    std::cout << "L_S_L" << std::endl;
+    // std::cout << "L_S_L" << std::endl;
   } else if (dubins_type == R_S_R) {
     lambda1 = -1.0;
     lambda2 = -1.0;
-    std::cout << "R_S_R" << std::endl;
+    // std::cout << "R_S_R" << std::endl;
   }
 
   result.dubins_type = dubins_type;
@@ -170,9 +170,10 @@ bool DubinsLibrary::Solve(uint8_t line_arc_type) {
   LineArcCalculate(line_arc_result, line_arc_type);
 
   SetOutputByLineArcType(output_, line_arc_result, line_arc_type);
-  const auto flag = GenDubinsOutput(output_, line_arc_result);
+  // const auto flag = GenDubinsOutput(output_, line_arc_result);
 
-  return flag;
+  // return flag;
+  return true;
 }
 
 // solve by dubins
@@ -315,6 +316,7 @@ const bool DubinsLibrary::GenDubinsOutput(
     const auto theta1 = geometry_lib::GetAngleFromTwoVec(v_O1A, v_O1B);
     output.arc_AB.length = std::fabs(theta1) * radius;
     output.arc_AB.headingA = input_.heading1;
+    output.dtheta_arc_AB = theta1;
 
     const auto t_AB_out = rotm_AB * result.t1;
     output.arc_AB.headingB = atan2(t_AB_out.y(), t_AB_out.x());
@@ -342,6 +344,13 @@ const bool DubinsLibrary::GenDubinsOutput(
     output.gear_change_index = 18;  // just for fun: 18
 
     uint8_t current_gear = 0;
+    output.current_gear_cmd = EMPTY;
+
+    // set some type info
+    output.is_line_arc = result.is_line_arc;
+    output.dubins_type = result.dubins_type;
+    output.line_arc_type = result.line_arc_type;
+
     // 1. AB arc
     // check if AB arc is too short
     if (output.arc_AB.length > dist_tol) {
@@ -358,6 +367,10 @@ const bool DubinsLibrary::GenDubinsOutput(
 
     const auto t1_after_AB = rotm_AB * result.t1;
 
+    if (output.current_gear_cmd == EMPTY) {
+      output.current_gear_cmd = current_gear;
+    }
+
     // 2. BC line segment
     if (output.line_BC.length > dist_tol) {
       const auto v_BC = output.line_BC.pB - output.line_BC.pA;
@@ -370,13 +383,19 @@ const bool DubinsLibrary::GenDubinsOutput(
       current_gear = EMPTY;
     }
     output.gear_cmd_vec.emplace_back(current_gear);
-    if (last_gear != current_gear && last_gear != EMPTY) {
+    if (last_gear != EMPTY && current_gear != EMPTY &&
+        last_gear != current_gear) {
       if (output.gear_change_count == 0) {
         output.gear_change_index = 1;
       }
       output.gear_change_count++;
     }
+
     last_gear = current_gear;
+
+    if (output.current_gear_cmd == EMPTY) {
+      output.current_gear_cmd = current_gear;
+    }
 
     // 3. CD arc
     // check if CD arc is too short
@@ -391,13 +410,31 @@ const bool DubinsLibrary::GenDubinsOutput(
     }
 
     output.gear_cmd_vec.emplace_back(current_gear);
-    if (last_gear != current_gear && last_gear != EMPTY) {
+
+    bool gear_change_flag = false;
+    if (last_gear != EMPTY) {
+      if (current_gear != EMPTY && last_gear != current_gear) {
+        gear_change_flag = true;
+      }
+    } else {
+      if (current_gear != EMPTY && output.gear_cmd_vec[0] != current_gear &&
+          output.gear_cmd_vec[0] != EMPTY) {
+        gear_change_flag = true;
+      }
+    }
+
+    if (gear_change_flag) {
       if (output.gear_change_count == 0) {
         output.gear_change_index = 2;
       }
       output.gear_change_count++;
     }
+
     last_gear = current_gear;
+
+    if (output.current_gear_cmd == EMPTY) {
+      output.current_gear_cmd = current_gear;
+    }
   }
 
   if (result.is_line_arc && output.gear_change_count > 0) {
@@ -428,7 +465,7 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
   const auto& pO1 = output_.arc_AB.circle_info.center;
 
   const double dtheta1 = ds / output_.arc_AB.circle_info.radius *
-                         (output_.arc_AB.is_anti_clockwise ? 1.0 : 1.0);
+                         (output_.arc_AB.is_anti_clockwise ? 1.0 : -1.0);
 
   const auto rot_m1 = GetRotm2dFromTheta(dtheta1);
 
@@ -531,33 +568,41 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
 }
 
 void DubinsLibrary::Extend(const double extend_s) {
-  const double ds = 0.1;
-  const auto& end_heading = output_.path_point_vec.back().heading;
-
-  const auto diff_vec =
-      Eigen::Vector2d(std::cos(end_heading) * ds, std::sin(end_heading) * ds);
-
-  PathPoint path_point;
-
-  double s = 0.0;
-  auto pn = output_.path_point_vec.back().pos;
-
-  while (s < extend_s) {
-    pn += diff_vec;
-    s += ds;
-    path_point.Set(pn, end_heading);
-    output_.path_point_vec.emplace_back(path_point);
+  if (extend_s < 0.0) {
+    return;
   }
 
-  const auto p_end = output_.path_point_vec.back().pos + extend_s * diff_vec;
-  path_point.Set(p_end, end_heading);
+  const auto& end_heading = output_.path_point_vec.back().heading;
+  double direction_scale = 1.0;
+
+  if (output_.current_gear_cmd == REVERSE) {
+    direction_scale = -1.0;
+  }
+
+  const Eigen::Vector2d diff_vec_t =
+      direction_scale *
+      Eigen::Vector2d(std::cos(end_heading), std::sin(end_heading));
+
+  auto pn = output_.path_point_vec.back().pos + diff_vec_t * extend_s;
+
+  PathPoint path_point;
+  path_point.Set(pn, end_heading);
   output_.path_point_vec.emplace_back(path_point);
 }
 
-const std::vector<double>& DubinsLibrary::GetPathEle(size_t index) const {
+void DubinsLibrary::Transform(const geometry_lib::LocalToGlobalTf& l2g_tf) {
+  for (auto& path_point : output_.path_point_vec) {
+    const Eigen::Vector2d pos_g = l2g_tf.GetPos(path_point.pos);
+    const double heading_g = l2g_tf.GetHeading(path_point.heading);
+
+    path_point.Set(std::move(pos_g), heading_g);
+  }
+}
+
+const std::vector<double> DubinsLibrary::GetPathEle(size_t index) const {
   std::vector<double> out_vec;
   const auto& N = output_.path_point_vec.size();
-  out_vec.reserve(N);
+  out_vec.reserve(3);
 
   for (size_t i = 0; i < N; ++i) {
     if (index == 0) {

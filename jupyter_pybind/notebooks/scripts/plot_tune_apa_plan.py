@@ -27,6 +27,8 @@ diag_slot_planning_py.Init()
 
 data_planning_tune = ColumnDataSource(data = {'plan_traj_x':[],
                                               'plan_traj_y':[],})
+data_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[], 'theta_vec':[]})
+data_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
 # find bag time when planning at real test
 # plan_msg_idx = 0
@@ -47,16 +49,16 @@ class LocalViewSlider:
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=bag_time0, step=frame_dt)
     self.selected_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='25%'), description= "selected_id",min=0, max=100, value=origin_selected_id, step=1)
     self.force_planning_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "force_planning",min=0, max=1, value=0, step=1)
-    self.turn_on_force_last_seg_name_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "turn_on_force_last_seg_name",min=0, max=1, value=0, step=1)
-    self.force_last_seg_name_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "force_last_seg_name",min=0, max=4, value=0, step=1)
+    self.turn_on_plan_stm_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "turn_on_plan_stm",min=0, max=1, value=0, step=1)
+    self.plan_stm_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "plan_stm",min=0, max=4, value=0, step=1)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
                                         selected_id = self.selected_id_slider,
                                         force_planning = self.force_planning_slider,
-                                        turn_on_force_last_seg_name = self.turn_on_force_last_seg_name_slider,
-                                        force_last_seg_name = self.force_last_seg_name_slider)
+                                        turn_on_plan_stm = self.turn_on_plan_stm_slider,
+                                        plan_stm = self.plan_stm_slider)
 
 ### sliders callback
-def slider_callback(bag_time, selected_id, force_planning,turn_on_force_last_seg_name, force_last_seg_name):
+def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, plan_stm):
   kwargs = locals()
   update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data)
 
@@ -79,13 +81,13 @@ def slider_callback(bag_time, selected_id, force_planning,turn_on_force_last_seg
   # print("vs_msg_input = ", vs_msg_input)
   planning_output = planning_plan_pb2.PlanningOutput()
 
-  last_seg_name = 0
-  if turn_on_force_last_seg_name == 1:
-    last_seg_name = force_last_seg_name
-  else:
-    last_seg_name = planning_json['last_segment_name']
+  plan_statemachine = plan_stm
+  # if turn_on_plan_stm == 1:
+  #   last_seg_name = plan_stm
+  # else:
+  #   last_seg_name = planning_json['last_segment_name']
 
-  print("last_seg_name = ", last_seg_name)
+  print("plan_statemachine = ", plan_statemachine)
 
   try:
     diag_slot_planning_py.UpdateBytesByParam(soc_state_input.SerializeToString(),
@@ -93,7 +95,7 @@ def slider_callback(bag_time, selected_id, force_planning,turn_on_force_last_seg
                                       loc_msg_input.SerializeToString(),
                                       vs_msg_input.SerializeToString(),
                                       planning_data.slot_management_info.SerializeToString(),
-                                      selected_id, force_planning, last_seg_name)
+                                      selected_id, force_planning, plan_statemachine)
     planning_output.ParseFromString(diag_slot_planning_py.GetOutputBytes())
   except:
     print("error")

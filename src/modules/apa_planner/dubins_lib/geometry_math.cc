@@ -72,10 +72,10 @@ const bool CalTangentPointsOfEqualCircles(TangentOutput &output,
 
   bool inner_tagent = true;
   if (d_O1O2 < c1.radius + c2.radius) {
-    std::cout << "outter tangent!" << std::endl;
+    // std::cout << "outter tangent!" << std::endl;
     inner_tagent = false;
   } else {
-    std::cout << "inner tangent!" << std::endl;
+    // std::cout << "inner tangent!" << std::endl;
     inner_tagent = true;
   }
 

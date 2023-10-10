@@ -61,7 +61,7 @@ int UpdateLineArc(double x_start, double y_start, double heading_start,
 
   pBase->SetInput(input);
   pBase->Solve(line_arc_type);
-  pBase->Sampling(ds, is_complete_path);
+  // pBase->Sampling(ds, is_complete_path);
 
   return 0;
 }

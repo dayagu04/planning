@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+
 #include "common.h"
 #include "common.pb.h"
 #include "config/basic_type.h"
@@ -92,13 +93,8 @@ struct PredictionObject {
 };
 
 static constexpr int kPredictionHashBit = 100000000;
-static int hash_prediction_id(int perception_id, int traj_index) {
-  return perception_id + traj_index * kPredictionHashBit;
-}
-
-static int inverse_hash_prediction_id(int prediction_id) {
-  return prediction_id % kPredictionHashBit;
-}
+int hash_prediction_id(int perception_id, int traj_index);
+int inverse_hash_prediction_id(int prediction_id);
 
 }  // namespace planning
 #endif
