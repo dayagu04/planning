@@ -25,6 +25,21 @@ from bokeh.models import DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 from cyber_record.record import Record
 from google.protobuf.json_format import MessageToJson
+from lib.local_view_lib import *
+
+plan_debug_ts = []
+plan_debug_timestamps = []
+fusion_object_timestamps = []
+fusion_road_timestamps = []
+localization_timestamps = []
+prediction_timestamps = []
+vehicle_service_timestamps = []
+control_output_timestamps = []
+slot_timestamps = []
+fusion_slot_timestamps = []
+vision_slot_timestamps = []
+mobileye_lane_lines_timestamps = []
+mobileye_objects_timestamps = []
 
 car_xb, car_yb = load_car_params_patch()
 car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord()
@@ -1212,3 +1227,724 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   return fig2, fig3, fig4, fig5, fig6, fig7, data_ctrl_debug_table
 
 
+# HTML
+# params 控制fig的样式
+vs_car_params_apa ={
+  'text_color' : 'firebrick',
+  'text_align' : "center",
+  'legend_label' : 'text',
+  'text_font_size' : '12pt'
+}
+
+ego_car_params_apa ={
+  'fill_color' : 'palegreen',
+  'line_color' : "black",
+  'line_width' : 1,
+  'legend_label' : 'car'
+}
+
+ego_dot_params_apa ={
+  'size' : 8,
+  'color' : "grey",
+  'legend_label' : 'car'
+}
+ego_circle_params_apa ={
+  'line_alpha' : 0.5,
+  'line_width' : 1,
+  'line_color' : 'blue',
+  'fill_alpha' : 0,
+  'legend_label' : 'car_circle',
+  'visible' : False
+}
+slot_params_apa = {
+  'fill_color' : None,
+  'line_color' : "red",
+  'line_width' : 1,
+  'legend_label' : 'slot'
+}
+fusion_slot_params_apa = {
+  'line_dash' : 'solid',
+  'line_color' : "red",
+  'line_width' : 2,
+  'legend_label' : 'fusion_parking_slot'
+}
+vision_slot_params_apa = {
+  'line_dash' : 'solid',
+  'line_color' : "lightgrey",
+  'line_width' : 3,
+  'legend_label' : 'vision_parking_slot',
+  'visible' : False
+}
+
+final_slot_params_apa = {
+  'line_dash' : 'dashed',
+  'line_color' : "#A52A2A",
+  'line_width' : 3,
+  'legend_label' : 'final_parking_slot'
+}
+
+target_slot_params_apa = {
+  'line_dash' : 'solid',
+  'line_color' : "green",
+  'line_width' : 3,
+  'legend_label' : 'target_managed_slot'
+}
+
+all_slot_params_apa = {
+  'line_dash' : 'solid',
+  'line_color' : "green",
+  'line_width' : 2,
+  'legend_label' : 'all managed slot',
+  'visible' : False
+}
+
+location_params_apa = {
+  'line_width' : 1.5,
+  'line_color' : 'orange',
+  'line_dash' : 'solid',
+  'legend_label' : 'ego_pos'
+}
+slot_id_params_apa = { 'text_color' : "red", 'text_align':"center", 'text_font_size':"10pt", 'legend_label' : 'fusion_parking_slot' }
+
+location_params = {
+  'line_width' : 1,
+  'line_color' : 'orange',
+  'line_dash' : 'solid',
+  'legend_label' : 'ego_pos'
+}
+
+uss_wave_params = {
+  'fill_color' : 'lavender',
+  'line_color' : 'black',
+  'legend_label' : 'uss_wave',
+  'alpha' : 0.5
+}
+
+uss_text_params = {
+  'text_color' : 'black',
+  'text_align' : 'center',
+  'text_font_size' : '10pt',
+  'legend_label' : 'uss_wave'
+}
+
+plan_params = {
+  'line_width' : 2.5, 'line_color' : 'blue', 'line_dash' : 'solid', 'line_alpha' : 0.6, 'legend_label' : 'plan'
+}
+
+mpc_params = {
+  'line_width' : 3.0, 'line_color' : 'red', 'line_dash' : 'solid', 'line_alpha' : 0.8, 'legend_label' : 'mpc'
+}
+
+table_params={
+    'width': 450,
+    'height':500,
+}
+
+def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
+    #define figure
+    # 定义 local_view fig
+    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=800, match_aspect = True, aspect_scale=1)
+    fig_local_view.x_range.flipped = True
+    # toolbar
+    fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
+    # 加载planning debug部分信息, 加载planning 输入topic的时间戳
+    fix_lane_xys = []
+    origin_lane_xys = []
+    target_lane_xys = []
+    global plan_debug_ts
+    global fusion_object_timestamps
+    global fusion_road_timestamps
+    global localization_timestamps
+    global prediction_timestamps
+    global vehicle_service_timestamps
+    global control_output_timestamps
+    global fusion_slot_timestamps
+    global vision_slot_timestamps
+    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+      t = dataLoader.plan_debug_msg["t"][i]  # sub the 0 time
+      plan_debug_ts.append(t)                                        # rea_t
+      input_topic_timestamp = plan_debug.input_topic_timestamp
+      fusion_object_timestamp = input_topic_timestamp.fusion_object  # abs_t
+      fusion_road_timestamp = input_topic_timestamp.fusion_road
+      localization_timestamp = input_topic_timestamp.localization
+      prediction_timestamp = input_topic_timestamp.prediction
+      vehicle_service_timestamp = input_topic_timestamp.vehicle_service
+      control_output_timestamp = input_topic_timestamp.control_output
+      slot_timestamp = input_topic_timestamp.parking_fusion
+
+      fusion_object_timestamps.append(fusion_object_timestamp / 1e6)
+      fusion_road_timestamps.append(fusion_road_timestamp / 1e6)
+      localization_timestamps.append(localization_timestamp / 1e6)
+      prediction_timestamps.append(prediction_timestamp / 1e6)
+      vehicle_service_timestamps.append(vehicle_service_timestamp / 1e6)
+      control_output_timestamps.append(control_output_timestamp / 1e6)
+      fusion_slot_timestamps.append(slot_timestamp / 1e6)
+
+  # 加载自车信息
+    ego_car_generate = CommonGenerator()
+    ego_center_generate = CommonGenerator()
+    ego_circle_generate = CircleGenerator()
+    for localization_timestamp in localization_timestamps:
+      # 自车形状
+      temp_cur_pos_xn = []
+      temp_cur_pos_yn = []
+      # 自车circle
+      car_circle_xn = []
+      car_circle_yn = []
+      car_circle_rn = []
+
+      flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamp)
+      if not flag:
+        print('find loc_msg error')
+        # location_generator.xys.append(([],[]))
+      else:
+        cur_pos_xn = loc_msg.pose.local_position.x
+        cur_pos_yn = loc_msg.pose.local_position.y
+        cur_pos_theta = loc_msg.pose.euler_angles.yaw
+        # 自车形状
+        for ego_i in range(len(car_xb)):
+          tmp_x, tmp_y = local2global(car_xb[ego_i], car_yb[ego_i], cur_pos_xn, cur_pos_yn, cur_pos_theta)
+          temp_cur_pos_xn.append(tmp_x)
+          temp_cur_pos_yn.append(tmp_y)
+        # 自车circle
+        for i in range(len(car_circle_x)):
+          tmp_x, tmp_y = local2global(car_circle_x[i], car_circle_y[i], cur_pos_xn, cur_pos_yn, cur_pos_theta)
+          car_circle_xn.append(tmp_x)
+          car_circle_yn.append(tmp_y)
+          car_circle_rn.append(car_circle_r[i])
+      ego_car_generate.xys.append(([temp_cur_pos_yn],[temp_cur_pos_xn]))
+      ego_circle_generate.xys.append((car_circle_yn,car_circle_xn, car_circle_rn))
+      # 自车中心点
+      ego_center_generate.xys.append(([cur_pos_yn],[cur_pos_xn]))
+    ego_car_generate.ts = np.array(plan_debug_ts)
+    ego_center_generate.ts = np.array(plan_debug_ts)
+    ego_circle_generate.ts = np.array(plan_debug_ts)
+    ego_car_layer = PatchLayer(fig_local_view ,ego_car_params_apa)
+    ego_center_layer = DotLayer(fig_local_view ,ego_dot_params_apa)
+    ego_circle_layer = CircleLayer(fig_local_view ,ego_circle_params_apa)
+    layer_manager.AddLayer(ego_car_layer, 'ego_car_layer', ego_car_generate, 'ego_car_generate', 2)
+    layer_manager.AddLayer(ego_center_layer, 'ego_center_layer', ego_center_generate, 'ego_center_generate', 2)
+    layer_manager.AddLayer(ego_circle_layer, 'ego_circle_layer', ego_circle_generate, 'ego_circle_generate', 3)
+
+  # 加载定位
+    location_generator = CommonGenerator()
+    # cur_pos_xn0 = cur_pos_xn = dataLoader.loc_msg['data'][0].pose.local_position.x
+    # cur_pos_yn0 = cur_pos_yn = dataLoader.loc_msg['data'][0].pose.local_position.y
+    for localization_timestamp in localization_timestamps:
+      ego_xb, ego_yb = [], []
+      # ego_xn, ego_yn = [], []
+      flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamp)
+      if not flag:
+        print('find loc_msg error')
+      else:
+        cur_pos_xn = loc_msg.pose.local_position.x
+        cur_pos_yn = loc_msg.pose.local_position.y
+        cur_yaw = loc_msg.pose.euler_angles.yaw
+        ### global variables
+        # pos offset
+        for i in range(len(dataLoader.loc_msg['data'])):
+          if (i % 10 != 0): # 下采样 10
+            continue
+          pos_xn_i = dataLoader.loc_msg['data'][i].pose.local_position.x
+          pos_yn_i = dataLoader.loc_msg['data'][i].pose.local_position.y
+
+          # ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+
+          ego_xb.append(pos_xn_i)
+          ego_yb.append(pos_yn_i)
+          # ego_xn.append(pos_xn_i - cur_pos_xn0)
+          # ego_yn.append(pos_yn_i - cur_pos_yn0)
+      location_generator.xys.append((ego_yb,ego_xb))
+    location_generator.ts = np.array(plan_debug_ts)
+    location_layer = CurveLayer(fig_local_view, location_params_apa)
+    layer_manager.AddLayer(location_layer, 'location_layer', location_generator, 'location_generator', 2)
+
+  # 加载vs and soc
+    vs_text_generator = TextGenerator()
+    for localization_timestamp in localization_timestamps:
+      vel_text = []
+      vel_x, vel_y = [], []
+      flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamp)
+      if not flag:
+        print('find loc_msg error')
+      else:
+        vel_ego =  loc_msg.pose.linear_velocity_from_wheel
+        soc_state_msg_idx = 0
+        if dataLoader.soc_state_msg['enable'] == True:
+          while dataLoader.soc_state_msg['abs_t'][soc_state_msg_idx] <= localization_timestamp and soc_state_msg_idx < (len(dataLoader.soc_state_msg['abs_t'])-1):
+              soc_state_msg_idx = soc_state_msg_idx + 1
+        current_state = dataLoader.soc_state_msg['data'][soc_state_msg_idx].current_state
+
+        steer_deg = 0.0
+        vs_msg_idx = 0
+        if dataLoader.vs_msg['enable'] == True:
+          while dataLoader.vs_msg['abs_t'][vs_msg_idx] <= localization_timestamp and vs_msg_idx < (len(dataLoader.vs_msg['abs_t'])-1):
+              vs_msg_idx = vs_msg_idx + 1
+          steer_deg = dataLoader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
+        text = 'v = {:.2f} m/s, steer = {:.1f} deg, state = {:d}'.format(round(vel_ego, 2), round(steer_deg, 1), current_state)
+        vel_text.append(text)
+        vel_x.append(-2)
+        vel_y.append(0)
+      vs_text_generator.xys.append((vel_y, vel_x, vel_text))
+    vs_text_generator.ts = np.array(plan_debug_ts)
+    vs_layer = TextLayer(fig_local_view, vs_car_params_apa)
+    layer_manager.AddLayer(vs_layer, 'vs_layer', vs_text_generator, 'vs_text_generator', 3)
+
+  # 加载apa车位
+    vision_slot_generate = CommonGenerator()
+    fusion_slot_generate = CommonGenerator()
+    target_slot_generate = CommonGenerator()
+    final_slot_generate = CommonGenerator()
+    all_slot_generate = CommonGenerator()
+    slot_id_generate = TextGenerator()
+    for slot_i, slot_timestamp in enumerate(fusion_slot_timestamps):
+        flag, fusion_slot_msg = findt(dataLoader.fus_parking_msg, slot_timestamp)
+        if not flag:
+            print('find fusion_slot_msg error')
+            fusion_slot_generate.xys.append(([], []))
+            slot_id_generate.xys.append(([],[]))
+            continue
+        vis_parking_msg_idx = 0
+        if dataLoader.vis_parking_msg['enable'] == True:
+          while dataLoader.vis_parking_msg['abs_t'][vis_parking_msg_idx] <= slot_timestamp and vis_parking_msg_idx < (len(dataLoader.vis_parking_msg['abs_t'])-1):
+            vis_parking_msg_idx = vis_parking_msg_idx + 1
+        # vision_slot_msg = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx]
+
+      # fusion slot
+        parking_fusion_slot_lists = fusion_slot_msg.parking_fusion_slot_lists
+        select_slot_id = fusion_slot_msg.select_slot_id
+         # 1. update slots corner points
+        temp_corner_x_list = []
+        temp_corner_y_list = []
+        temp_slot_id_list = []
+        temp_slot_id_x_list = []
+        temp_slot_id_y_list = []
+        for slot in parking_fusion_slot_lists:
+            temp_corner_x = []
+            temp_corner_y = []
+            for corner_point in slot.corner_points:
+                temp_corner_x.append(corner_point.x)
+                temp_corner_y.append(corner_point.y)
+            temp_corner_x = [temp_corner_x[0],temp_corner_x[2],temp_corner_x[3],temp_corner_x[1]]
+            temp_corner_y = [temp_corner_y[0],temp_corner_y[2],temp_corner_y[3],temp_corner_y[1]]
+            temp_corner_x_list.append(temp_corner_x)
+            temp_corner_y_list.append(temp_corner_y)
+            # 1.2 update slots limiter points in same slot_plot_vec
+            single_limiter_x_vec = []
+            single_limiter_y_vec = []
+            if len(slot.limiter_position)!= 0:
+              single_limiter_x_vec.append(slot.limiter_position[0].x)
+              single_limiter_x_vec.append(slot.limiter_position[1].x)
+              single_limiter_y_vec.append(slot.limiter_position[0].y)
+              single_limiter_y_vec.append(slot.limiter_position[1].y)
+            temp_corner_x_list.append(single_limiter_x_vec)
+            temp_corner_y_list.append(single_limiter_y_vec)
+            # add slot id
+            temp_slot_id = slot.id
+            text = '{:d}'.format(round(temp_slot_id, 2))
+            temp_slot_id_list.append(text)
+            temp_slot_id_x_list.append((temp_corner_x[0]+temp_corner_x[2]+temp_corner_x[3]+temp_corner_x[1])/4)
+            temp_slot_id_y_list.append((temp_corner_y[0]+temp_corner_y[2]+temp_corner_y[3]+temp_corner_y[1])/4)
+        fusion_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
+        slot_id_generate.xys.append((temp_slot_id_y_list,temp_slot_id_x_list,temp_slot_id_list))
+      # final slot
+        temp_corner_x_list = []
+        temp_corner_y_list = []
+        parking_fusion_slot_lists = dataLoader.fus_parking_msg['data'][-1].parking_fusion_slot_lists
+        select_slot_id = dataLoader.fus_parking_msg['data'][-1].select_slot_id
+        for slot in parking_fusion_slot_lists:
+            temp_corner_x = []
+            temp_corner_y = []
+            for corner_point in slot.corner_points:
+                temp_corner_x.append(corner_point.x)
+                temp_corner_y.append(corner_point.y)
+            temp_corner_x = [temp_corner_x[0],temp_corner_x[2],temp_corner_x[3],temp_corner_x[1]]
+            temp_corner_y = [temp_corner_y[0],temp_corner_y[2],temp_corner_y[3],temp_corner_y[1]]
+
+            # 2. update selected fusion slot
+            if select_slot_id == slot.id:
+              temp_corner_x_list.append(temp_corner_x)
+              temp_corner_y_list.append(temp_corner_y)
+        final_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
+        # print(final_slot_generate.xys)
+      # visual slot
+        temp_corner_x_list = []
+        temp_corner_y_list = []
+        parking_fusion_slot_lists = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx].parking_slot
+        if dataLoader.loc_msg['enable'] == True:
+          flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamps[slot_i])
+          if not flag:
+            print('find loc error')
+            temp_corner_x_list, temp_corner_y_list = [], []
+          else:
+            cur_pos_xn = loc_msg.pose.local_position.x
+            cur_pos_yn = loc_msg.pose.local_position.y
+            cur_yaw = loc_msg.pose.euler_angles.yaw
+            # attention: fusion slots are based on odom system, visual slots are based on vehicle system
+            # 1. update slots corner points
+            # coord_tf = coord_transformer()
+            # coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+            for slot in parking_fusion_slot_lists:
+                temp_corner_x = []
+                temp_corner_y = []
+                for corner_point in slot.corner_points:
+                  corner_x_local = corner_point.x
+                  corner_y_local = corner_point.y
+                  corner_x_global, corner_y_global = local2global(corner_x_local, corner_y_local, cur_pos_xn, cur_pos_yn, cur_yaw)
+                  temp_corner_x.append(corner_x_global)
+                  temp_corner_y.append(corner_y_global)
+                temp_corner_x = [temp_corner_x[0],temp_corner_x[2],temp_corner_x[3],temp_corner_x[1]]
+                temp_corner_y = [temp_corner_y[0],temp_corner_y[2],temp_corner_y[3],temp_corner_y[1]]
+                temp_corner_x_list.append(temp_corner_x)
+                temp_corner_y_list.append(temp_corner_y)
+            # 2. update limiters
+            vision_slot_limiter = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx].vision_slot_limiter
+            for limiter in vision_slot_limiter:
+              global_limiter_x0, global_limiter_y0 = local2global(limiter.limiter_points[0].x, limiter.limiter_points[0].y, cur_pos_xn, cur_pos_yn, cur_yaw)
+              global_limiter_x1, global_limiter_y1 = local2global(limiter.limiter_points[1].x, limiter.limiter_points[1].y, cur_pos_xn, cur_pos_yn, cur_yaw)
+              temp_corner_x_list.append([global_limiter_x0, global_limiter_x1])
+              temp_corner_y_list.append([global_limiter_y0, global_limiter_y1])
+        vision_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
+
+      # all slot
+        slot_management_info = dataLoader.plan_debug_msg['data'][slot_i].slot_management_info
+        select_slot_id = dataLoader.fus_parking_msg['data'][slot_i].select_slot_id
+        all_managed_slot_x_vec = []
+        all_managed_slot_y_vec = []
+        temp_corner_x_list = []
+        temp_corner_y_list = []
+        # 1. update target managed slot
+        for maganed_slot_vec in slot_management_info.slot_info_vec:
+          corner_point = maganed_slot_vec.corner_points.corner_point
+          slot_x = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
+          slot_y = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
+          if maganed_slot_vec.id == select_slot_id:
+              temp_corner_x_list.append(slot_x)
+              temp_corner_y_list.append(slot_y)
+          all_managed_slot_x_vec.append(slot_x)
+          all_managed_slot_y_vec.append(slot_y)
+        target_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
+        all_slot_generate.xys.append((all_managed_slot_y_vec, all_managed_slot_x_vec))
+
+    fusion_slot_generate.ts = np.array(plan_debug_ts)
+    slot_id_generate.ts = np.array(plan_debug_ts)
+    final_slot_generate.ts = np.array(plan_debug_ts)
+    vision_slot_generate.ts = np.array(plan_debug_ts)
+    target_slot_generate.ts = np.array(plan_debug_ts)
+    all_slot_generate.ts = np.array(plan_debug_ts)
+    slot_layer = MultiCurveLayer(fig_local_view ,fusion_slot_params_apa)
+    slot_id_layer = TextLayer(fig_local_view,slot_id_params_apa)
+    final_slot_layer = MultiCurveLayer(fig_local_view ,final_slot_params_apa)
+    vision_slot_layer = MultiCurveLayer(fig_local_view ,vision_slot_params_apa)
+    target_slot_layer = MultiCurveLayer(fig_local_view ,target_slot_params_apa)
+    all_slot_layer = MultiCurveLayer(fig_local_view ,all_slot_params_apa)
+    layer_manager.AddLayer(slot_layer, 'slot_layer', fusion_slot_generate, 'fusion_slot_generate', 2)
+    layer_manager.AddLayer(slot_id_layer, 'slot_id_layer',slot_id_generate,'slot_id_generate',3)
+    layer_manager.AddLayer(final_slot_layer, 'final_slot_layer',final_slot_generate,'final_slot_generate',2)
+    layer_manager.AddLayer(vision_slot_layer, 'vision_slot_layer',vision_slot_generate,'vision_slot_generate',2)
+    layer_manager.AddLayer(target_slot_layer, 'target_slot_layer',target_slot_generate,'target_slot_generate',2)
+    layer_manager.AddLayer(all_slot_layer, 'all_slot_layer',all_slot_generate,'all_slot_generate',2)
+
+  # 加载plan轨迹
+    plan_generator = CommonGenerator()
+    for plan_debug_t in plan_debug_ts:
+      flag, plan_msg = findrt(dataLoader.plan_msg, plan_debug_t)
+      if not flag:
+        print('find plan error')
+        plan_traj_x, plan_traj_y = [], []
+      else:
+        trajectory = plan_msg.trajectory
+        plan_traj_x = []
+        plan_traj_y = []
+        for j in range(len(trajectory.trajectory_points)):
+          plan_traj_x.append(trajectory.trajectory_points[j].x)
+          plan_traj_y.append(trajectory.trajectory_points[j].y)
+      plan_generator.xys.append((plan_traj_y, plan_traj_x))
+    plan_generator.ts = np.array(plan_debug_ts)
+    plan_layer = CurveLayer(fig_local_view, plan_params)
+    layer_manager.AddLayer(plan_layer, 'plan_layer', plan_generator, 'plane_generator', 2)
+
+  # 加载mpc轨迹
+    mpc_generator = CommonGenerator()
+    for mpc_i, control_timestamp in enumerate(control_output_timestamps):
+      flag, mpc_msg = findt(dataLoader.ctrl_msg, control_timestamp)
+      if not flag:
+        print('find mpc error')
+        mpc_dx, mpc_dy = [], []
+      else:
+        flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamps[mpc_i])
+        if not flag:
+          print('find loc error')
+          mpc_dx, mpc_dy = [], []
+        else:
+          cur_pos_xn = loc_msg.pose.local_position.x
+          cur_pos_yn = loc_msg.pose.local_position.y
+          cur_yaw = loc_msg.pose.euler_angles.yaw
+          coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+          control_result_points = mpc_msg.control_trajectory.control_result_points
+          mpc_dx_local, mpc_dy_local = [], []
+          for point in control_result_points:
+            mpc_dx_local.append(point.x)
+            mpc_dy_local.append(point.y)
+          mpc_dx, mpc_dy = coord_tf.local_to_global(mpc_dx_local, mpc_dy_local)
+      mpc_generator.xys.append((mpc_dy, mpc_dx))
+    mpc_generator.ts = np.array(plan_debug_ts)
+    mpc_layer = CurveLayer(fig_local_view, mpc_params)
+    layer_manager.AddLayer(mpc_layer, 'mpc_layer', mpc_generator, 'mpc_generator', 2)
+
+  # 加载uss
+    uss_generator = WedgesGenerator()
+    uss_text_generator = TextGenerator()
+    for localization_timestamp in localization_timestamps:
+      sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
+      text_x, text_y = [], []
+      flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamp)
+      if not flag:
+        print('find loc_msg error')
+      else:
+        wave_msg_idx = 0
+        if dataLoader.wave_msg['enable'] == True:
+          while dataLoader.wave_msg['abs_t'][wave_msg_idx] <= (localization_timestamp) and wave_msg_idx < (len(dataLoader.wave_msg['abs_t'])-1):
+              wave_msg_idx = wave_msg_idx + 1
+        #get cur pose and uss wave
+        upa_dis_info_bufs = dataLoader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
+        cur_pos_xn = loc_msg.pose.local_position.x
+        cur_pos_yn = loc_msg.pose.local_position.y
+        cur_yaw = loc_msg.pose.euler_angles.yaw
+        # rs_text = []
+        uss_x, uss_y = load_car_uss_patch()
+        uss_angle = load_uss_angle_patch()
+        wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
+        m = 0
+        for i in range(2):
+          for j in wdis_index[i]:
+              rs0 = ''
+              rs1 = ''
+              if upa_dis_info_bufs[i].wdis[j].wdis_value[0] <= 10 and upa_dis_info_bufs[i].wdis[j].wdis_value[0] != 0:
+                  rs1 = round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2)
+                  # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
+                  rs0 = '{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2))
+                  ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
+                  uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
+                  uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
+                  x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
+              elif upa_dis_info_bufs[i].wdis[j].wdis_value[0] == 0 or upa_dis_info_bufs[i].wdis[j].wdis_value[0] > 10:
+                  ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
+                  x_text, y_text = 0, 0
+              text_x.append(x_text)
+              text_y.append(y_text)
+              sector_x.append(ego_local_x)
+              sector_y.append(ego_local_y)
+              # print("rs1:",rs1)
+              rs.append(rs1)
+              # print("rs size:",len(rs))
+              length.append(rs0)
+              start_angle.append(uss_angle_start)
+              end_angle.append(uss_angle_end)
+              m += 1
+      uss_generator.xys.append((sector_y, sector_x, rs, start_angle, end_angle))
+      uss_text_generator.xys.append((text_y, text_x, length))
+    uss_generator.ts = np.array(plan_debug_ts)
+    uss_text_generator.ts = np.array(plan_debug_ts)
+    uss_layer = MultiWedgesLayer(fig_local_view, uss_wave_params)
+    uss_layer_text = TextLayer(fig_local_view, uss_text_params)
+    layer_manager.AddLayer(uss_layer, 'uss_layer', uss_generator, 'uss_generator', 5)
+    layer_manager.AddLayer(uss_layer_text, 'uss_layer_text', uss_text_generator, 'uss_text_generator', 3)
+
+  # legend
+    fig_local_view.legend.click_policy = 'hide'
+  # Table
+    if plot_ctrl_flag == False:
+      return fig_local_view, None
+    else:
+      data_ctrl_debug_data = TextGenerator()
+      for plan_debug_t in plan_debug_ts:
+        names = []
+        datas = []
+        flag, plan_msg = findrt(dataLoader.plan_msg, plan_debug_t)
+        if not flag:
+          print('find plan error')
+          # plan_traj_x, plan_traj_y = [], []
+        else:
+          names.append('planning_status')
+          datas.append(str(plan_msg.planning_status.apa_planning_status))
+
+          names.append("slots_id")
+          datas.append(str(plan_msg.successful_slot_info_list))
+
+          names.append("plan_gear_cmd")
+          datas.append(str(plan_msg.gear_command))
+
+          names.append("plan_traj_available")
+          datas.append(str(plan_msg.trajectory.available))
+
+        soc_state_msg_idx = 0
+        if dataLoader.soc_state_msg['enable'] == True:
+          while dataLoader.soc_state_msg['t'][soc_state_msg_idx] <= plan_debug_t and soc_state_msg_idx < (len(dataLoader.soc_state_msg['t'])-1):
+              soc_state_msg_idx = soc_state_msg_idx + 1
+          names.append("current_state")
+          datas.append(str(dataLoader.soc_state_msg['data'][soc_state_msg_idx].current_state))
+
+        vs_msg_idx = 0
+        if dataLoader.vs_msg['enable'] == True:
+          while dataLoader.vs_msg['t'][vs_msg_idx] <= plan_debug_t and vs_msg_idx < (len(dataLoader.vs_msg['t'])-1):
+              vs_msg_idx = vs_msg_idx + 1
+          names.append("long_control_actuator_status")
+          datas.append(str(dataLoader.vs_msg['data'][vs_msg_idx].parking_long_control_actuator_status))
+          names.append("lat_control_actuator_status")
+          datas.append(str(dataLoader.vs_msg['data'][vs_msg_idx].parking_lat_control_actuator_status))
+          names.append("shift_lever_state")
+          datas.append(str(dataLoader.vs_msg['data'][vs_msg_idx].shift_lever_state))
+          names.append("shift_lever_state_available")
+          datas.append(str(dataLoader.vs_msg['data'][vs_msg_idx].shift_lever_state_available))
+
+        ctrl_debug_msg_idx = 0
+        if dataLoader.ctrl_debug_msg['enable'] == True:
+          while dataLoader.ctrl_debug_msg['t'][ctrl_debug_msg_idx] <= plan_debug_t and ctrl_debug_msg_idx < (len(dataLoader.ctrl_debug_msg['t'])-1):
+              ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
+          ctrl_json_data = dataLoader.ctrl_debug_msg['json']
+          names.append("lat_mpc_status")
+          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['lat_mpc_status'])
+          names.append("vel_ref_gain")
+          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['vel_ref_gain'])
+          names.append("acc_vel")
+          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['acc_vel'])
+          names.append("slope_acc")
+          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['slope_acc'])
+          names.append("apa_enable")
+          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['apa_enable'])
+          names.append("vehicle_stationary_flag")
+          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['vehicle_stationary_flag'])
+          names.append("apa_finish_flag")
+          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['apa_finish_flag'])
+          names.append("emergency_stop_flag")
+          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['emergency_stop_flag'])
+          names.append("break_override_flag")
+          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['break_override_flag'])
+          names.append("gear_shifting_flag")
+          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['gear_shifting_flag'])
+          names.append("gear_cmd")
+          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['gear_cmd'])
+          names.append("gear_real")
+          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['gear_real'])
+
+        data_ctrl_debug_data.xys.append((names, datas, [None] * len(names)))
+      data_ctrl_debug_data.ts = np.array(plan_debug_ts)
+      tab_attr_list = ['name', 'data']
+      tab_debug_layer = TableLayerV2(None, tab_attr_list, table_params)
+      layer_manager.AddLayer(
+        tab_debug_layer, 'tab_debug_layer', data_ctrl_debug_data, 'data_ctrl_debug_data', 3)
+
+
+      return fig_local_view, tab_debug_layer.plot
+
+def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time):
+
+    json_value_list = ["controller_status", "lat_enable", "lon_enable", "gear_plan",
+                        "vel_ref", "vel_cmd", "vel_ego",
+                        "path_length_plan", "remain_s_plan", "remain_s_prebreak",
+                        "vel_out", "vel_KP_term", "vel_KI_term", "throttle_brake",
+                        "steer_angle_cmd", "steer_angle", "driver_hand_torque",
+                        "lat_err", "phi_err"
+                        ]
+
+    json_value_xys_dict = GenerateJsonValueData(dataLoader.ctrl_debug_msg['json'], dataLoader.ctrl_debug_msg['t'], json_value_list)
+
+    # fig2: control status
+    fig2 = FigureLayerHover(bkp.figure(x_axis_label='time',
+                                  y_axis_label='status',
+                                  x_range = [0.0, max_time],
+                                  width=450,
+                                  height=200,
+                                  match_aspect = True,
+                                  aspect_scale=1))
+    fig2.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "controller_status"), "controller_status")
+    fig2.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "lat_enable"), "lat_enable")
+    fig2.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "lon_enable"), "lon_enable")
+    fig2.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "gear_plan"), "gear_plan", last_line = True)
+
+    # fig3: vel status
+    # "vel_ref", "vel_cmd", "vel_ego"
+    fig3 = FigureLayerHover(bkp.figure(x_axis_label='time',
+                                  y_axis_label='vel',
+                                  x_range = fig2.fig.x_range,
+                                  width=450,
+                                  height=200,
+                                  match_aspect = True,
+                                  aspect_scale=1))
+    fig3.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "vel_ref"), "vel_cmd_plan")
+    fig3.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "vel_cmd"), "vel_cmd_pos")
+    fig3.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "vel_ego"), "vel_measure", last_line = True)
+
+    # fig4: vel status
+    # "path_length_plan", "remain_s_plan", "remain_s_prebreak"
+    fig4 = FigureLayerHover(bkp.figure(x_axis_label='time',
+                                  y_axis_label='distance',
+                                  x_range = fig2.fig.x_range,
+                                  width=450,
+                                  height=200,
+                                  match_aspect = True,
+                                  aspect_scale=1))
+    fig4.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "path_length_plan"), "path_length_plan")
+    fig4.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "remain_s_plan"), "remain_s_plan")
+    fig4.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "remain_s_prebreak"), "remain_s_prebreak", last_line = True)
+
+    # fig5: vel status
+    # "vel_out", "vel_KP_term", "vel_KI_term", "throttle_brake"
+    fig5 = FigureLayerHover(bkp.figure(x_axis_label='time',
+                                  y_axis_label='acc',
+                                  x_range = fig2.fig.x_range,
+                                  width=450,
+                                  height=200,
+                                  match_aspect = True,
+                                  aspect_scale=1))
+    fig5.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "vel_out"), "acc_cmd")
+    fig5.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "vel_KP_term"), "vel_kp_term")
+    fig5.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "vel_KI_term"), "vel_ki_term")
+    fig5.AddCurv(layer_manager,
+                 ScalarSomeGeneratorFromJson(json_value_xys_dict, "throttle_brake"), "throttle_brake", last_line = True)
+
+    # fig6: vel status
+    # "steer_angle_cmd", "steer_angle", "driver_hand_torque"
+    fig6 = FigureLayerHover(bkp.figure(x_axis_label='time',
+                                  y_axis_label='steer_angle',
+                                  x_range = fig2.fig.x_range,
+                                  width=450,
+                                  height=200,
+                                  match_aspect = True,
+                                  aspect_scale=1))
+    fig6.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "steer_angle_cmd", 57.3), "steer_angle_cmd")
+    fig6.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "steer_angle", 57.3), "steer_angle_measure")
+    fig6.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "driver_hand_torque"), "driver_hand_torque", last_line = True)
+
+    # fig7: vel status
+    # "lat_err", "phi_err"
+    fig7 = FigureLayerHover(bkp.figure(x_axis_label='time',
+                                  y_axis_label='err',
+                                  x_range = fig2.fig.x_range,
+                                  width=450,
+                                  height=200,
+                                  match_aspect = True,
+                                  aspect_scale=1))
+    fig7.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "lat_err", 100), "lat_err")
+    fig7.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "phi_err", 57.3), "phi_err", last_line = True)
+
+    return fig2, fig3, fig4, fig5, fig6, fig7

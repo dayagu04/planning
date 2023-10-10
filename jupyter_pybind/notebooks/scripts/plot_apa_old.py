@@ -33,7 +33,7 @@ class SingleUssObject:
 class ApaInfoPlotter(object):
   def __init__(self):
     # bag path and frame dt
-    path = '/asw/planning/apa_0.00000'
+    path = '/docker_share/0924/test_22.00000'
     self.bag = Record(path)
     display(HTML('<style>.container { width:95% !important;  }</style>'))
     output_notebook()
