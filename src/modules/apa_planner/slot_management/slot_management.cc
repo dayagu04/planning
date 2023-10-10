@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <utility>
 
-#include "Eigen/src/Core/Matrix.h"
 #include "basic_types.pb.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"

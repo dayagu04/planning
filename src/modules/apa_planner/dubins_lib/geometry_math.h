@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "Eigen/Core"
-#include "Eigen/src/Core/Matrix.h"
 
 namespace pnc {
 
@@ -30,9 +29,12 @@ struct Circle {
 
 struct Arc {
   Circle circle_info;
-  Eigen::Vector2d pA;
-  Eigen::Vector2d pB;
-  double length;
+  Eigen::Vector2d pA = Eigen::Vector2d::Zero();
+  Eigen::Vector2d pB = Eigen::Vector2d::Zero();
+  double length = 0.0;
+  double headingA = 0.0;
+  double headingB = 0.0;
+  bool is_anti_clockwise = true;
 };
 
 struct TangentOutput {
@@ -84,6 +86,10 @@ struct LocalToGlobalTf {
     return NormalizeAngle(heading + heading_ori);
   }
 };
+
+double GetAngleFromTwoVec(const Eigen::Vector2d &a, const Eigen::Vector2d &b);
+
+const Eigen::Matrix2d GetRotm2dFromTheta(const double theta);
 
 const double CalPoint2LineDist(const Eigen::Vector2d &pO,
                                const LineSegment &line);

@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "Eigen/src/Core/Matrix.h"
 #include "basic_types.pb.h"
 #include "func_state_machine.pb.h"
 #include "localization.pb.h"

@@ -6,7 +6,6 @@
 #include <limits>
 #include <ostream>
 
-#include "Eigen/src/Core/Matrix.h"
 #include "common/apa_cos_sin.h"
 #include "common/apa_utils.h"
 #include "common/planning_log_helper.h"
@@ -28,13 +27,15 @@ namespace planning {
 namespace apa_planner {
 
 using ::Common::GearCommandValue;
-using framework::Frame;
 using ::FuncStateMachine::FunctionalState;
-using planning::planning_math::LineSegment2d;
-using planning::planning_math::Vec2d;
 using ::PlanningOutput::PlanningOutput;
 using ::PlanningOutput::Trajectory;
 using ::PlanningOutput::TrajectoryPoint;
+using ::pnc::dubins_lib::DubinsLibrary;
+using ::pnc::geometry_lib::TangentOutput;
+using framework::Frame;
+using planning::planning_math::LineSegment2d;
+using planning::planning_math::Vec2d;
 
 namespace {
 constexpr double kEps = 1e-6;
@@ -52,7 +53,11 @@ constexpr double kMaxYOffset = 0.2;
 constexpr double kMaxThetaOffset = 0.05;
 constexpr double kMockedObjYOffset = 4.0;
 
-const static double kNormalSlotLength = 4.8;
+static const double kNormalSlotLength = 4.8;
+static const double target_x_init = 1.5;
+static const double min_radius_level1 = 5.0;
+static const double min_radius_level2 = 4.88;
+
 }  // namespace
 
 bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
@@ -374,21 +379,121 @@ void DiagonalInTrajectoryGenerator::UpdateSlotInfo(const int slot_index) {
   slot_origin_heading_ = std::atan2(-n.y(), -n.x());
 }
 
-bool DiagonalInTrajectoryGenerator::DubinsPlan() {
-  if (plan_state_machine_ == IDLE) {
-    dubins_planner_.SetRadius(5.5);
-    dubins_planner_.SetTarget(Eigen::Vector2d(target_x_, target_y_), 0.0);
+bool DiagonalInTrajectoryGenerator::DubinsPlanWhenIdle() {
+  // radius for dubins: larger
+  dubins_planner_.SetRadius(min_radius_level1);
+  dubins_planner_.SetTarget(Eigen::Vector2d(target_x_, target_y_),
+                            target_heading_);
 
-    // dubins_planner_.Solve(uint8_t dubins_type, uint8_t case_type);
+  bool success_flag = false;
+
+  const auto& output = dubins_planner_.GetOutputPtr();
+
+  // dubins search loop
+  for (size_t i = 0; i < DubinsLibrary::DUBINS_TYPE_COUNT; ++i) {
+    for (size_t j = 0; j < DubinsLibrary::CASE_COUNT; ++j) {
+      // continue when solve failed: path_available = false
+      if (!dubins_planner_.Solve(i, j)) {
+        continue;
+      }
+
+      // gear change count over 2 wll not be considered
+      if (output->gear_change_count > 1) {
+        continue;
+      }
+
+      // for once gear change
+      if (output->gear_change_count == 1) {
+        if (output->gear_cmd_vec[0] == 1 && output->gear_cmd_vec[1] == 1 &&
+            output->gear_cmd_vec[2] == 2) {
+          success_flag = true;
+          break;
+        }
+      } else if (output->gear_change_count == 0) {  // for zero gear change
+        success_flag = true;
+        break;
+      }
+    }
+
+    // case type loop finished
+    if (success_flag) {
+      break;
+    }
+  }
+
+  // dubins loop success
+  if (success_flag) {
+    if (output->gear_change_count == 0) {
+      plan_state_machine_ = FINAL;
+    } else {
+      plan_state_machine_ = INIT;
+    }
+
+    return true;
+  } else {  // dubins loop failed
+    // make a preparation before next dubins try
+    plan_state_machine_ = PREPARE;
+    return false;
   }
 }
 
+bool DiagonalInTrajectoryGenerator::DubinsPlanWhenInit() {
+  const auto& output = dubins_planner_.GetOutputPtr();
+  // last gear_change_count must 1 now
+  bool success_flag = false;
+
+  // radius for linearc, smaller
+  dubins_planner_.SetRadius(min_radius_level2);
+
+  // first step: line arc search
+  for (size_t i = 0; i < DubinsLibrary::LINEARC_TYPE_COUNT; ++i) {
+    if (dubins_planner_.Solve(i)) {
+      success_flag = true;
+      break;
+    }
+  }
+
+  // second step: dubins search
+  dubins_planner_.SetRadius(min_radius_level1);
+
+  if (success_flag) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool DiagonalInTrajectoryGenerator::DubinsPlan() {
+  bool flag = false;
+  if (plan_state_machine_ == IDLE) {
+    // calculate target point
+    target_x_ = target_x_init;
+    target_y_ = 0.0;
+    target_heading_ = 0.0;
+
+    // TODO: target_x will be looped
+    // for ()
+    flag = DubinsPlanWhenIdle();
+  } else if (plan_state_machine_ == INIT) {
+    flag = DubinsPlanWhenInit();
+  }
+
+  return true;
+}
+
+bool DiagonalInTrajectoryGenerator::PreparePlan() {
+  // search backward along line
+
+  return true;
+}
+
+#ifdef USE_DUBINS_LIB
 bool DiagonalInTrajectoryGenerator::SingleDubinsSlotPlan(
     const int slot_index, PlanningOutput* const planning_output) {
   // update measurement
   UpdateMeasurement();
 
-  // update slot info for target pose
+  // update slot info and target point
   UpdateSlotInfo(slot_index);
 
   // tf init
@@ -422,6 +527,7 @@ bool DiagonalInTrajectoryGenerator::SingleDubinsSlotPlan(
 
   return true;
 }
+#endif
 
 bool DiagonalInTrajectoryGenerator::GeometryPlan(
     const PlanningPoint& start_point, int idx,
@@ -1123,8 +1229,6 @@ void DiagonalInTrajectoryGenerator::CalSlotPointsInM(const int idx) {
   raw_slot_points_in_m_.emplace_back(x2, y2, 0.0);
   raw_slot_points_in_m_.emplace_back(x3, y3, 0.0);
   slot_points_in_m_ = raw_slot_points_in_m_;
-
-  const auto pO = k * n + pM;
 
   SquareSlot();
 }

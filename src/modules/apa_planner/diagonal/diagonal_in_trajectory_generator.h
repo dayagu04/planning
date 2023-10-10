@@ -94,6 +94,11 @@ class DiagonalInTrajectoryGenerator {
                       PlanningOutput::PlanningOutput *const planning_output);
 
   bool DubinsPlan();
+
+  // sub function for dubins plan
+  bool DubinsPlanWhenIdle();
+  bool DubinsPlanWhenInit();
+
   bool PreparePlan();
   bool LineArcPlan();
   bool CheckPose();

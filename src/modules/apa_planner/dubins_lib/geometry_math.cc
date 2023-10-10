@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <utility>
 
 #include "Eigen/Geometry"
 #include "math_lib.h"
@@ -120,6 +121,35 @@ const Eigen::Matrix2d GetRotm2dFromTwoVec(const Eigen::Vector2d &a,
   rotm << cos_theta, -sin_theta, sin_theta, cos_theta;
 
   return rotm;
+}
+
+double GetAngleFromTwoVec(const Eigen::Vector2d &a, const Eigen::Vector2d &b) {
+  if (a.norm() < 0.00001 || b.norm() < 0.00001) {
+    return 0.0;
+  } else {
+    Eigen::Vector3d a_3d(a(0), a(1), 0.0);
+    Eigen::Vector3d b_3d(b(0), b(1), 0.0);
+
+    a_3d.normalize();
+    b_3d.normalize();
+
+    double cos_theta = a_3d.dot(b_3d);
+    Eigen::Vector3d cross_a_b = a_3d.cross(b_3d);
+    double sign = cross_a_b.z() >= 0.0 ? 1.0 : -1.0;
+    double sin_theta = cross_a_b.norm() * sign;
+    double theta = std::atan2(sin_theta, cos_theta);
+
+    return theta;
+  }
+}
+
+const Eigen::Matrix2d GetRotm2dFromTheta(const double theta) {
+  const double cos_theta = std::cos(theta);
+  const double sin_theta = std::sin(theta);
+  Eigen::Matrix2d rot_m;
+  rot_m << cos_theta, -sin_theta, sin_theta, cos_theta;
+
+  return rot_m;
 }
 
 }  // namespace geometry_lib

@@ -27,6 +27,8 @@ data_start_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 data_target_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 data_O1A = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_O2D = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[], 'theta_vec':[]})
+data_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
 fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=640, match_aspect = True, aspect_scale=1)
 fig1.x_range.flipped = True
@@ -40,6 +42,9 @@ fig1.line('y_vec', 'x_vec', source = data_BC, line_width = 2, line_color = 'blac
 fig1.circle('y','x', source = data_start_pos, size=8, color='red', legend_label = 'circle AB')
 fig1.circle('y','x', source = data_target_pos, size=8, color='blue', legend_label = 'circle CD')
 fig1.circle('y_vec', 'x_vec', source = data_BC, size=8, color='black', legend_label = 'line BC')
+fig1.line('y_vec', 'x_vec', source = data_path, line_width = 8, line_color = 'green', line_dash = 'solid', line_alpha = 0.4,legend_label = 'sampled path')
+fig1.circle('y_vec','x_vec', source = data_path, size=4, color='green', legend_label = 'sampled path')
+fig1.patches('y_vec', 'x_vec', source = data_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'sampled carbox')
 
 fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 fig1.legend.click_policy = 'hide'
@@ -67,6 +72,8 @@ class LocalViewSlider:
     self.set_pD_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pD",min=0, max=1, value=0, step=1)
     self.line_arc_enable_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "line_arc_enable",min=0, max=1, value=0, step=1)
     self.line_arc_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "line_arc_type",min=0, max=3, value=0, step=1)
+    self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "ds",min=0.025, max=1.0, value=0.5, step=0.025)
+    self.is_complete_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_complete",min=0, max=1, value=0, step=1)
 
     ipywidgets.interact(slider_callback, ego_x = self.ego_x_slider,
                                          ego_y = self.ego_y_slider,
@@ -85,12 +92,15 @@ class LocalViewSlider:
                                          set_pC = self.set_pC_slider,
                                          set_pD = self.set_pD_slider,
                                          line_arc_enable = self.line_arc_enable_slider,
-                                         line_arc_type = self.line_arc_type_slider)
+                                         line_arc_type = self.line_arc_type_slider,
+                                         ds = self.ds_slider,
+                                         is_complete = self.is_complete_slider)
 
 
 ### sliders callback
 def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, target_heading, radius,
-                    dubins_type, case_type, set_start, reset_target, fix_result, set_pB, set_pC, set_pD, line_arc_enable, line_arc_type):
+                    dubins_type, case_type, set_start, reset_target, fix_result, set_pB, set_pC, set_pD,
+                    line_arc_enable, line_arc_type, ds, is_complete):
   kwargs = locals()
 
   if set_start == 1:
@@ -125,9 +135,9 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, targe
 
   if fix_result == 0:
     if line_arc_enable == 0:
-      dubins_lib_py.Update(x_start, y_start, ego_heading / 57.2958, x_target, y_target, target_heading / 57.2958, radius, dubins_type, case_type)
+      dubins_lib_py.Update(x_start, y_start, ego_heading / 57.2958, x_target, y_target, target_heading / 57.2958, radius, dubins_type, case_type, ds, is_complete)
     else:
-      dubins_lib_py.UpdateLineArc(x_start, y_start, ego_heading / 57.2958, x_target, y_target, target_heading / 57.2958, radius, line_arc_type)
+      dubins_lib_py.UpdateLineArc(x_start, y_start, ego_heading / 57.2958, x_target, y_target, target_heading / 57.2958, radius, line_arc_type, ds, is_complete)
 
 
   AB_center = dubins_lib_py.GetABCenter()
@@ -143,6 +153,10 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, targe
   gear_cmd_vec = dubins_lib_py.GetGearCmdVec()
   gear_change_count = dubins_lib_py.GetGearChangeCount()
   path_radius = dubins_lib_py.GetRadius()
+
+  path_x_vec = dubins_lib_py.GetPathEle(0)
+  path_y_vec = dubins_lib_py.GetPathEle(1)
+  path_theta_vec = dubins_lib_py.GetPathEle(2)
 
   print("path_available= ", path_available)
   print("AB_center = ", AB_center)
@@ -186,6 +200,29 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, target_x, target_y, targe
     'y_vec': [CD_center[1], y_target],
   })
 
+  data_path.data.update({
+    'x_vec': path_x_vec,
+    'y_vec': path_y_vec,
+    'theta_vec': path_theta_vec,
+  })
+
+  # path ego car
+  car_box_x_vec = []
+  car_box_y_vec = []
+  for k in range(len(path_x_vec)):
+    car_xn = []
+    car_yn = []
+    for i in range(len(car_xb)):
+        tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], path_x_vec[k], path_y_vec[k], path_theta_vec[k])
+        car_xn.append(tmp_x)
+        car_yn.append(tmp_y)
+    car_box_x_vec.append(car_xn)
+    car_box_y_vec.append(car_yn)
+
+  data_car_box.data.update({
+    'x_vec': car_box_x_vec,
+    'y_vec': car_box_y_vec,
+  })
 
   if set_pB:
     slider_class.ego_x_slider.value = pB[0]

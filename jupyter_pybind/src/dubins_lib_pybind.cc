@@ -1,6 +1,7 @@
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+
 #include <cstdint>
 #include <vector>
 
@@ -31,7 +32,8 @@ inline T BytesToProto(py::bytes &bytes) {
 
 int Update(double x_start, double y_start, double heading_start,
            double x_target, double y_target, double heading_target,
-           double radius, uint8_t dubins_type, uint8_t case_type) {
+           double radius, uint8_t dubins_type, uint8_t case_type, double ds,
+           bool is_complete_path) {
   DubinsLibrary::Input input;
   input.radius = radius;
   input.heading1 = heading_start;
@@ -41,13 +43,15 @@ int Update(double x_start, double y_start, double heading_start,
 
   pBase->SetInput(input);
   pBase->Solve(dubins_type, case_type);
+  pBase->Sampling(ds, is_complete_path);
 
   return 0;
 }
 
 int UpdateLineArc(double x_start, double y_start, double heading_start,
-           double x_target, double y_target, double heading_target,
-           double radius, uint8_t line_arc_type) {
+                  double x_target, double y_target, double heading_target,
+                  double radius, uint8_t line_arc_type, double ds,
+                  bool is_complete_path) {
   DubinsLibrary::Input input;
   input.radius = radius;
   input.heading1 = heading_start;
@@ -57,12 +61,23 @@ int UpdateLineArc(double x_start, double y_start, double heading_start,
 
   pBase->SetInput(input);
   pBase->Solve(line_arc_type);
+  pBase->Sampling(ds, is_complete_path);
 
   return 0;
 }
 
-Eigen::Vector2d GetABCenter() { return pBase->GetOutput().arc_AB.circle_info.center; }
-Eigen::Vector2d GetCDCenter() { return pBase->GetOutput().arc_CD.circle_info.center; }
+Eigen::Vector2d GetABCenter() {
+  return pBase->GetOutput().arc_AB.circle_info.center;
+}
+
+Eigen::Vector2d GetCDCenter() {
+  return pBase->GetOutput().arc_CD.circle_info.center;
+}
+
+std::vector<double> GetPathEle(size_t index) {
+  return pBase->GetPathEle(index);
+}
+
 Eigen::Vector2d GetpB() { return pBase->GetOutput().line_BC.pA; }
 Eigen::Vector2d GetpC() { return pBase->GetOutput().line_BC.pB; }
 Eigen::Vector2d GetpD() { return pBase->GetOutput().arc_CD.pB; }
@@ -78,18 +93,19 @@ PYBIND11_MODULE(dubins_lib_py, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)
-   .def("Update", &Update)
-   .def("UpdateLineArc", &UpdateLineArc)
-   .def("GetABCenter", &GetABCenter)
-   .def("GetCDCenter", &GetCDCenter)
-   .def("GetpB", &GetpB)
-   .def("GetpC", &GetpC)
-   .def("GetpD", &GetpD)
-   .def("GetThetaBC", &GetThetaBC)
-   .def("GetThetaD", &GetThetaD)
-   .def("GetPathAvailiable", &GetPathAvailiable)
-   .def("GetLength", &GetLength)
-   .def("GetGearCmdVec", &GetGearCmdVec)
-   .def("GetGearChangeCount", &GetGearChangeCount)
-   .def("GetRadius", &GetRadius);
+      .def("Update", &Update)
+      .def("UpdateLineArc", &UpdateLineArc)
+      .def("GetABCenter", &GetABCenter)
+      .def("GetCDCenter", &GetCDCenter)
+      .def("GetpB", &GetpB)
+      .def("GetpC", &GetpC)
+      .def("GetpD", &GetpD)
+      .def("GetThetaBC", &GetThetaBC)
+      .def("GetThetaD", &GetThetaD)
+      .def("GetPathAvailiable", &GetPathAvailiable)
+      .def("GetLength", &GetLength)
+      .def("GetGearCmdVec", &GetGearCmdVec)
+      .def("GetGearChangeCount", &GetGearChangeCount)
+      .def("GetRadius", &GetRadius)
+      .def("GetPathEle", &GetPathEle);
 }

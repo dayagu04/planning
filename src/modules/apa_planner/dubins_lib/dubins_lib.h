@@ -4,12 +4,12 @@
 #include <sys/types.h>
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <utility>
 #include <vector>
 
 #include "Eigen/Core"
-#include "Eigen/src/Core/Matrix.h"
 #include "geometry_math.h"
 
 namespace pnc {
@@ -60,14 +60,26 @@ class DubinsLibrary {
     }
   };
 
+  struct PathPoint {
+    void Set(const Eigen::Vector2d& pos_in, const double heading_in) {
+      pos = pos_in, heading = heading_in;
+    }
+
+    Eigen::Vector2d pos = Eigen::Vector2d::Zero();
+    double heading = 0.0;
+  };
+
   struct Output {
     bool path_available = false;
     uint8_t gear_change_count = 0;
+    uint8_t gear_change_index = 0;
+    uint8_t path_seg_count = 0;
     std::vector<uint8_t> gear_cmd_vec;
     double length = 0.0;
     geometry_lib::Arc arc_AB;
     geometry_lib::LineSegment line_BC;
     geometry_lib::Arc arc_CD;
+    std::vector<PathPoint> path_point_vec;
   };
 
   struct GeometryResult {
@@ -102,30 +114,38 @@ class DubinsLibrary {
 
   void SetRadius(const double radius) { input_.radius = radius; }
 
+  // solve by dubins
   bool Solve(uint8_t dubins_type, uint8_t case_type);
+
+  // solve by line arc
   bool Solve(uint8_t line_arc_type);
-  void Sampling(double ds);
-  const Output GetOutput() const { return output_; }
+
+  void Sampling(const double ds, const bool is_complete_path);
+  void Extend(const double extend_s);
+
+  const Output& GetOutput() const { return output_; }
+  const Output* GetOutputPtr() const { return &output_; }
   const double GetThetaBC() const;
   const double GetThetaD() const;
+  const std::vector<double> GetPathEle(size_t index) const;
 
  private:
   void SetOutputByCaseType(Output& output,
                            const DubinsLibrary::GeometryResult& result,
                            const uint8_t case_type);
 
-  const bool DubinsCalculate(DubinsLibrary::GeometryResult& result,
-                             const uint8_t dubins_type);
+  void DubinsCalculate(DubinsLibrary::GeometryResult& result,
+                       const uint8_t dubins_type);
 
-  const bool LineArcCalculate(DubinsLibrary::GeometryResult& result,
-                              const uint8_t line_arc_type);
+  void LineArcCalculate(DubinsLibrary::GeometryResult& result,
+                        const uint8_t line_arc_type);
 
   void SetOutputByLineArcType(Output& output,
                               const DubinsLibrary::GeometryResult& result,
                               const uint8_t line_arc_type);
 
-  void GenDubinsOutput(Output& output,
-                       const DubinsLibrary::GeometryResult& result);
+  const bool GenDubinsOutput(Output& output,
+                             const DubinsLibrary::GeometryResult& result);
 
   Input input_;
   Output output_;
