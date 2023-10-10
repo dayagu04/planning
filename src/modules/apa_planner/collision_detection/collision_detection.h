@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "dubins_lib/dubins_lib.h"
 #include "dubins_lib/geometry_math.h"
 #include "local_view.h"
 #include "math_lib.h"
@@ -17,29 +18,13 @@ namespace planning {
 
 class CollisionDetector {
  public:
-  struct PoseTf {
-    Eigen::Vector2d pn = Eigen::Vector2d::Zero();
-    double theta = 0.0;
-    Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
-
-    void SetEgoPose(Eigen::Vector2d &pn_ego, double theta_ego) {
-      pn = pn_ego;
-      theta = theta_ego;
-      const double cos_theta = std::cos(theta_ego);
-      const double sin_theta = std::sin(theta_ego);
-      rot_m << cos_theta, -sin_theta, sin_theta, cos_theta;
-    }
-
-    const Eigen::Vector2d GetGlobalPos(const Eigen::Vector2d &pb) const {
-      return rot_m * pb + pn;
-    }
-  };
-
   void Init();
   void Reset();
 
   void GenObstacles();
-  void GenCarCircles(PlanningOutput::PlanningOutput *const planning_output);
+
+  void GenCarCircles(
+      std::vector<pnc::dubins_lib::DubinsLibrary::PathPoint> &path_point_vec);
 
   bool CollisionDetect();
 
@@ -52,18 +37,14 @@ class CollisionDetector {
   }
 
  private:
-  // PoseTf tf_;
-
   // only updates when init
   std::vector<pnc::geometry_lib::Circle> car_circle_local_vec_;
 
   // updates every frame
-  // std::vector<pnc::geometry_lib::LineSegment> obstacle_local_vec_;
   std::vector<pnc::geometry_lib::LineSegment> obstacle_global_vec_;
 
-  // std::vector<pnc::geometry_lib::Circle> car_circle_global_vec_;
-
-  std::vector<std::vector<pnc::geometry_lib::Circle>> car_circle_global_vec_;
+  std::vector<std::vector<pnc::geometry_lib::Circle>>
+      car_circle_global_vec_path_vec_;
 
   const UssObstacleAvoidance *uss_oa_ptr_;
   const LocalView *local_view_ptr_;

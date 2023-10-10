@@ -75,8 +75,11 @@ bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
   frame_ = frame;
   local_view_ = &(frame->session()->environmental_model().get_local_view());
 
+  // set local view to uss oa
   uss_oa_.SetLocalView(local_view_);
-  collision_detector_.SetLocalView(local_view_);
+
+  // update uss oa
+  uss_oa_.Update(planning_output);
 
   auto& origin_parking_fusion_info = local_view_->parking_fusion_info;
 
@@ -84,6 +87,7 @@ bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
   if (g_context.GetStatemachine().apa_reset_flag) {
     plan_state_machine_ = IDLE;
     slot_manager_.Reset();
+    collision_detector_.Reset();
   }
 
   slot_manager_.Update(&local_view_->function_state_machine_info,
@@ -208,6 +212,8 @@ void DiagonalInTrajectoryGenerator::UpdateManagedParkingFusion(
 
 bool DiagonalInTrajectoryGenerator::SingleSlotPlanSimulation(
     common::SlotManagementInfo& slot_mangement_info) {
+  // set local view for these two modules for simulation
+  // since plan() is not included in pybind simulation
   uss_oa_.SetLocalView(local_view_);
   collision_detector_.SetLocalView(local_view_);
 
@@ -262,7 +268,7 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlanSimulation(
   // selected_slot_id
   int select_slot_index_slm = -1;
   const auto& slot_info_vec = slot_mangement_info.slot_info_vec();
-  for (size_t i = 0; i < slot_mangement_info.slot_info_vec_size(); ++i) {
+  for (int i = 0; i < slot_mangement_info.slot_info_vec_size(); ++i) {
     if (selected_slot_id == slot_info_vec[i].id()) {
       select_slot_index_slm = i;
       break;
@@ -357,21 +363,6 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlan(
   }
 
   SetPlanningOutputInfo(planning_output);
-  uss_oa_.Update(planning_output);
-
-  collision_detector_.SetUssOA(&uss_oa_);
-  // TODO: collision_detector_.SetVision();
-
-  // std::vector<Eigen::Vector2d> pos_vec;
-  // std::vector<double> theta_vec;
-  // pos_vec.emplace_back(Eigen::Vector2d(0.0, 0.0));
-  // pos_vec.emplace_back(Eigen::Vector2d(1.0, 1.0));
-  // theta_vec.emplace_back(0.0);
-  // theta_vec.emplace_back(1.0);
-
-  collision_detector_.GenCarCircles(planning_output);
-  collision_detector_.GenObstacles();
-
   return true;
 }
 
@@ -516,6 +507,17 @@ bool DiagonalInTrajectoryGenerator::SingleDubinsSlotPlan(
 
   // update slot info and target point
   UpdateSlotInfo(slot_index);
+
+  // set local view to collision detector
+  collision_detector_.SetLocalView(local_view_);
+
+  // update collision detection
+  collision_detector_.SetUssOA(&uss_oa_);
+
+  // TODO: collision_detector_.SetVision();
+
+  // generate obstacles just by uss oa
+  collision_detector_.GenObstacles();
 
   // tf init
   g2l_tf_.Init(slot_origin_pos_, slot_origin_heading_);

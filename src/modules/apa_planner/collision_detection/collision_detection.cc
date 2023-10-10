@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <utility>
 
+#include "dubins_lib/geometry_math.h"
+
 namespace planning {
 
 static const std::vector<double> car_circle_x_vec = {
@@ -28,9 +30,7 @@ void CollisionDetector::Init() {
 }
 void CollisionDetector::Reset() {
   obstacle_global_vec_.clear();
-  car_circle_global_vec_.clear();
-  uss_oa_ptr_ = nullptr;
-  local_view_ptr_ = nullptr;
+  car_circle_global_vec_path_vec_.clear();
 }
 
 void CollisionDetector::GenObstacles() {
@@ -40,7 +40,7 @@ void CollisionDetector::GenObstacles() {
         uss_oa_ptr_->GetMinDistUssLine();
 
     pnc::geometry_lib::LineSegment min_dist_uss_line_global;
-    PoseTf tf;
+    pnc::geometry_lib::LocalToGlobalTf l2g_tf;
     double ego_theta =
         local_view_ptr_->localization_estimate.pose().euler_angles().yaw();
 
@@ -48,51 +48,38 @@ void CollisionDetector::GenObstacles() {
         local_view_ptr_->localization_estimate.pose().local_position().x(),
         local_view_ptr_->localization_estimate.pose().local_position().y());
 
-    tf.SetEgoPose(ego_coord_global, ego_theta);
+    l2g_tf.Init(ego_coord_global, ego_theta);
 
-    min_dist_uss_line_global.pA = tf.GetGlobalPos(min_dist_uss_line_local.pA);
-    min_dist_uss_line_global.pB = tf.GetGlobalPos(min_dist_uss_line_local.pB);
+    min_dist_uss_line_global.SetPoints(
+        l2g_tf.GetPos(min_dist_uss_line_local.pA),
+        l2g_tf.GetPos(min_dist_uss_line_local.pB));
 
     obstacle_global_vec_.emplace_back(std::move(min_dist_uss_line_global));
   }
 }
 
 void CollisionDetector::GenCarCircles(
-    PlanningOutput::PlanningOutput *const planning_output) {
-  auto trajectory = planning_output->trajectory();
-  std::vector<Eigen::Vector2d> pos_vec;
-  std::vector<double> theta_vec;
-  for (size_t i = 0; i < trajectory.trajectory_points_size(); i++) {
-    pos_vec.emplace_back(Eigen::Vector2d(trajectory.trajectory_points(i).x(),
-                                         trajectory.trajectory_points(i).y()));
-    theta_vec.emplace_back(trajectory.trajectory_points(i).heading_yaw());
-  }
+    std::vector<pnc::dubins_lib::DubinsLibrary::PathPoint> &path_point_vec) {
+  const auto N = path_point_vec.size();
+  car_circle_global_vec_path_vec_.clear();
+  car_circle_global_vec_path_vec_.reserve(N);
 
-  car_circle_global_vec_.clear();
-  car_circle_global_vec_.reserve(pos_vec.size());
-  for (size_t i = 0; i < pos_vec.size(); i++) {
-    PoseTf tf;
-    // pos_vec[i].x() = 5.0;
-    // pos_vec[i].y() = 5.0;
-    // theta_vec[i] = 0.5;
-    tf.SetEgoPose(pos_vec[i], theta_vec[i]);
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+  for (size_t i = 0; i < N; ++i) {
+    l2g_tf.Init(path_point_vec[i].pos, path_point_vec[i].heading);
+
     std::vector<pnc::geometry_lib::Circle> car_circle_global_vec;
 
-    for (size_t j = 0; j < car_circle_local_vec_.size(); j++) {
+    for (const auto &car_circle_local : car_circle_local_vec_) {
       pnc::geometry_lib::Circle car_circle_global;
-      car_circle_global.center =
-          tf.GetGlobalPos(car_circle_local_vec_[j].center);
+      car_circle_global.center = l2g_tf.GetPos(car_circle_local.center);
 
-      car_circle_global.radius = car_circle_local_vec_[j].radius;
+      car_circle_global.radius = car_circle_local.radius;
       car_circle_global_vec.emplace_back(std::move(car_circle_global));
-
-      // if (i == 0) {
-      //   std::cout << j << "  local_C++:" << car_circle_local_vec_[j].center
-      //             << "   global_C++:" << car_circle_global.center <<
-      //             std::endl;
-      // }
     }
-    car_circle_global_vec_.emplace_back(std::move(car_circle_global_vec));
+
+    car_circle_global_vec_path_vec_.emplace_back(
+        std::move(car_circle_global_vec));
   }
 }
 
@@ -101,22 +88,21 @@ bool CollisionDetector::CollisionDetect() {
     return false;
   }
 
-  for (size_t i = 0; i < car_circle_global_vec_.size(); i++) {
-    bool collision_flag = false;
-    std::vector<pnc::geometry_lib::Circle> car_circle_global_vec =
-        car_circle_global_vec_[i];
+  bool collision_flag = false;
 
-    for (size_t j = 0; j < obstacle_global_vec_.size(); j++) {
-      pnc::geometry_lib::LineSegment line_obstacle = obstacle_global_vec_[j];
-
-      for (size_t k = 0; k < car_circle_global_vec.size(); k++) {
-        pnc::geometry_lib::Circle car_circle_global = car_circle_global_vec[k];
+  for (const auto &car_circle_global_vec_path :
+       car_circle_global_vec_path_vec_) {
+    for (const auto &obstacle_global : obstacle_global_vec_) {
+      for (size_t k = 0; k < car_circle_global_vec_path.size(); k++) {
         collision_flag = pnc::geometry_lib::CheckLineSegmentInCircle(
-            line_obstacle, car_circle_global);
+            obstacle_global, car_circle_global_vec_path[k]);
 
+        // first large circle to avoid current obstacle
         if (k == 0 && collision_flag == false) {
           break;
         }
+
+        // once collision to return
         if (k > 0 && collision_flag == true) {
           return true;
         }

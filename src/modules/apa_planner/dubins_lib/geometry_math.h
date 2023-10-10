@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "Eigen/Core"
+#include "Eigen/src/Core/Matrix.h"
 
 namespace pnc {
 
@@ -49,7 +50,7 @@ struct GlobalToLocalTf {
   Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
   double heading_ori = 0.0;
 
-  void Init(const Eigen::Vector2d &p_n_ori, double theta_ori) {
+  void Init(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
     pos_n_ori = p_n_ori;
     heading_ori = theta_ori;
     const double cos_theta = std::cos(theta_ori);
@@ -70,7 +71,7 @@ struct LocalToGlobalTf {
   Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
   double heading_ori = 0.0;
 
-  void Init(const Eigen::Vector2d &p_n_ori, double theta_ori) {
+  void Init(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
     pos_n_ori = p_n_ori;
     heading_ori = theta_ori;
     const double cos_theta = std::cos(theta_ori);
@@ -78,7 +79,7 @@ struct LocalToGlobalTf {
     rot_m << cos_theta, -sin_theta, sin_theta, cos_theta;
   }
 
-  const Eigen::Vector2d GetPos(Eigen::Vector2d &p_n) const {
+  const Eigen::Vector2d GetPos(const Eigen::Vector2d &p_n) const {
     return (rot_m * p_n + pos_n_ori);
   }
 
@@ -87,12 +88,20 @@ struct LocalToGlobalTf {
   }
 };
 
+const double NormSquareOfTwoVector2d(const Eigen::Vector2d &p1,
+                                     const Eigen::Vector2d &p2);
+
+const double NormSquareOfVector2d(const Eigen::Vector2d &p1);
+
 double GetAngleFromTwoVec(const Eigen::Vector2d &a, const Eigen::Vector2d &b);
 
 const Eigen::Matrix2d GetRotm2dFromTheta(const double theta);
 
 const double CalPoint2LineDist(const Eigen::Vector2d &pO,
                                const LineSegment &line);
+
+const double CalPoint2LineDistSquare(const Eigen::Vector2d &pO,
+                                     const LineSegment &line);
 
 const bool CheckLineSegmentInCircle(const LineSegment &line, const Circle &c);
 

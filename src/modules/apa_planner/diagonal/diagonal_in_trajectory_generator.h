@@ -20,7 +20,7 @@
 #include "speed_smoother/apa_speed_smoother.h"
 #include "uss_obstacle_avoidance/uss_obstacle_avoidance.h"
 
-// #define USE_DUBINS_LIB
+#define USE_DUBINS_LIB
 
 namespace planning {
 namespace apa_planner {

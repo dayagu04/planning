@@ -127,7 +127,11 @@ class DubinsLibrary {
   const Output* GetOutputPtr() const { return &output_; }
   const double GetThetaBC() const;
   const double GetThetaD() const;
-  const std::vector<double> GetPathEle(size_t index) const;
+  const std::vector<double>& GetPathEle(size_t index) const;
+
+  const std::vector<PathPoint>& GetPathPointVec() const {
+    return output_.path_point_vec;
+  }
 
  private:
   void SetOutputByCaseType(Output& output,

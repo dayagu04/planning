@@ -18,21 +18,37 @@ const double NormalizeAngle(const double angle) {
   return a - M_PI;
 }
 
+const double NormSquareOfVector2d(const Eigen::Vector2d &p1) {
+  return p1.x() * p1.x() + p1.y() * p1.y();
+}
+
+const double NormSquareOfTwoVector2d(const Eigen::Vector2d &p1,
+                                     const Eigen::Vector2d &p2) {
+  return NormSquareOfVector2d(p1 - p2);
+}
+
 const double CalPoint2LineDist(const Eigen::Vector2d &pO,
                                const LineSegment &line) {
-  Eigen::Vector2d vec_AB = line.pB - line.pA;
-  Eigen::Vector2d vec_AO = pO - line.pA;
-  const double AC_norm = vec_AO.dot(vec_AB) / vec_AB.norm();
+  return std::sqrt(CalPoint2LineDistSquare(pO, line));
+}
 
-  return std::sqrt(vec_AO.dot(vec_AO) - AC_norm * AC_norm);
+const double CalPoint2LineDistSquare(const Eigen::Vector2d &pO,
+                                     const LineSegment &line) {
+  Eigen::Vector2d v_AB = line.pB - line.pA;
+  Eigen::Vector2d v_AO = pO - line.pA;
+
+  const double v_AO_dot_v_AB = v_AO.dot(v_AB);
+
+  return NormSquareOfVector2d(v_AO) -
+         v_AO_dot_v_AB * v_AO_dot_v_AB / NormSquareOfVector2d(v_AB);
 }
 
 const bool CheckLineSegmentInCircle(const LineSegment &line, const Circle &c) {
   const auto &R = c.radius;
   const auto &pO = c.center;
-  const double d = CalPoint2LineDist(pO, line);
+  const double d2 = CalPoint2LineDistSquare(pO, line);
 
-  if (d > R) {
+  if (d2 > R * R) {
     return false;
   } else {
     const auto OA_norm = (pO - line.pA).norm();

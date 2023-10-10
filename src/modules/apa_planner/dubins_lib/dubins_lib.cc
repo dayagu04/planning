@@ -554,7 +554,7 @@ void DubinsLibrary::Extend(const double extend_s) {
   output_.path_point_vec.emplace_back(path_point);
 }
 
-const std::vector<double> DubinsLibrary::GetPathEle(size_t index) const {
+const std::vector<double>& DubinsLibrary::GetPathEle(size_t index) const {
   std::vector<double> out_vec;
   const auto& N = output_.path_point_vec.size();
   out_vec.reserve(N);

@@ -64,8 +64,8 @@ int UpdateBytes(py::bytes &func_statemachine_bytes,
 #ifndef USE_DUBINS_LIB
   pBase->SingleSlotPlanSimulation(slot_management_info);
 #else
-
 #endif
+
   return 0;
 }
 
