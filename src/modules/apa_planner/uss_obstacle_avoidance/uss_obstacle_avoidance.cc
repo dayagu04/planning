@@ -416,6 +416,14 @@ void UssObstacleAvoidance::CalRemainDist() {
   }
 }
 
+const pnc::geometry_lib::LineSegment UssObstacleAvoidance::GetMinDistUssLine()
+    const {
+  pnc::geometry_lib::LineSegment line;
+  line.SetPoints(uss_arc_vec_[min_dist_uss_arc_index_].pA,
+                 uss_arc_vec_[min_dist_uss_arc_index_].pB);
+  return line;
+}
+
 bool UssObstacleAvoidance::Update(
     PlanningOutput::PlanningOutput *const planning_output) {
   // update planning output

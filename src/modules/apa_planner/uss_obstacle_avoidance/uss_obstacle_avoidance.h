@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "dubins_lib/geometry_math.h"
 #include "local_view.h"
 #include "planning_plan.pb.h"
-
 namespace planning {
 class UssObstacleAvoidance {
   enum CarPointMode {
@@ -75,6 +75,8 @@ class UssObstacleAvoidance {
   }
 
   const std::vector<double> GetUssRawDist() const { return uss_raw_dist_vec_; }
+
+  const pnc::geometry_lib::LineSegment GetMinDistUssLine() const;
 
   bool Update(PlanningOutput::PlanningOutput *const planning_output);
 

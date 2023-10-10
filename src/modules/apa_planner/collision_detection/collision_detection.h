@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "Eigen/src/Core/Matrix.h"
 #include "dubins_lib/geometry_math.h"
 #include "local_view.h"
+#include "math_lib.h"
 #include "planning_plan.pb.h"
 #include "uss_obstacle_avoidance/uss_obstacle_avoidance.h"
 
@@ -39,10 +39,9 @@ class CollisionDetector {
   void Reset();
 
   void GenObstacles();
-  void GenCarCircles();
+  void GenCarCircles(PlanningOutput::PlanningOutput *const planning_output);
 
-  bool CollisionDetect(std::vector<Eigen::Vector2d> &pos_vec,
-                       std::vector<double> &theta_vec);
+  bool CollisionDetect();
 
   void SetUssOA(const UssObstacleAvoidance *uss_oa_ptr) {
     uss_oa_ptr_ = uss_oa_ptr;
@@ -53,16 +52,18 @@ class CollisionDetector {
   }
 
  private:
-  PoseTf tf_;
+  // PoseTf tf_;
 
   // only updates when init
   std::vector<pnc::geometry_lib::Circle> car_circle_local_vec_;
 
   // updates every frame
-  std::vector<pnc::geometry_lib::LineSegment> obstacle_local_vec_;
+  // std::vector<pnc::geometry_lib::LineSegment> obstacle_local_vec_;
   std::vector<pnc::geometry_lib::LineSegment> obstacle_global_vec_;
 
-  std::vector<pnc::geometry_lib::Circle> car_circle_global_vec_;
+  // std::vector<pnc::geometry_lib::Circle> car_circle_global_vec_;
+
+  std::vector<std::vector<pnc::geometry_lib::Circle>> car_circle_global_vec_;
 
   const UssObstacleAvoidance *uss_oa_ptr_;
   const LocalView *local_view_ptr_;

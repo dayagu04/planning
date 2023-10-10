@@ -362,6 +362,14 @@ bool DiagonalInTrajectoryGenerator::SingleSlotPlan(
   collision_detector_.SetUssOA(&uss_oa_);
   // TODO: collision_detector_.SetVision();
 
+  // std::vector<Eigen::Vector2d> pos_vec;
+  // std::vector<double> theta_vec;
+  // pos_vec.emplace_back(Eigen::Vector2d(0.0, 0.0));
+  // pos_vec.emplace_back(Eigen::Vector2d(1.0, 1.0));
+  // theta_vec.emplace_back(0.0);
+  // theta_vec.emplace_back(1.0);
+
+  collision_detector_.GenCarCircles(planning_output);
   collision_detector_.GenObstacles();
 
   return true;
