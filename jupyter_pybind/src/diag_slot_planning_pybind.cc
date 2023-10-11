@@ -71,7 +71,7 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
                        py::bytes &localization_info_bytes,
                        py::bytes &vehicle_service_output_info_bytes,
                        py::bytes &slot_management_info_bytes, int selected_id,
-                       bool force_planning, uint8_t force_plan_stm) {
+                       bool force_planning, uint8_t force_plan_stm, bool is_complete_path) {
   auto func_statemachine =
       BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
 
@@ -103,7 +103,7 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
   param.force_planning_ = force_planning;
   param.selected_id_ = selected_id;
   param.force_plan_stm = force_plan_stm;
-  param.is_complete_path = true;
+  param.is_complete_path = is_complete_path;
 
   pBase->SetSimulationParam(param);
   pBase->PathPlanOnceSimulation(slot_management_info);

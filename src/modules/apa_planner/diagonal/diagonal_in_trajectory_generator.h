@@ -5,7 +5,6 @@
 #include <memory>
 
 #include "Eigen/Core"
-#include "Eigen/src/Core/Matrix.h"
 #include "Platform_Types.h"
 #include "collision_detection/collision_detection.h"
 #include "common/geometry_planning_io.h"
@@ -19,8 +18,9 @@
 #include "slot_management/slot_management.h"
 #include "slot_management_info.pb.h"
 #include "speed_smoother/apa_speed_smoother.h"
+#include "spline.h"
+#include "spline_projection.h"
 #include "uss_obstacle_avoidance/uss_obstacle_avoidance.h"
-
 namespace planning {
 namespace apa_planner {
 
@@ -53,6 +53,7 @@ class DiagonalInTrajectoryGenerator {
     Eigen::Vector2d ego_pos = Eigen::Vector2d::Zero();
     double standstill_timer = 0.0;
     double standstill_timer_by_pos = 0.0;
+    bool static_flag = false;
   };
 
   struct PlanInput {
@@ -111,6 +112,7 @@ class DiagonalInTrajectoryGenerator {
  private:
   void UpdateMeasurement();
   void UpdateEgoSlotInfo(const int slot_index);
+  const bool UpdateSplineGlobal();
 
   void GeneratePlanningOutput(
       const bool plan_success,
@@ -128,10 +130,10 @@ class DiagonalInTrajectoryGenerator {
 
   void PrintDubinsOutput();
 
-  const bool CheckIfNearTarget() const;
-  const bool CheckIfApaFinished() const;
+  const bool CheckIfNearTerminalPoint() const;
+  const bool CheckFinish() const;
 
-  const bool CheckIfReplan(
+  const bool CheckReplan(
       PlanningOutput::PlanningOutput *const planning_output) const;
 
   const bool PathPlanOnce(
@@ -176,10 +178,15 @@ class DiagonalInTrajectoryGenerator {
   // system states
   pnc::geometry_lib::GlobalToLocalTf g2l_tf_;
   pnc::geometry_lib::LocalToGlobalTf l2g_tf_;
+  pnc::mathlib::spline x_s_spline_l_;
+  pnc::mathlib::spline y_s_spline_l_;
+  double current_path_length_ = 0.0;
+  double remain_dist_ = 0.0;
+  bool spline_success_ = false;
+
   Measurement measure_;
   EgoSlotInfo ego_slot_info_;
   uint8_t plan_state_machine_ = IDLE;
-  bool extend_path_already_ = false;
 };
 
 }  // namespace apa_planner

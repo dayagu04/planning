@@ -51,14 +51,16 @@ class LocalViewSlider:
     self.force_planning_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "force_planning",min=0, max=1, value=0, step=1)
     self.turn_on_plan_stm_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "turn_on_plan_stm",min=0, max=1, value=0, step=1)
     self.plan_stm_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "plan_stm",min=0, max=4, value=0, step=1)
+    self.is_complete_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "is_complete",min=0, max=1, value=0, step=1)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
                                         selected_id = self.selected_id_slider,
                                         force_planning = self.force_planning_slider,
                                         turn_on_plan_stm = self.turn_on_plan_stm_slider,
-                                        plan_stm = self.plan_stm_slider)
+                                        plan_stm = self.plan_stm_slider,
+                                        is_complete = self.is_complete_slider)
 
 ### sliders callback
-def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, plan_stm):
+def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, plan_stm, is_complete):
   kwargs = locals()
   update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data)
 
@@ -95,7 +97,7 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
                                       loc_msg_input.SerializeToString(),
                                       vs_msg_input.SerializeToString(),
                                       planning_data.slot_management_info.SerializeToString(),
-                                      selected_id, force_planning, plan_statemachine)
+                                      selected_id, force_planning, plan_statemachine, is_complete)
     planning_output.ParseFromString(diag_slot_planning_py.GetOutputBytes())
   except:
     print("error")

@@ -1,5 +1,6 @@
 #include "diagonal/diagonal_in_trajectory_generator.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -22,6 +23,7 @@
 #include "math/line_segment2d.h"
 #include "math/math_utils.h"
 #include "planning_output_context.h"
+#include "spline_projection.h"
 #include "utils_math.h"
 
 // #define __PYBIND_DEBUG__
@@ -64,7 +66,8 @@ static const double kLineStep = 0.1;
 static const double kMinProperBCLength = 0.3;
 static const double plan_time = 0.1;
 static const double terminal_target_x = 1.1;
-static const double ideal_length_level_0 = 10.0;
+static const double ideal_length_level_0 = 5.0;
+static const double max_path_length = 20.0;
 
 }  // namespace
 
@@ -108,6 +111,7 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
     slot_manager_.Reset();
     collision_detector_.Reset();
     replan_in_slot_count_ = 0;
+    spline_success_ = false;
   }
 
   slot_manager_.Update(&local_view_->function_state_machine_info,
@@ -280,10 +284,6 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnceSimulation(
 
   if (local_view_->function_state_machine_info.has_current_state()) {
     current_state_ = local_view_->function_state_machine_info.current_state();
-  }
-
-  if (simu_param_.force_planning_) {
-    current_state_ = FunctionalState::PARK_IN_ACTIVATE_CONTROL;
   }
 
   plan_state_machine_ = simu_param_.force_plan_stm;
@@ -477,7 +477,7 @@ const bool DiagonalInTrajectoryGenerator::PathEvaluateOnce(
     // once gear change
     if (output.gear_change_count == 1 &&
         output.line_BC.length >= kMinProperBCLength) {
-      // TODO
+      // TODO: consider heading
       // if (std::fabs(output.dtheta_arc_AB) < 10.0 / 57.3)
       return true;
     }
@@ -501,30 +501,40 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanFuncByLevel(
       path_length_queue;
 
   std::vector<DubinsLibrary::Output> dubins_output_vec;
-  dubins_output_vec.reserve(std::ceil(max_search_length / kLineStep));
 
-  double s = 0.0;
-  size_t index = 0;
-  while (s < max_search_length) {
-    // try linearc method first
-    if (DubinsPlanOneStep(plan_input_, PlanAlgorithm::DUBINS, level)) {
-      const auto length = dubins_planner_.GetOutput().length;
-      if (length < ideal_length_level_0) {
-        return true;
+  bool success_once = false;
+  if (level == DUBINS_LEVEL_0) {
+    dubins_output_vec.reserve(std::ceil(max_search_length / kLineStep));
+
+    double s = 0.0;
+    size_t index = 0;
+    while (s < max_search_length) {
+      // try linearc method first
+      if (DubinsPlanOneStep(plan_input_, PlanAlgorithm::DUBINS, level)) {
+        const auto length = dubins_planner_.GetOutput().length;
+        if (length < ideal_length_level_0) {
+          return true;
+        }
+
+        dubins_output_vec.emplace_back(dubins_planner_.GetOutput());
+        path_length_queue.push({length, index});
+        index++;
+
+        success_once = true;
       }
 
-      dubins_output_vec.emplace_back(dubins_planner_.GetOutput());
-      path_length_queue.push({length, index});
-      index++;
+      plan_input_.target_pos.x() += kLineStep;
+      s += kLineStep;
     }
-
-    plan_input_.target_pos.x() += kLineStep;
-    s += kLineStep;
   }
 
-  dubins_planner_.SetOutput(dubins_output_vec[path_length_queue.top().second]);
-
-  return false;
+  if (success_once) {
+    dubins_planner_.SetOutput(
+        dubins_output_vec[path_length_queue.top().second]);
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void DiagonalInTrajectoryGenerator::PrintDubinsOutput() {
@@ -552,16 +562,15 @@ void DiagonalInTrajectoryGenerator::PrintDubinsOutput() {
             << std::endl;
 }
 
-const bool DiagonalInTrajectoryGenerator::CheckIfApaFinished() const {
+const bool DiagonalInTrajectoryGenerator::CheckFinish() const {
   return (std::fabs(ego_slot_info_.ego_pos_slot.x() - terminal_target_x) <=
               kMaxXOffset &&
           std::fabs(ego_slot_info_.ego_pos_slot.y() - 0.0) <= kMaxYOffset &&
           std::fabs(ego_slot_info_.ego_heading_slot) <= kMaxThetaOffset &&
-          measure_.standstill_timer >= 0.5 &&
-          measure_.standstill_timer_by_pos > 0.5);
+          measure_.static_flag);
 }
 
-const bool DiagonalInTrajectoryGenerator::CheckIfReplan(
+const bool DiagonalInTrajectoryGenerator::CheckReplan(
     PlanningOutput* const planning_output) const {
   if (simulation_enable_flag_ && simu_param_.force_planning_) {
     std::cout << "tune force_planning on!" << std::endl;
@@ -572,8 +581,6 @@ const bool DiagonalInTrajectoryGenerator::CheckIfReplan(
     std::cout << "apa is not active!" << std::endl;
     return true;
   }
-  planning_output->mutable_planning_status()->set_apa_planning_status(
-      ::PlanningOutput::ApaPlanningStatus::IN_PROGRESS);
 
   if (!planning_output->has_trajectory() ||
       planning_output->trajectory().trajectory_points_size() == 0) {
@@ -581,12 +588,60 @@ const bool DiagonalInTrajectoryGenerator::CheckIfReplan(
     return true;
   }
 
-  if (CheckIfNearTarget()) {
+  if (CheckIfNearTerminalPoint()) {
     std::cout << "close to target!" << std::endl;
     return true;
   }
 
+  planning_output->mutable_planning_status()->set_apa_planning_status(
+      ::PlanningOutput::ApaPlanningStatus::IN_PROGRESS);
+
   return false;
+}
+
+const bool DiagonalInTrajectoryGenerator::UpdateSplineGlobal() {
+  const auto& output = dubins_planner_.GetOutput();
+  const auto N = output.path_point_vec.size();
+  if (N < 3) {
+    return false;
+  }
+
+  std::vector<double> x_vec;
+  std::vector<double> y_vec;
+  std::vector<double> s_vec;
+
+  x_vec.reserve(N);
+  y_vec.reserve(N);
+  s_vec.reserve(N);
+
+  x_vec.clear();
+  y_vec.clear();
+  s_vec.clear();
+
+  double s = 0.0;
+  double ds = 0.0;
+  for (size_t i = 0; i < N - 1; ++i) {
+    x_vec.emplace_back(output.path_point_vec[i].pos.x());
+    y_vec.emplace_back(output.path_point_vec[i].pos.y());
+    s_vec.emplace_back(s);
+
+    ds = std::max(
+        (output.path_point_vec[i].pos - output.path_point_vec[i + 1].pos)
+            .norm(),
+        1e-2);
+    s += ds;
+  }
+
+  x_vec.back() = output.path_point_vec.back().pos.x();
+  y_vec.back() = output.path_point_vec.back().pos.y();
+  s_vec.back() = s;
+
+  x_s_spline_l_.set_points(s_vec, x_vec);
+  y_s_spline_l_.set_points(s_vec, y_vec);
+
+  current_path_length_ = s_vec.back();
+
+  return true;
 }
 
 const bool DiagonalInTrajectoryGenerator::PathPlanOnce(
@@ -595,18 +650,15 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnce(
   UpdateEgoSlotInfo(slot_index);
 
   // check if finish
-  if (CheckIfApaFinished()) {
+  if (CheckFinish()) {
     std::cout << "apa is finished" << std::endl;
     SetFinishedPlanningOutput(frame_);
     return true;
   }
 
   // check if replan
-  if (!CheckIfReplan(planning_output)) {
+  if (!CheckReplan(planning_output)) {
     return true;
-  } else {
-    // do not forget to extend after replan
-    extend_path_already_ = false;
   }
 
   // start apa dubins planning
@@ -640,15 +692,20 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnce(
   }
 
   if (plan_state_machine_ == FINAL) {
-    const double extend_s = plan_input_.target_pos.x() - terminal_target_x;
-
-    // std::cout << "extend_s = " << extend_s << std::endl;
-
+    const double extend_s =
+        dubins_planner_.GetOutput().arc_CD.pB.x() - terminal_target_x;
     dubins_planner_.Extend(extend_s);
-    extend_path_already_ = true;
+
+    // std::cout << "plan_input_.target_pos = "
+    //           << plan_input_.target_pos.transpose() << std::endl;
+    // std::cout << "extend_s = " << extend_s << std::endl;
   }
 
   dubins_planner_.Transform(l2g_tf_);
+
+  // update spline for projection point dist calculation
+  // note that update after transform
+  spline_success_ = UpdateSplineGlobal();
 
   PrintDubinsOutput();
 
@@ -664,8 +721,15 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnce(
   return true;
 }
 
-const bool DiagonalInTrajectoryGenerator::CheckIfNearTarget() const {
-  // TODO
+const bool DiagonalInTrajectoryGenerator::CheckIfNearTerminalPoint() const {
+  if (spline_success_) {
+    if (remain_dist_ < 0.1 && measure_.static_flag) {
+      return true;
+    }
+  }
+
+  return false;
+
   return (measure_.standstill_timer > 2.5);
 }
 
@@ -694,6 +758,23 @@ void DiagonalInTrajectoryGenerator::UpdateMeasurement() {
     } else {
       measure_.standstill_timer = 0.0;
     }
+  }
+
+  if (!simulation_enable_flag_) {
+    measure_.static_flag = measure_.standstill_timer >= 0.5 &&
+                           measure_.standstill_timer_by_pos > 0.5;
+  } else {
+    measure_.static_flag = true;
+  }
+
+  if (spline_success_) {
+    pnc::spline::Projection proj;
+    proj.CalProjectionPoint(x_s_spline_l_, y_s_spline_l_, 0.0, max_path_length,
+                            measure_.ego_pos);
+    remain_dist_ = current_path_length_ - proj.GetOutput().s_proj;
+    std::cout << "remain_dist = " << remain_dist_ << std::endl;
+  } else {
+    remain_dist_ = 5.01;
   }
 }
 
