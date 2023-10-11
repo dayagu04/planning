@@ -17,7 +17,7 @@ VisionLongitudinalBehaviorPlanner::VisionLongitudinalBehaviorPlanner(
   config_ = config_builder->cast<VisionLongitudinalBehaviorPlannerConfig>();
   name_ = "VisionLongitudinalBehaviorPlanner";
 
-  accel_vel_filter_.Init(-2.0, 2.0, 0.0, 42.0, 0.1);
+  accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
 }
 
 bool VisionLongitudinalBehaviorPlanner::Execute(framework::Frame *frame) {
@@ -866,15 +866,19 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(
     v_target_ = std::min(v_target_ramp, v_target_);
     LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
     JSON_DEBUG_VALUE("VisionLonBehavior_v_target_ramp", v_target_ramp);
+    JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
+    JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
     LOG_DEBUG("v_target : [%f] \n", v_target_);
     return true;
   }
-  v_target_ramp = std::pow(std::pow(ramp_v_limit,  2.0) - 2 * dis_to_ramp * acc_to_ramp, 0.5);
+  double pre_brake_dis_to_ramp = std::max(dis_to_ramp - 50, 0);
+  v_target_ramp = std::pow(std::pow(ramp_v_limit,  2.0) - 2 * pre_brake_dis_to_ramp * acc_to_ramp, 0.5);
   v_target_ = std::min(v_target_ramp, v_target_);
   LOG_DEBUG("dis_to_ramp : [%f] \n", dis_to_ramp);
   LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
   JSON_DEBUG_VALUE("VisionLonBehavior_v_target_ramp", v_target_ramp);
   JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
+  JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
   LOG_DEBUG("v_target : [%f] \n", v_target_);
   return true;
      
