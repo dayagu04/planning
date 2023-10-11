@@ -539,7 +539,7 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
   const auto& pO2 = output_.arc_CD.circle_info.center;
 
   const double dtheta2 = ds / output_.arc_CD.circle_info.radius *
-                         (output_.arc_CD.is_anti_clockwise ? 1.0 : 1.0);
+                         (output_.arc_CD.is_anti_clockwise ? 1.0 : -1.0);
 
   const auto rot_m2 = GetRotm2dFromTheta(dtheta2);
   // v_O2C

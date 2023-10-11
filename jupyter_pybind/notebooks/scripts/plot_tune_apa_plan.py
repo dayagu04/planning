@@ -11,7 +11,7 @@ from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/1011/test_1.00000'
+bag_path = '/home/xlwang71/Downloads/APA/1011/test_6.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -69,6 +69,7 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
   loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
   vs_msg_idx = local_view_data['data_index']['vs_msg_idx']
   plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
+  plan_msg_idx = local_view_data['data_index']['plan_msg_idx']
 
   soc_state_input = bag_loader.soc_state_msg['data'][soc_state_msg_idx]
   fus_parking_input = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx]
@@ -76,6 +77,9 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
   vs_msg_input = bag_loader.vs_msg['data'][vs_msg_idx]
   planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
   planning_data = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
+  origin_plan_output = bag_loader.plan_msg['data'][plan_msg_idx]
+
+
 
   # print("soc_state_input = ", soc_state_input)
   # print("fus_parking_input = ", fus_parking_input)
@@ -88,8 +92,9 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
   #   last_seg_name = plan_stm
   # else:
   #   last_seg_name = planning_json['last_segment_name']
+  # print("plan_statemachine = ", plan_statemachine)
 
-  print("plan_statemachine = ", plan_statemachine)
+  print(origin_plan_output)
 
   try:
     diag_slot_planning_py.UpdateBytesByParam(soc_state_input.SerializeToString(),

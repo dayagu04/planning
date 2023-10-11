@@ -67,6 +67,7 @@ static const double plan_time = 0.1;
 static const double terminal_target_x = 1.1;
 static const double ideal_length_level_0 = 5.0;
 static const double max_path_length = 20.0;
+static const double min_search_length = 6.0;
 
 }  // namespace
 
@@ -106,11 +107,7 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
 
   // slot management update
   if (g_context.GetStatemachine().apa_reset_flag) {
-    plan_state_machine_ = IDLE;
-    slot_manager_.Reset();
-    collision_detector_.Reset();
-    replan_in_slot_count_ = 0;
-    spline_success_ = false;
+    Reset();
   }
 
   slot_manager_.Update(&local_view_->function_state_machine_info,
@@ -190,6 +187,16 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
   }
 
   return true;
+}
+
+void DiagonalInTrajectoryGenerator::Reset() {
+  plan_state_machine_ = INIT;
+  slot_manager_.Reset();
+  collision_detector_.Reset();
+  replan_in_slot_count_ = 0;
+  spline_success_ = false;
+  is_replan_ = false;
+  is_finished_ = false;
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
@@ -495,7 +502,8 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanFuncByLevel(
   UpdateDubinsInputByLevel(level);
 
   const double max_search_length =
-      ego_slot_info_.ego_pos_slot.x() - plan_input_.target_pos.x();
+      std::max(min_search_length,
+               ego_slot_info_.ego_pos_slot.x() - plan_input_.target_pos.x());
 
   // priority_queue to get index of shortest output
   std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>,
@@ -565,11 +573,22 @@ void DiagonalInTrajectoryGenerator::PrintDubinsOutput() {
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckFinish() const {
-  return (std::fabs(ego_slot_info_.ego_pos_slot.x() - terminal_target_x) <=
-              kMaxXOffset &&
-          std::fabs(ego_slot_info_.ego_pos_slot.y() - 0.0) <= kMaxYOffset &&
-          std::fabs(ego_slot_info_.ego_heading_slot) <= kMaxThetaOffset &&
-          measure_.static_flag);
+  if (simulation_enable_flag_) {
+    return false;
+  }
+
+  const bool parking_success =
+      (std::fabs(ego_slot_info_.ego_pos_slot.x() - terminal_target_x) <=
+           kMaxXOffset &&
+       std::fabs(ego_slot_info_.ego_pos_slot.y() - 0.0) <= kMaxYOffset &&
+       std::fabs(ego_slot_info_.ego_heading_slot) <= kMaxThetaOffset &&
+       measure_.static_flag);
+
+  const bool parking_failed =
+      (std::fabs(ego_slot_info_.ego_pos_slot.x() - terminal_target_x) < 0.5) &&
+      measure_.standstill_timer_by_pos > 3.0;
+
+  return parking_success || parking_failed;
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckReplan(
@@ -671,9 +690,11 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnce(
                            ego_slot_info_.ego_heading_slot);
 
   // main loop for dubins planning
-  if (plan_state_machine_ == IDLE) {
+  if (plan_state_machine_ == INIT) {
     if (DubinsPlanFuncByLevel(DUBINS_LEVEL_0)) {
-      if (dubins_planner_.GetOutput().gear_change_count == 0) {
+      if (dubins_planner_.GetOutput().gear_change_count == 0 &&
+          dubins_planner_.GetOutput().current_gear_cmd ==
+              pnc::dubins_lib::DubinsLibrary::REVERSE) {
         plan_state_machine_ = FINAL;
       }
     } else {
@@ -681,7 +702,7 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnce(
     }
   } else if (plan_state_machine_ == FINAL) {
     if (DubinsPlanFuncByLevel(DUBINS_LEVEL_0)) {
-      plan_state_machine_ = IDLE;
+      plan_state_machine_ = INIT;
     } else {
       return false;
     }
@@ -738,8 +759,6 @@ const bool DiagonalInTrajectoryGenerator::CheckIfNearTerminalPoint() const {
   }
 
   return false;
-
-  return (measure_.standstill_timer > 2.5);
 }
 
 void DiagonalInTrajectoryGenerator::UpdateMeasurement() {

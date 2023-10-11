@@ -26,7 +26,6 @@ namespace apa_planner {
 
 class DiagonalInTrajectoryGenerator {
   enum PlanningStateMachine {
-    IDLE,
     INIT,
     PREPARE,
     PAUSE,
@@ -143,6 +142,9 @@ class DiagonalInTrajectoryGenerator {
   void UpdateManagedParkingFusion(const int select_slot_index);
 
  private:
+  // reset
+  void Reset();
+
   // local view and frame
   const LocalView *local_view_ = nullptr;
   framework::Frame *frame_ = nullptr;
@@ -184,10 +186,11 @@ class DiagonalInTrajectoryGenerator {
   double remain_dist_ = 0.0;
   bool spline_success_ = false;
   bool is_replan_ = false;
+  bool is_finished_ = false;
 
   Measurement measure_;
   EgoSlotInfo ego_slot_info_;
-  uint8_t plan_state_machine_ = IDLE;
+  uint8_t plan_state_machine_ = INIT;
 };
 
 }  // namespace apa_planner
