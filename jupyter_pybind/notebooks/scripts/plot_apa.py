@@ -6,9 +6,9 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/0924/test_9.00000'
+bag_path = '/home/xlwang71/Downloads/APA/1011/test_12.00000'
 frame_dt = 0.1 # sec
-plot_ctrl_flag = False
+plot_ctrl_flag = True
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()

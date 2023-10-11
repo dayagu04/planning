@@ -60,8 +60,7 @@ constexpr double kMockedObjYOffset = 4.0;
 
 static const double kNormalSlotLength = 4.8;
 static const double target_x_init = 1.5;
-static const double min_radius_level1 = 5.0;
-static const double min_radius_level2 = 4.88;
+static const double min_radius = 5.2;
 static const double kLineStep = 0.1;
 static const double kMinProperBCLength = 0.3;
 static const double plan_time = 0.1;
@@ -458,7 +457,7 @@ void DiagonalInTrajectoryGenerator::UpdateDubinsInputByLevel(
   if (level == DUBINS_LEVEL_0) {  // LEVEL_0, usually for first try
     plan_input_.target_pos << target_x_init, 0.0;
     plan_input_.target_heading = 0.0;
-    plan_input_.path_radius = min_radius_level1;
+    plan_input_.path_radius = min_radius;
 
   } else if (level == DUBINS_LEVEL_1) {
   }
