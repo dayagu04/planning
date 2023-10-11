@@ -133,13 +133,13 @@ class DiagonalInTrajectoryGenerator {
   const bool CheckIfNearTerminalPoint() const;
   const bool CheckFinish() const;
 
-  const bool CheckReplan(
-      PlanningOutput::PlanningOutput *const planning_output) const;
+  const bool CheckReplan(PlanningOutput::PlanningOutput *const planning_output);
 
   const bool PathPlanOnce(
       const int slot_index,
       PlanningOutput::PlanningOutput *const planning_output);
 
+  void Log() const;
   void UpdateManagedParkingFusion(const int select_slot_index);
 
  private:
@@ -183,6 +183,7 @@ class DiagonalInTrajectoryGenerator {
   double current_path_length_ = 0.0;
   double remain_dist_ = 0.0;
   bool spline_success_ = false;
+  bool is_replan_ = false;
 
   Measurement measure_;
   EgoSlotInfo ego_slot_info_;

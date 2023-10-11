@@ -120,6 +120,9 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
   // update measurement
   UpdateMeasurement();
 
+  // log by json
+  Log();
+
   const auto& parking_fusion_info = origin_parking_fusion_info;
 
   const int slots_size = parking_fusion_info.parking_fusion_slot_lists_size();
@@ -570,7 +573,7 @@ const bool DiagonalInTrajectoryGenerator::CheckFinish() const {
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckReplan(
-    PlanningOutput* const planning_output) const {
+    PlanningOutput* const planning_output) {
   if (simulation_enable_flag_ && simu_param_.force_planning_) {
     std::cout << "tune force_planning on!" << std::endl;
     return true;
@@ -657,7 +660,10 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnce(
 
   // check if replan
   if (!CheckReplan(planning_output)) {
+    is_replan_ = false;
     return true;
+  } else {
+    is_replan_ = true;
   }
 
   // start apa dubins planning
@@ -718,6 +724,10 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnce(
   // }
 
   return true;
+}
+
+void DiagonalInTrajectoryGenerator::Log() const {
+  JSON_DEBUG_VALUE("is_replan", is_replan_)
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckIfNearTerminalPoint() const {
