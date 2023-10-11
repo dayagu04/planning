@@ -176,7 +176,7 @@ class LoadCyberbag:
 
     # load planning debug msg
     try:
-      json_value_list = ["replan_status", "ego_pos_x", "last_segment_name"]
+      json_value_list = ["replan_status", "ego_pos_x", "is_replan"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec"]
 
@@ -236,11 +236,11 @@ class LoadCyberbag:
     # load control debug msg
     try:
       json_value_list = ["controller_status", "lon_enable", "lat_enable", "lat_mpc_status", "gear_plan", "gear_real", "gear_cmd",
-                    "vel_ref", "vel_ref_gain", "vel_cmd", "vel_ego", 
+                    "vel_ref", "vel_ref_gain", "vel_cmd", "vel_ego",
                     "path_length_plan", "remain_s_plan", "remain_s_prebreak",
                     "vel_out", "acc_vel", "vel_KP_term", "vel_KI_term", "slope_acc", "throttle_brake",
                     "steer_angle_cmd", "steer_angle", 'driver_hand_torque',
-                    "lat_err", "phi_err", 
+                    "lat_err", "phi_err",
                     "apa_enable", "emergency_stop_flag", "vehicle_stationary_flag", "apa_finish_flag", "break_override_flag", "gear_shifting_flag"]
 
       json_vector_list = ["dx_ref_vec", "dy_ref_vec", "dx_ref_mpc_vec", "dy_ref_mpc_vec", "dphi_ref_mpc_vec", "dx_mpc_vec", "dy_mpc_vec", "delta_mpc_vec", "dphi_mpc_vec"]
@@ -556,7 +556,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       'current_pos_x': [cur_pos_xn - cur_pos_xn0],
       'current_pos_y': [cur_pos_yn - cur_pos_yn0],
     })
-    
+
     car_circle_xn = []
     car_circle_yn = []
     car_circle_rn = []
@@ -565,7 +565,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       car_circle_xn.append(tmp_x - cur_pos_xn0)
       car_circle_yn.append(tmp_y - cur_pos_yn0)
       car_circle_rn.append(car_circle_r[i])
-    
+
     local_view_data['data_car_circle'].data.update({
       'car_circle_xn': car_circle_xn,
       'car_circle_yn': car_circle_yn,
@@ -825,28 +825,28 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       'wave_text_y':text_x,
       'length':length,
     })
-  
+
   if plot_ctrl_flag == True:
     names = []
     datas = []
     if bag_loader.plan_msg['enable'] == True:
       names.append("planning_status")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].planning_status.apa_planning_status))
-        
+
       names.append("slots_id")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].successful_slot_info_list))
-        
+
       names.append("plan_gear_cmd")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].gear_command))
-      
+
       names.append("plan_traj_available")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].trajectory.available))
-        
+
     # load func_state
     if bag_loader.soc_state_msg['enable'] == True:
       names.append("current_state")
       datas.append(str(bag_loader.soc_state_msg['data'][soc_state_msg_idx].current_state))
-    
+
     # load vsg
     if bag_loader.vs_msg['enable'] == True:
       names.append("long_control_actuator_status")
@@ -857,8 +857,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       datas.append(str(bag_loader.vs_msg['data'][vs_msg_idx].shift_lever_state))
       names.append("shift_lever_state_available")
       datas.append(str(bag_loader.vs_msg['data'][vs_msg_idx].shift_lever_state_available))
-    
-    # load control debug  
+
+    # load control debug
     if bag_loader.ctrl_debug_msg['enable'] == True:
       ctrl_json_data = bag_loader.ctrl_debug_msg['json']
       dx_ref_mpc_vec_local = ctrl_json_data[ctrl_debug_msg_idx]['dx_ref_mpc_vec']
@@ -869,17 +869,17 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
 
       dx_ref_mpc_vec, dy_ref_mpc_vec = coord_tf.local_to_global(dx_ref_mpc_vec_local, dy_ref_mpc_vec_local)
       dx_ref_vec, dy_ref_vec = coord_tf.local_to_global(dx_ref_vec_local, dy_ref_vec_local)
-  
+
       local_view_data['data_ref_mpc_vec'].data.update({
         'dx_ref_mpc_vec': dx_ref_mpc_vec,
         'dy_ref_mpc_vec': dy_ref_mpc_vec,
       })
-      
+
       local_view_data['data_ref_vec'].data.update({
         'dx_ref_vec': dx_ref_vec,
         'dy_ref_vec': dy_ref_vec,
       })
-      
+
       names.append("lat_mpc_status")
       datas.append(ctrl_json_data[ctrl_debug_msg_idx]['lat_mpc_status'])
       names.append("vel_ref_gain")
@@ -904,12 +904,12 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       datas.append(ctrl_json_data[ctrl_debug_msg_idx]['gear_cmd'])
       names.append("gear_real")
       datas.append(ctrl_json_data[ctrl_debug_msg_idx]['gear_real'])
-      
+
     local_view_data['ctrl_debug_data'].data.update({
       'name': names,
       'data': datas,
     })
-  
+
   return local_view_data
 
 def load_local_view_figure_parking():
@@ -938,7 +938,7 @@ def load_local_view_figure_parking():
     'name':[],
     'data':[]
   })
-    
+
   data_all_managed_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
@@ -1020,7 +1020,7 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
 
   data_control_global = ColumnDataSource(data = {
   'time': [],
-  
+
   'controller_status': [],
   'lon_enable': [],
   'lat_enable': [],
@@ -1029,31 +1029,31 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   'vel_cmd_plan': [],
   'vel_cmd_pos': [],
   'vel_measure': [],
-  
+
   'path_length_plan': [],
   'remain_s_plan': [],
   'remain_s_prebreak': [],
-  
+
   'vel_out': [],
   'vel_KP_term': [],
   'vel_KI_term': [],
   'throttle_brake': [],
-  
+
   'steer_angle_cmd': [],
   'steer_angle_measure': [],
   'driver_hand_torque': [],
-  
+
   'lat_err': [],
   'phi_err': [],
   })
-  
+
   t_debug = []
-  
+
   controller_status = []
   lon_enable = []
   lat_enable = []
   gear_plan = []
-  
+
   vel_cmd_plan = []
   vel_cmd_pos = []
   vel_measure = []
@@ -1061,39 +1061,39 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   path_length_plan = []
   remain_s_plan = []
   remain_s_prebreak = []
-  
+
   acc_cmd = []
   vel_kp_term = []
   vel_ki_term = []
   throttle_brake = []
-  
+
   steer_angle_cmd = []
   steer_angle_measure = []
   driver_hand_torque = []
-  
+
   lat_err = []
   phi_err = []
 
   t = 0.0
 
   ctrl_json_data = bag_loader.ctrl_debug_msg['json']
-  
+
   for i in range(len(ctrl_json_data)):
     t_debug.append(t)
-      
+
     controller_status.append(ctrl_json_data[i]['controller_status'])
     lon_enable.append(ctrl_json_data[i]['lon_enable'])
     lat_enable.append(ctrl_json_data[i]['lat_enable'])
     gear_plan.append(ctrl_json_data[i]['gear_plan'])
-    
+
     vel_cmd_plan.append(ctrl_json_data[i]['vel_ref'])
     vel_cmd_pos.append(ctrl_json_data[i]['vel_cmd'])
     vel_measure.append(ctrl_json_data[i]['vel_ego'])
-    
+
     path_length_plan.append(ctrl_json_data[i]['path_length_plan'])
     remain_s_plan.append(ctrl_json_data[i]['remain_s_plan'])
     remain_s_prebreak.append(ctrl_json_data[i]['remain_s_prebreak'])
-    
+
     acc_cmd.append(ctrl_json_data[i]['vel_out'])
     vel_kp_term.append(ctrl_json_data[i]['vel_KP_term'])
     vel_ki_term.append(ctrl_json_data[i]['vel_KI_term'])
@@ -1101,45 +1101,45 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
     if tmp_throttle_brake > 0.0:
       tmp_throttle_brake = tmp_throttle_brake / 1000
     throttle_brake.append(tmp_throttle_brake)
-    
+
     steer_angle_cmd.append(ctrl_json_data[i]['steer_angle_cmd'] * 57.3)
     steer_angle_measure.append(ctrl_json_data[i]['steer_angle'] * 57.3)
     driver_hand_torque.append(ctrl_json_data[i]['driver_hand_torque'])
-    
+
     lat_err.append(ctrl_json_data[i]['lat_err'] * 100)
     phi_err.append(ctrl_json_data[i]['phi_err'] * 57.3)
-    
+
     t = t + 0.02
-    
+
   data_control_global.data.update({
     'time': t_debug,
-    
+
     'controller_status': controller_status,
     'lon_enable': lon_enable,
     'lat_enable': lat_enable,
     'gear_plan': gear_plan,
-    
+
     'vel_cmd_plan': vel_cmd_plan,
     'vel_cmd_pos': vel_cmd_pos,
     'vel_measure': vel_measure,
-    
+
     'path_length_plan': path_length_plan,
     'remain_s_plan': remain_s_plan,
     'remain_s_prebreak': remain_s_prebreak,
-    
+
     'vel_out': acc_cmd,
     'vel_KP_term': vel_kp_term,
     'vel_KI_term': vel_ki_term,
     'throttle_brake': throttle_brake,
-    
+
     'steer_angle_cmd': steer_angle_cmd,
     'steer_angle_measure': steer_angle_measure,
     'driver_hand_torque': driver_hand_torque,
-    
+
     'lat_err': lat_err,
-    'phi_err': phi_err,               
+    'phi_err': phi_err,
   })
-  
+
   # figures
   fig2 = bkp.figure(x_axis_label='time', y_axis_label='status',x_range = [t_debug[0], t_debug[-1]], width=500, height=200)
   fig3 = bkp.figure(x_axis_label='time', y_axis_label='vel',x_range = fig2.x_range, width=fig2.width, height=fig2.height)
@@ -1152,7 +1152,7 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   fig2.line('time', 'lon_enable', source = data_control_global, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'lon_enable')
   fig2.line('time', 'lat_enable', source = data_control_global, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'lat_enable')
   fig2.line('time', 'gear_plan', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'gear_plan')
- 
+
   f3 = fig3.line('time', 'vel_cmd_plan', source = data_control_global, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'vel_cmd_plan')
   fig3.line('time', 'vel_cmd_pos', source = data_control_global, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'vel_cmd_pos')
   fig3.line('time', 'vel_measure', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'vel_measure')
@@ -1173,10 +1173,10 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   f7 = fig7.line('time', 'lat_err', source = data_control_global, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat_err')
   fig7.line('time', 'phi_err', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'phi_err')
 
-  hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time'), ('controller_status', '@controller_status'), ('lon_enable', '@lon_enable'), ('lat_enable', '@lat_enable'),  
+  hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time'), ('controller_status', '@controller_status'), ('lon_enable', '@lon_enable'), ('lat_enable', '@lat_enable'),
                                               ('gear_plan', '@gear_plan')], mode='vline')
 
-  hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time'), ('vel_cmd_plan', '@vel_cmd_plan'), ('vel_cmd_pos', '@vel_cmd_pos'),  
+  hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time'), ('vel_cmd_plan', '@vel_cmd_plan'), ('vel_cmd_pos', '@vel_cmd_pos'),
                                               ('vel_measure', '@vel_measure')], mode='vline')
 
   hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time'), ('path_length_plan', '@path_length_plan'), ('remain_s_plan', '@remain_s_plan'), ('remain_s_prebreak', '@remain_s_prebreak')], mode='vline')
@@ -1207,8 +1207,7 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   fig5.legend.click_policy = 'hide'
   fig6.legend.click_policy = 'hide'
   fig7.legend.click_policy = 'hide'
-  
+
   return fig2, fig3, fig4, fig5, fig6, fig7, data_ctrl_debug_table
 
-  
-  
+

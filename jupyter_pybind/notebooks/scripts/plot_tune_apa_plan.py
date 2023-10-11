@@ -11,7 +11,7 @@ from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/1011/test_6.00000'
+bag_path = '/home/xlwang71/Downloads/APA/1011_night/test_15.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -80,7 +80,6 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
   origin_plan_output = bag_loader.plan_msg['data'][plan_msg_idx]
 
 
-
   # print("soc_state_input = ", soc_state_input)
   # print("fus_parking_input = ", fus_parking_input)
   # print("loc_msg_input = ", loc_msg_input)
@@ -94,7 +93,12 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
   #   last_seg_name = planning_json['last_segment_name']
   # print("plan_statemachine = ", plan_statemachine)
 
-  print(origin_plan_output)
+  # print(origin_plan_output)
+
+  is_replan = planning_json['is_replan']
+
+  print("is_replan = ", is_replan)
+  print("ego_yaw_deg = ", loc_msg_input.pose.euler_angles.yaw * 57.3)
 
   try:
     diag_slot_planning_py.UpdateBytesByParam(soc_state_input.SerializeToString(),
@@ -102,7 +106,7 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
                                       loc_msg_input.SerializeToString(),
                                       vs_msg_input.SerializeToString(),
                                       planning_data.slot_management_info.SerializeToString(),
-                                      selected_id, force_planning, plan_statemachine, is_complete)
+                                      selected_id, (force_planning or is_replan), plan_statemachine, is_complete)
     planning_output.ParseFromString(diag_slot_planning_py.GetOutputBytes())
   except:
     print("error")

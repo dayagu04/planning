@@ -749,6 +749,21 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnce(
 
 void DiagonalInTrajectoryGenerator::Log() const {
   JSON_DEBUG_VALUE("is_replan", is_replan_)
+  JSON_DEBUG_VALUE("gear_change_count",
+                   dubins_planner_.GetOutput().gear_change_count)
+
+  JSON_DEBUG_VALUE("path_length", dubins_planner_.GetOutput().length)
+
+  JSON_DEBUG_VALUE("AB_length", dubins_planner_.GetOutput().arc_AB.length)
+  JSON_DEBUG_VALUE("BC_length", dubins_planner_.GetOutput().line_BC.length)
+  JSON_DEBUG_VALUE("CD_length", dubins_planner_.GetOutput().arc_CD.length)
+
+  const std::vector<double> gear_cmd_vec = {
+      static_cast<double>(dubins_planner_.GetOutput().gear_cmd_vec[0]),
+      static_cast<double>(dubins_planner_.GetOutput().gear_cmd_vec[1]),
+      static_cast<double>(dubins_planner_.GetOutput().gear_cmd_vec[2])};
+
+  JSON_DEBUG_VECTOR("gear_cmd_vec", gear_cmd_vec, 1)
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckIfNearTerminalPoint() const {
