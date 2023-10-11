@@ -23,9 +23,9 @@ altitude0 = 0.0
 class LocalizationApaPlotter(object):
   def __init__(self):
   # bag path and frame dt
-    self.file_path = '/mnt/noa/20231008/noa_15.00000'
+    self.file_path = '/mnt/noa/20230925/output.record'
     self.abnormal_timestamp_path = '/mnt/noa/20230916/abnormal_timestamp.txt'
-    self.rtk_file_path = '/mnt/noa/20230925/output_json/sensor_navi_navifusion.json'
+    self.rtk_file_path_json = '/mnt/noa/20230925/output_json/sensor_navi_navifusion.json'
     display(HTML('<style>.container { width:95% !important;  }</style>'))
     output_notebook()
 
@@ -266,10 +266,10 @@ class LocalizationApaPlotter(object):
               self.abnormal_absolute_lon_vec.append(self.absolute_lon_vec[-1])
 
 
-  def load_rtk_data(self):
+  def load_rtk_data_json(self):
     # load rtk localization msg
     ell_wgs84 = pm.Ellipsoid('wgs84')
-    with open(self.rtk_file_path, 'r') as f:
+    with open(self.rtk_file_path_json, 'r') as f:
       data = json.load(f)
       messages = data['messages']
       for msg in messages:
@@ -285,11 +285,25 @@ class LocalizationApaPlotter(object):
         self.rtk_y_vec.append(n)
 
 
+  def load_rtk_data(self):
+    ell_wgs84 = pm.Ellipsoid('wgs84')
+    bag = Record(self.file_path)
+    for topic, msg, t in bag.read_messages('/iflytek/rtk/position'):
+      if(self.is_out_of_china([msg.absolute_pos[0].lat, msg.absolute_pos[0].lon, 0.0])):
+        continue
+      self.rtk_longitude_vec.append(msg.absolute_pos[0].lon)
+      self.rtk_latitude_vec.append(msg.absolute_pos[0].lat)
+      e, n, u = pm.geodetic2enu(msg.absolute_pos[0].lat, msg.absolute_pos[0].lon, 0.0, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
+      self.rtk_x_vec.append(e)
+      self.rtk_y_vec.append(n)
+
+
   def plot_figure(self):
     self.load_position_data()
-    self.load_iflytek_localization_data()
-    # self.load_pbox_gnss_data()
+    # self.load_iflytek_localization_data()
+    self.load_pbox_gnss_data()
     # self.load_gnss_data()
+    self.load_rtk_data_json()
     # self.load_rtk_data()
     self.plot_data()
 
@@ -299,6 +313,7 @@ class LocalizationApaPlotter(object):
     abnormal_size = 2
     fig1 = bkp.figure(x_axis_label='lat', y_axis_label='lon', width=1500, height=300, match_aspect=True, aspect_scale=1.0)
     fig1.circle(self.absolute_lat_vec, self.absolute_lon_vec, size=normal_size, fill_color='red', line_color='red', alpha=0.5, legend_label='absolute_pos')
+    fig1.circle(self.absolute_lat_vec[0], self.absolute_lon_vec[0], size=5, fill_color='red', line_color='red', alpha=0.5, legend_label='absolute_pos')
     fig1.line(self.absolute_lat_vec, self.absolute_lon_vec, line_width=1, line_color='red', legend_label = 'absolute_pos')
     fig1.circle(self.abnormal_absolute_lat_vec, self.abnormal_absolute_lon_vec, size=abnormal_size, fill_color='brown', line_color='brown', alpha=0.5, legend_label='abnormal absolute_pos')
     fig1.circle(self.positions_original_lat_vec, self.positions_original_lon_vec, size = normal_size, fill_color='blue', line_color='blue', alpha = 0.5, legend_label = 'positions')
@@ -331,7 +346,7 @@ class LocalizationApaPlotter(object):
     fig2.legend.click_policy = 'hide'
     bkp.show(fig2, notebook_handle=True)
 
-    time_range = [0, 2000]
+    time_range = [0, 100]
 
     fig3 = bkp.figure(x_axis_label='time', y_axis_label='status', x_range = time_range, y_range = [-1, 5], width=1500, height=300)
     fig3.line(self.failsafe_time_vec, self.failsafe_loc_status_vec, line_width=1, line_color='blue', line_dash='solid', legend_label='failsafe_loc_status')

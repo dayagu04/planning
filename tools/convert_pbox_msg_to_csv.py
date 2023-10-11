@@ -3,12 +3,14 @@
 
 import csv
 from cyber_record.record import Record
+import json
 import os
 
 class ConvertPboxMsgToCsv(object):
   def __init__(self):
   # bag path and frame dt
-    self.file_path = '/mnt/noa/20231007/noa_1.00000'
+    self.file_path = '/mnt/noa/20230925/output.record'
+    self.rtk_file_path_json = '/mnt/noa/20230925/output_json/sensor_navi_navifusion.json'
 
     self.gnss_data = {
       'gnss_utc_time_year': [],
@@ -61,6 +63,44 @@ class ConvertPboxMsgToCsv(object):
       'angular_rate_val_y': [],
       'angular_rate_val_z': [],
     }
+
+    self.cti_data = {
+      'gps_time': [],
+      'age': [],
+      've': [],
+      'yaw': [],
+      'altitude': [],
+      'longitude': [],
+      'sat_cnt1': [],
+      'warn': [],
+      'header_stamp_secs': [],
+      'header_stamp_nsecs': [],
+      'header_frame_id': [],
+      'header_seq': [],
+      'imu_data_temperature': [],
+      'imu_data_accy': [],
+      'imu_data_accx': [],
+      'imu_data_accz': [],
+      'imu_data_gyroz': [],
+      'imu_data_gyrox': [],
+      'imu_data_gyroy': [],
+      'gps_week': [],
+      'meta_timestamp_us': [],
+      'vn': [],
+      'pitch': [],
+      'latitude': [],
+      'gps_status': [],
+      'speed': [],
+      'roll': [],
+      'sat_cnt2': [],
+      'vu': [],
+    }
+
+
+  def is_out_of_china(self, lla):
+    if(not(lla[0] > 0.8293 and lla[0] < 55.8271 and lla[1] > 72.004 and \
+              lla[1] < 137.8347)):
+      return [0,0,0]
 
 
   def load_data(self):
@@ -115,10 +155,50 @@ class ConvertPboxMsgToCsv(object):
       self.imu_data['angular_rate_val_y'].append(msg.angular_rate_val.y)
       self.imu_data['angular_rate_val_z'].append(msg.angular_rate_val.z)
 
+    with open(self.rtk_file_path_json, 'r') as f:
+      data = json.load(f)
+      messages = data['messages']
+      for msg in messages:
+        latitude = float(msg['latitude'])
+        longitude = float(msg['longitude'])
+        altitude = float(msg['altitude'])
+        if self.is_out_of_china([latitude, longitude, altitude]):
+          continue
+        self.cti_data['gps_time'].append(float(msg['gps_time']))
+        self.cti_data['age'].append(float(msg['age']))
+        self.cti_data['ve'].append(float(msg['ve']))
+        self.cti_data['yaw'].append(float(msg['yaw']))
+        self.cti_data['altitude'].append(float(msg['altitude']))
+        self.cti_data['longitude'].append(float(msg['longitude']))
+        self.cti_data['sat_cnt1'].append(float(msg['sat_cnt1']))
+        self.cti_data['warn'].append(float(msg['warn']))
+        self.cti_data['header_stamp_secs'].append(float(msg['header']['stamp']['secs']))
+        self.cti_data['header_stamp_nsecs'].append(float(msg['header']['stamp']['nsecs']))
+        self.cti_data['header_frame_id'].append(msg['header']['frame_id'])
+        self.cti_data['header_seq'].append(float(msg['header']['seq']))
+        self.cti_data['imu_data_temperature'].append(float(msg['imu_data']['temperature']))
+        self.cti_data['imu_data_accy'].append(float(msg['imu_data']['accy']))
+        self.cti_data['imu_data_accx'].append(float(msg['imu_data']['accx']))
+        self.cti_data['imu_data_accz'].append(float(msg['imu_data']['accz']))
+        self.cti_data['imu_data_gyroz'].append(float(msg['imu_data']['gyroz']))
+        self.cti_data['imu_data_gyrox'].append(float(msg['imu_data']['gyrox']))
+        self.cti_data['imu_data_gyroy'].append(float(msg['imu_data']['gyroy']))
+        self.cti_data['gps_week'].append(float(msg['gps_week']))
+        self.cti_data['meta_timestamp_us'].append(float(msg['meta']['timestamp_us']))
+        self.cti_data['vn'].append(float(msg['vn']))
+        self.cti_data['pitch'].append(float(msg['pitch']))
+        self.cti_data['latitude'].append(float(msg['latitude']))
+        self.cti_data['gps_status'].append(float(msg['gps_status']))
+        self.cti_data['speed'].append(float(msg['speed']))
+        self.cti_data['roll'].append(float(msg['roll']))
+        self.cti_data['sat_cnt2'].append(float(msg['sat_cnt2']))
+        self.cti_data['vu'].append(float(msg['vu']))
+
 
   def write_all_data(self):
     self.write_data('gnss_data.csv', self.gnss_data)
     self.write_data('imu_data.csv', self.imu_data)
+    self.write_data('cti_data.csv', self.cti_data)
 
   def write_data(self, file_name, data):
     if os.path.exists(file_name):
