@@ -68,7 +68,7 @@ static const double kLineStep = 0.1;
 static const double kMinProperBCLength = 0.3;
 static const double plan_time = 0.1;
 static const double terminal_target_x = 1.1;
-static const double ideal_length_level_0 = 5.0;
+static const double min_path_length = 0.3;
 static const double max_path_length = 20.0;
 static const double min_search_length = 6.0;
 static const uint8_t max_gear_change_count = 6;
@@ -208,6 +208,8 @@ void DiagonalInTrajectoryGenerator::Reset() {
   gear_change_count_ = max_gear_change_count;
   path_level_ = DUBINS_LEVEL_NONE;
   is_plan_success_ = false;
+  terminal_err_.Set(Eigen::Vector2d(1.0, 1.0), 0.5);
+  target_err_.Set(Eigen::Vector2d(1.0, 1.0), 0.5);
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
@@ -412,21 +414,13 @@ void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
   const Eigen::Vector2d p2(slot_points[2].x(), slot_points[2].y());
   const Eigen::Vector2d p3(slot_points[3].x(), slot_points[3].y());
 
-  const auto pM = 0.5 * (p0 + p1);
-  const auto v_01 = p1 - p0;
-  const auto v_02 = p2 - p0;
+  const auto pM01 = 0.5 * (p0 + p1);
+  const auto pM23 = 0.5 * (p2 + p3);
 
-  auto n = Eigen::Vector2d(-v_01.y(), v_01.x());
+  const auto n = pM01 - pM23;
 
-  double k = 1.0;
-  if (n.dot(v_02) < 0.0) {
-    k = -1.0;
-  }
-
-  // std::cout << "pM = \n" << pM << std::endl;
-
-  ego_slot_info_.slot_origin_pos = k * n.normalized() * kNormalSlotLength + pM;
-  ego_slot_info_.slot_origin_heading = std::atan2(-n.y(), -n.x());
+  ego_slot_info_.slot_origin_pos = pM01 - kNormalSlotLength * n.normalized();
+  ego_slot_info_.slot_origin_heading = std::atan2(n.y(), n.x());
 
   // tf init
   g2l_tf_.Init(ego_slot_info_.slot_origin_pos,
@@ -445,6 +439,17 @@ void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
   // std::cout << "ego_pos_slot_ = \n" << ego_pos_slot_ << std::endl;
   // std::cout << "ego_heading_slot_deg = " << ego_heading_slot_ * 57.3
   //           << std::endl;
+
+  // update terminal error
+  terminal_err_.Set(
+      Eigen::Vector2d(ego_slot_info_.ego_pos_slot.x() - terminal_target_x,
+                      ego_slot_info_.ego_pos_slot.y() - 0.0),
+      ego_slot_info_.ego_heading_slot);
+
+  std::cout << "lon_err = " << terminal_err_.pos.x() << std::endl;
+  std::cout << "lat_err = " << terminal_err_.pos.y() << std::endl;
+  std::cout << "heading_err_deg = " << terminal_err_.heading * 57.3
+            << std::endl;
 }
 
 const bool DiagonalInTrajectoryGenerator::DubinsPlanOneStep(
@@ -506,8 +511,11 @@ const bool DiagonalInTrajectoryGenerator::PathEvaluateOnce(
   if (level ==
       DUBINS_LEVEL_ZERO_GEAR_CHANGE) {  // LEVEL_0, usually for first try
 
+    // const bool is_toward_terminal =
+    //     ego_slot_info_.ego_pos_slot.x() > plan_input_.target_pos.x();
+
     // no gear change: force no gear change in final
-    if (output.gear_change_count == 0) {
+    if (output.gear_change_count == 0 && plan_state_machine_ == FINAL) {
       return true;
     }
 
@@ -537,8 +545,9 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanFuncByLevel(
                ego_slot_info_.ego_pos_slot.x() - plan_input_.target_pos.x());
 
   // priority_queue to get index of shortest output
-  std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>,
-                      std::greater<std::pair<int, int>>>
+  std::priority_queue<std::pair<double, int>,
+                      std::vector<std::pair<double, int>>,
+                      std::greater<std::pair<double, int>>>
       path_length_queue;
 
   std::vector<DubinsLibrary::Output> dubins_output_vec;
@@ -553,11 +562,11 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanFuncByLevel(
       // try linearc method first
       if (DubinsPlanOneStep(plan_input_, PlanAlgorithm::DUBINS, level)) {
         const auto length = dubins_planner_.GetOutput().length;
-        if (length < ideal_length_level_0) {
-          return true;
-        }
-
         dubins_output_vec.emplace_back(dubins_planner_.GetOutput());
+
+        // std::cout << "index = " << index << ", length = " << length
+        //           << std::endl;
+
         path_length_queue.push({length, index});
         index++;
 
@@ -574,6 +583,11 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanFuncByLevel(
   if (success_once) {
     dubins_planner_.SetOutput(
         dubins_output_vec[path_length_queue.top().second]);
+
+    // std::cout << "path_length_queue.top() = " <<
+    // path_length_queue.top().second
+    //           << std::endl;
+
     return true;
   } else {
     return false;
@@ -591,36 +605,39 @@ void DiagonalInTrajectoryGenerator::PrintDubinsOutput() {
 
   std::cout << "target_pose = " << plan_input_.target_pos.transpose()
             << std::endl;
+
   std::cout << "target_heading = " << plan_input_.target_heading << std::endl;
   std::cout << "path length = " << output.length << std::endl;
+
+  std::cout << "AB_length = " << output.arc_AB.length
+            << ", BC_length = " << output.line_BC.length
+            << ", CD_length = " << output.arc_CD.length << std::endl;
+
   std::cout << "radius = " << plan_input_.path_radius << std::endl;
 
   const auto tmp_gear_cmd_vec = Eigen::Vector3d(
       output.gear_cmd_vec[0], output.gear_cmd_vec[1], output.gear_cmd_vec[2]);
+
   std::cout << "gear_cmd_vec = " << tmp_gear_cmd_vec.transpose() << std::endl;
 
   std::cout << "gear_change_count = "
             << static_cast<int>(output.gear_change_count) << std::endl;
 
   std::cout << "is_line_arc = " << output.is_line_arc << std::endl;
+
   std::cout << "dubins_type = " << static_cast<int>(output.dubins_type)
             << std::endl;
+
   std::cout << "line_arc_type = " << static_cast<int>(output.line_arc_type)
             << std::endl;
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckFinish() {
-  const double lon_err = ego_slot_info_.ego_pos_slot.x() - terminal_target_x;
-  const double lat_err = ego_slot_info_.ego_pos_slot.y() - 0.0;
-  const double heading_err = ego_slot_info_.ego_heading_slot;
-
-  std::cout << "lon_err = " << lon_err << std::endl;
-  std::cout << "lat_err = " << lat_err << std::endl;
-  std::cout << "heading_err_deg = " << heading_err * 57.3 << std::endl;
-
   const bool parking_success =
-      lon_err < kMaxXOffset && std::fabs(lat_err) <= kMaxYOffset &&
-      std::fabs(heading_err) <= kMaxThetaOffset && measure_.static_flag;
+      terminal_err_.pos.x() < kMaxXOffset &&
+      std::fabs(terminal_err_.pos.y()) <= kMaxYOffset &&
+      std::fabs(terminal_err_.heading) <= kMaxThetaOffset &&
+      measure_.static_flag;
 
   const bool parking_failed =
       (std::fabs(ego_slot_info_.ego_pos_slot.x() - terminal_target_x) < 0.5) &&
@@ -729,11 +746,15 @@ const bool DiagonalInTrajectoryGenerator::PathPlanCoreIteration() {
     plan_success = (dubins_planner_.GetOutput().gear_change_count == 0 &&
                     dubins_planner_.GetOutput().current_gear_cmd ==
                         pnc::dubins_lib::DubinsLibrary::REVERSE);
-    std::cout << "try final plan success" << std::endl;
+
     // TODO: obstacle detection
+  }
+
+  if (plan_success) {
+    std::cout << "try final plan success!" << std::endl;
   } else {
     plan_state_machine_ = INIT;
-    std::cout << "try final plan failed" << std::endl;
+    std::cout << "try final plan failed!" << std::endl;
   }
 
   // second dubins iteration: try to plan again with init: once gear change
@@ -800,7 +821,7 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
   gear_change_count_ = dubins_planner_.GetOutput().gear_change_count;
 
   // print dubins output for debug
-  PrintDubinsOutput();
+  // PrintDubinsOutput();
 
   std::cout << "diagonal replan triggered, plan statemachine = "
             << static_cast<int>(plan_state_machine_) << std::endl;
@@ -826,6 +847,10 @@ void DiagonalInTrajectoryGenerator::Log() const {
 
   JSON_DEBUG_VECTOR("gear_cmd_vec", gear_cmd_vec, 1)
   JSON_DEBUG_VALUE("dubins_iter_count", dubins_iter_count_)
+
+  JSON_DEBUG_VALUE("terminal_lon_err", terminal_err_.pos.x())
+  JSON_DEBUG_VALUE("terminal_lat_err", terminal_err_.pos.y())
+  JSON_DEBUG_VALUE("terminal_heading", terminal_err_.heading)
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckIfNearTerminalPoint() const {

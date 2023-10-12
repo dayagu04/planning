@@ -14,6 +14,7 @@
 #include "frame.h"
 #include "local_view.h"
 #include "math/box2d.h"
+#include "path_point.h"
 #include "planning_plan.pb.h"
 #include "slot_management/slot_management.h"
 #include "slot_management_info.pb.h"
@@ -185,6 +186,8 @@ class DiagonalInTrajectoryGenerator {
   pnc::mathlib::spline y_s_spline_l_;
   double current_path_length_ = 0.0;
   double remain_dist_ = 0.0;
+  pnc::dubins_lib::DubinsLibrary::PathPoint terminal_err_;
+  pnc::dubins_lib::DubinsLibrary::PathPoint target_err_;
   bool spline_success_ = false;
   bool is_replan_ = false;
   bool is_finished_ = false;
