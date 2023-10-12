@@ -1108,8 +1108,10 @@ void StGraphGenerator::UpdateVelRefs() {
   auto &function_info = lon_behav_input_->function_info();
   // ACC : STANDSTILL to ACTIVE need confirmed by driver
   JSON_DEBUG_VALUE("RealTime_STANDSTILL", 0.0);
-  if (v_ego < 1.0 && function_info.function_mode() == common::DrivingFunctionInfo::ACC &&
-      function_info.function_state() == common::DrivingFunctionInfo::STANDSTILL) {
+  if (v_ego < 1.0 &&
+      function_info.function_mode() == common::DrivingFunctionInfo::ACC &&
+      function_info.function_state() ==
+          common::DrivingFunctionInfo::STANDSTILL) {
     v_target_ = 0.0;
     JSON_DEBUG_VALUE("RealTime_STANDSTILL", 1.0);
   }

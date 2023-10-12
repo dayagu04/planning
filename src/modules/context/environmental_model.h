@@ -190,7 +190,9 @@ class EnvironmentalModel {
   }
 
   // update function by system function state
-  void set_function_info(common::DrivingFunctionInfo::DrivingFunctionMode mode, common::DrivingFunctionInfo::DrivingFunctionstate state) {
+  void set_function_info(
+      common::DrivingFunctionInfo::DrivingFunctionMode mode,
+      common::DrivingFunctionInfo::DrivingFunctionstate state) {
     function_info_.set_function_mode(mode);
     function_info_.set_function_state(state);
   }

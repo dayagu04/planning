@@ -170,8 +170,10 @@ bool VisionLongitudinalBehaviorPlanner::update() {
 
   // ACC : STANDSTILL to ACTIVE need confirmed by driver
   JSON_DEBUG_VALUE("VisionLonBehavior_STANDSTILL", 0.0);
-  if (v_ego < 1.0 && function_info.function_mode() == common::DrivingFunctionInfo::ACC &&
-      function_info.function_state() == common::DrivingFunctionInfo::STANDSTILL) {
+  if (v_ego < 1.0 &&
+      function_info.function_mode() == common::DrivingFunctionInfo::ACC &&
+      function_info.function_state() ==
+          common::DrivingFunctionInfo::STANDSTILL) {
     v_target_ = 0.0;
     JSON_DEBUG_VALUE("VisionLonBehavior_STANDSTILL", 1.0);
   }

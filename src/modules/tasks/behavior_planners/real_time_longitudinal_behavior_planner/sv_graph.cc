@@ -1,8 +1,8 @@
 #include "sv_graph.h"
 
 #include <utility>
-#include "debug_info_log.h"
 #include "behavior_planners/real_time_longitudinal_behavior_planner/real_time_lon_behavior_types.h"
+#include "debug_info_log.h"
 #include "environmental_model.h"
 #include "planning_context.h"
 namespace planning {
