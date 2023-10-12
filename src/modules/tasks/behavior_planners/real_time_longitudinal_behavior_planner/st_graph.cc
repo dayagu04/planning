@@ -1099,7 +1099,7 @@ void StGraphGenerator::UpdateVelRefs() {
   double v_target_clip = v_target_;
   if (v_target_ > v_ego) {
     v_target_clip =
-        clip(v_target_, v_ego, v_ego + config_.cruise_set_acc * 0.1);
+        clip(v_target_, v_ego + config_.cruise_set_acc * 0.1, v_ego);
   }
 
   for (int i = 0; i < config_.lon_num_step + 1; ++i) {

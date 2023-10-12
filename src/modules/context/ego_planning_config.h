@@ -837,7 +837,7 @@ struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double lane_keep_cutinp_threshold = 0.2;  // 车道保持时cut in车辆判断阈值
   double lane_change_cutinp_threshold = 0.6;  // 换道时cut in车辆判断阈值
   double corridor_width = 1.5;  // 通道半个宽度，用于判断cut in车辆是否侵入
-  double cruise_set_acc = 0.8;   // 巡航车速增加速率 0.8m/s2
+  double cruise_set_acc = 1.5;   // 巡航车速增加速率 0.8m/s2
   double cruise_set_dec = -1.0;  // 巡航车速减小速率 -1m/s2
 
   double preview_x = 80.0;
