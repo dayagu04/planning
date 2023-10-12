@@ -115,7 +115,6 @@ class DiagonalInTrajectoryGenerator {
   const bool UpdateSplineGlobal();
 
   void GeneratePlanningOutput(
-      const bool plan_success,
       PlanningOutput::PlanningOutput *const planning_output);
 
   // sub function for dubins plan
@@ -131,14 +130,14 @@ class DiagonalInTrajectoryGenerator {
   void PrintDubinsOutput();
 
   const bool CheckIfNearTerminalPoint() const;
-  const bool CheckFinish() const;
+  const bool CheckFinish();
 
   const bool CheckReplan(PlanningOutput::PlanningOutput *const planning_output);
 
-  const bool PathPlanOnce(
-      const int slot_index,
-      PlanningOutput::PlanningOutput *const planning_output);
+  void PathPlanOnce(const int slot_index,
+                    PlanningOutput::PlanningOutput *const planning_output);
 
+  const bool PathPlanCoreIteration();
   void Log() const;
   void UpdateManagedParkingFusion(const int select_slot_index);
 
@@ -189,6 +188,7 @@ class DiagonalInTrajectoryGenerator {
   bool spline_success_ = false;
   bool is_replan_ = false;
   bool is_finished_ = false;
+  bool is_plan_success_ = false;
   uint8_t gear_change_count_ = 6;
   uint8_t path_level_ = DUBINS_LEVEL_NONE;
 

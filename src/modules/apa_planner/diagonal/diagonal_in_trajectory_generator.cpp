@@ -169,10 +169,13 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
     // update managed parking fusion info by slot_manager
     UpdateManagedParkingFusion(select_slot_index);
 
-    const bool flag = PathPlanOnce(select_slot_index, planning_output);
-    GeneratePlanningOutput(flag, planning_output);
+    // plan once
+    PathPlanOnce(select_slot_index, planning_output);
 
-    return flag;
+    // generate planning output
+    GeneratePlanningOutput(planning_output);
+
+    return is_plan_success_;
   } else {
     // bool is_planning_ok = false;
     // for (int i = 0; i < parking_fusion_info.parking_fusion_slot_lists_size();
@@ -204,15 +207,24 @@ void DiagonalInTrajectoryGenerator::Reset() {
   dubins_iter_count_ = 0;
   gear_change_count_ = max_gear_change_count;
   path_level_ = DUBINS_LEVEL_NONE;
+  is_plan_success_ = false;
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
-    const bool plan_success, PlanningOutput* const planning_output) {
+    PlanningOutput* const planning_output) {
+  // not active
   if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
     return;
   }
 
-  if (plan_success) {
+  // when finished
+  if (is_finished_ && !simulation_enable_flag_) {
+    SetFinishedPlanningOutput(frame_);
+    return;
+  }
+
+  // plan suceess
+  if (is_plan_success_) {
     planning_output->Clear();
 
     auto trajectory = planning_output->mutable_trajectory();
@@ -246,6 +258,7 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
   } else {
     if (!simulation_enable_flag_) {
       SetFinishedPlanningOutput(frame_);
+      return;
     }
   }
 }
@@ -383,10 +396,10 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnceSimulation(
   // update measurement
   UpdateMeasurement();
 
-  const bool flag = PathPlanOnce(select_slot_index, &planning_output_);
-  GeneratePlanningOutput(flag, &planning_output_);
+  PathPlanOnce(select_slot_index, &planning_output_);
+  GeneratePlanningOutput(&planning_output_);
 
-  return flag;
+  return is_plan_success_;
 }
 
 void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
@@ -596,7 +609,7 @@ void DiagonalInTrajectoryGenerator::PrintDubinsOutput() {
             << std::endl;
 }
 
-const bool DiagonalInTrajectoryGenerator::CheckFinish() const {
+const bool DiagonalInTrajectoryGenerator::CheckFinish() {
   const double lon_err = ego_slot_info_.ego_pos_slot.x() - terminal_target_x;
   const double lat_err = ego_slot_info_.ego_pos_slot.y() - 0.0;
   const double heading_err = ego_slot_info_.ego_heading_slot;
@@ -613,11 +626,21 @@ const bool DiagonalInTrajectoryGenerator::CheckFinish() const {
       (std::fabs(ego_slot_info_.ego_pos_slot.x() - terminal_target_x) < 0.5) &&
       measure_.standstill_timer_by_pos > 3.0;
 
-  return parking_success || parking_failed;
+  const bool is_finished = parking_success || parking_failed;
+
+  // is_finished will hold true unless exit parking function (will be reset)
+  if (!simulation_enable_flag_) {
+    is_finished_ = is_finished || is_finished_;
+  } else {
+    is_finished_ = is_finished;
+  }
+
+  return is_finished_;
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckReplan(
     PlanningOutput* const planning_output) {
+  is_replan_ = true;
   if (simulation_enable_flag_ && simu_param_.force_planning_) {
     std::cout << "tune force_planning on!" << std::endl;
     return true;
@@ -642,7 +665,9 @@ const bool DiagonalInTrajectoryGenerator::CheckReplan(
   planning_output->mutable_planning_status()->set_apa_planning_status(
       ::PlanningOutput::ApaPlanningStatus::IN_PROGRESS);
 
-  return false;
+  is_replan_ = false;
+
+  return is_replan_;
 }
 
 const bool DiagonalInTrajectoryGenerator::UpdateSplineGlobal() {
@@ -690,28 +715,7 @@ const bool DiagonalInTrajectoryGenerator::UpdateSplineGlobal() {
   return true;
 }
 
-const bool DiagonalInTrajectoryGenerator::PathPlanOnce(
-    const int slot_index, PlanningOutput* const planning_output) {
-  // update slot info and target point in both global and slot coordinate
-  UpdateEgoSlotInfo(slot_index);
-
-  // check if finish
-  if (CheckFinish()) {
-    is_finished_ = true;
-    std::cout << "apa is finished" << std::endl;
-    return true;
-  } else {
-    is_finished_ = false;
-  }
-
-  // check if replan
-  if (!CheckReplan(planning_output)) {
-    is_replan_ = false;
-    return true;
-  } else {
-    is_replan_ = true;
-  }
-
+const bool DiagonalInTrajectoryGenerator::PathPlanCoreIteration() {
   // start apa dubins planning
   dubins_planner_.SetStart(ego_slot_info_.ego_pos_slot,
                            ego_slot_info_.ego_heading_slot);
@@ -739,9 +743,31 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnce(
     // TODO: obstacle detection
   }
 
-  // plan failed then return
-  if (!plan_success) {
-    return false;
+  // set is_plan_success
+  is_plan_success_ = plan_success;
+
+  return plan_success;
+}
+
+void DiagonalInTrajectoryGenerator::PathPlanOnce(
+    const int slot_index, PlanningOutput* const planning_output) {
+  // update slot info and target point in both global and slot coordinate
+  UpdateEgoSlotInfo(slot_index);
+
+  // check if finish
+  if (CheckFinish()) {
+    std::cout << "apa is finished" << std::endl;
+    return;
+  }
+
+  // check if replan
+  if (!CheckReplan(planning_output)) {
+    return;
+  }
+
+  // run plan core
+  if (!PathPlanCoreIteration()) {
+    return;
   }
 
   // enable complete path when simulation
@@ -767,30 +793,23 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnce(
   dubins_planner_.Transform(l2g_tf_);
 
   // update spline for projection point dist calculation
-  // note that update after transform
+  // note that must update after transform
   spline_success_ = UpdateSplineGlobal();
 
   // record gear change count, must be after successful path plan
   gear_change_count_ = dubins_planner_.GetOutput().gear_change_count;
 
+  // print dubins output for debug
   PrintDubinsOutput();
 
   std::cout << "diagonal replan triggered, plan statemachine = "
             << static_cast<int>(plan_state_machine_) << std::endl;
-
-  // if (replan_in_slot_count_ >= 2) {
-  //   std::cout << "replan cnts in slot are more than 1" << std::endl;
-  //   plan_state_machine_ = FINISH;
-  //   return false;
-  // }
-
-  return true;
 }
 
 void DiagonalInTrajectoryGenerator::Log() const {
   JSON_DEBUG_VALUE("is_replan", is_replan_)
   JSON_DEBUG_VALUE("is_finished", is_finished_)
-  
+
   JSON_DEBUG_VALUE("gear_change_count",
                    dubins_planner_.GetOutput().gear_change_count)
 
