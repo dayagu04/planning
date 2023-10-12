@@ -110,10 +110,8 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
             << current_lane->is_solid_line(0) << std::endl;
 
   if (current_lane != nullptr &&
-      ((lc_map_decision > 0 && (!current_lane->is_solid_line(1) ||
-                                virtual_lane_mgr_->dis_to_ramp() < 500.)) ||
-       (lc_map_decision < 0 && (!current_lane->is_solid_line(0) ||
-                                virtual_lane_mgr_->dis_to_ramp() < 500.)))) {
+      ((lc_map_decision > 0 && (!current_lane->is_solid_line(1))) ||
+       (lc_map_decision < 0 && (!current_lane->is_solid_line(0))))) {
     LOG_DEBUG("!!!!!!!!!!! lc_map_decision is %d", lc_map_decision);
     if (check_mlc_enable(lc_map_tfinish) == true && allow_generate == true) {
       if (lc_map_decision < 0) {

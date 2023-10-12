@@ -140,10 +140,13 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
 
     printf("lane relative_id:%d, order_id:%d\n", lane.relative_id(),
            lane.order_id());
-    relative_id_lanes_.emplace_back(virtual_lane_tmp);
     if (virtual_lane_tmp->get_lane_type() ==
         FusionRoad::LaneType::LANETYPE_EMERGENCY)
       break;
+    relative_id_lanes_.emplace_back(virtual_lane_tmp);
+    // if (virtual_lane_tmp->get_lane_type() ==
+    //     FusionRoad::LaneType::LANETYPE_EMERGENCY)
+    //   break;
   }
 
   lane_num_ = relative_id_lanes_.size();
