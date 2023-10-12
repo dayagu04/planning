@@ -68,6 +68,12 @@ class StGraphGenerator {
       const string &lc_request, double v_cruise, double v_ego,
       std::vector<planning::common::RealTimeLonObstacleSTInfo> &cut_in_st_info);
 
+  bool CalcSpeedWithRamp(double dis_to_ramp, double dis_to_merge, bool is_on_ramp, double ramp_v_limit,
+      double acc_to_ramp, double v_ego);
+
+  bool CalcSpeedWithTurns(const double v_ego,
+      const double angle_steers, const std::vector<double> &d_poly);
+
   void UpdateSTRefs(const std::vector<double> &sref_vec);
 
   void UpdateSTGraphs(
@@ -159,8 +165,8 @@ class StGraphGenerator {
   const std::vector<double> _A_TOTAL_MAX_V{1.5, 1.9, 3.2};
   const std::vector<double> _AY_MAX_ABS_BP{5.0, 10.0, 15.0, 30.0};
   const std::vector<double> _AY_MAX_STEERS{2.0, 1.8, 1.6, 1.6};
-  const std::vector<double> _AY_MAX_CURV_BP{500, 680};
-  const std::vector<double> _AY_MAX_CURV_V{0.6, 0.8};
+  const std::vector<double> _AY_MAX_CURV_BP{100, 200, 400, 600};
+  const std::vector<double> _AY_MAX_CURV_V{1.2, 0.6, 0.4, 0.3};
   const std::vector<double> _T_GAP_VEGO_BP{5.0, 15.0, 30.0};
   const std::vector<double> _T_GAP_VEGO_V{1.35, 1.55, 2.0};
   // linear slope

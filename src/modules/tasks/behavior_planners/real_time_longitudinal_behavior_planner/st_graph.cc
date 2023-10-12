@@ -18,6 +18,7 @@ StGraphGenerator::StGraphGenerator(
                                      150.0, 0.1);
   cut_in_desired_distance_filter_.Init(
       -0.2, config_.cut_in_desired_distance_step, 0.0, 150.0, 0.1);
+  //accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
 }
 
 void StGraphGenerator::Update(
@@ -27,6 +28,13 @@ void StGraphGenerator::Update(
   double v_ego = lon_behav_input_->ego_info().ego_v();
   double v_cruise = lon_behav_input_->ego_info().ego_cruise();
   double acc_ego = lon_behav_input_->ego_info().ego_acc();
+  double steer_angle_ego = lon_behav_input_->ego_info().ego_steer_angle();
+
+  std::vector<double> d_polys;
+  const auto &d_poly_infos = lon_behav_input_->lat_output().d_poly_vec();
+  for (auto d_poly_info : d_poly_infos) {
+    d_polys.push_back(d_poly_info);
+  }
 
   if (lane_changing_decider_ == nullptr) {
     lane_changing_decider_ = std::make_unique<RealTimeLaneChangeDecider>(
@@ -56,6 +64,16 @@ void StGraphGenerator::Update(
   sref_vec.reserve(config_.lon_num_step + 1);
 
   CalculateCruiseSrefs(v_ego, v_cruise, acc_ego, sref_vec);
+  
+  //calc target v for noa curv and ramp 
+  CalcSpeedWithTurns(v_ego, steer_angle_ego, d_polys);
+
+  double distance_to_ramp = lon_behav_input_->dis_to_ramp();
+  double distance_to_merge = lon_behav_input_->dis_to_merge();
+  bool is_on_ramp = lon_behav_input_->is_on_ramp();
+  double ramp_v_limit = 50 / 3.6;
+  double acc_to_ramp = -1.0;
+  CalcSpeedWithRamp(distance_to_ramp, distance_to_merge, is_on_ramp, ramp_v_limit, acc_to_ramp, v_ego);
 
   // 2. 计算障碍物s-t
   // 2.1 计算leads: lead one, 选择性使用lead two
@@ -358,6 +376,110 @@ void StGraphGenerator::CalcSpeedInfoWithCutin(
 
   UpdateSpeedWithPotentialCutinCar(lateral_obstacles, lc_request, v_cruise,
                                    v_ego, cut_in_st_info);
+}
+
+bool StGraphGenerator::CalcSpeedWithTurns(
+    const double v_ego, const double angle_steers,
+    const std::vector<double> &d_poly) {
+  // *** this function returns a limited long acceleration allowed, depending on
+  // the existing lateral acceleration
+  //  this should avoid accelerating when losing the target in turns
+  LOG_DEBUG("----CalcSpeedWithTurns--- \n");
+  double deg_rad = std::atan(1.0) * 4 / 180.0;
+  double angle_steers_deg = angle_steers / deg_rad;
+
+  double a_total_max = interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V);
+  double steer_ratio = 16.5;
+  double wheel_base = 2.92;
+  double a_y = std::pow(v_ego, 2) * angle_steers / (steer_ratio * wheel_base);
+  double a_x_allowed =
+      std::sqrt(std::max(std::pow(a_total_max, 2) - std::pow(a_y, 2), 0.0));
+
+  // And limit the logitudinal velocity for a safe turn
+  double a_y_max =
+      interp(std::abs(angle_steers_deg), _AY_MAX_ABS_BP, _AY_MAX_STEERS);
+  double v_limit_steering = std::sqrt((a_y_max * steer_ratio * wheel_base) /
+                                      std::max(std::abs(angle_steers), 0.001));
+  double v_limit_in_turns = v_limit_steering;
+  // calculate the velocity limit according to the road curvature
+  if (d_poly.size() == 4) {
+    double preview_x = config_.dis_curv + config_.t_curv * v_ego;
+    double curv =
+        std::fabs(2 * d_poly[0] * preview_x + d_poly[1]) /
+        std::pow(std::pow(2 * d_poly[0] * preview_x + d_poly[1], 2) + 1, 1.5);
+    double road_radius = 1 / std::max(curv, 0.0001);
+    if (road_radius < 750) {
+      a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+    }
+    double v_limit_road = std::sqrt(a_y_max * road_radius) * 0.9;
+    v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
+    LOG_DEBUG("road_radius is : [%f], a_y_max: [%f]\n", road_radius, a_y_max);
+    LOG_DEBUG(
+        "angle_steers: [%f], angle_steers_deg: [%f], v_limit_road: [%f]\n",
+        angle_steers, angle_steers_deg, v_limit_road);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_road", v_limit_road);
+    JSON_DEBUG_VALUE("VisionLonBehavior_road_radius", road_radius);
+  }
+  /*
+  if(ref_points.size() > 0) {
+    double curv_max_pt = -100.0;
+    for (int i = 0; i < ref_points.size(); i++) {
+      if(std::abs(ref_points[i].path_point.kappa) > curv_max_pt) {
+        curv_max_pt = std::abs(ref_points[i].path_point.kappa);
+      }
+    }
+    double road_radius = 1 / std::max(curv_max_pt, 0.0001);
+    if (road_radius < 680) {
+      a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+    }
+    double v_limit_curv_pt = std::sqrt(a_y_max * road_radius) * 0.9;
+    LOG_DEBUG("ref points calced road_radius is : [%f]\n", road_radius);
+    LOG_DEBUG("ref points max kappa is : [%f]\n", curv_max_pt);
+    LOG_DEBUG("v_limit_curv_pt: [%f]\n", v_limit_curv_pt);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_curv_pt", v_limit_curv_pt);
+    JSON_DEBUG_VALUE("road_radius_in_ref_pt", road_radius);
+    JSON_DEBUG_VALUE("max_kappa_abs", curv_max_pt);
+    v_limit_in_turns = std::min(v_limit_in_turns, v_limit_curv_pt);
+  }
+  */
+
+  JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_steering", v_limit_steering);
+  JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_in_turns", v_limit_in_turns);
+
+  v_target_ = std::min(v_target_, v_limit_in_turns);
+
+  LOG_DEBUG("v_target_ : [%f] \n", v_target_);
+  return true;
+}
+
+bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp, double dis_to_merge, bool is_on_ramp, double ramp_v_limit,
+      double acc_to_ramp, double v_ego) {
+  LOG_DEBUG("----calc_speed_for_ramp--- \n");
+  double v_target_ramp = 40;
+  //通过接口获取是否在匝道的信息
+  if (is_on_ramp) {
+    if (dis_to_merge > 50) {
+      v_target_ramp = 50 / 3.6;
+    }
+    v_target_ = std::min(v_target_ramp, v_target_);
+    LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_ramp", v_target_ramp);
+    JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
+    JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
+    LOG_DEBUG("v_target : [%f] \n", v_target_);
+    return true;
+  }
+  double pre_brake_dis_to_ramp = std::max(dis_to_ramp - 50, 0.0);
+  v_target_ramp = std::pow(std::pow(ramp_v_limit,  2.0) - 2 * pre_brake_dis_to_ramp * acc_to_ramp, 0.5);
+  v_target_ = std::min(v_target_ramp, v_target_);
+  LOG_DEBUG("dis_to_ramp : [%f] \n", dis_to_ramp);
+  LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
+  JSON_DEBUG_VALUE("VisionLonBehavior_v_target_ramp", v_target_ramp);
+  JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
+  JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
+  LOG_DEBUG("v_target : [%f] \n", v_target_);
+  return true;
+
 }
 
 void StGraphGenerator::UpdateSTRefs(const std::vector<double> &sref_vec) {

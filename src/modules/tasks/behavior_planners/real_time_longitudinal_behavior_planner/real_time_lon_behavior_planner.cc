@@ -338,6 +338,16 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
   // 6. set function_info
   auto function_info_input = lon_behav_plan_input_->mutable_function_info();
   function_info_input->CopyFrom(function_info);
+  double dis_to_ramp =
+      frame_->session()->environmental_model().get_virtual_lane_manager()->dis_to_ramp();
+  double dis_to_merge =
+      frame_->session()->environmental_model().get_virtual_lane_manager()->distance_to_first_road_merge();
+  bool is_on_ramp =
+      frame_->session()->environmental_model().get_virtual_lane_manager()->is_on_ramp();
+
+  lon_behav_plan_input_->set_dis_to_ramp(dis_to_ramp);
+  lon_behav_plan_input_->set_dis_to_merge(dis_to_merge);
+  lon_behav_plan_input_->set_is_on_ramp(is_on_ramp);
 }
 
 void RealTimeLonBehaviorPlanner::SetInput(
