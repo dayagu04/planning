@@ -40,9 +40,10 @@ class DiagonalInTrajectoryGenerator {
   };
 
   enum DubinsPlanLevel {
-    DUBINS_LEVEL_0,
-    DUBINS_LEVEL_1,
-    DUBINS_LEVEL_2,
+    DUBINS_LEVEL_NONE,
+    DUBINS_LEVEL_ZERO_GEAR_CHANGE,
+    DUBINS_LEVEL_ONCE_GEAR_CHANGE,
+    DUBINS_LEVEL_TWICE_GEAR_CHANGE,
     DUBINS_LEVEL_COUNT,
   };
 
@@ -168,6 +169,7 @@ class DiagonalInTrajectoryGenerator {
   size_t replan_in_slot_count_ = 0;
   pnc::dubins_lib::DubinsLibrary::Input dubins_input_;
   pnc::dubins_lib::DubinsLibrary::Output plan_result_;
+  size_t dubins_iter_count_ = 0;
 
   // TODO
   uint8_t current_state_ = ::FuncStateMachine::FunctionalState::INIT;
@@ -187,6 +189,8 @@ class DiagonalInTrajectoryGenerator {
   bool spline_success_ = false;
   bool is_replan_ = false;
   bool is_finished_ = false;
+  uint8_t gear_change_count_ = 6;
+  uint8_t path_level_ = DUBINS_LEVEL_NONE;
 
   Measurement measure_;
   EgoSlotInfo ego_slot_info_;

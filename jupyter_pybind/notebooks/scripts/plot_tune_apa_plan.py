@@ -11,7 +11,7 @@ from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/1011_night/test_15.00000'
+bag_path = '/home/xlwang71/Downloads/APA/1012/test_2.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -99,7 +99,7 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
 
   print("is_replan = ", is_replan)
   print("ego_yaw_deg = ", loc_msg_input.pose.euler_angles.yaw * 57.3)
-
+  is_replan = False
   try:
     diag_slot_planning_py.UpdateBytesByParam(soc_state_input.SerializeToString(),
                                       fus_parking_input.SerializeToString(),
