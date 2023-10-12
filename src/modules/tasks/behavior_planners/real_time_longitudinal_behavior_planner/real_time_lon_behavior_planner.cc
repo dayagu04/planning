@@ -52,6 +52,9 @@ bool RealTimeLonBehaviorPlanner::Calculate() {
   auto start_time = IflyTime::Now_ms();
 
   ConstructLonBehavInput();
+  auto construct_input_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("RealTimeLonBehaviorConstructInputCostTime",
+                   construct_input_time - start_time);
   Update();
   SaveToSession();
   SaveToDebugInfo();
@@ -100,6 +103,8 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
   auto &lon_decision_info = frame_->mutable_session()
                                 ->mutable_planning_context()
                                 ->mutable_lon_decision_result();
+  auto &function_info =
+      frame_->session()->environmental_model().function_info();
 
   // 0. set dbw (Drive-by-Wire)
   lon_behav_plan_input_->set_dbw_status(dbw_status);
@@ -323,6 +328,10 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
   // 5. set state of start & stop
   auto start_stop_state = lon_behav_plan_input_->mutable_start_stop_info();
   start_stop_state->CopyFrom(start_stop_state_info);
+
+  // 6. set function_info
+  auto function_info_input = lon_behav_plan_input_->mutable_function_info();
+  function_info_input->CopyFrom(function_info);
 }
 
 void RealTimeLonBehaviorPlanner::SetInput(

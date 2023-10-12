@@ -521,7 +521,8 @@ class TextGenerator4Lon(DataGeneratorBase):
                           'VisionLonBehavior_temp_lead_two_id', 'VisionLonBehavior_temp_lead_two_dis', 'VisionLonBehavior_temp_lead_two_vel', "VisionLonBehavior_v_target_temp_lead_two", \
                           'VisionLonBehavior_potental_cutin_track_id', 'VisionLonBehavior_potental_cutin_v_target', "VisionLonBehavior_cutin_v_target", \
                           'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', \
-                          "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_lead_id"]
+                          "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_lead_id", \
+                          "RealTime_stop_start_state", "RealTime_v_target_start_stop"]
 
             for i, v in enumerate(data["json"]):
                 ts.append(data["t"][i])

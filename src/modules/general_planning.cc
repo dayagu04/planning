@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "apa_planner/common/apa_utils.h"
+#include "basic_types.pb.h"
 #include "config/vehicle_param.h"
 #include "ego_planning_config.h"
 #include "environmental_model.h"
@@ -396,8 +397,8 @@ void GeneralPlanning::FillPlanningTrajectory(
   // 8.Planning status
   auto planning_status = planning_output->mutable_planning_status();
   planning_status->set_standstill(false);
-  if (function_info.function_mode == DrivingFunctionMode::ACC ||
-      function_info.function_mode == DrivingFunctionMode::SCC) {
+  if (function_info.function_mode() == common::DrivingFunctionInfo::ACC ||
+      function_info.function_mode() == common::DrivingFunctionInfo::SCC) {
     planning_status->set_standstill(std::fabs(ego_state->ego_v()) < 0.1);
   }
   // 启停状态机

@@ -42,6 +42,9 @@ void StGraphGenerator::Update(
       UpdateStartStopState(lon_behav_input_->lat_obs_info().lead_one(), v_ego);
   v_cruise = stop_start_state == common::StartStopInfo::STOP ? 0.0 : v_cruise;
 
+  JSON_DEBUG_VALUE("RealTime_stop_start_state", (int)stop_start_state);
+  JSON_DEBUG_VALUE("RealTime_v_target_start_stop", v_cruise);
+
   // 初始化v_refs
   v_target_ = v_cruise;
   vt_refs_.resize(config_.lon_num_step + 1);
@@ -1100,6 +1103,15 @@ void StGraphGenerator::UpdateVelRefs() {
   if (v_target_ > v_ego) {
     v_target_clip =
         clip(v_target_, v_ego + config_.cruise_set_acc * 0.1, v_ego);
+  }
+
+  auto &function_info = lon_behav_input_->function_info();
+  // ACC : STANDSTILL to ACTIVE need confirmed by driver
+  JSON_DEBUG_VALUE("RealTime_STANDSTILL", 0.0);
+  if (v_ego < 1.0 && function_info.function_mode() == common::DrivingFunctionInfo::ACC &&
+      function_info.function_state() == common::DrivingFunctionInfo::STANDSTILL) {
+    v_target_ = 0.0;
+    JSON_DEBUG_VALUE("RealTime_STANDSTILL", 1.0);
   }
 
   for (int i = 0; i < config_.lon_num_step + 1; ++i) {

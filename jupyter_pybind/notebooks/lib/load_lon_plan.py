@@ -49,8 +49,9 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                             'RealTime_temp_lead_two_id', 'RealTime_temp_lead_two_distance', 'RealTime_temp_lead_two_velocity', 'RealTime_temp_lead_two_desire_vel', \
                             'RealTime_potential_cutin_track_id', 'RealTime_potential_cutin_v_target',
                             "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_lead_id", \
-                            "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                            "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime", "RealTimeLateralMotionCostTime", "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime"]
+                            "RealTimeLateralMotionCostTime", "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime",
+                            "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime",
+                            "RealTime_stop_start_state", "RealTime_v_target_start_stop", "RealTime_STANDSTILL"]
 
   plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
   plan_debug_json_info = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]

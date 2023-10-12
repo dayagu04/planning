@@ -6,6 +6,7 @@
 #include <typeinfo>
 #include <unordered_map>
 
+#include "basic_types.pb.h"
 #include "common/math/linear_interpolation.h"
 #include "context/ego_planning_config.h"
 #include "context/ego_state_manager.h"
@@ -120,24 +121,25 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
       (fsm_state == FuncStateMachine::FunctionalState::NOA_SECUR);
   environmental_model->UpdateVehicleDbwStatus(acc_mode || scc_mode || noa_mode);
 
-  DrivingFunctionstate function_state = DrivingFunctionstate::ACTIVATE;
+  common::DrivingFunctionInfo::DrivingFunctionstate function_state =
+      common::DrivingFunctionInfo::ACTIVATE;
   if (fsm_state == FuncStateMachine::FunctionalState::ACC_ACTIVATE ||
       fsm_state == FuncStateMachine::FunctionalState::SCC_ACTIVATE ||
       fsm_state == FuncStateMachine::FunctionalState::NOA_ACTIVATE) {
-    function_state = DrivingFunctionstate::ACTIVATE;
+    function_state = common::DrivingFunctionInfo::ACTIVATE;
   } else if (fsm_state == FuncStateMachine::FunctionalState::ACC_STAND_WAIT ||
              fsm_state == FuncStateMachine::FunctionalState::SCC_STAND_WAIT) {
-    function_state = DrivingFunctionstate::STANDSTILL;
+    function_state = common::DrivingFunctionInfo::STANDSTILL;
   }
 
   if (scc_mode) {
-    environmental_model->set_function_info(DrivingFunctionMode::SCC,
+    environmental_model->set_function_info(common::DrivingFunctionInfo::SCC,
                                            function_state);
   } else if (acc_mode) {
-    environmental_model->set_function_info(DrivingFunctionMode::ACC,
+    environmental_model->set_function_info(common::DrivingFunctionInfo::ACC,
                                            function_state);
   } else if (noa_mode) {
-    environmental_model->set_function_info(DrivingFunctionMode::NOA,
+    environmental_model->set_function_info(common::DrivingFunctionInfo::NOA,
                                            function_state);
   } else {
     LOG_ERROR("function mode error\n");

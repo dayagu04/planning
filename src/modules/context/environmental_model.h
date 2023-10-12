@@ -190,11 +190,13 @@ class EnvironmentalModel {
   }
 
   // update function by system function state
-  void set_function_info(DrivingFunctionMode mode, DrivingFunctionstate state) {
-    function_info_.function_mode = mode;
-    function_info_.function_state = state;
+  void set_function_info(common::DrivingFunctionInfo::DrivingFunctionMode mode, common::DrivingFunctionInfo::DrivingFunctionstate state) {
+    function_info_.set_function_mode(mode);
+    function_info_.set_function_state(state);
   }
-  const DrivingFunctionInfo function_info() const { return function_info_; }
+  const common::DrivingFunctionInfo function_info() const {
+    return function_info_;
+  }
 
  private:
   ad_common::hdmap::HDMap hd_map_;
@@ -217,7 +219,7 @@ class EnvironmentalModel {
   EgoPlanningConfigBuilder *parking_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *highway_config_builder_ptr_ = nullptr;
 
-  DrivingFunctionInfo function_info_;
+  common::DrivingFunctionInfo function_info_;
 };
 
 }  // namespace planning
