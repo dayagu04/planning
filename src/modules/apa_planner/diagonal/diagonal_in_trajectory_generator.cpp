@@ -214,20 +214,25 @@ void DiagonalInTrajectoryGenerator::Reset() {
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
     PlanningOutput* const planning_output) {
-  // not active
-  if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
-    return;
-  }
-
   // when finished
   if (is_finished_ && !simulation_enable_flag_) {
     SetFinishedPlanningOutput(frame_);
     return;
   }
 
+  // not active
+  if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
+    return;
+  }
+
   // plan suceess
   if (is_plan_success_) {
-    planning_output->Clear();
+    if (simulation_enable_flag_) {
+      planning_output->Clear();
+    }
+
+    planning_output->mutable_planning_status()->set_apa_planning_status(
+        ::PlanningOutput::ApaPlanningStatus::IN_PROGRESS);
 
     auto trajectory = planning_output->mutable_trajectory();
     trajectory->set_available(true);
@@ -567,6 +572,14 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanFuncByLevel(
         // std::cout << "index = " << index << ", length = " << length
         //           << std::endl;
 
+        // std::cout << "gear_cmd_vec = "
+        //           << Eigen::Vector3d(
+        //                  dubins_planner_.GetOutput().gear_cmd_vec[0],
+        //                  dubins_planner_.GetOutput().gear_cmd_vec[1],
+        //                  dubins_planner_.GetOutput().gear_cmd_vec[2])
+        //                  .transpose()
+        //           << std::endl;
+
         path_length_queue.push({length, index});
         index++;
 
@@ -603,10 +616,14 @@ void DiagonalInTrajectoryGenerator::PrintDubinsOutput() {
   // std::cout << "pD = " << output.arc_CD.pB.transpose() << std::endl;
   std::cout << "------------- dubins result " << std::endl;
 
-  std::cout << "target_pose = " << plan_input_.target_pos.transpose()
+  std::cout << "target_pos = " << plan_input_.target_pos.transpose()
+            << ", target_heading_deg = " << plan_input_.target_heading * 57.3
             << std::endl;
 
-  std::cout << "target_heading = " << plan_input_.target_heading << std::endl;
+  std::cout << "ego_pos = " << ego_slot_info_.ego_pos_slot.transpose()
+            << ", ego_heading_deg = " << ego_slot_info_.ego_heading_slot * 57.3
+            << std::endl;
+
   std::cout << "path length = " << output.length << std::endl;
 
   std::cout << "AB_length = " << output.arc_AB.length
@@ -678,9 +695,6 @@ const bool DiagonalInTrajectoryGenerator::CheckReplan(
     std::cout << "close to target!" << std::endl;
     return true;
   }
-
-  planning_output->mutable_planning_status()->set_apa_planning_status(
-      ::PlanningOutput::ApaPlanningStatus::IN_PROGRESS);
 
   is_replan_ = false;
 
@@ -759,7 +773,7 @@ const bool DiagonalInTrajectoryGenerator::PathPlanCoreIteration() {
 
   // second dubins iteration: try to plan again with init: once gear change
   if (!plan_success && DubinsPlanFuncByLevel(DUBINS_LEVEL_ZERO_GEAR_CHANGE)) {
-    std::cout << "try init again plan_success = " << plan_success << std::endl;
+    std::cout << "try init again plan_success!" << std::endl;
     plan_success = true;
     // TODO: obstacle detection
   }
@@ -835,6 +849,7 @@ void DiagonalInTrajectoryGenerator::Log() const {
                    dubins_planner_.GetOutput().gear_change_count)
 
   JSON_DEBUG_VALUE("path_length", dubins_planner_.GetOutput().length)
+  JSON_DEBUG_VALUE("plan_state_machine", plan_state_machine_)
 
   JSON_DEBUG_VALUE("AB_length", dubins_planner_.GetOutput().arc_AB.length)
   JSON_DEBUG_VALUE("BC_length", dubins_planner_.GetOutput().line_BC.length)
@@ -851,6 +866,14 @@ void DiagonalInTrajectoryGenerator::Log() const {
   JSON_DEBUG_VALUE("terminal_lon_err", terminal_err_.pos.x())
   JSON_DEBUG_VALUE("terminal_lat_err", terminal_err_.pos.y())
   JSON_DEBUG_VALUE("terminal_heading", terminal_err_.heading)
+
+  JSON_DEBUG_VALUE("target_pos_x", plan_input_.target_pos.x())
+  JSON_DEBUG_VALUE("target_pos_y", plan_input_.target_pos.y())
+  JSON_DEBUG_VALUE("target_heading", plan_input_.target_heading)
+
+  JSON_DEBUG_VALUE("ego_pos_slot_x", ego_slot_info_.ego_pos_slot.x())
+  JSON_DEBUG_VALUE("ego_pos_slot_y", ego_slot_info_.ego_pos_slot.y())
+  JSON_DEBUG_VALUE("ego_heading_slot", ego_slot_info_.ego_heading_slot)
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckIfNearTerminalPoint() const {
