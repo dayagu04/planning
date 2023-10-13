@@ -1099,11 +1099,11 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
 
 void StGraphGenerator::UpdateVelRefs() {
   double v_ego = lon_behav_input_->ego_info().ego_v();
-  double v_target_clip = v_target_;
-  if (v_target_ > v_ego) {
-    v_target_clip =
-        clip(v_target_, v_ego + config_.cruise_set_acc * 0.1, v_ego);
-  }
+  // double v_target_clip = v_target_;
+  // if (v_target_ > v_ego && v_ego > 1.0) {
+  //   v_target_clip =
+  //       clip(v_target_, v_ego + config_.cruise_set_acc * 0.1, v_ego);
+  // }
 
   auto &function_info = lon_behav_input_->function_info();
   // ACC : STANDSTILL to ACTIVE need confirmed by driver
@@ -1117,9 +1117,9 @@ void StGraphGenerator::UpdateVelRefs() {
   }
 
   for (int i = 0; i < config_.lon_num_step + 1; ++i) {
-    vt_refs_[i] = std::min(vt_refs_[i], v_target_clip);
+    vt_refs_[i] = std::min(vt_refs_[i], v_target_);
   }
-  JSON_DEBUG_VALUE("RealTime_v_ref", v_target_clip);
+  JSON_DEBUG_VALUE("RealTime_v_ref", v_target_);
 }
 
 void StGraphGenerator::SetConfig(

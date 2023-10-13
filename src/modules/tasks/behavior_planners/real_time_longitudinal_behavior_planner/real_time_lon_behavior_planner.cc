@@ -378,7 +378,7 @@ void RealTimeLonBehaviorPlanner::UpdateLonRefPath(
   WeightedBounds s_soft_bounds;
   s_soft_bounds.emplace_back(WeightedBound{0.0 - 10.0, 150.0, -1.0});
   Bound lon_v_bound{0.0, std::min(v_cruise, config_.velocity_upper_bound)};
-  Bound lon_a_bound{-7.0, 4.0};
+  Bound lon_a_bound{-7.0, 2.0};
   Bound lon_j_bound{-7.0, 7.0};
 
   for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
