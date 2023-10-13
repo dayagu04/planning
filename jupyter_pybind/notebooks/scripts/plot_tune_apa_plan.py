@@ -11,7 +11,7 @@ from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/1012_3/'
+bag_path = '/home/xlwang71/Downloads/APA/1012_3/test_9.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 

@@ -202,7 +202,7 @@ void DubinsLibrary::SetOutputByCaseType(
   if (case_type == CASE_A) {
     target_points = result.tangent_result.tagent_points_a;
   }
-
+  output.case_type = case_type;
   output.arc_AB.circle_info = result.c1;
   output.arc_AB.pA = input_.p1;
   output.arc_AB.pB = target_points.first;

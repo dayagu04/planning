@@ -616,9 +616,10 @@ void DiagonalInTrajectoryGenerator::PrintDubinsOutput() {
   // std::cout << "pD = " << output.arc_CD.pB.transpose() << std::endl;
   std::cout << "------------- dubins result " << std::endl;
 
-  std::cout << "target_pos = " << plan_input_.target_pos.transpose()
-            << ", target_heading_deg = " << plan_input_.target_heading * 57.3
-            << std::endl;
+  std::cout << "target_pos = "
+            << dubins_planner_.GetOutput().arc_CD.pB.transpose()
+            << ", target_heading_deg = "
+            << dubins_planner_.GetOutput().arc_CD.headingB * 57.3 << std::endl;
 
   std::cout << "ego_pos = " << ego_slot_info_.ego_pos_slot.transpose()
             << ", ego_heading_deg = " << ego_slot_info_.ego_heading_slot * 57.3
@@ -643,6 +644,8 @@ void DiagonalInTrajectoryGenerator::PrintDubinsOutput() {
   std::cout << "is_line_arc = " << output.is_line_arc << std::endl;
 
   std::cout << "dubins_type = " << static_cast<int>(output.dubins_type)
+            << std::endl;
+  std::cout << "case_type = " << static_cast<int>(output.case_type)
             << std::endl;
 
   std::cout << "line_arc_type = " << static_cast<int>(output.line_arc_type)
@@ -835,7 +838,7 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
   gear_change_count_ = dubins_planner_.GetOutput().gear_change_count;
 
   // print dubins output for debug
-  // PrintDubinsOutput();
+  PrintDubinsOutput();
 
   std::cout << "diagonal replan triggered, plan statemachine = "
             << static_cast<int>(plan_state_machine_) << std::endl;
@@ -844,6 +847,8 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
 void DiagonalInTrajectoryGenerator::Log() const {
   JSON_DEBUG_VALUE("is_replan", is_replan_)
   JSON_DEBUG_VALUE("is_finished", is_finished_)
+  JSON_DEBUG_VALUE("dubins_type", dubins_planner_.GetOutput().dubins_type)
+  JSON_DEBUG_VALUE("case_type", dubins_planner_.GetOutput().case_type)
 
   JSON_DEBUG_VALUE("gear_change_count",
                    dubins_planner_.GetOutput().gear_change_count)
@@ -867,9 +872,10 @@ void DiagonalInTrajectoryGenerator::Log() const {
   JSON_DEBUG_VALUE("terminal_lat_err", terminal_err_.pos.y())
   JSON_DEBUG_VALUE("terminal_heading", terminal_err_.heading)
 
-  JSON_DEBUG_VALUE("target_pos_x", plan_input_.target_pos.x())
-  JSON_DEBUG_VALUE("target_pos_y", plan_input_.target_pos.y())
-  JSON_DEBUG_VALUE("target_heading", plan_input_.target_heading)
+  JSON_DEBUG_VALUE("target_pos_x", dubins_planner_.GetOutput().arc_CD.pB.x())
+  JSON_DEBUG_VALUE("target_pos_y", dubins_planner_.GetOutput().arc_CD.pB.y())
+  JSON_DEBUG_VALUE("target_heading",
+                   dubins_planner_.GetOutput().arc_CD.headingB)
 
   JSON_DEBUG_VALUE("ego_pos_slot_x", ego_slot_info_.ego_pos_slot.x())
   JSON_DEBUG_VALUE("ego_pos_slot_y", ego_slot_info_.ego_pos_slot.y())

@@ -74,6 +74,7 @@ class DubinsLibrary {
     bool is_line_arc = false;
     double dtheta_arc_AB = 0.0;
     uint8_t dubins_type = 0;
+    uint8_t case_type = 0;
     uint8_t line_arc_type = 0;
     uint8_t current_gear_cmd = EMPTY;
     uint8_t gear_change_count = 0;
