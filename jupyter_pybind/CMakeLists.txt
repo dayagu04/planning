@@ -56,9 +56,17 @@ target_link_libraries(uss_obstacle_avoidance_py PRIVATE
   modules_common
   modules_context
   modules_tasks)
-  
+
 pybind11_add_module(dubins_lib_py MODULE src/dubins_lib_pybind.cc)
 target_link_libraries(dubins_lib_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)
+
+pybind11_add_module(collision_detection_py MODULE src/collision_detection_pybind.cc)
+target_link_libraries(collision_detection_py PRIVATE
   autoplt
   modules
   modules_common

@@ -11,7 +11,7 @@ from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import uss_obstacle_avoidance_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/1007/test_16.00000'
+bag_path = '/pnc_x86_ywwang33/dataAnalysis/test_22.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
