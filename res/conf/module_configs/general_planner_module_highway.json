@@ -236,7 +236,7 @@
     "safe_distance_ttc": 0.3,
     "enable_lead_two": false,
     "enable_rss_model": false,
-    "cruise_set_acc": 1.5,
+    "cruise_set_acc": 5.0,
     "cruise_set_dec": -1.0,
     "fast_lead_distance_step": 1.0,
     "slow_lead_distance_step": 2.0,
