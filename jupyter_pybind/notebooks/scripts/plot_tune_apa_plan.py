@@ -11,7 +11,7 @@ from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/1012_4/test_1.00000'
+bag_path = '/home/xlwang71/Downloads/APA/1012_3/'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -25,10 +25,13 @@ fig1, local_view_data = load_local_view_figure_parking()
 origin_selected_id = bag_loader.fus_parking_msg['data'][int(len(bag_loader.fus_parking_msg['t'])/2)].select_slot_id
 diag_slot_planning_py.Init()
 
-data_planning_tune = ColumnDataSource(data = {'plan_traj_x':[],
-                                              'plan_traj_y':[],})
+data_planning_tune = ColumnDataSource(data = {'plan_path_x':[],
+                                              'plan_path_y':[],
+                                              'plan_path_heading':[],})
 data_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[], 'theta_vec':[]})
 data_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+
+fig1.patches('y_vec', 'x_vec', source = data_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'sampled carbox')
 
 # find bag time when planning at real test
 # plan_msg_idx = 0
@@ -41,7 +44,7 @@ data_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 #     plan_msg_idx = plan_msg_idx + 1
 # bag_time0 = plan_msg_idx * 0.1
 bag_time0 = 0.0
-fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'tuned plan')
+fig1.line('plan_path_y', 'plan_path_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'tuned plan')
 
 ### sliders config
 class LocalViewSlider:
@@ -112,15 +115,36 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
     print("error")
     pass
 
-  plan_traj_x = []
-  plan_traj_y = []
+  plan_path_x = []
+  plan_path_y = []
+  plan_path_heading = []
   for i in range(len(planning_output.trajectory.trajectory_points)):
-    plan_traj_x.append(planning_output.trajectory.trajectory_points[i].x)
-    plan_traj_y.append(planning_output.trajectory.trajectory_points[i].y)
+    plan_path_x.append(planning_output.trajectory.trajectory_points[i].x)
+    plan_path_y.append(planning_output.trajectory.trajectory_points[i].y)
+    plan_path_heading.append(planning_output.trajectory.trajectory_points[i].heading_yaw)
 
   data_planning_tune.data.update({
-    'plan_traj_x': plan_traj_x,
-    'plan_traj_y': plan_traj_y,
+    'plan_path_x': plan_path_x,
+    'plan_path_y': plan_path_y,
+    'plan_path_heading': plan_path_heading,
+  })
+
+  # path ego car
+  car_box_x_vec = []
+  car_box_y_vec = []
+  for k in range(len(plan_path_x)):
+    car_xn = []
+    car_yn = []
+    for i in range(len(car_xb)):
+        tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], plan_path_x[k], plan_path_y[k], plan_path_heading[k])
+        car_xn.append(tmp_x)
+        car_yn.append(tmp_y)
+    car_box_x_vec.append(car_xn)
+    car_box_y_vec.append(car_yn)
+
+  data_car_box.data.update({
+    'x_vec': car_box_x_vec,
+    'y_vec': car_box_y_vec,
   })
 
   # print("planning_output:\n", planning_output)
