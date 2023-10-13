@@ -2480,7 +2480,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                   right_lb_car_cnt_[tr.track_id].neg = 0;
                   right_alc_car_cnt_[tr.track_id].neg = 0;
 
-                  if (right_lane_tasks_id == -1 && current_lane_tasks_id == 0) {
+                  if (right_lane_tasks_id == -1 && current_lane_tasks_id == 0 && current_lane_index < 2) {
                     std::array<double, 4> xp{0, 50, 100, 200};
                     std::array<double, 4> fp{40 * coefficient, 20 * coefficient,
                                              -10 * coefficient,
@@ -2857,7 +2857,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                       }
                     }
                   } else if ((right_lane_tasks_id == 0 &&
-                              current_lane_tasks_id == 0) ||
+                              current_lane_tasks_id == 0 &&
+                              current_lane_index < 2) ||
                              (is_on_highway && right_lane_tasks_id >= 1 &&
                               current_lane_tasks_id >= 2)) {
                     std::array<double, 4> xp_pos_r{4, 7, 10, 20};

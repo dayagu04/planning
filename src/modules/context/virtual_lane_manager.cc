@@ -151,7 +151,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
 
   lane_num_ = relative_id_lanes_.size();
   double lane_num_except_emergency = lane_num_;
-  if (relative_id_lanes_[lane_num_ - 1]->get_lane_type() ==
+  if (lane_num_ > 0 && relative_id_lanes_[lane_num_ - 1]->get_lane_type() ==
       FusionRoad::LaneType::LANETYPE_EMERGENCY)
     lane_num_except_emergency -= 1;
   if (distance_to_first_road_merge_ < 100. || is_lane_merging) {
