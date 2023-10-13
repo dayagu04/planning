@@ -517,20 +517,37 @@ const bool DiagonalInTrajectoryGenerator::PathEvaluateOnce(
   if (level ==
       DUBINS_LEVEL_ZERO_GEAR_CHANGE) {  // LEVEL_0, usually for first try
 
-    // const bool is_toward_terminal =
-    //     ego_slot_info_.ego_pos_slot.x() > plan_input_.target_pos.x();
-
     // no gear change: force no gear change in final
+    if (plan_state_machine_ == FINAL) {
+      if (output.gear_change_count == 0) {
+        return true;
+      }
+    }
+
+    if (plan_state_machine_ == INIT) {
+      const bool is_toward_terminal =
+          ego_slot_info_.ego_pos_slot.x() > plan_input_.target_pos.x();
+
+      if (output.gear_change_count == 0 && is_toward_terminal) {
+        return true;
+      }
+
+      if (output.gear_change_count == 1 &&
+          output.line_BC.length >= kMinProperBCLength &&
+          plan_state_machine_ != FINAL) {  // no gear change first for final
+        // TODO: consider heading
+        // if (std::fabs(output.dtheta_arc_AB) < 10.0 / 57.3)
+        return true;
+      }
+    }
+
     if (output.gear_change_count == 0 && plan_state_machine_ == FINAL) {
       return true;
     }
 
     // once gear change
-    if (output.gear_change_count == 1 &&
-        output.line_BC.length >= kMinProperBCLength &&
-        plan_state_machine_ != FINAL) {  // no gear change first for final
-      // TODO: consider heading
-      // if (std::fabs(output.dtheta_arc_AB) < 10.0 / 57.3)
+
+    if (output.gear_change_count == 0) {
       return true;
     }
   } else if (level == DUBINS_LEVEL_ONCE_GEAR_CHANGE) {
@@ -773,9 +790,13 @@ const bool DiagonalInTrajectoryGenerator::PathPlanCoreIteration() {
   }
 
   // second dubins iteration: try to plan again with init: once gear change
-  if (!plan_success && DubinsPlanFuncByLevel(DUBINS_LEVEL_ZERO_GEAR_CHANGE)) {
-    std::cout << "try init again plan_success!" << std::endl;
-    plan_success = true;
+  if (!plan_success) {
+    if (DubinsPlanFuncByLevel(DUBINS_LEVEL_ZERO_GEAR_CHANGE)) {
+      std::cout << "try init again plan_success!" << std::endl;
+      plan_success = true;
+    } else {
+      std::cout << "try init again plan failed!" << std::endl;
+    }
     // TODO: obstacle detection
   }
 
