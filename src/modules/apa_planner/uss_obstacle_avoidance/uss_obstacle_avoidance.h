@@ -52,6 +52,12 @@ class UssObstacleAvoidance {
 
  public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  void Reset() {
+    min_dist_car_arc_index_ = 0;
+    min_dist_uss_arc_index_ = 0;
+    remain_dist_ = 100.0;
+  }
+
   void SetParam(Paramters &param) { param_ = param; }
 
   void Init() { InitVertexData(); }
@@ -81,7 +87,7 @@ class UssObstacleAvoidance {
   bool Update(PlanningOutput::PlanningOutput *const planning_output);
 
  private:
-  void Preprocess();
+  bool Preprocess();
 
   const bool CheckTwoCircleIntersection(const Circle &c1,
                                         const Circle &c2) const;

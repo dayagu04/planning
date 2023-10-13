@@ -253,7 +253,7 @@ class LoadCyberbag:
     try:
       json_value_list = ["controller_status", "lon_enable", "lat_enable", "lat_mpc_status", "gear_plan", "gear_real", "gear_cmd",
                     "vel_ref", "vel_ref_gain", "vel_cmd", "vel_ego",
-                    "path_length_plan", "remain_s_plan", "remain_s_prebreak",
+                    "path_length_plan", "remain_s_plan", "remain_s_prebreak", "remain_s_uss", "remain_s_ctrl",
                     "vel_out", "acc_vel", "vel_KP_term", "vel_KI_term", "slope_acc", "throttle_brake",
                     "steer_angle_cmd", "steer_angle", 'driver_hand_torque',
                     "lat_err", "phi_err",
@@ -898,6 +898,10 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
 
       names.append("lat_mpc_status")
       datas.append(ctrl_json_data[ctrl_debug_msg_idx]['lat_mpc_status'])
+      names.append("remain_s_uss")
+      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['remain_s_uss'])
+      names.append("remain_s_ctrl")
+      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['remain_s_ctrl'])
       names.append("vel_ref_gain")
       datas.append(ctrl_json_data[ctrl_debug_msg_idx]['vel_ref_gain'])
       names.append("acc_vel")
@@ -1049,6 +1053,8 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   'path_length_plan': [],
   'remain_s_plan': [],
   'remain_s_prebreak': [],
+  "remain_s_uss": [],
+  "remain_s_ctrl": [],
 
   'vel_out': [],
   'vel_KP_term': [],
@@ -1077,6 +1083,8 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   path_length_plan = []
   remain_s_plan = []
   remain_s_prebreak = []
+  remain_s_uss = []
+  remain_s_ctrl = []
 
   acc_cmd = []
   vel_kp_term = []
@@ -1109,6 +1117,8 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
     path_length_plan.append(ctrl_json_data[i]['path_length_plan'])
     remain_s_plan.append(ctrl_json_data[i]['remain_s_plan'])
     remain_s_prebreak.append(ctrl_json_data[i]['remain_s_prebreak'])
+    remain_s_uss.append(ctrl_json_data[i]['remain_s_uss'])
+    remain_s_ctrl.append(ctrl_json_data[i]['remain_s_ctrl'])
 
     acc_cmd.append(ctrl_json_data[i]['vel_out'])
     vel_kp_term.append(ctrl_json_data[i]['vel_KP_term'])
@@ -1142,6 +1152,8 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
     'path_length_plan': path_length_plan,
     'remain_s_plan': remain_s_plan,
     'remain_s_prebreak': remain_s_prebreak,
+    'remain_s_uss': remain_s_uss,
+    "remain_s_ctrl": remain_s_ctrl,
 
     'vel_out': acc_cmd,
     'vel_KP_term': vel_kp_term,
@@ -1176,6 +1188,8 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   f4 = fig4.line('time', 'path_length_plan', source = data_control_global, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'path_length_plan')
   fig4.line('time', 'remain_s_plan', source = data_control_global, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'remain_s_plan')
   fig4.line('time', 'remain_s_prebreak', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'remain_s_prebreak')
+  fig4.line('time', 'remain_s_uss', source = data_control_global, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'remain_s_uss')
+  fig4.line('time', 'remain_s_ctrl', source = data_control_global, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'remain_s_ctrl')
 
   f5 = fig5.line('time', 'vel_out', source = data_control_global, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'acc_cmd')
   fig5.line('time', 'vel_KP_term', source = data_control_global, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'vel_kp_term')

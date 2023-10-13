@@ -72,6 +72,7 @@ static const double min_path_length = 0.3;
 static const double max_path_length = 20.0;
 static const double min_search_length = 6.0;
 static const double path_sample_ds = 0.025;
+static const double safe_uss_remain_dist = 0.35;
 static const uint8_t max_gear_change_count = 6;
 
 static const double kSublaneWidth = 7.0;
@@ -187,7 +188,10 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
     GeneratePlanningOutput(planning_output);
 
     // update uss oa
-    // uss_oa_.Update(planning_output);
+    uss_oa_.Update(planning_output);
+
+    // generate planning output by uss remain dist
+    GeneratePlanningOutputByUssOA(planning_output);
 
     generate_trajectory = is_plan_success_;
   } else {
@@ -230,6 +234,28 @@ void DiagonalInTrajectoryGenerator::Reset() {
   target_err_.Set(Eigen::Vector2d(1.0, 1.0), 0.5);
 }
 
+void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
+    PlanningOutput* const planning_output) {
+  // std::cout << "planning_output->trajectory()->trajectory_points_size()"
+  //           << planning_output->trajectory().trajectory_points_size()
+  //           << std::endl;
+  if (planning_output->trajectory().trajectory_points_size() < 1) {
+    return;
+  }
+  if (spline_success_) {
+    planning_output->mutable_trajectory()
+        ->mutable_trajectory_points(0)
+        ->set_distance(uss_oa_.GetRemainDist() - safe_uss_remain_dist);
+  } else {
+    planning_output->mutable_trajectory()
+        ->mutable_trajectory_points(0)
+        ->set_distance(100.0);
+  }
+  // std::cout << "Uss RemainDist = " << uss_oa_.GetRemainDist() << std::endl;
+  // std::cout << "Plan RemainDist = " << remain_dist_ << std::endl;
+  // std::cout << "current_path_length_ = " << current_path_length_ << std::endl;
+}
+
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
     PlanningOutput* const planning_output) {
   if (!simulation_enable_flag_) {
@@ -245,10 +271,11 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
     }
   }
 
+  // clear output always
+  planning_output->Clear();
+
   // plan suceess
   if (is_plan_success_) {
-    planning_output->Clear();
-
     planning_output->mutable_planning_status()->set_apa_planning_status(
         ::PlanningOutput::ApaPlanningStatus::IN_PROGRESS);
 
@@ -335,7 +362,7 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnceSimulation(
 
   // set local view for these two modules for simulation
   // since plan() is not included in pybind simulation
-  // uss_oa_.SetLocalView(local_view_);
+  uss_oa_.SetLocalView(local_view_);
   // collision_detector_.SetLocalView(local_view_);
 
   if (local_view_->function_state_machine_info.has_current_state()) {
@@ -425,6 +452,10 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnceSimulation(
 
   PathPlanOnce(select_slot_index, &planning_output_);
   GeneratePlanningOutput(&planning_output_);
+
+  uss_oa_.Update(&planning_output_);
+
+  GeneratePlanningOutputByUssOA(&planning_output_);
 
   return is_plan_success_;
 }

@@ -84,11 +84,14 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
   vs_msg_idx = local_view_data['data_index']['vs_msg_idx']
   plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
   plan_msg_idx = local_view_data['data_index']['plan_msg_idx']
+  wave_msg_idx = local_view_data['data_index']['wave_msg_idx']
 
   soc_state_input = bag_loader.soc_state_msg['data'][soc_state_msg_idx]
   fus_parking_input = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx]
   loc_msg_input = bag_loader.loc_msg['data'][loc_msg_idx]
   vs_msg_input = bag_loader.vs_msg['data'][vs_msg_idx]
+  wave_msg_input = bag_loader.wave_msg['data'][wave_msg_idx]
+
   planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
   planning_data = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
   origin_plan_output = bag_loader.plan_msg['data'][plan_msg_idx]
@@ -118,6 +121,7 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
                                       fus_parking_input.SerializeToString(),
                                       loc_msg_input.SerializeToString(),
                                       vs_msg_input.SerializeToString(),
+                                      wave_msg_input.SerializeToString(),
                                       planning_data.slot_management_info.SerializeToString(),
                                       selected_id, (force_planning or is_replan), plan_statemachine, is_complete, sublane_left_length, sublane_right_length,sublane_width )
     planning_output.ParseFromString(diag_slot_planning_py.GetOutputBytes())
@@ -189,7 +193,11 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
 
       sublane_left_pt_x = target_managed_slot_x_vec[1] + sublane_width *slot_heading_unit[0] - sublane_left_length* sublane_right_heading_unit[0]
       sublane_left_pt_y = target_managed_slot_y_vec[1] + sublane_width *slot_heading_unit[1] - sublane_left_length* sublane_right_heading_unit[1]
-      data_sublane.data.update({'x_vec': [sublane_left_pt_x, sublane_right_pt_x],'y_vec': [sublane_left_pt_y, sublane_right_pt_y]})
+
+      sublane_right_down_pt_x = sublane_right_pt_x - slot_heading_unit[0] * 12.5
+      sublane_right_down_pt_y = sublane_right_pt_y - slot_heading_unit[1] * 12.5
+
+      data_sublane.data.update({'x_vec': [sublane_left_pt_x, sublane_right_pt_x, sublane_right_down_pt_x],'y_vec': [sublane_left_pt_y, sublane_right_pt_y, sublane_right_down_pt_y]})
 
   push_notebook()
 

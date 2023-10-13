@@ -185,8 +185,6 @@ def slider_callback(obstacle_line_start_x, obstacle_line_start_y, obstacle_line_
   
   collision_detection_py.GenCarCirclePb(path_x_vec, path_y_vec, path_theta_vec)
   circle_path_vec = collision_detection_py.GetCarCirclePb()
-  # print("circle_path_vec", circle_path_vec)
-  # circle_path_vec = [[[x,y,r],[x,y,r],[x,y,r]],[[x,y,r],[x,y,r],[x,y,r]]] std::vector<std::vector<Eigen::Vector3d>>
   circle_x_vec = []
   circle_y_vec = []
   circle_r_vec = []
@@ -194,16 +192,9 @@ def slider_callback(obstacle_line_start_x, obstacle_line_start_y, obstacle_line_
     circle_vec = circle_path_vec[i]
     for j in range(len(circle_vec)):
       circle = circle_vec[j]
-      #print(circle)
       circle_x_vec.append(circle[0])
       circle_y_vec.append(circle[1])
       circle_r_vec.append(circle[2])
-  
-  # data_car_circle.data.update({
-  #   'x_vec', car_xn,
-  #   'y_vec', car_xn,
-  #   'r_vec', car_xn,
-  # })
   
   data_car_circle.data.update({
     'circle_xn': circle_x_vec,
@@ -211,11 +202,6 @@ def slider_callback(obstacle_line_start_x, obstacle_line_start_y, obstacle_line_
     'circle_rn': circle_r_vec,
   })
   
-  # data_car_circle = ColumnDataSource(data = {'circle_x_vec':[], 'circle_y_vec':[], 'circle_r_vec':[]})
-  
-  # print("circir_x_vec", circle_x_vec)
-  # print("circir_y_vec", circle_y_vec)
-  # print("circir_r_vec", circle_r_vec)
   
   obstacle_line_x = [obstacle_line_start_x, obstacle_line_end_x]
   obstacle_line_y = [obstacle_line_start_y, obstacle_line_end_y]

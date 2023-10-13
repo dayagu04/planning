@@ -5,6 +5,7 @@
 #include "apa_planner/diagonal/diagonal_in_trajectory_generator.h"
 #include "local_view.h"
 #include "slot_management_info.pb.h"
+#include "uss_wave_info.pb.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
@@ -70,6 +71,7 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
                        py::bytes &parking_slot_info_bytes,
                        py::bytes &localization_info_bytes,
                        py::bytes &vehicle_service_output_info_bytes,
+                       py::bytes &uss_wave_info_bytes,
                        py::bytes &slot_management_info_bytes, int selected_id,
                        bool force_planning, uint8_t force_plan_stm,
                        bool is_complete_path, double sublane_left_length,
@@ -88,6 +90,9 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
       BytesToProto<VehicleService::VehicleServiceOutputInfo>(
           vehicle_service_output_info_bytes);
 
+  auto uss_wave_info =
+      BytesToProto<UssWaveInfo::UssWaveInfo>(uss_wave_info_bytes);
+
   auto slot_management_info =
       BytesToProto<planning::common::SlotManagementInfo>(
           slot_management_info_bytes);
@@ -98,6 +103,7 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
   local_view.function_state_machine_info = func_statemachine;
+  local_view.uss_wave_info = uss_wave_info;
 
   pBase->SetLocalView(&local_view);
 

@@ -127,6 +127,9 @@ class DiagonalInTrajectoryGenerator {
   void GeneratePlanningOutput(
       PlanningOutput::PlanningOutput *const planning_output);
 
+  void GeneratePlanningOutputByUssOA(
+      PlanningOutput::PlanningOutput *const planning_output);
+
   // sub function for dubins plan
   const bool DubinsPlanOneStep(const PlanInput &plan_input,
                                const uint8_t plan_algorithm,

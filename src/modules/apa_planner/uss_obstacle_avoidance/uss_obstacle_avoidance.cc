@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "common.pb.h"
 #include "math_lib.h"
 #include "transform_lib.h"
 
@@ -206,7 +207,7 @@ void UssObstacleAvoidance::GenUssArc() {
   }
 }
 
-void UssObstacleAvoidance::Preprocess() {
+bool UssObstacleAvoidance::Preprocess() {
   // process some measuremnts
   steer_angle_ =
       local_view_ptr_->vehicle_service_output_info.steering_wheel_angle();
@@ -232,6 +233,10 @@ void UssObstacleAvoidance::Preprocess() {
   const auto &upa_dis_info_buf =
       local_view_ptr_->uss_wave_info.upa_dis_info_buf();
 
+  if (upa_dis_info_buf.size() < 2) {
+    return false;
+  }
+
   // front uss
   for (size_t i = 0; i < wdis_index_front.size(); ++i) {
     uss_raw_dist_vec_.emplace_back(
@@ -243,6 +248,8 @@ void UssObstacleAvoidance::Preprocess() {
     uss_raw_dist_vec_.emplace_back(
         upa_dis_info_buf[1].wdis(wdis_index_back[i]).wdis_value(0));
   }
+
+  return true;
 }
 
 const bool UssObstacleAvoidance::CheckTwoCircleIntersection(
@@ -426,8 +433,19 @@ const pnc::geometry_lib::LineSegment UssObstacleAvoidance::GetMinDistUssLine()
 
 bool UssObstacleAvoidance::Update(
     PlanningOutput::PlanningOutput *const planning_output) {
-  if (!planning_output->has_trajectory() ||
-      planning_output->trajectory().trajectory_points_size() == 0) {
+  const bool trajectory_available =
+      planning_output->has_trajectory() &&
+      planning_output->trajectory().trajectory_points_size() > 1;
+
+  const bool gear_available =
+      planning_output->has_gear_command() &&
+      (planning_output->gear_command().gear_command_value() ==
+           Common::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE ||
+       planning_output->gear_command().gear_command_value() ==
+           Common::GearCommandValue::GEAR_COMMAND_VALUE_REVERSE);
+
+  if (gear_available == false || trajectory_available == false) {
+    Reset();
     return false;
   }
 
@@ -435,7 +453,10 @@ bool UssObstacleAvoidance::Update(
   planning_output_ = planning_output;
 
   // preprocess, get some measurement and construct arcs
-  Preprocess();
+  if (!Preprocess()) {
+    Reset();
+    return false;
+  }
 
   // if (!reverse_flag_) {
   //   std::cout << "reverse_flag OFF!" << std::endl;
