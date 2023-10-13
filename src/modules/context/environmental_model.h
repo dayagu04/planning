@@ -177,7 +177,29 @@ class EnvironmentalModel {
 
   void feed_local_view(const LocalView *local_view) {
     local_view_ = local_view;
+    const auto static_map_info_current_timestamp =
+        local_view->static_map_info.header().timestamp();
+    if (static_map_info_current_timestamp != static_map_info_timestamp_) {
+      static_map_info_update_flag_ = true;
+      static_map_info_timestamp_ = static_map_info_current_timestamp;
+    } else {
+      static_map_info_update_flag_ = false;
+    }
+
+    if (static_map_info_update_flag_) {
+      ad_common::hdmap::HDMap hd_map_tmp;
+      const int res =
+          hd_map_tmp.LoadMapFromProto(local_view->static_map_info.road_map());
+      if (res == 0) {
+        // std::cout << "hdmap debugstring:\n"
+        //     << local_view.static_map_info.current_routing().DebugString() <<
+        //     std::endl;
+        hd_map_ = std::move(hd_map_tmp);
+        hdmap_valid_ = true;
+      }
+    }
   }
+
   void set_location_valid(bool flag) { location_valid_ = flag; }
   bool location_valid() const { return location_valid_; }
   const ad_common::hdmap::HDMap &get_hd_map() const { return hd_map_; }
@@ -201,8 +223,10 @@ class EnvironmentalModel {
   }
 
  private:
+  const LocalView *local_view_ = nullptr;
+  uint64_t static_map_info_timestamp_ = 0;
+  bool static_map_info_update_flag_ = false;
   ad_common::hdmap::HDMap hd_map_;
-  const LocalView *local_view_;
   bool vehicle_dbw_status_{false};
   std::shared_ptr<EgoStateManager> ego_state_manager_ = nullptr;
   std::shared_ptr<ObstacleManager> obstacle_manager_ = nullptr;
