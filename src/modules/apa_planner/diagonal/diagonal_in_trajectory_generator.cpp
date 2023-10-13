@@ -961,7 +961,14 @@ void DiagonalInTrajectoryGenerator::UpdateMeasurement() {
     pnc::spline::Projection proj;
     proj.CalProjectionPoint(x_s_spline_l_, y_s_spline_l_, 0.0, max_path_length,
                             measure_.ego_pos);
-    remain_dist_ = current_path_length_ - proj.GetOutput().s_proj;
+
+    if (proj.GetOutput().success) {
+      remain_dist_ = current_path_length_ - proj.GetOutput().s_proj;
+    } else {
+      remain_dist_ = 5.01;
+      std::cout << "projection calculation error!" << std::endl;
+    }
+
     std::cout << "remain_dist = " << remain_dist_ << std::endl;
   } else {
     remain_dist_ = 5.01;
