@@ -426,6 +426,11 @@ const pnc::geometry_lib::LineSegment UssObstacleAvoidance::GetMinDistUssLine()
 
 bool UssObstacleAvoidance::Update(
     PlanningOutput::PlanningOutput *const planning_output) {
+  if (!planning_output->has_trajectory() ||
+      planning_output->trajectory().trajectory_points_size() == 0) {
+    return false;
+  }
+
   // update planning output
   planning_output_ = planning_output;
 

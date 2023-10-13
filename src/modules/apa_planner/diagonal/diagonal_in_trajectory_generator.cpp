@@ -90,12 +90,6 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
   frame_ = frame;
   local_view_ = &(frame->session()->environmental_model().get_local_view());
 
-  // set local view to uss oa
-  // uss_oa_.SetLocalView(local_view_);
-
-  // update uss oa
-  // uss_oa_.Update(planning_output);
-
   // set local view to collision detector
   // collision_detector_.SetLocalView(local_view_);
 
@@ -118,11 +112,11 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
                        &origin_parking_fusion_info,
                        &local_view_->localization_estimate);
 
+  // set local view to uss oa
+  uss_oa_.SetLocalView(local_view_);
+
   // update measurement
   UpdateMeasurement();
-
-  // log by json
-  Log();
 
   const auto& parking_fusion_info = origin_parking_fusion_info;
 
@@ -136,6 +130,8 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
   if (local_view_->function_state_machine_info.has_current_state()) {
     current_state_ = local_view_->function_state_machine_info.current_state();
   }
+
+  bool generate_trajectory = false;
 
   const auto& slots = parking_fusion_info.parking_fusion_slot_lists();
   if (IsSlotSelected(frame)) {
@@ -175,7 +171,10 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
     // generate planning output
     GeneratePlanningOutput(planning_output);
 
-    return is_plan_success_;
+    // update uss oa
+    // uss_oa_.Update(planning_output);
+
+    generate_trajectory = is_plan_success_;
   } else {
     // bool is_planning_ok = false;
     // for (int i = 0; i < parking_fusion_info.parking_fusion_slot_lists_size();
@@ -190,10 +189,14 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
     //   }
     // }
     // return is_planning_ok;
-    return false;
+
+    generate_trajectory = false;
   }
 
-  return true;
+  // log by json
+  Log();
+
+  return generate_trajectory;
 }
 
 void DiagonalInTrajectoryGenerator::Reset() {
@@ -227,9 +230,7 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
 
   // plan suceess
   if (is_plan_success_) {
-    if (simulation_enable_flag_) {
-      planning_output->Clear();
-    }
+    planning_output->Clear();
 
     planning_output->mutable_planning_status()->set_apa_planning_status(
         ::PlanningOutput::ApaPlanningStatus::IN_PROGRESS);
@@ -677,7 +678,6 @@ const bool DiagonalInTrajectoryGenerator::CheckFinish() {
 
 const bool DiagonalInTrajectoryGenerator::CheckReplan(
     PlanningOutput* const planning_output) {
-  is_replan_ = true;
   if (simulation_enable_flag_ && simu_param_.force_planning_) {
     std::cout << "tune force_planning on!" << std::endl;
     return true;
@@ -699,9 +699,7 @@ const bool DiagonalInTrajectoryGenerator::CheckReplan(
     return true;
   }
 
-  is_replan_ = false;
-
-  return is_replan_;
+  return false;
 }
 
 const bool DiagonalInTrajectoryGenerator::UpdateSplineGlobal() {
