@@ -11,7 +11,7 @@ from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/1012_3/test_9.00000'
+bag_path = '/home/xlwang71/Downloads/APA/1013_1530/test_5.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -53,14 +53,14 @@ class LocalViewSlider:
     self.selected_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='25%'), description= "selected_id",min=0, max=100, value=origin_selected_id, step=1)
     self.force_planning_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "force_planning",min=0, max=1, value=0, step=1)
     self.turn_on_plan_stm_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "turn_on_plan_stm",min=0, max=1, value=0, step=1)
+    self.is_complete_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "is_complete",min=0, max=1, value=0, step=1)
     self.plan_stm_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "plan_stm",min=0, max=4, value=0, step=1)
-    self.is_complete_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "is_complete",min=0, max=1, value=0, step=1)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
                                         selected_id = self.selected_id_slider,
                                         force_planning = self.force_planning_slider,
                                         turn_on_plan_stm = self.turn_on_plan_stm_slider,
-                                        plan_stm = self.plan_stm_slider,
-                                        is_complete = self.is_complete_slider)
+                                        is_complete = self.is_complete_slider,
+                                        plan_stm = self.plan_stm_slider)
 
 ### sliders callback
 def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, plan_stm, is_complete):
@@ -102,7 +102,6 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
 
   print("is_replan = ", is_replan)
   print("ego_yaw_deg = ", loc_msg_input.pose.euler_angles.yaw * 57.3)
-  is_replan = False
   try:
     diag_slot_planning_py.UpdateBytesByParam(soc_state_input.SerializeToString(),
                                       fus_parking_input.SerializeToString(),

@@ -217,15 +217,17 @@ void DiagonalInTrajectoryGenerator::Reset() {
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
     PlanningOutput* const planning_output) {
-  // when finished
-  if (is_finished_ && !simulation_enable_flag_) {
-    SetFinishedPlanningOutput(frame_);
-    return;
-  }
+  if (!simulation_enable_flag_) {
+    // when finished
+    if (is_finished_) {
+      SetFinishedPlanningOutput(frame_);
+      return;
+    }
 
-  // not active
-  if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
-    return;
+    // not active
+    if (current_state_ != FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
+      return;
+    }
   }
 
   // plan suceess
@@ -700,20 +702,26 @@ const bool DiagonalInTrajectoryGenerator::CheckReplan(
     return true;
   }
 
-  if (IsReplanEachFrame(local_view_->function_state_machine_info)) {
-    std::cout << "apa is not active!" << std::endl;
-    return true;
-  }
+  if (!simulation_enable_flag_) {
+    if (IsReplanEachFrame(local_view_->function_state_machine_info)) {
+      std::cout << "apa is not active!" << std::endl;
+      return true;
+    }
 
-  if (!planning_output->has_trajectory() ||
-      planning_output->trajectory().trajectory_points_size() == 0) {
-    std::cout << "no trajectory!" << std::endl;
-    return true;
-  }
-
-  if (CheckIfNearTerminalPoint()) {
-    std::cout << "close to target!" << std::endl;
-    return true;
+    if (!planning_output->has_trajectory() ||
+        planning_output->trajectory().trajectory_points_size() == 0) {
+      std::cout << "no trajectory!" << std::endl;
+      return true;
+    }
+    if (CheckIfNearTerminalPoint()) {
+      std::cout << "close to target!" << std::endl;
+      return true;
+    }
+  } else {
+    if (simu_param_.force_planning_) {
+      std::cout << "tune force_planning on!" << std::endl;
+      return true;
+    }
   }
 
   return false;
@@ -818,7 +826,8 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
   }
 
   // check if replan
-  if (!CheckReplan(planning_output)) {
+  is_replan_ = CheckReplan(planning_output);
+  if (!is_replan_) {
     return;
   }
 
