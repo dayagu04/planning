@@ -73,6 +73,7 @@ class DubinsLibrary {
     bool path_available = false;
     bool is_line_arc = false;
     double dtheta_arc_AB = 0.0;
+    double line_arc_radius = 0.0;
     uint8_t dubins_type = 0;
     uint8_t case_type = 0;
     uint8_t line_arc_type = 0;
@@ -107,6 +108,7 @@ class DubinsLibrary {
 
  public:
   void SetInput(Input& input) { input_ = input; }
+  void PrintOutput() const;
 
   void SetStart(const Eigen::Vector2d& p_start, const double heading_start) {
     input_.p1 = p_start;
@@ -158,7 +160,9 @@ class DubinsLibrary {
 
   const bool GenDubinsOutput(Output& output,
                              const DubinsLibrary::GeometryResult& result);
-
+                             
+  const bool GenLineArcOutput(Output& output,
+                             const DubinsLibrary::GeometryResult& result);
   Input input_;
   Output output_;
   uint8_t dubins_type_ = 0;

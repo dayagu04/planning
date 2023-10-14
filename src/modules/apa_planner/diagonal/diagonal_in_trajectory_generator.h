@@ -123,7 +123,7 @@ class DiagonalInTrajectoryGenerator {
                                const uint8_t plan_algorithm,
                                const uint8_t level);
 
-  const bool DubinsPlanFuncByLevel(const uint8_t level);
+  const bool DubinsPlanFunc(const uint8_t level);
 
   void UpdateDubinsInputByLevel(const uint8_t level);
   const bool PathEvaluateOnce(const uint8_t level);

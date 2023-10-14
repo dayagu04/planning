@@ -3,6 +3,7 @@
 #include <pybind11/stl.h>
 
 #include <cstdint>
+#include <iostream>
 #include <vector>
 
 #include "apa_planner/dubins_lib/dubins_lib.h"
@@ -45,6 +46,8 @@ int Update(double x_start, double y_start, double heading_start,
   pBase->Solve(dubins_type, case_type);
   pBase->Sampling(ds, is_complete_path);
 
+  pBase->PrintOutput();
+
   return 0;
 }
 
@@ -59,9 +62,12 @@ int UpdateLineArc(double x_start, double y_start, double heading_start,
   input.p1 << x_start, y_start;
   input.p2 << x_target, y_target;
 
+  std::cout << "---------------" << std::endl;
   pBase->SetInput(input);
   pBase->Solve(line_arc_type);
-  // pBase->Sampling(ds, is_complete_path);
+  pBase->Sampling(ds, is_complete_path);
+
+  pBase->PrintOutput();
 
   return 0;
 }

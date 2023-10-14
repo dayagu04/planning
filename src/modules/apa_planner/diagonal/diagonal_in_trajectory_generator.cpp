@@ -71,6 +71,7 @@ static const double terminal_target_x = 1.1;
 static const double min_path_length = 0.3;
 static const double max_path_length = 20.0;
 static const double min_search_length = 6.0;
+static const double path_sample_ds = 0.025;
 static const uint8_t max_gear_change_count = 6;
 
 }  // namespace
@@ -465,12 +466,13 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanOneStep(
     const uint8_t level) {
   dubins_planner_.SetRadius(plan_input.path_radius);
   dubins_planner_.SetTarget(plan_input.target_pos, plan_input.target_heading);
+  plan_algorithm_ = plan_algorithm;
 
   // dubins method
   if (plan_algorithm == PlanAlgorithm::DUBINS) {
     // dubins search loop in one tuning step
     for (size_t i = 0; i < DubinsLibrary::CASE_COUNT; ++i) {
-      for (size_t j = 0; j < DubinsLibrary::R_S_L + 1; ++j) {
+      for (size_t j = 0; j < DubinsLibrary::DUBINS_TYPE_COUNT; ++j) {
         if (dubins_planner_.Solve(j, i)) {
           if (PathEvaluateOnce(level)) {
             return true;
@@ -480,17 +482,16 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanOneStep(
     }  // dubins loop
   }
 
-  // TODO
-  // // line arc method
-  // if (plan_algorithm == PlanAlgorithm::LINE_ARC) {
-  //   for (size_t i = 0; i < DubinsLibrary::LINEARC_TYPE_COUNT; ++i) {
-  //     if (dubins_planner_.Solve(i)) {
-  //       if (output.gear_change_count == 0) {
-  //         return true;
-  //       }
-  //     }
-  //   }  // linearc loop
-  // }
+  // line arc method
+  if (plan_algorithm == PlanAlgorithm::LINE_ARC) {
+    for (size_t i = 0; i < DubinsLibrary::LINEARC_TYPE_COUNT; ++i) {
+      if (dubins_planner_.Solve(i)) {
+        if (PathEvaluateOnce(level)) {
+          return true;
+        }
+      }
+    }  // linearc loop
+  }
 
   return false;
 }
@@ -519,38 +520,35 @@ const bool DiagonalInTrajectoryGenerator::PathEvaluateOnce(
   if (level ==
       DUBINS_LEVEL_ZERO_GEAR_CHANGE) {  // LEVEL_0, usually for first try
 
+    const auto& is_line_arc = output.is_line_arc;
+
     // no gear change: force no gear change in final
     if (plan_state_machine_ == FINAL) {
-      if (output.gear_change_count == 0) {
-        return true;
+      const bool is_toward_terminal =
+          ego_slot_info_.ego_pos_slot.x() > plan_input_.target_pos.x();
+      if (output.gear_change_count == 0 && is_toward_terminal) {
+        if (is_line_arc) {
+          // const auto arc_length = output.arc_AB.length +
+          // output.arc_CD.length; arc_length / output.line_arc_radius < 2.2
+          // / 57.3 ||
+          if (output.line_arc_radius > min_radius_final) {
+            return true;
+          } else {
+            return false;
+          }
+        } else {
+          return true;
+        }
       }
     }
 
     if (plan_state_machine_ == INIT) {
-      const bool is_toward_terminal =
-          ego_slot_info_.ego_pos_slot.x() > plan_input_.target_pos.x();
-
-      if (output.gear_change_count == 0 && is_toward_terminal) {
-        return true;
+      if (output.gear_change_count == 1) {
+        if (output.line_BC.length >= kMinProperBCLength &&
+            is_line_arc == false) {
+          return true;
+        }
       }
-
-      if (output.gear_change_count == 1 &&
-          output.line_BC.length >= kMinProperBCLength &&
-          plan_state_machine_ != FINAL) {  // no gear change first for final
-        // TODO: consider heading
-        // if (std::fabs(output.dtheta_arc_AB) < 10.0 / 57.3)
-        return true;
-      }
-    }
-
-    if (output.gear_change_count == 0 && plan_state_machine_ == FINAL) {
-      return true;
-    }
-
-    // once gear change
-
-    if (output.gear_change_count == 0) {
-      return true;
     }
   } else if (level == DUBINS_LEVEL_ONCE_GEAR_CHANGE) {
   }
@@ -558,8 +556,7 @@ const bool DiagonalInTrajectoryGenerator::PathEvaluateOnce(
   return false;
 }
 
-const bool DiagonalInTrajectoryGenerator::DubinsPlanFuncByLevel(
-    const uint8_t level) {
+const bool DiagonalInTrajectoryGenerator::DubinsPlanFunc(const uint8_t level) {
   path_level_ = level;
   dubins_iter_count_ = 0;
   // step1: update target pose and radius
@@ -576,30 +573,20 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanFuncByLevel(
       path_length_queue;
 
   std::vector<DubinsLibrary::Output> dubins_output_vec;
+  dubins_output_vec.clear();
+  dubins_output_vec.reserve(std::ceil(max_search_length / kLineStep));
 
   bool success_once = false;
+  double s = 0.0;
+  size_t index = 0;
   if (level == DUBINS_LEVEL_ZERO_GEAR_CHANGE) {
-    dubins_output_vec.reserve(std::ceil(max_search_length / kLineStep));
-
-    double s = 0.0;
-    size_t index = 0;
+    // try dubins method first
+    s = 0.0;
+    index = 0;
     while (s < max_search_length) {
-      // try linearc method first
-      if (DubinsPlanOneStep(plan_input_, PlanAlgorithm::DUBINS, level)) {
+      if (DubinsPlanOneStep(plan_input_, PlanAlgorithm::LINE_ARC, level)) {
         const auto length = dubins_planner_.GetOutput().length;
         dubins_output_vec.emplace_back(dubins_planner_.GetOutput());
-
-        // std::cout << "index = " << index << ", length = " << length
-        //           << std::endl;
-
-        // std::cout << "gear_cmd_vec = "
-        //           << Eigen::Vector3d(
-        //                  dubins_planner_.GetOutput().gear_cmd_vec[0],
-        //                  dubins_planner_.GetOutput().gear_cmd_vec[1],
-        //                  dubins_planner_.GetOutput().gear_cmd_vec[2])
-        //                  .transpose()
-        //           << std::endl;
-
         path_length_queue.push({length, index});
         index++;
 
@@ -610,6 +597,40 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanFuncByLevel(
       s += kLineStep;
 
       dubins_iter_count_++;
+    }
+
+    if (success_once) {
+      std::cout << "--------line arc success!" << std::endl;
+    }
+
+    if (!success_once) {
+      path_length_queue.empty();
+      dubins_output_vec.clear();
+      s = 0.0;
+      index = 0;
+      dubins_iter_count_ = 0;
+      UpdateDubinsInputByLevel(level);
+
+      // then try line arc method
+      while (s < max_search_length) {
+        if (DubinsPlanOneStep(plan_input_, PlanAlgorithm::DUBINS, level)) {
+          const auto length = dubins_planner_.GetOutput().length;
+          dubins_output_vec.emplace_back(dubins_planner_.GetOutput());
+          path_length_queue.push({length, index});
+          index++;
+
+          success_once = true;
+        }
+
+        plan_input_.target_pos.x() += kLineStep;
+        s += kLineStep;
+
+        dubins_iter_count_++;
+      }
+
+      if (success_once) {
+        std::cout << "--------dubins success!" << std::endl;
+      }
     }
   }
 
@@ -623,6 +644,7 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanFuncByLevel(
 
     return true;
   } else {
+    std::cout << "--------all failed!" << std::endl;
     return false;
   }
 }
@@ -630,11 +652,12 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanFuncByLevel(
 void DiagonalInTrajectoryGenerator::PrintDubinsOutput() {
   const auto& output = dubins_planner_.GetOutput();
 
-  // std::cout << "pA = " << output.arc_AB.pA.transpose() << std::endl;
-  // std::cout << "pB = " << output.arc_AB.pB.transpose() << std::endl;
-  // std::cout << "pC = " << output.arc_CD.pA.transpose() << std::endl;
-  // std::cout << "pD = " << output.arc_CD.pB.transpose() << std::endl;
-  std::cout << "------------- dubins result " << std::endl;
+  std::cout << "pA = " << output.arc_AB.pA.transpose() << std::endl;
+  std::cout << "pB = " << output.arc_AB.pB.transpose() << std::endl;
+  std::cout << "pC = " << output.arc_CD.pA.transpose() << std::endl;
+  std::cout << "pD = " << output.arc_CD.pB.transpose() << std::endl;
+  std::cout << "------------------------------------- dubins result "
+            << std::endl;
 
   std::cout << "target_pos = "
             << dubins_planner_.GetOutput().arc_CD.pB.transpose()
@@ -662,6 +685,7 @@ void DiagonalInTrajectoryGenerator::PrintDubinsOutput() {
             << static_cast<int>(output.gear_change_count) << std::endl;
 
   std::cout << "is_line_arc = " << output.is_line_arc << std::endl;
+  std::cout << "line_arc_radius = " << output.line_arc_radius << std::endl;
 
   std::cout << "dubins_type = " << static_cast<int>(output.dubins_type)
             << std::endl;
@@ -760,9 +784,9 @@ const bool DiagonalInTrajectoryGenerator::UpdateSplineGlobal() {
     s += ds;
   }
 
-  x_vec.back() = output.path_point_vec.back().pos.x();
-  y_vec.back() = output.path_point_vec.back().pos.y();
-  s_vec.back() = s;
+  x_vec.emplace_back(output.path_point_vec.back().pos.x());
+  y_vec.emplace_back(output.path_point_vec.back().pos.y());
+  s_vec.emplace_back(s);
 
   x_s_spline_l_.set_points(s_vec, x_vec);
   y_s_spline_l_.set_points(s_vec, y_vec);
@@ -781,8 +805,9 @@ const bool DiagonalInTrajectoryGenerator::PathPlanCoreIteration() {
   bool plan_success = false;
 
   // first dubins iteration: try to plan with final: zero gear change
+  std::cout << "----------------try final plan first!" << std::endl;
   plan_state_machine_ = FINAL;
-  if (DubinsPlanFuncByLevel(DUBINS_LEVEL_ZERO_GEAR_CHANGE)) {
+  if (DubinsPlanFunc(DUBINS_LEVEL_ZERO_GEAR_CHANGE)) {
     plan_success = (dubins_planner_.GetOutput().gear_change_count == 0 &&
                     dubins_planner_.GetOutput().current_gear_cmd ==
                         pnc::dubins_lib::DubinsLibrary::REVERSE);
@@ -791,19 +816,20 @@ const bool DiagonalInTrajectoryGenerator::PathPlanCoreIteration() {
   }
 
   if (plan_success) {
-    std::cout << "try final plan success!" << std::endl;
+    std::cout << "--final plan success!" << std::endl;
   } else {
-    plan_state_machine_ = INIT;
-    std::cout << "try final plan failed!" << std::endl;
+    std::cout << "--final plan failed!" << std::endl;
   }
 
   // second dubins iteration: try to plan again with init: once gear change
   if (!plan_success) {
-    if (DubinsPlanFuncByLevel(DUBINS_LEVEL_ZERO_GEAR_CHANGE)) {
-      std::cout << "try init again plan_success!" << std::endl;
+    plan_state_machine_ = INIT;
+    std::cout << "----------------try init plan!" << std::endl;
+    if (DubinsPlanFunc(DUBINS_LEVEL_ZERO_GEAR_CHANGE)) {
+      std::cout << "--init plan success!" << std::endl;
       plan_success = true;
     } else {
-      std::cout << "try init again plan failed!" << std::endl;
+      std::cout << "--init plan failed!" << std::endl;
     }
     // TODO: obstacle detection
   }
@@ -842,7 +868,7 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
     is_complete_path = simu_param_.is_complete_path;
     dubins_planner_.Sampling(simu_param_.sample_ds, is_complete_path);
   } else {
-    dubins_planner_.Sampling(kLineStep, is_complete_path);
+    dubins_planner_.Sampling(path_sample_ds, is_complete_path);
   }
 
   double extend_s = 0.0;

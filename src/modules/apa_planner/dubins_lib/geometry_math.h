@@ -21,6 +21,7 @@ struct LineSegment {
   Eigen::Vector2d pA = Eigen::Vector2d::Zero();
   Eigen::Vector2d pB = Eigen::Vector2d::Zero();
   double length = 0.0;
+  bool is_ignored = false;
 };
 
 struct Circle {
@@ -36,6 +37,7 @@ struct Arc {
   double headingA = 0.0;
   double headingB = 0.0;
   bool is_anti_clockwise = true;
+  bool is_ignored = false;
 };
 
 struct TangentOutput {

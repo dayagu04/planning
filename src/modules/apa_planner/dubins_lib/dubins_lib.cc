@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "geometry_math.h"
+#include "math_lib.h"
 #include "path_point.h"
 #include "transform_lib.h"
 
@@ -68,29 +69,33 @@ void DubinsLibrary::LineArcCalculate(DubinsLibrary::GeometryResult& result,
   const auto d_t = CalPoint2LineDist(arc_point, line_segment_t);
   const auto d_n = CalPoint2LineDist(arc_point, line_segment_n);
 
-  const auto cos_dtheta = t1.dot(t2);
+  const auto cos_dtheta = std::min(t1.dot(t2), 0.999);
   const auto sin_dtheta = sqrt(1.0 - cos_dtheta * cos_dtheta);
 
   const auto r = d_t / (1.0 - cos_dtheta);
   const auto l = d_n - r * sin_dtheta;
 
-  // std::cout << "d_t = " << d_t << std::endl;
+  // std::cout << "t1 = " << t1.transpose() << std::endl;
+  // std::cout << "t2 = " << t2.transpose() << std::endl;
   // std::cout << "d_n = " << d_n << std::endl;
   // std::cout << "cos_dtheta = " << cos_dtheta << std::endl;
   // std::cout << "r = " << r << std::endl;
   // std::cout << "l = " << l << std::endl;
 
-  if (line_arc_type == L_S || line_arc_type == R_S) {
-    result.c1.radius = r;
-    result.c1.center = p1 + n1 * r;
-    result.c2 = result.c1;
-    result.tangent_result.cross_point = result.c1.center - n2 * r;
-  } else if (line_arc_type == S_L || line_arc_type == S_R) {
+  if (line_arc_type == S_L || line_arc_type == S_R) {
     result.c2.radius = r;
     result.c2.center = p2 + n2 * r;
     result.c1 = result.c2;
     result.tangent_result.cross_point = result.c2.center - n1 * r;
+  } else if (line_arc_type == L_S || line_arc_type == R_S) {
+    result.c1.radius = r;
+    result.c1.center = p1 + n1 * r;
+    result.c2 = result.c1;
+    result.tangent_result.cross_point = result.c1.center - n2 * r;
   }
+
+  // std::cout << "result.tangent_result.cross_point = "
+  //           << result.tangent_result.cross_point.transpose() << std::endl;
 
   result.n1 = n1;
   result.n2 = n2;
@@ -170,10 +175,9 @@ bool DubinsLibrary::Solve(uint8_t line_arc_type) {
   LineArcCalculate(line_arc_result, line_arc_type);
 
   SetOutputByLineArcType(output_, line_arc_result, line_arc_type);
-  // const auto flag = GenDubinsOutput(output_, line_arc_result);
+  const auto flag = GenLineArcOutput(output_, line_arc_result);
 
-  // return flag;
-  return true;
+  return flag;
 }
 
 // solve by dubins
@@ -220,6 +224,7 @@ void DubinsLibrary::SetOutputByLineArcType(
     const uint8_t line_arc_type) {
   output.arc_AB.circle_info = result.c1;
   output.arc_CD.circle_info = result.c2;
+  output.line_arc_type = line_arc_type;
 
   if (line_arc_type == L_S || line_arc_type == R_S) {
     output.arc_AB.pA = input_.p1;
@@ -271,13 +276,204 @@ const double DubinsLibrary::GetThetaD() const {
   return atan2(t1_out.y(), t1_out.x());
 }
 
-const bool DubinsLibrary::GenDubinsOutput(
+const bool DubinsLibrary::GenLineArcOutput(
     Output& output, const DubinsLibrary::GeometryResult& result) {
-  if (result.is_line_arc && result.r < 0.99 * input_.radius) {
+  output.is_line_arc = true;
+  const auto v_O1A = output.arc_AB.pA - output.arc_AB.circle_info.center;
+  const auto v_O1B = output.arc_AB.pB - output.arc_AB.circle_info.center;
+
+  const auto v_O2C = output.arc_CD.pA - output.arc_CD.circle_info.center;
+  const auto v_O2D = output.arc_CD.pB - output.arc_CD.circle_info.center;
+
+  const auto rotm_AB = geometry_lib::GetRotm2dFromTwoVec(v_O1A, v_O1B);
+  const auto rotm_CD = geometry_lib::GetRotm2dFromTwoVec(v_O2C, v_O2D);
+
+  const auto theta2 = geometry_lib::GetAngleFromTwoVec(v_O2C, v_O2D);
+
+  if (result.line_arc_type == S_L || result.line_arc_type == S_R) {
+    // arc AB
+    output.arc_AB.length = 0.0;
+    output.arc_AB.headingA = input_.heading1;
+    output.arc_AB.headingB = input_.heading1;
+
+    // line BC
+    const auto v_BC = output.line_BC.pB - output.line_BC.pA;
+    const auto v_BC_norm = v_BC.norm();
+    if (v_BC_norm > dist_tol &&
+        std::fabs(v_BC.dot(result.t1) / v_BC_norm) < 0.999962) {
+      // std::cout << "BC wrong!" << std::endl;
+      output.path_available = false;
+      return false;
+    }
+    output.line_BC.length = (output.line_BC.pA - output.line_BC.pB).norm();
+
+    // arc CD
+    output.arc_CD.length = std::fabs(theta2) * result.r;
+    const auto theta2 = geometry_lib::GetAngleFromTwoVec(v_O2C, v_O2D);
+    const auto t_AB_out = rotm_AB * result.t1;
+    const auto t2_out = rotm_CD * t_AB_out;
+    output.arc_CD.headingA = output.arc_AB.headingB;
+    output.arc_CD.headingB = atan2(t2_out.y(), t2_out.x());
+    output.arc_CD.is_anti_clockwise = (theta2 > 0.0);
+  } else if (result.line_arc_type == L_S || result.line_arc_type == R_S) {
+    // arc AB
+    const auto theta1 = geometry_lib::GetAngleFromTwoVec(v_O1A, v_O1B);
+    output.arc_AB.length = std::fabs(theta1) * result.r;
+    output.arc_AB.headingA = input_.heading1;
+    output.dtheta_arc_AB = theta1;
+    const auto t_AB_out = rotm_AB * result.t1;
+    output.arc_AB.headingB = atan2(t_AB_out.y(), t_AB_out.x());
+    output.arc_AB.is_anti_clockwise = (theta1 > 0.0);
+
+    // line BC
+    const auto v_BC = output.line_BC.pB - output.line_BC.pA;
+    const auto v_BC_norm = v_BC.norm();
+    if (v_BC_norm > dist_tol &&
+        std::fabs(v_BC.dot(result.t2) / v_BC_norm) < 0.999962) {
+      // std::cout << "BC wrong!" << std::endl;
+      output.path_available = false;
+      return false;
+    }
+    output.line_BC.length = (output.line_BC.pA - output.line_BC.pB).norm();
+
+    // arc CD
+    output.arc_CD.length = 0.0;
+    output.arc_CD.headingA = input_.heading2;
+    output.arc_CD.headingB = input_.heading2;
+  }
+
+  output.path_available = true;
+  output.line_arc_radius = result.r;
+
+  // std::cout << "output.pA = " << output.arc_AB.pA.transpose() << std::endl;
+  // std::cout << "output.pB = " << output.arc_AB.pB.transpose() << std::endl;
+  // std::cout << "output.pC = " << output.arc_CD.pA.transpose() << std::endl;
+  // std::cout << "output.pD = " << output.arc_CD.pB.transpose() << std::endl;
+
+  // std::cout << " output.arc_AB.length =" << output.arc_AB.length <<
+  // std::endl; std::cout << " output.line_BC.length =" << output.line_BC.length
+  // << std::endl; std::cout << " output.arc_CD.length =" <<
+  // output.arc_CD.length << std::endl;
+
+  output.length =
+      output.arc_AB.length + output.line_BC.length + output.arc_CD.length;
+  if (output.length < dist_tol) {
     output.path_available = false;
     return false;
   }
 
+  // calculate gear info
+  output.gear_cmd_vec.clear();
+  output.gear_cmd_vec.reserve(3);
+  output.gear_change_count = 0;
+  output.gear_change_index = 18;  // just for fun: 18
+
+  uint8_t current_gear = 0;
+  output.current_gear_cmd = EMPTY;
+
+  // set some type info
+  output.dubins_type = result.dubins_type;
+
+  // 1. AB arc
+  // check if AB arc is too short
+  if (output.arc_AB.length > dist_tol) {
+    if (v_O1B.dot(result.t1) < 0.0) {
+      current_gear = REVERSE;
+    } else {
+      current_gear = NORMAL;
+    }
+    output.arc_AB.is_ignored = false;
+  } else {
+    current_gear = EMPTY;
+    output.arc_AB.length = 0.0;
+    output.arc_AB.is_ignored = true;
+  }
+
+  output.gear_cmd_vec.emplace_back(current_gear);
+  uint8_t last_gear = current_gear;
+
+  const auto t1_after_AB = rotm_AB * result.t1;
+
+  if (output.current_gear_cmd == EMPTY) {
+    output.current_gear_cmd = current_gear;
+  }
+
+  // 2. BC line segment
+  if (output.line_BC.length > dist_tol) {
+    const auto v_BC = output.line_BC.pB - output.line_BC.pA;
+    if (t1_after_AB.dot(v_BC) < 0.0) {
+      current_gear = REVERSE;
+    } else {
+      current_gear = NORMAL;
+    }
+    output.line_BC.is_ignored = false;
+  } else {
+    current_gear = EMPTY;
+    output.line_BC.length = 0.0;
+    output.line_BC.is_ignored = true;
+  }
+  output.gear_cmd_vec.emplace_back(current_gear);
+  if (last_gear != EMPTY && current_gear != EMPTY &&
+      last_gear != current_gear) {
+    if (output.gear_change_count == 0) {
+      output.gear_change_index = 1;
+    }
+    output.gear_change_count++;
+  }
+
+  last_gear = current_gear;
+
+  if (output.current_gear_cmd == EMPTY) {
+    output.current_gear_cmd = current_gear;
+  }
+
+  // 3. CD arc
+  // check if CD arc is too short
+  if (output.arc_CD.length > dist_tol) {
+    if (v_O2D.dot(t1_after_AB) < 0.0) {
+      current_gear = REVERSE;
+    } else {
+      current_gear = NORMAL;
+    }
+    output.arc_CD.is_ignored = false;
+  } else {
+    current_gear = EMPTY;
+    output.arc_CD.length = 0.0;
+    output.arc_CD.is_ignored = true;
+  }
+
+  output.gear_cmd_vec.emplace_back(current_gear);
+
+  bool gear_change_flag = false;
+  if (last_gear != EMPTY) {
+    if (current_gear != EMPTY && last_gear != current_gear) {
+      gear_change_flag = true;
+    }
+  } else {
+    if (current_gear != EMPTY && output.gear_cmd_vec[0] != current_gear &&
+        output.gear_cmd_vec[0] != EMPTY) {
+      gear_change_flag = true;
+    }
+  }
+
+  if (gear_change_flag) {
+    if (output.gear_change_count == 0) {
+      output.gear_change_index = 2;
+    }
+    output.gear_change_count++;
+  }
+
+  last_gear = current_gear;
+
+  if (output.current_gear_cmd == EMPTY) {
+    output.current_gear_cmd = current_gear;
+  }
+  return true;
+}
+
+const bool DubinsLibrary::GenDubinsOutput(
+    Output& output, const DubinsLibrary::GeometryResult& result) {
+  output.is_line_arc = false;
   // rotation from O1A to O1B, then O2C to O2D, AB does not change heading
   const auto v_O1A = output.arc_AB.pA - output.arc_AB.circle_info.center;
   const auto v_O1B = output.arc_AB.pB - output.arc_AB.circle_info.center;
@@ -347,9 +543,7 @@ const bool DubinsLibrary::GenDubinsOutput(
     output.current_gear_cmd = EMPTY;
 
     // set some type info
-    output.is_line_arc = result.is_line_arc;
     output.dubins_type = result.dubins_type;
-    output.line_arc_type = result.line_arc_type;
 
     // 1. AB arc
     // check if AB arc is too short
@@ -359,9 +553,13 @@ const bool DubinsLibrary::GenDubinsOutput(
       } else {
         current_gear = NORMAL;
       }
+      output.arc_AB.is_ignored = false;
     } else {
       current_gear = EMPTY;
+      output.arc_AB.length = 0.0;
+      output.arc_AB.is_ignored = true;
     }
+
     output.gear_cmd_vec.emplace_back(current_gear);
     uint8_t last_gear = current_gear;
 
@@ -379,8 +577,11 @@ const bool DubinsLibrary::GenDubinsOutput(
       } else {
         current_gear = NORMAL;
       }
+      output.line_BC.is_ignored = false;
     } else {
       current_gear = EMPTY;
+      output.line_BC.length = 0.0;
+      output.line_BC.is_ignored = true;
     }
     output.gear_cmd_vec.emplace_back(current_gear);
     if (last_gear != EMPTY && current_gear != EMPTY &&
@@ -405,8 +606,11 @@ const bool DubinsLibrary::GenDubinsOutput(
       } else {
         current_gear = NORMAL;
       }
+      output.arc_CD.is_ignored = false;
     } else {
       current_gear = EMPTY;
+      output.arc_CD.length = 0.0;
+      output.arc_CD.is_ignored = true;
     }
 
     output.gear_cmd_vec.emplace_back(current_gear);
@@ -437,11 +641,6 @@ const bool DubinsLibrary::GenDubinsOutput(
     }
   }
 
-  if (result.is_line_arc && output.gear_change_count > 0) {
-    output.path_available = false;
-    return false;
-  }
-
   return true;
 }
 
@@ -451,6 +650,7 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
   }
 
   const size_t N = std::ceil(output_.length / ds) + 10;
+
   output_.path_point_vec.clear();
   output_.path_point_vec.reserve(N);
 
@@ -461,41 +661,44 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
 
   PathPoint path_point;
 
-  // sampling arc AB first
-  const auto& pO1 = output_.arc_AB.circle_info.center;
+  bool set_pB = false;
 
-  const double dtheta1 = ds / output_.arc_AB.circle_info.radius *
-                         (output_.arc_AB.is_anti_clockwise ? 1.0 : -1.0);
-
-  const auto rot_m1 = GetRotm2dFromTheta(dtheta1);
-
-  // set pA
+  // set pA always
   path_point.Set(output_.arc_AB.pA, output_.arc_AB.headingA);
   output_.path_point_vec.emplace_back(path_point);
+  // sampling arc AB first
+  if (!output_.arc_AB.is_ignored) {
+    // sample rest of arc AB (pB is not included)
+    const auto& pO1 = output_.arc_AB.circle_info.center;
 
-  // sample rest of arc AB (pB is not included)
-  double s = ds;
-  // v_O1A
-  Eigen::Vector2d v_n = output_.arc_AB.pA - output_.arc_AB.circle_info.center;
-  double theta = output_.arc_AB.headingA;
-  Eigen::Vector2d pn;
+    const double dtheta1 = ds / output_.arc_AB.circle_info.radius *
+                           (output_.arc_AB.is_anti_clockwise ? 1.0 : -1.0);
 
-  if (arc_AB_length > ds) {
-    while (s < arc_AB_length) {
-      v_n = rot_m1 * v_n;
-      pn = pO1 + v_n;
-      s += ds;
-      theta += dtheta1;
+    const auto rot_m1 = GetRotm2dFromTheta(dtheta1);
+    double s = ds;
+    // v_O1A
+    Eigen::Vector2d v_n = output_.arc_AB.pA - output_.arc_AB.circle_info.center;
+    double theta = output_.arc_AB.headingA;
+    Eigen::Vector2d pn;
 
-      path_point.Set(pn, NormalizeAngle(theta));
-      output_.path_point_vec.emplace_back(path_point);
+    if (arc_AB_length > ds) {
+      while (s < arc_AB_length) {
+        v_n = rot_m1 * v_n;
+        pn = pO1 + v_n;
+        s += ds;
+        theta += dtheta1;
+
+        path_point.Set(pn, NormalizeAngle(theta));
+        output_.path_point_vec.emplace_back(path_point);
+      }
     }
-  }
 
-  // set pB
-  if (arc_AB_length > dist_tol || line_BC_length > ds) {
-    path_point.Set(output_.arc_AB.pB, output_.arc_AB.headingB);
-    output_.path_point_vec.emplace_back(path_point);
+    // set pB
+    if (line_BC_length > ds) {
+      path_point.Set(output_.arc_AB.pB, output_.arc_AB.headingB);
+      output_.path_point_vec.emplace_back(path_point);
+      set_pB = true;
+    }
   }
 
   output_.path_seg_count = 1;
@@ -506,25 +709,28 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
   }
 
   // sample rest of line BC (pC is not included)
-  s = ds;
-  pn = output_.line_BC.pA;
-  theta = output_.arc_AB.headingB;
+  if (!output_.line_BC.is_ignored) {
+    double s = ds;
+    auto pn = output_.line_BC.pA;
+    auto theta = output_.arc_AB.headingB;
 
-  const auto diff_vec =
-      (output_.line_BC.pB - output_.line_BC.pA).normalized() * ds;
-  if (line_BC_length > ds) {
-    while (s < line_BC_length) {
-      pn += diff_vec;
-      s += ds;
-      path_point.Set(pn, theta);
+    const auto diff_vec =
+        (output_.line_BC.pB - output_.line_BC.pA).normalized() * ds;
+    if (line_BC_length > ds) {
+      while (s < line_BC_length) {
+        pn += diff_vec;
+        s += ds;
+        path_point.Set(pn, theta);
+        output_.path_point_vec.emplace_back(path_point);
+      }
+    }
+
+    // set pC
+    if (!set_pB) {
+      path_point.Set(output_.arc_CD.pA, output_.arc_CD.headingA);
       output_.path_point_vec.emplace_back(path_point);
     }
   }
-
-  // set pC
-  path_point.Set(output_.arc_CD.pA, output_.arc_CD.headingA);
-  output_.path_point_vec.emplace_back(path_point);
-
   output_.path_seg_count = 2;
 
   if (!is_complete_path && gear_change_index == 2) {
@@ -532,36 +738,36 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
     return;
   }
 
-  // sample rest of arc CD (pD is not included)
-  pn = output_.arc_AB.pA;
-  theta = output_.arc_CD.headingA;
+  if (!output_.arc_CD.is_ignored) {
+    // sample rest of arc CD (pD is not included)
+    auto pn = output_.arc_AB.pA;
+    auto theta = output_.arc_CD.headingA;
 
-  const auto& pO2 = output_.arc_CD.circle_info.center;
+    const auto& pO2 = output_.arc_CD.circle_info.center;
 
-  const double dtheta2 = ds / output_.arc_CD.circle_info.radius *
-                         (output_.arc_CD.is_anti_clockwise ? 1.0 : -1.0);
+    const double dtheta2 = ds / output_.arc_CD.circle_info.radius *
+                           (output_.arc_CD.is_anti_clockwise ? 1.0 : -1.0);
 
-  const auto rot_m2 = GetRotm2dFromTheta(dtheta2);
-  // v_O2C
-  v_n = output_.arc_CD.pA - output_.arc_CD.circle_info.center;
-  s = ds;
-  if (arc_CD_length > ds) {
-    while (s < arc_CD_length) {
-      v_n = rot_m2 * v_n;
-      pn = pO2 + v_n;
-      s += ds;
-      theta += dtheta2;
+    const auto rot_m2 = GetRotm2dFromTheta(dtheta2);
+    // v_O2C
+    Eigen::Vector2d v_n = output_.arc_CD.pA - output_.arc_CD.circle_info.center;
+    auto s = ds;
+    if (arc_CD_length > ds) {
+      while (s < arc_CD_length) {
+        v_n = rot_m2 * v_n;
+        pn = pO2 + v_n;
+        s += ds;
+        theta += dtheta2;
 
-      path_point.Set(pn, NormalizeAngle(theta));
-      output_.path_point_vec.emplace_back(path_point);
+        path_point.Set(pn, NormalizeAngle(theta));
+        output_.path_point_vec.emplace_back(path_point);
+      }
     }
   }
 
-  // set pD
-  if (arc_CD_length > dist_tol) {
-    path_point.Set(output_.arc_CD.pB, output_.arc_CD.headingB);
-    output_.path_point_vec.emplace_back(path_point);
-  }
+  // set pD always
+  path_point.Set(output_.arc_CD.pB, output_.arc_CD.headingB);
+  output_.path_point_vec.emplace_back(path_point);
 
   std::cout << "AB & BC & CD, all in Path!" << std::endl;
   output_.path_seg_count = 3;
@@ -615,6 +821,50 @@ const std::vector<double> DubinsLibrary::GetPathEle(size_t index) const {
   }
 
   return out_vec;
+}
+
+void DubinsLibrary::PrintOutput() const {
+  std::cout << "------------- dubins result ---" << std::endl;
+  const auto& output = GetOutput();
+  std::cout << "path_available = " << output.path_available << std::endl;
+  std::cout << "pA = " << output.arc_AB.pA.transpose() << std::endl;
+  std::cout << "pB = " << output.arc_AB.pB.transpose() << std::endl;
+  std::cout << "pC = " << output.arc_CD.pA.transpose() << std::endl;
+  std::cout << "pD = " << output.arc_CD.pB.transpose() << std::endl;
+
+  std::cout << "target_pos = " << GetOutput().arc_CD.pB.transpose()
+            << ", target_heading_deg = " << GetOutput().arc_CD.headingB * 57.3
+            << std::endl;
+
+  std::cout << "ego_pos = " << GetOutput().arc_AB.pA.transpose() << std::endl;
+  std::cout << "ego_heading_deg = " << GetOutput().arc_AB.headingB * 57.3
+            << std::endl;
+
+  std::cout << "path length = " << output.length << std::endl;
+
+  std::cout << "AB_length = " << output.arc_AB.length
+            << ", BC_length = " << output.line_BC.length
+            << ", CD_length = " << output.arc_CD.length << std::endl;
+
+  std::cout << "line_arc_radius = " << output.line_arc_radius << std::endl;
+
+  const auto tmp_gear_cmd_vec = Eigen::Vector3d(
+      output.gear_cmd_vec[0], output.gear_cmd_vec[1], output.gear_cmd_vec[2]);
+
+  std::cout << "gear_cmd_vec = " << tmp_gear_cmd_vec.transpose() << std::endl;
+
+  std::cout << "gear_change_count = "
+            << static_cast<int>(output.gear_change_count) << std::endl;
+
+  std::cout << "is_line_arc = " << output.is_line_arc << std::endl;
+
+  std::cout << "dubins_type = " << static_cast<int>(output.dubins_type)
+            << std::endl;
+  std::cout << "case_type = " << static_cast<int>(output.case_type)
+            << std::endl;
+
+  std::cout << "line_arc_type = " << static_cast<int>(output.line_arc_type)
+            << std::endl;
 }
 
 }  // namespace dubins_lib
