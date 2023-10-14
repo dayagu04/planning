@@ -74,6 +74,20 @@ static const double min_search_length = 6.0;
 static const double path_sample_ds = 0.025;
 static const uint8_t max_gear_change_count = 6;
 
+static const double kSublaneWidth = 7.0;
+static const double kRightSublaneLength = 11.0;
+static const double kLeftSublaneLength = 11.0;
+
+// vehicle params
+static const double kFrontOverhanging = 0.924;
+static const double kWheelBase = 2.7;
+static const double kVehicleWidth = 1.89;
+
+static const Eigen::Vector2d kEgoFLCornerVec((kFrontOverhanging + kWheelBase),
+                                             0.5 * kVehicleWidth);
+static const Eigen::Vector2d kEgoFRCornerVec((kFrontOverhanging + kWheelBase),
+                                             -0.5 * kVehicleWidth);
+
 }  // namespace
 
 const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
@@ -423,6 +437,8 @@ void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
   const Eigen::Vector2d p2(slot_points[2].x(), slot_points[2].y());
   const Eigen::Vector2d p3(slot_points[3].x(), slot_points[3].y());
 
+  ego_slot_info_.slot_width = (p0 - p1).norm();
+
   const auto pM01 = 0.5 * (p0 + p1);
   const auto pM23 = 0.5 * (p2 + p3);
 
@@ -431,7 +447,7 @@ void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
   ego_slot_info_.slot_origin_pos = pM01 - kNormalSlotLength * n.normalized();
   ego_slot_info_.slot_origin_heading = std::atan2(n.y(), n.x());
 
-  // tf init
+  // global2slot tf init
   g2l_tf_.Init(ego_slot_info_.slot_origin_pos,
                ego_slot_info_.slot_origin_heading);
 
@@ -514,9 +530,66 @@ void DiagonalInTrajectoryGenerator::UpdateDubinsInputByLevel(
   }
 }
 
+const bool DiagonalInTrajectoryGenerator::CheckIfCrossSublane() const {
+  const auto& output = dubins_planner_.GetOutput();
+  pnc::dubins_lib::DubinsLibrary::PathPoint check_point;
+
+  // if ego car drive forward in BC segment,check Point C collision
+  if (output.gear_cmd_vec[1] == 1) {
+    check_point.Set(output.arc_CD.pA, output.arc_CD.headingA);
+  } else {
+    check_point.Set(output.arc_AB.pB, output.arc_AB.headingB);
+  }
+  return CheckIfCrossSublane(check_point);
+}
+
+const bool DiagonalInTrajectoryGenerator::CheckIfCrossSublane(
+    DubinsLibrary::PathPoint ego_point_in_slot) const {
+  pnc::geometry_lib::LocalToGlobalTf ego2slot;
+  ego2slot.Init(ego_point_in_slot.pos, ego_point_in_slot.heading);
+
+  Eigen::Vector2d ego_fl_corner_in_slot = ego2slot.GetPos(kEgoFLCornerVec);
+  Eigen::Vector2d ego_fr_corner_in_slot = ego2slot.GetPos(kEgoFRCornerVec);
+
+  // check if ego x coor cross sublane width
+  const double ego_corner_x_limit =
+      std::max(ego_fl_corner_in_slot.x(), ego_fr_corner_in_slot.x());
+
+  if (ego_corner_x_limit > measure_.sublane_width + kNormalSlotLength) {
+    return true;
+  }
+
+  // ego heading is less than 0 ,check right sublane length
+  double ego_corner_y_limit = 0.0;
+  if (ego_point_in_slot.heading < 0) {
+    ego_corner_y_limit =
+        std::min(ego_fl_corner_in_slot.y(), ego_fr_corner_in_slot.y());
+
+    if (ego_corner_y_limit <
+        -0.5 * ego_slot_info_.slot_width - measure_.sublane_right_length) {
+      return true;
+    }
+  } else {  // ego heading is more than 0 ,check left sublane length
+    ego_corner_y_limit =
+        std::max(ego_fl_corner_in_slot.y(), ego_fr_corner_in_slot.y());
+    if (ego_corner_y_limit >
+        0.5 * ego_slot_info_.slot_width + measure_.sublane_left_length) {
+      return true;
+    }
+  }
+  return false;
+}
+
 const bool DiagonalInTrajectoryGenerator::PathEvaluateOnce(
     const uint8_t level) {
   const auto& output = dubins_planner_.GetOutput();
+
+  // check if the ego car cross sublane in slot system(dubins result is now in
+  // slot system)
+  if (CheckIfCrossSublane()) {
+    return false;
+  }
+
   if (level ==
       DUBINS_LEVEL_ZERO_GEAR_CHANGE) {  // LEVEL_0, usually for first try
 
@@ -965,6 +1038,16 @@ void DiagonalInTrajectoryGenerator::UpdateMeasurement() {
   measure_.ego_pos = current_pos;
   measure_.heading = pose.heading();
   measure_.v_ego = local_view_->vehicle_service_output_info.vehicle_speed();
+
+  if (!simulation_enable_flag_) {
+    measure_.sublane_left_length = kLeftSublaneLength;
+    measure_.sublane_right_length = kRightSublaneLength;
+    measure_.sublane_width = kSublaneWidth;
+  } else {
+    measure_.sublane_left_length = simu_param_.sublane_left_length;
+    measure_.sublane_right_length = simu_param_.sublane_right_length;
+    measure_.sublane_width = simu_param_.sublane_width;
+  }
 
   // check standstill by velocity
   if (!simulation_enable_flag_) {

@@ -52,6 +52,9 @@ class DiagonalInTrajectoryGenerator {
     double v_ego = 0.0;
     double heading = 0.0;
     Eigen::Vector2d ego_pos = Eigen::Vector2d::Zero();
+    double sublane_width = 0.0;
+    double sublane_right_length = 0.0;
+    double sublane_left_length = 0.0;
     double standstill_timer = 0.0;
     double standstill_timer_by_pos = 0.0;
     bool static_flag = false;
@@ -68,6 +71,8 @@ class DiagonalInTrajectoryGenerator {
 
     Eigen::Vector2d ego_pos_slot = Eigen::Vector2d::Zero();
     double ego_heading_slot = 0.0;
+
+    double slot_width = 3.0;
   };
 
  public:
@@ -79,6 +84,10 @@ class DiagonalInTrajectoryGenerator {
     uint8_t current_state_ = 0;
     bool is_complete_path = false;
     double sample_ds = 0.5;
+
+    double sublane_width = 0.0;
+    double sublane_right_length = 0.0;
+    double sublane_left_length = 0.0;
   };
 
   DiagonalInTrajectoryGenerator() {
@@ -127,6 +136,9 @@ class DiagonalInTrajectoryGenerator {
 
   void UpdateDubinsInputByLevel(const uint8_t level);
   const bool PathEvaluateOnce(const uint8_t level);
+  const bool CheckIfCrossSublane() const;
+  const bool CheckIfCrossSublane(
+      pnc::dubins_lib::DubinsLibrary::PathPoint check_point) const;
 
   void PrintDubinsOutput();
 
