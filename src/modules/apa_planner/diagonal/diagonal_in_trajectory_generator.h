@@ -52,14 +52,10 @@ class DiagonalInTrajectoryGenerator {
     double v_ego = 0.0;
     double heading = 0.0;
     Eigen::Vector2d ego_pos = Eigen::Vector2d::Zero();
-    double sublane_width = 0.0;
-    double sublane_right_length = 0.0;
-    double sublane_left_length = 0.0;
     double standstill_timer = 0.0;
     double standstill_timer_by_pos = 0.0;
     bool static_flag = false;
   };
-
   struct PlanInput {
     Eigen::Vector2d target_pos;
     double target_heading = 0.0;
@@ -93,6 +89,7 @@ class DiagonalInTrajectoryGenerator {
   DiagonalInTrajectoryGenerator() {
     managed_parking_fusion_info_ptr_ =
         std::make_shared<ParkingFusion::ParkingFusionInfo>();
+    Reset();
     uss_oa_.Init();
     collision_detector_.Init();
   };
@@ -185,6 +182,9 @@ class DiagonalInTrajectoryGenerator {
   pnc::dubins_lib::DubinsLibrary::Input dubins_input_;
   pnc::dubins_lib::DubinsLibrary::Output plan_result_;
   size_t dubins_iter_count_ = 0;
+  double sublane_left_length_ = 0.0;
+  double sublane_right_length_ = 0.0;
+  double sublane_width_ = 0.0;
 
   // TODO
   uint8_t current_state_ = ::FuncStateMachine::FunctionalState::INIT;

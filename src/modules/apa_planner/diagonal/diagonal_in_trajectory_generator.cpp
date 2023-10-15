@@ -75,7 +75,7 @@ static const double path_sample_ds = 0.025;
 static const double safe_uss_remain_dist = 0.35;
 static const uint8_t max_gear_change_count = 6;
 
-static const double kSublaneWidth = 7.0;
+static const double kSublaneWidth = 8.5;
 static const double kRightSublaneLength = 11.0;
 static const double kLeftSublaneLength = 11.0;
 
@@ -232,6 +232,9 @@ void DiagonalInTrajectoryGenerator::Reset() {
   is_plan_success_ = false;
   terminal_err_.Set(Eigen::Vector2d(1.0, 1.0), 0.5);
   target_err_.Set(Eigen::Vector2d(1.0, 1.0), 0.5);
+  sublane_left_length_ = kLeftSublaneLength;
+  sublane_right_length_ = kRightSublaneLength;
+  sublane_width_ = kSublaneWidth;
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
@@ -253,7 +256,8 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
   }
   // std::cout << "Uss RemainDist = " << uss_oa_.GetRemainDist() << std::endl;
   // std::cout << "Plan RemainDist = " << remain_dist_ << std::endl;
-  // std::cout << "current_path_length_ = " << current_path_length_ << std::endl;
+  // std::cout << "current_path_length_ = " << current_path_length_ <<
+  // std::endl;
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
@@ -568,12 +572,16 @@ const bool DiagonalInTrajectoryGenerator::CheckIfCrossSublane() const {
   pnc::dubins_lib::DubinsLibrary::PathPoint check_point;
 
   // if ego car drive forward in BC segment,check Point C collision
-  if (output.gear_cmd_vec[1] == 1) {
-    check_point.Set(output.arc_CD.pA, output.arc_CD.headingA);
+  if (output.path_available && output.gear_cmd_vec.size() > 0) {
+    if (output.gear_cmd_vec[1] == 1) {
+      check_point.Set(output.arc_CD.pA, output.arc_CD.headingA);
+    } else {
+      check_point.Set(output.arc_AB.pB, output.arc_AB.headingB);
+    }
+    return CheckIfCrossSublane(check_point);
   } else {
-    check_point.Set(output.arc_AB.pB, output.arc_AB.headingB);
+    return true;
   }
-  return CheckIfCrossSublane(check_point);
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckIfCrossSublane(
@@ -588,25 +596,25 @@ const bool DiagonalInTrajectoryGenerator::CheckIfCrossSublane(
   const double ego_corner_x_limit =
       std::max(ego_fl_corner_in_slot.x(), ego_fr_corner_in_slot.x());
 
-  if (ego_corner_x_limit > measure_.sublane_width + kNormalSlotLength) {
+  if (ego_corner_x_limit > sublane_width_ + kNormalSlotLength) {
     return true;
   }
 
-  // ego heading is less than 0 ,check right sublane length
+  // ego heading is less than zero, check right sublane length
   double ego_corner_y_limit = 0.0;
-  if (ego_point_in_slot.heading < 0) {
+  if (ego_point_in_slot.heading < 0.0) {
     ego_corner_y_limit =
         std::min(ego_fl_corner_in_slot.y(), ego_fr_corner_in_slot.y());
 
     if (ego_corner_y_limit <
-        -0.5 * ego_slot_info_.slot_width - measure_.sublane_right_length) {
+        -0.5 * ego_slot_info_.slot_width - sublane_right_length_) {
       return true;
     }
-  } else {  // ego heading is more than 0 ,check left sublane length
+  } else {  // ego heading is more than zero, check left sublane length
     ego_corner_y_limit =
         std::max(ego_fl_corner_in_slot.y(), ego_fr_corner_in_slot.y());
     if (ego_corner_y_limit >
-        0.5 * ego_slot_info_.slot_width + measure_.sublane_left_length) {
+        0.5 * ego_slot_info_.slot_width + sublane_left_length_) {
       return true;
     }
   }
@@ -1070,14 +1078,10 @@ void DiagonalInTrajectoryGenerator::UpdateMeasurement() {
   measure_.heading = pose.heading();
   measure_.v_ego = local_view_->vehicle_service_output_info.vehicle_speed();
 
-  if (!simulation_enable_flag_) {
-    measure_.sublane_left_length = kLeftSublaneLength;
-    measure_.sublane_right_length = kRightSublaneLength;
-    measure_.sublane_width = kSublaneWidth;
-  } else {
-    measure_.sublane_left_length = simu_param_.sublane_left_length;
-    measure_.sublane_right_length = simu_param_.sublane_right_length;
-    measure_.sublane_width = simu_param_.sublane_width;
+  if (simulation_enable_flag_) {
+    sublane_left_length_ = simu_param_.sublane_left_length;
+    sublane_right_length_ = simu_param_.sublane_right_length;
+    sublane_width_ = simu_param_.sublane_width;
   }
 
   // check standstill by velocity
