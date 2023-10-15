@@ -71,7 +71,7 @@ static const double terminal_target_x = 1.1;
 static const double min_path_length = 0.3;
 static const double max_path_length = 20.0;
 static const double min_search_length = 6.0;
-static const double path_sample_ds = 0.025;
+static const double path_sample_ds = 0.05;
 static const double safe_uss_remain_dist = 0.35;
 static const uint8_t max_gear_change_count = 6;
 
@@ -276,11 +276,11 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
     }
   }
 
-  // clear output always
-  planning_output->Clear();
-
   // plan suceess
   if (is_plan_success_) {
+    std::cout << "------------- ready to send traj" << std::endl;
+    planning_output->Clear();
+
     planning_output->mutable_planning_status()->set_apa_planning_status(
         ::PlanningOutput::ApaPlanningStatus::IN_PROGRESS);
 
@@ -316,8 +316,6 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
     if (!simulation_enable_flag_) {
       SetFinishedPlanningOutput(frame_);
       return;
-    } else {
-      planning_output->Clear();
     }
   }
 }
@@ -827,14 +825,7 @@ const bool DiagonalInTrajectoryGenerator::CheckFinish() {
 
   const bool parking_failed = stuck_time_ > 4.0;
 
-  const bool is_finished = parking_success || parking_failed;
-
-  // is_finished will hold true unless exit parking function (will be reset)
-  if (!simulation_enable_flag_) {
-    is_finished_ = is_finished || is_finished_;
-  } else {
-    is_finished_ = is_finished;
-  }
+  is_finished_ = parking_success;
 
   return is_finished_;
 }
@@ -1054,6 +1045,10 @@ void DiagonalInTrajectoryGenerator::Log() const {
   JSON_DEBUG_VALUE("ego_pos_slot_x", ego_slot_info_.ego_pos_slot.x())
   JSON_DEBUG_VALUE("ego_pos_slot_y", ego_slot_info_.ego_pos_slot.y())
   JSON_DEBUG_VALUE("ego_heading_slot", ego_slot_info_.ego_heading_slot)
+
+  JSON_DEBUG_VALUE("stuck_time", stuck_time_)
+  JSON_DEBUG_VALUE("standstill_timer_by_pos", measure_.standstill_timer_by_pos)
+  JSON_DEBUG_VALUE("standstill_timer", measure_.standstill_timer)
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckIfNearTerminalPoint() const {

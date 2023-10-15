@@ -645,7 +645,7 @@ const bool DubinsLibrary::GenDubinsOutput(
 }
 
 void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
-  if (!output_.path_available || ds < dist_tol) {
+  if (!output_.path_available) {
     return;
   }
 
