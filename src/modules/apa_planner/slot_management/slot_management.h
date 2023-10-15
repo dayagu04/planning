@@ -187,7 +187,8 @@ class SlotManagement {
   Param param_;
   double slot_occupied_ratio_ = 0.0;
   size_t fusion_order_error_cnt_ = 0;
-  bool last_is_occupied_ = false;
+  bool is_occupied_ = false;
+  bool is_fixed_ = false;
 };
 
 }  // namespace planning

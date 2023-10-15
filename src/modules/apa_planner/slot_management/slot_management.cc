@@ -19,6 +19,7 @@ namespace planning {
 
 static const double kPie = 3.141592653589793;
 static const double kMinSlotUpdateOccupiedRatio = 0.6;
+static const double kMinSlotUpdateFixedRatio = 0.85;
 
 void SlotManagement::Reset() {
   // reset slot in
@@ -31,6 +32,8 @@ void SlotManagement::Reset() {
 
   slot_occupied_ratio_ = 0.0;
   fusion_order_error_cnt_ = 0;
+  is_fixed_ = false;
+  is_occupied_ = false;
 }
 
 void SlotManagement::Preprocess() {
@@ -177,14 +180,14 @@ bool SlotManagement::UpdateSlotsInParking() {
   }
   if (!select_slot.has_corner_points()) {
     std::cout << "find no select slot" << std::endl;
-    last_is_occupied_ = false;
+    is_occupied_ = false;
     return false;
   }
 
   const bool is_slot_valid = IsValidParkingSlot(select_slot);
   if (!is_slot_valid) {
     std::cout << "fusion slot is not valid" << std::endl;
-    last_is_occupied_ = false;
+    is_occupied_ = false;
     return false;
   }
 
@@ -200,24 +203,42 @@ bool SlotManagement::UpdateSlotsInParking() {
   std::cout << "occupied_ratio in slm: " << slot_occupied_ratio_ << std::endl;
 
   // if occupied percentage is less than certain value,return
+  bool is_occupied = false;
   if (slot_occupied_ratio_ < kMinSlotUpdateOccupiedRatio) {
-    last_is_occupied_ = false;
+    is_occupied = false;
+    is_occupied_ = is_occupied;
     std::cout << "occupied_ratio is less than min update value " << std::endl;
     return false;
+  } else {
+    is_occupied = true;
   }
 
-  auto slot_idx = slot_info_map_[select_slot_id];
-
-  auto slot = slot_management_info_.mutable_slot_info_vec(slot_idx);
-
-  if (!last_is_occupied_ &&
-      slot_occupied_ratio_ >= kMinSlotUpdateOccupiedRatio) {
-    slot_info_window_vec_[slot_idx].Reset();
+  bool is_fixed = false;
+  if (slot_occupied_ratio_ > kMinSlotUpdateFixedRatio) {
+    is_fixed = true;
+  } else {
+    is_fixed = false;
   }
-  last_is_occupied_ = true;
 
-  slot_info_window_vec_[slot_idx].Add(select_slot);
-  *slot = slot_info_window_vec_[slot_idx].GetFusedInfo();
+  // once fixed, always fixed
+  is_fixed = is_fixed_ || is_fixed;
+
+  if (!is_fixed) {
+    // update slot
+    auto slot_idx = slot_info_map_[select_slot_id];
+    auto slot = slot_management_info_.mutable_slot_info_vec(slot_idx);
+
+    // reset when latest occupied
+    if ((is_occupied_ == false) && (is_occupied == true)) {
+      slot_info_window_vec_[slot_idx].Reset();
+    }
+
+    slot_info_window_vec_[slot_idx].Add(select_slot);
+    *slot = slot_info_window_vec_[slot_idx].GetFusedInfo();
+  }
+
+  is_occupied_ = is_occupied;
+  is_fixed_ = is_fixed;
 
   return true;
 }

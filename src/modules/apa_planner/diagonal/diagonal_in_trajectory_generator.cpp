@@ -56,8 +56,8 @@ constexpr double kRemainingDisThreshold = 0.2;
 constexpr uint64_t kMinStandstillTime = 500;  // ms
 constexpr uint64_t kMinPosUnchangedCount = 5;
 constexpr double kMaxXOffset = 0.2;
-constexpr double kMaxYOffset = 0.2;
-constexpr double kMaxThetaOffset = 3.25 / 57.3;
+constexpr double kMaxYOffset = 0.1;
+constexpr double kMaxThetaOffset = 2.8 / 57.3;
 constexpr double kMockedObjYOffset = 4.0;
 
 static const double kNormalSlotLength = 4.8;
