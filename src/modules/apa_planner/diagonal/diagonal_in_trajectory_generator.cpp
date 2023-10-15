@@ -825,7 +825,7 @@ const bool DiagonalInTrajectoryGenerator::CheckFinish() {
 
   const bool parking_failed = stuck_time_ > 4.0;
 
-  is_finished_ = parking_success;
+  is_finished_ = parking_success || parking_failed;
 
   return is_finished_;
 }
