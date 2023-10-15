@@ -31,10 +31,10 @@ constexpr double kLonReverseBuffer = 0.0;
 constexpr double kTargetXStep = 0.01;
 constexpr int kTargetXNum = 11;
 constexpr int kHalfTargetXNum = kTargetXNum / 2;
-constexpr double kMaxXOffset = kTargetXStep * kHalfTargetXNum;
+constexpr double kMaxLonOffset = kTargetXStep * kHalfTargetXNum;
 constexpr double kMaxXOffsetInDE3 = 0.5;
 constexpr double kMaxXOffsetInCD2 = 0.15;
-constexpr double kMaxYOffset = 0.2;
+constexpr double kMaxLatOffset = 0.2;
 constexpr double kMaxThetaDiff = 0.02;
 constexpr double kMaxYBackwardPos = -2.5;
 constexpr double kSegmentLengthWeight = 1.0;
@@ -398,7 +398,7 @@ bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c,
 
   if (is_start &&
       std::fabs(point_c.theta - target_point_.theta) <= kMaxThetaDiff &&
-      std::fabs(point_c.x - target_point_.x) <= kMaxYOffset) {
+      std::fabs(point_c.x - target_point_.x) <= kMaxLatOffset) {
     segments_info->total_cost = 0.0;
     segments_info->opt_point_d.x = point_c.x;
     segments_info->opt_point_d.y = target_point_.y;
@@ -481,7 +481,7 @@ bool DiagonalInGeometryPlan::CD1Segment(const PlanningPoint &point_c,
     const double radius_cd_tmp = min_turn_radius_ + radius_step * i;
     point_d.x = point_c.x + slot_sign_ * radius_cd_tmp *
                                 (sin_point_c_theta - sin_target_point_theta_);
-    if (std::fabs(point_d.x - target_point_.x) > kMaxXOffset) {
+    if (std::fabs(point_d.x - target_point_.x) > kMaxLonOffset) {
       ++dx_cnt2;
       continue;
     }
@@ -789,12 +789,12 @@ bool DiagonalInGeometryPlan::CD3Segment(const PlanningPoint &point_c,
         break;
       }
 
-      if (point_d.x < target_point_.x - kMaxXOffset) {
+      if (point_d.x < target_point_.x - kMaxLonOffset) {
         ++ex1_cnt;
         break;
       }
 
-      if (point_d.x > target_point_.x + kMaxXOffset) {
+      if (point_d.x > target_point_.x + kMaxLonOffset) {
         ++ex2_cnt;
         continue;
       }
@@ -903,7 +903,7 @@ bool DiagonalInGeometryPlan::DE2Segment(const PlanningPoint &point_d,
       point_e.theta = point_d.theta + yaw_step * j;
       point_e.x = point_d.x + slot_sign_ * radius_de *
                                   (-sin_point_d_theta + apa_sin(point_e.theta));
-      if (point_e.x > target_point_.x + kMaxXOffset) {
+      if (point_e.x > target_point_.x + kMaxLonOffset) {
         ++ex_cnt1;
         break;
       }

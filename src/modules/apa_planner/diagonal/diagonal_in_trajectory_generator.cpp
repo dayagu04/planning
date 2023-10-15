@@ -55,9 +55,9 @@ constexpr double kStanstillSpd = 0.01;
 constexpr double kRemainingDisThreshold = 0.2;
 constexpr uint64_t kMinStandstillTime = 500;  // ms
 constexpr uint64_t kMinPosUnchangedCount = 5;
-constexpr double kMaxXOffset = 0.2;
-constexpr double kMaxYOffset = 0.1;
-constexpr double kMaxThetaOffset = 2.8 / 57.3;
+constexpr double kMaxLonOffset = 0.2;
+constexpr double kMaxLatOffset = 0.1;
+constexpr double kMaxHeadingOffset = 2.8 / 57.3;
 constexpr double kMockedObjYOffset = 4.0;
 
 static const double kNormalSlotLength = 4.8;
@@ -76,6 +76,7 @@ static const double stuck_failed_time = 6.0;
 static const double stuck_replan_time = 4.0;
 static const double min_replan_remain_dist =
     0.2;  // in control, this value must be smaller
+static const double standard_slot_length = 5.2;
 static const uint8_t max_gear_change_count = 6;
 
 static const double kSublaneWidth = 8.5;
@@ -239,6 +240,7 @@ void DiagonalInTrajectoryGenerator::Reset() {
   sublane_right_length_ = kRightSublaneLength;
   sublane_width_ = kSublaneWidth;
   stuck_time_ = 0.0;
+  slot_occupied_ratio_ = 0.0;
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
@@ -488,6 +490,15 @@ void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
   std::cout << "lat_err = " << terminal_err_.pos.y() << std::endl;
   std::cout << "heading_err_deg = " << terminal_err_.heading * 57.3
             << std::endl;
+
+  if (std::fabs(terminal_err_.pos.y()) < 3.5 * kMaxLatOffset) {
+    slot_occupied_ratio_ = pnc::mathlib::Clamp(
+        1.0 - (terminal_err_.pos.x() / standard_slot_length), 0.0, 1.0);
+  } else {
+    slot_occupied_ratio_ = 0.0;
+  }
+
+  std::cout << "slot_occupied_ratio = " << slot_occupied_ratio_ << std::endl;
 }
 
 const bool DiagonalInTrajectoryGenerator::DubinsPlanOneStep(
@@ -788,9 +799,9 @@ void DiagonalInTrajectoryGenerator::PrintDubinsOutput() {
 
 const bool DiagonalInTrajectoryGenerator::CheckFinish() {
   const bool parking_success =
-      std::fabs(terminal_err_.pos.x()) < kMaxXOffset &&
-      std::fabs(terminal_err_.pos.y()) <= kMaxYOffset &&
-      std::fabs(terminal_err_.heading) <= kMaxThetaOffset &&
+      std::fabs(terminal_err_.pos.x()) < kMaxLonOffset &&
+      std::fabs(terminal_err_.pos.y()) <= kMaxLatOffset &&
+      std::fabs(terminal_err_.heading) <= kMaxHeadingOffset &&
       measure_.static_flag;
 
   // will be moved to other place
@@ -1053,6 +1064,7 @@ void DiagonalInTrajectoryGenerator::Log() const {
   JSON_DEBUG_VALUE("sublane_width", sublane_width_)
 
   JSON_DEBUG_VALUE("remain_dist", remain_dist_)
+  JSON_DEBUG_VALUE("slot_occupied_ratio", slot_occupied_ratio_)
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckIfNearTerminalPoint() const {

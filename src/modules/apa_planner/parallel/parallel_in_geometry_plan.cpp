@@ -34,8 +34,8 @@ constexpr double M_PI_20 = M_PI * 0.05;
 constexpr double kTargetYStep = 0.02;
 constexpr int kTargetYNum = 21;
 constexpr int kHalfTargetYNum = kTargetYNum / 2;
-constexpr double kMaxYOffset = kTargetYStep * kHalfTargetYNum;
-constexpr double kMaxXOffset = 0.2;
+constexpr double kMaxLatOffset = kTargetYStep * kHalfTargetYNum;
+constexpr double kMaxLonOffset = 0.2;
 constexpr double kSegmentLengthWeight = 1.0;
 constexpr double kPointyBiasWeight = 20.0;
 constexpr double kRadiusWeight = 1.0;
@@ -620,7 +620,7 @@ bool ParallelInGeometryPlan::EF1Segment(const PlanningPoint &point_e,
                                         ParallelSegmentsInfo *segments_info) {
   if (is_start &&
       std::fabs(point_e.theta - target_point_.theta) <= kMaxThetaDiff &&
-      std::fabs(point_e.y - target_point_.y) <= kMaxYOffset) {
+      std::fabs(point_e.y - target_point_.y) <= kMaxLatOffset) {
     segments_info->total_cost = 0.0;
     segments_info->opt_point_f.x = target_point_.x;
     segments_info->opt_point_f.y = point_e.y;
@@ -706,7 +706,7 @@ bool ParallelInGeometryPlan::EF1Segment(const PlanningPoint &point_e,
     const double radius_ef_tmp = min_turn_radius_ + radius_step * i;
     point_f.y = point_e.y + slot_sign_ * radius_ef_tmp *
                                 (cos_point_e_theta - cos_target_point_theta_);
-    if (std::fabs(point_f.y - target_point_.y) > kMaxYOffset) {
+    if (std::fabs(point_f.y - target_point_.y) > kMaxLatOffset) {
       ++fy_cnt2;
       continue;
     }
@@ -811,7 +811,7 @@ bool ParallelInGeometryPlan::EF2Segment(const PlanningPoint &point_e,
         continue;
       }
 
-      if (point_f.y * slot_sign_ > target_point_.y * slot_sign_ + kMaxYOffset) {
+      if (point_f.y * slot_sign_ > target_point_.y * slot_sign_ + kMaxLatOffset) {
         continue;
       }
 
@@ -865,7 +865,7 @@ bool ParallelInGeometryPlan::FGSegment(const PlanningPoint &point_f,
                                        ParallelSegmentsInfo *segments_info) {
   if (is_start &&
       std::fabs(point_f.theta - target_point_.theta) <= kMaxThetaDiff &&
-      std::fabs(point_f.y - target_point_.y) <= kMaxYOffset) {
+      std::fabs(point_f.y - target_point_.y) <= kMaxLatOffset) {
     segments_info->total_cost = 0.0;
     segments_info->opt_point_g.x = target_point_.x;
     segments_info->opt_point_g.y = point_f.y;
@@ -936,7 +936,7 @@ bool ParallelInGeometryPlan::FGSegment(const PlanningPoint &point_f,
     const double radius_fg_tmp = min_turn_radius_ + radius_step * i;
     point_g.y = point_f.y + slot_sign_ * radius_fg_tmp *
                                 (-cos_point_f_theta + cos_target_point_theta_);
-    if (std::fabs(point_g.y - target_point_.y) > kMaxYOffset) {
+    if (std::fabs(point_g.y - target_point_.y) > kMaxLatOffset) {
       ++gx_cnt2;
       continue;
     }
@@ -1026,7 +1026,7 @@ bool ParallelInGeometryPlan::EF3Segment(const PlanningPoint &point_e,
         break;
       }
 
-      if (point_f.y * slot_sign_ > target_point_.y * slot_sign_ + kMaxYOffset) {
+      if (point_f.y * slot_sign_ > target_point_.y * slot_sign_ + kMaxLatOffset) {
         ++fy_cnt1;
         continue;
       }
@@ -1175,7 +1175,7 @@ bool ParallelInGeometryPlan::FH2Segment(const PlanningPoint &point_f,
         continue;
       }
 
-      if (point_h.y * slot_sign_ < target_point_.y * slot_sign_ - kMaxYOffset) {
+      if (point_h.y * slot_sign_ < target_point_.y * slot_sign_ - kMaxLatOffset) {
         continue;
       }
 
@@ -1288,7 +1288,7 @@ bool ParallelInGeometryPlan::FH3Segment(const PlanningPoint &point_f,
         break;
       }
 
-      if (point_h.y * slot_sign_ < target_point_.y * slot_sign_ - kMaxYOffset) {
+      if (point_h.y * slot_sign_ < target_point_.y * slot_sign_ - kMaxLatOffset) {
         ++h3y_cnt1;
         continue;
       }
@@ -1626,7 +1626,7 @@ double ParallelInGeometryPlan::CalFGSegmentCost(
     double total_len = len_fg + len_g_end;
     if (total_len < kMinSegmentLen) {
       const double extending_len =
-          std::min(kMaxXOffset, kMinSegmentLen - total_len);
+          std::min(kMaxLonOffset, kMinSegmentLen - total_len);
       total_len += extending_len;
       updated_target_point->x = target_point_.x + extending_len;
     }
@@ -1654,7 +1654,7 @@ double ParallelInGeometryPlan::CalEFSegmentCost(
     double total_len = len_ef + len_f_end;
     if (total_len < kMinSegmentLen) {
       const double extending_len =
-          std::min(kMaxXOffset, kMinSegmentLen - total_len);
+          std::min(kMaxLonOffset, kMinSegmentLen - total_len);
       total_len += extending_len;
       updated_target_point->x = target_point_.x - extending_len;
     }

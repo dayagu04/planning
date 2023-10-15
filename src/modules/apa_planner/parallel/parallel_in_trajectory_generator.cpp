@@ -38,9 +38,9 @@ constexpr double kStanstillSpd = 0.01;
 constexpr double kRemainingDisThreshold = 0.2;
 constexpr uint64_t kMinStandstillTime = 500;  // ms
 constexpr uint64_t kMinPosUnchangedCount = 5;
-constexpr double kMaxXOffset = 0.2;
-constexpr double kMaxYOffset = 0.2;
-constexpr double kMaxThetaOffset = 0.05;
+constexpr double kMaxLonOffset = 0.2;
+constexpr double kMaxLatOffset = 0.2;
+constexpr double kMaxHeadingOffset = 0.05;
 constexpr double kMinSlotLength = 5.8;
 constexpr double kMaxLenOfSmallSpeed = 1.0;
 constexpr double kMaxSpdInLineStep = 0.5;
@@ -1286,10 +1286,10 @@ void ParallelInTrajectoryGenerator::UpdatePosUnchangedCount() {
 bool ParallelInTrajectoryGenerator::IsApaFinished() const {
   return current_state_ == FunctionalState::PARK_IN_ACTIVATE_CONTROL &&
          standstill_time_ >= kMinStandstillTime &&
-         fabs(target_point_in_slot_.x - cur_pos_in_slot_.x) < kMaxXOffset &&
-         fabs(target_point_in_slot_.y - cur_pos_in_slot_.y) < kMaxYOffset &&
+         fabs(target_point_in_slot_.x - cur_pos_in_slot_.x) < kMaxLonOffset &&
+         fabs(target_point_in_slot_.y - cur_pos_in_slot_.y) < kMaxLatOffset &&
          fabs(target_point_in_slot_.theta - cur_pos_in_slot_.theta) <
-             kMaxThetaOffset;
+             kMaxHeadingOffset;
 }
 
 void ParallelInTrajectoryGenerator::PrintTrajectoryPoints(
