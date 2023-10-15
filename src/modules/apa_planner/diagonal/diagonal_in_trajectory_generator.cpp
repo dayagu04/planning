@@ -547,11 +547,27 @@ void DiagonalInTrajectoryGenerator::UpdateDubinsInputByLevel(
 
   if (level ==
       DUBINS_LEVEL_ZERO_GEAR_CHANGE) {  // LEVEL_0, usually for first try
-    plan_input_.target_pos << target_x_init, 0.0;
+    plan_input_.target_pos << terminal_target_x, 0.0;
     plan_input_.target_heading = 0.0;
 
   } else if (level == DUBINS_LEVEL_ONCE_GEAR_CHANGE) {
   }
+}
+
+const bool DiagonalInTrajectoryGenerator::CheckPathPointsInSlot() const {
+  const auto& output = dubins_planner_.GetOutput();
+  if (output.path_available) {
+    const auto& pB = output.arc_AB.pB;
+    const auto& pC = output.arc_CD.pA;
+    const auto& pD = output.arc_CD.pB;
+
+    if (pB.x() > terminal_target_x && pC.x() > terminal_target_x &&
+        pD.x() > terminal_target_x) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckIfCrossSublane() const {
@@ -615,6 +631,10 @@ const bool DiagonalInTrajectoryGenerator::PathEvaluateOnce(
   // check if the ego car cross sublane in slot system(dubins result is now in
   // slot system)
   if (CheckIfCrossSublane()) {
+    return false;
+  }
+
+  if (!CheckPathPointsInSlot()) {
     return false;
   }
 

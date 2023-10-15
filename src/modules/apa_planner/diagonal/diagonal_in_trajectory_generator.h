@@ -137,8 +137,11 @@ class DiagonalInTrajectoryGenerator {
   void UpdateDubinsInputByLevel(const uint8_t level);
   const bool PathEvaluateOnce(const uint8_t level);
   const bool CheckIfCrossSublane() const;
+  
   const bool CheckIfCrossSublane(
       pnc::dubins_lib::DubinsLibrary::PathPoint check_point) const;
+
+  const bool CheckPathPointsInSlot() const;
 
   void PrintDubinsOutput();
 
