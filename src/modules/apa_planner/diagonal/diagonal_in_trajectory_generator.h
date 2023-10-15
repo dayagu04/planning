@@ -209,6 +209,7 @@ class DiagonalInTrajectoryGenerator {
   bool is_plan_success_ = false;
   uint8_t gear_change_count_ = 6;
   uint8_t path_level_ = DUBINS_LEVEL_NONE;
+  double stuck_time_ = 0.0;
 
   Measurement measure_;
   EgoSlotInfo ego_slot_info_;

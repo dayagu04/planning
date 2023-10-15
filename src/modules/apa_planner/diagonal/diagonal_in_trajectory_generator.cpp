@@ -235,6 +235,7 @@ void DiagonalInTrajectoryGenerator::Reset() {
   sublane_left_length_ = kLeftSublaneLength;
   sublane_right_length_ = kRightSublaneLength;
   sublane_width_ = kSublaneWidth;
+  stuck_time_ = 0.0;
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
@@ -817,7 +818,14 @@ const bool DiagonalInTrajectoryGenerator::CheckFinish() {
       std::fabs(terminal_err_.heading) <= kMaxThetaOffset &&
       measure_.static_flag;
 
-  const bool parking_failed = measure_.standstill_timer_by_pos > 3.0;
+  if (current_state_ == FunctionalState::PARK_IN_ACTIVATE_CONTROL &&
+      measure_.static_flag) {
+    stuck_time_ += plan_time;
+  } else {
+    stuck_time_ = 0.0;
+  }
+
+  const bool parking_failed = stuck_time_ > 4.0;
 
   const bool is_finished = parking_success || parking_failed;
 
