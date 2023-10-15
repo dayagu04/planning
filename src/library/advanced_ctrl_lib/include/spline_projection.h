@@ -25,7 +25,7 @@ class Projection {
 
  private:
   Result result_;
-  double max_iter_ = 5;
+  double max_iter_ = 10;
   double tol_ = 1e-3;
   double alpha_ = 0.75;
 };

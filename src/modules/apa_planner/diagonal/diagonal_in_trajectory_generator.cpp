@@ -68,11 +68,14 @@ static const double kLineStep = 0.1;
 static const double kMinProperBCLength = 0.3;
 static const double plan_time = 0.1;
 static const double terminal_target_x = 1.1;
-static const double min_path_length = 0.3;
 static const double max_path_length = 20.0;
 static const double min_search_length = 6.0;
 static const double path_sample_ds = 0.05;
 static const double safe_uss_remain_dist = 0.35;
+static const double stuck_failed_time = 6.0;
+static const double stuck_replan_time = 4.0;
+static const double min_replan_remain_dist =
+    0.2;  // in control, this value must be smaller
 static const uint8_t max_gear_change_count = 6;
 
 static const double kSublaneWidth = 8.5;
@@ -338,25 +341,12 @@ void DiagonalInTrajectoryGenerator::UpdateManagedParkingFusion(
   // managed_selected_slot.DebugString()
   //           << std::endl;
 
-  fusion_selected_slot->mutable_corner_points(0)->set_x(
-      managed_selected_slot.corner_points().corner_point(0).x());
-  fusion_selected_slot->mutable_corner_points(0)->set_y(
-      managed_selected_slot.corner_points().corner_point(0).y());
-
-  fusion_selected_slot->mutable_corner_points(1)->set_x(
-      managed_selected_slot.corner_points().corner_point(1).x());
-  fusion_selected_slot->mutable_corner_points(1)->set_y(
-      managed_selected_slot.corner_points().corner_point(1).y());
-
-  fusion_selected_slot->mutable_corner_points(2)->set_x(
-      managed_selected_slot.corner_points().corner_point(2).x());
-  fusion_selected_slot->mutable_corner_points(2)->set_y(
-      managed_selected_slot.corner_points().corner_point(2).y());
-
-  fusion_selected_slot->mutable_corner_points(3)->set_x(
-      managed_selected_slot.corner_points().corner_point(3).x());
-  fusion_selected_slot->mutable_corner_points(3)->set_y(
-      managed_selected_slot.corner_points().corner_point(3).y());
+  for (size_t i = 0; i < fusion_selected_slot->corner_points_size(); ++i) {
+    fusion_selected_slot->mutable_corner_points(i)->set_x(
+        managed_selected_slot.corner_points().corner_point(i).x());
+    fusion_selected_slot->mutable_corner_points(i)->set_y(
+        managed_selected_slot.corner_points().corner_point(i).y());
+  }
 }
 
 const bool DiagonalInTrajectoryGenerator::PathPlanOnceSimulation(
@@ -430,25 +420,12 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnceSimulation(
   auto managed_selected_slot =
       slot_mangement_info.slot_info_vec(select_slot_index_slm);
 
-  fusion_selected_slot->mutable_corner_points(0)->set_x(
-      managed_selected_slot.corner_points().corner_point(0).x());
-  fusion_selected_slot->mutable_corner_points(0)->set_y(
-      managed_selected_slot.corner_points().corner_point(0).y());
-
-  fusion_selected_slot->mutable_corner_points(1)->set_x(
-      managed_selected_slot.corner_points().corner_point(1).x());
-  fusion_selected_slot->mutable_corner_points(1)->set_y(
-      managed_selected_slot.corner_points().corner_point(1).y());
-
-  fusion_selected_slot->mutable_corner_points(2)->set_x(
-      managed_selected_slot.corner_points().corner_point(2).x());
-  fusion_selected_slot->mutable_corner_points(2)->set_y(
-      managed_selected_slot.corner_points().corner_point(2).y());
-
-  fusion_selected_slot->mutable_corner_points(3)->set_x(
-      managed_selected_slot.corner_points().corner_point(3).x());
-  fusion_selected_slot->mutable_corner_points(3)->set_y(
-      managed_selected_slot.corner_points().corner_point(3).y());
+  for (size_t i = 0; i < fusion_selected_slot->corner_points_size(); ++i) {
+    fusion_selected_slot->mutable_corner_points(i)->set_x(
+        managed_selected_slot.corner_points().corner_point(i).x());
+    fusion_selected_slot->mutable_corner_points(i)->set_y(
+        managed_selected_slot.corner_points().corner_point(i).y());
+  }
 
   // update measurement
   UpdateMeasurement();
@@ -816,6 +793,7 @@ const bool DiagonalInTrajectoryGenerator::CheckFinish() {
       std::fabs(terminal_err_.heading) <= kMaxThetaOffset &&
       measure_.static_flag;
 
+  // will be moved to other place
   if (current_state_ == FunctionalState::PARK_IN_ACTIVATE_CONTROL &&
       measure_.static_flag) {
     stuck_time_ += plan_time;
@@ -823,7 +801,7 @@ const bool DiagonalInTrajectoryGenerator::CheckFinish() {
     stuck_time_ = 0.0;
   }
 
-  const bool parking_failed = stuck_time_ > 4.0;
+  const bool parking_failed = stuck_time_ > stuck_failed_time;
 
   is_finished_ = parking_success || parking_failed;
 
@@ -848,8 +826,14 @@ const bool DiagonalInTrajectoryGenerator::CheckReplan(
       std::cout << "no trajectory!" << std::endl;
       return true;
     }
+
     if (CheckIfNearTerminalPoint()) {
       std::cout << "close to target!" << std::endl;
+      return true;
+    }
+
+    if (CheckIfReplanByStuck()) {
+      std::cout << "replan by stuck!" << std::endl;
       return true;
     }
   } else {
@@ -873,9 +857,9 @@ const bool DiagonalInTrajectoryGenerator::UpdateSplineGlobal() {
   std::vector<double> y_vec;
   std::vector<double> s_vec;
 
-  x_vec.reserve(N);
-  y_vec.reserve(N);
-  s_vec.reserve(N);
+  x_vec.reserve(N + 1);
+  y_vec.reserve(N + 1);
+  s_vec.reserve(N + 1);
 
   x_vec.clear();
   y_vec.clear();
@@ -899,10 +883,23 @@ const bool DiagonalInTrajectoryGenerator::UpdateSplineGlobal() {
   y_vec.emplace_back(output.path_point_vec.back().pos.y());
   s_vec.emplace_back(s);
 
+  current_path_length_ = s_vec.back();
+
+  // extend end point when remain dist < zero
+  const auto diff_vec =
+      Eigen::Vector2d(x_vec[N - 1] - x_vec[N - 2], y_vec[N - 1] - y_vec[N - 2]);
+
+  const double extend_s = 1.0;
+
+  const auto extend_p = Eigen::Vector2d(x_vec.back(), y_vec.back()) +
+                        extend_s * diff_vec.normalized();
+
+  x_vec.emplace_back(extend_p.x());
+  y_vec.emplace_back(extend_p.y());
+  s_vec.emplace_back(current_path_length_ + extend_s);
+
   x_s_spline_l_.set_points(s_vec, x_vec);
   y_s_spline_l_.set_points(s_vec, y_vec);
-
-  current_path_length_ = s_vec.back();
 
   return true;
 }
@@ -1049,16 +1046,27 @@ void DiagonalInTrajectoryGenerator::Log() const {
   JSON_DEBUG_VALUE("stuck_time", stuck_time_)
   JSON_DEBUG_VALUE("standstill_timer_by_pos", measure_.standstill_timer_by_pos)
   JSON_DEBUG_VALUE("standstill_timer", measure_.standstill_timer)
+  JSON_DEBUG_VALUE("static_flag", measure_.static_flag)
+
+  JSON_DEBUG_VALUE("sublane_left_length", sublane_left_length_)
+  JSON_DEBUG_VALUE("sublane_right_length", sublane_right_length_)
+  JSON_DEBUG_VALUE("sublane_width", sublane_width_)
+
+  JSON_DEBUG_VALUE("remain_dist", remain_dist_)
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckIfNearTerminalPoint() const {
   if (spline_success_) {
-    if (remain_dist_ < 0.1 && measure_.static_flag) {
+    if (remain_dist_ < min_replan_remain_dist && measure_.static_flag) {
       return true;
     }
   }
 
   return false;
+}
+
+const bool DiagonalInTrajectoryGenerator::CheckIfReplanByStuck() const {
+  return stuck_time_ > stuck_replan_time;
 }
 
 void DiagonalInTrajectoryGenerator::UpdateMeasurement() {

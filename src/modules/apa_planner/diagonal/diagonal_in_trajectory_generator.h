@@ -143,6 +143,7 @@ class DiagonalInTrajectoryGenerator {
   void PrintDubinsOutput();
 
   const bool CheckIfNearTerminalPoint() const;
+  const bool CheckIfReplanByStuck() const;
   const bool CheckFinish();
 
   const bool CheckReplan(PlanningOutput::PlanningOutput *const planning_output);

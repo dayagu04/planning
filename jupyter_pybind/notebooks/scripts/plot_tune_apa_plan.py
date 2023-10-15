@@ -11,7 +11,7 @@ from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/1013_1530/test_5.00000'
+bag_path = '/home/xlwang71/Downloads/APA/1015/1824/1015-1824/test_13.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -58,9 +58,9 @@ class LocalViewSlider:
     self.turn_on_plan_stm_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "turn_on_plan_stm",min=0, max=1, value=0, step=1)
     self.is_complete_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "is_complete",min=0, max=1, value=0, step=1)
     self.plan_stm_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "plan_stm",min=0, max=4, value=0, step=1)
-    self.sublane_left_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "sublane_left_length",min=0.0, max=15.0, value=12.0, step=0.1)
-    self.sublane_right_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "sublane_right_length",min=0.0, max=15.0, value=12.0, step=0.1)
-    self.sublane_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "sublane_width",min=0.0, max=15.0, value=6.0, step=0.1)
+    self.sublane_left_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "sublane_left_length",min=0.0, max=15.0, value=11.0, step=0.1)
+    self.sublane_right_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "sublane_right_length",min=0.0, max=15.0, value=11.0, step=0.1)
+    self.sublane_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "sublane_width",min=0.0, max=15.0, value=8.5, step=0.1)
 
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
                                         selected_id = self.selected_id_slider,
