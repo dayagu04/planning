@@ -771,14 +771,12 @@ void DiagonalInTrajectoryGenerator::PrintDubinsOutput() {
 
 const bool DiagonalInTrajectoryGenerator::CheckFinish() {
   const bool parking_success =
-      terminal_err_.pos.x() < kMaxXOffset &&
+      std::fabs(terminal_err_.pos.x()) < kMaxXOffset &&
       std::fabs(terminal_err_.pos.y()) <= kMaxYOffset &&
       std::fabs(terminal_err_.heading) <= kMaxThetaOffset &&
       measure_.static_flag;
 
-  const bool parking_failed =
-      (std::fabs(ego_slot_info_.ego_pos_slot.x() - terminal_target_x) < 0.5) &&
-      measure_.standstill_timer_by_pos > 3.0;
+  const bool parking_failed = measure_.standstill_timer_by_pos > 3.0;
 
   const bool is_finished = parking_success || parking_failed;
 
