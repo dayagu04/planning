@@ -284,6 +284,8 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
     if (!simulation_enable_flag_) {
       SetFinishedPlanningOutput(frame_);
       return;
+    } else {
+      planning_output->Clear();
     }
   }
 }
