@@ -18,6 +18,8 @@ static const double planning_loop_dt = 0.1;
 static const double ilqr_dt = 0.2;
 static const double min_v_cruise = 0.5;
 static const double c0_limit = 2.0;
+static const double kVelProtection = 8.333;
+static const double kMinVelProtection = 2.0;
 namespace planning {
 RealtimeLateralMotionPlanner::RealtimeLateralMotionPlanner(
     const EgoPlanningConfigBuilder *config_builder,
@@ -94,8 +96,18 @@ void RealtimeLateralMotionPlanner::AssembleInput() {
       frame_->session()->environmental_model().get_ego_state_manager();
 
   // set ref_vel
-  double ref_vel = std::max(
-      frame_->session()->planning_context().v_ref_cruise(), ego_state->ego_v());
+  const double vel = ego_state->ego_v();
+  double ref_vel{vel};
+  if (vel < kVelProtection) {
+    ref_vel = vel * 1.2;
+  } else {
+    ref_vel = std::fmin(frame_->session()->planning_context().v_ref_cruise(),
+                        vel * 1.2);
+  }
+
+  // double ref_vel =
+  //     std::max(frame_->session()->planning_context().v_ref_cruise(),
+
   ref_vel = max(ref_vel, min_v_cruise);
   planning_input_.set_ref_vel(ref_vel);
 
@@ -283,7 +295,8 @@ void RealtimeLateralMotionPlanner::Update() {
                                    ->mutable_planning_result()
                                    .motion_planning_info;
 
-  // append the planning traj anti-direction for decoupling lat & lon replan
+  // append the planning traj anti-direction for decoupling lat &
+  // lon replan
   const static double appended_length = 1.5;
   Eigen::Vector2d unit_vector(x_vec[1] - x_vec[2], y_vec[1] - y_vec[2]);
   unit_vector.normalize();
