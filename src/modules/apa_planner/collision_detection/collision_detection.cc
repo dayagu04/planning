@@ -33,7 +33,7 @@ void CollisionDetector::Reset() {
   car_circle_global_vec_path_vec_.clear();
 }
 
-void CollisionDetector::GenObstacles() {
+void CollisionDetector::GenObstaclesByUssOA() {
   double remain_s_uss = uss_oa_ptr_->GetRemainDist();
   if (remain_s_uss < 0.35) {
     pnc::geometry_lib::LineSegment min_dist_uss_line_local =
@@ -64,7 +64,8 @@ void CollisionDetector::GenObstaclesSimulation(
 }
 
 void CollisionDetector::GenCarCircles(
-    std::vector<pnc::dubins_lib::DubinsLibrary::PathPoint> &path_point_vec) {
+    const std::vector<pnc::dubins_lib::DubinsLibrary::PathPoint>
+        &path_point_vec) {
   const auto N = path_point_vec.size();
 
   car_circle_global_vec_path_vec_.clear();
@@ -107,34 +108,34 @@ void CollisionDetector::GenCarCircles(
 
 bool CollisionDetector::CollisionDetect() {
   if (obstacle_global_vec_.size() < 1) {
+    // std::cout << "obstacle_global_vec_ size error!" << std::endl;
     return false;
   }
 
   bool collision_flag = false;
   // std::cout << "\ncar_circle_global_vec_path_vec_"
   //           << car_circle_global_vec_path_vec_.size();
-  size_t i = 0;
+  // size_t i = 0;
   for (const auto &car_circle_global_vec : car_circle_global_vec_path_vec_) {
-    // std::cout << "\ncar_circle_global_vec" << car_circle_global_vec.size();
     for (const auto &obstacle_global : obstacle_global_vec_) {
       for (size_t k = 0; k < car_circle_global_vec.size(); k++) {
         collision_flag = pnc::geometry_lib::CheckLineSegmentInCircle(
             obstacle_global, car_circle_global_vec[k]);
-        //std::cout << " collision_flag_pb:" << k << ": " << collision_flag;
-        // first large circle to avoid current obstacle
+        // std::cout << " collision_flag_pb:" << k << ": " << collision_flag;
+        //  first large circle to avoid current obstacle
         if (k == 0 && collision_flag == false) {
-          //std::cout << i << "point first large circle is not in collision\n";
+          // std::cout << i << "point first large circle is not in collision\n";
           break;
         }
 
         // once collision to return
         if (k > 0 && collision_flag == true) {
-          std::cout << i << " point " << k << " circle is in collision\n";
+          // std::cout << i << " point " << k << " circle is in collision\n";
           return true;
         }
       }
     }
-    i++;
+    // i++;
   }
   return false;
 }

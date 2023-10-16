@@ -57,10 +57,10 @@ collision_detection_py.Init()
 
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.obstacle_line_start_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='90%'), description= "x_start_ob_line",min=-15, max=15, value=9.29, step=0.01)
-    self.obstacle_line_start_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='90%'), description= "y_start_ob_line",min=-15, max=15, value=12.26, step=0.01)
+    self.obstacle_line_start_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='90%'), description= "x_start_ob_line",min=-15, max=15, value=-3.88, step=0.01)
+    self.obstacle_line_start_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='90%'), description= "y_start_ob_line",min=-15, max=15, value=10.56, step=0.01)
     self.obstacle_line_end_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='90%'), description= "x_end_ob_line",min=-15, max=15, value=13.85, step=0.01)
-    self.obstacle_line_end_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='90%'), description= "y_end_ob_line",min=-15, max=15, value=13.99, step=0.01)
+    self.obstacle_line_end_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='90%'), description= "y_end_ob_line",min=-15, max=15, value=7.99, step=0.01)
     self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=0.0, step=0.01)
     self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=0.0, step=0.01)
     self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value=90.0, step=1)
@@ -68,7 +68,7 @@ class LocalViewSlider:
     self.target_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "target_x",min=0.0, max=15.0, value=5.2, step=0.01)
     self.target_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "target_y",min=-15.0, max=15.0, value=12.2, step=0.01)
     self.target_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "target_heading",min=-90.0, max=0.0, value=0.0, step=1)
-    self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "ds",min=0.025, max=3.0, value=0.8, step=0.025)
+    self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "ds",min=0.025, max=5.0, value=3.8, step=0.025)
     self.radius_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "radius",min=2.0, max=10.0, value=5.2, step=0.01)
     self.dubins_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='25%'), description= "dubins_type",min=0, max=3, value=0, step=1)
     self.case_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "case_type",min=0, max=1, value=0, step=1)
@@ -81,7 +81,7 @@ class LocalViewSlider:
     self.line_arc_enable_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "line_arc_enable",min=0, max=1, value=0, step=1)
     self.line_arc_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "line_arc_type",min=0, max=3, value=0, step=1)
     self.is_complete_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_complete",min=0, max=1, value=0, step=1)
-    
+
     ipywidgets.interact(slider_callback, obstacle_line_start_x = self.obstacle_line_start_x_slider,
                                          obstacle_line_start_y = self.obstacle_line_start_y_slider,
                                          obstacle_line_end_x = self.obstacle_line_end_x_slider,
@@ -109,11 +109,11 @@ class LocalViewSlider:
 
 
 ### sliders callback
-def slider_callback(obstacle_line_start_x, obstacle_line_start_y, obstacle_line_end_x, obstacle_line_end_y, ego_x, ego_y, ego_heading, s_init, 
+def slider_callback(obstacle_line_start_x, obstacle_line_start_y, obstacle_line_end_x, obstacle_line_end_y, ego_x, ego_y, ego_heading, s_init,
                     target_x, target_y, target_heading, radius, dubins_type, case_type, set_start, reset_target, fix_result, set_pB, set_pC, set_pD,
                     line_arc_enable, line_arc_type, ds, is_complete):
   kwargs = locals()
-  
+
   # if set_start == 1:
   #   slider_class.s_init_slider.value = 0.0
   #   slider_class.ego_x_slider.value = 6.0
@@ -135,13 +135,13 @@ def slider_callback(obstacle_line_start_x, obstacle_line_start_y, obstacle_line_
     slider_class.target_x_slider.value = 1.0
     slider_class.target_y_slider.value = 0.0
     slider_class.target_heading_slider.value = 0.0
-    
+
   x_start = ego_x + s_init * math.cos(ego_heading / 57.2958)
   y_start = ego_y + s_init * math.sin(ego_heading / 57.2958)
-  
+
   x_target = target_x
   y_target = target_y
-  
+
   # ego car
   car_xn = []
   car_yn = []
@@ -154,17 +154,17 @@ def slider_callback(obstacle_line_start_x, obstacle_line_start_y, obstacle_line_
     'car_xn': car_xn,
     'car_yn': car_yn,
   })
-  
+
   data_start_pos.data.update({
     'x': [x_start],
     'y': [y_start],
   })
-  
+
   data_target_pos.data.update({
     'x': [x_target],
     'y': [y_target],
   })
-  
+
   if fix_result == 0:
     if line_arc_enable == 0:
       collision_detection_py.Update(x_start, y_start, ego_heading / 57.2958, x_target, y_target, target_heading / 57.2958, radius, dubins_type, case_type, ds, is_complete)
@@ -174,15 +174,15 @@ def slider_callback(obstacle_line_start_x, obstacle_line_start_y, obstacle_line_
   path_x_vec = collision_detection_py.GetPathEle(0)
   path_y_vec = collision_detection_py.GetPathEle(1)
   path_theta_vec = collision_detection_py.GetPathEle(2)
-  
+
   data_path.data.update({
     'x_vec': path_x_vec,
     'y_vec': path_y_vec,
     'theta_vec': path_theta_vec,
   })
-  
+
   print("sample_point_size:", len(path_x_vec))
-  
+
   collision_detection_py.GenCarCirclePb(path_x_vec, path_y_vec, path_theta_vec)
   circle_path_vec = collision_detection_py.GetCarCirclePb()
   circle_x_vec = []
@@ -195,31 +195,31 @@ def slider_callback(obstacle_line_start_x, obstacle_line_start_y, obstacle_line_
       circle_x_vec.append(circle[0])
       circle_y_vec.append(circle[1])
       circle_r_vec.append(circle[2])
-  
+
   data_car_circle.data.update({
     'circle_xn': circle_x_vec,
     'circle_yn': circle_y_vec,
     'circle_rn': circle_r_vec,
   })
-  
-  
+
+
   obstacle_line_x = [obstacle_line_start_x, obstacle_line_end_x]
   obstacle_line_y = [obstacle_line_start_y, obstacle_line_end_y]
-  
+
   data_obstacle_line.data.update({
     'x': obstacle_line_x,
     'y': obstacle_line_y,
   })
-  
+
   obstacle_line_start = [[obstacle_line_start_x, obstacle_line_start_y]]
   obstacle_line_end = [[obstacle_line_end_x, obstacle_line_end_y]]
   collision_detection_py.GenObstacleLinePb(obstacle_line_start, obstacle_line_end)
-   
+
   collision_detection_flag = collision_detection_py.CollisionDetectPb()
-  
+
   print("collision_detection_flag:", collision_detection_flag)
-  
-  
+
+
   names = []
   datas = []
   names.append("collision_detection_flag")
@@ -228,7 +228,7 @@ def slider_callback(obstacle_line_start_x, obstacle_line_start_y, obstacle_line_
     'names': names,
     'datas': datas,
   })
-  
+
   push_notebook()
 
 bkp.show(row(fig1, debug_table), notebook_handle=True)

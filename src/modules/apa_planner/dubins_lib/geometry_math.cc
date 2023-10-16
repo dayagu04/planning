@@ -47,15 +47,35 @@ const bool CheckLineSegmentInCircle(const LineSegment &line, const Circle &c) {
   const auto &R = c.radius;
   const auto &pO = c.center;
   const double d2 = CalPoint2LineDistSquare(pO, line);
+  const auto R2 = R * R;
+  const auto v_OA = pO - line.pA;
+  const auto v_OB = pO - line.pB;
 
-  if (d2 > R * R) {
+  if (d2 >= R2) {
     return false;
-  } else {
-    const auto OA_norm = (pO - line.pA).norm();
-    const auto OB_norm = (pO - line.pB).norm();
-
-    return (OA_norm < R || OB_norm < R);
   }
+
+  const auto OA_norm2 = NormSquareOfVector2d(v_OA);
+  const auto OB_norm2 = NormSquareOfVector2d(v_OB);
+
+  if (OA_norm2 < R2 || OB_norm2 < R2) {
+    return true;
+  }
+
+  if (OA_norm2 > R2 && OB_norm2 > R2) {
+    const auto v_AB = line.pB - line.pA;
+
+    const auto n_AB = Eigen::Vector2d(-v_AB.y(), v_AB.x());
+
+    const auto cross_OA_n = v_OA.x() * n_AB.y() - n_AB.x() * v_OA.y();
+    const auto cross_OB_n = v_OB.x() * n_AB.y() - n_AB.x() * v_OB.y();
+
+    if (cross_OA_n * cross_OB_n < 0.0) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 const bool CalTangentPointsOfEqualCircles(TangentOutput &output,

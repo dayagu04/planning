@@ -30,10 +30,11 @@ data_planning_tune = ColumnDataSource(data = {'plan_path_x':[],
                                               'plan_path_heading':[],})
 data_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[], 'theta_vec':[]})
 data_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
-
-data_sublane = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_obstacles = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
 fig1.patches('y_vec', 'x_vec', source = data_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'sampled carbox')
+fig1.line('plan_path_y', 'plan_path_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'tuned plan')
+fig1.multi_line('y_vec', 'x_vec', source = data_obstacles, line_width = 2, line_color = 'black', line_dash = 'solid', line_alpha = 1.0, legend_label = 'obstacles')
 
 # find bag time when planning at real test
 # plan_msg_idx = 0
@@ -46,8 +47,7 @@ fig1.patches('y_vec', 'x_vec', source = data_car_box, fill_color = "#98FB98", fi
 #     plan_msg_idx = plan_msg_idx + 1
 # bag_time0 = plan_msg_idx * 0.1
 bag_time0 = 0.0
-fig1.line('plan_path_y', 'plan_path_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'tuned plan')
-fig1.line('y_vec', 'x_vec', source = data_sublane, line_width = 2, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sublane')
+
 
 ### sliders config
 class LocalViewSlider:
@@ -74,7 +74,8 @@ class LocalViewSlider:
 
 
 ### sliders callback
-def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, plan_stm, is_complete, sublane_left_length, sublane_right_length,sublane_width):
+def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, plan_stm, is_complete, sublane_left_length,
+                    sublane_right_length, sublane_width):
   kwargs = locals()
   update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data)
 
@@ -123,7 +124,8 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
                                       vs_msg_input.SerializeToString(),
                                       wave_msg_input.SerializeToString(),
                                       planning_data.slot_management_info.SerializeToString(),
-                                      selected_id, (force_planning or is_replan), plan_statemachine, is_complete, sublane_left_length, sublane_right_length,sublane_width )
+                                      selected_id, (force_planning or is_replan), plan_statemachine,
+                                      is_complete, sublane_left_length, sublane_right_length, sublane_width)
     planning_output.ParseFromString(diag_slot_planning_py.GetOutputBytes())
   except:
     print("error")
@@ -163,41 +165,24 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
 
   # print("planning_output:\n", planning_output)
 
+  # obstacles
+  obstacles_x_vec = diag_slot_planning_py.GetObstaclesX()
+  obstacles_y_vec = diag_slot_planning_py.GetObstaclesY()
 
-  # load plan debug msg
-  if bag_loader.plan_debug_msg['enable'] == True and bag_loader.fus_parking_msg['enable'] == True:
-    target_managed_slot_x_vec = []
-    target_managed_slot_y_vec = []
-    slot_management_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].slot_management_info
-    select_slot_id = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].select_slot_id
-    for i in range(len(slot_management_info.slot_info_vec)):
-      maganed_slot_vec = slot_management_info.slot_info_vec[i]
-      corner_point = maganed_slot_vec.corner_points.corner_point
-      if maganed_slot_vec.id == select_slot_id:
-        target_managed_slot_x_vec = [corner_point[0].x,corner_point[1].x,corner_point[2].x,corner_point[3].x]
-        target_managed_slot_y_vec = [corner_point[0].y,corner_point[1].y,corner_point[2].y,corner_point[3].y]
-        break
-    if (len(target_managed_slot_x_vec) != 0):
-      middle_01_vec = [(target_managed_slot_x_vec[0] + target_managed_slot_x_vec[1]) / 2,
-          (target_managed_slot_y_vec[0] + target_managed_slot_y_vec[1]) / 2]
-      middle_23_vec = [(target_managed_slot_x_vec[2] + target_managed_slot_x_vec[3]) / 2,
-          (target_managed_slot_y_vec[2] + target_managed_slot_y_vec[3]) / 2]
-      middle_heading_vec = [middle_01_vec[0] - middle_23_vec[0],   middle_01_vec[1] - middle_23_vec[1]]
-      slot_middle_length = math.sqrt(middle_heading_vec[0] * middle_heading_vec[0] + middle_heading_vec[1] * middle_heading_vec[1])
 
-      slot_heading_unit = [middle_heading_vec[0] / slot_middle_length, middle_heading_vec[1] / slot_middle_length]
-      sublane_right_heading_unit = [slot_heading_unit[1], -slot_heading_unit[0]]
 
-      sublane_right_pt_x = target_managed_slot_x_vec[0] + sublane_width *slot_heading_unit[0] + sublane_right_length* sublane_right_heading_unit[0]
-      sublane_right_pt_y = target_managed_slot_y_vec[0] + sublane_width *slot_heading_unit[1] + sublane_right_length* sublane_right_heading_unit[1]
+  obs_x_vec = []
+  obs_y_vec = []
+  for k in range(int(len(obstacles_x_vec) / 2)):
+    line_x_vec = [obstacles_x_vec[2 * k], obstacles_x_vec[2 * k + 1]]
+    line_y_vec = [obstacles_y_vec[2 * k], obstacles_y_vec[2 * k + 1]]
+    obs_x_vec.append(line_x_vec)
+    obs_y_vec.append(line_y_vec)
 
-      sublane_left_pt_x = target_managed_slot_x_vec[1] + sublane_width *slot_heading_unit[0] - sublane_left_length* sublane_right_heading_unit[0]
-      sublane_left_pt_y = target_managed_slot_y_vec[1] + sublane_width *slot_heading_unit[1] - sublane_left_length* sublane_right_heading_unit[1]
-
-      sublane_right_down_pt_x = sublane_right_pt_x - slot_heading_unit[0] * 12.5
-      sublane_right_down_pt_y = sublane_right_pt_y - slot_heading_unit[1] * 12.5
-
-      data_sublane.data.update({'x_vec': [sublane_left_pt_x, sublane_right_pt_x, sublane_right_down_pt_x],'y_vec': [sublane_left_pt_y, sublane_right_pt_y, sublane_right_down_pt_y]})
+  data_obstacles.data.update({
+    'x_vec': obs_x_vec,
+    'y_vec': obs_y_vec,
+  })
 
   push_notebook()
 

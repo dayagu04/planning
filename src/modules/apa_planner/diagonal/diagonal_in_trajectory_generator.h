@@ -1,8 +1,11 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include "Eigen/Core"
 #include "Platform_Types.h"
@@ -62,7 +65,29 @@ class DiagonalInTrajectoryGenerator {
     double target_heading = 0.0;
     double path_radius = 0.0;
   };
+
   struct EgoSlotInfo {
+    enum SlotSegIndex {
+      LEFT,
+      RIGHT,
+    };
+
+    void Reset() {
+      slot_origin_pos.setZero();
+      slot_origin_heading = 0.0;
+      ego_pos_slot.setZero();
+      ego_heading_slot = 0.0;
+
+      slot_width = 3.0;
+
+      slot_obs.first = false;
+      left_slot_obs.first = false;
+      right_slot_obs.first = false;
+
+      obstacles_vec.clear();
+      obstacles_vec.reserve(4);
+    }
+
     Eigen::Vector2d slot_origin_pos = Eigen::Vector2d::Zero();
     double slot_origin_heading = 0.0;
 
@@ -70,6 +95,16 @@ class DiagonalInTrajectoryGenerator {
     double ego_heading_slot = 0.0;
 
     double slot_width = 3.0;
+
+    // note that first bool means obstacle enable
+    // left and right seg (0, 1) are considered for current slot
+    std::pair<bool, std::array<pnc::geometry_lib::LineSegment, 2>> slot_obs;
+
+    // just up seg is considered for left and right slot
+    std::pair<bool, pnc::geometry_lib::LineSegment> left_slot_obs;
+    std::pair<bool, pnc::geometry_lib::LineSegment> right_slot_obs;
+
+    std::vector<pnc::geometry_lib::LineSegment> obstacles_vec;
   };
 
  public:
@@ -102,7 +137,7 @@ class DiagonalInTrajectoryGenerator {
   // for pybind & simulation
   void SetLocalView(LocalView *local_view_ptr) { local_view_ = local_view_ptr; }
 
-  PlanningOutput::PlanningOutput GetOutput() { return planning_output_; }
+  PlanningOutput::PlanningOutput GetOutput() const { return planning_output_; }
 
   const common::SlotManagementInfo GetSlotManagementOutput() const {
     return slot_manager_.GetOutput();
@@ -115,7 +150,13 @@ class DiagonalInTrajectoryGenerator {
   const bool PathPlanOnceSimulation(
       common::SlotManagementInfo &slot_mangement_info);
 
-  pnc::dubins_lib::DubinsLibrary GetDubinsPlanner() { return dubins_planner_; }
+  pnc::dubins_lib::DubinsLibrary GetDubinsPlanner() const {
+    return dubins_planner_;
+  }
+
+  const std::vector<pnc::geometry_lib::LineSegment> GetObstacles() const {
+    return collision_detector_.GetObstacles();
+  }
 
  private:
   void UpdateMeasurement();
@@ -137,6 +178,7 @@ class DiagonalInTrajectoryGenerator {
 
   void UpdateDubinsInputByLevel(const uint8_t level);
   const bool PathEvaluateOnce(const uint8_t level);
+  const bool CollisionCheck();
   const bool CheckIfCrossSublane() const;
 
   const bool CheckIfCrossSublane(
@@ -190,6 +232,7 @@ class DiagonalInTrajectoryGenerator {
   double sublane_left_length_ = 0.0;
   double sublane_right_length_ = 0.0;
   double sublane_width_ = 0.0;
+  double slot_width_offset_ = 0.0;
 
   // TODO
   uint8_t current_state_ = ::FuncStateMachine::FunctionalState::INIT;

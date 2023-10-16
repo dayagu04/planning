@@ -142,6 +142,32 @@ std::vector<double> GetPathEle(size_t index) {
   return pBase->GetDubinsPlanner().GetPathEle(index);
 }
 
+std::vector<double> GetObstaclesX() {
+  const auto &obstacles = pBase->GetObstacles();
+  std::vector<double> x_vec;
+  x_vec.reserve(obstacles.size());
+
+  for (const auto &obs : obstacles) {
+    x_vec.emplace_back(obs.pA.x());
+    x_vec.emplace_back(obs.pB.x());
+  }
+
+  return x_vec;
+}
+
+std::vector<double> GetObstaclesY() {
+  const auto &obstacles = pBase->GetObstacles();
+  std::vector<double> y_vec;
+  y_vec.reserve(obstacles.size());
+
+  for (const auto &obs : obstacles) {
+    y_vec.emplace_back(obs.pA.y());
+    y_vec.emplace_back(obs.pB.y());
+  }
+
+  return y_vec;
+}
+
 PYBIND11_MODULE(diag_slot_planning_py, m) {
   m.doc() = "m";
 
@@ -150,5 +176,7 @@ PYBIND11_MODULE(diag_slot_planning_py, m) {
       .def("UpdateBytesByParam", &UpdateBytesByParam)
       .def("GetSlotManagementOutputBytes", &GetSlotManagementOutputBytes)
       .def("GetOutputBytes", &GetOutputBytes)
+      .def("GetObstaclesX", &GetObstaclesX)
+      .def("GetObstaclesY", &GetObstaclesY)
       .def("GetPathEle", &GetPathEle);
 }

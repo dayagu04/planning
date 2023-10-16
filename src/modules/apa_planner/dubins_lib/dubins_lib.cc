@@ -704,7 +704,7 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
   output_.path_seg_count = 1;
 
   if (!is_complete_path && gear_change_index == 1) {
-    std::cout << "AB in Path!" << std::endl;
+    // std::cout << "AB in Path!" << std::endl;
     if (!set_pB) {
       // set pB if not
       path_point.Set(output_.arc_AB.pB, output_.arc_AB.headingB);
@@ -741,7 +741,7 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
   output_.path_seg_count = 2;
 
   if (!is_complete_path && gear_change_index == 2) {
-    std::cout << "AB & BC in Path!" << std::endl;
+    // std::cout << "AB & BC in Path!" << std::endl;
     if (!set_pC) {
       // set pC if not
       path_point.Set(output_.arc_CD.pA, output_.arc_CD.headingA);
@@ -781,7 +781,7 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
   path_point.Set(output_.arc_CD.pB, output_.arc_CD.headingB);
   output_.path_point_vec.emplace_back(path_point);
 
-  std::cout << "AB & BC & CD, all in Path!" << std::endl;
+  // std::cout << "AB & BC & CD, all in Path!" << std::endl;
   output_.path_seg_count = 3;
 }
 

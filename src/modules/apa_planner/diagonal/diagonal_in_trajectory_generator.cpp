@@ -72,9 +72,11 @@ static const double terminal_target_x = 1.1;
 static const double max_path_length = 20.0;
 static const double min_search_length = 6.0;
 static const double path_sample_ds = 0.05;
+static const double collision_check_sample_ds = 0.5;
 static const double safe_uss_remain_dist = 0.35;
 static const double stuck_failed_time = 6.0;
 static const double stuck_replan_time = 4.0;
+static const double slot_width_offset_empty = 1.0;
 static const double min_replan_remain_dist =
     0.2;  // in control, this value must be smaller
 static const double standard_slot_length = 5.2;
@@ -114,16 +116,7 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
   frame_ = frame;
   local_view_ = &(frame->session()->environmental_model().get_local_view());
 
-  // set local view to collision detector
-  // collision_detector_.SetLocalView(local_view_);
-
-  // update collision detection
-  // collision_detector_.SetUssOA(&uss_oa_);
-
   // TODO: collision_detector_.SetVision();
-
-  // generate obstacles just by uss oa
-  // collision_detector_.GenObstacles();
 
   auto& origin_parking_fusion_info = local_view_->parking_fusion_info;
 
@@ -141,6 +134,9 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
 
   // set local view to uss oa
   uss_oa_.SetLocalView(local_view_);
+
+  // set local view to collision detector
+  collision_detector_.SetLocalView(local_view_);
 
   // update measurement
   UpdateMeasurement();
@@ -257,6 +253,8 @@ void DiagonalInTrajectoryGenerator::Reset() {
   stuck_time_ = 0.0;
   slot_occupied_ratio_ = 0.0;
   parking_continue_time_ = 0.0;
+  ego_slot_info_.Reset();
+  slot_width_offset_ = slot_width_offset_empty;
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
@@ -366,7 +364,8 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
   } else {
     if (!simulation_enable_flag_) {
       SetFinishedPlanningOutput(frame_);
-      return;
+    } else {
+      planning_output->Clear();
     }
   }
 }
@@ -410,7 +409,7 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnceSimulation(
   // set local view for these two modules for simulation
   // since plan() is not included in pybind simulation
   uss_oa_.SetLocalView(local_view_);
-  // collision_detector_.SetLocalView(local_view_);
+  collision_detector_.SetLocalView(local_view_);
 
   if (local_view_->function_state_machine_info.has_current_state()) {
     current_state_ = local_view_->function_state_machine_info.current_state();
@@ -474,7 +473,7 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnceSimulation(
   auto managed_selected_slot =
       slot_mangement_info.slot_info_vec(select_slot_index_slm);
 
-  for (size_t i = 0; i < fusion_selected_slot->corner_points_size(); ++i) {
+  for (int i = 0; i < fusion_selected_slot->corner_points_size(); ++i) {
     fusion_selected_slot->mutable_corner_points(i)->set_x(
         managed_selected_slot.corner_points().corner_point(i).x());
     fusion_selected_slot->mutable_corner_points(i)->set_y(
@@ -509,9 +508,9 @@ void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
   const auto pM01 = 0.5 * (p0 + p1);
   const auto pM23 = 0.5 * (p2 + p3);
 
-  const auto n = pM01 - pM23;
+  const auto n = (pM01 - pM23).normalized();
 
-  ego_slot_info_.slot_origin_pos = pM01 - kNormalSlotLength * n.normalized();
+  ego_slot_info_.slot_origin_pos = pM01 - kNormalSlotLength * n;
   ego_slot_info_.slot_origin_heading = std::atan2(n.y(), n.x());
 
   // global2slot tf init
@@ -551,6 +550,84 @@ void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
   }
 
   std::cout << "slot_occupied_ratio = " << slot_occupied_ratio_ << std::endl;
+
+  // update obstacles in current, left or right slot
+  const auto t = Eigen::Vector2d(-n.y(), n.x());
+
+  // update current slot obstacles
+  ego_slot_info_.slot_obs.first = true;
+  const auto half_slot_width = 0.5 * ego_slot_info_.slot_width;
+
+  Eigen::Vector2d origin = ego_slot_info_.slot_origin_pos;
+  Eigen::Vector2d left_pA = origin + (half_slot_width + slot_width_offset_) * t;
+  Eigen::Vector2d left_pB = left_pA + kNormalSlotLength * n;
+  Eigen::Vector2d right_pA =
+      origin - (half_slot_width + slot_width_offset_) * t;
+  Eigen::Vector2d right_pB = right_pA + kNormalSlotLength * n;
+
+  ego_slot_info_.slot_obs.second[EgoSlotInfo::LEFT] =
+      pnc::geometry_lib::LineSegment(left_pA, left_pB);
+
+  ego_slot_info_.slot_obs.second[EgoSlotInfo::RIGHT] =
+      pnc::geometry_lib::LineSegment(right_pA, right_pB);
+
+  // update left slot obstacles
+  // TODO: to check if left and right slot are occupied by uss_OA or slot_m
+  ego_slot_info_.left_slot_obs.first = false;
+
+  ego_slot_info_.left_slot_obs.second = pnc::geometry_lib::LineSegment(
+      left_pB, left_pB + ego_slot_info_.slot_width * t);
+
+  // update right slot obstacles
+  ego_slot_info_.right_slot_obs.first = false;
+
+  ego_slot_info_.right_slot_obs.second = pnc::geometry_lib::LineSegment(
+      right_pB, right_pB - ego_slot_info_.slot_width * t);
+
+  ego_slot_info_.obstacles_vec.clear();
+  // clear obstacles first
+  if (ego_slot_info_.slot_obs.first) {
+    ego_slot_info_.obstacles_vec.emplace_back(
+        ego_slot_info_.slot_obs.second[LEFT]);
+    ego_slot_info_.obstacles_vec.emplace_back(
+        ego_slot_info_.slot_obs.second[RIGHT]);
+  }
+
+  if (ego_slot_info_.left_slot_obs.first) {
+    ego_slot_info_.obstacles_vec.emplace_back(
+        ego_slot_info_.left_slot_obs.second);
+  }
+
+  if (ego_slot_info_.right_slot_obs.first) {
+    ego_slot_info_.obstacles_vec.emplace_back(
+        ego_slot_info_.right_slot_obs.second);
+  }
+
+  // update channel obstacles
+  const double chanel_width_x = sublane_width_ + kNormalSlotLength;
+  const double chanel_length_y1 =
+      -0.5 * ego_slot_info_.slot_width - sublane_right_length_;
+  const double chanel_length_y2 = -chanel_length_y1;
+
+  const auto pA1 = origin + chanel_length_y1 * t;
+  const auto pB1 = pA1 + chanel_width_x * n;
+
+  const auto pA2 = origin + chanel_length_y2 * t;
+  const auto pB2 = pA2 + chanel_width_x * n;
+
+  const pnc::geometry_lib::LineSegment A1B1(pA1, pB1);
+  const pnc::geometry_lib::LineSegment A2B2(pA2, pB2);
+  const pnc::geometry_lib::LineSegment B1B2(pB1, pB2);
+
+  // add slot obstacles
+  for (auto const& obs : ego_slot_info_.obstacles_vec) {
+    collision_detector_.AddObstacle(obs);
+  }
+
+  // add channel object
+  collision_detector_.AddObstacle(A1B1);
+  collision_detector_.AddObstacle(A2B2);
+  collision_detector_.AddObstacle(B1B2);
 }
 
 const bool DiagonalInTrajectoryGenerator::DubinsPlanOneStep(
@@ -567,7 +644,9 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanOneStep(
       for (size_t j = 0; j < DubinsLibrary::DUBINS_TYPE_COUNT; ++j) {
         if (dubins_planner_.Solve(j, i)) {
           if (PathEvaluateOnce(level)) {
-            return true;
+            if (!CollisionCheck()) {
+              return true;
+            }
           }
         }
       }
@@ -579,7 +658,9 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanOneStep(
     for (size_t i = 0; i < DubinsLibrary::LINEARC_TYPE_COUNT; ++i) {
       if (dubins_planner_.Solve(i)) {
         if (PathEvaluateOnce(level)) {
-          return true;
+          if (!CollisionCheck()) {
+            return true;
+          }
         }
       }
     }  // linearc loop
@@ -676,15 +757,29 @@ const bool DiagonalInTrajectoryGenerator::CheckIfCrossSublane(
   return false;
 }
 
+const bool DiagonalInTrajectoryGenerator::CollisionCheck() {
+  // sample by large ds to get path point vector
+  dubins_planner_.Sampling(collision_check_sample_ds, true);
+
+  // transform to global
+  dubins_planner_.Transform(l2g_tf_);
+
+  // gen car circles by path point vector
+  collision_detector_.GenCarCircles(dubins_planner_.GetPathPointVec());
+
+  // collision detect
+  return collision_detector_.CollisionDetect();
+}
+
 const bool DiagonalInTrajectoryGenerator::PathEvaluateOnce(
     const uint8_t level) {
   const auto& output = dubins_planner_.GetOutput();
 
   // check if the ego car cross sublane in slot system(dubins result is now in
   // slot system)
-  if (CheckIfCrossSublane()) {
-    return false;
-  }
+  // if (CheckIfCrossSublane()) {
+  //   return false;
+  // }
 
   if (!CheckPathPointsInSlot()) {
     return false;
@@ -1033,6 +1128,9 @@ const bool DiagonalInTrajectoryGenerator::PathPlanCoreIteration() {
 
 void DiagonalInTrajectoryGenerator::PathPlanOnce(
     const int slot_index, PlanningOutput* const planning_output) {
+  // clear obstacles
+  collision_detector_.ClearObstacles();
+
   // update slot info and target point in both global and slot coordinate
   UpdateEgoSlotInfo(slot_index);
 
@@ -1071,9 +1169,8 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
 
     // std::cout << "plan_input_.target_pos = "
     //           << plan_input_.target_pos.transpose() << std::endl;
+    // std::cout << "extend_s = " << extend_s << std::endl;
   }
-
-  std::cout << "extend_s = " << extend_s << std::endl;
 
   dubins_planner_.Transform(l2g_tf_);
 

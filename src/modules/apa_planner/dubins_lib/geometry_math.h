@@ -14,6 +14,11 @@ namespace pnc {
 namespace geometry_lib {
 
 struct LineSegment {
+  LineSegment() = default;
+  LineSegment(const Eigen::Vector2d &p1, const Eigen::Vector2d &p2) {
+    pA = p1;
+    pB = p2;
+  }
   void SetPoints(const Eigen::Vector2d &p1, const Eigen::Vector2d &p2) {
     pA = p1;
     pB = p2;

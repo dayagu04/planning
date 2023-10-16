@@ -21,16 +21,28 @@ class CollisionDetector {
   void Init();
   void Reset();
 
-  void GenObstacles();
+  void GenObstaclesByUssOA();
 
   void GenCarCircles(
-      std::vector<pnc::dubins_lib::DubinsLibrary::PathPoint> &path_point_vec);
+      const std::vector<pnc::dubins_lib::DubinsLibrary::PathPoint>
+          &path_point_vec);
 
   bool CollisionDetect();
 
   void SetUssOA(const UssObstacleAvoidance *uss_oa_ptr) {
     uss_oa_ptr_ = uss_oa_ptr;
   }
+
+  void SetObstacles(
+      const std::vector<pnc::geometry_lib::LineSegment> &obstacle_global_vec) {
+    obstacle_global_vec_ = obstacle_global_vec;
+  }
+
+  void AddObstacle(const pnc::geometry_lib::LineSegment &line_segment) {
+    obstacle_global_vec_.emplace_back(line_segment);
+  }
+
+  void ClearObstacles() { obstacle_global_vec_.clear(); }
 
   void SetLocalView(const LocalView *local_view_ptr) {
     local_view_ptr_ = local_view_ptr;
@@ -39,8 +51,13 @@ class CollisionDetector {
   void GenObstaclesSimulation(
       const std::vector<pnc::geometry_lib::LineSegment> &obstacle_line_vec);
 
-  const std::vector<std::vector<pnc::geometry_lib::Circle>> GetCarCircle() {
+  const std::vector<std::vector<pnc::geometry_lib::Circle>> GetCarCircle()
+      const {
     return car_circle_global_vec_path_vec_;
+  }
+
+  const std::vector<pnc::geometry_lib::LineSegment> GetObstacles() const {
+    return obstacle_global_vec_;
   }
 
  private:
