@@ -71,7 +71,7 @@ class TrackletMaintainer {
             bool isOnHighway, std::vector<double> d_poly,
             std::vector<double> c_poly);
 
-  void fill_info_with_refline(TrackedObject &item, double lat_offset);
+  bool fill_info_with_refline(TrackedObject &item, double lat_offset);
 
   void fill_deriv_info(TrackedObject &item);
 

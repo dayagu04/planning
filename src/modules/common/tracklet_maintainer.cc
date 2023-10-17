@@ -403,7 +403,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     double rel_x = p.relative_position_x;
     double rel_y = p.relative_position_y;
 
-    if (rel_x < -50 || rel_x > 150 || p.trajectory_array.size() == 0) {
+    if (rel_x < -45 || rel_x > 120 || p.trajectory_array.size() == 0) {
       continue;
     }
 
@@ -668,20 +668,21 @@ void TrackletMaintainer::calc(
     for (auto item : tracked_objects) {
       item->v_ego = v_ego;
       item->v_rel = item->v_lead - v_ego;
+      bool frenet_transform_valid = false;
 
       double d_poly_offset = lat_offset;
       if ((d_poly.size() == 4) && (c_poly.size() == 4)) {
         d_poly_offset = d_poly[3] - c_poly[3];
       }
 
-      fill_info_with_refline(*item, d_poly_offset);
+      frenet_transform_valid = fill_info_with_refline(*item, d_poly_offset);
       if (!hdmap_valid_) {
         fill_deriv_info(*item);
         fill_possibility_of_cutin(*item);
       }
       // only use obstacle with camera source
-      if ((item->fusion_source == OBSTACLE_SOURCE_CAMERA) ||
-          (item->fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+      if (((item->fusion_source == OBSTACLE_SOURCE_CAMERA) ||
+          (item->fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA)) && frenet_transform_valid) {
         is_potential_lead_one(*item, v_ego);
       }
       calc_intersection_with_refline(*item, enable_intersection_planner);
@@ -748,11 +749,12 @@ void TrackletMaintainer::calc(
   }
 }
 
-void TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
+bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
                                                 double lat_offset) {
   double half_length = item.length * 0.5;
 
   double half_width;
+  bool frenet_transform_valid = true;
   if (item.type > 10000) {
     half_width = std::max(0.5, std::min(2.0, item.width * 0.5));
   } else if (item.type > 0) {
@@ -782,6 +784,8 @@ void TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
     theta = frenet_coord_->GetRefCurveHeading(frenet_point.x);
     v_l = item.v * std::sin(speed_yaw - theta);
     v_s = item.v * std::cos(speed_yaw - theta);
+  } else {
+    frenet_transform_valid = false;
   }
   item.vs_rel = v_s - vs_ego_;
   item.v_lead = v_s;
@@ -986,6 +990,7 @@ void TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
   item.d_path_self = std::fabs(item.d_path_self);
   item.d_path_pos = std::fabs(item.d_path_pos);
   item.d_path_self_pos = std::fabs(item.d_path_self_pos);
+  return frenet_transform_valid;
 }
 
 void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {

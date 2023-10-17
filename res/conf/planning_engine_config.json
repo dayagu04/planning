@@ -3,6 +3,6 @@
   "vehicle_cfg_dir": "/asw/planning/res/conf",
   "log_cfg":{
     "log_file_dir": "/asw/planning/log",
-    "log_level": "DEBUG"
+    "log_level": "FETAL"
   }
 }

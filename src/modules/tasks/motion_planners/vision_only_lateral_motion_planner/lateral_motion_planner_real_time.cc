@@ -1473,7 +1473,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
             }
           }
 
-          if (lat_offset > 0 && d_poly_[3] >= 0) {
+          if (lat_offset > 0) {
             if (d_poly_[3] > 0.3) {
               lat_offset = 0;
             } else {
@@ -1481,7 +1481,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                 lat_offset = -d_poly_[3] + 0.3;
               }
             }
-          } else if (lat_offset <= 0 && d_poly_[3] <= 0) {
+          } else if (lat_offset <= 0) {
             if (d_poly_[3] < -0.3) {
               lat_offset = 0;
             } else {
@@ -1731,13 +1731,12 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                            lat_offset);
             }
           }
-          if (d_poly_[3] <= 0) {
-            if (d_poly_[3] < -0.3) {
-              lat_offset = 0;
-            } else {
-              if (d_poly_[3] + lat_offset < -0.3) {
-                lat_offset = -d_poly_[3] - 0.3;
-              }
+
+          if (d_poly_[3] < -0.3) {
+            lat_offset = 0;
+          } else {
+            if (d_poly_[3] + lat_offset < -0.3) {
+              lat_offset = -d_poly_[3] - 0.3;
             }
           }
         } else {
@@ -2043,13 +2042,11 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                            lat_offset);
             }
           }
-          if (d_poly_[3] >= 0) {
-            if (d_poly_[3] > 0.3) {
-              lat_offset = 0;
-            } else {
-              if (d_poly_[3] + lat_offset > 0.3) {
-                lat_offset = -d_poly_[3] + 0.3;
-              }
+          if (d_poly_[3] > 0.3) {
+            lat_offset = 0;
+          } else {
+            if (d_poly_[3] + lat_offset > 0.3) {
+              lat_offset = -d_poly_[3] + 0.3;
             }
           }
         } else {
