@@ -199,6 +199,7 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
 
     generate_trajectory = is_plan_success_;
   } else {
+    std::cout << "no slot has been selected!" << std::endl;
     // bool is_planning_ok = false;
     // for (int i = 0; i < parking_fusion_info.parking_fusion_slot_lists_size();
     //      ++i) {

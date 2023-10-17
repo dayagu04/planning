@@ -103,16 +103,8 @@ bool IsSlotSelected(Frame* const frame) {
     return false;
   }
 
-  if (func_state_machine.current_state() == FunctionalState::PARK_IN_READY ||
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_ACTIVATE_WAIT ||
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_ACTIVATE_CONTROL ||
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_SUSPEND_ACTIVATE ||
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_SUSPEND_CLOSE ||
-      func_state_machine.current_state() == FunctionalState::PARK_IN_SECURE) {
+  if (func_state_machine.current_state() >= FunctionalState::PARK_IN_SELECT &&
+      func_state_machine.current_state() <= FunctionalState::PARK_OUT_SECURE) {
     return true;
   }
 
@@ -148,13 +140,10 @@ bool IsReplanEachFrame(const FuncStateMachine& func_state_machine) {
     return false;
   }
 
-  if (func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_SEARCHING ||
-      func_state_machine.current_state() == FunctionalState::PARK_IN_NO_READY ||
-      func_state_machine.current_state() == FunctionalState::PARK_IN_READY ||
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_ACTIVATE_WAIT ||
-      func_state_machine.current_state() == FunctionalState::PARK_IN_SELECT) {
+  if (func_state_machine.current_state() >=
+          FunctionalState::PARK_IN_SEARCHING &&
+      func_state_machine.current_state() <=
+          FunctionalState::PARK_IN_ACTIVATE_WAIT) {
     return true;
   }
 
