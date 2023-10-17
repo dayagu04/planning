@@ -904,9 +904,13 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    enable_lat_traj = read_json_keys<bool>(
+        json, std::vector<std::string>{"result_trajectory_generator",
+                                       "enable_lat_traj"});
   }
   double planning_result_delta_time = 0.025;
   bool is_pwj_planning = false;
+  bool enable_lat_traj = false;
 };
 
 struct TrafficLightDeciderConfig : public EgoPlanningConfig {

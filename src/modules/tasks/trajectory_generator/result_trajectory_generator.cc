@@ -175,6 +175,8 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
 }
 
 bool ResultTrajectoryGenerator::RealtimeTrajectoryGenerator() {
+  bool enable_lat_traj = config_.enable_lat_traj;
+
   auto &ego_planning_result = pipeline_context_->planning_result;
 
   // Step 1) get x,y of trajectory points
@@ -217,8 +219,11 @@ bool ResultTrajectoryGenerator::RealtimeTrajectoryGenerator() {
   static const std::vector<double> lat_err_norm_tab = {0.0, 0.3, 0.5, 100.0};
   static const std::vector<double> alpha_tab = {1.0, 1.0, 0.0, 0.0};
 
-  const double alpha =
-      pnc::mathlib::Interp1(lat_err_norm_tab, alpha_tab, lat_err_norm);
+  double alpha = 1.0;
+  if (enable_lat_traj) {
+    // 使能横向轨迹，采用轨迹和参考线合并的形式
+    alpha = pnc::mathlib::Interp1(lat_err_norm_tab, alpha_tab, lat_err_norm);
+  }
 
   // Step 2) get dense trajectory points
   std::vector<TrajectoryPoint> dense_traj_points;

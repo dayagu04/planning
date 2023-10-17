@@ -243,6 +243,9 @@
     "cut_in_desired_distance_step": 1.0,
     "soft_bound_corridor_t": 0.3
   },
+  "result_trajectory_generator": {
+    "enable_lat_traj": false
+  },
   "pnp_precise_lat_bound_care_threshold": 5.0,
   "pnp_lower_speed_protect_threshold": 0.3,
   "pnp_lat_precise_bound_extend_dis ": 0.2,
