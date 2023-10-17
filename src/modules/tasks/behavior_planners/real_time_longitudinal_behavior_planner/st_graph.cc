@@ -64,8 +64,8 @@ void StGraphGenerator::Update(
   sref_vec.reserve(config_.lon_num_step + 1);
 
   CalculateCruiseSrefs(v_ego, v_cruise, acc_ego, sref_vec);
-  
-  //calc target v for noa curv and ramp 
+
+  //calc target v for noa curv and ramp
   CalcSpeedWithTurns(v_ego, steer_angle_ego, d_polys);
 
   double distance_to_ramp = lon_behav_input_->dis_to_ramp();
@@ -455,6 +455,7 @@ bool StGraphGenerator::CalcSpeedWithTurns(
 bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp, double dis_to_merge, bool is_on_ramp, double ramp_v_limit,
       double acc_to_ramp, double v_ego) {
   LOG_DEBUG("----calc_speed_for_ramp--- \n");
+  auto ref_path_points = lon_behav_input_->ref_path_points();
   double v_target_ramp = 40;
   //通过接口获取是否在匝道的信息
   if (is_on_ramp) {
@@ -479,7 +480,6 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp, double dis_to_merge
   JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
   LOG_DEBUG("v_target : [%f] \n", v_target_);
   return true;
-
 }
 
 void StGraphGenerator::UpdateSTRefs(const std::vector<double> &sref_vec) {

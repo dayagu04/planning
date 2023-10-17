@@ -90,21 +90,29 @@ void RealTimeLonBehaviorPlanner::SetConfig(
 }
 
 void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
-  bool dbw_status =
-      frame_->session()->environmental_model().GetVehicleDbwStatus();
-  auto &ego_state_mgr =
-      frame_->session()->environmental_model().get_ego_state_manager();
-  auto &lateral_obstacles =
-      frame_->session()->environmental_model().get_lateral_obstacle();
-  auto &lateral_outputs =
+  const auto &environmental_model = frame_->session()->environmental_model();
+  const bool dbw_status = environmental_model.GetVehicleDbwStatus();
+  const auto ego_state_mgr = environmental_model.get_ego_state_manager();
+  const auto lateral_obstacles = environmental_model.get_lateral_obstacle();
+  const auto virtual_lane_manager =
+      environmental_model.get_virtual_lane_manager();
+  const auto lane_tracks_mgr = environmental_model.get_lane_tracks_manager();
+  const auto lateral_outputs =
       frame_->session()->planning_context().lateral_behavior_planner_output();
-  auto &start_stop_state_info =
+  const auto start_stop_state_info =
       frame_->session()->planning_context().start_stop_result();
   auto &lon_decision_info = frame_->mutable_session()
                                 ->mutable_planning_context()
                                 ->mutable_lon_decision_result();
   auto &function_info =
       frame_->session()->environmental_model().function_info();
+  const auto lane_change_lane_manager = frame_->session()
+                                            ->planning_context()
+                                            .scenario_state_machine()
+                                            ->get_lane_change_lane_manager();
+
+  const auto planning_status =
+      frame_->session()->planning_output_context().planning_status();
 
   // 0. set dbw (Drive-by-Wire)
   lon_behav_plan_input_->set_dbw_status(dbw_status);
@@ -243,21 +251,9 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
   }
 
   // 4. set lane change info
-  const auto &lane_change_lane_manager = frame_->session()
-                                             ->planning_context()
-                                             .scenario_state_machine()
-                                             ->get_lane_change_lane_manager();
-  const auto &planning_status =
-      frame_->session()->planning_output_context().planning_status();
-  const auto current_lane = frame_->session()
-                                ->environmental_model()
-                                .get_virtual_lane_manager()
-                                ->get_current_lane();
+  const auto current_lane = virtual_lane_manager->get_current_lane();
+  int lc_map_decision = virtual_lane_manager->lc_map_decision(current_lane);
   double lc_end_dis = 0;
-  int lc_map_decision = frame_->session()
-                            ->environmental_model()
-                            .get_virtual_lane_manager()
-                            ->lc_map_decision(current_lane);
   auto lane_change_info = lon_behav_plan_input_->mutable_lc_info();
   lane_change_info->set_has_target_lane(
       lane_change_lane_manager->has_target_lane());
@@ -272,8 +268,6 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
   lane_change_info->set_target_gap_obs_second(
       planning_status.lane_status.change_lane.target_gap_obs.second);
 
-  auto &lane_tracks_mgr =
-      frame_->session()->environmental_model().get_lane_tracks_manager();
   std::vector<TrackedObject> *front_target_tracks =
       lane_tracks_mgr->get_lane_tracks(
           lane_change_lane_manager->tlane_virtual_id(), FRONT_TRACK);
@@ -331,19 +325,50 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
     }
   }
 
-  // 5. set state of start & stop
+  // 5. set fix lane info
+  // TBD: 格式统一用proto后直接copy from
+  const auto fix_lane = virtual_lane_manager->get_lane_with_virtual_id(
+      lane_change_lane_manager->flane_virtual_id());
+  const std::vector<ReferencePathPoint> fix_ref_points =
+      fix_lane->get_reference_path()->get_points();
+  auto ref_path_points = lon_behav_plan_input_->mutable_ref_path_points();
+  ref_path_points->Clear();
+  ref_path_points->Reserve(fix_ref_points.size());
+  for(auto &point : fix_ref_points) {
+    common::ReferencePathPoint *ref_path_point = ref_path_points->Add();
+    auto *path_point = ref_path_point->mutable_path_point();
+    path_point->set_x(point.path_point.x);
+    path_point->set_y(point.path_point.y);
+    path_point->set_z(point.path_point.z);
+    path_point->set_theta(point.path_point.theta);
+    path_point->set_kappa(point.path_point.kappa);
+    path_point->set_s(point.path_point.s);
+    path_point->set_dkappa(point.path_point.dkappa);
+    path_point->set_ddkappa(point.path_point.ddkappa);
+    path_point->set_x_derivative(point.path_point.x_derivative);
+    path_point->set_y_derivative(point.path_point.y_derivative);
+
+    ref_path_point->set_distance_to_left_lane_border(point.distance_to_left_lane_border);
+    ref_path_point->set_distance_to_left_road_border(point.distance_to_left_road_border);
+    ref_path_point->set_distance_to_right_lane_border(point.distance_to_right_lane_border);
+    ref_path_point->set_distance_to_right_road_border(point.distance_to_right_road_border);
+    ref_path_point->set_lane_width(point.lane_width);
+    ref_path_point->set_max_velocity(point.max_velocity);
+    ref_path_point->set_min_velocity(point.min_velocity);
+    ref_path_point->set_is_in_intersection(point.is_in_intersection);
+  }
+
+  // 6. set state of start & stop
   auto start_stop_state = lon_behav_plan_input_->mutable_start_stop_info();
   start_stop_state->CopyFrom(start_stop_state_info);
 
   // 6. set function_info
   auto function_info_input = lon_behav_plan_input_->mutable_function_info();
   function_info_input->CopyFrom(function_info);
-  double dis_to_ramp =
-      frame_->session()->environmental_model().get_virtual_lane_manager()->dis_to_ramp();
-  double dis_to_merge =
-      frame_->session()->environmental_model().get_virtual_lane_manager()->distance_to_first_road_merge();
-  bool is_on_ramp =
-      frame_->session()->environmental_model().get_virtual_lane_manager()->is_on_ramp();
+  
+  double dis_to_ramp = virtual_lane_manager->dis_to_ramp();
+  double dis_to_merge = virtual_lane_manager->distance_to_first_road_merge();
+  bool is_on_ramp = virtual_lane_manager->is_on_ramp();
 
   lon_behav_plan_input_->set_dis_to_ramp(dis_to_ramp);
   lon_behav_plan_input_->set_dis_to_merge(dis_to_merge);

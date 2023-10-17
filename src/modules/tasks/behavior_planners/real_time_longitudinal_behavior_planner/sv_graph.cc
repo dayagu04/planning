@@ -53,6 +53,10 @@ void SvGraphGenerator::CalculateCurvSvs(const double v_ego,
   double base_dis = config_.dis_curv;  // 从自车位置开始，计算5s
   sv_boundary.boundary_type = SVBoundaryType::CURVATURE;
   sv_boundary.sv_bounds.resize(config_.lon_num_step + 1);
+
+  // 获取参考线的点，其中有曲率、道路限速
+  auto ref_path_points = lon_behav_input_->ref_path_points();
+
   SVBound sv_bound;
   for (int i = 0; i <= config_.lon_num_step; i++) {
     double s = base_dis + i * config_.delta_time * v_cruise;
