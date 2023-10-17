@@ -39,7 +39,6 @@ elseif(ADAPTER STREQUAL "ap")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DAP_ENV")
 endif()
 
-add_subdirectory(proto EXCLUDE_FROM_ALL)
 add_subdirectory(common EXCLUDE_FROM_ALL)
 add_subdirectory(modules EXCLUDE_FROM_ALL)
 add_subdirectory(framework EXCLUDE_FROM_ALL)
@@ -58,7 +57,6 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/private/planning interface_
 
 if(ADAPTER STREQUAL "cyber")
   add_subdirectory(adapter/cyber)
-  add_subdirectory(apa_simulation)
 elseif(ADAPTER STREQUAL "ap")
   # add_subdirectory(adapter/ap)
 endif()
@@ -72,7 +70,6 @@ install(FILES ${CMAKE_CURRENT_LIST_DIR}/../CHANGELOG.md
     DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/log)
 if (ADAPTER STREQUAL "cyber")
   install(TARGETS
-    apa_simulation_component
     planning_component
     LIBRARY DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/Lib)
   install(FILES
