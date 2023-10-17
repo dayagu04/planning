@@ -254,13 +254,12 @@ class LoadCyberbag:
       json_value_list = ["controller_status", "lon_enable", "lat_enable", "lat_mpc_status", "gear_plan", "gear_real", "gear_cmd",
                     "vel_ref", "vel_ref_gain", "vel_cmd", "vel_ego",
                     "path_length_plan", "remain_s_plan", "remain_s_prebreak", "remain_s_uss", "remain_s_ctrl",
-                    "vel_out", "acc_vel", "vel_KP_term", "vel_KI_term", "slope_acc", "throttle_brake",
+                    "vel_out", "acc_vel", "vel_KP_term", "vel_KI_term", "slope_acc", "throttle_brake", 'acc_vel',
                     "steer_angle_cmd", "steer_angle", 'driver_hand_torque',
                     "lat_err", "phi_err",
                     "apa_enable", "emergency_stop_flag", "vehicle_stationary_flag", "apa_finish_flag", "break_override_flag", "gear_shifting_flag"]
 
       json_vector_list = ["dx_ref_vec", "dy_ref_vec", "dx_ref_mpc_vec", "dy_ref_mpc_vec", "dphi_ref_mpc_vec", "dx_mpc_vec", "dy_mpc_vec", "delta_mpc_vec", "dphi_mpc_vec"]
-
 
       ctrl_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/control/debug_info"):
@@ -589,7 +588,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
     })
 
     vel_ego =  bag_loader.loc_msg['data'][loc_msg_idx].pose.linear_velocity_from_wheel
-
+    remain_s_ctrl = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['remain_s_ctrl'] * 100
     if bag_loader.vs_msg['enable'] == True:
       steer_deg = bag_loader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
     else:
@@ -597,7 +596,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
 
     current_state = bag_loader.soc_state_msg['data'][soc_state_msg_idx].current_state
     local_view_data['data_text'].data.update({
-      'vel_ego_text': ['v = {:.2f} m/s, steer = {:.1f} deg, state = {:d}'.format(round(vel_ego, 2), round(steer_deg, 1), current_state)],
+      'vel_ego_text': ['v = {:.2f} m/s, remain_s_ctrl = {:.1f} cm, steer = {:.1f} deg, state = {:d}'.format(round(vel_ego, 2), round(remain_s_ctrl, 1), round(steer_deg, 1), current_state)],
     })
 
   ### step 3: 加载planning轨迹信息
@@ -1060,6 +1059,7 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   'vel_KP_term': [],
   'vel_KI_term': [],
   'throttle_brake': [],
+  'acc_vel': [],
 
   'steer_angle_cmd': [],
   'steer_angle_measure': [],
@@ -1090,6 +1090,7 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   vel_kp_term = []
   vel_ki_term = []
   throttle_brake = []
+  acc_vel = []
 
   steer_angle_cmd = []
   steer_angle_measure = []
@@ -1127,6 +1128,7 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
     if tmp_throttle_brake > 0.0:
       tmp_throttle_brake = tmp_throttle_brake / 1000
     throttle_brake.append(tmp_throttle_brake)
+    acc_vel.append(ctrl_json_data[i]['acc_vel'])
 
     steer_angle_cmd.append(ctrl_json_data[i]['steer_angle_cmd'] * 57.3)
     steer_angle_measure.append(ctrl_json_data[i]['steer_angle'] * 57.3)
@@ -1159,6 +1161,7 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
     'vel_KP_term': vel_kp_term,
     'vel_KI_term': vel_ki_term,
     'throttle_brake': throttle_brake,
+    'acc_vel': acc_vel,
 
     'steer_angle_cmd': steer_angle_cmd,
     'steer_angle_measure': steer_angle_measure,
@@ -1195,7 +1198,8 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   fig5.line('time', 'vel_KP_term', source = data_control_global, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'vel_kp_term')
   fig5.line('time', 'vel_KI_term', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'vel_ki_term')
   fig5.line('time', 'throttle_brake', source = data_control_global, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'throttle_brake')
-
+  fig5.line('time', 'acc_vel', source = data_control_global, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'acc_vel')
+  
   f6 = fig6.line('time', 'steer_angle_cmd', source = data_control_global, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer_angle_cmd')
   fig6.line('time', 'steer_angle_measure', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'steer_angle_measure')
   fig6.line('time', 'driver_hand_torque', source = data_control_global, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'driver_hand_torque')
@@ -1209,9 +1213,9 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time'), ('vel_cmd_plan', '@vel_cmd_plan'), ('vel_cmd_pos', '@vel_cmd_pos'),
                                               ('vel_measure', '@vel_measure')], mode='vline')
 
-  hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time'), ('path_length_plan', '@path_length_plan'), ('remain_s_plan', '@remain_s_plan'), ('remain_s_prebreak', '@remain_s_prebreak')], mode='vline')
+  hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time'), ('path_length_plan', '@path_length_plan'), ('remain_s_plan', '@remain_s_plan'),('remain_s_ctrl','@remain_s_ctrl'), ('remain_s_uss','@remain_s_uss'), ('remain_s_prebreak', '@remain_s_prebreak')], mode='vline')
 
-  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time'), ('vel_out', '@vel_out'), ('vel_KP_term', '@vel_KP_term'), ('vel_KI_term', '@vel_KI_term'), ('throttle_brake', '@throttle_brake')], mode='vline')
+  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time'), ('vel_out', '@vel_out'), ('vel_KP_term', '@vel_KP_term'), ('vel_KI_term', '@vel_KI_term'), ('throttle_brake', '@throttle_brake'),('acc_vel', '@acc_vel')], mode='vline')
 
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time'), ('steer_angle_cmd', '@steer_angle_cmd'), ('steer_angle_measure', '@steer_angle_measure'), ('driver_hand_torque', '@driver_hand_torque')], mode='vline')
 
