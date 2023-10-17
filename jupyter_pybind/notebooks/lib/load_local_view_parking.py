@@ -253,7 +253,7 @@ class LoadCyberbag:
     try:
       json_value_list = ["controller_status", "lon_enable", "lat_enable", "lat_mpc_status", "gear_plan", "gear_real", "gear_cmd",
                     "vel_ref", "vel_ref_gain", "vel_cmd", "vel_ego",
-                    "path_length_plan", "remain_s_plan", "remain_s_prebreak", "remain_s_uss", "remain_s_ctrl",
+                    "path_length_plan", "remain_s_plan", "remain_s_prebreak",  "remain_s_uss", "remain_s_ctrl",
                     "vel_out", "acc_vel", "vel_KP_term", "vel_KI_term", "slope_acc", "throttle_brake", 'acc_vel',
                     "steer_angle_cmd", "steer_angle", 'driver_hand_torque',
                     "lat_err", "phi_err",
@@ -595,6 +595,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       steer_deg = 0.0
 
     current_state = bag_loader.soc_state_msg['data'][soc_state_msg_idx].current_state
+    # local_view_data['data_text'].data.update({
+    #   'vel_ego_text': ['v = {:.2f} m/s, steer = {:.1f} deg, state = {:d}'.format(round(vel_ego, 2), round(steer_deg, 1), current_state)],
+    # })
     local_view_data['data_text'].data.update({
       'vel_ego_text': ['v = {:.2f} m/s, remain_s_ctrl = {:.1f} cm, steer = {:.1f} deg, state = {:d}'.format(round(vel_ego, 2), round(remain_s_ctrl, 1), round(steer_deg, 1), current_state)],
     })
@@ -1054,13 +1057,11 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   'remain_s_prebreak': [],
   "remain_s_uss": [],
   "remain_s_ctrl": [],
-
   'vel_out': [],
   'vel_KP_term': [],
   'vel_KI_term': [],
   'throttle_brake': [],
   'acc_vel': [],
-
   'steer_angle_cmd': [],
   'steer_angle_measure': [],
   'driver_hand_torque': [],
@@ -1085,13 +1086,11 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   remain_s_prebreak = []
   remain_s_uss = []
   remain_s_ctrl = []
-
   acc_cmd = []
   vel_kp_term = []
   vel_ki_term = []
   throttle_brake = []
   acc_vel = []
-
   steer_angle_cmd = []
   steer_angle_measure = []
   driver_hand_torque = []
@@ -1120,7 +1119,6 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
     remain_s_prebreak.append(ctrl_json_data[i]['remain_s_prebreak'])
     remain_s_uss.append(ctrl_json_data[i]['remain_s_uss'])
     remain_s_ctrl.append(ctrl_json_data[i]['remain_s_ctrl'])
-
     acc_cmd.append(ctrl_json_data[i]['vel_out'])
     vel_kp_term.append(ctrl_json_data[i]['vel_KP_term'])
     vel_ki_term.append(ctrl_json_data[i]['vel_KI_term'])
@@ -1129,7 +1127,6 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
       tmp_throttle_brake = tmp_throttle_brake / 1000
     throttle_brake.append(tmp_throttle_brake)
     acc_vel.append(ctrl_json_data[i]['acc_vel'])
-
     steer_angle_cmd.append(ctrl_json_data[i]['steer_angle_cmd'] * 57.3)
     steer_angle_measure.append(ctrl_json_data[i]['steer_angle'] * 57.3)
     driver_hand_torque.append(ctrl_json_data[i]['driver_hand_torque'])
@@ -1156,13 +1153,11 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
     'remain_s_prebreak': remain_s_prebreak,
     'remain_s_uss': remain_s_uss,
     "remain_s_ctrl": remain_s_ctrl,
-
     'vel_out': acc_cmd,
     'vel_KP_term': vel_kp_term,
     'vel_KI_term': vel_ki_term,
     'throttle_brake': throttle_brake,
     'acc_vel': acc_vel,
-
     'steer_angle_cmd': steer_angle_cmd,
     'steer_angle_measure': steer_angle_measure,
     'driver_hand_torque': driver_hand_torque,
@@ -1199,7 +1194,7 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   fig5.line('time', 'vel_KI_term', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'vel_ki_term')
   fig5.line('time', 'throttle_brake', source = data_control_global, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'throttle_brake')
   fig5.line('time', 'acc_vel', source = data_control_global, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'acc_vel')
-  
+
   f6 = fig6.line('time', 'steer_angle_cmd', source = data_control_global, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer_angle_cmd')
   fig6.line('time', 'steer_angle_measure', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'steer_angle_measure')
   fig6.line('time', 'driver_hand_torque', source = data_control_global, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'driver_hand_torque')
@@ -1410,6 +1405,8 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
       car_circle_xn = []
       car_circle_yn = []
       car_circle_rn = []
+      car_center_xn = []
+      car_center_yn = []
 
       flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamp)
       if not flag:
@@ -1419,6 +1416,8 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
         cur_pos_xn = loc_msg.pose.local_position.x
         cur_pos_yn = loc_msg.pose.local_position.y
         cur_pos_theta = loc_msg.pose.euler_angles.yaw
+        car_center_xn.append(cur_pos_xn)
+        car_center_yn.append(cur_pos_yn)
         # 自车形状
         for ego_i in range(len(car_xb)):
           tmp_x, tmp_y = local2global(car_xb[ego_i], car_yb[ego_i], cur_pos_xn, cur_pos_yn, cur_pos_theta)
@@ -1430,10 +1429,11 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
           car_circle_xn.append(tmp_x)
           car_circle_yn.append(tmp_y)
           car_circle_rn.append(car_circle_r[i])
+      # 自车中心点
+      ego_center_generate.xys.append((car_center_yn,car_center_xn))
       ego_car_generate.xys.append(([temp_cur_pos_yn],[temp_cur_pos_xn]))
       ego_circle_generate.xys.append((car_circle_yn,car_circle_xn, car_circle_rn))
-      # 自车中心点
-      ego_center_generate.xys.append(([cur_pos_yn],[cur_pos_xn]))
+
     ego_car_generate.ts = np.array(plan_debug_ts)
     ego_center_generate.ts = np.array(plan_debug_ts)
     ego_circle_generate.ts = np.array(plan_debug_ts)
@@ -1498,8 +1498,15 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
         if dataLoader.vs_msg['enable'] == True:
           while dataLoader.vs_msg['abs_t'][vs_msg_idx] <= localization_timestamp and vs_msg_idx < (len(dataLoader.vs_msg['abs_t'])-1):
               vs_msg_idx = vs_msg_idx + 1
-          steer_deg = dataLoader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
-        text = 'v = {:.2f} m/s, steer = {:.1f} deg, state = {:d}'.format(round(vel_ego, 2), round(steer_deg, 1), current_state)
+        steer_deg = dataLoader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
+
+        ctrl_debug_msg_idx = 0
+        if dataLoader.ctrl_debug_msg['enable'] == True:
+          while dataLoader.ctrl_debug_msg['abs_t'][ctrl_debug_msg_idx] <= localization_timestamp and ctrl_debug_msg_idx < (len(dataLoader.ctrl_debug_msg['abs_t'])-1):
+              ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
+        remain_s_ctrl = dataLoader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['remain_s_ctrl'] * 100
+
+        text = 'v = {:.2f} m/s, remain_s_ctrl = {:.1f} cm, steer = {:.1f} deg, state = {:d}'.format(round(vel_ego, 2), round(remain_s_ctrl, 1), round(steer_deg, 1), current_state)
         vel_text.append(text)
         vel_x.append(-2)
         vel_y.append(0)
@@ -1520,7 +1527,7 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
         if not flag:
             print('find fusion_slot_msg error')
             fusion_slot_generate.xys.append(([], []))
-            slot_id_generate.xys.append(([],[]))
+            slot_id_generate.xys.append(([], [], []))
             continue
         vis_parking_msg_idx = 0
         if dataLoader.vis_parking_msg['enable'] == True:
@@ -1823,6 +1830,10 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
           ctrl_json_data = dataLoader.ctrl_debug_msg['json']
           names.append("lat_mpc_status")
           datas.append(ctrl_json_data[ctrl_debug_msg_idx]['lat_mpc_status'])
+          names.append("remain_s_uss")
+          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['remain_s_uss'])
+          names.append("remain_s_ctrl")
+          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['remain_s_ctrl'])
           names.append("vel_ref_gain")
           datas.append(ctrl_json_data[ctrl_debug_msg_idx]['vel_ref_gain'])
           names.append("acc_vel")
@@ -1860,8 +1871,8 @@ def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time):
 
     json_value_list = ["controller_status", "lat_enable", "lon_enable", "gear_plan",
                         "vel_ref", "vel_cmd", "vel_ego",
-                        "path_length_plan", "remain_s_plan", "remain_s_prebreak",
-                        "vel_out", "vel_KP_term", "vel_KI_term", "throttle_brake",
+                        "path_length_plan", "remain_s_plan", "remain_s_prebreak", "remain_s_uss", "remain_s_ctrl",
+                        "vel_out", "vel_KP_term", "vel_KI_term", "throttle_brake", 'acc_vel',
                         "steer_angle_cmd", "steer_angle", "driver_hand_torque",
                         "lat_err", "phi_err"
                         ]
@@ -1915,7 +1926,11 @@ def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time):
     fig4.AddCurv(layer_manager,
                  ScalarGeneratorFromJson(json_value_xys_dict, "remain_s_plan"), "remain_s_plan")
     fig4.AddCurv(layer_manager,
-                 ScalarGeneratorFromJson(json_value_xys_dict, "remain_s_prebreak"), "remain_s_prebreak", last_line = True)
+                 ScalarGeneratorFromJson(json_value_xys_dict, "remain_s_prebreak"), "remain_s_prebreak")
+    fig4.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "remain_s_uss"), "remain_s_uss")
+    fig4.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "remain_s_ctrl"), "remain_s_ctrl", last_line = True)
 
     # fig5: vel status
     # "vel_out", "vel_KP_term", "vel_KI_term", "throttle_brake"
@@ -1933,7 +1948,9 @@ def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time):
     fig5.AddCurv(layer_manager,
                  ScalarGeneratorFromJson(json_value_xys_dict, "vel_KI_term"), "vel_ki_term")
     fig5.AddCurv(layer_manager,
-                 ScalarSomeGeneratorFromJson(json_value_xys_dict, "throttle_brake"), "throttle_brake", last_line = True)
+                 ScalarSomeGeneratorFromJson(json_value_xys_dict, "throttle_brake"), "throttle_brake")
+    fig5.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "acc_vel"), "acc_vel", last_line = True)
 
     # fig6: vel status
     # "steer_angle_cmd", "steer_angle", "driver_hand_torque"
