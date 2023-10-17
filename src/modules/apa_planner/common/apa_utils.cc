@@ -14,13 +14,13 @@
 
 namespace planning {
 
+using framework::Frame;
 using ::FuncStateMachine::FuncStateMachine;
 using ::FuncStateMachine::FunctionalState;
 using ::ParkingFusion::ParkingFusionSlot;
-using ::PlanningOutput::PlanningOutput;
-using framework::Frame;
 using planning::planning_math::Polygon2d;
 using planning::planning_math::Vec2d;
+using ::PlanningOutput::PlanningOutput;
 
 Polygon2d ConstructVehiclePolygon(const PlanningPoint& rear_center,
                                   const double half_width,
@@ -153,7 +153,8 @@ bool IsReplanEachFrame(const FuncStateMachine& func_state_machine) {
       func_state_machine.current_state() == FunctionalState::PARK_IN_NO_READY ||
       func_state_machine.current_state() == FunctionalState::PARK_IN_READY ||
       func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_ACTIVATE_WAIT) {
+          FunctionalState::PARK_IN_ACTIVATE_WAIT ||
+      func_state_machine.current_state() == FunctionalState::PARK_IN_SELECT) {
     return true;
   }
 
@@ -243,15 +244,8 @@ bool IsValidParkingState(
     const ::FuncStateMachine::FunctionalState& current_state) {
   AINFO << "current_state:" << current_state;
 
-  if (current_state == FunctionalState::PARK_IN_SEARCHING ||
-      current_state == FunctionalState::PARK_IN_NO_READY ||
-      current_state == FunctionalState::PARK_IN_READY ||
-      current_state == FunctionalState::PARK_IN_ACTIVATE_WAIT ||
-      current_state == FunctionalState::PARK_IN_ACTIVATE_CONTROL ||
-      current_state == FunctionalState::PARK_IN_SUSPEND_ACTIVATE ||
-      current_state == FunctionalState::PARK_IN_SUSPEND_CLOSE ||
-      current_state == FunctionalState::PARK_IN_SECURE ||
-      current_state == FunctionalState::PARK_IN_COMPLETED) {
+  if (current_state >= FunctionalState::PARK_IN_APA_IN &&
+      current_state <= FunctionalState::PARK_OUT_COMPLETED) {
     return true;
   }
   return false;
