@@ -662,7 +662,7 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
   PathPoint path_point;
 
   bool set_pB = false;
-
+  bool set_pC = false;
   // set pA always
   path_point.Set(output_.arc_AB.pA, output_.arc_AB.headingA);
   output_.path_point_vec.emplace_back(path_point);
@@ -705,6 +705,11 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
 
   if (!is_complete_path && gear_change_index == 1) {
     std::cout << "AB in Path!" << std::endl;
+    if (!set_pB) {
+      // set pB if not
+      path_point.Set(output_.arc_AB.pB, output_.arc_AB.headingB);
+      output_.path_point_vec.emplace_back(path_point);
+    }
     return;
   }
 
@@ -727,6 +732,8 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
 
     // set pC
     if (!set_pB) {
+      // set pC if pB not
+      set_pC = true;
       path_point.Set(output_.arc_CD.pA, output_.arc_CD.headingA);
       output_.path_point_vec.emplace_back(path_point);
     }
@@ -735,6 +742,11 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
 
   if (!is_complete_path && gear_change_index == 2) {
     std::cout << "AB & BC in Path!" << std::endl;
+    if (!set_pC) {
+      // set pC if not
+      path_point.Set(output_.arc_CD.pA, output_.arc_CD.headingA);
+      output_.path_point_vec.emplace_back(path_point);
+    }
     return;
   }
 
