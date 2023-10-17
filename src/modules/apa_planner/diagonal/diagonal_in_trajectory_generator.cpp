@@ -82,9 +82,9 @@ static const double min_replan_remain_dist =
 static const double standard_slot_length = 5.2;
 static const uint8_t max_gear_change_count = 6;
 
-static const double kSublaneWidth = 8.5;
-static const double kRightSublaneLength = 11.0;
-static const double kLeftSublaneLength = 11.0;
+static const double kSublaneWidth = 7.5;
+static const double kRightSublaneLength = 8.5;
+static const double kLeftSublaneLength = 8.5;
 
 static const double kEmergencyFlashTime = 0.6;
 static const double kMaxVelocity = 0.6;
@@ -302,7 +302,7 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
 
   // plan suceess
   if (is_plan_success_) {
-    std::cout << "------------- ready to send traj" << std::endl;
+    // std::cout << "------------- ready to send traj" << std::endl;
     planning_output->Clear();
 
     planning_output->mutable_planning_status()->set_apa_planning_status(
@@ -758,14 +758,16 @@ const bool DiagonalInTrajectoryGenerator::CheckIfCrossSublane(
 }
 
 const bool DiagonalInTrajectoryGenerator::CollisionCheck() {
+  auto out = dubins_planner_.GetOutput();
+
   // sample by large ds to get path point vector
-  dubins_planner_.Sampling(collision_check_sample_ds, true);
+  DubinsLibrary::GetSampling(out, collision_check_sample_ds, true);
 
   // transform to global
-  dubins_planner_.Transform(l2g_tf_);
+  DubinsLibrary::GetTransform(out.path_point_vec, l2g_tf_);
 
   // gen car circles by path point vector
-  collision_detector_.GenCarCircles(dubins_planner_.GetPathPointVec());
+  collision_detector_.GenCarCircles(out.path_point_vec);
 
   // collision detect
   return collision_detector_.CollisionDetect();
@@ -919,13 +921,12 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanFunc(const uint8_t level) {
 
 void DiagonalInTrajectoryGenerator::PrintDubinsOutput() {
   const auto& output = dubins_planner_.GetOutput();
-
+  std::cout << "------------------------------------- dubins result "
+            << std::endl;
   std::cout << "pA = " << output.arc_AB.pA.transpose() << std::endl;
   std::cout << "pB = " << output.arc_AB.pB.transpose() << std::endl;
   std::cout << "pC = " << output.arc_CD.pA.transpose() << std::endl;
   std::cout << "pD = " << output.arc_CD.pB.transpose() << std::endl;
-  std::cout << "------------------------------------- dubins result "
-            << std::endl;
 
   std::cout << "target_pos = "
             << dubins_planner_.GetOutput().arc_CD.pB.transpose()
@@ -1024,11 +1025,14 @@ const bool DiagonalInTrajectoryGenerator::CheckReplan(
   return false;
 }
 
-const bool DiagonalInTrajectoryGenerator::UpdateSplineGlobal() {
+void DiagonalInTrajectoryGenerator::PostProcessPath() {
+  // transform current dubins result to global
+  dubins_planner_.Transform(l2g_tf_);
+
   const auto& output = dubins_planner_.GetOutput();
   const auto N = output.path_point_vec.size();
   if (N < 3) {
-    return false;
+    spline_success_ = false;
   }
 
   std::vector<double> x_vec;
@@ -1076,10 +1080,10 @@ const bool DiagonalInTrajectoryGenerator::UpdateSplineGlobal() {
   y_vec.emplace_back(extend_p.y());
   s_vec.emplace_back(current_path_length_ + extend_s);
 
-  x_s_spline_l_.set_points(s_vec, x_vec);
-  y_s_spline_l_.set_points(s_vec, y_vec);
+  x_s_spline_g_.set_points(s_vec, x_vec);
+  y_s_spline_g_.set_points(s_vec, y_vec);
 
-  return true;
+  spline_success_ = true;
 }
 
 const bool DiagonalInTrajectoryGenerator::PathPlanCoreIteration() {
@@ -1172,11 +1176,8 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
     // std::cout << "extend_s = " << extend_s << std::endl;
   }
 
-  dubins_planner_.Transform(l2g_tf_);
-
-  // update spline for projection point dist calculation
-  // note that must update after transform
-  spline_success_ = UpdateSplineGlobal();
+  // process path
+  PostProcessPath();
 
   // record gear change count, must be after successful path plan
   gear_change_count_ = dubins_planner_.GetOutput().gear_change_count;
@@ -1297,7 +1298,7 @@ void DiagonalInTrajectoryGenerator::UpdateMeasurement() {
 
   if (spline_success_) {
     pnc::spline::Projection proj;
-    proj.CalProjectionPoint(x_s_spline_l_, y_s_spline_l_, 0.0, max_path_length,
+    proj.CalProjectionPoint(x_s_spline_g_, y_s_spline_g_, 0.0, max_path_length,
                             measure_.ego_pos);
 
     if (proj.GetOutput().success) {

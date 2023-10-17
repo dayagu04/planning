@@ -30,52 +30,14 @@ inline T BytesToProto(py::bytes &bytes) {
   return input;
 }
 
-int UpdateBytes(py::bytes &func_statemachine_bytes,
-                py::bytes &parking_slot_info_bytes,
-                py::bytes &localization_info_bytes,
-                py::bytes &vehicle_service_output_info_bytes,
-                py::bytes &slot_management_info_bytes, int selected_id) {
-  auto func_statemachine =
-      BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
-
-  auto parking_slot_info =
-      BytesToProto<ParkingFusion::ParkingFusionInfo>(parking_slot_info_bytes);
-
-  auto localization_info =
-      BytesToProto<LocalizationOutput::LocalizationEstimate>(
-          localization_info_bytes);
-
-  auto vehicle_service_output_info =
-      BytesToProto<VehicleService::VehicleServiceOutputInfo>(
-          vehicle_service_output_info_bytes);
-
-  auto slot_management_info =
-      BytesToProto<planning::common::SlotManagementInfo>(
-          slot_management_info_bytes);
-
-  static planning::LocalView local_view;
-
-  local_view.localization_estimate = localization_info;
-  local_view.vehicle_service_output_info = vehicle_service_output_info;
-  local_view.parking_fusion_info = parking_slot_info;
-  local_view.function_state_machine_info = func_statemachine;
-
-  pBase->SetLocalView(&local_view);
-
-  pBase->PathPlanOnceSimulation(slot_management_info);
-
-  return 0;
-}
-
 int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
                        py::bytes &parking_slot_info_bytes,
                        py::bytes &localization_info_bytes,
                        py::bytes &vehicle_service_output_info_bytes,
                        py::bytes &uss_wave_info_bytes,
                        py::bytes &slot_management_info_bytes, int selected_id,
-                       bool force_planning, uint8_t force_plan_stm,
-                       bool is_complete_path, double sublane_left_length,
-                       double sublane_right_length, double sublane_width) {
+                       bool force_planning, bool is_complete_path, double sublane_left_length,
+                       double sublane_right_length, double sublane_width, double sample_ds) {
   auto func_statemachine =
       BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
 
@@ -110,11 +72,11 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
   DiagonalInTrajectoryGenerator::SimulationParam param;
   param.force_planning_ = force_planning;
   param.selected_id_ = selected_id;
-  param.force_plan_stm = force_plan_stm;
   param.is_complete_path = is_complete_path;
   param.sublane_left_length = sublane_left_length;
   param.sublane_right_length = sublane_right_length;
   param.sublane_width = sublane_width;
+  param.sample_ds = sample_ds;
 
   pBase->SetSimulationParam(param);
   pBase->PathPlanOnceSimulation(slot_management_info);
@@ -172,7 +134,6 @@ PYBIND11_MODULE(diag_slot_planning_py, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)
-      .def("UpdateBytes", &UpdateBytes)
       .def("UpdateBytesByParam", &UpdateBytesByParam)
       .def("GetSlotManagementOutputBytes", &GetSlotManagementOutputBytes)
       .def("GetOutputBytes", &GetOutputBytes)

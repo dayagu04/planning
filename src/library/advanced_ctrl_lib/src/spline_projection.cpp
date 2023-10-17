@@ -19,8 +19,8 @@ void Projection::CalProjectionPoint(const mathlib::spline &x_s_spline,
   }
 
   // newton iteration to calculate projection point
-  const double half_length = (s_start + s_end) * 0.5;
-  double s_proj = half_length;
+  const double half_length = (s_end - s_start) * 0.5;
+  double s_proj = (s_end + s_start) * 0.5;;
   auto const &x0 = x.x();
   auto const &y0 = x.y();
 

@@ -11,7 +11,7 @@ from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/1015/1824/1015-1824/test_13.00000'
+bag_path = '/home/xlwang71/Downloads/APA/1017_1000/only_mono_step/test_0.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -54,28 +54,25 @@ class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=bag_time0, step=frame_dt)
     self.selected_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='25%'), description= "selected_id",min=0, max=100, value=origin_selected_id, step=1)
-    self.force_planning_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "force_planning",min=0, max=1, value=0, step=1)
-    self.turn_on_plan_stm_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "turn_on_plan_stm",min=0, max=1, value=0, step=1)
+    self.force_replan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "force_replan",min=0, max=1, value=0, step=1)
     self.is_complete_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "is_complete",min=0, max=1, value=0, step=1)
-    self.plan_stm_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "plan_stm",min=0, max=4, value=0, step=1)
-    self.sublane_left_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "sublane_left_length",min=0.0, max=15.0, value=11.0, step=0.1)
-    self.sublane_right_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "sublane_right_length",min=0.0, max=15.0, value=11.0, step=0.1)
-    self.sublane_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "sublane_width",min=0.0, max=15.0, value=8.5, step=0.1)
+    self.is_replay_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "is_replay",min=0, max=1, value=1, step=1)
+    self.sample_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "sample_ds",min=0.025, max=2.0, value=0.5, step=0.025)
+    self.chn_length_one_side_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "chn_length_one_side",min=0.0, max=15.0, value=11.0, step=0.1)
+    self.chn_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "chn_width",min=0.0, max=15.0, value=8.5, step=0.1)
 
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
                                         selected_id = self.selected_id_slider,
-                                        force_planning = self.force_planning_slider,
-                                        turn_on_plan_stm = self.turn_on_plan_stm_slider,
+                                        force_replan = self.force_replan_slider,
                                         is_complete = self.is_complete_slider,
-                                        plan_stm = self.plan_stm_slider,
-                                        sublane_left_length = self.sublane_left_length_slider,
-                                        sublane_right_length = self.sublane_right_length_slider,
-                                        sublane_width = self.sublane_width_slider)
+                                        is_replay = self.is_replay_slider,
+                                        sample_ds = self.sample_ds_slider,
+                                        chn_length_one_side = self.chn_length_one_side_slider,
+                                        chn_width = self.chn_width_slider)
 
 
 ### sliders callback
-def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, plan_stm, is_complete, sublane_left_length,
-                    sublane_right_length, sublane_width):
+def slider_callback(bag_time, selected_id, force_replan, is_replay, is_complete, sample_ds, chn_length_one_side, chn_width):
   kwargs = locals()
   update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data)
 
@@ -104,7 +101,6 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
   # print("vs_msg_input = ", vs_msg_input)
   planning_output = planning_plan_pb2.PlanningOutput()
 
-  plan_statemachine = plan_stm
   # if turn_on_plan_stm == 1:
   #   last_seg_name = plan_stm
   # else:
@@ -112,8 +108,9 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
   # print("plan_statemachine = ", plan_statemachine)
 
   # print(origin_plan_output)
-
-  is_replan = planning_json['is_replan']
+  is_replan = 0
+  if is_replay:
+    is_replan = planning_json['is_replan']
 
   print("is_replan = ", is_replan)
   print("ego_yaw_deg = ", loc_msg_input.pose.euler_angles.yaw * 57.3)
@@ -124,8 +121,8 @@ def slider_callback(bag_time, selected_id, force_planning, turn_on_plan_stm, pla
                                       vs_msg_input.SerializeToString(),
                                       wave_msg_input.SerializeToString(),
                                       planning_data.slot_management_info.SerializeToString(),
-                                      selected_id, (force_planning or is_replan), plan_statemachine,
-                                      is_complete, sublane_left_length, sublane_right_length, sublane_width)
+                                      selected_id, is_replan or force_replan, is_complete, chn_length_one_side,
+                                      chn_length_one_side, chn_width, sample_ds)
     planning_output.ParseFromString(diag_slot_planning_py.GetOutputBytes())
   except:
     print("error")

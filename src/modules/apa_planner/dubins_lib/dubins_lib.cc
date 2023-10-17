@@ -644,41 +644,42 @@ const bool DubinsLibrary::GenDubinsOutput(
   return true;
 }
 
-void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
-  if (!output_.path_available) {
+void DubinsLibrary::GetSampling(Output& output, const double ds,
+                                const bool is_complete_path) {
+  if (!output.path_available) {
     return;
   }
 
-  const size_t N = std::ceil(output_.length / ds) + 10;
+  const size_t N = std::ceil(output.length / ds) + 10;
 
-  output_.path_point_vec.clear();
-  output_.path_point_vec.reserve(N);
+  output.path_point_vec.clear();
+  output.path_point_vec.reserve(N);
 
-  const auto& arc_AB_length = output_.arc_AB.length;
-  const auto& line_BC_length = output_.line_BC.length;
-  const auto& arc_CD_length = output_.arc_CD.length;
-  const auto& gear_change_index = output_.gear_change_index;
+  const auto& arc_AB_length = output.arc_AB.length;
+  const auto& line_BC_length = output.line_BC.length;
+  const auto& arc_CD_length = output.arc_CD.length;
+  const auto& gear_change_index = output.gear_change_index;
 
   PathPoint path_point;
 
   bool set_pB = false;
   bool set_pC = false;
   // set pA always
-  path_point.Set(output_.arc_AB.pA, output_.arc_AB.headingA);
-  output_.path_point_vec.emplace_back(path_point);
+  path_point.Set(output.arc_AB.pA, output.arc_AB.headingA);
+  output.path_point_vec.emplace_back(path_point);
   // sampling arc AB first
-  if (!output_.arc_AB.is_ignored) {
+  if (!output.arc_AB.is_ignored) {
     // sample rest of arc AB (pB is not included)
-    const auto& pO1 = output_.arc_AB.circle_info.center;
+    const auto& pO1 = output.arc_AB.circle_info.center;
 
-    const double dtheta1 = ds / output_.arc_AB.circle_info.radius *
-                           (output_.arc_AB.is_anti_clockwise ? 1.0 : -1.0);
+    const double dtheta1 = ds / output.arc_AB.circle_info.radius *
+                           (output.arc_AB.is_anti_clockwise ? 1.0 : -1.0);
 
     const auto rot_m1 = GetRotm2dFromTheta(dtheta1);
     double s = ds;
     // v_O1A
-    Eigen::Vector2d v_n = output_.arc_AB.pA - output_.arc_AB.circle_info.center;
-    double theta = output_.arc_AB.headingA;
+    Eigen::Vector2d v_n = output.arc_AB.pA - output.arc_AB.circle_info.center;
+    double theta = output.arc_AB.headingA;
     Eigen::Vector2d pn;
 
     if (arc_AB_length > ds) {
@@ -689,44 +690,44 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
         theta += dtheta1;
 
         path_point.Set(pn, NormalizeAngle(theta));
-        output_.path_point_vec.emplace_back(path_point);
+        output.path_point_vec.emplace_back(path_point);
       }
     }
 
     // set pB
     if (line_BC_length > ds) {
-      path_point.Set(output_.arc_AB.pB, output_.arc_AB.headingB);
-      output_.path_point_vec.emplace_back(path_point);
+      path_point.Set(output.arc_AB.pB, output.arc_AB.headingB);
+      output.path_point_vec.emplace_back(path_point);
       set_pB = true;
     }
   }
 
-  output_.path_seg_count = 1;
+  output.path_seg_count = 1;
 
   if (!is_complete_path && gear_change_index == 1) {
     // std::cout << "AB in Path!" << std::endl;
     if (!set_pB) {
       // set pB if not
-      path_point.Set(output_.arc_AB.pB, output_.arc_AB.headingB);
-      output_.path_point_vec.emplace_back(path_point);
+      path_point.Set(output.arc_AB.pB, output.arc_AB.headingB);
+      output.path_point_vec.emplace_back(path_point);
     }
     return;
   }
 
   // sample rest of line BC (pC is not included)
-  if (!output_.line_BC.is_ignored) {
+  if (!output.line_BC.is_ignored) {
     double s = ds;
-    auto pn = output_.line_BC.pA;
-    auto theta = output_.arc_AB.headingB;
+    auto pn = output.line_BC.pA;
+    auto theta = output.arc_AB.headingB;
 
     const auto diff_vec =
-        (output_.line_BC.pB - output_.line_BC.pA).normalized() * ds;
+        (output.line_BC.pB - output.line_BC.pA).normalized() * ds;
     if (line_BC_length > ds) {
       while (s < line_BC_length) {
         pn += diff_vec;
         s += ds;
         path_point.Set(pn, theta);
-        output_.path_point_vec.emplace_back(path_point);
+        output.path_point_vec.emplace_back(path_point);
       }
     }
 
@@ -734,35 +735,35 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
     if (!set_pB) {
       // set pC if pB not
       set_pC = true;
-      path_point.Set(output_.arc_CD.pA, output_.arc_CD.headingA);
-      output_.path_point_vec.emplace_back(path_point);
+      path_point.Set(output.arc_CD.pA, output.arc_CD.headingA);
+      output.path_point_vec.emplace_back(path_point);
     }
   }
-  output_.path_seg_count = 2;
+  output.path_seg_count = 2;
 
   if (!is_complete_path && gear_change_index == 2) {
     // std::cout << "AB & BC in Path!" << std::endl;
     if (!set_pC) {
       // set pC if not
-      path_point.Set(output_.arc_CD.pA, output_.arc_CD.headingA);
-      output_.path_point_vec.emplace_back(path_point);
+      path_point.Set(output.arc_CD.pA, output.arc_CD.headingA);
+      output.path_point_vec.emplace_back(path_point);
     }
     return;
   }
 
-  if (!output_.arc_CD.is_ignored) {
+  if (!output.arc_CD.is_ignored) {
     // sample rest of arc CD (pD is not included)
-    auto pn = output_.arc_AB.pA;
-    auto theta = output_.arc_CD.headingA;
+    auto pn = output.arc_AB.pA;
+    auto theta = output.arc_CD.headingA;
 
-    const auto& pO2 = output_.arc_CD.circle_info.center;
+    const auto& pO2 = output.arc_CD.circle_info.center;
 
-    const double dtheta2 = ds / output_.arc_CD.circle_info.radius *
-                           (output_.arc_CD.is_anti_clockwise ? 1.0 : -1.0);
+    const double dtheta2 = ds / output.arc_CD.circle_info.radius *
+                           (output.arc_CD.is_anti_clockwise ? 1.0 : -1.0);
 
     const auto rot_m2 = GetRotm2dFromTheta(dtheta2);
     // v_O2C
-    Eigen::Vector2d v_n = output_.arc_CD.pA - output_.arc_CD.circle_info.center;
+    Eigen::Vector2d v_n = output.arc_CD.pA - output.arc_CD.circle_info.center;
     auto s = ds;
     if (arc_CD_length > ds) {
       while (s < arc_CD_length) {
@@ -772,17 +773,21 @@ void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
         theta += dtheta2;
 
         path_point.Set(pn, NormalizeAngle(theta));
-        output_.path_point_vec.emplace_back(path_point);
+        output.path_point_vec.emplace_back(path_point);
       }
     }
   }
 
   // set pD always
-  path_point.Set(output_.arc_CD.pB, output_.arc_CD.headingB);
-  output_.path_point_vec.emplace_back(path_point);
+  path_point.Set(output.arc_CD.pB, output.arc_CD.headingB);
+  output.path_point_vec.emplace_back(path_point);
 
   // std::cout << "AB & BC & CD, all in Path!" << std::endl;
-  output_.path_seg_count = 3;
+  output.path_seg_count = 3;
+}
+
+void DubinsLibrary::Sampling(const double ds, const bool is_complete_path) {
+  GetSampling(output_, ds, is_complete_path);
 }
 
 void DubinsLibrary::Extend(const double extend_s) {
@@ -808,13 +813,19 @@ void DubinsLibrary::Extend(const double extend_s) {
   output_.path_point_vec.emplace_back(path_point);
 }
 
-void DubinsLibrary::Transform(const geometry_lib::LocalToGlobalTf& l2g_tf) {
-  for (auto& path_point : output_.path_point_vec) {
+void DubinsLibrary::GetTransform(
+    std::vector<DubinsLibrary::PathPoint>& path_point_vec,
+    const geometry_lib::LocalToGlobalTf& l2g_tf) {
+  for (auto& path_point : path_point_vec) {
     const Eigen::Vector2d pos_g = l2g_tf.GetPos(path_point.pos);
     const double heading_g = l2g_tf.GetHeading(path_point.heading);
 
     path_point.Set(std::move(pos_g), heading_g);
   }
+}
+
+void DubinsLibrary::Transform(const geometry_lib::LocalToGlobalTf& l2g_tf) {
+  GetTransform(output_.path_point_vec, l2g_tf);
 }
 
 const std::vector<double> DubinsLibrary::GetPathEle(size_t index) const {

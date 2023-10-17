@@ -161,7 +161,7 @@ class DiagonalInTrajectoryGenerator {
  private:
   void UpdateMeasurement();
   void UpdateEgoSlotInfo(const int slot_index);
-  const bool UpdateSplineGlobal();
+  void PostProcessPath();
 
   void GeneratePlanningOutput(
       PlanningOutput::PlanningOutput *const planning_output);
@@ -245,8 +245,8 @@ class DiagonalInTrajectoryGenerator {
   // system states
   pnc::geometry_lib::GlobalToLocalTf g2l_tf_;
   pnc::geometry_lib::LocalToGlobalTf l2g_tf_;
-  pnc::mathlib::spline x_s_spline_l_;
-  pnc::mathlib::spline y_s_spline_l_;
+  pnc::mathlib::spline x_s_spline_g_;
+  pnc::mathlib::spline y_s_spline_g_;
   double current_path_length_ = 0.0;
   double remain_dist_ = 0.0;
   pnc::dubins_lib::DubinsLibrary::PathPoint terminal_err_;

@@ -132,6 +132,13 @@ class DubinsLibrary {
   void Extend(const double extend_s);
   void Transform(const geometry_lib::LocalToGlobalTf& l2g_tf);
 
+  static void GetSampling(Output& Output, const double ds,
+                          const bool is_complete_path);
+
+  static void GetTransform(
+      std::vector<DubinsLibrary::PathPoint>& path_point_vec,
+      const geometry_lib::LocalToGlobalTf& l2g_tf);
+
   void SetOutput(const Output& Output) { output_ = Output; }
   const Output& GetOutput() const { return output_; }
   const Output* GetOutputPtr() const { return &output_; }
@@ -160,9 +167,9 @@ class DubinsLibrary {
 
   const bool GenDubinsOutput(Output& output,
                              const DubinsLibrary::GeometryResult& result);
-                             
+
   const bool GenLineArcOutput(Output& output,
-                             const DubinsLibrary::GeometryResult& result);
+                              const DubinsLibrary::GeometryResult& result);
   Input input_;
   Output output_;
   uint8_t dubins_type_ = 0;
