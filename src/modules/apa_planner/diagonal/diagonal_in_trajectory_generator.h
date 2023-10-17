@@ -45,7 +45,6 @@ class DiagonalInTrajectoryGenerator {
   };
 
   enum DubinsPlanLevel {
-    DUBINS_LEVEL_NONE,
     DUBINS_LEVEL_ZERO_GEAR_CHANGE,
     DUBINS_LEVEL_ONCE_GEAR_CHANGE,
     DUBINS_LEVEL_TWICE_GEAR_CHANGE,
@@ -120,6 +119,8 @@ class DiagonalInTrajectoryGenerator {
     double sublane_width = 0.0;
     double sublane_right_length = 0.0;
     double sublane_left_length = 0.0;
+
+    uint8_t plan_level = DUBINS_LEVEL_ONCE_GEAR_CHANGE;
   };
 
   DiagonalInTrajectoryGenerator() {
@@ -171,13 +172,12 @@ class DiagonalInTrajectoryGenerator {
 
   // sub function for dubins plan
   const bool DubinsPlanOneStep(const PlanInput &plan_input,
-                               const uint8_t plan_algorithm,
-                               const uint8_t level);
+                               const uint8_t plan_algorithm);
 
-  const bool DubinsPlanFunc(const uint8_t level);
+  const bool DubinsPlanOnceGearChange(uint8_t plan_statemachine);
+  const bool DubinsPlanTwiceGearChange(uint8_t plan_statemachine);
 
-  void UpdateDubinsInputByLevel(const uint8_t level);
-  const bool PathEvaluateOnce(const uint8_t level);
+  const bool PathEvaluateOnce() const;
   const bool CollisionCheck();
   const bool CheckIfCrossSublane() const;
 
@@ -228,6 +228,8 @@ class DiagonalInTrajectoryGenerator {
   size_t replan_in_slot_count_ = 0;
   pnc::dubins_lib::DubinsLibrary::Input dubins_input_;
   pnc::dubins_lib::DubinsLibrary::Output plan_result_;
+  std::vector<pnc::dubins_lib::DubinsLibrary::Output> multi_step_plan_result_;
+
   size_t dubins_iter_count_ = 0;
   double sublane_left_length_ = 0.0;
   double sublane_right_length_ = 0.0;
@@ -256,10 +258,11 @@ class DiagonalInTrajectoryGenerator {
   bool is_finished_ = false;
   bool is_plan_success_ = false;
   uint8_t gear_change_count_ = 6;
-  uint8_t path_level_ = DUBINS_LEVEL_NONE;
+  uint8_t path_level_ = DUBINS_LEVEL_ZERO_GEAR_CHANGE;
   double stuck_time_ = 0.0;
   double slot_occupied_ratio_ = 0.0;
   double parking_continue_time_ = 0.0;
+  bool twice_gear_change_enable_ = true;
 
   Measurement measure_;
   EgoSlotInfo ego_slot_info_;

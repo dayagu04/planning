@@ -14,6 +14,7 @@
 #include "transform_lib.h"
 
 // #define __USS_OA_DEBUG__
+static const double lat_inflation = 0.18;
 
 // car data
 static const std::vector<double> car_vertex_x_vec = {
@@ -22,9 +23,15 @@ static const std::vector<double> car_vertex_x_vec = {
     -0.879389, -0.798324, -0.476357, 1.96496,   1.916421,  2.177994};
 
 static const std::vector<double> car_vertex_y_vec = {
-    0.887956,  0.681712,         0.334651,  -0.334651, -0.681712,     -0.887956,
-    -0.887956, -(1.06715 + 0.1), -0.887956, -0.887956, -0.706505,     -0.334845,
-    0.334845,  0.706505,         0.887956,  0.887956,  1.06715 + 0.1, 0.887956};
+    0.887956 + lat_inflation,      0.681712 + lat_inflation,
+    0.334651 + lat_inflation,      -(0.334651 + lat_inflation),
+    -(0.681712 + lat_inflation),   -(0.887956 + lat_inflation),
+    -(0.887956 + lat_inflation),   -(1.06715 + lat_inflation),
+    -(0.887956 + lat_inflation),   -(0.887956 + lat_inflation),
+    -(0.706505 + lat_inflation),   -(0.334845 + lat_inflation),
+    0.334845 + lat_inflation,      0.706505 + lat_inflation,
+    0.887956 + lat_inflation,      0.887956 + lat_inflation,
+    1.06715  + lat_inflation, 0.887956 + lat_inflation};
 
 // uss data
 static const std::vector<double> uss_vertex_x_vec = {
