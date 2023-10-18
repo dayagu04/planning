@@ -74,18 +74,18 @@ static const double collision_check_sample_ds = 0.5;
 static const double safe_uss_remain_dist = 0.35;
 static const double stuck_failed_time = 6.0;
 static const double stuck_replan_time = 4.0;
-static const double slot_width_offset_empty = 1.0;
+static const double slot_width_offset_empty = 0.15;
 static const double min_replan_remain_dist =
     0.2;  // in control, this value must be smaller
 static const double standard_slot_length = 5.2;
 static const uint8_t max_gear_change_count = 6;
 
-static const double kSublaneWidth = 7.5;
-static const double kRightSublaneLength = 8.5;
-static const double kLeftSublaneLength = 8.5;
+static const double kSublaneWidth = 5.0;
+static const double kRightSublaneLength = 7.0;
+static const double kLeftSublaneLength = 7.0;
 static const double max_slot_target_angle = 60.0 / 57.3;
 static const double min_right_slot_target_angle = 30.0 / 57.3;
-static const double multi_gear_change_slot_target_y = 0.3;
+static const double multi_gear_change_slot_target_y = 0.1;
 static const double yaw_step = 1.0 / 57.3;
 
 static const double kEmergencyFlashTime = 0.6;
@@ -559,11 +559,14 @@ void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
   const auto half_slot_width = 0.5 * ego_slot_info_.slot_width;
 
   Eigen::Vector2d origin = ego_slot_info_.slot_origin_pos;
+
   Eigen::Vector2d left_pA = origin + (half_slot_width + slot_width_offset_) * t;
-  Eigen::Vector2d left_pB = left_pA + kNormalSlotLength * n;
+  Eigen::Vector2d left_pB = left_pA + kNormalSlotLength * n * 0.95;
+
   Eigen::Vector2d right_pA =
       origin - (half_slot_width + slot_width_offset_) * t;
-  Eigen::Vector2d right_pB = right_pA + kNormalSlotLength * n;
+
+  Eigen::Vector2d right_pB = right_pA + kNormalSlotLength * n * 0.95;
 
   ego_slot_info_.slot_obs.second[EgoSlotInfo::LEFT] =
       pnc::geometry_lib::LineSegment(left_pA, left_pB);

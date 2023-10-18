@@ -146,6 +146,7 @@ class DiagonalInTrajectoryGenerator {
 
   // for pybind simulation
   void SetSimulationParam(SimulationParam &param) { simu_param_ = param; }
+  void SetSlotWidthOffset(double slot_width_offset) {slot_width_offset_ = slot_width_offset;}
 
   // for apa planner pybind simulation
   const bool PathPlanOnceSimulation(

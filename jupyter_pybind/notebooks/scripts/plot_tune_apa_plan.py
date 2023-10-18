@@ -11,7 +11,7 @@ from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/1017_1000/only_mono_step/test_0.00000'
+bag_path = '/home/gdbai2/20231017/test_10.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -58,8 +58,10 @@ class LocalViewSlider:
     self.is_complete_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "is_complete",min=0, max=1, value=0, step=1)
     self.is_replay_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "is_replay",min=0, max=1, value=1, step=1)
     self.sample_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "sample_ds",min=0.025, max=2.0, value=0.5, step=0.025)
-    self.chn_length_one_side_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "chn_length_one_side",min=0.0, max=15.0, value=11.0, step=0.1)
-    self.chn_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "chn_width",min=0.0, max=15.0, value=8.5, step=0.1)
+    self.chn_length_one_side_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "chn_length_one_side",min=0.0, max=15.0, value=7.0, step=0.1)
+    self.chn_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "chn_width",min=0.0, max=15.0, value=5.0, step=0.1)
+    self.slot_width_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "slot_width_offset",min=0.0, max=5.0, value=0.15, step=0.05)
+
 
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
                                         selected_id = self.selected_id_slider,
@@ -68,11 +70,12 @@ class LocalViewSlider:
                                         is_replay = self.is_replay_slider,
                                         sample_ds = self.sample_ds_slider,
                                         chn_length_one_side = self.chn_length_one_side_slider,
-                                        chn_width = self.chn_width_slider)
+                                        chn_width = self.chn_width_slider,
+                                        slot_width_offset = self.slot_width_offset_slider)
 
 
 ### sliders callback
-def slider_callback(bag_time, selected_id, force_replan, is_replay, is_complete, sample_ds, chn_length_one_side, chn_width):
+def slider_callback(bag_time, selected_id, force_replan, is_replay, is_complete, sample_ds, chn_length_one_side, chn_width, slot_width_offset):
   kwargs = locals()
   update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data)
 
@@ -122,7 +125,7 @@ def slider_callback(bag_time, selected_id, force_replan, is_replay, is_complete,
                                       wave_msg_input.SerializeToString(),
                                       planning_data.slot_management_info.SerializeToString(),
                                       selected_id, is_replan or force_replan, is_complete, chn_length_one_side,
-                                      chn_length_one_side, chn_width, sample_ds)
+                                      chn_length_one_side, chn_width, sample_ds, slot_width_offset)
     planning_output.ParseFromString(diag_slot_planning_py.GetOutputBytes())
   except:
     print("error")
