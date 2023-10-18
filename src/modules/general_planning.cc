@@ -14,6 +14,7 @@
 #include "planning_output_context.h"
 #include "scene_type_config.pb.h"
 #include "vehicle_config_context.h"
+#include "utils/lateral_utils.h"
 
 namespace planning {
 
@@ -202,11 +203,13 @@ void GeneralPlanning::FillPlanningTrajectory(
     // const double max_lat_offset = config.max_lat_offset();
     const double lat_offset_rate = 0.2;
     const double max_lat_offset = 2;
+    const double presee_x_dist = 50.;
     static double limited_polynomial_3 = 0.0;
     const auto &d_polynomial = lateral_output.d_poly;
+    double presee_y_dist = calc_poly1d(d_polynomial, presee_x_dist);
 
     if (d_polynomial.size() == 4) {
-      if (std::fabs(d_polynomial[3]) > max_lat_offset) {
+      if (std::fabs(d_polynomial[3] + presee_y_dist) * 0.5 > max_lat_offset) {
         limited_polynomial_3 += planning_math::Clamp(
             d_polynomial[3], -lat_offset_rate, lat_offset_rate);
       } else {
