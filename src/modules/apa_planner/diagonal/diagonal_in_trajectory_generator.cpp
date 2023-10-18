@@ -85,6 +85,7 @@ static const double kRightSublaneLength = 11.0;
 static const double kLeftSublaneLength = 11.0;
 
 static const double kEmergencyFlashTime = 0.6;
+static const double kMaxVelocity = 0.6;
 
 // vehicle params
 static const double kFrontOverhanging = 0.924;
@@ -325,6 +326,22 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
       trajectory_point->set_heading_yaw(path_point.heading);
       trajectory_point->set_v(0.5);
     }
+
+    // set target velocity to control as a limit
+    const std::vector<double> ratio_tab = {0.0, 0.5, 0.8, 1.0};
+    const std::vector<double> vel_limit_tab = {0.3, 0.3, kMaxVelocity,
+                                               kMaxVelocity};
+    const double vel_limit =
+        pnc::mathlib::Interp1(ratio_tab, vel_limit_tab, slot_occupied_ratio_);
+
+    planning_output->mutable_trajectory()
+        ->mutable_target_reference()
+        ->set_target_velocity(vel_limit);
+
+    // send slot occupation ratio to control
+    planning_output->mutable_trajectory()
+        ->mutable_trajectory_points(1)
+        ->set_distance(slot_occupied_ratio_);
 
     // set plan gear cmd
     auto gear_command = planning_output->mutable_gear_command();
