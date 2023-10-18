@@ -216,6 +216,7 @@ class DiagonalInTrajectoryGenerator {
   uint8_t path_level_ = DUBINS_LEVEL_NONE;
   double stuck_time_ = 0.0;
   double slot_occupied_ratio_ = 0.0;
+  double parking_continue_time_ = 0.0;
 
   Measurement measure_;
   EgoSlotInfo ego_slot_info_;

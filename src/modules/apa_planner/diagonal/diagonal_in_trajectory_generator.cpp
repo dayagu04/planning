@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "Platform_Types.h"
+#include "common.pb.h"
 #include "common/apa_cos_sin.h"
 #include "common/apa_utils.h"
 #include "common/planning_log_helper.h"
@@ -82,6 +83,8 @@ static const uint8_t max_gear_change_count = 6;
 static const double kSublaneWidth = 8.5;
 static const double kRightSublaneLength = 11.0;
 static const double kLeftSublaneLength = 11.0;
+
+static const double kEmergencyFlashTime = 0.6;
 
 // vehicle params
 static const double kFrontOverhanging = 0.924;
@@ -252,6 +255,7 @@ void DiagonalInTrajectoryGenerator::Reset() {
   sublane_width_ = kSublaneWidth;
   stuck_time_ = 0.0;
   slot_occupied_ratio_ = 0.0;
+  parking_continue_time_ = 0.0;
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
@@ -284,6 +288,11 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
     if (is_finished_) {
       SetFinishedPlanningOutput(frame_);
       return;
+    }
+
+    if (current_state_ == FunctionalState::PARK_IN_ACTIVATE_WAIT ||
+        current_state_ == FunctionalState::PARK_IN_ACTIVATE_CONTROL) {
+      parking_continue_time_ += plan_time;
     }
 
     // not active
@@ -327,6 +336,15 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
     } else {
       gear_command->set_gear_command_value(
           Common::GearCommandValue::GEAR_COMMAND_VALUE_REVERSE);
+    }
+
+    // set emergency flash cmd
+    if (parking_continue_time_ < kEmergencyFlashTime) {
+      planning_output->mutable_turn_signal_command()->set_turn_signal_value(
+          Common::TurnSignalType::TURN_SIGNAL_TYPE_EMERGENCY_FLASH);
+    } else {
+      planning_output->mutable_turn_signal_command()->set_turn_signal_value(
+          Common::TurnSignalType::TURN_SIGNAL_TYPE_NONE);
     }
   } else {
     if (!simulation_enable_flag_) {
