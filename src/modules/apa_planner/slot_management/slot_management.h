@@ -138,9 +138,10 @@ class SlotManagement {
 
   void Reset();
 
-  const common::SlotInfo GetSelectedSlot(const int selected_id) const {
-    return slot_management_info_.slot_info_vec(slot_info_map_.at(selected_id));
-  }
+  const bool GetSelectedSlot(common::SlotInfo& slot_info,
+                             const int selected_id) const;
+
+  const size_t GetFusedSlotSize() { return slot_info_window_vec_.size(); }
 
   const common::SlotManagementInfo GetOutput() const {
     return slot_management_info_;

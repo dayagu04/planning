@@ -14,6 +14,7 @@
 #include "frame.h"
 #include "local_view.h"
 #include "math/box2d.h"
+#include "parking_fusion.pb.h"
 #include "path_point.h"
 #include "planning_plan.pb.h"
 #include "slot_management/slot_management.h"
@@ -137,7 +138,7 @@ class DiagonalInTrajectoryGenerator {
   void UpdateDubinsInputByLevel(const uint8_t level);
   const bool PathEvaluateOnce(const uint8_t level);
   const bool CheckIfCrossSublane() const;
-  
+
   const bool CheckIfCrossSublane(
       pnc::dubins_lib::DubinsLibrary::PathPoint check_point) const;
 
@@ -156,7 +157,7 @@ class DiagonalInTrajectoryGenerator {
 
   const bool PathPlanCoreIteration();
   void Log() const;
-  void UpdateManagedParkingFusion(const int select_slot_index);
+  const bool UpdateManagedParkingFusion(const int select_slot_index);
 
  private:
   // reset

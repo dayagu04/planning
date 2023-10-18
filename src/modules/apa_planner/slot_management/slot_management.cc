@@ -14,7 +14,7 @@
 #include "slot_management_info.pb.h"
 #include "transform_lib.h"
 
-#define __DEBUG_PRINT__
+// #define __DEBUG_PRINT__
 namespace planning {
 
 static const double kPie = 3.141592653589793;
@@ -74,8 +74,9 @@ bool SlotManagement::Update(
     update_occupied_flag = UpdateSlotsInParking();
   }
 
-  std::cout << "update_searching_flag: " << update_searching_flag << std::endl;
-  std::cout << "update_occupied_flag: " << update_occupied_flag << std::endl;
+  // std::cout << "update_searching_flag: " << update_searching_flag <<
+  // std::endl; std::cout << "update_occupied_flag: " << update_occupied_flag <<
+  // std::endl;
 
   ReleaseSlots();
 
@@ -89,6 +90,17 @@ bool SlotManagement::Update(
     return true;
   } else {
     return false;
+  }
+}
+
+const bool SlotManagement::GetSelectedSlot(common::SlotInfo &slot_info,
+                                           const int selected_id) const {
+  if (slot_info_map_.count(selected_id) == 0) {
+    return false;
+  } else {
+    slot_info =
+        slot_management_info_.slot_info_vec(slot_info_map_.at(selected_id));
+    return true;
   }
 }
 
@@ -195,19 +207,19 @@ bool SlotManagement::UpdateSlotsInParking() {
   if (correct_slot_order) {
     fusion_order_error_cnt_++;
   }
-  std::cout << "fusion_order_error_cnt_: " << fusion_order_error_cnt_
-            << std::endl;
 
   // calculate occupied ratio
   slot_occupied_ratio_ = CalOccupiedRatio();
-  std::cout << "occupied_ratio in slm: " << slot_occupied_ratio_ << std::endl;
+  // std::cout << "occupied_ratio in slm: " << slot_occupied_ratio_ <<
+  // std::endl;
 
   // if occupied percentage is less than certain value,return
   bool is_occupied = false;
   if (slot_occupied_ratio_ < kMinSlotUpdateOccupiedRatio) {
     is_occupied = false;
     is_occupied_ = is_occupied;
-    std::cout << "occupied_ratio is less than min update value " << std::endl;
+    // std::cout << "occupied_ratio is less than min update value " <<
+    // std::endl;
     return false;
   } else {
     is_occupied = true;
@@ -277,8 +289,8 @@ double SlotManagement::CalOccupiedRatio() const {
                 (dst_rear_edge_to_rear_axle + buffer) * slot_heading_unit_vec;
   }
 
-  std::cout << "current pos: " << measurement_.ego_pos << std::endl;
-  std::cout << "target pos: " << target_pt << std::endl;
+  // std::cout << "current pos: " << measurement_.ego_pos << std::endl;
+  // std::cout << "target pos: " << target_pt << std::endl;
 
   Eigen::Vector2d slot_01_middle_to_ego_pos =
       measurement_.ego_pos - middle_pt_01;

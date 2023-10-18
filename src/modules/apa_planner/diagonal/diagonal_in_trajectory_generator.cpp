@@ -104,7 +104,7 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
       planning_output->planning_status().has_apa_planning_status() &&
       planning_output->planning_status().apa_planning_status() ==
           ::PlanningOutput::ApaPlanningStatus::FINISHED) {
-    AINFO << "apa is finished";
+    std::cout << "apa is finished" << std::endl;
     return true;
   }
   frame_ = frame;
@@ -132,6 +132,9 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
                        &origin_parking_fusion_info,
                        &local_view_->localization_estimate);
 
+  std::cout << "slot manager: fused slot size = "
+            << slot_manager_.GetFusedSlotSize() << std::endl;
+
   // set local view to uss oa
   uss_oa_.SetLocalView(local_view_);
 
@@ -142,7 +145,8 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
 
   const int slots_size = parking_fusion_info.parking_fusion_slot_lists_size();
   if (slots_size == 0) {
-    AERROR << "Error: slot size is 0";
+    std::cout << "Error: slot size is 0" << std::endl;
+
     return false;
   }
 
@@ -156,13 +160,13 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
   const auto& slots = parking_fusion_info.parking_fusion_slot_lists();
   if (IsSlotSelected(frame)) {
     if (!parking_fusion_info.has_select_slot_id()) {
-      AERROR << "no select_slot_id";
+      std::cout << "no select_slot_id" << std::endl;
       return false;
     }
 
     int select_slot_index = -1;
     const size_t selected_slot_id = parking_fusion_info.select_slot_id();
-    AINFO << "selected_slot_id:" << selected_slot_id;
+    std::cout << "selected_slot_id:" << selected_slot_id << std::endl;
     for (int i = 0; i < parking_fusion_info.parking_fusion_slot_lists_size();
          ++i) {
       if (selected_slot_id != slots[i].id()) {
@@ -173,20 +177,26 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
           slots[i].type() ==
               Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
         select_slot_index = i;
-        AINFO << "diagonal slot selected";
+        std::cout << "diagonal slot selected" << std::endl;
         break;
       }
     }
+
     if (select_slot_index == -1) {
-      AERROR << "selected slot is not diagonal";
+      std::cout << "selected slot is not diagonal" << std::endl;
       return false;
     }
 
     // update managed parking fusion info by slot_manager
-    UpdateManagedParkingFusion(select_slot_index);
+    if (!UpdateManagedParkingFusion(select_slot_index)) {
+      std::cout << "selceted slot is not released!" << std::endl;
+      return false;
+    }
 
     // plan once
     PathPlanOnce(select_slot_index, planning_output);
+
+    std::cout << "run PathPlanOnce!" << std::endl;
 
     // generate planning output
     GeneratePlanningOutput(planning_output);
@@ -207,7 +217,7 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
     //           Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL ||
     //       slots[i].type() ==
     //           Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
-    //     AINFO << "diagonal slot id:" << slots[i].id();
+    //     std::cout << "diagonal slot id:" << slots[i].id();
     //     is_planning_ok = SingleSlotPlan(i, planning_output) ||
     //     is_planning_ok;
     //   }
@@ -326,7 +336,7 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
   }
 }
 
-void DiagonalInTrajectoryGenerator::UpdateManagedParkingFusion(
+const bool DiagonalInTrajectoryGenerator::UpdateManagedParkingFusion(
     const int select_slot_index) {
   // std::cout << "local_view_->parking_fusion_info:"
   //           << local_view_->parking_fusion_info.DebugString() << std::endl;
@@ -337,18 +347,24 @@ void DiagonalInTrajectoryGenerator::UpdateManagedParkingFusion(
       managed_parking_fusion_info_.mutable_parking_fusion_slot_lists(
           select_slot_index);
 
-  auto managed_selected_slot = slot_manager_.GetSelectedSlot(
-      managed_parking_fusion_info_.select_slot_id());
+  common::SlotInfo managed_selected_slot;
 
-  // std::cout << "managed_selected_slot = " <<
-  // managed_selected_slot.DebugString()
-  //           << std::endl;
+  const bool is_selected_slot_released = slot_manager_.GetSelectedSlot(
+      managed_selected_slot, managed_parking_fusion_info_.select_slot_id());
 
-  for (size_t i = 0; i < fusion_selected_slot->corner_points_size(); ++i) {
-    fusion_selected_slot->mutable_corner_points(i)->set_x(
-        managed_selected_slot.corner_points().corner_point(i).x());
-    fusion_selected_slot->mutable_corner_points(i)->set_y(
-        managed_selected_slot.corner_points().corner_point(i).y());
+  if (is_selected_slot_released) {
+    for (size_t i = 0; i < fusion_selected_slot->corner_points_size(); ++i) {
+      fusion_selected_slot->mutable_corner_points(i)->set_x(
+          managed_selected_slot.corner_points().corner_point(i).x());
+      fusion_selected_slot->mutable_corner_points(i)->set_y(
+          managed_selected_slot.corner_points().corner_point(i).y());
+    }
+    return true;
+  } else {
+    // std::cout << "managed_selected_slot = " <<
+    // managed_selected_slot.DebugString()
+    //           << std::endl;
+    return false;
   }
 }
 
@@ -994,11 +1010,13 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
   // check if replan
   is_replan_ = CheckReplan(planning_output);
   if (!is_replan_) {
+    std::cout << "replan is not required!" << std::endl;
     return;
   }
 
   // run plan core
   if (!PathPlanCoreIteration()) {
+    std::cout << "PathPlanCoreIteration is failed!" << std::endl;
     return;
   }
 
