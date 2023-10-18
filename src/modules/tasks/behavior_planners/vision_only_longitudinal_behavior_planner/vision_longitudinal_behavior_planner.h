@@ -152,5 +152,6 @@ class VisionLongitudinalBehaviorPlanner : public Task {
   std::shared_ptr<VisionOnlyLaneChangeDecider> lane_changing_decider_ = nullptr;
   //限制猛加速的滤波器
   pnc::filters::SlopeFilter accel_vel_filter_;
+  bool is_on_ramp_ = false;
 };
 }  // namespace planning

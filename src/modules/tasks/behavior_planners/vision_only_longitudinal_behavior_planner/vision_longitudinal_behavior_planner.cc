@@ -111,7 +111,7 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   //                      map_info_mgr.get_map_info().current_lane_type(),
   //                      lateral_outputs.lc_status, v_limit_in_turns_, v_ego);
   double distance_to_ramp = virtual_lane_manager->dis_to_ramp();
-  double ramp_v_limit = 50 / 3.6;
+  double ramp_v_limit = 60 / 3.6;
   double acc_to_ramp = -1.0;
   calc_speed_for_ramp(distance_to_ramp, ramp_v_limit, acc_to_ramp, v_ego);
   calc_speed_with_potential_cutin_car(lateral_obstacle->front_tracks(),
@@ -140,6 +140,11 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   v_target_ = clip(v_target_, 0.0, 40.0);
 
   if(v_target_ > v_ego) {
+    accel_vel_filter_.Update(v_target_);
+    v_target_ = accel_vel_filter_.GetOutput();
+    JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_work", 1);
+  }
+  else if (v_target_ < v_ego && (v_limit_in_turns_ == v_target_ || (v_limit_ramp_ == v_target_ && is_on_ramp_))) { 
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
     JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_work", 1);
@@ -256,7 +261,8 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
   if (v_limit_in_turns < v_ego - 2) {
     a_target_in_turns = -0.2;
   }
-
+  
+  v_limit_in_turns_ = v_limit_in_turns;
   JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_steering", v_limit_steering);
   JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_in_turns", v_limit_in_turns);
 
@@ -855,13 +861,13 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(
   double dis_to_ramp, double ramp_v_limit, double acc_to_ramp, double v_ego) {
   LOG_DEBUG("----calc_speed_for_ramp--- \n");
   double v_target_ramp = 40;
-  bool is_on_ramp = false;
-  is_on_ramp = frame_->session()->environmental_model().get_virtual_lane_manager()->is_on_ramp();
+  is_on_ramp_ = frame_->session()->environmental_model().get_virtual_lane_manager()->is_on_ramp();
   double dis_to_merge = frame_->session()->environmental_model().get_virtual_lane_manager()->distance_to_first_road_merge();
   //通过接口获取是否在匝道的信息
-  if (is_on_ramp) {
+  if (is_on_ramp_) {
     if (dis_to_merge > 50) {
-      v_target_ramp = 50 / 3.6;
+      v_target_ramp = 60 / 3.6;
+      v_limit_ramp_ = v_target_ramp;
     }
     v_target_ = std::min(v_target_ramp, v_target_);
     LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
