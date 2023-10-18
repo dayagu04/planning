@@ -138,6 +138,8 @@ void GeneralPlanning::FillPlanningTrajectory(
   auto &planning_result = session_.planning_context().planning_result();
   auto &planning_context = session_.planning_context();
   auto &ego_state = session_.environmental_model().get_ego_state_manager();
+  auto virtual_lane_manager =
+      session_.environmental_model().get_virtual_lane_manager();
 
   // 更新输出
   auto time_stamp_us = IflyTime::Now_us();
@@ -206,7 +208,12 @@ void GeneralPlanning::FillPlanningTrajectory(
     const double presee_x_dist = 50.;
     static double limited_polynomial_3 = 0.0;
     const auto &d_polynomial = lateral_output.d_poly;
-    double presee_y_dist = calc_poly1d(d_polynomial, presee_x_dist);
+
+    bool enable_presee = virtual_lane_manager->dis_to_ramp() < 1000. && 
+                         lateral_output.lc_status == "right_lane_change";
+
+    double presee_y_dist = enable_presee ? calc_poly1d(d_polynomial, presee_x_dist) : 0.;
+    LOG_DEBUG("presee_y_dist: [%f]: \n", presee_y_dist);
 
     if (d_polynomial.size() == 4) {
       if (std::fabs(d_polynomial[3] + presee_y_dist) * 0.5 > max_lat_offset) {

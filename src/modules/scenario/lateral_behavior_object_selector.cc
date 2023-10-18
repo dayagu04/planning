@@ -1,5 +1,6 @@
 #include "lateral_behavior_object_selector.h"
 #include "../../common/planning_gflags.h"
+#include "fusion_road.pb.h"
 #include "planning_context.h"
 
 namespace planning {
@@ -2245,6 +2246,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                   remove_car(right_alc_car_, tr.track_id);
               }
             }
+            FusionRoad::LaneType right_lane_type = FusionRoad::LaneType::LANETYPE_NORMAL;
+            if (rlane != nullptr) right_lane_type = rlane->get_lane_type();
 
             if (tr.d_min_cpath != 100 &&
                 tr.d_min_cpath >= -(lane_width / 2 + car_width / 5) &&
@@ -2858,7 +2861,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                     }
                   } else if ((right_lane_tasks_id == 0 &&
                               current_lane_tasks_id == 0 &&
-                              current_lane_index < 2) ||
+                              current_lane_index < 2 && 
+                              right_lane_type == FusionRoad::LaneType::LANETYPE_NORMAL) ||
                              (is_on_highway && right_lane_tasks_id >= 1 &&
                               current_lane_tasks_id >= 2)) {
                     std::array<double, 4> xp_pos_r{4, 7, 10, 20};
@@ -3035,7 +3039,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                     }
                   } else if ((is_on_highway && !is_on_ramp &&
                               right_lane_tasks_id == 0 &&
-                              current_lane_tasks_id == 1)) {
+                              current_lane_tasks_id == 1 &&
+                              right_lane_type == FusionRoad::LaneType::LANETYPE_NORMAL)) {
                     std::array<double, 4> xp{0, 50, 100, 200};
                     std::array<double, 4> fp{40 * coefficient, 20 * coefficient,
                                              0, -20 * coefficient};
