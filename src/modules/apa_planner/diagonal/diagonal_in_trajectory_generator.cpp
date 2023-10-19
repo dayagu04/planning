@@ -326,7 +326,7 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
     }
 
     // set target velocity to control as a limit
-    const std::vector<double> ratio_tab = {0.0, 0.5, 0.8, 1.0};
+    const std::vector<double> ratio_tab = {1.0, 0.6, 0.4, 0.0};
     const std::vector<double> vel_limit_tab = {0.3, 0.3, kMaxVelocity,
                                                kMaxVelocity};
     const double vel_limit =
