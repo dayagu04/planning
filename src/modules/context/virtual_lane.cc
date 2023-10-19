@@ -1,20 +1,26 @@
 #include "virtual_lane.h"
 #include <cassert>
+#include "log.h"
 #include "math/linear_interpolation.h"
 #include "virtual_lane.h"
 namespace planning {
 VirtualLane::VirtualLane() {}
 
-void VirtualLane::update_data(const FusionRoad::Lane &lane) {
+void VirtualLane::update_data(const FusionRoad::ReferenceLineMsg &lane) {
   order_id_ = lane.order_id();
   // virtual_id_ = lane.virtual_id();
   relative_id_ = lane.relative_id();
-  ego_lateral_offset_ = lane.ego_lateral_offset();
+  // ego_lateral_offset_ = lane.ego_lateral_offset();
 
-  lane_type_ = lane.lane_type();
-  lane_marks_ = lane.lane_marks();
-  lane_source_ = lane.lane_source();
-  lane_marks_ = lane.lane_marks();
+  for (auto lane_type : lane.lane_types()) {
+    lane_types_.emplace_back(lane_type);
+  }
+  for (auto lane_mark : lane.lane_marks()) {
+    lane_marks_.emplace_back(lane_mark);
+  }
+  for (auto lane_source : lane.lane_sources()) {
+    lane_sources_.emplace_back(lane_source);
+  }
   lane_reference_line_.CopyFrom(lane.lane_reference_line());
   lane_merge_split_point_.CopyFrom(lane.lane_merge_split_point());
   left_lane_boundary_.CopyFrom(lane.left_lane_boundary());
@@ -46,6 +52,8 @@ void VirtualLane::update_data(const FusionRoad::Lane &lane) {
     // center_line_points_track_id_.emplace_back(virtual_lane_refine_point.track_id());
     // // todo
   }
+
+  width_ = width(0);
 }
 
 bool VirtualLane::calc_c_poly(std::vector<double> &output) {  // 该函数先保留着
@@ -171,15 +179,13 @@ uint VirtualLane::get_common_point_num(
   return common_point_num;
 }
 
-double VirtualLane::width() { return width(0); }
-
 double VirtualLane::width(double x) {
   double width = 0;
   auto virtual_lane_refline_points =
       lane_reference_line_.virtual_lane_refline_points();
   if (virtual_lane_refline_points.size() < 1) {
   } else {
-    auto comp = [](const FusionRoad::VirtualLanePoint &p, const double x) {
+    auto comp = [](const FusionRoad::ReferencePoint &p, const double x) {
       return p.car_point().x() < x;
     };
     auto p_first_point =
@@ -224,7 +230,7 @@ double VirtualLane::width_by_s(double s) {
 }
 
 bool VirtualLane::get_point_by_distance(double distance,
-                                        FusionRoad::VirtualLanePoint *point) {
+                                        FusionRoad::ReferencePoint *point) {
   double min_distance_diff = std::numeric_limits<double>::max();
   for (auto virtual_lane_refine_point :
        lane_reference_line_.virtual_lane_refline_points()) {
@@ -243,37 +249,40 @@ bool VirtualLane::get_point_by_distance(double distance,
   }
 }
 
-double VirtualLane::max_width() {
-  switch (lane_type_) {
-    case FusionRoad::LaneType::LANE_TYPE_UNKNOWN:;
-    case FusionRoad::LaneType::LANE_TYPE_NORMAL:;
-    case FusionRoad::LaneType::LANE_TYPE_VIRTUAL:;
-    case FusionRoad::LaneType::LANE_TYPE_PARKING:;
-    case FusionRoad::LaneType::LANE_TYPE_ACCELERATE:;
-    case FusionRoad::LaneType::LANE_TYPE_DECELERATE:;
-    case FusionRoad::LaneType::LANE_TYPE_BUS:;
-    case FusionRoad::LaneType::LANE_TYPE_EMERGENCY:;
-    case FusionRoad::LaneType::LANE_TYPE_ACCELERATE_DECELERATE:;
-    case FusionRoad::LaneType::LANE_TYPE_LEFT_TURN_WAITTING_AREA:;
-    case FusionRoad::LaneType::LANE_TYPE_NON_MOTOR:;
-    case FusionRoad::LaneType::LANE_TYPE_RAMP:
-      return 4.2;
-    default:
-      return DBL_MAX;
+double VirtualLane::max_width() const {
+  if (lane_types_.size() > 0) {
+    switch (lane_types_[0].type()) {
+      case FusionRoad::LaneType::LANETYPE_UNKNOWN:;
+      case FusionRoad::LaneType::LANETYPE_NORMAL:;
+      case FusionRoad::LaneType::LANETYPE_VIRTUAL:;
+      case FusionRoad::LaneType::LANETYPE_PARKING:;
+      case FusionRoad::LaneType::LANETYPE_ACCELERATE:;
+      case FusionRoad::LaneType::LANETYPE_DECELERATE:;
+      case FusionRoad::LaneType::LANETYPE_BUS:;
+      case FusionRoad::LaneType::LANETYPE_EMERGENCY:;
+      case FusionRoad::LaneType::LANETYPE_ACCELERATE_DECELERATE:;
+      case FusionRoad::LaneType::LANETYPE_LEFT_TURN_WAITTING_AREA:;
+      case FusionRoad::LaneType::LANETYPE_NON_MOTOR:;
+        return 4.2;
+      default:
+        return DBL_MAX;
+    }
+  } else {
+    return DBL_MAX;
   }
 }
 
 bool VirtualLane::is_solid_line(int side) const {
   assert(side == 0 || side == 1);
   if (side == 0) {
-    if (left_lane_boundary_.segment_size() > 0 &&
-        left_lane_boundary_.segment(0).type() ==
+    if (left_lane_boundary_.type_segments_size() > 0 &&
+        left_lane_boundary_.type_segments(0).type() ==
             Common::LaneBoundaryType::MARKING_SOLID) {
       return true;
     }
   } else if (side == 1) {
-    if (right_lane_boundary_.segment_size() > 0 &&
-        right_lane_boundary_.segment(0).type() ==
+    if (right_lane_boundary_.type_segments_size() > 0 &&
+        right_lane_boundary_.type_segments(0).type() ==
             Common::LaneBoundaryType::MARKING_SOLID) {
       return true;
     }
@@ -281,23 +290,26 @@ bool VirtualLane::is_solid_line(int side) const {
   return false;
 }
 
-double VirtualLane::min_width() {
-  switch (lane_type_) {
-    case FusionRoad::LaneType::LANE_TYPE_UNKNOWN:;
-    case FusionRoad::LaneType::LANE_TYPE_NORMAL:;
-    case FusionRoad::LaneType::LANE_TYPE_VIRTUAL:;
-    case FusionRoad::LaneType::LANE_TYPE_PARKING:;
-    case FusionRoad::LaneType::LANE_TYPE_ACCELERATE:;
-    case FusionRoad::LaneType::LANE_TYPE_DECELERATE:;
-    case FusionRoad::LaneType::LANE_TYPE_BUS:;
-    case FusionRoad::LaneType::LANE_TYPE_EMERGENCY:;
-    case FusionRoad::LaneType::LANE_TYPE_ACCELERATE_DECELERATE:;
-    case FusionRoad::LaneType::LANE_TYPE_LEFT_TURN_WAITTING_AREA:;
-    case FusionRoad::LaneType::LANE_TYPE_NON_MOTOR:;
-    case FusionRoad::LaneType::LANE_TYPE_RAMP:
-      return 2.8;
-    default:
-      return DBL_MAX;
+double VirtualLane::min_width() const {
+  if (lane_types_.size() > 0) {
+    switch (lane_types_[0].type()) {
+      case FusionRoad::LaneType::LANETYPE_UNKNOWN:;
+      case FusionRoad::LaneType::LANETYPE_NORMAL:;
+      case FusionRoad::LaneType::LANETYPE_VIRTUAL:;
+      case FusionRoad::LaneType::LANETYPE_PARKING:;
+      case FusionRoad::LaneType::LANETYPE_ACCELERATE:;
+      case FusionRoad::LaneType::LANETYPE_DECELERATE:;
+      case FusionRoad::LaneType::LANETYPE_BUS:;
+      case FusionRoad::LaneType::LANETYPE_EMERGENCY:;
+      case FusionRoad::LaneType::LANETYPE_ACCELERATE_DECELERATE:;
+      case FusionRoad::LaneType::LANETYPE_LEFT_TURN_WAITTING_AREA:;
+      case FusionRoad::LaneType::LANETYPE_NON_MOTOR:;
+        return 2.8;
+      default:
+        return DBL_MAX;
+    }
+  } else {
+    return DBL_MAX;
   }
 }
 
@@ -348,6 +360,53 @@ void VirtualLane::update_speed_limit(double ego_vel,
   current_lane_speed_limit_ = std::min(current_lane_speed_limit_, ego_v_cruise);
 
   v_cruise_ = std::min(current_lane_speed_limit_, speed_change_point_.speed);
+}
+
+void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
+                                    RampDirection ramp_direction,
+                                    bool is_leaving_ramp, uint lane_num) {
+  int reverse_task_num =
+      lane_num > 3 ? std::max((int)std::floor((lane_num - 1) * 0.5), 0)
+                   : 0;  // clren: hack
+  current_tasks_.clear();
+  auto lane_type = get_lane_type();
+  if (order_id_ + 1 > lane_num) return;
+  if (is_nearing_ramp && !is_leaving_ramp) {
+    if (ramp_direction == RAMP_ON_RIGHT) {
+      if (lane_type == FusionRoad::LaneType::LANETYPE_DECELERATE &&
+          order_id_ > 0 && lane_num > 3) {
+        std::cout << "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN" << std::endl;
+        return;
+      }
+      for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+        current_tasks_.emplace_back(1);
+      }
+    } else {
+      for (int i = order_id_; i > 0; i--) {
+        current_tasks_.emplace_back(-1);
+        std::cout << "9999999999999999999999999999999999999999" << std::endl;
+      }
+    }
+  } else {
+    if (lane_num < reverse_task_num + order_id_ + 1) {
+      for (int i = 0; i + (lane_num - reverse_task_num) < (order_id_ + 1);
+           i++) {
+        current_tasks_.emplace_back(-1);
+      }
+    } else {
+      if (dis_to_ramp < 3000.0 && !is_leaving_ramp) {  // TODO:clren
+        // 后续考虑安全性，根据距离，车流量，对task做调整
+        for (int i = 0; i + order_id_ + 1 + reverse_task_num < lane_num; i++) {
+          current_tasks_.emplace_back(1);
+        }
+      } else if (is_leaving_ramp) {
+        if (order_id_ + 1 == lane_num) {
+          current_tasks_.emplace_back(-1);
+          std::cout << "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS" << std::endl;
+        }
+      }
+    }
+  }
 }
 
 void VirtualLane::save_context(VirtualLaneContext &context) const {

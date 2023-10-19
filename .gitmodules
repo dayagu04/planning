@@ -7,3 +7,6 @@
 [submodule "thirdparty"]
 	path = thirdparty
 	url = ../ad_third_party_libraries.git
+[submodule "ad_common"]
+	path = ad_common
+	url = ../ad_common.git
