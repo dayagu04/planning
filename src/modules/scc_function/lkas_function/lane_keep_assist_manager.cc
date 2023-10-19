@@ -101,7 +101,7 @@ void LaneKeepAssistManager::Update() {
       // LaneBoundaryType_MARKING_DOUBLE_SOLID = 5, /* 双实线 */
       // LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID = 6, /* 左虚右实线 */
       // LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED = 7 /* 左实右虚线 */
-      auto left_line_type = ptr_current_lane_left_boundary.segment(0).type();
+      auto left_line_type = ptr_current_lane_left_boundary.type_segments(0).type();
       if (left_line_type == Common::LaneBoundaryType::MARKING_DASHED ||
           left_line_type == Common::LaneBoundaryType::MARKING_SHORT_DASHED ||
           left_line_type == Common::LaneBoundaryType::MARKING_DOUBLE_DASHED ||
@@ -171,7 +171,7 @@ void LaneKeepAssistManager::Update() {
       // LaneBoundaryType_MARKING_DOUBLE_SOLID = 5, /* 双实线 */
       // LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID = 6, /* 左虚右实线 */
       // LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED = 7 /* 左实右虚线 */
-      auto right_line_type = ptr_current_lane_right_boundary.segment(0).type();
+      auto right_line_type = ptr_current_lane_right_boundary.type_segments(0).type();
       if ((right_line_type == Common::LaneBoundaryType::MARKING_DASHED) ||
           (right_line_type == Common::LaneBoundaryType::MARKING_SHORT_DASHED) ||
           (right_line_type ==
