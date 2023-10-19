@@ -252,6 +252,7 @@ class DiagonalInTrajectoryGenerator {
   pnc::mathlib::spline y_s_spline_g_;
   double current_path_length_ = 0.0;
   double remain_dist_ = 0.0;
+  double remain_dist_uss_ = 0.0;
   pnc::dubins_lib::DubinsLibrary::PathPoint terminal_err_;
   pnc::dubins_lib::DubinsLibrary::PathPoint target_err_;
   bool spline_success_ = false;

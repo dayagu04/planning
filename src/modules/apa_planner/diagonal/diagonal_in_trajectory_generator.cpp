@@ -255,6 +255,8 @@ void DiagonalInTrajectoryGenerator::Reset() {
   multi_step_plan_result_.clear();
   multi_step_plan_result_.reserve(DUBINS_LEVEL_COUNT);
   twice_gear_change_enable_ = true;
+  remain_dist_uss_ = 5.01;
+  remain_dist_ = 5.01;
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
@@ -265,15 +267,19 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
   if (planning_output->trajectory().trajectory_points_size() < 1) {
     return;
   }
+
   if (spline_success_) {
-    planning_output->mutable_trajectory()
-        ->mutable_trajectory_points(0)
-        ->set_distance(uss_oa_.GetRemainDist() - safe_uss_remain_dist);
+    // update remain_dist_uss
+    remain_dist_uss_ = uss_oa_.GetRemainDist() - safe_uss_remain_dist;
+
   } else {
-    planning_output->mutable_trajectory()
-        ->mutable_trajectory_points(0)
-        ->set_distance(100.0);
+    remain_dist_uss_ = 100.0;
   }
+
+  planning_output->mutable_trajectory()
+      ->mutable_trajectory_points(0)
+      ->set_distance(remain_dist_uss_);
+
   // std::cout << "Uss RemainDist = " << uss_oa_.GetRemainDist() << std::endl;
   // std::cout << "Plan RemainDist = " << remain_dist_ << std::endl;
   // std::cout << "current_path_length_ = " << current_path_length_ <<
@@ -1370,6 +1376,8 @@ void DiagonalInTrajectoryGenerator::Log() const {
   JSON_DEBUG_VALUE("sublane_width", sublane_width_)
 
   JSON_DEBUG_VALUE("remain_dist", remain_dist_)
+  JSON_DEBUG_VALUE("remain_dist_uss", remain_dist_uss_)
+
   JSON_DEBUG_VALUE("slot_occupied_ratio", slot_occupied_ratio_)
 }
 
