@@ -1391,6 +1391,60 @@ def GenerateJsonVectorData(json_data, json_time_list, json_vector_list):
 
     return json_vector_xys_dict
 
+def  GenerateTopicVectorData(topic_data,topic_time_list,topic_value_list):
+    topic_vector_dict = {}
+    topic_vector_dict['t'] = topic_time_list
+    # print(type(tmp[i]))
+    # lon_tmp = []
+    # lon_tmp1 = []
+    # lon_tmp2 = []
+    # lon_tmp3 = []
+    # lon_tmp4 = []
+    # lon_tmp5 = []
+    lat_tmp6 = []
+    lat_tmp7 = []
+    lat_tmp8 = []
+    lat_tmp9 = []
+    lat_tmp10 = []
+    for j in range(len(topic_data)):
+        try:
+            # lon_tmp.append(topic_data[j].lon_mpc_input.s_ref_mpc_vec)
+            # lon_tmp1.append(topic_data[j].lon_mpc_output.s_mpc_vec)
+            # lon_tmp2.append(topic_data[j].lon_mpc_input.v_ref_mpc_vec)
+            # lon_tmp3.append(topic_data[j].lon_mpc_output.v_mpc_vec)
+            # lon_tmp4.append(topic_data[j].lon_mpc_output.a_mpc_vec)
+            # lon_tmp5.append(topic_data[j].lon_mpc_output.jerk_mpc_vec)
+            lat_tmp6.append(topic_data[j].lat_mpc_input.dy_ref_mpc_vec)
+            lat_tmp7.append(topic_data[j].lat_mpc_input.dphi_ref_mpc_vec)
+            lat_tmp8.append(topic_data[j].lat_mpc_output.dy_mpc_vec)
+            lat_tmp9.append(topic_data[j].lat_mpc_output.dphi_mpc_vec)
+            lat_tmp10.append(topic_data[j].lat_mpc_output.delta_mpc_vec)
+        except:
+            # lon_tmp.append(0.0)
+            # lon_tmp1.append(0.0)
+            # lon_tmp2.append(0.0)
+            # lon_tmp3.append(0.0)
+            # lon_tmp4.append(0.0)
+            # lon_tmp5.append(0.0)
+            lat_tmp6.append(0.0)
+            lat_tmp7.append(0.0)
+            lat_tmp8.append(0.0)
+            lat_tmp9.append(0.0)
+            lat_tmp10.append(0.0)
+            
+    # topic_vector_dict[topic_value_list[0]] = lon_tmp
+    # topic_vector_dict[topic_value_list[1]] = lon_tmp1
+    # topic_vector_dict[topic_value_list[2]] = lon_tmp2
+    # topic_vector_dict[topic_value_list[3]] = lon_tmp3
+    # topic_vector_dict[topic_value_list[4]] = lon_tmp4
+    # topic_vector_dict[topic_value_list[5]] = lon_tmp5
+    topic_vector_dict[topic_value_list[0]] = lat_tmp6
+    topic_vector_dict[topic_value_list[1]] = lat_tmp7
+    topic_vector_dict[topic_value_list[2]] = lat_tmp8
+    topic_vector_dict[topic_value_list[3]] = lat_tmp9
+    topic_vector_dict[topic_value_list[4]] = lat_tmp10
+
+    return topic_vector_dict
 
 class ScalarGeneratorFromJson(DataGeneratorBase):
     def __init__(self, json_value_xys_dict, name, scale = 1):

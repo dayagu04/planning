@@ -64,7 +64,8 @@ def plotOnce(bag_path, html_file):
 
     json_vector_list = ["dx_ref_mpc_vec", "dy_ref_mpc_vec", "dphi_ref_mpc_vec", "dx_mpc_vec", "dy_mpc_vec", "delta_mpc_vec", "dphi_mpc_vec"]
     json_vector_xys_dict = GenerateJsonVectorData(dataLoader.ctrl_debug_msg['json'], dataLoader.ctrl_debug_msg['t'], json_vector_list)
-
+    topic_vector_list = ["dy_ref_mpc_vec", "dphi_ref_mpc_vec", "dy_mpc_vec", "dphi_mpc_vec", "delta_mpc_vec"]
+    topic_vector_dict = GenerateTopicVectorData(dataLoader.ctrl_debug_msg['data'], dataLoader.ctrl_debug_msg['t'], topic_vector_list)
     layer_manager = LayerManager()
 
     # fig1: local view
@@ -168,9 +169,9 @@ def plotOnce(bag_path, html_file):
                                          width=600,
                                          height=200))
     fig7.AddCurv(layer_manager,
-                 VectorGeneratorFromJson(json_vector_xys_dict, "dy_ref_mpc_vec", 1.0), "dy_ref_mpc_vec")
+                 VectorGeneratorFromJson(topic_vector_dict, "dy_ref_mpc_vec", 1.0), "dy_ref_mpc_vec")
     fig7.AddCurv(layer_manager,
-                 VectorGeneratorFromJson(json_vector_xys_dict, "dy_mpc_vec", 1.0), "dy_mpc_vec")
+                 VectorGeneratorFromJson(topic_vector_dict, "dy_mpc_vec", 1.0), "dy_mpc_vec")
 
     # fig8: mpc dphi
     fig8 = DynamicFigureLayer(bkp.figure(x_axis_label='time',
@@ -179,9 +180,9 @@ def plotOnce(bag_path, html_file):
                                          x_range = fig7.fig.x_range,
                                          height=200))
     fig8.AddCurv(layer_manager,
-                 VectorGeneratorFromJson(json_vector_xys_dict, "dphi_ref_mpc_vec", 57.3), "dphi_ref_mpc_vec")
+                 VectorGeneratorFromJson(topic_vector_dict, "dphi_ref_mpc_vec", 57.3), "dphi_ref_mpc_vec")
     fig8.AddCurv(layer_manager,
-                 VectorGeneratorFromJson(json_vector_xys_dict, "dphi_mpc_vec", 57.3), "dphi_mpc_vec")
+                 VectorGeneratorFromJson(topic_vector_dict, "dphi_mpc_vec", 57.3), "dphi_mpc_vec")
 
     # fig9: mpc delta (steer angle)
     fig9 = DynamicFigureLayer(bkp.figure(x_axis_label='time',
@@ -190,7 +191,7 @@ def plotOnce(bag_path, html_file):
                                          x_range = fig7.fig.x_range,
                                          height=200))
     fig9.AddCurv(layer_manager,
-                 VectorGeneratorFromJson(json_vector_xys_dict, "delta_mpc_vec", 57.3 * 15.7), "delta_mpc_vec")
+                 VectorGeneratorFromJson(topic_vector_dict, "delta_mpc_vec", 57.3 * 15.7), "delta_mpc_vec")
 
 
     # fig10: acc state
