@@ -1120,7 +1120,7 @@ const bool DiagonalInTrajectoryGenerator::CheckFinish() {
 
   is_finished_ = parking_success || parking_failed;
 
-  return is_finished_;
+  return is_finished_ && (!simulation_enable_flag_);
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckReplan(
