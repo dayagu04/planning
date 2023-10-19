@@ -55,6 +55,7 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/nlohmann_json thirdparty/nlohm
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/hfsm thirdparty/hfsm.out EXCLUDE_FROM_ALL)
 add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/proto interface.out EXCLUDE_FROM_ALL)
 add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/private/planning interface_planning.out EXCLUDE_FROM_ALL)
+add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/interface_converter interface_converter.out EXCLUDE_FROM_ALL)
 
 if(ADAPTER STREQUAL "cyber")
   add_subdirectory(adapter/cyber)
@@ -65,11 +66,11 @@ endif()
 
 file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning)
 file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning/res)
-file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning/log)
+#file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning/log)
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../res/conf
   DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/res)
 install(FILES ${CMAKE_CURRENT_LIST_DIR}/../CHANGELOG.md
-    DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/log)
+    DESTINATION ${PROJECT_SOURCE_DIR}/install/planning)
 if (ADAPTER STREQUAL "cyber")
   install(TARGETS
     apa_simulation_component

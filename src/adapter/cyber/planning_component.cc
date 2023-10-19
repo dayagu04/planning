@@ -13,6 +13,8 @@
 // register.
 #include "modules_register.h"
 
+#include "proto_to_uncompressed.hpp"
+
 namespace planning {
 
 logger::AsyncLogger *async_logger = nullptr;
@@ -114,9 +116,19 @@ bool PlanningComponent::Init() {
   planning_writer_ =
       planning_node_->CreateWriter<PlanningOutput::PlanningOutput>(
           "/iflytek/planning/plan");
+  auto planning_uncompress_writer =
+      planning_node_->CreateWriter<apollo::cyber::message::RawMessage>(
+          "/iflytek/planning/plan/uncompress");
   planning_adapter_->RegisterOutputWriter(
-      [this](const PlanningOutput::PlanningOutput &planning_output) {
+      [this, planning_uncompress_writer](
+          const PlanningOutput::PlanningOutput &planning_output) {
         planning_writer_->Write(planning_output);
+
+        iflyauto::PlanningOutput planning_output_uncompressed;
+        proto_to_uncompressed(planning_output, planning_output_uncompressed);
+        apollo::cyber::message::RawMessage planning_output_uncompressed_msg;
+        planning_output_uncompressed_msg.ParseFromArray((const char *)&planning_output_uncompressed, sizeof(planning_output_uncompressed));
+        planning_uncompress_writer->Write(planning_output_uncompressed_msg);
       });
 
   planning_debug_writer_ =
