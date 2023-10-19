@@ -339,6 +339,14 @@ uint16 EmergencyLaneKeep::LeftSuppressionCode() {
     /*do nothing*/
   }
 
+  // Condition5
+  if ((lkas_input_->function_state >
+       FuncStateMachine::FunctionalState::DRIVING) &&
+      (lkas_input_->function_state <
+       FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
+    elk_left_suppression_code_temp += uint16_bit[4];
+  }
+
   return elk_left_suppression_code_temp;
 }
 uint16 EmergencyLaneKeep::LeftKickDownCode() {
@@ -404,6 +412,14 @@ uint16 EmergencyLaneKeep::LeftKickDownCode() {
     elk_left_kickdown_code_temp += uint16_bit[3];
   } else {
     /*do nothing*/
+  }
+
+  // Condition5
+  if ((lkas_input_->function_state >
+       FuncStateMachine::FunctionalState::DRIVING) &&
+      (lkas_input_->function_state <
+       FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
+    elk_left_kickdown_code_temp += uint16_bit[4];
   }
 
   return elk_left_kickdown_code_temp;
@@ -525,6 +541,14 @@ uint16 EmergencyLaneKeep::RightSuppressionCode() {
     /*do nothing*/
   }
 
+  // Condition5
+  if ((lkas_input_->function_state >
+       FuncStateMachine::FunctionalState::DRIVING) &&
+      (lkas_input_->function_state <
+       FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
+    elk_right_suppression_code_temp += uint16_bit[4];
+  }
+
   return elk_right_suppression_code_temp;
 }
 uint16 EmergencyLaneKeep::RightKickDownCode() {
@@ -590,6 +614,14 @@ uint16 EmergencyLaneKeep::RightKickDownCode() {
     elk_right_kickdown_code_temp += uint16_bit[3];
   } else {
     /*do nothing*/
+  }
+
+  // Condition5
+  if ((lkas_input_->function_state >
+       FuncStateMachine::FunctionalState::DRIVING) &&
+      (lkas_input_->function_state <
+       FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
+    elk_right_kickdown_code_temp += uint16_bit[4];
   }
 
   return elk_right_kickdown_code_temp;

@@ -1,6 +1,7 @@
 #ifndef MODULES_PLANNING_OUTPUT_CONTEXT_
 #define MODULES_PLANNING_OUTPUT_CONTEXT_
 
+#include <memory>
 #include "define/planning_status.h"
 #include "planning_hmi.pb.h"
 
@@ -29,17 +30,19 @@ class PlanningOutputContext {
   common::PlanningStatus *mutable_prev_planning_status() {
     return &prev_planning_status_;
   }
-  const PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_info() const {
-    return planning_hmi_info_;
+
+  void feed_planning_hmi_info(
+      PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+    planning_hmi_info_ = planning_hmi_info;
   }
   PlanningHMI::PlanningHMIOutputInfoStr *mutable_planning_hmi_info() {
-    return &planning_hmi_info_;
+    return planning_hmi_info_;
   }
 
  private:
   FallBackInfo fallback_info_;
   common::PlanningStatus planning_status_;
-  PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_info_;
+  PlanningHMI::PlanningHMIOutputInfoStr *planning_hmi_info_;
   common::PlanningStatus prev_planning_status_;
 };
 

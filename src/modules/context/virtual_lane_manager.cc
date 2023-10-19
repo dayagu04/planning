@@ -7,6 +7,7 @@
 #include "ehr.pb.h"
 #include "environmental_model.h"
 #include "localization.pb.h"
+#include "planning_output_context.h"
 #include "reference_path_manager.h"
 
 namespace planning {
@@ -152,7 +153,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   lane_num_ = relative_id_lanes_.size();
   double lane_num_except_emergency = lane_num_;
   if (lane_num_ > 0 && relative_id_lanes_[lane_num_ - 1]->get_lane_type() ==
-      FusionRoad::LaneType::LANETYPE_EMERGENCY)
+                           FusionRoad::LaneType::LANETYPE_EMERGENCY)
     lane_num_except_emergency -= 1;
   if (distance_to_first_road_merge_ < 100. || is_lane_merging) {
     is_leaving_ramp_ = true;
@@ -923,8 +924,8 @@ bool VirtualLaneManager::GetCurrentNearestLane(
 
   auto time_start1 = IflyTime::Now_us();
   // const int res = hd_map.GetNearestLaneWithHeading(
-  //     point, distance, central_heading, max_heading_difference, &nearest_lane,
-  //     &nearest_s, &nearest_l);
+  //     point, distance, central_heading, max_heading_difference,
+  //     &nearest_lane, &nearest_s, &nearest_l);
   auto time_end1 = IflyTime::Now_us();
   double cost1 = time_end1 - time_start1;
   std::cout << "get nearest lane time cost:" << cost << ", time cost1:" << cost1

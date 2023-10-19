@@ -6,6 +6,7 @@
 #include "evaluator.h"
 #include "ifly_time.h"
 #include "log.h"
+#include "planning_output_context.h"
 #include "reference_path_manager.h"
 #include "scenario_state_machine.h"
 namespace planning {
@@ -19,7 +20,11 @@ std::shared_ptr<Evaluator> StateBase::get_evaluator(framework::Frame *frame) {
 
 void StateBase::process(Control &control, FsmContext &context) {
   LOG_DEBUG("StateBase::process() \n");
-
+  auto ad_info = context.frame->mutable_session()
+                     ->mutable_planning_output_context()
+                     ->mutable_planning_hmi_info()
+                     ->mutable_ad_info();
+  ad_info->set_lane_change_status(::PlanningHMI::LaneChangeStatus::NO_CHANGE);
   if (!is_leaf()) {
     return;
   }
@@ -155,6 +160,73 @@ void StateBase::process(Control &control, FsmContext &context) {
     lat_behavior_state_machine_output.lc_timer += 0.1;  // cumulative lc time
   } else {
     lat_behavior_state_machine_output.lc_timer = 0.;  // reset
+  }
+
+  // feed hmi
+  ad_info->set_lane_change_direction(::PlanningHMI::LaneChangeDirection::OTHER);
+  if (next_state == ROAD_LC_LWAIT || next_state == ROAD_LC_RWAIT) {
+    ad_info->set_lane_change_status(::PlanningHMI::LaneChangeStatus::WAITING);
+    if (next_state == ROAD_LC_LWAIT) {
+      ad_info->set_lane_change_direction(
+          ::PlanningHMI::LaneChangeDirection::LEFT);
+    } else {
+      ad_info->set_lane_change_direction(
+          ::PlanningHMI::LaneChangeDirection::RIGHT);
+    }
+  } else if (next_state == ROAD_LC_LCHANGE || next_state == ROAD_LC_RCHANGE) {
+    if (next_state == ROAD_LC_LCHANGE) {
+      ad_info->set_lane_change_direction(
+          ::PlanningHMI::LaneChangeDirection::LEFT);
+    } else {
+      ad_info->set_lane_change_direction(
+          ::PlanningHMI::LaneChangeDirection::RIGHT);
+    }
+    ad_info->set_lane_change_status(::PlanningHMI::LaneChangeStatus::STARTING);
+  } else if (next_state == ROAD_NONE) {
+    if (context.state == ROAD_LC_LWAIT || context.state == ROAD_LC_RWAIT ||
+        context.state == ROAD_LC_LCHANGE || context.state == ROAD_LC_RCHANGE ||
+        context.state == ROAD_LC_LBACK || context.state == ROAD_LC_RBACK) {
+      if (ad_info->has_lane_change_status() &&
+          ad_info->lane_change_status() ==
+              ::PlanningHMI::LaneChangeStatus::COMPLETED) {
+        // check_lc_change_finish
+      } else {
+        ad_info->set_lane_change_status(
+            ::PlanningHMI::LaneChangeStatus::CANCELLED);
+      }
+
+      if (context.state == ROAD_LC_LWAIT || context.state == ROAD_LC_LCHANGE ||
+          context.state == ROAD_LC_LBACK) {
+        ad_info->set_lane_change_direction(
+            ::PlanningHMI::LaneChangeDirection::LEFT);
+      } else {
+        ad_info->set_lane_change_direction(
+            ::PlanningHMI::LaneChangeDirection::RIGHT);
+      }
+    }
+  }
+
+  if (context.state == ROAD_LC_LWAIT || context.state == ROAD_LC_RWAIT ||
+      context.state == ROAD_LC_LCHANGE || context.state == ROAD_LC_RCHANGE) {
+    auto target_reference =
+        context.frame->session()
+            ->environmental_model()
+            .get_reference_path_manager()
+            ->get_reference_path_by_lane(
+                lane_change_lane_manager->tlane_virtual_id(), false);
+    if (target_reference != nullptr) {
+      Point2D cart_point;
+      if (target_reference->get_frenet_coord()->FrenetCoord2CartCoord(
+              Point2D(target_reference->get_frenet_ego_state().s() + 5, 0),
+              cart_point) == TRANSFORM_SUCCESS) {
+        ad_info->mutable_landing_point()->mutable_relative_pos()->set_x(
+            cart_point.x);
+        ad_info->mutable_landing_point()->mutable_relative_pos()->set_y(
+            cart_point.y);
+        ad_info->mutable_landing_point()->mutable_relative_pos()->set_z(0);
+        ad_info->mutable_landing_point()->set_heading(0);
+      }
+    }
   }
 
   // TODO(Rui):fix me  与上面的命名一致

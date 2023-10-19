@@ -111,12 +111,13 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
       (fsm_state == FuncStateMachine::FunctionalState::SCC_STAND_WAIT) ||
       (fsm_state == FuncStateMachine::FunctionalState::SCC_OVERRIDE) ||
       (fsm_state == FuncStateMachine::FunctionalState::SCC_SECURE);
-  bool noa_active = (fsm_state == FuncStateMachine::FunctionalState::NOA_ACTIVATE) ||
+  bool noa_active =
+      (fsm_state == FuncStateMachine::FunctionalState::NOA_ACTIVATE) ||
       (fsm_state == FuncStateMachine::FunctionalState::NOA_OVERRIDE);
 
   // for 1024: 不区分acc/scc/noa
-  session_->mutable_environmental_model()->UpdateVehicleDbwStatus(acc_active ||
-                                                                  scc_active || noa_active);
+  session_->mutable_environmental_model()->UpdateVehicleDbwStatus(
+      acc_active || scc_active || noa_active);
 
   // 自动有效，临时hack
   // session_->mutable_environmental_model()->UpdateVehicleDbwStatus(true);

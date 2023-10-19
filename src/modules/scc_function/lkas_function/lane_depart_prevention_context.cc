@@ -294,6 +294,14 @@ uint16 LaneDepartPrevention::LeftSuppressionCode() {
     /*do nothing*/
   }
 
+  // Condition5
+  if ((lkas_input_->function_state >
+       FuncStateMachine::FunctionalState::DRIVING) &&
+      (lkas_input_->function_state <
+       FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
+    ldp_left_suppression_code_temp += uint16_bit[4];
+  }
+
   return ldp_left_suppression_code_temp;
 }
 uint16 LaneDepartPrevention::LeftKickDownCode() {
@@ -359,6 +367,14 @@ uint16 LaneDepartPrevention::LeftKickDownCode() {
     ldp_left_kickdown_code_temp += uint16_bit[3];
   } else {
     /*do nothing*/
+  }
+
+  // Condition5
+  if ((lkas_input_->function_state >
+       FuncStateMachine::FunctionalState::DRIVING) &&
+      (lkas_input_->function_state <
+       FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
+    ldp_left_kickdown_code_temp += uint16_bit[4];
   }
 
   return ldp_left_kickdown_code_temp;
@@ -457,6 +473,14 @@ uint16 LaneDepartPrevention::RightSuppressionCode() {
     /*do nothing*/
   }
 
+  // Condition5
+  if ((lkas_input_->function_state >
+       FuncStateMachine::FunctionalState::DRIVING) &&
+      (lkas_input_->function_state <
+       FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
+    ldp_right_suppression_code_temp += uint16_bit[4];
+  }
+
   return ldp_right_suppression_code_temp;
 }
 uint16 LaneDepartPrevention::RightKickDownCode() {
@@ -522,6 +546,14 @@ uint16 LaneDepartPrevention::RightKickDownCode() {
     ldp_right_kickdown_code_temp += uint16_bit[3];
   } else {
     /*do nothing*/
+  }
+
+  // Condition5
+  if ((lkas_input_->function_state >
+       FuncStateMachine::FunctionalState::DRIVING) &&
+      (lkas_input_->function_state <
+       FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
+    ldp_right_kickdown_code_temp += uint16_bit[4];
   }
 
   return ldp_right_kickdown_code_temp;

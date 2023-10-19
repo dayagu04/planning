@@ -152,7 +152,7 @@ def load_lane_lines(lanes):
 def load_lane_center_lines(lanes):
   line_info_list = []
 
-  for i in range(5):
+  for i in range(10):
     lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[]}
     if i< len(lanes):
       lane = lanes[i]

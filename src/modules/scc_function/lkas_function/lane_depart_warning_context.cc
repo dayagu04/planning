@@ -1,4 +1,5 @@
 #include "lane_depart_warning_context.h"
+
 #include "log.h"
 namespace planning {
 void LaneDepartWarning::Init(planning::LkasInput *lkas_input) {
@@ -319,6 +320,14 @@ uint16 LaneDepartWarning::LeftSuppressionCode() {
     /*do nothing*/
   }
 
+  // Condition4
+  if ((lkas_input_->function_state >
+       FuncStateMachine::FunctionalState::DRIVING) &&
+      (lkas_input_->function_state <
+       FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
+    ldw_left_suppression_code_temp += uint16_bit[3];
+  }
+
   return ldw_left_suppression_code_temp;
 }
 uint16 LaneDepartWarning::LeftKickDownCode() {
@@ -379,6 +388,14 @@ uint16 LaneDepartWarning::LeftKickDownCode() {
   // Condition4
   if (measurement_str_.left_intervention == false) {
     ldw_left_kickdown_code_temp += uint16_bit[3];
+  }
+
+  // Condition5
+  if ((lkas_input_->function_state >
+       FuncStateMachine::FunctionalState::DRIVING) &&
+      (lkas_input_->function_state <
+       FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
+    ldw_left_kickdown_code_temp += uint16_bit[4];
   }
 
   return ldw_left_kickdown_code_temp;
@@ -468,6 +485,14 @@ uint16 LaneDepartWarning::RightSuppressionCode() {
     /*do nothing*/
   }
 
+  // Condition4
+  if ((lkas_input_->function_state >
+       FuncStateMachine::FunctionalState::DRIVING) &&
+      (lkas_input_->function_state <
+       FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
+    ldw_right_suppression_code_temp += uint16_bit[3];
+  }
+
   return ldw_right_suppression_code_temp;
 }
 uint16 LaneDepartWarning::RightKickDownCode() {
@@ -528,6 +553,14 @@ uint16 LaneDepartWarning::RightKickDownCode() {
   // Condition4
   if (measurement_str_.right_intervention == false) {
     ldw_right_kickdown_code_temp += uint16_bit[3];
+  }
+
+  // Condition5
+  if ((lkas_input_->function_state >
+       FuncStateMachine::FunctionalState::DRIVING) &&
+      (lkas_input_->function_state <
+       FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
+    ldw_right_kickdown_code_temp += uint16_bit[4];
   }
 
   return ldw_right_kickdown_code_temp;

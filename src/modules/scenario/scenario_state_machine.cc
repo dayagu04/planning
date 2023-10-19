@@ -10,6 +10,7 @@
 #include "ego_state_manager.h"
 #include "lateral_behavior_object_selector.h"
 #include "obstacle_manager.h"
+#include "planning_output_context.h"
 #include "reference_path.h"
 #include "reference_path_manager.h"
 #include "utils/pose2d_utils.h"
@@ -1195,6 +1196,13 @@ bool ScenarioStateMachine::check_lc_change_finish(RequestType direction) {
   } else {
     LOG_ERROR("[check_lc_change_finish] invalid direction[%d]", direction);
     lc_change_finish = true;
+  }
+
+  if (lc_change_finish == true) {
+    auto ad_info = session_->mutable_planning_output_context()
+                       ->mutable_planning_hmi_info()
+                       ->mutable_ad_info();
+    ad_info->set_lane_change_status(::PlanningHMI::LaneChangeStatus::COMPLETED);
   }
   return lc_change_finish;
 }

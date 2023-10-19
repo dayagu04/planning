@@ -73,6 +73,8 @@ struct TrackedObject {
 
   double a = 0;
   double v = 0;
+  double v_x = 0;
+  double v_y = 0;
   double v_lead = 0;
   double v_lead_k = 0;
   double v_lead_raw = 0;

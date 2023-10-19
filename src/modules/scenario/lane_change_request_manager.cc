@@ -2,6 +2,7 @@
 
 #include "config/basic_type.h"
 #include "mrc_condition.h"
+#include "planning_output_context.h"
 #include "scenario_state_machine.h"
 
 namespace planning {
@@ -135,13 +136,38 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
         "target_lane_virtual_id: %d \n",
         target_lane_virtual_id_);
   }
+
+  auto ad_info = session_->mutable_planning_output_context()
+                     ->mutable_planning_hmi_info()
+                     ->mutable_ad_info();
+  ad_info->set_lane_change_intent(::PlanningHMI::LaneChangeIntent::NO_INTENT);
+  ad_info->set_lane_change_source(::PlanningHMI::LaneChangeSource::NONE);
   if (request_source_ == MAP_REQUEST) {
     gen_turn_signal_ = map_request_.turn_signal();
+    auto current_lane = virtual_lane_mgr_->get_current_lane();
+    int lc_map_decision = virtual_lane_mgr_->lc_map_decision(current_lane);
+    if (lc_map_decision > 0) {
+      ad_info->set_lane_change_intent(
+          ::PlanningHMI::LaneChangeIntent::OUT_INTENT);
+    } else if (lc_map_decision < 0) {
+      ad_info->set_lane_change_intent(
+          ::PlanningHMI::LaneChangeIntent::IN_INTENT);
+    }
+    ad_info->set_lane_change_source(::PlanningHMI::LaneChangeSource::MAP);
   } else if (request_source_ == ACT_REQUEST) {
     gen_turn_signal_ = act_request_.turn_signal();
+    ad_info->set_lane_change_intent(
+        ::PlanningHMI::LaneChangeIntent::SLOWING_INTENT);
+    ad_info->set_lane_change_source(::PlanningHMI::LaneChangeSource::ACT);
+  } else if (request_source_ == INT_REQUEST) {
+    gen_turn_signal_ = NO_CHANGE;
+    ad_info->set_lane_change_intent(
+        ::PlanningHMI::LaneChangeIntent::BLINKSWITCH_INTENT);
+    ad_info->set_lane_change_source(::PlanningHMI::LaneChangeSource::INT);
   } else {
     gen_turn_signal_ = NO_CHANGE;
   }
+
   LOG_WARNING(
       "[LCRequestManager::update] ===cur_state: %d=== gen_turn_signal_: %d \n",
       lc_status, gen_turn_signal_);
