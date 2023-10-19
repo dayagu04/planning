@@ -212,15 +212,22 @@ class LoadCyberbag:
     try:
       json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'VisionLonBehavior_a_target_high',
                          "VisionLonBehavior_a_target_low", "VisionLonBehavior_v_target",
-                         "VisionLonBehavior_lead_one_id", "VisionLonBehavior_lead_one_dis", "VisionLonBehavior_lead_one_vel",
-                         "VisionLonBehavior_lead_two_id", "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel",
-                         "VisionLonBehavior_temp_lead_one_id", "VisionLonBehavior_temp_lead_one_dis", "VisionLonBehavior_temp_lead_one_vel",
-                         "VisionLonBehavior_temp_lead_two_id", "VisionLonBehavior_temp_lead_two_dis", "VisionLonBehavior_temp_lead_two_vel",
-                         "VisionLonBehavior_potental_cutin_track_id", "VisionLonBehavior_potental_cutin_v_target",
-                         "VisionLonBehavior_v_limit_road", "VisionLonBehavior_v_limit_in_turns",
-                         'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop',
-                         "solver_condition", "dist_err", "lat_err", "lon_err",
-                         "dbw_status"]
+                         "VisionLonBehavior_lead_one_id", "VisionLonBehavior_lead_one_dis", "VisionLonBehavior_lead_one_vel", "VisionLonBehavior_v_target_lead_one",
+                         "VisionLonBehavior_lead_two_id", "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel", "VisionLonBehavior_v_target_lead_two",
+                         "VisionLonBehavior_temp_lead_one_id", "VisionLonBehavior_temp_lead_one_dis", "VisionLonBehavior_temp_lead_one_vel", "VisionLonBehavior_v_target_temp_lead_one",
+                         "VisionLonBehavior_temp_lead_two_id", "VisionLonBehavior_temp_lead_two_dis", "VisionLonBehavior_temp_lead_two_vel", "VisionLonBehavior_v_target_temp_lead_two",
+                         "VisionLonBehavior_potental_cutin_track_id", "VisionLonBehavior_potental_cutin_v_target", "VisionLonBehavior_cutin_v_target", "VisionLonBehavior_v_target_ramp",
+                         "VisionLonBehavior_v_limit_road", "VisionLonBehavior_v_limit_in_turns", "VisionLonBehavior_road_radius", "dis_to_ramp",
+                         'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', 'VisionLonBehavior_STANDSTILL', "VisionLonBehavior_final_v_target",
+                         "solver_condition", "dist_err", "lat_err", "lon_err", "dbw_status",
+                         "RealTime_v_ref", "RealTime_v_ego", "RealTime_gap_v_limit_lc",
+                         "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_car_cut_in_id",
+                         "RealTime_lead_one_id", "RealTime_lead_one_distance", "RealTime_lead_one_velocity", "RealTime_lead_one_desire_vel",
+                         "RealTime_lead_two_id", "RealTime_lead_two_distance", "RealTime_lead_two_velocity", "RealTime_lead_two_desire_vel",
+                         "RealTime_temp_lead_one_id", "RealTime_temp_lead_one_distance", "RealTime_temp_lead_one_velocity", "RealTime_temp_lead_one_desire_vel",
+                         "RealTime_temp_lead_two_id", "RealTime_temp_lead_two_distance", "RealTime_temp_lead_two_velocity", "RealTime_temp_lead_two_desire_vel",
+                         "RealTime_potential_cutin_track_id", "RealTime_potential_cutin_v_target", "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate",
+                         "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime", "RealTimeLateralMotionCostTime", "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec"]
 
@@ -356,7 +363,7 @@ class LoadCyberbag:
     except:
       self.soc_state_msg['enable'] = False
       print('missing /iflytek/system_state/soc_state !!!')
-    
+
     # load ehr static map msg
     try:
       ehr_static_map_msg_dict = {}
@@ -395,7 +402,7 @@ class LoadCyberbag:
         self.planning_hmi_msg['enable'] = False
     except:
       self.planning_hmi_msg['enable'] = False
-      print('missing /iflytek/planning/hmi topic !!!')  
+      print('missing /iflytek/planning/hmi topic !!!')
     return max_time
 
   def msg_timeline_figure(self):
@@ -614,9 +621,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     })
 
     try:
-      vel_ego =  bag_loader.loc_msg['data'][loc_msg_idx].pose.linear_velocity_from_wheel
-    except:
       vel_ego = bag_loader.vs_msg['data'][vs_msg_idx].vehicle_speed
+    except:
+      vel_ego =  bag_loader.loc_msg['data'][loc_msg_idx].pose.linear_velocity_from_wheel
 
     text_xn = cur_pos_xn - cur_pos_xn0 - 2.0
     text_yn = cur_pos_yn - cur_pos_yn0 + 2.0
@@ -677,7 +684,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     # print(center_line_list)
     for i in range(5):
       # try:
-        if 0:
+        if 1:
           data_center_line = data_center_line_dict[i]
           data_center_line.data.update({
             'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
@@ -859,7 +866,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         plan_x.append(trajectory.trajectory_points[i].x)
         plan_y.append(trajectory.trajectory_points[i].y)
 
-      plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
+      # plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
+      # 接motion轨迹是相对于自车的
+      plan_traj_x = plan_x
+      plan_traj_y = plan_y
 
     local_view_data['data_planning'].data.update({
         'plan_traj_y' : plan_traj_y,
@@ -896,7 +906,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     })
 
   # # 加载ehr的lane信息
-  if bag_loader.ehr_static_map_msg['enable'] == True:
+  """ if bag_loader.ehr_static_map_msg['enable'] == True:
     #load ehr static map info
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
@@ -910,7 +920,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
     print("ehr static map timestamp:",bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].header)
     print("road_map.lanes len:",len(bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].road_map.lanes))
-    #load center line 
+    #load center line
     ehr_line_info_list = ehr_load_center_lane_lines(bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].road_map.lanes,
                                              cur_pos_xn,cur_pos_yn,cur_yaw,Max_line_size)
     ehr_data_lane_dict = {}
@@ -926,7 +936,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             'ehr_line_{}_x'.format(i): ehr_line_info_list[i]['ehr_line_x_vec'],
             'ehr_line_{}_y'.format(i): ehr_line_info_list[i]['ehr_line_y_vec'],
           })
-      
+
     #load road boundary
     print("road_map.road_boundaries len:",len(bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].road_map.road_boundaries))
     ehr_load_road_boundary_info_list = ehr_load_road_boundary_lines(bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].road_map.road_boundaries,
@@ -953,7 +963,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       ehr_data_lane_boundary.data.update({
             'ehr_lane_boundary_{}_x'.format(i): ehr_lane_boundary_info_list[i]['ehr_lane_boundary_x_vec'],
             'ehr_lane_boundary_{}_y'.format(i): ehr_lane_boundary_info_list[i]['ehr_lane_boundary_y_vec'],
-          })
+          }) """
 
   return local_view_data
 
@@ -971,7 +981,7 @@ def load_local_view_figure():
   data_lane_7 = ColumnDataSource(data = {'line_7_y':[], 'line_7_x':[]})
   data_lane_8 = ColumnDataSource(data = {'line_8_y':[], 'line_8_x':[]})
   data_lane_9 = ColumnDataSource(data = {'line_9_y':[], 'line_9_x':[]})
-  ehr_data_lanes = []
+  """  ehr_data_lanes = []
   for i in range(Max_line_size):
     ehr_data_lanes.append(ColumnDataSource(data={'ehr_line_{}_y'.format(i): [], 'ehr_line_{}_x'.format(i): []}))
 
@@ -982,7 +992,7 @@ def load_local_view_figure():
   ehr_lane_boundary_lanes = []
   for i in range(Lane_boundary_max_line_size):
     ehr_lane_boundary_lanes.append(ColumnDataSource(data={'ehr_lane_boundary_{}_y'.format(i): [], 'ehr_lane_boundary_{}_x'.format(i): []}))
-
+  """
   data_center_line_0 = ColumnDataSource(data = {'center_line_0_y':[], 'center_line_0_x':[]})
   data_center_line_1 = ColumnDataSource(data = {'center_line_1_y':[], 'center_line_1_x':[]})
   data_center_line_2 = ColumnDataSource(data = {'center_line_2_y':[], 'center_line_2_x':[]})
@@ -1048,11 +1058,11 @@ def load_local_view_figure():
                      'data_control':data_control,\
                      'data_index': data_index, \
                      }
-  for i in range(len(ehr_data_lanes)):
+  """ for i in range(len(ehr_data_lanes)):
     key = 'ehr_data_lane_' + str(i)
     value = ehr_data_lanes[i]
     local_view_data[key] = value
-  
+
   for i in range(len(ehr_road_boundary_lanes)):
     key = 'ehr_road_boundary_' + str(i)
     value = ehr_road_boundary_lanes[i]
@@ -1061,7 +1071,7 @@ def load_local_view_figure():
   for i in range (len(ehr_lane_boundary_lanes)):
     key = 'ehr_lane_boundary_' + str(i)
     value = ehr_lane_boundary_lanes[i]
-    local_view_data[key] = value
+    local_view_data[key] = value """
 
   ### figures config
 
@@ -1083,7 +1093,7 @@ def load_local_view_figure():
   fig1.line('line_8_y', 'line_8_x', source = data_lane_8, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   fig1.line('line_9_y', 'line_9_x', source = data_lane_9, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
 
-  for i in range (len(ehr_data_lanes)):
+  """ for i in range (len(ehr_data_lanes)):
     keyy = 'ehr_line_{}_y'.format(i)
     keyx = 'ehr_line_{}_x'.format(i)
     fig1.line(keyy,keyx,source = ehr_data_lanes[i], line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ehr_center_lane')
@@ -1097,7 +1107,7 @@ def load_local_view_figure():
     keyy = 'ehr_lane_boundary_{}_y'.format(i)
     keyx = 'ehr_lane_boundary_{}_x'.format(i)
     fig1.line(keyy,keyx,source = ehr_lane_boundary_lanes[i], line_width = 1, line_color = 'blue', line_dash = 'dashed', legend_label = 'ehr_lane_boundary')
-
+  """
 
   fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')

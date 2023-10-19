@@ -152,16 +152,21 @@ class LoadCyberbag:
     try:
       json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'VisionLonBehavior_a_target_high',
                          "VisionLonBehavior_a_target_low", "VisionLonBehavior_v_target",
-                         "VisionLonBehavior_lead_one_id", "VisionLonBehavior_lead_one_dis", "VisionLonBehavior_lead_one_vel",
-                         "VisionLonBehavior_lead_two_id", "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel",
-                         "VisionLonBehavior_temp_lead_one_id", "VisionLonBehavior_temp_lead_one_dis", "VisionLonBehavior_temp_lead_one_vel",
-                         "VisionLonBehavior_temp_lead_two_id", "VisionLonBehavior_temp_lead_two_dis", "VisionLonBehavior_temp_lead_two_vel",
-                         "VisionLonBehavior_potental_cutin_track_id", "VisionLonBehavior_potental_cutin_v_target",
-                         "VisionLonBehavior_v_limit_road", "VisionLonBehavior_v_limit_in_turns", "VisionLonBehavior_road_radius",
+                         "VisionLonBehavior_lead_one_id", "VisionLonBehavior_lead_one_dis", "VisionLonBehavior_lead_one_vel", "VisionLonBehavior_v_target_lead_one",
+                         "VisionLonBehavior_lead_two_id", "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel", "VisionLonBehavior_v_target_lead_two",
+                         "VisionLonBehavior_temp_lead_one_id", "VisionLonBehavior_temp_lead_one_dis", "VisionLonBehavior_temp_lead_one_vel", "VisionLonBehavior_v_target_temp_lead_one",
+                         "VisionLonBehavior_temp_lead_two_id", "VisionLonBehavior_temp_lead_two_dis", "VisionLonBehavior_temp_lead_two_vel", "VisionLonBehavior_v_target_temp_lead_two",
+                         "VisionLonBehavior_potental_cutin_track_id", "VisionLonBehavior_potental_cutin_v_target", "VisionLonBehavior_cutin_v_target", "dis_to_ramp",
+                         "VisionLonBehavior_v_limit_road", "VisionLonBehavior_v_limit_in_turns", "VisionLonBehavior_road_radius", "VisionLonBehavior_v_target_ramp",
                          "VisionLonBehavior_stop_start_state", "VisionLonBehavior_v_target_start_stop",
-                         "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel",
-                         "EnvironmentalModelManagerCost","VisionLateralBehaviorPlannerCost","VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost"
-                         ]
+                         "EnvironmentalModelManagerCost","VisionLateralBehaviorPlannerCost","VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost",
+                         "RealTime_v_ref", "RealTime_v_ego", "RealTime_gap_v_limit_lc",
+                         "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_car_cut_in_id",
+                         "RealTime_lead_one_id", "RealTime_lead_one_distance", "RealTime_lead_one_velocity", "RealTime_lead_one_desire_vel",
+                         "RealTime_lead_two_id", "RealTime_lead_two_distance", "RealTime_lead_two_velocity", "RealTime_lead_two_desire_vel",
+                         "RealTime_temp_lead_one_id", "RealTime_temp_lead_one_distance", "RealTime_temp_lead_one_velocity", "RealTime_temp_lead_one_desire_vel",
+                         "RealTime_temp_lead_two_id", "RealTime_temp_lead_two_distance", "RealTime_temp_lead_two_velocity", "RealTime_temp_lead_two_desire_vel",
+                         "RealTime_potential_cutin_track_id", "RealTime_potential_cutin_v_target", "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec"]
 

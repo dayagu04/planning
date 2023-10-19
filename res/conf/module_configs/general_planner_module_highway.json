@@ -229,7 +229,9 @@
     "v_start": 0.3,
     "obstacle_v_start": 0.5,
     "distance_stop": 1.0,
-    "distance_start": 0.3
+    "distance_start": 0.3,
+    "dece_to_ramp": -1.0,
+    "v_limit_ramp": 16.67
   },
   "pnp_precise_lat_bound_care_threshold": 5.0,
   "pnp_lower_speed_protect_threshold": 0.3,

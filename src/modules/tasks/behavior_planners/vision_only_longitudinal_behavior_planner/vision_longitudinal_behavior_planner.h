@@ -39,8 +39,7 @@ class VisionLongitudinalBehaviorPlanner : public Task {
                                   const bool close_to_accident,
                                   const string &lc_request,
                                   const string &lc_status);
-  bool calc_speed_for_ramp(double dis_to_ramp, double ramp_v_limit,
-                           double acc_to_ramp, double v_ego);
+  bool calc_speed_for_ramp(double v_ego);
   bool calc_speed_with_potential_cutin_car(
       const std::vector<TrackedObject> &front_tracks, const string &lc_request,
       const double v_cruise, const double v_ego);

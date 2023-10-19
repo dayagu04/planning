@@ -35,12 +35,22 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
                             'VisionLonBehavior_v_limit_road', 'VisionLonBehavior_v_limit_in_turns','VisionLonBehavior_v_target', \
-                            'VisionLonBehavior_lead_one_id', 'VisionLonBehavior_lead_one_dis', 'VisionLonBehavior_lead_one_vel', \
-                            'VisionLonBehavior_lead_two_id', 'VisionLonBehavior_lead_two_dis', 'VisionLonBehavior_lead_two_vel', \
-                            'VisionLonBehavior_temp_lead_one_id', 'VisionLonBehavior_temp_lead_one_dis', 'VisionLonBehavior_temp_lead_one_vel', \
-                            'VisionLonBehavior_temp_lead_two_id', 'VisionLonBehavior_temp_lead_two_dis', 'VisionLonBehavior_temp_lead_two_vel', \
-                            'VisionLonBehavior_potental_cutin_track_id', 'VisionLonBehavior_potental_cutin_v_target', \
-                            'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop']
+                            'VisionLonBehavior_lead_one_id', 'VisionLonBehavior_lead_one_dis', 'VisionLonBehavior_lead_one_vel', "VisionLonBehavior_v_target_lead_one",\
+                            'VisionLonBehavior_lead_two_id', 'VisionLonBehavior_lead_two_dis', 'VisionLonBehavior_lead_two_vel', "VisionLonBehavior_v_target_lead_two",\
+                            'VisionLonBehavior_temp_lead_one_id', 'VisionLonBehavior_temp_lead_one_dis', 'VisionLonBehavior_temp_lead_one_vel', "VisionLonBehavior_v_target_temp_lead_one",\
+                            'VisionLonBehavior_temp_lead_two_id', 'VisionLonBehavior_temp_lead_two_dis', 'VisionLonBehavior_temp_lead_two_vel', "VisionLonBehavior_v_target_temp_lead_two",\
+                            'VisionLonBehavior_potental_cutin_track_id', 'VisionLonBehavior_potental_cutin_v_target', "VisionLonBehavior_cutin_v_target", "VisionLonBehavior_road_radius", \
+                            'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', 'VisionLonBehavior_STANDSTILL', 'VisionLonBehavior_final_v_target', \
+                            "dis_to_ramp", "VisionLonBehavior_v_target_ramp",\
+                            'RealTime_v_ref', 'RealTime_v_ego', 'RealTime_gap_v_limit_lc', \
+                            'RealTime_lead_one_id', 'RealTime_lead_one_distance', 'RealTime_lead_one_velocity', 'RealTime_lead_one_desire_vel', \
+                            'RealTime_lead_two_id', 'RealTime_lead_two_distance', 'RealTime_lead_two_velocity', 'RealTime_lead_two_desire_vel', \
+                            'RealTime_temp_lead_one_id', 'RealTime_temp_lead_one_distance', 'RealTime_temp_lead_one_velocity', 'RealTime_temp_lead_one_desire_vel', \
+                            'RealTime_temp_lead_two_id', 'RealTime_temp_lead_two_distance', 'RealTime_temp_lead_two_velocity', 'RealTime_temp_lead_two_desire_vel', \
+                            'RealTime_potential_cutin_track_id', 'RealTime_potential_cutin_v_target',
+                            "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_lead_id", \
+                            "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
+                            "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime", "RealTimeLateralMotionCostTime", "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime"]
 
   plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
   plan_debug_json_info = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
@@ -59,12 +69,22 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   s_ref_vec = []
   for item in (plan_debug_info.long_ref_path.s_refs):
     s_ref_vec.append(item.first)
-  s_lead_vec = []
-  for idx in range(len(plan_debug_info.long_ref_path.lon_lead_bounds)):
-    try:
-      s_lead_vec.append(plan_debug_info.long_ref_path.lon_lead_bounds[idx].bound[0].s_lead)
-    except:
-      print("the s_lead_vec size: ",len(s_lead_vec))
+  s_soft_upper_bound_vec = []
+  s_soft_lower_bound_vec = []
+  try:
+    for idx in range(len(plan_debug_info.long_ref_path.soft_bounds)):
+      high_bound = plan_debug_info.long_ref_path.soft_bounds[idx].bound[0].upper
+      low_bound = plan_debug_info.long_ref_path.soft_bounds[idx].bound[0].lower
+      try:
+        for one_soft_bound in plan_debug_info.long_ref_path.soft_bounds[idx].bound:
+           high_bound = min(high_bound, one_soft_bound.upper)
+           low_bound = max(low_bound, one_soft_bound.lower)
+        s_soft_upper_bound_vec.append(high_bound)
+        s_soft_lower_bound_vec.append(low_bound)
+      except:
+        print("the s_soft_upper_bound_vec size: ",len(s_soft_upper_bound_vec))
+  except:
+        print("there is no long_ref_path.soft_bounds")
 
   obs_low_vec = []
   obs_high_vec = []
@@ -114,12 +134,24 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
      v_ref_vec.append(item.first)
 
   v_bound_low_vec = []
-  for item in (plan_debug_info.long_ref_path.lon_bound_v.bound):
-     v_bound_low_vec.append(item.lower)
+  try:
+    for item in (plan_debug_info.long_ref_path.lon_bound_v.bound):
+      v_bound_low_vec.append(item.lower)
+    v_bound_high_vec = []
+    for item in (plan_debug_info.long_ref_path.lon_bound_v.bound):
+      v_bound_high_vec.append(item.upper)
+  except:
+    print("there is no lon_ref_path.lon_bound_v.bound")
 
-  v_bound_high_vec = []
-  for item in (plan_debug_info.long_ref_path.lon_bound_v.bound):
-     v_bound_high_vec.append(item.upper)
+  # get sv_bound:
+  sv_bound_s_vec = []
+  sv_bound_v_vec = []
+  try:
+    for item in (plan_debug_info.long_ref_path.lon_sv_boundary.sv_bounds):
+      sv_bound_s_vec.append(item.s)
+      sv_bound_v_vec.append(item.v_bound.upper)
+  except:
+    print("there is no lon_ref_path.lon_sv_boundary.sv_bounds")
 
   a_bound_low_vec = []
   for item in (plan_debug_info.long_ref_path.lon_bound_a.bound):
@@ -136,7 +168,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lon_plan_data['data_st'].data.update({
     't': t_vec,
     's': s_ref_vec,
-    's_lead': s_lead_vec,
+    's_soft_ub': s_soft_upper_bound_vec,
+    's_soft_lb': s_soft_lower_bound_vec,
     'obs_low': obs_low_vec,
     'obs_high': obs_high_vec,
     'obs_low_id': obs_low_id_vec,
@@ -181,10 +214,12 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   })
 
   lon_plan_data['data_sv'].data.update({
-    's': s_ref_vec,
-    'v': v_ref_vec,
+    's_ref': s_ref_vec,
+    'v_ref': v_ref_vec,
     'v_low': v_bound_low_vec,
     'v_high': v_bound_high_vec,
+    'sv_bound_s': sv_bound_s_vec,
+    'sv_bound_v': sv_bound_v_vec,
   })
 
   lon_plan_data['data_text'].data.update({
@@ -218,6 +253,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   vel_vec = lon_motion_plan_output.vel_vec
   acc_vec = lon_motion_plan_output.acc_vec
   jerk_vec = lon_motion_plan_output.jerk_vec
+
+  # print("lon_motion_plan_output:=", lon_motion_plan_output)
 
   lon_plan_data['data_lon_motion_plan'].data.update({
     'time_vec': time_vec,
@@ -281,68 +318,262 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       'plan_traj_x' : plan_traj_x,
       })
 
+def update_lon_ref_path(lon_ref_path, lon_plan_data):
+  # behavior planning
+  t_vec = list(lon_ref_path.t_list)
+
+  s_ref_vec = []
+  for item in (lon_ref_path.s_refs):
+    s_ref_vec.append(item.first)
+  s_soft_upper_bound_vec = []
+  s_soft_lower_bound_vec = []
+  try:
+    for idx in range(len(lon_ref_path.soft_bounds)):
+      high_bound = lon_ref_path.soft_bounds[idx].bound[0].upper
+      low_bound = lon_ref_path.soft_bounds[idx].bound[0].lower
+      try:
+        for one_soft_bound in lon_ref_path.soft_bounds[idx].bound:
+           high_bound = min(high_bound, one_soft_bound.upper)
+           low_bound = max(low_bound, one_soft_bound.lower)
+        s_soft_upper_bound_vec.append(high_bound)
+        s_soft_lower_bound_vec.append(low_bound)
+      except:
+        print("the s_soft_upper_bound_vec size: ",len(s_soft_upper_bound_vec))
+  except:
+        print("there is no lon_ref_path.soft_bounds")
+
+  obs_low_vec = []
+  obs_high_vec = []
+  obs_low_id_vec = []
+  obs_high_id_vec = []
+  obs_low_type_vec = []
+  obs_high_type_vec = []
+  obs_st_dict = {'-1':dict({'t':[], 's':[]})}
+  for idx in range(len(lon_ref_path.bounds)):
+     low_bound = lon_ref_path.bounds[idx].bound[0].lower
+     high_bound = lon_ref_path.bounds[idx].bound[0].upper
+     low_bound_type = lon_ref_path.bounds[idx].bound[0].bound_info.type
+     high_bound_type = lon_ref_path.bounds[idx].bound[0].bound_info.type
+     low_bound_id = lon_ref_path.bounds[idx].bound[0].bound_info.id
+     high_bound_id = lon_ref_path.bounds[idx].bound[0].bound_info.id
+     for one_bound in lon_ref_path.bounds[idx].bound:
+        if one_bound.lower > low_bound:
+           low_bound = one_bound.lower
+           low_bound_type = one_bound.bound_info.type
+           low_bound_id = one_bound.bound_info.id
+        if one_bound.upper < high_bound:
+           high_bound = one_bound.upper
+           high_bound_type = one_bound.bound_info.type
+           high_bound_id = one_bound.bound_info.id
+        if one_bound.bound_info.type == 'obstacle':
+           if(str(one_bound.bound_info.id) in obs_st_dict.keys()):
+              obs_st_dict[str(one_bound.bound_info.id)]['t'].append(t_vec[idx])
+              obs_st_dict[str(one_bound.bound_info.id)]['s'].append(one_bound.upper)
+           else:
+              ons_obs_st = dict({'t':[], 's':[]})
+              ons_obs_st['t'].append(t_vec[idx])
+              ons_obs_st['s'].append(one_bound.upper)
+              obs_st_dict[str(one_bound.bound_info.id)] = ons_obs_st
+     obs_low_vec.append(low_bound)
+     obs_high_vec.append(high_bound)
+     if low_bound_type == 'default':
+        low_bound_id = -1
+     if high_bound_type == 'default':
+        high_bound_id = -1
+     obs_low_id_vec.append(low_bound_id)
+     obs_high_id_vec.append(high_bound_id)
+     obs_low_type_vec.append(low_bound_type)
+     obs_high_type_vec.append(high_bound_type)
+
+  v_ref_vec = []
+  for item in (lon_ref_path.ds_refs):
+     v_ref_vec.append(item.first)
+
+  v_bound_low_vec = []
+  for item in (lon_ref_path.lon_bound_v.bound):
+     v_bound_low_vec.append(item.lower)
+
+  v_bound_high_vec = []
+  for item in (lon_ref_path.lon_bound_v.bound):
+     v_bound_high_vec.append(item.upper)
+
+  # get sv_bound:
+  sv_bound_s_vec = []
+  sv_bound_v_vec = []
+  for item in (lon_ref_path.lon_sv_boundary.sv_bounds):
+    sv_bound_s_vec.append(item.s)
+    sv_bound_v_vec.append(item.v_bound.upper)
+
+  a_bound_low_vec = []
+  for item in (lon_ref_path.lon_bound_a.bound):
+     a_bound_low_vec.append(item.lower)
+
+  a_bound_high_vec = []
+  for item in (lon_ref_path.lon_bound_a.bound):
+     a_bound_high_vec.append(item.upper)
+
+  lon_plan_data['data_st'].data.update({
+    't': t_vec,
+    's': s_ref_vec,
+    's_soft_ub': s_soft_upper_bound_vec,
+    's_soft_lb': s_soft_lower_bound_vec,
+    'obs_low': obs_low_vec,
+    'obs_high': obs_high_vec,
+    'obs_low_id': obs_low_id_vec,
+    'obs_high_id': obs_high_id_vec,
+    'obs_low_type': obs_low_type_vec,
+    'obs_high_type': obs_high_type_vec
+  })
+
+  #lon_plan_data['data_obs_st'].clear()
+  #print(obs_st_dict)
+  for obs_id in lon_plan_data['data_obs_st'].keys():
+     """ if(obs_id not in lon_plan_data['data_obs_st'].keys()):
+        one_obs_st_cds = ColumnDataSource(data = {'obs_t':[], 'obs_s':[]})
+        lon_plan_data['data_obs_st'][obs_id] = one_obs_st_cds
+        lon_plan_data['data_obs_st'][obs_id].data.update({
+           'obs_t':obs_st_dict[obs_id]['t'],
+           'obs_s':obs_st_dict[obs_id]['s']
+        }) """
+     if obs_id in obs_st_dict.keys():
+       lon_plan_data['data_obs_st'][obs_id].data.update({
+           'obs_t':obs_st_dict[obs_id]['t'],
+           'obs_s':obs_st_dict[obs_id]['s'],
+           'obs_high_id':[obs_id] * len(obs_st_dict[obs_id]['s']),
+           'obs_high_type':['obstacle'] * len(obs_st_dict[obs_id]['s'])
+        })
+     else:
+        lon_plan_data['data_obs_st'][obs_id].data.update({
+           'obs_t':[],
+           'obs_s':[],
+           'obs_high_id':[],
+           'obs_high_type':[]
+        })
+
+  #print(lon_plan_data['data_obs_st'].values())
+  #for item in lon_plan_data['data_obs_st'].values():
+  #   print(item.data)
+
+  lon_plan_data['data_sv'].data.update({
+    's_ref': s_ref_vec,
+    'v_ref': v_ref_vec,
+    'v_low': v_bound_low_vec,
+    'v_high': v_bound_high_vec,
+    'sv_bound_s': sv_bound_s_vec,
+    'sv_bound_v': sv_bound_v_vec,
+  })
+
 def load_lon_global_figure(bag_loader):
-   #real time global figure data process
-   velocity_fig = bkp.figure(title='车速',x_axis_label='time/s',
-                  y_axis_label='velocity/(m/s)',width=600,height=400)
+  #real time global figure data process
+  velocity_fig = bkp.figure(title='车速',x_axis_label='time/s',
+                y_axis_label='velocity/(m/s)',width=600,height=300)
 
-   ego_velocity_vec = []
-   target_velocity_vec = []
-   leadone_velocity_vec = []
-   leadtwo_velocity_vec = []
-   t_plan_vec = bag_loader.plan_debug_msg['t']
-   t_loc_vec = bag_loader.loc_msg['t']
-   for ind in range(len(bag_loader.plan_debug_msg['json'])):
-      target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_v_target'], 2))
-      leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_lead_one_vel'], 2))
-      leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_lead_two_vel'], 2))
+  ego_velocity_vec = []
+  target_velocity_vec = []
+  ref_velocity_vec = []
+  leadone_velocity_vec = []
+  leadtwo_velocity_vec = []
+  t_plan_vec = bag_loader.plan_debug_msg['t']
+  t_loc_vec = bag_loader.loc_msg['t']
+  t_vehicle_service_vec = bag_loader.vs_msg['t']
+  for ind in range(len(bag_loader.plan_debug_msg['json'])):
+    target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_v_target'], 2))
+    ref_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_v_ref'], 2))
+    leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_lead_one_velocity'], 2))
+    leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_lead_two_velocity'], 2))
 
-   for ind in range(len(bag_loader.loc_msg['data'])):
-      ego_velocity_vec.append(round(bag_loader.loc_msg['data'][ind].pose.linear_velocity_from_wheel, 2))
+  for ind in range(len(bag_loader.vs_msg['data'])):
+    ego_velocity_vec.append(round(bag_loader.vs_msg['data'][ind].vehicle_speed, 2))
 
-   velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
-                                legend_label='target_velocity', color="green")
-   velocity_fig.line(t_loc_vec, ego_velocity_vec, line_width=1,
-                                  legend_label='ego_velocity',color="blue")
-   velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
-                                legend_label='leadone_velocity', color="red")
-   velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,
-                                  legend_label='leadtwo_velocity',color="orange")
+  velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
+                              legend_label='target_velocity', color="green")
+  velocity_fig.line(t_plan_vec, ref_velocity_vec, line_width=1,
+                              legend_label='ref_velocity', color="gray")
+  velocity_fig.line(t_vehicle_service_vec, ego_velocity_vec, line_width=1,
+                                legend_label='ego_velocity',color="blue")
+  velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
+                              legend_label='leadone_velocity', color="red")
+  velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,
+                                legend_label='leadtwo_velocity',color="orange")
 
-   acc_fig = bkp.figure(title='加速度',x_axis_label='time/s',
-                  y_axis_label='acc/(m/s2)',width=600,height=400)
+  acc_fig = bkp.figure(title='加速度',x_axis_label='time/s',
+                y_axis_label='acc/(m/s2)',width=600,height=300)
 
-   ego_acc_vec = []
-   acc_min_vec = []
-   acc_max_vec = []
+  ego_acc_vec = []
+  acc_min_vec = []
+  acc_max_vec = []
 
-   t_vs_vec = bag_loader.vs_msg['t']
-   for ind in range(len(bag_loader.plan_debug_msg['json'])):
-      acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_low'], 2))
-      acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_high'], 2))
-   for ind in range(len(bag_loader.vs_msg['data'])):
-      ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
+  t_vs_vec = bag_loader.vs_msg['t']
+  for ind in range(len(bag_loader.plan_debug_msg['json'])):
+    acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_low'], 2))
+    acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_high'], 2))
+  for ind in range(len(bag_loader.vs_msg['data'])):
+    ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
 
-   acc_fig.line(t_plan_vec, acc_min_vec, line_width=1,
-                                legend_label='acc_min', color="brown")
-   acc_fig.line(t_vs_vec, ego_acc_vec, line_width=1,
-                                  legend_label='ego_acc',color="blue")
-   acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
-                                legend_label='acc_max', color="red")
+  acc_fig.line(t_plan_vec, acc_min_vec, line_width=1,
+                              legend_label='acc_min', color="brown")
+  acc_fig.line(t_vs_vec, ego_acc_vec, line_width=1,
+                                legend_label='ego_acc',color="blue")
+  acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
+                              legend_label='acc_max', color="red")
 
-   #get longtime obstacle id list in st-graph
-   obs_st_ids = []
-   for ind in range(len(bag_loader.plan_debug_msg['data'])):
-     for item in bag_loader.plan_debug_msg['data'][ind].long_ref_path.bounds:
-        for one_bound in item.bound:
-           if(one_bound.bound_info.type == 'obstacle' and one_bound.bound_info.id > 0 and one_bound.bound_info.id not in obs_st_ids):
-              obs_st_ids.append(one_bound.bound_info.id)
-   return velocity_fig, acc_fig, obs_st_ids
+  lead_fig = bkp.figure(title='lead_car_distance',x_axis_label='time/s',
+                y_axis_label='distance/(m)',width=600,height=300)
+  # 各阶段耗时
+  cost_time_fig = bkp.figure(title='耗时',x_axis_label='time/s',
+                  y_axis_label='time cost/(ms)',width=600,height=300)
 
-def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
-  data_st = ColumnDataSource(data = {'t':[], 's':[], 's_lead':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
+  lead_one_dis_vec = []
+  lead_two_dis_vec = []
+  temp_lead_one_dis_vec = []
+  temp_lead_two_dis_vec = []
+  desired_distance_rss_vec = []
+  desired_distance_calibrate_vec = []
+  RealTimeLonBehaviorCostTime_vec = []
+  RealTimeLonMotionCostTime_vec = []
+  RealTimeLateralMotionCostTime_vec = []
+  EnvironmentalModelManagerCost_vec = []
+  GeneralPlannerModuleCostTime_vec = []
+
+  for ind in range(len(bag_loader.plan_debug_msg['json'])):
+    lead_one_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_lead_one_distance'], 2))
+    lead_two_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_lead_two_distance'], 2))
+    temp_lead_one_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_temp_lead_one_distance'], 2))
+    temp_lead_two_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_temp_lead_two_distance'], 2))
+    desired_distance_rss_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_desired_distance_rss'], 2))
+    desired_distance_calibrate_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_desired_distance_calibrate'], 2))
+    RealTimeLonBehaviorCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTimeLonBehaviorCostTime'], 2))
+    RealTimeLonMotionCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTimeLonMotionCostTime'], 2))
+    RealTimeLateralMotionCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTimeLateralMotionCostTime'], 2))
+    EnvironmentalModelManagerCost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['EnvironmentalModelManagerCost'], 2))
+    GeneralPlannerModuleCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['GeneralPlannerModuleCostTime'], 2))
+
+  lead_fig.line(t_plan_vec, lead_one_dis_vec, line_width=1, legend_label='lead_one_dis', color="red")
+  lead_fig.line(t_plan_vec, lead_two_dis_vec, line_width=1, legend_label='lead_two_dis', color="green")
+  lead_fig.line(t_plan_vec, temp_lead_one_dis_vec, line_width=1, legend_label='temp_lead_one_dis', color="blue")
+  lead_fig.line(t_plan_vec, temp_lead_two_dis_vec, line_width=1, legend_label='temp_lead_two_dis', color="purple")
+  lead_fig.line(t_plan_vec, desired_distance_rss_vec, line_width=1, legend_label='distance_rss', color="yellow")
+  lead_fig.line(t_plan_vec, desired_distance_calibrate_vec, line_width=1, legend_label='distance_cali', color="orange")
+
+  cost_time_fig.line(t_plan_vec, RealTimeLonBehaviorCostTime_vec, line_width=1, legend_label='LonBehaviorCostTime', color="red")
+  cost_time_fig.line(t_plan_vec, RealTimeLonMotionCostTime_vec, line_width=1, legend_label='LonMotionCostTime_vec', color="blue")
+  cost_time_fig.line(t_plan_vec, RealTimeLateralMotionCostTime_vec, line_width=1, legend_label='LatMotionCostTime_vec', color="orange")
+  cost_time_fig.line(t_plan_vec, EnvironmentalModelManagerCost_vec, line_width=1, legend_label='EnvironmentalCostTime_vec', color="yellow")
+  cost_time_fig.line(t_plan_vec, GeneralPlannerModuleCostTime_vec, line_width=1, legend_label='GeneralPlannerModuleCostTime', color="purple")
+
+  #get longtime obstacle id list in st-graph
+  obs_st_ids = []
+  for ind in range(len(bag_loader.plan_debug_msg['data'])):
+    for item in bag_loader.plan_debug_msg['data'][ind].long_ref_path.bounds:
+      for one_bound in item.bound:
+          if(one_bound.bound_info.type == 'obstacle' and one_bound.bound_info.id > 0 and one_bound.bound_info.id not in obs_st_ids):
+            obs_st_ids.append(one_bound.bound_info.id)
+  return velocity_fig, acc_fig, lead_fig, cost_time_fig, obs_st_ids
+
+def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, obs_st_ids):
+  data_st = ColumnDataSource(data = {'t':[], 's':[], 's_soft_ub':[], 's_soft_lb':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
-  data_sv = ColumnDataSource(data = {'s':[], 'v':[], 'v_low':[], 'v_high':[]})
+  data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[], 'sv_bound_s':[], 'sv_bound_v':[]})
   data_tv = ColumnDataSource(data = {'t':[], 'vel':[]})
   data_ta = ColumnDataSource(data = {'t':[], 'acc':[]})
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
@@ -414,7 +645,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
   fig7 = bkp.figure(x_axis_label='time', y_axis_label='jerk',x_range = fig6.x_range, width=600, height=200)
 
   f2 = fig2.line('t', 's', source = data_st, line_width = 2, line_color = 'green', line_dash = 'dashed', legend_label = 'origin s_ref')
-  fig2.line('t', 's_lead', source = data_st, line_width = 3, line_color = 'yellow', line_dash = 'solid', legend_label = 'origin s_lead')
+  fig2.line('t', 's_soft_ub', source = data_st, line_width = 3, line_color = 'yellow', line_dash = 'solid', legend_label = 's_soft_ub')
+  fig2.line('t', 's_soft_lb', source = data_st, line_width = 3, line_color = '#FFA500', line_dash = 'solid', legend_label = 's_soft_lb')
   fig2.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')
   #fig2.line('t_long', 's_plan', source = data_st_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
   fig2.line('time_vec', 'pos_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
@@ -433,13 +665,13 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
   #label_high_id = LabelSet(x='t', y='obs_high', text='obs_high_id', x_offset=2, y_offset=2, source=data_st)
   #fig2.add_layout(label_high_id)
 
-  f3 = fig3.line('s', 'v', source = data_sv, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')
-#   fig3.line('s_plan', 'v_plan', source = data_st_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'v_plan')
+  f3 = fig3.line('s_ref', 'v_ref', source = data_sv, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')
+  fig3.line('sv_bound_s', 'sv_bound_v', source = data_sv, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'sv_bound_v_upper')
   fig3.line('pos_vec', 'vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'v_plan')
-  fig3.line('s', 'v_low', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_lb')
-  fig3.line('s', 'v_high', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_ub')
-  fig3.triangle('s', 'v_low', source = data_sv, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
-  fig3.inverted_triangle ('s', 'v_high', source = data_sv, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
+  fig3.line('s_ref', 'v_low', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_lb')
+  fig3.line('s_ref', 'v_high', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_ub')
+  fig3.triangle('s_ref', 'v_low', source = data_sv, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
+  fig3.inverted_triangle ('s_ref', 'v_high', source = data_sv, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
 
   # pos
   f4 = fig4.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')
@@ -507,7 +739,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, obs_st_ids):
 
   tab1 = DataTable(source=data_text, columns=columns, width=500, height=800)
 
-  pan2 = Panel(child=row(tab1, column(velocity_fig, acc_fig)), title="Realtime")
+  pan2 = Panel(child=row(tab1, column(velocity_fig, acc_fig, lead_fig), column(cost_time_fig)), title="Realtime")
 
   pans = Tabs(tabs=[ pan1, pan2 ])
 
