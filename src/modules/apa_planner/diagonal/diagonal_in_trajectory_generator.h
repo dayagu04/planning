@@ -147,7 +147,8 @@ class DiagonalInTrajectoryGenerator {
   // for pybind simulation
   void SetSimulationParam(SimulationParam &param) { simu_param_ = param; }
   void SetSlotWidthOffset(double slot_width_offset) {
-    slot_width_offset_ = slot_width_offset;
+    left_slot_width_offset_ = slot_width_offset;
+    right_slot_width_offset_ = slot_width_offset;
   }
 
   // for apa planner pybind simulation
@@ -242,8 +243,8 @@ class DiagonalInTrajectoryGenerator {
   double sublane_left_length_ = 0.0;
   double sublane_right_length_ = 0.0;
   double sublane_width_ = 0.0;
-  double slot_width_offset_ = 0.0;
-
+  double left_slot_width_offset_ = 0.0;
+  double right_slot_width_offset_ = 0.0;
   // TODO
   uint8_t current_state_ = ::FuncStateMachine::FunctionalState::INIT;
 
@@ -255,6 +256,7 @@ class DiagonalInTrajectoryGenerator {
   // system states
   pnc::geometry_lib::GlobalToLocalTf g2l_tf_;
   pnc::geometry_lib::LocalToGlobalTf l2g_tf_;
+  pnc::geometry_lib::LocalToGlobalTf ego2slot_tf_;
   pnc::mathlib::spline x_s_spline_g_;
   pnc::mathlib::spline y_s_spline_g_;
   double current_path_length_ = 0.0;

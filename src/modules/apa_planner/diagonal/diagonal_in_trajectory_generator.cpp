@@ -81,6 +81,7 @@ static const double min_replan_remain_dist =
 static const double standard_slot_length = 5.2;
 static const uint8_t max_gear_change_count = 6;
 
+static const double kMinSlotCoverRatioUpdateObs = 0.8;
 static const double kSublaneWidth = 5.0;
 static const double kRightSublaneLength = 7.0;
 static const double kLeftSublaneLength = 7.0;
@@ -94,9 +95,10 @@ static const double kMaxVelocity = 0.6;
 
 // vehicle params
 static const double kFrontOverhanging = 0.924;
+static const double kRearOverhanging = 0.94;
 static const double kWheelBase = 2.7;
 static const double kVehicleWidth = 1.89;
-
+static const double kEgoVertexLatBuffer = 0.1;
 }  // namespace
 
 const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
@@ -252,7 +254,8 @@ void DiagonalInTrajectoryGenerator::Reset() {
   slot_occupied_ratio_ = 0.0;
   parking_continue_time_ = 0.0;
   ego_slot_info_.Reset();
-  slot_width_offset_ = slot_width_offset_empty;
+  left_slot_width_offset_ = slot_width_offset_empty;
+  right_slot_width_offset_ = slot_width_offset_empty;
   multi_step_plan_result_.clear();
   multi_step_plan_result_.reserve(DUBINS_LEVEL_COUNT);
   twice_gear_change_enable_ = true;
@@ -532,6 +535,31 @@ void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
   ego_slot_info_.ego_pos_slot = g2l_tf_.GetPos(measure_.ego_pos);
   ego_slot_info_.ego_heading_slot = g2l_tf_.GetHeading(measure_.heading);
 
+  ego2slot_tf_.Init(ego_slot_info_.ego_pos_slot,
+                    ego_slot_info_.ego_heading_slot);
+
+  // move away obstacles if ego car is crashed with new slot line.
+  // calc extreme y value of ego car
+  Eigen::Vector2d FL_corner_vec_ego(kFrontOverhanging + kWheelBase,
+                                    0.5 * kVehicleWidth);
+  Eigen::Vector2d FR_corner_vec_ego(FL_corner_vec_ego.x(),
+                                    -FL_corner_vec_ego.y());
+
+  Eigen::Vector2d RL_corner_vec_ego(-kRearOverhanging, FL_corner_vec_ego.y());
+  Eigen::Vector2d RR_corner_vec_ego(RL_corner_vec_ego.x(),
+                                    -RL_corner_vec_ego.y());
+
+  Eigen::Vector2d FL_corner_vec_slot = ego2slot_tf_.GetPos(FL_corner_vec_ego);
+  Eigen::Vector2d FR_corner_vec_slot = ego2slot_tf_.GetPos(FR_corner_vec_ego);
+  Eigen::Vector2d RL_corner_vec_slot = ego2slot_tf_.GetPos(RL_corner_vec_ego);
+  Eigen::Vector2d RR_corner_vec_slot = ego2slot_tf_.GetPos(RR_corner_vec_ego);
+  const double ego_max_y =
+      kEgoVertexLatBuffer +
+      std::max(FL_corner_vec_slot.y(), RL_corner_vec_slot.y());
+  const double ego_min_y =
+      -kEgoVertexLatBuffer +
+      std::min(FR_corner_vec_slot.y(), RR_corner_vec_slot.y());
+
   // std::cout << "measure_.ego_pos = " << measure_.ego_pos << std::endl;
   // std::cout << "slot_origin_pos_ = \n" << slot_origin_pos_ << std::endl;
   // std::cout << "slot_origin_heading_deg = " << slot_origin_heading_ * 57.3
@@ -567,13 +595,29 @@ void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
   ego_slot_info_.slot_obs.first = true;
   const auto half_slot_width = 0.5 * ego_slot_info_.slot_width;
 
+  std::cout << "half_slot_width = " << half_slot_width << std::endl;
+  std::cout << "ego max y = " << ego_max_y << std::endl;
+  std::cout << "ego min y = " << ego_min_y << std::endl;
+  if (slot_occupied_ratio_ > kMinSlotCoverRatioUpdateObs) {
+    if (ego_max_y > half_slot_width) {
+      left_slot_width_offset_ =
+          slot_width_offset_empty + std::fabs(ego_max_y - half_slot_width);
+      std::cout << "adjust left obs line " << std::endl;
+    }
+    if (ego_min_y < -half_slot_width) {
+      right_slot_width_offset_ =
+          slot_width_offset_empty + std::fabs(ego_min_y + half_slot_width);
+      std::cout << "adjust righgt obs line " << std::endl;
+    }
+  }
   Eigen::Vector2d origin = ego_slot_info_.slot_origin_pos;
 
-  Eigen::Vector2d left_pA = origin + (half_slot_width + slot_width_offset_) * t;
-  Eigen::Vector2d left_pB = left_pA + kNormalSlotLength * n * 0.95;
-
+  Eigen::Vector2d left_pA =
+      origin + (half_slot_width + left_slot_width_offset_) * t;
   Eigen::Vector2d right_pA =
-      origin - (half_slot_width + slot_width_offset_) * t;
+      origin - (half_slot_width + right_slot_width_offset_) * t;
+
+  Eigen::Vector2d left_pB = left_pA + kNormalSlotLength * n * 0.95;
 
   Eigen::Vector2d right_pB = right_pA + kNormalSlotLength * n * 0.95;
 

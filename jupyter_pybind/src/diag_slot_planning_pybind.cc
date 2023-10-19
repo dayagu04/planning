@@ -36,8 +36,9 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
                        py::bytes &vehicle_service_output_info_bytes,
                        py::bytes &uss_wave_info_bytes,
                        py::bytes &slot_management_info_bytes, int selected_id,
-                       bool force_planning, bool is_complete_path, double sublane_left_length,
-                       double sublane_right_length, double sublane_width, double sample_ds,
+                       bool force_planning, bool is_complete_path,
+                       double sublane_left_length, double sublane_right_length,
+                       double sublane_width, double sample_ds,
                        double slot_width_offset) {
   auto func_statemachine =
       BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
@@ -69,7 +70,7 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
   local_view.uss_wave_info = uss_wave_info;
 
   pBase->SetLocalView(&local_view);
-  pBase->SetSlotWidthOffset(slot_width_offset);
+  // pBase->SetSlotWidthOffset(slot_width_offset);
 
   DiagonalInTrajectoryGenerator::SimulationParam param;
   param.force_planning_ = force_planning;
