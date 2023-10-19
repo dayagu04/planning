@@ -233,7 +233,10 @@ class DiagonalInTrajectoryGenerator {
   pnc::dubins_lib::DubinsLibrary::Input dubins_input_;
   pnc::dubins_lib::DubinsLibrary::Output plan_result_;
   std::vector<pnc::dubins_lib::DubinsLibrary::Output> multi_step_plan_result_;
-  std::vector<pnc::geometry_lib::LineSegment> obstacles_vec_;
+
+  std::vector<pnc::geometry_lib::LineSegment>
+      uss_obstacles_vec_;  // slot obstacles which considered in EgoSlotInfo are
+                           // not included here
 
   size_t dubins_iter_count_ = 0;
   double sublane_left_length_ = 0.0;

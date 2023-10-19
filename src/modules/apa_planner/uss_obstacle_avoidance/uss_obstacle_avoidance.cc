@@ -23,15 +23,15 @@ static const std::vector<double> car_vertex_x_vec = {
     -0.879389, -0.798324, -0.476357, 1.96496,   1.916421,  2.177994};
 
 static const std::vector<double> car_vertex_y_vec = {
-    0.887956 + lat_inflation,      0.681712 + lat_inflation,
-    0.334651 + lat_inflation,      -(0.334651 + lat_inflation),
-    -(0.681712 + lat_inflation),   -(0.887956 + lat_inflation),
-    -(0.887956 + lat_inflation),   -(1.06715 + lat_inflation),
-    -(0.887956 + lat_inflation),   -(0.887956 + lat_inflation),
-    -(0.706505 + lat_inflation),   -(0.334845 + lat_inflation),
-    0.334845 + lat_inflation,      0.706505 + lat_inflation,
-    0.887956 + lat_inflation,      0.887956 + lat_inflation,
-    1.06715  + lat_inflation, 0.887956 + lat_inflation};
+    0.887956 + lat_inflation,    0.681712 + lat_inflation,
+    0.334651 + lat_inflation,    -(0.334651 + lat_inflation),
+    -(0.681712 + lat_inflation), -(0.887956 + lat_inflation),
+    -(0.887956 + lat_inflation), -(1.06715 + lat_inflation),
+    -(0.887956 + lat_inflation), -(0.887956 + lat_inflation),
+    -(0.706505 + lat_inflation), -(0.334845 + lat_inflation),
+    0.334845 + lat_inflation,    0.706505 + lat_inflation,
+    0.887956 + lat_inflation,    0.887956 + lat_inflation,
+    1.06715 + lat_inflation,     0.887956 + lat_inflation};
 
 // uss data
 static const std::vector<double> uss_vertex_x_vec = {

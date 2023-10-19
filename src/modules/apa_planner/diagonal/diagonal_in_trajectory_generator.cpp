@@ -18,6 +18,7 @@
 #include "common/vehicle_param_helper.h"
 #include "debug_info_log.h"
 #include "dubins_lib/dubins_lib.h"
+#include "dubins_lib/geometry_math.h"
 #include "environmental_model.h"
 #include "general_planning_context.h"
 #include "ifly_time.h"
@@ -258,7 +259,7 @@ void DiagonalInTrajectoryGenerator::Reset() {
   remain_dist_uss_ = 5.01;
   remain_dist_ = 5.01;
   is_replan_by_uss_ = false;
-  obstacles_vec_.clear();
+  uss_obstacles_vec_.clear();
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
@@ -277,6 +278,8 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
   } else {
     remain_dist_uss_ = 100.0;
   }
+
+  std::cout << "remain_dist_uss = " << remain_dist_uss_ << std::endl;
 
   planning_output->mutable_trajectory()
       ->mutable_trajectory_points(0)
@@ -322,9 +325,7 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
     trajectory->set_trajectory_type(
         Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
 
-    const auto& plan_result = dubins_planner_.GetOutput();
-
-    for (const auto& path_point : plan_result.path_point_vec) {
+    for (const auto& path_point : plan_result_.path_point_vec) {
       auto trajectory_point = trajectory->add_trajectory_points();
 
       trajectory_point->set_x(path_point.pos.x());
@@ -352,7 +353,7 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
     // set plan gear cmd
     auto gear_command = planning_output->mutable_gear_command();
     gear_command->set_available(true);
-    if (plan_result.current_gear_cmd ==
+    if (plan_result_.current_gear_cmd ==
         pnc::dubins_lib::DubinsLibrary::NORMAL) {
       gear_command->set_gear_command_value(
           Common::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE);
@@ -395,7 +396,7 @@ const bool DiagonalInTrajectoryGenerator::UpdateManagedParkingFusion(
       managed_selected_slot, managed_parking_fusion_info_.select_slot_id());
 
   if (is_selected_slot_released) {
-    for (size_t i = 0; i < fusion_selected_slot->corner_points_size(); ++i) {
+    for (auto i = 0; i < fusion_selected_slot->corner_points_size(); ++i) {
       fusion_selected_slot->mutable_corner_points(i)->set_x(
           managed_selected_slot.corner_points().corner_point(i).x());
       fusion_selected_slot->mutable_corner_points(i)->set_y(
@@ -481,7 +482,7 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnceSimulation(
   auto managed_selected_slot =
       slot_mangement_info.slot_info_vec(select_slot_index_slm);
 
-  for (int i = 0; i < fusion_selected_slot->corner_points_size(); ++i) {
+  for (auto i = 0; i < fusion_selected_slot->corner_points_size(); ++i) {
     fusion_selected_slot->mutable_corner_points(i)->set_x(
         managed_selected_slot.corner_points().corner_point(i).x());
     fusion_selected_slot->mutable_corner_points(i)->set_y(
@@ -773,6 +774,12 @@ const bool DiagonalInTrajectoryGenerator::PathEvaluateOnce() const {
   }
 
   const auto& is_line_arc = output.is_line_arc;
+
+  // force reversed gear cmd when replan by uss
+  if (is_replan_by_uss_ &&
+      output.current_gear_cmd == plan_result_.current_gear_cmd) {
+    return false;
+  }
 
   // no gear change: force no gear change in final
   if (plan_state_machine_ == FINAL) {
@@ -1133,6 +1140,16 @@ const bool DiagonalInTrajectoryGenerator::CheckReplan(
     return true;
   }
 
+  if (CheckIfNearTerminalPoint()) {
+    if (!is_replan_by_uss_) {
+      std::cout << "close to target!" << std::endl;
+    } else {
+      std::cout << "close to obstacle by uss!" << std::endl;
+    }
+
+    return true;
+  }
+
   if (!simulation_enable_flag_) {
     if (IsReplanEachFrame(local_view_->function_state_machine_info)) {
       std::cout << "apa is not active!" << std::endl;
@@ -1145,18 +1162,8 @@ const bool DiagonalInTrajectoryGenerator::CheckReplan(
       return true;
     }
 
-    if (CheckIfNearTerminalPoint()) {
-      std::cout << "close to target!" << std::endl;
-      return true;
-    }
-
     if (CheckIfReplanByStuck()) {
       std::cout << "replan by stuck!" << std::endl;
-      return true;
-    }
-  } else {
-    if (simu_param_.force_planning_) {
-      std::cout << "tune force_planning on!" << std::endl;
       return true;
     }
   }
@@ -1269,9 +1276,6 @@ const bool DiagonalInTrajectoryGenerator::PathPlanCoreIteration() {
 
 void DiagonalInTrajectoryGenerator::PathPlanOnce(
     const int slot_index, PlanningOutput* const planning_output) {
-  // clear obstacles
-  collision_detector_.ClearObstacles();
-
   // update slot info and target point in both global and slot coordinate
   UpdateEgoSlotInfo(slot_index);
 
@@ -1321,6 +1325,7 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
 
   // record gear change count, must be after successful path plan
   gear_change_count_ = dubins_planner_.GetOutput().gear_change_count;
+  plan_result_ = dubins_planner_.GetOutput();
 
   // print dubins output for debug
   PrintDubinsOutput();
@@ -1382,12 +1387,29 @@ void DiagonalInTrajectoryGenerator::Log() const {
 }
 
 void DiagonalInTrajectoryGenerator::UpdateObstacles() {
+  // clear obstacles
+  collision_detector_.ClearObstacles();
+
+  // update uss obstacles
+  if (is_replan_by_uss_) {
+    pnc::geometry_lib::LocalToGlobalTf l2g_tf(measure_.ego_pos,
+                                              measure_.heading);
+
+    const auto uss_local_line = uss_oa_.GetMinDistUssLine();
+
+    uss_obstacles_vec_.emplace_back(pnc::geometry_lib::LineSegment(
+        l2g_tf.GetPos(uss_local_line.pA), l2g_tf.GetPos(uss_local_line.pB)));
+  }
+
+  // add uss obstacles
+  for (auto const& obs : uss_obstacles_vec_) {
+    collision_detector_.AddObstacle(obs);
+  }
+
   // add slot and channel obstacles
   for (auto const& obs : ego_slot_info_.obstacles_vec) {
     collision_detector_.AddObstacle(obs);
   }
-
-  // add uss obstacles
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckIfNearTerminalPoint() {

@@ -57,6 +57,12 @@ struct GlobalToLocalTf {
   Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
   double heading_ori = 0.0;
 
+  GlobalToLocalTf() {}
+
+  GlobalToLocalTf(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
+    Init(p_n_ori, theta_ori);
+  }
+
   void Init(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
     pos_n_ori = p_n_ori;
     heading_ori = theta_ori;
@@ -77,6 +83,12 @@ struct LocalToGlobalTf {
   Eigen::Vector2d pos_n_ori = Eigen::Vector2d::Zero();
   Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
   double heading_ori = 0.0;
+
+  LocalToGlobalTf() {}
+
+  LocalToGlobalTf(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
+    Init(p_n_ori, theta_ori);
+  }
 
   void Init(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
     pos_n_ori = p_n_ori;
