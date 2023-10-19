@@ -26,38 +26,36 @@ from cyber_record.record import Record
 car_xb, car_yb = load_car_params_patch()
 coord_tf = coord_transformer()
 
-def load_local_lane_lines(lanes):
+def load_local_lane_lines(reference_line_msg):
   line_info_list = []
 
   for i in range(10):
     lane_info_l = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
-    if i< len(lanes):
-      lane = lanes[i]
-      left_line = lane.left_lane_boundary
-      enu_points = left_line.enu_points
+    if i< len(reference_line_msg):
+      reference_line = reference_line_msg[i]
+      left_line = reference_line.left_lane_boundary
       line_x = []
       line_y = []
-      for index in range(enu_points.num):
-        line_x.append(enu_points.points[index].x)
-        line_y.append(enu_points.points[index].y)
+      for point in left_line.enu_points:
+        line_x.append(point.x)
+        line_y.append(point.y)
       lane_info_l['line_x_vec'] = line_x
       lane_info_l['line_y_vec'] = line_y
-      lane_info_l['type'] = left_line.segment[0].type
+      lane_info_l['type'] = left_line.type
 
       line_info_list.append(lane_info_l)
 
       lane_info_r = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
-      right_line = lane.right_lane_boundary
-      enu_points = right_line.enu_points
+      right_line = reference_line.right_lane_boundary
       line_x = []
       line_y = []
-      for index in range(enu_points.num):
-        line_x.append(enu_points.points[index].x)
-        line_y.append(enu_points.points[index].y)
+      for point in right_line.enu_points:
+        line_x.append(point.x)
+        line_y.append(point.y)
 
       lane_info_r['line_x_vec'] = line_x
       lane_info_r['line_y_vec'] = line_y
-      lane_info_r['type'] = right_line.segment[0].type
+      lane_info_r['type'] = right_line.type
       line_info_list.append(lane_info_r)
     else:
       line_x = []
@@ -236,7 +234,7 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
   ### step 3: 加载车道线信息
   if bag_loader.road_msg['enable'] == True:
     # load lane info
-    line_info_list = load_local_lane_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
+    line_info_list = load_local_lane_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
     # update lane info
     data_lane_dict = {
       0:lat_plan_data['data_lane_0'],
@@ -270,7 +268,7 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
         print('error')
         pass
     
-    center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
+    center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
     # print(center_line_list)
     for i in range(5):
         data_center_line = data_center_line_dict[i]
