@@ -71,13 +71,20 @@ bool LaneChangeRequest::IsDashedLineEnough(
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr) {
   LOG_DEBUG("dashed_enough: direction: %d \n", static_cast<int>(direction));
   LOG_DEBUG("dashed_enough: vel: %.2f \n", ego_vel);
+  const double kInputBoundaryLenLimit = 145.;
+  const double kDefaultBoundaryLen = 5000.;
   double dash_length = 80;
   double right_dash_line_len = virtual_lane_mgr->get_distance_to_dash_line(
-      RIGHT_CHANGE, origin_lane_order_id_);
+      RIGHT_CHANGE, origin_lane_virtual_id_);
   double left_dash_line_len = virtual_lane_mgr->get_distance_to_dash_line(
-      LEFT_CHANGE, origin_lane_order_id_);
+      LEFT_CHANGE, origin_lane_virtual_id_);
   LOG_DEBUG("dashed_enough: right_dash_line_len: %.2f \n", right_dash_line_len);
   LOG_DEBUG("dashed_enough: left_dash_line_len: %.2f \n", left_dash_line_len);
+  std::cout << "origin_lane_virtual_id_: " << origin_lane_virtual_id_
+            << "origin_lane_order_id_: " << origin_lane_virtual_id_
+            << std::endl;
+  // HACK RUI
+  if (virtual_lane_mgr->dis_to_ramp() < 500.) return true;
   if (direction == LEFT_CHANGE && left_dash_line_len > 0.) {
     if (left_dash_line_len > ego_vel * 6.0) {
       return true;
@@ -96,13 +103,15 @@ bool LaneChangeRequest::IsDashedLineEnough(
     LOG_ERROR("!dashed_enough \n");
     return false;
   }
+  dash_length = (dash_length > kInputBoundaryLenLimit) ? kDefaultBoundaryLen
+                                                       : dash_length;
   double error_buffer = std::fmin(ego_vel * 0.5, 5);
   dash_length -= error_buffer;
 
-  double distance_thld =
-      500.0;  // hack for distance
-              // std::max(virtual_lane_mgr->map_velocity_limit(),
-              // ego_vel) * 4.0;
+  double v_target =
+      session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
+
+  double distance_thld = std::max(v_target, ego_vel) * 4.0;
   // bool must_change_lane =
   //     virtual_lane_mgr->get_current_lane()->must_change_lane(distance_thld);
   auto current_lane = virtual_lane_mgr_->get_current_lane();

@@ -1472,10 +1472,23 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                            lat_offset);
             }
           }
-          if (lat_offset < 0. && d_poly_[3] + lat_offset < -0.3) {
-            lat_offset = -d_poly_[3] - 0.3;
-          } else if (lat_offset >= 0. && d_poly_[3] + lat_offset > 0.3) {
-            lat_offset = -d_poly_[3] + 0.3;
+
+          if (lat_offset > 0) {
+            if (d_poly_[3] > 0.3) {
+              lat_offset = 0;
+            } else {
+              if (d_poly_[3] + lat_offset > 0.3) {
+                lat_offset = -d_poly_[3] + 0.3;
+              }
+            }
+          } else if (lat_offset <= 0) {
+            if (d_poly_[3] < -0.3) {
+              lat_offset = 0;
+            } else {
+              if (d_poly_[3] + lat_offset < -0.3) {
+                lat_offset = -d_poly_[3] - 0.3;
+              }
+            }
           }
         }
 
@@ -1718,8 +1731,13 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                            lat_offset);
             }
           }
-          if (d_poly_[3] + lat_offset < -0.3) {
-            lat_offset = -d_poly_[3] - 0.3;
+
+          if (d_poly_[3] < -0.3) {
+            lat_offset = 0;
+          } else {
+            if (d_poly_[3] + lat_offset < -0.3) {
+              lat_offset = -d_poly_[3] - 0.3;
+            }
           }
         } else {
           lat_offset = std::min(-d_poly_[3], 0.);
@@ -2024,8 +2042,12 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                            lat_offset);
             }
           }
-          if (d_poly_[3] + lat_offset > 0.3) {
-            lat_offset = -d_poly_[3] + 0.3;
+          if (d_poly_[3] > 0.3) {
+            lat_offset = 0;
+          } else {
+            if (d_poly_[3] + lat_offset > 0.3) {
+              lat_offset = -d_poly_[3] + 0.3;
+            }
           }
         } else {
           lat_offset = std::max(
@@ -2626,10 +2648,8 @@ bool VisionLateralMotionPlanner::update_planner_output() {
     lateral_output.lc_end_dis = 10000;
   }
 
-  if (virtual_lane_manager_->get_ramp().dis_to_ramp() !=
-      DBL_MAX) {  // attention !
-    lateral_output.dis_to_ramp =
-        virtual_lane_manager_->get_ramp().dis_to_ramp();
+  if (virtual_lane_manager_->dis_to_ramp() != DBL_MAX) {  // attention !
+    lateral_output.dis_to_ramp = virtual_lane_manager_->dis_to_ramp();
   } else {
     lateral_output.dis_to_ramp = 10000;
   }

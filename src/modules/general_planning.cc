@@ -14,6 +14,7 @@
 #include "planning_output_context.h"
 #include "scene_type_config.pb.h"
 #include "vehicle_config_context.h"
+#include "utils/lateral_utils.h"
 
 namespace planning {
 
@@ -50,6 +51,7 @@ bool GeneralPlanning::RunOnce(
   double start_timestamp = IflyTime::Now_ms();
   EnvironmentalModel *environmental_model =
       session_.mutable_environmental_model();
+
   environmental_model->feed_local_view(local_view);  // todo
 
   const auto &state_machine = local_view.function_state_machine_info;
@@ -138,6 +140,8 @@ void GeneralPlanning::FillPlanningTrajectory(
   auto &ego_state = session_.environmental_model().get_ego_state_manager();
   auto function_info = session_.environmental_model().function_info();
   const bool active = session_.environmental_model().GetVehicleDbwStatus();
+  auto virtual_lane_manager =
+      session_.environmental_model().get_virtual_lane_manager();
 
   // 更新输出
   auto time_stamp_us = IflyTime::Now_us();
@@ -204,19 +208,23 @@ void GeneralPlanning::FillPlanningTrajectory(
     // const double max_lat_offset = config.max_lat_offset();
     const double lat_offset_rate = 0.2;
     const double max_lat_offset = 2;
+    const double presee_x_dist = 50.;
     static double limited_polynomial_3 = 0.0;
     const auto &d_polynomial = lateral_output.d_poly;
 
+    bool enable_presee = virtual_lane_manager->dis_to_ramp() < 1000. &&
+                         lateral_output.lc_status == "right_lane_change";
+
+    double presee_y_dist = enable_presee ? calc_poly1d(d_polynomial, presee_x_dist) : 0.;
+    LOG_DEBUG("presee_y_dist: [%f]: \n", presee_y_dist);
+
     if (d_polynomial.size() == 4) {
-      if (std::fabs(d_polynomial[3]) > max_lat_offset) {
+      if (std::fabs(d_polynomial[3] + presee_y_dist) * 0.5 > max_lat_offset) {
         limited_polynomial_3 += planning_math::Clamp(
             d_polynomial[3], -lat_offset_rate, lat_offset_rate);
       } else {
         if ((lateral_output.lc_status == "left_lane_change_back" ||
-             lateral_output.lc_status == "right_lane_change_back" ||
-             (lateral_output.lc_status == "none" &&
-              config_.enable_none_smooth &&
-              std::fabs(d_polynomial[2]) < config_.none_consider_slope_thr)) &&
+             lateral_output.lc_status == "right_lane_change_back") &&
             std::fabs(d_polynomial[3]) >
                 config_.lc_back_consider_smooth_dpoly_thr) {
           limited_polynomial_3 =
@@ -409,6 +417,16 @@ void GeneralPlanning::FillPlanningHmiInfo(
       session_.planning_output_context().planning_hmi_info().cipv_info();
   planning_hmi_info->mutable_cipv_info()->set_has_cipv(cipv_info.has_cipv());
   planning_hmi_info->mutable_cipv_info()->set_cipv_id(cipv_info.cipv_id());
+
+  // HMI for NOA
+  auto virtual_lane_manager =
+      session_.environmental_model().get_virtual_lane_manager();
+  auto noa_info = planning_hmi_info->mutable_noa_output_info();
+  noa_info->set_dis_to_ramp(virtual_lane_manager->dis_to_ramp());
+  noa_info->set_dis_to_split(
+      virtual_lane_manager->distance_to_first_road_split());
+  noa_info->set_dis_to_merge(
+      virtual_lane_manager->distance_to_first_road_merge());
 }
 
 void GeneralPlanning::ClearParkingInfo(

@@ -235,6 +235,13 @@ void PlanningAdapter::Proc() {
         func_state_machine_msg_.header().timestamp());
     input_topic_latency->set_function_state_machine(
         get_latency(start_time, func_state_machine_msg_.header().timestamp()));
+
+    local_view_.static_map_info = map_info_msg_;
+    local_view_.static_map_info_recv_time = map_info_msg_recv_time_;
+    input_topic_timestamp->set_map(map_info_msg_.header().timestamp());
+    input_topic_latency->set_map(
+        get_latency(start_time, map_info_msg_.header().timestamp()));
+    local_view_.hdmap_time = map_info_msg_recv_time_;
   }
 
   // 2.planning run

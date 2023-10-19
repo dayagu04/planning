@@ -17,6 +17,8 @@ VisionLongitudinalBehaviorPlanner::VisionLongitudinalBehaviorPlanner(
     : Task(config_builder, pipeline_context) {
   config_ = config_builder->cast<VisionLongitudinalBehaviorPlannerConfig>();
   name_ = "VisionLongitudinalBehaviorPlanner";
+
+  accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
 }
 
 bool VisionLongitudinalBehaviorPlanner::Execute(framework::Frame *frame) {
@@ -63,6 +65,8 @@ bool VisionLongitudinalBehaviorPlanner::update() {
       frame_->session()->planning_context().lateral_behavior_planner_output();
   auto &function_info =
       frame_->session()->environmental_model().function_info();
+  auto virtual_lane_manager =
+      frame_->session()->environmental_model().get_virtual_lane_manager();
 
   // modify
   // lane_tracks_mgr_->update_ego_state(ego_state);
@@ -75,10 +79,25 @@ bool VisionLongitudinalBehaviorPlanner::update() {
             ego_state_mgr->ego_v_cruise(), ego_state_mgr->ego_v(),
             ego_state_mgr->ego_acc());
   double v_ego = ego_state_mgr->ego_v();
+  auto &vision_longitudinal_output =
+      frame_->mutable_session()
+          ->mutable_planning_context()
+          ->mutable_vision_longitudinal_behavior_planner_output();
+
+  accel_vel_filter_.SetState(vision_longitudinal_output.velocity_target);
   v_target_ = std::min(ego_state_mgr->ego_v_cruise(), 40.0);
   calc_cruise_accel_limits(v_ego);
+
+  const auto &lane_change_lane_manager = frame_->session()
+                                             ->planning_context()
+                                             .scenario_state_machine()
+                                             ->get_lane_change_lane_manager();
+  const auto fix_lane = virtual_lane_manager->get_lane_with_virtual_id(
+      lane_change_lane_manager->flane_virtual_id());
+  const std::vector<ReferencePathPoint> &fix_ref_points =
+      fix_lane->get_reference_path()->get_points();
   limit_accel_velocity_in_turns(v_ego, ego_state_mgr->ego_steer_angle(),
-                                lateral_outputs.d_poly);
+                                lateral_outputs.d_poly, fix_ref_points);
   a_target_objective_ = a_target_;
   limit_accel_velocity_for_cutin(lateral_obstacle->front_tracks(),
                                  lateral_obstacle->side_tracks(),
@@ -95,6 +114,8 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   //                      map_info_mgr.get_map_info().v_cruise(),
   //                      map_info_mgr.get_map_info().current_lane_type(),
   //                      lateral_outputs.lc_status, v_limit_in_turns_, v_ego);
+
+  calc_speed_for_ramp(v_ego);
   calc_speed_with_potential_cutin_car(lateral_obstacle->front_tracks(),
                                       lateral_outputs.lc_request,
                                       ego_state_mgr->ego_v_cruise(), v_ego);
@@ -119,6 +140,20 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   a_target_.first = clip(a_target_.first, _A_MIN, _A_MAX);
   a_target_.second = clip(a_target_.second, _A_MIN, _A_MAX);
   v_target_ = clip(v_target_, 0.0, 40.0);
+
+  if (v_target_ > v_ego) {
+    accel_vel_filter_.Update(v_target_);
+    v_target_ = accel_vel_filter_.GetOutput();
+    JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_work", 1);
+  } else if (v_target_ < v_ego &&
+             (v_limit_in_turns_ == v_target_ ||
+              (v_limit_ramp_ == v_target_ && is_on_ramp_))) {
+    accel_vel_filter_.Update(v_target_);
+    v_target_ = accel_vel_filter_.GetOutput();
+    JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_work", 1);
+  } else {
+    JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_work", 0);
+  }
 
   JSON_DEBUG_VALUE("VisionLonBehavior_a_target_high", a_target_.second);
   JSON_DEBUG_VALUE("VisionLonBehavior_a_target_low", a_target_.first);
@@ -164,7 +199,8 @@ bool VisionLongitudinalBehaviorPlanner::calc_cruise_accel_limits(
 
 bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
     const double v_ego, const double angle_steers,
-    const std::vector<double> &d_poly) {
+    const std::vector<double> &d_poly,
+    const std::vector<ReferencePathPoint> &ref_points) {
   // *** this function returns a limited long acceleration allowed, depending on
   // the existing lateral acceleration
   //  this should avoid accelerating when losing the target in turns
@@ -194,7 +230,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
         std::fabs(2 * d_poly[0] * preview_x + d_poly[1]) /
         std::pow(std::pow(2 * d_poly[0] * preview_x + d_poly[1], 2) + 1, 1.5);
     double road_radius = 1 / std::max(curv, 0.0001);
-    if (road_radius < 680) {
+    if (road_radius < 750) {
       a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
     }
     double v_limit_road = std::sqrt(a_y_max * road_radius) * 0.9;
@@ -206,12 +242,34 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
     JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_road", v_limit_road);
     JSON_DEBUG_VALUE("VisionLonBehavior_road_radius", road_radius);
   }
-
+  /*
+  if(ref_points.size() > 0) {
+    double curv_max_pt = -100.0;
+    for (int i = 0; i < ref_points.size(); i++) {
+      if(std::abs(ref_points[i].path_point.kappa) > curv_max_pt) {
+        curv_max_pt = std::abs(ref_points[i].path_point.kappa);
+      }
+    }
+    double road_radius = 1 / std::max(curv_max_pt, 0.0001);
+    if (road_radius < 680) {
+      a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+    }
+    double v_limit_curv_pt = std::sqrt(a_y_max * road_radius) * 0.9;
+    LOG_DEBUG("ref points calced road_radius is : [%f]\n", road_radius);
+    LOG_DEBUG("ref points max kappa is : [%f]\n", curv_max_pt);
+    LOG_DEBUG("v_limit_curv_pt: [%f]\n", v_limit_curv_pt);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_curv_pt", v_limit_curv_pt);
+    JSON_DEBUG_VALUE("road_radius_in_ref_pt", road_radius);
+    JSON_DEBUG_VALUE("max_kappa_abs", curv_max_pt);
+    v_limit_in_turns = std::min(v_limit_in_turns, v_limit_curv_pt);
+  }
+  */
   double a_target_in_turns = 0.0;
   if (v_limit_in_turns < v_ego - 2) {
     a_target_in_turns = -0.2;
   }
 
+  v_limit_in_turns_ = v_limit_in_turns;
   JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_steering", v_limit_steering);
   JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_in_turns", v_limit_in_turns);
 
@@ -814,6 +872,55 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
   return true;
 }
 
+bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(double v_ego) {
+  LOG_DEBUG("----calc_speed_for_ramp--- \n");
+  double v_target_ramp = 40.0;
+  // config_
+  double dece_to_ramp = config_.dece_to_ramp;  // -1.0
+  v_limit_ramp_ = config_.v_limit_ramp;  // 60km/h
+
+  double dis_to_ramp = frame_->session()
+                           ->environmental_model()
+                           .get_virtual_lane_manager()
+                           ->dis_to_ramp();
+  is_on_ramp_ = frame_->session()
+                    ->environmental_model()
+                    .get_virtual_lane_manager()
+                    ->is_on_ramp();
+  double dis_to_merge = frame_->session()
+                            ->environmental_model()
+                            .get_virtual_lane_manager()
+                            ->distance_to_first_road_merge();
+  // 通过接口获取是否在匝道的信息
+  if (is_on_ramp_) {
+    if (dis_to_merge > 50) {
+      v_target_ramp = v_limit_ramp_;
+    }
+    v_target_ = std::min(v_target_ramp, v_target_);
+    LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
+    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_ramp", v_target_ramp);
+    JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
+    JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
+    LOG_DEBUG("v_target : [%f] \n", v_target_);
+    return true;
+  }
+  double pre_brake_dis_to_ramp = std::max(dis_to_ramp - 50, 0.0);
+  v_target_ramp = std::pow(
+      std::pow(v_limit_ramp_, 2.0) - 2 * pre_brake_dis_to_ramp * dece_to_ramp,
+      0.5);
+  v_target_ = std::min(v_target_ramp, v_target_);
+
+  a_target_.first = std::min(a_target_.first, dece_to_ramp);
+
+  LOG_DEBUG("dis_to_ramp : [%f] \n", dis_to_ramp);
+  LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
+  JSON_DEBUG_VALUE("VisionLonBehavior_v_target_ramp", v_target_ramp);
+  JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
+  JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
+  LOG_DEBUG("v_target : [%f] \n", v_target_);
+  return true;
+}
+
 // bool VisionLongitudinalBehaviorPlanner::compute_speed_4_ramp(
 //     int lc_map_decision, double lc_end_dis, double ramp_max_speed,
 //     MSDLaneType current_lane_type, std::string lc_status,
@@ -1342,24 +1449,28 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(
       std::vector<TrackedObject> *front_target_tracks =
           lane_tracks_mgr->get_lane_tracks(
               lane_change_lane_manager->tlane_virtual_id(), FRONT_TRACK);
-      for (auto &track : *front_target_tracks) {
-        // ignore obj without camera source
-        if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
-            (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
-          continue;
-        };
-        lane_changing_cars.push_back(&track);
+      if (front_target_tracks != nullptr) {
+        for (auto &track : *front_target_tracks) {
+          // ignore obj without camera source
+          if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
+              (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+            continue;
+          };
+          lane_changing_cars.push_back(&track);
+        }
       }
       std::vector<TrackedObject> *side_target_tracks =
           lane_tracks_mgr->get_lane_tracks(
               lane_change_lane_manager->tlane_virtual_id(), SIDE_TRACK);
-      for (auto &track : *side_target_tracks) {
-        // ignore obj without camera source
-        if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
-            (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
-          continue;
-        };
-        lane_changing_cars.push_back(&track);
+      if (side_target_tracks != nullptr) {
+        for (auto &track : *side_target_tracks) {
+          // ignore obj without camera source
+          if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
+              (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+            continue;
+          };
+          lane_changing_cars.push_back(&track);
+        }
       }
     }
 
