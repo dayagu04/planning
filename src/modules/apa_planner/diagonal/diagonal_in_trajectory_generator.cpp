@@ -65,7 +65,7 @@ static const double target_x_init = 1.5;
 static const double min_radius = 5.5;
 static const double min_radius_final = 5.2;
 static const double kLineStep = 0.1;
-static const double kMinProperBCLength = 0.3;
+static const double kMinProperLength = 0.5;
 static const double plan_time = 0.1;
 static const double terminal_target_x = 1.1;
 static const double max_path_length = 20.0;
@@ -842,7 +842,7 @@ const bool DiagonalInTrajectoryGenerator::PathEvaluateOnce() const {
 
   if (plan_state_machine_ == INIT) {
     if (output.gear_change_count == 1) {
-      if (output.line_BC.length >= kMinProperBCLength && is_line_arc == false) {
+      if (output.current_length >= kMinProperLength && is_line_arc == false) {
         return true;
       }
     }
@@ -1436,6 +1436,7 @@ void DiagonalInTrajectoryGenerator::UpdateObstacles() {
 
   // update uss obstacles
   if (is_replan_by_uss_) {
+    uss_obstacles_vec_.clear();
     pnc::geometry_lib::LocalToGlobalTf l2g_tf(measure_.ego_pos,
                                               measure_.heading);
 
@@ -1449,11 +1450,14 @@ void DiagonalInTrajectoryGenerator::UpdateObstacles() {
   for (auto const& obs : uss_obstacles_vec_) {
     collision_detector_.AddObstacle(obs);
   }
+  std::cout << "uss obstacle size = " << uss_obstacles_vec_.size() << std::endl;
 
   // add slot and channel obstacles
   for (auto const& obs : ego_slot_info_.obstacles_vec) {
     collision_detector_.AddObstacle(obs);
   }
+  std::cout << "slot obstacle size = " << ego_slot_info_.obstacles_vec.size()
+            << std::endl;
 }
 
 const bool DiagonalInTrajectoryGenerator::CheckIfNearTerminalPoint() {

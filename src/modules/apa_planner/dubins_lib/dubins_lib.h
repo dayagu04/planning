@@ -83,6 +83,7 @@ class DubinsLibrary {
     uint8_t path_seg_count = 0;
     std::vector<uint8_t> gear_cmd_vec = {0, 0, 0};
     double length = 0.0;
+    double current_length = 0.0;
     geometry_lib::Arc arc_AB;
     geometry_lib::LineSegment line_BC;
     geometry_lib::Arc arc_CD;

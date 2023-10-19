@@ -590,6 +590,10 @@ const bool DubinsLibrary::GenDubinsOutput(
         output.gear_change_index = 1;
       }
       output.gear_change_count++;
+
+      output.current_length = output.arc_AB.length;
+    } else {
+      output.current_length = output.arc_AB.length + output.line_BC.length;
     }
 
     last_gear = current_gear;
@@ -632,6 +636,11 @@ const bool DubinsLibrary::GenDubinsOutput(
         output.gear_change_index = 2;
       }
       output.gear_change_count++;
+    } else {
+      if (output.gear_change_count == 0) {
+        output.current_length =
+            output.arc_AB.length + output.line_BC.length + output.arc_CD.length;
+      }
     }
 
     last_gear = current_gear;
