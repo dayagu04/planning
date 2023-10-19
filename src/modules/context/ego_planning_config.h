@@ -687,7 +687,7 @@ struct VisionLongitudinalBehaviorPlannerConfig : public EgoPlanningConfig {
                                        "dece_to_ramp"});
     v_limit_ramp = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
-                                       "v_target_ramp"});
+                                       "v_limit_ramp"});
   }
   double preview_x = 80.0;
   double dis_zero_speed = 3.5;
