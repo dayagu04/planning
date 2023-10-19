@@ -1,5 +1,5 @@
 #include "lane_change_requests/lane_change_request.h"
-
+#include "planning_output_context.h"
 #include "utils/lateral_utils.h"
 
 namespace planning {
@@ -23,7 +23,6 @@ void LaneChangeRequest::GenerateRequest(RequestType direction) {
         direction);
     return;
   }
-
   request_type_ = direction;
   turn_signal_ = direction;
   tstart_ = IflyTime::Now_s();

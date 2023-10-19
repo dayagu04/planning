@@ -2411,6 +2411,31 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
   one_nudge_left_car_ = one_nudge_left_car;
   one_nudge_right_car_ = one_nudge_right_car;
   lane_width_ = lane_width;
+  auto ad_info = frame_->mutable_session()
+                     ->mutable_planning_output_context()
+                     ->mutable_planning_hmi_info()
+                     ->mutable_ad_info();
+  ad_info->set_avoid_status(::PlanningHMI::AvoidObstacle::NO_HIDING);
+  ad_info->set_avoiddirect(::PlanningHMI::AvoidObstacleDirection::AVOID_NONE);
+  if (status == ScenarioStateEnum::ROAD_NONE ||
+      status == ScenarioStateEnum::ROAD_LC_LCHANGE ||
+      status == ScenarioStateEnum::ROAD_LC_RCHANGE ||
+      status == ScenarioStateEnum::ROAD_LC_LWAIT ||
+      status == ScenarioStateEnum::ROAD_LC_RWAIT ||
+      status == ScenarioStateEnum::ROAD_LC_LBACK ||
+      status == ScenarioStateEnum::ROAD_LC_RBACK) {
+    if (avd_car_past[0].size() > 0) {
+      if (lat_offset > 0.3) {
+        ad_info->set_avoid_status(::PlanningHMI::AvoidObstacle::HIDING);
+        ad_info->set_avoiddirect(
+            ::PlanningHMI::AvoidObstacleDirection::AVOID_LEFT);
+      } else if (lat_offset < -0.3) {
+        ad_info->set_avoid_status(::PlanningHMI::AvoidObstacle::HIDING);
+        ad_info->set_avoiddirect(
+            ::PlanningHMI::AvoidObstacleDirection::AVOID_RIGHT);
+      }
+    }
+  }
 
   if (premoving_) {
     lat_offset_ += lat_offset;

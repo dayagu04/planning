@@ -45,7 +45,7 @@ void ReferencePath::update_refpath_points(
     LOG_ERROR("update_refpath_points: points size < 2");
     return;
   }
-  const double interp_gap_s = 2.0;
+  const double interp_gap_s = 3.0;
   // Step 1) update refined path points
   refined_ref_path_points_ = raw_ref_path_points;
   if (is_need_density) {
