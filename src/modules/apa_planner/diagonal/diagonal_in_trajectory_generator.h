@@ -146,7 +146,9 @@ class DiagonalInTrajectoryGenerator {
 
   // for pybind simulation
   void SetSimulationParam(SimulationParam &param) { simu_param_ = param; }
-  void SetSlotWidthOffset(double slot_width_offset) {slot_width_offset_ = slot_width_offset;}
+  void SetSlotWidthOffset(double slot_width_offset) {
+    slot_width_offset_ = slot_width_offset;
+  }
 
   // for apa planner pybind simulation
   const bool PathPlanOnceSimulation(
@@ -189,7 +191,7 @@ class DiagonalInTrajectoryGenerator {
 
   void PrintDubinsOutput();
 
-  const bool CheckIfNearTerminalPoint() const;
+  const bool CheckIfNearTerminalPoint();
   const bool CheckIfReplanByStuck() const;
   const bool CheckFinish();
 
@@ -201,6 +203,7 @@ class DiagonalInTrajectoryGenerator {
   const bool PathPlanCoreIteration();
   void Log() const;
   const bool UpdateManagedParkingFusion(const int select_slot_index);
+  void UpdateObstacles();
 
  private:
   // reset
@@ -230,6 +233,7 @@ class DiagonalInTrajectoryGenerator {
   pnc::dubins_lib::DubinsLibrary::Input dubins_input_;
   pnc::dubins_lib::DubinsLibrary::Output plan_result_;
   std::vector<pnc::dubins_lib::DubinsLibrary::Output> multi_step_plan_result_;
+  std::vector<pnc::geometry_lib::LineSegment> obstacles_vec_;
 
   size_t dubins_iter_count_ = 0;
   double sublane_left_length_ = 0.0;
@@ -257,6 +261,7 @@ class DiagonalInTrajectoryGenerator {
   pnc::dubins_lib::DubinsLibrary::PathPoint target_err_;
   bool spline_success_ = false;
   bool is_replan_ = false;
+  bool is_replan_by_uss_ = false;
   bool is_finished_ = false;
   bool is_plan_success_ = false;
   uint8_t gear_change_count_ = 6;

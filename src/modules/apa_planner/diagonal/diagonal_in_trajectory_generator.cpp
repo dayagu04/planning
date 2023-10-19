@@ -257,6 +257,8 @@ void DiagonalInTrajectoryGenerator::Reset() {
   twice_gear_change_enable_ = true;
   remain_dist_uss_ = 5.01;
   remain_dist_ = 5.01;
+  is_replan_by_uss_ = false;
+  obstacles_vec_.clear();
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
@@ -628,15 +630,10 @@ void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
   const pnc::geometry_lib::LineSegment A2B2(pA2, pB2);
   const pnc::geometry_lib::LineSegment B1B2(pB1, pB2);
 
-  // add slot obstacles
-  for (auto const& obs : ego_slot_info_.obstacles_vec) {
-    collision_detector_.AddObstacle(obs);
-  }
-
   // add channel object
-  collision_detector_.AddObstacle(A1B1);
-  collision_detector_.AddObstacle(A2B2);
-  collision_detector_.AddObstacle(B1B2);
+  ego_slot_info_.obstacles_vec.emplace_back(A1B1);
+  ego_slot_info_.obstacles_vec.emplace_back(A2B2);
+  ego_slot_info_.obstacles_vec.emplace_back(B1B2);
 }
 
 const bool DiagonalInTrajectoryGenerator::DubinsPlanOneStep(
@@ -1291,6 +1288,9 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
     return;
   }
 
+  // update obstacles before replan
+  UpdateObstacles();
+
   // run plan core
   if (!PathPlanCoreIteration()) {
     std::cout << "PathPlanCoreIteration is failed!" << std::endl;
@@ -1381,9 +1381,21 @@ void DiagonalInTrajectoryGenerator::Log() const {
   JSON_DEBUG_VALUE("slot_occupied_ratio", slot_occupied_ratio_)
 }
 
-const bool DiagonalInTrajectoryGenerator::CheckIfNearTerminalPoint() const {
+void DiagonalInTrajectoryGenerator::UpdateObstacles() {
+  // add slot and channel obstacles
+  for (auto const& obs : ego_slot_info_.obstacles_vec) {
+    collision_detector_.AddObstacle(obs);
+  }
+
+  // add uss obstacles
+}
+
+const bool DiagonalInTrajectoryGenerator::CheckIfNearTerminalPoint() {
+  is_replan_by_uss_ = false;
   if (spline_success_) {
-    if (remain_dist_ < min_replan_remain_dist && measure_.static_flag) {
+    const auto min_remain_dist = std::min(remain_dist_uss_, remain_dist_);
+    if (min_remain_dist < min_replan_remain_dist && measure_.static_flag) {
+      is_replan_by_uss_ = (remain_dist_uss_ < remain_dist_);
       return true;
     }
   }
