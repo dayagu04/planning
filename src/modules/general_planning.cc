@@ -13,8 +13,8 @@
 #include "planning_debug_info.pb.h"
 #include "planning_output_context.h"
 #include "scene_type_config.pb.h"
-#include "vehicle_config_context.h"
 #include "utils/lateral_utils.h"
+#include "vehicle_config_context.h"
 
 namespace planning {
 
@@ -48,6 +48,9 @@ bool GeneralPlanning::RunOnce(
   LOG_ERROR("GeneralPlanning::RunOnce \n");
   frame_num_++;
   local_view_ = local_view;
+  session_.mutable_planning_output_context()->feed_planning_hmi_info(
+      planning_hmi_info);
+
   double start_timestamp = IflyTime::Now_ms();
   EnvironmentalModel *environmental_model =
       session_.mutable_environmental_model();
@@ -215,7 +218,8 @@ void GeneralPlanning::FillPlanningTrajectory(
     bool enable_presee = virtual_lane_manager->dis_to_ramp() < 1000. &&
                          lateral_output.lc_status == "right_lane_change";
 
-    double presee_y_dist = enable_presee ? calc_poly1d(d_polynomial, presee_x_dist) : 0.;
+    double presee_y_dist =
+        enable_presee ? calc_poly1d(d_polynomial, presee_x_dist) : 0.;
     LOG_DEBUG("presee_y_dist: [%f]: \n", presee_y_dist);
 
     if (d_polynomial.size() == 4) {
@@ -414,19 +418,29 @@ void GeneralPlanning::FillPlanningHmiInfo(
   // HMI for CIPV
   // TBD: 后续需要丰富障碍物的信息，后车、侧方车辆等
   auto cipv_info =
-      session_.planning_output_context().planning_hmi_info().cipv_info();
-  planning_hmi_info->mutable_cipv_info()->set_has_cipv(cipv_info.has_cipv());
-  planning_hmi_info->mutable_cipv_info()->set_cipv_id(cipv_info.cipv_id());
+      session_.planning_output_context().mutable_planning_hmi_info()->mutable_cipv_info();
+  planning_hmi_info->mutable_cipv_info()->set_has_cipv(cipv_info->has_cipv());
+  planning_hmi_info->mutable_cipv_info()->set_cipv_id(cipv_info->cipv_id());
+
+  auto &planning_result = session_.planning_context().planning_result();
+  auto ad_info = session_.mutable_planning_output_context()
+                     ->mutable_planning_hmi_info()
+                     ->mutable_ad_info();
+
+  ad_info->set_cruise_speed(
+      session_.environmental_model().get_ego_state_manager()->ego_v_cruise());
 
   // HMI for NOA
   auto virtual_lane_manager =
       session_.environmental_model().get_virtual_lane_manager();
-  auto noa_info = planning_hmi_info->mutable_ad_info();
-  noa_info->set_distance_to_ramp(virtual_lane_manager->dis_to_ramp());
-  noa_info->set_distance_to_split(
+  ad_info->set_distance_to_ramp(virtual_lane_manager->dis_to_ramp());
+  ad_info->set_distance_to_split(
       virtual_lane_manager->distance_to_first_road_split());
-  noa_info->set_distance_to_merge(
+  ad_info->set_distance_to_merge(
       virtual_lane_manager->distance_to_first_road_merge());
+  ad_info->set_distance_to_toll_station(
+      (uint)virtual_lane_manager
+          ->ramp_direction());  // 临时将toll_station改为ramp_direction
 }
 
 void GeneralPlanning::ClearParkingInfo(

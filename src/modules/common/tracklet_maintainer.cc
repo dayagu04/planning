@@ -1,3 +1,5 @@
+#include <cstddef>
+#include "refline.h"
 #define _USE_MATH_DEFINES
 #include "tracklet_maintainer.h"
 
@@ -11,6 +13,7 @@
 #include "environmental_model.h"
 #include "ifly_time.h"
 #include "planning_context.h"
+#include "planning_output_context.h"
 #include "virtual_lane_manager.h"
 namespace planning {
 
@@ -458,12 +461,13 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     origin->center_y = rel_y;
     origin->theta = p.relative_theta;
     origin->y_rel_ori = rel_y;
-    origin->speed_yaw =
-        std::atan2(p.relative_speed_y, p.relative_speed_x + ego_state_.ego_v());
+    origin->v_x = p.relative_speed_x + ego_state_.ego_v();
+    origin->v_y = p.relative_speed_y;
+    origin->speed_yaw = std::atan2(p.relative_speed_y, origin->v_x);
     origin->a = p.acc;
-    origin->v =
-        std::hypot(p.relative_speed_x + ego_state_.ego_v(), p.relative_speed_y);
-    origin->v_lead = p.relative_speed_x + ego_state_.ego_v();
+    origin->v = std::hypot(origin->v_x, p.relative_speed_y);
+
+    origin->v_lead = origin->v_x;
     origin->v_lead_k = origin->v_lead;
     origin->v_lead_raw = origin->v_lead;
     origin->vy_abs = p.relative_speed_y;
@@ -681,7 +685,8 @@ void TrackletMaintainer::calc(
       }
       // only use obstacle with camera source
       if (((item->fusion_source == OBSTACLE_SOURCE_CAMERA) ||
-          (item->fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA)) && frenet_transform_valid) {
+           (item->fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA)) &&
+          frenet_transform_valid) {
         is_potential_lead_one(*item, v_ego);
       }
       calc_intersection_with_refline(*item, enable_intersection_planner);
@@ -747,6 +752,44 @@ void TrackletMaintainer::calc(
     obstacle->set_current_lead_obstacle_to_ego(tr->is_temp_lead);
     // obstacle->set_cutin_p(tr->cutinp);
   }
+
+  // auto ad_info = session_->mutable_planning_output_context()
+  //                    ->mutable_planning_hmi_info()
+  //                    ->mutable_ad_info();
+  // feed_hmi
+  // for (auto tr : tracked_objects) {
+  //   if (!(tr->fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+  //     continue;
+  //   }
+  //   auto obstacle = ad_info->add_obstacle_info();
+  //   obstacle->set_id(tr->track_id);
+  //   obstacle->set_center_x(tr->center_x);
+  //   obstacle->set_center_y(tr->center_y);
+  //   // obstacle->set_type(tr->type)
+  //   obstacle->set_speed_x(tr->v_x);
+  //   obstacle->set_speed_y(tr->v_y);
+  //   obstacle->set_heading(tr->speed_yaw);  // 这里应该是yaw角
+  //   obstacle->mutable_size()->set_length(tr->length);
+  //   obstacle->mutable_size()->set_width(tr->width);
+  //   obstacle->mutable_size()->set_height(tr->height);
+  //   if (lead_cars.lead_one != nullptr && lead_cars.lead_one->track_id ==
+  //   tr->track_id ||
+  //       lead_cars.temp_lead_one != nullptr &&
+  //       lead_cars.temp_lead_one->track_id == tr->track_id) {
+  //     obstacle->set_lon_status(::PlanningHMI::ObstacleLonStatus::FOLLOWING);
+  //   } else {
+  //     obstacle->set_lon_status(::PlanningHMI::ObstacleLonStatus::NORMAL);
+  //   }
+  // }
+  // Point2D cart_point;
+  // if (frenet_coord_->FrenetCoord2CartCoord(Point2D(s_ego_ + 5, 0),
+  // cart_point) ==
+  //       TRANSFORM_SUCCESS) {
+  //   ad_info->mutable_landing_point()->mutable_relative_pos()->set_x(cart_point.x);
+  //   ad_info->mutable_landing_point()->mutable_relative_pos()->set_y(cart_point.y);
+  //   ad_info->mutable_landing_point()->mutable_relative_pos()->set_z(0);
+  //   ad_info->mutable_landing_point()->set_heading(0);
+  // }
 }
 
 bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,

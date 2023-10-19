@@ -213,6 +213,9 @@ void LaneKeepAssistManager::Update() {
   }
 
   // 车辆信息初始化、参数初始化
+  lkas_input_.function_state = session_->environmental_model()
+                                   .get_local_view()
+                                   .function_state_machine_info.current_state();
   auto ptr_ego_state_manager =
       session_->mutable_environmental_model()->get_ego_state_manager();
   lkas_input_.vehicle_info.veh_display_speed = ptr_ego_state_manager->ego_v();

@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/pnc_x86_fengwang31/noa_0920/noa_5.00000"
+bag_path = "/share/mnt/noa/20231011/noa_10.00000"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

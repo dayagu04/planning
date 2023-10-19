@@ -29,6 +29,8 @@ coord_tf = coord_transformer()
 Max_line_size = 200
 Road_boundary_max_line_size = 50
 Lane_boundary_max_line_size = 300
+is_vis_map = True
+
 class LoadCyberbag:
   def __init__(self, path) -> None:
     self.bag_path = path
@@ -607,7 +609,7 @@ class LoadCyberbag:
     return fig1
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
-
+  
   ### step 1: 时间戳对齐
   loc_msg_idx = 0
   if bag_loader.loc_msg['enable'] == True:
@@ -794,6 +796,16 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       7:local_view_data['data_lane_7'],
       8:local_view_data['data_lane_8'],
       9:local_view_data['data_lane_9'],
+      10:local_view_data['data_lane_10'],
+      11:local_view_data['data_lane_11'],
+      12:local_view_data['data_lane_12'],
+      13:local_view_data['data_lane_13'],
+      14:local_view_data['data_lane_14'],
+      15:local_view_data['data_lane_15'],
+      16:local_view_data['data_lane_16'],
+      17:local_view_data['data_lane_17'],
+      18:local_view_data['data_lane_18'],
+      19:local_view_data['data_lane_19'],
     }
     data_center_line_dict = {
       0:local_view_data['data_center_line_0'],
@@ -801,9 +813,14 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       2:local_view_data['data_center_line_2'],
       3:local_view_data['data_center_line_3'],
       4:local_view_data['data_center_line_4'],
+      5:local_view_data['data_center_line_5'],
+      6:local_view_data['data_center_line_6'],
+      7:local_view_data['data_center_line_7'],
+      8:local_view_data['data_center_line_8'],
+      9:local_view_data['data_center_line_9'],
     }
 
-    for i in range(10):
+    for i in range(20):
       try:
         if line_info_list[i]['type'] == 0 or \
           line_info_list[i]['type'] == 1 or \
@@ -823,7 +840,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
     center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
     # print(center_line_list)
-    for i in range(5):
+    for i in range(10):
       # try:
         if 1:
           data_center_line = data_center_line_dict[i]
@@ -874,7 +891,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     fix_lane_ralative_id = lat_behavior_common.fix_lane_virtual_id - current_lane_virtual_id
     target_lane_ralative_id = lat_behavior_common.target_lane_virtual_id - current_lane_virtual_id
     origin_lane_ralative_id = lat_behavior_common.origin_lane_virtual_id - current_lane_virtual_id
-    for i in range(5):
+    for i in range(10):
       if center_line_list[i]['relative_id'] == fix_lane_ralative_id:
         local_view_data['data_fix_lane'].data.update({
           'fix_lane_x': center_line_list[i]['line_x_vec'],
@@ -1203,7 +1220,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     })
 
   # # 加载ehr的lane信息
-  """ if bag_loader.ehr_static_map_msg['enable'] == True:
+  if is_vis_map and bag_loader.ehr_static_map_msg['enable'] == True :
     #load ehr static map info
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
@@ -1217,7 +1234,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
     print("ehr static map timestamp:",bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].header)
     print("road_map.lanes len:",len(bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].road_map.lanes))
-    #load center line
+    #load center line 
+    
     ehr_line_info_list = ehr_load_center_lane_lines(bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].road_map.lanes,
                                              cur_pos_xn,cur_pos_yn,cur_yaw,Max_line_size)
     ehr_data_lane_dict = {}
@@ -1278,23 +1296,40 @@ def load_local_view_figure():
   data_lane_7 = ColumnDataSource(data = {'line_7_y':[], 'line_7_x':[]})
   data_lane_8 = ColumnDataSource(data = {'line_8_y':[], 'line_8_x':[]})
   data_lane_9 = ColumnDataSource(data = {'line_9_y':[], 'line_9_x':[]})
-  """  ehr_data_lanes = []
-  for i in range(Max_line_size):
-    ehr_data_lanes.append(ColumnDataSource(data={'ehr_line_{}_y'.format(i): [], 'ehr_line_{}_x'.format(i): []}))
+  data_lane_10 = ColumnDataSource(data = {'line_10_y':[], 'line_10_x':[]})
+  data_lane_11 = ColumnDataSource(data = {'line_11_y':[], 'line_11_x':[]})
+  data_lane_12 = ColumnDataSource(data = {'line_12_y':[], 'line_12_x':[]})
+  data_lane_13 = ColumnDataSource(data = {'line_13_y':[], 'line_13_x':[]})
+  data_lane_14 = ColumnDataSource(data = {'line_14_y':[], 'line_14_x':[]})
+  data_lane_15 = ColumnDataSource(data = {'line_15_y':[], 'line_15_x':[]})
+  data_lane_16 = ColumnDataSource(data = {'line_16_y':[], 'line_16_x':[]})
+  data_lane_17 = ColumnDataSource(data = {'line_17_y':[], 'line_17_x':[]})
+  data_lane_18 = ColumnDataSource(data = {'line_18_y':[], 'line_18_x':[]})
+  data_lane_19 = ColumnDataSource(data = {'line_19_y':[], 'line_19_x':[]})
+  
+  if is_vis_map:
+    ehr_data_lanes = []
+    for i in range(Max_line_size):
+      ehr_data_lanes.append(ColumnDataSource(data={'ehr_line_{}_y'.format(i): [], 'ehr_line_{}_x'.format(i): []}))
 
-  ehr_road_boundary_lanes = []
-  for i in range(Road_boundary_max_line_size):
-    ehr_road_boundary_lanes.append(ColumnDataSource(data={'ehr_road_boundary_{}_y'.format(i): [], 'ehr_road_boundary_{}_x'.format(i): []}))
+    ehr_road_boundary_lanes = []
+    for i in range(Road_boundary_max_line_size):
+      ehr_road_boundary_lanes.append(ColumnDataSource(data={'ehr_road_boundary_{}_y'.format(i): [], 'ehr_road_boundary_{}_x'.format(i): []}))
 
-  ehr_lane_boundary_lanes = []
-  for i in range(Lane_boundary_max_line_size):
-    ehr_lane_boundary_lanes.append(ColumnDataSource(data={'ehr_lane_boundary_{}_y'.format(i): [], 'ehr_lane_boundary_{}_x'.format(i): []}))
-  """
+    ehr_lane_boundary_lanes = []
+    for i in range(Lane_boundary_max_line_size):
+      ehr_lane_boundary_lanes.append(ColumnDataSource(data={'ehr_lane_boundary_{}_y'.format(i): [], 'ehr_lane_boundary_{}_x'.format(i): []}))
+
   data_center_line_0 = ColumnDataSource(data = {'center_line_0_y':[], 'center_line_0_x':[]})
   data_center_line_1 = ColumnDataSource(data = {'center_line_1_y':[], 'center_line_1_x':[]})
   data_center_line_2 = ColumnDataSource(data = {'center_line_2_y':[], 'center_line_2_x':[]})
   data_center_line_3 = ColumnDataSource(data = {'center_line_3_y':[], 'center_line_3_x':[]})
   data_center_line_4 = ColumnDataSource(data = {'center_line_4_y':[], 'center_line_4_x':[]})
+  data_center_line_5 = ColumnDataSource(data = {'center_line_5_y':[], 'center_line_5_x':[]})
+  data_center_line_6 = ColumnDataSource(data = {'center_line_6_y':[], 'center_line_6_x':[]})
+  data_center_line_7 = ColumnDataSource(data = {'center_line_7_y':[], 'center_line_7_x':[]})
+  data_center_line_8 = ColumnDataSource(data = {'center_line_8_y':[], 'center_line_8_x':[]})
+  data_center_line_9 = ColumnDataSource(data = {'center_line_9_y':[], 'center_line_9_x':[]})
   data_fix_lane = ColumnDataSource(data = {'fix_lane_y':[], 'fix_lane_x':[]})
   data_target_lane = ColumnDataSource(data = {'target_lane_y':[], 'target_lane_x':[]})
   data_origin_lane = ColumnDataSource(data = {'origin_lane_y':[], 'origin_lane_x':[]})
@@ -1376,11 +1411,26 @@ def load_local_view_figure():
                      'data_lane_7':data_lane_7, \
                      'data_lane_8':data_lane_8, \
                      'data_lane_9':data_lane_9, \
+                     'data_lane_10':data_lane_10, \
+                     'data_lane_11':data_lane_11, \
+                     'data_lane_12':data_lane_12, \
+                     'data_lane_13':data_lane_13, \
+                     'data_lane_14':data_lane_14, \
+                     'data_lane_15':data_lane_15, \
+                     'data_lane_16':data_lane_16, \
+                     'data_lane_17':data_lane_17, \
+                     'data_lane_18':data_lane_18, \
+                     'data_lane_19':data_lane_19, \
                      'data_center_line_0':data_center_line_0, \
                      'data_center_line_1':data_center_line_1, \
                      'data_center_line_2':data_center_line_2, \
                      'data_center_line_3':data_center_line_3, \
                      'data_center_line_4':data_center_line_4, \
+                     'data_center_line_5':data_center_line_5, \
+                     'data_center_line_6':data_center_line_6, \
+                     'data_center_line_7':data_center_line_7, \
+                     'data_center_line_8':data_center_line_8, \
+                     'data_center_line_9':data_center_line_9, \
                      'data_fix_lane': data_fix_lane ,\
                      'data_target_lane': data_target_lane ,\
                      'data_origin_lane': data_origin_lane ,\
@@ -1397,20 +1447,21 @@ def load_local_view_figure():
                      'data_control':data_control,\
                      'data_index': data_index, \
                      }
-  """ for i in range(len(ehr_data_lanes)):
-    key = 'ehr_data_lane_' + str(i)
-    value = ehr_data_lanes[i]
-    local_view_data[key] = value
+  if is_vis_map:
+    for i in range(len(ehr_data_lanes)):
+      key = 'ehr_data_lane_' + str(i)
+      value = ehr_data_lanes[i]
+      local_view_data[key] = value
+    
+    for i in range(len(ehr_road_boundary_lanes)):
+      key = 'ehr_road_boundary_' + str(i)
+      value = ehr_road_boundary_lanes[i]
+      local_view_data[key] = value
 
-  for i in range(len(ehr_road_boundary_lanes)):
-    key = 'ehr_road_boundary_' + str(i)
-    value = ehr_road_boundary_lanes[i]
-    local_view_data[key] = value
-
-  for i in range (len(ehr_lane_boundary_lanes)):
-    key = 'ehr_lane_boundary_' + str(i)
-    value = ehr_lane_boundary_lanes[i]
-    local_view_data[key] = value """
+    for i in range (len(ehr_lane_boundary_lanes)):
+      key = 'ehr_lane_boundary_' + str(i)
+      value = ehr_lane_boundary_lanes[i]
+      local_view_data[key] = value
 
   ### figures config
 
@@ -1431,22 +1482,33 @@ def load_local_view_figure():
   fig1.line('line_7_y', 'line_7_x', source = data_lane_7, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   fig1.line('line_8_y', 'line_8_x', source = data_lane_8, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   fig1.line('line_9_y', 'line_9_x', source = data_lane_9, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_10_y', 'line_10_x', source = data_lane_10, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_11_y', 'line_11_x', source = data_lane_11, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_12_y', 'line_12_x', source = data_lane_12, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_13_y', 'line_13_x', source = data_lane_13, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_14_y', 'line_14_x', source = data_lane_14, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_15_y', 'line_15_x', source = data_lane_15, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_16_y', 'line_16_x', source = data_lane_16, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_17_y', 'line_17_x', source = data_lane_17, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_18_y', 'line_18_x', source = data_lane_18, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig1.line('line_19_y', 'line_19_x', source = data_lane_19, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
 
-  """ for i in range (len(ehr_data_lanes)):
-    keyy = 'ehr_line_{}_y'.format(i)
-    keyx = 'ehr_line_{}_x'.format(i)
-    fig1.line(keyy,keyx,source = ehr_data_lanes[i], line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ehr_center_lane')
+  if is_vis_map:
+    for i in range (len(ehr_data_lanes)):
+      keyy = 'ehr_line_{}_y'.format(i)
+      keyx = 'ehr_line_{}_x'.format(i)
+      fig1.line(keyy,keyx,source = ehr_data_lanes[i], line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ehr_center_lane')
 
-  for i in range(len(ehr_road_boundary_lanes)):
-    keyy = 'ehr_road_boundary_{}_y'.format(i)
-    keyx = 'ehr_road_boundary_{}_x'.format(i)
-    fig1.line(keyy,keyx,source = ehr_road_boundary_lanes[i], line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'ehr_road_boundary')
+    for i in range(len(ehr_road_boundary_lanes)):
+      keyy = 'ehr_road_boundary_{}_y'.format(i)
+      keyx = 'ehr_road_boundary_{}_x'.format(i)
+      fig1.line(keyy,keyx,source = ehr_road_boundary_lanes[i], line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'ehr_road_boundary')
 
-  for i in range(len(ehr_lane_boundary_lanes)):
-    keyy = 'ehr_lane_boundary_{}_y'.format(i)
-    keyx = 'ehr_lane_boundary_{}_x'.format(i)
-    fig1.line(keyy,keyx,source = ehr_lane_boundary_lanes[i], line_width = 1, line_color = 'blue', line_dash = 'dashed', legend_label = 'ehr_lane_boundary')
-  """
+    for i in range(len(ehr_lane_boundary_lanes)):
+      keyy = 'ehr_lane_boundary_{}_y'.format(i)
+      keyx = 'ehr_lane_boundary_{}_x'.format(i)
+      fig1.line(keyy,keyx,source = ehr_lane_boundary_lanes[i], line_width = 1, line_color = 'blue', line_dash = 'dashed', legend_label = 'ehr_lane_boundary')
+
 
   fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')

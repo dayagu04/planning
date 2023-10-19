@@ -1,6 +1,7 @@
 #include "vision_longitudinal_behavior_planner.h"
 
 #include <cmath>
+#include <cstdint>
 #include <string>
 
 #include "debug_info_log.h"
@@ -644,6 +645,10 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
       frame_->mutable_session()
           ->mutable_planning_context()
           ->mutable_vision_longitudinal_behavior_planner_output();
+  auto ad_info = frame_->mutable_session()
+                     ->mutable_planning_output_context()
+                     ->mutable_planning_hmi_info()
+                     ->mutable_ad_info();
 
   highway_longitudinal_output.v_limit_cutin = v_limit_cutin;
   highway_longitudinal_output.a_limit_cutin = a_limit_cutin;
@@ -874,10 +879,16 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
 
 bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(double v_ego) {
   LOG_DEBUG("----calc_speed_for_ramp--- \n");
+  bool is_ramp_speed_limit = false;  // 匝道限速
+  bool is_pre_deceleration = false;  // 匝道预减速
+  auto ad_info = frame_->mutable_session()
+                     ->mutable_planning_output_context()
+                     ->mutable_planning_hmi_info()
+                     ->mutable_ad_info();
   double v_target_ramp = 40.0;
-  // config_
+  // config
   double dece_to_ramp = config_.dece_to_ramp;  // -1.0
-  v_limit_ramp_ = config_.v_limit_ramp;  // 60km/h
+  v_limit_ramp_ = config_.v_limit_ramp;        // 60km/h
 
   double dis_to_ramp = frame_->session()
                            ->environmental_model()
@@ -895,19 +906,26 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(double v_ego) {
   if (is_on_ramp_) {
     if (dis_to_merge > 50) {
       v_target_ramp = v_limit_ramp_;
+      is_ramp_speed_limit = true;
     }
     v_target_ = std::min(v_target_ramp, v_target_);
+
     LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
     JSON_DEBUG_VALUE("VisionLonBehavior_v_target_ramp", v_target_ramp);
     JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
     JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
     LOG_DEBUG("v_target : [%f] \n", v_target_);
+
+    // debug info
+    ad_info->set_is_curva(is_ramp_speed_limit || is_pre_deceleration);
+
     return true;
   }
   double pre_brake_dis_to_ramp = std::max(dis_to_ramp - 50, 0.0);
   v_target_ramp = std::pow(
       std::pow(v_limit_ramp_, 2.0) - 2 * pre_brake_dis_to_ramp * dece_to_ramp,
       0.5);
+  is_pre_deceleration = (v_target_ramp < v_target_) ? true : false;
   v_target_ = std::min(v_target_ramp, v_target_);
 
   a_target_.first = std::min(a_target_.first, dece_to_ramp);
@@ -918,6 +936,8 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(double v_ego) {
   JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
   JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
   LOG_DEBUG("v_target : [%f] \n", v_target_);
+  // debug info
+  ad_info->set_is_curva(is_ramp_speed_limit || is_pre_deceleration);
   return true;
 }
 
@@ -1118,6 +1138,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
       a_target_potential_min =
           std::min({a_target_potential_min,
                     std::max(a_target.first, -4.0) * track.cutinp, -0.7});
+
       LOG_DEBUG("potential_cutin_car's id: [%d], track.v_lat is: [%f]\n",
                 track.track_id, track.v_lat);
       LOG_DEBUG(
@@ -1138,6 +1159,14 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
   v_target_ = std::min(v_target_, v_target_potental_cutin);
 
   // debug info
+  auto ad_info = frame_->mutable_session()
+                     ->mutable_planning_output_context()
+                     ->mutable_planning_hmi_info()
+                     ->mutable_ad_info();
+  for (auto id : front_cut_in_track_id) {
+    ad_info->add_cutin_track_id(id);
+  }
+
   auto &highway_longitudinal_output =
       frame_->mutable_session()
           ->mutable_planning_context()
