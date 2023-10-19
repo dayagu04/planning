@@ -1349,14 +1349,14 @@ mpc_params = {
 }
 
 table_params={
-    'width': 450,
-    'height':500,
+    'width': 600,
+    'height':520,
 }
 
 def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
     #define figure
     # 定义 local_view fig
-    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=800, match_aspect = True, aspect_scale=1)
+    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=1000, match_aspect = True, aspect_scale=1)
     fig_local_view.x_range.flipped = True
     # toolbar
     fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
@@ -1883,10 +1883,11 @@ def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time):
     fig2 = FigureLayerHover(bkp.figure(x_axis_label='time',
                                   y_axis_label='status',
                                   x_range = [0.0, max_time],
-                                  width=450,
-                                  height=200,
-                                  match_aspect = True,
-                                  aspect_scale=1))
+                                  width=600,
+                                  height=250,
+                                  # match_aspect = True,
+                                  # aspect_scale=1
+                                  ))
     fig2.AddCurv(layer_manager,
                  ScalarGeneratorFromJson(json_value_xys_dict, "controller_status"), "controller_status")
     fig2.AddCurv(layer_manager,
@@ -1901,10 +1902,11 @@ def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time):
     fig3 = FigureLayerHover(bkp.figure(x_axis_label='time',
                                   y_axis_label='vel',
                                   x_range = fig2.fig.x_range,
-                                  width=450,
-                                  height=200,
-                                  match_aspect = True,
-                                  aspect_scale=1))
+                                  width=600,
+                                  height=250,
+                                  # match_aspect = True,
+                                  # aspect_scale=1
+                                  ))
     fig3.AddCurv(layer_manager,
                  ScalarGeneratorFromJson(json_value_xys_dict, "vel_ref"), "vel_cmd_plan")
     fig3.AddCurv(layer_manager,
@@ -1917,10 +1919,11 @@ def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time):
     fig4 = FigureLayerHover(bkp.figure(x_axis_label='time',
                                   y_axis_label='distance',
                                   x_range = fig2.fig.x_range,
-                                  width=450,
-                                  height=200,
-                                  match_aspect = True,
-                                  aspect_scale=1))
+                                  width=600,
+                                  height=250,
+                                  # match_aspect = True,
+                                  # aspect_scale=1
+                                  ))
     fig4.AddCurv(layer_manager,
                  ScalarGeneratorFromJson(json_value_xys_dict, "path_length_plan"), "path_length_plan")
     fig4.AddCurv(layer_manager,
@@ -1937,10 +1940,11 @@ def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time):
     fig5 = FigureLayerHover(bkp.figure(x_axis_label='time',
                                   y_axis_label='acc',
                                   x_range = fig2.fig.x_range,
-                                  width=450,
-                                  height=200,
-                                  match_aspect = True,
-                                  aspect_scale=1))
+                                  width=600,
+                                  height=250,
+                                  # match_aspect = True,
+                                  # aspect_scale=1
+                                  ))
     fig5.AddCurv(layer_manager,
                  ScalarGeneratorFromJson(json_value_xys_dict, "vel_out"), "acc_cmd")
     fig5.AddCurv(layer_manager,
@@ -1957,10 +1961,11 @@ def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time):
     fig6 = FigureLayerHover(bkp.figure(x_axis_label='time',
                                   y_axis_label='steer_angle',
                                   x_range = fig2.fig.x_range,
-                                  width=450,
-                                  height=200,
-                                  match_aspect = True,
-                                  aspect_scale=1))
+                                  width=600,
+                                  height=250,
+                                  # match_aspect = True,
+                                  # aspect_scale=1
+                                  ))
     fig6.AddCurv(layer_manager,
                  ScalarGeneratorFromJson(json_value_xys_dict, "steer_angle_cmd", 57.3), "steer_angle_cmd")
     fig6.AddCurv(layer_manager,
@@ -1973,10 +1978,11 @@ def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time):
     fig7 = FigureLayerHover(bkp.figure(x_axis_label='time',
                                   y_axis_label='err',
                                   x_range = fig2.fig.x_range,
-                                  width=450,
-                                  height=200,
-                                  match_aspect = True,
-                                  aspect_scale=1))
+                                  width=600,
+                                  height=250,
+                                  # match_aspect = True,
+                                  # aspect_scale=1
+                                  ))
     fig7.AddCurv(layer_manager,
                  ScalarGeneratorFromJson(json_value_xys_dict, "lat_err", 100), "lat_err")
     fig7.AddCurv(layer_manager,
