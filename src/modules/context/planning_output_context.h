@@ -2,6 +2,7 @@
 #define MODULES_PLANNING_OUTPUT_CONTEXT_
 
 #include <memory>
+
 #include "define/planning_status.h"
 #include "planning_hmi.pb.h"
 
@@ -34,6 +35,9 @@ class PlanningOutputContext {
   void feed_planning_hmi_info(
       PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
     planning_hmi_info_ = planning_hmi_info;
+  }
+  const PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_info() const {
+    return *planning_hmi_info_;
   }
   PlanningHMI::PlanningHMIOutputInfoStr *mutable_planning_hmi_info() {
     return planning_hmi_info_;

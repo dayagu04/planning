@@ -418,11 +418,10 @@ void GeneralPlanning::FillPlanningHmiInfo(
   // HMI for CIPV
   // TBD: 后续需要丰富障碍物的信息，后车、侧方车辆等
   auto cipv_info =
-      session_.planning_output_context().mutable_planning_hmi_info()->mutable_cipv_info();
-  planning_hmi_info->mutable_cipv_info()->set_has_cipv(cipv_info->has_cipv());
-  planning_hmi_info->mutable_cipv_info()->set_cipv_id(cipv_info->cipv_id());
+      session_.planning_output_context().planning_hmi_info().cipv_info();
+  planning_hmi_info->mutable_cipv_info()->set_has_cipv(cipv_info.has_cipv());
+  planning_hmi_info->mutable_cipv_info()->set_cipv_id(cipv_info.cipv_id());
 
-  auto &planning_result = session_.planning_context().planning_result();
   auto ad_info = session_.mutable_planning_output_context()
                      ->mutable_planning_hmi_info()
                      ->mutable_ad_info();
