@@ -1470,6 +1470,24 @@ void DiagonalInTrajectoryGenerator::Log() const {
   JSON_DEBUG_VALUE("remain_dist_uss", remain_dist_uss_)
 
   JSON_DEBUG_VALUE("slot_occupied_ratio", slot_occupied_ratio_)
+
+  const auto& obstacles = collision_detector_.GetObstacles();
+  std::vector<double> obs_x_vec;
+  std::vector<double> obs_y_vec;
+
+  obs_x_vec.reserve(2 * obstacles.size());
+  obs_y_vec.reserve(2 * obstacles.size());
+
+  for (const auto& obs : obstacles) {
+    obs_x_vec.emplace_back(obs.pA.x());
+    obs_x_vec.emplace_back(obs.pB.x());
+
+    obs_y_vec.emplace_back(obs.pA.y());
+    obs_y_vec.emplace_back(obs.pB.y());
+  }
+
+  JSON_DEBUG_VECTOR("obs_x_vec", obs_x_vec, 2)
+  JSON_DEBUG_VECTOR("obs_y_vec", obs_y_vec, 2)
 }
 
 void DiagonalInTrajectoryGenerator::UpdateObstacles() {
