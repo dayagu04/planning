@@ -609,7 +609,7 @@ class LoadCyberbag:
     return fig1
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
-  
+
   ### step 1: 时间戳对齐
   loc_msg_idx = 0
   if bag_loader.loc_msg['enable'] == True:
@@ -1234,8 +1234,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
     print("ehr static map timestamp:",bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].header)
     print("road_map.lanes len:",len(bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].road_map.lanes))
-    #load center line 
-    
+    #load center line
+
     ehr_line_info_list = ehr_load_center_lane_lines(bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].road_map.lanes,
                                              cur_pos_xn,cur_pos_yn,cur_yaw,Max_line_size)
     ehr_data_lane_dict = {}
@@ -1278,7 +1278,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       ehr_data_lane_boundary.data.update({
             'ehr_lane_boundary_{}_x'.format(i): ehr_lane_boundary_info_list[i]['ehr_lane_boundary_x_vec'],
             'ehr_lane_boundary_{}_y'.format(i): ehr_lane_boundary_info_list[i]['ehr_lane_boundary_y_vec'],
-          }) """
+          })
 
   return local_view_data
 
@@ -1306,7 +1306,7 @@ def load_local_view_figure():
   data_lane_17 = ColumnDataSource(data = {'line_17_y':[], 'line_17_x':[]})
   data_lane_18 = ColumnDataSource(data = {'line_18_y':[], 'line_18_x':[]})
   data_lane_19 = ColumnDataSource(data = {'line_19_y':[], 'line_19_x':[]})
-  
+
   if is_vis_map:
     ehr_data_lanes = []
     for i in range(Max_line_size):
@@ -1452,7 +1452,7 @@ def load_local_view_figure():
       key = 'ehr_data_lane_' + str(i)
       value = ehr_data_lanes[i]
       local_view_data[key] = value
-    
+
     for i in range(len(ehr_road_boundary_lanes)):
       key = 'ehr_road_boundary_' + str(i)
       value = ehr_road_boundary_lanes[i]
