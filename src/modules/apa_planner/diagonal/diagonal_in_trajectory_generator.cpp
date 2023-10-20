@@ -82,11 +82,11 @@ static const double standard_slot_length = 5.2;
 static const uint8_t max_gear_change_count = 6;
 
 static const double kMinSlotCoverRatioUpdateObs = 0.8;
-static const double kSublaneWidth = 5.0;
+static const double kSublaneWidth = 5.5;
 static const double kRightSublaneLength = 7.0;
 static const double kLeftSublaneLength = 7.0;
 static const double max_slot_target_angle = 60.0 / 57.3;
-static const double min_right_slot_target_angle = 30.0 / 57.3;
+static const double min_right_slot_target_angle = 10.0 / 57.3;
 static const double multi_gear_change_slot_target_y = 0.1;
 static const double yaw_step = 1.0 / 57.3;
 
@@ -245,7 +245,7 @@ void DiagonalInTrajectoryGenerator::Reset() {
   is_finished_ = false;
   dubins_iter_count_ = 0;
   gear_change_count_ = max_gear_change_count;
-  path_level_ = DUBINS_LEVEL_ZERO_GEAR_CHANGE;
+  path_level_ = DUBINS_LEVEL_NONE;
   is_plan_success_ = false;
   terminal_err_.Set(Eigen::Vector2d(1.0, 1.0), 0.5);
   target_err_.Set(Eigen::Vector2d(1.0, 1.0), 0.5);
@@ -266,6 +266,8 @@ void DiagonalInTrajectoryGenerator::Reset() {
   is_replan_by_uss_ = false;
   uss_obstacles_vec_.clear();
   plan_result_.path_available = false;
+  multi_gear_change_plan_count_ = 0;
+  is_last_path_ = false;
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
@@ -861,13 +863,55 @@ const bool DiagonalInTrajectoryGenerator::PathEvaluateOnce() const {
   return false;
 }
 
+const bool
+DiagonalInTrajectoryGenerator::DubinsPlanOnceGearChangeFixedTarget() {
+  if (multi_gear_change_plan_count_ == 0) {
+    return false;
+  }
+
+  plan_input_.path_radius = min_radius_final;
+  dubins_planner_.SetStart(ego_slot_info_.ego_pos_slot,
+                           ego_slot_info_.ego_heading_slot);
+  plan_input_ = twice_gear_change_outer_plan_input_;
+
+  bool success = DubinsPlanOneStep(plan_input_, PlanAlgorithm::LINE_ARC);
+
+  if (!success) {
+    plan_input_.path_radius = min_radius;
+    success = DubinsPlanOneStep(plan_input_, PlanAlgorithm::DUBINS);
+  }
+
+  if (!success) {
+    plan_state_machine_ = INIT;
+    success = DubinsPlanOneStep(plan_input_, PlanAlgorithm::DUBINS);
+  }
+
+  if (success) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 const bool DiagonalInTrajectoryGenerator::DubinsPlanOnceGearChange(
     uint8_t plan_state_machine) {
   plan_state_machine_ = plan_state_machine;
+  const auto last_path_level = path_level_;
+
   path_level_ = DUBINS_LEVEL_ONCE_GEAR_CHANGE;
+
+  if (last_path_level == DUBINS_LEVEL_TWICE_GEAR_CHANGE) {
+    if (DubinsPlanOnceGearChangeFixedTarget()) {
+      std::cout << "try fixed target success!" << std::endl;
+      return true;
+    } else {
+      std::cout << "try fixed target failed!" << std::endl;
+    }
+  }
+
   dubins_iter_count_ = 0;
 
-  // step1: update target pose and radius
+  // step 1: update target pose and radius
   // set radius
   if (plan_state_machine_ == FINAL) {
     plan_input_.path_radius = min_radius_final;
@@ -968,6 +1012,9 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanOnceGearChange(
   }
 
   if (success_once) {
+    if (plan_state_machine_ == FINAL) {
+      is_last_path_ = true;
+    }
     return true;
   } else {
     std::cout << "--------all failed!" << std::endl;
@@ -1018,6 +1065,8 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanTwiceGearChange(
   dubins_output_pair_vec.reserve(
       std::ceil(std::fabs(search_angle_length / angle_search_step)));
 
+  std::vector<PlanInput> outer_plan_input_vec;
+  outer_plan_input_vec.reserve(dubins_output_pair_vec.capacity());
   size_t outter_loop_index = 0;
   bool inner_success_once = false;
 
@@ -1093,6 +1142,8 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanTwiceGearChange(
       dubins_output_pair_vec.emplace_back(
           std::make_pair(outer_dubins_output, inner_dubins_output));
 
+      outer_plan_input_vec.emplace_back(outer_plan_input);
+
       const auto two_step_length =
           outer_dubins_output.length + inner_dubins_output.length;
 
@@ -1106,6 +1157,9 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanTwiceGearChange(
     const auto result_pair =
         dubins_output_pair_vec[outer_path_length_queue.top().second];
 
+    twice_gear_change_outer_plan_input_ =
+        outer_plan_input_vec[outer_path_length_queue.top().second];
+
     multi_step_plan_result_.emplace_back(result_pair.first);
     multi_step_plan_result_.emplace_back(result_pair.second);
 
@@ -1116,6 +1170,8 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanTwiceGearChange(
     success_once = false;
   }
 
+  multi_gear_change_plan_count_++;
+
   return success_once;
 }
 
@@ -1123,6 +1179,9 @@ void DiagonalInTrajectoryGenerator::PrintDubinsOutput() {
   const auto& output = dubins_planner_.GetOutput();
   std::cout << "------------------------------------- dubins result "
             << std::endl;
+
+  std::cout << "path_level = " << static_cast<int>(path_level_) << std::endl;
+
   std::cout << "pA = " << output.arc_AB.pA.transpose() << std::endl;
   std::cout << "pB = " << output.arc_AB.pB.transpose() << std::endl;
   std::cout << "pC = " << output.arc_CD.pA.transpose() << std::endl;
@@ -1194,17 +1253,17 @@ const bool DiagonalInTrajectoryGenerator::CheckReplan(
     return true;
   }
 
-  if (CheckIfNearTerminalPoint()) {
-    if (!is_replan_by_uss_) {
-      std::cout << "close to target!" << std::endl;
-    } else {
-      std::cout << "close to obstacle by uss!" << std::endl;
+  if (!simulation_enable_flag_) {
+    if (CheckIfNearTerminalPoint()) {
+      if (!is_replan_by_uss_) {
+        std::cout << "close to target!" << std::endl;
+      } else {
+        std::cout << "close to obstacle by uss!" << std::endl;
+      }
+
+      return true;
     }
 
-    return true;
-  }
-
-  if (!simulation_enable_flag_) {
     if (IsReplanEachFrame(local_view_->function_state_machine_info)) {
       std::cout << "apa is not active!" << std::endl;
       return true;
@@ -1397,7 +1456,7 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
   }
 
   double extend_s = 0.0;
-  if (plan_state_machine_ == FINAL) {
+  if (is_last_path_) {
     extend_s = dubins_planner_.GetOutput().arc_CD.pB.x() - terminal_target_x;
     dubins_planner_.Extend(extend_s);
 
@@ -1422,6 +1481,7 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
 
 void DiagonalInTrajectoryGenerator::Log() const {
   JSON_DEBUG_VALUE("is_replan", is_replan_)
+  JSON_DEBUG_VALUE("path_level", path_level_)
   JSON_DEBUG_VALUE("is_finished", is_finished_)
   JSON_DEBUG_VALUE("dubins_type", dubins_planner_.GetOutput().dubins_type)
   JSON_DEBUG_VALUE("case_type", dubins_planner_.GetOutput().case_type)

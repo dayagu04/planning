@@ -45,6 +45,7 @@ class DiagonalInTrajectoryGenerator {
   };
 
   enum DubinsPlanLevel {
+    DUBINS_LEVEL_NONE,
     DUBINS_LEVEL_ZERO_GEAR_CHANGE,
     DUBINS_LEVEL_ONCE_GEAR_CHANGE,
     DUBINS_LEVEL_TWICE_GEAR_CHANGE,
@@ -210,6 +211,7 @@ class DiagonalInTrajectoryGenerator {
  private:
   // reset
   void Reset();
+  const bool DubinsPlanOnceGearChangeFixedTarget();
 
   // local view and frame
   const LocalView *local_view_ = nullptr;
@@ -230,8 +232,10 @@ class DiagonalInTrajectoryGenerator {
   // for path planner
   pnc::dubins_lib::DubinsLibrary dubins_planner_;
   PlanInput plan_input_;
+  PlanInput twice_gear_change_outer_plan_input_;
   uint8_t plan_algorithm_ = DUBINS;
   size_t replan_in_slot_count_ = 0;
+  size_t multi_gear_change_plan_count_ = 0;
   pnc::dubins_lib::DubinsLibrary::Input dubins_input_;
   pnc::dubins_lib::DubinsLibrary::Output plan_result_;
   std::vector<pnc::dubins_lib::DubinsLibrary::Output> multi_step_plan_result_;
@@ -270,6 +274,7 @@ class DiagonalInTrajectoryGenerator {
   bool is_replan_by_uss_ = false;
   bool is_finished_ = false;
   bool is_plan_success_ = false;
+  bool is_last_path_ = false;
   uint8_t gear_change_count_ = 6;
   uint8_t path_level_ = DUBINS_LEVEL_ZERO_GEAR_CHANGE;
   double stuck_time_ = 0.0;
