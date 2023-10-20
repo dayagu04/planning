@@ -275,8 +275,10 @@ class DiagonalInTrajectoryGenerator {
   bool is_finished_ = false;
   bool is_plan_success_ = false;
   bool is_last_path_ = false;
+  bool is_replan_once_ = false;
   uint8_t gear_change_count_ = 6;
   uint8_t path_level_ = DUBINS_LEVEL_ZERO_GEAR_CHANGE;
+  size_t replan_count_ = 0;
   double stuck_time_ = 0.0;
   double slot_occupied_ratio_ = 0.0;
   double parking_continue_time_ = 0.0;

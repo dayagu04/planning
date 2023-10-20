@@ -82,7 +82,7 @@ static const double standard_slot_length = 5.2;
 static const uint8_t max_gear_change_count = 6;
 
 static const double kMinSlotCoverRatioUpdateObs = 0.8;
-static const double kSublaneWidth = 5.5;
+static const double kSublaneWidth = 5.1;
 static const double kRightSublaneLength = 7.0;
 static const double kLeftSublaneLength = 7.0;
 static const double max_slot_target_angle = 60.0 / 57.3;
@@ -268,6 +268,8 @@ void DiagonalInTrajectoryGenerator::Reset() {
   plan_result_.path_available = false;
   multi_gear_change_plan_count_ = 0;
   is_last_path_ = false;
+  is_replan_once_ = false;
+  replan_count_ = 0;
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
@@ -341,9 +343,9 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
     }
 
     // set target velocity to control as a limit
-    const std::vector<double> ratio_tab = {0.0, 0.4, 0.6, 1.0};
-    const std::vector<double> vel_limit_tab = {kMaxVelocity, kMaxVelocity, 0.3,
-                                               0.3};
+    const std::vector<double> ratio_tab = {0.0, 0.4, 0.8, 1.0};
+    const std::vector<double> vel_limit_tab = {kMaxVelocity, kMaxVelocity, 0.45,
+                                               0.35};
     const double vel_limit =
         pnc::mathlib::Interp1(ratio_tab, vel_limit_tab, slot_occupied_ratio_);
 
@@ -607,19 +609,19 @@ void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
   ego_slot_info_.slot_obs.first = true;
   const auto half_slot_width = 0.5 * ego_slot_info_.slot_width;
 
-  std::cout << "half_slot_width = " << half_slot_width << std::endl;
-  std::cout << "ego max y = " << ego_max_y << std::endl;
-  std::cout << "ego min y = " << ego_min_y << std::endl;
+  // std::cout << "half_slot_width = " << half_slot_width << std::endl;
+  // std::cout << "ego max y = " << ego_max_y << std::endl;
+  // std::cout << "ego min y = " << ego_min_y << std::endl;
   if (slot_occupied_ratio_ > kMinSlotCoverRatioUpdateObs) {
     if (ego_max_y > half_slot_width) {
       left_slot_width_offset_ =
           slot_width_offset_empty + std::fabs(ego_max_y - half_slot_width);
-      std::cout << "adjust left obs line " << std::endl;
+      // std::cout << "adjust left obs line " << std::endl;
     }
     if (ego_min_y < -half_slot_width) {
       right_slot_width_offset_ =
           slot_width_offset_empty + std::fabs(ego_min_y + half_slot_width);
-      std::cout << "adjust righgt obs line " << std::endl;
+      // std::cout << "adjust righgt obs line " << std::endl;
     }
   }
   Eigen::Vector2d origin = ego_slot_info_.slot_origin_pos;
@@ -1406,10 +1408,29 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
 
   // check if replan
   is_replan_ = CheckReplan(planning_output);
+
+  if (is_replan_once_ && !is_replan_) {
+    if (fabs(measure_.v_ego) > 0.1) {
+      is_replan_once_ = false;
+    }
+  }
+
   if (!is_replan_) {
     std::cout << "replan is not required!" << std::endl;
     return;
   }
+
+  // avoid repeated replan
+  if (!is_replan_once_) {
+    is_replan_once_ = true;
+    std::cout << "need replan once!" << std::endl;
+  } else {
+    std::cout << "has replaned once!, cancel replan!" << std::endl;
+    return;
+  }
+
+  // count replan
+  replan_count_++;
 
   // update obstacles before replan
   UpdateObstacles();
@@ -1491,6 +1512,8 @@ void DiagonalInTrajectoryGenerator::Log() const {
 
   JSON_DEBUG_VALUE("path_length", dubins_planner_.GetOutput().length)
   JSON_DEBUG_VALUE("plan_state_machine", plan_state_machine_)
+  JSON_DEBUG_VALUE("replan_count", replan_count_)
+  JSON_DEBUG_VALUE("is_replan_once", is_replan_once_)
 
   JSON_DEBUG_VALUE("AB_length", dubins_planner_.GetOutput().arc_AB.length)
   JSON_DEBUG_VALUE("BC_length", dubins_planner_.GetOutput().line_BC.length)
@@ -1636,8 +1659,9 @@ void DiagonalInTrajectoryGenerator::UpdateMeasurement() {
 
   // static flag
   if (!simulation_enable_flag_) {
-    measure_.static_flag = measure_.standstill_timer >= 0.5 &&
-                           measure_.standstill_timer_by_pos > 0.5;
+    measure_.static_flag = (measure_.standstill_timer >= 0.5 &&
+                            measure_.standstill_timer_by_pos > 0.5) ||
+                           (measure_.standstill_timer_by_pos > 1.5);
   } else {
     measure_.static_flag = std::fabs(measure_.v_ego) < kStanstillSpd;
   }
