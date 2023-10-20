@@ -179,6 +179,42 @@ bool SlotManagement::UpdateSlotsInSearching() {
   return true;
 }
 
+const bool SlotManagement::SetRealtime() {
+  const auto select_slot_id = parking_slot_ptr_->select_slot_id();
+  common::SlotInfo select_slot;
+
+  for (const auto &fusion_slot :
+       parking_slot_ptr_->parking_fusion_slot_lists()) {
+    if (select_slot_id != fusion_slot.id()) {
+      continue;
+    }
+    select_slot = SlotInfoTransfer(fusion_slot);
+  }
+  if (!select_slot.has_corner_points()) {
+    std::cout << "find no select slot" << std::endl;
+    is_occupied_ = false;
+    return false;
+  }
+
+  const bool is_slot_valid = IsValidParkingSlot(select_slot);
+  if (!is_slot_valid) {
+    std::cout << "fusion slot is not valid" << std::endl;
+    is_occupied_ = false;
+    return false;
+  }
+
+  CorrectSlotPointsOrder(select_slot);
+
+  // update slot
+  auto slot_idx = slot_info_map_[select_slot_id];
+  auto slot = slot_management_info_.mutable_slot_info_vec(slot_idx);
+  slot_info_window_vec_[slot_idx].Reset();
+  slot_info_window_vec_[slot_idx].Add(select_slot);
+  *slot = slot_info_window_vec_[slot_idx].GetFusedInfo();
+
+  return true;
+}
+
 bool SlotManagement::UpdateSlotsInParking() {
   const auto select_slot_id = parking_slot_ptr_->select_slot_id();
   common::SlotInfo select_slot;

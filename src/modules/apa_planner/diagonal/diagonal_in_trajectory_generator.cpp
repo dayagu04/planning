@@ -195,17 +195,19 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
 
     // plan once
     PathPlanOnce(select_slot_index, planning_output);
-
     std::cout << "run PathPlanOnce!" << std::endl;
 
     // generate planning output
     GeneratePlanningOutput(planning_output);
 
     // update uss oa
-    uss_oa_.Update(planning_output);
-
-    // generate planning output by uss remain dist
-    GeneratePlanningOutputByUssOA(planning_output);
+    if (is_plan_success_) {
+      uss_oa_.Update(planning_output);
+      // generate planning output by uss remain dist
+      GeneratePlanningOutputByUssOA(planning_output);
+    } else {
+      uss_oa_.Reset();
+    }
 
     generate_trajectory = is_plan_success_;
   } else {
@@ -494,12 +496,21 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnceSimulation(
   // update measurement
   UpdateMeasurement();
 
+  // plan once
   PathPlanOnce(select_slot_index, &planning_output_);
+  std::cout << "run PathPlanOnce!" << std::endl;
+
+  // generate planning output
   GeneratePlanningOutput(&planning_output_);
 
-  uss_oa_.Update(&planning_output_);
-
-  GeneratePlanningOutputByUssOA(&planning_output_);
+  // update uss oa
+  if (is_plan_success_) {
+    uss_oa_.Update(&planning_output_);
+    // generate planning output by uss remain dist
+    GeneratePlanningOutputByUssOA(&planning_output_);
+  } else {
+    uss_oa_.Reset();
+  }
 
   return is_plan_success_;
 }
@@ -819,10 +830,10 @@ const bool DiagonalInTrajectoryGenerator::PathEvaluateOnce() const {
   const auto& is_line_arc = output.is_line_arc;
 
   // force reversed gear cmd when replan by uss
-  if (is_replan_by_uss_ &&
-      output.current_gear_cmd == plan_result_.current_gear_cmd) {
-    return false;
-  }
+  // if (is_replan_by_uss_ &&
+  //     output.current_gear_cmd == plan_result_.current_gear_cmd) {
+  //   return false;
+  // }
 
   // no gear change: force no gear change in final
   if (plan_state_machine_ == FINAL) {
@@ -1317,6 +1328,12 @@ const bool DiagonalInTrajectoryGenerator::PathPlanCoreIteration() {
   return is_plan_success_;
 }
 
+void DiagonalInTrajectoryGenerator::ClearUssObstacles() {
+  uss_obstacles_vec_.clear();
+  uss_oa_.SetDisable();
+  UpdateObstacles();
+}
+
 void DiagonalInTrajectoryGenerator::PathPlanOnce(
     const int slot_index, PlanningOutput* const planning_output) {
   // update slot info and target point in both global and slot coordinate
@@ -1341,6 +1358,32 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
   // run plan core
   if (!PathPlanCoreIteration()) {
     std::cout << "PathPlanCoreIteration is failed!" << std::endl;
+  }
+
+  // clear uss obstacles and try again
+  if (!is_plan_success_) {
+    ClearUssObstacles();
+    if (!PathPlanCoreIteration()) {
+      std::cout << "PathPlanCoreIteration after clear uss obstacles is failed!"
+                << std::endl;
+    }
+  }
+
+  // update slot info and try again
+  if (!simulation_enable_flag_ && !is_plan_success_) {
+    slot_manager_.SetRealtime();
+    if (UpdateManagedParkingFusion(slot_index)) {
+      UpdateEgoSlotInfo(slot_index);
+      UpdateObstacles();
+
+      if (!PathPlanCoreIteration()) {
+        std::cout << "PathPlanCoreIteration after update slot is failed!"
+                  << std::endl;
+      }
+    }
+  }
+
+  if (!is_plan_success_) {
     return;
   }
 

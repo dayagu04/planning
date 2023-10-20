@@ -205,6 +205,7 @@ class DiagonalInTrajectoryGenerator {
   void Log() const;
   const bool UpdateManagedParkingFusion(const int select_slot_index);
   void UpdateObstacles();
+  void ClearUssObstacles();
 
  private:
   // reset

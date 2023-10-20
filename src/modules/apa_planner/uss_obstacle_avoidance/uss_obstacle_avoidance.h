@@ -81,7 +81,8 @@ class UssObstacleAvoidance {
     return uss_vertex_vec_;
   }
 
-  const bool GetAvailable() { return is_available_; }
+  const bool GetAvailable() const { return is_available_; }
+  void SetDisable() { is_available_ = false; }
 
   const std::vector<double> GetUssRawDist() const { return uss_raw_dist_vec_; }
 

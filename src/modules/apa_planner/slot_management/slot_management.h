@@ -134,6 +134,8 @@ class SlotManagement {
       const ParkingFusion::ParkingFusionInfo* parking_slot_info,
       const LocalizationOutput::LocalizationEstimate* localization_info);
 
+  const bool SetRealtime();
+
   void SetParam(const Param& param) { param_ = param; }
 
   void Reset();
