@@ -56,6 +56,7 @@ class UssObstacleAvoidance {
     min_dist_car_arc_index_ = 0;
     min_dist_uss_arc_index_ = 0;
     remain_dist_ = 100.0;
+    is_available_ = false;
   }
 
   void SetParam(Paramters &param) { param_ = param; }
@@ -80,11 +81,13 @@ class UssObstacleAvoidance {
     return uss_vertex_vec_;
   }
 
+  const bool GetAvailable() { return is_available_; }
+
   const std::vector<double> GetUssRawDist() const { return uss_raw_dist_vec_; }
 
   const pnc::geometry_lib::LineSegment GetMinDistUssLine() const;
 
-  bool Update(PlanningOutput::PlanningOutput *const planning_output);
+  void Update(PlanningOutput::PlanningOutput *const planning_output);
 
  private:
   bool Preprocess();
@@ -134,6 +137,7 @@ class UssObstacleAvoidance {
   size_t min_dist_uss_arc_index_ = 0;
   double remain_dist_ = 20.0;
   double rear_axle_center_radius_ = 1.0e4;
+  bool is_available_ = false;
   Eigen::Vector2d turning_center_ = Eigen::Vector2d::Zero();
 
   const LocalView *local_view_ptr_ = nullptr;

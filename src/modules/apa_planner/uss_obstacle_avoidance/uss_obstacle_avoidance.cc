@@ -438,7 +438,7 @@ const pnc::geometry_lib::LineSegment UssObstacleAvoidance::GetMinDistUssLine()
   return line;
 }
 
-bool UssObstacleAvoidance::Update(
+void UssObstacleAvoidance::Update(
     PlanningOutput::PlanningOutput *const planning_output) {
   const bool trajectory_available =
       planning_output->has_trajectory() &&
@@ -453,7 +453,6 @@ bool UssObstacleAvoidance::Update(
 
   if (gear_available == false || trajectory_available == false) {
     Reset();
-    return false;
   }
 
   // update planning output
@@ -462,7 +461,6 @@ bool UssObstacleAvoidance::Update(
   // preprocess, get some measurement and construct arcs
   if (!Preprocess()) {
     Reset();
-    return false;
   }
 
   // if (!reverse_flag_) {
@@ -508,7 +506,11 @@ bool UssObstacleAvoidance::Update(
   // calculate remaining distance
   CalRemainDist();
 
-  return true;
+  if (remain_dist_ <= 2.0) {
+    is_available_ = true;
+  } else {
+    is_available_ = false;
+  }
 }
 
 }  // namespace planning

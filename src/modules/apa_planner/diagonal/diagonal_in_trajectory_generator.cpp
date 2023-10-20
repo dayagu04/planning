@@ -263,6 +263,7 @@ void DiagonalInTrajectoryGenerator::Reset() {
   remain_dist_ = 5.01;
   is_replan_by_uss_ = false;
   uss_obstacles_vec_.clear();
+  plan_result_.path_available = false;
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
@@ -270,16 +271,14 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
   // std::cout << "planning_output->trajectory()->trajectory_points_size()"
   //           << planning_output->trajectory().trajectory_points_size()
   //           << std::endl;
+  remain_dist_uss_ = 5.01;
   if (planning_output->trajectory().trajectory_points_size() < 1) {
     return;
   }
 
-  if (spline_success_) {
+  if (spline_success_ && uss_oa_.GetAvailable()) {
     // update remain_dist_uss
     remain_dist_uss_ = uss_oa_.GetRemainDist() - safe_uss_remain_dist;
-
-  } else {
-    remain_dist_uss_ = 100.0;
   }
 
   std::cout << "remain_dist_uss = " << remain_dist_uss_ << std::endl;
@@ -338,9 +337,9 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
     }
 
     // set target velocity to control as a limit
-    const std::vector<double> ratio_tab = {1.0, 0.6, 0.4, 0.0};
-    const std::vector<double> vel_limit_tab = {0.3, 0.3, kMaxVelocity,
-                                               kMaxVelocity};
+    const std::vector<double> ratio_tab = {0.0, 0.4, 0.6, 1.0};
+    const std::vector<double> vel_limit_tab = {kMaxVelocity, kMaxVelocity, 0.3,
+                                               0.3};
     const double vel_limit =
         pnc::mathlib::Interp1(ratio_tab, vel_limit_tab, slot_occupied_ratio_);
 
@@ -1437,13 +1436,15 @@ void DiagonalInTrajectoryGenerator::UpdateObstacles() {
   // update uss obstacles
   if (is_replan_by_uss_) {
     uss_obstacles_vec_.clear();
-    pnc::geometry_lib::LocalToGlobalTf l2g_tf(measure_.ego_pos,
-                                              measure_.heading);
+    if (uss_oa_.GetAvailable()) {
+      pnc::geometry_lib::LocalToGlobalTf l2g_tf(measure_.ego_pos,
+                                                measure_.heading);
 
-    const auto uss_local_line = uss_oa_.GetMinDistUssLine();
+      const auto uss_local_line = uss_oa_.GetMinDistUssLine();
 
-    uss_obstacles_vec_.emplace_back(pnc::geometry_lib::LineSegment(
-        l2g_tf.GetPos(uss_local_line.pA), l2g_tf.GetPos(uss_local_line.pB)));
+      uss_obstacles_vec_.emplace_back(pnc::geometry_lib::LineSegment(
+          l2g_tf.GetPos(uss_local_line.pA), l2g_tf.GetPos(uss_local_line.pB)));
+    }
   }
 
   // add uss obstacles
@@ -1522,8 +1523,8 @@ void DiagonalInTrajectoryGenerator::UpdateMeasurement() {
 
   if (spline_success_) {
     pnc::spline::Projection proj;
-    proj.CalProjectionPoint(x_s_spline_g_, y_s_spline_g_, 0.0, max_path_length,
-                            measure_.ego_pos);
+    proj.CalProjectionPoint(x_s_spline_g_, y_s_spline_g_, 0.0,
+                            current_path_length_, measure_.ego_pos);
 
     if (proj.GetOutput().success) {
       remain_dist_ = current_path_length_ - proj.GetOutput().s_proj;
