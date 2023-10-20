@@ -1,6 +1,7 @@
 #include "spline_projection.h"
 
 #include <cmath>
+#include <cstddef>
 #include <vector>
 
 #include "math_lib.h"
@@ -20,9 +21,13 @@ void Projection::CalProjectionPoint(const mathlib::spline &x_s_spline,
 
   // newton iteration to calculate projection point
   const double half_length = (s_end - s_start) * 0.5;
-  double s_proj = (s_end + s_start) * 0.5;;
+  double s_proj = (s_end + s_start) * 0.5;
+
   auto const &x0 = x.x();
   auto const &y0 = x.y();
+
+  double cost =
+      std::hypot((x0 - x_s_spline(s_proj)), (y0 - y_s_spline(s_proj)));
 
   // get s_proj
   for (size_t i = 0; i < max_iter_; ++i) {
@@ -37,19 +42,33 @@ void Projection::CalProjectionPoint(const mathlib::spline &x_s_spline,
     const double deriv_1st = xs * xs_derv_1st + ys * ys_derv_1st -
                              x0 * xs_derv_1st - y0 * ys_derv_1st;
 
-    const double deriv_2nd = xs_derv_1st * xs_derv_1st + xs * xs_derv_2nd +
-                             ys_derv_1st * ys_derv_1st + ys * ys_derv_2nd -
-                             x0 * xs_derv_2nd - y0 * ys_derv_2nd;
+    double deriv_2nd = xs_derv_1st * xs_derv_1st + xs * xs_derv_2nd +
+                       ys_derv_1st * ys_derv_1st + ys * ys_derv_2nd -
+                       x0 * xs_derv_2nd - y0 * ys_derv_2nd;
 
-    if (mathlib::IsDoubleEqual(deriv_2nd, 0.0, 1e-9)) {
-      return;
+    if (deriv_2nd < 1e-3) {
+      deriv_2nd = 1.0e-3;
     }
 
-    const double ds = pnc::mathlib::Limit(-deriv_1st / deriv_2nd * alpha_,
-                                          half_length * 0.95);
+    const double d = -deriv_1st / deriv_2nd;
+    double ds = 0.0;
+    double alpha = 1.0;
 
-    s_proj += ds;
-    s_proj = mathlib::Clamp(s_proj, s_start, s_end);
+    // line search
+    for (size_t i = 0; i < 10; ++i) {
+      ds = pnc::mathlib::Limit(d * alpha, half_length);
+      s_proj = mathlib::Clamp(s_proj + ds, s_start + 0.01, s_end - 0.01);
+
+      const double new_cost =
+          std::hypot((x0 - x_s_spline(s_proj)), (y0 - y_s_spline(s_proj)));
+
+      if (new_cost < cost) {
+        cost = new_cost;
+        break;
+      }
+
+      alpha = alpha * 0.5;
+    }
 
     // terminate when tol achived
     if (std::fabs(ds) < tol_) {
