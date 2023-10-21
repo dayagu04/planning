@@ -125,6 +125,8 @@ const bool DiagonalInTrajectoryGenerator::Plan(framework::Frame* const frame) {
     Reset();
   }
 
+  UpdateApaFunctionType();
+
   slot_manager_.Update(&local_view_->function_state_machine_info,
                        &origin_parking_fusion_info,
                        &local_view_->localization_estimate);
@@ -270,6 +272,7 @@ void DiagonalInTrajectoryGenerator::Reset() {
   is_last_path_ = false;
   is_replan_once_ = false;
   replan_count_ = 0;
+  apa_function_type_ = APA_FUNC_TYPE_IDLE;
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
@@ -297,6 +300,21 @@ void DiagonalInTrajectoryGenerator::GeneratePlanningOutputByUssOA(
   // std::cout << "Plan RemainDist = " << remain_dist_ << std::endl;
   // std::cout << "current_path_length_ = " << current_path_length_ <<
   // std::endl;
+}
+
+void DiagonalInTrajectoryGenerator::UpdateApaFunctionType() {
+  const auto current_state = current_state_ =
+      local_view_->function_state_machine_info.current_state();
+
+  if (current_state >= FuncStateMachine::PARK_IN_APA_IN &&
+      current_state <= FuncStateMachine::PARK_IN_COMPLETED) {
+    apa_function_type_ = APA_FUNC_TYPE_PARKING_IN;
+  } else if (current_state >= FuncStateMachine::PARK_OUT_SEARCHING &&
+             current_state <= FuncStateMachine::PARK_OUT_COMPLETED) {
+    apa_function_type_ = APA_FUNC_TYPE_PARKING_IN;
+  } else {
+    apa_function_type_ = APA_FUNC_TYPE_IDLE;
+  }
 }
 
 void DiagonalInTrajectoryGenerator::GeneratePlanningOutput(
@@ -432,7 +450,7 @@ const bool DiagonalInTrajectoryGenerator::PathPlanOnceSimulation(
     current_state_ = local_view_->function_state_machine_info.current_state();
   }
 
-  plan_state_machine_ = simu_param_.force_plan_stm;
+  UpdateApaFunctionType();
 
   std::cout << "-------------------------------------------- frame start "
                "-------------------------------------------- "
@@ -1395,8 +1413,17 @@ void DiagonalInTrajectoryGenerator::ClearUssObstacles() {
   UpdateObstacles();
 }
 
+void DiagonalInTrajectoryGenerator::StupidParkingOut() {}
+
 void DiagonalInTrajectoryGenerator::PathPlanOnce(
     const int slot_index, PlanningOutput* const planning_output) {
+  // hack for parking out, will be removed after stupid 1024
+  if (apa_function_type_ == APA_FUNC_TYPE_PARKING_OUT) {
+    StupidParkingOut();
+
+    return;
+  }
+
   // update slot info and target point in both global and slot coordinate
   UpdateEgoSlotInfo(slot_index);
 

@@ -52,6 +52,13 @@ class DiagonalInTrajectoryGenerator {
     DUBINS_LEVEL_COUNT,
   };
 
+  enum ApaFunctionType {
+    APA_FUNC_TYPE_IDLE,
+    APA_FUNC_TYPE_PARKING_IN,
+    APA_FUNC_TYPE_PARKING_OUT,
+    APA_FUNC_TYPE_COUNT,
+  };
+
   struct Measurement {
     double v_ego = 0.0;
     double heading = 0.0;
@@ -208,6 +215,10 @@ class DiagonalInTrajectoryGenerator {
   void UpdateObstacles();
   void ClearUssObstacles();
 
+  void UpdateApaFunctionType();
+
+  void StupidParkingOut();
+
  private:
   // reset
   void Reset();
@@ -283,6 +294,7 @@ class DiagonalInTrajectoryGenerator {
   double slot_occupied_ratio_ = 0.0;
   double parking_continue_time_ = 0.0;
   bool twice_gear_change_enable_ = true;
+  uint8_t apa_function_type_ = APA_FUNC_TYPE_IDLE;
 
   Measurement measure_;
   EgoSlotInfo ego_slot_info_;
