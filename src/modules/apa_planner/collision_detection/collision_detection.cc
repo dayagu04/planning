@@ -33,6 +33,30 @@ void CollisionDetector::Reset() {
   car_circle_global_vec_path_vec_.clear();
 }
 
+const std::vector<pnc::geometry_lib::Circle>
+CollisionDetector::GetCarCircleByEgoCarGlobal() const {
+  double ego_theta =
+      local_view_ptr_->localization_estimate.pose().euler_angles().yaw();
+
+  Eigen::Vector2d ego_coord_global(
+      local_view_ptr_->localization_estimate.pose().local_position().x(),
+      local_view_ptr_->localization_estimate.pose().local_position().y());
+
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf(ego_coord_global, ego_theta);
+
+  std::vector<pnc::geometry_lib::Circle> car_circle_global_vec;
+  car_circle_global_vec.clear();
+  car_circle_global_vec.reserve(car_circle_local_vec_.size());
+  pnc::geometry_lib::Circle car_circle_global;
+
+  for (const auto &circle_local : car_circle_local_vec_) {
+    car_circle_global.center = l2g_tf.GetPos(circle_local.center);
+    car_circle_global.radius = circle_local.radius;
+    car_circle_global_vec.emplace_back(car_circle_global);
+  }
+  return car_circle_global_vec;
+}
+
 void CollisionDetector::GenObstaclesByUssOA() {
   double remain_s_uss = uss_oa_ptr_->GetRemainDist();
   if (remain_s_uss < 0.35) {

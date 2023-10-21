@@ -51,14 +51,22 @@ class CollisionDetector {
   void GenObstaclesSimulation(
       const std::vector<pnc::geometry_lib::LineSegment> &obstacle_line_vec);
 
-  const std::vector<std::vector<pnc::geometry_lib::Circle>> GetCarCircle()
+  const std::vector<std::vector<pnc::geometry_lib::Circle>> &GetCarCircle()
       const {
     return car_circle_global_vec_path_vec_;
   }
 
-  const std::vector<pnc::geometry_lib::LineSegment> GetObstacles() const {
+  const std::vector<pnc::geometry_lib::LineSegment> &GetObstacles() const {
     return obstacle_global_vec_;
   }
+
+  const std::vector<pnc::geometry_lib::Circle> &GetCarCircleByEgoCarLocal()
+      const {
+    return car_circle_local_vec_;
+  }
+
+  const std::vector<pnc::geometry_lib::Circle> GetCarCircleByEgoCarGlobal()
+      const;
 
  private:
   // only updates when init

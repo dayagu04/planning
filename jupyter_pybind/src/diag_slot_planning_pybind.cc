@@ -133,6 +133,34 @@ std::vector<double> GetObstaclesY() {
   return y_vec;
 }
 
+const std::vector<Eigen::Vector3d> GetCarCircleByEgoCarLocalPb() {
+  const auto &car_cricle_local_vec = pBase->GetCarCircleByEgoCarLocal();
+  std::vector<Eigen::Vector3d> circle_local_vec;
+  circle_local_vec.clear();
+  circle_local_vec.reserve(car_cricle_local_vec.size());
+  Eigen::Vector3d circle_local;
+  for (const auto &car_circle_local : car_cricle_local_vec) {
+    circle_local << car_circle_local.center.x(), car_circle_local.center.y(),
+        car_circle_local.radius;
+    circle_local_vec.emplace_back(circle_local);
+  }
+  return circle_local_vec;
+}
+
+const std::vector<Eigen::Vector3d> GetCarCircleByEgoCarGlobalPb() {
+  const auto &car_cricle_global_vec = pBase->GetCarCircleByEgoCarGlobal();
+  std::vector<Eigen::Vector3d> circle_global_vec;
+  circle_global_vec.clear();
+  circle_global_vec.reserve(car_cricle_global_vec.size());
+  Eigen::Vector3d circle_global;
+  for (const auto &car_circle_global : car_cricle_global_vec) {
+    circle_global << car_circle_global.center.x(), car_circle_global.center.y(),
+        car_circle_global.radius;
+    circle_global_vec.emplace_back(circle_global);
+  }
+  return circle_global_vec;
+}
+
 PYBIND11_MODULE(diag_slot_planning_py, m) {
   m.doc() = "m";
 
@@ -142,5 +170,7 @@ PYBIND11_MODULE(diag_slot_planning_py, m) {
       .def("GetOutputBytes", &GetOutputBytes)
       .def("GetObstaclesX", &GetObstaclesX)
       .def("GetObstaclesY", &GetObstaclesY)
-      .def("GetPathEle", &GetPathEle);
+      .def("GetPathEle", &GetPathEle)
+      .def("GetCarCircleByEgoCarLocalPb", &GetCarCircleByEgoCarLocalPb)
+      .def("GetCarCircleByEgoCarGlobalPb", &GetCarCircleByEgoCarGlobalPb);
 }

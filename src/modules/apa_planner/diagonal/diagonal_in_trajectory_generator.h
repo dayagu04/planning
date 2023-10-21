@@ -171,6 +171,16 @@ class DiagonalInTrajectoryGenerator {
     return collision_detector_.GetObstacles();
   }
 
+  const std::vector<pnc::geometry_lib::Circle> GetCarCircleByEgoCarLocal()
+      const {
+    return collision_detector_.GetCarCircleByEgoCarLocal();
+  }
+
+  const std::vector<pnc::geometry_lib::Circle> GetCarCircleByEgoCarGlobal()
+      const {
+    return collision_detector_.GetCarCircleByEgoCarGlobal();
+  }
+
  private:
   void UpdateMeasurement();
   void UpdateEgoSlotInfo(const int slot_index);

@@ -31,10 +31,12 @@ data_planning_tune = ColumnDataSource(data = {'plan_path_x':[],
 data_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[], 'theta_vec':[]})
 data_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_obstacles = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_car_circle = ColumnDataSource(data = {'circle_xn':[], 'circle_yn':[], 'circle_rn':[]})
 
 fig1.patches('y_vec', 'x_vec', source = data_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'sampled carbox')
 fig1.line('plan_path_y', 'plan_path_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'tuned plan')
 fig1.multi_line('y_vec', 'x_vec', source = data_obstacles, line_width = 2, line_color = 'black', line_dash = 'solid', line_alpha = 1.0, legend_label = 'obstacles')
+fig1.circle(y ='circle_xn', x ='circle_yn', radius = 'circle_rn', source=data_car_circle, line_alpha = 0.5, line_width = 1, line_color = "grey", fill_alpha=0, legend_label = 'car_circle_cc', visible = False)
 
 # find bag time when planning at real test
 # plan_msg_idx = 0
@@ -182,6 +184,23 @@ def slider_callback(bag_time, selected_id, force_replan, is_replay, is_complete,
   data_obstacles.data.update({
     'x_vec': obs_x_vec,
     'y_vec': obs_y_vec,
+  })
+
+  # car_circle
+  car_circle_vec = diag_slot_planning_py.GetCarCircleByEgoCarGlobalPb()
+  car_circle_x_vec = []
+  car_circle_y_vec = []
+  car_circle_r_vec = []
+  for i in range(len(car_circle_vec)):
+    circle = car_circle_vec[i]
+    car_circle_x_vec.append(circle[0])
+    car_circle_y_vec.append(circle[1])
+    car_circle_r_vec.append(circle[2])
+
+  data_car_circle.data.update({
+    'circle_xn': car_circle_x_vec,
+    'circle_yn': car_circle_y_vec,
+    'circle_rn': car_circle_r_vec,
   })
 
   push_notebook()
