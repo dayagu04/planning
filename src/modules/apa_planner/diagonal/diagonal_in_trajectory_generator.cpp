@@ -1471,14 +1471,13 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
   }
 
   // clear uss obstacles and try again
-  // if (!is_plan_success_) {
-  //   ClearUssObstacles();
-  //   if (!PathPlanCoreIteration()) {
-  //     std::cout << "PathPlanCoreIteration after clear uss obstacles is
-  //     failed!"
-  //               << std::endl;
-  //   }
-  // }
+  if (!is_plan_success_) {
+    ClearUssObstacles();
+    if (!PathPlanCoreIteration()) {
+      std::cout << "PathPlanCoreIteration after clear uss obstacles is failed !"
+                << std::endl;
+    }
+  }
 
   // update slot info and try again
   if (!simulation_enable_flag_ && !is_plan_success_) {
