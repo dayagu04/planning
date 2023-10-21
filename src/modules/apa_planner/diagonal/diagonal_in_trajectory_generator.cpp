@@ -75,14 +75,14 @@ static const double collision_check_sample_ds = 0.5;
 static const double safe_uss_remain_dist = 0.35;
 static const double stuck_failed_time = 6.0;
 static const double stuck_replan_time = 4.0;
-static const double slot_width_offset_empty = 0.2;
+static const double slot_width_offset_empty = 0.25;
 static const double min_replan_remain_dist =
     0.2;  // in control, this value must be smaller
 static const double standard_slot_length = 5.2;
 static const uint8_t max_gear_change_count = 6;
 
 static const double kMinSlotCoverRatioUpdateObs = 0.8;
-static const double kSublaneWidth = 5.1;
+static const double kSublaneWidth = 5.3;
 static const double kRightSublaneLength = 7.0;
 static const double kLeftSublaneLength = 7.0;
 static const double max_slot_target_angle = 60.0 / 57.3;
@@ -1436,6 +1436,8 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
 
   // check if replan
   is_replan_ = CheckReplan(planning_output);
+
+  is_last_path_ = false;
 
   if (is_replan_once_ && !is_replan_) {
     if (fabs(measure_.v_ego) > 0.1) {

@@ -366,49 +366,49 @@ class LoadCyberbag:
 
     # add obstacles in plot apa
     # load precept_info msg
-    try:
-      precept_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/ultrasonic_perception_info"):
-        precept_msg_dict[msg.header.timestamp / 1e6] = msg
-      precept_msg_dict = {key: val for key, val in sorted(precept_msg_dict.items(), key = lambda ele: ele[0])}
-      for t, msg in precept_msg_dict.items():
-        self.precept_msg['t'].append(t)
-        self.precept_msg['abs_t'].append(t)
-        self.precept_msg['data'].append(msg)
-      self.precept_msg['t'] = [tmp - t0 for tmp in self.precept_msg['t']]
-      self.precept_msg['enable'] = True
-      print('precept time:',self.precept_msg['t'][-1])
-      max_time = max(max_time, self.precept_msg['t'][-1])
-      if len(self.precept_msg['t']) > 0:
-        self.precept_msg['enable'] = True
-      else:
-        self.precept_msg['enable'] = False
-    except:
-      self.precept_msg['enable'] = False
-      print("missing /iflytek/ultrasonic_perception_info !!!")
+    # try:
+    #   precept_msg_dict = {}
+    #   for topic, msg, t in self.bag.read_messages("/iflytek/ultrasonic_perception_info"):
+    #     precept_msg_dict[msg.header.timestamp / 1e6] = msg
+    #   precept_msg_dict = {key: val for key, val in sorted(precept_msg_dict.items(), key = lambda ele: ele[0])}
+    #   for t, msg in precept_msg_dict.items():
+    #     self.precept_msg['t'].append(t)
+    #     self.precept_msg['abs_t'].append(t)
+    #     self.precept_msg['data'].append(msg)
+    #   self.precept_msg['t'] = [tmp - t0 for tmp in self.precept_msg['t']]
+    #   self.precept_msg['enable'] = True
+    #   print('precept time:',self.precept_msg['t'][-1])
+    #   max_time = max(max_time, self.precept_msg['t'][-1])
+    #   if len(self.precept_msg['t']) > 0:
+    #     self.precept_msg['enable'] = True
+    #   else:
+    #     self.precept_msg['enable'] = False
+    # except:
+    #   self.precept_msg['enable'] = False
+    #   print("missing /iflytek/ultrasonic_perception_info !!!")
 
 
-    # precept_debug_info msg
-    try:
-      precept_debug_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/ultrasonic_perception_debug_info"):
-        precept_debug_msg_dict[msg.header.timestamp / 1e6] = msg
-      precept_debug_msg_dict = {key: val for key, val in sorted(precept_debug_msg_dict.items(), key = lambda ele: ele[0])}
-      for t, msg in precept_debug_msg_dict.items():
-        self.precept_debug_msg['t'].append(t)
-        self.precept_debug_msg['abs_t'].append(t)
-        self.precept_debug_msg['data'].append(msg)
-      self.precept_debug_msg['t'] = [tmp - t0  for tmp in self.precept_debug_msg['t']]
-      self.precept_debug_msg['enable'] = True
-      print('precept_debug time:',self.precept_debug_msg['t'][-1])
-      max_time = max(max_time, self.precept_debug_msg['t'][-1])
-      if len(self.precept_debug_msg['t']) > 0:
-        self.precept_debug_msg['enable'] = True
-      else:
-        self.precept_debug_msg['enable'] = False
-    except:
-      self.precept_debug_msg['enable'] = False
-      print("missing /iflytek/ultrasonic_perception_debug_info !!!")
+    # # precept_debug_info msg
+    # try:
+    #   precept_debug_msg_dict = {}
+    #   for topic, msg, t in self.bag.read_messages("/iflytek/ultrasonic_perception_debug_info"):
+    #     precept_debug_msg_dict[msg.header.timestamp / 1e6] = msg
+    #   precept_debug_msg_dict = {key: val for key, val in sorted(precept_debug_msg_dict.items(), key = lambda ele: ele[0])}
+    #   for t, msg in precept_debug_msg_dict.items():
+    #     self.precept_debug_msg['t'].append(t)
+    #     self.precept_debug_msg['abs_t'].append(t)
+    #     self.precept_debug_msg['data'].append(msg)
+    #   self.precept_debug_msg['t'] = [tmp - t0  for tmp in self.precept_debug_msg['t']]
+    #   self.precept_debug_msg['enable'] = True
+    #   print('precept_debug time:',self.precept_debug_msg['t'][-1])
+    #   max_time = max(max_time, self.precept_debug_msg['t'][-1])
+    #   if len(self.precept_debug_msg['t']) > 0:
+    #     self.precept_debug_msg['enable'] = True
+    #   else:
+    #     self.precept_debug_msg['enable'] = False
+    # except:
+    #   self.precept_debug_msg['enable'] = False
+    #   print("missing /iflytek/ultrasonic_perception_debug_info !!!")
 
     # load wave_info msg
     try:
