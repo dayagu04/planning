@@ -51,7 +51,7 @@ constexpr double kMaxSpd = 0.5;
 constexpr double kMinSegmentLen = 0.5 * kMaxSpd * kMaxSpd / kMaxAcc;
 constexpr double kStep = 0.1;
 constexpr double kYawStep = 0.1;
-constexpr double kStanstillSpd = 0.01;
+constexpr double kStanstillSpd = 0.082;
 constexpr double kRemainingDisThreshold = 0.2;
 constexpr uint64_t kMinStandstillTime = 500;  // ms
 constexpr uint64_t kMinPosUnchangedCount = 5;
@@ -75,7 +75,7 @@ static const double collision_check_sample_ds = 0.5;
 static const double safe_uss_remain_dist = 0.35;
 static const double stuck_failed_time = 6.0;
 static const double stuck_replan_time = 4.0;
-static const double slot_width_offset_empty = 0.15;
+static const double slot_width_offset_empty = 0.2;
 static const double min_replan_remain_dist =
     0.2;  // in control, this value must be smaller
 static const double standard_slot_length = 5.2;
@@ -1270,20 +1270,21 @@ const bool DiagonalInTrajectoryGenerator::CheckReplan(
     PlanningOutput* const planning_output) {
   if (simulation_enable_flag_ && simu_param_.force_planning_) {
     std::cout << "tune force_planning on!" << std::endl;
+    is_replan_once_ = false;
+    return true;
+  }
+
+  if (CheckIfNearTerminalPoint()) {
+    if (!is_replan_by_uss_) {
+      std::cout << "close to target!" << std::endl;
+    } else {
+      std::cout << "close to obstacle by uss!" << std::endl;
+    }
+
     return true;
   }
 
   if (!simulation_enable_flag_) {
-    if (CheckIfNearTerminalPoint()) {
-      if (!is_replan_by_uss_) {
-        std::cout << "close to target!" << std::endl;
-      } else {
-        std::cout << "close to obstacle by uss!" << std::endl;
-      }
-
-      return true;
-    }
-
     if (IsReplanEachFrame(local_view_->function_state_machine_info)) {
       std::cout << "apa is not active!" << std::endl;
       return true;
@@ -1468,13 +1469,14 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
   }
 
   // clear uss obstacles and try again
-  if (!is_plan_success_) {
-    ClearUssObstacles();
-    if (!PathPlanCoreIteration()) {
-      std::cout << "PathPlanCoreIteration after clear uss obstacles is failed!"
-                << std::endl;
-    }
-  }
+  // if (!is_plan_success_) {
+  //   ClearUssObstacles();
+  //   if (!PathPlanCoreIteration()) {
+  //     std::cout << "PathPlanCoreIteration after clear uss obstacles is
+  //     failed!"
+  //               << std::endl;
+  //   }
+  // }
 
   // update slot info and try again
   if (!simulation_enable_flag_ && !is_plan_success_) {
