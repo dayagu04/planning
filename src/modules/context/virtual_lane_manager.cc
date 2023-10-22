@@ -33,6 +33,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   current_lane_ = nullptr;
   left_lane_ = nullptr;
   right_lane_ = nullptr;
+  is_within_hdmap_ = false;
   relative_id_lanes_.clear();
 
   if (roads.reference_line_msg().size() == 0) {
@@ -940,6 +941,9 @@ bool VirtualLaneManager::GetCurrentNearestLane(
   std::cout << "find current lane to current ego point dis:"
             << nearest_lane->DistanceTo(point) << std::endl;
   std::cout << "find the nearest lane!!!" << std::endl;
+
+  is_within_hdmap_ = nearest_lane->IsOnLane(point);
+
   nearest_lane_ = nearest_lane;
   nearest_s_ = nearest_s;
   return true;
