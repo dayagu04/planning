@@ -1374,6 +1374,19 @@ const bool DiagonalInTrajectoryGenerator::PathPlanCoreIteration() {
   // main loop for dubins planning
   is_plan_success_ = false;
 
+  // hack for 1024
+  if (replan_count_ == 0) {
+    std::cout << "----------------fist plan: try multi-step plan!" << std::endl;
+    if (DubinsPlanTwiceGearChange(INIT)) {
+      std::cout << "--init multi-step success!" << std::endl;
+      is_plan_success_ = true;
+
+      return true;
+    } else {
+      std::cout << "--init multi-step failed!" << std::endl;
+    }
+  }
+
   // first dubins iteration: try to plan with final: zero gear change
   std::cout << "----------------try final plan first!" << std::endl;
   if (DubinsPlanOnceGearChange(FINAL)) {
@@ -1459,9 +1472,6 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
     return;
   }
 
-  // count replan
-  replan_count_++;
-
   // update obstacles before replan
   UpdateObstacles();
 
@@ -1496,6 +1506,9 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
   if (!is_plan_success_) {
     return;
   }
+
+  // count replan
+  replan_count_++;
 
   // enable complete path when simulation
   bool is_complete_path = false;
