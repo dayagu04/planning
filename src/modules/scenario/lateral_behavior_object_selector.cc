@@ -40,6 +40,13 @@ bool ObjectSelector::in_alc_range() {
   //   return false;
   // }
 
+  bool is_on_ramp = session_
+                    ->environmental_model()
+                    .get_virtual_lane_manager()
+                    ->is_on_ramp();
+  if (is_on_ramp) return false;
+  
+
   return true;
 }
 
