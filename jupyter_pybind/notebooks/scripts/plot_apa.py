@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/1015/1824/1015-1824/test_15.00000'
+bag_path = '/home/xlwang71/Downloads/APA/1021-2015/test_8.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
@@ -31,6 +31,16 @@ class LocalViewSlider:
 def slider_callback(bag_time):
   kwargs = locals()
   update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, plot_ctrl_flag)
+
+  # plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
+  # plan_msg_idx = local_view_data['data_index']['plan_msg_idx']
+
+  # planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
+  # planning_data = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
+
+  # print("is_replan_once = ", planning_json['is_replan_once'])
+  # print("replan_count = ", planning_json['replan_count'])
+
 
   push_notebook()
 

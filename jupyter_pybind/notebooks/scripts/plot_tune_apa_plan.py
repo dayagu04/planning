@@ -11,7 +11,7 @@ from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/1019/test_2.00000'
+bag_path = '/home/xlwang71/Downloads/APA/1021-2015/test_11.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -61,7 +61,7 @@ class LocalViewSlider:
     self.is_replay_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='13%'), description= "is_replay",min=0, max=1, value=1, step=1)
     self.sample_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "sample_ds",min=0.025, max=2.0, value=0.5, step=0.025)
     self.chn_length_one_side_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "chn_length_one_side",min=0.0, max=15.0, value=7.0, step=0.1)
-    self.chn_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "chn_width",min=0.0, max=15.0, value=5.0, step=0.1)
+    self.chn_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "chn_width",min=0.0, max=15.0, value=5.3, step=0.1)
     self.slot_width_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "slot_width_offset",min=0.0, max=5.0, value=0.15, step=0.05)
 
 

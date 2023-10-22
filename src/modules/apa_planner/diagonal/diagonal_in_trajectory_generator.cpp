@@ -87,7 +87,7 @@ static const double kRightSublaneLength = 7.0;
 static const double kLeftSublaneLength = 7.0;
 static const double max_slot_target_angle = 60.0 / 57.3;
 static const double min_right_slot_target_angle = 10.0 / 57.3;
-static const double multi_gear_change_slot_target_y = 0.1;
+static const double multi_gear_change_slot_target_y = 0.0;
 static const double yaw_step = 1.0 / 57.3;
 
 static const double kEmergencyFlashTime = 0.6;

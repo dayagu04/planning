@@ -139,8 +139,12 @@ bool CollisionDetector::CollisionDetect() {
   bool collision_flag = false;
   // std::cout << "\ncar_circle_global_vec_path_vec_"
   //           << car_circle_global_vec_path_vec_.size();
-  // size_t i = 0;
+  size_t path_count = 0;
   for (const auto &car_circle_global_vec : car_circle_global_vec_path_vec_) {
+    if (path_count++ == 0) {
+      continue;
+    }
+
     for (const auto &obstacle_global : obstacle_global_vec_) {
       for (size_t k = 0; k < car_circle_global_vec.size(); k++) {
         collision_flag = pnc::geometry_lib::CheckLineSegmentInCircle(
