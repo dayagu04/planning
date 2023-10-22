@@ -375,7 +375,7 @@ void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
     if (ramp_direction == RAMP_ON_RIGHT) {
       if (lane_type == FusionRoad::LaneType::LANETYPE_DECELERATE &&
           order_id_ > 0 && lane_num > 3) {
-        std::cout << "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN" << std::endl;
+        // std::cout << "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN" << std::endl;
         return;
       }
       for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
@@ -384,7 +384,7 @@ void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
     } else {
       for (int i = order_id_; i > 0; i--) {
         current_tasks_.emplace_back(-1);
-        std::cout << "9999999999999999999999999999999999999999" << std::endl;
+        // std::cout << "9999999999999999999999999999999999999999" << std::endl;
       }
     }
   } else {

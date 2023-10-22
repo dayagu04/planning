@@ -840,11 +840,11 @@ bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
   item.l0 = l_ego_;
   item.c0 = l_ego_;
   item.v_lat = (l > 0) ? v_l : -v_l;
-  std::cout << "object track_id: " << item.track_id
-            << " ego l_ego_ : " << l_ego_ << " ego vl_: " << vl_ego_
-            << " item.s: " << item.s << " item.l: " << item.l
-            << " item.v_lat: " << item.v_lat << " item.vy_rel: " << item.vy_rel
-            << " v_l: " << v_l << std::endl;
+  // std::cout << "object track_id: " << item.track_id
+  //           << " ego l_ego_ : " << l_ego_ << " ego vl_: " << vl_ego_
+  //           << " item.s: " << item.s << " item.l: " << item.l
+  //           << " item.v_lat: " << item.v_lat << " item.vy_rel: " << item.vy_rel
+  //           << " v_l: " << v_l << std::endl;
   if (hdmap_valid_) {
     item.a_lead = item.a * std::cos(item.theta - theta);
     item.a_lead_k = item.a_lead;

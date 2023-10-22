@@ -150,10 +150,17 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
           auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(
               target_lane_virtual_id_tmp);
           if (tlane != nullptr) {
-            GenerateRequest(RIGHT_CHANGE);
-            set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-            LOG_DEBUG(
-                "[MapRequest::update] Ask for map changing lane to right\n");
+            auto tlane_c_poly = tlane->c_poly();
+            if (virtual_lane_mgr_->dis_to_ramp() > 500. && tlane_c_poly[0] > -2.8) {
+              LOG_WARNING(
+                "[MapRequest::update] Ask for map changing lane to right "
+                "but split canceled \n");
+            } else {
+              GenerateRequest(RIGHT_CHANGE);
+              set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+              LOG_DEBUG(
+                  "[MapRequest::update] Ask for map changing lane to right\n");
+            }
           } else {
             LOG_WARNING(
                 "[MapRequest::update] Ask for map changing lane to right "
