@@ -75,7 +75,7 @@ static const double collision_check_sample_ds = 0.5;
 static const double safe_uss_remain_dist = 0.35;
 static const double stuck_failed_time = 6.0;
 static const double stuck_replan_time = 4.0;
-static const double slot_width_offset_empty = 0.25;
+static const double slot_width_offset_empty = 0.5;
 static const double min_replan_remain_dist =
     0.2;  // in control, this value must be smaller
 static const double standard_slot_length = 5.2;
@@ -1470,6 +1470,12 @@ void DiagonalInTrajectoryGenerator::PathPlanOnce(
   } else {
     std::cout << "has replaned once!, cancel replan!" << std::endl;
     return;
+  }
+
+  if (!simulation_enable_flag_ && replan_count_ == 2) {
+    slot_manager_.SetRealtime();
+    UpdateManagedParkingFusion(slot_index);
+    UpdateEgoSlotInfo(slot_index);
   }
 
   // update obstacles before replan
