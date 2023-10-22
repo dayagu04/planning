@@ -1159,8 +1159,13 @@ const bool DiagonalInTrajectoryGenerator::DubinsPlanTwiceGearChange(
     }
 
     if (inner_success_once) {
-      const auto inner_dubins_output =
-          inner_dubins_output_vec[inner_path_length_queue.top().second];
+      size_t seleteced_index = inner_path_length_queue.top().second;
+
+      if (seleteced_index > inner_dubins_output_vec.size() - 1) {
+        return false;
+      }
+
+      const auto inner_dubins_output = inner_dubins_output_vec[seleteced_index];
 
       dubins_output_pair_vec.emplace_back(
           std::make_pair(outer_dubins_output, inner_dubins_output));
