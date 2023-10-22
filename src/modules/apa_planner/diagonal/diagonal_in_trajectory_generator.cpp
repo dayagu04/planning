@@ -61,13 +61,14 @@ constexpr double kMaxHeadingOffset = 2.8 / 57.3;
 constexpr double kMockedObjYOffset = 4.0;
 
 static const double kNormalSlotLength = 4.8;
+static const double target_y_offset = -0.1;
 static const double target_x_init = 1.5;
 static const double min_radius = 5.5;
 static const double min_radius_final = 5.2;
 static const double kLineStep = 0.1;
 static const double kMinProperLength = 0.5;
 static const double plan_time = 0.1;
-static const double terminal_target_x = 1.1;
+static const double terminal_target_x = 1.4;
 static const double max_path_length = 20.0;
 static const double min_search_length = 6.0;
 static const double path_sample_ds = 0.05;
@@ -553,8 +554,11 @@ void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
   const auto pM23 = 0.5 * (p2 + p3);
 
   const auto n = (pM01 - pM23).normalized();
+  const auto t = Eigen::Vector2d(-n.y(), n.x());
 
-  ego_slot_info_.slot_origin_pos = pM01 - kNormalSlotLength * n;
+  ego_slot_info_.slot_origin_pos =
+      pM01 - kNormalSlotLength * n + target_y_offset * t;
+
   ego_slot_info_.slot_origin_heading = std::atan2(n.y(), n.x());
 
   // global2slot tf init
@@ -621,7 +625,6 @@ void DiagonalInTrajectoryGenerator::UpdateEgoSlotInfo(const int slot_index) {
   std::cout << "slot_occupied_ratio = " << slot_occupied_ratio_ << std::endl;
 
   // update obstacles in current, left or right slot
-  const auto t = Eigen::Vector2d(-n.y(), n.x());
 
   // update current slot obstacles
   ego_slot_info_.slot_obs.first = true;
@@ -1375,17 +1378,17 @@ const bool DiagonalInTrajectoryGenerator::PathPlanCoreIteration() {
   is_plan_success_ = false;
 
   // hack for 1024
-  if (replan_count_ == 0) {
-    std::cout << "----------------fist plan: try multi-step plan!" << std::endl;
-    if (DubinsPlanTwiceGearChange(INIT)) {
-      std::cout << "--init multi-step success!" << std::endl;
-      is_plan_success_ = true;
+  // if (replan_count_ == 0) {
+  //   std::cout << "----------------fist plan: try multi-step plan!" <<
+  //   std::endl; if (DubinsPlanTwiceGearChange(INIT)) {
+  //     std::cout << "--init multi-step success!" << std::endl;
+  //     is_plan_success_ = true;
 
-      return true;
-    } else {
-      std::cout << "--init multi-step failed!" << std::endl;
-    }
-  }
+  //     return true;
+  //   } else {
+  //     std::cout << "--init multi-step failed!" << std::endl;
+  //   }
+  // }
 
   // first dubins iteration: try to plan with final: zero gear change
   std::cout << "----------------try final plan first!" << std::endl;
@@ -1712,7 +1715,8 @@ void DiagonalInTrajectoryGenerator::UpdateMeasurement() {
                             measure_.standstill_timer_by_pos > 0.5) ||
                            (measure_.standstill_timer_by_pos > 1.5);
   } else {
-    measure_.static_flag = std::fabs(measure_.v_ego) < kStanstillSpd;
+    measure_.static_flag = std::fabs(measure_.v_ego) < kStanstillSpd ||
+                           measure_.standstill_timer_by_pos > 0.5;
   }
 
   if (spline_success_) {
