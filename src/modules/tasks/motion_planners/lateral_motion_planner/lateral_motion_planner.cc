@@ -70,6 +70,7 @@ void LateralMotionPlanner::Init() {
 
 bool LateralMotionPlanner::Execute(planning::framework::Frame *frame) {
   LOG_DEBUG("=======LateralMotionPlanner======= \n");
+  auto start_time = IflyTime::Now_ms();
   frame_ = frame;
   if (Task::Execute(frame) == false) {
     return false;
@@ -90,6 +91,9 @@ bool LateralMotionPlanner::Execute(planning::framework::Frame *frame) {
       .GetDebugInfoPb()
       ->mutable_lateral_motion_planning_output()
       ->CopyFrom(planning_problem_ptr_->GetOutput());
+
+  auto end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("RealTimeLateralMotionCostTime", end_time - start_time);
 
   return true;
 }

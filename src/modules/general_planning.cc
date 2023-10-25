@@ -249,8 +249,13 @@ void GeneralPlanning::FillPlanningTrajectory(
     }
     // 设置参考线为default
     auto target_ref = trajectory->mutable_target_reference();
-    target_ref->add_polynomial(0.0);
-    target_ref->set_target_velocity(0.0);
+    // add polynomial
+    const auto &d_polynomial = lateral_output.d_poly;
+    for (size_t i = 0; i < d_polynomial.size(); i++) {
+      target_ref->add_polynomial(d_polynomial[i]);
+    }
+    target_ref->set_target_velocity(
+        vision_only_longitudinal_outputs.velocity_target);
     auto acceleration_range_limit =
         target_ref->mutable_acceleration_range_limit();
     acceleration_range_limit->set_min_a(-4.0);
