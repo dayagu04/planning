@@ -144,8 +144,6 @@ class VirtualLaneManager {
   }
   bool is_on_ramp() const { return is_on_ramp_; }
 
-  bool is_within_hdmap() const { return is_within_hdmap_; }
-
   bool is_local_valid() const { return is_local_valid_; }
 
   void CalculateDistanceToRamp(planning::framework::Session *session);
@@ -204,7 +202,6 @@ class VirtualLaneManager {
   bool is_on_ramp_ = false;
   ad_common::hdmap::LaneInfoConstPtr nearest_lane_;
   double nearest_s_ = 0.0;
-  bool is_within_hdmap_ = false;
 };
 }  // namespace planning
 #endif
