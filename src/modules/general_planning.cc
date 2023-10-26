@@ -440,10 +440,6 @@ void GeneralPlanning::FillPlanningHmiInfo(
   ad_info->set_distance_to_toll_station(
       (uint)virtual_lane_manager
           ->ramp_direction());  // 临时将toll_station改为ramp_direction
-  // TODO(xjli32) hack, 1 means within hdmap scope, 0 means invalid value
-  const uint32_t distance_to_tunnel = virtual_lane_manager->is_within_hdmap() ?
-      1 : 0;
-  ad_info->set_distance_to_tunnel(distance_to_tunnel);
 }
 
 void GeneralPlanning::ClearParkingInfo(
