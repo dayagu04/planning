@@ -462,7 +462,317 @@ void StGraphGenerator::UpdateSTGraphs(
 
 void StGraphGenerator::UpdateNearObstacles(
     const planning::common::LatObsInfo &lateral_obstacles,
-    const string &lc_request, double v_ego) {}
+    const string &lc_request, double v_ego) {
+  const double safety_distance = 2.0 + v_ego * 0.2;
+  int cutin_status = 0;
+
+  std::vector<const planning::common::TrackedObjectInfo *> near_cars,
+      near_cars_sorted;
+  std::array<int, 3> nearest_car_track_id{0, 0, 0};
+  std::array<double, 3> v_limit_cutin{40.0, 40.0, 40.0};
+  std::array<double, 3> a_limit_cutin{0.0, 0.0, 0.0};
+  std::array<std::string, 3> cutin_condition{"", "", ""};
+
+  LOG_DEBUG("----limit_accel_velocity_for_cutin--- \n");
+  // filter near cars from front && side tracks
+  near_cars.clear();
+  for (auto &track : lateral_obstacles.front_tracks()) {
+    // ignore obj without camera source
+    if ((track.fusion_source() != OBSTACLE_SOURCE_CAMERA) &&
+        (track.fusion_source() != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+      continue;
+    };
+    if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
+        track.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+      near_cars.push_back(&track);
+    }
+  }
+
+  // sort by abs(y_min) from min to max
+  std::sort(near_cars.begin(), near_cars.end(),
+            [](const planning::common::TrackedObjectInfo *a,
+               const planning::common::TrackedObjectInfo *b) {
+              return std::abs(a->y_min()) < std::abs(b->y_min());
+            });
+
+  // take at most 3 nearest car
+  near_cars_sorted.clear();
+  for (int i = 0; i < near_cars.size() && near_cars_sorted.size() < 3; i++) {
+    if ((near_cars[i]->location_tail() < 2 * safety_distance) &&
+        (near_cars[i]->location_tail() > -safety_distance - 5))
+      near_cars_sorted.push_back(near_cars[i]);
+  }
+
+  for (int i = 0; i < near_cars_sorted.size(); i++) {
+    nearest_car_track_id[i] = near_cars_sorted[i]->track_id();
+    double car_length = near_cars_sorted[i]->location_head() -
+                        near_cars_sorted[i]->location_tail();
+    double d_x_offset = std::max(car_length - 5.0, 0.0);
+
+    // calculate y_rel for ttc
+    double y_rel = 0.0;
+    if (near_cars_sorted[i]->y_x0() != 0.0) {
+      y_rel = std::abs(std::abs(near_cars_sorted[i]->y_x0()) - 1.1);
+    } else if (near_cars_sorted[i]->location_tail() < 0.0) {
+      y_rel = std::abs(std::abs(near_cars_sorted[i]->y_min()) - 1.1);
+    } else {
+      double y_thres = interp(near_cars_sorted[i]->v_rel(), _Y_THRES_SPEED_BP,
+                              _Y_THRES_SPEED_V);
+      y_rel = std::abs(std::abs(near_cars_sorted[i]->y_min()) - y_thres);
+    }
+
+    double v_rel = near_cars_sorted[i]->v_rel() - 0.5;
+    double vy_rel = near_cars_sorted[i]->vy_rel();
+    double d_offset = 2.0 + 0.1 * v_ego;
+    double v_coeff = interp(std::abs(near_cars_sorted[i]->y_min()),
+                            _CUT_IN_COEFF_BP, _CUT_IN_COEFF_V);
+    bool cutin_valid = true;
+
+    // check cutin car
+    bool cutin_car = false;
+    bool potential_cutin_car_1 = false;
+    bool potential_cutin_car_2 = false;
+    if (near_cars_sorted[i]->y_min() < 0) {
+      if (lc_request == "left_lane_change") {
+        vy_rel = std::max(vy_rel, (vy_rel + near_cars_sorted[i]->v_lat()) / 2);
+      }
+      if (lc_request == "right_lane_change_wait") {
+        cutin_car =
+            near_cars_sorted[i]->y_min() + vy_rel * v_coeff >= -CUIIN_WIDTH;
+        potential_cutin_car_1 =
+            near_cars_sorted[i]->y_min() + 1.25 * vy_rel * v_coeff >=
+            -CUIIN_WIDTH;
+        potential_cutin_car_2 =
+            near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff >=
+            -CUIIN_WIDTH;
+      } else {
+        cutin_car =
+            near_cars_sorted[i]->y_min() + vy_rel * v_coeff >= -CUIIN_WIDTH;
+        potential_cutin_car_1 =
+            near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff >=
+            -1 * (CUIIN_WIDTH + 0.01 * v_ego);
+        potential_cutin_car_2 =
+            near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff >=
+            -1 * (CUIIN_WIDTH + 0.01 * v_ego);
+      }
+    } else {
+      if (lc_request == "right_lane_change") {
+        vy_rel = min(vy_rel, (vy_rel + near_cars_sorted[i]->v_lat()) / 2);
+      }
+      if (lc_request == "left_lane_change_wait") {
+        cutin_car =
+            near_cars_sorted[i]->y_min() + vy_rel * v_coeff <= CUIIN_WIDTH;
+        potential_cutin_car_1 =
+            near_cars_sorted[i]->y_min() + 1.25 * vy_rel * v_coeff <=
+            CUIIN_WIDTH;
+        potential_cutin_car_2 =
+            near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
+            CUIIN_WIDTH;
+      } else {
+        cutin_car =
+            near_cars_sorted[i]->y_min() + vy_rel * v_coeff <= CUIIN_WIDTH;
+        potential_cutin_car_1 =
+            near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
+            (CUIIN_WIDTH + 0.01 * v_ego);
+        potential_cutin_car_2 =
+            near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff <=
+            (CUIIN_WIDTH + 0.01 * v_ego);
+      }
+    }
+
+    // calculate ttc
+    vy_rel = near_cars_sorted[i]->y_min() > 0 ? vy_rel : -vy_rel;
+    double ttc =
+        std::max(y_rel / std::max(std::abs(std::min(vy_rel, 0.0)), 0.01), 0.2);
+    // double ttc_org = ttc;
+    bool lead_car = std::abs(near_cars_sorted[i]->y_min()) < 0.8;
+
+    // fast cutin car
+    double d_thres =
+        interp(std::abs(vy_rel), _D_THRES_SPEED_BP, _D_THRES_SPEED_V);
+    if (near_cars_sorted[i]->location_tail() < 0.0 &&
+        near_cars_sorted[i]->location_tail() > -3.0 &&
+        near_cars_sorted[i]->v_rel() > 2.0) {
+      double predict_d_x = near_cars_sorted[i]->v_rel() * ttc +
+                           near_cars_sorted[i]->location_tail();
+      if (predict_d_x > d_thres) {
+        ttc = std::max(std::abs(near_cars_sorted[i]->y_min()) /
+                           std::max(std::abs(std::min(vy_rel, 0.0)), 0.01),
+                       0.2);
+      }
+    }
+
+    // calculate v(a)_limit_cutin
+    if (cutin_valid &&
+        ((0.8 <= std::abs(near_cars_sorted[i]->y_min())) &&
+         (std::abs(near_cars_sorted[i]->y_min()) <= 2.5)) &&
+        cutin_car &&
+        ((-3.5 - d_x_offset - min(near_cars_sorted[i]->v_rel(), 1.0) <
+          near_cars_sorted[i]->location_tail()) &&
+         (near_cars_sorted[i]->location_tail() < safety_distance + 2))) {
+      v_limit_cutin[i] =
+          v_ego + v_rel -
+          ((-(near_cars_sorted[i]->location_tail()) + safety_distance) / ttc);
+      a_limit_cutin[i] =
+          std::min(-0.5 + 2 *
+                              (near_cars_sorted[i]->location_tail() +
+                               near_cars_sorted[i]->v_rel() * ttc - d_offset) /
+                              std::pow(ttc, 2),
+                   a_limit_cutin[i] + 0.1);
+      cutin_condition[i] = "cutin_car, stage 1";
+    } else if (cutin_valid &&
+               ((0.8 <= std::abs(near_cars_sorted[i]->y_min())) &&
+                (std::abs(near_cars_sorted[i]->y_min()) <= 2.1)) &&
+               cutin_car &&
+               ((-6.0 - d_x_offset < near_cars_sorted[i]->location_tail()) &&
+                (near_cars_sorted[i]->location_tail() < -3.5)) &&
+               (near_cars_sorted[i]->v_rel() > 0.5) && (v_ego > 2.0)) {
+      v_limit_cutin[i] =
+          v_ego + v_rel -
+          ((-(near_cars_sorted[i]->location_tail()) + safety_distance) / ttc);
+      a_limit_cutin[i] =
+          std::min(-0.5 + 2 *
+                              (near_cars_sorted[i]->location_tail() +
+                               near_cars_sorted[i]->v_rel() * ttc - d_offset) /
+                              std::pow(ttc, 2),
+                   a_limit_cutin[i] + 0.1);
+      cutin_condition[i] = "cutin_car, stage 2";
+    } else if (cutin_valid &&
+               ((0.8 <= std::abs(near_cars_sorted[i]->y_min())) &&
+                (std::abs(near_cars_sorted[i]->y_min()) <= 3.0)) &&
+               potential_cutin_car_1 &&
+               ((-3.5 - d_x_offset < near_cars_sorted[i]->location_tail()) &&
+                (near_cars_sorted[i]->location_tail() < safety_distance))) {
+      v_limit_cutin[i] =
+          near_cars_sorted[i]->location_tail() < 0
+              ? std::max(v_ego - 1, p1min_speed)
+              : std::max({v_ego - 1, v_ego + v_rel - 1, p1min_speed});
+      a_limit_cutin[i] =
+          std::max(std::min(a_limit_cutin[i], -0.6) - 0.002, -0.8);
+      cutin_condition[i] = "potential_cutin_car_1, stage 1";
+      if (std::abs(near_cars_sorted[i]->y_min()) < 1.7 ||
+          std::abs(vy_rel) > 0.7) {
+        v_limit_cutin[i] = std::max(
+            {std::min(v_ego + v_rel - 1, v_ego - 1), v_ego - 3, p1min_speed});
+        a_limit_cutin[i] = -1.0;
+        cutin_condition[i] = "potential_cutin_car_1, stage 1.5";
+      }
+    } else if (cutin_valid &&
+               ((0.8 <= std::abs(near_cars_sorted[i]->y_min())) &&
+                (std::abs(near_cars_sorted[i]->y_min()) <= 3.0)) &&
+               potential_cutin_car_2 &&
+               ((-3.5 - d_x_offset < near_cars_sorted[i]->location_tail()) &&
+                (near_cars_sorted[i]->location_tail() < safety_distance))) {
+      v_limit_cutin[i] =
+          near_cars_sorted[i]->location_tail() < 0
+              ? std::max(v_ego - 0.1, p2min_speed)
+              : std::max({v_ego - 0.1, v_ego + v_rel - 1, p2min_speed});
+      a_limit_cutin[i] = -0.6;
+      cutin_condition[i] = "potential_cutin_car_2, stage 1";
+      if (std::abs(near_cars_sorted[i]->y_min()) < 1.7) {
+        v_limit_cutin[i] = std::max(
+            {std::min(v_ego + v_rel - 1, v_ego - 1), v_ego - 3, p2min_speed});
+        a_limit_cutin[i] = -1.0;
+        cutin_condition[i] = "potential_cutin_car_2, stage 1.5";
+      }
+    } else if (cutin_valid &&
+               ((0.8 <= std::abs(near_cars_sorted[i]->y_min())) &&
+                (std::abs(near_cars_sorted[i]->y_min()) <= 3.0)) &&
+               potential_cutin_car_2 &&
+               ((-6.0 - d_x_offset <= near_cars_sorted[i]->location_tail()) &&
+                (near_cars_sorted[i]->location_tail() <= -3.5)) &&
+               (near_cars_sorted[i]->v_rel() > 1.0) &&
+               (near_cars_sorted[i]->v_rel() + v_ego > 10.0)) {
+      v_limit_cutin[i] = std::max(v_ego - 0.1, p2min_speed);
+      a_limit_cutin[i] = -0.6;
+      cutin_condition[i] = "potential_cutin_car_2, stage 2";
+      if (std::abs(near_cars_sorted[i]->y_min()) < 1.7 ||
+          std::abs(vy_rel) > 0.7) {
+        v_limit_cutin[i] = std::max(v_ego - 1, p2min_speed);
+        a_limit_cutin[i] = -1.0;
+        cutin_condition[i] = "potential_cutin_car_2, stage 2.5";
+      }
+    } else if (lead_car && ((-3.5 < near_cars_sorted[i]->location_tail()) &&
+                            (near_cars_sorted[i]->location_tail() <= 3.5))) {
+      v_limit_cutin[i] = v_ego + v_rel - 1;
+      // a_limit_cutin[i] =
+      //     -0.5 + calc_critical_decel(near_cars_sorted[i]->location_tail(),
+      //                                -near_cars_sorted[i]->v_rel(), d_offset,
+      //                                0);
+      cutin_condition[i] = "lead_car";
+    } else {
+      v_limit_cutin[i] = clip(v_limit_cutin[i] + 0.2, 40.0, v_ego);
+      a_limit_cutin[i] = a_limit_cutin[i] + 0.1;
+      cutin_condition[i] = "stage other";
+    }
+
+    // set cutin msg
+    // bool not_avoid =
+    //     ((-3.5 - d_x_offset - std::min(near_cars_sorted[i]->v_rel(), 0.0) >
+    //     near_cars_sorted[i]->location_tail() ||
+    //     near_cars_sorted[i]->location_tail() > 2.0)
+    //     && near_cars_sorted[i]->v_rel() > 0) ||
+    //     std::abs(near_cars_sorted[i]->y_min()) < 0.8;
+
+    v_limit_cutin[i] = std::max(v_limit_cutin[i], 0.0);
+    a_limit_cutin[i] = clip(a_limit_cutin[i], 0.0, -4.0);
+
+    // 临时出一下cutin的级别，便于可视化
+    if (cutin_condition[i] == "cutin_car, stage 1" ||
+        cutin_condition[i] == "cutin_car, stage 2") {
+      cutin_status = 10;
+    } else if (cutin_condition[i] == "potential_cutin_car_1, stage 1" ||
+               cutin_condition[i] == "potential_cutin_car_1, stage 1.5") {
+      cutin_status = 15;
+    } else if (cutin_condition[i] == "potential_cutin_car_2, stage 1" ||
+               cutin_condition[i] == "potential_cutin_car_2, stage 1.5" ||
+               cutin_condition[i] == "potential_cutin_car_2, stage 2" ||
+               cutin_condition[i] == "potential_cutin_car_2, stage 2.5") {
+      cutin_status = 20;
+    } else if (cutin_condition[i] == "lead_car") {
+      cutin_status = 25;
+    } else {
+      cutin_status = 30;
+    }
+  }
+
+  for (int i = 0; i < (3 - near_cars_sorted.size()); i++) {
+    nearest_car_track_id[i + near_cars_sorted.size()] = 0;
+    v_limit_cutin[i + near_cars_sorted.size()] =
+        clip(v_limit_cutin[i + near_cars_sorted.size()] + 0.2, 40.0, v_ego);
+    a_limit_cutin[i + near_cars_sorted.size()] =
+        clip(a_limit_cutin[i + near_cars_sorted.size()] + 0.1, 0.0, -4.0);
+    cutin_condition[i + near_cars_sorted.size()] = "near_cars_sorted None";
+    // cutin_info_[i + near_cars_sorted.size()] = "none";
+  }
+
+  int v_min_index = 0;
+  for (int i = 0; i < v_limit_cutin.size(); i++) {
+    if (v_limit_cutin[i] < v_limit_cutin[v_min_index]) {
+      v_min_index = i;
+    }
+  }
+
+  // a_target_.first = std::min(a_target_.first, a_limit_cutin[v_min_index]);
+  v_target_ = std::min(v_target_, v_limit_cutin[v_min_index]);
+
+  LOG_DEBUG("nearest_car_track_id : [%d],[%d],[%d] \n", nearest_car_track_id[0],
+            nearest_car_track_id[1], nearest_car_track_id[2]);
+  LOG_DEBUG("v_limit_cutin : [%f], v_target : [%f] \n",
+            v_limit_cutin[v_min_index], v_target_);
+  // LOG_DEBUG("a_target_.first : [%f] ,a_target_.second : [%f]\n",
+  //           a_target_.first, a_target_.second);
+
+  JSON_DEBUG_VALUE("VisionLonBehavior_nearest_car_track_id_one",
+                   nearest_car_track_id[0]);
+  JSON_DEBUG_VALUE("VisionLonBehavior_nearest_car_track_id_two",
+                   nearest_car_track_id[1]);
+  JSON_DEBUG_VALUE("VisionLonBehavior_nearest_car_track_id_three",
+                   nearest_car_track_id[2]);
+  JSON_DEBUG_VALUE("VisionLonBehavior_cutin_v_limit",
+                   v_limit_cutin[v_min_index]);
+  JSON_DEBUG_VALUE("VisionLonBehavior_cutin_status", cutin_status);
+}
 
 double StGraphGenerator::ProcessObstacleAcc(const double a_lead) {
   // soft threshold of 0.5m/s^2 applied to a_lead to reject noise, also not

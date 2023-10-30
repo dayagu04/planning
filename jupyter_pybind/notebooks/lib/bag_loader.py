@@ -168,6 +168,8 @@ class LoadCyberbag:
                          "VisionLonBehavior_potental_cutin_track_id", "VisionLonBehavior_potental_cutin_v_target", "VisionLonBehavior_cutin_v_target", "dis_to_ramp",
                          "VisionLonBehavior_v_limit_road", "VisionLonBehavior_v_limit_in_turns", "VisionLonBehavior_road_radius", "VisionLonBehavior_v_target_ramp",
                          "VisionLonBehavior_stop_start_state", "VisionLonBehavior_v_target_start_stop", "VisionLonBehavior_STANDSTILL", "VisionLonBehavior_final_v_target",
+                         "VisionLonBehavior_nearest_car_track_id_one", "VisionLonBehavior_nearest_car_track_id_two", "VisionLonBehavior_nearest_car_track_id_three", 
+                         "VisionLonBehavior_cutin_v_limit", "VisionLonBehavior_cutin_status",
                          "EnvironmentalModelManagerCost","VisionLateralBehaviorPlannerCost","VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost",
                          "RealTime_v_ref", "RealTime_v_ego", "RealTime_gap_v_limit_lc",
                          "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_car_cut_in_id",

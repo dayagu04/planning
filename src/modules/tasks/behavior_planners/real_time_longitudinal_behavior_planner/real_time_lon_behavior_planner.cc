@@ -234,6 +234,12 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
     one_obs->set_is_lead(track.is_lead);
     one_obs->set_is_temp_lead(track.is_temp_lead);
     one_obs->set_cutinp(track.cutinp);
+    one_obs->set_y_min(track.y_min);
+    one_obs->set_y_x0(track.y_x0);
+    one_obs->set_location_head(track.location_head);
+    one_obs->set_location_tail(track.location_tail);
+    one_obs->set_vy_rel(track.vy_rel);
+    one_obs->set_y_rel(track.y_rel);
   }
 
   // 4. set lane change info
