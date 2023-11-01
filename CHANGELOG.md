@@ -1,3 +1,7 @@
+# planning.2.2.1.1
+####  修改说明
+1. 修复reference_path & target_tracks nullptr引起的coredump
+
 # planning.2.2.1.0
 ####  修改说明
 1. APA新架构合入develop分支
