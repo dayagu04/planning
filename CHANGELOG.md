@@ -1,3 +1,7 @@
+# planning.2.2.1.2
+####  修改说明
+1. 关闭奇瑞主动换道功能
+
 # planning.2.2.1.1
 ####  修改说明
 1. 修复reference_path & target_tracks nullptr引起的coredump
