@@ -90,10 +90,10 @@ class DiagonalInGeometryPlan {
 
  private:
   double min_turn_radius_ = 5.5;
-  double width_veh_ = 1.89;
-  double half_width_veh_ = 1.89 * 0.5;
-  double front_edge_to_rear_axle_ = 3.624;
-  double rear_edge_to_rear_axle_ = 0.947;
+  double width_veh_ = 1.919;
+  double half_width_veh_ = 1.919 * 0.5;
+  double front_edge_to_rear_axle_ = 3.73;
+  double rear_edge_to_rear_axle_ = 1.085;
 
   int slot_sign_ = 1;  // 1:Right,(default),-1:Left
 

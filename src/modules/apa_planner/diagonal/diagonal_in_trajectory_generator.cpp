@@ -61,7 +61,7 @@ constexpr double kMaxHeadingOffset = 2.8 / 57.3;
 constexpr double kMockedObjYOffset = 4.0;
 
 static const double kNormalSlotLength = 4.8;
-static const double target_y_offset = -0.1;
+static const double target_y_offset = 0.0;
 static const double target_x_init = 1.5;
 static const double min_radius = 5.5;
 static const double min_radius_final = 5.2;
@@ -95,10 +95,10 @@ static const double kEmergencyFlashTime = 0.6;
 static const double kMaxVelocity = 0.6;
 
 // vehicle params
-static const double kFrontOverhanging = 0.924;
-static const double kRearOverhanging = 0.94;
-static const double kWheelBase = 2.7;
-static const double kVehicleWidth = 1.89;
+static const double kFrontOverhanging = 0.922;
+static const double kRearOverhanging = 1.085;
+static const double kWheelBase = 2.808;
+static const double kVehicleWidth = 1.919;
 static const double kEgoVertexLatBuffer = 0.1;
 }  // namespace
 

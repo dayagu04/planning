@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SCRIPT_DIR=$(dirname "$0")
-PRODUCT_NAME=JAC_S811
+PRODUCT_NAME=CHERY_T26
 if [[ $# -ge 1 ]]; then
     PRODUCT_NAME=$1
 fi

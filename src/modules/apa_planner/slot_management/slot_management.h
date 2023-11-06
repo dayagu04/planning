@@ -109,8 +109,8 @@ class SlotInfoWindow {
 class SlotManagement {
  public:
   struct Param {
-    double lon_dist_rearview_mirror_to_rear_axle = 1.844;
-    double lat_dist_rearview_mirror_to_center = 1.135;
+    double lon_dist_rearview_mirror_to_rear_axle = 2.092;
+    double lat_dist_rearview_mirror_to_center = 1.092;
 
     bool force_apa_on = false;
     bool force_clear = false;

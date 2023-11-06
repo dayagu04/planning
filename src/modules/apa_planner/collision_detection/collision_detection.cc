@@ -8,13 +8,13 @@
 namespace planning {
 
 static const std::vector<double> car_circle_x_vec = {
-    1.35, 3.3, 3.3, 2.02, -0.55, -0.55, 2.02, 2.7, 1.8, 0.9, 0.0};
+    1.28, 3.39, 3.39, 1.98, -0.82, -0.82, 1.98, 2.8, 1.8, 0.8, -0.2};
 
 static const std::vector<double> car_circle_y_vec = {
-    0.0, 0.55, -0.55, -0.95, -0.5, 0.5, 0.95, 0.0, 0.0, 0.0, 0.0};
+    0.0, 0.58, -0.58, -1.00, -0.62, 0.62, 1.00, 0.0, 0.0, 0.0, 0.0};
 
 static const std::vector<double> car_circle_radius_vec = {
-    2.4, 0.35, 0.35, 0.18, 0.35, 0.35, 0.18, 0.95, 0.95, 0.95, 0.95};
+    2.6, 0.36, 0.36, 0.13, 0.38, 0.38, 0.13, 0.97, 0.97, 0.97, 0.97};
 
 void CollisionDetector::Init() {
   car_circle_local_vec_.clear();

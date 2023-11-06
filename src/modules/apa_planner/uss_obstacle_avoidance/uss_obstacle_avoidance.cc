@@ -18,33 +18,33 @@ static const double lat_inflation = 0.18;
 
 // car data
 static const std::vector<double> car_vertex_x_vec = {
-    3.187342,  3.424531,  3.593071,  3.593071,  3.424531,  3.187342,
-    2.177994,  1.916421,  1.96496,   -0.476357, -0.798324, -0.879389,
-    -0.879389, -0.798324, -0.476357, 1.96496,   1.916421,  2.177994};
+    3.298241, 3.580141,  3.667435,  3.667435,  3.580141,  3.298241,
+    2.09208,  1.90554,   1.94782,   -0.602483, -0.997449, -1.06219,
+    -1.06219, -0.997449, -0.602483, 1.94782,   1.90554,   2.09208};
 
 static const std::vector<double> car_vertex_y_vec = {
-    0.887956 + lat_inflation,    0.681712 + lat_inflation,
-    0.334651 + lat_inflation,    -(0.334651 + lat_inflation),
-    -(0.681712 + lat_inflation), -(0.887956 + lat_inflation),
-    -(0.887956 + lat_inflation), -(1.06715 + lat_inflation),
-    -(0.887956 + lat_inflation), -(0.887956 + lat_inflation),
-    -(0.706505 + lat_inflation), -(0.334845 + lat_inflation),
-    0.334845 + lat_inflation,    0.706505 + lat_inflation,
-    0.887956 + lat_inflation,    0.887956 + lat_inflation,
-    1.06715 + lat_inflation,     0.887956 + lat_inflation};
+    0.935328 + lat_inflation,    0.680863 + lat_inflation,
+    0.334976 + lat_inflation,    -(0.334976 + lat_inflation),
+    -(0.680863 + lat_inflation), -(0.935328 + lat_inflation),
+    -(0.935328 + lat_inflation), -(1.09272 + lat_inflation),
+    -(0.935328 + lat_inflation), -(0.935328 + lat_inflation),
+    -(0.669815 + lat_inflation), -(0.299949 + lat_inflation),
+    0.299949 + lat_inflation,    0.699815 + lat_inflation,
+    0.935328 + lat_inflation,    0.935328 + lat_inflation,
+    1.09272 + lat_inflation,     0.935328 + lat_inflation};
 
 // uss data
 static const std::vector<double> uss_vertex_x_vec = {
-    3.187342,  3.424531,  3.593071,  3.593071,  3.424531,  3.187342,
-    -0.476357, -0.798324, -0.879389, -0.879389, -0.798324, -0.476357};
+    3.298241,  3.580141,  3.667435, 3.667435, 3.580141,  3.298241,
+    -0.602483, -0.997449, -1.06219, -1.06219, -0.997449, -0.602483};
 
 static const std::vector<double> uss_vertex_y_vec = {
-    0.887956,  0.681712,  0.334651,  -0.334651, -0.681712, -0.887956,
-    -0.887956, -0.706505, -0.334845, 0.334845,  0.706505,  0.887956};
+    0.935328,  0.680863,  0.334976,  -0.334976, -0.680863, -0.935328,
+    -0.935328, -0.669815, -0.299949, 0.299949,  0.699815,  0.935328};
 
 static const std::vector<double> uss_normal_angle_deg_vec = {
-    170.0, 130.0, 92.0,  88.0,  50.0,  8.0,
-    352.0, 298.0, 275.0, 264.0, 242.0, 187.0};
+    169.998, 125.019, 97.046,  82.954,  54.981,   10.002,
+    354.78,   298.086, 277.369, 262.631, 241.9914, 185.22};
 
 static const double uss_scan_angle_deg = 60.0;
 

@@ -411,48 +411,48 @@ class LoadCyberbag:
     #   print("missing /iflytek/ultrasonic_perception_debug_info !!!")
 
     # load wave_info msg
-    try:
-      wave_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/uss/wave_info"):
-        wave_msg_dict[msg.header.timestamp / 1e6] = msg
-      wave_msg_dict = {key: val for key, val in sorted(wave_msg_dict.items(), key = lambda ele: ele[0])}
-      for t, msg in wave_msg_dict.items():
-        self.wave_msg['t'].append(t)
-        self.wave_msg['abs_t'].append(t)
-        self.wave_msg['data'].append(msg)
-      self.wave_msg['t'] = [tmp - t0  for tmp in self.wave_msg['t']]
-      self.wave_msg['enable'] = True
-      print('wave time:',self.wave_msg['t'][-1])
-      max_time = max(max_time, self.wave_msg['t'][-1])
-      if len(self.wave_msg['t']) > 0:
-        self.wave_msg['enable'] = True
-      else:
-        self.wave_msg['enable'] = False
-    except:
-      self.wave_msg['enable'] = False
-      print("missing /iflytek/uss/wave_info !!!")
+    # try:
+    #   wave_msg_dict = {}
+    #   for topic, msg, t in self.bag.read_messages("/iflytek/uss/wave_info"):
+    #     wave_msg_dict[msg.header.timestamp / 1e6] = msg
+    #   wave_msg_dict = {key: val for key, val in sorted(wave_msg_dict.items(), key = lambda ele: ele[0])}
+    #   for t, msg in wave_msg_dict.items():
+    #     self.wave_msg['t'].append(t)
+    #     self.wave_msg['abs_t'].append(t)
+    #     self.wave_msg['data'].append(msg)
+    #   self.wave_msg['t'] = [tmp - t0  for tmp in self.wave_msg['t']]
+    #   self.wave_msg['enable'] = True
+    #   print('wave time:',self.wave_msg['t'][-1])
+    #   max_time = max(max_time, self.wave_msg['t'][-1])
+    #   if len(self.wave_msg['t']) > 0:
+    #     self.wave_msg['enable'] = True
+    #   else:
+    #     self.wave_msg['enable'] = False
+    # except:
+    #   self.wave_msg['enable'] = False
+    #   print("missing /iflytek/uss/wave_info !!!")
 
-    # load wave_debug_info msg
-    try:
-      wave_debug_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/uss/ussdriver_debug_info"):
-        wave_debug_msg_dict[msg.header.timestamp / 1e6] = msg
-      wave_debug_msg_dict = {key: val for key, val in sorted(wave_debug_msg_dict.items(), key = lambda ele: ele[0])}
-      for t, msg in wave_debug_msg_dict.items():
-        self.wave_debug_msg['t'].append(t)
-        self.wave_debug_msg['abs_t'].append(t)
-        self.wave_debug_msg['data'].append(msg)
-      self.wave_debug_msg['t'] = [tmp - t0  for tmp in self.wave_debug_msg['t']]
-      self.wave_debug_msg['enable'] = True
-      print('wave_debug time:',self.wave_debug_msg['t'][-1])
-      max_time = max(max_time, self.wave_debug_msg['t'][-1])
-      if len(self.wave_debug_msg['t']) > 0:
-        self.wave_debug_msg['enable'] = True
-      else:
-        self.wave_debug_msg['enable'] = False
-    except:
-      self.wave_debug_msg['enable'] = False
-      print("missing /iflytek/uss/ussdriver_debug_info !!!")
+    # # load wave_debug_info msg
+    # try:
+    #   wave_debug_msg_dict = {}
+    #   for topic, msg, t in self.bag.read_messages("/iflytek/uss/ussdriver_debug_info"):
+    #     wave_debug_msg_dict[msg.header.timestamp / 1e6] = msg
+    #   wave_debug_msg_dict = {key: val for key, val in sorted(wave_debug_msg_dict.items(), key = lambda ele: ele[0])}
+    #   for t, msg in wave_debug_msg_dict.items():
+    #     self.wave_debug_msg['t'].append(t)
+    #     self.wave_debug_msg['abs_t'].append(t)
+    #     self.wave_debug_msg['data'].append(msg)
+    #   self.wave_debug_msg['t'] = [tmp - t0  for tmp in self.wave_debug_msg['t']]
+    #   self.wave_debug_msg['enable'] = True
+    #   print('wave_debug time:',self.wave_debug_msg['t'][-1])
+    #   max_time = max(max_time, self.wave_debug_msg['t'][-1])
+    #   if len(self.wave_debug_msg['t']) > 0:
+    #     self.wave_debug_msg['enable'] = True
+    #   else:
+    #     self.wave_debug_msg['enable'] = False
+    # except:
+    #   self.wave_debug_msg['enable'] = False
+    #   print("missing /iflytek/uss/ussdriver_debug_info !!!")
 
     return max_time
 
@@ -1004,7 +1004,7 @@ def load_local_view_figure_parking():
   # figure plot
   f1 = fig1.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
   fig1.circle('current_pos_y','current_pos_x', source = data_current_pos, size=8, color='grey')
-  fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_car_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'car_circle', visible = False)
+  fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_car_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'car_circle', visible = True)
   fig1.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1.5, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'text')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')

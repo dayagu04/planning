@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/1021-2015/test_8.00000'
+bag_path = '/mnt/APA_TEST_DATA/1103/test_2.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
