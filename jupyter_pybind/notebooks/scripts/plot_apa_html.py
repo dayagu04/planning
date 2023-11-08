@@ -21,9 +21,12 @@ sys.path.append('../../..')
 from lib.basic_layers import *
 from lib.bag_loader import *
 from lib.local_view_lib import *
+from lib.load_local_view_parking import LoadCyberbag
+from lib.load_local_view_parking import apa_draw_local_view, apa_draw_local_view_parking_ctrl
 
-bag_path = "/home/xlwang71/Downloads/0713/real_time_WR_1.00000"
+bag_path = "/docker_share/0924/test_22.00000"
 html_file = bag_path +".apa.html"
+plot_ctrl_flag = True
 
 # bokeh创建的html在jupyter中显示
 if isINJupyter():
@@ -53,21 +56,23 @@ def plotOnce(bag_path, html_file):
         max_time = dataLoader.load_all_data()
         print("is in jupyter now!")
     else:
-        max_time = dataLoader.load_all_data(False)
+        max_time = dataLoader.load_all_data()
 
     layer_manager = LayerManager()
 
     # fig1: local view
-    try:
-        fig_local_view = apa_draw_local_view(dataLoader, layer_manager)
-    except:
-        print("fig_local_view plot error!")
-        fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=600, height=1000, match_aspect = True, aspect_scale=1)
-        fig_local_view.x_range.flipped = True
-        fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
-    
-    
-    
+    # try:
+
+    fig_local_view, tab_debug_layer = apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag = True)
+    # except:
+    #     print("fig_local_view plot error!")
+    #     fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=600, height=1000, match_aspect = True, aspect_scale=1)
+    #     fig_local_view.x_range.flipped = True
+    #     fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
+    # if plot_ctrl_flag:
+    fig2, fig3, fig4, fig5, fig6, fig7 = apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time)
+
+
     min_t = sys.maxsize
     max_t = 0
     for gdlabel in layer_manager.gds.keys():
@@ -110,8 +115,8 @@ def plotOnce(bag_path, html_file):
             }
     """
 
-    car_slider = Slider(start=0, end=max_time-0,
-                        value=0, step=0.02, title="time")
+    car_slider = Slider(start=0.0, end=max_time-0,
+                        value=-0.1, step=0.1, title="time")
     code0 = """
     %s
             console.log("cb_objS");
@@ -142,25 +147,31 @@ def plotOnce(bag_path, html_file):
         if gdlabel is 'online_obj_source' or gdlabel is 'onlinel_obj_source':
             layer_manager.layers[gdlabel].update(
                 gd_frame[0], gd_frame[1], gd_frame[2])
-            # print(gd_frame)
         elif gdlabel is 'cfb_source':
             pass
         else:
-            if layer_manager.plotdim[gdlabel] == 3:
-                layer_manager.layers[gdlabel].update(
-                    gd_frame[0], gd_frame[1], gd_frame[2])
-            else:
-                layer_manager.layers[gdlabel].update(gd_frame[0], gd_frame[1])
-
+            try:
+                if layer_manager.plotdim[gdlabel] == 3:
+                    layer_manager.layers[gdlabel].update(
+                        gd_frame[0], gd_frame[1], gd_frame[2])
+                elif layer_manager.plotdim[gdlabel] == 5:
+                    layer_manager.layers[gdlabel].update(
+                        gd_frame[0], gd_frame[1], gd_frame[2], gd_frame[3], gd_frame[4])
+                else:
+                    layer_manager.layers[gdlabel].update(gd_frame[0], gd_frame[1])
+            except:
+                pass
     output_file(html_file)
 
     if isINJupyter():
         # display in jupyter notebook
         output_notebook()
 
-    layout = gridplot([[fig_local_view],
-                   [car_slider]])
-    show(layout)
+    # layout = gridplot([[fig_local_view],
+    #                [car_slider]])
+    # show(layout)
+    bkp.show(layout(row(fig_local_view, row(column(fig2.fig, fig3.fig, fig4.fig, fig5.fig), column(fig6.fig, fig7.fig, tab_debug_layer))), car_slider))
+    # bkp.show(fig_local_view, notebook_handle=True)
 
 def plotMain():
     # print('sys.argv = ', sys.argv)

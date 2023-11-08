@@ -1,17 +1,17 @@
 #include "planning_component.h"
 
-#include "gflags/gflags.h"
-
-#include "cyber/scheduler/scheduler.h"
-
 #include "../common/cyber/logger/async_logger.h"
 #include "../common/log_glog.h"
 #include "common/config_context.h"
+#include "cyber/scheduler/scheduler.h"
+#include "gflags/gflags.h"
 
 // This file compile modules register map and constructor and link to .so
 // When .so loads, static vairiables will init and module constructors will
 // register.
 #include "modules_register.h"
+#include "uss_wave_debug_info.pb.h"
+#include "uss_wave_info.pb.h"
 
 namespace planning {
 
@@ -102,6 +102,14 @@ bool PlanningComponent::Init() {
           [this](const std::shared_ptr<FuncStateMachine::FuncStateMachine>
                      &func_state_machine_msg) {
             planning_adapter_->FeedFuncStateMachine(func_state_machine_msg);
+          });
+
+  auto uss_wave_info_reader_ =
+      planning_node_->CreateReader<UssWaveInfo::UssWaveInfo>(
+          "/iflytek/uss/wave_info",
+          [this](const std::shared_ptr<UssWaveInfo::UssWaveInfo>
+                     &uss_wave_info_msg) {
+            planning_adapter_->FeedUssWaveInfo(uss_wave_info_msg);
           });
 
   // -------------- writter topics --------------

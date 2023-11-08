@@ -19,7 +19,7 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g -fPIC -fpermissive")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D${PLATFORM}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D${PLATFORM} -D${PRODUCT}")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   message("Building in Release mode")
@@ -39,7 +39,6 @@ elseif(ADAPTER STREQUAL "ap")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DAP_ENV")
 endif()
 
-add_subdirectory(proto EXCLUDE_FROM_ALL)
 add_subdirectory(common EXCLUDE_FROM_ALL)
 add_subdirectory(modules EXCLUDE_FROM_ALL)
 add_subdirectory(framework EXCLUDE_FROM_ALL)
@@ -58,7 +57,6 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/private/planning interface_
 
 if(ADAPTER STREQUAL "cyber")
   add_subdirectory(adapter/cyber)
-  add_subdirectory(apa_simulation)
 elseif(ADAPTER STREQUAL "ap")
   # add_subdirectory(adapter/ap)
 endif()
@@ -72,7 +70,6 @@ install(FILES ${CMAKE_CURRENT_LIST_DIR}/../CHANGELOG.md
     DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/log)
 if (ADAPTER STREQUAL "cyber")
   install(TARGETS
-    apa_simulation_component
     planning_component
     LIBRARY DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/Lib)
   install(FILES

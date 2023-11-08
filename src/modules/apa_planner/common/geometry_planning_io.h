@@ -23,8 +23,7 @@ struct DiagonalSegmentsInfo {
   PlanningPoint opt_point_e;
   PlanningPoint opt_point_f;
 
-  double turn_radius_min =
-      VehicleParamHelper::Instance()->GetParam().turn_radius_min();
+  double turn_radius_min = 5.5;
   double opt_radius_bc = turn_radius_min;
   double opt_radius_cd = turn_radius_min;
   double opt_radius_de = turn_radius_min;
@@ -44,8 +43,7 @@ struct ParallelSegmentsInfo {
   PlanningPoint opt_point_h;
   PlanningPoint opt_point_i;
 
-  double turn_radius_min =
-      VehicleParamHelper::Instance()->GetParam().turn_radius_min();
+  double turn_radius_min = 5.5;
   double opt_radius_bc = turn_radius_min;
   double opt_radius_cd = turn_radius_min;
   double opt_radius_ef = turn_radius_min;

@@ -18,6 +18,7 @@ sys.path.append('../..')
 sys.path.append('../../..')
 from lib.basic_layers import *
 from lib.bag_loader import *
+from lib.load_struct import *
 
 plan_debug_ts = []
 plan_debug_timestamps = []
@@ -28,15 +29,28 @@ prediction_timestamps = []
 vehicle_service_timestamps = []
 control_output_timestamps = []
 slot_timestamps = []
+fusion_slot_timestamps = []
+vision_slot_timestamps = []
 mobileye_lane_lines_timestamps = []
 mobileye_objects_timestamps = []
 
+car_xb, car_yb = load_car_params_patch()
+car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord()
+coord_tf = coord_transformer()
+
 # params 控制fig的样式
-ego_pose_polygon_params_apa ={
-  'fill_color' : None,
+vs_car_params_apa ={
+  'text_color' : 'firebrick',
+  'text_align' : "center",
+  'legend_label' : 'text',
+  'text_font_size' : '12pt'
+}
+
+ego_car_params_apa ={
+  'fill_color' : 'palegreen',
   'line_color' : "black",
   'line_width' : 1,
-  'legend_label' : 'car_polygon'
+  'legend_label' : 'car'
 }
 ego_pose_params_apa ={
   'fill_color' : "red",
@@ -44,11 +58,18 @@ ego_pose_params_apa ={
   'line_width' : 1,
   'legend_label' : 'car_rear_alxe_center'
 }
-slot_params_apa = {
-  'fill_color' : None,
-  'line_color' : "red",
+ego_dot_params_apa ={
+  'size' : 8,
+  'color' : "grey",
+  'legend_label' : 'car'
+}
+ego_circle_params_apa ={
+  'line_alpha' : 0.5,
   'line_width' : 1,
-  'legend_label' : 'slot'
+  'line_color' : 'blue',
+  'fill_alpha' : 0,
+  'legend_label' : 'car_circle',
+  'visible' : False
 }
 slot_params_apa = {
   'fill_color' : None,
@@ -56,13 +77,49 @@ slot_params_apa = {
   'line_width' : 1,
   'legend_label' : 'slot'
 }
+fusion_slot_params_apa = {
+  'line_dash' : 'solid',
+  'line_color' : "red",
+  'line_width' : 2,
+  'legend_label' : 'fusion_parking_slot'
+}
+vision_slot_params_apa = {
+  'line_dash' : 'solid',
+  'line_color' : "lightgrey",
+  'line_width' : 3,
+  'legend_label' : 'vision_parking_slot',
+  'visible' : False
+}
+
+final_slot_params_apa = {
+  'line_dash' : 'dashed',
+  'line_color' : "#A52A2A",
+  'line_width' : 3,
+  'legend_label' : 'final_parking_slot'
+}
+
+target_slot_params_apa = {
+  'line_dash' : 'solid',
+  'line_color' : "green",
+  'line_width' : 3,
+  'legend_label' : 'target_managed_slot'
+}
+
+all_slot_params_apa = {
+  'line_dash' : 'solid',
+  'line_color' : "green",
+  'line_width' : 2,
+  'legend_label' : 'all managed slot',
+  'visible' : False
+}
+
 location_params_apa = {
-  'line_width' : 1,
+  'line_width' : 1.5,
   'line_color' : 'orange',
   'line_dash' : 'solid',
-  'legend_label' : 'ego_real_trajectory'
+  'legend_label' : 'ego_pos'
 }
-slot_id_params_apa = { 'text_color' : "firebrick", 'text_align':"center", 'text_font_size':"12pt", 'legend_label' : 'id' }
+slot_id_params_apa = { 'text_color' : "red", 'text_align':"center", 'text_font_size':"10pt", 'legend_label' : 'fusion_parking_slot' }
 ego_pose_params ={
   'fill_color' : "palegreen",
   'line_color' : "black",
@@ -77,6 +134,21 @@ location_params = {
   'line_dash' : 'solid',
   'legend_label' : 'ego_pos'
 }
+
+uss_wave_params = {
+  'fill_color' : 'lavender',
+  'line_color' : 'black',
+  'legend_label' : 'uss_wave',
+  'alpha' : 0.5
+}
+
+uss_text_params = {
+  'text_color' : 'black',
+  'text_align' : 'center',
+  'text_font_size' : '10pt',
+  'legend_label' : 'uss_wave'
+}
+
 lane_params = {
     'legend_label': 'lane',
     'line_width': 1.5,
@@ -185,7 +257,11 @@ prediction_params = {
 }
 
 plan_params = {
-  'line_width' : 5, 'line_color' : 'blue', 'line_dash' : 'solid', 'line_alpha' : 0.6, 'legend_label' : 'plan'
+  'line_width' : 2.5, 'line_color' : 'blue', 'line_dash' : 'solid', 'line_alpha' : 0.6, 'legend_label' : 'plan'
+}
+
+mpc_params = {
+  'line_width' : 3.0, 'line_color' : 'red', 'line_dash' : 'solid', 'line_alpha' : 0.8, 'legend_label' : 'mpc'
 }
 
 control_params = {
@@ -193,8 +269,8 @@ control_params = {
 }
 
 table_params={
-    'width': 300,
-    'height':200,
+    'width': 600,
+    'height':500,
 }
 
 # 判断是否在jupyter中运行
@@ -273,6 +349,30 @@ class TextGenerator(DataGeneratorBase):
     self.ts = []
     self.xys = []
     self.txt = "text"
+    super().__init__(self.xys, self.ts)
+    return
+  
+class CircleGenerator(DataGeneratorBase):
+  def __init__(self):
+    self.ts = []
+    self.xys = []
+    self.rs = []
+    super().__init__(self.xys, self.ts)
+    return
+
+class WedgesGenerator(DataGeneratorBase):
+  def __init__(self):
+    self.ts = []
+    self.xys = []
+    self.rs = []
+    self.min_angle = []
+    self.max_angle = []
+    super().__init__(self.xys, self.ts)
+    return
+class DotGenerator(DataGeneratorBase):
+  def __init__(self):
+    self.ts = []
+    self.xys = []
     super().__init__(self.xys, self.ts)
     return
 
@@ -444,6 +544,20 @@ class LayerManager():
             {}.data['texts'] = data['{}s'][0][{}_index][2];
             """.format(layer_label, data_key, data_key)
                 layer_code = (layer_append) % (layer_code)
+            elif plotdim == 3 and hasattr(gd, 'rs'):
+                # print(gd.rs)
+                layer_append = """%s
+            {}.data['rs'] = data['{}s'][0][{}_index][2];
+            """.format(layer_label, data_key, data_key)
+                layer_code = (layer_append) % (layer_code)
+            elif plotdim == 5 and hasattr(gd, 'min_angle'):
+                # print(gd.rs)
+                layer_append = """%s
+            {}.data['rs'] = data['{}s'][0][{}_index][2];
+            {}.data['min_angle'] = data['{}s'][0][{}_index][3];
+            {}.data['max_angle'] = data['{}s'][0][{}_index][4];
+            """.format(layer_label, data_key, data_key, layer_label, data_key, data_key, layer_label, data_key, data_key)
+                layer_code = (layer_append) % (layer_code)
             else:
                 pass
 
@@ -476,6 +590,27 @@ def find(data, t):
     #     index = index - 1
     #   return True, data['data'][index]
   return False, ""
+
+def findt(data, t):
+  '''
+  find data based on absolute t
+  '''
+  for index, timestamp in enumerate(data['abs_t']):
+    if t == timestamp:
+      return True, data['data'][index]
+
+  return False, ""
+
+def findrt(data, t):
+  '''
+  find data based on relative t (sub the 0 time)
+  '''
+  for index, timestamp in enumerate(data['t']):
+    if t == timestamp:
+      return True, data['data'][index]
+
+  return False, ""
+
 def findME(data, t):
   for index, timestamp in enumerate(data['timestamp']):
     if t < timestamp:
@@ -1455,6 +1590,20 @@ class ScalarGeneratorFromJson(DataGeneratorBase):
         xys.append((ts, ys))
         super().__init__(xys, ts)
         self.y_range = [min(ys), max(ys)]
+        
+class ScalarSomeGeneratorFromJson(DataGeneratorBase):
+    def __init__(self, json_value_xys_dict, name, scale = 1, condition = 0.0, cond_scale = 1000):
+        ts = json_value_xys_dict['t']
+        tmp = json_value_xys_dict[name]
+        ys = []
+        for x in tmp:
+          if x > condition:
+            x = x / cond_scale
+          ys.append(x)
+        xys = []
+        xys.append((ts, ys))
+        super().__init__(xys, ts)
+        self.y_range = [min(ys), max(ys)]
 
 class VectorGeneratorFromJson(DataGeneratorBase):
     def __init__(self, json_vector_xys_dict, name, scale = 1):
@@ -1516,6 +1665,58 @@ class FigureLayer():
 
         self.count = self.count + 1
 
+class FigureLayerHover():
+    def __init__(self, fig):
+        self.count = 0
+        self.fig = fig
+        self.y_range = [0, 0]
+        # self.tooltips_list = [('time', '@pts_xs'), (f'{name}', f'@pts_ys')]
+
+    def AddCurv(self, layer_manager, data, name, type = 0, last_line = False):
+        param = {'legend_label': name, 'line_width': 1.5, 'line_color': 'red', 'line_dash': 'solid'}
+        if self.count == 0:
+            param = {'legend_label': name, 'line_width': 1.5, 'line_color': 'red', 'line_dash': 'solid'}
+            # self.tooltips_list.append((f'{name}', f'@pts_ys'))
+        elif self.count == 1:
+            param = {'legend_label': name, 'line_width': 1.5, 'line_color': 'blue', 'line_dash': 'solid'}
+            # self.tooltips_list.append((f'{name}', f'@pts_ys'))
+        elif self.count == 2:
+            param = {'legend_label': name, 'line_width': 1.5, 'line_color': 'green', 'line_dash': 'solid'}
+            # self.tooltips_list.append((f'{name}', f'@pts_ys'))
+        elif self.count == 3:
+            param = {'legend_label': name, 'line_width': 1.5, 'line_color': 'black', 'line_dash': 'solid'}
+            # self.tooltips_list.append((f'{name}', f'@pts_ys'))
+        elif self.count == 4:
+            param = {'legend_label': name, 'line_width': 1.5, 'line_color': 'red', 'line_dash': 'dashed'}
+            # self.tooltips_list.append((f'{name}', f'@pts_ys'))
+        elif self.count == 5:
+            param = {'legend_label': name, 'line_width': 1.5, 'line_color': 'yellow', 'line_dash': 'dashed'}
+            # self.tooltips_list.append((f'{name}', f'@pts_ys'))
+
+        # curve layers
+        curv_layer = CurveLayer(self.fig, param)
+        name = param['legend_label']
+
+        self.y_range[0] = min(self.y_range[0], data.y_range[0])
+        self.y_range[1] = max(self.y_range[1], data.y_range[1])
+
+        # add layers
+        if type == 0:
+            layer_manager.AddLayer(curv_layer, name, data)
+        else:
+            layer_manager.AddLayer(curv_layer, name, data, name, 2)
+        
+        if last_line == True:
+          tooltips_list = [('time', '@pts_xs'), (f'{name}', f'@pts_ys')]
+        else:
+          tooltips_list = [(f'{name}', f'@pts_ys')]
+        hover = HoverTool(renderers=[curv_layer.plot], tooltips=tooltips_list, mode='vline')
+        self.fig.add_tools(hover)
+        
+        self.fig.legend.click_policy = "hide"
+        self.fig.toolbar.active_scroll = self.fig.select_one(WheelZoomTool)
+
+        self.count = self.count + 1
 
 class DynamicFigureLayer():
     def __init__(self, fig):

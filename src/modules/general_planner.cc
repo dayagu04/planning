@@ -110,7 +110,7 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
   UpdateFixLaneVirtualId();
 
   bool active = session_->environmental_model().GetVehicleDbwStatus();
-
+#ifndef CHERY_T26
   if (active && !object_selector_->update(
                     session_->planning_context()
                         .lat_behavior_state_machine_output()
@@ -133,6 +133,7 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
     }
   }
   LOG_DEBUG("object_selector_update end\n");
+#endif
 
   // Step 2) update state machine
   (void)scenario_state_machine_->update(frame_);

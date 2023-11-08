@@ -11,17 +11,17 @@
 namespace planning {
 namespace apa_planner {
 
+using framework::Frame;
 using ::FuncStateMachine::FuncStateMachine;
 using ::FuncStateMachine::FunctionalState;
 using ::ParkingFusion::ParkingFusionInfo;
-using framework::Frame;
 
 ApaPlannerDispatcher::ApaPlannerDispatcher() { RegisterPlanners(); }
 
 void ApaPlannerDispatcher::RegisterPlanners() {
   planner_list_.clear();
   planner_list_.emplace_back(std::make_unique<DiagonalInPlanner>());
-  planner_list_.emplace_back(std::make_unique<ParallelInPlanner>());
+  // planner_list_.emplace_back(std::make_unique<ParallelInPlanner>());
 }
 
 bool ApaPlannerDispatcher::Update(Frame* const frame) {

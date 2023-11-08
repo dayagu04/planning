@@ -9,7 +9,7 @@ def LoadScalar(ctrl_data, json_struct, name):
   try:
     ctrl_data[name] = json_struct[name]
   except:
-    ctrl_data[name] = 0.0
+    ctrl_data[name] = -0.01
 
 def LoadVector(ctrl_data, json_struct, name, N = 20):
   try:

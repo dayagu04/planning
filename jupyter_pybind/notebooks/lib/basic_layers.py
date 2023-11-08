@@ -76,7 +76,7 @@ class TrianglePointsLayer:
 class CircleLayer:
   def __init__(self, fig, params):
     self.fig = fig
-    self.xs, self.ys, self.rs = 'pts_xs', 'pts_ys', 'pts_rs'
+    self.xs, self.ys, self.rs = 'pts_xs', 'pts_ys', 'rs'
     self.data_source = ColumnDataSource(data={
       self.xs: [],
       self.ys: [],
@@ -94,6 +94,26 @@ class CircleLayer:
       self.xs: pts_xs,
       self.ys: pts_ys,
       self.rs: pts_rs
+    })
+    
+class DotLayer:
+  def __init__(self, fig, params):
+    self.fig = fig
+    self.xs, self.ys = 'pts_xs', 'pts_ys'
+    self.data_source = ColumnDataSource(data={
+      self.xs: [],
+      self.ys: []
+    })
+
+    self.plot = self.fig.circle(self.xs,
+                  self.ys,
+                  source=self.data_source,
+                  **params)
+
+  def update(self, pts_xs, pts_ys):
+    self.data_source.data.update({
+      self.xs: pts_xs,
+      self.ys: pts_ys
     })
 
 class MultiPolygonColorLayer:
@@ -130,6 +150,27 @@ class CurveLayer:
     })
 
     self.plot = self.fig.line(self.xs,
+                  self.ys,
+                  source=self.data_source,
+                  **params)
+
+  def update(self, pts_xs, pts_ys):
+    self.data_source.data.update({
+      self.xs: pts_xs,
+      self.ys: pts_ys,
+    })
+    
+class MultiCurveLayer:
+    # 
+  def __init__(self, fig, params):
+    self.fig = fig
+    self.xs, self.ys = 'pts_xs', 'pts_ys'
+    self.data_source = ColumnDataSource(data={
+      self.xs: [],
+      self.ys: [],
+    })
+
+    self.plot = self.fig.multi_line(self.xs,
                   self.ys,
                   source=self.data_source,
                   **params)

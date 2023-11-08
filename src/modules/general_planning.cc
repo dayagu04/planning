@@ -213,10 +213,7 @@ void GeneralPlanning::FillPlanningTrajectory(
             d_polynomial[3], -lat_offset_rate, lat_offset_rate);
       } else {
         if ((lateral_output.lc_status == "left_lane_change_back" ||
-             lateral_output.lc_status == "right_lane_change_back" ||
-             (lateral_output.lc_status == "none" &&
-              config_.enable_none_smooth &&
-              std::fabs(d_polynomial[2]) < config_.none_consider_slope_thr)) &&
+             lateral_output.lc_status == "right_lane_change_back") &&
             std::fabs(d_polynomial[3]) >
                 config_.lc_back_consider_smooth_dpoly_thr) {
           limited_polynomial_3 =
@@ -413,14 +410,16 @@ void GeneralPlanning::FillPlanningHmiInfo(
 
 void GeneralPlanning::ClearParkingInfo(
     PlanningOutput::PlanningOutput *const planning_output) {
-  session_.planning_output_context()
-      .planning_status()
-      .planning_result.planning_output.mutable_planning_status()
+  session_.mutable_planning_output_context()
+      ->mutable_planning_status()
+      ->planning_result.planning_output.mutable_planning_status()
       ->set_apa_planning_status(PlanningOutput::ApaPlanningStatus::NONE);
-  session_.planning_output_context()
-      .planning_status()
-      .planning_result.planning_output.mutable_successful_slot_info_list()
+
+  session_.mutable_planning_output_context()
+      ->mutable_planning_status()
+      ->planning_result.planning_output.mutable_successful_slot_info_list()
       ->Clear();
+
   planning_output->mutable_planning_status()->set_apa_planning_status(
       PlanningOutput::ApaPlanningStatus::NONE);
 }

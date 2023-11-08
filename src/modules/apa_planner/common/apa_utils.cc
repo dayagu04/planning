@@ -14,13 +14,13 @@
 
 namespace planning {
 
+using framework::Frame;
 using ::FuncStateMachine::FuncStateMachine;
 using ::FuncStateMachine::FunctionalState;
 using ::ParkingFusion::ParkingFusionSlot;
-using ::PlanningOutput::PlanningOutput;
-using framework::Frame;
 using planning::planning_math::Polygon2d;
 using planning::planning_math::Vec2d;
+using ::PlanningOutput::PlanningOutput;
 
 Polygon2d ConstructVehiclePolygon(const PlanningPoint& rear_center,
                                   const double half_width,
@@ -72,24 +72,13 @@ Polygon2d ConstructVehiclePolygonWithBuffer(const PlanningPoint& veh_point,
                                             const double front_buffer,
                                             const double rear_buffer,
                                             const double lat_buffer) {
-  const double half_width_veh =
-      VehicleParamHelper::Instance()->GetParam().vehicle_width() * 0.5;
-  const double front_edge_to_rear_axle =
-      VehicleParamHelper::Instance()
-          ->GetParam()
-          .lon_distance_from_front_edge_to_rear_axis();
-  const double rear_edge_to_rear_axle =
-      VehicleParamHelper::Instance()
-          ->GetParam()
-          .lon_distance_from_back_edge_to_rear_axis();
-  const double front_shrink_dis =
-      VehicleParamHelper::Instance()->GetParam().front_shrink_distance();
-  const double front_side_shrink_dis =
-      VehicleParamHelper::Instance()->GetParam().front_shrink_distance();
-  const double rear_shrink_dis =
-      VehicleParamHelper::Instance()->GetParam().rear_shrink_distance();
-  const double rear_side_shrink_dis =
-      VehicleParamHelper::Instance()->GetParam().rear_side_shrink_distance();
+  const double half_width_veh = 1.89 * 0.5;
+  const double front_edge_to_rear_axle = 3.624;
+  const double rear_edge_to_rear_axle = 0.947;
+  const double front_shrink_dis = 0.37264;
+  const double front_side_shrink_dis = 0.37264;
+  const double rear_shrink_dis = 0.34287;
+  const double rear_side_shrink_dis = 0.36939;
 
   const double front_edge_to_rear_axle_with_safe_dst =
       front_edge_to_rear_axle + front_buffer;
@@ -114,16 +103,8 @@ bool IsSlotSelected(Frame* const frame) {
     return false;
   }
 
-  if (func_state_machine.current_state() == FunctionalState::PARK_IN_READY ||
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_ACTIVATE_WAIT ||
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_ACTIVATE_CONTROL ||
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_SUSPEND_ACTIVATE ||
-      func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_SUSPEND_CLOSE ||
-      func_state_machine.current_state() == FunctionalState::PARK_IN_SECURE) {
+  if (func_state_machine.current_state() >= FunctionalState::PARK_IN_SELECT &&
+      func_state_machine.current_state() <= FunctionalState::PARK_OUT_SECURE) {
     return true;
   }
 
@@ -159,11 +140,9 @@ bool IsReplanEachFrame(const FuncStateMachine& func_state_machine) {
     return false;
   }
 
-  if (func_state_machine.current_state() ==
-          FunctionalState::PARK_IN_SEARCHING ||
-      func_state_machine.current_state() == FunctionalState::PARK_IN_NO_READY ||
-      func_state_machine.current_state() == FunctionalState::PARK_IN_READY ||
-      func_state_machine.current_state() ==
+  if (func_state_machine.current_state() >=
+          FunctionalState::PARK_IN_SEARCHING &&
+      func_state_machine.current_state() <=
           FunctionalState::PARK_IN_ACTIVATE_WAIT) {
     return true;
   }
@@ -254,15 +233,8 @@ bool IsValidParkingState(
     const ::FuncStateMachine::FunctionalState& current_state) {
   AINFO << "current_state:" << current_state;
 
-  if (current_state == FunctionalState::PARK_IN_SEARCHING ||
-      current_state == FunctionalState::PARK_IN_NO_READY ||
-      current_state == FunctionalState::PARK_IN_READY ||
-      current_state == FunctionalState::PARK_IN_ACTIVATE_WAIT ||
-      current_state == FunctionalState::PARK_IN_ACTIVATE_CONTROL ||
-      current_state == FunctionalState::PARK_IN_SUSPEND_ACTIVATE ||
-      current_state == FunctionalState::PARK_IN_SUSPEND_CLOSE ||
-      current_state == FunctionalState::PARK_IN_SECURE ||
-      current_state == FunctionalState::PARK_IN_COMPLETED) {
+  if (current_state >= FunctionalState::PARK_IN_APA_IN &&
+      current_state <= FunctionalState::PARK_OUT_COMPLETED) {
     return true;
   }
   return false;
