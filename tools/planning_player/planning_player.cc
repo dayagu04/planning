@@ -38,6 +38,7 @@ static constexpr auto TOPIC_HMI_MCU_INNER = "/iflytek/hmi/mcu_inner";
 static constexpr auto TOPIC_PARKING_FUSION = "/iflytek/fusion/parking_slot";
 static constexpr auto TOPIC_FUNC_STATE_MACHINE =
     "/iflytek/system_state/soc_state";
+static constexpr auto TOPIC_HD_MAP = "/iflytek/ehr/static_map";
 
 void PlanningPlayer::Init(bool is_close_loop, int auto_frame,
                           const std::string& scene_type) {
@@ -141,6 +142,8 @@ bool PlanningPlayer::LoadCyberBag(const std::string& bag_path) {
       cache_with_msg_time<planning::common::PlanningDebugInfo>(msg);
     } else if (msg.channel_name == TOPIC_PLANNING_HMI) {
       cache_with_msg_time<PlanningHMI::PlanningHMIOutputInfoStr>(msg);
+    } else if (msg.channel_name == TOPIC_HD_MAP) {
+      cache_with_msg_and_header_time<Map::StaticMap>(msg);
     } else {
       // std::cerr << "unsupported channel:" << msg.channel_name << std::endl;
     }
@@ -180,6 +183,7 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
       output_msg_cache_, record_writer, TOPIC_PLANNING_DEBUG_INFO);
   write_topic_msg<PlanningHMI::PlanningHMIOutputInfoStr>(
       output_msg_cache_, record_writer, TOPIC_PLANNING_HMI);
+  write_topic_msg<Map::StaticMap>(msg_cache_, record_writer, TOPIC_HD_MAP);
 
   std::cout << "write bag:" << record_writer.GetFile() << std::endl;
   record_writer.Close();
@@ -244,6 +248,12 @@ void PlanningPlayer::PlayOneFrame(
     planning_adapter_->FeedParkingFusion(parking_fusion_msg);
   }
 
+  auto hd_map_msg = find_msg_with_header_time<Map::StaticMap>(
+      TOPIC_HD_MAP, input_time_list.map());
+  if (hd_map_msg) {
+    planning_adapter_->FeedMap(hd_map_msg);
+  }
+
   auto func_state_machine_msg =
       std::make_shared<FuncStateMachine::FuncStateMachine>();
   if (input_time_list.has_function_state_machine()) {
@@ -257,7 +267,7 @@ void PlanningPlayer::PlayOneFrame(
   auto functional_state = ::FuncStateMachine::FunctionalState::INIT;
   if (frame_num >= enter_auto_frame_num_) {  // enter auto after 1.5s
     if (scene_type_ == "acc") {
-      functional_state = func_state_machine_msg->current_state();
+      functional_state = ::FuncStateMachine::FunctionalState::ACC_ACTIVATE;
     } else if (scene_type_ == "apa") {
       functional_state =
           ::FuncStateMachine::FunctionalState::PARK_IN_ACTIVATE_CONTROL;

@@ -56,7 +56,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/mnt/0625/long_time_gj2.00001"
+                "/mnt/noa_1018/noa_1.00000"
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",

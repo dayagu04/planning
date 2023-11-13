@@ -5,9 +5,11 @@
 #include <typeinfo>
 #include <unordered_map>
 
+#include "ad_common/hdmap/hdmap.h"
 #include "config/vehicle_param.h"
 #include "ego_planning_config.h"
 #include "fusion_objects.pb.h"
+#include "ifly_time.h"
 #include "local_view.h"
 #include "log.h"
 #include "parking_slot_manager.h"
@@ -114,8 +116,8 @@ class EnvironmentalModel {
     virtual_lane_manager_ = virtual_lane_manager;
   }
 
-  const std::shared_ptr<TrafficLightDecisionManager> &
-  get_traffic_light_decision_manager() const {
+  const std::shared_ptr<TrafficLightDecisionManager>
+      &get_traffic_light_decision_manager() const {
     return traffic_light_decision_manager_;
   }
   void set_traffic_light_decision_manager(
@@ -174,11 +176,25 @@ class EnvironmentalModel {
   }
 
   void feed_local_view(const LocalView &local_view) {
+    if (local_view.static_map_info.header().timestamp() !=
+        local_view_.static_map_info.header().timestamp()) {
+      ad_common::hdmap::HDMap hd_map_tmp;
+      const int res =
+          hd_map_tmp.LoadMapFromProto(local_view.static_map_info.road_map());
+      if (res == 0) {
+        // std::cout << "hdmap debugstring:\n"
+        //     << local_view.static_map_info.current_routing().DebugString() <<
+        //     std::endl;
+        hd_map_ = std::move(hd_map_tmp);
+        hdmap_valid_ = true;
+      }
+    }
     local_view_ = local_view;
   }
   void set_location_valid(bool flag) { location_valid_ = flag; }
   bool location_valid() const { return location_valid_; }
   const LocalView &get_local_view() const { return local_view_; }
+  const ad_common::hdmap::HDMap &get_hd_map() const { return hd_map_; }
 
   bool get_hdmap_valid() const { return hdmap_valid_; }
   bool is_on_highway() const { return true; }  // hack
@@ -191,12 +207,11 @@ class EnvironmentalModel {
     function_info_.function_mode = mode;
     function_info_.function_state = state;
   }
-  const DrivingFunctionInfo function_info() const {
-    return function_info_;
-  }
+  const DrivingFunctionInfo function_info() const { return function_info_; }
 
  private:
   LocalView local_view_;
+  ad_common::hdmap::HDMap hd_map_;
   bool vehicle_dbw_status_{false};
   std::shared_ptr<EgoStateManager> ego_state_manager_ = nullptr;
   std::shared_ptr<ObstacleManager> obstacle_manager_ = nullptr;

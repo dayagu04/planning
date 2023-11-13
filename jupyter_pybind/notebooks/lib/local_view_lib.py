@@ -55,7 +55,7 @@ ego_car_params_apa ={
 ego_pose_params_apa ={
   'fill_color' : "red",
   'line_color' : "black",
-  'line_width' : 1,
+  'line_width' : 3,
   'legend_label' : 'car_rear_alxe_center'
 }
 ego_dot_params_apa ={
@@ -114,7 +114,7 @@ all_slot_params_apa = {
 }
 
 location_params_apa = {
-  'line_width' : 1.5,
+  'line_width' : 3,
   'line_color' : 'orange',
   'line_dash' : 'solid',
   'legend_label' : 'ego_pos'
@@ -257,11 +257,7 @@ prediction_params = {
 }
 
 plan_params = {
-  'line_width' : 2.5, 'line_color' : 'blue', 'line_dash' : 'solid', 'line_alpha' : 0.6, 'legend_label' : 'plan'
-}
-
-mpc_params = {
-  'line_width' : 3.0, 'line_color' : 'red', 'line_dash' : 'solid', 'line_alpha' : 0.8, 'legend_label' : 'mpc'
+  'line_width' : 3, 'line_color' : 'blue', 'line_dash' : 'solid', 'line_alpha' : 0.6, 'legend_label' : 'plan'
 }
 
 control_params = {
@@ -351,7 +347,7 @@ class TextGenerator(DataGeneratorBase):
     self.txt = "text"
     super().__init__(self.xys, self.ts)
     return
-  
+
 class CircleGenerator(DataGeneratorBase):
   def __init__(self):
     self.ts = []
@@ -1344,14 +1340,15 @@ def apa_draw_local_view(dataLoader, layer_manager):
       ego_box = get_closed_veh_box(cur_pos_xn,cur_pos_yn,cur_pos_theta)
       ego_box_for_ego_point = get_closed_veh_box_for_ego_point(cur_pos_xn,cur_pos_yn,cur_pos_theta)
       ego_polygon_generate.xys.append(([ego_box[1]],[ego_box[0]]))
-      ego_pose_generate.xys.append(([ego_box_for_ego_point[1]],[ego_box_for_ego_point[0]]))
-    ego_polygon_generate.ts = np.array(plan_debug_ts)
-    ego_pose_generate.ts = np.array(plan_debug_ts)
+      # ego_pose_generate.xys.append(([ego_box_for_ego_point[1]],[ego_box_for_ego_point[0]]))
+      ego_pose_generate.xys.append(([cur_pos_yn],[cur_pos_xn]))
+    ego_polygon_generate.ts = np.array(plan_debug_timestamps)
+    ego_pose_generate.ts = np.array(plan_debug_timestamps)
     ego_pose_polygon_layer = PatchLayer(fig_local_view ,ego_pose_polygon_params_apa)
-    ego_pose_layer = PatchLayer(fig_local_view ,ego_pose_params_apa)
+    ego_pose_layer = PointsLayer(fig_local_view ,ego_pose_params_apa)
     layer_manager.AddLayer(ego_pose_polygon_layer, 'ego_pose_polygon_layer', ego_polygon_generate, 'ego_polygon_generate', 2)
     layer_manager.AddLayer(ego_pose_layer, 'ego_pose_layer', ego_pose_generate, 'ego_pose_generate', 2)
-
+# CircleLayer
     ###加载apa车位
     slot_generate = CommonGenerator()
     slot_id_generate = TextGenerator()
@@ -1398,29 +1395,16 @@ def apa_draw_local_view(dataLoader, layer_manager):
 
     ###加载apa规划plan
     plan_generator = CommonGenerator()
-    coord_tf = coord_transformer()
-
-    for plan_debug_t in plan_debug_ts:
-      flag, plan_msg = find(dataLoader.plan_msg, plan_debug_t)
-      if not flag:
-            # print('find plan_msg error')
-            slot_generate.xys.append(([], []))
-            continue
-    # for i, plan_msg in enumerate(dataLoader.plan_msg['data']):
+    for i, plan_msg in enumerate(dataLoader.plan_msg['data']):
       trajectory = plan_msg.trajectory
       trajectory_points_x = []
       trajectory_points_y = []
-      try:
-         trajectory_points = trajectory.trajectory_points
-         for point in trajectory_points:
-            trajectory_points_x.append(point.x)
-            trajectory_points_y.append(point.y)
-            print(point.x,point.y,sep=':')
-            print("运行到此!")
-      except:
-        print("plan points err!")
-      plan_generator.xys.append(([trajectory_points_y], [trajectory_points_x]))
-    plan_generator.ts = np.array(plan_debug_ts)
+      trajectory_points = trajectory.trajectory_points
+      for point in trajectory_points:
+        trajectory_points_x.append(point.x)
+        trajectory_points_y.append(point.y)
+      plan_generator.xys.append((trajectory_points_y, trajectory_points_x))
+    plan_generator.ts = np.array(plan_debug_timestamps)
     plan_layer = CurveLayer(fig_local_view, plan_params)
     layer_manager.AddLayer(plan_layer, 'plan_layer', plan_generator, 'plane_generator', 2)
     # legend
@@ -1465,7 +1449,7 @@ def get_closed_veh_box_for_ego_point(x, y, theta):
     # shift_dis = 1.325
 
     # params for AIONLX
-    scale = 3    #缩小的倍数，将自车的polygon缩小n倍后作为后轴中心点
+    scale = 5    #缩小的倍数，将自车的polygon缩小n倍后作为后轴中心点
     length = 4.786 / scale
     width = 1.935 / scale
     shift_dis = (3.846 - 0.94) * 0.5 / scale
@@ -1566,7 +1550,7 @@ def  GenerateTopicVectorData(topic_data,topic_time_list,topic_value_list):
             lat_tmp8.append(0.0)
             lat_tmp9.append(0.0)
             lat_tmp10.append(0.0)
-            
+
     # topic_vector_dict[topic_value_list[0]] = lon_tmp
     # topic_vector_dict[topic_value_list[1]] = lon_tmp1
     # topic_vector_dict[topic_value_list[2]] = lon_tmp2
@@ -1590,7 +1574,7 @@ class ScalarGeneratorFromJson(DataGeneratorBase):
         xys.append((ts, ys))
         super().__init__(xys, ts)
         self.y_range = [min(ys), max(ys)]
-        
+
 class ScalarSomeGeneratorFromJson(DataGeneratorBase):
     def __init__(self, json_value_xys_dict, name, scale = 1, condition = 0.0, cond_scale = 1000):
         ts = json_value_xys_dict['t']
@@ -1705,14 +1689,14 @@ class FigureLayerHover():
             layer_manager.AddLayer(curv_layer, name, data)
         else:
             layer_manager.AddLayer(curv_layer, name, data, name, 2)
-        
+
         if last_line == True:
           tooltips_list = [('time', '@pts_xs'), (f'{name}', f'@pts_ys')]
         else:
           tooltips_list = [(f'{name}', f'@pts_ys')]
         hover = HoverTool(renderers=[curv_layer.plot], tooltips=tooltips_list, mode='vline')
         self.fig.add_tools(hover)
-        
+
         self.fig.legend.click_policy = "hide"
         self.fig.toolbar.active_scroll = self.fig.select_one(WheelZoomTool)
 

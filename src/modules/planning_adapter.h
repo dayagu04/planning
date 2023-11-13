@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "control_command.pb.h"
+#include "ehr.pb.h"
 #include "func_state_machine.pb.h"
 #include "fusion_objects.pb.h"
 #include "fusion_road.pb.h"
@@ -53,7 +54,8 @@ class PlanningAdapter {
       const std::shared_ptr<LocalizationOutput::LocalizationEstimate>&
           localization_estimate_msg) {
     // std::cout << "receive localization_estimate "
-    //           << localization_estimate_msg->header().timestamp() << std::endl;
+    //           << localization_estimate_msg->header().timestamp() <<
+    //           std::endl;
     std::lock_guard<std::mutex> lock(msg_mutex_);
     localization_estimate_msg_.CopyFrom(*localization_estimate_msg);
     localization_estimate_msg_recv_time_ = IflyTime::Now_ms();
@@ -119,6 +121,12 @@ class PlanningAdapter {
     uss_wave_info_msg_recv_time_ = IflyTime::Now_ms();
   }
 
+  void FeedMap(const std::shared_ptr<Map::StaticMap>& map_msg) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    map_info_msg_.CopyFrom(*map_msg);
+    map_info_msg_recv_time_ = IflyTime::Now_ms();
+  }
+
   void RegisterOutputWriter(
       const std::function<void(PlanningOutput::PlanningOutput)>&
           planning_writer) {
@@ -166,6 +174,9 @@ class PlanningAdapter {
 
   UssWaveInfo::UssWaveInfo uss_wave_info_msg_;
   int64_t uss_wave_info_msg_recv_time_;
+
+  Map::StaticMap map_info_msg_;
+  int64_t map_info_msg_recv_time_;
 
   std::function<void(PlanningOutput::PlanningOutput)> planning_writer_ =
       nullptr;

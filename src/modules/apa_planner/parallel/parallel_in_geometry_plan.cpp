@@ -811,7 +811,8 @@ bool ParallelInGeometryPlan::EF2Segment(const PlanningPoint &point_e,
         continue;
       }
 
-      if (point_f.y * slot_sign_ > target_point_.y * slot_sign_ + kMaxLatOffset) {
+      if (point_f.y * slot_sign_ >
+          target_point_.y * slot_sign_ + kMaxLatOffset) {
         continue;
       }
 
@@ -1026,7 +1027,8 @@ bool ParallelInGeometryPlan::EF3Segment(const PlanningPoint &point_e,
         break;
       }
 
-      if (point_f.y * slot_sign_ > target_point_.y * slot_sign_ + kMaxLatOffset) {
+      if (point_f.y * slot_sign_ >
+          target_point_.y * slot_sign_ + kMaxLatOffset) {
         ++fy_cnt1;
         continue;
       }
@@ -1175,7 +1177,8 @@ bool ParallelInGeometryPlan::FH2Segment(const PlanningPoint &point_f,
         continue;
       }
 
-      if (point_h.y * slot_sign_ < target_point_.y * slot_sign_ - kMaxLatOffset) {
+      if (point_h.y * slot_sign_ <
+          target_point_.y * slot_sign_ - kMaxLatOffset) {
         continue;
       }
 
@@ -1288,7 +1291,8 @@ bool ParallelInGeometryPlan::FH3Segment(const PlanningPoint &point_f,
         break;
       }
 
-      if (point_h.y * slot_sign_ < target_point_.y * slot_sign_ - kMaxLatOffset) {
+      if (point_h.y * slot_sign_ <
+          target_point_.y * slot_sign_ - kMaxLatOffset) {
         ++h3y_cnt1;
         continue;
       }

@@ -682,6 +682,12 @@ struct VisionLongitudinalBehaviorPlannerConfig : public EgoPlanningConfig {
     distance_start = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "distance_start"});
+    dece_to_ramp = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "dece_to_ramp"});
+    v_limit_ramp = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "v_limit_ramp"});
   }
   double preview_x = 80.0;
   double dis_zero_speed = 3.5;
@@ -689,6 +695,8 @@ struct VisionLongitudinalBehaviorPlannerConfig : public EgoPlanningConfig {
   double ttc_brake_hysteresis = 0.3;
   double t_curv = 3.0;
   double dis_curv = 50;
+  double dece_to_ramp = -1.0;
+  double v_limit_ramp = 40.0;
   // The param for StartStopState
   double v_start = 0.3;
   double obstacle_v_start = 0.5;  // start of obstacle
@@ -739,6 +747,16 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
   double frenet_obstacle_range_l_min = -50.0;
   double frenet_obstacle_range_l_max = 50.0;
   bool enable_bbox_mode = true;
+};
+
+struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    is_select_split_nearing_ramp = read_json_key<bool>(
+        json, "is_select_split_nearing_ramp", is_select_split_nearing_ramp);
+  }
+  bool is_select_split_nearing_ramp = true;
 };
 
 struct EgoPlanningMapInfoManagerConfig : public EgoPlanningConfig {

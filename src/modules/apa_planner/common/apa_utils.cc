@@ -14,13 +14,13 @@
 
 namespace planning {
 
-using framework::Frame;
 using ::FuncStateMachine::FuncStateMachine;
 using ::FuncStateMachine::FunctionalState;
 using ::ParkingFusion::ParkingFusionSlot;
+using ::PlanningOutput::PlanningOutput;
+using framework::Frame;
 using planning::planning_math::Polygon2d;
 using planning::planning_math::Vec2d;
-using ::PlanningOutput::PlanningOutput;
 
 Polygon2d ConstructVehiclePolygon(const PlanningPoint& rear_center,
                                   const double half_width,

@@ -1472,10 +1472,23 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                            lat_offset);
             }
           }
-          if (lat_offset < 0. && d_poly_[3] + lat_offset < -0.3) {
-            lat_offset = -d_poly_[3] - 0.3;
-          } else if (lat_offset >= 0. && d_poly_[3] + lat_offset > 0.3) {
-            lat_offset = -d_poly_[3] + 0.3;
+
+          if (lat_offset > 0) {
+            if (d_poly_[3] > 0.3) {
+              lat_offset = 0;
+            } else {
+              if (d_poly_[3] + lat_offset > 0.3) {
+                lat_offset = -d_poly_[3] + 0.3;
+              }
+            }
+          } else if (lat_offset <= 0) {
+            if (d_poly_[3] < -0.3) {
+              lat_offset = 0;
+            } else {
+              if (d_poly_[3] + lat_offset < -0.3) {
+                lat_offset = -d_poly_[3] - 0.3;
+              }
+            }
           }
         }
 
@@ -1718,8 +1731,13 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                            lat_offset);
             }
           }
-          if (d_poly_[3] + lat_offset < -0.3) {
-            lat_offset = -d_poly_[3] - 0.3;
+
+          if (d_poly_[3] < -0.3) {
+            lat_offset = 0;
+          } else {
+            if (d_poly_[3] + lat_offset < -0.3) {
+              lat_offset = -d_poly_[3] - 0.3;
+            }
           }
         } else {
           lat_offset = std::min(-d_poly_[3], 0.);
@@ -2024,8 +2042,12 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                            lat_offset);
             }
           }
-          if (d_poly_[3] + lat_offset > 0.3) {
-            lat_offset = -d_poly_[3] + 0.3;
+          if (d_poly_[3] > 0.3) {
+            lat_offset = 0;
+          } else {
+            if (d_poly_[3] + lat_offset > 0.3) {
+              lat_offset = -d_poly_[3] + 0.3;
+            }
           }
         } else {
           lat_offset = std::max(
@@ -2389,6 +2411,31 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
   one_nudge_left_car_ = one_nudge_left_car;
   one_nudge_right_car_ = one_nudge_right_car;
   lane_width_ = lane_width;
+  auto ad_info = frame_->mutable_session()
+                     ->mutable_planning_output_context()
+                     ->mutable_planning_hmi_info()
+                     ->mutable_ad_info();
+  ad_info->set_avoid_status(::PlanningHMI::AvoidObstacle::NO_HIDING);
+  ad_info->set_avoiddirect(::PlanningHMI::AvoidObstacleDirection::AVOID_NONE);
+  if (status == ScenarioStateEnum::ROAD_NONE ||
+      status == ScenarioStateEnum::ROAD_LC_LCHANGE ||
+      status == ScenarioStateEnum::ROAD_LC_RCHANGE ||
+      status == ScenarioStateEnum::ROAD_LC_LWAIT ||
+      status == ScenarioStateEnum::ROAD_LC_RWAIT ||
+      status == ScenarioStateEnum::ROAD_LC_LBACK ||
+      status == ScenarioStateEnum::ROAD_LC_RBACK) {
+    if (avd_car_past[0].size() > 0) {
+      if (lat_offset > 0.3) {
+        ad_info->set_avoid_status(::PlanningHMI::AvoidObstacle::HIDING);
+        ad_info->set_avoiddirect(
+            ::PlanningHMI::AvoidObstacleDirection::AVOID_LEFT);
+      } else if (lat_offset < -0.3) {
+        ad_info->set_avoid_status(::PlanningHMI::AvoidObstacle::HIDING);
+        ad_info->set_avoiddirect(
+            ::PlanningHMI::AvoidObstacleDirection::AVOID_RIGHT);
+      }
+    }
+  }
 
   if (premoving_) {
     lat_offset_ += lat_offset;
@@ -2626,10 +2673,8 @@ bool VisionLateralMotionPlanner::update_planner_output() {
     lateral_output.lc_end_dis = 10000;
   }
 
-  if (virtual_lane_manager_->get_ramp().dis_to_ramp() !=
-      DBL_MAX) {  // attention !
-    lateral_output.dis_to_ramp =
-        virtual_lane_manager_->get_ramp().dis_to_ramp();
+  if (virtual_lane_manager_->dis_to_ramp() != DBL_MAX) {  // attention !
+    lateral_output.dis_to_ramp = virtual_lane_manager_->dis_to_ramp();
   } else {
     lateral_output.dis_to_ramp = 10000;
   }

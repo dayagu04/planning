@@ -11,10 +11,10 @@
 namespace planning {
 namespace apa_planner {
 
-using framework::Frame;
 using ::FuncStateMachine::FuncStateMachine;
 using ::FuncStateMachine::FunctionalState;
 using ::ParkingFusion::ParkingFusionInfo;
+using framework::Frame;
 
 ApaPlannerDispatcher::ApaPlannerDispatcher() { RegisterPlanners(); }
 

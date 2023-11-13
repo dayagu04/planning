@@ -22,7 +22,7 @@ def load_car_circle_coord():
   circle_x = [1.35, 3.3, 3.3, 2.02, -0.55, -0.55, 2.02, 2.7, 1.8, 0.9, 0.0]
   circle_y = [0.0, 0.55, -0.55, -0.95, -0.5, 0.5, 0.95, 0.0, 0.0, 0.0, 0.0]
   circle_r = [2.4, 0.35, 0.35, 0.18, 0.35, 0.35, 0.18, 0.95, 0.95, 0.95, 0.95]
-  
+
   return circle_x, circle_y, circle_r
 
 def load_car_uss_patch():
@@ -38,6 +38,110 @@ def one_echo_text_local(old_x, old_y, radian, distance):
     new_x = old_x + distance * math.cos(radian)
     new_y = old_y + distance * math.sin(radian)
     return new_x, new_y
+def ehr_load_center_lane_lines(lanes,x,y,yaw,Max_line_size):
+  ehr_line_info_list = []
+  for i in range(Max_line_size):
+    ehr_lane_info = {'ehr_line_x_vec':[], 'ehr_line_y_vec':[],'ehr_relative_id':[], 'ehr_type':[]}
+    if i < len(lanes):
+      lane = lanes[i]
+      line_x = []
+      line_y = []
+      cur_line_first_point = lane.points_on_central_line[0]
+      cur_line_last_point = lane.points_on_central_line[-1]
+      first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
+      last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
+      # if ((first_point_to_cur_dis > 1000) & (last_point_to_cur_dis>1000)):
+      #   continue
+      for point in lane.points_on_central_line:
+        ehr_x = point.x
+        ehr_y = point.y
+        car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+        # print("x:",ehr_x)
+        # print("y:",ehr_y)
+        line_x.append(car_x)
+        line_y.append(car_y)
+      ehr_lane_info['ehr_line_x_vec'] = line_x
+      ehr_lane_info['ehr_line_y_vec'] = line_y
+      ehr_lane_info['ehr_relative_id'] = lane.lane_id
+      ehr_lane_info['ehr_type'] = 0
+      ehr_line_info_list.append(ehr_lane_info)
+    else:
+      line_x, line_y = gen_line(0,0,0,0,0,0)
+      ehr_lane_info['ehr_line_x_vec'] = line_x
+      ehr_lane_info['ehr_line_y_vec'] = line_y
+      ehr_lane_info['ehr_relative_id'] = 1000
+      ehr_lane_info['ehr_type'] = 0
+      ehr_line_info_list.append(ehr_lane_info)
+  return ehr_line_info_list
+
+def ehr_load_road_boundary_lines(road_boundaries,x,y,yaw,Road_boundary_max_line_size):
+  ehr_road_boundary_info_list = []
+  for i in range(Road_boundary_max_line_size):
+    ehr_road_boundary_info = {'ehr_road_boundary_x_vec':[], 'ehr_road_boundary_y_vec':[],'ehr_road_boundary_relative_id':[], 'ehr_type':[]}
+    if i < len(road_boundaries):
+      road_boundary = road_boundaries[i]
+      line_x = []
+      line_y = []
+      # cur_line_first_point = road_boundary.points_on_central_line[0]
+      # cur_line_last_point = road_boundary.points_on_central_line[-1]
+      # first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
+      # last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
+      # # if ((first_point_to_cur_dis > 1000) & (last_point_to_cur_dis>1000)):
+      # #   continue
+      for doundary_attribute in road_boundary.boundary_attributes:
+        for  point in doundary_attribute.points:
+          ehr_x = point.x
+          ehr_y = point.y
+          car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+          # print("x:",ehr_x)
+          # print("y:",ehr_y)
+          line_x.append(car_x)
+          line_y.append(car_y)
+      ehr_road_boundary_info['ehr_road_boundary_x_vec'] = line_x
+      ehr_road_boundary_info['ehr_road_boundary_y_vec'] = line_y
+      ehr_road_boundary_info['ehr_road_boundary_relative_id'] = road_boundary.boundary_id
+      ehr_road_boundary_info['ehr_type'] = 0
+      ehr_road_boundary_info_list.append(ehr_road_boundary_info)
+    else:
+      line_x, line_y = gen_line(0,0,0,0,0,0)
+      ehr_road_boundary_info['ehr_road_boundary_x_vec'] = line_x
+      ehr_road_boundary_info['ehr_road_boundary_y_vec'] = line_y
+      ehr_road_boundary_info['ehr_road_boundary_relative_id'] = 1000
+      ehr_road_boundary_info['ehr_type'] = 0
+      ehr_road_boundary_info_list.append(ehr_road_boundary_info)
+  return ehr_road_boundary_info_list
+
+def ehr_load_lane_boundary_lines(lane_boundaries,x,y,yaw,Lane_boundary_max_line_size):
+  ehr_lane_boundary_info_list = []
+
+  for i in range(Lane_boundary_max_line_size):
+    ehr_lane_boundary_info = {'ehr_lane_boundary_x_vec':[], 'ehr_lane_boundary_y_vec':[],'ehr_lane_boundary_relative_id':[], 'ehr_type':[]}
+    if i < len(lane_boundaries):
+      lane_boundary = lane_boundaries[i]
+      line_x = []
+      line_y = []
+      for boundary_attribute in lane_boundary.boundary_attributes:
+        for  point in boundary_attribute.points:
+          ehr_x = point.x
+          ehr_y = point.y
+          car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+          # print("x:",ehr_x)
+          # print("y:",ehr_y)
+          line_x.append(car_x)
+          line_y.append(car_y)
+      ehr_lane_boundary_info['ehr_lane_boundary_x_vec'] = line_x
+      ehr_lane_boundary_info['ehr_lane_boundary_y_vec'] = line_y
+      ehr_lane_boundary_info['ehr_lane_boundary_relative_id'] = lane_boundary.boundary_id
+      ehr_lane_boundary_info['ehr_type'] = 0
+      ehr_lane_boundary_info_list.append(ehr_lane_boundary_info)
+    else:
+      line_x, line_y = gen_line(0,0,0,0,0,0)
+      ehr_lane_boundary_info['ehr_lane_boundary_x_vec'] = line_x
+      ehr_lane_boundary_info['ehr_lane_boundary_y_vec'] = line_y
+      ehr_lane_boundary_info['ehr_lane_boundary_relative_id'] = 1000
+      ehr_lane_boundary_info['ehr_type'] = 0
+      ehr_lane_boundary_info_list.append(ehr_lane_boundary_info)
+  return ehr_lane_boundary_info_list
 
 def load_lane_lines(lanes):
   line_info_list = []
@@ -52,7 +156,7 @@ def load_lane_lines(lanes):
         left_line.begin, left_line.end)
       lane_info_l['line_x_vec'] = line_x
       lane_info_l['line_y_vec'] = line_y
-      lane_info_l['type'] = left_line.segment[0].type
+      lane_info_l['type'] = left_line.type_segments[0].type
 
       line_info_list.append(lane_info_l)
 
@@ -64,7 +168,7 @@ def load_lane_lines(lanes):
 
       lane_info_r['line_x_vec'] = line_x
       lane_info_r['line_y_vec'] = line_y
-      lane_info_r['type'] = right_line.segment[0].type
+      lane_info_r['type'] = right_line.type_segments[0].type
       line_info_list.append(lane_info_r)
     else:
       line_x, line_y = gen_line(0,0,0,0,0,0)
@@ -78,7 +182,7 @@ def load_lane_lines(lanes):
 def load_lane_center_lines(lanes):
   line_info_list = []
 
-  for i in range(5):
+  for i in range(10):
     lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[]}
     if i< len(lanes):
       lane = lanes[i]

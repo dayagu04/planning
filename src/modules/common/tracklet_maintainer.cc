@@ -1,3 +1,5 @@
+#include <cstddef>
+#include "refline.h"
 #define _USE_MATH_DEFINES
 #include "tracklet_maintainer.h"
 
@@ -11,6 +13,7 @@
 #include "environmental_model.h"
 #include "ifly_time.h"
 #include "planning_context.h"
+#include "planning_output_context.h"
 #include "virtual_lane_manager.h"
 namespace planning {
 
@@ -403,7 +406,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     double rel_x = p.relative_position_x;
     double rel_y = p.relative_position_y;
 
-    if (rel_x < -50 || rel_x > 150 || p.trajectory_array.size() == 0) {
+    if (rel_x < -45 || rel_x > 120 || p.trajectory_array.size() == 0) {
       continue;
     }
 
@@ -458,12 +461,13 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     origin->center_y = rel_y;
     origin->theta = p.relative_theta;
     origin->y_rel_ori = rel_y;
-    origin->speed_yaw =
-        std::atan2(p.relative_speed_y, p.relative_speed_x + ego_state_.ego_v());
+    origin->v_x = p.relative_speed_x + ego_state_.ego_v();
+    origin->v_y = p.relative_speed_y;
+    origin->speed_yaw = std::atan2(p.relative_speed_y, origin->v_x);
     origin->a = p.acc;
-    origin->v =
-        std::hypot(p.relative_speed_x + ego_state_.ego_v(), p.relative_speed_y);
-    origin->v_lead = p.relative_speed_x + ego_state_.ego_v();
+    origin->v = std::hypot(origin->v_x, p.relative_speed_y);
+
+    origin->v_lead = origin->v_x;
     origin->v_lead_k = origin->v_lead;
     origin->v_lead_raw = origin->v_lead;
     origin->vy_abs = p.relative_speed_y;
@@ -668,19 +672,21 @@ void TrackletMaintainer::calc(
     for (auto item : tracked_objects) {
       item->v_ego = v_ego;
       item->v_rel = item->v_lead - v_ego;
+      bool frenet_transform_valid = false;
 
       double d_poly_offset = lat_offset;
       if ((d_poly.size() == 4) && (c_poly.size() == 4)) {
         d_poly_offset = d_poly[3] - c_poly[3];
       }
 
-      fill_info_with_refline(*item, d_poly_offset);
+      frenet_transform_valid = fill_info_with_refline(*item, d_poly_offset);
       if (!hdmap_valid_) {
         fill_deriv_info(*item);
       }
       // only use obstacle with camera source
-      if ((item->fusion_source == OBSTACLE_SOURCE_CAMERA) ||
-          (item->fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+      if (((item->fusion_source == OBSTACLE_SOURCE_CAMERA) ||
+           (item->fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA)) &&
+          frenet_transform_valid) {
         is_potential_lead_one(*item, v_ego);
       }
       calc_intersection_with_refline(*item, enable_intersection_planner);
@@ -746,13 +752,52 @@ void TrackletMaintainer::calc(
     obstacle->set_current_lead_obstacle_to_ego(tr->is_temp_lead);
     // obstacle->set_cutin_p(tr->cutinp);
   }
+
+  // auto ad_info = session_->mutable_planning_output_context()
+  //                    ->mutable_planning_hmi_info()
+  //                    ->mutable_ad_info();
+  // feed_hmi
+  // for (auto tr : tracked_objects) {
+  //   if (!(tr->fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+  //     continue;
+  //   }
+  //   auto obstacle = ad_info->add_obstacle_info();
+  //   obstacle->set_id(tr->track_id);
+  //   obstacle->set_center_x(tr->center_x);
+  //   obstacle->set_center_y(tr->center_y);
+  //   // obstacle->set_type(tr->type)
+  //   obstacle->set_speed_x(tr->v_x);
+  //   obstacle->set_speed_y(tr->v_y);
+  //   obstacle->set_heading(tr->speed_yaw);  // 这里应该是yaw角
+  //   obstacle->mutable_size()->set_length(tr->length);
+  //   obstacle->mutable_size()->set_width(tr->width);
+  //   obstacle->mutable_size()->set_height(tr->height);
+  //   if (lead_cars.lead_one != nullptr && lead_cars.lead_one->track_id ==
+  //   tr->track_id ||
+  //       lead_cars.temp_lead_one != nullptr &&
+  //       lead_cars.temp_lead_one->track_id == tr->track_id) {
+  //     obstacle->set_lon_status(::PlanningHMI::ObstacleLonStatus::FOLLOWING);
+  //   } else {
+  //     obstacle->set_lon_status(::PlanningHMI::ObstacleLonStatus::NORMAL);
+  //   }
+  // }
+  // Point2D cart_point;
+  // if (frenet_coord_->FrenetCoord2CartCoord(Point2D(s_ego_ + 5, 0),
+  // cart_point) ==
+  //       TRANSFORM_SUCCESS) {
+  //   ad_info->mutable_landing_point()->mutable_relative_pos()->set_x(cart_point.x);
+  //   ad_info->mutable_landing_point()->mutable_relative_pos()->set_y(cart_point.y);
+  //   ad_info->mutable_landing_point()->mutable_relative_pos()->set_z(0);
+  //   ad_info->mutable_landing_point()->set_heading(0);
+  // }
 }
 
-void TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
+bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
                                                 double lat_offset) {
   double half_length = item.length * 0.5;
 
   double half_width;
+  bool frenet_transform_valid = true;
   if (item.type > 10000) {
     half_width = std::max(0.5, std::min(2.0, item.width * 0.5));
   } else if (item.type > 0) {
@@ -782,6 +827,8 @@ void TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
     theta = frenet_coord_->GetRefCurveHeading(frenet_point.x);
     v_l = item.v * std::sin(speed_yaw - theta);
     v_s = item.v * std::cos(speed_yaw - theta);
+  } else {
+    frenet_transform_valid = false;
   }
   item.vs_rel = v_s - vs_ego_;
   item.v_lead = v_s;
@@ -793,11 +840,12 @@ void TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
   item.l0 = l_ego_;
   item.c0 = l_ego_;
   item.v_lat = (l > 0) ? v_l : -v_l;
-  std::cout << "object track_id: " << item.track_id
-            << " ego l_ego_ : " << l_ego_ << " ego vl_: " << vl_ego_
-            << " item.s: " << item.s << " item.l: " << item.l
-            << " item.v_lat: " << item.v_lat << " item.vy_rel: " << item.vy_rel
-            << " v_l: " << v_l << std::endl;
+  // std::cout << "object track_id: " << item.track_id
+  //           << " ego l_ego_ : " << l_ego_ << " ego vl_: " << vl_ego_
+  //           << " item.s: " << item.s << " item.l: " << item.l
+  //           << " item.v_lat: " << item.v_lat << " item.vy_rel: " <<
+  //           item.vy_rel
+  //           << " v_l: " << v_l << std::endl;
   if (hdmap_valid_) {
     item.a_lead = item.a * std::cos(item.theta - theta);
     item.a_lead_k = item.a_lead;
@@ -986,6 +1034,7 @@ void TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
   item.d_path_self = std::fabs(item.d_path_self);
   item.d_path_pos = std::fabs(item.d_path_pos);
   item.d_path_self_pos = std::fabs(item.d_path_self_pos);
+  return frenet_transform_valid;
 }
 
 void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {

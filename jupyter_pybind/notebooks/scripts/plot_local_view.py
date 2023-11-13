@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/mnt/xlwang71/v7.00000"
+bag_path = "/share/mnt/noa/20231011/noa_10.00000"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -19,7 +19,7 @@ fig1, local_view_data = load_local_view_figure()
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
+    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='100%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider)
 
 
@@ -37,4 +37,6 @@ def slider_callback(bag_time):
   push_notebook()
 
 bkp.show(row(fig1), notebook_handle=True)
+# layout = column(fig1, sizing_mode='scale_width')
+# bkp.show(layout)
 slider_class = LocalViewSlider(slider_callback)

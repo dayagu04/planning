@@ -83,9 +83,14 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
                             start_move_distolane - act_cancel_thr);
 
   // auto traffic_light_direction = map_info.traffic_light_direction();
+  // bool curr_direct_exist =
+  //     (current_lane->get_lane_marks() == DIRECTION_UNKNOWN &&
+  //      current_lane->get_lane_type() ==
+  //      FusionRoad::LaneType::LANETYPE_NORMAL);
+  // hack curr_direct_exist until intersection info ready
   bool curr_direct_exist =
-      (current_lane->get_lane_marks() == DIRECTION_UNKNOWN &&
-       current_lane->get_lane_type() == FusionRoad::LaneType::LANE_TYPE_NORMAL);
+      (current_lane->get_lane_marks() ==
+       FusionRoad::LaneDrivableDirection::DIRECTION_STRAIGHT);
   // 获取左右车道的index 换成获取id
   if (current_lane_index > 0) {
     left_lane_index = current_lane_index - 1;
@@ -104,7 +109,7 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
   // 判断是否为最左侧车道
   bool is_not_on_most_left_lane = current_lane_index != 0;
   bool is_normal_lane =
-      current_lane->get_lane_type() == FusionRoad::LaneType::LANE_TYPE_NORMAL;
+      current_lane->get_lane_type() == FusionRoad::LaneType::LANETYPE_NORMAL;
 
   auto distance_to_merge_point =
       current_lane->get_lane_merge_split_point().merge_split_point_data_size() >
@@ -132,7 +137,7 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
       distance_to_merge_point > 0 &&
       distance_to_merge_point < kDistanceBuffer &&
       distance_to_merge_point + kDistanceBuffer <
-          virtual_lane_mgr_->get_ramp().dis_to_ramp();
+          virtual_lane_mgr_->dis_to_ramp();
 
   bool is_nearby_right_merge_point_lc_valid =
       (virtual_lane_mgr_->lc_map_decision(current_lane) >= 0 &&
@@ -149,8 +154,7 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
               .orientation() ==
           FusionRoad::LaneOrientation::ORIENTATION_RIGHT &&
       distance_to_y_point > 0 && distance_to_y_point < kDistanceBuffer &&
-      distance_to_y_point + kDistanceBuffer <
-          virtual_lane_mgr_->get_ramp().dis_to_ramp();
+      distance_to_y_point + kDistanceBuffer < virtual_lane_mgr_->dis_to_ramp();
   bool is_from_right_y_point_lc_decision_valid =
       (virtual_lane_mgr_->lc_map_decision(current_lane) >= 0 &&
        distance_to_y_point + kDistanceBuffer <

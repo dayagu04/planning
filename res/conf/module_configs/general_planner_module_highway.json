@@ -11,6 +11,7 @@
   "use_ego_prediction_model_in_planning": true,
   "dump_mdebug": false,
   "enable_bbox_mode": true,
+  "is_select_split_nearing_ramp": false,
   "bound_return_speed": 0.5,
   "physical_road_bound_buffer": 0.5,
   "solid_line_bound_buffer": 0.5,
@@ -228,7 +229,9 @@
     "v_start": 0.3,
     "obstacle_v_start": 0.5,
     "distance_stop": 1.0,
-    "distance_start": 0.3
+    "distance_start": 0.3,
+    "dece_to_ramp": -1.0,
+    "v_limit_ramp": 16.67
   },
   "pnp_precise_lat_bound_care_threshold": 5.0,
   "pnp_lower_speed_protect_threshold": 0.3,

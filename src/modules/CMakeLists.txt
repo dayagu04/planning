@@ -15,6 +15,7 @@ add_subdirectory(scc_function EXCLUDE_FROM_ALL)
 add_subdirectory(tasks EXCLUDE_FROM_ALL)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
+  interface_converter
   framework
   modules_scenario
   modules_apa_planner

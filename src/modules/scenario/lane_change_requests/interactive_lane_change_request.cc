@@ -19,7 +19,7 @@ IntRequest::IntRequest(
 }
 
 void IntRequest::Update(int lc_status) {
-  // ego_blinker 0-lane follow, 1-left, 2-reght
+  // ego_blinker 0-lane follow, 1-left, 2-right
   lane_change_cmd_ = session_->mutable_environmental_model()
                          ->get_ego_state_manager()
                          ->ego_blinker();
@@ -47,7 +47,7 @@ void IntRequest::Update(int lc_status) {
     // 获取左车道线型
     auto left_boundary_type = virtual_lane_mgr_->get_current_lane()
                                   ->get_left_lane_boundary()
-                                  .segment(0)
+                                  .type_segments(0)
                                   .type();
     // 实线禁止换道
     if (left_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) {
@@ -79,7 +79,7 @@ void IntRequest::Update(int lc_status) {
     // 获取右车道线型,实线禁止换道
     auto right_boundary_type = virtual_lane_mgr_->get_current_lane()
                                    ->get_right_lane_boundary()
-                                   .segment(0)
+                                   .type_segments(0)
                                    .type();
     if (right_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) {
       counter_right_ = -5;

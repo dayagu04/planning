@@ -16,7 +16,7 @@ TaskPipelineVisionOnly::TaskPipelineVisionOnly(
       // TaskType::OBSTACLE_DECIDER,
       TaskType::LATERAL_DECIDER, TaskType::VISION_LATERAL_MOTION_PLANNER,
       TaskType::VISION_ONLY_LONGITUDINAL_BEHAVIOR_PLANNER,
-      TaskType::ADAS_FUNCTION_TASK,
+      // TaskType::ADAS_FUNCTION_TASK,
       // TaskType::RESULT_TRAJECTORY_GENERATOR
   };
   CreatePlanningTasks(config_builder);

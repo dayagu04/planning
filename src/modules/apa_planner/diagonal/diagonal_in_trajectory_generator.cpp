@@ -34,15 +34,15 @@ namespace planning {
 namespace apa_planner {
 
 using ::Common::GearCommandValue;
-using framework::Frame;
 using ::FuncStateMachine::FunctionalState;
-using planning::planning_math::LineSegment2d;
-using planning::planning_math::Vec2d;
 using ::PlanningOutput::PlanningOutput;
 using ::PlanningOutput::Trajectory;
 using ::PlanningOutput::TrajectoryPoint;
 using ::pnc::dubins_lib::DubinsLibrary;
 using ::pnc::geometry_lib::TangentOutput;
+using framework::Frame;
+using planning::planning_math::LineSegment2d;
+using planning::planning_math::Vec2d;
 
 namespace {
 constexpr double kEps = 1e-6;

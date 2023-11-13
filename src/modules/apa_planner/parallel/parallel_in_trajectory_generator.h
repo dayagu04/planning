@@ -141,7 +141,7 @@ class ParallelInTrajectoryGenerator {
 
     AINFO << "updated target_point_in_slot_ x:" << target_point_in_slot_.x
           << ", y:" << target_point_in_slot_.y
-          << ", theta:" << target_point_in_slot_.theta << std::endl;
+          << ", theta:" << target_point_in_slot_.theta;
   }
 
   bool IsSelectedSlotValid(framework::Frame *const frame) const;

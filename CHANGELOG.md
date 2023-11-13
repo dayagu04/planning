@@ -1,3 +1,8 @@
+# planning.2.2.1.3
+####  修改说明
+1. NOA合入develop分支
+2. interface2.2.3
+
 # planning.2.2.1.2
 ####  修改说明
 1. 关闭奇瑞主动换道功能
@@ -9,6 +14,11 @@
 # planning.2.2.1.0
 ####  修改说明
 1. APA新架构合入develop分支
+
+# planning.2.2.0.3_noa
+####  修改说明
+1. NOA修改
+2. 增加uncompress topic结构体输出，降低片间通负载
 
 # planning.2.2.0.3
 ####  修改说明

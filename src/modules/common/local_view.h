@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "control_command.pb.h"
+#include "ehr.pb.h"
 #include "func_state_machine.pb.h"
 #include "fusion_objects.pb.h"
 #include "fusion_road.pb.h"
@@ -51,6 +52,11 @@ struct LocalView {
 
   UssWaveInfo::UssWaveInfo uss_wave_info;
   double uss_wave_info_recv_time = 0.0;
+
+  Map::StaticMap static_map_info;
+  double static_map_info_recv_time = 0.0;
+
+  double hdmap_time = 0.0;
 };
 
 }  // namespace planning
