@@ -1,3 +1,7 @@
+# planning.2.2.1.4
+####  修改说明
+1. realtime planner输出轨迹化适配noa, 默认不开启
+
 # planning.2.2.1.3
 ####  修改说明
 1. NOA合入develop分支
