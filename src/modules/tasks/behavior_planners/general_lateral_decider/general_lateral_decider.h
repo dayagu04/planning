@@ -120,6 +120,8 @@ class GeneralLateralDecider : public Task {
 
   void CalcLateralBehaviorOutput();
 
+  bool check_ego_near_bound(const double &rel_s, const double &rel_l);
+
   GeneralLateralDeciderConfig config_;
 
   // VelocityLimitInfo vel_limit_info_;
@@ -134,6 +136,7 @@ class GeneralLateralDecider : public Task {
   bool is_lane_change_scene_ = false;
   LatDeciderLaneChangeInfo lat_lane_change_info_ =
       LatDeciderLaneChangeInfo::NONE;
+  std::unordered_map<int, std::shared_ptr<FrenetObstacle>> nearby_Obstacles_;
 };
 
 }  // namespace planning
