@@ -103,6 +103,7 @@ class EgoStateManager {
  private:
   void update_transform();
   void UpdatePlanningInitState();
+  void RealtimeUpdatePlanningInitState();
   uint8_t ReplanProcess(const bool &lat_reset_flag, const bool &lon_reset_flag);
 
   void LateralReset();
@@ -111,7 +112,6 @@ class EgoStateManager {
   bool LateralStitch();
   bool LongitudinalStitch();
 
-  std::vector<PncTrajectoryPoint> compute_stitching_trajectory();
   void set_timestamp_us(const planning::common::VehicleStatus &vehicle_status);
 
  private:

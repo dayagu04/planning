@@ -119,16 +119,37 @@ struct LonObstacleOverlapInfo {
   double t{0};
 };
 
+// sv bounds
+struct SVBound {
+  double s;
+  Bound v_bound;
+};
+using SVBounds = std::vector<SVBound>;
+enum class SVBoundaryType {
+  DEFAULT,
+  ROAD,
+  CURVATURE,
+  STOP,
+};
+struct SVBoundary {
+  SVBoundaryType boundary_type;
+  SVBounds sv_bounds;
+};
+using SVBoundaries = std::vector<SVBoundary>;
+
 struct LonRefPath {
   std::vector<double> t_list;
   std::vector<std::pair<double, double>> s_refs;  // <offset, weight>
   std::vector<std::pair<double, double>> ds_refs;
 
-  std::vector<WeightedBounds> bounds;
-  std::vector<WeightedLonLeadBounds> lon_lead_bounds;
+  std::vector<WeightedBounds> hard_bounds;             // s hard bounds
+  std::vector<WeightedBounds> soft_bounds;             // s soft bounds
+  std::vector<WeightedLonLeadBounds> lon_lead_bounds;  // 可以废弃
   std::unordered_map<int, std::vector<LonObstacleOverlapInfo>>
       lon_obstacle_overlap_info;
   std::vector<LonObstalceYieldInfo> lon_obstacle_yield_info;
+
+  SVBoundary lon_sv_boundary;
 
   Bounds lon_bound_v;
   Bounds lon_bound_a;

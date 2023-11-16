@@ -175,12 +175,21 @@ class EnvironmentalModel {
     highway_config_builder_ptr_ = highway_config_builder_ptr;
   }
 
-  void feed_local_view(const LocalView &local_view) {
-    if (local_view.static_map_info.header().timestamp() !=
-        local_view_.static_map_info.header().timestamp()) {
+  void feed_local_view(const LocalView *local_view) {
+    local_view_ = local_view;
+    const auto static_map_info_current_timestamp =
+        local_view->static_map_info.header().timestamp();
+    if (static_map_info_current_timestamp != static_map_info_timestamp_) {
+      static_map_info_update_flag_ = true;
+      static_map_info_timestamp_ = static_map_info_current_timestamp;
+    } else {
+      static_map_info_update_flag_ = false;
+    }
+
+    if (static_map_info_update_flag_) {
       ad_common::hdmap::HDMap hd_map_tmp;
       const int res =
-          hd_map_tmp.LoadMapFromProto(local_view.static_map_info.road_map());
+          hd_map_tmp.LoadMapFromProto(local_view->static_map_info.road_map());
       if (res == 0) {
         // std::cout << "hdmap debugstring:\n"
         //     << local_view.static_map_info.current_routing().DebugString() <<
@@ -189,28 +198,34 @@ class EnvironmentalModel {
         hdmap_valid_ = true;
       }
     }
-    local_view_ = local_view;
   }
+
   void set_location_valid(bool flag) { location_valid_ = flag; }
   bool location_valid() const { return location_valid_; }
-  const LocalView &get_local_view() const { return local_view_; }
   const ad_common::hdmap::HDMap &get_hd_map() const { return hd_map_; }
+  const LocalView &get_local_view() const { return *local_view_; }
 
   bool get_hdmap_valid() const { return hdmap_valid_; }
   bool is_on_highway() const { return true; }  // hack
   const HmiMcuInner::HmiMcuInner &get_hmi_info() const {
-    return local_view_.hmi_mcu_inner_info;
+    return local_view_->hmi_mcu_inner_info;
   }
 
   // update function by system function state
-  void set_function_info(DrivingFunctionMode mode, DrivingFunctionstate state) {
-    function_info_.function_mode = mode;
-    function_info_.function_state = state;
+  void set_function_info(
+      common::DrivingFunctionInfo::DrivingFunctionMode mode,
+      common::DrivingFunctionInfo::DrivingFunctionstate state) {
+    function_info_.set_function_mode(mode);
+    function_info_.set_function_state(state);
   }
-  const DrivingFunctionInfo function_info() const { return function_info_; }
+  const common::DrivingFunctionInfo function_info() const {
+    return function_info_;
+  }
 
  private:
-  LocalView local_view_;
+  const LocalView *local_view_ = nullptr;
+  uint64_t static_map_info_timestamp_ = 0;
+  bool static_map_info_update_flag_ = false;
   ad_common::hdmap::HDMap hd_map_;
   bool vehicle_dbw_status_{false};
   std::shared_ptr<EgoStateManager> ego_state_manager_ = nullptr;
@@ -230,7 +245,7 @@ class EnvironmentalModel {
   EgoPlanningConfigBuilder *parking_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *highway_config_builder_ptr_ = nullptr;
 
-  DrivingFunctionInfo function_info_;
+  common::DrivingFunctionInfo function_info_;
 };
 
 }  // namespace planning

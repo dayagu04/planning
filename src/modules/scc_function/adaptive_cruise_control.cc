@@ -13,7 +13,7 @@ AdaptiveCruiseControl::AdaptiveCruiseControl(
 }
 
 void AdaptiveCruiseControl::adaptive_cruise_control(
-    LonDecisionInfo& lon_decision_information,
+    common::LonDecisionInfo& lon_decision_information,
     AdaptiveCruiseControlInfo& acc_info,
     PlanningResult& ego_prediction_result) {
   auto& ego_state = session_->environmental_model().get_ego_state_manager();

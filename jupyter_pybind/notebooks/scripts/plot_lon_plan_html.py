@@ -21,7 +21,7 @@ from lib.bag_loader import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/docker_share/urban_bag_0213/real_time_17.00000"
+bag_path = "/mnt/1011_1/15_15.00000"
 html_file = bag_path +".lonplan.html"
 
 # bokeh创建的html在jupyter中显示
@@ -64,6 +64,20 @@ obs_ub_params = {
     'legend_label': 'obs_ub'
 }
 
+soft_bound_lb_params = {
+    'line_width': 2,
+    'line_color': 'yellow',
+    'line_dash': 'solid',
+    'legend_label': 'soft_bound_lb'
+}
+
+soft_bound_ub_params = {
+    'line_width': 2,
+    'line_color': '#FFA500',
+    'line_dash': 'solid',
+    'legend_label': 'soft_bound_ub'
+}
+
 s_ref_params = {
     'line_width': 2.5,
     'line_color': 'red',
@@ -87,7 +101,7 @@ obs_bound_params = {
 
 obs_lead_params = {
     'line_width': 2,
-    'line_color': 'orange',
+    'line_color': 'green',
     'line_dash': 'solid',
     'legend_label': 'obs_lead'
 }
@@ -269,6 +283,54 @@ acc_max_params = {
     'legend_label': 'acc_max'
 }
 
+lead_one_dis_params = {
+    'line_width': 1,
+    'color': 'red',
+    'legend_label': 'lead_one_dis'    
+}
+
+lead_two_dis_params = {
+    'line_width': 1,
+    'color': 'yellow',
+    'legend_label': 'lead_two_dis'    
+}
+
+temp_lead_one_dis_params = {
+    'line_width': 1,
+    'color': 'blue',
+    'legend_label': 'temp_lead_one_dis'    
+}
+
+temp_lead_two_dis_params = {
+    'line_width': 1,
+    'color': 'grey',
+    'legend_label': 'temp_lead_two_dis'    
+}
+
+des_dis_rss_params = {
+    'line_width': 1,
+    'color': 'green',
+    'legend_label': 'des_dis_rss' 
+}
+
+des_dis_cab_params = {
+    'line_width': 1,
+    'color': 'purple',
+    'legend_label': 'des_dis_cab' 
+}
+
+behav_cost_params = {
+    'line_width': 1,
+    'color': 'red',
+    'legend_label': 'behav_cost' 
+}
+
+motion_cost_params = {
+    'line_width': 1,
+    'color': 'blue',
+    'legend_label': 'motion_cost' 
+}
+
 box_params = {
     'legend_label': 'obs_boxes',
     'line_color': 'red',
@@ -313,16 +375,46 @@ class ScalarGenerator(DataGeneratorBase):
                 xs.append(data["t"][i])
                 if val_type == 'target_velocity':
                     ys.append(round(v['VisionLonBehavior_v_target'], 2))
+
                 elif val_type == 'ego_velocity':
                     ys.append(round(v['VisionLonBehavior_v_target']-2, 2))
+
                 elif val_type == 'leadone_velocity':
-                    ys.append(round(v['VisionLonBehavior_lead_one_vel'], 2))
+                    ys.append(round(v['RealTime_lead_one_velocity'], 2))
+
                 elif val_type == 'leadtwo_velocity':
-                    ys.append(round(v['VisionLonBehavior_lead_two_vel'], 2))
+                    ys.append(round(v['RealTime_lead_two_velocity'], 2))
+
                 elif val_type == 'acc_min':
                     ys.append(round(v['VisionLonBehavior_a_target_low'], 2))
+
                 elif val_type == 'acc_max':
                     ys.append(round(v['VisionLonBehavior_a_target_high'], 2))
+
+                elif val_type == 'lead_one_dis':
+                    ys.append(round(v['RealTime_lead_one_distance'], 2))
+
+                elif val_type == 'lead_two_dis':
+                    ys.append(round(v['RealTime_lead_two_distance'], 2))
+
+                elif val_type == 'temp_lead_one_dis':
+                    ys.append(round(v['RealTime_temp_lead_one_distance'], 2)) 
+
+                elif val_type == 'temp_lead_two_dis':
+                    ys.append(round(v['RealTime_temp_lead_two_distance'], 2)) 
+
+                elif val_type == 'des_dis_rss':
+                    ys.append(round(v['RealTime_desired_distance_rss'], 2)) 
+
+                elif val_type == 'des_dis_cab':
+                    ys.append(round(v['RealTime_desired_distance_calibrate'], 2)) 
+
+                elif val_type == 'behav_cost':
+                    ys.append(round(v['RealTimeLonBehaviorCostTime'], 2))                 
+                     
+                elif val_type == 'motion_cost':
+                    ys.append(round(v['RealTimeLonMotionCostTime'], 2)) 
+
                 elif val_type == 'target_velocity_start_stop':
                     if hasattr(v, 'VisionLonBehavior_v_target_start_stop'):
                         ys.append(round(v['VisionLonBehavior_v_target_start_stop'], 2))
@@ -375,6 +467,32 @@ class BoundLineGenerator(DataGeneratorBase):
                     obs_high_vec.append(high_bound)
                 xys.append((one_t_vec, obs_high_vec))
 
+            elif bound_type == "st_s_soft_bound_ub":
+                soft_bound_high_vec = []
+                try:
+                    for idx in range(len(v.long_ref_path.soft_bounds)):
+                        soft_high_bound = v.long_ref_path.soft_bounds[idx].bound[0].upper
+                        for one_bound in v.long_ref_path.soft_bounds[idx].bound:
+                            if one_bound.upper < soft_high_bound:
+                                soft_high_bound = one_bound.upper
+                        soft_bound_high_vec.append(soft_high_bound)
+                    xys.append((one_t_vec, soft_bound_high_vec))  
+                except:
+                    pass              
+
+            elif bound_type == "st_s_soft_bound_lb":
+                soft_bound_low_vec = []
+                try:
+                    for idx in range(len(v.long_ref_path.soft_bounds)):
+                        soft_low_bound = v.long_ref_path.soft_bounds[idx].bound[0].lower
+                        for one_bound in v.long_ref_path.soft_bounds[idx].bound:
+                            if one_bound.lower > soft_low_bound:
+                                soft_low_bound = one_bound.lower
+                        soft_bound_low_vec.append(soft_low_bound)
+                    xys.append((one_t_vec, soft_bound_low_vec)) 
+                except:
+                    pass
+
             elif bound_type == "st_s_ref" or bound_type == "t_pos_ref":
                 one_s_ref = list(v.longitudinal_motion_planning_input.ref_pos_vec)
                 xys.append((one_t_vec, one_s_ref))
@@ -396,6 +514,7 @@ class BoundLineGenerator(DataGeneratorBase):
                             lead_bound = one_bound.s_lead
                     lead_bound_vec.append(lead_bound)
                 xys.append((one_t_vec[:end_idx], lead_bound_vec))
+                # print(len(lead_bound_vec))
 
             elif bound_type.startswith("st_obs_id_"):
                 one_obs_vec = []
@@ -406,6 +525,7 @@ class BoundLineGenerator(DataGeneratorBase):
                             one_obs_vec.append(item.upper)
                             one_obs_t_vec.append(one_t_vec[idx])
                 xys.append((one_obs_t_vec, one_obs_vec))
+                # print(len(one_obs_vec))
 
             elif bound_type == "sv_v_ref":
                 one_s_refs = []
@@ -493,7 +613,7 @@ class BoundLineGenerator(DataGeneratorBase):
                 one_jerk_plan = list(v.longitudinal_motion_planning_output.jerk_vec)
                 xys.append((one_t_vec, one_jerk_plan))
             else:
-                pass
+                pass              
         if len(xys) == 0:
                 xys = [([], [])]
 
@@ -520,7 +640,16 @@ class TextGenerator4Lon(DataGeneratorBase):
                           'VisionLonBehavior_temp_lead_one_id', 'VisionLonBehavior_temp_lead_one_dis', 'VisionLonBehavior_temp_lead_one_vel', "VisionLonBehavior_v_target_temp_lead_one", \
                           'VisionLonBehavior_temp_lead_two_id', 'VisionLonBehavior_temp_lead_two_dis', 'VisionLonBehavior_temp_lead_two_vel', "VisionLonBehavior_v_target_temp_lead_two", \
                           'VisionLonBehavior_potental_cutin_track_id', 'VisionLonBehavior_potental_cutin_v_target', "VisionLonBehavior_cutin_v_target", \
-                          'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop']
+                          'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', \
+                          'RealTime_v_ego', 'RealTime_gap_v_limit_lc', \
+                          'RealTime_lead_one_id', 'RealTime_lead_one_distance', 'RealTime_lead_one_velocity', 'RealTime_lead_one_desire_vel', \
+                          'RealTime_lead_two_id', 'RealTime_lead_two_distance', 'RealTime_lead_two_velocity', 'RealTime_lead_two_desire_vel', \
+                          'RealTime_temp_lead_one_id', 'RealTime_temp_lead_one_distance', 'RealTime_temp_lead_one_velocity', 'RealTime_temp_lead_one_desire_vel', \
+                          'RealTime_temp_lead_two_id', 'RealTime_temp_lead_two_distance', 'RealTime_temp_lead_two_velocity', 'RealTime_temp_lead_two_desire_vel', \
+                          'RealTime_potential_cutin_track_id', 'RealTime_potential_cutin_v_target', \
+                          "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_lead_id", \
+                          "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime", \
+                          "RealTime_stop_start_state", "RealTime_v_target_start_stop", "RealTime_STANDSTILL"]
 
             for i, v in enumerate(data["json"]):
                 ts.append(data["t"][i])
@@ -548,7 +677,7 @@ def draw_lon_st(plan_debug_msg, layer_manager):
                         x_range = [-0.1, 7.0],
                         tools=[hover, 'pan,wheel_zoom,box_zoom,reset'],
                         width=600,
-                        height=500,
+                        height=400,
                         match_aspect = True,
                         aspect_scale=1)
 
@@ -559,6 +688,8 @@ def draw_lon_st(plan_debug_msg, layer_manager):
     st_s_ref = BoundLineGenerator(plan_debug_msg, "st_s_ref")
     st_s_plan = BoundLineGenerator(plan_debug_msg, "st_s_plan")
     st_obs_lead = BoundLineGenerator(plan_debug_msg, "st_obs_lead")
+    st_s_soft_bound_ub = BoundLineGenerator(plan_debug_msg, "st_s_soft_bound_ub")
+    st_s_soft_bound_lb = BoundLineGenerator(plan_debug_msg, "st_s_soft_bound_lb")
 
     #obstacles st plotting
     obs_st_ids = []
@@ -583,6 +714,8 @@ def draw_lon_st(plan_debug_msg, layer_manager):
     s_ref_layer = CurveLayer(fig_st, s_ref_params)
     s_plan_layer = CurveLayer(fig_st, s_plan_params)
     obs_lead_layer = CurveLayer(fig_st, obs_lead_params)
+    s_soft_bound_ub_layer = CurveLayer(fig_st, soft_bound_ub_params)
+    s_soft_bound_lb_layer = CurveLayer(fig_st, soft_bound_lb_params)
 
     #add st layers
     layer_manager.AddLayer(
@@ -601,6 +734,10 @@ def draw_lon_st(plan_debug_msg, layer_manager):
         s_plan_layer, 's_plan_source', st_s_plan, 's_plan', 2)
     layer_manager.AddLayer(
         obs_lead_layer, 'obs_lead_source', st_obs_lead, 'obs_lead', 2)
+    layer_manager.AddLayer(
+        s_soft_bound_ub_layer, 'soft_bound_ub_source', st_s_soft_bound_ub, 'soft_bound_ub', 2)
+    layer_manager.AddLayer(
+        s_soft_bound_lb_layer, 'soft_bound_lb_source', st_s_soft_bound_lb, 'soft_bound_lb', 2)
 
     fig_st.toolbar.active_scroll = fig_st.select_one(WheelZoomTool)
     fig_st.legend.click_policy = "hide"
@@ -614,7 +751,7 @@ def draw_lon_sv(plan_debug_msg, layer_manager):
     fig_sv = bkp.figure(x_axis_label='s',
                         y_axis_label='v',
                         width=600,
-                        height=500,
+                        height=400,
                         tools=[hover, 'pan,wheel_zoom,box_zoom,reset'],
                         match_aspect = True,
                         aspect_scale=1)
@@ -660,7 +797,7 @@ def draw_lon_tp(plan_debug_msg, layer_manager):
                         y_axis_label='pos',
                         x_range = [-0.1, 6.5],
                         tools=[hover, 'pan,wheel_zoom,box_zoom,reset'],
-                        width=600, height=250)
+                        width=600, height=200)
     #t-pos graph data generator
     t_pos_max = BoundLineGenerator(plan_debug_msg, "t_pos_max")
     t_pos_min = BoundLineGenerator(plan_debug_msg, "t_pos_min")
@@ -722,7 +859,7 @@ def draw_lon_tv(plan_debug_msg, layer_manager):
                         y_axis_label='vel',
                         x_range = [-0.1, 6.5],
                         tools=[hover, 'pan,wheel_zoom,box_zoom,reset'],
-                        width=600, height=250)
+                        width=600, height=200)
 
     #t-vel graph data generator
     t_vel_max = BoundLineGenerator(plan_debug_msg, "t_vel_max")
@@ -766,7 +903,7 @@ def draw_lon_ta(plan_debug_msg, layer_manager):
                         y_axis_label='acc',
                         x_range = [-0.1, 6.5],
                         tools=[hover, 'pan,wheel_zoom,box_zoom,reset'],
-                        width=600, height=250)
+                        width=600, height=200)
 
     #t-acc graph data generator
     t_acc_max = BoundLineGenerator(plan_debug_msg, "t_acc_max")
@@ -805,7 +942,7 @@ def draw_lon_tj(plan_debug_msg, layer_manager):
                         y_axis_label='jerk',
                         x_range = [-0.1, 6.5],
                         tools=[hover, 'pan,wheel_zoom,box_zoom,reset'],
-                        width=600, height=250)
+                        width=600, height=200)
 
     #t-jerk graph data generator
     t_jerk_max = BoundLineGenerator(plan_debug_msg, "t_jerk_max")
@@ -840,7 +977,7 @@ def draw_rt_vel(plan_debug_msg, loc_msg, layer_manager):
     fig_rtv = bkp.figure(title='车速',
                          x_axis_label='time/s',
                          y_axis_label='velocity/(m/s)',
-                         width=600,height=400)
+                         width=600,height=225)
 
     rt_target_vel = ScalarGenerator(plan_debug_msg, 'target_velocity', accu=True, name="rt_target_vel")
     rt_ego_vel = ScalarGenerator(loc_msg, 'ego_velocity', accu=True, name="rt_ego_vel")
@@ -870,7 +1007,7 @@ def draw_rt_acc(plan_debug_msg, vs_msg, layer_manager):
     fig_rta = bkp.figure(title='加速度',
                          x_axis_label='time/s',
                          y_axis_label='acc/(m/s2)',
-                         width=600,height=400)
+                         width=600,height=225)
 
     rt_ego_acc = ScalarGenerator(vs_msg, 'ego_acc', accu=True, name="rt_ego_acc")
     rt_acc_min = ScalarGenerator(plan_debug_msg, 'acc_min', accu=True, name="rt_acc_min")
@@ -888,6 +1025,58 @@ def draw_rt_acc(plan_debug_msg, vs_msg, layer_manager):
     fig_rta.legend.click_policy = "hide"
 
     return fig_rta
+
+def draw_rt_distance(plan_debug_msg, vs_msg, layer_manager):
+    fig_rt_dis = bkp.figure(title='距离',
+                         x_axis_label='time/s',
+                         y_axis_label='distance/m',
+                         width=600,height=225)    
+
+    rt_lead_one_dis = ScalarGenerator(plan_debug_msg, 'lead_one_dis', accu=True, name="rt_lead_one_dis")
+    rt_lead_two_dis = ScalarGenerator(plan_debug_msg, 'lead_two_dis', accu=True, name="rt_lead_two_dis")
+    rt_temp_lead_one_dis = ScalarGenerator(plan_debug_msg, 'temp_lead_one_dis', accu=True, name="rt_temp_lead_one_dis")
+    rt_temp_lead_two_dis = ScalarGenerator(plan_debug_msg, 'temp_lead_two_dis', accu=True, name="rt_temp_lead_two_dis")
+    rt_des_dis_rss = ScalarGenerator(plan_debug_msg, 'des_dis_rss', accu=True, name="rt_des_dis_rss")
+    rt_des_dis_cab = ScalarGenerator(plan_debug_msg, 'des_dis_cab', accu=True, name="rt_des_dis_cab")
+
+    lead_one_dis_layer = CurveLayer(fig_rt_dis, lead_one_dis_params)
+    lead_two_dis_layer = CurveLayer(fig_rt_dis, lead_two_dis_params)
+    temp_lead_one_dis_layer = CurveLayer(fig_rt_dis, temp_lead_one_dis_params)
+    temp_lead_two_dis_layer = CurveLayer(fig_rt_dis, temp_lead_two_dis_params)
+    des_dis_rss_layer = CurveLayer(fig_rt_dis, des_dis_rss_params)
+    des_dis_cab_layer = CurveLayer(fig_rt_dis, des_dis_cab_params)
+
+    layer_manager.AddLayer(lead_one_dis_layer, 'global_lead_one_dis', rt_lead_one_dis)
+    layer_manager.AddLayer(lead_two_dis_layer, 'global_lead_two_dis', rt_lead_two_dis)
+    layer_manager.AddLayer(temp_lead_one_dis_layer, 'global_temp_lead_one_dis', rt_temp_lead_one_dis)
+    layer_manager.AddLayer(temp_lead_two_dis_layer, 'global_temp_lead_two_dis', rt_temp_lead_two_dis)
+    layer_manager.AddLayer(des_dis_rss_layer, 'global_des_dis_rss', rt_des_dis_rss)
+    layer_manager.AddLayer(des_dis_cab_layer, 'global_des_dis_cab', rt_des_dis_cab)
+
+    fig_rt_dis.toolbar.active_scroll = fig_rt_dis.select_one(WheelZoomTool)
+    fig_rt_dis.legend.click_policy = "hide"
+
+    return fig_rt_dis
+
+def draw_rt_cost(plan_debug_msg, vs_msg, layer_manager):
+    fig_rt_cost = bkp.figure(title='耗时',
+                         x_axis_label='time/s',
+                         y_axis_label='time_cost/ms',
+                         width=600,height=225)  
+
+    rt_behav_cost = ScalarGenerator(plan_debug_msg, 'behav_cost', accu=True, name="rt_behav_cost")                       
+    rt_motion_cost = ScalarGenerator(plan_debug_msg, 'motion_cost', accu=True, name="rt_motion_cost")
+
+    rt_behav_cost_layer = CurveLayer(fig_rt_cost, behav_cost_params)
+    rt_motion_cost_layer = CurveLayer(fig_rt_cost, motion_cost_params)
+
+    layer_manager.AddLayer(rt_behav_cost_layer, 'global_behav_cost', rt_behav_cost)
+    layer_manager.AddLayer(rt_motion_cost_layer, 'global_motion_cost', rt_motion_cost)
+
+    fig_rt_cost.toolbar.active_scroll = fig_rt_cost.select_one(WheelZoomTool)
+    fig_rt_cost.legend.click_policy = "hide"
+
+    return fig_rt_cost
 
 def draw_rt_table(plan_debug_msg, layer_manager):
 
@@ -929,6 +1118,8 @@ def plotOnce(bag_path, html_file):
     fig_tj = draw_lon_tj(plan_debug_msg, layer_manager)
     fig_rtv = draw_rt_vel(plan_debug_msg, loc_msg, layer_manager)
     fig_rta = draw_rt_acc(plan_debug_msg, vs_msg, layer_manager)
+    fig_rt_dis = draw_rt_distance(plan_debug_msg, vs_msg, layer_manager)
+    fig_rt_cost = draw_rt_cost(plan_debug_msg, vs_msg, layer_manager)
 
     tab_rt = draw_rt_table(plan_debug_msg, layer_manager)
 
@@ -1023,7 +1214,8 @@ def plotOnce(bag_path, html_file):
         output_notebook()
 
     pan_lt = Panel(child=row(column(fig_st, fig_sv), column(fig_tp, fig_tv, fig_ta, fig_tj)), title="Longtime")
-    pan_rt = Panel(child=row(tab_rt, column(fig_rtv, fig_rta)), title="Realtime")
+    pan_rt = Panel(child=row(tab_rt, column(fig_rtv, fig_rta, fig_rt_dis, fig_rt_cost)), title="Realtime")
+    # pan_rt = Panel(child=row(tab_rt, column(fig_rtv, fig_rta, fig_rt_dis)), title="Realtime")
     pans = Tabs(tabs=[ pan_lt, pan_rt ])
     bkp.show(layout(car_slider, row(fig_lv, pans)))
 

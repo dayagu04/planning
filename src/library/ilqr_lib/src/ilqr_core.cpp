@@ -310,6 +310,7 @@ bool iLqr::ForwardPass(double &new_cost, double &expected, const size_t &iter) {
         uk_vec_ = uk_new_vec_;
         return true;
       } else if (du_norm < solver_config_ptr_->du_tol) {
+        solver_info_.solver_condition = CONST_CONTROL_TERMINATE;
         return false;
       }
     } else {
@@ -318,6 +319,7 @@ bool iLqr::ForwardPass(double &new_cost, double &expected, const size_t &iter) {
       return false;
     }
   }
+  solver_info_.solver_condition = MAX_ITER_TERMINATE;
   return false;
 }
 
@@ -528,21 +530,21 @@ bool iLqr::iLqrIteration() {
       } else if (solver_info_.solver_condition ==
                  iLqrSolveCondition::NON_POSITIVE_EXPECT) {
         solver_success = false;
-      } else {
-        if (solver_info_.iteration_info_vec[iter].du_norm <
-            solver_config_ptr_->du_tol) {
-          // should be considered next
-          // when linesearch cannot result in reduced cost, terminate
-          solver_success = true;
-          if (iter > 0) {
-            solver_info_.solver_condition =
-                iLqrSolveCondition::CONST_CONTROL_TERMINATE;
-          } else {
-            solver_info_.solver_condition = iLqrSolveCondition::INIT_TERMINATE;
-          }
-          break;
-        }
       }
+    }
+
+    if (solver_info_.iteration_info_vec[iter].du_norm <
+        solver_config_ptr_->du_tol) {
+      // should be considered next
+      // when linesearch cannot result in reduced cost, terminate
+      solver_success = true;
+      if (iter > 0) {
+        solver_info_.solver_condition =
+            iLqrSolveCondition::CONST_CONTROL_TERMINATE;
+      } else {
+        solver_info_.solver_condition = iLqrSolveCondition::INIT_TERMINATE;
+      }
+      break;
     }
 
     if (iter == solver_config_ptr_->max_iter - 1) {

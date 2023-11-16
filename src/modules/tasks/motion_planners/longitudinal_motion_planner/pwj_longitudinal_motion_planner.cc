@@ -113,10 +113,10 @@ bool LongitudinalOptimizerV3::optimize(
   double stop_weight_dx_config = config_start_stop_.dx_ref_weight;
   LOG_DEBUG("HHLDEBUGB in optimize ego_vel: %.2f, ego_acc: %.2f \n",
             ego_vel * 3.6, ego_acc);
-  StartStopInfo &start_stop_result = frame_->mutable_session()
-                                         ->mutable_planning_context()
-                                         ->mutable_start_stop_result();
-  bool enable_stop_flag = start_stop_result.enable_stop;
+  common::StartStopInfo &start_stop_result = frame_->mutable_session()
+                                                 ->mutable_planning_context()
+                                                 ->mutable_start_stop_result();
+  bool enable_stop_flag = start_stop_result.enable_stop();
   std::array<double, 3> s_init_state = {planning_init_point.frenet_state.s,
                                         ego_vel, ego_acc};  // todo recheck
   size_t num_t = lon_ref_path.t_list.size();
@@ -153,7 +153,7 @@ bool LongitudinalOptimizerV3::optimize(
   lon_problem.set_weight_slack(1.0);
 
   std::vector<WeightedBounds> bounds;
-  bounds.resize(lon_ref_path.bounds.size());
+  bounds.resize(lon_ref_path.hard_bounds.size());
   auto lon_bound_v = lon_ref_path.lon_bound_v;
   auto lon_bound_a = lon_ref_path.lon_bound_a;
   auto lon_bound_jerk = lon_ref_path.lon_bound_jerk;
@@ -165,17 +165,17 @@ bool LongitudinalOptimizerV3::optimize(
     lon_lead_bounds.clear();
     lon_bound_jerk.clear();
   } else if (option.loose_obstacle_bound) {
-    for (size_t i = 0; i < lon_ref_path.bounds.size(); i++) {
+    for (size_t i = 0; i < lon_ref_path.hard_bounds.size(); i++) {
       auto &ref_pos_bounds = bounds[i];
-      for (auto iter = lon_ref_path.bounds[i].begin();
-           iter != lon_ref_path.bounds[i].end(); iter++) {
+      for (auto iter = lon_ref_path.hard_bounds[i].begin();
+           iter != lon_ref_path.hard_bounds[i].end(); iter++) {
         if (iter->bound_info.type != "obstacle") {
           ref_pos_bounds.emplace_back(*iter);
         }
       }
     }
   } else {
-    bounds = lon_ref_path.bounds;
+    bounds = lon_ref_path.hard_bounds;
   }
 
   lon_problem.set_x_ref(lon_ref_path.s_refs);

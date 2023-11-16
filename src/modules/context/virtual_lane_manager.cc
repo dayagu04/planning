@@ -822,6 +822,7 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   *current_index = current_lane_group_index;
   return true;
 }
+
 bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
     const planning::framework::Session& session) {
   const auto& local_view = session.environmental_model().get_local_view();

@@ -57,7 +57,7 @@ bool ScenarioStateMachine::update(planning::framework::Frame *frame) {
   update_scenario();  // cruise or low speed or ...
 
   if (active == false ||
-      function_info.function_mode == DrivingFunctionMode::ACC) {
+      function_info.function_mode() == common::DrivingFunctionInfo::ACC) {
     lc_req_mgr_->FinishRequest();
     map_turn_signal_ = NO_CHANGE;
     reset_state_machine();

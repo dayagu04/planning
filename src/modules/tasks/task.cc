@@ -2,12 +2,15 @@
 
 #include "behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
+#include "behavior_planners/real_time_longitudinal_behavior_planner/real_time_lon_behavior_planner.h"
 #include "behavior_planners/vision_only_adas_function_task/vision_only_adas_function_task.h"
 #include "behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 #include "behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner.h"
 #include "motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "motion_planners/longitudinal_motion_planner/longitudinal_motion_planner.h"
 #include "motion_planners/longitudinal_motion_planner/pwj_longitudinal_motion_planner.h"
+#include "motion_planners/realtime_lateral_motion_planner/realtime_lateral_motion_planner.h"
+#include "motion_planners/realtime_longitudinal_motion_planner/realtime_longitudinal_motion_planner.h"
 #include "motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
 #include "trajectory_generator/result_trajectory_generator.h"
 #include "vehicle_config_context.h"
@@ -19,6 +22,8 @@ Task::Task(const EgoPlanningConfigBuilder *config_builder,
     : pipeline_context_(pipeline_context),
       vehicle_param_(
           VehicleConfigurationContext::Instance()->get_vehicle_param()) {}
+
+Task::Task(const EgoPlanningConfigBuilder *config_builder) {}
 
 bool Task::Execute(framework::Frame *frame) {
   frame_ = frame;
@@ -92,6 +97,11 @@ std::shared_ptr<Task> Task::Make(
           config_builder, pipeline_context);
     }
 
+    case TaskType::REAL_TIME_LONGITUDINAL_BEHAVIOR_PLANNER: {
+      return std::make_shared<RealTimeLonBehaviorPlanner>(config_builder,
+                                                          pipeline_context);
+    }
+
     case TaskType::RESULT_TRAJECTORY_GENERATOR: {
       return std::make_shared<ResultTrajectoryGenerator>(config_builder,
                                                          pipeline_context);
@@ -100,6 +110,16 @@ std::shared_ptr<Task> Task::Make(
     case TaskType::ADAS_FUNCTION_TASK: {
       return std::make_shared<VisionOnlyAdasFunctionTask>(config_builder,
                                                           pipeline_context);
+    }
+
+    case TaskType::REALTIME_LATERAL_MOTION_PLANNER: {
+      return std::make_shared<RealtimeLateralMotionPlanner>(config_builder,
+                                                            pipeline_context);
+    }
+
+    case TaskType::REALTIME_LONGITUDINAL_MOTION_PLANNER: {
+      return std::make_shared<RealtimeLongitudinalMotionPlanner>(
+          config_builder, pipeline_context);
     }
     default: { /*LOG_ERROR*/
       return nullptr;

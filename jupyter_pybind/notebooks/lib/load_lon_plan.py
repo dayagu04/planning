@@ -42,6 +42,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                             'VisionLonBehavior_potental_cutin_track_id', 'VisionLonBehavior_potental_cutin_v_target', "VisionLonBehavior_cutin_v_target", "VisionLonBehavior_road_radius", \
                             'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', 'VisionLonBehavior_STANDSTILL', 'VisionLonBehavior_final_v_target', \
                             "dis_to_ramp", "VisionLonBehavior_v_target_ramp",\
+                            "VisionLonBehavior_nearest_car_track_id_one", "VisionLonBehavior_nearest_car_track_id_two", "VisionLonBehavior_nearest_car_track_id_three", \
+                            "VisionLonBehavior_cutin_v_limit", "VisionLonBehavior_cutin_status", \
                             'RealTime_v_ref', 'RealTime_v_ego', 'RealTime_gap_v_limit_lc', \
                             'RealTime_lead_one_id', 'RealTime_lead_one_distance', 'RealTime_lead_one_velocity', 'RealTime_lead_one_desire_vel', \
                             'RealTime_lead_two_id', 'RealTime_lead_two_distance', 'RealTime_lead_two_velocity', 'RealTime_lead_two_desire_vel', \
@@ -49,8 +51,9 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                             'RealTime_temp_lead_two_id', 'RealTime_temp_lead_two_distance', 'RealTime_temp_lead_two_velocity', 'RealTime_temp_lead_two_desire_vel', \
                             'RealTime_potential_cutin_track_id', 'RealTime_potential_cutin_v_target',
                             "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_lead_id", \
-                            "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                            "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime", "RealTimeLateralMotionCostTime", "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime"]
+                            "RealTimeLateralMotionCostTime", "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime",
+                            "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime",
+                            "RealTime_stop_start_state", "RealTime_v_target_start_stop", "RealTime_STANDSTILL"]
 
   plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
   plan_debug_json_info = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
@@ -254,7 +257,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   acc_vec = lon_motion_plan_output.acc_vec
   jerk_vec = lon_motion_plan_output.jerk_vec
 
-  # print("lon_motion_plan_output:=", lon_motion_plan_output)
+#   print("lon_motion_plan_output:=", lon_motion_plan_output)
 
   lon_plan_data['data_lon_motion_plan'].data.update({
     'time_vec': time_vec,
@@ -561,6 +564,24 @@ def load_lon_global_figure(bag_loader):
   cost_time_fig.line(t_plan_vec, EnvironmentalModelManagerCost_vec, line_width=1, legend_label='EnvironmentalCostTime_vec', color="yellow")
   cost_time_fig.line(t_plan_vec, GeneralPlannerModuleCostTime_vec, line_width=1, legend_label='GeneralPlannerModuleCostTime', color="purple")
 
+  cutin_fig = bkp.figure(title='速度',x_axis_label='time/s', y_axis_label='velocity/(m/s)',width=600,height=300)  
+
+  limit_cutin_vel_vec = []
+  potential_cutin_speed_vec = []
+  cutin_status_vec = []
+   
+  for ind in range(len(bag_loader.plan_debug_msg['json'])):
+    limit_cutin_vel_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_cutin_v_limit'], 2))
+    potential_cutin_speed_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_potental_cutin_v_target'], 2))
+    cutin_status_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_cutin_status'], 2))
+
+  cutin_fig.line(t_plan_vec, limit_cutin_vel_vec, line_width=1,
+                                  legend_label='Pre-deceleration cutin',color="blue")
+  cutin_fig.line(t_plan_vec, potential_cutin_speed_vec, line_width=1,
+                                legend_label='Speed regulation cutin', color="red")
+  cutin_fig.line(t_plan_vec, cutin_status_vec, line_width=1,
+                                legend_label='cutin_status', color="black")                              
+
   #get longtime obstacle id list in st-graph
   obs_st_ids = []
   for ind in range(len(bag_loader.plan_debug_msg['data'])):
@@ -568,9 +589,9 @@ def load_lon_global_figure(bag_loader):
       for one_bound in item.bound:
           if(one_bound.bound_info.type == 'obstacle' and one_bound.bound_info.id > 0 and one_bound.bound_info.id not in obs_st_ids):
             obs_st_ids.append(one_bound.bound_info.id)
-  return velocity_fig, acc_fig, lead_fig, cost_time_fig, obs_st_ids
+  return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids
 
-def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, obs_st_ids):
+def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids):
   data_st = ColumnDataSource(data = {'t':[], 's':[], 's_soft_ub':[], 's_soft_lb':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[], 'sv_bound_s':[], 'sv_bound_v':[]})
@@ -739,7 +760,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, o
 
   tab1 = DataTable(source=data_text, columns=columns, width=500, height=800)
 
-  pan2 = Panel(child=row(tab1, column(velocity_fig, acc_fig, lead_fig), column(cost_time_fig)), title="Realtime")
+  pan2 = Panel(child=row(tab1, column(velocity_fig, acc_fig, lead_fig), column(cost_time_fig, cutin_fig)), title="Realtime")
 
   pans = Tabs(tabs=[ pan1, pan2 ])
 

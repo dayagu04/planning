@@ -78,7 +78,7 @@ void LongitudinalMotionPlanner::AssembleInput() {
 
   const auto &s_refs = lon_ref_path.s_refs;
   const auto &v_refs = lon_ref_path.ds_refs;
-  const auto &s_bounds = lon_ref_path.bounds;
+  const auto &s_bounds = lon_ref_path.hard_bounds;
   const auto &s_lead_bounds = lon_ref_path.lon_lead_bounds;
   const auto &v_bounds = lon_ref_path.lon_bound_v;
   const auto &a_bounds = lon_ref_path.lon_bound_a;

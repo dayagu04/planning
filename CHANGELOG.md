@@ -1,3 +1,7 @@
+# planning.2.2.1.4
+####  修改说明
+1. realtime planner输出轨迹化适配noa, 默认不开启
+
 # planning.2.2.1.3
 ####  修改说明
 1. NOA合入develop分支
@@ -19,6 +23,11 @@
 ####  修改说明
 1. NOA修改
 2. 增加uncompress topic结构体输出，降低片间通负载
+
+# planning.2.2.0.4
+####  修改说明
+1. 增加realtime planner，横纵向均接入轨迹化处理
+2. 优化纵向跟车与跟停效果
 
 # planning.2.2.0.3
 ####  修改说明

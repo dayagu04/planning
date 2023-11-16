@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "frame.h"
+#include "general_planning_context.h"
 #include "ifly_time.h"
 #include "lane_change_request_manager.h"
 #include "lane_change_requests/lane_change_lane_manager.h"
@@ -96,8 +97,14 @@ struct StateBase : M::Base {
       return TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder,
                                 frame);
     } else {
-      return TaskPipeline::Make(TaskPipelineType::VISION_ONLY, config_builder,
-                                frame);
+      if (g_context.GetParam().planner_type ==
+          planning::context::PlannerType::REALTIME_PLANNER_WITH_MOTION) {
+        return TaskPipeline::Make(TaskPipelineType::REALTIME, config_builder,
+                                  frame);
+      } else {
+        return TaskPipeline::Make(TaskPipelineType::VISION_ONLY, config_builder,
+                                  frame);
+      }
     }
   }
 

@@ -161,16 +161,19 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   JSON_DEBUG_VALUE("VisionLonBehavior_v_target", v_target_);
 
   // get start & stop state
-  StartStopInfo::StateType stop_start_state =
+  common::StartStopInfo::StateType stop_start_state =
       UpdateStartStopState(lateral_obstacle->leadone(), v_ego);
-  v_target_ = (stop_start_state == StartStopInfo::STOP) ? 0.0 : v_target_;
+  v_target_ =
+      (stop_start_state == common::StartStopInfo::STOP) ? 0.0 : v_target_;
   JSON_DEBUG_VALUE("VisionLonBehavior_stop_start_state", (int)stop_start_state);
   JSON_DEBUG_VALUE("VisionLonBehavior_v_target_start_stop", v_target_);
 
   // ACC : STANDSTILL to ACTIVE need confirmed by driver
   JSON_DEBUG_VALUE("VisionLonBehavior_STANDSTILL", 0.0);
-  if (v_ego < 1.0 && function_info.function_mode == DrivingFunctionMode::ACC &&
-      function_info.function_state == DrivingFunctionstate::STANDSTILL) {
+  if (v_ego < 1.0 &&
+      function_info.function_mode() == common::DrivingFunctionInfo::ACC &&
+      function_info.function_state() ==
+          common::DrivingFunctionInfo::STANDSTILL) {
     v_target_ = 0.0;
     JSON_DEBUG_VALUE("VisionLonBehavior_STANDSTILL", 1.0);
   }
@@ -1794,7 +1797,7 @@ double VisionLongitudinalBehaviorPlanner::clip(const double x, const double lo,
   return std::max(lo, std::min(hi, x));
 }
 
-StartStopInfo::StateType
+common::StartStopInfo::StateType
 VisionLongitudinalBehaviorPlanner::UpdateStartStopState(
     const TrackedObject *lead_one, const double v_ego) {
   // The AION's resolution of vehicle speed is 0.3m/s
@@ -1803,14 +1806,15 @@ VisionLongitudinalBehaviorPlanner::UpdateStartStopState(
   double distance_stop = config_.distance_stop;
   double distance_start = config_.distance_start;
 
-  StartStopInfo &start_stop_state_info = frame_->mutable_session()
-                                             ->mutable_planning_context()
-                                             ->mutable_start_stop_result();
+  common::StartStopInfo &start_stop_state_info =
+      frame_->mutable_session()
+          ->mutable_planning_context()
+          ->mutable_start_stop_result();
   bool dbw_status =
       frame_->session()->environmental_model().GetVehicleDbwStatus();
   if (lead_one == nullptr || dbw_status == false) {
     // reset state as default
-    start_stop_state_info.state = StartStopInfo::CRUISE;
+    start_stop_state_info.set_state(common::StartStopInfo::CRUISE);
   } else {
     // 1. Calculate the condition
     std::string lc_request = "none";
@@ -1823,7 +1827,7 @@ VisionLongitudinalBehaviorPlanner::UpdateStartStopState(
     bool cruise_condition = v_ego > v_start;
     bool lead_one_start =
         (lead_one->v_lead > obstacle_v_start &&
-         (lead_one->d_rel - start_stop_state_info.stop_distance_of_leadone) >
+         (lead_one->d_rel - start_stop_state_info.stop_distance_of_leadone()) >
              distance_start);
     // lead_one change: obj stopped adc by cut_in, then leaved
     bool lead_one_change =
@@ -1831,27 +1835,27 @@ VisionLongitudinalBehaviorPlanner::UpdateStartStopState(
     bool start_condition = lead_one_start || lead_one_change;
 
     // 2. Update the state
-    if (start_stop_state_info.state == StartStopInfo::CRUISE &&
+    if (start_stop_state_info.state() == common::StartStopInfo::CRUISE &&
         stop_condition) {
       // CRUISE --> STOP
-      start_stop_state_info.state = StartStopInfo::STOP;
+      start_stop_state_info.set_state(common::StartStopInfo::STOP);
       // store the distance of leadone
-      start_stop_state_info.stop_distance_of_leadone = lead_one->d_rel;
+      start_stop_state_info.set_stop_distance_of_leadone(lead_one->d_rel);
       LOG_DEBUG("The distance error of STOP is [%f]m \n",
                 lead_one->d_rel - desire_distance);
-    } else if (start_stop_state_info.state == StartStopInfo::STOP &&
+    } else if (start_stop_state_info.state() == common::StartStopInfo::STOP &&
                start_condition) {
       // STOP --> START
-      start_stop_state_info.state = StartStopInfo::START;
-    } else if (start_stop_state_info.state == StartStopInfo::START &&
+      start_stop_state_info.set_state(common::StartStopInfo::START);
+    } else if (start_stop_state_info.state() == common::StartStopInfo::START &&
                cruise_condition) {
       // START --> CRUISE
-      start_stop_state_info.state = StartStopInfo::CRUISE;
+      start_stop_state_info.set_state(common::StartStopInfo::CRUISE);
     }
   }
   LOG_DEBUG("The start_stop_state_info is [%d] \n",
-            start_stop_state_info.state);
-  return start_stop_state_info.state;
+            start_stop_state_info.state());
+  return start_stop_state_info.state();
 }
 
 int VisionLongitudinalBehaviorPlanner::GetCIPV(

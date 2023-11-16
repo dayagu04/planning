@@ -50,6 +50,7 @@ bool GeneralPlannerModule::reset(const ::google::protobuf::Message* config) {
 
 bool GeneralPlannerModule::compute(planning::framework::Frame* frame) {
   LOG_DEBUG("%s compute\n", name().c_str());
+  auto start_time = IflyTime::Now_ms();
   if (!frame->session()->environmental_model().GetVehicleDbwStatus()) {
     LOG_WARNING("%s DBW_Disable, but continue", name().c_str());
   }
@@ -57,6 +58,9 @@ bool GeneralPlannerModule::compute(planning::framework::Frame* frame) {
   bool success = false;
 
   success = general_planner_.Run(frame);
+
+  auto end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("GeneralPlannerModuleCostTime", end_time - start_time);
 
   if (!success) {
     LOG_ERROR("%s planning run failed\n", name().c_str());

@@ -17,8 +17,7 @@ namespace planning {
 
 void PlanningAdapter::Init() {
   std::cout << "The planning component init!!!" << std::endl;
-  const std::string CONFIG_PATH = "/asw/planning/res/conf";
-  std::string engine_config_path = CONFIG_PATH + "/planning_engine_config.json";
+  std::string engine_config_path = PLANNING_ENGINE_CONFIG_PATH;
   common::ConfigurationContext::Instance()->load_engine_config_from_json(
       engine_config_path);
 
@@ -274,7 +273,7 @@ void PlanningAdapter::Proc() {
   std::cout << "==============The planning enters RunOnce============="
             << std::endl;
   bool run_success = planning_base_->RunOnce(
-      local_view_, &planning_output, *planning_debug_data, &planning_hmi_info);
+      &local_view_, &planning_output, *planning_debug_data, &planning_hmi_info);
 
   // 3.get output & publish
   uint64_t output_time_us = (uint64_t)IflyTime::Now_us();
@@ -332,7 +331,7 @@ void PlanningAdapter::Proc() {
     planning_hmi_info.mutable_header()->set_version(__version_str__);
     planning_hmi_info_writer_(planning_hmi_info);
   }
-  double planning_cost_time = IflyTime::Now_ms() - start_time;
+  double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
   LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);
 }
 

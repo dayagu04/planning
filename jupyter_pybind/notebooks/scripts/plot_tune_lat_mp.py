@@ -44,10 +44,10 @@ class LocalViewSlider:
     self.q_jerk_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_jerk_bound",min=0.0, max=1000.0, value=lat_motion_plan_input0.q_jerk_bound, step=0.1)
     self.acc_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "acc_bound",min=0.0, max=10.0, value=lat_motion_plan_input0.acc_bound, step=0.1)
     self.jerk_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "jerk_bound",min=0.0, max=10.0, value=lat_motion_plan_input0.jerk_bound, step=0.1)
-    self.q_safe_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_safe_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_soft_corridor, step=0.1) # fbi warning
-    self.q_hard_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_hard_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_hard_corridor, step=0.1) # fbi warning
-    self.upper_safe_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "upper_safe_bound",min=-10., max=10.0, value=0.0, step=0.1) # fbi warning
-    self.lower_safe_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "lower_safe_bound",min=-10., max=10.0, value=0.0, step=0.1) # fbi warning
+    self.q_safe_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_safe_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_soft_corridor, step=0.1)
+    self.q_hard_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_hard_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_hard_corridor, step=0.1)
+    self.upper_safe_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "upper_safe_bound",min=-10., max=10.0, value=0.0, step=0.1)
+    self.lower_safe_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "lower_safe_bound",min=-10., max=10.0, value=0.0, step=0.1)
 
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
                                          q_ref_xy = self.q_ref_xy_slider,

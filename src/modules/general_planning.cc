@@ -3,9 +3,11 @@
 #include <cmath>
 
 #include "apa_planner/common/apa_utils.h"
+#include "basic_types.pb.h"
 #include "config/vehicle_param.h"
 #include "ego_planning_config.h"
 #include "environmental_model.h"
+#include "general_planning_context.h"
 #include "ifly_time.h"
 #include "log.h"
 #include "math/math_utils.h"
@@ -40,37 +42,103 @@ void GeneralPlanning::Init() {
       session_.vehicle_config_context().get_vehicle_param());
 }
 
+static std::string ReadFile(const std::string &path) {
+  FILE *file = fopen(path.c_str(), "r");
+  assert(file != nullptr);
+  std::shared_ptr<FILE> fp(file, [](FILE *file) { fclose(file); });
+  fseek(fp.get(), 0, SEEK_END);
+  std::vector<char> content(ftell(fp.get()));
+  fseek(fp.get(), 0, SEEK_SET);
+  auto read_bytes = fread(content.data(), 1, content.size(), fp.get());
+  assert(read_bytes == content.size());
+  (void)read_bytes;
+  return std::string(content.begin(), content.end());
+}
+
+void GeneralPlanning::SyncParameters(planning::common::SceneType scene_type) {
+  std::string path;
+  switch (scene_type) {
+    case planning::common::SceneType::HIGHWAY:
+      path =
+          "/asw/planning/res/conf/module_configs/"
+          "general_planner_module_highway.json";
+      break;
+    case planning::common::SceneType::PARKING_APA:
+      path =
+          "/asw/planning/res/conf/module_configs/"
+          "general_planner_module_parking.json";
+      break;
+    default:
+      path =
+          "/asw/planning/res/conf/module_configs/"
+          "general_planner_module_highway.json";
+  }
+
+  std::string config_file = ReadFile(path);
+  auto config = mjson::Reader(config_file);
+
+  // all parameters can be changed here
+  JSON_READ_VALUE(g_context.MutablePram().planner_type, int, "planner_type");
+}
+
 bool GeneralPlanning::RunOnce(
-    const LocalView &local_view,
+    const LocalView *local_view,
     PlanningOutput::PlanningOutput *const planning_output,
     common::PlanningDebugInfo &debug_info,
     PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
   LOG_ERROR("GeneralPlanning::RunOnce \n");
   frame_num_++;
-  local_view_ = local_view;
   session_.mutable_planning_output_context()->feed_planning_hmi_info(
       planning_hmi_info);
 
   double start_timestamp = IflyTime::Now_ms();
+
   EnvironmentalModel *environmental_model =
       session_.mutable_environmental_model();
 
-  environmental_model->feed_local_view(local_view);  // todo
+  environmental_model->feed_local_view(local_view);  //
 
-  const auto &state_machine = local_view.function_state_machine_info;
+  auto scene_type = planning::common::SceneType::HIGHWAY;
+
+  const auto &state_machine = local_view->function_state_machine_info;
   if (state_machine.has_current_state()) {
     if (IsUndefinedScene(state_machine.current_state())) {
-      session_.set_scene_type(planning::common::SceneType::HIGHWAY);
+      scene_type = planning::common::SceneType::HIGHWAY;
       ClearParkingInfo(planning_output);
     } else if (IsValidParkingState(state_machine.current_state())) {
-      session_.set_scene_type(planning::common::SceneType::PARKING_APA);
+      scene_type = planning::common::SceneType::PARKING_APA;
     } else {
-      session_.set_scene_type(planning::common::SceneType::HIGHWAY);
+      scene_type = planning::common::SceneType::HIGHWAY;
       ClearParkingInfo(planning_output);
     }
   }
 
-  if (session_.is_parking_scene()) {
+  auto fsm_state = local_view->function_state_machine_info.current_state();
+
+  bool acc_active =
+      (fsm_state >= FuncStateMachine::FunctionalState::ACC_ACTIVATE) &&
+      (fsm_state <= FuncStateMachine::FunctionalState::ACC_SECURE);
+
+  bool scc_active =
+      (fsm_state >= FuncStateMachine::FunctionalState::SCC_ACTIVATE) &&
+      (fsm_state <= FuncStateMachine::FunctionalState::SCC_SECURE);
+
+  const auto dbw_status = (acc_active || scc_active);
+
+  // sync parameters only if scene_type or dbw_status changes
+  if ((scene_type != g_context.GetStatemachine().scene_type ||
+       (dbw_status != g_context.GetStatemachine().dbw_status))) {
+    SyncParameters(scene_type);
+  }
+
+  // update general planning context
+  g_context.MutableStatemachine().dbw_status = dbw_status;
+  g_context.MutableStatemachine().scene_type = scene_type;
+
+  // to be removed
+  session_.set_scene_type(scene_type);
+
+  if (scene_type == common::PARKING_APA) {
     scheduler_.RunOnce();
     *planning_output = session_.planning_output_context()
                            .planning_status()
@@ -150,7 +218,7 @@ void GeneralPlanning::FillPlanningTrajectory(
   auto time_stamp_us = IflyTime::Now_us();
 
   planning_output->mutable_meta()->set_plan_timestamp_us(time_stamp_us);
-  planning_output->mutable_meta()->set_plan_strategy_name("Test");
+  planning_output->mutable_meta()->set_plan_strategy_name("Real Time Planning");
 
   // 2.Trajectory
   auto trajectory = planning_output->mutable_trajectory();
@@ -159,7 +227,10 @@ void GeneralPlanning::FillPlanningTrajectory(
 
   // 根据定位有效性决定实时、长时
   auto location_valid = session_.environmental_model().location_valid();
-  if (location_valid) {
+
+  if (location_valid ||
+      g_context.GetParam().planner_type ==
+          planning::context::PlannerType::REALTIME_PLANNER_WITH_MOTION) {
     trajectory->set_trajectory_type(
         Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
     trajectory->mutable_trajectory_points()->Clear();
@@ -178,14 +249,27 @@ void GeneralPlanning::FillPlanningTrajectory(
     }
     // 设置参考线为default
     auto target_ref = trajectory->mutable_target_reference();
-    target_ref->add_polynomial(0.0);
-    target_ref->set_target_velocity(0.0);
+    // add polynomial
+    const auto &d_polynomial = lateral_output.d_poly;
+    for (size_t i = 0; i < d_polynomial.size(); i++) {
+      target_ref->add_polynomial(d_polynomial[i]);
+    }
+    target_ref->set_target_velocity(
+        vision_only_longitudinal_outputs.velocity_target);
     auto acceleration_range_limit =
         target_ref->mutable_acceleration_range_limit();
     acceleration_range_limit->set_min_a(-4.0);
     acceleration_range_limit->set_max_a(4.0);
-    target_ref->set_lateral_maneuver_gear(
-        Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
+
+    if (g_context.GetParam().planner_type ==
+        planning::context::PlannerType::REALTIME_PLANNER_WITH_MOTION) {
+      // use fast lateral actuator to let control know real_time motion
+      target_ref->set_lateral_maneuver_gear(
+          Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_FAST);
+    } else {
+      target_ref->set_lateral_maneuver_gear(
+          Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
+    }
   } else {
     // set vision_only_longitudinal_outputs if hdmpa valid is false
     trajectory->set_trajectory_type(
@@ -318,13 +402,14 @@ void GeneralPlanning::FillPlanningTrajectory(
   // 8.Planning status
   auto planning_status = planning_output->mutable_planning_status();
   planning_status->set_standstill(false);
-  if (function_info.function_mode == DrivingFunctionMode::ACC ||
-      function_info.function_mode == DrivingFunctionMode::SCC) {
+  if (function_info.function_mode() == common::DrivingFunctionInfo::ACC ||
+      function_info.function_mode() == common::DrivingFunctionInfo::SCC) {
     planning_status->set_standstill(std::fabs(ego_state->ego_v()) < 0.1);
   }
   // 启停状态机
-  planning_status->set_ready_to_go(planning_context.start_stop_result().state !=
-                                   StartStopInfo::STOP);
+  planning_status->set_ready_to_go(
+      planning_context.start_stop_result().state() !=
+      common::StartStopInfo::STOP);
   planning_status->set_apa_planning_status(
       PlanningOutput::ApaPlanningStatus::NONE);
   // WB end:--------临时hack以上信号--------

@@ -122,6 +122,7 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
 
   if bag_loader.plan_debug_msg['enable'] == True:
     lat_motion_plan_input = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_input
+    # print("lat_motion_plan_input = ", lat_motion_plan_input)
 
     ref_x, ref_y = coord_tf.global_to_local(lat_motion_plan_input.ref_x_vec, \
       lat_motion_plan_input.ref_y_vec)
@@ -137,6 +138,16 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
 
     hard_lower_bound_x0_vec, hard_lower_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.hard_lower_bound_x0_vec, \
       lat_motion_plan_input.hard_lower_bound_y0_vec)
+
+    if len(soft_upper_bound_x0_vec) == 0 or bag_loader.plan_msg['data'][plan_msg_idx].trajectory.target_reference.lateral_maneuver_gear == 2:
+      soft_upper_bound_x0_vec = ref_x
+      soft_upper_bound_y0_vec = ref_y
+      soft_lower_bound_x0_vec = ref_x
+      soft_lower_bound_y0_vec = ref_y
+      hard_upper_bound_x0_vec = ref_x
+      hard_upper_bound_y0_vec = ref_y
+      hard_lower_bound_x0_vec = ref_x
+      hard_lower_bound_y0_vec = ref_y
 
     lat_plan_data['data_lat_motion_plan_input'].data.update({
       'ref_x': ref_x,
@@ -399,14 +410,14 @@ def load_lat_plan_figure(fig1):
   fig7.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   fig7.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   fig7.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
-  
+
   f2 = fig2.line('time_vec', 'ref_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'ref_theta')
   fig2.line('time_vec', 'theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'theta')
   f3 = fig3.line('time_vec', 'acc_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat acc')
   f4 = fig4.line('time_vec', 'jerk_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat jerk')
   f5 = fig5.line('time_vec', 'steer_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer deg')
   f6 = fig6.line('time_vec', 'steer_dot_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer dot deg')
-  
+
   hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time_vec'), ('ref_theta', '@ref_theta_deg_vec'), ('theta', '@theta_deg_vec')], mode='vline')
   hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time_vec'), ('acc', '@acc_vec')], mode='vline')
   hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('jerk', '@jerk_vec')], mode='vline')

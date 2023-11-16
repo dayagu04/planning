@@ -21,10 +21,12 @@ class GeneralPlanning {
   virtual ~GeneralPlanning();
 
   void Init();
-  bool RunOnce(const LocalView &local_view,
+  bool RunOnce(const LocalView *local_view,
                PlanningOutput::PlanningOutput *const planning_output,
                common::PlanningDebugInfo &debug_info,
                PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info);
+
+  void SyncParameters(planning::common::SceneType scene_type);
   //   void ResetState() override;
   planning::framework::Session *MutableSession() { return &session_; }
 
@@ -113,7 +115,6 @@ class GeneralPlanning {
   };
 
  protected:
-  LocalView local_view_;
   double last_feed_time_[FEED_TYPE_MAX]{};
 };
 

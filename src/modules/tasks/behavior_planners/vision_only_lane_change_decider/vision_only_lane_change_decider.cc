@@ -348,6 +348,11 @@ GapInfo VisionOnlyLaneChangeDecider::check_gap_valid(
   gap_info.rear_id = rear_car.id;
   gap_info.acc_valid = false;
 
+  gap_info.s_front = front_car.d_rel;
+  gap_info.v_front = front_car.v_rel + v_ego_;
+  gap_info.s_rear = rear_car.d_rel;
+  gap_info.v_rear = rear_car.v_rel + v_ego_;
+
   if (std::abs(front_car.d_rel) <
       std::abs(std::min(rear_car.d_rel + 5.0, front_car.d_rel - 0.1))) {
     base_car = front_car;
