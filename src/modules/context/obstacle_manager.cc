@@ -3,9 +3,9 @@
 #include "ego_state_manager.h"
 #include "math/math_utils.h"
 #include "obstacle_manager.h"
+#include "parking_slot_manager.h"
 #include "reference_path_manager.h"
 #include "virtual_lane_manager.h"
-
 namespace planning {
 
 ObstacleManager::ObstacleManager(const EgoPlanningConfigBuilder *config_builder,
@@ -58,9 +58,11 @@ void ObstacleManager::update() {
 
   // fusion ground line
   static constexpr int kGroundLineIdOffset = 5000000;
-  const std::vector<GroundLinePoint> &groundline = session_->environmental_model().get_ground_line_point_info();
+  const std::vector<GroundLinePoint> &groundline =
+      session_->environmental_model().get_ground_line_point_info();
   auto groundline_clusters = GroundLineDecider::execute(groundline);
-  std::cout << "groundline_clusters.size = " << groundline_clusters.size() << std::endl;
+  std::cout << "groundline_clusters.size = " << groundline_clusters.size()
+            << std::endl;
   LOG_DEBUG("groundline_clusters.size = %d", groundline_clusters.size());
   int cluster_id = kGroundLineIdOffset;
   for (auto &groundline_cluster : groundline_clusters) {
@@ -70,9 +72,17 @@ void ObstacleManager::update() {
   }
 
   // parking space
-  std::vector<Point3d> parking_space_points;
-  //待把parking space topic接入，完善此处
-  
+  static constexpr int kParkingSlotIdOffset = 6000000;
+  const std::shared_ptr<ParkingSlotManager> parking_slot_manager =
+      session_->environmental_model().get_parking_slot_manager();
+  const std::vector<ParkingSlotPoints> &parking_slot_points =
+      parking_slot_manager->get_points();
+  int parking_slot_id = kParkingSlotIdOffset;
+  for (auto &parking_slot_point : parking_slot_points) {
+    parking_slot_id += 1;
+    Obstacle obstacle(parking_slot_id, parking_slot_point);
+    add_parking_space(obstacle);
+  }
 }
 
 void ObstacleManager::clear() {

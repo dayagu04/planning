@@ -9,11 +9,7 @@
 // This file compile modules register map and constructor and link to .so
 // When .so loads, static vairiables will init and module constructors will
 // register.
-#include "groundline_perception.pb.h"
 #include "modules_register.h"
-#include "uss_wave_debug_info.pb.h"
-#include "uss_wave_info.pb.h"
-
 #include "proto_to_uncompressed.hpp"
 
 namespace planning {
@@ -50,11 +46,15 @@ bool PlanningComponent::Init() {
         planning_adapter_->FeedFusionRoad(road_info_msg);
       });
 
-  auto fusion_groudline_reader_ = planning_node_->CreateReader<GroundLinePerception::GroundLinePerception>(
-      "/iflytek/camera_perception/ground_line",
-      [this](const std::shared_ptr<GroundLinePerception::GroundLinePerception> &ground_line_perception_msg) {
-        planning_adapter_->FeedGroundLinePerception(ground_line_perception_msg);
-      });
+  auto fusion_groudline_reader_ =
+      planning_node_->CreateReader<GroundLinePerception::GroundLinePerception>(
+          "/iflytek/camera_perception/ground_line",
+          [this](
+              const std::shared_ptr<GroundLinePerception::GroundLinePerception>
+                  &ground_line_perception_msg) {
+            planning_adapter_->FeedGroundLinePerception(
+                ground_line_perception_msg);
+          });
 
   auto localization_reader_ =
       planning_node_->CreateReader<LocalizationOutput::LocalizationEstimate>(
@@ -103,6 +103,14 @@ bool PlanningComponent::Init() {
           [this](const std::shared_ptr<ParkingFusion::ParkingFusionInfo>
                      &parking_fusion_info_msg) {
             planning_adapter_->FeedParkingFusion(parking_fusion_info_msg);
+          });
+
+  auto parking_map_info_reader_ =
+      planning_node_->CreateReader<IFLYParkingMap::ParkingInfo>(
+          "/iflytek/ehr/parking_map",
+          [this](const std::shared_ptr<IFLYParkingMap::ParkingInfo>
+                     &parking_map_info_msg) {
+            planning_adapter_->FeedParkingMap(parking_map_info_msg);
           });
 
   auto func_state_machine_reader_ =

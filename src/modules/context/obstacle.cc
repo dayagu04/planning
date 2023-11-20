@@ -360,7 +360,7 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
       perception_id_(id),
       is_static_(true),
       perception_points_(points) {
-  type_ = Common::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE;  //FREESPACE占位
+  type_ = Common::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE;  // FREESPACE占位
   velocity_ = 0.0;
 }
 

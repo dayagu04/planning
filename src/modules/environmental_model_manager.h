@@ -64,6 +64,8 @@ class EnvironmentalModelManager {
   //   nullptr; std::shared_ptr<EgoPoseManager> ego_pose_manager_ = nullptr;
   std::shared_ptr<planning::EgoStateManager> ego_state_manager_ptr_ = nullptr;
   std::shared_ptr<planning::ObstacleManager> obstacle_manager_ptr_ = nullptr;
+  std::shared_ptr<planning::ParkingSlotManager> parking_slot_manager_ptr_ =
+      nullptr;
   std::shared_ptr<planning::VirtualLaneManager> virtual_lane_manager_ptr_ =
       nullptr;
   std::shared_ptr<planning::ReferencePathManager> reference_path_manager_ptr_ =

@@ -259,8 +259,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double care_obj_lat_distance_threshold = 30.;  // TBD: more beautiful
   double care_obj_lon_distance_threshold = 60.;  // TBD: more beautiful
   double static_obj_safe_buffer = 0.3;
-  double dynamic_obj_safe_buffer = 0.3;          //
-  double min_obstacle_avoid_distance = 0.2;      // check it
+  double dynamic_obj_safe_buffer = 0.3;      //
+  double min_obstacle_avoid_distance = 0.2;  // check it
   double lateral_bound_converge_speed = 1.0;
   double kPhysicalBoundWeight = 10.;
   double kSolidLaneBoundWeight = 5;

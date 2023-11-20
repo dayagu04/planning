@@ -79,6 +79,10 @@ void EnvironmentalModelManager::InitContext() {
       *lateral_obstacle_ptr_, *virtual_lane_manager_ptr_, session_);
   session_->mutable_environmental_model()->set_lane_tracks_manager(
       lane_tracks_mgr_ptr_);
+
+  parking_slot_manager_ptr_ = std::make_shared<ParkingSlotManager>();
+  session_->mutable_environmental_model()->set_parking_slot_manager(
+      parking_slot_manager_ptr_);
 }
 
 bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
@@ -177,6 +181,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
     return false;
   }
   ground_line_obstacles_update(local_view);
+  parking_slot_manager_ptr_->update(local_view.parking_map_info);
   obstacle_manager_ptr_->update();
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("obstacle_prediction update cost:%f\n", time_end - time_start);
@@ -259,17 +264,22 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   return true;
 }
 
-bool EnvironmentalModelManager::ground_line_obstacles_update(const LocalView &local_view) {
+bool EnvironmentalModelManager::ground_line_obstacles_update(
+    const LocalView &local_view) {
   std::vector<GroundLinePoint> &ground_line_point_info =
-      session_->mutable_environmental_model()->get_mutable_ground_line_point_info();
+      session_->mutable_environmental_model()
+          ->get_mutable_ground_line_point_info();
   ground_line_point_info.clear();
-  GroundLinePerception::GroundLinePerception groundline_data = local_view.ground_line_perception;
+  GroundLinePerception::GroundLinePerception groundline_data =
+      local_view.ground_line_perception;
 
   for (size_t i = 0; i < groundline_data.ground_lines_size(); ++i) {
-    for (size_t j = 0; j < groundline_data.ground_lines(i).points_2d_size(); j++) {
+    for (size_t j = 0; j < groundline_data.ground_lines(i).points_2d_size();
+         j++) {
       GroundLinePoint point;
-      point.point = planning_math::Vec2d(groundline_data.ground_lines(i).points_2d(j).x(), 
-                                         groundline_data.ground_lines(i).points_2d(j).y());
+      point.point = planning_math::Vec2d(
+          groundline_data.ground_lines(i).points_2d(j).x(),
+          groundline_data.ground_lines(i).points_2d(j).y());
       point.status = GroundLinePoint::Status::UNCLASSIFIED;
       ground_line_point_info.emplace_back(point);
     }

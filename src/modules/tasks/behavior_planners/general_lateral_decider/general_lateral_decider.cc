@@ -345,8 +345,8 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
     double care_area_s_end = ego_s + ego_length / 2 + config_.care_area_s_len;
     auto care_area_center = Vec2d((care_area_s_start + care_area_s_end) / 2, 0);
     double care_area_length = care_area_s_end - care_area_s_start;
-    auto care_polygon =
-        Polygon2d(Box2d(care_area_center, 0, care_area_length, config_.l_care_width));
+    auto care_polygon = Polygon2d(
+        Box2d(care_area_center, 0, care_area_length, config_.l_care_width));
 
     SampleRoadDistanceInfo(map_obstacle_decision.tp.s, ref_path_points_[i]);
     // distance to lane is unaccurate near end of the ref line
@@ -386,8 +386,9 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
     double static_obstacle_collision_center_distance = vehicle_param_.width / 2;
     double static_obstacle_safe_center_distance =
         config_.static_obj_safe_buffer + vehicle_param_.width / 2;
-    double static_obstacle_buffer_extra = std::fabs(ref_path_points_[i].path_point.kappa) /
-                                          config_.max_ref_curvature * 0.2;
+    double static_obstacle_buffer_extra =
+        std::fabs(ref_path_points_[i].path_point.kappa) /
+        config_.max_ref_curvature * 0.2;
     double static_obstacle_safe_buffer_extra = 0.2;
 
     // Groundline obstacle borders
@@ -407,23 +408,22 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
         groundline_obstacle_safe_bound.upper,
         left_groundline_obstacle_border - static_obstacle_safe_center_distance -
             static_obstacle_safe_buffer_extra);
-    groundline_obstacle_safe_bound.lower = std::fmax(
-        groundline_obstacle_safe_bound.lower,
-        right_groundline_obstacle_border + static_obstacle_safe_center_distance +
-            static_obstacle_safe_buffer_extra);
+    groundline_obstacle_safe_bound.lower =
+        std::fmax(groundline_obstacle_safe_bound.lower,
+                  right_groundline_obstacle_border +
+                      static_obstacle_safe_center_distance +
+                      static_obstacle_safe_buffer_extra);
 
     // Parking Space borders
     Bound parking_space_bound{-l_offset_limit, l_offset_limit};
-    parking_space_bound.upper =
-        std::fmin(parking_space_bound.upper,
-                  left_parking_space_border -
-                      static_obstacle_collision_center_distance -
-                      static_obstacle_buffer_extra);
-    parking_space_bound.lower =
-        std::fmax(parking_space_bound.lower,
-                  right_parking_space_border +
-                      static_obstacle_collision_center_distance +
-                      static_obstacle_buffer_extra);
+    parking_space_bound.upper = std::fmin(
+        parking_space_bound.upper,
+        left_parking_space_border - static_obstacle_collision_center_distance -
+            static_obstacle_buffer_extra);
+    parking_space_bound.lower = std::fmax(
+        parking_space_bound.lower,
+        right_parking_space_border + static_obstacle_collision_center_distance +
+            static_obstacle_buffer_extra);
     Bound parking_space_safe_bound{-l_offset_limit, l_offset_limit};
     parking_space_safe_bound.upper = std::fmin(
         parking_space_safe_bound.upper,
@@ -433,7 +433,7 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
         parking_space_safe_bound.lower,
         right_parking_space_border + static_obstacle_safe_center_distance +
             static_obstacle_safe_buffer_extra);
-    
+
     if (lat_lane_change_info_ == LatDeciderLaneChangeInfo::NONE) {
       safe_bound.upper =
           std::fmin(ref_path_points_[i].distance_to_left_lane_border -
@@ -505,12 +505,12 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
         groundline_obstacle_safe_bound.upper, config_.kPhysicalBoundWeight,
         BoundInfo{static_cast<int>(i), "groundline_obstacle_soft"}});
     map_obstacle_decision.lat_bounds.push_back(
-        WeightedBound{parking_space_bound.lower,
-                      parking_space_bound.upper, config_.kSolidLaneBoundWeight,
+        WeightedBound{parking_space_bound.lower, parking_space_bound.upper,
+                      config_.kSolidLaneBoundWeight,
                       BoundInfo{static_cast<int>(i), "parking_space"}});
     map_obstacle_decision.lat_bounds.push_back(WeightedBound{
-        parking_space_safe_bound.lower,
-        parking_space_safe_bound.upper, config_.kVirtualLaneBoundWeight,
+        parking_space_safe_bound.lower, parking_space_safe_bound.upper,
+        config_.kVirtualLaneBoundWeight,
         BoundInfo{static_cast<int>(i), "parking_space"}});
 
     map_obstacle_decisions.emplace_back(std::move(map_obstacle_decision));
@@ -1340,7 +1340,8 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
 
 double GetNearestObstacleBorder(
     const planning_math::Polygon2d &care_polygon, double care_area_s_start,
-    double care_area_s_end, const std::vector<planning_math::Polygon2d> &obstacle_frenet_polygons,
+    double care_area_s_end,
+    const std::vector<planning_math::Polygon2d> &obstacle_frenet_polygons,
     bool is_left, bool is_sorted, bool is_curve, int index,
     const TrajectoryPoints &traj_points) {
   static constexpr double kMaxLaneBound = 100.0;
@@ -1361,10 +1362,11 @@ double GetNearestObstacleBorder(
     if (!is_sorted && polygon.max_y() * polygon.min_y() < 0) {
       continue;
     }
-    if (std::min(std::fabs(polygon.min_y()), std::fabs(polygon.max_y())) > l_care_width) continue;
-    nearest_border = is_left
-                        ? std::fmin(nearest_border, polygon.min_y())
-                        : std::fmax(nearest_border, polygon.max_y());
+    if (std::min(std::fabs(polygon.min_y()), std::fabs(polygon.max_y())) >
+        l_care_width)
+      continue;
+    nearest_border = is_left ? std::fmin(nearest_border, polygon.min_y())
+                             : std::fmax(nearest_border, polygon.max_y());
   }
   return nearest_border;
 }

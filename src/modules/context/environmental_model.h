@@ -9,6 +9,7 @@
 #include "config/vehicle_param.h"
 #include "ego_planning_config.h"
 #include "fusion_objects.pb.h"
+#include "groundline_decider.h"
 #include "ifly_time.h"
 #include "local_view.h"
 #include "log.h"
@@ -18,7 +19,6 @@
 #include "scene_type_config.pb.h"
 #include "vehicle_service.pb.h"
 #include "vehicle_status.pb.h"
-#include "groundline_decider.h"
 
 namespace planning {
 
@@ -158,6 +158,15 @@ class EnvironmentalModel {
     lane_tracks_manager_ = lane_tracks_manager;
   }
 
+  const std::shared_ptr<ParkingSlotManager> &get_parking_slot_manager() const {
+    return parking_slot_manager_;
+  }
+
+  void set_parking_slot_manager(
+      std::shared_ptr<ParkingSlotManager> parking_slot_manager) {
+    parking_slot_manager_ = parking_slot_manager;
+  }
+
   const std::string &get_module_config_file_dir() const {
     return config_file_dir_;
   }
@@ -246,6 +255,7 @@ class EnvironmentalModel {
   std::shared_ptr<LaneTracksManager> lane_tracks_manager_ = nullptr;
   std::vector<PredictionObject> prediction_info_;
   std::vector<GroundLinePoint> ground_line_point_info_;
+  std::shared_ptr<ParkingSlotManager> parking_slot_manager_ = nullptr;
   bool hdmap_valid_{false};
   bool location_valid_{true};
   planning::VehicleParam vehicle_param_;

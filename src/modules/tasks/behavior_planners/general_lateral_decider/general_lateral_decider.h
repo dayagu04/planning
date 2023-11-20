@@ -126,13 +126,12 @@ class GeneralLateralDecider : public Task {
       vector<planning_math::Polygon2d> &left_parking_space_polygons,
       vector<planning_math::Polygon2d> &right_parking_space_polygons);
 
-  double GetNearestObstacleBorder(const planning_math::Polygon2d &care_polygon,
-                                     double care_area_s_start,
-                                     double care_area_s_end,
-                                     const std::vector<planning_math::Polygon2d> &obstacle_frenet_polygons,
-                                     bool is_left, bool is_sorted,
-                                     bool is_curve, int index,
-                                     const TrajectoryPoints &traj_points);
+  double GetNearestObstacleBorder(
+      const planning_math::Polygon2d &care_polygon, double care_area_s_start,
+      double care_area_s_end,
+      const std::vector<planning_math::Polygon2d> &obstacle_frenet_polygons,
+      bool is_left, bool is_sorted, bool is_curve, int index,
+      const TrajectoryPoints &traj_points);
 
   bool check_ego_near_bound(const double &rel_s, const double &rel_l);
 

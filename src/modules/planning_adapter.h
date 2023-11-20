@@ -8,7 +8,9 @@
 #include "fusion_objects.pb.h"
 #include "fusion_road.pb.h"
 #include "general_planning.h"
+#include "groundline_perception.pb.h"
 #include "hmi_mcu_inner.pb.h"
+#include "ifly_parking_map.pb.h"
 #include "ifly_time.h"
 #include "local_view.h"
 #include "localization.pb.h"
@@ -20,7 +22,6 @@
 #include "prediction.pb.h"
 #include "uss_wave_info.pb.h"
 #include "vehicle_service.pb.h"
-#include "groundline_perception.pb.h"
 
 namespace planning {
 
@@ -52,7 +53,8 @@ class PlanningAdapter {
   }
 
   void FeedGroundLinePerception(
-      const std::shared_ptr<GroundLinePerception::GroundLinePerception>& ground_line_perception_msg) {
+      const std::shared_ptr<GroundLinePerception::GroundLinePerception>&
+          ground_line_perception_msg) {
     std::cout << "receive ground_line_perception "
               << ground_line_perception_msg->header().timestamp() << std::endl;
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -115,6 +117,13 @@ class PlanningAdapter {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     parking_fusion_info_msg_.CopyFrom(*parking_fusion_info_msg);
     parking_fusion_info_msg_recv_time_ = IflyTime::Now_ms();
+  }
+
+  void FeedParkingMap(const std::shared_ptr<IFLYParkingMap::ParkingInfo>&
+                          parking_map_info_msg) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    parking_map_info_msg_.CopyFrom(*parking_map_info_msg);
+    parking_map_info_msg_recv_time_ = IflyTime::Now_ms();
   }
 
   void FeedFuncStateMachine(
@@ -182,6 +191,9 @@ class PlanningAdapter {
 
   ParkingFusion::ParkingFusionInfo parking_fusion_info_msg_;
   int64_t parking_fusion_info_msg_recv_time_;
+
+  IFLYParkingMap::ParkingInfo parking_map_info_msg_;
+  int64_t parking_map_info_msg_recv_time_;
 
   FuncStateMachine::FuncStateMachine func_state_machine_msg_;
 

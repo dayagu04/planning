@@ -1,6 +1,5 @@
 #include "groundline_decider.h"
 
-
 namespace planning {
 
 int GroundLineDecider::min_pts_ = 1;
@@ -13,7 +12,6 @@ void GroundLineDecider::update_params(const int min_pts, const double eps) {
 
 std::vector<std::vector<planning_math::Vec2d>> GroundLineDecider::execute(
     const std::vector<GroundLinePoint> &ground_line_points) {
-
   std::vector<std::vector<planning_math::Vec2d>> result;
   std::vector<GroundLinePoint> points = ground_line_points;
   // update_points(ground_line_points, points);

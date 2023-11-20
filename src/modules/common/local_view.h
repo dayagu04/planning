@@ -7,7 +7,9 @@
 #include "func_state_machine.pb.h"
 #include "fusion_objects.pb.h"
 #include "fusion_road.pb.h"
+#include "groundline_perception.pb.h"
 #include "hmi_mcu_inner.pb.h"
+#include "ifly_parking_map.pb.h"
 #include "localization.pb.h"
 #include "parking_fusion.pb.h"
 #include "parking_slot_list.pb.h"
@@ -15,7 +17,6 @@
 #include "prediction.pb.h"
 #include "uss_wave_info.pb.h"
 #include "vehicle_service.pb.h"
-#include "groundline_perception.pb.h"
 
 namespace planning {
 /**
@@ -50,6 +51,9 @@ struct LocalView {
 
   ParkingFusion::ParkingFusionInfo parking_fusion_info;
   double parking_fusion_info_recv_time = 0.0;
+
+  IFLYParkingMap::ParkingInfo parking_map_info;
+  double parking_map_info_recv_time = 0.0;
 
   FuncStateMachine::FuncStateMachine function_state_machine_info;
   double function_state_machine_info_recv_time = 0.0;
