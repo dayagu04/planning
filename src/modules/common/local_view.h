@@ -15,6 +15,7 @@
 #include "prediction.pb.h"
 #include "uss_wave_info.pb.h"
 #include "vehicle_service.pb.h"
+#include "groundline_perception.pb.h"
 
 namespace planning {
 /**
@@ -28,6 +29,9 @@ struct LocalView {
 
   FusionRoad::RoadInfo road_info;
   double road_info_recv_time = 0.0;
+
+  GroundLinePerception::GroundLinePerception ground_line_perception;
+  double ground_line_perception_recv_time = 0.0;
 
   LocalizationOutput::LocalizationEstimate localization_estimate;
   double localization_estimate_recv_time = 0.0;

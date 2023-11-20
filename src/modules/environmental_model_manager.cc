@@ -176,6 +176,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   if (!obstacle_prediction_update(current_time, local_view)) {
     return false;
   }
+  ground_line_obstacles_update(local_view);
   obstacle_manager_ptr_->update();
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("obstacle_prediction update cost:%f\n", time_end - time_start);
@@ -255,6 +256,25 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   last_feed_time_[FEED_FUSION_INFO] = local_view.fusion_objects_info_recv_time;
   last_feed_time_[FEED_PREDICTION_INFO] =
       local_view.prediction_result_recv_time;
+  return true;
+}
+
+bool EnvironmentalModelManager::ground_line_obstacles_update(const LocalView &local_view) {
+  std::vector<GroundLinePoint> &ground_line_point_info =
+      session_->mutable_environmental_model()->get_mutable_ground_line_point_info();
+  ground_line_point_info.clear();
+  GroundLinePerception::GroundLinePerception groundline_data = local_view.ground_line_perception;
+
+  for (size_t i = 0; i < groundline_data.ground_lines_size(); ++i) {
+    for (size_t j = 0; j < groundline_data.ground_lines(i).points_2d_size(); j++) {
+      GroundLinePoint point;
+      point.point = planning_math::Vec2d(groundline_data.ground_lines(i).points_2d(j).x(), 
+                                         groundline_data.ground_lines(i).points_2d(j).y());
+      point.status = GroundLinePoint::Status::UNCLASSIFIED;
+      ground_line_point_info.emplace_back(point);
+    }
+  }
+
   return true;
 }
 

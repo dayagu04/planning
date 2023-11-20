@@ -18,6 +18,7 @@
 #include "scene_type_config.pb.h"
 #include "vehicle_service.pb.h"
 #include "vehicle_status.pb.h"
+#include "groundline_decider.h"
 
 namespace planning {
 
@@ -85,6 +86,13 @@ class EnvironmentalModel {
   }
   std::vector<PredictionObject> &get_mutable_prediction_info() {
     return prediction_info_;
+  }
+
+  const std::vector<GroundLinePoint> &get_ground_line_point_info() const {
+    return ground_line_point_info_;
+  }
+  std::vector<GroundLinePoint> &get_mutable_ground_line_point_info() {
+    return ground_line_point_info_;
   }
 
   const std::shared_ptr<EgoStateManager> &get_ego_state_manager() const {
@@ -237,6 +245,7 @@ class EnvironmentalModel {
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
   std::shared_ptr<LaneTracksManager> lane_tracks_manager_ = nullptr;
   std::vector<PredictionObject> prediction_info_;
+  std::vector<GroundLinePoint> ground_line_point_info_;
   bool hdmap_valid_{false};
   bool location_valid_{true};
   planning::VehicleParam vehicle_param_;

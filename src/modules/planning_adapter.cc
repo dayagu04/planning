@@ -184,6 +184,13 @@ void PlanningAdapter::Proc() {
     input_topic_latency->set_fusion_road(
         get_latency(start_time, road_info_msg_.header().timestamp()));
 
+    local_view_.ground_line_perception = ground_line_perception_msg_;
+    local_view_.ground_line_perception_recv_time = ground_line_perception_msg_recv_time_;
+    // TODO: 和数采同步后再添加
+    // input_topic_timestamp->set_fusion_road(ground_line_perception_msg_.header().timestamp());
+    // input_topic_latency->set_fusion_road(
+    //     get_latency(start_time, ground_line_perception_msg_.header().timestamp()));
+
     local_view_.localization_estimate = localization_estimate_msg_;
     local_view_.localization_estimate_recv_time =
         localization_estimate_msg_recv_time_;

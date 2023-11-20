@@ -355,15 +355,14 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
 //                                               &perception_polygon_);
 // }
 
-// Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
-//     : id_(id),
-//       perception_id_(id),
-//       is_static_(true),
-//       perception_points_(points) {
-//   type_ = Common::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE;  //FREESPACE占位
-//   perception_velocity_ = 0.0;
-//   velocity_ = 0.0;
-// }
+Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
+    : id_(id),
+      perception_id_(id),
+      is_static_(true),
+      perception_points_(points) {
+  type_ = Common::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE;  //FREESPACE占位
+  velocity_ = 0.0;
+}
 
 void Obstacle::extract_point_at_specified_resolution(
     std::vector<planning_math::Vec2d> &points) const {

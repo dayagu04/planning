@@ -258,10 +258,13 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double l_care_width = 10.;                     // TBD: more beautiful
   double care_obj_lat_distance_threshold = 30.;  // TBD: more beautiful
   double care_obj_lon_distance_threshold = 60.;  // TBD: more beautiful
+  double static_obj_safe_buffer = 0.3;
   double dynamic_obj_safe_buffer = 0.3;          //
   double min_obstacle_avoid_distance = 0.2;      // check it
   double lateral_bound_converge_speed = 1.0;
   double kPhysicalBoundWeight = 10.;
+  double kSolidLaneBoundWeight = 5;
+  double kVirtualLaneBoundWeight = 1;
   double kHardBoundWeight = -1.;
   double dynamic_bound_slack_coefficient = 1.;
   double buffer2border = 0.15;
@@ -275,6 +278,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double sample_forward_distance = 2.0;
   double lane_change_duration = 6.6;
   double care_object_t_threshold = 3.0;
+  double care_area_s_len = 5.0;
+  double max_ref_curvature = 0.5;
 };
 struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {

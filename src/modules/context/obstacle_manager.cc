@@ -55,6 +55,24 @@ void ObstacleManager::update() {
       break;  // only use the first traj
     }
   }
+
+  // fusion ground line
+  static constexpr int kGroundLineIdOffset = 5000000;
+  const std::vector<GroundLinePoint> &groundline = session_->environmental_model().get_ground_line_point_info();
+  auto groundline_clusters = GroundLineDecider::execute(groundline);
+  std::cout << "groundline_clusters.size = " << groundline_clusters.size() << std::endl;
+  LOG_DEBUG("groundline_clusters.size = %d", groundline_clusters.size());
+  int cluster_id = kGroundLineIdOffset;
+  for (auto &groundline_cluster : groundline_clusters) {
+    cluster_id += 1;
+    Obstacle obstacle(cluster_id, groundline_cluster);
+    add_groundline_obstacle(obstacle);
+  }
+
+  // parking space
+  std::vector<Point3d> parking_space_points;
+  //待把parking space topic接入，完善此处
+  
 }
 
 void ObstacleManager::clear() {

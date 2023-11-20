@@ -51,6 +51,7 @@ class EnvironmentalModelManager {
       const FusionObjects::FusionObject &fusion_object, double timestamp);
   bool obstacle_prediction_update(double current_time,
                                   const LocalView &local_view);
+  bool ground_line_obstacles_update(const LocalView &local_view);
   bool InputReady(double current_time, std::string &error_msg);
   PredictionTrajectoryPoint GetPointAtTime(
       const std::vector<PredictionTrajectoryPoint> &trajectory_points,
