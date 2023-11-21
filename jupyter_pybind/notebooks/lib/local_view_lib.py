@@ -889,8 +889,8 @@ def draw_local_view(dataLoader, layer_manager):
             if not flag:
               lane_generator_dict[lane_generator_key].xys.append(([] , [] ,[], []))
               continue
-            if index < len(fusion_road_msg.lanes):
-              lane = fusion_road_msg.lanes[index]
+            if index < len(fusion_road_msg.reference_line_msg):
+              lane = fusion_road_msg.reference_line_msg[index]
               if derection == 0:
                 line = lane.left_lane_boundary
               elif derection == 1:
@@ -901,7 +901,7 @@ def draw_local_view(dataLoader, layer_manager):
                 line.begin, line.end)
               lane_info['line_x_vec'] = line_x
               lane_info['line_y_vec'] = line_y
-              tp = line.segment[0].type
+              tp = line.type_segments[0].type
               if tp == 0 or tp == 1 or tp == 3 or tp == 4:
                 lane_info['type'] = ['dashed']
               else:
@@ -917,7 +917,7 @@ def draw_local_view(dataLoader, layer_manager):
 
         # 加载车道中心线
         if flag:
-          center_line_list = load_lane_center_lines(fusion_road_msg.lanes)
+          center_line_list = load_lane_center_lines(fusion_road_msg.reference_line_msg)
         for index in range(5):
           line_generator_key = 'centerline_' + str(index)
           fig_index = 10 + index + 1
@@ -948,7 +948,7 @@ def draw_local_view(dataLoader, layer_manager):
       flag, fusion_road_msg = find(dataLoader.road_msg, fusion_road_timestamps[i])
       if not flag:
         continue
-      center_line_list = load_lane_center_lines(fusion_road_msg.lanes)
+      center_line_list = load_lane_center_lines(fusion_road_msg.reference_line_msg)
       lat_behavior_common = plan_debug.lat_behavior_common
       environment_model_info =plan_debug.environment_model_info
       current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
