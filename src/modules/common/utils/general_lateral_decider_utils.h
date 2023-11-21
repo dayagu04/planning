@@ -23,7 +23,8 @@ void MakeLinePolygons(
     const std::vector<planning_math::Vec2d> &points,
     std::vector<planning_math::Polygon2d> &left_polygons,
     std::vector<planning_math::Polygon2d> &right_polygons);
-void MakePolygon(const planning_math::Polygon2d &polygon,
+void MakePolygon(const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
+                 const planning_math::Polygon2d &polygon,
                  std::vector<planning_math::Polygon2d> &left_polygons,
                  std::vector<planning_math::Polygon2d> &right_polygons);
 

@@ -511,7 +511,7 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
     map_obstacle_decision.lat_bounds.push_back(WeightedBound{
         parking_space_safe_bound.lower, parking_space_safe_bound.upper,
         config_.kVirtualLaneBoundWeight,
-        BoundInfo{static_cast<int>(i), "parking_space"}});
+        BoundInfo{static_cast<int>(i), "parking_space_soft"}});
 
     map_obstacle_decisions.emplace_back(std::move(map_obstacle_decision));
   }
@@ -1338,7 +1338,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
                     c_poly.begin());
 }
 
-double GetNearestObstacleBorder(
+double GeneralLateralDecider::GetNearestObstacleBorder(
     const planning_math::Polygon2d &care_polygon, double care_area_s_start,
     double care_area_s_end,
     const std::vector<planning_math::Polygon2d> &obstacle_frenet_polygons,
@@ -1369,6 +1369,30 @@ double GetNearestObstacleBorder(
                              : std::fmax(nearest_border, polygon.max_y());
   }
   return nearest_border;
+}
+
+void GeneralLateralDecider::ConstructStaticObstacleTotalPolygons(
+    vector<Polygon2d> &left_groundline_polygons,
+    vector<Polygon2d> &right_groundline_polygons,
+    vector<Polygon2d> &left_parking_space_polygons,
+    vector<Polygon2d> &right_parking_space_polygons) {
+
+  const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord =
+      reference_path_ptr_->get_frenet_coord();
+  // Step1: 主要区分 lines 类型 和 polygon 类型（slot & pillar），生成所有polygons
+  // Step 1.1 : 处理 lines
+  for (auto &obstacle : reference_path_ptr_->get_free_space_ground_lines()) {
+    const std::vector<planning_math::Vec2d> &line_vec2d_points =
+        obstacle->perception_points();
+    MakeLinePolygons(frenet_coord, line_vec2d_points, left_groundline_polygons,
+                       right_groundline_polygons);
+  }
+  // Step 1.2 : 处理 polygon
+  for (auto &obstacle : reference_path_ptr_->get_parking_space()) {
+    const planning_math::Polygon2d &polygon = obstacle->perception_polygon();
+    MakePolygon(frenet_coord, polygon, left_parking_space_polygons,
+                 right_parking_space_polygons);
+  }
 }
 
 }  // namespace planning
