@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "ifly_parking_map.pb.h"
+#include "session.h"
 #include "vec2d.h"
 
 namespace planning {
@@ -10,7 +11,7 @@ using ParkingSlotPoints = std::vector<planning_math::Vec2d>;
 
 class ParkingSlotManager {
  public:
-  ParkingSlotManager(){};
+  ParkingSlotManager(planning::framework::Session *session);
   ~ParkingSlotManager() = default;
 
  public:
@@ -18,6 +19,7 @@ class ParkingSlotManager {
   std::vector<ParkingSlotPoints> get_points() { return points_; };
 
  private:
+  planning::framework::Session *session_;
   std::vector<ParkingSlotPoints> points_;
 };
 }  // namespace planning

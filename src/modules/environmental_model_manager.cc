@@ -13,7 +13,6 @@
 #include "context/frenet_ego_state.h"
 #include "context/lateral_obstacle.h"
 #include "context/obstacle_manager.h"
-#include "context/parking_slot_manager.h"
 #include "context/planning_output_context.h"
 #include "context/reference_path_manager.h"
 #include "context/traffic_light_decision_manager.h"
@@ -80,7 +79,7 @@ void EnvironmentalModelManager::InitContext() {
   session_->mutable_environmental_model()->set_lane_tracks_manager(
       lane_tracks_mgr_ptr_);
 
-  parking_slot_manager_ptr_ = std::make_shared<ParkingSlotManager>();
+  parking_slot_manager_ptr_ = std::make_shared<ParkingSlotManager>(session_);
   session_->mutable_environmental_model()->set_parking_slot_manager(
       parking_slot_manager_ptr_);
 }

@@ -5,10 +5,12 @@
 #include "context/ego_planning_config.h"
 #include "context/ego_state_manager.h"
 #include "context/obstacle_manager.h"
+#include "context/parking_slot_manager.h"
 #include "frame.h"
 #include "ifly_time.h"
 #include "session.h"
 #include "vehicle_status.pb.h"
+
 namespace planning {
 namespace planner {
 

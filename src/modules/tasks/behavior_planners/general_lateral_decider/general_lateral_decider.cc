@@ -1376,22 +1376,21 @@ void GeneralLateralDecider::ConstructStaticObstacleTotalPolygons(
     vector<Polygon2d> &right_groundline_polygons,
     vector<Polygon2d> &left_parking_space_polygons,
     vector<Polygon2d> &right_parking_space_polygons) {
-
   const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord =
       reference_path_ptr_->get_frenet_coord();
-  // Step1: 主要区分 lines 类型 和 polygon 类型（slot & pillar），生成所有polygons
-  // Step 1.1 : 处理 lines
+  // Step1: 主要区分 lines 类型 和 polygon 类型（slot &
+  // pillar），生成所有polygons Step 1.1 : 处理 lines
   for (auto &obstacle : reference_path_ptr_->get_free_space_ground_lines()) {
     const std::vector<planning_math::Vec2d> &line_vec2d_points =
         obstacle->perception_points();
     MakeLinePolygons(frenet_coord, line_vec2d_points, left_groundline_polygons,
-                       right_groundline_polygons);
+                     right_groundline_polygons);
   }
   // Step 1.2 : 处理 polygon
   for (auto &obstacle : reference_path_ptr_->get_parking_space()) {
     const planning_math::Polygon2d &polygon = obstacle->perception_polygon();
     MakePolygon(frenet_coord, polygon, left_parking_space_polygons,
-                 right_parking_space_polygons);
+                right_parking_space_polygons);
   }
 }
 

@@ -240,6 +240,9 @@ void PlanningAdapter::Proc() {
     input_topic_latency->set_parking_fusion(
         get_latency(start_time, parking_fusion_info_msg_.header().timestamp()));
 
+    local_view_.parking_map_info = parking_map_info_msg_;
+    local_view_.parking_map_info_recv_time = parking_map_info_msg_recv_time_;
+
     local_view_.function_state_machine_info = func_state_machine_msg_;
     input_topic_timestamp->set_function_state_machine(
         func_state_machine_msg_.header().timestamp());
