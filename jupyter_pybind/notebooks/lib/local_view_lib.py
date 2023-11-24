@@ -32,6 +32,7 @@ slot_timestamps = []
 fusion_slot_timestamps = []
 vision_slot_timestamps = []
 mobileye_lane_lines_timestamps = []
+rdg_lane_lines_timestamps = []
 mobileye_objects_timestamps = []
 rdg_object_timestamps = []
 fm_object_timestamps = []
@@ -217,6 +218,14 @@ mobileye_lane_lines_params = {
   'legend_label': 'mlane',
   'line_width' : 1.3,
   'line_color' : 'chocolate',
+  'line_dash' : 'dashed',
+  'line_alpha' : 1.0
+}
+
+rdg_lane_lines_params = {
+  'legend_label': 'rdglane',
+  'line_width' : 1.3,
+  'line_color' : 'green',
   'line_dash' : 'dashed',
   'line_alpha' : 1.0
 }
@@ -1150,6 +1159,7 @@ def draw_local_view(dataLoader, layer_manager):
     global vehicle_service_timestamps
     global control_output_timestamps
     global mobileye_lane_lines_timestamps
+    global rdg_lane_lines_timestamps
     global mobileye_objects_timestamps
     global rdg_object_timestamps
     global fm_object_timestamps
@@ -1564,6 +1574,41 @@ def draw_local_view(dataLoader, layer_manager):
           layer_manager.AddLayer(mobileye_lane_layer, mobileye_lane_generator_key.replace('mobileye_lane_', 'mobileye_lane_layer_'), \
                                  mobileye_lane_lines_generator_dict[mobileye_lane_generator_key], \
                                  mobileye_lane_generator_key , 2)
+
+    # 加载rdg车道线
+    rdg_lane_lines_generator_dict = {}
+    if dataLoader.rdg_lane_lines_msg['enable'] == True:
+      for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+        flag, rdg_lane_lines_msg = findME(dataLoader.rdg_lane_lines_msg, fusion_road_timestamps[i])
+        for index in range(rdg_lane_lines_msg.num) :
+          rdg_lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+          rdg_lane_generator_key = 'rdg_lane_' + str(index)
+          if (rdg_lane_generator_key in rdg_lane_lines_generator_dict.keys()) == False:
+            rdg_lane_lines_generator_dict[rdg_lane_generator_key] = LineGenerator('rdg_line')
+          if not flag:
+            rdg_lane_lines_generator_dict[rdg_lane_generator_key].xys.append(([] , [] ,[], []))
+            continue
+          lane = rdg_lane_lines_msg.lane_line[index]
+          fig_index = lane.pos_type
+          line_x, line_y = gen_line(lane.a0, lane.a1, lane.a2, lane.a3, lane.start, lane.end)
+          rdg_lane_info['line_x_vec'] = line_x
+          rdg_lane_info['line_y_vec'] = line_y
+          tp = lane.marking_segments[0].marking
+          if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+            rdg_lane_info['type'] = ['dashed']
+          else:
+            rdg_lane_info['type'] = ['solid']
+          rdg_lane_info['fix_index'] = [fig_index]
+          rdg_lane_lines_generator_dict[rdg_lane_generator_key].xys.append((rdg_lane_info['line_y_vec'] , \
+                                                                                      rdg_lane_info['line_x_vec'] , \
+                                                                                      rdg_lane_info['type'], \
+                                                                                      rdg_lane_info['fix_index']))
+      for rdg_lane_generator_key in rdg_lane_lines_generator_dict.keys():
+          rdg_lane_lines_generator_dict[rdg_lane_generator_key].ts = np.array(plan_debug_ts)
+          rdg_lane_layer = CurveLayer(fig_local_view, rdg_lane_lines_params)
+          layer_manager.AddLayer(rdg_lane_layer, rdg_lane_generator_key.replace('rdg_lane_', 'rdg_lane_layer_'), \
+                                 rdg_lane_lines_generator_dict[rdg_lane_generator_key], \
+                                 rdg_lane_generator_key , 2)
 
     # 加载mobileye障碍物
     obstacle_mobileye_generate = CommonGenerator()

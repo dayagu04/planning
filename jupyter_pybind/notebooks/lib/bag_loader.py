@@ -41,6 +41,9 @@ class LoadCyberbag:
     # mobileye lane lines msg
     self.mobileye_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
+    # rdg lane lines msg
+    self.rdg_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
     # mobileye objects msg
     self.mobileye_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
@@ -322,6 +325,22 @@ class LoadCyberbag:
       self.mobileye_lane_lines_msg['enable'] = False
       print('missing /mobileye/camera_perception/lane_lines !!!')
 
+    # load rdg lane_lines msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/lane_lines"):
+        self.rdg_lane_lines_msg['t'].append(msg.header.timestamp / 1e6)
+        self.rdg_lane_lines_msg['timestamp'].append(msg.header.timestamp)
+        self.rdg_lane_lines_msg['data'].append(msg)
+      self.rdg_lane_lines_msg['t'] = [tmp - self.rdg_lane_lines_msg['t'][0]  for tmp in self.rdg_lane_lines_msg['t']]
+      if normal_print == True:
+        print('rdg_lane_lines_msg time:',self.rdg_lane_lines_msg['t'][-1])
+      if len(self.rdg_lane_lines_msg['t']) > 0:
+        self.rdg_lane_lines_msg['enable'] = True
+      else:
+        self.rdg_lane_lines_msg['enable'] = False
+    except:
+      self.rdg_lane_lines_msg['enable'] = False
+      print('missing /iflytek/camera_perception/lane_lines !!!')
 
     # load mobileye objects msg
     try:
