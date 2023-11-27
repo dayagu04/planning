@@ -278,8 +278,12 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
       except:
         print('error')
         pass
-    
-    center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
+
+    try:
+      center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
+    except:
+      print("old interface before 2.2.3")
+      center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
     # print(center_line_list)
     for i in range(5):
         data_center_line = data_center_line_dict[i]

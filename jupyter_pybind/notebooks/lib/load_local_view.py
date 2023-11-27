@@ -787,7 +787,11 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # step 3: 加载车道线信息
   if bag_loader.road_msg['enable'] == True:
     # load lane info
-    line_info_list = load_lane_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
+    try:
+      line_info_list = load_lane_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
+    except:
+      print("old interface before 2.2.3")
+      line_info_list = load_lane_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
 
     # update lane info
     data_lane_dict = {
@@ -843,7 +847,11 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         print('error')
         pass
 
-    center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
+    try:
+      center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
+    except:
+      print("old interface before 2.2.3")
+      center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
     # print(center_line_list)
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
 

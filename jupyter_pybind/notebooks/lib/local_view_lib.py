@@ -975,7 +975,7 @@ def load_obstacle_radar_params(obstacle_list):
       # frenet_vs, frenet_vl = 255, 255
       half_length = obstacle_list[i].shape.length / 2
       half_width = obstacle_list[i].shape.width /2
-      long_pos_rel = obstacle_list[i].relative_position.x 
+      long_pos_rel = obstacle_list[i].relative_position.x
       lat_pos_rel = obstacle_list[i].relative_position.y
       theta = obstacle_list[i].relative_heading_angle
 
@@ -1009,7 +1009,7 @@ def load_obstacle_radar_params(obstacle_list):
 
 # 可视化rdg objects
 def load_obstacle_rdg(dataLoader, layer_manager, fig_local_view):
-    
+
     obstacle_rdg_generate = CommonGenerator()
     obstacle_rdg_text_generate = TextGenerator()
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
@@ -1240,35 +1240,81 @@ def draw_local_view(dataLoader, layer_manager):
             if not flag:
               lane_generator_dict[lane_generator_key].xys.append(([] , [] ,[], []))
               continue
-            if index < len(fusion_road_msg.reference_line_msg):
-              lane = fusion_road_msg.reference_line_msg[index]
-              if derection == 0:
-                line = lane.left_lane_boundary
-              elif derection == 1:
-                line = lane.right_lane_boundary
 
-              line_coef = line.poly_coefficient
-              line_x, line_y = gen_line(line_coef[0], line_coef[1], line_coef[2], line_coef[3], \
-                line.begin, line.end)
-              lane_info['line_x_vec'] = line_x
-              lane_info['line_y_vec'] = line_y
-              tp = line.type_segments[0].type
-              if tp == 0 or tp == 1 or tp == 3 or tp == 4:
-                lane_info['type'] = ['dashed']
+            try:
+              if index < len(fusion_road_msg.reference_line_msg):
+                lane = fusion_road_msg.reference_line_msg[index]
+                if derection == 0:
+                  line = lane.left_lane_boundary
+                elif derection == 1:
+                  line = lane.right_lane_boundary
+
+                line_coef = line.poly_coefficient
+                try:
+                  line_x, line_y = gen_line(line_coef[0], line_coef[1], line_coef[2], line_coef[3], \
+                    line.begin, line.end)
+                  lane_info['line_x_vec'] = line_x
+                  lane_info['line_y_vec'] = line_y
+                  tp = line.type_segments[0].type
+                  if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                    lane_info['type'] = ['dashed']
+                  else:
+                    lane_info['type'] = ['solid']
+                  lane_info['fix_index'] = [fig_index]
+                except:
+                  line_x, line_y = gen_line(0,0,0,0,0,0)
+                  lane_info['line_x_vec'] = line_x
+                  lane_info['line_y_vec'] = line_y
+                  lane_info['type'] = ['dashed']
+                  lane_info['fix_index'] = [fig_index]
               else:
-                lane_info['type'] = ['solid']
-              lane_info['fix_index'] = [fig_index]
-            else:
-              line_x, line_y = gen_line(0,0,0,0,0,0)
-              lane_info['line_x_vec'] = line_x
-              lane_info['line_y_vec'] = line_y
-              lane_info['type'] = ['dashed']
-              lane_info['fix_index'] = [fig_index]
-            lane_generator_dict[lane_generator_key].xys.append((lane_info['line_y_vec'] , lane_info['line_x_vec'] ,lane_info['type'], lane_info['fix_index']))
+                line_x, line_y = gen_line(0,0,0,0,0,0)
+                lane_info['line_x_vec'] = line_x
+                lane_info['line_y_vec'] = line_y
+                lane_info['type'] = ['dashed']
+                lane_info['fix_index'] = [fig_index]
+              lane_generator_dict[lane_generator_key].xys.append((lane_info['line_y_vec'] , lane_info['line_x_vec'] ,lane_info['type'], lane_info['fix_index']))
+            except:
+              print("old interface before 2.2.3")
+              if index < len(fusion_road_msg.lanes):
+                lane = fusion_road_msg.lanes[index]
+                if derection == 0:
+                  line = lane.left_lane_boundary
+                elif derection == 1:
+                  line = lane.right_lane_boundary
+                line_coef = line.poly_coefficient
+                try:
+                  line_x, line_y = gen_line(line_coef[0], line_coef[1], line_coef[2], line_coef[3], \
+                    line.begin, line.end)
+                  lane_info['line_x_vec'] = line_x
+                  lane_info['line_y_vec'] = line_y
+                  tp = line.segment[0].type
+                  if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                    lane_info['type'] = ['dashed']
+                  else:
+                    lane_info['type'] = ['solid']
+                  lane_info['fix_index'] = [fig_index]
+                except:
+                  line_x, line_y = gen_line(0,0,0,0,0,0)
+                  lane_info['line_x_vec'] = line_x
+                  lane_info['line_y_vec'] = line_y
+                  lane_info['type'] = ['dashed']
+                  lane_info['fix_index'] = [fig_index]
+              else:
+                line_x, line_y = gen_line(0,0,0,0,0,0)
+                lane_info['line_x_vec'] = line_x
+                lane_info['line_y_vec'] = line_y
+                lane_info['type'] = ['dashed']
+                lane_info['fix_index'] = [fig_index]
+              lane_generator_dict[lane_generator_key].xys.append((lane_info['line_y_vec'] , lane_info['line_x_vec'] ,lane_info['type'], lane_info['fix_index']))
 
         # 加载车道中心线
         if flag:
-          center_line_list = load_lane_center_lines(fusion_road_msg.reference_line_msg)
+          try:
+            center_line_list = load_lane_center_lines(fusion_road_msg.reference_line_msg)
+          except:
+            print("old interface before 2.2.3")
+            center_line_list = load_lane_center_lines(fusion_road_msg.lanes)
         for index in range(5):
           line_generator_key = 'centerline_' + str(index)
           fig_index = 10 + index + 1
@@ -1299,7 +1345,10 @@ def draw_local_view(dataLoader, layer_manager):
       flag, fusion_road_msg = find(dataLoader.road_msg, fusion_road_timestamps[i])
       if not flag:
         continue
-      center_line_list = load_lane_center_lines(fusion_road_msg.reference_line_msg)
+      try:
+        center_line_list = load_lane_center_lines(fusion_road_msg.reference_line_msg)
+      except:
+        center_line_list = load_lane_center_lines(fusion_road_msg.lanes)
       lat_behavior_common = plan_debug.lat_behavior_common
       environment_model_info =plan_debug.environment_model_info
       current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
@@ -1630,14 +1679,14 @@ def draw_local_view(dataLoader, layer_manager):
     obstacle_mobileye_text_generate.ts = np.array(plan_debug_ts)
     obstacle_mobileye_text_layer = TextLayer(fig_local_view, obstacle_mobileye_text_params)
     layer_manager.AddLayer(obstacle_mobileye_text_layer, 'obstacle_mobileye_text_layer', obstacle_mobileye_text_generate, 'obstacle_mobileye_text_generate', 3)
-    
+
     # 加载rdg障碍物
     load_obstacle_rdg(dataLoader, layer_manager, fig_local_view)
     # 加载lidar 障碍物
     load_obstacle_lidar(dataLoader, layer_manager, fig_local_view)
     # 加载雷达障碍物
     load_obstacle_radar(dataLoader, layer_manager, fig_local_view)
-    
+
     return fig_local_view, (tab_debug_layer1.plot, tab_debug_layer2.plot)
 
 def apa_draw_local_view(dataLoader, layer_manager):
