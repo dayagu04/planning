@@ -525,6 +525,16 @@ void GeneralPlanning::FillPlanningHmiInfo(
   ad_info->set_distance_to_toll_station(
       (uint)virtual_lane_manager
           ->ramp_direction());  // 临时将toll_station改为ramp_direction
+
+  // HMI for hpp
+  auto hpp_info = session_.mutable_planning_output_context()
+                      ->mutable_planning_hmi_info()
+                      ->mutable_hpp_info();
+  hpp_info->set_is_on_hpp_lane(virtual_lane_manager->is_on_hpp_lane());
+  hpp_info->set_is_reached_hpp_trace_start(
+      virtual_lane_manager->is_reached_hpp_start_point());
+  hpp_info->set_accumulated_driving_distance(
+      virtual_lane_manager->sum_distance_driving());
 }
 
 void GeneralPlanning::ClearParkingInfo(

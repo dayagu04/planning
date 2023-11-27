@@ -1,4 +1,5 @@
 #include "virtual_lane_manager.h"
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -7,8 +8,11 @@
 #include "ehr.pb.h"
 #include "environmental_model.h"
 #include "localization.pb.h"
+#include "log_glog.h"
+#include "math/box2d.h"
 #include "planning_output_context.h"
 #include "reference_path_manager.h"
+#include "task_basic_types.h"
 
 namespace planning {
 
@@ -41,7 +45,13 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   }
 
   is_local_valid_ = roads.local_point_valid();
-  CalculateDistanceToRampSplitMerge(session_);
+  // CalculateDistanceToRampSplitMerge(session_);
+  // CalculateDistanceToTargetSlot(session_);
+  CalculateHPPInfo(session_);
+  std::cout << "is on hpp lane:" << is_on_hpp_lane_
+            << ",is reached trace start:" << is_reached_hpp_start_point_
+            << ",accumulate driving dis:" << sum_distance_driving_ << std::endl;
+
   double dis_to_first_road_split = distance_to_first_road_split();
   double dis_between_first_road_split_and_ramp =
       dis_to_first_road_split - dis_to_ramp_;
@@ -988,4 +998,125 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMerge(
     }
   }
 }
+
+void VirtualLaneManager::CalculateHPPInfo(
+    planning::framework::Session* session) {
+  if (session_->environmental_model().get_hdmap_valid()) {
+    const auto& local_view = session_->environmental_model().get_local_view();
+    if (local_view.localization_estimate.msf_status().msf_status() !=
+        LocalizationOutput::MsfStatus::ERROR) {
+      std::cout << "hdmap_valid is true,current timestamp:"
+                << session_->environmental_model()
+                       .get_local_view()
+                       .static_map_info.header()
+                       .timestamp()
+                << std::endl;
+      // ego info
+      const auto& hd_map = session->environmental_model().get_hd_map();
+      const auto& pose = local_view.localization_estimate.pose();
+      const double ego_pose_x = pose.local_position().x();
+      const double ego_pose_y = pose.local_position().y();
+      const ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
+      std::cout << "ego_pose_x:" << ego_pose_x << ",ego_pose_y:" << ego_pose_y
+                << std::endl;
+      auto fsm_state = local_view.function_state_machine_info.current_state();
+      auto const trace_start_point = local_view.parking_map_info.trace_start();
+
+      // get ego projection point on line
+      ad_common::hdmap::LaneInfoConstPtr nearest_lane;
+      double nearest_s = 0.0;
+      double nearest_l = 0.0;
+      const int res =
+          hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
+      if (res != 0) {
+        std::cout << "not get ego projection point on line!!!" << std::endl;
+        return;
+      } else {
+        std::cout << "get s for ego projection point on line:" << nearest_s
+                  << ",l:" << nearest_l << std::endl;
+      }
+
+      // ego box
+      const auto& vehicle_param =
+          session->vehicle_config_context().get_vehicle_param();
+      const ad_common::math::Box2d ego_box(
+          {ego_pose_x, ego_pose_y}, pose.euler_angles().yaw(),
+          vehicle_param.length, vehicle_param.width);
+      // if on hpp lane
+      if (nearest_lane->IsOnLane(ego_box)) {
+        std::cout << "is on hpp lane!" << std::endl;
+        is_on_hpp_lane_ = true;
+        const auto trace_start = local_view.parking_map_info.trace_start();
+        const ad_common::math::Vec2d trace_start_point_2d = {
+            trace_start.enu().x(), trace_start.enu().x()};
+        std::cout << "trace_start_point_2d,x:" << trace_start_point_2d.x()
+                  << ",y:" << trace_start_point_2d.y() << std::endl;
+
+        // get cur point projection s
+        double cur_point_accumulate_s = 0;
+        double cur_point_lateral = 0;
+        if (nearest_lane->GetProjection(point, &cur_point_accumulate_s,
+                                        &cur_point_lateral)) {
+          std::cout << "cur point s:" << cur_point_accumulate_s
+                    << ",lateral:" << cur_point_lateral << std::endl;
+        } else {
+          std::cout << " cur point get projection fail!! " << std::endl;
+          return;
+        }
+        // get trace_start point projection s
+        double trace_start_point_accumulate_s;
+        double trace_start_point_lateral;
+        if (nearest_lane->GetProjection(trace_start_point_2d,
+                                        &trace_start_point_accumulate_s,
+                                        &trace_start_point_lateral)) {
+          std::cout << "trace_start point s:" << trace_start_point_accumulate_s
+                    << ",lateral:" << trace_start_point_lateral << std::endl;
+        } else {
+          std::cout << " trace_start point get projection fail!! " << std::endl;
+          return;
+        }
+        // calculate sum distance
+        bool is_reached_trace_start_point =
+            cur_point_accumulate_s >= trace_start_point_accumulate_s;
+        if (is_reached_trace_start_point) {
+          std::cout << "reached trace start point!!" << std::endl;
+          is_reached_hpp_start_point_ = true;
+          if (last_point_hpp_.x() != NL_NMAX &&
+              last_point_hpp_.y() != NL_NMAX) {
+            sum_distance_driving_ += point.DistanceTo(last_point_hpp_);
+          } else {
+            sum_distance_driving_ = 0;
+            std::cout << "1111last_point_hpp_.x():" << last_point_hpp_.x()
+                      << ",last_point_hpp_.y():" << last_point_hpp_.y()
+                      << std::endl;
+          }
+          last_point_hpp_ = point;
+          std::cout << "2222last_point_hpp_.x():" << last_point_hpp_.x()
+                    << ",last_point_hpp_.y():" << last_point_hpp_.y()
+                    << std::endl;
+          std::cout << "sum_distance_driving_:" << sum_distance_driving_
+                    << std::endl;
+        } else {
+          std::cout << "cur point s less than trace start s" << std::endl;
+        }
+      } else {
+        std::cout << "not in hpp lane!!!" << std::endl;
+        ResetHpp();
+      }
+    } else {
+      std::cout << "localization in invalid!!! " << std::endl;
+    }
+  } else {
+    std::cout << "hdmap is invalid!!" << std::endl;
+  }
+}
+
+void VirtualLaneManager::ResetHpp() {
+  is_on_hpp_lane_ = false;
+  is_reached_hpp_start_point_ = false;
+  sum_distance_driving_ = -1;
+  last_point_hpp_.set_x(NL_NMAX);
+  last_point_hpp_.set_y(NL_NMAX);
+}
+
 }  // namespace planning

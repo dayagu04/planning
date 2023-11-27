@@ -15,7 +15,7 @@ class ParkingSlotManager {
   ~ParkingSlotManager() = default;
 
  public:
-  bool update(const IFLYParkingMap::ParkingInfo& parking_info);
+  bool update(const IFLYParkingMap::ParkingInfo &parking_info);
   std::vector<ParkingSlotPoints> get_points() { return points_; };
 
  private:

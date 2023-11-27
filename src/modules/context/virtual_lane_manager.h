@@ -9,6 +9,7 @@
 #include "intersection.h"
 #include "local_view.h"
 #include "log.h"
+#include "session.h"
 #include "virtual_lane.h"
 namespace planning {
 
@@ -146,6 +147,12 @@ class VirtualLaneManager {
 
   bool is_local_valid() const { return is_local_valid_; }
 
+  bool is_on_hpp_lane() const { return is_on_hpp_lane_; }
+  bool is_reached_hpp_start_point() const {
+    return is_reached_hpp_start_point_;
+  }
+  double sum_distance_driving() const { return sum_distance_driving_; }
+
   void CalculateDistanceToRamp(planning::framework::Session *session);
   void CalculateDistanceToFirstRoadSplit(planning::framework::Session *session);
   void CalculateDistanceToFirstRoadMerge(planning::framework::Session *session);
@@ -175,6 +182,8 @@ class VirtualLaneManager {
 
   bool GetCurrentNearestLane(const planning::framework::Session &session);
   void CalculateDistanceToRampSplitMerge(planning::framework::Session *session);
+  void CalculateHPPInfo(planning::framework::Session *session);
+  void ResetHpp();
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
@@ -202,6 +211,11 @@ class VirtualLaneManager {
   bool is_on_ramp_ = false;
   ad_common::hdmap::LaneInfoConstPtr nearest_lane_;
   double nearest_s_ = 0.0;
+  // HPP
+  bool is_on_hpp_lane_ = false;
+  bool is_reached_hpp_start_point_ = false;
+  double sum_distance_driving_ = -1;
+  ad_common::math::Vec2d last_point_hpp_{NL_NMAX, NL_NMAX};
 };
 }  // namespace planning
 #endif

@@ -11,7 +11,7 @@ const double kMaxDistanceBackY = 30;
 ParkingSlotManager::ParkingSlotManager(planning::framework::Session *session)
     : session_(session) {}
 bool ParkingSlotManager::update(
-    const IFLYParkingMap::ParkingInfo& parking_info) {
+    const IFLYParkingMap::ParkingInfo &parking_info) {
   points_.clear();
   const auto ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
