@@ -53,7 +53,7 @@ class PlanningAdapter {
   }
 
   void FeedGroundLinePerception(
-      const std::shared_ptr<GroundLinePerception::GroundLinePerception>&
+      const std::shared_ptr<GroundLinePerception::GroundLinePerceptionInfo>&
           ground_line_perception_msg) {
     std::cout << "receive ground_line_perception "
               << ground_line_perception_msg->header().timestamp() << std::endl;
@@ -171,7 +171,7 @@ class PlanningAdapter {
   FusionRoad::RoadInfo road_info_msg_;
   int64_t road_info_msg_recv_time_;
 
-  GroundLinePerception::GroundLinePerception ground_line_perception_msg_;
+  GroundLinePerception::GroundLinePerceptionInfo ground_line_perception_msg_;
   int64_t ground_line_perception_msg_recv_time_;
 
   LocalizationOutput::LocalizationEstimate localization_estimate_msg_;

@@ -269,7 +269,7 @@ bool EnvironmentalModelManager::ground_line_obstacles_update(
       session_->mutable_environmental_model()
           ->get_mutable_ground_line_point_info();
   ground_line_point_info.clear();
-  GroundLinePerception::GroundLinePerception groundline_data =
+  GroundLinePerception::GroundLinePerceptionInfo groundline_data =
       local_view.ground_line_perception;
 
   for (size_t i = 0; i < groundline_data.ground_lines_size(); ++i) {

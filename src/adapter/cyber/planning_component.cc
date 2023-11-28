@@ -47,10 +47,10 @@ bool PlanningComponent::Init() {
       });
 
   auto fusion_groudline_reader_ =
-      planning_node_->CreateReader<GroundLinePerception::GroundLinePerception>(
+      planning_node_->CreateReader<GroundLinePerception::GroundLinePerceptionInfo>(
           "/iflytek/camera_perception/ground_line",
           [this](
-              const std::shared_ptr<GroundLinePerception::GroundLinePerception>
+              const std::shared_ptr<GroundLinePerception::GroundLinePerceptionInfo>
                   &ground_line_perception_msg) {
             planning_adapter_->FeedGroundLinePerception(
                 ground_line_perception_msg);

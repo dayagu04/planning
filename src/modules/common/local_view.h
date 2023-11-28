@@ -31,7 +31,7 @@ struct LocalView {
   FusionRoad::RoadInfo road_info;
   double road_info_recv_time = 0.0;
 
-  GroundLinePerception::GroundLinePerception ground_line_perception;
+  GroundLinePerception::GroundLinePerceptionInfo ground_line_perception;
   double ground_line_perception_recv_time = 0.0;
 
   LocalizationOutput::LocalizationEstimate localization_estimate;
