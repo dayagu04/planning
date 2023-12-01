@@ -45,7 +45,7 @@ using planning::planning_math::LineSegment2d;
 using planning::planning_math::Vec2d;
 
 namespace {
-constexpr double kEps = 1e-6;
+constexpr double kEps = 0.02;
 constexpr double kMaxAcc = 0.5;
 constexpr double kMaxSpd = 0.5;
 constexpr double kMinSegmentLen = 0.5 * kMaxSpd * kMaxSpd / kMaxAcc;

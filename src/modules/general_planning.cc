@@ -291,10 +291,8 @@ void GeneralPlanning::FillPlanningTrajectory(
     auto target_ref = trajectory->mutable_target_reference();
     // add polynomial
     // clip the polynomial C_3
-    // const double lat_offset_rate = config.lat_offset_rate();
-    // const double max_lat_offset = config.max_lat_offset();
-    const double lat_offset_rate = 0.2;
-    const double max_lat_offset = 2;
+    const double lat_offset_rate = config_.d_poly_lat_offset_rate;
+    const double max_lat_offset = config_.d_poly_max_lat_offset;
     const double presee_x_dist = 50.;
     static double limited_polynomial_3 = 0.0;
     const auto &d_polynomial = lateral_output.d_poly;
