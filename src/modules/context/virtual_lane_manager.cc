@@ -46,11 +46,12 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
 
   is_local_valid_ = roads.local_point_valid();
   // CalculateDistanceToRampSplitMerge(session_);
-  // CalculateDistanceToTargetSlot(session_);
   CalculateHPPInfo(session_);
   std::cout << "is on hpp lane:" << is_on_hpp_lane_
             << ",is reached trace start:" << is_reached_hpp_start_point_
             << ",accumulate driving dis:" << sum_distance_driving_ << std::endl;
+  CalculateDistanceToTargetSlot(session_);
+  std::cout << "dis to tar slot:" << distance_to_target_slot_ << std::endl;
 
   double dis_to_first_road_split = distance_to_first_road_split();
   double dis_between_first_road_split_and_ramp =
@@ -1117,6 +1118,102 @@ void VirtualLaneManager::ResetHpp() {
   sum_distance_driving_ = -1;
   last_point_hpp_.set_x(NL_NMAX);
   last_point_hpp_.set_y(NL_NMAX);
+}
+
+void VirtualLaneManager::CalculateDistanceToTargetSlot(
+    planning::framework::Session* session) {
+  distance_to_target_slot_ = NL_NMAX;
+  const auto& local_view = session->environmental_model().get_local_view();
+  if (local_view.localization_estimate.msf_status().msf_status() !=
+      LocalizationOutput::MsfStatus::ERROR) {
+    std::cout << "hdmap_valid is true,current timestamp:"
+              << session_->environmental_model()
+                     .get_local_view()
+                     .static_map_info.header()
+                     .timestamp()
+              << std::endl;
+
+    if (local_view.localization_estimate.pose().has_local_position() &&
+        session->environmental_model().get_hdmap_valid()) {
+      const auto& hd_map = session->environmental_model().get_hd_map();
+      const auto& pose = local_view.localization_estimate.pose();
+      const double ego_pose_x = pose.local_position().x();
+      const double ego_pose_y = pose.local_position().y();
+      ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
+      std::cout << "ego_pose_x:" << ego_pose_x << ",ego_pose_y:" << ego_pose_y
+                << std::endl;
+
+      // get target slot projection point on line
+      ad_common::hdmap::LaneInfoConstPtr nearest_lane;
+      double nearest_s = 0.0;
+      double nearest_l = 0.0;
+      const double distance = 10.0;
+      const double central_heading = pose.heading();
+      const double max_heading_difference = PI / 4;
+
+      auto time_start = IflyTime::Now_us();
+      const int res =
+          hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
+      auto time_end = IflyTime::Now_us();
+      double cost = time_end - time_start;
+
+      auto time_start1 = IflyTime::Now_us();
+      // const int res = hd_map.GetNearestLaneWithHeading(
+      //     point, distance, central_heading, max_heading_difference,
+      //     &nearest_lane, &nearest_s, &nearest_l);
+      auto time_end1 = IflyTime::Now_us();
+      double cost1 = time_end1 - time_start1;
+      std::cout << "get nearest lane time cost:" << cost
+                << ", time cost1:" << cost1 << ",cost gap:" << cost1 - cost
+                << std::endl;
+
+      if (res != 0) {
+        std::cout << "not get ego projection point on line!!!" << std::endl;
+        return;
+      } else {
+        std::cout << "get s for ego projection point on line:" << nearest_s
+                  << std::endl;
+      }
+
+      // get target slot projection point on line
+      ad_common::hdmap::LaneInfoConstPtr tar_slot_nearest_lane;
+      double tar_slot_nearest_s = 0.0;
+      double tar_slot_nearest_l = 0.0;
+      const double tar_slot_distance = 10.0;
+      const double tar_slot_central_heading = pose.heading();
+      const double tar_slot_max_heading_difference = PI / 4;
+
+      ad_common::math::Vec2d tar_slot_point;
+      const auto& lines = local_view.static_map_info.road_map().lanes();
+      for (auto line : lines) {
+        const auto points = line.points_on_central_line();
+        const double tar_slot_pose_x = points[points.size() - 1].x();
+        const double tar_slot_pose_y = points[points.size() - 1].y();
+        tar_slot_point.set_x(tar_slot_pose_x);
+        tar_slot_point.set_y(tar_slot_pose_y);
+        std::cout << "tar_slot_pose_x:" << tar_slot_pose_x
+                  << ",tar_slot_pose_y:" << tar_slot_pose_y << std::endl;
+      }
+
+      const int tar_slot_res =
+          hd_map.GetNearestLane(tar_slot_point, &tar_slot_nearest_lane,
+                                &tar_slot_nearest_s, &tar_slot_nearest_l);
+      if (tar_slot_res != 0) {
+        std::cout << "not get target slot projection point on line!!!"
+                  << std::endl;
+        return;
+      } else {
+        std::cout << "get s for target slot projection point on line:"
+                  << tar_slot_nearest_s << std::endl;
+      }
+      distance_to_target_slot_ = tar_slot_nearest_s - nearest_s;
+
+    } else {
+      std::cout << "pose is invalid!!" << std::endl;
+    }
+  } else {
+    std::cout << "localization invalid" << std::endl;
+  }
 }
 
 }  // namespace planning

@@ -152,6 +152,7 @@ class VirtualLaneManager {
     return is_reached_hpp_start_point_;
   }
   double sum_distance_driving() const { return sum_distance_driving_; }
+    double distance_to_target_slot() const { return distance_to_target_slot_; }
 
   void CalculateDistanceToRamp(planning::framework::Session *session);
   void CalculateDistanceToFirstRoadSplit(planning::framework::Session *session);
@@ -184,6 +185,7 @@ class VirtualLaneManager {
   void CalculateDistanceToRampSplitMerge(planning::framework::Session *session);
   void CalculateHPPInfo(planning::framework::Session *session);
   void ResetHpp();
+  void CalculateDistanceToTargetSlot(planning::framework::Session *session);
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
@@ -216,6 +218,8 @@ class VirtualLaneManager {
   bool is_reached_hpp_start_point_ = false;
   double sum_distance_driving_ = -1;
   ad_common::math::Vec2d last_point_hpp_{NL_NMAX, NL_NMAX};
+  // target slot
+  double distance_to_target_slot_ = NL_NMAX;
 };
 }  // namespace planning
 #endif
