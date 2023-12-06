@@ -12,6 +12,7 @@
 #include "environmental_model.h"
 #include "fusion_road.pb.h"
 #include "localization.pb.h"
+#include "log.h"
 #include "planning_output_context.h"
 #include "reference_path_manager.h"
 
@@ -33,7 +34,7 @@ VirtualLaneManager::VirtualLaneManager(
 }
 
 std::vector<double> VirtualLaneManager::construct_reference_line_scc(void) {
-  //暂且发直线
+  // 暂且发直线
   std::vector<double> virtual_poly(4, 0.0);
   return virtual_poly;  // 依次为常数项、一次项、二次项、三次项
 }
@@ -46,8 +47,8 @@ std::vector<double> VirtualLaneManager::construct_reference_line_acc(void) {
       session_->environmental_model().get_ego_state_manager()->ego_yaw_rate();
 
   const double ego_steer_angle = session_->environmental_model()
-                               .get_ego_state_manager()
-                               ->ego_steer_angle();
+                                     .get_ego_state_manager()
+                                     ->ego_steer_angle();
 
   const double steer_ratio =
       session_->environmental_model().vehicle_param().steer_ratio;
@@ -96,10 +97,15 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   if (roads.reference_line_msg().empty()) {
     // 依次为常数项、一次项、二次项、三次项
     std::vector<double> current_lane_virtual_poly;
-    if (session_->environmental_model().function_info().function_mode() == common::DrivingFunctionInfo::ACC) {
+    if (session_->environmental_model().function_info().function_mode() ==
+        common::DrivingFunctionInfo::ACC) {
       current_lane_virtual_poly = construct_reference_line_acc();
-    } else if (session_->environmental_model().function_info().function_mode() == common::DrivingFunctionInfo::SCC) {
+      LOG_WARNING("[VirtualLaneManager::update] ACC construct reference line");
+    } else if (session_->environmental_model()
+                   .function_info()
+                   .function_mode() == common::DrivingFunctionInfo::SCC) {
       current_lane_virtual_poly = construct_reference_line_scc();
+      LOG_WARNING("[VirtualLaneManager::update] SCC construct reference line");
     } else {
       return false;
     }
@@ -157,16 +163,18 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     double x = -50.0;
     double s = 0.0;
     double y_delay;
-    const double heading_angle =
-      session_->environmental_model().get_ego_state_manager()->heading_angle();
+    const double heading_angle = session_->environmental_model()
+                                     .get_ego_state_manager()
+                                     ->heading_angle();
     for (size_t i = 0; i < 100; ++i) {
       auto current_lane_virtual_ref_point =
           current_lane_virtual_ref->add_virtual_lane_refline_points();
 
-      const double y = c0 + (c1 + (c2 + c3 * x) * x) * x; 
-      const double heading = c1 + (2.0 * c2  + 3.0 * c3 * x) * x;
-      const double curvature = std::fabs(2.0 * c2 + 6.0 * c3 * x) /
-        std::pow(std::pow(c1 + (2.0 * c2  + 3.0 * c3 * x) * x, 2) + 1, 1.5);
+      const double y = c0 + (c1 + (c2 + c3 * x) * x) * x;
+      const double heading = c1 + (2.0 * c2 + 3.0 * c3 * x) * x;
+      const double curvature =
+          std::fabs(2.0 * c2 + 6.0 * c3 * x) /
+          std::pow(std::pow(c1 + (2.0 * c2 + 3.0 * c3 * x) * x, 2) + 1, 1.5);
 
       const double half_car_width =
           session_->environmental_model().vehicle_param().width;
@@ -198,8 +206,10 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
 
       current_lane_virtual_ref_point->set_curvature(curvature);
       current_lane_virtual_ref_point->set_car_heading(heading);
-      current_lane_virtual_ref_point->set_enu_heading(fmod(heading + heading_angle + M_PI, 2 * M_PI) - M_PI);
-      current_lane_virtual_ref_point->set_local_heading(fmod(heading + heading_angle + M_PI, 2 * M_PI) - M_PI);
+      current_lane_virtual_ref_point->set_enu_heading(
+          fmod(heading + heading_angle + M_PI, 2 * M_PI) - M_PI);
+      current_lane_virtual_ref_point->set_local_heading(
+          fmod(heading + heading_angle + M_PI, 2 * M_PI) - M_PI);
 
       current_lane_virtual_ref_point->set_distance_to_left_road_border(
           half_car_width);
@@ -238,8 +248,10 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       x += delta_x;
       y_delay = y;
     }
-   
-    LOG_DEBUG("current_lane_virtual_ref->virtual_lane_refline_points_size =  %d\n", current_lane_virtual_ref->virtual_lane_refline_points_size());
+
+    LOG_DEBUG(
+        "current_lane_virtual_ref->virtual_lane_refline_points_size =  %d\n",
+        current_lane_virtual_ref->virtual_lane_refline_points_size());
     LOG_DEBUG("s_end =  %f\n", s);
 
     // set left_lane_boundary
@@ -258,6 +270,9 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     current_lane_virtual_left->add_poly_coefficient(c3);
     current_lane_virtual_left->set_begin(-50.0);
     current_lane_virtual_left->set_end(150.0);
+    current_lane_virtual_left->add_type_segments()->set_length(150.0);
+    current_lane_virtual_left->add_type_segments()->set_type(
+        Common::LaneBoundaryType::MARKING_SOLID);
     x = -50.0;
     for (size_t i = 0; i < 100; ++i) {
       auto current_lane_virtual_left_car_point =
@@ -308,6 +323,9 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     current_lane_virtual_right->add_poly_coefficient(c3);
     current_lane_virtual_right->set_begin(-50.0);
     current_lane_virtual_right->set_end(150.0);
+    current_lane_virtual_right->add_type_segments()->set_length(150.0);
+    current_lane_virtual_right->add_type_segments()->set_type(
+        Common::LaneBoundaryType::MARKING_SOLID);
     x = -50.0;
     for (size_t i = 0; i < 100; ++i) {
       auto current_lane_virtual_right_car_point =
@@ -366,16 +384,8 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       "dis_to_ramp: %f, dis_to_first_road_split: %f, "
       "distance_to_first_road_merge_: %f \n",
       dis_to_ramp_, dis_to_first_road_split, distance_to_first_road_merge_);
-  // std::cout << " dis_to_ramp: " << dis_to_ramp_
-  //           << " dis_to_first_road_split: " << dis_to_first_road_split
-  //           << " distance_to_first_road_merge_: "
-  //           << distance_to_first_road_merge_ << std::endl;
   LOG_DEBUG("is_nearing_ramp:%d \n", is_nearing_ramp);
 
-  // 后续删除该打印
-  // std::cout << "is_select_split_nearing_ramp:" <<
-  // is_select_split_nearing_ramp_
-  //           << std::endl;
   for (auto& lane : roads_ptr->reference_line_msg()) {
     std::shared_ptr<VirtualLane> virtual_lane_tmp =
         std::make_shared<VirtualLane>();
@@ -394,7 +404,6 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
               lane_merge_split_point_data.is_continue())) &&
             lane.relative_id() == 0) {
           virtual_lane_tmp->update_data(lane);
-          // std::cout << "22222222222222222222222" << std::endl;
         } else if ((lane.relative_id() == 1 &&
                     lane_merge_split_point_data.is_split() &&
                     lane_merge_split_point_data.distance() < -5. &&
@@ -404,24 +413,12 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
                     relative_id_lanes_.size() == lane.order_id() &&
                     ramp_direction_ == RAMP_ON_LEFT)) {
           virtual_lane_tmp->update_data(lane);
-          // std::cout << "444444444444444444444444" << std::endl;
         } else if (lane_merge_split_point_data.is_continue()) {
           virtual_lane_tmp->update_data(lane);
-          // std::cout << "555555555555555555555555" << std::endl;
         } else if (lane.relative_id() <= 0 &&
                    relative_id_lanes_.size() == lane.order_id()) {
           virtual_lane_tmp->update_data(lane);
-          // std::cout << "77777777777777777777777777777" << std::endl;
         } else {
-          // std::cout << "lane_merge_split_point_data.orientation(): "
-          //           << lane_merge_split_point_data.orientation()
-          //           << " lane_merge_split_point_data.distance(): "
-          //           << lane_merge_split_point_data.distance()
-          //           << " relative_id_lanes_.size():  "
-          //           << relative_id_lanes_.size()
-          //           << " lane.order_id(): " << lane.order_id()
-          //           << " lane.relative_id(): " << lane.relative_id()
-          //           << std::endl;
           if (lane.relative_id() == -1) {
             // std::cout << "6666666666666666666666666666: "
             //              "lane_merge_split_point_data.is_continue(): "
@@ -434,7 +431,6 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       } else {
         if (lane_merge_split_point_data.is_continue()) {
           virtual_lane_tmp->update_data(lane);
-          // std::cout << "333333333333333333333333" << std::endl;
         } else if (lane.relative_id() == 0 &&
                    !lane_merge_split_point_data.is_split() &&
                    lane_merge_split_point_data.orientation() == 1 &&
@@ -442,11 +438,9 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
                    lane.order_id() >= 3) {
           virtual_lane_tmp->update_data(lane);
           is_lane_merging = true;
-          // std::cout << "88888888888888888888888888888888888" << std::endl;
         } else if (lane.relative_id() == 0 &&
                    relative_id_lanes_.size() == lane.order_id()) {
           virtual_lane_tmp->update_data(lane);
-          // std::cout << "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM" << std::endl;
         } else {
           continue;
         }
@@ -454,14 +448,11 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     }
 
     LOG_DEBUG("lane relative_id:%d, order_id:%d\n", lane.relative_id(),
-           lane.order_id());
+              lane.order_id());
     if (virtual_lane_tmp->get_lane_type() ==
         FusionRoad::LaneType::LANETYPE_EMERGENCY)
       break;
     relative_id_lanes_.emplace_back(virtual_lane_tmp);
-    // if (virtual_lane_tmp->get_lane_type() ==
-    //     FusionRoad::LaneType::LANETYPE_EMERGENCY)
-    //   break;
   }
 
   lane_num_ = relative_id_lanes_.size();
@@ -485,7 +476,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
               << " lane_type: " << relative_id_lane->get_lane_type()
               << " lane_num_except_emergency: " << lane_num_except_emergency
               << " is_leaving_ramp_: " << is_leaving_ramp_ << std::endl;
-   
+
     if (relative_id_lane->get_lane_type() ==
         FusionRoad::LaneType::LANETYPE_EMERGENCY)
       break;
@@ -904,8 +895,6 @@ double VirtualLaneManager::JudgeIfTheRamp(
 
   for (int i = current_index; i < sorted_lane_groups_num; i++) {
     const uint64_t lane_group_id = sorted_lane_groups_in_route_[i];
-    // std::cout << "lane_group_id:" << lane_group_id << ", i=" << i <<
-    // std::endl;
     LaneGroupConstPtr lane_group_ptr = hd_map.GetLaneGroupById(lane_group_id);
     if (lane_group_ptr == nullptr) {
       LOG_DEBUG("fail get lane group by id for ramp!!!\n");
@@ -1062,9 +1051,8 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
         LOG_DEBUG("fail get lane group by id for merge!!!\n");
         return NL_NMAX;
       }
-      //std::cout << "lane_group_ptr_next->way_forms size:"
-      //          << lane_group_ptr_next->way_forms().size() << std::endl;
-      LOG_DEBUG("lane_group_ptr_next->way_forms size: %d\n", lane_group_ptr_next->way_forms().size());
+      LOG_DEBUG("lane_group_ptr_next->way_forms size: %d\n",
+                lane_group_ptr_next->way_forms().size());
       bool is_no_ramp_on_next_group = true;
       for (int j = 0; j < lane_group_ptr_next->way_forms().size(); j++) {
         // std::cout << "lane_group_ptr_next way_forms:"
@@ -1079,23 +1067,18 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
 
       // can comment out the code if want to cancel the first change lane
       // ************
-      //std::cout << "predecessor_lane_group_ids size:"
-      //          << lane_group_ptr_next->predecessor_lane_group_ids().size()
-      //          << std::endl;
-      LOG_DEBUG("predecessor_lane_group_ids size: %d\n", lane_group_ptr_next->predecessor_lane_group_ids().size());
+      LOG_DEBUG("predecessor_lane_group_ids size: %d\n",
+                lane_group_ptr_next->predecessor_lane_group_ids().size());
       if (lane_group_ptr_next->predecessor_lane_group_ids().size() > 1) {
         is_predecessor_more_than_one = true;
-        //std::cout << "is_predecessor_more_than_one:"
-        //          << is_predecessor_more_than_one << std::endl;
-        LOG_DEBUG("is_predecessor_more_than_one: %d\n", int(is_predecessor_more_than_one));
+        LOG_DEBUG("is_predecessor_more_than_one: %d\n",
+                  int(is_predecessor_more_than_one));
       }
       //******************************************************************************
 
       if (is_no_ramp_on_next_group || is_predecessor_more_than_one) {
         LOG_DEBUG("accumulate_distance_in_lane_group for merge :%f\n",
                   accumulate_distance_for_lane_group);
-        //std::cout << "judge merge lane group id:" << lane_group_id_next
-        //          << std::endl;
         LOG_DEBUG("judge merge lane group id: %d\n", lane_group_id_next);
         return accumulate_distance_for_lane_group;
       }
@@ -1117,16 +1100,11 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
   // get the remaining distance in current lane
   const double nearest_lane_total_length = nearest_lane_->total_length();
   *remaining_dis = nearest_lane_total_length - nearest_s_;
-  //std::cout << "nearest_lane_total_length:" << nearest_lane_total_length
-  //          << ",nearest_s:" << nearest_s_
-  //          << ",remaining_dis:" << *remaining_dis << std::endl;
-  LOG_DEBUG("nearest_lane_total_length: %f, nearest_s: %f, remaining_dis: %f\n", nearest_lane_total_length,
-             nearest_s_, *remaining_dis);
+  LOG_DEBUG("nearest_lane_total_length: %f, nearest_s: %f, remaining_dis: %f\n",
+            nearest_lane_total_length, nearest_s_, *remaining_dis);
 
   // judge the ramp lane group
   uint64_t nearest_lane_group_id = nearest_lane_->lane_group_id();
-  //std::cout << "nearest_lane_id:" << nearest_lane_->id() << std::endl;
-  //std::cout << "nearest_lane_group_id:" << nearest_lane_group_id << std::endl;
   LOG_DEBUG("nearest_lane_id::%d\n", nearest_lane_->id());
   LOG_DEBUG("nearest_lane_group_id:%d\n", nearest_lane_group_id);
   LOG_DEBUG("lane_groups_num nums:%d\n", lane_groups_num);
@@ -1171,13 +1149,11 @@ bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
   sorted_lane_groups_in_route_.clear();
   // sorted_lane_groups_in_route_.reserve(lane_groups_num);
   sorted_lane_groups_in_route_.emplace_back(current_lane_group);
-  //std::cout << "id:" << current_lane_group << std::endl;
   LOG_DEBUG("id:%d\n", current_lane_group);
 
   LaneGroupConstPtr lane_group_ptr =
       hd_map.GetLaneGroupById(current_lane_group);
   if (lane_group_ptr == nullptr) {
-    //std::cout << "lane_group_ptr is nullprt!!!" << std::endl;
     LOG_DEBUG("lane_group_ptr is nullprt!!!\n");
   }
   while (lane_group_ptr != nullptr) {
@@ -1185,23 +1161,20 @@ bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
     for (const auto& id : lane_group_ptr->successor_lane_group_ids()) {
       if (lane_group_set_.count(id) != 0) {
         sorted_lane_groups_in_route_.emplace_back(id);
-        //std::cout << "sorted lane group id:" << id
-        //          << ",No:" << sorted_lane_groups_in_route_.size() << std::endl;
-        LOG_DEBUG("sorted lane group id: %d, No: %d\n", id, sorted_lane_groups_in_route_.size());
+        LOG_DEBUG("sorted lane group id: %d, No: %d\n", id,
+                  sorted_lane_groups_in_route_.size());
         lane_group_ptr = hd_map.GetLaneGroupById(id);
         is_found = true;
         break;
       }
     }
     if (!is_found) {
-      //std::cout << "not found" << std::endl;
       LOG_DEBUG("not found\n");
       break;
     }
   }
-  //std::cout << "sorted_lane_groups_in_route_ size:"
-  //          << sorted_lane_groups_in_route_.size() << std::endl;
-  LOG_DEBUG("sorted_lane_groups_in_route_ size: %d\n", sorted_lane_groups_in_route_.size());
+  LOG_DEBUG("sorted_lane_groups_in_route_ size: %d\n",
+            sorted_lane_groups_in_route_.size());
   return true;
 }
 
