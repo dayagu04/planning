@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/mnt/noa_1018/noa_1.00000.1697642337.plan"
+bag_path = "/mnt/jwliu23/data_collection_JAC_S811_23GC9_EVENT_MANUAL_2023-12-02-15-17-11.record.1701695522.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
