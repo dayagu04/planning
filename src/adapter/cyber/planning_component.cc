@@ -55,13 +55,21 @@ bool PlanningComponent::Init() {
         planning_adapter_->FeedGroundLinePerception(ground_line_perception_msg);
       });
 
-  auto localization_reader_ =
+  auto localization_estimate_reader_ =
       planning_node_->CreateReader<LocalizationOutput::LocalizationEstimate>(
           "/iflytek/localization/ego_pose",
           [this](const std::shared_ptr<LocalizationOutput::LocalizationEstimate>
                      &localization_estimate_msg) {
-            planning_adapter_->FeedLocalizationOutput(
+            planning_adapter_->FeedLocalizationEstimateOutput(
                 localization_estimate_msg);
+          });
+
+  auto localization_reader_ =
+      planning_node_->CreateReader<IFLYLocalization::IFLYLocalization>(
+          "/iflytek/localization/egomotion",
+          [this](const std::shared_ptr<IFLYLocalization::IFLYLocalization>
+                     &localization_msg) {
+            planning_adapter_->FeedLocalizationOutput(localization_msg);
           });
 
   auto prediction_reader_ =

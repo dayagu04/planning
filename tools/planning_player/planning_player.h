@@ -28,7 +28,10 @@ class PlanningPlayer {
                     const planning::common::TopicTimeList &input_time_list);
   void PlayAllFrames();
   void RunCloseLoop(const PlanningOutput::PlanningOutput &planning_output);
-  void PerfectControl(
+  void PerfectControlHPP(
+      const PlanningOutput::PlanningOutput &plan_msg, uint64_t delta_t,
+      std::shared_ptr<IFLYLocalization::IFLYLocalization> &loc_msg);
+  void PerfectControlAPA(
       const PlanningOutput::PlanningOutput &plan_msg, uint64_t delta_t,
       std::shared_ptr<LocalizationOutput::LocalizationEstimate> &loc_msg);
 

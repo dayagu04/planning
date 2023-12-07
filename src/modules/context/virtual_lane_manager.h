@@ -152,7 +152,7 @@ class VirtualLaneManager {
     return is_reached_hpp_start_point_;
   }
   double sum_distance_driving() const { return sum_distance_driving_; }
-    double distance_to_target_slot() const { return distance_to_target_slot_; }
+  double distance_to_target_slot() const { return distance_to_target_slot_; }
 
   void CalculateDistanceToRamp(planning::framework::Session *session);
   void CalculateDistanceToFirstRoadSplit(planning::framework::Session *session);

@@ -10,6 +10,7 @@
 #include "general_planning.h"
 #include "groundline_perception.pb.h"
 #include "hmi_mcu_inner.pb.h"
+#include "ifly_localization.pb.h"
 #include "ifly_parking_map.pb.h"
 #include "ifly_time.h"
 #include "local_view.h"
@@ -62,7 +63,7 @@ class PlanningAdapter {
     ground_line_perception_msg_recv_time_ = IflyTime::Now_ms();
   }
 
-  void FeedLocalizationOutput(
+  void FeedLocalizationEstimateOutput(
       const std::shared_ptr<LocalizationOutput::LocalizationEstimate>&
           localization_estimate_msg) {
     // std::cout << "receive localization_estimate "
@@ -71,6 +72,17 @@ class PlanningAdapter {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     localization_estimate_msg_.CopyFrom(*localization_estimate_msg);
     localization_estimate_msg_recv_time_ = IflyTime::Now_ms();
+  }
+
+  void FeedLocalizationOutput(
+      const std::shared_ptr<IFLYLocalization::IFLYLocalization>&
+          localization_msg) {
+    // std::cout << "receive localization_estimate "
+    //           << localization_estimate_msg->header().timestamp() <<
+    //           std::endl;
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    localization_msg_.CopyFrom(*localization_msg);
+    localization_msg_recv_time_ = IflyTime::Now_ms();
   }
 
   void FeedPredictionResult(const std::shared_ptr<Prediction::PredictionResult>&
@@ -176,6 +188,9 @@ class PlanningAdapter {
 
   LocalizationOutput::LocalizationEstimate localization_estimate_msg_;
   int64_t localization_estimate_msg_recv_time_;
+
+  IFLYLocalization::IFLYLocalization localization_msg_;
+  int64_t localization_msg_recv_time_;
 
   FusionObjects::FusionObjectsInfo fusion_objects_info_msg_;
   int64_t fusion_objects_info_msg_recv_time_;

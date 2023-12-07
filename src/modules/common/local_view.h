@@ -9,6 +9,7 @@
 #include "fusion_road.pb.h"
 #include "groundline_perception.pb.h"
 #include "hmi_mcu_inner.pb.h"
+#include "ifly_localization.pb.h"
 #include "ifly_parking_map.pb.h"
 #include "localization.pb.h"
 #include "parking_fusion.pb.h"
@@ -36,6 +37,9 @@ struct LocalView {
 
   LocalizationOutput::LocalizationEstimate localization_estimate;
   double localization_estimate_recv_time = 0.0;
+
+  IFLYLocalization::IFLYLocalization localization;
+  double localization_recv_time = 0.0;
 
   FusionObjects::FusionObjectsInfo fusion_objects_info;
   double fusion_objects_info_recv_time = 0.0;

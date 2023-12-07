@@ -29,7 +29,9 @@ static constexpr auto TOPIC_PLANNING_DEBUG_INFO =
 static constexpr auto TOPIC_PLANNING_HMI = "/iflytek/planning/hmi";
 static constexpr auto TOPIC_FUSION_OBJECTS = "/iflytek/fusion/objects";
 static constexpr auto TOPIC_ROAD_FUSION = "/iflytek/fusion/road_fusion";
-static constexpr auto TOPIC_LOCALIZATION = "/iflytek/localization/ego_pose";
+static constexpr auto TOPIC_LOCALIZATION_ESTIMATE =
+    "/iflytek/localization/ego_pose";
+static constexpr auto TOPIC_LOCALIZATION = "/iflytek/localization/egomotion";
 static constexpr auto TOPIC_PREDICTION_RESULT =
     "/iflytek/prediction/prediction_result";
 static constexpr auto TOPIC_VEHICLE_SERVICE = "/iflytek/vehicle_service";
@@ -120,7 +122,7 @@ bool PlanningPlayer::LoadCyberBag(const std::string& bag_path) {
       cache_with_msg_and_header_time<FusionObjects::FusionObjectsInfo>(msg);
     } else if (msg.channel_name == TOPIC_ROAD_FUSION) {
       cache_with_msg_and_header_time<FusionRoad::RoadInfo>(msg);
-    } else if (msg.channel_name == TOPIC_LOCALIZATION) {
+    } else if (msg.channel_name == TOPIC_LOCALIZATION_ESTIMATE) {
       cache_with_msg_and_header_time<LocalizationOutput::LocalizationEstimate>(
           msg);
     } else if (msg.channel_name == TOPIC_PREDICTION_RESULT) {
@@ -164,6 +166,8 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
   write_topic_msg<FusionRoad::RoadInfo>(msg_cache_, record_writer,
                                         TOPIC_ROAD_FUSION);
   write_topic_msg<LocalizationOutput::LocalizationEstimate>(
+      msg_cache_, record_writer, TOPIC_LOCALIZATION_ESTIMATE);
+  write_topic_msg<IFLYLocalization::IFLYLocalization>(
       msg_cache_, record_writer, TOPIC_LOCALIZATION);
   write_topic_msg<Prediction::PredictionResult>(msg_cache_, record_writer,
                                                 TOPIC_PREDICTION_RESULT);
@@ -208,8 +212,16 @@ void PlanningPlayer::PlayOneFrame(
     planning_adapter_->FeedFusionRoad(fusion_road_msg);
   }
 
-  auto localization_msg =
+  auto localization_estimate_msg =
       find_msg_with_header_time<LocalizationOutput::LocalizationEstimate>(
+          TOPIC_LOCALIZATION_ESTIMATE, input_time_list.localization_estimate());
+  if (localization_estimate_msg) {
+    planning_adapter_->FeedLocalizationEstimateOutput(
+        localization_estimate_msg);
+  }
+
+  auto localization_msg =
+      find_msg_with_header_time<IFLYLocalization::IFLYLocalization>(
           TOPIC_LOCALIZATION, input_time_list.localization());
   if (localization_msg) {
     planning_adapter_->FeedLocalizationOutput(localization_msg);
@@ -299,33 +311,144 @@ void PlanningPlayer::PlayAllFrames() {
 
 void PlanningPlayer::RunCloseLoop(
     const PlanningOutput::PlanningOutput& planning_output) {
-  if (!check_msg_exist(msg_cache_, TOPIC_PLANNING_DEBUG_INFO) ||
-      !check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
-    return;
-  }
-  auto traj_size = planning_output.trajectory().trajectory_points_size();
-  if (traj_size < 10) {
-    std::cerr << "RunCloseLoop fail, traj_points size=" << traj_size
-              << std::endl;
-    return;
-  }
+      
+  if (1) {  // HPP
+    if (!check_msg_exist(msg_cache_, TOPIC_PLANNING_DEBUG_INFO) ||
+        !check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
+      return;
+    }
+    auto traj_size = planning_output.trajectory().trajectory_points_size();
+    if (traj_size < 10) {
+      std::cerr << "RunCloseLoop fail, traj_points size=" << traj_size
+                << std::endl;
+      return;
+    }
 
-  for (auto it = msg_cache_[TOPIC_LOCALIZATION].begin();
-       it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
-    auto loc_msg_i =
-        std::const_pointer_cast<LocalizationOutput::LocalizationEstimate>(
-            std::dynamic_pointer_cast<LocalizationOutput::LocalizationEstimate>(
-                it->second));
-    auto loc_header_time_i = loc_msg_i->header().timestamp();
-    if (loc_header_time_i > loc_header_time_us_ &&
-        loc_header_time_i < loc_header_time_us_ + 1000 * 1000) {
-      auto delta_t = loc_header_time_i - loc_header_time_us_;
-      PerfectControl(planning_output, delta_t, loc_msg_i);
+    for (auto it = msg_cache_[TOPIC_LOCALIZATION].begin();
+         it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
+      auto loc_msg_i =
+          std::const_pointer_cast<IFLYLocalization::IFLYLocalization>(
+              std::dynamic_pointer_cast<
+                  IFLYLocalization::IFLYLocalization>(it->second));
+      auto loc_header_time_i = loc_msg_i->header().timestamp();
+      if (loc_header_time_i > loc_header_time_us_ &&
+          loc_header_time_i < loc_header_time_us_ + 1000 * 1000) {
+        auto delta_t = loc_header_time_i - loc_header_time_us_;
+        PerfectControlHPP(planning_output, delta_t, loc_msg_i);
+      }
+    }
+  } else {  // APA
+    if (!check_msg_exist(msg_cache_, TOPIC_PLANNING_DEBUG_INFO) ||
+        !check_msg_exist(msg_cache_, TOPIC_LOCALIZATION_ESTIMATE)) {
+      return;
+    }
+    auto traj_size = planning_output.trajectory().trajectory_points_size();
+    if (traj_size < 10) {
+      std::cerr << "RunCloseLoop fail, traj_points size=" << traj_size
+                << std::endl;
+      return;
+    }
+
+    for (auto it = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
+         it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
+      auto loc_msg_i =
+          std::const_pointer_cast<LocalizationOutput::LocalizationEstimate>(
+              std::dynamic_pointer_cast<
+                  LocalizationOutput::LocalizationEstimate>(it->second));
+      auto loc_header_time_i = loc_msg_i->header().timestamp();
+      if (loc_header_time_i > loc_header_time_us_ &&
+          loc_header_time_i < loc_header_time_us_ + 1000 * 1000) {
+        auto delta_t = loc_header_time_i - loc_header_time_us_;
+        PerfectControlAPA(planning_output, delta_t, loc_msg_i);
+      }
     }
   }
 }
 
-void PlanningPlayer::PerfectControl(
+void PlanningPlayer::PerfectControlHPP(
+    const PlanningOutput::PlanningOutput& plan_msg, uint64_t delta_t,
+    std::shared_ptr<IFLYLocalization::IFLYLocalization>& loc_msg) {
+  const double dt = static_cast<double>(delta_t) / 1e6;
+  const auto& trajectory = plan_msg.trajectory();
+  auto traj_size = trajectory.trajectory_points_size();
+  std::vector<double> x_vec(traj_size);
+  std::vector<double> y_vec(traj_size);
+  std::vector<double> theta_vec(traj_size);
+  std::vector<double> v_vec(traj_size);
+  std::vector<double> a_vec(traj_size);
+  std::vector<double> t_vec(traj_size);
+
+  double angle_offset = 0.0;
+  static const double pi_const = 3.141592654;
+  for (size_t i = 0; i < traj_size; ++i) {
+    t_vec[i] = trajectory.trajectory_points(i).t();
+    x_vec[i] = trajectory.trajectory_points(i).x();
+    y_vec[i] = trajectory.trajectory_points(i).y();
+    v_vec[i] = trajectory.trajectory_points(i).v();
+    a_vec[i] = trajectory.trajectory_points(i).a();
+
+    if (i == 0) {
+      theta_vec[i] = trajectory.trajectory_points(i).heading_yaw();
+    } else {
+      const auto delta_theta =
+          trajectory.trajectory_points(i).heading_yaw() -
+          trajectory.trajectory_points(i - 1).heading_yaw();
+      if (delta_theta > 1.5 * pi_const) {
+        angle_offset -= 2.0 * pi_const;
+      } else if (delta_theta < -1.5 * pi_const) {
+        angle_offset += 2.0 * pi_const;
+      }
+      theta_vec[i] =
+          trajectory.trajectory_points(i).heading_yaw() + angle_offset;
+    }
+  }
+
+  pnc::mathlib::spline x_t_spline;
+  pnc::mathlib::spline y_t_spline;
+  pnc::mathlib::spline theta_t_spline;
+  pnc::mathlib::spline v_t_spline;
+  pnc::mathlib::spline a_t_spline;
+
+  x_t_spline.set_points(t_vec, x_vec);
+  y_t_spline.set_points(t_vec, y_vec);
+  theta_t_spline.set_points(t_vec, theta_vec);
+  v_t_spline.set_points(t_vec, v_vec);
+  a_t_spline.set_points(t_vec, a_vec);
+
+  const double x = x_t_spline(dt);
+  const double y = y_t_spline(dt);
+  const double v = v_t_spline(dt);
+  const double a = a_t_spline(dt);
+  const double theta = pnc::mathlib::DeltaAngleFix(theta_t_spline(dt));
+
+  Eigen::Vector3d euler_zxy;
+  Eigen::Quaterniond q;
+
+  euler_zxy << theta, 0.0, 0.0;
+
+  q = pnc::transform::EulerZYX2Quat(euler_zxy);
+
+  // auto pose = loc_msg->mutable_pose();
+  
+  // vel
+  loc_msg->mutable_velocity()->mutable_velocity_enu()->set_ve(v);
+  // acc
+  loc_msg->mutable_acceleration()->mutable_acceleration_enu()->set_ae(a);
+  // atti
+  loc_msg->mutable_orientation()->mutable_euler_enu()->set_yaw(euler_zxy[0]);
+  // pose->set_heading(pose->euler_angles().yaw());
+
+  loc_msg->mutable_orientation()->mutable_quaternion_enu()->set_w(q.w());
+  loc_msg->mutable_orientation()->mutable_quaternion_enu()->set_x(q.x());
+  loc_msg->mutable_orientation()->mutable_quaternion_enu()->set_y(q.y());
+  loc_msg->mutable_orientation()->mutable_quaternion_enu()->set_z(q.z());
+
+  // pos
+  loc_msg->mutable_position()->mutable_position_enu()->set_e(x);
+  loc_msg->mutable_position()->mutable_position_enu()->set_n(y);
+}
+
+void PlanningPlayer::PerfectControlAPA(
     const PlanningOutput::PlanningOutput& plan_msg, uint64_t delta_t,
     std::shared_ptr<LocalizationOutput::LocalizationEstimate>& loc_msg) {
   const double dt = static_cast<double>(delta_t) / 1e6;
@@ -409,6 +532,5 @@ void PlanningPlayer::PerfectControl(
   pose->mutable_local_position()->set_x(x);
   pose->mutable_local_position()->set_y(y);
 }
-
 }  // namespace planning_player
 }  // namespace planning

@@ -94,9 +94,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
 
   // 通过配置项进行实时长时的切换 true: 长时规划
   auto location_valid =
-      local_view.localization_estimate.msf_status().available() &&
-      (local_view.localization_estimate.msf_status().msf_status() !=
-       LocalizationOutput::MsfStatus::ERROR) &&
+      local_view.localization.status().status_info().mode() != 0 &&
       local_view.road_info.local_point_valid() &&
       local_view.fusion_objects_info.local_point_valid() &&
       (g_context.GetParam().planner_type ==
@@ -229,10 +227,9 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   prediction_info.clear();
   if (session_->environmental_model().location_valid()) {
     std::unordered_set<uint> prediction_obj_id_set;
-    truncate_prediction_info(
-        local_view.prediction_result,
-        local_view.localization_estimate.header().timestamp(),
-        prediction_obj_id_set);
+    truncate_prediction_info(local_view.prediction_result,
+                             local_view.localization.header().timestamp(),
+                             prediction_obj_id_set);
     int num = 0;
     for (auto &obj : local_view.fusion_objects_info.fusion_object()) {
       num++;
@@ -292,7 +289,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
     common::VehicleStatus &vehicle_status) {
   const auto &vehicle_service_output_info =
       local_view.vehicle_service_output_info;
-  const auto &localization_estimate = local_view.localization_estimate;
+  const auto &localization = local_view.localization;
   const auto &hmi_mcu_inner_info = local_view.hmi_mcu_inner_info;
   vehicle_status.mutable_header()->set_timestamp_us(
       vehicle_service_output_info.header().timestamp());
@@ -300,44 +297,44 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   if (session_->environmental_model().location_valid()) {
     vehicle_status.mutable_heading_yaw()
         ->mutable_heading_yaw_data()
-        ->set_value_rad(localization_estimate.pose().euler_angles().yaw());
+        ->set_value_rad(localization.orientation().euler_enu().yaw());
     vehicle_status.mutable_location()->set_available(true);
-    auto llh_position = localization_estimate.pose().llh_position();
+    auto llh_position = localization.position().position_llh();
     vehicle_status.mutable_location()
         ->mutable_location_geographic()
-        ->set_latitude_degree(llh_position.lat());
+        ->set_latitude_degree(llh_position.latitude());
     vehicle_status.mutable_location()
         ->mutable_location_geographic()
-        ->set_longitude_degree(llh_position.lon());
+        ->set_longitude_degree(llh_position.longitude());
     vehicle_status.mutable_location()
         ->mutable_location_geographic()
         ->set_altitude_meter(llh_position.height());
-    auto local_position = localization_estimate.pose().local_position();
+    auto position_enu = localization.position().position_enu();
     vehicle_status.mutable_location()->mutable_location_enu()->set_x(
-        local_position.x());
+        position_enu.e());
     vehicle_status.mutable_location()->mutable_location_enu()->set_y(
-        local_position.y());
+        position_enu.n());
     vehicle_status.mutable_location()->mutable_location_enu()->set_z(
-        local_position.z());
+        position_enu.u());
 
-    auto enu_orientation = localization_estimate.pose().orientation();
+    auto enu_orientation = localization.orientation().quaternion_enu();
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_x(enu_orientation.qx());
+        ->set_x(enu_orientation.x());
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_y(enu_orientation.qy());
+        ->set_y(enu_orientation.y());
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_z(enu_orientation.qz());
+        ->set_z(enu_orientation.z());
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_w(enu_orientation.qw());
-    last_feed_time_[FEED_EGO_ENU] = local_view.localization_estimate_recv_time;
+        ->set_w(enu_orientation.w());
+    last_feed_time_[FEED_EGO_ENU] = local_view.localization_recv_time;
   } else {
     vehicle_status.mutable_heading_yaw()
         ->mutable_heading_yaw_data()
@@ -355,7 +352,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
     location_enu->mutable_orientation()->set_y(0.0);
     location_enu->mutable_orientation()->set_z(0.0);
     location_enu->mutable_orientation()->set_w(1.0);
-    last_feed_time_[FEED_EGO_ENU] = local_view.localization_estimate_recv_time;
+    last_feed_time_[FEED_EGO_ENU] = local_view.localization_recv_time;
   }
 
   vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
@@ -398,11 +395,27 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   }
 
   if (session_->environmental_model().location_valid()) {
-    auto linear_velocity_from_wheel =
-        localization_estimate.pose().linear_velocity_from_wheel();
+    double linear_velocity_from_wheel =
+        std::sqrt(localization.velocity().velocity_enu().ve() *
+                      localization.velocity().velocity_enu().ve() +
+                  localization.velocity().velocity_enu().vn() *
+                      localization.velocity().velocity_enu().vn() +
+                  localization.velocity().velocity_enu().vu() *
+                      localization.velocity().velocity_enu().vu());
     vehicle_status.mutable_velocity()
         ->mutable_heading_velocity()
         ->set_value_mps(linear_velocity_from_wheel);
+    double linear_acc_from_wheel =
+        std::sqrt(localization.acceleration().acceleration_enu().ae() *
+                      localization.acceleration().acceleration_enu().ae() +
+                  localization.acceleration().acceleration_enu().an() *
+                      localization.acceleration().acceleration_enu().an() +
+                  localization.acceleration().acceleration_enu().au() *
+                      localization.acceleration().acceleration_enu().au());
+    vehicle_status.mutable_brake_info()
+        ->mutable_brake_info_data()
+        ->set_acceleration_on_vehicle_wheel(
+            linear_acc_from_wheel);
   }
 
   if (vehicle_service_output_info.steering_wheel_angle_available()) {

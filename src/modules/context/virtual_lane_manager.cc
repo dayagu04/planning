@@ -7,7 +7,7 @@
 #include "debug_info_log.h"
 #include "ehr.pb.h"
 #include "environmental_model.h"
-#include "localization.pb.h"
+#include "ifly_localization.pb.h"
 #include "log_glog.h"
 #include "math/box2d.h"
 #include "planning_output_context.h"
@@ -838,10 +838,9 @@ bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
     const planning::framework::Session& session) {
   const auto& local_view = session.environmental_model().get_local_view();
   const auto& hd_map = session.environmental_model().get_hd_map();
-  const auto& pose = local_view.localization_estimate.pose();
-
-  const double ego_pose_x = pose.local_position().x();
-  const double ego_pose_y = pose.local_position().y();
+  const auto& position_enu = local_view.localization.position().position_enu();
+  const double ego_pose_x = position_enu.e();
+  const double ego_pose_y = position_enu.n();
   ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
 
   // get nearest lane
@@ -917,10 +916,9 @@ bool VirtualLaneManager::GetCurrentNearestLane(
     const planning::framework::Session& session) {
   const auto& local_view = session.environmental_model().get_local_view();
   const auto& hd_map = session.environmental_model().get_hd_map();
-  const auto& pose = local_view.localization_estimate.pose();
-
-  const double ego_pose_x = pose.local_position().x();
-  const double ego_pose_y = pose.local_position().y();
+  const auto& position_enu = local_view.localization.position().position_enu();
+  const double ego_pose_x = position_enu.e();
+  const double ego_pose_y = position_enu.n();
   ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
   std::cout << "ego_pose_x:" << ego_pose_x << ",ego_pose_y:" << ego_pose_y
             << std::endl;
@@ -930,7 +928,7 @@ bool VirtualLaneManager::GetCurrentNearestLane(
   double nearest_s = 0.0;
   double nearest_l = 0.0;
   const double distance = 10.0;
-  const double central_heading = pose.heading();
+  // const double central_heading = pose.heading();
   const double max_heading_difference = PI / 4;
 
   auto time_start = IflyTime::Now_us();
@@ -963,8 +961,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMerge(
     planning::framework::Session* session) {
   if (session_->environmental_model().get_hdmap_valid()) {
     const auto& local_view = session_->environmental_model().get_local_view();
-    if (local_view.localization_estimate.msf_status().msf_status() !=
-        LocalizationOutput::MsfStatus::ERROR) {
+    if (local_view.localization.status().status_info().mode() != 0) {
       std::cout << "hdmap_valid is true,current timestamp:"
                 << session_->environmental_model()
                        .get_local_view()
@@ -1004,8 +1001,7 @@ void VirtualLaneManager::CalculateHPPInfo(
     planning::framework::Session* session) {
   if (session_->environmental_model().get_hdmap_valid()) {
     const auto& local_view = session_->environmental_model().get_local_view();
-    if (local_view.localization_estimate.msf_status().msf_status() !=
-        LocalizationOutput::MsfStatus::ERROR) {
+    if (local_view.localization.status().status_info().mode() != 0) {
       std::cout << "hdmap_valid is true,current timestamp:"
                 << session_->environmental_model()
                        .get_local_view()
@@ -1014,9 +1010,12 @@ void VirtualLaneManager::CalculateHPPInfo(
                 << std::endl;
       // ego info
       const auto& hd_map = session->environmental_model().get_hd_map();
-      const auto& pose = local_view.localization_estimate.pose();
-      const double ego_pose_x = pose.local_position().x();
-      const double ego_pose_y = pose.local_position().y();
+      const auto& position_enu =
+          local_view.localization.position().position_enu();
+      const double ego_pose_x = position_enu.e();
+      const double ego_pose_y = position_enu.n();
+      const double yaw =
+          local_view.localization.orientation().euler_enu().yaw();
       const ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
       std::cout << "ego_pose_x:" << ego_pose_x << ",ego_pose_y:" << ego_pose_y
                 << std::endl;
@@ -1040,9 +1039,9 @@ void VirtualLaneManager::CalculateHPPInfo(
       // ego box
       const auto& vehicle_param =
           session->vehicle_config_context().get_vehicle_param();
-      const ad_common::math::Box2d ego_box(
-          {ego_pose_x, ego_pose_y}, pose.euler_angles().yaw(),
-          vehicle_param.length, vehicle_param.width);
+      const ad_common::math::Box2d ego_box({ego_pose_x, ego_pose_y}, yaw,
+                                           vehicle_param.length,
+                                           vehicle_param.width);
       // if on hpp lane
       if (nearest_lane->IsOnLane(ego_box)) {
         std::cout << "is on hpp lane!" << std::endl;
@@ -1124,8 +1123,7 @@ void VirtualLaneManager::CalculateDistanceToTargetSlot(
     planning::framework::Session* session) {
   distance_to_target_slot_ = NL_NMAX;
   const auto& local_view = session->environmental_model().get_local_view();
-  if (local_view.localization_estimate.msf_status().msf_status() !=
-      LocalizationOutput::MsfStatus::ERROR) {
+  if (local_view.localization.status().status_info().mode() != 0) {
     std::cout << "hdmap_valid is true,current timestamp:"
               << session_->environmental_model()
                      .get_local_view()
@@ -1133,12 +1131,13 @@ void VirtualLaneManager::CalculateDistanceToTargetSlot(
                      .timestamp()
               << std::endl;
 
-    if (local_view.localization_estimate.pose().has_local_position() &&
+    if (local_view.localization.position().has_position_enu() &&
         session->environmental_model().get_hdmap_valid()) {
       const auto& hd_map = session->environmental_model().get_hd_map();
-      const auto& pose = local_view.localization_estimate.pose();
-      const double ego_pose_x = pose.local_position().x();
-      const double ego_pose_y = pose.local_position().y();
+      const auto& position_enu =
+          local_view.localization.position().position_enu();
+      const double ego_pose_x = position_enu.e();
+      const double ego_pose_y = position_enu.n();
       ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
       std::cout << "ego_pose_x:" << ego_pose_x << ",ego_pose_y:" << ego_pose_y
                 << std::endl;
@@ -1148,7 +1147,7 @@ void VirtualLaneManager::CalculateDistanceToTargetSlot(
       double nearest_s = 0.0;
       double nearest_l = 0.0;
       const double distance = 10.0;
-      const double central_heading = pose.heading();
+      // const double central_heading = pose.heading();
       const double max_heading_difference = PI / 4;
 
       auto time_start = IflyTime::Now_us();
@@ -1180,7 +1179,7 @@ void VirtualLaneManager::CalculateDistanceToTargetSlot(
       double tar_slot_nearest_s = 0.0;
       double tar_slot_nearest_l = 0.0;
       const double tar_slot_distance = 10.0;
-      const double tar_slot_central_heading = pose.heading();
+      // const double tar_slot_central_heading = pose.heading();
       const double tar_slot_max_heading_difference = PI / 4;
 
       ad_common::math::Vec2d tar_slot_point;
