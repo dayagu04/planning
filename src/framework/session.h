@@ -52,7 +52,11 @@ class Session : public planning::common::Arena {
   }
 
   bool is_parking_scene() const {
-    return get_scene_type() == planning::common::SceneType::PARKING_APA;
+    return get_scene_type() == planning::common::SceneType::HPP;
+  }
+
+  bool is_hpp_scene() const {
+    return get_scene_type() == planning::common::SceneType::HPP;
   }
 
   planning::common::SceneType get_scene_type() const { return scene_type_; }

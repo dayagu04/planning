@@ -362,6 +362,10 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
       perception_points_(points) {
   type_ = Common::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE;  // FREESPACE占位
   velocity_ = 0.0;
+  if (id_ > 6000000) {
+    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
+                                              &perception_polygon_);
+  }
 }
 
 void Obstacle::extract_point_at_specified_resolution(

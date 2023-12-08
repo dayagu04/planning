@@ -162,6 +162,7 @@ typedef struct {
   int64_t planning_loop = 0;
   bool planning_success = false;
   bool last_planning_success = false;
+  bool planning_completed = false;
   double v_limit{40.0};
   double a_limit{1.0};
   double acc_smooth{5.0};

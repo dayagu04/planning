@@ -79,6 +79,10 @@ void ObstacleManager::update() {
       parking_slot_manager->get_points();
   int parking_slot_id = kParkingSlotIdOffset;
   for (auto &parking_slot_point : parking_slot_points) {
+    if (parking_slot_point.size() != 4U) {
+      LOG_DEBUG("invalid parking_slot_point.size = %lu", parking_slot_point.size());
+      continue;
+    }
     parking_slot_id += 1;
     Obstacle obstacle(parking_slot_id, parking_slot_point);
     add_parking_space(obstacle);

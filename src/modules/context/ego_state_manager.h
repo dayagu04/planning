@@ -1,6 +1,7 @@
 #ifndef ZNQC_MODULES_CONTEXT_EGO_STATE_MANAGER_H_
 #define ZNQC_MODULES_CONTEXT_EGO_STATE_MANAGER_H_
 
+#include <cstdint>
 #include "config/basic_type.h"
 #include "config/message_type.h"
 #include "config/vehicle_param.h"
@@ -54,6 +55,7 @@ class EgoStateManager {
   void set_planning_init_point_valid(bool planning_init_point_valid) {
     planning_init_point_valid_ = planning_init_point_valid;
   };
+  void set_ego_gear(const planning::common::VehicleStatus &vehicle_status);
 
   const planning::VehicleParam &get_vehicle_param() const {
     return vehicle_param_;
@@ -65,6 +67,7 @@ class EgoStateManager {
   Pose2D ego_pose() const { return ego_pose_; };
   Pose2D ego_pose_raw() const { return ego_pose_raw_; };
   Point2D ego_carte() const { return ego_carte_; };
+  uint32_t ego_gear() const { return ego_gear_; };
   double heading_angle() const { return ego_pose_.theta; }
   double ego_v() const { return ego_v_; };
   double ego_v_angle() const { return ego_v_angle_; };
@@ -121,6 +124,7 @@ class EgoStateManager {
   double navi_timestamp_;
   uint64_t timestamp_us_ = 0;
   uint64_t timestamp_us_last_ = 0;
+  uint32_t ego_gear_;
   Pose location_enu_;
   PointLLH position_llh_;
   EulerAngle euler_angle_;  // 车身姿态yaw, pitch, roll

@@ -120,7 +120,12 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
       (fsm_state == FuncStateMachine::FunctionalState::NOA_ACTIVATE) ||
       (fsm_state == FuncStateMachine::FunctionalState::NOA_OVERRIDE) ||
       (fsm_state == FuncStateMachine::FunctionalState::NOA_SECUR);
-  environmental_model->UpdateVehicleDbwStatus(acc_mode || scc_mode || noa_mode);
+  bool hpp_mode = 
+      (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_MEMORY_READY) ||
+      (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_MEMORY_CRUISE) ||
+      (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_SECURE) ||
+      (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_COMPLETED);
+  environmental_model->UpdateVehicleDbwStatus(acc_mode || scc_mode || noa_mode || hpp_mode);
 
   common::DrivingFunctionInfo::DrivingFunctionstate function_state =
       common::DrivingFunctionInfo::ACTIVATE;
@@ -270,12 +275,12 @@ bool EnvironmentalModelManager::ground_line_obstacles_update(
       local_view.ground_line_perception;
 
   for (size_t i = 0; i < groundline_data.ground_lines_size(); ++i) {
-    for (size_t j = 0; j < groundline_data.ground_lines(i).points_2d_size();
+    for (size_t j = 0; j < groundline_data.ground_lines(i).points_3d_size();
          j++) {
       GroundLinePoint point;
       point.point = planning_math::Vec2d(
-          groundline_data.ground_lines(i).points_2d(j).x(),
-          groundline_data.ground_lines(i).points_2d(j).y());
+          groundline_data.ground_lines(i).points_3d(j).x(),
+          groundline_data.ground_lines(i).points_3d(j).y());
       point.status = GroundLinePoint::Status::UNCLASSIFIED;
       ground_line_point_info.emplace_back(point);
     }
@@ -498,6 +503,10 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   if (vehicle_service_output_info.driver_hands_off_state_available()) {
     vehicle_status.mutable_driver_hand_state()->set_driver_hands_off_state(
         vehicle_service_output_info.driver_hands_off_state());
+  }
+
+  if (vehicle_service_output_info.gear_lever_state_available()) {
+    vehicle_status.mutable_gear()->mutable_gear_data()->mutable_gear_status()->set_value(vehicle_service_output_info.gear_lever_state());
   }
 }
 

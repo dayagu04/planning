@@ -138,6 +138,10 @@ void EgoStateManager::set_driver_hand_state(
       vehicle_status.driver_hand_state().driver_hands_off_state();
 }
 
+void EgoStateManager::set_ego_gear(const planning::common::VehicleStatus &vehicle_status) {
+  ego_gear_ = vehicle_status.gear().gear_data().gear_status().value();
+}
+
 void EgoStateManager::update_transform() {
   Eigen::Vector4d q;
   q.x() = location_enu_.orientation.x;
@@ -176,6 +180,7 @@ bool EgoStateManager::update(
   set_ego_blinker(vehicle_status);
   set_ego_auto_light_state(vehicle_status);
   set_driver_hand_state(vehicle_status);
+  set_ego_gear(vehicle_status);
   if (timestamp_us_ == timestamp_us_last_) {
     jerk_ = 0;
   } else {

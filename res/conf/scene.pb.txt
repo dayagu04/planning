@@ -11,6 +11,16 @@ module_name_map: [
         }
     },
     {
+        key: "hpp"
+        value: {
+            module_list: 
+            [
+                "planning.modules.EnvironmentalModelModule",
+                "planning.modules.GeneralPlannerModule"
+            ]
+        }
+    },
+    {
         key: "apa"
         value: {
             module_list:

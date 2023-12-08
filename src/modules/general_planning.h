@@ -82,7 +82,10 @@ class GeneralPlanning {
 
   void ClearParkingInfo(PlanningOutput::PlanningOutput *const planning_output);
 
+  void PrepareForApa();
   bool IsUndefinedScene(
+      const ::FuncStateMachine::FunctionalState &current_state);
+  bool IsValidHppState(
       const ::FuncStateMachine::FunctionalState &current_state);
 
  private:

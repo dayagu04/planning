@@ -143,6 +143,10 @@ class VirtualLaneManager {
   double distance_to_first_road_split() const {
     return distance_to_first_road_split_;
   }
+  const double GetDistanceToDestination() const {
+    return distance_to_destination_;
+  }
+
   bool is_on_ramp() const { return is_on_ramp_; }
 
   bool is_local_valid() const { return is_local_valid_; }
@@ -218,6 +222,7 @@ class VirtualLaneManager {
   bool is_reached_hpp_start_point_ = false;
   double sum_distance_driving_ = -1;
   ad_common::math::Vec2d last_point_hpp_{NL_NMAX, NL_NMAX};
+  double distance_to_destination_ = NL_NMAX;
   // target slot
   double distance_to_target_slot_ = NL_NMAX;
 };

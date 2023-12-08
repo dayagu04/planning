@@ -7,7 +7,7 @@
 #include "config/vehicle_param.h"
 #include "ego_planning_config.h"
 #include "environmental_model.h"
-#include "general_planning_context.h"
+#include "func_state_machine.pb.h"
 #include "ifly_time.h"
 #include "log.h"
 #include "math/math_utils.h"
@@ -17,6 +17,7 @@
 #include "scene_type_config.pb.h"
 #include "utils/lateral_utils.h"
 #include "vehicle_config_context.h"
+#include "vehicle_status.pb.h"
 
 namespace planning {
 
@@ -106,7 +107,12 @@ bool GeneralPlanning::RunOnce(
       scene_type = planning::common::SceneType::HIGHWAY;
       ClearParkingInfo(planning_output);
     } else if (IsValidParkingState(state_machine.current_state())) {
+      session_.set_scene_type(planning::common::SceneType::PARKING_APA);
       scene_type = planning::common::SceneType::PARKING_APA;
+    } else if (IsValidHppState(state_machine.current_state())) {
+      session_.set_scene_type(planning::common::SceneType::HPP);
+      scene_type = planning::common::SceneType::HPP;
+      ClearParkingInfo(planning_output);
     } else {
       scene_type = planning::common::SceneType::HIGHWAY;
       ClearParkingInfo(planning_output);
@@ -181,6 +187,9 @@ bool GeneralPlanning::RunOnce(
   if (planning_status->planning_success) {
     FillPlanningTrajectory(start_timestamp, planning_output);
     FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
+    if (session_.is_hpp_scene()) {
+      PrepareForApa();
+    }
     std::cout << "The RunOnce is successed !!!!:" << std::endl;
   } else {
     LOG_DEBUG("RunOnce failed !!!! \n");
@@ -208,6 +217,7 @@ void GeneralPlanning::FillPlanningTrajectory(
       session_.planning_context().vision_longitudinal_behavior_planner_output();
   auto &planning_result = session_.planning_context().planning_result();
   auto &planning_context = session_.planning_context();
+  auto &planning_output_context = session_.planning_output_context();
   auto &ego_state = session_.environmental_model().get_ego_state_manager();
   auto function_info = session_.environmental_model().function_info();
   const bool active = session_.environmental_model().GetVehicleDbwStatus();
@@ -388,7 +398,7 @@ void GeneralPlanning::FillPlanningTrajectory(
   auto gear_command = planning_output->mutable_gear_command();
   gear_command->set_available(true);
   // 需要获取目标挡位值
-  auto gear = Common::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE;
+  auto gear = planning_output_context.planning_status().planning_result.planning_output.gear_command().gear_command_value();
   gear_command->set_gear_command_value(gear);
 
   // 7.Open loop steering command
@@ -413,6 +423,15 @@ void GeneralPlanning::FillPlanningTrajectory(
   planning_status->set_apa_planning_status(
       PlanningOutput::ApaPlanningStatus::NONE);
   // WB end:--------临时hack以上信号--------
+//   bool planning_success = planning_output_context.planning_status().planning_success;
+//   bool planning_completed = planning_output_context.planning_status().planning_completed;
+//   if (planning_completed) {
+//     planning_status->set_hpp_planning_status(PlanningOutput::HppPlanningStatus::COMPLETED);
+//   } else if (planning_success) {
+//     planning_status->set_hpp_planning_status(PlanningOutput::HppPlanningStatus::RUNNING);
+//   } else {
+//     planning_status->set_hpp_planning_status(PlanningOutput::HppPlanningStatus::RUNNING_FAILED);
+//   }
 }
 
 void GeneralPlanning::GenerateStopTrajectory(
@@ -510,9 +529,9 @@ void GeneralPlanning::FillPlanningHmiInfo(
   auto ad_info = session_.mutable_planning_output_context()
                      ->mutable_planning_hmi_info()
                      ->mutable_ad_info();
-
-  ad_info->set_cruise_speed(
-      session_.environmental_model().get_ego_state_manager()->ego_v_cruise());
+  auto ego_state_manager =
+      session_.environmental_model().get_ego_state_manager();
+  ad_info->set_cruise_speed(ego_state_manager->ego_v_cruise());
 
   // HMI for NOA
   auto virtual_lane_manager =
@@ -530,11 +549,42 @@ void GeneralPlanning::FillPlanningHmiInfo(
   auto hpp_info = session_.mutable_planning_output_context()
                       ->mutable_planning_hmi_info()
                       ->mutable_hpp_info();
+  hpp_info->set_is_avaliable(virtual_lane_manager->is_on_hpp_lane());
   hpp_info->set_is_on_hpp_lane(virtual_lane_manager->is_on_hpp_lane());
   hpp_info->set_is_reached_hpp_trace_start(
       virtual_lane_manager->is_reached_hpp_start_point());
   hpp_info->set_accumulated_driving_distance(
       virtual_lane_manager->sum_distance_driving());
+
+  hpp_info->set_is_approaching_intersection(false);
+  hpp_info->set_is_approaching_turn(false);
+  auto reference_path_manager =
+      session_.environmental_model().get_reference_path_manager();
+  auto current_reference_path =
+      reference_path_manager->get_reference_path_by_current_lane();
+  const double kCheckTurnDistance = 15.0;
+  const double kEgoIsOnTurnDistance1 = -3.0;
+  const double kEgoIsOnTurnDistance2 = 5.0;
+  if (current_reference_path != nullptr) {
+    auto frenet_ego_state = current_reference_path->get_frenet_ego_state();
+    auto points = current_reference_path->get_points();
+    double ego_s = frenet_ego_state.s();
+    for (auto &point : points) {
+      double distance = point.path_point.s - ego_s;
+      if (distance > kEgoIsOnTurnDistance1 && distance < kEgoIsOnTurnDistance2 && point.path_point.kappa > 0.08) { // ego is on the curve
+        break;
+      }
+      if (distance > kEgoIsOnTurnDistance2 && distance <= kCheckTurnDistance) {
+        if (point.path_point.kappa > 0.1) { // 关注实际曲率的连续性，考虑多点还是单点
+          // hpp_info->set_is_approaching_intersection(true);
+          hpp_info->set_is_approaching_turn(true);
+          break;
+        }
+      } else if (distance > kCheckTurnDistance) {
+        break;
+      }
+    }
+  }
 }
 
 void GeneralPlanning::ClearParkingInfo(
@@ -553,11 +603,60 @@ void GeneralPlanning::ClearParkingInfo(
       PlanningOutput::ApaPlanningStatus::NONE);
 }
 
+void GeneralPlanning::PrepareForApa() {
+  const double kDistanceToDestination = 8.;
+  auto virtual_lane_manager =
+      session_.environmental_model().get_virtual_lane_manager();
+  auto &ego_state = session_.environmental_model().get_ego_state_manager();
+  common::PlanningStatus *planning_status =
+      session_.mutable_planning_output_context()->mutable_planning_status();
+  auto planning_output = planning_status->planning_result.planning_output;
+  auto gear_command = planning_output.mutable_gear_command();
+  double distance_to_destination = std::numeric_limits<double>::max();
+  distance_to_destination = virtual_lane_manager->GetDistanceToDestination();
+  bool entering_parking_area = distance_to_destination < kDistanceToDestination;
+  double ego_v = ego_state->ego_v();
+  auto fsm_state = session_.environmental_model().get_local_view().function_state_machine_info.current_state();
+
+  if (fsm_state != FuncStateMachine::FunctionalState::HPP_IN_SECURE &&
+      entering_parking_area && ego_v < 0.1) {
+    gear_command->set_gear_command_value(
+      Common::GearCommandValue::GEAR_COMMAND_VALUE_PARKING);
+    if (ego_state->ego_gear() == planning::common::GearType::PARK) {
+        planning_status->planning_completed = true;
+        std::cout << "HPP has arrived destination !!! " << std::endl;
+    }
+  } else {
+    if (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_SECURE &&
+        ego_v < 0.1) {
+      if (ego_state->ego_gear() == planning::common::GearType::PARK) {
+        planning_status->planning_completed = true;
+        std::cout << "[general_planning] The HPP gear has been changed to PARK by fsm_state HPP_IN_SECURE !!! " << std::endl;
+      }
+      gear_command->set_gear_command_value(
+      Common::GearCommandValue::GEAR_COMMAND_VALUE_PARKING);
+      std::cout << "[general planning] The HPP has stopped by MFF because of SECURE situation" << std::endl;
+    } else {
+      gear_command->set_gear_command_value(
+      Common::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE);
+      planning_status->planning_completed = false;
+      std::cout << "[general_planning] reset planning_completed to false" << std::endl;
+    }
+  }
+}
+
 bool GeneralPlanning::IsUndefinedScene(
     const ::FuncStateMachine::FunctionalState &current_state) {
   return current_state == FunctionalState::INIT ||
          current_state == FunctionalState::STANDBY ||
          current_state == FunctionalState::ERROR;
+}
+
+bool GeneralPlanning::IsValidHppState(const ::FuncStateMachine::FunctionalState& current_state) {
+    return current_state == FunctionalState::HPP_IN_MEMORY ||
+           current_state == FunctionalState::HPP_IN_MEMORY_READY ||
+           current_state == FunctionalState::HPP_IN_MEMORY_CRUISE ||
+           current_state == FunctionalState::HPP_IN_SECURE;
 }
 
 }  // namespace planning

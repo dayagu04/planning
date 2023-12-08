@@ -40,6 +40,10 @@ class PlanningContext {
 
   bool &mutable_planning_success() { return planning_success_; }
 
+  const bool planning_completed() const { return planning_completed_; }
+
+  bool &mutable_planning_completed() { return planning_completed_; }
+
   const bool last_planning_success() const { return last_planning_success_; }
 
   bool &mutable_last_planning_success() { return last_planning_success_; }
@@ -249,6 +253,7 @@ class PlanningContext {
   void clear() {
     last_planning_success_ = planning_success_;
     planning_success_ = false;
+    planning_completed_ = false;
     planning_result_.raw_traj_points.clear();
     planning_result_.traj_points.clear();
   }
@@ -256,6 +261,7 @@ class PlanningContext {
   void reset() {
     planning_success_ = false;
     last_planning_success_ = false;
+    planning_completed_ = false;
     planning_result_ = PlanningResult();
     adaptive_cruise_control_result_ = AdaptiveCruiseControlInfo();
     start_stop_result_.Clear();
@@ -268,6 +274,7 @@ class PlanningContext {
  private:
   bool planning_success_{false};
   bool last_planning_success_{false};
+  bool planning_completed_{false};
   bool replan_trajectory_{false};
   double v_ref_cruise_;
   PlanningResult planning_result_;
