@@ -41,7 +41,8 @@ static constexpr auto TOPIC_PARKING_FUSION = "/iflytek/fusion/parking_slot";
 static constexpr auto TOPIC_FUNC_STATE_MACHINE =
     "/iflytek/system_state/soc_state";
 static constexpr auto TOPIC_HD_MAP = "/iflytek/ehr/static_map";
-
+static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
+static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
 void PlanningPlayer::Init(bool is_close_loop, int auto_frame,
                           const std::string& scene_type) {
   std::cout << "===========planning player init, is_close_loop="
@@ -146,6 +147,10 @@ bool PlanningPlayer::LoadCyberBag(const std::string& bag_path) {
       cache_with_msg_time<PlanningHMI::PlanningHMIOutputInfoStr>(msg);
     } else if (msg.channel_name == TOPIC_HD_MAP) {
       cache_with_msg_and_header_time<Map::StaticMap>(msg);
+    } else if (msg.channel_name == TOPIC_EHR_PARKING_MAP) {
+      cache_with_msg_and_header_time<IFLYParkingMap::ParkingInfo>(msg);
+    } else if (msg.channel_name == TOPIC_GROUND_LINE) {
+      cache_with_msg_and_header_time<GroundLinePerception::GroundLinePerceptionInfo>(msg);
     } else {
       // std::cerr << "unsupported channel:" << msg.channel_name << std::endl;
     }
@@ -188,7 +193,8 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
   write_topic_msg<PlanningHMI::PlanningHMIOutputInfoStr>(
       output_msg_cache_, record_writer, TOPIC_PLANNING_HMI);
   write_topic_msg<Map::StaticMap>(msg_cache_, record_writer, TOPIC_HD_MAP);
-
+  write_topic_msg<IFLYParkingMap::ParkingInfo>(msg_cache_, record_writer, TOPIC_EHR_PARKING_MAP);
+  write_topic_msg<GroundLinePerception::GroundLinePerceptionInfo>(msg_cache_, record_writer, TOPIC_GROUND_LINE);
   std::cout << "write bag:" << record_writer.GetFile() << std::endl;
   record_writer.Close();
 }
@@ -264,6 +270,18 @@ void PlanningPlayer::PlayOneFrame(
       TOPIC_HD_MAP, input_time_list.map());
   if (hd_map_msg) {
     planning_adapter_->FeedMap(hd_map_msg);
+  }
+
+  auto ehr_parking_map_msg = find_msg_with_header_time<IFLYParkingMap::ParkingInfo>(
+      TOPIC_EHR_PARKING_MAP, input_time_list.ehr_parking_map());
+  if (ehr_parking_map_msg) {
+    planning_adapter_->FeedParkingMap(ehr_parking_map_msg);
+  }
+
+  auto ground_line_msg = find_msg_with_header_time<GroundLinePerception::GroundLinePerceptionInfo>(
+      TOPIC_EHR_PARKING_MAP, input_time_list.ground_line());
+  if (ground_line_msg) {
+    planning_adapter_->FeedGroundLinePerception(ground_line_msg);
   }
 
   auto func_state_machine_msg =

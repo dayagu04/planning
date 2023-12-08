@@ -21,7 +21,7 @@ from lib.bag_loader import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/mnt/1011_1/15_15.00000"
+bag_path = "/share/data_cold/abu_zone/autoparse/jac_s811_21pt6/trigger/20231128/20231128-11-02-50/data_collection_JAC_S811_21PT6_EVENT_MANUAL_2023-11-28-11-02-50.record"
 html_file = bag_path +".lonplan.html"
 
 # bokeh创建的html在jupyter中显示
@@ -476,10 +476,10 @@ class BoundLineGenerator(DataGeneratorBase):
                             if one_bound.upper < soft_high_bound:
                                 soft_high_bound = one_bound.upper
                         soft_bound_high_vec.append(soft_high_bound)
-                    xys.append((one_t_vec, soft_bound_high_vec))  
+                    xys.append((one_t_vec, soft_bound_high_vec))
                 except:
-                    pass              
-
+                    xys.append(([], []))  
+                
             elif bound_type == "st_s_soft_bound_lb":
                 soft_bound_low_vec = []
                 try:
@@ -489,9 +489,9 @@ class BoundLineGenerator(DataGeneratorBase):
                             if one_bound.lower > soft_low_bound:
                                 soft_low_bound = one_bound.lower
                         soft_bound_low_vec.append(soft_low_bound)
-                    xys.append((one_t_vec, soft_bound_low_vec)) 
+                    xys.append((one_t_vec, soft_bound_low_vec))
                 except:
-                    pass
+                    xys.append(([], []))
 
             elif bound_type == "st_s_ref" or bound_type == "t_pos_ref":
                 one_s_ref = list(v.longitudinal_motion_planning_input.ref_pos_vec)
@@ -1102,8 +1102,8 @@ def plotOnce(bag_path, html_file):
     else:
         max_time = dataLoader.load_all_data(False)
 
-    dataLoader = LoadCyberbag(bag_path)
-    max_time = dataLoader.load_all_data(False)
+    #dataLoader = LoadCyberbag(bag_path)
+    #max_time = dataLoader.load_all_data(False)
     plan_debug_msg = dataLoader.plan_debug_msg
     loc_msg = dataLoader.loc_msg
     vs_msg = dataLoader.vs_msg
@@ -1213,11 +1213,14 @@ def plotOnce(bag_path, html_file):
         # display in jupyter notebook
         output_notebook()
 
+    #pan_lt = Panel(child=row(column(fig_st, fig_sv), column(fig_tp, fig_tv, fig_ta, fig_tj)), title="Longtime")
     pan_lt = Panel(child=row(column(fig_st, fig_sv), column(fig_tp, fig_tv, fig_ta, fig_tj)), title="Longtime")
     pan_rt = Panel(child=row(tab_rt, column(fig_rtv, fig_rta, fig_rt_dis, fig_rt_cost)), title="Realtime")
-    # pan_rt = Panel(child=row(tab_rt, column(fig_rtv, fig_rta, fig_rt_dis)), title="Realtime")
+    #pan_rt = Panel(child=row(tab_rt), title="Realtime")
     pans = Tabs(tabs=[ pan_lt, pan_rt ])
+    #pans = Tabs(tabs=[ pan_rt ])
     bkp.show(layout(car_slider, row(fig_lv, pans)))
+    #bkp.show(layout(car_slider, row(pans)))
 
 def plotMain():
     # print('sys.argv = ', sys.argv)

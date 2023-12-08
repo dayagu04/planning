@@ -68,6 +68,16 @@ class LoadCyberbag:
     # lidar object msg
     self.lidar_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]} 
 
+    # ehr_parking_map
+    self.ehr_parking_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]} 
+    
+    # ground_line_msg
+    self.ground_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]} 
+    # ehr_parking_map
+    self.ehr_parking_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]} 
+    
+    # ground_line_msg
+    self.ground_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]} 
   def load_all_data(self, normal_print = True):
     max_time = 0.0
     # load localization msg
@@ -85,6 +95,7 @@ class LoadCyberbag:
         self.loc_msg['enable'] = True
       else:
         self.loc_msg['enable'] = False
+        print('/iflytek/localization/ego_pose size is 0 !!!')
     except:
       self.loc_msg['enable'] = False
       print('missing /iflytek/localization/ego_pose !!!')
@@ -102,6 +113,7 @@ class LoadCyberbag:
         self.road_msg['enable'] = True
       else:
         self.road_msg['enable'] = False
+        print('/iflytek/fusion/road_fusion size is 0 !!!')
     except:
       self.road_msg['enable'] = False
       print('missing /iflytek/fusion/road_fusion topic !!!')
@@ -119,6 +131,7 @@ class LoadCyberbag:
         self.fus_msg['enable'] = True
       else:
         self.fus_msg['enable'] = False
+        print('/iflytek/fusion/objects size is 0 !!!')
     except:
       self.fus_msg['enable'] = False
       print('missing /iflytek/fusion/objects !!!')
@@ -138,6 +151,7 @@ class LoadCyberbag:
         self.vs_msg['enable'] = True
       else:
         self.vs_msg['enable'] = False
+        print('/iflytek/vehicle_service size is 0 !!!')
     except:
       self.vs_msg['enable'] = False
       print("missing /iflytek/vehicle_service !!!")
@@ -156,6 +170,7 @@ class LoadCyberbag:
         self.plan_msg['enable'] = True
       else:
         self.plan_msg['enable'] = False
+        print('/iflytek/planning/plan size is 0 !!!')
     except:
       self.plan_msg['enable'] = False
       print("missing /iflytek/planning/plan !!!")
@@ -176,6 +191,7 @@ class LoadCyberbag:
         self.prediction_msg['enable'] = True
       else:
         self.prediction_msg['enable'] = False
+        print('/iflytek/prediction/prediction_result size is 0 !!!')
     except:
       self.prediction_msg['enable'] = False
       print("missing /iflytek/prediction/prediction_result !!!")
@@ -229,6 +245,7 @@ class LoadCyberbag:
         self.plan_debug_msg['enable'] = True
       else:
         self.plan_debug_msg['enable'] = False
+        print('/iflytek/planning/debug_info size is 0 !!!')
     except:
       self.plan_debug_msg['enable'] = False
       print("missing /iflytek/planning/debug_info !!!")
@@ -248,6 +265,7 @@ class LoadCyberbag:
         self.ctrl_msg['enable'] = True
       else:
         self.ctrl_msg['enable'] = False
+        print('/iflytek/control/control_command size is 0 !!!')
     except:
       self.ctrl_msg['enable'] = False
       print("missing /iflytek/control/control_command !!!")
@@ -284,6 +302,7 @@ class LoadCyberbag:
         self.ctrl_debug_msg['enable'] = True
       else:
         self.ctrl_debug_msg['enable'] = False
+        print('/iflytek/control/debug_info size is 0 !!!')
     except:
       self.ctrl_debug_msg['enable'] = False
       print("missing /iflytek/control/debug_info !!!")
@@ -303,6 +322,7 @@ class LoadCyberbag:
         self.slot_msg['enable'] = True
       else:
         self.slot_msg['enable'] = False
+        print('/iflytek/fusion/parking_slot size is 0 !!!')
     except:
       self.slot_msg['enable'] = False
       print('missing /iflytek/fusion/parking_slot !!!')
@@ -321,6 +341,7 @@ class LoadCyberbag:
         self.mobileye_lane_lines_msg['enable'] = True
       else:
         self.mobileye_lane_lines_msg['enable'] = False
+        print('/mobileye/camera_perception/lane_lines size is 0 !!!')
     except:
       self.mobileye_lane_lines_msg['enable'] = False
       print('missing /mobileye/camera_perception/lane_lines !!!')
@@ -338,9 +359,10 @@ class LoadCyberbag:
         self.rdg_lane_lines_msg['enable'] = True
       else:
         self.rdg_lane_lines_msg['enable'] = False
+        print('/iflytek/camera_perception/lane_lines size is 0 !!!')
     except:
       self.rdg_lane_lines_msg['enable'] = False
-      print('missing /iflytek/camera_perception/lane_lines !!!')
+      
 
     # load mobileye objects msg
     try:
@@ -355,6 +377,7 @@ class LoadCyberbag:
         self.mobileye_objects_msg['enable'] = True
       else:
         self.mobileye_objects_msg['enable'] = False
+        print('/mobileye/camera_perception/objects size is 0 !!!')
     except:
       self.mobileye_objects_msg['enable'] = False
       print('missing /mobileye/camera_perception/objects !!!')
@@ -372,6 +395,7 @@ class LoadCyberbag:
         self.rdg_objects_msg['enable'] = True
       else:
         self.rdg_objects_msg['enable'] = False
+        print('/iflytek/camera_perception/objects size is 0 !!!')
     except:
       self.rdg_objects_msg['enable'] = False
       print('missing /iflytek/camera_perception/objects !!!')
@@ -389,6 +413,7 @@ class LoadCyberbag:
         self.lidar_msg['enable'] = True
       else:
         self.lidar_msg['enable'] = False
+        print('/iflytek/lidar_objects size is 0 !!!')
     except:
       self.lidar_msg['enable'] = False
       print('missing /iflytek/lidar_objects !!!')
@@ -435,8 +460,44 @@ class LoadCyberbag:
           # print("true:",i)
         else:
           radar_msg[i]['enable'] = False
+          print(topic_list[i], ' size is 0 !!!')
       except:
         radar_msg[i]['enable'] = False
         print('missing',topic_list[i])
 
+    # load parking_map msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/iflytek/ehr/parking_map"):
+        self.ehr_parking_map_msg['t'].append(msg.header.timestamp / 1e6)
+        self.ehr_parking_map_msg['timestamp'].append(msg.header.timestamp)
+        self.ehr_parking_map_msg['data'].append(msg)
+      self.ehr_parking_map_msg['t'] = [tmp - self.ehr_parking_map_msg['t'][0]  for tmp in self.ehr_parking_map_msg['t']]
+      if normal_print == True:
+        print('ehr_parking_map_msg time:',self.ehr_parking_map_msg['t'][-1])
+      if len(self.ehr_parking_map_msg['t']) > 0:
+        self.ehr_parking_map_msg['enable'] = True
+      else:
+        self.ehr_parking_map_msg['enable'] = False
+        print('ehr_parking_map_msg size is 0 !!!')
+    except:
+      self.ehr_parking_map_msg['enable'] = False
+      print('missing /iflytek/ehr/parking_map topic !!!')
+      
+    # load vis_ground_msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/ground_line"):
+        self.ground_line_msg['t'].append(msg.header.timestamp / 1e6)
+        self.ground_line_msg['timestamp'].append(msg.header.timestamp)
+        self.ground_line_msg['data'].append(msg)
+      self.ground_line_msg['t'] = [tmp - self.ground_line_msg['t'][0]  for tmp in self.ground_line_msg['t']]
+      if normal_print == True:
+        print('ground_line_msg time:',self.ground_line_msg['t'][-1])
+      if len(self.ground_line_msg['t']) > 0:
+        self.ground_line_msg['enable'] = True
+      else:
+        self.ground_line_msg['enable'] = False
+        print('/iflytek/camera_perception/ground_line size is 0 !!!')
+    except:
+      self.ground_line_msg['enable'] = False
+      print('missing /iflytek/camera_perception/ground_line topic !!!')
     return max_time

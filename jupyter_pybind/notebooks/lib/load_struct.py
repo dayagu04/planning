@@ -597,10 +597,14 @@ def load_prediction_objects(obstacle_list, localization_info):
     linear_velocity_from_wheel = localization_info.pose.linear_velocity_from_wheel
     localization_theta = localization_info.pose.euler_angles.yaw
 
-    trajectory_info = {'x':[],'y':[]}
+    trajectory_info = {'x':[],'y':[], 'r':[]}
+    p_x = []
+    p_y = []
     obs_num = len(obstacle_list)
     num = len(obstacle_list[0].trajectory[0].trajectory_point)
     for i in range(obs_num):
+      if (obstacle_list[i].fusion_obstacle.additional_info.fusion_source & 1) == 0:
+        continue
       if len(obstacle_list[i].trajectory[0].trajectory_point) == 0:
         # print("No data")
         continue
@@ -637,8 +641,7 @@ def load_prediction_objects(obstacle_list, localization_info):
         obs_info['obstacles_tid'].append(obstacle_list[i].fusion_obstacle.common_info.id)
         obs_info['obs_label'].append(str(obstacle_list[i].fusion_obstacle.common_info.id) + ',v=' + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2)))
 
-        p_x = []
-        p_y = []
+        
         for j in range(len(obstacle_list[i].trajectory[0].trajectory_point)):
           # local_x = obstacle_list[i].trajectory[0].trajectory_point[j].relative_position.x
           # local_y = obstacle_list[i].trajectory[0].trajectory_point[j].relative_position.y
@@ -647,8 +650,9 @@ def load_prediction_objects(obstacle_list, localization_info):
           local_x, local_y = global2local(global_x, global_y, localization_x, localization_y, localization_theta)
           p_x.append(local_x)
           p_y.append(local_y)
+          
         # trajectory_info[track_id] = [p_x, p_y]
-      trajectory_info['x'].append(p_x)
-      trajectory_info['y'].append(p_y)
+    trajectory_info['x']=p_x
+    trajectory_info['y']=p_y
 
     return obs_info, trajectory_info
