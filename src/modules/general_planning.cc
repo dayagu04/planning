@@ -550,6 +550,7 @@ void GeneralPlanning::FillPlanningHmiInfo(
                       ->mutable_planning_hmi_info()
                       ->mutable_hpp_info();
   hpp_info->set_is_avaliable(virtual_lane_manager->is_on_hpp_lane());
+  hpp_info->set_distance_to_parking_space(virtual_lane_manager->GetDistanceToDestination());
   hpp_info->set_is_on_hpp_lane(virtual_lane_manager->is_on_hpp_lane());
   hpp_info->set_is_reached_hpp_trace_start(
       virtual_lane_manager->is_reached_hpp_start_point());

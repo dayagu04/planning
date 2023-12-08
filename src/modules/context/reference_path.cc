@@ -17,7 +17,7 @@ void ReferencePath::init() {
   frenet_parameters_.zero_speed_threshold = 0.1;
   frenet_parameters_.coord_transform_precision = 0.01;
   frenet_parameters_.step_s = 0.3;
-  frenet_parameters_.coarse_step_s = 1.0;
+  frenet_parameters_.coarse_step_s = 2.0;
   frenet_parameters_.optimization_gamma = 0.5;
   frenet_parameters_.max_iter = 15;
 }

@@ -5,9 +5,9 @@
 #include "environmental_model.h"
 #include "log.h"
 namespace planning {
-const double kMaxDistanceX = 40;
-const double kMaxDistanceFrontY = 60;
-const double kMaxDistanceBackY = 30;
+const double kMaxDistanceX = 30;
+const double kMaxDistanceFrontY = 10;
+const double kMaxDistanceBackY = 10;
 ParkingSlotManager::ParkingSlotManager(planning::framework::Session *session)
     : session_(session) {}
 bool ParkingSlotManager::update(

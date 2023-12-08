@@ -97,6 +97,10 @@ void EgoStateManager::set_ego_v_cruise(
         vehicle_status.velocity().cruise_velocity().value_mps());
   }
   ego_v_cruise_ = v_cruise_filter_.GetOutput();
+  if (session_->is_hpp_scene()) {
+    const double hpp_cruise_v = 2.8;
+    ego_v_cruise_ = hpp_cruise_v;
+  }
 }
 
 void EgoStateManager::set_ego_t_distance(
