@@ -838,9 +838,9 @@ bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
     const planning::framework::Session& session) {
   const auto& local_view = session.environmental_model().get_local_view();
   const auto& hd_map = session.environmental_model().get_hd_map();
-  const auto& position_enu = local_view.localization.position().position_enu();
-  const double ego_pose_x = position_enu.e();
-  const double ego_pose_y = position_enu.n();
+  const auto& position_boot = local_view.localization.position().position_boot();
+  const double ego_pose_x = position_boot.x();
+  const double ego_pose_y = position_boot.y();
   ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
 
   // get nearest lane
@@ -916,9 +916,9 @@ bool VirtualLaneManager::GetCurrentNearestLane(
     const planning::framework::Session& session) {
   const auto& local_view = session.environmental_model().get_local_view();
   const auto& hd_map = session.environmental_model().get_hd_map();
-  const auto& position_enu = local_view.localization.position().position_enu();
-  const double ego_pose_x = position_enu.e();
-  const double ego_pose_y = position_enu.n();
+  const auto& position_boot = local_view.localization.position().position_boot();
+  const double ego_pose_x = position_boot.x();
+  const double ego_pose_y = position_boot.y();
   ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
   std::cout << "ego_pose_x:" << ego_pose_x << ",ego_pose_y:" << ego_pose_y
             << std::endl;
@@ -1010,12 +1010,12 @@ void VirtualLaneManager::CalculateHPPInfo(
                 << std::endl;
       // ego info
       const auto& hd_map = session->environmental_model().get_hd_map();
-      const auto& position_enu =
-          local_view.localization.position().position_enu();
-      const double ego_pose_x = position_enu.e();
-      const double ego_pose_y = position_enu.n();
+      const auto& position_boot =
+          local_view.localization.position().position_boot();
+      const double ego_pose_x = position_boot.x();
+      const double ego_pose_y = position_boot.y();
       const double yaw =
-          local_view.localization.orientation().euler_enu().yaw();
+          local_view.localization.orientation().euler_boot().yaw();
       const ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
       std::cout << "ego_pose_x:" << ego_pose_x << ",ego_pose_y:" << ego_pose_y
                 << std::endl;
@@ -1131,13 +1131,13 @@ void VirtualLaneManager::CalculateDistanceToTargetSlot(
                      .timestamp()
               << std::endl;
 
-    if (local_view.localization.position().has_position_enu() &&
+    if (local_view.localization.position().has_position_boot() &&
         session->environmental_model().get_hdmap_valid()) {
       const auto& hd_map = session->environmental_model().get_hd_map();
-      const auto& position_enu =
-          local_view.localization.position().position_enu();
-      const double ego_pose_x = position_enu.e();
-      const double ego_pose_y = position_enu.n();
+      const auto& position_boot =
+          local_view.localization.position().position_boot();
+      const double ego_pose_x = position_boot.x();
+      const double ego_pose_y = position_boot.y();
       ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
       std::cout << "ego_pose_x:" << ego_pose_x << ",ego_pose_y:" << ego_pose_y
                 << std::endl;

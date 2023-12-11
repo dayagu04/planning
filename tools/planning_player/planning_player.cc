@@ -449,21 +449,21 @@ void PlanningPlayer::PerfectControlHPP(
   // auto pose = loc_msg->mutable_pose();
   
   // vel
-  loc_msg->mutable_velocity()->mutable_velocity_enu()->set_ve(v);
+  loc_msg->mutable_velocity()->mutable_velocity_boot()->set_vx(v);
   // acc
-  loc_msg->mutable_acceleration()->mutable_acceleration_enu()->set_ae(a);
+  loc_msg->mutable_acceleration()->mutable_acceleration_boot()->set_ax(a);
   // atti
-  loc_msg->mutable_orientation()->mutable_euler_enu()->set_yaw(euler_zxy[0]);
+  loc_msg->mutable_orientation()->mutable_euler_boot()->set_yaw(euler_zxy[0]);
   // pose->set_heading(pose->euler_angles().yaw());
 
-  loc_msg->mutable_orientation()->mutable_quaternion_enu()->set_w(q.w());
-  loc_msg->mutable_orientation()->mutable_quaternion_enu()->set_x(q.x());
-  loc_msg->mutable_orientation()->mutable_quaternion_enu()->set_y(q.y());
-  loc_msg->mutable_orientation()->mutable_quaternion_enu()->set_z(q.z());
+  loc_msg->mutable_orientation()->mutable_quaternion_boot()->set_w(q.w());
+  loc_msg->mutable_orientation()->mutable_quaternion_boot()->set_x(q.x());
+  loc_msg->mutable_orientation()->mutable_quaternion_boot()->set_y(q.y());
+  loc_msg->mutable_orientation()->mutable_quaternion_boot()->set_z(q.z());
 
   // pos
-  loc_msg->mutable_position()->mutable_position_enu()->set_e(x);
-  loc_msg->mutable_position()->mutable_position_enu()->set_n(y);
+  loc_msg->mutable_position()->mutable_position_boot()->set_x(x);
+  loc_msg->mutable_position()->mutable_position_boot()->set_y(y);
 }
 
 void PlanningPlayer::PerfectControlAPA(
