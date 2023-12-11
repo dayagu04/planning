@@ -144,7 +144,7 @@ class VirtualLaneManager {
     return distance_to_first_road_split_;
   }
   const double GetDistanceToDestination() const {
-    return distance_to_destination_;
+    return distance_to_target_slot_;
   }
 
   bool is_on_ramp() const { return is_on_ramp_; }
