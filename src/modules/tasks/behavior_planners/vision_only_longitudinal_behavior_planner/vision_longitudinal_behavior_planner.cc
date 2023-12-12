@@ -84,8 +84,9 @@ bool VisionLongitudinalBehaviorPlanner::update() {
       frame_->mutable_session()
           ->mutable_planning_context()
           ->mutable_vision_longitudinal_behavior_planner_output();
-
-  accel_vel_filter_.SetState(vision_longitudinal_output.velocity_target);
+  
+  double last_v_target = vision_longitudinal_output.velocity_target;
+  accel_vel_filter_.SetState(last_v_target);
   v_target_ = std::min(ego_state_mgr->ego_v_cruise(), 40.0);
   calc_cruise_accel_limits(v_ego);
 
@@ -143,6 +144,13 @@ bool VisionLongitudinalBehaviorPlanner::update() {
   v_target_ = clip(v_target_, 0.0, 40.0);
 
   if (v_target_ > v_ego) {
+    if (v_ego > last_v_target) {
+      accel_vel_filter_.SetState(v_ego);
+      JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_reset", 1);
+    }
+    else {
+      JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_reset", 0);
+    }
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
     JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_work", 1);
@@ -152,8 +160,10 @@ bool VisionLongitudinalBehaviorPlanner::update() {
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
     JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_work", 1);
+    JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_reset", 0);
   } else {
     JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_work", 0);
+    JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_reset", 0);
   }
 
   JSON_DEBUG_VALUE("VisionLonBehavior_a_target_high", a_target_.second);
