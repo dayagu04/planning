@@ -2,14 +2,16 @@
 #define _LANE_KEEP_ASSIST_MANAGER_H_
 #include "Platform_Types.h"
 #include "debug_info_log.h"
+#include "emergency_lane_keep_context.h"
 #include "environmental_model.h"
 #include "frame.h"
+#include "lane_depart_prevention_context.h"
+#include "lane_depart_warning_context.h"
 #include "planning_output_context.h"
 #include "virtual_lane_manager.h"
 
-#include "emergency_lane_keep_context.h"
-#include "lane_depart_prevention_context.h"
-#include "lane_depart_warning_context.h"
+#define ADAS_JSON_READ_VALUE(var_name, type, json_name) \
+  var_name = adas_config.get<type>(json_name, false, var_name)
 
 namespace planning {
 class LaneKeepAssistManager {
@@ -56,8 +58,10 @@ class LaneKeepAssistManager {
   void CalculateWheelToLine();
   void Output();
   void set_lka_output_info();
+  void SyncParameters();
 
  private:
+  bool init_flag_ = false;
   // planning::framework::Session *session_ = nullptr;
   framework::Session *session_ = nullptr;
   planning::LkasInput lkas_input_;

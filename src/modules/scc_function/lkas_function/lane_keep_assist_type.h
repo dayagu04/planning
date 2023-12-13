@@ -18,7 +18,7 @@ namespace planning {
 #define LKA_StateMachine_IN_LeftIntervention 1   // LKA ACTIVE子状态
 #define LKA_StateMachine_IN_NoIntervention 2     // LKA ACTIVE子状态
 #define LKA_StateMachine_IN_RightIntervention 3  // LKA ACTIVE子状态
-#define Common_Cycle_Time 20                     // 系统训话周期计数
+#define Common_Cycle_Time 100                    // 系统循环周期计数
 #define Common_FrontCamera_PosX \
   1.817  // 前视摄像头光轴距前保的水平距离，单位：m
 #define Common_FrontCamera_PosYL \
@@ -47,86 +47,98 @@ typedef struct MeasurementPoint {
   uint16 right_kickdown_code;
   bool left_intervention;
   bool right_intervention;
-  float32 tlc_line_threshold;
+  double tlc_line_threshold;
   uint8 left_bsd_lca_code;   // 0,无风险，1有风险
   uint8 right_bsd_lca_code;  // 0,无风险，1有风险
 } MeasurementPoint;
 
 typedef struct CalibrationParameter {
   bool enable_roadedge_switch;  // 是否使能功能的路沿场景开关 0:不使能 1:使能
-  float32 enable_vehspd_display_min;  // 激活的最小仪表车速，单位：m/s
-  float32 enable_vehspd_display_max;  // 激活的最大仪表车速，单位：m/s
-  float32 disable_vehspd_display_min;  // 退出的最小仪表车速，单位：m/s
-  float32 disable_vehspd_display_max;  // 退出的最大仪表车速，单位：m/s
+  double enable_vehspd_display_min;  // 激活的最小仪表车速，单位：m/s
+  double enable_vehspd_display_max;  // 激活的最大仪表车速，单位：m/s
+  double disable_vehspd_display_min;  // 退出的最小仪表车速，单位：m/s
+  double disable_vehspd_display_max;  // 退出的最大仪表车速，单位：m/s
   uint16 supp_turn_light_recovery_time;  // 转向灯抑制恢复时长，单位：ms
-  float32 earliest_warning_line;  // 触发的最早报警线，单位：m
-  float32 latest_warning_line;    // 触发的最晚报警线，单位：m
-  float32 reset_warning_line;     // 触发的报警重置线，单位：m
+  double earliest_warning_line;  // 触发的最早报警线，单位：m
+  double latest_warning_line;    // 触发的最晚报警线，单位：m
+  double reset_warning_line;     // 触发的报警重置线，单位：m
   uint16 warning_time_max;        // 最大报警时长，单位：ms
-  float32 tlc_line_far;  // 针对道线触发报警的高灵敏度阈值，单位：s
-  float32 tlc_line_medium;  // 针对道线触发报警的中灵敏度阈值，单位：s
-  float32 tlc_line_near;  // 针对道线触发报警的低灵敏度阈值，单位：s
-  float32
+  double tlc_line_far;  // 针对道线触发报警的高灵敏度阈值，单位：s
+  double tlc_line_medium;  // 针对道线触发报警的中灵敏度阈值，单位：s
+  double tlc_line_near;  // 针对道线触发报警的低灵敏度阈值，单位：s
+  double
       suppression_driver_hand_trq;  // 抑制报警的驾驶员手力矩(绝对值)阈值，单位：Nm
-  float32
+  double
       kickdown_driver_hand_trq;  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
 } CalibrationParameter;
 
 typedef struct RoadInfo {
-  bool left_line_valid;  // 本车道左侧道线有效性 0:Invalid 1:Valid
+  bool left_line_existence;  // 本车道左侧道线存在性
+  bool left_line_valid;      // 本车道左侧道线有效性 0:Invalid 1:Valid
   uint8 left_line_type;  // 本车道左侧车道线类型 0：虚线  1：实线
   double left_line_c0;   // 本车道左侧道线方程系数c0
   double left_line_c1;   // 本车道左侧道线方程系数c1
   double left_line_c2;   // 本车道左侧道线方程系数c3
   double left_line_c3;   // 本车道左侧道线方程系数c3
+  bool right_line_existence;  // 本车道右侧道线存在性
   bool right_line_valid;  // 本车道右侧道线有效性 0:Invalid 1:Valid
   uint8 right_line_type;  // 本车道右侧车道线类型 0：虚线  1：实线
-  double right_line_c0;      // 本车道右侧道线方程系数c0
-  double right_line_c1;      // 本车道右侧道线方程系数c1
-  double right_line_c2;      // 本车道右侧道线方程系数c2
-  double right_line_c3;      // 本车道右侧道线方程系数c3
+  double right_line_c0;          // 本车道右侧道线方程系数c0
+  double right_line_c1;          // 本车道右侧道线方程系数c1
+  double right_line_c2;          // 本车道右侧道线方程系数c2
+  double right_line_c3;          // 本车道右侧道线方程系数c3
+  bool left_roadedge_existence;  // 本车道左侧路缘存在性
   bool left_roadedge_valid;  // 本车道左侧路缘有效性 0:Invalid 1:Valid
   double left_roadedge_c0;   // 本车道左侧路缘方程系数c0
   double left_roadedge_c1;   // 本车道左侧路缘方程系数c1
   double left_roadedge_c2;   // 本车道左侧路缘方程系数c3
   double left_roadedge_c3;   // 本车道左侧路缘方程系数c3
+  bool right_roadedge_existence;  // 本车道右侧路缘存在性
   bool right_roadedge_valid;  // 本车道右侧路缘有效性 0:Invalid 1:Valid
   double right_roadedge_c0;   // 本车道右侧路缘方程系数c0
   double right_roadedge_c1;   // 本车道右侧路缘方程系数c1
   double right_roadedge_c2;   // 本车道右侧路缘方程系数c2
   double right_roadedge_c3;   // 本车道右侧路缘方程系数c3
   bool lane_width_valid;  // 当前车道宽度信息有效性 0:Invalid 1:Valid
-  float32 lane_width;     // 当前车道宽度,单位:m
+  double lane_width;     // 当前车道宽度,单位:m
 } RoadInfo;               // 道线和路缘信息结构体定义
 
 typedef struct VehInfo {
-  float32 veh_display_speed;
-  float32 veh_yaw_rate;
-  float32 driver_hand_torque;
+  double veh_left_departure_speed;
+  double veh_right_departure_speed;
+  double veh_display_speed;
+  double veh_actual_speed;
+  double veh_yaw_rate;
+  double driver_hand_torque;
   bool left_turn_light_state;
   bool right_turn_light_state;
   bool ldw_main_switch;
   bool ldp_main_switch;
   bool elk_main_switch;
   uint8 ldw_tlc_level;
-  float32 common_front_over;
-  float32 common_rear_over;
-  float32 common_wheel_base;
-  float32 common_veh_width;
+  double common_front_over;
+  double common_rear_over;
+  double common_wheel_base;
+  double common_veh_width;
 } VehInfo;
 
 typedef struct WheelToLine {
-  float32 fl_wheel_distance_to_line;
-  float32 fl_wheel_distance_to_roadedge;
-  float32 fr_wheel_distance_to_line;
-  float32 fr_wheel_distance_to_roadedge;
+  double fl_wheel_distance_to_line;
+  double fl_wheel_distance_to_roadedge;
+  double fr_wheel_distance_to_line;
+  double fr_wheel_distance_to_roadedge;
 } WheelToLine;
+
+struct Param {
+  double ldp_tlc_thrd = 1.0;
+};
 
 typedef struct LkasInput {
   VehInfo vehicle_info;
   RoadInfo road_info;
   WheelToLine wheel_to_line;
   FuncStateMachine::FunctionalState function_state;
+  Param param;
 } LkasInput;
 
 /*
@@ -146,32 +158,32 @@ typedef struct LkasState {
 typedef struct {
   uint8 pos;  // 0代表左，1代表右
   uint8 obj_class;
-  float32 obj_x;
-  float32 obj_y;
-  float32 obj_vx;
-  float32 obj_vy;
-  float32 obj_length;
-  float32 obj_width;
+  double obj_x;
+  double obj_y;
+  double obj_vx;
+  double obj_vy;
+  double obj_length;
+  double obj_width;
 } RadarObjData;
 
 typedef struct {
-  float32 area_length_distance;
-  float32 b_x;
-  float32 c_x;
-  float32 f_y;
-  float32 g_y;
-  float32 l_y;
-  float32 k_y;
-  float32 obstacle_velocity_limit;
+  double area_length_distance;
+  double b_x;
+  double c_x;
+  double f_y;
+  double g_y;
+  double l_y;
+  double k_y;
+  double obstacle_velocity_limit;
 } AeraVel;
 
-bool LKALineLeftIntervention(float32 tlc_to_line_threshold,
+bool LKALineLeftIntervention(double tlc_to_line_threshold,
                              planning::LkasInput *lkas_input);
-bool LKARoadEdgeLeftIntervention(float32 tlc_to_roadedge_threshold,
+bool LKARoadEdgeLeftIntervention(double tlc_to_roadedge_threshold,
                                  planning::LkasInput *lkas_input);
-bool LKALineRightIntervention(float32 tlc_to_line_threshold,
+bool LKALineRightIntervention(double tlc_to_line_threshold,
                               planning::LkasInput *lkas_input);
-bool LKARoadEdgeRightIntervention(float32 tlc_to_roadedge_threshold,
+bool LKARoadEdgeRightIntervention(double tlc_to_roadedge_threshold,
                                   planning::LkasInput *lkas_input);
 
 }  // namespace planning
