@@ -202,8 +202,7 @@ void PlanningAdapter::Proc() {
         start_time, localization_estimate_msg_.header().timestamp()));
 
     local_view_.localization = localization_msg_;
-    local_view_.localization_recv_time =
-        localization_msg_recv_time_;
+    local_view_.localization_recv_time = localization_msg_recv_time_;
     input_topic_timestamp->set_localization(
         localization_msg_.header().timestamp());
     // input_topic_latency->set_localization(get_latency(
@@ -304,8 +303,7 @@ void PlanningAdapter::Proc() {
   input_timestamp_list.MergeFrom(road_info_msg_.header().input_list());
   input_timestamp_list.MergeFrom(
       localization_estimate_msg_.header().input_list());
-  input_timestamp_list.MergeFrom(
-      localization_msg_.header().input_list());
+  input_timestamp_list.MergeFrom(localization_msg_.header().input_list());
 
   if (planning_debug_writer_) {
     planning_debug_data->set_timestamp(output_time_us);

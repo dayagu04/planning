@@ -364,7 +364,7 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
   velocity_ = 0.0;
   if (id_ > 6000000) {
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,
-                                              &perception_polygon_);
+                                                &perception_polygon_);
   }
 }
 

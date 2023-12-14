@@ -299,7 +299,8 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
     // adjust s_limit by target parking space
     // auto s_bound_upper = get_s_bound_by_target_parking_space();
     // lon_ref_path.hard_bounds.back().emplace_back(
-    //     WeightedBound{std::numeric_limits<double>::min(), s_bound_upper, -1.0,
+    //     WeightedBound{std::numeric_limits<double>::min(), s_bound_upper,
+    //     -1.0,
     //                   BoundInfo{0, "destination_parking_space"}});
     // if (s_bound_upper < std::numeric_limits<double>::max() &&
     //     s_bound_upper > destination_s) {

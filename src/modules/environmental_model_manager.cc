@@ -120,12 +120,13 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
       (fsm_state == FuncStateMachine::FunctionalState::NOA_ACTIVATE) ||
       (fsm_state == FuncStateMachine::FunctionalState::NOA_OVERRIDE) ||
       (fsm_state == FuncStateMachine::FunctionalState::NOA_SECUR);
-  bool hpp_mode = 
+  bool hpp_mode =
       (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_MEMORY_READY) ||
       (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_MEMORY_CRUISE) ||
       (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_SECURE) ||
       (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_COMPLETED);
-  environmental_model->UpdateVehicleDbwStatus(acc_mode || scc_mode || noa_mode || hpp_mode);
+  environmental_model->UpdateVehicleDbwStatus(acc_mode || scc_mode ||
+                                              noa_mode || hpp_mode);
 
   common::DrivingFunctionInfo::DrivingFunctionstate function_state =
       common::DrivingFunctionInfo::ACTIVATE;
@@ -419,8 +420,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
                       localization.acceleration().acceleration_boot().az());
     vehicle_status.mutable_brake_info()
         ->mutable_brake_info_data()
-        ->set_acceleration_on_vehicle_wheel(
-            linear_acc_from_wheel);
+        ->set_acceleration_on_vehicle_wheel(linear_acc_from_wheel);
   }
 
   if (vehicle_service_output_info.steering_wheel_angle_available()) {
@@ -506,7 +506,10 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   }
 
   if (vehicle_service_output_info.gear_lever_state_available()) {
-    vehicle_status.mutable_gear()->mutable_gear_data()->mutable_gear_status()->set_value(vehicle_service_output_info.gear_lever_state());
+    vehicle_status.mutable_gear()
+        ->mutable_gear_data()
+        ->mutable_gear_status()
+        ->set_value(vehicle_service_output_info.gear_lever_state());
   }
 }
 

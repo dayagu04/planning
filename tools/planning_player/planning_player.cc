@@ -150,7 +150,8 @@ bool PlanningPlayer::LoadCyberBag(const std::string& bag_path) {
     } else if (msg.channel_name == TOPIC_EHR_PARKING_MAP) {
       cache_with_msg_and_header_time<IFLYParkingMap::ParkingInfo>(msg);
     } else if (msg.channel_name == TOPIC_GROUND_LINE) {
-      cache_with_msg_and_header_time<GroundLinePerception::GroundLinePerceptionInfo>(msg);
+      cache_with_msg_and_header_time<
+          GroundLinePerception::GroundLinePerceptionInfo>(msg);
     } else {
       // std::cerr << "unsupported channel:" << msg.channel_name << std::endl;
     }
@@ -172,8 +173,8 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
                                         TOPIC_ROAD_FUSION);
   write_topic_msg<LocalizationOutput::LocalizationEstimate>(
       msg_cache_, record_writer, TOPIC_LOCALIZATION_ESTIMATE);
-  write_topic_msg<IFLYLocalization::IFLYLocalization>(
-      msg_cache_, record_writer, TOPIC_LOCALIZATION);
+  write_topic_msg<IFLYLocalization::IFLYLocalization>(msg_cache_, record_writer,
+                                                      TOPIC_LOCALIZATION);
   write_topic_msg<Prediction::PredictionResult>(msg_cache_, record_writer,
                                                 TOPIC_PREDICTION_RESULT);
   write_topic_msg<VehicleService::VehicleServiceOutputInfo>(
@@ -193,8 +194,10 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
   write_topic_msg<PlanningHMI::PlanningHMIOutputInfoStr>(
       output_msg_cache_, record_writer, TOPIC_PLANNING_HMI);
   write_topic_msg<Map::StaticMap>(msg_cache_, record_writer, TOPIC_HD_MAP);
-  write_topic_msg<IFLYParkingMap::ParkingInfo>(msg_cache_, record_writer, TOPIC_EHR_PARKING_MAP);
-  write_topic_msg<GroundLinePerception::GroundLinePerceptionInfo>(msg_cache_, record_writer, TOPIC_GROUND_LINE);
+  write_topic_msg<IFLYParkingMap::ParkingInfo>(msg_cache_, record_writer,
+                                               TOPIC_EHR_PARKING_MAP);
+  write_topic_msg<GroundLinePerception::GroundLinePerceptionInfo>(
+      msg_cache_, record_writer, TOPIC_GROUND_LINE);
   std::cout << "write bag:" << record_writer.GetFile() << std::endl;
   record_writer.Close();
 }
@@ -272,14 +275,16 @@ void PlanningPlayer::PlayOneFrame(
     planning_adapter_->FeedMap(hd_map_msg);
   }
 
-  auto ehr_parking_map_msg = find_msg_with_header_time<IFLYParkingMap::ParkingInfo>(
-      TOPIC_EHR_PARKING_MAP, input_time_list.ehr_parking_map());
+  auto ehr_parking_map_msg =
+      find_msg_with_header_time<IFLYParkingMap::ParkingInfo>(
+          TOPIC_EHR_PARKING_MAP, input_time_list.ehr_parking_map());
   if (ehr_parking_map_msg) {
     planning_adapter_->FeedParkingMap(ehr_parking_map_msg);
   }
 
-  auto ground_line_msg = find_msg_with_header_time<GroundLinePerception::GroundLinePerceptionInfo>(
-      TOPIC_EHR_PARKING_MAP, input_time_list.ground_line());
+  auto ground_line_msg =
+      find_msg_with_header_time<GroundLinePerception::GroundLinePerceptionInfo>(
+          TOPIC_EHR_PARKING_MAP, input_time_list.ground_line());
   if (ground_line_msg) {
     planning_adapter_->FeedGroundLinePerception(ground_line_msg);
   }
@@ -329,7 +334,6 @@ void PlanningPlayer::PlayAllFrames() {
 
 void PlanningPlayer::RunCloseLoop(
     const PlanningOutput::PlanningOutput& planning_output) {
-      
   if (1) {  // HPP
     if (!check_msg_exist(msg_cache_, TOPIC_PLANNING_DEBUG_INFO) ||
         !check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
@@ -346,8 +350,8 @@ void PlanningPlayer::RunCloseLoop(
          it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
       auto loc_msg_i =
           std::const_pointer_cast<IFLYLocalization::IFLYLocalization>(
-              std::dynamic_pointer_cast<
-                  IFLYLocalization::IFLYLocalization>(it->second));
+              std::dynamic_pointer_cast<IFLYLocalization::IFLYLocalization>(
+                  it->second));
       auto loc_header_time_i = loc_msg_i->header().timestamp();
       if (loc_header_time_i > loc_header_time_us_ &&
           loc_header_time_i < loc_header_time_us_ + 1000 * 1000) {
@@ -447,7 +451,7 @@ void PlanningPlayer::PerfectControlHPP(
   q = pnc::transform::EulerZYX2Quat(euler_zxy);
 
   // auto pose = loc_msg->mutable_pose();
-  
+
   // vel
   loc_msg->mutable_velocity()->mutable_velocity_boot()->set_vx(v);
   // acc

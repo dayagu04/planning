@@ -838,7 +838,8 @@ bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
     const planning::framework::Session& session) {
   const auto& local_view = session.environmental_model().get_local_view();
   const auto& hd_map = session.environmental_model().get_hd_map();
-  const auto& position_boot = local_view.localization.position().position_boot();
+  const auto& position_boot =
+      local_view.localization.position().position_boot();
   const double ego_pose_x = position_boot.x();
   const double ego_pose_y = position_boot.y();
   ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
@@ -916,7 +917,8 @@ bool VirtualLaneManager::GetCurrentNearestLane(
     const planning::framework::Session& session) {
   const auto& local_view = session.environmental_model().get_local_view();
   const auto& hd_map = session.environmental_model().get_hd_map();
-  const auto& position_boot = local_view.localization.position().position_boot();
+  const auto& position_boot =
+      local_view.localization.position().position_boot();
   const double ego_pose_x = position_boot.x();
   const double ego_pose_y = position_boot.y();
   ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);

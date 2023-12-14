@@ -142,7 +142,8 @@ void EgoStateManager::set_driver_hand_state(
       vehicle_status.driver_hand_state().driver_hands_off_state();
 }
 
-void EgoStateManager::set_ego_gear(const planning::common::VehicleStatus &vehicle_status) {
+void EgoStateManager::set_ego_gear(
+    const planning::common::VehicleStatus &vehicle_status) {
   ego_gear_ = vehicle_status.gear().gear_data().gear_status().value();
 }
 

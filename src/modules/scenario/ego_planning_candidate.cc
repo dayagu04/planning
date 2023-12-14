@@ -92,12 +92,14 @@ void EgoPlanningCandidate::set_coarse_planning_info(
         coarse_planning_info_.reference_path->get_points().at(i).path_point.y;
     cart_ref_info.s_vec[i] =
         coarse_planning_info_.reference_path->get_points().at(i).path_point.s;
-    if (cart_ref_info.s_vec[i] > normal_care_spline_length + std::max(v_ref_cruise * preview_time, min_preview_spline_length)) {
+    if (cart_ref_info.s_vec[i] >
+        normal_care_spline_length +
+            std::max(v_ref_cruise * preview_time, min_preview_spline_length)) {
       cart_ref_info.x_vec.resize(i);
       cart_ref_info.y_vec.resize(i);
       cart_ref_info.s_vec.resize(i);
       break;
-    } 
+    }
   }
 
   cart_ref_info.x_s_spline.set_points(cart_ref_info.s_vec, cart_ref_info.x_vec);
