@@ -41,8 +41,32 @@ class LoadCyberbag:
     # mobileye lane lines msg
     self.mobileye_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
+    # rdg lane lines msg
+    self.rdg_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
     # mobileye objects msg
     self.mobileye_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # radar_fm object msg
+    self.rdg_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # radar_fm object msg
+    self.radar_fm_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+    
+    # radar_fl object msg
+    self.radar_fl_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+    
+    # radar_fr object msg
+    self.radar_fr_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+    
+    # radar_rl object msg
+    self.radar_rl_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+    
+    # radar_rr object msg
+    self.radar_rr_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]} 
+
+    # lidar object msg
+    self.lidar_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]} 
 
   def load_all_data(self, normal_print = True):
     max_time = 0.0
@@ -301,6 +325,22 @@ class LoadCyberbag:
       self.mobileye_lane_lines_msg['enable'] = False
       print('missing /mobileye/camera_perception/lane_lines !!!')
 
+    # load rdg lane_lines msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/lane_lines"):
+        self.rdg_lane_lines_msg['t'].append(msg.header.timestamp / 1e6)
+        self.rdg_lane_lines_msg['timestamp'].append(msg.header.timestamp)
+        self.rdg_lane_lines_msg['data'].append(msg)
+      self.rdg_lane_lines_msg['t'] = [tmp - self.rdg_lane_lines_msg['t'][0]  for tmp in self.rdg_lane_lines_msg['t']]
+      if normal_print == True:
+        print('rdg_lane_lines_msg time:',self.rdg_lane_lines_msg['t'][-1])
+      if len(self.rdg_lane_lines_msg['t']) > 0:
+        self.rdg_lane_lines_msg['enable'] = True
+      else:
+        self.rdg_lane_lines_msg['enable'] = False
+    except:
+      self.rdg_lane_lines_msg['enable'] = False
+      print('missing /iflytek/camera_perception/lane_lines !!!')
 
     # load mobileye objects msg
     try:
@@ -318,5 +358,85 @@ class LoadCyberbag:
     except:
       self.mobileye_objects_msg['enable'] = False
       print('missing /mobileye/camera_perception/objects !!!')
+
+     # load rdg objects msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/objects"):
+        self.rdg_objects_msg['t'].append(msg.header.timestamp / 1e6)
+        self.rdg_objects_msg['timestamp'].append(msg.header.timestamp)
+        self.rdg_objects_msg['data'].append(msg)
+      self.rdg_objects_msg['t'] = [tmp - self.rdg_objects_msg['t'][0]  for tmp in self.rdg_objects_msg['t']]
+      if normal_print == True:
+        print('rdg_objects_msg time:',self.rdg_objects_msg['t'][-1])
+      if len(self.rdg_objects_msg['t']) > 0:
+        self.rdg_objects_msg['enable'] = True
+      else:
+        self.rdg_objects_msg['enable'] = False
+    except:
+      self.rdg_objects_msg['enable'] = False
+      print('missing /iflytek/camera_perception/objects !!!')
+
+    # load lidar objects msg
+    try:
+      for topic, msg, t in self.bag.read_messages("/iflytek/lidar_objects"):
+        self.lidar_msg['t'].append(msg.header.timestamp / 1e6)
+        self.lidar_msg['timestamp'].append(msg.header.timestamp)
+        self.lidar_msg['data'].append(msg)
+      self.lidar_msg['t'] = [tmp - self.lidar_msg['t'][0]  for tmp in self.lidar_msg['t']]
+      if normal_print == True:
+        print('lidar_msg time:',self.lidar_msg['t'][-1])
+      if len(self.lidar_msg['t']) > 0:
+        self.lidar_msg['enable'] = True
+      else:
+        self.lidar_msg['enable'] = False
+    except:
+      self.lidar_msg['enable'] = False
+      print('missing /iflytek/lidar_objects !!!')
+
+    # load radar objects msg
+    radar_msg = [self.radar_fm_msg,self.radar_fl_msg,self.radar_fr_msg,self.radar_rl_msg,self.radar_rr_msg]
+    topic_list = ["/iflytek/radar_fm_perception_info","/iflytek/radar_fl_perception_info","/iflytek/radar_fr_perception_info","/iflytek/radar_rl_perception_info","/iflytek/radar_rr_perception_info"]
+    # for i in range(5):
+    #   print(topic[i])
+    for i in range(5):
+      try:
+        if i == 0:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_fm_perception_info"):
+            radar_msg[i]['t'].append(msg.header.timestamp / 1e6)
+            radar_msg[i]['timestamp'].append(msg.header.timestamp)
+            radar_msg[i]['data'].append(msg)
+        elif i == 1:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_fl_perception_info"):
+            radar_msg[i]['t'].append(msg.header.timestamp / 1e6)
+            radar_msg[i]['timestamp'].append(msg.header.timestamp)
+            radar_msg[i]['data'].append(msg)
+        elif i == 2:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_fr_perception_info"):
+            radar_msg[i]['t'].append(msg.header.timestamp / 1e6)
+            radar_msg[i]['timestamp'].append(msg.header.timestamp)
+            radar_msg[i]['data'].append(msg)
+        elif i == 3:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_rl_perception_info"):
+            radar_msg[i]['t'].append(msg.header.timestamp / 1e6)
+            radar_msg[i]['timestamp'].append(msg.header.timestamp)
+            radar_msg[i]['data'].append(msg)
+        elif i == 4:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_rr_perception_info"):
+            radar_msg[i]['t'].append(msg.header.timestamp / 1e6)
+            radar_msg[i]['timestamp'].append(msg.header.timestamp)
+            radar_msg[i]['data'].append(msg)
+        radar_msg[i]['t'] = [tmp - radar_msg[i]['t'][0]  for tmp in radar_msg[i]['t']]
+        if normal_print == True:
+          print('radar_msg time:',i,":",radar_msg[i]['t'][-1])
+          # print("load message:",i)
+        # print(i,'_time:',radar_msg[i]['t'][-1])
+        if len(radar_msg[i]['t']) > 0:
+          radar_msg[i]['enable'] = True
+          # print("true:",i)
+        else:
+          radar_msg[i]['enable'] = False
+      except:
+        radar_msg[i]['enable'] = False
+        print('missing',topic_list[i])
 
     return max_time

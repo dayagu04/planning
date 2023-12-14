@@ -1,3 +1,8 @@
+# planning.2.2.1.5
+####  修改说明
+1. 调整换道速度
+2. SCC/ACC无车道线情况下构建虚拟车道
+
 # planning.2.2.1.4
 ####  修改说明
 1. realtime planner输出轨迹化适配noa, 默认不开启

@@ -3,6 +3,7 @@
 
 #include <climits>
 #include <vector>
+
 #include "ad_common/hdmap/hdmap.h"
 #include "ego_planning_config.h"
 #include "fusion_road.pb.h"
@@ -12,9 +13,8 @@
 #include "virtual_lane.h"
 namespace planning {
 
-using Map::CurrentRouting;
-using Map::CurrentRouting;
 using ad_common::hdmap::LaneGroupConstPtr;
+using Map::CurrentRouting;
 
 enum LaneChangeStatus {
   NO_LANE_CHANGE = 0,
@@ -109,6 +109,8 @@ class VirtualLaneManager {
     return get_lane_with_virtual_id(last_fix_lane_virtual_id_);
   }
 
+  std::vector<double> construct_reference_line_acc(void);
+  std::vector<double> construct_reference_line_scc(void);
   bool update(const FusionRoad::RoadInfo &roads);
   void reset();
 

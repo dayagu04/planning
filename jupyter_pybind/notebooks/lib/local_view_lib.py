@@ -32,7 +32,15 @@ slot_timestamps = []
 fusion_slot_timestamps = []
 vision_slot_timestamps = []
 mobileye_lane_lines_timestamps = []
+rdg_lane_lines_timestamps = []
 mobileye_objects_timestamps = []
+rdg_object_timestamps = []
+fm_object_timestamps = []
+fl_object_timestamps = []
+fr_object_timestamps = []
+rl_object_timestamps = []
+rr_object_timestamps = []
+lidar_object_timestamps = []
 
 car_xb, car_yb = load_car_params_patch()
 car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord()
@@ -214,6 +222,14 @@ mobileye_lane_lines_params = {
   'line_alpha' : 1.0
 }
 
+rdg_lane_lines_params = {
+  'legend_label': 'rdglane',
+  'line_width' : 1.3,
+  'line_color' : 'green',
+  'line_dash' : 'dashed',
+  'line_alpha' : 1.0
+}
+
 obstacle_fusion_params = {
     'fill_color' : "gray",
     'line_color' : "black",
@@ -250,6 +266,112 @@ obstacle_mobileye_text_params = {
   'text_color' : "salmon",
   'text_align':"center",
   'text_font_size':"10pt"
+}
+
+obstacle_rdg_params = {
+  'fill_color' : "orange",
+  'line_color' : "orange",
+  'line_width' : 1,
+  'fill_alpha' : 0.3,
+  'legend_label' : 'obj_rdg',
+  'visible' : False
+}
+obstacle_lidar_params = {
+  'fill_color' : "red",
+  'line_color' : "red",
+  'line_width' : 1,
+  'fill_alpha' : 0.3,
+  'legend_label' : 'obj_lidar',
+  'visible' : False
+}
+obstacle_fm_params = {
+  'fill_color' : "green",
+  'line_color' : "green",
+  'line_width' : 1,
+  'fill_alpha' : 0.3,
+  'legend_label' : 'obj_fm',
+  'visible' : False
+}
+obstacle_fl_params = {
+  'fill_color' : "red",
+  'line_color' : "red",
+  'line_width' : 1,
+  'fill_alpha' : 0.3,
+  'legend_label' : 'obj_fl',
+  'visible' : False
+}
+obstacle_fr_params = {
+  'fill_color' : "blue",
+  'line_color' : "blue",
+  'line_width' : 1,
+  'fill_alpha' : 0.3,
+  'legend_label' : 'obj_fr',
+  'visible' : False
+}
+obstacle_rl_params = {
+  'fill_color' : "yellow",
+  'line_color' : "yellow",
+  'line_width' : 1,
+  'fill_alpha' : 0.3,
+  'legend_label' : 'obj_rl',
+  'visible' : False
+}
+obstacle_rr_params = {
+  'fill_color' : "black",
+  'line_color' : "black",
+  'line_width' : 1,
+  'fill_alpha' : 0.3,
+  'legend_label' : 'obj_rr',
+  'visible' : False
+}
+obstacle_rdg_text_params = {
+  'legend_label' : 'rdg_info',
+  'text_color' : "red",
+  'text_align':"center",
+  'text_font_size':"10pt",
+  'visible' : False
+}
+obstacle_lidar_text_params = {
+  'legend_label' : 'lidar_info',
+  'text_color' : "black",
+  'text_align':"center",
+  'text_font_size':"10pt",
+  'visible' : False
+}
+obstacle_fm_text_params = {
+  'legend_label' : 'fm_info',
+  'text_color' : "red",
+  'text_align':"center",
+  'text_font_size':"10pt",
+  'visible' : False
+}
+obstacle_fl_text_params = {
+  'legend_label' : 'fl_info',
+  'text_color' : "red",
+  'text_align':"center",
+  'text_font_size':"10pt",
+  'visible' : False
+}
+obstacle_fr_text_params = {
+  'legend_label' : 'fr_info',
+  'text_color' : "red",
+  'text_align':"center",
+  'text_font_size':"10pt",
+  'visible' : False
+}
+obstacle_rl_text_params = {
+  'legend_label' : 'rl_info',
+  'text_color' : "red",
+  'text_align':"center",
+  'text_font_size':"10pt",
+  'visible' : False
+}
+obstacle_rr_text_params = {
+  'legend_label' : 'rr_info',
+  'text_color' : "red",
+  'text_align':"center",
+  'text_font_size':"10pt",
+  'visible' : False
 }
 
 prediction_params = {
@@ -782,10 +904,231 @@ def load_obstacle_mobileye_params(obstacle_list):
     obstacles_mobileye_info['obstacles_vel'].append(obstacle_list[i].common_info.relative_velocity.x)
     obstacles_mobileye_info['obstacles_acc'].append(obstacle_list[i].common_info.relative_acceleration.x)
     obstacles_mobileye_info['obstacles_id'].append(obstacle_list[i].common_info.id)
-    obstacles_mobileye_info['obs_label'].append('v(' + str(obstacle_list[i].common_info.id) + ')')  # ')=' \
-        # + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4)))
+    obstacles_mobileye_info['obs_label'].append('v(' + str(obstacle_list[i].common_info.id) + ')=' \
+         + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 3)))
 
   return obstacles_mobileye_info
+def load_obstacle_lidar_params(obstacle_list):
+    obstacles_lidar_info = {
+      'obstacles_x_rel': [],
+      'obstacles_y_rel': [],
+      'pos_x_rel': [],
+      'pos_y_rel': [],
+      'obstacles_vel': [],
+      'obstacles_acc': [],
+      'obstacles_id': [],
+      'obs_label': []
+    }
+    obs_num = len(obstacle_list)
+    for i in range(obs_num):
+      # frenet_vs, frenet_vl = 255, 255
+      half_length = obstacle_list[i].common_info.shape.length / 2
+      half_width = obstacle_list[i].common_info.shape.width /2
+      long_pos_rel = obstacle_list[i].common_info.relative_position.x
+      lat_pos_rel = obstacle_list[i].common_info.relative_position.y
+      theta = obstacle_list[i].common_info.relative_heading_angle
+      if theta == 255:
+        theta = 0
+      cos_heading = math.cos(theta)
+      sin_heading = math.sin(theta)
+      dx1 = cos_heading * half_length
+      dy1 = sin_heading * half_length
+      dx2 = sin_heading * half_width
+      dy2 = -cos_heading * half_width
+      obs_x_rel = [long_pos_rel + dx1 + dx2,
+                long_pos_rel + dx1 - dx2,
+                long_pos_rel- dx1 - dx2,
+                long_pos_rel - dx1 + dx2,
+                long_pos_rel + dx1 + dx2]
+      obs_y_rel = [lat_pos_rel + dy1 + dy2,
+                lat_pos_rel + dy1 - dy2,
+                lat_pos_rel - dy1 - dy2,
+                lat_pos_rel - dy1 + dy2,
+                lat_pos_rel + dy1 + dy2]
+      obstacles_lidar_info['obstacles_x_rel'].append(obs_x_rel)
+      obstacles_lidar_info['obstacles_y_rel'].append(obs_y_rel)
+      obstacles_lidar_info['pos_x_rel'].append(long_pos_rel)
+      obstacles_lidar_info['pos_y_rel'].append(lat_pos_rel)
+      obstacles_lidar_info['obstacles_vel'].append(obstacle_list[i].common_info.relative_velocity.x)
+      obstacles_lidar_info['obstacles_acc'].append(obstacle_list[i].common_info.relative_acceleration.x)
+      obstacles_lidar_info['obstacles_id'].append(obstacle_list[i].common_info.id)
+      obstacles_lidar_info['obs_label'].append('v(' + str(obstacle_list[i].common_info.id) + ')=' \
+          + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 3)))
+
+    return obstacles_lidar_info
+
+def load_obstacle_radar_params(obstacle_list):
+    obstacles_radar_info = {
+      'obstacles_x_rel': [],
+      'obstacles_y_rel': [],
+      'pos_x_rel': [],
+      'pos_y_rel': [],
+      'obstacles_vel': [],
+      'obstacles_acc': [],
+      'obstacles_id': [],
+      'obs_label': []
+    }
+    obs_num = len(obstacle_list)
+    for i in range(obs_num):
+      if abs(obstacle_list[i].relative_position.y) >10:
+        continue
+      # frenet_vs, frenet_vl = 255, 255
+      half_length = obstacle_list[i].shape.length / 2
+      half_width = obstacle_list[i].shape.width /2
+      long_pos_rel = obstacle_list[i].relative_position.x
+      lat_pos_rel = obstacle_list[i].relative_position.y
+      theta = obstacle_list[i].relative_heading_angle
+
+      cos_heading = math.cos(theta)
+      sin_heading = math.sin(theta)
+      dx1 = cos_heading * half_length
+      dy1 = sin_heading * half_length
+      dx2 = sin_heading * half_width
+      dy2 = -cos_heading * half_width
+      obs_x_rel = [long_pos_rel + dx1 + dx2,
+                long_pos_rel + dx1 - dx2,
+                long_pos_rel- dx1 - dx2,
+                long_pos_rel - dx1 + dx2,
+                long_pos_rel + dx1 + dx2]
+      obs_y_rel = [lat_pos_rel + dy1 + dy2,
+                lat_pos_rel + dy1 - dy2,
+                lat_pos_rel - dy1 - dy2,
+                lat_pos_rel - dy1 + dy2,
+                lat_pos_rel + dy1 + dy2]
+      obstacles_radar_info['obstacles_x_rel'].append(obs_x_rel)
+      obstacles_radar_info['obstacles_y_rel'].append(obs_y_rel)
+      obstacles_radar_info['pos_x_rel'].append(long_pos_rel)
+      obstacles_radar_info['pos_y_rel'].append(lat_pos_rel)
+      obstacles_radar_info['obstacles_vel'].append(obstacle_list[i].relative_velocity.x)
+      obstacles_radar_info['obstacles_acc'].append(obstacle_list[i].relative_acceleration.x)
+      obstacles_radar_info['obstacles_id'].append(obstacle_list[i].id)
+      obstacles_radar_info['obs_label'].append('v(' + str(obstacle_list[i].id) + ')=' \
+          + str(round(obstacle_list[i].relative_velocity.x, 2))+','+ str(round(obstacle_list[i].relative_velocity.y, 3)))
+
+    return obstacles_radar_info
+
+# 可视化rdg objects
+def load_obstacle_rdg(dataLoader, layer_manager, fig_local_view):
+
+    obstacle_rdg_generate = CommonGenerator()
+    obstacle_rdg_text_generate = TextGenerator()
+    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+      flag, rdg_objects_msg = findME(dataLoader.rdg_objects_msg, fusion_object_timestamps[i])
+      if not flag:
+        # print('find mobileye_objects_msg error')
+        obstacle_rdg_generate.xys.append(([], []))
+        obstacle_rdg_text_generate.xys.append(([], [], []))
+        continue
+      # obstacles_mobileye_info = load_obstacle_params(mobileye_objects_msg.camera_perception_object_list, plan_debug.environment_model_info)
+      obstacles_rdg_info = load_obstacle_mobileye_params(rdg_objects_msg.camera_perception_object_list)
+      obstacle_rdg_generate.xys.append((obstacles_rdg_info['obstacles_y_rel'], obstacles_rdg_info['obstacles_x_rel']))
+      obstacle_rdg_text_generate.xys.append((obstacles_rdg_info['pos_y_rel'], obstacles_rdg_info['pos_x_rel'], obstacles_rdg_info['obs_label']))
+    obstacle_rdg_generate.ts = np.array(plan_debug_ts)
+    obstacle_rdg_layer = PatchLayer(fig_local_view ,obstacle_rdg_params)
+    layer_manager.AddLayer(obstacle_rdg_layer, 'obstacle_rdg_layer', obstacle_rdg_generate, 'obstacle_rdg_generate', 2)
+    obstacle_rdg_text_generate.ts = np.array(plan_debug_ts)
+    obstacle_rdg_text_layer = TextLayer(fig_local_view, obstacle_rdg_text_params)
+    layer_manager.AddLayer(obstacle_rdg_text_layer, 'obstacle_rdg_text_layer', obstacle_rdg_text_generate, 'obstacle_rdg_text_generate', 3)
+
+#可视化  lidar ojects
+def load_obstacle_lidar(dataLoader, layer_manager, fig_local_view):
+
+    obstacle_lidar_generate = CommonGenerator()
+    obstacle_lidar_text_generate = TextGenerator()
+    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+      flag, lidar_objects_msg = findME(dataLoader.lidar_msg, fusion_object_timestamps[i])
+      if not flag:
+        # print('find mobileye_objects_msg error')
+        obstacle_lidar_generate.xys.append(([], []))
+        obstacle_lidar_text_generate.xys.append(([], [], []))
+        continue
+      obstacles_lidar_info = load_obstacle_lidar_params(lidar_objects_msg.lidar_object)
+      obstacle_lidar_generate.xys.append((obstacles_lidar_info['obstacles_y_rel'], obstacles_lidar_info['obstacles_x_rel']))
+      obstacle_lidar_text_generate.xys.append((obstacles_lidar_info['pos_y_rel'], obstacles_lidar_info['pos_x_rel'], obstacles_lidar_info['obs_label']))
+    obstacle_lidar_generate.ts = np.array(plan_debug_ts)
+    obstacle_lidar_layer = PatchLayer(fig_local_view ,obstacle_lidar_params)
+    layer_manager.AddLayer(obstacle_lidar_layer, 'obstacle_lidar_layer', obstacle_lidar_generate, 'obstacle_lidar_generate', 2)
+    obstacle_lidar_text_generate.ts = np.array(plan_debug_ts)
+    obstacle_lidar_text_layer = TextLayer(fig_local_view, obstacle_lidar_text_params)
+    layer_manager.AddLayer(obstacle_lidar_text_layer, 'obstacle_lidar_text_layer', obstacle_lidar_text_generate, 'obstacle_lidar_text_generate', 3)
+
+#可视化  radar ojects
+def load_obstacle_radar(dataLoader, layer_manager, fig_local_view):
+
+    obstacle_fm_generate = CommonGenerator()
+    obstacle_fl_generate = CommonGenerator()
+    obstacle_fr_generate = CommonGenerator()
+    obstacle_rl_generate = CommonGenerator()
+    obstacle_rr_generate = CommonGenerator()
+    obstacle_radar_generate = [obstacle_fm_generate,
+                               obstacle_fl_generate,
+                               obstacle_fr_generate,
+                               obstacle_rl_generate,
+                               obstacle_rr_generate]
+    obstacle_fm_text_generate = TextGenerator()
+    obstacle_fl_text_generate = TextGenerator()
+    obstacle_fr_text_generate = TextGenerator()
+    obstacle_rl_text_generate = TextGenerator()
+    obstacle_rr_text_generate = TextGenerator()
+    obstacle_radar_text_generate = [obstacle_fm_text_generate,
+                                    obstacle_fl_text_generate,
+                                    obstacle_fr_text_generate,
+                                    obstacle_rl_text_generate,
+                                    obstacle_rr_text_generate]
+
+    radar_obj_msg = [dataLoader.radar_fm_msg,
+                     dataLoader.radar_fl_msg,
+                     dataLoader.radar_fr_msg,
+                     dataLoader.radar_rl_msg,
+                     dataLoader.radar_rr_msg]
+    radar_object_timestamps = [fm_object_timestamps,
+                               fl_object_timestamps,
+                               fr_object_timestamps,
+                               rl_object_timestamps,
+                               rr_object_timestamps]
+    for k in range(5):
+      for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+        #if i <= len(radar_object_timestamps[k]):
+        flag, radar_msg = findME(radar_obj_msg[k], fusion_object_timestamps[i])
+        if not flag:
+          print("find",i,"radar_object error")
+          obstacle_radar_generate[k].xys.append(([], []))
+          obstacle_radar_text_generate[k].xys.append(([], [], []))
+          continue
+        obstacles_info_all = load_obstacle_radar_params(radar_msg.radar_perception_object_list)
+        obstacle_radar_generate[k].xys.append((obstacles_info_all['obstacles_y_rel'], obstacles_info_all['obstacles_x_rel']))
+        obstacle_radar_text_generate[k].xys.append((obstacles_info_all['pos_y_rel'], obstacles_info_all['pos_x_rel'], obstacles_info_all['obs_label']))
+    obstacle_fm_generate.ts = np.array(plan_debug_ts)
+    obstacle_fl_generate.ts = np.array(plan_debug_ts)
+    obstacle_fr_generate.ts = np.array(plan_debug_ts)
+    obstacle_rl_generate.ts = np.array(plan_debug_ts)
+    obstacle_rr_generate.ts = np.array(plan_debug_ts)
+
+    obstacle_fm_layer = PatchLayer(fig_local_view ,obstacle_fm_params)
+    obstacle_fl_layer = PatchLayer(fig_local_view ,obstacle_fl_params)
+    obstacle_fr_layer = PatchLayer(fig_local_view ,obstacle_fr_params)
+    obstacle_rl_layer = PatchLayer(fig_local_view ,obstacle_rl_params)
+    obstacle_rr_layer = PatchLayer(fig_local_view ,obstacle_rr_params)
+    layer_manager.AddLayer(obstacle_fm_layer, 'obstacle_fm_layer', obstacle_fm_generate, 'obstacle_fm_generate', 2)
+    layer_manager.AddLayer(obstacle_fl_layer, 'obstacle_fl_layer', obstacle_fl_generate, 'obstacle_fl_generate', 2)
+    layer_manager.AddLayer(obstacle_fr_layer, 'obstacle_fr_layer', obstacle_fr_generate, 'obstacle_fr_generate', 2)
+    layer_manager.AddLayer(obstacle_rl_layer, 'obstacle_rl_layer', obstacle_rl_generate, 'obstacle_rl_generate', 2)
+    layer_manager.AddLayer(obstacle_rr_layer, 'obstacle_rr_layer', obstacle_rr_generate, 'obstacle_rr_generate', 2)
+    obstacle_fm_text_generate.ts = np.array(plan_debug_ts)
+    obstacle_fl_text_generate.ts = np.array(plan_debug_ts)
+    obstacle_fr_text_generate.ts = np.array(plan_debug_ts)
+    obstacle_rl_text_generate.ts = np.array(plan_debug_ts)
+    obstacle_rr_text_generate.ts = np.array(plan_debug_ts)
+    obstacle_text_layer3 = TextLayer(fig_local_view, obstacle_fm_text_params)
+    obstacle_text_layer4 = TextLayer(fig_local_view, obstacle_fl_text_params)
+    obstacle_text_layer5 = TextLayer(fig_local_view, obstacle_fr_text_params)
+    obstacle_text_layer6 = TextLayer(fig_local_view, obstacle_rl_text_params)
+    obstacle_text_layer7 = TextLayer(fig_local_view, obstacle_rr_text_params)
+    layer_manager.AddLayer(obstacle_text_layer3, 'obstacle_text_layer3', obstacle_fm_text_generate, 'obstacle_fm_text_generate', 3)
+    layer_manager.AddLayer(obstacle_text_layer4, 'obstacle_text_layer4', obstacle_fl_text_generate, 'obstacle_fl_text_generate', 3)
+    layer_manager.AddLayer(obstacle_text_layer5, 'obstacle_text_layer5', obstacle_fr_text_generate, 'obstacle_fr_text_generate', 3)
+    layer_manager.AddLayer(obstacle_text_layer6, 'obstacle_text_layer6', obstacle_rl_text_generate, 'obstacle_rl_text_generate', 3)
+    layer_manager.AddLayer(obstacle_text_layer7, 'obstacle_text_layer7', obstacle_rr_text_generate, 'obstacle_rr_text_generate', 3)
 
 def draw_local_view_debug(dataLoader, layer_manager):
     #define figure
@@ -816,7 +1159,15 @@ def draw_local_view(dataLoader, layer_manager):
     global vehicle_service_timestamps
     global control_output_timestamps
     global mobileye_lane_lines_timestamps
+    global rdg_lane_lines_timestamps
     global mobileye_objects_timestamps
+    global rdg_object_timestamps
+    global fm_object_timestamps
+    global fl_object_timestamps
+    global fr_object_timestamps
+    global rl_object_timestamps
+    global rr_object_timestamps
+    global lidar_object_timestamps
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
       t = dataLoader.plan_debug_msg["t"][i]
       plan_debug_ts.append(t)
@@ -889,35 +1240,81 @@ def draw_local_view(dataLoader, layer_manager):
             if not flag:
               lane_generator_dict[lane_generator_key].xys.append(([] , [] ,[], []))
               continue
-            if index < len(fusion_road_msg.lanes):
-              lane = fusion_road_msg.lanes[index]
-              if derection == 0:
-                line = lane.left_lane_boundary
-              elif derection == 1:
-                line = lane.right_lane_boundary
 
-              line_coef = line.poly_coefficient
-              line_x, line_y = gen_line(line_coef[0], line_coef[1], line_coef[2], line_coef[3], \
-                line.begin, line.end)
-              lane_info['line_x_vec'] = line_x
-              lane_info['line_y_vec'] = line_y
-              tp = line.segment[0].type
-              if tp == 0 or tp == 1 or tp == 3 or tp == 4:
-                lane_info['type'] = ['dashed']
+            try:
+              if index < len(fusion_road_msg.reference_line_msg):
+                lane = fusion_road_msg.reference_line_msg[index]
+                if derection == 0:
+                  line = lane.left_lane_boundary
+                elif derection == 1:
+                  line = lane.right_lane_boundary
+
+                line_coef = line.poly_coefficient
+                try:
+                  line_x, line_y = gen_line(line_coef[0], line_coef[1], line_coef[2], line_coef[3], \
+                    line.begin, line.end)
+                  lane_info['line_x_vec'] = line_x
+                  lane_info['line_y_vec'] = line_y
+                  tp = line.type_segments[0].type
+                  if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                    lane_info['type'] = ['dashed']
+                  else:
+                    lane_info['type'] = ['solid']
+                  lane_info['fix_index'] = [fig_index]
+                except:
+                  line_x, line_y = gen_line(0,0,0,0,0,0)
+                  lane_info['line_x_vec'] = line_x
+                  lane_info['line_y_vec'] = line_y
+                  lane_info['type'] = ['dashed']
+                  lane_info['fix_index'] = [fig_index]
               else:
-                lane_info['type'] = ['solid']
-              lane_info['fix_index'] = [fig_index]
-            else:
-              line_x, line_y = gen_line(0,0,0,0,0,0)
-              lane_info['line_x_vec'] = line_x
-              lane_info['line_y_vec'] = line_y
-              lane_info['type'] = ['dashed']
-              lane_info['fix_index'] = [fig_index]
-            lane_generator_dict[lane_generator_key].xys.append((lane_info['line_y_vec'] , lane_info['line_x_vec'] ,lane_info['type'], lane_info['fix_index']))
+                line_x, line_y = gen_line(0,0,0,0,0,0)
+                lane_info['line_x_vec'] = line_x
+                lane_info['line_y_vec'] = line_y
+                lane_info['type'] = ['dashed']
+                lane_info['fix_index'] = [fig_index]
+              lane_generator_dict[lane_generator_key].xys.append((lane_info['line_y_vec'] , lane_info['line_x_vec'] ,lane_info['type'], lane_info['fix_index']))
+            except:
+              print("old interface before 2.2.3")
+              if index < len(fusion_road_msg.lanes):
+                lane = fusion_road_msg.lanes[index]
+                if derection == 0:
+                  line = lane.left_lane_boundary
+                elif derection == 1:
+                  line = lane.right_lane_boundary
+                line_coef = line.poly_coefficient
+                try:
+                  line_x, line_y = gen_line(line_coef[0], line_coef[1], line_coef[2], line_coef[3], \
+                    line.begin, line.end)
+                  lane_info['line_x_vec'] = line_x
+                  lane_info['line_y_vec'] = line_y
+                  tp = line.segment[0].type
+                  if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                    lane_info['type'] = ['dashed']
+                  else:
+                    lane_info['type'] = ['solid']
+                  lane_info['fix_index'] = [fig_index]
+                except:
+                  line_x, line_y = gen_line(0,0,0,0,0,0)
+                  lane_info['line_x_vec'] = line_x
+                  lane_info['line_y_vec'] = line_y
+                  lane_info['type'] = ['dashed']
+                  lane_info['fix_index'] = [fig_index]
+              else:
+                line_x, line_y = gen_line(0,0,0,0,0,0)
+                lane_info['line_x_vec'] = line_x
+                lane_info['line_y_vec'] = line_y
+                lane_info['type'] = ['dashed']
+                lane_info['fix_index'] = [fig_index]
+              lane_generator_dict[lane_generator_key].xys.append((lane_info['line_y_vec'] , lane_info['line_x_vec'] ,lane_info['type'], lane_info['fix_index']))
 
         # 加载车道中心线
         if flag:
-          center_line_list = load_lane_center_lines(fusion_road_msg.lanes)
+          try:
+            center_line_list = load_lane_center_lines(fusion_road_msg.reference_line_msg)
+          except:
+            print("old interface before 2.2.3")
+            center_line_list = load_lane_center_lines(fusion_road_msg.lanes)
         for index in range(5):
           line_generator_key = 'centerline_' + str(index)
           fig_index = 10 + index + 1
@@ -948,7 +1345,10 @@ def draw_local_view(dataLoader, layer_manager):
       flag, fusion_road_msg = find(dataLoader.road_msg, fusion_road_timestamps[i])
       if not flag:
         continue
-      center_line_list = load_lane_center_lines(fusion_road_msg.lanes)
+      try:
+        center_line_list = load_lane_center_lines(fusion_road_msg.reference_line_msg)
+      except:
+        center_line_list = load_lane_center_lines(fusion_road_msg.lanes)
       lat_behavior_common = plan_debug.lat_behavior_common
       environment_model_info =plan_debug.environment_model_info
       current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
@@ -1224,6 +1624,41 @@ def draw_local_view(dataLoader, layer_manager):
                                  mobileye_lane_lines_generator_dict[mobileye_lane_generator_key], \
                                  mobileye_lane_generator_key , 2)
 
+    # 加载rdg车道线
+    rdg_lane_lines_generator_dict = {}
+    if dataLoader.rdg_lane_lines_msg['enable'] == True:
+      for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+        flag, rdg_lane_lines_msg = findME(dataLoader.rdg_lane_lines_msg, fusion_road_timestamps[i])
+        for index in range(rdg_lane_lines_msg.num) :
+          rdg_lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+          rdg_lane_generator_key = 'rdg_lane_' + str(index)
+          if (rdg_lane_generator_key in rdg_lane_lines_generator_dict.keys()) == False:
+            rdg_lane_lines_generator_dict[rdg_lane_generator_key] = LineGenerator('rdg_line')
+          if not flag:
+            rdg_lane_lines_generator_dict[rdg_lane_generator_key].xys.append(([] , [] ,[], []))
+            continue
+          lane = rdg_lane_lines_msg.lane_line[index]
+          fig_index = lane.pos_type
+          line_x, line_y = gen_line(lane.a0, lane.a1, lane.a2, lane.a3, lane.start, lane.end)
+          rdg_lane_info['line_x_vec'] = line_x
+          rdg_lane_info['line_y_vec'] = line_y
+          tp = lane.marking_segments[0].marking
+          if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+            rdg_lane_info['type'] = ['dashed']
+          else:
+            rdg_lane_info['type'] = ['solid']
+          rdg_lane_info['fix_index'] = [fig_index]
+          rdg_lane_lines_generator_dict[rdg_lane_generator_key].xys.append((rdg_lane_info['line_y_vec'] , \
+                                                                                      rdg_lane_info['line_x_vec'] , \
+                                                                                      rdg_lane_info['type'], \
+                                                                                      rdg_lane_info['fix_index']))
+      for rdg_lane_generator_key in rdg_lane_lines_generator_dict.keys():
+          rdg_lane_lines_generator_dict[rdg_lane_generator_key].ts = np.array(plan_debug_ts)
+          rdg_lane_layer = CurveLayer(fig_local_view, rdg_lane_lines_params)
+          layer_manager.AddLayer(rdg_lane_layer, rdg_lane_generator_key.replace('rdg_lane_', 'rdg_lane_layer_'), \
+                                 rdg_lane_lines_generator_dict[rdg_lane_generator_key], \
+                                 rdg_lane_generator_key , 2)
+
     # 加载mobileye障碍物
     obstacle_mobileye_generate = CommonGenerator()
     obstacle_mobileye_text_generate = TextGenerator()
@@ -1244,6 +1679,13 @@ def draw_local_view(dataLoader, layer_manager):
     obstacle_mobileye_text_generate.ts = np.array(plan_debug_ts)
     obstacle_mobileye_text_layer = TextLayer(fig_local_view, obstacle_mobileye_text_params)
     layer_manager.AddLayer(obstacle_mobileye_text_layer, 'obstacle_mobileye_text_layer', obstacle_mobileye_text_generate, 'obstacle_mobileye_text_generate', 3)
+
+    # 加载rdg障碍物
+    load_obstacle_rdg(dataLoader, layer_manager, fig_local_view)
+    # 加载lidar 障碍物
+    load_obstacle_lidar(dataLoader, layer_manager, fig_local_view)
+    # 加载雷达障碍物
+    load_obstacle_radar(dataLoader, layer_manager, fig_local_view)
 
     return fig_local_view, (tab_debug_layer1.plot, tab_debug_layer2.plot)
 

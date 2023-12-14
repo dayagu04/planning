@@ -29,7 +29,8 @@ coord_tf = coord_transformer()
 Max_line_size = 200
 Road_boundary_max_line_size = 50
 Lane_boundary_max_line_size = 300
-is_vis_map = True
+timestamp_shrink = 1e6
+is_vis_map = False
 
 class LoadCyberbag:
   def __init__(self, path) -> None:
@@ -102,7 +103,7 @@ class LoadCyberbag:
     try:
       loc_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
-        loc_msg_dict[msg.header.timestamp / 1e3] = msg
+        loc_msg_dict[msg.header.timestamp / timestamp_shrink] = msg
       loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in loc_msg_dict.items():
         self.loc_msg['t'].append(t)
@@ -320,7 +321,7 @@ class LoadCyberbag:
                          "VisionLonBehavior_v_target_ramp", "VisionLonBehavior_road_radius", "dis_to_ramp",
                          "VisionLonBehavior_potental_cutin_track_id", "VisionLonBehavior_potental_cutin_v_target", "VisionLonBehavior_cutin_v_target",
                          "VisionLonBehavior_v_limit_road", "VisionLonBehavior_v_limit_in_turns",
-                         "VisionLonBehavior_nearest_car_track_id_one", "VisionLonBehavior_nearest_car_track_id_two", "VisionLonBehavior_nearest_car_track_id_three", 
+                         "VisionLonBehavior_nearest_car_track_id_one", "VisionLonBehavior_nearest_car_track_id_two", "VisionLonBehavior_nearest_car_track_id_three",
                          "VisionLonBehavior_cutin_v_limit", "VisionLonBehavior_cutin_status",
                          'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', 'VisionLonBehavior_STANDSTILL', "VisionLonBehavior_final_v_target",
                          "solver_condition", "dist_err", "lat_err", "lon_err", "dbw_status",
@@ -786,7 +787,11 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # step 3: 加载车道线信息
   if bag_loader.road_msg['enable'] == True:
     # load lane info
-    line_info_list = load_lane_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
+    try:
+      line_info_list = load_lane_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
+    except:
+      print("old interface before 2.2.3")
+      line_info_list = load_lane_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
 
     # update lane info
     data_lane_dict = {
@@ -842,10 +847,14 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         print('error')
         pass
 
-    center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
+    try:
+      center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
+    except:
+      print("old interface before 2.2.3")
+      center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
     # print(center_line_list)
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
-    
+
     for i in range(10):
       # try:
         if (trajectory.trajectory_type == 0) or (trajectory.trajectory_type == 1 and trajectory.target_reference.lateral_maneuver_gear == 2) :

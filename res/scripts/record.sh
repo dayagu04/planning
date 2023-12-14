@@ -26,6 +26,8 @@ cyber_recorder record -c \
     /iflytek/vehicle_service \
     /iflytek/planning/debug_info \
     /iflytek/planning/plan \
+    /iflytek/planning/hmi \
+    /iflytek/adas_function_debug \
     /iflytek/prediction/prediction_result \
     /iflytek/fusion/objects \
     /iflytek/system_state/soc_state \

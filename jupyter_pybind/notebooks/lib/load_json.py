@@ -31,3 +31,7 @@ def LoadScalarList(json_data, json_value_list, json_struct):
 def LoadVectorList(json_data, json_vector_list, json_struct):
   for i in range(len(json_vector_list)):
     LoadVector(json_data, json_struct, json_vector_list[i])
+
+def VectorTimeK(x, k):
+  new_x = [i * k for i in x]
+  return new_x

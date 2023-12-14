@@ -10,6 +10,8 @@ import json
 import math
 import os
 import pymap3d as pm
+import numpy as np
+
 
 kRefLat = 39.907500
 kRefLon = 116.3880555
@@ -24,9 +26,10 @@ altitude0 = kRefAlt
 class LocalizationApaPlotter(object):
   def __init__(self):
   # bag path and frame dt
-    self.file_path = '/mnt/noa/S811-13/20231018_bag/20231018145524.record.00003'
-    self.abnormal_timestamp_path = '/mnt/noa/20230916/abnormal_timestamp.txt'
-    self.rtk_file_path_json = '/mnt/noa/20231013/20231013-16-16-05/sensor_navi_navifusion.json'
+    self.file_path = '/mnt/noa/S811-6/1122-insd/merge.bag.record'
+    self.abnormal_timestamp_path = '/mnt/noa/abnormal_timestamp.txt'
+    self.rtk_file_path_json = '/mnt/noa/S811-6/1122-insd/sensor_navi_navifusion.json'
+    self.insd_file_path = '/mnt/noa/S811-6/1122-insd/insd_output.txt'
     display(HTML('<style>.container { width:95% !important;  }</style>'))
     output_notebook()
 
@@ -50,6 +53,8 @@ class LocalizationApaPlotter(object):
     self.positions_time_vec = []
     self.positions_lat_diff_vec = []
     self.abnormal_positons_timestamp = []
+    self.positons_header_timestamp_vec = []
+    self.positons_timestamp_vec = []
 
     # AbsolutePostion
     self.absolute_pos_original_loc_timestamp_vec = []
@@ -92,10 +97,34 @@ class LocalizationApaPlotter(object):
     self.pbox_gnss_time_vec = []
     self.pbox_gnss_quality_vec = []
     self.pbox_gnss_timestamp_interval_vec = []
+    self.pbox_gnss_start_timestamp_vec = []
+
+    # pbox imu
+    self.pbox_imu_start_timestamp = None
+    self.pbox_imu_start_timestamp_vec = []
+    self.last_imu_timestamp = None
+    self.pbox_imu_time_vec = []
+    self.pbox_imu_acc_x_vec = []
+    self.pbox_imu_acc_y_vec = []
+    self.pbox_imu_acc_z_vec = []
+    self.pbox_imu_yaw_rate_x_vec = []
+    self.pbox_imu_yaw_rate_y_vec = []
+    self.pbox_imu_yaw_rate_z_vec = []
 
     # gnss
     self.gnss_lon_vec = []
     self.gnss_lat_vec = []
+
+    # insd
+    self.insd_lon_vec = []
+    self.insd_lat_vec = []
+    self.insd_x_vec = []
+    self.insd_y_vec = []
+    self.corrected_insd_x_vec = []
+    self.corrected_insd_y_vec = []
+
+    # tmp
+    self.vehicle_service_timestamp = []
 
   def is_out_of_china(self, lla):
     if(not(lla[0] > 0.8293 and lla[0] < 55.8271 and lla[1] > 72.004 and \
@@ -123,6 +152,43 @@ class LocalizationApaPlotter(object):
     ret += (150.0 * math.sin(lon / 12.0 * math.pi) + 300.0 * math.sin(lon / 30.0 * math.pi)) * \
             2.0 / 3.0
     return ret
+
+
+  def correct_localization_by_external_parameters(self, xyz_in_enu, yaw):
+    gnss_to_enu_r = self.roll_pitch_raw_to_r_matrix(0, 0, yaw)
+    gnss_to_enu_t_vector = np.array([xyz_in_enu[0], xyz_in_enu[1], xyz_in_enu[2]])
+    gnss_to_enu = np.eye(4)
+    gnss_to_enu[:3, 3] = gnss_to_enu_t_vector
+    gnss_to_enu[:3, :3] = gnss_to_enu_r
+
+    lidar_to_gnss_r = self.roll_pitch_raw_to_r_matrix(0.0059852922245445545, 0.008283748108464804, -0.011274372654086581)
+    lidar_to_gnss_t_vector = np.array([-0.178372528506434, 0.8809019984963019, 1.2326251653197116])
+    lidar_to_gnss = np.eye(4)
+    lidar_to_gnss[:3, 3] = lidar_to_gnss_t_vector
+    lidar_to_gnss[:3, :3] = lidar_to_gnss_r
+
+    lidar_to_ego_r = self.roll_pitch_raw_to_r_matrix(-0.009021534911056395, -0.011910021126027534, -1.579902386060273)
+    lidar_to_ego_t_vector = np.array([0.8228984002955497, -0.013759881080784415, 1.7031276414135466])
+    lidar_to_ego = np.eye(4)
+    lidar_to_ego[:3, 3] = lidar_to_ego_t_vector
+    lidar_to_ego[:3, :3] = lidar_to_ego_r
+
+    ego_to_lidar = np.eye(4)
+    ego_to_lidar_r = np.transpose(lidar_to_ego_r)
+    ego_to_lidar_t_vector = np.negative(ego_to_lidar_r) @ lidar_to_ego_t_vector
+    ego_to_lidar[:3, 3] = ego_to_lidar_t_vector
+    ego_to_lidar[:3, :3] = ego_to_lidar_r
+
+    ego_to_gnss = lidar_to_gnss @ ego_to_lidar
+
+    return (gnss_to_enu @ ego_to_gnss)[:3, 3]
+
+
+  def roll_pitch_raw_to_r_matrix(self, roll, pitch, yaw):
+    rz = np.array([[math.cos(yaw), -math.sin(yaw), 0], [math.sin(yaw), math.cos(yaw), 0], [0, 0, 1]])
+    ry = np.array([[math.cos(pitch), 0, math.sin(pitch)], [0, 1, 0], [-math.sin(pitch), 0, math.cos(pitch)]])
+    rx = np.array([[1, 0, 0], [0, math.cos(roll), -math.sin(roll)], [0, math.sin(roll), math.cos(roll)]])
+    return rz @ ry @ rx
 
 
   def gcj02_to_wgs84(self, lla):
@@ -162,6 +228,7 @@ class LocalizationApaPlotter(object):
   def load_pbox_gnss_data(self):
     bag = Record(self.file_path)
     for topic, msg, t in bag.read_messages('/iflytek/sensor/pbox/gnss'):
+      self.pbox_gnss_start_timestamp_vec.append(msg.header.timestamp)
       if self.pbox_gnss_start_timestamp is None:
         self.pbox_gnss_start_timestamp = msg.header.timestamp
       if(self.is_out_of_china([msg.gnss_msg.gnss_lat, msg.gnss_msg.gnss_lon, 0.0])):
@@ -176,12 +243,54 @@ class LocalizationApaPlotter(object):
       self.pbox_gnss_time_vec.append(time)
       self.last_pbox_gnss_timestamp = msg.header.timestamp
 
+  def load_pbox_imu_data(self):
+    bag = Record(self.file_path)
+    for topic, msg, t in bag.read_messages('/iflytek/sensor/pbox/imu'):
+      if self.pbox_imu_start_timestamp is None:
+        self.pbox_imu_start_timestamp = msg.header.timestamp
+      self.pbox_imu_start_timestamp_vec.append(msg.header.timestamp)
+      self.pbox_imu_acc_x_vec.append(msg.acc_val.x)
+      self.pbox_imu_acc_y_vec.append(msg.acc_val.y)
+      self.pbox_imu_acc_z_vec.append(msg.acc_val.z)
+      self.pbox_imu_yaw_rate_x_vec.append(msg.angular_rate_val.x)
+      self.pbox_imu_yaw_rate_y_vec.append(msg.angular_rate_val.y)
+      self.pbox_imu_yaw_rate_z_vec.append(msg.angular_rate_val.z)
+      time = 0.0
+      if self.last_imu_timestamp is not None:
+        time = (msg.header.timestamp - self.pbox_imu_start_timestamp) * 1e-6
+      self.pbox_imu_time_vec.append(time)
+      self.last_imu_timestamp = msg.header.timestamp
+
 
   def load_gnss_data(self):
     bag = Record(self.file_path)
     for topic, msg, t in bag.read_messages('/iflytek/sensor/gnss'):
       self.gnss_lon_vec.append(msg.gnss_msg.new_longitude)
       self.gnss_lat_vec.append(msg.gnss_msg.new_latitude)
+
+  def load_vehicle_service_data(self):
+    bag = Record(self.file_path)
+    for topic, msg, t in bag.read_messages('/iflytek/vehicle_service'):
+      self.vehicle_service_timestamp.append(msg.header.timestamp)
+
+  def load_insd_data(self):
+      file_object = open(self.insd_file_path, 'r')
+      lines = file_object.readlines()
+      ell_wgs84 = pm.Ellipsoid('wgs84')
+      for line in lines:
+        if line.startswith("2289."):
+            strs = line.split(",")
+            lat = float(strs[2])
+            lon = float(strs[3])
+            heading = float(strs[8])
+            self.insd_lat_vec.append(lat)
+            self.insd_lon_vec.append(lon)
+            e, n, u = pm.geodetic2enu(lat, lon, 0.0, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
+            x, y, z = self.correct_localization_by_external_parameters([e, n, u], heading * math.pi / 180.0)
+            self.insd_x_vec.append(e)
+            self.insd_y_vec.append(n)
+            self.corrected_insd_x_vec.append(x)
+            self.corrected_insd_y_vec.append(y)
 
 
   def load_position_data(self):
@@ -228,6 +337,8 @@ class LocalizationApaPlotter(object):
             continue
           is_absolute_valid = True
           self.absolute_pos_original_loc_timestamp_vec.append(msg.absolute_pos[0].original_loc_timestamp)
+          self.positons_header_timestamp_vec.append(msg.header.timestamp)
+          self.positons_timestamp_vec.append(msg.timestamp)
           self.absolute_pos_time_vec.append((msg.timestamp - self.ehr_start_time) * 0.001)
           self.absolute_lon_vec.append(llu_lon)
           self.absolute_lat_vec.append(llu_lat)
@@ -240,7 +351,9 @@ class LocalizationApaPlotter(object):
             x2 = self.absolute_x_vec[-1] - self.absolute_x_vec[-2]
             y2 = self.absolute_y_vec[-1] - self.absolute_y_vec[-2]
             len_v1 = math.sqrt(x1 * x1 + y1 * y1)
-            diff = (x1 * y2 - y1 * x2) / len_v1
+            diff = 0.0
+            if len_v1 > 1e-6:
+              diff = (x1 * y2 - y1 * x2) / len_v1
             self.positions_lat_diff_vec.append(diff)
             if abs(diff) > 0.1 and msg_index - abnormal_position_index > 1:
               # print("timestmap:", msg.timestamp, "lateral jumpiness: ", diff,
@@ -305,11 +418,14 @@ class LocalizationApaPlotter(object):
 
   def plot_figure(self):
     self.load_position_data()
+    # self.load_pbox_imu_data()
     # self.load_iflytek_localization_data()
-    # self.load_pbox_gnss_data()
+    self.load_pbox_gnss_data()
     # self.load_gnss_data()
-    # self.load_rtk_data_json()
-    self.load_rtk_data()
+    self.load_rtk_data_json()
+    # self.load_rtk_data()
+    # self.load_vehicle_service_data()
+    self.load_insd_data()
     self.plot_data()
 
 
@@ -320,14 +436,16 @@ class LocalizationApaPlotter(object):
     fig1.circle(self.absolute_lat_vec, self.absolute_lon_vec, size=normal_size, fill_color='red', line_color='red', alpha=0.5, legend_label='absolute_pos')
     fig1.circle(self.absolute_lat_vec[0], self.absolute_lon_vec[0], size=10, fill_color='red', line_color='red', alpha=0.5, legend_label='absolute_pos')
     fig1.line(self.absolute_lat_vec, self.absolute_lon_vec, line_width=1, line_color='red', legend_label = 'absolute_pos')
-    fig1.circle(self.abnormal_absolute_lat_vec, self.abnormal_absolute_lon_vec, size=abnormal_size, fill_color='brown', line_color='brown', alpha=0.5, legend_label='abnormal absolute_pos')
-    fig1.circle(self.positions_original_lat_vec, self.positions_original_lon_vec, size = normal_size, fill_color='blue', line_color='blue', alpha = 0.5, legend_label = 'positions')
-    fig1.line(self.positions_original_lat_vec, self.positions_original_lon_vec, line_width=1, line_color='blue', legend_label = 'positions')
-    fig1.circle(self.abnormal_positions_lat_vec, self.abnormal_positions_lon_vec, size = abnormal_size, fill_color='green', line_color='green', alpha = 0.5, legend_label = 'abnormal positions')
-    fig1.circle(self.rtk_latitude_vec, self.rtk_longitude_vec, size = normal_size, fill_color='indigo', line_color='indigo', alpha = 0.5, legend_label = 'rtk positions')
-    fig1.line(self.rtk_latitude_vec, self.rtk_longitude_vec, line_width=1, line_color='indigo', legend_label = 'rtk positions')
-    fig1.circle(self.pbox_gnss_lat_vec, self.pbox_gnss_lon_vec, size = normal_size, fill_color='gold', line_color='gold', alpha = 0.5, legend_label = 'pbox gnss positions')
-    fig1.line(self.pbox_gnss_lat_vec, self.pbox_gnss_lon_vec, line_width=1, line_color='gold', legend_label = 'pbox gnss positions')
+    # fig1.circle(self.abnormal_absolute_lat_vec, self.abnormal_absolute_lon_vec, size=abnormal_size, fill_color='brown', line_color='brown', alpha=0.5, legend_label='abnormal absolute_pos')
+    # fig1.circle(self.positions_original_lat_vec, self.positions_original_lon_vec, size = normal_size, fill_color='blue', line_color='blue', alpha = 0.5, legend_label = 'positions')
+    # fig1.line(self.positions_original_lat_vec, self.positions_original_lon_vec, line_width=1, line_color='blue', legend_label = 'positions')
+    # fig1.circle(self.abnormal_positions_lat_vec, self.abnormal_positions_lon_vec, size = abnormal_size, fill_color='green', line_color='green', alpha = 0.5, legend_label = 'abnormal positions')
+    fig1.circle(self.rtk_latitude_vec, self.rtk_longitude_vec, size = normal_size, fill_color='indigo', line_color='indigo', alpha = 0.5, legend_label = 'insd raw positions')
+    fig1.line(self.rtk_latitude_vec, self.rtk_longitude_vec, line_width=1, line_color='indigo', legend_label = 'insd raw positions')
+    # fig1.circle(self.pbox_gnss_lat_vec, self.pbox_gnss_lon_vec, size = normal_size, fill_color='gold', line_color='gold', alpha = 0.5, legend_label = 'pbox gnss positions')
+    # fig1.line(self.pbox_gnss_lat_vec, self.pbox_gnss_lon_vec, line_width=1, line_color='gold', legend_label = 'pbox gnss positions')
+    fig1.circle(self.insd_lat_vec, self.insd_lon_vec, size = normal_size, fill_color='cyan', line_color='cyan', alpha = 0.5, legend_label = 'insd positions')
+    fig1.line(self.insd_lat_vec, self.insd_lon_vec, line_width=1, line_color='cyan', legend_label = 'insd positions')
     # fig1.circle(self.gnss_lat_vec, self.gnss_lon_vec, size = normal_size, fill_color='pink', line_color='pink', alpha = 0.5, legend_label = 'gnss positions')
     # fig1.line(self.gnss_lat_vec, self.gnss_lon_vec, line_width=1, line_color='pink', legend_label = 'gnss positions')
 
@@ -339,14 +457,18 @@ class LocalizationApaPlotter(object):
     fig2.circle(self.absolute_x_vec, self.absolute_y_vec, size=normal_size, fill_color='red', line_color='red', alpha = 0.5, legend_label='absolute_pos')
     fig2.circle(self.absolute_x_vec[0], self.absolute_y_vec[0], size=10, fill_color='red', line_color='red', alpha = 0.5, legend_label='absolute_pos')
     fig2.line(self.absolute_x_vec, self.absolute_y_vec, line_width=1, line_color='red', legend_label = 'absolute_pos')
-    fig2.circle(self.abnormal_absolute_x_vec, self.abnormal_absolute_y_vec, size=abnormal_size, fill_color='brown', line_color='brown', alpha = 0.5, legend_label='abnormal absolute_pos')
-    fig2.circle(self.positions_x_vec, self.positions_y_vec, size=normal_size, fill_color='blue', line_color='blue', alpha=0.5, legend_label='positions')
-    fig2.line(self.positions_x_vec, self.positions_y_vec, line_width=1, line_color='blue', legend_label = 'positions')
-    fig2.circle(self.abnormal_positions_x_vec, self.abnormal_positions_y_vec, size=abnormal_size, fill_color='green', line_color='green', alpha=0.5, legend_label='abnormal positions')
-    fig2.circle(self.rtk_x_vec, self.rtk_y_vec, size=normal_size, fill_color='indigo', line_color='indigo', alpha=0.5, legend_label='rtk positions')
-    fig2.line(self.rtk_x_vec, self.rtk_y_vec, line_width=1, line_color='indigo', legend_label = 'rtk positions')
-    fig2.circle(self.iflytek_local_position_x_vec, self.iflytek_local_position_y_vec, size=normal_size, fill_color='cyan', line_color='cyan', alpha=0.5, legend_label='ilfytek positions')
-    fig2.line(self.iflytek_local_position_x_vec, self.iflytek_local_position_y_vec, line_width=1, line_color='cyan', legend_label = 'ilfytek positions')
+    # fig2.circle(self.abnormal_absolute_x_vec, self.abnormal_absolute_y_vec, size=abnormal_size, fill_color='brown', line_color='brown', alpha = 0.5, legend_label='abnormal absolute_pos')
+    # fig2.circle(self.positions_x_vec, self.positions_y_vec, size=normal_size, fill_color='blue', line_color='blue', alpha=0.5, legend_label='positions')
+    # fig2.line(self.positions_x_vec, self.positions_y_vec, line_width=1, line_color='blue', legend_label = 'positions')
+    # fig2.circle(self.abnormal_positions_x_vec, self.abnormal_positions_y_vec, size=abnormal_size, fill_color='green', line_color='green', alpha=0.5, legend_label='abnormal positions')
+    # fig2.circle(self.rtk_x_vec, self.rtk_y_vec, size=normal_size, fill_color='indigo', line_color='indigo', alpha=0.5, legend_label='insd raw positions')
+    # fig2.line(self.rtk_x_vec, self.rtk_y_vec, line_width=1, line_color='indigo', legend_label = 'insd raw positions')
+    # fig2.circle(self.iflytek_local_position_x_vec, self.iflytek_local_position_y_vec, size=normal_size, fill_color='cyan', line_color='cyan', alpha=0.5, legend_label='ilfytek positions')
+    # fig2.line(self.iflytek_local_position_x_vec, self.iflytek_local_position_y_vec, line_width=1, line_color='cyan', legend_label = 'ilfytek positions')
+    fig2.circle(self.insd_x_vec, self.insd_y_vec, size=normal_size, fill_color='cyan', line_color='cyan', alpha=0.5, legend_label='insd positions')
+    fig2.line(self.insd_x_vec, self.insd_y_vec, line_width=1, line_color='cyan', legend_label = 'insd positions')
+    fig2.circle(self.corrected_insd_x_vec, self.corrected_insd_y_vec, size=normal_size, fill_color='lime', line_color='lime', alpha=0.5, legend_label='corrected insd positions')
+    fig2.line(self.corrected_insd_x_vec, self.corrected_insd_y_vec, line_width=1, line_color='lime', legend_label = 'corrected insd positions')
 
     fig2.toolbar.active_scroll = fig2.select_one(WheelZoomTool)
     fig2.legend.click_policy = 'hide'
@@ -407,18 +529,64 @@ class LocalizationApaPlotter(object):
     bkp.show(fig8, notebook_handle=True)
 
     fig9 = bkp.figure(x_axis_label='time', y_axis_label='position diff', width=1500, height=500)
-    fig9.line(self.positions_time_vec[2:], self.positions_lat_diff_vec, line_width=1, line_color='blue', line_dash='solid', legend_label='position diff')
+    fig9.line(self.absolute_pos_time_vec[2:], self.positions_lat_diff_vec, line_width=1, line_color='blue', line_dash='solid', legend_label='position diff')
 
     fig9.toolbar.active_scroll = fig9.select_one(WheelZoomTool)
     fig9.legend.click_policy = 'hide'
     bkp.show(fig9, notebook_handle=True)
 
-    fig10 = bkp.figure(x_axis_label='time', y_axis_label='gnss_quality', y_range = [-1, 6], width=1500, height=500)
+    fig10 = bkp.figure(x_axis_label='time', y_axis_label='pbox gnss_quality', y_range = [-1, 6], width=1500, height=500)
     fig10.line(self.pbox_gnss_time_vec, self.pbox_gnss_quality_vec, line_width=1, line_color='blue', line_dash='solid', legend_label='gnss_quality')
 
     fig10.toolbar.active_scroll = fig10.select_one(WheelZoomTool)
     fig10.legend.click_policy = 'hide'
     bkp.show(fig10, notebook_handle=True)
+
+    fig11 = bkp.figure(x_axis_label='time', y_axis_label='pbox imu acc', width=1500, height=500)
+    fig11.line(self.pbox_imu_time_vec, self.pbox_imu_acc_x_vec, line_width=1, line_color='blue', line_dash='solid', legend_label='acc x')
+    fig11.line(self.pbox_imu_time_vec, self.pbox_imu_acc_y_vec, line_width=1, line_color='red', line_dash='solid', legend_label='acc y')
+    fig11.line(self.pbox_imu_time_vec, self.pbox_imu_acc_z_vec, line_width=1, line_color='green', line_dash='solid', legend_label='acc z')
+
+    fig11.toolbar.active_scroll = fig11.select_one(WheelZoomTool)
+    fig11.legend.click_policy = 'hide'
+    bkp.show(fig11, notebook_handle=True)
+
+    fig12 = bkp.figure(x_axis_label='time', y_axis_label='pbox imu yaw rate', width=1500, height=500)
+    fig12.line(self.pbox_imu_time_vec, self.pbox_imu_yaw_rate_x_vec, line_width=1, line_color='blue', line_dash='solid', legend_label='yaw rate x')
+    fig12.line(self.pbox_imu_time_vec, self.pbox_imu_yaw_rate_y_vec, line_width=1, line_color='red', line_dash='solid', legend_label='yaw rate y')
+    fig12.line(self.pbox_imu_time_vec, self.pbox_imu_yaw_rate_z_vec, line_width=1, line_color='green', line_dash='solid', legend_label='yaw rate z')
+
+    fig12.toolbar.active_scroll = fig12.select_one(WheelZoomTool)
+    fig12.legend.click_policy = 'hide'
+    bkp.show(fig12, notebook_handle=True)
+
+    fig13 = bkp.figure(y_axis_label='timestamp', width=1500, height=500)
+    tmp_x = range(len(self.absolute_pos_original_loc_timestamp_vec))
+    fig13.line(tmp_x, self.absolute_pos_original_loc_timestamp_vec, line_width=1, line_color='blue', line_dash='solid', legend_label='absolute_pos_original_loc_timestamp')
+    fig13.line(tmp_x, self.positons_header_timestamp_vec, line_width=1, line_color='red', line_dash='solid', legend_label='positons_header_timestamp_vec')
+    fig13.line(tmp_x, self.positons_timestamp_vec, line_width=1, line_color='green', line_dash='solid', legend_label='positons_timestamp_vec')
+
+    fig13.toolbar.active_scroll = fig13.select_one(WheelZoomTool)
+    fig13.legend.click_policy = 'hide'
+    bkp.show(fig13, notebook_handle=True)
+
+    fig14 = bkp.figure(y_axis_label='timestamp', width=1500, height=500)
+    tmp_x = range(len(self.vehicle_service_timestamp))
+    fig14.line(tmp_x, self.vehicle_service_timestamp, line_width=1, line_color='green', line_dash='solid', legend_label='vehicle_service_timestamp')
+
+    fig14.toolbar.active_scroll = fig14.select_one(WheelZoomTool)
+    fig14.legend.click_policy = 'hide'
+    bkp.show(fig14, notebook_handle=True)
+
+    fig15 = bkp.figure(y_axis_label='timestamp', width=1500, height=500)
+    tmp_x = range(len(self.pbox_imu_start_timestamp_vec))
+    fig15.line(tmp_x, self.pbox_imu_start_timestamp_vec, line_width=1, line_color='blue', line_dash='solid', legend_label='pbox_imu_start_timestamp_vec')
+    tmp_x = range(len(self.pbox_gnss_start_timestamp_vec))
+    fig15.line(tmp_x, self.pbox_gnss_start_timestamp_vec, line_width=1, line_color='red', line_dash='solid', legend_label='pbox_gnss_start_timestamp_vec')
+
+    fig15.toolbar.active_scroll = fig15.select_one(WheelZoomTool)
+    fig15.legend.click_policy = 'hide'
+    bkp.show(fig15, notebook_handle=True)
 
 
 if __name__ == '__main__':

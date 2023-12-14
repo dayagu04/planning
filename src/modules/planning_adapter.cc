@@ -57,13 +57,11 @@ static uint64_t get_latency(double now, uint64_t input_time) {
   return (now - input_time) / US_PER_MS;
 }
 
-static void calc_fusion_latency(
+static inline void calc_fusion_latency(
     uint64 planning_in_time_us,
     const google::protobuf::RepeatedPtrField<Common::InputHistoryTimestamp>
         &input_timestamp_list,
-    planning::common::ImageLatency *latency,
-    Common::InputHistoryTimestamp::InputHistoryTimestampSourceType
-        fusion_type) {
+    planning::common::ImageLatency *latency) {
   constexpr uint64_t US_PER_MS = 1000;
 
   uint64 image_expose_time_us = 0;
@@ -87,22 +85,14 @@ static void calc_fusion_latency(
       }
       case Common::InputHistoryTimestamp::
           INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_OBSTACLE_FUSION: {
-        if (fusion_type ==
-            Common::InputHistoryTimestamp::
-                INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_OBSTACLE_FUSION) {
-          fusion_in_time_us = input.in_ts_us();
-          fusion_out_time_us = input.out_ts_us();
-        }
+        fusion_in_time_us = input.in_ts_us();
+        fusion_out_time_us = input.out_ts_us();
         break;
       }
       case Common::InputHistoryTimestamp::
           INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_ROAD_FUSION: {
-        if (fusion_type ==
-            Common::InputHistoryTimestamp::
-                INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_ROAD_FUSION) {
-          fusion_in_time_us = input.in_ts_us();
-          fusion_out_time_us = input.out_ts_us();
-        }
+        fusion_in_time_us = input.in_ts_us();
+        fusion_out_time_us = input.out_ts_us();
         break;
       }
       default: { break; }
@@ -277,30 +267,20 @@ void PlanningAdapter::Proc() {
 
   // 3.get output & publish
   uint64_t output_time_us = (uint64_t)IflyTime::Now_us();
-  google::protobuf::RepeatedPtrField<::Common::InputHistoryTimestamp>
-      input_timestamp_list{};
-  input_timestamp_list.MergeFrom(
-      fusion_objects_info_msg_.header().input_list());
-  input_timestamp_list.MergeFrom(road_info_msg_.header().input_list());
-  input_timestamp_list.MergeFrom(
-      localization_estimate_msg_.header().input_list());
 
   if (planning_debug_writer_) {
     planning_debug_data->set_timestamp(output_time_us);
     planning_debug_data->mutable_frame_info()->set_version(__version_str__);
     auto debug_info_json = *DebugInfoManager::GetInstance().GetDebugJson();
     planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
-    calc_fusion_latency(start_time, input_timestamp_list,
-                        planning_debug_data->mutable_road_fusion_latency(),
-                        Common::InputHistoryTimestamp::
-                            INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_ROAD_FUSION);
-    calc_fusion_latency(
-        start_time, input_timestamp_list,
-        planning_debug_data->mutable_obstacle_fusion_latency(),
-        Common::InputHistoryTimestamp::
-            INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_OBSTACLE_FUSION);
-    calc_location_latency(start_time, input_timestamp_list,
-                          planning_debug_data->mutable_location_latency());
+    calc_fusion_latency(start_time, local_view_.road_info.header().input_list(),
+                        planning_debug_data->mutable_road_fusion_latency());
+    calc_fusion_latency(start_time,
+                        local_view_.fusion_objects_info.header().input_list(),
+                        planning_debug_data->mutable_obstacle_fusion_latency());
+    calc_location_latency(
+        start_time, local_view_.localization_estimate.header().input_list(),
+        planning_debug_data->mutable_location_latency());
     planning_debug_writer_(*planning_debug_data);
   }
 
@@ -316,7 +296,12 @@ void PlanningAdapter::Proc() {
     auto header = planning_output.mutable_meta()->mutable_header();
     header->set_timestamp(output_time_us);
     header->set_version(__version_str__);
-    header->mutable_input_list()->CopyFrom(input_timestamp_list);
+    header->mutable_input_list()->MergeFrom(
+        local_view_.fusion_objects_info.header().input_list());
+    header->mutable_input_list()->MergeFrom(
+        local_view_.road_info.header().input_list());
+    header->mutable_input_list()->MergeFrom(
+        local_view_.localization_estimate.header().input_list());
     auto planning_latency = header->mutable_input_list()->Add();
     planning_latency->set_input_type(
         Common::InputHistoryTimestamp::

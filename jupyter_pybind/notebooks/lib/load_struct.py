@@ -152,23 +152,52 @@ def load_lane_lines(lanes):
       lane = lanes[i]
       left_line = lane.left_lane_boundary
       left_line_coef = left_line.poly_coefficient
-      line_x, line_y = gen_line(left_line_coef[0], left_line_coef[1], left_line_coef[2], left_line_coef[3], \
-        left_line.begin, left_line.end)
-      lane_info_l['line_x_vec'] = line_x
-      lane_info_l['line_y_vec'] = line_y
-      lane_info_l['type'] = left_line.type_segments[0].type
+      try:
+        line_x, line_y = gen_line(left_line_coef[0], left_line_coef[1], left_line_coef[2], left_line_coef[3], \
+          left_line.begin, left_line.end)
+        lane_info_l['line_x_vec'] = line_x
+        lane_info_l['line_y_vec'] = line_y
+        try:
+          tp = left_line.type_segments[0].type
+        except:
+          print("旧格式：左车道线类型")
+          tp = left_line.segment[0].type
+        if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+          lane_info_l['type'] = ['dashed']
+        else:
+          lane_info_l['type'] = ['solid']
+      except:
+        print("旧格式：左车道线信息")
+        line_x, line_y = gen_line(0,0,0,0,0,0)
+        lane_info_l['line_x_vec'] = line_x
+        lane_info_l['line_y_vec'] = line_y
+        lane_info_l['type'] = ['dashed']
 
       line_info_list.append(lane_info_l)
 
       lane_info_r = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
       right_line = lane.right_lane_boundary
       right_line_coef = right_line.poly_coefficient
-      line_x, line_y = gen_line(right_line_coef[0], right_line_coef[1], right_line_coef[2], right_line_coef[3], \
-        right_line.begin, right_line.end)
-
-      lane_info_r['line_x_vec'] = line_x
-      lane_info_r['line_y_vec'] = line_y
-      lane_info_r['type'] = right_line.type_segments[0].type
+      try:
+        line_x, line_y = gen_line(right_line_coef[0], right_line_coef[1], right_line_coef[2], right_line_coef[3], \
+          right_line.begin, right_line.end)
+        lane_info_r['line_x_vec'] = line_x
+        lane_info_r['line_y_vec'] = line_y
+        try:
+          tp = left_line.type_segments[0].type
+        except:
+          print("旧格式：右车道线类型")
+          tp = left_line.segment[0].type
+        if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+          lane_info_r['type'] = ['dashed']
+        else:
+          lane_info_r['type'] = ['solid']
+      except:
+        line_x, line_y = gen_line(0,0,0,0,0,0)
+        lane_info_r['line_x_vec'] = line_x
+        lane_info_r['line_y_vec'] = line_y
+        lane_info_r['type'] = ['dashed']
+        print("旧格式：右车道线信息")
       line_info_list.append(lane_info_r)
     else:
       line_x, line_y = gen_line(0,0,0,0,0,0)
