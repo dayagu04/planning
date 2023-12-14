@@ -1163,9 +1163,9 @@ def load_ehr_parking_map(dataLoader, layer_manager, fig_local_view):
           pass
           # plan_traj_x, plan_traj_y = [], []
         else:
-          cur_pos_xn = loc_msg.pose.local_position.x
-          cur_pos_yn = loc_msg.pose.local_position.y
-          cur_yaw = loc_msg.pose.euler_angles.yaw
+          cur_pos_xn = loc_msg.position.position_boot.x
+          cur_pos_yn = loc_msg.position.position_boot.y
+          cur_yaw = loc_msg.orientation.euler_boot.yaw
           coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
         # print(cur_pos_xn,cur_pos_yn, cur_yaw)
         
@@ -1270,17 +1270,20 @@ def draw_local_view(dataLoader, layer_manager):
     # 加载定位
     if dataLoader.loc_msg['enable'] == True:
       location_generator = CommonGenerator()
-      cur_pos_xn0 = cur_pos_xn = dataLoader.loc_msg['data'][0].pose.local_position.x
-      cur_pos_yn0 = cur_pos_yn = dataLoader.loc_msg['data'][0].pose.local_position.y
+      cur_pos_xn0 = cur_pos_xn = dataLoader.loc_msg['data'][0].position.position_boot.x
+      cur_pos_yn0 = cur_pos_yn = dataLoader.loc_msg['data'][0].position.position_boot.y
       for localization_timestamp in localization_timestamps:
         flag, loc_msg = find(dataLoader.loc_msg, localization_timestamp)
         if not flag:
           # print('find loc_msg error')
           location_generator.xys.append(([],[]))
           continue
-        cur_pos_xn = loc_msg.pose.local_position.x
-        cur_pos_yn = loc_msg.pose.local_position.y
-        cur_yaw = loc_msg.pose.euler_angles.yaw
+        # cur_pos_xn = loc_msg.pose.local_position.x
+        # cur_pos_yn = loc_msg.pose.local_position.y
+        # cur_yaw = loc_msg.pose.euler_angles.yaw
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
         ego_xb, ego_yb = [], []
         ego_xn, ego_yn = [], []
         ### global variables
@@ -1288,8 +1291,8 @@ def draw_local_view(dataLoader, layer_manager):
         for i in range(len(dataLoader.loc_msg['data'])):
           if (i % 10 != 0): # 下采样 10
             continue
-          pos_xn_i = dataLoader.loc_msg['data'][i].pose.local_position.x
-          pos_yn_i = dataLoader.loc_msg['data'][i].pose.local_position.y
+          pos_xn_i = dataLoader.loc_msg['data'][i].position.position_boot.x
+          pos_yn_i = dataLoader.loc_msg['data'][i].position.position_boot.y
 
           ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
 
@@ -1582,9 +1585,9 @@ def draw_local_view(dataLoader, layer_manager):
               if not flag:
                 plan_traj_x, plan_traj_y = [], []
               else:
-                cur_pos_xn = loc_msg.pose.local_position.x
-                cur_pos_yn = loc_msg.pose.local_position.y
-                cur_yaw = loc_msg.pose.euler_angles.yaw
+                cur_pos_xn = loc_msg.position.position_boot.x
+                cur_pos_yn = loc_msg.position.position_boot.y
+                cur_yaw = loc_msg.orientation.euler_boot.yaw
                 coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
                 plan_x = []
                 plan_y = []
@@ -1832,17 +1835,17 @@ def apa_draw_local_view(dataLoader, layer_manager):
       slot_timestamps.append(slot_timestamp)
     # 加载定位
     location_generator = CommonGenerator()
-    cur_pos_xn0 = cur_pos_xn = dataLoader.loc_msg['data'][0].pose.local_position.x
-    cur_pos_yn0 = cur_pos_yn = dataLoader.loc_msg['data'][0].pose.local_position.y
+    cur_pos_xn0 = cur_pos_xn = dataLoader.loc_msg['data'][0].position.position_boot.x
+    cur_pos_yn0 = cur_pos_yn = dataLoader.loc_msg['data'][0].position.position_boot.y
     for localization_timestamp in localization_timestamps:
       flag, loc_msg = find(dataLoader.loc_msg, localization_timestamp)
       if not flag:
         # print('find loc_msg error')
         location_generator.xys.append(([],[]))
         continue
-      cur_pos_xn = loc_msg.pose.local_position.x
-      cur_pos_yn = loc_msg.pose.local_position.y
-      cur_yaw = loc_msg.pose.euler_angles.yaw
+      cur_pos_xn = loc_msg.position.position_boot.x
+      cur_pos_yn = loc_msg.position.position_boot.y
+      cur_yaw = loc_msg.orientation.euler_boot.yaw
       ego_xb, ego_yb = [], []
       ego_xn, ego_yn = [], []
       ### global variables
@@ -1850,8 +1853,8 @@ def apa_draw_local_view(dataLoader, layer_manager):
       for i in range(len(dataLoader.loc_msg['data'])):
         if (i % 10 != 0): # 下采样 10
           continue
-        pos_xn_i = dataLoader.loc_msg['data'][i].pose.local_position.x
-        pos_yn_i = dataLoader.loc_msg['data'][i].pose.local_position.y
+        pos_xn_i = dataLoader.loc_msg['data'][i].position.position_boot.x
+        pos_yn_i = dataLoader.loc_msg['data'][i].position.position_boot.y
 
         # ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
 
@@ -1876,9 +1879,9 @@ def apa_draw_local_view(dataLoader, layer_manager):
         # print('find loc_msg error')
         # location_generator.xys.append(([],[]))
         continue
-      cur_pos_xn = loc_msg.pose.local_position.x
-      cur_pos_yn = loc_msg.pose.local_position.y
-      cur_pos_theta = loc_msg.pose.euler_angles.yaw
+      cur_pos_xn = loc_msg.position.position_boot.x
+      cur_pos_yn = loc_msg.position.position_boot.y
+      cur_pos_theta = loc_msg.orientation.euler_boot.yaw
       temp_cur_pos_xn = []
       temp_cur_pos_yn = []
       temp_cur_pos_xn.append(cur_pos_xn)

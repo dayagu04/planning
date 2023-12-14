@@ -21,7 +21,7 @@ from lib.bag_loader import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/share/data_cold/abu_zone/autoparse/jac_s811_21pt6/trigger/20231128/20231128-11-02-50/data_collection_JAC_S811_21PT6_EVENT_MANUAL_2023-11-28-11-02-50.record"
+bag_path = "/share/data_cold/abu_zone/S811-7/hpp_1215_crusing/hpp_1215_crusing_6.00000"
 html_file = bag_path +".lonplan.html"
 
 # bokeh创建的html在jupyter中显示
@@ -363,7 +363,11 @@ class ScalarGenerator(DataGeneratorBase):
             for i, v in enumerate(data["data"]):
                 ts.append(data["t"][i])
                 xs.append(data["t"][i])
-                ys.append(round(v.pose.linear_velocity_from_wheel, 2))
+                linear_velocity_from_wheel = math.sqrt(v.velocity.velocity_boot.vx * v.velocity.velocity_boot.vx + \
+                v.velocity.velocity_boot.vy * v.velocity.velocity_boot.vy + \
+                v.velocity.velocity_boot.vz * v.velocity.velocity_boot.vz)
+                ys.append(round(linear_velocity_from_wheel, 2))
+                # ys.append(round(v.pose.linear_velocity_from_wheel, 2))
         elif val_type == 'ego_acc':
             for i, v in enumerate(data["data"]):
                 ts.append(data["t"][i])

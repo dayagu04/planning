@@ -23,7 +23,7 @@ from lib.local_view_lib import *
 # 先手动写死bag
 bag_path = "/share/mnt/s811_1_0824_1/realtime_cutin_9.00000"
 bag_path = '/share/data/clren/code/planning_10/planning/20231116110908.record.00000'
-bag_path = '/share/data_cold/abu_zone/autoparse/jac_s811_21pt6/trigger/20231128/20231128-11-02-50/data_collection_JAC_S811_21PT6_EVENT_MANUAL_2023-11-28-11-02-50.record'
+bag_path = '/share/data/clren/code/planning_1/planning/1213_night_4.00000.1702523475.plan'
 
 html_file = bag_path +".lat_plan.html" 
 # -

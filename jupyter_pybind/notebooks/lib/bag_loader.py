@@ -82,7 +82,7 @@ class LoadCyberbag:
     max_time = 0.0
     # load localization msg
     try:
-      for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
+      for topic, msg, t in self.bag.read_messages("/iflytek/localization/egomotion"):
         # load timestamp
         self.loc_msg['t'].append(msg.header.timestamp / 1e6)
         self.loc_msg['timestamp'].append(msg.header.timestamp)
@@ -95,10 +95,10 @@ class LoadCyberbag:
         self.loc_msg['enable'] = True
       else:
         self.loc_msg['enable'] = False
-        print('/iflytek/localization/ego_pose size is 0 !!!')
+        print('/iflytek/localization/egomotion size is 0 !!!')
     except:
       self.loc_msg['enable'] = False
-      print('missing /iflytek/localization/ego_pose !!!')
+      print('missing /iflytek/localization/egomotion !!!')
 
     # load road_fusion msg
     try:
