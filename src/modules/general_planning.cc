@@ -425,17 +425,20 @@ void GeneralPlanning::FillPlanningTrajectory(
   planning_status->set_apa_planning_status(
       PlanningOutput::ApaPlanningStatus::NONE);
   // WB end:--------临时hack以上信号--------
-  //   bool planning_success =
-  //   planning_output_context.planning_status().planning_success; bool
-  //   planning_completed =
-  //   planning_output_context.planning_status().planning_completed; if
-  //   (planning_completed) {
-  //     planning_status->set_hpp_planning_status(PlanningOutput::HppPlanningStatus::COMPLETED);
-  //   } else if (planning_success) {
-  //     planning_status->set_hpp_planning_status(PlanningOutput::HppPlanningStatus::RUNNING);
-  //   } else {
-  //     planning_status->set_hpp_planning_status(PlanningOutput::HppPlanningStatus::RUNNING_FAILED);
-  //   }
+  bool planning_success =
+      planning_output_context.planning_status().planning_success;
+  bool planning_completed =
+      planning_output_context.planning_status().planning_completed;
+  if (planning_completed) {
+    planning_status->set_hpp_planning_status(
+        PlanningOutput::HppPlanningStatus::COMPLETED);
+  } else if (planning_success) {
+    planning_status->set_hpp_planning_status(
+        PlanningOutput::HppPlanningStatus::RUNNING);
+  } else {
+    planning_status->set_hpp_planning_status(
+        PlanningOutput::HppPlanningStatus::RUNNING_FAILED);
+  }
 }
 
 void GeneralPlanning::GenerateStopTrajectory(
@@ -671,6 +674,8 @@ bool GeneralPlanning::IsUndefinedScene(
 bool GeneralPlanning::IsValidHppState(
     const ::FuncStateMachine::FunctionalState &current_state) {
   return current_state == FunctionalState::HPP_IN_MEMORY ||
+         current_state == FunctionalState::HPP_IN_READY_EXISTROUTE ||
+         current_state == FunctionalState::HPP_IN_READY_REENTRYROUTE ||
          current_state == FunctionalState::HPP_IN_MEMORY_READY ||
          current_state == FunctionalState::HPP_IN_MEMORY_CRUISE ||
          current_state == FunctionalState::HPP_IN_SECURE;

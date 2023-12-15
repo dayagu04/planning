@@ -99,7 +99,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
       local_view.fusion_objects_info.local_point_valid() &&
       (g_context.GetParam().planner_type ==
        planning::context::PlannerType::LONGTIME_PLANNER);
-  // location_valid = true; //hack
+  // location_valid = true;  // hack
   auto environmental_model = session_->mutable_environmental_model();
   environmental_model->set_location_valid(location_valid);
   // Step 1) update vehicleDbwStatus
@@ -121,10 +121,14 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
       (fsm_state == FuncStateMachine::FunctionalState::NOA_OVERRIDE) ||
       (fsm_state == FuncStateMachine::FunctionalState::NOA_SECUR);
   bool hpp_mode =
+      (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_MEMORY) ||
+      (fsm_state ==
+       FuncStateMachine::FunctionalState::HPP_IN_READY_EXISTROUTE) ||
+      (fsm_state ==
+       FuncStateMachine::FunctionalState::HPP_IN_READY_REENTRYROUTE) ||
       (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_MEMORY_READY) ||
       (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_MEMORY_CRUISE) ||
-      (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_SECURE) ||
-      (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_COMPLETED);
+      (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_SECURE);
   environmental_model->UpdateVehicleDbwStatus(acc_mode || scc_mode ||
                                               noa_mode || hpp_mode);
 

@@ -126,6 +126,8 @@ bool PlanningPlayer::LoadCyberBag(const std::string& bag_path) {
     } else if (msg.channel_name == TOPIC_LOCALIZATION_ESTIMATE) {
       cache_with_msg_and_header_time<LocalizationOutput::LocalizationEstimate>(
           msg);
+    } else if (msg.channel_name == TOPIC_LOCALIZATION) {
+      cache_with_msg_and_header_time<IFLYLocalization::IFLYLocalization>(msg);
     } else if (msg.channel_name == TOPIC_PREDICTION_RESULT) {
       cache_with_msg_and_header_time<Prediction::PredictionResult>(msg);
     } else if (msg.channel_name == TOPIC_VEHICLE_SERVICE) {
@@ -306,6 +308,9 @@ void PlanningPlayer::PlayOneFrame(
     } else if (scene_type_ == "apa") {
       functional_state =
           ::FuncStateMachine::FunctionalState::PARK_IN_ACTIVATE_CONTROL;
+    } else if (scene_type_ == "hpp") {
+      functional_state =
+          ::FuncStateMachine::FunctionalState::HPP_IN_MEMORY_CRUISE;
     }
   }
   func_state_machine_msg->set_current_state(functional_state);
