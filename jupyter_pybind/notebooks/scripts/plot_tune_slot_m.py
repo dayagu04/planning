@@ -11,7 +11,7 @@ from python_proto import common_pb2, slot_management_info_pb2
 from jupyter_pybind import slot_management_py
 
 # bag path and frame dt
-bag_path = '/home/xlwang71/Downloads/APA/20230919/3_17.00000'
+bag_path = '/data_cold/abu_zone/APA/simulation/simulation/test_2_good.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -24,13 +24,6 @@ fig1, local_view_data = load_local_view_figure_parking()
 
 # try before sliders
 slot_management_py.Init()
-
-
-# data source
-data_slot_management_vec = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
-
-# fig configs
-fig1.multi_line('corner_point_y', 'corner_point_x', source = data_slot_management_vec, line_width = 1, line_color = 'blue', line_dash = 'solid',legend_label = 'managed slots')
 
 ### sliders config
 class LocalViewSlider:
@@ -50,27 +43,6 @@ class LocalViewSlider:
                                         min_slot_update_lon_dif_slot_center_to_mirror = self.min_slot_update_lon_dif_slot_center_to_mirror_slider,
                                         max_slot_boundary_line_angle_dif_deg=self.max_slot_boundary_line_angle_dif_deg_slider)
 
-def load_slot_management_info(slot_management_info):
-  slots_x_vec = []
-  slots_y_vec = []
-  for slot in slot_management_info.slot_info_vec:
-    single_slot_x_vec = []
-    single_slot_y_vec = []
-    corner_points = slot.corner_points
-    single_slot_x_vec.append(corner_points.corner_point[0].x)
-    single_slot_y_vec.append(corner_points.corner_point[0].y)
-    single_slot_x_vec.append(corner_points.corner_point[2].x)
-    single_slot_y_vec.append(corner_points.corner_point[2].y)
-    single_slot_x_vec.append(corner_points.corner_point[3].x)
-    single_slot_y_vec.append(corner_points.corner_point[3].y)
-    single_slot_x_vec.append(corner_points.corner_point[1].x)
-    single_slot_y_vec.append(corner_points.corner_point[1].y)
-    slots_x_vec.append(single_slot_x_vec)
-    slots_y_vec.append(single_slot_y_vec)
-
-  data_slot_management_vec.data.update({'corner_point_y': [], 'corner_point_x': [],})
-  data_slot_management_vec.data.update({'corner_point_y': slots_y_vec, 'corner_point_x': slots_x_vec,})
-
 
 ### sliders callback
 def slider_callback(bag_time, force_apa, force_clear,
@@ -84,14 +56,17 @@ def slider_callback(bag_time, force_apa, force_clear,
   soc_state_msg_idx = local_view_data['data_index']['soc_state_msg_idx']
   fus_parking_msg_idx = local_view_data['data_index']['fus_parking_msg_idx']
   loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
+  uss_wave_idx = local_view_data['data_index']['wave_msg_idx']
 
   soc_state_input = bag_loader.soc_state_msg['data'][soc_state_msg_idx]
   fus_parking_input = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx]
   loc_msg_input = bag_loader.loc_msg['data'][loc_msg_idx]
+  uss_wave_input = bag_loader.wave_msg['data'][uss_wave_idx]
 
   slot_management_py.UpdateBytesByParam(soc_state_input.SerializeToString(),
                                         fus_parking_input.SerializeToString(),
                                         loc_msg_input.SerializeToString(),
+                                        uss_wave_input.SerializeToString(),
                                         force_apa, force_clear,
                                         max_slots_update_angle_dis_limit_deg,
                                         max_slot_boundary_line_angle_dif_deg,
@@ -102,8 +77,6 @@ def slider_callback(bag_time, force_apa, force_clear,
   slot_management_info = slot_management_info_pb2.SlotManagementInfo()
   slot_management_info.ParseFromString(slot_management_py.GetOutputBytes())
 
-  # print(slot_management_info)
-  load_slot_management_info(slot_management_info)
 
   push_notebook()
 

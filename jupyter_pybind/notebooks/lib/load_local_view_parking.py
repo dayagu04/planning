@@ -193,7 +193,8 @@ class LoadCyberbag:
     # load planning debug msg
     try:
       json_value_list = ["replan_status", "ego_pos_x", "is_replan", "standstill_timer_by_pos", "standstill_timer", "stuck_time", "slot_occupied_ratio", "remain_dist",
-                         "remain_dist_uss", "path_length", "is_replan_once", "replan_count"]
+                         "remain_dist_uss", "path_length", "is_replan_first", "replan_count", "planning_status", "replan_reason",
+                         "tlane_p0_x", "tlane_p0_y", "tlane_p1_x", "tlane_p1_y", "tlane_pt_x", "tlane_pt_y", "channel_x", "slot_side"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec"]
 
@@ -456,9 +457,81 @@ class LoadCyberbag:
 
     return max_time
 
+  def get_msg_index(self, bag_time):
+      ### step 1: 时间戳对齐
+    out = {}
+    loc_msg_idx = 0
+    if self.loc_msg['enable'] == True:
+      while self.loc_msg['t'][loc_msg_idx] <= bag_time and loc_msg_idx < (len(self.loc_msg['t'])-1):
+          loc_msg_idx = loc_msg_idx + 1
+    out['loc_msg_idx'] = loc_msg_idx
+
+    fus_msg_idx = 0
+    if self.fus_msg['enable'] == True:
+      while self.fus_msg['t'][fus_msg_idx] <= bag_time and fus_msg_idx < (len(self.fus_msg['t'])-1):
+          fus_msg_idx = fus_msg_idx + 1
+    out['fus_msg_idx'] = fus_msg_idx
+
+    fus_parking_msg_idx = 0
+    if self.fus_parking_msg['enable'] == True:
+      while self.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time and fus_parking_msg_idx < (len(self.fus_parking_msg['t'])-1):
+        fus_parking_msg_idx = fus_parking_msg_idx + 1
+    out['fus_parking_msg_idx'] = fus_parking_msg_idx
+
+    vis_parking_msg_idx = 0
+    if self.vis_parking_msg['enable'] == True:
+      while self.vis_parking_msg['t'][vis_parking_msg_idx] <= bag_time and vis_parking_msg_idx < (len(self.vis_parking_msg['t'])-1):
+        vis_parking_msg_idx = vis_parking_msg_idx + 1
+    out['vis_parking_msg_idx'] = vis_parking_msg_idx
+
+    vs_msg_idx = 0
+    if self.vs_msg['enable'] == True:
+      while self.vs_msg['t'][vs_msg_idx] <= bag_time and vs_msg_idx < (len(self.vs_msg['t'])-1):
+          vs_msg_idx = vs_msg_idx + 1
+    out['vs_msg_idx'] = vs_msg_idx
+
+    plan_msg_idx = 0
+    if self.plan_msg['enable'] == True:
+      while self.plan_msg['t'][plan_msg_idx] <= bag_time and plan_msg_idx < (len(self.plan_msg['t'])-1):
+          plan_msg_idx = plan_msg_idx + 1
+    out['plan_msg_idx'] = plan_msg_idx
+
+    plan_debug_msg_idx = 0
+    if self.plan_debug_msg['enable'] == True:
+      while self.plan_debug_msg['t'][plan_debug_msg_idx] <= bag_time and plan_debug_msg_idx < (len(self.plan_debug_msg['t'])-1):
+          plan_debug_msg_idx = plan_debug_msg_idx + 1
+    out['plan_debug_msg_idx'] = plan_debug_msg_idx
+
+    ctrl_msg_idx = 0
+    if self.ctrl_msg['enable'] == True:
+      while self.ctrl_msg['t'][ctrl_msg_idx] <= bag_time and ctrl_msg_idx < (len(self.ctrl_msg['t'])-1):
+          ctrl_msg_idx = ctrl_msg_idx + 1
+    out['ctrl_msg_idx'] = ctrl_msg_idx
+
+    ctrl_debug_msg_idx = 0
+    if self.ctrl_debug_msg['enable'] == True:
+      while self.ctrl_debug_msg['t'][ctrl_debug_msg_idx] <= bag_time and ctrl_debug_msg_idx < (len(self.ctrl_debug_msg['t'])-1):
+          ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
+    out['ctrl_debug_msg_idx'] = ctrl_debug_msg_idx
+
+    soc_state_msg_idx = 0
+    if self.soc_state_msg['enable'] == True:
+      while self.soc_state_msg['t'][soc_state_msg_idx] <= bag_time and soc_state_msg_idx < (len(self.soc_state_msg['t'])-1):
+          soc_state_msg_idx = soc_state_msg_idx + 1
+    out['soc_state_msg_idx'] = soc_state_msg_idx
+
+    wave_msg_idx = 0
+    if self.wave_msg['enable'] == True:
+      while self.wave_msg['t'][wave_msg_idx] <= bag_time and wave_msg_idx < (len(self.wave_msg['t'])-1):
+          wave_msg_idx = wave_msg_idx + 1
+    out['wave_msg_idx'] = wave_msg_idx
+
+    return out
+
+
 def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, plot_ctrl_flag=False):
 
-  ### step 1: 时间戳对齐
+  ### step 1: timestamp alignment
   loc_msg_idx = 0
   if bag_loader.loc_msg['enable'] == True:
     while bag_loader.loc_msg['t'][loc_msg_idx] <= bag_time and loc_msg_idx < (len(bag_loader.loc_msg['t'])-1):
@@ -525,7 +598,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
         wave_msg_idx = wave_msg_idx + 1
   local_view_data['data_index']['wave_msg_idx'] = wave_msg_idx
 
-  ### step 2: 加载定位信息
+  ### step 2: load positioning information
   cur_pos_xn0 = 0
   cur_pos_yn0 = 0
   cur_pos_xn = 0
@@ -603,7 +676,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       'vel_ego_text': ['v = {:.2f} m/s, remain_s_ctrl = {:.1f} cm, steer = {:.1f} deg, state = {:d}'.format(round(vel_ego, 2), round(remain_s_ctrl, 1), round(steer_deg, 1), current_state)],
     })
 
-  ### step 3: 加载planning轨迹信息
+  ### step 3: loading planning traj information
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
     plan_x = []
@@ -769,6 +842,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
     # print("**************************************************")
     all_managed_slot_x_vec = []
     all_managed_slot_y_vec = []
+    occupied_x_vec = []
+    occupied_y_vec = []
     # 1. update target managed slot
     for i in range(len(slot_management_info.slot_info_vec)):
       maganed_slot_vec = slot_management_info.slot_info_vec[i]
@@ -785,11 +860,27 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       slot_y = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
       all_managed_slot_x_vec.append(slot_x)
       all_managed_slot_y_vec.append(slot_y)
+      if maganed_slot_vec.is_occupied:
+        occupied_x_vec.append(slot_x)
+        occupied_y_vec.append(slot_y)
+
     local_view_data['data_all_managed_slot'].data.update({
           'corner_point_x': all_managed_slot_x_vec,
           'corner_point_y': all_managed_slot_y_vec,
           })
-
+    local_view_data['data_all_managed_occupied_slot'].data.update({
+          'occupied_slot_y': occupied_y_vec,
+          'occupied_slot_x': occupied_x_vec,
+          })
+    limiter_x_vec = []
+    limiter_y_vec = []
+    for limiter in  slot_management_info.limiter_points:
+      limiter_x_vec.append(limiter.x)
+      limiter_y_vec.append(limiter.y)
+    local_view_data['data_all_managed_limiter'].data.update({
+      'limiter_point_y': limiter_y_vec,
+      'limiter_point_x': limiter_x_vec,
+        })
   # load uss wave
   if bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True:
     #get cur pose and uss wave
@@ -963,6 +1054,9 @@ def load_local_view_figure_parking():
   })
 
   data_all_managed_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
+  data_all_managed_limiter = ColumnDataSource(data = {'limiter_point_y': [], 'limiter_point_x': [],})
+  data_all_managed_occupied_slot = ColumnDataSource(data = {'occupied_slot_y': [], 'occupied_slot_x': [],})
+
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
                 'fus_msg_idx': 0,
@@ -996,6 +1090,8 @@ def load_local_view_figure_parking():
                      'data_wave':data_wave, \
                      'data_wave_length_text':data_wave_length_text, \
                      'data_all_managed_slot':data_all_managed_slot,\
+                     'data_all_managed_limiter':data_all_managed_limiter,\
+                     'data_all_managed_occupied_slot':data_all_managed_occupied_slot,\
                      }
   ### figures config
 
@@ -1012,19 +1108,20 @@ def load_local_view_figure_parking():
   # fig1.line('dy_ref_mpc_vec', 'dx_ref_mpc_vec', source = data_ref_mpc_vec, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_mpc_vec')
   # fig1.line('dy_ref_vec', 'dx_ref_vec', source = data_ref_vec, line_width = 3.0, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_vec')
 
-  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot', visible = False)
-  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_parking, line_width = 2, line_color = 'red', line_dash = 'solid',legend_label = 'fusion_parking_slot')
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot', visible = True)
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_parking, line_width = 2, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = False)
   fig1.line('corner_point_y', 'corner_point_x', source = data_target_managed_slot, line_width = 3, line_color = 'green', line_dash = 'solid',legend_label = 'target_managed_slot')
   fig1.line('corner_point_y', 'corner_point_x', source = data_final_slot, line_width = 3, line_color = '#A52A2A', line_dash = 'dashed',legend_label = 'final_parking_slot')
 
   fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_fusion_parking_id, text_color='red', text_align='center', text_font_size='10pt',legend_label = 'fusion_parking_slot')
 
-  fig1.wedge('wave_x','wave_y', 'radius', 'start_angle', 'end_angle',source = data_wave, fill_color="lavender", line_color="black",legend_label = 'uss_wave',alpha = 0.5)
-  fig1.text(x = 'wave_text_x', y = 'wave_text_y', text = 'length', source = data_wave_length_text, text_color='black', text_align='center', text_font_size='10pt',legend_label = 'uss_wave')
+  fig1.wedge('wave_x','wave_y', 'radius', 'start_angle', 'end_angle',source = data_wave, fill_color="lavender", line_color="black",legend_label = 'uss_wave',alpha = 0.5, visible = False)
+  fig1.text(x = 'wave_text_x', y = 'wave_text_y', text = 'length', source = data_wave_length_text, text_color='black', text_align='center', text_font_size='10pt',legend_label = 'uss_wave', visible = False)
 
   # debug
-  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_all_managed_slot, line_width = 2, line_color = 'green', line_dash = 'solid',legend_label = 'all managed slot', visible = False)
-
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_all_managed_slot, line_width = 2, line_color = 'blue', line_dash = 'solid',legend_label = 'all managed slot', visible = False)
+  fig1.line('limiter_point_y', 'limiter_point_x', source = data_all_managed_limiter, line_width = 3, line_color = 'pink', line_dash = 'solid', legend_label = 'managed limiter')
+  fig1.patches('occupied_slot_y', 'occupied_slot_x', source = data_all_managed_occupied_slot, fill_color = "blue", line_color = "blue", line_width = 1, fill_alpha = 0.15, legend_label = 'all managed slot', visible = False)
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 
@@ -1242,7 +1339,7 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
 
 
 # HTML
-# params 控制fig的样式
+# params control the style of fig
 vs_car_params_apa ={
   'text_color' : 'firebrick',
   'text_align' : "center",
@@ -1356,12 +1453,12 @@ table_params={
 
 def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
     #define figure
-    # 定义 local_view fig
+    # define local_view fig
     fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=1000, match_aspect = True, aspect_scale=1)
     fig_local_view.x_range.flipped = True
     # toolbar
     fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
-    # 加载planning debug部分信息, 加载planning 输入topic的时间戳
+    # load the planning debug section information and load the timestamp of the planning input topic
     fix_lane_xys = []
     origin_lane_xys = []
     target_lane_xys = []
@@ -1394,15 +1491,15 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
       control_output_timestamps.append(control_output_timestamp / 1e6)
       fusion_slot_timestamps.append(slot_timestamp / 1e6)
 
-  # 加载自车信息
+    # load self car info
     ego_car_generate = CommonGenerator()
     ego_center_generate = CommonGenerator()
     ego_circle_generate = CircleGenerator()
     for localization_timestamp in localization_timestamps:
-      # 自车形状
+      # car pos
       temp_cur_pos_xn = []
       temp_cur_pos_yn = []
-      # 自车circle
+      # car circle
       car_circle_xn = []
       car_circle_yn = []
       car_circle_rn = []
@@ -1419,18 +1516,18 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
         cur_pos_theta = loc_msg.pose.euler_angles.yaw
         car_center_xn.append(cur_pos_xn)
         car_center_yn.append(cur_pos_yn)
-        # 自车形状
+        # car pos
         for ego_i in range(len(car_xb)):
           tmp_x, tmp_y = local2global(car_xb[ego_i], car_yb[ego_i], cur_pos_xn, cur_pos_yn, cur_pos_theta)
           temp_cur_pos_xn.append(tmp_x)
           temp_cur_pos_yn.append(tmp_y)
-        # 自车circle
+        # car circle
         for i in range(len(car_circle_x)):
           tmp_x, tmp_y = local2global(car_circle_x[i], car_circle_y[i], cur_pos_xn, cur_pos_yn, cur_pos_theta)
           car_circle_xn.append(tmp_x)
           car_circle_yn.append(tmp_y)
           car_circle_rn.append(car_circle_r[i])
-      # 自车中心点
+      # car rear axle center
       ego_center_generate.xys.append((car_center_yn,car_center_xn))
       ego_car_generate.xys.append(([temp_cur_pos_yn],[temp_cur_pos_xn]))
       ego_circle_generate.xys.append((car_circle_yn,car_circle_xn, car_circle_rn))
@@ -1445,7 +1542,7 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
     layer_manager.AddLayer(ego_center_layer, 'ego_center_layer', ego_center_generate, 'ego_center_generate', 2)
     layer_manager.AddLayer(ego_circle_layer, 'ego_circle_layer', ego_circle_generate, 'ego_circle_generate', 3)
 
-  # 加载定位
+    # load location
     location_generator = CommonGenerator()
     # cur_pos_xn0 = cur_pos_xn = dataLoader.loc_msg['data'][0].pose.local_position.x
     # cur_pos_yn0 = cur_pos_yn = dataLoader.loc_msg['data'][0].pose.local_position.y
@@ -1462,7 +1559,7 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
         ### global variables
         # pos offset
         for i in range(len(dataLoader.loc_msg['data'])):
-          if (i % 10 != 0): # 下采样 10
+          if (i % 10 != 0):
             continue
           pos_xn_i = dataLoader.loc_msg['data'][i].pose.local_position.x
           pos_yn_i = dataLoader.loc_msg['data'][i].pose.local_position.y
@@ -1478,7 +1575,7 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
     location_layer = CurveLayer(fig_local_view, location_params_apa)
     layer_manager.AddLayer(location_layer, 'location_layer', location_generator, 'location_generator', 2)
 
-  # 加载vs and soc
+  # load vs and soc
     vs_text_generator = TextGenerator()
     for localization_timestamp in localization_timestamps:
       vel_text = []
@@ -1488,19 +1585,21 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
         print('find loc_msg error')
       else:
         vel_ego =  loc_msg.pose.linear_velocity_from_wheel
+        current_state = -1
         soc_state_msg_idx = 0
         if dataLoader.soc_state_msg['enable'] == True:
           while dataLoader.soc_state_msg['abs_t'][soc_state_msg_idx] <= localization_timestamp and soc_state_msg_idx < (len(dataLoader.soc_state_msg['abs_t'])-1):
               soc_state_msg_idx = soc_state_msg_idx + 1
-        current_state = dataLoader.soc_state_msg['data'][soc_state_msg_idx].current_state
+          current_state = dataLoader.soc_state_msg['data'][soc_state_msg_idx].current_state
 
-        steer_deg = 0.0
+        steer_deg = 600
         vs_msg_idx = 0
         if dataLoader.vs_msg['enable'] == True:
           while dataLoader.vs_msg['abs_t'][vs_msg_idx] <= localization_timestamp and vs_msg_idx < (len(dataLoader.vs_msg['abs_t'])-1):
               vs_msg_idx = vs_msg_idx + 1
         steer_deg = dataLoader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
 
+        remain_s_ctrl = -1
         ctrl_debug_msg_idx = 0
         if dataLoader.ctrl_debug_msg['enable'] == True:
           while dataLoader.ctrl_debug_msg['abs_t'][ctrl_debug_msg_idx] <= localization_timestamp and ctrl_debug_msg_idx < (len(dataLoader.ctrl_debug_msg['abs_t'])-1):
@@ -1516,7 +1615,7 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
     vs_layer = TextLayer(fig_local_view, vs_car_params_apa)
     layer_manager.AddLayer(vs_layer, 'vs_layer', vs_text_generator, 'vs_text_generator', 3)
 
-  # 加载apa车位
+    # load apa slot
     vision_slot_generate = CommonGenerator()
     fusion_slot_generate = CommonGenerator()
     target_slot_generate = CommonGenerator()
@@ -1529,149 +1628,159 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
             print('find fusion_slot_msg error')
             fusion_slot_generate.xys.append(([], []))
             slot_id_generate.xys.append(([], [], []))
-            continue
+        else:
+          # fusion slot
+            parking_fusion_slot_lists = fusion_slot_msg.parking_fusion_slot_lists
+            select_slot_id = fusion_slot_msg.select_slot_id
+            # 1. update slots corner points
+            temp_corner_x_list = []
+            temp_corner_y_list = []
+            temp_slot_id_list = []
+            temp_slot_id_x_list = []
+            temp_slot_id_y_list = []
+            for slot in parking_fusion_slot_lists:
+                temp_corner_x = []
+                temp_corner_y = []
+                for corner_point in slot.corner_points:
+                    temp_corner_x.append(corner_point.x)
+                    temp_corner_y.append(corner_point.y)
+                temp_corner_x = [temp_corner_x[0],temp_corner_x[2],temp_corner_x[3],temp_corner_x[1]]
+                temp_corner_y = [temp_corner_y[0],temp_corner_y[2],temp_corner_y[3],temp_corner_y[1]]
+                temp_corner_x_list.append(temp_corner_x)
+                temp_corner_y_list.append(temp_corner_y)
+                # 1.2 update slots limiter points in same slot_plot_vec
+                single_limiter_x_vec = []
+                single_limiter_y_vec = []
+                if len(slot.limiter_position)!= 0:
+                  single_limiter_x_vec.append(slot.limiter_position[0].x)
+                  single_limiter_x_vec.append(slot.limiter_position[1].x)
+                  single_limiter_y_vec.append(slot.limiter_position[0].y)
+                  single_limiter_y_vec.append(slot.limiter_position[1].y)
+                temp_corner_x_list.append(single_limiter_x_vec)
+                temp_corner_y_list.append(single_limiter_y_vec)
+                # add slot id
+                temp_slot_id = slot.id
+                text = '{:d}'.format(round(temp_slot_id, 2))
+                temp_slot_id_list.append(text)
+                temp_slot_id_x_list.append((temp_corner_x[0]+temp_corner_x[2]+temp_corner_x[3]+temp_corner_x[1])/4)
+                temp_slot_id_y_list.append((temp_corner_y[0]+temp_corner_y[2]+temp_corner_y[3]+temp_corner_y[1])/4)
+            fusion_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
+            slot_id_generate.xys.append((temp_slot_id_y_list,temp_slot_id_x_list,temp_slot_id_list))
+
         vis_parking_msg_idx = 0
         if dataLoader.vis_parking_msg['enable'] == True:
           while dataLoader.vis_parking_msg['abs_t'][vis_parking_msg_idx] <= slot_timestamp and vis_parking_msg_idx < (len(dataLoader.vis_parking_msg['abs_t'])-1):
             vis_parking_msg_idx = vis_parking_msg_idx + 1
         # vision_slot_msg = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx]
 
-      # fusion slot
-        parking_fusion_slot_lists = fusion_slot_msg.parking_fusion_slot_lists
-        select_slot_id = fusion_slot_msg.select_slot_id
-         # 1. update slots corner points
-        temp_corner_x_list = []
-        temp_corner_y_list = []
-        temp_slot_id_list = []
-        temp_slot_id_x_list = []
-        temp_slot_id_y_list = []
-        for slot in parking_fusion_slot_lists:
-            temp_corner_x = []
-            temp_corner_y = []
-            for corner_point in slot.corner_points:
-                temp_corner_x.append(corner_point.x)
-                temp_corner_y.append(corner_point.y)
-            temp_corner_x = [temp_corner_x[0],temp_corner_x[2],temp_corner_x[3],temp_corner_x[1]]
-            temp_corner_y = [temp_corner_y[0],temp_corner_y[2],temp_corner_y[3],temp_corner_y[1]]
-            temp_corner_x_list.append(temp_corner_x)
-            temp_corner_y_list.append(temp_corner_y)
-            # 1.2 update slots limiter points in same slot_plot_vec
-            single_limiter_x_vec = []
-            single_limiter_y_vec = []
-            if len(slot.limiter_position)!= 0:
-              single_limiter_x_vec.append(slot.limiter_position[0].x)
-              single_limiter_x_vec.append(slot.limiter_position[1].x)
-              single_limiter_y_vec.append(slot.limiter_position[0].y)
-              single_limiter_y_vec.append(slot.limiter_position[1].y)
-            temp_corner_x_list.append(single_limiter_x_vec)
-            temp_corner_y_list.append(single_limiter_y_vec)
-            # add slot id
-            temp_slot_id = slot.id
-            text = '{:d}'.format(round(temp_slot_id, 2))
-            temp_slot_id_list.append(text)
-            temp_slot_id_x_list.append((temp_corner_x[0]+temp_corner_x[2]+temp_corner_x[3]+temp_corner_x[1])/4)
-            temp_slot_id_y_list.append((temp_corner_y[0]+temp_corner_y[2]+temp_corner_y[3]+temp_corner_y[1])/4)
-        fusion_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
-        slot_id_generate.xys.append((temp_slot_id_y_list,temp_slot_id_x_list,temp_slot_id_list))
       # final slot
-        temp_corner_x_list = []
-        temp_corner_y_list = []
-        parking_fusion_slot_lists = dataLoader.fus_parking_msg['data'][-1].parking_fusion_slot_lists
-        select_slot_id = dataLoader.fus_parking_msg['data'][-1].select_slot_id
-        for slot in parking_fusion_slot_lists:
-            temp_corner_x = []
-            temp_corner_y = []
-            for corner_point in slot.corner_points:
-                temp_corner_x.append(corner_point.x)
-                temp_corner_y.append(corner_point.y)
-            temp_corner_x = [temp_corner_x[0],temp_corner_x[2],temp_corner_x[3],temp_corner_x[1]]
-            temp_corner_y = [temp_corner_y[0],temp_corner_y[2],temp_corner_y[3],temp_corner_y[1]]
+        if dataLoader.fus_parking_msg['enable'] == True:
+          temp_corner_x_list = []
+          temp_corner_y_list = []
+          parking_fusion_slot_lists = dataLoader.fus_parking_msg['data'][-1].parking_fusion_slot_lists
+          select_slot_id = dataLoader.fus_parking_msg['data'][-1].select_slot_id
+          for slot in parking_fusion_slot_lists:
+              temp_corner_x = []
+              temp_corner_y = []
+              for corner_point in slot.corner_points:
+                  temp_corner_x.append(corner_point.x)
+                  temp_corner_y.append(corner_point.y)
+              temp_corner_x = [temp_corner_x[0],temp_corner_x[2],temp_corner_x[3],temp_corner_x[1]]
+              temp_corner_y = [temp_corner_y[0],temp_corner_y[2],temp_corner_y[3],temp_corner_y[1]]
 
-            # 2. update selected fusion slot
-            if select_slot_id == slot.id:
-              temp_corner_x_list.append(temp_corner_x)
-              temp_corner_y_list.append(temp_corner_y)
-        final_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
-        # print(final_slot_generate.xys)
-      # visual slot
-        temp_corner_x_list = []
-        temp_corner_y_list = []
-        parking_fusion_slot_lists = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx].parking_slot
-        if dataLoader.loc_msg['enable'] == True:
-          flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamps[slot_i])
-          if not flag:
-            print('find loc error')
-            temp_corner_x_list, temp_corner_y_list = [], []
-          else:
-            cur_pos_xn = loc_msg.pose.local_position.x
-            cur_pos_yn = loc_msg.pose.local_position.y
-            cur_yaw = loc_msg.pose.euler_angles.yaw
-            # attention: fusion slots are based on odom system, visual slots are based on vehicle system
-            # 1. update slots corner points
-            # coord_tf = coord_transformer()
-            # coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-            for slot in parking_fusion_slot_lists:
-                temp_corner_x = []
-                temp_corner_y = []
-                for corner_point in slot.corner_points:
-                  corner_x_local = corner_point.x
-                  corner_y_local = corner_point.y
-                  corner_x_global, corner_y_global = local2global(corner_x_local, corner_y_local, cur_pos_xn, cur_pos_yn, cur_yaw)
-                  temp_corner_x.append(corner_x_global)
-                  temp_corner_y.append(corner_y_global)
-                temp_corner_x = [temp_corner_x[0],temp_corner_x[2],temp_corner_x[3],temp_corner_x[1]]
-                temp_corner_y = [temp_corner_y[0],temp_corner_y[2],temp_corner_y[3],temp_corner_y[1]]
+              # 2. update selected fusion slot
+              if select_slot_id == slot.id:
                 temp_corner_x_list.append(temp_corner_x)
                 temp_corner_y_list.append(temp_corner_y)
-            # 2. update limiters
-            vision_slot_limiter = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx].vision_slot_limiter
-            for limiter in vision_slot_limiter:
-              global_limiter_x0, global_limiter_y0 = local2global(limiter.limiter_points[0].x, limiter.limiter_points[0].y, cur_pos_xn, cur_pos_yn, cur_yaw)
-              global_limiter_x1, global_limiter_y1 = local2global(limiter.limiter_points[1].x, limiter.limiter_points[1].y, cur_pos_xn, cur_pos_yn, cur_yaw)
-              temp_corner_x_list.append([global_limiter_x0, global_limiter_x1])
-              temp_corner_y_list.append([global_limiter_y0, global_limiter_y1])
-        vision_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
+          final_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
+          # print(final_slot_generate.xys)
+      # visual slot
+        if dataLoader.vis_parking_msg['enable'] == True:
+          temp_corner_x_list = []
+          temp_corner_y_list = []
+          parking_fusion_slot_lists = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx].parking_slot
+          if dataLoader.loc_msg['enable'] == True:
+            flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamps[slot_i])
+            if not flag:
+              print('find loc error')
+              temp_corner_x_list, temp_corner_y_list = [], []
+            else:
+              cur_pos_xn = loc_msg.pose.local_position.x
+              cur_pos_yn = loc_msg.pose.local_position.y
+              cur_yaw = loc_msg.pose.euler_angles.yaw
+              # attention: fusion slots are based on odom system, visual slots are based on vehicle system
+              # 1. update slots corner points
+              # coord_tf = coord_transformer()
+              # coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+              for slot in parking_fusion_slot_lists:
+                  temp_corner_x = []
+                  temp_corner_y = []
+                  for corner_point in slot.corner_points:
+                    corner_x_local = corner_point.x
+                    corner_y_local = corner_point.y
+                    corner_x_global, corner_y_global = local2global(corner_x_local, corner_y_local, cur_pos_xn, cur_pos_yn, cur_yaw)
+                    temp_corner_x.append(corner_x_global)
+                    temp_corner_y.append(corner_y_global)
+                  temp_corner_x = [temp_corner_x[0],temp_corner_x[2],temp_corner_x[3],temp_corner_x[1]]
+                  temp_corner_y = [temp_corner_y[0],temp_corner_y[2],temp_corner_y[3],temp_corner_y[1]]
+                  temp_corner_x_list.append(temp_corner_x)
+                  temp_corner_y_list.append(temp_corner_y)
+              # 2. update limiters
+              vision_slot_limiter = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx].vision_slot_limiter
+              for limiter in vision_slot_limiter:
+                global_limiter_x0, global_limiter_y0 = local2global(limiter.limiter_points[0].x, limiter.limiter_points[0].y, cur_pos_xn, cur_pos_yn, cur_yaw)
+                global_limiter_x1, global_limiter_y1 = local2global(limiter.limiter_points[1].x, limiter.limiter_points[1].y, cur_pos_xn, cur_pos_yn, cur_yaw)
+                temp_corner_x_list.append([global_limiter_x0, global_limiter_x1])
+                temp_corner_y_list.append([global_limiter_y0, global_limiter_y1])
+          vision_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
 
       # all slot
-        slot_management_info = dataLoader.plan_debug_msg['data'][slot_i].slot_management_info
-        select_slot_id = dataLoader.fus_parking_msg['data'][slot_i].select_slot_id
-        all_managed_slot_x_vec = []
-        all_managed_slot_y_vec = []
-        temp_corner_x_list = []
-        temp_corner_y_list = []
-        # 1. update target managed slot
-        for maganed_slot_vec in slot_management_info.slot_info_vec:
-          corner_point = maganed_slot_vec.corner_points.corner_point
-          slot_x = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
-          slot_y = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
-          if maganed_slot_vec.id == select_slot_id:
-              temp_corner_x_list.append(slot_x)
-              temp_corner_y_list.append(slot_y)
-          all_managed_slot_x_vec.append(slot_x)
-          all_managed_slot_y_vec.append(slot_y)
-        target_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
-        all_slot_generate.xys.append((all_managed_slot_y_vec, all_managed_slot_x_vec))
+        if dataLoader.fus_parking_msg['enable'] == True and dataLoader.plan_debug_msg['enable'] == True:
+          slot_management_info = dataLoader.plan_debug_msg['data'][slot_i].slot_management_info
+          select_slot_id = dataLoader.fus_parking_msg['data'][slot_i].select_slot_id
+          all_managed_slot_x_vec = []
+          all_managed_slot_y_vec = []
+          temp_corner_x_list = []
+          temp_corner_y_list = []
+          # 1. update target managed slot
+          for maganed_slot_vec in slot_management_info.slot_info_vec:
+            corner_point = maganed_slot_vec.corner_points.corner_point
+            slot_x = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
+            slot_y = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
+            if maganed_slot_vec.id == select_slot_id:
+                temp_corner_x_list.append(slot_x)
+                temp_corner_y_list.append(slot_y)
+            all_managed_slot_x_vec.append(slot_x)
+            all_managed_slot_y_vec.append(slot_y)
+          target_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
+          all_slot_generate.xys.append((all_managed_slot_y_vec, all_managed_slot_x_vec))
+
+    if dataLoader.vis_parking_msg['enable'] == True:
+      vision_slot_generate.ts = np.array(plan_debug_ts)
+      vision_slot_layer = MultiCurveLayer(fig_local_view ,vision_slot_params_apa)
+      layer_manager.AddLayer(vision_slot_layer, 'vision_slot_layer',vision_slot_generate,'vision_slot_generate',2)
 
     fusion_slot_generate.ts = np.array(plan_debug_ts)
     slot_id_generate.ts = np.array(plan_debug_ts)
-    final_slot_generate.ts = np.array(plan_debug_ts)
-    vision_slot_generate.ts = np.array(plan_debug_ts)
-    target_slot_generate.ts = np.array(plan_debug_ts)
-    all_slot_generate.ts = np.array(plan_debug_ts)
     slot_layer = MultiCurveLayer(fig_local_view ,fusion_slot_params_apa)
     slot_id_layer = TextLayer(fig_local_view,slot_id_params_apa)
-    final_slot_layer = MultiCurveLayer(fig_local_view ,final_slot_params_apa)
-    vision_slot_layer = MultiCurveLayer(fig_local_view ,vision_slot_params_apa)
-    target_slot_layer = MultiCurveLayer(fig_local_view ,target_slot_params_apa)
-    all_slot_layer = MultiCurveLayer(fig_local_view ,all_slot_params_apa)
     layer_manager.AddLayer(slot_layer, 'slot_layer', fusion_slot_generate, 'fusion_slot_generate', 2)
     layer_manager.AddLayer(slot_id_layer, 'slot_id_layer',slot_id_generate,'slot_id_generate',3)
-    layer_manager.AddLayer(final_slot_layer, 'final_slot_layer',final_slot_generate,'final_slot_generate',2)
-    layer_manager.AddLayer(vision_slot_layer, 'vision_slot_layer',vision_slot_generate,'vision_slot_generate',2)
-    layer_manager.AddLayer(target_slot_layer, 'target_slot_layer',target_slot_generate,'target_slot_generate',2)
-    layer_manager.AddLayer(all_slot_layer, 'all_slot_layer',all_slot_generate,'all_slot_generate',2)
 
-  # 加载plan轨迹
+    if dataLoader.fus_parking_msg['enable'] == True:
+      final_slot_generate.ts = np.array(plan_debug_ts)
+      final_slot_layer = MultiCurveLayer(fig_local_view ,final_slot_params_apa)
+      layer_manager.AddLayer(final_slot_layer, 'final_slot_layer',final_slot_generate,'final_slot_generate',2)
+
+    if dataLoader.fus_parking_msg['enable'] == True and dataLoader.plan_debug_msg['enable'] == True:
+      target_slot_generate.ts = np.array(plan_debug_ts)
+      all_slot_generate.ts = np.array(plan_debug_ts)
+      target_slot_layer = MultiCurveLayer(fig_local_view ,target_slot_params_apa)
+      all_slot_layer = MultiCurveLayer(fig_local_view ,all_slot_params_apa)
+      layer_manager.AddLayer(target_slot_layer, 'target_slot_layer',target_slot_generate,'target_slot_generate',2)
+      layer_manager.AddLayer(all_slot_layer, 'all_slot_layer',all_slot_generate,'all_slot_generate',2)
+
+    # load planning traj
     plan_generator = CommonGenerator()
     for plan_debug_t in plan_debug_ts:
       flag, plan_msg = findrt(dataLoader.plan_msg, plan_debug_t)
@@ -1690,7 +1799,7 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
     plan_layer = CurveLayer(fig_local_view, plan_params)
     layer_manager.AddLayer(plan_layer, 'plan_layer', plan_generator, 'plane_generator', 2)
 
-  # 加载mpc轨迹
+    # load mpc traj
     mpc_generator = CommonGenerator()
     for mpc_i, control_timestamp in enumerate(control_output_timestamps):
       flag, mpc_msg = findt(dataLoader.ctrl_msg, control_timestamp)
@@ -1718,7 +1827,7 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
     mpc_layer = CurveLayer(fig_local_view, mpc_params)
     layer_manager.AddLayer(mpc_layer, 'mpc_layer', mpc_generator, 'mpc_generator', 2)
 
-  # 加载uss
+    # load uss
     uss_generator = WedgesGenerator()
     uss_text_generator = TextGenerator()
     for localization_timestamp in localization_timestamps:
@@ -1732,42 +1841,42 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
         if dataLoader.wave_msg['enable'] == True:
           while dataLoader.wave_msg['abs_t'][wave_msg_idx] <= (localization_timestamp) and wave_msg_idx < (len(dataLoader.wave_msg['abs_t'])-1):
               wave_msg_idx = wave_msg_idx + 1
-        #get cur pose and uss wave
-        upa_dis_info_bufs = dataLoader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
-        cur_pos_xn = loc_msg.pose.local_position.x
-        cur_pos_yn = loc_msg.pose.local_position.y
-        cur_yaw = loc_msg.pose.euler_angles.yaw
-        # rs_text = []
-        uss_x, uss_y = load_car_uss_patch()
-        uss_angle = load_uss_angle_patch()
-        wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
-        m = 0
-        for i in range(2):
-          for j in wdis_index[i]:
-              rs0 = ''
-              rs1 = ''
-              if upa_dis_info_bufs[i].wdis[j].wdis_value[0] <= 10 and upa_dis_info_bufs[i].wdis[j].wdis_value[0] != 0:
-                  rs1 = round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2)
-                  # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
-                  rs0 = '{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2))
-                  ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
-                  uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
-                  uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
-                  x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
-              elif upa_dis_info_bufs[i].wdis[j].wdis_value[0] == 0 or upa_dis_info_bufs[i].wdis[j].wdis_value[0] > 10:
-                  ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
-                  x_text, y_text = 0, 0
-              text_x.append(x_text)
-              text_y.append(y_text)
-              sector_x.append(ego_local_x)
-              sector_y.append(ego_local_y)
-              # print("rs1:",rs1)
-              rs.append(rs1)
-              # print("rs size:",len(rs))
-              length.append(rs0)
-              start_angle.append(uss_angle_start)
-              end_angle.append(uss_angle_end)
-              m += 1
+          #get cur pose and uss wave
+          upa_dis_info_bufs = dataLoader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
+          cur_pos_xn = loc_msg.pose.local_position.x
+          cur_pos_yn = loc_msg.pose.local_position.y
+          cur_yaw = loc_msg.pose.euler_angles.yaw
+          # rs_text = []
+          uss_x, uss_y = load_car_uss_patch()
+          uss_angle = load_uss_angle_patch()
+          wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
+          m = 0
+          for i in range(2):
+            for j in wdis_index[i]:
+                rs0 = ''
+                rs1 = ''
+                if upa_dis_info_bufs[i].wdis[j].wdis_value[0] <= 10 and upa_dis_info_bufs[i].wdis[j].wdis_value[0] != 0:
+                    rs1 = round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2)
+                    # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
+                    rs0 = '{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2))
+                    ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
+                    uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
+                    uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
+                    x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
+                elif upa_dis_info_bufs[i].wdis[j].wdis_value[0] == 0 or upa_dis_info_bufs[i].wdis[j].wdis_value[0] > 10:
+                    ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
+                    x_text, y_text = 0, 0
+                text_x.append(x_text)
+                text_y.append(y_text)
+                sector_x.append(ego_local_x)
+                sector_y.append(ego_local_y)
+                # print("rs1:",rs1)
+                rs.append(rs1)
+                # print("rs size:",len(rs))
+                length.append(rs0)
+                start_angle.append(uss_angle_start)
+                end_angle.append(uss_angle_end)
+                m += 1
       uss_generator.xys.append((sector_y, sector_x, rs, start_angle, end_angle))
       uss_text_generator.xys.append((text_y, text_x, length))
     uss_generator.ts = np.array(plan_debug_ts)
@@ -1777,9 +1886,9 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
     layer_manager.AddLayer(uss_layer, 'uss_layer', uss_generator, 'uss_generator', 5)
     layer_manager.AddLayer(uss_layer_text, 'uss_layer_text', uss_text_generator, 'uss_text_generator', 3)
 
-  # legend
+    # legend
     fig_local_view.legend.click_policy = 'hide'
-  # Table
+    # Table
     if plot_ctrl_flag == False:
       return fig_local_view, None
     else:
@@ -1825,6 +1934,7 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
           datas.append(str(dataLoader.vs_msg['data'][vs_msg_idx].shift_lever_state_available))
 
         ctrl_debug_msg_idx = 0
+        assert dataLoader.ctrl_debug_msg['enable'] == True
         if dataLoader.ctrl_debug_msg['enable'] == True:
           while dataLoader.ctrl_debug_msg['t'][ctrl_debug_msg_idx] <= plan_debug_t and ctrl_debug_msg_idx < (len(dataLoader.ctrl_debug_msg['t'])-1):
               ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
@@ -1869,6 +1979,15 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
       return fig_local_view, tab_debug_layer.plot
 
 def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time):
+    #print(f'max time is {max_time}')
+
+    # use a time interval of 0.02s to adapt to Jupyter
+    ctrl_json_data = dataLoader.ctrl_debug_msg['json']
+    t_debug = []
+    t = 0.0
+    for i in range(len(ctrl_json_data)):
+      t_debug.append(t)
+      t = t + 0.02
 
     json_value_list = ["controller_status", "lat_enable", "lon_enable", "gear_plan",
                         "vel_ref", "vel_cmd", "vel_ego",
@@ -1878,12 +1997,14 @@ def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time):
                         "lat_err", "phi_err"
                         ]
 
-    json_value_xys_dict = GenerateJsonValueData(dataLoader.ctrl_debug_msg['json'], dataLoader.ctrl_debug_msg['t'], json_value_list)
+    # json_value_xys_dict = GenerateJsonValueData(ctrl_json_data, dataLoader.ctrl_debug_msg['t'], json_value_list)
+    json_value_xys_dict = GenerateJsonValueData(ctrl_json_data, t_debug, json_value_list)
 
     # fig2: control status
     fig2 = FigureLayerHover(bkp.figure(x_axis_label='time',
                                   y_axis_label='status',
-                                  x_range = [0.0, max_time],
+                                  x_range = [0.0, t_debug[-1]],
+                                  # x_range = [0.0, max_time],
                                   width=600,
                                   height=250,
                                   # match_aspect = True,

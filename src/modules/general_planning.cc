@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include "apa_planner/common/apa_utils.h"
+#include "apa_planner/src/apa_utils.h"
 #include "basic_types.pb.h"
 #include "config/vehicle_param.h"
 #include "ego_planning_config.h"
@@ -93,11 +93,6 @@ bool GeneralPlanning::RunOnce(
 
   double start_timestamp = IflyTime::Now_ms();
 
-  EnvironmentalModel *environmental_model =
-      session_.mutable_environmental_model();
-
-  environmental_model->feed_local_view(local_view);  //
-
   auto scene_type = planning::common::SceneType::HIGHWAY;
 
   const auto &state_machine = local_view->function_state_machine_info;
@@ -111,7 +106,13 @@ bool GeneralPlanning::RunOnce(
       scene_type = planning::common::SceneType::HIGHWAY;
       ClearParkingInfo(planning_output);
     }
+  } else {
+    return false;
   }
+
+  // set local_view to environment model
+  auto environmental_model = session_.mutable_environmental_model();
+  environmental_model->feed_local_view(local_view);
 
   auto fsm_state = local_view->function_state_machine_info.current_state();
 

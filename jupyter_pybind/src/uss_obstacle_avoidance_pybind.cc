@@ -2,28 +2,30 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "apa_planner/uss_obstacle_avoidance/uss_obstacle_avoidance.h"
-#include "planning_debug_info.pb.h"
-#include "planning_plan.pb.h"
-#include "uss_wave_info.pb.h"
+#include <vector>
+
+#include "Eigen/Core"
+#include "geometry_math.h"
+#include "math_lib.h"
+#include "transform_lib.h"
+#include "uss_obstacle_avoidance.h"
 
 namespace py = pybind11;
 using namespace planning;
 
-static UssObstacleAvoidance *pBase = nullptr;
+static UssObstacleAvoidance* pBaseUssOaAir = nullptr;
 
 int Init() {
-  pBase = new UssObstacleAvoidance();
-  pBase->Init();
+  pBaseUssOaAir = new UssObstacleAvoidance();
   return 0;
 }
 
 template <class T>
-inline T BytesToProto(py::bytes &bytes) {
+inline T BytesToProto(py::bytes& bytes) {
   T proto_obj;
   py::buffer buf(bytes);
   py::buffer_info input_info = buf.request();
-  char *input_ptr = static_cast<char *>(input_info.ptr);
+  char* input_ptr = static_cast<char*>(input_info.ptr);
   std::string input_s(input_ptr, input_info.size);
 
   T input;
@@ -31,69 +33,87 @@ inline T BytesToProto(py::bytes &bytes) {
   return input;
 }
 
-int UpdateBytes(py::bytes &func_statemachine_bytes,
-                py::bytes &localization_info_bytes,
-                py::bytes &vehicle_service_output_info_bytes,
-                py::bytes &uss_wave_info_bytes,
-                py::bytes &planning_output_bytes) {
-  auto func_statemachine =
-      BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
-
-  auto localization_info =
-      BytesToProto<LocalizationOutput::LocalizationEstimate>(
-          localization_info_bytes);
-
-  auto vehicle_service_output_info =
-      BytesToProto<VehicleService::VehicleServiceOutputInfo>(
-          vehicle_service_output_info_bytes);
-
-  auto uss_wave_info =
-      BytesToProto<UssWaveInfo::UssWaveInfo>(uss_wave_info_bytes);
-
-  auto planning_output =
-      BytesToProto<PlanningOutput::PlanningOutput>(planning_output_bytes);
-
-  static planning::LocalView local_view;
-
-  local_view.localization_estimate = localization_info;
-  local_view.vehicle_service_output_info = vehicle_service_output_info;
-  local_view.function_state_machine_info = func_statemachine;
-  local_view.uss_wave_info = uss_wave_info;
-
-  pBase->SetLocalView(&local_view);
-
-  pBase->Update(&planning_output);
-
-  return 0;
+void SetParam(const double& detection_distance, const double& lat_inflation) {
+  UssObstacleAvoidance::Paramters param;
+  param.detection_distance = detection_distance;
+  param.lat_inflation = lat_inflation;
+  pBaseUssOaAir->SetParam(param);
 }
 
-const size_t GetMinDistCarArcIndex() {
-  return pBase->GetMinDistCarArcIndex();
+void SetUssRawDist(const double& uss_raw_dist) {
+  pBaseUssOaAir->SetUssRawDist(uss_raw_dist);
 }
 
-const size_t GetMinDistUssArcIndex() { return pBase->GetMinDistUssArcIndex(); }
-
-const double GetRemainDist() { return pBase->GetRemainDist(); }
-
-const std::vector<Eigen::Vector2d> GetCarVertex() {
-  return pBase->GetCarVertex();
+void SetCarMotionInfo(const double& steer_angle, const int& forward_back) {
+  UssObstacleAvoidance::CarMotionInfo car_motion_info;
+  car_motion_info.steer_angle = steer_angle;
+  car_motion_info.reverse_flag = (forward_back == 0) ? false : true;
+  pBaseUssOaAir->SetCarMotionInfo(car_motion_info);
 }
 
-const std::vector<Eigen::Vector2d> GetUssVertex() {
-  return pBase->GetUssVertex();
+void UpdateUssDis() { pBaseUssOaAir->UpdateByPybind(); }
+
+const double GetRemainDist() {
+  return pBaseUssOaAir->GetRemainDistInfo().remain_dist;
 }
 
-const std::vector<double> GetUssRawDist() { return pBase->GetUssRawDist(); }
+const bool GetAvailable() {
+  return pBaseUssOaAir->GetRemainDistInfo().is_available;
+}
+
+const size_t GetUssIndex() {
+  return pBaseUssOaAir->GetRemainDistInfo().uss_index;
+}
+
+const size_t GetCarIndex() {
+  return pBaseUssOaAir->GetRemainDistInfo().car_index;
+}
+
+const std::vector<Eigen::Vector2d> GetCarLine() {
+  std::vector<Eigen::Vector2d> car_line;
+  car_line.clear();
+  car_line.reserve(2);
+  if (pBaseUssOaAir->GetRemainDistInfo().is_available) {
+    car_line.emplace_back(
+        pBaseUssOaAir
+            ->GetCarLocalLine()[pBaseUssOaAir->GetRemainDistInfo().car_index]
+            .pA);
+    car_line.emplace_back(
+        pBaseUssOaAir
+            ->GetCarLocalLine()[pBaseUssOaAir->GetRemainDistInfo().car_index]
+            .pB);
+  } else {
+    car_line.resize(2, Eigen::Vector2d(0.0, 0.0));
+  }
+  return car_line;
+}
+
+const Eigen::Vector3d GetCarArc() {
+  Eigen::Vector3d car_arc;
+  if (pBaseUssOaAir->GetRemainDistInfo().is_available) {
+    pnc::geometry_lib::Arc arc =
+        pBaseUssOaAir
+            ->GetCarLocalArc()[pBaseUssOaAir->GetRemainDistInfo().car_index];
+    car_arc << arc.circle_info.center.x(), arc.circle_info.center.y(),
+        arc.circle_info.radius;
+  } else {
+    car_arc << 0.0, 0.0, 0.0;
+  }
+  return car_arc;
+}
 
 PYBIND11_MODULE(uss_obstacle_avoidance_py, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)
-      .def("UpdateBytes", &UpdateBytes)
-      .def("GetMinDistCarArcIndex", &GetMinDistCarArcIndex)
-      .def("GetMinDistUssArcIndex", &GetMinDistUssArcIndex)
+      .def("SetUssRawDist", &SetUssRawDist)
+      .def("SetCarMotionInfo", &SetCarMotionInfo)
+      .def("UpdateUssDis", &UpdateUssDis)
       .def("GetRemainDist", &GetRemainDist)
-      .def("GetCarVertex", &GetCarVertex)
-      .def("GetUssVertex", &GetUssVertex)
-      .def("GetUssRawDist", &GetUssRawDist);
+      .def("GetAvailable", &GetAvailable)
+      .def("GetUssIndex", &GetUssIndex)
+      .def("GetCarIndex", &GetCarIndex)
+      .def("GetCarLine", &GetCarLine)
+      .def("GetCarArc", &GetCarArc)
+      .def("SetParam", &SetParam);
 }

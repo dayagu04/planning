@@ -1,10 +1,13 @@
 #include "apa_module.h"
 
+#include "apa_plan_interface.h"
+
 namespace planning {
 namespace modules {
 
 ApaPlanningModule::ApaPlanningModule() {
-  planner_dispatcher_ = std::make_unique<apa_planner::ApaPlannerDispatcher>();
+  apa_interface_ptr_ = std::make_unique<apa_planner::ApaPlanInterface>();
+  apa_interface_ptr_->Init();
 }
 
 planning::framework::BaseModule* ApaPlanningModule::clone() const {
@@ -21,7 +24,7 @@ bool ApaPlanningModule::reset(const ::google::protobuf::Message* config) {
 }
 
 bool ApaPlanningModule::compute(framework::Frame* frame) {
-  return planner_dispatcher_->Update(frame);
+  return apa_interface_ptr_->UpdateFrame(frame);
 }
 
 }  // namespace modules

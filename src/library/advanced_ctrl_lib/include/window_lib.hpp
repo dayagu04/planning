@@ -12,7 +12,6 @@
 #include <cmath>
 #include <queue>
 #include <vector>
-#include "controller/common/math.h"
 #include "math_lib.h"
 
 namespace pnc {

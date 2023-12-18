@@ -329,8 +329,8 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
     last_feed_time_[FEED_EGO_ENU] = local_view.localization_estimate_recv_time;
   }
 
-  vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
-      hmi_mcu_inner_info.acc_set_real_speed());
+  // vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
+  //     hmi_mcu_inner_info.acc_set_real_speed());
 
   if (vehicle_service_output_info.yaw_rate_available()) {
     vehicle_status.mutable_angular_velocity()->set_available(true);
