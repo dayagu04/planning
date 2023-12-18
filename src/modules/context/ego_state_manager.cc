@@ -20,9 +20,12 @@ static const double planning_loop_dt = 0.1;
 static const double steer_ratio = 15.7;
 static const double curve_factor = 0.30;
 
-EgoStateManager::EgoStateManager(planning::framework::Session *session)
+EgoStateManager::EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
+                                 planning::framework::Session *session)
     : session_(session) {
   vehicle_param_ = session_->vehicle_config_context().get_vehicle_param();
+  config_ = config_builder->cast<EgoPlanningEgoStateManagerConfig>();
+  parking_cruise_speed_ = config_.parking_cruise_speed;
   // init v_cruise_filter: -1.5m/s2, 1.5m/s2, 0-150km/h, 10hz
   v_cruise_filter_.Init(-1.5, 1.5, 0.0, 42.0, planning_loop_dt);
 }
@@ -98,8 +101,7 @@ void EgoStateManager::set_ego_v_cruise(
   }
   ego_v_cruise_ = v_cruise_filter_.GetOutput();
   if (session_->is_hpp_scene()) {
-    const double hpp_cruise_v = 2.8;
-    ego_v_cruise_ = hpp_cruise_v;
+    ego_v_cruise_ = parking_cruise_speed_;
   }
 }
 

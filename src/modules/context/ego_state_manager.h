@@ -6,6 +6,7 @@
 #include "config/message_type.h"
 #include "config/vehicle_param.h"
 #include "define/geometry.h"
+#include "ego_planning_config.h"
 #include "filters.h"
 #include "math/polygon2d.h"
 #include "refline.h"
@@ -18,7 +19,8 @@ namespace planning {
 
 class EgoStateManager {
  public:
-  EgoStateManager(framework::Session *session);
+  EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
+                  framework::Session *session);
   ~EgoStateManager() = default;
 
   enum ReplanStatus {
@@ -120,7 +122,8 @@ class EgoStateManager {
  private:
   planning::VehicleParam vehicle_param_;
   framework::Session *session_ = nullptr;
-
+  EgoPlanningEgoStateManagerConfig config_;
+  double parking_cruise_speed_;
   double navi_timestamp_;
   uint64_t timestamp_us_ = 0;
   uint64_t timestamp_us_last_ = 0;

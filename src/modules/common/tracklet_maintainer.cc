@@ -61,8 +61,7 @@ void LifecycleDict::remove_clean() {
   dirty_set_.clear();
 }
 
-TrackletMaintainer::TrackletMaintainer(planning::framework::Session *session)
-    : ego_state_(session) {
+TrackletMaintainer::TrackletMaintainer(planning::framework::Session *session) {
   session_ = session;
   s_ego_ = 0;
   l_ego_ = 0;
@@ -80,7 +79,7 @@ TrackletMaintainer::~TrackletMaintainer() {
 }
 
 void TrackletMaintainer::apply_update(
-    const EgoStateManager &ego_state,
+    const std::shared_ptr<EgoStateManager> ego_state,
     const std::vector<PredictionObject> &predictions,
     std::vector<TrackedObject> &tracked_objects, LeadCars &lead_cars,
     bool isRedLightStop, bool hdmap_valid) {
@@ -111,12 +110,12 @@ void TrackletMaintainer::apply_update(
       auto &ref_path = flane->get_reference_path();
       std::vector<Point2D> coord_points;
       for (auto ref_point : ref_path->get_points()) {
-        double ego_fx = std::cos(ego_state_.ego_pose_raw().theta);
-        double ego_fy = std::sin(ego_state_.ego_pose_raw().theta);
+        double ego_fx = std::cos(ego_state_->ego_pose_raw().theta);
+        double ego_fy = std::sin(ego_state_->ego_pose_raw().theta);
         double ego_lx = -ego_fy;
         double ego_ly = ego_fx;
-        double dx = ref_point.path_point.x - ego_state_.ego_pose_raw().x;
-        double dy = ref_point.path_point.y - ego_state_.ego_pose_raw().y;
+        double dx = ref_point.path_point.x - ego_state_->ego_pose_raw().x;
+        double dy = ref_point.path_point.y - ego_state_->ego_pose_raw().y;
 
         ref_point.path_point.x = dx * ego_fx + dy * ego_fy;
         ref_point.path_point.y = dx * ego_lx + dy * ego_ly;
@@ -162,8 +161,8 @@ void TrackletMaintainer::recv_prediction_objects(
   double pi = std::atan(1.0) * 4;
   std::map<int, TrackedObject *> new_map;
 
-  double ego_fx = std::cos(ego_state_.ego_pose_raw().theta);
-  double ego_fy = std::sin(ego_state_.ego_pose_raw().theta);
+  double ego_fx = std::cos(ego_state_->ego_pose_raw().theta);
+  double ego_fy = std::sin(ego_state_->ego_pose_raw().theta);
   double ego_lx = -ego_fy;
   double ego_ly = ego_fx;
 
@@ -182,8 +181,8 @@ void TrackletMaintainer::recv_prediction_objects(
                 p.id);
       continue;
     }
-    double dx = p.position_x - ego_state_.ego_pose_raw().x;
-    double dy = p.position_y - ego_state_.ego_pose_raw().y;
+    double dx = p.position_x - ego_state_->ego_pose_raw().x;
+    double dy = p.position_y - ego_state_->ego_pose_raw().y;
 
     double rel_x = dx * ego_fx + dy * ego_fy;
     double rel_y = dx * ego_lx + dy * ego_ly;
@@ -222,7 +221,7 @@ void TrackletMaintainer::recv_prediction_objects(
     double abs_ay = p.acc * std::sin(speed_yaw);
     double rot_ax = abs_ax * ego_fx + abs_ay * ego_fy;
 
-    double theta = p.yaw - ego_state_.ego_pose_raw().theta;
+    double theta = p.yaw - ego_state_->ego_pose_raw().theta;
     if (theta > pi) {
       theta -= 2 * pi;
     } else if (theta < -pi) {
@@ -286,8 +285,8 @@ void TrackletMaintainer::recv_prediction_objects(
         }
       }
 
-      dx = tr.trajectory[0].x - ego_state_.ego_pose_raw().x;
-      dy = tr.trajectory[0].y - ego_state_.ego_pose_raw().y;
+      dx = tr.trajectory[0].x - ego_state_->ego_pose_raw().x;
+      dy = tr.trajectory[0].y - ego_state_->ego_pose_raw().y;
       rel_x = dx * ego_fx + dy * ego_fy;
       rel_y = dx * ego_lx + dy * ego_ly;
       object->center_x = rel_x;
@@ -338,7 +337,7 @@ void TrackletMaintainer::recv_prediction_objects(
         object->trajectory.relative_ego_y[i] = tr.trajectory[i].relative_ego_y;
         // Todo:clren
         // 后续根据情况修改成与recv_relative_prediction_objects类似的写法
-        double theta = tr.trajectory[i].yaw - ego_state_.ego_pose_raw().theta;
+        double theta = tr.trajectory[i].yaw - ego_state_->ego_pose_raw().theta;
         if (theta > pi) {
           theta -= 2 * pi;
         } else if (theta < -pi) {
@@ -380,14 +379,14 @@ void TrackletMaintainer::recv_relative_prediction_objects(
   // double pi = std::atan(1.0) * 4;
   std::map<int, TrackedObject *> new_map;
 
-  // double ego_fx = std::cos(ego_state_.ego_pose_raw().theta);
-  // double ego_fy = std::sin(ego_state_.ego_pose_raw().theta);
+  // double ego_fx = std::cos(ego_state_->ego_pose_raw().theta);
+  // double ego_fy = std::sin(ego_state_->ego_pose_raw().theta);
   // double ego_lx = -ego_fy;
   // double ego_ly = ego_fx;
 
   for (auto &p : predictions) {
     // 过滤未与相机融合， 且在相机FOV之内的
-    if ((p.type == 0 && p.relative_speed_x + ego_state_.ego_v() < 1.) ||
+    if ((p.type == 0 && p.relative_speed_x + ego_state_->ego_v() < 1.) ||
         (!(p.fusion_source & OBSTACLE_SOURCE_CAMERA)) &&
             (p.relative_position_x > 0 &&
              tan(25) > fabs(p.relative_position_y / p.relative_position_x)) ||
@@ -397,8 +396,8 @@ void TrackletMaintainer::recv_relative_prediction_objects(
       continue;
     }
 
-    // double dx = p.position_x - ego_state_.ego_pose_raw().x;
-    // double dy = p.position_y - ego_state_.ego_pose_raw().y;
+    // double dx = p.position_x - ego_state_->ego_pose_raw().x;
+    // double dy = p.position_y - ego_state_->ego_pose_raw().y;
 
     // double rel_x = dx * ego_fx + dy * ego_fy;
     // double rel_y = dx * ego_lx + dy * ego_ly;
@@ -445,7 +444,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     // double abs_ay = p.acc * std::sin(speed_yaw);
     // double rot_ax = abs_ax * ego_fx + abs_ay * ego_fy;
 
-    // double theta = p.yaw - ego_state_.ego_pose_raw().theta;
+    // double theta = p.yaw - ego_state_->ego_pose_raw().theta;
     // if (theta > pi) {
     //   theta -= 2 * pi;
     // } else if (theta < -pi) {
@@ -461,7 +460,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     origin->center_y = rel_y;
     origin->theta = p.relative_theta;
     origin->y_rel_ori = rel_y;
-    origin->v_x = p.relative_speed_x + ego_state_.ego_v();
+    origin->v_x = p.relative_speed_x + ego_state_->ego_v();
     origin->v_y = p.relative_speed_y;
     origin->speed_yaw = std::atan2(p.relative_speed_y, origin->v_x);
     origin->a = p.acc;
@@ -651,9 +650,7 @@ void TrackletMaintainer::calc(
     bool isRedLightStop, bool isFasterStaticAvd, bool isOnHighway,
     std::vector<double> d_poly, std::vector<double> c_poly) {
   seq_state_.remove_clean();
-  auto ego_state_manager =
-      session_->environmental_model().get_ego_state_manager();
-  double v_ego = ego_state_manager->ego_v();
+  double v_ego = ego_state_->ego_v();
   double ego_rear_axis_to_front_edge = session_->vehicle_config_context()
                                            .get_vehicle_param()
                                            .rear_axis_to_front_edge;
@@ -1118,20 +1115,21 @@ void TrackletMaintainer::calc_intersection_with_refline(
   std::vector<double> ego_y;
   std::vector<double> ego_speed;
   std::vector<double> ego_yaw;
-  double ego_fx = std::cos(ego_state_.ego_pose_raw().theta);
-  double ego_fy = std::sin(ego_state_.ego_pose_raw().theta);
+  double ego_fx = std::cos(ego_state_->ego_pose_raw().theta);
+  double ego_fy = std::sin(ego_state_->ego_pose_raw().theta);
   double ego_lx = -ego_fy;
   double ego_ly = ego_fx;
   for (int i = 0; i < x.size(); i++) {
-    double dx = x[i] - ego_state_.ego_pose_raw().x;
-    double dy = y[i] - ego_state_.ego_pose_raw().y;
+    double dx = x[i] - ego_state_->ego_pose_raw().x;
+    double dy = y[i] - ego_state_->ego_pose_raw().y;
 
     double rel_x = dx * ego_fx + dy * ego_fy;
     double rel_y = dx * ego_lx + dy * ego_ly;
     ego_x.push_back(rel_x);
     ego_y.push_back(rel_y);
     ego_speed.push_back(item.trajectory.speed[i]);
-    ego_yaw.push_back(item.trajectory.yaw[i] - ego_state_.ego_pose_raw().theta);
+    ego_yaw.push_back(item.trajectory.yaw[i] -
+                      ego_state_->ego_pose_raw().theta);
   }
   if (ego_x.size() > 0) {
     double half_car_width =
@@ -1242,7 +1240,7 @@ void TrackletMaintainer::calc_intersection_with_refline(
     double end_speed_yaw;
     if (item.trajectory.yaw.size() > 0) {
       end_speed_yaw =
-          item.trajectory.yaw[end_idx] - ego_state_.ego_pose_raw().theta;
+          item.trajectory.yaw[end_idx] - ego_state_->ego_pose_raw().theta;
     }
     if (frenet_coord_->CartCoord2FrenetCoord(
             Point2D(ego_x[min_idx], ego_y[min_idx]), frenet_point) ==
@@ -1412,7 +1410,7 @@ void TrackletMaintainer::check_accident_car(
   std::array<double, 5> xp_lat{-1.0, -0.7, -0.5, 0.0, 0.5};
   std::array<double, 5> fp_lat{1.0, 0.8, 0.4, 0.2, 0.1};
   double accident_discern_threshold = 0.0;
-  // double l_ego = ego_state_.ego_frenet().y;
+  // double l_ego = ego_state_->ego_frenet().y;
   double l_ego = l_ego_;
 
   if (scenario == LOCATION_INTER &&
@@ -1855,7 +1853,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   item.is_ncar = false;
   double ego_car_width = 2.2;
   double lat_safety_buffer = 0.2;
-  // double l_ego = ego_state_.ego_frenet.y;
+  // double l_ego = ego_state_->ego_frenet.y;
   // TODO: ego_state relative
   double l_ego = 0.;
   double dist_limit;
@@ -2114,7 +2112,7 @@ void TrackletMaintainer::select_lead_cars(
   TrackedObject *temp_lead_one = nullptr;
   TrackedObject *temp_lead_two = nullptr;
 
-  double v_ego = ego_state_.ego_v();
+  double v_ego = ego_state_->ego_v();
 
   for (auto tr : tracked_objects) {
     if (tr->is_lead == false) {

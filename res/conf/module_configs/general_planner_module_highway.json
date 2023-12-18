@@ -24,6 +24,7 @@
   "approach_distance_threshold_push_bound": 80,
   "approach_distance_threshold_avoid_obstacle": 50,
   "parking_space_release_dis_max": 2.0,
+  "parking_cruise_speed": 2.5,
   "reference_point_velocity": 2.0,
   "approach_distance_threshold_planning": 50,
   "velocity_upper_bound": 34.72,

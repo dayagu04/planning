@@ -953,6 +953,16 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
   bool enable_bbox_mode = true;
 };
 
+struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    parking_cruise_speed = read_json_key<double>(json, "parking_cruise_speed",
+                                                 parking_cruise_speed);
+  }
+  double parking_cruise_speed = parking_cruise_speed;
+};
+
 struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

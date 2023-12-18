@@ -44,7 +44,7 @@ void EnvironmentalModelManager::InitContext() {
   ego_config_ = config_builder->cast<planning::EgoPlanningConfig>();
 
   ego_state_manager_ptr_ =
-      std::make_shared<planning::EgoStateManager>(session_);
+      std::make_shared<planning::EgoStateManager>(config_builder, session_);
   session_->mutable_environmental_model()->set_ego_state(
       ego_state_manager_ptr_);
 

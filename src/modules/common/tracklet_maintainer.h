@@ -47,7 +47,7 @@ class TrackletMaintainer {
   TrackletMaintainer(planning::framework::Session *session);
   virtual ~TrackletMaintainer();
 
-  void apply_update(const EgoStateManager &ego_state,
+  void apply_update(const std::shared_ptr<EgoStateManager> ego_state,
                     const std::vector<PredictionObject> &predictions,
                     std::vector<TrackedObject> &tracked_objects,
                     LeadCars &lead_cars, bool isRedLightStop, bool hdmap_valid);
@@ -123,7 +123,7 @@ class TrackletMaintainer {
   std::shared_ptr<FrenetCoordinateSystem> frenet_coord_;
   LifecycleDict seq_state_;
   std::map<int, TrackedObject *> object_map_;
-  EgoStateManager ego_state_;
+  std::shared_ptr<EgoStateManager> ego_state_;
   bool hdmap_valid_{false};
 
   double s_ego_;

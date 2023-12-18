@@ -44,7 +44,7 @@ bool LateralObstacle::update_sensors(
   std::vector<TrackedObject> tracked_objects;
 
   if (prediction_update_ || !hdmap_valid) {
-    maintainer_->apply_update(*ego_state, predictions, tracked_objects,
+    maintainer_->apply_update(ego_state, predictions, tracked_objects,
                               lead_cars_, isRedLightStop, hdmap_valid);
     update_tracks(tracked_objects);
 
