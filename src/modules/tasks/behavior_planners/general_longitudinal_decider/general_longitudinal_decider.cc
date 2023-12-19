@@ -113,7 +113,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
   //       ego_v < 0.5;
   bool enable_stop_flag =
       ((lon_yield_info_.keep_stop || start_stop_result.enable_stop()) &&
-       !frame->session()->is_parking_scene());
+       !frame->session()->is_hpp_scene());
   LOG_DEBUG(
       "HHLDEBUGDB start stop input: %d, enable stop_flag: %d, is_start: %d, "
       "is_stop: % d, enable_stop: % d \n",
@@ -253,7 +253,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
   const double kEgoAccThreshold{0.1};
   const double kEgoVelThreshold{2.0};
   const bool enable_jerk_bound_reshape =
-      !is_emergency && !frame->session()->is_parking_scene() &&
+      !is_emergency && !frame->session()->is_hpp_scene() &&
       ego_a < kEgoAccThreshold && ego_v > kEgoVelThreshold;
   if (enable_jerk_bound_reshape) {
     LOG_DEBUG(
@@ -286,7 +286,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
                     BoundInfo{0, "traffic light"}});
 
   // set destination bound for PNP
-  if (frame_->session()->is_parking_scene()) {
+  if (frame_->session()->is_hpp_scene()) {
     // set destination bound
     double distance_to_destination = get_distance_to_destination();
     double stop_distance_to_destination = config_.stop_distance_to_destination;
@@ -472,7 +472,7 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
                  std::min(user_velocity_limit, map_velocity_limit));
   }
 
-  if (frame_->session()->is_parking_scene()) {
+  if (frame_->session()->is_hpp_scene()) {
     static constexpr double kVelocityPreviewDistance = 3.0;
     // auto mff_cruise_velocity = frame_->session()
     //                                ->environmental_model()
@@ -696,7 +696,7 @@ bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(
   }
 
   // behind ego car
-  if ((frame_->session()->is_parking_scene() &&
+  if ((frame_->session()->is_hpp_scene() &&
        obstacle->type() != Common::ObjectType::OBJECT_TYPE_PEDESTRIAN)) {
     // the obstacle will be ignored when it behind rear axle for PNP
     if (obstacle_sl_boundary.s_end + vehicle_param_.back_edge_to_rear_axis <
@@ -1157,7 +1157,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
     // distance_safe应该是停车安全距离+跟车完全距离
     // double follow_distance = 0.0;
     // follow_distance = calc_desired_distance(obstacle, );
-    if (frame_->session()->is_parking_scene()) {
+    if (frame_->session()->is_hpp_scene()) {
       static constexpr double kSafeDistanceInverse = 3.0;
       static constexpr double kDistanceInverseTTC = 0.3;
       double relative_velocity = ego_velocity - obstacle->frenet_velocity_s();
@@ -1737,16 +1737,16 @@ bool GeneralLongitudinalDecider::check_obstacle_both_sides(
 double GeneralLongitudinalDecider::get_distance_to_destination() {
   // WB: 暂无地图，终点距离无穷大
   double distance_to_destination = 2000.0;
-  // auto dest = frame_->session()
-  //                 ->environmental_model()
-  //                 .get_virtual_lane_manager()
-  //                 ->get_dest();
+  distance_to_destination = frame_->session()
+                  ->environmental_model()
+                  .get_virtual_lane_manager()
+                  ->GetDistanceToDestination();
   // auto distance_to_destination = std::numeric_limits<double>::max();
   // if (dest.isValid()) {
   //   distance_to_destination = dest.hasLanePathOffset()
   //                                 ? dest.getLanePathOffset()
   //                                 : dest.getRoadOffset();
-  // }
+  // // }
   return distance_to_destination;
 }
 

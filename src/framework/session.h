@@ -51,10 +51,6 @@ class Session : public planning::common::Arena {
     return vehicle_config_context_;
   }
 
-  bool is_parking_scene() const {
-    return get_scene_type() == planning::common::SceneType::HPP;
-  }
-
   bool is_hpp_scene() const {
     return get_scene_type() == planning::common::SceneType::HPP;
   }
