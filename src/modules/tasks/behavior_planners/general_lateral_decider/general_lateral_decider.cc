@@ -8,7 +8,8 @@
 #include <string>
 #include <vector>
 
-#include "../../common/planning_gflags.h"
+#include "history_obstacle_manager.h"
+#include "prediction_object.h"
 #include "task_basic_types.h"
 #include "utils/general_lateral_decider_utils.h"
 #include "debug_info_log.h"
@@ -32,6 +33,9 @@ bool GeneralLateralDecider::InitInfo() {
 
   ego_cart_state_manager_ =
       frame_->session()->environmental_model().get_ego_state_manager();
+
+  history_obstacle_manager_ =
+      frame_->session()->environmental_model().get_history_obstacle_manager();
 
   cruise_vel_ = frame_->session()->planning_context().v_ref_cruise();
 
@@ -521,24 +525,6 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
   }
 }
 
-bool GeneralLateralDecider::check_ego_near_bound(const double &rel_s,
-                                                 const double &rel_l) {
-  double lane_width =
-      frame_->session()
-          ->environmental_model()
-          .get_virtual_lane_manager()
-          ->get_lane_with_virtual_id(
-              pipeline_context_->coarse_planning_info.target_lane_id)
-          ->width();
-  double l_check_bound = 1.5 * std::max(lane_width, 2.5);
-  double s_check_bound = 10.0;
-  if ((std::fabs(rel_s) < s_check_bound) &&
-      (std::fabs(rel_l) < l_check_bound)) {
-    return true;
-  }
-  return false;
-}
-
 void GeneralLateralDecider::ConstructLateralObstacleDecisions(
     // const TrajectoryPoints &traj_points,
     ObstacleDecisions &obstacle_decisions) {
@@ -546,41 +532,31 @@ void GeneralLateralDecider::ConstructLateralObstacleDecisions(
   
   int32_t obj_cnt = 0;
 
-  auto &obs_vec = reference_path_ptr_->mutable_obstacles();
-  // select obstacles that are not in front view from nearby_Obstacles_
-  if (!nearby_Obstacles_.empty()) {
-    for (auto &obstacle : obs_vec) {
-      if (nearby_Obstacles_.find(obstacle->id()) != nearby_Obstacles_.end()) {
-        nearby_Obstacles_.erase(obstacle->id());
-      }
-    }
+  const auto &obs_vec = reference_path_ptr_->get_obstacles();
+  // new current obstacle. only apply to current function  
+  std::vector<std::shared_ptr<FrenetObstacle>> current_obstacles;  
+  for (std::shared_ptr<FrenetObstacle> obstacle : obs_vec) {
+    current_obstacles.emplace_back(obstacle);
   }
-  // update obstacles location, and judge if the obstacles is not in boundary
-  if (!nearby_Obstacles_.empty()) {
-    for (auto it = nearby_Obstacles_.begin(); it != nearby_Obstacles_.end();
-         it++) {
-      double rel_s = it->second->rel_s() + it->second->frenet_velocity_s() *
-                                               (1.0 / FLAGS_planning_loop_rate);
-      double rel_l =
-          it->second->l_relative_to_ego() +
-          it->second->frenet_velocity_l() * (1.0 / FLAGS_planning_loop_rate);
-      if (check_ego_near_bound(rel_s, rel_l)) {
-        it->second->set_rel_s(rel_s);
-        it->second->set_l_relative_to_ego(rel_l);
-        obs_vec.emplace_back(it->second);
-      }
+  if (is_need_save_near_obstacle_) {
+    const std::vector<Obstacle> &new_obstacles =
+        history_obstacle_manager_->GetNearPredictionObstacle();
+    // get new frenet obstacles
+    for (const Obstacle &obstacle : new_obstacles) {
+      std::shared_ptr<FrenetObstacle> new_frenet_obstacle;
+      new_frenet_obstacle = std::make_shared<FrenetObstacle>(
+          &obstacle, *reference_path_ptr_, ego_cart_state_manager_,
+          frame_->session()->environmental_model().location_valid());
+      current_obstacles.emplace_back(new_frenet_obstacle);
     }
-    nearby_Obstacles_.clear();
+    // check ego near, save obstacle info
+    history_obstacle_manager_->SelectObstacleNearEgo(current_obstacles,
+                                                     ego_frenet_state_);
   }
-  for (auto &obstacle : obs_vec) {
+  for (auto &obstacle : current_obstacles) {
     const auto &otype = obstacle->type();
     const auto ofusion_source = obstacle->obstacle()->fusion_source();
-    // save nearby obstacles
-    if (check_ego_near_bound(
-            obstacle->rel_s(),
-            obstacle->l_relative_to_ego())) {  // bound or center
-      nearby_Obstacles_.emplace(obstacle->id(), obstacle);
-    }
+
     if ((ofusion_source != OBSTACLE_SOURCE_CAMERA) &&
         (ofusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
       LOG_ERROR("The obstacle's fusion source is no camera whose id : %d \n",

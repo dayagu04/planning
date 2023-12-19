@@ -6,6 +6,7 @@
 
 #include "environmental_model.h"
 #include "frenet_ego_state.h"
+#include "history_obstacle_manager.h"
 #include "lateral_obstacle.h"
 #include "math/linear_interpolation.h"
 #include "obstacle_manager.h"
@@ -133,8 +134,6 @@ class GeneralLateralDecider : public Task {
       bool is_left, bool is_sorted, bool is_curve, int index,
       const TrajectoryPoints &traj_points);
 
-  bool check_ego_near_bound(const double &rel_s, const double &rel_l);
-
   GeneralLateralDeciderConfig config_;
 
   // VelocityLimitInfo vel_limit_info_;
@@ -145,11 +144,12 @@ class GeneralLateralDecider : public Task {
   FrenetEgoState ego_frenet_state_;
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;
   std::shared_ptr<ReferencePath> cur_reference_path_ptr_;
+  std::shared_ptr<HistoryObstacleManager> history_obstacle_manager_;
   double cruise_vel_ = 0.0;
   bool is_lane_change_scene_ = false;
+  bool is_need_save_near_obstacle_ = true;
   LatDeciderLaneChangeInfo lat_lane_change_info_ =
       LatDeciderLaneChangeInfo::NONE;
-  std::unordered_map<int, std::shared_ptr<FrenetObstacle>> nearby_Obstacles_;
 };
 
 }  // namespace planning

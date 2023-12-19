@@ -32,8 +32,6 @@ class FrenetObstacle {
   Point2D s_min_l() const { return s_with_min_l_; }
   Point2D s_max_l() const { return s_with_max_l_; }
   double l_relative_to_ego() const { return l_relative_to_ego_; }
-  void set_rel_s(double rel_s) { rel_s_ = rel_s; }
-  void set_l_relative_to_ego(double rel_l) { l_relative_to_ego_ = rel_l; }
 
   const Obstacle* obstacle() const { return obstacle_ptr_; }
   double velocity() const { return obstacle_ptr_->velocity(); }

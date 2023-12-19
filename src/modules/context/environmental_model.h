@@ -10,6 +10,7 @@
 #include "ego_planning_config.h"
 #include "fusion_objects.pb.h"
 #include "groundline_decider.h"
+#include "history_obstacle_manager.h"
 #include "ifly_time.h"
 #include "local_view.h"
 #include "log.h"
@@ -167,6 +168,15 @@ class EnvironmentalModel {
     parking_slot_manager_ = parking_slot_manager;
   }
 
+  const std::shared_ptr<HistoryObstacleManager> &get_history_obstacle_manager()
+      const {
+    return history_obstacle_manager_;
+  }
+  void set_history_obstacle_manager(
+      std::shared_ptr<HistoryObstacleManager> history_obstacle_manager) {
+    history_obstacle_manager_ = history_obstacle_manager;
+  }
+
   const std::string &get_module_config_file_dir() const {
     return config_file_dir_;
   }
@@ -261,6 +271,7 @@ class EnvironmentalModel {
       nullptr;
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
   std::shared_ptr<LaneTracksManager> lane_tracks_manager_ = nullptr;
+  std::shared_ptr<HistoryObstacleManager> history_obstacle_manager_ = nullptr;
   std::vector<PredictionObject> prediction_info_;
   std::vector<GroundLinePoint> ground_line_point_info_;
   std::shared_ptr<ParkingSlotManager> parking_slot_manager_ = nullptr;

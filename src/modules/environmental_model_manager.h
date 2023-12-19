@@ -4,6 +4,7 @@
 #include "common/prediction_object.h"
 #include "context/ego_planning_config.h"
 #include "context/ego_state_manager.h"
+#include "context/history_obstacle_manager.h"
 #include "context/obstacle_manager.h"
 #include "context/parking_slot_manager.h"
 #include "frame.h"
@@ -76,6 +77,8 @@ class EnvironmentalModelManager {
       traffic_light_decision_manager_ptr_ = nullptr;
   std::shared_ptr<planning::LateralObstacle> lateral_obstacle_ptr_ = nullptr;
   std::shared_ptr<planning::LaneTracksManager> lane_tracks_mgr_ptr_ = nullptr;
+  std::shared_ptr<planning::HistoryObstacleManager> history_obstacle_ptr_ =
+      nullptr;
   double last_feed_time_[FEED_TYPE_MAX]{};
   EgoPlanningConfig ego_config_;
 };

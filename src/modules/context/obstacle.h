@@ -127,16 +127,5 @@ class Obstacle {
   unsigned int fusion_source_;
 };
 
-struct HistoryObstacle {
-  int id{};
-  Common::ObjectType type;
-  double time = 0.0;
-  double x_center = 0.0;
-  double y_center = 0.0;
-  double velocity_x = 0.0;
-  double velocity_y = 0.0;
-  double heading_angle = 0.0;
-};
-
 // typedef IndexedList<int, Obstacle> IndexedObstacles;
 }  // namespace planning

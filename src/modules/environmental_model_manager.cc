@@ -11,6 +11,7 @@
 #include "context/ego_planning_config.h"
 #include "context/ego_state_manager.h"
 #include "context/frenet_ego_state.h"
+#include "context/history_obstacle_manager.h"
 #include "context/lateral_obstacle.h"
 #include "context/obstacle_manager.h"
 #include "context/planning_output_context.h"
@@ -82,6 +83,10 @@ void EnvironmentalModelManager::InitContext() {
   parking_slot_manager_ptr_ = std::make_shared<ParkingSlotManager>(session_);
   session_->mutable_environmental_model()->set_parking_slot_manager(
       parking_slot_manager_ptr_);
+  history_obstacle_ptr_ =
+      std::make_shared<planning::HistoryObstacleManager>(session_);
+  session_->mutable_environmental_model()->set_history_obstacle_manager(
+      history_obstacle_ptr_);
 }
 
 bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
@@ -208,6 +213,8 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   LOG_DEBUG("lateral_obstacle update cost:%f\n", time_end - time_start);
 
   lane_tracks_mgr_ptr_->update_lane_tracks();
+
+  history_obstacle_ptr_->Update();
 
   auto end_time = IflyTime::Now_ms();
   LOG_DEBUG("EnvironmentalModelManager::Run cost time:%f\n",
