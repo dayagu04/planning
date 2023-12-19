@@ -204,6 +204,9 @@ class VirtualLaneManager {
   double last_left_diff_ = 0;
   double last_right_diff_ = 0;
   Intersection intersection_;
+  double ego_pose_x_;
+  double ego_pose_y_;
+  double yaw_;
   // Ramp ramp_;
   double dis_to_ramp_ = NL_NMAX;
   RampDirection ramp_direction_ = RampDirection::RAMP_NONE;
