@@ -543,7 +543,7 @@ void GeneralLateralDecider::ConstructLateralObstacleDecisions(
     // const TrajectoryPoints &traj_points,
     ObstacleDecisions &obstacle_decisions) {
   ObstaclePotentialDecisions obstacle_potential_decisions;
-
+  
   int32_t obj_cnt = 0;
 
   auto &obs_vec = reference_path_ptr_->mutable_obstacles();
