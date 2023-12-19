@@ -11,6 +11,7 @@
 #include "../../common/planning_gflags.h"
 #include "task_basic_types.h"
 #include "utils/general_lateral_decider_utils.h"
+#include "debug_info_log.h"
 namespace planning {
 
 using namespace planning_math;
@@ -57,6 +58,7 @@ bool GeneralLateralDecider::InitInfo() {
 
 bool GeneralLateralDecider::Execute(planning::framework::Frame *frame) {
   LOG_DEBUG("=======GeneralLateralDecider======= \n");
+  auto current_time = IflyTime::Now_ms();
   frame_ = frame;
   if (Task::Execute(frame) == false) {
     return false;
@@ -104,6 +106,8 @@ bool GeneralLateralDecider::Execute(planning::framework::Frame *frame) {
 
   CalcLateralBehaviorOutput();
 
+  auto end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("GeneralLateralDeciderCost", end_time - current_time);
   return true;
 }
 

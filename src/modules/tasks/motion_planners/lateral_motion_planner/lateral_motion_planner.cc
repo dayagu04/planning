@@ -93,7 +93,7 @@ bool LateralMotionPlanner::Execute(planning::framework::Frame *frame) {
       ->CopyFrom(planning_problem_ptr_->GetOutput());
 
   auto end_time = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("RealTimeLateralMotionCostTime", end_time - start_time);
+  JSON_DEBUG_VALUE("LateralMotionCostTime", end_time - start_time);
 
   return true;
 }

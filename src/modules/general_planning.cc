@@ -88,7 +88,9 @@ bool GeneralPlanning::RunOnce(
     common::PlanningDebugInfo &debug_info,
     PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
   LOG_ERROR("GeneralPlanning::RunOnce \n");
+  auto frame_info = debug_info.mutable_frame_info();
   frame_num_++;
+  frame_info->set_frame_num(frame_num_);
   session_.mutable_planning_output_context()->feed_planning_hmi_info(
       planning_hmi_info);
 
@@ -198,8 +200,6 @@ bool GeneralPlanning::RunOnce(
   int64_t frame_duration = IflyTime::Now_ms() - start_timestamp;
   LOG_DEBUG("The time cost of RunOnce is: %d\n", (int)frame_duration);
 
-  auto frame_info = debug_info.mutable_frame_info();
-  frame_info->set_frame_num(frame_num_);
   frame_info->set_scene_type(common::SceneType_Name(session_.get_scene_type()));
   frame_info->set_frame_duration_ms(frame_duration);
   frame_info->set_planning_succ(planning_success);

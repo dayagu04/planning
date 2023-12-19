@@ -369,7 +369,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
   double end_time = IflyTime::Now_ms();
   LOG_DEBUG("=======GeneralLongitudinalDecider time cost is [%f]ms:\n",
             end_time - start_time);
-
+  JSON_DEBUG_VALUE("GeneralLongitudinalDeciderCost", end_time - start_time);
   return true;
 }
 
