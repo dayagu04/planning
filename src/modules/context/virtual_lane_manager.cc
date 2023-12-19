@@ -1040,10 +1040,14 @@ void VirtualLaneManager::CalculateHPPInfo(
 
       // ego box
       const auto& vehicle_param =
-          session->vehicle_config_context().get_vehicle_param();
-      const ad_common::math::Box2d ego_box({ego_pose_x, ego_pose_y}, yaw,
-                                           vehicle_param.length,
-                                           vehicle_param.width);
+      session->vehicle_config_context().get_vehicle_param();
+      const auto center_x = ego_pose_x +
+          std::cos(yaw) * vehicle_param.rear_axis_to_center;
+      const auto center_y = ego_pose_y +
+          std::sin(yaw) * vehicle_param.rear_axis_to_center;
+      const ad_common::math::Box2d ego_box(
+          {center_x, center_y}, yaw,
+          vehicle_param.length, vehicle_param.width);
       // if on hpp lane
       if (nearest_lane->IsOnLane(ego_box)) {
         std::cout << "is on hpp lane!" << std::endl;
