@@ -67,7 +67,7 @@ bool VisionLateralMotionPlanner::Execute(planning::framework::Frame *frame) {
 
   virtual_lane_manager_ =
       frame_->session()->environmental_model().get_virtual_lane_manager();
-  
+
   left_lane_boundary_poly_.clear();
   right_lane_boundary_poly_.clear();
   set_left_lane_boundary_poly();   // hack left_lane_boundary_poly

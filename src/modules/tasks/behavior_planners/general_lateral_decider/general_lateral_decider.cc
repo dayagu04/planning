@@ -10,9 +10,10 @@
 
 #include "history_obstacle_manager.h"
 #include "prediction_object.h"
+#include "../../common/planning_gflags.h"
+#include "debug_info_log.h"
 #include "task_basic_types.h"
 #include "utils/general_lateral_decider_utils.h"
-#include "debug_info_log.h"
 namespace planning {
 
 using namespace planning_math;
@@ -529,7 +530,7 @@ void GeneralLateralDecider::ConstructLateralObstacleDecisions(
     // const TrajectoryPoints &traj_points,
     ObstacleDecisions &obstacle_decisions) {
   ObstaclePotentialDecisions obstacle_potential_decisions;
-  
+
   int32_t obj_cnt = 0;
 
   const auto &obs_vec = reference_path_ptr_->get_obstacles();

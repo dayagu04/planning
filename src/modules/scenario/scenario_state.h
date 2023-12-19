@@ -93,7 +93,7 @@ struct StateBase : M::Base {
     // 根据定位状态切换实时、长时
     auto location_valid =
         frame->session()->environmental_model().location_valid();
-      static auto hpp_pipeline =
+    static auto hpp_pipeline =
         TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, nullptr);
     // static auto scc_pipeline =
     //     TaskPipeline::Make(TaskPipelineType::SCC, config_builder, nullptr);

@@ -1738,9 +1738,9 @@ double GeneralLongitudinalDecider::get_distance_to_destination() {
   // WB: 暂无地图，终点距离无穷大
   double distance_to_destination = 2000.0;
   distance_to_destination = frame_->session()
-                  ->environmental_model()
-                  .get_virtual_lane_manager()
-                  ->GetDistanceToDestination();
+                                ->environmental_model()
+                                .get_virtual_lane_manager()
+                                ->GetDistanceToDestination();
   // auto distance_to_destination = std::numeric_limits<double>::max();
   // if (dest.isValid()) {
   //   distance_to_destination = dest.hasLanePathOffset()

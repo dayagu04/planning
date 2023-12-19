@@ -328,7 +328,7 @@ void LongitudinalMotionPlanner::Update() {
 
   JSON_DEBUG_VECTOR("assembled_delta", assembled_delta, 4)
   JSON_DEBUG_VECTOR("assembled_omega", assembled_omega, 4)
-  
+
   // bool LongitudinalMotionPlanner::RecheckPlanningResult() {
   //   const auto &lon_ref_path = // result from lon decision
   //       pipeline_context_->planning_info.lon_ref_path;
