@@ -84,7 +84,7 @@ bool VisionLongitudinalBehaviorPlanner::update() {
       frame_->mutable_session()
           ->mutable_planning_context()
           ->mutable_vision_longitudinal_behavior_planner_output();
-  
+
   double last_v_target = vision_longitudinal_output.velocity_target;
   accel_vel_filter_.SetState(last_v_target);
   v_target_ = std::min(ego_state_mgr->ego_v_cruise(), 40.0);
@@ -147,8 +147,7 @@ bool VisionLongitudinalBehaviorPlanner::update() {
     if (v_ego > last_v_target) {
       accel_vel_filter_.SetState(v_ego);
       JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_reset", 1);
-    }
-    else {
+    } else {
       JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_reset", 0);
     }
     accel_vel_filter_.Update(v_target_);

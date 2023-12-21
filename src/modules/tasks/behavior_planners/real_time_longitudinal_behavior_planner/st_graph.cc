@@ -18,7 +18,7 @@ StGraphGenerator::StGraphGenerator(
                                      150.0, 0.1);
   cut_in_desired_distance_filter_.Init(
       -0.2, config_.cut_in_desired_distance_step, 0.0, 150.0, 0.1);
-  //accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
+  // accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
 }
 
 void StGraphGenerator::Update(
@@ -65,7 +65,7 @@ void StGraphGenerator::Update(
 
   CalculateCruiseSrefs(v_ego, v_cruise, acc_ego, sref_vec);
 
-  //calc target v for noa curv and ramp
+  // calc target v for noa curv and ramp
   CalcSpeedWithTurns(v_ego, steer_angle_ego, d_polys);
 
   double distance_to_ramp = lon_behav_input_->dis_to_ramp();
@@ -73,7 +73,8 @@ void StGraphGenerator::Update(
   bool is_on_ramp = lon_behav_input_->is_on_ramp();
   double ramp_v_limit = 50 / 3.6;
   double acc_to_ramp = -1.0;
-  CalcSpeedWithRamp(distance_to_ramp, distance_to_merge, is_on_ramp, ramp_v_limit, acc_to_ramp, v_ego);
+  CalcSpeedWithRamp(distance_to_ramp, distance_to_merge, is_on_ramp,
+                    ramp_v_limit, acc_to_ramp, v_ego);
 
   // 2. 计算障碍物s-t
   // 2.1 计算leads: lead one, 选择性使用lead two
@@ -378,9 +379,9 @@ void StGraphGenerator::CalcSpeedInfoWithCutin(
                                    v_ego, cut_in_st_info);
 }
 
-bool StGraphGenerator::CalcSpeedWithTurns(
-    const double v_ego, const double angle_steers,
-    const std::vector<double> &d_poly) {
+bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
+                                          const double angle_steers,
+                                          const std::vector<double> &d_poly) {
   // *** this function returns a limited long acceleration allowed, depending on
   // the existing lateral acceleration
   //  this should avoid accelerating when losing the target in turns
@@ -452,8 +453,10 @@ bool StGraphGenerator::CalcSpeedWithTurns(
   return true;
 }
 
-bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp, double dis_to_merge, bool is_on_ramp, double ramp_v_limit,
-      double acc_to_ramp, double v_ego) {
+bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
+                                         double dis_to_merge, bool is_on_ramp,
+                                         double ramp_v_limit,
+                                         double acc_to_ramp, double v_ego) {
   LOG_DEBUG("----calc_speed_for_ramp--- \n");
   auto ref_path_points = lon_behav_input_->ref_path_points();
   double v_target_ramp = 40;
@@ -471,7 +474,9 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp, double dis_to_merge
     return true;
   }
   double pre_brake_dis_to_ramp = std::max(dis_to_ramp - 50, 0.0);
-  v_target_ramp = std::pow(std::pow(ramp_v_limit,  2.0) - 2 * pre_brake_dis_to_ramp * acc_to_ramp, 0.5);
+  v_target_ramp = std::pow(
+      std::pow(ramp_v_limit, 2.0) - 2 * pre_brake_dis_to_ramp * acc_to_ramp,
+      0.5);
   v_target_ = std::min(v_target_ramp, v_target_);
   LOG_DEBUG("dis_to_ramp : [%f] \n", dis_to_ramp);
   LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);

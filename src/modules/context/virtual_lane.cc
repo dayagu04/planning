@@ -316,8 +316,11 @@ double VirtualLane::min_width() const {
 void VirtualLane::update_speed_limit(double ego_vel,
                                      double ego_v_cruise) {  // todo
   // update vision only v_cruise_
-  if (get_lane_source() == FusionRoad::LaneSource::SOURCE_FUSION) {
+  auto lane_source = get_lane_source();
+  if (lane_source == FusionRoad::LaneSource::SOURCE_CAMERA ||
+      lane_source == FusionRoad::LaneSource::SOURCE_UNKNOWN) {
     v_cruise_ = ego_v_cruise;
+    return;
   }
 
   assert(reference_path_ != nullptr);

@@ -68,11 +68,12 @@ class StGraphGenerator {
       const string &lc_request, double v_cruise, double v_ego,
       std::vector<planning::common::RealTimeLonObstacleSTInfo> &cut_in_st_info);
 
-  bool CalcSpeedWithRamp(double dis_to_ramp, double dis_to_merge, bool is_on_ramp, double ramp_v_limit,
-      double acc_to_ramp, double v_ego);
+  bool CalcSpeedWithRamp(double dis_to_ramp, double dis_to_merge,
+                         bool is_on_ramp, double ramp_v_limit,
+                         double acc_to_ramp, double v_ego);
 
-  bool CalcSpeedWithTurns(const double v_ego,
-      const double angle_steers, const std::vector<double> &d_poly);
+  bool CalcSpeedWithTurns(const double v_ego, const double angle_steers,
+                          const std::vector<double> &d_poly);
 
   void UpdateSTRefs(const std::vector<double> &sref_vec);
 

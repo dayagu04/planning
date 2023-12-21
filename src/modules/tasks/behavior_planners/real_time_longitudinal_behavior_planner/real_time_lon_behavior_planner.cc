@@ -334,7 +334,7 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
   auto ref_path_points = lon_behav_plan_input_->mutable_ref_path_points();
   ref_path_points->Clear();
   ref_path_points->Reserve(fix_ref_points.size());
-  for(auto &point : fix_ref_points) {
+  for (auto &point : fix_ref_points) {
     common::ReferencePathPoint *ref_path_point = ref_path_points->Add();
     auto *path_point = ref_path_point->mutable_path_point();
     path_point->set_x(point.path_point.x);
@@ -348,10 +348,14 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
     path_point->set_x_derivative(point.path_point.x_derivative);
     path_point->set_y_derivative(point.path_point.y_derivative);
 
-    ref_path_point->set_distance_to_left_lane_border(point.distance_to_left_lane_border);
-    ref_path_point->set_distance_to_left_road_border(point.distance_to_left_road_border);
-    ref_path_point->set_distance_to_right_lane_border(point.distance_to_right_lane_border);
-    ref_path_point->set_distance_to_right_road_border(point.distance_to_right_road_border);
+    ref_path_point->set_distance_to_left_lane_border(
+        point.distance_to_left_lane_border);
+    ref_path_point->set_distance_to_left_road_border(
+        point.distance_to_left_road_border);
+    ref_path_point->set_distance_to_right_lane_border(
+        point.distance_to_right_lane_border);
+    ref_path_point->set_distance_to_right_road_border(
+        point.distance_to_right_road_border);
     ref_path_point->set_lane_width(point.lane_width);
     ref_path_point->set_max_velocity(point.max_velocity);
     ref_path_point->set_min_velocity(point.min_velocity);
@@ -365,7 +369,7 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
   // 6. set function_info
   auto function_info_input = lon_behav_plan_input_->mutable_function_info();
   function_info_input->CopyFrom(function_info);
-  
+
   double dis_to_ramp = virtual_lane_manager->dis_to_ramp();
   double dis_to_merge = virtual_lane_manager->distance_to_first_road_merge();
   bool is_on_ramp = virtual_lane_manager->is_on_ramp();

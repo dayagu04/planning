@@ -62,7 +62,7 @@ typedef struct CalibrationParameter {
   double earliest_warning_line;  // 触发的最早报警线，单位：m
   double latest_warning_line;    // 触发的最晚报警线，单位：m
   double reset_warning_line;     // 触发的报警重置线，单位：m
-  uint16 warning_time_max;        // 最大报警时长，单位：ms
+  uint16 warning_time_max;       // 最大报警时长，单位：ms
   double tlc_line_far;  // 针对道线触发报警的高灵敏度阈值，单位：s
   double tlc_line_medium;  // 针对道线触发报警的中灵敏度阈值，单位：s
   double tlc_line_near;  // 针对道线触发报警的低灵敏度阈值，单位：s
@@ -100,7 +100,7 @@ typedef struct RoadInfo {
   double right_roadedge_c2;   // 本车道右侧路缘方程系数c2
   double right_roadedge_c3;   // 本车道右侧路缘方程系数c3
   bool lane_width_valid;  // 当前车道宽度信息有效性 0:Invalid 1:Valid
-  double lane_width;     // 当前车道宽度,单位:m
+  double lane_width;      // 当前车道宽度,单位:m
 } RoadInfo;               // 道线和路缘信息结构体定义
 
 typedef struct VehInfo {
