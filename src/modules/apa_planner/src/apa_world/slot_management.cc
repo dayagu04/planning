@@ -219,6 +219,11 @@ common::SlotInfo SlotManagement::SlotInfoTransfer(
     slot_info.set_is_occupied((fusion_slot.allow_parking() == 0));
   }
 
+  if (IsInParkingState()) {
+    slot_info.set_is_release(true);
+    slot_info.set_is_occupied(false);
+  }
+
   return slot_info;
 }
 
