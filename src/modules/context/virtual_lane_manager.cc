@@ -8,6 +8,7 @@
 #include "ehr.pb.h"
 #include "environmental_model.h"
 #include "ifly_localization.pb.h"
+#include "ifly_parking_map.pb.h"
 #include "log_glog.h"
 #include "math/box2d.h"
 #include "planning_output_context.h"
@@ -53,7 +54,10 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
               << ",accumulate driving dis:" << sum_distance_driving_
               << std::endl;
     CalculateDistanceToTargetSlot(session_);
+    CalculateDistanceToNextSpeedBump(session_);
     std::cout << "dis to tar slot:" << distance_to_target_slot_ << std::endl;
+    std::cout << "distance_to_frist_speed_bump: "
+              << distance_to_next_speed_bump_ << std::endl;
   }
 
   double dis_to_first_road_split = distance_to_first_road_split();
@@ -1112,4 +1116,44 @@ void VirtualLaneManager::CalculateDistanceToTargetSlot(
   distance_to_target_slot_ = tar_slot_nearest_s - nearest_s_;
 }
 
+void VirtualLaneManager::CalculateDistanceToNextSpeedBump(
+    planning::framework::Session* session) {
+  distance_to_next_speed_bump_ = NL_NMAX;
+  auto& local_view = session_->environmental_model().get_local_view();
+  const auto road_marks =
+      local_view.parking_map_info.road_tile_info().road_mark();
+  const auto& hd_map = session->environmental_model().get_hd_map();
+
+  double distance_to_speed_bump_tmp = 0;
+  for (auto& road_mark : road_marks) {
+    if (road_mark.type() == ::IFLYParkingMap::RoadMark::SPEED_BUMP &&
+        road_mark.shape_size() == 4) {
+      ad_common::hdmap::LaneInfoConstPtr speed_bump_nearest_lane;
+      double speed_bump_nearest_s = 0.0;
+      double speed_bump_nearest_l = 0.0;
+
+      ad_common::math::Vec2d speed_bump_center_point(
+          (road_mark.shape(0).boot().x() + road_mark.shape(3).boot().x()) * 0.5,
+          (road_mark.shape(0).boot().y() + road_mark.shape(3).boot().y()) *
+              0.5);
+
+      const int speed_bump_res = hd_map.GetNearestLane(
+          speed_bump_center_point, &speed_bump_nearest_lane,
+          &speed_bump_nearest_s, &speed_bump_nearest_l);
+      if (speed_bump_res != 0) {
+        std::cout << "not get speed_bump projection point on line!!!"
+                  << std::endl;
+        continue;
+      } else {
+        std::cout << "get s for speed_bump projection point on line:"
+                  << speed_bump_nearest_s << std::endl;
+      }
+      distance_to_speed_bump_tmp = speed_bump_nearest_s - nearest_s_;
+      if (distance_to_speed_bump_tmp > 0) {  // TODO: 假设挡位为前进档
+        distance_to_next_speed_bump_ = distance_to_speed_bump_tmp;
+        break;
+      }
+    }
+  }
+}
 }  // namespace planning

@@ -8,10 +8,10 @@
 #include <string>
 #include <vector>
 
-#include "history_obstacle_manager.h"
-#include "prediction_object.h"
 #include "../../common/planning_gflags.h"
 #include "debug_info_log.h"
+#include "history_obstacle_manager.h"
+#include "prediction_object.h"
 #include "task_basic_types.h"
 #include "utils/general_lateral_decider_utils.h"
 namespace planning {
@@ -534,8 +534,8 @@ void GeneralLateralDecider::ConstructLateralObstacleDecisions(
   int32_t obj_cnt = 0;
 
   const auto &obs_vec = reference_path_ptr_->get_obstacles();
-  // new current obstacle. only apply to current function  
-  std::vector<std::shared_ptr<FrenetObstacle>> current_obstacles;  
+  // new current obstacle. only apply to current function
+  std::vector<std::shared_ptr<FrenetObstacle>> current_obstacles;
   for (std::shared_ptr<FrenetObstacle> obstacle : obs_vec) {
     current_obstacles.emplace_back(obstacle);
   }
