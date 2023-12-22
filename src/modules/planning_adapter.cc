@@ -260,9 +260,9 @@ void PlanningAdapter::Proc() {
 
     local_view_.static_map_info = map_info_msg_;
     local_view_.static_map_info_recv_time = map_info_msg_recv_time_;
-    // input_topic_timestamp->set_map(map_info_msg_.header().timestamp());
-    // input_topic_latency->set_map(
-    //     get_latency(start_time, map_info_msg_.header().timestamp()));
+    input_topic_timestamp->set_map(map_info_msg_.header().timestamp());
+    input_topic_latency->set_map(
+        get_latency(start_time, map_info_msg_.header().timestamp()));
     local_view_.hdmap_time = map_info_msg_recv_time_;
     // TODO: add input topic info
   }
