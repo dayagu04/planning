@@ -97,7 +97,7 @@ void ReferencePath::update_refpath_points(
         iter->path_point.theta =
             frenet_coord_->GetRefCurveHeading(frenet_point.x);
         double dist = iter->path_point.s - (iter - 1)->path_point.s;
-        if (dist < 0) {
+        if (dist <= 0) {
           LOG_ERROR("raw_ref_path_points frenet x is smaller");
           raw_ref_path_points.erase(iter);
           continue;
