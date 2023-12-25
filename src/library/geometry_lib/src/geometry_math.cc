@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include "Eigen/Core"
+#include "Eigen/Eigenvalues"
 #include "Eigen/Geometry"
 #include "math_lib.h"
 
@@ -1183,5 +1185,88 @@ const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
   return true;
 }
 
+const bool IsPointInPolygon(const std::vector<Eigen::Vector2d> &polygon,
+                            const Eigen::Vector2d &point) {
+  int crossProductSign = 0;
+
+  for (size_t i = 0; i < polygon.size(); i++) {
+    Eigen::Vector2d vertex1 = polygon[i];
+    Eigen::Vector2d vertex2 = polygon[(i + 1) % polygon.size()];
+
+    const double crossProduct =
+        (vertex2.x() - vertex1.x()) * (point.y() - vertex1.y()) -
+        (point.x() - vertex1.x()) * (vertex2.y() - vertex1.y());
+
+    if (std::fabs(crossProduct) < 1.0e-4) {
+      return true;
+    } else if (crossProductSign == 0) {
+      crossProductSign = (crossProduct > 0) ? 1 : -1;
+    } else if (crossProductSign != ((crossProduct > 0.0) ? 1 : -1)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+const bool MinimumBoundingBox(
+    std::vector<Eigen::Vector2d> &target_boundingbox,
+    const std::vector<Eigen::Vector2d> &original_vertices) {
+  Eigen::MatrixXd vertices_matrix(2, original_vertices.size());
+
+  for (size_t i = 0; i < original_vertices.size(); i++) {
+    vertices_matrix.col(i) = original_vertices[i];
+  }
+  // compute center
+  const auto center = vertices_matrix.rowwise().mean();
+  // compute covariance
+  const auto covaraince_matrix =
+      (vertices_matrix.colwise() - center) *
+      ((vertices_matrix.colwise() - center).transpose()) /
+      (vertices_matrix.cols() - 1);
+
+  // value and vector
+  const Eigen::SelfAdjointEigenSolver<Eigen::Matrix2d> eigen_solver(
+      covaraince_matrix);
+  const auto eigen_values = eigen_solver.eigenvalues();
+  const Eigen::Matrix2d eigen_vectors = eigen_solver.eigenvectors();
+
+  // compute main direction(length, x)
+  // std::cout << "eigen_values:" << eigen_values(0) << "\n";
+  // std::cout << "eigen_values:" << eigen_values(1) << "\n";
+  // std::cout << "eigen_vectors:" << eigen_vectors.col(0).transpose() << "\n";
+  // std::cout << "eigen_vectors:" << eigen_vectors.col(1).transpose() << "\n";
+  if (std::fabs(eigen_values(0)) < 1e-4) {
+    return false;
+  }
+  const auto direction = eigen_vectors.col(0);
+  // compute norm direction
+  const Eigen::Vector2d direction_t(-direction.y(), direction.x());
+
+  // length
+  const double half_length =
+      0.25 * ((original_vertices[0] - original_vertices[2]).norm() +
+              (original_vertices[1] - original_vertices[3]).norm());
+  const double half_width =
+      0.25 * ((original_vertices[1] - original_vertices[0]).norm() +
+              (original_vertices[3] - original_vertices[2]).norm());
+
+  std::cout << "direction:" << direction.transpose() << "\n";
+  std::cout << "half_length:" << half_length << "\n";
+  std::cout << "half_width:" << half_width << "\n";
+
+  target_boundingbox.emplace_back(center + direction * half_length -
+                                  direction_t * half_width);
+
+  target_boundingbox.emplace_back(center + direction * half_length +
+                                  direction_t * half_width);
+
+  target_boundingbox.emplace_back(center - direction * half_length -
+                                  direction_t * half_width);
+
+  target_boundingbox.emplace_back(center - direction * half_length +
+                                  direction_t * half_width);
+  return true;
+}
 }  // namespace geometry_lib
 }  // namespace pnc

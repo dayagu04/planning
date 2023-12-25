@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <utility>
+#include <vector>
 
 #include "Eigen/Core"
 #include "spline.h"
@@ -270,7 +271,13 @@ const bool SamplePointSetInLineSeg(std::vector<PathPoint> &point_set,
 
 const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
                                const Arc &arc, const double &ds);
+const bool IsPointInPolygon(const std::vector<Eigen::Vector2d> &polygon,
+                            const Eigen::Vector2d &point);
 
+// The eigenvalues of the symmetry matrix must be real numbers ; so there is no
+// need to use bool
+const bool MinimumBoundingBox(std::vector<Eigen::Vector2d> &target_boundingbox,
+                        const std::vector<Eigen::Vector2d> &original_vertices);
 }  // namespace geometry_lib
 }  // namespace pnc
 

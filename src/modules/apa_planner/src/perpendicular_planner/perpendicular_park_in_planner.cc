@@ -19,6 +19,7 @@
 #include "geometry_math.h"
 #include "local_view.h"
 #include "perpendicular_path_planner.h"
+#include "slot_management_info.pb.h"
 
 namespace planning {
 namespace apa_planner {
@@ -247,16 +248,20 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
       << std::cos(ego_slot_info.ego_heading_slot),
       std::sin(ego_slot_info.ego_heading_slot);
 
-  const auto limiter_point = apa_world_ptr_->GetSlotManagerPtr()
-                                 ->GetLimiterPointWindow()
-                                 .GetFusedLimiterPointsEigen();
+  std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter_point;
+  const auto is_have_limiter =
+      apa_world_ptr_->GetSlotManagerPtr()->GetSelectedLimiter(limiter_point);
+
+
+  // std::cout << "limiter1: " << limiter_point.first.transpose() << " \n";
+  // std::cout << "limiter2: " << limiter_point.second.transpose() << " \n";
 
   const auto point_mid = ego_slot_info.g2l_tf.GetPos(
       (limiter_point.first + limiter_point.second) / 2.0);
 
   if ((point_mid - ego_slot_info.ego_pos_slot).norm() < 1.0 &&
       ego_slot_info.first_fix_limiter &&
-      perpendicular_path_planner_.GetOutput().is_last_path) {
+      perpendicular_path_planner_.GetOutput().is_last_path && false) {
     PostProcessPathAccordingLimiter();
     ego_slot_info.terminal_target_X = point_mid.x() + kTerminalTargetX2Limiter;
     ego_slot_info.first_fix_limiter = false;
@@ -284,15 +289,8 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   std::cout << "vel_ego = " << measures_ptr->vel_ego << std::endl;
 
   // calc slot occupied ratio
-  // TODO: apa_world_ptr_->GetSlotManagerPtr()->GetOccupiedRatio();
-  if (std::fabs(ego_slot_info.terminal_err.pos.y()) < 0.9 &&
-      std::fabs(ego_slot_info.ego_heading_slot) < 75.0 / 57.3) {
-    ego_slot_info.slot_occupied_ratio = pnc::mathlib::Clamp(
-        1.0 - (ego_slot_info.terminal_err.pos.x() / kNormalSlotLength), 0.0,
-        1.0);
-  } else {
-    ego_slot_info.slot_occupied_ratio = 0.0;
-  }
+  ego_slot_info.slot_occupied_ratio =
+      apa_world_ptr_->GetSlotManagerPtr()->GetOccupiedRatio();
 
   std::cout << "ego_slot_info.slot_occupied_ratio = "
             << ego_slot_info.slot_occupied_ratio << std::endl;
@@ -815,9 +813,9 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingLimiter() {
   s_vec.reserve(traj_size);
   heading_vec.reserve(traj_size);
 
-  const auto limiter_point = apa_world_ptr_->GetSlotManagerPtr()
-                                 ->GetLimiterPointWindow()
-                                 .GetFusedLimiterPointsEigen();
+  std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter_point;
+  const auto is_have_limiter =
+      apa_world_ptr_->GetSlotManagerPtr()->GetSelectedLimiter(limiter_point);
 
   const auto point_mid = (limiter_point.first + limiter_point.second) / 2.0;
 
