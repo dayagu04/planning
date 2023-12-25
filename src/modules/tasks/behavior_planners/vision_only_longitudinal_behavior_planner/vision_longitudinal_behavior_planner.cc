@@ -80,11 +80,12 @@ bool VisionLongitudinalBehaviorPlanner::update() {
             ego_state_mgr->ego_v_cruise(), ego_state_mgr->ego_v(),
             ego_state_mgr->ego_acc());
   double v_ego = ego_state_mgr->ego_v();
+  JSON_DEBUG_VALUE("v_ego", v_ego)
   auto &vision_longitudinal_output =
       frame_->mutable_session()
           ->mutable_planning_context()
           ->mutable_vision_longitudinal_behavior_planner_output();
-  
+
   double last_v_target = vision_longitudinal_output.velocity_target;
   accel_vel_filter_.SetState(last_v_target);
   v_target_ = std::min(ego_state_mgr->ego_v_cruise(), 40.0);
@@ -147,8 +148,7 @@ bool VisionLongitudinalBehaviorPlanner::update() {
     if (v_ego > last_v_target) {
       accel_vel_filter_.SetState(v_ego);
       JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_reset", 1);
-    }
-    else {
+    } else {
       JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_reset", 0);
     }
     accel_vel_filter_.Update(v_target_);
@@ -168,26 +168,26 @@ bool VisionLongitudinalBehaviorPlanner::update() {
 
   JSON_DEBUG_VALUE("VisionLonBehavior_a_target_high", a_target_.second);
   JSON_DEBUG_VALUE("VisionLonBehavior_a_target_low", a_target_.first);
-  JSON_DEBUG_VALUE("VisionLonBehavior_v_target", v_target_);
 
   // get start & stop state
   common::StartStopInfo::StateType stop_start_state =
       UpdateStartStopState(lateral_obstacle->leadone(), v_ego);
   v_target_ =
       (stop_start_state == common::StartStopInfo::STOP) ? 0.0 : v_target_;
-  JSON_DEBUG_VALUE("VisionLonBehavior_stop_start_state", (int)stop_start_state);
-  JSON_DEBUG_VALUE("VisionLonBehavior_v_target_start_stop", v_target_);
+  JSON_DEBUG_VALUE("stop_start_state", (int)stop_start_state);
+  JSON_DEBUG_VALUE("v_target_start_stop", v_target_);
 
   // ACC : STANDSTILL to ACTIVE need confirmed by driver
-  JSON_DEBUG_VALUE("VisionLonBehavior_STANDSTILL", 0.0);
+  JSON_DEBUG_VALUE("STANDSTILL", 0.0);
   if (v_ego < 1.0 &&
       function_info.function_mode() == common::DrivingFunctionInfo::ACC &&
       function_info.function_state() ==
           common::DrivingFunctionInfo::STANDSTILL) {
     v_target_ = 0.0;
-    JSON_DEBUG_VALUE("VisionLonBehavior_STANDSTILL", 1.0);
+    JSON_DEBUG_VALUE("STANDSTILL", 1.0);
   }
-  JSON_DEBUG_VALUE("VisionLonBehavior_final_v_target", v_target_);
+  // JSON_DEBUG_VALUE("VisionLonBehavior_final_v_target", v_target_);
+  JSON_DEBUG_VALUE("v_target", v_target_);
 
   // HMI: CIPV
   int CIPV_id = GetCIPV(lateral_obstacle, lateral_outputs.lc_status);
@@ -253,8 +253,8 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
     LOG_DEBUG(
         "angle_steers: [%f], angle_steers_deg: [%f], v_limit_road: [%f]\n",
         angle_steers, angle_steers_deg, v_limit_road);
-    JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_road", v_limit_road);
-    JSON_DEBUG_VALUE("VisionLonBehavior_road_radius", road_radius);
+    JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
+    JSON_DEBUG_VALUE("road_radius", road_radius);
   }
   /*
   if(ref_points.size() > 0) {
@@ -284,8 +284,8 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
   }
 
   v_limit_in_turns_ = v_limit_in_turns;
-  JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_steering", v_limit_steering);
-  JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_in_turns", v_limit_in_turns);
+  JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
+  JSON_DEBUG_VALUE("v_limit_in_turns", v_limit_in_turns);
 
   a_target_.first = std::min(a_target_.first, a_target_in_turns);
   a_target_.second = std::min(a_target_.second, a_x_allowed);
@@ -328,8 +328,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
   near_cars.clear();
   for (auto &track : front_tracks) {
     // ignore obj without camera source
-    if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
-        (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+    if ((track.fusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
       continue;
     };
     if (std::abs(track.y_rel) < 10.0 && std::abs(track.d_rel) < 20.0 &&
@@ -339,8 +338,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
   }
   for (auto &track : side_tracks) {
     // ignore obj without camera source
-    if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
-        (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+    if ((track.fusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
       continue;
     };
     if (std::abs(track.y_rel) < 10.0 && std::abs(track.d_rel) < 20.0 &&
@@ -676,7 +674,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
   LOG_DEBUG("a_target_.first : [%f] ,a_target_.second : [%f]\n",
             a_target_.first, a_target_.second);
 
-  JSON_DEBUG_VALUE("VisionLonBehavior_cutin_v_target", v_target_);
+  JSON_DEBUG_VALUE("v_target_cutin", v_limit_cutin[v_min_index]);
   return true;
 }
 
@@ -706,10 +704,10 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
     v_target_lead =
         calc_desired_speed(lead_one->d_rel, d_des, lead_one->v_lead);
 
-    JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_id", lead_one->track_id);
-    JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_dis", lead_one->d_rel);
-    JSON_DEBUG_VALUE("VisionLonBehavior_lead_one_vel", lead_one->v_lead);
-    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_one", v_target_lead);
+    JSON_DEBUG_VALUE("lead_one_id", lead_one->track_id);
+    JSON_DEBUG_VALUE("lead_one_dis", lead_one->d_rel);
+    JSON_DEBUG_VALUE("lead_one_vel", lead_one->v_lead);
+    JSON_DEBUG_VALUE("v_target_lead_one", v_target_lead);
 
     // leadtwo
     if (lead_two != nullptr && lead_two->type != 0) {
@@ -724,15 +722,15 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
       v_target_lead_2 =
           calc_desired_speed(lead_two->d_rel, d_des_2, lead_two->v_lead);
 
-      JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_id", lead_two->track_id);
-      JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_dis", lead_two->d_rel);
-      JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_vel", lead_two->v_lead);
-      JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_two", v_target_lead_2);
+      JSON_DEBUG_VALUE("lead_two_id", lead_two->track_id);
+      JSON_DEBUG_VALUE("lead_two_dis", lead_two->d_rel);
+      JSON_DEBUG_VALUE("lead_two_vel", lead_two->v_lead);
+      JSON_DEBUG_VALUE("v_target_lead_two", v_target_lead_2);
     } else {
-      JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_id", 0);
-      JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_dis", 0);
-      JSON_DEBUG_VALUE("VisionLonBehavior_lead_two_vel", 0);
-      JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_two", 0);
+      JSON_DEBUG_VALUE("lead_two_id", 0);
+      JSON_DEBUG_VALUE("lead_two_dis", 0);
+      JSON_DEBUG_VALUE("lead_two_vel", 0);
+      JSON_DEBUG_VALUE("v_target_lead_two", 0);
     }
     // listen to lead that makes you go slower
     if ((v_target_lead_2 < v_target_lead) && (lead_two != nullptr)) {
@@ -757,6 +755,10 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
     LOG_DEBUG("desire_des : [%f] , v_target_ : [%f] \n", d_des, v_target_);
 
   } else {
+    JSON_DEBUG_VALUE("lead_one_id", 0);
+    JSON_DEBUG_VALUE("lead_one_dis", 0);
+    JSON_DEBUG_VALUE("lead_one_vel", 0);
+    JSON_DEBUG_VALUE("v_target_lead_one", 0);
     a_target.first = 0.0;
     a_target.second = 0.0;
   }
@@ -818,20 +820,17 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
     a_target_.first = std::min(a_target_.first, a_target_temp.first);
     v_target_ = std::min(v_target_, v_target_temp_lead);
 
-    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_id",
-                     temp_lead_one->track_id);
-    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_dis",
-                     temp_lead_one->d_rel);
-    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_vel",
-                     temp_lead_one->v_lead);
-    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_temp_lead_one", v_target_);
+    JSON_DEBUG_VALUE("temp_lead_one_id", temp_lead_one->track_id);
+    JSON_DEBUG_VALUE("temp_lead_one_dis", temp_lead_one->d_rel);
+    JSON_DEBUG_VALUE("temp_lead_one_vel", temp_lead_one->v_lead);
+    JSON_DEBUG_VALUE("v_target_temp_lead_one", v_target_temp_lead);
   } else {
     a_target_temp.first = 0.0;
     a_target_temp.second = 0.0;
-    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_id", 0);
-    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_dis", 0);
-    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_one_vel", 0);
-    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_temp_lead_one", 0);
+    JSON_DEBUG_VALUE("temp_lead_one_id", 0);
+    JSON_DEBUG_VALUE("temp_lead_one_dis", 0);
+    JSON_DEBUG_VALUE("temp_lead_one_vel", 0);
+    JSON_DEBUG_VALUE("v_target_temp_lead_one", 0);
   }
   // tleadtwo
   if (temp_lead_two != nullptr && lc_status == "none" &&
@@ -854,22 +853,20 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
 
     a_target_.first =
         std::min(a_target_.first, std::max(a_target_temp2.first, -0.6));
-    v_target_ = std::min(v_target_, std::max(v_target_temp_lead_2, v_ego - 2));
+    double v_temp2 = std::max(v_target_temp_lead_2, v_ego - 2);
+    v_target_ = std::min(v_target_, v_temp2);
 
-    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_id",
-                     temp_lead_two->track_id);
-    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_dis",
-                     temp_lead_two->d_rel);
-    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_vel",
-                     temp_lead_two->v_lead);
-    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_temp_lead_two", v_target_);
+    JSON_DEBUG_VALUE("temp_lead_two_id", temp_lead_two->track_id);
+    JSON_DEBUG_VALUE("temp_lead_two_dis", temp_lead_two->d_rel);
+    JSON_DEBUG_VALUE("temp_lead_two_vel", temp_lead_two->v_lead);
+    JSON_DEBUG_VALUE("v_target_temp_lead_two", v_temp2);
   } else {
     a_target_temp2.first = 0.0;
     a_target_temp2.second = 0.0;
-    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_id", 0);
-    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_dis", 0);
-    JSON_DEBUG_VALUE("VisionLonBehavior_temp_lead_two_vel", 0);
-    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_temp_lead_two", 0);
+    JSON_DEBUG_VALUE("temp_lead_two_id", 0);
+    JSON_DEBUG_VALUE("temp_lead_two_dis", 0);
+    JSON_DEBUG_VALUE("temp_lead_two_vel", 0);
+    JSON_DEBUG_VALUE("v_target_temp_lead_two", 0);
   }
 
   // debug info
@@ -924,7 +921,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(double v_ego) {
     v_target_ = std::min(v_target_ramp, v_target_);
 
     LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
-    JSON_DEBUG_VALUE("VisionLonBehavior_v_target_ramp", v_target_ramp);
+    JSON_DEBUG_VALUE("v_target_ramp", v_target_ramp);
     JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
     JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
     LOG_DEBUG("v_target : [%f] \n", v_target_);
@@ -945,7 +942,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(double v_ego) {
 
   LOG_DEBUG("dis_to_ramp : [%f] \n", dis_to_ramp);
   LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
-  JSON_DEBUG_VALUE("VisionLonBehavior_v_target_ramp", v_target_ramp);
+  JSON_DEBUG_VALUE("v_target_ramp", v_target_ramp);
   JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
   JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
   LOG_DEBUG("v_target : [%f] \n", v_target_);
@@ -1126,8 +1123,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
   front_cut_in_track_id.clear();
   for (auto &track : front_tracks) {
     // ignore obj without camera source
-    if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
-        (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+    if ((track.fusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
       continue;
     };
     if (!track.is_lead && track.cutinp > cutinp_threshold &&
@@ -1158,13 +1154,11 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
           "d_des: [%f], v_target_car: [%f], v_target_potental_cutin: [%f]\n",
           d_des, v_target_car, v_target_potental_cutin);
       // debug info
-      JSON_DEBUG_VALUE("VisionLonBehavior_potental_cutin_v_target",
-                       v_target_potental_cutin);
-      JSON_DEBUG_VALUE("VisionLonBehavior_potental_cutin_track_id",
-                       track.track_id);
+      JSON_DEBUG_VALUE("v_target_potental_cutin", v_target_potental_cutin);
+      JSON_DEBUG_VALUE("potental_cutin_track_id", track.track_id);
     } else {
-      JSON_DEBUG_VALUE("VisionLonBehavior_potental_cutin_v_target", 0);
-      JSON_DEBUG_VALUE("VisionLonBehavior_potental_cutin_track_id", 0);
+      JSON_DEBUG_VALUE("v_target_potental_cutin", 0);
+      JSON_DEBUG_VALUE("potental_cutin_track_id", 0);
     }
   }
 
@@ -1191,7 +1185,6 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
 
   LOG_DEBUG("v_target_: [%f], a_target_.first: [%f]\n", v_target_,
             a_target_.first);
-  JSON_DEBUG_VALUE("VisionLonBehavior_potental_cutin_v_target", v_target_);
 
   return true;
 }
@@ -1494,8 +1487,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(
       if (front_target_tracks != nullptr) {
         for (auto &track : *front_target_tracks) {
           // ignore obj without camera source
-          if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
-              (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+          if ((track.fusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
             continue;
           };
           lane_changing_cars.push_back(&track);
@@ -1507,8 +1499,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(
       if (side_target_tracks != nullptr) {
         for (auto &track : *side_target_tracks) {
           // ignore obj without camera source
-          if ((track.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
-              (track.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
+          if ((track.fusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
             continue;
           };
           lane_changing_cars.push_back(&track);
@@ -1649,6 +1640,9 @@ double VisionLongitudinalBehaviorPlanner::calc_desired_distance(
     const double v_lead, const double v_ego, const std::string &lc_request,
     const bool is_accident_car, const bool is_temp_lead) {
   LOG_DEBUG("-----calc_desired_distance \n");
+  // 受限感知性能，取非负
+  double v_lead_clip = std::max(v_lead, 0.0);
+
   double t_gap = interp(v_ego, _T_GAP_VEGO_BP, _T_GAP_VEGO_V);
   if (lc_request != "none") {
     t_gap = t_gap * (0.6 + v_ego * 0.01);
@@ -1657,7 +1651,7 @@ double VisionLongitudinalBehaviorPlanner::calc_desired_distance(
     t_gap = t_gap * 0.3;
   }
   // Brake hysteresis
-  double v_relative = std::min(std::max(v_ego - v_lead, 0.0), 5.0);
+  double v_relative = std::min(std::max(v_ego - v_lead_clip, 0.0), 5.0);
   double distance_hysteresis = v_relative * config_.ttc_brake_hysteresis;
   // distance when at zero speed
   double d_offset = config_.dis_zero_speed;
@@ -1668,8 +1662,8 @@ double VisionLongitudinalBehaviorPlanner::calc_desired_distance(
   LOG_DEBUG("distance_hysteresis : [%f] \n", distance_hysteresis);
   LOG_DEBUG("ttc gap : [%f] \n", t_gap);
   LOG_DEBUG("desired_distance : [%f] \n",
-            d_offset + v_lead * t_gap + distance_hysteresis);
-  return d_offset + v_lead * t_gap + distance_hysteresis;
+            d_offset + v_lead_clip * t_gap + distance_hysteresis);
+  return d_offset + v_lead_clip * t_gap + distance_hysteresis;
 }
 
 double VisionLongitudinalBehaviorPlanner::calc_desired_speed(

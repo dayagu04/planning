@@ -26,6 +26,8 @@
   "parking_space_release_dis_max": 2.0,
   "reference_point_velocity": 2.0,
   "approach_distance_threshold_planning": 50,
+  "nudge_buffer_road_boundary": 0.5,
+  "nudge_buffer_lane_boundary": 0.2,
   "velocity_upper_bound": 34.72,
   "velocity_upper_bound_scale_rate": 1.2,
   "acceleration_upper_bound": 1.0,
@@ -106,8 +108,8 @@
   "care_area_s_len": 0.0,
   "min_desired_target_s": 4.5,
   "enable_hnp_functions": true,
-  "d_poly_lat_offset_rate": 0.2,
-  "d_poly_max_lat_offset": 1.5,
+  "d_poly_lat_offset_rate": 0.12,
+  "d_poly_max_lat_offset": 2.0,
   "lc_t_actuator_delay": 0.02,
   "lc_back_available_thr": 1.5,
   "lc_back_smooth_thr": 0.3,
@@ -138,6 +140,10 @@
     "into_ramp_threshold": 2000.0,
     "close_to_split_merge_threshold": 100.0,
     "avoid_truck_time_distance_threshold": 1.5
+  },
+  "act_request": {
+    "enable_act_request_function": true,
+    "enable_speed_threshold": 60.0
   },
   "int_request": {
     "enable_int_request_function": true,

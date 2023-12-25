@@ -306,7 +306,7 @@ void GeneralPlanning::FillPlanningTrajectory(
     LOG_DEBUG("presee_y_dist: [%f]: \n", presee_y_dist);
 
     if (d_polynomial.size() == 4) {
-      if (std::fabs(d_polynomial[3] + presee_y_dist) * 0.5 > max_lat_offset) {
+      if (std::fabs(d_polynomial[3] + presee_y_dist) > max_lat_offset) {
         limited_polynomial_3 += planning_math::Clamp(
             d_polynomial[3], -lat_offset_rate, lat_offset_rate);
       } else {

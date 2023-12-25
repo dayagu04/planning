@@ -46,6 +46,8 @@ class ActRequest : public LaneChangeRequest {
   double vrel_l_ = 1000.;
   double vrel_r_ = 1000.;
   std::string act_request_source_{"none"};
+  ActRequestConfig act_request_config_;
+
   void print_forbid_generating_reason(
       const std::vector<std::string> forbid_generating_reason);
   void check_lc_forbid_reason(

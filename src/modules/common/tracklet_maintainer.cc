@@ -626,8 +626,10 @@ void TrackletMaintainer::fisheye_helper(const PredictionObject &prediction,
   // calcuate cutin related
   // 转换为障碍物相对自车车头距离
   auto vehicle_param = session_->vehicle_config_context().get_vehicle_param();
-  object.location_head = std::max(object.points_3d_f.x, object.points_3d_r.x) - vehicle_param.rear_axis_to_front_edge;
-  object.location_tail = std::min(object.points_3d_f.x, object.points_3d_r.x) - vehicle_param.rear_axis_to_front_edge;
+  object.location_head = std::max(object.points_3d_f.x, object.points_3d_r.x) -
+                         vehicle_param.rear_axis_to_front_edge;
+  object.location_tail = std::min(object.points_3d_f.x, object.points_3d_r.x) -
+                         vehicle_param.rear_axis_to_front_edge;
 
   if (std::abs(object.points_3d_f.y) < std::abs(object.points_3d_r.y)) {
     object.y_min = object.points_3d_f.y;
