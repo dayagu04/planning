@@ -31,7 +31,7 @@ class LaneDepartWarning {
   uint8 StateMachine();
   void set_ldw_output_info() {
     // ldw_state_ = measurement_str_.state;
-    switch (measurement_str_.state)  {
+    switch (measurement_str_.state) {
       case 0:
         ldw_state_ = PlanningHMI::
             LDWOutputInfoStr_LDWFunctionFSMWorkState_LDW_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;

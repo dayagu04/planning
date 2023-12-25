@@ -252,7 +252,6 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   const auto is_have_limiter =
       apa_world_ptr_->GetSlotManagerPtr()->GetSelectedLimiter(limiter_point);
 
-
   // std::cout << "limiter1: " << limiter_point.first.transpose() << " \n";
   // std::cout << "limiter2: " << limiter_point.second.transpose() << " \n";
 

@@ -80,8 +80,7 @@ void CollisionDetector::AddObstacles(
                               obstacle_global_vec.end());
 }
 
-void CollisionDetector::AddObstacles(
-    const Eigen::Vector2d &obstacle_global) {
+void CollisionDetector::AddObstacles(const Eigen::Vector2d &obstacle_global) {
   obstacle_global_vec_.reserve(obstacle_global_vec_.size() + 1);
   obstacle_global_vec_.emplace_back(obstacle_global);
 }

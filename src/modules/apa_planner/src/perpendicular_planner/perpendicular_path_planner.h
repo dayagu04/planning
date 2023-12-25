@@ -248,12 +248,11 @@ class PerpendicularPathPlanner {
     std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> tangent_pt_vec;
   };
   const bool CalInverseTwoArcGeometry(
-      const pnc::geometry_lib::PathPoint &start_pose,
-      const uint8_t direction, const uint8_t steer,
-      std::vector<PathSegment> &inverse_two_segmemts,
+      const pnc::geometry_lib::PathPoint &start_pose, const uint8_t direction,
+      const uint8_t steer, std::vector<PathSegment> &inverse_two_segmemts,
       DebugInfo &debuginfo) const;
 
-  const CollisionDetector& GetCollisionDetector() {
+  const CollisionDetector &GetCollisionDetector() {
     return collision_detector_;
   }
 
@@ -270,9 +269,8 @@ class PerpendicularPathPlanner {
   const bool MultiStepPlan();
 
   const bool CalOnePathInMultiStep(
-      const pnc::geometry_lib::PathPoint &current_pose,
-      const uint8_t direction, const uint8_t steer,
-      std::vector<PathSegment> &segments);
+      const pnc::geometry_lib::PathPoint &current_pose, const uint8_t direction,
+      const uint8_t steer, std::vector<PathSegment> &segments);
 
   const bool LineArcLinePlan(std::vector<PathSegment> &line_arc_line_segments,
                              const pnc::geometry_lib::PathPoint &start_pose,
@@ -296,14 +294,14 @@ class PerpendicularPathPlanner {
       const pnc::geometry_lib::Circle &circle, const uint8_t steer,
       const uint8_t gear) const;
 
-  const bool InverseTwoArcPlan(
-      const pnc::geometry_lib::PathPoint &current_pose,
-      const uint8_t direction, const uint8_t steer, const double radius,
-      PathSegment &opt_arc_segment);
+  const bool InverseTwoArcPlan(const pnc::geometry_lib::PathPoint &current_pose,
+                               const uint8_t direction, const uint8_t steer,
+                               const double radius,
+                               PathSegment &opt_arc_segment);
 
   const bool CalInverseTwoArcGeometry(
-      const pnc::geometry_lib::PathPoint &start_pose,
-      const uint8_t direction, const uint8_t steer,
+      const pnc::geometry_lib::PathPoint &start_pose, const uint8_t direction,
+      const uint8_t steer,
       std::vector<PathSegment> &inverse_two_segmemts) const;
 
   const bool IsSeenAsLine(
@@ -361,9 +359,8 @@ class PerpendicularPathPlanner {
                                             const double radius,
                                             const uint8_t steer) const;
 
-  const bool IsRightCircle(
-      const pnc::geometry_lib::PathPoint &ego_pose,
-      const Eigen::Vector2d &center) const;
+  const bool IsRightCircle(const pnc::geometry_lib::PathPoint &ego_pose,
+                           const Eigen::Vector2d &center) const;
 
   const bool IsRightCircle(const Eigen::Vector2d &ego_pos,
                            const double ego_heading,

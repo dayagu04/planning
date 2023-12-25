@@ -10,9 +10,9 @@
 
 namespace planning {
 
-using framework::Frame;
 using ::FuncStateMachine::FuncStateMachine;
 using ::FuncStateMachine::FunctionalState;
+using framework::Frame;
 
 bool IsSlotSelected(Frame* const frame) {
   const auto& func_state_machine = frame->session()
@@ -60,9 +60,8 @@ bool IsReplanNecessary(const FuncStateMachine& func_state_machine) {
              FunctionalState::PARK_IN_ACTIVATE_CONTROL;
 }
 
-void SetStoppingPlanningOutput(
-    PlanningOutput::PlanningOutput& planning_output,
-    const pnc::geometry_lib::PathPoint& ego_pose) {
+void SetStoppingPlanningOutput(PlanningOutput::PlanningOutput& planning_output,
+                               const pnc::geometry_lib::PathPoint& ego_pose) {
   auto trajectory = planning_output.mutable_trajectory();
 
   trajectory->set_available(true);
@@ -89,9 +88,8 @@ void SetStoppingPlanningOutput(
   trajectory_point->set_jerk(0.0);
 }
 
-void SetFinishedPlanningOutput(
-    PlanningOutput::PlanningOutput& planning_output,
-    const pnc::geometry_lib::PathPoint& ego_pose) {
+void SetFinishedPlanningOutput(PlanningOutput::PlanningOutput& planning_output,
+                               const pnc::geometry_lib::PathPoint& ego_pose) {
   planning_output.mutable_planning_status()->set_apa_planning_status(
       ::PlanningOutput::ApaPlanningStatus::FINISHED);
 
@@ -99,9 +97,8 @@ void SetFinishedPlanningOutput(
   std::cout << "set finished planning output" << std::endl;
 }
 
-void SetFailedPlanningOutput(
-    PlanningOutput::PlanningOutput& planning_output,
-    const pnc::geometry_lib::PathPoint& ego_pose) {
+void SetFailedPlanningOutput(PlanningOutput::PlanningOutput& planning_output,
+                             const pnc::geometry_lib::PathPoint& ego_pose) {
   planning_output.mutable_planning_status()->set_apa_planning_status(
       ::PlanningOutput::ApaPlanningStatus::FAILED);
 
@@ -109,9 +106,8 @@ void SetFailedPlanningOutput(
   std::cout << "set failed planning output" << std::endl;
 }
 
-void SetIdlePlanningOutput(
-    PlanningOutput::PlanningOutput& planning_output,
-    const pnc::geometry_lib::PathPoint& ego_pose) {
+void SetIdlePlanningOutput(PlanningOutput::PlanningOutput& planning_output,
+                           const pnc::geometry_lib::PathPoint& ego_pose) {
   planning_output.mutable_planning_status()->set_apa_planning_status(
       ::PlanningOutput::ApaPlanningStatus::NONE);
 

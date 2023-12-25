@@ -276,8 +276,9 @@ const bool IsPointInPolygon(const std::vector<Eigen::Vector2d> &polygon,
 
 // The eigenvalues of the symmetry matrix must be real numbers ; so there is no
 // need to use bool
-const bool MinimumBoundingBox(std::vector<Eigen::Vector2d> &target_boundingbox,
-                        const std::vector<Eigen::Vector2d> &original_vertices);
+const bool MinimumBoundingBox(
+    std::vector<Eigen::Vector2d> &target_boundingbox,
+    const std::vector<Eigen::Vector2d> &original_vertices);
 }  // namespace geometry_lib
 }  // namespace pnc
 

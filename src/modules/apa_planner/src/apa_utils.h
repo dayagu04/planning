@@ -21,21 +21,17 @@ bool IsReplanNecessary(
 bool IsSlotLineCrossable(
     const ParkingFusion::ParkingFusionSlot& parking_fusion_slot);
 
-void SetStoppingPlanningOutput(
-    PlanningOutput::PlanningOutput& planning_output,
-    const pnc::geometry_lib::PathPoint& ego_pose);
+void SetStoppingPlanningOutput(PlanningOutput::PlanningOutput& planning_output,
+                               const pnc::geometry_lib::PathPoint& ego_pose);
 
-void SetFinishedPlanningOutput(
-    PlanningOutput::PlanningOutput& planning_output,
-    const pnc::geometry_lib::PathPoint& ego_pose);
+void SetFinishedPlanningOutput(PlanningOutput::PlanningOutput& planning_output,
+                               const pnc::geometry_lib::PathPoint& ego_pose);
 
-void SetFailedPlanningOutput(
-    PlanningOutput::PlanningOutput& planning_output,
-    const pnc::geometry_lib::PathPoint& ego_pose);
+void SetFailedPlanningOutput(PlanningOutput::PlanningOutput& planning_output,
+                             const pnc::geometry_lib::PathPoint& ego_pose);
 
-void SetIdlePlanningOutput(
-    PlanningOutput::PlanningOutput& planning_output,
-    const pnc::geometry_lib::PathPoint& ego_pose);
+void SetIdlePlanningOutput(PlanningOutput::PlanningOutput& planning_output,
+                           const pnc::geometry_lib::PathPoint& ego_pose);
 
 bool IsValidParkingState(
     const ::FuncStateMachine::FunctionalState& func_state_machine);

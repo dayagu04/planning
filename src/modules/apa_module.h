@@ -22,8 +22,7 @@ class ApaPlanningModule : public framework::PlanningModule {
   bool reset(const ::google::protobuf::Message* config) override;
 
  private:
-  std::unique_ptr<apa_planner::ApaPlanInterface> apa_interface_ptr_ =
-      nullptr;
+  std::unique_ptr<apa_planner::ApaPlanInterface> apa_interface_ptr_ = nullptr;
 };
 
 // REGISTER_MODULE_FACTORY(ApaPlanningModule)

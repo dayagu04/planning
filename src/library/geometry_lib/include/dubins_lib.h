@@ -128,9 +128,8 @@ class DubinsLibrary {
   static void GetSampling(Output& Output, const double ds,
                           const bool is_complete_path);
 
-  static void GetTransform(
-      std::vector<geometry_lib::PathPoint>& path_point_vec,
-      const geometry_lib::LocalToGlobalTf& l2g_tf);
+  static void GetTransform(std::vector<geometry_lib::PathPoint>& path_point_vec,
+                           const geometry_lib::LocalToGlobalTf& l2g_tf);
 
   void SetOutput(const Output& Output) { output_ = Output; }
   const Output& GetOutput() const { return output_; }

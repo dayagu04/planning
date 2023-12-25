@@ -95,9 +95,7 @@ static inline void calc_fusion_latency(
         fusion_out_time_us = input.out_ts_us();
         break;
       }
-      default: {
-        break;
-      }
+      default: { break; }
     }
   }
 
@@ -137,9 +135,7 @@ static void calc_location_latency(
         location_out_time_us = input.out_ts_us();
         break;
       }
-      default: {
-        break;
-      }
+      default: { break; }
     }
   }
 
