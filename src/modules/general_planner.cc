@@ -111,28 +111,31 @@ bool GeneralPlanner::Run(planning::framework::Frame *frame) {
 
   bool active = session_->environmental_model().GetVehicleDbwStatus();
 #ifndef CHERY_T26
-  if (active && !object_selector_->update(
-                    session_->planning_context()
-                        .lat_behavior_state_machine_output()
-                        .curr_state,
-                    session_->planning_context()
-                        .scenario_state_machine()
-                        ->get_start_move_dist_lane(),
-                    false, 80., false, false, false, false, false, -1)) {
-    LOG_DEBUG("object_selector_update fail\n");
-    return false;
-  } else {
-    if (!active) {
-      object_selector_->left_alc_car().clear();
-      object_selector_->right_alc_car().clear();
-      object_selector_->left_alc_car_cnt().clear();
-      object_selector_->right_alc_car_cnt().clear();
-      LOG_DEBUG("object_selector_ cleared\n");
+  if (not session_->is_hpp_scene()) {
+    if (active && !object_selector_->update(
+                      session_->planning_context()
+                          .lat_behavior_state_machine_output()
+                          .curr_state,
+                      session_->planning_context()
+                          .scenario_state_machine()
+                          ->get_start_move_dist_lane(),
+                      false, 80., false, false, false, false, false, -1)) {
+      LOG_DEBUG("object_selector_update fail\n");
+      return false;
     } else {
-      LOG_DEBUG("object_selector_updated \n");
+      if (!active) {
+        object_selector_->left_alc_car().clear();
+        object_selector_->right_alc_car().clear();
+        object_selector_->left_alc_car_cnt().clear();
+        object_selector_->right_alc_car_cnt().clear();
+        LOG_DEBUG("object_selector_ cleared\n");
+      } else {
+        LOG_DEBUG("object_selector_updated \n");
+      }
     }
+    LOG_DEBUG("object_selector_update end\n");
   }
-  LOG_DEBUG("object_selector_update end\n");
+
 #endif
 
   // Step 2) update state machine

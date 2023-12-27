@@ -187,7 +187,6 @@ void PlanningAdapter::Proc() {
     local_view_.ground_line_perception = ground_line_perception_msg_;
     local_view_.ground_line_perception_recv_time =
         ground_line_perception_msg_recv_time_;
-    // TODO: 和数采同步后再添加
     input_topic_timestamp->set_ground_line(ground_line_perception_msg_.header().timestamp());
     input_topic_latency->set_ground_line(
         get_latency(start_time,

@@ -268,15 +268,25 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
   JSON_DEBUG_VALUE("lon_err", lon_err)
   JSON_DEBUG_VALUE("dist_err", dist_err)
 
-  if (fabs(lat_err) > 0.6 || lat_reset_flag) {
+  double max_replan_lat_err = 0.6;
+  double max_replan_lon_err = 1.0;
+  double max_replan_dist_err = 1.5;
+
+  if (session_->is_hpp_scene()) {
+    max_replan_lat_err = 0.4;
+    max_replan_lon_err = 0.5;
+    max_replan_dist_err = 0.75;
+  }
+
+  if (fabs(lat_err) > max_replan_lat_err || lat_reset_flag) {
     lat_replan = true;
   }
 
-  if (fabs(lon_err) > 1.0 || lon_reset_flag) {
+  if (fabs(lon_err) > max_replan_lon_err || lon_reset_flag) {
     lon_replan = true;
   }
 
-  if (fabs(dist_replan) > 1.5) {
+  if (fabs(dist_replan) > max_replan_dist_err) {
     dist_replan = true;
   }
 
@@ -370,7 +380,10 @@ bool EgoStateManager::LateralStitch() {
     // const double s = motion_planning_info.s_t_spline(planning_loop_dt);
 
     // max delta as equivalent steer angle = 120 deg
-    static const double max_delta = 120.0 / 57.3 / 15.7;
+    double max_delta = 120.0 / 57.3 / 15.7;
+    if (session_->is_hpp_scene()) {
+      max_delta = 470.0 / 57.3 / 15.7; 
+    }
 
     lat_init_state.set_x(motion_planning_info.x_t_spline(planning_loop_dt));
     lat_init_state.set_y(motion_planning_info.y_t_spline(planning_loop_dt));

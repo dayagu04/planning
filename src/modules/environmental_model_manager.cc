@@ -207,12 +207,14 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("reference_path_manager update cost:%f\n", time_end - time_start);
 
-  time_start = IflyTime::Now_ms();
-  lateral_obstacle_ptr_->update();
-  time_end = IflyTime::Now_ms();
-  LOG_DEBUG("lateral_obstacle update cost:%f\n", time_end - time_start);
+  if (session_->is_hpp_scene()) {
+    time_start = IflyTime::Now_ms();
+    lateral_obstacle_ptr_->update();
+    time_end = IflyTime::Now_ms();
+    LOG_DEBUG("lateral_obstacle update cost:%f\n", time_end - time_start);
 
-  lane_tracks_mgr_ptr_->update_lane_tracks();
+    lane_tracks_mgr_ptr_->update_lane_tracks();
+  }
 
   history_obstacle_ptr_->Update();
 
