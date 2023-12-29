@@ -7,6 +7,7 @@
 #include "environmental_model.h"
 #include "frenet_ego_state.h"
 #include "history_obstacle_manager.h"
+#include "lateral_behavior_planner.pb.h"
 #include "lateral_obstacle.h"
 #include "math/linear_interpolation.h"
 #include "obstacle_manager.h"
@@ -56,6 +57,11 @@ struct LatDeciderInfo {
 //   double v_limit_final;
 // };
 
+struct ObstacleBorderInfo {
+  int obstacle_id;
+  double obstacle_border;
+};
+
 class GeneralLateralDecider : public Task {
  public:
   explicit GeneralLateralDecider(
@@ -102,10 +108,10 @@ class GeneralLateralDecider : public Task {
       const MapObstacleDecision &map_obstacle_decision,
       const ObstacleDecisions &obstacle_decisions,
       std::vector<std::pair<double, double>> &frenet_safe_bounds,
-      std::vector<std::pair<double, double>> &frenet_path_bounds);
+      std::vector<std::pair<double, double>> &frenet_path_bounds,
+      LatDeciderOutput &lat_decider_output);
 
   void GenerateEnuBoundaryPoints(
-
       const std::vector<std::pair<double, double>> &frenet_safe_bounds,
       const std::vector<std::pair<double, double>> &frenet_path_bounds,
       LatDeciderOutput &lat_decider_output);
@@ -122,15 +128,20 @@ class GeneralLateralDecider : public Task {
   void CalcLateralBehaviorOutput();
 
   void ConstructStaticObstacleTotalPolygons(
-      vector<planning_math::Polygon2d> &left_groundline_polygons,
-      vector<planning_math::Polygon2d> &right_groundline_polygons,
-      vector<planning_math::Polygon2d> &left_parking_space_polygons,
-      vector<planning_math::Polygon2d> &right_parking_space_polygons);
+      std::vector<std::pair<int, planning_math::Polygon2d>>
+          &left_groundline_polygons,
+      std::vector<std::pair<int, planning_math::Polygon2d>>
+          &right_groundline_polygons,
+      std::vector<std::pair<int, planning_math::Polygon2d>>
+          &left_parking_space_polygons,
+      std::vector<std::pair<int, planning_math::Polygon2d>>
+          &right_parking_space_polygons);
 
-  double GetNearestObstacleBorder(
+  ObstacleBorderInfo GetNearestObstacleBorder(
       const planning_math::Polygon2d &care_polygon, double care_area_s_start,
       double care_area_s_end,
-      const std::vector<planning_math::Polygon2d> &obstacle_frenet_polygons,
+      const std::vector<std::pair<int, planning_math::Polygon2d>>
+          &obstacle_frenet_polygons,
       bool is_left, bool is_sorted, bool is_curve, int index,
       const TrajectoryPoints &traj_points);
 
@@ -150,6 +161,7 @@ class GeneralLateralDecider : public Task {
   bool is_need_save_near_obstacle_ = true;
   LatDeciderLaneChangeInfo lat_lane_change_info_ =
       LatDeciderLaneChangeInfo::NONE;
+  planning::common::LateralBehaviorDebugInfo lat_debug_info_;
 };
 
 }  // namespace planning

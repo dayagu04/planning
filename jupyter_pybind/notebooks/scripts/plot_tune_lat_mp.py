@@ -27,7 +27,7 @@ lateral_motion_planning_py.Init()
 lat_motion_plan_input0 = bag_loader.plan_debug_msg['data'][-1].lateral_motion_planning_input
 
 # load lateral planning (behavior and motion)
-fig1, fig2, fig3, fig4, fig5, fig6, fig7, lat_plan_data = load_lat_plan_figure(fig1)
+fig1, fig2, fig3, fig4, fig5, fig6, fig7, tab1, lat_plan_data = load_lat_plan_figure(fig1)
 
 coord_tf = coord_transformer()
 
@@ -133,5 +133,5 @@ def slider_callback(bag_time, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound,
 
   push_notebook()
 
-bkp.show(row(fig1, fig7, column(fig2, fig3, fig4, fig5, fig6)), notebook_handle=True)
+bkp.show(row(fig1, column(fig7, tab1), column(fig2, fig3, fig4, fig5, fig6)), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)

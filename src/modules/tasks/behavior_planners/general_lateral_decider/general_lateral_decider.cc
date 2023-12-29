@@ -100,7 +100,7 @@ bool GeneralLateralDecider::Execute(planning::framework::Frame *frame) {
   std::vector<std::pair<double, double>> frenet_path_bounds;
 
   ExtractBoundary(map_obstacle_decisions, obstacle_decisions,
-                  frenet_safe_bounds, frenet_path_bounds);
+                  frenet_safe_bounds, frenet_path_bounds, lat_decider_output);
 
   GenerateEnuBoundaryPoints(frenet_safe_bounds, frenet_path_bounds,
                             lat_decider_output);
@@ -328,8 +328,9 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
   double right_border_distance{10.};
   double l_offset_limit = 20.0;
 
-  std::vector<Polygon2d> left_groundline_polygons, right_groundline_polygons,
-      left_parking_space_polygons, right_parking_space_polygons;
+  std::vector<std::pair<int, Polygon2d>> left_groundline_polygons,
+      right_groundline_polygons, left_parking_space_polygons,
+      right_parking_space_polygons;
   ConstructStaticObstacleTotalPolygons(
       left_groundline_polygons, right_groundline_polygons,
       left_parking_space_polygons, right_parking_space_polygons);
@@ -378,17 +379,17 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
           ref_path_points_[lower_truncation_idx].distance_to_right_lane_border;
     }
 
-    double left_groundline_obstacle_border = GetNearestObstacleBorder(
+    ObstacleBorderInfo left_groundline_obstacle_border = GetNearestObstacleBorder(
         care_polygon, care_area_s_start, care_area_s_end,
         left_groundline_polygons, true, false, false, i, ref_traj_points_);
-    double right_groundline_obstacle_border = GetNearestObstacleBorder(
+    ObstacleBorderInfo right_groundline_obstacle_border = GetNearestObstacleBorder(
         care_polygon, care_area_s_start, care_area_s_end,
         right_groundline_polygons, false, false, false, i, ref_traj_points_);
 
-    double left_parking_space_border = GetNearestObstacleBorder(
+    ObstacleBorderInfo left_parking_space_border = GetNearestObstacleBorder(
         care_polygon, care_area_s_start, care_area_s_end,
         left_parking_space_polygons, true, false, false, i, ref_traj_points_);
-    double right_parking_space_border = GetNearestObstacleBorder(
+    ObstacleBorderInfo right_parking_space_border = GetNearestObstacleBorder(
         care_polygon, care_area_s_start, care_area_s_end,
         right_parking_space_polygons, false, false, false, i, ref_traj_points_);
 
@@ -404,22 +405,22 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
     Bound groundline_obstacle_bound{-l_offset_limit, l_offset_limit};
     groundline_obstacle_bound.upper =
         std::fmin(groundline_obstacle_bound.upper,
-                  left_groundline_obstacle_border -
+                  left_groundline_obstacle_border.obstacle_border -
                       static_obstacle_collision_center_distance -
                       static_obstacle_buffer_extra);
     groundline_obstacle_bound.lower =
         std::fmax(groundline_obstacle_bound.lower,
-                  right_groundline_obstacle_border +
+                  right_groundline_obstacle_border.obstacle_border +
                       static_obstacle_collision_center_distance +
                       static_obstacle_buffer_extra);
     Bound groundline_obstacle_safe_bound{-l_offset_limit, l_offset_limit};
     groundline_obstacle_safe_bound.upper = std::fmin(
         groundline_obstacle_safe_bound.upper,
-        left_groundline_obstacle_border - static_obstacle_safe_center_distance -
+        left_groundline_obstacle_border.obstacle_border - static_obstacle_safe_center_distance -
             static_obstacle_safe_buffer_extra);
     groundline_obstacle_safe_bound.lower =
         std::fmax(groundline_obstacle_safe_bound.lower,
-                  right_groundline_obstacle_border +
+                  right_groundline_obstacle_border.obstacle_border +
                       static_obstacle_safe_center_distance +
                       static_obstacle_safe_buffer_extra);
 
@@ -427,20 +428,20 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
     Bound parking_space_bound{-l_offset_limit, l_offset_limit};
     parking_space_bound.upper = std::fmin(
         parking_space_bound.upper,
-        left_parking_space_border - static_obstacle_collision_center_distance -
+        left_parking_space_border.obstacle_border - static_obstacle_collision_center_distance -
             static_obstacle_buffer_extra);
     parking_space_bound.lower = std::fmax(
         parking_space_bound.lower,
-        right_parking_space_border + static_obstacle_collision_center_distance +
+        right_parking_space_border.obstacle_border + static_obstacle_collision_center_distance +
             static_obstacle_buffer_extra);
     Bound parking_space_safe_bound{-l_offset_limit, l_offset_limit};
     parking_space_safe_bound.upper = std::fmin(
         parking_space_safe_bound.upper,
-        left_parking_space_border - static_obstacle_safe_center_distance -
+        left_parking_space_border.obstacle_border - static_obstacle_safe_center_distance -
             static_obstacle_safe_buffer_extra);
     parking_space_safe_bound.lower = std::fmax(
         parking_space_safe_bound.lower,
-        right_parking_space_border + static_obstacle_safe_center_distance +
+        right_parking_space_border.obstacle_border + static_obstacle_safe_center_distance +
             static_obstacle_safe_buffer_extra);
 
     if (lat_lane_change_info_ == LatDeciderLaneChangeInfo::NONE) {
@@ -501,26 +502,40 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
 
     map_obstacle_decision.lat_bounds.emplace_back(
         WeightedBound{safe_bound.lower, safe_bound.upper,
-                      config_.kPhysicalBoundWeight, BoundInfo{i, "lane"}});
+                      config_.kPhysicalBoundWeight, BoundInfo{-100, "lane"}});
     map_obstacle_decision.lat_bounds.emplace_back(
         WeightedBound{path_bound.lower, path_bound.upper,
-                      config_.kHardBoundWeight, BoundInfo{i, "road"}});
-    map_obstacle_decision.lat_bounds.emplace_back(
-        WeightedBound{groundline_obstacle_bound.lower,
-                      groundline_obstacle_bound.upper, config_.kHardBoundWeight,
-                      BoundInfo{static_cast<int>(i), "groundline_obstacle"}});
+                      config_.kHardBoundWeight, BoundInfo{-100, "road"}});
     map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
-        groundline_obstacle_safe_bound.lower,
-        groundline_obstacle_safe_bound.upper, config_.kPhysicalBoundWeight,
-        BoundInfo{static_cast<int>(i), "groundline_obstacle_soft"}});
-    map_obstacle_decision.lat_bounds.push_back(
-        WeightedBound{parking_space_bound.lower, parking_space_bound.upper,
-                      config_.kSolidLaneBoundWeight,
-                      BoundInfo{static_cast<int>(i), "parking_space"}});
+        groundline_obstacle_bound.lower, l_offset_limit, config_.kHardBoundWeight,
+        BoundInfo{right_groundline_obstacle_border.obstacle_id,
+                  "groundline_obstacle"}});
+    map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+        groundline_obstacle_safe_bound.lower, l_offset_limit, config_.kPhysicalBoundWeight,
+        BoundInfo{right_groundline_obstacle_border.obstacle_id,
+                  "groundline_obstacle_soft"}});
     map_obstacle_decision.lat_bounds.push_back(WeightedBound{
-        parking_space_safe_bound.lower, parking_space_safe_bound.upper,
-        config_.kVirtualLaneBoundWeight,
-        BoundInfo{static_cast<int>(i), "parking_space_soft"}});
+        parking_space_bound.lower, l_offset_limit, config_.kSolidLaneBoundWeight,
+        BoundInfo{right_parking_space_border.obstacle_id, "parking_space"}});
+    map_obstacle_decision.lat_bounds.push_back(WeightedBound{
+        parking_space_safe_bound.lower, l_offset_limit, config_.kVirtualLaneBoundWeight,
+        BoundInfo{right_parking_space_border.obstacle_id,
+                  "parking_space_soft"}});
+    map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+        -l_offset_limit, groundline_obstacle_bound.upper, config_.kHardBoundWeight,
+        BoundInfo{left_groundline_obstacle_border.obstacle_id,
+                  "groundline_obstacle"}});
+    map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+        -l_offset_limit, groundline_obstacle_safe_bound.upper, config_.kPhysicalBoundWeight,
+        BoundInfo{left_groundline_obstacle_border.obstacle_id,
+                  "groundline_obstacle_soft"}});
+    map_obstacle_decision.lat_bounds.push_back(WeightedBound{
+        -l_offset_limit, parking_space_bound.upper, config_.kSolidLaneBoundWeight,
+        BoundInfo{left_parking_space_border.obstacle_id, "parking_space"}});
+    map_obstacle_decision.lat_bounds.push_back(WeightedBound{
+        -l_offset_limit, parking_space_safe_bound.upper, config_.kVirtualLaneBoundWeight,
+        BoundInfo{left_parking_space_border.obstacle_id,
+                  "parking_space_soft"}});
 
     map_obstacle_decisions.emplace_back(std::move(map_obstacle_decision));
   }
@@ -762,6 +777,8 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
     auto lon_decision = LonObstacleDecisionType::IGNORE;
     Bound path_bound{-l_offset_limit, l_offset_limit};
     Bound safe_bound{-l_offset_limit, l_offset_limit};
+    BoundInfo path_bound_info;
+    BoundInfo safe_bound_info;
 
     std::pair<double, double> s_side_range{obstacle_sl_polygon.min_x(),
                                            obstacle_sl_polygon.max_x()};
@@ -848,13 +865,19 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
           care_overlap_polygon.max_y() + collision_center_distance;
       safe_bound.lower = care_overlap_polygon.max_y() + safe_center_distance +
                          safe_extra_distance;
-
+      path_bound_info.type = "LEFT";
+      safe_bound_info.type = "LEFT";
+      path_bound_info.id = obstacle->id();
+      safe_bound_info.id = obstacle->id();
     } else if (lat_decision == LatObstacleDecisionType::RIGHT) {
       path_bound.upper =
           care_overlap_polygon.min_y() - collision_center_distance;
       safe_bound.upper = care_overlap_polygon.min_y() - safe_center_distance -
                          safe_extra_distance;
-
+      path_bound_info.type = "RIGHT";
+      safe_bound_info.type = "RIGHT";
+      path_bound_info.id = obstacle->id();
+      safe_bound_info.id = obstacle->id();
     } else {
       assert(lon_decision != LonObstacleDecisionType::IGNORE);
     }
@@ -923,12 +946,12 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
     position_decision.tp.l = ego_l;
 
     position_decision.lat_bounds.push_back(WeightedBound{
-        path_bound.lower, path_bound.upper, config_.kHardBoundWeight, {}});
+        path_bound.lower, path_bound.upper, config_.kHardBoundWeight, path_bound_info});
     position_decision.lat_bounds.push_back(WeightedBound{
         safe_bound.lower,
         safe_bound.upper,
         config_.dynamic_bound_slack_coefficient * config_.kPhysicalBoundWeight,
-        {}});
+        safe_bound_info});
     position_decision.lat_decision = lat_decision;
     position_decision.lon_decision = lon_decision;
 
@@ -1018,11 +1041,22 @@ void GeneralLateralDecider::ExtractBoundary(
     const MapObstacleDecision &map_obstacle_decision,
     const ObstacleDecisions &obstacle_decisions,
     std::vector<std::pair<double, double>> &frenet_safe_bounds,
-    std::vector<std::pair<double, double>> &frenet_path_bounds) {
+    std::vector<std::pair<double, double>> &frenet_path_bounds,
+    LatDeciderOutput &lat_decider_output) {
   assert(map_obstacle_decision.size() == ref_traj_points_.size());
 
   // auto &path_bounds = lat_decider_output.path_bounds;
   // auto &safe_bounds = lat_decider_output.path_bounds;
+  lat_debug_info_.Clear();
+  lat_debug_info_.mutable_bound_s_vec()->Resize(ref_traj_points_.size(), 0.0);
+  lat_debug_info_.mutable_hard_lower_bound_info_vec()->Reserve(
+      ref_traj_points_.size());
+  lat_debug_info_.mutable_hard_upper_bound_info_vec()->Reserve(
+      ref_traj_points_.size());
+  lat_debug_info_.mutable_soft_lower_bound_info_vec()->Reserve(
+      ref_traj_points_.size());
+  lat_debug_info_.mutable_soft_upper_bound_info_vec()->Reserve(
+      ref_traj_points_.size());
 
   std::vector<WeightedBounds> path_bounds;
   std::vector<WeightedBounds> safe_bounds;
@@ -1039,6 +1073,7 @@ void GeneralLateralDecider::ExtractBoundary(
         safe_bounds[i].emplace_back(map_obstacle_position_lat_bounds[j]);
       }
     }
+    lat_debug_info_.mutable_bound_s_vec()->Set(i, ref_traj_points_[i].s);
   }
 
   for (auto &obstacle_decision : obstacle_decisions) {
@@ -1062,30 +1097,74 @@ void GeneralLateralDecider::ExtractBoundary(
 
   for (auto &bounds : path_bounds) {
     std::pair<double, double> tmp_bound{-10., 10.};  // <lower ,upper >
+    BoundInfo path_upper_bound_info;
+    BoundInfo path_lower_bound_info;
     for (auto &bound : bounds) {
       if (bound.upper < tmp_bound.second) {
         tmp_bound.second = bound.upper;
+        path_upper_bound_info.id = bound.bound_info.id;
+        path_upper_bound_info.type = bound.bound_info.type;
       }
       if (bound.lower > tmp_bound.first) {
         tmp_bound.first = bound.lower;
+        path_lower_bound_info.id = bound.bound_info.id;
+        path_lower_bound_info.type = bound.bound_info.type;
       }
     }
     frenet_path_bounds.emplace_back(tmp_bound);
+    auto hard_upper_bound_info =
+        lat_debug_info_.mutable_hard_upper_bound_info_vec()->Add();
+    hard_upper_bound_info->set_upper(tmp_bound.second);
+    hard_upper_bound_info->mutable_bound_info()->set_id(
+        path_upper_bound_info.id);
+    hard_upper_bound_info->mutable_bound_info()->set_type(
+        path_upper_bound_info.type);
+    auto hard_lower_bound_info =
+        lat_debug_info_.mutable_hard_lower_bound_info_vec()->Add();
+    hard_lower_bound_info->set_lower(tmp_bound.first);
+    hard_lower_bound_info->mutable_bound_info()->set_id(
+        path_lower_bound_info.id);
+    hard_lower_bound_info->mutable_bound_info()->set_type(
+        path_lower_bound_info.type);
   }
 
   for (auto &bounds : safe_bounds) {
     std::pair<double, double> tmp_bound{-10., 10.};  // <lower ,upper >
+    BoundInfo safe_upper_bound_info;
+    BoundInfo safe_lower_bound_info;
     for (auto &bound : bounds) {
       if (bound.upper < tmp_bound.second) {
         tmp_bound.second = bound.upper;
+        safe_upper_bound_info.id = bound.bound_info.id;
+        safe_upper_bound_info.type = bound.bound_info.type;
       }
       if (bound.lower > tmp_bound.first) {
         tmp_bound.first = bound.lower;
+        safe_lower_bound_info.id = bound.bound_info.id;
+        safe_lower_bound_info.type = bound.bound_info.type;
       }
     }
     frenet_safe_bounds.emplace_back(tmp_bound);
+    auto soft_upper_bound_info =
+        lat_debug_info_.mutable_soft_upper_bound_info_vec()->Add();
+    soft_upper_bound_info->set_upper(tmp_bound.second);
+    soft_upper_bound_info->mutable_bound_info()->set_id(
+        safe_upper_bound_info.id);
+    soft_upper_bound_info->mutable_bound_info()->set_type(
+        safe_upper_bound_info.type);
+    auto soft_lower_bound_info =
+        lat_debug_info_.mutable_soft_lower_bound_info_vec()->Add();
+    soft_lower_bound_info->set_lower(tmp_bound.first);
+    soft_lower_bound_info->mutable_bound_info()->set_id(
+        safe_lower_bound_info.id);
+    soft_lower_bound_info->mutable_bound_info()->set_type(
+        safe_lower_bound_info.type);
   }
-
+  
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_lateral_behavior_debug_info()
+      ->CopyFrom(lat_debug_info_);
   assert(frenet_path_bounds.size() == ref_traj_points_.size());
   assert(frenet_safe_bounds.size() == ref_traj_points_.size());
 }
@@ -1319,59 +1398,89 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
                     c_poly.begin());
 }
 
-double GeneralLateralDecider::GetNearestObstacleBorder(
+ObstacleBorderInfo GeneralLateralDecider::GetNearestObstacleBorder(
     const planning_math::Polygon2d &care_polygon, double care_area_s_start,
     double care_area_s_end,
-    const std::vector<planning_math::Polygon2d> &obstacle_frenet_polygons,
+    const std::vector<std::pair<int, planning_math::Polygon2d>>
+        &obstacle_frenet_polygons,
     bool is_left, bool is_sorted, bool is_curve, int index,
     const TrajectoryPoints &traj_points) {
   static constexpr double kMaxLaneBound = 100.0;
   double l_care_width = 10.;
   double nearest_border = is_left ? kMaxLaneBound : -kMaxLaneBound;
   // planning_math::Polygon2d overlap_polygon;
+  ObstacleBorderInfo nearest_obstacle_border;
+  nearest_obstacle_border.obstacle_id = -100;
+  nearest_obstacle_border.obstacle_border = nearest_border;
 
   for (auto &polygon : obstacle_frenet_polygons) {
-    if (polygon.max_x() < care_area_s_start) {
+    if (polygon.second.max_x() < care_area_s_start) {
       continue;
     }
-    if (polygon.min_x() > care_area_s_end) {
+    if (polygon.second.min_x() > care_area_s_end) {
       if (is_sorted) {
         break;
       }
       continue;
     }
-    if (!is_sorted && polygon.max_y() * polygon.min_y() < 0) {
+    if (!is_sorted && polygon.second.max_y() * polygon.second.min_y() < 0) {
       continue;
     }
-    if (std::min(std::fabs(polygon.min_y()), std::fabs(polygon.max_y())) >
+    if (std::min(std::fabs(polygon.second.min_y()), std::fabs(polygon.second.max_y())) >
         l_care_width)
       continue;
-    nearest_border = is_left ? std::fmin(nearest_border, polygon.min_y())
-                             : std::fmax(nearest_border, polygon.max_y());
+    nearest_border = is_left ? std::fmin(nearest_border, polygon.second.min_y())
+                             : std::fmax(nearest_border, polygon.second.max_y());
+    if (nearest_obstacle_border.obstacle_border != nearest_border) {
+      nearest_obstacle_border.obstacle_id = polygon.first;
+      nearest_obstacle_border.obstacle_border = nearest_border;
+    }
   }
-  return nearest_border;
+  return nearest_obstacle_border;
 }
 
 void GeneralLateralDecider::ConstructStaticObstacleTotalPolygons(
-    vector<Polygon2d> &left_groundline_polygons,
-    vector<Polygon2d> &right_groundline_polygons,
-    vector<Polygon2d> &left_parking_space_polygons,
-    vector<Polygon2d> &right_parking_space_polygons) {
+    vector<pair<int, Polygon2d>> &left_groundline_polygons,
+    vector<pair<int, Polygon2d>> &right_groundline_polygons,
+    vector<pair<int, Polygon2d>> &left_parking_space_polygons,
+    vector<pair<int, Polygon2d>> &right_parking_space_polygons) {
   const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord =
       reference_path_ptr_->get_frenet_coord();
+  vector<Polygon2d> left_groundline_polygon;
+  vector<Polygon2d> right_groundline_polygon;
+  vector<Polygon2d> left_parking_space_polygon;
+  vector<Polygon2d> right_parking_space_polygon;
   // Step1: 主要区分 lines 类型 和 polygon 类型（slot &
   // pillar），生成所有polygons Step 1.1 : 处理 lines
   for (auto &obstacle : reference_path_ptr_->get_free_space_ground_lines()) {
     const std::vector<planning_math::Vec2d> &line_vec2d_points =
         obstacle->perception_points();
-    MakeLinePolygons(frenet_coord, line_vec2d_points, left_groundline_polygons,
-                     right_groundline_polygons);
+    size_t old_l_size = left_groundline_polygon.size();
+    size_t old_r_size = right_groundline_polygon.size();
+    MakeLinePolygons(frenet_coord, line_vec2d_points, left_groundline_polygon,
+                     right_groundline_polygon);
+    if (left_groundline_polygon.size() > old_l_size) {
+      left_groundline_polygons.emplace_back(obstacle->id(),
+                                            left_groundline_polygon.back());
+    } else if (right_groundline_polygon.size() > old_r_size) {
+      right_groundline_polygons.emplace_back(obstacle->id(),
+                                             right_groundline_polygon.back());
+    }
   }
   // Step 1.2 : 处理 polygon
   for (auto &obstacle : reference_path_ptr_->get_parking_space()) {
     const planning_math::Polygon2d &polygon = obstacle->perception_polygon();
-    MakePolygon(frenet_coord, polygon, left_parking_space_polygons,
-                right_parking_space_polygons);
+    size_t old_l_size = left_parking_space_polygon.size();
+    size_t old_r_size = right_parking_space_polygon.size();
+    MakePolygon(frenet_coord, polygon, left_parking_space_polygon,
+                right_parking_space_polygon);
+    if (left_parking_space_polygon.size() > old_l_size) {
+      left_groundline_polygons.emplace_back(obstacle->id(),
+                                            left_parking_space_polygon.back());
+    } else if (right_parking_space_polygon.size() > old_r_size) {
+      right_groundline_polygons.emplace_back(
+          obstacle->id(), right_parking_space_polygon.back());
+    }
   }
 }
 
