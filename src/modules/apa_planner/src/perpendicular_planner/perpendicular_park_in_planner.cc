@@ -267,7 +267,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   }
 
   // calc terminal pos
-  ego_slot_info.target_ego_pos_slot << ego_slot_info.terminal_target_X,
+  ego_slot_info.target_ego_pos_slot << kTerminalTargetX,
       kTerminalTargetY + kTerminalTargetYBias;
   ego_slot_info.target_ego_heading_slot = 0.0;
 
@@ -288,8 +288,16 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   std::cout << "vel_ego = " << measures_ptr->vel_ego << std::endl;
 
   // calc slot occupied ratio
-  ego_slot_info.slot_occupied_ratio =
-      apa_world_ptr_->GetSlotManagerPtr()->GetOccupiedRatio();
+  // ego_slot_info.slot_occupied_ratio =
+  //     apa_world_ptr_->GetSlotManagerPtr()->GetOccupiedRatio();
+  if (std::fabs(ego_slot_info.terminal_err.pos.y()) < 0.9 &&
+      std::fabs(ego_slot_info.ego_heading_slot) < 75.0 / 57.3) {
+    ego_slot_info.slot_occupied_ratio = pnc::mathlib::Clamp(
+        1.0 - (ego_slot_info.terminal_err.pos.x() / kNormalSlotLength), 0.0,
+        1.0);
+  } else {
+    ego_slot_info.slot_occupied_ratio = 0.0;
+  }
 
   std::cout << "ego_slot_info.slot_occupied_ratio = "
             << ego_slot_info.slot_occupied_ratio << std::endl;
