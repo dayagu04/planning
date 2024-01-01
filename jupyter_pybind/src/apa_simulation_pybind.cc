@@ -90,6 +90,35 @@ const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
   return result;
 }
 
+const bool InterfaceUpdateClosedLoop(
+    py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
+    py::bytes &localization_info_bytes,
+    py::bytes &vehicle_service_output_info_bytes) {
+  auto func_statemachine =
+      BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
+
+  auto parking_slot_info =
+      BytesToProto<ParkingFusion::ParkingFusionInfo>(parking_slot_info_bytes);
+
+  auto localization_info =
+      BytesToProto<LocalizationOutput::LocalizationEstimate>(
+          localization_info_bytes);
+
+  auto vehicle_service_output_info =
+      BytesToProto<VehicleService::VehicleServiceOutputInfo>(
+          vehicle_service_output_info_bytes);
+
+  local_view.localization_estimate = localization_info;
+  local_view.vehicle_service_output_info = vehicle_service_output_info;
+  local_view.parking_fusion_info = parking_slot_info;
+  local_view.function_state_machine_info = func_statemachine;
+
+  const bool result = apa_interface_ptr->Update(&local_view);
+  apa_interface_ptr->UpdateDebugInfo();
+
+  return result;
+}
+
 const bool InterfaceUpdateParam(py::bytes &func_statemachine_bytes,
                                 py::bytes &parking_slot_info_bytes,
                                 py::bytes &localization_info_bytes,
@@ -204,6 +233,7 @@ PYBIND11_MODULE(apa_simulation_py, m) {
 
   m.def("Init", &Init)
       .def("InterfaceUpdate", &InterfaceUpdate)
+      .def("InterfaceUpdateClosedLoop", &InterfaceUpdateClosedLoop)
       .def("InterfaceUpdateParam", &InterfaceUpdateParam)
       .def("GetPlanningOutput", &GetPlanningOutput)
       .def("GetPlanningDebugInfo", &GetPlanningDebugInfo)

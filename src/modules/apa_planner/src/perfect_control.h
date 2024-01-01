@@ -16,6 +16,8 @@ class PerfectControl {
     double vel = 0.0;
     Eigen::Vector2d pos = Eigen::Vector2d::Zero();
     double heading = 0.0;
+    double static_time = 0.0;
+    bool static_flag = false;
 
     void Reset() {
       vel = 0.0;

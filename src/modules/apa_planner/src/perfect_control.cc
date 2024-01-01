@@ -99,9 +99,19 @@ const bool PerfectControl::Update(
   //     proj.GetOutput().s_proj, path_s_vec.front(), path_s_vec.back());
 
   // const auto remain_dist = path_s_vec.back() - s_proj;
+  if (state_.static_flag) {
+    if (state_.static_time > 0.6) {
+      state_.static_flag = false;
+    } else {
+      state_.static_time += dt;
+      state_.vel = 0.0;
+      return true;
+    }
+  }
 
-  if (fabs(remain_dist) <= 0.1) {
+  if (fabs(remain_dist) <= 0.06) {
     state_.vel = 0.0;
+    state_.static_flag = true;
   } else {
     auto s_next = s_proj + state_.vel * dt;
     state_.vel = kVelSimulation;
@@ -114,7 +124,7 @@ const bool PerfectControl::Update(
   std::cout << "------ dynamics:" << std::endl;
   std::cout << "remain_dist = " << remain_dist << std::endl;
   std::cout << "s_proj = " << s_proj << std::endl;
-  std::cout << "s_nax = " << path_length << std::endl;
+  std::cout << "s_path = " << path_length << std::endl;
 
   return true;
 }
