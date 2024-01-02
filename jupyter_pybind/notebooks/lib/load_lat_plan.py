@@ -79,17 +79,17 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data):
   pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
 
   if bag_loader.loc_msg['enable'] == True:
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
     planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
     ego_xn, ego_yn = [], []
     ### global variables
     # pos offset
     for i in range(len(bag_loader.loc_msg['data'])):
-      pos_xn_i = bag_loader.loc_msg['data'][i].pose.local_position.x
-      pos_yn_i = bag_loader.loc_msg['data'][i].pose.local_position.y
+      pos_xn_i = bag_loader.loc_msg['data'][i].position.position_boot.x
+      pos_yn_i = bag_loader.loc_msg['data'][i].position.position_boot.y
 
       ego_xn.append(pos_xn_i)
       ego_yn.append(pos_yn_i)

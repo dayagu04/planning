@@ -21,7 +21,7 @@ from lib.bag_loader import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/share/data_cold/abu_zone/S811-7/hpp_1215_crusing/hpp_1215_crusing_6.00000"
+bag_path = "/share/data_cold/abu_zone/hpp/hpp1225/hpp_first_loop_0.00000"
 html_file = bag_path +".lonplan.html"
 
 # bokeh创建的html在jupyter中显示

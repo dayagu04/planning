@@ -43,17 +43,17 @@ def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_da
   pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
 
   if bag_loader.loc_msg['enable'] == True:
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
     planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
     ego_xn, ego_yn = [], []
     ### global variables
     # pos offset
     for i in range(len(bag_loader.loc_msg['data'])):
-      pos_xn_i = bag_loader.loc_msg['data'][i].pose.local_position.x
-      pos_yn_i = bag_loader.loc_msg['data'][i].pose.local_position.y
+      pos_xn_i = bag_loader.loc_msg['data'][i].position.position_boot.x
+      pos_yn_i = bag_loader.loc_msg['data'][i].position.position_boot.y
 
       ego_xn.append(pos_xn_i)
       ego_yn.append(pos_yn_i)
@@ -337,8 +337,8 @@ def load_lat_plan_figure(fig1):
                                                          'steer_dot_deg_vec_t':[],
                                                          'acc_vec_t':[],
                                                          'jerk_vec_t':[],
-                                                         'comb_x_vec': [],
-                                                         'comb_y_vec': [],
+                                                        #  'comb_x_vec': [],
+                                                        #  'comb_y_vec': [],
                                                         })
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
@@ -372,7 +372,7 @@ def load_lat_plan_figure(fig1):
   fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=False)
   fig1.line('y_vec', 'x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
   fig1.line('y_vec_t', 'x_vec_t', source = data_lat_motion_plan_output, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.4, legend_label = 'tuned plan path')
-  fig1.line('comb_y_vec', 'comb_x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.7, legend_label = 'combined path')
+  # fig1.line('comb_y_vec', 'comb_x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.7, legend_label = 'combined path')
 
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
 

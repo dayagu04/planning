@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/home/xlwang71/Downloads/new_motion/10_10.00000"
+bag_path = "/share/data_cold/abu_zone/hpp/hpp1225/hpp_first_loop_0.00000.1704165354.plan"
 frame_dt = 0.1 # sec
 
 # plot global figure?

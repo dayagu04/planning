@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/mnt/noa_1018/noa_1.00000.1697642337.plan"
+bag_path = "/share/data_cold/abu_zone/hpp/hpp1225/hpp_first_loop_0.00000"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

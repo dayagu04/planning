@@ -12,7 +12,7 @@ from python_proto import common_pb2, lateral_motion_planner_pb2
 from jupyter_pybind import realtime_lateral_motion_planning_py
 
 # bag path and frame dt
-bag_path = "/home/xlwang71/Downloads/s811_1_0824_2/lc_2_8.00000"
+bag_path = "/share/data_cold/abu_zone/S811-7/20231220/20231220150300.record.00000.1703065001.plan"
 frame_dt = 0.1 # sec
 
 # plot global figure?
@@ -93,9 +93,9 @@ def slider_callback(bag_time, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound,
 
 
   if bag_loader.loc_msg['enable'] == True:
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
     planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
   try:

@@ -73,11 +73,6 @@ class LoadCyberbag:
     
     # ground_line_msg
     self.ground_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]} 
-    # ehr_parking_map
-    self.ehr_parking_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]} 
-    
-    # ground_line_msg
-    self.ground_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]} 
   def load_all_data(self, normal_print = True):
     max_time = 0.0
     # load localization msg
@@ -219,14 +214,22 @@ class LoadCyberbag:
                          "RealTime_temp_lead_two_id", "RealTime_temp_lead_two_distance", "RealTime_temp_lead_two_velocity", "RealTime_temp_lead_two_desire_vel",
                          "RealTime_potential_cutin_track_id", "RealTime_potential_cutin_v_target", "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate",
                          "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime",
-                         "RealTime_stop_start_state", "RealTime_v_target_start_stop", "RealTime_STANDSTILL"]
+                         "RealTime_stop_start_state", "RealTime_v_target_start_stop", "RealTime_STANDSTILL", \
+                          "GeneralLateralDeciderCost", "LateralMotionCostTime", "GeneralLongitudinalDeciderCost", "LongitudinalMotionCostTime" ]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec"]
-
+      plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
-        self.plan_debug_msg['t'].append(msg.timestamp / 1e6)
-        self.plan_debug_msg['timestamp'].append(msg.timestamp)
+        plan_debug_msg_dict[msg.timestamp] = msg
+      plan_debug_msg_dict = {key: val for key, val in sorted(plan_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in plan_debug_msg_dict.items():
+        self.plan_debug_msg['t'].append(t / 1e6)
+        self.plan_debug_msg['timestamp'].append(t)
         self.plan_debug_msg['data'].append(msg)
+      # for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
+      #   self.plan_debug_msg['t'].append(msg.timestamp / 1e6)
+      #   self.plan_debug_msg['timestamp'].append(msg.timestamp)
+      #   self.plan_debug_msg['data'].append(msg)
         try:
           json_struct = json.loads(msg.data_json, strict = False)
           json_data = {}

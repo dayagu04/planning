@@ -5,7 +5,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/opt/planning/bags/long_time_hualong_1.00000"
+bag_path = "/share//data_cold/abu_zone/hpp/1219bag/memory1219_12.00000"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

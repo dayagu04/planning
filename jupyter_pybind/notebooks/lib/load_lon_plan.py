@@ -168,17 +168,20 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   for ind in range(len(planning_json_value_list)):
      vision_lon_attr_vec.append(plan_debug_json_info[planning_json_value_list[ind]])
 
+  v_limit_vec = plan_debug_json_info['limit_v_type']
+  print('v_limit_vec', v_limit_vec)
   lon_plan_data['data_st'].data.update({
     't': t_vec,
     's': s_ref_vec,
-    's_soft_ub': s_soft_upper_bound_vec,
-    's_soft_lb': s_soft_lower_bound_vec,
+    # 's_soft_ub': s_soft_upper_bound_vec,
+    # 's_soft_lb': s_soft_lower_bound_vec,
     'obs_low': obs_low_vec,
     'obs_high': obs_high_vec,
     'obs_low_id': obs_low_id_vec,
     'obs_high_id': obs_high_id_vec,
     'obs_low_type': obs_low_type_vec,
-    'obs_high_type': obs_high_type_vec
+    'obs_high_type': obs_high_type_vec,
+    'v_limit_type': v_limit_vec
   })
 
   #lon_plan_data['data_obs_st'].clear()
@@ -221,8 +224,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'v_ref': v_ref_vec,
     'v_low': v_bound_low_vec,
     'v_high': v_bound_high_vec,
-    'sv_bound_s': sv_bound_s_vec,
-    'sv_bound_v': sv_bound_v_vec,
+    # 'sv_bound_s': sv_bound_s_vec,
+    # 'sv_bound_v': sv_bound_v_vec,
   })
 
   lon_plan_data['data_text'].data.update({
@@ -279,9 +282,9 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   })
 
   if bag_loader.loc_msg['enable'] == True:
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
     planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
     print("dbw_status = ", planning_json['dbw_status'])
@@ -418,8 +421,8 @@ def update_lon_ref_path(lon_ref_path, lon_plan_data):
   lon_plan_data['data_st'].data.update({
     't': t_vec,
     's': s_ref_vec,
-    's_soft_ub': s_soft_upper_bound_vec,
-    's_soft_lb': s_soft_lower_bound_vec,
+    # 's_soft_ub': s_soft_upper_bound_vec,
+    # 's_soft_lb': s_soft_lower_bound_vec,
     'obs_low': obs_low_vec,
     'obs_high': obs_high_vec,
     'obs_low_id': obs_low_id_vec,
@@ -462,8 +465,8 @@ def update_lon_ref_path(lon_ref_path, lon_plan_data):
     'v_ref': v_ref_vec,
     'v_low': v_bound_low_vec,
     'v_high': v_bound_high_vec,
-    'sv_bound_s': sv_bound_s_vec,
-    'sv_bound_v': sv_bound_v_vec,
+    # 'sv_bound_s': sv_bound_s_vec,
+    # 'sv_bound_v': sv_bound_v_vec,
   })
 
 def load_lon_global_figure(bag_loader):
@@ -592,9 +595,9 @@ def load_lon_global_figure(bag_loader):
   return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids
 
 def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids):
-  data_st = ColumnDataSource(data = {'t':[], 's':[], 's_soft_ub':[], 's_soft_lb':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
+  data_st = ColumnDataSource(data = {'t':[], 's':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[] , 'v_limit_type':[]}) #'s_soft_ub':[], 's_soft_lb':[]
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
-  data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[], 'sv_bound_s':[], 'sv_bound_v':[]})
+  data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[]}) # , 'sv_bound_s':[], 'sv_bound_v':[]
   data_tv = ColumnDataSource(data = {'t':[], 'vel':[]})
   data_ta = ColumnDataSource(data = {'t':[], 'acc':[]})
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
@@ -649,6 +652,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
      ('id_high','@obs_high_id'),
      ('low_type','@obs_low_type'),
      ('high_type','@obs_high_type'),
+     ('v_limit_type','@v_limit_type')
   ])
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
 
@@ -666,8 +670,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig7 = bkp.figure(x_axis_label='time', y_axis_label='jerk',x_range = fig6.x_range, width=600, height=200)
 
   f2 = fig2.line('t', 's', source = data_st, line_width = 2, line_color = 'green', line_dash = 'dashed', legend_label = 'origin s_ref')
-  fig2.line('t', 's_soft_ub', source = data_st, line_width = 3, line_color = 'yellow', line_dash = 'solid', legend_label = 's_soft_ub')
-  fig2.line('t', 's_soft_lb', source = data_st, line_width = 3, line_color = '#FFA500', line_dash = 'solid', legend_label = 's_soft_lb')
+  # fig2.line('t', 's_soft_ub', source = data_st, line_width = 3, line_color = 'yellow', line_dash = 'solid', legend_label = 's_soft_ub')
+  # fig2.line('t', 's_soft_lb', source = data_st, line_width = 3, line_color = '#FFA500', line_dash = 'solid', legend_label = 's_soft_lb')
   fig2.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')
   #fig2.line('t_long', 's_plan', source = data_st_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
   fig2.line('time_vec', 'pos_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
@@ -687,7 +691,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   #fig2.add_layout(label_high_id)
 
   f3 = fig3.line('s_ref', 'v_ref', source = data_sv, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')
-  fig3.line('sv_bound_s', 'sv_bound_v', source = data_sv, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'sv_bound_v_upper')
+  # fig3.line('sv_bound_s', 'sv_bound_v', source = data_sv, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'sv_bound_v_upper')
   fig3.line('pos_vec', 'vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'v_plan')
   fig3.line('s_ref', 'v_low', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_lb')
   fig3.line('s_ref', 'v_high', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_ub')

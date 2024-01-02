@@ -156,8 +156,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'v_ref': v_ref_vec,
     'v_low': v_bound_low_vec,
     'v_high': v_bound_high_vec,
-    'sv_bound_s': sv_bound_s_vec,
-    'sv_bound_v': sv_bound_v_vec,
+    # 'sv_bound_s': sv_bound_s_vec,
+    # 'sv_bound_v': sv_bound_v_vec,
   })
 
   lon_plan_data['data_text'].data.update({
@@ -212,9 +212,9 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   })
 
   if bag_loader.loc_msg['enable'] == True:
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
     planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
     print("dbw_status = ", planning_json['dbw_status'])
@@ -235,17 +235,18 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
-    try:
-      planning_polynomial = trajectory.target_reference.polynomial
-      plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
-
-    except:
+    if trajectory.trajectory_type == 0: # 实时轨迹
+      try:
+        planning_polynomial = trajectory.target_reference.polynomial
+        plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
+      except:
+        plan_traj_x, plan_traj_y = [], []
+    else:
       plan_x = []
       plan_y = []
       for i in range(len(trajectory.trajectory_points)):
         plan_x.append(trajectory.trajectory_points[i].x)
         plan_y.append(trajectory.trajectory_points[i].y)
-
       # plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
       plan_traj_x, plan_traj_y = coord_tf.global_to_local(planning_json['traj_x_vec'], planning_json['traj_y_vec'])
 
@@ -272,7 +273,11 @@ def load_lon_global_figure(bag_loader):
       leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_lead_two_vel'], 2))
 
    for ind in range(len(bag_loader.loc_msg['data'])):
-      ego_velocity_vec.append(round(bag_loader.loc_msg['data'][ind].pose.linear_velocity_from_wheel, 2))
+      loc_msg = bag_loader.loc_msg['data'][ind]
+      linear_velocity_from_wheel = math.sqrt(loc_msg.velocity.velocity_boot.vx * loc_msg.velocity.velocity_boot.vx + \
+                loc_msg.velocity.velocity_boot.vy * loc_msg.velocity.velocity_boot.vy + \
+                loc_msg.velocity.velocity_boot.vz * loc_msg.velocity.velocity_boot.vz)
+      ego_velocity_vec.append(round(linear_velocity_from_wheel, 2))
 
    velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
                                 legend_label='target_velocity', color="green")
@@ -310,7 +315,7 @@ def load_lon_global_figure(bag_loader):
 def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
   data_st = ColumnDataSource(data = {'t':[], 's':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
-  data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[], 'sv_bound_s':[], 'sv_bound_v':[]})
+  data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[]}) # , 'sv_bound_s':[], 'sv_bound_v':[]
   data_tv = ColumnDataSource(data = {'t':[], 'vel':[]})
   data_ta = ColumnDataSource(data = {'t':[], 'acc':[]})
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
@@ -394,8 +399,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
   #label_high_id = LabelSet(x='t', y='obs_high', text='obs_high_id', x_offset=2, y_offset=2, source=data_st)
   #fig2.add_layout(label_high_id)
 
-  f3 = fig3.line('s', 'v', source = data_sv, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')
-  fig3.line('sv_bound_s', 'sv_bound_v', source = data_sv, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'sv_bound_v_upper')
+  # f3 = fig3.line('s', 'v', source = data_sv, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')
+  # fig3.line('sv_bound_s', 'sv_bound_v', source = data_sv, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'sv_bound_v_upper')
   fig3.line('pos_vec', 'vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'green', line_dash = 'solid', legend_label = 'origin v_plan')
   fig3.line('pos_vec_t', 'vel_vec_t', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned v_plan')
   fig3.line('s_ref', 'v_low', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_lb')

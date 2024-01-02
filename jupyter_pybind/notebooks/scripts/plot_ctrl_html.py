@@ -18,7 +18,7 @@ from lib.basic_layers import *
 from lib.bag_loader import *
 from lib.local_view_lib import *
 
-bag_path = "/home/xlwang71/Downloads/0713/real_time_WR_1.00000"
+bag_path = "/share//data/clren/20231215182928.record.00000"
 html_file = bag_path +".ctrl.html"
 
 # bokeh创建的html在jupyter中显示
@@ -168,8 +168,8 @@ def plotOnce(bag_path, html_file):
                                          y_axis_label='dy',
                                          width=600,
                                          height=200))
-    fig7.AddCurv(layer_manager,
-                 VectorGeneratorFromJson(topic_vector_dict, "dy_ref_mpc_vec", 1.0), "dy_ref_mpc_vec")
+    # fig7.AddCurv(layer_manager,
+    #              VectorGeneratorFromJson(topic_vector_dict, "dy_ref_mpc_vec", 1.0), "dy_ref_mpc_vec")
     fig7.AddCurv(layer_manager,
                  VectorGeneratorFromJson(topic_vector_dict, "dy_mpc_vec", 1.0), "dy_mpc_vec")
 

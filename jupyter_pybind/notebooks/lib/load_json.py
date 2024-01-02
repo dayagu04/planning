@@ -11,7 +11,7 @@ def LoadScalar(ctrl_data, json_struct, name):
   except:
     ctrl_data[name] = -0.01
 
-def LoadVector(ctrl_data, json_struct, name, N = 20):
+def LoadVector(ctrl_data, json_struct, name, N = 26):
   try:
     data_list = json_struct[name].split(',')
     ctrl_data[name] = list(map(float, data_list))

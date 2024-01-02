@@ -11,7 +11,8 @@ from python_proto import common_pb2, lateral_motion_planner_pb2
 from jupyter_pybind import lateral_motion_planning_py
 
 # bag path and frame dt
-bag_path = "/home/xlwang71/Downloads/0713/long_time_12.00000"
+bag_path = "/share//data_cold/abu_zone/hpp/1219bag/memory1219_12.00000"
+bag_path = "/share//data_cold/abu_zone/hpp/1219bag/memory1219_12.00000"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -86,9 +87,9 @@ def slider_callback(bag_time, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound,
 
 
   if bag_loader.loc_msg['enable'] == True:
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
     planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
   try:
@@ -117,6 +118,21 @@ def slider_callback(bag_time, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound,
   acc_vec = planning_output.acc_vec
   jerk_vec = planning_output.jerk_vec
 
+  # comb_x_vec = []
+  # comb_y_vec = []
+
+  # lat_err_tab = [0.0, theta1, theta2, 100.0]
+  # alpha_tab = [1.0, 1.0, 0.0, 0.0]
+
+  # f = interp1d(lat_err_tab, alpha_tab)
+
+  # lat_err = abs(ref_y_vec[0])
+  # alpha = f(lat_err)
+
+  # for i in range(len(ref_x_vec)):
+  #   comb_x_vec.append(x_vec[i] * (1.0 - alpha) + alpha * ref_x_vec[i])
+  #   comb_y_vec.append(y_vec[i] * (1.0 - alpha) + alpha * ref_y_vec[i])
+    
   lat_plan_data['data_lat_motion_plan_output'].data.update({
     'time_vec_t': time_vec,
     'x_vec_t': x_vec,
@@ -129,6 +145,8 @@ def slider_callback(bag_time, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound,
     'steer_dot_deg_vec_t': steer_dot_deg_vec,
     'acc_vec_t': acc_vec,
     'jerk_vec_t': jerk_vec,
+    # 'comb_x_vec': comb_x_vec,
+    # 'comb_y_vec': comb_y_vec,
   })
 
   push_notebook()

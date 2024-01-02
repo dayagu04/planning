@@ -22,10 +22,11 @@ from lib.local_view_lib import *
 
 # 先手动写死bag
 bag_path = "/share/mnt/s811_1_0824_1/realtime_cutin_9.00000"
-bag_path = '/share/data/clren/code/planning_10/planning/20231116110908.record.00000'
-bag_path = '/share/data/clren/code/planning_1/planning/1213_night_4.00000.1702523475.plan'
+# bag_path = '/share/data_cold/abu_zone/hpp/1219bag/memory1219_12.00000'
+bag_path = '/share/data_cold/abu_zone/hpp/hpp1225/hpp_first_loop_0.00000'
 
-html_file = bag_path +".lat_plan.html" 
+
+html_file = bag_path +".local_view.html" 
 # -
 def isINJupyter():
     try:
@@ -90,7 +91,7 @@ def plotOnce(bag_path, html_file):
                     var mid = Math.floor((left + right) / 2);
                     if(ts[mid]<=k){ //if the middle value is less than or equal to k
                         left = mid + 1; //set the left value to the middle value + 1
-                    }else{
+                    } else{
                         right = mid; //set the right value to the middle value
                     }
                 }
@@ -205,7 +206,7 @@ def plotMain():
 
     if os.path.isfile(bag_path) and (not os.path.isdir(html_path)):
         print("process one bag ...")
-        html_file = bag_path + ".lat_plan" + ".html"
+        html_file = bag_path + ".local_view" + ".html"
         plotOnce(bag_path, html_file)
         return
 
