@@ -41,6 +41,7 @@ fr_object_timestamps = []
 rl_object_timestamps = []
 rr_object_timestamps = []
 lidar_object_timestamps = []
+ehr_parking_map_timestamps = []
 ground_line_timestamps = []
 car_xb, car_yb = load_car_params_patch()
 car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord()
@@ -1118,7 +1119,11 @@ def load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, is_display_e
     parking_space_generate = CommonGenerator()
     road_mark_generate = CommonGenerator()
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-      ehr_parking_map_msg = dataLoader.ehr_parking_map_msg['data']
+      flag, ehr_parking_map_msg = find(dataLoader.ehr_parking_map_msg, ehr_parking_map_timestamps[i])
+      if not flag:
+        parking_space_generate.xys.append(([], [],[]))
+        road_mark_generate.xys.append(([], [],[]))
+        continue
       flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
       parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y = generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, is_display_enu)
       road_mark_generate.xys.append((road_mark_boxes_y, road_mark_boxes_x))    
@@ -1151,7 +1156,7 @@ def load_ground_line(dataLoader, layer_manager, fig_local_view, is_display_enu =
         for k in range(len(groundline.points_3d)):
           ground_x_enu = groundline.points_3d[k].x
           ground_y_enu = groundline.points_3d[k].y
-          print(ground_x_enu, ground_y_enu)
+          # print(ground_x_enu, ground_y_enu)
           # ground_x_global, ground_y_global = local2global(ground_x_local, ground_y_local, cur_pos_xn, cur_pos_yn, cur_yaw)
           # single_groundline_x_vec.append(ground_x_global - cur_pos_xn0)
           # single_groundline_y_vec.append(ground_y_global - cur_pos_yn0)
@@ -1194,6 +1199,7 @@ def draw_local_view(dataLoader, layer_manager):
     global rl_object_timestamps
     global rr_object_timestamps
     global lidar_object_timestamps
+    global ehr_parking_map_timestamps
     global ground_line_timestamps
     # if len(dataLoader.plan_debug_msg['data'] != 0):
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
@@ -1207,6 +1213,7 @@ def draw_local_view(dataLoader, layer_manager):
       prediction_timestamp = input_topic_timestamp.prediction
       vehicle_service_timestamp = input_topic_timestamp.vehicle_service
       control_output_timestamp = input_topic_timestamp.control_output
+      ehr_parking_map_timestamp = input_topic_timestamp.ehr_parking_map
       ground_line_timestamp = input_topic_timestamp.ground_line
       fusion_object_timestamps.append(fusion_object_timestamp)
       fusion_road_timestamps.append(fusion_road_timestamp)
@@ -1214,6 +1221,7 @@ def draw_local_view(dataLoader, layer_manager):
       prediction_timestamps.append(prediction_timestamp)
       vehicle_service_timestamps.append(vehicle_service_timestamp)
       control_output_timestamps.append(control_output_timestamp)
+      ehr_parking_map_timestamps.append(ehr_parking_map_timestamp)
       ground_line_timestamps.append(ground_line_timestamp)
     # else:
     #   print("plan_debug_msg is empty")
@@ -1287,7 +1295,7 @@ def draw_local_view(dataLoader, layer_manager):
     centerline_generator_dict = {}
     center_line_lists = []
     if dataLoader.road_msg['enable'] == True:
-      for fusion_road_timestamp in fusion_road_timestamps:
+      for i_index, fusion_road_timestamp in enumerate(fusion_road_timestamps):
         flag, fusion_road_msg = find(dataLoader.road_msg, fusion_road_timestamp)
 
         for derection in [0, 1]: # 0: left     1:right
