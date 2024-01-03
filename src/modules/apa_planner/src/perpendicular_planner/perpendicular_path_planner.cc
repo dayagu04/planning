@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include "apa_param_setting.h"
 #include "apa_plan_base.h"
 #include "apa_world.h"
 #include "collision_detection.h"
@@ -22,23 +23,8 @@
 #include "math_lib.h"
 namespace planning {
 namespace apa_planner {
-static const double kPie = 3.1415926;
-static const double kRadiusEps = 0.01;
-static const double kPosEps = 0.01;
-static const double kMinLineStepLength = 0.3;
-static const double kMinTurnRadius = 5.5;
-static const double kMaxOneStepArcRadius = 8.5;
-static const double kMaxRadiusInSlot = 12.66;
-static const double kMaxIgnoredLength = 0.05;
 static const double kMaxYCoordSeenAsLine = 0.03;
 static const double kMaxHeadingSeenAsLine = 3.0 / 57.3;
-static const double kFrontOverhanging = 0.924;
-static const double kRearOverhanging = 0.94;
-static const double kWheelBase = 2.7;
-static const double kVehicleWidth = 1.89;
-static const double kPrepareLineEgoSlotX = 7.2;
-static const double kPrepareLineEgoSlotHeadingOffset = 8.8 / 57.3;
-static const double kMinOneStepPathLength = 0.6;
 static const size_t kMaxPerpenParkInSegmentNums = 15;
 static const size_t kReservedOutputPathPointSize = 750;
 static const size_t kMaxPathNumsInSlot = 6;
@@ -77,23 +63,33 @@ void PerpendicularPathPlanner::Preprocess() {
   calc_params_.target_line.SetPoints(input_.tlane.pt, pt2);
   calc_params_.target_line.heading = 0.0;
 
-  const double dist_front_bumper_to_rac = kFrontOverhanging + kWheelBase;
-  const double half_width = 0.5 * kVehicleWidth;
+  const double dist_front_bumper_to_rac =
+      apa_param.GetInstance().GetParam().front_overhanging +
+      apa_param.GetInstance().GetParam().wheel_base;
+  const double half_width =
+      0.5 * apa_param.GetInstance().GetParam().vehicle_width;
 
-  calc_params_.dist_r_corner_to_rac = std::hypot(half_width, kRearOverhanging);
+  calc_params_.dist_r_corner_to_rac = std::hypot(
+      half_width, apa_param.GetInstance().GetParam().rear_overhanging);
   calc_params_.dist_f_corner_to_rac =
       std::hypot(half_width, dist_front_bumper_to_rac);
 
   calc_params_.fl_corner_vec << dist_front_bumper_to_rac, half_width;
   calc_params_.fr_corner_vec << dist_front_bumper_to_rac, -half_width;
-  calc_params_.rl_corner_vec << -kRearOverhanging, half_width;
-  calc_params_.rl_corner_vec << -kRearOverhanging, -half_width;
+  calc_params_.rl_corner_vec
+      << -apa_param.GetInstance().GetParam().rear_overhanging,
+      half_width;
+  calc_params_.rl_corner_vec
+      << -apa_param.GetInstance().GetParam().rear_overhanging,
+      -half_width;
 
-  calc_params_.min_fo_radius =
-      std::hypot(kMinTurnRadius + half_width, dist_front_bumper_to_rac);
+  calc_params_.min_fo_radius = std::hypot(
+      apa_param.GetInstance().GetParam().min_turn_radius + half_width,
+      dist_front_bumper_to_rac);
 
-  calc_params_.min_fi_radius =
-      std::hypot(kMinTurnRadius - half_width, dist_front_bumper_to_rac);
+  calc_params_.min_fi_radius = std::hypot(
+      apa_param.GetInstance().GetParam().min_turn_radius - half_width,
+      dist_front_bumper_to_rac);
 
   // set obstacles
   double channel_width = 10.5;
@@ -263,7 +259,7 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
   target_point.heading = calc_params_.prepare_line.heading;
 
   pnc::dubins_lib::DubinsLibrary::Input input;
-  input.radius = kMinTurnRadius * 1.05;
+  input.radius = apa_param.GetInstance().GetParam().min_turn_radius * 1.05;
 
   // std::cout << "ego_pos = " << input_.ego_pose.pos.transpose()
   //           << "  ego_heading = " << input_.ego_pose.heading * 57.3
@@ -311,13 +307,18 @@ const bool PerpendicularPathPlanner::PreparePlan() {
   std::vector<double> x_offset_vec;
   std::vector<double> heading_offset_vec;
 
-  double x_offset = kPrepareLineEgoSlotX;
-  while (x_offset < kPrepareLineEgoSlotX + 2.5) {
+  double x_offset =
+      apa_param.GetInstance().GetParam().prepare_line_x_offset_slot;
+  while (x_offset <
+         apa_param.GetInstance().GetParam().prepare_line_x_offset_slot + 2.5) {
     x_offset_vec.emplace_back(x_offset);
     x_offset += 0.1;
   }
 
-  double heading_offset = kPrepareLineEgoSlotHeadingOffset;
+  double heading_offset =
+      apa_param.GetInstance().GetParam().prepare_line_heading_offset_slot_deg /
+      57.3;
+
   while (heading_offset >= 0.0) {
     heading_offset_vec.emplace_back(heading_offset);
     heading_offset -= 1.0 / 57.3;
@@ -340,6 +341,10 @@ bool PerpendicularPathPlanner::Update() {
   std::cout << "----------------------------------------- path "
                "planner:---------------------------------------"
             << std::endl;
+  std::cout << "params: min_turn_radius ="
+            << apa_param.GetInstance().GetParam().min_turn_radius << std::endl;
+  std::cout << "params: width ="
+            << apa_param.GetInstance().GetParam().vehicle_width << std::endl;
   // preprocess
   Preprocess();
 
@@ -379,7 +384,8 @@ bool PerpendicularPathPlanner::Update() {
 }
 
 const bool PerpendicularPathPlanner::AdjustStepPlan() {
-  bool success = AdjustStepPlanOnce(1.0, kMaxRadiusInSlot);
+  bool success = AdjustStepPlanOnce(
+      1.0, apa_param.GetInstance().GetParam().max_radius_in_slot);
 
   if (success && output_.gear_cmd_vec.back() == ApaPlannerBase::REVERSE) {
     return true;
@@ -390,7 +396,8 @@ const bool PerpendicularPathPlanner::AdjustStepPlan() {
       return true;
     } else {
       output_.Reset();
-      success = AdjustStepPlanOnce(0.35, kMinTurnRadius);
+      success = AdjustStepPlanOnce(
+          0.35, apa_param.GetInstance().GetParam().min_turn_radius);
       if (success && output_.length <= 5.0) {
         return true;
       }
@@ -416,9 +423,11 @@ const bool PerpendicularPathPlanner::AdjustStepPlanOnce(
         adjust_arc, input_.ego_pose.pos, input_.ego_pose.heading, is_advance,
         calc_params_.target_line);
 
-    success =
-        success && (adjust_arc.circle_info.radius >= kMinTurnRadius &&
-                    adjust_arc.circle_info.radius <= kMaxOneStepArcRadius);
+    success = success &&
+              (adjust_arc.circle_info.radius >=
+                   apa_param.GetInstance().GetParam().min_turn_radius &&
+               adjust_arc.circle_info.radius <=
+                   apa_param.GetInstance().GetParam().max_one_step_arc_radius);
 
     std::cout << "adjust_arc.circle_info.radius = "
               << adjust_arc.circle_info.radius << std::endl;
@@ -444,7 +453,8 @@ const bool PerpendicularPathPlanner::AdjustStepPlanOnce(
 
     pnc::geometry_lib::OneStepArcTargetHeading(
         adjust_arc_head, input_.ego_pose.pos, input_.ego_pose.heading,
-        calc_params_.target_line.heading, kMinTurnRadius, is_advance);
+        calc_params_.target_line.heading,
+        apa_param.GetInstance().GetParam().min_turn_radius, is_advance);
 
     const auto target_heading_line = ConstructEgoHeadingLine(
         adjust_arc_head.pB, calc_params_.target_line.heading);
@@ -649,7 +659,8 @@ const bool PerpendicularPathPlanner::MultiStepPlan() {
 
     current_pose = last_pose;
 
-    if ((last_pose.pos - input_.tlane.pt).norm() <= kPosEps) {
+    if ((last_pose.pos - input_.tlane.pt).norm() <=
+        apa_param.GetInstance().GetParam().static_pos_eps) {
       std::cout << "already plan to target pos!" << std::endl;
       break;
     } else {
@@ -680,7 +691,7 @@ void PerpendicularPathPlanner::GenPrepareTargetLine(
 const bool PerpendicularPathPlanner::CalOnePathInMultiStep(
     const pnc::geometry_lib::PathPoint& current_pose, const uint8_t direction,
     const uint8_t steer, std::vector<PathSegment>& segment_vec) {
-  const double radius = kMinTurnRadius;
+  const double radius = apa_param.GetInstance().GetParam().min_turn_radius;
   segment_vec.clear();
   segment_vec.reserve(2);
 
@@ -705,7 +716,7 @@ const bool PerpendicularPathPlanner::CalOnePathInMultiStep(
   PathSegment opt_arc_segment;
   std::vector<PathSegment> current_path_seg_vec;
 
-  if (dist >= radius + kRadiusEps && false) {
+  if (dist >= radius + apa_param.GetInstance().GetParam().radius_eps && false) {
     pnc::geometry_lib::PathPoint target_pose(input_.tlane.pt,
                                              calc_params_.target_line.heading);
 
@@ -720,7 +731,7 @@ const bool PerpendicularPathPlanner::CalOnePathInMultiStep(
                 << std::endl;
     }
     // use line arc line
-  } else if (dist > radius - kRadiusEps) {
+  } else if (dist > radius - apa_param.GetInstance().GetParam().radius_eps) {
     cal_success = OneArcGeometryPlan(current_pose, calc_params_.target_line,
                                      radius, steer, opt_arc_segment);
 
@@ -974,7 +985,7 @@ const bool PerpendicularPathPlanner::CalInverseTwoArcGeometry(
     const pnc::geometry_lib::PathPoint& start_pose, const uint8_t direction,
     const uint8_t steer, std::vector<PathSegment>& inverse_two_segmemts,
     DebugInfo& debuginfo) const {
-  const double radius = kMinTurnRadius;
+  const double radius = apa_param.GetInstance().GetParam().min_turn_radius;
   double start_dir_sgn = (direction == ApaPlannerBase::DRIVE ? 1.0 : -1.0);
 
   if (steer == ApaPlannerBase::STRAIGHT) {
@@ -1088,7 +1099,7 @@ const bool PerpendicularPathPlanner::CalInverseTwoArcGeometry(
 const bool PerpendicularPathPlanner::CalInverseTwoArcGeometry(
     const pnc::geometry_lib::PathPoint& start_pose, const uint8_t direction,
     const uint8_t steer, std::vector<PathSegment>& inverse_two_segmemts) const {
-  const double radius = kMinTurnRadius;
+  const double radius = apa_param.GetInstance().GetParam().min_turn_radius;
   double start_dir_sgn = (direction == ApaPlannerBase::DRIVE ? 1.0 : -1.0);
 
   if (steer == ApaPlannerBase::STRAIGHT) {
@@ -1215,15 +1226,18 @@ const bool PerpendicularPathPlanner::UpdateMultiStepMinSafeCircle() {
 
   // move down the start line
   const Eigen::Vector2d pt_s =
-      calc_params_.prepare_line.pA + ego_n_down_vec * kMinTurnRadius;
+      calc_params_.prepare_line.pA +
+      ego_n_down_vec * apa_param.GetInstance().GetParam().min_turn_radius;
 
   std::cout << "ego n vec " << ego_n_down_vec.transpose() << std::endl;
 
   pnc::geometry_lib::LineSegment line_sa(pt_s,
                                          pt_s + prepare_target_heading_vec);
 
-  pnc::geometry_lib::Circle circle_p1 = {input_.tlane.p1,
-                                         kMinTurnRadius - 0.5 * kVehicleWidth};
+  pnc::geometry_lib::Circle circle_p1 = {
+      input_.tlane.p1,
+      apa_param.GetInstance().GetParam().min_turn_radius -
+          0.5 * apa_param.GetInstance().GetParam().vehicle_width};
 
   // calc cross points of line and circle
   std::vector<Eigen::Vector2d> cross_points;
@@ -1243,10 +1257,12 @@ const bool PerpendicularPathPlanner::UpdateMultiStepMinSafeCircle() {
   std::cout << "multi-step safe circle"
             << calc_params_.multi_safe_circle.center.transpose() << std::endl;
 
-  calc_params_.multi_safe_circle.radius = kMinTurnRadius;
+  calc_params_.multi_safe_circle.radius =
+      apa_param.GetInstance().GetParam().min_turn_radius;
 
   calc_params_.safe_circle_key_pt =
-      calc_params_.multi_safe_circle.center - ego_n_down_vec * kMinTurnRadius;
+      calc_params_.multi_safe_circle.center -
+      ego_n_down_vec * apa_param.GetInstance().GetParam().min_turn_radius;
 
   calc_params_.safe_circle_key_heading = input_.ego_pose.heading;
 
@@ -1260,12 +1276,16 @@ const bool PerpendicularPathPlanner::UpdateMultiStepMinSafeCircle() {
 
 void PerpendicularPathPlanner::CalMonoSafeCircle() {
   calc_params_.mono_safe_circle.center.y() =
-      input_.tlane.pt.y() - kMinTurnRadius * calc_params_.slot_side_sgn;
+      input_.tlane.pt.y() - apa_param.GetInstance().GetParam().min_turn_radius *
+                                calc_params_.slot_side_sgn;
 
-  calc_params_.mono_safe_circle.radius = kMinTurnRadius;
+  calc_params_.mono_safe_circle.radius =
+      apa_param.GetInstance().GetParam().min_turn_radius;
 
   const double deta_x = std::sqrt(
-      std::pow((kMinTurnRadius - kVehicleWidth * 0.5), 2) -
+      std::pow((apa_param.GetInstance().GetParam().min_turn_radius -
+                apa_param.GetInstance().GetParam().vehicle_width * 0.5),
+               2) -
       std::pow((calc_params_.mono_safe_circle.center.y() - input_.tlane.p1.y()),
                2));
 
@@ -1319,12 +1339,13 @@ const bool PerpendicularPathPlanner::MonoPreparePlan(
 bool PerpendicularPathPlanner::CalMultiSafeCircle() {
   pnc::geometry_lib::Circle circle_p1;
   circle_p1.center = input_.tlane.p1;
-  circle_p1.radius = kMinTurnRadius - 0.5 * kVehicleWidth;
-
+  circle_p1.radius = apa_param.GetInstance().GetParam().min_turn_radius -
+                     0.5 * apa_param.GetInstance().GetParam().vehicle_width;
   // move down the start line
   const Eigen::Vector2d pt_s =
       calc_params_.prepare_line.pA +
-      calc_params_.pre_line_normal_vec * kMinTurnRadius;
+      calc_params_.pre_line_normal_vec *
+          apa_param.GetInstance().GetParam().min_turn_radius;
 
   pnc::geometry_lib::LineSegment line_sa(
       pt_s, pt_s + calc_params_.pre_line_tangent_vec);
@@ -1348,7 +1369,7 @@ bool PerpendicularPathPlanner::CalMultiSafeCircle() {
     multi_safe_circle.center = cross_points[1];
   }
 
-  multi_safe_circle.radius = kMinTurnRadius;
+  multi_safe_circle.radius = apa_param.GetInstance().GetParam().min_turn_radius;
 
   // std::cout << "multi safa circle info: center = " <<
   // multi_safe_circle.center
@@ -1386,9 +1407,10 @@ const bool PerpendicularPathPlanner::CheckMonoStepInSlot() {
       CalPoint2LineDist(calc_params_.mono_safe_circle.center, current_line);
 
   std::cout << "dist of current line to circle center: " << dist << std::endl;
-  std::cout << "circle radius: " << kMinTurnRadius << std::endl;
+  std::cout << "circle radius: "
+            << apa_param.GetInstance().GetParam().min_turn_radius << std::endl;
 
-  if (dist >= kMinTurnRadius) {
+  if (dist >= apa_param.GetInstance().GetParam().min_turn_radius) {
     return true;
   } else {
     return false;
@@ -1421,7 +1443,9 @@ const bool PerpendicularPathPlanner::OneLineGeometryPlan(
     line_step.length = (line_step.pA - line_step.pB).norm();
 
     line_step.is_ignored =
-        line_step.length >= kMinLineStepLength ? false : true;
+        line_step.length >= apa_param.GetInstance().GetParam().min_line_length
+            ? false
+            : true;
 
     if (!line_step.is_ignored) {
       uint8_t line_step_dir = line_step.pA.x() > line_step.pB.x()
@@ -1452,7 +1476,8 @@ const bool PerpendicularPathPlanner::OneArcGeometryPlan(
 
   const double dist = pnc::geometry_lib::CalPoint2LineDist(center, target_line);
 
-  if (std::fabs(dist - radius) > kRadiusEps) {
+  if (std::fabs(dist - radius) >
+      apa_param.GetInstance().GetParam().radius_eps) {
     std::cout << "dist is more than radius, one arc failed! " << dist
               << std::endl;
 
@@ -1500,12 +1525,16 @@ const bool PerpendicularPathPlanner::OneArcGeometryPlan(
 void PerpendicularPathPlanner::CalcMonoStepMinSafetyCircle() {
   // calc min safe circle
   calc_params_.mono_safe_circle.center.y() =
-      input_.tlane.pt.y() - kMinTurnRadius * calc_params_.slot_side_sgn;
+      input_.tlane.pt.y() - apa_param.GetInstance().GetParam().min_turn_radius *
+                                calc_params_.slot_side_sgn;
 
-  calc_params_.mono_safe_circle.radius = kMinTurnRadius;
+  calc_params_.mono_safe_circle.radius =
+      apa_param.GetInstance().GetParam().min_turn_radius;
 
   const double deta_x = std::sqrt(
-      std::pow((kMinTurnRadius - kVehicleWidth * 0.5), 2) -
+      std::pow((apa_param.GetInstance().GetParam().min_turn_radius -
+                apa_param.GetInstance().GetParam().vehicle_width * 0.5),
+               2) -
       std::pow((calc_params_.mono_safe_circle.center.y() - input_.tlane.p1.y()),
                2));
   std::cout << "deta_x = " << deta_x << std::endl;
@@ -1646,8 +1675,11 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
     PathSegment new_line;
     new_line.seg_type = ApaPlannerBase::LINE_SEGMENT;
 
-    if (path_seg.Getlength() + extend_distance < kMinOneStepPathLength) {
-      extend_distance = kMinOneStepPathLength - path_seg.Getlength();
+    if (path_seg.Getlength() + extend_distance <
+        apa_param.GetInstance().GetParam().min_one_step_path_length) {
+      extend_distance =
+          apa_param.GetInstance().GetParam().min_one_step_path_length -
+          path_seg.Getlength();
     }
 
     new_line.line_seg.length = extend_distance;

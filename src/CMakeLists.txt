@@ -86,5 +86,8 @@ elseif (ADAPTER STREQUAL "ap")
   # to be add
 endif()
 
+install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../res/conf/${PRODUCT}/
+  DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/res/conf)
+
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning
   DESTINATION /asw)

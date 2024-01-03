@@ -31,6 +31,8 @@ class ApaPlanInterface {
     return apa_planner_stack_;
   }
 
+  void SyncParameters();
+
   const PlanningOutput::PlanningOutput GetPlaningOutput() const {
     if (planner_ptr_ != nullptr) {
       return planner_ptr_->GetOutput();

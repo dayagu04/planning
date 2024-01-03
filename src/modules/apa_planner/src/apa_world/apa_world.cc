@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "apa_param_setting.h"
 #include "common.pb.h"
 #include "func_state_machine.pb.h"
 #include "general_planning_context.h"
@@ -11,12 +12,7 @@
 
 namespace planning {
 namespace apa_planner {
-// params of ego car seen as static
-static const double kMaxEgoPosStandstillDist = 0.02;
 static const double kPlanTime = 0.1;
-static const double kStanstillSpd = 0.01;
-static const double kMinStandstillTimeByPos = 1.5;
-static const double kMinStandsitllTimeByVel = 0.5;
 
 void ApaWorld::Init() {
   measures_ptr_ = std::make_shared<Measurements>();
@@ -50,7 +46,7 @@ void ApaWorld::UpdateEgoState() {
 
   // calculate standstill time by pos
   if ((measures_ptr_->pos_ego - current_pos).norm() <
-      kMaxEgoPosStandstillDist) {
+      apa_param.GetInstance().GetParam().static_pos_eps) {
     measures_ptr_->standstill_timer_by_pos += kPlanTime;
   } else {
     measures_ptr_->standstill_timer_by_pos = 0.0;
@@ -68,7 +64,8 @@ void ApaWorld::UpdateEgoState() {
                                .linear_velocity_from_wheel();
 
   // calculate standstill time by velocity
-  if (std::fabs(measures_ptr_->vel_ego) < kStanstillSpd) {
+  if (std::fabs(measures_ptr_->vel_ego) <
+      apa_param.GetInstance().GetParam().max_standstill_speed) {
     measures_ptr_->standstill_timer_by_vel += kPlanTime;
   } else {
     measures_ptr_->standstill_timer_by_vel = 0.0;
@@ -76,9 +73,12 @@ void ApaWorld::UpdateEgoState() {
 
   // static flag
   measures_ptr_->static_flag =
-      (measures_ptr_->standstill_timer_by_vel >= kMinStandsitllTimeByVel &&
-       measures_ptr_->standstill_timer_by_pos > kMinStandsitllTimeByVel) ||
-      (measures_ptr_->standstill_timer_by_pos > kMinStandstillTimeByPos);
+      (measures_ptr_->standstill_timer_by_vel >=
+           apa_param.GetInstance().GetParam().min_standstill_time_by_vel &&
+       measures_ptr_->standstill_timer_by_pos >
+           apa_param.GetInstance().GetParam().min_standstill_time_by_vel) ||
+      (measures_ptr_->standstill_timer_by_pos >
+       apa_param.GetInstance().GetParam().min_standstill_time_by_pos);
 }
 
 const bool ApaWorld::CheckSelectedSlot() const {

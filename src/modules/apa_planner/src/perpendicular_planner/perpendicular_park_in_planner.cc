@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <iostream>
 
+#include "apa_param_setting.h"
 #include "apa_plan_base.h"
 #include "apa_utils.h"
 #include "apa_world.h"
@@ -24,38 +25,7 @@
 namespace planning {
 namespace apa_planner {
 
-// planning params
-static const double kNormalSlotLength = 5.2;
-static const double kMaxFinishLatOffset = 0.08;
-static const double kMaxFinishLonOffset = 0.2;
-static const double kMaxFinishHeadingOffset = 2.8 / 57.3;
-static const double kMaxVelocity = 0.6;
-static const double kSafeUssRemainDist = 0.35;
-
-// replan params
-static const double kStuckFailedTime = 9.0;
-static const double kStuckReplanTime = 4.0;
-static const double kMaxReplanRemainDist = 0.2;
-
-// T-lane expending or shrinking distance
-static const double kVacantXp0 = 0.5;
-static const double kVacantYp0 = 0.3;
-static const double kVacantXp1 = 0.8;
-static const double kVacantYp1 = 0.6;
-
-static const double kOccupiedXp0 = 0.2;
-static const double kOccupiedYp0 = 0.0;
-static const double kOccupiedXp1 = 0.3;
-static const double kOccupiedYp1 = 0.0;
-
-static const double kNearBySlotCornerDist = 0.6;
-static const double kChannelWidth = 6.5;
-static const double kTerminalTargetX = 1.35;
-static const double kTerminalTargetY = 0.0;
-static const double kTerminalTargetYBias = 0.0;
-static const double kTerminalTargetX2Limiter = 0.15;
 static const double kPlanTime = 0.1;
-static const double kUssStuckReplanWaitTime = 2.5;
 static const bool kForceBothOccupied = true;
 
 void PerpendicularInPlanner::Reset() {
@@ -122,7 +92,8 @@ void PerpendicularInPlanner::PlanCore() {
   if (CheckReplan() || simu_param_.force_plan) {
     std::cout << "replan is required!" << std::endl;
     frame_.ego_slot_info.first_fix_limiter = true;
-    frame_.ego_slot_info.terminal_target_X = kTerminalTargetX;
+    frame_.ego_slot_info.terminal_target_X =
+        apa_param.GetInstance().GetParam().terminal_target_x;
 
     UpdateSlotRealtime();
 
@@ -187,7 +158,8 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   const auto pM23 = 0.5 * (pt[2] + pt[3]);
   const auto n = (pM01 - pM23).normalized();
 
-  ego_slot_info.slot_origin_pos = pM01 - kNormalSlotLength * n;
+  ego_slot_info.slot_origin_pos =
+      pM01 - apa_param.GetInstance().GetParam().normal_slot_length * n;
   ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
   ego_slot_info.slot_origin_heading_vec = n;
 
@@ -229,7 +201,8 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   std::cout << "frame_.current_arc_steer = "
             << static_cast<int>(frame_.current_arc_steer) << std::endl;
 
-  ego_slot_info.slot_length = kNormalSlotLength;
+  ego_slot_info.slot_length =
+      apa_param.GetInstance().GetParam().normal_slot_length;
   ego_slot_info.slot_width = (pt[0] - pt[1]).norm();
 
   ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
@@ -262,13 +235,16 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
       ego_slot_info.first_fix_limiter &&
       perpendicular_path_planner_.GetOutput().is_last_path && false) {
     PostProcessPathAccordingLimiter();
-    ego_slot_info.terminal_target_X = point_mid.x() + kTerminalTargetX2Limiter;
+    ego_slot_info.terminal_target_X =
+        point_mid.x() +
+        apa_param.GetInstance().GetParam().terminal_target_x_to_limiter;
     ego_slot_info.first_fix_limiter = false;
   }
 
   // calc terminal pos
-  ego_slot_info.target_ego_pos_slot << kTerminalTargetX,
-      kTerminalTargetY + kTerminalTargetYBias;
+  ego_slot_info.target_ego_pos_slot << ego_slot_info.terminal_target_X,
+      apa_param.GetInstance().GetParam().terminal_target_y +
+          apa_param.GetInstance().GetParam().terminal_target_y_bias;
   ego_slot_info.target_ego_heading_slot = 0.0;
 
   // calc terminal error once
@@ -293,8 +269,9 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   if (std::fabs(ego_slot_info.terminal_err.pos.y()) < 0.9 &&
       std::fabs(ego_slot_info.ego_heading_slot) < 75.0 / 57.3) {
     ego_slot_info.slot_occupied_ratio = pnc::mathlib::Clamp(
-        1.0 - (ego_slot_info.terminal_err.pos.x() / kNormalSlotLength), 0.0,
-        1.0);
+        1.0 - (ego_slot_info.terminal_err.pos.x() /
+               apa_param.GetInstance().GetParam().normal_slot_length),
+        0.0, 1.0);
   } else {
     ego_slot_info.slot_occupied_ratio = 0.0;
   }
@@ -343,12 +320,14 @@ void PerpendicularInPlanner::GenTlane() {
         managed_slot.corner_points().corner_point(1).x(),
         managed_slot.corner_points().corner_point(1).y());
 
-    if ((target_corner0 - managed_corner1).norm() < kNearBySlotCornerDist) {
+    if ((target_corner0 - managed_corner1).norm() <
+        apa_param.GetInstance().GetParam().nearby_slot_corner_dist) {
       nearby_slot_nums++;
       corner_0_side_occupied = managed_slot.is_occupied();
     }
 
-    if ((target_corner1 - managed_corner0).norm() < kNearBySlotCornerDist) {
+    if ((target_corner1 - managed_corner0).norm() <
+        apa_param.GetInstance().GetParam().nearby_slot_corner_dist) {
       nearby_slot_nums++;
       corner_1_side_occupied = managed_slot.is_occupied();
     }
@@ -384,31 +363,56 @@ void PerpendicularInPlanner::GenTlane() {
   if (slot_side == SLOT_SIDE_RIGHT) {
     // if right slot is free
     if (!corner_0_side_occupied) {
-      t_lane_.p1 = corner0_slot + Eigen::Vector2d(-kVacantXp1, -kVacantYp1);
+      t_lane_.p1 =
+          corner0_slot +
+          Eigen::Vector2d(-apa_param.GetInstance().GetParam().vacant_p1_x_diff,
+                          -apa_param.GetInstance().GetParam().vacant_p1_y_diff);
     } else {
-      t_lane_.p1 = corner0_slot + Eigen::Vector2d(kOccupiedXp1, kOccupiedYp1);
+      t_lane_.p1 = corner0_slot +
+                   Eigen::Vector2d(
+                       apa_param.GetInstance().GetParam().occupied_p1_x_diff,
+                       apa_param.GetInstance().GetParam().occupied_p1_y_diff);
     }
 
     if (!corner_1_side_occupied) {
-      t_lane_.p0 = corner1_slot + Eigen::Vector2d(-kVacantXp0, kVacantYp0);
+      t_lane_.p0 =
+          corner1_slot +
+          Eigen::Vector2d(-apa_param.GetInstance().GetParam().vacant_p0_x_diff,
+                          apa_param.GetInstance().GetParam().vacant_p0_y_diff);
     } else {
-      t_lane_.p0 = corner1_slot + Eigen::Vector2d(kOccupiedXp0, -kOccupiedYp0);
+      t_lane_.p0 = corner1_slot +
+                   Eigen::Vector2d(
+                       apa_param.GetInstance().GetParam().occupied_p0_x_diff,
+                       -apa_param.GetInstance().GetParam().occupied_p0_y_diff);
     }
   } else if (slot_side == SLOT_SIDE_LEFT) {
     if (!corner_0_side_occupied) {
-      t_lane_.p1 = corner0_slot + Eigen::Vector2d(-kVacantXp1, kVacantYp1);
+      t_lane_.p1 =
+          corner0_slot +
+          Eigen::Vector2d(-apa_param.GetInstance().GetParam().vacant_p1_x_diff,
+                          apa_param.GetInstance().GetParam().vacant_p1_y_diff);
     } else {
-      t_lane_.p1 = corner0_slot + Eigen::Vector2d(kOccupiedXp1, -kOccupiedYp1);
+      t_lane_.p1 = corner0_slot +
+                   Eigen::Vector2d(
+                       apa_param.GetInstance().GetParam().occupied_p1_x_diff,
+                       -apa_param.GetInstance().GetParam().occupied_p1_y_diff);
     }
 
     if (!corner_1_side_occupied) {
-      t_lane_.p0 = corner1_slot + Eigen::Vector2d(-kVacantXp0, -kVacantYp0);
+      t_lane_.p0 =
+          corner1_slot +
+          Eigen::Vector2d(-apa_param.GetInstance().GetParam().vacant_p0_x_diff,
+                          -apa_param.GetInstance().GetParam().vacant_p0_y_diff);
     } else {
-      t_lane_.p0 = corner1_slot + Eigen::Vector2d(kOccupiedXp0, kOccupiedYp0);
+      t_lane_.p0 = corner1_slot +
+                   Eigen::Vector2d(
+                       apa_param.GetInstance().GetParam().occupied_p0_x_diff,
+                       apa_param.GetInstance().GetParam().occupied_p0_y_diff);
     }
   }
 
-  t_lane_.channel_x = kNormalSlotLength + kChannelWidth;
+  t_lane_.channel_x = apa_param.GetInstance().GetParam().normal_slot_length +
+                      apa_param.GetInstance().GetParam().channel_width;
 
   t_lane_.pt << ego_slot_info.target_ego_pos_slot.x(),
       ego_slot_info.target_ego_pos_slot.y();
@@ -532,7 +536,8 @@ const bool PerpendicularInPlanner::CheckSegCompleted() {
     const auto min_remain_dist =
         std::min(frame_.remain_dist_uss, frame_.remain_dist);
 
-    if (min_remain_dist < kMaxReplanRemainDist &&
+    if (min_remain_dist <
+            apa_param.GetInstance().GetParam().max_replan_remain_dist &&
         apa_world_ptr_->GetMeasurementsPtr()->static_flag) {
       frame_.is_replan_by_uss = (frame_.remain_dist_uss < frame_.remain_dist);
 
@@ -545,7 +550,8 @@ const bool PerpendicularInPlanner::CheckSegCompleted() {
           apa_world_ptr_->GetSlotManagerPtr()->SetRealtime();
           is_seg_complete = true;
         } else {
-          if (frame_.stuck_time > kUssStuckReplanWaitTime) {
+          if (frame_.stuck_time >
+              apa_param.GetInstance().GetParam().uss_stuck_replan_wait_time) {
             is_seg_complete = true;
           }
         }
@@ -595,7 +601,8 @@ const bool PerpendicularInPlanner::CheckReplan() {
     return true;
   }
 
-  if (frame_.stuck_time > kStuckReplanTime) {
+  if (frame_.stuck_time >
+      apa_param.GetInstance().GetParam().stuck_replan_time) {
     std::cout << "replan by stuck!" << std::endl;
     frame_.replan_reason = STUCKED;
     return true;
@@ -607,17 +614,21 @@ const bool PerpendicularInPlanner::CheckReplan() {
 }
 
 const bool PerpendicularInPlanner::CheckStuckFailed() {
-  return frame_.stuck_time > kStuckFailedTime;
+  return frame_.stuck_time >
+         apa_param.GetInstance().GetParam().stuck_failed_time;
 }
 
 const bool PerpendicularInPlanner::CheckFinished() {
   const auto& ego_slot_info = frame_.ego_slot_info;
 
   const bool parking_success =
-      ego_slot_info.terminal_err.pos.x() < kMaxFinishLonOffset &&
-      std::fabs(ego_slot_info.terminal_err.pos.y()) <= kMaxFinishLatOffset &&
+      ego_slot_info.terminal_err.pos.x() <
+          apa_param.GetInstance().GetParam().max_finish_lon_offset &&
+      std::fabs(ego_slot_info.terminal_err.pos.y()) <=
+          apa_param.GetInstance().GetParam().max_finish_lat_offset &&
       std::fabs(ego_slot_info.terminal_err.heading) <=
-          kMaxFinishHeadingOffset &&
+          apa_param.GetInstance().GetParam().max_finish_heading_offset_deg /
+              57.3 &&
       apa_world_ptr_->GetMeasurementsPtr()->static_flag;
 
   std::cout << "terminal x error= " << ego_slot_info.terminal_err.pos.x()
@@ -672,8 +683,9 @@ void PerpendicularInPlanner::GenPlanningPath() {
 
   // set target velocity to control as a limit
   const std::vector<double> ratio_tab = {0.0, 0.4, 0.8, 1.0};
-  const std::vector<double> vel_limit_tab = {kMaxVelocity, kMaxVelocity, 0.45,
-                                             0.35};
+  const std::vector<double> vel_limit_tab = {
+      apa_param.GetInstance().GetParam().max_velocity,
+      apa_param.GetInstance().GetParam().max_velocity, 0.45, 0.35};
   const double vel_limit = pnc::mathlib::Interp1(
       ratio_tab, vel_limit_tab, frame_.ego_slot_info.slot_occupied_ratio);
 
@@ -768,7 +780,8 @@ const double PerpendicularInPlanner::CalRemainDistFromUss() {
   uss_obstacle_avoider_ptr->Update(&planning_output_,
                                    apa_world_ptr_->GetLocalViewPtr());
 
-  double safe_uss_remain_dist = kSafeUssRemainDist;
+  double safe_uss_remain_dist =
+      apa_param.GetInstance().GetParam().safe_uss_remain_dist;
   if (frame_.ego_slot_info.slot_occupied_ratio < 0.05) {
     safe_uss_remain_dist = 0.6;
   }
@@ -834,7 +847,7 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingLimiter() {
     auto& x = current_path_point_global_vec_[i].pos.x();
     auto& y = current_path_point_global_vec_[i].pos.y();
     double dis = (Eigen::Vector2d(x, y) - point_mid).norm();
-    if (dis < kTerminalTargetX2Limiter) {
+    if (dis < apa_param.GetInstance().GetParam().terminal_target_x_to_limiter) {
       // need shorten
       break;
     }
@@ -857,9 +870,10 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingLimiter() {
     return false;
   }
 
-  if (dis > kTerminalTargetX2Limiter) {
+  if (dis > apa_param.GetInstance().GetParam().terminal_target_x_to_limiter) {
     // need extend by limiter
-    double extend_dis = dis - kTerminalTargetX2Limiter;
+    double extend_dis =
+        dis - apa_param.GetInstance().GetParam().terminal_target_x_to_limiter;
     Eigen::Vector2d extended_point;
     bool success = pnc::geometry_lib::CalExtendedPointByTwoPoints(
         Eigen::Vector2d(x_vec[i - 2], y_vec[i - 2]),
