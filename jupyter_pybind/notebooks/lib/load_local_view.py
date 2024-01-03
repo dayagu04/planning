@@ -1463,7 +1463,7 @@ def load_local_view_figure():
 
   ### figures config
 
-  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=800, match_aspect = True, aspect_scale=1)
+  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=900, match_aspect = True, aspect_scale=1)
 
   fig1.x_range.flipped = True
   # figure plot

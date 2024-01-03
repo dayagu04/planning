@@ -82,7 +82,6 @@ def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_da
       coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
     except:
       coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
-    # coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
   if bag_loader.plan_debug_msg['enable'] == True:
     lat_behavior_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_behavior_debug_info
@@ -430,13 +429,13 @@ def load_lat_plan_figure(fig1):
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('origin steer', '@steer_deg_vec'), ('tuned steer', '@steer_deg_vec_t')], mode='vline')
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('origin steer dot', '@steer_dot_deg_vec'), ('tuned steer dot', '@steer_dot_deg_vec_t')], mode='vline')
 
-  hover7 = HoverTool(renderers=[fig1.renderers[57]], tooltips=[('index', '@bound_index_vec'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @soft_upper_bound_vec))'), 
+  hover7 = HoverTool(renderers=[fig1.renderers[len(fig1.renderers) - 4]], tooltips=[('index', '@bound_index_vec'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @soft_upper_bound_vec))'), 
                                                                ('obstacle id', '@soft_upper_bound_id_vec'), ('type', '@soft_upper_bound_type_vec')])
-  hover8 = HoverTool(renderers=[fig1.renderers[58]], tooltips=[('index', '@bound_index_vec'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @soft_lower_bound_vec))'), 
+  hover8 = HoverTool(renderers=[fig1.renderers[len(fig1.renderers) - 3]], tooltips=[('index', '@bound_index_vec'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @soft_lower_bound_vec))'), 
                                                                ('obstacle id', '@soft_lower_bound_id_vec'), ('type', '@soft_lower_bound_type_vec')])  
-  hover9 = HoverTool(renderers=[fig1.renderers[59]], tooltips=[('index', '@bound_index_vec'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @hard_upper_bound_vec))'), 
+  hover9 = HoverTool(renderers=[fig1.renderers[len(fig1.renderers) - 2]], tooltips=[('index', '@bound_index_vec'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @hard_upper_bound_vec))'), 
                                                                ('obstacle id', '@hard_upper_bound_id_vec'), ('type', '@hard_upper_bound_type_vec')])
-  hover10 = HoverTool(renderers=[fig1.renderers[60]], tooltips=[('index', '@bound_index_vec'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @hard_lower_bound_vec))'), 
+  hover10 = HoverTool(renderers=[fig1.renderers[len(fig1.renderers) - 1]], tooltips=[('index', '@bound_index_vec'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @hard_lower_bound_vec))'), 
                                                                 ('obstacle id', '@hard_lower_bound_id_vec'), ('type', '@hard_lower_bound_type_vec')])
   fig1.add_tools(hover7)
   fig1.add_tools(hover8)
