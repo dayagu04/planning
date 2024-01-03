@@ -765,7 +765,6 @@ def generate_planning_trajectory(trajectory, loc_msg = None, is_display_enu = Fa
 
 def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = "", is_display_enu = False):
   road_tile_info = ehr_parking_map_msg.road_tile_info
-    
   parking_space_info = road_tile_info.parking_space
   parking_space_boxes_x = []
   parking_space_boxes_y = []
@@ -829,6 +828,46 @@ def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = "", is_display_enu =
   except:
     print('generate_ehr_parking_map error')
   return parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y
+
+def generate_ground_line(ground_line_msg, loc_msg = "", is_display_enu = False):
+  ground_lines = ground_line_msg.ground_lines
+  groundline_x_vec = []
+  groundline_y_vec = []
+  try:
+    if is_display_enu:
+      for j in range(len(ground_lines)):
+        groundline = ground_lines[j]
+        single_groundline_x_vec = []
+        single_groundline_y_vec = []
+        for k in range(len(groundline.points_3d)):
+          ground_x_enu = groundline.points_3d[k].x
+          ground_y_enu = groundline.points_3d[k].y
+          single_groundline_x_vec.append(ground_x_enu)
+          single_groundline_y_vec.append(ground_y_enu)
+        groundline_x_vec.append(single_groundline_x_vec)
+        groundline_y_vec.append(single_groundline_y_vec)
+    else:
+      coord_tf = coord_transformer()
+      if loc_msg != "": # 长时轨迹 
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        for j in range(len(ground_lines)):
+          groundline = ground_lines[j]
+          single_groundline_x_vec = []
+          single_groundline_y_vec = []
+          for k in range(len(groundline.points_3d)):
+            ground_x_enu = groundline.points_3d[k].x
+            ground_y_enu = groundline.points_3d[k].y
+            local_x, local_y = coord_tf.global_to_local([ground_x_enu], [ground_y_enu])
+            single_groundline_x_vec.append(local_x)
+            single_groundline_y_vec.append(local_y)
+          groundline_x_vec.append(single_groundline_x_vec)
+          groundline_y_vec.append(single_groundline_y_vec)
+  except:
+    print('groundline error')
+  return groundline_x_vec, groundline_y_vec
   
 def generate_control(control_msg, loc_msg = "", is_display_enu = False):
   mpc_dx = []

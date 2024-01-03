@@ -487,7 +487,7 @@ road_mark_params = {
 ground_line_params = {
     'legend_label' : 'ground_line',
     'line_width' : 2,
-    'line_color' : '#A52A2A', # 棕色
+    'line_color' : 'green',
     'line_dash' : 'dotted',
     'line_alpha' : 1
 }
@@ -1121,8 +1121,9 @@ def load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, is_display_e
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
       flag, ehr_parking_map_msg = find(dataLoader.ehr_parking_map_msg, ehr_parking_map_timestamps[i])
       if not flag:
-        parking_space_generate.xys.append(([], [],[]))
-        road_mark_generate.xys.append(([], [],[]))
+        parking_space_generate.xys.append(([], [], []))
+        road_mark_generate.xys.append(([], [], []))
+        # print('find ehr_parking_map_msg error')
         continue
       flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
       parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y = generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, is_display_enu)
@@ -1136,34 +1137,17 @@ def load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, is_display_e
     road_mark_generate.ts = np.array(plan_debug_ts)
     road_mark_params_layer = PatchLayer(fig_local_view ,road_mark_params)
     layer_manager.AddLayer(road_mark_params_layer, 'road_mark_params_layer', road_mark_generate, 'road_mark_generate', 2)
+
 def load_ground_line(dataLoader, layer_manager, fig_local_view, is_display_enu = False):
-  if dataLoader.ground_line_msg['enable'] == True:
+  if dataLoader.ground_line_msg['enable'] == False:
     groundline_generate = CommonGenerator()
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
       flag, ground_line_msg = find(dataLoader.ground_line_msg, ground_line_timestamps[i])
       if not flag:
-        groundline_generate.xys.append(([], [],[]))
+        groundline_generate.xys.append(([], []))
         continue
-      ground_lines = ground_line_msg.ground_lines
-      groundline_x_vec = []
-      groundline_y_vec = []
-      for j in range(len(ground_lines)):
-        groundline = ground_lines[j]
-        single_groundline_x_vec = []
-        single_groundline_y_vec = []
-        groundline_plot_x_vec = []
-        groundline_plot_y_vec = []
-        for k in range(len(groundline.points_3d)):
-          ground_x_enu = groundline.points_3d[k].x
-          ground_y_enu = groundline.points_3d[k].y
-          # print(ground_x_enu, ground_y_enu)
-          # ground_x_global, ground_y_global = local2global(ground_x_local, ground_y_local, cur_pos_xn, cur_pos_yn, cur_yaw)
-          # single_groundline_x_vec.append(ground_x_global - cur_pos_xn0)
-          # single_groundline_y_vec.append(ground_y_global - cur_pos_yn0)
-          single_groundline_x_vec.append(ground_x_enu)
-          single_groundline_y_vec.append(ground_y_enu)
-        groundline_x_vec.append(single_groundline_x_vec)
-        groundline_y_vec.append(single_groundline_y_vec)
+      flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
+      groundline_x_vec, groundline_y_vec = generate_ground_line(ground_line_msg, loc_msg, is_display_enu)
       groundline_generate.xys.append((groundline_y_vec, groundline_x_vec))
     groundline_generate.ts = np.array(plan_debug_ts)
     groundline_params_layer = MultiCurveLayer(fig_local_view ,ground_line_params)
