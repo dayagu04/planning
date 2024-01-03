@@ -284,7 +284,7 @@ class SlotManagement {
   const double GetOccupiedRatio() const { return frame_.slot_occupied_ratio_; }
 
   const bool GetSelectedLimiter(
-      std::pair<Eigen::Vector2d, Eigen::Vector2d> fused_limiter) const;
+      std::pair<Eigen::Vector2d, Eigen::Vector2d>& fused_limiter) const;
 
   const std::vector<PlanningOutput::SuccessfulSlotsInfo>&
   GetReleasedSlotInfoVec() const {

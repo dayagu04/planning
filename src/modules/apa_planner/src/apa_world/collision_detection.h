@@ -38,6 +38,15 @@ class CollisionDetector {
   const CollisionResult Update(const pnc::geometry_lib::Arc &arc,
                                const double heading_start);
 
+  const CollisionResult Update(
+      const pnc::geometry_lib::LineSegment &line_seg,
+      const double heading_start,
+      const std::vector<Eigen::Vector2d> &obstacle_global_vec);
+
+  const CollisionResult Update(
+      const pnc::geometry_lib::Arc &arc, const double heading_start,
+      const std::vector<Eigen::Vector2d> &obstacle_global_vec);
+
   void SetObstacles(const std::vector<Eigen::Vector2d> &obstacle_global_vec);
   void AddObstacles(const std::vector<Eigen::Vector2d> &obstacle_global_vec);
   void AddObstacles(const Eigen::Vector2d &obstacle_global);

@@ -47,16 +47,12 @@ int Update(double ego_x, double ego_y, double ego_heading, double tlane_p0_x,
   input.ego_pose.pos << ego_x, ego_y;
   input.ego_pose.heading = ego_heading;
 
-  input.tlane.p0 << tlane_p0_x, tlane_p0_y;
-  input.tlane.p1 << tlane_p1_x, tlane_p1_y;
-  input.tlane.pt << tlane_pt_x, tlane_pt_y;
+  input.tlane.pt_outside << tlane_p0_x, tlane_p0_y;
+  input.tlane.pt_inside << tlane_p1_x, tlane_p1_y;
+  input.tlane.pt_terminal << tlane_pt_x, tlane_pt_y;
   input.tlane.channel_x = channel_x;
   input.is_complete_path = is_complete_path;
   input.is_replan_first = false;
-
-  // need consider
-  input.tlane.plan_seg_state.cur_seg_direction = 0;
-  input.tlane.plan_seg_state.cur_seg_steer = 0;
 
   // std::cout << "---------------" << std::endl;
   pBase->SetInput(input);
@@ -81,7 +77,7 @@ std::vector<double> GetMinSafeCircle() { return pBase->GetMinSafeCircle(); }
 
 Eigen::Vector2d GetpA() {
   if (pBase->GetOutput().path_segment_vec[0].seg_type ==
-      ApaPlannerBase::LINE_SEGMENT) {
+      pnc::geometry_lib::SEG_TYPE_LINE) {
     return pBase->GetOutput().path_segment_vec[0].line_seg.pB;
   } else {
     return pBase->GetOutput().path_segment_vec[0].line_seg.pA;
@@ -90,7 +86,7 @@ Eigen::Vector2d GetpA() {
 
 Eigen::Vector2d GetpB() {
   if (pBase->GetOutput().path_segment_vec[0].seg_type ==
-      ApaPlannerBase::LINE_SEGMENT) {
+      pnc::geometry_lib::SEG_TYPE_LINE) {
     return pBase->GetOutput().path_segment_vec[1].arc_seg.pB;
   } else {
     return pBase->GetOutput().path_segment_vec[0].line_seg.pB;
@@ -101,7 +97,7 @@ Eigen::Vector2d GetABCenter() {
   if (pBase->GetOutput().path_available &&
       pBase->GetOutput().path_segment_vec.size() > 1) {
     if (pBase->GetOutput().path_segment_vec[1].seg_type ==
-        ApaPlannerBase::ARC_SEGMENT) {
+        pnc::geometry_lib::SEG_TYPE_ARC) {
       return pBase->GetOutput().path_segment_vec[1].arc_seg.circle_info.center;
     } else {
       return pBase->GetOutput().path_segment_vec[0].arc_seg.circle_info.center;
@@ -110,12 +106,6 @@ Eigen::Vector2d GetABCenter() {
     return Eigen::Vector2d();
   }
 }
-
-std::vector<Eigen::Vector2d> GetObstacles() {
-  planning::CollisionDetector collision_detector_ = pBase->GetCollisionDetector();
-  return collision_detector_.GetObstacles();
-}
-
 
 PYBIND11_MODULE(perpendicular_planning_py, m) {
   m.doc() = "m";
@@ -128,6 +118,5 @@ PYBIND11_MODULE(perpendicular_planning_py, m) {
       .def("GetpB", &GetpB)
       .def("GetHeadingB", &GetHeadingB)
       .def("GetTagPoint", &GetTagPoint)
-      .def("GetABCenter", &GetABCenter)
-      .def("GetObstacles", &GetObstacles);
+      .def("GetABCenter", &GetABCenter);
 }

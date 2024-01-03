@@ -11,7 +11,7 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/TMP/test_7.00000'
+bag_path = '/data_cold/abu_zone/APA/planning-918fd908/test_1.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -54,7 +54,7 @@ class LocalViewSlider:
     self.sample_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "sample_ds",min=0.02, max=2.0, value=0.5, step=0.02)
     self.lon_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lon_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
     self.lat_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lat_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
-    self.heading_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "heading_dif",min=-35.0, max=25.0, value=0.0, step=0.1)
+    self.heading_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "heading_dif",min=-45.0, max=45.0, value=0.0, step=0.1)
 
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
@@ -85,9 +85,15 @@ def slider_callback(bag_time, select_id, force_plan, is_reset, is_complete_path,
     tlane_p0_y = plan_debug_msg['tlane_p0_y']
     tlane_p1_x = plan_debug_msg['tlane_p1_x']
     tlane_p1_y = plan_debug_msg['tlane_p1_y']
+    obstacle_x = plan_debug_msg['obstaclesX']
+    obstacle_x.append(tlane_p0_x)
+    obstacle_x.append(tlane_p1_x)
+    obstacle_y = plan_debug_msg['obstaclesY']
+    obstacle_y.append(tlane_p0_y)
+    obstacle_y.append(tlane_p1_y)
     data_tlane.data.update({
-      'x': [tlane_p0_x, tlane_p1_x],
-      'y': [tlane_p0_y, tlane_p1_y],
+      'x': obstacle_x,
+      'y': obstacle_y,
     })
   else:
     data_tlane.data.update({

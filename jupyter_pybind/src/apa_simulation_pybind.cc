@@ -164,8 +164,9 @@ const bool InterfaceUpdateParam(py::bytes &func_statemachine_bytes,
   if (force_plan) {
     local_view.function_state_machine_info.set_current_state(
         FuncStateMachine::FunctionalState::PARK_IN_ACTIVATE_WAIT);
-
-    local_view.parking_fusion_info.set_select_slot_id(select_id);
+    if (select_id > 0) {
+      local_view.parking_fusion_info.set_select_slot_id(select_id);
+    }
   }
 
   const bool result = apa_interface_ptr->Update(&local_view);

@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/planning-06cae897/test_3.00000'
+bag_path = '/data_cold/abu_zone/APA/planning-918fd908/test_1.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
@@ -31,19 +31,20 @@ class LocalViewSlider:
 def slider_callback(bag_time):
   kwargs = locals()
   update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, plot_ctrl_flag)
+  index_map = bag_loader.get_msg_index(bag_time)
 
-  plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
-  # plan_msg_idx = local_view_data['data_index']['plan_msg_idx']
+  plan_msg = bag_loader.plan_msg['data'][index_map['plan_msg_idx']]
+  # print("plan_msg = ", plan_msg)
 
-  planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
-  planning_data = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
-
+  planning_json = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
   print("remain_dist = ", planning_json['remain_dist'])
-  print("planning_status = ", planning_json['planning_status'])
-  print("stuck_time = ", planning_json['stuck_time'])
-  print("replan_reason = ", planning_json['replan_reason'])
-  print("slot_occupied_ratio = ", planning_json['slot_occupied_ratio'])
 
+  # print("planning_json = ", planning_json)
+
+  # planning_data = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
+
+  # print("is_replan_once = ", planning_json['is_replan_once'])
+  # print("replan_count = ", planning_json['replan_count'])
 
 
   push_notebook()

@@ -192,11 +192,12 @@ class LoadCyberbag:
 
     # load planning debug msg
     try:
-      json_value_list = ["replan_status", "ego_pos_x", "is_replan", "standstill_timer_by_pos", "standstill_timer", "stuck_time", "slot_occupied_ratio", "remain_dist",
+      json_value_list = ["replan_status", "ego_pos_x", "is_replan", "standstill_timer_by_pos", "standstill_timer", "static_flag", "stuck_time", "slot_occupied_ratio", "remain_dist",
                          "remain_dist_uss", "path_length", "is_replan_first", "replan_count", "planning_status", "replan_reason",
-                         "tlane_p0_x", "tlane_p0_y", "tlane_p1_x", "tlane_p1_y", "tlane_pt_x", "tlane_pt_y", "channel_x", "slot_side"]
+                         "tlane_p0_x", "tlane_p0_y", "tlane_p1_x", "tlane_p1_y", "tlane_pt_x", "tlane_pt_y", "channel_x", "slot_side",
+                         "terminal_error_x", "terminal_error_y", "terminal_error_heading", "path_plan_success", "pathplan_result"]
 
-      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec"]
+      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec", "obstaclesX", "obstaclesY"]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
@@ -939,9 +940,37 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
   if plot_ctrl_flag == True:
     names = []
     datas = []
+    # load planning data
     if bag_loader.plan_msg['enable'] == True:
-      names.append("planning_status")
+      names.append("apa_planning_status")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].planning_status.apa_planning_status))
+
+      names.append("planning_stm")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['planning_status']))
+
+      names.append("replan_reason")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_reason']))
+
+      names.append("path_plan_success")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['path_plan_success']))
+
+      names.append("path_plan_result")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['pathplan_result']))
+
+      names.append("terminal_error_x")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['terminal_error_x']))
+
+      names.append("terminal_error_y")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['terminal_error_y']))
+
+      names.append("terminal_error_heading (deg)")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['terminal_error_heading'] * 57.3))
+
+      names.append("stuck_time")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['stuck_time']))
+
+      names.append("slot_occupied_ratio")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_occupied_ratio']))
 
       names.append("slots_id")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].successful_slot_info_list))
@@ -1376,15 +1405,17 @@ slot_params_apa = {
 fusion_slot_params_apa = {
   'line_dash' : 'solid',
   'line_color' : "red",
+  'line_alpha' : 0.6,
   'line_width' : 2,
-  'legend_label' : 'fusion_parking_slot'
+  'legend_label' : 'fusion_parking_slot',
+  'visible' : False
 }
 vision_slot_params_apa = {
   'line_dash' : 'solid',
   'line_color' : "lightgrey",
   'line_width' : 3,
   'legend_label' : 'vision_parking_slot',
-  'visible' : False
+  'visible' : True
 }
 
 final_slot_params_apa = {
@@ -1403,7 +1434,7 @@ target_slot_params_apa = {
 
 all_slot_params_apa = {
   'line_dash' : 'solid',
-  'line_color' : "green",
+  'line_color' : "blue",
   'line_width' : 2,
   'legend_label' : 'all managed slot',
   'visible' : False
@@ -1428,14 +1459,16 @@ uss_wave_params = {
   'fill_color' : 'lavender',
   'line_color' : 'black',
   'legend_label' : 'uss_wave',
-  'alpha' : 0.5
+  'alpha' : 0.5,
+  'visible' : False
 }
 
 uss_text_params = {
   'text_color' : 'black',
   'text_align' : 'center',
   'text_font_size' : '10pt',
-  'legend_label' : 'uss_wave'
+  'legend_label' : 'uss_wave',
+  'visible' : False
 }
 
 plan_params = {
@@ -1446,12 +1479,28 @@ mpc_params = {
   'line_width' : 3.0, 'line_color' : 'red', 'line_dash' : 'solid', 'line_alpha' : 0.8, 'legend_label' : 'mpc'
 }
 
+all_managed_occupied_slot_params_apa = {
+  'fill_color' : "blue",
+  'line_color' : "blue",
+  'line_width' : 1,
+  'fill_alpha' : 0.15,
+  'legend_label' : 'all managed slot',
+  'visible' : False
+}
+
+all_managed_limiter_params_apa = {
+  'line_width' : 3,
+  'line_color' : 'pink',
+  'line_dash' : 'solid',
+  'legend_label' : 'managed limiter'
+}
+
 table_params={
     'width': 600,
     'height':520,
 }
 
-def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
+def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctrl_flag=False):
     #define figure
     # define local_view fig
     fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=1000, match_aspect = True, aspect_scale=1)
@@ -1471,27 +1520,98 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
     global control_output_timestamps
     global fusion_slot_timestamps
     global vision_slot_timestamps
-    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-      t = dataLoader.plan_debug_msg["t"][i]  # sub the 0 time
-      plan_debug_ts.append(t)                                        # rea_t
-      input_topic_timestamp = plan_debug.input_topic_timestamp
-      fusion_object_timestamp = input_topic_timestamp.fusion_object  # abs_t
-      fusion_road_timestamp = input_topic_timestamp.fusion_road
-      localization_timestamp = input_topic_timestamp.localization
-      prediction_timestamp = input_topic_timestamp.prediction
-      vehicle_service_timestamp = input_topic_timestamp.vehicle_service
-      control_output_timestamp = input_topic_timestamp.control_output
-      slot_timestamp = input_topic_timestamp.parking_fusion
+    ctrl_debug_ts = []
+    control_debug_timestamps = []
+    plan_output_timestamps = []
+    plan_debug_timestamps = []
+    soc_timestamps = []
+    wave_timestamps = []
 
-      fusion_object_timestamps.append(fusion_object_timestamp / 1e6)
-      fusion_road_timestamps.append(fusion_road_timestamp / 1e6)
-      localization_timestamps.append(localization_timestamp / 1e6)
-      prediction_timestamps.append(prediction_timestamp / 1e6)
-      vehicle_service_timestamps.append(vehicle_service_timestamp / 1e6)
-      control_output_timestamps.append(control_output_timestamp / 1e6)
-      fusion_slot_timestamps.append(slot_timestamp / 1e6)
+    bag_time = 0.0
+    while bag_time <= max_time + time_step / 2:
+      # ctrl_debug_ts is the base time list
+      ctrl_debug_ts.append(bag_time)
 
-    # load self car info
+      loc_msg_idx = 0
+      if dataLoader.loc_msg['enable'] == True:
+        while dataLoader.loc_msg['t'][loc_msg_idx] <= bag_time and loc_msg_idx < (len(dataLoader.loc_msg['t'])-1):
+            loc_msg_idx = loc_msg_idx + 1
+        localization_timestamp = dataLoader.loc_msg['t'][loc_msg_idx]
+        localization_timestamps.append(localization_timestamp)
+
+      fus_msg_idx = 0
+      if dataLoader.fus_msg['enable'] == True:
+        while dataLoader.fus_msg['t'][fus_msg_idx] <= bag_time and fus_msg_idx < (len(dataLoader.fus_msg['t'])-1):
+            fus_msg_idx = fus_msg_idx + 1
+        fusion_object_timestamp = dataLoader.fus_msg['t'][fus_msg_idx]
+        fusion_object_timestamps.append(fusion_object_timestamp)
+
+      vs_msg_idx = 0
+      if dataLoader.vs_msg['enable'] == True:
+        while dataLoader.vs_msg['t'][vs_msg_idx] <= bag_time and vs_msg_idx < (len(dataLoader.vs_msg['t'])-1):
+            vs_msg_idx = vs_msg_idx + 1
+        vehicle_service_timestamp = dataLoader.vs_msg['t'][vs_msg_idx]
+        vehicle_service_timestamps.append(vehicle_service_timestamp)
+
+      fus_parking_msg_idx = 0
+      if dataLoader.fus_parking_msg['enable'] == True:
+        while dataLoader.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time and fus_parking_msg_idx < (len(dataLoader.fus_parking_msg['t'])-1):
+          fus_parking_msg_idx = fus_parking_msg_idx + 1
+        slot_timestamp = dataLoader.fus_parking_msg['t'][fus_parking_msg_idx]
+        fusion_slot_timestamps.append(slot_timestamp)
+
+      vis_parking_msg_idx = 0
+      if dataLoader.vis_parking_msg['enable'] == True:
+        while dataLoader.vis_parking_msg['t'][vis_parking_msg_idx] <= bag_time and vis_parking_msg_idx < (len(dataLoader.vis_parking_msg['t'])-1):
+          vis_parking_msg_idx = vis_parking_msg_idx + 1
+        vis_slot_timestamp = dataLoader.vis_parking_msg['t'][vis_parking_msg_idx]
+        vision_slot_timestamps.append(vis_slot_timestamp)
+
+      plan_msg_idx = 0
+      if dataLoader.plan_msg['enable'] == True:
+        while dataLoader.plan_msg['t'][plan_msg_idx] <= bag_time and plan_msg_idx < (len(dataLoader.plan_msg['t'])-1):
+            plan_msg_idx = plan_msg_idx + 1
+        plan_timestamp = dataLoader.plan_msg['t'][plan_msg_idx]
+        plan_output_timestamps.append(plan_timestamp)
+
+      plan_debug_msg_idx = 0
+      if dataLoader.plan_debug_msg['enable'] == True:
+        while dataLoader.plan_debug_msg['t'][plan_debug_msg_idx] <= bag_time and plan_debug_msg_idx < (len(dataLoader.plan_debug_msg['t'])-1):
+            plan_debug_msg_idx = plan_debug_msg_idx + 1
+        plan_debug_timestamp = dataLoader.plan_debug_msg['t'][plan_debug_msg_idx]
+        plan_debug_timestamps.append(plan_debug_timestamp)
+
+      ctrl_msg_idx = 0
+      if dataLoader.ctrl_msg['enable'] == True:
+        while dataLoader.ctrl_msg['t'][ctrl_msg_idx] <= bag_time and ctrl_msg_idx < (len(dataLoader.ctrl_msg['t'])-1):
+            ctrl_msg_idx = ctrl_msg_idx + 1
+        control_output_timestamp = dataLoader.ctrl_msg['t'][ctrl_msg_idx]
+        control_output_timestamps.append(control_output_timestamp)
+
+      ctrl_debug_msg_idx = 0
+      if dataLoader.ctrl_debug_msg['enable'] == True:
+        while dataLoader.ctrl_debug_msg['t'][ctrl_debug_msg_idx] <= bag_time and ctrl_debug_msg_idx < (len(dataLoader.ctrl_debug_msg['t'])-1):
+            ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
+        ctrl_debug_timestamp = dataLoader.ctrl_debug_msg['t'][ctrl_debug_msg_idx]
+        control_debug_timestamps.append(ctrl_debug_timestamp)
+
+      soc_state_msg_idx = 0
+      if dataLoader.soc_state_msg['enable'] == True:
+        while dataLoader.soc_state_msg['t'][soc_state_msg_idx] <= bag_time and soc_state_msg_idx < (len(dataLoader.soc_state_msg['t'])-1):
+            soc_state_msg_idx = soc_state_msg_idx + 1
+        soc_timestamp = dataLoader.soc_state_msg['t'][soc_state_msg_idx]
+        soc_timestamps.append(soc_timestamp)
+
+      wave_msg_idx = 0
+      if dataLoader.wave_msg['enable'] == True:
+        while dataLoader.wave_msg['t'][wave_msg_idx] <= bag_time and wave_msg_idx < (len(dataLoader.wave_msg['t'])-1):
+            wave_msg_idx = wave_msg_idx + 1
+        wave_timestamp = dataLoader.wave_msg['t'][wave_msg_idx]
+        wave_timestamps.append(wave_timestamp)
+
+      bag_time += time_step
+
+  # load self car info
     ego_car_generate = CommonGenerator()
     ego_center_generate = CommonGenerator()
     ego_circle_generate = CircleGenerator()
@@ -1506,7 +1626,7 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
       car_center_xn = []
       car_center_yn = []
 
-      flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamp)
+      flag, loc_msg = findrt(dataLoader.loc_msg, localization_timestamp)
       if not flag:
         print('find loc_msg error')
         # location_generator.xys.append(([],[]))
@@ -1532,9 +1652,9 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
       ego_car_generate.xys.append(([temp_cur_pos_yn],[temp_cur_pos_xn]))
       ego_circle_generate.xys.append((car_circle_yn,car_circle_xn, car_circle_rn))
 
-    ego_car_generate.ts = np.array(plan_debug_ts)
-    ego_center_generate.ts = np.array(plan_debug_ts)
-    ego_circle_generate.ts = np.array(plan_debug_ts)
+    ego_car_generate.ts = np.array(ctrl_debug_ts)
+    ego_center_generate.ts = np.array(ctrl_debug_ts)
+    ego_circle_generate.ts = np.array(ctrl_debug_ts)
     ego_car_layer = PatchLayer(fig_local_view ,ego_car_params_apa)
     ego_center_layer = DotLayer(fig_local_view ,ego_dot_params_apa)
     ego_circle_layer = CircleLayer(fig_local_view ,ego_circle_params_apa)
@@ -1542,14 +1662,14 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
     layer_manager.AddLayer(ego_center_layer, 'ego_center_layer', ego_center_generate, 'ego_center_generate', 2)
     layer_manager.AddLayer(ego_circle_layer, 'ego_circle_layer', ego_circle_generate, 'ego_circle_generate', 3)
 
-    # load location
+  # load location
     location_generator = CommonGenerator()
     # cur_pos_xn0 = cur_pos_xn = dataLoader.loc_msg['data'][0].pose.local_position.x
     # cur_pos_yn0 = cur_pos_yn = dataLoader.loc_msg['data'][0].pose.local_position.y
     for localization_timestamp in localization_timestamps:
       ego_xb, ego_yb = [], []
       # ego_xn, ego_yn = [], []
-      flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamp)
+      flag, loc_msg = findrt(dataLoader.loc_msg, localization_timestamp)
       if not flag:
         print('find loc_msg error')
       else:
@@ -1571,59 +1691,69 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
           # ego_xn.append(pos_xn_i - cur_pos_xn0)
           # ego_yn.append(pos_yn_i - cur_pos_yn0)
       location_generator.xys.append((ego_yb,ego_xb))
-    location_generator.ts = np.array(plan_debug_ts)
+    location_generator.ts = np.array(ctrl_debug_ts)
     location_layer = CurveLayer(fig_local_view, location_params_apa)
     layer_manager.AddLayer(location_layer, 'location_layer', location_generator, 'location_generator', 2)
 
   # load vs and soc
     vs_text_generator = TextGenerator()
-    for localization_timestamp in localization_timestamps:
+    for loc_i, localization_timestamp in enumerate(localization_timestamps):
       vel_text = []
       vel_x, vel_y = [], []
-      flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamp)
+      flag, loc_msg = findrt(dataLoader.loc_msg, localization_timestamp)
       if not flag:
         print('find loc_msg error')
       else:
         vel_ego =  loc_msg.pose.linear_velocity_from_wheel
-        current_state = -1
-        soc_state_msg_idx = 0
-        if dataLoader.soc_state_msg['enable'] == True:
-          while dataLoader.soc_state_msg['abs_t'][soc_state_msg_idx] <= localization_timestamp and soc_state_msg_idx < (len(dataLoader.soc_state_msg['abs_t'])-1):
-              soc_state_msg_idx = soc_state_msg_idx + 1
-          current_state = dataLoader.soc_state_msg['data'][soc_state_msg_idx].current_state
 
-        steer_deg = 600
-        vs_msg_idx = 0
-        if dataLoader.vs_msg['enable'] == True:
-          while dataLoader.vs_msg['abs_t'][vs_msg_idx] <= localization_timestamp and vs_msg_idx < (len(dataLoader.vs_msg['abs_t'])-1):
-              vs_msg_idx = vs_msg_idx + 1
-        steer_deg = dataLoader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
+        flag, soc_msg = findrt(dataLoader.soc_state_msg, soc_timestamps[loc_i])
+        if not flag:
+          print('find soc_msg error')
+          current_state = -1
+        else:
+          current_state = soc_msg.current_state
 
-        remain_s_ctrl = -1
-        ctrl_debug_msg_idx = 0
-        if dataLoader.ctrl_debug_msg['enable'] == True:
-          while dataLoader.ctrl_debug_msg['abs_t'][ctrl_debug_msg_idx] <= localization_timestamp and ctrl_debug_msg_idx < (len(dataLoader.ctrl_debug_msg['abs_t'])-1):
-              ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
-        remain_s_ctrl = dataLoader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['remain_s_ctrl'] * 100
+        flag, vs_msg = findrt(dataLoader.vs_msg, vehicle_service_timestamps[loc_i])
+        if not flag:
+          print('find vs_msg error')
+          steer_deg = 600
+        else:
+          steer_deg = vs_msg.steering_wheel_angle * 57.3
+
+        # remain_s_ctrl = -1
+        # ctrl_debug_msg_idx = 0
+        # if dataLoader.ctrl_debug_msg['enable'] == True:
+        #   while dataLoader.ctrl_debug_msg['t'][ctrl_debug_msg_idx] <= localization_timestamp and ctrl_debug_msg_idx < (len(dataLoader.ctrl_debug_msg['t'])-1):
+        #       ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
+        #   remain_s_ctrl = dataLoader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['remain_s_ctrl'] * 100
+
+        flag, ctrl_debug_msg = findrt_json(dataLoader.ctrl_debug_msg, control_debug_timestamps[loc_i])
+        if not flag:
+          print('find ctrl_debug_msg error')
+          remain_s_ctrl = -1
+        else:
+          remain_s_ctrl = ctrl_debug_msg['remain_s_ctrl'] * 100
 
         text = 'v = {:.2f} m/s, remain_s_ctrl = {:.1f} cm, steer = {:.1f} deg, state = {:d}'.format(round(vel_ego, 2), round(remain_s_ctrl, 1), round(steer_deg, 1), current_state)
         vel_text.append(text)
         vel_x.append(-2)
         vel_y.append(0)
       vs_text_generator.xys.append((vel_y, vel_x, vel_text))
-    vs_text_generator.ts = np.array(plan_debug_ts)
+    vs_text_generator.ts = np.array(ctrl_debug_ts)
     vs_layer = TextLayer(fig_local_view, vs_car_params_apa)
     layer_manager.AddLayer(vs_layer, 'vs_layer', vs_text_generator, 'vs_text_generator', 3)
 
-    # load apa slot
+  # load apa slot
     vision_slot_generate = CommonGenerator()
     fusion_slot_generate = CommonGenerator()
     target_slot_generate = CommonGenerator()
     final_slot_generate = CommonGenerator()
     all_slot_generate = CommonGenerator()
     slot_id_generate = TextGenerator()
+    all_managed_occupied_slot_generate = CommonGenerator()
+    all_managed_limiter_generate = CommonGenerator()
     for slot_i, slot_timestamp in enumerate(fusion_slot_timestamps):
-        flag, fusion_slot_msg = findt(dataLoader.fus_parking_msg, slot_timestamp)
+        flag, fusion_slot_msg = findrt(dataLoader.fus_parking_msg, slot_timestamp)
         if not flag:
             print('find fusion_slot_msg error')
             fusion_slot_generate.xys.append(([], []))
@@ -1669,7 +1799,7 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
 
         vis_parking_msg_idx = 0
         if dataLoader.vis_parking_msg['enable'] == True:
-          while dataLoader.vis_parking_msg['abs_t'][vis_parking_msg_idx] <= slot_timestamp and vis_parking_msg_idx < (len(dataLoader.vis_parking_msg['abs_t'])-1):
+          while dataLoader.vis_parking_msg['t'][vis_parking_msg_idx] <= slot_timestamp and vis_parking_msg_idx < (len(dataLoader.vis_parking_msg['t'])-1):
             vis_parking_msg_idx = vis_parking_msg_idx + 1
         # vision_slot_msg = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx]
 
@@ -1693,14 +1823,13 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
                 temp_corner_x_list.append(temp_corner_x)
                 temp_corner_y_list.append(temp_corner_y)
           final_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
-          # print(final_slot_generate.xys)
       # visual slot
         if dataLoader.vis_parking_msg['enable'] == True:
           temp_corner_x_list = []
           temp_corner_y_list = []
           parking_fusion_slot_lists = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx].parking_slot
           if dataLoader.loc_msg['enable'] == True:
-            flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamps[slot_i])
+            flag, loc_msg = findrt(dataLoader.loc_msg, localization_timestamps[slot_i])
             if not flag:
               print('find loc error')
               temp_corner_x_list, temp_corner_y_list = [], []
@@ -1736,54 +1865,83 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
 
       # all slot
         if dataLoader.fus_parking_msg['enable'] == True and dataLoader.plan_debug_msg['enable'] == True:
-          slot_management_info = dataLoader.plan_debug_msg['data'][slot_i].slot_management_info
-          select_slot_id = dataLoader.fus_parking_msg['data'][slot_i].select_slot_id
+          # slot_management_info = dataLoader.plan_debug_msg['data'][slot_i].slot_management_info
           all_managed_slot_x_vec = []
           all_managed_slot_y_vec = []
           temp_corner_x_list = []
           temp_corner_y_list = []
-          # 1. update target managed slot
-          for maganed_slot_vec in slot_management_info.slot_info_vec:
-            corner_point = maganed_slot_vec.corner_points.corner_point
-            slot_x = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
-            slot_y = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
-            if maganed_slot_vec.id == select_slot_id:
-                temp_corner_x_list.append(slot_x)
-                temp_corner_y_list.append(slot_y)
-            all_managed_slot_x_vec.append(slot_x)
-            all_managed_slot_y_vec.append(slot_y)
+          occupied_x_vec = []
+          occupied_y_vec = []
+          limiter_x_vec = []
+          limiter_y_vec = []
+          flag, plan_msg = findrt(dataLoader.plan_debug_msg, plan_debug_timestamps[slot_i])
+          if not flag:
+            print('find plan_msg error')
+          else:
+            slot_management_info = plan_msg.slot_management_info
+            # select_slot_id = dataLoader.fus_parking_msg['data'][slot_i].select_slot_id
+            select_slot_id = fusion_slot_msg.select_slot_id
+
+            # 1. update target managed slot
+            for maganed_slot_vec in slot_management_info.slot_info_vec:
+              corner_point = maganed_slot_vec.corner_points.corner_point
+              slot_x = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
+              slot_y = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
+              if maganed_slot_vec.id == select_slot_id:
+                  temp_corner_x_list.append(slot_x)
+                  temp_corner_y_list.append(slot_y)
+              all_managed_slot_x_vec.append(slot_x)
+              all_managed_slot_y_vec.append(slot_y)
+              if maganed_slot_vec.is_occupied:
+                  occupied_x_vec.append(slot_x)
+                  occupied_y_vec.append(slot_y)
+
+            for limiter in slot_management_info.limiter_points:
+              limiter_x_vec.append(limiter.x)
+              limiter_y_vec.append(limiter.y)
+
           target_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
           all_slot_generate.xys.append((all_managed_slot_y_vec, all_managed_slot_x_vec))
+          all_managed_occupied_slot_generate.xys.append((occupied_y_vec, occupied_x_vec))
+          all_managed_limiter_generate.xys.append((limiter_y_vec, limiter_x_vec))
 
     if dataLoader.vis_parking_msg['enable'] == True:
-      vision_slot_generate.ts = np.array(plan_debug_ts)
+      vision_slot_generate.ts = np.array(ctrl_debug_ts)
       vision_slot_layer = MultiCurveLayer(fig_local_view ,vision_slot_params_apa)
       layer_manager.AddLayer(vision_slot_layer, 'vision_slot_layer',vision_slot_generate,'vision_slot_generate',2)
 
-    fusion_slot_generate.ts = np.array(plan_debug_ts)
-    slot_id_generate.ts = np.array(plan_debug_ts)
+    fusion_slot_generate.ts = np.array(ctrl_debug_ts)
+    slot_id_generate.ts = np.array(ctrl_debug_ts)
     slot_layer = MultiCurveLayer(fig_local_view ,fusion_slot_params_apa)
     slot_id_layer = TextLayer(fig_local_view,slot_id_params_apa)
     layer_manager.AddLayer(slot_layer, 'slot_layer', fusion_slot_generate, 'fusion_slot_generate', 2)
     layer_manager.AddLayer(slot_id_layer, 'slot_id_layer',slot_id_generate,'slot_id_generate',3)
 
     if dataLoader.fus_parking_msg['enable'] == True:
-      final_slot_generate.ts = np.array(plan_debug_ts)
+      final_slot_generate.ts = np.array(ctrl_debug_ts)
       final_slot_layer = MultiCurveLayer(fig_local_view ,final_slot_params_apa)
       layer_manager.AddLayer(final_slot_layer, 'final_slot_layer',final_slot_generate,'final_slot_generate',2)
 
     if dataLoader.fus_parking_msg['enable'] == True and dataLoader.plan_debug_msg['enable'] == True:
-      target_slot_generate.ts = np.array(plan_debug_ts)
-      all_slot_generate.ts = np.array(plan_debug_ts)
+      target_slot_generate.ts = np.array(ctrl_debug_ts)
+      all_slot_generate.ts = np.array(ctrl_debug_ts)
+      all_managed_occupied_slot_generate.ts = np.array(ctrl_debug_ts)
+      all_managed_limiter_generate.ts = np.array(ctrl_debug_ts)
       target_slot_layer = MultiCurveLayer(fig_local_view ,target_slot_params_apa)
       all_slot_layer = MultiCurveLayer(fig_local_view ,all_slot_params_apa)
+      all_managed_occupied_slot_layer = PatchLayer(fig_local_view, all_managed_occupied_slot_params_apa)
+      all_managed_limiter_layer = CurveLayer(fig_local_view, all_managed_limiter_params_apa)
+
+
       layer_manager.AddLayer(target_slot_layer, 'target_slot_layer',target_slot_generate,'target_slot_generate',2)
       layer_manager.AddLayer(all_slot_layer, 'all_slot_layer',all_slot_generate,'all_slot_generate',2)
+      layer_manager.AddLayer(all_managed_occupied_slot_layer, 'all_managed_occupied_slot_layer',all_managed_occupied_slot_generate,'all_managed_occupied_slot_generate',2)
+      layer_manager.AddLayer(all_managed_limiter_layer, 'all_managed_limiter_layer',all_managed_limiter_generate,'all_managed_limiter_generate',2)
 
-    # load planning traj
+  # load planning traj
     plan_generator = CommonGenerator()
-    for plan_debug_t in plan_debug_ts:
-      flag, plan_msg = findrt(dataLoader.plan_msg, plan_debug_t)
+    for plan_timestamp in plan_output_timestamps:
+      flag, plan_msg = findrt(dataLoader.plan_msg, plan_timestamp)
       if not flag:
         print('find plan error')
         plan_traj_x, plan_traj_y = [], []
@@ -1795,19 +1953,19 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
           plan_traj_x.append(trajectory.trajectory_points[j].x)
           plan_traj_y.append(trajectory.trajectory_points[j].y)
       plan_generator.xys.append((plan_traj_y, plan_traj_x))
-    plan_generator.ts = np.array(plan_debug_ts)
+    plan_generator.ts = np.array(ctrl_debug_ts)
     plan_layer = CurveLayer(fig_local_view, plan_params)
     layer_manager.AddLayer(plan_layer, 'plan_layer', plan_generator, 'plane_generator', 2)
 
-    # load mpc traj
+  # load mpc traj
     mpc_generator = CommonGenerator()
     for mpc_i, control_timestamp in enumerate(control_output_timestamps):
-      flag, mpc_msg = findt(dataLoader.ctrl_msg, control_timestamp)
+      flag, mpc_msg = findrt(dataLoader.ctrl_msg, control_timestamp)
       if not flag:
         print('find mpc error')
         mpc_dx, mpc_dy = [], []
       else:
-        flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamps[mpc_i])
+        flag, loc_msg = findrt(dataLoader.loc_msg, localization_timestamps[mpc_i])
         if not flag:
           print('find loc error')
           mpc_dx, mpc_dy = [], []
@@ -1823,86 +1981,115 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
             mpc_dy_local.append(point.y)
           mpc_dx, mpc_dy = coord_tf.local_to_global(mpc_dx_local, mpc_dy_local)
       mpc_generator.xys.append((mpc_dy, mpc_dx))
-    mpc_generator.ts = np.array(plan_debug_ts)
+    mpc_generator.ts = np.array(ctrl_debug_ts)
     mpc_layer = CurveLayer(fig_local_view, mpc_params)
     layer_manager.AddLayer(mpc_layer, 'mpc_layer', mpc_generator, 'mpc_generator', 2)
 
-    # load uss
+  # load uss
     uss_generator = WedgesGenerator()
     uss_text_generator = TextGenerator()
-    for localization_timestamp in localization_timestamps:
+    for loc_i, localization_timestamp in enumerate(localization_timestamps):
       sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
       text_x, text_y = [], []
-      flag, loc_msg = findt(dataLoader.loc_msg, localization_timestamp)
+      flag, loc_msg = findrt(dataLoader.loc_msg, localization_timestamp)
       if not flag:
         print('find loc_msg error')
       else:
         wave_msg_idx = 0
         if dataLoader.wave_msg['enable'] == True:
-          while dataLoader.wave_msg['abs_t'][wave_msg_idx] <= (localization_timestamp) and wave_msg_idx < (len(dataLoader.wave_msg['abs_t'])-1):
-              wave_msg_idx = wave_msg_idx + 1
-          #get cur pose and uss wave
-          upa_dis_info_bufs = dataLoader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
-          cur_pos_xn = loc_msg.pose.local_position.x
-          cur_pos_yn = loc_msg.pose.local_position.y
-          cur_yaw = loc_msg.pose.euler_angles.yaw
-          # rs_text = []
-          uss_x, uss_y = load_car_uss_patch()
-          uss_angle = load_uss_angle_patch()
-          wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
-          m = 0
-          for i in range(2):
-            for j in wdis_index[i]:
-                rs0 = ''
-                rs1 = ''
-                if upa_dis_info_bufs[i].wdis[j].wdis_value[0] <= 10 and upa_dis_info_bufs[i].wdis[j].wdis_value[0] != 0:
-                    rs1 = round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2)
-                    # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
-                    rs0 = '{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2))
-                    ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
-                    uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
-                    uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
-                    x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
-                elif upa_dis_info_bufs[i].wdis[j].wdis_value[0] == 0 or upa_dis_info_bufs[i].wdis[j].wdis_value[0] > 10:
-                    ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
-                    x_text, y_text = 0, 0
-                text_x.append(x_text)
-                text_y.append(y_text)
-                sector_x.append(ego_local_x)
-                sector_y.append(ego_local_y)
-                # print("rs1:",rs1)
-                rs.append(rs1)
-                # print("rs size:",len(rs))
-                length.append(rs0)
-                start_angle.append(uss_angle_start)
-                end_angle.append(uss_angle_end)
-                m += 1
+          flag, wave_msg = findrt(dataLoader.wave_msg, wave_timestamps[loc_i])
+          if not flag:
+            print('find wave_msg error')
+          else:
+            #get cur pose and uss wave
+            upa_dis_info_bufs = wave_msg.upa_dis_info_buf
+            cur_pos_xn = loc_msg.pose.local_position.x
+            cur_pos_yn = loc_msg.pose.local_position.y
+            cur_yaw = loc_msg.pose.euler_angles.yaw
+            # rs_text = []
+            uss_x, uss_y = load_car_uss_patch()
+            uss_angle = load_uss_angle_patch()
+            wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
+            m = 0
+            for i in range(2):
+              for j in wdis_index[i]:
+                  rs0 = ''
+                  rs1 = ''
+                  if upa_dis_info_bufs[i].wdis[j].wdis_value[0] <= 10 and upa_dis_info_bufs[i].wdis[j].wdis_value[0] != 0:
+                      rs1 = round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2)
+                      # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
+                      rs0 = '{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2))
+                      ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
+                      uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
+                      uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
+                      x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
+                  elif upa_dis_info_bufs[i].wdis[j].wdis_value[0] == 0 or upa_dis_info_bufs[i].wdis[j].wdis_value[0] > 10:
+                      ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
+                      x_text, y_text = 0, 0
+                  text_x.append(x_text)
+                  text_y.append(y_text)
+                  sector_x.append(ego_local_x)
+                  sector_y.append(ego_local_y)
+                  rs.append(rs1)
+                  length.append(rs0)
+                  start_angle.append(uss_angle_start)
+                  end_angle.append(uss_angle_end)
+                  m += 1
       uss_generator.xys.append((sector_y, sector_x, rs, start_angle, end_angle))
       uss_text_generator.xys.append((text_y, text_x, length))
-    uss_generator.ts = np.array(plan_debug_ts)
-    uss_text_generator.ts = np.array(plan_debug_ts)
+    uss_generator.ts = np.array(ctrl_debug_ts)
+    uss_text_generator.ts = np.array(ctrl_debug_ts)
     uss_layer = MultiWedgesLayer(fig_local_view, uss_wave_params)
     uss_layer_text = TextLayer(fig_local_view, uss_text_params)
     layer_manager.AddLayer(uss_layer, 'uss_layer', uss_generator, 'uss_generator', 5)
     layer_manager.AddLayer(uss_layer_text, 'uss_layer_text', uss_text_generator, 'uss_text_generator', 3)
 
-    # legend
+  # legend
     fig_local_view.legend.click_policy = 'hide'
-    # Table
+  # Table
     if plot_ctrl_flag == False:
       return fig_local_view, None
     else:
       data_ctrl_debug_data = TextGenerator()
-      for plan_debug_t in plan_debug_ts:
+      for plan_i, plan_timestamp in enumerate(plan_output_timestamps):
         names = []
         datas = []
-        flag, plan_msg = findrt(dataLoader.plan_msg, plan_debug_t)
+        flag, plan_msg = findrt(dataLoader.plan_msg, plan_timestamp)
         if not flag:
           print('find plan error')
-          # plan_traj_x, plan_traj_y = [], []
+        flag, plan_json = findrt_json(dataLoader.plan_debug_msg, plan_debug_timestamps[plan_i])
+        if not flag:
+          print('find plan_debug error')
         else:
-          names.append('planning_status')
+          names.append('apa_planning_status')
           datas.append(str(plan_msg.planning_status.apa_planning_status))
+
+          names.append("planning_stm")
+          datas.append(str(plan_json['planning_status']))
+
+          names.append("replan_reason")
+          datas.append(str(plan_json['replan_reason']))
+
+          names.append("path_plan_success")
+          datas.append(str(plan_json['path_plan_success']))
+
+          names.append("path_plan_result")
+          datas.append(str(plan_json['pathplan_result']))
+
+          names.append("terminal_error_x")
+          datas.append(str(plan_json['terminal_error_x']))
+
+          names.append("terminal_error_y")
+          datas.append(str(plan_json['terminal_error_y']))
+
+          names.append("terminal_error_heading (deg)")
+          datas.append(str(plan_json['terminal_error_heading'] * 57.3))
+
+          names.append("stuck_time")
+          datas.append(str(plan_json['stuck_time']))
+
+          names.append("slot_occupied_ratio")
+          datas.append(str(plan_json['slot_occupied_ratio']))
 
           names.append("slots_id")
           datas.append(str(plan_msg.successful_slot_info_list))
@@ -1913,63 +2100,60 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
           names.append("plan_traj_available")
           datas.append(str(plan_msg.trajectory.available))
 
-        soc_state_msg_idx = 0
-        if dataLoader.soc_state_msg['enable'] == True:
-          while dataLoader.soc_state_msg['t'][soc_state_msg_idx] <= plan_debug_t and soc_state_msg_idx < (len(dataLoader.soc_state_msg['t'])-1):
-              soc_state_msg_idx = soc_state_msg_idx + 1
+        flag, soc_msg = findrt(dataLoader.soc_state_msg, soc_timestamps[plan_i])
+        if not flag:
+          print('find soc_msg error')
+        else:
           names.append("current_state")
-          datas.append(str(dataLoader.soc_state_msg['data'][soc_state_msg_idx].current_state))
+          datas.append(str(soc_msg.current_state))
 
-        vs_msg_idx = 0
-        if dataLoader.vs_msg['enable'] == True:
-          while dataLoader.vs_msg['t'][vs_msg_idx] <= plan_debug_t and vs_msg_idx < (len(dataLoader.vs_msg['t'])-1):
-              vs_msg_idx = vs_msg_idx + 1
+        flag, vs_msg = findrt(dataLoader.vs_msg, vehicle_service_timestamps[plan_i])
+        if not flag:
+          print('find soc_msg error')
+        else:
           names.append("long_control_actuator_status")
-          datas.append(str(dataLoader.vs_msg['data'][vs_msg_idx].parking_long_control_actuator_status))
+          datas.append(str(vs_msg.parking_long_control_actuator_status))
           names.append("lat_control_actuator_status")
-          datas.append(str(dataLoader.vs_msg['data'][vs_msg_idx].parking_lat_control_actuator_status))
+          datas.append(str(vs_msg.parking_lat_control_actuator_status))
           names.append("shift_lever_state")
-          datas.append(str(dataLoader.vs_msg['data'][vs_msg_idx].shift_lever_state))
+          datas.append(str(vs_msg.shift_lever_state))
           names.append("shift_lever_state_available")
-          datas.append(str(dataLoader.vs_msg['data'][vs_msg_idx].shift_lever_state_available))
+          datas.append(str(vs_msg.shift_lever_state_available))
 
-        ctrl_debug_msg_idx = 0
-        assert dataLoader.ctrl_debug_msg['enable'] == True
-        if dataLoader.ctrl_debug_msg['enable'] == True:
-          while dataLoader.ctrl_debug_msg['t'][ctrl_debug_msg_idx] <= plan_debug_t and ctrl_debug_msg_idx < (len(dataLoader.ctrl_debug_msg['t'])-1):
-              ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
-          ctrl_json_data = dataLoader.ctrl_debug_msg['json']
+        flag, ctrl_debug_msg = findrt_json(dataLoader.ctrl_debug_msg, control_debug_timestamps[plan_i])
+        if not flag:
+          print('find ctrl_debug_msg error')
+        else:
           names.append("lat_mpc_status")
-          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['lat_mpc_status'])
+          datas.append(ctrl_debug_msg['lat_mpc_status'])
           names.append("remain_s_uss")
-          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['remain_s_uss'])
+          datas.append(ctrl_debug_msg['remain_s_uss'])
           names.append("remain_s_ctrl")
-          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['remain_s_ctrl'])
+          datas.append(ctrl_debug_msg['remain_s_ctrl'])
           names.append("vel_ref_gain")
-          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['vel_ref_gain'])
+          datas.append(ctrl_debug_msg['vel_ref_gain'])
           names.append("acc_vel")
-          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['acc_vel'])
+          datas.append(ctrl_debug_msg['acc_vel'])
           names.append("slope_acc")
-          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['slope_acc'])
+          datas.append(ctrl_debug_msg['slope_acc'])
           names.append("apa_enable")
-          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['apa_enable'])
+          datas.append(ctrl_debug_msg['apa_enable'])
           names.append("vehicle_stationary_flag")
-          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['vehicle_stationary_flag'])
+          datas.append(ctrl_debug_msg['vehicle_stationary_flag'])
           names.append("apa_finish_flag")
-          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['apa_finish_flag'])
+          datas.append(ctrl_debug_msg['apa_finish_flag'])
           names.append("emergency_stop_flag")
-          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['emergency_stop_flag'])
+          datas.append(ctrl_debug_msg['emergency_stop_flag'])
           names.append("break_override_flag")
-          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['break_override_flag'])
+          datas.append(ctrl_debug_msg['break_override_flag'])
           names.append("gear_shifting_flag")
-          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['gear_shifting_flag'])
+          datas.append(ctrl_debug_msg['gear_shifting_flag'])
           names.append("gear_cmd")
-          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['gear_cmd'])
+          datas.append(ctrl_debug_msg['gear_cmd'])
           names.append("gear_real")
-          datas.append(ctrl_json_data[ctrl_debug_msg_idx]['gear_real'])
-
+          datas.append(ctrl_debug_msg['gear_real'])
         data_ctrl_debug_data.xys.append((names, datas, [None] * len(names)))
-      data_ctrl_debug_data.ts = np.array(plan_debug_ts)
+      data_ctrl_debug_data.ts = np.array(ctrl_debug_ts)
       tab_attr_list = ['name', 'data']
       tab_debug_layer = TableLayerV2(None, tab_attr_list, table_params)
       layer_manager.AddLayer(
@@ -1978,16 +2162,29 @@ def apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag=False):
 
       return fig_local_view, tab_debug_layer.plot
 
-def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time):
-    #print(f'max time is {max_time}')
-
-    # use a time interval of 0.02s to adapt to Jupyter
-    ctrl_json_data = dataLoader.ctrl_debug_msg['json']
+def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time, time_step = 0.02):
+    print(f'max time is {max_time}')
+    assert dataLoader.ctrl_debug_msg['enable'] == True
+    # not show all ctrl_debug_msg.
+    bag_time = 0.0
     t_debug = []
-    t = 0.0
-    for i in range(len(ctrl_json_data)):
-      t_debug.append(t)
-      t = t + 0.02
+    ctrl_json_data = []
+
+    while bag_time <= max_time + time_step / 2:
+      ctrl_debug_msg_idx = 0
+      while dataLoader.ctrl_debug_msg['t'][ctrl_debug_msg_idx] <= bag_time and ctrl_debug_msg_idx < (len(dataLoader.ctrl_debug_msg['t'])-1):
+          ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
+      ctrl_debug_json = dataLoader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]
+      t_debug.append(bag_time)
+      ctrl_json_data.append(ctrl_debug_json)
+      bag_time += time_step
+    # ## using 0.02 as time step，for align with Jupyter
+    # ctrl_json_data = dataLoader.ctrl_debug_msg['json']
+    # t_debug = []
+    # t = 0.0
+    # for i in range(len(ctrl_json_data)):
+    #   t_debug.append(t)
+    #   t = t + time_step
 
     json_value_list = ["controller_status", "lat_enable", "lon_enable", "gear_plan",
                         "vel_ref", "vel_cmd", "vel_ego",

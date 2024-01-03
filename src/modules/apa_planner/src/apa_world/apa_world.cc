@@ -12,28 +12,25 @@
 
 namespace planning {
 namespace apa_planner {
-static const double kPlanTime = 0.1;
-
 void ApaWorld::Init() {
   measures_ptr_ = std::make_shared<Measurements>();
   slot_manager_ptr_ = std::make_shared<SlotManagement>();
   uss_obstacle_avoider_ptr_ = std::make_shared<UssObstacleAvoidance>();
+  collision_detector_ptr_ = std::make_shared<CollisionDetector>();
 }
 
 void ApaWorld::Reset() {
   measures_ptr_->Reset();
   slot_manager_ptr_->Reset();
+  uss_obstacle_avoider_ptr_->Reset();
+  collision_detector_ptr_->Reset();
   local_view_ptr_ = nullptr;
 }
 
 void ApaWorld::Preprocess() {
   // update ego info
   UpdateEgoState();
-
-  // UpdateObstacles()
 }
-
-void ApaWorld::UpdateObstacles() {}
 
 void ApaWorld::UpdateEgoState() {
   measures_ptr_->current_state =
@@ -46,8 +43,8 @@ void ApaWorld::UpdateEgoState() {
 
   // calculate standstill time by pos
   if ((measures_ptr_->pos_ego - current_pos).norm() <
-      apa_param.GetInstance().GetParam().static_pos_eps) {
-    measures_ptr_->standstill_timer_by_pos += kPlanTime;
+      apa_param.GetParam().car_static_pos_eps) {
+    measures_ptr_->standstill_timer_by_pos += apa_param.GetParam().plan_time;
   } else {
     measures_ptr_->standstill_timer_by_pos = 0.0;
   }
@@ -65,8 +62,8 @@ void ApaWorld::UpdateEgoState() {
 
   // calculate standstill time by velocity
   if (std::fabs(measures_ptr_->vel_ego) <
-      apa_param.GetInstance().GetParam().max_standstill_speed) {
-    measures_ptr_->standstill_timer_by_vel += kPlanTime;
+      apa_param.GetParam().car_static_velocity) {
+    measures_ptr_->standstill_timer_by_vel += apa_param.GetParam().plan_time;
   } else {
     measures_ptr_->standstill_timer_by_vel = 0.0;
   }
@@ -74,11 +71,11 @@ void ApaWorld::UpdateEgoState() {
   // static flag
   measures_ptr_->static_flag =
       (measures_ptr_->standstill_timer_by_vel >=
-           apa_param.GetInstance().GetParam().min_standstill_time_by_vel &&
+           apa_param.GetParam().min_standstill_time_by_vel &&
        measures_ptr_->standstill_timer_by_pos >
-           apa_param.GetInstance().GetParam().min_standstill_time_by_vel) ||
+           apa_param.GetParam().min_standstill_time_by_vel) ||
       (measures_ptr_->standstill_timer_by_pos >
-       apa_param.GetInstance().GetParam().min_standstill_time_by_pos);
+       apa_param.GetParam().min_standstill_time_by_pos);
 }
 
 const bool ApaWorld::CheckSelectedSlot() const {

@@ -11,7 +11,7 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/planning1e858cc782/test_0.00000'
+bag_path = '/data_cold/abu_zone/APA/planning-42f60cac2/test_1.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -96,7 +96,7 @@ for bag_time in np.arange(0.0, max_time, 0.1):
                                     loc_msg.SerializeToString(),
                                     vs_msg.SerializeToString(),
                                     wave_msg.SerializeToString(),
-                                    2, False, False, 0.02)
+                                    4, False, False, False, 0.02)
 
   data_planning_tune.data = {'plan_path_x': [],
                              'plan_path_y': [],

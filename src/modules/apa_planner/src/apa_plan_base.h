@@ -18,32 +18,8 @@ namespace planning {
 namespace apa_planner {
 class ApaPlannerBase {
  public:
-  struct PlanSegState {
-    uint8_t cur_seg_steer = STRAIGHT;
-    uint8_t cur_seg_direction = DRIVE;
-  };
-
-  enum SegmentType {
-    LINE_SEGMENT,
-    ARC_SEGMENT,
-  };
-
-  enum SegmentSteer {
-    LEFT,
-    RIGHT,
-    STRAIGHT,
-    STEER_NONE,
-  };
-
-  enum SegmentDirection {
-    EMPTY,
-    DRIVE,
-    REVERSE,
-    GEAR_NONE,
-  };
-
   enum SlotSide {
-    SLOT_SIDE_NONE,
+    SLOT_SIDE_INVALID,
     SLOT_SIDE_LEFT,
     SLOT_SIDE_RIGHT,
   };
@@ -63,7 +39,7 @@ class ApaPlannerBase {
 
   struct EgoSlotInfo {
     common::SlotInfo target_managed_slot;
-    std::vector<Eigen::Vector2d> limiter;
+    std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter;
     Eigen::Vector2d target_ego_pos_slot = Eigen::Vector2d::Zero();
     double target_ego_heading_slot = 0.0;
 
@@ -87,13 +63,15 @@ class ApaPlannerBase {
     pnc::geometry_lib::LocalToGlobalTf l2g_tf;
 
     bool first_fix_limiter = true;
-    double terminal_target_X = 0.0;
 
     void Reset() {
       target_managed_slot.Clear();
       selected_slot_id = 0;
       target_ego_pos_slot = Eigen::Vector2d::Zero();
       target_ego_heading_slot = 0.0;
+
+      limiter.first.setZero();
+      limiter.second.setZero();
 
       slot_origin_pos.setZero();
 
@@ -112,7 +90,6 @@ class ApaPlannerBase {
       slot_occupied_ratio = 0.0;
 
       first_fix_limiter = true;
-      terminal_target_X = 0.0;
     }
   };
 
@@ -142,8 +119,8 @@ class ApaPlannerBase {
       ego_slot_info.Reset();
       plan_stm.Reset();
       pathplan_result = 0;
-      current_gear = ApaPlannerBase::GEAR_NONE;
-      current_arc_steer = ApaPlannerBase::STEER_NONE;
+      current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+      current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
       replan_reason = NOT_REPLAN;
     }
 
@@ -166,8 +143,8 @@ class ApaPlannerBase {
     PlannerStateMachine plan_stm;
     EgoSlotInfo ego_slot_info;
 
-    uint8_t current_gear = ApaPlannerBase::GEAR_NONE;
-    uint8_t current_arc_steer = ApaPlannerBase::STEER_NONE;
+    uint8_t current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+    uint8_t current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
   };
 
   enum PathPlannerResult {
@@ -223,7 +200,6 @@ class ApaPlannerBase {
   virtual void Log() const = 0;
 
   std::shared_ptr<ApaWorld> apa_world_ptr_;
-  std::shared_ptr<CollisionDetector> collision_detector_ptr_;
 
   PlanningOutput::PlanningOutput planning_output_;
 

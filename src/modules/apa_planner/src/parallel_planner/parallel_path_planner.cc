@@ -111,7 +111,7 @@ const bool ParallelPathPlanner::GenPathOutputByDubins() {
   output_.current_gear = dubins_output.current_gear_cmd;
 
   // set arc AB
-  if (dubins_output.gear_cmd_vec[0] != pnc::dubins_lib::DubinsLibrary::EMPTY) {
+  if (dubins_output.gear_cmd_vec[0] != pnc::geometry_lib::SEG_GEAR_INVALID) {
     auto seg_AB =
         PathSegment(CalArcSteer(dubins_output.arc_AB),
                     dubins_output.current_gear_cmd, dubins_output.arc_AB);
@@ -122,17 +122,17 @@ const bool ParallelPathPlanner::GenPathOutputByDubins() {
   }
 
   // seg line BC
-  if (dubins_output.gear_cmd_vec[1] != pnc::dubins_lib::DubinsLibrary::EMPTY) {
+  if (dubins_output.gear_cmd_vec[1] != pnc::geometry_lib::SEG_GEAR_INVALID) {
     auto seg_BC =
         PathSegment(dubins_output.current_gear_cmd, dubins_output.line_BC);
 
-    output_.steer_vec.emplace_back(ApaPlannerBase::STRAIGHT);
+    output_.steer_vec.emplace_back(pnc::geometry_lib::SEG_STEER_STRAIGHT);
     output_.gear_cmd_vec.emplace_back(dubins_output.current_gear_cmd);
     output_.path_segment_vec.emplace_back(seg_BC);
   }
 
   // set arc CD
-  if (dubins_output.gear_cmd_vec[2] != pnc::dubins_lib::DubinsLibrary::EMPTY) {
+  if (dubins_output.gear_cmd_vec[2] != pnc::geometry_lib::SEG_GEAR_INVALID) {
     auto seg_CD =
         PathSegment(CalArcSteer(dubins_output.arc_CD),
                     dubins_output.current_gear_cmd, dubins_output.arc_CD);
@@ -151,12 +151,12 @@ const bool ParallelPathPlanner::GenPathOutputByDubins() {
               << "  direction = " << static_cast<int>(path_seg.seg_direction)
               << "  steer = " << static_cast<int>(path_seg.seg_steer)
               << std::endl;
-    if (path_seg.seg_type == ApaPlannerBase::LINE_SEGMENT) {
+    if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       std::cout << "pA = " << path_seg.line_seg.pA.transpose()
                 << "  pB = " << path_seg.line_seg.pB.transpose()
                 << "  heading = " << path_seg.line_seg.heading * 57.3
                 << std::endl;
-    } else if (path_seg.seg_type == ApaPlannerBase::ARC_SEGMENT) {
+    } else if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
       std::cout << "pA = " << path_seg.arc_seg.pA.transpose()
                 << "  pB = " << path_seg.arc_seg.pB.transpose()
                 << "  headingA = " << path_seg.arc_seg.headingA * 57.3
@@ -167,7 +167,8 @@ const bool ParallelPathPlanner::GenPathOutputByDubins() {
     }
   }
 
-  const bool res = (output_.current_gear == ApaPlannerBase::REVERSE);
+  const bool res =
+      (output_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE);
 
   if (res) {
     const auto& dubins_input = dubins_planner_.GetInput();
@@ -322,7 +323,7 @@ const bool ParallelPathPlanner::MonoStepPlan() {
   output_.current_gear = dubins_output.current_gear_cmd;
 
   // set arc AB
-  if (dubins_output.gear_cmd_vec[0] != pnc::dubins_lib::DubinsLibrary::EMPTY) {
+  if (dubins_output.gear_cmd_vec[0] != pnc::geometry_lib::SEG_GEAR_INVALID) {
     auto seg_AB =
         PathSegment(CalArcSteer(dubins_output.arc_AB),
                     dubins_output.current_gear_cmd, dubins_output.arc_AB);
@@ -333,17 +334,17 @@ const bool ParallelPathPlanner::MonoStepPlan() {
   }
 
   // seg line BC
-  if (dubins_output.gear_cmd_vec[1] != pnc::dubins_lib::DubinsLibrary::EMPTY) {
+  if (dubins_output.gear_cmd_vec[1] != pnc::geometry_lib::SEG_GEAR_INVALID) {
     const auto seg_BC =
         PathSegment(dubins_output.current_gear_cmd, dubins_output.line_BC);
 
-    output_.steer_vec.emplace_back(ApaPlannerBase::STRAIGHT);
+    output_.steer_vec.emplace_back(pnc::geometry_lib::SEG_STEER_STRAIGHT);
     output_.gear_cmd_vec.emplace_back(dubins_output.current_gear_cmd);
     output_.path_segment_vec.emplace_back(seg_BC);
   }
 
   // set arc CD
-  if (dubins_output.gear_cmd_vec[2] != pnc::dubins_lib::DubinsLibrary::EMPTY) {
+  if (dubins_output.gear_cmd_vec[2] != pnc::geometry_lib::SEG_GEAR_INVALID) {
     auto seg_CD =
         PathSegment(CalArcSteer(dubins_output.arc_CD),
                     dubins_output.current_gear_cmd, dubins_output.arc_CD);
@@ -362,12 +363,12 @@ const bool ParallelPathPlanner::MonoStepPlan() {
               << "  direction = " << static_cast<int>(path_seg.seg_direction)
               << "  steer = " << static_cast<int>(path_seg.seg_steer)
               << std::endl;
-    if (path_seg.seg_type == ApaPlannerBase::LINE_SEGMENT) {
+    if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       std::cout << "pA = " << path_seg.line_seg.pA.transpose()
                 << "  pB = " << path_seg.line_seg.pB.transpose()
                 << "  heading = " << path_seg.line_seg.heading * 57.3
                 << std::endl;
-    } else if (path_seg.seg_type == ApaPlannerBase::ARC_SEGMENT) {
+    } else if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
       std::cout << "pA = " << path_seg.arc_seg.pA.transpose()
                 << "  pB = " << path_seg.arc_seg.pB.transpose()
                 << "  headingA = " << path_seg.arc_seg.headingA * 57.3
@@ -384,11 +385,13 @@ const bool ParallelPathPlanner::MonoStepPlan() {
 const bool ParallelPathPlanner::AdjustStepPlan() {
   bool success = AdjustStepPlanOnce(1.0, kMinTurnRadius);
 
-  if (success && output_.gear_cmd_vec.back() == ApaPlannerBase::REVERSE) {
+  if (success &&
+      output_.gear_cmd_vec.back() == pnc::geometry_lib::SEG_GEAR_REVERSE) {
     return true;
   }
 
-  if (success && output_.gear_cmd_vec.back() == ApaPlannerBase::DRIVE) {
+  if (success &&
+      output_.gear_cmd_vec.back() == pnc::geometry_lib::SEG_GEAR_DRIVE) {
     if (output_.length <= 5.0) {
       return true;
     } else {
@@ -415,13 +418,14 @@ const bool ParallelPathPlanner::AdjustStepPlanOnce(
     output_.path_available = true;
     output_.path_segment_vec.emplace_back(line_seg);
     output_.gear_cmd_vec.emplace_back(line_seg.seg_direction);
-    output_.steer_vec.emplace_back(ApaPlannerBase::STRAIGHT);
+    output_.steer_vec.emplace_back(pnc::geometry_lib::SEG_STEER_STRAIGHT);
     output_.length += line_seg.Getlength();
     std::cout << "one line success!" << std::endl;
     return true;
   }
 
-  const bool is_advance = (input_.ref_gear == ApaPlannerBase::DRIVE);
+  const bool is_advance =
+      (input_.ref_gear == pnc::geometry_lib::SEG_GEAR_DRIVE);
   std::cout << "is_advance = " << is_advance << std::endl;
 
   const auto fix_shift_scale = pnc::mathlib::Clamp(shift_scale, 0.1, 1.0);
@@ -529,8 +533,8 @@ const bool ParallelPathPlanner::AdjustStepPlanOnce(
   const uint8_t last_gear =
       last_line_seg.pA.x() * calc_params_.slot_side_sgn <
               last_line_seg.pB.x() * calc_params_.slot_side_sgn
-          ? ApaPlannerBase::DRIVE
-          : ApaPlannerBase::REVERSE;
+          ? pnc::geometry_lib::SEG_GEAR_DRIVE
+          : pnc::geometry_lib::SEG_GEAR_REVERSE;
 
   output_.path_available = true;
 
@@ -542,7 +546,7 @@ const bool ParallelPathPlanner::AdjustStepPlanOnce(
   output_.path_segment_vec.emplace_back(PathSegment(last_gear, last_line_seg));
 
   output_.gear_cmd_vec.emplace_back(last_gear);
-  output_.steer_vec.emplace_back(ApaPlannerBase::STRAIGHT);
+  output_.steer_vec.emplace_back(pnc::geometry_lib::SEG_STEER_STRAIGHT);
   output_.length += last_line_seg.length;
 
   return true;
@@ -555,8 +559,8 @@ const uint8_t ParallelPathPlanner::CalArcGear(
   const Eigen::Vector2d v_heading_a(std::cos(arc.headingA),
                                     std::sin(arc.headingA));
 
-  return (v_ab.dot(v_heading_a) > 0.0) ? ApaPlannerBase::DRIVE
-                                       : ApaPlannerBase::REVERSE;
+  return (v_ab.dot(v_heading_a) > 0.0) ? pnc::geometry_lib::SEG_GEAR_DRIVE
+                                       : pnc::geometry_lib::SEG_GEAR_REVERSE;
 }
 
 const uint8_t ParallelPathPlanner::CalArcSteer(
@@ -567,8 +571,8 @@ const uint8_t ParallelPathPlanner::CalArcSteer(
   const Eigen::Vector2d v_oa = arc.pA - arc.circle_info.center;
 
   return (pnc::geometry_lib::GetCrossFromTwoVec2d(v_oa, v_heading_a) > 0.0)
-             ? ApaPlannerBase::LEFT
-             : ApaPlannerBase::RIGHT;
+             ? pnc::geometry_lib::SEG_STEER_LEFT
+             : pnc::geometry_lib::SEG_STEER_RIGHT;
 }
 
 const bool ParallelPathPlanner::MultiStepPlan() {
@@ -640,20 +644,21 @@ const bool ParallelPathPlanner::MultiStepPlan() {
     const auto& last_segment = output_.path_segment_vec.back();
 
     pnc::geometry_lib::PathPoint last_pose;
-    if (last_segment.seg_type == ApaPlannerBase::ARC_SEGMENT) {
+    if (last_segment.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
       last_pose.Set(last_segment.GetArcSeg().pB,
                     last_segment.GetArcSeg().headingB);
-    } else if (last_segment.seg_type == ApaPlannerBase::LINE_SEGMENT) {
+    } else if (last_segment.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       last_pose.Set(last_segment.GetLineSeg().pB,
                     last_segment.GetLineSeg().heading);
     }
 
-    current_direction = (current_direction == ApaPlannerBase::REVERSE
-                             ? ApaPlannerBase::DRIVE
-                             : ApaPlannerBase::REVERSE);
-    current_arc_steer =
-        (current_arc_steer == ApaPlannerBase::RIGHT ? ApaPlannerBase::LEFT
-                                                    : ApaPlannerBase::RIGHT);
+    current_direction =
+        (current_direction == pnc::geometry_lib::SEG_GEAR_REVERSE
+             ? pnc::geometry_lib::SEG_GEAR_DRIVE
+             : pnc::geometry_lib::SEG_GEAR_REVERSE);
+    current_arc_steer = (current_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT
+                             ? pnc::geometry_lib::SEG_STEER_LEFT
+                             : pnc::geometry_lib::SEG_STEER_RIGHT);
 
     // std::cout << "current pose: " << current_pose.pos.transpose()
     //           << "heading: " << current_pose.heading * 57.3 << std::endl;
@@ -678,7 +683,7 @@ const bool ParallelPathPlanner::MultiStepPlan() {
       if (last_Line_success) {
         output_.path_segment_vec.emplace_back(last_line_seg);
         output_.gear_cmd_vec.emplace_back(last_line_seg.seg_direction);
-        output_.steer_vec.emplace_back(ApaPlannerBase::STRAIGHT);
+        output_.steer_vec.emplace_back(pnc::geometry_lib::SEG_STEER_STRAIGHT);
         output_.length += last_line_seg.Getlength();
         output_.path_available = true;
         break;
@@ -837,8 +842,8 @@ const bool ParallelPathPlanner::GetCorrectCircleIndexofLineArcLine(
     const uint8_t tangent_pt1_steer =
         IsRightCircle(possible_tangent_pts[correct_pt_idx].first, start_heading,
                       possible_centers[correct_pt_idx])
-            ? ApaPlannerBase::RIGHT
-            : ApaPlannerBase::LEFT;
+            ? pnc::geometry_lib::SEG_STEER_RIGHT
+            : pnc::geometry_lib::SEG_STEER_LEFT;
 
     // std::cout << "tangent_pt1: "
     //           << possible_tangent_pts[correct_pt_idx].first.transpose()
@@ -849,8 +854,8 @@ const bool ParallelPathPlanner::GetCorrectCircleIndexofLineArcLine(
     const uint8_t tangent_pt2_steer =
         IsRightCircle(possible_tangent_pts[correct_pt_idx].second,
                       target_heading, possible_centers[correct_pt_idx])
-            ? ApaPlannerBase::RIGHT
-            : ApaPlannerBase::LEFT;
+            ? pnc::geometry_lib::SEG_STEER_RIGHT
+            : pnc::geometry_lib::SEG_STEER_LEFT;
 
     // std::cout << "tangent_pt2: "
     //           << possible_tangent_pts[correct_pt_idx].second.transpose()
@@ -887,8 +892,8 @@ const bool ParallelPathPlanner::SelectLineArcLineByDir(
 
   const uint8_t first_line_dir =
       start_to_tangent_vec.dot(start_heading_vec) > 0.0
-          ? ApaPlannerBase::DRIVE
-          : ApaPlannerBase::REVERSE;
+          ? pnc::geometry_lib::SEG_GEAR_DRIVE
+          : pnc::geometry_lib::SEG_GEAR_REVERSE;
 
   if (first_line_dir != ideal_dir &&
       start_to_tangent_vec.norm() > kMaxIgnoredLength) {
@@ -906,8 +911,8 @@ const bool ParallelPathPlanner::SelectLineArcLineByDir(
 
   const uint8_t last_line_dir =
       tangent_to_target_vec.dot(target_heading_vec) > 0.0
-          ? ApaPlannerBase::DRIVE
-          : ApaPlannerBase::REVERSE;
+          ? pnc::geometry_lib::SEG_GEAR_DRIVE
+          : pnc::geometry_lib::SEG_GEAR_REVERSE;
 
   if (tangent_pts.second.x() < target_pose.pos.x() - kMaxIgnoredLength) {
     std::cout << "last line step direction is different than ideal one"
@@ -1033,9 +1038,10 @@ const bool ParallelPathPlanner::CalInverseTwoArcGeometry(
     const uint8_t steer, std::vector<PathSegment>& inverse_two_segmemts,
     DebugInfo& debuginfo) const {
   const double radius = kMinTurnRadius;
-  double start_dir_sgn = (direction == ApaPlannerBase::DRIVE ? 1.0 : -1.0);
+  double start_dir_sgn =
+      (direction == pnc::geometry_lib::SEG_GEAR_DRIVE ? 1.0 : -1.0);
 
-  if (steer == ApaPlannerBase::STRAIGHT) {
+  if (steer == pnc::geometry_lib::SEG_STEER_STRAIGHT) {
     std::cout << "steer input error" << std::endl;
     return false;
   }
@@ -1114,12 +1120,12 @@ const bool ParallelPathPlanner::CalInverseTwoArcGeometry(
   inverse_two_segmemts.emplace_back(PathSegment(steer, direction, start_arc));
 
   // second inverse arc
-  const uint8_t end_steer =
-      (steer == ApaPlannerBase::RIGHT ? ApaPlannerBase::LEFT
-                                      : ApaPlannerBase::RIGHT);
-  const uint8_t end_direction =
-      (direction == ApaPlannerBase::DRIVE ? ApaPlannerBase::REVERSE
-                                          : ApaPlannerBase::DRIVE);
+  const uint8_t end_steer = (steer == pnc::geometry_lib::SEG_STEER_RIGHT
+                                 ? pnc::geometry_lib::SEG_STEER_LEFT
+                                 : pnc::geometry_lib::SEG_STEER_RIGHT);
+  const uint8_t end_direction = (direction == pnc::geometry_lib::SEG_GEAR_DRIVE
+                                     ? pnc::geometry_lib::SEG_GEAR_REVERSE
+                                     : pnc::geometry_lib::SEG_GEAR_DRIVE);
 
   pnc::geometry_lib::Arc end_arc;
   end_arc.is_ignored = false;
@@ -1147,9 +1153,10 @@ const bool ParallelPathPlanner::CalInverseTwoArcGeometry(
     const pnc::geometry_lib::PathPoint& start_pose, const uint8_t direction,
     const uint8_t steer, std::vector<PathSegment>& inverse_two_segmemts) const {
   const double radius = kMinTurnRadius;
-  double start_dir_sgn = (direction == ApaPlannerBase::DRIVE ? 1.0 : -1.0);
+  double start_dir_sgn =
+      (direction == pnc::geometry_lib::SEG_GEAR_DRIVE ? 1.0 : -1.0);
 
-  if (steer == ApaPlannerBase::STRAIGHT) {
+  if (steer == pnc::geometry_lib::SEG_STEER_STRAIGHT) {
     std::cout << "steer input error" << std::endl;
     return false;
   }
@@ -1229,12 +1236,12 @@ const bool ParallelPathPlanner::CalInverseTwoArcGeometry(
   inverse_two_segmemts.emplace_back(PathSegment(steer, direction, start_arc));
 
   // second inverse arc
-  const uint8_t end_steer =
-      (steer == ApaPlannerBase::RIGHT ? ApaPlannerBase::LEFT
-                                      : ApaPlannerBase::RIGHT);
-  const uint8_t end_direction =
-      (direction == ApaPlannerBase::DRIVE ? ApaPlannerBase::REVERSE
-                                          : ApaPlannerBase::DRIVE);
+  const uint8_t end_steer = (steer == pnc::geometry_lib::SEG_STEER_RIGHT
+                                 ? pnc::geometry_lib::SEG_STEER_LEFT
+                                 : pnc::geometry_lib::SEG_STEER_RIGHT);
+  const uint8_t end_direction = (direction == pnc::geometry_lib::SEG_GEAR_DRIVE
+                                     ? pnc::geometry_lib::SEG_GEAR_REVERSE
+                                     : pnc::geometry_lib::SEG_GEAR_DRIVE);
 
   pnc::geometry_lib::Arc end_arc;
   end_arc.is_ignored = false;
@@ -1484,8 +1491,8 @@ const bool ParallelPathPlanner::OneLineGeometryPlan(
       uint8_t line_step_dir =
           line_step.pA.x() * calc_params_.slot_side_sgn >
                   line_step.pB.x() * calc_params_.slot_side_sgn
-              ? ApaPlannerBase::REVERSE
-              : ApaPlannerBase::DRIVE;
+              ? pnc::geometry_lib::SEG_GEAR_REVERSE
+              : pnc::geometry_lib::SEG_GEAR_DRIVE;
 
       line_seg = PathSegment(line_step_dir, line_step);
     }
@@ -1504,7 +1511,8 @@ const bool ParallelPathPlanner::OneArcGeometryPlan(
                                   std::sin(current_pose.heading));
 
   Eigen::Vector2d ego_n_vec(ego_heading_vec.y(), -ego_heading_vec.x());
-  const double steer_sgn = (steer == ApaPlannerBase::RIGHT ? 1.0 : -1.0);
+  const double steer_sgn =
+      (steer == pnc::geometry_lib::SEG_STEER_RIGHT ? 1.0 : -1.0);
   ego_n_vec *= steer_sgn;
 
   Eigen::Vector2d center = current_pose.pos + ego_n_vec * radius;
@@ -1548,8 +1556,8 @@ const bool ParallelPathPlanner::OneArcGeometryPlan(
 
   Eigen::Vector2d ab_vec = arc.pB - arc.pA;
   const uint8_t direction = ab_vec.dot(ego_heading_vec) < 0.0
-                                ? ApaPlannerBase::REVERSE
-                                : ApaPlannerBase::DRIVE;
+                                ? pnc::geometry_lib::SEG_GEAR_REVERSE
+                                : pnc::geometry_lib::SEG_GEAR_DRIVE;
 
   arc_segment = PathSegment(steer, direction, arc);
   std::cout << "one arc plan success" << std::endl;
@@ -1615,7 +1623,8 @@ const bool ParallelPathPlanner::SetCurrentPathSegIndex() {
 
   for (size_t i = output_.path_seg_index.second;
        i >= output_.path_seg_index.first; --i) {
-    if (output_.path_segment_vec[i].seg_type == ApaPlannerBase::ARC_SEGMENT) {
+    if (output_.path_segment_vec[i].seg_type ==
+        pnc::geometry_lib::SEG_TYPE_ARC) {
       output_.current_arc_steer = output_.steer_vec[i];
       break;
     }
@@ -1670,10 +1679,10 @@ void ParallelPathPlanner::SetLineSegmentHeading() {
     }
     if (i == 0) {
       current_heading = input_.ego_pose.heading;
-    } else if (last_path_seg.seg_type == ApaPlannerBase::ARC_SEGMENT) {
+    } else if (last_path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
       current_heading = last_path_seg.arc_seg.headingB;
     }
-    if (current_path_seg.seg_type == ApaPlannerBase::LINE_SEGMENT) {
+    if (current_path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       current_path_seg.line_seg.heading = current_heading;
     }
   }
@@ -1695,7 +1704,7 @@ void ParallelPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
 
   auto& path_seg = output_.path_segment_vec[output_.path_seg_index.second];
 
-  if (path_seg.seg_type == ApaPlannerBase::ARC_SEGMENT &&
+  if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC &&
       extend_distance < 0.0) {
     std::cout << "arc can not shorten\n";
     return;
@@ -1703,18 +1712,18 @@ void ParallelPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
 
   if (extend_distance > 0.0) {
     PathSegment new_line;
-    new_line.seg_type = ApaPlannerBase::LINE_SEGMENT;
+    new_line.seg_type = pnc::geometry_lib::SEG_TYPE_LINE;
 
     if (path_seg.Getlength() + extend_distance < kMinOneStepPathLength) {
       extend_distance = kMinOneStepPathLength - path_seg.Getlength();
     }
 
     new_line.line_seg.length = extend_distance;
-    if (path_seg.seg_type == ApaPlannerBase::LINE_SEGMENT) {
+    if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       new_line.line_seg.pA = path_seg.line_seg.pB;
       new_line.line_seg.heading = path_seg.line_seg.heading;
 
-    } else if (path_seg.seg_type == ApaPlannerBase::ARC_SEGMENT) {
+    } else if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
       new_line.line_seg.pA = path_seg.arc_seg.pB;
       new_line.line_seg.heading = path_seg.arc_seg.headingB;
     }
@@ -1722,7 +1731,7 @@ void ParallelPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
     Eigen::Vector2d unit_tangent = Eigen::Vector2d(
         cos(new_line.line_seg.heading), sin(new_line.line_seg.heading));
 
-    if (output_.current_gear == ApaPlannerBase::REVERSE) {
+    if (output_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
       unit_tangent *= -1.0;
     }
 
@@ -1762,7 +1771,7 @@ void ParallelPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
 
       output_.steer_vec.insert(
           output_.steer_vec.begin() + output_.path_seg_index.second + 1,
-          ApaPlannerBase::STRAIGHT);
+          pnc::geometry_lib::SEG_STEER_STRAIGHT);
 
       output_.path_seg_index.second += 1;
 
@@ -1842,13 +1851,13 @@ void ParallelPathPlanner::ExtendCurrentFollowLastPath(double extend_distance) {
     }
   }
   const auto path_seg_extended_length = path_seg_length + extend_distance;
-  if (path_seg.seg_type == ApaPlannerBase::LINE_SEGMENT) {
+  if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
     path_seg.line_seg.length = path_seg_extended_length;
     Eigen::Vector2d AB = path_seg.line_seg.pB - path_seg.line_seg.pA;
     Eigen::Vector2d AB_unit = AB.normalized();
     AB = path_seg_extended_length * AB_unit;
     path_seg.line_seg.pB = AB + path_seg.line_seg.pA;
-  } else if (path_seg.seg_type == ApaPlannerBase::ARC_SEGMENT) {
+  } else if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
     path_seg.arc_seg.length = path_seg_extended_length;
     double theta =
         path_seg_extended_length / path_seg.arc_seg.circle_info.radius;
@@ -1866,10 +1875,10 @@ void ParallelPathPlanner::ExtendCurrentFollowLastPath(double extend_distance) {
   if (extend_distance > 0.0) {
     std::cout << "--- extend distance collision --- " << std::endl;
     CollisionDetector::CollisionResult collision_result;
-    if (path_seg.seg_type == ApaPlannerBase::LINE_SEGMENT) {
+    if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       collision_result = collision_detector_ptr_->Update(
           path_seg.line_seg, path_seg.line_seg.heading);
-    } else if (path_seg.seg_type == ApaPlannerBase::ARC_SEGMENT) {
+    } else if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
       collision_result = collision_detector_ptr_->Update(
           path_seg.arc_seg, path_seg.arc_seg.headingA);
     }
@@ -1885,13 +1894,13 @@ void ParallelPathPlanner::ExtendCurrentFollowLastPath(double extend_distance) {
         safe_remain_dist < 0.0) {
       return;
     }
-    if (path_seg.seg_type == ApaPlannerBase::LINE_SEGMENT) {
+    if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       path_seg.line_seg.length = safe_remain_dist;
       Eigen::Vector2d AB = path_seg.line_seg.pB - path_seg.line_seg.pA;
       Eigen::Vector2d AB_unit = AB.normalized();
       AB = safe_remain_dist * AB_unit;
       path_seg.line_seg.pB = AB + path_seg.line_seg.pA;
-    } else if (path_seg.seg_type == ApaPlannerBase::ARC_SEGMENT) {
+    } else if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
       path_seg.arc_seg.length = safe_remain_dist;
       double theta = safe_remain_dist / path_seg.arc_seg.circle_info.radius;
       const Eigen::Vector2d OA =
@@ -1927,7 +1936,7 @@ const bool ParallelPathPlanner::SampleCurrentPathSeg() {
        i <= output_.path_seg_index.second; ++i) {
     const auto& current_seg = output_.path_segment_vec[i];
 
-    if (current_seg.seg_type == ApaPlannerBase::LINE_SEGMENT) {
+    if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       SampleLineSegment(current_seg.line_seg, input_.sample_ds);
     } else {
       SampleArcSegment(current_seg.arc_seg, input_.sample_ds);
@@ -2024,7 +2033,7 @@ void ParallelPathPlanner::PrintSegmentInfo(const PathSegment& seg) const {
   std::cout << "seg_type: " << static_cast<int>(seg.seg_type) << std::endl;
   std::cout << "length: " << seg.Getlength() << std::endl;
 
-  if (seg.seg_type == ApaPlannerBase::LINE_SEGMENT) {
+  if (seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
     std::cout << "start_pos: " << seg.GetLineSeg().pA.transpose() << std::endl;
     std::cout << "start_heading: " << seg.GetLineSeg().heading * 57.3
               << std::endl;
@@ -2046,7 +2055,7 @@ void ParallelPathPlanner::PrintOutputSegmentsInfo() const {
   for (size_t i = 0; i < output_.path_segment_vec.size(); i++) {
     const auto& current_seg = output_.path_segment_vec[i];
 
-    if (current_seg.seg_type == ApaPlannerBase::LINE_SEGMENT) {
+    if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       const auto& line_seg = current_seg.line_seg;
 
       std::cout << "Segment [" << i << "] "
@@ -2150,7 +2159,7 @@ const Eigen::Vector2d ParallelPathPlanner::CalEgoTurningCenter(
   Eigen::Vector2d ego_heading_vec(std::cos(ego_heading), std::sin(ego_heading));
 
   Eigen::Vector2d ego_n_vec(-ego_heading_vec.y(), ego_heading_vec.x());
-  if (steer == ApaPlannerBase::RIGHT) {
+  if (steer == pnc::geometry_lib::SEG_STEER_RIGHT) {
     ego_n_vec *= -1.0;
   }
   return ego_pos + ego_n_vec * radius;

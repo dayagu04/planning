@@ -39,11 +39,6 @@ class DubinsLibrary {
     CASE_COUNT,
   };
 
-  enum GearType {
-    EMPTY,
-    NORMAL,
-    REVERSE,
-  };
   struct Input {
     Eigen::Vector2d p1 = Eigen::Vector2d::Zero();
     Eigen::Vector2d p2 = Eigen::Vector2d::Zero();
@@ -68,7 +63,7 @@ class DubinsLibrary {
     uint8_t dubins_type = 0;
     uint8_t case_type = 0;
     uint8_t line_arc_type = 0;
-    uint8_t current_gear_cmd = EMPTY;
+    uint8_t current_gear_cmd = geometry_lib::SEG_GEAR_INVALID;
     uint8_t gear_change_count = 0;
     uint8_t gear_change_index = 0;
     uint8_t path_seg_count = 0;

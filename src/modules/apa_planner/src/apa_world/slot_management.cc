@@ -767,8 +767,7 @@ void SlotManagement::UpdateLimiterInfoInParking(
       Eigen::Vector2d p1(selected_fusion_slot.limiter_position(1).x(),
                          selected_fusion_slot.limiter_position(1).y());
 
-      const Eigen::Vector2d heading_norm(std::cos(frame_.measurement_.heading),
-                                         std::sin(frame_.measurement_.heading));
+      const auto heading_norm = (slot_p0 - slot_p2).normalized();
 
       const Eigen::Vector2d delta = kResLimiter * heading_norm;
       limiter_points.first = p0 + delta;
@@ -966,12 +965,12 @@ const bool SlotManagement::GetSelectedSlot(common::SlotInfo &slot_info) const {
 }
 
 const bool SlotManagement::GetSelectedLimiter(
-    std::pair<Eigen::Vector2d, Eigen::Vector2d> fused_limiter) const {
+    std::pair<Eigen::Vector2d, Eigen::Vector2d> &fused_limiter) const {
   if (frame_.slot_management_info_.limiter_points_size() > 0) {
     fused_limiter.first << frame_.slot_management_info_.limiter_points(0).x(),
         frame_.slot_management_info_.limiter_points(0).y();
 
-    fused_limiter.first << frame_.slot_management_info_.limiter_points(1).x(),
+    fused_limiter.second << frame_.slot_management_info_.limiter_points(1).x(),
         frame_.slot_management_info_.limiter_points(1).y();
     return true;
   }

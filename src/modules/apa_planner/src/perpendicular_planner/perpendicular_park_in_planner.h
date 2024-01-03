@@ -23,11 +23,11 @@ class PerpendicularInPlanner : public ApaPlannerBase {
   virtual void Reset() override;
   virtual void Update() override;
   virtual std::string GetName() override { return typeid(this).name(); }
-  const std::vector<Eigen::Vector2d> GenTlaneInGlobSystem() const;
 
  private:
   void PlanCore();
   void GenTlane();
+  void GenObstacles();
   virtual void Log() const override;
   virtual void GenPlanningOutput() override;
   virtual void GenPlanningPath() override;

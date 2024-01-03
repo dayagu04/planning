@@ -369,8 +369,8 @@ const bool DubinsLibrary::GenLineArcOutput(
   output.gear_change_count = 0;
   output.gear_change_index = 18;  // just for fun: 18
 
-  uint8_t current_gear = 0;
-  output.current_gear_cmd = EMPTY;
+  uint8_t current_gear = geometry_lib::SEG_GEAR_INVALID;
+  output.current_gear_cmd = geometry_lib::SEG_GEAR_INVALID;
 
   // set some type info
   output.dubins_type = result.dubins_type;
@@ -379,13 +379,13 @@ const bool DubinsLibrary::GenLineArcOutput(
   // check if AB arc is too short
   if (output.arc_AB.length > dist_tol) {
     if (v_O1B.dot(result.t1) < 0.0) {
-      current_gear = REVERSE;
+      current_gear = geometry_lib::SEG_GEAR_REVERSE;
     } else {
-      current_gear = NORMAL;
+      current_gear = geometry_lib::SEG_GEAR_DRIVE;
     }
     output.arc_AB.is_ignored = false;
   } else {
-    current_gear = EMPTY;
+    current_gear = geometry_lib::SEG_GEAR_INVALID;
     output.arc_AB.length = 0.0;
     output.arc_AB.is_ignored = true;
   }
@@ -395,7 +395,7 @@ const bool DubinsLibrary::GenLineArcOutput(
 
   const auto t1_after_AB = rotm_AB * result.t1;
 
-  if (output.current_gear_cmd == EMPTY) {
+  if (output.current_gear_cmd == geometry_lib::SEG_GEAR_INVALID) {
     output.current_gear_cmd = current_gear;
   }
 
@@ -403,18 +403,19 @@ const bool DubinsLibrary::GenLineArcOutput(
   if (output.line_BC.length > dist_tol) {
     const auto v_BC = output.line_BC.pB - output.line_BC.pA;
     if (t1_after_AB.dot(v_BC) < 0.0) {
-      current_gear = REVERSE;
+      current_gear = geometry_lib::SEG_GEAR_REVERSE;
     } else {
-      current_gear = NORMAL;
+      current_gear = geometry_lib::SEG_GEAR_DRIVE;
     }
     output.line_BC.is_ignored = false;
   } else {
-    current_gear = EMPTY;
+    current_gear = geometry_lib::SEG_GEAR_INVALID;
     output.line_BC.length = 0.0;
     output.line_BC.is_ignored = true;
   }
   output.gear_cmd_vec.emplace_back(current_gear);
-  if (last_gear != EMPTY && current_gear != EMPTY &&
+  if (last_gear != geometry_lib::SEG_GEAR_INVALID &&
+      current_gear != geometry_lib::SEG_GEAR_INVALID &&
       last_gear != current_gear) {
     if (output.gear_change_count == 0) {
       output.gear_change_index = 1;
@@ -424,7 +425,7 @@ const bool DubinsLibrary::GenLineArcOutput(
 
   last_gear = current_gear;
 
-  if (output.current_gear_cmd == EMPTY) {
+  if (output.current_gear_cmd == geometry_lib::SEG_GEAR_INVALID) {
     output.current_gear_cmd = current_gear;
   }
 
@@ -432,13 +433,13 @@ const bool DubinsLibrary::GenLineArcOutput(
   // check if CD arc is too short
   if (output.arc_CD.length > dist_tol) {
     if (v_O2D.dot(t1_after_AB) < 0.0) {
-      current_gear = REVERSE;
+      current_gear = geometry_lib::SEG_GEAR_REVERSE;
     } else {
-      current_gear = NORMAL;
+      current_gear = geometry_lib::SEG_GEAR_DRIVE;
     }
     output.arc_CD.is_ignored = false;
   } else {
-    current_gear = EMPTY;
+    current_gear = geometry_lib::SEG_GEAR_INVALID;
     output.arc_CD.length = 0.0;
     output.arc_CD.is_ignored = true;
   }
@@ -446,13 +447,15 @@ const bool DubinsLibrary::GenLineArcOutput(
   output.gear_cmd_vec.emplace_back(current_gear);
 
   bool gear_change_flag = false;
-  if (last_gear != EMPTY) {
-    if (current_gear != EMPTY && last_gear != current_gear) {
+  if (last_gear != geometry_lib::SEG_GEAR_INVALID) {
+    if (current_gear != geometry_lib::SEG_GEAR_INVALID &&
+        last_gear != current_gear) {
       gear_change_flag = true;
     }
   } else {
-    if (current_gear != EMPTY && output.gear_cmd_vec[0] != current_gear &&
-        output.gear_cmd_vec[0] != EMPTY) {
+    if (current_gear != geometry_lib::SEG_GEAR_INVALID &&
+        output.gear_cmd_vec[0] != current_gear &&
+        output.gear_cmd_vec[0] != geometry_lib::SEG_GEAR_INVALID) {
       gear_change_flag = true;
     }
   }
@@ -466,7 +469,7 @@ const bool DubinsLibrary::GenLineArcOutput(
 
   last_gear = current_gear;
 
-  if (output.current_gear_cmd == EMPTY) {
+  if (output.current_gear_cmd == geometry_lib::SEG_GEAR_INVALID) {
     output.current_gear_cmd = current_gear;
   }
   return true;
@@ -542,7 +545,7 @@ const bool DubinsLibrary::GenDubinsOutput(
     output.gear_change_index = 18;  // just for fun: 18
 
     uint8_t current_gear = 0;
-    output.current_gear_cmd = EMPTY;
+    output.current_gear_cmd = geometry_lib::SEG_GEAR_INVALID;
 
     // set some type info
     output.dubins_type = result.dubins_type;
@@ -551,13 +554,13 @@ const bool DubinsLibrary::GenDubinsOutput(
     // check if AB arc is too short
     if (output.arc_AB.length > dist_tol) {
       if (v_O1B.dot(result.t1) < 0.0) {
-        current_gear = REVERSE;
+        current_gear = geometry_lib::SEG_GEAR_REVERSE;
       } else {
-        current_gear = NORMAL;
+        current_gear = geometry_lib::SEG_GEAR_DRIVE;
       }
       output.arc_AB.is_ignored = false;
     } else {
-      current_gear = EMPTY;
+      current_gear = geometry_lib::SEG_GEAR_INVALID;
       output.arc_AB.length = 0.0;
       output.arc_AB.is_ignored = true;
     }
@@ -567,7 +570,7 @@ const bool DubinsLibrary::GenDubinsOutput(
 
     const auto t1_after_AB = rotm_AB * result.t1;
 
-    if (output.current_gear_cmd == EMPTY) {
+    if (output.current_gear_cmd == geometry_lib::SEG_GEAR_INVALID) {
       output.current_gear_cmd = current_gear;
     }
 
@@ -575,18 +578,19 @@ const bool DubinsLibrary::GenDubinsOutput(
     if (output.line_BC.length > dist_tol) {
       const auto v_BC = output.line_BC.pB - output.line_BC.pA;
       if (t1_after_AB.dot(v_BC) < 0.0) {
-        current_gear = REVERSE;
+        current_gear = geometry_lib::SEG_GEAR_REVERSE;
       } else {
-        current_gear = NORMAL;
+        current_gear = geometry_lib::SEG_GEAR_DRIVE;
       }
       output.line_BC.is_ignored = false;
     } else {
-      current_gear = EMPTY;
+      current_gear = geometry_lib::SEG_GEAR_INVALID;
       output.line_BC.length = 0.0;
       output.line_BC.is_ignored = true;
     }
     output.gear_cmd_vec.emplace_back(current_gear);
-    if (last_gear != EMPTY && current_gear != EMPTY &&
+    if (last_gear != geometry_lib::SEG_GEAR_INVALID &&
+        current_gear != geometry_lib::SEG_GEAR_INVALID &&
         last_gear != current_gear) {
       if (output.gear_change_count == 0) {
         output.gear_change_index = 1;
@@ -600,7 +604,7 @@ const bool DubinsLibrary::GenDubinsOutput(
 
     last_gear = current_gear;
 
-    if (output.current_gear_cmd == EMPTY) {
+    if (output.current_gear_cmd == geometry_lib::SEG_GEAR_INVALID) {
       output.current_gear_cmd = current_gear;
     }
 
@@ -608,13 +612,13 @@ const bool DubinsLibrary::GenDubinsOutput(
     // check if CD arc is too short
     if (output.arc_CD.length > dist_tol) {
       if (v_O2D.dot(t1_after_AB) < 0.0) {
-        current_gear = REVERSE;
+        current_gear = geometry_lib::SEG_GEAR_REVERSE;
       } else {
-        current_gear = NORMAL;
+        current_gear = geometry_lib::SEG_GEAR_DRIVE;
       }
       output.arc_CD.is_ignored = false;
     } else {
-      current_gear = EMPTY;
+      current_gear = geometry_lib::SEG_GEAR_INVALID;
       output.arc_CD.length = 0.0;
       output.arc_CD.is_ignored = true;
     }
@@ -622,13 +626,15 @@ const bool DubinsLibrary::GenDubinsOutput(
     output.gear_cmd_vec.emplace_back(current_gear);
 
     bool gear_change_flag = false;
-    if (last_gear != EMPTY) {
-      if (current_gear != EMPTY && last_gear != current_gear) {
+    if (last_gear != geometry_lib::SEG_GEAR_INVALID) {
+      if (current_gear != geometry_lib::SEG_GEAR_INVALID &&
+          last_gear != current_gear) {
         gear_change_flag = true;
       }
     } else {
-      if (current_gear != EMPTY && output.gear_cmd_vec[0] != current_gear &&
-          output.gear_cmd_vec[0] != EMPTY) {
+      if (current_gear != geometry_lib::SEG_GEAR_INVALID &&
+          output.gear_cmd_vec[0] != current_gear &&
+          output.gear_cmd_vec[0] != geometry_lib::SEG_GEAR_INVALID) {
         gear_change_flag = true;
       }
     }
@@ -647,7 +653,7 @@ const bool DubinsLibrary::GenDubinsOutput(
 
     last_gear = current_gear;
 
-    if (output.current_gear_cmd == EMPTY) {
+    if (output.current_gear_cmd == geometry_lib::SEG_GEAR_INVALID) {
       output.current_gear_cmd = current_gear;
     }
   }
@@ -809,7 +815,7 @@ void DubinsLibrary::Extend(const double extend_s) {
   const auto& end_heading = output_.path_point_vec.back().heading;
   double direction_scale = 1.0;
 
-  if (output_.current_gear_cmd == REVERSE) {
+  if (output_.current_gear_cmd == geometry_lib::SEG_GEAR_REVERSE) {
     direction_scale = -1.0;
   }
 

@@ -1,6 +1,7 @@
 #ifndef __GEOMETERY_MATH_H__
 #define __GEOMETERY_MATH_H__
 
+#include <bits/stdint-uintn.h>
 #include <math.h>
 
 #include <cmath>
@@ -13,6 +14,34 @@
 namespace pnc {
 
 namespace geometry_lib {
+
+enum PathSegType {
+  SEG_TYPE_INVALID,
+  SEG_TYPE_LINE,
+  SEG_TYPE_ARC,
+  SEG_TYPE_COUNT,
+};
+
+enum PathSegSteer {
+  SEG_STEER_INVALID,
+  SEG_STEER_STRAIGHT,
+  SEG_STEER_LEFT,
+  SEG_STEER_RIGHT,
+  SEG_STEER_COUNT,
+};
+
+enum PathSegGear {
+  SEG_GEAR_INVALID,
+  SEG_GEAR_DRIVE,
+  SEG_GEAR_REVERSE,
+  SEG_GEAR_COUNT,
+};
+
+struct PlanSegState {
+  uint8_t cur_seg_type = SEG_TYPE_LINE;
+  uint8_t cur_seg_steer = SEG_STEER_STRAIGHT;
+  uint8_t cur_seg_gear = SEG_GEAR_DRIVE;
+};
 
 struct PathPoint {
   PathPoint() = default;
@@ -27,6 +56,11 @@ struct PathPoint {
 
   Eigen::Vector2d pos = Eigen::Vector2d::Zero();
   double heading = 0.0;
+
+  void Reset() {
+    pos.setZero();
+    heading = 0.0;
+  }
 };
 
 struct LineSegment {
@@ -36,9 +70,9 @@ struct LineSegment {
   }
 
   LineSegment(const Eigen::Vector2d &p1, const Eigen::Vector2d &p2,
-              const double heading_r) {
+              const double heading_in) {
     SetPoints(p1, p2);
-    heading = heading_r;
+    heading = heading_in;
   }
 
   void SetPoints(const Eigen::Vector2d &p1, const Eigen::Vector2d &p2) {
@@ -52,11 +86,24 @@ struct LineSegment {
   double heading = 0.0;
   double length = 0.0;
   bool is_ignored = false;
+
+  void Reset() {
+    pA.setZero();
+    pB.setZero();
+    heading = 0.0;
+    length = 0.0;
+    is_ignored = false;
+  }
 };
 
 struct Circle {
   Eigen::Vector2d center = Eigen::Vector2d::Zero();
   double radius = 0.0;
+
+  void Reset() {
+    center.setZero();
+    radius = 0.0;
+  }
 };
 
 struct Arc {
@@ -68,6 +115,69 @@ struct Arc {
   double headingB = 0.0;
   bool is_anti_clockwise = true;
   bool is_ignored = false;
+
+  void Reset() {
+    circle_info.Reset();
+    pA.setZero();
+    pB.setZero();
+    length = 0.0;
+    headingA = 0.0;
+    headingB = 0.0;
+    is_anti_clockwise = true;
+    is_ignored = false;
+  }
+};
+
+struct PathSegment {
+  uint8_t seg_type = SEG_TYPE_LINE;
+  uint8_t seg_steer = SEG_STEER_STRAIGHT;
+  uint8_t seg_gear = SEG_GEAR_DRIVE;
+
+  LineSegment line_seg;
+  Arc arc_seg;
+
+  PathSegment() = default;
+
+  const double Getlength() const {
+    if (seg_type == SEG_TYPE_LINE) {
+      return line_seg.length;
+    } else if (seg_type == SEG_TYPE_ARC) {
+      return arc_seg.length;
+    } else {
+      return 0.0;
+    }
+  }
+
+  PathSegment(const uint8_t seg_type_in, const uint8_t seg_steer_in,
+              const uint8_t seg_gear_in, const LineSegment &line_seg_in,
+              const Arc &arc_seg_in) {
+    seg_type = seg_type_in;
+    seg_steer = seg_steer_in;
+    seg_gear = seg_gear_in;
+    line_seg = line_seg_in;
+    arc_seg = arc_seg_in;
+  }
+
+  // construct line segment
+  PathSegment(const uint8_t seg_gear_in, const LineSegment &line_seg_in) {
+    seg_type = SEG_TYPE_LINE;
+
+    seg_steer = SEG_STEER_STRAIGHT;
+    seg_gear = seg_gear_in;
+    line_seg = line_seg_in;
+  }
+
+  // construct arc segment
+  PathSegment(const uint8_t seg_steer_in, const uint8_t seg_gear_in,
+              const Arc &arc_seg_in) {
+    seg_type = SEG_TYPE_ARC;
+    seg_steer = seg_steer_in;
+    seg_gear = seg_gear_in;
+    arc_seg = arc_seg_in;
+  }
+
+  const LineSegment &GetLineSeg() const { return line_seg; }
+  const Arc &GetArcSeg() const { return arc_seg; }
 };
 
 struct TangentOutput {
@@ -160,10 +270,12 @@ const Eigen::Matrix2d GetRotm2dFromTwoVec(const Eigen::Vector2d &a,
 const LineSegment GetEgoHeadingLine(const Eigen::Vector2d &ego_pos,
                                     const double ego_heading);
 
-const bool GetLineLineIntersection(
-    Eigen::Vector2d &intersection,
-    const pnc::geometry_lib::LineSegment &line_seg1,
-    const pnc::geometry_lib::LineSegment &line_seg2);
+const bool GetIntersectionFromTwoLineSeg(Eigen::Vector2d &intersection,
+                                         LineSegment &line_seg1,
+                                         LineSegment &line_seg2);
+
+const bool GetIntersectionFromTwoLine(Eigen::Vector2d &intersection,
+                                      LineSegment &line1, LineSegment &line2);
 
 const bool CheckPointLiesOnArc(const pnc::geometry_lib::Arc &arc,
                                const Eigen::Vector2d &pC);
@@ -279,6 +391,75 @@ const bool IsPointInPolygon(const std::vector<Eigen::Vector2d> &polygon,
 const bool MinimumBoundingBox(
     std::vector<Eigen::Vector2d> &target_boundingbox,
     const std::vector<Eigen::Vector2d> &original_vertices);
+
+const bool CalOneArcWithLine(Arc &arc, LineSegment &line, double r_err = 0.001);
+
+const bool CalTwoArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
+                             bool is_shifted = true);
+
+const bool IsPoseOnLine(const PathPoint &pose, LineSegment &line,
+                        const double lat_err, const double heading_err);
+
+const Eigen::Vector2d GetUnitTangVecByHeading(const double &heading);
+
+const LineSegment BuildLineSegByPose(const Eigen::Vector2d &current_pos,
+                                     const double &current_heading);
+
+const bool CalCommonTangentCircleOfTwoLine(
+    LineSegment &line1, LineSegment &line2, const double &radius,
+    std::vector<Eigen::Vector2d> &centers,
+    std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> &tangent_ptss);
+
+const bool CheckTwoVecCollinear(const Eigen::Vector2d &v1,
+                                const Eigen::Vector2d &v2);
+
+const bool CheckTwoVecVertical(const Eigen::Vector2d &v1,
+                               const Eigen::Vector2d &v2);
+
+const bool CheckTwoVecSameOrOppositeDirection(const Eigen::Vector2d &v1,
+                                              const Eigen::Vector2d &v2);
+
+const bool CompleteArcInfo(Arc &arc);
+
+const bool CompleteArcInfo(Arc &arc, const double rot_angle);
+
+const bool CompleteArcInfo(Arc &arc, const uint8_t arc_steer);
+
+const bool CompleteArcInfo(Arc &arc, const double length,
+                           bool is_anti_clockwise);
+
+const bool CompleteLineInfo(LineSegment &line, const double length);
+
+const bool CompleteLineInfo(LineSegment &line, const double length,
+                            const double heading);
+
+const uint8_t CalArcGear(const Arc &arc);
+
+const uint8_t CalArcSteer(const Arc &arc);
+
+const uint8_t CalLineSegGear(const LineSegment &line_seg);
+
+const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
+                                    const uint8_t current_arc_steer);
+
+const bool CalOneArcWithTargetHeading(Arc &arc, const uint8_t &current_seg_gear,
+                                      const double &target_heading);
+
+const bool LogErr(const std::string &func_name, uint8_t index,
+                  const uint8_t type = 0);
+
+const bool CalLineUnitNormVecByPos(const Eigen::Vector2d &pos,
+                                   const LineSegment &line,
+                                   Eigen::Vector2d &line_norm_vec);
+
+const bool CalTwoArcWithSameHeading(Arc &arc1, Arc &arc2,
+                                    const uint8_t seg_gear);
+
+const bool CalOneArcWithTargetHeading(Arc &arc, const uint8_t &current_seg_gear,
+                                      const double &target_heading);
+
+const bool IsDoublePositive(const double x);
+
 }  // namespace geometry_lib
 }  // namespace pnc
 

@@ -25,9 +25,7 @@ class ParallelPathPlanner {
     Eigen::Vector2d p1 = Eigen::Vector2d::Zero();
     Eigen::Vector2d pt = Eigen::Vector2d::Zero();
     double channel_x = 0.0;
-    uint8_t slot_side = ApaPlannerBase::SLOT_SIDE_NONE;
-
-    ApaPlannerBase::PlanSegState plan_seg_state;
+    uint8_t slot_side = ApaPlannerBase::SLOT_SIDE_INVALID;
 
     void Reset() {
       p0 = Eigen::Vector2d::Zero();
@@ -38,9 +36,9 @@ class ParallelPathPlanner {
   };
 
   struct PathSegment {
-    uint8_t seg_type = ApaPlannerBase::LINE_SEGMENT;
-    uint8_t seg_steer = ApaPlannerBase::STRAIGHT;
-    uint8_t seg_direction = ApaPlannerBase::DRIVE;
+    uint8_t seg_type = pnc::geometry_lib::SEG_TYPE_LINE;
+    uint8_t seg_steer = pnc::geometry_lib::SEG_STEER_STRAIGHT;
+    uint8_t seg_direction = pnc::geometry_lib::SEG_GEAR_DRIVE;
 
     pnc::geometry_lib::LineSegment line_seg;
     pnc::geometry_lib::Arc arc_seg;
@@ -48,9 +46,9 @@ class ParallelPathPlanner {
     PathSegment() = default;
 
     const double Getlength() const {
-      if (seg_type == ApaPlannerBase::LINE_SEGMENT) {
+      if (seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
         return line_seg.length;
-      } else if (seg_type == ApaPlannerBase::ARC_SEGMENT) {
+      } else if (seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
         return arc_seg.length;
       } else {
         return 0.0;
@@ -71,9 +69,9 @@ class ParallelPathPlanner {
     // construct line segment
     PathSegment(const uint8_t seg_direction_r,
                 const pnc::geometry_lib::LineSegment &line_seg_r) {
-      seg_type = ApaPlannerBase::LINE_SEGMENT;
+      seg_type = pnc::geometry_lib::SEG_TYPE_LINE;
 
-      seg_steer = ApaPlannerBase::STRAIGHT;
+      seg_steer = pnc::geometry_lib::SEG_STEER_STRAIGHT;
       seg_direction = seg_direction_r;
       line_seg = line_seg_r;
     }
@@ -81,7 +79,7 @@ class ParallelPathPlanner {
     // construct arc segment
     PathSegment(const uint8_t seg_steer_r, const uint8_t seg_direction_r,
                 const pnc::geometry_lib::Arc &arc_seg_r) {
-      seg_type = ApaPlannerBase::ARC_SEGMENT;
+      seg_type = pnc::geometry_lib::SEG_TYPE_ARC;
       seg_steer = seg_steer_r;
       seg_direction = seg_direction_r;
       arc_seg = arc_seg_r;
@@ -100,8 +98,8 @@ class ParallelPathPlanner {
     bool is_complete_path = false;
     bool is_replan_first = true;
     double sample_ds = 0.02;
-    uint8_t ref_gear = ApaPlannerBase::GEAR_NONE;
-    uint8_t ref_arc_steer = ApaPlannerBase::STEER_NONE;
+    uint8_t ref_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+    uint8_t ref_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
 
     void Set(const Tlane &tlane_r,
              const std::vector<Eigen::Vector2d> &obstacle_vec_r,

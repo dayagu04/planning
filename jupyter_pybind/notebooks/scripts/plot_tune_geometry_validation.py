@@ -174,6 +174,153 @@ def slider_callback(ego_x, ego_y, ego_heading, target_x, target_y, target_headin
   #   'y':y_set,
   # })
 
+  # length = 20
+  # ego_x = 8.2
+  # ego_y = -1.5
+  # ego_heading = 15
+  # target_y = 0.0
+  # is_left = 0
+  # p1 = [ego_x, ego_y]
+  # heading1_vec = [math.cos(ego_heading / 57.3), math.sin(ego_heading / 57.3)]
+  # heading1_vec = [value * length for value in heading1_vec]
+  # p2 = [p1[0] + heading1_vec[0], p1[1] + heading1_vec[1]]
+  # data_start_pose_line.data.update({
+  #   'x_vec': [p1[0], p2[0]],
+  #   'y_vec': [p1[1], p2[1]],
+  # })
+
+  # q1 = [target_x, target_y]
+  # heading2_vec = [math.cos(target_heading / 57.3), math.sin(target_heading / 57.3)]
+  # heading2_vec = [value * length for value in heading2_vec]
+  # q2 = [q1[0] + heading2_vec[0], q1[1] + heading2_vec[1]]
+  # data_target_pose_line.data.update({
+  #   'x_vec': [q1[0], q2[0]],
+  #   'y_vec': [q1[1], q2[1]],
+  # })
+
+
+
+
+  #center_set = geometry_math_validation_py.CalTangCirOfTwoLine(p1, ego_heading / 57.3, q1, target_heading / 57.3, radius)
+  # center_set = geometry_math_validation_py.CalSetTangCirOfTwoLine(p1, ego_heading / 57.3, q1, target_heading / 57.3, radius, is_advance, is_left)
+  # x_set = []
+  # y_set = []
+  # r_set = []
+  # pBx_vec = []
+  # pBy_vec = []
+  # pCx_vec = []
+  # pCy_vec = []
+  # for i in range(len(center_set)):
+  #   x_set.append(center_set[i][0])
+  #   y_set.append(center_set[i][1])
+  #   r_set.append(radius)
+  #   print("x = ", x_set[i], "  y = ", y_set[i], "  r = ", r_set[i])
+  #   pBx_vec.append(0)
+  #   pBy_vec.append(0)
+  #   pCx_vec.append(0)
+  #   pCy_vec.append(0)
+
+  # data_res_arc.data.update({
+  #   'cx_vec':x_set,
+  #   'cy_vec':y_set,
+  #   'radius_vec':r_set,
+  #   'pBx_vec':pBx_vec,
+  #   'pBy_vec':pBy_vec,
+  #   'pCx_vec':pCx_vec,
+  #   'pCy_vec':pCy_vec
+  # })
+
+  length = 20
+  # ego_x = 8.2
+  # ego_y = -1.5
+  # ego_heading = 15
+  # target_y = 0.0
+  # is_left = 0
+  p1 = [ego_x, ego_y]
+  heading1_vec = [math.cos(ego_heading / 57.3), math.sin(ego_heading / 57.3)]
+  heading1_vec = [value * length for value in heading1_vec]
+  p2 = [p1[0] + heading1_vec[0], p1[1] + heading1_vec[1]]
+  data_start_pose_line.data.update({
+    'x_vec': [p1[0], p2[0]],
+    'y_vec': [p1[1], p2[1]],
+  })
+
+  q1 = [target_x, target_y]
+  heading2_vec = [math.cos(target_heading / 57.3), math.sin(target_heading / 57.3)]
+  heading2_vec = [value * length for value in heading2_vec]
+  q2 = [q1[0] + heading2_vec[0], q1[1] + heading2_vec[1]]
+  data_target_pose_line.data.update({
+    'x_vec': [q1[0], q2[0]],
+    'y_vec': [q1[1], q2[1]],
+  })
+
+  # r = geometry_math_validation_py.CalTangCircleByPoseAndLine(p1, ego_heading / 57.3, q1, target_heading / 57.3, is_advance, is_left)
+  r = radius
+  # print("r = ", r)
+  p1_tang_vec = [math.cos(ego_heading / 57.3), math.sin(ego_heading / 57.3)]
+  p1_norm_vec = []
+  if is_left == 1:
+    p1_norm_vec = [-p1_tang_vec[1], p1_tang_vec[0]]
+  else:
+    p1_norm_vec = [p1_tang_vec[1], -p1_tang_vec[0]]
+  # r = 44.02
+  p1o = [r * p1_norm_vec[0], r * p1_norm_vec[1]]
+  # print("p1_tang_vec = ", p1_tang_vec)
+  # print("p1_norm_vec = ", p1_norm_vec)
+  # print("p1o = ", p1o)
+  o = [p1o[0] + p1[0], p1o[1] + p1[1]]
+  # print("o = ", o)
+
+
+  data_start_pos.data.update({
+    'x':[ego_x],
+    'y':[ego_y],
+  })
+
+  p_o_b = geometry_math_validation_py.CalOneArcByTargetHeading(p1, ego_heading / 57.3, q1, target_heading / 57.3, radius, is_advance)
+  print("pB = ", p_o_b)
+  data_tag_pos.data.update({
+    'x':[p_o_b[2]],
+    'y':[p_o_b[3]],
+  })
+
+  data_res_arc.data.update({
+    'cx_vec':[p_o_b[0]],
+    'cy_vec':[p_o_b[1]],
+    'radius_vec':[r],
+    'pBx_vec':[0],
+    'pBy_vec':[0],
+    'pCx_vec':[0],
+    'pCy_vec':[0]
+  })
+
+  p_o1_o2 = geometry_math_validation_py.CalTwoArcBySameHeading(p1, ego_heading / 57.3, q1, target_heading / 57.3, radius, is_advance)
+  if p_o1_o2[0] == p_o1_o2[2] and p_o1_o2[1] == p_o1_o2[3]:
+    data_res_arc.data.update({
+      'cx_vec':[],
+      'cy_vec':[],
+      'radius_vec':[],
+      'pBx_vec':[],
+      'pBy_vec':[],
+      'pCx_vec':[],
+      'pCy_vec':[]
+    })
+  else:
+    data_res_arc.data.update({
+    'cx_vec':[p_o1_o2[0], p_o1_o2[2]],
+    'cy_vec':[p_o1_o2[1], p_o1_o2[3]],
+    'radius_vec':[r, r],
+    'pBx_vec':[0, 0],
+    'pBy_vec':[0, 0],
+    'pCx_vec':[0, 0],
+    'pCy_vec':[0, 0]
+    })
+
+
+
+
+
+
   push_notebook()
 
 bkp.show(row(fig1), notebook_handle=True)

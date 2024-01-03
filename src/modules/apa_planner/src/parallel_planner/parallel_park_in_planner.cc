@@ -197,17 +197,17 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
                                                 v_ego_to_slot_pt3);
 
     // judge slot side via slot center and heading
-    frame_.current_gear = ApaPlannerBase::REVERSE;
+    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
     if (cross_ego_to_slot_pt3 < 0.0) {
       t_lane_.slot_side = SLOT_SIDE_RIGHT;
-      frame_.current_arc_steer = ApaPlannerBase::RIGHT;
+      frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
     } else if (cross_ego_to_slot_pt3 > 0.0) {
       t_lane_.slot_side = SLOT_SIDE_LEFT;
-      frame_.current_arc_steer = ApaPlannerBase::LEFT;
+      frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
     } else {
-      t_lane_.slot_side = SLOT_SIDE_NONE;
-      frame_.current_arc_steer = ApaPlannerBase::STEER_NONE;
-      frame_.current_gear = ApaPlannerBase::GEAR_NONE;
+      t_lane_.slot_side = SLOT_SIDE_INVALID;
+      frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
+      frame_.current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
       std::cout << "calculate slot side error " << std::endl;
       // return false;
     }
@@ -404,23 +404,23 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
   // set current arc_steer
   if (!frame_.is_replan_first) {
     // set current arc steer
-    if (frame_.current_arc_steer == ApaPlannerBase::STRAIGHT) {
+    if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_STRAIGHT) {
       std::cout << "fault ref_arc_steer state!" << std::endl;
       return false;
-    } else if (frame_.current_arc_steer == ApaPlannerBase::RIGHT) {
-      frame_.current_arc_steer = ApaPlannerBase::LEFT;
+    } else if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT) {
+      frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
     } else {
-      frame_.current_arc_steer = ApaPlannerBase::RIGHT;
+      frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
     }
 
     // set current gear
-    if (frame_.current_gear == ApaPlannerBase::GEAR_NONE) {
+    if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_INVALID) {
       std::cout << "fault ref_gear state!" << std::endl;
       return false;
-    } else if (frame_.current_gear == ApaPlannerBase::DRIVE) {
-      frame_.current_gear = ApaPlannerBase::REVERSE;
+    } else if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+      frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
     } else {
-      frame_.current_gear = ApaPlannerBase::DRIVE;
+      frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
     }
   }
 
@@ -593,7 +593,7 @@ void ParallelParInPlanner::GenPlanningPath() {
   auto gear_command = planning_output_.mutable_gear_command();
   gear_command->set_available(true);
 
-  if (gear_command_ == DRIVE) {
+  if (gear_command_ == pnc::geometry_lib::SEG_GEAR_DRIVE) {
     gear_command->set_gear_command_value(
         Common::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE);
   } else {

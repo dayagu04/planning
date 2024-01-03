@@ -16,7 +16,7 @@ struct ApaParameters {
   double normal_slot_length = 5.2;
   double max_finish_lat_offset = 0.08;
   double max_finish_lon_offset = 0.2;
-  double max_finish_heading_offset_deg = 2.8;
+  double max_finish_heading_offset_deg = 1.2;
   double max_velocity = 0.6;
   double safe_uss_remain_dist = 0.35;
   // replan params
@@ -49,7 +49,13 @@ struct ApaParameters {
   double prepare_line_x_offset_slot = 7.2;
   double prepare_line_heading_offset_slot_deg = 8.8;
   double static_pos_eps = 0.01;
+  double static_heading_eps = 0.8;
+
+  double plan_time = 0.1;
+
   // apa world params
+  double car_static_pos_eps = 0.005;
+  double car_static_velocity = 0.01;
   double max_standstill_speed = 0.01;
   double min_standstill_time_by_pos = 1.5;
   double min_standstill_time_by_vel = 0.5;

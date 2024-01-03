@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "collision_detection.h"
 #include "common.pb.h"
 #include "func_state_machine.pb.h"
 #include "local_view.h"
@@ -87,12 +88,15 @@ class ApaWorld {
     return uss_obstacle_avoider_ptr_;
   }
 
+  std::shared_ptr<CollisionDetector> GetCollisionDetectorPtr() {
+    return collision_detector_ptr_;
+  }
+
   const LocalView* GetLocalViewPtr() { return local_view_ptr_; }
 
  private:
   void Preprocess();
   void UpdateEgoState();
-  void UpdateObstacles();
 
   const bool CheckSelectedSlot() const;
   const bool CheckParkInState() const;
@@ -103,6 +107,7 @@ class ApaWorld {
   std::shared_ptr<SlotManagement> slot_manager_ptr_;
   std::shared_ptr<Measurements> measures_ptr_;
   std::shared_ptr<UssObstacleAvoidance> uss_obstacle_avoider_ptr_;
+  std::shared_ptr<CollisionDetector> collision_detector_ptr_;
 
   const LocalView* local_view_ptr_ = nullptr;
 };

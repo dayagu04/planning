@@ -54,10 +54,6 @@ int Update(double ego_x, double ego_y, double ego_heading, double tlane_p0_x,
   input.is_complete_path = is_complete_path;
   input.is_replan_first = is_plan_first;
 
-  // need consider
-  input.tlane.plan_seg_state.cur_seg_direction = 0;
-  input.tlane.plan_seg_state.cur_seg_steer = 0;
-
   // std::cout << "---------------" << std::endl;
   pBase->SetInput(input);
 

@@ -232,10 +232,20 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().prepare_line_x_offset_slot, double,
                   "prepare_line_x_offset_slot");
 
-  JSON_READ_VALUE(apa_param.SetPram().prepare_line_heading_offset_slot_deg, double,
-                  "prepare_line_heading_offset_slot_deg");
+  JSON_READ_VALUE(apa_param.SetPram().prepare_line_heading_offset_slot_deg,
+                  double, "prepare_line_heading_offset_slot_deg");
 
   JSON_READ_VALUE(apa_param.SetPram().static_pos_eps, double, "static_pos_eps");
+  JSON_READ_VALUE(apa_param.SetPram().static_heading_eps, double,
+                  "static_heading_eps");
+
+  JSON_READ_VALUE(apa_param.SetPram().plan_time, double, "plan_time");
+
+  JSON_READ_VALUE(apa_param.SetPram().car_static_pos_eps, double,
+                  "car_static_pos_eps");
+
+  JSON_READ_VALUE(apa_param.SetPram().car_static_velocity, double,
+                  "car_static_velocity");
 
   JSON_READ_VALUE(apa_param.SetPram().max_standstill_speed, double,
                   "max_standstill_speed");

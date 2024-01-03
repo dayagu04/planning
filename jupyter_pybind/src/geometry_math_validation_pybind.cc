@@ -241,8 +241,7 @@ const std::vector<Eigen::Vector2d> UpdateSamplePointSet(
 int UpdateLineArcLine(double ego_x, double ego_y, double ego_heading,
                       double target_x, double target_y, double target_heading,
                       bool is_advance, bool is_turn_left, double radius) {
-  std::vector<planning::apa_planner::PerpendicularPathPlanner::PathSegment>
-      line_arc_line_segments;
+  std::vector<pnc::geometry_lib::PathSegment> line_arc_line_segments;
 
   planning::apa_planner::PerpendicularPathPlanner::DebugInfo debug_info;
 
@@ -252,16 +251,15 @@ int UpdateLineArcLine(double ego_x, double ego_y, double ego_heading,
   const pnc::geometry_lib::PathPoint target_pose(
       Eigen::Vector2d(target_x, target_y), target_heading);
 
-  const uint8_t direction =
-      (is_advance ? planning::apa_planner::ApaPlannerBase::DRIVE
-                  : planning::apa_planner::ApaPlannerBase::REVERSE);
-  const uint8_t steer =
-      (is_turn_left ? planning::apa_planner::ApaPlannerBase::LEFT
-                    : planning::apa_planner::ApaPlannerBase::RIGHT);
+  const uint8_t direction = (is_advance ? pnc::geometry_lib::SEG_GEAR_DRIVE
+                                        : pnc::geometry_lib::SEG_GEAR_REVERSE);
+  const uint8_t steer = (is_turn_left ? pnc::geometry_lib::SEG_STEER_LEFT
+                                      : pnc::geometry_lib::SEG_STEER_RIGHT);
 
   // planning::apa_planner::PerpendicularPathPlanner perpen_planner;
 
-  // perpen_planner.LineArcLinePlan(line_arc_line_segments, debug_info, start_pose,
+  // perpen_planner.LineArcLinePlan(line_arc_line_segments, debug_info,
+  // start_pose,
   //                                target_pose, direction, steer, radius);
   res.clear();
 
@@ -278,6 +276,167 @@ int UpdateLineArcLine(double ego_x, double ego_y, double ego_heading,
   return true;
 }
 
+const std::vector<Eigen::Vector2d> CalTangCirOfTwoLine(const Eigen::Vector2d p1,
+                                                       const double heading1,
+                                                       const Eigen::Vector2d p2,
+                                                       const double heading2,
+                                                       double radius) {
+  std::vector<Eigen::Vector2d> possible_centers;
+  std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> possible_tangent_pts;
+
+  pnc::geometry_lib::LineSegment line1 =
+      pnc::geometry_lib::BuildLineSegByPose(p1, heading1);
+
+  pnc::geometry_lib::LineSegment line2 =
+      pnc::geometry_lib::BuildLineSegByPose(p2, heading2);
+
+  pnc::geometry_lib::CalCommonTangentCircleOfTwoLine(
+      line1, line2, radius, possible_centers, possible_tangent_pts);
+
+  return possible_centers;
+}
+
+const std::vector<Eigen::Vector2d> CalSetTangCirOfTwoLine(
+    const Eigen::Vector2d p1, const double heading1, const Eigen::Vector2d p2,
+    const double heading2, double radius, bool is_advance, bool is_turn_left) {
+  using namespace pnc::geometry_lib;
+  using namespace pnc::mathlib;
+  std::vector<Eigen::Vector2d> possible_centers;
+  std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> possible_tangent_pts;
+
+  LineSegment line1 = BuildLineSegByPose(p1, heading1);
+
+  LineSegment line2 = BuildLineSegByPose(p2, heading2);
+
+  CalCommonTangentCircleOfTwoLine(line1, line2, radius, possible_centers,
+                                  possible_tangent_pts);
+  std::vector<Eigen::Vector2d> actual_centers;
+  actual_centers.clear();
+  printf("\n\n\n");
+  for (size_t i = 0; i < possible_centers.size(); ++i) {
+    Arc tmp_arc;
+    tmp_arc.pA = possible_tangent_pts[i].first;
+    tmp_arc.headingA = line1.heading;
+    tmp_arc.pB = possible_tangent_pts[i].second;
+    tmp_arc.headingB = line2.heading;
+    tmp_arc.circle_info.center = possible_centers[i];
+    tmp_arc.circle_info.radius = radius;
+
+    const uint8_t tmp_gear = pnc::geometry_lib::CalArcGear(tmp_arc);
+    const uint8_t tmp_steer = pnc::geometry_lib::CalArcSteer(tmp_arc);
+    std::cout << "tmp_arc info: pA = " << tmp_arc.pA.transpose()
+              << "  headingA = " << tmp_arc.headingA
+              << "  pB = " << tmp_arc.pB.transpose()
+              << "  headingB = " << tmp_arc.headingB << "  center"
+              << tmp_arc.circle_info.center.transpose()
+              << "  tmp_gear = " << tmp_gear << "  tmp_steer = " << tmp_steer
+              << std::endl;
+
+    if ((is_advance && tmp_gear != pnc::geometry_lib::SEG_GEAR_DRIVE) ||
+        (!is_advance && tmp_gear != pnc::geometry_lib::SEG_GEAR_REVERSE) ||
+        (is_turn_left && tmp_steer != pnc::geometry_lib::SEG_STEER_LEFT) ||
+        (!is_turn_left && tmp_steer != pnc::geometry_lib::SEG_STEER_RIGHT)) {
+      std::cout << i << "th arc is not ok\n";
+      continue;
+    }
+
+    std::cout << i << "th arc is ok\n";
+
+    LineSegment line(line1.pA, possible_tangent_pts[i].first, line1.heading);
+
+    const uint8_t line_gear = pnc::geometry_lib::CalLineSegGear(line);
+    if ((is_advance && tmp_gear != pnc::geometry_lib::SEG_GEAR_DRIVE) ||
+        (!is_advance && tmp_gear != pnc::geometry_lib::SEG_GEAR_REVERSE)) {
+      std::cout << i << "th line is not ok\n";
+      continue;
+    }
+
+    std::cout << i << "th line is ok\n";
+
+    actual_centers.emplace_back(possible_centers[i]);
+  }
+
+  return actual_centers;
+}
+
+const double CalTangCircleByPoseAndLine(
+    const Eigen::Vector2d p1, const double heading1, const Eigen::Vector2d p2,
+    const double heading2, const int is_advance, const int is_turn_left) {
+  using namespace pnc::geometry_lib;
+  const uint8_t current_gear =
+      (is_advance == 1) ? SEG_GEAR_DRIVE : SEG_GEAR_REVERSE;
+
+  const uint8_t current_arc_steer =
+      (is_turn_left == 1) ? SEG_STEER_LEFT : SEG_STEER_RIGHT;
+
+  LineSegment line = BuildLineSegByPose(p2, heading2);
+  double radius = 0.0;
+  Arc arc;
+  arc.pA = p1;
+  arc.headingA = heading1;
+  CalOneArcWithLineAndGear(arc, line, current_gear);
+  std::cout << "arc.headingB = " << arc.headingB * 57.3
+            << "   line.heading  = " << line.heading * 57.3
+            << "  arc.headingA = " << arc.headingA * 57.3
+            << "  arc.pA = " << arc.pA.transpose()
+            << "  arc.pB = " << arc.pB.transpose()
+            << "  arc.center = " << arc.circle_info.center.transpose()
+            << "  arc.r = " << arc.circle_info.radius << std::endl;
+  if (arc.circle_info.radius > 20.0) {
+    return 0.0;
+  }
+  return arc.circle_info.radius;
+}
+
+const Eigen::Vector4d CalOneArcByTargetHeading(
+    const Eigen::Vector2d p1, const double heading1, const Eigen::Vector2d p2,
+    const double heading2, const double radius, const int is_advance) {
+  using namespace pnc::geometry_lib;
+  Arc arc;
+  arc.pA = p1;
+  arc.headingA = heading1;
+  arc.circle_info.radius = radius;
+  const uint8_t current_gear =
+      (is_advance == 1) ? SEG_GEAR_DRIVE : SEG_GEAR_REVERSE;
+  CalOneArcWithTargetHeading(arc, current_gear, heading2);
+
+  return Eigen::Vector4d(arc.circle_info.center.x(), arc.circle_info.center.y(),
+                         arc.pB.x(), arc.pB.y());
+}
+
+const Eigen::Vector4d CalTwoArcBySameHeading(
+    const Eigen::Vector2d p1, const double heading1, const Eigen::Vector2d p2,
+    const double heading2, const double radius, const int is_advance) {
+  using namespace pnc::geometry_lib;
+  Arc arc1;
+  arc1.pA = p1;
+  arc1.headingA = heading1;
+  arc1.circle_info.radius = radius;
+
+  Arc arc2;
+  arc2.pB = p2;
+  arc2.headingB = heading2;
+  arc2.circle_info.radius = radius;
+
+  const uint8_t current_gear =
+      (is_advance == 1) ? SEG_GEAR_DRIVE : SEG_GEAR_REVERSE;
+
+  if (CalTwoArcWithSameHeading(arc1, arc2, current_gear)) {
+    const uint8_t tmp_gear1 = CalArcGear(arc1);
+    const uint8_t tmp_gear2 = CalArcGear(arc2);
+    const uint8_t tmp_steer1 = CalArcSteer(arc1);
+    const uint8_t tmp_steer2 = CalArcSteer(arc2);
+    if (tmp_gear1 == current_gear && tmp_gear2 == current_gear &&
+        tmp_steer1 != tmp_steer2 &&
+        std::fabs(NormalizeAngle(arc1.headingA - arc1.headingB)) < 0.8 * 3.14) {
+      return Eigen::Vector4d(
+          arc1.circle_info.center.x(), arc1.circle_info.center.y(),
+          arc2.circle_info.center.x(), arc2.circle_info.center.y());
+    }
+  }
+  return Eigen::Vector4d(0.0, 0.0, 0.0, 0.0);
+}
+
 PYBIND11_MODULE(geometry_math_validation_py, m) {
   m.doc() = "m";
 
@@ -290,5 +449,10 @@ PYBIND11_MODULE(geometry_math_validation_py, m) {
       .def("UpdateOneStepParallelShift", &UpdateOneStepParallelShift)
       .def("UpdateLineArcLine", &UpdateLineArcLine)
       .def("UpdateSamplePointSet", &UpdateSamplePointSet)
-      .def("GetOutput", &GetOutput);
+      .def("GetOutput", &GetOutput)
+      .def("CalTangCirOfTwoLine", &CalTangCirOfTwoLine)
+      .def("CalSetTangCirOfTwoLine", &CalSetTangCirOfTwoLine)
+      .def("CalTangCircleByPoseAndLine", &CalTangCircleByPoseAndLine)
+      .def("CalOneArcByTargetHeading", &CalOneArcByTargetHeading)
+      .def("CalTwoArcBySameHeading", &CalTwoArcBySameHeading);
 }

@@ -3,9 +3,7 @@
 namespace planning {
 namespace apa_planner {
 
-void ApaPlannerBase::Init() {
-  collision_detector_ptr_ = std::make_shared<CollisionDetector>();
-}
+void ApaPlannerBase::Init() {}
 
 }  // namespace apa_planner
 }  // namespace planning
