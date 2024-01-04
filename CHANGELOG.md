@@ -1,3 +1,11 @@
+# planning.2.3.2.1
+####  修改说明
+1. 修改长时重规划的参数设置
+2. 修复因交互式变道获取车道线type引起的的崩溃问题
+3. 区分hpp和highway场景
+4. 适配新定位接口
+5. local_view接入parking_map与groundline
+
 # planning.2.2.1.4
 ####  修改说明
 1. realtime planner输出轨迹化适配noa, 默认不开启
