@@ -173,7 +173,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   }
   auto time_end = IflyTime::Now_ms();
   LOG_DEBUG("ego_state_update cost:%f\n", time_end - time_start);
-
+  JSON_DEBUG_VALUE("ego_state_cost", time_end - time_start)
   // Step 3) update virtual_lane
   time_start = IflyTime::Now_ms();
   last_feed_time_[FEED_MAP_INFO] = local_view.hdmap_time;
@@ -186,17 +186,33 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   }
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("virtual_lane_manager update cost:%f\n", time_end - time_start);
-
+  JSON_DEBUG_VALUE("virtual_lane_manager_cost", time_end - time_start)
   // Step 4) update obstacle
   time_start = IflyTime::Now_ms();
   if (!obstacle_prediction_update(current_time, local_view)) {
     return false;
   }
-  ground_line_obstacles_update(local_view);
-  parking_slot_manager_ptr_->update(local_view.parking_map_info);
-  obstacle_manager_ptr_->update();
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("obstacle_prediction update cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("obstacle_prediction_cost", time_end - time_start)
+
+  time_start = IflyTime::Now_ms();
+  ground_line_obstacles_update(local_view);
+  time_end = IflyTime::Now_ms();
+  LOG_DEBUG("ground_line_obstacles update cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("ground_line_obstacles_cost", time_end - time_start)
+
+  time_start = IflyTime::Now_ms();
+  parking_slot_manager_ptr_->update(local_view.parking_map_info);
+  time_end = IflyTime::Now_ms();
+  LOG_DEBUG("parking_slot_manager update cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start)
+
+  time_start = IflyTime::Now_ms();
+  obstacle_manager_ptr_->update();
+  time_end = IflyTime::Now_ms();
+  LOG_DEBUG("obstacle_manager cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("obstacle_manager_cost", time_end - time_start)
 
   // Step 5) update reference path
   time_start = IflyTime::Now_ms();
@@ -206,6 +222,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   }
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("reference_path_manager update cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("reference_path_manager_cost", time_end - time_start)
 
   if (not session_->is_hpp_scene()) {
     time_start = IflyTime::Now_ms();
@@ -216,7 +233,11 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
     lane_tracks_mgr_ptr_->update_lane_tracks();
   }
 
+  time_start = IflyTime::Now_ms();
   history_obstacle_ptr_->Update();
+  time_end = IflyTime::Now_ms();
+  LOG_DEBUG("history_obstacle update cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("history_obstacle_cost", time_end - time_start)
 
   auto end_time = IflyTime::Now_ms();
   LOG_DEBUG("EnvironmentalModelManager::Run cost time:%f\n",

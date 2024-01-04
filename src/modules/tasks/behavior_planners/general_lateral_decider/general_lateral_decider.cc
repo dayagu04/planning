@@ -83,33 +83,61 @@ bool GeneralLateralDecider::Execute(planning::framework::Frame *frame) {
   lat_decider_output.complete_follow =
       false;  // fusion is unsteady, lane keep weight need decay in end of ref
   lat_decider_output.v_cruise = cruise_vel_;
-  HandleLaneChangeScene(traj_points);  // TODO:handle the lane change info;
 
+  auto time_start = IflyTime::Now_ms();
+  HandleLaneChangeScene(traj_points);  // TODO:handle the lane change info;
+  auto time_end = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("HandleLaneChangeScene cost", time_end - time_start)
+
+  time_start = IflyTime::Now_ms();
   ConstructReferencePathPoints(traj_points);
+  time_end = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("ConstructReferencePathPoints cost", time_end - time_start)
 
   auto &obstacle_decisions =
       pipeline_context_->planning_info.obstacle_decisions;
   auto &map_obstacle_decisions =
       pipeline_context_->planning_info.map_obstacle_decision;
 
+  time_start = IflyTime::Now_ms();
   ConstructLaneAndBoundaryBounds(map_obstacle_decisions);
+  time_end = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("ConstructLaneAndBoundaryBounds cost", time_end - time_start)
 
+  time_start = IflyTime::Now_ms();
   ConstructLateralObstacleDecisions(obstacle_decisions);
+  time_end = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("ConstructLateralObstacleDecisions cost", time_end - time_start)
 
   std::vector<std::pair<double, double>> frenet_safe_bounds;
   std::vector<std::pair<double, double>> frenet_path_bounds;
 
+  time_start = IflyTime::Now_ms();
   ExtractBoundary(map_obstacle_decisions, obstacle_decisions,
                   frenet_safe_bounds, frenet_path_bounds, lat_decider_output);
+  time_end = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("ExtractBoundary cost", time_end - time_start)
 
+  time_start = IflyTime::Now_ms();
   GenerateEnuBoundaryPoints(frenet_safe_bounds, frenet_path_bounds,
                             lat_decider_output);
+  time_end = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("GenerateEnuBoundaryPoints cost", time_end - time_start)
 
+  time_start = IflyTime::Now_ms();
   GenerateEnuReferenceTheta(lat_decider_output);
+  time_end = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("GenerateEnuReferenceTheta cost", time_end - time_start)
 
+  time_start = IflyTime::Now_ms();
   GenerateEnuReferenceTraj(lat_decider_output);
-
+  time_end = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("GenerateEnuReferenceTraj cost", time_end - time_start)
+  
+  time_start = IflyTime::Now_ms();
   CalcLateralBehaviorOutput();
+  time_end = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("CalcLateralBehaviorOutput cost", time_end - time_start)
 
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("GeneralLateralDeciderCost", end_time - current_time);
@@ -554,6 +582,8 @@ void GeneralLateralDecider::ConstructLateralObstacleDecisions(
   for (std::shared_ptr<FrenetObstacle> obstacle : obs_vec) {
     current_obstacles.emplace_back(obstacle);
   }
+
+  auto time_start = IflyTime::Now_ms();
   if (is_need_save_near_obstacle_) {
     const std::vector<Obstacle> &new_obstacles =
         history_obstacle_manager_->GetNearPredictionObstacle();
@@ -569,6 +599,9 @@ void GeneralLateralDecider::ConstructLateralObstacleDecisions(
     history_obstacle_manager_->SelectObstacleNearEgo(current_obstacles,
                                                      ego_frenet_state_);
   }
+  auto time_end = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("SelectObstacleNearEgo Cost", time_end - time_start)
+
   for (auto &obstacle : current_obstacles) {
     const auto &otype = obstacle->type();
     const auto ofusion_source = obstacle->obstacle()->fusion_source();
@@ -604,6 +637,7 @@ void GeneralLateralDecider::ConstructLateralObstacleDecisions(
 
     obj_cnt++;
   }
+  JSON_DEBUG_VALUE("LateralObstacleDecisioNum", obj_cnt)
 }
 
 void GeneralLateralDecider::ConstructLateralObstacleDecision(
