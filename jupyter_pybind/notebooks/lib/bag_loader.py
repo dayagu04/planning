@@ -52,21 +52,21 @@ class LoadCyberbag:
 
     # radar_fm object msg
     self.radar_fm_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
-    
+
     # radar_fl object msg
     self.radar_fl_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
-    
+
     # radar_fr object msg
     self.radar_fr_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
-    
+
     # radar_rl object msg
     self.radar_rl_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
-    
+
     # radar_rr object msg
-    self.radar_rr_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]} 
+    self.radar_rr_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
     # lidar object msg
-    self.lidar_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]} 
+    self.lidar_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
   def load_all_data(self, normal_print = True):
     max_time = 0.0
@@ -185,7 +185,7 @@ class LoadCyberbag:
     try:
       json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw",
                          'VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low',\
-                         "road_radius", 'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego'\
+                         "road_radius", 'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego',\
                          'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one",\
                          'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two",\
                          'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one",\

@@ -1672,6 +1672,11 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
 bool TrackletMaintainer::is_potential_lead_two(TrackedObject &item,
                                                TrackedObject *lead_one) {
   LOG_DEBUG("----is_potential_lead_two-----\n");
+  // Only use obstacle fusion with camera
+  if (!(item.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+    return false;
+  }
+
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   if (lead_one == nullptr) {
     return false;

@@ -710,7 +710,13 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_leads(
     JSON_DEBUG_VALUE("v_target_lead_one", v_target_lead);
 
     // leadtwo
-    if (lead_two != nullptr && lead_two->type != 0) {
+    // 只用雷达和相机融合成功的障碍物
+    bool is_camera_and_lidar = false;
+    if (lead_two != nullptr) {
+      is_camera_and_lidar =
+          lead_two->fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA;
+    }
+    if (is_camera_and_lidar && lead_two != nullptr && lead_two->type != 0) {
       LOG_DEBUG(
           "target_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
           lead_two->track_id, lead_two->d_rel, lead_two->v_lead);
@@ -833,7 +839,12 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_temp_leads(
     JSON_DEBUG_VALUE("v_target_temp_lead_one", 0);
   }
   // tleadtwo
-  if (temp_lead_two != nullptr && lc_status == "none" &&
+  bool is_camera_and_lidar = false;
+  if (temp_lead_two != nullptr) {
+    is_camera_and_lidar =
+        temp_lead_two->fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA;
+  }
+  if (is_camera_and_lidar && temp_lead_two != nullptr && lc_status == "none" &&
       temp_lead_two->type != 0) {
     LOG_DEBUG("temp_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n ",
               temp_lead_two->track_id, temp_lead_two->d_rel,
