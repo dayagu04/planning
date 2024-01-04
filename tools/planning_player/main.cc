@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
   std::string bag_path, out_bag, log_file;
   bool is_close_loop = false;
   int auto_frame = 15;
-  std::string scene_type = "acc";
+  std::string scene_type = "scc";
 
   int opt, lopt, loidx;
   const char *optstring = "";
