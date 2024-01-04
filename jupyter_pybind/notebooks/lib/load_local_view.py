@@ -690,7 +690,7 @@ class LoadCyberbag:
     return fig1
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
-  is_display_enu = False
+  is_display_enu = True
   ### step 1: 时间戳对齐
   loc_msg_idx = 0
   if bag_loader.loc_msg['enable'] == True:
