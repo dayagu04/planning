@@ -311,8 +311,15 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
 
     // update lon init state
     lon_init_state.set_s(0.0);
-    if (lon_init_state.v() - ego_state->ego_v() > 3.0) {
-      lon_init_state.set_v(ego_state->ego_v());
+    
+    if (session_->is_hpp_scene()) {
+      if (lon_init_state.v() - ego_state->ego_v() > 3.0) {
+        lon_init_state.set_v(ego_state->ego_v());
+      }
+    } else {
+      if (lon_init_state.v() - ego_state->ego_v() > 0.5) {
+        lon_init_state.set_v(ego_state->ego_v());
+      }
     }
 
     // lon_init_state.set_a(ego_state->ego_acc());
