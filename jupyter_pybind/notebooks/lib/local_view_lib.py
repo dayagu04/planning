@@ -1237,6 +1237,7 @@ def draw_local_view(dataLoader, layer_manager):
         if not flag:
           # print('find loc_msg error')
           location_generator.xys.append(([],[]))
+          cur_location_point_generator.xys.append(([0], [0],[0.1]))
           continue
         # cur_pos_xn = loc_msg.pose.local_position.x
         # cur_pos_yn = loc_msg.pose.local_position.y
