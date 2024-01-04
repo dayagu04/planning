@@ -799,7 +799,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     while bag_loader.planning_hmi_msg['t'][planning_hmi_msg_idx] <= bag_time and planning_hmi_msg_idx < (len(bag_loader.planning_hmi_msg['t'])-2):
         planning_hmi_msg_idx = planning_hmi_msg_idx + 1
   local_view_data['data_index']['planning_hmi_msg_idx'] = planning_hmi_msg_idx
-
+  
   ### step 2: 加载定位信息
   cur_pos_xn0 = 0
   cur_pos_yn0 = 0
@@ -858,10 +858,19 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'car_xb': car_xn,
         'car_yb': car_yn,
       })
+      
+      local_view_data['data_ego_pos_point'].data.update({
+        'ego_pos_point_x': [cur_pos_xn],
+        'ego_pos_point_y': [cur_pos_yn],
+      })
     else:
        local_view_data['data_car'].data.update({
         'car_xb': car_xb,
         'car_yb': car_yb,
+      })
+       local_view_data['data_ego_pos_point'].data.update({
+        'ego_pos_point_x': [0],
+        'ego_pos_point_y': [0],
       })
 
     try:
@@ -1265,6 +1274,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 def load_local_view_figure():
   data_car = ColumnDataSource(data = {'car_yb':[], 'car_xb':[]})
   data_ego = ColumnDataSource(data = {'ego_yb':[], 'ego_xb':[]})
+  data_ego_pos_point = ColumnDataSource(data = {'ego_pos_point_y':[],
+                                             'ego_pos_point_x':[],})
   data_text = ColumnDataSource(data = {'vel_ego_text':[], 'text_xn': [],  'text_yn': []})
   data_lane_0 = ColumnDataSource(data = {'line_0_y':[], 'line_0_x':[]})
   data_lane_1 = ColumnDataSource(data = {'line_1_y':[], 'line_1_x':[]})
@@ -1387,6 +1398,7 @@ def load_local_view_figure():
 
   local_view_data = {'data_car':data_car, \
                      'data_ego':data_ego, \
+                     'data_ego_pos_point': data_ego_pos_point, \
                      'data_text':data_text, \
                      'data_lane_0':data_lane_0, \
                      'data_lane_1':data_lane_1, \
@@ -1468,6 +1480,7 @@ def load_local_view_figure():
   fig1.x_range.flipped = True
   # figure plot
   f1 = fig1.patch('car_yb', 'car_xb', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
+  fig1.circle('ego_pos_point_y', 'ego_pos_point_x', source = data_ego_pos_point, radius = 0.1, line_width = 2,  line_color = 'purple', line_alpha = 1, fill_alpha = 1, legend_label = 'ego_pos_point')
   fig1.line('ego_yb', 'ego_xb', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.text('text_yn', 'text_xn', text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'car')
   fig1.line('line_0_y', 'line_0_x', source = data_lane_0, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
