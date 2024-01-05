@@ -528,7 +528,7 @@ class LoadCyberbag:
     try:
       ehr_parking_map_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/ehr/parking_map"):
-        ehr_parking_map_msg_dict[msg.header.timestamp / 1e3] = msg
+        ehr_parking_map_msg_dict[msg.header.timestamp / 1e6] = msg
       ehr_parking_map_msg_dict = {key: val for key, val in sorted(ehr_parking_map_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ehr_parking_map_msg_dict.items():
         self.ehr_parking_map_msg['t'].append(t)
@@ -548,7 +548,7 @@ class LoadCyberbag:
     try:
       ground_line_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/ground_line"):
-        ground_line_msg_dict[msg.header.timestamp / 1e3] = msg
+        ground_line_msg_dict[msg.header.timestamp / 1e6] = msg
       ground_line_msg_dict = {key: val for key, val in sorted(ground_line_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ground_line_msg_dict.items():
         self.ground_line_msg['t'].append(t)
@@ -690,7 +690,7 @@ class LoadCyberbag:
     return fig1
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
-  is_display_enu = False
+  is_display_enu = True
   ### step 1: 时间戳对齐
   loc_msg_idx = 0
   if bag_loader.loc_msg['enable'] == True:
@@ -1264,6 +1264,15 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'road_mark_x' : road_mark_boxes_x,
       'road_mark_y' : road_mark_boxes_y,
     })
+    
+  if bag_loader.ground_line_msg['enable'] == True:
+    print("groundline_msg_idx", groundline_msg_idx)
+    ground_line_msg = bag_loader.ground_line_msg['data'][groundline_msg_idx]
+    groundline_x_vec, groundline_y_vec = generate_ground_line(ground_line_msg, loc_msg, is_display_enu)
+    local_view_data['data_ground_line'].data.update({
+      'ground_line_x' : groundline_x_vec,
+      'ground_line_y' : groundline_y_vec,
+    })
   return local_view_data
 
 def load_local_view_figure():
@@ -1371,7 +1380,8 @@ def load_local_view_figure():
                                              'parking_space_x':[],})
   data_road_mark = ColumnDataSource(data = {'road_mark_y':[],
                                              'road_mark_x':[],})
-  
+  data_ground_line = ColumnDataSource(data = {'ground_line_y':[],
+                                             'ground_line_x':[],})
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
                 'fus_msg_idx': 0,
@@ -1435,6 +1445,7 @@ def load_local_view_figure():
                      'data_prediction_4' : data_prediction_4 ,\
                      'data_parking_space' : data_parking_space , \
                      'data_road_mark' : data_road_mark , \
+                     'data_ground_line' : data_ground_line, \
                      'data_fus_obj':data_fus_obj, \
                      'data_me_obj':data_me_obj, \
                      'data_radar_fm_obj':data_radar_fm_obj, \
@@ -1556,7 +1567,7 @@ def load_local_view_figure():
   fig1.circle('prediction_y', 'prediction_x', source = data_prediction_4, radius = 0.3, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
   fig1.patches('parking_space_y', 'parking_space_x', source = data_parking_space, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'parking_space')
   fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'road_mark')
-  
+  fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line, line_width = 2, line_color = 'green', line_dash = 'dotted', legend_label = 'ground_line')
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 
