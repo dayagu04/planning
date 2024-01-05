@@ -1139,7 +1139,7 @@ def load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, is_display_e
     layer_manager.AddLayer(road_mark_params_layer, 'road_mark_params_layer', road_mark_generate, 'road_mark_generate', 2)
 
 def load_ground_line(dataLoader, layer_manager, fig_local_view, is_display_enu = False):
-  if dataLoader.ground_line_msg['enable'] == False:
+  if dataLoader.ground_line_msg['enable'] == True:
     groundline_generate = CommonGenerator()
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
       flag, ground_line_msg = find(dataLoader.ground_line_msg, ground_line_timestamps[i])
@@ -1160,7 +1160,7 @@ def draw_local_view(dataLoader, layer_manager):
     fig_local_view.x_range.flipped = True
     # toolbar
     fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
-    is_display_enu = True
+    is_display_enu = False
     # 加载planning debug部分信息, 加载planning 输入topic的时间戳
     fix_lane_xys = []
     origin_lane_xys = []

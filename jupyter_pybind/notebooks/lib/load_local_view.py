@@ -690,7 +690,7 @@ class LoadCyberbag:
     return fig1
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
-  is_display_enu = True
+  is_display_enu = False
   ### step 1: 时间戳对齐
   loc_msg_idx = 0
   if bag_loader.loc_msg['enable'] == True:
@@ -801,14 +801,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   local_view_data['data_index']['planning_hmi_msg_idx'] = planning_hmi_msg_idx
   
   ### step 2: 加载定位信息
-  cur_pos_xn0 = 0
-  cur_pos_yn0 = 0
   cur_pos_xn = 0
   cur_pos_yn = 0
   cur_yaw = 0
   if bag_loader.loc_msg['enable'] == True:
-    cur_pos_xn0 = cur_pos_xn = bag_loader.loc_msg['data'][0].position.position_boot.x
-    cur_pos_yn0 = cur_pos_yn = bag_loader.loc_msg['data'][0].position.position_boot.y
     # ego pos in local and global coordinates
     loc_msg = bag_loader.loc_msg['data'][loc_msg_idx]
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
@@ -836,8 +832,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
       ego_xb.append(ego_local_x)
       ego_yb.append(ego_local_y)
-      ego_xn.append(pos_xn_i - cur_pos_xn0)
-      ego_yn.append(pos_yn_i - cur_pos_yn0)
+      ego_xn.append(pos_xn_i)
+      ego_yn.append(pos_yn_i)
 
     local_view_data['data_ego'].data.update({
       'ego_xb': ego_xb,
@@ -852,8 +848,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       car_yn = []
       for i in range(len(car_xb)):
           tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], cur_pos_xn, cur_pos_yn, cur_yaw)
-          car_xn.append(tmp_x - cur_pos_xn0)
-          car_yn.append(tmp_y - cur_pos_yn0)
+          car_xn.append(tmp_x)
+          car_yn.append(tmp_y)
       local_view_data['data_car'].data.update({
         'car_xb': car_xn,
         'car_yb': car_yn,
@@ -881,15 +877,14 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
                 bag_loader.loc_msg['data'][loc_msg_idx].velocity.velocity_boot.vz * bag_loader.loc_msg['data'][loc_msg_idx].velocity.velocity_boot.vz)
       vel_ego =  linear_velocity_from_wheel
 
-    text_xn = cur_pos_xn - cur_pos_xn0 - 2.0
-    text_yn = cur_pos_yn - cur_pos_yn0 + 2.0
+    
 
     steer_deg = bag_loader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
     if is_display_enu:
       local_view_data['data_text'].data.update({
         'vel_ego_text': ['v={:.2f}\nsteer={:.2f}'.format(round(vel_ego, 2), round(steer_deg, 2))],
-        'text_xn': [text_xn],
-        'text_yn': [text_yn],
+        'text_xn': [cur_pos_xn],
+        'text_yn': [cur_pos_yn],
       })
     else:
       local_view_data['data_text'].data.update({
