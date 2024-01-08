@@ -1406,6 +1406,9 @@ const bool IsPoseOnLine(const PathPoint &pose, LineSegment &line,
   if (dist < lat_err && std::fabs(pose.heading - line.heading) < heading_err) {
     return true;
   }
+  std::cout << "pos = " << pose.pos.transpose()
+            << "  heading = " << pose.heading << "  dist = " << dist
+            << "   line.heading = " << line.heading << std::endl;
   return LogErr(__func__, 1);
 }
 
@@ -1555,7 +1558,9 @@ const LineSegment BuildLineSegByPose(const Eigen::Vector2d &current_pos,
 
 const bool CheckTwoVecCollinear(const Eigen::Vector2d &v1,
                                 const Eigen::Vector2d &v2) {
-  if (std::fabs((GetCrossFromTwoVec2d(v1, v2))) < 0.015) {
+  const auto unit_v1 = v1.normalized();
+  const auto unit_v2 = v2.normalized();
+  if (std::fabs((GetCrossFromTwoVec2d(unit_v1, unit_v2))) < 0.015) {
     return true;
   }
   return false;
@@ -1941,6 +1946,26 @@ const bool CalTwoArcWithSameHeading(Arc &arc1, Arc &arc2,
 }
 
 const bool IsDoublePositive(const double x) { return x > 1e-8; }
+
+const double CalPoint2LineSegDist(const Eigen::Vector2d &pO,
+                                  const LineSegment &line) {
+  double dist;
+  Eigen::Vector2d unit_AB = (line.pB - line.pA).normalized();
+  Eigen::Vector2d unit_BA = (line.pA - line.pB).normalized();
+
+  Eigen::Vector2d unit_AO = (pO - line.pA).normalized();
+  Eigen::Vector2d unit_BO = (pO - line.pB).normalized();
+
+  double cos_OAB = unit_AB.dot(unit_AO);
+  double cos_OBA = unit_BA.dot(unit_BO);
+  if (cos_OAB > 1e-6 && cos_OAB < 1 - 1e-6 && cos_OBA > 1e-6 &&
+      cos_OBA < 1 - 1e-6) {
+    dist = CalPoint2LineDist(pO, line);
+  } else {
+    dist = std::min((line.pB - pO).norm(), (line.pA - pO).norm());
+  }
+  return dist;
+}
 
 }  // namespace geometry_lib
 }  // namespace pnc

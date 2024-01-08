@@ -6,7 +6,6 @@
 #include <iostream>
 #include <vector>
 
-#include "Eigen/src/Core/Matrix.h"
 #include "apa_plan_base.h"
 #include "perpendicular_park_in_planner.h"
 #include "perpendicular_path_planner.h"
@@ -50,7 +49,6 @@ int Update(double ego_x, double ego_y, double ego_heading, double tlane_p0_x,
   input.tlane.pt_outside << tlane_p0_x, tlane_p0_y;
   input.tlane.pt_inside << tlane_p1_x, tlane_p1_y;
   input.tlane.pt_terminal << tlane_pt_x, tlane_pt_y;
-  input.tlane.channel_x = channel_x;
   input.is_complete_path = is_complete_path;
   input.is_replan_first = false;
 

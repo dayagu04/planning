@@ -43,10 +43,10 @@ void ApaWorld::UpdateEgoState() {
 
   // calculate standstill time by pos
   if ((measures_ptr_->pos_ego - current_pos).norm() <
-      apa_param.GetParam().car_static_pos_eps) {
-    measures_ptr_->standstill_timer_by_pos += apa_param.GetParam().plan_time;
+      apa_param.GetParam().car_static_pos_err) {
+    measures_ptr_->car_static_timer_by_pos += apa_param.GetParam().plan_time;
   } else {
-    measures_ptr_->standstill_timer_by_pos = 0.0;
+    measures_ptr_->car_static_timer_by_pos = 0.0;
   }
 
   measures_ptr_->pos_ego = current_pos;
@@ -63,19 +63,19 @@ void ApaWorld::UpdateEgoState() {
   // calculate standstill time by velocity
   if (std::fabs(measures_ptr_->vel_ego) <
       apa_param.GetParam().car_static_velocity) {
-    measures_ptr_->standstill_timer_by_vel += apa_param.GetParam().plan_time;
+    measures_ptr_->car_static_timer_by_vel += apa_param.GetParam().plan_time;
   } else {
-    measures_ptr_->standstill_timer_by_vel = 0.0;
+    measures_ptr_->car_static_timer_by_vel = 0.0;
   }
 
   // static flag
   measures_ptr_->static_flag =
-      (measures_ptr_->standstill_timer_by_vel >=
-           apa_param.GetParam().min_standstill_time_by_vel &&
-       measures_ptr_->standstill_timer_by_pos >
-           apa_param.GetParam().min_standstill_time_by_vel) ||
-      (measures_ptr_->standstill_timer_by_pos >
-       apa_param.GetParam().min_standstill_time_by_pos);
+      (measures_ptr_->car_static_timer_by_vel >=
+           apa_param.GetParam().car_static_keep_time_by_vel &&
+       measures_ptr_->car_static_timer_by_pos >
+           apa_param.GetParam().car_static_keep_time_by_vel) ||
+      (measures_ptr_->car_static_timer_by_pos >
+       apa_param.GetParam().car_static_keep_time_by_pos);
 }
 
 const bool ApaWorld::CheckSelectedSlot() const {

@@ -27,8 +27,10 @@ class ApaPlannerBase {
   enum ReplanReason {
     NOT_REPLAN,
     FIRST_PLAN,
-    SEG_COMPLETED,
+    SEG_COMPLETED_PATH,
+    SEG_COMPLETED_USS,
     STUCKED,
+    DYNAMIC,
   };
   struct SimulationParam {
     bool is_complete_path = false;
@@ -57,7 +59,7 @@ class ApaPlannerBase {
     double slot_length = 5.2;
 
     pnc::geometry_lib::PathPoint terminal_err;
-    double slot_occupied_ratio;
+    double slot_occupied_ratio = 0.0;
 
     pnc::geometry_lib::GlobalToLocalTf g2l_tf;
     pnc::geometry_lib::LocalToGlobalTf l2g_tf;
@@ -108,7 +110,9 @@ class ApaPlannerBase {
       gear_change_count = 0;
       is_replan = false;
       is_replan_first = true;
+      is_dynamic_replan_first = true;
       is_finished = false;
+      is_fix_slot = false;
       stuck_time = 0.0;
       remain_dist = 5.01;
       remain_dist_uss = 5.01;
@@ -122,12 +126,15 @@ class ApaPlannerBase {
       current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
       current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
       replan_reason = NOT_REPLAN;
+      need_update_slot = true;
     }
 
     bool is_replan = false;
     bool is_replan_first = true;
+    bool is_dynamic_replan_first = true;
     uint8_t replan_reason = NOT_REPLAN;
     bool is_finished = false;
+    bool is_fix_slot = false;
     bool spline_success = false;
     bool is_replan_by_uss = false;
     uint8_t pathplan_result = 0;
@@ -145,6 +152,8 @@ class ApaPlannerBase {
 
     uint8_t current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
     uint8_t current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
+
+    bool need_update_slot = true;
   };
 
   enum PathPlannerResult {
@@ -160,6 +169,7 @@ class ApaPlannerBase {
     PARKING_PLANNING,    // replan by updated path
     PARKING_FINISHED,    // parking successful
     PARKING_FAILED,      // parking failed
+    PARKING_PAUSED,      // parking paused
   };
 
  public:

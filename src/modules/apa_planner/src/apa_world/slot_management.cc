@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "Eigen/Core"
+#include "apa_param_setting.h"
 #include "basic_types.pb.h"
 #include "common.h"
 #include "config/basic_type.h"
@@ -317,7 +318,7 @@ bool SlotManagement::UpdateSlotsInParking() {
   }
 
   // update slot_management_info :: slot info
-  UpdateSlotInfoInParking(select_slot, select_slot_id, is_occupied);
+  // UpdateSlotInfoInParking(select_slot, select_slot_id, is_occupied);
 
   frame_.is_occupied_ = is_occupied;
 
@@ -769,7 +770,7 @@ void SlotManagement::UpdateLimiterInfoInParking(
 
       const auto heading_norm = (slot_p0 - slot_p2).normalized();
 
-      const Eigen::Vector2d delta = kResLimiter * heading_norm;
+      const Eigen::Vector2d delta = apa_param.GetParam().res_limiter * heading_norm;
       limiter_points.first = p0 + delta;
       limiter_points.second = p1 + delta;
       frame_.limiter_point_window_.Add(limiter_points);
@@ -978,6 +979,7 @@ const bool SlotManagement::GetSelectedLimiter(
 }
 
 const bool SlotManagement::SetRealtime() {
+  std::cout << "use real time slot\n";
   google::protobuf::uint32 select_slot_id = 0;
   if (frame_.parking_slot_ptr_->select_slot_id() != 0) {
     select_slot_id = frame_.parking_slot_ptr_->select_slot_id();

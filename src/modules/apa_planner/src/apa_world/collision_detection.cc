@@ -4,6 +4,7 @@
 
 #include <cmath>
 
+#include "apa_param_setting.h"
 #include "geometry_math.h"
 
 namespace planning {
@@ -265,6 +266,70 @@ const CollisionDetector::CollisionResult CollisionDetector::Update(
   CollisionResult result = Update(arc, heading_start);
   obstacle_global_vec_ = tmp_obstacle_global_vec;
   return result;
+}
+
+const double CollisionDetector::CalMinDistObs2Car(
+    const Eigen::Vector2d &obs_pos,
+    const pnc::geometry_lib::PathPoint &ego_pose) {
+  // car line segment
+  std::vector<pnc::geometry_lib::LineSegment> car_line_global_vec;
+  car_line_global_vec.clear();
+  car_line_global_vec.reserve(car_line_local_vec_.size());
+  pnc::geometry_lib::LineSegment car_line_global;
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+  l2g_tf.Init(ego_pose.pos, ego_pose.heading);
+  for (const auto &car_line_local : car_line_local_vec_) {
+    car_line_global.pA = l2g_tf.GetPos(car_line_local.pA);
+    car_line_global.pB = l2g_tf.GetPos(car_line_local.pB);
+    car_line_global_vec.emplace_back(car_line_global);
+  }
+  double min_dist = 166.6;
+  // std::cout << "ego_pose = " << ego_pose.pos << std::endl;
+  for (const auto &car_line_global : car_line_global_vec) {
+    min_dist = std::min(min_dist, pnc::geometry_lib::CalPoint2LineSegDist(
+                                      obs_pos, car_line_global));
+    // std::cout << "min_dist = " << min_dist << "\n";
+    // std::cout << "car_line_global.pA = " << car_line_global.pA.transpose()
+    //           << "car_line_global.pB = " << car_line_global.pB.transpose()
+    //           << "\n";
+  }
+  return min_dist;
+}
+
+const bool CollisionDetector::IsObstacleInCar(
+    const Eigen::Vector2d &obs_pos,
+    const pnc::geometry_lib::PathPoint &ego_pose) {
+  // car line segment
+  std::vector<pnc::geometry_lib::LineSegment> car_line_global_vec;
+  car_line_global_vec.clear();
+  car_line_global_vec.reserve(car_line_local_vec_.size());
+  pnc::geometry_lib::LineSegment car_line_global;
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+  l2g_tf.Init(ego_pose.pos, ego_pose.heading);
+  std::vector<Eigen::Vector2d> car_polygon;
+  car_polygon.clear();
+  car_polygon.reserve(g_car_local_vertex_x_vec.size());
+  for (const auto &car_line_local : car_line_local_vec_) {
+    car_line_global.pA = l2g_tf.GetPos(car_line_local.pA);
+    car_line_global.pB = l2g_tf.GetPos(car_line_local.pB);
+    car_line_global_vec.emplace_back(car_line_global);
+    car_polygon.emplace_back(car_line_global.pA);
+  }
+
+  if (pnc::geometry_lib::IsPointInPolygon(car_polygon, obs_pos)) {
+    return true;
+  }
+
+  double min_dist = 166.6;
+  for (const auto &car_line_global : car_line_global_vec) {
+    min_dist = std::min(min_dist, pnc::geometry_lib::CalPoint2LineSegDist(
+                                      obs_pos, car_line_global));
+  }
+  if (min_dist < apa_param.GetParam().max_obs2car_dist) {
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace planning

@@ -437,6 +437,14 @@ const Eigen::Vector4d CalTwoArcBySameHeading(
   return Eigen::Vector4d(0.0, 0.0, 0.0, 0.0);
 }
 
+const double CalPoint2LineSegDistPb(const Eigen::Vector2d pO,
+                                  const Eigen::Vector2d p1,
+                                  const Eigen::Vector2d p2) {
+  pnc::geometry_lib::LineSegment line;
+  line.SetPoints(p1, p2);
+  return pnc::geometry_lib::CalPoint2LineSegDist(pO, line);
+}
+
 PYBIND11_MODULE(geometry_math_validation_py, m) {
   m.doc() = "m";
 
@@ -454,5 +462,6 @@ PYBIND11_MODULE(geometry_math_validation_py, m) {
       .def("CalSetTangCirOfTwoLine", &CalSetTangCirOfTwoLine)
       .def("CalTangCircleByPoseAndLine", &CalTangCircleByPoseAndLine)
       .def("CalOneArcByTargetHeading", &CalOneArcByTargetHeading)
-      .def("CalTwoArcBySameHeading", &CalTwoArcBySameHeading);
+      .def("CalTwoArcBySameHeading", &CalTwoArcBySameHeading)
+      .def("CalPoint2LineSegDistPb", &CalPoint2LineSegDistPb);
 }

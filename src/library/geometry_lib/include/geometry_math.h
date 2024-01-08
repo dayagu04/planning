@@ -460,6 +460,9 @@ const bool CalOneArcWithTargetHeading(Arc &arc, const uint8_t &current_seg_gear,
 
 const bool IsDoublePositive(const double x);
 
+const double CalPoint2LineSegDist(const Eigen::Vector2d &pO,
+                                  const LineSegment &line);
+
 }  // namespace geometry_lib
 }  // namespace pnc
 

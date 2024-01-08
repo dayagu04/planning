@@ -58,6 +58,12 @@ class CollisionDetector {
 
   void SetLatInflation();
 
+  const double CalMinDistObs2Car(const Eigen::Vector2d &obs,
+                                 const pnc::geometry_lib::PathPoint &ego_pose);
+
+  const bool IsObstacleInCar(const Eigen::Vector2d &obs_pos,
+                             const pnc::geometry_lib::PathPoint &ego_pose);
+
  private:
   std::vector<pnc::geometry_lib::LineSegment> car_line_local_vec_;
 

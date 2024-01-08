@@ -211,7 +211,7 @@ void PerpendicularPathPlanner::CalMonoSafeCircle() {
 
   const double deta_x =
       std::sqrt(std::pow((apa_param.GetParam().min_turn_radius -
-                          apa_param.GetParam().vehicle_width * 0.5),
+                          apa_param.GetParam().car_width * 0.5),
                          2) -
                 std::pow((calc_params_.mono_safe_circle.center.y() -
                           input_.tlane.pt_inside.y()),
@@ -269,7 +269,7 @@ bool PerpendicularPathPlanner::CalMultiSafeCircle() {
   pnc::geometry_lib::Circle circle_p1;
   circle_p1.center = input_.tlane.pt_inside;
   circle_p1.radius = apa_param.GetParam().min_turn_radius -
-                     0.5 * apa_param.GetParam().vehicle_width;
+                     0.5 * apa_param.GetParam().car_width;
 
   // move down the start line
   const Eigen::Vector2d pt_s =
@@ -508,7 +508,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
             << ",  current_heading = " << current_pose.heading * 57.3
             << std::endl;
 
-  const double current_turn_radius = 1.0 *  apa_param.GetParam().min_turn_radius;
+  const double current_turn_radius = 1.0 * apa_param.GetParam().min_turn_radius;
 
   const Eigen::Vector2d current_tang_vec =
       pnc::geometry_lib::GetUnitTangVecByHeading(current_pose.heading);
@@ -916,7 +916,18 @@ const bool PerpendicularPathPlanner::AdjustPlan() {
             apa_param.GetParam().static_pos_eps &&
         std::fabs(current_pose.heading - calc_params_.target_line.heading) <=
             apa_param.GetParam().static_heading_eps / 57.3) {
-      std::cout << "already plan to target pos!\n\n";
+      std::cout << "already plan to target pos!\n";
+      if (output_.path_segment_vec.size() > 0) {
+        const auto& last_segment = output_.path_segment_vec.back();
+        if (last_segment.seg_type == pnc::geometry_lib::SEG_TYPE_LINE &&
+            last_segment.seg_gear != pnc::geometry_lib::SEG_GEAR_REVERSE) {
+          std::cout << "last line is not reverse, should lose\n";
+          output_.length -= last_segment.Getlength();
+          output_.path_segment_vec.pop_back();
+          output_.gear_cmd_vec.pop_back();
+          output_.steer_vec.pop_back();
+        }
+      }
       break;
     }
   }
@@ -936,6 +947,15 @@ const bool PerpendicularPathPlanner::OneArcPlan(
   pnc::geometry_lib::Arc arc;
   arc.pA = current_pose.pos;
   arc.headingA = current_pose.heading;
+  if (pnc::mathlib::IsDoubleEqual(arc.headingA,
+                                  calc_params_.target_line.heading) ||
+      pnc::mathlib::IsDoubleEqual(arc.pA.y(),
+                                  calc_params_.target_line.pA.y())) {
+    std::cout << "current heading is equal to target heading or current y is "
+                 "equal to "
+                 "target y, no need to one arc plan\n";
+    return false;
+  }
   bool success = pnc::geometry_lib::CalOneArcWithLineAndGear(
       arc, calc_params_.target_line, current_gear);
 
@@ -944,9 +964,10 @@ const bool PerpendicularPathPlanner::OneArcPlan(
     std::cout << "cal radius = " << arc.circle_info.radius << std::endl;
     const auto steer = pnc::geometry_lib::CalArcSteer(arc);
     const auto gear = pnc::geometry_lib::CalArcGear(arc);
-    success = (arc.circle_info.radius >= apa_param.GetParam().min_turn_radius &&
+    success = (arc.circle_info.radius >=
+                   apa_param.GetParam().min_turn_radius - 1e-3 &&
                arc.circle_info.radius <=
-                   apa_param.GetParam().max_one_step_arc_radius) &&
+                   apa_param.GetParam().max_one_step_arc_radius + 1e-3) &&
               (gear == current_gear);
     if (success) {
       std::cout << "one arc plan success\n";
@@ -972,7 +993,7 @@ const bool PerpendicularPathPlanner::AlignBodyPlan(
   pnc::geometry_lib::Arc arc;
   arc.pA = current_pose.pos;
   arc.headingA = current_pose.heading;
-  arc.circle_info.radius =  apa_param.GetParam().min_turn_radius;
+  arc.circle_info.radius = apa_param.GetParam().min_turn_radius;
   // check if it is necessary to align body
   if (pnc::mathlib::IsDoubleEqual(arc.headingA,
                                   calc_params_.target_line.heading)) {
@@ -1019,6 +1040,12 @@ const bool PerpendicularPathPlanner::STurnParallelPlan(
     std::cout << "body no align\n";
     return false;
   }
+  if (pnc::mathlib::IsDoubleEqual(arc_s_1.pA.y(),
+                                  calc_params_.target_line.pA.y())) {
+    std::cout << "current pos is already on target line, no need to "
+                 "STurnParallelPlan\n";
+    return true;
+  }
 
   pnc::geometry_lib::PathPoint terminal_err;
   terminal_err.Set(current_pose.pos - input_.tlane.pt_terminal,
@@ -1032,19 +1059,20 @@ const bool PerpendicularPathPlanner::STurnParallelPlan(
   } else {
     slot_occupied_ratio = 0.0;
   }
+
   const std::vector<double> ratio_tab = {0.0, 0.2, 0.5, 0.8, 1.0};
   const double radius_change = apa_param.GetParam().max_radius_in_slot -
-                               apa_param.GetParam().min_turn_radius;
+                               apa_param.GetParam().min_radius_out_slot;
   if (radius_change < 1e-8) {
     std::cout << "radius setting is err\n";
     return false;
   }
   const std::vector<double> radius_tab = {
-      apa_param.GetParam().min_turn_radius,
-      apa_param.GetParam().min_turn_radius + radius_change * 0.22,
-      apa_param.GetParam().min_turn_radius + radius_change * 0.55,
-      apa_param.GetParam().min_turn_radius + radius_change * 0.88,
-      apa_param.GetParam().min_turn_radius + radius_change};
+      apa_param.GetParam().min_radius_out_slot,
+      apa_param.GetParam().min_radius_out_slot + radius_change * 0.22,
+      apa_param.GetParam().min_radius_out_slot + radius_change * 0.55,
+      apa_param.GetParam().min_radius_out_slot + radius_change * 0.88,
+      apa_param.GetParam().min_radius_out_slot + radius_change};
 
   double real_steer_change_radius = steer_change_radius;
   real_steer_change_radius =
@@ -1361,8 +1389,7 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
     if (path_seg.Getlength() + extend_distance <
         apa_param.GetParam().min_one_step_path_length) {
       extend_distance =
-          apa_param.GetParam().min_one_step_path_length -
-          path_seg.Getlength();
+          apa_param.GetParam().min_one_step_path_length - path_seg.Getlength();
     }
 
     new_line.line_seg.length = extend_distance;

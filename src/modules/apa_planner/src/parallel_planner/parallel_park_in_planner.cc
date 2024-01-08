@@ -489,7 +489,7 @@ const bool ParallelParInPlanner::CheckReplan() {
 
   if (CheckSegCompleted()) {
     std::cout << "replan by current segment completed!" << std::endl;
-    frame_.replan_reason = SEG_COMPLETED;
+    frame_.replan_reason = SEG_COMPLETED_PATH;
     return true;
   }
 

@@ -192,7 +192,7 @@ class LoadCyberbag:
 
     # load planning debug msg
     try:
-      json_value_list = ["replan_status", "ego_pos_x", "is_replan", "standstill_timer_by_pos", "standstill_timer", "static_flag", "stuck_time", "slot_occupied_ratio", "remain_dist",
+      json_value_list = ["replan_status", "ego_pos_x", "is_replan", "car_static_timer_by_pos", "car_static_timer_by_vel", "static_flag", "stuck_time", "slot_occupied_ratio", "remain_dist",
                          "remain_dist_uss", "path_length", "is_replan_first", "replan_count", "planning_status", "replan_reason",
                          "tlane_p0_x", "tlane_p0_y", "tlane_p1_x", "tlane_p1_y", "tlane_pt_x", "tlane_pt_y", "channel_x", "slot_side",
                          "terminal_error_x", "terminal_error_y", "terminal_error_heading", "path_plan_success", "pathplan_result"]

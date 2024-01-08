@@ -23,22 +23,13 @@ class PerpendicularPathPlanner {
     Eigen::Vector2d pt_outside = Eigen::Vector2d::Zero();
     Eigen::Vector2d pt_inside = Eigen::Vector2d::Zero();
     Eigen::Vector2d pt_terminal = Eigen::Vector2d::Zero();
-    double channel_x = 0.0;
     uint8_t slot_side = ApaPlannerBase::SLOT_SIDE_INVALID;
-
-    double channel_width = 5.5;
-    double channel_length = 8.8;
-    double slot_length = 4.2;
 
     void Reset() {
       pt_outside = Eigen::Vector2d::Zero();
       pt_inside = Eigen::Vector2d::Zero();
       pt_terminal = Eigen::Vector2d::Zero();
-      channel_x = 0.0;
-
-      channel_width = 5.5;
-      channel_length = 8.8;
-      slot_length = 4.2;
+      slot_side = ApaPlannerBase::SLOT_SIDE_INVALID;
     }
   };
 
