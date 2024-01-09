@@ -131,6 +131,8 @@ typedef struct WheelToLine {
 
 struct Param {
   double ldp_tlc_thrd = 1.0;
+  double ldp_c0_right_offset = 0.0;
+  double ldp_ttlc_right_hack = 1.1;
 };
 
 typedef struct LkasInput {

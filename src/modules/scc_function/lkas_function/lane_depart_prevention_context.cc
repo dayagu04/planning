@@ -1,4 +1,7 @@
 #include "lane_depart_prevention_context.h"
+
+#include "debug_info_log.h"
+#include "lkas_function/lane_keep_assist_type.h"
 namespace planning {
 void LaneDepartPrevention::Init(planning::LkasInput *lkas_input) {
   lkas_input_ = lkas_input;
@@ -49,12 +52,16 @@ void LaneDepartPrevention::Update() {
   }
   /*measurement_str_.right_intervention*/
   if (lkas_input_->road_info.right_line_valid == true) {
+    // measurement_str_.right_intervention = LKALineRightIntervention(
+    //     measurement_str_.tlc_line_threshold, lkas_input_);
     measurement_str_.right_intervention = LKALineRightIntervention(
-        measurement_str_.tlc_line_threshold, lkas_input_);
+        lkas_input_->param.ldp_ttlc_right_hack, lkas_input_);
   } else if ((calribration_str_.enable_roadedge_switch == true) &&
              (lkas_input_->road_info.right_roadedge_valid == true)) {
+    // measurement_str_.right_intervention = LKARoadEdgeRightIntervention(
+    //     measurement_str_.tlc_line_threshold, lkas_input_);
     measurement_str_.right_intervention = LKARoadEdgeRightIntervention(
-        measurement_str_.tlc_line_threshold, lkas_input_);
+        lkas_input_->param.ldp_ttlc_right_hack, lkas_input_);
   } else {
     measurement_str_.right_intervention = false;
   }
@@ -93,6 +100,8 @@ void LaneDepartPrevention::RunOnce() {
                    measurement_str_.right_kickdown_code);
   JSON_DEBUG_VALUE("lkas_function::ldp::state", measurement_str_.state);
   JSON_DEBUG_VALUE("ldp_tlc_threshold", measurement_str_.tlc_line_threshold);
+  JSON_DEBUG_VALUE("ldp_ttlc_right_hack",
+                   lkas_input_->param.ldp_ttlc_right_hack);
 }
 uint16 LaneDepartPrevention::EnableCode() {
   uint16 ldp_enable_code_temp = 0;

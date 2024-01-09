@@ -28,6 +28,10 @@ void LaneKeepAssistManager::SyncParameters() {
   std::cout << json_car_type << std::endl;
 
   ADAS_JSON_READ_VALUE(lkas_input_.param.ldp_tlc_thrd, double, "ldp_tlc_thrd");
+  ADAS_JSON_READ_VALUE(lkas_input_.param.ldp_c0_right_offset, double,
+                       "ldp_c0_right_offset");
+  ADAS_JSON_READ_VALUE(lkas_input_.param.ldp_ttlc_right_hack, double,
+                       "ldp_ttlc_right_hack");
   std::cout << lkas_input_.param.ldp_tlc_thrd << std::endl;
 }
 
@@ -257,7 +261,8 @@ void LaneKeepAssistManager::Update() {
         }
         if (ptr_current_lane_right_boundary.poly_coefficient_size() > 3) {
           lkas_input_.road_info.right_line_c0 =
-              ptr_current_lane_right_boundary.poly_coefficient(0);
+              ptr_current_lane_right_boundary.poly_coefficient(0) +
+              lkas_input_.param.ldp_c0_right_offset;
           lkas_input_.road_info.right_line_c1 =
               ptr_current_lane_right_boundary.poly_coefficient(1);
           lkas_input_.road_info.right_line_c2 =
@@ -271,7 +276,8 @@ void LaneKeepAssistManager::Update() {
         lkas_input_.road_info.right_roadedge_valid = true;
         if (ptr_current_lane_right_boundary.poly_coefficient_size() > 3) {
           lkas_input_.road_info.right_roadedge_c0 =
-              ptr_current_lane_right_boundary.poly_coefficient(0);
+              ptr_current_lane_right_boundary.poly_coefficient(0) +
+              lkas_input_.param.ldp_c0_right_offset;
           lkas_input_.road_info.right_roadedge_c1 =
               ptr_current_lane_right_boundary.poly_coefficient(1);
           lkas_input_.road_info.right_roadedge_c2 =

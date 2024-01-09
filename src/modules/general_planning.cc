@@ -86,7 +86,7 @@ bool GeneralPlanning::RunOnce(
     PlanningOutput::PlanningOutput *const planning_output,
     common::PlanningDebugInfo &debug_info,
     PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
-  LOG_ERROR("GeneralPlanning::RunOnce \n");
+  LOG_DEBUG("GeneralPlanning::RunOnce \n");
   frame_num_++;
   session_.mutable_planning_output_context()->feed_planning_hmi_info(
       planning_hmi_info);
