@@ -111,7 +111,7 @@
   "d_poly_lat_offset_rate": 0.12,
   "d_poly_max_lat_offset": 2.0,
   "lc_t_actuator_delay": 0.02,
-  "lc_back_available_thr": 1.5,
+  "lc_back_available_thr": 0.8,
   "lc_back_smooth_thr": 0.3,
   "lc_back_consider_smooth_dpoly_thr": 0.6,
   "none_consider_slope_thr": 0.003,

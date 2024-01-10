@@ -1,5 +1,7 @@
 #include "virtual_lane.h"
+
 #include <cassert>
+
 #include "log.h"
 #include "math/linear_interpolation.h"
 #include "virtual_lane.h"
@@ -204,21 +206,21 @@ double VirtualLane::width(double x) {
   }
   return std::max(width, 2.8);
 }
+
 double VirtualLane::width_by_s(double s) {
   double width = 0;
   if (reference_path_ != nullptr) {
     auto &reference_path_points = reference_path_->get_points();
-    if (reference_path_points.size() < 1) {
-    } else {
+    if (!reference_path_points.empty()) {
       auto comp = [](const ReferencePathPoint &p, const double s) {
         return p.path_point.s < s;
       };
       auto p_first_point = std::lower_bound(
           reference_path_points.begin(), reference_path_points.end(), s, comp);
       if (p_first_point == reference_path_points.begin()) {
-        width = reference_path_points.begin()->lane_width;
+        width = reference_path_points.front().lane_width;
       } else if (p_first_point == reference_path_points.end()) {
-        width = reference_path_points.end()->lane_width;
+        width = reference_path_points.back().lane_width;
       } else {
         width = planning_math::lerp(
             (p_first_point - 1)->lane_width, (p_first_point - 1)->path_point.s,
