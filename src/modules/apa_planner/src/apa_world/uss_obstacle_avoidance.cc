@@ -3,70 +3,44 @@
 #include <cstddef>
 #include <utility>
 
+#include "apa_param_setting.h"
 #include "geometry_math.h"
 #include "transform_lib.h"
 
 namespace planning {
 
-// car data
-static const std::vector<double> g_car_local_vertex_x_vec = {
-    3.187342,  3.424531,  3.593071,  3.593071,  3.424531,  3.187342,
-    2.177994,  1.916421,  1.96496,   -0.476357, -0.798324, -0.879389,
-    -0.879389, -0.798324, -0.476357, 1.96496,   1.916421,  2.177994};
-
-static const std::vector<double> g_car_local_vertex_y_vec = {
-    0.887956,  0.681712, 0.334651,  -0.334651, -0.681712, -0.887956,
-    -0.887956, -1.06715, -0.887956, -0.887956, -0.706505, -0.334845,
-    0.334845,  0.706505, 0.887956,  0.887956,  1.06715,   0.887956};
-
-// uss data
-static const std::vector<double> g_uss_local_vertex_x_vec = {
-    3.187342,  3.424531,  3.593071,  3.593071,  3.424531,  3.187342,
-    -0.476357, -0.798324, -0.879389, -0.879389, -0.798324, -0.476357};
-
-static const std::vector<double> g_uss_local_vertex_y_vec = {
-    0.887956,  0.681712,  0.334651,  -0.334651, -0.681712, -0.887956,
-    -0.887956, -0.706505, -0.334845, 0.334845,  0.706505,  0.887956};
-
-static const std::vector<double> g_uss_normal_angle_deg_vec = {
-    170.0, 130.0, 92.0,  88.0,  50.0,  8.0,
-    352.0, 298.0, 275.0, 264.0, 242.0, 187.0};
-
-static const double g_uss_scan_angle_deg = 60.0;
-
-// front and rear radar reading distance index
-static const std::vector<size_t> g_wdis_index_front = {0, 9, 6, 3, 1, 11};
-static const std::vector<size_t> g_wdis_index_back = {0, 1, 3, 6, 9, 11};
-
 void UssObstacleAvoidance::Init() {
   // init car local vertex
   car_local_vertex_vec_.clear();
-  car_local_vertex_vec_.reserve(g_car_local_vertex_x_vec.size());
-  for (size_t i = 0; i < g_car_local_vertex_x_vec.size(); ++i) {
-    car_local_vertex_vec_.emplace_back(Eigen::Vector2d(
-        g_car_local_vertex_x_vec[i], g_car_local_vertex_y_vec[i]));
+  car_local_vertex_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size());
+  for (size_t i = 0; i < apa_param.GetParam().car_vertex_x_vec.size(); ++i) {
+    car_local_vertex_vec_.emplace_back(
+        Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
+                        apa_param.GetParam().car_vertex_y_vec[i]));
   }
 
   SetLatInflation();
 
   // init uss local vertex and normal angle
   uss_local_vertex_vec_.clear();
-  uss_local_vertex_vec_.reserve(g_uss_local_vertex_x_vec.size());
+  uss_local_vertex_vec_.reserve(apa_param.GetParam().uss_vertex_x_vec.size());
   uss_local_normal_angle_vec_.clear();
-  uss_local_normal_angle_vec_.reserve(g_uss_local_vertex_x_vec.size());
+  uss_local_normal_angle_vec_.reserve(
+      apa_param.GetParam().uss_vertex_x_vec.size());
 
-  for (size_t i = 0; i < g_uss_local_vertex_x_vec.size(); ++i) {
-    uss_local_vertex_vec_.emplace_back(Eigen::Vector2d(
-        g_uss_local_vertex_x_vec[i], g_uss_local_vertex_y_vec[i]));
+  for (size_t i = 0; i < apa_param.GetParam().uss_vertex_x_vec.size(); ++i) {
+    uss_local_vertex_vec_.emplace_back(
+        Eigen::Vector2d(apa_param.GetParam().uss_vertex_x_vec[i],
+                        apa_param.GetParam().uss_vertex_y_vec[i]));
     // converted to the angle relative to the car axis
-    uss_local_normal_angle_vec_.emplace_back(
-        pnc::mathlib::Deg2Rad(g_uss_normal_angle_deg_vec[i] - 90.0));
+    uss_local_normal_angle_vec_.emplace_back(pnc::mathlib::Deg2Rad(
+        apa_param.GetParam().uss_normal_angle_deg_vec[i] - 90.0));
   }
 }
 
 void UssObstacleAvoidance::SetLatInflation() {
-  for (size_t i = 0; i < g_car_local_vertex_y_vec.size(); ++i) {
-    car_local_vertex_vec_[i].y() = g_car_local_vertex_y_vec[i];
+  for (size_t i = 0; i < apa_param.GetParam().car_vertex_y_vec.size(); ++i) {
+    car_local_vertex_vec_[i].y() = apa_param.GetParam().car_vertex_y_vec[i];
     if (car_local_vertex_vec_[i].y() > 0) {
       car_local_vertex_vec_[i].y() += param_.lat_inflation;
     } else {
@@ -141,10 +115,12 @@ void UssObstacleAvoidance::GenUssArc() {
 
   // 1/4/7/10 vertexs are more likely to collide, so set a larger scan angle
   const auto rot_matrix_normal = pnc::geometry_lib::GetRotm2dFromTheta(
-      pnc::mathlib::Deg2Rad(g_uss_scan_angle_deg * 0.5));
+      pnc::mathlib::Deg2Rad(apa_param.GetParam().uss_face_scan_angle_gain *
+                            apa_param.GetParam().uss_scan_angle_deg * 0.5));
 
   const auto rot_matrix_large = pnc::geometry_lib::GetRotm2dFromTheta(
-      pnc::mathlib::Deg2Rad(1.05 * g_uss_scan_angle_deg * 0.5));
+      pnc::mathlib::Deg2Rad(apa_param.GetParam().uss_corner_scan_angle_gain *
+                            apa_param.GetParam().uss_scan_angle_deg * 0.5));
 
   Eigen::Matrix2d rot_matrix;
 
@@ -223,7 +199,7 @@ const bool UssObstacleAvoidance::Preprocess() {
 
   // set uss raw dist data
   uss_raw_dist_vec_.clear();
-  uss_raw_dist_vec_.reserve(g_uss_local_vertex_x_vec.size());
+  uss_raw_dist_vec_.reserve(apa_param.GetParam().uss_vertex_x_vec.size());
   const auto &upa_dis_info_buf =
       local_view_ptr_->uss_wave_info.upa_dis_info_buf();
 
@@ -233,15 +209,20 @@ const bool UssObstacleAvoidance::Preprocess() {
   }
 
   // front uss
-  for (size_t i = 0; i < g_wdis_index_front.size(); ++i) {
+  for (size_t i = 0; i < apa_param.GetParam().uss_wdis_index_front.size();
+       ++i) {
     uss_raw_dist_vec_.emplace_back(
-        upa_dis_info_buf[0].wdis(g_wdis_index_front[i]).wdis_value(0));
+        upa_dis_info_buf[0]
+            .wdis(apa_param.GetParam().uss_wdis_index_front[i])
+            .wdis_value(0));
   }
 
   // back uss
-  for (size_t i = 0; i < g_wdis_index_back.size(); ++i) {
+  for (size_t i = 0; i < apa_param.GetParam().uss_wdis_index_back.size(); ++i) {
     uss_raw_dist_vec_.emplace_back(
-        upa_dis_info_buf[1].wdis(g_wdis_index_back[i]).wdis_value(0));
+        upa_dis_info_buf[1]
+            .wdis(apa_param.GetParam().uss_wdis_index_back[i])
+            .wdis_value(0));
   }
 
   return true;
@@ -256,12 +237,12 @@ void UssObstacleAvoidance::CalRemainDist() {
   pnc::geometry_lib::LineSegment car_local_line;
   Eigen::Vector2d intersection;
   double rot_angle = 0.0;
-  for (size_t i = 0; i < g_uss_local_vertex_x_vec.size(); ++i) {
+  for (size_t i = 0; i < apa_param.GetParam().uss_vertex_x_vec.size(); ++i) {
     uss_local_arc = uss_local_arc_vec_[i];
     if (uss_local_arc.is_ignored == true) {
       continue;
     }
-    for (size_t j = 0; j < g_car_local_vertex_x_vec.size(); ++j) {
+    for (size_t j = 0; j < apa_param.GetParam().car_vertex_x_vec.size(); ++j) {
       if (car_motion_info_.car_motion_mode == LINE_MODE) {
         car_local_line = car_local_line_vec_[j];
         if (pnc::geometry_lib::GetArcLineIntersection(
@@ -353,9 +334,9 @@ void UssObstacleAvoidance::Update(
 void UssObstacleAvoidance::SetUssRawDist(const double &uss_raw_dist) {
   // set uss raw dist data
   uss_raw_dist_vec_.clear();
-  uss_raw_dist_vec_.reserve(g_uss_local_vertex_x_vec.size());
+  uss_raw_dist_vec_.reserve(apa_param.GetParam().uss_vertex_x_vec.size());
 
-  for (size_t i = 0; i < g_uss_local_vertex_x_vec.size(); ++i) {
+  for (size_t i = 0; i < apa_param.GetParam().uss_vertex_x_vec.size(); ++i) {
     uss_raw_dist_vec_.emplace_back(uss_raw_dist);
   }
 }

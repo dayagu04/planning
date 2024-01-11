@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "apa_param_setting.h"
 #include "basic_types.pb.h"
 #include "func_state_machine.pb.h"
 #include "local_view.h"
@@ -58,7 +59,7 @@ class SlotInfoWindow {
     sum_corner_pts_x_vec.resize(4);
     sum_corner_pts_y_vec.resize(4);
 
-    // TODO 取平均车位
+    // TODO Take the average slot
     for (const auto& slot : slot_info_vec_) {
       for (int j = 0; j < slot.corner_points().corner_point_size(); ++j) {
         sum_corner_pts_x_vec[j] += slot.corner_points().corner_point(j).x();
@@ -190,17 +191,23 @@ class LimiterPointWindow {
 class SlotManagement {
  public:
   struct Param {
-    double lon_dist_rearview_mirror_to_rear_axle = 1.844;
-    double lat_dist_rearview_mirror_to_center = 1.135;
+    double lon_dist_rearview_mirror_to_rear_axle =
+        apa_param.GetParam().lon_dist_mirror_to_rear_axle;
+    double lat_dist_rearview_mirror_to_center =
+        apa_param.GetParam().lat_dist_mirror_to_center;
 
     bool force_apa_on = false;
     bool force_clear = false;
     size_t max_slot_size = 100;
     double max_slot_release_dist = 25.0;
-    double max_slots_update_angle_dis_limit_deg = 36.6;
-    double max_slot_boundary_line_angle_dif_deg = 10.0;
-    double max_slot_update_lon_dif_slot_center_to_mirror = 2.26;
-    double min_slot_update_lon_dif_slot_center_to_mirror = 0.35;
+    double max_slots_update_angle_dis_limit_deg =
+        apa_param.GetParam().max_slots_update_angle_dis_limit_deg;
+    double max_slot_boundary_line_angle_dif_deg =
+        apa_param.GetParam().max_slot_boundary_line_angle_dif_deg;
+    double max_slot_update_lon_dif_slot_center_to_mirror =
+        apa_param.GetParam().max_slot_update_lon_dif_slot_center_to_mirror;
+    double min_slot_update_lon_dif_slot_center_to_mirror =
+        apa_param.GetParam().min_slot_update_lon_dif_slot_center_to_mirror;
     double invade_area_ratio = 0.36;
   };
 

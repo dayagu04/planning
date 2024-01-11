@@ -155,8 +155,18 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().wheel_base, double, "wheel_base");
   JSON_READ_VALUE(apa_param.SetPram().car_width, double, "car_width");
   JSON_READ_VALUE(apa_param.SetPram().mirror_width, double, "mirror_width");
-  JSON_READ_VALUE(apa_param.SetPram().x_vec, std::vector<double>, "x_vec");
-  JSON_READ_VALUE(apa_param.SetPram().y_vec, std::vector<double>, "y_vec");
+  JSON_READ_VALUE(apa_param.SetPram().steer_ratio, double, "steer_ratio");
+  JSON_READ_VALUE(apa_param.SetPram().arc_line_shift_steer_angle_deg, double,
+                  "arc_line_shift_steer_angle_deg");
+  JSON_READ_VALUE(apa_param.SetPram().c1, double, "c1");
+  JSON_READ_VALUE(apa_param.SetPram().detection_distance, double,
+                  "detection_distance");
+  JSON_READ_VALUE(apa_param.SetPram().lat_inflation, double, "lat_inflation");
+
+  JSON_READ_VALUE(apa_param.SetPram().car_vertex_x_vec, std::vector<double>,
+                  "car_vertex_x_vec");
+  JSON_READ_VALUE(apa_param.SetPram().car_vertex_y_vec, std::vector<double>,
+                  "car_vertex_y_vec");
 
   // slot params
   JSON_READ_VALUE(apa_param.SetPram().normal_slot_length, double,
@@ -164,6 +174,9 @@ void ApaPlanInterface::SyncParameters() {
 
   // check finish params
   JSON_READ_VALUE(apa_param.SetPram().finish_lat_err, double, "finish_lat_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().finish_lat_err_strict, double,
+                  "finish_lat_err_strict");
 
   JSON_READ_VALUE(apa_param.SetPram().finish_lon_err, double, "finish_lon_err");
 
@@ -196,6 +209,30 @@ void ApaPlanInterface::SyncParameters() {
 
   JSON_READ_VALUE(apa_param.SetPram().uss_stuck_replan_wait_time, double,
                   "uss_stuck_replan_wait_time");
+
+  JSON_READ_VALUE(apa_param.SetPram().uss_scan_angle_deg, double,
+                  "uss_scan_angle_deg");
+
+  JSON_READ_VALUE(apa_param.SetPram().uss_corner_scan_angle_gain, double,
+                  "uss_corner_scan_angle_gain");
+
+  JSON_READ_VALUE(apa_param.SetPram().uss_face_scan_angle_gain, double,
+                  "uss_face_scan_angle_gain");
+
+  JSON_READ_VALUE(apa_param.SetPram().uss_vertex_x_vec, std::vector<double>,
+                  "uss_vertex_x_vec");
+
+  JSON_READ_VALUE(apa_param.SetPram().uss_vertex_y_vec, std::vector<double>,
+                  "uss_vertex_y_vec");
+
+  JSON_READ_VALUE(apa_param.SetPram().uss_normal_angle_deg_vec,
+                  std::vector<double>, "uss_normal_angle_deg_vec");
+
+  JSON_READ_VALUE(apa_param.SetPram().uss_wdis_index_front, std::vector<int>,
+                  "uss_wdis_index_front");
+
+  JSON_READ_VALUE(apa_param.SetPram().uss_wdis_index_back, std::vector<int>,
+                  "uss_wdis_index_back");
 
   // check replan params
   JSON_READ_VALUE(apa_param.SetPram().stuck_replan_time, double,
@@ -245,6 +282,8 @@ void ApaPlanInterface::SyncParameters() {
 
   JSON_READ_VALUE(apa_param.SetPram().max_obs2car_dist, double,
                   "max_obs2car_dist");
+
+  JSON_READ_VALUE(apa_param.SetPram().obstacle_ds, double, "obstacle_ds");
 
   // terminal pose params
   JSON_READ_VALUE(apa_param.SetPram().terminal_target_x, double,
@@ -308,18 +347,93 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().min_one_step_path_length, double,
                   "min_one_step_path_length");
 
-  JSON_READ_VALUE(apa_param.SetPram().prepare_line_x_offset_slot, double,
-                  "prepare_line_x_offset_slot");
+  JSON_READ_VALUE(apa_param.SetPram().prepare_line_min_x_offset_slot, double,
+                  "prepare_line_min_x_offset_slot");
 
-  JSON_READ_VALUE(apa_param.SetPram().prepare_line_heading_offset_slot_deg,
-                  double, "prepare_line_heading_offset_slot_deg");
+  JSON_READ_VALUE(apa_param.SetPram().prepare_line_dx_offset_slot, double,
+                  "prepare_line_dx_offset_slot");
+
+  JSON_READ_VALUE(apa_param.SetPram().prepare_line_max_x_offset_slot, double,
+                  "prepare_line_max_x_offset_slot");
+
+  JSON_READ_VALUE(apa_param.SetPram().prepare_line_max_heading_offset_slot_deg,
+                  double, "prepare_line_max_heading_offset_slot_deg");
+
+  JSON_READ_VALUE(apa_param.SetPram().prepare_line_dheading_offset_slot_deg,
+                  double, "prepare_line_dheading_offset_slot_deg");
+
+  JSON_READ_VALUE(apa_param.SetPram().prepare_line_min_heading_offset_slot_deg,
+                  double, "prepare_line_min_heading_offset_slot_deg");
 
   JSON_READ_VALUE(apa_param.SetPram().static_pos_eps, double, "static_pos_eps");
+
   JSON_READ_VALUE(apa_param.SetPram().static_heading_eps, double,
                   "static_heading_eps");
 
+  JSON_READ_VALUE(apa_param.SetPram().path_extend_distance, double,
+                  "path_extend_distance");
+
+  JSON_READ_VALUE(apa_param.SetPram().mono_plan_enable, bool,
+                  "mono_plan_enable");
+
+  JSON_READ_VALUE(apa_param.SetPram().multi_plan_min_lat_err, double,
+                  "multi_plan_min_lat_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().multi_plan_min_heading_err, double,
+                  "multi_plan_min_heading_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().multi_plan_max_occupied_ratio, double,
+                  "multi_plan_max_occupied_ratio");
+
+  JSON_READ_VALUE(apa_param.SetPram().adjust_plan_max_lat_err, double,
+                  "adjust_plan_max_lat_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().adjust_plan_max_heading1_err, double,
+                  "adjust_plan_max_heading1_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().adjust_plan_max_heading2_err, double,
+                  "adjust_plan_max_heading2_err");
+
   // slot managent params
+  JSON_READ_VALUE(apa_param.SetPram().lon_dist_mirror_to_rear_axle, double,
+                  "lon_dist_mirror_to_rear_axle");
+
+  JSON_READ_VALUE(apa_param.SetPram().lat_dist_mirror_to_center, double,
+                  "lat_dist_mirror_to_center");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_slots_update_angle_dis_limit_deg,
+                  double, "max_slots_update_angle_dis_limit_deg");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_slot_boundary_line_angle_dif_deg,
+                  double, "max_slot_boundary_line_angle_dif_deg");
+
+  JSON_READ_VALUE(
+      apa_param.SetPram().min_slot_update_lon_dif_slot_center_to_mirror, double,
+      "min_slot_update_lon_dif_slot_center_to_mirror");
+
   JSON_READ_VALUE(apa_param.SetPram().res_limiter, double, "res_limiter");
+
+  JSON_READ_VALUE(apa_param.SetPram().terminal_length, double,
+                  "terminal_length");
+
+  JSON_READ_VALUE(apa_param.SetPram().res_distance, double, "res_distance");
+
+  JSON_READ_VALUE(apa_param.SetPram().min_limiter_update_occupied_ratio, double,
+                  "min_limiter_update_occupied_ratio");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_limiter_update_occupied_ratio, double,
+                  "max_limiter_update_occupied_ratio");
+
+  JSON_READ_VALUE(apa_param.SetPram().limiter_update_occupied_ratio, double,
+                  "limiter_update_occupied_ratio");
+
+  JSON_READ_VALUE(apa_param.SetPram().limiter_length, double, "limiter_length");
+
+  JSON_READ_VALUE(apa_param.SetPram().slot_occupied_ratio_max_lat_err, double,
+                  "slot_occupied_ratio_max_lat_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().slot_occupied_ratio_max_heading_err,
+                  double, "slot_occupied_ratio_max_heading_err");
 
   // gen output params
   JSON_READ_VALUE(apa_param.SetPram().max_velocity, double, "max_velocity");

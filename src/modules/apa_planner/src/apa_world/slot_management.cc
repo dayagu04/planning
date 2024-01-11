@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "Eigen/Core"
-#include "apa_param_setting.h"
 #include "basic_types.pb.h"
 #include "common.h"
 #include "config/basic_type.h"
@@ -28,17 +27,6 @@ static const double kMinSlotUpdateOccupiedRatio = 0.6;
 static const double kMaxSlotUpdateFixedOrientationCos = 0.866;  // cos(30°)
 static const double kFixSlotUpdateOccupiedRatio = 0.85;
 
-static const double kMinLimiterUpdateOccupiedRatio = 0.4;
-static const double kMaxLimiterUpdateOccupiedRatio = 0.6;
-static const double kLimiterUpdateOccupiedRatio = 0.6;
-
-static const double kSlotLength = 4.8;
-static const double kTerminalLength = 1.2;
-static const double kResDistance = 1.7;
-static const double kResLimiter = 0.55;
-
-static const size_t kMaxOccupiedCount = 4;
-
 // for occupied ratio
 static const double kTerminalTargetX = 1.35;
 static const double kTerminalTargetY = 0.0;
@@ -46,37 +34,6 @@ static const double kTerminalTargetYBias = 0.0;
 static const double kHeadingBias = std::cos(75.0 / 57.3);
 static const double kPosYBias = 0.9;
 static const double kNormalkSlotLength = 5.2;
-
-// if slot does not contain limiter information
-static const double kLimiterLength = 0.0;
-
-// uss data
-static const std::vector<double> uss_vertex_x_vec = {
-    3.187342,  3.424531,  3.593071,  3.593071,  3.424531,  3.187342,
-    -0.476357, -0.798324, -0.879389, -0.879389, -0.798324, -0.476357};
-
-static const std::vector<double> uss_vertex_y_vec = {
-    0.887956,  0.681712,  0.334651,  -0.334651, -0.681712, -0.887956,
-    -0.887956, -0.706505, -0.334845, 0.334845,  0.706505,  0.887956};
-
-static const std::vector<double> uss_normal_angle_deg_vec = {
-    170.0, 130.0, 92.0,  88.0,  50.0,  8.0,
-    352.0, 298.0, 275.0, 264.0, 242.0, 187.0};
-
-static const std::vector<size_t> wdis_index_front = {0, 9, 6, 3, 1, 11};
-static const std::vector<size_t> wdis_index_back = {0, 1, 3, 6, 9, 11};
-
-static const Eigen::Vector2d uss0_vertex(uss_vertex_x_vec[0],
-                                         uss_vertex_y_vec[0]);
-
-static const Eigen::Vector2d uss5_vertex(uss_vertex_x_vec[5],
-                                         uss_vertex_y_vec[5]);
-
-static const Eigen::Vector2d uss6_vertex(uss_vertex_x_vec[6],
-                                         uss_vertex_y_vec[6]);
-
-static const Eigen::Vector2d uss11_vertex(uss_vertex_x_vec[11],
-                                          uss_vertex_y_vec[11]);
 
 void SlotManagement::Reset() {
   // reset slot info
@@ -191,7 +148,7 @@ bool SlotManagement::IsInSearchingState() const {
 #ifdef __DEBUG_PRINT__
   std::cout << "func_state_ptr_->current_state() = "
             << func_state_ptr_->current_state() << std::endl;
-  // 应该检查一下每帧slot_management_info_车位的值
+  // should check each frame slot_management_info value
   std::cout << "managed slot size:"
             << slot_management_info_.slot_info_vec_size() << std::endl;
   std::cout << "magaged slot id: ";
@@ -693,7 +650,8 @@ void SlotManagement::UpdateLimiterInfoInParking(
   // smoothing limiter position
   if (frame_.limiter_point_window_.IsEmpty()) {
     // add default value
-    const double K = kSlotLength - kTerminalLength;
+    const double K = apa_param.GetParam().normal_slot_length -
+                     apa_param.GetParam().terminal_length;
     Eigen::Vector2d direction_vec;
     if (is_perpendicular_flag) {
       direction_vec << select_slot.corner_points().corner_point(3).x() -
@@ -736,8 +694,10 @@ void SlotManagement::UpdateLimiterInfoInParking(
   }
 
   const bool update_limiter_flag_low =
-      frame_.slot_occupied_ratio_ <= kMaxLimiterUpdateOccupiedRatio &&
-      frame_.slot_occupied_ratio_ >= kMinLimiterUpdateOccupiedRatio;
+      frame_.slot_occupied_ratio_ <=
+          apa_param.GetParam().max_limiter_update_occupied_ratio &&
+      frame_.slot_occupied_ratio_ >=
+          apa_param.GetParam().min_limiter_update_occupied_ratio;
 
   frame_.limiter_point_window_.Fuse();
   const auto limiter_points_line =
@@ -752,8 +712,9 @@ void SlotManagement::UpdateLimiterInfoInParking(
       frame_.measurement_.ego_pos, limiter_line);
 
   const bool update_limiter_flag_upper =
-      res_distance >= kResDistance &&
-      frame_.slot_occupied_ratio_ >= kLimiterUpdateOccupiedRatio;
+      res_distance >= apa_param.GetParam().res_distance &&
+      frame_.slot_occupied_ratio_ >=
+          apa_param.GetParam().limiter_update_occupied_ratio;
 
   if (update_limiter_flag_low || update_limiter_flag_upper) {
     // add realtime value
@@ -770,13 +731,15 @@ void SlotManagement::UpdateLimiterInfoInParking(
 
       const auto heading_norm = (slot_p0 - slot_p2).normalized();
 
-      const Eigen::Vector2d delta = apa_param.GetParam().res_limiter * heading_norm;
+      const Eigen::Vector2d delta =
+          apa_param.GetParam().res_limiter * heading_norm;
       limiter_points.first = p0 + delta;
       limiter_points.second = p1 + delta;
       frame_.limiter_point_window_.Add(limiter_points);
     } else {
       // if slot does not contain limiter, to set a virtual limiter
-      const double K = kSlotLength - kLimiterLength;
+      const double K = apa_param.GetParam().normal_slot_length -
+                       apa_param.GetParam().limiter_length;
       Eigen::Vector2d direction_vec;
       if (is_perpendicular_flag) {
         direction_vec << select_slot.corner_points().corner_point(3).x() -
@@ -1111,7 +1074,8 @@ void SlotManagement::UpdateLimiterForAutoSetSlot() {
       // init limiter position
       if (frame_.limiter_point_window_.IsEmpty()) {
         // add default value
-        const double K = kSlotLength - kTerminalLength;
+        const double K = apa_param.GetParam().normal_slot_length -
+                         apa_param.GetParam().terminal_length;
         Eigen::Vector2d direction_vec;
         direction_vec << slot_info.corner_points().corner_point(3).x() -
                              slot_info.corner_points().corner_point(1).x(),

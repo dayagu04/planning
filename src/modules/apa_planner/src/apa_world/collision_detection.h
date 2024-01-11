@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "apa_param_setting.h"
 #include "dubins_lib.h"
 #include "geometry_math.h"
 #include "local_view.h"
@@ -25,8 +26,8 @@ class CollisionDetector {
   };
 
   struct Paramters {
-    double lat_inflation = 0.1;
-    void Reset() { lat_inflation = 0.1; }
+    double lat_inflation = apa_param.GetParam().lat_inflation;
+    void Reset() { lat_inflation = apa_param.GetParam().lat_inflation; }
   };
 
   void Init();

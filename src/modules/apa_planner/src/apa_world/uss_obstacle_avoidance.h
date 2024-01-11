@@ -12,6 +12,8 @@
 #include "math_lib.h"
 #include "planning_plan.pb.h"
 
+#include "apa_param_setting.h"
+
 namespace planning {
 
 class UssObstacleAvoidance {
@@ -23,11 +25,12 @@ class UssObstacleAvoidance {
   };
 
   struct Paramters {
-    double steer_ratio = 16.5;
-    double arc_line_shift_steer_angle_deg = 2.5;
-    double c1 = 0.3790;
-    double detection_distance = 2.5;
-    double lat_inflation = 0.1;
+    double steer_ratio = apa_param.GetParam().steer_ratio;
+    double arc_line_shift_steer_angle_deg =
+        apa_param.GetParam().arc_line_shift_steer_angle_deg;
+    double c1 = apa_param.GetParam().c1;
+    double detection_distance = apa_param.GetParam().detection_distance;
+    double lat_inflation = apa_param.GetParam().lat_inflation;
   };
 
   struct RemainDistInfo {

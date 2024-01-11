@@ -1403,7 +1403,8 @@ const bool IsPoseOnLine(const PathPoint &pose, LineSegment &line,
   }
 
   const auto dist = CalPoint2LineDist(pose.pos, line);
-  if (dist < lat_err && std::fabs(pose.heading - line.heading) < heading_err) {
+  if (dist < lat_err &&
+      std::fabs(NormalizeAngle(pose.heading - line.heading)) < heading_err) {
     return true;
   }
   std::cout << "pos = " << pose.pos.transpose()

@@ -304,8 +304,10 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   // ego_slot_info.slot_occupied_ratio =
   //     apa_world_ptr_->GetSlotManagerPtr()->GetOccupiedRatio();
 
-  if (std::fabs(ego_slot_info.terminal_err.pos.y()) < 0.9 &&
-      std::fabs(ego_slot_info.ego_heading_slot) < 75.0 / 57.3) {
+  if (std::fabs(ego_slot_info.terminal_err.pos.y()) <
+          apa_param.GetParam().slot_occupied_ratio_max_lat_err &&
+      std::fabs(ego_slot_info.ego_heading_slot) <
+          apa_param.GetParam().slot_occupied_ratio_max_heading_err / 57.3) {
     ego_slot_info.slot_occupied_ratio =
         pnc::mathlib::Clamp(1.0 - (ego_slot_info.terminal_err.pos.x() /
                                    apa_param.GetParam().normal_slot_length),
@@ -570,7 +572,7 @@ void PerpendicularInPlanner::GenObstacles() {
   // line.SetPoints(F, G);
   // line_vec.emplace_back(line);
 
-  double ds = 0.5;
+  double ds = apa_param.GetParam().obstacle_ds;
   std::vector<Eigen::Vector2d> point_set;
   std::vector<Eigen::Vector2d> channel_obstacle_vec;
   channel_obstacle_vec.clear();
@@ -647,8 +649,13 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
   const bool path_plan_success = perpendicular_path_planner_.Update(
       apa_world_ptr_->GetCollisionDetectorPtr());
 
-  // set current arc_steer
-  if (!frame_.is_replan_first && frame_.replan_reason != DYNAMIC) {
+  const auto& planner_output = perpendicular_path_planner_.GetOutput();
+
+  const bool gear_steer_shift =
+      (frame_.is_replan_first &&
+       planner_output.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) ||
+      (!frame_.is_replan_first && frame_.replan_reason != DYNAMIC);
+  if (gear_steer_shift) {
     // set current arc steer
     if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
@@ -687,14 +694,14 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
 
   perpendicular_path_planner_.SetLineSegmentHeading();
 
-  perpendicular_path_planner_.InsertLineSegAfterCurrentFollowLastPath(0.3);
+  perpendicular_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
+      apa_param.GetParam().path_extend_distance);
 
   perpendicular_path_planner_.SampleCurrentPathSeg();
 
   // print segment info
   perpendicular_path_planner_.PrintOutputSegmentsInfo();
 
-  const auto& planner_output = perpendicular_path_planner_.GetOutput();
   gear_command_ = planner_output.current_gear;
 
   current_path_point_global_vec_.clear();
@@ -861,8 +868,8 @@ const bool PerpendicularInPlanner::CheckFinished() {
       std::fabs(y1) <= apa_param.GetParam().finish_lat_err;
 
   const bool lat_condition_2 =
-      std::fabs(y1) <= apa_param.GetParam().finish_lat_err &&
-      std::fabs(y2) <= apa_param.GetParam().finish_lat_err;
+      std::fabs(y1) <= apa_param.GetParam().finish_lat_err_strict &&
+      std::fabs(y2) <= apa_param.GetParam().finish_lat_err_strict;
 
   const bool heading_condition_1 =
       std::fabs(ego_slot_info.terminal_err.heading) <=

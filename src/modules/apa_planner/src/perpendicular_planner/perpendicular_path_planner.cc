@@ -23,20 +23,17 @@
 #include "math_lib.h"
 namespace planning {
 namespace apa_planner {
-static const double kMaxYCoordSeenAsLine = 0.03;
-static const double kMaxHeadingSeenAsLine = 3.0 / 57.3;
+
 static const size_t kMaxPerpenParkInSegmentNums = 15;
 static const size_t kReservedOutputPathPointSize = 750;
 static const size_t kMaxPathNumsInSlot = 6;
-static const bool kP0P1CollisionDetectEnable = true;
-static const bool kMonoPlanEnable = false;
 
-static const std::vector<double> kPrepareTargetLineDeltaHeadingTab = {
-    10.0 / 57.3, 12.0 / 57.3, 8.0 / 57.3};
+// static const std::vector<double> kPrepareTargetLineDeltaHeadingTab = {
+//     10.0 / 57.3, 12.0 / 57.3, 8.0 / 57.3};
 
-static const std::vector<Eigen::Vector2d> kPrepareTargetLinePosTab = {
-    Eigen::Vector2d(0.0, 0.0), Eigen::Vector2d(0.0, 0.0),
-    Eigen::Vector2d(0.0, 0.0)};
+// static const std::vector<Eigen::Vector2d> kPrepareTargetLinePosTab = {
+//     Eigen::Vector2d(0.0, 0.0), Eigen::Vector2d(0.0, 0.0),
+//     Eigen::Vector2d(0.0, 0.0)};
 
 void PerpendicularPathPlanner::Reset() {
   output_.Reset();
@@ -111,17 +108,19 @@ const bool PerpendicularPathPlanner::PreparePlan() {
   std::vector<double> x_offset_vec;
   std::vector<double> heading_offset_vec;
 
-  double x_offset = apa_param.GetParam().prepare_line_x_offset_slot;
-  while (x_offset < apa_param.GetParam().prepare_line_x_offset_slot + 2.5) {
+  double x_offset = apa_param.GetParam().prepare_line_min_x_offset_slot;
+  while (x_offset < apa_param.GetParam().prepare_line_max_x_offset_slot) {
     x_offset_vec.emplace_back(x_offset);
-    x_offset += 0.1;
+    x_offset += apa_param.GetParam().prepare_line_dx_offset_slot;
   }
 
   double heading_offset =
-      apa_param.GetParam().prepare_line_heading_offset_slot_deg / 57.3;
-  while (heading_offset >= 0.0) {
+      apa_param.GetParam().prepare_line_max_heading_offset_slot_deg / 57.3;
+  while (heading_offset >=
+         apa_param.GetParam().prepare_line_min_heading_offset_slot_deg / 57.3) {
     heading_offset_vec.emplace_back(heading_offset);
-    heading_offset -= 1.0 / 57.3;
+    heading_offset -=
+        apa_param.GetParam().prepare_line_dheading_offset_slot_deg / 57.3;
   }
 
   for (const auto& heading_offset : heading_offset_vec) {
@@ -172,7 +171,8 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
 
   bool prepare_success = false;
   // first use mono prepare to find target point
-  if (MonoPreparePlan(target_pose.pos) && kMonoPlanEnable) {
+  if (MonoPreparePlan(target_pose.pos) &&
+      apa_param.GetParam().mono_plan_enable) {
     input.Set(input_.ego_pose.pos, target_pose.pos, input_.ego_pose.heading,
               target_pose.heading);
     dubins_planner_.SetInput(input);
@@ -409,9 +409,12 @@ const bool PerpendicularPathPlanner::MultiPlan() {
   uint8_t current_arc_steer = input_.ref_arc_steer;
 
   // check pose and slot_occupied_ratio, if error is small, multi isnot suitable
-  if ((std::fabs(current_pose.pos.y()) <= 0.5 &&
-       std::fabs(current_pose.heading) <= 12.0 / 57.3) ||
-      input_.slot_occupied_ratio >= 0.8) {
+  if ((std::fabs(current_pose.pos.y()) <=
+           apa_param.GetParam().multi_plan_min_lat_err &&
+       std::fabs(current_pose.heading) <=
+           apa_param.GetParam().multi_plan_min_heading_err / 57.3) ||
+      input_.slot_occupied_ratio >=
+          apa_param.GetParam().multi_plan_max_occupied_ratio) {
     std::cout << "pose err is relatively small, skip multi plan, directly try "
                  "adjust plan\n";
     return false;
@@ -775,9 +778,9 @@ const bool PerpendicularPathPlanner::OneLinePlan(
   std::cout << "--- try one line plan ---\n";
   pnc::geometry_lib::PathPoint pose;
   pose.Set(line.pA, line.heading);
-  if (pnc::geometry_lib::IsPoseOnLine(pose, calc_params_.target_line,
-                                      kMaxYCoordSeenAsLine,
-                                      kMaxHeadingSeenAsLine)) {
+  if (pnc::geometry_lib::IsPoseOnLine(
+          pose, calc_params_.target_line, apa_param.GetParam().static_pos_eps,
+          apa_param.GetParam().static_heading_eps)) {
     std::cout << "pose is on line, success\n";
     line.pB = calc_params_.target_line.pA;
     line.length = (line.pB - line.pA).norm();
@@ -821,9 +824,12 @@ const bool PerpendicularPathPlanner::AdjustPlan() {
   }
 
   // check pose, if error is large, adjust is not suitable
-  if ((std::fabs(current_pose.pos.y()) >= 1.2 &&
-       std::fabs(current_pose.heading) >= 50.0 / 57.3) ||
-      std::fabs(current_pose.heading) >= 70.0 / 57.3) {
+  if ((std::fabs(current_pose.pos.y()) >=
+           apa_param.GetParam().adjust_plan_max_lat_err &&
+       std::fabs(current_pose.heading) >=
+           apa_param.GetParam().adjust_plan_max_heading1_err / 57.3) ||
+      std::fabs(current_pose.heading) >=
+          apa_param.GetParam().adjust_plan_max_heading2_err / 57.3) {
     std::cout << "pose err is relatively large, skip adjust plan, plan fail\n";
     return false;
   }
@@ -1051,8 +1057,10 @@ const bool PerpendicularPathPlanner::STurnParallelPlan(
   terminal_err.Set(current_pose.pos - input_.tlane.pt_terminal,
                    current_pose.heading - 0.0);
   double slot_occupied_ratio;
-  if (std::fabs(terminal_err.pos.y()) < 0.9 &&
-      std::fabs(terminal_err.heading) < 75.0 / 57.3) {
+  if (std::fabs(terminal_err.pos.y()) <
+          apa_param.GetParam().slot_occupied_ratio_max_lat_err &&
+      std::fabs(terminal_err.heading) <
+          apa_param.GetParam().slot_occupied_ratio_max_heading_err / 57.3) {
     slot_occupied_ratio = pnc::mathlib::Clamp(
         1.0 - (terminal_err.pos.x() / apa_param.GetParam().normal_slot_length),
         0.0, 1.0);

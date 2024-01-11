@@ -4,31 +4,21 @@
 
 #include <cmath>
 
-#include "apa_param_setting.h"
 #include "geometry_math.h"
 
 namespace planning {
 
-// car data
-static const std::vector<double> g_car_local_vertex_x_vec = {
-    3.187342,  3.424531,  3.593071,  3.593071,  3.424531,  3.187342,
-    2.177994,  1.916421,  1.96496,   -0.476357, -0.798324, -0.879389,
-    -0.879389, -0.798324, -0.476357, 1.96496,   1.916421,  2.177994};
-
-static const std::vector<double> g_car_local_vertex_y_vec = {
-    0.887956,  0.681712, 0.334651,  -0.334651, -0.681712, -0.887956,
-    -0.887956, -1.06715, -0.887956, -0.887956, -0.706505, -0.334845,
-    0.334845,  0.706505, 0.887956,  0.887956,  1.06715,   0.887956};
-
 void CollisionDetector::Init() {
   car_line_local_vec_.clear();
-  car_line_local_vec_.reserve(g_car_local_vertex_x_vec.size());
+  car_line_local_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size());
 
   std::vector<double> inflated_car_local_vertex_y_vec;
   inflated_car_local_vertex_y_vec.clear();
-  inflated_car_local_vertex_y_vec.reserve(g_car_local_vertex_y_vec.size());
-  for (size_t i = 0; i < g_car_local_vertex_y_vec.size(); ++i) {
-    inflated_car_local_vertex_y_vec[i] = g_car_local_vertex_y_vec[i];
+  inflated_car_local_vertex_y_vec.reserve(
+      apa_param.GetParam().car_vertex_y_vec.size());
+  for (size_t i = 0; i < apa_param.GetParam().car_vertex_y_vec.size(); ++i) {
+    inflated_car_local_vertex_y_vec[i] =
+        apa_param.GetParam().car_vertex_y_vec[i];
     if (inflated_car_local_vertex_y_vec[i] > 0) {
       inflated_car_local_vertex_y_vec[i] += param_.lat_inflation;
     } else {
@@ -40,13 +30,15 @@ void CollisionDetector::Init() {
   Eigen::Vector2d p1;
   Eigen::Vector2d p2;
 
-  for (size_t i = 0; i < g_car_local_vertex_x_vec.size(); ++i) {
-    p1 << g_car_local_vertex_x_vec[i], inflated_car_local_vertex_y_vec[i];
-    if (i < g_car_local_vertex_x_vec.size() - 1) {
-      p2 << g_car_local_vertex_x_vec[i + 1],
+  for (size_t i = 0; i < apa_param.GetParam().car_vertex_x_vec.size(); ++i) {
+    p1 << apa_param.GetParam().car_vertex_x_vec[i],
+        inflated_car_local_vertex_y_vec[i];
+    if (i < apa_param.GetParam().car_vertex_x_vec.size() - 1) {
+      p2 << apa_param.GetParam().car_vertex_x_vec[i + 1],
           inflated_car_local_vertex_y_vec[i + 1];
     } else {
-      p2 << g_car_local_vertex_x_vec[0], inflated_car_local_vertex_y_vec[0];
+      p2 << apa_param.GetParam().car_vertex_x_vec[0],
+          inflated_car_local_vertex_y_vec[0];
     }
     car_line.SetPoints(p1, p2);
     car_line_local_vec_.emplace_back(car_line);
@@ -308,7 +300,7 @@ const bool CollisionDetector::IsObstacleInCar(
   l2g_tf.Init(ego_pose.pos, ego_pose.heading);
   std::vector<Eigen::Vector2d> car_polygon;
   car_polygon.clear();
-  car_polygon.reserve(g_car_local_vertex_x_vec.size());
+  car_polygon.reserve(apa_param.GetParam().car_vertex_x_vec.size());
   for (const auto &car_line_local : car_line_local_vec_) {
     car_line_global.pA = l2g_tf.GetPos(car_line_local.pA);
     car_line_global.pB = l2g_tf.GetPos(car_line_local.pB);
