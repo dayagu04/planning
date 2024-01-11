@@ -1,6 +1,8 @@
 import sys
 import numpy as np
 import math
+from scipy.interpolate import interp1d
+from scipy.misc import derivative
 from lib.load_rotate import *
 
 def load_car_params_patch():
@@ -208,7 +210,7 @@ def load_lane_lines(lanes):
 
   return line_info_list
 
-def load_lane_center_lines(lanes, find_enu = False, loc_msg = [], is_display_enu = False):
+def load_lane_center_lines(lanes, find_enu = False, loc_msg = [], g_is_display_enu = False):
   line_info_list = []
 
   for i in range(10):
@@ -219,7 +221,7 @@ def load_lane_center_lines(lanes, find_enu = False, loc_msg = [], is_display_enu
       line_x = []
       line_y = []
       for virtual_lane_refline_point in virtual_lane_refline_points:
-        if is_display_enu:
+        if g_is_display_enu:
           line_x.append(virtual_lane_refline_point.enu_point.x)
           line_y.append(virtual_lane_refline_point.enu_point.y)
         else:
@@ -488,7 +490,7 @@ def load_obstacle_me(obstacle_list):
 
   return obs_info_all
 
-  
+
 def load_obstacle_radar(obstacle_list,type):
   obs_info_all = dict()
   obs_num = len(obstacle_list)
@@ -613,7 +615,7 @@ def gen_line(c0, c1, c2, c3, start, end):
 
   return points_x, points_y
 
-def load_prediction_objects(obstacle_list, localization_info, is_display_enu = False):
+def load_prediction_objects(obstacle_list, localization_info, g_is_display_enu = False):
   prediction_dict = {0: {'x': [], 'y': []},
                      1: {'x': [], 'y': []},
                      2: {'x': [], 'y': []},
@@ -701,7 +703,7 @@ def load_prediction_objects(obstacle_list, localization_info, is_display_enu = F
         global_x = obstacle_list[i].trajectory[0].trajectory_point[j].position.x
         global_y = obstacle_list[i].trajectory[0].trajectory_point[j].position.y
         # print(global_x, global_y)
-        if is_display_enu:
+        if g_is_display_enu:
           p_x.append(global_x)
           p_y.append(global_y)
         else:
@@ -721,8 +723,8 @@ def load_prediction_objects(obstacle_list, localization_info, is_display_enu = F
     prediction_dict[index]['x'].append(trajectory_info['x'][i])
     prediction_dict[index]['y'].append(trajectory_info['y'][i])
   return prediction_dict
-  
-def generate_planning_trajectory(trajectory, loc_msg = None, is_display_enu = False):
+
+def generate_planning_trajectory(trajectory, loc_msg = None, g_is_display_enu = False):
   plan_dict = {0: {'x': [], 'y': []},
                1: {'x': [], 'y': []},
                2: {'x': [], 'y': []},
@@ -730,15 +732,17 @@ def generate_planning_trajectory(trajectory, loc_msg = None, is_display_enu = Fa
                4: {'x': [], 'y': []}}
   plan_x = []
   plan_y = []
+  plan_theta = []
   try:
     for i in range(len(trajectory.trajectory_points)):
       plan_x.append(trajectory.trajectory_points[i].x)
       plan_y.append(trajectory.trajectory_points[i].y)
+      plan_theta.append(trajectory.trajectory_points[i].heading_yaw)
 
     if trajectory.target_reference.lateral_maneuver_gear == 2:
       pass
     else:
-      if is_display_enu:
+      if g_is_display_enu:
         for i in range(len(plan_x)):
           index = (int)(i / 40)
           if index > 4:
@@ -759,11 +763,14 @@ def generate_planning_trajectory(trajectory, loc_msg = None, is_display_enu = Fa
             break
           plan_dict[index]['x'].append(plan_x[i])
           plan_dict[index]['y'].append(plan_y[i])
+        for i in range(len(plan_theta)):
+          tmp_theta = plan_theta[i] - cur_yaw
+          plan_theta[i] = tmp_theta
   except:
     print('generate_planning_trajectory error')  
-  return plan_x, plan_y, plan_dict
+  return plan_x, plan_y, plan_theta, plan_dict
 
-def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = "", is_display_enu = False):
+def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = "", g_is_display_enu = False):
   road_tile_info = ehr_parking_map_msg.road_tile_info
   parking_space_info = road_tile_info.parking_space
   parking_space_boxes_x = []
@@ -773,7 +780,7 @@ def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = "", is_display_enu =
   road_mark_boxes_y = []
   
   try:  
-    if is_display_enu:
+    if g_is_display_enu:
       for parking_space in parking_space_info:
         parking_space_box_x = []
         parking_space_box_y = []
@@ -829,12 +836,12 @@ def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = "", is_display_enu =
     print('generate_ehr_parking_map error')
   return parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y
 
-def generate_ground_line(ground_line_msg, loc_msg = "", is_display_enu = False):
+def generate_ground_line(ground_line_msg, loc_msg = "", g_is_display_enu = False):
   ground_lines = ground_line_msg.ground_lines
   groundline_x_vec = []
   groundline_y_vec = []
   try:
-    if is_display_enu:
+    if g_is_display_enu:
       for j in range(len(ground_lines)):
         groundline = ground_lines[j]
         single_groundline_x_vec = []
@@ -868,20 +875,28 @@ def generate_ground_line(ground_line_msg, loc_msg = "", is_display_enu = False):
   except:
     print('groundline error')
   return groundline_x_vec, groundline_y_vec
-  
-def generate_control(control_msg, loc_msg = "", is_display_enu = False):
+
+def generate_control(control_msg, loc_msg = "", g_is_display_enu = False):
   mpc_dx = []
   mpc_dy = []
+  mpc_dtheta = []
   control_result_points = control_msg.control_trajectory.control_result_points
   for i in range(len(control_result_points)):
     mpc_dx.append(control_result_points[i].x)
     mpc_dy.append(control_result_points[i].y)
-  if is_display_enu:
+  if len(mpc_dx) > 0:
+    f1 = interp1d(mpc_dx, mpc_dy, kind='cubic')
+    for i in range(len(mpc_dx) - 1):
+      mpc_dtheta.append(math.atan(derivative(f1, mpc_dx[i] + 1e-6, dx = 1e-6)))
+    mpc_dtheta.append(math.atan(derivative(f1, mpc_dx[len(mpc_dx) - 1] - 1e-6, dx = 1e-6)))
+  if g_is_display_enu:
     coord_tf = coord_transformer()
     cur_pos_xn = loc_msg.position.position_boot.x
     cur_pos_yn = loc_msg.position.position_boot.y
     cur_yaw = loc_msg.orientation.euler_boot.yaw
     coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
     mpc_dx, mpc_dy = coord_tf.local_to_global(mpc_dx, mpc_dy)
-  return mpc_dx, mpc_dy
-    
+    for i in range(len(mpc_dtheta)):
+      mpc_dtheta[i] = mpc_dtheta[i] + cur_yaw
+  return mpc_dx, mpc_dy, mpc_dtheta
+

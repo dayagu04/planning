@@ -70,7 +70,7 @@ class LocalViewSlider:
 def slider_callback(bag_time, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound,q_hard_bound, upper_safe_bound, lower_safe_bound):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
-  update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data,upper_safe_bound, lower_safe_bound)
+  update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data,upper_safe_bound, lower_safe_bound, g_is_display_enu)
 
   plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
   loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
@@ -100,8 +100,10 @@ def slider_callback(bag_time, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound,
   except:
     coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
-
-  x_vec, y_vec = coord_tf.global_to_local(planning_output.x_vec, planning_output.y_vec)
+  if g_is_display_enu:
+    x_vec, y_vec = planning_output.x_vec, planning_output.y_vec
+  else:
+    x_vec, y_vec = coord_tf.global_to_local(planning_output.x_vec, planning_output.y_vec)
   time_vec = planning_output.time_vec
 
   ref_theta_deg_vec = []

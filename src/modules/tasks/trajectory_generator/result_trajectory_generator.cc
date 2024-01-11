@@ -96,7 +96,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
     dkappa_vec[i] = traj_points[i].dkappa;
     ddkappa_vec[i] = traj_points[i].ddkappa;
   }
-
+  JSON_DEBUG_VECTOR("traj_s_vec", s_vec, 3)
   s_t_spline.set_points(t_vec, s_vec);
   l_t_spline.set_points(t_vec, l_vec);
 

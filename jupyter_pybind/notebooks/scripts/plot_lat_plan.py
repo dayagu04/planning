@@ -33,7 +33,7 @@ class LocalViewSlider:
 def slider_callback(bag_time):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
-  update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data)
+  update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g_is_display_enu)
 
   push_notebook()
 

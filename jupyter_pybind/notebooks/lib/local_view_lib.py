@@ -1114,7 +1114,7 @@ def load_obstacle_radar(dataLoader, layer_manager, fig_local_view):
       layer_manager.AddLayer(obstacle_text_layer6, 'obstacle_text_layer6', obstacle_rl_text_generate, 'obstacle_rl_text_generate', 3)
       layer_manager.AddLayer(obstacle_text_layer7, 'obstacle_text_layer7', obstacle_rr_text_generate, 'obstacle_rr_text_generate', 3)
 
-def load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, is_display_enu = False):
+def load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, g_is_display_enu = False):
   if dataLoader.ehr_parking_map_msg['enable'] == True:
     parking_space_generate = CommonGenerator()
     road_mark_generate = CommonGenerator()
@@ -1126,7 +1126,7 @@ def load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, is_display_e
         # print('find ehr_parking_map_msg error')
         continue
       flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
-      parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y = generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, is_display_enu)
+      parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y = generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, g_is_display_enu)
       road_mark_generate.xys.append((road_mark_boxes_y, road_mark_boxes_x))    
       parking_space_generate.xys.append((parking_space_boxes_y, parking_space_boxes_x))
           
@@ -1138,8 +1138,8 @@ def load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, is_display_e
     road_mark_params_layer = PatchLayer(fig_local_view ,road_mark_params)
     layer_manager.AddLayer(road_mark_params_layer, 'road_mark_params_layer', road_mark_generate, 'road_mark_generate', 2)
 
-def load_ground_line(dataLoader, layer_manager, fig_local_view, is_display_enu = False):
-  if dataLoader.ground_line_msg['enable'] == True:
+def load_ground_line(dataLoader, layer_manager, fig_local_view, g_is_display_enu = False):
+  if dataLoader.ground_line_msg['enable'] == False:
     groundline_generate = CommonGenerator()
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
       flag, ground_line_msg = find(dataLoader.ground_line_msg, ground_line_timestamps[i])
@@ -1147,7 +1147,7 @@ def load_ground_line(dataLoader, layer_manager, fig_local_view, is_display_enu =
         groundline_generate.xys.append(([], []))
         continue
       flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
-      groundline_x_vec, groundline_y_vec = generate_ground_line(ground_line_msg, loc_msg, is_display_enu)
+      groundline_x_vec, groundline_y_vec = generate_ground_line(ground_line_msg, loc_msg, g_is_display_enu)
       groundline_generate.xys.append((groundline_y_vec, groundline_x_vec))
     groundline_generate.ts = np.array(plan_debug_ts)
     groundline_params_layer = MultiCurveLayer(fig_local_view ,ground_line_params)
@@ -1160,7 +1160,7 @@ def draw_local_view(dataLoader, layer_manager):
     fig_local_view.x_range.flipped = True
     # toolbar
     fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
-    is_display_enu = False
+    g_is_display_enu = True
     # 加载planning debug部分信息, 加载planning 输入topic的时间戳
     fix_lane_xys = []
     origin_lane_xys = []
@@ -1245,7 +1245,7 @@ def draw_local_view(dataLoader, layer_manager):
         cur_pos_xn = loc_msg.position.position_boot.x
         cur_pos_yn = loc_msg.position.position_boot.y
         cur_yaw = loc_msg.orientation.euler_boot.yaw
-        if is_display_enu:
+        if g_is_display_enu:
           cur_location_point_generator.xys.append(([cur_pos_yn], [cur_pos_xn],[0.1]))
         else:
           cur_location_point_generator.xys.append(([0], [0],[0.1]))
@@ -1258,7 +1258,7 @@ def draw_local_view(dataLoader, layer_manager):
             continue
           pos_xn_i = dataLoader.loc_msg['data'][i].position.position_boot.x
           pos_yn_i = dataLoader.loc_msg['data'][i].position.position_boot.y
-          if is_display_enu:
+          if g_is_display_enu:
             ego_local_x, ego_local_y = pos_xn_i, pos_yn_i
           else:
             ego_local_x, ego_local_y = global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
@@ -1367,7 +1367,7 @@ def draw_local_view(dataLoader, layer_manager):
           find_enu = False
           flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i_index])
           # try:
-          center_line_list = load_lane_center_lines(fusion_road_msg.reference_line_msg, find_enu, loc_msg, is_display_enu)
+          center_line_list = load_lane_center_lines(fusion_road_msg.reference_line_msg, find_enu, loc_msg, g_is_display_enu)
           # except:
           #   print("old interface before 2.2.3")
           #   center_line_list = load_lane_center_lines(fusion_road_msg.lanes, find_enu, loc_msg)
@@ -1447,7 +1447,7 @@ def draw_local_view(dataLoader, layer_manager):
     # # 加载自车信息
     ego_generate = CommonGenerator()
     car_xb, car_yb = load_car_params_patch()
-    if is_display_enu:
+    if g_is_display_enu:
       for localization_timestamp in localization_timestamps:
         flag, loc_msg = find(dataLoader.loc_msg, localization_timestamp)
         if not flag:
@@ -1487,7 +1487,7 @@ def draw_local_view(dataLoader, layer_manager):
                 loc_msg.velocity.velocity_boot.vy * loc_msg.velocity.velocity_boot.vy + \
                 loc_msg.velocity.velocity_boot.vz * loc_msg.velocity.velocity_boot.vz)
           vel_ego = linear_velocity_from_wheel
-          if is_display_enu:
+          if g_is_display_enu:
             ego_text_pos = [loc_msg.position.position_boot.x, loc_msg.position.position_boot.y]
         elif flag:
           vel_ego = vs_msg.vehicle_speed
@@ -1518,7 +1518,7 @@ def draw_local_view(dataLoader, layer_manager):
           obstacle_snrd_text_generate.xys.append(([], [], []))
           continue
         obstacles_info_all = load_obstacle_params(fus_msg.fusion_object, plan_debug.environment_model_info)
-        if is_display_enu:
+        if g_is_display_enu:
           obstacle_fusion_generate.xys.append((obstacles_info_all[1]['obstacles_y'], obstacles_info_all[1]['obstacles_x']))
           obstacle_snrd_generate.xys.append((obstacles_info_all[4]['obstacles_y'], obstacles_info_all[4]['obstacles_x']))
           obstacle_fusion_text_generate.xys.append((obstacles_info_all[1]['pos_y'], obstacles_info_all[1]['pos_x'], obstacles_info_all[1]['obs_label']))
@@ -1564,7 +1564,7 @@ def draw_local_view(dataLoader, layer_manager):
           continue
         # 定位的选择需要修改
         try:
-          prediction_dict = load_prediction_objects(prediction_msg.prediction_obstacle_list, loc_msg, is_display_enu)
+          prediction_dict = load_prediction_objects(prediction_msg.prediction_obstacle_list, loc_msg, g_is_display_enu)
           prediction_generator_1.xys.append((prediction_dict[0]['y'], prediction_dict[0]['x'],[0.3]*len(prediction_dict[0]['x'])))
           prediction_generator_2.xys.append((prediction_dict[1]['y'], prediction_dict[1]['x'],[0.3]*len(prediction_dict[1]['x'])))
           prediction_generator_3.xys.append((prediction_dict[2]['y'], prediction_dict[2]['x'],[0.3]*len(prediction_dict[2]['x'])))
@@ -1628,7 +1628,7 @@ def draw_local_view(dataLoader, layer_manager):
               if not flag:
                 plan_traj_x, plan_traj_y = [], []
               else:
-                plan_traj_x, plan_traj_y, plan_dict = generate_planning_trajectory(trajectory, loc_msg, is_display_enu) 
+                plan_traj_x, plan_traj_y, plan_dict = generate_planning_trajectory(trajectory, loc_msg, g_is_display_enu) 
             else:
               plan_traj_x, plan_traj_y = [], []
             
@@ -1670,7 +1670,7 @@ def draw_local_view(dataLoader, layer_manager):
             control_generator.xys.append(([], []))
             continue
           flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i_index])
-          mpc_dx, mpc_dy = generate_control(ctrl_msg, loc_msg, is_display_enu)
+          mpc_dx, mpc_dy = generate_control(ctrl_msg, loc_msg, g_is_display_enu)
           control_generator.xys.append((mpc_dy, mpc_dx))
       control_generator.ts = np.array(plan_debug_ts)
       control_layer = CurveLayer(fig_local_view, control_params)
@@ -1852,7 +1852,7 @@ def draw_local_view(dataLoader, layer_manager):
     load_obstacle_radar(dataLoader, layer_manager, fig_local_view)
 
     # # 加载hpp ehr
-    load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, is_display_enu)
+    load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
     load_ground_line(dataLoader, layer_manager, fig_local_view)
     
     return fig_local_view, (tab_debug_layer1.plot, tab_debug_layer2.plot)

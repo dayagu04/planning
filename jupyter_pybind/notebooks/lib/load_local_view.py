@@ -20,7 +20,7 @@ from collections import namedtuple
 from functools import  partial
 from bokeh.models import ColumnDataSource
 import bokeh.plotting as bkp
-from bokeh.models import WheelZoomTool, HoverTool, TapTool, CustomJS
+from bokeh.models import WheelZoomTool, HoverTool, TapTool, CustomJS, CheckboxGroup
 from cyber_record.record import Record
 from google.protobuf.json_format import MessageToJson
 
@@ -31,6 +31,7 @@ Road_boundary_max_line_size = 50
 Lane_boundary_max_line_size = 300
 timestamp_shrink = 1e6
 is_vis_map = False
+g_is_display_enu = True
 
 class LoadCyberbag:
   def __init__(self, path) -> None:
@@ -365,7 +366,7 @@ class LoadCyberbag:
                          "RealTimeLateralMotionCostTime", "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime",
                          "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime", "RealTime_stop_start_state", "RealTime_v_target_start_stop", "RealTime_STANDSTILL"]
 
-      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec", "limit_v_type"]
+      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type"]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
@@ -690,7 +691,6 @@ class LoadCyberbag:
     return fig1
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
-  is_display_enu = True
   ### step 1: 时间戳对齐
   loc_msg_idx = 0
   if bag_loader.loc_msg['enable'] == True:
@@ -809,9 +809,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     loc_msg = bag_loader.loc_msg['data'][loc_msg_idx]
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
-
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
-
     coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
 
     ego_xb, ego_yb = [], []
@@ -825,7 +823,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       #   continue
       pos_xn_i = bag_loader.loc_msg['data'][i].position.position_boot.x
       pos_yn_i = bag_loader.loc_msg['data'][i].position.position_boot.y
-      if is_display_enu:
+      if g_is_display_enu:
         ego_local_x, ego_local_y = pos_xn_i, pos_yn_i
       else:
         ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
@@ -841,8 +839,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'ego_xn': ego_xn,
       'ego_yn': ego_yn,
     })
-    
-    if is_display_enu: 
+
+    if g_is_display_enu: 
       # car pos in global coordinates
       car_xn = []
       car_yn = []
@@ -858,6 +856,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       local_view_data['data_ego_pos_point'].data.update({
         'ego_pos_point_x': [cur_pos_xn],
         'ego_pos_point_y': [cur_pos_yn],
+        'ego_pos_point_theta': [cur_yaw],
       })
     else:
        local_view_data['data_car'].data.update({
@@ -867,6 +866,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
        local_view_data['data_ego_pos_point'].data.update({
         'ego_pos_point_x': [0],
         'ego_pos_point_y': [0],
+        'ego_pos_point_theta': [0],
       })
 
     try:
@@ -880,7 +880,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     
 
     steer_deg = bag_loader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
-    if is_display_enu:
+    if g_is_display_enu:
       local_view_data['data_text'].data.update({
         'vel_ego_text': ['v={:.2f}\nsteer={:.2f}'.format(round(vel_ego, 2), round(steer_deg, 2))],
         'text_xn': [cur_pos_xn],
@@ -957,7 +957,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         pass
 
     find_enu = False
-    center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg, find_enu, loc_msg, is_display_enu)
+    center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg, find_enu, loc_msg, g_is_display_enu)
     # print(center_line_list)
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
 
@@ -1028,6 +1028,80 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'origin_lane_x': center_line_list[i]['line_x_vec'],
           'origin_lane_y':center_line_list[i]['line_y_vec']
         })
+    
+    plan_debug_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
+    plan_traj_x = plan_debug_json["assembled_x"]
+    plan_traj_y = plan_debug_json["assembled_y"]
+    plan_traj_theta = plan_debug_json["assembled_theta"]
+    plan_traj_s = plan_debug_json["traj_s_vec"]
+    if min(plan_traj_x) != max(plan_traj_x) or min(plan_traj_y) != max(plan_traj_y):
+      if not g_is_display_enu:
+        plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_traj_x, plan_traj_y)
+        cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
+        plan_traj_theta_local = []
+        for i in range(len(plan_traj_theta)):
+          plan_traj_theta_local.append(plan_traj_theta[i] - cur_yaw)
+        plan_traj_theta = plan_traj_theta_local
+          
+      local_view_data['data_planning_raw'].data.update({
+          'plan_traj_y' : plan_traj_y,
+          'plan_traj_x' : plan_traj_x,
+          'plan_traj_s': plan_traj_s
+      })
+
+      car_xb_traj = []
+      car_yb_traj = []
+      for i in range(len(plan_traj_x) - 1, -1, -1):
+        car_xb_traj_point = []
+        car_yb_traj_point = []
+        for j in range(len(car_xb)):
+          tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], plan_traj_x[i], plan_traj_y[i], plan_traj_theta[i])
+          car_xb_traj_point.append(tmp_x)
+          car_yb_traj_point.append(tmp_y)
+        car_xb_traj.append(car_xb_traj_point)
+        car_yb_traj.append(car_yb_traj_point)
+      local_view_data['data_car_traj_raw'].data.update({
+        'car_yb_traj' : car_yb_traj,
+        'car_xb_traj' : car_xb_traj,
+      })
+    else:
+      print("no car_traj_raw json debug info!")
+
+    lat_init_state = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_input.init_state
+    init_state_x = lat_init_state.x
+    init_state_y = lat_init_state.y
+    init_state_theta = lat_init_state.theta
+    init_state_delta = lat_init_state.delta
+    lon_init_state = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].longitudinal_motion_planning_input.init_state
+    init_state_s = lon_init_state.s
+    init_state_v = lon_init_state.v
+    init_state_a = lon_init_state.a
+    replan_status = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]["replan_status"]
+    init_pos_point_x = []
+    init_pos_point_y = []
+    init_pos_point_theta = []
+    if g_is_display_enu:
+      init_pos_point_x.append(init_state_x)
+      init_pos_point_y.append(init_state_y)
+      init_pos_point_theta.append(init_state_theta)
+    else:
+      init_pos_point_x, init_pos_point_y = coord_tf.global_to_local([init_state_x], [init_state_y])
+      temp_theta = init_state_theta - bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
+      init_pos_point_theta.append(temp_theta)
+      
+    local_view_data['data_init_pos_point'].data.update({
+      'init_pos_point_y': init_pos_point_y,
+      'init_pos_point_x': init_pos_point_x,
+      'init_pos_point_theta': init_pos_point_theta,
+      'init_state_x': [init_state_x], 
+      'init_state_y': [init_state_y],
+      'init_state_theta': [init_state_theta], 
+      'init_state_delta': [init_state_delta],
+      'init_state_s': [init_state_s],
+      'init_state_v': [init_state_v], 
+      'init_state_a': [init_state_a],
+      'replan_status': [replan_status],
+    })
 
     # local_view_data['data_text'].data.update({
     #   'vel_ego_text': ['v={:.2f}({:d})\nsteer={:.2}'.format(round(vel_ego, 2),current_lane_virtual_id, round(steer_deg, 2))],
@@ -1060,7 +1134,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           key_name = 'data_fus_obj'
         else:
           key_name = 'data_snrd_obj'
-        if is_display_enu:
+        if g_is_display_enu:
           local_view_data[key_name].data.update({
             'obstacles_x': obstacles_info['obstacles_x'],
             'obstacles_y': obstacles_info['obstacles_y'],
@@ -1091,7 +1165,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           key_name = 'data_me_obj'
         else:
           key_name = 'data_snrd_obj'
-        if is_display_enu:
+        if g_is_display_enu:
           local_view_data[key_name].data.update({
             'obstacles_x': obstacles_info['obstacles_x'],
             'obstacles_y': obstacles_info['obstacles_y'],
@@ -1123,7 +1197,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           key_name = data_radar_obj[i]
         else:
           continue
-        if is_display_enu:
+        if g_is_display_enu:
           local_view_data[key_name].data.update({
             'obstacles_x': [],
             'obstacles_y': [],
@@ -1144,6 +1218,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   ### step 3: 加载planning轨迹信息
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
+    plan_traj_s = []
+    for i in range(len(trajectory.trajectory_points)):
+      plan_traj_s.append(trajectory.trajectory_points[i].distance)
     if trajectory.trajectory_type == 0: # 实时轨迹
       try:
         planning_polynomial = trajectory.target_reference.polynomial
@@ -1151,7 +1228,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       except:
         plan_traj_x, plan_traj_y = [], []
     else:
-      plan_traj_x, plan_traj_y, plan_dict = generate_planning_trajectory(trajectory, bag_loader.loc_msg['data'][loc_msg_idx], is_display_enu)
+      plan_traj_x, plan_traj_y, plan_traj_theta, plan_dict = generate_planning_trajectory(trajectory, bag_loader.loc_msg['data'][loc_msg_idx], g_is_display_enu)
       for i in range(5):
         local_view_data['data_planning_' + str(i)].data.update({
           'plan_traj_y' : plan_dict[i]['y'],
@@ -1161,6 +1238,23 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     local_view_data['data_planning'].data.update({
         'plan_traj_y' : plan_traj_y,
         'plan_traj_x' : plan_traj_x,
+        'plan_traj_s' : plan_traj_s,
+    })
+
+    car_xb_traj = []
+    car_yb_traj = []
+    for i in range(len(plan_traj_x) - 1, -1, -1):
+      car_xb_traj_point = []
+      car_yb_traj_point = []
+      for j in range(len(car_xb)):
+        tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], plan_traj_x[i], plan_traj_y[i], plan_traj_theta[i])
+        car_xb_traj_point.append(tmp_x)
+        car_yb_traj_point.append(tmp_y)
+      car_xb_traj.append(car_xb_traj_point)
+      car_yb_traj.append(car_yb_traj_point)
+    local_view_data['data_car_traj'].data.update({
+      'car_yb_traj' : car_yb_traj,
+      'car_xb_traj' : car_xb_traj,
     })
       
   # 加载prediction_msg
@@ -1173,7 +1267,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         })
       prediction_info = bag_loader.prediction_msg['data'][pred_msg_idx]
       # 定位的选择需要修改
-      prediction_dict = load_prediction_objects(prediction_info.prediction_obstacle_list, loc_msg, is_display_enu)
+      prediction_dict = load_prediction_objects(prediction_info.prediction_obstacle_list, loc_msg, g_is_display_enu)
       for i in range(5):
         local_view_data['data_prediction_' + str(i)].data.update({
           'prediction_y' : prediction_dict[i]['y'],
@@ -1185,10 +1279,26 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   # load control
   if bag_loader.ctrl_msg['enable'] == True:
-    mpc_dx, mpc_dy = generate_control(bag_loader.ctrl_msg['data'][ctrl_msg_idx], loc_msg, is_display_enu)
+    mpc_dx, mpc_dy, mpc_dtheta = generate_control(bag_loader.ctrl_msg['data'][ctrl_msg_idx], loc_msg, g_is_display_enu)
     local_view_data['data_control'].data.update({
         'mpc_dx' : mpc_dx,
         'mpc_dy' : mpc_dy,
+    })
+
+    car_xb_traj = []
+    car_yb_traj = []
+    for i in range(len(mpc_dx) - 1, -1, -1):
+      car_xb_traj_point = []
+      car_yb_traj_point = []
+      for j in range(len(car_xb)):
+        tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], mpc_dx[i], mpc_dy[i], mpc_dtheta[i])
+        car_xb_traj_point.append(tmp_x)
+        car_yb_traj_point.append(tmp_y)
+      car_xb_traj.append(car_xb_traj_point)
+      car_yb_traj.append(car_yb_traj_point)
+    local_view_data['data_car_traj_mpc'].data.update({
+      'car_yb_traj' : car_yb_traj,
+      'car_xb_traj' : car_xb_traj,
     })
 
   # # 加载ehr的lane信息
@@ -1255,7 +1365,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # 加载ehr_parking_map
   if bag_loader.ehr_parking_map_msg['enable'] == True:
     ehr_parking_map_msg = bag_loader.ehr_parking_map_msg['data'][ehr_parking_map_msg_idx]
-    parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y = generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, is_display_enu)
+    parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y = generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, g_is_display_enu)
     local_view_data['data_parking_space'].data.update({
       'parking_space_x' : parking_space_boxes_x,
       'parking_space_y' : parking_space_boxes_y,
@@ -1268,7 +1378,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   if bag_loader.ground_line_msg['enable'] == True:
     print("groundline_msg_idx", groundline_msg_idx)
     ground_line_msg = bag_loader.ground_line_msg['data'][groundline_msg_idx]
-    groundline_x_vec, groundline_y_vec = generate_ground_line(ground_line_msg, loc_msg, is_display_enu)
+    groundline_x_vec, groundline_y_vec = generate_ground_line(ground_line_msg, loc_msg, g_is_display_enu)
     local_view_data['data_ground_line'].data.update({
       'ground_line_x' : groundline_x_vec,
       'ground_line_y' : groundline_y_vec,
@@ -1277,9 +1387,24 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
 def load_local_view_figure():
   data_car = ColumnDataSource(data = {'car_yb':[], 'car_xb':[]})
+  data_car_traj = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
+  data_car_traj_raw = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
+  data_car_traj_mpc = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
   data_ego = ColumnDataSource(data = {'ego_yb':[], 'ego_xb':[]})
   data_ego_pos_point = ColumnDataSource(data = {'ego_pos_point_y':[],
-                                             'ego_pos_point_x':[],})
+                                                'ego_pos_point_x':[],
+                                                'ego_pos_point_theta':[]})
+  data_init_pos_point = ColumnDataSource(data = {'init_pos_point_y':[],
+                                                 'init_pos_point_x':[],
+                                                 'init_pos_point_theta':[],
+                                                 'init_state_x':[], 
+                                                 'init_state_y':[],
+                                                 'init_state_theta':[], 
+                                                 'init_state_delta':[],
+                                                 'init_state_s':[],
+                                                 'init_state_v':[], 
+                                                 'init_state_a':[],
+                                                 'replan_status':[]})
   data_text = ColumnDataSource(data = {'vel_ego_text':[], 'text_xn': [],  'text_yn': []})
   data_lane_0 = ColumnDataSource(data = {'line_0_y':[], 'line_0_x':[]})
   data_lane_1 = ColumnDataSource(data = {'line_1_y':[], 'line_1_x':[]})
@@ -1352,8 +1477,12 @@ def load_local_view_figure():
   data_snrd_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obs_label':[]})
+  data_planning_raw = ColumnDataSource(data = {'plan_traj_y':[],
+                                      'plan_traj_x':[],
+                                      'plan_traj_s':[],})
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
-                                      'plan_traj_x':[],})
+                                      'plan_traj_x':[],
+                                      'plan_traj_s':[],})
   data_planning_0 = ColumnDataSource(data = {'plan_traj_y':[],
                                       'plan_traj_x':[],})
   data_planning_1 = ColumnDataSource(data = {'plan_traj_y':[],
@@ -1402,8 +1531,12 @@ def load_local_view_figure():
                }
 
   local_view_data = {'data_car':data_car, \
+                     'data_car_traj':data_car_traj, \
+                     'data_car_traj_raw':data_car_traj_raw, \
+                     'data_car_traj_mpc':data_car_traj_mpc, \
                      'data_ego':data_ego, \
                      'data_ego_pos_point': data_ego_pos_point, \
+                     'data_init_pos_point': data_init_pos_point, \
                      'data_text':data_text, \
                      'data_lane_0':data_lane_0, \
                      'data_lane_1':data_lane_1, \
@@ -1454,6 +1587,7 @@ def load_local_view_figure():
                      'data_radar_rl_obj':data_radar_rl_obj, \
                      'data_radar_rr_obj':data_radar_rr_obj, \
                      'data_snrd_obj':data_snrd_obj, \
+                     'data_planning_raw':data_planning_raw,\
                      'data_planning':data_planning,\
                      'data_planning_0':data_planning_0,\
                      'data_planning_1':data_planning_1,\
@@ -1480,12 +1614,15 @@ def load_local_view_figure():
       local_view_data[key] = value
 
   ### figures config
-
-  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=900, match_aspect = True, aspect_scale=1)
+  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1100, match_aspect = True, aspect_scale=1)
 
   fig1.x_range.flipped = True
   # figure plot
-  f1 = fig1.patch('car_yb', 'car_xb', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
+  f1 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj')
+  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_raw, fill_color = "deepskyblue", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_raw')
+  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_mpc, fill_color = "salmon", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_mpc')
+  fig1.patch('car_yb', 'car_xb', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
+  fig1.circle('init_pos_point_y', 'init_pos_point_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "deepskyblue", fill_alpha = 1, legend_label = 'init_state')
   fig1.circle('ego_pos_point_y', 'ego_pos_point_x', source = data_ego_pos_point, radius = 0.1, line_width = 2,  line_color = 'purple', line_alpha = 1, fill_alpha = 1, legend_label = 'ego_pos_point')
   fig1.line('ego_yb', 'ego_xb', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.text('text_yn', 'text_xn', text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'car')
@@ -1553,6 +1690,7 @@ def load_local_view_figure():
   fig1.patches('obstacles_y', 'obstacles_x', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd')
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fusion_info')
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info')
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_raw, line_width = 5, line_color = 'deepskyblue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'raw plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
   fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
   fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_1, radius = 0.03, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
@@ -1568,6 +1706,21 @@ def load_local_view_figure():
   fig1.patches('parking_space_y', 'parking_space_x', source = data_parking_space, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'parking_space')
   fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'road_mark')
   fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line, line_width = 2, line_color = 'green', line_dash = 'dotted', legend_label = 'ground_line')
+  
+  hover1_1 = HoverTool(renderers=[fig1.renderers[4]], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
+                                                                ('lat init x', '@init_state_x'), ('lat init y', '@init_state_y'), ('lat init theta', '@init_state_theta'), 
+                                                                ('lat init delta', '@init_state_delta'), ('lon init s', '@init_state_s'), ('lon init v', '@init_state_v'), 
+                                                                ('lon init a', '@init_state_a'), ('replan status', '@replan_status')])
+  hover1_2 = HoverTool(renderers=[fig1.renderers[5]], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
+  hover1_3 = HoverTool(renderers=[fig1.renderers[50]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
+  hover1_4 = HoverTool(renderers=[fig1.renderers[51]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
+  hover1_5 = HoverTool(renderers=[fig1.renderers[57]], tooltips=[('index', '$index')])
+
+  fig1.add_tools(hover1_1)
+  fig1.add_tools(hover1_2)
+  fig1.add_tools(hover1_3)
+  fig1.add_tools(hover1_4)
+  fig1.add_tools(hover1_5)
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 
