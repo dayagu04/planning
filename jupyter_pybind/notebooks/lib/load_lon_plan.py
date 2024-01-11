@@ -290,6 +290,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     print("dbw_status = ", planning_json['dbw_status'])
     print("replan_status = ", planning_json['replan_status'])
     print("lat_err = ", planning_json['lat_err'])
+    print("theta_err = ", planning_json['theta_err'])
     print("lon_err = ", planning_json['lon_err'])
     print("dist_err = ", planning_json['dist_err'])
 

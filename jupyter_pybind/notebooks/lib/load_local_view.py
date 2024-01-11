@@ -355,7 +355,7 @@ class LoadCyberbag:
                          "VisionLonBehavior_nearest_car_track_id_one", "VisionLonBehavior_nearest_car_track_id_two", "VisionLonBehavior_nearest_car_track_id_three",
                          "VisionLonBehavior_cutin_v_limit", "VisionLonBehavior_cutin_status",
                          'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', 'VisionLonBehavior_STANDSTILL', "VisionLonBehavior_final_v_target",
-                         "solver_condition", "dist_err", "lat_err", "lon_err", "dbw_status",
+                         "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status",
                          "RealTime_v_ego", "RealTime_gap_v_limit_lc",
                          "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_car_cut_in_id",
                          "RealTime_lead_one_id", "RealTime_lead_one_distance", "RealTime_lead_one_velocity", "RealTime_lead_one_desire_vel",

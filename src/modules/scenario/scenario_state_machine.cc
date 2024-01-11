@@ -74,9 +74,9 @@ bool ScenarioStateMachine::update(planning::framework::Frame *frame) {
       // update lc_req_mgr_
       if (not session_->is_hpp_scene()) {
         lc_req_mgr_->Update(fsm_context_.state,
-                          session_->environmental_model().IsOnRoute());
+                            session_->environmental_model().IsOnRoute());
       }
-      
+
       gen_map_turn_signal();
       update_state_machine();
       post_process();

@@ -124,6 +124,10 @@ class EgoStateManager {
   framework::Session *session_ = nullptr;
   EgoPlanningEgoStateManagerConfig config_;
   double parking_cruise_speed_;
+  double hpp_max_replan_lat_err_;
+  double hpp_max_replan_theta_err_;
+  double hpp_max_replan_lon_err_;
+  double hpp_max_replan_dist_err_;
   double navi_timestamp_;
   uint64_t timestamp_us_ = 0;
   uint64_t timestamp_us_last_ = 0;

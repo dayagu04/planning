@@ -187,10 +187,10 @@ void PlanningAdapter::Proc() {
     local_view_.ground_line_perception = ground_line_perception_msg_;
     local_view_.ground_line_perception_recv_time =
         ground_line_perception_msg_recv_time_;
-    input_topic_timestamp->set_ground_line(ground_line_perception_msg_.header().timestamp());
-    input_topic_latency->set_ground_line(
-        get_latency(start_time,
-        ground_line_perception_msg_.header().timestamp()));
+    input_topic_timestamp->set_ground_line(
+        ground_line_perception_msg_.header().timestamp());
+    input_topic_latency->set_ground_line(get_latency(
+        start_time, ground_line_perception_msg_.header().timestamp()));
 
     local_view_.localization_estimate = localization_estimate_msg_;
     local_view_.localization_estimate_recv_time =
@@ -204,8 +204,8 @@ void PlanningAdapter::Proc() {
     local_view_.localization_recv_time = localization_msg_recv_time_;
     input_topic_timestamp->set_localization(
         localization_msg_.header().timestamp());
-    input_topic_latency->set_localization(get_latency(
-        start_time, localization_msg_.header().timestamp()));
+    input_topic_latency->set_localization(
+        get_latency(start_time, localization_msg_.header().timestamp()));
 
     local_view_.fusion_objects_info = fusion_objects_info_msg_;
     local_view_.fusion_objects_info_recv_time =
@@ -252,7 +252,7 @@ void PlanningAdapter::Proc() {
         parking_map_info_msg_.header().timestamp());
     input_topic_latency->set_ehr_parking_map(
         get_latency(start_time, parking_map_info_msg_.header().timestamp()));
-        
+
     local_view_.function_state_machine_info = func_state_machine_msg_;
     input_topic_timestamp->set_function_state_machine(
         func_state_machine_msg_.header().timestamp());

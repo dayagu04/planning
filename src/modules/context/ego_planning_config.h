@@ -959,8 +959,20 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
     /* read config from json */
     parking_cruise_speed = read_json_key<double>(json, "parking_cruise_speed",
                                                  parking_cruise_speed);
+    hpp_max_replan_lat_err = read_json_key<double>(
+        json, "hpp_max_replan_lat_err_", hpp_max_replan_lat_err);
+    hpp_max_replan_theta_err = read_json_key<double>(
+        json, "hpp_max_replan_theta_err", hpp_max_replan_theta_err);
+    hpp_max_replan_lon_err = read_json_key<double>(
+        json, "hpp_max_replan_lon_err", hpp_max_replan_lon_err);
+    hpp_max_replan_dist_err = read_json_key<double>(
+        json, "hpp_max_replan_dist_err", hpp_max_replan_dist_err);
   }
-  double parking_cruise_speed = parking_cruise_speed;
+  double parking_cruise_speed = 5.55;
+  double hpp_max_replan_lat_err = 0.45;
+  double hpp_max_replan_theta_err = 12.0;
+  double hpp_max_replan_lon_err = 0.55;
+  double hpp_max_replan_dist_err = 0.8;
 };
 
 struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {

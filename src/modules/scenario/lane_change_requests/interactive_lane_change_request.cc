@@ -46,9 +46,11 @@ void IntRequest::Update(int lc_status) {
     counter_right_ = 0;
     counter_left_++;
     // 获取左车道线型
-    auto left_lane_boundary = virtual_lane_mgr_->get_current_lane()
-                                  ->get_left_lane_boundary();
-    auto left_boundary_type =   left_lane_boundary.type_segments_size() > 0 ?  left_lane_boundary.type_segments(0).type() : Common::LaneBoundaryType::MARKING_UNKNOWN;
+    auto left_lane_boundary =
+        virtual_lane_mgr_->get_current_lane()->get_left_lane_boundary();
+    auto left_boundary_type = left_lane_boundary.type_segments_size() > 0
+                                  ? left_lane_boundary.type_segments(0).type()
+                                  : Common::LaneBoundaryType::MARKING_UNKNOWN;
     // 实线禁止换道
     if (left_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) {
       counter_left_ = -5;
@@ -77,9 +79,11 @@ void IntRequest::Update(int lc_status) {
     counter_left_ = 0;
     counter_right_ = counter_right_ + 1;
     // 获取右车道线型,实线禁止换道
-    auto right_lane_boundary = virtual_lane_mgr_->get_current_lane()
-                                  ->get_right_lane_boundary();
-    auto right_boundary_type =   right_lane_boundary.type_segments_size() > 0 ?  right_lane_boundary.type_segments(0).type() : Common::LaneBoundaryType::MARKING_UNKNOWN;
+    auto right_lane_boundary =
+        virtual_lane_mgr_->get_current_lane()->get_right_lane_boundary();
+    auto right_boundary_type = right_lane_boundary.type_segments_size() > 0
+                                   ? right_lane_boundary.type_segments(0).type()
+                                   : Common::LaneBoundaryType::MARKING_UNKNOWN;
     if (right_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) {
       counter_right_ = -5;
     }
