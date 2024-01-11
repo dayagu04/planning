@@ -439,6 +439,10 @@ const uint8_t CalArcSteer(const Arc &arc);
 
 const uint8_t CalLineSegGear(const LineSegment &line_seg);
 
+const uint8_t ReverseGear(const uint8_t gear);
+
+const uint8_t ReverseSteer(const uint8_t steer);
+
 const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
                                     const uint8_t current_arc_steer);
 

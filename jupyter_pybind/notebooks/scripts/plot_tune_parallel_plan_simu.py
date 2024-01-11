@@ -44,7 +44,7 @@ fig1.patches('y_vec', 'x_vec', source = data_car_box, fill_color = "#98FB98", fi
 fig1.multi_line('y_vec', 'x_vec',source = data_tlane, line_width = 1.5, line_color = 'black', line_dash = 'solid',legend_label = 'T-lane')
 fig1.line('y_vec','x_vec',source =data_channel,  line_width = 1, line_color = 'black', line_dash = 'solid',legend_label = 'channel')
 
-fig1.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
+fig1.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", fill_alpha = 0.2, line_color = "black", line_width = 1, legend_label = 'car')
 fig1.circle('y','x', source = data_tag_point, size=8, color='grey', legend_label = 'tag point')
 
 fig1.circle('y','x', source = data_start_pos, size=8, color='red', legend_label = 'start_pos')
@@ -58,28 +58,22 @@ parallel_planning_py.Init()
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-15, max=15, value=-2.0, step=0.01)
+    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-15, max=15, value=0.0, step=0.01)
     self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=3.0, step=0.01)
     self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value=0.0, step=0.1)
-
     self.s_init_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "s_init",min=-10.0, max=10.0, value=0.0, step=0.01)
 
-    self.target_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "target_x",min=-15, max=15.0, value=-2.0, step=0.01)
-    self.target_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "target_y",min=-8.0, max=15.0, value=0.0, step=0.01)
-    self.target_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "target_heading",min=-90.0, max=90.0, value=0.0, step=0.1)
+    self.tlane_p_outside_deta_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_outside_deta_x",min=-15, max=15, value=0.0, step=0.01)
+    self.tlane_p_outside_deta_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_outside_deta_y",min=-15, max=15, value=0.0, step=0.01)
+    self.tlane_p_inside_deta_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_inside_deta_x",min=-15, max=15, value=0.0, step=0.01)
+    self.tlane_p_inside_deta_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_inside_deta_y",min=-15, max=15, value=0.0, step=0.01)
 
-    self.tlane_p0_deta_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p0_deta_x",min=-15, max=15, value=0.0, step=0.01)
-    self.tlane_p0_deta_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p0_deta_y",min=-15, max=15, value=0.0, step=0.01)
+    self.tlane_pt_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_pt_x",min=-2.0, max=2.0, value=1.2, step=0.01)
+    self.tlane_pt_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_pt_y",min=-2.0, max=2.0, value=0.0, step=0.01)
+    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_y",min=3.0, max=20.0, value=6.5, step=0.1)
+    self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ds",min=0.025, max=1.0, value=0.2, step=0.025)
 
-    self.tlane_p1_deta_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p1_deta_x",min=-15, max=15, value=0.0, step=0.01)
-    self.tlane_p1_deta_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p1_deta_y",min=-15, max=15, value=0.0, step=0.01)
-
-    self.tlane_pt_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_pt_x",min=-5.0, max=5.0, value=-2.0, step=0.01)
-    self.tlane_pt_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_pt_x",min=-0.5, max=0.5, value=0, step=0.01)
-    self.channel_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_y",min=5.0, max=20.0, value=8.0, step=0.1)
-
-    self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ds",min=0.025, max=1.0, value=0.3, step=0.025)
-
+    self.set_left_slot_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set left slot",min=0, max=1, value=0, step=1)
     self.set_start_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_start",min=0, max=1, value=0, step=1)
     self.reset_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "reset_target",min=0, max=1, value=0, step=1)
     self.fix_result_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "fix_result",min=0, max=1, value=0, step=1)
@@ -92,14 +86,15 @@ class LocalViewSlider:
                                          ego_y = self.ego_y_slider,
                                          ego_heading = self.ego_heading_slider,
                                          s_init = self.s_init_slider,
-                                         tlane_p0_deta_x = self.tlane_p0_deta_x_slider,
-                                         tlane_p0_deta_y = self.tlane_p0_deta_y_slider,
-                                         tlane_p1_deta_x = self.tlane_p1_deta_x_slider,
-                                         tlane_p1_deta_y = self.tlane_p1_deta_y_slider,
+                                         tlane_p_outside_deta_x = self.tlane_p_outside_deta_x_slider,
+                                         tlane_p_outside_deta_y = self.tlane_p_outside_deta_y_slider,
+                                         tlane_p_inside_deta_x = self.tlane_p_inside_deta_x_slider,
+                                         tlane_p_inside_deta_y = self.tlane_p_inside_deta_y_slider,
                                          tlane_pt_x = self.tlane_pt_x_slider,
                                          tlane_pt_y = self.tlane_pt_y_slider,
-                                         channel_y = self.channel_y_slider,
+                                         channel_width = self.channel_width_slider,
                                          ds = self.ds_slider,
+                                         set_left_slot = self.set_left_slot_slider,
                                          set_start = self.set_start_slider,
                                          reset_target = self.reset_target_slider,
                                          fix_result = self.fix_result_slider,
@@ -108,19 +103,23 @@ class LocalViewSlider:
                                          is_plan_first = self.is_plan_first_slider)
 
 ### sliders callback
-def slider_callback(ego_x, ego_y, ego_heading, s_init, tlane_p0_deta_x, tlane_p0_deta_y,
-                    tlane_p1_deta_x,tlane_p1_deta_y,tlane_pt_x,tlane_pt_y,channel_y,
-                    set_start,reset_target,fix_result,set_prepare_tangent_pt,ds,is_complete_path,is_plan_first):
+def slider_callback(ego_x, ego_y, ego_heading, s_init, tlane_p_outside_deta_x, tlane_p_outside_deta_y,
+                    tlane_p_inside_deta_x,tlane_p_inside_deta_y,tlane_pt_x,tlane_pt_y,channel_width,
+                    set_left_slot, set_start,reset_target,fix_result,set_prepare_tangent_pt,ds,is_complete_path,is_plan_first,):
   kwargs = locals()
 
-  kNormalSlotDepth = 2.4
-  kNormalSlotWidth = 6.2
+  kNormalSlotDepth = 2.6
+  kNormalSlotLength = 6.2
 
-  tlane_p0_y = 0.5 * kNormalSlotDepth + tlane_p0_deta_y
-  tlane_p1_y = 0.5 * kNormalSlotDepth + tlane_p1_deta_y
+  slot_side_sgn = 1.0
+  if set_left_slot:
+    slot_side_sgn = -1.0
 
-  tlane_p0_x = -0.5 * kNormalSlotWidth + tlane_p0_deta_x
-  tlane_p1_x = 0.5 * kNormalSlotWidth + tlane_p1_deta_x
+  tlane_p0_y = 0.5 * slot_side_sgn * kNormalSlotDepth + tlane_p_outside_deta_y
+  tlane_p1_y = 0.5 * slot_side_sgn * kNormalSlotDepth + tlane_p_inside_deta_y
+
+  tlane_p0_x = tlane_p_outside_deta_x
+  tlane_p1_x = kNormalSlotLength + tlane_p_inside_deta_x
 
   if set_start == 1:
     slider_class.s_init_slider.value = 0.0
@@ -128,44 +127,40 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, tlane_p0_deta_x, tlane_p0
     slider_class.ego_y_slider.value = ego_y
 
   if reset_target == 1:
-    slider_class.tlane_pt_x_slider.value = -2.0
+    slider_class.tlane_pt_x_slider.value = 1.2
     slider_class.tlane_pt_y_slider.value = 0.0
 
-
-
-  slot_side = 1.0
-  if tlane_p0_x > tlane_p1_x:
-    slot_side = -1.0
   tlane_bounds_x_vec = []
   tlane_bounds_y_vec = []
 
   ## first parallel line to p0
-  tlane_bounds_x_vec.append([tlane_p0_x - slot_side*3.0, tlane_p0_x])
+  tlane_bounds_x_vec.append([tlane_p0_x - 3.0, tlane_p0_x])
   tlane_bounds_y_vec.append([tlane_p0_y, tlane_p0_y])
 
   ## second parallel line to p1
-  tlane_bounds_x_vec.append([tlane_p1_x + slot_side*3.0, tlane_p1_x])
+  tlane_bounds_x_vec.append([tlane_p1_x + 3.0, tlane_p1_x])
   tlane_bounds_y_vec.append([tlane_p1_y, tlane_p1_y])
 
   ## vertical line to p0
-  tlane_bottom_y = -1.2
-  tlane_bounds_x_vec.append([tlane_p0_x,tlane_p0_x])
-  tlane_bounds_y_vec.append([tlane_p0_y,tlane_bottom_y])
+  tlane_bottom_y = -1.3
+  tlane_bounds_x_vec.append([tlane_p0_x, tlane_p0_x])
+  tlane_bounds_y_vec.append([tlane_p0_y, tlane_bottom_y * slot_side_sgn])
 
   ##vertical line to p1
   tlane_bounds_x_vec.append([tlane_p1_x,tlane_p1_x])
-  tlane_bounds_y_vec.append([tlane_p1_y,tlane_bottom_y])
+  tlane_bounds_y_vec.append([tlane_p1_y,tlane_bottom_y * slot_side_sgn])
 
   ##bottom parallel line
   tlane_bounds_x_vec.append([tlane_p0_x,tlane_p1_x])
-  tlane_bounds_y_vec.append([tlane_bottom_y,tlane_bottom_y])
+  tlane_bounds_y_vec.append([tlane_bottom_y * slot_side_sgn, tlane_bottom_y * slot_side_sgn])
 
   data_tlane.data.update({
      'x_vec': tlane_bounds_x_vec,
      'y_vec': tlane_bounds_y_vec,})
 
   # channel
-  data_channel.data.update({'y_vec':[channel_y,channel_y],'x_vec':[-10,10]})
+  channel_y = tlane_p1_y + slot_side_sgn * channel_width
+  data_channel.data.update({'y_vec':[channel_y,channel_y],'x_vec':[0.0, 10.0]})
 
   # ego start position
   data_start_pos.data.update({'x':[ego_x],'y':[ego_y]})
@@ -174,8 +169,6 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, tlane_p0_deta_x, tlane_p0
   x_start = ego_x + s_init * math.cos(ego_heading / 57.2958)
   y_start = ego_y + s_init * math.sin(ego_heading / 57.2958)
 
-  x_target = tlane_pt_x
-  y_target = tlane_pt_y
   # ego car
   car_xn = []
   car_yn = []
@@ -191,14 +184,13 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, tlane_p0_deta_x, tlane_p0
   })
 
   if fix_result == 0:
-    parallel_planning_py.Update(ego_x, ego_y, ego_heading / 57.3, tlane_p0_x,
-                                   tlane_p0_y,tlane_p1_x,tlane_p1_y, x_target,
-                                   y_target,channel_y, ds,is_complete_path,is_plan_first)
-
-
-
-  # tag_point = parallel_planning_py.GetTagPoint()
-
+    parallel_planning_py.Update(ego_x, ego_y, ego_heading / 57.2958, \
+                                tlane_p0_x, tlane_p0_y, \
+                                tlane_p1_x, tlane_p1_y, \
+                                tlane_pt_x, tlane_pt_y, \
+                                channel_width, \
+                                ds, is_complete_path, \
+                                is_plan_first,set_left_slot)
 
   # clear
   data_path.data.update({
@@ -210,6 +202,7 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, tlane_p0_deta_x, tlane_p0
   path_x_vec = parallel_planning_py.GetPathEle(0)
   path_y_vec = parallel_planning_py.GetPathEle(1)
   path_theta_vec = parallel_planning_py.GetPathEle(2)
+
   data_path.data.update({
     'x_vec': path_x_vec,
     'y_vec': path_y_vec,
@@ -234,17 +227,6 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init, tlane_p0_deta_x, tlane_p0
     'y_vec': car_box_y_vec,
   })
 
-  # if set_pA:
-  #   slider_class.ego_x_slider.value = pA[0]
-  #   slider_class.ego_y_slider.value = pA[1]
-  #   slider_class.ego_heading_slider.value = ego_heading
-  #   slider_class.s_init_slider.value = 0.0
-
-  # if set_pB:
-  #   slider_class.ego_x_slider.value = pB[0]
-  #   slider_class.ego_y_slider.value = pB[1]
-  #   slider_class.ego_heading_slider.value = 0.0
-  #   slider_class.s_init_slider.value = 0.0
   if set_prepare_tangent_pt:
     slider_class.ego_x_slider.value = path_x_vec[-1]
     slider_class.ego_y_slider.value = path_y_vec[-1]

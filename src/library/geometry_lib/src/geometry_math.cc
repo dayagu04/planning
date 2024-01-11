@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <iostream>
 #include <utility>
 #include <vector>
@@ -1747,6 +1748,26 @@ const uint8_t CalLineSegGear(const LineSegment &line_seg) {
     return SEG_GEAR_DRIVE;
   }
   return SEG_GEAR_REVERSE;
+}
+
+const uint8_t ReverseGear(const uint8_t gear) {
+  uint8_t desired_gear = SEG_GEAR_INVALID;
+  if (gear == SEG_GEAR_REVERSE) {
+    desired_gear = SEG_GEAR_DRIVE;
+  } else if (gear == SEG_GEAR_DRIVE) {
+    desired_gear = SEG_GEAR_REVERSE;
+  }
+  return desired_gear;
+}
+
+const uint8_t ReverseSteer(const uint8_t steer) {
+  uint8_t desired_steer = SEG_STEER_INVALID;
+  if (steer == SEG_STEER_RIGHT) {
+    desired_steer = SEG_STEER_LEFT;
+  } else if (steer == SEG_STEER_LEFT) {
+    desired_steer = SEG_STEER_RIGHT;
+  }
+  return desired_steer;
 }
 
 const bool CalLineUnitNormVecByPos(const Eigen::Vector2d &pos,

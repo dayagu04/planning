@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "apa_plan_base.h"
-#include "parallel_park_in_planner.h"
 #include "parallel_path_planner.h"
 
 namespace py = pybind11;
@@ -37,19 +36,25 @@ inline T BytesToProto(py::bytes &bytes) {
 static ParallelPathPlanner::DebugInfo debuginfo;
 static std::vector<double> res;
 
-int Update(double ego_x, double ego_y, double ego_heading, double tlane_p0_x,
-           double tlane_p0_y, double tlane_p1_x, double tlane_p1_y,
-           double tlane_pt_x, double tlane_pt_y, double channel_x, double ds,
-           bool is_complete_path, bool is_plan_first) {
+int Update(double ego_x, double ego_y, double ego_heading, double p_outside_x,
+           double p_outside_y, double p_inside_x, double p_inside_y,
+           double p_target_x, double p_target_y, double channel_width,
+           double ds, bool is_complete_path, bool is_plan_first,
+           bool set_left_side) {
   planning::apa_planner::ParallelPathPlanner::Input input;
 
   input.ego_pose.pos << ego_x, ego_y;
   input.ego_pose.heading = ego_heading;
 
-  input.tlane.p0 << tlane_p0_x, tlane_p0_y;
-  input.tlane.p1 << tlane_p1_x, tlane_p1_y;
-  input.tlane.pt << tlane_pt_x, tlane_pt_y;
-  input.tlane.channel_x = channel_x;
+  input.tlane.pt_outside << p_outside_x, p_outside_y;
+  input.tlane.pt_inside << p_inside_x, p_inside_y;
+  input.tlane.pt_terminal << p_target_x, p_target_y;
+
+  input.tlane.slot_side = (set_left_side ? ApaPlannerBase::SLOT_SIDE_LEFT
+                                         : ApaPlannerBase::SLOT_SIDE_RIGHT);
+
+  input.tlane.channel_width = channel_width;
+  input.tlane.channel_length = 10.0;
   input.sample_ds = ds;
   input.is_complete_path = is_complete_path;
   input.is_replan_first = is_plan_first;

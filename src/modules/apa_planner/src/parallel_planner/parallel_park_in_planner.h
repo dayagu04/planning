@@ -24,11 +24,11 @@ class ParallelParInPlanner : public ApaPlannerBase {
   virtual void Reset() override;
   virtual void Update() override;
   virtual std::string GetName() override { return typeid(this).name(); }
-  const std::vector<Eigen::Vector2d> GenTlaneInGlobSystem() const;
 
  private:
   void PlanCore();
   void GenTlane();
+  void GenObstacles();
   void UpdateObstacles();
   void SetParkingStatus(uint8_t status);
   const bool UpdateEgoSlotInfo();
