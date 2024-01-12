@@ -11,7 +11,7 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/planning_c9b2105f284/test_0.00000'
+bag_path = '/data_cold/abu_zone/APA/0112-qirui-2car/test_1.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -80,6 +80,17 @@ def slider_callback(bag_time, select_id, force_plan, is_reset, is_complete_path,
   soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
   loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][index_map['loc_msg_idx']])
 
+  slot_management_info = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].slot_management_info
+  select_slot_id = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']].select_slot_id
+  target_managed_slot_x_vec = []
+  target_managed_slot_y_vec = []
+  for i in range(len(slot_management_info.slot_info_vec)):
+    maganed_slot_vec = slot_management_info.slot_info_vec[i]
+    corner_point = maganed_slot_vec.corner_points.corner_point
+    if maganed_slot_vec.id == select_slot_id:
+      target_managed_slot_x_vec = [corner_point[0].x,corner_point[1].x,corner_point[2].x,corner_point[3].x]
+      target_managed_slot_y_vec = [corner_point[0].y,corner_point[1].y,corner_point[2].y,corner_point[3].y]
+
   if soc_state_msg.current_state == 30:
     tlane_p0_x = plan_debug_msg['tlane_p0_x']
     tlane_p0_y = plan_debug_msg['tlane_p0_y']
@@ -135,7 +146,7 @@ def slider_callback(bag_time, select_id, force_plan, is_reset, is_complete_path,
                                     loc_msg.SerializeToString(),
                                     vs_msg.SerializeToString(),
                                     wave_msg.SerializeToString(),
-                                    select_id, force_plan, is_reset, is_complete_path, sample_ds)
+                                    select_id, force_plan, is_reset, is_complete_path, sample_ds, target_managed_slot_x_vec, target_managed_slot_y_vec)
 
   data_planning_tune.data = {'plan_path_x': [],
                              'plan_path_y': [],

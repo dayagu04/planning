@@ -171,6 +171,15 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     pt[i] << slot_points[i].x(), slot_points[i].y();
   }
 
+  if (is_simulation_) {
+    std::cout << "use proto target_managed_slot\n";
+    for (int i = 0; i < simu_param_.target_managed_slot_x_vec.size(); i++) {
+      pt[i] << simu_param_.target_managed_slot_x_vec[i],
+          simu_param_.target_managed_slot_y_vec[i];
+      std::cout << "corner " << i << " = " << pt[i].transpose() << std::endl;
+    }
+  }
+
   const auto pM01 = 0.5 * (pt[0] + pt[1]);
   const auto pM23 = 0.5 * (pt[2] + pt[3]);
   const auto n = (pM01 - pM23).normalized();

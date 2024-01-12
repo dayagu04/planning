@@ -97,6 +97,7 @@ struct ApaParameters {
   double channel_length = 12.28;
   double max_obs2car_dist = 1.2;
   double obstacle_ds = 0.5;
+  double col_obs_safe_dist = 0.6;
 
   // terminal pose params
   double terminal_target_x = 1.35;

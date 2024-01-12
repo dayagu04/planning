@@ -192,12 +192,16 @@ class LoadCyberbag:
 
     # load planning debug msg
     try:
-      json_value_list = ["replan_status", "ego_pos_x", "is_replan", "car_static_timer_by_pos", "car_static_timer_by_vel", "static_flag", "stuck_time", "slot_occupied_ratio", "remain_dist",
-                         "remain_dist_uss", "path_length", "is_replan_first", "replan_count", "planning_status", "replan_reason",
-                         "tlane_p0_x", "tlane_p0_y", "tlane_p1_x", "tlane_p1_y", "tlane_pt_x", "tlane_pt_y", "channel_x", "slot_side",
-                         "terminal_error_x", "terminal_error_y", "terminal_error_heading", "path_plan_success", "pathplan_result"]
+      json_value_list = ["tlane_p0_x", "tlane_p0_y", "tlane_p1_x", "tlane_p1_y", "tlane_pt_x", "tlane_pt_y", "slot_side",
+                         "terminal_error_x", "terminal_error_y", "terminal_error_heading",
+                         "is_replan", "is_finished", "is_replan_first", "is_replan_by_uss", "current_path_length", "gear_change_count", "replan_reason",
+                         "path_plan_success", "planning_status", "spline_success", "remain_dist", "remain_dist_uss", "stuck_time",
+                         "car_static_timer_by_pos", "car_static_timer_by_vel", "static_flag", "ego_heading_slot",
+                         "selected_slot_id", "slot_length", "slot_width", "slot_origin_pos_x", "slot_origin_pos_y", "slot_origin_heading",
+                         "slot_occupied_ratio", "pathplan_result", "target_ego_pos_slot", "path_start_seg_index", "path_end_seg_index", "path_length"]
 
-      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec", "obstaclesX", "obstaclesY"]
+      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
+                          "obstaclesX", "obstaclesY"]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
@@ -875,13 +879,22 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
           })
     limiter_x_vec = []
     limiter_y_vec = []
-    for limiter in  slot_management_info.limiter_points:
+    for limiter in slot_management_info.limiter_points:
       limiter_x_vec.append(limiter.x)
       limiter_y_vec.append(limiter.y)
     local_view_data['data_all_managed_limiter'].data.update({
       'limiter_point_y': limiter_y_vec,
       'limiter_point_x': limiter_x_vec,
-        })
+    })
+
+    obstacle_x = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['obstaclesX']
+    obstacle_y = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['obstaclesY']
+
+    local_view_data['data_obs'].data.update({
+      'obs_x': obstacle_x,
+      'obs_y': obstacle_y,
+    })
+
   # load uss wave
   if bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True:
     #get cur pose and uss wave
@@ -972,6 +985,24 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       names.append("slot_occupied_ratio")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_occupied_ratio']))
 
+      names.append("current_path_length")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['current_path_length']))
+
+      names.append("remain_dist")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['remain_dist']))
+
+      names.append("car_static_timer_by_pos")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_pos']))
+
+      names.append("car_static_timer_by_vel")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_vel']))
+
+      names.append("static_flag")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['static_flag']))
+
+      names.append("slot_width")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_width']))
+
       names.append("slots_id")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].successful_slot_info_list))
 
@@ -980,6 +1011,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
 
       names.append("plan_traj_available")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].trajectory.available))
+
 
     # load func_state
     if bag_loader.soc_state_msg['enable'] == True:
@@ -1060,6 +1092,7 @@ def load_local_view_figure_parking():
   data_car_circle = ColumnDataSource(data = {'car_circle_yn':[], 'car_circle_xn':[], 'car_circle_rn':[]})
   data_current_pos = ColumnDataSource(data = {'current_pos_y':[], 'current_pos_x':[]})
   data_ego = ColumnDataSource(data = {'ego_yn':[], 'ego_xn':[]})
+  data_obs = ColumnDataSource(data = {'obs_x':[], 'obs_y':[]})
   data_text = ColumnDataSource(data = {'vel_ego_text':[]})
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
@@ -1104,6 +1137,7 @@ def load_local_view_figure_parking():
                      'data_car_circle':data_car_circle, \
                      'data_current_pos': data_current_pos, \
                      'data_ego':data_ego, \
+                     'data_obs':data_obs, \
                      'data_text':data_text, \
                      'data_planning':data_planning,\
                      'data_control':data_control,\
@@ -1131,6 +1165,7 @@ def load_local_view_figure_parking():
   fig1.circle('current_pos_y','current_pos_x', source = data_current_pos, size=8, color='grey')
   fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_car_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'car_circle', visible = False)
   fig1.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1.5, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
+  fig1.circle('obs_y', 'obs_x', source = data_obs, size=8, color='green', legend_label='tlane')
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'text')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
   fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'mpc')
@@ -1495,6 +1530,10 @@ all_managed_limiter_params_apa = {
   'legend_label' : 'managed limiter'
 }
 
+tlane_params = {
+  'size' : 8, 'color' : 'green', 'legend_label' : 'obstacle'
+}
+
 table_params={
     'width': 600,
     'height':520,
@@ -1752,6 +1791,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
     slot_id_generate = TextGenerator()
     all_managed_occupied_slot_generate = CommonGenerator()
     all_managed_limiter_generate = CommonGenerator()
+    tlane_generate = CommonGenerator()
     for slot_i, slot_timestamp in enumerate(fusion_slot_timestamps):
         flag, fusion_slot_msg = findrt(dataLoader.fus_parking_msg, slot_timestamp)
         if not flag:
@@ -1877,6 +1917,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
           flag, plan_msg = findrt(dataLoader.plan_debug_msg, plan_debug_timestamps[slot_i])
           if not flag:
             print('find plan_msg error')
+          flag, plan_json = findrt_json(dataLoader.plan_debug_msg, plan_debug_timestamps[slot_i])
+          if not flag:
+            print('find plan_msg error')
           else:
             slot_management_info = plan_msg.slot_management_info
             # select_slot_id = dataLoader.fus_parking_msg['data'][slot_i].select_slot_id
@@ -1900,10 +1943,14 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
               limiter_x_vec.append(limiter.x)
               limiter_y_vec.append(limiter.y)
 
+            obstacle_x = plan_json['obstaclesX']
+            obstacle_y = plan_json['obstaclesY']
+
           target_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
           all_slot_generate.xys.append((all_managed_slot_y_vec, all_managed_slot_x_vec))
           all_managed_occupied_slot_generate.xys.append((occupied_y_vec, occupied_x_vec))
           all_managed_limiter_generate.xys.append((limiter_y_vec, limiter_x_vec))
+          tlane_generate.xys.append((obstacle_y, obstacle_x))
 
     if dataLoader.vis_parking_msg['enable'] == True:
       vision_slot_generate.ts = np.array(ctrl_debug_ts)
@@ -1927,16 +1974,18 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
       all_slot_generate.ts = np.array(ctrl_debug_ts)
       all_managed_occupied_slot_generate.ts = np.array(ctrl_debug_ts)
       all_managed_limiter_generate.ts = np.array(ctrl_debug_ts)
+      tlane_generate.ts = np.array(ctrl_debug_ts)
       target_slot_layer = MultiCurveLayer(fig_local_view ,target_slot_params_apa)
       all_slot_layer = MultiCurveLayer(fig_local_view ,all_slot_params_apa)
       all_managed_occupied_slot_layer = PatchLayer(fig_local_view, all_managed_occupied_slot_params_apa)
       all_managed_limiter_layer = CurveLayer(fig_local_view, all_managed_limiter_params_apa)
-
+      tlane_layer = DotLayer(fig_local_view, tlane_params)
 
       layer_manager.AddLayer(target_slot_layer, 'target_slot_layer',target_slot_generate,'target_slot_generate',2)
       layer_manager.AddLayer(all_slot_layer, 'all_slot_layer',all_slot_generate,'all_slot_generate',2)
       layer_manager.AddLayer(all_managed_occupied_slot_layer, 'all_managed_occupied_slot_layer',all_managed_occupied_slot_generate,'all_managed_occupied_slot_generate',2)
       layer_manager.AddLayer(all_managed_limiter_layer, 'all_managed_limiter_layer',all_managed_limiter_generate,'all_managed_limiter_generate',2)
+      layer_manager.AddLayer(tlane_layer, 'tlane_layer',tlane_generate,'tlane_generate',2)
 
   # load planning traj
     plan_generator = CommonGenerator()
@@ -2090,6 +2139,24 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
 
           names.append("slot_occupied_ratio")
           datas.append(str(plan_json['slot_occupied_ratio']))
+
+          names.append("current_path_length")
+          datas.append(str(plan_json['current_path_length']))
+
+          names.append("remain_dist")
+          datas.append(str(plan_json['remain_dist']))
+
+          names.append("car_static_timer_by_pos")
+          datas.append(str(plan_json['car_static_timer_by_pos']))
+
+          names.append("car_static_timer_by_vel")
+          datas.append(str(plan_json['car_static_timer_by_vel']))
+
+          names.append("static_flag")
+          datas.append(str(plan_json['static_flag']))
+
+          names.append("slot_width")
+          datas.append(str(plan_json['slot_width']))
 
           names.append("slots_id")
           datas.append(str(plan_msg.successful_slot_info_list))

@@ -283,6 +283,9 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().max_obs2car_dist, double,
                   "max_obs2car_dist");
 
+  JSON_READ_VALUE(apa_param.SetPram().col_obs_safe_dist, double,
+                  "col_obs_safe_dist");
+
   JSON_READ_VALUE(apa_param.SetPram().obstacle_ds, double, "obstacle_ds");
 
   // terminal pose params

@@ -78,6 +78,7 @@
   "channel_length": 12.28,
   "max_obs2car_dist": 1.2,
   "obstacle_ds": 0.5,
+  "col_obs_safe_dist": 0.6,
 
   "comment_11": "terminal pose params",
   "terminal_target_x": 1.35,

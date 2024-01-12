@@ -1642,7 +1642,7 @@ const uint8_t PerpendicularPathPlanner::TrimPathByCollisionDetection(
   const double remain_car_dist = col_res.remain_car_dist;
   const double remain_obs_dist = col_res.remain_obstacle_dist;
   const double safe_remain_dist =
-      std::min(remain_car_dist, remain_obs_dist - 0.3);
+      std::min(remain_car_dist, remain_obs_dist - apa_param.GetParam().col_obs_safe_dist);
 
   std::cout << "  remain_car_dist = " << remain_car_dist
             << "  remain_obs_dist = " << remain_obs_dist

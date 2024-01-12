@@ -37,6 +37,8 @@ class ApaPlannerBase {
     bool force_plan = false;
     bool is_reset = false;
     double sample_ds = 0.02;
+    std::vector<double> target_managed_slot_x_vec;
+    std::vector<double> target_managed_slot_y_vec;
   };
 
   struct EgoSlotInfo {

@@ -41,7 +41,11 @@ const Eigen::Vector2d GenHeadingVec(const double heading) {
 
 const double CalPoint2LineDist(const Eigen::Vector2d &pO,
                                const LineSegment &line) {
-  return std::sqrt(CalPoint2LineDistSquare(pO, line));
+  double dist_square = CalPoint2LineDistSquare(pO, line);
+  if (dist_square < 1e-6) {
+    return 0.0;
+  }
+  return std::sqrt(dist_square);
 }
 
 const double CalPoint2LineDistSquare(const Eigen::Vector2d &pO,
@@ -50,6 +54,10 @@ const double CalPoint2LineDistSquare(const Eigen::Vector2d &pO,
   Eigen::Vector2d v_AO = pO - line.pA;
 
   const double v_AO_dot_v_AB = v_AO.dot(v_AB);
+
+  if (NormSquareOfVector2d(v_AB) < 1e-4) {
+    return 0.0;
+  }
 
   return NormSquareOfVector2d(v_AO) -
          v_AO_dot_v_AB * v_AO_dot_v_AB / NormSquareOfVector2d(v_AB);
@@ -1404,13 +1412,13 @@ const bool IsPoseOnLine(const PathPoint &pose, LineSegment &line,
   }
 
   const auto dist = CalPoint2LineDist(pose.pos, line);
+  std::cout << "pos = " << pose.pos.transpose()
+            << "  heading = " << pose.heading << "  dist = " << dist
+            << "   line.heading = " << line.heading << std::endl;
   if (dist < lat_err &&
       std::fabs(NormalizeAngle(pose.heading - line.heading)) < heading_err) {
     return true;
   }
-  std::cout << "pos = " << pose.pos.transpose()
-            << "  heading = " << pose.heading << "  dist = " << dist
-            << "   line.heading = " << line.heading << std::endl;
   return LogErr(__func__, 1);
 }
 

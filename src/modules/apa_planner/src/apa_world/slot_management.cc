@@ -236,6 +236,8 @@ bool SlotManagement::UpdateSlotsInParking() {
   common::SlotInfo select_slot;
   ParkingFusion::ParkingFusionSlot selecte_fusion_slot;
   size_t selected_fusion_slot_index = 0;
+  bool enable_target_slot = false;
+
   for (int i = 0;
        i < frame_.parking_slot_ptr_->parking_fusion_slot_lists_size(); ++i) {
     const auto &fusion_slot =
@@ -243,8 +245,13 @@ bool SlotManagement::UpdateSlotsInParking() {
     if (select_slot_id == fusion_slot.id()) {
       selected_fusion_slot_index = i;
       selecte_fusion_slot = fusion_slot;
+      enable_target_slot = true;
       break;
     }
+  }
+
+  if (!enable_target_slot) {
+    return false;
   }
 
   auto is_valid_slot = ProcessRawSlot(selecte_fusion_slot, select_slot);
