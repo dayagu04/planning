@@ -1,3 +1,11 @@
+# planning.2.3.2.2
+####  修改说明
+1. 修复在hpp场景的U型弯，规划起点在ref上的投影出错导致决策规划的ref错误的问题
+2. 修复轨迹拼接时planning_loop_dt默认取0.1的问题
+3. add lat theta replan
+4. 更新可视化工具,加入自车包络框的planning轨迹
+5. 优化代码耗时在virtual_lane_manager计算超视距信息部分
+
 # planning.2.3.2.1
 ####  修改说明
 1. 修改长时重规划的参数设置
