@@ -1670,11 +1670,14 @@ double VisionLongitudinalBehaviorPlanner::calc_desired_distance(
   if (is_accident_car) {
     d_offset = config_.dis_zero_speed_accident;
   }
+  auto desired_distance_calibrate =
+      d_offset + v_lead_clip * t_gap + distance_hysteresis;
   LOG_DEBUG("distance_hysteresis : [%f] \n", distance_hysteresis);
   LOG_DEBUG("ttc gap : [%f] \n", t_gap);
-  LOG_DEBUG("desired_distance : [%f] \n",
-            d_offset + v_lead_clip * t_gap + distance_hysteresis);
-  return d_offset + v_lead_clip * t_gap + distance_hysteresis;
+  LOG_DEBUG("desired_distance : [%f] \n", desired_distance_calibrate);
+  JSON_DEBUG_VALUE("RealTime_desired_distance_calibrate",
+                   desired_distance_calibrate);
+  return desired_distance_calibrate;
 }
 
 double VisionLongitudinalBehaviorPlanner::calc_desired_speed(
