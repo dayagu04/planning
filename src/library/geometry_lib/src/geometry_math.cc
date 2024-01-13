@@ -1939,7 +1939,9 @@ const bool CalTwoArcWithSameHeading(Arc &arc1, Arc &arc2,
 
   const double lat_dist = CalPoint2LineDist(arc1.pA, line2);
   // if radius is too small, arc1 and arc2 cannot be tangent
-  if (arc1.circle_info.radius * 4.0 < lat_dist + 1e-8) {
+  if (arc1.circle_info.radius * 4.0 < lat_dist + 1e-8 || lat_dist < 1e-5) {
+    std::cout << "radius = " << arc1.circle_info.radius
+              << "  lat_dist = " << lat_dist << std::endl;
     return LogErr(__func__, 2);
   }
   // the C is the tangent of arc1 and arc2

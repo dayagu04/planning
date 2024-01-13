@@ -1046,8 +1046,14 @@ const bool PerpendicularPathPlanner::STurnParallelPlan(
     std::cout << "body no align\n";
     return false;
   }
-  if (pnc::mathlib::IsDoubleEqual(arc_s_1.pA.y(),
-                                  calc_params_.target_line.pA.y())) {
+  // if (pnc::mathlib::IsDoubleEqual(arc_s_1.pA.y(),
+  //                                 calc_params_.target_line.pA.y())) {
+  //   std::cout << "current pos is already on target line, no need to "
+  //                "STurnParallelPlan\n";
+  //   return true;
+  // }
+  if (std::fabs(arc_s_1.pA.y() - calc_params_.target_line.pA.y()) <
+      apa_param.GetParam().static_pos_eps) {
     std::cout << "current pos is already on target line, no need to "
                  "STurnParallelPlan\n";
     return true;
@@ -1642,7 +1648,8 @@ const uint8_t PerpendicularPathPlanner::TrimPathByCollisionDetection(
   const double remain_car_dist = col_res.remain_car_dist;
   const double remain_obs_dist = col_res.remain_obstacle_dist;
   const double safe_remain_dist =
-      std::min(remain_car_dist, remain_obs_dist - apa_param.GetParam().col_obs_safe_dist);
+      std::min(remain_car_dist,
+               remain_obs_dist - apa_param.GetParam().col_obs_safe_dist);
 
   std::cout << "  remain_car_dist = " << remain_car_dist
             << "  remain_obs_dist = " << remain_obs_dist
