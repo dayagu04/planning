@@ -1,5 +1,7 @@
 #include "reference_path.h"
+
 #include <cmath>
+
 #include "ego_state_manager.h"
 #include "ifly_time.h"
 #include "math/math_utils.h"
@@ -103,7 +105,7 @@ void ReferencePath::update_refpath_points(
           continue;
         } else if (
             dist >
-            interp_gap_s) {  //检验原始点的密度，如果点距离大于interp_gap_s，需要插值加密
+            interp_gap_s) {  // 检验原始点的密度，如果点距离大于interp_gap_s，需要插值加密
           int num_point = ceil(dist / interp_gap_s - 1);
           double interpolate_s = dist / (num_point + 1);
           ReferencePathPoints ref_path_pts;
@@ -178,7 +180,7 @@ void ReferencePath::densifying_refined_path_points(
     return;
   }
 
-  //对原始点进行加密
+  // 对原始点进行加密
   double interp_gap_s = 0.5;
   std::vector<double> u_points{0};
   std::vector<double> x_points, y_points;
