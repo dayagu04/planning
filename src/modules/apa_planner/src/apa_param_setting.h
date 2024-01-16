@@ -1,0 +1,190 @@
+#ifndef __APA_PARAM_SETTING_H__
+#define __APA_PARAM_SETTING_H__
+
+#include <cstdint>
+#include <memory>
+#include <vector>
+
+#ifndef apa_param
+#define apa_param planning::apa_planner::ApaParametersSetting::GetInstance()
+#endif
+
+namespace planning {
+namespace apa_planner {
+
+struct ApaParameters {
+  // length unit: m   deg unit: deg  time unit: s
+
+  // schedule params
+  double plan_time = 0.1;
+
+  // car params
+  double front_overhanging = 0.924;
+  double rear_overhanging = 0.94;
+  double wheel_base = 2.7;
+  double car_width = 1.89;
+  double mirror_width = 0.2;
+  double steer_ratio = 16.5;
+  double arc_line_shift_steer_angle_deg = 2.5;
+  double c1 = 0.3790;
+  double detection_distance = 2.5;
+  double lat_inflation = 0.1;
+  std::vector<double> car_vertex_x_vec = {
+      3.187342,  3.424531,  3.593071,  3.593071,  3.424531,  3.187342,
+      2.177994,  1.916421,  1.96496,   -0.476357, -0.798324, -0.879389,
+      -0.879389, -0.798324, -0.476357, 1.96496,   1.916421,  2.177994};
+  std::vector<double> car_vertex_y_vec = {
+      0.887956,  0.681712, 0.334651,  -0.334651, -0.681712, -0.887956,
+      -0.887956, -1.06715, -0.887956, -0.887956, -0.706505, -0.334845,
+      0.334845,  0.706505, 0.887956,  0.887956,  1.06715,   0.887956};
+
+  // slot params
+  double normal_slot_length = 5.2;
+
+  // check finish params
+  double finish_lat_err = 0.08;
+  double finish_lat_err_strict = 0.036;
+  double finish_lon_err = 0.2;
+  double finish_heading_err = 0.88;
+
+  // check fail params
+  double stuck_failed_time = 9.0;
+
+  // check static params
+  double car_static_pos_err = 0.005;
+  double car_static_velocity = 0.01;
+  double car_static_keep_time_by_pos = 1.5;
+  double car_static_keep_time_by_vel = 1.5;
+
+  // uss params
+  double safe_uss_remain_dist_in_slot = 0.35;
+  double safe_uss_remain_dist_out_slot = 0.55;
+  double uss_stuck_replan_wait_time = 2.0;
+  double uss_scan_angle_deg = 60;
+  double uss_corner_scan_angle_gain = 1.0;
+  double uss_face_scan_angle_gain = 1.0;
+  std::vector<double> uss_vertex_x_vec = {
+      3.187342,  3.424531,  3.593071,  3.593071,  3.424531,  3.187342,
+      -0.476357, -0.798324, -0.879389, -0.879389, -0.798324, -0.476357};
+  std::vector<double> uss_vertex_y_vec = {
+      0.887956,  0.681712,  0.334651,  -0.334651, -0.681712, -0.887956,
+      -0.887956, -0.706505, -0.334845, 0.334845,  0.706505,  0.887956};
+  std::vector<double> uss_normal_angle_deg_vec = {170.0, 130.0, 92.0,  88.0,
+                                                  50.0,  8.0,   352.0, 298.0,
+                                                  275.0, 264.0, 242.0, 187.0};
+  std::vector<int> uss_wdis_index_front = {0, 9, 6, 3, 1, 11};
+  std::vector<int> uss_wdis_index_back = {0, 1, 3, 6, 9, 11};
+
+  // check replan params
+  double stuck_replan_time = 4.0;
+  double max_replan_remain_dist = 0.2;
+
+  // construct t_lane params
+  double nearby_slot_corner_dist = 0.6;
+  double vacant_pt_outside_dx = 0.5;
+  double vacant_pt_outside_dy = 0.3;
+  double vacant_pt_inside_dx = 0.8;
+  double vacant_pt_inside_dy = 0.6;
+  double occupied_pt_outside_dx = 0.2;
+  double occupied_pt_outside_dy = 0.0;
+  double occupied_pt_inside_dx = 0.3;
+  double occupied_pt_inside_dy = 0.0;
+  bool force_both_side_occupied = true;
+  double width_threshold = 0.1;
+
+  // construce obstacles params
+  double channel_width = 12.28;
+  double channel_length = 12.28;
+  double max_obs2car_dist = 1.2;
+  double obstacle_ds = 0.5;
+  double col_obs_safe_dist = 0.6;
+
+  // terminal pose params
+  double terminal_target_x = 1.35;
+  double terminal_target_y = 0.0;
+  double terminal_target_x_to_limiter = 0.15;
+
+  // dynamic update path params
+  double car_to_limiter_dis = 1.0;
+  double pose_y_err = 0.15;
+  double pose_heading_err = 6.6;
+  double pose_slot_occupied_ratio = 0.48;
+  double pose_min_remain_dis = 2.18;
+
+  // slot update params when parking
+  double fix_slot_occupied_ratio = 0.938;
+
+  // slot update params when replan
+  double uss_slot_occupied_ratio = 0.25;
+  double path_heading_slot = 55.5;
+  double path_pos_err = 6.6;
+  double last_update_slot_occupied_ratio = 0.836;
+
+  // path planner params
+  double prepare_line_min_x_offset_slot = 7.2;
+  double prepare_line_dx_offset_slot = 0.1;
+  double prepare_line_max_x_offset_slot = 9.7;
+  double prepare_line_max_heading_offset_slot_deg = 8.8;
+  double prepare_line_dheading_offset_slot_deg = 1.0;
+  double prepare_line_min_heading_offset_slot_deg = 0.0;
+  double min_turn_radius = 5.5;
+  double max_one_step_arc_radius = 8.5;
+  double max_radius_in_slot = 12.66;
+  double min_radius_out_slot = 7.8;
+  double radius_eps = 0.01;
+  double min_line_length = 0.3;
+  double min_one_step_path_length = 0.6;
+  double static_pos_eps = 0.01;
+  double static_heading_eps = 0.8;
+  double path_extend_distance = 0.3;
+  bool mono_plan_enable = false;
+  double multi_plan_min_lat_err = 0.5;
+  double multi_plan_min_heading_err = 12.0;
+  double multi_plan_max_occupied_ratio = 0.8;
+  double adjust_plan_max_lat_err = 1.2;
+  double adjust_plan_max_heading1_err = 50.0;
+  double adjust_plan_max_heading2_err = 70.0;
+
+  // slot managent params
+  double lon_dist_mirror_to_rear_axle = 1.844;
+  double lat_dist_mirror_to_center = 1.135;
+  double max_slots_update_angle_dis_limit_deg = 36.6;
+  double max_slot_boundary_line_angle_dif_deg = 10.0;
+  double max_slot_update_lon_dif_slot_center_to_mirror = 2.26;
+  double min_slot_update_lon_dif_slot_center_to_mirror = 0.35;
+  double res_limiter = 0.45;
+  double terminal_length = 1.2;
+  double res_distance = 1.7;
+  double min_limiter_update_occupied_ratio = 0.4;
+  double max_limiter_update_occupied_ratio = 0.6;
+  double limiter_update_occupied_ratio = 0.6;
+  double limiter_length = 0.0;
+  double slot_occupied_ratio_max_lat_err = 0.9;
+  double slot_occupied_ratio_max_heading_err = 75.0;
+
+  // gen output params
+  double max_velocity = 0.6;
+};
+
+class ApaParametersSetting {
+ public:
+  static ApaParametersSetting &GetInstance() {
+    static ApaParametersSetting instance;
+    return instance;
+  }
+
+  // planning parameters
+  const ApaParameters &GetParam() const { return param_; }
+  ApaParameters &SetPram() { return param_; }
+
+ private:
+  ApaParametersSetting(){};
+
+  // apa parameters
+  ApaParameters param_;
+};
+
+}  // namespace apa_planner
+}  // namespace planning
+
+#endif

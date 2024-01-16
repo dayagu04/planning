@@ -254,6 +254,16 @@ void PlanningAdapter::Proc() {
     state_machine_g.apa_reset_flag = false;
   }
 
+  // APA plan once when state machine changes from no ready to other parking in
+  // state
+  if (last_state == FuncStateMachine::PARK_IN_NO_READY &&
+      (current_state == FuncStateMachine::PARK_IN_READY ||
+       current_state >= FuncStateMachine::PARK_IN_ACTIVATE_CONTROL)) {
+    state_machine_g.apa_start_plan_once_flag = true;
+  } else {
+    state_machine_g.apa_start_plan_once_flag = false;
+  }
+
   state_machine_g.current_state = current_state;
 
   // 2.planning run

@@ -132,14 +132,15 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
   lat_output->set_lc_request(lateral_outputs.lc_request);
   lat_output->set_lc_status(lateral_outputs.lc_status);
   lat_output->set_close_to_accident(lateral_outputs.close_to_accident);
+  lat_output->clear_d_poly_vec();
   for (auto coeff : lateral_outputs.d_poly) {
     lat_output->add_d_poly_vec(coeff);
   }
 
   // 3. set lateral obstacles
+  auto lead_one =
+      lon_behav_plan_input_->mutable_lat_obs_info()->mutable_lead_one();
   if (lateral_obstacles->leadone() != nullptr) {
-    auto lead_one =
-        lon_behav_plan_input_->mutable_lat_obs_info()->mutable_lead_one();
     lead_one->set_track_id(lateral_obstacles->leadone()->track_id);
     lead_one->set_type(lateral_obstacles->leadone()->type);
     lead_one->set_fusion_source(lateral_obstacles->leadone()->fusion_source);
@@ -155,11 +156,14 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
     lead_one->set_is_lead(lateral_obstacles->leadone()->is_lead);
     lead_one->set_is_temp_lead(lateral_obstacles->leadone()->is_temp_lead);
     lead_one->set_cutinp(lateral_obstacles->leadone()->cutinp);
+  } else {
+    lead_one->set_track_id(-1);
+    lead_one->set_type(0);
   }
 
+  auto lead_two =
+      lon_behav_plan_input_->mutable_lat_obs_info()->mutable_lead_two();
   if (lateral_obstacles->leadtwo() != nullptr) {
-    auto lead_two =
-        lon_behav_plan_input_->mutable_lat_obs_info()->mutable_lead_two();
     lead_two->set_track_id(lateral_obstacles->leadtwo()->track_id);
     lon_behav_plan_input_->mutable_lat_obs_info()->mutable_lead_two()->set_type(
         lateral_obstacles->leadtwo()->type);
@@ -176,11 +180,14 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
     lead_two->set_is_lead(lateral_obstacles->leadtwo()->is_lead);
     lead_two->set_is_temp_lead(lateral_obstacles->leadtwo()->is_temp_lead);
     lead_two->set_cutinp(lateral_obstacles->leadtwo()->cutinp);
+  } else {
+    lead_two->set_track_id(-1);
+    lead_two->set_type(0);
   }
 
+  auto temp_lead_one =
+      lon_behav_plan_input_->mutable_lat_obs_info()->mutable_temp_lead_one();
   if (lateral_obstacles->tleadone() != nullptr) {
-    auto temp_lead_one =
-        lon_behav_plan_input_->mutable_lat_obs_info()->mutable_temp_lead_one();
     temp_lead_one->set_track_id(lateral_obstacles->tleadone()->track_id);
     temp_lead_one->set_type(lateral_obstacles->tleadone()->type);
     temp_lead_one->set_fusion_source(
@@ -198,10 +205,14 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
     temp_lead_one->set_is_temp_lead(
         lateral_obstacles->tleadone()->is_temp_lead);
     temp_lead_one->set_cutinp(lateral_obstacles->tleadone()->cutinp);
+  } else {
+    temp_lead_one->set_track_id(-1);
+    temp_lead_one->set_type(0);
   }
+
+  auto temp_lead_two =
+      lon_behav_plan_input_->mutable_lat_obs_info()->mutable_temp_lead_two();
   if (lateral_obstacles->tleadtwo() != nullptr) {
-    auto temp_lead_two =
-        lon_behav_plan_input_->mutable_lat_obs_info()->mutable_temp_lead_two();
     temp_lead_two->set_track_id(lateral_obstacles->tleadtwo()->track_id);
     temp_lead_two->set_type(lateral_obstacles->tleadtwo()->type);
     temp_lead_two->set_fusion_source(
@@ -219,6 +230,9 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
     temp_lead_two->set_is_temp_lead(
         lateral_obstacles->tleadtwo()->is_temp_lead);
     temp_lead_two->set_cutinp(lateral_obstacles->tleadtwo()->cutinp);
+  } else {
+    temp_lead_two->set_track_id(-1);
+    temp_lead_two->set_type(0);
   }
 
   auto lat_obs_info = lon_behav_plan_input_->mutable_lat_obs_info();
@@ -267,6 +281,7 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
       planning_status.lane_status.change_lane.target_gap_obs.first);
   lane_change_info->set_target_gap_obs_second(
       planning_status.lane_status.change_lane.target_gap_obs.second);
+  lane_change_info->clear_lc_cars();
 
   std::vector<TrackedObject> *front_target_tracks =
       lane_tracks_mgr->get_lane_tracks(
@@ -334,7 +349,7 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
   auto ref_path_points = lon_behav_plan_input_->mutable_ref_path_points();
   ref_path_points->Clear();
   ref_path_points->Reserve(fix_ref_points.size());
-  for(auto &point : fix_ref_points) {
+  for (auto &point : fix_ref_points) {
     common::ReferencePathPoint *ref_path_point = ref_path_points->Add();
     auto *path_point = ref_path_point->mutable_path_point();
     path_point->set_x(point.path_point.x);
@@ -348,10 +363,14 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
     path_point->set_x_derivative(point.path_point.x_derivative);
     path_point->set_y_derivative(point.path_point.y_derivative);
 
-    ref_path_point->set_distance_to_left_lane_border(point.distance_to_left_lane_border);
-    ref_path_point->set_distance_to_left_road_border(point.distance_to_left_road_border);
-    ref_path_point->set_distance_to_right_lane_border(point.distance_to_right_lane_border);
-    ref_path_point->set_distance_to_right_road_border(point.distance_to_right_road_border);
+    ref_path_point->set_distance_to_left_lane_border(
+        point.distance_to_left_lane_border);
+    ref_path_point->set_distance_to_left_road_border(
+        point.distance_to_left_road_border);
+    ref_path_point->set_distance_to_right_lane_border(
+        point.distance_to_right_lane_border);
+    ref_path_point->set_distance_to_right_road_border(
+        point.distance_to_right_road_border);
     ref_path_point->set_lane_width(point.lane_width);
     ref_path_point->set_max_velocity(point.max_velocity);
     ref_path_point->set_min_velocity(point.min_velocity);
@@ -365,7 +384,7 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
   // 6. set function_info
   auto function_info_input = lon_behav_plan_input_->mutable_function_info();
   function_info_input->CopyFrom(function_info);
-  
+
   double dis_to_ramp = virtual_lane_manager->dis_to_ramp();
   double dis_to_merge = virtual_lane_manager->distance_to_first_road_merge();
   bool is_on_ramp = virtual_lane_manager->is_on_ramp();

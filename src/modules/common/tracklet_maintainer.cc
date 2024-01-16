@@ -1,8 +1,7 @@
 #include <cstddef>
+
 #include "refline.h"
 #define _USE_MATH_DEFINES
-#include "tracklet_maintainer.h"
-
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -14,6 +13,7 @@
 #include "ifly_time.h"
 #include "planning_context.h"
 #include "planning_output_context.h"
+#include "tracklet_maintainer.h"
 #include "virtual_lane_manager.h"
 namespace planning {
 
@@ -212,7 +212,7 @@ void TrackletMaintainer::recv_prediction_objects(
     origin->fusion_type = 2;
 
     double speed_yaw =
-        p.trajectory_array[0].trajectory[0].yaw;  //现在yaw这个字段为姿态角
+        p.trajectory_array[0].trajectory[0].yaw;  // 现在yaw这个字段为姿态角
 
     double abs_vx = p.speed * std::cos(speed_yaw);
     double abs_vy = p.speed * std::sin(speed_yaw);
@@ -379,6 +379,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     std::vector<TrackedObject *> &objects) {
   // double pi = std::atan(1.0) * 4;
   std::map<int, TrackedObject *> new_map;
+  auto ego_state = session_->environmental_model().get_ego_state_manager();
 
   // double ego_fx = std::cos(ego_state_.ego_pose_raw().theta);
   // double ego_fy = std::sin(ego_state_.ego_pose_raw().theta);
@@ -473,8 +474,9 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     origin->vy_abs = p.relative_speed_y;
     origin->vy_rel = p.relative_speed_y;
 
-    origin->a_lead = p.acceleration_relative_to_ground_x;
-    origin->a_lead_k = p.acceleration_relative_to_ground_x;
+    // origin->a_lead = p.acceleration_relative_to_ground_x;
+    origin->a_lead = p.relative_acceleration_x + ego_state->ego_acc();
+    origin->a_lead_k = p.relative_acceleration_x + ego_state->ego_acc();
 
     origin->oncoming = (origin->v_lead < -3.9);
 
@@ -626,8 +628,10 @@ void TrackletMaintainer::fisheye_helper(const PredictionObject &prediction,
   // calcuate cutin related
   // 转换为障碍物相对自车车头距离
   auto vehicle_param = session_->vehicle_config_context().get_vehicle_param();
-  object.location_head = std::max(object.points_3d_f.x, object.points_3d_r.x) - vehicle_param.rear_axis_to_front_edge;
-  object.location_tail = std::min(object.points_3d_f.x, object.points_3d_r.x) - vehicle_param.rear_axis_to_front_edge;
+  object.location_head = std::max(object.points_3d_f.x, object.points_3d_r.x) -
+                         vehicle_param.rear_axis_to_front_edge;
+  object.location_tail = std::min(object.points_3d_f.x, object.points_3d_r.x) -
+                         vehicle_param.rear_axis_to_front_edge;
 
   if (std::abs(object.points_3d_f.y) < std::abs(object.points_3d_r.y)) {
     object.y_min = object.points_3d_f.y;
@@ -686,8 +690,7 @@ void TrackletMaintainer::calc(
         fill_deriv_info(*item);
       }
       // only use obstacle with camera source
-      if (((item->fusion_source == OBSTACLE_SOURCE_CAMERA) ||
-           (item->fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA)) &&
+      if ((item->fusion_source & OBSTACLE_SOURCE_CAMERA) &&
           frenet_transform_valid) {
         is_potential_lead_one(*item, v_ego);
       }
@@ -1670,6 +1673,11 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
 bool TrackletMaintainer::is_potential_lead_two(TrackedObject &item,
                                                TrackedObject *lead_one) {
   LOG_DEBUG("----is_potential_lead_two-----\n");
+  // Only use obstacle fusion with camera
+  if (!(item.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+    return false;
+  }
+
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   if (lead_one == nullptr) {
     return false;

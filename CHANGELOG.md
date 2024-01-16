@@ -2,6 +2,12 @@
 ####  修改说明
 1. LDP功能接入实车控制
 
+# planning.2.2.1.6
+####  修改说明
+1. 修改fusion source，纵向使用BEV全方位障碍物
+2. 解决max_lat_offset不生效
+3. 优化taskpipeline，不析构
+
 # planning.2.2.1.5
 ####  修改说明
 1. 调整换道速度

@@ -52,21 +52,21 @@ class LoadCyberbag:
 
     # radar_fm object msg
     self.radar_fm_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
-    
+
     # radar_fl object msg
     self.radar_fl_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
-    
+
     # radar_fr object msg
     self.radar_fr_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
-    
+
     # radar_rl object msg
     self.radar_rl_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
-    
+
     # radar_rr object msg
-    self.radar_rr_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]} 
+    self.radar_rr_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
     # lidar object msg
-    self.lidar_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]} 
+    self.lidar_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
   def load_all_data(self, normal_print = True):
     max_time = 0.0
@@ -183,27 +183,22 @@ class LoadCyberbag:
 
     # load planning debug msg
     try:
-      json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'VisionLonBehavior_a_target_high',
-                         "VisionLonBehavior_a_target_low", "VisionLonBehavior_v_target", "RealTime_v_ref",
-                         "VisionLonBehavior_lead_one_id", "VisionLonBehavior_lead_one_dis", "VisionLonBehavior_lead_one_vel", "VisionLonBehavior_v_target_lead_one",
-                         "VisionLonBehavior_lead_two_id", "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel", "VisionLonBehavior_v_target_lead_two",
-                         "VisionLonBehavior_temp_lead_one_id", "VisionLonBehavior_temp_lead_one_dis", "VisionLonBehavior_temp_lead_one_vel", "VisionLonBehavior_v_target_temp_lead_one",
-                         "VisionLonBehavior_temp_lead_two_id", "VisionLonBehavior_temp_lead_two_dis", "VisionLonBehavior_temp_lead_two_vel", "VisionLonBehavior_v_target_temp_lead_two",
-                         "VisionLonBehavior_potental_cutin_track_id", "VisionLonBehavior_potental_cutin_v_target", "VisionLonBehavior_cutin_v_target", "dis_to_ramp",
-                         "VisionLonBehavior_v_limit_road", "VisionLonBehavior_v_limit_in_turns", "VisionLonBehavior_road_radius", "VisionLonBehavior_v_target_ramp",
-                         "VisionLonBehavior_stop_start_state", "VisionLonBehavior_v_target_start_stop", "VisionLonBehavior_STANDSTILL", "VisionLonBehavior_final_v_target",
-                         "VisionLonBehavior_nearest_car_track_id_one", "VisionLonBehavior_nearest_car_track_id_two", "VisionLonBehavior_nearest_car_track_id_three", 
-                         "VisionLonBehavior_cutin_v_limit", "VisionLonBehavior_cutin_status",
-                         "EnvironmentalModelManagerCost","VisionLateralBehaviorPlannerCost","VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost",
-                         "RealTime_v_ref", "RealTime_v_ego", "RealTime_gap_v_limit_lc",
-                         "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_car_cut_in_id",
-                         "RealTime_lead_one_id", "RealTime_lead_one_distance", "RealTime_lead_one_velocity", "RealTime_lead_one_desire_vel",
-                         "RealTime_lead_two_id", "RealTime_lead_two_distance", "RealTime_lead_two_velocity", "RealTime_lead_two_desire_vel",
-                         "RealTime_temp_lead_one_id", "RealTime_temp_lead_one_distance", "RealTime_temp_lead_one_velocity", "RealTime_temp_lead_one_desire_vel",
-                         "RealTime_temp_lead_two_id", "RealTime_temp_lead_two_distance", "RealTime_temp_lead_two_velocity", "RealTime_temp_lead_two_desire_vel",
-                         "RealTime_potential_cutin_track_id", "RealTime_potential_cutin_v_target", "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate",
-                         "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime",
-                         "RealTime_stop_start_state", "RealTime_v_target_start_stop", "RealTime_STANDSTILL"]
+      json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw",
+                         'VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low',\
+                         "road_radius", 'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego',\
+                         'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one",\
+                         'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two",\
+                         'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one",\
+                         'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two",\
+                         'potental_cutin_track_id', 'v_target_potental_cutin', "v_target_cutin",  \
+                         'stop_start_state', 'v_target_start_stop', 'STANDSTILL', \
+                         "dis_to_ramp", "v_target_ramp",\
+                         "VisionLateralBehaviorPlannerCost","VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost",
+                         'RealTime_v_ref', 'v_ego', 'gap_v_limit_lc', \
+                         "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
+                         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime",
+                         "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
+                         "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime", 'RealTimeLateralMotionCostTime']
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec"]
 

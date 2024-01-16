@@ -1,5 +1,6 @@
 #include "virtual_lane_manager.h"
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -94,7 +95,25 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
 
   const FusionRoad::RoadInfo* roads_ptr = &roads;
   FusionRoad::RoadInfo roads_virtual;
+
+  // CheckLaneValid()
+  bool lane_valid = true;
   if (roads.reference_line_msg().empty()) {
+    lane_valid = false;
+  } else {
+    for (auto& ref_line : roads.reference_line_msg()) {
+      auto first_point = ref_line.lane_reference_line()
+                             .virtual_lane_refline_points()
+                             .begin()
+                             ->car_point();
+      if (std::fabs(first_point.y()) > 50.0) {
+        lane_valid = false;
+        LOG_ERROR("lane point's y is error \n");
+      }
+    }
+  }
+
+  if (!lane_valid) {
     // 依次为常数项、一次项、二次项、三次项
     std::vector<double> current_lane_virtual_poly;
     if (session_->environmental_model().function_info().function_mode() ==

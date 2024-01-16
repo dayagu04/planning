@@ -13,8 +13,8 @@
 #include "virtual_lane.h"
 namespace planning {
 
-using ad_common::hdmap::LaneGroupConstPtr;
 using Map::CurrentRouting;
+using ad_common::hdmap::LaneGroupConstPtr;
 
 enum LaneChangeStatus {
   NO_LANE_CHANGE = 0,

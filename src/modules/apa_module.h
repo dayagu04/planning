@@ -1,6 +1,6 @@
 #pragma once
 
-#include "apa_planner_dispatcher.h"
+#include "apa_plan_interface.h"
 #include "frame.h"
 #include "module.h"
 
@@ -22,8 +22,7 @@ class ApaPlanningModule : public framework::PlanningModule {
   bool reset(const ::google::protobuf::Message* config) override;
 
  private:
-  std::unique_ptr<apa_planner::ApaPlannerDispatcher> planner_dispatcher_ =
-      nullptr;
+  std::unique_ptr<apa_planner::ApaPlanInterface> apa_interface_ptr_ = nullptr;
 };
 
 // REGISTER_MODULE_FACTORY(ApaPlanningModule)

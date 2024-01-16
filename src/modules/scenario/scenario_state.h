@@ -93,17 +93,25 @@ struct StateBase : M::Base {
     // 根据定位状态切换实时、长时
     auto location_valid =
         frame->session()->environmental_model().location_valid();
+
+    static auto normal_pipeline =
+        TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, nullptr);
+    static auto realtime_pipeline =
+        TaskPipeline::Make(TaskPipelineType::REALTIME, config_builder, nullptr);
+    static auto vision_only_pipeline = TaskPipeline::Make(
+        TaskPipelineType::VISION_ONLY, config_builder, nullptr);
+
     if (location_valid) {
-      return TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder,
-                                frame);
+      normal_pipeline->SetFrame(frame);
+      return normal_pipeline;
     } else {
       if (g_context.GetParam().planner_type ==
           planning::context::PlannerType::REALTIME_PLANNER_WITH_MOTION) {
-        return TaskPipeline::Make(TaskPipelineType::REALTIME, config_builder,
-                                  frame);
+        realtime_pipeline->SetFrame(frame);
+        return realtime_pipeline;
       } else {
-        return TaskPipeline::Make(TaskPipelineType::VISION_ONLY, config_builder,
-                                  frame);
+        vision_only_pipeline->SetFrame(frame);
+        return vision_only_pipeline;
       }
     }
   }

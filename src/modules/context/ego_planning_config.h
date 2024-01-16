@@ -190,6 +190,21 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
   double lc_back_available_thr = 1.5;
 };
 
+struct ActRequestConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    // /* read config from json */
+    enable_act_request_function = read_json_keys<bool>(
+        json,
+        std::vector<std::string>{"act_request", "enable_act_request_function"});
+    enable_speed_threshold = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"act_request", "enable_speed_threshold"});
+  }
+  bool enable_act_request_function = true;
+  double enable_speed_threshold = 60.0;
+};
+
 struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -455,7 +470,13 @@ struct VisionLateralMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    nudge_buffer_road_boundary =
+        read_json_key<double>(json, "nudge_buffer_road_boundary");
+    nudge_buffer_lane_boundary =
+        read_json_key<double>(json, "nudge_buffer_lane_boundary");
   }
+  double nudge_buffer_road_boundary = 0.3;
+  double nudge_buffer_lane_boundary = 0.1;
 };
 
 struct LongitudinalDeciderV3Config : public EgoPlanningConfig {

@@ -463,7 +463,7 @@ void ScenarioStateMachine::compute_lc_valid_info(RequestType direction) {
 
   double v_ego = ego_state->ego_v();
   double l_ego = frenet_ego_state.l();
-  double safety_dist = v_ego * v_ego * 0.01 + 2.0;
+  double safety_dist = v_ego * v_ego * 0.02 + 2.0;
   double dist_mline = std::fabs(target_lane_frenet_ego_state.l()) -
                       1.8;  // TODO(Rui): use target_lane()->get_lane_width()
   double t_reaction = (dist_mline == DBL_MAX) ? 0.5 : 0.5 * dist_mline / 1.8;

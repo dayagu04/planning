@@ -142,7 +142,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
     environmental_model->set_function_info(common::DrivingFunctionInfo::NOA,
                                            function_state);
   } else {
-    LOG_ERROR("function mode error\n");
+    LOG_NOTICE("function mode error\n");
   }
 
   // 自动有效，临时hack

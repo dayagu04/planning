@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include "apa_planner/common/apa_utils.h"
+#include "apa_planner/src/apa_utils.h"
 #include "basic_types.pb.h"
 #include "config/vehicle_param.h"
 #include "ego_planning_config.h"
@@ -86,17 +86,12 @@ bool GeneralPlanning::RunOnce(
     PlanningOutput::PlanningOutput *const planning_output,
     common::PlanningDebugInfo &debug_info,
     PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
-  LOG_ERROR("GeneralPlanning::RunOnce \n");
+  LOG_DEBUG("GeneralPlanning::RunOnce \n");
   frame_num_++;
   session_.mutable_planning_output_context()->feed_planning_hmi_info(
       planning_hmi_info);
 
   double start_timestamp = IflyTime::Now_ms();
-
-  EnvironmentalModel *environmental_model =
-      session_.mutable_environmental_model();
-
-  environmental_model->feed_local_view(local_view);  //
 
   auto scene_type = planning::common::SceneType::HIGHWAY;
 
@@ -111,7 +106,13 @@ bool GeneralPlanning::RunOnce(
       scene_type = planning::common::SceneType::HIGHWAY;
       ClearParkingInfo(planning_output);
     }
+  } else {
+    return false;
   }
+
+  // set local_view to environment model
+  auto environmental_model = session_.mutable_environmental_model();
+  environmental_model->feed_local_view(local_view);
 
   auto fsm_state = local_view->function_state_machine_info.current_state();
 
@@ -305,7 +306,7 @@ void GeneralPlanning::FillPlanningTrajectory(
     LOG_DEBUG("presee_y_dist: [%f]: \n", presee_y_dist);
 
     if (d_polynomial.size() == 4) {
-      if (std::fabs(d_polynomial[3] + presee_y_dist) * 0.5 > max_lat_offset) {
+      if (std::fabs(d_polynomial[3] + presee_y_dist) > max_lat_offset) {
         limited_polynomial_3 += planning_math::Clamp(
             d_polynomial[3], -lat_offset_rate, lat_offset_rate);
       } else {

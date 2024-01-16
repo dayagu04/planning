@@ -11,7 +11,11 @@ ActRequest::ActRequest(
     planning::framework::Session *session,
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
     std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
-    : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {}
+    : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {
+  auto config_builder = session_->mutable_environmental_model()->config_builder(
+      planning::common::SceneType::HIGHWAY);
+  act_request_config_ = config_builder->cast<ActRequestConfig>();
+}
 
 void ActRequest::Update(int lc_status, double start_move_distolane,
                         double lc_int_tfinish, double lc_map_tfinish,
@@ -100,7 +104,10 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
   }
 
   // 判断道路条件lane_change_condition是否可以进行换道
-  const double kSpeedLimit = 60.0 / 3.6;
+  const bool enable_act_request =
+      act_request_config_.enable_act_request_function;
+  const double act_request_speed_limit =
+      act_request_config_.enable_speed_threshold / 3.6;
   const int kDistanceBuffer = 1000;
   // 道路限速
   auto v_limit_map = current_lane->velocity_limit();
@@ -162,7 +169,8 @@ void ActRequest::Update(int lc_status, double start_move_distolane,
       virtual_lane_mgr_->lc_map_decision(current_lane) < 0;
   // 整合分汇流附近换道条件：
   bool lc_condition_nearby_merge =
-      v_limit_map >= kSpeedLimit && is_on_highway && is_not_on_ramp &&
+      enable_act_request && v_limit_map >= act_request_speed_limit &&
+      is_on_highway && is_not_on_ramp &&
       ((is_nearby_right_merge_point && is_nearby_right_merge_point_lc_valid &&
         front_tracks_r_cnt > 0) ||
        (is_nearby_right_y_point && is_from_right_y_point_lc_decision_valid)) &&

@@ -727,7 +727,7 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
                          safe_extra_distance;
 
     } else {
-      assert(lon_decision != LonObstacleDecisionType::IGNORE);
+      // assert(lon_decision != LonObstacleDecisionType::IGNORE);
     }
 
     // refine safe bound a.c. model traj and path bound

@@ -6,24 +6,23 @@
 #include <cstdint>
 #include <vector>
 
-#include "Eigen/src/Core/Matrix.h"
-#include "apa_planner/collision_detection/collision_detection.h"
-#include "apa_planner/dubins_lib/dubins_lib.h"
+#include "Eigen/Core"
+#include "collision_detection.h"
+#include "math_lib.h"
+#include "transform_lib.h"
 
 namespace py = pybind11;
 using namespace planning;
-using namespace pnc::dubins_lib;
 
-// 进行碰撞检测
-static CollisionDetector* pBaseColDet = nullptr;
+namespace Eigen {
+typedef Eigen::Matrix<double, 5, 1> Vector5d;
+}
 
-// 获取轨迹
-static DubinsLibrary* pBaseDubins = nullptr;
+static CollisionDetector* pBaseColDetAir = nullptr;
+static CollisionDetector::CollisionResult collision_result;
 
 int Init() {
-  pBaseColDet = new CollisionDetector();
-  pBaseColDet->Init();
-  pBaseDubins = new DubinsLibrary();
+  pBaseColDetAir = new CollisionDetector();
   return 0;
 }
 
@@ -40,158 +39,101 @@ inline T BytesToProto(py::bytes& bytes) {
   return input;
 }
 
-int Update(double x_start, double y_start, double heading_start,
-           double x_target, double y_target, double heading_target,
-           double radius, uint8_t dubins_type, uint8_t case_type, double ds,
-           bool is_complete_path) {
-  DubinsLibrary::Input input;
-  input.radius = radius;
-  input.heading1 = heading_start;
-  input.heading2 = heading_target;
-  input.p1 << x_start, y_start;
-  input.p2 << x_target, y_target;
+void SetObstacle(const double obstacles_x, const double obstacles_y) {
+  std::vector<Eigen::Vector2d> obstacle_global_vec;
+  obstacle_global_vec.clear();
+  obstacle_global_vec.reserve(1);
+  Eigen::Vector2d obstacle_global(obstacles_x, obstacles_y);
 
-  pBaseDubins->SetInput(input);
-  pBaseDubins->Solve(dubins_type, case_type);
-  pBaseDubins->Sampling(ds, is_complete_path);
+  obstacle_global_vec.emplace_back(obstacle_global);
 
-  return 0;
+  pBaseColDetAir->SetObstacles(obstacle_global_vec);
 }
 
-int UpdateLineArc(double x_start, double y_start, double heading_start,
-                  double x_target, double y_target, double heading_target,
-                  double radius, uint8_t line_arc_type, double ds,
-                  bool is_complete_path) {
-  DubinsLibrary::Input input;
-  input.radius = radius;
-  input.heading1 = heading_start;
-  input.heading2 = heading_target;
-  input.p1 << x_start, y_start;
-  input.p2 << x_target, y_target;
-
-  pBaseDubins->SetInput(input);
-  pBaseDubins->Solve(line_arc_type);
-  pBaseDubins->Sampling(ds, is_complete_path);
-
-  return 0;
+void SetParam(const double lat_inflation) {
+  CollisionDetector::Paramters param;
+  param.lat_inflation = lat_inflation;
+  pBaseColDetAir->SetParam(param);
 }
 
-Eigen::Vector2d GetABCenter() {
-  return pBaseDubins->GetOutput().arc_AB.circle_info.center;
+void UpdateRefTrajLine(const Eigen::Vector3d ego_pos_start,
+                       const Eigen::Vector3d ego_pos_end) {
+  pnc::geometry_lib::LineSegment line_seg(
+      Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]),
+      Eigen::Vector2d(ego_pos_end[0], ego_pos_end[1]));
+  collision_result = pBaseColDetAir->Update(line_seg, ego_pos_start[2]);
 }
 
-Eigen::Vector2d GetCDCenter() {
-  return pBaseDubins->GetOutput().arc_CD.circle_info.center;
+void UpdateRefTrajArc(const Eigen::Vector3d ego_pos_start,
+                      const Eigen::Vector3d ego_pos_end,
+                      const Eigen::Vector5d ego_turn_circle) {
+  pnc::geometry_lib::Arc arc;
+  arc.pA = Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]);
+  arc.pB = Eigen::Vector2d(ego_pos_end[0], ego_pos_end[1]);
+  arc.circle_info.center = Eigen::Vector2d(ego_turn_circle[0], ego_turn_circle[1]);
+  arc.circle_info.radius = ego_turn_circle[2];
+  collision_result = pBaseColDetAir->Update(arc, ego_pos_start[2]);
 }
 
-std::vector<double> GetPathEle(size_t index) {
-  return pBaseDubins->GetPathEle(index);
+const double GetRemainDist() { return float(collision_result.remain_dist); }
+
+const double GetRemainCarDist() {
+  return float(collision_result.remain_car_dist);
 }
 
-Eigen::Vector2d GetpB() { return pBaseDubins->GetOutput().line_BC.pA; }
-Eigen::Vector2d GetpC() { return pBaseDubins->GetOutput().line_BC.pB; }
-Eigen::Vector2d GetpD() { return pBaseDubins->GetOutput().arc_CD.pB; }
-bool GetPathAvailiable() { return pBaseDubins->GetOutput().path_available; }
-double GetLength() { return pBaseDubins->GetOutput().length; }
-std::vector<uint8_t> GetGearCmdVec() {
-  return pBaseDubins->GetOutput().gear_cmd_vec;
-}
-uint8_t GetGearChangeCount() {
-  return pBaseDubins->GetOutput().gear_change_count;
-}
-double GetThetaBC() { return pBaseDubins->GetThetaBC(); }
-double GetThetaD() { return pBaseDubins->GetThetaD(); }
-double GetRadius() {
-  return pBaseDubins->GetOutput().arc_AB.circle_info.radius;
+const double GetRemainObstacleDist() {
+  return float(collision_result.remain_obstacle_dist);
 }
 
-void GenObstacleLinePb(const std::vector<Eigen::Vector2d>& start_point_vec,
-                       const std::vector<Eigen::Vector2d>& end_point_vec) {
-  //sstd::cout << "\nGenObstacleLinePb";                    
-  pnc::geometry_lib::LineSegment obstacle_line;
-  std::vector<pnc::geometry_lib::LineSegment> obstacle_line_vec;
-  obstacle_line_vec.clear();
-  obstacle_line_vec.reserve(start_point_vec.size());
-  for (size_t i = 0; i < start_point_vec.size(); i++) {
-    obstacle_line.SetPoints(start_point_vec[i], end_point_vec[i]);
-    obstacle_line_vec.emplace_back(std::move(obstacle_line));
-  }
-  pBaseColDet->GenObstaclesSimulation(obstacle_line_vec);
+const bool GetCollisionFlag() { return collision_result.collision_flag; }
+
+const Eigen::Vector2d GetCollisionPoint() {
+  return collision_result.collision_point;
 }
 
-void GenCarCirclePb(const std::vector<double>& path_x,
-                    const std::vector<double>& path_y,
-                    const std::vector<double>& path_theta) {
-  //std::cout << "\nGenCarCirclePb";
-  std::vector<pnc::dubins_lib::DubinsLibrary::PathPoint> path_point_vec;
-  path_point_vec.clear();
-  path_point_vec.reserve(path_x.size());
-  pnc::dubins_lib::DubinsLibrary::PathPoint path_point;
-  // std::cout << "\npath_point_vec0.size():" << path_point_vec.size();
-  for (size_t i = 0; i < path_x.size(); i++) {
-    path_point.Set(Eigen::Vector2d(path_x[i], path_y[i]), path_theta[i]);
-    path_point_vec.emplace_back(path_point);
-  }
-  // std::cout << "\npath_point_vec1.size():" << path_point_vec.size();
-  pBaseColDet->GenCarCircles(path_point_vec);
-  // std::cout << "\npath_point_vec2.size():" << path_point_vec.size();
+const Eigen::Vector2d GetTrunCenterCoord(
+    const Eigen::Vector3d ego_pos_start,
+    const Eigen::Vector5d ego_turn_circle) {
+  const Eigen::Vector2d tangent_unit_vector(cos(ego_pos_start[2]),
+                                            sin(ego_pos_start[2]));
+  // ego_pos_start: x, y, heading
+  // ego_turn_circle: x, y, radius, rotation_angle, rotation_direction
+  const double sign = (ego_turn_circle[4] == true ? 1.0 : -1.0);
+  const double rot_angle = sign * pnc::mathlib::Deg2Rad(90);
+  const auto rot_m = pnc::geometry_lib::GetRotm2dFromTheta(rot_angle);
+  const Eigen::Vector2d normal_unit_vector = rot_m * tangent_unit_vector;
+  const Eigen::Vector2d AO = ego_turn_circle[2] * normal_unit_vector;
+  return Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]) + AO;
 }
 
-const std::vector<std::vector<Eigen::Vector3d>> GetCarCirclePb() {
-  //std::cout << "\nGetCarCirclePb";
-  const auto &N = pBaseColDet->GetCarCircle().size();
-  const auto &M = pBaseColDet->GetCarCircle()[0].size();
-  // std::cout << "\nN:" << N;
-  // std::cout << "\nM:" << M;
-  std::vector<std::vector<Eigen::Vector3d>> circle_path_vec;
-  circle_path_vec.clear();
-  circle_path_vec.reserve(pBaseColDet->GetCarCircle().size());
-  std::vector<Eigen::Vector3d> circle_vec;
-  circle_vec.clear();
-  circle_vec.reserve(pBaseColDet->GetCarCircle()[0].size());
-  Eigen::Vector3d circle;
-  // std::cout << "\ncircle_path_vec.size():" << circle_path_vec.size();
-  //std::cout << "\ncircle_vec.size():" << circle_vec.size();
-  for (const auto& car_circle_global_vec : pBaseColDet->GetCarCircle()) {
-    for (const auto& car_circle_global : car_circle_global_vec) {
-      circle << car_circle_global.center.x(), car_circle_global.center.y(),
-          car_circle_global.radius;
-      circle_vec.emplace_back(circle);
-    }
-    circle_path_vec.emplace_back(std::move(circle_vec));
-  }
-  // std::cout << "\ncircle_path_vec.size():" << circle_path_vec.size();
-  return circle_path_vec;
-}
+const Eigen::Vector2d GetEgoPosCoord(const Eigen::Vector3d ego_pos_start,
+                                        const Eigen::Vector5d ego_turn_circle) {
+  // ego_pos_start: x, y, heading
+  // ego_turn_circle: x, y, radius, rotation_angle, rotation_direction
+  const Eigen::Vector2d OA =
+      Eigen::Vector2d(ego_pos_start[0] - ego_turn_circle[0],
+                      ego_pos_start[1] - ego_turn_circle[1]);
 
-bool CollisionDetectPb() {
-  //std::cout << "\nCollisionDetectPb";
-  // printf("\nnCollisionDetectPb");
-  // return false;
-  return pBaseColDet->CollisionDetect();
+  const double sign = (ego_turn_circle[4] == true ? 1.0 : -1.0);
+  const double rot_angle = sign * ego_turn_circle[3];
+  const auto rot_m = pnc::geometry_lib::GetRotm2dFromTheta(rot_angle);
+  Eigen::Vector2d OB = rot_m * OA;
+  return OB + Eigen::Vector2d(ego_turn_circle[0], ego_turn_circle[1]);
 }
 
 PYBIND11_MODULE(collision_detection_py, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)
-      .def("Update", &Update)
-      .def("UpdateLineArc", &UpdateLineArc)
-      .def("GetPathEle", &GetPathEle)
-      .def("GenObstacleLinePb", &GenObstacleLinePb)
-      .def("GenCarCirclePb", &GenCarCirclePb)
-      .def("GetCarCirclePb", GetCarCirclePb)
-      .def("CollisionDetectPb", CollisionDetectPb)
-      .def("GetABCenter", &GetABCenter)
-      .def("GetCDCenter", &GetCDCenter)
-      .def("GetpB", &GetpB)
-      .def("GetpC", &GetpC)
-      .def("GetpD", &GetpD)
-      .def("GetThetaBC", &GetThetaBC)
-      .def("GetThetaD", &GetThetaD)
-      .def("GetPathAvailiable", &GetPathAvailiable)
-      .def("GetLength", &GetLength)
-      .def("GetGearCmdVec", &GetGearCmdVec)
-      .def("GetGearChangeCount", &GetGearChangeCount)
-      .def("GetRadius", &GetRadius);
+      .def("SetObstacle", &SetObstacle)
+      .def("UpdateRefTrajLine", &UpdateRefTrajLine)
+      .def("UpdateRefTrajArc", &UpdateRefTrajArc)
+      .def("GetTrunCenterCoord", &GetTrunCenterCoord)
+      .def("GetEgoPosCoord", &GetEgoPosCoord)
+      .def("GetRemainDist", &GetRemainDist)
+      .def("GetCollisionFlag", &GetCollisionFlag)
+      .def("GetCollisionPoint", &GetCollisionPoint)
+      .def("GetRemainCarDist", &GetRemainCarDist)
+      .def("GetRemainObstacleDist", &GetRemainObstacleDist)
+      .def("SetParam", &SetParam);
 }
