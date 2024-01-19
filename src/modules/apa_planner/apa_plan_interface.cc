@@ -41,6 +41,10 @@ void ApaPlanInterface::Init() {
   SyncParameters();
 }
 
+void ApaPlanInterface::Reset() {
+  return;
+}
+
 std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
     const uint8_t apa_planner_id) {
   if (apa_planner_id <= apa_planner_stack_.size()) {
@@ -52,8 +56,7 @@ std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
 
 const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   std::cout << "\n------------------------ apa_interface: Update() "
-               "------------------------"
-            << std::endl;
+               "------------------------\n";
 
   const uint8_t last_state =
       apa_world_ptr_->GetMeasurementsPtr()->current_state;
@@ -75,15 +78,18 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   }
 
   // run apa world, always run when enter apa
-  std::cout << "---- apa_world: Update() ---" << std::endl;
+  std::cout << "---- apa_world: Update() ---\n";
   apa_world_ptr_->Update(local_view_ptr);
 
   // run planner
   bool success = false;
-
   if (apa_world_ptr_->GetMeasurementsPtr()->planner_type <
       ApaWorld::NONE_PLANNER) {
     success = ApaPlanOnce(apa_world_ptr_->GetMeasurementsPtr()->planner_type);
+  }
+
+  if (success) {
+    planning_output_ = planner_ptr_->GetOutput();
   }
 
   return success;
@@ -155,6 +161,11 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().wheel_base, double, "wheel_base");
   JSON_READ_VALUE(apa_param.SetPram().car_width, double, "car_width");
   JSON_READ_VALUE(apa_param.SetPram().mirror_width, double, "mirror_width");
+  JSON_READ_VALUE(apa_param.SetPram().lon_dist_mirror_to_rear_axle, double,
+                  "lon_dist_mirror_to_rear_axle");
+
+  JSON_READ_VALUE(apa_param.SetPram().lat_dist_mirror_to_center, double,
+                  "lat_dist_mirror_to_center");
   JSON_READ_VALUE(apa_param.SetPram().steer_ratio, double, "steer_ratio");
   JSON_READ_VALUE(apa_param.SetPram().arc_line_shift_steer_angle_deg, double,
                   "arc_line_shift_steer_angle_deg");
@@ -171,6 +182,22 @@ void ApaPlanInterface::SyncParameters() {
   // slot params
   JSON_READ_VALUE(apa_param.SetPram().normal_slot_length, double,
                   "normal_slot_length");
+
+  JSON_READ_VALUE(apa_param.SetPram().normal_slot_width, double,
+                  "normal_slot_width");
+
+  // terminal pose params
+  JSON_READ_VALUE(apa_param.SetPram().terminal_target_x, double,
+                  "terminal_target_x");
+
+  JSON_READ_VALUE(apa_param.SetPram().terminal_target_y, double,
+                  "terminal_target_y");
+
+  JSON_READ_VALUE(apa_param.SetPram().terminal_target_heading, double,
+                  "terminal_target_heading");
+
+  JSON_READ_VALUE(apa_param.SetPram().terminal_target_x_to_limiter, double,
+                  "terminal_target_x_to_limiter");
 
   // check finish params
   JSON_READ_VALUE(apa_param.SetPram().finish_lat_err, double, "finish_lat_err");
@@ -288,16 +315,6 @@ void ApaPlanInterface::SyncParameters() {
 
   JSON_READ_VALUE(apa_param.SetPram().obstacle_ds, double, "obstacle_ds");
 
-  // terminal pose params
-  JSON_READ_VALUE(apa_param.SetPram().terminal_target_x, double,
-                  "terminal_target_x");
-
-  JSON_READ_VALUE(apa_param.SetPram().terminal_target_y, double,
-                  "terminal_target_y");
-
-  JSON_READ_VALUE(apa_param.SetPram().terminal_target_x_to_limiter, double,
-                  "terminal_target_x_to_limiter");
-
   // dynamic update path params
   JSON_READ_VALUE(apa_param.SetPram().car_to_limiter_dis, double,
                   "car_to_limiter_dis");
@@ -368,6 +385,12 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().prepare_line_min_heading_offset_slot_deg,
                   double, "prepare_line_min_heading_offset_slot_deg");
 
+  JSON_READ_VALUE(apa_param.SetPram().prepare_directly_use_tangent_pos_err,
+                  double, "prepare_directly_use_tangent_pos_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().prepare_directly_use_tangent_heading_err,
+                  double, "prepare_directly_use_tangent_heading_err");
+
   JSON_READ_VALUE(apa_param.SetPram().static_pos_eps, double, "static_pos_eps");
 
   JSON_READ_VALUE(apa_param.SetPram().static_heading_eps, double,
@@ -398,11 +421,39 @@ void ApaPlanInterface::SyncParameters() {
                   "adjust_plan_max_heading2_err");
 
   // slot managent params
-  JSON_READ_VALUE(apa_param.SetPram().lon_dist_mirror_to_rear_axle, double,
-                  "lon_dist_mirror_to_rear_axle");
+  // slot update
+  JSON_READ_VALUE(apa_param.SetPram().slot_update_in_or_out_occupied_ratio,
+                  double, "slot_update_in_or_out_occupied_ratio");
 
-  JSON_READ_VALUE(apa_param.SetPram().lat_dist_mirror_to_center, double,
-                  "lat_dist_mirror_to_center");
+  JSON_READ_VALUE(apa_param.SetPram().slot_update_out_heading, double,
+                  "slot_update_out_heading");
+
+  JSON_READ_VALUE(apa_param.SetPram().slot_update_out_lat, double,
+                  "slot_update_out_lat");
+
+  JSON_READ_VALUE(apa_param.SetPram().slot_update_in_heading, double,
+                  "slot_update_in_heading");
+
+  JSON_READ_VALUE(apa_param.SetPram().slot_update_in_lat, double,
+                  "slot_update_in_lat");
+
+  JSON_READ_VALUE(apa_param.SetPram().slot_reset_threshold, int,
+                  "slot_reset_threshold");
+
+  JSON_READ_VALUE(apa_param.SetPram().limiter_move_dist, double,
+                  "limiter_move_dist");
+
+  JSON_READ_VALUE(apa_param.SetPram().limiter_update_min_occupied_ratio, double,
+                  "limiter_update_min_occupied_ratio");
+
+  JSON_READ_VALUE(apa_param.SetPram().limiter_update_max_occupied_ratio, double,
+                  "limiter_update_max_occupied_ratio");
+
+  JSON_READ_VALUE(apa_param.SetPram().limiter_update_distance_to_car, double,
+                  "limiter_update_distance_to_car");
+
+  JSON_READ_VALUE(apa_param.SetPram().limiter_update_occupied_ratio, double,
+                  "limiter_update_occupied_ratio");
 
   JSON_READ_VALUE(apa_param.SetPram().max_slots_update_angle_dis_limit_deg,
                   double, "max_slots_update_angle_dis_limit_deg");
@@ -414,21 +465,8 @@ void ApaPlanInterface::SyncParameters() {
       apa_param.SetPram().min_slot_update_lon_dif_slot_center_to_mirror, double,
       "min_slot_update_lon_dif_slot_center_to_mirror");
 
-  JSON_READ_VALUE(apa_param.SetPram().res_limiter, double, "res_limiter");
-
   JSON_READ_VALUE(apa_param.SetPram().terminal_length, double,
                   "terminal_length");
-
-  JSON_READ_VALUE(apa_param.SetPram().res_distance, double, "res_distance");
-
-  JSON_READ_VALUE(apa_param.SetPram().min_limiter_update_occupied_ratio, double,
-                  "min_limiter_update_occupied_ratio");
-
-  JSON_READ_VALUE(apa_param.SetPram().max_limiter_update_occupied_ratio, double,
-                  "max_limiter_update_occupied_ratio");
-
-  JSON_READ_VALUE(apa_param.SetPram().limiter_update_occupied_ratio, double,
-                  "limiter_update_occupied_ratio");
 
   JSON_READ_VALUE(apa_param.SetPram().limiter_length, double, "limiter_length");
 
@@ -468,8 +506,7 @@ const bool ApaPlanInterface::UpdateFrame(framework::Frame *frame) {
                                    ->planning_result.planning_output);
 
   if (success) {
-    const auto apa_planning_output = planner_ptr_->GetOutput();
-    *planning_output_ptr = apa_planning_output;
+    *planning_output_ptr = planning_output_;
 
     const auto &planning_status =
         planner_ptr_->GetPlannerStates().planning_status;

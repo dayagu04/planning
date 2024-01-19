@@ -24,6 +24,8 @@ struct ApaParameters {
   double wheel_base = 2.7;
   double car_width = 1.89;
   double mirror_width = 0.2;
+  double lon_dist_mirror_to_rear_axle = 1.844;
+  double lat_dist_mirror_to_center = 1.135;
   double steer_ratio = 16.5;
   double arc_line_shift_steer_angle_deg = 2.5;
   double c1 = 0.3790;
@@ -40,6 +42,13 @@ struct ApaParameters {
 
   // slot params
   double normal_slot_length = 5.2;
+  double normal_slot_width = 2.2;
+
+  // terminal pose params
+  double terminal_target_x = 1.35;
+  double terminal_target_y = 0.0;
+  double terminal_target_heading = 0.0;
+  double terminal_target_x_to_limiter = 0.15;
 
   // check finish params
   double finish_lat_err = 0.08;
@@ -97,12 +106,7 @@ struct ApaParameters {
   double channel_length = 12.28;
   double max_obs2car_dist = 1.2;
   double obstacle_ds = 0.5;
-  double col_obs_safe_dist = 0.6;
-
-  // terminal pose params
-  double terminal_target_x = 1.35;
-  double terminal_target_y = 0.0;
-  double terminal_target_x_to_limiter = 0.15;
+  double col_obs_safe_dist = 0.36;
 
   // dynamic update path params
   double car_to_limiter_dis = 1.0;
@@ -127,6 +131,8 @@ struct ApaParameters {
   double prepare_line_max_heading_offset_slot_deg = 8.8;
   double prepare_line_dheading_offset_slot_deg = 1.0;
   double prepare_line_min_heading_offset_slot_deg = 0.0;
+  double prepare_directly_use_tangent_pos_err = 0.106;
+  double prepare_directly_use_tangent_heading_err = 2.6;
   double min_turn_radius = 5.5;
   double max_one_step_arc_radius = 8.5;
   double max_radius_in_slot = 12.66;
@@ -146,19 +152,28 @@ struct ApaParameters {
   double adjust_plan_max_heading2_err = 70.0;
 
   // slot managent params
-  double lon_dist_mirror_to_rear_axle = 1.844;
-  double lat_dist_mirror_to_center = 1.135;
+  // slot update
+  double slot_update_in_or_out_occupied_ratio = 0.001;
+  double slot_update_out_heading = 10;
+  double slot_update_out_lat = 0.3;
+  double slot_update_in_heading = 10;
+  double slot_update_in_lat = 0.3;
+  int slot_reset_threshold = 10;
+  // limiter update
+  double limiter_update_min_occupied_ratio = 0.4;
+  double limiter_update_max_occupied_ratio = 0.6;
+  double limiter_update_distance_to_car = 1.7;
+  double limiter_update_occupied_ratio = 0.6;
+  double limiter_move_dist = 0.45;
+
   double max_slots_update_angle_dis_limit_deg = 36.6;
   double max_slot_boundary_line_angle_dif_deg = 10.0;
   double max_slot_update_lon_dif_slot_center_to_mirror = 2.26;
   double min_slot_update_lon_dif_slot_center_to_mirror = 0.35;
-  double res_limiter = 0.45;
+
   double terminal_length = 1.2;
-  double res_distance = 1.7;
-  double min_limiter_update_occupied_ratio = 0.4;
-  double max_limiter_update_occupied_ratio = 0.6;
-  double limiter_update_occupied_ratio = 0.6;
   double limiter_length = 0.0;
+
   double slot_occupied_ratio_max_lat_err = 0.9;
   double slot_occupied_ratio_max_heading_err = 75.0;
 

@@ -107,6 +107,8 @@ class PerpendicularPathPlanner {
     pnc::geometry_lib::Circle multi_safe_circle;
 
     pnc::geometry_lib::PathPoint safe_circle_tang_pt;
+    bool cal_tang_pt_success = false;
+    bool directly_use_tang_pt = false;
 
     pnc::geometry_lib::LineSegment prepare_line;  // pA is tag point
     Eigen::Vector2d pre_line_tangent_vec = Eigen::Vector2d::Zero();
@@ -122,6 +124,8 @@ class PerpendicularPathPlanner {
       multi_safe_circle.Reset();
 
       safe_circle_tang_pt.Reset();
+      cal_tang_pt_success = false;
+      directly_use_tang_pt = false;
 
       pre_line_tangent_vec.setZero();
       pre_line_normal_vec.setZero();

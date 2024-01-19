@@ -39,6 +39,8 @@ class ApaPlannerBase {
     double sample_ds = 0.02;
     std::vector<double> target_managed_slot_x_vec;
     std::vector<double> target_managed_slot_y_vec;
+    std::vector<double> target_managed_limiter_x_vec;
+    std::vector<double> target_managed_limiter_y_vec;
   };
 
   struct EgoSlotInfo {
@@ -46,6 +48,9 @@ class ApaPlannerBase {
     std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter;
     Eigen::Vector2d target_ego_pos_slot = Eigen::Vector2d::Zero();
     double target_ego_heading_slot = 0.0;
+
+    std::vector<Eigen::Vector2d> slot_corner;
+    std::vector<Eigen::Vector2d> limiter_corner;
 
     size_t selected_slot_id = 0;
 
@@ -73,6 +78,9 @@ class ApaPlannerBase {
       selected_slot_id = 0;
       target_ego_pos_slot = Eigen::Vector2d::Zero();
       target_ego_heading_slot = 0.0;
+
+      slot_corner.clear();
+      limiter_corner.clear();
 
       limiter.first.setZero();
       limiter.second.setZero();

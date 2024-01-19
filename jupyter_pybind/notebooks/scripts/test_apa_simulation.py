@@ -11,7 +11,7 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/planning-42f60cac2/test_1.00000'
+bag_path = '/data_cold/abu_zone/APA/planning-b9b956b3/test_4.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -32,8 +32,8 @@ data_planning_tune = ColumnDataSource(data = {'plan_path_x':[],
 data_sim_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 data_sim_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
-data_tlane = ColumnDataSource(data = {'x':[-11.3691, -11.56], 'y':[-4.08125, -6.54795]})
-# data_tlane = ColumnDataSource(data = {'x':[1.12249], 'y':[0.618948]})
+# data_tlane = ColumnDataSource(data = {'x':[-11.3691, -11.56], 'y':[-4.08125, -6.54795]})
+
 
 for bag_time in np.arange(0.0, max_time, 0.1):
   kwargs = locals()
@@ -47,20 +47,26 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
   loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][index_map['loc_msg_idx']])
 
-  if soc_state_msg.current_state == 30:
-    tlane_p0_x = plan_debug_msg['tlane_p0_x']
-    tlane_p0_y = plan_debug_msg['tlane_p0_y']
-    tlane_p1_x = plan_debug_msg['tlane_p1_x']
-    tlane_p1_y = plan_debug_msg['tlane_p1_y']
-    data_tlane.data.update({
-      'x': [tlane_p0_x, tlane_p1_x],
-      'y': [tlane_p0_y, tlane_p1_y],
-    })
-  else:
-    data_tlane.data.update({
-      'y': [],
-      'x': [],
-    })
+  slot_management_info = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].slot_management_info
+  select_slot_id = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']].select_slot_id
+  target_managed_slot_x_vec = []
+  target_managed_slot_y_vec = []
+  for i in range(len(slot_management_info.slot_info_vec)):
+    maganed_slot_vec = slot_management_info.slot_info_vec[i]
+    corner_point = maganed_slot_vec.corner_points.corner_point
+    if maganed_slot_vec.id == select_slot_id:
+      target_managed_slot_x_vec = [corner_point[0].x,corner_point[1].x,corner_point[2].x,corner_point[3].x]
+      target_managed_slot_y_vec = [corner_point[0].y,corner_point[1].y,corner_point[2].y,corner_point[3].y]
+
+  target_managed_slot_x_vec = []
+  target_managed_slot_y_vec = []
+  target_managed_limiter_x_vec = []
+  target_managed_limiter_y_vec = []
+  if soc_state_msg.current_state == 29 or soc_state_msg.current_state == 30:
+    target_managed_slot_x_vec = plan_debug_msg['slot_corner_X']
+    target_managed_slot_y_vec = plan_debug_msg['slot_corner_Y']
+    target_managed_limiter_x_vec = plan_debug_msg['limiter_corner_X']
+    target_managed_limiter_y_vec = plan_debug_msg['limiter_corner_Y']
 
   current_ego_x = loc_msg.pose.local_position.x
   current_ego_y = loc_msg.pose.local_position.y
@@ -96,7 +102,8 @@ for bag_time in np.arange(0.0, max_time, 0.1):
                                     loc_msg.SerializeToString(),
                                     vs_msg.SerializeToString(),
                                     wave_msg.SerializeToString(),
-                                    4, False, False, False, 0.02)
+                                    0, False, False, False, 0.02, target_managed_slot_x_vec, target_managed_slot_y_vec,
+                                    target_managed_limiter_x_vec, target_managed_limiter_y_vec)
 
   data_planning_tune.data = {'plan_path_x': [],
                              'plan_path_y': [],

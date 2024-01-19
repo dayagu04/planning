@@ -14,6 +14,7 @@
 #include "apa_param_setting.h"
 #include "basic_types.pb.h"
 #include "func_state_machine.pb.h"
+#include "geometry_math.h"
 #include "local_view.h"
 #include "localization.pb.h"
 #include "parking_fusion.pb.h"
@@ -40,7 +41,6 @@ class SlotInfoWindow {
         front_index_ = 0;
       }
     }
-    Fuse();
   }
 
   void Reset() {
@@ -102,7 +102,12 @@ class SlotInfoWindow {
     fused_slot_info_ = fused_slot;
   }
 
-  const common::SlotInfo GetFusedInfo() const { return fused_slot_info_; }
+  const common::SlotInfo GetFusedInfo() {
+    Fuse();
+    return fused_slot_info_;
+  }
+
+  const bool IsEmpty() const { return slot_info_vec_.empty(); }
 
  private:
   size_t front_index_ = 0;
@@ -115,15 +120,6 @@ class LimiterPointWindow {
   LimiterPointWindow() { limiter_points_vec_.reserve(max_limiter_window_size); }
 
   ~LimiterPointWindow() = default;
-
-  const bool IsEmpty() const { return (limiter_points_vec_.size() == 0); }
-
-  void Reset() {
-    front_index_ = 0;
-    limiter_points_vec_.clear();
-    fused_limiter_points_.first.Clear();
-    fused_limiter_points_.second.Clear();
-  }
 
   void Add(const std::pair<Eigen::Vector2d, Eigen::Vector2d> fusion_slot) {
     std::pair<Eigen::Vector2d, Eigen::Vector2d> fusion_slot_tmp = fusion_slot;
@@ -154,6 +150,13 @@ class LimiterPointWindow {
     }
   }
 
+  void Reset() {
+    front_index_ = 0;
+    limiter_points_vec_.clear();
+    fused_limiter_points_.first.Clear();
+    fused_limiter_points_.second.Clear();
+  }
+
   void Fuse() {
     if (limiter_points_vec_.size() == 0) {
       return;
@@ -177,10 +180,12 @@ class LimiterPointWindow {
     fused_limiter_points_.second.set_y(p1_mean.y());
   }
 
-  const std::pair<common::Point2d, common::Point2d> GetFusedLimiterPoints()
-      const {
+  const std::pair<common::Point2d, common::Point2d> GetFusedLimiterPoints() {
+    Fuse();
     return fused_limiter_points_;
   }
+
+  const bool IsEmpty() const { return limiter_points_vec_.empty(); }
 
  private:
   size_t front_index_ = 0;
@@ -196,8 +201,6 @@ class SlotManagement {
     double lat_dist_rearview_mirror_to_center =
         apa_param.GetParam().lat_dist_mirror_to_center;
 
-    bool force_apa_on = false;
-    bool force_clear = false;
     size_t max_slot_size = 100;
     double max_slot_release_dist = 25.0;
     double max_slots_update_angle_dis_limit_deg =
@@ -209,16 +212,19 @@ class SlotManagement {
     double min_slot_update_lon_dif_slot_center_to_mirror =
         apa_param.GetParam().min_slot_update_lon_dif_slot_center_to_mirror;
     double invade_area_ratio = 0.36;
-  };
 
-  struct OccupiedInfo {
-    OccupiedInfo() {}
-    OccupiedInfo(size_t count_r, bool is_occupied_r) {
-      count = count_r;
-      is_occupied = is_occupied_r;
+    // auto switcher to parking
+    bool force_apa_on = false;
+    bool force_clear = false;
+    bool is_switch_parking = false;
+    google::protobuf::uint32 set_seleted_id_mannually = 0;
+
+    void Reset() {
+      force_apa_on = false;
+      force_clear = false;
+      is_switch_parking = false;
+      set_seleted_id_mannually = 0;
     }
-    size_t count = 0;
-    bool is_occupied = false;
   };
 
   struct Measurement {
@@ -228,6 +234,69 @@ class SlotManagement {
     Eigen::Vector2d mirror_pos = Eigen::Vector2d::Zero();
   };
 
+  struct EgoSlotInfo {
+    uint8_t select_slot_id = 0;
+    uint8_t slot_type = Common::PARKING_SLOT_TYPE_VERTICAL;
+    ParkingFusion::ParkingFusionSlot select_fusion_slot;
+    common::SlotInfo select_slot;
+    common::SlotInfo select_slot_filter;
+
+    Eigen::Vector2d slot_origin_pos = Eigen::Vector2d::Zero();
+    double slot_origin_heading = 0.0;
+    Eigen::Vector2d slot_origin_heading_vec = Eigen::Vector2d::Zero();
+
+    double slot_length = apa_param.GetParam().normal_slot_length;
+    double slot_width = apa_param.GetParam().normal_slot_width;
+
+    pnc::geometry_lib::GlobalToLocalTf g2l_tf;
+    pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+
+    Eigen::Vector2d ego_pos_slot = Eigen::Vector2d::Zero();
+    Eigen::Vector2d ego_heading_slot_vec = Eigen::Vector2d::Zero();
+    double ego_heading_slot = 0.0;
+
+    Eigen::Vector2d target_ego_pos_slot = Eigen::Vector2d::Zero();
+    Eigen::Vector2d target_ego_heading_slot_vec = Eigen::Vector2d::Zero();
+    double target_ego_heading_slot = 0.0;
+
+    pnc::geometry_lib::PathPoint terminal_err;
+
+    std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter = std::make_pair(
+        Eigen::Vector2d(apa_param.GetParam().terminal_target_x,
+                        apa_param.GetParam().normal_slot_width / 2.0),
+        Eigen::Vector2d(apa_param.GetParam().terminal_target_x,
+                        -apa_param.GetParam().normal_slot_width / 2.0));
+
+    double slot_occupied_ratio = 0.0;
+
+    void Reset() {
+      select_slot_id = 0;
+      slot_type = Common::PARKING_SLOT_TYPE_VERTICAL;
+      select_fusion_slot.Clear();
+      select_slot.Clear();
+      select_slot_filter.Clear();
+      slot_origin_pos.setZero();
+      slot_origin_heading = 0.0;
+      slot_origin_heading_vec.setZero();
+      slot_length = apa_param.GetParam().normal_slot_length;
+      slot_width = apa_param.GetParam().normal_slot_width;
+      ego_pos_slot.setZero();
+      ego_heading_slot_vec.setZero();
+      ego_heading_slot = 0.0;
+
+      target_ego_pos_slot.setZero();
+      target_ego_heading_slot_vec.setZero();
+      target_ego_heading_slot = 0.0;
+      terminal_err.Reset();
+      limiter = std::make_pair(
+          Eigen::Vector2d(apa_param.GetParam().terminal_target_x,
+                          apa_param.GetParam().normal_slot_width / 2.0),
+          Eigen::Vector2d(apa_param.GetParam().terminal_target_x,
+                          -apa_param.GetParam().normal_slot_width / 2.0));
+      slot_occupied_ratio = 0.0;
+    }
+  };
+
   struct Frame {
     const FuncStateMachine::FuncStateMachine* func_state_ptr_;
     const ParkingFusion::ParkingFusionInfo* parking_slot_ptr_;
@@ -235,7 +304,6 @@ class SlotManagement {
     // slot state check by uss
     const UssWaveInfo::UssWaveInfo* uss_wave_info_ptr_;
     std::vector<double> uss_raw_dist_vec_;
-    std::unordered_map<int, OccupiedInfo> occupied_info_map_;
     std::vector<PlanningOutput::SuccessfulSlotsInfo> released_slot_info_vec_;
 
     std::unordered_map<int, size_t> slot_info_map_;
@@ -246,15 +314,25 @@ class SlotManagement {
 
     Measurement measurement_;
     Param param_;
-    double slot_occupied_ratio_ = 0.0;
     size_t fusion_order_error_cnt_ = 0;
-    bool is_occupied_ = false;
-    bool is_fixed_ = false;
 
-    // auto switcher to parking
-    bool using_auto_switcher = false;
-    bool is_switch_parking = false;
-    google::protobuf::uint32 set_seleted_id_mannually = 0;
+    EgoSlotInfo ego_slot_info;
+
+    size_t no_update_slot_count = 0;
+
+    void Reset() {
+      uss_raw_dist_vec_.clear();
+      released_slot_info_vec_.clear();
+      slot_info_map_.clear();
+      slot_info_map_.reserve(max_slot_window_size);
+      slot_info_window_vec_.clear();
+      slot_management_info_.Clear();
+      limiter_point_window_.Reset();
+      param_.Reset();
+      fusion_order_error_cnt_ = 0;
+      no_update_slot_count = 0;
+      ego_slot_info.Reset();
+    }
   };
 
   bool Update(const LocalView* local_view_ptr);
@@ -269,7 +347,6 @@ class SlotManagement {
   void SetParam(const Param& param) { frame_.param_ = param; }
 
   void Reset();
-  void SetSlotFix(const bool is_fixed) { frame_.is_fixed_ = is_fixed; }
 
   const bool GetSelectedSlot(common::SlotInfo& slot_info,
                              const int selected_id) const;
@@ -288,7 +365,7 @@ class SlotManagement {
     return &frame_.slot_management_info_;
   }
 
-  const double GetOccupiedRatio() const { return frame_.slot_occupied_ratio_; }
+  const EgoSlotInfo& GetEgoSlotInfo() const { return frame_.ego_slot_info; }
 
   const bool GetSelectedLimiter(
       std::pair<Eigen::Vector2d, Eigen::Vector2d>& fused_limiter) const;
@@ -300,44 +377,35 @@ class SlotManagement {
 
  private:
   Frame frame_;
-  void Preprocess();
-  bool UpdateSlotsInSearching();
-  bool UpdateSlotsInParking();
-  bool IsValidParkingSlot(const common::SlotInfo& slot_info) const;
-  bool CorrectSlotPointsOrder(common::SlotInfo& slot_info) const;
+
   bool IsInAPAState() const;
+  void Preprocess();
+
   bool IsInSearchingState() const;
+  bool UpdateSlotsInSearching();
+
   bool IsInParkingState() const;
-  bool ReleaseSlots();
-
-  double CalOccupiedRatio() const;
-
-  common::SlotInfo SlotInfoTransfer(
-      const ParkingFusion::ParkingFusionSlot& parking_fusion_slot);
-
-  bool ReleaseSlots(FuncStateMachine::FuncStateMachine& func_statemachine,
-                    ParkingFusion::ParkingFusionInfo& parking_slot_info);
-
-  void UpdateReleasedSlotInfo();
-
-  bool IfUpdateSlot(const common::SlotInfo& new_slot_info);
-  bool AngleUpdateCondition(const common::SlotInfo& new_slot_info);
-  bool LonDifUpdateCondition(const common::SlotInfo& new_slot_info);
-
-  void UpdateOccupiedInfo();
-  void UpdateLimiterInfoInParking(const common::SlotInfo& slot_info,
-                                  const size_t selected_fusin_slot_index);
-
-  void UpdateSlotInfoInParking(common::SlotInfo& select_slot,
-                               const size_t selected_fusin_slot_index,
-                               const bool is_occupied);
+  bool UpdateSlotsInParking();
+  bool UpdateEgoSlotInfo(
+      const google::protobuf::uint32& select_slot_id,
+      const common::SlotInfo& select_slot,
+      const ParkingFusion::ParkingFusionSlot& selecte_fusion_slot);
+  void UpdateSlotInfoInParking();
+  void UpdateLimiterInfoInParking();
 
   const bool ProcessRawSlot(
       const ParkingFusion::ParkingFusionSlot& parking_fusion_slot,
       common::SlotInfo& new_slot_info);
+  common::SlotInfo SlotInfoTransfer(
+      const ParkingFusion::ParkingFusionSlot& parking_fusion_slot);
+  bool IsValidParkingSlot(const common::SlotInfo& slot_info) const;
+  bool CorrectSlotPointsOrder(common::SlotInfo& slot_info) const;
+  bool IfUpdateSlot(const common::SlotInfo& new_slot_info);
+  bool AngleUpdateCondition(const common::SlotInfo& new_slot_info);
+  bool LonDifUpdateCondition(const common::SlotInfo& new_slot_info);
   void ModifySlot2Rectangle(common::SlotInfo& slot_info);
 
-  void UpdateLimiterForAutoSetSlot();
+  void UpdateReleasedSlotInfo();
 };
 
 }  // namespace planning

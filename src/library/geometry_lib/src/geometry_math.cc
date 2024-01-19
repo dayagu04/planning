@@ -1394,7 +1394,7 @@ const bool CalTwoArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
     return LogErr(__func__, 5);
   }
   if (!mathlib::IsDoubleEqual(arc2.headingB, line.heading)) {
-    return LogErr(__func__, 3);
+    return LogErr(__func__, 6);
   }
   return true;
 }
