@@ -112,6 +112,9 @@ class VirtualLaneManager {
   std::vector<double> construct_reference_line_acc(void);
   std::vector<double> construct_reference_line_scc(void);
   bool update(const FusionRoad::RoadInfo &roads);
+
+  bool CheckLaneValid(const FusionRoad::RoadInfo &roads);
+
   void reset();
 
   double get_distance_to_dash_line(const RequestType direction,
