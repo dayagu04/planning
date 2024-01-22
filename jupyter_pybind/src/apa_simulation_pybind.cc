@@ -124,17 +124,23 @@ const bool InterfaceUpdateParam(py::bytes &func_statemachine_bytes,
                                 py::bytes &localization_info_bytes,
                                 py::bytes &vehicle_service_output_info_bytes,
                                 py::bytes &uss_wave_info_bytes, int select_id,
-                                bool force_plan, bool is_reset,
+                                bool force_plan, bool is_path_optimization, bool is_reset,
                                 bool is_complete_path, double sample_ds,
                                 std::vector<double> target_managed_slot_x_vec,
-                                std::vector<double> target_managed_slot_y_vec) {
+                                std::vector<double> target_managed_slot_y_vec,
+                                std::vector<double> target_managed_limiter_x_vec,
+                                std::vector<double> target_managed_limiter_y_vec) 
+                                 {
   apa_planner::ApaPlannerBase::SimulationParam param;
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
+  param.is_path_optimization = is_path_optimization;
   param.sample_ds = sample_ds;
   param.is_reset = is_reset;
   param.target_managed_slot_x_vec = target_managed_slot_x_vec;
   param.target_managed_slot_y_vec = target_managed_slot_y_vec;
+  param.target_managed_limiter_x_vec = target_managed_limiter_x_vec;
+  param.target_managed_limiter_y_vec = target_managed_limiter_y_vec;
 
   const auto &apa_planner_stack = apa_interface_ptr->GetPlannerStack();
 

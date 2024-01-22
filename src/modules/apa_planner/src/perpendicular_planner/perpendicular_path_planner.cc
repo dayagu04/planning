@@ -71,15 +71,22 @@ bool PerpendicularPathPlanner::Update() {
 
   // prepare plan, only for first plan
   if (input_.is_replan_first) {
-    if (PreparePlan() == false) {
-      std::cout << "prepare plan failed!" << std::endl;
-      return false;
+    if (PreparePlan()) {
+      if (GenPathOutputByDubins()) {
+        std::cout << "prepare gear is reverse, need multi plan" << std::endl;
+      } else {
+        std::cout << "prepare gear is drive, no need multi plan" << std::endl;
+        return true;
+      }
+    } else {
+      std::cout << "prepare plan failed!\n";
+      if (calc_params_.directly_use_tang_pt) {
+        std::cout << "directly use safe_circle_tang_pt to multi plan\n";
+      } else {
+        std::cout << "cannot directly_use_tang_pt to multi plan\n";
+        return false;
+      }
     }
-    if (GenPathOutputByDubins() == false) {
-      std::cout << "prepare gear is drive, no need multi plan" << std::endl;
-      return true;
-    }
-    std::cout << "prepare gear is reverse, need multi plan" << std::endl;
   }
 
   // multi step
@@ -123,12 +130,45 @@ const bool PerpendicularPathPlanner::PreparePlan() {
         apa_param.GetParam().prepare_line_dheading_offset_slot_deg / 57.3;
   }
 
+  calc_params_.directly_use_tang_pt = false;
   for (const auto& heading_offset : heading_offset_vec) {
     for (const auto& x_offset : x_offset_vec) {
       if (PreparePlanOnce(x_offset, heading_offset)) {
         std::cout << "x_offset = " << x_offset << std::endl;
         std::cout << "heading_offset = " << heading_offset * 57.3 << std::endl;
         return true;
+      } else {
+        if (calc_params_.cal_tang_pt_success) {
+          const double dist =
+              (input_.ego_pose.pos - calc_params_.safe_circle_tang_pt.pos)
+                  .norm();
+          const double heading_err =
+              std::fabs(input_.ego_pose.heading -
+                        calc_params_.safe_circle_tang_pt.heading);
+          // std::cout << "input_.ego_pose.pos = "
+          //           << input_.ego_pose.pos.transpose()
+          //           << "  input_.ego_pose.heading = " <<
+          //           input_.ego_pose.heading
+          //           << "  safe_circle_tang_pt.pos = "
+          //           << calc_params_.safe_circle_tang_pt.pos.transpose()
+          //           << "  safe_circle_tang_pt.heading = "
+          //           << calc_params_.safe_circle_tang_pt.heading
+          //           << "  dist = " << dist << " heading_err = " <<
+          //           heading_err
+          //           << std::endl;
+          // std::cout << "  dist = " << dist << " heading_err = " <<
+          // heading_err
+          //           << std::endl;
+          if (dist <
+                  apa_param.GetParam().prepare_directly_use_tangent_pos_err &&
+              heading_err < apa_param.GetParam()
+                                    .prepare_directly_use_tangent_heading_err /
+                                57.3) {
+            input_.ego_pose = calc_params_.safe_circle_tang_pt;
+            calc_params_.directly_use_tang_pt = true;
+            return false;
+          }
+        }
       }
     }
   }
@@ -169,14 +209,18 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
   pnc::dubins_lib::DubinsLibrary::Input input;
   input.radius = apa_param.GetParam().min_turn_radius * 1.05;
 
+  calc_params_.cal_tang_pt_success = false;
+
   bool prepare_success = false;
   // first use mono prepare to find target point
-  if (MonoPreparePlan(target_pose.pos) &&
-      apa_param.GetParam().mono_plan_enable) {
+  if (apa_param.GetParam().mono_plan_enable &&
+      MonoPreparePlan(target_pose.pos)) {
     input.Set(input_.ego_pose.pos, target_pose.pos, input_.ego_pose.heading,
               target_pose.heading);
     dubins_planner_.SetInput(input);
     prepare_success = dubins_planner_.OneStepDubinsUpdate();
+    calc_params_.cal_tang_pt_success = true;
+    calc_params_.safe_circle_tang_pt = target_pose;
   }
 
   if (prepare_success) {
@@ -191,6 +235,8 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
               target_pose.heading);
     dubins_planner_.SetInput(input);
     prepare_success = dubins_planner_.OneStepDubinsUpdate();
+    calc_params_.cal_tang_pt_success = true;
+    calc_params_.safe_circle_tang_pt = target_pose;
   }
 
   if (prepare_success) {
@@ -244,6 +290,7 @@ const bool PerpendicularPathPlanner::MonoPreparePlan(
   CalMonoSafeCircle();
 
   if (CheckMonoIsFeasible() == false) {
+    std::cout << "cal monostep safe circle fail!" << std::endl;
     return false;
   }
 

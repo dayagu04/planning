@@ -1,9 +1,14 @@
 #include "ilqr_core.h"
+
 #include <Eigen/Cholesky>
 #include <Eigen/LU>
+#include <cmath>
 #include <cstddef>
+#include <cstdlib>
+#include <iomanip>
 #include <iostream>
 #include <numeric>
+
 #include "math_lib.h"
 
 using namespace pnc::mathlib;
@@ -166,9 +171,9 @@ void iLqr::Solve(const State &x0) {
 
 // print info when debug
 #ifdef __ILQR_PRINT__
-  PrintSolverInfo();
   PrintCostInfo();
-  PrintTimeInfo();
+  PrintSolverInfo();
+  // PrintTimeInfo();
 #endif
 }
 
@@ -290,6 +295,19 @@ bool iLqr::ForwardPass(double &new_cost, double &expected, const size_t &iter) {
 
       xk_new_vec_[i + 1] = ilqr_model_ptr_->UpdateDynamicsOneStep(
           xk_new_vec_[i], uk_new_vec_[i], i);
+
+      // if (std::isnan(xk_new_vec_[i + 1].norm()) || 1) {
+      //   std::cout << "-------------------debug_info ------------" <<
+      //   std::endl; std::cout << "alpha = " << alpha << std::endl; std::cout
+      //   << "k_vec_[i] = " << k_vec_[i].transpose() << std::endl; std::cout <<
+      //   "K_vec_[i] = " << K_vec_[i] << std::endl; std::cout << "xk_vec_[i] =
+      //   " << xk_vec_[i].transpose() << std::endl; std::cout <<
+      //   "xk_new_vec_[i] = " << xk_new_vec_[i].transpose()
+      //             << std::endl;
+      //   std::cout << "xk_new_vec_[i + 1] = " << xk_new_vec_[i +
+      //   1].transpose()
+      //             << std::endl;
+      // }
     }
 
     const double du_norm =
@@ -576,10 +594,10 @@ void iLqr::UpdateAdvancedInfo(size_t iter) {
 }
 
 void iLqr::PrintSolverInfo() {
-  std::cout
-      << "--------------------------------------------------- iLqr solver info "
-         "--------------------------------------------------- "
-      << std::endl;
+  std::cout << "--------------------------------------------------- 2. iLqr "
+               "solver info "
+               "--------------------------------------------------- "
+            << std::endl;
   // init info
   std::cout << "init state = " << xk_vec_[0].transpose() << std::endl;
 
@@ -594,15 +612,29 @@ void iLqr::PrintSolverInfo() {
                "success\tdu_norm\n";
 
   for (size_t iter = 0; iter < solver_info_.iter_count; ++iter) {
-    printf(
-        "%-12ld\t%-12.5g\t%-12.5f\t%-12.5f\t%-12.5f\t%-12ld\t%-12d\t%-12.5f\n",
-        iter, solver_info_.iteration_info_vec[iter].cost,
-        solver_info_.iteration_info_vec[iter].dcost,
-        solver_info_.iteration_info_vec[iter].expect,
-        solver_info_.iteration_info_vec[iter].lambda,
-        solver_info_.iteration_info_vec[iter].linesearch_count,
-        solver_info_.iteration_info_vec[iter].linesearch_success,
-        solver_info_.iteration_info_vec[iter].du_norm);
+    const IterationInfo &info = solver_info_.iteration_info_vec[iter];
+
+    std::cout << std::left << std::setw(12) << iter << std::setw(12)
+              << info.cost << std::setw(12) << info.dcost << std::setw(12)
+              << info.expect << std::setw(12) << info.lambda << std::setw(12)
+              << info.linesearch_count << std::setw(12)
+              << info.linesearch_success << std::setw(12) << info.du_norm
+              << std::endl;
+
+    // Eigen::VectorXd control;
+    // control.resize(info.u_vec.size());
+    // for (size_t i = 0; i < info.u_vec.size(); ++i) {
+    //   control[i] = info.u_vec[i].x();
+    // }
+
+    // std::cout << "----"
+    //           << "control = " << control.transpose() << std::endl;
+
+    // for (size_t i = 0; i < info.x_vec.size(); ++i) {
+    //   if (info.x_vec[i].norm() > 100000.0) {
+    //     std::cout << "bug x = " << info.x_vec[i].transpose() << std::endl;
+    //   }
+    // }
   }
 }
 
@@ -630,7 +662,9 @@ void iLqr::PrintCostInfo() {
   // }
 
   // cost info
-  std::cout << "\n-----cost vec info:" << std::endl;
+  std::cout << "\n-------------------------------- 1. cost vec info "
+               "--------------------------------"
+            << std::endl;
   std::cout << "cost list: [";
   for (size_t i = 0; i < ilqr_model_ptr_->GetCostStackPtr()->size(); ++i) {
     if (i < ilqr_model_ptr_->GetCostStackPtr()->size() - 1) {
@@ -643,16 +677,17 @@ void iLqr::PrintCostInfo() {
   }
   for (size_t iter = 0; iter < solver_info_.iter_count + 1; ++iter) {
     if (iter == 0) {
-      printf("cost_vec[init] = [ ");
+      std::cout << "cost_vec[init] = [ ";
     } else {
-      // printf("cost_vec[%ld]    = [ ", iter - 1);
-      printf("cost_vec[%ld]    = [ ", iter - 1);
+      std::cout << "cost_vec[" << iter - 1 << "]    = [ ";
     }
 
     for (size_t i = 0; i < solver_info_.cost_size; ++i) {
-      printf("%.5f ", solver_info_.cost_iter_vec[iter].at(i));
+      std::cout << std::fixed << std::setprecision(5)
+                << solver_info_.cost_iter_vec[iter].at(i) << " ";
     }
-    printf("]\n");
+
+    std::cout << "]" << std::endl;
   }
 #endif
 }

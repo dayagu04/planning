@@ -126,7 +126,8 @@ class MapLaneChangeRequestTest : public ::testing::Test {
       lane_marks->set_begin(200.);
 
       auto lane_sources = road->add_lane_sources();
-      lane_sources->set_source(FusionRoad::LaneSource::SOURCE_CAMERA_HDMAP_FUSION);
+      lane_sources->set_source(
+          FusionRoad::LaneSource::SOURCE_CAMERA_HDMAP_FUSION);
       lane_sources->set_begin(0.);
       lane_sources->set_begin(200.);
 

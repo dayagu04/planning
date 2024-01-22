@@ -1021,8 +1021,9 @@ const bool OneStepParallelShift(
   first_arc.circle_info.center = start_pos + v_start_n * radius;
   first_arc.circle_info.radius = radius;
 
-  std::cout << "first_arc.circle_info.center = " << first_arc.circle_info.center
-            << std::endl;
+  // std::cout << "first_arc.circle_info.center = " <<
+  // first_arc.circle_info.center
+  //           << std::endl;
 
   first_arc.pA = start_pos;
   first_arc.headingA = start_heading;
@@ -1041,7 +1042,8 @@ const bool OneStepParallelShift(
 
   const double theta = std::atan2(sin_theta, cos_theta);
   const double start_to_tan_lon_dist = radius * sin_theta;
-  std::cout << "start_to_tan_lon_dist = " << start_to_tan_lon_dist << std::endl;
+  // std::cout << "start_to_tan_lon_dist = " << start_to_tan_lon_dist <<
+  // std::endl;
 
   const double advance_sgn = (is_advance ? 1.0 : -1.0);
   first_arc.pB = first_arc.pA + lat_dist * 0.5 * v_start_n +
@@ -1394,7 +1396,7 @@ const bool CalTwoArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
     return LogErr(__func__, 5);
   }
   if (!mathlib::IsDoubleEqual(arc2.headingB, line.heading)) {
-    return LogErr(__func__, 3);
+    return LogErr(__func__, 6);
   }
   return true;
 }
@@ -1419,6 +1421,9 @@ const bool IsPoseOnLine(const PathPoint &pose, LineSegment &line,
       std::fabs(NormalizeAngle(pose.heading - line.heading)) < heading_err) {
     return true;
   }
+  // std::cout << "pos = " << pose.pos.transpose()
+  //           << "  heading = " << pose.heading << "  dist = " << dist
+  //           << "   line.heading = " << line.heading << std::endl;
   return LogErr(__func__, 1);
 }
 
@@ -1536,9 +1541,9 @@ const bool MinimumBoundingBox(
       0.25 * ((original_vertices[1] - original_vertices[0]).norm() +
               (original_vertices[3] - original_vertices[2]).norm());
 
-  std::cout << "direction:" << direction.transpose() << "\n";
-  std::cout << "half_length:" << half_length << "\n";
-  std::cout << "half_width:" << half_width << "\n";
+  // std::cout << "direction:" << direction.transpose() << "\n";
+  // std::cout << "half_length:" << half_length << "\n";
+  // std::cout << "half_width:" << half_width << "\n";
 
   target_boundingbox.emplace_back(center + direction * half_length -
                                   direction_t * half_width);

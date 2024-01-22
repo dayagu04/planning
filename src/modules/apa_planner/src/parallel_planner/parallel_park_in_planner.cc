@@ -15,6 +15,7 @@
 #include "dubins_lib.h"
 #include "func_state_machine.pb.h"
 #include "geometry_math.h"
+#include "lateral_path_optimizer.h"
 #include "local_view.h"
 #include "math_lib.h"
 
@@ -25,6 +26,8 @@ static const bool kForceBothOccupied = true;
 static const double kRearStopBuffer = 0.55;
 
 void ParallelParInPlanner::Init() {
+  lateral_path_optimizer_ptr_ = std::make_shared<LateralPathOptimizer>();
+  lateral_path_optimizer_ptr_->Init();
   // reset
   Reset();
 }
@@ -500,15 +503,80 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
   const auto& planner_output = parallel_path_planner_.GetOutput();
   gear_command_ = planner_output.current_gear;
 
-  current_path_point_global_vec_.clear();
-  current_path_point_global_vec_.reserve(planner_output.path_point_vec.size());
+  // lateral path optimization
+  auto lateral_path_optimization_enable = false;
 
-  pnc::geometry_lib::PathPoint global_point;
-  for (const auto& path_point : planner_output.path_point_vec) {
-    global_point.Set(ego_slot_info.l2g_tf.GetPos(path_point.pos),
-                     ego_slot_info.l2g_tf.GetHeading(path_point.heading));
+  if (!is_simulation_) {
+    lateral_path_optimization_enable =
+        apa_param.GetParam().lateral_path_optimization_enable;
+  } else {
+    lateral_path_optimization_enable = simu_param_.is_path_optimization;
+  }
 
-    current_path_point_global_vec_.emplace_back(global_point);
+  if (lateral_path_optimization_enable) {
+    std::cout << "------------------------ lateral path optimization "
+                 "------------------------"
+              << std::endl;
+    std::cout << "gear_command_= " << static_cast<int>(gear_command_)
+              << std::endl;
+    std::cout << "origin path size= " << planner_output.path_point_vec.size()
+              << std::endl;
+
+    LateralPathOptimizer::Parameter param;
+    param.sample_ds = simu_param_.sample_ds;
+    param.q_ref_xy = simu_param_.q_ref_xy;
+    param.q_ref_theta = simu_param_.q_ref_theta;
+    param.q_terminal_xy = simu_param_.q_terminal_xy;
+    param.q_terminal_theta = simu_param_.q_terminal_theta;
+    param.q_k = simu_param_.q_k;
+    param.q_u = simu_param_.q_u;
+    param.q_k_bound = simu_param_.q_k_bound;
+    param.q_u_bound = simu_param_.q_u_bound;
+
+    lateral_path_optimizer_ptr_->SetParam(param);
+
+    lateral_path_optimizer_ptr_->Update(planner_output.path_point_vec,
+                                        gear_command_);
+
+    const auto& optimized_path_vec =
+        lateral_path_optimizer_ptr_->GetOutputPathVec();
+
+    std::cout << "optimization path size = " << optimized_path_vec.size()
+              << std::endl;
+    std::cout << "terminal pos error = "
+              << (optimized_path_vec.back().pos -
+                  planner_output.path_point_vec.back().pos)
+                     .norm()
+              << std::endl;
+
+    std::cout << "terminal heading error = "
+              << (optimized_path_vec.back().heading -
+                  planner_output.path_point_vec.back().heading) *
+                     57.3
+              << std::endl;
+
+    current_path_point_global_vec_.clear();
+    current_path_point_global_vec_.reserve(optimized_path_vec.size());
+
+    pnc::geometry_lib::PathPoint global_point;
+    for (const auto& path_point : optimized_path_vec) {
+      global_point.Set(ego_slot_info.l2g_tf.GetPos(path_point.pos),
+                       ego_slot_info.l2g_tf.GetHeading(path_point.heading));
+
+      current_path_point_global_vec_.emplace_back(global_point);
+    }
+  } else {
+    current_path_point_global_vec_.clear();
+    current_path_point_global_vec_.reserve(
+        planner_output.path_point_vec.size());
+
+    pnc::geometry_lib::PathPoint global_point;
+    for (const auto& path_point : planner_output.path_point_vec) {
+      global_point.Set(ego_slot_info.l2g_tf.GetPos(path_point.pos),
+                       ego_slot_info.l2g_tf.GetHeading(path_point.heading));
+
+      current_path_point_global_vec_.emplace_back(global_point);
+    }
   }
 
   std::cout << "current_path_point_global_vec_.size() = "

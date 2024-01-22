@@ -16,7 +16,7 @@ namespace longitudinal_planning {
 
 struct LongitudinalMotionPlanningInput {
   // init state
-  State init_state;  // p v a
+  ilqr_solver::State init_state;  // p v a
 
   // reference
   std::vector<double> ref_pos_vec;
@@ -86,7 +86,7 @@ class LongitudinalMotionPlanningProblem {
  private:
   std::shared_ptr<ilqr_solver::iLqr> ilqr_core_ptr_;
   planning::common::LongitudinalPlanningOutput planning_output_;
-  State init_state_;
+  ilqr_solver::State init_state_;
 };
 
 }  // namespace longitudinal_planning

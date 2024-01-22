@@ -369,12 +369,12 @@ void LateralMotionPlanner::Update() {
   motion_planning_info.s_lat_vec = s_vec;
   motion_planning_info.lat_init_flag = true;
 
-  ControlVec u_vec;
+  ilqr_solver::ControlVec u_vec;
   u_vec.resize(N);
 
   // set u_vec to motion_planning_info for warm start
   for (size_t i = 0; i < N; ++i) {
-    Control u;
+    ilqr_solver::Control u;
     u.resize(1);
     u[0] = omega_vec[i];
     u_vec[i] = u;

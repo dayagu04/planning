@@ -11,6 +11,7 @@
 #include "apa_world.h"
 #include "collision_detection.h"
 #include "geometry_math.h"
+#include "lateral_path_optimizer.h"
 #include "local_view.h"
 #include "planning_plan.pb.h"
 
@@ -35,10 +36,21 @@ class ApaPlannerBase {
   struct SimulationParam {
     bool is_complete_path = false;
     bool force_plan = false;
+    bool is_path_optimization = false;
     bool is_reset = false;
     double sample_ds = 0.02;
     std::vector<double> target_managed_slot_x_vec;
     std::vector<double> target_managed_slot_y_vec;
+    std::vector<double> target_managed_limiter_x_vec;
+    std::vector<double> target_managed_limiter_y_vec;
+    double q_ref_xy = 100.0;
+    double q_ref_theta = 100.0;
+    double q_terminal_xy = 1000.0;
+    double q_terminal_theta = 9000.0;
+    double q_k = 10.0;
+    double q_u = 10.0;
+    double q_k_bound = 100.0;
+    double q_u_bound = 50.0;
   };
 
   struct EgoSlotInfo {
@@ -46,6 +58,9 @@ class ApaPlannerBase {
     std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter;
     Eigen::Vector2d target_ego_pos_slot = Eigen::Vector2d::Zero();
     double target_ego_heading_slot = 0.0;
+
+    std::vector<Eigen::Vector2d> slot_corner;
+    std::vector<Eigen::Vector2d> limiter_corner;
 
     size_t selected_slot_id = 0;
 
@@ -73,6 +88,9 @@ class ApaPlannerBase {
       selected_slot_id = 0;
       target_ego_pos_slot = Eigen::Vector2d::Zero();
       target_ego_heading_slot = 0.0;
+
+      slot_corner.clear();
+      limiter_corner.clear();
 
       limiter.first.setZero();
       limiter.second.setZero();
@@ -212,6 +230,7 @@ class ApaPlannerBase {
   virtual void Log() const = 0;
 
   std::shared_ptr<ApaWorld> apa_world_ptr_;
+  std::shared_ptr<LateralPathOptimizer> lateral_path_optimizer_ptr_;
 
   PlanningOutput::PlanningOutput planning_output_;
 

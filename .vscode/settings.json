@@ -85,6 +85,6 @@
     "comments": true,
     "strings": true
   },
-  "editor.wordBasedSuggestions": true,
+  "editor.wordBasedSuggestions": "matchingDocuments",
   "C_Cpp.intelliSenseEngine": "disabled"
 }

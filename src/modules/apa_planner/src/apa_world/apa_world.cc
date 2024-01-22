@@ -175,15 +175,11 @@ const bool ApaWorld::CheckParkOutActivated() const {
 }
 const bool ApaWorld::Update() {
   // preprocess measurements
-  std::cout << "-- apa_world: run preprocess ---" << std::endl;
+  std::cout << "-- apa_world: run preprocess ---\n";
   Preprocess();
 
   std::cout << "current_state = "
             << static_cast<int>(measures_ptr_->current_state) << std::endl;
-
-  // run slot manager
-  std::cout << "-- apa_world: run slot_management ---" << std::endl;
-  slot_manager_ptr_->Update(local_view_ptr_);
 
   // check parking scenarios
   if (CheckParkInState()) {
@@ -199,12 +195,15 @@ const bool ApaWorld::Update() {
     return false;
   }
 
-  // check if slot selected
-  if (!CheckSelectedSlot()) {
-    std::cout << "no slot has been selected!" << std::endl;
+  // run slot manager
+  // path planning only starts when the current state machines are 29 and 30
+  std::cout << "-- apa_world: run slot_management ---" << std::endl;
+  if (!slot_manager_ptr_->Update(local_view_ptr_)) {
+    std::cout << "shouldn't have entered the parking function at that time\n";
     return false;
   }
 
+  measures_ptr_->slot_type = slot_manager_ptr_->GetEgoSlotInfo().slot_type;
   // TODO: selected slot (slot_type) should be obtained in slot management
   measures_ptr_->planner_type = ApaPlannerType::NONE_PLANNER;
 

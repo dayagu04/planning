@@ -1,4 +1,5 @@
 #include "longitudinal_motion_planning_model.h"
+
 #include "longitudinal_motion_planning_cost.h"
 #include "math_lib.h"
 
@@ -8,10 +9,11 @@ static const double kOneSix = 1.0 / 6.0;
 namespace pnc {
 namespace longitudinal_planning {
 
-State LongitudinalMotionPlanningModel::UpdateDynamicsOneStep(
-    const State &x, const Control &u, const size_t &) const {
+ilqr_solver::State LongitudinalMotionPlanningModel::UpdateDynamicsOneStep(
+    const ilqr_solver::State &x, const ilqr_solver::Control &u,
+    const size_t &) const {
   const double &dt = solver_config_ptr_->model_dt;
-  State x1 = x;
+  ilqr_solver::State x1 = x;
 
   const auto &s = x[POS];
   const auto &v = x[VEL];
@@ -31,8 +33,8 @@ State LongitudinalMotionPlanningModel::UpdateDynamicsOneStep(
 }
 
 void LongitudinalMotionPlanningModel::GetDynamicsDerivatives(
-    const State &, const Control &, FxMT &f_x, FuMT &f_u,
-    const size_t &) const {
+    const ilqr_solver::State &, const ilqr_solver::Control &,
+    ilqr_solver::FxMT &f_x, ilqr_solver::FuMT &f_u, const size_t &) const {
   const double &dt = solver_config_ptr_->model_dt;
   const auto dt2 = dt * dt;
   const auto dt3 = dt2 * dt;

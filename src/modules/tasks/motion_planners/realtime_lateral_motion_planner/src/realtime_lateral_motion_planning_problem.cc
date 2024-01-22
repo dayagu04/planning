@@ -19,7 +19,7 @@ namespace pnc {
 namespace realtime_lateral_planning {
 void RealtimeLateralMotionPlanningProblem::Init() {
   // STEP 0: set solver config parmeters
-  iLqrSolverConfig solver_config;
+  ilqr_solver::iLqrSolverConfig solver_config;
   solver_config.horizon = 25;
   solver_config.state_size = STATE_SIZE;
   solver_config.input_size = INPUT_SIZE;
@@ -72,7 +72,7 @@ uint8_t RealtimeLateralMotionPlanningProblem::Update(
   const size_t N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
   const auto v2 = planning_input.ref_vel() * planning_input.ref_vel();
 
-  std::vector<IlqrCostConfig> cost_config_vec;
+  std::vector<ilqr_solver::IlqrCostConfig> cost_config_vec;
   cost_config_vec.resize(N);
 
   // calculate delta_bound and omega_bound
@@ -172,7 +172,7 @@ uint8_t RealtimeLateralMotionPlanningProblem::Update(
       ilqr_core_ptr_->GetSolverInfoPtr()->solver_condition;
   const auto solver_config = ilqr_core_ptr_->GetSolverConfigPtr();
 
-  ControlVec u_vec;
+  ilqr_solver::ControlVec u_vec;
   u_vec.resize(solver_config->horizon + 1);
 
   for (size_t i = 0; i < u_vec.size(); ++i) {

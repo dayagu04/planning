@@ -10,7 +10,7 @@
 #define __ILQR_DEBUG__
 
 // for offline info print
-// #define __ILQR_PRINT__
+#define __ILQR_PRINT__
 
 // for offline timer
 // #define __ILQR_TIMER__
@@ -24,7 +24,7 @@
 #ifndef MAX_COST_SIZE
 #define MAX_COST_SIZE (20)
 #endif
-
+namespace ilqr_solver {
 // state of model
 typedef Eigen::VectorXd State;
 
@@ -67,7 +67,7 @@ typedef std::unordered_map<uint8_t, std::vector<double>> ILqrCostMap;
 typedef std::vector<double> ILqrCostVec;
 
 // ilqr solver config for solver parameters
-namespace ilqr_solver {
+
 struct iLqrSolverConfig {
   size_t horizon = 25;
   size_t state_size = 3;
@@ -90,5 +90,4 @@ struct iLqrSolverConfig {
       0.0901, 0.0557, 0.0344, 0.01};  // fixed linesearch step
 };
 }  // namespace ilqr_solver
-
 #endif

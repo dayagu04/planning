@@ -110,10 +110,26 @@ target_link_libraries(apa_simulation_py PRIVATE
   modules_context
   modules_tasks)
 
-  pybind11_add_module(geometry_math_validation_py MODULE src/geometry_math_validation_pybind.cc)
+pybind11_add_module(geometry_math_validation_py MODULE src/geometry_math_validation_pybind.cc)
 target_link_libraries(geometry_math_validation_py PRIVATE
   autoplt
   modules
   modules_common
   modules_context
   modules_tasks)
+
+pybind11_add_module(lateral_path_optimizer_py MODULE src/lateral_path_optimizer_pybind.cc)
+target_link_libraries(lateral_path_optimizer_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)
+
+pybind11_add_module(optimizer_apa_simulation_py MODULE src/optimizer_apa_simulation_pybind.cc)
+  target_link_libraries(optimizer_apa_simulation_py PRIVATE
+    autoplt
+    modules
+    modules_common
+    modules_context
+    modules_tasks)

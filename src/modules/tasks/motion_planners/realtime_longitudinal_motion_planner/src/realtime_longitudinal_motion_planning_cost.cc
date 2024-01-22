@@ -9,16 +9,18 @@ using namespace pnc::mathlib;
 namespace pnc {
 namespace realtime_longitudinal_planning {
 // reference cost for s and v
-double ReferenceCostTerm::GetCost(const State &x, const Control &) {
+double ReferenceCostTerm::GetCost(const ilqr_solver::State &x,
+                                  const ilqr_solver::Control &) {
   return 0.5 * (cost_config_ptr_->at(W_REF_POS) *
                     Square(x[POS] - cost_config_ptr_->at(REF_POS)) +
                 cost_config_ptr_->at(W_REF_VEL) *
                     Square(x[VEL] - cost_config_ptr_->at(REF_VEL)));
 }
 
-void ReferenceCostTerm::GetGradientHessian(const State &x, const Control &,
-                                           LxMT &lx, LuMT &, LxxMT &lxx,
-                                           LxuMT &, LuuMT &) {
+void ReferenceCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control &,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
   lx(POS) += -cost_config_ptr_->at(W_REF_POS) *
              (cost_config_ptr_->at(REF_POS) - x[POS]);
   lx(VEL) += -cost_config_ptr_->at(W_REF_VEL) *
@@ -29,32 +31,39 @@ void ReferenceCostTerm::GetGradientHessian(const State &x, const Control &,
 }
 
 // longitudinal acc cost
-double LonAccCostTerm::GetCost(const State &x, const Control &) {
+double LonAccCostTerm::GetCost(const ilqr_solver::State &x,
+                               const ilqr_solver::Control &) {
   return 0.5 * cost_config_ptr_->at(W_ACC) * Square(x[ACC]);
 }
 
-void LonAccCostTerm::GetGradientHessian(const State &x, const Control &,
-                                        LxMT &lx, LuMT &, LxxMT &lxx, LxuMT &,
-                                        LuuMT &) {
+void LonAccCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control &,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
   lx(ACC) += cost_config_ptr_->at(W_ACC) * x[ACC];
   lxx(ACC, ACC) += cost_config_ptr_->at(W_ACC);
 }
 
 // longitudinal jerk cost
-double LonJerkCostTerm::GetCost(const State & /*x*/, const Control &u) {
+double LonJerkCostTerm::GetCost(const ilqr_solver::State & /*x*/,
+                                const ilqr_solver::Control &u) {
   return 0.5 * cost_config_ptr_->at(W_JERK) * Square(u[JERK]);
 }
 
-void LonJerkCostTerm::GetGradientHessian(const State & /*x*/, const Control &u,
-                                         LxMT & /*lx*/, LuMT &lu,
-                                         LxxMT & /*lxx*/, LxuMT & /*lxu*/,
-                                         LuuMT &luu) {
+void LonJerkCostTerm::GetGradientHessian(const ilqr_solver::State & /*x*/,
+                                         const ilqr_solver::Control &u,
+                                         ilqr_solver::LxMT & /*lx*/,
+                                         ilqr_solver::LuMT &lu,
+                                         ilqr_solver::LxxMT & /*lxx*/,
+                                         ilqr_solver::LxuMT & /*lxu*/,
+                                         ilqr_solver::LuuMT &luu) {
   lu(JERK) += cost_config_ptr_->at(W_JERK) * u[JERK];
   luu(JERK, JERK) += cost_config_ptr_->at(W_JERK);
 }
 
 // longitudinal pos soft bound cost
-double LonSoftPosBoundCostTerm::GetCost(const State &x, const Control &) {
+double LonSoftPosBoundCostTerm::GetCost(const ilqr_solver::State &x,
+                                        const ilqr_solver::Control &) {
   double cost = 0.0;
   if (x[POS] > cost_config_ptr_->at(SOFT_POS_MAX)) {
     cost = 0.5 * cost_config_ptr_->at(W_POS_BOUND) *
@@ -67,10 +76,10 @@ double LonSoftPosBoundCostTerm::GetCost(const State &x, const Control &) {
   return cost;
 }
 
-void LonSoftPosBoundCostTerm::GetGradientHessian(const State &x,
-                                                 const Control &, LxMT &lx,
-                                                 LuMT &, LxxMT &lxx, LxuMT &,
-                                                 LuuMT &) {
+void LonSoftPosBoundCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control &,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
   if (x[POS] > cost_config_ptr_->at(SOFT_POS_MAX)) {
     lx(POS) += cost_config_ptr_->at(W_POS_BOUND) *
                (x[POS] - cost_config_ptr_->at(SOFT_POS_MAX));
@@ -85,7 +94,8 @@ void LonSoftPosBoundCostTerm::GetGradientHessian(const State &x,
 }
 
 // longitudinal pos hard bound cost
-double LonHardPosBoundCostTerm::GetCost(const State &x, const Control &) {
+double LonHardPosBoundCostTerm::GetCost(const ilqr_solver::State &x,
+                                        const ilqr_solver::Control &) {
   double cost = 0.0;
   if (x[POS] > cost_config_ptr_->at(HARD_POS_MAX)) {
     cost = 0.5 * cost_config_ptr_->at(W_HARD_POS_BOUND) *
@@ -97,10 +107,10 @@ double LonHardPosBoundCostTerm::GetCost(const State &x, const Control &) {
   return cost;
 }
 
-void LonHardPosBoundCostTerm::GetGradientHessian(const State &x,
-                                                 const Control &, LxMT &lx,
-                                                 LuMT &, LxxMT &lxx, LxuMT &,
-                                                 LuuMT &) {
+void LonHardPosBoundCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control &,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
   if (x[POS] > cost_config_ptr_->at(HARD_POS_MAX)) {
     lx(POS) += cost_config_ptr_->at(W_HARD_POS_BOUND) *
                (x[POS] - cost_config_ptr_->at(HARD_POS_MAX));
@@ -114,7 +124,8 @@ void LonHardPosBoundCostTerm::GetGradientHessian(const State &x,
   }
 }
 // longitudinal vel bound cost
-double LonVelBoundCostTerm::GetCost(const State &x, const Control &) {
+double LonVelBoundCostTerm::GetCost(const ilqr_solver::State &x,
+                                    const ilqr_solver::Control &) {
   double cost = 0.0;
   if (x[VEL] > cost_config_ptr_->at(VEL_MAX)) {
     cost = 0.5 * cost_config_ptr_->at(W_VEL_BOUND) *
@@ -126,9 +137,10 @@ double LonVelBoundCostTerm::GetCost(const State &x, const Control &) {
   return cost;
 }
 
-void LonVelBoundCostTerm::GetGradientHessian(const State &x, const Control &,
-                                             LxMT &lx, LuMT &, LxxMT &lxx,
-                                             LxuMT &, LuuMT &) {
+void LonVelBoundCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control &,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
   if (x[VEL] > cost_config_ptr_->at(VEL_MAX)) {
     lx(VEL) += cost_config_ptr_->at(W_VEL_BOUND) *
                (x[VEL] - cost_config_ptr_->at(VEL_MAX));
@@ -143,7 +155,8 @@ void LonVelBoundCostTerm::GetGradientHessian(const State &x, const Control &,
 }
 
 // non-negative vel cost
-double NonNegativeVelCost::GetCost(const State &x, const Control &) {
+double NonNegativeVelCost::GetCost(const ilqr_solver::State &x,
+                                   const ilqr_solver::Control &) {
   double cost = 0.0;
   if (x[VEL] < 0.0) {
     cost = 0.5 * cost_config_ptr_->at(W_NON_NEGATIVE_VEL) * Square(x[VEL]);
@@ -152,9 +165,10 @@ double NonNegativeVelCost::GetCost(const State &x, const Control &) {
   return cost;
 }
 
-void NonNegativeVelCost::GetGradientHessian(const State &x, const Control &,
-                                            LxMT &lx, LuMT &, LxxMT &lxx,
-                                            LxuMT &, LuuMT &) {
+void NonNegativeVelCost::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control &,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
   if (x[VEL] < 0.0) {
     lx(VEL) += cost_config_ptr_->at(W_NON_NEGATIVE_VEL) * (x[VEL]);
 
@@ -163,7 +177,8 @@ void NonNegativeVelCost::GetGradientHessian(const State &x, const Control &,
 }
 
 // longitudinal acc bound cost
-double LonAccBoundCostTerm::GetCost(const State &x, const Control &) {
+double LonAccBoundCostTerm::GetCost(const ilqr_solver::State &x,
+                                    const ilqr_solver::Control &) {
   double cost = 0.0;
   if (x[ACC] > cost_config_ptr_->at(ACC_MAX)) {
     cost = 0.5 * cost_config_ptr_->at(W_ACC_BOUND) *
@@ -176,9 +191,10 @@ double LonAccBoundCostTerm::GetCost(const State &x, const Control &) {
   return cost;
 }
 
-void LonAccBoundCostTerm::GetGradientHessian(const State &x, const Control &,
-                                             LxMT &lx, LuMT &, LxxMT &lxx,
-                                             LxuMT &, LuuMT &) {
+void LonAccBoundCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control &,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
   if (x[ACC] > cost_config_ptr_->at(ACC_MAX)) {
     lx(ACC) += cost_config_ptr_->at(W_ACC_BOUND) *
                (x[ACC] - cost_config_ptr_->at(ACC_MAX));
@@ -193,7 +209,8 @@ void LonAccBoundCostTerm::GetGradientHessian(const State &x, const Control &,
 }
 
 // longitudinal jerk bound cost
-double LonJerkBoundCostTerm::GetCost(const State & /*x*/, const Control &u) {
+double LonJerkBoundCostTerm::GetCost(const ilqr_solver::State & /*x*/,
+                                     const ilqr_solver::Control &u) {
   double cost = 0.0;
   if (u[JERK] > cost_config_ptr_->at(JERK_MAX)) {
     cost = 0.5 * cost_config_ptr_->at(W_JERK_BOUND) *
@@ -206,10 +223,13 @@ double LonJerkBoundCostTerm::GetCost(const State & /*x*/, const Control &u) {
   return cost;
 }
 
-void LonJerkBoundCostTerm::GetGradientHessian(const State & /*x*/,
-                                              const Control &u, LxMT & /*lx*/,
-                                              LuMT &lu, LxxMT & /*lxx*/,
-                                              LxuMT & /*lxu*/, LuuMT &luu) {
+void LonJerkBoundCostTerm::GetGradientHessian(const ilqr_solver::State & /*x*/,
+                                              const ilqr_solver::Control &u,
+                                              ilqr_solver::LxMT & /*lx*/,
+                                              ilqr_solver::LuMT &lu,
+                                              ilqr_solver::LxxMT & /*lxx*/,
+                                              ilqr_solver::LxuMT & /*lxu*/,
+                                              ilqr_solver::LuuMT &luu) {
   if (u[JERK] > cost_config_ptr_->at(JERK_MAX)) {
     lu(JERK) += cost_config_ptr_->at(W_JERK_BOUND) *
                 (u[JERK] - cost_config_ptr_->at(JERK_MAX));
@@ -224,7 +244,8 @@ void LonJerkBoundCostTerm::GetGradientHessian(const State & /*x*/,
 }
 
 // longitudinal stop point cost
-double LonStopPointCost::GetCost(const State &x, const Control &) {
+double LonStopPointCost::GetCost(const ilqr_solver::State &x,
+                                 const ilqr_solver::Control &) {
   double cost = 0.0;
   if ((x[POS] <= cost_config_ptr_->at(S_STOP) && x[VEL] <= 0.0) ||
       (x[POS] > cost_config_ptr_->at(S_STOP) && x[VEL] >= 0.0)) {
@@ -234,9 +255,10 @@ double LonStopPointCost::GetCost(const State &x, const Control &) {
   return cost;
 }
 
-void LonStopPointCost::GetGradientHessian(const State &x, const Control &,
-                                          LxMT &lx, LuMT &, LxxMT &lxx, LxuMT &,
-                                          LuuMT &) {
+void LonStopPointCost::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control &,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
   if ((x[POS] <= cost_config_ptr_->at(S_STOP) && x[VEL] <= 0.0) ||
       (x[POS] > cost_config_ptr_->at(S_STOP) && x[VEL] >= 0.0)) {
     lx(VEL) = cost_config_ptr_->at(W_S_STOP) * x[VEL];
@@ -245,7 +267,8 @@ void LonStopPointCost::GetGradientHessian(const State &x, const Control &,
 }
 
 // longitudinal s-v bound cost
-double LonSVBoundCost::GetCost(const State &x, const Control &) {
+double LonSVBoundCost::GetCost(const ilqr_solver::State &x,
+                               const ilqr_solver::Control &) {
   // get v limit by s-v discrete points
   const std::vector<double> sv_bounds_s = {
       cost_config_ptr_->at(SV_BOUND_S_0), cost_config_ptr_->at(SV_BOUND_S_1),
@@ -268,9 +291,10 @@ double LonSVBoundCost::GetCost(const State &x, const Control &) {
   return cost;
 }
 
-void LonSVBoundCost::GetGradientHessian(const State &x, const Control &,
-                                        LxMT &lx, LuMT &, LxxMT &lxx, LxuMT &,
-                                        LuuMT &) {
+void LonSVBoundCost::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control &,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
   // get v limit by s-v discrete points
   const std::vector<double> sv_bounds_s = {
       cost_config_ptr_->at(SV_BOUND_S_0), cost_config_ptr_->at(SV_BOUND_S_1),

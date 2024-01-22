@@ -11,46 +11,27 @@
 #include "apa_world.h"
 #include "frame.h"
 #include "local_view.h"
-#include "planning_debug_info.pb.h"
-#include "planning_def.h"
-#include "planning_plan.pb.h"
+#include "plan_interface_base.h"
 
 namespace planning {
 namespace apa_planner {
 
-class ApaPlanInterface {
+class ApaPlanInterface : public plan_interface::PlanInterfaceBase {
  public:
-  void Init();
-  void Reset();
-  const bool Update(const LocalView* local_view_ptr);
+  virtual void Init() override;
+  virtual void Reset() override;
+  virtual const bool Update(const LocalView* local_view_ptr) override;
+  virtual void SyncParameters() override;
 
   // an isolation between pybind (simulation) and real test
-  const bool UpdateFrame(framework::Frame* const frame);
+  virtual const bool UpdateFrame(framework::Frame* const frame) override;
 
   const std::vector<std::shared_ptr<ApaPlannerBase>>& GetPlannerStack() const {
     return apa_planner_stack_;
   }
 
-  void SyncParameters();
-
-  const PlanningOutput::PlanningOutput GetPlaningOutput() const {
-    if (planner_ptr_ != nullptr) {
-      return planner_ptr_->GetOutput();
-    } else {
-      std::cout << "planner_ptr_ is null!" << std::endl;
-      PlanningOutput::PlanningOutput planning_output;
-      planning_output.Clear();
-
-      return planning_output;
-    }
-  }
-
   // only for simulation
   void UpdateDebugInfo();
-
-  const planning::common::PlanningDebugInfo& GetPlanningDebugInfo() const {
-    return planning_debug_info_;
-  }
 
  private:
   std::shared_ptr<ApaPlannerBase> GetPlannerByType(
@@ -62,11 +43,6 @@ class ApaPlanInterface {
   std::vector<std::shared_ptr<ApaPlannerBase>> apa_planner_stack_;
   std::shared_ptr<ApaWorld> apa_world_ptr_ = nullptr;
   std::shared_ptr<ApaPlannerBase> planner_ptr_ = nullptr;
-
-  const LocalView* local_view_ptr_ = nullptr;  // note that pointer to constant
-
-  // only for simulation
-  planning::common::PlanningDebugInfo planning_debug_info_;
 };
 
 }  // namespace apa_planner
