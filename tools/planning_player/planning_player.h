@@ -24,6 +24,7 @@ class PlanningPlayer {
   void Clear();
   bool LoadCyberBag(const std::string &bag_path);
   void StoreCyberBag(const std::string &bag_path);
+  void StoreCyberBag_old(const std::string &bag_path);
   void PlayOneFrame(int frame_num,
                     const planning::common::TopicTimeList &input_time_list);
   void PlayAllFrames();
@@ -40,11 +41,24 @@ class PlanningPlayer {
   TopicMsgCache header_cache_{};      // msg cache indexed by header time(us)
   TopicMsgCache msg_cache_{};         // msg cache indexed by msg time(ns)
   TopicMsgCache output_msg_cache_{};  // output cache indexed by msg time(ns)
+  std::map<uint64_t, std::shared_ptr<google::protobuf::Message>>
+      msg_cache_ordered_by_time_;
   std::map<std::string, std::string> proto_desc_map_{};
   uint64_t planning_msg_time_ns_ = 0;
   uint64_t planning_header_time_us_ = 0;
+  int frame_num_ = 0;
+  uint64_t planning_dubug_info_msg_time_ns_ = 0;
+  uint64_t planning_dubug_info_header_time_us_ = 0;
+  uint64_t planning_hmi_msg_time_ns_ = 0;
+  uint64_t planning_hmi_header_time_us_ = 0;
+  uint64_t input_time_list_map_ = 0;
+  uint64_t input_time_list_road_fusion_ = 0;
+  uint64_t history_planning_start_time_ = 0;
+  uint64_t next_history_planning_start_time_ = 0;
+  uint64_t planning_start_timestamp_ = 0;
+  uint64_t next_loc_header_time_us_ = 0;
   uint64_t loc_header_time_us_ = 0;
-  int enter_auto_frame_num_ = 0;
+  int frame_num_before_enter_auto_ = 0;
   std::string scene_type_ = "acc";
 
   template <class T>
@@ -58,6 +72,13 @@ class PlanningPlayer {
   void write_topic_msg(TopicMsgCache &msg_cache,
                        apollo::cyber::record::RecordWriter &record_writer,
                        const std::string &topic_name);
+
+  template <class T>
+  void write_msg(
+      const std::pair<const unsigned long,
+                      std::shared_ptr<google::protobuf::Message>> &msg,
+      apollo::cyber::record::RecordWriter &record_writer,
+      const std::string &topic_name);
 
   template <class T>
   std::shared_ptr<T> find_msg_with_header_time(const std::string &topic,
@@ -129,6 +150,23 @@ void PlanningPlayer::write_topic_msg(
             << (msg_cache[topic_name].rbegin())->first -
                    msg_cache[topic_name].begin()->first
             << std::endl;
+}
+
+template <class T>
+void PlanningPlayer::write_msg(
+    const std::pair<const unsigned long,
+                    std::shared_ptr<google::protobuf::Message>> &msg,
+    apollo::cyber::record::RecordWriter &record_writer,
+    const std::string &topic_name) {
+  if (!msg.second) {
+    return;
+  }
+  if (!record_writer.WriteMessage(
+          topic_name, *std::dynamic_pointer_cast<T>(msg.second), msg.first,
+          get_proto_desc(*msg.second, topic_name))) {
+    std::cerr << "write msg failed: " << topic_name << std::endl;
+    return;
+  }
 }
 
 template <class T>

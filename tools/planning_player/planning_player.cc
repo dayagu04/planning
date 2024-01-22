@@ -48,7 +48,21 @@ void PlanningPlayer::Init(bool is_close_loop, int auto_frame,
   std::cout << "===========planning player init, is_close_loop="
             << is_close_loop << ", auto_frame=" << auto_frame
             << ", scene_type=" << scene_type << "==========" << std::endl;
-  enter_auto_frame_num_ = auto_frame;
+  // 找到第几帧进自动
+  for (const auto& it : msg_cache_[TOPIC_PLANNING_DEBUG_INFO]) {
+    auto debug_info =
+        std::dynamic_pointer_cast<planning::common::PlanningDebugInfo>(
+            it.second);
+    auto& debug_data_json = debug_info->data_json();
+    auto dbw_pos = debug_data_json.find("dbw_status");
+    if (dbw_pos != std::string::npos &&
+        debug_data_json.substr(dbw_pos + 14, 1) == "1") {
+      break;
+    } else {
+      frame_num_before_enter_auto_++;
+    }
+  }
+  // frame_num_before_enter_auto_ = auto_frame;
   scene_type_ = scene_type;
   planning_adapter_ = std::make_unique<PlanningAdapter>();
   planning_adapter_->Init();
@@ -62,7 +76,10 @@ void PlanningPlayer::Init(bool is_close_loop, int auto_frame,
             planning_header_time_us_);
         output_msg_cache_[TOPIC_PLANNING_PLAN][planning_msg_time_ns_] =
             planning_output_ptr;
-        if (is_close_loop) {
+        // 进自动一段时间后（默认1.5s）再改变车辆位置，为的是准备好相关的输入topic
+        // 假设录包时刻是T0，那T0时刻的planning用到的相关输入信息一定是T0时刻之前的
+        // 而这些信息不在此包中
+        if (is_close_loop && frame_num_ > (frame_num_before_enter_auto_ + 15)) {
           RunCloseLoop(planning_output);
         }
       });
@@ -72,17 +89,23 @@ void PlanningPlayer::Init(bool is_close_loop, int auto_frame,
         auto planning_debug_info_ptr =
             std::make_shared<planning::common::PlanningDebugInfo>(
                 planning_debug_info);
-        planning_debug_info_ptr->set_timestamp(planning_header_time_us_);
-        output_msg_cache_[TOPIC_PLANNING_DEBUG_INFO][planning_msg_time_ns_] =
-            planning_debug_info_ptr;
+        planning_debug_info_ptr->set_timestamp(
+            planning_dubug_info_header_time_us_);
+        output_msg_cache_[TOPIC_PLANNING_DEBUG_INFO]
+                         [planning_dubug_info_msg_time_ns_] =
+                             planning_debug_info_ptr;
       });
 
   planning_adapter_->RegisterHMIOutputInfoWriter(
       [this](const PlanningHMI::PlanningHMIOutputInfoStr&
                  planning_hmi_ouput_info) {
-        output_msg_cache_[TOPIC_PLANNING_HMI][planning_msg_time_ns_] =
+        auto planning_hmi_ouput_info_ptr =
             std::make_shared<PlanningHMI::PlanningHMIOutputInfoStr>(
                 planning_hmi_ouput_info);
+        planning_hmi_ouput_info_ptr->mutable_header()->set_timestamp(
+            planning_hmi_header_time_us_);
+        output_msg_cache_[TOPIC_PLANNING_HMI][planning_hmi_msg_time_ns_] =
+            planning_hmi_ouput_info_ptr;
       });
 }
 
@@ -94,7 +117,7 @@ void PlanningPlayer::Clear() {
   planning_msg_time_ns_ = 0;
   planning_header_time_us_ = 0;
   loc_header_time_us_ = 0;
-  enter_auto_frame_num_ = 0;
+  frame_num_before_enter_auto_ = 0;
 }
 
 bool PlanningPlayer::LoadCyberBag(const std::string& bag_path) {
@@ -161,7 +184,7 @@ bool PlanningPlayer::LoadCyberBag(const std::string& bag_path) {
   return true;
 }
 
-void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
+void PlanningPlayer::StoreCyberBag_old(const std::string& bag_path) {
   apollo::cyber::record::RecordWriter record_writer;
   record_writer.SetSizeOfFileSegmentation(0);
   record_writer.SetIntervalOfFileSegmentation(0);
@@ -204,6 +227,99 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
   record_writer.Close();
 }
 
+void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
+  apollo::cyber::record::RecordWriter record_writer;
+  record_writer.SetSizeOfFileSegmentation(0);
+  record_writer.SetIntervalOfFileSegmentation(0);
+  if (!record_writer.Open(bag_path)) {
+    std::cerr << "open writer file failed: " << bag_path << std::endl;
+    return;
+  }
+
+  for (auto& i : msg_cache_) {
+    if (i.first != TOPIC_PLANNING_PLAN &&
+        i.first != TOPIC_PLANNING_DEBUG_INFO && i.first != TOPIC_PLANNING_HMI) {
+      for (auto& j : i.second) {
+        msg_cache_ordered_by_time_[j.first] = j.second;
+      }
+    }
+  }
+
+  // PlanningOutput  PlanningDebugInfo  PlanningHMIOutputInfoStr
+  for (auto& i : output_msg_cache_) {
+    for (auto& j : i.second) {
+      msg_cache_ordered_by_time_[j.first] = j.second;
+    }
+  }
+
+  for (const auto& it_msg : msg_cache_ordered_by_time_) {
+    if (!it_msg.second) {
+      continue;
+    }
+    if (it_msg.second->GetTypeName() == "FusionRoad.RoadInfo") {
+      write_msg<FusionRoad::RoadInfo>(it_msg, record_writer, TOPIC_ROAD_FUSION);
+    } else if (it_msg.second->GetTypeName() ==
+               "FusionObjects.FusionObjectsInfo") {
+      write_msg<FusionObjects::FusionObjectsInfo>(it_msg, record_writer,
+                                                  TOPIC_FUSION_OBJECTS);
+    } else if (it_msg.second->GetTypeName() ==
+               "LocalizationOutput.LocalizationEstimate") {
+      write_msg<LocalizationOutput::LocalizationEstimate>(
+          it_msg, record_writer, TOPIC_LOCALIZATION_ESTIMATE);
+    } else if (it_msg.second->GetTypeName() ==
+               "IFLYLocalization.IFLYLocalization") {
+      write_msg<IFLYLocalization::IFLYLocalization>(it_msg, record_writer,
+                                                    TOPIC_LOCALIZATION);
+    } else if (it_msg.second->GetTypeName() == "Prediction.PredictionResult") {
+      write_msg<Prediction::PredictionResult>(it_msg, record_writer,
+                                              TOPIC_PREDICTION_RESULT);
+    } else if (it_msg.second->GetTypeName() ==
+               "VehicleService.VehicleServiceOutputInfo") {
+      write_msg<VehicleService::VehicleServiceOutputInfo>(
+          it_msg, record_writer, TOPIC_VEHICLE_SERVICE);
+    } else if (it_msg.second->GetTypeName() == "ControlCommand.ControlOutput") {
+      write_msg<ControlCommand::ControlOutput>(it_msg, record_writer,
+                                               TOPIC_CONTROL_COMMAN);
+    } else if (it_msg.second->GetTypeName() == "HmiMcuInner.HmiMcuInner") {
+      write_msg<HmiMcuInner::HmiMcuInner>(it_msg, record_writer,
+                                          TOPIC_HMI_MCU_INNER);
+    } else if (it_msg.second->GetTypeName() ==
+               "ParkingFusion.ParkingFusionInfo") {
+      write_msg<ParkingFusion::ParkingFusionInfo>(it_msg, record_writer,
+                                                  TOPIC_PARKING_FUSION);
+    } else if (it_msg.second->GetTypeName() ==
+               "FuncStateMachine.FuncStateMachine") {
+      write_msg<FuncStateMachine::FuncStateMachine>(it_msg, record_writer,
+                                                    TOPIC_FUNC_STATE_MACHINE);
+    } else if (it_msg.second->GetTypeName() ==
+               "PlanningOutput.PlanningOutput") {
+      write_msg<PlanningOutput::PlanningOutput>(it_msg, record_writer,
+                                                TOPIC_PLANNING_PLAN);
+    } else if (it_msg.second->GetTypeName() ==
+               "planning.common.PlanningDebugInfo") {
+      write_msg<planning::common::PlanningDebugInfo>(it_msg, record_writer,
+                                                     TOPIC_PLANNING_DEBUG_INFO);
+    } else if (it_msg.second->GetTypeName() ==
+               "PlanningHMI.PlanningHMIOutputInfoStr") {
+      write_msg<PlanningHMI::PlanningHMIOutputInfoStr>(it_msg, record_writer,
+                                                       TOPIC_PLANNING_HMI);
+    } else if (it_msg.second->GetTypeName() == "Map.StaticMap") {
+      write_msg<Map::StaticMap>(it_msg, record_writer, TOPIC_HD_MAP);
+    } else if (it_msg.second->GetTypeName() == "IFLYParkingMap.ParkingInfo") {
+      write_msg<IFLYParkingMap::ParkingInfo>(it_msg, record_writer,
+                                             TOPIC_EHR_PARKING_MAP);
+    } else if (it_msg.second->GetTypeName() ==
+               "GroundLinePerception.GroundLinePerceptionInfo") {
+      write_msg<GroundLinePerception::GroundLinePerceptionInfo>(
+          it_msg, record_writer, TOPIC_GROUND_LINE);
+    } else {
+      // std::cerr << "unsupported channel:" << msg.channel_name << std::endl;
+    }
+  }
+  std::cout << "write bag:" << record_writer.GetFile() << std::endl;
+  record_writer.Close();
+}
+
 void PlanningPlayer::PlayOneFrame(
     int frame_num, const planning::common::TopicTimeList& input_time_list) {
   std::cout << "==================== frame " << frame_num
@@ -215,12 +331,22 @@ void PlanningPlayer::PlayOneFrame(
           TOPIC_FUSION_OBJECTS, input_time_list.fusion_object());
   if (fusion_object_msg) {
     planning_adapter_->FeedFusionObjects(fusion_object_msg);
+  } else {
+    std::cerr << "frame_num " << frame_num_
+              << " missing /iflytek/fusion/objects" << std::endl;
   }
 
-  auto fusion_road_msg = find_msg_with_header_time<FusionRoad::RoadInfo>(
-      TOPIC_ROAD_FUSION, input_time_list.fusion_road());
-  if (fusion_road_msg) {
-    planning_adapter_->FeedFusionRoad(fusion_road_msg);
+  // 由于fusion_road的频率与planning相同，为了避免重复feed同一帧fusion_road而做对应判断
+  if (input_time_list_road_fusion_ != input_time_list.fusion_road()) {
+    input_time_list_road_fusion_ = input_time_list.fusion_road();
+    auto fusion_road_msg = find_msg_with_header_time<FusionRoad::RoadInfo>(
+        TOPIC_ROAD_FUSION, input_time_list.fusion_road());
+    if (fusion_road_msg) {
+      planning_adapter_->FeedFusionRoad(fusion_road_msg);
+    } else {
+      std::cerr << "frame_num " << frame_num_
+                << " missing /iflytek/fusion/road_fusion" << std::endl;
+    }
   }
 
   auto localization_estimate_msg =
@@ -236,12 +362,18 @@ void PlanningPlayer::PlayOneFrame(
           TOPIC_LOCALIZATION, input_time_list.localization());
   if (localization_msg) {
     planning_adapter_->FeedLocalizationOutput(localization_msg);
+  } else {
+    std::cerr << "frame_num " << frame_num_
+              << " missing /iflytek/localization/egomotion" << std::endl;
   }
 
   auto prediction_msg = find_msg_with_header_time<Prediction::PredictionResult>(
       TOPIC_PREDICTION_RESULT, input_time_list.prediction());
   if (prediction_msg) {
     planning_adapter_->FeedPredictionResult(prediction_msg);
+  } else {
+    std::cerr << "frame_num " << frame_num_
+              << " missing /iflytek/prediction/prediction_result" << std::endl;
   }
 
   auto vehicle_service_msg =
@@ -249,6 +381,9 @@ void PlanningPlayer::PlayOneFrame(
           TOPIC_VEHICLE_SERVICE, input_time_list.vehicle_service());
   if (vehicle_service_msg) {
     planning_adapter_->FeedVehicleService(vehicle_service_msg);
+  } else {
+    std::cerr << "frame_num " << frame_num_
+              << " missing /iflytek/vehicle_service" << std::endl;
   }
 
   auto control_output_msg =
@@ -256,25 +391,40 @@ void PlanningPlayer::PlayOneFrame(
           TOPIC_CONTROL_COMMAN, input_time_list.control_output());
   if (control_output_msg) {
     planning_adapter_->FeedControlCommand(control_output_msg);
+  } else {
+    // std::cerr << "missing /iflytek/control/control_command" << std::endl;
   }
 
   auto hmi_mcu_msg = find_msg_with_header_time<HmiMcuInner::HmiMcuInner>(
       TOPIC_HMI_MCU_INNER, input_time_list.hmi());
   if (hmi_mcu_msg) {
     planning_adapter_->FeedHmiMcuInner(hmi_mcu_msg);
+  } else {
+    // std::cerr << "missing /iflytek/hmi/mcu_inner" << std::endl;
   }
 
   auto parking_fusion_msg =
       find_msg_with_header_time<ParkingFusion::ParkingFusionInfo>(
-          TOPIC_PARKING_FUSION, input_time_list.hmi());
+          TOPIC_PARKING_FUSION, input_time_list.parking_fusion());
   if (parking_fusion_msg) {
     planning_adapter_->FeedParkingFusion(parking_fusion_msg);
+  } else {
+    std::cerr << "frame_num " << frame_num_
+              << " missing /iflytek/fusion/parking_slot" << std::endl;
   }
 
-  auto hd_map_msg = find_msg_with_header_time<Map::StaticMap>(
-      TOPIC_HD_MAP, input_time_list.map());
-  if (hd_map_msg) {
-    planning_adapter_->FeedMap(hd_map_msg);
+  // 由于static map的频率比planning低，为了避免重复feed同一帧static
+  // map导致对map更新频率的误判而做对应判断
+  if (input_time_list_map_ != input_time_list.map()) {
+    input_time_list_map_ = input_time_list.map();
+    auto hd_map_msg = find_msg_with_header_time<Map::StaticMap>(
+        TOPIC_HD_MAP, input_time_list.map());
+    if (hd_map_msg) {
+      planning_adapter_->FeedMap(hd_map_msg);
+    } else {
+      std::cerr << "frame_num " << frame_num_
+                << " missing /iflytek/ehr/static_map" << std::endl;
+    }
   }
 
   auto ehr_parking_map_msg =
@@ -282,13 +432,19 @@ void PlanningPlayer::PlayOneFrame(
           TOPIC_EHR_PARKING_MAP, input_time_list.ehr_parking_map());
   if (ehr_parking_map_msg) {
     planning_adapter_->FeedParkingMap(ehr_parking_map_msg);
+  } else {
+    std::cerr << "frame_num " << frame_num_
+              << " missing /iflytek/ehr/parking_map" << std::endl;
   }
 
   auto ground_line_msg =
       find_msg_with_header_time<GroundLinePerception::GroundLinePerceptionInfo>(
-          TOPIC_EHR_PARKING_MAP, input_time_list.ground_line());
+          TOPIC_GROUND_LINE, input_time_list.ground_line());
   if (ground_line_msg) {
     planning_adapter_->FeedGroundLinePerception(ground_line_msg);
+  } else {
+    std::cerr << "frame_num " << frame_num_
+              << " missing /iflytek/fusion/ground_line" << std::endl;
   }
 
   auto func_state_machine_msg =
@@ -299,10 +455,13 @@ void PlanningPlayer::PlayOneFrame(
             TOPIC_FUNC_STATE_MACHINE, input_time_list.function_state_machine());
     if (cached_func_state_machine_msg) {
       func_state_machine_msg = cached_func_state_machine_msg;
+    } else {
+      std::cerr << "frame_num " << frame_num_
+                << " missing /iflytek/system_state/soc_state" << std::endl;
     }
   }
   auto functional_state = ::FuncStateMachine::FunctionalState::INIT;
-  if (frame_num >= enter_auto_frame_num_) {  // enter auto after 1.5s
+  if (frame_num >= frame_num_before_enter_auto_) {  // enter auto after 1.5s
     if (scene_type_ == "acc") {
       functional_state = ::FuncStateMachine::FunctionalState::ACC_ACTIVATE;
     } else if (scene_type_ == "apa") {
@@ -316,24 +475,88 @@ void PlanningPlayer::PlayOneFrame(
   func_state_machine_msg->set_current_state(functional_state);
   planning_adapter_->FeedFuncStateMachine(func_state_machine_msg);
 
-  planning_adapter_->Proc();
+  uint64_t history_planning_duration =
+      next_history_planning_start_time_ - history_planning_start_time_;
+  uint64_t planning_duration = IflyTime::Now_us() - planning_start_timestamp_;
+  if (planning_start_timestamp_ != 0 &&
+      history_planning_duration > planning_duration) {
+    usleep(history_planning_duration - planning_duration);
+    planning_start_timestamp_ = IflyTime::Now_us();
+    planning_adapter_->Proc();
+  } else {
+    planning_start_timestamp_ = IflyTime::Now_us();
+    planning_adapter_->Proc();
+  }
 }
 
 void PlanningPlayer::PlayAllFrames() {
-  auto& debug_info_cache = msg_cache_[TOPIC_PLANNING_DEBUG_INFO];
-  int frame_num = 0;
-  for (auto it : debug_info_cache) {
+  auto it_debug_info_msg = msg_cache_[TOPIC_PLANNING_DEBUG_INFO].begin();
+  auto it_planning_msg = msg_cache_[TOPIC_PLANNING_PLAN].begin();
+  auto it_planning_hmi_msg = msg_cache_[TOPIC_PLANNING_HMI].begin();
+
+  for (size_t i = 0; i < msg_cache_[TOPIC_PLANNING_DEBUG_INFO].size() - 1;
+       ++i) {
     auto debug_info =
         std::dynamic_pointer_cast<planning::common::PlanningDebugInfo>(
-            it.second);
+            it_debug_info_msg->second);
+    auto planning_msg =
+        std::dynamic_pointer_cast<PlanningOutput::PlanningOutput>(
+            it_planning_msg->second);
+    auto planning_hmi_msg =
+        std::dynamic_pointer_cast<PlanningHMI::PlanningHMIOutputInfoStr>(
+            it_planning_hmi_msg->second);
+
     if (!debug_info->has_input_topic_timestamp()) {
       std::cerr << "no input topic timestamp" << std::endl;
       continue;
     }
-    planning_header_time_us_ = debug_info->timestamp();
-    planning_msg_time_ns_ = it.first;
+    planning_dubug_info_header_time_us_ = debug_info->timestamp();
+    planning_dubug_info_msg_time_ns_ = it_debug_info_msg->first;
+    it_debug_info_msg++;
+    if (!std::dynamic_pointer_cast<planning::common::PlanningDebugInfo>(
+             it_debug_info_msg->second)
+             ->has_input_topic_timestamp()) {
+      std::cerr << "no input topic timestamp" << std::endl;
+      continue;
+    }
+    next_loc_header_time_us_ =
+        std::dynamic_pointer_cast<planning::common::PlanningDebugInfo>(
+            it_debug_info_msg->second)
+            ->input_topic_timestamp()
+            .localization();
+    // 特殊处理最后一帧，否则最后几帧定位将和原包一致
+    if (i == msg_cache_[TOPIC_PLANNING_DEBUG_INFO].size() - 2) {
+      next_loc_header_time_us_ = UINT64_MAX;
+    }
+
+    planning_header_time_us_ = planning_msg->meta().header().timestamp();
+    planning_msg_time_ns_ = it_planning_msg->first;
+    for (auto& i : planning_msg->meta().header().input_list()) {
+      if (i.input_type() == Common::InputHistoryTimestamp::
+                                INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PLANNING) {
+        history_planning_start_time_ = i.in_ts_us();
+        break;
+      }
+    }
+    it_planning_msg++;
+    for (auto& i : std::dynamic_pointer_cast<PlanningOutput::PlanningOutput>(
+                       it_planning_msg->second)
+                       ->meta()
+                       .header()
+                       .input_list()) {
+      if (i.input_type() == Common::InputHistoryTimestamp::
+                                INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PLANNING) {
+        next_history_planning_start_time_ = i.in_ts_us();
+        break;
+      }
+    }
+
+    planning_hmi_header_time_us_ = planning_hmi_msg->header().timestamp();
+    planning_hmi_msg_time_ns_ = it_planning_hmi_msg->first;
+    it_planning_hmi_msg++;
+
     loc_header_time_us_ = debug_info->input_topic_timestamp().localization();
-    PlayOneFrame(frame_num++, debug_info->input_topic_timestamp());
+    PlayOneFrame(frame_num_++, debug_info->input_topic_timestamp());
   }
 }
 
@@ -358,10 +581,13 @@ void PlanningPlayer::RunCloseLoop(
               std::dynamic_pointer_cast<IFLYLocalization::IFLYLocalization>(
                   it->second));
       auto loc_header_time_i = loc_msg_i->header().timestamp();
-      if (loc_header_time_i > loc_header_time_us_ &&
-          loc_header_time_i < loc_header_time_us_ + 1000 * 1000) {
-        auto delta_t = loc_header_time_i - loc_header_time_us_;
-        PerfectControlHPP(planning_output, delta_t, loc_msg_i);
+      if (loc_header_time_i > loc_header_time_us_) {
+        if (loc_header_time_i <= next_loc_header_time_us_) {
+          auto delta_t = loc_header_time_i - loc_header_time_us_;
+          PerfectControlHPP(planning_output, delta_t, loc_msg_i);
+        } else {
+          break;
+        }
       }
     }
   } else {  // APA
@@ -458,9 +684,17 @@ void PlanningPlayer::PerfectControlHPP(
   // auto pose = loc_msg->mutable_pose();
 
   // vel
-  loc_msg->mutable_velocity()->mutable_velocity_boot()->set_vx(v);
+  loc_msg->mutable_velocity()->mutable_velocity_boot()->set_vx(v * cos(theta));
+  loc_msg->mutable_velocity()->mutable_velocity_boot()->set_vy(v * sin(theta));
+  loc_msg->mutable_velocity()->mutable_velocity_boot()->set_vz(0);
+
   // acc
-  loc_msg->mutable_acceleration()->mutable_acceleration_boot()->set_ax(a);
+  loc_msg->mutable_acceleration()->mutable_acceleration_boot()->set_ax(
+      a * cos(theta));
+  loc_msg->mutable_acceleration()->mutable_acceleration_boot()->set_ay(
+      a * sin(theta));
+  loc_msg->mutable_acceleration()->mutable_acceleration_boot()->set_az(0);
+
   // atti
   loc_msg->mutable_orientation()->mutable_euler_boot()->set_yaw(euler_zxy[0]);
   // pose->set_heading(pose->euler_angles().yaw());

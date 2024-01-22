@@ -10,11 +10,11 @@ int run_planning_player(const std::string &bag_path, const std::string &out_bag,
                         bool is_close_loop, int auto_frame,
                         const std::string &scene_type) {
   planning::planning_player::PlanningPlayer player;
-  player.Init(is_close_loop, auto_frame, scene_type);
 
   if (!player.LoadCyberBag(bag_path)) {
     return -1;
   }
+  player.Init(is_close_loop, auto_frame, scene_type);
   player.PlayAllFrames();
   player.StoreCyberBag(out_bag);
   return 0;
