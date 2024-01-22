@@ -52,6 +52,7 @@ class LocalViewSlider:
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
     self.select_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='18%'), description= "select_id",min=0, max=20, value=0, step=1)
     self.force_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_plan",min=0, max=1, value=0, step=1)
+    self.is_path_optimization_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "path_optimization",min=0, max=1, value=0, step=1)
     self.is_reset_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_reset",min=0, max=1, value=0, step=1)
     self.is_complete_path_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_complete_path",min=0, max=1, value=0, step=1)
     self.sample_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "sample_ds",min=0.02, max=2.0, value=0.12, step=0.02)
@@ -63,6 +64,7 @@ class LocalViewSlider:
                         bag_time = self.time_slider,
                         select_id = self.select_id_slider,
                         force_plan = self.force_plan_slider,
+                        is_path_optimization = self.is_path_optimization_slider,
                         is_reset = self.is_reset_slider,
                         is_complete_path = self.is_complete_path_slider,
                         sample_ds = self.sample_ds_slider,
@@ -71,7 +73,7 @@ class LocalViewSlider:
                         heading_dif = self.heading_dif_slider)
 
 ### sliders callback
-def slider_callback(bag_time, select_id, force_plan, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
+def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
   kwargs = locals()
   update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data)
   index_map = bag_loader.get_msg_index(bag_time)
@@ -138,8 +140,9 @@ def slider_callback(bag_time, select_id, force_plan, is_reset, is_complete_path,
                                     loc_msg.SerializeToString(),
                                     vs_msg.SerializeToString(),
                                     wave_msg.SerializeToString(),
-                                    select_id, force_plan, is_reset, is_complete_path, sample_ds, target_managed_slot_x_vec, target_managed_slot_y_vec,
+                                    select_id, force_plan, is_path_optimization, is_reset, is_complete_path, sample_ds, target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec)
+                                  
 
   data_planning_tune.data = {'plan_path_x': [],
                              'plan_path_y': [],

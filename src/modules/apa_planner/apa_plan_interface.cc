@@ -419,6 +419,8 @@ void ApaPlanInterface::SyncParameters() {
 
   JSON_READ_VALUE(apa_param.SetPram().adjust_plan_max_heading2_err, double,
                   "adjust_plan_max_heading2_err");
+  JSON_READ_VALUE(apa_param.SetPram().lateral_path_optimization_enable, bool,
+                  "lateral_path_optimization_enable");
 
   // slot managent params
   // slot update

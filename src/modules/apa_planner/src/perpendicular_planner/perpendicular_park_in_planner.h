@@ -19,7 +19,6 @@ class PerpendicularInPlanner : public ApaPlannerBase {
     SetApaWorldPtr(apa_world_ptr);
     Init();
   }
-
   virtual void Reset() override;
   virtual void Update() override;
   virtual std::string GetName() override { return typeid(this).name(); }

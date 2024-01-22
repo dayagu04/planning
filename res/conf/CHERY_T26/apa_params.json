@@ -133,6 +133,7 @@
   "adjust_plan_max_lat_err": 1.2,
   "adjust_plan_max_heading1_err": 50.0,
   "adjust_plan_max_heading2_err": 70.0,
+  "lateral_path_optimization_enable": false,
 
   "comment_16": "slot managent params",
   "slot_update_in_or_out_occupied_ratio": 0.001,

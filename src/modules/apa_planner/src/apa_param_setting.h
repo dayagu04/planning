@@ -150,6 +150,7 @@ struct ApaParameters {
   double adjust_plan_max_lat_err = 1.2;
   double adjust_plan_max_heading1_err = 50.0;
   double adjust_plan_max_heading2_err = 70.0;
+  bool lateral_path_optimization_enable = false;
 
   // slot managent params
   // slot update

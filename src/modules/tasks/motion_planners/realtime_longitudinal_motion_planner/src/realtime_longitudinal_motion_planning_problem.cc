@@ -17,7 +17,7 @@ namespace pnc {
 namespace realtime_longitudinal_planning {
 void RealtimeLongitudinalMotionPlanningProblem::Init() {
   // STEP 0: set solver config parmeters
-  iLqrSolverConfig solver_config;
+  ilqr_solver::iLqrSolverConfig solver_config;
   solver_config.horizon = 25;
   solver_config.state_size = STATE_SIZE;
   solver_config.input_size = INPUT_SIZE;
@@ -77,7 +77,7 @@ uint8_t RealtimeLongitudinalMotionPlanningProblem::Update(
   // set cost config
   const size_t N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
 
-  std::vector<IlqrCostConfig> cost_config_vec;
+  std::vector<ilqr_solver::IlqrCostConfig> cost_config_vec;
   cost_config_vec.resize(N);
 
   for (size_t i = 0; i < N; ++i) {

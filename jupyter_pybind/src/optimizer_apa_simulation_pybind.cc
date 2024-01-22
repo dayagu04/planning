@@ -126,21 +126,25 @@ const bool InterfaceUpdateParam(py::bytes &func_statemachine_bytes,
                                 py::bytes &uss_wave_info_bytes, int select_id,
                                 bool force_plan, bool is_path_optimization, bool is_reset,
                                 bool is_complete_path, double sample_ds,
-                                std::vector<double> target_managed_slot_x_vec,
-                                std::vector<double> target_managed_slot_y_vec,
-                                std::vector<double> target_managed_limiter_x_vec,
-                                std::vector<double> target_managed_limiter_y_vec) 
-                                 {
+                                double q_ref_xy, double q_ref_theta,
+                                double q_terminal_xy, double q_terminal_theta,
+                                double q_k, double q_u,
+                                double q_k_bound, double q_u_bound
+                                ) {
   apa_planner::ApaPlannerBase::SimulationParam param;
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
   param.is_path_optimization = is_path_optimization;
   param.sample_ds = sample_ds;
   param.is_reset = is_reset;
-  param.target_managed_slot_x_vec = target_managed_slot_x_vec;
-  param.target_managed_slot_y_vec = target_managed_slot_y_vec;
-  param.target_managed_limiter_x_vec = target_managed_limiter_x_vec;
-  param.target_managed_limiter_y_vec = target_managed_limiter_y_vec;
+  param.q_ref_xy = q_ref_xy;
+  param.q_ref_theta = q_ref_theta;
+  param.q_terminal_xy = q_terminal_xy;
+  param.q_terminal_theta = q_terminal_theta;
+  param.q_k = q_k;
+  param.q_u = q_u;
+  param.q_k_bound = q_k_bound;
+  param.q_u_bound = q_u_bound;
 
   const auto &apa_planner_stack = apa_interface_ptr->GetPlannerStack();
 
@@ -239,7 +243,7 @@ void DynamicsSwitchBuf(double x, double y, double heading) {
       PerfectControl::DynamicState(Eigen::Vector2d(x, y), heading));
 }
 
-PYBIND11_MODULE(apa_simulation_py, m) {
+PYBIND11_MODULE(optimizer_apa_simulation_py, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)

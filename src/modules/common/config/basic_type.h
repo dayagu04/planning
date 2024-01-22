@@ -353,7 +353,7 @@ struct MotionPlanningInfo {
 
   std::vector<double> s_lat_vec;
 
-  ControlVec u_vec;
+  ilqr_solver::ControlVec u_vec;
 };
 
 struct PlanningResult {

@@ -1,4 +1,5 @@
 #include "lateral_motion_planning_cost.h"
+
 #include "math_lib.h"
 
 using namespace pnc::mathlib;
@@ -6,7 +7,8 @@ namespace pnc {
 namespace lateral_planning {
 static const double kEps = 1e-8;
 
-double ReferenceCostTerm::GetCost(const State &x, const Control & /*u*/) {
+double ReferenceCostTerm::GetCost(const ilqr_solver::State &x,
+                                  const ilqr_solver::Control & /*u*/) {
   const double cost_x = 0.5 * cost_config_ptr_->at(W_REF_X) *
                         Square(x[X] - cost_config_ptr_->at(REF_X));
   const double cost_y = 0.5 * cost_config_ptr_->at(W_REF_Y) *
@@ -17,10 +19,10 @@ double ReferenceCostTerm::GetCost(const State &x, const Control & /*u*/) {
   return cost_x + cost_y + cost_theta;
 }
 
-void ReferenceCostTerm::GetGradientHessian(const State &x,
-                                           const Control & /*u*/, LxMT &lx,
-                                           LuMT & /*lu*/, LxxMT &lxx,
-                                           LxuMT & /*lxu*/, LuuMT & /*luu*/) {
+void ReferenceCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
   lx(X) +=
       -cost_config_ptr_->at(W_REF_X) * (cost_config_ptr_->at(REF_X) - x[X]);
   lx(Y) +=
@@ -33,7 +35,8 @@ void ReferenceCostTerm::GetGradientHessian(const State &x,
   lxx(THETA, THETA) += cost_config_ptr_->at(W_REF_THETA);
 }
 
-double ContinuityCostTerm::GetCost(const State &x, const Control & /*u*/) {
+double ContinuityCostTerm::GetCost(const ilqr_solver::State &x,
+                                   const ilqr_solver::Control & /*u*/) {
   const double cost =
       0.5 * (cost_config_ptr_->at(W_CONTINUITY_X) *
                  Square(x[X] - cost_config_ptr_->at(CONTINUITY_X)) +
@@ -45,10 +48,10 @@ double ContinuityCostTerm::GetCost(const State &x, const Control & /*u*/) {
   return cost;
 }
 
-void ContinuityCostTerm::GetGradientHessian(const State &x,
-                                            const Control & /*u*/, LxMT &lx,
-                                            LuMT & /*lu*/, LxxMT &lxx,
-                                            LxuMT & /*lxu*/, LuuMT & /*luu*/) {
+void ContinuityCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
   lx(X) += -cost_config_ptr_->at(W_CONTINUITY_X) *
            (cost_config_ptr_->at(CONTINUITY_X) - x[X]);
   lx(Y) += -cost_config_ptr_->at(W_CONTINUITY_Y) *
@@ -61,7 +64,8 @@ void ContinuityCostTerm::GetGradientHessian(const State &x,
   lxx(THETA, THETA) += cost_config_ptr_->at(W_CONTINUITY_THETA);
 }
 
-double LatAccCostTerm::GetCost(const State &x, const Control & /*u*/) {
+double LatAccCostTerm::GetCost(const ilqr_solver::State &x,
+                               const ilqr_solver::Control & /*u*/) {
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR) *
                              Square(cost_config_ptr_->at(REF_VEL)));
   const double &delta = x[DELTA];
@@ -72,9 +76,10 @@ double LatAccCostTerm::GetCost(const State &x, const Control & /*u*/) {
   return cost;
 }
 
-void LatAccCostTerm::GetGradientHessian(const State &x, const Control & /*u*/,
-                                        LxMT &lx, LuMT & /*lu*/, LxxMT &lxx,
-                                        LxuMT & /*lxu*/, LuuMT & /*luu*/) {
+void LatAccCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR) *
                              Square(cost_config_ptr_->at(REF_VEL)));
   const double &delta = x[DELTA];
@@ -83,7 +88,8 @@ void LatAccCostTerm::GetGradientHessian(const State &x, const Control & /*u*/,
   lxx(DELTA, DELTA) += cost_config_ptr_->at(W_ACC) * k2v4;
 }
 
-double LatJerkCostTerm::GetCost(const State &x, const Control &u) {
+double LatJerkCostTerm::GetCost(const ilqr_solver::State &x,
+                                const ilqr_solver::Control &u) {
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR) *
                              Square(cost_config_ptr_->at(REF_VEL)));
   const double &omega = u[OMEGA];
@@ -94,9 +100,10 @@ double LatJerkCostTerm::GetCost(const State &x, const Control &u) {
   return cost;
 }
 
-void LatJerkCostTerm::GetGradientHessian(const State &x, const Control &u,
-                                         LxMT &lx, LuMT &lu, LxxMT &lxx,
-                                         LxuMT & /*lxu*/, LuuMT &luu) {
+void LatJerkCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control &u,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &lu, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT &luu) {
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR) *
                              Square(cost_config_ptr_->at(REF_VEL)));
   const double &omega = u[OMEGA];
@@ -105,7 +112,8 @@ void LatJerkCostTerm::GetGradientHessian(const State &x, const Control &u,
   luu(OMEGA, OMEGA) = cost_config_ptr_->at(W_JERK) * k2v4;
 }
 
-double LatAccBoundCostTerm::GetCost(const State &x, const Control & /*u*/) {
+double LatAccBoundCostTerm::GetCost(const ilqr_solver::State &x,
+                                    const ilqr_solver::Control & /*u*/) {
   double cost = 0.;
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
                       SSquare(cost_config_ptr_->at(REF_VEL));
@@ -120,10 +128,10 @@ double LatAccBoundCostTerm::GetCost(const State &x, const Control & /*u*/) {
   return cost;
 }
 
-void LatAccBoundCostTerm::GetGradientHessian(const State &x,
-                                             const Control & /*u*/, LxMT &lx,
-                                             LuMT & /*lu*/, LxxMT &lxx,
-                                             LxuMT & /*lxu*/, LuuMT & /*luu*/) {
+void LatAccBoundCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
                       SSquare(cost_config_ptr_->at(REF_VEL));
 
@@ -138,7 +146,8 @@ void LatAccBoundCostTerm::GetGradientHessian(const State &x,
   }
 }
 
-double LatJerkBoundCostTerm::GetCost(const State &x, const Control &u) {
+double LatJerkBoundCostTerm::GetCost(const ilqr_solver::State &x,
+                                     const ilqr_solver::Control &u) {
   double cost = 0.;
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
                       SSquare(cost_config_ptr_->at(REF_VEL));
@@ -152,10 +161,13 @@ double LatJerkBoundCostTerm::GetCost(const State &x, const Control &u) {
   return cost;
 }
 
-void LatJerkBoundCostTerm::GetGradientHessian(const State &x, const Control &u,
-                                              LxMT & /*lx*/, LuMT &lu,
-                                              LxxMT & /*lxx*/, LxuMT & /*lxu*/,
-                                              LuuMT &luu) {
+void LatJerkBoundCostTerm::GetGradientHessian(const ilqr_solver::State &x,
+                                              const ilqr_solver::Control &u,
+                                              ilqr_solver::LxMT & /*lx*/,
+                                              ilqr_solver::LuMT &lu,
+                                              ilqr_solver::LxxMT & /*lxx*/,
+                                              ilqr_solver::LxuMT & /*lxu*/,
+                                              ilqr_solver::LuuMT &luu) {
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
                       SSquare(cost_config_ptr_->at(REF_VEL));
   if (u[OMEGA] > cost_config_ptr_->at(OMEGA_BOUND)) {
@@ -169,8 +181,8 @@ void LatJerkBoundCostTerm::GetGradientHessian(const State &x, const Control &u,
   }
 }
 
-double PathSoftCorridorCostTerm::GetCost(const State &x,
-                                         const Control & /*u*/) {
+double PathSoftCorridorCostTerm::GetCost(const ilqr_solver::State &x,
+                                         const ilqr_solver::Control & /*u*/) {
   double cost = 0.0;
   // upper bound
   const double a1 = cost_config_ptr_->at(SOFT_UPPER_BOUND_Y1) -
@@ -207,11 +219,10 @@ double PathSoftCorridorCostTerm::GetCost(const State &x,
   return cost;
 }
 
-void PathSoftCorridorCostTerm::GetGradientHessian(const State &x,
-                                                  const Control & /*u*/,
-                                                  LxMT &lx, LuMT & /*lu*/,
-                                                  LxxMT &lxx, LxuMT & /*lxu*/,
-                                                  LuuMT & /*luu*/) {
+void PathSoftCorridorCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
   // upper bound
   const double a1 = cost_config_ptr_->at(SOFT_UPPER_BOUND_Y1) -
                     cost_config_ptr_->at(SOFT_UPPER_BOUND_Y0);

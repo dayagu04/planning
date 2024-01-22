@@ -8,6 +8,7 @@ file(GLOB_RECURSE SRC_FILES
 set(INCLUDE_DIRS
   ${CMAKE_CURRENT_LIST_DIR}
   ${CMAKE_CURRENT_LIST_DIR}/src
+  ${CMAKE_CURRENT_LIST_DIR}/src/lateral_path_optimizer
   ${CMAKE_CURRENT_LIST_DIR}/src/apa_world
   ${CMAKE_CURRENT_LIST_DIR}/src/perpendicular_planner
   ${CMAKE_CURRENT_LIST_DIR}/src/parallel_planner)
