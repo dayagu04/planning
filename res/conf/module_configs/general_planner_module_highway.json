@@ -150,7 +150,8 @@
     "int_vel_limit": 0,
     "request_count_threshold": 2,
     "map_int_cancel_freeze_cnt": 20,
-    "model_int_cancel_freeze_cnt": 50
+    "model_int_cancel_freeze_cnt": 50,
+    "disallow_cancel_int_lc_lateral_thr": 0.8
   },
   "confirm_mode": {
     "enable_confirm_mode": false,
