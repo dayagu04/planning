@@ -11,7 +11,7 @@ namespace {
 constexpr double kMaxLaneWidth = 4.2;
 constexpr double kMinLaneWidth = 2.8;
 
-} // namespace
+}  // namespace
 namespace planning {
 VirtualLane::VirtualLane() {}
 
