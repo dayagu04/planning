@@ -49,7 +49,8 @@ class EnvironmentalModelManager {
       const Prediction::PredictionResult &prediction_result,
       double cur_timestamp_us, std::unordered_set<uint> &prediction_obj_id_set);
   bool transform_fusion_to_prediction(
-      const FusionObjects::FusionObject &fusion_object, double timestamp);
+      const FusionObjects::FusionObject &fusion_object, double timestamp,
+      std::vector<PredictionObject> &objects_infos);
   bool obstacle_prediction_update(double current_time,
                                   const LocalView &local_view);
   bool InputReady(double current_time, std::string &error_msg);

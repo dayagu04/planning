@@ -244,7 +244,10 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   // fusion and prediction update
   auto &prediction_info =
       session_->mutable_environmental_model()->get_mutable_prediction_info();
+  auto &fusion_objs_info =
+      session_->mutable_environmental_model()->get_mutable_fusion_info();
   prediction_info.clear();
+  fusion_objs_info.clear();
   if (session_->environmental_model().location_valid()) {
     std::unordered_set<uint> prediction_obj_id_set;
     truncate_prediction_info(
@@ -260,8 +263,12 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
       if (prediction_obj_id_set.find(obj.additional_info().track_id()) ==
           prediction_obj_id_set.end()) {
         transform_fusion_to_prediction(
-            obj, (double)local_view.fusion_objects_info.header().timestamp());
+            obj, (double)local_view.fusion_objects_info.header().timestamp(),
+            prediction_info);
       }
+      transform_fusion_to_prediction(
+          obj, (double)local_view.fusion_objects_info.header().timestamp(),
+          fusion_objs_info);
     }
   } else {
     int num = 0;
@@ -271,7 +278,8 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
         break;
       }
       transform_fusion_to_prediction(
-          obj, (double)local_view.fusion_objects_info.header().timestamp());
+          obj, (double)local_view.fusion_objects_info.header().timestamp(),
+          prediction_info);
     }
   }
 
@@ -700,15 +708,13 @@ PredictionTrajectoryPoint EnvironmentalModelManager::GetPointAtTime(
 }
 
 bool EnvironmentalModelManager::transform_fusion_to_prediction(
-    const FusionObjects::FusionObject &fusion_object, double timestamp) {
+    const FusionObjects::FusionObject &fusion_object, double timestamp,
+    std::vector<PredictionObject> &objects_infos) {
   assert(session_ != nullptr);
   if (session_ == nullptr) {
     return false;
   }
   auto &ego_state = session_->environmental_model().get_ego_state_manager();
-
-  auto &prediction_info =
-      session_->mutable_environmental_model()->get_mutable_prediction_info();
 
   PredictionObject prediction_object;
   prediction_object.id = fusion_object.additional_info().track_id();
@@ -782,7 +788,7 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   PredictionTrajectory tra;
   tra.trajectory.emplace_back(std::move(trajectory_point));
   prediction_object.trajectory_array.emplace_back(std::move(tra));
-  prediction_info.emplace_back(std::move(prediction_object));
+  objects_infos.emplace_back(std::move(prediction_object));
   return true;
 }
 
