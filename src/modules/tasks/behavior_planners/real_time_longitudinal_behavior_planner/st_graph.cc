@@ -951,17 +951,18 @@ double StGraphGenerator::GetCalibratedDistance(
     const double v_lead, const double v_ego, const std::string &lc_request,
     const bool is_accident_car, const bool is_temp_lead, const bool is_lead) {
   LOG_DEBUG("-----calc_desired_distance \n");
-  // 这里查表、魔数都要优化
+  // 受限感知性能，取非负
+  double v_lead_clip = std::max(v_lead, 0.0);
+
   double t_gap = interp(v_ego, _T_GAP_VEGO_BP, _T_GAP_VEGO_V);
   if (lc_request != "none") {
     t_gap = t_gap * (0.6 + v_ego * 0.01);
   }
-  // 同一个障碍物从temp_lead_one变成lead_one后，temp_lead的标志未清除，导致t_gap计算有问题，这里先加一个二者互斥的判断
-  if (is_temp_lead && !is_lead) {
+  if (is_temp_lead) {
     t_gap = t_gap * 0.3;
   }
   // Brake hysteresis
-  double v_relative = std::min(std::max(v_ego - v_lead, 0.0), 5.0);
+  double v_relative = std::min(std::max(v_ego - v_lead_clip, 0.0), 5.0);
   double distance_hysteresis = v_relative * config_.ttc_brake_hysteresis;
   // distance when at zero speed
   double d_offset = config_.dis_zero_speed;
@@ -972,8 +973,8 @@ double StGraphGenerator::GetCalibratedDistance(
   LOG_DEBUG("distance_hysteresis : [%f] \n", distance_hysteresis);
   LOG_DEBUG("ttc gap : [%f] \n", t_gap);
   LOG_DEBUG("desired_distance : [%f] \n",
-            d_offset + v_lead * t_gap + distance_hysteresis);
-  return d_offset + v_lead * t_gap + distance_hysteresis;
+            d_offset + v_lead_clip * t_gap + distance_hysteresis);
+  return d_offset + v_lead_clip * t_gap + distance_hysteresis;
 }
 
 double StGraphGenerator::CalcSafeDistance(const double obstacle_velocity,

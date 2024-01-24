@@ -47,7 +47,10 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                             'RealTime_v_ref', 'gap_v_limit_lc', \
                             "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                             "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                            "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime"]
+                            "SccLonBehaviorCostTime", "SccLonMotionCostTime", \
+                            'RealTimeLateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                            "ego_state_update_cost", "virtual_lane_manager_update_cost", "obstacle_prediction_update_cost", \
+                            "reference_path_manager_update_cost", "lateral_obstacle_update_cost"]
 
   plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
   plan_debug_json_info = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
@@ -520,17 +523,23 @@ def load_lon_global_figure(bag_loader):
   cost_time_fig = bkp.figure(title='耗时',x_axis_label='time/s',
                   y_axis_label='time cost/(ms)',width=600,height=300)
 
+  cost_time_fig2 = bkp.figure(title='耗时',x_axis_label='time/s',
+                  y_axis_label='time cost/(ms)',width=600,height=300)
+
   lead_one_dis_vec = []
   lead_two_dis_vec = []
   temp_lead_one_dis_vec = []
   temp_lead_two_dis_vec = []
   desired_distance_rss_vec = []
   desired_distance_calibrate_vec = []
-  RealTimeLonBehaviorCostTime_vec = []
-  RealTimeLonMotionCostTime_vec = []
-  RealTimeLateralMotionCostTime_vec = []
+  SccLonBehaviorCostTime_vec = []
+  SccLonMotionCostTime_vec = []
+  SccLateralMotionCostTime_vec = []
+  SccLateralBehaviorCostTime_vec = []
+  SccTrajGeneratorCostTime_vec = []
   EnvironmentalModelManagerCost_vec = []
   GeneralPlannerModuleCostTime_vec = []
+  reference_path_manager_update_cost_vec = []
 
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
     lead_one_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_dis'], 2))
@@ -539,11 +548,14 @@ def load_lon_global_figure(bag_loader):
     temp_lead_two_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['temp_lead_two_dis'], 2))
     desired_distance_rss_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_desired_distance_rss'], 2))
     desired_distance_calibrate_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_desired_distance_calibrate'], 2))
-    RealTimeLonBehaviorCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTimeLonBehaviorCostTime'], 2))
-    RealTimeLonMotionCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTimeLonMotionCostTime'], 2))
-    RealTimeLateralMotionCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTimeLateralMotionCostTime'], 2))
+    SccLonBehaviorCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['SccLonBehaviorCostTime'], 2))
+    SccLonMotionCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['SccLonMotionCostTime'], 2))
+    SccLateralMotionCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTimeLateralMotionCostTime'], 2))
+    SccLateralBehaviorCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTimeLateralBehaviorCostTime'], 2))
+    SccTrajGeneratorCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['TrajectoryGeneratorCostTime'], 2))
     EnvironmentalModelManagerCost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['EnvironmentalModelManagerCost'], 2))
     GeneralPlannerModuleCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['GeneralPlannerModuleCostTime'], 2))
+    reference_path_manager_update_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['reference_path_manager_update_cost'], 2))
 
   lead_fig.line(t_plan_vec, lead_one_dis_vec, line_width=1, legend_label='lead_one_dis', color="red")
   lead_fig.line(t_plan_vec, lead_two_dis_vec, line_width=1, legend_label='lead_two_dis', color="green")
@@ -552,29 +564,50 @@ def load_lon_global_figure(bag_loader):
   lead_fig.line(t_plan_vec, desired_distance_rss_vec, line_width=1, legend_label='distance_rss', color="yellow")
   lead_fig.line(t_plan_vec, desired_distance_calibrate_vec, line_width=1, legend_label='distance_cali', color="orange")
 
-  cost_time_fig.line(t_plan_vec, RealTimeLonBehaviorCostTime_vec, line_width=1, legend_label='LonBehaviorCostTime', color="red")
-  cost_time_fig.line(t_plan_vec, RealTimeLonMotionCostTime_vec, line_width=1, legend_label='LonMotionCostTime', color="blue")
-  cost_time_fig.line(t_plan_vec, RealTimeLateralMotionCostTime_vec, line_width=1, legend_label='LatMotionCostTime', color="orange")
+  # cost_time_fig.line(t_plan_vec, SccLonBehaviorCostTime_vec, line_width=1, legend_label='LonBehaviorCostTime', color="red")
+  # cost_time_fig.line(t_plan_vec, SccLonMotionCostTime_vec, line_width=1, legend_label='LonMotionCostTime', color="blue")
+  # cost_time_fig.line(t_plan_vec, SccLateralMotionCostTime_vec, line_width=1, legend_label='LatMotionCostTime', color="orange")
   cost_time_fig.line(t_plan_vec, EnvironmentalModelManagerCost_vec, line_width=1, legend_label='EnvironmentalCostTime', color="yellow")
   cost_time_fig.line(t_plan_vec, GeneralPlannerModuleCostTime_vec, line_width=1, legend_label='GeneralPlannerModuleCostTime', color="purple")
+  cost_time_fig.line(t_plan_vec, reference_path_manager_update_cost_vec, line_width=1, legend_label='reference_path_manager_update_cost', color="red")
 
-  cutin_fig = bkp.figure(title='速度',x_axis_label='time/s', y_axis_label='velocity/(m/s)',width=600,height=300)  
+  # 计算平均耗时
+  LonBahaviorAverageCostTime = sum(SccLonBehaviorCostTime_vec) / len(t_plan_vec)
+  LonMotionAverageCostTime = sum(SccLonMotionCostTime_vec) / len(t_plan_vec)
+  LateralBahaviorAverageCostTime = sum(SccLateralBehaviorCostTime_vec) / len(t_plan_vec)
+  LateralMotionAverageCostTime = sum(SccLateralMotionCostTime_vec) / len(t_plan_vec)
+  EnvironmentalAverageCostTime = sum(EnvironmentalModelManagerCost_vec) / len(t_plan_vec)
+  GeneralPlannerAverageCostTime = sum(GeneralPlannerModuleCostTime_vec) / len(t_plan_vec)
+  print('lat_bahavior_average_cost', LateralBahaviorAverageCostTime)
+  print('lat_motion_average_cost', LateralMotionAverageCostTime)
+  print('lon_bahavior_average_cost', LonBahaviorAverageCostTime)
+  print('lon_motion_average_cost', LonMotionAverageCostTime)
+  print('Environmental_average_cost', EnvironmentalAverageCostTime)
+  print('GeneralPlanner_average_cost', GeneralPlannerAverageCostTime)
+
+  cutin_fig = bkp.figure(title='cutin',x_axis_label='time/s', y_axis_label='cutin status',width=600,height=300)
 
   limit_cutin_vel_vec = []
   potential_cutin_speed_vec = []
   cutin_status_vec = []
-   
+
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
     limit_cutin_vel_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_cutin'], 2))
     potential_cutin_speed_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_potental_cutin'], 2))
-    # cutin_status_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_cutin_status'], 2))
+   #  cutin_status_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['cutin_status'], 2))
 
   cutin_fig.line(t_plan_vec, limit_cutin_vel_vec, line_width=1,
                                   legend_label='Pre-deceleration cutin',color="blue")
   cutin_fig.line(t_plan_vec, potential_cutin_speed_vec, line_width=1,
                                 legend_label='Speed regulation cutin', color="red")
-  # cutin_fig.line(t_plan_vec, cutin_status_vec, line_width=1,
-  #                               legend_label='cutin_status', color="black")                              
+#   cutin_fig.line(t_plan_vec, cutin_status_vec, line_width=1,
+#                                 legend_label='cutin_status', color="black")
+
+  cost_time_fig2.line(t_plan_vec, SccLateralBehaviorCostTime_vec, line_width=1, legend_label='LatBehaviorCostTime', color="red")
+  cost_time_fig2.line(t_plan_vec, SccLateralMotionCostTime_vec, line_width=1, legend_label='LatMotionCostTime', color="blue")
+  cost_time_fig2.line(t_plan_vec, SccLonBehaviorCostTime_vec, line_width=1, legend_label='LonBehaviorCostTime', color="green")
+  cost_time_fig2.line(t_plan_vec, SccLonMotionCostTime_vec, line_width=1, legend_label='LonMotionCostTime', color="purple")
+  cost_time_fig2.line(t_plan_vec, SccTrajGeneratorCostTime_vec, line_width=1, legend_label='TrajGeneratorCostTime', color="orange")
 
   #get longtime obstacle id list in st-graph
   obs_st_ids = []
@@ -583,9 +616,9 @@ def load_lon_global_figure(bag_loader):
       for one_bound in item.bound:
           if(one_bound.bound_info.type == 'obstacle' and one_bound.bound_info.id > 0 and one_bound.bound_info.id not in obs_st_ids):
             obs_st_ids.append(one_bound.bound_info.id)
-  return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids
+  return velocity_fig, acc_fig, lead_fig, cost_time_fig, cost_time_fig2, cutin_fig, obs_st_ids
 
-def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids):
+def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cost_time_fig2, cutin_fig, obs_st_ids):
   data_st = ColumnDataSource(data = {'t':[], 's':[], 's_soft_ub':[], 's_soft_lb':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[], 'sv_bound_s':[], 'sv_bound_v':[]})
@@ -754,7 +787,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
 
   tab1 = DataTable(source=data_text, columns=columns, width=500, height=800)
 
-  pan2 = Panel(child=row(tab1, column(velocity_fig, acc_fig, lead_fig), column(cost_time_fig, cutin_fig)), title="Realtime")
+  pan2 = Panel(child=row(tab1, column(velocity_fig, acc_fig, lead_fig), column(cost_time_fig, cost_time_fig2, cutin_fig)), title="Realtime")
 
   pans = Tabs(tabs=[ pan1, pan2 ])
 

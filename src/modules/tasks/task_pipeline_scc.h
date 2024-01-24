@@ -4,10 +4,10 @@
 
 namespace planning {
 
-class TaskPipelineRealTime final : public TaskPipeline {
+class TaskPipelineScc final : public TaskPipeline {
  public:
-  explicit TaskPipelineRealTime(const EgoPlanningConfigBuilder *config_builder,
-                                framework::Frame *frame);
+  explicit TaskPipelineScc(const EgoPlanningConfigBuilder *config_builder,
+                           framework::Frame *frame);
 
   bool Run(const EgoPlanningCandidate &candidate) override;
 
@@ -16,7 +16,7 @@ class TaskPipelineRealTime final : public TaskPipeline {
       const EgoPlanningConfigBuilder *config_builder) override;
 
  private:
-  EgoPlanningTaskPipelineRealTimeConfig config_;
+  EgoPlanningTaskPipelineSccConfig config_;
   std::map<std::string, PlanningTaskTypes> version_to_tasks_ = {};
 };
 

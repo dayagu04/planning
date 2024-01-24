@@ -381,7 +381,7 @@ void RealTimeLonBehaviorPlanner::ConstructLonBehavInput() {
   auto start_stop_state = lon_behav_plan_input_->mutable_start_stop_info();
   start_stop_state->CopyFrom(start_stop_state_info);
 
-  // 6. set function_info
+  // 7. set function_info
   auto function_info_input = lon_behav_plan_input_->mutable_function_info();
   function_info_input->CopyFrom(function_info);
 

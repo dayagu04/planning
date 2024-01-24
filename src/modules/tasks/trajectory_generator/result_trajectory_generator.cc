@@ -30,6 +30,7 @@ ResultTrajectoryGenerator::ResultTrajectoryGenerator(
 void ResultTrajectoryGenerator::Init() {}
 
 bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
+  auto start_time = IflyTime::Now_ms();
   if (Task::Execute(frame) == false) {
     return false;
   }
@@ -44,6 +45,8 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
     res = RealtimeTrajectoryGenerator();
   }
 
+  auto end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("TrajectoryGeneratorCostTime", end_time - start_time);
   return res;
 }
 
@@ -77,8 +80,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
     if (config_.is_pwj_planning) {
       Point2D frenet_pt{traj_points[i].s, traj_points[i].l};
       Point2D cart_pt;
-      if (frenet_coord_->FrenetCoord2CartCoord(frenet_pt, cart_pt) !=
-          TRANSFORM_SUCCESS) {
+      if (!frenet_coord_->SLToXY(frenet_pt, cart_pt)) {
         LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
         return false;
       }
@@ -134,7 +136,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   }
 
   // Step 3) extends to max length if needed
-  double desired_length = planning_init_point.frenet_state.s;
+  double desired_length = planning_init_point.frenet_state.s + 1.0;
 
   while (dense_traj_points.back().s < desired_length) {
     auto traj_pt = dense_traj_points.back();
@@ -143,8 +145,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
 
     Point2D frenet_pt{traj_pt.s, traj_pt.l};
     Point2D cart_pt;
-    if (frenet_coord_->FrenetCoord2CartCoord(frenet_pt, cart_pt) !=
-        TRANSFORM_SUCCESS) {
+    if (!frenet_coord_->SLToXY(frenet_pt, cart_pt)) {
       LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
       return false;
     }

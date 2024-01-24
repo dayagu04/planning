@@ -4,7 +4,7 @@
   "enable_dagger": false,
   "pipeline_version": "v1",
   "pipeline_version_vision_only": "v1",
-  "pipeline_version_real_time": "v1",
+  "pipeline_version_scc": "v1",
   "torch_use_cuda": true,
   "torch_gpu_index": 0,
   "torch_model_cpu_path": "${NPP_RESOURCE_PATH}/pnp_v2_train_0811_epoch_100.pt",

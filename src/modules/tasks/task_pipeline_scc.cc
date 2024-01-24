@@ -1,4 +1,4 @@
-#include "task_pipeline_real_time.h"
+#include "task_pipeline_scc.h"
 
 #include "ifly_time.h"
 // #include "trace.h"
@@ -7,25 +7,20 @@
 
 namespace planning {
 
-TaskPipelineRealTime::TaskPipelineRealTime(
-    const EgoPlanningConfigBuilder *config_builder, framework::Frame *frame)
+TaskPipelineScc::TaskPipelineScc(const EgoPlanningConfigBuilder *config_builder,
+                                 framework::Frame *frame)
     : TaskPipeline(config_builder, frame) {
-  name_ = "TaskPipelineRealTime";
-  config_ = config_builder->cast<EgoPlanningTaskPipelineRealTimeConfig>();
-  version_to_tasks_["v1"] = {
-      // TaskType::OBSTACLE_DECIDER,
-      TaskType::LATERAL_DECIDER,
-      TaskType::VISION_LATERAL_MOTION_PLANNER,
-      TaskType::REALTIME_LATERAL_MOTION_PLANNER,
-      TaskType::REAL_TIME_LONGITUDINAL_BEHAVIOR_PLANNER,
-      TaskType::REALTIME_LONGITUDINAL_MOTION_PLANNER,
-      TaskType::ADAS_FUNCTION_TASK,
-      TaskType::RESULT_TRAJECTORY_GENERATOR,
-  };
+  name_ = "TaskPipelineScc";
+  config_ = config_builder->cast<EgoPlanningTaskPipelineSccConfig>();
+  version_to_tasks_["v1"] = {TaskType::GENERAL_LATERAL_DECIDER,
+                             TaskType::LATERAL_MOTION_PLANNER,
+                             TaskType::SCC_LONGITUDINAL_BEHAVIOR_PLANNER,
+                             TaskType::SCC_LONGITUDINAL_MOTION_PLANNER,
+                             TaskType::RESULT_TRAJECTORY_GENERATOR};
   CreatePlanningTasks(config_builder);
 }
 
-bool TaskPipelineRealTime::Run(const EgoPlanningCandidate &candidate) {
+bool TaskPipelineScc::Run(const EgoPlanningCandidate &candidate) {
   // NTRACE_CALL(6);
   auto &coarse_planning_info = candidate.coarse_planning_info();
   auto &reference_path = candidate.coarse_planning_info().reference_path;
@@ -68,7 +63,7 @@ bool TaskPipelineRealTime::Run(const EgoPlanningCandidate &candidate) {
   return true;
 }
 
-void TaskPipelineRealTime::CreatePlanningTasks(
+void TaskPipelineScc::CreatePlanningTasks(
     const EgoPlanningConfigBuilder *config_builder) {
   auto version_it = version_to_tasks_.find(config_.pipeline_version);
   assert(version_it != version_to_tasks_.end());

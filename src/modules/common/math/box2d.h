@@ -187,6 +187,7 @@ class Box2d {
    */
   double DistanceTo(const Box2d &box) const;
 
+  double DistanceSquareTo(const Vec2d &point) const;
   /**
    * @brief Determines whether this box overlaps a given line segment
    * @param line_segment The line-segment

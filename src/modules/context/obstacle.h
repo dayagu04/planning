@@ -41,6 +41,11 @@ class Obstacle {
   }
 
   int id() const { return id_; }
+  void set_x_center(const double x_center) {
+    x_center_ = x_center;
+  }  // for pybind debug
+  void set_y_center(const double y_center) { y_center_ = y_center; }
+  void set_v(const double v) { velocity_ = v; }
 
   double x_center() const { return x_center_; }
   double y_center() const { return y_center_; }

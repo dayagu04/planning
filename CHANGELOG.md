@@ -13,6 +13,7 @@
 1. 修改fusion source，纵向使用BEV全方位障碍物
 2. 解决max_lat_offset不生效
 3. 优化taskpipeline，不析构
+4. scc planner合入，默认不开启
 
 # planning.2.2.1.5
 ####  修改说明

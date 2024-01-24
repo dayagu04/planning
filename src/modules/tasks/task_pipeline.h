@@ -7,7 +7,7 @@ namespace planning {
 enum class TaskPipelineType {
   NORMAL = 0,
   VISION_ONLY = 1,
-  REALTIME = 2,
+  SCC = 2,
 };
 
 class EgoPlanningCandidate;

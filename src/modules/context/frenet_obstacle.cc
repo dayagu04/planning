@@ -1,10 +1,12 @@
+#include "frenet_obstacle.h"
+
 #include <cassert>
 
 #include "ego_state_manager.h"
-#include "frenet_obstacle.h"
 #include "math/linear_interpolation.h"
 #include "reference_path.h"
 #include "session.h"
+#include "utils/kd_path.h"
 #include "utils/pose2d_utils.h"
 
 namespace planning {
@@ -40,8 +42,7 @@ void FrenetObstacle::compute_frenet_obstacle(
     carte_point.y = obstacle_ptr_->y_relative_center();
   }
 
-  if (frenet_coord->CartCoord2FrenetCoord(carte_point, frenet_point) ==
-          TRANSFORM_FAILED ||
+  if (!frenet_coord->XYToSL(carte_point, frenet_point) ||
       std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
     // frenet_s_ = obs_end_s;
     // frenet_l_ = obs_end_l;
@@ -57,10 +58,10 @@ void FrenetObstacle::compute_frenet_obstacle(
   const double obs_length = obstacle_ptr_->length();
   const double obs_width = obstacle_ptr_->width();
   double obs_relative_heading = obstacle_ptr_->heading_angle() -
-                                frenet_coord->GetRefCurveHeading(frenet_s_);
+                                frenet_coord->GetPathCurveHeading(frenet_s_);
   if (not is_location_valid_) {
     obs_relative_heading = obstacle_ptr_->relative_heading_angle() -
-                           frenet_coord->GetRefCurveHeading(frenet_s_);
+                           frenet_coord->GetPathCurveHeading(frenet_s_);
   }
   frenet_obstacle_corners_.s_front_left =
       frenet_s_ + obs_length / 2.0 * std::cos(obs_relative_heading) -
@@ -87,7 +88,7 @@ void FrenetObstacle::compute_frenet_obstacle(
       frenet_l_ - obs_length / 2.0 * std::sin(obs_relative_heading) -
       obs_width / 2.0 * std::cos(obs_relative_heading);
 
-  double curve_heading = frenet_coord->GetRefCurveHeading(frenet_s_);
+  double curve_heading = frenet_coord->GetPathCurveHeading(frenet_s_);
   frenet_relative_velocity_angle_ = planning_math::NormalizeAngle(
       obstacle_ptr_->velocity_angle() - curve_heading);
   frenet_velocity_s_ =
@@ -162,8 +163,7 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(
     Point2D frenet_point, carte_point;
     carte_point.x = obs_point.x();
     carte_point.y = obs_point.y();
-    if (frenet_coord->CartCoord2FrenetCoord(carte_point, frenet_point) ==
-            TRANSFORM_FAILED ||
+    if (!frenet_coord->XYToSL(carte_point, frenet_point) ||
         std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
       b_frenet_valid_ = false;
       return;
@@ -209,8 +209,7 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
       Point2D cart_point, frenet_point;
       cart_point.x = cart_vertex.x();
       cart_point.y = cart_vertex.y();
-      if (frenet_coord->CartCoord2FrenetCoord(cart_point, frenet_point) ==
-              TRANSFORM_FAILED ||
+      if (!frenet_coord->XYToSL(cart_point, frenet_point) ||
           std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
         b_frenet_polygon_sequence_invalid_ = true;
         return;
@@ -264,10 +263,10 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
           false == frenet_polygon_sequence_.empty()) {
         auto &last_polygon = frenet_polygon_sequence_.back().second;
         double curvature =
-            max(std::abs(frenet_coord->GetRefCurveCurvature(clip(
-                    last_polygon.min_x(), frenet_coord->GetLength(), 0.0))),
-                std::abs(frenet_coord->GetRefCurveCurvature(clip(
-                    last_polygon.max_x(), frenet_coord->GetLength(), 0.0))));
+            max(std::abs(frenet_coord->GetPathCurveHeading(
+                    clip(last_polygon.min_x(), frenet_coord->Length(), 0.0))),
+                std::abs(frenet_coord->GetPathCurveHeading(
+                    clip(last_polygon.max_x(), frenet_coord->Length(), 0.0))));
         double cur_radius = curvature > 0.0
                                 ? 1.0 / curvature
                                 : std::numeric_limits<double>::infinity();
@@ -304,9 +303,7 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
         Point2D cart_point, frenet_point;
         cart_point.x = cart_vertex.x();
         cart_point.y = cart_vertex.y();
-        if (frenet_coord->CartCoord2FrenetCoord(
-                cart_point, frenet_point, has_heuristics, heuristic_s_begin,
-                heuristic_s_end) == TRANSFORM_FAILED ||
+        if (frenet_coord->XYToSL(cart_point, frenet_point) ||
             std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
           is_vertexes_valid = false;
           break;
@@ -372,8 +369,7 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
 }
 
 void FrenetObstacle::generate_precise_frenet_polygon(
-    planning_math::Polygon2d &polygon,
-    std::shared_ptr<FrenetCoordinateSystem> frenet_coord) {
+    planning_math::Polygon2d &polygon, std::shared_ptr<KDPath> frenet_coord) {
   planning_math::Polygon2d result_polygon;
   double max_curvature = 0.0;
   double min_l = std::numeric_limits<double>::max();
@@ -385,10 +381,10 @@ void FrenetObstacle::generate_precise_frenet_polygon(
   assert(origin_points.size() > 2);
   std::vector<double> curvatures;
   for (auto point : origin_points) {
-    if (point.x() < 0.0 || point.x() > frenet_coord->GetLength()) {
+    if (point.x() < 0.0 || point.x() > frenet_coord->Length()) {
       return;
     }
-    double curvature = frenet_coord->GetRefCurveCurvature(point.x());
+    double curvature = frenet_coord->GetPathCurveHeading(point.x());
     curvatures.push_back(curvature);
     max_curvature = max(max_curvature, curvature);
     min_l = min(min_l, std::abs(point.y()));
@@ -408,8 +404,7 @@ void FrenetObstacle::generate_precise_frenet_polygon(
     Point2D fren_point, cart_point;
     fren_point.x = point.x();
     fren_point.y = point.y();
-    if (frenet_coord->FrenetCoord2CartCoord(fren_point, cart_point) ==
-        TRANSFORM_FAILED) {
+    if (!frenet_coord->SLToXY(fren_point, cart_point)) {
       return;
     }
     origin_cart_points.push_back({cart_point.x, cart_point.y});
@@ -436,8 +431,7 @@ void FrenetObstacle::generate_precise_frenet_polygon(
       cur_cart_p.y =
           planning_math::lerp(origin_cart_points[index_begin].y(), 0,
                               origin_cart_points[index_end].y(), inter_num, j);
-      if (frenet_coord->CartCoord2FrenetCoord(cur_cart_p, cur_fren_p) ==
-          TRANSFORM_FAILED) {
+      if (!frenet_coord->XYToSL(cur_cart_p, cur_fren_p)) {
         return;
       }
       assert(!std::isnan(cur_fren_p.x) && !std::isnan(cur_fren_p.y));
@@ -471,8 +465,7 @@ bool FrenetObstacle::get_polygon_at_time(
     Point2D frenet_point, carte_point;
     carte_point.x = pt.x();
     carte_point.y = pt.y();
-    if (frenet_coord->CartCoord2FrenetCoord(carte_point, frenet_point) ==
-        TRANSFORM_FAILED) {
+    if (!frenet_coord->XYToSL(carte_point, frenet_point)) {
       LOG_DEBUG(
           "Frenet_coord failed, the obstacle [%i]'s enu ploygon min_x: [%f], "
           "max_x: [%f], min_y: [%f], max_y: [%f] \n",

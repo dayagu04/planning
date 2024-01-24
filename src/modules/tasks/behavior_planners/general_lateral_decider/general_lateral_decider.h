@@ -14,9 +14,9 @@
 #include "spline_projection.h"
 #include "task.h"
 #include "task_basic_types.h"
+#include "utils/kd_path.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
-
 namespace planning {
 
 // struct LatYieldInfo {

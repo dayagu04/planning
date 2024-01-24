@@ -79,6 +79,10 @@ void EnvironmentalModelManager::InitContext() {
       *lateral_obstacle_ptr_, *virtual_lane_manager_ptr_, session_);
   session_->mutable_environmental_model()->set_lane_tracks_manager(
       lane_tracks_mgr_ptr_);
+  // agent node manager
+  agent_node_mgr_ptr_ = std::make_shared<AgentNodeManager>();
+  session_->mutable_environmental_model()->set_agent_node_manager(
+      agent_node_mgr_ptr_);
 }
 
 bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
@@ -90,14 +94,19 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   auto &local_view = session_->environmental_model().get_local_view();
 
   // 通过配置项进行实时长时的切换 true: 长时规划
-  auto location_valid =
+  bool msf_valid =
       local_view.localization_estimate.msf_status().available() &&
       (local_view.localization_estimate.msf_status().msf_status() !=
-       LocalizationOutput::MsfStatus::ERROR) &&
+       LocalizationOutput::MsfStatus::ERROR);
+  bool fusion_localization_valid =
       local_view.road_info.local_point_valid() &&
-      local_view.fusion_objects_info.local_point_valid() &&
-      (g_context.GetParam().planner_type ==
-       planning::context::PlannerType::LONGTIME_PLANNER);
+      local_view.fusion_objects_info.local_point_valid();
+  bool planner_valid = g_context.GetParam().planner_type ==
+                           planning::context::PlannerType::SCC_PLANNER ||
+                       g_context.GetParam().planner_type ==
+                           planning::context::PlannerType::LONGTIME_PLANNER;
+  auto location_valid = msf_valid && fusion_localization_valid && planner_valid;
+
   // location_valid = true; //hack
   auto environmental_model = session_->mutable_environmental_model();
   environmental_model->set_location_valid(location_valid);
@@ -157,6 +166,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   }
   auto time_end = IflyTime::Now_ms();
   LOG_DEBUG("ego_state_update cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("ego_state_update_cost", time_end - time_start)
 
   // Step 3) update virtual_lane
   time_start = IflyTime::Now_ms();
@@ -170,6 +180,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   }
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("virtual_lane_manager update cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("virtual_lane_manager_update_cost", time_end - time_start);
 
   // Step 4) update obstacle
   time_start = IflyTime::Now_ms();
@@ -179,6 +190,7 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   obstacle_manager_ptr_->update();
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("obstacle_prediction update cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("obstacle_prediction_update_cost", time_end - time_start);
 
   // Step 5) update reference path
   time_start = IflyTime::Now_ms();
@@ -188,11 +200,13 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   }
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("reference_path_manager update cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("reference_path_manager_update_cost", time_end - time_start);
 
   time_start = IflyTime::Now_ms();
   lateral_obstacle_ptr_->update();
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("lateral_obstacle update cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("lateral_obstacle_update_cost", time_end - time_start);
 
   lane_tracks_mgr_ptr_->update_lane_tracks();
 
@@ -205,6 +219,15 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
     LOG_ERROR("InputReady is failed !!!! \n");
     // return false;
   }
+
+  // Step 6) update agent node manager
+  time_start = IflyTime::Now_ms();
+  agent_node_mgr_ptr_->init();
+  time_end = IflyTime::Now_ms();
+  LOG_DEBUG("agent_node_manager init cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("agent_node_manager_init_cost", time_end - time_start);
+  // std::cout<< "agent_node_mgr time is : " << time_end - time_start
+  // <<std::endl;
 
   return true;
 }
@@ -371,9 +394,10 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   if (session_->environmental_model().location_valid()) {
     auto linear_velocity_from_wheel =
         localization_estimate.pose().linear_velocity_from_wheel();
-    vehicle_status.mutable_velocity()
-        ->mutable_heading_velocity()
-        ->set_value_mps(linear_velocity_from_wheel);
+    // WB：定位没有给linear_velocity_from_wheel赋值
+    // vehicle_status.mutable_velocity()
+    //     ->mutable_heading_velocity()
+    //     ->set_value_mps(linear_velocity_from_wheel);
   }
 
   if (vehicle_service_output_info.steering_wheel_angle_available()) {
@@ -473,18 +497,14 @@ void EnvironmentalModelManager::truncate_prediction_info(
   auto &prediction_info =
       session_->mutable_environmental_model()->get_mutable_prediction_info();
   prediction_info.clear();
+  auto &ego_state = session_->environmental_model().get_ego_state_manager();
 
   for (const auto &prediction_object :
        prediction_result.prediction_obstacle_list()) {
-    // HACK: 不使用左前、右前radar
-    if (prediction_object.fusion_obstacle().additional_info().fusion_source() ==
-            4 ||
-        prediction_object.fusion_obstacle().additional_info().fusion_source() ==
-            8 ||
-        prediction_object.fusion_obstacle().common_info().shape().length() ==
-            0 ||
-        prediction_object.fusion_obstacle().common_info().shape().width() ==
-            0) {
+    auto fusion_source =
+        prediction_object.fusion_obstacle().additional_info().fusion_source();
+    if (!(fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+      // 非相机融合成功的不用
       continue;
     }
     PredictionObject cur_predicion_obj;
@@ -569,8 +589,10 @@ void EnvironmentalModelManager::truncate_prediction_info(
     cur_predicion_obj.yaw =
         prediction_object.fusion_obstacle().common_info().heading_angle();
     if ((int)cur_predicion_obj.yaw == 255) {
-      cur_predicion_obj.yaw = 0;
+      // set object's yaw with ego heading
+      cur_predicion_obj.yaw = ego_state->heading_angle();
     }
+
     cur_predicion_obj.theta = std::atan2(
         prediction_object.fusion_obstacle().common_info().velocity().y(),
         prediction_object.fusion_obstacle().common_info().velocity().x());
@@ -683,6 +705,7 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   if (session_ == nullptr) {
     return false;
   }
+  auto &ego_state = session_->environmental_model().get_ego_state_manager();
 
   auto &prediction_info =
       session_->mutable_environmental_model()->get_mutable_prediction_info();
@@ -705,9 +728,12 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   prediction_object.speed =
       std::hypot(fusion_object.common_info().velocity().x(),
                  fusion_object.common_info().velocity().y());
-  prediction_object.yaw = fusion_object.common_info().heading_angle();
-  if ((int)prediction_object.yaw == 255) {
-    prediction_object.yaw = 0;
+
+  if ((int)fusion_object.common_info().heading_angle() == 255) {
+    // set object's yaw with ego heading
+    prediction_object.yaw = ego_state->heading_angle();
+  } else {
+    prediction_object.yaw = fusion_object.common_info().heading_angle();
   }
   prediction_object.acc =
       std::hypot(fusion_object.common_info().acceleration().x(),

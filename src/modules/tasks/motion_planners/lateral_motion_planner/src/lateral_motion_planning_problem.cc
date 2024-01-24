@@ -85,7 +85,8 @@ uint8_t LateralMotionPlanningProblem::Update(
     // reference
     cost_config_vec.at(i)[REF_X] = planning_input.ref_x_vec(i);
     cost_config_vec.at(i)[REF_Y] = planning_input.ref_y_vec(i);
-    cost_config_vec.at(i)[REF_THETA] = planning_input.ref_theta_vec(i);
+    cost_config_vec.at(i)[REF_THETA] =
+        i > 0 ? planning_input.ref_theta_vec(i) : 0.0;
     cost_config_vec.at(i)[REF_VEL] = planning_input.ref_vel();
     cost_config_vec.at(i)[CURV_FACTOR] = planning_input.curv_factor();
 

@@ -4,11 +4,10 @@
 #include <cmath>
 #include <iostream>
 
-#include "planning_plan.pb.h"
-
 #include "config/basic_type.h"
 #include "config/message_type.h"
 #include "path_point.h"
+#include "planning_plan.pb.h"
 #include "prediction_object.h"
 /**
  * @namespace apollo::common::math
@@ -38,7 +37,26 @@ T lerp(const T &x0, const double t0, const T &x1, const double t1,
   const T x = x0 + r * (x1 - x0);
   return x;
 }
+template <typename T>
+T lerp(const T x0, const T x1, const T r) {
+  return x0 + r * (x1 - x0);
+}
 
+inline double LerpWithLimit(const double x0, const double t0, const double x1,
+                            const double t1, const double t) {
+  // t0 <t1
+  if (fabs(t1 - t0) <= 1.0e-6) {
+    return x0;
+  }
+  if (t < t0) {
+    return x0;
+  }
+  if (t > t1) {
+    return x1;
+  }
+  double r = (t - t0) / (t1 - t0);
+  return x0 + r * (x1 - x0);
+}
 /**
  * @brief Spherical linear interpolation between two angles.
  *        The two angles are within range [-M_PI, M_PI).

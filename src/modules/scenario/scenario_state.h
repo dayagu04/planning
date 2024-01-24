@@ -94,26 +94,25 @@ struct StateBase : M::Base {
     auto location_valid =
         frame->session()->environmental_model().location_valid();
 
-    static auto normal_pipeline =
+    static auto hpp_pipeline =
         TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, nullptr);
-    static auto realtime_pipeline =
-        TaskPipeline::Make(TaskPipelineType::REALTIME, config_builder, nullptr);
+    static auto scc_pipeline =
+        TaskPipeline::Make(TaskPipelineType::SCC, config_builder, nullptr);
     static auto vision_only_pipeline = TaskPipeline::Make(
         TaskPipelineType::VISION_ONLY, config_builder, nullptr);
 
     if (location_valid) {
-      normal_pipeline->SetFrame(frame);
-      return normal_pipeline;
-    } else {
-      if (g_context.GetParam().planner_type ==
-          planning::context::PlannerType::REALTIME_PLANNER_WITH_MOTION) {
-        realtime_pipeline->SetFrame(frame);
-        return realtime_pipeline;
-      } else {
-        vision_only_pipeline->SetFrame(frame);
-        return vision_only_pipeline;
+      auto planner_type = g_context.GetParam().planner_type;
+      if (planner_type == planning::context::PlannerType::LONGTIME_PLANNER) {
+        hpp_pipeline->SetFrame(frame);
+        return hpp_pipeline;
+      } else if (planner_type == planning::context::PlannerType::SCC_PLANNER) {
+        scc_pipeline->SetFrame(frame);
+        return scc_pipeline;
       }
     }
+    vision_only_pipeline->SetFrame(frame);
+    return vision_only_pipeline;
   }
 
   virtual std::shared_ptr<Evaluator> get_evaluator(framework::Frame *frame);

@@ -34,7 +34,7 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   // Step 3) update
   if (ok) {
     auto current_time = IflyTime::Now_ms();
-    update_refpath_points(raw_reference_path_points, false);
+    update_refpath_points(raw_reference_path_points);
     auto end_time = IflyTime::Now_ms();
     LOG_DEBUG("update_refpath_points time:%f\n", end_time - current_time);
     frenet_ego_state_.update(

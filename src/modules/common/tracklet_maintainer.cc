@@ -1,6 +1,10 @@
 #include <cstddef>
+#include <memory>
+#include <vector>
 
+#include "path_point.h"
 #include "refline.h"
+#include "utils/path_point.h"
 #define _USE_MATH_DEFINES
 #include <algorithm>
 #include <cmath>
@@ -16,7 +20,6 @@
 #include "tracklet_maintainer.h"
 #include "virtual_lane_manager.h"
 namespace planning {
-
 TrackletSequentialState *LifecycleDict::get(int uid) {
   auto iter = data_dict_.find(uid);
   if (iter != data_dict_.end()) {
@@ -100,16 +103,34 @@ void TrackletMaintainer::apply_update(
   if (is_location_valid) {
     recv_prediction_objects(predictions, objects);
     if (flane != nullptr) {
-      FrenetCoordinateSystemParameters frenet_parameters;
+      // FrenetCoordinateSystemParameters frenet_parameters;
       // init frenet parameters
-      frenet_parameters.zero_speed_threshold = 0.1;
-      frenet_parameters.coord_transform_precision = 0.01;
-      frenet_parameters.step_s = 0.3;
-      frenet_parameters.coarse_step_s = 1.0;
-      frenet_parameters.optimization_gamma = 0.5;
-      frenet_parameters.max_iter = 15;
+      // frenet_parameters.zero_speed_threshold = 0.1;
+      // frenet_parameters.coord_transform_precision = 0.01;
+      // frenet_parameters.step_s = 0.3;
+      // frenet_parameters.coarse_step_s = 1.0;
+      // frenet_parameters.optimization_gamma = 0.5;
+      // frenet_parameters.max_iter = 15;
       auto &ref_path = flane->get_reference_path();
-      std::vector<Point2D> coord_points;
+      // std::vector<Point2D> coord_points;
+      // for (auto ref_point : ref_path->get_points()) {
+      //   double ego_fx = std::cos(ego_state_.ego_pose_raw().theta);
+      //   double ego_fy = std::sin(ego_state_.ego_pose_raw().theta);
+      //   double ego_lx = -ego_fy;
+      //   double ego_ly = ego_fx;
+      //   double dx = ref_point.path_point.x - ego_state_.ego_pose_raw().x;
+      //   double dy = ref_point.path_point.y - ego_state_.ego_pose_raw().y;
+
+      //   ref_point.path_point.x = dx * ego_fx + dy * ego_fy;
+      //   ref_point.path_point.y = dx * ego_lx + dy * ego_ly;
+      //   path_points.emplace_back(ref_point.path_point);
+      //   coord_points.emplace_back(
+      //       Point2D(ref_point.path_point.x, ref_point.path_point.y));
+      // }
+      // frenet_coord_ = std::make_shared<FrenetCoordinateSystem>(
+      //     coord_points, frenet_parameters);
+
+      std::vector<planning_math::PathPoint> coord_points;
       for (auto ref_point : ref_path->get_points()) {
         double ego_fx = std::cos(ego_state_.ego_pose_raw().theta);
         double ego_fy = std::sin(ego_state_.ego_pose_raw().theta);
@@ -120,12 +141,11 @@ void TrackletMaintainer::apply_update(
 
         ref_point.path_point.x = dx * ego_fx + dy * ego_fy;
         ref_point.path_point.y = dx * ego_lx + dy * ego_ly;
-        path_points.emplace_back(ref_point.path_point);
-        coord_points.emplace_back(
-            Point2D(ref_point.path_point.x, ref_point.path_point.y));
+        planning_math::PathPoint path_point{ref_point.path_point.x,
+                                            ref_point.path_point.y};
+        coord_points.emplace_back(path_point);
       }
-      frenet_coord_ = std::make_shared<FrenetCoordinateSystem>(
-          coord_points, frenet_parameters);
+      frenet_coord_ = std::make_shared<KDPath>(std::move(coord_points));
     }
   } else {
     recv_relative_prediction_objects(predictions, objects);
@@ -250,6 +270,9 @@ void TrackletMaintainer::recv_prediction_objects(
     origin->a_lead_k = rot_ax;
 
     origin->oncoming = (origin->v_lead < -3.9);
+
+    // calculate fisheye related for cutin
+    fisheye_helper(p, *origin);
 
     int idx = 0;
     for (auto &tr : p.trajectory_array) {
@@ -665,12 +688,11 @@ void TrackletMaintainer::calc(
                                            .rear_axis_to_front_edge;
   if (frenet_coord_ != nullptr) {
     Point2D frenet_point;
-    if (frenet_coord_->CartCoord2FrenetCoord(
-            Point2D(ego_rear_axis_to_front_edge, 0), frenet_point) ==
-        TRANSFORM_SUCCESS) {
+    if (frenet_coord_->XYToSL(Point2D(ego_rear_axis_to_front_edge, 0),
+                              frenet_point)) {
       s_ego_ = frenet_point.x;
       l_ego_ = frenet_point.y;
-      double theta = frenet_coord_->GetRefCurveHeading(frenet_point.x);
+      double theta = frenet_coord_->GetPathCurveHeading(frenet_point.x);
       vl_ego_ = v_ego * std::sin(-theta);
       vs_ego_ = v_ego * std::cos(-theta);
     }
@@ -824,12 +846,11 @@ bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
 
   double s, l, v_s, v_l, theta;
   Point2D frenet_point;
-  if (frenet_coord_->CartCoord2FrenetCoord(
-          Point2D(item.center_x, item.center_y), frenet_point) ==
-      TRANSFORM_SUCCESS) {
+  if (frenet_coord_->XYToSL(Point2D(item.center_x, item.center_y),
+                            frenet_point)) {
     s = frenet_point.x;
     l = frenet_point.y;
-    theta = frenet_coord_->GetRefCurveHeading(frenet_point.x);
+    theta = frenet_coord_->GetPathCurveHeading(frenet_point.x);
     v_l = item.v * std::sin(speed_yaw - theta);
     v_s = item.v * std::cos(speed_yaw - theta);
   } else {
@@ -1169,8 +1190,7 @@ void TrackletMaintainer::calc_intersection_with_refline(
       return;
     }
     Point2D frenet_point;
-    if (frenet_coord_->CartCoord2FrenetCoord(
-            Point2D(ego_x[0], ego_y[0]), frenet_point) == TRANSFORM_SUCCESS) {
+    if (frenet_coord_->XYToSL(Point2D(ego_x[0], ego_y[0]), frenet_point)) {
       s0 = frenet_point.x;
       l0 = frenet_point.y;
     }
@@ -1197,9 +1217,8 @@ void TrackletMaintainer::calc_intersection_with_refline(
         // double *yaw;
         // *v = ego_speed[max_idx];
         // *yaw = ego_yaw[max_idx];
-        if (frenet_coord_->CartCoord2FrenetCoord(
-                Point2D(ego_x[max_idx], ego_y[max_idx]), frenet_point) ==
-            TRANSFORM_SUCCESS) {
+        if (frenet_coord_->XYToSL(Point2D(ego_x[max_idx], ego_y[max_idx]),
+                                  frenet_point)) {
           smax = frenet_point.x;
           lmax = frenet_point.y;
         }
@@ -1249,24 +1268,21 @@ void TrackletMaintainer::calc_intersection_with_refline(
       end_speed_yaw =
           item.trajectory.yaw[end_idx] - ego_state_.ego_pose_raw().theta;
     }
-    if (frenet_coord_->CartCoord2FrenetCoord(
-            Point2D(ego_x[min_idx], ego_y[min_idx]), frenet_point) ==
-        TRANSFORM_SUCCESS) {
+    if (frenet_coord_->XYToSL(Point2D(ego_x[min_idx], ego_y[min_idx]),
+                              frenet_point)) {
       smin = frenet_point.x;
       lmin = frenet_point.y;
     }
-    if (frenet_coord_->CartCoord2FrenetCoord(
-            Point2D(ego_x[max_idx], ego_y[max_idx]), frenet_point) ==
-        TRANSFORM_SUCCESS) {
+    if (frenet_coord_->XYToSL(Point2D(ego_x[max_idx], ego_y[max_idx]),
+                              frenet_point)) {
       smax = frenet_point.x;
       lmax = frenet_point.y;
     }
-    if (frenet_coord_->CartCoord2FrenetCoord(
-            Point2D(ego_x[end_idx], ego_y[end_idx]), frenet_point) ==
-        TRANSFORM_SUCCESS) {
+    if (frenet_coord_->XYToSL(Point2D(ego_x[end_idx], ego_y[end_idx]),
+                              frenet_point)) {
       send = frenet_point.x;
       lend = frenet_point.y;
-      theta = frenet_coord_->GetRefCurveHeading(frenet_point.x);
+      theta = frenet_coord_->GetPathCurveHeading(frenet_point.x);
       v_l = item.v * std::sin(end_speed_yaw - theta);
       v_s = item.v * std::cos(end_speed_yaw - theta);
     }
@@ -1303,9 +1319,8 @@ void TrackletMaintainer::calc_intersection_with_refline(
       double smid = 0.0;
       double lmid = 0.0;
       int mid_idx = (min_idx + max_idx) / 2;
-      if (frenet_coord_->CartCoord2FrenetCoord(
-              Point2D(ego_x[mid_idx], ego_y[mid_idx]), frenet_point) ==
-          TRANSFORM_SUCCESS) {
+      if (frenet_coord_->XYToSL(Point2D(ego_x[mid_idx], ego_y[mid_idx]),
+                                frenet_point)) {
         smid = frenet_point.x;
         lmid = frenet_point.y;
       }
@@ -1330,9 +1345,8 @@ void TrackletMaintainer::calc_intersection_with_refline(
       double smid = 0.0;
       double lmid = 0.0;
       int mid_idx = (min_idx + max_idx) / 2;
-      if (frenet_coord_->CartCoord2FrenetCoord(
-              Point2D(ego_x[mid_idx], ego_y[mid_idx]), frenet_point) ==
-          TRANSFORM_SUCCESS) {
+      if (frenet_coord_->XYToSL(Point2D(ego_x[mid_idx], ego_y[mid_idx]),
+                                frenet_point)) {
         smid = frenet_point.x;
         lmid = frenet_point.y;
       }

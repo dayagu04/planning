@@ -18,7 +18,6 @@
 #include "scene_type_config.pb.h"
 #include "vehicle_service.pb.h"
 #include "vehicle_status.pb.h"
-
 namespace planning {
 
 struct RefPointFrenet {
@@ -53,7 +52,7 @@ class ReferencePathManager;
 class TrafficLightDecisionManager;
 class LateralObstacle;
 class LaneTracksManager;
-
+class AgentNodeManager;
 class EnvironmentalModel {
  public:
   EnvironmentalModel();
@@ -105,6 +104,13 @@ class EnvironmentalModel {
     obstacle_manager_ = obstacle_manager;
   }
 
+  const std::vector<PredictionObject> &get_fusion_info() const {
+    return fusion_info_;
+  }
+  std::vector<PredictionObject> &get_mutable_fusion_info() {
+    return fusion_info_;
+  }
+
   const std::shared_ptr<VirtualLaneManager> &get_virtual_lane_manager() const {
     return virtual_lane_manager_;
   }
@@ -133,6 +139,17 @@ class EnvironmentalModel {
   void set_reference_path_manager(
       std::shared_ptr<ReferencePathManager> reference_path_manager) {
     reference_path_manager_ = reference_path_manager;
+  }
+  std::shared_ptr<AgentNodeManager> &mutable_agent_node_manager() {
+    return agent_node_manager_;
+  }
+
+  const std::shared_ptr<AgentNodeManager> &get_agent_node_manager() const {
+    return agent_node_manager_;
+  }
+  void set_agent_node_manager(
+      std::shared_ptr<AgentNodeManager> agent_node_manager) {
+    agent_node_manager_ = agent_node_manager;
   }
 
   const std::shared_ptr<LateralObstacle> &get_lateral_obstacle() const {
@@ -236,7 +253,9 @@ class EnvironmentalModel {
       nullptr;
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
   std::shared_ptr<LaneTracksManager> lane_tracks_manager_ = nullptr;
+  std::shared_ptr<AgentNodeManager> agent_node_manager_ = nullptr;
   std::vector<PredictionObject> prediction_info_;
+  std::vector<PredictionObject> fusion_info_;
   bool hdmap_valid_{false};
   bool location_valid_{true};
   planning::VehicleParam vehicle_param_;

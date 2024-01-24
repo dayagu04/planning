@@ -13,7 +13,7 @@ namespace context {
 
 enum PlannerType {
   REALTIME_PLANNER = 0,
-  REALTIME_PLANNER_WITH_MOTION = 1,
+  SCC_PLANNER = 1,
   LONGTIME_PLANNER = 2,
 };
 

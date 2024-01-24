@@ -284,8 +284,11 @@ void LateralMotionPlanner::AssembleInput() {
 }
 
 void LateralMotionPlanner::Update() {
+  auto start_time = IflyTime::Now_ms();
   auto solver_condition = planning_problem_ptr_->Update(planning_input_);
   JSON_DEBUG_VALUE("solver_condition", solver_condition)
+  auto end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("iLqr_lat_update_time", end_time - start_time);
 
   // update planning_output
   const auto &planning_output = planning_problem_ptr_->GetOutput();
@@ -400,13 +403,12 @@ void LateralMotionPlanner::Update() {
     Point2D frenet_pt;
 
     if (reference_path_ptr_->get_frenet_coord() != nullptr &&
-        reference_path_ptr_->get_frenet_coord()->CartCoord2FrenetCoord(
-            cart_pt, frenet_pt) == TRANSFORM_STATUS::TRANSFORM_SUCCESS) {
+        reference_path_ptr_->get_frenet_coord()->XYToSL(cart_pt, frenet_pt)) {
       traj_points[i].s = frenet_pt.x;
       traj_points[i].l = frenet_pt.y;
     } else {
       LOG_DEBUG(
-          "CartCoord2FrenetCoord = FAILED !!!!!!!! index: %ld,  point.s : "
+          "XYToSL = FAILED !!!!!!!! index: %ld,  point.s : "
           "%f, point.l: %f ",
           i, traj_points[i].s, traj_points[i].l);
     }

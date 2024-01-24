@@ -177,6 +177,28 @@ struct TrajectoryPoint {
 };
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
+struct ObstaclePredicatedPoint {
+  double x = 0.;
+  double y = 0.;
+  double heading_angle = 0.;
+  double t = 0.;
+  double s = 0.;
+  double l = 0.;
+};
+using ObstaclePredicatedPoints = std::vector<ObstaclePredicatedPoint>;
+struct ObstaclePredicatedInfo {
+  ObstaclePredicatedPoints obstacle_pred_info;
+
+  // perception info
+  double origin_x = 0.;
+  double origin_y = 0.;
+  double raw_vel = 0.;
+  double cur_s = 0.;
+  double cur_l = 0.;
+
+  double length = 5.;
+  double width = 2.1;
+};
 enum ScenarioStateEnum {
   ROAD_NONE = 0,
   ROAD_LC_LWAIT,

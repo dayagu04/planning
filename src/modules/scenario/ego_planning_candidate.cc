@@ -120,7 +120,7 @@ void EgoPlanningCandidate::set_coarse_planning_info(
 
   double s_ref = projection_spline.GetOutput().s_proj;
 
-  const auto &frenet_length = frenet_coord->GetLength();
+  const auto &frenet_length = frenet_coord->Length();
 
   s_ref = std::min(s_ref, frenet_length * 0.95);
   const double delta_s = frenet_length - s_ref;
@@ -143,7 +143,7 @@ void EgoPlanningCandidate::set_coarse_planning_info(
     // frenet info
     Point2D frenet_pt{0.0, 0.0};
     Point2D cart_pt(point.x, point.y);
-    frenet_coord->CartCoord2FrenetCoord(cart_pt, frenet_pt);
+    frenet_coord->XYToSL(cart_pt, frenet_pt);
     point.s = frenet_pt.x;
     point.l = frenet_pt.y;
     point.t = static_cast<double>(i) * delta_time;

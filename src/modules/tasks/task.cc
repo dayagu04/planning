@@ -3,6 +3,7 @@
 #include "behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
 #include "behavior_planners/real_time_longitudinal_behavior_planner/real_time_lon_behavior_planner.h"
+#include "behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_planner.h"
 #include "behavior_planners/vision_only_adas_function_task/vision_only_adas_function_task.h"
 #include "behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 #include "behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner.h"
@@ -11,6 +12,7 @@
 #include "motion_planners/longitudinal_motion_planner/pwj_longitudinal_motion_planner.h"
 #include "motion_planners/realtime_lateral_motion_planner/realtime_lateral_motion_planner.h"
 #include "motion_planners/realtime_longitudinal_motion_planner/realtime_longitudinal_motion_planner.h"
+#include "motion_planners/scc_lon_motion_planner/scc_longitudinal_motion_planner.h"
 #include "motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
 #include "trajectory_generator/result_trajectory_generator.h"
 #include "vehicle_config_context.h"
@@ -102,6 +104,11 @@ std::shared_ptr<Task> Task::Make(
                                                           pipeline_context);
     }
 
+    case TaskType::SCC_LONGITUDINAL_BEHAVIOR_PLANNER: {
+      return std::make_shared<SccLonBehaviorPlanner>(config_builder,
+                                                     pipeline_context);
+    }
+
     case TaskType::RESULT_TRAJECTORY_GENERATOR: {
       return std::make_shared<ResultTrajectoryGenerator>(config_builder,
                                                          pipeline_context);
@@ -120,6 +127,11 @@ std::shared_ptr<Task> Task::Make(
     case TaskType::REALTIME_LONGITUDINAL_MOTION_PLANNER: {
       return std::make_shared<RealtimeLongitudinalMotionPlanner>(
           config_builder, pipeline_context);
+    }
+
+    case TaskType::SCC_LONGITUDINAL_MOTION_PLANNER: {
+      return std::make_shared<SccLongitudinalMotionPlanner>(config_builder,
+                                                            pipeline_context);
     }
     default: { /*LOG_ERROR*/
       return nullptr;

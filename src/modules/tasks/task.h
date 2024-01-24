@@ -28,6 +28,8 @@ enum TaskType {
   ADAS_FUNCTION_TASK,
   REALTIME_LATERAL_MOTION_PLANNER,
   REALTIME_LONGITUDINAL_MOTION_PLANNER,
+  SCC_LONGITUDINAL_BEHAVIOR_PLANNER,
+  SCC_LONGITUDINAL_MOTION_PLANNER
 };
 using PlanningTaskTypes = std::vector<TaskType>;
 
@@ -52,7 +54,7 @@ class Task {
   // PlanningContext *pnc_context_ = nullptr; // 删除此变量
   std::shared_ptr<TaskPipelineContext> pipeline_context_;
   std::shared_ptr<ReferencePath> reference_path_ptr_ = nullptr;
-  std::shared_ptr<FrenetCoordinateSystem> frenet_coord_ =
+  std::shared_ptr<planning_math::KDPath> frenet_coord_ =
       nullptr;  // 这个是否还需要？
   std::string name_{};
   // int planning_loop_; // 没有被使用到
