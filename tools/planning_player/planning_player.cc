@@ -33,7 +33,7 @@ static constexpr auto TOPIC_FUSION_OBJECTS = "/iflytek/fusion/objects";
 static constexpr auto TOPIC_ROAD_FUSION = "/iflytek/fusion/road_fusion";
 static constexpr auto TOPIC_LOCALIZATION_ESTIMATE =
     "/iflytek/localization/ego_pose";
-static constexpr auto TOPIC_LOCALIZATION = "/iflytek/localization/egomotion";
+static constexpr auto TOPIC_LOCALIZATION = "/iflytek/localization/ego_pose";
 static constexpr auto TOPIC_PREDICTION_RESULT =
     "/iflytek/prediction/prediction_result";
 static constexpr auto TOPIC_VEHICLE_SERVICE = "/iflytek/vehicle_service";
