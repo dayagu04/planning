@@ -28,9 +28,12 @@ void IntRequest::Update(int lc_status) {
   auto tlane = lane_change_lane_mgr_->tlane();
   std::shared_ptr<ReferencePathManager> reference_path_mgr =
       session_->mutable_environmental_model()->get_reference_path_manager();
-  auto target_reference_path =
-      reference_path_mgr->get_reference_path_by_lane(lane_change_lane_mgr_->tlane_virtual_id());
-  double frenet_ego_state_l = target_reference_path != nullptr ? target_reference_path->get_frenet_ego_state().l() : 0.;
+  auto target_reference_path = reference_path_mgr->get_reference_path_by_lane(
+      lane_change_lane_mgr_->tlane_virtual_id(), false);
+  double frenet_ego_state_l =
+      target_reference_path != nullptr
+          ? target_reference_path->get_frenet_ego_state().l()
+          : 0.;
   // 获取左车道线型
   auto left_boundary_type = virtual_lane_mgr_->get_current_lane()
                                 ->get_left_lane_boundary()
@@ -38,9 +41,9 @@ void IntRequest::Update(int lc_status) {
                                 .type();
   // 获取右车道线型,实线禁止换道
   auto right_boundary_type = virtual_lane_mgr_->get_current_lane()
-                                  ->get_right_lane_boundary()
-                                  .type_segments(0)
-                                  .type();
+                                 ->get_right_lane_boundary()
+                                 .type_segments(0)
+                                 .type();
   if (lane_change_lane_mgr_->has_origin_lane()) {
     auto origin_lane = lane_change_lane_mgr_->olane();
     origin_lane_virtual_id_ = origin_lane->get_virtual_id();
@@ -115,7 +118,8 @@ void IntRequest::Update(int lc_status) {
     // 3.换道过程中取消拨杆
     if (lane_change_lane_mgr_->has_target_lane() &&
         (std::fabs(frenet_ego_state_l) <
-             tlane->width() / 2 + int_request_config_.disallow_cancel_int_lc_lateral_thr)) {
+         tlane->width() / 2 +
+             int_request_config_.disallow_cancel_int_lc_lateral_thr)) {
       // 取消换道，但此时已经进入目标车道，则保持至换道完成
       LOG_DEBUG(
           "[IntRequest::update]: Cancel int lc blinker when ego car on target "
@@ -133,10 +137,13 @@ void IntRequest::Update(int lc_status) {
     counter_left_ = 0;
     counter_right_ = 0;
   } else if (lane_change_lane_mgr_->has_target_lane() &&
-            (std::fabs(frenet_ego_state_l) >=
-             tlane->width() / 2 + int_request_config_.disallow_cancel_int_lc_lateral_thr)) {
-    if ((request_type_ == LEFT_CHANGE && left_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) ||
-        (request_type_ == RIGHT_CHANGE && right_boundary_type == Common::LaneBoundaryType::MARKING_SOLID)) {
+             (std::fabs(frenet_ego_state_l) >=
+              tlane->width() / 2 +
+                  int_request_config_.disallow_cancel_int_lc_lateral_thr)) {
+    if ((request_type_ == LEFT_CHANGE &&
+         left_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) ||
+        (request_type_ == RIGHT_CHANGE &&
+         right_boundary_type == Common::LaneBoundaryType::MARKING_SOLID)) {
       Finish();
       set_target_lane_virtual_id(current_lane_virtual_id);
       counter_left_ = 0;
