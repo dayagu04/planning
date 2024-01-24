@@ -919,6 +919,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(double v_ego) {
                     ->environmental_model()
                     .get_virtual_lane_manager()
                     ->is_on_ramp();
+
   double dis_to_merge = frame_->session()
                             ->environmental_model()
                             .get_virtual_lane_manager()

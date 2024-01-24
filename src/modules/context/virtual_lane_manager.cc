@@ -374,7 +374,10 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   }
 
   is_local_valid_ = roads_ptr->local_point_valid();
-  CalculateDistanceToRampSplitMerge(session_);
+  if (session_->environmental_model().function_info().function_mode() 
+      == common::DrivingFunctionInfo::NOA ) {
+    CalculateDistanceToRampSplitMerge(session_);
+  }
   double dis_to_first_road_split = distance_to_first_road_split();
   double dis_between_first_road_split_and_ramp =
       dis_to_first_road_split - dis_to_ramp_;
@@ -1290,6 +1293,8 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMerge(
     } else {
       std::cout << "localization invalid" << std::endl;
     }
+  } else {
+   ResetForRampInfo();
   }
 }
 
@@ -1323,6 +1328,14 @@ bool VirtualLaneManager::CheckLaneValid(const FusionRoad::RoadInfo& roads) {
   }
   // TBD: 校验车道中心线的连续性
   return lane_valid;
+}
+
+void VirtualLaneManager::ResetForRampInfo() {
+  is_on_ramp_ = false;
+  dis_to_ramp_ = NL_NMAX;
+  ramp_direction_ = RampDirection::RAMP_NONE;
+  distance_to_first_road_merge_ = NL_NMAX;
+  distance_to_first_road_split_ = NL_NMAX;
 }
 
 }  // namespace planning
