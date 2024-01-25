@@ -133,3 +133,11 @@ pybind11_add_module(optimizer_apa_simulation_py MODULE src/optimizer_apa_simulat
     modules_common
     modules_context
     modules_tasks)
+
+pybind11_add_module(jerk_limited_trajectory_py MODULE src/jerk_limited_trajectory_pybind.cc)
+target_link_libraries(jerk_limited_trajectory_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)
