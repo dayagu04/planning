@@ -52,14 +52,33 @@ void PlanningPlayer::Init(bool is_close_loop, int auto_frame,
             << ", scene_type=" << scene_type << "==========" << std::endl;
   // 找到第几帧进自动
   if (scene_type == "scc") {
-    for (const auto& it : msg_cache_[TOPIC_PLANNING_DEBUG_INFO]) {
-      auto debug_info =
-          std::dynamic_pointer_cast<planning::common::PlanningDebugInfo>(
+    for (const auto& it : msg_cache_[TOPIC_FUNC_STATE_MACHINE]) {
+      auto fsm_msg =
+          std::dynamic_pointer_cast<FuncStateMachine::FuncStateMachine>(
               it.second);
-      auto& debug_data_json = debug_info->data_json();
-      auto dbw_pos = debug_data_json.find("dbw_status");
-      if (dbw_pos != std::string::npos &&
-          debug_data_json.substr(dbw_pos + 14, 1) == "1") {
+      auto current_state = fsm_msg->current_state();
+      bool acc_mode =
+          (current_state == FuncStateMachine::FunctionalState::ACC_ACTIVATE) ||
+          (current_state ==
+           FuncStateMachine::FunctionalState::ACC_STAND_ACTIVATE) ||
+          (current_state ==
+           FuncStateMachine::FunctionalState::ACC_STAND_WAIT) ||
+          (current_state == FuncStateMachine::FunctionalState::ACC_OVERRIDE) ||
+          (current_state == FuncStateMachine::FunctionalState::ACC_SECURE);
+      bool scc_mode =
+          (current_state == FuncStateMachine::FunctionalState::SCC_ACTIVATE) ||
+          (current_state ==
+           FuncStateMachine::FunctionalState::SCC_STAND_ACTIVATE) ||
+          (current_state ==
+           FuncStateMachine::FunctionalState::SCC_STAND_WAIT) ||
+          (current_state == FuncStateMachine::FunctionalState::SCC_OVERRIDE) ||
+          (current_state == FuncStateMachine::FunctionalState::SCC_SECURE);
+      bool noa_mode =
+          (current_state == FuncStateMachine::FunctionalState::NOA_ACTIVATE) ||
+          (current_state == FuncStateMachine::FunctionalState::NOA_OVERRIDE) ||
+          (current_state == FuncStateMachine::FunctionalState::NOA_SECUR);
+      bool dbw_status = acc_mode || scc_mode || noa_mode;
+      if (dbw_status == true) {
         break;
       } else {
         frame_num_before_enter_auto_++;
