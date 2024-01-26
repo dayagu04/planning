@@ -45,10 +45,10 @@ static constexpr auto TOPIC_FUNC_STATE_MACHINE =
 static constexpr auto TOPIC_HD_MAP = "/iflytek/ehr/static_map";
 static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
 static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
-void PlanningPlayer::Init(bool is_close_loop, int auto_frame,
+void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
                           const std::string& scene_type) {
   std::cout << "===========planning player init, is_close_loop="
-            << is_close_loop << ", auto_frame=" << auto_frame
+            << is_close_loop << ", auto_time_sec=" << auto_time_sec
             << ", scene_type=" << scene_type << "==========" << std::endl;
   // 找到第几帧进自动
   if (scene_type == "scc") {
@@ -100,7 +100,11 @@ void PlanningPlayer::Init(bool is_close_loop, int auto_frame,
       }
     }
   }
-  // frame_num_before_enter_auto_ = auto_frame;
+
+  if (auto_time_sec > 1.0) {
+    frame_num_before_enter_auto_ = static_cast<int>(auto_time_sec * 10);
+  }
+
   scene_type_ = scene_type;
   planning_adapter_ = std::make_unique<PlanningAdapter>();
   planning_adapter_->Init();

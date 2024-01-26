@@ -7,14 +7,14 @@
 #include "planning_player.h"
 
 int run_planning_player(const std::string &bag_path, const std::string &out_bag,
-                        bool is_close_loop, int auto_frame,
+                        bool is_close_loop, double auto_time_sec,
                         const std::string &scene_type) {
   planning::planning_player::PlanningPlayer player;
 
   if (!player.LoadCyberBag(bag_path)) {
     return -1;
   }
-  player.Init(is_close_loop, auto_frame, scene_type);
+  player.Init(is_close_loop, auto_time_sec, scene_type);
   player.PlayAllFrames();
   player.StoreCyberBag(out_bag);
   return 0;
@@ -23,7 +23,7 @@ int run_planning_player(const std::string &bag_path, const std::string &out_bag,
 int main(int argc, char **argv) {
   std::string bag_path, out_bag, log_file;
   bool is_close_loop = false;
-  int auto_frame = 15;
+  double auto_time_sec = 1.5;
   std::string scene_type = "scc";
 
   int opt, lopt, loidx;
@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
         std::cout << "--log-file         generated log path, default [bag "
                      "paht].[timestamp].log"
                   << std::endl;
-        std::cout << "--auto-frame       frame num when enter auto, default 15"
+        std::cout << "--auto-time       frame num when enter auto, default 15"
                   << std::endl;
         std::cout << "--scene-type       acc/apa" << std::endl;
         break;
@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
         out_bag = std::string(optarg);
         break;
       case 5:
-        auto_frame = std::stoi(optarg);
+        auto_time_sec = std::stod(optarg);
         break;
       case 6:
         scene_type = std::string(optarg);
@@ -90,6 +90,6 @@ int main(int argc, char **argv) {
     out_bag = bag_path + "." + std::to_string(tp) + ".plan";
   }
 
-  return run_planning_player(bag_path, out_bag, is_close_loop, auto_frame,
+  return run_planning_player(bag_path, out_bag, is_close_loop, auto_time_sec,
                              scene_type);
 }

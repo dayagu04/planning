@@ -39,7 +39,8 @@ class PlanningPlayer {
   PlanningPlayer() = default;
   ~PlanningPlayer() = default;
 
-  void Init(bool is_close_loop, int auto_frame, const std::string &scene_type);
+  void Init(bool is_close_loop, double auto_time_sec,
+            const std::string &scene_type);
   void Clear();
   bool LoadCyberBag(const std::string &bag_path);
   void StoreCyberBag(const std::string &bag_path);
