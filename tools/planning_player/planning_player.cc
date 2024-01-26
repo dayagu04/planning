@@ -434,8 +434,7 @@ void PlanningPlayer::PlayOneFrame(
       functional_state =
           ::FuncStateMachine::FunctionalState::PARK_IN_ACTIVATE_CONTROL;
     } else if (scene_type_ == "scc") {
-      functional_state =
-          ::FuncStateMachine::FunctionalState::SCC_ACTIVATE;
+      functional_state = ::FuncStateMachine::FunctionalState::SCC_ACTIVATE;
     }
   }
   func_state_machine_msg->set_current_state(functional_state);

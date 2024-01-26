@@ -41,9 +41,7 @@ void ApaPlanInterface::Init() {
   SyncParameters();
 }
 
-void ApaPlanInterface::Reset() {
-  return;
-}
+void ApaPlanInterface::Reset() { return; }
 
 std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
     const uint8_t apa_planner_id) {

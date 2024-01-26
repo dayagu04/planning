@@ -771,7 +771,6 @@ void SlotManagement::UpdateLimiterInfoInParking() {
   Eigen::Vector2d current_limiter_slot_right(current_limiter_slot.second.x(),
                                              current_limiter_slot.second.y());
 
-
   Eigen::Vector2d current_limiter_global_left =
       ego_slot_info.l2g_tf.GetPos(current_limiter_slot_left);
 

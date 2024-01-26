@@ -19,11 +19,11 @@
 
 namespace planning {
 
-using ad_common::hdmap::LaneGroupConstPtr;
-using ad_common::hdmap::LaneInfoConstPtr;
 using Map::CurrentRouting;
 using Map::FormOfWayType::MAIN_ROAD;
 using Map::FormOfWayType::RAMP;
+using ad_common::hdmap::LaneGroupConstPtr;
+using ad_common::hdmap::LaneInfoConstPtr;
 const double PI = 3.1415926;
 
 VirtualLaneManager::VirtualLaneManager(

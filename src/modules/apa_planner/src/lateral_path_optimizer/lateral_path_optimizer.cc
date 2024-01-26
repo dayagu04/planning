@@ -141,7 +141,6 @@ void LateralPathOptimizer::AssembleInput(
   planning_input_.set_last_y(planning_input_.ref_y_vec(ilqr_horizon));
   planning_input_.set_last_theta(planning_input_.ref_theta_vec(ilqr_horizon));
 
-
   // simu_ weight
   planning_input_.set_q_ref_x(param_.q_ref_xy);
   planning_input_.set_q_ref_y(param_.q_ref_xy);
