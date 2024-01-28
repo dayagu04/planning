@@ -1157,14 +1157,17 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
     // distance_safe应该是停车安全距离+跟车完全距离
     // double follow_distance = 0.0;
     // follow_distance = calc_desired_distance(obstacle, );
+    auto obstacle_type = obstacle->type();
     if (frame_->session()->is_hpp_scene()) {
       static constexpr double kSafeDistanceInverse = 3.0;
       static constexpr double kDistanceInverseTTC = 0.3;
       double relative_velocity = ego_velocity - obstacle->frenet_velocity_s();
       distance_safe = kSafeDistanceInverse +
                       std::fabs(relative_velocity) * kDistanceInverseTTC;
+      if (obstacle_type == Common::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
+        distance_safe += config_.pedestrian_safe_extra_buffer;
+      }
     }
-    auto obstacle_type = obstacle->type();
     bool b_fast_car =
         obstacle_type != Common::ObjectType::OBJECT_TYPE_BICYCLE and
         obstacle_type != Common::ObjectType::OBJECT_TYPE_PEDESTRIAN &&

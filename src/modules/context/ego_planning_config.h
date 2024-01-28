@@ -505,6 +505,8 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "narrow_space_width_stop_thrshld");
     narrow_space_distance_stop_thrshld =
         read_json_key<double>(json, "narrow_space_distance_stop_thrshld");
+    pedestrian_safe_extra_buffer =
+        read_json_key<double>(json, "pedestrian_safe_extra_buffer");
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -536,6 +538,7 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double lon_max_ignore_relative_time = 2.0;
   double rads_stop_distance_to_destination = 0;
   double max_deceleration = -6.0;
+  double pedestrian_safe_extra_buffer = 1.0;
 };
 
 struct AdaptiveCruiseControlConfig : public EgoPlanningConfig {

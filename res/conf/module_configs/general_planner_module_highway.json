@@ -112,6 +112,7 @@
   "velocity_limit_parking": 10.0,
   "narrow_space_width_stop_thrshld": -0.1,
   "narrow_space_distance_stop_thrshld": 10.0,
+  "pedestrian_safe_extra_buffer": 1.0,
   "lon_care_length": 120.0,
   "lon_max_ignore_relative_time": 2.0,
   "care_area_s_len": 0.0,
