@@ -1133,6 +1133,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
   LOG_DEBUG("----calc_speed_with_potential_cutin_car--- \n");
   double cutinp_threshold = lc_request != "none" ? 0.6 : 0.2;
   front_cut_in_track_id.clear();
+  std::pair<int, double> cutin_id_vt = {-1, 0.0};
   for (auto &track : front_tracks) {
     // ignore obj without camera source
     if ((track.fusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
@@ -1153,9 +1154,15 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
       calc_acc_accel_limits(drel_pre_for_a, d_des, v_ego, track.v_lead,
                             track.v_rel, a_lead_p, v_target_car, a_target,
                             std::min(std::abs(track.y_rel), track.d_path));
-      v_target_potental_cutin =
-          std::min(v_target_potental_cutin,
-                   (v_target_car - v_limit) * track.cutinp + v_limit);
+
+      double v_potental_cutin =
+          (v_target_car - v_limit) * track.cutinp + v_limit;
+      if (v_target_potental_cutin > v_potental_cutin) {
+        v_target_potental_cutin = v_potental_cutin;
+        cutin_id_vt.first = track.track_id;
+        cutin_id_vt.second = v_target_potental_cutin;
+      }
+
       a_target_potential_min =
           std::min({a_target_potential_min,
                     std::max(a_target.first, -4.0) * track.cutinp, -0.7});
@@ -1165,14 +1172,11 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
       LOG_DEBUG(
           "d_des: [%f], v_target_car: [%f], v_target_potental_cutin: [%f]\n",
           d_des, v_target_car, v_target_potental_cutin);
-      // debug info
-      JSON_DEBUG_VALUE("v_target_potental_cutin", v_target_potental_cutin);
-      JSON_DEBUG_VALUE("potental_cutin_track_id", track.track_id);
-    } else {
-      JSON_DEBUG_VALUE("v_target_potental_cutin", 0);
-      JSON_DEBUG_VALUE("potental_cutin_track_id", 0);
     }
   }
+
+  JSON_DEBUG_VALUE("v_target_potental_cutin", cutin_id_vt.second);
+  JSON_DEBUG_VALUE("potental_cutin_track_id", cutin_id_vt.first);
 
   a_target_.first = std::min(a_target_.first, a_target_potential_min);
   v_target_ = std::min(v_target_, v_target_potental_cutin);
