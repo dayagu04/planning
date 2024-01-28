@@ -1147,7 +1147,7 @@ def load_ground_line(dataLoader, layer_manager, fig_local_view, g_is_display_enu
         groundline_generate.xys.append(([], []))
         continue
       flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
-      groundline_x_vec, groundline_y_vec = generate_ground_line(ground_line_msg, loc_msg, g_is_display_enu)
+      groundline_x_vec, groundline_y_vec, groundline_id_vec = generate_ground_line(ground_line_msg, loc_msg, g_is_display_enu)
       groundline_generate.xys.append((groundline_y_vec, groundline_x_vec))
     groundline_generate.ts = np.array(plan_debug_ts)
     groundline_params_layer = MultiCurveLayer(fig_local_view ,ground_line_params)
@@ -1628,7 +1628,7 @@ def draw_local_view(dataLoader, layer_manager):
               if not flag:
                 plan_traj_x, plan_traj_y = [], []
               else:
-                plan_traj_x, plan_traj_y, plan_dict = generate_planning_trajectory(trajectory, loc_msg, g_is_display_enu) 
+                plan_traj_x, plan_traj_y, plan_traj_theta, plan_dict = generate_planning_trajectory(trajectory, loc_msg, g_is_display_enu) 
             else:
               plan_traj_x, plan_traj_y = [], []
             
@@ -1670,7 +1670,7 @@ def draw_local_view(dataLoader, layer_manager):
             control_generator.xys.append(([], []))
             continue
           flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i_index])
-          mpc_dx, mpc_dy = generate_control(ctrl_msg, loc_msg, g_is_display_enu)
+          mpc_dx, mpc_dy, mpc_dtheta = generate_control(ctrl_msg, loc_msg, g_is_display_enu)
           control_generator.xys.append((mpc_dy, mpc_dx))
       control_generator.ts = np.array(plan_debug_ts)
       control_layer = CurveLayer(fig_local_view, control_params)

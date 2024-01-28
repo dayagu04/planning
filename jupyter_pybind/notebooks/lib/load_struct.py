@@ -900,3 +900,126 @@ def generate_control(control_msg, loc_msg = "", g_is_display_enu = False):
       mpc_dtheta[i] = mpc_dtheta[i] + cur_yaw
   return mpc_dx, mpc_dy, mpc_dtheta
 
+# GroundLinePoint & GroundLineDecider & generate_ground_line_clusters must be consistent with C++ code
+class GroundLinePoint:
+  class Status:
+      UNCLASSIFIED = 0
+      CLASSIFIED = 1
+      NOISE = 2
+
+  def __init__(self, point, status):
+      self.point = point
+      self.status = status
+
+  def __eq__(self, other):
+      return self.point == other.point and self.status == other.status
+
+  def __ne__(self, other):
+      return not (self.point == other.point and self.status == other.status)
+
+class GroundLineDecider:
+  min_pts = 1
+  eps = 0.5
+
+  def update_params(min_pts, eps):
+    GroundLineDecider.min_pts = min_pts
+    GroundLineDecider.eps = eps
+
+  def execute(ground_line_points):
+    result = []
+    points = ground_line_points
+    for point in points:
+      if point.status == GroundLinePoint.Status.UNCLASSIFIED:
+        cluster = []
+        GroundLineDecider.expand_cluster(point, points, cluster)
+        if cluster:
+          result.append(cluster)
+    return result
+
+  def calc_cluster(point, points, cluster_index):
+    for i in range(len(points)):
+      if point != points[i] and math.sqrt((point.point[0] - points[i].point[0])**2 + (point.point[1] - points[i].point[1])**2) <= GroundLineDecider.eps:
+        cluster_index.append(i)
+
+  def expand_cluster(point, points, result):
+    result.clear()
+    cluster = []
+    GroundLineDecider.calc_cluster(point, points, cluster)
+    if len(cluster) + 1 < GroundLineDecider.min_pts:
+      point.status = GroundLinePoint.Status.NOISE
+      return
+
+    point.status = GroundLinePoint.Status.CLASSIFIED
+    result.append(point.point)
+    index = 0
+    for c_index in cluster:
+      index += 1
+      cluster_exp = []
+      GroundLineDecider.calc_cluster(points[c_index], points, cluster_exp)
+      points[c_index].status = GroundLinePoint.Status.CLASSIFIED
+      result.append(points[c_index].point)
+
+      if len(cluster_exp) >= GroundLineDecider.min_pts:
+        for j in range(len(cluster_exp)):
+          if points[cluster_exp[j]].status == GroundLinePoint.Status.UNCLASSIFIED:
+            if cluster_exp[j] not in cluster:
+              cluster.append(cluster_exp[j])
+          elif points[cluster_exp[j]].status == GroundLinePoint.Status.NOISE:
+            points[cluster_exp[j]].status = GroundLinePoint.Status.CLASSIFIED
+            result.append(points[cluster_exp[j]].point)
+
+def generate_ground_line_clusters(ground_line_msg, loc_msg = "", g_is_display_enu = False):
+  ground_lines = ground_line_msg.ground_lines
+  groundline_point_x_vec = []
+  groundline_point_y_vec = []
+  groundline_points = []
+  try:
+    if g_is_display_enu:
+      for j in range(len(ground_lines)):
+        groundline = ground_lines[j]
+        for k in range(len(groundline.points_3d)):
+          ground_x_enu = groundline.points_3d[k].x
+          ground_y_enu = groundline.points_3d[k].y
+          groundline_point_x_vec.append(ground_x_enu)
+          groundline_point_y_vec.append(ground_y_enu)
+          groundline_point = GroundLinePoint([ground_x_enu, ground_y_enu], GroundLinePoint.Status.UNCLASSIFIED)
+          groundline_points.append(groundline_point)
+
+    else:
+      coord_tf = coord_transformer()
+      if loc_msg != "": # 长时轨迹 
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        for j in range(len(ground_lines)):
+          groundline = ground_lines[j]
+          for k in range(len(groundline.points_3d)):
+            ground_x_enu = groundline.points_3d[k].x
+            ground_y_enu = groundline.points_3d[k].y
+            local_x, local_y = coord_tf.global_to_local([ground_x_enu], [ground_y_enu])
+            groundline_point_x_vec.append(local_x)
+            groundline_point_y_vec.append(local_y)
+            groundline_point = GroundLinePoint([ground_x_enu, ground_y_enu], GroundLinePoint.Status.UNCLASSIFIED)
+            groundline_points.append(groundline_point)
+  except:
+    print('groundline error')
+  
+  clusters = GroundLineDecider.execute(groundline_points)
+  groundline_x_vec = []
+  groundline_y_vec = []
+  groundline_id_vec = []
+  kGroundLineIdOffset = 5000000
+  for cluster in clusters:
+    single_groundline_x_vec = []
+    single_groundline_y_vec = []
+    single_groundline_id_vec = []
+    kGroundLineIdOffset += 1
+    single_groundline_id_vec.append(kGroundLineIdOffset)
+    for groundline_point in cluster:
+      single_groundline_x_vec.append(groundline_point[0])
+      single_groundline_y_vec.append(groundline_point[1])
+    groundline_x_vec.append(single_groundline_x_vec)
+    groundline_y_vec.append(single_groundline_y_vec)
+    groundline_id_vec.append(single_groundline_id_vec)
+  return groundline_point_x_vec, groundline_point_y_vec, groundline_x_vec, groundline_y_vec, groundline_id_vec

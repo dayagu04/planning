@@ -1103,6 +1103,42 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'replan_status': [replan_status],
     })
 
+    lat_motion_planning_output = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_output
+    lat_plan_traj_x = []
+    lat_plan_traj_y = []
+    lat_plan_traj_theta = []
+    for i in range(len(lat_motion_planning_output.x_vec)):
+      lat_plan_traj_x.append(lat_motion_planning_output.x_vec[i])
+      lat_plan_traj_y.append(lat_motion_planning_output.y_vec[i])
+      lat_plan_traj_theta.append(lat_motion_planning_output.theta_vec[i])
+    if not g_is_display_enu:
+        lat_plan_traj_x, lat_plan_traj_y = coord_tf.global_to_local(lat_plan_traj_x, lat_plan_traj_y)
+        cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
+        lat_plan_traj_theta_local = []
+        for i in range(len(lat_plan_traj_theta)):
+          lat_plan_traj_theta_local.append(lat_plan_traj_theta[i] - cur_yaw)
+        lat_plan_traj_theta = lat_plan_traj_theta_local
+    
+    local_view_data['data_planning_lat'].data.update({
+      'plan_traj_y' : lat_plan_traj_y,
+      'plan_traj_x' : lat_plan_traj_x,
+    })
+
+    lat_car_xb_traj = []
+    lat_car_yb_traj = []
+    for i in range(len(lat_plan_traj_x) - 1, -1, -1):
+      car_xb_traj_point = []
+      car_yb_traj_point = []
+      for j in range(len(car_xb)):
+        tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], lat_plan_traj_x[i], lat_plan_traj_y[i], lat_plan_traj_theta[i])
+        car_xb_traj_point.append(tmp_x)
+        car_yb_traj_point.append(tmp_y)
+      lat_car_xb_traj.append(car_xb_traj_point)
+      lat_car_yb_traj.append(car_yb_traj_point)
+    local_view_data['data_car_traj_lat'].data.update({
+      'car_yb_traj' : lat_car_yb_traj,
+      'car_xb_traj' : lat_car_xb_traj,
+    })
     # local_view_data['data_text'].data.update({
     #   'vel_ego_text': ['v={:.2f}({:d})\nsteer={:.2}'.format(round(vel_ego, 2),current_lane_virtual_id, round(steer_deg, 2))],
     #   'text_xn': [text_xn],
@@ -1383,6 +1419,17 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'ground_line_x' : groundline_x_vec,
       'ground_line_y' : groundline_y_vec,
     })
+
+    ground_line_point_x_vec, ground_line_point_y_vec, groundline_x_vec, groundline_y_vec, groundline_id_vec = generate_ground_line_clusters(ground_line_msg, loc_msg, g_is_display_enu)
+    local_view_data['data_ground_line_point'].data.update({
+      'ground_line_x' : ground_line_point_x_vec,
+      'ground_line_y' : ground_line_point_y_vec,
+    })
+    local_view_data['data_ground_line_clusters'].data.update({
+      'ground_line_x' : groundline_x_vec,
+      'ground_line_y' : groundline_y_vec,
+      'groundline_id_vec' : groundline_id_vec
+    })
   return local_view_data
 
 def load_local_view_figure():
@@ -1390,6 +1437,7 @@ def load_local_view_figure():
   data_car_traj = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
   data_car_traj_raw = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
   data_car_traj_mpc = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
+  data_car_traj_lat = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
   data_ego = ColumnDataSource(data = {'ego_yb':[], 'ego_xb':[]})
   data_ego_pos_point = ColumnDataSource(data = {'ego_pos_point_y':[],
                                                 'ego_pos_point_x':[],
@@ -1477,6 +1525,8 @@ def load_local_view_figure():
   data_snrd_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obs_label':[]})
+  data_planning_lat = ColumnDataSource(data = {'plan_traj_y':[],
+                                      'plan_traj_x':[],})
   data_planning_raw = ColumnDataSource(data = {'plan_traj_y':[],
                                       'plan_traj_x':[],
                                       'plan_traj_s':[],})
@@ -1511,6 +1561,11 @@ def load_local_view_figure():
                                              'road_mark_x':[],})
   data_ground_line = ColumnDataSource(data = {'ground_line_y':[],
                                              'ground_line_x':[],})
+  data_ground_line_point = ColumnDataSource(data = {'ground_line_y':[],
+                                                    'ground_line_x':[],})
+  data_ground_line_clusters = ColumnDataSource(data = {'ground_line_y':[],
+                                                       'ground_line_x':[],
+                                                       'groundline_id_vec':[],})
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
                 'fus_msg_idx': 0,
@@ -1534,6 +1589,7 @@ def load_local_view_figure():
                      'data_car_traj':data_car_traj, \
                      'data_car_traj_raw':data_car_traj_raw, \
                      'data_car_traj_mpc':data_car_traj_mpc, \
+                     'data_car_traj_lat':data_car_traj_lat, \
                      'data_ego':data_ego, \
                      'data_ego_pos_point': data_ego_pos_point, \
                      'data_init_pos_point': data_init_pos_point, \
@@ -1579,6 +1635,8 @@ def load_local_view_figure():
                      'data_parking_space' : data_parking_space , \
                      'data_road_mark' : data_road_mark , \
                      'data_ground_line' : data_ground_line, \
+                     'data_ground_line_point' : data_ground_line_point, \
+                     'data_ground_line_clusters' : data_ground_line_clusters, \
                      'data_fus_obj':data_fus_obj, \
                      'data_me_obj':data_me_obj, \
                      'data_radar_fm_obj':data_radar_fm_obj, \
@@ -1587,6 +1645,7 @@ def load_local_view_figure():
                      'data_radar_rl_obj':data_radar_rl_obj, \
                      'data_radar_rr_obj':data_radar_rr_obj, \
                      'data_snrd_obj':data_snrd_obj, \
+                     'data_planning_lat':data_planning_lat,\
                      'data_planning_raw':data_planning_raw,\
                      'data_planning':data_planning,\
                      'data_planning_0':data_planning_0,\
@@ -1614,11 +1673,12 @@ def load_local_view_figure():
       local_view_data[key] = value
 
   ### figures config
-  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1100, match_aspect = True, aspect_scale=1)
+  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1200, match_aspect = True, aspect_scale=1)
 
   fig1.x_range.flipped = True
   # figure plot
-  f1 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj')
+  f1 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
+  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj')
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_raw, fill_color = "deepskyblue", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_raw')
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_mpc, fill_color = "salmon", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_mpc')
   fig1.patch('car_yb', 'car_xb', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
@@ -1690,6 +1750,7 @@ def load_local_view_figure():
   fig1.patches('obstacles_y', 'obstacles_x', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd')
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fusion_info')
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info')
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_raw, line_width = 5, line_color = 'deepskyblue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'raw plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
   fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
@@ -1706,21 +1767,29 @@ def load_local_view_figure():
   fig1.patches('parking_space_y', 'parking_space_x', source = data_parking_space, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'parking_space')
   fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'road_mark')
   fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line, line_width = 2, line_color = 'green', line_dash = 'dotted', legend_label = 'ground_line')
+  fig1.circle('ground_line_y', 'ground_line_x', source = data_ground_line_point, radius = 0.01, line_width = 1,  line_color = 'green', line_alpha = 1, fill_color = "green", fill_alpha = 1.0, legend_label = 'ground_line')
+  fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line_clusters, line_width = 2, line_color = 'red', line_dash = 'dotted', legend_label = 'ground_line_cluster')
   
-  hover1_1 = HoverTool(renderers=[fig1.renderers[4]], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
+  hover1_1 = HoverTool(renderers=[fig1.renderers[5]], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
                                                                 ('lat init x', '@init_state_x'), ('lat init y', '@init_state_y'), ('lat init theta', '@init_state_theta'), 
                                                                 ('lat init delta', '@init_state_delta'), ('lon init s', '@init_state_s'), ('lon init v', '@init_state_v'), 
                                                                 ('lon init a', '@init_state_a'), ('replan status', '@replan_status')])
-  hover1_2 = HoverTool(renderers=[fig1.renderers[5]], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
-  hover1_3 = HoverTool(renderers=[fig1.renderers[50]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
-  hover1_4 = HoverTool(renderers=[fig1.renderers[51]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
-  hover1_5 = HoverTool(renderers=[fig1.renderers[57]], tooltips=[('index', '$index')])
+  hover1_2 = HoverTool(renderers=[fig1.renderers[6]], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
+  hover1_3 = HoverTool(renderers=[fig1.renderers[51]], tooltips=[('index', '$index')])
+  hover1_4 = HoverTool(renderers=[fig1.renderers[52]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
+  hover1_5 = HoverTool(renderers=[fig1.renderers[53]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
+  hover1_6 = HoverTool(renderers=[fig1.renderers[59]], tooltips=[('index', '$index')])
+  hover1_7 = HoverTool(renderers=[fig1.renderers[68]], tooltips=[('index', '$index')])
+  hover1_8 = HoverTool(renderers=[fig1.renderers[69]], tooltips=[('id', '@groundline_id_vec')])
 
   fig1.add_tools(hover1_1)
   fig1.add_tools(hover1_2)
   fig1.add_tools(hover1_3)
   fig1.add_tools(hover1_4)
   fig1.add_tools(hover1_5)
+  fig1.add_tools(hover1_6)
+  fig1.add_tools(hover1_7)
+  fig1.add_tools(hover1_8)
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 

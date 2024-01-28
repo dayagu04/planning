@@ -76,80 +76,80 @@ def slider_callback(bag_time, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound,
   loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
 
   lat_motion_plan_input = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_input
+  if len(lat_motion_plan_input.ref_theta_vec) > 0:
+    input_string = lat_motion_plan_input.SerializeToString()
+    lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound, upper_safe_bound, lower_safe_bound)
 
-  input_string = lat_motion_plan_input.SerializeToString()
-  lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound, upper_safe_bound, lower_safe_bound)
-
-  planning_output = lateral_motion_planner_pb2.LateralPlanningOutput()
-  output_string_tmp = lateral_motion_planning_py.GetOutputBytes()
-  planning_output.ParseFromString(output_string_tmp)
+    planning_output = lateral_motion_planner_pb2.LateralPlanningOutput()
+    output_string_tmp = lateral_motion_planning_py.GetOutputBytes()
+    planning_output.ParseFromString(output_string_tmp)
 
 
 
-  if bag_loader.loc_msg['enable'] == True:
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
-    planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
+    if bag_loader.loc_msg['enable'] == True:
+      cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
+      cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
+      cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
+      planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
-  try:
-    json_pos_x = planning_json['ego_pos_x']
-    json_pos_y = planning_json['ego_pos_y']
-    json_yaw = planning_json['ego_pos_yaw']
-    coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
-  except:
-    coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+    try:
+      json_pos_x = planning_json['ego_pos_x']
+      json_pos_y = planning_json['ego_pos_y']
+      json_yaw = planning_json['ego_pos_yaw']
+      coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
+    except:
+      coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
-  if g_is_display_enu:
-    x_vec, y_vec = planning_output.x_vec, planning_output.y_vec
-  else:
-    x_vec, y_vec = coord_tf.global_to_local(planning_output.x_vec, planning_output.y_vec)
-  time_vec = planning_output.time_vec
+    if g_is_display_enu:
+      x_vec, y_vec = planning_output.x_vec, planning_output.y_vec
+    else:
+      x_vec, y_vec = coord_tf.global_to_local(planning_output.x_vec, planning_output.y_vec)
+    time_vec = planning_output.time_vec
 
-  ref_theta_deg_vec = []
-  theta_deg_vec = []
-  steer_deg_vec = []
-  steer_dot_deg_vec =[]
+    ref_theta_deg_vec = []
+    theta_deg_vec = []
+    steer_deg_vec = []
+    steer_dot_deg_vec =[]
 
-  for i in range(len(time_vec)):
-    ref_theta_deg_vec.append(lat_motion_plan_input.ref_theta_vec[i] * 57.3)
-    theta_deg_vec.append(planning_output.theta_vec[i] * 57.3)
-    steer_deg_vec.append(planning_output.delta_vec[i] * 57.3 * 15.7)
-    steer_dot_deg_vec.append(planning_output.omega_vec[i] * 57.3 * 15.7)
+    for i in range(len(time_vec)):
+      ref_theta_deg_vec.append(lat_motion_plan_input.ref_theta_vec[i] * 57.3)
+      theta_deg_vec.append(planning_output.theta_vec[i] * 57.3)
+      steer_deg_vec.append(planning_output.delta_vec[i] * 57.3 * 15.7)
+      steer_dot_deg_vec.append(planning_output.omega_vec[i] * 57.3 * 15.7)
 
-  acc_vec = planning_output.acc_vec
-  jerk_vec = planning_output.jerk_vec
+    acc_vec = planning_output.acc_vec
+    jerk_vec = planning_output.jerk_vec
 
-  # comb_x_vec = []
-  # comb_y_vec = []
+    # comb_x_vec = []
+    # comb_y_vec = []
 
-  # lat_err_tab = [0.0, theta1, theta2, 100.0]
-  # alpha_tab = [1.0, 1.0, 0.0, 0.0]
+    # lat_err_tab = [0.0, theta1, theta2, 100.0]
+    # alpha_tab = [1.0, 1.0, 0.0, 0.0]
 
-  # f = interp1d(lat_err_tab, alpha_tab)
+    # f = interp1d(lat_err_tab, alpha_tab)
 
-  # lat_err = abs(ref_y_vec[0])
-  # alpha = f(lat_err)
+    # lat_err = abs(ref_y_vec[0])
+    # alpha = f(lat_err)
 
-  # for i in range(len(ref_x_vec)):
-  #   comb_x_vec.append(x_vec[i] * (1.0 - alpha) + alpha * ref_x_vec[i])
-  #   comb_y_vec.append(y_vec[i] * (1.0 - alpha) + alpha * ref_y_vec[i])
-    
-  lat_plan_data['data_lat_motion_plan_output'].data.update({
-    'time_vec_t': time_vec,
-    'x_vec_t': x_vec,
-    'y_vec_t': y_vec,
-    'xn_vec_t': planning_output.x_vec,
-    'yn_vec_t': planning_output.y_vec,
-    'ref_theta_deg_vec_t': ref_theta_deg_vec,
-    'theta_deg_vec_t': theta_deg_vec,
-    'steer_deg_vec_t': steer_deg_vec,
-    'steer_dot_deg_vec_t': steer_dot_deg_vec,
-    'acc_vec_t': acc_vec,
-    'jerk_vec_t': jerk_vec,
-    # 'comb_x_vec': comb_x_vec,
-    # 'comb_y_vec': comb_y_vec,
-  })
+    # for i in range(len(ref_x_vec)):
+    #   comb_x_vec.append(x_vec[i] * (1.0 - alpha) + alpha * ref_x_vec[i])
+    #   comb_y_vec.append(y_vec[i] * (1.0 - alpha) + alpha * ref_y_vec[i])
+      
+    lat_plan_data['data_lat_motion_plan_output'].data.update({
+      'time_vec_t': time_vec,
+      'x_vec_t': x_vec,
+      'y_vec_t': y_vec,
+      'xn_vec_t': planning_output.x_vec,
+      'yn_vec_t': planning_output.y_vec,
+      'ref_theta_deg_vec_t': ref_theta_deg_vec,
+      'theta_deg_vec_t': theta_deg_vec,
+      'steer_deg_vec_t': steer_deg_vec,
+      'steer_dot_deg_vec_t': steer_dot_deg_vec,
+      'acc_vec_t': acc_vec,
+      'jerk_vec_t': jerk_vec,
+      # 'comb_x_vec': comb_x_vec,
+      # 'comb_y_vec': comb_y_vec,
+    })
 
   push_notebook()
 
