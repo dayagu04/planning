@@ -1064,19 +1064,20 @@ void VirtualLaneManager::CalculateDistanceToTargetSlot(
   ad_common::hdmap::LaneInfoConstPtr tar_slot_nearest_lane;
   double tar_slot_nearest_s = 0.0;
   double tar_slot_nearest_l = 0.0;
-  
+
   const auto& lines = local_view.static_map_info.road_map().lanes();
   if (!lines.empty()) {
     const auto& last_point = lines[0].points_on_central_line().rbegin();
     const double tar_slot_pose_x = last_point->x();
     const double tar_slot_pose_y = last_point->y();
-    const int tar_slot_res =
-        hd_map.GetNearestLane({tar_slot_pose_x,tar_slot_pose_y}, &tar_slot_nearest_lane,
-                              &tar_slot_nearest_s, &tar_slot_nearest_l);
+    const int tar_slot_res = hd_map.GetNearestLane(
+        {tar_slot_pose_x, tar_slot_pose_y}, &tar_slot_nearest_lane,
+        &tar_slot_nearest_s, &tar_slot_nearest_l);
     if (tar_slot_res != 0) {
-      std::cout << "not get target slot projection point on line!!!" << std::endl;
+      std::cout << "not get target slot projection point on line!!!"
+                << std::endl;
       return;
-    } 
+    }
     distance_to_target_slot_ = tar_slot_nearest_s - nearest_s_;
   } else {
     std::cout << "lines is empty from road_map!!!" << std::endl;

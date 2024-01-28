@@ -45,6 +45,13 @@ void ReferencePath::update_refpath_points(
     LOG_ERROR("update_refpath_points: points size < 2");
     return;
   }
+  // hpp hack
+  for (auto &raw_ref_path_point : raw_ref_path_points) {
+    raw_ref_path_point.distance_to_left_lane_border = 5.0;
+    raw_ref_path_point.distance_to_right_lane_border = 5.0;
+    raw_ref_path_point.distance_to_left_road_border = 5.0;
+    raw_ref_path_point.distance_to_right_road_border = 5.0;
+  }
   const double interp_gap_s = 3.0;
   // Step 1) update refined path points
   refined_ref_path_points_ = raw_ref_path_points;

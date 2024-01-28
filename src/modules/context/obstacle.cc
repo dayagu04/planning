@@ -230,8 +230,8 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
     tp.path_point.y = traj_point.y;
     tp.sigma_x = traj_point.std_dev_x;
     tp.sigma_y = traj_point.std_dev_y;
-    tp.path_point.theta = planning_math::NormalizeAngle(traj_point.theta);
-    tp.velocity_direction = planning_math::NormalizeAngle(traj_point.yaw);
+    tp.path_point.theta = planning_math::NormalizeAngle(traj_point.yaw);
+    tp.velocity_direction = planning_math::NormalizeAngle(traj_point.theta);
     tp.relative_ego_x = traj_point.relative_ego_x;
     tp.relative_ego_y = traj_point.relative_ego_y;
     tp.relative_ego_yaw = traj_point.relative_ego_yaw;
@@ -454,7 +454,6 @@ planning_math::Polygon2d Obstacle::get_polygon_at_point(
     const PncTrajectoryPoint &point) const {
   std::vector<planning_math::Vec2d> polygon_points;
   double rel_theta = point.path_point.theta - yaw_;
-
   for (const auto &ego_point : obstacle_ego_polygon_.points()) {
     polygon_points.emplace_back(planning_math::Vec2d(
         ego_point.x() * cos(rel_theta) - ego_point.y() * sin(rel_theta) +
@@ -462,6 +461,7 @@ planning_math::Polygon2d Obstacle::get_polygon_at_point(
         ego_point.y() * cos(rel_theta) + ego_point.x() * sin(rel_theta) +
             point.path_point.y));
   }
+
   planning_math::Polygon2d polygon;
   if (!planning_math::Polygon2d::ComputeConvexHull(polygon_points, &polygon)) {
     LOG_DEBUG("polygon_debug : get position %f %f failed\n", point.path_point.x,
