@@ -158,7 +158,7 @@ class GeneralLateralDecider : public Task {
   std::shared_ptr<HistoryObstacleManager> history_obstacle_manager_;
   double cruise_vel_ = 0.0;
   bool is_lane_change_scene_ = false;
-  bool is_need_save_near_obstacle_ = true;
+  bool is_deduce_near_obstacles_ = true;
   LatDeciderLaneChangeInfo lat_lane_change_info_ =
       LatDeciderLaneChangeInfo::NONE;
   planning::common::LateralBehaviorDebugInfo lat_debug_info_;

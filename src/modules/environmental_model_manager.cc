@@ -84,7 +84,7 @@ void EnvironmentalModelManager::InitContext() {
   session_->mutable_environmental_model()->set_parking_slot_manager(
       parking_slot_manager_ptr_);
   history_obstacle_ptr_ =
-      std::make_shared<planning::HistoryObstacleManager>(session_);
+      std::make_shared<planning::HistoryObstacleManager>(config_builder, session_);
   session_->mutable_environmental_model()->set_history_obstacle_manager(
       history_obstacle_ptr_);
 }

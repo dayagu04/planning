@@ -24,6 +24,8 @@ class Obstacle {
   explicit Obstacle(int id, const PredictionObject &prediction_object,
                     bool is_static, double start_relative_timestamp);
 
+  explicit Obstacle(const Obstacle *obstacle);
+
   // explicit Obstacle(int id,
   //                   const FusionObjects::FusionObject &perception_obstacle,
   //                   bool is_static);

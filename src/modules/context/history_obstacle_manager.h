@@ -20,6 +20,8 @@ struct HistoryObstacle {
   double cart_velocity = 0.0;
   double cart_velocity_angle = 0.0;
   double cart_acc = 0.0;
+  double frenet_s = 0.0;
+  double frenet_l = 0.0;
   double frenet_rel_s = 0.0;
   double frenet_rel_l = 0.0;
   double frenet_velocity_s = 0.0;
@@ -34,38 +36,35 @@ struct HistoryObstacle {
 class ObstacleManager;
 class HistoryObstacleManager {
  public:
-  HistoryObstacleManager(planning::framework::Session *session);
+  HistoryObstacleManager(const EgoPlanningConfigBuilder *config_builder, planning::framework::Session *session);
   virtual ~HistoryObstacleManager();
 
   bool Update();
 
-  void SelectObstacleNearEgo(
-      const std::vector<std::shared_ptr<FrenetObstacle>> &near_frenet_obstacles,
-      const FrenetEgoState &frenet_ego);
+  void AddNewDeductionObstacles(
+      const std::shared_ptr<ReferencePath> &reference_path,
+      std::vector<std::shared_ptr<FrenetObstacle>> &current_obstacles);
 
-  const std::vector<Obstacle> &GetNearPredictionObstacle() const {
-    return new_obstacles_;
+  const std::vector<Obstacle> &GetOldObstacles() const {
+    return old_obstacles_;
   }
 
  private:
-  void Init();
-
-  void UpdateNearbyObstacles(
-      const std::shared_ptr<EgoStateManager> &ego_state,
-      const std::shared_ptr<ReferencePathManager> &reference_path,
-      const std::shared_ptr<ObstacleManager> &obstacles);
-
   bool CheckEgoNearBound(double rel_s, double rel_l);
 
   void UpdatePredictionTrajectory(
       double ego_s, double ego_l, double ego_v_s, double frenet_s,
       double frenet_l, const std::shared_ptr<EgoStateManager> &ego_state,
-      const HistoryObstacle &history_object, PredictionObject &new_trajectory);
+      const HistoryObstacle &history_object, PredictionObject &new_prediction);
 
+  HistoryObstacleConfig config_;
   planning::framework::Session *session_ = nullptr;
   std::shared_ptr<FrenetCoordinateSystem> frenet_coord_;
+  std::vector<Obstacle> old_obstacles_;  // hack: maintain static_obstacle
   std::vector<Obstacle> new_obstacles_;
   std::vector<HistoryObstacle> history_obstacles_;
+  VehicleParam vehicle_param_;
+  double planning_loop_dt_;
 };
 }  // namespace planning
 

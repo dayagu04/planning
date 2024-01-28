@@ -19,14 +19,17 @@ bool Vec2dsToFrenet2ds(
     const std::vector<planning_math::Vec2d> &pts,
     std::vector<planning_math::Vec2d> &frenet_pts);
 void MakeLinePolygons(
+    const int obstacle_id,
     const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
     const std::vector<planning_math::Vec2d> &points,
-    std::vector<planning_math::Polygon2d> &left_polygons,
-    std::vector<planning_math::Polygon2d> &right_polygons);
-void MakePolygon(const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
-                 const planning_math::Polygon2d &polygon,
-                 std::vector<planning_math::Polygon2d> &left_polygons,
-                 std::vector<planning_math::Polygon2d> &right_polygons);
+    std::vector<std::pair<int, planning_math::Polygon2d>> &left_polygons,
+    std::vector<std::pair<int, planning_math::Polygon2d>> &right_polygons);
+void MakePolygon(
+    const int obstacle_id,
+    const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
+    const planning_math::Polygon2d &polygon,
+    std::vector<std::pair<int, planning_math::Polygon2d>> &left_polygons,
+    std::vector<std::pair<int, planning_math::Polygon2d>> &right_polygons);
 
 }  // namespace planning
 

@@ -36,8 +36,25 @@ void ObstacleManager::update() {
                 prediction_object.id);
       continue;
     }
+
+    double prediction_trajectory_length = 10.0;
+    double prediction_duration = 0.0;
+    if (prediction_object.trajectory_array.size() > 0) {
+      const auto &trajectory_array = prediction_object.trajectory_array.at(0);
+      if (trajectory_array.trajectory.size() > 0) {
+        const auto &start_point = trajectory_array.trajectory.at(0);
+        const auto &end_point = trajectory_array.trajectory.at(
+            trajectory_array.trajectory.size() - 1);
+        prediction_trajectory_length = std::sqrt(
+            (start_point.x - end_point.x) * (start_point.x - end_point.x) +
+            (start_point.y - end_point.y) * (start_point.y - end_point.y));
+        prediction_duration = end_point.relative_time;    
+      }
+    }
+    
+    const double kMaxStaticPredictionLength = config_.max_speed_static_obstacle * prediction_duration;
     bool is_static = prediction_object.speed < 0.1 ||
-                     prediction_object.trajectory_array.size() == 0;
+                     prediction_object.trajectory_array.size() == 0 || prediction_trajectory_length < kMaxStaticPredictionLength;
     double prediction_relative_time =
         prediction_object.delay_time - ego_init_relative_time;
     if (prediction_object.trajectory_array.size() == 0) {

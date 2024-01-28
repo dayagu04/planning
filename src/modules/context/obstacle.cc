@@ -162,7 +162,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
   acc_ = prediction_object.acc;
   fusion_source_ = prediction_object.fusion_source;
   type_ = prediction_object.type;
-  
+
   std::vector<planning_math::Vec2d> polygon_points;
   if (prediction_object.bottom_polygon_points.size() < 3) {
     perception_bounding_box_.GetAllCorners(&polygon_points);
@@ -252,8 +252,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
     }
     trajectory_.emplace_back(tp);
   }
-  is_static_ = std::fabs(trajectory_.back().path_point.s -
-                         trajectory_.front().path_point.s) < 5.e-3;
+
   //  DiscretizedTrajectory::CompensateTrajectory(trajectory_, 5.0);
 
   // reset perception info matched with current timestamp
@@ -261,6 +260,36 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
   perception_polygon_ = get_polygon_at_point(init_point);
   perception_bounding_box_ = get_bounding_box(init_point);
   // speed_direction_ = init_point.velocity_direction;
+}
+
+Obstacle::Obstacle(const Obstacle *obstacle) {
+  id_ = obstacle->id();
+  perception_id_ = obstacle->perception_id_;
+  is_static_ = obstacle->is_static();
+  x_center_ = obstacle->x_center();
+  y_center_ = obstacle->y_center();
+  x_relative_center_ = obstacle->x_relative_center();
+  y_relative_center_ = obstacle->y_relative_center();
+  width_ = obstacle->width();
+  length_ = obstacle->length();
+  yaw_ = obstacle->heading_angle();
+  relative_yaw_ = obstacle->relative_heading_angle();
+  velocity_ = obstacle->velocity();
+  velocity_angle_ = obstacle->velocity_angle();
+  relative_velocity_angle_ = obstacle->relative_velocity_angle();
+  x_relative_velocity_ = obstacle->x_relative_velocity();
+  y_relative_velocity_ = obstacle->y_relative_velocity();
+  acc_ = obstacle->acceleration();
+  fusion_source_ = obstacle->fusion_source();
+  type_ = obstacle->type();
+  trajectory_.reserve(obstacle->trajectory().size());
+  trajectory_ = obstacle->trajectory();
+  perception_bounding_box_ = obstacle->perception_bounding_box();
+  perception_polygon_ = obstacle->perception_polygon();
+  obstacle_ego_polygon_ = obstacle->obstacle_ego_polygon_;
+  car_ego_polygon_ = obstacle->car_ego_polygon_;
+  perception_points_.reserve(obstacle->perception_points().size());
+  perception_points_ = obstacle->perception_points();
 }
 
 // Obstacle::Obstacle(int id,

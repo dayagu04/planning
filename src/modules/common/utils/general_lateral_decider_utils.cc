@@ -48,6 +48,7 @@ bool Vec2dsToFrenet2ds(
     const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
     const std::vector<planning_math::Vec2d> &pts,
     std::vector<planning_math::Vec2d> &frenet_pts) {
+  const double kDistanceToRefThreshold = 1.0;
   if (pts.size() == 0) {
     LOG_DEBUG("vec2ds_to_frenet2ds empty input");
     return false;
@@ -64,6 +65,14 @@ bool Vec2dsToFrenet2ds(
     frenet_pts.emplace_back(
         planning_math::Vec2d{frenet_point.x, frenet_point.y});
   }
+  
+  // [hack]: just effective for groundline close to road center
+  for (size_t i = 0; i < frenet_pts.size(); i++) {
+    if (std::fabs(frenet_pts.at(i).y()) < kDistanceToRefThreshold) {
+      return false;  
+    }
+  }
+
   bool is_same_lat_direction = true;
   for (size_t i = 0; i + 1 < frenet_pts.size(); i++) {
     if (frenet_pts.at(i).y() * frenet_pts.at(i + 1).y() < 0) {
@@ -82,10 +91,11 @@ bool Vec2dsToFrenet2ds(
 }
 
 void MakeLinePolygons(
+    const int obstacle_id,
     const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
     const std::vector<planning_math::Vec2d> &points,
-    std::vector<planning_math::Polygon2d> &left_polygons,
-    std::vector<planning_math::Polygon2d> &right_polygons) {
+    std::vector<std::pair<int, planning_math::Polygon2d>> &left_polygons,
+    std::vector<std::pair<int, planning_math::Polygon2d>> &right_polygons) {
   std::vector<planning_math::Polygon2d> temp_polygons;
   std::vector<planning_math::Vec2d> frenet_points;
   frenet_points.reserve(points.size());
@@ -99,17 +109,19 @@ void MakeLinePolygons(
 
   for (auto &polygon : temp_polygons) {
     if (offset > 0) {
-      left_polygons.push_back(polygon);
+      left_polygons.emplace_back(obstacle_id, polygon);
     } else {
-      right_polygons.push_back(polygon);
+      right_polygons.emplace_back(obstacle_id, polygon);
     }
   }
 }
 
-void MakePolygon(const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
-                 const planning_math::Polygon2d &polygon,
-                 std::vector<planning_math::Polygon2d> &left_polygons,
-                 std::vector<planning_math::Polygon2d> &right_polygons) {
+void MakePolygon(
+    const int obstacle_id,
+    const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
+    const planning_math::Polygon2d &polygon,
+    std::vector<std::pair<int, planning_math::Polygon2d>> &left_polygons,
+    std::vector<std::pair<int, planning_math::Polygon2d>> &right_polygons) {
   const std::vector<planning_math::Vec2d> &points = polygon.points();
   std::vector<planning_math::Vec2d> frenet_points;
   frenet_points.reserve(points.size());
@@ -119,9 +131,9 @@ void MakePolygon(const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
   }
   planning_math::Polygon2d tmp_polygon(frenet_points);
   if (OnLeftSide(frenet_points) > 0) {
-    left_polygons.push_back(tmp_polygon);
+    left_polygons.emplace_back(obstacle_id, tmp_polygon);
   } else {
-    right_polygons.push_back(tmp_polygon);
+    right_polygons.emplace_back(obstacle_id, tmp_polygon);
   }
 }
 

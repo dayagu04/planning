@@ -593,27 +593,30 @@ void GeneralLateralDecider::ConstructLateralObstacleDecisions(
   int32_t obj_cnt = 0;
 
   const auto &obs_vec = reference_path_ptr_->get_obstacles();
+  const auto &history_obs_vec = history_obstacle_manager_->GetOldObstacles();
   // new current obstacle. only apply to current function
   std::vector<std::shared_ptr<FrenetObstacle>> current_obstacles;
   for (std::shared_ptr<FrenetObstacle> obstacle : obs_vec) {
-    current_obstacles.emplace_back(obstacle);
+    bool is_use_history_static_obs = false;
+    if (obstacle->b_frenet_valid()) {
+      for (const Obstacle &history_obstacle : history_obs_vec) {
+        if ((history_obstacle.id() == obstacle->id()) &&
+            (history_obstacle.is_static())) {
+          is_use_history_static_obs = true;
+          break;
+        }
+      }
+      if (is_use_history_static_obs) {
+        continue;
+      }
+      current_obstacles.emplace_back(obstacle);
+    }
   }
 
   auto time_start = IflyTime::Now_ms();
-  if (is_need_save_near_obstacle_) {
-    const std::vector<Obstacle> &new_obstacles =
-        history_obstacle_manager_->GetNearPredictionObstacle();
-    // get new frenet obstacles
-    for (const Obstacle &obstacle : new_obstacles) {
-      std::shared_ptr<FrenetObstacle> new_frenet_obstacle;
-      new_frenet_obstacle = std::make_shared<FrenetObstacle>(
-          &obstacle, *reference_path_ptr_, ego_cart_state_manager_,
-          frame_->session()->environmental_model().location_valid());
-      current_obstacles.emplace_back(new_frenet_obstacle);
-    }
-    // check ego near, save obstacle info
-    history_obstacle_manager_->SelectObstacleNearEgo(current_obstacles,
-                                                     ego_frenet_state_);
+  if (is_deduce_near_obstacles_) {  // deduce obstacle pos & traj
+    history_obstacle_manager_->AddNewDeductionObstacles(reference_path_ptr_,
+                                                        current_obstacles);
   }
   auto time_end = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("SelectObstacleNearEgo Cost", time_end - time_start)
@@ -634,7 +637,8 @@ void GeneralLateralDecider::ConstructLateralObstacleDecisions(
         otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
         otype == Common::ObjectType::OBJECT_TYPE_VAN or
         otype == Common::ObjectType::OBJECT_TYPE_TRAILER or
-        otype == Common::ObjectType::OBJECT_TYPE_TEMPORY_SIGN) {
+        otype == Common::ObjectType::OBJECT_TYPE_TEMPORY_SIGN or
+        otype == Common::ObjectType::OBJECT_TYPE_PEDESTRIAN) {  // hpp hack
       // add logs;
       continue;
     }
@@ -761,14 +765,14 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
   bool is_cross_obj{false};
   bool has_lat_decision{false};
   bool has_lon_decision{false};
+  bool static_obstacle_loop_flag{true};
+
+  Polygon2d obstacle_sl_polygon;
+
   // Step 5) calculate safe_bound, path_bound
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     auto &traj_point = ref_traj_points_[i];
     const auto &t = traj_point.t;
-    if (t > care_object_t_threshold) {
-      continue;
-    }
-
     const auto &ego_s = traj_point.s;
     const auto &ego_l = traj_point.l;
 
@@ -776,7 +780,8 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
     //     std::max(std::min(5.0, 5.0 - 0.5 * (10.0 - ego_velocity)),
     //              0.0);  // @cai: currently use fixed distance
 
-    auto care_area_s_start = ego_s - vehicle_param.back_edge_to_rear_axis;
+    auto care_area_s_start = ego_s - vehicle_param.back_edge_to_rear_axis -
+                             config_.care_area_s_start_buffer;
     auto care_area_s_end = ego_s + rear_axle_to_front_bumper + kCareAreaSBuffer;
     auto care_area_center =
         Vec2d((care_area_s_start + care_area_s_end) * 0.5, ego_l);
@@ -790,9 +795,18 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
     //    obstacle_pos_time = 0.;
     //  }
 
-    Polygon2d obstacle_sl_polygon;
-    auto ok = obstacle->get_polygon_at_time(
-        i * config_.delta_t, reference_path_ptr_, obstacle_sl_polygon);
+    bool ok = true;
+    if (obstacle->obstacle()->is_static() && static_obstacle_loop_flag) {
+      ok = obstacle->get_polygon_at_time(0, reference_path_ptr_,
+                                         obstacle_sl_polygon);
+      static_obstacle_loop_flag = false;
+    } else if (not obstacle->obstacle()->is_static()) {
+      if (t > care_object_t_threshold) {
+        continue;
+      }
+      ok = obstacle->get_polygon_at_time(
+          i * config_.delta_t, reference_path_ptr_, obstacle_sl_polygon);
+    }
     if (!ok) {
       // TBD add log
       return;
@@ -843,7 +857,6 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
     }
 
     const auto &nudge_reference_center_l = ego_l;
-    constexpr double kMaxAvoidEdgeL{2.0};  // m
 
     if ((overlap_min_y <= nudge_reference_center_l &&
          nudge_reference_center_l <= overlap_max_y) ||
@@ -857,7 +870,7 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
       if (avoid_right_edge >
               std::fmax(-ref_path_points_[i].distance_to_right_lane_border -
                             avoid_cross_lane,
-                        -kMaxAvoidEdgeL) or
+                        -config_.max_avoid_edge) or
           b_overlap_side) {
         lat_decision = LatObstacleDecisionType::RIGHT;
         lon_decision = LonObstacleDecisionType::IGNORE;
@@ -873,7 +886,7 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
       if (avoid_left_edge <
               std::min(ref_path_points_[i].distance_to_left_lane_border +
                            avoid_cross_lane,
-                       kMaxAvoidEdgeL) or
+                       config_.max_avoid_edge) or
           b_overlap_side) {
         lat_decision = LatObstacleDecisionType::LEFT;
         lon_decision = LonObstacleDecisionType::IGNORE;
@@ -933,57 +946,59 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
     }
 
     // refine safe bound a.c. model traj and path bound
-    if (lat_decision == LatObstacleDecisionType::LEFT) {
-      if (ego_l < safe_bound.lower) {
-        if (ego_l > path_bound.lower + config_.min_obstacle_avoid_distance) {
-          double origin_avoid_buffer = safe_bound.lower - path_bound.lower;
-          double adjust_avoid_buffer = planning::planning_math::lerp(
-              config_.min_obstacle_avoid_distance, 0.0, origin_avoid_buffer,
-              1.0, (ego_l - path_bound.lower) / origin_avoid_buffer);
-          safe_bound.lower =
-              path_bound.lower + std::max(config_.min_obstacle_avoid_distance,
-                                          adjust_avoid_buffer);
+    // if (lat_decision == LatObstacleDecisionType::LEFT) {
+    //   if (ego_l < safe_bound.lower) {
+    //     if (ego_l > path_bound.lower + config_.min_obstacle_avoid_distance) {
+    //       double origin_avoid_buffer = safe_bound.lower - path_bound.lower;
+    //       double adjust_avoid_buffer = planning::planning_math::lerp(
+    //           config_.min_obstacle_avoid_distance, 0.0, origin_avoid_buffer,
+    //           1.0, (ego_l - path_bound.lower) / origin_avoid_buffer);
+    //       safe_bound.lower =
+    //           path_bound.lower +
+    //           std::max(config_.min_obstacle_avoid_distance,
+    //                                       adjust_avoid_buffer);
 
-        } else {
-          safe_bound.lower =
-              path_bound.lower + config_.min_obstacle_avoid_distance;
-        }
-      }
-      if (ego_l < safe_bound.lower) {
-        double converge_coeff = std::min(
-            1.0, std::pow(config_.lateral_bound_converge_speed * t, 2));
-        safe_bound.lower = planning::planning_math::lerp(
-            ego_l, 0, safe_bound.lower, 1.0, converge_coeff);
-        safe_bound.lower =
-            std::max(safe_bound.lower,
-                     path_bound.lower + config_.min_obstacle_avoid_distance);
-      }
-    } else if (lat_decision == LatObstacleDecisionType::RIGHT) {
-      if (ego_l > safe_bound.upper) {
-        if (ego_l < path_bound.upper - config_.min_obstacle_avoid_distance) {
-          double origin_avoid_buffer = path_bound.upper - safe_bound.upper;
-          double adjust_avoid_buffer = planning::planning_math::lerp(
-              config_.min_obstacle_avoid_distance, 0.0, origin_avoid_buffer,
-              1.0, (path_bound.upper - ego_l) / origin_avoid_buffer);
-          safe_bound.upper =
-              path_bound.upper - std::max(config_.min_obstacle_avoid_distance,
-                                          adjust_avoid_buffer);
+    //     } else {
+    //       safe_bound.lower =
+    //           path_bound.lower + config_.min_obstacle_avoid_distance;
+    //     }
+    //   }
+    //   if (ego_l < safe_bound.lower) {
+    //     double converge_coeff = std::min(
+    //         1.0, std::pow(config_.lateral_bound_converge_speed * t, 2));
+    //     safe_bound.lower = planning::planning_math::lerp(
+    //         ego_l, 0, safe_bound.lower, 1.0, converge_coeff);
+    //     safe_bound.lower =
+    //         std::max(safe_bound.lower,
+    //                  path_bound.lower + config_.min_obstacle_avoid_distance);
+    //   }
+    // } else if (lat_decision == LatObstacleDecisionType::RIGHT) {
+    //   if (ego_l > safe_bound.upper) {
+    //     if (ego_l < path_bound.upper - config_.min_obstacle_avoid_distance) {
+    //       double origin_avoid_buffer = path_bound.upper - safe_bound.upper;
+    //       double adjust_avoid_buffer = planning::planning_math::lerp(
+    //           config_.min_obstacle_avoid_distance, 0.0, origin_avoid_buffer,
+    //           1.0, (path_bound.upper - ego_l) / origin_avoid_buffer);
+    //       safe_bound.upper =
+    //           path_bound.upper -
+    //           std::max(config_.min_obstacle_avoid_distance,
+    //                                       adjust_avoid_buffer);
 
-        } else {
-          safe_bound.upper =
-              path_bound.upper - config_.min_obstacle_avoid_distance;
-        }
-      }
-      if (ego_l > safe_bound.upper) {
-        double converge_coeff = std::min(
-            1.0, std::pow(config_.lateral_bound_converge_speed * t, 2));
-        safe_bound.upper = planning::planning_math::lerp(
-            ego_l, 0.0, safe_bound.upper, 1.0, converge_coeff);
-        safe_bound.upper =
-            std::min(safe_bound.upper,
-                     path_bound.upper - config_.min_obstacle_avoid_distance);
-      }
-    }
+    //     } else {
+    //       safe_bound.upper =
+    //           path_bound.upper - config_.min_obstacle_avoid_distance;
+    //     }
+    //   }
+    //   if (ego_l > safe_bound.upper) {
+    //     double converge_coeff = std::min(
+    //         1.0, std::pow(config_.lateral_bound_converge_speed * t, 2));
+    //     safe_bound.upper = planning::planning_math::lerp(
+    //         ego_l, 0.0, safe_bound.upper, 1.0, converge_coeff);
+    //     safe_bound.upper =
+    //         std::min(safe_bound.upper,
+    //                  path_bound.upper - config_.min_obstacle_avoid_distance);
+    //   }
+    // }
 
     has_lat_decision =
         has_lat_decision || lat_decision != LatObstacleDecisionType::IGNORE;
@@ -1130,8 +1145,8 @@ void GeneralLateralDecider::ExtractBoundary(
     for (auto &obstacle_position_decision :
          obstacle_decision.second.position_decisions) {
       for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-        if (std::fabs(obstacle_position_decision.tp.t - ref_traj_points_[i].t <
-                      1e-2)) {
+        if (std::fabs(obstacle_position_decision.tp.t - ref_traj_points_[i].t) <
+            1e-2) {
           auto obstacle_pos_bounds = obstacle_position_decision.lat_bounds;
           for (auto &obstacle_pos_bound : obstacle_pos_bounds) {
             if (obstacle_pos_bound.weight < 0.) {
@@ -1497,41 +1512,19 @@ void GeneralLateralDecider::ConstructStaticObstacleTotalPolygons(
     vector<pair<int, Polygon2d>> &right_parking_space_polygons) {
   const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord =
       reference_path_ptr_->get_frenet_coord();
-  vector<Polygon2d> left_groundline_polygon;
-  vector<Polygon2d> right_groundline_polygon;
-  vector<Polygon2d> left_parking_space_polygon;
-  vector<Polygon2d> right_parking_space_polygon;
   // Step1: 主要区分 lines 类型 和 polygon 类型（slot &
   // pillar），生成所有polygons Step 1.1 : 处理 lines
   for (auto &obstacle : reference_path_ptr_->get_free_space_ground_lines()) {
     const std::vector<planning_math::Vec2d> &line_vec2d_points =
         obstacle->perception_points();
-    size_t old_l_size = left_groundline_polygon.size();
-    size_t old_r_size = right_groundline_polygon.size();
-    MakeLinePolygons(frenet_coord, line_vec2d_points, left_groundline_polygon,
-                     right_groundline_polygon);
-    if (left_groundline_polygon.size() > old_l_size) {
-      left_groundline_polygons.emplace_back(obstacle->id(),
-                                            left_groundline_polygon.back());
-    } else if (right_groundline_polygon.size() > old_r_size) {
-      right_groundline_polygons.emplace_back(obstacle->id(),
-                                             right_groundline_polygon.back());
-    }
+    MakeLinePolygons(obstacle->id(), frenet_coord, line_vec2d_points,
+                     left_groundline_polygons, right_groundline_polygons);
   }
   // Step 1.2 : 处理 polygon
   for (auto &obstacle : reference_path_ptr_->get_parking_space()) {
     const planning_math::Polygon2d &polygon = obstacle->perception_polygon();
-    size_t old_l_size = left_parking_space_polygon.size();
-    size_t old_r_size = right_parking_space_polygon.size();
-    MakePolygon(frenet_coord, polygon, left_parking_space_polygon,
-                right_parking_space_polygon);
-    if (left_parking_space_polygon.size() > old_l_size) {
-      left_groundline_polygons.emplace_back(obstacle->id(),
-                                            left_parking_space_polygon.back());
-    } else if (right_parking_space_polygon.size() > old_r_size) {
-      right_groundline_polygons.emplace_back(
-          obstacle->id(), right_parking_space_polygon.back());
-    }
+    MakePolygon(obstacle->id(), frenet_coord, polygon,
+                left_parking_space_polygons, right_parking_space_polygons);
   }
 }
 

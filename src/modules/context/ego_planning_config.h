@@ -158,6 +158,20 @@ struct LateralObstacleConfig : public EgoPlanningConfig {
   }
 };
 
+struct HistoryObstacleConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    ego_near_bound_s0 = read_json_key<double>(
+        json, "ego_near_bound_s0", ego_near_bound_s0);
+    ego_near_bound_s1 = read_json_key<double>(
+        json, "ego_near_bound_s1", ego_near_bound_s1);
+    /* read config from json */
+  }
+  double ego_near_bound_s0 = -10.0;
+  double ego_near_bound_s1 = 10.0;
+  double ego_near_bound_l = 5.0;
+};
+
 struct VisionLateralBehaviorPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -252,14 +266,22 @@ struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
 struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
+    dynamic_obj_safe_buffer = read_json_key<double>(
+        json, "dynamic_obj_safe_buffer", dynamic_obj_safe_buffer);
+    static_obj_safe_buffer = read_json_key<double>(
+        json, "static_obj_safe_buffer", static_obj_safe_buffer);
+    care_area_s_start_buffer = read_json_key<double>(
+        json, "care_area_s_start_buffer", care_area_s_start_buffer);
+    max_avoid_edge = read_json_key<double>(
+        json, "max_avoid_edge", max_avoid_edge);
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
   double l_care_width = 10.;                     // TBD: more beautiful
   double care_obj_lat_distance_threshold = 30.;  // TBD: more beautiful
   double care_obj_lon_distance_threshold = 60.;  // TBD: more beautiful
-  double static_obj_safe_buffer = 0.3;
-  double dynamic_obj_safe_buffer = 0.3;      //
+  double static_obj_safe_buffer = 0.15;
+  double dynamic_obj_safe_buffer = 0.8;      //
   double min_obstacle_avoid_distance = 0.2;  // check it
   double lateral_bound_converge_speed = 1.0;
   double kPhysicalBoundWeight = 10.;
@@ -280,6 +302,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double care_object_t_threshold = 3.0;
   double care_area_s_len = 5.0;
   double max_ref_curvature = 0.5;
+  double care_area_s_start_buffer = 0.0;
+  double max_avoid_edge = 2.0;
 };
 struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
@@ -945,12 +969,15 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
     enable_bbox_mode = read_json_key<bool>(
         json, "enable_bbox_mode",
         enable_bbox_mode);  // obstacle boundary construction
+    max_speed_static_obstacle =
+        read_json_key<double>(json, "max_speed_static_obstacle");    
   }
   double frenet_obstacle_range_s_min = -30.0;
   double frenet_obstacle_range_s_max = 100.0;
   double frenet_obstacle_range_l_min = -50.0;
   double frenet_obstacle_range_l_max = 50.0;
   bool enable_bbox_mode = true;
+  double max_speed_static_obstacle = 0.5;
 };
 
 struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
