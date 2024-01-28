@@ -119,7 +119,9 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
       (fsm_state == FuncStateMachine::FunctionalState::NOA_ACTIVATE) ||
       (fsm_state == FuncStateMachine::FunctionalState::NOA_OVERRIDE) ||
       (fsm_state == FuncStateMachine::FunctionalState::NOA_SECUR);
-  environmental_model->UpdateVehicleDbwStatus(acc_mode || scc_mode || noa_mode);
+  bool dbw_status = acc_mode || scc_mode || noa_mode;
+  environmental_model->UpdateVehicleDbwStatus(dbw_status);
+  JSON_DEBUG_VALUE("dbw_status", dbw_status)
 
   common::DrivingFunctionInfo::DrivingFunctionstate function_state =
       common::DrivingFunctionInfo::ACTIVATE;

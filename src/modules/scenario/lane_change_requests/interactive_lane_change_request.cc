@@ -13,9 +13,9 @@ IntRequest::IntRequest(
     : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {
   auto config_builder = session_->mutable_environmental_model()->config_builder(
       planning::common::SceneType::HIGHWAY);
-  auto int_request_config = config_builder->cast<ScenarioDisplayStateConfig>();
-  enable_int_request_ = int_request_config.enable_int_request_function;
-  count_threshold_ = int_request_config.int_rqt_cnt_threshold;
+  int_request_config_ = config_builder->cast<ScenarioDisplayStateConfig>();
+  enable_int_request_ = int_request_config_.enable_int_request_function;
+  count_threshold_ = int_request_config_.int_rqt_cnt_threshold;
 }
 
 void IntRequest::Update(int lc_status) {
@@ -25,6 +25,25 @@ void IntRequest::Update(int lc_status) {
                          ->ego_blinker();
   // init lanes with id
   auto current_lane_virtual_id = virtual_lane_mgr_->current_lane_virtual_id();
+  auto tlane = lane_change_lane_mgr_->tlane();
+  std::shared_ptr<ReferencePathManager> reference_path_mgr =
+      session_->mutable_environmental_model()->get_reference_path_manager();
+  auto target_reference_path = reference_path_mgr->get_reference_path_by_lane(
+      lane_change_lane_mgr_->tlane_virtual_id(), false);
+  double frenet_ego_state_l =
+      target_reference_path != nullptr
+          ? target_reference_path->get_frenet_ego_state().l()
+          : 0.;
+  // 获取左车道线型
+  auto left_boundary_type = virtual_lane_mgr_->get_current_lane()
+                                ->get_left_lane_boundary()
+                                .type_segments(0)
+                                .type();
+  // 获取右车道线型,实线禁止换道
+  auto right_boundary_type = virtual_lane_mgr_->get_current_lane()
+                                 ->get_right_lane_boundary()
+                                 .type_segments(0)
+                                 .type();
   if (lane_change_lane_mgr_->has_origin_lane()) {
     auto origin_lane = lane_change_lane_mgr_->olane();
     origin_lane_virtual_id_ = origin_lane->get_virtual_id();
@@ -44,11 +63,6 @@ void IntRequest::Update(int lc_status) {
       request_type_ != LEFT_CHANGE) {
     counter_right_ = 0;
     counter_left_++;
-    // 获取左车道线型
-    auto left_boundary_type = virtual_lane_mgr_->get_current_lane()
-                                  ->get_left_lane_boundary()
-                                  .type_segments(0)
-                                  .type();
     // 实线禁止换道
     if (left_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) {
       counter_left_ = -5;
@@ -76,11 +90,6 @@ void IntRequest::Update(int lc_status) {
              request_type_ != RIGHT_CHANGE) {
     counter_left_ = 0;
     counter_right_ = counter_right_ + 1;
-    // 获取右车道线型,实线禁止换道
-    auto right_boundary_type = virtual_lane_mgr_->get_current_lane()
-                                   ->get_right_lane_boundary()
-                                   .type_segments(0)
-                                   .type();
     if (right_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) {
       counter_right_ = -5;
     }
@@ -107,11 +116,10 @@ void IntRequest::Update(int lc_status) {
   } else if (lane_change_cmd_ == common::TurnSignalType::NONE &&
              request_type_ != NO_CHANGE) {
     // 3.换道过程中取消拨杆
-    auto tlane = lane_change_lane_mgr_->tlane();
     if (lane_change_lane_mgr_->has_target_lane() &&
-        (lane_change_lane_mgr_->is_ego_on(tlane) ||
-         std::fabs(tlane->get_ego_lateral_offset()) <
-             tlane->width() / 2 + 1.5)) {
+        (std::fabs(frenet_ego_state_l) <
+         tlane->width() / 2 +
+             int_request_config_.disallow_cancel_int_lc_lateral_thr)) {
       // 取消换道，但此时已经进入目标车道，则保持至换道完成
       LOG_DEBUG(
           "[IntRequest::update]: Cancel int lc blinker when ego car on target "
@@ -128,6 +136,19 @@ void IntRequest::Update(int lc_status) {
     set_target_lane_virtual_id(current_lane_virtual_id);
     counter_left_ = 0;
     counter_right_ = 0;
+  } else if (lane_change_lane_mgr_->has_target_lane() &&
+             (std::fabs(frenet_ego_state_l) >=
+              tlane->width() / 2 +
+                  int_request_config_.disallow_cancel_int_lc_lateral_thr)) {
+    if ((request_type_ == LEFT_CHANGE &&
+         left_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) ||
+        (request_type_ == RIGHT_CHANGE &&
+         right_boundary_type == Common::LaneBoundaryType::MARKING_SOLID)) {
+      Finish();
+      set_target_lane_virtual_id(current_lane_virtual_id);
+      counter_left_ = 0;
+      counter_right_ = 0;
+    }
   }
 }
 

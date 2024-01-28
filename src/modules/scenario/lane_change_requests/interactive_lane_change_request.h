@@ -59,6 +59,7 @@ class IntRequest : public LaneChangeRequest {
   int count_threshold_ = 3;
   std::uint8_t lane_change_cmd_ = LeverStatus::LEVER_STATE_OFF;
   IntCancelReasonType request_cancel_reason_ = NO_CANCEL;
+  ScenarioDisplayStateConfig int_request_config_;
 };
 
 }  // namespace planning

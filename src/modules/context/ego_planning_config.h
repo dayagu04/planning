@@ -245,6 +245,9 @@ struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
     avoid_truck_time_distance_threshold = read_json_keys<double>(
         json, std::vector<std::string>{"display_state",
                                        "avoid_truck_time_distance_threshold"});
+    disallow_cancel_int_lc_lateral_thr = read_json_keys<double>(
+        json, std::vector<std::string>{"int_request",
+                                       "disallow_cancel_int_lc_lateral_thr"});
     enable_int_request_function = read_json_keys<bool>(
         json,
         std::vector<std::string>{"int_request", "enable_int_request_function"});
@@ -259,6 +262,7 @@ struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
   double into_ramp_threshold = 2000.0;               // meter
   double close_to_split_merge_threshold = 100.0;     // meter
   double avoid_truck_time_distance_threshold = 1.5;  // seconds
+  double disallow_cancel_int_lc_lateral_thr = 1.5;
   int int_rqt_cnt_threshold = 2;
   int map_int_cancel_freeze_cnt = 50;
   int model_int_cancel_freeze_cnt = 100;

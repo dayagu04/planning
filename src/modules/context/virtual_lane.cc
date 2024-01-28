@@ -5,6 +5,13 @@
 #include "log.h"
 #include "math/linear_interpolation.h"
 #include "virtual_lane.h"
+
+namespace {
+
+constexpr double kMaxLaneWidth = 4.2;
+constexpr double kMinLaneWidth = 2.8;
+
+} // namespace
 namespace planning {
 VirtualLane::VirtualLane() {}
 
@@ -265,12 +272,14 @@ double VirtualLane::max_width() const {
       case FusionRoad::LaneType::LANETYPE_ACCELERATE_DECELERATE:;
       case FusionRoad::LaneType::LANETYPE_LEFT_TURN_WAITTING_AREA:;
       case FusionRoad::LaneType::LANETYPE_NON_MOTOR:;
-        return 4.2;
+        return kMaxLaneWidth;
       default:
-        return DBL_MAX;
+        LOG_ERROR("Error Lane Type");
+        return kMinLaneWidth;
     }
   } else {
-    return DBL_MAX;
+    LOG_ERROR("Error Lane Type");
+    return kMinLaneWidth;
   }
 }
 
@@ -306,12 +315,14 @@ double VirtualLane::min_width() const {
       case FusionRoad::LaneType::LANETYPE_ACCELERATE_DECELERATE:;
       case FusionRoad::LaneType::LANETYPE_LEFT_TURN_WAITTING_AREA:;
       case FusionRoad::LaneType::LANETYPE_NON_MOTOR:;
-        return 2.8;
+        return kMinLaneWidth;
       default:
-        return DBL_MAX;
+        LOG_ERROR("Error Lane Type");
+        return kMinLaneWidth;
     }
   } else {
-    return DBL_MAX;
+    LOG_ERROR("Error Lane Type");
+    return kMinLaneWidth;
   }
 }
 
