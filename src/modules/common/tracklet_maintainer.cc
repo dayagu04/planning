@@ -102,7 +102,7 @@ void TrackletMaintainer::apply_update(
                    ->get_last_fix_lane();
   if (is_location_valid) {
     recv_prediction_objects(predictions, objects);
-    if (flane != nullptr) {
+    if (flane != nullptr && flane->get_reference_path() != nullptr) {
       // FrenetCoordinateSystemParameters frenet_parameters;
       // init frenet parameters
       // frenet_parameters.zero_speed_threshold = 0.1;

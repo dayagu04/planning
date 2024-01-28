@@ -1156,7 +1156,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
 
   // path points
   std::vector<planning::PathPoint> path_points;
-  if (flane != nullptr) {
+  if (flane != nullptr && flane->get_reference_path() != nullptr) {
     auto &ref_path = flane->get_reference_path();
     for (auto &ref_point : ref_path->get_points()) {
       path_points.emplace_back(ref_point.path_point);
