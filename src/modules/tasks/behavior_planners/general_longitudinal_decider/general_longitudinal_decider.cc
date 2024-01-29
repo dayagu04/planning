@@ -1146,7 +1146,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
     double frenet_point_s = obstacle->frenet_s();
     auto obstacle_point = obstacle->obstacle()->get_point_at_time(t);
     double relative_yaw = obstacle_point.velocity_direction -
-                          frenet_coord_->GetRefCurveHeading(frenet_point_s);
+                          frenet_coord_->GetPathCurveHeading(frenet_point_s);
     double obstacle_v_lon =
         std::max(obstacle_point.v * std::cos(relative_yaw), 0.0);
     bool b_on_ego_path = std::min(std::min(fabs(obstacle_sl_boundary.l_start),

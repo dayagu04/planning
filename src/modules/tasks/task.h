@@ -11,6 +11,7 @@
 #include "ego_planning_config.h"
 #include "frame.h"
 #include "task_pipeline_context.h"
+#include "utils/kd_path.h"
 
 namespace planning {
 
@@ -52,8 +53,7 @@ class Task {
   // PlanningContext *pnc_context_ = nullptr; // 删除此变量
   std::shared_ptr<TaskPipelineContext> pipeline_context_;
   std::shared_ptr<ReferencePath> reference_path_ptr_ = nullptr;
-  std::shared_ptr<FrenetCoordinateSystem> frenet_coord_ =
-      nullptr;  // 这个是否还需要？
+  std::shared_ptr<KDPath> frenet_coord_ = nullptr;  // 这个是否还需要？
   std::string name_{};
   // int planning_loop_; // 没有被使用到
   VehicleParam vehicle_param_;  // 这个是否还需要？应该去掉

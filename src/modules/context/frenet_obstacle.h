@@ -2,10 +2,12 @@
 
 #include <algorithm>
 #include <limits>
+
 #include "config/basic_type.h"
 #include "ego_state_manager.h"
 #include "obstacle.h"
 #include "speed/sl_polygon_seq.h"
+#include "utils/kd_path.h"
 
 namespace planning {
 
@@ -60,8 +62,7 @@ class FrenetObstacle {
   void compute_frenet_polygon_sequence(const ReferencePath& reference_path);
 
   static void generate_precise_frenet_polygon(
-      planning_math::Polygon2d& polygon,
-      std::shared_ptr<FrenetCoordinateSystem> frenet_coord);
+      planning_math::Polygon2d& polygon, std::shared_ptr<KDPath> frenet_coord);
 
  private:
   int id_;

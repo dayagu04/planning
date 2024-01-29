@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
-#include "assert.h"
 
+#include "assert.h"
 #include "math/math_utils.h"
 
 namespace planning {
@@ -92,6 +92,19 @@ double AABox2d::DistanceTo(const AABox2d &box) const {
     return dx;
   }
   return hypot(dx, dy);
+}
+
+double AABox2d::DistanceSquareTo(const Vec2d &point) const {
+  const double dx = std::abs(point.x() - center_.x()) - half_length_;
+  const double dy = std::abs(point.y() - center_.y()) - half_width_;
+  if (dx <= 0.0) {
+    double max_y = std::fmax(0.0, dy);
+    return max_y * max_y;
+  }
+  if (dy <= 0.0) {
+    return dx * dx;
+  }
+  return dx * dx + dy * dy;
 }
 
 bool AABox2d::HasOverlap(const AABox2d &box) const {

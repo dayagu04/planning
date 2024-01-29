@@ -1,8 +1,9 @@
+#include "obstacle_manager.h"
+
 #include <tuple>
 
 #include "ego_state_manager.h"
 #include "math/math_utils.h"
-#include "obstacle_manager.h"
 #include "parking_slot_manager.h"
 #include "reference_path_manager.h"
 #include "virtual_lane_manager.h"
@@ -167,8 +168,7 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
     auto obstacle_care_flag =
         (fabs(cart_point.x - planning_init_x) < kCareDistance) &&
         (fabs(cart_point.y - planning_init_y) < kCareDistance);
-    if ((frenet_coord->CartCoord2FrenetCoord(cart_point, frenet_point) ==
-             TRANSFORM_FAILED &&
+    if ((!frenet_coord->XYToSL(cart_point, frenet_point) &&
          obstacle_care_flag == false) ||
         std::isnan(frenet_point.x) || std::isnan(frenet_point.y) ||
         frenet_point.x > (config_.frenet_obstacle_range_s_max + ego_s) ||
@@ -206,7 +206,7 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
 //     const double frenet_obstacle_range_s_min = -50.0;
 //     bool frenet_transform_flag =
 //         frenet_coord->CartCoord2FrenetCoord(cart_point, frenet_point);
-//     if (frenet_transform_flag == TRANSFORM_FAILED ||
+//     if (frenet_transform_flag  ||
 //         std::isnan(frenet_point.x) || std::isnan(frenet_point.y) ||
 //         frenet_point.x > (frenet_obstacle_range_s_max + ego_s) ||
 //         frenet_point.x < (frenet_obstacle_range_s_min + ego_s) ||

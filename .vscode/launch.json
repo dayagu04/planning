@@ -56,7 +56,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/mnt/noa_1018/noa_1.00000"
+                "/data_cold/abu_zone/autoparse/jac_s811_36gl1/common_frame/20240116/20240116-17-12-13/data_collection_JAC_S811_36GL1_ALL_MANUAL_2024-01-16-17-12-13.record"
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",

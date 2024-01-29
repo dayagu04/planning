@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "basic_types.pb.h"
 #include "debug_info_log.h"
 #include "math/math_utils.h"
 #include "math_lib.h"
@@ -76,6 +77,14 @@ void EgoPlanningCandidate::set_coarse_planning_info(
   const auto &frenet_coord =
       coarse_planning_info_.reference_path->get_frenet_coord();
 
+  // auto &debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  // debug_info_pb->mutable_refpath_candidate()->Clear();
+  // for (auto i = 0; i < frenet_coord->path_points().size(); i++) {
+  //   planning::common::TrajectoryPoint *coord_point =
+  //       debug_info_pb->mutable_refpath_candidate()->Add();
+  //   coord_point->set_x(frenet_coord->path_points().at(i).x());
+  //   coord_point->set_y(frenet_coord->path_points().at(i).y());
+  // }
   double s = 0.0;
   Point2D frenet_pt{s, 0.0};
   Point2D cart_pt(0.0, 0.0);
@@ -106,7 +115,13 @@ void EgoPlanningCandidate::set_coarse_planning_info(
   for (size_t i = 0; i < point_size; ++i) {
     cart_ref_info.x_vec[i] = ref_point.at(i).path_point.x;
     cart_ref_info.y_vec[i] = ref_point.at(i).path_point.y;
-    cart_ref_info.s_vec[i] = ref_point.at(i).path_point.s;
+    cart_ref_info.s_vec[i] =
+        i > 0 ? cart_ref_info.s_vec[i - 1] +
+                    std::hypot(ref_point.at(i).path_point.x -
+                                   ref_point.at(i - 1).path_point.x,
+                               ref_point.at(i).path_point.y -
+                                   ref_point.at(i - 1).path_point.y)
+              : 0.;
     if (cart_ref_info.s_vec[i] >
         normal_care_spline_length +
             std::max(v_ref_cruise * preview_time, min_preview_spline_length)) {
@@ -142,7 +157,7 @@ void EgoPlanningCandidate::set_coarse_planning_info(
 
   double s_ref = projection_spline.GetOutput().s_proj;
 
-  const auto &frenet_length = frenet_coord->GetLength();
+  const auto &frenet_length = frenet_coord->Length();
 
   s_ref = std::min(s_ref, frenet_length * 0.95);
   const double delta_s = frenet_length - s_ref;
@@ -165,7 +180,10 @@ void EgoPlanningCandidate::set_coarse_planning_info(
     // frenet info
     Point2D frenet_pt{0.0, 0.0};
     Point2D cart_pt(point.x, point.y);
-    frenet_coord->CartCoord2FrenetCoord(cart_pt, frenet_pt);
+    frenet_coord->XYToSL(cart_pt, frenet_pt);
+    // debug_info_pb->mutable_refpath_candidate(i)->set_s(frenet_pt.x);
+    // debug_info_pb->mutable_refpath_candidate(i)->set_l(frenet_pt.y);
+
     point.s = frenet_pt.x;
     point.l = frenet_pt.y;
     point.t = static_cast<double>(i) * delta_time;

@@ -4,6 +4,7 @@
 #include "math/math_utils.h"
 #include "math/polygon2d.h"
 #include "utils/frenet_coordinate_system.h"
+#include "utils/kd_path.h"
 
 namespace planning {
 
@@ -12,7 +13,7 @@ class FrenetEgoState {
   FrenetEgoState() = default;
   ~FrenetEgoState() = default;
 
-  void update(const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
+  void update(const std::shared_ptr<planning_math::KDPath> &frenet_coord,
               const planning::EgoStateManager &ego_state);
 
   double s() const { return s_; }

@@ -11,6 +11,7 @@
 #include "fusion_objects.pb.h"
 #include "session.h"
 #include "tracked_object.h"
+#include "utils/kd_path.h"
 #include "utils/lateral_utils.h"
 
 namespace planning {
@@ -120,7 +121,7 @@ class TrackletMaintainer {
   void set_default_value(const std::vector<TrackedObject *> &tracked_objects);
 
   planning::framework::Session *session_ = nullptr;
-  std::shared_ptr<FrenetCoordinateSystem> frenet_coord_;
+  std::shared_ptr<planning_math::KDPath> frenet_coord_;
   LifecycleDict seq_state_;
   std::map<int, TrackedObject *> object_map_;
   std::shared_ptr<EgoStateManager> ego_state_;

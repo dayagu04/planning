@@ -1,7 +1,9 @@
 #include "utils/general_lateral_decider_utils.h"
 
 #include <algorithm>
+
 #include "log.h"
+#include "utils/kd_path.h"
 
 namespace planning {
 bool ConstructLinePolygons(const std::vector<planning_math::Vec2d> &line,
@@ -44,10 +46,9 @@ bool OnLeftSide(const std::vector<planning_math::Vec2d> &vec2ds) {
   return true;
 }
 
-bool Vec2dsToFrenet2ds(
-    const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
-    const std::vector<planning_math::Vec2d> &pts,
-    std::vector<planning_math::Vec2d> &frenet_pts) {
+bool Vec2dsToFrenet2ds(const std::shared_ptr<KDPath> &frenet_coord,
+                       const std::vector<planning_math::Vec2d> &pts,
+                       std::vector<planning_math::Vec2d> &frenet_pts) {
   const double kDistanceToRefThreshold = 1.0;
   if (pts.size() == 0) {
     LOG_DEBUG("vec2ds_to_frenet2ds empty input");
@@ -57,19 +58,18 @@ bool Vec2dsToFrenet2ds(
   for (size_t i = 0; i < pts.size(); i++) {
     carte_point.x = pts[i].x();
     carte_point.y = pts[i].y();
-    if (frenet_coord->CartCoord2FrenetCoord(carte_point, frenet_point) ==
-            TRANSFORM_FAILED ||
+    if (!frenet_coord->XYToSL(carte_point, frenet_point) ||
         std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
       return false;
     }
     frenet_pts.emplace_back(
         planning_math::Vec2d{frenet_point.x, frenet_point.y});
   }
-  
+
   // [hack]: just effective for groundline close to road center
   for (size_t i = 0; i < frenet_pts.size(); i++) {
     if (std::fabs(frenet_pts.at(i).y()) < kDistanceToRefThreshold) {
-      return false;  
+      return false;
     }
   }
 
@@ -91,8 +91,7 @@ bool Vec2dsToFrenet2ds(
 }
 
 void MakeLinePolygons(
-    const int obstacle_id,
-    const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
+    const int obstacle_id, const std::shared_ptr<KDPath> &frenet_coord,
     const std::vector<planning_math::Vec2d> &points,
     std::vector<std::pair<int, planning_math::Polygon2d>> &left_polygons,
     std::vector<std::pair<int, planning_math::Polygon2d>> &right_polygons) {
@@ -117,8 +116,7 @@ void MakeLinePolygons(
 }
 
 void MakePolygon(
-    const int obstacle_id,
-    const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
+    const int obstacle_id, const std::shared_ptr<KDPath> &frenet_coord,
     const planning_math::Polygon2d &polygon,
     std::vector<std::pair<int, planning_math::Polygon2d>> &left_polygons,
     std::vector<std::pair<int, planning_math::Polygon2d>> &right_polygons) {

@@ -12,7 +12,7 @@
 namespace planning {
 
 HistoryObstacleManager::HistoryObstacleManager(
-    const EgoPlanningConfigBuilder *config_builder, 
+    const EgoPlanningConfigBuilder *config_builder,
     planning::framework::Session *session) {
   config_ = config_builder->cast<HistoryObstacleConfig>();
   session_ = session;
@@ -50,12 +50,13 @@ bool HistoryObstacleManager::Update() {
       reference_path->get_reference_path_by_current_lane()->get_frenet_coord();
   if (frenet_coord_ != nullptr) {
     Point2D ego_frenet;
-    if (frenet_coord_->CartCoord2FrenetCoord(
+    if (frenet_coord_->XYToSL(
             Point2D(ego_state->ego_carte().x, ego_state->ego_carte().y),
-            ego_frenet) == TRANSFORM_SUCCESS) {
+            ego_frenet)) {
+      double dt = 1.0 / FLAGS_planning_loop_rate;  // 0.1
       double ego_s = ego_frenet.x;
       double ego_l = ego_frenet.y;
-      double curve_heading = frenet_coord_->GetRefCurveHeading(ego_s);
+      double curve_heading = frenet_coord_->GetPathCurveHeading(ego_s);
       double ego_frenet_relative_v_angle = planning_math::NormalizeAngle(
           ego_state->ego_v_angle() - curve_heading);
       double ego_v_s =
@@ -79,10 +80,10 @@ bool HistoryObstacleManager::Update() {
           double real_l = ego_l + rel_l;
           Point2D obstacle_frenet;
           if (history_obstacles_[i].is_static) {
-            if (frenet_coord_->CartCoord2FrenetCoord(
+            if (frenet_coord_->XYToSL(
                     Point2D(history_obstacles_[i].cart_x_center,
                             history_obstacles_[i].cart_y_center),
-                    obstacle_frenet) == TRANSFORM_SUCCESS) {
+                    obstacle_frenet)) {
               real_s = obstacle_frenet.x;
               real_l = history_obstacles_[i].frenet_l;
               rel_s = real_s - ego_s;
@@ -168,8 +169,7 @@ void HistoryObstacleManager::UpdatePredictionTrajectory(
       history_object.cart_y_center - ego_state->ego_carte().y;
 
   Point2D cart_point_init;
-  if (frenet_coord_->FrenetCoord2CartCoord(
-          Point2D(frenet_s, frenet_l), cart_point_init) == TRANSFORM_SUCCESS) {
+  if (frenet_coord_->SLToXY(Point2D(frenet_s, frenet_l), cart_point_init)) {
     new_prediction.position_x = cart_point_init.x;
     new_prediction.position_y = cart_point_init.y;
     new_prediction.relative_position_x =
@@ -189,8 +189,7 @@ void HistoryObstacleManager::UpdatePredictionTrajectory(
   for (size_t i = 0; i < history_object.trajectory_size; ++i) {
     PredictionTrajectoryPoint prediction_trajectory_point;
     Point2D cart_point;
-    if (frenet_coord_->FrenetCoord2CartCoord(
-            Point2D(real_s, real_l), cart_point) == TRANSFORM_SUCCESS) {
+    if (frenet_coord_->SLToXY(Point2D(real_s, real_l), cart_point)) {
       prediction_trajectory_point.x = cart_point.x;
       prediction_trajectory_point.y = cart_point.y;
       prediction_trajectory_point.relative_ego_x =
@@ -212,8 +211,7 @@ void HistoryObstacleManager::UpdatePredictionTrajectory(
       // prediction_trajectory_point.relative_ego_std_dev_speed = ;
       prediction_trajectory_point.relative_time = i * 0.2;
     }
-    prediction_trajectory.trajectory.emplace_back(
-        prediction_trajectory_point);
+    prediction_trajectory.trajectory.emplace_back(prediction_trajectory_point);
     rel_s = rel_v_s * 0.2 + rel_s;
     real_s = ego_s + rel_s;
     real_l = ego_l + rel_l;
@@ -222,7 +220,8 @@ void HistoryObstacleManager::UpdatePredictionTrajectory(
 }
 
 bool HistoryObstacleManager::CheckEgoNearBound(double rel_s, double rel_l) {
-  if ((rel_s <= config_.ego_near_bound_s1) && (rel_s >= config_.ego_near_bound_s0) &&
+  if ((rel_s <= config_.ego_near_bound_s1) &&
+      (rel_s >= config_.ego_near_bound_s0) &&
       (std::fabs(rel_l) <= config_.ego_near_bound_l)) {
     return true;
   }

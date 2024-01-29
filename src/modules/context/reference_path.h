@@ -8,6 +8,8 @@
 #include "frenet_ego_state.h"
 #include "frenet_obstacle.h"
 #include "session.h"
+#include "utils/kd_path.h"
+#include "utils/path_point.h"
 
 namespace planning {
 
@@ -44,7 +46,7 @@ class ReferencePath {
     return refined_ref_path_points_;
   }
 
-  const std::shared_ptr<FrenetCoordinateSystem> &get_frenet_coord() const {
+  const std::shared_ptr<KDPath> &get_frenet_coord() const {
     return frenet_coord_;
   }
 
@@ -64,13 +66,13 @@ class ReferencePath {
     return frenet_obstacles_;
   }
 
-  std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
-      &mutable_obstacles_map() {
+  std::unordered_map<int, std::shared_ptr<FrenetObstacle>> &
+  mutable_obstacles_map() {
     return frenet_obstacles_map_;
   }
 
-  const std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
-      &get_obstacles_map() const {
+  const std::unordered_map<int, std::shared_ptr<FrenetObstacle>> &
+  get_obstacles_map() const {
     return frenet_obstacles_map_;
   }
   virtual bool is_obstacle_ignorable(
@@ -129,7 +131,7 @@ class ReferencePath {
   ReferencePathPoints refined_ref_path_points_;
   // frenet coord system
   FrenetCoordinateSystemParameters frenet_parameters_;
-  std::shared_ptr<FrenetCoordinateSystem> frenet_coord_;
+  std::shared_ptr<KDPath> frenet_coord_;
 
   // ego_state
   FrenetEgoState frenet_ego_state_;

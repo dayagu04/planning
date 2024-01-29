@@ -5,6 +5,7 @@
 #include "prediction_object.h"
 #include "reference_path_manager.h"
 #include "session.h"
+#include "utils/kd_path.h"
 
 namespace planning {
 
@@ -59,8 +60,8 @@ class HistoryObstacleManager {
 
   HistoryObstacleConfig config_;
   planning::framework::Session *session_ = nullptr;
-  std::shared_ptr<FrenetCoordinateSystem> frenet_coord_;
   std::vector<Obstacle> old_obstacles_;  // hack: maintain static_obstacle
+  std::shared_ptr<KDPath> frenet_coord_;
   std::vector<Obstacle> new_obstacles_;
   std::vector<HistoryObstacle> history_obstacles_;
   VehicleParam vehicle_param_;

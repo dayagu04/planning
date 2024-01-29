@@ -154,6 +154,8 @@ class AABox2d {
    */
   double DistanceTo(const AABox2d &box) const;
 
+  /**/
+  double DistanceSquareTo(const Vec2d &point) const;
   /**
    * @brief Determines whether two boxes overlap.
    *

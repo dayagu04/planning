@@ -77,8 +77,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
     if (config_.is_pwj_planning) {
       Point2D frenet_pt{traj_points[i].s, traj_points[i].l};
       Point2D cart_pt;
-      if (frenet_coord_->FrenetCoord2CartCoord(frenet_pt, cart_pt) !=
-          TRANSFORM_SUCCESS) {
+      if (!frenet_coord_->SLToXY(frenet_pt, cart_pt)) {
         LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
         return false;
       }
@@ -143,8 +142,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
 
     Point2D frenet_pt{traj_pt.s, traj_pt.l};
     Point2D cart_pt;
-    if (frenet_coord_->FrenetCoord2CartCoord(frenet_pt, cart_pt) !=
-        TRANSFORM_SUCCESS) {
+    if (!frenet_coord_->SLToXY(frenet_pt, cart_pt)) {
       LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
       return false;
     }

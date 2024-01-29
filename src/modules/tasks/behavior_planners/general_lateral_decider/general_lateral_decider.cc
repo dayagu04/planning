@@ -14,6 +14,7 @@
 #include "prediction_object.h"
 #include "task_basic_types.h"
 #include "utils/general_lateral_decider_utils.h"
+#include "utils/kd_path.h"
 namespace planning {
 
 using namespace planning_math;
@@ -188,9 +189,8 @@ void GeneralLateralDecider::HandleLaneChangeScene(
     auto lat_state = ego_state->planning_init_point().lat_init_state;
     Point2D frenet_init_point;
     Point2D cart_init_point{lat_state.x(), lat_state.y()};
-    if (TRANSFORM_FAILED ==
-        reference_path_ptr_->get_frenet_coord()->CartCoord2FrenetCoord(
-            cart_init_point, frenet_init_point)) {
+    if (!reference_path_ptr_->get_frenet_coord()->XYToSL(cart_init_point,
+                                                         frenet_init_point)) {
       LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
     }
 
@@ -209,8 +209,8 @@ void GeneralLateralDecider::HandleLaneChangeScene(
     // ego_state->planning_init_point().heading_angle; const auto normal_acc
     // = ego_v * ego_v * curvature;
     if (frenet_init_point.x + ego_v * remaining_lane_change_duration >=
-        reference_path_ptr_->get_frenet_coord()->GetLength() - 0.5) {
-      ego_v = (reference_path_ptr_->get_frenet_coord()->GetLength() -
+        reference_path_ptr_->get_frenet_coord()->Length() - 0.5) {
+      ego_v = (reference_path_ptr_->get_frenet_coord()->Length() -
                frenet_init_point.x - 0.5) /
               std::fmax(remaining_lane_change_duration,
                         (traj_points.size() - 1) * config_.delta_t);
@@ -226,18 +226,17 @@ void GeneralLateralDecider::HandleLaneChangeScene(
     // set lane change end state
     Point2D frenet_end_point{lane_change_end_s, 0.};
     Point2D cart_end_point;
-    if (TRANSFORM_FAILED ==
-        reference_path_ptr_->get_frenet_coord()->FrenetCoord2CartCoord(
-            frenet_end_point, cart_end_point)) {
+    if (!reference_path_ptr_->get_frenet_coord()->SLToXY(frenet_end_point,
+                                                         cart_end_point)) {
       LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
     }
 
     const auto lane_change_end_heading_angle =
-        reference_path_ptr_->get_frenet_coord()->GetRefCurveHeading(
+        reference_path_ptr_->get_frenet_coord()->GetPathCurveHeading(
             lane_change_end_s);
-    const auto lane_change_end_curvature =
-        reference_path_ptr_->get_frenet_coord()->GetRefCurveCurvature(
-            lane_change_end_s);
+    double lane_change_end_curvature;
+    reference_path_ptr_->get_frenet_coord()->GetKappaByS(
+        lane_change_end_s, &lane_change_end_curvature);
 
     const auto normal_acc_end = ego_v * ego_v * lane_change_end_curvature;
 
@@ -275,9 +274,8 @@ void GeneralLateralDecider::HandleLaneChangeScene(
             lane_change_quintic_path.heading(traj_points[i].t);
 
         Point2D cart_point(point.x, point.y);
-        if (TRANSFORM_FAILED ==
-            reference_path_ptr_->get_frenet_coord()->CartCoord2FrenetCoord(
-                cart_point, frenet_point)) {
+        if (!reference_path_ptr_->get_frenet_coord()->XYToSL(cart_point,
+                                                             frenet_point)) {
           LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
         }
         point.s = frenet_point.x;
@@ -303,23 +301,22 @@ void GeneralLateralDecider::HandleLaneChangeScene(
         }
         point.s = std::fmin(
             s_truncation + ego_v * (i - truncation_idx) * config_.delta_t,
-            reference_path_ptr_->get_frenet_coord()->GetLength());
+            reference_path_ptr_->get_frenet_coord()->Length());
         point.l = 0.;
         point.t = traj_points[i].t;
 
         frenet_point.x = point.s;
         frenet_point.y = point.l;
         Point2D cart_point;
-        if (TRANSFORM_FAILED ==
-            reference_path_ptr_->get_frenet_coord()->FrenetCoord2CartCoord(
-                frenet_point, cart_point)) {
+        if (!reference_path_ptr_->get_frenet_coord()->SLToXY(frenet_point,
+                                                             cart_point)) {
           LOG_ERROR("ERROR! Cart Point -> Frenet Point Failed!!!");
         }
         point.x = cart_point.x;
         point.y = cart_point.y;
 
         point.heading_angle =
-            reference_path_ptr_->get_frenet_coord()->GetRefCurveHeading(
+            reference_path_ptr_->get_frenet_coord()->GetPathCurveHeading(
                 point.s);
         traj_points[i] = point;
       }
@@ -1241,43 +1238,39 @@ void GeneralLateralDecider::GenerateEnuBoundaryPoints(
   auto &safe_bounds_output = lat_decider_output.safe_bounds;
   auto &path_bounds_output = lat_decider_output.path_bounds;
 
-  const std::shared_ptr<FrenetCoordinateSystem> frenet_coord =
+  const std::shared_ptr<KDPath> frenet_coord =
       reference_path_ptr_->get_frenet_coord();
   Point2D tmp_safe_lower_point;
   Point2D tmp_safe_upper_point;
   Point2D tmp_path_lower_point;
   Point2D tmp_path_upper_point;
   for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
-    if (frenet_coord->FrenetCoord2CartCoord(
+    if (!frenet_coord->SLToXY(
             Point2D(ref_traj_points_[i].s, frenet_safe_bounds[i].first),
-            tmp_safe_lower_point) !=
-        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // safe lower
+            tmp_safe_lower_point))  // safe lower
     {
       // TODO: add logs
     }
 
-    if (frenet_coord->FrenetCoord2CartCoord(
+    if (!frenet_coord->SLToXY(
             Point2D(ref_traj_points_[i].s, frenet_safe_bounds[i].second),
-            tmp_safe_upper_point) !=
-        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // safe upper
+            tmp_safe_upper_point))  // safe upper
     {
       // TODO: add logs
     }
     safe_bounds_output.emplace_back(std::pair<Point2D, Point2D>(
         tmp_safe_lower_point, tmp_safe_upper_point));
 
-    if (frenet_coord->FrenetCoord2CartCoord(
+    if (!frenet_coord->SLToXY(
             Point2D(ref_traj_points_[i].s, frenet_path_bounds[i].first),
-            tmp_path_lower_point) !=
-        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // path lower
+            tmp_path_lower_point))  // path lower
     {
       // TODO: add logs
     }
 
-    if (frenet_coord->FrenetCoord2CartCoord(
+    if (!frenet_coord->SLToXY(
             Point2D(ref_traj_points_[i].s, frenet_path_bounds[i].second),
-            tmp_path_upper_point) !=
-        TRANSFORM_STATUS::TRANSFORM_SUCCESS)  // path upper
+            tmp_path_upper_point))  // path upper
     {
       // TODO: add logs
     }
@@ -1358,7 +1351,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
       frame_->session()->environmental_model().get_virtual_lane_manager();
 
   // path points
-  std::vector<PathPoint> path_points;
+  std::vector<planning::PathPoint> path_points;
   if (flane != nullptr) {
     auto &ref_path = flane->get_reference_path();
     for (auto &ref_point : ref_path->get_points()) {
@@ -1510,7 +1503,7 @@ void GeneralLateralDecider::ConstructStaticObstacleTotalPolygons(
     vector<pair<int, Polygon2d>> &right_groundline_polygons,
     vector<pair<int, Polygon2d>> &left_parking_space_polygons,
     vector<pair<int, Polygon2d>> &right_parking_space_polygons) {
-  const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord =
+  const std::shared_ptr<KDPath> &frenet_coord =
       reference_path_ptr_->get_frenet_coord();
   // Step1: 主要区分 lines 类型 和 polygon 类型（slot &
   // pillar），生成所有polygons Step 1.1 : 处理 lines

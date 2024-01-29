@@ -301,8 +301,8 @@ void LongitudinalMotionPlanner::Update() {
     Point2D frenet_pt;
 
     if (reference_path_ptr_->get_frenet_coord() != nullptr &&
-        reference_path_ptr_->get_frenet_coord()->CartCoord2FrenetCoord(
-            cart_pt, frenet_pt) == TRANSFORM_STATUS::TRANSFORM_SUCCESS) {
+        reference_path_ptr_->get_frenet_coord()->XYToSL(
+            cart_pt, frenet_pt)) {
       traj_points[i].s = frenet_pt.x;
       traj_points[i].l = frenet_pt.y;
     } else {
