@@ -48,7 +48,7 @@ int Update(double ego_x, double ego_y, double ego_heading, double p_outside_x,
 
   input.tlane.pt_outside << p_outside_x, p_outside_y;
   input.tlane.pt_inside << p_inside_x, p_inside_y;
-  input.tlane.pt_terminal << p_target_x, p_target_y;
+  input.tlane.pt_terminal_pos << p_target_x, p_target_y;
 
   input.tlane.slot_side = (set_left_side ? ApaPlannerBase::SLOT_SIDE_LEFT
                                          : ApaPlannerBase::SLOT_SIDE_RIGHT);

@@ -133,6 +133,8 @@ struct PathSegment {
   uint8_t seg_steer = SEG_STEER_STRAIGHT;
   uint8_t seg_gear = SEG_GEAR_DRIVE;
 
+  bool collision_flag = false;
+
   LineSegment line_seg;
   Arc arc_seg;
 
@@ -466,6 +468,10 @@ const bool IsDoublePositive(const double x);
 
 const double CalPoint2LineSegDist(const Eigen::Vector2d &pO,
                                   const LineSegment &line);
+
+const bool CheckTwoPoseIsSame(const PathPoint &pose1, const PathPoint &pose2,
+                              const double pos_err = 0.01,
+                              const double heading_err = 0.8 / 57.3);
 
 }  // namespace geometry_lib
 }  // namespace pnc

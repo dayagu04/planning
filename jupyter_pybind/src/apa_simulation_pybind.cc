@@ -129,7 +129,7 @@ const bool InterfaceUpdateParam(py::bytes &func_statemachine_bytes,
                                 std::vector<double> target_managed_slot_x_vec,
                                 std::vector<double> target_managed_slot_y_vec,
                                 std::vector<double> target_managed_limiter_x_vec,
-                                std::vector<double> target_managed_limiter_y_vec) 
+                                std::vector<double> target_managed_limiter_y_vec)
                                  {
   apa_planner::ApaPlannerBase::SimulationParam param;
   param.is_complete_path = is_complete_path;

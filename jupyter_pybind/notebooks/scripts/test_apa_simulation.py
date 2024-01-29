@@ -11,7 +11,7 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/planning-b9b956b3/test_4.00000'
+bag_path = '/data_cold/abu_zone/APA/s2apap0125/test_27.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -35,7 +35,7 @@ data_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 # data_tlane = ColumnDataSource(data = {'x':[-11.3691, -11.56], 'y':[-4.08125, -6.54795]})
 
 
-for bag_time in np.arange(0.0, max_time, 0.1):
+for bag_time in np.arange(0.0, 35, 0.1):
   kwargs = locals()
   update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data)
   index_map = bag_loader.get_msg_index(bag_time)
@@ -102,7 +102,7 @@ for bag_time in np.arange(0.0, max_time, 0.1):
                                     loc_msg.SerializeToString(),
                                     vs_msg.SerializeToString(),
                                     wave_msg.SerializeToString(),
-                                    0, False, False, False, 0.02, target_managed_slot_x_vec, target_managed_slot_y_vec,
+                                    0, False, False, False, False, 0.02, target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec)
 
   data_planning_tune.data = {'plan_path_x': [],

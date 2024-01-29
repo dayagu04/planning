@@ -1,5 +1,7 @@
 #include "perpendicular_park_in_planner.h"
 
+#include <bits/stdint-uintn.h>
+
 #include <cmath>
 #include <complex>
 #include <cstddef>
@@ -59,7 +61,7 @@ void PerpendicularInPlanner::PlanCore() {
   InitSimulation();
 
   // check planning status
-  if (CheckPlanSkip() && simu_param_.force_plan == false) {
+  if (!simu_param_.force_plan && CheckPlanSkip()) {
     return;
   }
 
@@ -93,7 +95,7 @@ void PerpendicularInPlanner::PlanCore() {
   }
 
   // check replan
-  if (CheckReplan() || simu_param_.force_plan) {
+  if (simu_param_.force_plan || CheckReplan()) {
     std::cout << "replan is required!" << std::endl;
 
     // UpdateSlotRealtime();
@@ -283,7 +285,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
           apa_param.GetParam().fix_slot_occupied_ratio &&
       !frame_.is_fix_slot &&
       apa_world_ptr_->GetMeasurementsPtr()->static_flag) {
-    apa_world_ptr_->GetSlotManagerPtr()->SetRealtime();
+    // apa_world_ptr_->GetSlotManagerPtr()->SetRealtime();
     frame_.is_fix_slot = true;
   }
 
@@ -510,13 +512,16 @@ void PerpendicularInPlanner::GenTlane() {
               << std::endl;
   }
 
-  t_lane_.pt_terminal << ego_slot_info.target_ego_pos_slot.x(),
+  t_lane_.pt_terminal_pos << ego_slot_info.target_ego_pos_slot.x(),
       ego_slot_info.target_ego_pos_slot.y();
+
+  t_lane_.pt_terminal_heading = ego_slot_info.target_ego_heading_slot;
 
   std::cout << "-- t_lane --" << std::endl;
   std::cout << "pt_outside = " << t_lane_.pt_outside.transpose() << std::endl;
   std::cout << "pt_inside = " << t_lane_.pt_inside.transpose() << std::endl;
-  std::cout << "pt_terminal = " << t_lane_.pt_terminal.transpose() << std::endl;
+  std::cout << "pt_terminal_pos = " << t_lane_.pt_terminal_pos.transpose()
+            << std::endl;
 }
 
 void PerpendicularInPlanner::GenObstacles() {
@@ -633,6 +638,8 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
   path_planner_input.ref_arc_steer = frame_.current_arc_steer;
   path_planner_input.ref_gear = frame_.current_gear;
   path_planner_input.is_replan_first = frame_.is_replan_first;
+  path_planner_input.is_replan_second = frame_.is_replan_second;
+  path_planner_input.is_replan_dynamic = frame_.is_replan_dynamic;
   path_planner_input.ego_pose.Set(ego_slot_info.ego_pos_slot,
                                   ego_slot_info.ego_heading_slot);
 
@@ -648,13 +655,35 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
   const bool path_plan_success = perpendicular_path_planner_.Update(
       apa_world_ptr_->GetCollisionDetectorPtr());
 
+  uint8_t plan_result = 0;
+  if (!path_plan_success && !is_simulation_ && !frame_.is_replan_dynamic) {
+    std::cout << "path plan fail\n";
+    plan_result = PathPlannerResult::PLAN_FAILED;
+    return plan_result;
+  }
+  plan_result = PathPlannerResult::PLAN_UPDATE;
+
+  perpendicular_path_planner_.SetCurrentPathSegIndex();
+
+  perpendicular_path_planner_.SetLineSegmentHeading();
+
+  perpendicular_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
+      apa_param.GetParam().path_extend_distance);
+
+  perpendicular_path_planner_.SampleCurrentPathSeg();
+
+  perpendicular_path_planner_.PrintOutputSegmentsInfo();
+
   const auto& planner_output = perpendicular_path_planner_.GetOutput();
 
   const bool gear_steer_shift =
-      (frame_.is_replan_first &&
-       planner_output.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) ||
-      (!frame_.is_replan_first && frame_.replan_reason != DYNAMIC);
+      (frame_.is_replan_first && planner_output.gear_shift) ||
+      (frame_.is_replan_second && planner_output.gear_shift) ||
+      (!frame_.is_replan_first && !frame_.is_replan_second &&
+       frame_.replan_reason != DYNAMIC);
+
   if (gear_steer_shift) {
+    std::cout << "next plan should shift gear\n";
     // set current arc steer
     if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
@@ -676,30 +705,18 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
     }
   }
 
-  frame_.is_replan_first = false;
-
-  // TODO: check if need update
-  uint8_t plan_result = 0;
-  if (path_plan_success) {
-    plan_result = PathPlannerResult::PLAN_UPDATE;
-    std::cout << "path plan success\n";
+  if (frame_.is_replan_first) {
+    frame_.is_replan_first = false;
+    frame_.is_replan_second = true;
   } else {
-    plan_result = PathPlannerResult::PLAN_FAILED;
-    std::cout << "path plan fail\n";
-    return PathPlannerResult::PLAN_FAILED;
+    if (frame_.is_replan_second) {
+      frame_.is_replan_second = false;
+    }
   }
 
-  perpendicular_path_planner_.SetCurrentPathSegIndex();
-
-  perpendicular_path_planner_.SetLineSegmentHeading();
-
-  perpendicular_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
-      apa_param.GetParam().path_extend_distance);
-
-  perpendicular_path_planner_.SampleCurrentPathSeg();
-
-  // print segment info
-  perpendicular_path_planner_.PrintOutputSegmentsInfo();
+  if (!path_plan_success) {
+    return plan_result;
+  }
 
   gear_command_ = planner_output.current_gear;
 
@@ -787,8 +804,6 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
 }
 
 const bool PerpendicularInPlanner::CheckSegCompleted() {
-  frame_.is_replan_by_uss = false;
-
   bool is_seg_complete = false;
   if (frame_.spline_success) {
     const auto min_remain_dist =
@@ -853,30 +868,68 @@ void PerpendicularInPlanner::UpdateSlotRealtime() {
 }
 
 const bool PerpendicularInPlanner::CheckDynamicUpdate() {
-  // pose
-  bool condition_1 = std::fabs(frame_.ego_slot_info.terminal_err.pos.y()) <
-                         apa_param.GetParam().pose_y_err &&
-                     std::fabs(frame_.ego_slot_info.terminal_err.heading) <
-                         apa_param.GetParam().pose_heading_err / 57.3;
+  bool update_flag = false;
+  // first update, conditions are relatively relaxed
+  if (frame_.dynamic_replan_count == 0) {
+    bool condition_1 = std::fabs(frame_.ego_slot_info.terminal_err.pos.y()) <
+                           apa_param.GetParam().pose_y_err &&
+                       std::fabs(frame_.ego_slot_info.terminal_err.heading) <
+                           apa_param.GetParam().pose_heading_err / 57.3;
 
-  // slot occupied ratio
-  bool condition_2 = frame_.ego_slot_info.slot_occupied_ratio >
-                     apa_param.GetParam().pose_slot_occupied_ratio;
+    bool condition_2 = frame_.ego_slot_info.slot_occupied_ratio >
+                       apa_param.GetParam().pose_slot_occupied_ratio;
 
-  // remain dist
-  bool condition_3 =
-      frame_.remain_dist > apa_param.GetParam().pose_min_remain_dis;
-
-  // gear_command
-  bool condition_4 = gear_command_ == pnc::geometry_lib::SEG_GEAR_REVERSE;
-
-  if (condition_1 && condition_2 && condition_3 && condition_4 &&
-      frame_.is_dynamic_replan_first) {
-    frame_.is_dynamic_replan_first = false;
-    return true;
+    if (condition_1 && condition_2) {
+      frame_.dynamic_replan_count++;
+      update_flag = true;
+    }
   }
 
-  return false;
+  // second update
+  if (frame_.dynamic_replan_count == 1) {
+    bool condition_1 = std::fabs(frame_.ego_slot_info.terminal_err.pos.y()) >
+                           apa_param.GetParam().max_y_err_2 ||
+                       std::fabs(frame_.ego_slot_info.terminal_err.heading) >
+                           apa_param.GetParam().max_heading_err_2 / 57.3;
+
+    bool condition_2 = frame_.ego_slot_info.slot_occupied_ratio >
+                       apa_param.GetParam().pose_slot_occupied_ratio_2;
+
+    bool condition_3 =
+        frame_.remain_dist > apa_param.GetParam().pose_min_remain_dis;
+
+    if (condition_1 && condition_2 && condition_3) {
+      frame_.dynamic_replan_count++;
+      update_flag = true;
+    }
+  }
+
+  // third update
+  if (frame_.dynamic_replan_count == 2) {
+    bool condition_1 = std::fabs(frame_.ego_slot_info.terminal_err.pos.y()) >
+                           apa_param.GetParam().max_y_err_3 ||
+                       std::fabs(frame_.ego_slot_info.terminal_err.heading) >
+                           apa_param.GetParam().max_heading_err_3 / 57.3;
+
+    bool condition_2 = frame_.ego_slot_info.slot_occupied_ratio >
+                       apa_param.GetParam().pose_slot_occupied_ratio_3;
+
+    bool condition_3 =
+        frame_.remain_dist > apa_param.GetParam().pose_min_remain_dis;
+
+    if (condition_1 && condition_2 && condition_3) {
+      frame_.dynamic_replan_count++;
+      update_flag = true;
+    }
+  }
+
+  update_flag =
+      (update_flag && gear_command_ == pnc::geometry_lib::SEG_GEAR_REVERSE &&
+       !apa_world_ptr_->GetMeasurementsPtr()->static_flag);
+
+  frame_.is_replan_dynamic = update_flag;
+
+  return update_flag;
 }
 
 const bool PerpendicularInPlanner::CheckReplan() {
@@ -885,6 +938,9 @@ const bool PerpendicularInPlanner::CheckReplan() {
     frame_.replan_reason = FIRST_PLAN;
     return true;
   }
+
+  frame_.is_replan_by_uss = false;
+  frame_.is_replan_dynamic = false;
 
   if (CheckSegCompleted()) {
     std::cout << "replan by current segment completed!" << std::endl;
@@ -950,8 +1006,21 @@ const bool PerpendicularInPlanner::CheckFinished() {
   const bool static_condition =
       apa_world_ptr_->GetMeasurementsPtr()->static_flag;
 
-  const bool parking_finish =
-      lon_condition && lat_condition && static_condition;
+  bool parking_finish = lon_condition && lat_condition && static_condition;
+
+  if (parking_finish) {
+    return true;
+  }
+
+  // stucked by directly behind uss
+  const auto& uss_obstacle_avoider_ptr =
+      apa_world_ptr_->GetUssObstacleAvoidancePtr();
+
+  if (uss_obstacle_avoider_ptr->CheckIsDirectlyBehindUss()) {
+    parking_finish =
+        lat_condition && static_condition &&
+        (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist);
+  }
 
   return parking_finish;
 }
@@ -1319,7 +1388,7 @@ void PerpendicularInPlanner::Log() const {
   const auto& l2g_tf = frame_.ego_slot_info.l2g_tf;
   const auto p0_g = l2g_tf.GetPos(t_lane_.pt_outside);
   const auto p1_g = l2g_tf.GetPos(t_lane_.pt_inside);
-  const auto pt_g = l2g_tf.GetPos(t_lane_.pt_terminal);
+  const auto pt_g = l2g_tf.GetPos(t_lane_.pt_terminal_pos);
 
   JSON_DEBUG_VALUE("tlane_p0_x", p0_g.x())
   JSON_DEBUG_VALUE("tlane_p0_y", p0_g.y())
@@ -1403,6 +1472,7 @@ void PerpendicularInPlanner::Log() const {
   JSON_DEBUG_VALUE("static_flag",
                    apa_world_ptr_->GetMeasurementsPtr()->static_flag)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
+  JSON_DEBUG_VALUE("dynamic_replan_count", frame_.dynamic_replan_count)
   JSON_DEBUG_VALUE("ego_heading_slot", frame_.ego_slot_info.ego_heading_slot)
 
   JSON_DEBUG_VALUE("selected_slot_id", frame_.ego_slot_info.selected_slot_id)

@@ -22,13 +22,15 @@ class PerpendicularPathPlanner {
   struct Tlane {
     Eigen::Vector2d pt_outside = Eigen::Vector2d::Zero();
     Eigen::Vector2d pt_inside = Eigen::Vector2d::Zero();
-    Eigen::Vector2d pt_terminal = Eigen::Vector2d::Zero();
+    Eigen::Vector2d pt_terminal_pos = Eigen::Vector2d::Zero();
+    double pt_terminal_heading = 0.0;
     uint8_t slot_side = ApaPlannerBase::SLOT_SIDE_INVALID;
 
     void Reset() {
       pt_outside = Eigen::Vector2d::Zero();
       pt_inside = Eigen::Vector2d::Zero();
-      pt_terminal = Eigen::Vector2d::Zero();
+      pt_terminal_pos = Eigen::Vector2d::Zero();
+      pt_terminal_heading = 0.0;
       slot_side = ApaPlannerBase::SLOT_SIDE_INVALID;
     }
   };
@@ -53,6 +55,8 @@ class PerpendicularPathPlanner {
     pnc::geometry_lib::PathPoint ego_pose;
     bool is_complete_path = false;
     bool is_replan_first = true;
+    bool is_replan_second = false;
+    bool is_replan_dynamic = false;
     double sample_ds = 0.02;
     uint8_t ref_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
     uint8_t ref_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
@@ -71,6 +75,7 @@ class PerpendicularPathPlanner {
     bool path_available = false;
     bool is_first_path = true;
     bool is_last_path = false;
+    bool gear_shift = false;
     double length = 0.0;
     uint8_t gear_change_count = 0;
     uint8_t current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
@@ -85,6 +90,7 @@ class PerpendicularPathPlanner {
       path_available = false;
       is_first_path = true;
       is_last_path = false;
+      gear_shift = false;
       length = 0.0;
       gear_change_count = 0;
       path_seg_index = std::make_pair(0, 0);
@@ -100,6 +106,8 @@ class PerpendicularPathPlanner {
   struct PlannerParams {
     bool is_left_side = true;
     double slot_side_sgn = 1.0;
+
+    bool should_prepare_second = false;
 
     pnc::geometry_lib::LineSegment target_line;
 
@@ -117,6 +125,8 @@ class PerpendicularPathPlanner {
     void Reset() {
       is_left_side = true;
       slot_side_sgn = 1.0;
+
+      should_prepare_second = false;
 
       target_line.Reset();
 
@@ -177,6 +187,15 @@ class PerpendicularPathPlanner {
   const bool PreparePlanOnce(const double x_offset,
                              const double heading_offset);
 
+  const bool PreparePlanV2();
+  const bool PreparePlanOnceV2(const double x_offset,
+                               const double heading_offset);
+  const bool PreparePlanAdjust(
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const uint8_t current_gear);
+
+  const bool PreparePlanSecond();
+
   const bool GenPathOutputByDubins();
   const bool MonoPreparePlan(Eigen::Vector2d &tag_point);
   void CalMonoSafeCircle();
@@ -186,6 +205,10 @@ class PerpendicularPathPlanner {
   // prepare plan end
 
   // multi plan start
+  const bool CheckMultiPlanSuitable(
+      const pnc::geometry_lib::PathPoint &current_pose,
+      const double &slot_occupied_ratio);
+
   const bool MultiPlan();
   const bool CalSinglePathInMulti(
       const pnc::geometry_lib::PathPoint &current_pose,
@@ -214,6 +237,10 @@ class PerpendicularPathPlanner {
   // multi plan end
 
   // adjust plan start
+  const bool CheckAdjustPlanSuitable(
+      const pnc::geometry_lib::PathPoint &current_pose,
+      const double slot_occupied_ratio = 0.0);
+
   const bool AdjustPlan();
   const bool CalSinglePathInAdjust(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
@@ -250,6 +277,20 @@ class PerpendicularPathPlanner {
   const uint8_t TrimPathByCollisionDetection(
       pnc::geometry_lib::PathSegment &path_seg);
   // collision detect end
+
+  const bool CheckArcOrLineAvailable(const pnc::geometry_lib::Arc &arc);
+  const bool CheckArcOrLineAvailable(
+      const pnc::geometry_lib::LineSegment &line);
+
+  const bool CheckPathIsNormal(const pnc::geometry_lib::PathSegment &path_seg);
+
+  const bool CheckReachTargetPose(
+      const pnc::geometry_lib::PathPoint &current_pose);
+
+  const bool CheckReachTargetPose();
+
+  const double CalOccupiedRatio(
+      const pnc::geometry_lib::PathPoint &current_pose);
 
   const bool CheckTwoPoseInCircle(const Eigen::Vector2d &ego_pos0,
                                   const double ego_heading0,

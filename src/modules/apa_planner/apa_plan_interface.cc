@@ -259,6 +259,9 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().uss_wdis_index_back, std::vector<int>,
                   "uss_wdis_index_back");
 
+  JSON_READ_VALUE(apa_param.SetPram().uss_directly_behind_index,
+                  std::vector<int>, "uss_directly_behind_index");
+
   // check replan params
   JSON_READ_VALUE(apa_param.SetPram().stuck_replan_time, double,
                   "stuck_replan_time");
@@ -322,8 +325,24 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().pose_heading_err, double,
                   "pose_heading_err");
 
+  JSON_READ_VALUE(apa_param.SetPram().max_y_err_2, double, "max_y_err_2");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_heading_err_2, double,
+                  "max_heading_err_2");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_y_err_3, double, "max_y_err_3");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_heading_err_3, double,
+                  "max_heading_err_3");
+
   JSON_READ_VALUE(apa_param.SetPram().pose_slot_occupied_ratio, double,
                   "pose_slot_occupied_ratio");
+
+  JSON_READ_VALUE(apa_param.SetPram().pose_slot_occupied_ratio_2, double,
+                  "pose_slot_occupied_ratio_2");
+
+  JSON_READ_VALUE(apa_param.SetPram().pose_slot_occupied_ratio_3, double,
+                  "pose_slot_occupied_ratio_3");
 
   JSON_READ_VALUE(apa_param.SetPram().pose_min_remain_dis, double,
                   "pose_min_remain_dis");
@@ -389,6 +408,12 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().prepare_directly_use_tangent_heading_err,
                   double, "prepare_directly_use_tangent_heading_err");
 
+  JSON_READ_VALUE(apa_param.SetPram().prepare_adjust_drive_max_length, double,
+                  "prepare_adjust_drive_max_length");
+
+  JSON_READ_VALUE(apa_param.SetPram().prepare_adjust_reverse_max_length, double,
+                  "prepare_adjust_reverse_max_length");
+
   JSON_READ_VALUE(apa_param.SetPram().static_pos_eps, double, "static_pos_eps");
 
   JSON_READ_VALUE(apa_param.SetPram().static_heading_eps, double,
@@ -409,16 +434,19 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().multi_plan_max_occupied_ratio, double,
                   "multi_plan_max_occupied_ratio");
 
-  JSON_READ_VALUE(apa_param.SetPram().adjust_plan_max_lat_err, double,
-                  "adjust_plan_max_lat_err");
-
   JSON_READ_VALUE(apa_param.SetPram().adjust_plan_max_heading1_err, double,
                   "adjust_plan_max_heading1_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().adjust_plan_max_lat_err, double,
+                  "adjust_plan_max_lat_err");
 
   JSON_READ_VALUE(apa_param.SetPram().adjust_plan_max_heading2_err, double,
                   "adjust_plan_max_heading2_err");
   JSON_READ_VALUE(apa_param.SetPram().lateral_path_optimization_enable, bool,
                   "lateral_path_optimization_enable");
+
+  JSON_READ_VALUE(apa_param.SetPram().min_gear_path_length, double,
+                  "min_gear_path_length");
 
   // slot managent params
   // slot update

@@ -367,12 +367,12 @@ void ParallelParInPlanner::GenTlane() {
 
   t_lane_.pt_inside = corner1_slot;
   t_lane_.pt_outside = corner0_slot;
-  t_lane_.pt_terminal = ego_slot_info.target_ego_pos_slot;
+  t_lane_.pt_terminal_pos = ego_slot_info.target_ego_pos_slot;
 
   std::cout << "-- t_lane --" << std::endl;
   std::cout << "pt_outside = " << t_lane_.pt_outside.transpose() << std::endl;
   std::cout << "pt_inside = " << t_lane_.pt_inside.transpose() << std::endl;
-  std::cout << "pt_terminal = " << t_lane_.pt_terminal.transpose() << std::endl;
+  std::cout << "pt_terminal_pos = " << t_lane_.pt_terminal_pos.transpose() << std::endl;
 }
 
 void ParallelParInPlanner::GenObstacles() {
@@ -921,7 +921,7 @@ void ParallelParInPlanner::Log() const {
   const auto& l2g_tf = frame_.ego_slot_info.l2g_tf;
   const auto p0_g = l2g_tf.GetPos(t_lane_.pt_outside);
   const auto p1_g = l2g_tf.GetPos(t_lane_.pt_inside);
-  const auto pt_g = l2g_tf.GetPos(t_lane_.pt_terminal);
+  const auto pt_g = l2g_tf.GetPos(t_lane_.pt_terminal_pos);
 
   std::cout << "p0_g = " << p0_g.transpose() << std::endl;
 

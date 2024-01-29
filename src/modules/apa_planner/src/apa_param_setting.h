@@ -83,6 +83,7 @@ struct ApaParameters {
                                                   275.0, 264.0, 242.0, 187.0};
   std::vector<int> uss_wdis_index_front = {0, 9, 6, 3, 1, 11};
   std::vector<int> uss_wdis_index_back = {0, 1, 3, 6, 9, 11};
+  std::vector<int> uss_directly_behind_index = {8, 9};
 
   // check replan params
   double stuck_replan_time = 4.0;
@@ -112,8 +113,14 @@ struct ApaParameters {
   double car_to_limiter_dis = 1.0;
   double pose_y_err = 0.15;
   double pose_heading_err = 6.6;
-  double pose_slot_occupied_ratio = 0.48;
-  double pose_min_remain_dis = 2.18;
+  double max_y_err_2 = 0.088;
+  double max_heading_err_2 = 1.08;
+  double max_y_err_3 = 0.06;
+  double max_heading_err_3 = 0.88;
+  double pose_slot_occupied_ratio = 0.368;
+  double pose_slot_occupied_ratio_2 = 0.588;
+  double pose_slot_occupied_ratio_3 = 0.788;
+  double pose_min_remain_dis = 0.4;
 
   // slot update params when parking
   double fix_slot_occupied_ratio = 0.938;
@@ -133,6 +140,8 @@ struct ApaParameters {
   double prepare_line_min_heading_offset_slot_deg = 0.0;
   double prepare_directly_use_tangent_pos_err = 0.106;
   double prepare_directly_use_tangent_heading_err = 2.6;
+  double prepare_adjust_drive_max_length = 2.28;
+  double prepare_adjust_reverse_max_length = 3.6;
   double min_turn_radius = 5.5;
   double max_one_step_arc_radius = 8.5;
   double max_radius_in_slot = 12.66;
@@ -141,16 +150,17 @@ struct ApaParameters {
   double min_line_length = 0.3;
   double min_one_step_path_length = 0.6;
   double static_pos_eps = 0.01;
-  double static_heading_eps = 0.8;
+  double static_heading_eps = 0.08;
   double path_extend_distance = 0.3;
   bool mono_plan_enable = false;
   double multi_plan_min_lat_err = 0.5;
   double multi_plan_min_heading_err = 12.0;
   double multi_plan_max_occupied_ratio = 0.8;
-  double adjust_plan_max_lat_err = 1.2;
-  double adjust_plan_max_heading1_err = 50.0;
-  double adjust_plan_max_heading2_err = 70.0;
   bool lateral_path_optimization_enable = false;
+  double adjust_plan_max_heading1_err = 8.8;
+  double adjust_plan_max_lat_err = 0.8;
+  double adjust_plan_max_heading2_err = 15.0;
+  double min_gear_path_length = 0.25;
 
   // slot managent params
   // slot update

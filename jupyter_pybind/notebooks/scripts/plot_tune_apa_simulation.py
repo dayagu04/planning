@@ -11,9 +11,17 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/planning-5370375c/test_8.00000'
+bag_path = '/data_cold/abu_zone/APA/planning-5370375c/test_9.00000'
+bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_32694/parking/20240116/20240116-11-07-15/park_in_data_collection_CHERY_TIGGO9_32694_MANUAL_ALL_2024-01-16-11-07-16_no_camera.record'
 #bag_path = '/data_cold/abu_zone/autoparse/jac_s811_58977/parking/20240118/20240118-17-20-08/park_in__JAC_S811_58977_MANUAL_ALL_2024-01-18-17-20-08_no_camera.record'
 #bag_path = '/data_cold/abu_zone/autoparse/jac_s811_58977/parking/20240118/20240118-17-21-07/park_in__JAC_S811_58977_MANUAL_ALL_2024-01-18-17-21-07_no_camera.record'
+bag_path = '/data_cold/abu_zone/APA/planning-5370375c/tmp0122.00000'
+bag_path = '/data_cold/abu_zone/APA/planning-5887aac3/test_13.00000'
+bag_path = '/data_cold/abu_zone/autoparse/jac_s811_96tj0/parking/20240122/20240122-16-24-07/park_in_data_collection_JAC_S811_96TJ0_MANUAL_ALL_2024-01-22-16-24-07_no_camera.record'
+bag_path = '/data_cold/abu_zone/autoparse/jac_s811_58977/parking/20240116/20240116-10-25-06/park_in__JAC_S811_58977_MANUAL_ALL_2024-01-16-10-25-06_no_camera.record'
+bag_path = '/data_cold/abu_zone/APA/s2apa0124/control_bfeb734/test_0.00000'
+bag_path = '/data_cold/abu_zone/APA/planning-0d6621c9/test_5.00000'
+#bag_path = '/data_cold/abu_zone/autoparse/jac_s811_96tj0/parking/20240122/20240122-14-52-25/park_in_data_collection_JAC_S811_96TJ0_MANUAL_ALL_2024-01-22-14-52-25_no_camera.record'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -58,7 +66,7 @@ class LocalViewSlider:
     self.sample_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "sample_ds",min=0.02, max=2.0, value=0.12, step=0.02)
     self.lon_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lon_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
     self.lat_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lat_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
-    self.heading_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "heading_dif",min=-45.0, max=45.0, value=0.0, step=0.1)
+    self.heading_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "heading_dif",min=-90.0, max=90.0, value=0.0, step=0.1)
 
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
@@ -142,7 +150,7 @@ def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_re
                                     wave_msg.SerializeToString(),
                                     select_id, force_plan, is_path_optimization, is_reset, is_complete_path, sample_ds, target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec)
-                                  
+
 
   data_planning_tune.data = {'plan_path_x': [],
                              'plan_path_y': [],

@@ -221,6 +221,8 @@ common::SlotInfo SlotManagement::SlotInfoTransfer(
     slot_info.set_is_occupied(false);
   }
 
+  slot_info.set_slot_type(fusion_slot.type());
+
   return slot_info;
 }
 

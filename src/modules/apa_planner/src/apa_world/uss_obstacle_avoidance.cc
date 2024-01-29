@@ -331,6 +331,20 @@ void UssObstacleAvoidance::Update(
   }
 }
 
+const bool UssObstacleAvoidance::CheckIsDirectlyBehindUss() {
+  if (!remain_dist_info_.is_available) {
+    return false;
+  }
+  for (size_t i = 0; i < apa_param.GetParam().uss_directly_behind_index.size();
+       ++i) {
+    if (remain_dist_info_.uss_index ==
+        apa_param.GetParam().uss_directly_behind_index[i]) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void UssObstacleAvoidance::SetUssRawDist(const double &uss_raw_dist) {
   // set uss raw dist data
   uss_raw_dist_vec_.clear();

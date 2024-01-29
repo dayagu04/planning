@@ -54,7 +54,7 @@ void ParallelPathPlanner::Preprocess() {
 
   // target line
   calc_params_.target_line =
-      pnc::geometry_lib::BuildLineSegByPose(input_.tlane.pt_terminal, 0.0);
+      pnc::geometry_lib::BuildLineSegByPose(input_.tlane.pt_terminal_pos, 0.0);
 }
 
 const bool ParallelPathPlanner::Update() {
@@ -114,8 +114,8 @@ const bool ParallelPathPlanner::PreparePlan() {
   std::vector<double> x_offset_vec;
   std::vector<double> y_offset_vec;
 
-  double x_offset = input_.tlane.pt_terminal.x() + 5.0;
-  while (x_offset < input_.tlane.pt_terminal.x() + 10.0) {
+  double x_offset = input_.tlane.pt_terminal_pos.x() + 5.0;
+  while (x_offset < input_.tlane.pt_terminal_pos.x() + 10.0) {
     x_offset_vec.emplace_back(x_offset);
     x_offset += 0.1;
   }
@@ -252,7 +252,7 @@ const bool ParallelPathPlanner::ProcessPlan() {
 const bool ParallelPathPlanner::CalMinSafeCircle() {
   // search from target pose to current pose
   pnc::geometry_lib::PathPoint start_pose;
-  start_pose.Set(input_.tlane.pt_terminal, 0.0);
+  start_pose.Set(input_.tlane.pt_terminal_pos, 0.0);
 
   // firstly backward to limit pose of t-lane
   pnc::geometry_lib::PathPoint current_pose = start_pose;
@@ -402,7 +402,7 @@ const bool ParallelPathPlanner::AdjustPlan() {
               : pnc::geometry_lib::SEG_STEER_RIGHT;
     }
 
-    if ((current_pose.pos - input_.tlane.pt_terminal).norm() <=
+    if ((current_pose.pos - input_.tlane.pt_terminal_pos).norm() <=
             apa_param.GetParam().static_pos_eps &&
         std::fabs(current_pose.heading - calc_params_.target_line.heading) <=
             apa_param.GetParam().static_heading_eps / 57.3) {
@@ -511,7 +511,7 @@ const bool ParallelPathPlanner::STurnParallelPlan(
   }
 
   pnc::geometry_lib::PathPoint terminal_err;
-  terminal_err.Set(current_pose.pos - input_.tlane.pt_terminal,
+  terminal_err.Set(current_pose.pos - input_.tlane.pt_terminal_pos,
                    current_pose.heading - 0.0);
   double slot_occupied_ratio;
   if (std::fabs(terminal_err.pos.y()) < 0.9 &&
@@ -1411,10 +1411,10 @@ const bool ParallelPathPlanner::CheckTwoPoseInCircle(
 const bool ParallelPathPlanner::IsLocatedOnTarget(
     const pnc::geometry_lib::PathPoint& current_pose) const {
   const double lon_error_abs =
-      std::fabs(current_pose.pos.x() - input_.tlane.pt_terminal.x());
+      std::fabs(current_pose.pos.x() - input_.tlane.pt_terminal_pos.x());
 
   const double lat_error_abs =
-      std::fabs(current_pose.pos.y() - input_.tlane.pt_terminal.y());
+      std::fabs(current_pose.pos.y() - input_.tlane.pt_terminal_pos.y());
 
   const double heading_error_abs = std::fabs(pnc::geometry_lib::NormalizeAngle(
       current_pose.heading - calc_params_.target_line.heading));

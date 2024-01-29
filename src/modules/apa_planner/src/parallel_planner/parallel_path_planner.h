@@ -23,7 +23,7 @@ class ParallelPathPlanner {
   struct Tlane {
     Eigen::Vector2d pt_outside = Eigen::Vector2d::Zero();
     Eigen::Vector2d pt_inside = Eigen::Vector2d::Zero();
-    Eigen::Vector2d pt_terminal = Eigen::Vector2d::Zero();
+    Eigen::Vector2d pt_terminal_pos = Eigen::Vector2d::Zero();
     uint8_t slot_side = ApaPlannerBase::SLOT_SIDE_INVALID;
 
     double channel_width = 5.5;
@@ -32,7 +32,7 @@ class ParallelPathPlanner {
     void Reset() {
       pt_outside = Eigen::Vector2d::Zero();
       pt_inside = Eigen::Vector2d::Zero();
-      pt_terminal = Eigen::Vector2d::Zero();
+      pt_terminal_pos = Eigen::Vector2d::Zero();
       channel_width = 5.5;
       channel_length = 10.0;
     }

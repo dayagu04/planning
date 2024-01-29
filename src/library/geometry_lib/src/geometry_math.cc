@@ -1396,6 +1396,8 @@ const bool CalTwoArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
     return LogErr(__func__, 5);
   }
   if (!mathlib::IsDoubleEqual(arc2.headingB, line.heading)) {
+    std::cout << "arc2.headingB = " << arc2.headingB * 57.3
+              << "  line.heading = " << line.heading  * 57.3 << std::endl;
     return LogErr(__func__, 6);
   }
   return true;
@@ -1414,9 +1416,9 @@ const bool IsPoseOnLine(const PathPoint &pose, LineSegment &line,
   }
 
   const auto dist = CalPoint2LineDist(pose.pos, line);
-  std::cout << "pos = " << pose.pos.transpose()
-            << "  heading = " << pose.heading << "  dist = " << dist
-            << "   line.heading = " << line.heading << std::endl;
+  // std::cout << "pos = " << pose.pos.transpose()
+  //           << "  heading = " << pose.heading << "  dist = " << dist
+  //           << "   line.heading = " << line.heading << std::endl;
   if (dist < lat_err &&
       std::fabs(NormalizeAngle(pose.heading - line.heading)) < heading_err) {
     return true;
@@ -1575,9 +1577,11 @@ const bool CheckTwoVecCollinear(const Eigen::Vector2d &v1,
                                 const Eigen::Vector2d &v2) {
   const auto unit_v1 = v1.normalized();
   const auto unit_v2 = v2.normalized();
-  if (std::fabs((GetCrossFromTwoVec2d(unit_v1, unit_v2))) < 0.015) {
+  const double sin_theta = GetCrossFromTwoVec2d(unit_v1, unit_v2);
+  if (std::fabs(sin_theta) < 0.015) {
     return true;
   }
+  std::cout << "sin_theta = " << sin_theta << std::endl;
   return false;
 }
 
@@ -1591,6 +1595,7 @@ const bool CheckTwoVecVertical(const Eigen::Vector2d &v1,
   if (std::fabs(cos_theta) < 0.015) {
     return true;
   }
+  std::cout << "cos_theta = " << cos_theta << std::endl;
   return false;
 }
 
@@ -1613,12 +1618,11 @@ const bool CompleteArcInfo(Arc &arc) {
   const auto OB = arc.pB - arc.circle_info.center;
   const auto OA_norm = OA.norm();
   const auto OB_norm = OB.norm();
+  // const auto AB_norm = (arc.pB - arc.pA).norm();
   if (IsDoubleEqual(OA_norm, 0.0) || IsDoubleEqual(OB_norm, 0.0) ||
       !IsDoubleEqual(OA_norm, OB_norm)) {
-    std::cout << "start: coord = " << arc.pA.transpose()
-              << "  heading = " << arc.headingA * 57.3
-              << "  end: coord = " << arc.pB.transpose()
-              << "  heading = " << arc.headingB * 57.3 << std::endl;
+    std::cout << "OA_norm = " << OA_norm << "  OB_norm = " << OB_norm
+              << std::endl;
     return LogErr(__func__, 0);
   }
 
@@ -1630,7 +1634,7 @@ const bool CompleteArcInfo(Arc &arc) {
   } else if (rot_angle < 0.0) {
     arc.is_anti_clockwise = false;
   } else {
-    return LogErr(__func__, 1);
+    // return LogErr(__func__, 1);
   }
 
   arc.headingB = NormalizeAngle(arc.headingA + rot_angle);
@@ -1858,8 +1862,8 @@ const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
     return LogErr(__func__, 1);
   }
   if (!mathlib::IsDoubleEqual(arc.headingB, line.heading)) {
-    std::cout << "arc.headingB = " << arc.headingB * 57.3
-              << "  line.heading = " << line.heading << std::endl;
+    // std::cout << "arc.headingB = " << arc.headingB * 57.3
+    //           << "  line.heading = " << line.heading << std::endl;
     return LogErr(__func__, 2);
   }
   return true;
@@ -2002,6 +2006,16 @@ const double CalPoint2LineSegDist(const Eigen::Vector2d &pO,
     dist = std::min((line.pB - pO).norm(), (line.pA - pO).norm());
   }
   return dist;
+}
+
+const bool CheckTwoPoseIsSame(const PathPoint &pose1, const PathPoint &pose2,
+                              const double pos_err, const double heading_err) {
+  if ((pose1.pos - pose2.pos).norm() < pos_err &&
+      std::fabs(pnc::geometry_lib::NormalizeAngle(
+          pose1.heading - pose2.heading)) < heading_err) {
+    return true;
+  }
+  return false;
 }
 
 }  // namespace geometry_lib

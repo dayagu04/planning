@@ -87,6 +87,8 @@ class UssObstacleAvoidance {
     SetLatInflation();
   }
 
+  const bool CheckIsDirectlyBehindUss();
+
   void SetLatInflation();
 
   // for simulation by pybind

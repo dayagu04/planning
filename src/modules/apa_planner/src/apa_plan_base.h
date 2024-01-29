@@ -1,6 +1,7 @@
 #ifndef __APA_PLAN_BASE_H__
 #define __APA_PLAN_BASE_H__
 
+#include <bits/stdint-uintn.h>
 #include <sys/types.h>
 
 #include <cstdint>
@@ -130,7 +131,10 @@ class ApaPlannerBase {
       gear_change_count = 0;
       is_replan = false;
       is_replan_first = true;
+      is_replan_second = false;
+      is_replan_dynamic = false;
       is_dynamic_replan_first = true;
+      dynamic_replan_count = 0;
       is_finished = false;
       is_fix_slot = false;
       stuck_time = 0.0;
@@ -151,7 +155,10 @@ class ApaPlannerBase {
 
     bool is_replan = false;
     bool is_replan_first = true;
+    bool is_replan_second = false;
+    bool is_replan_dynamic = false;
     bool is_dynamic_replan_first = true;
+    uint8_t dynamic_replan_count = 0;
     uint8_t replan_reason = NOT_REPLAN;
     bool is_finished = false;
     bool is_fix_slot = false;
