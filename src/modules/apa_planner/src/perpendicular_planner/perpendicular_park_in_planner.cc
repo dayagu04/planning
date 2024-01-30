@@ -252,7 +252,8 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
 
   // trim path according to limiter
   if (!frame_.is_replan_first &&
-      perpendicular_path_planner_.GetOutput().is_last_path &&
+      (perpendicular_path_planner_.GetOutput().is_last_path ||
+       perpendicular_path_planner_.GetOutput().path_segment_vec.empty()) &&
       gear_command_ == pnc::geometry_lib::SEG_GEAR_REVERSE &&
       ego_slot_info.first_fix_limiter) {
     const pnc::geometry_lib::LineSegment limiter_line(
