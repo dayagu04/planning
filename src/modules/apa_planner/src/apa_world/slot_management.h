@@ -19,6 +19,7 @@
 #include "localization.pb.h"
 #include "parking_fusion.pb.h"
 #include "parking_slot_list.pb.h"
+#include "perpendicular_path_planner.h"
 #include "planning_plan.pb.h"
 #include "slot_management_info.pb.h"
 #include "task_basic_types.pb.h"
@@ -230,6 +231,7 @@ class SlotManagement {
   struct Measurement {
     double v_ego = 0.0;
     double heading = 0.0;
+    Eigen::Vector2d ego_heading_vec = Eigen::Vector2d::Zero();
     Eigen::Vector2d ego_pos = Eigen::Vector2d::Zero();
     Eigen::Vector2d mirror_pos = Eigen::Vector2d::Zero();
   };
@@ -244,6 +246,8 @@ class SlotManagement {
     Eigen::Vector2d slot_origin_pos = Eigen::Vector2d::Zero();
     double slot_origin_heading = 0.0;
     Eigen::Vector2d slot_origin_heading_vec = Eigen::Vector2d::Zero();
+
+    std::vector<Eigen::Vector2d> slot_corner;
 
     double slot_length = apa_param.GetParam().normal_slot_length;
     double slot_width = apa_param.GetParam().normal_slot_width;
@@ -298,38 +302,38 @@ class SlotManagement {
   };
 
   struct Frame {
-    const FuncStateMachine::FuncStateMachine* func_state_ptr_;
-    const ParkingFusion::ParkingFusionInfo* parking_slot_ptr_;
-    const LocalizationOutput::LocalizationEstimate* localization_ptr_;
+    const FuncStateMachine::FuncStateMachine* func_state_ptr;
+    const ParkingFusion::ParkingFusionInfo* parking_slot_ptr;
+    const LocalizationOutput::LocalizationEstimate* localization_ptr;
     // slot state check by uss
-    const UssWaveInfo::UssWaveInfo* uss_wave_info_ptr_;
-    std::vector<double> uss_raw_dist_vec_;
-    std::vector<PlanningOutput::SuccessfulSlotsInfo> released_slot_info_vec_;
+    const UssWaveInfo::UssWaveInfo* uss_wave_info_ptr;
+    std::vector<double> uss_raw_dist_vec;
+    std::vector<PlanningOutput::SuccessfulSlotsInfo> released_slot_info_vec;
 
-    std::unordered_map<int, size_t> slot_info_map_;
-    std::vector<SlotInfoWindow> slot_info_window_vec_;
-    common::SlotManagementInfo slot_management_info_;
+    std::unordered_map<int, size_t> slot_info_map;
+    std::vector<SlotInfoWindow> slot_info_window_vec;
+    common::SlotManagementInfo slot_management_info;
 
-    LimiterPointWindow limiter_point_window_;
+    LimiterPointWindow limiter_point_window;
 
-    Measurement measurement_;
-    Param param_;
-    size_t fusion_order_error_cnt_ = 0;
+    Measurement measurement;
+    Param param;
+    size_t fusion_order_error_cnt = 0;
 
     EgoSlotInfo ego_slot_info;
 
     size_t no_update_slot_count = 0;
 
     void Reset() {
-      uss_raw_dist_vec_.clear();
-      released_slot_info_vec_.clear();
-      slot_info_map_.clear();
-      slot_info_map_.reserve(max_slot_window_size);
-      slot_info_window_vec_.clear();
-      slot_management_info_.Clear();
-      limiter_point_window_.Reset();
-      param_.Reset();
-      fusion_order_error_cnt_ = 0;
+      uss_raw_dist_vec.clear();
+      released_slot_info_vec.clear();
+      slot_info_map.clear();
+      slot_info_map.reserve(max_slot_window_size);
+      slot_info_window_vec.clear();
+      slot_management_info.Clear();
+      limiter_point_window.Reset();
+      param.Reset();
+      fusion_order_error_cnt = 0;
       no_update_slot_count = 0;
       ego_slot_info.Reset();
     }
@@ -344,7 +348,7 @@ class SlotManagement {
 
   const bool SetRealtime();
 
-  void SetParam(const Param& param) { frame_.param_ = param; }
+  void SetParam(const Param& param) { frame_.param = param; }
 
   void Reset();
 
@@ -353,16 +357,14 @@ class SlotManagement {
 
   const bool GetSelectedSlot(common::SlotInfo& slot_info) const;
 
-  const size_t GetFusedSlotSize() {
-    return frame_.slot_info_window_vec_.size();
-  }
+  const size_t GetFusedSlotSize() { return frame_.slot_info_window_vec.size(); }
 
   const common::SlotManagementInfo& GetOutput() const {
-    return frame_.slot_management_info_;
+    return frame_.slot_management_info;
   }
 
   const common::SlotManagementInfo* GetOutputPtr() const {
-    return &frame_.slot_management_info_;
+    return &frame_.slot_management_info;
   }
 
   const EgoSlotInfo& GetEgoSlotInfo() const { return frame_.ego_slot_info; }
@@ -372,7 +374,7 @@ class SlotManagement {
 
   const std::vector<PlanningOutput::SuccessfulSlotsInfo>&
   GetReleasedSlotInfoVec() const {
-    return frame_.released_slot_info_vec_;
+    return frame_.released_slot_info_vec;
   }
 
  private:
@@ -390,6 +392,10 @@ class SlotManagement {
       const google::protobuf::uint32& select_slot_id,
       const common::SlotInfo& select_slot,
       const ParkingFusion::ParkingFusionSlot& selecte_fusion_slot);
+  bool UpdateEgoSlotInfo(EgoSlotInfo& ego_slot_info,
+                         const common::SlotInfo* slot_info);
+  bool GenTLane(const EgoSlotInfo& ego_slot_info,
+                apa_planner::PerpendicularPathPlanner::Tlane& t_lane);
   void UpdateSlotInfoInParking();
   void UpdateLimiterInfoInParking();
 

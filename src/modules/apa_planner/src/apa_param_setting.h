@@ -58,6 +58,7 @@ struct ApaParameters {
 
   // check fail params
   double stuck_failed_time = 9.0;
+  double pause_failed_time = 12.68;
 
   // check static params
   double car_static_pos_err = 0.005;
@@ -163,6 +164,7 @@ struct ApaParameters {
   double min_gear_path_length = 0.25;
 
   // slot managent params
+  bool release_slot_by_prepare = false;
   // slot update
   double slot_update_in_or_out_occupied_ratio = 0.001;
   double slot_update_out_heading = 10;

@@ -20,12 +20,6 @@ namespace planning {
 namespace apa_planner {
 class ApaPlannerBase {
  public:
-  enum SlotSide {
-    SLOT_SIDE_INVALID,
-    SLOT_SIDE_LEFT,
-    SLOT_SIDE_RIGHT,
-  };
-
   enum ReplanReason {
     NOT_REPLAN,
     FIRST_PLAN,
@@ -138,6 +132,7 @@ class ApaPlannerBase {
       is_finished = false;
       is_fix_slot = false;
       stuck_time = 0.0;
+      pause_time = 0.0;
       remain_dist = 5.01;
       remain_dist_uss = 5.01;
       spline_success = false;
@@ -169,6 +164,7 @@ class ApaPlannerBase {
     double current_path_length = 0.0;
     double path_extended_dist = 1.0;
     double stuck_time = 0.0;
+    double pause_time = 0.0;
     double remain_dist = 5.01;
     double remain_dist_uss = 5.01;
     pnc::mathlib::spline x_s_spline;

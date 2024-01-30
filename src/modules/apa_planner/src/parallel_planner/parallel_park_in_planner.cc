@@ -173,13 +173,13 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
     // judge slot side via slot pt3
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
     if (cross_ego_to_pt3 < 0.0) {
-      t_lane_.slot_side = SLOT_SIDE_RIGHT;
+      t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
     } else if (cross_ego_to_pt3 > 0.0) {
-      t_lane_.slot_side = SLOT_SIDE_LEFT;
+      t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
     } else {
-      t_lane_.slot_side = SLOT_SIDE_INVALID;
+      t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
       frame_.current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
       std::cout << "calculate parallel slot side error " << std::endl;
@@ -194,7 +194,7 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
   ego_slot_info.slot_width = (pt[0] - pt[2]).norm();
 
   // note: slot points' order is corrected in slot management
-  if (t_lane_.slot_side == SLOT_SIDE_RIGHT) {
+  if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
     n = (pt[0] - pt[1]).normalized();
     ego_slot_info.slot_origin_pos = pM02 - ego_slot_info.slot_length * n;
   } else {
@@ -262,7 +262,7 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
   // ego_slot_info.slot_occupied_ratio =
   //     apa_world_ptr_->GetSlotManagerPtr()->GetOccupiedRatio();
   const double slot_side_sgn =
-      t_lane_.slot_side == SLOT_SIDE_RIGHT ? 1.0 : -1.0;
+      t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT ? 1.0 : -1.0;
 
   if (pnc::mathlib::IsInBound(ego_slot_info.terminal_err.pos.x(), 0.0, 3.0) &&
       std::fabs(ego_slot_info.ego_heading_slot) < 30.0 / 57.3) {
@@ -356,7 +356,7 @@ void ParallelParInPlanner::GenTlane() {
             << std::endl;
 
   const double slot_side_sgn =
-      t_lane_.slot_side == SLOT_SIDE_RIGHT ? 1.0 : -1.0;
+      t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT ? 1.0 : -1.0;
 
   const Eigen::Vector2d corner0_slot(
       ego_slot_info.slot_length,
@@ -377,7 +377,7 @@ void ParallelParInPlanner::GenTlane() {
 
 void ParallelParInPlanner::GenObstacles() {
   const double slot_side_sgn =
-      (t_lane_.slot_side == SLOT_SIDE_RIGHT ? 1.0 : -1.0);
+      (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT ? 1.0 : -1.0);
 
   double channel_length = 16.0;
   double channel_y = slot_side_sgn * (0.5 * frame_.ego_slot_info.slot_width +

@@ -67,6 +67,9 @@ void PerpendicularInPlanner::PlanCore() {
 
   if (CheckPaused()) {
     SetParkingStatus(PARKING_PAUSED);
+    if (frame_.pause_time > apa_param.GetParam().pause_failed_time) {
+      SetParkingStatus(PARKING_FAILED);
+    }
     return;
   }
 
@@ -281,6 +284,13 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     frame_.stuck_time = 0.0;
   }
 
+  // update pause time
+  if (frame_.plan_stm.planning_status == PARKING_PAUSED) {
+    frame_.pause_time += apa_param.GetParam().plan_time;
+  } else {
+    frame_.pause_time = 0.0;
+  }
+
   // fix slot
   if (ego_slot_info.slot_occupied_ratio >
           apa_param.GetParam().fix_slot_occupied_ratio &&
@@ -311,14 +321,14 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     // judge slot side via slot center and heading
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
     if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
-      t_lane_.slot_side = SLOT_SIDE_RIGHT;
+      t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
     } else if (cross_ego_to_slot_heading < 0.0 &&
                cross_ego_to_slot_center > 0.0) {
-      t_lane_.slot_side = SLOT_SIDE_LEFT;
+      t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
     } else {
-      t_lane_.slot_side = SLOT_SIDE_INVALID;
+      t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
       frame_.current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
       std::cout << "calculate slot side error " << std::endl;
@@ -433,7 +443,7 @@ void PerpendicularInPlanner::GenTlane() {
   Eigen::Vector2d corner1_slot(ego_slot_info.slot_length,
                                0.5 * ego_slot_info.slot_width);
 
-  if (slot_side == SLOT_SIDE_RIGHT) {
+  if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
     // right corner is inside, left corner is outside
     if (corner_0_side_occupied) {
       // right side slot is occupied
@@ -461,7 +471,7 @@ void PerpendicularInPlanner::GenTlane() {
           Eigen::Vector2d(-apa_param.GetParam().vacant_pt_outside_dx,
                           apa_param.GetParam().vacant_pt_outside_dy);
     }
-  } else if (slot_side == SLOT_SIDE_LEFT) {
+  } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
     // left corner is inside, right corner is outside
     if (corner_0_side_occupied) {
       // right side slot is occupied
@@ -502,10 +512,10 @@ void PerpendicularInPlanner::GenTlane() {
   const double threshold = apa_param.GetParam().width_threshold;
   if (tlane_width < car_width + threshold) {
     tlane_width = car_width + threshold;
-    if (slot_side == SLOT_SIDE_RIGHT) {
+    if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
       t_lane_.pt_outside.y() = tlane_width / 2.0;
       t_lane_.pt_inside.y() = -tlane_width / 2.0;
-    } else if (slot_side == SLOT_SIDE_LEFT) {
+    } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
       t_lane_.pt_outside.y() = -tlane_width / 2.0;
       t_lane_.pt_inside.y() = tlane_width / 2.0;
     }

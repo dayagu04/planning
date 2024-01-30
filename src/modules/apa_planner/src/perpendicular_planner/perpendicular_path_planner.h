@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "apa_plan_base.h"
+//#include "apa_plan_base.h"
 #include "collision_detection.h"
 #include "dubins_lib.h"
 #include "geometry_math.h"
@@ -24,14 +24,14 @@ class PerpendicularPathPlanner {
     Eigen::Vector2d pt_inside = Eigen::Vector2d::Zero();
     Eigen::Vector2d pt_terminal_pos = Eigen::Vector2d::Zero();
     double pt_terminal_heading = 0.0;
-    uint8_t slot_side = ApaPlannerBase::SLOT_SIDE_INVALID;
+    uint8_t slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
 
     void Reset() {
       pt_outside = Eigen::Vector2d::Zero();
       pt_inside = Eigen::Vector2d::Zero();
       pt_terminal_pos = Eigen::Vector2d::Zero();
       pt_terminal_heading = 0.0;
-      slot_side = ApaPlannerBase::SLOT_SIDE_INVALID;
+      slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
     }
   };
 
@@ -147,6 +147,7 @@ class PerpendicularPathPlanner {
   void Preprocess();
   bool Update();
   bool Update(const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
+  bool UpdateByPrePlan();
   const bool SetCurrentPathSegIndex();
   void SetLineSegmentHeading();
   void ExtendCurrentFollowLastPath(double extend_distance);

@@ -149,12 +149,18 @@ bool PerpendicularPathPlanner::Update() {
   }
   output_.Reset();
   return false;
-}  // namespace apa_planner
+}
 
 bool PerpendicularPathPlanner::Update(
     const std::shared_ptr<CollisionDetector>& collision_detector_ptr) {
   collision_detector_ptr_ = collision_detector_ptr;
   return Update();
+}
+
+bool PerpendicularPathPlanner::UpdateByPrePlan() {
+  Preprocess();
+
+  return PreparePlan() || calc_params_.directly_use_tang_pt;
 }
 
 // prepare plan start
@@ -181,8 +187,8 @@ const bool PerpendicularPathPlanner::PreparePlan() {
   for (const auto& heading_offset : heading_offset_vec) {
     for (const auto& x_offset : x_offset_vec) {
       if (PreparePlanOnce(x_offset, heading_offset)) {
-        std::cout << "x_offset = " << x_offset << std::endl;
-        std::cout << "heading_offset = " << heading_offset * 57.3 << std::endl;
+        // std::cout << "x_offset = " << x_offset << std::endl;
+        // std::cout << "heading_offset = " << heading_offset * 57.3 << std::endl;
         return true;
       } else {
         if (calc_params_.cal_tang_pt_success) {
@@ -287,7 +293,7 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
   }
 
   if (prepare_success) {
-    std::cout << "prepare find target point multi successful\n";
+    // std::cout << "prepare find target point multi successful\n";
     return true;
   }
   // std::cout << "prepare find target point multi failed\n";

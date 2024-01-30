@@ -48,7 +48,7 @@ void ParallelPathPlanner::Preprocess() {
   calc_params_.Reset();
 
   calc_params_.is_left_side =
-      (input_.tlane.slot_side == ApaPlannerBase::SLOT_SIDE_LEFT);
+      (input_.tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT);
 
   calc_params_.slot_side_sgn = calc_params_.is_left_side ? -1.0 : 1.0;
 

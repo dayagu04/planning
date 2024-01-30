@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "apa_plan_base.h"
+#include "geometry_math.h"
 #include "parallel_path_planner.h"
 
 namespace py = pybind11;
@@ -50,8 +51,8 @@ int Update(double ego_x, double ego_y, double ego_heading, double p_outside_x,
   input.tlane.pt_inside << p_inside_x, p_inside_y;
   input.tlane.pt_terminal_pos << p_target_x, p_target_y;
 
-  input.tlane.slot_side = (set_left_side ? ApaPlannerBase::SLOT_SIDE_LEFT
-                                         : ApaPlannerBase::SLOT_SIDE_RIGHT);
+  input.tlane.slot_side = (set_left_side ? pnc::geometry_lib::SLOT_SIDE_LEFT
+                                         : pnc::geometry_lib::SLOT_SIDE_RIGHT);
 
   input.tlane.channel_width = channel_width;
   input.tlane.channel_length = 10.0;

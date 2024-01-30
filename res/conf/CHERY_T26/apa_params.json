@@ -44,6 +44,7 @@
 
   "comment_6": "check fail params",
   "stuck_failed_time": 9.0,
+  "pause_failed_time": 12.68,
 
   "comment_7": "check static params",
   "car_static_pos_err": 0.005,
@@ -146,6 +147,7 @@
   "min_gear_path_length": 0.25,
 
   "comment_16": "slot managent params",
+  "release_slot_by_prepare": true,
   "slot_update_in_or_out_occupied_ratio": 0.001,
   "slot_update_out_heading": 10,
   "slot_update_out_lat": 0.3,
@@ -153,8 +155,8 @@
   "slot_update_in_lat": 0.66,
   "slot_reset_threshold": 10,
   "limiter_update_distance_to_car": 1.7,
-  "limiter_update_min_occupied_ratio": 0.4,
-  "limiter_update_max_occupied_ratio": 0.6,
+  "limiter_update_min_occupied_ratio": 0.386,
+  "limiter_update_max_occupied_ratio": 0.886,
   "limiter_update_occupied_ratio": 0.6,
   "limiter_move_dist": 0.4,
   "max_slots_update_angle_dis_limit_deg": 36.6,

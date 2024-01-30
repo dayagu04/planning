@@ -24,7 +24,7 @@ class ParallelPathPlanner {
     Eigen::Vector2d pt_outside = Eigen::Vector2d::Zero();
     Eigen::Vector2d pt_inside = Eigen::Vector2d::Zero();
     Eigen::Vector2d pt_terminal_pos = Eigen::Vector2d::Zero();
-    uint8_t slot_side = ApaPlannerBase::SLOT_SIDE_INVALID;
+    uint8_t slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
 
     double channel_width = 5.5;
     double channel_length = 10.0;

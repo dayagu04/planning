@@ -212,6 +212,9 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().stuck_failed_time, double,
                   "stuck_failed_time");
 
+  JSON_READ_VALUE(apa_param.SetPram().pause_failed_time, double,
+                  "pause_failed_time");
+
   // check static params
   JSON_READ_VALUE(apa_param.SetPram().car_static_pos_err, double,
                   "car_static_pos_err");
@@ -449,6 +452,8 @@ void ApaPlanInterface::SyncParameters() {
                   "min_gear_path_length");
 
   // slot managent params
+  JSON_READ_VALUE(apa_param.SetPram().release_slot_by_prepare, bool,
+                  "release_slot_by_prepare");
   // slot update
   JSON_READ_VALUE(apa_param.SetPram().slot_update_in_or_out_occupied_ratio,
                   double, "slot_update_in_or_out_occupied_ratio");

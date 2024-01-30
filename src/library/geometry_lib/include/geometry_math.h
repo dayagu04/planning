@@ -15,6 +15,12 @@ namespace pnc {
 
 namespace geometry_lib {
 
+enum SlotSide {
+  SLOT_SIDE_INVALID,
+  SLOT_SIDE_LEFT,
+  SLOT_SIDE_RIGHT,
+};
+
 enum PathSegType {
   SEG_TYPE_INVALID,
   SEG_TYPE_LINE,
