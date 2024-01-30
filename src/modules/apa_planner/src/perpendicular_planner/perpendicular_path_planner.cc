@@ -131,6 +131,7 @@ bool PerpendicularPathPlanner::Update() {
       std::cout << "directly use ego pose to multi plan\n";
       output_.gear_shift = true;
     }
+    calc_params_.Reset();
   }
 
   // multi step
@@ -188,7 +189,8 @@ const bool PerpendicularPathPlanner::PreparePlan() {
     for (const auto& x_offset : x_offset_vec) {
       if (PreparePlanOnce(x_offset, heading_offset)) {
         // std::cout << "x_offset = " << x_offset << std::endl;
-        // std::cout << "heading_offset = " << heading_offset * 57.3 << std::endl;
+        // std::cout << "heading_offset = " << heading_offset * 57.3 <<
+        // std::endl;
         return true;
       } else {
         if (calc_params_.cal_tang_pt_success) {
