@@ -1,3 +1,18 @@
+# planning.2.3.2.3
+####  修改说明
+1. KDPath 适配 HPP
+2. 修复history obstacle维护错误，内存泄漏的问题
+3. 修复ground_line误检出现在参考线附近导致bound异常的问题
+4. 修复在对一系列groundline线段计算polygons后只取最后一段线段的polygon问题
+5. opt lat_motion_ilqr json param
+6. 增加通过对预测轨迹长度的判断来决定是否是静态障碍物
+7. add pedestrian_safe_extra_buffer param
+8. 修复parking_space取enu未取boot系坐标的问题
+9. 优化parking_space的筛选区域 
+10. 修复obstacle中预测轨迹yaw,theta取错的问题
+11. 对 planning player 进行bug修复及功能优化，满足闭环仿真需求
+12. 添加横向输出路径的自车碰撞检测的可视化； 添加ground_line的id可视化
+
 # planning.2.3.2.2
 ####  修改说明
 1. 修复在hpp场景的U型弯，规划起点在ref上的投影出错导致决策规划的ref错误的问题
