@@ -55,6 +55,7 @@ struct ApaParameters {
   double finish_lat_err_strict = 0.036;
   double finish_lon_err = 0.2;
   double finish_heading_err = 0.88;
+  double finish_uss_slot_occupied_ratio = 0.668;
 
   // check fail params
   double stuck_failed_time = 9.0;

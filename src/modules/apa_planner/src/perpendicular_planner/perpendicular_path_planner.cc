@@ -131,7 +131,7 @@ bool PerpendicularPathPlanner::Update() {
       std::cout << "directly use ego pose to multi plan\n";
       output_.gear_shift = true;
     }
-    calc_params_.Reset();
+    calc_params_.should_prepare_second = false;
   }
 
   // multi step

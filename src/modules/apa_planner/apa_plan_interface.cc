@@ -208,6 +208,9 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().finish_heading_err, double,
                   "finish_heading_err");
 
+  JSON_READ_VALUE(apa_param.SetPram().finish_uss_slot_occupied_ratio, double,
+                  "finish_uss_slot_occupied_ratio");
+
   // check fail params
   JSON_READ_VALUE(apa_param.SetPram().stuck_failed_time, double,
                   "stuck_failed_time");

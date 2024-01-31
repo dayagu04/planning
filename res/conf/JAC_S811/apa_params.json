@@ -41,6 +41,7 @@
   "finish_lat_err_strict": 0.036,
   "finish_lon_err": 0.2,
   "finish_heading_err": 0.88,
+  "finish_uss_slot_occupied_ratio": 0.668,
 
   "comment_6": "check fail params",
   "stuck_failed_time": 9.0,

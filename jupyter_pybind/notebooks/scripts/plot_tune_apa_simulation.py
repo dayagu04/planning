@@ -23,6 +23,7 @@ bag_path = '/data_cold/abu_zone/APA/s2apa0124/control_bfeb734/test_0.00000'
 bag_path = '/data_cold/abu_zone/APA/s2apa0129/planning-03f2d195/test_4.00000'
 #bag_path = '/data_cold/abu_zone/autoparse/jac_s811_96tj0/parking/20240129/20240129-14-36-19/park_in_data_collection_JAC_S811_96TJ0_MANUAL_ALL_2024-01-29-14-36-19_no_camera.record'
 #bag_path = '/data_cold/abu_zone/autoparse/jac_s811_96tj0/parking/20240123/20240123-15-24-08/park_in_data_collection_JAC_S811_96TJ0_MANUAL_ALL_2024-01-23-15-24-08_no_camera.record'
+bag_path = '/data_cold/abu_zone/autoparse/jac_s811_58977/parking/20240130/20240130-16-36-20/park_in__JAC_S811_58977_MANUAL_ALL_2024-01-30-16-36-20_no_camera.record'
 frame_dt = 0.1 # sec
 parking_flag = True
 

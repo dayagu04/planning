@@ -1017,7 +1017,11 @@ const bool PerpendicularInPlanner::CheckFinished() {
   const bool static_condition =
       apa_world_ptr_->GetMeasurementsPtr()->static_flag;
 
-  bool parking_finish = lon_condition && lat_condition && static_condition;
+  const bool remain_s_condition =
+      frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;
+
+  bool parking_finish =
+      lon_condition && lat_condition && static_condition && remain_s_condition;
 
   if (parking_finish) {
     return true;
@@ -1026,11 +1030,14 @@ const bool PerpendicularInPlanner::CheckFinished() {
   // stucked by directly behind uss
   const auto& uss_obstacle_avoider_ptr =
       apa_world_ptr_->GetUssObstacleAvoidancePtr();
-
+  const bool enter_slot_condition =
+      frame_.ego_slot_info.slot_occupied_ratio >
+      apa_param.GetParam().finish_uss_slot_occupied_ratio;
+  const bool remain_uss_condition =
+      frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist;
   if (uss_obstacle_avoider_ptr->CheckIsDirectlyBehindUss()) {
-    parking_finish =
-        lat_condition && static_condition &&
-        (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist);
+    parking_finish = lat_condition && static_condition &&
+                     enter_slot_condition && remain_uss_condition;
   }
 
   return parking_finish;
