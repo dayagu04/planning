@@ -19,11 +19,11 @@
 
 namespace planning {
 
+using ad_common::hdmap::LaneGroupConstPtr;
+using ad_common::hdmap::LaneInfoConstPtr;
 using Map::CurrentRouting;
 using Map::FormOfWayType::MAIN_ROAD;
 using Map::FormOfWayType::RAMP;
-using ad_common::hdmap::LaneGroupConstPtr;
-using ad_common::hdmap::LaneInfoConstPtr;
 const double PI = 3.1415926;
 
 VirtualLaneManager::VirtualLaneManager(
@@ -1294,9 +1294,16 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMerge(
 }
 
 bool VirtualLaneManager::CheckLaneValid(const FusionRoad::RoadInfo& roads) {
-  // 车道中心线出现间隔>5m的点，则拒绝
-  bool lane_valid = true;
   const double max_y_interval = 5.0;
+  const double current_lane_y_thrs = 5.0;
+
+  // 1.车道线为空
+  // 2.车道中心线出现间隔>5m的点，则拒绝
+  // 3.所有车道线离自车横向距离都>5m
+  bool lane_valid = true;
+  bool current_lane_exist = false;
+  bool y_interval_valid = true;
+
   if (roads.reference_line_msg().empty()) {
     lane_valid = false;
   } else {
@@ -1311,17 +1318,22 @@ bool VirtualLaneManager::CheckLaneValid(const FusionRoad::RoadInfo& roads) {
            ++point_it) {
         const auto& prev_point = prev_point_it->car_point();
         const auto& current_point = point_it->car_point();
+
+        current_lane_exist |= (current_point.y() < current_lane_y_thrs);
+
         double y_interval = std::fabs(current_point.y() - prev_point.y());
         prev_point_it = point_it;
         if (y_interval > max_y_interval) {
           LOG_ERROR("lane_valid is error \n");
-          lane_valid = false;
+          y_interval_valid = false;
           break;
         }
       }
     }
   }
+
   // TBD: 校验车道中心线的连续性
+  lane_valid = y_interval_valid && current_lane_exist;
   return lane_valid;
 }
 

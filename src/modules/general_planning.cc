@@ -202,6 +202,19 @@ bool GeneralPlanning::RunOnce(
 
 void GeneralPlanning::FillPlanningTrajectory(
     double start_time, PlanningOutput::PlanningOutput *const planning_output) {
+  // 获取LDP&&ELK功能干预状态
+  auto lkas_info =
+      session_.mutable_planning_context()->lane_keep_assit_function();
+  bool lkas_intervention_flag;
+  if ((lkas_info->get_ldp_left_intervention_flag_info() == true) ||
+      (lkas_info->get_ldp_right_intervention_flag_info() == true) ||
+      (lkas_info->get_elk_left_intervention_flag_info() == true) ||
+      (lkas_info->get_elk_right_intervention_flag_info() == true)) {
+    lkas_intervention_flag = true;
+  } else {
+    lkas_intervention_flag = false;
+  }
+
   // 获取计算结果
   const auto &lateral_output =
       session_.planning_context().lateral_behavior_planner_output();
@@ -224,14 +237,19 @@ void GeneralPlanning::FillPlanningTrajectory(
   // 2.Trajectory
   auto trajectory = planning_output->mutable_trajectory();
   // set trajectory false when dbw is false
-  trajectory->set_available(active);
+  if (lkas_intervention_flag) {
+    trajectory->set_available(true);
+  } else {
+    trajectory->set_available(active);
+  }
 
   // 根据定位有效性决定实时、长时
   auto location_valid = session_.environmental_model().location_valid();
 
-  if (location_valid ||
-      g_context.GetParam().planner_type ==
-          planning::context::PlannerType::REALTIME_PLANNER_WITH_MOTION) {
+  if ((location_valid ||
+       g_context.GetParam().planner_type ==
+           planning::context::PlannerType::REALTIME_PLANNER_WITH_MOTION) &&
+      (lkas_intervention_flag == false)) {
     trajectory->set_trajectory_type(
         Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
     trajectory->mutable_trajectory_points()->Clear();
@@ -334,10 +352,25 @@ void GeneralPlanning::FillPlanningTrajectory(
               lateral_output.d_poly[0], lateral_output.d_poly[1],
               lateral_output.d_poly[2], lateral_output.d_poly[3]);
     std::vector<double> polynomial_limited(4);
-    polynomial_limited[0] = d_polynomial[0];
-    polynomial_limited[1] = d_polynomial[1];
-    polynomial_limited[2] = d_polynomial[2];
-    polynomial_limited[3] = limited_polynomial_3;
+
+    const auto &current_lane = session_.environmental_model()
+                                   .get_virtual_lane_manager()
+                                   ->get_current_lane();
+    if ((lkas_intervention_flag == true) && (current_lane != nullptr)) {
+      polynomial_limited[0] =
+          current_lane->get_center_line().poly_coefficient_car(3);
+      polynomial_limited[1] =
+          current_lane->get_center_line().poly_coefficient_car(2);
+      polynomial_limited[2] =
+          current_lane->get_center_line().poly_coefficient_car(1);
+      polynomial_limited[3] =
+          current_lane->get_center_line().poly_coefficient_car(0);
+    } else {
+      polynomial_limited[0] = d_polynomial[0];
+      polynomial_limited[1] = d_polynomial[1];
+      polynomial_limited[2] = d_polynomial[2];
+      polynomial_limited[3] = limited_polynomial_3;
+    }
     LOG_DEBUG("limited_polynomial C0: [%f] C1: [%f] C2: [%f] C3: [%f] \n",
               polynomial_limited[0], polynomial_limited[1],
               polynomial_limited[2], polynomial_limited[3]);

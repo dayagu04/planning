@@ -238,7 +238,7 @@
     "dis_curv": 50.0,
     "v_start": 0.3,
     "obstacle_v_start": 0.5,
-    "distance_stop": 1.0,
+    "distance_stop": 2.0,
     "distance_start": 0.3,
     "dece_to_ramp": -1.0,
     "v_limit_ramp": 16.67,
