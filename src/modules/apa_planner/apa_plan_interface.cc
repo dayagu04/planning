@@ -81,10 +81,18 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
 
   // run planner
   bool success = false;
+#ifdef PERPENDICULAR_SIMULATION
+  std::cout << "PERPENDICULAR_SIMULATION\n";
+  if (current_state == FuncStateMachine::PARK_IN_ACTIVATE_WAIT ||
+      current_state == FuncStateMachine::PARK_IN_ACTIVATE_CONTROL) {
+    success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
+  }
+#else
   if (apa_world_ptr_->GetMeasurementsPtr()->planner_type <
       ApaWorld::NONE_PLANNER) {
     success = ApaPlanOnce(apa_world_ptr_->GetMeasurementsPtr()->planner_type);
   }
+#endif
 
   if (success) {
     planning_output_ = planner_ptr_->GetOutput();

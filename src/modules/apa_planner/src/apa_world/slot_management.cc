@@ -753,8 +753,14 @@ bool SlotManagement::UpdateSlotsInParking() {
   }
   std::cout << "select_slot_id:" << select_slot_id << std::endl;
 
+  if (frame_.slot_info_map.count(select_slot_id) == 0) {
+    std::cout << "select slot is not in slot_info_window_vec\n";
+    return false;
+  }
+  std::cout << "select slot is in slot_info_window_vec\n";
+  const uint8_t slot_idx = frame_.slot_info_map[select_slot_id];
   if (frame_.slot_info_window_vec.empty() ||
-      frame_.slot_info_window_vec[select_slot_id].IsEmpty()) {
+      frame_.slot_info_window_vec[slot_idx].IsEmpty()) {
     std::cout << "slot_info_window_vec is empty!\n";
     return false;
   }
@@ -789,7 +795,11 @@ bool SlotManagement::UpdateSlotsInParking() {
 
   common::SlotInfo select_slot;
   if (!ProcessRawSlot(select_fusion_slot, select_slot)) {
-    return false;
+    if (!select_slot.has_corner_points()) {
+      std::cout << "slot doesnot have corner points\n" << std::endl;
+      return false;
+    }
+    return true;
   }
 
   if (select_slot.is_release() == false) {

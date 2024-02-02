@@ -174,10 +174,11 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     std::vector<Eigen::Vector2d> pt;
     pt.resize(4);
     for (size_t i = 0; i < 4; ++i) {
-      pt[i] << slot_points[i].x(), slot_points[i].y();
       if (is_simulation_ && simu_param_.target_managed_slot_x_vec.size() == 4) {
         pt[i] << simu_param_.target_managed_slot_x_vec[i],
             simu_param_.target_managed_slot_y_vec[i];
+      } else {
+        pt[i] << slot_points[i].x(), slot_points[i].y();
       }
     }
     ego_slot_info.slot_corner = pt;
@@ -378,6 +379,11 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
 void PerpendicularInPlanner::GenTlane() {
   const auto measure = apa_world_ptr_->GetMeasurementsPtr();
   const auto& ego_slot_info = frame_.ego_slot_info;
+
+  bool corner_0_side_occupied = true;
+  bool corner_1_side_occupied = true;
+
+#ifndef PERPENDICULAR_SIMULATION
   const auto& target_corner_pts =
       ego_slot_info.target_managed_slot.corner_points();
 
@@ -387,8 +393,6 @@ void PerpendicularInPlanner::GenTlane() {
   Eigen::Vector2d target_corner1(target_corner_pts.corner_point(1).x(),
                                  target_corner_pts.corner_point(1).y());
 
-  bool corner_0_side_occupied = true;
-  bool corner_1_side_occupied = true;
   size_t nearby_slot_nums = 0;
 
   const auto& slot_info_vec =
@@ -420,6 +424,7 @@ void PerpendicularInPlanner::GenTlane() {
       break;
     }
   }
+#endif
 
   if (apa_param.GetParam().force_both_side_occupied) {
     corner_1_side_occupied = true;
@@ -1285,10 +1290,17 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingLimiter() {
   }
   if (s < s_proj) {
     std::cout << "path shoule be extended because of limiter\n";
-    x_vec.emplace_back(frame_.x_s_spline(s_proj));
-    y_vec.emplace_back(frame_.y_s_spline(s_proj));
-    heading_vec.emplace_back(heading_vec.back());
-    s_vec.emplace_back(s_proj);
+    while (s <= s_proj) {
+      s += simu_param_.sample_ds;
+      x_vec.emplace_back(frame_.x_s_spline(s));
+      y_vec.emplace_back(frame_.y_s_spline(s));
+      heading_vec.emplace_back(heading_vec.back());
+      s_vec.emplace_back(s);
+    }
+    // x_vec.emplace_back(frame_.x_s_spline(s_proj));
+    // y_vec.emplace_back(frame_.y_s_spline(s_proj));
+    // heading_vec.emplace_back(heading_vec.back());
+    // s_vec.emplace_back(s_proj);
   }
   frame_.current_path_length = s_vec.back();
   const size_t N = x_vec.size();

@@ -16,6 +16,8 @@
 #include "local_view.h"
 #include "planning_plan.pb.h"
 
+// #define PERPENDICULAR_SIMULATION
+
 namespace planning {
 namespace apa_planner {
 class ApaPlannerBase {
