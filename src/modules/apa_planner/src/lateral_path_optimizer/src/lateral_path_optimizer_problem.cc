@@ -23,21 +23,12 @@ void LateralPathOptimizerProblem::Init() {
   solver_config.horizon = 29;
   solver_config.state_size = STATE_SIZE;
   solver_config.input_size = INPUT_SIZE;
+  solver_config.max_al_iter = 10;
   init_state_.resize(STATE_SIZE);
   // step1 : init core with solver config
   ilqr_core_ptr_ = std::make_shared<LateralPathOptimizerCore>();
   ilqr_core_ptr_->Init(std::make_shared<LateralPathOptimizerModel>(),
                        solver_config);
-  // step2 : add cost
-  ilqr_core_ptr_->AddCost(std::make_shared<ReferenceCostTerm>());
-  ilqr_core_ptr_->AddCost(std::make_shared<TerminalCostTerm>());
-  ilqr_core_ptr_->AddCost(std::make_shared<KCostTerm>());
-  ilqr_core_ptr_->AddCost(std::make_shared<UCostTerm>());
-  ilqr_core_ptr_->AddCost(std::make_shared<KBoundCostTerm>());
-  ilqr_core_ptr_->AddCost(std::make_shared<UBoundCostTerm>());
-
-  // step3 : init debug info
-  ilqr_core_ptr_->InitAdvancedInfo();
 
   // init planning output
   const auto N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
@@ -53,7 +44,7 @@ void LateralPathOptimizerProblem::Init() {
 
 uint8_t LateralPathOptimizerProblem::Update(
     planning::common::LateralPathOptimizerInput &planning_input,
-    const uint8_t gear_cmd) {
+    const uint8_t gear_cmd, const bool is_cilqr_path_optimization_enable) {
   double model_sign_gain = 1.0;
   if (gear_cmd == pnc::geometry_lib::SEG_GEAR_INVALID) {
     return 0;
@@ -64,6 +55,9 @@ uint8_t LateralPathOptimizerProblem::Update(
   const size_t N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
   std::vector<ilqr_solver::IlqrCostConfig> cost_config_vec;
   cost_config_vec.resize(N);
+
+  std::vector<ilqr_solver::AliLqrConfig> alilqr_config_vec;
+  alilqr_config_vec.resize(N);
 
   // transfer input to cost_config
   for (size_t i = 0; i < N; i++) {
@@ -77,6 +71,9 @@ uint8_t LateralPathOptimizerProblem::Update(
 
     cost_config_vec.at(i)[K_MAX] = planning_input.k_max_vec(i);
     cost_config_vec.at(i)[U_MAX] = planning_input.u_max_vec(i);
+
+    cost_config_vec.at(i)[K_MIN] = planning_input.k_min_vec(i);
+    cost_config_vec.at(i)[U_MIN] = planning_input.u_min_vec(i);
 
     if (i == N - 1) {
       cost_config_vec.at(i)[TERMINAL_FLAG] = 1;
@@ -101,25 +98,31 @@ uint8_t LateralPathOptimizerProblem::Update(
     cost_config_vec.at(i)[W_REF_THETA] = planning_input.q_ref_theta();
     cost_config_vec.at(i)[W_K] = planning_input.q_k();
     cost_config_vec.at(i)[W_U] = planning_input.q_u();
-    cost_config_vec.at(i)[W_K_BOUND] = planning_input.q_k_bound();
-    cost_config_vec.at(i)[W_U_BOUND] = planning_input.q_u_bound();
     cost_config_vec.at(i)[MODEL_SIGN_GAIN] = model_sign_gain;
+
+    // alilqr
+    alilqr_config_vec.at(i)[W_K_HARDBOUND] = 1.0;
+    alilqr_config_vec.at(i)[W_U_HARDBOUND] = 1.0;
+    alilqr_config_vec.at(i)[L_K_HARDBOUND] = 0.0;
+    alilqr_config_vec.at(i)[L_U_HARDBOUND] = 0.0;
+
+    alilqr_config_vec.at(i)[PHI_SCALE] = 6.0;
+    alilqr_config_vec.at(i)[CONSTRAINT_CONFIG_SIZE] = 2;
   }
 
   // set const config
   ilqr_core_ptr_->SetCostConfig(cost_config_vec);
+  ilqr_core_ptr_->SetAliLqrConfig(alilqr_config_vec);
 
   // set solver config (ds)
   double ds =
       planning_input.ref_s() / ilqr_core_ptr_->GetSolverConfigPtr()->horizon;
   ilqr_solver::iLqrSolverConfig solver_config;
+  solver_config.model_dt = ds;
   solver_config.horizon = 29;
   solver_config.state_size = STATE_SIZE;
   solver_config.input_size = INPUT_SIZE;
-  solver_config.model_dt = ds;
-  solver_config.warm_start_enable = false;
-  solver_config.du_tol =
-      0.1 * planning_input.curv_factor() / planning_input.ref_vel();
+  solver_config.max_al_iter = 10;
 
   ilqr_core_ptr_->SetSolverConfig(solver_config);
 
@@ -128,7 +131,33 @@ uint8_t LateralPathOptimizerProblem::Update(
       planning_input.init_state().y(), planning_input.init_state().theta(),
       planning_input.init_state().k();
 
-  ilqr_core_ptr_->Solve(init_state_);
+  if (is_cilqr_path_optimization_enable) {
+    std::cout << "cilqr" << std::endl;
+    // step2 : add cost
+    ilqr_core_ptr_->AddCost(std::make_shared<ReferenceCostTerm>());
+    ilqr_core_ptr_->AddCost(std::make_shared<TerminalCostTerm>());
+    ilqr_core_ptr_->AddCost(std::make_shared<KCostTerm>());
+    ilqr_core_ptr_->AddCost(std::make_shared<UCostTerm>());
+    ilqr_core_ptr_->AddCost(std::make_shared<KBoundCostTerm>());
+    ilqr_core_ptr_->AddCost(std::make_shared<UBoundCostTerm>());
+
+    // step3 : init debug info
+    ilqr_core_ptr_->InitAdvancedInfo();
+    ilqr_core_ptr_->SolveForAliLqr(init_state_);
+  } else {
+    std::cout << "ilqr" << std::endl;
+    // step2 : add cost
+    ilqr_core_ptr_->AddCost(std::make_shared<ReferenceCostTerm>());
+    ilqr_core_ptr_->AddCost(std::make_shared<TerminalCostTerm>());
+    ilqr_core_ptr_->AddCost(std::make_shared<KCostTerm>());
+    ilqr_core_ptr_->AddCost(std::make_shared<UCostTerm>());
+    ilqr_core_ptr_->AddCost(std::make_shared<KSoftBoundCostTerm>());
+    ilqr_core_ptr_->AddCost(std::make_shared<USoftBoundCostTerm>());
+
+    // step3 : init debug info
+    ilqr_core_ptr_->InitAdvancedInfo();
+    ilqr_core_ptr_->Solve(init_state_);
+  }
 
   // fail protection
   const uint8_t solver_condition =
@@ -175,7 +204,6 @@ uint8_t LateralPathOptimizerProblem::Update(
       planning_output_.mutable_u_vec()->Set(i, planning_output_.u_vec(i - 1));
     }
   }
-
   // load solver and iteration info
   planning_output_.clear_solver_info();
 

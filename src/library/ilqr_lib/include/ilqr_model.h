@@ -13,7 +13,8 @@ class iLqrModel {
     // instantiation for shared ptrs
     cost_config_vec_ptr_ = std::make_shared<std::vector<IlqrCostConfig>>();
     solver_config_ptr_ = std::make_shared<iLqrSolverConfig>();
-
+    // alilqr config for each horizon
+    alilqr_config_vec_ptr_ = std::make_shared<std::vector<AliLqrConfig>>();
     // cost stack init
     cost_stack_.clear();
     cost_stack_.reserve(MAX_COST_SIZE);
@@ -58,8 +59,16 @@ class iLqrModel {
     *cost_config_vec_ptr_ = cost_config;
   }
 
+  void SetAliLqrConfig(const std::vector<AliLqrConfig> &alilqr_config) {
+    *alilqr_config_vec_ptr_ = alilqr_config;
+  }
+
   std::shared_ptr<std::vector<IlqrCostConfig>> GetiLqrCostConfigPtr() {
     return cost_config_vec_ptr_;
+  }
+
+  std::shared_ptr<std::vector<AliLqrConfig>> GetAliLqrConfigPtr() {
+    return alilqr_config_vec_ptr_;
   }
 
   std::shared_ptr<iLqrSolverConfig> GetSolverConfigPtr() {
@@ -87,6 +96,8 @@ class iLqrModel {
   // cost config for each horizon
   std::shared_ptr<std::vector<IlqrCostConfig>> cost_config_vec_ptr_;
 
+  // alilqr config for each horizon
+  std::shared_ptr<std::vector<AliLqrConfig>> alilqr_config_vec_ptr_;
   // solver config
   std::shared_ptr<iLqrSolverConfig> solver_config_ptr_;
 

@@ -14,7 +14,9 @@ enum iLqrCostConfigId {
   TERMINAL_Y,
   TERMINAL_X,
   K_MAX,
+  K_MIN,
   U_MAX,
+  U_MIN,
   W_REF_X,
   W_REF_Y,
   W_REF_THETA,
@@ -35,8 +37,10 @@ enum iLqrCostId {
   TERMINAL_COST,
   U_COST,
   K_COST,
-  K_BOUND_COST,
-  U_BOUND_COST,
+  K_HARDBOUND_COST,
+  U_HARDBOUND_COST,
+  K_SOFTBOUND_COST,
+  U_SOFTBOUND_COST,
   COST_SIZE
 };
 
@@ -110,8 +114,9 @@ class KBoundCostTerm : public ilqr_solver::BaseCostTerm {
                           ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
                           ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
                           ilqr_solver::LuuMT & /*luu*/) override;
+
   std::string GetCostString() override { return typeid(this).name(); }
-  uint8_t GetCostId() override { return K_BOUND_COST; }
+  uint8_t GetCostId() override { return K_HARDBOUND_COST; }
 };
 
 class UBoundCostTerm : public ilqr_solver::BaseCostTerm {
@@ -126,8 +131,38 @@ class UBoundCostTerm : public ilqr_solver::BaseCostTerm {
                           ilqr_solver::LxuMT & /*lxu*/,
                           ilqr_solver::LuuMT &luu) override;
   std::string GetCostString() override { return typeid(this).name(); }
-  uint8_t GetCostId() override { return U_BOUND_COST; }
+  uint8_t GetCostId() override { return U_HARDBOUND_COST; }
 };
+
+class KSoftBoundCostTerm : public ilqr_solver::BaseCostTerm {
+ public:
+  KSoftBoundCostTerm() = default;
+  double GetCost(const ilqr_solver::State &x,
+                 const ilqr_solver::Control & /*u*/) override;
+  void GetGradientHessian(const ilqr_solver::State &x,
+                          const ilqr_solver::Control & /*u*/,
+                          ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
+                          ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
+                          ilqr_solver::LuuMT & /*luu*/) override;
+  std::string GetCostString() override { return typeid(this).name(); }
+  uint8_t GetCostId() override { return K_SOFTBOUND_COST; }
+};
+
+class USoftBoundCostTerm : public ilqr_solver::BaseCostTerm {
+ public:
+  USoftBoundCostTerm() = default;
+  double GetCost(const ilqr_solver::State & /*x*/,
+                 const ilqr_solver::Control &u) override;
+  void GetGradientHessian(const ilqr_solver::State & /*x*/,
+                          const ilqr_solver::Control &u,
+                          ilqr_solver::LxMT & /*lx*/, ilqr_solver::LuMT &lu,
+                          ilqr_solver::LxxMT & /*lxx*/,
+                          ilqr_solver::LxuMT & /*lxu*/,
+                          ilqr_solver::LuuMT &luu) override;
+  std::string GetCostString() override { return typeid(this).name(); }
+  uint8_t GetCostId() override { return U_SOFTBOUND_COST; }
+};
+
 }  // namespace apa_planner
 }  // namespace planning
 

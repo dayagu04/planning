@@ -913,7 +913,7 @@ const bool DubinsLibrary::OneStepDubinsUpdate() {
     if (Solve(i)) {
       if (output_.gear_change_count == 0 &&
           output_.line_arc_radius >= input_.radius) {
-        std::cout << "line arc success!" << std::endl;
+        // std::cout << "line arc success!" << std::endl;
         return true;
       }
     }
@@ -925,7 +925,7 @@ const bool DubinsLibrary::OneStepDubinsUpdate() {
     for (size_t j = 0; j < DubinsLibrary::DUBINS_TYPE_COUNT; ++j) {
       if (Solve(j, i)) {
         if (output_.gear_change_count == 0) {
-          std::cout << "dubins success!" << std::endl;
+          // std::cout << "dubins success!" << std::endl;
           return true;
         }
       }

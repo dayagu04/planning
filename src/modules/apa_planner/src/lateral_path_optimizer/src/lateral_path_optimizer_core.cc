@@ -37,6 +37,11 @@ bool LateralPathOptimizerCore::ForwardPass(double &new_cost, double &expected,
           alpha * k_vec_[i] + K_vec_[i] * (xk_new_vec_[i] - xk_vec_[i]);
 
       uk_new_vec_[i] = uk_vec_[i] + du;
+
+      // double tmp_u = uk_new_vec_[i][U];
+      // const auto u_com = pnc::mathlib::Limit(tmp_u, 0.3 * 400 / 57.3 / 15
+      // / 1.688); uk_new_vec_[i][U] = u_com;
+
       du_norm_vec_[i] = du.norm();
 
       new_cost += ilqr_model_ptr_->GetCost(xk_new_vec_[i], uk_new_vec_[i], i);
@@ -44,10 +49,9 @@ bool LateralPathOptimizerCore::ForwardPass(double &new_cost, double &expected,
       xk_new_vec_[i + 1] = ilqr_model_ptr_->UpdateDynamicsOneStep(
           xk_new_vec_[i], uk_new_vec_[i], i);
 
-      double tmp_k = 0.0;
-      const auto k_com = xk_new_vec_[i + 1][StateId::K];
-      tmp_k = pnc::mathlib::Limit(k_com, 1.0 / 5.5);
-      xk_new_vec_[i + 1][StateId::K] = tmp_k;
+      // double tmp_k =  xk_new_vec_[i + 1][K];
+      // const auto k_com = pnc::mathlib::Limit(tmp_k, 1.0 / 5.5);
+      // xk_new_vec_[i + 1][K] = k_com;
 
       // if (std::isnan(xk_new_vec_[i + 1].norm()) || 1) {
       //   std::cout << "-------------------debug_info ------------" <<

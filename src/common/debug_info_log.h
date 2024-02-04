@@ -61,6 +61,16 @@ class DebugInfoManager : public planning::common::Arena {
 #define JSON_READ_VALUE(var_name, type, json_name) \
   var_name = config.get<type>(json_name, false, var_name)
 
+#define DEBUG_PRINT_ENABLE
+
+#ifdef DEBUG_PRINT_ENABLE
+#define DEBUG_PRINT(content) std::cout << content << std::endl
+#else
+#define DEBUG_PRINT(content)
+#endif
+
+#define TMP_DEBUG_PRINT(content) std::cout << content << std::endl
+
 class Utils {
  public:
   Utils(){};

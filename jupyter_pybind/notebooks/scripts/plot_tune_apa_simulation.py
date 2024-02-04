@@ -11,20 +11,7 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/planning-5370375c/test_9.00000'
-bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_32694/parking/20240116/20240116-11-07-15/park_in_data_collection_CHERY_TIGGO9_32694_MANUAL_ALL_2024-01-16-11-07-16_no_camera.record'
-#bag_path = '/data_cold/abu_zone/autoparse/jac_s811_58977/parking/20240118/20240118-17-20-08/park_in__JAC_S811_58977_MANUAL_ALL_2024-01-18-17-20-08_no_camera.record'
-#bag_path = '/data_cold/abu_zone/autoparse/jac_s811_58977/parking/20240118/20240118-17-21-07/park_in__JAC_S811_58977_MANUAL_ALL_2024-01-18-17-21-07_no_camera.record'
-bag_path = '/data_cold/abu_zone/APA/planning-5370375c/tmp0122.00000'
-bag_path = '/data_cold/abu_zone/APA/planning-5887aac3/test_13.00000'
-bag_path = '/data_cold/abu_zone/autoparse/jac_s811_96tj0/parking/20240122/20240122-16-24-07/park_in_data_collection_JAC_S811_96TJ0_MANUAL_ALL_2024-01-22-16-24-07_no_camera.record'
-bag_path = '/data_cold/abu_zone/autoparse/jac_s811_58977/parking/20240116/20240116-10-25-06/park_in__JAC_S811_58977_MANUAL_ALL_2024-01-16-10-25-06_no_camera.record'
-bag_path = '/data_cold/abu_zone/APA/s2apa0124/control_bfeb734/test_0.00000'
-bag_path = '/data_cold/abu_zone/APA/s2apa0129/planning-03f2d195/test_4.00000'
-#bag_path = '/data_cold/abu_zone/autoparse/jac_s811_96tj0/parking/20240129/20240129-14-36-19/park_in_data_collection_JAC_S811_96TJ0_MANUAL_ALL_2024-01-29-14-36-19_no_camera.record'
-#bag_path = '/data_cold/abu_zone/autoparse/jac_s811_96tj0/parking/20240123/20240123-15-24-08/park_in_data_collection_JAC_S811_96TJ0_MANUAL_ALL_2024-01-23-15-24-08_no_camera.record'
-bag_path = '/data_cold/abu_zone/autoparse/jac_s811_58977/parking/20240130/20240130-16-36-20/park_in__JAC_S811_58977_MANUAL_ALL_2024-01-30-16-36-20_no_camera.record'
-bag_path = '/data_cold/abu_zone/autoparse/jac_s811_96tj0/parking/20240131/20240131-16-53-16/park_in_data_collection_JAC_S811_96TJ0_MANUAL_ALL_2024-01-31-16-53-16_no_camera.record'
+bag_path = '/data_cold/abu_zone/autoparse/jac_s811_96tj0/parking/20240202/'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -64,6 +51,7 @@ class LocalViewSlider:
     self.select_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='18%'), description= "select_id",min=0, max=20, value=0, step=1)
     self.force_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_plan",min=0, max=1, value=0, step=1)
     self.is_path_optimization_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "path_optimization",min=0, max=1, value=0, step=1)
+    self.is_cilqr_enable_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "cilqr_enable",min=0, max=1, value=0, step=1)
     self.is_reset_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_reset",min=0, max=1, value=0, step=1)
     self.is_complete_path_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_complete_path",min=0, max=1, value=0, step=1)
     self.sample_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "sample_ds",min=0.02, max=2.0, value=0.12, step=0.02)
@@ -76,6 +64,7 @@ class LocalViewSlider:
                         select_id = self.select_id_slider,
                         force_plan = self.force_plan_slider,
                         is_path_optimization = self.is_path_optimization_slider,
+                        is_cilqr_enable = self.is_cilqr_enable_slider,
                         is_reset = self.is_reset_slider,
                         is_complete_path = self.is_complete_path_slider,
                         sample_ds = self.sample_ds_slider,
@@ -84,7 +73,7 @@ class LocalViewSlider:
                         heading_dif = self.heading_dif_slider)
 
 ### sliders callback
-def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
+def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
   kwargs = locals()
   update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data)
   index_map = bag_loader.get_msg_index(bag_time)
@@ -151,7 +140,7 @@ def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_re
                                     loc_msg.SerializeToString(),
                                     vs_msg.SerializeToString(),
                                     wave_msg.SerializeToString(),
-                                    select_id, force_plan, is_path_optimization, is_reset, is_complete_path, sample_ds, target_managed_slot_x_vec, target_managed_slot_y_vec,
+                                    select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec)
 
 

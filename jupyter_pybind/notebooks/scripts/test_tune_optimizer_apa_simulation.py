@@ -15,7 +15,7 @@ from lib.load_local_view_parking import *
 
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/0131/test_3.00000'
+bag_path = '/data_cold/abu_zone/APA/planning-3be4f612/test_0.00000'
 frame_dt = 0.1  # sec
 parking_flag = True
 
@@ -178,9 +178,10 @@ class LocalViewSlider:
 # sliders callback
 
 
-def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_cilqr_optimization, is_reset, is_complete_path, sample_ds,
-                    q_ref_xy, q_ref_theta, q_terminal_xy, q_terminal_theta, q_k, q_u, q_k_bound, q_u_bound,
-                    lon_pos_dif, lat_pos_dif, heading_dif):
+# def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_reset, is_complete_path, sample_ds,
+#                     q_ref_xy, q_ref_theta, q_terminal_xy, q_terminal_theta, q_k, q_u, q_k_bound, q_u_bound,
+#                     lon_pos_dif, lat_pos_dif, heading_dif):
+for bag_time in np.arange(0.0, 19.6, 0.1):
     kwargs = locals()
     update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data)
     index_map = bag_loader.get_msg_index(bag_time)
@@ -214,6 +215,11 @@ def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_ci
             'x': [],
         })
 
+
+    lon_pos_dif = 0.0
+    lat_pos_dif = 0.0
+    heading_dif = 0.0
+
     current_ego_x = loc_msg.pose.local_position.x
     current_ego_y = loc_msg.pose.local_position.y
     sim_ego_heading = loc_msg.pose.euler_angles.yaw + heading_dif / 57.2958
@@ -246,13 +252,14 @@ def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_ci
         'car_yn': car_yn,
     })
 
+
     res = optimizer_apa_simulation_py.InterfaceUpdateParam(soc_state_msg.SerializeToString(),
                                                            fus_parking_msg.SerializeToString(),
                                                            loc_msg.SerializeToString(),
                                                            vs_msg.SerializeToString(),
                                                            wave_msg.SerializeToString(),
-                                                           select_id, force_plan, is_path_optimization, is_cilqr_optimization, is_reset, is_complete_path, sample_ds,
-                                                           q_ref_xy, q_ref_theta, q_terminal_xy, q_terminal_theta, q_k, q_u, q_k_bound, q_u_bound)
+                                                           6, False, True, False, False, False, 0.02,
+                                                           100.0, 100.0, 9000.0, 9000.0, 10.0, 10.0, 100.0, 50.0)
 
     data_planning_tune.data = {'plan_path_x': [],
                                'plan_path_y': [],
@@ -305,9 +312,6 @@ def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_ci
         planning_debug = planning_debug_info_pb2.PlanningDebugInfo()
         planning_debug_tmp = optimizer_apa_simulation_py.GetPlanningDebugInfo()
         planning_debug.ParseFromString(planning_debug_tmp)
-
-        print("terminal pos error = ", planning_debug.lateral_path_optimizer_output.terminal_pos_error)
-        print("terminal heading error = ", planning_debug.lateral_path_optimizer_output.terminal_heading_error)
 
         x_vec_origin = []
         y_vec_origin = []
@@ -385,8 +389,8 @@ def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_ci
             's_vec_origin_u': s_vec_tune
         })
 
-    push_notebook()
+    # push_notebook()
 
 
-bkp.show(row(fig1, column(fig4, fig5, fig2, fig3, fig6)), notebook_handle=True)
-slider_class = LocalViewSlider(slider_callback)
+# bkp.show(row(fig1, column(fig4, fig5, fig2, fig3, fig6)), notebook_handle=True)
+# slider_class = LocalViewSlider(slider_callback)

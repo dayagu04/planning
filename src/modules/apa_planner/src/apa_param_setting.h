@@ -56,6 +56,7 @@ struct ApaParameters {
   double finish_lon_err = 0.2;
   double finish_heading_err = 0.88;
   double finish_uss_slot_occupied_ratio = 0.668;
+  double finish_heading_err_loose = 2.868;
 
   // check fail params
   double stuck_failed_time = 9.0;
@@ -103,6 +104,16 @@ struct ApaParameters {
   double occupied_pt_inside_dy = 0.0;
   bool force_both_side_occupied = true;
   double width_threshold = 0.1;
+  // parallel t lane params
+  double parallel_vacant_pt_outside_dx = 2.0;
+  double parallel_vacant_pt_outside_dy = 1.7;
+  double parallel_vacant_pt_inside_dx = 3.0;
+  double parallel_vacant_pt_inside_dy = 1.7;
+  double parallel_occupied_pt_outside_dx = 0.0;
+  double parallel_occupied_pt_outside_dy = 0.1;
+  double parallel_occupied_pt_inside_dx = 0.0;
+  double parallel_occupied_pt_inside_dy = 0.3;
+  double curb_offset = 3.0;
 
   // construce obstacles params
   double channel_width = 12.28;
@@ -158,12 +169,13 @@ struct ApaParameters {
   double multi_plan_min_lat_err = 0.5;
   double multi_plan_min_heading_err = 12.0;
   double multi_plan_max_occupied_ratio = 0.8;
-  bool lateral_path_optimization_enable = false;
   double adjust_plan_max_heading1_err = 8.8;
   double adjust_plan_max_lat_err = 0.8;
   double adjust_plan_max_heading2_err = 15.0;
   double min_gear_path_length = 0.25;
-
+  bool cilqr_path_optimization_enable = false;
+  bool perpendicular_lat_opt_enable = false;
+  bool parallel_lat_opt_enable = false;
   // slot managent params
   bool release_slot_by_prepare = false;
   // slot update

@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "geometry_math.h"
+#include "ilqr_define.h"
 #include "math_lib.h"
 
 using namespace pnc::mathlib;
@@ -104,6 +105,83 @@ void UCostTerm::GetGradientHessian(const ilqr_solver::State & /*x*/,
 double KBoundCostTerm::GetCost(const ilqr_solver::State &x,
                                const ilqr_solver::Control & /*u*/) {
   double cost = 0.0;
+  if (Square(x[K]) - Square(cost_config_ptr_->at(K_MAX)) +
+          alilqr_config_ptr_->at(ilqr_solver::L_K_HARDBOUND) /
+              alilqr_config_ptr_->at(ilqr_solver::W_K_HARDBOUND) >
+      0.0) {
+    cost += 0.5 * alilqr_config_ptr_->at(ilqr_solver::W_K_HARDBOUND) *
+            Square(Square(x[K]) - Square(cost_config_ptr_->at(K_MAX)) +
+                   alilqr_config_ptr_->at(ilqr_solver::L_K_HARDBOUND) /
+                       alilqr_config_ptr_->at(ilqr_solver::W_K_HARDBOUND));
+  }
+  return cost;
+}
+
+void KBoundCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
+  if (Square(x[K]) - Square(cost_config_ptr_->at(K_MAX)) +
+          alilqr_config_ptr_->at(ilqr_solver::L_K_HARDBOUND) /
+              alilqr_config_ptr_->at(ilqr_solver::W_K_HARDBOUND) >
+      0.0) {
+    lx(K) += (alilqr_config_ptr_->at(ilqr_solver::W_K_HARDBOUND) *
+                  (Square(x[K]) - Square(cost_config_ptr_->at(K_MAX))) +
+              alilqr_config_ptr_->at(ilqr_solver::L_K_HARDBOUND)) *
+             (2.0 * x[K]);
+
+    lxx(K, K) +=
+        4.0 * Square(x[K]) *
+            alilqr_config_ptr_->at(ilqr_solver::W_K_HARDBOUND) +
+        2.0 * (alilqr_config_ptr_->at(ilqr_solver::W_K_HARDBOUND) *
+                   (Square(x[K]) - Square(cost_config_ptr_->at(K_MAX))) +
+               alilqr_config_ptr_->at(ilqr_solver::L_K_HARDBOUND));
+  }
+}
+
+double UBoundCostTerm::GetCost(const ilqr_solver::State & /*x*/,
+                               const ilqr_solver::Control &u) {
+  double cost = 0.0;
+  if (Square(u[U]) - Square(cost_config_ptr_->at(U_MAX)) +
+          alilqr_config_ptr_->at(ilqr_solver::L_U_HARDBOUND) /
+              alilqr_config_ptr_->at(ilqr_solver::W_U_HARDBOUND) >
+      0.0) {
+    cost += 0.5 * alilqr_config_ptr_->at(ilqr_solver::W_U_HARDBOUND) *
+            Square(Square(u[U]) - Square(cost_config_ptr_->at(U_MAX)) +
+                   alilqr_config_ptr_->at(ilqr_solver::L_U_HARDBOUND) /
+                       alilqr_config_ptr_->at(ilqr_solver::W_U_HARDBOUND));
+  }
+  return cost;
+}
+
+void UBoundCostTerm::GetGradientHessian(const ilqr_solver::State & /*x*/,
+                                        const ilqr_solver::Control &u,
+                                        ilqr_solver::LxMT & /*lx*/,
+                                        ilqr_solver::LuMT &lu,
+                                        ilqr_solver::LxxMT & /*lxx*/,
+                                        ilqr_solver::LxuMT & /*lxu*/,
+                                        ilqr_solver::LuuMT &luu) {
+  if (Square(u[U]) - Square(cost_config_ptr_->at(U_MAX)) +
+          alilqr_config_ptr_->at(ilqr_solver::L_U_HARDBOUND) /
+              alilqr_config_ptr_->at(ilqr_solver::W_U_HARDBOUND) >
+      0.0) {
+    lu(U) += (alilqr_config_ptr_->at(ilqr_solver::W_U_HARDBOUND) *
+                  (Square(u[U]) - Square(cost_config_ptr_->at(U_MAX))) +
+              alilqr_config_ptr_->at(ilqr_solver::L_U_HARDBOUND)) *
+             (2.0 * u[U]);
+
+    luu(U, U) +=
+        4.0 * Square(u[U]) *
+            alilqr_config_ptr_->at(ilqr_solver::W_U_HARDBOUND) +
+        2.0 * (alilqr_config_ptr_->at(ilqr_solver::W_U_HARDBOUND) *
+                   (Square(u[U]) - Square(cost_config_ptr_->at(U_MAX))) +
+               alilqr_config_ptr_->at(ilqr_solver::L_U_HARDBOUND));
+  }
+}
+
+double KSoftBoundCostTerm::GetCost(const ilqr_solver::State &x,
+                                   const ilqr_solver::Control & /*u*/) {
+  double cost = 0.0;
   if (x(K) > cost_config_ptr_->at(K_MAX)) {
     cost = 0.5 * cost_config_ptr_->at(W_K_BOUND) *
            Square(x[K] - cost_config_ptr_->at(K_MAX));
@@ -114,7 +192,7 @@ double KBoundCostTerm::GetCost(const ilqr_solver::State &x,
   return cost;
 }
 
-void KBoundCostTerm::GetGradientHessian(
+void KSoftBoundCostTerm::GetGradientHessian(
     const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
     ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
     ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
@@ -130,8 +208,8 @@ void KBoundCostTerm::GetGradientHessian(
   }
 }
 
-double UBoundCostTerm::GetCost(const ilqr_solver::State & /*x*/,
-                               const ilqr_solver::Control &u) {
+double USoftBoundCostTerm::GetCost(const ilqr_solver::State & /*x*/,
+                                   const ilqr_solver::Control &u) {
   double cost = 0.0;
   if (u(U) > cost_config_ptr_->at(U_MAX)) {
     cost = 0.5 * cost_config_ptr_->at(W_U_BOUND) *
@@ -144,13 +222,13 @@ double UBoundCostTerm::GetCost(const ilqr_solver::State & /*x*/,
   return cost;
 }
 
-void UBoundCostTerm::GetGradientHessian(const ilqr_solver::State & /*x*/,
-                                        const ilqr_solver::Control &u,
-                                        ilqr_solver::LxMT & /*lx*/,
-                                        ilqr_solver::LuMT &lu,
-                                        ilqr_solver::LxxMT & /*lxx*/,
-                                        ilqr_solver::LxuMT & /*lxu*/,
-                                        ilqr_solver::LuuMT &luu) {
+void USoftBoundCostTerm::GetGradientHessian(const ilqr_solver::State & /*x*/,
+                                            const ilqr_solver::Control &u,
+                                            ilqr_solver::LxMT & /*lx*/,
+                                            ilqr_solver::LuMT &lu,
+                                            ilqr_solver::LxxMT & /*lxx*/,
+                                            ilqr_solver::LxuMT & /*lxu*/,
+                                            ilqr_solver::LuuMT &luu) {
   if (u(U) > cost_config_ptr_->at(U_MAX)) {
     lu(U) +=
         cost_config_ptr_->at(W_U_BOUND) * (u(U) - cost_config_ptr_->at(U_MAX));

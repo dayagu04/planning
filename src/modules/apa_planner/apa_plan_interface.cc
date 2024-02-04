@@ -76,7 +76,7 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   }
 
   // run apa world, always run when enter apa
-  std::cout << "---- apa_world: Update() ---\n";
+  DEBUG_PRINT("---- apa_world: Update() ---");
   apa_world_ptr_->Update(local_view_ptr);
 
   // run planner
@@ -218,6 +218,8 @@ void ApaPlanInterface::SyncParameters() {
 
   JSON_READ_VALUE(apa_param.SetPram().finish_uss_slot_occupied_ratio, double,
                   "finish_uss_slot_occupied_ratio");
+  JSON_READ_VALUE(apa_param.SetPram().finish_heading_err_loose, double,
+                  "finish_heading_err_loose");
 
   // check fail params
   JSON_READ_VALUE(apa_param.SetPram().stuck_failed_time, double,
@@ -316,6 +318,33 @@ void ApaPlanInterface::SyncParameters() {
 
   JSON_READ_VALUE(apa_param.SetPram().width_threshold, double,
                   "width_threshold");
+
+  // construct parallel t-lane params
+  JSON_READ_VALUE(apa_param.SetPram().parallel_vacant_pt_outside_dx, double,
+                  "parallel_vacant_pt_outside_dx");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_vacant_pt_outside_dy, double,
+                  "parallel_vacant_pt_outside_dy");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_vacant_pt_inside_dx, double,
+                  "parallel_vacant_pt_inside_dx");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_vacant_pt_inside_dy, double,
+                  "parallel_vacant_pt_inside_dy");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_occupied_pt_outside_dx, double,
+                  "parallel_occupied_pt_outside_dx");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_occupied_pt_outside_dy, double,
+                  "parallel_occupied_pt_outside_dy");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_occupied_pt_inside_dx, double,
+                  "parallel_occupied_pt_inside_dx");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_occupied_pt_inside_dy, double,
+                  "parallel_occupied_pt_inside_dy");
+
+  JSON_READ_VALUE(apa_param.SetPram().curb_offset, double, "curb_offset");
 
   // construce obstacles params
   JSON_READ_VALUE(apa_param.SetPram().channel_width, double, "channel_width");
@@ -456,8 +485,15 @@ void ApaPlanInterface::SyncParameters() {
 
   JSON_READ_VALUE(apa_param.SetPram().adjust_plan_max_heading2_err, double,
                   "adjust_plan_max_heading2_err");
-  JSON_READ_VALUE(apa_param.SetPram().lateral_path_optimization_enable, bool,
-                  "lateral_path_optimization_enable");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_lat_opt_enable, bool,
+                  "parallel_lat_opt_enable");
+
+  JSON_READ_VALUE(apa_param.SetPram().perpendicular_lat_opt_enable, bool,
+                  "perpendicular_lat_opt_enable");
+
+  JSON_READ_VALUE(apa_param.SetPram().cilqr_path_optimization_enable, bool,
+                  "is_cilqr_path_optimization_enable");
 
   JSON_READ_VALUE(apa_param.SetPram().min_gear_path_length, double,
                   "min_gear_path_length");

@@ -30,17 +30,22 @@ class LateralPathOptimizer {
   };
   void Init();
   void Update(const std::vector<pnc::geometry_lib::PathPoint> &path_vec,
-              const uint8_t gear_cmd);
+              const uint8_t gear_cmd,
+              const bool is_cilqr_path_optimization_enable);
   void SetParam(const Parameter &param) { param_ = param; }
 
   const std::vector<pnc::geometry_lib::PathPoint> &GetOutputPathVec() {
     return output_path_vec_;
   }
 
+  const planning::common::LateralPathOptimizerOutput &GetOutputDebugInfo()
+      const {
+    return optimizer_planning_output_;
+  }
+
  private:
   void AssembleInput(const std::vector<pnc::geometry_lib::PathPoint> &path_vec);
   void AssembleOutput();
-
   void PostProcessOutput();
 
   std::shared_ptr<apa_planner::LateralPathOptimizerProblem>

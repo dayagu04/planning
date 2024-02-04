@@ -4,11 +4,14 @@
 #include <Eigen/LU>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <numeric>
 
+#include "Eigen/Core"
+#include "ilqr_define.h"
 #include "math_lib.h"
 
 using namespace pnc::mathlib;
@@ -30,6 +33,8 @@ void iLqr::Init(std::shared_ptr<iLqrModel> ilqr_model) {
 
   // solver config will also be used by model
   solver_config_ptr_ = ilqr_model->GetSolverConfigPtr();
+  alilqr_config_vec_ptr_ = ilqr_model->GetAliLqrConfigPtr();
+  cost_config_vec_ptr_ = ilqr_model->GetiLqrCostConfigPtr();
 
   // do not init solver config without config input
   // InitSolverConfig();
@@ -87,7 +92,6 @@ void iLqr::InitSolverConfig() {
 
   // du norm debug
   du_norm_vec_.resize(horizon);
-
   // solver info init
   const auto max_iter = solver_config_ptr_->max_iter;
   solver_info_.solver_condition = iLqrSolveCondition::INIT;
@@ -100,6 +104,24 @@ void iLqr::InitSolverConfig() {
 
   // +1 means considering init cost
   solver_info_.cost_iter_vec.resize(max_iter + 1);
+
+  // record al param
+  const auto max_outer_iter = solver_config_ptr_->max_al_iter;
+  const int constraint_num = solver_config_ptr_->constraint_num;
+  solver_info_.al_iteration_info.mu_k_iteration.resize(max_outer_iter,
+                                                       horizon + 1);
+  solver_info_.al_iteration_info.rho_k_iteration.resize(max_outer_iter,
+                                                        horizon + 1);
+
+  solver_info_.al_iteration_info.mu_u_iteration.resize(max_outer_iter,
+                                                       horizon + 1);
+
+  solver_info_.al_iteration_info.rho_u_iteration.resize(max_outer_iter,
+                                                        horizon + 1);
+
+  solver_info_.al_iteration_info.constraint_data_iteration.resize(
+      constraint_num, horizon + 1);
+
 #endif
 
   // init cost size
@@ -234,6 +256,8 @@ bool iLqr::BackwardPass() {
     // regularization is different
     Quuf_ = Quu_ + lambda_ * Quu_eye_;
     if (!PSDCheck(Quuf_)) {
+      std::cout << i << " Vxx[K] = " << Vxx(K, K) << std::endl;
+      std::cout << i << " luu = " << luu_vec_[i] << std::endl;
       std::cout << "wocao wocao = " << Quuf_ << std::endl;
       return false;
     }
@@ -608,8 +632,12 @@ void iLqr::PrintSolverInfo() {
             << ", solver condition = "
             << static_cast<size_t>(solver_info_.solver_condition) << std::endl;
 
-  std::cout << "iteration\tcost\t\treduction\texpect\t\tlambda\t\tLS_count\tLS_"
-               "success\tdu_norm\n";
+  std::cout << std::left << std::setw(12) << "iteration" << std::setw(12)
+            << "cost" << std::setw(12) << "reduction" << std::setw(12)
+            << "expect" << std::setw(12) << "lambda" << std::setw(12)
+            << "LS_count" << std::setw(12) << "LS_success" << std::setw(12)
+            << "du_norm"
+            << "\n";
 
   for (size_t iter = 0; iter < solver_info_.iter_count; ++iter) {
     const IterationInfo &info = solver_info_.iteration_info_vec[iter];
@@ -636,6 +664,105 @@ void iLqr::PrintSolverInfo() {
     //   }
     // }
   }
+}
+
+void iLqr::PrintAlSolverInfo() {
+  std::cout << "-------------------------------- 2. iLqr "
+               "solver info "
+               "-------------------------------- "
+            << std::endl;
+  // init info
+  std::cout << "init state = " << xk_vec_[0].transpose() << std::endl;
+
+  // iteration info
+  std::cout << "cost size = " << solver_info_.cost_size
+            << ", init cost = " << solver_info_.init_cost
+            << ", outer iteration count = " << solver_info_.outer_iter_count
+            << ", cost_derivation_value = " << solver_info_.dcost_outer
+            << ", constraint_violation = " << solver_info_.constraint_violation
+            << ", iteration count = " << solver_info_.iter_count
+            << ", solver condition = "
+            << static_cast<size_t>(solver_info_.solver_condition) << std::endl;
+
+  std::cout << std::left << std::setw(12) << "iteration" << std::setw(12)
+            << "cost" << std::setw(12) << "reduction" << std::setw(12)
+            << "expect" << std::setw(12) << "lambda" << std::setw(12)
+            << "LS_count" << std::setw(12) << "LS_success" << std::setw(12)
+            << "du_norm"
+            << "\n";
+
+  for (size_t iter = 0; iter < solver_info_.iter_count; ++iter) {
+    const IterationInfo &info = solver_info_.iteration_info_vec[iter];
+
+    std::cout << std::left << std::setw(12) << iter << std::setw(12)
+              << info.cost << std::setw(12) << info.dcost << std::setw(12)
+              << info.expect << std::setw(12) << info.lambda << std::setw(12)
+              << info.linesearch_count << std::setw(12)
+              << info.linesearch_success << std::setw(12) << info.du_norm
+              << std::endl;
+
+    // Eigen::VectorXd control;
+    // control.resize(info.u_vec.size());
+    // for (size_t i = 0; i < info.u_vec.size(); ++i) {
+    //   control[i] = info.u_vec[i].x();
+    // }
+
+    // std::cout << "----"
+    //           << "control = " << control.transpose() << std::endl;
+
+    // for (size_t i = 0; i < info.x_vec.size(); ++i) {
+    //   if (info.x_vec[i].norm() > 100000.0) {
+    //     std::cout << "bug x = " << info.x_vec[i].transpose() << std::endl;
+    //   }
+    // }
+  }
+}
+
+void iLqr::PrintAlParamInfo() {
+  std::cout << "-------------------------------- 0. ciLqr "
+               "augumented lagrangian params info "
+               "-------------------------------- "
+            << std::endl;
+  std::cout << "mu K : " << std::endl;
+  std::cout << solver_info_.al_iteration_info.mu_k_iteration.row(
+                   solver_info_.outer_iter_count)
+            << std::endl;
+
+  std::cout << "rho K : " << std::endl;
+  std::cout << solver_info_.al_iteration_info.rho_k_iteration.row(
+                   solver_info_.outer_iter_count)
+            << std::endl;
+
+  std::cout << "mu U : " << std::endl;
+  std::cout << solver_info_.al_iteration_info.mu_u_iteration.row(
+                   solver_info_.outer_iter_count)
+            << std::endl;
+
+  std::cout << "rho U : " << std::endl;
+  std::cout << solver_info_.al_iteration_info.rho_u_iteration.row(
+                   solver_info_.outer_iter_count)
+            << std::endl;
+
+  std::cout << "constraint error data :" << std::endl;
+  std::cout << "error K : \n"
+            << solver_info_.al_iteration_info.constraint_data_iteration.row(0)
+            << std::endl;
+  std::cout << "error U : \n"
+            << solver_info_.al_iteration_info.constraint_data_iteration.row(1)
+            << std::endl;
+}
+
+void iLqr::PrintAlParamInfoAfter() {
+  std::cout << "\n-------------------------------- 3. constraint error data "
+               "after ilqr "
+               "--------------------------------"
+            << std::endl;
+  std::cout << "error K : \n"
+            << solver_info_.al_iteration_info.constraint_data_iteration.row(0)
+            << std::endl;
+  std::cout << "error U : \n"
+            << solver_info_.al_iteration_info.constraint_data_iteration.row(1)
+            << std::endl;
 }
 
 void iLqr::PrintCostInfo() {
@@ -708,4 +835,222 @@ void iLqr::PrintTimeInfo() {
             << std::endl;
 #endif
 }
+
+// alilqr
+void iLqr::SolveForAliLqr(const State &x0) {
+// TODO: check feasibility of input and avoid coredump
+// InputFeasibilityCheck(xk, uk);
+
+// time tag of all start
+#ifdef __ILQR_TIMER__
+  // init time info
+  time_info_.Reset();
+  time_info_.UpdateAllStart();
+#endif
+
+  // set init x
+  xk_vec_[0] = x0;
+
+  // set first cost_map before init guess
+#ifdef __ILQR_DEBUG__
+  ilqr_model_ptr_->SetCostMapPtr(&(solver_info_.cost_map_vec[0]));
+#endif
+
+  // init guess
+  solver_config_ptr_->warm_start_enable = true;
+  ilqr_model_ptr_->InitGuess(xk_vec_, uk_vec_, cost_);
+
+  // calculate t_init_guess_ms
+#ifdef __ILQR_TIMER__
+  time_info_.t_init_guess_ms +=
+      time_info_.GetElapsed(time_info_.all_start, false);
+#endif
+
+  // update advanced info after init guess
+#ifdef __ILQR_DEBUG__
+  UpdateAdvancedInfo(0);
+#endif
+
+  // alilqr main iteration
+  AliLqrIteration();
+  // t_one_step_ms
+#ifdef __ILQR_TIMER__
+  time_info_.t_one_step_ms = time_info_.GetElapsed(time_info_.all_start, false);
+#endif
+}
+
+void iLqr::InitAliLqrSolverConfig() {
+  // solver info init
+  const auto max_iter = solver_config_ptr_->max_iter;
+  solver_info_.solver_condition = iLqrSolveCondition::INIT;
+  solver_info_.iteration_info_vec.resize(max_iter + 1);
+
+  // init advanced info
+#ifdef __ILQR_DEBUG__
+  // +1 means considering init cost
+  solver_info_.cost_map_vec.resize(max_iter + 1);
+
+  // +1 means considering init cost
+  solver_info_.cost_iter_vec.resize(max_iter + 1);
+#endif
+  // init cost size
+  solver_info_.iter_count = 0;
+  solver_info_.init_cost = 0.0;
+}
+
+// Iteration assumes uk = 0
+void iLqr::AliLqrIteration() {
+  // outer iteration
+  for (size_t al_iter = 0; al_iter < solver_config_ptr_->max_al_iter;
+       ++al_iter) {
+    // record al param
+    for (int i = 0; i < static_cast<int>(solver_config_ptr_->horizon) + 1;
+         i++) {
+      solver_info_.al_iteration_info.mu_k_iteration(al_iter, i) =
+          alilqr_config_vec_ptr_->at(i)[L_K_HARDBOUND];
+
+      solver_info_.al_iteration_info.rho_k_iteration(al_iter, i) =
+          alilqr_config_vec_ptr_->at(i)[W_K_HARDBOUND];
+
+      solver_info_.al_iteration_info.mu_u_iteration(al_iter, i) =
+          alilqr_config_vec_ptr_->at(i)[L_U_HARDBOUND];
+
+      solver_info_.al_iteration_info.rho_u_iteration(al_iter, i) =
+          alilqr_config_vec_ptr_->at(i)[W_U_HARDBOUND];
+    }
+
+    // constraint_violation
+    solver_info_.constraint_violation = MaxConstraintViolation();
+
+    // alilqr
+    solver_info_.outer_iter_count = al_iter;
+
+#ifdef __ILQR_PRINT__
+    std::cout << "iteration = " << al_iter << std::endl;
+    PrintAlParamInfo();
+#endif
+    iLqrIteration();
+
+    // constraint_violation
+    solver_info_.constraint_violation = MaxConstraintViolation();
+    // derivation_error
+    solver_info_.dcost_outer = MaxDerivationValue();
+
+    //  print info when debug
+#ifdef __ILQR_PRINT__
+    PrintCostInfo();
+    PrintAlSolverInfo();
+    PrintAlParamInfoAfter();
+    // PrintTimeInfo();
+#endif
+    // normal terminate
+
+    // fail protection / can not optimization anymore
+    if (solver_info_.solver_condition >= iLqr::BACKWARD_PASS_FAIL) {
+      break;
+    } else if (solver_info_.constraint_violation <
+               solver_config_ptr_->constraint_tolerance_tol) {
+      solver_info_.solver_condition = iLqrSolveCondition::KKT_TERMINATE;
+      break;
+    } else if (al_iter == solver_config_ptr_->max_al_iter - 1) {
+      solver_info_.solver_condition =
+          iLqrSolveCondition::MAX_OUTERITER_TERMINATE;
+      break;
+    }
+
+    UpdateAugmentedLagragian();
+    solver_config_ptr_->cost_tol *= solver_config_ptr_->cost_scale;
+
+    // init solver config  set to zero
+    InitAliLqrSolverConfig();
+// set first cost_map before init guess
+#ifdef __ILQR_DEBUG__
+    ilqr_model_ptr_->SetCostMapPtr(&(solver_info_.cost_map_vec[0]));
+#endif
+    // init guess
+    ilqr_model_ptr_->InitGuess(xk_vec_, uk_vec_, cost_);
+// calculate t_init_guess_ms
+#ifdef __ILQR_TIMER__
+    time_info_.t_init_guess_ms +=
+        time_info_.GetElapsed(time_info_.all_start, false);
+#endif
+
+// update advanced info after init guess
+#ifdef __ILQR_DEBUG__
+    UpdateAdvancedInfo(0);
+#endif
+  }
+
+}  // generate_trajectory
+
+double iLqr::MaxConstraintViolation() {
+  double max_violation = 0.0;
+  for (size_t j = 0; j < solver_config_ptr_->horizon + 1; j++) {
+    solver_info_.al_iteration_info.constraint_data_iteration(0, j) = std::max(
+        Square(xk_vec_[j][K]) - Square(cost_config_vec_ptr_->at(j)[K_MAX]),
+        -alilqr_config_vec_ptr_->at(j)[L_K_HARDBOUND] /
+            cost_config_vec_ptr_->at(j)[W_K_HARDBOUND]);
+
+    solver_info_.al_iteration_info.constraint_data_iteration(1, j) = std::max(
+        Square(uk_vec_[j][U]) - Square(cost_config_vec_ptr_->at(j)[U_MAX]),
+        -alilqr_config_vec_ptr_->at(j)[L_U_HARDBOUND] /
+            cost_config_vec_ptr_->at(j)[W_U_HARDBOUND]);
+  }
+  const auto constraint_data =
+      solver_info_.al_iteration_info.constraint_data_iteration.array().abs();
+  const auto row_sum = constraint_data.rowwise().sum();
+  max_violation = row_sum.maxCoeff();
+  return max_violation;
+}
+
+double iLqr::MaxDerivationValue() {
+  UpdateDynamicsDerivatives();
+  Eigen::VectorXd state_derivation_sum(
+      static_cast<int>(solver_config_ptr_->state_size));
+  state_derivation_sum.setZero();
+  Eigen::VectorXd input_derivation_sum(
+      static_cast<int>(solver_config_ptr_->input_size));
+  input_derivation_sum.setZero();
+  for (size_t i = 0; i < solver_config_ptr_->horizon + 1; i++) {
+    state_derivation_sum =
+        state_derivation_sum.array().abs() + lx_vec_[i].array().abs();
+    input_derivation_sum =
+        input_derivation_sum.array().abs() + lu_vec_[i].array().abs();
+  }
+  double derivation_error = std::max(state_derivation_sum.maxCoeff(),
+                                     input_derivation_sum.maxCoeff());
+  return derivation_error;
+}
+
+void iLqr::UpdateAugmentedLagragian() {
+  // update alilqr augmented parameters
+
+  for (int i = 0; i < static_cast<int>(solver_config_ptr_->horizon) + 1; i++) {
+    // k bound
+    const double l_k = alilqr_config_vec_ptr_->at(i)[L_K_HARDBOUND];
+
+    alilqr_config_vec_ptr_->at(i)[L_K_HARDBOUND] =
+        std::max(0.0, l_k + alilqr_config_vec_ptr_->at(i)[W_K_HARDBOUND] *
+                                (Square(xk_vec_[i][K]) -
+                                 Square(cost_config_vec_ptr_->at(i)[K_MAX])));
+
+    alilqr_config_vec_ptr_->at(i)[W_K_HARDBOUND] =
+        Limit(alilqr_config_vec_ptr_->at(i)[W_K_HARDBOUND] *
+                  alilqr_config_vec_ptr_->at(i)[PHI_SCALE],
+              10000.0);
+    // u bound
+    const double l_u = alilqr_config_vec_ptr_->at(i)[L_U_HARDBOUND];
+
+    alilqr_config_vec_ptr_->at(i)[L_U_HARDBOUND] =
+        std::max(0.0, l_u + alilqr_config_vec_ptr_->at(i)[W_U_HARDBOUND] *
+                                (Square(uk_vec_[i][U]) -
+                                 Square(cost_config_vec_ptr_->at(i)[U_MAX])));
+
+    alilqr_config_vec_ptr_->at(i)[W_U_HARDBOUND] =
+        Limit(alilqr_config_vec_ptr_->at(i)[W_U_HARDBOUND] *
+                  alilqr_config_vec_ptr_->at(i)[PHI_SCALE],
+              10000.0);
+  }
+}
+
 }  // namespace ilqr_solver

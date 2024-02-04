@@ -16,16 +16,16 @@ namespace apa_planner {
 #define EPS (1E-3)
 
 ilqr_solver::State x;
-Control u;
+ilqr_solver::Control u;
 
-LxMT lx, lx_dif;
-LuMT lu, lu_dif;
-LxxMT lxx, lxx_dif;
-LxuMT lxu, lxu_dif;
-LuuMT luu, luu_dif;
+ilqr_solver::LxMT lx, lx_dif;
+ilqr_solver::LuMT lu, lu_dif;
+ilqr_solver::LxxMT lxx, lxx_dif;
+ilqr_solver::LxuMT lxu, lxu_dif;
+ilqr_solver::LuuMT luu, luu_dif;
 
 ilqr_solver::IlqrCostConfig cost_config;
-
+ilqr_solver::AliLqrConfig alilqr_config_vec;
 void clear() {
   x.resize(0);
   u.resize(0);
@@ -78,17 +78,24 @@ void Init() {
   cost_config[REF_X] = 1.0;
   cost_config[REF_Y] = 1.0;
   cost_config[REF_THETA] = 1.0;
-  cost_config[TERNIMAL_THETA] = 0.1;
+  cost_config[TERMINAL_THETA] = 0.1;
+  cost_config[TERMINAL_X] = 0.1;
+  cost_config[TERMINAL_Y] = 0.1;
   cost_config[K_MAX] = 1.0 / 6;
   cost_config[U_MAX] = 0.3 * 400 / 57.3 / 15 / 1.688;
 
-  cost_config[W_REF_X] = 2.0;
-  cost_config[W_REF_Y] = 2.0;
-  cost_config[W_REF_THETA] = 2.0;
-  cost_config[W_TERNIMAL_THETA] = 100.0;
-  cost_config[W_U] = 2.0;
-  cost_config[W_K_BOUND] = 5.0;
-  cost_config[W_U_BOUND] = 3.0;
+  cost_config[W_REF_X] = 100.0;
+  cost_config[W_REF_Y] = 100.0;
+  cost_config[W_REF_THETA] = 100.0;
+  cost_config[W_TERMINAL_X] = 9000.0;
+  cost_config[W_TERMINAL_Y] = 9000.0;
+  cost_config[W_TERMINAL_THETA] = 9000.0;
+  cost_config[W_U] = 10.0;
+  cost_config[W_K] = 10.0;
+  alilqr_config_vec[ilqr_solver::W_K_HARDBOUND] = 75.0;
+  alilqr_config_vec[ilqr_solver::W_U_HARDBOUND] = 75.0;
+  alilqr_config_vec[ilqr_solver::L_K_HARDBOUND] = 0.0;
+  alilqr_config_vec[ilqr_solver::L_U_HARDBOUND] = 0.05412;
 }
 
 void SetRandomMat(Eigen::MatrixXd &A) {
@@ -128,9 +135,9 @@ void Generate() {
 
   x << GetRandomDouble(-5.0, 5.0), GetRandomDouble(-5.0, 5.0),
       GetRandomDouble(-2.0, 2.0),
-      GetRandomDouble(0.0, (cost_config[K_MAX] + 10.0));
+      GetRandomDouble(0.0, (cost_config[K_MAX] + 0.0));
 
-  u << GetRandomDouble(-1.0, 1.0) * (cost_config[U_MAX] + 10.0);
+  u << GetRandomDouble(-1.0, 1.0) * (cost_config[U_MAX] + 0.0);
 
   if (std::abs(std::abs(x(3)) - cost_config[K_MAX]) < 0.02) {
     x(3) += 0.2;
@@ -201,6 +208,7 @@ TEST(ReferenceCostTerm, ref_cost_term) {
   Init();
   Generate();
   ref_cost_term_ptr->SetConfig(&cost_config);
+  ref_cost_term_ptr->SetAliLqrConfig(&alilqr_config_vec);
   ref_cost_term_ptr->GetGradientHessian(x, u, lx, lu, lxx, lxu, luu);
 
   Print("ref_cost_term");
@@ -213,12 +221,13 @@ TEST(ReferenceCostTerm, ref_cost_term) {
 
 TEST(TernimalCostTerm, terminal_cost_term) {
   std::shared_ptr<ilqr_solver::BaseCostTerm> terminal_cost_term_ptr =
-      std::make_shared<TernimalCostTerm>();
+      std::make_shared<TerminalCostTerm>();
   clear();
   Init();
   Generate();
 
   terminal_cost_term_ptr->SetConfig(&cost_config);
+  terminal_cost_term_ptr->SetAliLqrConfig(&alilqr_config_vec);
   terminal_cost_term_ptr->GetGradientHessian(x, u, lx, lu, lxx, lxu, luu);
 
   Print("terminal_cost_term_ptr");
@@ -238,6 +247,7 @@ TEST(KBoundCostTerm, kbound_cost_term) {
   Init();
   Generate();
   kbound_cost_term_ptr->SetConfig(&cost_config);
+  kbound_cost_term_ptr->SetAliLqrConfig(&alilqr_config_vec);
   kbound_cost_term_ptr->GetGradientHessian(x, u, lx, lu, lxx, lxu, luu);
 
   Print("kbound_cost_term");
@@ -257,6 +267,7 @@ TEST(UCostTerm, u_cost_term) {
   Init();
   Generate();
   u_cost_term_ptr->SetConfig(&cost_config);
+  u_cost_term_ptr->SetAliLqrConfig(&alilqr_config_vec);
   u_cost_term_ptr->GetGradientHessian(x, u, lx, lu, lxx, lxu, luu);
 
   Print("u_cost_term");
@@ -269,13 +280,14 @@ TEST(UCostTerm, u_cost_term) {
   Compare();
 }
 
-TEST(UBoundCostTerm, lat_acc_cost_term) {
+TEST(UBoundCostTerm, u_bound_cost_term) {
   std::shared_ptr<ilqr_solver::BaseCostTerm> ubound_cost_term_ptr =
       std::make_shared<UBoundCostTerm>();
   clear();
   Init();
   Generate();
   ubound_cost_term_ptr->SetConfig(&cost_config);
+  ubound_cost_term_ptr->SetAliLqrConfig(&alilqr_config_vec);
   ubound_cost_term_ptr->GetGradientHessian(x, u, lx, lu, lxx, lxu, luu);
 
   Print("ubound_cost_term");

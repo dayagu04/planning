@@ -124,7 +124,7 @@ const bool InterfaceUpdateParam(py::bytes &func_statemachine_bytes,
                                 py::bytes &localization_info_bytes,
                                 py::bytes &vehicle_service_output_info_bytes,
                                 py::bytes &uss_wave_info_bytes, int select_id,
-                                bool force_plan, bool is_path_optimization, bool is_reset,
+                                bool force_plan, bool is_path_optimization, bool is_cilqr_optimization, bool is_reset,
                                 bool is_complete_path, double sample_ds,
                                 double q_ref_xy, double q_ref_theta,
                                 double q_terminal_xy, double q_terminal_theta,
@@ -135,10 +135,8 @@ const bool InterfaceUpdateParam(py::bytes &func_statemachine_bytes,
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
   param.is_path_optimization = is_path_optimization;
-  param.sample_ds = sample_ds;
-  param.is_reset = is_reset;
+  param.is_cilqr_path_optimization = is_cilqr_optimization,
   param.q_ref_xy = q_ref_xy;
-  param.q_ref_theta = q_ref_theta;
   param.q_terminal_xy = q_terminal_xy;
   param.q_terminal_theta = q_terminal_theta;
   param.q_k = q_k;

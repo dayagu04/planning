@@ -15,7 +15,8 @@ class LateralPathOptimizerProblem {
  public:
   void Init();
   uint8_t Update(planning::common::LateralPathOptimizerInput &planning_input,
-                 const uint8_t gear_cmd);
+                 const uint8_t gear_cmd,
+                 const bool is_cilqr_path_optimization_enable);
 
   const planning::common::LateralPathOptimizerOutput &GetOutput() {
     return planning_output_;

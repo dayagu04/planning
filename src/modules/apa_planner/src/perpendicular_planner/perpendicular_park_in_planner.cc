@@ -21,6 +21,7 @@
 #include "func_state_machine.pb.h"
 #include "general_planning_context.h"
 #include "geometry_math.h"
+#include "ifly_time.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
 #include "perpendicular_path_planner.h"
@@ -737,16 +738,32 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
   gear_command_ = planner_output.current_gear;
 
   // lateral path optimization
-  auto lateral_path_optimization_enable = false;
-
-  if (!is_simulation_) {
-    lateral_path_optimization_enable =
-        apa_param.GetParam().lateral_path_optimization_enable;
-  } else {
-    lateral_path_optimization_enable = simu_param_.is_path_optimization;
+  bool is_use_optimizer = true;
+  auto distance_approx = (planner_output.path_point_vec.front().pos -
+                          planner_output.path_point_vec.back().pos)
+                             .norm();
+  std::cout << "trajectory_approx_length = " << distance_approx << std::endl;
+  if (distance_approx < 2.0) {
+    is_use_optimizer = false;
   }
 
-  if (lateral_path_optimization_enable) {
+  auto cilqr_path_optimization_enable = false;
+  auto perpendicular_optimization_enable = false;
+
+  if (!is_simulation_) {
+    perpendicular_optimization_enable =
+        apa_param.GetParam().perpendicular_lat_opt_enable;
+
+    cilqr_path_optimization_enable =
+        apa_param.GetParam().cilqr_path_optimization_enable;
+
+  } else {
+    perpendicular_optimization_enable = simu_param_.is_path_optimization;
+    cilqr_path_optimization_enable = simu_param_.is_cilqr_path_optimization;
+  }
+
+  double lat_path_opt_cost_time_ms = 0.0;
+  if (perpendicular_optimization_enable && is_use_optimizer) {
     std::cout << "------------------------ lateral path optimization "
                  "------------------------"
               << std::endl;
@@ -768,24 +785,17 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
 
     lateral_path_optimizer_ptr_->SetParam(param);
 
+    auto time_start = IflyTime::Now_ms();
     lateral_path_optimizer_ptr_->Update(planner_output.path_point_vec,
-                                        gear_command_);
+                                        gear_command_,
+                                        cilqr_path_optimization_enable);
+    auto time_end = IflyTime::Now_ms();
+    lat_path_opt_cost_time_ms = time_end - time_start;
 
     const auto& optimized_path_vec =
         lateral_path_optimizer_ptr_->GetOutputPathVec();
 
     std::cout << "optimization path size = " << optimized_path_vec.size()
-              << std::endl;
-    std::cout << "terminal pos error = "
-              << (optimized_path_vec.back().pos -
-                  planner_output.path_point_vec.back().pos)
-                     .norm()
-              << std::endl;
-
-    std::cout << "terminal heading error = "
-              << (optimized_path_vec.back().heading -
-                  planner_output.path_point_vec.back().heading) *
-                     57.3
               << std::endl;
 
     // TODO: longitudinal path optimization
@@ -799,6 +809,17 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
 
       current_path_point_global_vec_.emplace_back(global_point);
     }
+    const auto plan_debug_info =
+        lateral_path_optimizer_ptr_->GetOutputDebugInfo();
+
+    std::cout << "lat_path_opt_cost_time_ms = " << lat_path_opt_cost_time_ms
+              << std::endl;
+
+    std::cout << "terminal point error = "
+              << plan_debug_info.terminal_pos_error() << std::endl;
+
+    std::cout << "terminal heading error = "
+              << plan_debug_info.terminal_heading_error() << std::endl;
   } else {
     current_path_point_global_vec_.clear();
     current_path_point_global_vec_.reserve(
@@ -812,6 +833,8 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
       current_path_point_global_vec_.emplace_back(global_point);
     }
   }
+
+  JSON_DEBUG_VALUE("lat_path_opt_cost_time_ms", lat_path_opt_cost_time_ms);
 
   std::cout << "current_path_point_global_vec_.size() = "
             << current_path_point_global_vec_.size() << std::endl;
@@ -959,7 +982,7 @@ const bool PerpendicularInPlanner::CheckReplan() {
   frame_.is_replan_dynamic = false;
 
   if (CheckSegCompleted()) {
-    std::cout << "replan by current segment completed!" << std::endl;
+    DEBUG_PRINT("replan by current segment completed!");
     frame_.replan_reason = SEG_COMPLETED_PATH;
     if (frame_.is_replan_by_uss) {
       frame_.replan_reason = SEG_COMPLETED_USS;
@@ -968,7 +991,7 @@ const bool PerpendicularInPlanner::CheckReplan() {
   }
 
   if (frame_.stuck_time > apa_param.GetParam().stuck_replan_time) {
-    std::cout << "replan by stuck!" << std::endl;
+    DEBUG_PRINT("replan by stuck!");
     frame_.replan_reason = STUCKED;
     return true;
   }
@@ -1533,6 +1556,20 @@ void PerpendicularInPlanner::Log() const {
                    path_plan_output.path_seg_index.first)
   JSON_DEBUG_VALUE("path_end_seg_index", path_plan_output.path_seg_index.second)
   JSON_DEBUG_VALUE("path_length", path_plan_output.length)
+
+  // lateral optimization
+  const auto plan_debug_info =
+      lateral_path_optimizer_ptr_->GetOutputDebugInfo();
+
+  if (plan_debug_info.has_terminal_pos_error()) {
+    JSON_DEBUG_VALUE("optimization_terminal_pose_error",
+                     plan_debug_info.terminal_pos_error())
+    JSON_DEBUG_VALUE("optimization_terminal_heading_error",
+                     plan_debug_info.terminal_heading_error())
+  } else {
+    JSON_DEBUG_VALUE("optimization_terminal_pose_error", 0.0)
+    JSON_DEBUG_VALUE("optimization_terminal_heading_error", 0.0)
+  }
 }
 
 }  // namespace apa_planner

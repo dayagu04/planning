@@ -1094,6 +1094,15 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       names.append("plan_traj_available")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].trajectory.available))
 
+      names.append("optimization_terminal_pose_error")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['optimization_terminal_pose_error']))
+
+      names.append("optimization_terminal_heading_error")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['optimization_terminal_heading_error']))
+
+      names.append("lat_path_opt_cost_time_ms")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['lat_path_opt_cost_time_ms']))
+
 
     # load func_state
     if bag_loader.soc_state_msg['enable'] == True:

@@ -150,7 +150,8 @@ int UpdateBytes(py::bytes &planning_input_bytes) {
           planning_input_bytes);
 
   uint8_t gear_cmd = 0;
-  pBase->Update(planning_input, gear_cmd);
+  bool is_cilqr_enable = false;
+  pBase->Update(planning_input, gear_cmd, is_cilqr_enable);
 
   return 0;
 }
@@ -181,7 +182,8 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_x, double q_ref
   planning_input.set_q_k_bound(q_k_bound);
   planning_input.set_q_u_bound(q_u_bound);
   uint8_t gear_cmd = 0;
-  pBase->Update(planning_input, gear_cmd);
+  bool is_cilqr_enable = false;
+  pBase->Update(planning_input, gear_cmd, is_cilqr_enable);
 
   return 0;
 }

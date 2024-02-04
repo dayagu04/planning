@@ -23,6 +23,7 @@ class CollisionDetector {
     double remain_car_dist = 25.0;
     double remain_obstacle_dist = 25.0;
     Eigen::Vector2d collision_point;
+    Eigen::Vector2d collision_point_global;
   };
 
   struct Paramters {

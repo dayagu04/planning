@@ -34,12 +34,14 @@ class ApaPlannerBase {
     bool is_complete_path = false;
     bool force_plan = false;
     bool is_path_optimization = false;
+    bool is_cilqr_path_optimization = false;
     bool is_reset = false;
     double sample_ds = 0.02;
     std::vector<double> target_managed_slot_x_vec;
     std::vector<double> target_managed_slot_y_vec;
     std::vector<double> target_managed_limiter_x_vec;
     std::vector<double> target_managed_limiter_y_vec;
+
     double q_ref_xy = 100.0;
     double q_ref_theta = 100.0;
     double q_terminal_xy = 1000.0;

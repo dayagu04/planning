@@ -29,9 +29,9 @@ class ParallelParInPlanner : public ApaPlannerBase {
   void PlanCore();
   void GenTlane();
   void GenObstacles();
-  void UpdateObstacles();
   void SetParkingStatus(uint8_t status);
   const bool UpdateEgoSlotInfo();
+  void UpdateSlotRealtime();
   const uint8_t PathPlanOnce();
 
   virtual void Log() const override;
@@ -54,6 +54,7 @@ class ParallelParInPlanner : public ApaPlannerBase {
 
   planning::apa_planner::ParallelPathPlanner::Tlane t_lane_;
   ParallelPathPlanner parallel_path_planner_;
+  uint8_t plan_count_ = 0;
 
   uint8_t gear_command_ = 0;
 
