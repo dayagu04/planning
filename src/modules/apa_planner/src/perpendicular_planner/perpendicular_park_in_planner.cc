@@ -1557,6 +1557,12 @@ void PerpendicularInPlanner::Log() const {
   JSON_DEBUG_VALUE("path_end_seg_index", path_plan_output.path_seg_index.second)
   JSON_DEBUG_VALUE("path_length", path_plan_output.length)
 
+  const auto uss_info = apa_world_ptr_->GetUssObstacleAvoidancePtr()->GetRemainDistInfo();
+  JSON_DEBUG_VALUE("uss_available", uss_info.is_available)
+  JSON_DEBUG_VALUE("uss_remain_dist", uss_info.remain_dist)
+  JSON_DEBUG_VALUE("uss_index", uss_info.uss_index)
+  JSON_DEBUG_VALUE("uss_car_index", uss_info.car_index)
+
   // lateral optimization
   const auto plan_debug_info =
       lateral_path_optimizer_ptr_->GetOutputDebugInfo();

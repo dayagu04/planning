@@ -11,7 +11,7 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/jac_s811_96tj0/parking/20240202/'
+bag_path = '/pnc_x86_ywwang33/planning/test_4.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 

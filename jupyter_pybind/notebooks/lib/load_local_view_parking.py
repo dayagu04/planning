@@ -198,7 +198,9 @@ class LoadCyberbag:
                          "path_plan_success", "planning_status", "spline_success", "remain_dist", "remain_dist_uss", "stuck_time",
                          "car_static_timer_by_pos", "car_static_timer_by_vel", "static_flag", "ego_heading_slot",
                          "selected_slot_id", "slot_length", "slot_width", "slot_origin_pos_x", "slot_origin_pos_y", "slot_origin_heading",
-                         "slot_occupied_ratio", "pathplan_result", "target_ego_pos_slot", "path_start_seg_index", "path_end_seg_index", "path_length"]
+                         "slot_occupied_ratio", "pathplan_result", "target_ego_pos_slot", "path_start_seg_index", "path_end_seg_index", "path_length",
+                         "uss_available", "uss_remain_dist", "uss_index", "uss_car_index",
+                         "optimization_terminal_pose_error", "optimization_terminal_heading_error", "lat_path_opt_cost_time_ms"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
                           "obstaclesX", "obstaclesY", "slot_corner_X", "slot_corner_Y", "limiter_corner_X", "limiter_corner_Y"]
@@ -904,6 +906,10 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       'car_yn': car_yn,
     })
 
+  uss_available = False
+  uss_remain_dist = 0.0
+  uss_index = 0
+  uss_car_index = 0
   # load plan debug msg
   if bag_loader.plan_debug_msg['enable'] == True and bag_loader.fus_parking_msg['enable'] == True:
     local_view_data['data_target_managed_slot'].data.update({'corner_point_x': [], 'corner_point_y': [],})
@@ -977,6 +983,17 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       'limiter_point_y': limiter_corner_Y,
     })
 
+    uss_available = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_available']
+    #print("uss_available = ", uss_available)
+    uss_available = bool(uss_available)
+    #print("uss_available = ", uss_available)
+    uss_remain_dist = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_remain_dist']
+    #print("uss_remain_dist = ", uss_remain_dist)
+    uss_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_index']
+    uss_index = int(uss_index)
+    uss_car_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_car_index']
+    uss_car_index = int(uss_car_index)
+
   # load uss wave
   if bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True:
     #get cur pose and uss wave
@@ -1031,6 +1048,23 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       'wave_text_y':text_x,
       'length':length,
     })
+
+    if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[sector_y[uss_index]],
+        'wave_y':[sector_x[uss_index]],
+        'radius':[rs[uss_index]],
+        'start_angle':[start_angle[uss_index]],
+        'end_angle':[end_angle[uss_index]],
+      })
+    else:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[],
+        'wave_y':[],
+        'radius':[],
+        'start_angle':[],
+        'end_angle':[],
+      })
 
   if plot_ctrl_flag == True:
     names = []
@@ -1202,6 +1236,7 @@ def load_local_view_figure_parking():
   data_fusion_parking_id = ColumnDataSource(data = {'id':[], 'id_text_x':[], 'id_text_y':[]})
 
   data_wave = ColumnDataSource(data = {'wave_x': [], 'wave_y': [], 'radius':[], 'start_angle':[], 'end_angle':[]})
+  data_wave_min = ColumnDataSource(data = {'wave_x': [], 'wave_y': [], 'radius':[], 'start_angle':[], 'end_angle':[]})
   data_wave_length_text = ColumnDataSource(data = {'wave_text_x': [], 'wave_text_y': [], 'length':[]})
 
   data_car_target_line = ColumnDataSource(data = {'y':[], 'x':[]})
@@ -1249,6 +1284,7 @@ def load_local_view_figure_parking():
                      'data_fusion_parking_id':data_fusion_parking_id, \
                      'data_index': data_index, \
                      'data_wave':data_wave, \
+                     'data_wave_min':data_wave_min, \
                      'data_wave_length_text':data_wave_length_text, \
                      'data_all_managed_slot':data_all_managed_slot,\
                      'data_all_managed_limiter':data_all_managed_limiter,\
@@ -1284,6 +1320,7 @@ def load_local_view_figure_parking():
   fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_fusion_parking_id, text_color='red', text_align='center', text_font_size='10pt',legend_label = 'fusion_parking_slot')
 
   fig1.wedge('wave_x','wave_y', 'radius', 'start_angle', 'end_angle',source = data_wave, fill_color="lavender", line_color="black",legend_label = 'uss_wave',alpha = 0.5, visible = False)
+  fig1.wedge('wave_x','wave_y', 'radius', 'start_angle', 'end_angle',source = data_wave_min, fill_color="blue", line_color="black",legend_label = 'uss_wave',alpha = 0.8, visible = False)
   fig1.text(x = 'wave_text_x', y = 'wave_text_y', text = 'length', source = data_wave_length_text, text_color='black', text_align='center', text_font_size='10pt',legend_label = 'uss_wave', visible = False)
 
   # debug
