@@ -320,7 +320,7 @@ class ParallelPathPlanner {
       const double radius);
 
   const uint8_t TrimPathByCollisionDetection(
-      pnc::geometry_lib::PathSegment &path_seg);
+      pnc::geometry_lib::PathSegment &path_seg, const double buffer = 0.1);
 
   const uint8_t TrimPathByCollisionDetection(
       pnc::geometry_lib::PathSegment &path_seg, Eigen::Vector2d &collision_pt);
