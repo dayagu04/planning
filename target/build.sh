@@ -1,5 +1,6 @@
 #!/bin/bash
 
+SCRIPT_DIR=$(dirname "$0")
 PRODUCT_NAME=JAC_S811
 TYPE=SYSTEM
 if [[ $# -ge 1 ]]; then
@@ -12,6 +13,7 @@ fi
 
 if [[ $TYPE == "SYSTEM" ]]; then
     echo "SYSTEM BUILD!"
+    rm -rf install/planning
     cd $SCRIPT_DIR/..
 
     make build BUILD_TYPE=Release PLATFORM=BZT PRODUCT=$PRODUCT_NAME NUM_JOB=8
@@ -25,8 +27,7 @@ if [[ $TYPE == "SYSTEM" ]]; then
 else
     echo "LOCAL BUILD!"
     rm -rf install/planning
-    # make build BUILD_TYPE=Release PLATFORM=BZT PRODUCT=$PRODUCT_NAME NUM_JOB=16
-    make build PRODUCT=$PRODUCT_NAME NUM_JOB=16
+    make build BUILD_TYPE=Release PLATFORM=BZT PRODUCT=$PRODUCT_NAME NUM_JOB=16
 
     rm ./planning.7z
     7z a ./planning.7z ./install/planning
