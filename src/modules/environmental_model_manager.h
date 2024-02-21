@@ -1,5 +1,6 @@
 #pragma once
 
+#include "agent_node_manager.h"
 #include "common/local_view.h"
 #include "common/prediction_object.h"
 #include "context/ego_planning_config.h"
@@ -48,7 +49,8 @@ class EnvironmentalModelManager {
       const Prediction::PredictionResult &prediction_result,
       double cur_timestamp_us, std::unordered_set<uint> &prediction_obj_id_set);
   bool transform_fusion_to_prediction(
-      const FusionObjects::FusionObject &fusion_object, double timestamp);
+      const FusionObjects::FusionObject &fusion_object, double timestamp,
+      std::vector<PredictionObject> &objects_infos);
   bool obstacle_prediction_update(double current_time,
                                   const LocalView &local_view);
   bool InputReady(double current_time, std::string &error_msg);
@@ -71,6 +73,7 @@ class EnvironmentalModelManager {
       traffic_light_decision_manager_ptr_ = nullptr;
   std::shared_ptr<planning::LateralObstacle> lateral_obstacle_ptr_ = nullptr;
   std::shared_ptr<planning::LaneTracksManager> lane_tracks_mgr_ptr_ = nullptr;
+  std::shared_ptr<planning::AgentNodeManager> agent_node_mgr_ptr_ = nullptr;
   double last_feed_time_[FEED_TYPE_MAX]{};
   EgoPlanningConfig ego_config_;
 };

@@ -1,5 +1,6 @@
 #include "virtual_lane_manager.h"
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -18,11 +19,11 @@
 
 namespace planning {
 
-using ad_common::hdmap::LaneGroupConstPtr;
-using ad_common::hdmap::LaneInfoConstPtr;
 using Map::CurrentRouting;
 using Map::FormOfWayType::MAIN_ROAD;
 using Map::FormOfWayType::RAMP;
+using ad_common::hdmap::LaneGroupConstPtr;
+using ad_common::hdmap::LaneInfoConstPtr;
 const double PI = 3.1415926;
 
 VirtualLaneManager::VirtualLaneManager(
@@ -94,7 +95,8 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
 
   const FusionRoad::RoadInfo* roads_ptr = &roads;
   FusionRoad::RoadInfo roads_virtual;
-  if (roads.reference_line_msg().empty()) {
+
+  if (!CheckLaneValid(roads)) {
     // 依次为常数项、一次项、二次项、三次项
     std::vector<double> current_lane_virtual_poly;
     if (session_->environmental_model().function_info().function_mode() ==
@@ -372,7 +374,10 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   }
 
   is_local_valid_ = roads_ptr->local_point_valid();
-  CalculateDistanceToRampSplitMerge(session_);
+  if (session_->environmental_model().function_info().function_mode() 
+      == common::DrivingFunctionInfo::NOA ) {
+    CalculateDistanceToRampSplitMerge(session_);
+  }
   double dis_to_first_road_split = distance_to_first_road_split();
   double dis_between_first_road_split_and_ramp =
       dis_to_first_road_split - dis_to_ramp_;
@@ -1288,6 +1293,49 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMerge(
     } else {
       std::cout << "localization invalid" << std::endl;
     }
+  } else {
+   ResetForRampInfo();
   }
 }
+
+bool VirtualLaneManager::CheckLaneValid(const FusionRoad::RoadInfo& roads) {
+  // 车道中心线出现间隔>5m的点，则拒绝
+  bool lane_valid = true;
+  const double max_y_interval = 5.0;
+  if (roads.reference_line_msg().empty()) {
+    lane_valid = false;
+  } else {
+    for (const auto& ref_line : roads.reference_line_msg()) {
+      const auto& points =
+          ref_line.lane_reference_line().virtual_lane_refline_points();
+      if (points.empty()) {
+        continue;  // 如果没有点，则跳过此参考线
+      }
+      auto prev_point_it = points.begin();
+      for (auto point_it = std::next(points.begin()); point_it != points.end();
+           ++point_it) {
+        const auto& prev_point = prev_point_it->car_point();
+        const auto& current_point = point_it->car_point();
+        double y_interval = std::fabs(current_point.y() - prev_point.y());
+        prev_point_it = point_it;
+        if (y_interval > max_y_interval) {
+          LOG_ERROR("lane_valid is error \n");
+          lane_valid = false;
+          break;
+        }
+      }
+    }
+  }
+  // TBD: 校验车道中心线的连续性
+  return lane_valid;
+}
+
+void VirtualLaneManager::ResetForRampInfo() {
+  is_on_ramp_ = false;
+  dis_to_ramp_ = NL_NMAX;
+  ramp_direction_ = RampDirection::RAMP_NONE;
+  distance_to_first_road_merge_ = NL_NMAX;
+  distance_to_first_road_split_ = NL_NMAX;
+}
+
 }  // namespace planning

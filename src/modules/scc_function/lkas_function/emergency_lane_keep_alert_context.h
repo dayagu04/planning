@@ -42,7 +42,7 @@ class EmergencyLaneKeepAlert {
   planning::AeraVel r_bsd_aera_vel_;
   planning::AeraVel f_lca_aera_vel_;
   planning::AeraVel r_lca_aera_vel_;
-  float32 ego_curvature;
+  double ego_curvature;
 };
 
 }  // namespace planning

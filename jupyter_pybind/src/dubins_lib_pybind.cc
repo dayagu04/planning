@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 
-#include "apa_planner/dubins_lib/dubins_lib.h"
+#include "dubins_lib.h"
 
 namespace py = pybind11;
 using namespace pnc::dubins_lib;

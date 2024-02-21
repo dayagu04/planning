@@ -1,10 +1,14 @@
 #include "reference_path.h"
+
 #include <cmath>
+
 #include "ego_state_manager.h"
 #include "ifly_time.h"
 #include "math/math_utils.h"
 #include "obstacle_manager.h"
 #include "session.h"
+#include "utils/kd_path.h"
+#include "utils/path_point.h"
 #include "vec2d.h"
 namespace planning {
 
@@ -14,12 +18,12 @@ void ReferencePath::init() {
   valid_ = false;
 
   // init frenet parameters
-  frenet_parameters_.zero_speed_threshold = 0.1;
-  frenet_parameters_.coord_transform_precision = 0.01;
-  frenet_parameters_.step_s = 0.3;
-  frenet_parameters_.coarse_step_s = 1.0;
-  frenet_parameters_.optimization_gamma = 0.5;
-  frenet_parameters_.max_iter = 15;
+  // frenet_parameters_.zero_speed_threshold = 0.1;
+  // frenet_parameters_.coord_transform_precision = 0.01;
+  // frenet_parameters_.step_s = 0.3;
+  // frenet_parameters_.coarse_step_s = 1.0;
+  // frenet_parameters_.optimization_gamma = 0.5;
+  // frenet_parameters_.max_iter = 15;
 }
 
 void ReferencePath::update(planning::framework::Session *session) {
@@ -40,197 +44,82 @@ void ReferencePath::update_obstacles() {
 }
 
 void ReferencePath::update_refpath_points(
-    ReferencePathPoints &raw_ref_path_points, bool is_need_density) {
+    const ReferencePathPoints &raw_ref_path_points) {
   if (raw_ref_path_points.size() <= 2) {
     LOG_ERROR("update_refpath_points: points size < 2");
     return;
   }
-  const double interp_gap_s = 3.0;
-  // Step 1) update refined path points
-  refined_ref_path_points_ = raw_ref_path_points;
-  if (is_need_density) {
-    densifying_refined_path_points(refined_ref_path_points_);
-  }
 
-  // Step 2) reset coord system from refined_ref_path_points_
-  std::vector<Point2D> coord_points;
-  for (auto iter = refined_ref_path_points_.begin();
-       iter != refined_ref_path_points_.end();) {
-    if (std::isnan(iter->path_point.x) || std::isnan(iter->path_point.y)) {
+  // Step 1) reset coord system from refined_ref_path_points_
+  auto current_time = IflyTime::Now_ms();
+  std::vector<planning_math::PathPoint> coord_path_points;
+  coord_path_points.reserve(raw_ref_path_points.size());  // 预先分配足够的空间
+  for (const auto &point : raw_ref_path_points) {
+    if (std::isnan(point.path_point.x) || std::isnan(point.path_point.y)) {
       LOG_ERROR("update_refpath_points: skip NaN point");
-      refined_ref_path_points_.erase(iter);
       continue;
     }
-    auto pt = Point2D(iter->path_point.x, iter->path_point.y);
-    if (not coord_points.empty()) {
-      auto &last_pt = coord_points.back();
-      if (planning_math::Vec2d(last_pt.x - pt.x, last_pt.y - pt.y).Length() <
-          1e-2) {
-        iter++;
+    auto pt = planning_math::PathPoint(point.path_point.x, point.path_point.y);
+    // std ::cout << "path_point: " << pt.x() << "," << pt.y() <<std::endl;
+    if (not coord_path_points.empty()) {
+      auto &last_pt = coord_path_points.back();
+      if (planning_math::Vec2d(last_pt.x() - pt.x(), last_pt.y() - pt.y())
+              .Length() < 1e-2) {
         continue;
       }
     }
-    coord_points.emplace_back(pt);
-    iter++;
+    coord_path_points.emplace_back(pt);
   }
+  auto end_time = IflyTime::Now_ms();
+  LOG_DEBUG("FrenetCoordinateSystem cost1 time:%f\n", end_time - current_time);
   // 需要检查coord_points数量是否满足要求，  frenet_coord_是否构建成功
-  frenet_coord_ = std::make_shared<FrenetCoordinateSystem>(coord_points,
-                                                           frenet_parameters_);
+  frenet_coord_ = std::make_shared<KDPath>(std::move(coord_path_points));
+  double end_time2 = IflyTime::Now_ms();
+  LOG_DEBUG("FrenetCoordinateSystem cost2 time:%f\n", end_time2 - current_time);
 
   // Step 3) 1. update raw_ref_path_points' frenet points by frenet_coord_
-  //         2. if s > interp_gap_s, it need interpolate
-  for (auto iter = raw_ref_path_points.begin();
-       iter != raw_ref_path_points.end();) {
-    if (std::isnan(iter->path_point.x) || std::isnan(iter->path_point.y)) {
+  refined_ref_path_points_.clear();
+  refined_ref_path_points_.reserve(raw_ref_path_points.size());
+  for (auto pt : raw_ref_path_points) {
+    if (std::isnan(pt.path_point.x) || std::isnan(pt.path_point.y)) {
       LOG_ERROR("raw_ref_path_points: skip NaN point");
-      raw_ref_path_points.erase(iter);
       continue;
     }
     Point2D frenet_point;
-    if (frenet_coord_->CartCoord2FrenetCoord(
-            Point2D(iter->path_point.x, iter->path_point.y), frenet_point) ==
-        TRANSFORM_SUCCESS) {
-      if (iter != raw_ref_path_points.begin()) {
-        iter->path_point.s = frenet_point.x;
-        iter->path_point.kappa =
-            frenet_coord_->GetRefCurveCurvature(frenet_point.x);
-        iter->path_point.theta =
-            frenet_coord_->GetRefCurveHeading(frenet_point.x);
-        double dist = iter->path_point.s - (iter - 1)->path_point.s;
-        if (dist < 0) {
-          LOG_ERROR("raw_ref_path_points frenet x is smaller");
-          raw_ref_path_points.erase(iter);
-          continue;
-        } else if (
-            dist >
-            interp_gap_s) {  //检验原始点的密度，如果点距离大于interp_gap_s，需要插值加密
-          int num_point = ceil(dist / interp_gap_s - 1);
-          double interpolate_s = dist / (num_point + 1);
-          ReferencePathPoints ref_path_pts;
-          double dis = (iter - 1)->path_point.s;
-          for (int num = 0; num < num_point; num++) {
-            ReferencePathPoint ref_path_pt;
-            dis += interpolate_s;
-            get_reference_point_by_lon_from_raw_ref_path_points(
-                dis, raw_ref_path_points, ref_path_pt);
-            ref_path_pts.emplace_back(std::move(ref_path_pt));
-          }
-          iter = raw_ref_path_points.insert(iter, ref_path_pts.begin(),
-                                            ref_path_pts.end());
-          iter += ref_path_pts.size();
-        }
-      } else {
-        iter->path_point.s = frenet_point.x;
-        iter->path_point.kappa =
-            frenet_coord_->GetRefCurveCurvature(frenet_point.x);
-        iter->path_point.theta =
-            frenet_coord_->GetRefCurveHeading(frenet_point.x);
-      }
-    } else {
-      LOG_ERROR("trasform raw_ref_path_points frenet Failed");
-      raw_ref_path_points.erase(iter);
-      continue;
-    }
-    iter++;
-  }
+    // double start_s = pt.path_point.s - 10;
+    // double end_s = pt.path_point.s + 10;
+    // if (frenet_coord_->CartCoord2FrenetCoord(
+    //         Point2D(pt.path_point.x, pt.path_point.y), frenet_point) ==
+    //     TRANSFORM_SUCCESS) {
+    //   pt.path_point.s = frenet_point.x;
+    //   if (!refined_ref_path_points_.empty() &&
+    //       pt.path_point.s < refined_ref_path_points_.back().path_point.s) {
+    //     continue;
+    //   }
+    //   pt.path_point.kappa =
+    //   frenet_coord_->GetRefCurveCurvature(frenet_point.x);
+    //   pt.path_point.theta =
+    //   frenet_coord_->GetRefCurveHeading(frenet_point.x);
 
-  // Step 4) update refined_ref_path_points_ again
-  if (is_need_density) {
-    for (auto iter = refined_ref_path_points_.begin();
-         iter != refined_ref_path_points_.end();) {
-      if (std::isnan(iter->path_point.x) || std::isnan(iter->path_point.y)) {
-        refined_ref_path_points_.erase(iter);
+    //   refined_ref_path_points_.emplace_back(pt);
+    // }
+
+    if (frenet_coord_->XYToSL(pt.path_point.x, pt.path_point.y, &frenet_point.x,
+                              &frenet_point.y)) {
+      pt.path_point.s = frenet_point.x;
+      if (!refined_ref_path_points_.empty() &&
+          pt.path_point.s < refined_ref_path_points_.back().path_point.s) {
         continue;
       }
-      if (iter != refined_ref_path_points_.begin() &&
-          iter->path_point.s > (iter - 1)->path_point.s) {
-        refined_ref_path_points_.erase(iter);
-        continue;
-      }
-      get_reference_point_by_lon_from_raw_ref_path_points(
-          iter->path_point.s, raw_ref_path_points, *iter);
-      iter->path_point.kappa =
-          frenet_coord_->GetRefCurveCurvature(iter->path_point.s);
-      iter->path_point.theta =
-          frenet_coord_->GetRefCurveHeading(iter->path_point.s);
-      // check direction
-      if (iter != refined_ref_path_points_.begin()) {
-        planning_math::Vec2d delta{
-            iter->path_point.x - (iter - 1)->path_point.x,
-            iter->path_point.y - (iter - 1)->path_point.y};
-        planning_math::Vec2d cur_direction =
-            planning_math::Vec2d::CreateUnitVec2d(iter->path_point.theta);
-        if (cur_direction.InnerProd(delta) < 0) {
-          refined_ref_path_points_.erase(iter);
-          continue;
-        }
-      }
-      ++iter;
+      auto kd_path_point = frenet_coord_->GetPathPointByS(frenet_point.x);
+      pt.path_point.kappa = kd_path_point.kappa();
+      pt.path_point.theta = kd_path_point.theta();
+
+      refined_ref_path_points_.emplace_back(pt);
     }
-  } else {
-    refined_ref_path_points_ = raw_ref_path_points;
   }
-}
-
-void ReferencePath::densifying_refined_path_points(
-    ReferencePathPoints &refined_ref_path_points) {
-  if (refined_ref_path_points.size() < 2) {
-    return;
-  }
-
-  //对原始点进行加密
-  double interp_gap_s = 0.5;
-  std::vector<double> u_points{0};
-  std::vector<double> x_points, y_points;
-  for (auto &ref_path_point : refined_ref_path_points) {
-    x_points.push_back(ref_path_point.path_point.x);
-    y_points.push_back(ref_path_point.path_point.y);
-  }
-  for (size_t i = 0; i + 1 < x_points.size(); i++) {
-    double dist = std::sqrt(std::pow(x_points[i + 1] - x_points[i], 2) +
-                            std::pow(y_points[i + 1] - y_points[i], 2));
-    u_points.push_back(u_points[i] + dist);
-  }
-
-  planning::planning_math::spline x_spline, y_spline;
-  x_spline.set_points(u_points, x_points);
-  y_spline.set_points(u_points, y_points);
-
-  std::vector<double> us;
-  discrete(u_points[0], u_points.back(), interp_gap_s, us);
-
-  refined_ref_path_points.clear();
-  size_t index = 0;
-  for (size_t i = 0; i < us.size(); i++) {
-    ReferencePathPoint ref_path_pt;
-    auto &pp = ref_path_pt.path_point;
-    pp.x = x_spline(us[i]);
-    pp.y = y_spline(us[i]);
-
-    if (i == 0) {
-      pp.s = 0;
-    } else {
-      double dist = std::sqrt(
-          std::pow(pp.x - refined_ref_path_points[i - 1].path_point.x, 2) +
-          std::pow(pp.y - refined_ref_path_points[i - 1].path_point.y, 2));
-
-      pp.s = refined_ref_path_points[i - 1].path_point.s + dist;
-    }
-
-    // something strange
-    for (size_t j = 0; j + 1 < u_points.size(); j++) {
-      if (j < index) {
-        continue;
-      }
-
-      if (us[i] >= u_points[j] && us[i] < u_points[j + 1]) {
-        index = j;
-        break;
-      }
-      index++;
-    }
-    refined_ref_path_points.push_back(std::move(ref_path_pt));
-  }
+  double end_time3 = IflyTime::Now_ms();
+  LOG_DEBUG("FrenetCoordinateSystem cost3 time:%f\n", end_time3 - end_time2);
 }
 
 bool ReferencePath::is_obstacle_ignorable(
@@ -253,13 +142,21 @@ bool ReferencePath::get_reference_point_by_lon(
     return false;
   }
 
-  size_t pos_idx = 0;
-  while (pos_idx < refined_ref_path_points_.size() - 1) {
+  /*@cailiu: use binary search*/
+  size_t low = 0;
+  size_t high = refined_ref_path_points_.size() - 1;
+  size_t pos_idx;
+  while (low <= high) {
+    pos_idx = low + (high - low) / 2;
     if (refined_ref_path_points_[pos_idx].path_point.s <= s and
-        s <= refined_ref_path_points_[pos_idx + 1].path_point.s) {
+        (pos_idx == refined_ref_path_points_.size() - 1 or
+         s <= refined_ref_path_points_[pos_idx + 1].path_point.s)) {
       break;
+    } else if (refined_ref_path_points_[pos_idx].path_point.s < s) {
+      low = pos_idx + 1;
+    } else {
+      high = pos_idx - 1;
     }
-    pos_idx++;
   }
 
   auto &pre_reference_point = refined_ref_path_points_[pos_idx];
@@ -425,9 +322,12 @@ bool ReferencePath::transform_trajectory_point(TrajectoryPoint &traj_pt) const {
     return false;
   }
   Point2D frenet_point;
-  auto success =
-      frenet_coord_->CartCoord2FrenetCoord(Point2D{traj_pt.x, traj_pt.y},
-                                           frenet_point) == TRANSFORM_SUCCESS;
+  // auto success =
+  //     frenet_coord_->CartCoord2FrenetCoord(Point2D{traj_pt.x, traj_pt.y},
+  //                                          frenet_point) ==
+  //                                          TRANSFORM_SUCCESS;
+  auto success = frenet_coord_->XYToSL(traj_pt.x, traj_pt.y, &frenet_point.x,
+                                       &frenet_point.y);
   if (success) {
     traj_pt.s = frenet_point.x;
     traj_pt.l = frenet_point.y;

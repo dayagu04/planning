@@ -7,29 +7,29 @@ void LaneDepartWarning::Init(planning::LkasInput *lkas_input) {
   calribration_str_.enable_roadedge_switch =
       false;  // 是否使能功能的路沿场景开关 0:不使能  1:使能
   calribration_str_.enable_vehspd_display_min =
-      60.0F / 3.6F;  // 激活的最小仪表车速，单位：m/s
+      60.0 / 3.6;  // 激活的最小仪表车速，单位：m/s
   calribration_str_.enable_vehspd_display_max =
-      150.0F / 3.6F;  // 激活的最大仪表车速，单位：m/s
+      150.0 / 3.6;  // 激活的最大仪表车速，单位：m/s
   calribration_str_.disable_vehspd_display_min =
-      55.0F / 3.6F;  // 退出的最小仪表车速，单位：m/s
+      55.0 / 3.6;  // 退出的最小仪表车速，单位：m/s
   calribration_str_.disable_vehspd_display_max =
-      155.0F / 3.6F;  // 退出的最大仪表车速，单位：m/s
+      155.0 / 3.6;  // 退出的最大仪表车速，单位：m/s
   calribration_str_.supp_turn_light_recovery_time =
       2000;  // 转向灯抑制恢复时长，单位：ms
-  calribration_str_.earliest_warning_line = 0.75F;  // 触发的最早报警线，单位：m
-  calribration_str_.latest_warning_line = -0.3F;  // 触发的最晚报警线，单位：m
-  calribration_str_.reset_warning_line = 0.15F;  // 触发的报警重置线，单位：m
+  calribration_str_.earliest_warning_line = 1.5;  // 触发的最早报警线，单位：m
+  calribration_str_.latest_warning_line = -0.3;  // 触发的最晚报警线，单位：m
+  calribration_str_.reset_warning_line = 0.15;  // 触发的报警重置线，单位：m
   calribration_str_.warning_time_max = 2000;  // 最大报警时长，单位：ms
   calribration_str_.tlc_line_far =
-      1.0F;  // 针对道线触发报警的高灵敏度阈值，单位：s
+      1.0;  // 针对道线触发报警的高灵敏度阈值，单位：s
   calribration_str_.tlc_line_medium =
-      0.6F;  // 针对道线触发报警的中灵敏度阈值，单位：s
+      0.6;  // 针对道线触发报警的中灵敏度阈值，单位：s
   calribration_str_.tlc_line_near =
-      0.2F;  // 针对道线触发报警的低灵敏度阈值，单位：s
+      0.2;  // 针对道线触发报警的低灵敏度阈值，单位：s
   calribration_str_.suppression_driver_hand_trq =
-      2.0F;  // 抑制报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+      2.0;  // 抑制报警的驾驶员手力矩(绝对值)阈值，单位：Nm
   calribration_str_.kickdown_driver_hand_trq =
-      2.5F;  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+      2.5;  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
 }
 void LaneDepartWarning::Update() {
   // printf("aaa=%d\n", aaaa);
@@ -37,9 +37,9 @@ void LaneDepartWarning::Update() {
   measurement_str_.main_switch =
       lkas_input_->vehicle_info.ldw_main_switch;  // LDW功能开关状态 0:Off  1:On
   // 依据驾驶员选择的灵敏度等级,设定触发阈值
-  if (lkas_input_->vehicle_info.ldw_tlc_level == 0) {
+  if (lkas_input_->vehicle_info.ldw_tlc_level == 1) {
     measurement_str_.tlc_line_threshold = calribration_str_.tlc_line_near;
-  } else if (lkas_input_->vehicle_info.ldw_tlc_level == 1) {
+  } else if (lkas_input_->vehicle_info.ldw_tlc_level == 2) {
     measurement_str_.tlc_line_threshold = calribration_str_.tlc_line_medium;
   } else {
     measurement_str_.tlc_line_threshold = calribration_str_.tlc_line_far;
@@ -101,6 +101,7 @@ void LaneDepartWarning::RunOnce() {
   JSON_DEBUG_VALUE("lkas_function::ldw::right_kickdown_code",
                    measurement_str_.right_kickdown_code);
   JSON_DEBUG_VALUE("lkas_function::ldw::state", measurement_str_.state);
+  JSON_DEBUG_VALUE("ldw_tlc_threshold", measurement_str_.tlc_line_threshold);
 
   // LOG_DEBUG("lkas_function::ldw::left_intervention = %d \n",
   //           measurement_str_.left_intervention);
@@ -172,8 +173,9 @@ uint16 LaneDepartWarning::EnableCode() {
       /*do nothing*/
     }
   } else {
-    /*do nothing*/
+    ldw_enable_code_temp += uint16_bit[2];
   }
+
   return ldw_enable_code_temp;
 }
 uint16 LaneDepartWarning::DisableCode() {
@@ -224,7 +226,7 @@ uint16 LaneDepartWarning::DisableCode() {
       /*do nothing*/
     }
   } else {
-    /*do nothing*/
+    ldw_disable_code_temp += uint16_bit[2];
   }
 
   return ldw_disable_code_temp;
@@ -289,7 +291,7 @@ uint16 LaneDepartWarning::LeftSuppressionCode() {
   // Condition2
   // 判断是否处于允许左侧报警区域内
   if (lkas_input_->road_info.left_line_valid == true) {  // 检测到左侧道线
-    if (lkas_input_->wheel_to_line.fl_wheel_distance_to_line < 0.0F) {
+    if (lkas_input_->wheel_to_line.fl_wheel_distance_to_line < 0.0) {
       ldw_left_suppression_code_temp += uint16_bit[1];
     } else if (lkas_input_->wheel_to_line.fl_wheel_distance_to_line >
                calribration_str_.earliest_warning_line) {
@@ -300,7 +302,7 @@ uint16 LaneDepartWarning::LeftSuppressionCode() {
   } else if ((calribration_str_.enable_roadedge_switch == true) &&
              (lkas_input_->road_info.left_roadedge_valid ==
               true)) {  // 使能路沿场景&&检测到路沿
-    if (lkas_input_->wheel_to_line.fl_wheel_distance_to_roadedge < 0.0F) {
+    if (lkas_input_->wheel_to_line.fl_wheel_distance_to_roadedge < 0.0) {
       ldw_left_suppression_code_temp += uint16_bit[1];
     } else if (lkas_input_->wheel_to_line.fl_wheel_distance_to_roadedge >
                calribration_str_.earliest_warning_line) {
@@ -321,8 +323,7 @@ uint16 LaneDepartWarning::LeftSuppressionCode() {
   }
 
   // Condition4
-  if ((lkas_input_->function_state >
-       FuncStateMachine::FunctionalState::DRIVING) &&
+  if ((lkas_input_->function_state > FuncStateMachine::FunctionalState::SCC) &&
       (lkas_input_->function_state <
        FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
     ldw_left_suppression_code_temp += uint16_bit[3];
@@ -391,8 +392,7 @@ uint16 LaneDepartWarning::LeftKickDownCode() {
   }
 
   // Condition5
-  if ((lkas_input_->function_state >
-       FuncStateMachine::FunctionalState::DRIVING) &&
+  if ((lkas_input_->function_state > FuncStateMachine::FunctionalState::SCC) &&
       (lkas_input_->function_state <
        FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
     ldw_left_kickdown_code_temp += uint16_bit[4];
@@ -455,7 +455,7 @@ uint16 LaneDepartWarning::RightSuppressionCode() {
   // Condition2
   // 判断是否处于允许右侧报警区域内
   if (lkas_input_->road_info.right_line_valid == true) {  // 检测到右侧道线
-    if (lkas_input_->wheel_to_line.fr_wheel_distance_to_line > 0.0F) {
+    if (lkas_input_->wheel_to_line.fr_wheel_distance_to_line > 0.0) {
       ldw_right_suppression_code_temp += uint16_bit[1];
     } else if (lkas_input_->wheel_to_line.fr_wheel_distance_to_line <
                (-1.0 * calribration_str_.earliest_warning_line)) {
@@ -466,7 +466,7 @@ uint16 LaneDepartWarning::RightSuppressionCode() {
   } else if ((calribration_str_.enable_roadedge_switch == true) &&
              (lkas_input_->road_info.right_roadedge_valid ==
               true)) {  // 使能路沿场景&&检测到路沿
-    if (lkas_input_->wheel_to_line.fr_wheel_distance_to_roadedge > 0.0F) {
+    if (lkas_input_->wheel_to_line.fr_wheel_distance_to_roadedge > 0.0) {
       ldw_right_suppression_code_temp += uint16_bit[1];
     } else if (lkas_input_->wheel_to_line.fr_wheel_distance_to_roadedge <
                (-1.0 * calribration_str_.earliest_warning_line)) {
@@ -486,8 +486,7 @@ uint16 LaneDepartWarning::RightSuppressionCode() {
   }
 
   // Condition4
-  if ((lkas_input_->function_state >
-       FuncStateMachine::FunctionalState::DRIVING) &&
+  if ((lkas_input_->function_state > FuncStateMachine::FunctionalState::SCC) &&
       (lkas_input_->function_state <
        FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
     ldw_right_suppression_code_temp += uint16_bit[3];
@@ -556,8 +555,7 @@ uint16 LaneDepartWarning::RightKickDownCode() {
   }
 
   // Condition5
-  if ((lkas_input_->function_state >
-       FuncStateMachine::FunctionalState::DRIVING) &&
+  if ((lkas_input_->function_state > FuncStateMachine::FunctionalState::SCC) &&
       (lkas_input_->function_state <
        FuncStateMachine::FunctionalState::PARK_IN_APA_IN)) {
     ldw_right_kickdown_code_temp += uint16_bit[4];

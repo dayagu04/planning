@@ -79,12 +79,11 @@
     "tensor": "cpp"
   },
   "C_Cpp.errorSquiggles": "disabled",
-
   "editor.quickSuggestions": {
     "other": true,
     "comments": true,
     "strings": true
   },
-  "editor.wordBasedSuggestions": true,
+  "editor.wordBasedSuggestions": "matchingDocuments",
   "C_Cpp.intelliSenseEngine": "disabled"
 }

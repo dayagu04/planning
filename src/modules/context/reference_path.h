@@ -8,6 +8,8 @@
 #include "frenet_ego_state.h"
 #include "frenet_obstacle.h"
 #include "session.h"
+#include "utils/kd_path.h"
+#include "utils/path_point.h"
 
 namespace planning {
 
@@ -44,7 +46,11 @@ class ReferencePath {
     return refined_ref_path_points_;
   }
 
-  const std::shared_ptr<FrenetCoordinateSystem> &get_frenet_coord() const {
+  // const std::shared_ptr<FrenetCoordinateSystem> &get_frenet_coord() const {
+  //   return frenet_coord_;
+  // }
+
+  const std::shared_ptr<KDPath> &get_frenet_coord() const {
     return frenet_coord_;
   }
 
@@ -73,6 +79,15 @@ class ReferencePath {
       &get_obstacles_map() const {
     return frenet_obstacles_map_;
   }
+
+  std::vector<int> &mutable_obstacles_in_lane_map() {
+    return obstacles_in_lane_map_;
+  }
+
+  const std::vector<int> &get_obstacles_in_lane_map() const {
+    return obstacles_in_lane_map_;
+  }
+
   virtual bool is_obstacle_ignorable(
       const std::shared_ptr<FrenetObstacle> obstacle);
 
@@ -109,10 +124,9 @@ class ReferencePath {
 
  protected:
   void init();
-  void update_refpath_points(ReferencePathPoints &raw_reference_path_points,
-                             bool is_need_density = false);
-  void densifying_refined_path_points(
-      ReferencePathPoints &refined_ref_path_points);
+  void update_refpath_points(
+      const ReferencePathPoints &raw_reference_path_points);
+
   bool get_reference_point_by_lon_from_raw_ref_path_points(
       double s, const ReferencePathPoints &raw_reference_path_point,
       ReferencePathPoint &reference_path_point);
@@ -128,8 +142,11 @@ class ReferencePath {
   bool valid_;
   ReferencePathPoints refined_ref_path_points_;
   // frenet coord system
-  FrenetCoordinateSystemParameters frenet_parameters_;
-  std::shared_ptr<FrenetCoordinateSystem> frenet_coord_;
+  // FrenetCoordinateSystemParameters frenet_parameters_;
+  // std::shared_ptr<FrenetCoordinateSystem> frenet_coord_;
+
+  // kd_path
+  std::shared_ptr<KDPath> frenet_coord_;
 
   // ego_state
   FrenetEgoState frenet_ego_state_;
@@ -139,6 +156,8 @@ class ReferencePath {
 
   std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
       frenet_obstacles_map_;
+
+  std::vector<int> obstacles_in_lane_map_;
 
   std::vector<const Obstacle *> parking_spaces_;
   std::vector<const Obstacle *> free_space_ground_lines_;

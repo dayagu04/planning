@@ -1,10 +1,10 @@
 #ifndef MODULES_PLANNING_MATH_LINE_SEGMENT2D_H_
 #define MODULES_PLANNING_MATH_LINE_SEGMENT2D_H_
 
-#include "vec2d.h"
-
 #include <cmath>
 #include <string>
+
+#include "vec2d.h"
 
 namespace planning {
 namespace planning_math {
@@ -57,6 +57,7 @@ class LineSegment2d {
    */
   double heading() const { return heading_; }
 
+  void set_heading(double heading) { heading_ = heading; }
   /**
    * @brief Get the cosine of the heading.
    * @return The cosine of the heading.
@@ -68,7 +69,17 @@ class LineSegment2d {
    * @return The sine of the heading.
    */
   double sin_heading() const { return unit_direction_.y(); }
+  double line_a() const { return line_a_; }
 
+  double line_b() const { return line_b_; }
+
+  double line_c() const { return line_c_; }
+
+  double unit_a() const { return unit_a_; }
+
+  double unit_b() const { return unit_b_; }
+
+  double unit_c() const { return unit_c_; }
   /**
    * @brief Get the length of the line segment.
    * @return The length of the line segment.
@@ -80,6 +91,14 @@ class LineSegment2d {
    * @return The square of length of the line segment.
    */
   double length_sqr() const;
+
+  /**
+   * @brief Compute the project distance from a point in 2-D to the line
+   * segment.
+   * @param point The point to compute the distance to.
+   * @return The project distance which is positive or negative or zero.
+   */
+  double RawDistanceTo(const Vec2d &point) const;
 
   /**
    * @brief Compute the shortest distance from a point on the line segment
@@ -147,7 +166,14 @@ class LineSegment2d {
    */
   bool GetIntersect(const LineSegment2d &other_segment,
                     Vec2d *const point) const;
-
+  /**
+   * @brief Compute the intersect with another straight line in 2-D if any.
+   * @param other_segment The straight line to compute the intersect.
+   * @param point the computed intersect between two straight lines.
+   * @return Whether the two straight lines have an intersect
+   */
+  bool GetStraightLineIntersect(const LineSegment2d &other_segment,
+                                Vec2d *const point) const;
   /**
    * @brief Compute the projection of a vector onto the line segment.
    * @param point The end of the vector (starting from the start point of the
@@ -178,12 +204,34 @@ class LineSegment2d {
   double GetPerpendicularFoot(const Vec2d &point,
                               Vec2d *const foot_point) const;
 
+  double min_x() const { return min_x_; }
+  double max_x() const { return max_x_; }
+  double min_y() const { return min_y_; }
+  double max_y() const { return max_y_; }
+
+  Vec2d GetPoint(double s) const;
+
  private:
   Vec2d start_;
   Vec2d end_;
   Vec2d unit_direction_;
   double heading_ = 0.0;
   double length_ = 0.0;
+
+  void InitMaxMin();
+
+  double min_x_;
+  double max_x_;
+  double min_y_;
+  double max_y_;
+
+  double line_a_ = 0.;
+  double line_b_ = 0.;
+  double line_c_ = 0.;
+
+  double unit_a_ = 0.;
+  double unit_b_ = 0.;
+  double unit_c_ = 0.;
 };
 
 }  // namespace planning_math

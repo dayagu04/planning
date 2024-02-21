@@ -40,7 +40,7 @@ target_link_libraries(slot_management_py PRIVATE
   modules_common
   modules_context
   modules_tasks)
-  
+
 pybind11_add_module(realtime_lateral_motion_planning_py MODULE src/realtime_lateral_motion_planning_pybind.cc)
 target_link_libraries(realtime_lateral_motion_planning_py PRIVATE
   autoplt
@@ -48,25 +48,9 @@ target_link_libraries(realtime_lateral_motion_planning_py PRIVATE
   modules_context
   modules_tasks)
 
-pybind11_add_module(diag_slot_planning_py MODULE src/diag_slot_planning_pybind.cc)
-target_link_libraries(diag_slot_planning_py PRIVATE
-  autoplt
-  modules
-  modules_common
-  modules_context
-  modules_tasks)
-  
 pybind11_add_module(realtime_longitudinal_motion_planning_py MODULE src/realtime_longitudinal_motion_planning_pybind.cc)
 target_link_libraries(realtime_longitudinal_motion_planning_py PRIVATE
   autoplt
-  modules_common
-  modules_context
-  modules_tasks)
-
-pybind11_add_module(uss_obstacle_avoidance_py MODULE src/uss_obstacle_avoidance_pybind.cc)
-target_link_libraries(uss_obstacle_avoidance_py PRIVATE
-  autoplt
-  modules
   modules_common
   modules_context
   modules_tasks)
@@ -79,6 +63,13 @@ target_link_libraries(dubins_lib_py PRIVATE
   modules_context
   modules_tasks)
 
+pybind11_add_module(real_time_lon_behavior_planning_py MODULE src/realtime_lon_behavior_planner_pybind.cc)
+target_link_libraries(real_time_lon_behavior_planning_py PRIVATE
+  autoplt
+  modules_common
+  modules_context
+  modules_tasks)
+
 pybind11_add_module(collision_detection_py MODULE src/collision_detection_pybind.cc)
 target_link_libraries(collision_detection_py PRIVATE
   autoplt
@@ -87,9 +78,66 @@ target_link_libraries(collision_detection_py PRIVATE
   modules_context
   modules_tasks)
 
-pybind11_add_module(real_time_lon_behavior_planning_py MODULE src/realtime_lon_behavior_planner_pybind.cc)
-target_link_libraries(real_time_lon_behavior_planning_py PRIVATE
+pybind11_add_module(perpendicular_planning_py MODULE src/perpendicular_planning_pybind.cc)
+target_link_libraries(perpendicular_planning_py PRIVATE
   autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)
+
+pybind11_add_module(parallel_planning_py MODULE src/parallel_planning_pybind.cc)
+target_link_libraries(parallel_planning_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)
+
+pybind11_add_module(uss_obstacle_avoidance_py MODULE src/uss_obstacle_avoidance_pybind.cc)
+target_link_libraries(uss_obstacle_avoidance_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)
+
+pybind11_add_module(apa_simulation_py MODULE src/apa_simulation_pybind.cc)
+target_link_libraries(apa_simulation_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)
+
+pybind11_add_module(geometry_math_validation_py MODULE src/geometry_math_validation_pybind.cc)
+target_link_libraries(geometry_math_validation_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)
+
+pybind11_add_module(lateral_path_optimizer_py MODULE src/lateral_path_optimizer_pybind.cc)
+target_link_libraries(lateral_path_optimizer_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)
+
+pybind11_add_module(optimizer_apa_simulation_py MODULE src/optimizer_apa_simulation_pybind.cc)
+  target_link_libraries(optimizer_apa_simulation_py PRIVATE
+    autoplt
+    modules
+    modules_common
+    modules_context
+    modules_tasks)
+
+pybind11_add_module(jerk_limited_trajectory_py MODULE src/jerk_limited_trajectory_pybind.cc)
+target_link_libraries(jerk_limited_trajectory_py PRIVATE
+  autoplt
+  modules
   modules_common
   modules_context
   modules_tasks)

@@ -1009,7 +1009,6 @@ def load_obstacle_radar_params(obstacle_list):
 
 # 可视化rdg objects
 def load_obstacle_rdg(dataLoader, layer_manager, fig_local_view):
-
     obstacle_rdg_generate = CommonGenerator()
     obstacle_rdg_text_generate = TextGenerator()
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
@@ -1679,14 +1678,12 @@ def draw_local_view(dataLoader, layer_manager):
     obstacle_mobileye_text_generate.ts = np.array(plan_debug_ts)
     obstacle_mobileye_text_layer = TextLayer(fig_local_view, obstacle_mobileye_text_params)
     layer_manager.AddLayer(obstacle_mobileye_text_layer, 'obstacle_mobileye_text_layer', obstacle_mobileye_text_generate, 'obstacle_mobileye_text_generate', 3)
-
     # 加载rdg障碍物
     load_obstacle_rdg(dataLoader, layer_manager, fig_local_view)
     # 加载lidar 障碍物
     load_obstacle_lidar(dataLoader, layer_manager, fig_local_view)
     # 加载雷达障碍物
     load_obstacle_radar(dataLoader, layer_manager, fig_local_view)
-
     return fig_local_view, (tab_debug_layer1.plot, tab_debug_layer2.plot)
 
 def apa_draw_local_view(dataLoader, layer_manager):

@@ -190,6 +190,21 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
   double lc_back_available_thr = 1.5;
 };
 
+struct ActRequestConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    // /* read config from json */
+    enable_act_request_function = read_json_keys<bool>(
+        json,
+        std::vector<std::string>{"act_request", "enable_act_request_function"});
+    enable_speed_threshold = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"act_request", "enable_speed_threshold"});
+  }
+  bool enable_act_request_function = true;
+  double enable_speed_threshold = 60.0;
+};
+
 struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -230,6 +245,9 @@ struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
     avoid_truck_time_distance_threshold = read_json_keys<double>(
         json, std::vector<std::string>{"display_state",
                                        "avoid_truck_time_distance_threshold"});
+    disallow_cancel_int_lc_lateral_thr = read_json_keys<double>(
+        json, std::vector<std::string>{"int_request",
+                                       "disallow_cancel_int_lc_lateral_thr"});
     enable_int_request_function = read_json_keys<bool>(
         json,
         std::vector<std::string>{"int_request", "enable_int_request_function"});
@@ -244,6 +262,7 @@ struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
   double into_ramp_threshold = 2000.0;               // meter
   double close_to_split_merge_threshold = 100.0;     // meter
   double avoid_truck_time_distance_threshold = 1.5;  // seconds
+  double disallow_cancel_int_lc_lateral_thr = 1.5;
   int int_rqt_cnt_threshold = 2;
   int map_int_cancel_freeze_cnt = 50;
   int model_int_cancel_freeze_cnt = 100;
@@ -277,8 +296,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double lon_rear_car_filter_buffer = 10.;
   double refine_lat_ref_threshold = 0.5;
   double delta_t = 0.2;
-  double sample_step = 0.2;
-  double sample_forward_distance = 2.0;
+  double sample_step = 1.4;
+  double sample_forward_distance = 1.0;
   double lane_change_duration = 6.6;
   double care_object_t_threshold = 3.0;
 };
@@ -455,7 +474,13 @@ struct VisionLateralMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    nudge_buffer_road_boundary =
+        read_json_key<double>(json, "nudge_buffer_road_boundary");
+    nudge_buffer_lane_boundary =
+        read_json_key<double>(json, "nudge_buffer_lane_boundary");
   }
+  double nudge_buffer_road_boundary = 0.3;
+  double nudge_buffer_lane_boundary = 0.1;
 };
 
 struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
@@ -906,6 +931,153 @@ struct RealTimeLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_stop_s = 2000.0;
 };
 
+struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    preview_x = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "preview_x"});
+    dis_zero_speed = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "dis_zero_speed"});
+    dis_zero_speed_accident = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "dis_zero_speed_accident"});
+    safe_distance_ttc = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "safe_distance_ttc"});
+    enable_lead_two = read_json_keys<bool>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "enable_lead_two"});
+    enable_rss_model = read_json_keys<bool>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "enable_rss_model"});
+    cruise_set_acc = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "cruise_set_acc"});
+    cruise_set_dec = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "cruise_set_dec"});
+    v_start = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"real_time_long_behavior_planner", "v_start"});
+    obstacle_v_start = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "obstacle_v_start"});
+    distance_stop = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "distance_stop"});
+    distance_start = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "distance_start"});
+    fast_lead_distance_step = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "fast_lead_distance_step"});
+    slow_lead_distance_step = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "slow_lead_distance_step"});
+
+    cut_in_desired_distance_step = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "cut_in_desired_distance_step"});
+    soft_bound_corridor_t = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "soft_bound_corridor_t"});
+  }
+  int lon_num_step = 25;
+  double delta_time = 0.2;
+  bool enable_lead_two = false;
+  double safe_distance_base = 0.5;  // 最小安全距离
+  double safe_distance_ttc = 0.3;   // 安全距离ttc
+  bool enable_rss_model = false;    // 是否采用RSS跟车模型
+  double t_actuator_delay = 0.0;    // 纵向执行响应延时
+  double a_max_comfort_accel =
+      2.0;  // maximum comfortable acceleration of the ego
+  double a_max_comfort_brake =
+      -2.5;  // maximum comfortable braking deceleration of the ego
+  double CIPV_max_brake = -3.0;  // maximum braking deceleration of the CIPV
+  double lane_keep_cutinp_threshold = 0.2;  // 车道保持时cut in车辆判断阈值
+  double lane_change_cutinp_threshold = 0.6;  // 换道时cut in车辆判断阈值
+  double corridor_width = 1.5;  // 通道半个宽度，用于判断cut in车辆是否侵入
+  double cruise_set_acc = 1.5;   // 巡航车速增加速率 0.8m/s2
+  double cruise_set_dec = -1.0;  // 巡航车速减小速率 -1m/s2
+
+  double preview_x = 80.0;
+  double dis_zero_speed = 3.5;
+  double dis_zero_speed_accident = 6;
+  double ttc_brake_hysteresis = 0.3;
+  double t_curv = 3.0;
+  double dis_curv = 0.0;
+  double velocity_upper_bound = 33.33;  // 120km/h
+  // The param for StartStopState
+  double v_start = 0.3;
+  double obstacle_v_start = 0.5;  // start of obstacle
+  double distance_stop = 1.0;
+  double distance_start = 0.3;
+  // param for st graph
+  double fast_lead_distance_step = 1.0;  // fast lead跟车距离膨胀速率1.0m/s
+  double slow_lead_distance_step = 2.0;  // slow lead跟车距离膨胀速率2.0m/s
+  double cut_in_desired_distance_step = 1.0;
+  double soft_bound_corridor_t = 0.3;
+  // bound make
+  // acc
+  double lower_speed_acc_upper_bound = 1.2;
+  double high_speed_acc_upper_bound = 1.8;
+  double low_speed_threshold_with_acc_upper_bound = 5.5;
+  double high_speed_threshold_with_acc_upper_bound = 16.67;
+  double lane_change_low_speed_acc_upper_bound = 2.4;
+  double lane_change_high_speed_acc_upper_bound = 1.6;
+  double acc_lower_bound = -7.0;
+  // vel
+  double kSpeedBoundFactor = 1.1;
+  // jerk
+  double kSlowJerkUpperBound = 6.0;
+  double jerk_upper_bound = 10.0;
+  double jerk_lower_bound = -5.0;
+};
+
+struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    q_ref_pos = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_ref_pos"});
+    q_ref_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_ref_vel"});
+    q_acc = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_acc"});
+    q_jerk = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_jerk"});
+    q_soft_pos_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_soft_pos_bound"});
+    q_hard_pos_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_hard_pos_bound"});
+    q_sv_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_sv_bound"});
+    q_vel_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_vel_bound"});
+    q_acc_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_acc_bound"});
+    q_jerk_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_jerk_bound"});
+    q_stop_s = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_stop_s"});
+  }
+  double q_ref_pos = 1.0;
+  double q_ref_vel = 0.05;
+  double q_acc = 10.0;
+  double q_jerk = 5.0;
+
+  double q_soft_pos_bound = 5.0;
+  double q_hard_pos_bound = 1000.0;
+  double q_sv_bound = 1000.0;
+  double q_vel_bound = 400.0;
+  double q_acc_bound = 400.0;
+  double q_jerk_bound = 100.0;
+  double q_stop_s = 2000.0;
+};
+
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -1009,13 +1181,12 @@ struct EgoPlanningTaskPipelineVisionOnlyConfig
   std::string pipeline_version = "v1";
 };
 
-struct EgoPlanningTaskPipelineRealTimeConfig
-    : public EgoPlanningTaskPipelineConfig {
+struct EgoPlanningTaskPipelineSccConfig : public EgoPlanningTaskPipelineConfig {
   void init(const Json &json) override {
     EgoPlanningTaskPipelineConfig::init(json);
     /* read config from json */
     pipeline_version =
-        read_json_key<std::string>(json, "pipeline_version_real_time", "v1");
+        read_json_key<std::string>(json, "pipeline_version_scc", "v1");
   }
 
   std::string pipeline_version = "v1";

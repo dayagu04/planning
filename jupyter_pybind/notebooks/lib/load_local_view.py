@@ -312,28 +312,26 @@ class LoadCyberbag:
 
     # load planning debug msg
     try:
-      json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'VisionLonBehavior_a_target_high',
-                         "VisionLonBehavior_a_target_low", "VisionLonBehavior_v_target", "RealTime_v_ref",
-                         "VisionLonBehavior_lead_one_id", "VisionLonBehavior_lead_one_dis", "VisionLonBehavior_lead_one_vel", "VisionLonBehavior_v_target_lead_one",
-                         "VisionLonBehavior_lead_two_id", "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel", "VisionLonBehavior_v_target_lead_two",
-                         "VisionLonBehavior_temp_lead_one_id", "VisionLonBehavior_temp_lead_one_dis", "VisionLonBehavior_temp_lead_one_vel", "VisionLonBehavior_v_target_temp_lead_one",
-                         "VisionLonBehavior_temp_lead_two_id", "VisionLonBehavior_temp_lead_two_dis", "VisionLonBehavior_temp_lead_two_vel", "VisionLonBehavior_v_target_temp_lead_two",
-                         "VisionLonBehavior_v_target_ramp", "VisionLonBehavior_road_radius", "dis_to_ramp",
-                         "VisionLonBehavior_potental_cutin_track_id", "VisionLonBehavior_potental_cutin_v_target", "VisionLonBehavior_cutin_v_target",
-                         "VisionLonBehavior_v_limit_road", "VisionLonBehavior_v_limit_in_turns",
-                         "VisionLonBehavior_nearest_car_track_id_one", "VisionLonBehavior_nearest_car_track_id_two", "VisionLonBehavior_nearest_car_track_id_three",
-                         "VisionLonBehavior_cutin_v_limit", "VisionLonBehavior_cutin_status",
-                         'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', 'VisionLonBehavior_STANDSTILL', "VisionLonBehavior_final_v_target",
-                         "solver_condition", "dist_err", "lat_err", "lon_err", "dbw_status",
-                         "RealTime_v_ego", "RealTime_gap_v_limit_lc",
-                         "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_car_cut_in_id",
-                         "RealTime_lead_one_id", "RealTime_lead_one_distance", "RealTime_lead_one_velocity", "RealTime_lead_one_desire_vel",
-                         "RealTime_lead_two_id", "RealTime_lead_two_distance", "RealTime_lead_two_velocity", "RealTime_lead_two_desire_vel",
-                         "RealTime_temp_lead_one_id", "RealTime_temp_lead_one_distance", "RealTime_temp_lead_one_velocity", "RealTime_temp_lead_one_desire_vel",
-                         "RealTime_temp_lead_two_id", "RealTime_temp_lead_two_distance", "RealTime_temp_lead_two_velocity", "RealTime_temp_lead_two_desire_vel",
-                         "RealTime_potential_cutin_track_id", "RealTime_potential_cutin_v_target", "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate",
-                         "RealTimeLateralMotionCostTime", "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime",
-                         "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime", "RealTime_stop_start_state", "RealTime_v_target_start_stop", "RealTime_STANDSTILL"]
+      json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw",
+                        "solver_condition", "dist_err", "lat_err", "lon_err", "dbw_status",
+                        'VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low',\
+                        "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
+                        "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
+                        'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
+                        'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one",\
+                        'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two",\
+                        'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one",\
+                        'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two",\
+                        'potental_cutin_track_id', 'v_target_potental_cutin', "v_target_cutin", "road_radius", \
+                        'stop_start_state', 'v_target_start_stop', 'STANDSTILL', \
+                        "dis_to_ramp", "v_target_ramp",\
+                        'RealTime_v_ref', 'gap_v_limit_lc', \
+                        "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
+                        "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
+                        "SccLonBehaviorCostTime", "SccLonMotionCostTime", \
+                        'RealTimeLateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                        "ego_state_update_cost", "virtual_lane_manager_update_cost", "obstacle_prediction_update_cost", \
+                        "reference_path_manager_update_cost", "lateral_obstacle_update_cost"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec"]
 
@@ -727,8 +725,16 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
 
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+    planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
-    coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+    try:
+      json_pos_x = planning_json['ego_pos_x']
+      json_pos_y = planning_json['ego_pos_y']
+      json_yaw = planning_json['ego_pos_yaw']
+      coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
+    except:
+      coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+    #coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
 
     ego_xb, ego_yb = [], []
     ego_xn, ego_yn = [], []
@@ -857,7 +863,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
     for i in range(10):
       # try:
-        if (trajectory.trajectory_type == 0) or (trajectory.trajectory_type == 1 and trajectory.target_reference.lateral_maneuver_gear == 2) :
+        if (trajectory.trajectory_type == 0) or (trajectory.trajectory_type == 1 and trajectory.target_reference.lateral_maneuver_gear == 1) :
           data_center_line = data_center_line_dict[i]
           data_center_line.data.update({
             'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
@@ -1185,9 +1191,11 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
     if trajectory.trajectory_type == 0:
-      planning_polynomial = trajectory.target_reference.polynomial
-      plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
-
+      try:
+        planning_polynomial = trajectory.target_reference.polynomial
+        plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
+      except:
+        plan_traj_x, plan_traj_y = gen_line(0.0, 0.0, 0.0, 0.0, 0, 0)
     else:
       plan_x = []
       plan_y = []

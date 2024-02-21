@@ -1,8 +1,9 @@
+#include "obstacle_manager.h"
+
 #include <tuple>
 
 #include "ego_state_manager.h"
 #include "math/math_utils.h"
-#include "obstacle_manager.h"
 #include "reference_path_manager.h"
 #include "virtual_lane_manager.h"
 
@@ -55,6 +56,36 @@ void ObstacleManager::update() {
       break;  // only use the first traj
     }
   }
+
+  // add gs care obstacles
+  const auto &fusion_objects =
+      session_->environmental_model().get_fusion_info();
+  for (int i = 0; i < session_->environmental_model().get_fusion_info().size();
+       i++) {
+    auto &fusion_object = fusion_objects[i];
+    bool is_static =
+        fusion_object.speed < 0.1 || fusion_object.trajectory_array.size() == 0;
+    double prediction_relative_time =
+        fusion_object.delay_time - ego_init_relative_time;
+
+    // add gs care obstacles
+    bool gs_care_fusion_source =
+        (fusion_object.fusion_source == OBSTACLE_SOURCE_CAMERA) ||
+        (fusion_object.fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA) ||
+        (fusion_object.fusion_source == OBSTACLE_SOURCE_LF_RADAR) ||
+        (fusion_object.fusion_source == OBSTACLE_SOURCE_RF_RADAR) ||
+        (fusion_object.fusion_source == OBSTACLE_SOURCE_LR_RADAR) ||
+        (fusion_object.fusion_source == OBSTACLE_SOURCE_RR_RADAR);
+
+    if (gs_care_fusion_source && fusion_object.type != 0 &&
+        fusion_object.length > 0. && fusion_object.width > 0. &&
+        std::fabs(fusion_object.relative_position_y) < 10. &&
+        std::fabs(fusion_object.relative_position_x) < 100.) {
+      auto obstacle = Obstacle(fusion_object.id, fusion_object, is_static,
+                               prediction_relative_time);
+      add_gs_care_obstacles(obstacle);
+    }
+  }
 }
 
 void ObstacleManager::clear() {
@@ -63,6 +94,7 @@ void ObstacleManager::clear() {
   map_static_obstacles_ = IndexedList<int, Obstacle>();
   parking_space_obstacles_ = IndexedList<int, Obstacle>();
   road_edge_obstacles_ = IndexedList<int, Obstacle>();
+  gs_care_obstacles_ = IndexedList<int, Obstacle>();
 }
 
 Obstacle *ObstacleManager::add_obstacle(const Obstacle &obstacle) {
@@ -77,6 +109,10 @@ const Obstacle *ObstacleManager::find_obstacle(int object_id) const {
   return obstacles_.Find(object_id);
 }
 
+Obstacle *ObstacleManager::find_gs_care_obstacle(int object_id) {
+  return gs_care_obstacles_.Find(object_id);
+}
+
 const IndexedList<int, Obstacle> &ObstacleManager::get_obstacles() const {
   return obstacles_;
 }
@@ -85,6 +121,9 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
   const auto &frenet_coord = reference_path.get_frenet_coord();
   auto &frenet_obstacles = reference_path.mutable_obstacles();
   auto &frenet_obstacles_map = reference_path.mutable_obstacles_map();
+  auto &bstacles_ids_in_lane_map =
+      reference_path.mutable_obstacles_in_lane_map();
+  bstacles_ids_in_lane_map.clear();
   frenet_obstacles.clear();
   frenet_obstacles_map.clear();
   constexpr double kCareDistance = 30.0;
@@ -113,15 +152,19 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
     auto obstacle_care_flag =
         (fabs(cart_point.x - planning_init_x) < kCareDistance) &&
         (fabs(cart_point.y - planning_init_y) < kCareDistance);
-    if ((frenet_coord->CartCoord2FrenetCoord(cart_point, frenet_point) ==
-             TRANSFORM_FAILED &&
+    if ((!frenet_coord->XYToSL(cart_point, frenet_point) &&
          obstacle_care_flag == false) ||
         std::isnan(frenet_point.x) || std::isnan(frenet_point.y) ||
         frenet_point.x > (config_.frenet_obstacle_range_s_max + ego_s) ||
         frenet_point.x < (config_.frenet_obstacle_range_s_min + ego_s) ||
         frenet_point.y > (config_.frenet_obstacle_range_l_max + ego_l) ||
         frenet_point.y < (config_.frenet_obstacle_range_l_min + ego_l)) {
-      continue;
+      auto iter = gs_care_obstacles_.Dict().find(obstacle_ptr->id());
+      if (iter != gs_care_obstacles_.Dict().end()) {
+        LOG_ERROR("This unnormal obj need to consider in gs");
+      } else {
+        continue;
+      }
     }
     // construct frenet_obstacle
     std::shared_ptr<FrenetObstacle> frenet_obstacle =
@@ -131,6 +174,15 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
             is_location_valid);
     frenet_obstacles.emplace_back(frenet_obstacle);
     frenet_obstacles_map[obstacle_ptr->id()] = frenet_obstacle;
+
+    // judge the strict lane obstacles
+    // TODO:@cailiu, this condition can be released, its strict!
+    const double half_width = obstacle_ptr->width() * 0.5;
+    const double lat_buffer = 0.4;
+    if (frenet_point.y + half_width < 1.5 + lat_buffer &&
+        frenet_point.y - half_width > -1.5 - lat_buffer) {
+      bstacles_ids_in_lane_map.emplace_back(obstacle_ptr->id());
+    }
   }
 }
 

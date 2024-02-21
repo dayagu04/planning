@@ -1,73 +1,80 @@
-
 /**
  * @file
  * @brief 用于快速生成存在jerk,v约束的轨迹ref
  */
-#ifndef __JERK_LIMITED_TRAJECTORY__
-#define __JERK_LIMITED_TRAJECTORY__
+#pragma once
 
-struct extremum {
-  double v_max = 20.0;
-  double v_min = 0.0;
-  double a_max = 3.0;
-  double a_min = -4.0;
-  double j_max = 7.0;
-  double j_min = -7.0;
-};
+#include <vector>
+#include "jerk_limited_trajectory_define.h"
 
-struct Point {
-  double j1 = 0.0;
-  double j2 = 0.0;
-  double j3 = 0.0;
-  double T1 = 0.0;
-  double T2 = 0.0;
-  double T3 = 0.0;
-};
+namespace planning {
+namespace jlt {
 
-struct Point_State {
-  double p_ = 0.0;
-  double v_ = 0.0;
-  double a_ = 0.0;
-};
-
-class jerk_limited_trajectory {
+class JerkLimitedTrajectory {
  public:
-  Point getPositionA() { return P_a_; };
-  Point getPositionB() { return P_b_; };
-  double getTimeSwitch() { return t_s_; };
-  double getTimeCruise() { return t_c_; };
-  double getVelocityCruise() { return v_c_; };
+  JerkLimitedTrajectory() = default;
 
- public:
-  void positionTargetSolver(const extremum &extrem, const double &p_0,
-                            const double &v_0, const double &a_0,
-                            const double &p_f);
-  void positionTargetSolver(const extremum &extrem, const double &p_0,
-                            const double &v_0, const double &a_0,
-                            const double &p_f, const double &v_f);
-  Point_State updateFinalTrajectory(const double &p_0, const double &v_0,
-                                    const double &a_0, double &ts);
-  Point velocityTargetSolver(const extremum &extrem, const double &v_0,
-                             const double &a_0, const double &v_des);
-  Point_State updateTrajectory(const double &p_0, const double &v_0,
-                               const double &a_0, const double &t,
-                               const Point &Point_);
+  ~JerkLimitedTrajectory() = default;
+
+  bool Update(const PointState &init_point_state,
+              const StateLimitParam &state_limit, const JltType jlt_type,
+              const double dt);
+  bool Update(const PointState &init_point_state,
+              const StateLimitParam &state_limit, const JltType jlt_type,
+              const CoordinateParam &base_coordinate);
+  // std::vector<std::vector<double>> GetOutput();
+
+  double Evaluate(const int order, const double param);
+
+  double ParamLength() const;
+
+  VelocityParam GetVelocityParam() { return velocity_param_; };
+  PositionParam GetPositionParam() { return position_param_; };
+  std::vector<double> GetSCurve() { return s_curve_; };
+  std::vector<double> GetVelCurve() { return v_curve_; };
+  std::vector<double> GetAccCurve() { return a_curve_; };
+  std::vector<double> GetJerkCurve() { return j_curve_; };
 
  private:
-  Point_State updatePoint(const double &x, const double &v, const double &a,
-                          const double &j, const double &t);
+  VelocityParam VelocityTargetSolver(const StateLimitParam &state_limit,
+                                     const PointState &init_state,
+                                     const double &v_des);
+
+  PointState UpdateTrajectory(const PointState &init_state, const double &t,
+                              const VelocityParam &velocity_param);
+
+  PointState UpdatePoint(const double &x, const double &v, const double &a,
+                         const double &j, const double &t);
+
+  PositionParam PositionTargetSolver(const StateLimitParam &state_limit,
+                                     const PointState &init_state,
+                                     const double &p_f);
+
+  PointState UpdateFinalTrajectory(const PointState &init_state,
+                                   const PositionParam &position_param,
+                                   const double &t);
+
+  bool GenerateCurve(const double delta_t);
 
  private:
-  extremum extremum_;
-  double delta_t_ = 0.1;
-  Point P_a_;
-  Point P_b_;
-  double t_c_;
-  double t_s_;
-  double v_c_;
-  // double pos_;
-  // double vel_;
-  // double acc_;
+  StateLimitParam state_limit_;
+  // init state
+  PointState init_point_state_;
+  // position
+  PositionParam position_param_;
+  // velocity
+  VelocityParam velocity_param_;
+  // relative position
+  CoordinateParam relative_coordinate_param_;
+  // solve state
+  bool is_solve_velocity_ = false;
+  bool is_solve_position_ = false;
+  // curve
+  std::vector<double> s_curve_;
+  std::vector<double> v_curve_;
+  std::vector<double> a_curve_;
+  std::vector<double> j_curve_;
 };
 
-#endif
+}  // namespace jlt
+}  // namespace planning

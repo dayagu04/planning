@@ -28,6 +28,16 @@ class ObstacleManager {
 
   void generate_frenet_obstacles(ReferencePath &reference_path);
 
+  Obstacle *find_gs_care_obstacle(int object_id);
+
+  Obstacle *add_gs_care_obstacles(const Obstacle &obstacle) {
+    return gs_care_obstacles_.Add(obstacle.id(), obstacle);
+  }
+
+  const IndexedList<int, Obstacle> &get_gs_care_obstacles() const {
+    return gs_care_obstacles_;
+  }
+
   // lidar road edge
   Obstacle *add_road_edge_obstacle(const Obstacle &obstacle) {
     return road_edge_obstacles_.Add(obstacle.id(), obstacle);
@@ -69,6 +79,7 @@ class ObstacleManager {
   planning::framework::Session *session_ = nullptr;
   IndexedList<int, Obstacle> obstacles_;
   IndexedList<int, Obstacle> groundline_obstacles_;
+  IndexedList<int, Obstacle> gs_care_obstacles_;
   IndexedList<int, Obstacle> map_static_obstacles_;
   IndexedList<int, Obstacle> parking_space_obstacles_;
   IndexedList<int, Obstacle> road_edge_obstacles_;

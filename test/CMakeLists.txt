@@ -9,7 +9,9 @@ include_directories(
   ${cyber_BINARY_DIR}
 )
 
-
+# file(GLOB_RECURSE SRC_FILES
+#   ${CMAKE_CURRENT_LIST_DIR}/src/modules/planning/lateral_path_optimizer_cost_test.cc
+# )
 file(GLOB_RECURSE SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/src/modules/tasks/jerk_limited_trajectory_test.cc
 )

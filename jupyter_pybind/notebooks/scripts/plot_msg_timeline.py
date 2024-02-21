@@ -5,7 +5,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/opt/planning/bags/long_time_hualong_1.00000"
+bag_path = "/PanShi_data/autoparse/jac_s811_72kx6/trigger/20231120/20231120-20-26-45/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2023-11-20-20-26-45.record"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

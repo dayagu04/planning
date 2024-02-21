@@ -1,8 +1,17 @@
 #include "virtual_lane.h"
+
 #include <cassert>
+
 #include "log.h"
 #include "math/linear_interpolation.h"
 #include "virtual_lane.h"
+
+namespace {
+
+constexpr double kMaxLaneWidth = 4.2;
+constexpr double kMinLaneWidth = 2.8;
+
+}  // namespace
 namespace planning {
 VirtualLane::VirtualLane() {}
 
@@ -40,8 +49,7 @@ void VirtualLane::update_data(const FusionRoad::ReferenceLineMsg &lane) {
     }
   }
 
-  for (auto poly_coefficient :
-       lane.lane_reference_line().poly_coefficient_car()) {
+  for (auto poly_coefficient : lane_reference_line_.poly_coefficient_car()) {
     c_poly_.emplace_back(poly_coefficient);
   }
   assert(c_poly_.size() == 4);
@@ -204,21 +212,21 @@ double VirtualLane::width(double x) {
   }
   return std::max(width, 2.8);
 }
+
 double VirtualLane::width_by_s(double s) {
   double width = 0;
   if (reference_path_ != nullptr) {
     auto &reference_path_points = reference_path_->get_points();
-    if (reference_path_points.size() < 1) {
-    } else {
+    if (!reference_path_points.empty()) {
       auto comp = [](const ReferencePathPoint &p, const double s) {
         return p.path_point.s < s;
       };
       auto p_first_point = std::lower_bound(
           reference_path_points.begin(), reference_path_points.end(), s, comp);
       if (p_first_point == reference_path_points.begin()) {
-        width = reference_path_points.begin()->lane_width;
+        width = reference_path_points.front().lane_width;
       } else if (p_first_point == reference_path_points.end()) {
-        width = reference_path_points.end()->lane_width;
+        width = reference_path_points.back().lane_width;
       } else {
         width = planning_math::lerp(
             (p_first_point - 1)->lane_width, (p_first_point - 1)->path_point.s,
@@ -263,12 +271,14 @@ double VirtualLane::max_width() const {
       case FusionRoad::LaneType::LANETYPE_ACCELERATE_DECELERATE:;
       case FusionRoad::LaneType::LANETYPE_LEFT_TURN_WAITTING_AREA:;
       case FusionRoad::LaneType::LANETYPE_NON_MOTOR:;
-        return 4.2;
+        return kMaxLaneWidth;
       default:
-        return DBL_MAX;
+        LOG_ERROR("Error Lane Type");
+        return kMinLaneWidth;
     }
   } else {
-    return DBL_MAX;
+    LOG_ERROR("Error Lane Type");
+    return kMinLaneWidth;
   }
 }
 
@@ -304,12 +314,14 @@ double VirtualLane::min_width() const {
       case FusionRoad::LaneType::LANETYPE_ACCELERATE_DECELERATE:;
       case FusionRoad::LaneType::LANETYPE_LEFT_TURN_WAITTING_AREA:;
       case FusionRoad::LaneType::LANETYPE_NON_MOTOR:;
-        return 2.8;
+        return kMinLaneWidth;
       default:
-        return DBL_MAX;
+        LOG_ERROR("Error Lane Type");
+        return kMinLaneWidth;
     }
   } else {
-    return DBL_MAX;
+    LOG_ERROR("Error Lane Type");
+    return kMinLaneWidth;
   }
 }
 

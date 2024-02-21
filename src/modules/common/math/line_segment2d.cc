@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <cmath>
 #include <utility>
-#include "assert.h"
 
+#include "assert.h"
 #include "math/math_utils.h"
 
 namespace planning {
@@ -20,7 +20,10 @@ bool IsWithin(double val, double bound1, double bound2) {
 
 }  // namespace
 
-LineSegment2d::LineSegment2d() { unit_direction_ = Vec2d(1, 0); }
+LineSegment2d::LineSegment2d() {
+  unit_direction_ = Vec2d(1, 0);
+  InitMaxMin();
+}
 
 LineSegment2d::LineSegment2d(const Vec2d &start, const Vec2d &end)
     : start_(start), end_(end) {
@@ -31,6 +34,21 @@ LineSegment2d::LineSegment2d(const Vec2d &start, const Vec2d &end)
       (length_ <= kMathEpsilon ? Vec2d(0, 0)
                                : Vec2d(dx / length_, dy / length_));
   heading_ = unit_direction_.Angle();
+
+  line_a_ = (end.y() - start.y());
+  line_b_ = (start.x() - end.x());
+  line_c_ = (end.x() * start.y() - start.x() * end.y());
+
+  unit_a_ = line_a_;
+  unit_b_ = line_b_;
+  unit_c_ = line_c_;
+  if (length_ > 1e-5) {
+    unit_a_ /= length_;
+    unit_b_ /= length_;
+    unit_c_ /= length_;
+  }
+
+  InitMaxMin();
 }
 
 double LineSegment2d::length() const { return length_; }
@@ -193,6 +211,15 @@ double LineSegment2d::GetPerpendicularFoot(const Vec2d &point,
   *foot_point = start_ + unit_direction_ * proj;
   return std::abs(x0 * unit_direction_.y() - y0 * unit_direction_.x());
 }
-
+void LineSegment2d::InitMaxMin() {
+  min_x_ = std::min(start_.x(), end_.x());
+  max_x_ = std::max(start_.x(), end_.x());
+  min_y_ = std::min(start_.y(), end_.y());
+  max_y_ = std::max(start_.y(), end_.y());
+}
+Vec2d LineSegment2d::GetPoint(double s) const {
+  double ratio = s / length_;
+  return start_ * (1 - ratio) + end_ * ratio;
+}
 }  // namespace planning_math
 }  // namespace planning

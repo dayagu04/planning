@@ -216,9 +216,9 @@ void StateBase::process(Control &control, FsmContext &context) {
                 lane_change_lane_manager->tlane_virtual_id(), false);
     if (target_reference != nullptr) {
       Point2D cart_point;
-      if (target_reference->get_frenet_coord()->FrenetCoord2CartCoord(
+      if (target_reference->get_frenet_coord()->SLToXY(
               Point2D(target_reference->get_frenet_ego_state().s() + 5, 0),
-              cart_point) == TRANSFORM_SUCCESS) {
+              cart_point)) {
         ad_info->mutable_landing_point()->mutable_relative_pos()->set_x(
             cart_point.x);
         ad_info->mutable_landing_point()->mutable_relative_pos()->set_y(

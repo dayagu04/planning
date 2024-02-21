@@ -4,6 +4,7 @@
 #include <chrono>
 #include <utility>
 #include <vector>
+
 #include "ilqr_define.h"
 #include "ilqr_model.h"
 namespace ilqr_solver {
@@ -102,7 +103,8 @@ class iLqr {
   // simulation dynamics with given init state x0 and input u_vec
   void Simulation(const State &x0, const ControlVec &u_vec);
 
-  // void InputFeasibilityCheck(const StateVec &xk, const ControlVec &uk);
+  // void InputFeasibilityCheck(const StateVec &xk, const
+  // ControlVec &uk);
 
   void SetWarmStart(bool flag) { solver_config_ptr_->warm_start_enable = flag; }
 
@@ -152,11 +154,13 @@ class iLqr {
   // reset solver
   void Reset();
 
- private:
+ protected:
+  virtual bool ForwardPass(double &new_cost, double &expected,
+                           const size_t &iter);
+
   bool BackwardPass();
   bool iLqrIteration();
 
-  bool ForwardPass(double &new_cost, double &expected, const size_t &iter);
   void IncreaseLambda();
   void DecreaseLambda();
   bool PSDCheck(Eigen::MatrixXd &Q);

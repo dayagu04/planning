@@ -484,8 +484,6 @@ void EgoStateManager::UpdatePlanningInitState() {
 
   JSON_DEBUG_VALUE("replan_status", replan_status)
   JSON_DEBUG_VALUE("stitch_success", stitch_success)
-  JSON_DEBUG_VALUE("dbw_status",
-                   session_->environmental_model().GetVehicleDbwStatus())
 
   // assebling init state
   const auto &lat_init_state = planning_init_point_.lat_init_state;

@@ -68,6 +68,8 @@ bool VisionLateralMotionPlanner::Execute(planning::framework::Frame *frame) {
   virtual_lane_manager_ =
       frame_->session()->environmental_model().get_virtual_lane_manager();
 
+  left_lane_boundary_poly_.clear();
+  right_lane_boundary_poly_.clear();
   set_left_lane_boundary_poly();   // hack left_lane_boundary_poly
   set_right_lane_boundary_poly();  // hack right_lane_boundary_poly
 
@@ -475,11 +477,13 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
 
   double dist_offset = 3.5;
   double car_width = 2.2;
-  double avd_normal_thr = lane_width / 2 - 0.3 - car_width * 0.5;
+  double avd_normal_thr =
+      lane_width * 0.5 - config_.nudge_buffer_road_boundary - car_width * 0.5;
   double pre_str_dist = 100.;
 
   if (virtual_lane_manager_->current_lane_index() != 0) {
-    avd_normal_thr = lane_width * 0.5 - 0.1 - car_width * 0.5;
+    avd_normal_thr =
+        lane_width * 0.5 - config_.nudge_buffer_lane_boundary - car_width * 0.5;
   }
 
   sb_lane_ = false;

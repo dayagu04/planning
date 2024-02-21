@@ -13,7 +13,7 @@ namespace context {
 
 enum PlannerType {
   REALTIME_PLANNER = 0,
-  REALTIME_PLANNER_WITH_MOTION = 1,
+  SCC_PLANNER = 1,
   LONGTIME_PLANNER = 2,
 };
 
@@ -24,6 +24,7 @@ struct PlanningPram {
 struct PlanningStatemachine {
   bool dbw_status = false;
   bool apa_reset_flag = false;
+  bool apa_start_plan_once_flag = false;
   uint8_t scene_type = 0;
   uint8_t current_state = 0;
 };

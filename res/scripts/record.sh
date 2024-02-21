@@ -34,6 +34,7 @@ cyber_recorder record -c \
     /iflytek/control/control_command \
     /iflytek/control/debug_info \
     /iflytek/hmi/mcu_inner \
+    /iflytek/hmi/soc_outer \
     /iflytek/sensor/gnss \
     /iflytek/sensor/imu \
     /iflytek/camera_perception/lane_lines \

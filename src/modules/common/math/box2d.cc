@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <cmath>
 #include <utility>
-#include "assert.h"
 
+#include "assert.h"
 #include "math/math_utils.h"
 #include "math/polygon2d.h"
 
@@ -143,6 +143,23 @@ double Box2d::DistanceTo(const Vec2d &point) const {
     return dx;
   }
   return hypot(dx, dy);
+}
+
+double Box2d::DistanceSquareTo(const Vec2d &point) const {
+  const double x0 = point.x() - center_.x();
+  const double y0 = point.y() - center_.y();
+  const double dx =
+      std::abs(x0 * cos_heading_ + y0 * sin_heading_) - half_length_;
+  const double dy =
+      std::abs(x0 * sin_heading_ - y0 * cos_heading_) - half_width_;
+  if (dx <= 0.0) {
+    double max_y = std::fmax(0.0, dy);
+    return max_y * max_y;
+  }
+  if (dy <= 0.0) {
+    return dx * dx;
+  }
+  return dx * dx + dy * dy;
 }
 
 bool Box2d::HasOverlap(const LineSegment2d &line_segment) const {

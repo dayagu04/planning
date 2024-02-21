@@ -1,6 +1,28 @@
+# planning.2.3.1.1
+####  修改说明
+1. 合入0115奇瑞演示变更项
+2. 合入长时planning，默认实时
+
 # planning.2.3.1.0
 ####  修改说明
 1. 适配2.3接口
+
+# planning.2.3.0.1
+####  修改说明
+1. LDP功能接入实车控制
+
+# planning.2.2.1.7
+####  修改说明
+1. APA/SCC共分支
+2. SCC针对交付需求优化以及APA新架构与交付优化
+3. 0115奇瑞验收
+
+# planning.2.2.1.6
+####  修改说明
+1. 修改fusion source，纵向使用BEV全方位障碍物
+2. 解决max_lat_offset不生效
+3. 优化taskpipeline，不析构
+4. scc planner合入，默认不开启
 
 # planning.2.2.1.5
 ####  修改说明

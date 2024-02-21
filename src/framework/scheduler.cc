@@ -44,7 +44,7 @@ void Scheduler::RunOnce() {
         dynamic_cast<PlanningModule *>(module_map_[module_name.c_str()]);
     if (p != nullptr) {
       if (p->compute(&frame) != true) {
-        LOG_DEBUG("%s compute failed \n", p->name().c_str());
+        LOG_ERROR("%s compute failed \n", p->name().c_str());
         break;
       };
     }

@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <vector>
+
 #include "ilqr_core.h"
 #include "ilqr_define.h"
 #include "lateral_motion_planner.pb.h"
@@ -29,7 +30,7 @@ class LateralMotionPlanningProblem {
  private:
   std::shared_ptr<ilqr_solver::iLqr> ilqr_core_ptr_;
   planning::common::LateralPlanningOutput planning_output_;
-  State init_state_;
+  ilqr_solver::State init_state_;
 };
 
 }  // namespace lateral_planning

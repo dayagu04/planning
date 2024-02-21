@@ -45,6 +45,7 @@ add_subdirectory(framework EXCLUDE_FROM_ALL)
 
 add_subdirectory(library/advanced_ctrl_lib EXCLUDE_FROM_ALL)
 add_subdirectory(library/ilqr_lib EXCLUDE_FROM_ALL)
+add_subdirectory(library/geometry_lib EXCLUDE_FROM_ALL)
 add_subdirectory(library/jlt_lib EXCLUDE_FROM_ALL)
 
 add_subdirectory(thirdparty/mjson EXCLUDE_FROM_ALL)
@@ -84,6 +85,9 @@ if (ADAPTER STREQUAL "cyber")
 elseif (ADAPTER STREQUAL "ap")
   # to be add
 endif()
+
+install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../res/conf/${PRODUCT}/
+  DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/res/conf)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning
   DESTINATION /asw)

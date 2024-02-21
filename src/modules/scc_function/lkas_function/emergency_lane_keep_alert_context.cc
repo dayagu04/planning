@@ -8,73 +8,69 @@ void EmergencyLaneKeepAlert::Init(planning::LkasInput *lkas_input,
   lkas_input_ = lkas_input;
   session_ = session;
   // for aera&velocit init
-  f_bsd_aera_vel_.area_length_distance = 0.0F;
-  f_bsd_aera_vel_.b_x = 0.0F;
-  f_bsd_aera_vel_.c_x = 0.0F;
-  f_bsd_aera_vel_.f_y = 0.0F;
-  f_bsd_aera_vel_.g_y = 0.0F;
-  f_bsd_aera_vel_.l_y = 0.0F;
-  f_bsd_aera_vel_.k_y = 0.0F;
-  f_bsd_aera_vel_.obstacle_velocity_limit = 0.0F;
-  r_bsd_aera_vel_.area_length_distance = 0.0F;
-  r_bsd_aera_vel_.b_x = 0.0F;
-  r_bsd_aera_vel_.c_x = 0.0F;
-  r_bsd_aera_vel_.f_y = 0.0F;
-  r_bsd_aera_vel_.g_y = 0.0F;
-  r_bsd_aera_vel_.l_y = 0.0F;
-  r_bsd_aera_vel_.k_y = 0.0F;
-  r_bsd_aera_vel_.obstacle_velocity_limit = 0.0F;
-  f_lca_aera_vel_.area_length_distance = 0.0F;
-  f_lca_aera_vel_.b_x = 0.0F;
-  f_lca_aera_vel_.c_x = 0.0F;
-  f_lca_aera_vel_.f_y = 0.0F;
-  f_lca_aera_vel_.g_y = 0.0F;
-  f_lca_aera_vel_.l_y = 0.0F;
-  f_lca_aera_vel_.k_y = 0.0F;
-  f_lca_aera_vel_.obstacle_velocity_limit = 0.0F;
-  r_lca_aera_vel_.area_length_distance = 0.0F;
-  r_lca_aera_vel_.b_x = 0.0F;
-  r_lca_aera_vel_.c_x = 0.0F;
-  r_lca_aera_vel_.f_y = 0.0F;
-  r_lca_aera_vel_.g_y = 0.0F;
-  r_lca_aera_vel_.l_y = 0.0F;
-  r_lca_aera_vel_.k_y = 0.0F;
-  r_lca_aera_vel_.obstacle_velocity_limit = 0.0F;
+  f_bsd_aera_vel_.area_length_distance = 0.0;
+  f_bsd_aera_vel_.b_x = 0.0;
+  f_bsd_aera_vel_.c_x = 0.0;
+  f_bsd_aera_vel_.f_y = 0.0;
+  f_bsd_aera_vel_.g_y = 0.0;
+  f_bsd_aera_vel_.l_y = 0.0;
+  f_bsd_aera_vel_.k_y = 0.0;
+  f_bsd_aera_vel_.obstacle_velocity_limit = 0.0;
+  r_bsd_aera_vel_.area_length_distance = 0.0;
+  r_bsd_aera_vel_.b_x = 0.0;
+  r_bsd_aera_vel_.c_x = 0.0;
+  r_bsd_aera_vel_.f_y = 0.0;
+  r_bsd_aera_vel_.g_y = 0.0;
+  r_bsd_aera_vel_.l_y = 0.0;
+  r_bsd_aera_vel_.k_y = 0.0;
+  r_bsd_aera_vel_.obstacle_velocity_limit = 0.0;
+  f_lca_aera_vel_.area_length_distance = 0.0;
+  f_lca_aera_vel_.b_x = 0.0;
+  f_lca_aera_vel_.c_x = 0.0;
+  f_lca_aera_vel_.f_y = 0.0;
+  f_lca_aera_vel_.g_y = 0.0;
+  f_lca_aera_vel_.l_y = 0.0;
+  f_lca_aera_vel_.k_y = 0.0;
+  f_lca_aera_vel_.obstacle_velocity_limit = 0.0;
+  r_lca_aera_vel_.area_length_distance = 0.0;
+  r_lca_aera_vel_.b_x = 0.0;
+  r_lca_aera_vel_.c_x = 0.0;
+  r_lca_aera_vel_.f_y = 0.0;
+  r_lca_aera_vel_.g_y = 0.0;
+  r_lca_aera_vel_.l_y = 0.0;
+  r_lca_aera_vel_.k_y = 0.0;
+  r_lca_aera_vel_.obstacle_velocity_limit = 0.0;
   // for ego_curvature
-  ego_curvature = 0.0F;
+  ego_curvature = 0.0;
 
   // LOG_DEBUG("LaneKeepAssistManager::elk:: bsd_lca has been inited \n");
 }
 void EmergencyLaneKeepAlert::Update() {
-  float32 temp32 = 0.0F;
+  double temp32 = 0.0;
   // 区域划分
-  if (lkas_input_->vehicle_info.veh_display_speed <= (60.0F / 3.6F)) {
-    f_bsd_aera_vel_.area_length_distance = 4.0F;
-    r_bsd_aera_vel_.area_length_distance = 4.0F;
-    f_lca_aera_vel_.area_length_distance = 4.0F;
-    r_lca_aera_vel_.area_length_distance = 4.0F;
-  } else if ((lkas_input_->vehicle_info.veh_display_speed > (60.0F / 3.6F)) &&
-             (lkas_input_->vehicle_info.veh_display_speed < (115.0F / 3.6F))) {
+  if (lkas_input_->vehicle_info.veh_display_speed <= (60.0 / 3.6)) {
+    f_bsd_aera_vel_.area_length_distance = 4.0;
+    r_bsd_aera_vel_.area_length_distance = 4.0;
+    f_lca_aera_vel_.area_length_distance = 4.0;
+    r_lca_aera_vel_.area_length_distance = 4.0;
+  } else if ((lkas_input_->vehicle_info.veh_display_speed > (60.0 / 3.6)) &&
+             (lkas_input_->vehicle_info.veh_display_speed < (115.0 / 3.6))) {
     f_bsd_aera_vel_.area_length_distance =
-        0.2F * (lkas_input_->vehicle_info.veh_display_speed - 60.0F / 3.6F) +
-        4.0F;
+        0.2 * (lkas_input_->vehicle_info.veh_display_speed - 60.0 / 3.6) + 4.0;
     r_bsd_aera_vel_.area_length_distance =
-        0.2F * (lkas_input_->vehicle_info.veh_display_speed - 60.0F / 3.6F) +
-        4.0F;
+        0.2 * (lkas_input_->vehicle_info.veh_display_speed - 60.0 / 3.6) + 4.0;
     f_lca_aera_vel_.area_length_distance =
-        0.2F * (lkas_input_->vehicle_info.veh_display_speed - 60.0F / 3.6F) +
-        4.0F;
+        0.2 * (lkas_input_->vehicle_info.veh_display_speed - 60.0 / 3.6) + 4.0;
     r_lca_aera_vel_.area_length_distance =
-        0.2F * (lkas_input_->vehicle_info.veh_display_speed - 60.0F / 3.6F) +
-        4.0F;
+        0.2 * (lkas_input_->vehicle_info.veh_display_speed - 60.0 / 3.6) + 4.0;
   } else {
-    f_bsd_aera_vel_.area_length_distance = 15.0F;
-    r_bsd_aera_vel_.area_length_distance = 15.0F;
-    f_lca_aera_vel_.area_length_distance = 15.0F;
-    r_lca_aera_vel_.area_length_distance = 15.0F;
+    f_bsd_aera_vel_.area_length_distance = 15.0;
+    r_bsd_aera_vel_.area_length_distance = 15.0;
+    f_lca_aera_vel_.area_length_distance = 15.0;
+    r_lca_aera_vel_.area_length_distance = 15.0;
   }
 
-  f_bsd_aera_vel_.b_x = 0.0F;  // 1
+  f_bsd_aera_vel_.b_x = 0.0;  // 1
   f_bsd_aera_vel_.c_x = f_bsd_aera_vel_.area_length_distance +
                         lkas_input_->vehicle_info.common_wheel_base +
                         lkas_input_->vehicle_info.common_front_over;  // 2
@@ -82,72 +78,72 @@ void EmergencyLaneKeepAlert::Update() {
                         lkas_input_->vehicle_info.common_rear_over;   // 3
   r_bsd_aera_vel_.c_x = lkas_input_->vehicle_info.common_wheel_base;  // 4
 
-  f_lca_aera_vel_.b_x = 70.0F;  // 5
+  f_lca_aera_vel_.b_x = 70.0;  // 5
   f_lca_aera_vel_.c_x = f_bsd_aera_vel_.area_length_distance +
                         lkas_input_->vehicle_info.common_wheel_base +
                         lkas_input_->vehicle_info.common_front_over;  // 6
   r_lca_aera_vel_.b_x = -f_bsd_aera_vel_.area_length_distance -
                         lkas_input_->vehicle_info.common_rear_over;  // 7
-  r_lca_aera_vel_.c_x = -70.0F;                                      // 8
+  r_lca_aera_vel_.c_x = -70.0;                                       // 8
 
   f_bsd_aera_vel_.f_y =
-      lkas_input_->vehicle_info.common_veh_width / 2.0F + width_distance_min;
+      lkas_input_->vehicle_info.common_veh_width / 2.0 + width_distance_min;
   f_bsd_aera_vel_.g_y =
-      lkas_input_->vehicle_info.common_veh_width / 2.0F + width_distance_max;
+      lkas_input_->vehicle_info.common_veh_width / 2.0 + width_distance_max;
   f_bsd_aera_vel_.l_y =
-      -lkas_input_->vehicle_info.common_veh_width / 2.0F - width_distance_max;
+      -lkas_input_->vehicle_info.common_veh_width / 2.0 - width_distance_max;
   f_bsd_aera_vel_.k_y =
-      -lkas_input_->vehicle_info.common_veh_width / 2.0F - width_distance_min;
+      -lkas_input_->vehicle_info.common_veh_width / 2.0 - width_distance_min;
   r_bsd_aera_vel_.f_y =
-      lkas_input_->vehicle_info.common_veh_width / 2.0F + width_distance_min;
+      lkas_input_->vehicle_info.common_veh_width / 2.0 + width_distance_min;
   r_bsd_aera_vel_.g_y =
-      lkas_input_->vehicle_info.common_veh_width / 2.0F + width_distance_max;
+      lkas_input_->vehicle_info.common_veh_width / 2.0 + width_distance_max;
   r_bsd_aera_vel_.l_y =
-      -lkas_input_->vehicle_info.common_veh_width / 2.0F - width_distance_max;
+      -lkas_input_->vehicle_info.common_veh_width / 2.0 - width_distance_max;
   r_bsd_aera_vel_.k_y =
-      -lkas_input_->vehicle_info.common_veh_width / 2.0F - width_distance_min;
+      -lkas_input_->vehicle_info.common_veh_width / 2.0 - width_distance_min;
 
   f_lca_aera_vel_.f_y =
-      lkas_input_->vehicle_info.common_veh_width / 2.0F + width_distance_min;
+      lkas_input_->vehicle_info.common_veh_width / 2.0 + width_distance_min;
   f_lca_aera_vel_.g_y =
-      lkas_input_->vehicle_info.common_veh_width / 2.0F + width_distance_max;
+      lkas_input_->vehicle_info.common_veh_width / 2.0 + width_distance_max;
   f_lca_aera_vel_.l_y =
-      -lkas_input_->vehicle_info.common_veh_width / 2.0F - width_distance_max;
+      -lkas_input_->vehicle_info.common_veh_width / 2.0 - width_distance_max;
   f_lca_aera_vel_.k_y =
-      -lkas_input_->vehicle_info.common_veh_width / 2.0F - width_distance_min;
+      -lkas_input_->vehicle_info.common_veh_width / 2.0 - width_distance_min;
   r_lca_aera_vel_.f_y =
-      lkas_input_->vehicle_info.common_veh_width / 2.0F + width_distance_min;
+      lkas_input_->vehicle_info.common_veh_width / 2.0 + width_distance_min;
   r_lca_aera_vel_.g_y =
-      lkas_input_->vehicle_info.common_veh_width / 2.0F + width_distance_max;
+      lkas_input_->vehicle_info.common_veh_width / 2.0 + width_distance_max;
   r_lca_aera_vel_.l_y =
-      -lkas_input_->vehicle_info.common_veh_width / 2.0F - width_distance_max;
+      -lkas_input_->vehicle_info.common_veh_width / 2.0 - width_distance_max;
   r_lca_aera_vel_.k_y =
-      -lkas_input_->vehicle_info.common_veh_width / 2.0F - width_distance_min;
+      -lkas_input_->vehicle_info.common_veh_width / 2.0 - width_distance_min;
   // 目标物速度限制
-  if (lkas_input_->vehicle_info.veh_display_speed < (10.0F / 3.6F)) {
+  if (lkas_input_->vehicle_info.veh_display_speed < (10.0 / 3.6)) {
     f_bsd_aera_vel_.obstacle_velocity_limit =
-        10.0F / 3.6F;  // 单位需要统一转换成m/s
-    r_bsd_aera_vel_.obstacle_velocity_limit = -10.0F / 3.6F;
-  } else if ((lkas_input_->vehicle_info.veh_display_speed <= (30.0F / 3.6F)) &&
+        10.0 / 3.6;  // 单位需要统一转换成m/s
+    r_bsd_aera_vel_.obstacle_velocity_limit = -10.0 / 3.6;
+  } else if ((lkas_input_->vehicle_info.veh_display_speed <= (30.0 / 3.6)) &&
              (lkas_input_->vehicle_info.veh_display_speed >=
-              (10.0F / 3.6F)))  // 根据本车车速设置速度阈值
+              (10.0 / 3.6)))  // 根据本车车速设置速度阈值
   {
     f_bsd_aera_vel_.obstacle_velocity_limit =
-        -((-15.0F / 3.6F + 10.0F / 3.6F) / (30.0F / 3.6F - 10.0F / 3.6F) *
-              (lkas_input_->vehicle_info.veh_display_speed - 30.0F / 3.6F) -
-          15.0F / 3.6F);
+        -((-15.0 / 3.6 + 10.0 / 3.6) / (30.0 / 3.6 - 10.0 / 3.6) *
+              (lkas_input_->vehicle_info.veh_display_speed - 30.0 / 3.6) -
+          15.0 / 3.6);
     r_bsd_aera_vel_.obstacle_velocity_limit =
-        ((-15.0F / 3.6F + 10.0F / 3.6F) / (30.0F / 3.6F - 10.0F / 3.6F) *
-             (lkas_input_->vehicle_info.veh_display_speed - 30.0F / 3.6F) -
-         15.0F / 3.6F);
+        ((-15.0 / 3.6 + 10.0 / 3.6) / (30.0 / 3.6 - 10.0 / 3.6) *
+             (lkas_input_->vehicle_info.veh_display_speed - 30.0 / 3.6) -
+         15.0 / 3.6);
   } else {
-    f_bsd_aera_vel_.obstacle_velocity_limit = (15.0F / 3.6F);
-    r_bsd_aera_vel_.obstacle_velocity_limit = -(15.0F / 3.6F);
+    f_bsd_aera_vel_.obstacle_velocity_limit = (15.0 / 3.6);
+    r_bsd_aera_vel_.obstacle_velocity_limit = -(15.0 / 3.6);
   }
 
   f_lca_aera_vel_.obstacle_velocity_limit =
-      -30.0F / 3.6F;  // 单位需要统一转换成m/s
-  r_lca_aera_vel_.obstacle_velocity_limit = 30.0F / 3.6F;
+      -30.0 / 3.6;  // 单位需要统一转换成m/s
+  r_lca_aera_vel_.obstacle_velocity_limit = 30.0 / 3.6;
 
   // for ego_curvature
   if (fabs(lkas_input_->vehicle_info.veh_display_speed) < 0.0001) {
@@ -236,7 +232,7 @@ bool EmergencyLaneKeepAlert::RightAlertJudge() {
 // sigle radar judge
 bool EmergencyLaneKeepAlert::LeftAlertJudgeFL() {
   // 雷达信息
-  RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
+  RadarObjData radar_obj_data = {0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
   // 状态标志位
   uint8 select_state = 0;
   bool condition_bsd_state = false;
@@ -280,7 +276,7 @@ bool EmergencyLaneKeepAlert::LeftAlertJudgeFL() {
 }
 bool EmergencyLaneKeepAlert::LeftAlertJudgeRL() {
   // 雷达信息
-  RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
+  RadarObjData radar_obj_data = {0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
   // 状态标志位
   uint8 select_state = 0;
   bool condition_bsd_state = false;
@@ -323,7 +319,7 @@ bool EmergencyLaneKeepAlert::LeftAlertJudgeRL() {
 }
 bool EmergencyLaneKeepAlert::RightAlertJudgeFR() {
   // 雷达信息
-  RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
+  RadarObjData radar_obj_data = {0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
   // 状态标志位
   uint8 select_state = 0;
   bool condition_bsd_state = false;
@@ -366,7 +362,7 @@ bool EmergencyLaneKeepAlert::RightAlertJudgeFR() {
 }
 bool EmergencyLaneKeepAlert::RightAlertJudgeRR() {
   // 雷达信息
-  RadarObjData radar_obj_data = {0, 0, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
+  RadarObjData radar_obj_data = {0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
   // 状态标志位
   uint8 select_state = 0;
   bool condition_bsd_state = false;
@@ -462,7 +458,7 @@ uint8 EmergencyLaneKeepAlert::ObjSelect(RadarObjData *radar) {
   if ((radar->obj_class >= 11) || (radar->obj_class == 2) ||
       (radar->obj_class == 1) ||
       ((radar->obj_class == 0) &&
-       (radar->obj_length <= 3.0F || (radar->obj_width <= 1.6F)))) {
+       (radar->obj_length <= 3.0 || (radar->obj_width <= 1.6)))) {
     class_code += uint16_bit[0];
   }
   return (class_code);
@@ -504,7 +500,7 @@ uint8 EmergencyLaneKeepAlert::ObjBsdConditionF(RadarObjData *radar) {
   // condition3
   if (fabs(radar->obj_vy) < 0.5) {
   } else {
-    if (fabs(radar->obj_vx / radar->obj_vy) < 1.0F) {
+    if (fabs(radar->obj_vx / radar->obj_vy) < 1.0) {
       condition_code = uint16_bit[3];
     }
   }
@@ -548,13 +544,13 @@ uint8 EmergencyLaneKeepAlert::ObjBsdConditionR(RadarObjData *radar) {
   // condition2
   if ((radar->obj_vx < r_bsd_aera_vel_.obstacle_velocity_limit) ||
       (fabs(radar->obj_vx + lkas_input_->vehicle_info.veh_display_speed) <
-       (5.0F / 3.6F))) {
+       (5.0 / 3.6))) {
     condition_code += uint16_bit[2];
   }
   // condition3
   if (fabs(radar->obj_vy) < 0.5) {
   } else {
-    if (fabs(radar->obj_vx / radar->obj_vy) < 1.0F) {
+    if (fabs(radar->obj_vx / radar->obj_vy) < 1.0) {
       condition_code = uint16_bit[3];
     }
   }
@@ -599,9 +595,9 @@ uint8 EmergencyLaneKeepAlert::ObjLcaConditionF(RadarObjData *radar) {
     condition_code += uint16_bit[2];
   }
   // condition3
-  if (fabs(radar->obj_vy) < 0.5F) {
+  if (fabs(radar->obj_vy) < 0.5) {
   } else {
-    if (fabs(radar->obj_vx / radar->obj_vy) < 1.0F) {
+    if (fabs(radar->obj_vx / radar->obj_vy) < 1.0) {
       condition_code = uint16_bit[3];
     }
   }
@@ -614,10 +610,10 @@ uint8 EmergencyLaneKeepAlert::ObjLcaConditionF(RadarObjData *radar) {
 uint8 EmergencyLaneKeepAlert::ObjLcaAlertF(RadarObjData *radar) {
   uint8 alert_code = 0;
   // uint8 crash_code = 0;
-  float32 lca_ttc = 0.0F;
-  float32 ttc = 0.0F;
-  float32 obj_to_front_x = 0;
-  float32 crash_y = 0.0F;
+  double lca_ttc = 0.0;
+  double ttc = 0.0;
+  double obj_to_front_x = 0;
+  double crash_y = 0.0;
   obj_to_front_x = radar->obj_x - lkas_input_->vehicle_info.common_wheel_base -
                    lkas_input_->vehicle_info.common_front_over;
 
@@ -626,13 +622,13 @@ uint8 EmergencyLaneKeepAlert::ObjLcaAlertF(RadarObjData *radar) {
   } else if ((radar->obj_x < f_lca_aera_vel_.b_x) && (radar->obj_x > 25)) {
     lca_ttc = 3.5;
   } else {
-    lca_ttc = 0.0F;
+    lca_ttc = 0.0;
   }
 
   if (radar->obj_vx < 0) {
     ttc = fabs(obj_to_front_x / radar->obj_vx);
   } else {
-    ttc = 100.0F;
+    ttc = 100.0;
   }
 
   crash_y = radar->obj_y + ttc * radar->obj_vy;
@@ -642,12 +638,12 @@ uint8 EmergencyLaneKeepAlert::ObjLcaAlertF(RadarObjData *radar) {
   }
   if (radar->pos == 0) {  // 左侧
     if ((crash_y < -0.5 * lkas_input_->vehicle_info.common_veh_width) ||
-        (crash_y > (f_lca_aera_vel_.g_y + 1.0F))) {
+        (crash_y > (f_lca_aera_vel_.g_y + 1.0))) {
       alert_code += uint16_bit[1];
     }
   } else {  // 右侧
     if ((crash_y > 0.5 * lkas_input_->vehicle_info.common_veh_width) ||
-        (crash_y < (f_lca_aera_vel_.l_y - 1.0F))) {
+        (crash_y < (f_lca_aera_vel_.l_y - 1.0))) {
       alert_code += uint16_bit[1];
     }
   }
@@ -685,13 +681,13 @@ uint8 EmergencyLaneKeepAlert::ObjLcaConditionR(RadarObjData *radar) {
     }
   }
   // condition2
-  if (radar->obj_vx < 0.0F) {
+  if (radar->obj_vx < 0.0) {
     condition_code += uint16_bit[2];
   }
   // condition3
-  if (fabs(radar->obj_vy) < 0.5F) {
+  if (fabs(radar->obj_vy) < 0.5) {
   } else {
-    if (fabs(radar->obj_vx / radar->obj_vy) < 1.0F) {
+    if (fabs(radar->obj_vx / radar->obj_vy) < 1.0) {
       condition_code = uint16_bit[3];
     }
   }
@@ -703,10 +699,10 @@ uint8 EmergencyLaneKeepAlert::ObjLcaConditionR(RadarObjData *radar) {
 }
 uint8 EmergencyLaneKeepAlert::ObjLcaAlertR(RadarObjData *radar) {
   uint8 alert_code = 0;
-  float32 lca_ttc = 0.0F;
-  float32 ttc = 0.0F;
-  float32 obj_to_front_x = 0;
-  float32 crash_y = 0.0F;
+  double lca_ttc = 0.0;
+  double ttc = 0.0;
+  double obj_to_front_x = 0;
+  double crash_y = 0.0;
   obj_to_front_x = -radar->obj_x - lkas_input_->vehicle_info.common_rear_over;
 
   if ((radar->obj_x < r_lca_aera_vel_.b_x) && (radar->obj_x >= -25)) {
@@ -719,7 +715,7 @@ uint8 EmergencyLaneKeepAlert::ObjLcaAlertR(RadarObjData *radar) {
   if (radar->obj_vx > 0) {
     ttc = fabs(obj_to_front_x / radar->obj_vx);
   } else {
-    ttc = 100.0F;
+    ttc = 100.0;
   }
 
   crash_y = radar->obj_y + ttc * radar->obj_vy;
@@ -730,12 +726,12 @@ uint8 EmergencyLaneKeepAlert::ObjLcaAlertR(RadarObjData *radar) {
   // condition2
   if (radar->pos == 0) {
     if ((crash_y < -0.5 * lkas_input_->vehicle_info.common_veh_width) ||
-        (crash_y > (r_lca_aera_vel_.g_y + 1.0F))) {
+        (crash_y > (r_lca_aera_vel_.g_y + 1.0))) {
       alert_code += uint16_bit[1];
     }
   } else {
     if ((crash_y > 0.5 * lkas_input_->vehicle_info.common_veh_width) ||
-        (crash_y < (r_lca_aera_vel_.l_y - 1.0F))) {
+        (crash_y < (r_lca_aera_vel_.l_y - 1.0))) {
       alert_code += uint16_bit[1];
     }
   }

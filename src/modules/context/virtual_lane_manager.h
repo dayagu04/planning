@@ -13,8 +13,8 @@
 #include "virtual_lane.h"
 namespace planning {
 
-using ad_common::hdmap::LaneGroupConstPtr;
 using Map::CurrentRouting;
+using ad_common::hdmap::LaneGroupConstPtr;
 
 enum LaneChangeStatus {
   NO_LANE_CHANGE = 0,
@@ -112,6 +112,9 @@ class VirtualLaneManager {
   std::vector<double> construct_reference_line_acc(void);
   std::vector<double> construct_reference_line_scc(void);
   bool update(const FusionRoad::RoadInfo &roads);
+
+  bool CheckLaneValid(const FusionRoad::RoadInfo &roads);
+
   void reset();
 
   double get_distance_to_dash_line(const RequestType direction,
@@ -177,6 +180,7 @@ class VirtualLaneManager {
 
   bool GetCurrentNearestLane(const planning::framework::Session &session);
   void CalculateDistanceToRampSplitMerge(planning::framework::Session *session);
+  void ResetForRampInfo();
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;

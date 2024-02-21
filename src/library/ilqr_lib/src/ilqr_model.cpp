@@ -1,4 +1,5 @@
 #include "ilqr_model.h"
+
 #include "math_lib.h"
 
 using namespace pnc::mathlib;

@@ -1,12 +1,13 @@
 PACKAGE_NAME := planning
-PACKAGE_VERSION := planning.2.3.1.0
+PACKAGE_VERSION := planning.2.3.1.1
 
 include .ci/utils.mk
 
 pybind_build:
 	mkdir -p build && cd build && \
 	/bin/bash -c "cmake $(CMAKE_ARGS) -DPYBIND_TOOL_ENABLE=True .. && \
-	make -j $(NUM_JOB)"
+	make -j $(NUM_JOB) && \
+	make install"
 
 pp_build:
 	mkdir -p build && cd build && \

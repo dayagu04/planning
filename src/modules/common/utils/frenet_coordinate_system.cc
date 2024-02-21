@@ -1,8 +1,12 @@
 
 #include "utils/frenet_coordinate_system.h"
+
 #include <fstream>
 #include <iostream>
+
 #include "Eigen/LU"
+#include "ifly_time.h"
+#include "log.h"
 
 /*
 ADD MORE VALIDITY CHECK TO MAKE IT AS ROBUST AS POSSIBLE
@@ -77,18 +81,19 @@ FrenetCoordinateSystem::FrenetCoordinateSystem(
 void FrenetCoordinateSystem::ConstructFrenetCoordinateSystem(
     const vector<double>& vec_x, const vector<double>& vec_y,
     double s_polyfit_start, double s_polyfit_end) {
-  vector<double> vec_s;
   assert(vec_x.size() == vec_y.size());
+  vector<double> vec_s(vec_x.size());
   vector<std::pair<double, double>> vec_c;
-  vec_s.push_back(0);
+  vec_s[0] = 0.0;
   for (int i = 1; i < (int)vec_x.size(); i++) {
-    vec_s.push_back(vec_s[i - 1] + sqrt(pow(vec_x[i] - vec_x[i - 1], 2) +
-                                        pow(vec_y[i] - vec_y[i - 1], 2)));
+    vec_s[i] = (vec_s[i - 1] + sqrt(pow(vec_x[i] - vec_x[i - 1], 2) +
+                                    pow(vec_y[i] - vec_y[i - 1], 2)));
   }
   m_x_s.set_points(vec_s, vec_x);
   m_y_s.set_points(vec_s, vec_y);
-  m_length = vec_s[vec_x.size() - 1];
-  vector<double> vec_k;
+  m_length = vec_s.back();
+
+  vector<double> vec_k(vec_s.size());
   assert(s_polyfit_start < s_polyfit_end);
   s_polyfit_start = std::max(0.0, s_polyfit_start);
   double s_end = std::min(m_length, s_polyfit_end);
@@ -99,18 +104,12 @@ void FrenetCoordinateSystem::ConstructFrenetCoordinateSystem(
     double ddx = m_x_s.deriv(2, tmp_s);
     double ddy = m_y_s.deriv(2, tmp_s);
     double tmp_k = (dx * ddy - dy * ddx) / pow(dx * dx + dy * dy, 1.5);
-    if (tmp_k > 0.5) {
-      tmp_k = 0.5;
-    } else if (tmp_k < -0.5) {
-      tmp_k = -0.5;
-    }
-    vec_k.push_back(tmp_k);
+    tmp_k = std::min(0.5, std::max(-0.5, tmp_k));
+
+    vec_k[i] = (tmp_k);
     if (tmp_s >= s_polyfit_start && tmp_s <= s_end) {
-      if (tmp_s > vec_s[0] + 30.0) {
-        vec_c.push_back(std::make_pair(0.0, tmp_s));
-      } else {
-        vec_c.push_back(std::make_pair(tmp_k * POLYFIT_GAIN, tmp_s));
-      }
+      double c = (tmp_s > vec_s[0] + 30.0) ? 0.0 : tmp_k * POLYFIT_GAIN;
+      vec_c.emplace_back(c, tmp_s);
     }
   }
   m_k_s.set_points(vec_s, vec_k);
@@ -156,6 +155,7 @@ double FrenetCoordinateSystem::FindMinDistanceOffsetOnCurve(
     check_s_end = std::min(s_end, m_length);
   }
   double cur_s = check_s_begin;
+  int find_s_count = 0;
   // Coarsed linear search to counter possible local minimum
   // Check if the yaw difference between the road heading and the vehicle
   // heading is too large If larger than pi/2, means that the mapping is not
@@ -172,8 +172,12 @@ double FrenetCoordinateSystem::FindMinDistanceOffsetOnCurve(
       if (squared_distance > temp) {
         squared_distance = temp;
         shortest_s = cur_s;
+      } else {
+        // 目前参考线不考虑U型弯的话，squared_distance具备极小值
+        break;
       }
     }
+    find_s_count++;
     cur_s += m_fcs_params.coarse_step_s;
   }
 
@@ -183,6 +187,7 @@ double FrenetCoordinateSystem::FindMinDistanceOffsetOnCurve(
   double s_old = std::numeric_limits<double>::max();
   double s_new = (begin_s + end_s) / 2.0;
   int count = 0;
+  const double coarse_step = m_fcs_params.coarse_step_s * 0.1;
   while (!(std::abs(s_new - s_old) <= m_fcs_params.coord_transform_precision ||
            s_new - begin_s <= 0 || s_new - end_s >= 0 ||
            count > m_fcs_params.max_iter)) {
@@ -190,8 +195,8 @@ double FrenetCoordinateSystem::FindMinDistanceOffsetOnCurve(
     double step_val = -(m_fcs_params.optimization_gamma /
                         HessianSquaredDistanceToPointOnCurve(s_old, cart0)) *
                       GradientSquaredDistanceToOffSetOnCurve(s_old, cart0);
-    step_val = std::max<double>(-m_fcs_params.coarse_step_s / 10, step_val);
-    step_val = std::min<double>(m_fcs_params.coarse_step_s / 10, step_val);
+    step_val = std::max<double>(-coarse_step, step_val);
+    step_val = std::min<double>(coarse_step, step_val);
 
     s_new += step_val;
     count++;
@@ -231,6 +236,7 @@ TRANSFORM_STATUS FrenetCoordinateSystem::CartCoord2FrenetCoord(
     frenet.y = distance;
   else
     frenet.y = -distance;
+
   return TRANSFORM_SUCCESS;
 }
 /*
@@ -299,6 +305,7 @@ TRANSFORM_STATUS FrenetCoordinateSystem::CartCoord2FrenetCoord(
     frenet.y = -distance;
   return TRANSFORM_SUCCESS;
 }
+
 // Frenet coordinate to cartesian coordinate
 TRANSFORM_STATUS FrenetCoordinateSystem::FrenetCoord2CartCoord(
     const Point2D& frenet, Point2D& cart) const {

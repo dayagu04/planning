@@ -73,7 +73,7 @@ build/tools/planning_player/pp --play /mnt/xxxxx/xxxx.0000 --close-loop > planni
 ```
 - 修改进自动帧数，默认15（1.5s）
 ```
---auto-frame=15
+--auto-time=15
 ```
 支持指定场景，行车/泊车，默认行车
 ```

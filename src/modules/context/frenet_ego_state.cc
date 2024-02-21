@@ -1,21 +1,45 @@
 #include "frenet_ego_state.h"
 
+#include <vector>
+
 #include "session.h"
+#include "utils/frenet_coordinate_system.h"
 
 namespace planning {
 
-void FrenetEgoState::update(
-    const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
-    const planning::EgoStateManager &ego_state) {
+void FrenetEgoState::update(const std::shared_ptr<KDPath> &frenet_coord,
+                            const planning::EgoStateManager &ego_state) {
+  // debug ------------------------------------------
+
+  //   std::vector<double> x_vec;
+  //   std::vector<double> y_vec;
+  //   for (auto path_point : frenet_coord->path_points()) {
+  //     x_vec.push_back(path_point.x());
+  //     y_vec.push_back(path_point.y());
+  //   }
+  //   FrenetCoordinateSystemParameters frenet_parameters{0.1, 0.01, 0.3,
+  //                                                      1.0, 0.5,  15};
+  //   FrenetCoordinateSystem frenet_debug(x_vec, y_vec, frenet_parameters);
+  //   Point2D frenet_point_tmp, cart_point_tmp;
+  //   cart_point_tmp.x = ego_state.ego_carte().x;
+  //   cart_point_tmp.y = ego_state.ego_carte().y;
+  //   frenet_debug.CartCoord2FrenetCoord(cart_point_tmp, frenet_point_tmp);
+  //   double s_ft = frenet_point_tmp.x;
+  //   double l_ft = frenet_point_tmp.y;
+
+  // debug ------------------------------------------
   // Step 1) update location, velocity
   Point2D frenet_point, cart_point;
   cart_point.x = ego_state.ego_carte().x;
   cart_point.y = ego_state.ego_carte().y;
-  (void)frenet_coord->CartCoord2FrenetCoord(cart_point, frenet_point);
-  s_ = frenet_point.x;
-  l_ = frenet_point.y;
+  if (frenet_coord->XYToSL(cart_point, frenet_point)) {
+    s_ = frenet_point.x;
+    l_ = frenet_point.y;
+  } else {
+    LOG_DEBUG("kd_path coordinate conversion failed");
+  };
   heading_angle_ = planning_math::NormalizeAngle(
-      ego_state.heading_angle() - frenet_coord->GetRefCurveHeading(s_));
+      ego_state.heading_angle() - frenet_coord->GetPathCurveHeading(s_));
   velocity_ = ego_state.ego_v();
   acc_ = ego_state.ego_acc();
   jerk_ = ego_state.jerk();
@@ -67,7 +91,7 @@ void FrenetEgoState::update(
     Point2D frenet_corner, cart_corner;
     cart_corner.x = pt.x();
     cart_corner.y = pt.y();
-    (void)frenet_coord->CartCoord2FrenetCoord(cart_corner, frenet_corner);
+    (void)frenet_coord->XYToSL(cart_corner, frenet_corner);
     frenet_corners.emplace_back(
         planning_math::Vec2d(frenet_corner.x, frenet_corner.y));
   }
@@ -95,8 +119,8 @@ void FrenetEgoState::update(
   cstate.speed = std::max(planning_init_point_.v, 0.0);
   cstate.acceleration = planning_init_point_.a;
   cstate.curvature = planning_init_point_.curvature;
-  auto ok = frenet_coord->CartState2FrenetState(
-                cstate, planning_init_point_.frenet_state) == TRANSFORM_SUCCESS;
+  auto ok = frenet_coord->CartStateToFrenetState(
+      cstate, planning_init_point_.frenet_state);
   LOG_DEBUG(
       "planning_init_point: rel_t: %f, x: %f, y: %f, yaw: %f, v: %f, a: %f, s: %f, l: %f, dr/ds: %f, dds/drdr: %f | \
            ego_pose: x: %f, y: %F, s: %f, l: %f\n",

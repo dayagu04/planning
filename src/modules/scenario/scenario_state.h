@@ -93,19 +93,26 @@ struct StateBase : M::Base {
     // 根据定位状态切换实时、长时
     auto location_valid =
         frame->session()->environmental_model().location_valid();
+
+    static auto hpp_pipeline =
+        TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, nullptr);
+    static auto scc_pipeline =
+        TaskPipeline::Make(TaskPipelineType::SCC, config_builder, nullptr);
+    static auto vision_only_pipeline = TaskPipeline::Make(
+        TaskPipelineType::VISION_ONLY, config_builder, nullptr);
+
     if (location_valid) {
-      return TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder,
-                                frame);
-    } else {
-      if (g_context.GetParam().planner_type ==
-          planning::context::PlannerType::REALTIME_PLANNER_WITH_MOTION) {
-        return TaskPipeline::Make(TaskPipelineType::REALTIME, config_builder,
-                                  frame);
-      } else {
-        return TaskPipeline::Make(TaskPipelineType::VISION_ONLY, config_builder,
-                                  frame);
+      auto planner_type = g_context.GetParam().planner_type;
+      if (planner_type == planning::context::PlannerType::LONGTIME_PLANNER) {
+        hpp_pipeline->SetFrame(frame);
+        return hpp_pipeline;
+      } else if (planner_type == planning::context::PlannerType::SCC_PLANNER) {
+        scc_pipeline->SetFrame(frame);
+        return scc_pipeline;
       }
     }
+    vision_only_pipeline->SetFrame(frame);
+    return vision_only_pipeline;
   }
 
   virtual std::shared_ptr<Evaluator> get_evaluator(framework::Frame *frame);

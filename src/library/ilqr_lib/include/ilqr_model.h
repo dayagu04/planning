@@ -2,6 +2,7 @@
 #define __ILQR_MODEL_H_
 
 #include <memory>
+
 #include "ilqr_cost.h"
 
 namespace ilqr_solver {
