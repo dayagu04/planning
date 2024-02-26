@@ -6,7 +6,6 @@
 #include <memory>
 
 #include "geometry_math.h"
-// #include "ilqr_core.h"
 #include "ilqr_define.h"
 #include "lateral_path_optimizer_core.h"
 #include "lateral_path_optimizer_cost.h"

@@ -9,6 +9,8 @@ class LateralPathOptimizerCore : public ilqr_solver::iLqr {
  protected:
   bool ForwardPass(double &new_cost, double &expected,
                    const size_t &iter) override;
+
+  bool BackwardPass() override;
 };
 }  // namespace apa_planner
 }  // namespace planning

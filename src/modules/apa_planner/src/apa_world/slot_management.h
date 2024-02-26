@@ -238,7 +238,7 @@ class SlotManagement {
 
   struct EgoSlotInfo {
     uint8_t select_slot_id = 0;
-    uint8_t slot_type = Common::PARKING_SLOT_TYPE_VERTICAL;
+    uint8_t slot_type = Common::PARKING_SLOT_TYPE_INVALID;
     ParkingFusion::ParkingFusionSlot select_fusion_slot;
     common::SlotInfo select_slot;
     common::SlotInfo select_slot_filter;
@@ -275,7 +275,7 @@ class SlotManagement {
 
     void Reset() {
       select_slot_id = 0;
-      slot_type = Common::PARKING_SLOT_TYPE_VERTICAL;
+      slot_type = Common::PARKING_SLOT_TYPE_INVALID;
       select_fusion_slot.Clear();
       select_slot.Clear();
       select_slot_filter.Clear();

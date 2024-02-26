@@ -482,7 +482,7 @@ void ParallelParInPlanner::GenObstacles() {
   const double channel_y =
       slot_side_sgn * (0.5 * frame_.ego_slot_info.slot_width + channel_width);
 
-  // set limit obstacles in clockwise direction
+  // set limit obstacles in clockwise direction in slot systems
   const Eigen::Vector2d A(t_lane_.pt_outside.x(), channel_y);
   const Eigen::Vector2d B(t_lane_.pt_outside.x() + channel_length, channel_y);
 
@@ -524,18 +524,14 @@ void ParallelParInPlanner::GenObstacles() {
     obstacle_vec.reserve(obstacle_vec.size() + point_set.size());
     obstacle_vec.insert(obstacle_vec.end(), point_set.begin(), point_set.end());
   }
-
-  // if ((t_lane_.pt_outside - frame_.ego_slot_info.ego_pos_slot).norm()
-  // > 2.2)
-  // {
-  //   obstacle_vec.emplace_back(t_lane_.pt_outside);
-  // }
-
-  // if ((t_lane_.pt_inside - frame_.ego_slot_info.ego_pos_slot).norm()
-  // > 2.2) {
-  //   obstacle_vec.emplace_back(t_lane_.pt_inside);
-  // }
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(obstacle_vec);
+}
+
+const bool ParallelParInPlanner::IsEgoInSlot() const {
+  return std::fabs(frame_.ego_slot_info.ego_pos_slot.y() -
+                   t_lane_.pt_terminal_pos.y()) <=
+         0.5 * (frame_.ego_slot_info.slot_width +
+                apa_param.GetParam().car_width - 0.2);
 }
 
 const uint8_t ParallelParInPlanner::PathPlanOnce() {
@@ -627,11 +623,12 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
 
   // lateral path optimization
   bool is_use_optimizer = true;
-  auto distance_approx = (planner_output.path_point_vec.front().pos -
-                          planner_output.path_point_vec.back().pos)
-                             .norm();
-  std::cout << "trajectory_approx_length = " << distance_approx << std::endl;
-  if (distance_approx < 2.0) {
+  const auto path_length = (planner_output.path_point_vec.front().pos -
+                            planner_output.path_point_vec.back().pos)
+                               .norm();
+                               
+  if (path_length < apa_param.GetParam().min_opt_path_length) {
+    std::cout << "path length is too short, optimizer is closed " << std::endl;
     is_use_optimizer = false;
   }
 
@@ -802,21 +799,15 @@ const bool ParallelParInPlanner::CheckFinished() {
   const bool loose_lat_condition =
       lat_error_abs <= apa_param.GetParam().finish_lat_err;
 
-  const bool strict_lat_condition =
-      std::fabs(ego_middle_tail.y()) <=
-          apa_param.GetParam().finish_lat_err_strict + 0.008 &&
-      std::fabs(ego_middle_head.y()) <=
-          apa_param.GetParam().finish_lat_err_strict + 0.008;
+  const bool strict_pose_condition = std::fabs(ego_middle_tail.y()) <= 0.055 &&
+                                     std::fabs(ego_middle_head.y()) <= 0.055;
 
   const double heading_err_abs = std::fabs(ego_slot_info.terminal_err.heading);
 
-  const bool strict_heading_condition =
-      heading_err_abs <=
-      (apa_param.GetParam().finish_heading_err + 0.12) / 57.3;
+  const bool loose_heading_condition = (heading_err_abs <= 2.3666 / 57.3);
 
-  const bool lat_condition =
-      (loose_lat_condition && strict_heading_condition) ||
-      (strict_lat_condition);
+  const bool lat_condition = (loose_lat_condition && loose_heading_condition) ||
+                             (strict_pose_condition);
 
   const bool static_condition =
       apa_world_ptr_->GetMeasurementsPtr()->static_flag;
@@ -1093,6 +1084,20 @@ void ParallelParInPlanner::Log() const {
   JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 2)
 
   DEBUG_PRINT("obs " << obstaclesX.front() << ", " << obstaclesY.front());
+
+  std::vector<double> slot_corner_X;
+  slot_corner_X.clear();
+  slot_corner_X.reserve(frame_.ego_slot_info.slot_corner.size());
+  std::vector<double> slot_corner_Y;
+  slot_corner_Y.clear();
+  slot_corner_Y.reserve(frame_.ego_slot_info.slot_corner.size());
+  for (const auto& corner : frame_.ego_slot_info.slot_corner) {
+    slot_corner_X.emplace_back(corner.x());
+    slot_corner_Y.emplace_back(corner.y());
+  }
+
+  JSON_DEBUG_VECTOR("slot_corner_X", slot_corner_X, 2)
+  JSON_DEBUG_VECTOR("slot_corner_Y", slot_corner_Y, 2)
 
   JSON_DEBUG_VALUE("terminal_error_x",
                    frame_.ego_slot_info.terminal_err.pos.x())

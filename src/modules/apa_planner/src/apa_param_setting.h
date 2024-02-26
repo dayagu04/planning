@@ -173,9 +173,11 @@ struct ApaParameters {
   double adjust_plan_max_lat_err = 0.8;
   double adjust_plan_max_heading2_err = 15.0;
   double min_gear_path_length = 0.25;
+  // path optimizer params
   bool cilqr_path_optimization_enable = false;
   bool perpendicular_lat_opt_enable = false;
   bool parallel_lat_opt_enable = false;
+  double min_opt_path_length = 0.7;
   // slot managent params
   bool release_slot_by_prepare = false;
   // slot update

@@ -57,6 +57,8 @@ class ApaWorld {
     uint8_t slot_type = Common::PARKING_SLOT_TYPE_VERTICAL;
     common::SlotInfo target_managed_slot;
 
+    bool is_slot_type_fixed = false;
+
     void Reset() {
       planner_type = NONE_PLANNER;
       general_apa_function = NONE_FUNCTION;
@@ -68,6 +70,7 @@ class ApaWorld {
       car_static_timer_by_vel = 0.0;
       static_flag = false;
       current_state = FuncStateMachine::STANDBY;
+      is_slot_type_fixed = false;
     }
   };
 

@@ -203,10 +203,18 @@ const bool ApaWorld::Update() {
     return false;
   }
 
-  measures_ptr_->slot_type = slot_manager_ptr_->GetEgoSlotInfo().slot_type;
-  // TODO: selected slot (slot_type) should be obtained in slot management
-  measures_ptr_->planner_type = ApaPlannerType::NONE_PLANNER;
+  if (!measures_ptr_->is_slot_type_fixed) {
+    // TODO: selected slot (slot_type) should be obtained in slot management
+    measures_ptr_->slot_type = slot_manager_ptr_->GetEgoSlotInfo().slot_type;
+    measures_ptr_->is_slot_type_fixed = true;
+  }
+  std::cout << "current slot type in slm ="
+            << static_cast<int>(slot_manager_ptr_->GetEgoSlotInfo().slot_type)
+            << std::endl;
+  std::cout << "fixed slot type =" << static_cast<int>(measures_ptr_->slot_type)
+            << std::endl;
 
+  measures_ptr_->planner_type = ApaPlannerType::NONE_PLANNER;
   // check park in planner
   if (CheckParkInActivated()) {
     if (measures_ptr_->slot_type ==

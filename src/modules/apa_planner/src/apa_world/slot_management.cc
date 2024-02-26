@@ -796,11 +796,9 @@ bool SlotManagement::UpdateSlotsInParking() {
 
   common::SlotInfo select_slot;
   if (!ProcessRawSlot(select_fusion_slot, select_slot)) {
-    if (!select_slot.has_corner_points()) {
-      std::cout << "slot doesnot have corner points\n" << std::endl;
-      return false;
-    }
-    return true;
+    select_slot = frame_.slot_info_window_vec[slot_idx].GetFusedInfo();
+    select_slot.set_is_release(true);
+    select_slot.set_is_occupied(false);
   }
 
   if (select_slot.is_release() == false) {
@@ -832,7 +830,17 @@ bool SlotManagement::UpdateEgoSlotInfo(
     return false;
   }
 
-  ego_slot_info.slot_type = selecte_fusion_slot.type();
+  if (selecte_fusion_slot.type() == Common::PARKING_SLOT_TYPE_INVALID) {
+    return false;
+  }
+  if (ego_slot_info.slot_type == Common::PARKING_SLOT_TYPE_INVALID) {
+    ego_slot_info.slot_type = selecte_fusion_slot.type();
+  } else {
+    if (ego_slot_info.slot_type != selecte_fusion_slot.type()) {
+      std::cout << "selecte_fusion_slot type is changed, error\n";
+      return false;
+    }
+  }
   ego_slot_info.select_slot_id = select_slot_id;
   ego_slot_info.select_fusion_slot = selecte_fusion_slot;
   ego_slot_info.select_slot = select_slot;

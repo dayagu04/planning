@@ -85,15 +85,15 @@
   "occupied_pt_inside_dx": 0.3,
   "occupied_pt_inside_dy": 0.0,
   "nearby_slot_corner_dist": 0.6,
-  "parallel_vacant_pt_outside_dx": 0.3,
+  "parallel_vacant_pt_outside_dx": 0.5,
   "parallel_vacant_pt_outside_dy": 0.0,
-  "parallel_vacant_pt_inside_dx": 0.3,
+  "parallel_vacant_pt_inside_dx": 0.5,
   "parallel_vacant_pt_inside_dy": 0.0,
   "parallel_occupied_pt_outside_dx": 0.0,
   "parallel_occupied_pt_outside_dy": 0.15,
   "parallel_occupied_pt_inside_dx": 0.0,
   "parallel_occupied_pt_inside_dy": 0.0,
-  "curb_offset": 3.0,
+  "curb_offset": 1.6,
   "force_both_side_occupied": true,
   "width_threshold": 0.1,
 
@@ -158,7 +158,8 @@
   "perpendicular_lat_opt_enable": false,
   "parallel_lat_opt_enable": true,
   "cilqr_path_optimization_enable": true,
-  
+  "min_opt_path_length": 0.9,
+
   "comment_16": "slot managent params",
   "release_slot_by_prepare": true,
   "slot_update_in_or_out_occupied_ratio": 0.001,

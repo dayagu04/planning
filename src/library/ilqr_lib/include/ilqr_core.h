@@ -191,7 +191,7 @@ class iLqr {
   virtual bool ForwardPass(double &new_cost, double &expected,
                            const size_t &iter);
 
-  bool BackwardPass();
+  virtual bool BackwardPass();
   bool iLqrIteration();
 
   void IncreaseLambda();

@@ -495,6 +495,9 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().cilqr_path_optimization_enable, bool,
                   "is_cilqr_path_optimization_enable");
 
+  JSON_READ_VALUE(apa_param.SetPram().min_opt_path_length, double,
+                  "min_opt_path_length");
+
   JSON_READ_VALUE(apa_param.SetPram().min_gear_path_length, double,
                   "min_gear_path_length");
 

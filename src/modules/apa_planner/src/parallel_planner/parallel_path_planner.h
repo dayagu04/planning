@@ -117,6 +117,7 @@ class ParallelPathPlanner {
   struct PlannerParams {
     bool is_left_side = false;
     double slot_side_sgn = 1.0;  // 1.0 in right slot
+    pnc::geometry_lib::PathPoint target_pose;
     pnc::geometry_lib::PathPoint park_out_pose;
     pnc::geometry_lib::PathPoint safe_circle_root_pose;
     pnc::geometry_lib::Circle safe_circle;
@@ -132,6 +133,7 @@ class ParallelPathPlanner {
     void Reset() {
       is_left_side = true;
       slot_side_sgn = 1.0;
+      target_pose.Reset();
       park_out_pose.Reset();
       safe_circle_root_pose.Reset();
       safe_circle.Reset();
@@ -163,6 +165,8 @@ class ParallelPathPlanner {
   void InsertLineSegAfterCurrentFollowLastPath(double extend_distance);
   const bool SampleCurrentPathSeg();
 
+  void PrintPose(const pnc::geometry_lib::PathPoint &pose) const;
+  void PrintPose(const Eigen::Vector2d &pos, const double heading) const;
   void PrintOutputSegmentsInfo() const;
   void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg) const;
 
@@ -215,6 +219,9 @@ class ParallelPathPlanner {
 
   // normal plan
   const bool MonoStepPlan();
+  const bool MonoStepPlanWithShift();
+  const bool MonoStepPlanOnceWithShift(
+      bool &is_drive_out_safe, pnc::geometry_lib::PathPoint &target_pose);
   const bool BackwardNormalPlan();
   const bool BackWardTripleStepPlan();
   const bool BackWardTripleStepPlanOnce(
@@ -238,7 +245,9 @@ class ParallelPathPlanner {
 
   const bool CalcArcStepLimitPose(
       pnc::geometry_lib::Arc &arc, bool &is_drive_out_safe, const uint8_t gear,
-      const uint8_t steer);  // start pose and radius should be given in arc
+      const uint8_t steer,
+      const double buffer =
+          0.15);  // start pose and radius should be given in arc
 
   const bool TwoSameGearArcPlanToLine(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
@@ -323,7 +332,8 @@ class ParallelPathPlanner {
       pnc::geometry_lib::PathSegment &path_seg, const double buffer = 0.1);
 
   const uint8_t TrimPathByCollisionDetection(
-      pnc::geometry_lib::PathSegment &path_seg, Eigen::Vector2d &collision_pt);
+      pnc::geometry_lib::PathSegment &path_seg, Eigen::Vector2d &collision_pt,
+      const double buffer = 0.3);
 
   const bool CheckPathSegCollided(
       const pnc::geometry_lib::PathSegment &path_seg,
@@ -337,6 +347,10 @@ class ParallelPathPlanner {
       pnc::geometry_lib::LineSegment &line,
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const uint8_t current_gear);
+
+  const bool OneLinePlan(pnc::geometry_lib::LineSegment &line,
+                         const pnc::geometry_lib::PathPoint &target_pose)
+      const;  // start pose is given in line
 
   const bool ArcLineArcDubinsPlan(
       const pnc::geometry_lib::PathPoint &start_pose,
