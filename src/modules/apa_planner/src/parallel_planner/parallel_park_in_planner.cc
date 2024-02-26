@@ -626,7 +626,6 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
   const auto path_length = (planner_output.path_point_vec.front().pos -
                             planner_output.path_point_vec.back().pos)
                                .norm();
-                               
   if (path_length < apa_param.GetParam().min_opt_path_length) {
     std::cout << "path length is too short, optimizer is closed " << std::endl;
     is_use_optimizer = false;
@@ -818,6 +817,14 @@ const bool ParallelParInPlanner::CheckFinished() {
             << std::endl;
   std::cout << "terminal heading error= "
             << ego_slot_info.terminal_err.heading * 57.3 << std::endl;
+  DEBUG_PRINT("lat condition =" << lat_condition);
+  if (lat_condition) {
+    DEBUG_PRINT("  is loose condition =" << (loose_lat_condition &&
+                                           loose_heading_condition));
+    DEBUG_PRINT("  is head and tail condition =" << strict_pose_condition);
+  }
+  DEBUG_PRINT("lon condition =" << lon_condition);
+  DEBUG_PRINT("static condition =" << static_condition);
 
   return lon_condition && lat_condition && static_condition;
 }

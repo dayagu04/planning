@@ -352,6 +352,11 @@ class ParallelPathPlanner {
                          const pnc::geometry_lib::PathPoint &target_pose)
       const;  // start pose is given in line
 
+  const bool OneLinePlanAlongEgoHeading(
+      pnc::geometry_lib::LineSegment &line,
+      const pnc::geometry_lib::PathPoint &target_pose)
+      const;  // start pose is given in line
+
   const bool ArcLineArcDubinsPlan(
       const pnc::geometry_lib::PathPoint &start_pose,
       const pnc::geometry_lib::PathPoint &target_pose,

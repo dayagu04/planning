@@ -1804,6 +1804,17 @@ const bool ParallelPathPlanner::ParallelAdjustPlan() {
   pnc::geometry_lib::PathPoint current_pose = input_.ego_pose;
   uint8_t current_gear = input_.ref_gear;
 
+  // dirve backward directly if can park near target pose
+  pnc::geometry_lib::LineSegment first_line;
+  first_line.pA = input_.ego_pose.pos;
+  first_line.heading = input_.ego_pose.heading;
+  if (OneLinePlanAlongEgoHeading(first_line, calc_params_.target_pose)) {
+    DEBUG_PRINT("firstly calc line success");
+    AddPathSegToOutPut(pnc::geometry_lib::PathSegment(
+        pnc::geometry_lib::CalLineSegGear(first_line), first_line));
+    return true;
+  }
+
   if (output_.path_segment_vec.size() > 0 && output_.gear_cmd_vec.size() > 0) {
     const auto& last_seg = output_.path_segment_vec.back();
     current_pose.Set(last_seg.GetEndPos(), last_seg.GetEndHeading());
@@ -1816,8 +1827,8 @@ const bool ParallelPathPlanner::ParallelAdjustPlan() {
 
   // check pose, if error is large, adjust is not suitable
   // if (!CheckAdjustPlanSuitable(current_pose)) {
-  //   DEBUG_PRINT("pose err is relatively large, skip adjust plan, plan fail");
-  //   return false;
+  //   DEBUG_PRINT("pose err is relatively large, skip adjust plan, plan
+  //   fail"); return false;
   // }
 
   // check gear and steer
@@ -2009,8 +2020,8 @@ const bool ParallelPathPlanner::OneArcPlan(
       pnc::mathlib::IsDoubleEqual(arc.pA.y(),
                                   calc_params_.target_line.pA.y())) {
     // DEBUG_PRINT(
-    //     "current heading is equal to target heading or current y is equal to
-    //     " "target y, no need to one arc plan");
+    //     "current heading is equal to target heading or current y is equal
+    //     to " "target y, no need to one arc plan");
     return false;
   }
 
@@ -2617,6 +2628,81 @@ const bool ParallelPathPlanner::OneLinePlan(
   } else {
     line.is_ignored = true;
     DEBUG_PRINT("already is on target pos");
+  }
+  return true;
+}
+
+const bool ParallelPathPlanner::OneLinePlanAlongEgoHeading(
+    pnc::geometry_lib::LineSegment& line,
+    const pnc::geometry_lib::PathPoint& target_pose) const {
+  std::cout << "--- try OneLinePlanAlongEgoHeading ---\n";
+
+  const pnc::geometry_lib::PathPoint start_pose(line.pA, line.heading);
+
+  const Eigen::Vector2d v_start_heading(std::cos(start_pose.heading),
+                                        std::sin(start_pose.heading));
+
+  if (pnc::mathlib::IsDoubleEqual(v_start_heading.x(), 0.0)) {
+    DEBUG_PRINT("ego heading is not possible equal to 90deg, calc failed!");
+    return false;
+  }
+
+  // firstly extend ego line to the same x coordination as target pose
+  double len = (target_pose.pos.x() - start_pose.pos.x()) / v_start_heading.x();
+
+  const pnc::geometry_lib::PathPoint fixed_target_pose(
+      start_pose.pos + len * v_start_heading, start_pose.heading);
+
+  DEBUG_PRINT("fixed target pose =" << fixed_target_pose.pos.transpose()
+                                    << " ,heading ="
+                                    << fixed_target_pose.heading * 57.3);
+
+  const double lat_error_abs =
+      std::fabs(fixed_target_pose.pos.y() - target_pose.pos.y());
+
+  const Eigen::Vector2d ego_middle_head =
+      fixed_target_pose.pos + (apa_param.GetParam().wheel_base +
+                               apa_param.GetParam().front_overhanging) *
+                                  v_start_heading;
+
+  const Eigen::Vector2d ego_middle_tail =
+      fixed_target_pose.pos -
+      apa_param.GetParam().rear_overhanging * v_start_heading;
+
+  const bool loose_lat_condition =
+      lat_error_abs <= apa_param.GetParam().finish_lat_err;
+
+  const double heading_err_abs =
+      std::fabs(fixed_target_pose.heading - target_pose.heading);
+
+  const bool loose_heading_condition = (heading_err_abs <= 2.3666 / 57.3);
+  DEBUG_PRINT("lat err abs =" << lat_error_abs);
+  DEBUG_PRINT("heading err abs(deg) =" << heading_err_abs * 57.3);
+  // DEBUG_PRINT("head y err ="
+  //             << std::fabs(ego_middle_head.y() - fixed_target_pose.pos.y()));
+  // DEBUG_PRINT("tail y err ="
+  //             << std::fabs(ego_middle_tail.y() - fixed_target_pose.pos.y()));
+
+  const bool finish_condition =
+      (loose_lat_condition && loose_heading_condition);
+
+  if (!finish_condition) {
+    std::cout << "pose is not on line, fail\n";
+    return false;
+  }
+  DEBUG_PRINT("pose is on line, success");
+
+  line.SetPoints(start_pose.pos, fixed_target_pose.pos);
+  if (line.length > apa_param.GetParam().finish_lon_err) {
+    const uint8_t seg_gear = pnc::geometry_lib::CalLineSegGear(line);
+    if (!pnc::geometry_lib::IsValidGear(seg_gear)) {
+      std::cout << "the line gear is invalid\n";
+      return false;
+    }
+    DEBUG_PRINT("line plan to target pos success");
+  } else {
+    DEBUG_PRINT("path is too short");
+    return false;
   }
   return true;
 }
