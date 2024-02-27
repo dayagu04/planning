@@ -108,6 +108,8 @@ class PerpendicularPathPlanner {
     double slot_side_sgn = 1.0;
 
     bool should_prepare_second = false;
+    bool should_prepare_third = false;
+    bool first_multi_plan = true;
 
     pnc::geometry_lib::LineSegment target_line;
 
@@ -116,7 +118,7 @@ class PerpendicularPathPlanner {
 
     pnc::geometry_lib::PathPoint safe_circle_tang_pt;
     bool cal_tang_pt_success = false;
-    bool directly_use_tang_pt = false;
+    bool directly_use_ego_pose = false;
 
     pnc::geometry_lib::LineSegment prepare_line;  // pA is tag point
     Eigen::Vector2d pre_line_tangent_vec = Eigen::Vector2d::Zero();
@@ -127,6 +129,8 @@ class PerpendicularPathPlanner {
       slot_side_sgn = 1.0;
 
       should_prepare_second = false;
+      should_prepare_third = false;
+      first_multi_plan = true;
 
       target_line.Reset();
 
@@ -135,7 +139,7 @@ class PerpendicularPathPlanner {
 
       safe_circle_tang_pt.Reset();
       cal_tang_pt_success = false;
-      directly_use_tang_pt = false;
+      directly_use_ego_pose = false;
 
       pre_line_tangent_vec.setZero();
       pre_line_normal_vec.setZero();
@@ -196,6 +200,8 @@ class PerpendicularPathPlanner {
       const uint8_t current_gear);
 
   const bool PreparePlanSecond();
+
+  const bool PreparePlanThird();
 
   const bool GenPathOutputByDubins();
   const bool MonoPreparePlan(Eigen::Vector2d &tag_point);

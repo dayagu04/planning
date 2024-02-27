@@ -319,6 +319,18 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().width_threshold, double,
                   "width_threshold");
 
+  JSON_READ_VALUE(apa_param.SetPram().move_tlane_slot_occupied_ratio, double,
+                  "move_tlane_slot_occupied_ratio");
+
+  JSON_READ_VALUE(apa_param.SetPram().move_tlane_ego_heading_err, double,
+                  "move_tlane_ego_heading_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().move_tlane_toward_outside_dist, double,
+                  "move_tlane_toward_outside_dist");
+
+  JSON_READ_VALUE(apa_param.SetPram().move_tlane_toward_up_dist, double,
+                  "move_tlane_toward_up_dist");
+
   // construct parallel t-lane params
   JSON_READ_VALUE(apa_param.SetPram().parallel_vacant_pt_outside_dx, double,
                   "parallel_vacant_pt_outside_dx");
@@ -424,8 +436,14 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().min_line_length, double,
                   "min_line_length");
 
+  JSON_READ_VALUE(apa_param.SetPram().max_line_length_for_third_prepare, double,
+                  "max_line_length_for_third_prepare");
+
   JSON_READ_VALUE(apa_param.SetPram().min_one_step_path_length, double,
                   "min_one_step_path_length");
+
+  JSON_READ_VALUE(apa_param.SetPram().min_one_step_path_length_in_slot, double,
+                  "min_one_step_path_length_in_slot");
 
   JSON_READ_VALUE(apa_param.SetPram().prepare_line_min_x_offset_slot, double,
                   "prepare_line_min_x_offset_slot");
@@ -457,6 +475,9 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().prepare_adjust_reverse_max_length, double,
                   "prepare_adjust_reverse_max_length");
 
+  JSON_READ_VALUE(apa_param.SetPram().third_prepare_heading_threshold, double,
+                  "third_prepare_heading_threshold");
+
   JSON_READ_VALUE(apa_param.SetPram().static_pos_eps, double, "static_pos_eps");
 
   JSON_READ_VALUE(apa_param.SetPram().static_heading_eps, double,
@@ -467,6 +488,15 @@ void ApaPlanInterface::SyncParameters() {
 
   JSON_READ_VALUE(apa_param.SetPram().mono_plan_enable, bool,
                   "mono_plan_enable");
+
+  JSON_READ_VALUE(apa_param.SetPram().third_prepare_plan_enable, bool,
+                  "third_prepare_plan_enable");
+
+  JSON_READ_VALUE(apa_param.SetPram().inside_pt_move_dist_x, double,
+                  "inside_pt_move_dist_x");
+
+  JSON_READ_VALUE(apa_param.SetPram().inside_pt_move_dist_y, double,
+                  "inside_pt_move_dist_y");
 
   JSON_READ_VALUE(apa_param.SetPram().multi_plan_min_lat_err, double,
                   "multi_plan_min_lat_err");

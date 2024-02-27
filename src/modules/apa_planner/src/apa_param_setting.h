@@ -104,6 +104,10 @@ struct ApaParameters {
   double occupied_pt_inside_dy = 0.0;
   bool force_both_side_occupied = true;
   double width_threshold = 0.1;
+  double move_tlane_slot_occupied_ratio = 0.266;
+  double move_tlane_ego_heading_err = 18.68;
+  double move_tlane_toward_outside_dist = 0.108;
+  double move_tlane_toward_up_dist = 0.108;
   // parallel t lane params
   double parallel_vacant_pt_outside_dx = 2.0;
   double parallel_vacant_pt_outside_dy = 1.7;
@@ -155,17 +159,23 @@ struct ApaParameters {
   double prepare_directly_use_tangent_heading_err = 2.6;
   double prepare_adjust_drive_max_length = 2.28;
   double prepare_adjust_reverse_max_length = 3.6;
+  double third_prepare_heading_threshold = 26.68;
   double min_turn_radius = 5.5;
   double max_one_step_arc_radius = 8.5;
   double max_radius_in_slot = 12.66;
   double min_radius_out_slot = 7.8;
   double radius_eps = 0.01;
   double min_line_length = 0.3;
+  double max_line_length_for_third_prepare = 1.2;
   double min_one_step_path_length = 0.6;
+  double min_one_step_path_length_in_slot = 1.2;
   double static_pos_eps = 0.01;
   double static_heading_eps = 0.08;
   double path_extend_distance = 0.3;
   bool mono_plan_enable = false;
+  bool third_prepare_plan_enable = false;
+  double inside_pt_move_dist_x = 0.1;
+  double inside_pt_move_dist_y = 0.2;
   double multi_plan_min_lat_err = 0.5;
   double multi_plan_min_heading_err = 12.0;
   double multi_plan_max_occupied_ratio = 0.8;

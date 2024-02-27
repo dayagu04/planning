@@ -66,39 +66,50 @@ bool PerpendicularPathPlanner::Update() {
   if (input_.is_replan_first) {
     if (PreparePlan()) {
       if (GenPathOutputByDubins()) {
-        std::cout << "prepare gear is reverse, need multi plan" << std::endl;
+        std::cout << "first prepare success, the gear is reverse, use "
+                     "safe_circle_tang_pt to multi plan, no second prepare!\n";
+        input_.ego_pose = calc_params_.safe_circle_tang_pt;
         output_.gear_shift = true;
       } else {
-        std::cout << "prepare gear is drive, no need multi plan" << std::endl;
+        std::cout << "first prepare success, the gear is drive, no need multi "
+                     "plan, need second prepare!\n";
         calc_params_.should_prepare_second = true;
         return true;
       }
     } else {
-      std::cout << "prepare plan failed!\n";
-      if (calc_params_.directly_use_tang_pt) {
-        std::cout << "directly use safe_circle_tang_pt to multi plan\n";
+      std::cout << "first prepare plan failed.\n";
+      if (calc_params_.directly_use_ego_pose) {
+        std::cout << "ego pose is close to safe_circle_tang_pt, directly use"
+                     "ego pose to multi plan, no second prepare!\n";
         output_.gear_shift = true;
       } else {
+        std::cout << "try prepre plan v2!\n";
         if (PreparePlanV2() && output_.path_segment_vec.size() > 0) {
           std::cout << "prepare plan v2 success\n";
           bool gear_same = true;
           for (const auto& path_seg : output_.path_segment_vec) {
             PrintSegmentInfo(path_seg);
-            if (path_seg.seg_gear !=
-                output_.path_segment_vec.front().seg_gear) {
+            if (path_seg.seg_gear != output_.path_segment_vec.back().seg_gear) {
               gear_same = false;
             }
           }
-          if (gear_same) {
-            std::cout << "directly use safe_circle_tang_pt to multi plan\n";
+          if (gear_same && output_.path_segment_vec.back().seg_gear ==
+                               pnc::geometry_lib::SEG_GEAR_REVERSE) {
+            std::cout
+                << "prepare v2 success, all gear is the same and also reverse,"
+                   "use safe_circle_tang_pt to multi plan, no second "
+                   "prepare!\n";
+            input_.ego_pose = calc_params_.safe_circle_tang_pt;
             output_.gear_shift = true;
           } else {
-            std::cout << "cannot directly_use_tang_pt to multi plan\n";
+            std::cout
+                << "prepare v2 success, but the gear is not all same or "
+                   "not reverse, no need multi plan, need second prepare!\n";
             calc_params_.should_prepare_second = true;
             return true;
           }
         }
-        std::cout << "prepare plan v2 fail\n";
+        std::cout << "prepare plan v2 fail, quit plan!\n";
         return false;
       }
     }
@@ -106,36 +117,55 @@ bool PerpendicularPathPlanner::Update() {
 
   if (input_.is_replan_second) {
     if (calc_params_.should_prepare_second) {
+      std::cout << "should try second prepare!\n";
       if (!PreparePlanSecond()) {
-        std::cout << "directly use ego pose to multi plan\n";
+        std::cout
+            << "second prepare fail, directly use ego pose to multi plan!\n";
         output_.gear_shift = true;
       } else {
-        std::cout << "directly use safe_circle_tang_pt to multi plan\n";
+        std::cout << "second prepare success\n";
         if (output_.path_segment_vec.empty()) {
+          std::cout << "ego pose is close to safe_circle_tang_pt, directly use"
+                       "ego pose to multi plan!\n";
           output_.gear_shift = true;
         } else {
           uint8_t gear = output_.path_segment_vec.back().seg_gear;
           if (gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-            std::cout << "prepare gear is reverse, need multi plan"
-                      << std::endl;
+            std::cout << "second prepare gear is reverse, need multi plan!\n";
+            input_.ego_pose = calc_params_.safe_circle_tang_pt;
             output_.gear_shift = true;
           } else {
-            std::cout << "prepare gear is drive, no need multi plan"
-                      << std::endl;
+            std::cout << "second prepare gear is drive, no need multi plan!\n";
             return true;
           }
         }
-        input_.ego_pose = calc_params_.safe_circle_tang_pt;
       }
     } else {
-      std::cout << "directly use ego pose to multi plan\n";
+      std::cout
+          << "no need second prepare, directly use ego pose to multi plan\n";
       output_.gear_shift = true;
     }
     calc_params_.should_prepare_second = false;
   }
 
+  // third prepare
+  if (apa_param.GetParam().third_prepare_plan_enable &&
+      calc_params_.should_prepare_third) {
+    calc_params_.should_prepare_third = false;
+    if (PreparePlanThird()) {
+      std::cout << "third prepare success\n";
+      return true;
+    }
+    std::cout << "third prepare fail, continue to multi plan!\n";
+  }
+
   // multi step
   if (MultiPlan()) {
+    if (calc_params_.first_multi_plan) {
+      calc_params_.should_prepare_third = true;
+      std::cout << "need third prepare\n";
+    }
+    calc_params_.first_multi_plan = false;
     std::cout << "multi plan success!" << std::endl;
   }
 
@@ -161,7 +191,7 @@ bool PerpendicularPathPlanner::Update(
 bool PerpendicularPathPlanner::UpdateByPrePlan() {
   Preprocess();
 
-  return PreparePlan() || calc_params_.directly_use_tang_pt;
+  return PreparePlan() || calc_params_.directly_use_ego_pose;
 }
 
 // prepare plan start
@@ -184,7 +214,7 @@ const bool PerpendicularPathPlanner::PreparePlan() {
         apa_param.GetParam().prepare_line_dheading_offset_slot_deg / 57.3;
   }
 
-  calc_params_.directly_use_tang_pt = false;
+  calc_params_.directly_use_ego_pose = false;
   for (const auto& heading_offset : heading_offset_vec) {
     for (const auto& x_offset : x_offset_vec) {
       if (PreparePlanOnce(x_offset, heading_offset)) {
@@ -219,8 +249,8 @@ const bool PerpendicularPathPlanner::PreparePlan() {
               heading_err < apa_param.GetParam()
                                     .prepare_directly_use_tangent_heading_err /
                                 57.3) {
-            input_.ego_pose = calc_params_.safe_circle_tang_pt;
-            calc_params_.directly_use_tang_pt = true;
+            // input_.ego_pose = calc_params_.safe_circle_tang_pt;
+            calc_params_.directly_use_ego_pose = true;
             return false;
           }
         }
@@ -693,9 +723,85 @@ const bool PerpendicularPathPlanner::PreparePlanSecond() {
   return true;
 }
 
+const bool PerpendicularPathPlanner::PreparePlanThird() {
+  if (std::fabs(input_.ego_pose.heading) <
+      apa_param.GetParam().third_prepare_heading_threshold / 57.3) {
+    std::cout << "heading is small.\n";
+    return false;
+  }
+
+  pnc::geometry_lib::PathPoint start_pose = input_.ego_pose;
+
+  // cal pre line tangent vec and normal vec
+  const Eigen::Vector2d line_tangent_vec =
+      pnc::geometry_lib::GenHeadingVec(start_pose.heading);
+
+  Eigen::Vector2d line_normal_vec(line_tangent_vec.y(), -line_tangent_vec.x());
+
+  // sure line_normal_vec towards downward along the x axis.
+  if (line_normal_vec.x() > 0.0) {
+    line_normal_vec = -1.0 * line_normal_vec;
+  }
+
+  // gen prepare line
+  calc_params_.prepare_line =
+      pnc::geometry_lib::BuildLineSegByPose(start_pose.pos, start_pose.heading);
+
+  calc_params_.pre_line_tangent_vec = line_tangent_vec;
+  calc_params_.pre_line_normal_vec = line_normal_vec;
+
+  CalMonoSafeCircle();
+
+  if (!CheckMonoIsFeasible()) {
+    std::cout << "cal monostep safe circle fail!" << std::endl;
+    // return false;
+  }
+
+  // calc actual circle corresponding to mono safe circle
+  pnc::geometry_lib::Circle autual_circle;
+  autual_circle = calc_params_.mono_safe_circle;
+
+  const Eigen::Vector2d point_start = calc_params_.prepare_line.pA;
+
+  // the length from point_start to point_tangent
+  double length = (autual_circle.center.y() -
+                   autual_circle.radius * calc_params_.pre_line_normal_vec.y() -
+                   point_start.y()) /
+                  calc_params_.pre_line_tangent_vec.y();
+
+  std::cout << "line length = " << length << std::endl;
+  // limit length
+  length =
+      std::min(length, apa_param.GetParam().max_line_length_for_third_prepare);
+  length = std::max(length, apa_param.GetParam().min_one_step_path_length);
+
+  pnc::geometry_lib::PathPoint target_pose = start_pose;
+  target_pose.pos = point_start + length * calc_params_.pre_line_tangent_vec;
+
+  pnc::geometry_lib::LineSegment line(start_pose.pos, target_pose.pos,
+                                      start_pose.heading);
+
+  const uint8_t seg_gear = pnc::geometry_lib::CalLineSegGear(line);
+
+  if (seg_gear != pnc::geometry_lib::SEG_GEAR_DRIVE) {
+    std::cout << "seg_gear is not drive\n";
+    return false;
+  }
+
+  pnc::geometry_lib::PathSegment line_seg(seg_gear, line);
+
+  output_.path_available = true;
+  output_.path_segment_vec.emplace_back(line_seg);
+  output_.length += line_seg.Getlength();
+  output_.gear_cmd_vec.emplace_back(line_seg.seg_gear);
+  output_.steer_vec.emplace_back(line_seg.seg_steer);
+
+  return true;
+}
+
 void PerpendicularPathPlanner::CalMonoSafeCircle() {
   calc_params_.mono_safe_circle.center.y() =
-      input_.tlane.pt_terminal_pos.y() +
+      calc_params_.target_line.pA.y() +
       apa_param.GetParam().min_turn_radius * calc_params_.slot_side_sgn;
 
   calc_params_.mono_safe_circle.radius = apa_param.GetParam().min_turn_radius;
@@ -760,6 +866,9 @@ const bool PerpendicularPathPlanner::MonoPreparePlan(
 bool PerpendicularPathPlanner::CalMultiSafeCircle() {
   pnc::geometry_lib::Circle circle_p1;
   circle_p1.center = input_.tlane.pt_inside;
+  circle_p1.center.x() += apa_param.GetParam().inside_pt_move_dist_x;
+  circle_p1.center.y() -=
+      apa_param.GetParam().inside_pt_move_dist_y * calc_params_.slot_side_sgn;
   circle_p1.radius = apa_param.GetParam().min_turn_radius -
                      0.5 * apa_param.GetParam().car_width;
 
@@ -880,15 +989,7 @@ const bool PerpendicularPathPlanner::GenPathOutputByDubins() {
     }
   }
 
-  const bool res =
-      (output_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE);
-
-  if (res) {
-    const auto& dubins_input = dubins_planner_.GetInput();
-    input_.ego_pose.Set(dubins_input.p2, dubins_input.heading2);
-  }
-
-  return res;
+  return output_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE;
 }
 // prepare plan end
 
@@ -1343,7 +1444,7 @@ const bool PerpendicularPathPlanner::OneLinePlan(
           apa_param.GetParam().static_heading_eps)) {
     std::cout << "pose is on line, success\n";
     // line.pB = calc_params_.target_line.pA;
-    line.pB.x() = input_.tlane.pt_terminal_pos.x();
+    line.pB.x() = calc_params_.target_line.pA.x();
     line.pB.y() = line.pA.y();
     line.length = (line.pB - line.pA).norm();
     pnc::geometry_lib::PathSegment line_seg;
@@ -1834,7 +1935,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
     last_pose = current_pose;
     std::cout << "current pose to one plan\n";
   }
-  if ((last_pose.pos - input_.tlane.pt_terminal_pos).norm() <=
+  if ((last_pose.pos - calc_params_.target_line.pA).norm() <=
           apa_param.GetParam().static_pos_eps &&
       std::fabs(pnc::geometry_lib::NormalizeAngle(
           last_pose.heading - input_.tlane.pt_terminal_heading)) <=
@@ -2060,10 +2161,14 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
     pnc::geometry_lib::PathSegment new_line;
     new_line.seg_type = pnc::geometry_lib::SEG_TYPE_LINE;
 
-    if (path_seg.Getlength() + extend_distance <
-        apa_param.GetParam().min_one_step_path_length) {
-      extend_distance =
-          apa_param.GetParam().min_one_step_path_length - path_seg.Getlength();
+    double min_path_length = apa_param.GetParam().min_one_step_path_length;
+    if (input_.slot_occupied_ratio > 0.886 &&
+        output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+      min_path_length = apa_param.GetParam().min_one_step_path_length_in_slot;
+    }
+
+    if (path_seg.Getlength() + extend_distance < min_path_length) {
+      extend_distance = min_path_length - path_seg.Getlength();
     }
 
     new_line.line_seg.length = extend_distance;
@@ -2512,7 +2617,7 @@ const bool PerpendicularPathPlanner::CheckPathIsNormal(
   } else {
     return false;
   }
-  double x_target = input_.tlane.pt_terminal_pos.x();
+  double x_target = calc_params_.target_line.pA.x();
   if (x_start < x_target + 0.168 && x_end < x_target &&
       path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
     return false;
@@ -2522,7 +2627,7 @@ const bool PerpendicularPathPlanner::CheckPathIsNormal(
 
 const bool PerpendicularPathPlanner::CheckReachTargetPose(
     const pnc::geometry_lib::PathPoint& current_pose) {
-  if ((current_pose.pos - input_.tlane.pt_terminal_pos).norm() <=
+  if ((current_pose.pos - calc_params_.target_line.pA).norm() <=
           apa_param.GetParam().static_pos_eps &&
       std::fabs(pnc::geometry_lib::NormalizeAngle(
           current_pose.heading - input_.tlane.pt_terminal_heading)) <=
@@ -2554,7 +2659,7 @@ const double PerpendicularPathPlanner::CalOccupiedRatio(
     const pnc::geometry_lib::PathPoint& current_pose) {
   pnc::geometry_lib::PathPoint terminal_err;
   terminal_err.Set(
-      current_pose.pos - input_.tlane.pt_terminal_pos,
+      current_pose.pos - calc_params_.target_line.pA,
       std::fabs(pnc::geometry_lib::NormalizeAngle(
           current_pose.heading - input_.tlane.pt_terminal_heading)));
   double slot_occupied_ratio;

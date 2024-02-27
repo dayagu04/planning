@@ -12,6 +12,7 @@ from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
 bag_path = '/data_cold/abu_zone/autoparse/jac_s811_96tj0/parking/20240131/20240131-16-02-15/park_in_data_collection_JAC_S811_96TJ0_MANUAL_ALL_2024-01-31-16-02-15_no_camera.record'
+bag_path = '/data_cold/abu_zone/APA/planning-43dac821-JAC_S811/test_13.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -141,12 +142,20 @@ for bag_time in np.arange(0.0, 35, 0.1):
     'car_yn': car_yn,
   })
 
+  # res = apa_simulation_py.InterfaceUpdateParam(soc_state_msg.SerializeToString(),
+  #                                   fus_parking_msg.SerializeToString(),
+  #                                   loc_msg.SerializeToString(),
+  #                                   vs_msg.SerializeToString(),
+  #                                   wave_msg.SerializeToString(),
+  #                                   select_id, force_plan, is_path_optimization, is_reset, is_complete_path, sample_ds, target_managed_slot_x_vec, target_managed_slot_y_vec,
+  #                                   target_managed_limiter_x_vec, target_managed_limiter_y_vec)
+
   res = apa_simulation_py.InterfaceUpdateParam(soc_state_msg.SerializeToString(),
                                     fus_parking_msg.SerializeToString(),
                                     loc_msg.SerializeToString(),
                                     vs_msg.SerializeToString(),
                                     wave_msg.SerializeToString(),
-                                    select_id, force_plan, is_path_optimization, is_reset, is_complete_path, sample_ds, target_managed_slot_x_vec, target_managed_slot_y_vec,
+                                    0, False, False, False, False, False, 0.02, target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec)
 
 

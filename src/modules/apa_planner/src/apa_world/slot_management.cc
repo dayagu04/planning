@@ -352,7 +352,8 @@ bool SlotManagement::UpdateSlotsInSearching() {
     const auto fusion_slot_source_type = fusion_slot.fusion_source();
     const auto slot_info_vec_size = frame_.slot_info_window_vec.size();
     if (frame_.slot_info_map.count(slot_info.id()) == 0 &&
-        LonDifUpdateCondition(slot_info, fusion_slot_source_type)) {  // get new id
+        LonDifUpdateCondition(slot_info,
+                              fusion_slot_source_type)) {  // get new id
 
       SlotInfoWindow slot_info_window;
       slot_info_window.Add(slot_info);
@@ -641,15 +642,16 @@ bool SlotManagement::CorrectSlotPointsOrder(common::SlotInfo &slot_info) const {
   return false;
 }
 
-bool SlotManagement::IfUpdateSlot(
-    const common::SlotInfo &new_slot_info,
-    const size_t fusion_slot_source_type) {
+bool SlotManagement::IfUpdateSlot(const common::SlotInfo &new_slot_info,
+                                  const size_t fusion_slot_source_type) {
   if ((fusion_slot_source_type ==
        ParkingFusion::ParkingFusionSlot::FUSION_SLOT_SOURCE_TYPE_ONLY_USS) ||
       (fusion_slot_source_type ==
        ParkingFusion::ParkingFusionSlot::FUSION_SLOT_SOURCE_TYPE_CAMERA_USS)) {
+    std::cout << "it is uss slot\n";
     return true;
   }
+  std::cout << "it is vision slot\n";
   // update by angle between ego_heading_axis and slot_heading_axis (new slot)
   const bool angle_update_condition = AngleUpdateCondition(new_slot_info);
 
@@ -850,7 +852,6 @@ bool SlotManagement::UpdateEgoSlotInfo(
     std::cout << "slot_info_map doesnot have the select_slot_id\n";
     return false;
   }
-
   if (selecte_fusion_slot.type() == Common::PARKING_SLOT_TYPE_INVALID) {
     return false;
   }
@@ -949,7 +950,8 @@ void SlotManagement::UpdateSlotInfoInParking() {
   bool update_slot_flag = false;
 
   bool update_slot_condition_1 =
-      IfUpdateSlot(ego_slot_info.select_slot, ego_slot_info.select_fusion_slot.fusion_source());
+      IfUpdateSlot(ego_slot_info.select_slot,
+                   ego_slot_info.select_fusion_slot.fusion_source());
 
   bool update_slot_condition_2 =
       (ego_slot_info.slot_occupied_ratio <

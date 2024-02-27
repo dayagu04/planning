@@ -32,6 +32,7 @@ namespace apa_planner {
 void PerpendicularInPlanner::Reset() {
   frame_.Reset();
   t_lane_.Reset();
+  perpendicular_path_planner_.Reset();
 }
 
 void PerpendicularInPlanner::SetParkingStatus(uint8_t status) {
@@ -533,6 +534,24 @@ void PerpendicularInPlanner::GenTlane() {
       ego_slot_info.target_ego_pos_slot.y();
 
   t_lane_.pt_terminal_heading = ego_slot_info.target_ego_heading_slot;
+
+  // car should be close to the outside as possible when is not in slot
+  // move tlane to close to outside
+  if (ego_slot_info.slot_occupied_ratio <
+          apa_param.GetParam().move_tlane_slot_occupied_ratio &&
+      ego_slot_info.terminal_err.heading >
+          apa_param.GetParam().move_tlane_ego_heading_err / 57.3) {
+    const double slot_side_sgn =
+        (t_lane_.pt_inside.y() > t_lane_.pt_outside.y()) ? 1.0 : -1.0;
+    t_lane_.pt_terminal_pos.y() -=
+        slot_side_sgn * apa_param.GetParam().move_tlane_toward_outside_dist;
+    t_lane_.pt_inside.y() -=
+        slot_side_sgn * apa_param.GetParam().move_tlane_toward_outside_dist;
+    t_lane_.pt_outside.y() -=
+        slot_side_sgn * apa_param.GetParam().move_tlane_toward_outside_dist;
+    t_lane_.pt_inside.x() += apa_param.GetParam().move_tlane_toward_up_dist;
+    t_lane_.pt_outside.x() += apa_param.GetParam().move_tlane_toward_up_dist;
+  }
 
   std::cout << "-- t_lane --" << std::endl;
   std::cout << "pt_outside = " << t_lane_.pt_outside.transpose() << std::endl;
@@ -1557,7 +1576,8 @@ void PerpendicularInPlanner::Log() const {
   JSON_DEBUG_VALUE("path_end_seg_index", path_plan_output.path_seg_index.second)
   JSON_DEBUG_VALUE("path_length", path_plan_output.length)
 
-  const auto uss_info = apa_world_ptr_->GetUssObstacleAvoidancePtr()->GetRemainDistInfo();
+  const auto uss_info =
+      apa_world_ptr_->GetUssObstacleAvoidancePtr()->GetRemainDistInfo();
   JSON_DEBUG_VALUE("uss_available", uss_info.is_available)
   JSON_DEBUG_VALUE("uss_remain_dist", uss_info.remain_dist)
   JSON_DEBUG_VALUE("uss_index", uss_info.uss_index)
