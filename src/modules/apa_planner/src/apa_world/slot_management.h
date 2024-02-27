@@ -406,9 +406,9 @@ class SlotManagement {
       const ParkingFusion::ParkingFusionSlot& parking_fusion_slot);
   bool IsValidParkingSlot(const common::SlotInfo& slot_info) const;
   bool CorrectSlotPointsOrder(common::SlotInfo& slot_info) const;
-  bool IfUpdateSlot(const common::SlotInfo& new_slot_info);
+  bool IfUpdateSlot(const common::SlotInfo& new_slot_info, const size_t parking_fusion_slot_source_type);
   bool AngleUpdateCondition(const common::SlotInfo& new_slot_info);
-  bool LonDifUpdateCondition(const common::SlotInfo& new_slot_info);
+  bool LonDifUpdateCondition(const common::SlotInfo& new_slot_info, const size_t parking_fusion_slot_source_type);
   void ModifySlot2Rectangle(common::SlotInfo& slot_info);
 
   void UpdateReleasedSlotInfo();

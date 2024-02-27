@@ -341,14 +341,18 @@ bool SlotManagement::UpdateSlotsInSearching() {
     const auto &fusion_slot =
         frame_.parking_slot_ptr->parking_fusion_slot_lists(i);
 
+    // std::cout << "fusion slot source = " << fusion_slot.fusion_source()
+    //           << std::endl;
+
+    // std::cout << "fusion slot id = " << fusion_slot.id() << std::endl;
     common::SlotInfo slot_info;
     if (!ProcessRawSlot(fusion_slot, slot_info)) {
       continue;
     }
-
+    const auto fusion_slot_source_type = fusion_slot.fusion_source();
     const auto slot_info_vec_size = frame_.slot_info_window_vec.size();
     if (frame_.slot_info_map.count(slot_info.id()) == 0 &&
-        LonDifUpdateCondition(slot_info)) {  // get new id
+        LonDifUpdateCondition(slot_info, fusion_slot_source_type)) {  // get new id
 
       SlotInfoWindow slot_info_window;
       slot_info_window.Add(slot_info);
@@ -359,7 +363,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
           std::make_pair(slot_info.id(), slot_info_vec_size));
     } else {  // get old id
       // slot update strategy
-      if (IfUpdateSlot(slot_info)) {
+      if (IfUpdateSlot(slot_info, fusion_slot_source_type)) {
         auto slot_idx = frame_.slot_info_map[slot_info.id()];
         frame_.slot_info_window_vec[slot_idx].Add(slot_info);
       }
@@ -637,18 +641,35 @@ bool SlotManagement::CorrectSlotPointsOrder(common::SlotInfo &slot_info) const {
   return false;
 }
 
-bool SlotManagement::IfUpdateSlot(const common::SlotInfo &new_slot_info) {
+bool SlotManagement::IfUpdateSlot(
+    const common::SlotInfo &new_slot_info,
+    const size_t fusion_slot_source_type) {
+  if ((fusion_slot_source_type ==
+       ParkingFusion::ParkingFusionSlot::FUSION_SLOT_SOURCE_TYPE_ONLY_USS) ||
+      (fusion_slot_source_type ==
+       ParkingFusion::ParkingFusionSlot::FUSION_SLOT_SOURCE_TYPE_CAMERA_USS)) {
+    return true;
+  }
   // update by angle between ego_heading_axis and slot_heading_axis (new slot)
   const bool angle_update_condition = AngleUpdateCondition(new_slot_info);
 
   // update by lon dif between slot center and mirror middle point
-  const bool lon_update_condition = LonDifUpdateCondition(new_slot_info);
+  const bool lon_update_condition =
+      LonDifUpdateCondition(new_slot_info, fusion_slot_source_type);
 
   return (angle_update_condition && lon_update_condition);
 }
 
 bool SlotManagement::LonDifUpdateCondition(
-    const common::SlotInfo &new_slot_info) {
+    const common::SlotInfo &new_slot_info,
+    const size_t parking_fusion_slot_source_type) {
+  if ((parking_fusion_slot_source_type ==
+       ParkingFusion::ParkingFusionSlot::FUSION_SLOT_SOURCE_TYPE_ONLY_USS) ||
+      (parking_fusion_slot_source_type ==
+       ParkingFusion::ParkingFusionSlot::FUSION_SLOT_SOURCE_TYPE_CAMERA_USS)) {
+    return true;
+  }
+
   const auto new_pts = new_slot_info.corner_points();
 
   Eigen::Vector2d car_rear_center_to_pt1_vec(
@@ -927,7 +948,8 @@ void SlotManagement::UpdateSlotInfoInParking() {
   bool reset_slot_flag = false;
   bool update_slot_flag = false;
 
-  bool update_slot_condition_1 = IfUpdateSlot(ego_slot_info.select_slot);
+  bool update_slot_condition_1 =
+      IfUpdateSlot(ego_slot_info.select_slot, ego_slot_info.select_fusion_slot.fusion_source());
 
   bool update_slot_condition_2 =
       (ego_slot_info.slot_occupied_ratio <
