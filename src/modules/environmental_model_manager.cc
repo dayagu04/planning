@@ -11,9 +11,9 @@
 #include "context/ego_planning_config.h"
 #include "context/ego_state_manager.h"
 #include "context/frenet_ego_state.h"
+#include "context/history_obstacle_manager.h"
 #include "context/lateral_obstacle.h"
 #include "context/obstacle_manager.h"
-#include "context/parking_slot_manager.h"
 #include "context/planning_output_context.h"
 #include "context/reference_path_manager.h"
 #include "context/traffic_light_decision_manager.h"
@@ -45,7 +45,7 @@ void EnvironmentalModelManager::InitContext() {
   ego_config_ = config_builder->cast<planning::EgoPlanningConfig>();
 
   ego_state_manager_ptr_ =
-      std::make_shared<planning::EgoStateManager>(session_);
+      std::make_shared<planning::EgoStateManager>(config_builder, session_);
   session_->mutable_environmental_model()->set_ego_state(
       ego_state_manager_ptr_);
 
@@ -83,6 +83,14 @@ void EnvironmentalModelManager::InitContext() {
   agent_node_mgr_ptr_ = std::make_shared<AgentNodeManager>();
   session_->mutable_environmental_model()->set_agent_node_manager(
       agent_node_mgr_ptr_);
+
+  parking_slot_manager_ptr_ = std::make_shared<ParkingSlotManager>(session_);
+  session_->mutable_environmental_model()->set_parking_slot_manager(
+      parking_slot_manager_ptr_);
+  history_obstacle_ptr_ = std::make_shared<planning::HistoryObstacleManager>(
+      config_builder, session_);
+  session_->mutable_environmental_model()->set_history_obstacle_manager(
+      history_obstacle_ptr_);
 }
 
 bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
@@ -95,19 +103,25 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
 
   // 通过配置项进行实时长时的切换 true: 长时规划
   bool msf_valid =
-      local_view.localization_estimate.msf_status().available() &&
-      (local_view.localization_estimate.msf_status().msf_status() !=
-       LocalizationOutput::MsfStatus::ERROR);
+      session_->is_hpp_scene()
+          ? local_view.localization.status().status_info().mode() == 2
+          : (local_view.localization_estimate.msf_status().available() &&
+             (local_view.localization_estimate.msf_status().msf_status() !=
+              LocalizationOutput::MsfStatus::ERROR));
   bool fusion_localization_valid =
       local_view.road_info.local_point_valid() &&
       local_view.fusion_objects_info.local_point_valid();
   bool planner_valid = g_context.GetParam().planner_type ==
                            planning::context::PlannerType::SCC_PLANNER ||
                        g_context.GetParam().planner_type ==
-                           planning::context::PlannerType::LONGTIME_PLANNER;
+                           planning::context::PlannerType::LONGTIME_PLANNER ||
+                       g_context.GetParam().planner_type ==
+                           planning::context::PlannerType::HPP_PLANNER;
+  printf("planner_type:%d\n", g_context.GetParam().planner_type);
   auto location_valid = msf_valid && fusion_localization_valid && planner_valid;
 
   // location_valid = true; //hack
+
   auto environmental_model = session_->mutable_environmental_model();
   environmental_model->set_location_valid(location_valid);
   // Step 1) update vehicleDbwStatus
@@ -128,9 +142,17 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
       (fsm_state == FuncStateMachine::FunctionalState::NOA_ACTIVATE) ||
       (fsm_state == FuncStateMachine::FunctionalState::NOA_OVERRIDE) ||
       (fsm_state == FuncStateMachine::FunctionalState::NOA_SECUR);
-  bool dbw_status = acc_mode || scc_mode || noa_mode;
+  bool hpp_mode =
+      (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_MEMORY) ||
+      (fsm_state ==
+       FuncStateMachine::FunctionalState::HPP_IN_READY_EXISTROUTE) ||
+      (fsm_state ==
+       FuncStateMachine::FunctionalState::HPP_IN_READY_REENTRYROUTE) ||
+      (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_MEMORY_READY) ||
+      (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_MEMORY_CRUISE) ||
+      (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_SECURE);
+  bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
-  JSON_DEBUG_VALUE("dbw_status", dbw_status)
 
   common::DrivingFunctionInfo::DrivingFunctionstate function_state =
       common::DrivingFunctionInfo::ACTIVATE;
@@ -189,10 +211,29 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   if (!obstacle_prediction_update(current_time, local_view)) {
     return false;
   }
-  obstacle_manager_ptr_->update();
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("obstacle_prediction update cost:%f\n", time_end - time_start);
   JSON_DEBUG_VALUE("obstacle_prediction_update_cost", time_end - time_start);
+
+  if (session_->is_hpp_scene()) {
+    time_start = IflyTime::Now_ms();
+    ground_line_obstacles_update(local_view);
+    time_end = IflyTime::Now_ms();
+    LOG_DEBUG("ground_line_obstacles update cost:%f\n", time_end - time_start);
+    JSON_DEBUG_VALUE("ground_line_obstacles_cost", time_end - time_start);
+
+    time_start = IflyTime::Now_ms();
+    parking_slot_manager_ptr_->update(local_view.parking_map_info);
+    time_end = IflyTime::Now_ms();
+    LOG_DEBUG("parking_slot_manager update cost:%f\n", time_end - time_start);
+    JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start);
+  }
+
+  time_start = IflyTime::Now_ms();
+  obstacle_manager_ptr_->update();
+  time_end = IflyTime::Now_ms();
+  LOG_DEBUG("obstacle_manager cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("obstacle_manager_cost", time_end - time_start);
 
   // Step 5) update reference path
   time_start = IflyTime::Now_ms();
@@ -204,13 +245,29 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   LOG_DEBUG("reference_path_manager update cost:%f\n", time_end - time_start);
   JSON_DEBUG_VALUE("reference_path_manager_update_cost", time_end - time_start);
 
-  time_start = IflyTime::Now_ms();
-  lateral_obstacle_ptr_->update();
-  time_end = IflyTime::Now_ms();
-  LOG_DEBUG("lateral_obstacle update cost:%f\n", time_end - time_start);
-  JSON_DEBUG_VALUE("lateral_obstacle_update_cost", time_end - time_start);
+  if (not session_->is_hpp_scene()) {
+    time_start = IflyTime::Now_ms();
+    lateral_obstacle_ptr_->update();
+    time_end = IflyTime::Now_ms();
+    LOG_DEBUG("lateral_obstacle update cost:%f\n", time_end - time_start);
+    JSON_DEBUG_VALUE("lateral_obstacle_update_cost", time_end - time_start);
 
-  lane_tracks_mgr_ptr_->update_lane_tracks();
+    lane_tracks_mgr_ptr_->update_lane_tracks();
+    // Step 6) update agent node manager
+    time_start = IflyTime::Now_ms();
+    agent_node_mgr_ptr_->init();
+    time_end = IflyTime::Now_ms();
+    LOG_DEBUG("agent_node_manager init cost:%f\n", time_end - time_start);
+    JSON_DEBUG_VALUE("agent_node_manager_init_cost", time_end - time_start);
+    // std::cout<< "agent_node_mgr time is : " << time_end - time_start
+    // <<std::endl;
+  } else {
+    time_start = IflyTime::Now_ms();
+    history_obstacle_ptr_->Update();
+    time_end = IflyTime::Now_ms();
+    LOG_DEBUG("history_obstacle update cost:%f\n", time_end - time_start);
+    JSON_DEBUG_VALUE("history_obstacle_cost", time_end - time_start)
+  }
 
   auto end_time = IflyTime::Now_ms();
   LOG_DEBUG("EnvironmentalModelManager::Run cost time:%f\n",
@@ -252,10 +309,11 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   fusion_objs_info.clear();
   if (session_->environmental_model().location_valid()) {
     std::unordered_set<uint> prediction_obj_id_set;
-    truncate_prediction_info(
-        local_view.prediction_result,
-        local_view.localization_estimate.header().timestamp(),
-        prediction_obj_id_set);
+    const auto &ego_state_manager =
+        session_->environmental_model().get_ego_state_manager();
+    truncate_prediction_info(local_view.prediction_result,
+                             ego_state_manager->location_timestamp(),
+                             prediction_obj_id_set);
     int num = 0;
     for (auto &obj : local_view.fusion_objects_info.fusion_object()) {
       num++;
@@ -291,57 +349,130 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   return true;
 }
 
+bool EnvironmentalModelManager::ground_line_obstacles_update(
+    const LocalView &local_view) {
+  std::vector<GroundLinePoint> &ground_line_point_info =
+      session_->mutable_environmental_model()
+          ->get_mutable_ground_line_point_info();
+  ground_line_point_info.clear();
+  GroundLinePerception::GroundLinePerceptionInfo groundline_data =
+      local_view.ground_line_perception;
+
+  for (size_t i = 0; i < groundline_data.ground_lines_size(); ++i) {
+    for (size_t j = 0; j < groundline_data.ground_lines(i).points_3d_size();
+         j++) {
+      GroundLinePoint point;
+      point.point = planning_math::Vec2d(
+          groundline_data.ground_lines(i).points_3d(j).x(),
+          groundline_data.ground_lines(i).points_3d(j).y());
+      point.status = GroundLinePoint::Status::UNCLASSIFIED;
+      ground_line_point_info.emplace_back(point);
+    }
+  }
+
+  return true;
+}
+
 void EnvironmentalModelManager::vehicle_status_adaptor(
     double current_time, const LocalView &local_view,
     common::VehicleStatus &vehicle_status) {
   const auto &vehicle_service_output_info =
       local_view.vehicle_service_output_info;
+  const auto &localization = local_view.localization;
   const auto &localization_estimate = local_view.localization_estimate;
   const auto &hmi_mcu_inner_info = local_view.hmi_mcu_inner_info;
   vehicle_status.mutable_header()->set_timestamp_us(
       vehicle_service_output_info.header().timestamp());
 
   if (session_->environmental_model().location_valid()) {
-    vehicle_status.mutable_heading_yaw()
-        ->mutable_heading_yaw_data()
-        ->set_value_rad(localization_estimate.pose().euler_angles().yaw());
-    vehicle_status.mutable_location()->set_available(true);
-    auto llh_position = localization_estimate.pose().llh_position();
-    vehicle_status.mutable_location()
-        ->mutable_location_geographic()
-        ->set_latitude_degree(llh_position.lat());
-    vehicle_status.mutable_location()
-        ->mutable_location_geographic()
-        ->set_longitude_degree(llh_position.lon());
-    vehicle_status.mutable_location()
-        ->mutable_location_geographic()
-        ->set_altitude_meter(llh_position.height());
-    auto local_position = localization_estimate.pose().local_position();
-    vehicle_status.mutable_location()->mutable_location_enu()->set_x(
-        local_position.x());
-    vehicle_status.mutable_location()->mutable_location_enu()->set_y(
-        local_position.y());
-    vehicle_status.mutable_location()->mutable_location_enu()->set_z(
-        local_position.z());
+    if (session_->is_hpp_scene()) {
+      vehicle_status.mutable_heading_yaw()
+          ->mutable_heading_yaw_data()
+          ->set_value_rad(localization.orientation().euler_boot().yaw());
+      vehicle_status.mutable_location()->set_available(true);
+      auto llh_position = localization.position().position_llh();
+      vehicle_status.mutable_location()
+          ->mutable_location_geographic()
+          ->set_latitude_degree(llh_position.latitude());
+      vehicle_status.mutable_location()
+          ->mutable_location_geographic()
+          ->set_longitude_degree(llh_position.longitude());
+      vehicle_status.mutable_location()
+          ->mutable_location_geographic()
+          ->set_altitude_meter(llh_position.height());
+      auto position_boot = localization.position().position_boot();
+      vehicle_status.mutable_location()->mutable_location_enu()->set_x(
+          position_boot.x());
+      vehicle_status.mutable_location()->mutable_location_enu()->set_y(
+          position_boot.y());
+      vehicle_status.mutable_location()->mutable_location_enu()->set_z(
+          position_boot.z());
 
-    auto enu_orientation = localization_estimate.pose().orientation();
-    vehicle_status.mutable_location()
-        ->mutable_location_enu()
-        ->mutable_orientation()
-        ->set_x(enu_orientation.qx());
-    vehicle_status.mutable_location()
-        ->mutable_location_enu()
-        ->mutable_orientation()
-        ->set_y(enu_orientation.qy());
-    vehicle_status.mutable_location()
-        ->mutable_location_enu()
-        ->mutable_orientation()
-        ->set_z(enu_orientation.qz());
-    vehicle_status.mutable_location()
-        ->mutable_location_enu()
-        ->mutable_orientation()
-        ->set_w(enu_orientation.qw());
-    last_feed_time_[FEED_EGO_ENU] = local_view.localization_estimate_recv_time;
+      auto boot_orientation = localization.orientation().quaternion_boot();
+      vehicle_status.mutable_location()
+          ->mutable_location_enu()
+          ->mutable_orientation()
+          ->set_x(boot_orientation.x());
+      vehicle_status.mutable_location()
+          ->mutable_location_enu()
+          ->mutable_orientation()
+          ->set_y(boot_orientation.y());
+      vehicle_status.mutable_location()
+          ->mutable_location_enu()
+          ->mutable_orientation()
+          ->set_z(boot_orientation.z());
+      vehicle_status.mutable_location()
+          ->mutable_location_enu()
+          ->mutable_orientation()
+          ->set_w(boot_orientation.w());
+      vehicle_status.mutable_header()->set_timestamp_us(
+          localization.header().timestamp());
+      last_feed_time_[FEED_EGO_ENU] = local_view.localization_recv_time;
+    } else {
+      vehicle_status.mutable_heading_yaw()
+          ->mutable_heading_yaw_data()
+          ->set_value_rad(localization_estimate.pose().euler_angles().yaw());
+      vehicle_status.mutable_location()->set_available(true);
+      auto llh_position = localization_estimate.pose().llh_position();
+      vehicle_status.mutable_location()
+          ->mutable_location_geographic()
+          ->set_latitude_degree(llh_position.lat());
+      vehicle_status.mutable_location()
+          ->mutable_location_geographic()
+          ->set_longitude_degree(llh_position.lon());
+      vehicle_status.mutable_location()
+          ->mutable_location_geographic()
+          ->set_altitude_meter(llh_position.height());
+      auto local_position = localization_estimate.pose().local_position();
+      vehicle_status.mutable_location()->mutable_location_enu()->set_x(
+          local_position.x());
+      vehicle_status.mutable_location()->mutable_location_enu()->set_y(
+          local_position.y());
+      vehicle_status.mutable_location()->mutable_location_enu()->set_z(
+          local_position.z());
+
+      auto enu_orientation = localization_estimate.pose().orientation();
+      vehicle_status.mutable_location()
+          ->mutable_location_enu()
+          ->mutable_orientation()
+          ->set_x(enu_orientation.qx());
+      vehicle_status.mutable_location()
+          ->mutable_location_enu()
+          ->mutable_orientation()
+          ->set_y(enu_orientation.qy());
+      vehicle_status.mutable_location()
+          ->mutable_location_enu()
+          ->mutable_orientation()
+          ->set_z(enu_orientation.qz());
+      vehicle_status.mutable_location()
+          ->mutable_location_enu()
+          ->mutable_orientation()
+          ->set_w(enu_orientation.qw());
+      vehicle_status.mutable_header()->set_timestamp_us(
+          localization_estimate.header().timestamp());
+      last_feed_time_[FEED_EGO_ENU] =
+          local_view.localization_estimate_recv_time;
+    }
   } else {
     vehicle_status.mutable_heading_yaw()
         ->mutable_heading_yaw_data()
@@ -359,7 +490,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
     location_enu->mutable_orientation()->set_y(0.0);
     location_enu->mutable_orientation()->set_z(0.0);
     location_enu->mutable_orientation()->set_w(1.0);
-    last_feed_time_[FEED_EGO_ENU] = local_view.localization_estimate_recv_time;
+    last_feed_time_[FEED_EGO_ENU] = local_view.localization_recv_time;
   }
 
   vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
@@ -402,12 +533,35 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   }
 
   if (session_->environmental_model().location_valid()) {
-    auto linear_velocity_from_wheel =
-        localization_estimate.pose().linear_velocity_from_wheel();
-    // WB：定位没有给linear_velocity_from_wheel赋值
-    // vehicle_status.mutable_velocity()
-    //     ->mutable_heading_velocity()
-    //     ->set_value_mps(linear_velocity_from_wheel);
+    if (session_->is_hpp_scene()) {
+      double linear_velocity_from_wheel =
+          std::sqrt(localization.velocity().velocity_boot().vx() *
+                        localization.velocity().velocity_boot().vx() +
+                    localization.velocity().velocity_boot().vy() *
+                        localization.velocity().velocity_boot().vy() +
+                    localization.velocity().velocity_boot().vz() *
+                        localization.velocity().velocity_boot().vz());
+      vehicle_status.mutable_velocity()
+          ->mutable_heading_velocity()
+          ->set_value_mps(linear_velocity_from_wheel);
+      double linear_acc_from_wheel =
+          std::sqrt(localization.acceleration().acceleration_boot().ax() *
+                        localization.acceleration().acceleration_boot().ax() +
+                    localization.acceleration().acceleration_boot().ay() *
+                        localization.acceleration().acceleration_boot().ay() +
+                    localization.acceleration().acceleration_boot().az() *
+                        localization.acceleration().acceleration_boot().az());
+      vehicle_status.mutable_brake_info()
+          ->mutable_brake_info_data()
+          ->set_acceleration_on_vehicle_wheel(linear_acc_from_wheel);
+    } else {
+      auto linear_velocity_from_wheel =
+          localization_estimate.pose().linear_velocity_from_wheel();
+      // WB：定位没有给linear_velocity_from_wheel赋值
+      // vehicle_status.mutable_velocity()
+      //     ->mutable_heading_velocity()
+      //     ->set_value_mps(linear_velocity_from_wheel);
+    }
   }
 
   if (vehicle_service_output_info.steering_wheel_angle_available()) {
@@ -491,6 +645,13 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
     vehicle_status.mutable_driver_hand_state()->set_driver_hands_off_state(
         vehicle_service_output_info.driver_hands_off_state());
   }
+
+  if (vehicle_service_output_info.gear_lever_state_available()) {
+    vehicle_status.mutable_gear()
+        ->mutable_gear_data()
+        ->mutable_gear_status()
+        ->set_value(vehicle_service_output_info.gear_lever_state());
+  }
 }
 
 void EnvironmentalModelManager::truncate_prediction_info(
@@ -541,8 +702,10 @@ void EnvironmentalModelManager::truncate_prediction_info(
           prediction_relative_time, init_relative_time);
     }
     cur_predicion_obj.delay_time = prediction_relative_time;
+    JSON_DEBUG_VALUE("prediction_relative_time", prediction_relative_time);
 #ifdef X86
-    cur_predicion_obj.delay_time = 0;
+    cur_predicion_obj.delay_time =
+        SimulationContext::Instance()->prediction_relative_time();
 #endif
     if (prediction_object.obstacle_intent().type() ==
         Prediction::ObstacleIntent::COMMON) {
@@ -770,6 +933,9 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   if ((int)prediction_object.relative_theta == 255) {
     prediction_object.relative_theta = 0;
   }
+  prediction_object.theta =
+      std::atan2(fusion_object.common_info().velocity().y(),
+                 fusion_object.common_info().velocity().x());
 
   PredictionTrajectoryPoint trajectory_point;
   trajectory_point.relative_time = 0;

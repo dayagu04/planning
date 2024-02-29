@@ -2,6 +2,7 @@
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"
 #include "frenet_ego_state.h"
+#include "history_obstacle_manager.h"
 #include "lateral_obstacle.h"
 #include "obstacle_manager.h"
 #include "reference_path_manager.h"

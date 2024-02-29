@@ -52,6 +52,7 @@ void VirtualLane::update_data(const FusionRoad::ReferenceLineMsg &lane) {
   for (auto poly_coefficient : lane_reference_line_.poly_coefficient_car()) {
     c_poly_.emplace_back(poly_coefficient);
   }
+
   assert(c_poly_.size() == 4);
 
   center_line_points_track_id_.clear();

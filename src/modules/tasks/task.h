@@ -11,6 +11,7 @@
 #include "ego_planning_config.h"
 #include "frame.h"
 #include "task_pipeline_context.h"
+#include "utils/kd_path.h"
 
 namespace planning {
 
@@ -29,7 +30,8 @@ enum TaskType {
   REALTIME_LATERAL_MOTION_PLANNER,
   REALTIME_LONGITUDINAL_MOTION_PLANNER,
   SCC_LONGITUDINAL_BEHAVIOR_PLANNER,
-  SCC_LONGITUDINAL_MOTION_PLANNER
+  SCC_LONGITUDINAL_MOTION_PLANNER,
+  HPP_GENERAL_LATERAL_DECIDER,
 };
 using PlanningTaskTypes = std::vector<TaskType>;
 

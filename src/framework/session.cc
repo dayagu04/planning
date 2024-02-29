@@ -32,6 +32,8 @@ static common::SceneType parse_scene_type_str(const std::string& str) {
     return planning::common::SceneType::PARKING_APA;
   } else if (str == "highway") {
     return planning::common::SceneType::HIGHWAY;
+  } else if (str == "hpp") {
+    return planning::common::SceneType::HPP;
   } else {
     return planning::common::NOT_DEFINED;
   }
@@ -61,6 +63,7 @@ bool Session::Init() {
   planning_output_context_ = alloc<PlanningOutputContext>();
   environmental_model_->set_module_config_file_dir(module_config_file_dir);
   vehicle_config_context_ = VehicleConfigurationContext::Instance();
+  simulation_context_ = SimulationContext::Instance();
   return true;
 }
 

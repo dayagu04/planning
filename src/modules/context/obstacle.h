@@ -24,6 +24,8 @@ class Obstacle {
   explicit Obstacle(int id, const PredictionObject &prediction_object,
                     bool is_static, double start_relative_timestamp);
 
+  explicit Obstacle(const Obstacle *obstacle);
+
   // explicit Obstacle(int id,
   //                   const FusionObjects::FusionObject &perception_obstacle,
   //                   bool is_static);
@@ -130,17 +132,6 @@ class Obstacle {
   planning_math::Polygon2d car_ego_polygon_;
   std::vector<planning_math::Vec2d> perception_points_;
   unsigned int fusion_source_;
-};
-
-struct HistoryObstacle {
-  int id{};
-  Common::ObjectType type;
-  double time = 0.0;
-  double x_center = 0.0;
-  double y_center = 0.0;
-  double velocity_x = 0.0;
-  double velocity_y = 0.0;
-  double heading_angle = 0.0;
 };
 
 // typedef IndexedList<int, Obstacle> IndexedObstacles;

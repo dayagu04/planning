@@ -9,6 +9,8 @@
 #include "config/vehicle_param.h"
 #include "ego_planning_config.h"
 #include "fusion_objects.pb.h"
+#include "groundline_decider.h"
+#include "history_obstacle_manager.h"
 #include "ifly_time.h"
 #include "local_view.h"
 #include "log.h"
@@ -84,6 +86,13 @@ class EnvironmentalModel {
   }
   std::vector<PredictionObject> &get_mutable_prediction_info() {
     return prediction_info_;
+  }
+
+  const std::vector<GroundLinePoint> &get_ground_line_point_info() const {
+    return ground_line_point_info_;
+  }
+  std::vector<GroundLinePoint> &get_mutable_ground_line_point_info() {
+    return ground_line_point_info_;
   }
 
   const std::shared_ptr<EgoStateManager> &get_ego_state_manager() const {
@@ -167,6 +176,24 @@ class EnvironmentalModel {
     lane_tracks_manager_ = lane_tracks_manager;
   }
 
+  const std::shared_ptr<ParkingSlotManager> &get_parking_slot_manager() const {
+    return parking_slot_manager_;
+  }
+
+  void set_parking_slot_manager(
+      std::shared_ptr<ParkingSlotManager> parking_slot_manager) {
+    parking_slot_manager_ = parking_slot_manager;
+  }
+
+  const std::shared_ptr<HistoryObstacleManager> &get_history_obstacle_manager()
+      const {
+    return history_obstacle_manager_;
+  }
+  void set_history_obstacle_manager(
+      std::shared_ptr<HistoryObstacleManager> history_obstacle_manager) {
+    history_obstacle_manager_ = history_obstacle_manager;
+  }
+
   const std::string &get_module_config_file_dir() const {
     return config_file_dir_;
   }
@@ -178,6 +205,8 @@ class EnvironmentalModel {
   EgoPlanningConfigBuilder *config_builder(common::SceneType scene_type) const {
     if (scene_type == common::SceneType::PARKING_APA) {
       return parking_config_builder_ptr_;
+    } else if (scene_type == common::SceneType::HPP) {
+      return hpp_config_builder_ptr_;
     } else {
       return highway_config_builder_ptr_;
     }
@@ -191,6 +220,10 @@ class EnvironmentalModel {
       EgoPlanningConfigBuilder *highway_config_builder_ptr) {
     highway_config_builder_ptr_ = highway_config_builder_ptr;
   }
+  void set_hpp_config_builder(
+      EgoPlanningConfigBuilder *hpp_config_builder_ptr) {
+    hpp_config_builder_ptr_ = hpp_config_builder_ptr;
+  }
 
   void feed_local_view(const LocalView *local_view) {
     local_view_ = local_view;
@@ -202,7 +235,9 @@ class EnvironmentalModel {
     } else {
       static_map_info_update_flag_ = false;
     }
-
+    bool is_hdmap_valid =
+        (IflyTime::Now_ms() - local_view_->static_map_info_recv_time) <
+        3000;  //距离上一次更新时间小于3秒，则地图有效.超过三秒则认为无效报错
     if (static_map_info_update_flag_) {
       ad_common::hdmap::HDMap hd_map_tmp;
       const int res =
@@ -214,6 +249,12 @@ class EnvironmentalModel {
         hd_map_ = std::move(hd_map_tmp);
         hdmap_valid_ = true;
       }
+    }
+    if (!is_hdmap_valid) {
+      // hd_map_.clear();
+      hdmap_valid_ = false;
+      std::cout << "error!!! because more than 3s no update hdmap!!!"
+                << std::endl;
     }
   }
 
@@ -256,6 +297,9 @@ class EnvironmentalModel {
   std::shared_ptr<AgentNodeManager> agent_node_manager_ = nullptr;
   std::vector<PredictionObject> prediction_info_;
   std::vector<PredictionObject> fusion_info_;
+  std::shared_ptr<HistoryObstacleManager> history_obstacle_manager_ = nullptr;
+  std::vector<GroundLinePoint> ground_line_point_info_;
+  std::shared_ptr<ParkingSlotManager> parking_slot_manager_ = nullptr;
   bool hdmap_valid_{false};
   bool location_valid_{true};
   planning::VehicleParam vehicle_param_;
@@ -263,7 +307,7 @@ class EnvironmentalModel {
 
   EgoPlanningConfigBuilder *parking_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *highway_config_builder_ptr_ = nullptr;
-
+  EgoPlanningConfigBuilder *hpp_config_builder_ptr_ = nullptr;
   common::DrivingFunctionInfo function_info_;
 };
 

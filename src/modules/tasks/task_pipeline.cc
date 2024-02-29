@@ -1,5 +1,6 @@
 #include "task_pipeline.h"
 
+#include "task_pipeline_hpp.h"
 #include "task_pipeline_normal.h"
 #include "task_pipeline_scc.h"
 #include "task_pipeline_vision_only.h"
@@ -25,6 +26,9 @@ std::shared_ptr<TaskPipeline> TaskPipeline::Make(
     }
     case TaskPipelineType::SCC: {
       return std::make_shared<TaskPipelineScc>(config_builder, frame);
+    }
+    case TaskPipelineType::HPP: {
+      return std::make_shared<TaskPipelineHpp>(config_builder, frame);
     }
     default: { /*LOG_ERROR*/
       return nullptr;

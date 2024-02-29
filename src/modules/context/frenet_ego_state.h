@@ -13,10 +13,7 @@ class FrenetEgoState {
   FrenetEgoState() = default;
   ~FrenetEgoState() = default;
 
-  // void update(const std::shared_ptr<FrenetCoordinateSystem> &frenet_coord,
-  //             const planning::EgoStateManager &ego_state);
-
-  void update(const std::shared_ptr<KDPath> &frenet_coord,
+  void update(const std::shared_ptr<planning_math::KDPath> &frenet_coord,
               const planning::EgoStateManager &ego_state);
 
   double s() const { return s_; }

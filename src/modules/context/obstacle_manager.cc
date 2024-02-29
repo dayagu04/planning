@@ -4,9 +4,9 @@
 
 #include "ego_state_manager.h"
 #include "math/math_utils.h"
+#include "parking_slot_manager.h"
 #include "reference_path_manager.h"
 #include "virtual_lane_manager.h"
-
 namespace planning {
 
 ObstacleManager::ObstacleManager(const EgoPlanningConfigBuilder *config_builder,
@@ -37,8 +37,27 @@ void ObstacleManager::update() {
                 prediction_object.id);
       continue;
     }
+
+    double prediction_trajectory_length = 10.0;
+    double prediction_duration = 0.0;
+    if (prediction_object.trajectory_array.size() > 0) {
+      const auto &trajectory_array = prediction_object.trajectory_array.at(0);
+      if (trajectory_array.trajectory.size() > 0) {
+        const auto &start_point = trajectory_array.trajectory.at(0);
+        const auto &end_point = trajectory_array.trajectory.at(
+            trajectory_array.trajectory.size() - 1);
+        prediction_trajectory_length = std::sqrt(
+            (start_point.x - end_point.x) * (start_point.x - end_point.x) +
+            (start_point.y - end_point.y) * (start_point.y - end_point.y));
+        prediction_duration = end_point.relative_time;
+      }
+    }
+
+    const double kMaxStaticPredictionLength =
+        config_.max_speed_static_obstacle * prediction_duration;
     bool is_static = prediction_object.speed < 0.1 ||
-                     prediction_object.trajectory_array.size() == 0;
+                     prediction_object.trajectory_array.size() == 0 ||
+                     prediction_trajectory_length < kMaxStaticPredictionLength;
     double prediction_relative_time =
         prediction_object.delay_time - ego_init_relative_time;
     if (prediction_object.trajectory_array.size() == 0) {
@@ -57,34 +76,74 @@ void ObstacleManager::update() {
     }
   }
 
-  // add gs care obstacles
-  const auto &fusion_objects =
-      session_->environmental_model().get_fusion_info();
-  for (int i = 0; i < session_->environmental_model().get_fusion_info().size();
-       i++) {
-    auto &fusion_object = fusion_objects[i];
-    bool is_static =
-        fusion_object.speed < 0.1 || fusion_object.trajectory_array.size() == 0;
-    double prediction_relative_time =
-        fusion_object.delay_time - ego_init_relative_time;
-
+  if (!session_->is_hpp_scene()) {
     // add gs care obstacles
-    bool gs_care_fusion_source =
-        (fusion_object.fusion_source == OBSTACLE_SOURCE_CAMERA) ||
-        (fusion_object.fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA) ||
-        (fusion_object.fusion_source == OBSTACLE_SOURCE_LF_RADAR) ||
-        (fusion_object.fusion_source == OBSTACLE_SOURCE_RF_RADAR) ||
-        (fusion_object.fusion_source == OBSTACLE_SOURCE_LR_RADAR) ||
-        (fusion_object.fusion_source == OBSTACLE_SOURCE_RR_RADAR);
+    const auto &fusion_objects =
+        session_->environmental_model().get_fusion_info();
+    for (int i = 0;
+         i < session_->environmental_model().get_fusion_info().size(); i++) {
+      auto &fusion_object = fusion_objects[i];
+      bool is_static = fusion_object.speed < 0.1 ||
+                       fusion_object.trajectory_array.size() == 0;
+      double prediction_relative_time =
+          fusion_object.delay_time - ego_init_relative_time;
 
-    if (gs_care_fusion_source && fusion_object.type != 0 &&
-        fusion_object.length > 0. && fusion_object.width > 0. &&
-        std::fabs(fusion_object.relative_position_y) < 10. &&
-        std::fabs(fusion_object.relative_position_x) < 100.) {
-      auto obstacle = Obstacle(fusion_object.id, fusion_object, is_static,
-                               prediction_relative_time);
-      add_gs_care_obstacles(obstacle);
+      // add gs care obstacles
+      bool gs_care_fusion_source =
+          (fusion_object.fusion_source == OBSTACLE_SOURCE_CAMERA) ||
+          (fusion_object.fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA) ||
+          (fusion_object.fusion_source == OBSTACLE_SOURCE_LF_RADAR) ||
+          (fusion_object.fusion_source == OBSTACLE_SOURCE_RF_RADAR) ||
+          (fusion_object.fusion_source == OBSTACLE_SOURCE_LR_RADAR) ||
+          (fusion_object.fusion_source == OBSTACLE_SOURCE_RR_RADAR);
+
+      if (gs_care_fusion_source && fusion_object.type != 0 &&
+          fusion_object.length > 0. && fusion_object.width > 0. &&
+          std::fabs(fusion_object.relative_position_y) < 10. &&
+          std::fabs(fusion_object.relative_position_x) < 100.) {
+        auto obstacle = Obstacle(fusion_object.id, fusion_object, is_static,
+                                 prediction_relative_time);
+        add_gs_care_obstacles(obstacle);
+      }
     }
+  } else {
+    // fusion ground line
+    static constexpr int kGroundLineIdOffset = 5000000;
+    const std::vector<GroundLinePoint> &groundline =
+        session_->environmental_model().get_ground_line_point_info();
+    auto groundline_clusters = GroundLineDecider::execute(groundline);
+    std::cout << "groundline_clusters.size = " << groundline_clusters.size()
+              << std::endl;
+    LOG_DEBUG("groundline_clusters.size = %d", groundline_clusters.size());
+    int cluster_id = kGroundLineIdOffset;
+    for (auto &groundline_cluster : groundline_clusters) {
+      cluster_id += 1;
+      Obstacle obstacle(cluster_id, groundline_cluster);
+      add_groundline_obstacle(obstacle);
+    }
+
+    // parking space
+    static constexpr int kParkingSlotIdOffset = 6000000;
+    const std::shared_ptr<ParkingSlotManager> parking_slot_manager =
+        session_->environmental_model().get_parking_slot_manager();
+    const std::vector<ParkingSlotPoints> &parking_slot_points =
+        parking_slot_manager->get_points();
+    int parking_slot_id = kParkingSlotIdOffset;
+    for (auto &parking_slot_point : parking_slot_points) {
+      if (parking_slot_point.size() != 4U) {
+        LOG_DEBUG("invalid parking_slot_point.size = %lu",
+                  parking_slot_point.size());
+        continue;
+      }
+      parking_slot_id += 1;
+      Obstacle obstacle(parking_slot_id, parking_slot_point);
+      add_parking_space(obstacle);
+    }
+
+    // update uss
+    uss_obstacle_.SetLocalView(
+        &session_->environmental_model().get_local_view());
+    uss_obstacle_.Update();
   }
 }
 
@@ -204,7 +263,7 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
 //     const double frenet_obstacle_range_s_min = -50.0;
 //     bool frenet_transform_flag =
 //         frenet_coord->CartCoord2FrenetCoord(cart_point, frenet_point);
-//     if (frenet_transform_flag == TRANSFORM_FAILED ||
+//     if (frenet_transform_flag  ||
 //         std::isnan(frenet_point.x) || std::isnan(frenet_point.y) ||
 //         frenet_point.x > (frenet_obstacle_range_s_max + ego_s) ||
 //         frenet_point.x < (frenet_obstacle_range_s_min + ego_s) ||

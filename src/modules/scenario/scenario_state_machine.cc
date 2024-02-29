@@ -72,8 +72,11 @@ bool ScenarioStateMachine::update(planning::framework::Frame *frame) {
     LOG_DEBUG("[scenario_state_machine] active\n");
     if (scenario_ == SCENARIO_CRUISE) {
       // update lc_req_mgr_
-      lc_req_mgr_->Update(fsm_context_.state,
-                          session_->environmental_model().IsOnRoute());
+      if (not session_->is_hpp_scene()) {
+        lc_req_mgr_->Update(fsm_context_.state,
+                            session_->environmental_model().IsOnRoute());
+      }
+
       gen_map_turn_signal();
       update_state_machine();
       post_process();

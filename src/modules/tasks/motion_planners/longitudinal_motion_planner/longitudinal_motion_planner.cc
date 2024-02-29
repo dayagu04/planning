@@ -49,6 +49,7 @@ void LongitudinalMotionPlanner::Init() {
 
 bool LongitudinalMotionPlanner::Execute(planning::framework::Frame *frame) {
   LOG_DEBUG("=======LongitudinalMotionPlanner======= \n");
+  auto start_time = IflyTime::Now_ms();
   frame_ = frame;
   if (Task::Execute(frame) == false) {
     return false;
@@ -68,7 +69,8 @@ bool LongitudinalMotionPlanner::Execute(planning::framework::Frame *frame) {
       .GetDebugInfoPb()
       ->mutable_longitudinal_motion_planning_output()
       ->CopyFrom(planning_problem_ptr_->GetOutput());
-
+  auto end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("LongitudinalMotionCostTime", end_time - start_time);
   return true;
 }
 
@@ -323,6 +325,9 @@ void LongitudinalMotionPlanner::Update() {
   motion_planning_info.omega_t_spline.set_points(t_vec, assembled_omega);
   motion_planning_info.lat_enable_flag = true;
 
+  JSON_DEBUG_VECTOR("assembled_x", assembled_x, 4)
+  JSON_DEBUG_VECTOR("assembled_y", assembled_y, 4)
+  JSON_DEBUG_VECTOR("assembled_theta", assembled_theta, 4)
   JSON_DEBUG_VECTOR("assembled_delta", assembled_delta, 4)
   JSON_DEBUG_VECTOR("assembled_omega", assembled_omega, 4)
 

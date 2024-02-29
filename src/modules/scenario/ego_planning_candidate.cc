@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "basic_types.pb.h"
 #include "debug_info_log.h"
 #include "math/math_utils.h"
 #include "math_lib.h"
@@ -56,6 +57,9 @@ void EgoPlanningCandidate::set_coarse_planning_info(
           ->get_reference_path_manager()
           ->make_map_lane_reference_path(coarse_planning_info_.target_lane_id);
 
+  const auto &planning_init_point =
+      coarse_planning_info_.reference_path->get_frenet_ego_state()
+          .planning_init_point();
   // Step 3) calculate trajectory points
   // generate reference path
   static const double min_ego_v_cruise = 2.0;
@@ -73,22 +77,59 @@ void EgoPlanningCandidate::set_coarse_planning_info(
   const auto &frenet_coord =
       coarse_planning_info_.reference_path->get_frenet_coord();
 
+  // auto &debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  // debug_info_pb->mutable_refpath_candidate()->Clear();
+  // for (auto i = 0; i < frenet_coord->path_points().size(); i++) {
+  //   planning::common::TrajectoryPoint *coord_point =
+  //       debug_info_pb->mutable_refpath_candidate()->Add();
+  //   coord_point->set_x(frenet_coord->path_points().at(i).x());
+  //   coord_point->set_y(frenet_coord->path_points().at(i).y());
+  // }
   double s = 0.0;
   Point2D frenet_pt{s, 0.0};
   Point2D cart_pt(0.0, 0.0);
-
-  auto point_size = coarse_planning_info_.reference_path->get_points().size();
+  const auto &ref_point = coarse_planning_info_.reference_path->get_points();
+  auto point_size = ref_point.size();
   cart_ref_info.x_vec.resize(point_size);
   cart_ref_info.y_vec.resize(point_size);
   cart_ref_info.s_vec.resize(point_size);
+  float normal_care_spline_length = 50.;
+  const float preview_time = 20.;
+  const double min_preview_spline_length = 20.;
+
+  if (frame_->session()->is_hpp_scene()) {
+    const double kHppMaxRearDistance = 30.0;
+    double distance_to_first_point = kHppMaxRearDistance;
+    if (point_size > 0) {
+      double diff_x =
+          ref_point.at(0).path_point.x - planning_init_point.lat_init_state.x();
+      double diff_y =
+          ref_point.at(0).path_point.y - planning_init_point.lat_init_state.y();
+      distance_to_first_point = std::sqrt(diff_x * diff_x + diff_y * diff_y);
+    }
+
+    normal_care_spline_length =
+        std::min(kHppMaxRearDistance, distance_to_first_point);
+  }
 
   for (size_t i = 0; i < point_size; ++i) {
-    cart_ref_info.x_vec[i] =
-        coarse_planning_info_.reference_path->get_points().at(i).path_point.x;
-    cart_ref_info.y_vec[i] =
-        coarse_planning_info_.reference_path->get_points().at(i).path_point.y;
+    cart_ref_info.x_vec[i] = ref_point.at(i).path_point.x;
+    cart_ref_info.y_vec[i] = ref_point.at(i).path_point.y;
     cart_ref_info.s_vec[i] =
-        coarse_planning_info_.reference_path->get_points().at(i).path_point.s;
+        i > 0 ? cart_ref_info.s_vec[i - 1] +
+                    std::hypot(ref_point.at(i).path_point.x -
+                                   ref_point.at(i - 1).path_point.x,
+                               ref_point.at(i).path_point.y -
+                                   ref_point.at(i - 1).path_point.y)
+              : 0.;
+    if (cart_ref_info.s_vec[i] >
+        normal_care_spline_length +
+            std::max(v_ref_cruise * preview_time, min_preview_spline_length)) {
+      cart_ref_info.x_vec.resize(i);
+      cart_ref_info.y_vec.resize(i);
+      cart_ref_info.s_vec.resize(i);
+      break;
+    }
   }
 
   cart_ref_info.x_s_spline.set_points(cart_ref_info.s_vec, cart_ref_info.x_vec);
@@ -96,10 +137,6 @@ void EgoPlanningCandidate::set_coarse_planning_info(
 
   JSON_DEBUG_VECTOR("raw_refline_x_vec", cart_ref_info.x_vec, 2)
   JSON_DEBUG_VECTOR("raw_refline_y_vec", cart_ref_info.y_vec, 2)
-
-  const auto &planning_init_point =
-      coarse_planning_info_.reference_path->get_frenet_ego_state()
-          .planning_init_point();
 
   Eigen::Vector2d init_pos(planning_init_point.lat_init_state.x(),
                            planning_init_point.lat_init_state.y());

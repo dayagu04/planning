@@ -5,11 +5,14 @@
 #include "common/prediction_object.h"
 #include "context/ego_planning_config.h"
 #include "context/ego_state_manager.h"
+#include "context/history_obstacle_manager.h"
 #include "context/obstacle_manager.h"
+#include "context/parking_slot_manager.h"
 #include "frame.h"
 #include "ifly_time.h"
 #include "session.h"
 #include "vehicle_status.pb.h"
+
 namespace planning {
 namespace planner {
 
@@ -53,6 +56,7 @@ class EnvironmentalModelManager {
       std::vector<PredictionObject> &objects_infos);
   bool obstacle_prediction_update(double current_time,
                                   const LocalView &local_view);
+  bool ground_line_obstacles_update(const LocalView &local_view);
   bool InputReady(double current_time, std::string &error_msg);
   PredictionTrajectoryPoint GetPointAtTime(
       const std::vector<PredictionTrajectoryPoint> &trajectory_points,
@@ -65,6 +69,8 @@ class EnvironmentalModelManager {
   //   nullptr; std::shared_ptr<EgoPoseManager> ego_pose_manager_ = nullptr;
   std::shared_ptr<planning::EgoStateManager> ego_state_manager_ptr_ = nullptr;
   std::shared_ptr<planning::ObstacleManager> obstacle_manager_ptr_ = nullptr;
+  std::shared_ptr<planning::ParkingSlotManager> parking_slot_manager_ptr_ =
+      nullptr;
   std::shared_ptr<planning::VirtualLaneManager> virtual_lane_manager_ptr_ =
       nullptr;
   std::shared_ptr<planning::ReferencePathManager> reference_path_manager_ptr_ =
@@ -74,6 +80,8 @@ class EnvironmentalModelManager {
   std::shared_ptr<planning::LateralObstacle> lateral_obstacle_ptr_ = nullptr;
   std::shared_ptr<planning::LaneTracksManager> lane_tracks_mgr_ptr_ = nullptr;
   std::shared_ptr<planning::AgentNodeManager> agent_node_mgr_ptr_ = nullptr;
+  std::shared_ptr<planning::HistoryObstacleManager> history_obstacle_ptr_ =
+      nullptr;
   double last_feed_time_[FEED_TYPE_MAX]{};
   EgoPlanningConfig ego_config_;
 };

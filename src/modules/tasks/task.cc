@@ -2,6 +2,7 @@
 
 #include "behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
+#include "behavior_planners/hpp_general_lateral_decider/hpp_general_lateral_decider.h"
 #include "behavior_planners/real_time_longitudinal_behavior_planner/real_time_lon_behavior_planner.h"
 #include "behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_planner.h"
 #include "behavior_planners/vision_only_adas_function_task/vision_only_adas_function_task.h"
@@ -133,6 +134,12 @@ std::shared_ptr<Task> Task::Make(
       return std::make_shared<SccLongitudinalMotionPlanner>(config_builder,
                                                             pipeline_context);
     }
+
+    case TaskType::HPP_GENERAL_LATERAL_DECIDER: {
+      return std::make_shared<HppGeneralLateralDecider>(config_builder,
+                                                        pipeline_context);
+    }
+
     default: { /*LOG_ERROR*/
       return nullptr;
     }

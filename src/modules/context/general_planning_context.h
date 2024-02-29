@@ -15,6 +15,7 @@ enum PlannerType {
   REALTIME_PLANNER = 0,
   SCC_PLANNER = 1,
   LONGTIME_PLANNER = 2,
+  HPP_PLANNER = 3,
 };
 
 struct PlanningPram {

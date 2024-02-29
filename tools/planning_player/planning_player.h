@@ -44,14 +44,13 @@ class PlanningPlayer {
   void Clear();
   bool LoadCyberBag(const std::string &bag_path);
   void StoreCyberBag(const std::string &bag_path);
-  void StoreCyberBag_old(const std::string &bag_path);
   void PlayOneFrame(int frame_num,
                     const planning::common::TopicTimeList &input_time_list);
   void PlayAllFrames();
   void RunCloseLoop(const PlanningOutput::PlanningOutput &planning_output);
-  // void PerfectControlHPP(
-  //     const PlanningOutput::PlanningOutput &plan_msg, uint64_t delta_t,
-  //     std::shared_ptr<IFLYLocalization::IFLYLocalization> &loc_msg);
+  void PerfectControlHPP(
+      const PlanningOutput::PlanningOutput &plan_msg, uint64_t delta_t,
+      std::shared_ptr<IFLYLocalization::IFLYLocalization> &loc_msg);
   void PerfectControlSCC(
       const PlanningOutput::PlanningOutput &plan_msg, uint64_t delta_t,
       std::shared_ptr<LocalizationOutput::LocalizationEstimate> &loc_msg);
@@ -77,11 +76,12 @@ class PlanningPlayer {
   uint64_t planning_hmi_header_time_us_ = 0;
   uint64_t input_time_list_map_ = 0;
   uint64_t input_time_list_road_fusion_ = 0;
-  uint64_t history_planning_start_time_ = 0;
-  uint64_t next_history_planning_start_time_ = 0;
   uint64_t planning_start_timestamp_ = 0;
   uint64_t next_loc_header_time_us_ = 0;
   uint64_t loc_header_time_us_ = 0;
+  uint64_t next_loc_esti_header_time_us_ = 0;
+  uint64_t loc_esti_header_time_us_ = 0;
+  uint64_t planning_dubug_info_frame_num_ = 0;
   int frame_num_before_enter_auto_ = 0;
   std::string scene_type_ = "acc";
 

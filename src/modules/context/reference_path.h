@@ -46,10 +46,6 @@ class ReferencePath {
     return refined_ref_path_points_;
   }
 
-  // const std::shared_ptr<FrenetCoordinateSystem> &get_frenet_coord() const {
-  //   return frenet_coord_;
-  // }
-
   const std::shared_ptr<KDPath> &get_frenet_coord() const {
     return frenet_coord_;
   }

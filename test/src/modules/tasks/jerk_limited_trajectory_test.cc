@@ -11,7 +11,7 @@ TEST(TestVelJerkLimitedTrajectory, Vel_Jerk_Limited_Trajectory) {
   // init state
   planning::jlt::PointState init_state = {0.0, 0.0, 2.0, 0.0};
   planning::jlt::StateLimitParam limit_state = {0.0, 20.0, 10.0, -1.0,
-                                                5.0,   -5.0, 7.0,  -7.0};
+                                                5.0, -5.0, 7.0,  -7.0};
   // generate curve
   planning::jlt::JerkLimitedTrajectory curve_by_vel;
   curve_by_vel.Update(init_state, limit_state, planning::jlt::SOLVE_VEL, 0.1);
@@ -33,8 +33,8 @@ TEST(TestVelJerkLimitedTrajectory, Vel_Jerk_Limited_Trajectory) {
 TEST(TestPosJerkLimitedTrajectory, Pos_Jerk_Limited_Trajectory) {
   // init state
   planning::jlt::PointState init_state = {0.0, 5.0, 0.0, 0.0};
-  planning::jlt::StateLimitParam limit_state = {100.0, 0.0, 10.0, -1.0,
-                                                5.0, -5.0, 7.0,  -7.0};
+  planning::jlt::StateLimitParam limit_state = {100.0, 0.0,  10.0, -1.0,
+                                                5.0,   -5.0, 7.0,  -7.0};
   // generate curve
   planning::jlt::JerkLimitedTrajectory curve_by_pos;
   curve_by_pos.Update(init_state, limit_state, planning::jlt::SOLVE_POS, 0.1);

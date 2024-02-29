@@ -55,6 +55,11 @@ bool EnvironmentalModelModule::init(const ::google::protobuf::Message* config,
   session->mutable_environmental_model()->set_highway_config_builder(
       highway_config_builder);
 
+  auto hpp_config_builder =
+      load_config_builder(session, "general_planner_module_hpp.json");
+  session->mutable_environmental_model()->set_hpp_config_builder(
+      hpp_config_builder);
+
   environmental_model_manager_.Init(session);
   return true;
 }

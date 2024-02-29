@@ -19,42 +19,6 @@
 #include "virtual_lane_manager.h"
 namespace planning {
 
-// struct LatYieldInfo {
-//   double min_ds;
-//   double min_ttc;
-//   double min_acc;
-//   double min_jerk;
-//   bool keep_stop;
-// };
-
-struct LatDeciderInfo {
-  double desired_vel;
-  double l_care_width;
-  double care_obj_lat_distance_threshold;
-  double care_obj_lon_distance_threshold;
-  double dynamic_obj_safe_buffer;
-  double vehicle_width_with_rearview_mirror;
-  double vehicle_length;
-  double rear_bumper_to_rear_axle;
-  double min_gain_vel;
-  double min_obstacle_avoid_distance;
-  double lateral_bound_converge_speed;
-  double kPhysicalBoundWeight;
-  double kHardBoundWeight;
-  double dynamic_bound_slack_coefficient;
-  double l_offset_limit;
-  double buffer2lane;
-  double buffer2border;
-};
-
-// struct VelocityLimitInfo {
-//   double v_limit_map;
-//   double v_limit_usr;
-//   double v_limit_curv;
-//   double v_limit_narrow_area;
-//   double v_limit_final;
-// };
-
 class GeneralLateralDecider : public Task {
  public:
   explicit GeneralLateralDecider(

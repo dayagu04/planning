@@ -16,13 +16,21 @@
 
 namespace planning {
 
-static const double planning_loop_dt = 0.1;
+static double planning_loop_dt = 0.1;
 static const double steer_ratio = 15.7;
 static const double curve_factor = 0.30;
 
-EgoStateManager::EgoStateManager(planning::framework::Session *session)
+EgoStateManager::EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
+                                 planning::framework::Session *session)
     : session_(session) {
   vehicle_param_ = session_->vehicle_config_context().get_vehicle_param();
+  config_ = config_builder->cast<EgoPlanningEgoStateManagerConfig>();
+  parking_cruise_speed_ = config_.parking_cruise_speed;
+  hpp_max_replan_lat_err_ = config_.hpp_max_replan_lat_err;
+  hpp_max_replan_theta_err_ = config_.hpp_max_replan_theta_err;
+  hpp_max_replan_lon_err_ = config_.hpp_max_replan_lon_err;
+  hpp_max_replan_dist_err_ = config_.hpp_max_replan_dist_err;
+
   // init v_cruise_filter: -1.5m/s2, 1.5m/s2, 0-150km/h, 10hz
   v_cruise_filter_.Init(-1.5, 1.5, 0.0, 42.0, planning_loop_dt);
 }
@@ -97,6 +105,9 @@ void EgoStateManager::set_ego_v_cruise(
         vehicle_status.velocity().cruise_velocity().value_mps());
   }
   ego_v_cruise_ = v_cruise_filter_.GetOutput();
+  if (session_->is_hpp_scene()) {
+    ego_v_cruise_ = parking_cruise_speed_;
+  }
 }
 
 void EgoStateManager::set_ego_t_distance(
@@ -138,6 +149,11 @@ void EgoStateManager::set_driver_hand_state(
       vehicle_status.driver_hand_state().driver_hands_off_state();
 }
 
+void EgoStateManager::set_ego_gear(
+    const planning::common::VehicleStatus &vehicle_status) {
+  ego_gear_ = vehicle_status.gear().gear_data().gear_status().value();
+}
+
 void EgoStateManager::update_transform() {
   Eigen::Vector4d q;
   q.x() = location_enu_.orientation.x;
@@ -176,13 +192,22 @@ bool EgoStateManager::update(
   set_ego_blinker(vehicle_status);
   set_ego_auto_light_state(vehicle_status);
   set_driver_hand_state(vehicle_status);
+  set_ego_gear(vehicle_status);
   if (timestamp_us_ == timestamp_us_last_) {
     jerk_ = 0;
   } else {
     jerk_ = (ego_acc_ - ego_acc_last_) /
             ((timestamp_us_ - timestamp_us_last_) / 1000000.0);
   }
-
+  const auto &planning_result =
+      session_->planning_output_context().planning_status().planning_result;
+  planning_loop_dt =
+      (planning_result.next_timestamp - planning_result.timestamp) / 1000.0;
+  printf("planning_loop_dt:%f\n", planning_loop_dt);
+  JSON_DEBUG_VALUE("planning_loop_dt", planning_loop_dt);
+#ifdef X86
+  planning_loop_dt = SimulationContext::Instance()->planning_loop_dt();
+#endif
   planning_math::Vec2d center(
       ego_pose_.x +
           std::cos(ego_pose_.theta) * vehicle_param_.rear_axis_to_center,
@@ -226,7 +251,6 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
 
   Eigen::Vector2d cur_pos(ego_state->ego_pose_raw().x,
                           ego_state->ego_pose_raw().y);
-
   pnc::spline::Projection projection_spline;
   projection_spline.CalProjectionPoint(
       motion_planning_info.x_s_spline, motion_planning_info.y_s_spline,
@@ -245,7 +269,8 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
   //                                      init_point);
   // const auto s_init = projection_spline.GetOutput().s_proj;
   // const double &lon_err = s_init - s_proj;
-
+  const double theta_err =
+      lat_init_state.theta() - ego_state->ego_pose_raw().theta;
   const auto lon_err = std::hypot(init_point.x() - proj_point.x(),
                                   init_point.y() - proj_point.y());
   const double dist_err =
@@ -253,18 +278,31 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
                  lat_init_state.y() - ego_state->ego_pose_raw().y);
 
   JSON_DEBUG_VALUE("lat_err", lat_err)
+  JSON_DEBUG_VALUE("theta_err", theta_err)
   JSON_DEBUG_VALUE("lon_err", lon_err)
   JSON_DEBUG_VALUE("dist_err", dist_err)
 
-  if (fabs(lat_err) > 0.6 || lat_reset_flag) {
+  double max_replan_lat_err = 0.6;
+  double max_replan_lon_err = 1.0;
+  double max_replan_dist_err = 1.5;
+  double max_replan_theta_err = 10.0 / 57.3;
+  if (session_->is_hpp_scene()) {
+    max_replan_lat_err = hpp_max_replan_lat_err_;
+    max_replan_theta_err = hpp_max_replan_theta_err_ / 57.3;
+    max_replan_lon_err = hpp_max_replan_lon_err_;
+    max_replan_dist_err = hpp_max_replan_dist_err_;
+  }
+
+  if (fabs(lat_err) > max_replan_lat_err || lat_reset_flag ||
+      (session_->is_hpp_scene() && fabs(theta_err) > max_replan_theta_err)) {
     lat_replan = true;
   }
 
-  if (fabs(lon_err) > 1.0 || lon_reset_flag) {
+  if (fabs(lon_err) > max_replan_lon_err || lon_reset_flag) {
     lon_replan = true;
   }
 
-  if (fabs(dist_replan) > 1.5) {
+  if (fabs(dist_replan) > max_replan_dist_err) {
     dist_replan = true;
   }
 
@@ -289,8 +327,15 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
 
     // update lon init state
     lon_init_state.set_s(0.0);
-    if (lon_init_state.v() - ego_state->ego_v() > 3.0) {
-      lon_init_state.set_v(ego_state->ego_v());
+
+    if (!session_->is_hpp_scene()) {
+      if (lon_init_state.v() - ego_state->ego_v() > 3.0) {
+        lon_init_state.set_v(ego_state->ego_v());
+      }
+    } else {
+      if (lon_init_state.v() - ego_state->ego_v() > 0.5) {
+        lon_init_state.set_v(ego_state->ego_v());
+      }
     }
 
     // lon_init_state.set_a(ego_state->ego_acc());
@@ -358,7 +403,10 @@ bool EgoStateManager::LateralStitch() {
     // const double s = motion_planning_info.s_t_spline(planning_loop_dt);
 
     // max delta as equivalent steer angle = 120 deg
-    static const double max_delta = 120.0 / 57.3 / 15.7;
+    double max_delta = 120.0 / 57.3 / 15.7;
+    if (session_->is_hpp_scene()) {
+      max_delta = 470.0 / 57.3 / 15.7;
+    }
 
     lat_init_state.set_x(motion_planning_info.x_t_spline(planning_loop_dt));
     lat_init_state.set_y(motion_planning_info.y_t_spline(planning_loop_dt));

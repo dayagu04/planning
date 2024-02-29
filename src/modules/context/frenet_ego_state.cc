@@ -7,27 +7,9 @@
 
 namespace planning {
 
-void FrenetEgoState::update(const std::shared_ptr<KDPath> &frenet_coord,
-                            const planning::EgoStateManager &ego_state) {
-  // debug ------------------------------------------
-
-  //   std::vector<double> x_vec;
-  //   std::vector<double> y_vec;
-  //   for (auto path_point : frenet_coord->path_points()) {
-  //     x_vec.push_back(path_point.x());
-  //     y_vec.push_back(path_point.y());
-  //   }
-  //   FrenetCoordinateSystemParameters frenet_parameters{0.1, 0.01, 0.3,
-  //                                                      1.0, 0.5,  15};
-  //   FrenetCoordinateSystem frenet_debug(x_vec, y_vec, frenet_parameters);
-  //   Point2D frenet_point_tmp, cart_point_tmp;
-  //   cart_point_tmp.x = ego_state.ego_carte().x;
-  //   cart_point_tmp.y = ego_state.ego_carte().y;
-  //   frenet_debug.CartCoord2FrenetCoord(cart_point_tmp, frenet_point_tmp);
-  //   double s_ft = frenet_point_tmp.x;
-  //   double l_ft = frenet_point_tmp.y;
-
-  // debug ------------------------------------------
+void FrenetEgoState::update(
+    const std::shared_ptr<planning_math::KDPath> &frenet_coord,
+    const planning::EgoStateManager &ego_state) {
   // Step 1) update location, velocity
   Point2D frenet_point, cart_point;
   cart_point.x = ego_state.ego_carte().x;

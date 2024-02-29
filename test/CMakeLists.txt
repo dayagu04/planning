@@ -13,7 +13,7 @@ include_directories(
 #   ${CMAKE_CURRENT_LIST_DIR}/src/modules/planning/lateral_path_optimizer_cost_test.cc
 # )
 file(GLOB_RECURSE SRC_FILES
-  ${CMAKE_CURRENT_LIST_DIR}/src/modules/tasks/jerk_limited_trajectory_test.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/modules/planning/lateral_path_optimizer_cost_test.cc
 )
 
 add_executable(${PROJECT_NAME}

@@ -7,7 +7,10 @@
 #include "func_state_machine.pb.h"
 #include "fusion_objects.pb.h"
 #include "fusion_road.pb.h"
+#include "groundline_perception.pb.h"
 #include "hmi_mcu_inner.pb.h"
+#include "ifly_localization.pb.h"
+#include "ifly_parking_map.pb.h"
 #include "localization.pb.h"
 #include "parking_fusion.pb.h"
 #include "parking_slot_list.pb.h"
@@ -29,8 +32,14 @@ struct LocalView {
   FusionRoad::RoadInfo road_info;
   double road_info_recv_time = 0.0;
 
+  GroundLinePerception::GroundLinePerceptionInfo ground_line_perception;
+  double ground_line_perception_recv_time = 0.0;
+
   LocalizationOutput::LocalizationEstimate localization_estimate;
   double localization_estimate_recv_time = 0.0;
+
+  IFLYLocalization::IFLYLocalization localization;
+  double localization_recv_time = 0.0;
 
   FusionObjects::FusionObjectsInfo fusion_objects_info;
   double fusion_objects_info_recv_time = 0.0;
@@ -46,6 +55,9 @@ struct LocalView {
 
   ParkingFusion::ParkingFusionInfo parking_fusion_info;
   double parking_fusion_info_recv_time = 0.0;
+
+  IFLYParkingMap::ParkingInfo parking_map_info;
+  double parking_map_info_recv_time = 0.0;
 
   FuncStateMachine::FuncStateMachine function_state_machine_info;
   double function_state_machine_info_recv_time = 0.0;

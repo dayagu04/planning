@@ -161,6 +161,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
   y_relative_velocity_ = prediction_object.relative_speed_y;
   acc_ = prediction_object.acc;
   fusion_source_ = prediction_object.fusion_source;
+  type_ = prediction_object.type;
 
   std::vector<planning_math::Vec2d> polygon_points;
   if (prediction_object.bottom_polygon_points.size() < 3) {
@@ -229,8 +230,8 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
     tp.path_point.y = traj_point.y;
     tp.sigma_x = traj_point.std_dev_x;
     tp.sigma_y = traj_point.std_dev_y;
-    tp.path_point.theta = planning_math::NormalizeAngle(traj_point.theta);
-    tp.velocity_direction = planning_math::NormalizeAngle(traj_point.yaw);
+    tp.path_point.theta = planning_math::NormalizeAngle(traj_point.yaw);
+    tp.velocity_direction = planning_math::NormalizeAngle(traj_point.theta);
     tp.relative_ego_x = traj_point.relative_ego_x;
     tp.relative_ego_y = traj_point.relative_ego_y;
     tp.relative_ego_yaw = traj_point.relative_ego_yaw;
@@ -251,8 +252,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
     }
     trajectory_.emplace_back(tp);
   }
-  is_static_ = std::fabs(trajectory_.back().path_point.s -
-                         trajectory_.front().path_point.s) < 5.e-3;
+
   //  DiscretizedTrajectory::CompensateTrajectory(trajectory_, 5.0);
 
   // reset perception info matched with current timestamp
@@ -260,6 +260,36 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
   perception_polygon_ = get_polygon_at_point(init_point);
   perception_bounding_box_ = get_bounding_box(init_point);
   // speed_direction_ = init_point.velocity_direction;
+}
+
+Obstacle::Obstacle(const Obstacle *obstacle) {
+  id_ = obstacle->id();
+  perception_id_ = obstacle->perception_id_;
+  is_static_ = obstacle->is_static();
+  x_center_ = obstacle->x_center();
+  y_center_ = obstacle->y_center();
+  x_relative_center_ = obstacle->x_relative_center();
+  y_relative_center_ = obstacle->y_relative_center();
+  width_ = obstacle->width();
+  length_ = obstacle->length();
+  yaw_ = obstacle->heading_angle();
+  relative_yaw_ = obstacle->relative_heading_angle();
+  velocity_ = obstacle->velocity();
+  velocity_angle_ = obstacle->velocity_angle();
+  relative_velocity_angle_ = obstacle->relative_velocity_angle();
+  x_relative_velocity_ = obstacle->x_relative_velocity();
+  y_relative_velocity_ = obstacle->y_relative_velocity();
+  acc_ = obstacle->acceleration();
+  fusion_source_ = obstacle->fusion_source();
+  type_ = obstacle->type();
+  trajectory_.reserve(obstacle->trajectory().size());
+  trajectory_ = obstacle->trajectory();
+  perception_bounding_box_ = obstacle->perception_bounding_box();
+  perception_polygon_ = obstacle->perception_polygon();
+  obstacle_ego_polygon_ = obstacle->obstacle_ego_polygon_;
+  car_ego_polygon_ = obstacle->car_ego_polygon_;
+  perception_points_.reserve(obstacle->perception_points().size());
+  perception_points_ = obstacle->perception_points();
 }
 
 // Obstacle::Obstacle(int id,
@@ -355,15 +385,18 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
 //                                               &perception_polygon_);
 // }
 
-// Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
-//     : id_(id),
-//       perception_id_(id),
-//       is_static_(true),
-//       perception_points_(points) {
-//   type_ = Common::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE;  //FREESPACE占位
-//   perception_velocity_ = 0.0;
-//   velocity_ = 0.0;
-// }
+Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
+    : id_(id),
+      perception_id_(id),
+      is_static_(true),
+      perception_points_(points) {
+  type_ = Common::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE;  // FREESPACE占位
+  velocity_ = 0.0;
+  if (id_ > 6000000) {
+    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
+                                                &perception_polygon_);
+  }
+}
 
 void Obstacle::extract_point_at_specified_resolution(
     std::vector<planning_math::Vec2d> &points) const {
@@ -450,7 +483,6 @@ planning_math::Polygon2d Obstacle::get_polygon_at_point(
     const PncTrajectoryPoint &point) const {
   std::vector<planning_math::Vec2d> polygon_points;
   double rel_theta = point.path_point.theta - yaw_;
-
   for (const auto &ego_point : obstacle_ego_polygon_.points()) {
     polygon_points.emplace_back(planning_math::Vec2d(
         ego_point.x() * cos(rel_theta) - ego_point.y() * sin(rel_theta) +
@@ -458,6 +490,7 @@ planning_math::Polygon2d Obstacle::get_polygon_at_point(
         ego_point.y() * cos(rel_theta) + ego_point.x() * sin(rel_theta) +
             point.path_point.y));
   }
+
   planning_math::Polygon2d polygon;
   if (!planning_math::Polygon2d::ComputeConvexHull(polygon_points, &polygon)) {
     LOG_DEBUG("polygon_debug : get position %f %f failed\n", point.path_point.x,

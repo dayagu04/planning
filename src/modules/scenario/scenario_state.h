@@ -94,25 +94,42 @@ struct StateBase : M::Base {
     auto location_valid =
         frame->session()->environmental_model().location_valid();
 
-    static auto hpp_pipeline =
-        TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, nullptr);
-    static auto scc_pipeline =
-        TaskPipeline::Make(TaskPipelineType::SCC, config_builder, nullptr);
-    static auto vision_only_pipeline = TaskPipeline::Make(
-        TaskPipelineType::VISION_ONLY, config_builder, nullptr);
-
     if (location_valid) {
       auto planner_type = g_context.GetParam().planner_type;
-      if (planner_type == planning::context::PlannerType::LONGTIME_PLANNER) {
+      if (planner_type == planning::context::PlannerType::HPP_PLANNER) {
+        static auto hpp_pipeline =
+            TaskPipeline::Make(TaskPipelineType::HPP, config_builder, nullptr);
         hpp_pipeline->SetFrame(frame);
         return hpp_pipeline;
       } else if (planner_type == planning::context::PlannerType::SCC_PLANNER) {
+        static auto scc_pipeline =
+            TaskPipeline::Make(TaskPipelineType::SCC, config_builder, nullptr);
         scc_pipeline->SetFrame(frame);
         return scc_pipeline;
+      } else if (planner_type ==
+                 planning::context::PlannerType::LONGTIME_PLANNER) {
+        static auto normal_pipeline = TaskPipeline::Make(
+            TaskPipelineType::NORMAL, config_builder, nullptr);
+        normal_pipeline->SetFrame(frame);
+        return normal_pipeline;
+      } else {
+        auto config_builder =
+            frame->session()->environmental_model().config_builder(
+                common::SceneType::HIGHWAY);
+        static auto vision_only_pipeline = TaskPipeline::Make(
+            TaskPipelineType::VISION_ONLY, config_builder, nullptr);
+        vision_only_pipeline->SetFrame(frame);
+        return vision_only_pipeline;
       }
+    } else {
+      auto config_builder =
+          frame->session()->environmental_model().config_builder(
+              common::SceneType::HIGHWAY);
+      static auto vision_only_pipeline = TaskPipeline::Make(
+          TaskPipelineType::VISION_ONLY, config_builder, nullptr);
+      vision_only_pipeline->SetFrame(frame);
+      return vision_only_pipeline;
     }
-    vision_only_pipeline->SetFrame(frame);
-    return vision_only_pipeline;
   }
 
   virtual std::shared_ptr<Evaluator> get_evaluator(framework::Frame *frame);

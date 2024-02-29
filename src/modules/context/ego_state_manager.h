@@ -1,10 +1,12 @@
 #ifndef ZNQC_MODULES_CONTEXT_EGO_STATE_MANAGER_H_
 #define ZNQC_MODULES_CONTEXT_EGO_STATE_MANAGER_H_
 
+#include <cstdint>
 #include "config/basic_type.h"
 #include "config/message_type.h"
 #include "config/vehicle_param.h"
 #include "define/geometry.h"
+#include "ego_planning_config.h"
 #include "filters.h"
 #include "math/polygon2d.h"
 #include "refline.h"
@@ -17,7 +19,8 @@ namespace planning {
 
 class EgoStateManager {
  public:
-  EgoStateManager(framework::Session *session);
+  EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
+                  framework::Session *session);
   ~EgoStateManager() = default;
 
   enum ReplanStatus {
@@ -54,17 +57,20 @@ class EgoStateManager {
   void set_planning_init_point_valid(bool planning_init_point_valid) {
     planning_init_point_valid_ = planning_init_point_valid;
   };
+  void set_ego_gear(const planning::common::VehicleStatus &vehicle_status);
 
   const planning::VehicleParam &get_vehicle_param() const {
     return vehicle_param_;
   };
   double navi_timestamp() const { return navi_timestamp_; }  // todo
+  double location_timestamp() const { return timestamp_us_; }
   Pose location_enu() const { return location_enu_; };
   PointLLH position_llh() const { return position_llh_; };
   EulerAngle euler_angle() const { return euler_angle_; }
   Pose2D ego_pose() const { return ego_pose_; };
   Pose2D ego_pose_raw() const { return ego_pose_raw_; };
   Point2D ego_carte() const { return ego_carte_; };
+  uint32_t ego_gear() const { return ego_gear_; };
   double heading_angle() const { return ego_pose_.theta; }
   double ego_v() const { return ego_v_; };
   double ego_v_angle() const { return ego_v_angle_; };
@@ -117,10 +123,16 @@ class EgoStateManager {
  private:
   planning::VehicleParam vehicle_param_;
   framework::Session *session_ = nullptr;
-
+  EgoPlanningEgoStateManagerConfig config_;
+  double parking_cruise_speed_;
+  double hpp_max_replan_lat_err_;
+  double hpp_max_replan_theta_err_;
+  double hpp_max_replan_lon_err_;
+  double hpp_max_replan_dist_err_;
   double navi_timestamp_;
   uint64_t timestamp_us_ = 0;
   uint64_t timestamp_us_last_ = 0;
+  uint32_t ego_gear_;
   Pose location_enu_;
   PointLLH position_llh_;
   EulerAngle euler_angle_;  // 车身姿态yaw, pitch, roll

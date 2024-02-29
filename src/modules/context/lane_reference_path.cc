@@ -125,14 +125,23 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
       ref_path_pt.path_point.theta = refline_pt.car_heading();
     }
     ref_path_pt.path_point.kappa = refline_pt.curvature();
-    ref_path_pt.distance_to_left_lane_border = std::fmin(
-        refline_pt.distance_to_left_lane_border(), kDefaultLaneBorderDis);
-    ref_path_pt.distance_to_right_lane_border = std::fmin(
-        refline_pt.distance_to_right_lane_border(), kDefaultLaneBorderDis);
-    ref_path_pt.distance_to_left_road_border = std::fmin(
-        refline_pt.distance_to_left_road_border(), kDefaultLaneBorderDis);
-    ref_path_pt.distance_to_right_road_border = std::fmin(
-        refline_pt.distance_to_right_road_border(), kDefaultLaneBorderDis);
+    // hpp hack
+    if (session_->is_hpp_scene()) {
+      ref_path_pt.distance_to_left_lane_border = 5.0;
+      ref_path_pt.distance_to_right_lane_border = 5.0;
+      ref_path_pt.distance_to_left_road_border = 5.0;
+      ref_path_pt.distance_to_right_road_border = 5.0;
+    } else {
+      ref_path_pt.distance_to_left_lane_border = std::fmin(
+          refline_pt.distance_to_left_lane_border(), kDefaultLaneBorderDis);
+      ref_path_pt.distance_to_right_lane_border = std::fmin(
+          refline_pt.distance_to_right_lane_border(), kDefaultLaneBorderDis);
+      ref_path_pt.distance_to_left_road_border = std::fmin(
+          refline_pt.distance_to_left_road_border(), kDefaultLaneBorderDis);
+      ref_path_pt.distance_to_right_road_border = std::fmin(
+          refline_pt.distance_to_right_road_border(), kDefaultLaneBorderDis);
+    }
+
     ref_path_pt.left_road_border_type = refline_pt.left_road_border_type();
     ref_path_pt.right_road_border_type = refline_pt.right_road_border_type();
     ref_path_pt.left_lane_border_type = refline_pt.left_lane_border_type();
@@ -200,7 +209,8 @@ void LaneReferencePath::assign_obstacles_to_lane() {
 bool LaneReferencePath::IsObstacleOn(
     std::shared_ptr<FrenetObstacle> frenet_obstacle) {
   if (frenet_obstacle->rel_s() > 80 || frenet_obstacle->rel_s() < -50 ||
-      frenet_obstacle->s_min_l().x > 15 || frenet_obstacle->s_max_l().x < -15) {
+      frenet_obstacle->s_min_l().x > 15 || frenet_obstacle->s_max_l().x < -15 ||
+      !frenet_obstacle->b_frenet_valid()) {
     return false;
   }
   double check_offset = 0;

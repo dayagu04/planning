@@ -262,11 +262,16 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
       if (enable_heuristic_search &&
           false == frenet_polygon_sequence_.empty()) {
         auto &last_polygon = frenet_polygon_sequence_.back().second;
-        double curvature =
-            max(std::abs(frenet_coord->GetPathCurveHeading(
-                    clip(last_polygon.min_x(), frenet_coord->Length(), 0.0))),
-                std::abs(frenet_coord->GetPathCurveHeading(
-                    clip(last_polygon.max_x(), frenet_coord->Length(), 0.0))));
+        double min_kappa;
+        double max_kappa;
+        frenet_coord->GetKappaByS(
+            clip(last_polygon.min_x(), frenet_coord->Length(), 0.0),
+            &min_kappa);
+        frenet_coord->GetKappaByS(
+            clip(last_polygon.max_x(), frenet_coord->Length(), 0.0),
+            &max_kappa);
+
+        double curvature = max(std::abs(min_kappa), std::abs(max_kappa));
         double cur_radius = curvature > 0.0
                                 ? 1.0 / curvature
                                 : std::numeric_limits<double>::infinity();
@@ -303,7 +308,7 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
         Point2D cart_point, frenet_point;
         cart_point.x = cart_vertex.x();
         cart_point.y = cart_vertex.y();
-        if (frenet_coord->XYToSL(cart_point, frenet_point) ||
+        if (!frenet_coord->XYToSL(cart_point, frenet_point) ||
             std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
           is_vertexes_valid = false;
           break;
@@ -384,7 +389,8 @@ void FrenetObstacle::generate_precise_frenet_polygon(
     if (point.x() < 0.0 || point.x() > frenet_coord->Length()) {
       return;
     }
-    double curvature = frenet_coord->GetPathCurveHeading(point.x());
+    double curvature;
+    frenet_coord->GetKappaByS(point.x(), &curvature);
     curvatures.push_back(curvature);
     max_curvature = max(max_curvature, curvature);
     min_l = min(min_l, std::abs(point.y()));

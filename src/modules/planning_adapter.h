@@ -8,7 +8,10 @@
 #include "fusion_objects.pb.h"
 #include "fusion_road.pb.h"
 #include "general_planning.h"
+#include "groundline_perception.pb.h"
 #include "hmi_mcu_inner.pb.h"
+#include "ifly_localization.pb.h"
+#include "ifly_parking_map.pb.h"
 #include "ifly_time.h"
 #include "local_view.h"
 #include "localization.pb.h"
@@ -50,7 +53,17 @@ class PlanningAdapter {
     road_info_msg_recv_time_ = IflyTime::Now_ms();
   }
 
-  void FeedLocalizationOutput(
+  void FeedGroundLinePerception(
+      const std::shared_ptr<GroundLinePerception::GroundLinePerceptionInfo>&
+          ground_line_perception_msg) {
+    std::cout << "receive ground_line_perception "
+              << ground_line_perception_msg->header().timestamp() << std::endl;
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    ground_line_perception_msg_.CopyFrom(*ground_line_perception_msg);
+    ground_line_perception_msg_recv_time_ = IflyTime::Now_ms();
+  }
+
+  void FeedLocalizationEstimateOutput(
       const std::shared_ptr<LocalizationOutput::LocalizationEstimate>&
           localization_estimate_msg) {
     // std::cout << "receive localization_estimate "
@@ -59,6 +72,17 @@ class PlanningAdapter {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     localization_estimate_msg_.CopyFrom(*localization_estimate_msg);
     localization_estimate_msg_recv_time_ = IflyTime::Now_ms();
+  }
+
+  void FeedLocalizationOutput(
+      const std::shared_ptr<IFLYLocalization::IFLYLocalization>&
+          localization_msg) {
+    // std::cout << "receive localization_estimate "
+    //           << localization_estimate_msg->header().timestamp() <<
+    //           std::endl;
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    localization_msg_.CopyFrom(*localization_msg);
+    localization_msg_recv_time_ = IflyTime::Now_ms();
   }
 
   void FeedPredictionResult(const std::shared_ptr<Prediction::PredictionResult>&
@@ -107,6 +131,13 @@ class PlanningAdapter {
     parking_fusion_info_msg_recv_time_ = IflyTime::Now_ms();
   }
 
+  void FeedParkingMap(const std::shared_ptr<IFLYParkingMap::ParkingInfo>&
+                          parking_map_info_msg) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    parking_map_info_msg_.CopyFrom(*parking_map_info_msg);
+    parking_map_info_msg_recv_time_ = IflyTime::Now_ms();
+  }
+
   void FeedFuncStateMachine(
       const std::shared_ptr<FuncStateMachine::FuncStateMachine>&
           func_state_machine_msg) {
@@ -152,8 +183,14 @@ class PlanningAdapter {
   FusionRoad::RoadInfo road_info_msg_;
   int64_t road_info_msg_recv_time_;
 
+  GroundLinePerception::GroundLinePerceptionInfo ground_line_perception_msg_;
+  int64_t ground_line_perception_msg_recv_time_;
+
   LocalizationOutput::LocalizationEstimate localization_estimate_msg_;
   int64_t localization_estimate_msg_recv_time_;
+
+  IFLYLocalization::IFLYLocalization localization_msg_;
+  int64_t localization_msg_recv_time_;
 
   FusionObjects::FusionObjectsInfo fusion_objects_info_msg_;
   int64_t fusion_objects_info_msg_recv_time_;
@@ -169,6 +206,9 @@ class PlanningAdapter {
 
   ParkingFusion::ParkingFusionInfo parking_fusion_info_msg_;
   int64_t parking_fusion_info_msg_recv_time_;
+
+  IFLYParkingMap::ParkingInfo parking_map_info_msg_;
+  int64_t parking_map_info_msg_recv_time_;
 
   FuncStateMachine::FuncStateMachine func_state_machine_msg_;
 

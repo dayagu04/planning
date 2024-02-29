@@ -8,6 +8,7 @@ enum class TaskPipelineType {
   NORMAL = 0,
   VISION_ONLY = 1,
   SCC = 2,
+  HPP = 3,
 };
 
 class EgoPlanningCandidate;

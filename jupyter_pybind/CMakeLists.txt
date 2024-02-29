@@ -7,6 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
 set(WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/notebooks/scripts/")
+set(WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/notebooks_hpp/scripts/")
 set(SH_COMMAND "python proto_gen.py")
 set(CMAKE_CXX_FLAGS "-DX86")
 
@@ -141,3 +142,11 @@ target_link_libraries(jerk_limited_trajectory_py PRIVATE
   modules_common
   modules_context
   modules_tasks)
+
+pybind11_add_module(optimizer_apa_simulation_py MODULE src/optimizer_apa_simulation_pybind.cc)
+  target_link_libraries(optimizer_apa_simulation_py PRIVATE
+    autoplt
+    modules
+    modules_common
+    modules_context
+    modules_tasks)

@@ -89,6 +89,16 @@ class KDPath {
 
   const LineSegment2d* GetNearestLineSegment(const Vec2d& point) const;
 
+  static double LimitAngle(double angle) {
+    const double pi2 = 2.0 * M_PI;
+    while (angle > M_PI) {
+      angle -= pi2;
+    }
+    while (angle < -M_PI) {
+      angle += pi2;
+    }
+    return angle;
+  }
   template <class T>
   static void ResetSCalculte(T* const points) {
     double distance = 0.0;
@@ -149,14 +159,17 @@ class KDPath {
       double delta_s = 0.0;
       if (i == 0) {
         delta_s = points->at(i + 1).s() - points->at(i).s();
-        kappa = (points->at(i + 1).theta() - points->at(i).theta()) / delta_s;
+        kappa = LimitAngle(points->at(i + 1).theta() - points->at(i).theta()) /
+                delta_s;
       } else if (i == points->size() - 1) {
         delta_s = points->at(i).s() - points->at(i - 1).s();
-        kappa = (points->at(i).theta() - points->at(i - 1).theta()) / delta_s;
+        kappa = LimitAngle(points->at(i).theta() - points->at(i - 1).theta()) /
+                delta_s;
       } else {
         delta_s = points->at(i + 1).s() - points->at(i - 1).s();
         kappa =
-            (points->at(i + 1).theta() - points->at(i - 1).theta()) / delta_s;
+            LimitAngle(points->at(i + 1).theta() - points->at(i - 1).theta()) /
+            delta_s;
       }
       points->at(i).set_kappa(kappa);
     }
@@ -221,17 +234,9 @@ class KDPath {
     if (line_segments_.size() < 1) {
       return true;
     }
-    double pi2 = 2.0 * M_PI;
     for (int i = 0; i < line_segments_.size(); i++) {
       auto& seg = line_segments_[i];
-      double delta_angle = seg.heading() - startref_angle;
-      delta_angle = std::fmod(delta_angle, pi2);
-      if (delta_angle > M_PI) {
-        delta_angle -= pi2;
-      } else if (delta_angle < -M_PI) {
-        delta_angle += pi2;
-      }
-
+      double delta_angle = LimitAngle(seg.heading() - startref_angle);
       seg.set_heading(startref_angle + delta_angle);
       startref_angle = seg.heading();
     }

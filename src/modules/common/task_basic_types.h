@@ -214,4 +214,24 @@ struct PlanningInfo {
   TrafficLightDecision traffic_light_decision;
 };
 
+struct LatDeciderInfo {
+  double desired_vel;
+  double l_care_width;
+  double care_obj_lat_distance_threshold;
+  double care_obj_lon_distance_threshold;
+  double dynamic_obj_safe_buffer;
+  double vehicle_width_with_rearview_mirror;
+  double vehicle_length;
+  double rear_bumper_to_rear_axle;
+  double min_gain_vel;
+  double min_obstacle_avoid_distance;
+  double lateral_bound_converge_speed;
+  double kPhysicalBoundWeight;
+  double kHardBoundWeight;
+  double dynamic_bound_slack_coefficient;
+  double l_offset_limit;
+  double buffer2lane;
+  double buffer2border;
+};
+
 }  // namespace planning

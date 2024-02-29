@@ -1,5 +1,5 @@
 #include "virtual_lane_manager.h"
-
+#include <cyber/common/log.h>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -12,10 +12,16 @@
 #include "ehr.pb.h"
 #include "environmental_model.h"
 #include "fusion_road.pb.h"
+#include "ifly_localization.pb.h"
+#include "ifly_parking_map.pb.h"
+#include "ifly_time.h"
 #include "localization.pb.h"
 #include "log.h"
+#include "log_glog.h"
+#include "math/box2d.h"
 #include "planning_output_context.h"
 #include "reference_path_manager.h"
+#include "task_basic_types.h"
 
 namespace planning {
 
@@ -374,9 +380,15 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   }
 
   is_local_valid_ = roads_ptr->local_point_valid();
-  if (session_->environmental_model().function_info().function_mode() 
-      == common::DrivingFunctionInfo::NOA ) {
+  if (session_->environmental_model().function_info().function_mode() ==
+      common::DrivingFunctionInfo::NOA) {
     CalculateDistanceToRampSplitMerge(session_);
+  }
+
+  if (GetCurrentNearestLane(*session_) && session_->is_hpp_scene()) {
+    CalculateHPPInfo(session_);
+    CalculateDistanceToTargetSlot(session_);
+    CalculateDistanceToNextSpeedBump(session_);
   }
   double dis_to_first_road_split = distance_to_first_road_split();
   double dis_between_first_road_split_and_ramp =
@@ -390,6 +402,8 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       "distance_to_first_road_merge_: %f \n",
       dis_to_ramp_, dis_to_first_road_split, distance_to_first_road_merge_);
   LOG_DEBUG("is_nearing_ramp:%d \n", is_nearing_ramp);
+  LOG_DEBUG("dis to tar slot: %f, distance_to_frist_speed_bump: %f \n",
+            distance_to_target_slot_, distance_to_next_speed_bump_);
 
   for (auto& lane : roads_ptr->reference_line_msg()) {
     std::shared_ptr<VirtualLane> virtual_lane_tmp =
@@ -1131,12 +1145,10 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
 
 bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
     const planning::framework::Session& session) {
-  const auto& local_view = session.environmental_model().get_local_view();
   const auto& hd_map = session.environmental_model().get_hd_map();
-  const auto& pose = local_view.localization_estimate.pose();
-
-  const double ego_pose_x = pose.local_position().x();
-  const double ego_pose_y = pose.local_position().y();
+  const auto& ego_state = session.environmental_model().get_ego_state_manager();
+  const double ego_pose_x = ego_state->ego_pose_raw().x;
+  const double ego_pose_y = ego_state->ego_pose_raw().y;
   ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
 
   // get nearest lane
@@ -1211,49 +1223,58 @@ bool VirtualLaneManager::JudgeEgoIfOnRamp(
 
 bool VirtualLaneManager::GetCurrentNearestLane(
     const planning::framework::Session& session) {
-  const auto& local_view = session.environmental_model().get_local_view();
-  const auto& hd_map = session.environmental_model().get_hd_map();
-  const auto& pose = local_view.localization_estimate.pose();
+  if (session_->environmental_model().get_hdmap_valid()) {
+    // const auto& local_view =
+    // session_->environmental_model().get_local_view();
+    if (session_->environmental_model().location_valid()) {
+      std::cout << "hdmap_valid is true,current timestamp:"
+                << session_->environmental_model()
+                       .get_local_view()
+                       .static_map_info.header()
+                       .timestamp()
+                << std::endl;
+      // get ego info
+      // const auto& local_view =
+      // session.environmental_model().get_local_view();
+      const auto& hd_map = session.environmental_model().get_hd_map();
+      const auto& ego_state =
+          session.environmental_model().get_ego_state_manager();
+      ego_pose_x_ = ego_state->ego_pose_raw().x;
+      ego_pose_y_ = ego_state->ego_pose_raw().y;
+      yaw_ = ego_state->ego_pose_raw().theta;
+      ad_common::math::Vec2d point(ego_pose_x_, ego_pose_y_);
+      std::cout << "ego_pose_x:" << ego_pose_x_ << ",ego_pose_y:" << ego_pose_y_
+                << std::endl;
 
-  const double ego_pose_x = pose.local_position().x();
-  const double ego_pose_y = pose.local_position().y();
-  ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
-  std::cout << "ego_pose_x:" << ego_pose_x << ",ego_pose_y:" << ego_pose_y
-            << std::endl;
-
-  // get nearest lane
-  ad_common::hdmap::LaneInfoConstPtr nearest_lane;
-  double nearest_s = 0.0;
-  double nearest_l = 0.0;
-  const double distance = 10.0;
-  const double central_heading = pose.heading();
-  const double max_heading_difference = PI / 4;
-
-  auto time_start = IflyTime::Now_us();
-  const int res =
-      hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
-  auto time_end = IflyTime::Now_us();
-  double cost = time_end - time_start;
-
-  auto time_start1 = IflyTime::Now_us();
-  // const int res = hd_map.GetNearestLaneWithHeading(
-  //     point, distance, central_heading, max_heading_difference,
-  //     &nearest_lane, &nearest_s, &nearest_l);
-  auto time_end1 = IflyTime::Now_us();
-  double cost1 = time_end1 - time_start1;
-  std::cout << "get nearest lane time cost:" << cost << ", time cost1:" << cost1
-            << ",cost gap:" << cost1 - cost << std::endl;
-
-  if (res != 0) {
-    std::cout << "no get nearest lane!!!" << std::endl;
-    return false;
+      // get nearest lane
+      ad_common::hdmap::LaneInfoConstPtr nearest_lane;
+      double nearest_s = 0.0;
+      double nearest_l = 0.0;
+      // const double distance = 10.0;
+      // const double central_heading = pose.heading();
+      // const double max_heading_difference = PI / 4;
+      if (hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l) !=
+          0) {
+        std::cout << "no get nearest lane!!!" << std::endl;
+        return false;
+      }
+      // const int res = hd_map.GetNearestLaneWithHeading(
+      //     point, distance, central_heading, max_heading_difference,
+      //     &nearest_lane, &nearest_s, &nearest_l);
+      // std::cout << "find current lane to current ego point dis:"
+      //           << nearest_lane->DistanceTo(point) << std::endl;
+      std::cout << "find the nearest lane!!!"
+                << "nearest_s_:" << nearest_s_ << std::endl;
+      nearest_lane_ = nearest_lane;
+      nearest_s_ = nearest_s;
+      return true;
+    } else {
+      std::cout << "localization invalid" << std::endl;
+    }
+  } else {
+    std::cout << "hdmap  is invalid" << std::endl;
   }
-  std::cout << "find current lane to current ego point dis:"
-            << nearest_lane->DistanceTo(point) << std::endl;
-  std::cout << "find the nearest lane!!!" << std::endl;
-  nearest_lane_ = nearest_lane;
-  nearest_s_ = nearest_s;
-  return true;
+  return false;
 }
 void VirtualLaneManager::CalculateDistanceToRampSplitMerge(
     planning::framework::Session* session) {
@@ -1294,7 +1315,140 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMerge(
       std::cout << "localization invalid" << std::endl;
     }
   } else {
-   ResetForRampInfo();
+    ResetForRampInfo();
+  }
+}
+
+void VirtualLaneManager::CalculateHPPInfo(
+    planning::framework::Session* session) {
+  const auto& local_view = session_->environmental_model().get_local_view();
+  // ego box
+  const auto& vehicle_param =
+      session->vehicle_config_context().get_vehicle_param();
+  const auto center_x =
+      ego_pose_x_ + std::cos(yaw_) * vehicle_param.rear_axis_to_center;
+  const auto center_y =
+      ego_pose_y_ + std::sin(yaw_) * vehicle_param.rear_axis_to_center;
+  const ad_common::math::Box2d ego_box(
+      {center_x, center_y}, yaw_, vehicle_param.length, vehicle_param.width);
+  // if on hpp lane
+  if (nearest_lane_->IsOnLane(ego_box)) {
+    std::cout << "is on hpp lane!" << std::endl;
+    is_on_hpp_lane_ = true;
+    const auto trace_start = local_view.parking_map_info.trace_start();
+    const ad_common::math::Vec2d trace_start_point_2d = {trace_start.enu().x(),
+                                                         trace_start.enu().x()};
+    // get trace_start point projection s
+    double trace_start_point_accumulate_s;
+    double trace_start_point_lateral;
+    if (nearest_lane_->GetProjection(trace_start_point_2d,
+                                     &trace_start_point_accumulate_s,
+                                     &trace_start_point_lateral)) {
+      // std::cout << "trace_start point s:" << trace_start_point_accumulate_s
+      //           << ",lateral:" << trace_start_point_lateral << std::endl;
+    } else {
+      std::cout << " trace_start point get projection fail!! " << std::endl;
+      return;
+    }
+    // calculate sum distance
+    bool is_reached_trace_start_point =
+        nearest_s_ >= trace_start_point_accumulate_s;
+    const ad_common::math::Vec2d point(ego_pose_x_, ego_pose_y_);
+    if (is_reached_trace_start_point) {
+      std::cout << "reached trace start point!!" << std::endl;
+      is_reached_hpp_start_point_ = true;
+      if (last_point_hpp_.x() != NL_NMAX && last_point_hpp_.y() != NL_NMAX) {
+        sum_distance_driving_ += point.DistanceTo(last_point_hpp_);
+      } else {
+        sum_distance_driving_ = 0;
+      }
+      last_point_hpp_ = point;
+      // std::cout << "sum_distance_driving_:" << sum_distance_driving_
+      //           << std::endl;
+    } else {
+      std::cout << "cur point s less than trace start s" << std::endl;
+    }
+  } else {
+    std::cout << "not in hpp lane!!!" << std::endl;
+    ResetHpp();
+  }
+}
+
+void VirtualLaneManager::ResetHpp() {
+  is_on_hpp_lane_ = false;
+  is_reached_hpp_start_point_ = false;
+  sum_distance_driving_ = -1;
+  last_point_hpp_.set_x(NL_NMAX);
+  last_point_hpp_.set_y(NL_NMAX);
+}
+
+void VirtualLaneManager::CalculateDistanceToTargetSlot(
+    planning::framework::Session* session) {
+  distance_to_target_slot_ = NL_NMAX;
+  const auto& local_view = session->environmental_model().get_local_view();
+  const auto& hd_map = session->environmental_model().get_hd_map();
+
+  // get target slot projection point on line
+  ad_common::hdmap::LaneInfoConstPtr tar_slot_nearest_lane;
+  double tar_slot_nearest_s = 0.0;
+  double tar_slot_nearest_l = 0.0;
+
+  const auto& lines = local_view.static_map_info.road_map().lanes();
+  if (!lines.empty()) {
+    const auto& last_point = lines[0].points_on_central_line().rbegin();
+    const double tar_slot_pose_x = last_point->x();
+    const double tar_slot_pose_y = last_point->y();
+    const int tar_slot_res = hd_map.GetNearestLane(
+        {tar_slot_pose_x, tar_slot_pose_y}, &tar_slot_nearest_lane,
+        &tar_slot_nearest_s, &tar_slot_nearest_l);
+    if (tar_slot_res != 0) {
+      std::cout << "not get target slot projection point on line!!!"
+                << std::endl;
+      return;
+    }
+    distance_to_target_slot_ = tar_slot_nearest_s - nearest_s_;
+  } else {
+    std::cout << "lines is empty from road_map!!!" << std::endl;
+  }
+}
+
+void VirtualLaneManager::CalculateDistanceToNextSpeedBump(
+    planning::framework::Session* session) {
+  distance_to_next_speed_bump_ = NL_NMAX;
+  auto& local_view = session_->environmental_model().get_local_view();
+  const auto& road_marks =
+      local_view.parking_map_info.road_tile_info().road_mark();
+  const auto& hd_map = session->environmental_model().get_hd_map();
+
+  double distance_to_speed_bump_tmp = 0;
+  for (auto& road_mark : road_marks) {
+    if (road_mark.type() == ::IFLYParkingMap::RoadMark::SPEED_BUMP &&
+        road_mark.shape_size() == 4) {
+      ad_common::hdmap::LaneInfoConstPtr speed_bump_nearest_lane;
+      double speed_bump_nearest_s = 0.0;
+      double speed_bump_nearest_l = 0.0;
+
+      ad_common::math::Vec2d speed_bump_center_point(
+          (road_mark.shape(0).boot().x() + road_mark.shape(3).boot().x()) * 0.5,
+          (road_mark.shape(0).boot().y() + road_mark.shape(3).boot().y()) *
+              0.5);
+      const int speed_bump_res = hd_map.GetNearestLane(
+          speed_bump_center_point, &speed_bump_nearest_lane,
+          &speed_bump_nearest_s, &speed_bump_nearest_l);
+      if (speed_bump_res != 0) {
+        std::cout << "not get speed_bump projection point on line!!!"
+                  << std::endl;
+        continue;
+      } else {
+        std::cout << "get s for speed_bump projection point on line:"
+                  << speed_bump_nearest_s << std::endl;
+      }
+      distance_to_speed_bump_tmp = speed_bump_nearest_s - nearest_s_;
+      if (distance_to_speed_bump_tmp > 0) {  // TODO: 假设挡位为前进档
+        distance_to_next_speed_bump_ = distance_to_speed_bump_tmp;
+        break;
+      }
+    }
   }
 }
 
@@ -1337,5 +1491,4 @@ void VirtualLaneManager::ResetForRampInfo() {
   distance_to_first_road_merge_ = NL_NMAX;
   distance_to_first_road_split_ = NL_NMAX;
 }
-
 }  // namespace planning

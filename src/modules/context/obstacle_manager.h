@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include "ego_planning_config.h"
 #include "environmental_model.h"
 #include "frenet_obstacle.h"
@@ -7,6 +8,7 @@
 #include "obstacle.h"
 #include "reference_path.h"
 #include "session.h"
+#include "uss_obstacle.h"
 #include "utils/index_list.h"
 
 namespace planning {
@@ -71,6 +73,16 @@ class ObstacleManager {
     return parking_space_obstacles_;
   }
 
+  double GetUssRemainDistance() {
+    double remain_dist_uss = 5.01;
+    const double kSafeUssRemainDist = 0.35;
+    if (uss_obstacle_.GetAvailable()) {
+      // update remain_dist_uss
+      remain_dist_uss = uss_obstacle_.GetRemainDist() - kSafeUssRemainDist;
+    }
+    return remain_dist_uss;
+  }
+
  private:
   void clear();
   // bool is_potential_current_leadone_leadtwo_to_ego(const
@@ -85,7 +97,7 @@ class ObstacleManager {
   IndexedList<int, Obstacle> road_edge_obstacles_;
   EgoPlanningObstacleManagerConfig config_;
   // std::unordered_map<int, std::vector<int>> lanes_obstacles_;
-
+  UssObstacle uss_obstacle_;
   std::unordered_map<int, std::vector<int>> lanes_virtual_obstacles_;
 };
 

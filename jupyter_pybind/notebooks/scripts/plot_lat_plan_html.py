@@ -20,7 +20,7 @@ from lib.basic_layers import *
 from lib.bag_loader import *
 
 # 先手动写死bag
-bag_path = "/share/mnt/s811_1_0824_1/realtime_cutin_9.00000"
+bag_path = "/share/data_cold/abu_zone/autoparse/jac_s811_23gc9/trigger/20240116/20240116-10-40-18/data_collection_JAC_S811_23GC9_EVENT_MANUAL_2024-01-16-10-40-18.record"
 
 html_file = bag_path +".lat_plan.html" 
 # -

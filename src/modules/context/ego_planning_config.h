@@ -164,6 +164,20 @@ struct LateralObstacleConfig : public EgoPlanningConfig {
   }
 };
 
+struct HistoryObstacleConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    ego_near_bound_s0 =
+        read_json_key<double>(json, "ego_near_bound_s0", ego_near_bound_s0);
+    ego_near_bound_s1 =
+        read_json_key<double>(json, "ego_near_bound_s1", ego_near_bound_s1);
+    /* read config from json */
+  }
+  double ego_near_bound_s0 = -10.0;
+  double ego_near_bound_s1 = 10.0;
+  double ego_near_bound_l = 5.0;
+};
+
 struct VisionLateralBehaviorPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -277,16 +291,27 @@ struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
 struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
+    dynamic_obj_safe_buffer = read_json_key<double>(
+        json, "dynamic_obj_safe_buffer", dynamic_obj_safe_buffer);
+    static_obj_safe_buffer = read_json_key<double>(
+        json, "static_obj_safe_buffer", static_obj_safe_buffer);
+    care_area_s_start_buffer = read_json_key<double>(
+        json, "care_area_s_start_buffer", care_area_s_start_buffer);
+    max_avoid_edge =
+        read_json_key<double>(json, "max_avoid_edge", max_avoid_edge);
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
   double l_care_width = 10.;                     // TBD: more beautiful
   double care_obj_lat_distance_threshold = 30.;  // TBD: more beautiful
   double care_obj_lon_distance_threshold = 60.;  // TBD: more beautiful
-  double dynamic_obj_safe_buffer = 0.3;          //
-  double min_obstacle_avoid_distance = 0.2;      // check it
+  double static_obj_safe_buffer = 0.15;
+  double dynamic_obj_safe_buffer = 0.8;      //
+  double min_obstacle_avoid_distance = 0.2;  // check it
   double lateral_bound_converge_speed = 1.0;
   double kPhysicalBoundWeight = 10.;
+  double kSolidLaneBoundWeight = 5;
+  double kVirtualLaneBoundWeight = 1;
   double kHardBoundWeight = -1.;
   double dynamic_bound_slack_coefficient = 1.;
   double buffer2border = 0.15;
@@ -300,7 +325,55 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double sample_forward_distance = 1.0;
   double lane_change_duration = 6.6;
   double care_object_t_threshold = 3.0;
+  double care_area_s_len = 5.0;
+  double max_ref_curvature = 0.5;
+  double care_area_s_start_buffer = 0.0;
+  double max_avoid_edge = 2.0;
 };
+
+struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    dynamic_obj_safe_buffer = read_json_key<double>(
+        json, "dynamic_obj_safe_buffer", dynamic_obj_safe_buffer);
+    static_obj_safe_buffer = read_json_key<double>(
+        json, "static_obj_safe_buffer", static_obj_safe_buffer);
+    care_area_s_start_buffer = read_json_key<double>(
+        json, "care_area_s_start_buffer", care_area_s_start_buffer);
+    max_avoid_edge =
+        read_json_key<double>(json, "max_avoid_edge", max_avoid_edge);
+    /* read config from json */
+  }
+  double desired_vel = 11.11;                    // KPH_40;
+  double l_care_width = 10.;                     // TBD: more beautiful
+  double care_obj_lat_distance_threshold = 30.;  // TBD: more beautiful
+  double care_obj_lon_distance_threshold = 60.;  // TBD: more beautiful
+  double static_obj_safe_buffer = 0.15;
+  double dynamic_obj_safe_buffer = 0.8;      //
+  double min_obstacle_avoid_distance = 0.2;  // check it
+  double lateral_bound_converge_speed = 1.0;
+  double kPhysicalBoundWeight = 10.;
+  double kSolidLaneBoundWeight = 5;
+  double kVirtualLaneBoundWeight = 1;
+  double kHardBoundWeight = -1.;
+  double dynamic_bound_slack_coefficient = 1.;
+  double buffer2border = 0.15;
+  double buffer2lane = 0.3;
+  double l_offset_limit = 0.1;
+  double min_gain_vel = 1.0;
+  double lon_rear_car_filter_buffer = 10.;
+  double refine_lat_ref_threshold = 0.5;
+  double delta_t = 0.2;
+  double sample_step = 1.4;
+  double sample_forward_distance = 1.0;
+  double lane_change_duration = 6.6;
+  double care_object_t_threshold = 3.0;
+  double care_area_s_len = 5.0;
+  double max_ref_curvature = 0.5;
+  double care_area_s_start_buffer = 0.0;
+  double max_avoid_edge = 2.0;
+};
+
 struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -1118,12 +1191,37 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
     enable_bbox_mode = read_json_key<bool>(
         json, "enable_bbox_mode",
         enable_bbox_mode);  // obstacle boundary construction
+    max_speed_static_obstacle =
+        read_json_key<double>(json, "max_speed_static_obstacle");
   }
   double frenet_obstacle_range_s_min = -30.0;
   double frenet_obstacle_range_s_max = 100.0;
   double frenet_obstacle_range_l_min = -50.0;
   double frenet_obstacle_range_l_max = 50.0;
   bool enable_bbox_mode = true;
+  double max_speed_static_obstacle = 0.5;
+};
+
+struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    parking_cruise_speed = read_json_key<double>(json, "parking_cruise_speed",
+                                                 parking_cruise_speed);
+    hpp_max_replan_lat_err = read_json_key<double>(
+        json, "hpp_max_replan_lat_err", hpp_max_replan_lat_err);
+    hpp_max_replan_theta_err = read_json_key<double>(
+        json, "hpp_max_replan_theta_err", hpp_max_replan_theta_err);
+    hpp_max_replan_lon_err = read_json_key<double>(
+        json, "hpp_max_replan_lon_err", hpp_max_replan_lon_err);
+    hpp_max_replan_dist_err = read_json_key<double>(
+        json, "hpp_max_replan_dist_err", hpp_max_replan_dist_err);
+  }
+  double parking_cruise_speed = 5.55;
+  double hpp_max_replan_lat_err = 0.45;
+  double hpp_max_replan_theta_err = 12.0;
+  double hpp_max_replan_lon_err = 0.55;
+  double hpp_max_replan_dist_err = 0.8;
 };
 
 struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {
@@ -1164,6 +1262,17 @@ struct EgoPlanningTaskPipelineNormalConfig
     /* read config from json */
     pipeline_version =
         read_json_key<std::string>(json, "pipeline_version", "v1");
+  }
+
+  std::string pipeline_version = "v1";
+};
+
+struct EgoPlanningTaskPipelineHppConfig : public EgoPlanningTaskPipelineConfig {
+  void init(const Json &json) override {
+    EgoPlanningTaskPipelineConfig::init(json);
+    /* read config from json */
+    pipeline_version =
+        read_json_key<std::string>(json, "pipeline_version_hpp", "v1");
   }
 
   std::string pipeline_version = "v1";

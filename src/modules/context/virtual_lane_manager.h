@@ -10,6 +10,7 @@
 #include "intersection.h"
 #include "local_view.h"
 #include "log.h"
+#include "session.h"
 #include "virtual_lane.h"
 namespace planning {
 
@@ -147,10 +148,23 @@ class VirtualLaneManager {
   double distance_to_first_road_split() const {
     return distance_to_first_road_split_;
   }
+  const double GetDistanceToDestination() const {
+    return distance_to_target_slot_;
+  }
+
   bool is_on_ramp() const { return is_on_ramp_; }
 
   bool is_local_valid() const { return is_local_valid_; }
 
+  bool is_on_hpp_lane() const { return is_on_hpp_lane_; }
+  bool is_reached_hpp_start_point() const {
+    return is_reached_hpp_start_point_;
+  }
+  double sum_distance_driving() const { return sum_distance_driving_; }
+  double distance_to_target_slot() const { return distance_to_target_slot_; }
+  double DistanceToNextSpeedBump() const {
+    return distance_to_next_speed_bump_;
+  }
   void CalculateDistanceToRamp(planning::framework::Session *session);
   void CalculateDistanceToFirstRoadSplit(planning::framework::Session *session);
   void CalculateDistanceToFirstRoadMerge(planning::framework::Session *session);
@@ -180,6 +194,10 @@ class VirtualLaneManager {
 
   bool GetCurrentNearestLane(const planning::framework::Session &session);
   void CalculateDistanceToRampSplitMerge(planning::framework::Session *session);
+  void CalculateHPPInfo(planning::framework::Session *session);
+  void ResetHpp();
+  void CalculateDistanceToTargetSlot(planning::framework::Session *session);
+  void CalculateDistanceToNextSpeedBump(planning::framework::Session *session);
   void ResetForRampInfo();
 
   planning::framework::Session *session_ = nullptr;
@@ -195,6 +213,9 @@ class VirtualLaneManager {
   double last_left_diff_ = 0;
   double last_right_diff_ = 0;
   Intersection intersection_;
+  double ego_pose_x_;
+  double ego_pose_y_;
+  double yaw_;
   // Ramp ramp_;
   double dis_to_ramp_ = NL_NMAX;
   RampDirection ramp_direction_ = RampDirection::RAMP_NONE;
@@ -208,6 +229,15 @@ class VirtualLaneManager {
   bool is_on_ramp_ = false;
   ad_common::hdmap::LaneInfoConstPtr nearest_lane_;
   double nearest_s_ = 0.0;
+  // HPP
+  bool is_on_hpp_lane_ = false;
+  bool is_reached_hpp_start_point_ = false;
+  double sum_distance_driving_ = -1;
+  ad_common::math::Vec2d last_point_hpp_{NL_NMAX, NL_NMAX};
+  double distance_to_destination_ = NL_NMAX;
+  // target slot
+  double distance_to_target_slot_ = NL_NMAX;
+  double distance_to_next_speed_bump_ = NL_NMAX;
 };
 }  // namespace planning
 #endif

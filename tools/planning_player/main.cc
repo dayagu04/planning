@@ -31,10 +31,10 @@ int main(int argc, char **argv) {
   const struct option long_options[] = {
       {"help", no_argument, &lopt, 1},
       {"play", required_argument, &lopt, 2},
-      {"close-loop", optional_argument, &lopt, 3},
-      {"out-bag", optional_argument, &lopt, 4},
-      {"auto-frame", optional_argument, &lopt, 5},
-      {"scene-type", optional_argument, &lopt, 6}};
+      {"close-loop", no_argument, &lopt, 3},
+      {"out-bag", required_argument, &lopt, 4},
+      {"auto-time", required_argument, &lopt, 5},
+      {"scene-type", required_argument, &lopt, 6}};
 
   while ((opt = getopt_long(argc, argv, optstring, long_options, &loidx)) !=
          -1) {
@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
         std::cout << "--log-file         generated log path, default [bag "
                      "paht].[timestamp].log"
                   << std::endl;
-        std::cout << "--auto-time       frame num when enter auto, default 15"
+        std::cout << "--auto-time        time when enter auto, default 1.5"
                   << std::endl;
         std::cout << "--scene-type       acc/apa" << std::endl;
         break;

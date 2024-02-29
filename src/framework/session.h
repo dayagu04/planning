@@ -4,6 +4,7 @@
 #include "macro.h"
 #include "planning_def.h"
 #include "scene_type_config.pb.h"
+#include "simulation_context.h"
 
 namespace planning {
 
@@ -11,6 +12,7 @@ class PlanningContext;
 class PlanningOutputContext;
 class EnvironmentalModel;
 class VehicleConfigurationContext;
+class SimulationContext;
 
 namespace framework {
 
@@ -55,6 +57,10 @@ class Session : public planning::common::Arena {
     return get_scene_type() == planning::common::SceneType::PARKING_APA;
   }
 
+  bool is_hpp_scene() const {
+    return get_scene_type() == planning::common::SceneType::HPP;
+  }
+
   planning::common::SceneType get_scene_type() const { return scene_type_; }
   void set_scene_type(const planning::common::SceneType &default_scene_type) {
     scene_type_ = default_scene_type;
@@ -72,6 +78,14 @@ class Session : public planning::common::Arena {
     return planning_init_config_;
   }
 
+  const SimulationContext &simulation_context() const {
+    return *simulation_context_;
+  }
+
+  SimulationContext *mutable_simulation_context() {
+    return simulation_context_;
+  }
+
  private:
   planning::EnvironmentalModel *environmental_model_;
   PlanningContext *planning_context_;
@@ -80,6 +94,7 @@ class Session : public planning::common::Arena {
   planning::common::SceneType scene_type_;
   std::map<common::SceneType, common::ModuleList> module_name_map_;
   PlanningInitConfig planning_init_config_;
+  SimulationContext *simulation_context_;
 
   DISALLOW_COPY_AND_ASSIGN(Session);
 };

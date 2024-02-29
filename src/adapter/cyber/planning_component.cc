@@ -10,9 +10,6 @@
 // When .so loads, static vairiables will init and module constructors will
 // register.
 #include "modules_register.h"
-#include "uss_wave_debug_info.pb.h"
-#include "uss_wave_info.pb.h"
-
 #include "proto_to_uncompressed.hpp"
 
 namespace planning {
@@ -49,13 +46,30 @@ bool PlanningComponent::Init() {
         planning_adapter_->FeedFusionRoad(road_info_msg);
       });
 
-  auto localization_reader_ =
+  auto fusion_groudline_reader_ = planning_node_->CreateReader<
+      GroundLinePerception::GroundLinePerceptionInfo>(
+      "/iflytek/fusion/ground_line",
+      [this](
+          const std::shared_ptr<GroundLinePerception::GroundLinePerceptionInfo>
+              &ground_line_perception_msg) {
+        planning_adapter_->FeedGroundLinePerception(ground_line_perception_msg);
+      });
+
+  auto localization_estimate_reader_ =
       planning_node_->CreateReader<LocalizationOutput::LocalizationEstimate>(
           "/iflytek/localization/ego_pose",
           [this](const std::shared_ptr<LocalizationOutput::LocalizationEstimate>
                      &localization_estimate_msg) {
-            planning_adapter_->FeedLocalizationOutput(
+            planning_adapter_->FeedLocalizationEstimateOutput(
                 localization_estimate_msg);
+          });
+
+  auto localization_reader_ =
+      planning_node_->CreateReader<IFLYLocalization::IFLYLocalization>(
+          "/iflytek/localization/egomotion",
+          [this](const std::shared_ptr<IFLYLocalization::IFLYLocalization>
+                     &localization_msg) {
+            planning_adapter_->FeedLocalizationOutput(localization_msg);
           });
 
   auto prediction_reader_ =
@@ -96,6 +110,14 @@ bool PlanningComponent::Init() {
           [this](const std::shared_ptr<ParkingFusion::ParkingFusionInfo>
                      &parking_fusion_info_msg) {
             planning_adapter_->FeedParkingFusion(parking_fusion_info_msg);
+          });
+
+  auto parking_map_info_reader_ =
+      planning_node_->CreateReader<IFLYParkingMap::ParkingInfo>(
+          "/iflytek/ehr/parking_map",
+          [this](const std::shared_ptr<IFLYParkingMap::ParkingInfo>
+                     &parking_map_info_msg) {
+            planning_adapter_->FeedParkingMap(parking_map_info_msg);
           });
 
   auto func_state_machine_reader_ =
