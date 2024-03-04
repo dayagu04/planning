@@ -274,7 +274,7 @@ void UssObstacleAvoidance::CalRemainDist() {
 
 void UssObstacleAvoidance::Update(
     PlanningOutput::PlanningOutput *const planning_output,
-    const LocalView *local_view_ptr) {
+    const std::shared_ptr<LocalView> local_view_ptr) {
   // update local_view
   local_view_ptr_ = local_view_ptr;
 

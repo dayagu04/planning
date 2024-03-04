@@ -7,12 +7,11 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "apa_param_setting.h"
 #include "geometry_math.h"
 #include "local_view.h"
 #include "math_lib.h"
 #include "planning_plan.pb.h"
-
-#include "apa_param_setting.h"
 
 namespace planning {
 
@@ -80,7 +79,7 @@ class UssObstacleAvoidance {
   const RemainDistInfo& GetRemainDistInfo() const { return remain_dist_info_; }
 
   void Update(PlanningOutput::PlanningOutput* const planning_output,
-              const LocalView* local_view_ptr);
+              const std::shared_ptr<LocalView> local_view_ptr);
 
   void SetParam(const Paramters& param) {
     param_ = param;
@@ -134,7 +133,7 @@ class UssObstacleAvoidance {
   Paramters param_;
   CarMotionInfo car_motion_info_;
 
-  const LocalView* local_view_ptr_ = nullptr;
+  std::shared_ptr<LocalView> local_view_ptr_ = nullptr;
   PlanningOutput::PlanningOutput* planning_output_;
 };
 }  // namespace planning

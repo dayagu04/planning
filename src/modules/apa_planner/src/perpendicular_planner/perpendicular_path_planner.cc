@@ -2160,7 +2160,8 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
   if (extend_distance > 0.0) {
     pnc::geometry_lib::PathSegment new_line;
     new_line.seg_type = pnc::geometry_lib::SEG_TYPE_LINE;
-
+    new_line.seg_gear = output_.current_gear;
+    new_line.seg_steer = pnc::geometry_lib::SEG_STEER_STRAIGHT;
     double min_path_length = apa_param.GetParam().min_one_step_path_length;
     if (input_.slot_occupied_ratio > 0.886 &&
         output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {

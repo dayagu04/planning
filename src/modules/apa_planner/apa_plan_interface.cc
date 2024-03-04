@@ -10,6 +10,7 @@
 #include "environmental_model.h"
 #include "func_state_machine.pb.h"
 #include "general_planning_context.h"
+#include "local_view.h"
 #include "parallel_park_in_planner.h"
 #include "perpendicular_park_in_planner.h"
 #include "planning_output_context.h"
@@ -17,7 +18,11 @@
 namespace planning {
 namespace apa_planner {
 
-void ApaPlanInterface::Init() {
+void ApaPlanInterface::Init(
+    const std::shared_ptr<plan_interface::PlanData> plan_data_ptr) {
+  // init plan data
+  plan_data_ptr_ = plan_data_ptr;
+
   // init apa world
   apa_world_ptr_ = std::make_shared<ApaWorld>();
 
@@ -41,7 +46,22 @@ void ApaPlanInterface::Init() {
   SyncParameters();
 }
 
-void ApaPlanInterface::Reset() { return; }
+void ApaPlanInterface::Reset() {
+  // reset planning output
+  planning_output_.Clear();
+  planning_output_.mutable_planning_status()->set_apa_planning_status(
+      PlanningOutput::ApaPlanningStatus::NONE);
+
+  planning_output_.mutable_successful_slot_info_list()->Clear();
+
+  // reset apa world
+  apa_world_ptr_->Reset();
+
+  // reset all planner
+  for (const auto &planner : apa_planner_stack_) {
+    planner->Reset();
+  }
+}
 
 std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
     const uint8_t apa_planner_id) {
@@ -52,7 +72,8 @@ std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
   }
 }
 
-const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
+const bool ApaPlanInterface::Update(
+    const std::shared_ptr<LocalView> local_view_ptr) {
   std::cout << "\n------------------------ apa_interface: Update() "
                "------------------------\n";
 
@@ -66,13 +87,7 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   if (last_state == FuncStateMachine::STANDBY &&
       (current_state >= FuncStateMachine::PARK_IN_APA_IN &&
        current_state <= FuncStateMachine::PARK_IN_COMPLETED)) {
-    apa_world_ptr_->Reset();
-    std::cout << "reset apa world once!" << std::endl;
-
-    if (planner_ptr_ != nullptr) {
-      planner_ptr_->Reset();
-      std::cout << "reset planner once!" << std::endl;
-    }
+    Reset();
   }
 
   // run apa world, always run when enter apa
@@ -84,7 +99,8 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
 #ifdef PERPENDICULAR_SIMULATION
   std::cout << "PERPENDICULAR_SIMULATION\n";
   if (current_state == FuncStateMachine::PARK_IN_ACTIVATE_WAIT ||
-      current_state == FuncStateMachine::PARK_IN_ACTIVATE_CONTROL) {
+      current_state == FuncStateMachine::PARK_IN_ACTIVATE_CONTROL ||
+      current_state == FuncStateMachine::PARK_IN_SECURE) {
     success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
   }
 #else
@@ -97,6 +113,8 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   if (success) {
     planning_output_ = planner_ptr_->GetOutput();
   }
+
+  AddReleasedSlotInfo(planning_output_);
 
   return success;
 }
@@ -591,48 +609,6 @@ void ApaPlanInterface::SyncParameters() {
 
   // gen output params
   JSON_READ_VALUE(apa_param.SetPram().max_velocity, double, "max_velocity");
-}
-
-const bool ApaPlanInterface::UpdateFrame(framework::Frame *frame) {
-  // main update
-  const auto local_view_ptr =
-      &(frame->session()->environmental_model().get_local_view());
-
-  if (g_context.GetStatemachine().apa_reset_flag) {
-    apa_world_ptr_->Reset();
-    std::cout << "reset apa world once!" << std::endl;
-
-    if (planner_ptr_ != nullptr) {
-      planner_ptr_->Reset();
-      std::cout << "reset planner once!" << std::endl;
-    }
-
-    // sync parameters
-    SyncParameters();
-  }
-
-  const bool success = Update(local_view_ptr);
-
-  auto planning_output_ptr = &(frame->mutable_session()
-                                   ->mutable_planning_output_context()
-                                   ->mutable_planning_status()
-                                   ->planning_result.planning_output);
-
-  if (success) {
-    *planning_output_ptr = planning_output_;
-
-    const auto &planning_status =
-        planner_ptr_->GetPlannerStates().planning_status;
-
-    AddReleasedSlotInfo(*planning_output_ptr);
-
-    return planning_status < ApaPlannerBase::ParkingStatus::PARKING_FAILED;
-  } else {
-    planning_output_ptr->clear_trajectory();
-    planning_output_ptr->clear_gear_command();
-    AddReleasedSlotInfo(*planning_output_ptr);
-    return false;
-  }
 }
 
 }  // namespace apa_planner

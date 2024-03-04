@@ -25,7 +25,7 @@ namespace planning {
 
 static const double kPie = 3.141592653589793;
 
-bool SlotManagement::Update(const LocalView *local_view_ptr) {
+bool SlotManagement::Update(const std::shared_ptr<LocalView> local_view_ptr) {
   return Update(&local_view_ptr->function_state_machine_info,
                 &local_view_ptr->parking_fusion_info,
                 &local_view_ptr->localization_estimate,

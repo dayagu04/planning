@@ -238,7 +238,7 @@ const bool ApaWorld::Update() {
   return true;
 }
 
-const bool ApaWorld::Update(const LocalView* local_view_ptr) {
+const bool ApaWorld::Update(const std::shared_ptr<LocalView> local_view_ptr) {
   local_view_ptr_ = local_view_ptr;
   return Update();
 }

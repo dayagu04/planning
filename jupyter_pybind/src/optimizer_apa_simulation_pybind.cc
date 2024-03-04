@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstddef>
 #include <iostream>
+#include <memory>
 #include <vector>
 
 #include "apa_plan_base.h"
@@ -28,7 +29,8 @@ static planning::LocalView local_view;
 
 int Init() {
   apa_interface_ptr = new apa_planner::ApaPlanInterface();
-  apa_interface_ptr->Init();
+  const auto plan_data_ptr = std::make_shared<plan_interface::PlanData>();
+  apa_interface_ptr->Init(plan_data_ptr);
 
   perfect_control_ptr = new PerfectControl();
   perfect_control_ptr->Init();
@@ -84,7 +86,10 @@ const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
   local_view.function_state_machine_info = func_statemachine;
   local_view.uss_wave_info = uss_wave_info;
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  std::shared_ptr<LocalView> local_view_ptr = std::make_shared<LocalView>();
+*local_view_ptr = local_view;
+  const bool result = apa_interface_ptr->Update(local_view_ptr);
+
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;
@@ -113,24 +118,23 @@ const bool InterfaceUpdateClosedLoop(
   local_view.parking_fusion_info = parking_slot_info;
   local_view.function_state_machine_info = func_statemachine;
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  std::shared_ptr<LocalView> local_view_ptr = std::make_shared<LocalView>();
+*local_view_ptr = local_view;
+  const bool result = apa_interface_ptr->Update(local_view_ptr);
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;
 }
 
-const bool InterfaceUpdateParam(py::bytes &func_statemachine_bytes,
-                                py::bytes &parking_slot_info_bytes,
-                                py::bytes &localization_info_bytes,
-                                py::bytes &vehicle_service_output_info_bytes,
-                                py::bytes &uss_wave_info_bytes, int select_id,
-                                bool force_plan, bool is_path_optimization, bool is_cilqr_optimization, bool is_reset,
-                                bool is_complete_path, double sample_ds,
-                                double q_ref_xy, double q_ref_theta,
-                                double q_terminal_xy, double q_terminal_theta,
-                                double q_k, double q_u,
-                                double q_k_bound, double q_u_bound
-                                ) {
+const bool InterfaceUpdateParam(
+    py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
+    py::bytes &localization_info_bytes,
+    py::bytes &vehicle_service_output_info_bytes,
+    py::bytes &uss_wave_info_bytes, int select_id, bool force_plan,
+    bool is_path_optimization, bool is_cilqr_optimization, bool is_reset,
+    bool is_complete_path, double sample_ds, double q_ref_xy,
+    double q_ref_theta, double q_terminal_xy, double q_terminal_theta,
+    double q_k, double q_u, double q_k_bound, double q_u_bound) {
   apa_planner::ApaPlannerBase::SimulationParam param;
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
@@ -181,7 +185,9 @@ const bool InterfaceUpdateParam(py::bytes &func_statemachine_bytes,
     }
   }
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  std::shared_ptr<LocalView> local_view_ptr = std::make_shared<LocalView>();
+*local_view_ptr = local_view;
+  const bool result = apa_interface_ptr->Update(local_view_ptr);
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;

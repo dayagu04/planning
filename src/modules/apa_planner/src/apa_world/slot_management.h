@@ -339,7 +339,7 @@ class SlotManagement {
     }
   };
 
-  bool Update(const LocalView* local_view_ptr);
+  bool Update(const std::shared_ptr<LocalView> local_view_ptr);
 
   bool Update(const FuncStateMachine::FuncStateMachine* func_statemachine,
               const ParkingFusion::ParkingFusionInfo* parking_slot_info,

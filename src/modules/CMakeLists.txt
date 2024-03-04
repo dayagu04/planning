@@ -7,7 +7,6 @@ file(GLOB_RECURSE SRC_FILES
 
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 
-add_subdirectory(plan_interface EXCLUDE_FROM_ALL)
 add_subdirectory(context EXCLUDE_FROM_ALL)
 add_subdirectory(apa_planner EXCLUDE_FROM_ALL)
 add_subdirectory(common EXCLUDE_FROM_ALL)
