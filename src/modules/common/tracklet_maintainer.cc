@@ -693,6 +693,8 @@ void TrackletMaintainer::calc(
       if ((item->fusion_source & OBSTACLE_SOURCE_CAMERA) &&
           frenet_transform_valid) {
         is_potential_lead_one(*item, v_ego);
+      } else {
+        obstacle_reset(*item);
       }
       calc_intersection_with_refline(*item, enable_intersection_planner);
     }
@@ -2222,6 +2224,14 @@ void TrackletMaintainer::set_default_value(
     if (tr->theta == DBL_MAX) {
       tr->theta = 0.0;
     }
+  }
+}
+
+void TrackletMaintainer::obstacle_reset(TrackedObject &item) {
+  // Reset lead/temp_lead that have not been fused successfully
+  if (!(item.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+    item.is_lead = false;
+    item.is_temp_lead = false;
   }
 }
 

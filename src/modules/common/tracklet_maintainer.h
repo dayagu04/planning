@@ -119,6 +119,8 @@ class TrackletMaintainer {
 
   void set_default_value(const std::vector<TrackedObject *> &tracked_objects);
 
+  void obstacle_reset(TrackedObject &item);
+
   planning::framework::Session *session_ = nullptr;
   std::shared_ptr<FrenetCoordinateSystem> frenet_coord_;
   LifecycleDict seq_state_;
