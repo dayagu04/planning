@@ -646,37 +646,37 @@ const bool PerpendicularPathPlanner::PreparePlanSecond() {
   }
 
   // try line
-  dist = pnc::geometry_lib::CalPoint2LineDist(input_.ego_pose.pos,
-                                              calc_params_.prepare_line);
+  // dist = pnc::geometry_lib::CalPoint2LineDist(input_.ego_pose.pos,
+  //                                             calc_params_.prepare_line);
 
-  bool case_2 = (heading_err < apa_param.GetParam().static_heading_eps &&
-                 dist < apa_param.GetParam().static_pos_eps);
+  // bool case_2 = (heading_err < apa_param.GetParam().static_heading_eps &&
+  //                dist < apa_param.GetParam().static_pos_eps);
 
-  if (case_2) {
-    pnc::geometry_lib::LineSegment line;
-    line.pA = input_.ego_pose.pos;
-    line.heading = calc_params_.safe_circle_tang_pt.heading;
-    line.pB = calc_params_.safe_circle_tang_pt.pos;
-    const auto AB = (line.pB - line.pA).normalized();
-    const auto heading_vec =
-        pnc::geometry_lib::GetUnitTangVecByHeading(line.heading);
-    const auto cos_theta = AB.dot(heading_vec);
-    uint8_t seg_gear;
-    if (cos_theta > 0.0) {
-      seg_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
-    } else if (cos_theta < 0.0) {
-      seg_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-    } else {
-      return false;
-    }
-    pnc::geometry_lib::PathSegment line_seg(seg_gear, line);
-    output_.path_available = true;
-    output_.path_segment_vec.emplace_back(line_seg);
-    output_.length = line_seg.Getlength();
-    output_.gear_cmd_vec.emplace_back(line_seg.seg_gear);
-    output_.steer_vec.emplace_back(line_seg.seg_steer);
-    return true;
-  }
+  // if (case_2) {
+  //   pnc::geometry_lib::LineSegment line;
+  //   line.pA = input_.ego_pose.pos;
+  //   line.heading = calc_params_.safe_circle_tang_pt.heading;
+  //   line.pB = calc_params_.safe_circle_tang_pt.pos;
+  //   const auto AB = (line.pB - line.pA).normalized();
+  //   const auto heading_vec =
+  //       pnc::geometry_lib::GetUnitTangVecByHeading(line.heading);
+  //   const auto cos_theta = AB.dot(heading_vec);
+  //   uint8_t seg_gear;
+  //   if (cos_theta > 0.0) {
+  //     seg_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+  //   } else if (cos_theta < 0.0) {
+  //     seg_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+  //   } else {
+  //     return false;
+  //   }
+  //   pnc::geometry_lib::PathSegment line_seg(seg_gear, line);
+  //   output_.path_available = true;
+  //   output_.path_segment_vec.emplace_back(line_seg);
+  //   output_.length = line_seg.Getlength();
+  //   output_.gear_cmd_vec.emplace_back(line_seg.seg_gear);
+  //   output_.steer_vec.emplace_back(line_seg.seg_steer);
+  //   return true;
+  // }
 
   // try dubins
   pnc::dubins_lib::DubinsLibrary::Input input;
@@ -686,6 +686,10 @@ const bool PerpendicularPathPlanner::PreparePlanSecond() {
   dubins_planner_.SetInput(input);
   if (dubins_planner_.OneStepDubinsUpdate()) {
     GenPathOutputByDubins();
+    if (output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
+        output_.length < apa_param.GetParam().min_one_step_path_length) {
+      return false;
+    }
     return true;
   } else {
     std::cout << "dubins fail\n";
@@ -1491,6 +1495,8 @@ const bool PerpendicularPathPlanner::AdjustPlan() {
   pnc::geometry_lib::PathPoint current_pose = input_.ego_pose;
   uint8_t current_gear = input_.ref_gear;
   uint8_t current_arc_steer = input_.ref_arc_steer;
+  bool continue_after_multi = false;
+  size_t fail_count = 0;
   if (output_.path_segment_vec.size() > 0 && output_.gear_cmd_vec.size() > 0) {
     const auto& last_seg = output_.path_segment_vec.back();
     if (last_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
@@ -1500,6 +1506,7 @@ const bool PerpendicularPathPlanner::AdjustPlan() {
     }
     current_gear = output_.gear_cmd_vec.back();
     current_arc_steer = output_.steer_vec.back();
+    continue_after_multi = true;
     std::cout << "continue to plan after multi\n";
   }
 
@@ -1549,9 +1556,13 @@ const bool PerpendicularPathPlanner::AdjustPlan() {
       success = true;
     } else {
       std::cout << "single path of adjust plan failed!\n\n";
-      output_.Reset();
-      success = false;
-      break;
+      fail_count += 1;
+      if (continue_after_multi && fail_count == 1) {
+      } else {
+        output_.Reset();
+        success = false;
+        break;
+      }
     }
 
     if (tmp_path_seg_vec.size() > 0) {
