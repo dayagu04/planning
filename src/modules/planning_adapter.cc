@@ -421,7 +421,7 @@ void PlanningAdapter::Proc() {
     }
     auto &header = planning_output.meta.header;
     header.timestamp = output_time_us;
-    strncpy(header.version, __version_str__, 64);
+    iflyauto::strcpy_array(header.version, __version_str__);
     // TODO
     // header->input_list_size =
     // local_view_ptr_->fusion_objects_info.header.input_list_size; for (int i =
@@ -451,7 +451,7 @@ void PlanningAdapter::Proc() {
 
   if (planning_hmi_info_writer_) {
     planning_hmi_info.header.timestamp = output_time_us;
-    strncpy(planning_hmi_info.header.version, __version_str__, 64);
+    iflyauto::strcpy_array(planning_hmi_info.header.version, __version_str__);
     planning_hmi_info_writer_(planning_hmi_info_container);
   }
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;

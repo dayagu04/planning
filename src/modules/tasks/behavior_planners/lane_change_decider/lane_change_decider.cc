@@ -1631,11 +1631,11 @@ void LaneChangeDecider::UpdateStateMachineDebugInfo() {
       lane_change_decider_output.lc_back_reason);
   lat_behavior_common->set_lc_back_invalid_reason(
       lane_change_decider_output.lc_back_invalid_reason);
-  lat_behavior_common->near_car_ids_origin().Clear();
+  lat_behavior_common->mutable_near_car_ids_origin()->Clear();
   for (auto &near_car_origin : lane_change_decider_output.near_cars_origin) {
     lat_behavior_common->add_near_car_ids_origin(near_car_origin.track_id);
   }
-  lat_behavior_common->near_car_ids_target().Clear();
+  lat_behavior_common->mutable_near_car_ids_target()->Clear();
   for (auto &near_car_target : lane_change_decider_output.near_cars_target) {
     lat_behavior_common->add_near_car_ids_target(near_car_target.track_id);
   }
@@ -1643,11 +1643,11 @@ void LaneChangeDecider::UpdateStateMachineDebugInfo() {
       lane_change_decider_output.left_is_faster);
   lat_behavior_common->set_is_faster_right_lane(
       lane_change_decider_output.right_is_faster);
-  lat_behavior_common->left_alc_car_ids().Clear();
+  lat_behavior_common->mutable_left_alc_car_ids()->Clear();
   for (auto id : lane_change_decider_output.left_alc_car) {
     lat_behavior_common->add_left_alc_car_ids(id);
   }
-  lat_behavior_common->right_alc_car_ids().Clear();
+  lat_behavior_common->mutable_right_alc_car_ids()->Clear();
   for (auto id : lane_change_decider_output.right_alc_car) {
     lat_behavior_common->add_right_alc_car_ids(id);
   }

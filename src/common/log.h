@@ -1,9 +1,10 @@
 #pragma once
 
 #include <chrono>
+
 #include "iostream"
 
-#ifndef X86
+#ifdef BSZ
 #include "Nanolog/NanoLogCpp17.h"
 #endif
 
@@ -21,7 +22,7 @@ enum LogLevel {
   LOGLEVEL_END
 };
 
-#ifndef X86
+#ifdef BSZ
 class Log {
  public:
   static Log& getInstance() {
@@ -69,7 +70,7 @@ class Log {
 };
 #endif
 // bst::Log::getInstance().getModulePointer(),
-#ifndef X86
+#ifdef BST
 #define LOG_BST_RELEASE(severity, format, ...)                        \
   do {                                                                \
     NANO_LOG(severity, CONCAT(format),                                \
@@ -81,11 +82,9 @@ class Log {
     printf(format, ##__VA_ARGS__);           \
   } while (0)
 #else
-#define LOG_BST_RELEASE(severity, format, ...)                  \
-  do {                                                          \
-    fprintf(bst::Log::getInstance().getModulePointer(), format, \
-            ##__VA_ARGS__);                                     \
-    fflush(bst::Log::getInstance().getModulePointer());         \
+#define LOG_BST_RELEASE(severity, format, ...) \
+  do {                                         \
+    printf(format, ##__VA_ARGS__);             \
   } while (0)
 
 #define LOG_BST_DEBUG(severity, format, ...) \

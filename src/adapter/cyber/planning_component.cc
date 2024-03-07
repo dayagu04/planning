@@ -1,7 +1,7 @@
 #include "planning_component.h"
 
 #include "../common/cyber/logger/async_logger.h"
-#include "../common/log_glog.h"
+// #include "../common/log_glog.h"
 #include "common/config_context.h"
 #include "cyber/scheduler/scheduler.h"
 #include "gflags/gflags.h"
@@ -227,33 +227,33 @@ bool PlanningComponent::Proc() {
 }
 
 void PlanningComponent::InitLogger() {
-  FLAGS_log_dir = "/asw/planning/log";
-  FLAGS_alsologtostderr = false;
-  FLAGS_colorlogtostderr = true;
-  FLAGS_max_log_size = 500;
-  FLAGS_minloglevel = 0;
-  FLAGS_v = 0;
+//   FLAGS_log_dir = "/asw/planning/log";
+//   FLAGS_alsologtostderr = false;
+//   FLAGS_colorlogtostderr = true;
+//   FLAGS_max_log_size = 500;
+//   FLAGS_minloglevel = 0;
+//   FLAGS_v = 0;
 
-  // Init glog
-  google::InitGoogleLogging("");
-  google::SetLogDestination(google::ERROR, "");
-  google::SetLogDestination(google::WARNING, "");
-  google::SetLogDestination(google::FATAL, "");
+//   // Init glog
+//   google::InitGoogleLogging("");
+//   google::SetLogDestination(google::ERROR, "");
+//   google::SetLogDestination(google::WARNING, "");
+//   google::SetLogDestination(google::FATAL, "");
 
-  // Init async logger
-  async_logger = new ::apollo::cyber::logger::AsyncLogger(
-      google::base::GetLogger(FLAGS_minloglevel));
-  google::base::SetLogger(FLAGS_minloglevel, async_logger);
-  async_logger->Start();
+//   // Init async logger
+//   async_logger = new ::apollo::cyber::logger::AsyncLogger(
+//       google::base::GetLogger(FLAGS_minloglevel));
+//   google::base::SetLogger(FLAGS_minloglevel, async_logger);
+//   async_logger->Start();
 
-  auto thread = const_cast<std::thread *>(async_logger->LogThread());
-  scheduler::Instance()->SetInnerThreadAttr("async_log", thread);
+//   auto thread = const_cast<std::thread *>(async_logger->LogThread());
+//   scheduler::Instance()->SetInnerThreadAttr("async_log", thread);
 }
 
 void PlanningComponent::InitGflags() const {
-  const std::string flag_file_path =
-      "/asw/planning/res/conf/planning_gflags.conf";
-  google::SetCommandLineOption("flagfile", flag_file_path.c_str());
+//   const std::string flag_file_path =
+//       "/asw/planning/res/conf/planning_gflags.conf";
+//   google::SetCommandLineOption("flagfile", flag_file_path.c_str());
 }
 
 }  // namespace planning

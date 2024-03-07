@@ -95,7 +95,7 @@ bool LateralOffsetCalculator::update(
   auto lat_motion_plan = planning_debug_data->mutable_vo_lat_motion_plan();
 
   update_basic_path(status);
-  lat_motion_plan->basic_dpoly().Clear();
+  lat_motion_plan->mutable_basic_dpoly()->Clear();
   for (auto value : d_poly_) {
     lat_motion_plan->add_basic_dpoly(value);
   }
@@ -2798,8 +2798,8 @@ void LateralOffsetCalculator::save_to_debug_info() {
   // lat_behavior_plan->set_is_side_borrow_lane(lateral_output.sb_lane);
   // lat_behavior_plan->set_has_origin_lane(lateral_output.sb_blane);
   // lat_behavior_plan->set_has_target_lane(lateral_output.sb_lane);
-  lat_behavior_plan->avoid_car_ids().Clear();
-  lat_behavior_plan->avoid_car_allow_max_opposite_offset().Clear();
+  lat_behavior_plan->mutable_avoid_car_ids()->Clear();
+  lat_behavior_plan->mutable_avoid_car_allow_max_opposite_offset()->Clear();
   for (auto &item : lateral_output.avd_car_past) {
     if (item.size() > 0) {
       lat_behavior_plan->add_avoid_car_ids(item[0]);

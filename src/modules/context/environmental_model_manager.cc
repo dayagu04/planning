@@ -212,6 +212,8 @@ bool EnvironmentalModelManager::Run() {
                                            function_state);
   } else {
     LOG_NOTICE("function mode error\n");
+    environmental_model->set_function_info(common::DrivingFunctionInfo::ACC,
+                                           function_state);
   }
 
   // 自动有效，临时hack

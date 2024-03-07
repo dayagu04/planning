@@ -10,6 +10,7 @@ add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 target_link_libraries(${PROJECT_NAME} PUBLIC
   modules_common
   ad_common
+  geometry_lib
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})

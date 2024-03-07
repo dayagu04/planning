@@ -51,7 +51,7 @@ void StGraphGenerator::Update(
     lane_changing_decider_ = std::make_unique<RealTimeLaneChangeDecider>(
         lon_behav_input_->lc_info());
   } else {
-    lane_changing_decider_->update_lc_info(&(lon_behav_input_->lc_info()));
+    lane_changing_decider_->update_lc_info(lon_behav_input_->mutable_lc_info());
   }
 
   st_refs_.clear();
