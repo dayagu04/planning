@@ -48,7 +48,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_subdirectory(proto)
 add_subdirectory(src)
-add_subdirectory(ad_common)
+#add_subdirectory(ad_common)
 
 if (UNIT_TEST_ENABLE)
   add_subdirectory(test)

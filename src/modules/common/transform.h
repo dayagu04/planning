@@ -3,8 +3,11 @@
 
 #include <cmath>
 
-// #include <Eigen/Dense>
+#ifdef MDC
+#include <Eigen/Dense>
+#else
 #include <eigen3/Eigen/Dense>
+#endif
 
 namespace planning {
 namespace define {

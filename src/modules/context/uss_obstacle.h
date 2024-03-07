@@ -9,7 +9,7 @@
 #include "Eigen/Core"
 #include "local_view.h"
 #include "planning_plan_c.h"
-#include "src/library/geometry_lib/include/geometry_math.h"
+#include "geometry_math.h"
 namespace planning {
 class UssObstacle {
   enum CarPointMode {

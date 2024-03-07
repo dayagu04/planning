@@ -40,7 +40,7 @@ bool RealTimeLaneChangeDecider::process() {
   gap_list_.clear();
 
   lc_map_decision_ = lc_info_.lc_map_decision();
-  current_lane_type_ = lc_info_.current_lane_type();
+  current_lane_type_ = (iflyauto::LaneType)lc_info_.current_lane_type();
 
   v_limit_ = lc_info_.v_limit();
 

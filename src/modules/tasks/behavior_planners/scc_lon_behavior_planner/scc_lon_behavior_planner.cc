@@ -125,7 +125,7 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
       session_->mutable_planning_context()->mutable_lon_decision_result();
   auto &function_info = session_->environmental_model().function_info();
 
-  const auto &lane_status = session_->planning_context().lane_status();
+  const auto &lane_status = session_->mutable_planning_context()->lane_status();
 
   // 0. set dbw (Drive-by-Wire)
   lon_behav_plan_input_->set_dbw_status(dbw_status);

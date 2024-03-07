@@ -39,7 +39,7 @@ bool VisionOnlyLaneChangeDecider::process() {
   // cur_lane_.clear();
   // target_lane_.clear();
 
-  const auto &lane_status = session_->planning_context().lane_status();
+  const auto &lane_status = session_->mutable_planning_context()->lane_status();
 
   const auto current_v_lane = session_->environmental_model()
                                   .get_virtual_lane_manager()

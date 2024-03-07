@@ -18,9 +18,10 @@ enum class StatusCode {
 
 class SpeedStatus : public std::exception {
  public:
-  SpeedStatus();
+  SpeedStatus() = default;
 
-  SpeedStatus(const StatusCode& code, const std::string& msg);
+  SpeedStatus(const StatusCode& code, const std::string& msg)
+      : code_(code), msg_(msg) {}
 
   virtual ~SpeedStatus() = default;
 

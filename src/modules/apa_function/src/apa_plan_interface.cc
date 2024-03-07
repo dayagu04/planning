@@ -166,7 +166,7 @@ static std::string ReadFile(const std::string &path) {
 }
 
 void ApaPlanInterface::SyncParameters() {
-  std::string path = "/asw/planning/res/conf/apa_params.json";
+  std::string path = "../runtime_service/planning_exec/res/conf/apa_params.json";
 
   std::string config_file = ReadFile(path);
   auto config = mjson::Reader(config_file);

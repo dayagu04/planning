@@ -20,7 +20,7 @@ namespace planning {
 void LaneKeepAssistManager::SyncParameters() {
   // read json file
   std::string config_file =
-      ReadJsonFile("/asw/planning/res/conf/adas_params.json");
+      ReadJsonFile("../runtime_service/planning_exec/res/conf/adas_params.json");
   auto adas_config = mjson::Reader(config_file);
 
   // get params

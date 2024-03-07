@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COMPONENT>
+  <!--Component name. Do not modify manually!-->
+  <NAME>planning_exec</NAME>
+  <!--Component description. Can be customized!-->
+  <DESCRIPTION>An ap component.</DESCRIPTION>
+  <!--Component type. Do not modify manually!-->
+  <TYPE>executable</TYPE>
+  <!--Component version. Can be customized!-->
+  <VERSION>1.0.0</VERSION>
+  <!--Manage component's dependencies. Can be customized! Dependency type can only be either 'mdc_sdk' or 'rpm'-->
+  <DEPENDENCIES>
+    <DEPENDENCY>
+      <NAME>log</NAME>
+      <TYPE>mdc_sdk</TYPE>
+    </DEPENDENCY>
+    <DEPENDENCY>
+      <NAME>per</NAME>
+      <TYPE>mdc_sdk</TYPE>
+    </DEPENDENCY>
+    <DEPENDENCY>
+      <NAME>ara-exec</NAME>
+      <TYPE>mdc_sdk</TYPE>
+    </DEPENDENCY>
+    <DEPENDENCY>
+      <NAME>ara-com</NAME>
+      <TYPE>mdc_sdk</TYPE>
+    </DEPENDENCY>
+    <DEPENDENCY>
+      <NAME>rm</NAME>
+      <TYPE>mdc_sdk</TYPE>
+    </DEPENDENCY>
+    <DEPENDENCY>
+      <NAME>yaml</NAME>
+      <TYPE>builtin</TYPE>
+    </DEPENDENCY>
+    <DEPENDENCY>
+      <NAME>pthread</NAME>
+      <TYPE>builtin</TYPE>
+    </DEPENDENCY>
+    <DEPENDENCY>
+      <NAME>common_swc_lib</NAME>
+      <TYPE>scfi</TYPE>
+    </DEPENDENCY>
+  </DEPENDENCIES>
+  <!--Generated interfaces. Do not modify manually!-->
+  <INTERFACES>
+    <INTERFACE>
+      <NAME>StructContainerInterface</NAME>
+      <TYPE>ServiceInterface</TYPE>
+      <NAMESPACE>iflyauto::struct_container</NAMESPACE>
+      <DIRECTION>RPortPrototype</DIRECTION>
+    </INTERFACE>
+  </INTERFACES>
+  <!--Generated from manifest. Do not modify manually!-->
+  <FEATURES>
+    <FEATURE>log</FEATURE>
+    <FEATURE>em</FEATURE>
+    <FEATURE>cm</FEATURE>
+  </FEATURES>
+</COMPONENT>

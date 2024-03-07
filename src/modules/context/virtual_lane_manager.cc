@@ -1,6 +1,6 @@
 #include "virtual_lane_manager.h"
 
-#include <cyber/common/log.h>
+// #include <cyber/common/log.h>
 
 #include <cmath>
 #include <cstddef>
@@ -20,7 +20,7 @@
 #include "ifly_time.h"
 #include "localization_c.h"
 #include "log.h"
-#include "log_glog.h"
+// #include "log_glog.h"
 #include "math/box2d.h"
 #include "planning_context.h"
 #include "reference_path_manager.h"
