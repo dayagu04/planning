@@ -177,6 +177,7 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
     pt[i] << slot_points[i].x(), slot_points[i].y();
     std::cout << pt[i].transpose() << std::endl;
   }
+  ego_slot_info.slot_corner = pt;
 
   // calc slot side once at first
   if (frame_.is_replan_first == true) {
@@ -464,7 +465,7 @@ void ParallelParInPlanner::GenTlane() {
   t_lane_.pt_outside = p_out;
   t_lane_.pt_terminal_pos = ego_slot_info.target_ego_pos_slot;
 
-  std::cout << "-- t_lane --" << std::endl;
+  std::cout << "-- t_lane --------" << std::endl;
   std::cout << "pt_outside = " << t_lane_.pt_outside.transpose() << std::endl;
   std::cout << "pt_inside = " << t_lane_.pt_inside.transpose() << std::endl;
   std::cout << "pt_terminal_pos = " << t_lane_.pt_terminal_pos.transpose()
@@ -472,6 +473,9 @@ void ParallelParInPlanner::GenTlane() {
   std::cout << "slot length =" << ego_slot_info.slot_length << std::endl;
   std::cout << "half slot width =" << 0.5 * ego_slot_info.slot_width
             << std::endl;
+  std::cout << "curb y =" << -slot_side_sgn * apa_param.GetParam().curb_offset
+            << std::endl;
+  std::cout << "------------------" << std::endl;
 }
 
 void ParallelParInPlanner::GenObstacles() {
@@ -616,7 +620,8 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
   // parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(0.3);
   parallel_path_planner_.SampleCurrentPathSeg();
   // print segment info
-  parallel_path_planner_.PrintOutputSegmentsInfo();
+  pnc::geometry_lib::PrintSegmentsVecInfo(
+      parallel_path_planner_.GetOutput().path_segment_vec);
 
   const auto& planner_output = parallel_path_planner_.GetOutput();
   gear_command_ = planner_output.current_gear;
@@ -786,43 +791,43 @@ const bool ParallelParInPlanner::CheckFinished() {
 
   const double lat_error_abs = std::fabs(ego_slot_info.ego_pos_slot.y());
 
-  const Eigen::Vector2d ego_middle_head =
-      ego_slot_info.ego_pos_slot + (apa_param.GetParam().wheel_base +
-                                    apa_param.GetParam().front_overhanging) *
-                                       ego_slot_info.ego_heading_slot_vec;
+  const double heading_error_abs =
+      std::fabs(ego_slot_info.terminal_err.heading);
 
-  const Eigen::Vector2d ego_middle_tail =
-      ego_slot_info.ego_pos_slot - apa_param.GetParam().rear_overhanging *
-                                       ego_slot_info.ego_heading_slot_vec;
+  const Eigen::Vector2d front_axle_center =
+      ego_slot_info.ego_pos_slot +
+      apa_param.GetParam().wheel_base * ego_slot_info.ego_heading_slot_vec;
 
   const bool loose_lat_condition =
       lat_error_abs <= apa_param.GetParam().finish_lat_err;
 
-  const bool strict_pose_condition = std::fabs(ego_middle_tail.y()) <= 0.055 &&
-                                     std::fabs(ego_middle_head.y()) <= 0.055;
+  const bool strict_lat_condition =
+      std::fabs(front_axle_center.y()) <=
+          apa_param.GetParam().finish_lat_err_strict &&
+      lat_error_abs <= apa_param.GetParam().finish_lat_err_strict;
 
-  const double heading_err_abs = std::fabs(ego_slot_info.terminal_err.heading);
+  const bool strict_heading_condition =
+      heading_error_abs <= apa_param.GetParam().finish_heading_err / 57.3;
 
-  const bool loose_heading_condition = (heading_err_abs <= 2.3666 / 57.3);
+  const bool loose_heading_condition =
+      heading_error_abs <= apa_param.GetParam().finish_heading_err_loose / 57.3;
 
-  const bool lat_condition = (loose_lat_condition && loose_heading_condition) ||
-                             (strict_pose_condition);
+  const bool lat_1 = loose_lat_condition && strict_heading_condition;
+  const bool lat_2 = strict_lat_condition && loose_heading_condition;
+  const bool lat_condition = lat_1 || lat_2;
 
   const bool static_condition =
       apa_world_ptr_->GetMeasurementsPtr()->static_flag;
 
-  std::cout << "terminal x error= " << ego_slot_info.terminal_err.pos.x()
-            << std::endl;
-  std::cout << "terminal y error= " << ego_slot_info.terminal_err.pos.y()
-            << std::endl;
-  std::cout << "terminal heading error= "
-            << ego_slot_info.terminal_err.heading * 57.3 << std::endl;
+  DEBUG_PRINT("terminal x error= " << ego_slot_info.terminal_err.pos.x());
+  DEBUG_PRINT("terminal y error= " << ego_slot_info.terminal_err.pos.y());
+  DEBUG_PRINT("terminal heading error= " << ego_slot_info.terminal_err.heading *
+                                                57.3);
+
   DEBUG_PRINT("lat condition =" << lat_condition);
-  if (lat_condition) {
-    DEBUG_PRINT("  is loose condition =" << (loose_lat_condition &&
-                                           loose_heading_condition));
-    DEBUG_PRINT("  is head and tail condition =" << strict_pose_condition);
-  }
+  DEBUG_PRINT("  is loose condition =" << lat_1);
+  DEBUG_PRINT("  is head and tail condition =" << lat_2);
+
   DEBUG_PRINT("lon condition =" << lon_condition);
   DEBUG_PRINT("static condition =" << static_condition);
 

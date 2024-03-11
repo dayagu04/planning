@@ -648,10 +648,10 @@ bool SlotManagement::IfUpdateSlot(const common::SlotInfo &new_slot_info,
        ParkingFusion::ParkingFusionSlot::FUSION_SLOT_SOURCE_TYPE_ONLY_USS) ||
       (fusion_slot_source_type ==
        ParkingFusion::ParkingFusionSlot::FUSION_SLOT_SOURCE_TYPE_CAMERA_USS)) {
-    std::cout << "it is uss slot\n";
+    // std::cout << "it is uss slot\n";
     return true;
   }
-  std::cout << "it is vision slot\n";
+  // std::cout << "it is vision slot\n";
   // update by angle between ego_heading_axis and slot_heading_axis (new slot)
   const bool angle_update_condition = AngleUpdateCondition(new_slot_info);
 

@@ -165,11 +165,6 @@ class ParallelPathPlanner {
   void InsertLineSegAfterCurrentFollowLastPath(double extend_distance);
   const bool SampleCurrentPathSeg();
 
-  void PrintPose(const pnc::geometry_lib::PathPoint &pose) const;
-  void PrintPose(const Eigen::Vector2d &pos, const double heading) const;
-  void PrintOutputSegmentsInfo() const;
-  void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg) const;
-
   void SetInput(const Input &input) { input_ = input; }
   const Output &GetOutput() const { return output_; }
   const Output *GetOutputPtr() const { return &output_; }
@@ -214,7 +209,7 @@ class ParallelPathPlanner {
                          const pnc::geometry_lib::PathPoint &target_pose,
                          const double radius);
 
-  const bool IsDubinsCollided();
+  const bool IsDubinsCollided(const double buffer = 0.0);
   void GenPathOutputByDubins();
 
   // normal plan
@@ -286,13 +281,48 @@ class ParallelPathPlanner {
   // adjust plan
   const bool AdjustPlan();
   const bool ParallelAdjustPlan();
+  const bool CSCSAdjustPlan();
 
   const bool CheckAdjustPlanSuitable(
       const pnc::geometry_lib::PathPoint &current_pose) const;
 
+  const bool CalcLineDirAllValidPose(
+      std::vector<pnc::geometry_lib::PathPoint> &target_tan_pose_vec,
+      const pnc::geometry_lib::PathPoint start_pose,
+      const pnc::geometry_lib::LineSegment &terminal_line,
+      const double shift_ratio = 1.0);
+
+  const bool CalcLineDirAllValidPose(
+      std::vector<pnc::geometry_lib::PathPoint> &target_tan_pose_vec,
+      const pnc::geometry_lib::LineSegment &target_line);
+
+  const bool SameSteerCSCToLine(
+      std::vector<pnc::geometry_lib::PathPoint> &target_tan_pose_vec,
+      const uint8_t start_steer, const uint8_t start_gear,
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const pnc::geometry_lib::LineSegment &terminal_line,
+      const double shift_ratio = 1.0);
+
+  const bool SameSteerCSCPlan(const pnc::geometry_lib::PathPoint &start_pose,
+                              const pnc::geometry_lib::PathPoint &target_pose,
+                              const uint8_t start_steer,
+                              const uint8_t start_gear);
+
+  const bool CSCSInclinedStepPlan(
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const pnc::geometry_lib::PathPoint &current_pose,
+      const pnc::geometry_lib::LineSegment &target_line,
+      const uint8_t current_gear);
+
   const bool OneArcPlan(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const pnc::geometry_lib::PathPoint &current_pose,
+      const uint8_t current_gear);
+
+  const bool OneArcPlan(
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const pnc::geometry_lib::PathPoint &current_pose,
+      const pnc::geometry_lib::LineSegment &target_line,
       const uint8_t current_gear);
 
   const bool TwoArcPlan(

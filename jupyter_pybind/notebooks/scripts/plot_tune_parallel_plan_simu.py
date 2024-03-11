@@ -81,21 +81,21 @@ parallel_planning_py.Init()
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-15, max=15, value= 7.74343, step=0.01)
-    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value= 2.77156, step=0.01)
-    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value= 0.0, step=0.1)
+    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-15, max=15, value= 3.00268, step=0.01)
+    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value= 3.05401, step=0.01)
+    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value= 2.6507, step=0.1)
     self.s_init_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "s_init",min=-10.0, max=10.0, value=0.0, step=0.01)
 
-    self.tlane_p_outside_deta_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_outside_deta_x",min=-15, max=15, value=-0.5, step=0.01)
+    self.tlane_p_outside_deta_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_outside_deta_x",min=-15, max=15, value=-1.5, step=0.01)
     self.tlane_p_outside_deta_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_outside_deta_y",min=-15, max=15, value=1.1748, step=0.01)
-    self.tlane_p_inside_deta_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_inside_deta_x",min=-15, max=15, value= 6.44947, step=0.01)
+    self.tlane_p_inside_deta_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_inside_deta_x",min=-15, max=15, value= 7.412, step=0.01)# 6.74947
     self.tlane_p_inside_deta_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_inside_deta_y",min=-15, max=15, value= 1.17481, step=0.01)
 
     self.tlane_pt_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_pt_x",min=-2.0, max=2.0, value=1.497, step=0.01)
     self.tlane_pt_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_pt_y",min=-2.0, max=2.0, value=0.0, step=0.01)
     self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_width",min=3.0, max=20.0, value=6.5, step=0.1)
     self.channel_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_length",min=8.0, max=30.0, value=18.0, step=0.1)
-    self.curb_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "curb_offset",min=1.2, max=5.0, value=1.6, step=0.1)
+    self.curb_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "curb_offset",min=1.2, max=5.0, value=2.2, step=0.1)
     self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ds",min=0.025, max=1.0, value=0.2, step=0.025)
 
 
@@ -116,7 +116,7 @@ class LocalViewSlider:
     self.set_pin_line_obs_slider =  ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pin_line_obs",min=0, max=1, value=1, step=1)
     self.set_pout_line_obs_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pout_line_obs",min=0, max=1, value=1, step=1)
     self.seg_pin_parallel_line_obs_slider =ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "seg_pin_parallel_line_obs",min=0, max=1, value=1, step=1)
-    self.ref_gear_drive_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "dirve",min=0, max=1, value=1, step=1)
+    self.ref_gear_drive_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "dirve",min=0, max=1, value=0, step=1)
     self.ref_steer_left_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "left",min=0, max=1, value=0, step=1)
 
 

@@ -540,6 +540,16 @@ std::vector<Eigen::Vector2d> LinSpace(const Eigen::Vector2d &start_pos,
                                       const Eigen::Vector2d &stop_pos,
                                       const double ds);
 
+void PrintPose(const pnc::geometry_lib::PathPoint &pose);
+void PrintPose(const std::string &str,
+               const pnc::geometry_lib::PathPoint &pose);
+void PrintPose(const Eigen::Vector2d &pos, const double heading);
+void PrintPose(const std::string &str, const Eigen::Vector2d &pos,
+               const double heading);
+void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg);
+void PrintSegmentsVecInfo(
+    const std::vector<pnc::geometry_lib::PathSegment> &path_segment_vec);
+
 }  // namespace geometry_lib
 }  // namespace pnc
 

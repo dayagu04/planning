@@ -2231,5 +2231,99 @@ std::vector<Eigen::Vector2d> LinSpace(const Eigen::Vector2d &start_pos,
   return res;
 }
 
+void PrintPose(const pnc::geometry_lib::PathPoint &pose) {
+  std::cout << " " << pose.pos.x() << ", " << pose.pos.y()
+            << ", heading(deg): " << pose.heading * 57.3 << std::endl;
+}
+
+void PrintPose(const std::string &str,
+               const pnc::geometry_lib::PathPoint &pose) {
+  std::cout << str << "= " << pose.pos.x() << ", " << pose.pos.y()
+            << ", heading(deg): " << pose.heading * 57.3 << std::endl;
+}
+
+void PrintPose(const Eigen::Vector2d &pos, const double heading) {
+  std::cout << " " << pos.x() << ", " << pos.y()
+            << ", heading(deg): " << heading * 57.3 << std::endl;
+}
+
+void PrintPose(const std::string &str, const Eigen::Vector2d &pos,
+               const double heading) {
+  std::cout << str << "= " << pos.x() << ", " << pos.y()
+            << ", heading(deg): " << heading * 57.3 << std::endl;
+}
+
+void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg) {
+  std::cout << "----" << std::endl;
+  std::cout << "seg_gear: " << static_cast<int>(seg.seg_gear) << std::endl;
+
+  std::cout << "seg_steer: " << static_cast<int>(seg.seg_steer) << std::endl;
+  std::cout << "seg_type: " << static_cast<int>(seg.seg_type) << std::endl;
+  std::cout << "length: " << seg.Getlength() << std::endl;
+
+  if (seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
+    std::cout << "start_pos: " << seg.GetLineSeg().pA.transpose() << std::endl;
+    std::cout << "start_heading deg: " << seg.GetLineSeg().heading * 57.3
+              << std::endl;
+    std::cout << "end_pos: " << seg.GetLineSeg().pB.transpose() << std::endl;
+    std::cout << "end_heading deg: " << seg.GetLineSeg().heading * 57.3
+              << std::endl;
+  } else {
+    std::cout << "start_pos: " << seg.GetArcSeg().pA.transpose() << std::endl;
+    std::cout << "start_heading deg: " << seg.GetArcSeg().headingA * 57.3
+              << std::endl;
+    std::cout << "end_pos: " << seg.GetArcSeg().pB.transpose() << std::endl;
+    std::cout << "end_heading deg: " << seg.GetArcSeg().headingB * 57.3
+              << std::endl;
+  }
+}
+
+void PrintSegmentsVecInfo(
+    const std::vector<pnc::geometry_lib::PathSegment> &path_segment_vec) {
+  std::cout << "-------------- OutputSegmentsInfo --------------" << std::endl;
+  for (size_t i = 0; i < path_segment_vec.size(); i++) {
+    const auto &current_seg = path_segment_vec[i];
+
+    if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
+      const auto &line_seg = current_seg.line_seg;
+
+      std::cout << "Segment [" << i << "] "
+                << " LINE_SEGMENT "
+                << " length= " << line_seg.length << std::endl;
+
+      std::cout << "seg_gear: " << static_cast<int>(current_seg.seg_gear)
+                << std::endl;
+
+      std::cout << "seg_steer: " << static_cast<int>(current_seg.seg_steer)
+                << std::endl;
+
+      std::cout << "start_pos: " << line_seg.pA.transpose() << std::endl;
+      std::cout << "start_heading deg: " << line_seg.heading * 57.3
+                << std::endl;
+      std::cout << "end_pos: " << line_seg.pB.transpose() << std::endl;
+    } else {
+      const auto &arc_seg = current_seg.arc_seg;
+
+      std::cout << "Segment [" << i << "] "
+                << "ARC_SEGMENT "
+                << "length= " << arc_seg.length << std::endl;
+
+      std::cout << "seg_gear: " << static_cast<int>(current_seg.seg_gear)
+                << std::endl;
+
+      std::cout << "seg_steer: " << static_cast<int>(current_seg.seg_steer)
+                << std::endl;
+
+      std::cout << "start_pos: " << arc_seg.pA.transpose() << std::endl;
+      std::cout << "start_heading deg: " << arc_seg.headingA * 57.3
+                << std::endl;
+      std::cout << "end_pos: " << arc_seg.pB.transpose() << std::endl;
+      std::cout << "end_heading deg: " << arc_seg.headingB * 57.3 << std::endl;
+      std::cout << "center: " << arc_seg.circle_info.center.transpose()
+                << "radius = " << arc_seg.circle_info.radius << std::endl;
+    }
+  }
+}
+
 }  // namespace geometry_lib
 }  // namespace pnc
