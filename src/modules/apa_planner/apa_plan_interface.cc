@@ -20,6 +20,9 @@ namespace apa_planner {
 
 void ApaPlanInterface::Init(
     const std::shared_ptr<plan_interface::PlanData> plan_data_ptr) {
+  // sync parameters
+  SyncParameters();
+
   // init plan data
   plan_data_ptr_ = plan_data_ptr;
 
@@ -41,9 +44,6 @@ void ApaPlanInterface::Init(
   if (apa_planner_stack_.size() > 0) {
     planner_ptr_ = apa_planner_stack_.front();
   }
-
-  // sync parameters
-  SyncParameters();
 }
 
 void ApaPlanInterface::Reset() {
