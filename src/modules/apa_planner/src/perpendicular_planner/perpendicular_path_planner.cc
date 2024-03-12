@@ -2151,8 +2151,9 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
   if (pnc::mathlib::IsDoubleEqual(extend_distance, 0.0)) {
     return;
   }
-  if (output_.is_last_path == true) {
-    std::cout << "is last path, not extend path\n";
+  if (output_.is_last_path == true &&
+      output_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+    std::cout << "path is last and gear is reverse, not extend path\n";
     return;
   }
 

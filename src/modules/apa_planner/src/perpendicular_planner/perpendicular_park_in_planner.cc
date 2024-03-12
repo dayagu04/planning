@@ -1153,6 +1153,12 @@ void PerpendicularInPlanner::GenPlanningPath() {
       ->mutable_trajectory_points(1)
       ->set_distance(frame_.ego_slot_info.slot_occupied_ratio);
 
+  // send slot type to control
+  planning_output_.mutable_trajectory()
+      ->mutable_trajectory_points(2)
+      ->set_distance(static_cast<double>(
+          Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL));
+
   // set plan gear cmd
   auto gear_command = planning_output_.mutable_gear_command();
   gear_command->set_available(true);
