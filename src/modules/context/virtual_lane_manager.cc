@@ -1098,7 +1098,7 @@ double VirtualLaneManager::JudgeIfTheFirstMerge(
       if (is_no_ramp_on_next_group || is_predecessor_more_than_one) {
         LOG_DEBUG("accumulate_distance_in_lane_group for merge :%f\n",
                   accumulate_distance_for_lane_group);
-        LOG_DEBUG("judge merge lane group id: %d\n", lane_group_id_next);
+        LOG_DEBUG("judge merge lane group id: %lu\n", lane_group_id_next);
         return accumulate_distance_for_lane_group;
       }
     }
@@ -1124,8 +1124,8 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
 
   // judge the ramp lane group
   uint64_t nearest_lane_group_id = nearest_lane_->lane_group_id();
-  LOG_DEBUG("nearest_lane_id::%d\n", nearest_lane_->id());
-  LOG_DEBUG("nearest_lane_group_id:%d\n", nearest_lane_group_id);
+  LOG_DEBUG("nearest_lane_id::%lu\n", nearest_lane_->id());
+  LOG_DEBUG("nearest_lane_group_id:%lu\n", nearest_lane_group_id);
   LOG_DEBUG("lane_groups_num nums:%d\n", lane_groups_num);
 
   // get the current lane group
@@ -1146,27 +1146,11 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
 bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
     const planning::framework::Session& session) {
   const auto& hd_map = session.environmental_model().get_hd_map();
-  const auto& ego_state = session.environmental_model().get_ego_state_manager();
-  const double ego_pose_x = ego_state->ego_pose_raw().x;
-  const double ego_pose_y = ego_state->ego_pose_raw().y;
-  ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
-
-  // get nearest lane
-  ad_common::hdmap::LaneInfoConstPtr nearest_lane;
-  double nearest_s = 0.0;
-  double nearest_l = 0.0;
-  const int res =
-      hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l);
-  if (res != 0) {
-    LOG_DEBUG("no get nearest lane!!!\n");
-    return false;
-  }
-
-  const uint64_t current_lane_group = nearest_lane->lane_group_id();
+  const uint64_t current_lane_group = nearest_lane_->lane_group_id();
   sorted_lane_groups_in_route_.clear();
   // sorted_lane_groups_in_route_.reserve(lane_groups_num);
   sorted_lane_groups_in_route_.emplace_back(current_lane_group);
-  LOG_DEBUG("id:%d\n", current_lane_group);
+  LOG_DEBUG("id:%lu\n", current_lane_group);
 
   LaneGroupConstPtr lane_group_ptr =
       hd_map.GetLaneGroupById(current_lane_group);
@@ -1178,7 +1162,7 @@ bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
     for (const auto& id : lane_group_ptr->successor_lane_group_ids()) {
       if (lane_group_set_.count(id) != 0) {
         sorted_lane_groups_in_route_.emplace_back(id);
-        LOG_DEBUG("sorted lane group id: %d, No: %d\n", id,
+        LOG_DEBUG("sorted lane group id: %lu, No: %zu\n", id,
                   sorted_lane_groups_in_route_.size());
         lane_group_ptr = hd_map.GetLaneGroupById(id);
         is_found = true;
@@ -1190,7 +1174,7 @@ bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
       break;
     }
   }
-  LOG_DEBUG("sorted_lane_groups_in_route_ size: %d\n",
+  LOG_DEBUG("sorted_lane_groups_in_route_ size: %zu\n",
             sorted_lane_groups_in_route_.size());
   return true;
 }
@@ -1224,28 +1208,43 @@ bool VirtualLaneManager::JudgeEgoIfOnRamp(
 bool VirtualLaneManager::GetCurrentNearestLane(
     const planning::framework::Session& session) {
   if (session_->environmental_model().get_hdmap_valid()) {
-    // const auto& local_view =
-    // session_->environmental_model().get_local_view();
-    if (session_->environmental_model().location_valid()) {
+    const auto& local_view =
+    session_->environmental_model().get_local_view();
+    if (local_view.localization_estimate.msf_status().msf_status() !=
+        LocalizationOutput::MsfStatus::ERROR) {
       std::cout << "hdmap_valid is true,current timestamp:"
                 << session_->environmental_model()
                        .get_local_view()
                        .static_map_info.header()
                        .timestamp()
                 << std::endl;
-      // get ego info
-      // const auto& local_view =
-      // session.environmental_model().get_local_view();
       const auto& hd_map = session.environmental_model().get_hd_map();
-      const auto& ego_state =
+      ad_common::math::Vec2d point;
+      // TODO(fengwang31):把noa和hpp的定位需要合在一起
+      if (session_->is_hpp_scene()) {
+        // TODO(xjli32): location_valid含义模糊
+        if (!session_->environmental_model().location_valid()) {
+          return false;
+        }
+        const auto& ego_state =
           session.environmental_model().get_ego_state_manager();
-      ego_pose_x_ = ego_state->ego_pose_raw().x;
-      ego_pose_y_ = ego_state->ego_pose_raw().y;
-      yaw_ = ego_state->ego_pose_raw().theta;
-      ad_common::math::Vec2d point(ego_pose_x_, ego_pose_y_);
-      std::cout << "ego_pose_x:" << ego_pose_x_ << ",ego_pose_y:" << ego_pose_y_
-                << std::endl;
-
+        ego_pose_x_ = ego_state->ego_pose_raw().x;
+        ego_pose_y_ = ego_state->ego_pose_raw().y;
+        yaw_ = ego_state->ego_pose_raw().theta; 
+        point.set_x(ego_pose_x_);
+        point.set_y(ego_pose_y_);
+        std::cout << "in hpp," << "ego_pose_x_:" << ego_pose_x_ << ",ego_pose_y_:" << ego_pose_y_
+                  << std::endl;
+      } else {
+        const auto& pose = local_view.localization_estimate.pose();
+        const double ego_pose_x = pose.local_position().x();
+        const double ego_pose_y = pose.local_position().y();
+        point.set_x(ego_pose_x);
+        point.set_y(ego_pose_y);
+        std::cout << "in NOA," << "ego_pose_x:" << point.x() << ",ego_pose_y:" << point.y()
+                  << std::endl;
+      }
+      
       // get nearest lane
       ad_common::hdmap::LaneInfoConstPtr nearest_lane;
       double nearest_s = 0.0;
@@ -1264,7 +1263,8 @@ bool VirtualLaneManager::GetCurrentNearestLane(
       // std::cout << "find current lane to current ego point dis:"
       //           << nearest_lane->DistanceTo(point) << std::endl;
       std::cout << "find the nearest lane!!!"
-                << "nearest_s_:" << nearest_s_ << std::endl;
+                << "nearest_s_:" << nearest_s_ 
+                << ",nearest lane group id:" << nearest_lane->lane_group_id() << std::endl;
       nearest_lane_ = nearest_lane;
       nearest_s_ = nearest_s;
       return true;

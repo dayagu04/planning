@@ -237,7 +237,7 @@ class EnvironmentalModel {
     }
     bool is_hdmap_valid =
         (IflyTime::Now_ms() - local_view_->static_map_info_recv_time) <
-        3000;  //距离上一次更新时间小于3秒，则地图有效.超过三秒则认为无效报错
+        20000;  //距离上一次更新时间小于20秒，则地图有效.超过20秒则认为无效报错
     if (static_map_info_update_flag_) {
       ad_common::hdmap::HDMap hd_map_tmp;
       const int res =
@@ -253,7 +253,7 @@ class EnvironmentalModel {
     if (!is_hdmap_valid) {
       // hd_map_.clear();
       hdmap_valid_ = false;
-      std::cout << "error!!! because more than 3s no update hdmap!!!"
+      std::cout << "error!!! because more than 20s no update hdmap!!!"
                 << std::endl;
     }
   }
