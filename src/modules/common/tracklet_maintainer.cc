@@ -103,33 +103,7 @@ void TrackletMaintainer::apply_update(
   if (is_location_valid) {
     recv_prediction_objects(predictions, objects);
     if (flane != nullptr && flane->get_reference_path() != nullptr) {
-      // FrenetCoordinateSystemParameters frenet_parameters;
-      // init frenet parameters
-      // frenet_parameters.zero_speed_threshold = 0.1;
-      // frenet_parameters.coord_transform_precision = 0.01;
-      // frenet_parameters.step_s = 0.3;
-      // frenet_parameters.coarse_step_s = 1.0;
-      // frenet_parameters.optimization_gamma = 0.5;
-      // frenet_parameters.max_iter = 15;
       auto &ref_path = flane->get_reference_path();
-      // std::vector<Point2D> coord_points;
-      // for (auto ref_point : ref_path->get_points()) {
-      //   double ego_fx = std::cos(ego_state_.ego_pose_raw().theta);
-      //   double ego_fy = std::sin(ego_state_.ego_pose_raw().theta);
-      //   double ego_lx = -ego_fy;
-      //   double ego_ly = ego_fx;
-      //   double dx = ref_point.path_point.x - ego_state_.ego_pose_raw().x;
-      //   double dy = ref_point.path_point.y - ego_state_.ego_pose_raw().y;
-
-      //   ref_point.path_point.x = dx * ego_fx + dy * ego_fy;
-      //   ref_point.path_point.y = dx * ego_lx + dy * ego_ly;
-      //   path_points.emplace_back(ref_point.path_point);
-      //   coord_points.emplace_back(
-      //       Point2D(ref_point.path_point.x, ref_point.path_point.y));
-      // }
-      // frenet_coord_ = std::make_shared<FrenetCoordinateSystem>(
-      //     coord_points, frenet_parameters);
-
       std::vector<planning_math::PathPoint> coord_points;
       for (auto ref_point : ref_path->get_points()) {
         double ego_fx = std::cos(ego_state_->ego_pose_raw().theta);
@@ -426,7 +400,6 @@ void TrackletMaintainer::recv_relative_prediction_objects(
 
     // double rel_x = dx * ego_fx + dy * ego_fy;
     // double rel_y = dx * ego_lx + dy * ego_ly;
-
     double rel_x = p.relative_position_x;
     double rel_y = p.relative_position_y;
 
@@ -486,6 +459,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     origin->theta = p.relative_theta;
     origin->y_rel_ori = rel_y;
     origin->v_x = p.relative_speed_x + ego_state_->ego_v();
+    // TODO: 这里的v_y为绝对速度，需要再加上自车的横向速度(暂时无法获取)
     origin->v_y = p.relative_speed_y;
     origin->speed_yaw = std::atan2(p.relative_speed_y, origin->v_x);
     origin->a = p.acc;
@@ -713,6 +687,8 @@ void TrackletMaintainer::calc(
       if ((item->fusion_source & OBSTACLE_SOURCE_CAMERA) &&
           frenet_transform_valid) {
         is_potential_lead_one(*item, v_ego);
+      } else {
+        obstacle_reset(*item);
       }
       calc_intersection_with_refline(*item, enable_intersection_planner);
     }
@@ -823,13 +799,28 @@ bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
 
   double half_width;
   bool frenet_transform_valid = true;
-  if (item.type > 10000) {
-    half_width = std::max(0.5, std::min(2.0, item.width * 0.5));
-  } else if (item.type > 0) {
+  // 对车辆障碍物half_width限定在1-2m以内
+  // 其余障碍物使用其默认的half_width
+  // OBJECT_TYPE_COUPE = 3
+  // OBJECT_TYPE_MINIBUS = 4
+  // OBJECT_TYPE_VAN = 5
+  // OBJECT_TYPE_BUS = 6
+  // OBJECT_TYPE_TRUCK = 7
+  // OBJECT_TYPE_TRAILER = 8
+  bool is_vehicle_type = item.type == 3 || item.type == 4 || item.type == 5 ||
+                         item.type == 6 || item.type == 7 || item.type == 8;
+  if (is_vehicle_type) {
     half_width = std::max(1.0, std::min(2.0, item.width * 0.5));
   } else {
     half_width = item.width * 0.5;
   }
+  // if (item.type > 10000) {
+  //   half_width = std::max(0.5, std::min(2.0, item.width * 0.5));
+  // } else if (item.type > 0) {
+  //   half_width = std::max(1.0, std::min(2.0, item.width * 0.5));
+  // } else {
+  //   half_width = item.width * 0.5;
+  // }
 
   double speed_yaw;
   if (item.trajectory.relative_ego_yaw.size() > 0) {
@@ -2235,6 +2226,14 @@ void TrackletMaintainer::set_default_value(
     if (tr->theta == DBL_MAX) {
       tr->theta = 0.0;
     }
+  }
+}
+
+void TrackletMaintainer::obstacle_reset(TrackedObject &item) {
+  // Reset lead/temp_lead that have not been fused successfully
+  if (!(item.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+    item.is_lead = false;
+    item.is_temp_lead = false;
   }
 }
 

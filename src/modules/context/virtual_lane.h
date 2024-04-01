@@ -137,6 +137,9 @@ class VirtualLane {
   void save_context(VirtualLaneContext &context) const;
   void restore_context(const VirtualLaneContext &context);
   bool calc_c_poly(std::vector<double> &output);
+  void set_is_in_merge_area(bool is_in_merge_area) {
+    is_in_merge_area_ = is_in_merge_area;
+  }
 
  private:
   int order_id_ = -1;
@@ -165,6 +168,7 @@ class VirtualLane {
   SpeedChangePoint speed_change_point_{};
   double v_cruise_ = 0.0;
   double current_lane_speed_limit_ = 0.0;
+  bool is_in_merge_area_ = false;
 };
 }  // namespace planning
 #endif

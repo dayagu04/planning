@@ -169,7 +169,7 @@ bool LongitudinalOptimizerV3::optimize(
       auto &ref_pos_bounds = bounds[i];
       for (auto iter = lon_ref_path.hard_bounds[i].begin();
            iter != lon_ref_path.hard_bounds[i].end(); iter++) {
-        if (iter->bound_info.type != "obstacle") {
+        if (iter->bound_info.type != BoundType::AGENT) {
           ref_pos_bounds.emplace_back(*iter);
         }
       }

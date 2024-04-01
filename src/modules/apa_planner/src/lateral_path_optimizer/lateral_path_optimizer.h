@@ -28,7 +28,7 @@ class LateralPathOptimizer {
     double q_k_bound = 100.0;
     double q_u_bound = 50.0;
   };
-  void Init();
+  void Init(const bool c_ilqr_enable);
   void Update(const std::vector<pnc::geometry_lib::PathPoint> &path_vec,
               const uint8_t gear_cmd);
   void SetParam(const Parameter &param) { param_ = param; }
@@ -37,10 +37,17 @@ class LateralPathOptimizer {
     return output_path_vec_;
   }
 
+  const planning::common::LateralPathOptimizerOutput &GetOutputDebugInfo()
+      const {
+    return optimizer_planning_output_;
+  }
+  const planning::common::LateralPathOptimizerInput &GetInputDebugInfo() const {
+    return planning_input_;
+  }
+
  private:
   void AssembleInput(const std::vector<pnc::geometry_lib::PathPoint> &path_vec);
   void AssembleOutput();
-
   void PostProcessOutput();
 
   std::shared_ptr<apa_planner::LateralPathOptimizerProblem>

@@ -184,24 +184,21 @@ class LoadCyberbag:
     # load planning debug msg
     try:
       json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw",
-                        'VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low',\
-                        "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
-                        "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
-                        'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
-                        'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one",\
-                        'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two",\
-                        'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one",\
-                        'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two",\
-                        'potental_cutin_track_id', 'v_target_potental_cutin', "v_target_cutin", "road_radius", \
-                        'stop_start_state', 'v_target_start_stop', 'STANDSTILL', \
-                        "dis_to_ramp", "v_target_ramp",\
-                        'RealTime_v_ref', 'gap_v_limit_lc', \
-                        "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
-                        "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                        "SccLonBehaviorCostTime", "SccLonMotionCostTime", \
-                        'RealTimeLateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
-                        "ego_state_update_cost", "virtual_lane_manager_update_cost", "obstacle_prediction_update_cost", \
-                        "reference_path_manager_update_cost", "lateral_obstacle_update_cost"]
+                         'VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low',\
+                         "road_radius", 'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego',\
+                         'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one",\
+                         'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two",\
+                         'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one",\
+                         'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two",\
+                         'potental_cutin_track_id', 'v_target_potental_cutin', "v_target_cutin",  \
+                         'stop_start_state', 'v_target_start_stop', 'STANDSTILL', \
+                         "dis_to_ramp", "v_target_ramp",\
+                         "VisionLateralBehaviorPlannerCost","VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost",
+                         'RealTime_v_ref', 'v_ego', 'gap_v_limit_lc', \
+                         "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
+                         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime",
+                         "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
+                         "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime", 'RealTimeLateralMotionCostTime']
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec"]
 

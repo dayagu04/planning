@@ -6,9 +6,11 @@
 
 #include "environmental_model.h"
 #include "frenet_ego_state.h"
+#include "lateral_behavior_planner.pb.h"
 #include "lateral_obstacle.h"
 #include "math/linear_interpolation.h"
 #include "obstacle_manager.h"
+#include "planning_context.h"
 #include "quintic_poly_path.h"
 #include "scenario_state_machine.h"
 #include "spline_projection.h"
@@ -65,7 +67,8 @@ class GeneralLateralDecider : public Task {
       const MapObstacleDecision &map_obstacle_decision,
       const ObstacleDecisions &obstacle_decisions,
       std::vector<std::pair<double, double>> &frenet_safe_bounds,
-      std::vector<std::pair<double, double>> &frenet_path_bounds);
+      std::vector<std::pair<double, double>> &frenet_path_bounds,
+      LatDeciderOutput &lat_decider_output);
 
   void GenerateEnuBoundaryPoints(
 
@@ -81,7 +84,7 @@ class GeneralLateralDecider : public Task {
   void GenerateEnuReferenceTheta(LatDeciderOutput &lat_decider_output);
 
   void HandleLaneChangeScene(TrajectoryPoints &traj_points);
-
+  void HandleAvoidScene(TrajectoryPoints &traj_points);
   void CalcLateralBehaviorOutput();
 
   GeneralLateralDeciderConfig config_;
@@ -98,6 +101,8 @@ class GeneralLateralDecider : public Task {
   bool is_lane_change_scene_ = false;
   LatDeciderLaneChangeInfo lat_lane_change_info_ =
       LatDeciderLaneChangeInfo::NONE;
+  GapSelectorResult gap_selector_result_;
+  planning::common::LateralBehaviorDebugInfo lat_debug_info_;
 };
 
 }  // namespace planning

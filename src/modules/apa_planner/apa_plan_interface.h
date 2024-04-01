@@ -18,13 +18,15 @@ namespace apa_planner {
 
 class ApaPlanInterface : public plan_interface::PlanInterfaceBase {
  public:
-  virtual void Init() override;
-  virtual void Reset() override;
-  virtual const bool Update(const LocalView* local_view_ptr) override;
-  virtual void SyncParameters() override;
+  virtual void Init(
+      const std::shared_ptr<plan_interface::PlanData> plan_data_ptr) override;
 
-  // an isolation between pybind (simulation) and real test
-  virtual const bool UpdateFrame(framework::Frame* const frame) override;
+  virtual void Reset() override;
+
+  virtual const bool Update(
+      const std::shared_ptr<LocalView> local_view_ptr) override;
+
+  virtual void SyncParameters() override;
 
   const std::vector<std::shared_ptr<ApaPlannerBase>>& GetPlannerStack() const {
     return apa_planner_stack_;
@@ -32,6 +34,15 @@ class ApaPlanInterface : public plan_interface::PlanInterfaceBase {
 
   // only for simulation
   void UpdateDebugInfo();
+
+  const planning::common::LateralPathOptimizerOutput& GetOutputDebugInfo()
+      const {
+    return planner_ptr_->GetLateralPathOptimizerPtr()->GetOutputDebugInfo();
+  }
+
+  const planning::common::LateralPathOptimizerInput& GetInputDebugInfo() const {
+    return planner_ptr_->GetLateralPathOptimizerPtr()->GetInputDebugInfo();
+  }
 
  private:
   std::shared_ptr<ApaPlannerBase> GetPlannerByType(

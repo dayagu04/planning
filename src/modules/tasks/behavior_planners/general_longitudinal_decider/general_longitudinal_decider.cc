@@ -40,6 +40,8 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
     return false;
   }
 
+  gap_selector_result_ =
+      frame_->session()->planning_context().gap_selector_result();
   lon_yield_info_.min_ds = 1000.0;
   lon_yield_info_.min_ttc = 100.0;
   lon_yield_info_.min_acc = 100.0;
@@ -124,15 +126,27 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
   std::vector<double> traj_v_list;
   std::vector<double> traj_a_list;
   double min_traj_a = std::numeric_limits<double>::max();
-  for (size_t i = 0; i < ego_planning_result.traj_points.size() - 1; ++i) {
-    auto delta_s = ego_planning_result.traj_points[i + 1].s -
-                   ego_planning_result.traj_points[i].s;
-    traj_v_list.push_back(std::max(delta_s / config_.delta_time, 0.0));
-  }
-  for (size_t i = 0; i < traj_v_list.size() - 1; ++i) {
-    auto delta_v = traj_v_list[i + 1] - traj_v_list[i];
-    traj_a_list.push_back(delta_v / config_.delta_time);
-    min_traj_a = std::fmin(min_traj_a, traj_a_list.back());
+  if (!gap_selector_result_.lon_decider_ignore) {
+    for (size_t i = 0; i < ego_planning_result.traj_points.size() - 1; ++i) {
+      auto delta_s = ego_planning_result.traj_points[i + 1].s -
+                     ego_planning_result.traj_points[i].s;
+      traj_v_list.push_back(std::max(delta_s / config_.delta_time, 0.0));
+    }
+    for (size_t i = 0; i < traj_v_list.size() - 1; ++i) {
+      auto delta_v = traj_v_list[i + 1] - traj_v_list[i];
+      traj_a_list.push_back(delta_v / config_.delta_time);
+      min_traj_a = std::fmin(min_traj_a, traj_a_list.back());
+    }
+  } else {
+    for (size_t i = 0; i < ego_planning_result.traj_points.size() - 1; ++i) {
+      traj_v_list.push_back(
+          std::max(ego_planning_result.traj_points[i].v, 0.0));
+    }
+    for (size_t i = 0; i < traj_v_list.size() - 1; ++i) {
+      auto delta_v = traj_v_list[i + 1] - traj_v_list[i];
+      traj_a_list.push_back(delta_v / config_.delta_time);
+      min_traj_a = std::fmin(min_traj_a, traj_a_list.back());
+    }
   }
 
   // Step 4: 初始化纵向参考轨迹
@@ -228,8 +242,11 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
   }
 
   // adjust jerk_bound
-  acc_function->acc_update_jerk_bound(acc_info, lon_ref_path,
-                                      ego_planning_result, planning_init_point);
+  if (!gap_selector_result_.lon_decider_ignore) {
+    acc_function->acc_update_jerk_bound(
+        acc_info, lon_ref_path, ego_planning_result, planning_init_point);
+  }
+
   if (ego_planning_info.traffic_light_decision.stop_flag) {
     double stop_distance =
         std::max(0.1, ego_planning_info.traffic_light_decision.stop_distance);
@@ -283,7 +300,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
                      ego_planning_info.traffic_light_decision.stop_distance;
   lon_ref_path.hard_bounds.back().emplace_back(
       WeightedBound{std::numeric_limits<double>::min(), stop_line_s, -1.0,
-                    BoundInfo{0, "traffic light"}});
+                    BoundInfo{0, BoundType::TRAFFIC_LIGHT}});
 
   // set destination bound for PNP
   if (frame_->session()->is_hpp_scene()) {
@@ -295,7 +312,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
                            stop_distance_to_destination;
     lon_ref_path.hard_bounds.back().emplace_back(
         WeightedBound{std::numeric_limits<double>::min(), destination_s, -1.0,
-                      BoundInfo{0, "destination"}});
+                      BoundInfo{0, BoundType::DESTINATION}});
     // adjust s_limit by target parking space
     // auto s_bound_upper = get_s_bound_by_target_parking_space();
     // lon_ref_path.hard_bounds.back().emplace_back(
@@ -321,7 +338,7 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
           auto &bounds = lon_ref_path.hard_bounds[i];
           for (auto &lon_bound : position_decision.lon_bounds) {
             bounds.push_back(lon_bound);
-            bounds.back().bound_info.type = "obstacle";
+            bounds.back().bound_info.type = BoundType::AGENT;
             bounds.back().bound_info.id = obstacle_decision.second.id_;
           }
 
@@ -351,15 +368,20 @@ bool GeneralLongitudinalDecider::Execute(planning::framework::Frame *frame) {
     if (i < static_cast<int>(lon_ref_path.t_list.size()) - 1) {
       s_ref = std::min(s_ref, lon_ref_path.s_refs[i + 1].first);
     }
-    for (auto &bound : lon_ref_path.hard_bounds[i]) {
-      if (bound.weight < 0) {
-        s_ref = std::min(s_ref, bound.upper);
+    if (!gap_selector_result_.lon_decider_ignore) {
+      for (auto &bound : lon_ref_path.hard_bounds[i]) {
+        if (bound.weight < 0) {
+          s_ref = std::min(s_ref, bound.upper);
+        }
       }
     }
     // use lead_bound
-    for (auto &lead_bound : lon_ref_path.lon_lead_bounds[i]) {
-      s_ref = std::min(s_ref, lead_bound.s_lead);
+    if (!gap_selector_result_.lon_decider_ignore) {
+      for (auto &lead_bound : lon_ref_path.lon_lead_bounds[i]) {
+        s_ref = std::min(s_ref, lead_bound.s_lead);
+      }
     }
+
     s_ref = std::max(s_ref, 0.0);
     LOG_DEBUG("s_ref: = %f, index = %d \n", s_ref, i);
   }
@@ -759,7 +781,8 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decisions(
   double construct_longitudinal_obstacle_decision_time_start =
       IflyTime::Now_ms();
   for (auto &obstacle : reference_path_ptr_->get_obstacles()) {
-    if (check_longitudinal_ignore_obstacle(obstacle)) {
+    if (check_longitudinal_ignore_obstacle(obstacle) ||
+        gap_selector_result_.lon_decider_ignore == true) {
       continue;
     }
     auto obstacle_id = obstacle->id();
@@ -1192,7 +1215,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
 
     pos_decision.lon_bounds.emplace_back(WeightedBound{
         std::numeric_limits<double>::min(), yield_upper - distance_safe, -1,
-        BoundInfo{obstacle->id(), "obstacle"}});
+        BoundInfo{obstacle->id(), BoundType::AGENT}});
 
     for (size_t i = 0; i < traj_points.size(); ++i) {
       auto t_traj = traj_points[i].t;
@@ -1512,7 +1535,8 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
   lon_decision_information.set_nearby_obstacle(false);
   // ObstacleInformation CIPV_object;
   // ObstacleInformation cutin_object;
-  if (!frenet_obstacles_map.empty()) {
+  if (!frenet_obstacles_map.empty() &&
+      !gap_selector_result_.lon_decider_ignore) {
     const double ego_l_start =
         reference_path_ptr_->get_frenet_ego_state().boundary().l_start;
     const double ego_l_end =
@@ -2059,7 +2083,8 @@ void GeneralLongitudinalDecider::GenerateLonRefPathPB(
       bound_pb->set_upper(bound.upper);
       bound_pb->set_weight(bound.weight);
       bound_pb->mutable_bound_info()->set_id(bound.bound_info.id);
-      bound_pb->mutable_bound_info()->set_type(bound.bound_info.type);
+      bound_pb->mutable_bound_info()->set_type(
+          BoundType2String(bound.bound_info.type));
     }
   }
   // 5.update lon_lead_bounds

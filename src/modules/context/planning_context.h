@@ -32,6 +32,13 @@ struct StatusInfo {
   double last_vel_limit = 100.0;
 };
 
+struct GapSelectorResult {
+  bool gap_selector_trustworthy = false;
+  int lc_direction = 0;  // 0 -- no change, 1-- left change, 2--right change
+  bool lat_decider_ignore = 0;
+  bool lon_decider_ignore = 0;
+};
+
 class StartStopEnable;
 
 class PlanningContext {
@@ -130,6 +137,14 @@ class PlanningContext {
   VisionLongitudinalBehaviorPlannerOutput &
   mutable_vision_longitudinal_behavior_planner_output() {
     return vision_longitudinal_behavior_planner_output_;
+  }
+
+  const LateralOffsetDeciderOutput &lateral_offset_decider_output() const {
+    return lateral_offset_decider_output_;
+  }
+
+  LateralOffsetDeciderOutput &mutable_lateral_offset_decider_output() {
+    return lateral_offset_decider_output_;
   }
 
   const LatDeciderOutput &lat_decider_output() const {
@@ -236,6 +251,13 @@ class PlanningContext {
     scenario_state_machine_ptr_ = scenario_state_machine;
   }
 
+  GapSelectorResult &mutable_gap_selector_result() {
+    return gap_selector_result_;
+  };
+  const GapSelectorResult &gap_selector_result() const {
+    return gap_selector_result_;
+  };
+
   const StatusInfo &status_info() { return status_info_; }
 
   StatusInfo &mutable_status_info() { return status_info_; }
@@ -292,10 +314,12 @@ class PlanningContext {
   SpeedLimit speed_limit_;
   LatBehaviorInfo lat_behavior_info_;
   LatBehaviorStateMachineOutput lat_behavior_state_machine_output_;
+  LateralOffsetDeciderOutput lateral_offset_decider_output_;
   LatDeciderOutput lat_decider_output_;
   LateralBehaviorPlannerOutput lateral_behavior_planner_output_;
   VisionLongitudinalBehaviorPlannerOutput
       vision_longitudinal_behavior_planner_output_;
+  GapSelectorResult gap_selector_result_;
   std::shared_ptr<ScenarioManager> scenario_manager_ptr_;
   std::shared_ptr<ObjectSelector> object_selector_ptr_;
   std::shared_ptr<ScenarioStateMachine> scenario_state_machine_ptr_;

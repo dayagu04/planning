@@ -9,13 +9,13 @@ sys.path.append('../../../')
 sys.path.append('python_proto')
 
 from jupyter_pybind import optimizer_apa_simulation_py
-from python_proto import planning_plan_pb2, planning_debug_info_pb2
+from python_proto import planning_plan_pb2, lateral_path_optimizer_pb2
 from lib.load_local_view_parking import *
 
 
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/planning-3be4f612/test_0.00000'
+bag_path = '/data_cold/abu_zone/autoparse/jac_s811_96tj0/parking/20240320/20240320-15-04-51/park_in_data_collection_JAC_S811_96TJ0_MANUAL_ALL_2024-03-20-15-04-51_no_camera.record'
 frame_dt = 0.1  # sec
 parking_flag = True
 
@@ -115,7 +115,7 @@ fig3.legend.click_policy = 'hide'
 
 hover4 = HoverTool(renderers=[f4], tooltips=[('s', '@s_vec_origin_x'), ('ref x', '@x_vec_origin'), ('tune x', '@x_vec_tune')], mode='vline')
 hover5 = HoverTool(renderers=[f5], tooltips=[('s', '@s_vec_origin_y'), ('ref y', '@y_vec_origin'), ('tune y', '@y_vec_tune')], mode='vline')
-hover6 = HoverTool(renderers=[f6], tooltips=[('s', '@s_vec_origin_u'), ('u','@s_vec_origin_u'), ('u_max', '@u_vec_max'), ('u_min', '@u_vec_min')], mode='vline')
+hover6 = HoverTool(renderers=[f6], tooltips=[('s', '@s_vec_origin_u'), ('u','@u_vec_tune'), ('u_max', '@u_vec_max'), ('u_min', '@u_vec_min')], mode='vline')
 fig4.add_tools(hover4)
 fig5.add_tools(hover5)
 fig6.add_tools(hover6)
@@ -136,14 +136,15 @@ class LocalViewSlider:
         self.select_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='18%'), description="select_id", min=0, max=20, value=0, step=1)
         self.force_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout( width='15%'), description="force_plan", min=0, max=1, value=0, step=1)
         self.is_path_optimization_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout( width='15%'), description="path_optimization", min=0, max=1, value=0, step=1)
+        self.is_cilqr_optimization_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout( width='15%'), description="cilqr_optimization", min=0, max=1, value=0, step=1)
         self.is_reset_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout( width='15%'), description="is_reset", min=0, max=1, value=0, step=1)
         self.is_complete_path_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout( width='15%'), description="is_complete_path", min=0, max=1, value=0, step=1)
         self.sample_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout( width='25%'), description="sample_ds", min=0.02, max=2.0, value=0.02, step=0.02)
 
         self.q_ref_xy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout( width='50%'), description="q_ref_xy", min=0.0, max=20000.0, value=100.0, step=0.1)
         self.q_ref_theta_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout( width='50%'), description="q_ref_theta", min=0.0, max=100000.0, value=100.0, step=0.1)
-        self.q_terminal_xy = ipywidgets.FloatSlider(layout=ipywidgets.Layout( width='50%'), description="q_terminal_xy", min=0.0, max=100000.0, value=1000.0, step=0.01)
-        self.q_terminal_theta = ipywidgets.FloatSlider(layout=ipywidgets.Layout( width='50%'), description="q_terminal_theta", min=0.0, max=100000.0, value=5000.0, step=0.01)
+        self.q_terminal_xy = ipywidgets.FloatSlider(layout=ipywidgets.Layout( width='50%'), description="q_terminal_xy", min=0.0, max=100000.0, value=9000.0, step=0.01)
+        self.q_terminal_theta = ipywidgets.FloatSlider(layout=ipywidgets.Layout( width='50%'), description="q_terminal_theta", min=0.0, max=100000.0, value=9000.0, step=0.01)
         self.q_k_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description="q_k", min=0.0, max=200.0, value=10.0, step=0.1)
         self.q_u_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout( width='50%'), description="q_u", min=0.0, max=200.0, value=10.0, step=0.1)
         self.q_k_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description="q_k_bound", min=0.0, max=2000.0, value=100.0, step=0.1)
@@ -158,6 +159,7 @@ class LocalViewSlider:
                             select_id=self.select_id_slider,
                             force_plan=self.force_plan_slider,
                             is_path_optimization=self.is_path_optimization_slider,
+                            is_cilqr_optimization = self.is_cilqr_optimization_slider,
                             is_reset=self.is_reset_slider,
                             is_complete_path=self.is_complete_path_slider,
                             sample_ds=self.sample_ds_slider,
@@ -176,7 +178,7 @@ class LocalViewSlider:
 # sliders callback
 
 
-def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_reset, is_complete_path, sample_ds,
+def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_cilqr_optimization, is_reset, is_complete_path, sample_ds,
                     q_ref_xy, q_ref_theta, q_terminal_xy, q_terminal_theta, q_k, q_u, q_k_bound, q_u_bound,
                     lon_pos_dif, lat_pos_dif, heading_dif):
     kwargs = locals()
@@ -249,7 +251,7 @@ def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_re
                                                            loc_msg.SerializeToString(),
                                                            vs_msg.SerializeToString(),
                                                            wave_msg.SerializeToString(),
-                                                           select_id, force_plan, is_path_optimization, is_reset, is_complete_path, sample_ds,
+                                                           select_id, force_plan, is_path_optimization, is_cilqr_optimization, is_reset, is_complete_path, sample_ds,
                                                            q_ref_xy, q_ref_theta, q_terminal_xy, q_terminal_theta, q_k, q_u, q_k_bound, q_u_bound)
 
     data_planning_tune.data = {'plan_path_x': [],
@@ -300,85 +302,96 @@ def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_re
         print("tuned_gear_command = ", tuned_planning_output.gear_command)
 
         # ilqr path
-        planning_debug = planning_debug_info_pb2.PlanningDebugInfo()
-        planning_debug_tmp = optimizer_apa_simulation_py.GetPlanningDebugInfo()
-        planning_debug.ParseFromString(planning_debug_tmp)
+        output_planning_debug = lateral_path_optimizer_pb2.LateralPathOptimizerOutput()
+        output_planning_debug_tmp = optimizer_apa_simulation_py.GetPlanningOutputDebugInfo()
+        output_planning_debug.ParseFromString(output_planning_debug_tmp)
 
-        x_vec_origin = []
-        y_vec_origin = []
-        theta_vec_origin = []
-        x_vec_tune = []
-        y_vec_tune = []
-        theta_vec_tune = []
-        k_vec_tune = []
-        u_vec_tune = []
-        s_vec_tune = []
-        k_max_origin = []
-        k_min_origin = []
-        u_max_origin = []
-        u_min_origin = []
+        input_planning_debug = lateral_path_optimizer_pb2.LateralPathOptimizerInput()
+        input_planning_debug_tmp = optimizer_apa_simulation_py.GetPlanningInputDebugInfo()
+        input_planning_debug.ParseFromString(input_planning_debug_tmp)
 
-        for i in range(len(planning_debug.lateral_path_optimizer_output.s_vec)):
-            x_vec_tune.append(
-                planning_debug.lateral_path_optimizer_output.x_vec[i])
-            y_vec_tune.append(
-                planning_debug.lateral_path_optimizer_output.y_vec[i])
-            theta_vec_tune.append(
-                planning_debug.lateral_path_optimizer_output.theta_vec[i] * 57.3)
-            k_vec_tune.append(
-                planning_debug.lateral_path_optimizer_output.k_vec[i])
-            u_vec_tune.append(
-                planning_debug.lateral_path_optimizer_output.u_vec[i])
-            s_vec_tune.append(
-                planning_debug.lateral_path_optimizer_output.s_vec[i])
+        # print(output_planning_debug)
+        # print(input_planning_debug)
+        # print("terminal pos error = ", planning_debug.terminal_pos_error)
+        # print("terminal heading error = ", planning_debug.terminal_heading_error)
+        try:
+            x_vec_origin = []
+            y_vec_origin = []
+            theta_vec_origin = []
+            x_vec_tune = []
+            y_vec_tune = []
+            theta_vec_tune = []
+            k_vec_tune = []
+            u_vec_tune = []
+            s_vec_tune = []
+            k_max_origin = []
+            k_min_origin = []
+            u_max_origin = []
+            u_min_origin = []
 
-            k_max_origin.append(
-                planning_debug.lateral_path_optimizer_input.k_max_vec[i])
-            k_min_origin.append(
-                planning_debug.lateral_path_optimizer_input.k_min_vec[i])
-            u_max_origin.append(
-                planning_debug.lateral_path_optimizer_input.u_max_vec[i])
-            u_min_origin.append(
-                planning_debug.lateral_path_optimizer_input.u_min_vec[i])
+            for i in range(len(output_planning_debug.s_vec)):
+                x_vec_tune.append(
+                    output_planning_debug.x_vec[i])
+                y_vec_tune.append(
+                    output_planning_debug.y_vec[i])
+                theta_vec_tune.append(
+                    output_planning_debug.theta_vec[i] * 57.3)
+                k_vec_tune.append(
+                    output_planning_debug.k_vec[i])
+                u_vec_tune.append(
+                    output_planning_debug.u_vec[i])
+                s_vec_tune.append(
+                    output_planning_debug.s_vec[i])
 
-            x_vec_origin.append(
-                planning_debug.lateral_path_optimizer_input.ref_x_vec[i])
-            y_vec_origin.append(
-                planning_debug.lateral_path_optimizer_input.ref_y_vec[i])
-            theta_vec_origin.append(
-                planning_debug.lateral_path_optimizer_input.ref_theta_vec[i] * 57.3)
+                k_max_origin.append(
+                    input_planning_debug.k_max_vec[i])
+                k_min_origin.append(
+                    input_planning_debug.k_min_vec[i])
+                u_max_origin.append(
+                    input_planning_debug.u_max_vec[i])
+                u_min_origin.append(
+                    input_planning_debug.u_min_vec[i])
 
-        data_x.data.update({
-            'x_vec_origin': x_vec_origin,
-            'x_vec_tune': x_vec_tune,
-            's_vec_origin_x': s_vec_tune
-        })
+                x_vec_origin.append(
+                    input_planning_debug.ref_x_vec[i])
+                y_vec_origin.append(
+                    input_planning_debug.ref_y_vec[i])
+                theta_vec_origin.append(
+                    input_planning_debug.ref_theta_vec[i] * 57.3)
 
-        data_y.data.update({
-            'y_vec_origin': y_vec_origin,
-            'y_vec_tune': y_vec_tune,
-            's_vec_origin_y': s_vec_tune
-        })
+            data_x.data.update({
+                'x_vec_origin': x_vec_origin,
+                'x_vec_tune': x_vec_tune,
+                's_vec_origin_x': s_vec_tune
+            })
 
-        data_theta.data.update({
-            'theta_vec_origin': theta_vec_origin,
-            'theta_vec_tune': theta_vec_tune,
-            's_vec_origin_theta': s_vec_tune
-        })
+            data_y.data.update({
+                'y_vec_origin': y_vec_origin,
+                'y_vec_tune': y_vec_tune,
+                's_vec_origin_y': s_vec_tune
+            })
 
-        data_k.data.update({
-            'k_vec_tune': k_vec_tune,
-            's_vec_origin_k': s_vec_tune,
-            'k_vec_max': k_max_origin,
-            'k_vec_min': k_min_origin
-        })
+            data_theta.data.update({
+                'theta_vec_origin': theta_vec_origin,
+                'theta_vec_tune': theta_vec_tune,
+                's_vec_origin_theta': s_vec_tune
+            })
 
-        data_u.data.update({
-            'u_vec_tune': u_vec_tune,
-            'u_vec_max': u_max_origin,
-            'u_vec_min': u_min_origin,
-            's_vec_origin_u': s_vec_tune
-        })
+            data_k.data.update({
+                'k_vec_tune': k_vec_tune,
+                's_vec_origin_k': s_vec_tune,
+                'k_vec_max': k_max_origin,
+                'k_vec_min': k_min_origin
+            })
+
+            data_u.data.update({
+                'u_vec_tune': u_vec_tune,
+                'u_vec_max': u_max_origin,
+                'u_vec_min': u_min_origin,
+                's_vec_origin_u': s_vec_tune
+            })
+        except:
+            pass
 
     push_notebook()
 

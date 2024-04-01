@@ -73,12 +73,18 @@ class GeneralPlanning {
   void FillPlanningTrajectory(
       double start_time, PlanningOutput::PlanningOutput *const planning_output);
 
+  double ComputeBoundOfReferenceIntercept();
+
   void GenerateStopTrajectory(
       double start_time, PlanningOutput::PlanningOutput *const planning_output);
 
   void FillPlanningHmiInfo(
       double start_timestamp,
       PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info);
+
+  void FillPlanningRequest(
+      PlanningOutput::PlanningRequest::RequestLevel request,
+      PlanningOutput::PlanningOutput *const planning_output);
 
   void ClearParkingInfo(PlanningOutput::PlanningOutput *const planning_output);
 
@@ -100,6 +106,7 @@ class GeneralPlanning {
   bool last_can_run_{false};
   int hdmap_valid_count_;
   uint64_t frame_num_ = 0;
+  uint64_t failure_counter_ = 0;
 
  protected:
   enum FeedType {

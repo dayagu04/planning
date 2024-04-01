@@ -1,6 +1,8 @@
 #include "general_planning.h"
 
+#include <algorithm>
 #include <cmath>
+#include <complex>
 
 #include "apa_planner/src/apa_utils.h"
 #include "basic_types.pb.h"
@@ -192,14 +194,22 @@ bool GeneralPlanning::RunOnce(
       planning_status->planning_result.next_timestamp;
 
   // when planning succeed, update the planning_output
+  const uint64_t failure_counter_thrshld = config_.failure_counter_thrshld;
   if (planning_status->planning_success) {
     FillPlanningTrajectory(start_timestamp, planning_output);
     FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
     if (session_.is_hpp_scene()) {
       PrepareForApa();
     }
+    failure_counter_ = 0;
     std::cout << "The RunOnce is successed !!!!:" << std::endl;
   } else {
+    failure_counter_++;
+    // counter 2s
+    if (failure_counter_ >= failure_counter_thrshld) {
+      FillPlanningRequest(PlanningOutput::PlanningRequest::MIDDLE,
+                          planning_output);
+    }
     LOG_DEBUG("RunOnce failed !!!! \n");
   }
 
@@ -216,6 +226,19 @@ bool GeneralPlanning::RunOnce(
 
 void GeneralPlanning::FillPlanningTrajectory(
     double start_time, PlanningOutput::PlanningOutput *const planning_output) {
+  // 获取LDP&&ELK功能干预状态
+  auto lkas_info =
+      session_.mutable_planning_context()->lane_keep_assit_function();
+  bool lkas_intervention_flag;
+  if ((lkas_info->get_ldp_left_intervention_flag_info() == true) ||
+      (lkas_info->get_ldp_right_intervention_flag_info() == true) ||
+      (lkas_info->get_elk_left_intervention_flag_info() == true) ||
+      (lkas_info->get_elk_right_intervention_flag_info() == true)) {
+    lkas_intervention_flag = true;
+  } else {
+    lkas_intervention_flag = false;
+  }
+
   // 获取计算结果
   const auto &lateral_output =
       session_.planning_context().lateral_behavior_planner_output();
@@ -239,7 +262,11 @@ void GeneralPlanning::FillPlanningTrajectory(
   // 2.Trajectory
   auto trajectory = planning_output->mutable_trajectory();
   // set trajectory false when dbw is false
-  trajectory->set_available(active);
+  if (lkas_intervention_flag) {
+    trajectory->set_available(true);
+  } else {
+    trajectory->set_available(active);
+  }
 
   // 根据定位有效性决定实时、长时
   auto location_valid = session_.environmental_model().location_valid();
@@ -259,7 +286,7 @@ void GeneralPlanning::FillPlanningTrajectory(
       path_point->set_v(planning_result.traj_points[i].v);
       path_point->set_a(planning_result.traj_points[i].a);
       path_point->set_distance(planning_result.traj_points[i].s);
-      path_point->set_jerk(0.0);  // TBD
+      path_point->set_jerk(planning_result.traj_points[i].jerk);
     }
     // 设置参考线为default
     auto target_ref = trajectory->mutable_target_reference();
@@ -300,37 +327,37 @@ void GeneralPlanning::FillPlanningTrajectory(
     // clip the polynomial C_3
     const double lat_offset_rate = config_.d_poly_lat_offset_rate;
     const double max_lat_offset = config_.d_poly_max_lat_offset;
-    const double presee_x_dist = 50.;
-    static double limited_polynomial_3 = 0.0;
     const auto &d_polynomial = lateral_output.d_poly;
-
-    bool enable_presee = virtual_lane_manager->dis_to_ramp() < 1000. &&
-                         lateral_output.lc_status == "right_lane_change";
-
-    double presee_y_dist =
-        enable_presee ? calc_poly1d(d_polynomial, presee_x_dist) : 0.;
-    LOG_DEBUG("presee_y_dist: [%f]: \n", presee_y_dist);
+    double lat_offset_bound = max_lat_offset;
+    static double limited_polynomial_3 = 0.0;
 
     if (d_polynomial.size() == 4) {
-      if (std::fabs(d_polynomial[3] + presee_y_dist) > max_lat_offset) {
-        limited_polynomial_3 += planning_math::Clamp(
-            d_polynomial[3], -lat_offset_rate, lat_offset_rate);
-      } else {
-        if ((lateral_output.lc_status == "left_lane_change_back" ||
-             lateral_output.lc_status == "right_lane_change_back") &&
-            std::fabs(d_polynomial[3]) >
-                config_.lc_back_consider_smooth_dpoly_thr) {
-          limited_polynomial_3 =
-              planning_math::Clamp(d_polynomial[3], -config_.lc_back_smooth_thr,
-                                   config_.lc_back_smooth_thr);
+      if (lateral_output.lc_status == "left_lane_change" ||
+          lateral_output.lc_status == "right_lane_change") {
+        lat_offset_bound = ComputeBoundOfReferenceIntercept();
+
+        if (std::fabs(d_polynomial[3]) > lat_offset_bound) {
+          limited_polynomial_3 += planning_math::Clamp(
+              d_polynomial[3], -lat_offset_rate, lat_offset_rate);
         } else {
           limited_polynomial_3 = planning_math::Clamp(
-              d_polynomial[3], -max_lat_offset, max_lat_offset);
+              d_polynomial[3], -lat_offset_bound, lat_offset_bound);
         }
+      } else if ((lateral_output.lc_status == "left_lane_change_back" ||
+                  lateral_output.lc_status == "right_lane_change_back") &&
+                 std::fabs(d_polynomial[3]) >
+                     config_.lc_back_consider_smooth_dpoly_thr) {
+        limited_polynomial_3 =
+            planning_math::Clamp(d_polynomial[3], -config_.lc_back_smooth_thr,
+                                 config_.lc_back_smooth_thr);
+      } else {
+        limited_polynomial_3 = planning_math::Clamp(
+            d_polynomial[3], -lat_offset_bound, lat_offset_bound);
       }
       limited_polynomial_3 = planning_math::Clamp(
-          limited_polynomial_3, -max_lat_offset, max_lat_offset);
+          limited_polynomial_3, -lat_offset_bound, lat_offset_bound);
     }
+
     std::cout << "smooth dpoly enable_none_smooth: "
               << config_.enable_none_smooth
               << "   config_.none_consider_slope_thr:   "
@@ -340,10 +367,25 @@ void GeneralPlanning::FillPlanningTrajectory(
               lateral_output.d_poly[0], lateral_output.d_poly[1],
               lateral_output.d_poly[2], lateral_output.d_poly[3]);
     std::vector<double> polynomial_limited(4);
-    polynomial_limited[0] = d_polynomial[0];
-    polynomial_limited[1] = d_polynomial[1];
-    polynomial_limited[2] = d_polynomial[2];
-    polynomial_limited[3] = limited_polynomial_3;
+
+    const auto &current_lane = session_.environmental_model()
+                                   .get_virtual_lane_manager()
+                                   ->get_current_lane();
+    if ((lkas_intervention_flag == true) && (current_lane != nullptr)) {
+      polynomial_limited[0] =
+          current_lane->get_center_line().poly_coefficient_car(3);
+      polynomial_limited[1] =
+          current_lane->get_center_line().poly_coefficient_car(2);
+      polynomial_limited[2] =
+          current_lane->get_center_line().poly_coefficient_car(1);
+      polynomial_limited[3] =
+          current_lane->get_center_line().poly_coefficient_car(0);
+    } else {
+      polynomial_limited[0] = d_polynomial[0];
+      polynomial_limited[1] = d_polynomial[1];
+      polynomial_limited[2] = d_polynomial[2];
+      polynomial_limited[3] = limited_polynomial_3;
+    }
     LOG_DEBUG("limited_polynomial C0: [%f] C1: [%f] C2: [%f] C3: [%f] \n",
               polynomial_limited[0], polynomial_limited[1],
               polynomial_limited[2], polynomial_limited[3]);
@@ -594,6 +636,14 @@ void GeneralPlanning::FillPlanningHmiInfo(
   }
 }
 
+void GeneralPlanning::FillPlanningRequest(
+    PlanningOutput::PlanningRequest::RequestLevel request,
+    PlanningOutput::PlanningOutput *const planning_output) {
+  planning_output->mutable_planning_request()->set_take_over_req_level(request);
+  planning_output->mutable_planning_request()->set_request_reason(
+      PlanningOutput::PlanningRequest::NO_REASON);
+}
+
 void GeneralPlanning::ClearParkingInfo(
     PlanningOutput::PlanningOutput *const planning_output) {
   session_.mutable_planning_output_context()
@@ -674,6 +724,72 @@ bool GeneralPlanning::IsValidHppState(
          current_state == FunctionalState::HPP_IN_MEMORY_READY ||
          current_state == FunctionalState::HPP_IN_MEMORY_CRUISE ||
          current_state == FunctionalState::HPP_IN_SECURE;
+}
+
+double GeneralPlanning::ComputeBoundOfReferenceIntercept() {
+  int origin_lane_virtual_id = session_.planning_context()
+                                   .lat_behavior_state_machine_output()
+                                   .origin_lane_virtual_id;
+  int target_lane_virtual_id = session_.planning_context()
+                                   .lat_behavior_state_machine_output()
+                                   .target_lane_virtual_id;
+  auto target_reference =
+      session_.environmental_model()
+          .get_reference_path_manager()
+          ->get_reference_path_by_lane(target_lane_virtual_id, false);
+  auto origin_reference =
+      session_.environmental_model()
+          .get_reference_path_manager()
+          ->get_reference_path_by_lane(origin_lane_virtual_id, false);
+  const double max_lat_offset = config_.d_poly_max_lat_offset;
+  const double min_lat_offset = config_.d_poly_min_lat_offset;
+  double intercept_cart_point = 0.0;
+  double intercept_presee_cart_point = 0.0;
+  double presee_dist = 25;
+  double reference_intercept_bound = max_lat_offset;
+  LOG_DEBUG("start compute bound of reference intercept!! \n");
+
+  if (origin_reference != nullptr && target_reference != nullptr) {
+    Point2D frenet_of_cart_point_in_target;
+    Point2D cart_point_in_target;
+    Point2D presee_cart_point_in_target;
+    Point2D frenet_of_presee_cart_point_in_target;
+
+    if (target_reference->get_frenet_coord()->SLToXY(
+            Point2D(target_reference->get_frenet_ego_state().s(), 0),
+            cart_point_in_target)) {
+      if (origin_reference->get_frenet_coord()->XYToSL(
+              cart_point_in_target, frenet_of_cart_point_in_target)) {
+        intercept_cart_point = frenet_of_cart_point_in_target.y;
+      }
+    }
+
+    double s_end =
+        min(target_reference->get_frenet_coord()->Length(),
+            target_reference->get_frenet_ego_state().s() + presee_dist);
+    if (target_reference->get_frenet_coord()->SLToXY(
+            Point2D(s_end, 0), presee_cart_point_in_target)) {
+      if (origin_reference->get_frenet_coord()->XYToSL(
+              presee_cart_point_in_target,
+              frenet_of_presee_cart_point_in_target)) {
+        intercept_presee_cart_point = frenet_of_presee_cart_point_in_target.y;
+      }
+    }
+  }
+  std::cout << "intercept_presee_cart_point: " << intercept_presee_cart_point
+            << "intercept_cart_point: " << intercept_cart_point << std::endl;
+
+  if (std::fabs(intercept_presee_cart_point) >
+      std::fabs(intercept_cart_point)) {
+    reference_intercept_bound =
+        max_lat_offset -
+        std::fabs(intercept_presee_cart_point - intercept_cart_point);
+    reference_intercept_bound = planning_math::Clamp(
+        reference_intercept_bound, min_lat_offset, max_lat_offset);
+    LOG_DEBUG("lat_offset_bound: [%f]: \n", reference_intercept_bound);
+  }
+
+  return reference_intercept_bound;
 }
 
 }  // namespace planning

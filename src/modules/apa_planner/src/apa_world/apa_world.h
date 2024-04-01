@@ -57,6 +57,8 @@ class ApaWorld {
     uint8_t slot_type = Common::PARKING_SLOT_TYPE_VERTICAL;
     common::SlotInfo target_managed_slot;
 
+    bool is_slot_type_fixed = false;
+
     void Reset() {
       planner_type = NONE_PLANNER;
       general_apa_function = NONE_FUNCTION;
@@ -68,6 +70,7 @@ class ApaWorld {
       car_static_timer_by_vel = 0.0;
       static_flag = false;
       current_state = FuncStateMachine::STANDBY;
+      is_slot_type_fixed = false;
     }
   };
 
@@ -76,7 +79,7 @@ class ApaWorld {
 
   void Init();
   void Reset();
-  const bool Update(const LocalView* local_view_ptr);
+  const bool Update(const std::shared_ptr<LocalView> local_view_ptr);
   const bool Update();
   std::shared_ptr<Measurements> GetMeasurementsPtr() { return measures_ptr_; }
 
@@ -92,7 +95,7 @@ class ApaWorld {
     return collision_detector_ptr_;
   }
 
-  const LocalView* GetLocalViewPtr() { return local_view_ptr_; }
+  const std::shared_ptr<LocalView> GetLocalViewPtr() { return local_view_ptr_; }
 
  private:
   void Preprocess();
@@ -109,7 +112,7 @@ class ApaWorld {
   std::shared_ptr<UssObstacleAvoidance> uss_obstacle_avoider_ptr_;
   std::shared_ptr<CollisionDetector> collision_detector_ptr_;
 
-  const LocalView* local_view_ptr_ = nullptr;
+  std::shared_ptr<LocalView> local_view_ptr_ = nullptr;
 };
 
 }  // namespace apa_planner

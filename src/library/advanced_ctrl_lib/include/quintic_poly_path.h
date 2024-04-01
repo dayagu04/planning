@@ -10,6 +10,15 @@
 namespace pnc {
 
 namespace spline {
+struct QuinticPolyInput {
+  Eigen::Vector2d x0;
+  Eigen::Vector2d xT;
+  Eigen::Vector2d dx0;
+  Eigen::Vector2d dxT;
+  Eigen::Vector2d ddx0;
+  Eigen::Vector2d ddxT;
+  double T;
+};
 
 class QuinticPolynominalPath {
  public:
@@ -17,7 +26,7 @@ class QuinticPolynominalPath {
                  const Eigen::Vector2d &dx0, const Eigen::Vector2d &dxT,
                  const Eigen::Vector2d &ddx0, const Eigen::Vector2d &ddxT,
                  const double T);
-
+  void SetPoints(const QuinticPolyInput &quintic_poly_input);
   Eigen::Vector2d operator()(double t) const;
   double heading(double t) const;
 

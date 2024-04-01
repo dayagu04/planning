@@ -27,17 +27,63 @@ enum class LatDeciderLaneChangeInfo {
   RIGHT_LANE_CHANGE
 };
 
+struct ObstacleBorderInfo {
+  int obstacle_id;
+  double obstacle_border;
+};
+
 struct Bound {
   double lower{std::numeric_limits<double>::min()};
   double upper{std::numeric_limits<double>::max()};
 };
 using Bounds = std::vector<Bound>;
 
-struct BoundInfo {
-  int id = 0;
-  std::string type = "default";
+enum class BoundType {
+  DEFAULT,
+  LANE,
+  AGENT,
+  ROAD_BORDER,
+  EGO_POSITION,
+
+  GROUNDLINE,
+  PARKING_SPACE,
+
+  TRAFFIC_LIGHT,
+  DESTINATION,
+
 };
 
+struct BoundInfo {
+  int id = 0;
+  BoundType type = BoundType::DEFAULT;
+};
+
+static std::string BoundType2String(BoundType in) {
+  switch (in) {
+    case BoundType::DEFAULT:
+      return "TRAFFIC_LIGHT";
+    case BoundType::LANE:
+      return "LANE";
+    case BoundType::AGENT:
+      return "AGENT";
+    case BoundType::ROAD_BORDER:
+      return "ROAD_BORDER";
+    case BoundType::EGO_POSITION:
+      return "EGO_POSITION";
+
+    case BoundType::GROUNDLINE:
+      return "GROUNDLINE";
+    case BoundType::PARKING_SPACE:
+      return "PARKING_SPACE";
+
+    case BoundType::TRAFFIC_LIGHT:
+      return "TRAFFIC_LIGHT";
+    case BoundType::DESTINATION:
+      return "LANE_BORDER";
+    default:
+      return "UNKNOWN";
+  }
+}
 struct WeightedBound {
   double lower;
   double upper;

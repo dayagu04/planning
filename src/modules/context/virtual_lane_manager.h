@@ -169,6 +169,10 @@ class VirtualLaneManager {
   void CalculateDistanceToFirstRoadSplit(planning::framework::Session *session);
   void CalculateDistanceToFirstRoadMerge(planning::framework::Session *session);
 
+  void construct_reference_line_msg(
+      const std::vector<double> &current_lane_virtual_poly,
+      FusionRoad::ReferenceLineMsg &current_lane_virtual);
+
  private:
   LaneChangeStatus is_lane_change();
   void update_virtual_id();
@@ -228,6 +232,8 @@ class VirtualLaneManager {
   bool is_leaving_ramp_ = false;
   bool is_on_ramp_ = false;
   ad_common::hdmap::LaneInfoConstPtr nearest_lane_;
+  bool in_intersection_ = false;
+  FusionRoad::ReferenceLineMsg intersection_lane_generated_;
   double nearest_s_ = 0.0;
   // HPP
   bool is_on_hpp_lane_ = false;

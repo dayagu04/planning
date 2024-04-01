@@ -1,6 +1,7 @@
 #include "utils/lateral_utils.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include "config/vehicle_param_tmp.h"
 #include "define/geometry.h"

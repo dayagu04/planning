@@ -1,6 +1,7 @@
 {
   "enable_raw_ego_prediction": false,
   "planner_type": 0,
+  "failure_counter_thrshld": 20,
   "enable_dagger": false,
   "pipeline_version": "v1",
   "pipeline_version_vision_only": "v1",
@@ -100,6 +101,7 @@
   "enable_hnp_functions": true,
   "d_poly_lat_offset_rate": 0.12,
   "d_poly_max_lat_offset": 2.0,
+  "d_poly_min_lat_offset": 1.0,
   "lc_t_actuator_delay": 0.02,
   "lc_back_available_thr": 0.8,
   "lc_back_smooth_thr": 0.3,

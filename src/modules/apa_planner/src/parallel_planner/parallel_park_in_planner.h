@@ -17,10 +17,11 @@ class ParallelParInPlanner : public ApaPlannerBase {
   ParallelParInPlanner() = default;
   ParallelParInPlanner(const std::shared_ptr<ApaWorld> &apa_world_ptr) {
     SetApaWorldPtr(apa_world_ptr);
-    Init();
+    const bool c_ilqr_enable = false;
+    Init(c_ilqr_enable);
   }
 
-  virtual void Init() override;
+  virtual void Init(const bool c_ilqr_enable) override;
   virtual void Reset() override;
   virtual void Update() override;
   virtual std::string GetName() override { return typeid(this).name(); }
@@ -29,9 +30,10 @@ class ParallelParInPlanner : public ApaPlannerBase {
   void PlanCore();
   void GenTlane();
   void GenObstacles();
-  void UpdateObstacles();
   void SetParkingStatus(uint8_t status);
+  const bool IsEgoInSlot() const;
   const bool UpdateEgoSlotInfo();
+  void UpdateSlotRealtime();
   const uint8_t PathPlanOnce();
 
   virtual void Log() const override;
@@ -45,6 +47,7 @@ class ParallelParInPlanner : public ApaPlannerBase {
   virtual const double CalRemainDistFromUss() override;
   virtual const bool PostProcessPath() override;
 
+  const bool CheckPaused();
   const bool CheckSegCompleted();
   const uint8_t CheckParkingStatus();
 
@@ -54,6 +57,8 @@ class ParallelParInPlanner : public ApaPlannerBase {
 
   planning::apa_planner::ParallelPathPlanner::Tlane t_lane_;
   ParallelPathPlanner parallel_path_planner_;
+  bool is_slot_reset_ = false;
+  uint8_t plan_count_ = 0;
 
   uint8_t gear_command_ = 0;
 

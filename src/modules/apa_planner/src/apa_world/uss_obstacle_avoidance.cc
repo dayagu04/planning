@@ -274,7 +274,7 @@ void UssObstacleAvoidance::CalRemainDist() {
 
 void UssObstacleAvoidance::Update(
     PlanningOutput::PlanningOutput *const planning_output,
-    const LocalView *local_view_ptr) {
+    const std::shared_ptr<LocalView> local_view_ptr) {
   // update local_view
   local_view_ptr_ = local_view_ptr;
 
@@ -329,6 +329,20 @@ void UssObstacleAvoidance::Update(
   } else {
     remain_dist_info_.is_available = false;
   }
+}
+
+const bool UssObstacleAvoidance::CheckIsDirectlyBehindUss() {
+  if (!remain_dist_info_.is_available) {
+    return false;
+  }
+  for (size_t i = 0; i < apa_param.GetParam().uss_directly_behind_index.size();
+       ++i) {
+    if (remain_dist_info_.uss_index ==
+        apa_param.GetParam().uss_directly_behind_index[i]) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void UssObstacleAvoidance::SetUssRawDist(const double &uss_raw_dist) {

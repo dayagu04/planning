@@ -141,9 +141,9 @@ const CollisionDetector::CollisionResult CollisionDetector::Update(
   result.collision_flag =
       (result.remain_obstacle_dist <= result.remain_car_dist);
 
-  std::cout << "collision_point = " << collision_point.transpose()
-            << "  obstacle_global = " << obstacle_global_vec_[i].transpose()
-            << std::endl;
+  // std::cout << "collision_point = " << collision_point.transpose()
+  //           << "  obstacle_global = " << obstacle_global_vec_[i].transpose()
+  //           << std::endl;
 
   result.collision_point = collision_point;
 
@@ -228,15 +228,15 @@ const CollisionDetector::CollisionResult CollisionDetector::Update(
   result.collision_flag =
       (result.remain_obstacle_dist <= result.remain_car_dist);
 
-  std::cout << "collision_point = " << collision_point.transpose()
-            << "  obstacle_global = " << obstacle_global_vec_[i].transpose()
-            << std::endl;
+  // std::cout << "collision_point = " << collision_point.transpose()
+  //           << "  obstacle_global = " << obstacle_global_vec_[i].transpose()
+  //           << std::endl;
 
   result.remain_dist =
       std::min(result.remain_obstacle_dist, result.remain_car_dist);
 
   result.collision_point = collision_point;
-
+  result.collision_point_global = obstacle_global_vec_[i];
   return result;
 }
 

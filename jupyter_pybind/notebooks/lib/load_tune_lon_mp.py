@@ -33,23 +33,24 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
   pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
 
-  planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
-                            'VisionLonBehavior_v_limit_road', 'VisionLonBehavior_v_limit_in_turns','VisionLonBehavior_v_target', 'RealTime_v_ref', \
-                            'VisionLonBehavior_lead_one_id', 'VisionLonBehavior_lead_one_dis', 'VisionLonBehavior_lead_one_vel', "VisionLonBehavior_v_target_lead_one", \
-                            'VisionLonBehavior_lead_two_id', 'VisionLonBehavior_lead_two_dis', 'VisionLonBehavior_lead_two_vel', "VisionLonBehavior_v_target_lead_two", \
-                            'VisionLonBehavior_temp_lead_one_id', 'VisionLonBehavior_temp_lead_one_dis', 'VisionLonBehavior_temp_lead_one_vel', "VisionLonBehavior_v_target_temp_lead_one", \
-                            'VisionLonBehavior_temp_lead_two_id', 'VisionLonBehavior_temp_lead_two_dis', 'VisionLonBehavior_temp_lead_two_vel', "VisionLonBehavior_v_target_temp_lead_two",\
-                            'VisionLonBehavior_potental_cutin_track_id', 'VisionLonBehavior_potental_cutin_v_target', "VisionLonBehavior_cutin_v_target", \
-                            'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', 'VisionLonBehavior_STANDSTILL', 'VisionLonBehavior_final_v_target', \
-                            'RealTime_v_ref', 'RealTime_v_ego', 'RealTime_gap_v_limit_lc', \
-                            'RealTime_lead_one_id', 'RealTime_lead_one_distance', 'RealTime_lead_one_velocity', 'RealTime_lead_one_desire_vel', \
-                            'RealTime_lead_two_id', 'RealTime_lead_two_distance', 'RealTime_lead_two_velocity', 'RealTime_lead_two_desire_vel', \
-                            'RealTime_temp_lead_one_id', 'RealTime_temp_lead_one_distance', 'RealTime_temp_lead_one_velocity', 'RealTime_temp_lead_one_desire_vel', \
-                            'RealTime_temp_lead_two_id', 'RealTime_temp_lead_two_distance', 'RealTime_temp_lead_two_velocity', 'RealTime_temp_lead_two_desire_vel', \
-                            'RealTime_potential_cutin_track_id', 'RealTime_potential_cutin_v_target',
-                            "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_lead_id", "RealTime_STANDSTILL", \
-                            "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime",
-                            "RealTimeLateralMotionCostTime", "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime"]
+  planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low',\
+                            "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
+                            "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
+                            'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
+                            'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one",\
+                            'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two",\
+                            'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one",\
+                            'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two",\
+                            'potental_cutin_track_id', 'v_target_potental_cutin', "v_target_cutin", "road_radius", \
+                            'stop_start_state', 'v_target_start_stop', 'STANDSTILL', \
+                            "dis_to_ramp", "v_target_ramp",\
+                            'gap_v_limit_lc', \
+                            "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
+                            "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
+                            "SccLonBehaviorCostTime", "SccLonMotionCostTime", \
+                            'RealTimeLateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                            "ego_state_update_cost", "virtual_lane_manager_update_cost", "obstacle_prediction_update_cost", \
+                            "reference_path_manager_update_cost", "lateral_obstacle_update_cost"]
 
   plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
   plan_debug_json_info = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
@@ -260,24 +261,24 @@ def load_lon_global_figure(bag_loader):
 
    ego_velocity_vec = []
    target_velocity_vec = []
-   ref_velocity_vec = []
+   # ref_velocity_vec = []
    leadone_velocity_vec = []
    leadtwo_velocity_vec = []
    t_plan_vec = bag_loader.plan_debug_msg['t']
    t_loc_vec = bag_loader.loc_msg['t']
    for ind in range(len(bag_loader.plan_debug_msg['json'])):
-      target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_v_target'], 2))
-      ref_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_v_ref'], 2))
-      leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_lead_one_vel'], 2))
-      leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_lead_two_vel'], 2))
+      target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target'], 2))
+      # ref_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_v_ref'], 2))
+      leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_vel'], 2))
+      leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_two_vel'], 2))
 
    for ind in range(len(bag_loader.loc_msg['data'])):
       ego_velocity_vec.append(round(bag_loader.loc_msg['data'][ind].pose.linear_velocity_from_wheel, 2))
 
    velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
                                 legend_label='target_velocity', color="green")
-   velocity_fig.line(t_plan_vec, ref_velocity_vec, line_width=1,
-                                legend_label='ref_velocity', color="gray")
+   # velocity_fig.line(t_plan_vec, ref_velocity_vec, line_width=1,
+   #                              legend_label='ref_velocity', color="gray")
    velocity_fig.line(t_loc_vec, ego_velocity_vec, line_width=1,
                                   legend_label='ego_velocity',color="blue")
    velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,

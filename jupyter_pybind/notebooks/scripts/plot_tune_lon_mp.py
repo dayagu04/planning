@@ -11,7 +11,7 @@ from python_proto import common_pb2, longitudinal_motion_planner_pb2
 from jupyter_pybind import longitudinal_motion_planning_py
 
 # bag path and frame dt
-bag_path = "/mnt/scenes/real_time_motion/0906/6_6.00000"
+bag_path = "/data_cold/abu_zone/autoparse/jac_s811_35kw2/trigger/20240305/20240305-09-47-55/data_collection_JAC_S811_35KW2_EVENT_FILTER_2024-03-05-09-47-55.record"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

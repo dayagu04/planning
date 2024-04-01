@@ -12,7 +12,9 @@ TaskPipelineScc::TaskPipelineScc(const EgoPlanningConfigBuilder *config_builder,
     : TaskPipeline(config_builder, frame) {
   name_ = "TaskPipelineScc";
   config_ = config_builder->cast<EgoPlanningTaskPipelineSccConfig>();
-  version_to_tasks_["v1"] = {TaskType::GENERAL_LATERAL_DECIDER,
+  version_to_tasks_["v1"] = {TaskType::LATERAL_OFFSET_DECIDER,
+                             TaskType::GAP_SELECTOR,
+                             TaskType::GENERAL_LATERAL_DECIDER,
                              TaskType::LATERAL_MOTION_PLANNER,
                              TaskType::SCC_LONGITUDINAL_BEHAVIOR_PLANNER,
                              TaskType::SCC_LONGITUDINAL_MOTION_PLANNER,

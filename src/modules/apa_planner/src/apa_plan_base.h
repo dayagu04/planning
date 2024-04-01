@@ -1,6 +1,7 @@
 #ifndef __APA_PLAN_BASE_H__
 #define __APA_PLAN_BASE_H__
 
+#include <bits/stdint-uintn.h>
 #include <sys/types.h>
 
 #include <cstdint>
@@ -15,16 +16,12 @@
 #include "local_view.h"
 #include "planning_plan.pb.h"
 
+// #define PERPENDICULAR_SIMULATION
+
 namespace planning {
 namespace apa_planner {
 class ApaPlannerBase {
  public:
-  enum SlotSide {
-    SLOT_SIDE_INVALID,
-    SLOT_SIDE_LEFT,
-    SLOT_SIDE_RIGHT,
-  };
-
   enum ReplanReason {
     NOT_REPLAN,
     FIRST_PLAN,
@@ -37,12 +34,15 @@ class ApaPlannerBase {
     bool is_complete_path = false;
     bool force_plan = false;
     bool is_path_optimization = false;
+    bool is_cilqr_optimization = false;
+    bool last_cilqr_optimization_enable = false;
     bool is_reset = false;
     double sample_ds = 0.02;
     std::vector<double> target_managed_slot_x_vec;
     std::vector<double> target_managed_slot_y_vec;
     std::vector<double> target_managed_limiter_x_vec;
     std::vector<double> target_managed_limiter_y_vec;
+
     double q_ref_xy = 100.0;
     double q_ref_theta = 100.0;
     double q_terminal_xy = 1000.0;
@@ -130,10 +130,14 @@ class ApaPlannerBase {
       gear_change_count = 0;
       is_replan = false;
       is_replan_first = true;
+      is_replan_second = false;
+      is_replan_dynamic = false;
       is_dynamic_replan_first = true;
+      dynamic_replan_count = 0;
       is_finished = false;
       is_fix_slot = false;
       stuck_time = 0.0;
+      pause_time = 0.0;
       remain_dist = 5.01;
       remain_dist_uss = 5.01;
       spline_success = false;
@@ -151,7 +155,10 @@ class ApaPlannerBase {
 
     bool is_replan = false;
     bool is_replan_first = true;
+    bool is_replan_second = false;
+    bool is_replan_dynamic = false;
     bool is_dynamic_replan_first = true;
+    uint8_t dynamic_replan_count = 0;
     uint8_t replan_reason = NOT_REPLAN;
     bool is_finished = false;
     bool is_fix_slot = false;
@@ -162,6 +169,7 @@ class ApaPlannerBase {
     double current_path_length = 0.0;
     double path_extended_dist = 1.0;
     double stuck_time = 0.0;
+    double pause_time = 0.0;
     double remain_dist = 5.01;
     double remain_dist_uss = 5.01;
     pnc::mathlib::spline x_s_spline;
@@ -193,7 +201,7 @@ class ApaPlannerBase {
   };
 
  public:
-  virtual void Init();
+  virtual void Init(const bool c_ilqr_enable);
   virtual void Reset() = 0;
   virtual void Update() = 0;
   virtual std::string GetName() = 0;
@@ -217,6 +225,11 @@ class ApaPlannerBase {
     apa_world_ptr_ = apa_world_ptr;
   }
 
+  const std::shared_ptr<LateralPathOptimizer> GetLateralPathOptimizerPtr()
+      const {
+    return lateral_path_optimizer_ptr_;
+  }
+
  protected:
   virtual void GenPlanningOutput() = 0;
   virtual void GenPlanningPath() = 0;
@@ -238,6 +251,7 @@ class ApaPlannerBase {
 
   SimulationParam simu_param_;
   bool is_simulation_ = false;
+  bool update_optimizer_ptr_enable = false;
 };
 
 }  // namespace apa_planner

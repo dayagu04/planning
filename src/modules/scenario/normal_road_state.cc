@@ -159,7 +159,8 @@ void RoadBase::process_wait(FsmContext &context,
 
   auto lc_lane_manager = std::make_shared<LaneChangeLaneManager>(
       state_machine->get_lane_change_lane_manager());
-
+  const bool location_valid =
+      context.session->environmental_model().location_valid();
   // std::shared_ptr<EnvironmentalModel> environmental_model =
   //     context.environmental_model;
 
@@ -191,9 +192,12 @@ void RoadBase::process_wait(FsmContext &context,
         lc_lane_manager->tlane_virtual_id() != target_lane_virtual_id) {
       lc_lane_manager->assign_lc_lanes(target_lane_virtual_id);
     }
-    gap_available = state_machine->GapAvailable(lc_request, overtake_obstacles,
-                                                yield_obstacles);
-    lane_change_info = state_machine->decide_lc_valid_info(lc_request);
+    gap_available = location_valid
+                        ? true
+                        : state_machine->GapAvailable(
+                              lc_request, overtake_obstacles, yield_obstacles);
+    lane_change_info =
+        state_machine->decide_lc_valid_info(location_valid, lc_request);
     LOG_DEBUG(
         "[CruiseState::Wait] gap_available: %d, aggressive_change: %d, "
         "target_lane_virtual_id: %d, "
@@ -253,10 +257,11 @@ void RoadBase::process_change(FsmContext &context,
   std::shared_ptr<ScenarioStateMachine> state_machine = context.state_machine;
   std::shared_ptr<LaneChangeRequestManager> lc_req_manager =
       state_machine->get_lane_change_request_manager();
-
   std::vector<ScenarioStateEnum> candidate_states;
   std::vector<std::shared_ptr<LaneChangeLaneManager>> lc_lane_managers;
 
+  const bool location_valid =
+      context.session->environmental_model().location_valid();
   auto lc_lane_manager = std::make_shared<LaneChangeLaneManager>(
       state_machine->get_lane_change_lane_manager());
 
@@ -297,13 +302,17 @@ void RoadBase::process_change(FsmContext &context,
       lc_lane_manager->assign_lc_lanes(target_lane_virtual_id);
     }
 
-    gap_available = state_machine->GapAvailable(lc_request, overtake_obstacles,
-                                                yield_obstacles);
+    gap_available = location_valid
+                        ? true  // @cailiu: general planning consider lc valid
+                                // in GapSelector
+                        : state_machine->GapAvailable(
+                              lc_request, overtake_obstacles, yield_obstacles);
 
     if (lc_lane_manager->has_origin_lane() &&
         lc_lane_manager->olane_virtual_id() !=
             lc_lane_manager->tlane_virtual_id()) {
-      lc_back_info = state_machine->decide_lc_back_info(lc_request);
+      lc_back_info =
+          state_machine->decide_lc_back_info(location_valid, lc_request);
       if (lc_back_info.lc_should_back) {
         prepare_for_back_state(lc_lane_manager, lc_req_manager,
                                candidate_states, lc_lane_managers);
@@ -398,7 +407,8 @@ void RoadBase::process_back(FsmContext &context,
 
   auto lc_lane_manager = std::make_shared<LaneChangeLaneManager>(
       state_machine->get_lane_change_lane_manager());
-
+  const bool location_valid =
+      context.session->environmental_model().location_valid();
   RequestType lc_request = lc_req_manager->request();
   bool aggressive_change{lc_req_manager->AggressiveChange()};
   bool gap_available{true};
@@ -415,9 +425,12 @@ void RoadBase::process_back(FsmContext &context,
       int target_lane_virtual_id = lc_req_manager->target_lane_virtual_id();
       lc_lane_manager->assign_lc_lanes(target_lane_virtual_id);
     }
-    gap_available = state_machine->GapAvailable(lc_request, overtake_obstacles,
-                                                yield_obstacles);
-    lane_change_info = state_machine->decide_lc_valid_info(lc_request);
+    gap_available = location_valid
+                        ? true
+                        : state_machine->GapAvailable(
+                              lc_request, overtake_obstacles, yield_obstacles);
+    lane_change_info =
+        state_machine->decide_lc_valid_info(location_valid, lc_request);
     // if (gap_available || aggressive_change) {
     // //TODO(Rui):后面把安全检查坐在gap_available里，统一通过gap_available判断
     if (lane_change_info.gap_insertable) {

@@ -1,3 +1,11 @@
+# planning.2.3.3.1
+####  修改说明
+1. 变更SCC默认配置为SCC_PLANNER轨迹方案
+2. 调整jerk weight
+3. interface接口同步为 interface2.3.5
+4. 添加退自动请求
+5. 修复长时s bound, lead属性清除等
+
 # planning.2.3.2.3
 ####  修改说明
 1. 更新interface接口至2.3.5版本

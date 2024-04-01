@@ -18,12 +18,21 @@ class BaseCostTerm {
                                       LxuMT &lxu, LuuMT &luu);
   virtual std::string GetCostString() = 0;
   virtual uint8_t GetCostId() = 0;
+
   void SetConfig(IlqrCostConfig *cost_config_ptr) {
     cost_config_ptr_ = cost_config_ptr;
   }
-  IlqrCostConfig *cost_config_ptr_;
 
+  void SetAliLqrConfig(AliLqrConfig *alilqr_config_ptr) {
+    alilqr_config_ptr_ = alilqr_config_ptr;
+  }
+
+  IlqrCostConfig *cost_config_ptr_;
   std::shared_ptr<std::vector<IlqrCostConfig>> cost_config_vec_ptr_;
+
+  AliLqrConfig *alilqr_config_ptr_;
+  std::shared_ptr<std::vector<AliLqrConfig>> alilqr_config_vec_ptr_;
+
   std::shared_ptr<iLqrSolverConfig> solver_config_ptr_;
 };
 }  // namespace ilqr_solver

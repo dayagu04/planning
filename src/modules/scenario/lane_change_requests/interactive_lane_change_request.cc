@@ -66,7 +66,6 @@ void IntRequest::Update(int lc_status) {
       request_type_ != LEFT_CHANGE) {
     counter_right_ = 0;
     counter_left_++;
-
     // 实线禁止换道
     if (left_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) {
       counter_left_ = -5;
@@ -94,7 +93,6 @@ void IntRequest::Update(int lc_status) {
              request_type_ != RIGHT_CHANGE) {
     counter_left_ = 0;
     counter_right_ = counter_right_ + 1;
-
     if (right_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) {
       counter_right_ = -5;
     }

@@ -55,9 +55,16 @@ struct ApaParameters {
   double finish_lat_err_strict = 0.036;
   double finish_lon_err = 0.2;
   double finish_heading_err = 0.88;
+  double finish_uss_slot_occupied_ratio = 0.668;
+  double finish_heading_err_loose = 2.868;
+  double finish_parallel_lat_err = 0.1;
+  double finish_parallel_lon_err = 0.3;
+  double finish_parallel_heading_err = 2.3;
+  double finish_parallel_rear_stop_buffer = 0.55;
 
   // check fail params
   double stuck_failed_time = 9.0;
+  double pause_failed_time = 12.68;
 
   // check static params
   double car_static_pos_err = 0.005;
@@ -83,6 +90,7 @@ struct ApaParameters {
                                                   275.0, 264.0, 242.0, 187.0};
   std::vector<int> uss_wdis_index_front = {0, 9, 6, 3, 1, 11};
   std::vector<int> uss_wdis_index_back = {0, 1, 3, 6, 9, 11};
+  std::vector<int> uss_directly_behind_index = {8, 9};
 
   // check replan params
   double stuck_replan_time = 4.0;
@@ -100,6 +108,20 @@ struct ApaParameters {
   double occupied_pt_inside_dy = 0.0;
   bool force_both_side_occupied = true;
   double width_threshold = 0.1;
+  double move_tlane_slot_occupied_ratio = 0.266;
+  double move_tlane_ego_heading_err = 18.68;
+  double move_tlane_toward_outside_dist = 0.108;
+  double move_tlane_toward_up_dist = 0.108;
+  // parallel t lane params
+  double parallel_vacant_pt_outside_dx = 2.0;
+  double parallel_vacant_pt_outside_dy = 1.7;
+  double parallel_vacant_pt_inside_dx = 3.0;
+  double parallel_vacant_pt_inside_dy = 1.7;
+  double parallel_occupied_pt_outside_dx = 0.0;
+  double parallel_occupied_pt_outside_dy = 0.1;
+  double parallel_occupied_pt_inside_dx = 0.0;
+  double parallel_occupied_pt_inside_dy = 0.3;
+  double curb_offset = 3.0;
 
   // construce obstacles params
   double channel_width = 12.28;
@@ -112,8 +134,14 @@ struct ApaParameters {
   double car_to_limiter_dis = 1.0;
   double pose_y_err = 0.15;
   double pose_heading_err = 6.6;
-  double pose_slot_occupied_ratio = 0.48;
-  double pose_min_remain_dis = 2.18;
+  double max_y_err_2 = 0.088;
+  double max_heading_err_2 = 1.08;
+  double max_y_err_3 = 0.06;
+  double max_heading_err_3 = 0.88;
+  double pose_slot_occupied_ratio = 0.368;
+  double pose_slot_occupied_ratio_2 = 0.588;
+  double pose_slot_occupied_ratio_3 = 0.788;
+  double pose_min_remain_dis = 0.4;
 
   // slot update params when parking
   double fix_slot_occupied_ratio = 0.938;
@@ -133,26 +161,39 @@ struct ApaParameters {
   double prepare_line_min_heading_offset_slot_deg = 0.0;
   double prepare_directly_use_tangent_pos_err = 0.106;
   double prepare_directly_use_tangent_heading_err = 2.6;
+  double prepare_adjust_drive_max_length = 2.28;
+  double prepare_adjust_reverse_max_length = 3.6;
+  double third_prepare_heading_threshold = 26.68;
   double min_turn_radius = 5.5;
   double max_one_step_arc_radius = 8.5;
   double max_radius_in_slot = 12.66;
   double min_radius_out_slot = 7.8;
   double radius_eps = 0.01;
   double min_line_length = 0.3;
+  double max_line_length_for_third_prepare = 1.2;
   double min_one_step_path_length = 0.6;
+  double min_one_step_path_length_in_slot = 1.2;
   double static_pos_eps = 0.01;
-  double static_heading_eps = 0.8;
+  double static_heading_eps = 0.08;
   double path_extend_distance = 0.3;
   bool mono_plan_enable = false;
+  bool third_prepare_plan_enable = false;
+  double inside_pt_move_dist_x = 0.1;
+  double inside_pt_move_dist_y = 0.2;
   double multi_plan_min_lat_err = 0.5;
   double multi_plan_min_heading_err = 12.0;
   double multi_plan_max_occupied_ratio = 0.8;
-  double adjust_plan_max_lat_err = 1.2;
-  double adjust_plan_max_heading1_err = 50.0;
-  double adjust_plan_max_heading2_err = 70.0;
-  bool lateral_path_optimization_enable = false;
-
+  double adjust_plan_max_heading1_err = 8.8;
+  double adjust_plan_max_lat_err = 0.8;
+  double adjust_plan_max_heading2_err = 15.0;
+  double min_gear_path_length = 0.25;
+  // path optimizer params
+  bool cilqr_path_optimization_enable = false;
+  bool perpendicular_lat_opt_enable = false;
+  bool parallel_lat_opt_enable = false;
+  double min_opt_path_length = 0.7;
   // slot managent params
+  bool release_slot_by_prepare = false;
   // slot update
   double slot_update_in_or_out_occupied_ratio = 0.001;
   double slot_update_out_heading = 10;

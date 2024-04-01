@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "Eigen/Core"
 #include "ilqr_define.h"
 #include "ilqr_model.h"
 namespace ilqr_solver {
@@ -18,6 +19,8 @@ class iLqr {
     MAX_ITER_TERMINATE,       // max iteration
     LINESEARCH_TERMINATE,     // linesearch terminate, lambda is too big
     INIT_TERMINATE,           // one step iteration, init is the minimum
+    MAX_OUTERITER_TERMINATE,  // al-ilqr  max outer iteration
+    KKT_TERMINATE,            // al-ilqr KKT satisfied
     BACKWARD_PASS_FAIL,       // backward pass failed, non-positive definite Quu
     NON_POSITIVE_EXPECT,      // non-positive expect, should not happen
     FAULT_INPUT_SIZE,         // input size is error
@@ -37,6 +40,15 @@ class iLqr {
     ControlVec u_vec;
   };
 
+  struct AlIterationInfo {
+    // record al param
+    Eigen::MatrixXd mu_k_iteration;
+    Eigen::MatrixXd rho_k_iteration;
+    Eigen::MatrixXd mu_u_iteration;
+    Eigen::MatrixXd rho_u_iteration;
+    Eigen::MatrixXd constraint_data_iteration;
+  };
+
   // solver info for all iterations
   struct iLqrSolverInfo {
     uint8_t solver_condition = NORMAL_TERMINATE;
@@ -50,6 +62,12 @@ class iLqr {
 
     // each cost of cost term for every iteration
     std::vector<ILqrCostVec> cost_iter_vec;
+
+    // alilqr iteration
+    size_t outer_iter_count = 0;
+    double dcost_outer = 0.0;
+    double constraint_violation = 0.0;
+    AlIterationInfo al_iteration_info;
   };
 
   struct TimeInfo {
@@ -122,8 +140,11 @@ class iLqr {
   const iLqrSolverInfo *GetSolverInfoPtr() { return &solver_info_; }
 
   void PrintSolverInfo();
+  void PrintAlSolverInfo();
+  virtual void PrintAlParamInfo();
   void PrintCostInfo();
   void PrintTimeInfo();
+  virtual void PrintAlParamInfoAfter();
 
   void UpdateDynamicsDerivatives();
 
@@ -131,6 +152,10 @@ class iLqr {
 
   void SetSolverConfig(const iLqrSolverConfig &ilqr_sovler_config) {
     *solver_config_ptr_ = ilqr_sovler_config;
+  }
+
+  void SetAliLqrConfig(const std::vector<AliLqrConfig> &alilqr_config) {
+    ilqr_model_ptr_->SetAliLqrConfig(alilqr_config);
   }
 
   void SetCostConfig(const std::vector<IlqrCostConfig> &cost_config) {
@@ -154,11 +179,19 @@ class iLqr {
   // reset solver
   void Reset();
 
+  // Solve for AL-iLqr
+  void InitAliLqrSolverConfig();
+  void SolveForAliLqr(const State &x0);
+  virtual void AliLqrIteration();
+  virtual void UpdateAugmentedLagragian();
+  virtual double MaxConstraintViolation();
+  virtual double MaxDerivationValue();
+
  protected:
   virtual bool ForwardPass(double &new_cost, double &expected,
                            const size_t &iter);
 
-  bool BackwardPass();
+  virtual bool BackwardPass();
   bool iLqrIteration();
 
   void IncreaseLambda();
@@ -196,6 +229,10 @@ class iLqr {
 
   // model
   std::shared_ptr<iLqrModel> ilqr_model_ptr_;
+
+  // AliLqr parameters
+  std::shared_ptr<std::vector<AliLqrConfig>> alilqr_config_vec_ptr_;
+  std::shared_ptr<std::vector<IlqrCostConfig>> cost_config_vec_ptr_;
 
   // solver config
   std::shared_ptr<iLqrSolverConfig> solver_config_ptr_;

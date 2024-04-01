@@ -280,13 +280,13 @@ bool EnvironmentalModelManager::Run(planning::framework::Frame *frame) {
   }
 
   // Step 6) update agent node manager
-  time_start = IflyTime::Now_ms();
-  agent_node_mgr_ptr_->init();
-  time_end = IflyTime::Now_ms();
-  LOG_DEBUG("agent_node_manager init cost:%f\n", time_end - time_start);
-  JSON_DEBUG_VALUE("agent_node_manager_init_cost", time_end - time_start);
-  // std::cout<< "agent_node_mgr time is : " << time_end - time_start
-  // <<std::endl;
+  // time_start = IflyTime::Now_ms();
+  // agent_node_mgr_ptr_->init();
+  // time_end = IflyTime::Now_ms();
+  // LOG_DEBUG("agent_node_manager init cost:%f\n", time_end - time_start);
+  // JSON_DEBUG_VALUE("agent_node_manager_init_cost", time_end - time_start);
+  // // std::cout<< "agent_node_mgr time is : " << time_end - time_start
+  // // <<std::endl;
 
   return true;
 }
@@ -324,7 +324,8 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
           prediction_obj_id_set.end()) {
         transform_fusion_to_prediction(
             obj, (double)local_view.fusion_objects_info.header().timestamp(),
-            prediction_info);
+            prediction_info);  // distinguish pred and
+                               // fusion;
       }
       transform_fusion_to_prediction(
           obj, (double)local_view.fusion_objects_info.header().timestamp(),

@@ -76,15 +76,16 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
           DisplayStateConfig::DefaultCancelFreezeCnt);
     }
     map_request_.Finish();
-    // std::cout << "DDDDDDDDDDDDDDDDDDDDDDD " << std::endl;
     LOG_DEBUG(
         "[LaneChangeRequestManager::update] manual cancel finish dd or map "
         "request! \n");
   }
+  std::cout << "\n int request type is: " << int_request_.request_type()
+            << std::endl;
+
   if (int_request_.request_type() != NO_CHANGE) {
     if (map_request_.request_type() != NO_CHANGE) {
       map_request_.Finish();
-      // std::cout << "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB " << std::endl;
     }
     if (act_request_.request_type() != NO_CHANGE) {
       act_request_.Finish();
@@ -109,18 +110,6 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
                                 : virtual_lane_mgr_->current_lane_virtual_id();
   }
 
-  if (request_ == NO_CHANGE) {
-    LOG_WARNING("[LCRequestManager::update] request: None \n");
-    // MDEBUG_JSON_ADD_ITEM(request_shape, "========", LaneChangeRequestManager)
-  } else if (request_ == LEFT_CHANGE) {
-    LOG_WARNING(
-        "[LCRequestManager::update] request: Left Change <<<<<<<<<<<<<<<<< \n");
-    LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
-  } else {
-    LOG_WARNING(
-        "[LCRequestManager::update] request: Right Change >>>>>>>>>>>>>>>> \n");
-    LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
-  }
   if (virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)) {
     int target_lane_order_id =
         virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)
@@ -135,6 +124,27 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
         "[LCRequestManager::update] Target lane lost !!! final "
         "target_lane_virtual_id: %d \n",
         target_lane_virtual_id_);
+  }
+
+  GenerateHMIInfo();
+
+  LOG_WARNING(
+      "[LCRequestManager::update] ===cur_state: %d=== gen_turn_signal_: %d \n",
+      lc_status, gen_turn_signal_);
+}
+
+void LaneChangeRequestManager::GenerateHMIInfo() {
+  if (request_ == NO_CHANGE) {
+    LOG_WARNING("[LCRequestManager::update] request: None \n");
+    // MDEBUG_JSON_ADD_ITEM(request_shape, "========", LaneChangeRequestManager)
+  } else if (request_ == LEFT_CHANGE) {
+    LOG_WARNING(
+        "[LCRequestManager::update] request: Left Change <<<<<<<<<<<<<<<<< \n");
+    LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
+  } else {
+    LOG_WARNING(
+        "[LCRequestManager::update] request: Right Change >>>>>>>>>>>>>>>> \n");
+    LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
   }
 
   auto ad_info = session_->mutable_planning_output_context()
@@ -167,10 +177,6 @@ void LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   } else {
     gen_turn_signal_ = NO_CHANGE;
   }
-
-  LOG_WARNING(
-      "[LCRequestManager::update] ===cur_state: %d=== gen_turn_signal_: %d \n",
-      lc_status, gen_turn_signal_);
 }
 
 double LaneChangeRequestManager::GetReqStartTime(int source) const {

@@ -553,7 +553,8 @@ void StGraphGenerator::UpdateSTGraphs(
           */
           s_ref = st.start_s() - st.desired_distance() + s_step;
           // hard bound使用安全距离
-          hard_bound.upper = st.start_s() - st.safe_distance() + s_step;
+          hard_bound.upper =
+              std::max(st.start_s() - st.safe_distance() + s_step, 0.1);
           hard_bound.lower = 0.0;  // 应该至少使用自车s-10
           st_boundary.hard_bound.emplace_back(hard_bound);
           s_ref_update = std::min(
@@ -1698,7 +1699,7 @@ void StGraphGenerator::UpdateVelRefs() {
   for (int i = 0; i < config_.lon_num_step + 1; ++i) {
     vt_refs_[i] = std::max(std::min(vt_refs_[i], v_target_), 0.0);
   }
-  JSON_DEBUG_VALUE("RealTime_v_ref", v_target_);
+  JSON_DEBUG_VALUE("v_target", v_target_);
 }
 
 void StGraphGenerator::CalculateSrefsByVref(const double v_ego,

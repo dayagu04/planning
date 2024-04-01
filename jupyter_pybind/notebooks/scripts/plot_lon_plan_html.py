@@ -21,7 +21,7 @@ from lib.bag_loader import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/mnt/scc_1208/scc_8.00000.1702888825.plan"
+bag_path = "/mnt/jwliu23/data_collection_JAC_S811_23GC9_EVENT_MANUAL_2023-12-02-15-17-11.record.1701832945.plan"
 html_file = bag_path +".lonplan.html"
 
 # bokeh创建的html在jupyter中显示
@@ -242,11 +242,11 @@ ego_vel_params = {
     'legend_label': 'ego_velocity'
 }
 
-ref_vel_params = {
-    'line_width': 1,
-    'color': 'black',
-    'legend_label': 'reference_velocity'
-}
+# ref_vel_params = {
+#     'line_width': 1,
+#     'color': 'black',
+#     'legend_label': 'reference_velocity'
+# }
 
 leadone_vel_params = {
     'line_width': 1,
@@ -382,8 +382,8 @@ class ScalarGenerator(DataGeneratorBase):
                 if val_type == 'target_velocity':
                     ys.append(round(v['v_target'], 2))
 
-                elif val_type == 'reference_velocity':
-                    ys.append(round(v['RealTime_v_ref'], 2))
+                # elif val_type == 'reference_velocity':
+                #     ys.append(round(v['RealTime_v_ref'], 2))
 
                 elif val_type == 'ego_velocity':
                     ys.append(round(v['v_target']-2, 2))
@@ -419,12 +419,12 @@ class ScalarGenerator(DataGeneratorBase):
                     ys.append(round(v['RealTime_desired_distance_calibrate'], 2))
 
                 elif val_type == 'behav_cost':
-                    if hasattr(v, 'SccLonBehaviorCostTime'):
-                        ys.append(round(v['SccLonBehaviorCostTime'], 2))
+                    if hasattr(v, 'RealTimeLonBehaviorCostTime'):
+                        ys.append(round(v['RealTimeLonBehaviorCostTime'], 2))
                     else:
                         ys.append(round(v['VisionLongitudinalBehaviorPlannerCost'], 2))
                 elif val_type == 'motion_cost':
-                    ys.append(round(v['SccLonMotionCostTime'], 2))
+                    ys.append(round(v['RealTimeLonMotionCostTime'], 2))
 
                 elif val_type == 'target_velocity_start_stop':
                     if hasattr(v, 'v_target_start_stop'):
@@ -644,24 +644,21 @@ class TextGenerator4Lon(DataGeneratorBase):
         ts = []
         xys = []
         if text_type == "real_time_json_value":
-            planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low',\
-                            "VisionLateralBehaviorPlannerCost","VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
+            planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
+                            "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                             "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
-                            'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
-                            'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one",\
-                            'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two",\
-                            'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one",\
-                            'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two",\
+                            'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego',\
+                            'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", \
+                            'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
+                            'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
+                            'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                             'potental_cutin_track_id', 'v_target_potental_cutin', "v_target_cutin", "road_radius", \
                             'stop_start_state', 'v_target_start_stop', 'STANDSTILL', \
                             "dis_to_ramp", "v_target_ramp",\
-                            'RealTime_v_ref', 'gap_v_limit_lc', \
+                            'gap_v_limit_lc', \
                             "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                             "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                            "SccLonBehaviorCostTime", "SccLonMotionCostTime", \
-                            'RealTimeLateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
-                            "ego_state_update_cost", "virtual_lane_manager_update_cost", "obstacle_prediction_update_cost", \
-                            "reference_path_manager_update_cost", "lateral_obstacle_update_cost"]
+                            "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime"]
 
             for i, v in enumerate(data["json"]):
                 ts.append(data["t"][i])
@@ -993,21 +990,21 @@ def draw_rt_vel(plan_debug_msg, vs_msg, layer_manager):
 
     rt_target_vel = ScalarGenerator(plan_debug_msg, 'target_velocity', accu=True, name="rt_target_vel")
     rt_ego_vel = ScalarGenerator(vs_msg, 'ego_velocity', accu=True, name="rt_ego_vel")
-    rt_ref_vel = ScalarGenerator(plan_debug_msg, 'reference_velocity', accu=True, name="rt_ref_vel")
+    # rt_ref_vel = ScalarGenerator(plan_debug_msg, 'reference_velocity', accu=True, name="rt_ref_vel")
     rt_leadone_vel = ScalarGenerator(plan_debug_msg, 'leadone_velocity', accu=True, name="rt_leadone_vel")
     rt_leadtwo_vel = ScalarGenerator(plan_debug_msg, 'leadtwo_velocity', accu=True, name="rt_leadtwo_vel")
     rt_target_vel_start_stop = ScalarGenerator(plan_debug_msg, 'target_velocity_start_stop', accu=True, name="rt_target_vel_start_stop")
 
     target_vel_layer = CurveLayer(fig_rtv, target_vel_params)
     ego_vel_layer = CurveLayer(fig_rtv, ego_vel_params)
-    ref_vel_layer = CurveLayer(fig_rtv, ref_vel_params)
+    # ref_vel_layer = CurveLayer(fig_rtv, ref_vel_params)
     leadone_vel_layer = CurveLayer(fig_rtv, leadone_vel_params)
     leadtwo_vel_layer = CurveLayer(fig_rtv, leadtwo_vel_params)
     target_vel_start_stop_layer = CurveLayer(fig_rtv, target_vel_start_stop_params)
 
     layer_manager.AddLayer(target_vel_layer, 'global_target_vel', rt_target_vel)
     layer_manager.AddLayer(ego_vel_layer, 'global_ego_vel', rt_ego_vel)
-    layer_manager.AddLayer(ref_vel_layer, 'global_ref_vel', rt_ref_vel)
+    # layer_manager.AddLayer(ref_vel_layer, 'global_ref_vel', rt_ref_vel)
     layer_manager.AddLayer(leadone_vel_layer, 'global_leadone_vel', rt_leadone_vel)
     layer_manager.AddLayer(leadtwo_vel_layer, 'global_leadtwo_vel', rt_leadtwo_vel)
     layer_manager.AddLayer(target_vel_start_stop_layer, 'global_target_vel_start_stop', rt_target_vel_start_stop)

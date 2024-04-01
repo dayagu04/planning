@@ -21,11 +21,6 @@
 #include "virtual_lane_manager.h"
 namespace planning {
 
-struct ObstacleBorderInfo {
-  int obstacle_id;
-  double obstacle_border;
-};
-
 class HppGeneralLateralDecider : public Task {
  public:
   explicit HppGeneralLateralDecider(

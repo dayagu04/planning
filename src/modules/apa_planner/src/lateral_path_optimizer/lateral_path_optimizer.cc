@@ -3,7 +3,9 @@
 #include <cmath>
 #include <cstddef>
 #include <memory>
+#include <vector>
 
+#include "Eigen/Core"
 #include "Eigen/src/Core/Matrix.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
@@ -14,18 +16,18 @@
 #include "src/lateral_path_optimizer_problem.h"
 
 static const double kPiConst = 3.141592654;
-static const double kMinRadius = 5.5;
+static const double kMinRadius = 6.0;
 static const double kCurvFactor = 0.3;
 static const double kMaxDelta = 400 / 57.3 / 15;
-static const double kRefVel = 1.688;
+static const double kRefVel = 0.368;
 
 namespace planning {
 namespace apa_planner {
-void LateralPathOptimizer::Init() {
+void LateralPathOptimizer::Init(const bool c_ilqr_enable) {
   // init planning problem
   planning_problem_ptr_ =
       std::make_shared<apa_planner::LateralPathOptimizerProblem>();
-  planning_problem_ptr_->Init();
+  planning_problem_ptr_->Init(c_ilqr_enable);
 
   // init planning input and ouput
   const auto N =
@@ -109,7 +111,7 @@ void LateralPathOptimizer::AssembleInput(
   double s_ilqr = 0.0;
 
   // set reference
-  const auto k_max = 1 / kMinRadius;
+  const auto k_max = 1.0 / kMinRadius;
   const auto k_min = -k_max;
   const auto u_max = kCurvFactor * kMaxDelta / kRefVel;
   const auto u_min = -u_max;
@@ -157,7 +159,6 @@ void LateralPathOptimizer::AssembleInput(
   planning_input_.set_curv_factor(kCurvFactor);
   planning_input_.set_delta_max(kMaxDelta);
   planning_input_.set_ref_vel(kRefVel);
-  // return 0;
 }
 
 void LateralPathOptimizer::AssembleOutput() {
@@ -187,22 +188,25 @@ void LateralPathOptimizer::AssembleOutput() {
     }
   }
 
-  auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  const Eigen::Vector2d delta_terminal_pose(
+      optimizer_planning_output_.x_vec(N - 1) -
+          planning_input_.ref_x_vec(N - 1),
+      optimizer_planning_output_.y_vec(N - 1) -
+          planning_input_.ref_y_vec(N - 1));
 
-  planning_debug_data->clear_lateral_path_optimizer_input();
-  planning_debug_data->clear_lateral_motion_planning_output();
-  planning_debug_data->mutable_lateral_path_optimizer_input()->CopyFrom(
-      planning_input_);
+  const double terminal_pose_error = delta_terminal_pose.norm();
+  const double terminal_heading_error =
+      (optimizer_planning_output_.theta_vec(N - 1) -
+       planning_input_.ref_theta_vec(N - 1)) *
+      57.3;
 
-  planning_debug_data->mutable_lateral_path_optimizer_output()->CopyFrom(
-      optimizer_planning_output_);
+  optimizer_planning_output_.set_terminal_pos_error(terminal_pose_error);
+  optimizer_planning_output_.set_terminal_heading_error(terminal_heading_error);
 }
 
 void LateralPathOptimizer::PostProcessOutput() {
   const auto &planning_output = planning_problem_ptr_->GetOutput();
-  const auto N =
-      planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon +
-      1;
+  const size_t N = planning_output.x_vec_size();
 
   std::vector<double> x_vec;
   std::vector<double> y_vec;
@@ -211,22 +215,18 @@ void LateralPathOptimizer::PostProcessOutput() {
   x_vec.reserve(N);
   y_vec.reserve(N);
   theta_vec.reserve(N);
+  s_vec.reserve(N);
 
-  double s_sum = 0.0;
+  // double s_sum = 0.0;
   for (size_t i = 0; i < N; i++) {
     x_vec.emplace_back(planning_output.x_vec(i));
     y_vec.emplace_back(planning_output.y_vec(i));
     theta_vec.emplace_back(planning_output.theta_vec(i));
-    if (i < N - 1) {
-      s_vec.emplace_back(s_sum);
-      s_sum += std::sqrt(pnc::mathlib::Square(planning_output.x_vec(i + 1) -
-                                              planning_output.x_vec(i)) +
-                         pnc::mathlib::Square(planning_output.y_vec(i + 1) -
-                                              planning_output.y_vec(i)));
-    }
+    s_vec.emplace_back(planning_output.s_vec(i));
   }
-  s_vec.emplace_back(s_sum);
-  const size_t resampled_point_num = std::floor(s_sum / param_.sample_ds) + 1;
+
+  const size_t resampled_point_num =
+      std::floor(s_vec.back() / param_.sample_ds) + 1;
 
   pnc::mathlib::spline x_s_spline;
   pnc::mathlib::spline y_s_spline;
@@ -235,9 +235,9 @@ void LateralPathOptimizer::PostProcessOutput() {
   y_s_spline.set_points(s_vec, y_vec);
   theta_s_spline.set_points(s_vec, theta_vec);
 
-  double resampled_ds = 0.0;
   output_path_vec_.clear();
   output_path_vec_.reserve(resampled_point_num);
+  double resampled_ds = 0.0;
   Eigen::Vector2d point;
   double heading;
   pnc::geometry_lib::PathPoint tmp_output;
@@ -261,11 +261,9 @@ void LateralPathOptimizer::Update(
       planning_problem_ptr_->Update(planning_input_, gear_cmd);
   std::cout << "lateral path optimizer: solver_condition::"
             << static_cast<size_t>(solver_condition) << "\n";
-
   // postprocess planning_output
   PostProcessOutput();
-
-  // assemble output
+  // assemble output to plan debug info
   AssembleOutput();
 }
 }  // namespace apa_planner

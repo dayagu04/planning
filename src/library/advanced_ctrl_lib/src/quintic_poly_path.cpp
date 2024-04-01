@@ -52,6 +52,15 @@ void QuinticPolynominalPath::SetPoints(
   coef_y_[3] = coef_y_vec[2];
 }
 
+void QuinticPolynominalPath::SetPoints(
+    const QuinticPolyInput &quintic_poly_input) {
+  SetPoints(quintic_poly_input.x0, quintic_poly_input.xT,
+            quintic_poly_input.dx0, quintic_poly_input.dxT,
+            quintic_poly_input.ddx0, quintic_poly_input.ddxT,
+            quintic_poly_input.T);
+  return;
+}
+
 Eigen::Vector2d QuinticPolynominalPath::operator()(double t) const {
   const double t2 = t * t;
   const double t3 = t2 * t;

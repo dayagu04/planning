@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 
 #include "control_command.pb.h"
 #include "ehr.pb.h"
@@ -17,6 +18,7 @@
 #include "localization.pb.h"
 #include "parking_fusion.pb.h"
 #include "parking_slot_list.pb.h"
+#include "plan_scheduler.h"
 #include "planning_debug_info.pb.h"
 #include "planning_hmi.pb.h"
 #include "planning_plan.pb.h"
@@ -225,9 +227,11 @@ class PlanningAdapter {
   std::function<void(PlanningHMI::PlanningHMIOutputInfoStr)>
       planning_hmi_info_writer_ = nullptr;
 
-  LocalView local_view_;
+  std::shared_ptr<LocalView> local_view_ptr_;
   std::unique_ptr<GeneralPlanning> planning_base_ = nullptr;
   PlanningOutput::PlanningOutput last_planning_output_;
+
+  plan_scheduler::PlanScheduler plan_scheduler_;
 };
 
 }  // namespace planning

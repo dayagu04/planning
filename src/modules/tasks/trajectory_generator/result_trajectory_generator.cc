@@ -126,6 +126,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
     traj_pt.y = motion_planning_info.y_t_spline(t);
     traj_pt.v = motion_planning_info.v_t_spline(t);
     traj_pt.a = motion_planning_info.a_t_spline(t);
+    traj_pt.jerk = motion_planning_info.j_t_spline(t);
     traj_pt.l = l_t_spline(t);
     traj_pt.heading_angle = motion_planning_info.theta_t_spline(t);
     traj_pt.curvature = curvature_t_spline(t);

@@ -122,6 +122,7 @@ struct EgoPlanningConfig : public Config {
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
+  double d_poly_min_lat_offset = 0.0;
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
@@ -132,9 +133,13 @@ struct GeneralPlanningConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "d_poly_lat_offset_rate");
     d_poly_max_lat_offset =
         read_json_key<double>(json, "d_poly_max_lat_offset");
+    d_poly_min_lat_offset =
+        read_json_key<double>(json, "d_poly_min_lat_offset");
     enable_none_smooth = read_json_key<bool>(json, "enable_none_smooth");
     none_consider_slope_thr =
         read_json_key<double>(json, "none_consider_slope_thr");
+    failure_counter_thrshld =
+        read_json_key<double>(json, "failure_counter_thrshld");
   }
   double lc_back_smooth_thr = 0.3;
   double lc_back_consider_smooth_dpoly_thr = 0.6;
@@ -142,6 +147,7 @@ struct GeneralPlanningConfig : public EgoPlanningConfig {
   double none_consider_slope_thr = 0.003;
   double d_poly_lat_offset_rate = 0.2;
   double d_poly_max_lat_offset = 2.0;
+  uint failure_counter_thrshld = 20;
 };
 
 struct EgoPlanningCandidateConfig : public EgoPlanningConfig {
@@ -287,6 +293,28 @@ struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
   bool enable_int_request_function = false;
   bool enable_confirm_mode = false;
 };
+struct GapSelectorConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    default_lc_time = read_json_keys<double>(
+        json, std::vector<std::string>{"gap_selector", "default_lc_time"});
+    collision_check_length_threshold = read_json_keys<double>(
+        json, std::vector<std::string>{"gap_selector",
+                                       "collision_check_length_threshold"});
+  }
+
+  double default_lc_time = 5.0;
+  double collision_check_length_threshold = 1.2;
+};
+
+struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    is_valid_lateral_offset = read_json_key<bool>(
+        json, "is_valid_lateral_offset", is_valid_lateral_offset);
+  }
+  bool is_valid_lateral_offset = false;
+};
 
 struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
@@ -411,6 +439,41 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     motion_plan_concerned_index = read_json_keys<size_t>(
         json, std::vector<std::string>{"lat_motion_ilqr",
                                        "motion_plan_concerned_index"});
+    q_acc_lane_change = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_lane_change"});
+    q_jerk_lane_change = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_lane_change"});
+    acc_bound_avoid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "acc_bound_avoid"});
+    jerk_bound_avoid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "jerk_bound_avoid"});
+    q_ref_x_avoid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_avoid"});
+    q_ref_y_avoid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_y_avoid"});
+    q_ref_theta_avoid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_theta_avoid"});
+    q_acc_avoid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_avoid"});
+    q_jerk_avoid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid"});
+    q_acc_bound_avoid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_bound_avoid"});
+    q_jerk_bound_avoid = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_bound_avoid"});
+    q_ref_x_lane_change = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_lane_change"});
+
+    q_ref_y_lane_change = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_ref_y_lane_change"});
+
+    q_ref_theta_lane_change = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_ref_theta_lane_change"});
   }
   bool warm_start_enable = true;
   double acc_bound = 6.0;
@@ -431,6 +494,20 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_soft_corridor = 200.0;
   double q_hard_corridor = 0.0;
   double delta_t = 0.2;
+  double q_acc_lane_change = 0.10;
+  double q_jerk_lane_change = 0.01;
+  double acc_bound_avoid = 6.0;
+  double jerk_bound_avoid = 3.5;
+  double q_ref_x_avoid = 20.0;
+  double q_ref_y_avoid = 20.0;
+  double q_ref_theta_avoid = 15.0;
+  double q_acc_avoid = 0.5;
+  double q_jerk_avoid = 2.0;
+  double q_acc_bound_avoid = 200.0;
+  double q_jerk_bound_avoid = 500.0;
+  double q_ref_x_lane_change = 20.0;
+  double q_ref_y_lane_change = 20.0;
+  double q_ref_theta_lane_change = 15.0;
   size_t motion_plan_concerned_index = 20;
 };
 

@@ -10,6 +10,7 @@
 #include "environmental_model.h"
 #include "func_state_machine.pb.h"
 #include "general_planning_context.h"
+#include "local_view.h"
 #include "parallel_park_in_planner.h"
 #include "perpendicular_park_in_planner.h"
 #include "planning_output_context.h"
@@ -17,7 +18,14 @@
 namespace planning {
 namespace apa_planner {
 
-void ApaPlanInterface::Init() {
+void ApaPlanInterface::Init(
+    const std::shared_ptr<plan_interface::PlanData> plan_data_ptr) {
+  // sync parameters
+  SyncParameters();
+
+  // init plan data
+  plan_data_ptr_ = plan_data_ptr;
+
   // init apa world
   apa_world_ptr_ = std::make_shared<ApaWorld>();
 
@@ -36,12 +44,24 @@ void ApaPlanInterface::Init() {
   if (apa_planner_stack_.size() > 0) {
     planner_ptr_ = apa_planner_stack_.front();
   }
-
-  // sync parameters
-  SyncParameters();
 }
 
-void ApaPlanInterface::Reset() { return; }
+void ApaPlanInterface::Reset() {
+  // reset planning output
+  planning_output_.Clear();
+  planning_output_.mutable_planning_status()->set_apa_planning_status(
+      PlanningOutput::ApaPlanningStatus::NONE);
+
+  planning_output_.mutable_successful_slot_info_list()->Clear();
+
+  // reset apa world
+  apa_world_ptr_->Reset();
+
+  // reset all planner
+  for (const auto &planner : apa_planner_stack_) {
+    planner->Reset();
+  }
+}
 
 std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
     const uint8_t apa_planner_id) {
@@ -52,7 +72,8 @@ std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
   }
 }
 
-const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
+const bool ApaPlanInterface::Update(
+    const std::shared_ptr<LocalView> local_view_ptr) {
   std::cout << "\n------------------------ apa_interface: Update() "
                "------------------------\n";
 
@@ -66,29 +87,34 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   if (last_state == FuncStateMachine::STANDBY &&
       (current_state >= FuncStateMachine::PARK_IN_APA_IN &&
        current_state <= FuncStateMachine::PARK_IN_COMPLETED)) {
-    apa_world_ptr_->Reset();
-    std::cout << "reset apa world once!" << std::endl;
-
-    if (planner_ptr_ != nullptr) {
-      planner_ptr_->Reset();
-      std::cout << "reset planner once!" << std::endl;
-    }
+    Reset();
   }
 
   // run apa world, always run when enter apa
-  std::cout << "---- apa_world: Update() ---\n";
+  DEBUG_PRINT("---- apa_world: Update() ---");
   apa_world_ptr_->Update(local_view_ptr);
 
   // run planner
   bool success = false;
+#ifdef PERPENDICULAR_SIMULATION
+  std::cout << "PERPENDICULAR_SIMULATION\n";
+  if (current_state == FuncStateMachine::PARK_IN_ACTIVATE_WAIT ||
+      current_state == FuncStateMachine::PARK_IN_ACTIVATE_CONTROL ||
+      current_state == FuncStateMachine::PARK_IN_SECURE) {
+    success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
+  }
+#else
   if (apa_world_ptr_->GetMeasurementsPtr()->planner_type <
       ApaWorld::NONE_PLANNER) {
     success = ApaPlanOnce(apa_world_ptr_->GetMeasurementsPtr()->planner_type);
   }
+#endif
 
   if (success) {
     planning_output_ = planner_ptr_->GetOutput();
   }
+
+  AddReleasedSlotInfo(planning_output_);
 
   return success;
 }
@@ -208,9 +234,29 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().finish_heading_err, double,
                   "finish_heading_err");
 
+  JSON_READ_VALUE(apa_param.SetPram().finish_uss_slot_occupied_ratio, double,
+                  "finish_uss_slot_occupied_ratio");
+  JSON_READ_VALUE(apa_param.SetPram().finish_heading_err_loose, double,
+                  "finish_heading_err_loose");
+
+  JSON_READ_VALUE(apa_param.SetPram().finish_parallel_lat_err, double,
+                  "finish_parallel_lat_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().finish_parallel_lon_err, double,
+                  "finish_parallel_lon_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().finish_parallel_heading_err, double,
+                  "finish_parallel_heading_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().finish_parallel_rear_stop_buffer, double,
+                  "finish_parallel_rear_stop_buffer");
+
   // check fail params
   JSON_READ_VALUE(apa_param.SetPram().stuck_failed_time, double,
                   "stuck_failed_time");
+
+  JSON_READ_VALUE(apa_param.SetPram().pause_failed_time, double,
+                  "pause_failed_time");
 
   // check static params
   JSON_READ_VALUE(apa_param.SetPram().car_static_pos_err, double,
@@ -259,6 +305,9 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().uss_wdis_index_back, std::vector<int>,
                   "uss_wdis_index_back");
 
+  JSON_READ_VALUE(apa_param.SetPram().uss_directly_behind_index,
+                  std::vector<int>, "uss_directly_behind_index");
+
   // check replan params
   JSON_READ_VALUE(apa_param.SetPram().stuck_replan_time, double,
                   "stuck_replan_time");
@@ -300,6 +349,45 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().width_threshold, double,
                   "width_threshold");
 
+  JSON_READ_VALUE(apa_param.SetPram().move_tlane_slot_occupied_ratio, double,
+                  "move_tlane_slot_occupied_ratio");
+
+  JSON_READ_VALUE(apa_param.SetPram().move_tlane_ego_heading_err, double,
+                  "move_tlane_ego_heading_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().move_tlane_toward_outside_dist, double,
+                  "move_tlane_toward_outside_dist");
+
+  JSON_READ_VALUE(apa_param.SetPram().move_tlane_toward_up_dist, double,
+                  "move_tlane_toward_up_dist");
+
+  // construct parallel t-lane params
+  JSON_READ_VALUE(apa_param.SetPram().parallel_vacant_pt_outside_dx, double,
+                  "parallel_vacant_pt_outside_dx");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_vacant_pt_outside_dy, double,
+                  "parallel_vacant_pt_outside_dy");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_vacant_pt_inside_dx, double,
+                  "parallel_vacant_pt_inside_dx");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_vacant_pt_inside_dy, double,
+                  "parallel_vacant_pt_inside_dy");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_occupied_pt_outside_dx, double,
+                  "parallel_occupied_pt_outside_dx");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_occupied_pt_outside_dy, double,
+                  "parallel_occupied_pt_outside_dy");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_occupied_pt_inside_dx, double,
+                  "parallel_occupied_pt_inside_dx");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_occupied_pt_inside_dy, double,
+                  "parallel_occupied_pt_inside_dy");
+
+  JSON_READ_VALUE(apa_param.SetPram().curb_offset, double, "curb_offset");
+
   // construce obstacles params
   JSON_READ_VALUE(apa_param.SetPram().channel_width, double, "channel_width");
 
@@ -322,8 +410,24 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().pose_heading_err, double,
                   "pose_heading_err");
 
+  JSON_READ_VALUE(apa_param.SetPram().max_y_err_2, double, "max_y_err_2");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_heading_err_2, double,
+                  "max_heading_err_2");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_y_err_3, double, "max_y_err_3");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_heading_err_3, double,
+                  "max_heading_err_3");
+
   JSON_READ_VALUE(apa_param.SetPram().pose_slot_occupied_ratio, double,
                   "pose_slot_occupied_ratio");
+
+  JSON_READ_VALUE(apa_param.SetPram().pose_slot_occupied_ratio_2, double,
+                  "pose_slot_occupied_ratio_2");
+
+  JSON_READ_VALUE(apa_param.SetPram().pose_slot_occupied_ratio_3, double,
+                  "pose_slot_occupied_ratio_3");
 
   JSON_READ_VALUE(apa_param.SetPram().pose_min_remain_dis, double,
                   "pose_min_remain_dis");
@@ -362,8 +466,14 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().min_line_length, double,
                   "min_line_length");
 
+  JSON_READ_VALUE(apa_param.SetPram().max_line_length_for_third_prepare, double,
+                  "max_line_length_for_third_prepare");
+
   JSON_READ_VALUE(apa_param.SetPram().min_one_step_path_length, double,
                   "min_one_step_path_length");
+
+  JSON_READ_VALUE(apa_param.SetPram().min_one_step_path_length_in_slot, double,
+                  "min_one_step_path_length_in_slot");
 
   JSON_READ_VALUE(apa_param.SetPram().prepare_line_min_x_offset_slot, double,
                   "prepare_line_min_x_offset_slot");
@@ -389,6 +499,15 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().prepare_directly_use_tangent_heading_err,
                   double, "prepare_directly_use_tangent_heading_err");
 
+  JSON_READ_VALUE(apa_param.SetPram().prepare_adjust_drive_max_length, double,
+                  "prepare_adjust_drive_max_length");
+
+  JSON_READ_VALUE(apa_param.SetPram().prepare_adjust_reverse_max_length, double,
+                  "prepare_adjust_reverse_max_length");
+
+  JSON_READ_VALUE(apa_param.SetPram().third_prepare_heading_threshold, double,
+                  "third_prepare_heading_threshold");
+
   JSON_READ_VALUE(apa_param.SetPram().static_pos_eps, double, "static_pos_eps");
 
   JSON_READ_VALUE(apa_param.SetPram().static_heading_eps, double,
@@ -400,6 +519,15 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().mono_plan_enable, bool,
                   "mono_plan_enable");
 
+  JSON_READ_VALUE(apa_param.SetPram().third_prepare_plan_enable, bool,
+                  "third_prepare_plan_enable");
+
+  JSON_READ_VALUE(apa_param.SetPram().inside_pt_move_dist_x, double,
+                  "inside_pt_move_dist_x");
+
+  JSON_READ_VALUE(apa_param.SetPram().inside_pt_move_dist_y, double,
+                  "inside_pt_move_dist_y");
+
   JSON_READ_VALUE(apa_param.SetPram().multi_plan_min_lat_err, double,
                   "multi_plan_min_lat_err");
 
@@ -409,18 +537,33 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().multi_plan_max_occupied_ratio, double,
                   "multi_plan_max_occupied_ratio");
 
-  JSON_READ_VALUE(apa_param.SetPram().adjust_plan_max_lat_err, double,
-                  "adjust_plan_max_lat_err");
-
   JSON_READ_VALUE(apa_param.SetPram().adjust_plan_max_heading1_err, double,
                   "adjust_plan_max_heading1_err");
 
+  JSON_READ_VALUE(apa_param.SetPram().adjust_plan_max_lat_err, double,
+                  "adjust_plan_max_lat_err");
+
   JSON_READ_VALUE(apa_param.SetPram().adjust_plan_max_heading2_err, double,
                   "adjust_plan_max_heading2_err");
-  JSON_READ_VALUE(apa_param.SetPram().lateral_path_optimization_enable, bool,
-                  "lateral_path_optimization_enable");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_lat_opt_enable, bool,
+                  "parallel_lat_opt_enable");
+
+  JSON_READ_VALUE(apa_param.SetPram().perpendicular_lat_opt_enable, bool,
+                  "perpendicular_lat_opt_enable");
+
+  JSON_READ_VALUE(apa_param.SetPram().cilqr_path_optimization_enable, bool,
+                  "is_cilqr_path_optimization_enable");
+
+  JSON_READ_VALUE(apa_param.SetPram().min_opt_path_length, double,
+                  "min_opt_path_length");
+
+  JSON_READ_VALUE(apa_param.SetPram().min_gear_path_length, double,
+                  "min_gear_path_length");
 
   // slot managent params
+  JSON_READ_VALUE(apa_param.SetPram().release_slot_by_prepare, bool,
+                  "release_slot_by_prepare");
   // slot update
   JSON_READ_VALUE(apa_param.SetPram().slot_update_in_or_out_occupied_ratio,
                   double, "slot_update_in_or_out_occupied_ratio");
@@ -478,48 +621,6 @@ void ApaPlanInterface::SyncParameters() {
 
   // gen output params
   JSON_READ_VALUE(apa_param.SetPram().max_velocity, double, "max_velocity");
-}
-
-const bool ApaPlanInterface::UpdateFrame(framework::Frame *frame) {
-  // main update
-  const auto local_view_ptr =
-      &(frame->session()->environmental_model().get_local_view());
-
-  if (g_context.GetStatemachine().apa_reset_flag) {
-    apa_world_ptr_->Reset();
-    std::cout << "reset apa world once!" << std::endl;
-
-    if (planner_ptr_ != nullptr) {
-      planner_ptr_->Reset();
-      std::cout << "reset planner once!" << std::endl;
-    }
-
-    // sync parameters
-    SyncParameters();
-  }
-
-  const bool success = Update(local_view_ptr);
-
-  auto planning_output_ptr = &(frame->mutable_session()
-                                   ->mutable_planning_output_context()
-                                   ->mutable_planning_status()
-                                   ->planning_result.planning_output);
-
-  if (success) {
-    *planning_output_ptr = planning_output_;
-
-    const auto &planning_status =
-        planner_ptr_->GetPlannerStates().planning_status;
-
-    AddReleasedSlotInfo(*planning_output_ptr);
-
-    return planning_status < ApaPlannerBase::ParkingStatus::PARKING_FAILED;
-  } else {
-    planning_output_ptr->clear_trajectory();
-    planning_output_ptr->clear_gear_command();
-    AddReleasedSlotInfo(*planning_output_ptr);
-    return false;
-  }
 }
 
 }  // namespace apa_planner

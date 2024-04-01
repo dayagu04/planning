@@ -600,50 +600,52 @@ void HppGeneralLateralDecider::ConstructLaneAndBoundaryBounds(
                     path_bound.lower);
     }
 
-    map_obstacle_decision.lat_bounds.emplace_back(
-        WeightedBound{safe_bound.lower, safe_bound.upper,
-                      config_.kPhysicalBoundWeight, BoundInfo{-100, "lane"}});
-    map_obstacle_decision.lat_bounds.emplace_back(
-        WeightedBound{path_bound.lower, path_bound.upper,
-                      config_.kHardBoundWeight, BoundInfo{-100, "road"}});
+    map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+        safe_bound.lower, safe_bound.upper, config_.kPhysicalBoundWeight,
+        BoundInfo{-100, BoundType::LANE}});
+    map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+        path_bound.lower, path_bound.upper, config_.kHardBoundWeight,
+        BoundInfo{-100, BoundType::ROAD_BORDER}});
     map_obstacle_decision.lat_bounds.emplace_back(
         WeightedBound{groundline_obstacle_bound.lower, l_offset_limit,
                       config_.kHardBoundWeight,
                       BoundInfo{right_groundline_obstacle_border.obstacle_id,
-                                "groundline_obstacle"}});
+                                BoundType::GROUNDLINE}});
     map_obstacle_decision.lat_bounds.emplace_back(
         WeightedBound{groundline_obstacle_safe_bound.lower, l_offset_limit,
                       config_.kPhysicalBoundWeight,
                       BoundInfo{right_groundline_obstacle_border.obstacle_id,
-                                "groundline_obstacle_soft"}});
-    map_obstacle_decision.lat_bounds.push_back(WeightedBound{
-        parking_space_bound.lower, l_offset_limit,
-        config_.kSolidLaneBoundWeight,
-        BoundInfo{right_parking_space_border.obstacle_id, "parking_space"}});
+                                BoundType::GROUNDLINE}});
+    map_obstacle_decision.lat_bounds.push_back(
+        WeightedBound{parking_space_bound.lower, l_offset_limit,
+                      config_.kSolidLaneBoundWeight,
+                      BoundInfo{right_parking_space_border.obstacle_id,
+                                BoundType::PARKING_SPACE}});
     map_obstacle_decision.lat_bounds.push_back(
         WeightedBound{parking_space_safe_bound.lower, l_offset_limit,
                       config_.kVirtualLaneBoundWeight,
                       BoundInfo{right_parking_space_border.obstacle_id,
-                                "parking_space_soft"}});
+                                BoundType::PARKING_SPACE}});
     map_obstacle_decision.lat_bounds.emplace_back(
         WeightedBound{-l_offset_limit, groundline_obstacle_bound.upper,
                       config_.kHardBoundWeight,
                       BoundInfo{left_groundline_obstacle_border.obstacle_id,
-                                "groundline_obstacle"}});
+                                BoundType::GROUNDLINE}});
     map_obstacle_decision.lat_bounds.emplace_back(
         WeightedBound{-l_offset_limit, groundline_obstacle_safe_bound.upper,
                       config_.kPhysicalBoundWeight,
                       BoundInfo{left_groundline_obstacle_border.obstacle_id,
-                                "groundline_obstacle_soft"}});
-    map_obstacle_decision.lat_bounds.push_back(WeightedBound{
-        -l_offset_limit, parking_space_bound.upper,
-        config_.kSolidLaneBoundWeight,
-        BoundInfo{left_parking_space_border.obstacle_id, "parking_space"}});
+                                BoundType::GROUNDLINE}});
+    map_obstacle_decision.lat_bounds.push_back(
+        WeightedBound{-l_offset_limit, parking_space_bound.upper,
+                      config_.kSolidLaneBoundWeight,
+                      BoundInfo{left_parking_space_border.obstacle_id,
+                                BoundType::PARKING_SPACE}});
     map_obstacle_decision.lat_bounds.push_back(
         WeightedBound{-l_offset_limit, parking_space_safe_bound.upper,
                       config_.kVirtualLaneBoundWeight,
                       BoundInfo{left_parking_space_border.obstacle_id,
-                                "parking_space_soft"}});
+                                BoundType::PARKING_SPACE}});
 
     map_obstacle_decisions.emplace_back(std::move(map_obstacle_decision));
   }
@@ -994,8 +996,8 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
           care_overlap_polygon.max_y() + collision_center_distance;
       safe_bound.lower = care_overlap_polygon.max_y() + safe_center_distance +
                          safe_extra_distance;
-      path_bound_info.type = "LEFT";
-      safe_bound_info.type = "LEFT";
+      path_bound_info.type = BoundType::AGENT;
+      safe_bound_info.type = BoundType::AGENT;
       path_bound_info.id = obstacle->id();
       safe_bound_info.id = obstacle->id();
     } else if (lat_decision == LatObstacleDecisionType::RIGHT) {
@@ -1003,8 +1005,8 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
           care_overlap_polygon.min_y() - collision_center_distance;
       safe_bound.upper = care_overlap_polygon.min_y() - safe_center_distance -
                          safe_extra_distance;
-      path_bound_info.type = "RIGHT";
-      safe_bound_info.type = "RIGHT";
+      path_bound_info.type = BoundType::AGENT;
+      safe_bound_info.type = BoundType::AGENT;
       path_bound_info.id = obstacle->id();
       safe_bound_info.id = obstacle->id();
     } else {
@@ -1249,14 +1251,14 @@ void HppGeneralLateralDecider::ExtractBoundary(
     hard_upper_bound_info->mutable_bound_info()->set_id(
         path_upper_bound_info.id);
     hard_upper_bound_info->mutable_bound_info()->set_type(
-        path_upper_bound_info.type);
+        BoundType2String(path_upper_bound_info.type));
     auto hard_lower_bound_info =
         lat_debug_info_.mutable_hard_lower_bound_info_vec()->Add();
     hard_lower_bound_info->set_lower(tmp_bound.first);
     hard_lower_bound_info->mutable_bound_info()->set_id(
         path_lower_bound_info.id);
     hard_lower_bound_info->mutable_bound_info()->set_type(
-        path_lower_bound_info.type);
+        BoundType2String(path_lower_bound_info.type));
   }
 
   for (auto &bounds : safe_bounds) {
@@ -1282,14 +1284,14 @@ void HppGeneralLateralDecider::ExtractBoundary(
     soft_upper_bound_info->mutable_bound_info()->set_id(
         safe_upper_bound_info.id);
     soft_upper_bound_info->mutable_bound_info()->set_type(
-        safe_upper_bound_info.type);
+        BoundType2String(safe_upper_bound_info.type));
     auto soft_lower_bound_info =
         lat_debug_info_.mutable_soft_lower_bound_info_vec()->Add();
     soft_lower_bound_info->set_lower(tmp_bound.first);
     soft_lower_bound_info->mutable_bound_info()->set_id(
         safe_lower_bound_info.id);
     soft_lower_bound_info->mutable_bound_info()->set_type(
-        safe_lower_bound_info.type);
+        BoundType2String(safe_lower_bound_info.type));
   }
 
   DebugInfoManager::GetInstance()

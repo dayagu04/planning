@@ -267,7 +267,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
   double safety_dist = v_ego * v_ego / 6.0 + 2;
   double min_visible_gap = 10.0;
   double max_visible_gap = 25.0;
-  double max_perception_range = 70.0;
+  double max_perception_range = 90.0;
 
   const std::vector<TrackedObject> &front_tracks =
       lateral_obstacle->front_tracks();

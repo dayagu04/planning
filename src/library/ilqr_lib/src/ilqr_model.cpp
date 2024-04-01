@@ -36,6 +36,9 @@ double iLqrModel::GetCost(const State &x, const Control &u,
   double result = 0.0;
   for (auto &each_cost : cost_stack_) {
     each_cost->SetConfig(&cost_config_vec_ptr_->at(step));
+    if (solver_config_ptr_->c_ilqr_enable) {
+      each_cost->SetAliLqrConfig(&alilqr_config_vec_ptr_->at(step));
+    }
     result = each_cost->GetCost(x, u);
     cost += result;
 
@@ -54,6 +57,9 @@ double iLqrModel::GetTerminalCost(const State &x) {
   double result = 0.0;
   for (auto &each_cost : cost_stack_) {
     each_cost->SetConfig(&cost_config_vec_ptr_->back());
+    if (solver_config_ptr_->c_ilqr_enable) {
+      each_cost->SetAliLqrConfig(&alilqr_config_vec_ptr_->back());
+    }
     result = each_cost->GetCost(x, u);
     cost += result;
 
@@ -72,6 +78,9 @@ void iLqrModel::GetGradientHessian(const State &x, const Control &u,
                                    LxxMT &lxx, LxuMT &lxu, LuuMT &luu) {
   for (auto &each_cost : cost_stack_) {
     each_cost->SetConfig(&cost_config_vec_ptr_->at(step));
+    if (solver_config_ptr_->c_ilqr_enable) {
+      each_cost->SetAliLqrConfig(&alilqr_config_vec_ptr_->at(step));
+    }
     each_cost->GetGradientHessian(x, u, lx, lu, lxx, lxu, luu);
   }
 }
@@ -82,6 +91,9 @@ void iLqrModel::GetTerminalGradientHessian(const State &x, LxMT &lx, LuMT &lu,
 
   for (auto &each_cost : cost_stack_) {
     each_cost->SetConfig(&cost_config_vec_ptr_->back());
+    if (solver_config_ptr_->c_ilqr_enable) {
+      each_cost->SetAliLqrConfig(&alilqr_config_vec_ptr_->back());
+    }
     each_cost->GetGradientHessian(x, u, lx, lu, lxx, lxu, luu);
   }
 }

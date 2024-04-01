@@ -13,8 +13,9 @@
 namespace py = pybind11;
 using namespace planning::apa_planner;
 
-static LateralPathOptimizerProblem *pBase = nullptr;
-
+static LateralPathOptimizerProblem *pABase = nullptr;
+static LateralPathOptimizerProblem *pBBase = nullptr;
+static bool c_ilqr_enable = false;
 //  create init data
 static std::vector<double> x_vec;
 static std::vector<double> y_vec;
@@ -51,7 +52,7 @@ int SamplingOneSeg(const double start_x, const double start_y,
   bool is_anti_clockwise = (theta_arc > 0.0);
   const double seg_length = std::fabs(theta_arc) * radius;
 
-  const auto& pO = Eigen::Vector2d(center_x, center_y);
+  const auto &pO = Eigen::Vector2d(center_x, center_y);
   double theta = start_heading;
 
   const double dtheta = ds / radius * (is_anti_clockwise ? 1.0 : -1.0);
@@ -124,10 +125,13 @@ std::vector<double> GetHeadingVec() { return heading_vec; }
 std::vector<double> GetCurvatureVec() { return curvature_vec; }
 double GetLength() { return length; }
 
-//ilqr optimizer
+// ilqr optimizer
 int Init() {
-  pBase = new LateralPathOptimizerProblem();
-  pBase->Init();
+  pABase = new LateralPathOptimizerProblem();
+  pABase->Init(true);
+
+  pBBase = new LateralPathOptimizerProblem();
+  pBBase->Init(false);
   return 0;
 }
 
@@ -150,22 +154,31 @@ int UpdateBytes(py::bytes &planning_input_bytes) {
           planning_input_bytes);
 
   uint8_t gear_cmd = 0;
-  pBase->Update(planning_input, gear_cmd);
-
+  if (c_ilqr_enable) {
+    pABase->Update(planning_input, gear_cmd);
+  } else {
+    pBBase->Update(planning_input, gear_cmd);
+  }
   return 0;
 }
 
 py::bytes GetOutputBytes() {
-  auto res = pBase->GetOutput();
+  planning::common::LateralPathOptimizerOutput res;
+  if (c_ilqr_enable) {
+    res = pABase->GetOutput();
+  } else {
+    res = pBBase->GetOutput();
+  }
   std::string serialized_message;
   res.SerializeToString(&serialized_message);
 
   return serialized_message;
 }
 
-int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_x, double q_ref_y,
-                   double q_ref_theta, double q_terminal_theta, double q_terminal_xy, double q_k,
-                   double q_u,double q_k_bound, double q_u_bound) {
+int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_x,
+                   double q_ref_y, double q_ref_theta, double q_terminal_theta,
+                   double q_terminal_xy, double q_k, double q_u,
+                   double q_k_bound, double q_u_bound) {
   planning::common::LateralPathOptimizerInput planning_input =
       BytesToProto<planning::common::LateralPathOptimizerInput>(
           planning_input_bytes);
@@ -181,8 +194,13 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_x, double q_ref
   planning_input.set_q_k_bound(q_k_bound);
   planning_input.set_q_u_bound(q_u_bound);
   uint8_t gear_cmd = 0;
-  pBase->Update(planning_input, gear_cmd);
-
+  bool is_cilqr_enable = false;
+  c_ilqr_enable = is_cilqr_enable;
+  if (is_cilqr_enable) {
+    pABase->Update(planning_input, gear_cmd);
+  } else {
+    pBBase->Update(planning_input, gear_cmd);
+  }
   return 0;
 }
 

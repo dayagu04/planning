@@ -60,6 +60,8 @@ class LaneChangeRequestManager {
     return false;
   }
 
+  void GenerateHMIInfo();
+
  private:
   RequestType request_ = NO_CHANGE;
   RequestSource request_source_ = NO_REQUEST;

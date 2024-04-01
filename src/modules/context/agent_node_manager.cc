@@ -35,9 +35,9 @@ bool AgentNodeManager::init() {
   y_vec_origin_lane_.clear();
   x_vec_target_lane_.clear();
   y_vec_target_lane_.clear();
-
-  frenet_coord_ = nullptr;
-
+  map_gs_care_obstacles_.clear();
+  map_target_lane_obstacles_.clear();
+  map_origin_lane_obstacles_.clear();
   return true;
 }
 
@@ -171,7 +171,7 @@ int AgentNodeManager::FindSectionIndex(
   return -1;  // Index not found in any section
 }
 
-void AgentNodeManager::InferObjTrajByLane(
+bool AgentNodeManager::InferObjTrajByLane(
     ObstaclePredicatedInfo &obstacle_predicated_info, const Obstacle &obj,
     const int obj_in_which_lane) {
   double obj_x_0 = obj.x_center();
@@ -190,6 +190,7 @@ void AgentNodeManager::InferObjTrajByLane(
   for (size_t i = 0; i < lane_x_vec.size(); ++i) {
     lane_points[i] = {lane_x_vec[i], lane_y_vec[i]};
   }
+  bool infer_ok{true};
   // Point2D obj_position = {obj_x_0, obj_y_0}; //TODO:@liuhao why delete
 
   // Point2D projection_point = FindClosestPointOnCurve(obj_position,
@@ -235,10 +236,14 @@ void AgentNodeManager::InferObjTrajByLane(
         lane_y_vec.begin() + lane_mono_interval_index[sections_index].second +
             1);
     auto section_x_values = lane_mono_intervals[sections_index];
+    if (section_x_values[0] > section_x_values[1]) {
+      std::reverse(section_x_values.begin(), section_x_values.end());
+      std::reverse(section_y_values.begin(), section_y_values.end());
+    }
     cart_spline_line_info.set_points(section_x_values, section_y_values);
   } else {
     std::cout << "MonotonicStatus bug, id is" << obj.id() << std::endl;
-    return;
+    return false;
   }
 
   double lane_intersection_point_y = cart_spline_line_info(obj_x_0);
@@ -262,9 +267,9 @@ void AgentNodeManager::InferObjTrajByLane(
         lane_y_vec.begin() + lane_mono_interval_index[sections_index].second);
     StitchLaneValidInfo(mono_status, obj_traj_length, non_mono_x_value,
                         non_mono_y_value, s_vec);
-    InferConstSpeedObstacleTraj(obj, mono_status, delta_y, obj_traj_length,
-                                non_mono_x_value, non_mono_y_value, s_vec,
-                                obj_in_which_lane, obstacle_predicated_info);
+    infer_ok = InferConstSpeedObstacleTraj(
+        obj, mono_status, delta_y, obj_traj_length, non_mono_x_value,
+        non_mono_y_value, s_vec, obj_in_which_lane, obstacle_predicated_info);
 
   } else {
     std::vector<double> filtered_x_value(
@@ -275,12 +280,12 @@ void AgentNodeManager::InferObjTrajByLane(
         lane_predict_points_y.end());
     StitchLaneValidInfo(mono_status, obj_traj_length, filtered_x_value,
                         filtered_y_value, s_vec);
-    InferConstSpeedObstacleTraj(obj, mono_status, delta_y, obj_traj_length,
-                                filtered_x_value, filtered_y_value, s_vec,
-                                obj_in_which_lane, obstacle_predicated_info);
+    infer_ok = InferConstSpeedObstacleTraj(
+        obj, mono_status, delta_y, obj_traj_length, filtered_x_value,
+        filtered_y_value, s_vec, obj_in_which_lane, obstacle_predicated_info);
   }
 
-  return;
+  return infer_ok;
 }
 
 std::vector<std::pair<size_t, size_t>>
@@ -342,7 +347,7 @@ void AgentNodeManager::StitchLaneValidInfo(
   }
 }
 
-void AgentNodeManager::InferConstSpeedObstacleTraj(
+bool AgentNodeManager::InferConstSpeedObstacleTraj(
     const Obstacle &obj, const MonotonicStatus mono_status,
     const double delta_y, const double traj_length,
     const std::vector<double> &x_values, const std::vector<double> &y_values,
@@ -350,7 +355,7 @@ void AgentNodeManager::InferConstSpeedObstacleTraj(
     ObstaclePredicatedInfo &obj_predicted_points) {
   if (x_values.size() < 3) {
     std::cout << "lane x vec num is little, id is" << obj.id() << std::endl;
-    return;  // NOTE: core dump时 注意检查
+    return false;  // NOTE: core dump时 注意检查
   }
   // spline
   pnc::mathlib::spline x_s_spline;
@@ -363,9 +368,10 @@ void AgentNodeManager::InferConstSpeedObstacleTraj(
   obj_pred_traj.resize(PointNum + 1);
 
   Point2D obj_cart_position{obj.x_center(), obj.y_center()};
-  Point2D obj_frenet_position;
+  Point2D obj_frenet_position{
+      300, obj_in_which_lane == 0 ? 0. : (target_state_ == 1 ? 3. : -3.)};
   if (!frenet_coord_->XYToSL(obj_cart_position, obj_frenet_position)) {
-    LOG_ERROR("Agent Node, cart 2 frenet failed first position");
+    // LOG_ERROR("Agent Node, cart 2 frenet failed first position");
   }
 
   for (auto i = 0; i < PointNum + 1; i++) {  // only update pred x, y, heading
@@ -373,22 +379,25 @@ void AgentNodeManager::InferConstSpeedObstacleTraj(
     obj_pred_traj[i].y = y_s_spline(sn);
     obj_pred_traj[i].heading_angle =
         std::atan2(y_s_spline.deriv(1, sn), x_s_spline.deriv(1, sn));
-
-    sn += obj_predicted_points.raw_vel * delta_t;
+    double delta_s = obj.velocity() * delta_t;
+    sn += delta_s;
 
     Point2D cart_point{obj_pred_traj[i].x, obj_pred_traj[i].y};
     Point2D frenet_point{100, 0.};
     if (!frenet_coord_->XYToSL(cart_point, frenet_point)) {
-      obj_pred_traj[i].s = 120;
+      obj_pred_traj[i].s =
+          i > 0 ? obj_pred_traj[i - 1].s + delta_s
+                : 300;  //@TODO May exceed the maximum length of the reference
+                        // line, awaiting optimization
       obj_pred_traj[i].l =
           obj_in_which_lane == 0 ? 0 : (target_state_ == 1 ? 3 : -3);
-      LOG_ERROR("Agent Node, cart 2 frenet failed");
+      // LOG_ERROR("Agent Node, cart 2 frenet failed");
     } else {
       obj_pred_traj[i].s = frenet_point.x;
       obj_pred_traj[i].l = frenet_point.y;
     }
   }
-  return;
+  return true;
 }
 
 MonotonicStatus AgentNodeManager::IsMonotonic(
@@ -478,22 +487,28 @@ bool AgentNodeManager::HandleAllObjPredInfo() {
   }
 
   if (!map_origin_lane_obstacles_.empty()) {
+    bool infer_ok{false};
     for (auto &agent : map_origin_lane_obstacles_) {
       ObstaclePredicatedInfo obj_infos;
       auto iter = map_gs_care_obstacles_.find(agent);
       if (iter != map_gs_care_obstacles_.end()) {
-        InferObjTrajByLane(obj_infos, iter->second, true);
-        agent_node_origin_lane_map_.insert(std::make_pair(agent, obj_infos));
+        infer_ok = InferObjTrajByLane(obj_infos, iter->second, true);
+        if (infer_ok) {
+          agent_node_origin_lane_map_.insert(std::make_pair(agent, obj_infos));
+        }
       }
     }
   };
   if (!map_target_lane_obstacles_.empty()) {
+    bool infer_ok{false};
     for (auto &agent : map_target_lane_obstacles_) {
       ObstaclePredicatedInfo obj_infos;
       auto iter = map_gs_care_obstacles_.find(agent);
       if (iter != map_gs_care_obstacles_.end()) {
-        InferObjTrajByLane(obj_infos, iter->second, false);
-        agent_node_target_lane_map_.insert(std::make_pair(agent, obj_infos));
+        infer_ok = InferObjTrajByLane(obj_infos, iter->second, false);
+        if (infer_ok) {
+          agent_node_target_lane_map_.insert(std::make_pair(agent, obj_infos));
+        }
       }
     }
   };
@@ -626,7 +641,7 @@ void AgentNodeManager::RefineObjInitState(const int64_t &obj_id,
 
   agent_node_target_lane_map_.erase(obj_id);
   agent_node_target_lane_map_.insert(std::make_pair(obj_id, obj_infos));
-  return;
   // map_gs_care_obstacles_.erase(obj_id);
   // map_gs_care_obstacles_.insert(std::make_pair(obj_id, tmp_obstacle));
+  return;
 }

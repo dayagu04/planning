@@ -23,6 +23,9 @@ class MapRequest : public LaneChangeRequest {
       std::vector<std::string>& forbid_generating_right_reason,
       int left_int_freeze_cnt, int right_int_freeze_cnt);
   bool must_change_before_curr_intersection();
+  bool IsDashEnoughForRepeatSegments(
+      const int lc_map_decision,
+      std::shared_ptr<VirtualLane> current_lane) const;
 };
 
 }  // namespace planning

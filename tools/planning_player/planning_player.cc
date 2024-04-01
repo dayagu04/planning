@@ -97,8 +97,10 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
       auto debug_info_msg =
           std::dynamic_pointer_cast<planning::common::PlanningDebugInfo>(
               it.second);
-      if (debug_info_msg->input_topic_timestamp().function_state_machine() <
-          auto_timestamp) {
+      auto input_time_list = debug_info_msg->input_topic_timestamp();
+      // 增加has_function_state_machine()的判断，应对该字段缺失情况
+      if (input_time_list.has_function_state_machine() &&
+          input_time_list.function_state_machine() < auto_timestamp) {
         frame_num_before_enter_auto_++;
       } else {
         break;
@@ -359,9 +361,15 @@ void PlanningPlayer::PlayOneFrame(
     }
   }
 
+  // 兼容老版本的包，在老版本中，ego_pose的时间戳被加在input_topic_timestamp.localization字段
+  auto input_time_localization_estimate =
+      input_time_list.localization_estimate();
+  if (0 == input_time_localization_estimate) {
+    input_time_localization_estimate = input_time_list.localization();
+  }
   auto localization_estimate_msg =
       find_msg_with_header_time<LocalizationOutput::LocalizationEstimate>(
-          TOPIC_LOCALIZATION_ESTIMATE, input_time_list.localization_estimate());
+          TOPIC_LOCALIZATION_ESTIMATE, input_time_localization_estimate);
   if (localization_estimate_msg) {
     planning_adapter_->FeedLocalizationEstimateOutput(
         localization_estimate_msg);
@@ -576,6 +584,10 @@ void PlanningPlayer::PlayAllFrames() {
             it_debug_info_msg->second)
             ->input_topic_timestamp()
             .localization_estimate();
+    // 兼容老版本的包，在老版本中，ego_pose的时间戳被加在input_topic_timestamp.localization字段
+    if (0 == next_loc_esti_header_time_us_) {
+      next_loc_esti_header_time_us_ = next_loc_header_time_us_;
+    }
     // 特殊处理最后一帧，否则最后几帧定位将和原包一致
     if (i == msg_cache_[TOPIC_PLANNING_DEBUG_INFO].size() - 3) {
       next_loc_header_time_us_ = UINT64_MAX;
@@ -589,6 +601,10 @@ void PlanningPlayer::PlayAllFrames() {
     loc_header_time_us_ = debug_info->input_topic_timestamp().localization();
     loc_esti_header_time_us_ =
         debug_info->input_topic_timestamp().localization_estimate();
+    // 兼容老版本的包，在老版本中，ego_pose的时间戳被加在input_topic_timestamp.localization字段
+    if (0 == loc_esti_header_time_us_) {
+      loc_esti_header_time_us_ = loc_header_time_us_;
+    }
     PlayOneFrame(frame_num_++, debug_info->input_topic_timestamp());
   }
 }

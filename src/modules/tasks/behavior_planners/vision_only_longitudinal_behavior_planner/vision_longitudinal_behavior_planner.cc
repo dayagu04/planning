@@ -19,7 +19,7 @@ VisionLongitudinalBehaviorPlanner::VisionLongitudinalBehaviorPlanner(
   config_ = config_builder->cast<VisionLongitudinalBehaviorPlannerConfig>();
   name_ = "VisionLongitudinalBehaviorPlanner";
 
-  accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
+  accel_vel_filter_.Init(-1.0, 0.7, 0.0, 42.0, 0.1);
 }
 
 bool VisionLongitudinalBehaviorPlanner::Execute(framework::Frame *frame) {

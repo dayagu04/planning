@@ -34,7 +34,8 @@ inline T BytesToProto(py::bytes &bytes) {
 
 int UpdateBytes(py::bytes &planning_input_bytes) {
   planning::common::LateralPlanningInput planning_input =
-      BytesToProto<planning::common::LateralPlanningInput>(planning_input_bytes);
+      BytesToProto<planning::common::LateralPlanningInput>(
+          planning_input_bytes);
 
   pBase->Update(planning_input);
 
@@ -49,11 +50,15 @@ py::bytes GetOutputBytes() {
   return serialized_message;
 }
 
-int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy, double q_ref_theta, double q_acc, double q_jerk,
-                   double q_acc_bound, double q_jerk_bound, double acc_bound, double jerk_bound, double q_safe_bound,
-                   double q_hard_bound, double upper_safe_bound, double lower_safe_bound) {
+int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
+                   double q_ref_theta, double q_acc, double q_jerk,
+                   double q_acc_bound, double q_jerk_bound, double acc_bound,
+                   double jerk_bound, double q_safe_bound, double q_hard_bound,
+                   double upper_safe_bound, double lower_safe_bound,
+                   double q_continuity) {
   planning::common::LateralPlanningInput planning_input =
-      BytesToProto<planning::common::LateralPlanningInput>(planning_input_bytes);
+      BytesToProto<planning::common::LateralPlanningInput>(
+          planning_input_bytes);
   planning_input.set_acc_bound(acc_bound);
   planning_input.set_jerk_bound(jerk_bound);
 
@@ -67,27 +72,36 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy, double q_re
   planning_input.set_q_jerk_bound(q_jerk_bound);
   planning_input.set_q_soft_corridor(q_safe_bound);
   planning_input.set_q_hard_corridor(q_hard_bound);
+  planning_input.set_q_continuity(q_continuity);
 
   // tune the path bound and soft bound
   auto N = planning_input.ref_x_vec().size();
   for (size_t i = 0; i < N; i++) {
     Eigen::Vector2d upper_unit_vector(
-        planning_input.soft_upper_bound_x0_vec(i) - planning_input.soft_lower_bound_x0_vec(i),
-        planning_input.soft_upper_bound_y0_vec(i) - planning_input.soft_lower_bound_y0_vec(i));
+        planning_input.soft_upper_bound_x0_vec(i) -
+            planning_input.soft_lower_bound_x0_vec(i),
+        planning_input.soft_upper_bound_y0_vec(i) -
+            planning_input.soft_lower_bound_y0_vec(i));
     Eigen::Vector2d lower_unit_vector(
-        planning_input.soft_lower_bound_x0_vec(i) - planning_input.soft_upper_bound_x0_vec(i),
-        planning_input.soft_lower_bound_y0_vec(i) - planning_input.soft_upper_bound_y0_vec(i));
+        planning_input.soft_lower_bound_x0_vec(i) -
+            planning_input.soft_upper_bound_x0_vec(i),
+        planning_input.soft_lower_bound_y0_vec(i) -
+            planning_input.soft_upper_bound_y0_vec(i));
 
     upper_unit_vector.normalize();
     lower_unit_vector.normalize();
     planning_input.mutable_soft_upper_bound_x0_vec()->Set(
-        i, planning_input.soft_upper_bound_x0_vec(i) + upper_unit_vector.x() * upper_safe_bound);
+        i, planning_input.soft_upper_bound_x0_vec(i) +
+               upper_unit_vector.x() * upper_safe_bound);
     planning_input.mutable_soft_upper_bound_y0_vec()->Set(
-        i, planning_input.soft_upper_bound_y0_vec(i) + upper_unit_vector.y() * upper_safe_bound);
+        i, planning_input.soft_upper_bound_y0_vec(i) +
+               upper_unit_vector.y() * upper_safe_bound);
     planning_input.mutable_soft_lower_bound_x0_vec()->Set(
-        i, planning_input.soft_lower_bound_x0_vec(i) + lower_unit_vector.x() * lower_safe_bound);
+        i, planning_input.soft_lower_bound_x0_vec(i) +
+               lower_unit_vector.x() * lower_safe_bound);
     planning_input.mutable_soft_lower_bound_y0_vec()->Set(
-        i, planning_input.soft_lower_bound_y0_vec(i) + lower_unit_vector.y() * lower_safe_bound);
+        i, planning_input.soft_lower_bound_y0_vec(i) +
+               lower_unit_vector.y() * lower_safe_bound);
   }
 
   pBase->Update(planning_input);

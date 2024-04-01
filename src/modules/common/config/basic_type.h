@@ -5,12 +5,14 @@
 #include <unordered_map>
 #include <vector>
 
+#include "define/geometry.h"
 #include "ilqr_define.h"
 #include "lateral_motion_planner.pb.h"
 #include "longitudinal_motion_planner.pb.h"
 #include "mjson/mjson.hpp"
 #include "planning_def.h"
 #include "spline.h"
+#include "trajectory1d/trajectory1d.h"
 #include "utils/cartesian_coordinate_system.h"
 #include "utils/frenet_coordinate_system.h"
 
@@ -82,7 +84,43 @@ struct EulerAngle {
   double pitch;
   double roll;
 };
+enum GapDriveStyle {
+  NONESTYLE = 1,
+  OnlyRearFasterCar = 2,
+  OnlyRearSlowerCar = 3,
+  RearCarFaster = 4,
+  FrontCarFaster = 5,
+  NoDecisionForBothCar = 6,
+  OnlyFrontFasterCar = 7,
+  OnlyFrontSlowerCar = 8,
 
+  Free = 9,
+};
+
+struct CrossedLinePointInfo {
+  Point2D crossed_line_point;
+  bool valid = false;
+};
+struct GapSelectorPathSpline {
+  pnc::mathlib::spline x_s_spline;
+  pnc::mathlib::spline y_s_spline;
+  LonState start_state{0., 0., 0., 0., 0.};
+  Point2D start_cart_point{0., 0.};
+  Point2D start_frenet_point{0., 0.};
+  Point2D quintic_p0{0., 0.};
+  Point2D quintic_pe{0., 0.};
+  Point2D stitched_p{0., 0.};
+  CrossedLinePointInfo crossed_line_point_info{Point2D{0., 0.}, false};
+  enum PathSplineStatus {
+    NO_VALID = 0,
+    LC_VALID = 1,
+    LH_VALID = 2,
+    LB_VALID = 3,
+    LC_LANE_CROSS = 4,
+  };
+  int path_spline_status{
+      NO_VALID};  // 0--NO_VALID, 1--LC_VALID, 2--LH_VALID, 3--LB_VALID
+};
 typedef enum {
   BOTH_AVAILABLE = 0,
   LEFT_AVAILABLE,
@@ -128,6 +166,16 @@ struct TrackInfo {
   double v_rel = 0.0;
 };
 
+typedef enum {
+  NO_REJECTION,
+  BIAS_L,
+  BIAS_R,
+  WIDE_REJECTION_L,
+  WIDE_REJECTION_R,
+  SHORT_REJECTION,
+  NARROW_REJECTION
+} RejectReason;
+
 struct LatBehaviorInfo {
   std::array<std::vector<double>, 2> avd_car_past;
   std::array<std::vector<double>, 2> avd_sp_car_past;
@@ -169,6 +217,7 @@ struct TrajectoryPoint {
   double t = 0;
   double v = 0;
   double a = 0;
+  double jerk = 0;
 
   // frenet
   double s = 0;
@@ -377,7 +426,20 @@ struct MotionPlanningInfo {
 
   ilqr_solver::ControlVec u_vec;
 };
-
+struct GapSelectorInfo {
+  bool lane_cross = false;
+  bool lc_triggered = false;
+  bool lb_triggered = false;
+  bool lc_in = false;
+  bool lb_in = false;
+  double lc_pass_time = 0.;
+  double lc_wait_time = 0.;
+  bool path_requintic = false;
+  bool lc_cancel = false;
+  bool gs_skip = false;
+  int lc_request = 0;
+  GapSelectorPathSpline last_gap_selector_path_spline;
+};
 struct PlanningResult {
   int target_lane_id;
   ScenarioStateEnum target_scenario_state = ROAD_NONE;
@@ -390,6 +452,7 @@ struct PlanningResult {
   double timestamp = 0.0;
   bool use_refined_reference_path = false;
   int contingency_trigger_index = 0;
+  bool gap_selector_trustworthy = false;
   // std::string extra_json;
   mjson::Json extra_json = mjson::Json(mjson::Json::object());
 };
@@ -572,6 +635,11 @@ struct LatBehaviorStateMachineOutput {
 
 enum class LatObstacleType { LANE, ROAD, CAR };
 
+struct LateralOffsetDeciderOutput {
+  bool is_valid = false;
+  double lateral_offset = 0.0;
+};
+
 struct LatDeciderOutput {
   planning::common::LateralInitState init_state;
 
@@ -584,6 +652,7 @@ struct LatDeciderOutput {
   std::vector<double> last_enu_ref_theta;
   double v_cruise;
   bool complete_follow = true;
+  bool lane_change_scene = false;
 };
 
 struct LateralMotionPlanningOutput {

@@ -84,7 +84,7 @@ class AgentNodeManager {
 
   void RefineObjInitState(const int64_t &obj_id, const double &obj_add_vel,
                           const double &obj_add_s);
-  void InferObjTrajByLane(
+  bool InferObjTrajByLane(
       ObstaclePredicatedInfo &obstacle_predicated_info, const Obstacle &obj,
       const int obj_in_which_lane = 0);  // 0 --origin lane; 1-- target lane
 
@@ -110,7 +110,7 @@ class AgentNodeManager {
   int FindSectionIndex(const std::vector<std::pair<size_t, size_t>> &indices,
                        size_t indexToFind);
 
-  void InferConstSpeedObstacleTraj(
+  bool InferConstSpeedObstacleTraj(
       const Obstacle &obj, const MonotonicStatus mono_status,
       const double delta_y, const double traj_length,
       const std::vector<double> &x_values, const std::vector<double> &y_values,
@@ -142,9 +142,6 @@ class AgentNodeManager {
   void ConstructGaps();
 
   void SortNodeByS();
-
-  std::unordered_map<int, Obstacle> origin_lane_objs_;
-  std::unordered_map<int, Obstacle> target_lane_objs_;
 
   std::unordered_map<int64_t, ObstaclePredicatedInfo>
       agent_node_origin_lane_map_;

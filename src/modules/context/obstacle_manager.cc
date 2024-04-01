@@ -78,31 +78,39 @@ void ObstacleManager::update() {
 
   if (!session_->is_hpp_scene()) {
     // add gs care obstacles
-    const auto &fusion_objects =
-        session_->environmental_model().get_fusion_info();
     for (int i = 0;
-         i < session_->environmental_model().get_fusion_info().size(); i++) {
-      auto &fusion_object = fusion_objects[i];
-      bool is_static = fusion_object.speed < 0.1 ||
-                       fusion_object.trajectory_array.size() == 0;
-      double prediction_relative_time =
-          fusion_object.delay_time - ego_init_relative_time;
+         i < session_->environmental_model().get_prediction_info().size();
+         i++) {
+      const auto &prediction_object = prediction_objects[i];
+      const bool is_static = prediction_object.speed < 0.1 ||
+                             prediction_object.trajectory_array.size() == 0;
+      const double prediction_relative_time =
+          prediction_object.delay_time - ego_init_relative_time;
 
       // add gs care obstacles
-      bool gs_care_fusion_source =
-          (fusion_object.fusion_source == OBSTACLE_SOURCE_CAMERA) ||
-          (fusion_object.fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA) ||
-          (fusion_object.fusion_source == OBSTACLE_SOURCE_LF_RADAR) ||
-          (fusion_object.fusion_source == OBSTACLE_SOURCE_RF_RADAR) ||
-          (fusion_object.fusion_source == OBSTACLE_SOURCE_LR_RADAR) ||
-          (fusion_object.fusion_source == OBSTACLE_SOURCE_RR_RADAR);
+      const bool gs_care_fusion_source =
+          (prediction_object.fusion_source == OBSTACLE_SOURCE_CAMERA) ||
+          (prediction_object.fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA) ||
+          (prediction_object.fusion_source == OBSTACLE_SOURCE_LF_RADAR) ||
+          (prediction_object.fusion_source == OBSTACLE_SOURCE_RF_RADAR) ||
+          (prediction_object.fusion_source == OBSTACLE_SOURCE_LR_RADAR) ||
+          (prediction_object.fusion_source == OBSTACLE_SOURCE_RR_RADAR) ||
+          (prediction_object.fusion_source ==
+           OBSTACLE_SOURCE_CAMERA_AND_FLRADAR) ||
+          (prediction_object.fusion_source ==
+           OBSTACLE_SOURCE_CAMERA_AND_FRRADAR) ||
+          (prediction_object.fusion_source ==
+           OBSTACLE_SOURCE_CAMERA_AND_RLRADAR) ||
+          (prediction_object.fusion_source ==
+           OBSTACLE_SOURCE_CAMERA_AND_RRRADAR);
 
-      if (gs_care_fusion_source && fusion_object.type != 0 &&
-          fusion_object.length > 0. && fusion_object.width > 0. &&
-          std::fabs(fusion_object.relative_position_y) < 10. &&
-          std::fabs(fusion_object.relative_position_x) < 100.) {
-        auto obstacle = Obstacle(fusion_object.id, fusion_object, is_static,
-                                 prediction_relative_time);
+      if (gs_care_fusion_source &&
+          prediction_object.type != Common::ObjectType::OBJECT_TYPE_UNKNOWN &&
+          prediction_object.length > 0. && prediction_object.width > 0. &&
+          std::fabs(prediction_object.relative_position_y) < 10. &&
+          std::fabs(prediction_object.relative_position_x) < 100.) {
+        auto obstacle = Obstacle(prediction_object.id, prediction_object,
+                                 is_static, prediction_relative_time);
         add_gs_care_obstacles(obstacle);
       }
     }
@@ -237,7 +245,7 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
     // judge the strict lane obstacles
     // TODO:@cailiu, this condition can be released, its strict!
     const double half_width = obstacle_ptr->width() * 0.5;
-    const double lat_buffer = 0.4;
+    const double lat_buffer = 0.8;
     if (frenet_point.y + half_width < 1.5 + lat_buffer &&
         frenet_point.y - half_width > -1.5 - lat_buffer) {
       bstacles_ids_in_lane_map.emplace_back(obstacle_ptr->id());

@@ -2,6 +2,7 @@ import sys, os, copy
 sys.path.append("..")
 # from lib.load_cyberbag import *
 from lib.load_local_view_parking import *
+from bokeh.events import Tap
 sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
@@ -11,9 +12,7 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/planning-5370375c/test_8.00000'
-#bag_path = '/data_cold/abu_zone/autoparse/jac_s811_58977/parking/20240118/20240118-17-20-08/park_in__JAC_S811_58977_MANUAL_ALL_2024-01-18-17-20-08_no_camera.record'
-#bag_path = '/data_cold/abu_zone/autoparse/jac_s811_58977/parking/20240118/20240118-17-21-07/park_in__JAC_S811_58977_MANUAL_ALL_2024-01-18-17-21-07_no_camera.record'
+bag_path = '/data_cold/abu_zone/APA/Parallel/0321/planning-1900f6a2-JAC_S811/test_1.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -23,6 +22,63 @@ output_notebook()
 bag_loader = LoadCyberbag(bag_path, parking_flag)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure_parking()
+
+source = ColumnDataSource(data=dict(x=[], y=[]))
+fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
+line_source = ColumnDataSource(data=dict(x=[], y=[]))
+fig1.line('x', 'y', source=source, line_width=3, line_color = 'pink', line_dash = 'solid', legend_label='measure tool')
+text_source = ColumnDataSource(data=dict(x=[], y=[], text=[]))
+fig1.text('x', 'y', 'text', source=text_source, text_color='red', text_align='center', text_font_size='15pt', legend_label='measure tool')
+
+# Define the JavaScript callback code
+callback_code = """
+    var x = cb_obj.x;
+    var y = cb_obj.y;
+
+    source.data['x'].push(x);
+    source.data['y'].push(y);
+
+    if (source.data['x'].length > 2) {
+        source.data['x'].shift();
+        source.data['y'].shift();
+        source.data['x'].shift();
+        source.data['y'].shift();
+    }
+    source.change.emit();
+
+    if (source.data['x'].length >= 2) {
+        var x1 = source.data['x'][source.data['x'].length - 2];
+        var y1 = source.data['y'][source.data['y'].length - 2];
+        var x2 = x;
+        var y2 = y;
+        var x3 = (x1 + x2) / 2;
+        var y3 = (y1 + y2) / 2;
+
+        var distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+        console.log("Distance between the last two points: " + distance);
+
+        distance = distance.toFixed(4);
+        text_source.data = {'x': [x3], 'y': [y3], 'text': [distance]};
+        text_source.change.emit();
+
+        line_source.data = {'x': [x1, x2], 'y': [y1, y2]};
+        line_source.change.emit();
+    }
+
+    if (source.data['x'].length == 1) {
+        text_source.data['x'].shift();
+        text_source.data['y'].shift();
+        text_source.data['text'].shift();
+    }
+    text_source.change.emit();
+"""
+
+# Create a CustomJS callback with the defined code
+callback = CustomJS(args=dict(source=source, line_source=line_source, text_source=text_source), code=callback_code)
+
+# Attach the callback to the Tap event on the plot
+fig1.js_on_event(Tap, callback)
 
 # try before sliders
 apa_simulation_py.Init()
@@ -52,19 +108,21 @@ class LocalViewSlider:
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
     self.select_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='18%'), description= "select_id",min=0, max=20, value=0, step=1)
     self.force_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_plan",min=0, max=1, value=0, step=1)
-    self.is_path_optimization_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "path_optimization",min=0, max=1, value=0, step=1)
+    self.is_path_optimization_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "path_optimization",min=0, max=1, value=1, step=1)
+    self.is_cilqr_enable_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "cilqr_enable",min=0, max=1, value=1, step=1)
     self.is_reset_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_reset",min=0, max=1, value=0, step=1)
     self.is_complete_path_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_complete_path",min=0, max=1, value=0, step=1)
     self.sample_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "sample_ds",min=0.02, max=2.0, value=0.12, step=0.02)
     self.lon_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lon_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
     self.lat_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lat_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
-    self.heading_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "heading_dif",min=-45.0, max=45.0, value=0.0, step=0.1)
+    self.heading_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "heading_dif",min=-90.0, max=90.0, value=0.0, step=0.1)
 
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
                         select_id = self.select_id_slider,
                         force_plan = self.force_plan_slider,
                         is_path_optimization = self.is_path_optimization_slider,
+                        is_cilqr_enable = self.is_cilqr_enable_slider,
                         is_reset = self.is_reset_slider,
                         is_complete_path = self.is_complete_path_slider,
                         sample_ds = self.sample_ds_slider,
@@ -73,7 +131,7 @@ class LocalViewSlider:
                         heading_dif = self.heading_dif_slider)
 
 ### sliders callback
-def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
+def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
   kwargs = locals()
   update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data)
   index_map = bag_loader.get_msg_index(bag_time)
@@ -140,9 +198,9 @@ def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_re
                                     loc_msg.SerializeToString(),
                                     vs_msg.SerializeToString(),
                                     wave_msg.SerializeToString(),
-                                    select_id, force_plan, is_path_optimization, is_reset, is_complete_path, sample_ds, target_managed_slot_x_vec, target_managed_slot_y_vec,
+                                    select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec)
-                                  
+
 
   data_planning_tune.data = {'plan_path_x': [],
                              'plan_path_y': [],

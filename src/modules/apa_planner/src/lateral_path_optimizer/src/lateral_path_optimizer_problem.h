@@ -13,7 +13,7 @@ namespace planning {
 namespace apa_planner {
 class LateralPathOptimizerProblem {
  public:
-  void Init();
+  void Init(const bool c_ilqr_enable);
   uint8_t Update(planning::common::LateralPathOptimizerInput &planning_input,
                  const uint8_t gear_cmd);
 

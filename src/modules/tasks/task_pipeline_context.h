@@ -75,6 +75,7 @@ struct TaskPipelineContext {
   std::shared_ptr<ReferencePath> reference_path_ptr = nullptr;
   ScenarioStateEnum planning_target_state;
   CoarsePlanningInfo coarse_planning_info;
+  bool gs_valid = false;
 };
 
 }  // namespace planning

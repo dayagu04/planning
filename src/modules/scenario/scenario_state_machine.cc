@@ -709,10 +709,13 @@ void ScenarioStateMachine::compute_lc_valid_info(RequestType direction) {
 }
 
 LaneChangeStageInfo ScenarioStateMachine::decide_lc_valid_info(
-    RequestType direction) {
+    const bool localation_valid, RequestType direction) {
   last_should_premove_ = lane_change_stage_info_.should_premove;
   clear_lc_stage_info();
-  compute_lc_valid_info(direction);
+  lane_change_stage_info_.gap_insertable = true;
+  if (!localation_valid) {
+    compute_lc_valid_info(direction);
+  }
   double coefficient = FLAGS_planning_loop_rate / 25.;
   int lc_valid_thre = static_cast<int>(10.0 * coefficient);
   auto &virtual_lane_manager =
@@ -1131,9 +1134,11 @@ void ScenarioStateMachine::compute_lc_back_info(RequestType direction) {
 }
 
 LaneChangeStageInfo ScenarioStateMachine::decide_lc_back_info(
-    RequestType direction) {
+    const bool localation_valid, RequestType direction) {
   clear_lc_stage_info();
-  compute_lc_back_info(direction);
+  if (!localation_valid) {
+    compute_lc_back_info(direction);
+  }
   double coefficient = FLAGS_planning_loop_rate / 25.;
   int lc_back_thre = static_cast<int>(5 * coefficient);
   if (lane_change_stage_info_.lc_should_back) {

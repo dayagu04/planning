@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/jac_s811_35kw2/trigger/20231227/20231227-16-17-42/data_collection_JAC_S811_35KW2_EVENT_MANUAL_2023-12-27-16-17-42.record"
+bag_path = "/docker_share/urban_bag_0213/data_collection_JAC_S811_21PT6_EVENT_MANUAL_2023-12-08-14-13-52.record.1703145426.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -16,10 +16,10 @@ bag_loader = LoadCyberbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 
-velocity_fig, acc_fig, lead_fig, cost_time_fig, cost_time_fig2, cutin_fig, obs_st_ids = load_lon_global_figure(bag_loader)
+velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids = load_lon_global_figure(bag_loader)
 
 # load lateral planning (behavior and motion)
-pans, lon_plan_data = load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cost_time_fig2, cutin_fig, obs_st_ids)
+pans, lon_plan_data = load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids)
 
 ### sliders config
 class LocalViewSlider:

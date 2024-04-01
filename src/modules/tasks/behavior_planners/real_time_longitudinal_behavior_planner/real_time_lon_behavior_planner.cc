@@ -471,13 +471,13 @@ void RealTimeLonBehaviorPlanner::UpdateLonRefPath(
       s_hard_bound.upper = st_bound.hard_bound.at(i).upper;
       s_hard_bound.weight = 10;
       s_hard_bound.bound_info.id = st_bound.id;
-      s_hard_bound.bound_info.type = "obstacle";
+      s_hard_bound.bound_info.type = BoundType::AGENT;
       WeightedBound s_soft_bound;
       s_soft_bound.lower = st_bound.soft_bound.at(i).lower;
       s_soft_bound.upper = st_bound.soft_bound.at(i).upper;
       s_soft_bound.weight = 10;
       s_soft_bound.bound_info.id = st_bound.id;
-      s_soft_bound.bound_info.type = "obstacle";
+      s_soft_bound.bound_info.type = BoundType::AGENT;
 
       lon_behav_output_.hard_bounds[i].emplace_back(s_hard_bound);
       lon_behav_output_.soft_bounds[i].emplace_back(s_soft_bound);
@@ -532,7 +532,8 @@ void RealTimeLonBehaviorPlanner::GenerateLonRefPathPB() {
       bound_pb->set_upper(bound.upper);
       bound_pb->set_weight(bound.weight);
       bound_pb->mutable_bound_info()->set_id(bound.bound_info.id);
-      bound_pb->mutable_bound_info()->set_type(bound.bound_info.type);
+      bound_pb->mutable_bound_info()->set_type(
+          BoundType2String(bound.bound_info.type));
     }
   }
   // 5.update lon_soft_bounds
@@ -548,7 +549,7 @@ void RealTimeLonBehaviorPlanner::GenerateLonRefPathPB() {
       lon_soft_bound_pb->mutable_bound_info()->set_id(
           lon_soft_bound.bound_info.id);
       lon_soft_bound_pb->mutable_bound_info()->set_type(
-          lon_soft_bound.bound_info.type);
+          BoundType2String(lon_soft_bound.bound_info.type));
     }
   }
   // 6.update lon_sv_boundary

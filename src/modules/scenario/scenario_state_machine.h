@@ -88,9 +88,11 @@ class ScenarioStateMachine
                     std::vector<int>& yield_obstacles);
 
   void compute_lc_valid_info(RequestType direction);
-  LaneChangeStageInfo decide_lc_valid_info(RequestType direction);
+  LaneChangeStageInfo decide_lc_valid_info(const bool localation_valid,
+                                           RequestType direction);
   void compute_lc_back_info(RequestType direction);
-  LaneChangeStageInfo decide_lc_back_info(RequestType direction);
+  LaneChangeStageInfo decide_lc_back_info(const bool localation_valid,
+                                          RequestType direction);
   bool check_lc_change_finish(RequestType direction);
   bool check_lc_back_finish(RequestType direction);
   void set_entry_time(double t) { state_entry_time_ = t; }

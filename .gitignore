@@ -6,6 +6,9 @@ tools/pybind/**/python_proto
 jupyter_pybind/notebooks/scripts/python_proto/*.py
 jupyter_pybind/notebooks/**/__pycache__
 jupyter_pybind/notebooks/**/.ipynb_checkpoints
+jupyter_pybind/notebooks_scc/scripts/python_proto/*.py
+jupyter_pybind/notebooks_scc/**/__pycache__
+jupyter_pybind/notebooks_scc/**/.ipynb_checkpoints
 target/*.tar
 bags/
 src/modules/version.h

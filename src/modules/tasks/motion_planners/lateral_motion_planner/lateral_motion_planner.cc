@@ -126,6 +126,7 @@ void LateralMotionPlanner::AssembleInput() {
   const auto &enu_ref_path = lat_decider_output.enu_ref_path;
   const auto &enu_ref_theta = lat_decider_output.enu_ref_theta;
   const bool &complete_follow = lat_decider_output.complete_follow;
+  const bool &lane_change_scene = lat_decider_output.lane_change_scene;
   assert(enu_ref_path.size() == enu_ref_theta.size());
 
   // set reference trajectory
@@ -275,8 +276,33 @@ void LateralMotionPlanner::AssembleInput() {
   planning_input_.set_q_soft_corridor(config_.q_soft_corridor);
   planning_input_.set_q_hard_corridor(config_.q_hard_corridor);
 
+  const LateralOffsetDeciderOutput &lateral_offset_decider_output =
+      frame_->mutable_session()
+          ->mutable_planning_context()
+          ->lateral_offset_decider_output();
+  if (lateral_offset_decider_output.is_valid) {
+    planning_input_.set_acc_bound(config_.acc_bound_avoid);
+    planning_input_.set_jerk_bound(config_.jerk_bound_avoid);
+    planning_input_.set_q_ref_x(config_.q_ref_x_avoid);
+    planning_input_.set_q_ref_y(config_.q_ref_y_avoid);
+    planning_input_.set_q_ref_theta(config_.q_ref_theta_avoid);
+    planning_input_.set_q_continuity(config_.q_continuity);
+    planning_input_.set_q_acc(config_.q_acc_avoid);
+    planning_input_.set_q_jerk(config_.q_jerk_avoid);
+    planning_input_.set_q_acc_bound(config_.q_acc_bound_avoid);
+    planning_input_.set_q_jerk_bound(config_.q_jerk_bound_avoid);
+    planning_input_.set_q_soft_corridor(0);
+    planning_input_.set_q_hard_corridor(0);
+  }
   // TODO: set control vec for warm start
-
+  if (lane_change_scene) {
+    planning_input_.set_q_continuity(0.01);
+    planning_input_.set_q_jerk(config_.q_jerk_lane_change);
+    planning_input_.set_q_acc(config_.q_acc_lane_change);
+    planning_input_.set_q_ref_x(config_.q_ref_x_lane_change);
+    planning_input_.set_q_ref_y(config_.q_ref_y_lane_change);
+    planning_input_.set_q_ref_theta(config_.q_ref_theta_lane_change);
+  }
   // set complete hold flag, concerned index
   planning_input_.set_complete_follow(complete_follow);
   planning_input_.set_motion_plan_concerned_index(

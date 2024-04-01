@@ -383,6 +383,7 @@ void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
                    : 0;  // clren: hack
   current_tasks_.clear();
   auto lane_type = get_lane_type();
+
   if (order_id_ + 1 > lane_num) return;
   if (is_nearing_ramp && !is_leaving_ramp) {
     if (ramp_direction == RAMP_ON_RIGHT) {
@@ -411,6 +412,14 @@ void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
         // 后续考虑安全性，根据距离，车流量，对task做调整
         for (int i = 0; i + order_id_ + 1 + reverse_task_num < lane_num; i++) {
           current_tasks_.emplace_back(1);
+        }
+      } else if (is_in_merge_area_) {
+        if (dis_to_ramp < 2000.0) {
+          std::cout << "is on merge area,but is nearing ramp!!" << std::endl;
+        } else {
+          current_tasks_.emplace_back(-1);
+          std::cout << "is on merge area,generate 1 left lc task!!!"
+                    << std::endl;
         }
       } else if (is_leaving_ramp) {
         if (order_id_ + 1 == lane_num) {

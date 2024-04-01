@@ -1,5 +1,7 @@
 #include "virtual_lane_manager.h"
+
 #include <cyber/common/log.h>
+
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -19,6 +21,7 @@
 #include "log.h"
 #include "log_glog.h"
 #include "math/box2d.h"
+#include "planning_context.h"
 #include "planning_output_context.h"
 #include "reference_path_manager.h"
 #include "task_basic_types.h"
@@ -91,6 +94,250 @@ std::vector<double> VirtualLaneManager::construct_reference_line_acc(void) {
   return virtual_poly;  // 依次为常数项、一次项、二次项、三次项
 }
 
+void VirtualLaneManager::construct_reference_line_msg(
+    const std::vector<double>& current_lane_virtual_poly,
+    FusionRoad::ReferenceLineMsg& current_lane_virtual) {
+  LOG_DEBUG("construct_reference_line_msg\n");
+  current_lane_virtual.set_order_id(0);
+  current_lane_virtual.set_relative_id(0);
+
+  auto current_lane_virtual_type =
+      current_lane_virtual.mutable_lane_types()->Add();
+
+  current_lane_virtual_type->set_begin(0.0);
+  current_lane_virtual_type->set_end(0.0);
+  current_lane_virtual_type->set_type(FusionRoad::LaneType::LANETYPE_VIRTUAL);
+
+  auto current_lane_virtual_mark =
+      current_lane_virtual.mutable_lane_marks()->Add();
+
+  current_lane_virtual_mark->set_begin(0.0);
+  current_lane_virtual_mark->set_end(0.0);
+
+  current_lane_virtual_mark->set_lane_mark(
+      FusionRoad::LaneDrivableDirection::DIRECTION_UNKNOWN);
+
+  auto current_lane_virtual_source =
+      current_lane_virtual.mutable_lane_sources()->Add();
+
+  current_lane_virtual_source->set_begin(-50.0);
+  current_lane_virtual_source->set_end(150.0);
+
+  current_lane_virtual_source->set_source(
+      FusionRoad::LaneSource::SOURCE_UNKNOWN);
+
+  // set lane_reference_line poly
+  auto current_lane_virtual_ref =
+      current_lane_virtual.mutable_lane_reference_line();
+
+  current_lane_virtual_ref->add_poly_coefficient_car(
+      current_lane_virtual_poly[0]);
+  current_lane_virtual_ref->add_poly_coefficient_car(
+      current_lane_virtual_poly[1]);
+  current_lane_virtual_ref->add_poly_coefficient_car(
+      current_lane_virtual_poly[2]);
+  current_lane_virtual_ref->add_poly_coefficient_car(
+      current_lane_virtual_poly[3]);
+
+  // center line poly
+  const double c0 = current_lane_virtual_ref->poly_coefficient_car(0);
+  const double c1 = current_lane_virtual_ref->poly_coefficient_car(1);
+  const double c2 = current_lane_virtual_ref->poly_coefficient_car(2);
+  const double c3 = current_lane_virtual_ref->poly_coefficient_car(3);
+  LOG_DEBUG("c2 = %f\n", c2);
+
+  // set lane_reference_line ref points
+  double x = -50.0;
+  double s = 0.0;
+  double y_delay;
+  const double heading_angle =
+      session_->environmental_model().get_ego_state_manager()->heading_angle();
+  for (size_t i = 0; i < 100; ++i) {
+    auto current_lane_virtual_ref_point =
+        current_lane_virtual_ref->add_virtual_lane_refline_points();
+
+    const double y = c0 + (c1 + (c2 + c3 * x) * x) * x;
+    const double heading = c1 + (2.0 * c2 + 3.0 * c3 * x) * x;
+    const double curvature =
+        std::fabs(2.0 * c2 + 6.0 * c3 * x) /
+        std::pow(std::pow(c1 + (2.0 * c2 + 3.0 * c3 * x) * x, 2) + 1, 1.5);
+
+    const double half_car_width =
+        session_->environmental_model().vehicle_param().width;
+
+    current_lane_virtual_ref_point->set_track_id(0);
+
+    auto& car2enu =
+        session_->environmental_model().get_ego_state_manager()->get_car2enu();
+
+    Eigen::Vector3d car_point, enu_point;
+    car_point.x() = x;
+    car_point.y() = y;
+    car_point.z() = 0.0;
+    enu_point = car2enu * car_point;
+
+    current_lane_virtual_ref_point->mutable_car_point()->set_x(car_point.x());
+    current_lane_virtual_ref_point->mutable_car_point()->set_y(car_point.y());
+    current_lane_virtual_ref_point->mutable_enu_point()->set_x(enu_point.x());
+    current_lane_virtual_ref_point->mutable_enu_point()->set_y(enu_point.y());
+    current_lane_virtual_ref_point->mutable_enu_point()->set_z(enu_point.z());
+
+    current_lane_virtual_ref_point->mutable_local_point()->set_x(enu_point.x());
+    current_lane_virtual_ref_point->mutable_local_point()->set_y(enu_point.y());
+    current_lane_virtual_ref_point->mutable_local_point()->set_z(enu_point.z());
+
+    current_lane_virtual_ref_point->set_curvature(curvature);
+    current_lane_virtual_ref_point->set_car_heading(heading);
+    current_lane_virtual_ref_point->set_enu_heading(
+        fmod(heading + heading_angle + M_PI, 2 * M_PI) - M_PI);
+    current_lane_virtual_ref_point->set_local_heading(
+        fmod(heading + heading_angle + M_PI, 2 * M_PI) - M_PI);
+
+    current_lane_virtual_ref_point->set_distance_to_left_road_border(
+        half_car_width);
+    current_lane_virtual_ref_point->set_distance_to_right_road_border(
+        half_car_width);
+    current_lane_virtual_ref_point->set_distance_to_left_lane_border(
+        half_car_width);
+    current_lane_virtual_ref_point->set_distance_to_right_lane_border(
+        half_car_width);
+
+    current_lane_virtual_ref_point->set_lane_width(3.75);
+    current_lane_virtual_ref_point->set_speed_limit_max(0.0);
+    current_lane_virtual_ref_point->set_speed_limit_min(0.0);
+
+    current_lane_virtual_ref_point->set_left_road_border_type(
+        Common::LaneBoundaryType::MARKING_UNKNOWN);
+    current_lane_virtual_ref_point->set_right_road_border_type(
+        Common::LaneBoundaryType::MARKING_UNKNOWN);
+    current_lane_virtual_ref_point->set_left_lane_border_type(
+        Common::LaneBoundaryType::MARKING_UNKNOWN);
+    current_lane_virtual_ref_point->set_right_lane_border_type(
+        Common::LaneBoundaryType::MARKING_UNKNOWN);
+
+    current_lane_virtual_ref_point->set_is_in_intersection(false);
+
+    current_lane_virtual_ref_point->set_lane_type(
+        FusionRoad::LaneType::LANETYPE_VIRTUAL);
+
+    const double delta_x = 2.0;
+    if (i == 0) {
+      s = 0.0;
+    } else {
+      s = s + std::hypot(delta_x, y - y_delay);
+    }
+    current_lane_virtual_ref_point->set_s(s);
+    x += delta_x;
+    y_delay = y;
+  }
+  LOG_DEBUG(
+      "current_lane_virtual_ref->virtual_lane_refline_points_size =  %d\n",
+      current_lane_virtual_ref->virtual_lane_refline_points_size());
+  LOG_DEBUG("s_end =  %f\n", s);
+
+  // set left_lane_boundary
+  auto current_lane_virtual_left =
+      current_lane_virtual.mutable_left_lane_boundary();
+
+  current_lane_virtual_left->set_existence(true);
+  current_lane_virtual_left->set_life_time(1);
+  current_lane_virtual_left->set_track_id(0);
+
+  current_lane_virtual_left->set_type(FusionRoad::LineType::LINE_TYPE_UNKNOWN);
+  current_lane_virtual_left->add_poly_coefficient(c0 + 3.75 * 0.5);
+  current_lane_virtual_left->add_poly_coefficient(c1);
+  current_lane_virtual_left->add_poly_coefficient(c2);
+  current_lane_virtual_left->add_poly_coefficient(c3);
+  current_lane_virtual_left->set_begin(-50.0);
+  current_lane_virtual_left->set_end(150.0);
+  current_lane_virtual_left->add_type_segments()->set_length(150.0);
+  current_lane_virtual_left->add_type_segments()->set_type(
+      Common::LaneBoundaryType::MARKING_SOLID);
+  x = -50.0;
+  for (size_t i = 0; i < 100; ++i) {
+    auto current_lane_virtual_left_car_point =
+        current_lane_virtual_left->add_car_points();
+    auto current_lane_virtual_left_enu_point =
+        current_lane_virtual_left->add_enu_points();
+    auto current_lane_virtual_left_local_point =
+        current_lane_virtual_left->add_local_point();
+
+    const double y = c0 + (c1 + (c2 + c3 * x) * x) * x;
+
+    auto& car2enu =
+        session_->environmental_model().get_ego_state_manager()->get_car2enu();
+
+    Eigen::Vector3d car_point, enu_point;
+    car_point.x() = x;
+    car_point.y() = y;
+    car_point.z() = 0.0;
+    enu_point = car2enu * car_point;
+
+    current_lane_virtual_left_car_point->set_x(car_point.x());
+    current_lane_virtual_left_car_point->set_y(car_point.y());
+    current_lane_virtual_left_enu_point->set_x(enu_point.x());
+    current_lane_virtual_left_enu_point->set_y(enu_point.y());
+    current_lane_virtual_left_enu_point->set_z(enu_point.z());
+    current_lane_virtual_left_local_point->set_x(enu_point.x());
+    current_lane_virtual_left_local_point->set_y(enu_point.y());
+    current_lane_virtual_left_local_point->set_z(enu_point.z());
+
+    const double delta_x = 2.0;
+    x += delta_x;
+  }
+
+  // set right_lane_boundary
+  auto current_lane_virtual_right =
+      current_lane_virtual.mutable_right_lane_boundary();
+
+  current_lane_virtual_right->set_existence(true);
+  current_lane_virtual_right->set_life_time(1);
+  current_lane_virtual_right->set_track_id(0);
+
+  current_lane_virtual_right->set_type(FusionRoad::LineType::LINE_TYPE_UNKNOWN);
+  current_lane_virtual_right->add_poly_coefficient(c0 - 3.75 * 0.5);
+  current_lane_virtual_right->add_poly_coefficient(c1);
+  current_lane_virtual_right->add_poly_coefficient(c2);
+  current_lane_virtual_right->add_poly_coefficient(c3);
+  current_lane_virtual_right->set_begin(-50.0);
+  current_lane_virtual_right->set_end(150.0);
+  current_lane_virtual_right->add_type_segments()->set_length(150.0);
+  current_lane_virtual_right->add_type_segments()->set_type(
+      Common::LaneBoundaryType::MARKING_SOLID);
+  x = -50.0;
+  for (size_t i = 0; i < 100; ++i) {
+    auto current_lane_virtual_right_car_point =
+        current_lane_virtual_right->add_car_points();
+    auto current_lane_virtual_right_enu_point =
+        current_lane_virtual_right->add_enu_points();
+    auto current_lane_virtual_right_local_point =
+        current_lane_virtual_right->add_local_point();
+
+    const double y = c0 + (c1 + (c2 + c3 * x) * x) * x;
+
+    auto& car2enu =
+        session_->environmental_model().get_ego_state_manager()->get_car2enu();
+
+    Eigen::Vector3d car_point, enu_point;
+    car_point.x() = x;
+    car_point.y() = y;
+    car_point.z() = 0.0;
+    enu_point = car2enu * car_point;
+
+    current_lane_virtual_right_car_point->set_x(car_point.x());
+    current_lane_virtual_right_car_point->set_y(car_point.y());
+    current_lane_virtual_right_enu_point->set_x(enu_point.x());
+    current_lane_virtual_right_enu_point->set_y(enu_point.y());
+    current_lane_virtual_right_enu_point->set_z(enu_point.z());
+    current_lane_virtual_right_local_point->set_x(enu_point.x());
+    current_lane_virtual_right_local_point->set_y(enu_point.y());
+    current_lane_virtual_right_local_point->set_z(enu_point.z());
+
+    const double delta_x = 2.0;
+    x += delta_x;
+  }
+}
+
 bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   LOG_DEBUG("update VirtualLaneManager\n");
   const double allow_error = 5.0;
@@ -98,6 +345,10 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   left_lane_ = nullptr;
   right_lane_ = nullptr;
   relative_id_lanes_.clear();
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_generated_refline_info()
+      ->Clear();
 
   const FusionRoad::RoadInfo* roads_ptr = &roads;
   FusionRoad::RoadInfo roads_virtual;
@@ -105,268 +356,34 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   if (!CheckLaneValid(roads)) {
     // 依次为常数项、一次项、二次项、三次项
     std::vector<double> current_lane_virtual_poly;
+    FusionRoad::ReferenceLineMsg current_lane_virtual;
     if (session_->environmental_model().function_info().function_mode() ==
         common::DrivingFunctionInfo::ACC) {
       current_lane_virtual_poly = construct_reference_line_acc();
+      construct_reference_line_msg(current_lane_virtual_poly,
+                                   current_lane_virtual);
       LOG_WARNING("[VirtualLaneManager::update] ACC construct reference line");
     } else if (session_->environmental_model()
                    .function_info()
                    .function_mode() == common::DrivingFunctionInfo::SCC) {
-      current_lane_virtual_poly = construct_reference_line_scc();
+      if (in_intersection_ == false) {
+        in_intersection_ = true;
+        current_lane_virtual_poly = construct_reference_line_scc();
+        construct_reference_line_msg(current_lane_virtual_poly,
+                                     current_lane_virtual);
+        intersection_lane_generated_.CopyFrom(current_lane_virtual);
+      } else {
+        current_lane_virtual.CopyFrom(intersection_lane_generated_);
+      }
       LOG_WARNING("[VirtualLaneManager::update] SCC construct reference line");
     } else {
       return false;
     }
-    // set default value
-    FusionRoad::ReferenceLineMsg current_lane_virtual;
-    current_lane_virtual.set_order_id(0);
-    current_lane_virtual.set_relative_id(0);
 
-    auto current_lane_virtual_type =
-        current_lane_virtual.mutable_lane_types()->Add();
-
-    current_lane_virtual_type->set_begin(0.0);
-    current_lane_virtual_type->set_end(0.0);
-    current_lane_virtual_type->set_type(FusionRoad::LaneType::LANETYPE_VIRTUAL);
-
-    auto current_lane_virtual_mark =
-        current_lane_virtual.mutable_lane_marks()->Add();
-
-    current_lane_virtual_mark->set_begin(0.0);
-    current_lane_virtual_mark->set_end(0.0);
-
-    current_lane_virtual_mark->set_lane_mark(
-        FusionRoad::LaneDrivableDirection::DIRECTION_UNKNOWN);
-
-    auto current_lane_virtual_source =
-        current_lane_virtual.mutable_lane_sources()->Add();
-
-    current_lane_virtual_source->set_begin(-50.0);
-    current_lane_virtual_source->set_end(150.0);
-
-    current_lane_virtual_source->set_source(
-        FusionRoad::LaneSource::SOURCE_UNKNOWN);
-
-    // set lane_reference_line poly
-    auto current_lane_virtual_ref =
-        current_lane_virtual.mutable_lane_reference_line();
-
-    current_lane_virtual_ref->add_poly_coefficient_car(
-        current_lane_virtual_poly[0]);
-    current_lane_virtual_ref->add_poly_coefficient_car(
-        current_lane_virtual_poly[1]);
-    current_lane_virtual_ref->add_poly_coefficient_car(
-        current_lane_virtual_poly[2]);
-    current_lane_virtual_ref->add_poly_coefficient_car(
-        current_lane_virtual_poly[3]);
-
-    // center line poly
-    const double c0 = current_lane_virtual_ref->poly_coefficient_car(0);
-    const double c1 = current_lane_virtual_ref->poly_coefficient_car(1);
-    const double c2 = current_lane_virtual_ref->poly_coefficient_car(2);
-    const double c3 = current_lane_virtual_ref->poly_coefficient_car(3);
-    LOG_DEBUG("c2 = %f\n", c2);
-
-    // set lane_reference_line ref points
-    double x = -50.0;
-    double s = 0.0;
-    double y_delay;
-    const double heading_angle = session_->environmental_model()
-                                     .get_ego_state_manager()
-                                     ->heading_angle();
-    for (size_t i = 0; i < 100; ++i) {
-      auto current_lane_virtual_ref_point =
-          current_lane_virtual_ref->add_virtual_lane_refline_points();
-
-      const double y = c0 + (c1 + (c2 + c3 * x) * x) * x;
-      const double heading = c1 + (2.0 * c2 + 3.0 * c3 * x) * x;
-      const double curvature =
-          std::fabs(2.0 * c2 + 6.0 * c3 * x) /
-          std::pow(std::pow(c1 + (2.0 * c2 + 3.0 * c3 * x) * x, 2) + 1, 1.5);
-
-      const double half_car_width =
-          session_->environmental_model().vehicle_param().width;
-
-      current_lane_virtual_ref_point->set_track_id(0);
-
-      auto& car2enu = session_->environmental_model()
-                          .get_ego_state_manager()
-                          ->get_car2enu();
-
-      Eigen::Vector3d car_point, enu_point;
-      car_point.x() = x;
-      car_point.y() = y;
-      car_point.z() = 0.0;
-      enu_point = car2enu * car_point;
-
-      current_lane_virtual_ref_point->mutable_car_point()->set_x(car_point.x());
-      current_lane_virtual_ref_point->mutable_car_point()->set_y(car_point.y());
-      current_lane_virtual_ref_point->mutable_enu_point()->set_x(enu_point.x());
-      current_lane_virtual_ref_point->mutable_enu_point()->set_y(enu_point.y());
-      current_lane_virtual_ref_point->mutable_enu_point()->set_z(enu_point.z());
-
-      current_lane_virtual_ref_point->mutable_local_point()->set_x(
-          enu_point.x());
-      current_lane_virtual_ref_point->mutable_local_point()->set_y(
-          enu_point.y());
-      current_lane_virtual_ref_point->mutable_local_point()->set_z(
-          enu_point.z());
-
-      current_lane_virtual_ref_point->set_curvature(curvature);
-      current_lane_virtual_ref_point->set_car_heading(heading);
-      current_lane_virtual_ref_point->set_enu_heading(
-          fmod(heading + heading_angle + M_PI, 2 * M_PI) - M_PI);
-      current_lane_virtual_ref_point->set_local_heading(
-          fmod(heading + heading_angle + M_PI, 2 * M_PI) - M_PI);
-
-      current_lane_virtual_ref_point->set_distance_to_left_road_border(
-          half_car_width);
-      current_lane_virtual_ref_point->set_distance_to_right_road_border(
-          half_car_width);
-      current_lane_virtual_ref_point->set_distance_to_left_lane_border(
-          half_car_width);
-      current_lane_virtual_ref_point->set_distance_to_right_lane_border(
-          half_car_width);
-
-      current_lane_virtual_ref_point->set_lane_width(3.75);
-      current_lane_virtual_ref_point->set_speed_limit_max(0.0);
-      current_lane_virtual_ref_point->set_speed_limit_min(0.0);
-
-      current_lane_virtual_ref_point->set_left_road_border_type(
-          Common::LaneBoundaryType::MARKING_UNKNOWN);
-      current_lane_virtual_ref_point->set_right_road_border_type(
-          Common::LaneBoundaryType::MARKING_UNKNOWN);
-      current_lane_virtual_ref_point->set_left_lane_border_type(
-          Common::LaneBoundaryType::MARKING_UNKNOWN);
-      current_lane_virtual_ref_point->set_right_lane_border_type(
-          Common::LaneBoundaryType::MARKING_UNKNOWN);
-
-      current_lane_virtual_ref_point->set_is_in_intersection(false);
-
-      current_lane_virtual_ref_point->set_lane_type(
-          FusionRoad::LaneType::LANETYPE_VIRTUAL);
-
-      const double delta_x = 2.0;
-      if (i == 0) {
-        s = 0.0;
-      } else {
-        s = s + std::hypot(delta_x, y - y_delay);
-      }
-      current_lane_virtual_ref_point->set_s(s);
-      x += delta_x;
-      y_delay = y;
-    }
-
-    LOG_DEBUG(
-        "current_lane_virtual_ref->virtual_lane_refline_points_size =  %d\n",
-        current_lane_virtual_ref->virtual_lane_refline_points_size());
-    LOG_DEBUG("s_end =  %f\n", s);
-
-    // set left_lane_boundary
-    auto current_lane_virtual_left =
-        current_lane_virtual.mutable_left_lane_boundary();
-
-    current_lane_virtual_left->set_existence(true);
-    current_lane_virtual_left->set_life_time(1);
-    current_lane_virtual_left->set_track_id(0);
-
-    current_lane_virtual_left->set_type(
-        FusionRoad::LineType::LINE_TYPE_UNKNOWN);
-    current_lane_virtual_left->add_poly_coefficient(c0 + 3.75 * 0.5);
-    current_lane_virtual_left->add_poly_coefficient(c1);
-    current_lane_virtual_left->add_poly_coefficient(c2);
-    current_lane_virtual_left->add_poly_coefficient(c3);
-    current_lane_virtual_left->set_begin(-50.0);
-    current_lane_virtual_left->set_end(150.0);
-    current_lane_virtual_left->add_type_segments()->set_length(150.0);
-    current_lane_virtual_left->add_type_segments()->set_type(
-        Common::LaneBoundaryType::MARKING_SOLID);
-    x = -50.0;
-    for (size_t i = 0; i < 100; ++i) {
-      auto current_lane_virtual_left_car_point =
-          current_lane_virtual_left->add_car_points();
-      auto current_lane_virtual_left_enu_point =
-          current_lane_virtual_left->add_enu_points();
-      auto current_lane_virtual_left_local_point =
-          current_lane_virtual_left->add_local_point();
-
-      const double y = c0 + (c1 + (c2 + c3 * x) * x) * x;
-
-      auto& car2enu = session_->environmental_model()
-                          .get_ego_state_manager()
-                          ->get_car2enu();
-
-      Eigen::Vector3d car_point, enu_point;
-      car_point.x() = x;
-      car_point.y() = y;
-      car_point.z() = 0.0;
-      enu_point = car2enu * car_point;
-
-      current_lane_virtual_left_car_point->set_x(car_point.x());
-      current_lane_virtual_left_car_point->set_y(car_point.y());
-      current_lane_virtual_left_enu_point->set_x(enu_point.x());
-      current_lane_virtual_left_enu_point->set_y(enu_point.y());
-      current_lane_virtual_left_enu_point->set_z(enu_point.z());
-      current_lane_virtual_left_local_point->set_x(enu_point.x());
-      current_lane_virtual_left_local_point->set_y(enu_point.y());
-      current_lane_virtual_left_local_point->set_z(enu_point.z());
-
-      const double delta_x = 2.0;
-      x += delta_x;
-    }
-
-    // set right_lane_boundary
-    auto current_lane_virtual_right =
-        current_lane_virtual.mutable_right_lane_boundary();
-
-    current_lane_virtual_right->set_existence(true);
-    current_lane_virtual_right->set_life_time(1);
-    current_lane_virtual_right->set_track_id(0);
-
-    current_lane_virtual_right->set_type(
-        FusionRoad::LineType::LINE_TYPE_UNKNOWN);
-    current_lane_virtual_right->add_poly_coefficient(c0 - 3.75 * 0.5);
-    current_lane_virtual_right->add_poly_coefficient(c1);
-    current_lane_virtual_right->add_poly_coefficient(c2);
-    current_lane_virtual_right->add_poly_coefficient(c3);
-    current_lane_virtual_right->set_begin(-50.0);
-    current_lane_virtual_right->set_end(150.0);
-    current_lane_virtual_right->add_type_segments()->set_length(150.0);
-    current_lane_virtual_right->add_type_segments()->set_type(
-        Common::LaneBoundaryType::MARKING_SOLID);
-    x = -50.0;
-    for (size_t i = 0; i < 100; ++i) {
-      auto current_lane_virtual_right_car_point =
-          current_lane_virtual_right->add_car_points();
-      auto current_lane_virtual_right_enu_point =
-          current_lane_virtual_right->add_enu_points();
-      auto current_lane_virtual_right_local_point =
-          current_lane_virtual_right->add_local_point();
-
-      const double y = c0 + (c1 + (c2 + c3 * x) * x) * x;
-
-      auto& car2enu = session_->environmental_model()
-                          .get_ego_state_manager()
-                          ->get_car2enu();
-
-      Eigen::Vector3d car_point, enu_point;
-      car_point.x() = x;
-      car_point.y() = y;
-      car_point.z() = 0.0;
-      enu_point = car2enu * car_point;
-
-      current_lane_virtual_right_car_point->set_x(car_point.x());
-      current_lane_virtual_right_car_point->set_y(car_point.y());
-      current_lane_virtual_right_enu_point->set_x(enu_point.x());
-      current_lane_virtual_right_enu_point->set_y(enu_point.y());
-      current_lane_virtual_right_enu_point->set_z(enu_point.z());
-      current_lane_virtual_right_local_point->set_x(enu_point.x());
-      current_lane_virtual_right_local_point->set_y(enu_point.y());
-      current_lane_virtual_right_local_point->set_z(enu_point.z());
-
-      const double delta_x = 2.0;
-      x += delta_x;
-    }
+    auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
+    debug_info_pb->add_generated_refline_info()->CopyFrom(
+        *((planning::common::ReferenceLine*)
+              current_lane_virtual.mutable_lane_reference_line()));
 
     // set roads_virtual
     roads_virtual.mutable_header()->CopyFrom(roads.header());
@@ -377,6 +394,8 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
 
     roads_virtual.set_local_point_valid(roads.local_point_valid());
     roads_ptr = &roads_virtual;
+  } else {
+    in_intersection_ = false;
   }
 
   is_local_valid_ = roads_ptr->local_point_valid();
@@ -408,7 +427,8 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   for (auto& lane : roads_ptr->reference_line_msg()) {
     std::shared_ptr<VirtualLane> virtual_lane_tmp =
         std::make_shared<VirtualLane>();
-    if (lane.lane_merge_split_point().merge_split_point_data_size() == 0) {
+    if (lane.lane_merge_split_point().merge_split_point_data_size() ==
+        0) {  // judge according split point
       virtual_lane_tmp->update_data(lane);
       LOG_DEBUG("this lane has no merge_split info\n");
     } else {
@@ -437,6 +457,11 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
         } else if (lane.relative_id() <= 0 &&
                    relative_id_lanes_.size() == lane.order_id()) {
           virtual_lane_tmp->update_data(lane);
+        } else if (lane.relative_id() == 1 &&
+                   !lane_merge_split_point_data.is_split() &&
+                   lane_merge_split_point_data.orientation() == 1 &&
+                   !lane_merge_split_point_data.is_continue()) {
+          virtual_lane_tmp->update_data(lane);
         } else {
           if (lane.relative_id() == -1) {
             // std::cout << "6666666666666666666666666666: "
@@ -460,6 +485,13 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
         } else if (lane.relative_id() == 0 &&
                    relative_id_lanes_.size() == lane.order_id()) {
           virtual_lane_tmp->update_data(lane);
+        } else if (lane.relative_id() == 1 &&
+                   !lane_merge_split_point_data.is_split() &&
+                   !lane_merge_split_point_data.is_continue() &&
+                   lane_merge_split_point_data.orientation() == 1) {
+          virtual_lane_tmp->update_data(lane);
+          std::cout << "update lane in merge area when ramp merge to road!!!"
+                    << std::endl;
         } else {
           continue;
         }
@@ -499,6 +531,58 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     if (relative_id_lane->get_lane_type() ==
         FusionRoad::LaneType::LANETYPE_EMERGENCY)
       break;
+    //正处于匝道汇主路交汇区的判断条件
+    // 1、当前车道有交汇点信息
+    // 2、自车所在车道为占据路权的normal车道；
+    // 3、右边的车道不是分叉；且是向左汇入；且不占路权的accelerate车道。
+    bool is_in_merge_area = false;
+    if (relative_id_lane->get_lane_merge_split_point()
+                .merge_split_point_data_size() > 0 &&
+        relative_id_lane->get_relative_id() == 0 &&
+        relative_id_lane->get_lane_merge_split_point()
+                .merge_split_point_data()[0]
+                .distance() > 0) {
+      const auto& lane_merge_split_point =
+          relative_id_lane->get_lane_merge_split_point()
+              .merge_split_point_data()[0];
+      const bool current_lane_is_continue =
+          lane_merge_split_point.is_continue();
+      const bool is_current_lane_normal = relative_id_lane->get_lane_type() ==
+                                          FusionRoad::LaneType::LANETYPE_NORMAL;
+      // get right lane
+      std::shared_ptr<VirtualLane> right_lane;
+      for (const auto& get_relative_id_lane : relative_id_lanes_) {
+        if (get_relative_id_lane->get_relative_id() == 1) {
+          const auto& lane_order_id = get_relative_id_lane->get_order_id();
+          right_lane = get_lane_with_order_id(lane_order_id);
+          std::cout << "get right lane!!!" << std::endl;
+          break;
+        }
+      }
+      if (right_lane != NULL) {
+        if (right_lane->get_lane_merge_split_point()
+                .merge_split_point_data_size() > 0) {
+          const auto& right_lane_merge_info =
+              right_lane->get_lane_merge_split_point()
+                  .merge_split_point_data()[0];
+          const bool is_right_lane_accelerate =
+              right_lane->get_lane_type() ==
+              FusionRoad::LaneType::LANETYPE_ACCELERATE;
+          if (current_lane_is_continue && is_current_lane_normal &&
+              is_right_lane_accelerate && !right_lane_merge_info.is_split() &&
+              right_lane_merge_info.orientation() == 1 &&
+              !right_lane_merge_info.is_continue()) {
+            is_in_merge_area = true;
+            std::cout << "is_in_merge_area!!!!" << std::endl;
+          }
+        } else {
+          std::cout << "right lane no merge info!!!1" << std::endl;
+        }
+      } else {
+        std::cout << "right_lane == NULL" << std::endl;
+      }
+    }
+    relative_id_lane->set_is_in_merge_area(is_in_merge_area);
     if (dis_to_first_road_split < 3000.0 || is_leaving_ramp_) {
       relative_id_lane->update_lane_tasks(dis_to_ramp_, is_nearing_ramp,
                                           ramp_direction_, is_leaving_ramp_,
@@ -595,6 +679,14 @@ void VirtualLaneManager::update_virtual_id() {
   }
 
   current_lane_virtual_id_ = lane_virtual_id;
+  // update fixlane id
+  const auto& lateral_outputs =
+      session_->planning_context().lateral_behavior_planner_output();
+  if (lateral_outputs.lc_status == "none") {
+    // sync fix lane id with current lane id while no lane change
+    update_last_fix_lane_id(lane_virtual_id);
+  }
+
   virtual_id_mapped_lane_.clear();
   for (auto lane : relative_id_lanes_) {
     auto lane_virtual_id = lane->get_relative_id() + current_lane_virtual_id_;
@@ -1162,8 +1254,6 @@ bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
     for (const auto& id : lane_group_ptr->successor_lane_group_ids()) {
       if (lane_group_set_.count(id) != 0) {
         sorted_lane_groups_in_route_.emplace_back(id);
-        LOG_DEBUG("sorted lane group id: %lu, No: %zu\n", id,
-                  sorted_lane_groups_in_route_.size());
         lane_group_ptr = hd_map.GetLaneGroupById(id);
         is_found = true;
         break;
@@ -1208,8 +1298,7 @@ bool VirtualLaneManager::JudgeEgoIfOnRamp(
 bool VirtualLaneManager::GetCurrentNearestLane(
     const planning::framework::Session& session) {
   if (session_->environmental_model().get_hdmap_valid()) {
-    const auto& local_view =
-    session_->environmental_model().get_local_view();
+    const auto& local_view = session_->environmental_model().get_local_view();
     if (local_view.localization_estimate.msf_status().msf_status() !=
         LocalizationOutput::MsfStatus::ERROR) {
       std::cout << "hdmap_valid is true,current timestamp:"
@@ -1227,24 +1316,26 @@ bool VirtualLaneManager::GetCurrentNearestLane(
           return false;
         }
         const auto& ego_state =
-          session.environmental_model().get_ego_state_manager();
+            session.environmental_model().get_ego_state_manager();
         ego_pose_x_ = ego_state->ego_pose_raw().x;
         ego_pose_y_ = ego_state->ego_pose_raw().y;
-        yaw_ = ego_state->ego_pose_raw().theta; 
+        yaw_ = ego_state->ego_pose_raw().theta;
         point.set_x(ego_pose_x_);
         point.set_y(ego_pose_y_);
-        std::cout << "in hpp," << "ego_pose_x_:" << ego_pose_x_ << ",ego_pose_y_:" << ego_pose_y_
-                  << std::endl;
+        std::cout << "in hpp,"
+                  << "ego_pose_x_:" << ego_pose_x_
+                  << ",ego_pose_y_:" << ego_pose_y_ << std::endl;
       } else {
         const auto& pose = local_view.localization_estimate.pose();
         const double ego_pose_x = pose.local_position().x();
         const double ego_pose_y = pose.local_position().y();
         point.set_x(ego_pose_x);
         point.set_y(ego_pose_y);
-        std::cout << "in NOA," << "ego_pose_x:" << point.x() << ",ego_pose_y:" << point.y()
+        std::cout << "in NOA,"
+                  << "ego_pose_x:" << point.x() << ",ego_pose_y:" << point.y()
                   << std::endl;
       }
-      
+
       // get nearest lane
       ad_common::hdmap::LaneInfoConstPtr nearest_lane;
       double nearest_s = 0.0;
@@ -1263,8 +1354,9 @@ bool VirtualLaneManager::GetCurrentNearestLane(
       // std::cout << "find current lane to current ego point dis:"
       //           << nearest_lane->DistanceTo(point) << std::endl;
       std::cout << "find the nearest lane!!!"
-                << "nearest_s_:" << nearest_s_ 
-                << ",nearest lane group id:" << nearest_lane->lane_group_id() << std::endl;
+                << "nearest_s_:" << nearest_s_
+                << ",nearest lane group id:" << nearest_lane->lane_group_id()
+                << std::endl;
       nearest_lane_ = nearest_lane;
       nearest_s_ = nearest_s;
       return true;
@@ -1296,9 +1388,6 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMerge(
         for (int i = 0; i < lane_groups_num; i++) {
           lane_group_set_.insert(
               current_routing.lane_groups_in_route()[i].lane_group_id());
-          std::cout << "every_lane_groups_id:"
-                    << current_routing.lane_groups_in_route()[i].lane_group_id()
-                    << ",No:" << i << std::endl;
         }
         ramp_direction_ = RampDirection::RAMP_NONE;
         CalculateSortedLaneGroupIdsInRouting(*session_);
@@ -1453,9 +1542,16 @@ void VirtualLaneManager::CalculateDistanceToNextSpeedBump(
 }
 
 bool VirtualLaneManager::CheckLaneValid(const FusionRoad::RoadInfo& roads) {
-  // 车道中心线出现间隔>5m的点，则拒绝
-  bool lane_valid = true;
   const double max_y_interval = 5.0;
+  const double current_lane_y_thrs = 5.0;
+
+  // 1.车道线为空
+  // 2.车道中心线出现间隔>5m的点，则拒绝
+  // 3.所有车道线离自车横向距离都>5m
+  bool lane_valid = true;
+  bool current_lane_exist = false;
+  bool y_interval_valid = true;
+
   if (roads.reference_line_msg().empty()) {
     lane_valid = false;
   } else {
@@ -1470,17 +1566,22 @@ bool VirtualLaneManager::CheckLaneValid(const FusionRoad::RoadInfo& roads) {
            ++point_it) {
         const auto& prev_point = prev_point_it->car_point();
         const auto& current_point = point_it->car_point();
+
+        current_lane_exist |= (current_point.y() < current_lane_y_thrs);
+
         double y_interval = std::fabs(current_point.y() - prev_point.y());
         prev_point_it = point_it;
         if (y_interval > max_y_interval) {
           LOG_ERROR("lane_valid is error \n");
-          lane_valid = false;
+          y_interval_valid = false;
           break;
         }
       }
     }
   }
+
   // TBD: 校验车道中心线的连续性
+  lane_valid = y_interval_valid && current_lane_exist;
   return lane_valid;
 }
 

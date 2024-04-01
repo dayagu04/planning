@@ -6,7 +6,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/jac_s811_35kw2/trigger/20231227/20231227-15-14-46/data_collection_JAC_S811_35KW2_EVENT_MANUAL_2023-12-27-15-14-46.record"
+bag_path = "/home/xlwang71/Downloads/new_motion/10_10.00000"
 frame_dt = 0.1 # sec
 
 # plot global figure?

@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "lon_behavior_planner.pb.h"
+#include "planning_context.h"
 #include "task.h"
 #include "task_basic_types.h"
 #include "trajectory1d/bounded_constant_jerk_trajectory1d.h"
@@ -130,6 +131,7 @@ class GeneralLongitudinalDecider : public Task {
   StartStopEnableConfig config_start_stop_;
   LonYieldInfo lon_yield_info_;
   VelocityLimitInfo vel_limit_info_;
+  GapSelectorResult gap_selector_result_;
   // CollisionChecker lon_collision_checker_; // 主要给pnp使用，暂时不需要
   planning::framework::Frame *frame_;
 };

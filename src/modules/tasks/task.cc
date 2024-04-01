@@ -1,8 +1,10 @@
 #include "task.h"
 
+#include "behavior_planners/gap_selector/gap_selector.h"
 #include "behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
 #include "behavior_planners/hpp_general_lateral_decider/hpp_general_lateral_decider.h"
+#include "behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
 #include "behavior_planners/real_time_longitudinal_behavior_planner/real_time_lon_behavior_planner.h"
 #include "behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_planner.h"
 #include "behavior_planners/vision_only_adas_function_task/vision_only_adas_function_task.h"
@@ -57,6 +59,10 @@ std::shared_ptr<Task> Task::Make(
     const TaskType &task_type, const EgoPlanningConfigBuilder *config_builder,
     const std::shared_ptr<TaskPipelineContext> &pipeline_context) {
   switch (task_type) {
+    case TaskType::GAP_SELECTOR: {
+      return std::make_shared<GapSelector>(config_builder, pipeline_context);
+    }
+
     case TaskType::GENERAL_LATERAL_DECIDER: {
       return std::make_shared<GeneralLateralDecider>(config_builder,
                                                      pipeline_context);
@@ -138,6 +144,11 @@ std::shared_ptr<Task> Task::Make(
     case TaskType::HPP_GENERAL_LATERAL_DECIDER: {
       return std::make_shared<HppGeneralLateralDecider>(config_builder,
                                                         pipeline_context);
+    }
+
+    case TaskType::LATERAL_OFFSET_DECIDER: {
+      return std::make_shared<LateralOffsetDecider>(config_builder,
+                                                    pipeline_context);
     }
 
     default: { /*LOG_ERROR*/

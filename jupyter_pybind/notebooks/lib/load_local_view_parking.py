@@ -92,6 +92,12 @@ class LoadCyberbag:
     # wave_debug_info msg
     self.wave_debug_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
+    # adas_debug_info msg
+    self.adas_debug_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+
+    # uss_perception msg
+    self.uss_percept_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+
     self.parking_flag = parking_flag
 
     self.max_time = 0
@@ -198,7 +204,9 @@ class LoadCyberbag:
                          "path_plan_success", "planning_status", "spline_success", "remain_dist", "remain_dist_uss", "stuck_time",
                          "car_static_timer_by_pos", "car_static_timer_by_vel", "static_flag", "ego_heading_slot",
                          "selected_slot_id", "slot_length", "slot_width", "slot_origin_pos_x", "slot_origin_pos_y", "slot_origin_heading",
-                         "slot_occupied_ratio", "pathplan_result", "target_ego_pos_slot", "path_start_seg_index", "path_end_seg_index", "path_length"]
+                         "slot_occupied_ratio", "pathplan_result", "target_ego_pos_slot", "path_start_seg_index", "path_end_seg_index", "path_length",
+                         "uss_available", "uss_remain_dist", "uss_index", "uss_car_index",
+                         "optimization_terminal_pose_error", "optimization_terminal_heading_error", "lat_path_opt_cost_time_ms"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
                           "obstaclesX", "obstaclesY", "slot_corner_X", "slot_corner_Y", "limiter_corner_X", "limiter_corner_Y"]
@@ -335,13 +343,17 @@ class LoadCyberbag:
         self.vis_parking_msg['t'].append(t)
         self.vis_parking_msg['abs_t'].append(t)
         self.vis_parking_msg['data'].append(msg)
-      self.vis_parking_msg['t'] = [tmp - self.vis_parking_msg['t'][0]  for tmp in self.vis_parking_msg['t']]
+      if (abs(self.vis_parking_msg['t'][0]) < 0.0001):
+        self.vis_parking_msg['t'] = [tmp - self.vis_parking_msg['t'][1]  for tmp in self.vis_parking_msg['t']]
+      else:
+        self.vis_parking_msg['t'] = [tmp - self.vis_parking_msg['t'][0]  for tmp in self.vis_parking_msg['t']]
       max_time = max(max_time, self.vis_parking_msg['t'][-1])
       print('vis_parking_msg time:',self.vis_parking_msg['t'][-1])
-      if len(self.vis_parking_msg['t']) > 0:
+      if len(self.vis_parking_msg['t']) > 2:
         self.vis_parking_msg['enable'] = True
       else:
         self.vis_parking_msg['enable'] = False
+        print('missing /parking_slot !!!')
     except:
       self.vis_parking_msg['enable'] = False
       print('missing /parking_slot !!!')
@@ -429,7 +441,7 @@ class LoadCyberbag:
       self.wave_msg['t'] = [tmp - t0  for tmp in self.wave_msg['t']]
       self.wave_msg['enable'] = True
       print('wave time:',self.wave_msg['t'][-1])
-      max_time = max(max_time, self.wave_msg['t'][-1])
+      # max_time = max(max_time, self.wave_msg['t'][-1])
       if len(self.wave_msg['t']) > 0:
         self.wave_msg['enable'] = True
       else:
@@ -437,6 +449,27 @@ class LoadCyberbag:
     except:
       self.wave_msg['enable'] = False
       print("missing /iflytek/uss/wave_info !!!")
+   #load adas_debug_msg
+    try:
+      adas_debug_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/adas_function_debug"):
+        adas_debug_msg_dict[msg.header.timestamp / 1e6] = msg
+      adas_debug_msg_dict = {key: val for key, val in sorted(adas_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in adas_debug_msg_dict.items():
+        self.adas_debug_msg['t'].append(t)
+        self.adas_debug_msg['abs_t'].append(t)
+        self.adas_debug_msg['data'].append(msg)
+      self.adas_debug_msg['t'] = [tmp - t0  for tmp in self.adas_debug_msg['t']]
+      self.adas_debug_msg['enable'] = True
+      print('wave time:',self.adas_debug_msg['t'][-1])
+      # max_time = max(max_time, self.adas_debug_msg['t'][-1])
+      if len(self.adas_debug_msg['t']) > 0:
+        self.adas_debug_msg['enable'] = True
+      else:
+        self.adas_debug_msg['enable'] = False
+    except:
+      self.adas_debug_msg['enable'] = False
+      print("/iflytek/adas_function_debug !!!")
 
     # load wave_debug_info msg
     try:
@@ -451,7 +484,7 @@ class LoadCyberbag:
       self.wave_debug_msg['t'] = [tmp - t0  for tmp in self.wave_debug_msg['t']]
       self.wave_debug_msg['enable'] = True
       print('wave_debug time:',self.wave_debug_msg['t'][-1])
-      max_time = max(max_time, self.wave_debug_msg['t'][-1])
+      # max_time = max(max_time, self.wave_debug_msg['t'][-1])
       if len(self.wave_debug_msg['t']) > 0:
         self.wave_debug_msg['enable'] = True
       else:
@@ -459,6 +492,29 @@ class LoadCyberbag:
     except:
       self.wave_debug_msg['enable'] = False
       print("missing /iflytek/uss/ussdriver_debug_info !!!")
+
+    # load uss perception msg
+    try:
+      uss_percept_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/UssPerceptInfo"):
+        uss_percept_msg_dict[msg.header.timestamp / 1e6] = msg
+      uss_percept_msg_dict = {key: val for key, val in sorted(uss_percept_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in uss_percept_msg_dict.items():
+        self.uss_percept_msg['t'].append(t)
+        self.uss_percept_msg['abs_t'].append(t)
+        self.uss_percept_msg['data'].append(msg)
+      t0 = self.uss_percept_msg['t'][0]
+      self.uss_percept_msg['t'] = [tmp - t0  for tmp in self.uss_percept_msg['t']]
+      self.uss_percept_msg['enable'] = True
+      print('uss_percept time:',self.uss_percept_msg['t'][-1])
+      # max_time = max(max_time, self.uss_percept_msg['t'][-1])
+      if len(self.uss_percept_msg['t']) > 0:
+        self.uss_percept_msg['enable'] = True
+      else:
+        self.uss_percept_msg['enable'] = False
+    except:
+      self.uss_percept_msg['enable'] = False
+      print("missing /iflytek/UssPerceptInfo !!!")
 
     return max_time
 
@@ -531,6 +587,18 @@ class LoadCyberbag:
           wave_msg_idx = wave_msg_idx + 1
     out['wave_msg_idx'] = wave_msg_idx
 
+    adas_msg_idx = 0
+    if self.adas_debug_msg['enable'] == True:
+      while self.adas_debug_msg['t'][adas_msg_idx] <= bag_time and adas_msg_idx < (len(self.adas_debug_msg['t'])-1):
+          adas_msg_idx = adas_msg_idx + 1
+    out['adas_msg_idx'] = adas_msg_idx
+
+    uss_percept_msg_idx = 0
+    if self.uss_percept_msg['enable'] == True:
+      while self.uss_percept_msg['t'][uss_percept_msg_idx] <= bag_time and uss_percept_msg_idx < (len(self.uss_percept_msg['t'])-1):
+          uss_percept_msg_idx = uss_percept_msg_idx + 1
+    out['uss_percept_msg_idx'] = uss_percept_msg_idx
+
     return out
 
 
@@ -602,6 +670,12 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
     while bag_loader.wave_msg['t'][wave_msg_idx] <= bag_time and wave_msg_idx < (len(bag_loader.wave_msg['t'])-1):
         wave_msg_idx = wave_msg_idx + 1
   local_view_data['data_index']['wave_msg_idx'] = wave_msg_idx
+
+  uss_percept_msg_idx = 0
+  if bag_loader.uss_percept_msg['enable'] == True:
+    while bag_loader.uss_percept_msg['t'][uss_percept_msg_idx] <= bag_time and uss_percept_msg_idx < (len(bag_loader.uss_percept_msg['t'])-1):
+        uss_percept_msg_idx = uss_percept_msg_idx + 1
+  local_view_data['data_index']['uss_percept_msg_idx'] = uss_percept_msg_idx
 
   ### step 2: load positioning information
   cur_pos_xn0 = 0
@@ -687,12 +761,14 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
     else:
       steer_deg = 0.0
 
+    selected_slot_id = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].select_slot_id
+
     current_state = bag_loader.soc_state_msg['data'][soc_state_msg_idx].current_state
     # local_view_data['data_text'].data.update({
     #   'vel_ego_text': ['v = {:.2f} m/s, steer = {:.1f} deg, state = {:d}'.format(round(vel_ego, 2), round(steer_deg, 1), current_state)],
     # })
     local_view_data['data_text'].data.update({
-      'vel_ego_text': ['v = {:.2f} m/s, remain_s_ctrl = {:.1f} cm, steer = {:.1f} deg, state = {:d}'.format(round(vel_ego, 2), round(remain_s_ctrl, 1), round(steer_deg, 1), current_state)],
+      'vel_ego_text': ['v = {:.2f} m/s, remain_s_ctrl = {:.1f} cm, steer = {:.1f} deg, selected_slot_id = {:d}, state = {:d}'.format(round(vel_ego, 2), round(remain_s_ctrl, 1), round(steer_deg, 1),selected_slot_id, current_state)],
     })
 
   ### step 3: loading planning traj information
@@ -904,6 +980,10 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       'car_yn': car_yn,
     })
 
+  uss_available = False
+  uss_remain_dist = 0.0
+  uss_index = 0
+  uss_car_index = 0
   # load plan debug msg
   if bag_loader.plan_debug_msg['enable'] == True and bag_loader.fus_parking_msg['enable'] == True:
     local_view_data['data_target_managed_slot'].data.update({'corner_point_x': [], 'corner_point_y': [],})
@@ -977,6 +1057,28 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       'limiter_point_y': limiter_corner_Y,
     })
 
+    uss_available = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_available']
+    #print("uss_available = ", uss_available)
+    uss_available = bool(uss_available)
+    #print("uss_available = ", uss_available)
+    uss_remain_dist = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_remain_dist']
+    #print("uss_remain_dist = ", uss_remain_dist)
+    uss_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_index']
+    uss_index = int(uss_index)
+    uss_car_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_car_index']
+    uss_car_index = int(uss_car_index)
+
+    uss_available = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_available']
+    #print("uss_available = ", uss_available)
+    uss_available = bool(uss_available)
+    #print("uss_available = ", uss_available)
+    uss_remain_dist = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_remain_dist']
+    #print("uss_remain_dist = ", uss_remain_dist)
+    uss_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_index']
+    uss_index = int(uss_index)
+    uss_car_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_car_index']
+    uss_car_index = int(uss_car_index)
+
   # load uss wave
   if bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True:
     #get cur pose and uss wave
@@ -1031,6 +1133,40 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       'wave_text_y':text_x,
       'length':length,
     })
+
+    if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[sector_y[uss_index]],
+        'wave_y':[sector_x[uss_index]],
+        'radius':[rs[uss_index]],
+        'start_angle':[start_angle[uss_index]],
+        'end_angle':[end_angle[uss_index]],
+      })
+    else:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[],
+        'wave_y':[],
+        'radius':[],
+        'start_angle':[],
+        'end_angle':[],
+      })
+
+    if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[sector_y[uss_index]],
+        'wave_y':[sector_x[uss_index]],
+        'radius':[rs[uss_index]],
+        'start_angle':[start_angle[uss_index]],
+        'end_angle':[end_angle[uss_index]],
+      })
+    else:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[],
+        'wave_y':[],
+        'radius':[],
+        'start_angle':[],
+        'end_angle':[],
+      })
 
   if plot_ctrl_flag == True:
     names = []
@@ -1094,7 +1230,14 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       names.append("plan_traj_available")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].trajectory.available))
 
+      names.append("optimization_terminal_pose_error")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['optimization_terminal_pose_error']))
 
+      names.append("optimization_terminal_heading_error")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['optimization_terminal_heading_error']))
+
+      names.append("lat_path_opt_cost_time_ms")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['lat_path_opt_cost_time_ms']))
     # load func_state
     if bag_loader.soc_state_msg['enable'] == True:
       names.append("current_state")
@@ -1167,6 +1310,30 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       'data': datas,
     })
 
+  if bag_loader.uss_percept_msg['enable'] == True:
+    model_x = []
+    model_y = []
+    post_x = []
+    post_y = []
+    for i in range(len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori)):
+      for j in range(len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt)):
+        x = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt[j].x
+        y = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt[j].y
+        if i == 0:
+          post_x.append(x)
+          post_y.append(y)
+        elif i == 1:
+          model_x.append(x)
+          model_y.append(y)
+    local_view_data['data_dluss_post'].data.update({
+      'obj_pt_x': post_x,
+      'obj_pt_y': post_y,
+    })
+    local_view_data['data_dluss_model'].data.update({
+      'obj_pt_x': model_x,
+      'obj_pt_y': model_y,
+    })
+
   return local_view_data
 
 def load_local_view_figure_parking():
@@ -1193,6 +1360,7 @@ def load_local_view_figure_parking():
   data_fusion_parking_id = ColumnDataSource(data = {'id':[], 'id_text_x':[], 'id_text_y':[]})
 
   data_wave = ColumnDataSource(data = {'wave_x': [], 'wave_y': [], 'radius':[], 'start_angle':[], 'end_angle':[]})
+  data_wave_min = ColumnDataSource(data = {'wave_x': [], 'wave_y': [], 'radius':[], 'start_angle':[], 'end_angle':[]})
   data_wave_length_text = ColumnDataSource(data = {'wave_text_x': [], 'wave_text_y': [], 'length':[]})
 
   data_car_target_line = ColumnDataSource(data = {'y':[], 'x':[]})
@@ -1206,6 +1374,8 @@ def load_local_view_figure_parking():
   data_all_managed_limiter = ColumnDataSource(data = {'limiter_point_y': [], 'limiter_point_x': [],})
   data_all_managed_occupied_slot = ColumnDataSource(data = {'occupied_slot_y': [], 'occupied_slot_x': [],})
 
+  data_dluss_model = ColumnDataSource(data = {'obj_pt_y':[], 'obj_pt_x':[]})
+  data_dluss_post = ColumnDataSource(data = {'obj_pt_y':[], 'obj_pt_x':[]})
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
                 'fus_msg_idx': 0,
@@ -1218,6 +1388,7 @@ def load_local_view_figure_parking():
                 'ctrl_debug_msg_idx': 0,
                 'soc_state_msg_idx': 0,
                 'wave_msg_idx': 0,
+                'uss_percept_msg_idx': 0,
                }
   local_view_data = {'data_car':data_car, \
                      'data_car_target_pos':data_car_target_pos, \
@@ -1240,11 +1411,14 @@ def load_local_view_figure_parking():
                      'data_fusion_parking_id':data_fusion_parking_id, \
                      'data_index': data_index, \
                      'data_wave':data_wave, \
+                     'data_wave_min':data_wave_min, \
                      'data_wave_length_text':data_wave_length_text, \
                      'data_all_managed_slot':data_all_managed_slot,\
                      'data_all_managed_limiter':data_all_managed_limiter,\
                      'data_all_managed_occupied_slot':data_all_managed_occupied_slot,\
                      'data_car_target_line':data_car_target_line,\
+                     'data_dluss_model':data_dluss_model,\
+                     'data_dluss_post':data_dluss_post,\
                      }
   ### figures config
 
@@ -1275,12 +1449,17 @@ def load_local_view_figure_parking():
   fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_fusion_parking_id, text_color='red', text_align='center', text_font_size='10pt',legend_label = 'fusion_parking_slot')
 
   fig1.wedge('wave_x','wave_y', 'radius', 'start_angle', 'end_angle',source = data_wave, fill_color="lavender", line_color="black",legend_label = 'uss_wave',alpha = 0.5, visible = False)
+  fig1.wedge('wave_x','wave_y', 'radius', 'start_angle', 'end_angle',source = data_wave_min, fill_color="blue", line_color="black",legend_label = 'uss_wave',alpha = 0.8, visible = False)
   fig1.text(x = 'wave_text_x', y = 'wave_text_y', text = 'length', source = data_wave_length_text, text_color='black', text_align='center', text_font_size='10pt',legend_label = 'uss_wave', visible = False)
 
   # debug
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_all_managed_slot, line_width = 2, line_color = 'blue', line_dash = 'solid',legend_label = 'all managed slot', visible = False)
   fig1.line('limiter_point_y', 'limiter_point_x', source = data_all_managed_limiter, line_width = 3, line_color = 'blue', line_dash = 'solid', legend_label = 'managed limiter')
   fig1.patches('occupied_slot_y', 'occupied_slot_x', source = data_all_managed_occupied_slot, fill_color = "blue", line_color = "blue", line_width = 1, fill_alpha = 0.15, legend_label = 'all managed slot', visible = False)
+  # dluss
+  fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_post, size=3, color='orange', legend_label = 'dluss_post', visible = False)
+  fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_model, size=3, color='blue', legend_label = 'dluss_model', visible = False)
+
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 
@@ -1593,6 +1772,14 @@ uss_wave_params = {
   'visible' : False
 }
 
+uss_wave_params_min = {
+  'fill_color' : 'blue',
+  'line_color' : 'black',
+  'legend_label' : 'uss_wave',
+  'alpha' : 0.8,
+  'visible' : False
+}
+
 uss_text_params = {
   'text_color' : 'black',
   'text_align' : 'center',
@@ -1667,6 +1854,20 @@ sampled_carbox_params={
   'visible' : False
 }
 
+dluss_post_params={
+  "size" : 3,
+  "color" : 'orange',
+  "legend_label" : 'dluss_post',
+  "visible" : False
+}
+
+dluss_model_params={
+  "size" : 3,
+  "color" : 'blue',
+  "legend_label" : 'dluss_model',
+  "visible" : False
+}
+
 def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctrl_flag=False):
     #define figure
     # define local_view fig
@@ -1693,6 +1894,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
     plan_debug_timestamps = []
     soc_timestamps = []
     wave_timestamps = []
+    uss_percept_timestamps = []
 
     bag_time = 0.0
     while bag_time <= max_time + time_step / 2:
@@ -1775,6 +1977,13 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
             wave_msg_idx = wave_msg_idx + 1
         wave_timestamp = dataLoader.wave_msg['t'][wave_msg_idx]
         wave_timestamps.append(wave_timestamp)
+
+      uss_percept_msg_idx = 0
+      if dataLoader.uss_percept_msg['enable'] == True:
+        while dataLoader.uss_percept_msg['t'][uss_percept_msg_idx] <= bag_time and uss_percept_msg_idx < (len(dataLoader.uss_percept_msg['t'])-1):
+            uss_percept_msg_idx = uss_percept_msg_idx + 1
+        uss_timestamp = dataLoader.uss_percept_msg['t'][uss_percept_msg_idx]
+        uss_percept_timestamps.append(uss_timestamp)
 
       bag_time += time_step
 
@@ -2192,9 +2401,15 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
   # load uss
     uss_generator = WedgesGenerator()
     uss_text_generator = TextGenerator()
+    wave_min_generator = WedgesGenerator()
     for loc_i, localization_timestamp in enumerate(localization_timestamps):
       sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
       text_x, text_y = [], []
+      sector_x_min, sector_y_min, rs_min, start_angle_min, end_angle_min = [], [], [], [], []
+      uss_available = False
+      uss_remain_dist = 0.0
+      uss_index = 0
+      uss_car_index = 0
       flag, loc_msg = findrt(dataLoader.loc_msg, localization_timestamp)
       if not flag:
         print('find loc_msg error')
@@ -2239,33 +2454,90 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
                   start_angle.append(uss_angle_start)
                   end_angle.append(uss_angle_end)
                   m += 1
+
+            flag, plan_json = findrt_json(dataLoader.plan_debug_msg, plan_debug_timestamps[loc_i])
+            if not flag:
+              print('find plan_msg error')
+            else:
+              uss_available = plan_json['uss_available']
+              uss_available = bool(uss_available)
+              uss_remain_dist = plan_json['uss_remain_dist']
+              uss_index = plan_json['uss_index']
+              uss_index = int(uss_index)
+              uss_car_index = plan_json['uss_car_index']
+              uss_car_index = int(uss_car_index)
+            flag, soc_msg = findrt(dataLoader.soc_state_msg, soc_timestamps[loc_i])
+            if not flag:
+              print('find soc_msg error')
+              current_state = -1
+            else:
+              current_state = soc_msg.current_state
+
+            if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
+              sector_y_min, sector_x_min = [sector_y[uss_index]], [sector_x[uss_index]]
+              rs_min, start_angle_min, end_angle_min = [rs[uss_index]], [start_angle[uss_index]], [end_angle[uss_index]]
+
       uss_generator.xys.append((sector_y, sector_x, rs, start_angle, end_angle))
       uss_text_generator.xys.append((text_y, text_x, length))
+      wave_min_generator.xys.append((sector_y_min, sector_x_min, rs_min, start_angle_min, end_angle_min))
 
     uss_generator.ts = np.array(ctrl_debug_ts)
     uss_text_generator.ts = np.array(ctrl_debug_ts)
+    wave_min_generator.ts = np.array(ctrl_debug_ts)
 
-    # move Layer here for manage
-    target_pos_layer = PatchLayer(fig_local_view , target_pos_params)
-    layer_manager.AddLayer(target_pos_layer, 'target_pos_layer', target_pos_generator, 'target_pos_generator', 2)
+  # uss perception
+    uss_post_generator = CommonGenerator()
+    uss_model_generator = CommonGenerator()
+    for uss_i, uss_percept_timestamp in enumerate(uss_percept_timestamps):
+      flag, uss_percept_msg = findrt(dataLoader.uss_percept_msg, uss_percept_timestamp)
+      model_x, model_y = [], []
+      post_x, post_y = [], []
+      if not flag:
+        print('find uss percept error')
+      else:
+        for i in range(len(uss_percept_msg.out_line_dataori)):
+          for j in range(len(uss_percept_msg.out_line_dataori[i].obj_pt)):
+            x = uss_percept_msg.out_line_dataori[i].obj_pt[j].x
+            y = uss_percept_msg.out_line_dataori[i].obj_pt[j].y
+            if i == 0:
+              post_x.append(x)
+              post_y.append(y)
+            elif i == 1:
+              model_x.append(x)
+              model_y.append(y)
+
+      uss_post_generator.xys.append((post_y, post_x))
+      uss_model_generator.xys.append((model_y, model_x))
+    uss_post_generator.ts = np.array(ctrl_debug_ts)
+    uss_model_generator.ts = np.array(ctrl_debug_ts)
+
+
+  # move Layer here for manage
+    if dataLoader.plan_msg['enable'] == True:
+      target_pos_layer = PatchLayer(fig_local_view , target_pos_params)
+      layer_manager.AddLayer(target_pos_layer, 'target_pos_layer', target_pos_generator, 'target_pos_generator', 2)
     # self car info
     ego_car_layer = PatchLayer(fig_local_view ,ego_car_params_apa)
     layer_manager.AddLayer(ego_car_layer, 'ego_car_layer', ego_car_generate, 'ego_car_generate', 2)
     ego_center_layer = DotLayer(fig_local_view ,ego_dot_params_apa)
     layer_manager.AddLayer(ego_center_layer, 'ego_center_layer', ego_center_generate, 'ego_center_generate', 2)
 
-    car_box_layer = PatchLayer(fig_local_view , sampled_carbox_params)
-    layer_manager.AddLayer(car_box_layer, 'car_box_layer', car_box_generator, 'car_box_generator', 2)
+    if dataLoader.plan_msg['enable'] == True:
+      car_box_layer = PatchLayer(fig_local_view , sampled_carbox_params)
+      layer_manager.AddLayer(car_box_layer, 'car_box_layer', car_box_generator, 'car_box_generator', 2)
 
     ego_circle_layer = CircleLayer(fig_local_view ,ego_circle_params_apa)
     layer_manager.AddLayer(ego_circle_layer, 'ego_circle_layer', ego_circle_generate, 'ego_circle_generate', 3)
 
     # location
-    location_layer = CurveLayer(fig_local_view, location_params_apa)
-    layer_manager.AddLayer(location_layer, 'location_layer', location_generator, 'location_generator', 2)
+    if dataLoader.loc_msg['enable'] == True:
+      location_layer = CurveLayer(fig_local_view, location_params_apa)
+      layer_manager.AddLayer(location_layer, 'location_layer', location_generator, 'location_generator', 2)
+
     # vs and soc
-    vs_layer = TextLayer(fig_local_view, vs_car_params_apa)
-    layer_manager.AddLayer(vs_layer, 'vs_layer', vs_text_generator, 'vs_text_generator', 3)
+    if dataLoader.soc_state_msg['enable'] == True and dataLoader.vs_msg['enable'] == True and dataLoader.ctrl_debug_msg['enable'] == True:
+      vs_layer = TextLayer(fig_local_view, vs_car_params_apa)
+      layer_manager.AddLayer(vs_layer, 'vs_layer', vs_text_generator, 'vs_text_generator', 3)
     # apa slot
     if dataLoader.vis_parking_msg['enable'] == True:
       vision_slot_generate.ts = np.array(ctrl_debug_ts)
@@ -2303,23 +2575,39 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
       layer_manager.AddLayer(tlane_layer, 'tlane_layer',tlane_generate,'tlane_generate',2)
 
     # planning traj
-    plan_layer = CurveLayer(fig_local_view, plan_params)
-    layer_manager.AddLayer(plan_layer, 'plan_layer', plan_generator, 'plane_generator', 2)
+    if dataLoader.plan_msg['enable'] == True:
+      plan_layer = CurveLayer(fig_local_view, plan_params)
+      layer_manager.AddLayer(plan_layer, 'plan_layer', plan_generator, 'plane_generator', 2)
 
     # mpc
-    mpc_layer = CurveLayer(fig_local_view, mpc_params)
-    layer_manager.AddLayer(mpc_layer, 'mpc_layer', mpc_generator, 'mpc_generator', 2)
+    if dataLoader.ctrl_msg['enable'] == True:
+      mpc_layer = CurveLayer(fig_local_view, mpc_params)
+      layer_manager.AddLayer(mpc_layer, 'mpc_layer', mpc_generator, 'mpc_generator', 2)
 
-    target_line_layer = CurveLayer(fig_local_view, target_line_params)
-    layer_manager.AddLayer(target_line_layer, 'target_line_layer', target_line_generator, 'target_line_generator', 2)
-    current_line_layer = CurveLayer(fig_local_view, current_line_params)
-    layer_manager.AddLayer(current_line_layer, 'current_line_layer', current_line_generate, 'current_line_generate', 2)
+    if dataLoader.plan_msg['enable'] == True:
+      target_line_layer = CurveLayer(fig_local_view, target_line_params)
+      layer_manager.AddLayer(target_line_layer, 'target_line_layer', target_line_generator, 'target_line_generator', 2)
+
+    if dataLoader.loc_msg['enable'] == True:
+      current_line_layer = CurveLayer(fig_local_view, current_line_params)
+      layer_manager.AddLayer(current_line_layer, 'current_line_layer', current_line_generate, 'current_line_generate', 2)
 
     # uss
-    uss_layer = MultiWedgesLayer(fig_local_view, uss_wave_params)
-    uss_layer_text = TextLayer(fig_local_view, uss_text_params)
-    layer_manager.AddLayer(uss_layer, 'uss_layer', uss_generator, 'uss_generator', 5)
-    layer_manager.AddLayer(uss_layer_text, 'uss_layer_text', uss_text_generator, 'uss_text_generator', 3)
+    if dataLoader.wave_msg['enable'] == True:
+      uss_layer = MultiWedgesLayer(fig_local_view, uss_wave_params)
+      layer_manager.AddLayer(uss_layer, 'uss_layer', uss_generator, 'uss_generator', 5)
+      if dataLoader.plan_debug_msg['enable'] == True and dataLoader.soc_state_msg['enable'] == True:
+        uss_min_layer = MultiWedgesLayer(fig_local_view, uss_wave_params_min)
+        layer_manager.AddLayer(uss_min_layer, 'uss_min_layer', wave_min_generator, 'wave_min_generator', 5)
+      uss_layer_text = TextLayer(fig_local_view, uss_text_params)
+      layer_manager.AddLayer(uss_layer_text, 'uss_layer_text', uss_text_generator, 'uss_text_generator', 3)
+
+    # uss perception
+    if dataLoader.uss_percept_msg['enable'] == True:
+      dluss_post_layer = DotLayer(fig_local_view ,dluss_post_params)
+      layer_manager.AddLayer(dluss_post_layer, 'dluss_post_layer', uss_post_generator, 'uss_post_generator', 2)
+      dluss_model_layer = DotLayer(fig_local_view ,dluss_model_params)
+      layer_manager.AddLayer(dluss_model_layer, 'dluss_model_layer', uss_model_generator, 'uss_model_generator', 2)
 
   # legend
     fig_local_view.legend.click_policy = 'hide'
@@ -2394,6 +2682,15 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
 
           names.append("plan_traj_available")
           datas.append(str(plan_msg.trajectory.available))
+
+          names.append("optimization_terminal_pose_error")
+          datas.append(str(plan_json['optimization_terminal_pose_error']))
+
+          names.append("optimization_terminal_heading_error")
+          datas.append(str(plan_json['optimization_terminal_heading_error']))
+
+          names.append("lat_path_opt_cost_time_ms")
+          datas.append(str(plan_json['lat_path_opt_cost_time_ms']))
 
         flag, soc_msg = findrt(dataLoader.soc_state_msg, soc_timestamps[plan_i])
         if not flag:

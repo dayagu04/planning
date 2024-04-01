@@ -1,6 +1,6 @@
 #include "behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
+#include "debug_info_log.h"
 #include "environmental_model.h"
-
 #include "ifly_time.h"
 
 namespace planning {
@@ -31,6 +31,9 @@ double VisionLateralBehaviorPlanner::update_antsides_strict() {
   auto &side_tracks_l = lateral_obstacle->side_tracks_l();
   auto &side_tracks_r = lateral_obstacle->side_tracks_r();
 
+  int debug_final_id = -1000;
+  int debug_front_id = -1000;
+  int debug_side_id = -1000;
   if (avd_car_past_[0].size() > 0) {
     if (avd_car_past_[0][5] >
             std::min(((ego_car_width + lat_safety_buffer) - lane_width_ / 2),
@@ -48,6 +51,7 @@ double VisionLateralBehaviorPlanner::update_antsides_strict() {
               strict_car -= 0.7;
             }
             front_ry_rel = std::fabs(strict_car);
+            debug_front_id = tr.track_id;
           }
         }
       }
@@ -68,6 +72,7 @@ double VisionLateralBehaviorPlanner::update_antsides_strict() {
               strict_side_car -= 0.7;
             }
             side_ry_rel = std::fabs(strict_side_car);
+            debug_side_id = tr.track_id;
           }
         }
       }
@@ -83,13 +88,11 @@ double VisionLateralBehaviorPlanner::update_antsides_strict() {
       if (side_ry_rel <= front_ry_rel &&
           std::fabs(side_ry_rel - final_y_rel_) > 0.1) {
         final_y_rel_ = side_ry_rel;
-        return final_y_rel_;
+        debug_final_id = debug_side_id;
       } else if (side_ry_rel > front_ry_rel &&
                  std::fabs(front_ry_rel - final_y_rel_) > 0.1) {
         final_y_rel_ = front_ry_rel;
-        return final_y_rel_;
-      } else {
-        return final_y_rel_;
+        debug_final_id = debug_front_id;
       }
     } else if (avd_car_past_[0][5] < 0 &&
                (avd_car_past_[1].size() == 0 ||
@@ -104,6 +107,7 @@ double VisionLateralBehaviorPlanner::update_antsides_strict() {
               strict_car += 0.7;
             }
             front_ly_rel = std::fabs(strict_car);
+            debug_front_id = tr.track_id;
           } else if (avd_car_past_[0][6] >= 0 && tr.d_max_cpath < -1 &&
                      tr.d_max_cpath > -strict_car &&
                      tr.d_rel <
@@ -114,6 +118,7 @@ double VisionLateralBehaviorPlanner::update_antsides_strict() {
               strict_car -= 0.7;
             }
             front_ly_rel = std::fabs(strict_car);
+            debug_front_id = tr.track_id;
           }
         }
       }
@@ -134,6 +139,7 @@ double VisionLateralBehaviorPlanner::update_antsides_strict() {
               strict_side_car += 0.7;
             }
             side_ly_rel = std::fabs(strict_side_car);
+            debug_side_id = tr.track_id;
           }
         }
       }
@@ -150,6 +156,7 @@ double VisionLateralBehaviorPlanner::update_antsides_strict() {
               strict_side_car -= 0.7;
             }
             side_ly_rel = std::fabs(strict_side_car);
+            debug_side_id = tr.track_id;
           }
         }
       }
@@ -165,20 +172,16 @@ double VisionLateralBehaviorPlanner::update_antsides_strict() {
       if (side_ly_rel <= front_ly_rel &&
           std::fabs(side_ly_rel - final_y_rel_) > 0.1) {
         final_y_rel_ = side_ly_rel;
-        return final_y_rel_;
+        debug_final_id = debug_side_id;
       } else if (side_ly_rel > front_ly_rel &&
                  std::fabs(front_ly_rel - final_y_rel_) > 0.1) {
         final_y_rel_ = front_ly_rel;
-        return final_y_rel_;
-      } else {
-        return final_y_rel_;
+        debug_final_id = debug_front_id;
       }
-
-    } else {
-      return final_y_rel_;
     }
   }
-
+  JSON_DEBUG_VALUE("final_y_rel_id", debug_final_id);
+  JSON_DEBUG_VALUE("final_y_rel", final_y_rel_);
   return final_y_rel_;
 }
 
@@ -1491,8 +1494,9 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
       }
     }
 
+    double final_y_rel = update_antsides_strict();
     if (avd_car_past_[0].size() > 0) {
-      avd_car_past_[0][9] = update_antsides_strict();
+      avd_car_past_[0][9] = final_y_rel;
     }
 
     if (flag_avd_ == 1) {

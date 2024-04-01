@@ -1,0 +1,1870 @@
+#include "gap_selector.h"
+
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <iostream>
+#include <memory>
+#include <vector>
+
+#include "Eigen/src/Core/Matrix.h"
+#include "basic_types.pb.h"
+// #include "behavior_planners/gap_selector/gap_selector_debug_info.h"
+#include "behavior_planners/gap_selector/gap_selector_interface.h"
+#include "config/basic_type.h"
+#include "define/geometry.h"
+#include "ego_state_manager.h"
+#include "environmental_model.h"
+// #include "gap_selector.pb.h"
+#include "debug_info_log.h"
+#include "ifly_time.h"
+#include "log.h"
+#include "math/linear_interpolation.h"
+#include "math_lib.h"
+#include "planning_context.h"
+#include "quintic_poly_path.h"
+#include "reference_path_manager.h"
+#include "speed/st_point.h"
+// #include "trajectory1d/second_order_time_optimal_trajectory.h"
+// #include "trajectory1d/trajectory1d.h"
+#include "utils/frenet_coordinate_system.h"
+#include "utils/kd_path.h"
+#include "utils/spline.h"
+#include "virtual_lane.h"
+#include "virtual_lane_manager.h"
+
+namespace planning {
+
+using namespace planning_math;
+using namespace pnc::spline;
+using namespace pnc::mathlib;
+
+constexpr int PointNum = 25;
+constexpr double delta_t = 0.2;
+constexpr double kFilterFrontCarDistace = 50.;
+constexpr double kMaxNegativeJerk = -4.;
+constexpr double kMaxPositiveJerk = 4.;
+constexpr double kMaxDecel = -5.;
+constexpr double kMaxAcc = 5.;
+constexpr double kPlanEps = 0.1;
+constexpr double kOvertakeSpeedThreshld = 2.;
+constexpr double kCarCollisionThreshld = 1.0;
+constexpr double kMaxTotalLCTime = 35;
+constexpr double kHalfEgoLength = 2.55;
+constexpr double kHalfEgoWidth = 1.1;
+constexpr double kMaxExpectedLCTime = 8.5;
+constexpr double kMinExpectedLCTime = 6.0;
+constexpr double kMinSplineSampleLength = 30.0;
+constexpr double kMaxSplineSampleLength = 60.0;
+constexpr double kDefaultLatMovedDistance = 7.0;
+
+GapSelector::GapSelector(
+    const EgoPlanningConfigBuilder *config_builder,
+    const std::shared_ptr<TaskPipelineContext> &pipeline_context)
+    : Task(config_builder, pipeline_context) {
+  config_ = config_builder->cast<GapSelectorConfig>();
+  name_ = "GapSelector";
+
+  base_frenet_coord_ = std::make_shared<KDPath>();
+  agent_node_mgr_ = std::make_shared<AgentNodeManager>();
+
+  current_lane_coord_ptr_ = nullptr;
+  origin_lane_coord_ptr_ = nullptr;
+  target_lane_coord_ptr_ = nullptr;
+
+  gap_selector_state_machine_info_.ego_l_buffer = {0., 0., 0.};
+  gap_selector_state_machine_info_.lc_request_buffer = {0, 0, 0};
+
+  target_lane_s_width_.clear();
+  origin_lane_s_width_.clear();
+};
+
+bool GapSelector::Execute(planning::framework::Frame *frame) {
+  LOG_DEBUG("=======GapSelector======= \n");
+  GapSelectorResult &gap_selector_result = frame->mutable_session()
+                                               ->mutable_planning_context()
+                                               ->mutable_gap_selector_result();
+  if (Task::Execute(frame) == false) {
+    gap_selector_result = {false, target_state_, false, false};
+    LOG_DEBUG("\n Task frame check failed");
+    return false;
+  }
+
+  // Preprocess Part:below is the upstream info, these need to be decoupled by
+  // interface
+  // -----------------------------------------
+
+  auto start_time = IflyTime::Now_ms();
+
+  Preprocessor(frame, pipeline_context_);
+
+  auto preprocessor_end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("GapSelectorPreprocessCostTime",
+                   preprocessor_end_time - start_time);
+  // update
+  GapSelectorStatus gap_status = Update(gap_selector_result);
+
+#ifdef __COLLECT_GAP_SELECTOR_DEBUG_INFO__
+  gap_selector_interface_.Store(frame, pipeline_context_,
+                                gap_selector_state_machine_info_);
+  gap_selector_interface_.Store(path_spline_, *traj_points_ptr_);
+#endif
+
+#ifdef __COLLECT_GAP_SELECTOR_REPLAY_INFO__
+  gap_selector_interface_.ReplayCollect(
+      *traj_points_ptr_, gap_selector_state_machine_info_, path_spline_,
+      gap_list_, nearby_gap_, front_gap_car_st_boundaries_,
+      rear_gap_car_st_boundaries_, st_time_optimal_, gap_status);
+
+#endif
+  auto all_task_end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("GapSelectorTaskCostTime", all_task_end_time - start_time);
+  return true;
+}
+
+void GapSelector::Preprocessor(
+    planning::framework::Frame *frame,
+    std::shared_ptr<TaskPipelineContext> pipeline_context) {
+  target_state_ =
+      pipeline_context_->coarse_planning_info.target_state == ROAD_LC_LCHANGE
+          ? 1
+          : (pipeline_context_->coarse_planning_info.target_state ==
+                     ROAD_LC_RCHANGE
+                 ? 2
+                 : 0);
+  const std::shared_ptr<EgoStateManager> ego_state_mgr =
+      frame->mutable_session()
+          ->mutable_environmental_model()
+          ->get_ego_state_manager();
+  const std::shared_ptr<VirtualLaneManager> virtual_lane_mgr =
+      frame->mutable_session()
+          ->mutable_environmental_model()
+          ->get_virtual_lane_manager();
+
+  gap_selector_state_machine_info_.current_lane_id =
+      frame->session()
+          ->environmental_model()
+          .get_virtual_lane_manager()
+          ->current_lane_virtual_id();
+
+  if (target_state_ != 0) {  // @cailiu2:
+    gap_selector_state_machine_info_.target_lane_id =
+        frame->session()
+            ->planning_context()
+            .lat_behavior_state_machine_output()
+            .target_lane_virtual_id;
+    gap_selector_state_machine_info_.origin_lane_id =
+        frame->session()
+            ->planning_context()
+            .lat_behavior_state_machine_output()
+            .origin_lane_virtual_id;
+  } else {
+    gap_selector_state_machine_info_.target_lane_id =
+        gap_selector_state_machine_info_.current_lane_id;
+    gap_selector_state_machine_info_.origin_lane_id =
+        gap_selector_state_machine_info_.current_lane_id;
+  }
+
+  std::shared_ptr<ReferencePath> target_refline =
+      frame_->mutable_session()
+          ->mutable_environmental_model()
+          ->get_reference_path_manager()
+          ->get_reference_path_by_lane(
+              gap_selector_state_machine_info_.target_lane_id, false);
+
+  if (target_refline != nullptr) {
+    ids_obstacle_in_target_lane_ =
+        target_refline->mutable_obstacles_in_lane_map();
+    target_lane_width_ =
+        virtual_lane_mgr
+            ->get_lane_with_virtual_id(
+                gap_selector_state_machine_info_.target_lane_id)
+            ->width_by_s(0.);  // near s
+    target_lane_coord_ptr_ = target_refline->get_frenet_coord();
+    use_query_lane_width_ = true;
+
+    target_lane_s_width_.clear();
+    target_lane_s_width_.reserve(target_refline->get_points().size());
+    for (auto i = 0; i < target_refline->get_points().size(); i++) {
+      const ReferencePathPoint &ref_path_point =
+          target_refline->get_points()[i];
+      target_lane_s_width_.emplace_back(std::make_pair(
+          ref_path_point.path_point.s, ref_path_point.lane_width));
+    }
+  } else {
+    ids_obstacle_in_target_lane_.emplace_back(-1);  // no obstacle in targe lane
+    target_lane_coord_ptr_ = current_lane_coord_ptr_;
+    use_query_lane_width_ = false;
+    target_lane_width_ = 3.5;
+  }
+
+  std::shared_ptr<ReferencePath> origin_refline =
+      frame_->mutable_session()
+          ->mutable_environmental_model()
+          ->get_reference_path_manager()
+          ->get_reference_path_by_lane(
+              gap_selector_state_machine_info_.origin_lane_id, false);
+  std::vector<int> origin_obstacles_in_lane_map;
+  if (origin_refline != nullptr) {
+    ids_obstacle_in_origin_lane_ =
+        origin_refline->mutable_obstacles_in_lane_map();
+    origin_lane_coord_ptr_ = origin_refline->get_frenet_coord();
+    origin_lane_width_ =
+        virtual_lane_mgr
+            ->get_lane_with_virtual_id(
+                gap_selector_state_machine_info_.origin_lane_id)
+            ->width_by_s(0.);  // near s
+    use_query_lane_width_ = use_query_lane_width_ ? true : false;
+
+    origin_lane_s_width_.clear();
+    origin_lane_s_width_.reserve(origin_refline->get_points().size());
+    for (auto i = 0; i < origin_refline->get_points().size(); i++) {
+      const ReferencePathPoint &ref_path_point =
+          origin_refline->get_points()[i];
+      origin_lane_s_width_.emplace_back(std::make_pair(
+          ref_path_point.path_point.s, ref_path_point.lane_width));
+    }
+  } else {
+    ids_obstacle_in_origin_lane_.emplace_back(-1);  // no obstacle in targe lane
+    origin_lane_width_ = 3.5;
+    origin_lane_coord_ptr_ = current_lane_coord_ptr_;
+    use_query_lane_width_ = false;
+  }
+
+#ifdef __FUNCTION_CONSUMPTION_COLLECT__
+  auto gs_care_copy_start = IflyTime::Now_ms();
+#endif
+
+  gs_care_obstacles_ = frame_->mutable_session()
+                           ->mutable_environmental_model()
+                           ->get_obstacle_manager()
+                           ->get_gs_care_obstacles()
+                           .Dict();
+#ifdef __FUNCTION_CONSUMPTION_COLLECT__
+  auto gs_care_copy_end = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("GSCareObjsCopyTime", gs_care_copy_end - gs_care_copy_start);
+#endif
+
+  cruise_vel_ = ego_state_mgr->ego_v_cruise();
+  ego_l_cur_lane_ = frame->session()
+                        ->environmental_model()
+                        .get_reference_path_manager()
+                        ->get_reference_path_by_current_lane()
+                        ->get_frenet_ego_state()
+                        .l();
+
+  // set all virtual lanes info
+  current_lane_coord_ptr_ = virtual_lane_mgr->get_current_lane()
+                                ->get_reference_path()
+                                ->get_frenet_coord();
+  ego_cart_point_ = {ego_state_mgr->ego_pose().x, ego_state_mgr->ego_pose().y};
+  // transform
+  transform_.SetEgoState(ego_state_mgr->heading_angle(),
+                         ego_state_mgr->ego_pose().x,
+                         ego_state_mgr->ego_pose().y);
+  refline_transform_.SetEgoState(
+      current_lane_coord_ptr_->GetPathCurveHeading(10.),
+      planning_init_point_.lat_init_state.x(),
+      planning_init_point_.lat_init_state.y());
+  traj_points_ptr_ = &pipeline_context_->coarse_planning_info.trajectory_points;
+  planning_init_point_ =
+      reference_path_ptr_->get_frenet_ego_state().planning_init_point();
+  ego_planning_init_s_[1] = ego_state_mgr->ego_v();
+  ego_planning_init_s_[2] = ego_state_mgr->ego_acc();
+  return;
+}
+
+GapSelectorStatus GapSelector::Update(GapSelectorResult &gap_selector_result) {
+  // -----------------------------------------
+  GapSelectorStatus env_preprocessor_status =
+      EnvHandle(target_state_, Point2D{ego_cart_point_[0], ego_cart_point_[1]},
+                gap_selector_result);
+
+  if (env_preprocessor_status == GS_SKIP ||
+      env_preprocessor_status == LC_CANCEL ||
+      env_preprocessor_status == BASE_FRENET_COORD_NULLPTR ||
+      env_preprocessor_status == LC_FINISHED ||
+      env_preprocessor_status == LC_PASS_TIME_EXCEED_THRESHOLD) {
+    gap_selector_result = {false, target_state_, false, false};
+    LOG_DEBUG("Gap Selector finished after env preprocessor, the status is: %d",
+              (int)env_preprocessor_status);
+    return env_preprocessor_status;
+  }
+
+  // generate gap info
+  ConstructGaps();
+  if (gap_list_.empty()) {  // no collision check when no gap
+  }
+  // generate candidate lateral path
+  ResponsivePathPlan();  // generate path plan responsive
+
+  // get the nearby gap
+  ObtainNearbyGap();
+
+  // make decision of drive style
+  MakeDriveStyleDecision();
+  GapSelectorStatus status = GapSelectorStatus::DEFAULT;
+  if (gap_drive_style_ == GapDriveStyle::Free) {
+    status = GapSelectorStatus::FREE_LC;
+  }
+
+  if (path_spline_.path_spline_status == GapSelectorPathSpline::LC_VALID ||
+      path_spline_.path_spline_status == GapSelectorPathSpline::LC_LANE_CROSS) {
+    DriveStyleTimeOptimalTrajEvaluation(gap_selector_path_spline_[0]);
+    ConstructTimeOptimal(traj_time_optimal_, gap_selector_path_spline_[0]);
+    int collision_id =
+        gap_list_.empty() ? -1 : SafetyCheck(gap_selector_path_spline_[0]);
+    if (collision_id < 0 &&
+        PathSplineLengthCheck(gap_selector_path_spline_[0])) {
+      GenerateEgoTrajectory(*traj_points_ptr_);
+      status = GapSelectorStatus::COLLISION_CHECK_OK_PATH;
+      path_spline_ = gap_selector_path_spline_[0];
+      path_spline_.path_spline_status = GapSelectorPathSpline::LC_VALID;
+      gap_selector_result = {true, target_state_, true, true};
+      // planning::common::GapSelectorPathSpline::LC_VALID;
+      gap_selector_state_machine_info_.lc_pass_time += 0.1;
+    } else {
+      status = GapSelectorStatus::COLLISION_CHECK_FAILED_PATH;
+      path_spline_.path_spline_status = GapSelectorPathSpline::NO_VALID;
+    }
+  }
+
+  if (path_spline_.path_spline_status == GapSelectorPathSpline::NO_VALID) {
+    SecondOrderTimeOptimalTrajectory lane_hold_speed_profile =
+        DriveStyleTimeOptimalTrajEvaluation(planning_init_point_.v,
+                                            cruise_vel_);
+    GenerateLHTrajectory(lane_hold_speed_profile, *traj_points_ptr_);
+    gap_drive_style_ = GapDriveStyle::NONESTYLE;
+    path_spline_.path_spline_status = GapSelectorPathSpline::LH_VALID;
+    status = GapSelectorStatus::COLLISION_CHECK_FAILED_PATH;
+    gap_selector_result = {true, target_state_, true, false};
+  }
+
+  RestoreTrajResult(*traj_points_ptr_);
+
+  return status;
+}
+
+GapSelectorStatus GapSelector::EnvHandle(
+    const int target_state, const Point2D &ego_cart_pose,
+    GapSelectorResult &gap_selector_result) {
+  //
+  UpdateSequenceInfos();
+
+  CheckLaneCrossed();
+
+  if (!SetBaseFrenetCoordAndUpdateAgentNode()) {
+    LOG_ERROR("Enmergency error! Agent Node updated false!");
+  }
+
+  Point2D ego_frenet_point;
+  Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
+                         planning_init_point_.lat_init_state.y()};
+  if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
+    LOG_ERROR("Enmergency error! Ego Pose Cart2SL failed!");
+  }  // upstream default reference path
+  planning_init_point_.frenet_state.s = ego_frenet_point.x;
+  planning_init_point_.frenet_state.r = ego_frenet_point.y;
+
+  ego_l_ = ego_frenet_point.y;
+  ego_planning_init_s_[0] = planning_init_point_.frenet_state.s;
+
+  // no lc case
+  if (target_state_ == 0) {
+    path_spline_.path_spline_status = GapSelectorPathSpline::NO_VALID;
+  }
+
+  GapSelectorStatus gs_status{DEFAULT};
+  if (gap_selector_state_machine_info_.gs_skip ||
+      base_frenet_coord_ == nullptr) {
+    ResetAllInfo();
+    gap_selector_result = {false, target_state_, false, false};
+    LOG_DEBUG("\n Gap selector skip is %d, base_frenet_coord is ok: %d",
+              gap_selector_state_machine_info_.gs_skip,
+              base_frenet_coord_ == nullptr);
+    gs_status = gap_selector_state_machine_info_.gs_skip
+                    ? GS_SKIP
+                    : BASE_FRENET_COORD_NULLPTR;
+  } else if (CheckLCFinish() || gap_selector_state_machine_info_.lc_cancel) {
+    ResetAllInfo();
+    gap_selector_result = {true, target_state_, false, false};
+    LOG_DEBUG("\n Gap selector lc cancel %d",
+              gap_selector_state_machine_info_.lc_cancel);
+    gs_status =
+        gap_selector_state_machine_info_.lc_cancel ? LC_CANCEL : LC_FINISHED;
+  } else if (gap_selector_state_machine_info_.lc_pass_time > kMaxTotalLCTime &&
+             !gap_selector_state_machine_info_.lane_cross) {
+    GenerateLBTrajectory(*traj_points_ptr_);
+    path_spline_.path_spline_status = GapSelectorPathSpline::LB_VALID;
+    gap_selector_result = {false, target_state_, true, false};
+    LOG_DEBUG("Lc time is exceed max , LB Launch !");
+    gs_status = LC_PASS_TIME_EXCEED_THRESHOLD;
+  }
+  return gs_status;
+}
+
+void GapSelector::ResetAllInfo() {
+  // lane_cross_ = false;
+  // lc_triggered_ = false;
+  // lb_triggered_ = false;
+  // lc_in_ = false;
+  // lb_in_ = false;
+  // lc_pass_time_ = 0.;
+  // lc_wait_time_ = 0.;
+  // path_requintic_ = false;
+  // lc_cancel_ = false;
+
+  gap_selector_state_machine_info_ = {
+      false, false, false, false, false,     0.,
+      0.,    false, false, false, {0, 0, 0}, {ego_l_, ego_l_, ego_l_}};
+
+  st_lower_boundaries_.clear();
+  st_upper_boundaries_.clear();
+  st_time_optimal_.clear();
+  loninfo_time_optimal_.clear();
+
+  front_gap_car_st_boundaries_.clear();
+  gs_status_ = GapSelectorPathSpline::NO_VALID;
+
+  gap_list_.clear();
+  target_state_ = 0;
+  gap_selector_path_spline_.clear();
+  front_careful_car_id_origin_lane_ = -1;
+  path_spline_.path_spline_status = GapSelectorPathSpline::NO_VALID;
+  front_gap_car_st_boundaries_.clear();
+  rear_gap_car_st_boundaries_.clear();
+  return;
+}
+
+void GapSelector::UpdateSequenceInfos() {
+  // lc sequence
+  gap_selector_state_machine_info_.lc_request_buffer[0] =
+      gap_selector_state_machine_info_.lc_request_buffer[1];
+  gap_selector_state_machine_info_.lc_request_buffer[1] =
+      gap_selector_state_machine_info_.lc_request_buffer[2];
+  gap_selector_state_machine_info_.lc_request_buffer[2] = target_state_;
+
+  if (gap_selector_state_machine_info_.lc_request_buffer[2] ==
+          gap_selector_state_machine_info_.lc_request_buffer[1] &&
+      gap_selector_state_machine_info_.lc_request_buffer[1] != 0) {
+    gap_selector_state_machine_info_.lc_triggered = false;
+    gap_selector_state_machine_info_.lb_triggered = false;
+    // gap_selector_state_machine_info_.lc_pass_time += 0.1;
+  } else if (gap_selector_state_machine_info_.lc_request_buffer[2] !=
+                 gap_selector_state_machine_info_.lc_request_buffer[1] &&
+             gap_selector_state_machine_info_.lc_request_buffer[2] != 0) {
+    gap_selector_state_machine_info_.lc_triggered = true;
+    gap_selector_state_machine_info_.lc_pass_time = 0.;
+    gap_selector_state_machine_info_.lc_wait_time = 0.;
+  } else if (gap_selector_state_machine_info_.lc_request_buffer[2] !=
+                 gap_selector_state_machine_info_.lc_request_buffer[1] &&
+             gap_selector_state_machine_info_.lc_request_buffer[2] == 0) {
+    gap_selector_state_machine_info_.lb_triggered = true;
+    gap_selector_state_machine_info_.lc_pass_time = 0.;
+    gap_selector_state_machine_info_.lc_wait_time = 0.;
+  } else if (gap_selector_state_machine_info_.lc_request_buffer[2] == 0) {
+    gap_selector_state_machine_info_.lc_triggered = false;
+    gap_selector_state_machine_info_.lb_triggered = false;
+  }
+
+  if (gs_status_ == GapSelectorPathSpline::LH_VALID) {
+    gap_selector_state_machine_info_.lc_wait_time += 0.1;
+  } else {
+    gap_selector_state_machine_info_.lc_wait_time = 0.;
+  }
+  if (gap_selector_state_machine_info_.lc_request_buffer[2] == 0 &&
+      gap_selector_state_machine_info_.lc_request_buffer[1] != 0) {
+    gap_selector_state_machine_info_.lc_cancel = true;
+  } else {
+    gap_selector_state_machine_info_.lc_cancel = false;
+  }
+
+  if (gap_selector_state_machine_info_.lc_request_buffer[2] == 0 &&
+      gap_selector_state_machine_info_.lc_request_buffer[1] == 0) {
+    gap_selector_state_machine_info_.gs_skip = true;
+  } else {
+    gap_selector_state_machine_info_.gs_skip = false;
+  }
+  return;
+}
+
+bool GapSelector::SetBaseFrenetCoordAndUpdateAgentNode() {
+  gap_selector_state_machine_info_.path_requintic = false;
+  if (!gap_selector_state_machine_info_.lane_cross) {
+    base_frenet_coord_ = origin_lane_coord_ptr_;
+    if (base_frenet_coord_ == nullptr) {
+      gap_selector_state_machine_info_.path_requintic = true;
+      base_frenet_coord_ = current_lane_coord_ptr_;
+      LOG_ERROR("The original lane coord get nullptr after lane cross!");
+    }
+  } else {
+    base_frenet_coord_ = current_lane_coord_ptr_;
+  }
+
+  bool agent_node_updated = {false};
+
+  auto agent_node_start_time = IflyTime::Now_ms();
+  if (origin_lane_coord_ptr_ != nullptr && target_lane_coord_ptr_ != nullptr &&
+      !gap_selector_state_machine_info_.gs_skip) {
+    // agent_node_mgr_->SetOriginLane(origin_lane_coord_ptr_);
+    // agent_node_updated =
+    //     agent_node_mgr_->Update(target_lane_coord_ptr_, target_state_);
+
+    agent_node_mgr_->set_input_info(
+        origin_lane_coord_ptr_, target_lane_coord_ptr_, target_state_,
+        ids_obstacle_in_origin_lane_, ids_obstacle_in_target_lane_,
+        gs_care_obstacles_);
+    agent_node_updated = agent_node_mgr_->Update();
+  }
+  auto agent_node_end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("AgentNodeCostTime",
+                   agent_node_end_time - agent_node_start_time);
+  return agent_node_updated;
+}
+
+void GapSelector::CheckLaneCrossed() {
+  for (int i = 0; i < gap_selector_state_machine_info_.ego_l_buffer.size() - 1;
+       i++) {
+    gap_selector_state_machine_info_.ego_l_buffer[i] =
+        gap_selector_state_machine_info_.ego_l_buffer[i + 1];
+  }
+  gap_selector_state_machine_info_.ego_l_buffer.back() = ego_l_cur_lane_;
+  const double lane_cross_lat_thres = 1.5;
+  bool left_cross_lane =
+      gap_selector_state_machine_info_.lc_request_buffer[2] == 1 &&
+      gap_selector_state_machine_info_.ego_l_buffer[2] -
+              gap_selector_state_machine_info_.ego_l_buffer[1] <
+          -lane_cross_lat_thres;
+  bool right_cross_lane =
+      gap_selector_state_machine_info_.lc_request_buffer[2] == 2 &&
+      gap_selector_state_machine_info_.ego_l_buffer[2] -
+              gap_selector_state_machine_info_.ego_l_buffer[1] >
+          lane_cross_lat_thres;
+  bool left_cross_back =
+      gap_selector_state_machine_info_.lc_request_buffer[2] == 1 &&
+      gap_selector_state_machine_info_.ego_l_buffer[2] -
+              gap_selector_state_machine_info_.ego_l_buffer[1] >
+          lane_cross_lat_thres;
+  bool right_cross_back =
+      gap_selector_state_machine_info_.lc_request_buffer[2] == 2 &&
+      gap_selector_state_machine_info_.ego_l_buffer[2] -
+              gap_selector_state_machine_info_.ego_l_buffer[1] <
+          -lane_cross_lat_thres;
+
+  if (!gap_selector_state_machine_info_.lane_cross &&
+      (left_cross_lane || right_cross_lane)) {
+    gap_selector_state_machine_info_.lane_cross = true;
+  } else if (gap_selector_state_machine_info_.lane_cross &&
+             (gap_selector_state_machine_info_.lc_request_buffer[2] == 0 ||
+              left_cross_back || right_cross_back)) {
+    gap_selector_state_machine_info_.lane_cross = false;
+  }
+  return;
+}
+
+void GapSelector::ConstructGaps() {
+  gap_list_.clear();
+  const std::vector<int64_t> &ids_sorted_target_lane =
+      agent_node_mgr_->ids_sorted_target_lane();
+  const std::unordered_map<int64_t, ObstaclePredicatedInfo>
+      &agent_target_lane_map = agent_node_mgr_->agent_node_target_lane_map();
+
+  if (ids_sorted_target_lane.empty()) {
+    LOG_DEBUG("GapSelectorTask, No gap exists!");
+    return;
+  }
+
+  gap_list_.reserve(ids_sorted_target_lane.size() + 1);
+
+  for (size_t i = 0; i < ids_sorted_target_lane.size() + 1; i++) {
+    const bool is_first_gap = (i == 0);
+    const bool is_last_gap = (i + 1 == ids_sorted_target_lane.size() + 1);
+
+    if (is_first_gap) {
+      Gap first_gap;
+      first_gap.front_agent_id = -1;
+      first_gap.rear_agent_id = ids_sorted_target_lane.front();
+
+      auto iter = agent_target_lane_map.find(first_gap.rear_agent_id);
+      if (iter != agent_target_lane_map.end()) {
+        first_gap.gap_center_s = iter->second.cur_s - 8.;
+
+      } else {
+        first_gap.gap_center_s = -10.;
+      }
+      gap_list_.emplace_back(first_gap);
+    }
+
+    if (is_last_gap) {
+      Gap last_gap;
+      last_gap.front_agent_id = ids_sorted_target_lane.back();
+      last_gap.rear_agent_id = -1;
+      auto iter = agent_target_lane_map.find(last_gap.front_agent_id);
+      if (iter != agent_target_lane_map.end()) {
+        last_gap.gap_center_s = iter->second.cur_s + 8.;
+
+      } else {
+        last_gap.gap_center_s = base_frenet_coord_->Length() - 10.;
+      }
+      gap_list_.emplace_back(last_gap);
+    }
+
+    if (is_first_gap || is_last_gap) {
+      continue;
+    }
+
+    Gap normal_gap;
+    normal_gap.front_agent_id = ids_sorted_target_lane.at(i - 1);
+    normal_gap.rear_agent_id = ids_sorted_target_lane.at(i);
+
+    auto front_iter = agent_target_lane_map.find(normal_gap.front_agent_id);
+    auto rear_iter = agent_target_lane_map.find(normal_gap.rear_agent_id);
+
+    auto diff_cur_s = rear_iter->second.cur_s - front_iter->second.cur_s;
+    if (diff_cur_s < rear_iter->second.length * 2) {
+      continue;  // perception false check!
+    }
+
+    if (front_iter != agent_target_lane_map.end() &&
+        rear_iter != agent_target_lane_map.end()) {
+      normal_gap.gap_center_s =
+          front_iter->second.cur_s +
+          (rear_iter->second.cur_s - front_iter->second.cur_s) * 0.5;
+    }
+
+    gap_list_.emplace_back(normal_gap);
+  }
+  return;
+}
+
+void GapSelector::ObtainNearbyGap() {
+  if (gap_list_.empty()) {
+    nearby_gap_.front_agent_id = -1;
+    nearby_gap_.rear_agent_id = -1;
+    return;
+  }
+
+  double ego_s = ego_planning_init_s_[0];
+  auto nearby_gap =
+      std::min_element(gap_list_.begin(), gap_list_.end(),
+                       [&](const Gap &gap1, const Gap &gap2) {
+                         return std::abs(gap1.gap_center_s - ego_s) <
+                                std::abs(gap2.gap_center_s - ego_s);
+                       });
+  if (nearby_gap != gap_list_.end()) {
+    nearby_gap_ = *nearby_gap;
+  }
+
+  // select origin lane front car
+  auto agent_on_origin_lane = agent_node_mgr_->agent_node_origin_lane_map();
+  auto nearest_element =
+      std::min_element(agent_on_origin_lane.begin(), agent_on_origin_lane.end(),
+                       [&](const auto &pair1, const auto &pair2) {
+                         return std::abs(pair1.second.cur_s - ego_s) <
+                                    std::abs(pair2.second.cur_s - ego_s) &&
+                                pair1.second.cur_s > ego_s;
+                       });
+  if (nearest_element != agent_on_origin_lane.end() &&
+      nearest_element->second.cur_s - ego_s < kFilterFrontCarDistace) {
+    front_careful_car_id_origin_lane_ = nearest_element->first;
+  } else {
+    front_careful_car_id_origin_lane_ = -1;
+  }
+  return;
+}
+
+void GapSelector::MakeDriveStyleDecision() {
+  if (nearby_gap_.rear_agent_id != -1) {
+    ObstaclePredicatedInfo rear_obstacle_pred_info =
+        agent_node_mgr_->agent_node_target_lane_map()
+            .find(nearby_gap_.rear_agent_id)
+            ->second;
+
+    if (nearby_gap_.front_agent_id == -1) {
+      if (rear_obstacle_pred_info.raw_vel >=
+          ego_planning_init_s_[1] + kPlanEps) {
+        gap_drive_style_ = GapDriveStyle::OnlyRearFasterCar;
+
+      } else {
+        gap_drive_style_ = GapDriveStyle::OnlyRearSlowerCar;
+      }
+    } else if (nearby_gap_.front_agent_id != -1) {
+      ObstaclePredicatedInfo front_obstacle_pred_info =
+          agent_node_mgr_->agent_node_target_lane_map()
+              .find(nearby_gap_.front_agent_id)
+              ->second;
+
+      if (front_obstacle_pred_info.raw_vel <= rear_obstacle_pred_info.raw_vel &&
+          rear_obstacle_pred_info.raw_vel >= ego_planning_init_s_[1] &&
+          front_obstacle_pred_info.raw_vel <= ego_planning_init_s_[1]) {
+        gap_drive_style_ = GapDriveStyle::RearCarFaster;
+
+      } else if (front_obstacle_pred_info.raw_vel >=
+                     rear_obstacle_pred_info.raw_vel &&
+                 rear_obstacle_pred_info.raw_vel < ego_planning_init_s_[1] &&
+                 front_obstacle_pred_info.raw_vel > ego_planning_init_s_[1]) {
+        gap_drive_style_ = GapDriveStyle::FrontCarFaster;
+
+      } else {
+        gap_drive_style_ = GapDriveStyle::NoDecisionForBothCar;
+      }
+    }
+
+  } else {
+    if (nearby_gap_.front_agent_id != -1) {
+      ObstaclePredicatedInfo front_obstacle_pred_info =
+          agent_node_mgr_->agent_node_target_lane_map()
+              .find(nearby_gap_.front_agent_id)
+              ->second;
+
+      if (front_obstacle_pred_info.raw_vel + kPlanEps > ego_planning_init_s_[1]
+          //&&front_obstacle_pred_info.cur_s > ego_init_s_[0]
+      ) {
+        gap_drive_style_ = GapDriveStyle::OnlyFrontFasterCar;
+
+      } else if (front_obstacle_pred_info.raw_vel + kPlanEps <
+                 ego_planning_init_s_[1]
+                 //&&front_obstacle_pred_info.cur_s > ego_init_s_[0]
+                 )  //
+      {
+        gap_drive_style_ = GapDriveStyle::OnlyFrontSlowerCar;
+      }
+    } else {
+      gap_drive_style_ = GapDriveStyle::Free;
+    }
+  };
+  return;
+}
+
+bool GapSelector::MakeInteractiveDecision(
+    const ObstaclePredicatedInfo &interactive_obj_pred_info,
+    const GapSelectorPathSpline &path_spline,
+    SecondOrderTimeOptimalTrajectory &traj_time_optimal) {
+  const Point2D &crossed_line_point =
+      path_spline.crossed_line_point_info.crossed_line_point;
+  Point2D crossed_line_frenet_point;
+  if (!base_frenet_coord_->XYToSL(crossed_line_point,
+                                  crossed_line_frenet_point)) {
+    LOG_ERROR("Crossed line transform frenet failed!");
+    return false;
+  }
+
+  if (!path_spline.crossed_line_point_info.valid) {
+    LOG_ERROR("crossed_line_point_info is not valid");
+    return false;
+  }
+
+  // get the obj arrive the interacted point time
+  if (interactive_obj_pred_info.cur_s > crossed_line_frenet_point.x) {
+    std::cout << "interactive_obj_pred_info.cur_s > crossed_line_frenet_point.x"
+              << std::endl;
+    return false;
+  };
+
+  const double interacted_time =
+      (crossed_line_frenet_point.x - interactive_obj_pred_info.cur_s) /
+      interactive_obj_pred_info.raw_vel;
+  // default speed profile
+  LonState ego_lon_state{ego_planning_init_s_[0], ego_planning_init_s_[1],
+                         ego_planning_init_s_[2], 0., 0.};
+  StateLimit default_state_limit{
+      0.,        cruise_vel_, kPlanEps,         cruise_vel_ + kPlanEps,
+      kMaxDecel, kMaxAcc,     kMaxNegativeJerk, kMaxPositiveJerk};
+
+  SecondOrderTimeOptimalTrajectory default_traj(ego_lon_state,
+                                                default_state_limit);
+  LonState ego_crossed_line_state = default_traj.GetSecondOrderTrajectoryState(
+      ego_lon_state, default_traj.second_order_param(), interacted_time);
+
+  std::vector<double> vel_candidates{cruise_vel_ + 3., cruise_vel_ - 5.};
+  if (std::fabs(ego_crossed_line_state.p - crossed_line_frenet_point.x) >
+      kHalfEgoLength * 2 + kCarCollisionThreshld) {
+    traj_time_optimal = default_traj;
+    traj_time_optimal.valid_ = true;
+    std::cout << "interactive decision normal ego vel: "
+              << default_state_limit.v_end << std::endl;
+    return true;
+  } else {
+    for (auto &v_candidate : vel_candidates) {
+      StateLimit decel_state_limit = default_state_limit;
+      decel_state_limit.v_end = std::fmax(v_candidate, 0.1);
+      SecondOrderTimeOptimalTrajectory decel_time_optimal_traj(
+          ego_lon_state, decel_state_limit);
+
+      LonState decel_crossed_line_state =
+          decel_time_optimal_traj.GetSecondOrderTrajectoryState(
+              ego_lon_state, decel_time_optimal_traj.second_order_param(),
+              interacted_time);
+      if (crossed_line_frenet_point.x - decel_crossed_line_state.p >
+          kHalfEgoLength * 2 + kCarCollisionThreshld) {
+        traj_time_optimal = decel_time_optimal_traj;
+        traj_time_optimal.valid_ = true;
+        std::cout << "interactive decision decel ego vel: "
+                  << default_state_limit.v_end << std::endl;
+        return true;
+      } else {
+        std::cout << "decel cross line is too close " << std::endl;
+        continue;
+      }
+    }
+    return false;
+    // check decel traj
+  }
+}
+
+bool GapSelector::MakeInteractiveDecision(
+    const ObstaclePredicatedInfo &front_obj_pred_info,
+    const ObstaclePredicatedInfo &rear_obj_pred_info,
+    const GapSelectorPathSpline &path_spline,
+    SecondOrderTimeOptimalTrajectory &traj_time_optimal) {
+  const Point2D &crossed_line_point =
+      path_spline.crossed_line_point_info.crossed_line_point;
+  Point2D crossed_line_frenet_point;
+  if (!base_frenet_coord_->XYToSL(crossed_line_point,
+                                  crossed_line_frenet_point)) {
+    LOG_ERROR("Crossed line transform frenet failed!");
+    return false;
+  }
+  if (!path_spline.crossed_line_point_info.valid) {
+    LOG_ERROR("crossed_line_point_info is not valid");
+    return false;
+  }
+  if (front_obj_pred_info.cur_s > crossed_line_frenet_point.x) {
+    std::cout << "interactive_obj_pred_info.cur_s > crossed_line_frenet_point.x"
+              << std::endl;
+    return false;
+  }
+};
+
+void GapSelector::DriveStyleTimeOptimalTrajEvaluation(
+    const GapSelectorPathSpline &path_spline) {
+  LonState ego_lon_state{ego_planning_init_s_[0], ego_planning_init_s_[1],
+                         ego_planning_init_s_[2], 0., 0.};
+  StateLimit state_limit{
+      0.,        cruise_vel_, kPlanEps,         cruise_vel_ + kPlanEps,
+      kMaxDecel, kMaxAcc,     kMaxNegativeJerk, kMaxPositiveJerk};
+
+  bool interactive_ok{false};
+  if (gap_drive_style_ == GapDriveStyle::OnlyRearFasterCar) {
+    const ObstaclePredicatedInfo &rear_obstacle_info =
+        agent_node_mgr_->agent_node_target_lane_map()
+            .find(nearby_gap_.rear_agent_id)
+            ->second;
+    state_limit.v_end =
+        std::fmin(cruise_vel_, rear_obstacle_info.raw_vel - kPlanEps);
+    // -----apend decision
+  } else if (gap_drive_style_ == GapDriveStyle::OnlyRearSlowerCar) {
+    const ObstaclePredicatedInfo &rear_obstacle_info =
+        agent_node_mgr_->agent_node_target_lane_map()
+            .find(nearby_gap_.rear_agent_id)
+            ->second;
+    double suggested_vel{cruise_vel_};  // reserve
+    state_limit.v_end = std::fmin(cruise_vel_, suggested_vel);
+    interactive_ok = MakeInteractiveDecision(rear_obstacle_info, path_spline,
+                                             traj_time_optimal_);
+  } else if (gap_drive_style_ == GapDriveStyle::RearCarFaster) {
+    const ObstaclePredicatedInfo &rear_obstacle_info =
+        agent_node_mgr_->agent_node_target_lane_map()
+            .find(nearby_gap_.rear_agent_id)
+            ->second;
+    state_limit.v_end =
+        std::fmin(cruise_vel_, rear_obstacle_info.raw_vel - kPlanEps);
+    // -----apend decision
+  } else if (gap_drive_style_ == GapDriveStyle::FrontCarFaster) {
+    const ObstaclePredicatedInfo &front_obstacle_info =
+        agent_node_mgr_->agent_node_target_lane_map()
+            .find(nearby_gap_.front_agent_id)
+            ->second;
+    const ObstaclePredicatedInfo &rear_obstacle_info =
+        agent_node_mgr_->agent_node_target_lane_map()
+            .find(nearby_gap_.rear_agent_id)
+            ->second;
+    state_limit.v_end =
+        std::fmin(cruise_vel_, front_obstacle_info.raw_vel + kPlanEps);
+
+    // -----apend decision
+    interactive_ok =
+        MakeInteractiveDecision(front_obstacle_info, rear_obstacle_info,
+                                path_spline, traj_time_optimal_);
+  } else if (gap_drive_style_ == GapDriveStyle::OnlyFrontFasterCar) {
+    const double overtake_speed_buffer = 2.0;
+    const ObstaclePredicatedInfo &front_obstacle_info =
+        agent_node_mgr_->agent_node_target_lane_map()
+            .find(nearby_gap_.front_agent_id)
+            ->second;
+    state_limit.v_end = std::fmin(
+        cruise_vel_, front_obstacle_info.raw_vel + overtake_speed_buffer);
+
+    // -----apend decision
+    interactive_ok = MakeInteractiveDecision(front_obstacle_info, path_spline,
+                                             traj_time_optimal_);
+  } else if (gap_drive_style_ == GapDriveStyle::OnlyFrontSlowerCar) {
+    const ObstaclePredicatedInfo &front_obstacle_info =
+        agent_node_mgr_->agent_node_target_lane_map()
+            .find(nearby_gap_.front_agent_id)
+            ->second;
+    state_limit.v_end = cruise_vel_;
+  }
+
+  // time optimal traj
+  SecondOrderTimeOptimalTrajectory time_optimal_traj(ego_lon_state,
+                                                     state_limit);
+  time_optimal_traj.valid_ = true;
+  if (!interactive_ok) {
+    traj_time_optimal_ = time_optimal_traj;
+  }
+
+  return;
+}
+
+SecondOrderTimeOptimalTrajectory
+GapSelector::DriveStyleTimeOptimalTrajEvaluation(const double ego_v,
+                                                 const double target_v) {
+  LonState ego_lon_state{ego_planning_init_s_[0], ego_v,
+                         ego_planning_init_s_[2], 0., 0.};
+  StateLimit state_limit{
+      0.,        target_v, kPlanEps,         cruise_vel_,
+      kMaxDecel, kMaxAcc,  kMaxNegativeJerk, kMaxPositiveJerk};
+  return SecondOrderTimeOptimalTrajectory(ego_lon_state, state_limit);
+}
+
+void GapSelector::RetentivePathPlan() {
+  // // generate different lateral path
+  gap_selector_path_spline_.clear();
+  lc_time_list_[0] = config_.default_lc_time;
+  for (auto i = 0; i < 1; i++) {
+    double quintic_truancation_s{200.};
+    double expected_s = 100.;
+    double expected_l = 2.5;
+    double refine_time = lc_time_list_[i];
+
+    CalcLatOffset(expected_s, expected_l, refine_time);
+
+    pnc::spline::QuinticPolynominalPath lc_quintic_poly = ConstructQuinticPath(
+        expected_s, expected_l, quintic_truancation_s, refine_time);
+
+    // to stitch the quintic path and target lane path!
+    GapSelectorPathSpline path_spline;
+    path_spline.start_cart_point.x = planning_init_point_.lat_init_state.x();
+    path_spline.start_cart_point.y = planning_init_point_.lat_init_state.y();
+    path_spline.start_frenet_point.x = planning_init_point_.frenet_state.s;
+    path_spline.start_frenet_point.y = planning_init_point_.frenet_state.r;
+    path_spline.quintic_p0.x = lc_quintic_poly(0.).x();
+    path_spline.quintic_p0.y = lc_quintic_poly(0.).y();
+    path_spline.quintic_pe.x = lc_quintic_poly(refine_time).x();
+    path_spline.quintic_pe.y = lc_quintic_poly(refine_time).y();
+
+    StitchQuinticPath(quintic_truancation_s, refine_time, expected_l,
+                      lc_quintic_poly, path_spline);
+    QuerySplineCrossLinePoint(
+        path_spline);  // TODO: need to consider the lane cross state
+    gap_selector_path_spline_.emplace_back(path_spline);
+  }
+  return;
+}
+
+void GapSelector::ResponsivePathPlan() {
+  gap_selector_path_spline_.clear();
+  lc_time_list_[0] = config_.default_lc_time;
+
+  double remaining_lc_duration =
+      lc_time_list_[0] - gap_selector_state_machine_info_.lc_pass_time;
+  shared_ptr<KDPath> coord = target_lane_coord_ptr_;
+  if (remaining_lc_duration < 1.0) {
+    const double lat_mvd_coeff = lc_time_list_[0] / kDefaultLatMovedDistance;
+    remaining_lc_duration = std::fabs(ego_l_cur_lane_) * lat_mvd_coeff;
+    if (gap_selector_state_machine_info_
+            .lane_cross) {  // base coord is current lane coord
+      // lane cross, go lc
+      coord = target_lane_coord_ptr_;
+    } else {
+      // not lane cross, go lb
+      coord = base_frenet_coord_;
+    }
+  }
+  auto quintic_lc_path = ConstructQuinticPath(remaining_lc_duration, coord);
+  GapSelectorPathSpline path_spline;
+  path_spline.start_cart_point.x = planning_init_point_.lat_init_state.x();
+  path_spline.start_cart_point.y = planning_init_point_.lat_init_state.y();
+  path_spline.start_frenet_point.x = planning_init_point_.frenet_state.s;
+  path_spline.start_frenet_point.y = planning_init_point_.frenet_state.r;
+  path_spline.quintic_p0.x = quintic_lc_path(0.).x();
+  path_spline.quintic_p0.y = quintic_lc_path(0.).y();
+  path_spline.quintic_pe.x = quintic_lc_path(remaining_lc_duration).x();
+  path_spline.quintic_pe.y = quintic_lc_path(remaining_lc_duration).y();
+  DecoupleQuinticPathSpline(remaining_lc_duration, quintic_lc_path, coord,
+                            path_spline);
+  if (remaining_lc_duration > 1.0) {
+    QuerySplineCrossLinePoint(
+        path_spline);  // TODO: need to consider the lane cross state
+    path_spline_.path_spline_status = GapSelectorPathSpline::LC_VALID;
+    gap_selector_path_spline_.emplace_back(path_spline);
+  } else {
+    if (gap_selector_state_machine_info_.lane_cross) {
+      path_spline_.path_spline_status = GapSelectorPathSpline::LC_LANE_CROSS;
+      path_spline_.crossed_line_point_info.valid = false;
+      gap_selector_path_spline_.emplace_back(path_spline);
+    } else {
+      path_spline.path_spline_status = GapSelectorPathSpline::LB_VALID;
+      path_spline_.crossed_line_point_info.valid = false;
+      gap_selector_path_spline_.emplace_back(path_spline);
+    }
+  }
+  return;
+};
+
+void GapSelector::QuerySplineCrossLinePoint(
+    GapSelectorPathSpline &path_spline) {
+  if (gap_selector_state_machine_info_.lane_cross) {
+    cross_line_point_info_.valid = false;
+    cross_line_point_info_.crossed_line_point.x =
+        planning_init_point_.lat_init_state.x();
+    cross_line_point_info_.crossed_line_point.y =
+        planning_init_point_.lat_init_state.y();
+    return;
+  }
+  // generate spline local points
+  double sample_total_length =
+      std::fmin(std::fmax(cruise_vel_ * 5., kMinSplineSampleLength),
+                path_spline.x_s_spline.get_x_max() - 2.);
+  double sample_step = 4.;
+  int sample_num = sample_total_length / sample_step;
+
+  std::vector<double> local_x_vec_spline_path, local_y_vec_spline_path,
+      local_x_vec_lane_boundary, local_y_vec_lane_boundary;
+  local_x_vec_spline_path.reserve(sample_num);
+  local_y_vec_spline_path.reserve(sample_num);
+  local_x_vec_lane_boundary.reserve(sample_num);
+  local_y_vec_lane_boundary.reserve(sample_num);
+
+  double lane_direction = target_state_ == 1 ? 1 : -1;
+
+  for (auto i = 0; i < sample_num; i++) {
+    // spline local points
+    double sample_s = i > 0 ? i * sample_step : 0.3;
+    Point2D global_sample_point{path_spline.x_s_spline(sample_s),
+                                path_spline.y_s_spline(sample_s)};
+    Point2D local_sample_point;
+    refline_transform_.Global2Local(global_sample_point, local_sample_point);
+    local_x_vec_spline_path.emplace_back(local_sample_point.x);
+    local_y_vec_spline_path.emplace_back(local_sample_point.y);
+
+    // lane boundary local points
+    double half_lane_length = 0.5 * lane_direction * origin_lane_width_;
+    Point2D global_frenet_lane_point{
+        planning_init_point_.frenet_state.s + sample_s, half_lane_length};
+    Point2D global_cart_lane_point;
+    base_frenet_coord_->SLToXY(global_frenet_lane_point,
+                               global_cart_lane_point);
+
+    Point2D local_lane_point;
+    refline_transform_.Global2Local(global_cart_lane_point, local_lane_point);
+    local_x_vec_lane_boundary.emplace_back(local_lane_point.x);
+    local_y_vec_lane_boundary.emplace_back(local_lane_point.y);
+  }
+
+  bool is_monotic = (MonotonicCheck(local_x_vec_lane_boundary) == INCREASE) &&
+                    (MonotonicCheck(local_x_vec_spline_path) == INCREASE);
+
+  if (is_monotic) {
+    // path spline & boundary spline, both x-y spline: local to protect the
+    // mono
+    pnc::mathlib::spline local_boundary_spline, local_path_spline;
+    local_boundary_spline.set_points(local_x_vec_lane_boundary,
+                                     local_y_vec_lane_boundary);
+    local_path_spline.set_points(local_x_vec_spline_path,
+                                 local_y_vec_spline_path);
+
+    // Newton method
+    double x0 =
+        (local_path_spline.get_x_max() + local_path_spline.get_x_min()) * 0.5;
+    double epsilon = 0.01;
+    double x1 = x0;
+
+    for (size_t i = 0; i < 10; ++i) {
+      const double f_derv_1st =
+          local_path_spline.deriv(1, x0) - local_boundary_spline.deriv(1, x0);
+      x1 =
+          x0 - (local_path_spline(x0) - local_boundary_spline(x0)) / f_derv_1st;
+      if (std::fabs(x1 - x0) < epsilon) {
+        break;
+      }
+      x0 = x1;
+    };
+
+    Point2D cross_local_point{x0, local_boundary_spline(x0)};
+    Point2D cross_global_point;
+    refline_transform_.Local2Gobal(cross_local_point, cross_global_point);
+    path_spline.crossed_line_point_info.valid = true;
+    path_spline.crossed_line_point_info.crossed_line_point = cross_global_point;
+  } else {
+    // linear calc
+    const double spline_length =
+        path_spline.x_s_spline.get_x_max() - path_spline.x_s_spline.get_x_min();
+    const double expected_lat_movd_dist =
+        lane_direction * 0.5 * (origin_lane_width_ + target_lane_width_) -
+        path_spline.start_frenet_point.y;
+    const double coef_dist =
+        std::fabs((lane_direction * 0.5 * origin_lane_width_ -
+                   path_spline.start_frenet_point.y));
+    const double movd_s = spline_length * (coef_dist / expected_lat_movd_dist);
+
+    path_spline.crossed_line_point_info.valid = true;
+    path_spline.crossed_line_point_info.crossed_line_point.x =
+        path_spline.x_s_spline(movd_s);
+    path_spline.crossed_line_point_info.crossed_line_point.y =
+        path_spline.y_s_spline(movd_s);
+  }
+  return;
+}
+
+MonotonicStatus GapSelector::MonotonicCheck(const std::vector<double> &x_vec) {
+  if (x_vec.size() <= 1) {
+    return NONMONOTIONIC;
+  }
+
+  bool increasing = true;
+  bool decreasing = true;
+  for (size_t i = 1; i < x_vec.size(); ++i) {
+    if (x_vec[i] > x_vec[i - 1]) {
+      decreasing = false;
+    } else if (x_vec[i] < x_vec[i - 1]) {
+      increasing = false;
+    }
+    // Early termination if both increasing and decreasing are already false
+    if (!increasing && !decreasing) {
+      return NONMONOTIONIC;
+    }
+  }
+
+  if (increasing) {
+    return INCREASE;
+  } else if (decreasing) {
+    return DECREASE;
+  } else {
+    return NONMONOTIONIC;
+  }
+}
+
+void GapSelector::ConstructTimeOptimal(
+    const SecondOrderTimeOptimalTrajectory &time_optimal_traj,
+    const GapSelectorPathSpline &path_spline) {
+  st_time_optimal_.resize(PointNum + 1);
+  loninfo_time_optimal_.resize(PointNum + 1);
+  // currently only check the first gap selector path spline st
+  const double speed_adjust_duration = time_optimal_traj.ParamLength();
+  const LonState &init_state = time_optimal_traj.init_state();
+  const SecondOrderParam &second_order_param =
+      time_optimal_traj.second_order_param();
+  double remain_length = 0.;
+  int truncation_idx = 0;
+  double spline_s = 0.;
+  // profile end point
+  LonState profile_end_state = time_optimal_traj.GetSecondOrderTrajectoryState(
+      init_state, second_order_param, time_optimal_traj.ParamLength());
+
+  st_time_optimal_[0].set_t(0.);
+  st_time_optimal_[0].set_x(planning_init_point_.lat_init_state.x());
+  st_time_optimal_[0].set_y(planning_init_point_.lat_init_state.y());
+  st_time_optimal_[0].set_s(ego_planning_init_s_[0]);
+  loninfo_time_optimal_[0].v = ego_planning_init_s_[1];
+  loninfo_time_optimal_[0].a = ego_planning_init_s_[2];
+  loninfo_time_optimal_[0].j = 0.;
+  loninfo_time_optimal_[0].l = ego_l_;
+  loninfo_time_optimal_[0].heading = planning_init_point_.heading_angle;
+
+  const auto &path_spline_start_cart_point = path_spline.start_cart_point;
+  Point2D path_spline_start_frenet_point;
+  double compensated_dis =
+      std::hypot(path_spline_start_cart_point.x - ego_cart_point_[0],
+                 path_spline_start_cart_point.y - ego_cart_point_[1]);
+  if (base_frenet_coord_->XYToSL(path_spline_start_cart_point,
+                                 path_spline_start_frenet_point)) {
+    LOG_ERROR(
+        "GS:Cart 2 frenet success, spline start cart point -> frenet point!");
+    compensated_dis =
+        ego_planning_init_s_[0] - path_spline_start_frenet_point.x;
+  }
+  // std::cout << "\n compensated_dis: " << compensated_dis << std::endl;
+  for (auto i = 1; i < PointNum + 1; i++) {
+    if (i * delta_t < speed_adjust_duration) {
+      LonState profile_state = time_optimal_traj.GetSecondOrderTrajectoryState(
+          init_state, second_order_param, i * delta_t);
+      st_time_optimal_[i].set_s(profile_state.p);
+      st_time_optimal_[i].set_t(i * delta_t);
+      spline_s = profile_state.p - ego_planning_init_s_[0] + compensated_dis;
+      loninfo_time_optimal_[i].v = profile_state.v;
+      loninfo_time_optimal_[i].a = profile_state.a;
+      loninfo_time_optimal_[i].j = profile_state.j;
+      // frenet convert
+      truncation_idx = i;
+    } else {
+      remain_length = i * delta_t - speed_adjust_duration > 0
+                          ? i * delta_t - profile_end_state.t
+                          : delta_t - profile_end_state.t;
+      st_time_optimal_[i].set_s(profile_end_state.p +
+                                remain_length * profile_end_state.v);
+      st_time_optimal_[i].set_t(i * delta_t);
+      spline_s = profile_end_state.p + remain_length * profile_end_state.v -
+                 ego_planning_init_s_[0] + compensated_dis;
+      loninfo_time_optimal_[i].v = profile_end_state.v;
+      loninfo_time_optimal_[i].a = profile_end_state.a;
+      loninfo_time_optimal_[i].j = profile_end_state.j;
+    }
+    st_time_optimal_[i].set_x(path_spline.x_s_spline(spline_s));
+    st_time_optimal_[i].set_y(path_spline.y_s_spline(spline_s));
+
+    Point2D frenet_point{-100, 0.};
+    Point2D cart_point{st_time_optimal_[i].x(), st_time_optimal_[i].y()};
+    if (!base_frenet_coord_->XYToSL(cart_point, frenet_point)) {
+      std::cout << "GS:Cart 2 frenet failed, Generate loninfo time optimal!"
+                << std::endl;
+    }
+    loninfo_time_optimal_[i].l = frenet_point.y;
+    // std::cout << "\n loninfo_time_optimal l:" << loninfo_time_optimal_[i].l
+    //           << " , i is: " << i << std::endl;
+    loninfo_time_optimal_[i].heading =
+        std::atan2(path_spline.y_s_spline.deriv(1, spline_s),
+                   path_spline.x_s_spline.deriv(1, spline_s));
+  }
+  return;
+}
+
+int GapSelector::CollisionCheck() {
+  int check_max_idx = 15;  // check 3s predication
+  int collision_idx = -1;
+  bool lat_collision{false};
+
+  if (!front_gap_car_st_boundaries_.empty()) {
+    for (auto i = 0; i < check_max_idx + 1; i++) {
+      if ((st_time_optimal_[i].s() - kHalfEgoLength <
+               front_gap_car_st_boundaries_[i].first.s() &&
+           st_time_optimal_[i].s() - kHalfEgoLength >
+               front_gap_car_st_boundaries_[i].second.s()) ||
+          (st_time_optimal_[i].s() + kHalfEgoLength <
+               front_gap_car_st_boundaries_[i].first.s() &&
+           st_time_optimal_[i].s() + kHalfEgoLength >
+               front_gap_car_st_boundaries_[i].second.s())) {
+        lat_collision =
+            target_state_ == 1
+                ? loninfo_time_optimal_[i].l + kHalfEgoWidth > 1.85
+                : loninfo_time_optimal_[i].l - kHalfEgoWidth < -1.85;
+        // std::cout << "front gap car, lat collision check, time idx: " << i
+        //           << ", l is: " << loninfo_time_optimal_[i].l << std::endl;
+        collision_idx = lat_collision ? i : collision_idx;
+        if (collision_idx > 0) {
+          break;
+        } else {
+          continue;
+        }
+      } else {
+        continue;
+      }
+    }
+  }
+
+  if (!rear_gap_car_st_boundaries_.empty() && collision_idx < 0) {
+    for (auto i = 0; i < check_max_idx + 1; i++) {
+      if ((st_time_optimal_[i].s() - kHalfEgoLength <
+               rear_gap_car_st_boundaries_[i].first.s() &&
+           st_time_optimal_[i].s() - kHalfEgoLength >
+               rear_gap_car_st_boundaries_[i].second.s()) ||
+          (st_time_optimal_[i].s() + kHalfEgoLength <
+               rear_gap_car_st_boundaries_[i].first.s() &&
+           st_time_optimal_[i].s() + kHalfEgoLength >
+               rear_gap_car_st_boundaries_[i].second.s())) {
+        lat_collision =
+            target_state_ == 1
+                ? loninfo_time_optimal_[i].l + kHalfEgoWidth > 1.85
+                : loninfo_time_optimal_[i].l - kHalfEgoWidth < -1.85;
+        // std::cout << "rear gap car, lat collision check, time idx: " << i
+        //           << ", l is: " << loninfo_time_optimal_[i].l << std::endl;
+        collision_idx = lat_collision ? i : collision_idx;
+        if (collision_idx > 0) {
+          break;
+        } else {
+          continue;
+        }
+
+      } else {
+        continue;
+      }
+    }
+  }
+
+  if (!front_careful_car_st_boundary_.empty() && collision_idx < 0) {
+    for (auto i = 0; i < check_max_idx + 1; i++) {
+      if ((st_time_optimal_[i].s() - kHalfEgoLength <
+               front_careful_car_st_boundary_[i].first.s() &&
+           st_time_optimal_[i].s() - kHalfEgoLength >
+               front_careful_car_st_boundary_[i].second.s()) ||
+          (st_time_optimal_[i].s() + kHalfEgoLength <
+               front_careful_car_st_boundary_[i].first.s() &&
+           st_time_optimal_[i].s() + kHalfEgoLength >
+               front_careful_car_st_boundary_[i].second.s())) {
+        lat_collision =
+            target_state_ == 1
+                ? loninfo_time_optimal_[i].l + kHalfEgoWidth > 1.85
+                : loninfo_time_optimal_[i].l - kHalfEgoWidth < -1.85;
+        // std::cout << "careful car, lat collision check, time idx: " << i
+        //           << ", l is: " << loninfo_time_optimal_[i].l << std::endl;
+        collision_idx = lat_collision ? i : collision_idx;
+        if (collision_idx > 0) {
+          break;
+        } else {
+          continue;
+        }
+      } else {
+        continue;
+      }
+    }
+  }
+
+  return collision_idx;
+}
+
+int GapSelector::SafetyCheck(const GapSelectorPathSpline &path_spline) {
+  int collision_idx = -1;
+  int64_t front_check_obj_id = -1;
+  int64_t rear_check_obj_id = -1;
+  front_gap_car_st_boundaries_.clear();
+  rear_gap_car_st_boundaries_.clear();
+
+  if (nearby_gap_.front_agent_id < 0 && nearby_gap_.rear_agent_id < 0 &&
+      front_careful_car_id_origin_lane_ < 0) {
+    LOG_ERROR("ST Boundaries break check!");
+    return collision_idx;
+  }
+
+  if (gap_drive_style_ == GapDriveStyle::OnlyRearSlowerCar ||
+      gap_drive_style_ == GapDriveStyle::OnlyRearFasterCar) {
+    rear_check_obj_id = nearby_gap_.rear_agent_id;
+  } else if (gap_drive_style_ == GapDriveStyle::OnlyFrontSlowerCar ||
+             gap_drive_style_ == GapDriveStyle::OnlyFrontFasterCar) {
+    front_check_obj_id = nearby_gap_.front_agent_id;
+  } else if (gap_drive_style_ == GapDriveStyle::RearCarFaster ||
+             gap_drive_style_ == GapDriveStyle::FrontCarFaster ||
+             gap_drive_style_ == GapDriveStyle::NoDecisionForBothCar) {
+    front_check_obj_id = nearby_gap_.front_agent_id;
+    rear_check_obj_id = nearby_gap_.rear_agent_id;
+  }
+
+  ConvertObsPredToSTBoundary(front_check_obj_id,
+                             agent_node_mgr_->agent_node_target_lane_map(),
+                             front_gap_car_st_boundaries_);
+  ConvertObsPredToSTBoundary(rear_check_obj_id,
+                             agent_node_mgr_->agent_node_target_lane_map(),
+                             rear_gap_car_st_boundaries_);
+
+  if (front_careful_car_id_origin_lane_ > 0) {
+    auto iter = agent_node_mgr_->agent_node_origin_lane_map().find(
+        front_careful_car_id_origin_lane_);
+    if (iter != agent_node_mgr_->agent_node_origin_lane_map().end()) {
+      ConvertObsPredToSTBoundary(front_careful_car_id_origin_lane_,
+                                 agent_node_mgr_->agent_node_origin_lane_map(),
+                                 front_careful_car_st_boundary_);
+    }
+  }
+
+  return CollisionCheck();
+}
+bool GapSelector::PathSplineLengthCheck(GapSelectorPathSpline &path_spline) {
+  const Point2D &spline_start_cart_point = path_spline.start_cart_point;
+  /*
+    @liucai:
+    the frenet start point is about 50m away from ego init s
+  */
+  return std::hypot(ego_cart_point_[0] - spline_start_cart_point.x,
+                    ego_cart_point_[1] - spline_start_cart_point.y) < 50.;
+}
+void GapSelector::ConvertObsPredToSTBoundary(
+    const int64_t &id,
+    const std::unordered_map<int64_t, ObstaclePredicatedInfo> &agent_node_map,
+    std::vector<std::pair<STPoint, STPoint>> &st_boundary) {
+  if (id < 0) {
+    return;
+  }
+  st_boundary.resize(PointNum + 1);
+
+  const ObstaclePredicatedInfo &car_pred_info = agent_node_map.find(id)->second;
+  const double obj_length = car_pred_info.length;
+
+  for (auto i = 0; i < PointNum + 1; i++) {
+    st_boundary[i].first.set_s(car_pred_info.obstacle_pred_info.at(i).s +
+                               obj_length * 0.5 +
+                               config_.collision_check_length_threshold);
+    st_boundary[i].first.set_t(i * delta_t);
+
+    st_boundary[i].second.set_s(car_pred_info.obstacle_pred_info.at(i).s -
+                                obj_length * 0.5 -
+                                config_.collision_check_length_threshold);
+    st_boundary[i].second.set_t(i * delta_t);
+  }
+  return;
+}
+
+double GapSelector::QueryLaneWidth(
+    const double s0,
+    const std::vector<std::pair<double, double>> &lane_s_width) {
+  auto comp = [](const std::pair<double, double> &s_width, const double s) {
+    return s_width.first < s;
+  };
+  double lane_width;
+  const auto &first_pair_on_lane =
+      std::lower_bound(lane_s_width.begin(), lane_s_width.end(), s0, comp);
+
+  if (first_pair_on_lane == lane_s_width.begin()) {
+    lane_width = lane_s_width.front().second;
+  } else if (first_pair_on_lane == lane_s_width.end()) {
+    lane_width = lane_s_width.back().second;
+  } else {
+    lane_width = planning_math::lerp(
+        (first_pair_on_lane - 1)->second, (first_pair_on_lane - 1)->first,
+        first_pair_on_lane->second, first_pair_on_lane->first, s0);
+  }
+  return std::fmax(lane_width, 2.8);
+}
+
+void GapSelector::CalcLatOffset(double &expected_s, double &expected_l,
+                                double &refine_lc_time) {
+  expected_s = std::fmin(
+      planning_init_point_.frenet_state.s +
+          planning_init_point_.v * refine_lc_time,
+      base_frenet_coord_->Length() - planning_init_point_.frenet_state.s - 0.5);
+  const double &cur_l = planning_init_point_.frenet_state.r;
+
+  if (gap_selector_state_machine_info_.lane_cross) {
+    expected_l = 0.;
+    return;
+  }
+
+  if (use_query_lane_width_) {
+    const double away_origin_lane_width =
+        QueryLaneWidth(expected_s, origin_lane_s_width_);
+    const double away_target_lane_width =
+        QueryLaneWidth(expected_s, target_lane_s_width_);
+    expected_l = target_state_ == 1
+                     ? 0.5 * (away_origin_lane_width + away_target_lane_width)
+                     : -0.5 * (away_origin_lane_width + away_target_lane_width);
+
+  } else {
+    const double &cur_s = planning_init_point_.frenet_state.s;
+
+    const double near_current_lane_width = origin_lane_width_;
+    const double near_target_lane_width = target_lane_width_;
+
+    double near_expected_l =
+        0.5 * (near_current_lane_width + near_target_lane_width);
+    near_expected_l = target_state_ == 1 ? near_expected_l : -near_expected_l;
+    double coeff = (near_expected_l - cur_l) / near_expected_l;
+
+    refine_lc_time =
+        std::fmax(std::min(refine_lc_time * coeff, kMaxExpectedLCTime),
+                  kMinExpectedLCTime);  // refine time
+
+    const double away_current_lane_width = origin_lane_width_;
+    // origin_vir_lane_ptr_->width_by_s(expected_s);
+    const double away_target_lane_width = target_lane_width_;
+    // target_vir_lane_ptr_->width_by_s(expected_s);
+
+    expected_l =
+        target_state_ == 1
+            ? 0.5 * (away_current_lane_width + away_target_lane_width)
+            : -0.5 * (away_current_lane_width + away_target_lane_width);
+  }
+  return;
+}
+
+pnc::spline::QuinticPolynominalPath GapSelector::ConstructQuinticPath(
+    double &expected_s, double &expected_l, double &truancation_end_s,
+    const double expected_lc_time) {
+  double x, y, v_x, v_y, v_x_end, v_y_end, normal_acc_x, normal_acc_y,
+      normal_acc_x_end, normal_acc_y_end;
+
+  double normal_acc, heading_end, curv_end, normal_acc_end;
+
+  x = planning_init_point_.lat_init_state.x();
+  y = planning_init_point_.lat_init_state.y();
+  v_x = ego_planning_init_s_[1] *
+        std::cos(planning_init_point_.heading_angle);  // theta equal to heading
+  v_y = ego_planning_init_s_[1] * std::sin(planning_init_point_.heading_angle);
+
+  normal_acc =
+      ego_planning_init_s_[1] * ego_planning_init_s_[1] *
+      planning_init_point_
+          .curvature;  // TODO: curv and heading is important for the path
+  normal_acc_x = normal_acc * std::sin(planning_init_point_.heading_angle);
+  normal_acc_y = normal_acc * std::cos(planning_init_point_.heading_angle);
+
+  Point2D end_frenet_point(expected_s, expected_l);
+  Point2D end_cart_point;
+  if (!base_frenet_coord_->SLToXY(end_frenet_point, end_cart_point)) {
+    LOG_ERROR("Quintic Path Frenet->Car Error");
+  }
+  // realign reference velocity
+  double s_length = std::hypot(end_cart_point.y - y, end_cart_point.x - x);
+  const double v_cruise_scale =
+      std::min(s_length / (cruise_vel_ * expected_lc_time), 1.0);
+  const double v_adjust = cruise_vel_ * v_cruise_scale;
+  // Assumption: target lane has same status of the origin lane
+  heading_end = base_frenet_coord_->GetPathCurveHeading(
+      expected_s);  // TODO: 1.add frenet length s protection; consider target
+                    // lane heading
+
+  base_frenet_coord_->GetKappaByS(expected_s, &curv_end);
+
+  v_x_end = v_adjust * std::cos(heading_end);
+  v_y_end = v_adjust * std::sin(heading_end);
+  normal_acc_end = v_adjust * v_adjust * curv_end;
+  normal_acc_x_end = normal_acc_end * std::sin(heading_end);
+  normal_acc_y_end = normal_acc_end * std::cos(heading_end);
+
+  Eigen::Vector2d x0(x, y);
+  Eigen::Vector2d dx0(v_x, v_y);
+  Eigen::Vector2d ddx0(normal_acc_x, normal_acc_y);
+
+  Eigen::Vector2d xT(end_cart_point.x, end_cart_point.y);
+  Eigen::Vector2d dxT(v_x_end, v_y_end);
+  Eigen::Vector2d ddxT(normal_acc_x_end, normal_acc_y_end);
+
+  pnc::spline::QuinticPolynominalPath candidate_path;
+
+  candidate_path.SetPoints(x0, xT, dx0, dxT, ddx0, ddxT, expected_lc_time);
+  truancation_end_s = expected_s;
+  return candidate_path;
+}
+
+pnc::spline::QuinticPolynominalPath GapSelector::ConstructQuinticPath(
+    const double remaining_lc_duration, const shared_ptr<KDPath> coord) {
+  double ego_v = cruise_vel_;
+  const auto &lat_state = planning_init_point_.lat_init_state;
+
+  if (planning_init_point_.frenet_state.s + ego_v * remaining_lc_duration >=
+      coord->Length() - 0.5) {
+    ego_v = (coord->Length() - planning_init_point_.frenet_state.s - 0.5) /
+            std::fmax(remaining_lc_duration, PointNum * delta_t);
+  }
+  const double lane_change_end_s =
+      planning_init_point_.frenet_state.s + ego_v * remaining_lc_duration;
+
+  const double normal_acc = ego_v * ego_v * lat_state.curv();
+
+  Point2D frenet_end_point{lane_change_end_s, 0.};
+  Point2D cart_end_point;
+  if (!coord->SLToXY(frenet_end_point, cart_end_point)) {
+    LOG_ERROR("ERROR! TargetLaneCoordPtr Frenet Point -> Cart Point Failed!!!");
+  }
+  const auto lane_change_end_heading_angle =  // use target lane info!
+      coord->GetPathCurveHeading(lane_change_end_s);
+  const auto lane_change_end_curvature =
+      coord->GetPathPointByS(lane_change_end_s).kappa();
+
+  const auto normal_acc_end = ego_v * ego_v * lane_change_end_curvature;
+
+  // construct quintic path for lane change duration
+  QuinticPolynominalPath lane_change_quintic_path;
+  QuinticPolyInput quintic_poly_input{
+      Eigen::Vector2d(planning_init_point_.lat_init_state.x(),
+                      planning_init_point_.lat_init_state.y()),
+      Eigen::Vector2d(cart_end_point.x, cart_end_point.y),
+      Eigen::Vector2d(ego_v * std::cos(lat_state.theta()),
+                      ego_v * std::sin(lat_state.theta())),
+      Eigen::Vector2d(ego_v * std::cos(lane_change_end_heading_angle),
+                      ego_v * std::sin(lane_change_end_heading_angle)),
+      Eigen::Vector2d(normal_acc * std::cos(lat_state.theta()),
+                      normal_acc * std::sin(lat_state.theta())),
+      Eigen::Vector2d(normal_acc_end * std::sin(lane_change_end_heading_angle),
+                      normal_acc_end * std::cos(lane_change_end_heading_angle)),
+      remaining_lc_duration};
+  lane_change_quintic_path.SetPoints(quintic_poly_input);
+  return lane_change_quintic_path;
+}
+
+void GapSelector::StitchQuinticPath(
+    const double &truancation_end_s, const double expected_lc_time,
+    const double expected_l, pnc::spline::QuinticPolynominalPath &quintic_path,
+    GapSelectorPathSpline &path_spline) {
+  double path_length =
+      base_frenet_coord_->Length() - 0.5 - planning_init_point_.frenet_state.s;
+  const double sample_s = 15.0;
+
+  int quintic_point_num = expected_lc_time / delta_t;
+
+  std::vector<double> x_path_points;
+  std::vector<double> y_path_points;
+  std::vector<double> s_vec;
+  x_path_points.reserve(quintic_point_num + 1  //+ stitch_point_num
+  );
+  y_path_points.reserve(quintic_point_num + 1  //+ stitch_point_num
+  );
+  s_vec.reserve(quintic_point_num + 1  //+ quintic_point_num
+  );
+
+  for (auto i = 0; i < quintic_point_num; i++) {
+    Eigen::Vector2d path_point = quintic_path(i * delta_t);
+    x_path_points.emplace_back(path_point.x());
+    y_path_points.emplace_back(path_point.y());
+  }
+
+  Point2D path_end_point{std::fmin(truancation_end_s + 70., path_length),
+                         expected_l};
+  Point2D path_end_pos{0., 0.};
+  if (!base_frenet_coord_->SLToXY(path_end_point, path_end_pos)) {
+    LOG_ERROR("GS ERROR! Frenet Point -> Cart Point Failed!!!");
+  }
+  x_path_points.emplace_back(path_end_pos.x);
+  y_path_points.emplace_back(path_end_pos.y);
+
+  path_spline.stitched_p.x = path_end_pos.x;
+  path_spline.stitched_p.y = path_end_pos.y;
+  s_vec.emplace_back(0.);
+  for (auto i = 0; i < x_path_points.size() - 1; i++) {
+    double delta_s = std::hypot(x_path_points[i + 1] - x_path_points[i],
+                                y_path_points[i + 1] - y_path_points[i]);
+    s_vec.emplace_back(s_vec[i] + delta_s + 0.1);
+  }
+
+  // // set spline
+  assert(s_vec.size() > 3);
+  path_spline.x_s_spline.set_points(s_vec, x_path_points);
+  path_spline.y_s_spline.set_points(s_vec, y_path_points);
+  return;
+}
+
+void GapSelector::DecoupleQuinticPathSpline(
+    const double remaining_lc_duration,
+    const pnc::spline::QuinticPolynominalPath &quintic_path,
+    const std::shared_ptr<KDPath> coord, GapSelectorPathSpline &path_spline) {
+  const double path_length =
+      coord->Length() - 0.5 - planning_init_point_.frenet_state.s;
+  const double sample_s = 7.0;
+
+  std::vector<double> x_path_points, y_path_points, s_vec;
+
+  int quintic_point_num = remaining_lc_duration / delta_t;
+  quintic_point_num = quintic_point_num > 1 ? quintic_point_num : 1;
+  for (auto i = 0; i < quintic_point_num; i++) {
+    Eigen::Vector2d path_point = quintic_path(i * delta_t);
+    x_path_points.emplace_back(path_point.x());
+    y_path_points.emplace_back(path_point.y());
+  };
+
+  Point2D quintic_end_point{x_path_points.back(), y_path_points.back()};
+  Point2D quintic_end_frenet_in_target_lane;
+  if (!coord->XYToSL(quintic_end_point, quintic_end_frenet_in_target_lane)) {
+    LOG_ERROR("Target lane calc end path end frenet point failed!");
+  }
+
+  int compensated_point_num =
+      (coord->Length() - quintic_end_frenet_in_target_lane.x) / sample_s;
+
+  for (auto i = 0; i < compensated_point_num; i++) {
+    Point2D compensate_point{
+        quintic_end_frenet_in_target_lane.x + (i + 1) * sample_s, 0.};
+    Point2D compensate_cart_point;
+    if (!coord->SLToXY(compensate_point, compensate_cart_point)) {
+      LOG_ERROR("Target lane calc compensate_point path point failed!");
+    }
+    x_path_points.emplace_back(compensate_cart_point.x);
+    y_path_points.emplace_back(compensate_cart_point.y);
+  }
+
+  double s = 0.;
+  s_vec.emplace_back(s);
+  for (auto i = 1; i < compensated_point_num + quintic_point_num; i++) {
+    s += std::hypot(x_path_points[i] - x_path_points[i - 1],
+                    y_path_points[i] - y_path_points[i - 1]);
+    s_vec.emplace_back(s);
+  }
+
+  // set spline
+  path_spline.x_s_spline.set_points(s_vec, x_path_points);
+  path_spline.y_s_spline.set_points(s_vec, y_path_points);
+  return;
+};
+
+void GapSelector::GenerateEgoTrajectory(TrajectoryPoints &traj_points) {
+  for (auto i = 0; i < PointNum + 1; i++) {
+    auto &traj_point = traj_points[i];
+    traj_point.s = st_time_optimal_[i].s();
+    traj_point.t = st_time_optimal_[i].t();
+    traj_point.x = st_time_optimal_[i].x();
+    traj_point.y = st_time_optimal_[i].y();
+    traj_point.a = loninfo_time_optimal_[i].a;
+    traj_point.v = loninfo_time_optimal_[i].v;
+    traj_point.l = loninfo_time_optimal_[i].l;
+    traj_point.heading_angle = loninfo_time_optimal_[i].heading;
+  }
+  return;
+}
+
+void GapSelector::GenerateLBTrajectory(TrajectoryPoints &traj_points) {
+  double v_target = cruise_vel_;
+  Point2D tmp_cart_point{planning_init_point_.lat_init_state.x(),
+                         planning_init_point_.lat_init_state.y()};
+  Point2D tmp_frenet_point{planning_init_point_.frenet_state.s,
+                           planning_init_point_.frenet_state.r};
+
+  const double l0 = planning_init_point_.frenet_state.r;
+  const double le = 0.;
+  const double t0 = 0.;
+  const double te = 5.;
+
+  for (auto i = 0; i < PointNum + 1; i++) {
+    auto &traj_point = traj_points[i];
+    traj_point.v = v_target;
+    traj_point.s = ego_planning_init_s_[0] + i * v_target * delta_t;
+    traj_point.l = planning_math::lerp(l0, t0, le, te, i * delta_t);
+
+    tmp_frenet_point.x = traj_point.s;
+    tmp_frenet_point.y = traj_point.l;
+    base_frenet_coord_->SLToXY(tmp_frenet_point, tmp_cart_point);
+    traj_point.x = tmp_cart_point.x;
+    traj_point.y = tmp_cart_point.y;
+    traj_point.t = i * delta_t;
+    traj_point.a = 0.;
+    traj_point.heading_angle =
+        i == 0 ? planning_init_point_.heading_angle
+               : std::atan2(traj_point.y - traj_points[i - 1].y,
+                            traj_point.x - traj_points[i - 1].x);
+  }
+  return;
+}
+
+void GapSelector::GenerateLHTrajectory(
+    const SecondOrderTimeOptimalTrajectory &lane_hold_time_speed_profile,
+    TrajectoryPoints &traj_points) {
+  // the car is in dynamic lc, need to consider the lat car state, use quintic
+  // poly
+  double expected_s = cruise_vel_ * 5;
+
+  /*TODO: @cailiu
+    the expected l will be in target lane, because traj points is directely
+    generated by target lane
+    currently, hack the expected l
+  */
+  double expected_l = ego_l_cur_lane_;  // base frenet coord l
+  double expected_lh_time = 5.;
+  double default_end_s = 200.;
+  const std::shared_ptr<KDPath> coord =
+      gap_selector_state_machine_info_.lane_cross ? target_lane_coord_ptr_
+                                                  : origin_lane_coord_ptr_;
+  pnc::spline::QuinticPolynominalPath lh_quintic_path =
+      ConstructQuinticPath(expected_lh_time, coord);
+  DecoupleQuinticPathSpline(expected_lh_time, lh_quintic_path, coord,
+                            path_spline_);
+
+  const double frenet_end_s =
+      base_frenet_coord_->Length() - planning_init_point_.frenet_state.s;
+
+  const LonState &init_state = lane_hold_time_speed_profile.init_state();
+
+  const SecondOrderParam &second_order_param =
+      lane_hold_time_speed_profile.second_order_param();
+  const double speed_adjust_duration =
+      lane_hold_time_speed_profile.ParamLength();
+  const LonState profile_end_state =
+      lane_hold_time_speed_profile.GetSecondOrderTrajectoryState(
+          init_state, second_order_param, speed_adjust_duration);
+  double remain_length = 0.;
+  double spline_s = 0.;
+
+  const auto &path_spline_start_cart_point =
+      Point2D{planning_init_point_.lat_init_state.x(),
+              planning_init_point_.lat_init_state.y()};
+  Point2D path_spline_start_frenet_point{0., 0.};
+
+  // std::cout << "\nplanning_init_point_.frenet_state.s: "
+  //           << planning_init_point_.frenet_state.s << std::endl;
+  // std::cout << "\n path_spline_start_cart_point x: "
+  //           << path_spline_start_cart_point.x << std::endl;
+  // std::cout << "\n path_spline_start_cart_point y: "
+  //           << path_spline_start_cart_point.y << std::endl;
+  // std::cout << "\n planning_init_point.x: " << planning_init_point_.x
+  //           << std::endl;
+  // std::cout << "\n planning_init_point.y: " << planning_init_point_.y
+  //           << std::endl;
+  if (!base_frenet_coord_->XYToSL(path_spline_start_cart_point,
+                                  path_spline_start_frenet_point)) {
+    LOG_ERROR(
+        "GS:Cart 2 frenet failed, spline start cart point -> frenet point!");
+  }
+  // std::cout << "\nstart_frenet_point s: " <<
+  // path_spline_start_frenet_point.x
+  //           << std::endl;
+  for (auto i = 0; i < PointNum + 1; i++) {
+    auto &traj_point = traj_points[i];
+    if (i * delta_t < speed_adjust_duration) {
+      LonState profile_state =
+          lane_hold_time_speed_profile.GetSecondOrderTrajectoryState(
+              init_state, second_order_param, i * delta_t);
+
+      traj_point.v = i > 0 ? profile_state.v : ego_planning_init_s_[1];
+      traj_point.a = i > 0 ? profile_state.a : ego_planning_init_s_[2];
+      spline_s = profile_state.p - path_spline_start_frenet_point.x;
+      // std::cout << "\n profile_state.p: " << profile_state.p << std::endl;
+      // std::cout << "\n path_spline_start_frenet_point.x: "
+      //           << path_spline_start_frenet_point.x << std::endl;
+    } else {
+      remain_length = i * delta_t - speed_adjust_duration > 0
+                          ? i * delta_t - profile_end_state.t
+                          : delta_t - profile_end_state.t;
+
+      traj_point.v = profile_end_state.v;
+      traj_point.a = profile_end_state.a;
+      spline_s = profile_end_state.p + remain_length * profile_end_state.v -
+                 path_spline_start_frenet_point.x;
+    }
+    // std::cout << "\n lh spline s[" << i << "]: " << spline_s << std::endl;
+    traj_point.x = i > 0 ? path_spline_.x_s_spline(spline_s)
+                         : planning_init_point_.lat_init_state.x();
+    traj_point.y = i > 0 ? path_spline_.y_s_spline(spline_s)
+                         : planning_init_point_.lat_init_state.y();
+
+    Point2D cart_point{traj_point.x, traj_point.y};
+    Point2D frenet_point{-100, 0.};
+    if (!base_frenet_coord_->XYToSL(cart_point, frenet_point)) {
+      LOG_ERROR("GS:Cart 2 frenet failed, LH,Generate loninfo time optimal!");
+    }
+    traj_point.s = i > 0 ? frenet_point.x : ego_planning_init_s_[0];
+    traj_point.l = i > 0 ? frenet_point.y : ego_l_;  // keep the l
+    traj_point.heading_angle = base_frenet_coord_->GetPathCurveHeading(
+        std::fmin(frenet_end_s, traj_point.s));
+    // NOTE: the steer angle may not be 0, todo:
+    // consider lateral planning
+    traj_point.t = i * delta_t;
+  }
+  return;
+}
+
+void GapSelector::RestoreTrajResult(TrajectoryPoints &traj_points) {
+  if (gap_selector_state_machine_info_.lane_cross) {
+    for (auto i = 0; i < traj_points.size(); i++) {
+      Point2D tmp_cart_point{traj_points[i].x, traj_points[i].y};
+      Point2D tmp_frenet_point;
+      if (frenet_coord_->XYToSL(tmp_cart_point, tmp_frenet_point)) {
+        LOG_ERROR("Restore Traj Result failed!");
+        traj_points[i].s = tmp_frenet_point.x;
+        traj_points[i].l = tmp_frenet_point.y;
+      }
+    }
+  }
+  return;
+}
+
+bool GapSelector::CheckLCFinish() {
+  if (gap_selector_state_machine_info_.lane_cross) {
+    LOG_DEBUG("lc finished! lane crossed!");
+    return std::fabs(ego_l_cur_lane_) < 0.5 ? true : false;
+  } else {
+    LOG_DEBUG("lc finished! lane crossed!");
+    return false;
+  }
+}
+
+}  // namespace planning

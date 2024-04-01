@@ -15,6 +15,12 @@ namespace pnc {
 
 namespace geometry_lib {
 
+enum SlotSide {
+  SLOT_SIDE_INVALID,
+  SLOT_SIDE_LEFT,
+  SLOT_SIDE_RIGHT,
+};
+
 enum PathSegType {
   SEG_TYPE_INVALID,
   SEG_TYPE_LINE,
@@ -133,6 +139,8 @@ struct PathSegment {
   uint8_t seg_steer = SEG_STEER_STRAIGHT;
   uint8_t seg_gear = SEG_GEAR_DRIVE;
 
+  bool collision_flag = false;
+
   LineSegment line_seg;
   Arc arc_seg;
 
@@ -143,6 +151,46 @@ struct PathSegment {
       return line_seg.length;
     } else if (seg_type == SEG_TYPE_ARC) {
       return arc_seg.length;
+    } else {
+      return 0.0;
+    }
+  }
+
+  const Eigen::Vector2d GetStartPos() const {
+    if (seg_type == SEG_TYPE_LINE) {
+      return line_seg.pA;
+    } else if (seg_type == SEG_TYPE_ARC) {
+      return arc_seg.pA;
+    } else {
+      return Eigen::Vector2d::Zero();
+    }
+  }
+
+  const Eigen::Vector2d GetEndPos() const {
+    if (seg_type == SEG_TYPE_LINE) {
+      return line_seg.pB;
+    } else if (seg_type == SEG_TYPE_ARC) {
+      return arc_seg.pB;
+    } else {
+      return Eigen::Vector2d::Zero();
+    }
+  }
+
+  const double GetStartHeading() const {
+    if (seg_type == SEG_TYPE_LINE) {
+      return line_seg.heading;
+    } else if (seg_type == SEG_TYPE_ARC) {
+      return arc_seg.headingA;
+    } else {
+      return 0.0;
+    }
+  }
+
+  const double GetEndHeading() const {
+    if (seg_type == SEG_TYPE_LINE) {
+      return line_seg.heading;
+    } else if (seg_type == SEG_TYPE_ARC) {
+      return arc_seg.headingB;
     } else {
       return 0.0;
     }
@@ -397,6 +445,9 @@ const bool CalOneArcWithLine(Arc &arc, LineSegment &line, double r_err = 0.001);
 const bool CalTwoArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
                              bool is_shifted = true);
 
+const bool CalTwoSameGearArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
+                                     const uint8_t gear);
+
 const bool IsPoseOnLine(const PathPoint &pose, LineSegment &line,
                         const double lat_err, const double heading_err);
 
@@ -443,6 +494,21 @@ const uint8_t ReverseGear(const uint8_t gear);
 
 const uint8_t ReverseSteer(const uint8_t steer);
 
+const bool CalcArcDirection(bool &is_anti_clockwise, const uint8_t gear,
+                            const uint8_t steer);
+
+const bool IsValidGear(const uint8_t gear);
+
+const bool IsValidLineSteer(const uint8_t steer);
+
+const bool IsValidArcSteer(const uint8_t steer);
+
+const bool ReversePathSegInfo(PathSegment &path_seg);
+
+const bool ReverseArcSegInfo(PathSegment &path_seg);
+
+const bool ReverseLineSegInfo(PathSegment &path_seg);
+
 const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
                                     const uint8_t current_arc_steer);
 
@@ -459,13 +525,30 @@ const bool CalLineUnitNormVecByPos(const Eigen::Vector2d &pos,
 const bool CalTwoArcWithSameHeading(Arc &arc1, Arc &arc2,
                                     const uint8_t seg_gear);
 
-const bool CalOneArcWithTargetHeading(Arc &arc, const uint8_t &current_seg_gear,
-                                      const double &target_heading);
-
 const bool IsDoublePositive(const double x);
 
 const double CalPoint2LineSegDist(const Eigen::Vector2d &pO,
                                   const LineSegment &line);
+
+const bool CheckTwoPoseIsSame(const PathPoint &pose1, const PathPoint &pose2,
+                              const double pos_err = 0.01,
+                              const double heading_err = 0.8 / 57.3);
+std::vector<double> Linspace(const double start, const double stop,
+                             const double ds);
+
+std::vector<Eigen::Vector2d> LinSpace(const Eigen::Vector2d &start_pos,
+                                      const Eigen::Vector2d &stop_pos,
+                                      const double ds);
+
+void PrintPose(const pnc::geometry_lib::PathPoint &pose);
+void PrintPose(const std::string &str,
+               const pnc::geometry_lib::PathPoint &pose);
+void PrintPose(const Eigen::Vector2d &pos, const double heading);
+void PrintPose(const std::string &str, const Eigen::Vector2d &pos,
+               const double heading);
+void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg);
+void PrintSegmentsVecInfo(
+    const std::vector<pnc::geometry_lib::PathSegment> &path_segment_vec);
 
 }  // namespace geometry_lib
 }  // namespace pnc

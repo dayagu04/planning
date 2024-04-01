@@ -10,15 +10,6 @@
 #include "utils/pose2d_utils.h"
 #include "virtual_lane_manager.h"
 namespace planning {
-typedef enum {
-  NO_REJECTION,
-  BIAS_L,
-  BIAS_R,
-  WIDE_REJECTION_L,
-  WIDE_REJECTION_R,
-  SHORT_REJECTION,
-  NARROW_REJECTION
-} RejectReason;
 
 struct LateralSolverOption {
   bool enable_log{false};

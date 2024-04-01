@@ -1,7 +1,7 @@
 #include "lane_change_requests/map_lane_change_request.h"
 
 namespace planning {
-
+const double kNeedLaneChangeTime = 4.0;
 // class: MapRequest
 MapRequest::MapRequest(
     framework::Session* session, const EgoPlanningConfigBuilder* config_builder,
@@ -115,6 +115,7 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
     LOG_DEBUG("!!!!!!!!!!! lc_map_decision is %d", lc_map_decision);
     if (check_mlc_enable(lc_map_tfinish) == true && allow_generate == true) {
       if (lc_map_decision < 0) {
+        std::cout << "request_type_:" << request_type_ << std::endl;
         if (request_type_ != LEFT_CHANGE) {
           target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
           auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(
@@ -129,6 +130,13 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
                 "[MapRequest::update] Ask for map changing lane to left "
                 "but left lane is null \n");
           }
+        }
+
+        if (!IsDashEnoughForRepeatSegments(lc_map_decision, current_lane)) {
+          Finish();
+          set_target_lane_virtual_id(current_lane_virtual_id);
+          LOG_DEBUG(
+              "[MapRequest::update] : mlc finish request, dashed not enough");
         }
 
         // if (!IsDashedLineEnough(LEFT_CHANGE, v_ego, virtual_lane_mgr_) &&
@@ -190,8 +198,43 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
       LOG_DEBUG("[MapRequest::update] cancel map request as allow cancel");
     }
   }
-
   LOG_DEBUG("MapRequest::update: finished");
+}
+bool MapRequest::IsDashEnoughForRepeatSegments(
+    const int lc_map_decision,
+    std::shared_ptr<VirtualLane> current_lane) const {
+  const double ego_v =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
+  double dash_length = 0;
+  if (lc_map_decision < 0) {
+    const auto& left_lane_boundarys = current_lane->get_left_lane_boundary();
+    for (int i = 0; i < left_lane_boundarys.type_segments_size(); i++) {
+      if (left_lane_boundarys.type_segments()[i].type() ==
+          Common::LaneBoundaryType::MARKING_DASHED) {
+        dash_length += left_lane_boundarys.type_segments()[i].length();
+      } else {
+        break;
+      }
+    }
+  } else if (lc_map_decision > 0) {
+    const auto& right_lane_boundarys = current_lane->get_right_lane_boundary();
+    for (int i = 0; i < right_lane_boundarys.type_segments_size(); i++) {
+      if (right_lane_boundarys.type_segments()[i].type() ==
+          Common::LaneBoundaryType::MARKING_DASHED) {
+        dash_length += right_lane_boundarys.type_segments()[i].length();
+      } else {
+        break;
+      }
+    }
+  }
+  const double map_response_dist = ego_v * kNeedLaneChangeTime;  // hack
+  std::cout << "dash_length:" << dash_length
+            << ",map_response_dist:" << map_response_dist << std::endl;
+  if (dash_length < map_response_dist) {
+    std::cout << "dash lengh less than map response dist!!!!" << std::endl;
+    return false;
+  }
+  return true;
 }
 
 }  // namespace planning

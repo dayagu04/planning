@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstddef>
 #include <iostream>
+#include <memory>
 #include <vector>
 
 #include "apa_plan_base.h"
@@ -26,9 +27,12 @@ static PerfectControl *perfect_control_ptr;
 
 static planning::LocalView local_view;
 
+static bool last_cilqr_optimization_enable = false;
 int Init() {
   apa_interface_ptr = new apa_planner::ApaPlanInterface();
-  apa_interface_ptr->Init();
+  const auto plan_data_ptr = std::make_shared<plan_interface::PlanData>();
+
+  apa_interface_ptr->Init(plan_data_ptr);
 
   perfect_control_ptr = new PerfectControl();
   perfect_control_ptr->Init();
@@ -84,7 +88,9 @@ const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
   local_view.function_state_machine_info = func_statemachine;
   local_view.uss_wave_info = uss_wave_info;
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  std::shared_ptr<LocalView> local_view_ptr = std::make_shared<LocalView>();
+  *local_view_ptr = local_view;
+  const bool result = apa_interface_ptr->Update(local_view_ptr);
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;
@@ -113,28 +119,31 @@ const bool InterfaceUpdateClosedLoop(
   local_view.parking_fusion_info = parking_slot_info;
   local_view.function_state_machine_info = func_statemachine;
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  std::shared_ptr<LocalView> local_view_ptr = std::make_shared<LocalView>();
+  *local_view_ptr = local_view;
+  const bool result = apa_interface_ptr->Update(local_view_ptr);
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;
 }
 
-const bool InterfaceUpdateParam(py::bytes &func_statemachine_bytes,
-                                py::bytes &parking_slot_info_bytes,
-                                py::bytes &localization_info_bytes,
-                                py::bytes &vehicle_service_output_info_bytes,
-                                py::bytes &uss_wave_info_bytes, int select_id,
-                                bool force_plan, bool is_path_optimization, bool is_reset,
-                                bool is_complete_path, double sample_ds,
-                                std::vector<double> target_managed_slot_x_vec,
-                                std::vector<double> target_managed_slot_y_vec,
-                                std::vector<double> target_managed_limiter_x_vec,
-                                std::vector<double> target_managed_limiter_y_vec) 
-                                 {
+const bool InterfaceUpdateParam(
+    py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
+    py::bytes &localization_info_bytes,
+    py::bytes &vehicle_service_output_info_bytes,
+    py::bytes &uss_wave_info_bytes, int select_id, bool force_plan,
+    bool is_path_optimization, bool is_cilqr_optimization, bool is_reset,
+    bool is_complete_path, double sample_ds,
+    std::vector<double> target_managed_slot_x_vec,
+    std::vector<double> target_managed_slot_y_vec,
+    std::vector<double> target_managed_limiter_x_vec,
+    std::vector<double> target_managed_limiter_y_vec) {
   apa_planner::ApaPlannerBase::SimulationParam param;
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
   param.is_path_optimization = is_path_optimization;
+  param.is_cilqr_optimization = is_cilqr_optimization;
+  param.last_cilqr_optimization_enable = last_cilqr_optimization_enable;
   param.sample_ds = sample_ds;
   param.is_reset = is_reset;
   param.target_managed_slot_x_vec = target_managed_slot_x_vec;
@@ -147,7 +156,7 @@ const bool InterfaceUpdateParam(py::bytes &func_statemachine_bytes,
   for (const auto &planner : apa_planner_stack) {
     planner->SetSimuParam(param);
   }
-
+  last_cilqr_optimization_enable = is_cilqr_optimization;
   auto func_statemachine =
       BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
 
@@ -174,12 +183,16 @@ const bool InterfaceUpdateParam(py::bytes &func_statemachine_bytes,
   if (force_plan) {
     local_view.function_state_machine_info.set_current_state(
         FuncStateMachine::FunctionalState::PARK_IN_ACTIVATE_WAIT);
-    if (select_id > 0) {
-      local_view.parking_fusion_info.set_select_slot_id(select_id);
-    }
+  }
+  if (select_id > 0) {
+    local_view.parking_fusion_info.set_select_slot_id(select_id);
+    std::cout << "pybind select slot id = "
+              << local_view.parking_fusion_info.select_slot_id() << std::endl;
   }
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  std::shared_ptr<LocalView> local_view_ptr = std::make_shared<LocalView>();
+  *local_view_ptr = local_view;
+  const bool result = apa_interface_ptr->Update(local_view_ptr);
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;

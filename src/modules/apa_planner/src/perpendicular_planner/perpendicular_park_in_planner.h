@@ -17,7 +17,8 @@ class PerpendicularInPlanner : public ApaPlannerBase {
   PerpendicularInPlanner() = default;
   PerpendicularInPlanner(const std::shared_ptr<ApaWorld> &apa_world_ptr) {
     SetApaWorldPtr(apa_world_ptr);
-    Init();
+    const bool c_ilqr_enable = false;
+    Init(c_ilqr_enable);
   }
   virtual void Reset() override;
   virtual void Update() override;

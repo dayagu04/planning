@@ -329,6 +329,7 @@ void SccLongitudinalMotionPlanner::Update() {
     traj_points[i].v = v_vec[i];
     traj_points[i].a = a_vec[i];
     traj_points[i].t = t_vec[i];
+    traj_points[i].jerk = j_vec[i];
 
     // lateral path resampling
     // s is lateral path rather than longitudinal path (frenet)

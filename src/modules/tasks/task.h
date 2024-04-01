@@ -16,6 +16,7 @@
 namespace planning {
 
 enum TaskType {
+  GAP_SELECTOR,
   LATERAL_DECIDER,
   GENERAL_LATERAL_DECIDER,
   LATERAL_MOTION_PLANNER,
@@ -32,11 +33,13 @@ enum TaskType {
   SCC_LONGITUDINAL_BEHAVIOR_PLANNER,
   SCC_LONGITUDINAL_MOTION_PLANNER,
   HPP_GENERAL_LATERAL_DECIDER,
+  LATERAL_OFFSET_DECIDER,
 };
 using PlanningTaskTypes = std::vector<TaskType>;
 
 class Task {
  public:
+  Task(){};
   explicit Task(const EgoPlanningConfigBuilder *config_builder,
                 const std::shared_ptr<TaskPipelineContext> &pipeline_context);
   explicit Task(const EgoPlanningConfigBuilder *config_builder);

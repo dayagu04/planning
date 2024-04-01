@@ -2,7 +2,9 @@
 #define PLANNING_COMMON_TRACKED_OBJECT_H_
 
 #include <float.h>
+
 #include <vector>
+
 #include "common.pb.h"
 #include "define/geometry.h"
 
@@ -17,6 +19,10 @@ namespace planning {
 #define OBSTACLE_SOURCE_RR_RADAR 0X20
 #define OBSTACLE_SOURCE_USS 0X40
 #define OBSTACLE_SOURCE_LIDAR 0X80
+#define OBSTACLE_SOURCE_CAMERA_AND_FLRADAR 0X05
+#define OBSTACLE_SOURCE_CAMERA_AND_FRRADAR 0X09
+#define OBSTACLE_SOURCE_CAMERA_AND_RLRADAR 0X11
+#define OBSTACLE_SOURCE_CAMERA_AND_RRRADAR 0X21
 
 struct PredictionInfo {
   double prob;
