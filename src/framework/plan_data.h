@@ -4,20 +4,22 @@
 #include <cstdint>
 
 #include "planning_debug_info.pb.h"
-#include "planning_hmi.pb.h"
-#include "planning_plan.pb.h"
+#include "planning_hmi_c.h"
+#include "planning_plan_c.h"
 
 namespace planning {
 namespace plan_interface {
 struct PlanningOutputData {
-  PlanningOutput::PlanningOutput planning_output;
+  iflyauto::PlanningOutput planning_output;
   common::PlanningDebugInfo planning_debug_info;
-  PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_info;
+  iflyauto::PlanningHMIOutputInfoStr planning_hmi_info;
 
   void Reset() {
-    planning_output.Clear();
+    // planning_output.Clear();
     planning_debug_info.Clear();
-    planning_hmi_info.Clear();
+    // planning_hmi_info.Clear();
+    memset(&planning_output, 0, sizeof(planning_output));
+    memset(&planning_hmi_info, 0, sizeof(planning_hmi_info));
   }
 };
 

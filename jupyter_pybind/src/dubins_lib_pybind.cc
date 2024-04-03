@@ -18,19 +18,6 @@ int Init() {
   return 0;
 }
 
-template <class T>
-inline T BytesToProto(py::bytes &bytes) {
-  T proto_obj;
-  py::buffer buf(bytes);
-  py::buffer_info input_info = buf.request();
-  char *input_ptr = static_cast<char *>(input_info.ptr);
-  std::string input_s(input_ptr, input_info.size);
-
-  T input;
-  input.ParseFromString(input_s);
-  return input;
-}
-
 int Update(double x_start, double y_start, double heading_start,
            double x_target, double y_target, double heading_target,
            double radius, uint8_t dubins_type, uint8_t case_type, double ds,

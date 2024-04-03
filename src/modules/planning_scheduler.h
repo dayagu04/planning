@@ -3,14 +3,15 @@
 #include <cstdint>
 
 #include "apa_function/apa_function.h"
-#include "basic_types.pb.h"
 #include "common/define/debug_output.h"
 #include "common/local_view.h"
 #include "environmental_model_manager.h"
 #include "hpp_function/hpp_function.h"
+#include "ihc_function/intelligent_headlight_control.h"
+#include "lkas_function/lane_keep_assist_manager.h"
 #include "noa_function/noa_function.h"
-#include "planning_hmi.pb.h"
-#include "planning_plan.pb.h"
+#include "planning_hmi_c.h"
+#include "planning_plan_c.h"
 #include "scc_function/scc_function.h"
 #include "session.h"
 namespace planning {
@@ -21,8 +22,8 @@ class PlanningScheduler {
   virtual ~PlanningScheduler();
 
   void Init();
-  bool RunOnce(PlanningOutput::PlanningOutput *const planning_output,
-               PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info);
+  bool RunOnce(iflyauto::PlanningOutput *const planning_output,
+               iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info);
 
   void SyncParameters(planning::common::SceneType scene_type);
   //   void ResetState() override;
@@ -31,19 +32,18 @@ class PlanningScheduler {
  private:
   // 解析障碍物
   void FillPredictionTrajectoryPoint(
-      const std::vector<Prediction::PredictionTrajectoryPoint> &input,
-      Prediction::PredictionTrajectory &output);
+      const std::vector<iflyauto::PredictionTrajectoryPoint> &input,
+      iflyauto::PredictionTrajectory &output);
 
   void FillPredictionTrajectory(
-      const std::vector<Prediction::PredictionTrajectory> &input,
-      Prediction::PredictionObject &output);
+      const std::vector<iflyauto::PredictionTrajectory> &input,
+      iflyauto::PredictionObject &output);
 
   void FillPredictionObjectInfo(
-      const std::shared_ptr<Prediction::PredictionResult>
-          &prediction_result_raw,
-      const std::shared_ptr<FusionObjects::FusionObjectsInfo>
+      const std::shared_ptr<iflyauto::PredictionResult> &prediction_result_raw,
+      const std::shared_ptr<iflyauto::FusionObjectsInfo>
           &fusion_objects_info_raw,
-      Prediction::PredictionResult &output_prediction_ojects);
+      iflyauto::PredictionResult &output_prediction_ojects);
 
   void UpdateChassisReport(double current_time);
   void UpdateWheelReport(double current_time);
@@ -52,15 +52,15 @@ class PlanningScheduler {
   void UpdateVehicleStatus(double current_time);
 
   void FillEgoPlanningTrajectoryPoint(
-      const std::vector<Prediction::PredictionTrajectoryPoint> &input,
+      const std::vector<iflyauto::PredictionTrajectoryPoint> &input,
       std::vector<planning::common::TrajectoryPoint> &output);
 
   void FillEgoPlanningTrajectory(
-      const Prediction::PredictionTrajectory &pred_traj,
+      const iflyauto::PredictionTrajectory &pred_traj,
       planning::common::EgoPredictionTrajectory &ego_prediction_traj);
 
   void FillEgoPlanningInfo(
-      const std::shared_ptr<Prediction::PredictionObject> &prediction_object,
+      const std::shared_ptr<iflyauto::PredictionObject> &prediction_object,
       planning::common::EgoPredictionObject &ego_prediction_info);
 
   void FillControlInfo();
@@ -68,29 +68,26 @@ class PlanningScheduler {
   void UpdatePredictionInfo(double current_time);
   void UpdateFusionObjectInfo(double current_time);
 
-  void FillPlanningTrajectory(
-      double start_time, PlanningOutput::PlanningOutput *const planning_output);
+  void FillPlanningTrajectory(double start_time,
+                              iflyauto::PlanningOutput *planning_output);
 
   double ComputeBoundOfReferenceIntercept();
 
-  void GenerateStopTrajectory(
-      double start_time, PlanningOutput::PlanningOutput *const planning_output);
+  void GenerateStopTrajectory(double start_time,
+                              iflyauto::PlanningOutput *planning_output);
 
   void FillPlanningHmiInfo(
       double start_timestamp,
-      PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info);
+      iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info);
 
-  void FillPlanningRequest(
-      PlanningOutput::PlanningRequest::RequestLevel request,
-      PlanningOutput::PlanningOutput *const planning_output);
+  void FillPlanningRequest(iflyauto::RequestLevel request,
+                           iflyauto::PlanningOutput *const planning_output);
 
-  void ClearParkingInfo(PlanningOutput::PlanningOutput *const planning_output);
+  void ClearParkingInfo(iflyauto::PlanningOutput *planning_output);
 
   void PrepareForApa();
-  bool IsUndefinedScene(
-      const ::FuncStateMachine::FunctionalState &current_state);
-  bool IsValidHppState(
-      const ::FuncStateMachine::FunctionalState &current_state);
+  bool IsUndefinedScene(const iflyauto::FunctionalState &current_state);
+  bool IsValidHppState(const iflyauto::FunctionalState &current_state);
 
   void InitSccFunction();
 

@@ -19,15 +19,13 @@
 #include "fusion_objects.pb.h"
 #include "geometry_math.h"
 #include "local_view.h"
-#include "localization.pb.h"
-#include "parking_fusion.pb.h"
-#include "parking_slot_list.pb.h"
+#include "localization_c.h"
 #include "perpendicular_path_planner.h"
-#include "planning_plan.pb.h"
+#include "planning_plan_c.h"
 #include "slot_management_info.pb.h"
 #include "task_basic_types.pb.h"
-#include "uss_percept_info.pb.h"
-#include "uss_wave_info.pb.h"
+#include "uss_perception_info_c.h"
+#include "uss_wave_info_c.h"
 
 static const size_t slot_corner_pt_nums = 4;
 
@@ -275,7 +273,7 @@ class SlotManagement {
     uint8_t select_slot_id = 0;
     uint8_t slot_type = Common::PARKING_SLOT_TYPE_INVALID;
     uint8_t slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
-    ParkingFusion::ParkingFusionSlot select_fusion_slot;
+    iflyauto::ParkingFusionSlot select_fusion_slot;
     common::SlotInfo select_slot;
     common::SlotInfo select_slot_filter;
 
@@ -321,7 +319,7 @@ class SlotManagement {
     void Reset() {
       select_slot_id = 0;
       slot_type = Common::PARKING_SLOT_TYPE_INVALID;
-      select_fusion_slot.Clear();
+      memset(&select_fusion_slot, 0, sizeof(select_fusion_slot));
       select_slot.Clear();
       select_slot_filter.Clear();
       slot_origin_pos.setZero();
@@ -356,9 +354,9 @@ class SlotManagement {
   };
 
   struct Frame {
-    const FuncStateMachine::FuncStateMachine* func_state_ptr;
-    const ParkingFusion::ParkingFusionInfo* parking_slot_ptr;
-    const LocalizationOutput::LocalizationEstimate* localization_ptr;
+    const iflyauto::FuncStateMachine* func_state_ptr;
+    const iflyauto::ParkingFusionInfo* parking_slot_ptr;
+    const iflyauto::LocalizationEstimate* localization_ptr;
     // slot state check by uss
     const UssWaveInfo::UssWaveInfo* uss_wave_info_ptr;
     const UssPerceptInfo::UssPerceptInfo* uss_percept_info_ptr;
@@ -367,7 +365,7 @@ class SlotManagement {
     const FusionObjects::FusionObjectsInfo* fusion_objects_info_ptr;
 
     std::vector<double> uss_raw_dist_vec;
-    std::vector<PlanningOutput::SuccessfulSlotsInfo> released_slot_info_vec;
+    std::vector<iflyauto::SuccessfulSlotsInfo> released_slot_info_vec;
 
     std::unordered_map<size_t, size_t> slot_info_map;
     std::unordered_map<size_t, std::pair<double, double>> slot_info_angle;
@@ -469,8 +467,8 @@ class SlotManagement {
   const bool GetSelectedLimiter(
       std::pair<Eigen::Vector2d, Eigen::Vector2d>& fused_limiter) const;
 
-  const std::vector<PlanningOutput::SuccessfulSlotsInfo>&
-  GetReleasedSlotInfoVec() const {
+  const std::vector<iflyauto::SuccessfulSlotsInfo>& GetReleasedSlotInfoVec()
+      const {
     return frame_.released_slot_info_vec;
   }
 
@@ -485,14 +483,13 @@ class SlotManagement {
 
   bool IsInParkingState() const;
   bool UpdateSlotsInParking();
-  bool UpdateEgoSlotInfo(
-      const google::protobuf::uint32& select_slot_id,
-      const common::SlotInfo& select_slot,
-      const ParkingFusion::ParkingFusionSlot& selecte_fusion_slot);
+  bool UpdateEgoSlotInfo(const google::protobuf::uint32& select_slot_id,
+                         const common::SlotInfo& select_slot,
+                         const iflyauto::ParkingFusionSlot& select_fusion_slot);
   const bool UpdateEgoParallelSlotInfo(
       const google::protobuf::uint32& select_slot_id,
       const common::SlotInfo& select_slot,
-      const ParkingFusion::ParkingFusionSlot& selecte_fusion_slot);
+      const iflyauto::ParkingFusionSlot& select_fusion_slot);
   bool UpdateEgoSlotInfo(EgoSlotInfo& ego_slot_info,
                          const common::SlotInfo* slot_info);
   bool GenTLane(EgoSlotInfo& ego_slot_info,
@@ -509,13 +506,12 @@ class SlotManagement {
   void UpdateLimiterInfoInParking();
 
   const bool ProcessRawSlot(
-      const ParkingFusion::ParkingFusionSlot& parking_fusion_slot,
+      const iflyauto::ParkingFusionSlot& parking_fusion_slot,
       common::SlotInfo& new_slot_info);
   common::SlotInfo SlotInfoTransfer(
-      const ParkingFusion::ParkingFusionSlot& fusion_slot);
-  const bool SlotInfoTransfer(
-      const ParkingFusion::ParkingFusionSlot& fusion_slot,
-      common::SlotInfo& slot_info);
+      const iflyauto::ParkingFusionSlot& fusion_slot);
+  const bool SlotInfoTransfer(const iflyauto::ParkingFusionSlot& fusion_slot,
+                              common::SlotInfo& slot_info);
   bool IsValidParkingSlot(const common::SlotInfo& slot_info) const;
   bool CorrectSlotPointsOrder(common::SlotInfo& slot_info) const;
   bool IfUpdateSlot(const common::SlotInfo& new_slot_info,
@@ -533,7 +529,7 @@ class SlotManagement {
 
   const bool ProcessSlantSlot(
       common::SlotInfo& slot_info,
-      const ParkingFusion::ParkingFusionSlot& parking_fusion_slot);
+      const iflyauto::ParkingFusionSlot& parking_fusion_slot);
 
   void Log();
 

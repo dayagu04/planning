@@ -5,9 +5,8 @@
 #include <cmath>
 
 #include "debug_info_log.h"
-#include "func_state_machine.pb.h"
-#include "planning_hmi.pb.h"
-#include "session.h"
+#include "func_state_machine_c.h"
+#include "planning_hmi_c.h"
 
 namespace planning {
 #define LKA_StateMachine_IN_ACTIVE 1             // LKA一级主状态
@@ -139,7 +138,7 @@ typedef struct LkasInput {
   VehInfo vehicle_info;
   RoadInfo road_info;
   WheelToLine wheel_to_line;
-  FuncStateMachine::FunctionalState function_state;
+  iflyauto::FunctionalState function_state;
   Param param;
 } LkasInput;
 

@@ -320,7 +320,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
       continue;
     };
     if (std::abs(track.y_rel) < 10.0 && std::abs(track.d_rel) < 20.0 &&
-        track.type != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        track.type != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       near_cars.push_back(&track);
     }
   }
@@ -330,7 +330,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
       continue;
     };
     if (std::abs(track.y_rel) < 10.0 && std::abs(track.d_rel) < 20.0 &&
-        track.type != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        track.type != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       near_cars.push_back(&track);
     }
   }
@@ -643,9 +643,6 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
   auto &vision_longitudinal_behavior_planner_output =
       session_->mutable_planning_context()
           ->mutable_vision_longitudinal_behavior_planner_output();
-  auto ad_info = session_->mutable_planning_context()
-                     ->mutable_planning_hmi_info()
-                     ->mutable_ad_info();
 
   vision_longitudinal_behavior_planner_output.v_limit_cutin = v_limit_cutin;
   vision_longitudinal_behavior_planner_output.a_limit_cutin = a_limit_cutin;
@@ -893,9 +890,9 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(double v_ego) {
   LOG_DEBUG("----calc_speed_for_ramp--- \n");
   bool is_ramp_speed_limit = false;  // 匝道限速
   bool is_pre_deceleration = false;  // 匝道预减速
-  auto ad_info = session_->mutable_planning_context()
-                     ->mutable_planning_hmi_info()
-                     ->mutable_ad_info();
+  auto ad_info = &(session_->mutable_planning_context()
+                       ->mutable_planning_hmi_info()
+                       ->ad_info);
   double v_target_ramp = 40.0;
   // config
   double dece_to_ramp = config_.dece_to_ramp;  // -1.0
@@ -924,7 +921,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(double v_ego) {
     LOG_DEBUG("v_target : [%f] \n", v_target_);
 
     // debug info
-    ad_info->set_is_curva(is_ramp_speed_limit || is_pre_deceleration);
+    ad_info->is_curva = is_ramp_speed_limit || is_pre_deceleration;
 
     return true;
   }
@@ -944,7 +941,7 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(double v_ego) {
   JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
   LOG_DEBUG("v_target : [%f] \n", v_target_);
   // debug info
-  ad_info->set_is_curva(is_ramp_speed_limit || is_pre_deceleration);
+  ad_info->is_curva = is_ramp_speed_limit || is_pre_deceleration;
   return true;
 }
 
@@ -1167,11 +1164,14 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
   v_target_ = std::min(v_target_, v_target_potental_cutin);
 
   // debug info
-  auto ad_info = session_->mutable_planning_context()
-                     ->mutable_planning_hmi_info()
-                     ->mutable_ad_info();
+  auto ad_info = &(session_->mutable_planning_context()
+                       ->mutable_planning_hmi_info()
+                       ->ad_info);
+  // TODO c接口定义错误，要改成数组
   for (auto id : front_cut_in_track_id) {
-    ad_info->add_cutin_track_id(id);
+    //   ad_info->add_cutin_track_id(id);
+    ad_info->cutin_track_id = id;
+    break;
   }
 
   auto &vision_longitudinal_behavior_planner_output =
@@ -1624,22 +1624,20 @@ int VisionLongitudinalBehaviorPlanner::GetCIPV(
   if ((lc_status != "left_lane_change") && (lc_status != "right_lane_change")) {
     if (lateral_obstacle->leadone() != nullptr &&
         lateral_obstacle->leadone()->type != 0) {
-      hmi_info->mutable_cipv_info()->set_has_cipv(true);
-      hmi_info->mutable_cipv_info()->set_cipv_id(
-          lateral_obstacle->leadone()->track_id);
+      hmi_info->cipv_info.has_cipv = true;
+      hmi_info->cipv_info.cipv_id = lateral_obstacle->leadone()->track_id;
       return lateral_obstacle->leadone()->track_id;
     }
   } else {
     if (lateral_obstacle->tleadone() != nullptr &&
         lateral_obstacle->tleadone()->type != 0) {
-      hmi_info->mutable_cipv_info()->set_has_cipv(true);
-      hmi_info->mutable_cipv_info()->set_cipv_id(
-          lateral_obstacle->tleadone()->track_id);
+      hmi_info->cipv_info.has_cipv = true;
+      hmi_info->cipv_info.cipv_id = lateral_obstacle->tleadone()->track_id;
       return lateral_obstacle->tleadone()->track_id;
     }
   }
-  hmi_info->mutable_cipv_info()->set_has_cipv(false);
-  hmi_info->mutable_cipv_info()->set_cipv_id(error_id);
+  hmi_info->cipv_info.has_cipv = false;
+  hmi_info->cipv_info.cipv_id = error_id;
   return error_id;
 }
 }  // namespace planning

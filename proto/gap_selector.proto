@@ -1,0 +1,260 @@
+syntax = "proto2";
+package planning.common;
+import "basic_types.proto";
+
+message LonState {
+  optional double p = 1;
+  optional double v = 2;
+  optional double a = 3;
+  optional double j = 4;
+  optional double t = 5;
+}
+
+message PredictionObject {
+  optional int32 id = 1;
+  enum ObjectType {
+    OBJECT_TYPE_UNKNOWN = 0;
+    OBJECT_TYPE_UNKNOWN_MOVABLE = 1;
+    OBJECT_TYPE_UNKNOWN_IMMOVABLE = 2;
+    OBJECT_TYPE_COUPE = 3;
+    OBJECT_TYPE_MINIBUS = 4;
+    OBJECT_TYPE_VAN = 5;
+    OBJECT_TYPE_BUS = 6;
+    OBJECT_TYPE_TRUCK = 7;
+    OBJECT_TYPE_TRAILER = 8;
+    OBJECT_TYPE_BICYCLE = 9;
+    OBJECT_TYPE_MOTORCYCLE = 10;
+    OBJECT_TYPE_TRICYCLE = 11;
+    OBJECT_TYPE_PEDESTRIAN = 12;
+    OBJECT_TYPE_ANIMAL = 13;
+    OBJECT_TYPE_CONE = 14;
+    OBJECT_TYPE_TRAFFIC_BARRIER = 15;
+    OBJECT_TYPE_TEMPORY_SIGN = 16;
+    OBJECT_TYPE_FENCE = 17;
+  };
+  optional ObjectType type = 2;
+  optional int32 fusion_source = 3;
+  optional double timestamp_us = 4;
+  optional double delay_time = 5;
+  enum ObstacleIntentType {
+    COMMON = 0;
+    CUT_IN = 1;
+  };
+  optional ObstacleIntentType intention = 6;
+  optional bool b_backup_freemove = 7;
+  optional double cutin_score = 8;
+  optional float position_x = 9;
+  optional float position_y = 10;
+  optional float length = 11;
+  optional float width = 12;
+  optional float speed = 13;
+  optional float yaw = 14;    // for obj
+  optional float theta = 15;  // for velocity
+  optional float acc = 16;
+  // add relative info for highway
+  optional float relative_position_x = 17;
+  optional float relative_position_y = 18;
+  optional float relative_speed_x = 19;
+  optional float relative_speed_y = 20;
+  optional float relative_acceleration_x = 21;
+  optional float relative_acceleration_y = 22;
+  optional float acceleration_relative_to_ground_x = 23;
+  optional float acceleration_relative_to_ground_y = 24;
+  optional float relative_theta = 25;
+}
+
+message GapSelectorPathSpline {
+  repeated double x_vector_spline = 1;
+  repeated double y_vector_spline = 2;
+  repeated double s_vector_spline = 3;
+  optional LonState start_state = 4;
+  optional Point2d start_cart_point = 5;
+  optional int32 path_spline_status = 6;
+}
+
+message QuinticPathParames {
+  optional Point2d x0 = 1;
+  optional Point2d dx0 = 2;
+  optional Point2d ddx0 = 3;
+  optional Point2d xT = 4;
+  optional Point2d dxT = 5;
+  optional Point2d ddxT = 6;
+  optional double lc_time = 7;
+  optional double expected_dis = 8;
+  optional double expected_l = 9;
+}
+
+message VisionInfo {
+  optional int32 gap_selector_status = 1;
+  optional int32 drive_style = 2;
+  optional int64 front_gap_obj_id = 3;
+  optional int64 rear_gap_obj_id = 4;
+  optional double refine_lc_time = 5;
+  optional double expected_lc_l = 6;
+  optional double ego_cur_l = 7;
+  optional double expected_lc_s = 8;
+  optional double front_gap_obj_cur_s = 9;
+  optional double front_gap_obj_raw_vel = 10;
+  optional double rear_gap_obj_cur_s = 11;
+  optional double rear_gap_obj_raw_vel = 12;
+  optional double ego_init_s = 13;
+  optional double ego_init_v = 14;
+
+  optional double lc_v_end = 15;
+  optional int32 cur_lc_path_collision_idx = 16;
+  optional int32 last_lc_path_collision_idx = 17;
+  optional int32 last_path_spline_status = 18;
+  optional int32 cur_path_spline_status = 19;
+  optional int32 lh_v_end = 20;
+  optional QuinticPathParames quintic_parames = 21;
+  repeated int32 lc_request_buffer = 22;
+  repeated double ego_l_buffer = 23;
+  optional int32 request = 24;
+  optional int32 origin_lane_id = 25;
+  optional int32 target_lane_id = 26;
+  optional int32 current_lane_id = 27;
+}
+
+message GapSelectorInfo {
+  optional bool lane_cross = 1;
+  optional double lc_triggered = 2;
+  optional double lb_triggered = 3;
+  optional double lc_in = 4;
+  optional double lb_in = 5;
+  optional bool lc_pass_time = 6;
+  optional bool lc_wait_time = 7;
+
+  optional double path_requintic = 8;
+  optional double lc_cancel = 9;
+  optional double gs_skip = 10;
+  optional int32 lc_request = 11;
+  optional GapSelectorPathSpline last_gap_selector_path_spline = 12;
+  repeated int32 lc_request_buffer = 13;
+  repeated int32 ego_l_buffer = 14;
+}
+
+message STPoint {
+  optional double x = 1;
+  optional double y = 2;
+  optional double s = 3;
+  optional double t = 4;
+}
+
+message PathData {
+  repeated Point2d points = 1;
+}
+
+message ObstaclePredicatedPoint {
+  optional double x = 1;
+  optional double y = 2;
+  optional double heading_angle = 3;
+  optional double t = 4;
+  optional double s = 5;
+  optional double l = 6;
+};
+
+message GapSelectorOutput {
+  repeated TrajectoryPoint gs_traj = 1;
+  repeated STPoint upper_st_boundary_front_car = 2;
+  repeated STPoint lower_st_boundary_front_car = 3;
+  repeated STPoint upper_st_boundary_rear_car = 4;
+  repeated STPoint lower_st_boundary_rear_car = 5;
+  repeated Point2d frenet_coord_points = 6;
+  repeated Point2d target_coord_points = 7;
+  repeated PathData path_spline_data = 8;
+  repeated STPoint upper_obj_st_points = 9;
+  repeated STPoint lower_obj_st_points = 10;
+  repeated Point2d origin_spline_points = 11;
+  repeated Point2d stitch_spline_points = 12;
+  repeated Point2d current_coord_points = 13;
+  repeated STPoint upper_st_boundary_origin_front_car = 14;
+  repeated STPoint lower_st_boundary_origin_front_car = 15;
+  repeated ObstaclePredicatedPoint obstacle_predicate_points_front_gap_car = 16;
+  repeated ObstaclePredicatedPoint obstacle_predicate_points_rear_gap_car = 17;
+  optional Point2d cross_line_point = 18;
+}
+
+message StateLimit {
+  optional double p_end = 1;
+  optional double v_end = 2;
+  optional double v_min = 3;
+  optional double v_max = 4;
+  optional double a_min = 5;
+  optional double a_max = 6;
+  optional double j_min = 7;
+  optional double j_max = 8;
+}
+
+message ObstacleCornalPoints {
+  repeated double x_vec = 1;
+  repeated double y_vec = 2;
+}
+
+message GapSelectorInput {
+  repeated Point2d origin_refline_points = 1;
+  repeated Point2d target_refline_points = 2;
+  // optional Point2d planning_cart_init_point =3;
+  // optional Point2d planning_frenet_init_point = 4;
+  optional GapSelectorInfo gap_selector_info = 3;
+  repeated TrajectoryPoint trajectory_points = 4;
+  optional int32 request = 5;
+  repeated PredictionObject gs_care_objs = 6;
+  repeated int32 target_lane_obstacle_ids = 7;
+  repeated int32 origin_lane_obstacles_ids = 8;
+  optional double cruise_vel = 9;
+  // repeated double ego_init_s = 12;
+  optional PlanningInitPoint planning_init_state = 10;
+  repeated Point2d origin_lane_s_width = 11;  // x -->s， y-->width
+  repeated Point2d target_lane_s_width = 12;  // x -->s， y-->width
+  optional int32 origin_lane_id = 13;
+  optional int32 target_lane_id = 14;
+  optional int32 current_lane_id = 15;
+  optional double ego_l_cur_lane = 16;
+  repeated Point2d current_refline_points = 17;
+}
+
+message Gap {
+  optional int32 front_agent_id = 1;
+  optional int32 rear_agent_id = 2;
+  // optional double begin_gap_length = 0.;
+  // optional double end_gap_length = 0.;
+  // optional double gap_center = 0.;
+}
+
+message GapSelectorReplayInfo {
+  optional int32 origin_lane_id = 1;
+  optional int32 current_lane_id = 2;
+  optional int32 target_lane_id = 3;
+  optional GapSelectorPathSpline gap_selector_path_spline = 4;
+  repeated TrajectoryPoint gs_traj_points = 5;
+  optional bool lane_cross = 6;
+  optional bool lc_triggered = 7;
+  optional bool lb_triggered = 8;
+  optional bool lc_in = 9;
+  optional bool lb_in = 10;
+  optional bool gs_skip = 11;
+  optional bool lc_cancel = 12;
+  optional int32 lc_request = 13;
+  optional double lc_pass_time = 14;
+  optional double lc_wait_time = 15;
+  repeated int32 lc_request_buffer = 16;
+  repeated double ego_l_buffer = 17;
+  optional bool path_requintic = 18;
+  optional Point2d cross_line_point_global = 19;
+  repeated Gap gap_list = 20;
+  repeated ObstaclePredicatedPoint obstacle_predicate_points_front_gap_car = 21;
+  repeated ObstaclePredicatedPoint obstacle_predicate_points_rear_gap_car = 22;
+  optional Gap nearby_gap = 23;
+  repeated ObstaclePredicatedPoint ego_time_optimal =
+      24;  // @liucai: only use s, t
+  optional int32 gap_selector_status = 25;
+  optional Point2d quintic_p0 = 26;
+  optional Point2d quintic_pe = 27;
+  optional Point2d quintic_stitched_p = 28;
+  repeated ObstaclePredicatedPoint obstacle_predicate_points_current_lane_car =
+      29;
+  optional int32 current_front_agent_id = 30;
+  optional double front_car_dynamic_dis = 31;
+  optional double rear_car_dynamic_dis = 32;
+  optional double ego_lane_car_dynamic_dis = 33;
+}

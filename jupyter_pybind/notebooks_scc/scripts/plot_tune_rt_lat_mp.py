@@ -7,8 +7,8 @@ sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
 
-sys.path.append('python_proto')
-from python_proto import common_pb2, lateral_motion_planner_pb2
+sys.path.append('../../python_proto')
+from python_proto import lateral_motion_planner_pb2
 from jupyter_pybind import realtime_lateral_motion_planning_py
 
 # bag path and frame dt

@@ -4,10 +4,33 @@ import math
 from scipy.interpolate import interp1d
 from scipy.misc import derivative
 from lib.load_rotate import *
+from bokeh.models import TextInput
+import ipywidgets
 
-kMapRange = 500
-only_display_map_in_route = False
-load_center_line_in_poly = False
+def isINJupyter():
+    try:
+        __file__
+    except NameError:
+        return True
+    else:
+        return False
+def find(msg, t):
+  if msg['enable']  == True:
+    for index, timestamp in enumerate(msg['timestamp']):
+      if t == timestamp:
+        return msg['data'][index]
+  return None
+def find_nearest(msg, bag_time, find_json = False):
+  if msg['enable']  == True:
+    msg_idx = 0
+    while msg['t'][msg_idx] <= bag_time and msg_idx < (len(msg['t'])-2):
+      msg_idx = msg_idx + 1
+    if find_json:
+      return msg['json'][msg_idx]
+    else:
+      return msg['data'][msg_idx]
+  else:
+    return None
 
 def load_car_params_patch():
   # car_x = [3.624, 3.624, -0.947, -0.947, 3.624]
@@ -44,13 +67,11 @@ def one_echo_text_local(old_x, old_y, radian, distance):
     new_x = old_x + distance * math.cos(radian)
     new_y = old_y + distance * math.sin(radian)
     return new_x, new_y
-def ehr_load_center_lane_lines(lanes,x,y,yaw,Max_line_size,lane_id_in_route_set):
+def ehr_load_center_lane_lines(lanes,x,y,yaw,Max_line_size):
   ehr_line_info_list = []
   for i in range(Max_line_size):
     ehr_lane_info = {'ehr_line_x_vec':[], 'ehr_line_y_vec':[],'ehr_relative_id':[], 'ehr_type':[]}
     if i < len(lanes):
-      if only_display_map_in_route and lanes[i].lane_id not in lane_id_in_route_set:
-        continue
       lane = lanes[i]
       line_x = []
       line_y = []
@@ -58,8 +79,8 @@ def ehr_load_center_lane_lines(lanes,x,y,yaw,Max_line_size,lane_id_in_route_set)
       cur_line_last_point = lane.points_on_central_line[-1]
       first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
       last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
-      if first_point_to_cur_dis > kMapRange and last_point_to_cur_dis > kMapRange:
-        continue
+      # if ((first_point_to_cur_dis > 1000) & (last_point_to_cur_dis>1000)):
+      #   continue
       for point in lane.points_on_central_line:
         ehr_x = point.x
         ehr_y = point.y
@@ -74,29 +95,28 @@ def ehr_load_center_lane_lines(lanes,x,y,yaw,Max_line_size,lane_id_in_route_set)
       ehr_lane_info['ehr_type'] = 0
       ehr_line_info_list.append(ehr_lane_info)
     else:
-      ehr_lane_info['ehr_line_x_vec'] = []
-      ehr_lane_info['ehr_line_y_vec'] = []
-      ehr_lane_info['ehr_relative_id'] = []
-      ehr_lane_info['ehr_type'] = []
+      line_x, line_y = gen_line(0,0,0,0,0,0)
+      ehr_lane_info['ehr_line_x_vec'] = line_x
+      ehr_lane_info['ehr_line_y_vec'] = line_y
+      ehr_lane_info['ehr_relative_id'] = 1000
+      ehr_lane_info['ehr_type'] = 0
       ehr_line_info_list.append(ehr_lane_info)
   return ehr_line_info_list
 
-def ehr_load_road_boundary_lines(road_boundaries,x,y,yaw,Road_boundary_max_line_size,road_boundary_id_in_route_set):
+def ehr_load_road_boundary_lines(road_boundaries,x,y,yaw,Road_boundary_max_line_size):
   ehr_road_boundary_info_list = []
   for i in range(Road_boundary_max_line_size):
     ehr_road_boundary_info = {'ehr_road_boundary_x_vec':[], 'ehr_road_boundary_y_vec':[],'ehr_road_boundary_relative_id':[], 'ehr_type':[]}
     if i < len(road_boundaries):
-      if only_display_map_in_route and road_boundaries[i].boundary_id not in road_boundary_id_in_route_set:
-        continue
       road_boundary = road_boundaries[i]
       line_x = []
       line_y = []
-      cur_line_first_point = road_boundary.boundary_attributes[0].points[0]
-      cur_line_last_point = road_boundary.boundary_attributes[-1].points[-1]
-      first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
-      last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
-      if first_point_to_cur_dis > kMapRange and last_point_to_cur_dis > kMapRange:
-        continue
+      # cur_line_first_point = road_boundary.points_on_central_line[0]
+      # cur_line_last_point = road_boundary.points_on_central_line[-1]
+      # first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
+      # last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
+      # # if ((first_point_to_cur_dis > 1000) & (last_point_to_cur_dis>1000)):
+      # #   continue
       for doundary_attribute in road_boundary.boundary_attributes:
         for  point in doundary_attribute.points:
           ehr_x = point.x
@@ -112,30 +132,23 @@ def ehr_load_road_boundary_lines(road_boundaries,x,y,yaw,Road_boundary_max_line_
       ehr_road_boundary_info['ehr_type'] = 0
       ehr_road_boundary_info_list.append(ehr_road_boundary_info)
     else:
-      ehr_road_boundary_info['ehr_road_boundary_x_vec'] = []
-      ehr_road_boundary_info['ehr_road_boundary_y_vec'] = []
-      ehr_road_boundary_info['ehr_road_boundary_relative_id'] = []
-      ehr_road_boundary_info['ehr_type'] = []
+      line_x, line_y = gen_line(0,0,0,0,0,0)
+      ehr_road_boundary_info['ehr_road_boundary_x_vec'] = line_x
+      ehr_road_boundary_info['ehr_road_boundary_y_vec'] = line_y
+      ehr_road_boundary_info['ehr_road_boundary_relative_id'] = 1000
+      ehr_road_boundary_info['ehr_type'] = 0
       ehr_road_boundary_info_list.append(ehr_road_boundary_info)
   return ehr_road_boundary_info_list
 
-def ehr_load_lane_boundary_lines(lane_boundaries,x,y,yaw,Lane_boundary_max_line_size, lane_boundary_id_in_route_set):
+def ehr_load_lane_boundary_lines(lane_boundaries,x,y,yaw,Lane_boundary_max_line_size):
   ehr_lane_boundary_info_list = []
 
   for i in range(Lane_boundary_max_line_size):
     ehr_lane_boundary_info = {'ehr_lane_boundary_x_vec':[], 'ehr_lane_boundary_y_vec':[],'ehr_lane_boundary_relative_id':[], 'ehr_type':[]}
     if i < len(lane_boundaries):
-      if only_display_map_in_route and lane_boundaries[i].boundary_id not in lane_boundary_id_in_route_set:
-        continue
       lane_boundary = lane_boundaries[i]
       line_x = []
       line_y = []
-      cur_line_first_point = lane_boundary.boundary_attributes[0].points[0]
-      cur_line_last_point = lane_boundary.boundary_attributes[-1].points[-1]
-      first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
-      last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
-      if first_point_to_cur_dis > kMapRange and last_point_to_cur_dis > kMapRange:
-        continue
       for boundary_attribute in lane_boundary.boundary_attributes:
         for  point in boundary_attribute.points:
           ehr_x = point.x
@@ -151,21 +164,25 @@ def ehr_load_lane_boundary_lines(lane_boundaries,x,y,yaw,Lane_boundary_max_line_
       ehr_lane_boundary_info['ehr_type'] = 0
       ehr_lane_boundary_info_list.append(ehr_lane_boundary_info)
     else:
-      ehr_lane_boundary_info['ehr_lane_boundary_x_vec'] = []
-      ehr_lane_boundary_info['ehr_lane_boundary_y_vec'] = []
-      ehr_lane_boundary_info['ehr_lane_boundary_relative_id'] = []
-      ehr_lane_boundary_info['ehr_type'] = []
+      line_x, line_y = gen_line(0,0,0,0,0,0)
+      ehr_lane_boundary_info['ehr_lane_boundary_x_vec'] = line_x
+      ehr_lane_boundary_info['ehr_lane_boundary_y_vec'] = line_y
+      ehr_lane_boundary_info['ehr_lane_boundary_relative_id'] = 1000
+      ehr_lane_boundary_info['ehr_type'] = 0
       ehr_lane_boundary_info_list.append(ehr_lane_boundary_info)
   return ehr_lane_boundary_info_list
 
 # 加载车道boundary
-def load_lane_lines(lanes, is_enu_to_car = False, loc_msg = [], g_is_display_enu = False):
+def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
   line_info_list = []
-
+  reference_line_msg = road_msg.reference_line_msg
+  reference_line_msg_size = road_msg.reference_line_msg_size
+  print("reference_line_msg_size ", reference_line_msg_size)
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
   for i in range(10):
     lane_info_l = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
-    if i< len(lanes):
-      lane = lanes[i]
+    if i< reference_line_msg_size:
+      lane = reference_line_msg[i]
       left_line = lane.left_lane_boundary
       # left_line_coef = left_line.poly_coefficient
       try:
@@ -173,46 +190,40 @@ def load_lane_lines(lanes, is_enu_to_car = False, loc_msg = [], g_is_display_enu
         if g_is_display_enu:
           # print(left_line.enu_points)
           local_points = left_line.enu_points
-          for local_point in local_points:
-            line_x.append(local_point.x)
-            line_y.append(local_point.y)
+          point_num = left_line.enu_points_size
+          line_x = [local_points[i].x for i in range(point_num)]
+          line_y = [local_points[i].y for i in range(point_num)]
         else :
           if is_enu_to_car:
             coord_tf = coord_transformer()
-            if loc_msg != []: # 长时轨迹
+            if loc_msg != None: # 长时轨迹
               cur_pos_xn = loc_msg.position.position_boot.x
               cur_pos_yn = loc_msg.position.position_boot.y
               cur_yaw = loc_msg.orientation.euler_boot.yaw
               coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
             local_points = left_line.enu_points
-            for local_point in local_points:
-              car_point_x, car_point_y = coord_tf.global_to_local([local_point.x], [local_point.y])
-              line_x.append(car_point_x[0])
-              line_y.append(car_point_y[0])
-            # print(car_point_x, car_point_y)
+            point_num = left_line.enu_points_size
+            line_x = [local_points[i].x for i in range(point_num)]
+            line_y = [local_points[i].y for i in range(point_num)]
+            line_x, line_y = coord_tf.global_to_local(line_x, line_y)
           else:
             car_points = left_line.car_points
-            for car_point in car_points:
-              line_x.append(car_point.x)
-              line_y.append(car_point.y)
+            point_num = left_line.car_points_size
+            line_x = [car_points[i].x for i in range(point_num)]
+            line_y = [car_points[i].y for i in range(point_num)]
         # line_x, line_y = gen_line(left_line_coef[0], left_line_coef[1], left_line_coef[2], left_line_coef[3], \
         #   left_line.begin, left_line.end)
         lane_info_l['line_x_vec'] = line_x
         lane_info_l['line_y_vec'] = line_y
-        try:
-          tp = left_line.type_segments[0].type
-        except:
-          print("旧格式：左车道线类型")
-          tp = left_line.segment[0].type
+
+        tp = left_line.type_segments[0].type
         if tp == 0 or tp == 1 or tp == 3 or tp == 4:
           lane_info_l['type'] = ['dashed']
         else:
           lane_info_l['type'] = ['solid']
       except:
-        print("旧格式：左车道线信息")
-        line_x, line_y = gen_line(0,0,0,0,0,0)
-        lane_info_l['line_x_vec'] = line_x
-        lane_info_l['line_y_vec'] = line_y
+        lane_info_l['line_x_vec'] = default_line_x
+        lane_info_l['line_y_vec'] = default_line_y
         lane_info_l['type'] = ['dashed']
 
       line_info_list.append(lane_info_l)
@@ -223,93 +234,89 @@ def load_lane_lines(lanes, is_enu_to_car = False, loc_msg = [], g_is_display_enu
       try:
         line_x, line_y = [], []
         if g_is_display_enu:
+          # print(right_line.enu_points)
           local_points = right_line.enu_points
-          for local_point in local_points:
-            line_x.append(local_point.x)
-            line_y.append(local_point.y)
+          point_num = right_line.enu_points_size
+          line_x = [local_points[i].x for i in range(point_num)]
+          line_y = [local_points[i].y for i in range(point_num)]
         else :
           if is_enu_to_car:
             coord_tf = coord_transformer()
-            if loc_msg != []: # 长时轨迹
+            if loc_msg != None: # 长时轨迹
               cur_pos_xn = loc_msg.position.position_boot.x
               cur_pos_yn = loc_msg.position.position_boot.y
               cur_yaw = loc_msg.orientation.euler_boot.yaw
               coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
             local_points = right_line.enu_points
-            for local_point in local_points:
-              car_point_x, car_point_y = coord_tf.global_to_local([local_point.x], [local_point.y])
-              line_x.append(car_point_x[0])
-              line_y.append(car_point_y[0])
-            # print(car_point_x, car_point_y)
+            point_num = right_line.enu_points_size
+            line_x = [local_points[i].x for i in range(point_num)]
+            line_y = [local_points[i].y for i in range(point_num)]
+            line_x, line_y = coord_tf.global_to_local(line_x, line_y)
           else:
             car_points = right_line.car_points
-            for car_point in car_points:
-              line_x.append(car_point.x)
-              line_y.append(car_point.y)
+            point_num = right_line.car_points_size
+            line_x = [car_points[i].x for i in range(point_num)]
+            line_y = [car_points[i].y for i in range(point_num)]
         # line_x, line_y = gen_line(right_line_coef[0], right_line_coef[1], right_line_coef[2], right_line_coef[3], \
-          # right_line.begin, right_line.end)
+        #   right_line.begin, right_line.end)
         lane_info_r['line_x_vec'] = line_x
         lane_info_r['line_y_vec'] = line_y
-        try:
-          tp = right_line.type_segments[0].type
-        except:
-          print("旧格式：右车道线类型")
-          tp = right_line.segment[0].type
+
+        tp = right_line.type_segments[0].type
         if tp == 0 or tp == 1 or tp == 3 or tp == 4:
           lane_info_r['type'] = ['dashed']
         else:
           lane_info_r['type'] = ['solid']
       except:
-        line_x, line_y = gen_line(0,0,0,0,0,0)
-        lane_info_r['line_x_vec'] = line_x
-        lane_info_r['line_y_vec'] = line_y
+        lane_info_r['line_x_vec'] = default_line_x
+        lane_info_r['line_y_vec'] = default_line_y
         lane_info_r['type'] = ['dashed']
-        print("旧格式：右车道线信息")
+
       line_info_list.append(lane_info_r)
     else:
-      line_x, line_y = gen_line(0,0,0,0,0,0)
-      lane_info_l['line_x_vec'] = line_x
-      lane_info_l['line_y_vec'] = line_y
-      lane_info_l['type'] = []
-      line_info_list.append(lane_info_l)
-
+      lane_info_r = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+      lane_info_r['line_x_vec'] = default_line_x
+      lane_info_r['line_y_vec'] = default_line_y
+      lane_info_r['type'] = ['dashed']
+      line_info_list.append(lane_info_r)
   return line_info_list
 
 # 加载中心线
-def load_lane_center_lines(lanes, is_enu_to_car = False, loc_msg = [], g_is_display_enu = False):
+def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
   line_info_list = []
-
+  reference_line_msg = road_msg.reference_line_msg
+  reference_line_msg_size = road_msg.reference_line_msg_size
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
   for i in range(10):
     lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[], 'line_s_vec':[], 'curvature_vec':[]}
-    if i< len(lanes):
-      lane = lanes[i]
+    if i < reference_line_msg_size:
+      lane = reference_line_msg[i]
       virtual_lane_refline_points = lane.lane_reference_line.virtual_lane_refline_points
+      virtual_lane_refline_points_size = lane.lane_reference_line.virtual_lane_refline_points_size
       line_x = []
       line_y = []
       line_curvature = []
       line_s = []
-      for virtual_lane_refline_point in virtual_lane_refline_points:
-        if g_is_display_enu:
-          line_x.append(virtual_lane_refline_point.enu_point.x)
-          line_y.append(virtual_lane_refline_point.enu_point.y)
+      if g_is_display_enu:
+        line_x = [virtual_lane_refline_points[i].enu_point.x for i in range(virtual_lane_refline_points_size)]
+        line_y = [virtual_lane_refline_points[i].enu_point.y for i in range(virtual_lane_refline_points_size)]
+      else:
+        if is_enu_to_car:
+          coord_tf = coord_transformer()
+          if loc_msg != None: # 长时轨迹
+            cur_pos_xn = loc_msg.position.position_boot.x
+            cur_pos_yn = loc_msg.position.position_boot.y
+            cur_yaw = loc_msg.orientation.euler_boot.yaw
+            coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+            line_x = [virtual_lane_refline_points[i].enu_point.x for i in range(virtual_lane_refline_points_size)]
+            line_y = [virtual_lane_refline_points[i].enu_point.y for i in range(virtual_lane_refline_points_size)]
+            line_x, line_y = coord_tf.global_to_local(line_x, line_y)
         else:
-          if is_enu_to_car:
-            coord_tf = coord_transformer()
-            if loc_msg != []: # 长时轨迹
-              cur_pos_xn = loc_msg.position.position_boot.x
-              cur_pos_yn = loc_msg.position.position_boot.y
-              cur_yaw = loc_msg.orientation.euler_boot.yaw
-              coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-            car_point_x, car_point_y = coord_tf.global_to_local([virtual_lane_refline_point.enu_point.x], [virtual_lane_refline_point.enu_point.y])
-            # print(car_point_x, car_point_y)
-            line_x.append(car_point_x[0])
-            line_y.append(car_point_y[0])
-          else:
-            line_x.append(virtual_lane_refline_point.car_point.x)
-            line_y.append(virtual_lane_refline_point.car_point.y)
+          line_x = [virtual_lane_refline_points[i].car_point.x for i in range(virtual_lane_refline_points_size)]
+          line_y = [virtual_lane_refline_points[i].car_point.y for i in range(virtual_lane_refline_points_size)]
 
-        line_s.append(virtual_lane_refline_point.s)
-        line_curvature.append(max(min(1.0 / (virtual_lane_refline_point.curvature + 1e-6), 10000.0), -10000.0))
+        line_s.append(virtual_lane_refline_points[i].s)
+        line_curvature.append(max(min(1.0 / (virtual_lane_refline_points[i].curvature + 1e-6), 10000.0), -10000.0))
 
       lane_info['line_x_vec'] = line_x
       lane_info['line_y_vec'] = line_y
@@ -319,9 +326,8 @@ def load_lane_center_lines(lanes, is_enu_to_car = False, loc_msg = [], g_is_disp
       lane_info['curvature_vec'] = line_curvature
       line_info_list.append(lane_info)
     else:
-      line_x, line_y = gen_line(0,0,0,0,0,0)
-      lane_info['line_x_vec'] = line_x
-      lane_info['line_y_vec'] = line_y
+      lane_info['line_x_vec'] = default_line_x
+      lane_info['line_y_vec'] = default_line_y
       lane_info['relative_id'] = 1000
       lane_info['type'] = 0
       lane_info['line_s_vec'] = 0
@@ -345,11 +351,12 @@ def load_intersection_generated_refline(plan_gen_refline, is_enu_to_car = False,
     line_y.append(car_point_y[0])
   return line_x, line_y
 
-def load_obstacle_params(obstacle_list, is_enu_to_car = False, loc_msg = [], environment_model_info = None):
+def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environment_model_info = None):
   obs_info_all = dict()
-  obs_num = len(obstacle_list)
+  fusion_object_num = fus_msg.fusion_object_num
+  obstacle_list = fus_msg.fusion_object
   num = 0
-  for i in range(obs_num):
+  for i in range(fusion_object_num):
     source = obstacle_list[i].additional_info.fusion_source
     if source & 0x01: #相机融合障碍物
       source = 1
@@ -433,6 +440,10 @@ def load_obstacle_params(obstacle_list, is_enu_to_car = False, loc_msg = [], env
               lat_pos + dy1 + dy2]
 
     num = num + 1
+    # obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
+    # obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
+    # obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
+    # obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
 
     if is_enu_to_car:
       coord_tf = coord_transformer()
@@ -452,6 +463,7 @@ def load_obstacle_params(obstacle_list, is_enu_to_car = False, loc_msg = [], env
       obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
       obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
       obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
+
     obs_info_all[source]['obstacles_vel'].append(obstacle_list[i].common_info.relative_velocity.x)
     obs_info_all[source]['obstacles_acc'].append(obstacle_list[i].common_info.relative_acceleration.x)
     obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].additional_info.track_id)
@@ -462,7 +474,7 @@ def load_obstacle_params(obstacle_list, is_enu_to_car = False, loc_msg = [], env
           +','+str(obstacle_list[i].common_info.type))
     else:
       obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
-          + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4))+','+str(obstacle_list[i].common_info.type))
+          + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4)))
     obs_info_all[source]['obstacles_x'].append(obs_x)
     # for ind in range(len(obs_y)):
     obs_info_all[source]['obstacles_y'].append(obs_y)
@@ -492,22 +504,14 @@ def load_obstacle_params(obstacle_list, is_enu_to_car = False, loc_msg = [], env
 
   return obs_info_all
 
-def load_obstacle_me(obstacle_list):
+def load_obstacle_me(camera_msg,is_rdg):
 
   obs_info_all = dict()
-
-  obs_num = len(obstacle_list)
+  obstacle_list = camera_msg.camera_perception_objects
+  obs_num = camera_msg.camera_perception_objects_size
   num = 0
   for i in range(obs_num):
-    source = 1#obstacle_list[i].additional_info.sensor_type
-    # if source & 0x01: #相机融合障碍物
-    #   source = 1
-    # elif (obstacle_list[i].common_info.relative_center_position.x > 0 and \
-    #   math.tan(25) > math.fabs(obstacle_list[i].common_info.relative_center_position.y / obstacle_list[i].common_info.relative_center_position.x)) or \
-    #   math.fabs(obstacle_list[i].common_info.relative_center_position.y) > 10:
-    #   continue
-    # else:
-    #   source = 4
+    source = 1
     if (source in obs_info_all.keys()) == False:
       obs_info = {
         'obstacles_x_rel': [],
@@ -525,8 +529,11 @@ def load_obstacle_me(obstacle_list):
         'obs_label':[]
       }
     obs_info_all[source] = obs_info
-
-    long_pos_rel = obstacle_list[i].common_info.relative_position.x
+    long_pos_rel = 0
+    if is_rdg == False:
+      long_pos_rel = obstacle_list[i].common_info.relative_position.x + obstacle_list[i].common_info.shape.length / 2
+    else:
+      long_pos_rel = obstacle_list[i].common_info.relative_center_position.x
     # print(long_pos_rel)
     lat_pos_rel = obstacle_list[i].common_info.relative_position.y
     theta = obstacle_list[i].common_info.relative_heading_angle
@@ -596,12 +603,11 @@ def load_obstacle_me(obstacle_list):
   return obs_info_all
 
 
-def load_obstacle_radar(obstacle_list,type):
+def load_obstacle_radar(obstacle_list,type,num):
   obs_info_all = dict()
-  obs_num = len(obstacle_list)
+  obs_num = num
   # print("obs_num:",obs_num)
-  # print(obs_num)
-  num = 0
+  #print(obs_num)
   if type == 0:
     source = 11
   elif type == 1:
@@ -875,7 +881,7 @@ def generate_planning_trajectory(trajectory, loc_msg = None, g_is_display_enu = 
     print('generate_planning_trajectory error')
   return plan_x, plan_y, plan_theta, plan_dict
 
-def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = "", g_is_display_enu = False):
+def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = None, g_is_display_enu = False):
   road_tile_info = ehr_parking_map_msg.road_tile_info
   parking_space_info = road_tile_info.parking_space
   parking_space_boxes_x = []
@@ -909,7 +915,7 @@ def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = "", g_is_display_enu
         road_mark_boxes_y.append(road_mark_box_y)
     else:
       coord_tf = coord_transformer()
-      if loc_msg != "": # 长时轨迹
+      if loc_msg != None: # 长时轨迹
         cur_pos_xn = loc_msg.position.position_boot.x
         cur_pos_yn = loc_msg.position.position_boot.y
         cur_yaw = loc_msg.orientation.euler_boot.yaw
@@ -941,7 +947,7 @@ def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = "", g_is_display_enu
     print('generate_ehr_parking_map error')
   return parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y
 
-def generate_ground_line(ground_line_msg, loc_msg = "", g_is_display_enu = False):
+def generate_ground_line(ground_line_msg, loc_msg = None, g_is_display_enu = False):
   ground_lines = ground_line_msg.ground_lines
   groundline_x_vec = []
   groundline_y_vec = []
@@ -960,7 +966,7 @@ def generate_ground_line(ground_line_msg, loc_msg = "", g_is_display_enu = False
         groundline_y_vec.append(single_groundline_y_vec)
     else:
       coord_tf = coord_transformer()
-      if loc_msg != "": # 长时轨迹
+      if loc_msg != None: # 长时轨迹
         cur_pos_xn = loc_msg.position.position_boot.x
         cur_pos_yn = loc_msg.position.position_boot.y
         cur_yaw = loc_msg.orientation.euler_boot.yaw
@@ -981,32 +987,38 @@ def generate_ground_line(ground_line_msg, loc_msg = "", g_is_display_enu = False
     print('groundline error')
   return groundline_x_vec, groundline_y_vec
 
-def generate_control(control_msg, loc_msg = "", g_is_display_enu = False):
+def generate_control(control_msg, loc_msg = None, g_is_display_enu = False):
   mpc_dx = []
   mpc_dy = []
   mpc_dtheta = []
-  control_result_points = control_msg.control_trajectory.control_result_points
-  for i in range(len(control_result_points)):
-    mpc_dx.append(control_result_points[i].x)
-    mpc_dy.append(control_result_points[i].y)
-  if len(mpc_dx) > 0:
-    f1 = interp1d(mpc_dx, mpc_dy, kind='cubic')
-    for i in range(len(mpc_dx) - 1):
-      mpc_dtheta.append(math.atan(derivative(f1, mpc_dx[i] + 1e-6, dx = 1e-6)))
-    mpc_dtheta.append(math.atan(derivative(f1, mpc_dx[len(mpc_dx) - 1] - 1e-6, dx = 1e-6)))
-  if g_is_display_enu:
-    if loc_msg == "":
-      mpc_dx = len(mpc_dx) * [0]
-      mpc_dy = len(mpc_dy) * [0]
-      return mpc_dx, mpc_dy, mpc_dtheta
-    coord_tf = coord_transformer()
-    cur_pos_xn = loc_msg.position.position_boot.x
-    cur_pos_yn = loc_msg.position.position_boot.y
-    cur_yaw = loc_msg.orientation.euler_boot.yaw
-    coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-    mpc_dx, mpc_dy = coord_tf.local_to_global(mpc_dx, mpc_dy)
-    for i in range(len(mpc_dtheta)):
-      mpc_dtheta[i] = mpc_dtheta[i] + cur_yaw
+  if control_msg.control_status.available:
+    control_result_points_size = control_msg.control_trajectory.control_result_points_size
+    control_result_points = control_msg.control_trajectory.control_result_points
+    print("real control_result_points size: ", control_result_points_size)
+    for i in range(control_result_points_size):
+      mpc_dx.append(control_result_points[i].x)
+      mpc_dy.append(control_result_points[i].y)
+    if len(mpc_dx) > 0:
+      f1 = interp1d(mpc_dx, mpc_dy, kind='cubic')
+      for i in range(len(mpc_dx) - 1):
+        mpc_dtheta.append(math.atan(derivative(f1, mpc_dx[i] + 1e-6, dx = 1e-6)))
+      mpc_dtheta.append(math.atan(derivative(f1, mpc_dx[len(mpc_dx) - 1] - 1e-6, dx = 1e-6)))
+    if g_is_display_enu:
+      if loc_msg == None:
+        mpc_dx = len(mpc_dx) * [0]
+        mpc_dy = len(mpc_dy) * [0]
+        return mpc_dx, mpc_dy, mpc_dtheta
+      coord_tf = coord_transformer()
+      cur_pos_xn = loc_msg.position.position_boot.x
+      cur_pos_yn = loc_msg.position.position_boot.y
+      cur_yaw = loc_msg.orientation.euler_boot.yaw
+      coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+      mpc_dx, mpc_dy = coord_tf.local_to_global(mpc_dx, mpc_dy)
+      for i in range(len(mpc_dtheta)):
+        mpc_dtheta[i] = mpc_dtheta[i] + cur_yaw
+  else:
+    print("control_status available is false")
+    pass
   return mpc_dx, mpc_dy, mpc_dtheta
 
 # GroundLinePoint & GroundLineDecider & generate_ground_line_clusters must be consistent with C++ code
@@ -1077,7 +1089,7 @@ class GroundLineDecider:
             points[cluster_exp[j]].status = GroundLinePoint.Status.CLASSIFIED
             result.append(points[cluster_exp[j]].point)
 
-def generate_ground_line_clusters(ground_line_msg, loc_msg = "", g_is_display_enu = False):
+def generate_ground_line_clusters(ground_line_msg, loc_msg = None, g_is_display_enu = False):
   ground_lines = ground_line_msg.ground_lines
   groundline_point_x_vec = []
   groundline_point_y_vec = []
@@ -1096,7 +1108,7 @@ def generate_ground_line_clusters(ground_line_msg, loc_msg = "", g_is_display_en
 
     else:
       coord_tf = coord_transformer()
-      if loc_msg != "": # 长时轨迹
+      if loc_msg != None: # 长时轨迹
         cur_pos_xn = loc_msg.position.position_boot.x
         cur_pos_yn = loc_msg.position.position_boot.y
         cur_yaw = loc_msg.orientation.euler_boot.yaw
@@ -1302,12 +1314,10 @@ def load_lat_common(plan_debug, planning_json):
 
   data_dict2['left_alc_car_ids'] = left_alc_car_id_str
   data_dict2['right_alc_car_ids'] = right_alc_car_id_str
-
-
   avoid_debug_key = ["avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
                         "select_avoid_car_ids_1", "select_avoid_car_ids_2","lat_offset", "smooth_lateral_offset", "lane_width", "smooth_lateral_offset", "normal_avoid_threshold", "avoid_way", "allow_max_opposite_offset", "allow_max_opposite_offset_id",\
                         "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
-                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l"]
+                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "final_y_rel_id", "final_y_rel"]
   for key in avoid_debug_key:
     try:
       data_dict2[key] = planning_json[key]
@@ -1323,5 +1333,11 @@ def load_lat_common(plan_debug, planning_json):
   except:
     pass
   return data_dict1, data_dict2
+
+# 障碍物的id选择
+class ObjText:
+  def __init__(self,  obj_callback):
+    self.id = ipywidgets.IntText(layout=ipywidgets.Layout(width='10%'), description= "obj_id",min=0.0, max=10000)
+    ipywidgets.interact(obj_callback, id = self.id)
 
 

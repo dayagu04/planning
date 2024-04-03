@@ -1,0 +1,46 @@
+syntax = "proto2";
+package planning.common;
+
+message LatBehaviorCommon {
+  optional int32 fix_lane_virtual_id = 1;
+  optional int32 origin_lane_virtual_id = 2;
+  optional int32 target_lane_virtual_id = 3;
+  optional bool is_lc_valid = 4;
+  optional int32 lc_valid_cnt = 5;
+  optional int32 lc_invalid_obj_id = 6;
+  optional string lc_invalid_reason = 7;
+  optional bool lc_valid_back = 8;
+  optional int32 lc_back_obj_id = 9;
+  optional int32 lc_back_cnt = 10;
+  optional string lc_back_reason = 11;
+  repeated int32 near_car_ids_origin = 12;
+  repeated int32 near_car_ids_target = 13;
+
+  optional float v_relative_left_lane = 16;
+  optional bool is_faster_left_lane = 17;
+  optional int32 faster_left_lane_cnt = 18;
+  optional float v_relative_right_lane = 19;
+  optional bool is_faster_right_lane = 20;
+  optional int32 faster_right_lane_cnt = 21;
+
+  repeated int32 left_alc_car_ids = 22;
+  repeated int32 right_alc_car_ids = 23;
+  optional bool is_forbid_left_alc_car = 24;
+  optional bool is_forbid_right_alc_car = 25;
+  optional bool is_side_borrow_bicycle_lane = 26;
+  optional bool is_side_borrow_lane = 27;
+
+  optional bool has_origin_lane = 31;
+  optional bool has_target_lane = 32;
+  optional bool enable_left_lc = 33;
+  optional bool enable_right_lc = 34;
+
+  optional int32 turn_light = 35;
+  optional int32 map_turn_light = 36;
+  optional int32 lc_request = 37;
+  optional int32 lc_request_source = 38;
+  optional int32 lc_turn_light = 39;
+  optional string act_request_source = 40;
+  optional string lc_back_invalid_reason = 41;
+  optional int32 current_state = 42;
+}

@@ -1,15 +1,5 @@
 #pragma once
 
-#include "config/basic_type.h"
-#include "config/vehicle_param.h"
-#include "define/lateral_behavior_planner_output.h"
-#include "define/planning_status.h"
-#include "lon_behavior_planner.pb.h"
-#include "macro.h"
-#include "planning_hmi.pb.h"
-#include "real_time_lon_behavior_planner.pb.h"
-#include "speed/speed_limit.h"
-
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
 #include "../tasks/task_interface/general_lateral_decider_output.h"
 #include "../tasks/task_interface/lane_change_decider_output.h"
@@ -19,6 +9,15 @@
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
+#include "config/basic_type.h"
+#include "config/vehicle_param.h"
+#include "define/lateral_behavior_planner_output.h"
+#include "define/planning_status.h"
+#include "lon_behavior_planner.pb.h"
+#include "macro.h"
+#include "planning_hmi_c.h"
+#include "real_time_lon_behavior_planner.pb.h"
+#include "speed/speed_limit.h"
 
 namespace planning {
 
@@ -134,13 +133,13 @@ class PlanningContext {
   }
 
   void feed_planning_hmi_info(
-      PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+      iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
     planning_hmi_info_ = planning_hmi_info;
   }
-  const PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_info() const {
+  const iflyauto::PlanningHMIOutputInfoStr planning_hmi_info() const {
     return *planning_hmi_info_;
   }
-  PlanningHMI::PlanningHMIOutputInfoStr *mutable_planning_hmi_info() {
+  iflyauto::PlanningHMIOutputInfoStr *mutable_planning_hmi_info() {
     return planning_hmi_info_;
   }
 
@@ -171,11 +170,11 @@ class PlanningContext {
     return last_planning_result_;
   }
 
-  const PlanningOutput::PlanningOutput &planning_output() const {
+  const iflyauto::PlanningOutput &planning_output() const {
     return planning_output_;
   }
 
-  PlanningOutput::PlanningOutput &mutable_planning_output() {
+  iflyauto::PlanningOutput &mutable_planning_output() {
     return planning_output_;
   }
 
@@ -275,7 +274,8 @@ class PlanningContext {
     planning_success_ = false;
     planning_completed_ = false;
     planning_result_.Clear();
-    planning_output_.Clear();
+    // planning_output_.Clear();
+    memset(&planning_output_, 0, sizeof(planning_output_));
     status_info_.Clear();
   }
 
@@ -285,7 +285,8 @@ class PlanningContext {
     planning_completed_ = false;
     planning_result_ = PlanningResult();
     last_planning_result_ = PlanningResult();
-    planning_output_.Clear();
+    // planning_output_.Clear();
+    memset(&planning_output_, 0, sizeof(planning_output_));
     adaptive_cruise_control_result_ = AdaptiveCruiseControlInfo();
     start_stop_result_.Clear();
     lon_decision_result_.Clear();
@@ -301,7 +302,7 @@ class PlanningContext {
   PlanningResult planning_result_;
   // std::shared_ptr<PlanningResult> last_planning_result_;
   PlanningResult last_planning_result_;
-  PlanningOutput::PlanningOutput planning_output_;
+  iflyauto::PlanningOutput planning_output_;
   StatusInfo status_info_;
   LateralOffsetDeciderOutput lateral_offset_decider_output_;
 
@@ -309,7 +310,7 @@ class PlanningContext {
   LateralBehaviorPlannerOutput
       lateral_behavior_planner_output_;  // TODO: 拆分到独立的Task里面
 
-  PlanningHMI::PlanningHMIOutputInfoStr *planning_hmi_info_;
+  iflyauto::PlanningHMIOutputInfoStr *planning_hmi_info_;
 
   // NOTE:注意Task成员变量的清空
   // lane change task pipeline

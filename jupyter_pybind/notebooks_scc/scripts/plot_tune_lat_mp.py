@@ -6,8 +6,8 @@ sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
 
-sys.path.append('python_proto')
-from python_proto import common_pb2, lateral_motion_planner_pb2
+sys.path.append('../../python_proto')
+from python_proto import lateral_motion_planner_pb2
 from jupyter_pybind import lateral_motion_planning_py
 
 # bag path and frame dt
@@ -164,7 +164,6 @@ class LocalViewSlider:
     self.use_new_param = ipywidgets.Checkbox(value=False, description='use_new_param')
 
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
-                                         use_new_param = self.use_new_param,
                                          q_ref_xy = self.q_ref_xy_slider,
                                          q_ref_theta = self.q_ref_theta_slider,
                                          q_acc = self.q_acc_slider,
@@ -200,8 +199,7 @@ class LocalViewSlider:
                                          ref_v = self.ref_vel_slider,
                                          curv_factor = self.curv_factor_slider,
                                         #  model_dt = self.model_dt_slider,
-                                         ref_acc = self.ref_acc_slider,
-                                         )
+                                         ref_acc = self.ref_acc_slider)
 
 
 ### sliders callback
@@ -216,7 +214,6 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
 
   plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
   loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
-  vs_msg_idx = local_view_data['data_index']['vs_msg_idx']
 
   lat_motion_plan_input = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_input
   loc_msg = bag_loader.loc_msg['data'][loc_msg_idx]
@@ -348,9 +345,6 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
     output_string_tmp = lateral_motion_planning_py.GetOutputBytes()
     planning_output.ParseFromString(output_string_tmp)
 
-    print("\n------------------------------------------\n")
-    print("ego steering_wheel_angle_available:", vs_msg.steering_wheel_angle_available)
-    print("ego steering_wheel_angle_speed_available:", vs_msg.steering_wheel_angle_speed_available)
 
     delta_bound = min(360.0 / 14.5 / 57.3, acc_bound / (lat_motion_plan_input.curv_factor * ref_vel * ref_vel))
     omega_bound = min(240.0 / 14.5 / 57.3, jerk_bound / (lat_motion_plan_input.curv_factor * ref_vel * ref_vel))
@@ -402,14 +396,6 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
     theta_deg_vec = []
     steer_deg_vec = []
     steer_dot_deg_vec =[]
-    acc_upper_bound = []
-    acc_lower_bound = []
-    jerk_upper_bound = []
-    jerk_lower_bound = []
-    steer_deg_upper_bound = []
-    steer_deg_lower_bound = []
-    steer_dot_deg_upper_bound = []
-    steer_dot_deg_lower_bound = []
 
     for i in range(len(time_vec)):
       ref_theta_deg_vec.append(lat_motion_plan_input.ref_theta_vec[i] * 57.3)
@@ -452,14 +438,8 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
       'steer_dot_deg_vec_t': steer_dot_deg_vec,
       'acc_vec_t': acc_vec,
       'jerk_vec_t': jerk_vec,
-      'acc_upper_bound': acc_upper_bound,
-      'acc_lower_bound': acc_lower_bound,
-      'jerk_upper_bound': jerk_upper_bound,
-      'jerk_lower_bound': jerk_lower_bound,
-      'steer_deg_upper_bound': steer_deg_upper_bound,
-      'steer_deg_lower_bound': steer_deg_lower_bound,
-      'steer_dot_deg_upper_bound': steer_dot_deg_upper_bound,
-      'steer_dot_deg_lower_bound': steer_dot_deg_lower_bound,
+      # 'comb_x_vec': comb_x_vec,
+      # 'comb_y_vec': comb_y_vec,
     })
 
   push_notebook()

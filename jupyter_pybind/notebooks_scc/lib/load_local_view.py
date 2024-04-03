@@ -1,10 +1,9 @@
 from lib.load_struct import *
 from lib.load_rotate import *
 from lib.load_json import *
-from lib.load_bag import LoadCyberbag, g_is_display_enu, is_match_planning, is_vis_map
+from lib.load_ros_bag import LoadRosbag, g_is_display_enu, is_match_planning, is_vis_map, is_bag_main
 import numpy as np
-import time
-import ipywidgets
+
 from bokeh.io import output_notebook, push_notebook
 from bokeh.layouts import layout, column, row
 from IPython.core.display import display, HTML
@@ -31,168 +30,103 @@ Road_boundary_max_line_size = 50
 Lane_boundary_max_line_size = 300
 
 first_frame_num = 0
-def find(data, t):
-  for index, timestamp in enumerate(data['timestamp']):
-    if t == timestamp:
-      return True, data['data'][index]
-    # if t < timestamp:
-    #   if ((index > 0) & (abs(t - data['timestamp'][index - 1]) < abs(data['timestamp'][index] - t))):
-    #     index = index - 1
-    #   return True, data['data'][index]
-  return False, ""
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
+  update_local_view_data_index(fig1, bag_loader, bag_time, local_view_data)
+
   ### step 1: 时间戳对齐
-  loc_msg_idx = 0
   if bag_loader.loc_msg['enable'] == True:
-    while bag_loader.loc_msg['t'][loc_msg_idx] <= bag_time and loc_msg_idx < (len(bag_loader.loc_msg['t'])-2):
-        loc_msg_idx = loc_msg_idx + 1
+    loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
     loc_msg = bag_loader.loc_msg['data'][loc_msg_idx]
-  local_view_data['data_index']['loc_msg_idx'] = loc_msg_idx
 
-
-  road_msg_idx = 0
   if bag_loader.road_msg['enable'] == True:
-    while bag_loader.road_msg['t'][road_msg_idx] <= bag_time and road_msg_idx < (len(bag_loader.road_msg['t'])-2):
-        road_msg_idx = road_msg_idx + 1
+    road_msg_idx = local_view_data['data_index']['road_msg_idx']
     road_msg = bag_loader.road_msg['data'][road_msg_idx]
-  local_view_data['data_index']['road_msg_idx'] = road_msg_idx
 
-
-  fus_msg_idx = 0
   if bag_loader.fus_msg['enable'] == True:
-    while bag_loader.fus_msg['t'][fus_msg_idx] <= bag_time and fus_msg_idx < (len(bag_loader.fus_msg['t'])-2):
-        fus_msg_idx = fus_msg_idx + 1
+    fus_msg_idx = local_view_data['data_index']['fus_msg_idx']
     fus_msg = bag_loader.fus_msg['data'][fus_msg_idx]
-  local_view_data['data_index']['fus_msg_idx'] = fus_msg_idx
 
-  mobileye_objects_msg_idx = 0
   if bag_loader.mobileye_objects_msg['enable'] == True:
-    while bag_loader.mobileye_objects_msg['t'][mobileye_objects_msg_idx] <= bag_time and mobileye_objects_msg_idx < (len(bag_loader.mobileye_objects_msg['t'])-2):
-        mobileye_objects_msg_idx = mobileye_objects_msg_idx + 1
+    mobileye_objects_msg_idx = local_view_data['data_index']['mobileye_objects_msg_idx']
     mobileye_objects_msg = bag_loader.mobileye_objects_msg['data'][mobileye_objects_msg_idx]
-  local_view_data['data_index']['mobileye_objects_msg_idx'] = mobileye_objects_msg_idx
 
+  if bag_loader.rdg_objects_msg['enable'] == True:
+    rdg_objects_msg_idx = local_view_data['data_index']['rdg_objects_msg_idx']
+    rdg_objects_msg = bag_loader.rdg_objects_msg['data'][rdg_objects_msg_idx]
 
   # radar_msg_idx = dict()
   radar_msg_idx_list = ['radar_fm_msg_idx','radar_fl_msg_idx','radar_fr_msg_idx','radar_rl_msg_idx','radar_rr_msg_idx']
   radar_msg_idx = [0,0,0,0,0]
   bag_loader_radar_msg = [bag_loader.radar_fm_msg, bag_loader.radar_fl_msg, bag_loader.radar_fr_msg,
                           bag_loader.radar_rl_msg, bag_loader.radar_rr_msg]
-  # print("bag_loader.radar_fm_msg:",bag_loader.radar_fm_msg['t'][0])
+  radar_msg = ['radar_fm_msg','radar_fl_msg','radar_fr_msg','radar_rl_msg','radar_rr_msg']
   for i in range(5):
     if bag_loader_radar_msg[i]['enable'] == True:
-      while bag_loader_radar_msg[i]['t'][radar_msg_idx[i]] <= bag_time and radar_msg_idx[i] < (len(bag_loader_radar_msg[i]['t'])-2):
-          radar_msg_idx[i] = radar_msg_idx[i] + 1
-          # print("bag_loader_radar_msg[i]['t'][radar_msg_idx[i]]:",bag_loader_radar_msg[i]['t'][radar_msg_idx[i]])
-          # print("bag_time:",bag_time)
-          # print("radar_msg_idx[i]:",radar_msg_idx[i])
-      # print('radar_msg_idx:',i,radar_msg_idx[i])
-    local_view_data['data_index'][radar_msg_idx_list[i]] = radar_msg_idx[i]
+      radar_msg_idx = local_view_data['data_index'][radar_msg_idx_list[i]]
+      radar_msg[i] = bag_loader_radar_msg[i]['data'][radar_msg_idx]
+    
 
-  # radar_fm_msg_idx = 0
-  # if bag_loader.radar_fm_msg['enable'] == True:
-  #   while bag_loader.radar_fm_msg['t'][radar_fm_msg_idx] <= bag_time and radar_fm_msg_idx < (len(bag_loader.radar_fm_msg['t'])-2):
-  #       radar_fm_msg_idx = radar_fm_msg_idx + 1
-  # local_view_data['data_index']['radar_fm_msg_idx'] = radar_fm_msg_idx
-
-  vs_msg_idx = 0
   if bag_loader.vs_msg['enable'] == True:
-    while bag_loader.vs_msg['t'][vs_msg_idx] <= bag_time and vs_msg_idx < (len(bag_loader.vs_msg['t'])-2):
-        vs_msg_idx = vs_msg_idx + 1
+    vs_msg_idx = local_view_data['data_index']['vs_msg_idx']
     vs_msg = bag_loader.vs_msg['data'][vs_msg_idx]
-  local_view_data['data_index']['vs_msg_idx'] = vs_msg_idx
 
-
-  plan_msg_idx = 0
   if bag_loader.plan_msg['enable'] == True:
-    while bag_loader.plan_msg['t'][plan_msg_idx] <= bag_time and plan_msg_idx < (len(bag_loader.plan_msg['t'])-2):
-        plan_msg_idx = plan_msg_idx + 1
+    plan_msg_idx = local_view_data['data_index']['plan_msg_idx']
     plan_msg = bag_loader.plan_msg['data'][plan_msg_idx]
-  local_view_data['data_index']['plan_msg_idx'] = plan_msg_idx
 
-  plan_debug_msg_idx = 0
   if bag_loader.plan_debug_msg['enable'] == True:
-    while bag_loader.plan_debug_msg['t'][plan_debug_msg_idx] <= bag_time and plan_debug_msg_idx < (len(bag_loader.plan_debug_msg['t'])-2):
-        plan_debug_msg_idx = plan_debug_msg_idx + 1
-    plan_debug_msg = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
-  local_view_data['data_index']['plan_debug_msg_idx'] = plan_debug_msg_idx
+    plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
+    plan_debug_msg = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]  
+    plan_debug_json_msg = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
-
-  pred_msg_idx = 0
   if bag_loader.prediction_msg['enable'] == True:
-    while bag_loader.prediction_msg['t'][pred_msg_idx] <= bag_time and pred_msg_idx < (len(bag_loader.prediction_msg['t'])-2):
-        pred_msg_idx = pred_msg_idx + 1
+    pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
     prediction_msg = bag_loader.prediction_msg['data'][pred_msg_idx]
-  local_view_data['data_index']['pred_msg_idx'] = pred_msg_idx
 
-  ctrl_msg_idx = 0
   if bag_loader.ctrl_msg['enable'] == True:
-    while bag_loader.ctrl_msg['t'][ctrl_msg_idx] <= bag_time and ctrl_msg_idx < (len(bag_loader.ctrl_msg['t'])-2):
-        ctrl_msg_idx = ctrl_msg_idx + 1
+    ctrl_msg_idx = local_view_data['data_index']['ctrl_msg_idx']
     ctrl_msg = bag_loader.ctrl_msg['data'][ctrl_msg_idx]
-  local_view_data['data_index']['ctrl_msg_idx'] = ctrl_msg_idx
 
-  ctrl_debug_msg_idx = 0
   if bag_loader.ctrl_debug_msg['enable'] == True:
-    while bag_loader.ctrl_debug_msg['t'][ctrl_debug_msg_idx] <= bag_time and ctrl_debug_msg_idx < (len(bag_loader.ctrl_debug_msg['t'])-2):
-        ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
+    ctrl_debug_msg_idx = local_view_data['data_index']['ctrl_debug_msg_idx']
     ctrl_debug_msg = bag_loader.ctrl_debug_msg['data'][ctrl_debug_msg_idx]
+    ctrl_debug_json_msg = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]
 
-  local_view_data['data_index']['ctrl_debug_msg_idx'] = ctrl_debug_msg_idx
-
-  ehr_static_map_msg_idx = 0
   if bag_loader.ehr_static_map_msg['enable'] == True:
-    while bag_loader.ehr_static_map_msg['t'][ehr_static_map_msg_idx] <= bag_time and ehr_static_map_msg_idx < (len(bag_loader.ehr_static_map_msg['t'])-2):
-        ehr_static_map_msg_idx = ehr_static_map_msg_idx + 1
+    ehr_static_map_msg_idx = local_view_data['data_index']['ehr_static_map_msg_idx']
     ehr_static_map_msg = bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx]
-  local_view_data['data_index']['ehr_static_map_msg_idx'] = ehr_static_map_msg_idx
 
-
-  ehr_parking_map_msg_idx = 0
   if bag_loader.ehr_parking_map_msg['enable'] == True:
-    while bag_loader.ehr_parking_map_msg['t'][ehr_parking_map_msg_idx] <= bag_time and ehr_parking_map_msg_idx < (len(bag_loader.ehr_parking_map_msg['t'])-2):
-        ehr_parking_map_msg_idx = ehr_parking_map_msg_idx + 1
+    ehr_parking_map_msg_idx = local_view_data['data_index']['ehr_parking_map_msg_idx']
     ehr_parking_map_msg = bag_loader.ehr_parking_map_msg['data'][ehr_parking_map_msg_idx]
-  local_view_data['data_index']['ehr_parking_map_msg_idx'] = ehr_parking_map_msg_idx
 
-
-  groundline_msg_idx = 0
   if bag_loader.ground_line_msg['enable'] == True:
-    while bag_loader.ground_line_msg['t'][groundline_msg_idx] <= bag_time and groundline_msg_idx < (len(bag_loader.ground_line_msg['t'])-2):
-        groundline_msg_idx = groundline_msg_idx + 1
+    groundline_msg_idx = local_view_data['data_index']['ground_line_msg_idx']
     ground_line_msg = bag_loader.ground_line_msg['data'][groundline_msg_idx]
-  local_view_data['data_index']['ground_line_msg_idx'] = groundline_msg_idx
 
-  planning_hmi_msg_idx = 0
   if bag_loader.planning_hmi_msg['enable'] == True:
-    while bag_loader.planning_hmi_msg['t'][planning_hmi_msg_idx] <= bag_time and planning_hmi_msg_idx < (len(bag_loader.planning_hmi_msg['t'])-2):
-        planning_hmi_msg_idx = planning_hmi_msg_idx + 1
+    planning_hmi_msg_idx = local_view_data['data_index']['planning_hmi_msg_idx']
     planning_hmi_msg = bag_loader.planning_hmi_msg['data'][planning_hmi_msg_idx]
-  local_view_data['data_index']['planning_hmi_msg_idx'] = planning_hmi_msg_idx
 
-  plan_debug = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
-  input_topic_timestamp = plan_debug.input_topic_timestamp
+  input_topic_timestamp = plan_debug_msg.input_topic_timestamp
   fusion_object_timestamp = input_topic_timestamp.fusion_object
   fusion_road_timestamp = input_topic_timestamp.fusion_road
-  localization_timestamp = input_topic_timestamp.localization_estimate
-  # prediction_timestamp = input_topic_timestamp.prediction
-  # vehicle_service_timestamp = input_topic_timestamp.vehicle_service
-  # control_output_timestamp = input_topic_timestamp.control_output
-  # ehr_parking_map_timestamp = input_topic_timestamp.ehr_parking_map
-  # ground_line_timestamp = input_topic_timestamp.ground_line
-  #
-  if is_match_planning:
-    flag, fus_msg_tmp = find(bag_loader.fus_msg, fusion_object_timestamp)
-    if flag:
-      fus_msg = fus_msg_tmp
-    flag, road_msg_tmp = find(bag_loader.road_msg, fusion_road_timestamp)
-    if flag:
-      road_msg = road_msg_tmp
-    flag, loc_msg_tmp = find(bag_loader.loc_msg, localization_timestamp)
-    if flag:
-      loc_msg = loc_msg_tmp
+  if is_bag_main:
+    localization_timestamp = input_topic_timestamp.localization_estimate
+  else:
+    localization_timestamp = input_topic_timestamp.localization
 
+  if is_match_planning:
+    fus_msg_tmp = find(bag_loader.fus_msg, fusion_object_timestamp)
+    if fus_msg_tmp != None:
+      fus_msg = fus_msg_tmp
+    road_msg_tmp = find(bag_loader.road_msg, fusion_road_timestamp)
+    if road_msg_tmp != None:
+      road_msg = road_msg_tmp
+    loc_msg_tmp = find(bag_loader.loc_msg, localization_timestamp)
+    if loc_msg_tmp != None:
+      loc_msg = loc_msg_tmp
 
   ### step 2: 加载定位信息
   loc_mode = 0
@@ -292,15 +226,14 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     is_enu_to_car = False
   else:
     is_enu_to_car = True
+
   # step 3: 加载车道线信息
   if bag_loader.road_msg['enable'] == True:
-    print("fusion road local point valid: ", road_msg.local_point_valid)
     # load lane info
     try:
-      line_info_list = load_lane_lines(road_msg.reference_line_msg, is_enu_to_car, loc_msg, g_is_display_enu)
+      line_info_list = load_lane_lines(road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
     except:
-      print("old interface before 2.2.3")
-      line_info_list = load_lane_lines(road_msg.lanes, is_enu_to_car, loc_msg, g_is_display_enu)
+      print("vis road_msg error")
 
     # update lane info
     data_lane_dict = {
@@ -350,10 +283,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'line_{}_y'.format(i): line_info_list[i]['line_y_vec'],
         })
       except:
-        # print('error')
+        print('error')
         pass
 
-    center_line_list = load_lane_center_lines(road_msg.reference_line_msg, is_enu_to_car, loc_msg, g_is_display_enu)
+    center_line_list = load_lane_center_lines(road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
     # print(center_line_list)
     trajectory = plan_msg.trajectory
 
@@ -397,7 +330,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       #   pass
     #加载planning 生成中心线的信息
     try:
-      plan_gen_refline_list = list(bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].generated_refline_info)
+      plan_gen_refline_list = list(plan_debug_msg.generated_refline_info)
       if(len(plan_gen_refline_list) > 0):
         plan_gen_refline = plan_gen_refline_list[0]
         line_x, line_y = load_intersection_generated_refline(plan_gen_refline, is_enu_to_car, loc_msg)
@@ -414,7 +347,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         })
     except:
       pass
-
   # fix_lane,origin_lane
   if bag_loader.plan_debug_msg['enable'] == True:
     try:
@@ -448,7 +380,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         })
 
     if loc_mode == 2:
-      plan_debug_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
+      plan_debug_json = plan_debug_json_msg
       plan_traj_x = plan_debug_json["assembled_x"]
       plan_traj_y = plan_debug_json["assembled_y"]
       plan_traj_theta = plan_debug_json["assembled_theta"]
@@ -501,7 +433,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       init_state_s = lon_init_state.s
       init_state_v = lon_init_state.v
       init_state_a = lon_init_state.a
-      replan_status = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]["replan_status"]
+      replan_status = plan_debug_json_msg["replan_status"]
       init_pos_point_x = []
       init_pos_point_y = []
       init_pos_point_theta = []
@@ -579,8 +511,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # load fus_obj
   if bag_loader.fus_msg['enable'] == True:
     print("fusion objects local point valid: ", fus_msg.local_point_valid)
-    fusion_objects = fus_msg.fusion_object
-    obstacles_info_all = load_obstacle_params(fusion_objects, is_enu_to_car, loc_msg, environment_model_info)
+    obstacles_info_all = load_obstacle_params(fus_msg, is_enu_to_car, loc_msg, environment_model_info)
     local_view_data['data_fus_obj'].data.update({
             'obstacles_x': [],
             'obstacles_y': [],
@@ -619,20 +550,24 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             'obs_label' : obstacles_info['obs_label'],
           })
 
-  # load me_obj
+  # load mobileye_obj
   if bag_loader.mobileye_objects_msg['enable'] == True:
-    # print("mobileye_objects_msg_idx:",mobileye_objects_msg_idx)
-    me_camera_objects = mobileye_objects_msg.camera_perception_object_list
-    # print(me_camera_objects.size())
-    obstacles_info_all1 = load_obstacle_me(me_camera_objects)
+
+    obstacles_info_all1 = load_obstacle_me(mobileye_objects_msg,False)
+    local_view_data['data_me_obj'].data.update({
+            'obstacles_x': [],
+            'obstacles_y': [],
+            'pos_x' : [],
+            'pos_y' : [],
+            'obs_label' : [],
+          })
+
     # 加载自车坐标系下的数据
     if 1:
       for key in obstacles_info_all1:
         obstacles_info = obstacles_info_all1[key]
-        if key == 1:
-          key_name = 'data_me_obj'
-        else:
-          key_name = 'data_snrd_obj'
+        key_name = 'data_me_obj'
+
         if g_is_display_enu:
           local_view_data[key_name].data.update({
             'obstacles_x': obstacles_info['obstacles_x'],
@@ -649,15 +584,49 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             'pos_y' : obstacles_info['pos_y_rel'],
             'obs_label' : obstacles_info['obs_label'],
           })
+
+  # load rdg_obj
+  if bag_loader.rdg_objects_msg['enable'] == True:
+
+    obstacles_info_all1 = load_obstacle_me(rdg_objects_msg,True)
+    # 加载自车坐标系下的数据
+    local_view_data['data_rdg_obj'].data.update({
+            'obstacles_x': [],
+            'obstacles_y': [],
+            'pos_x' : [],
+            'pos_y' : [],
+            'obs_label' : [],
+          })
+    for key in obstacles_info_all1:
+      obstacles_info = obstacles_info_all1[key]
+      key_name = 'data_rdg_obj'
+      if g_is_display_enu:
+        local_view_data[key_name].data.update({
+          'obstacles_x': obstacles_info['obstacles_x'],
+          'obstacles_y': obstacles_info['obstacles_y'],
+          'pos_x' : obstacles_info['pos_x'],
+          'pos_y' : obstacles_info['pos_y'],
+          'obs_label' : obstacles_info['obs_label'],
+        })
+      else:
+        local_view_data[key_name].data.update({
+          'obstacles_x': obstacles_info['obstacles_x_rel'],
+          'obstacles_y': obstacles_info['obstacles_y_rel'],
+          'pos_x' : obstacles_info['pos_x_rel'],
+          'pos_y' : obstacles_info['pos_y_rel'],
+          'obs_label' : obstacles_info['obs_label'],
+        })
+
   # load radar_obj
   data_radar_obj = ['data_radar_fm_obj','data_radar_fl_obj','data_radar_fr_obj','data_radar_rl_obj','data_radar_rr_obj']
   for i in range(5):
     # print(data_radar_obj[i])
     if bag_loader_radar_msg[i]['enable'] == True:
       # print(radar_msg_idx[i])
-      radar_objects = bag_loader_radar_msg[i]['data'][radar_msg_idx[i]].radar_perception_object_list
+      radar_objects = radar_msg[i].object_list
+      num = radar_msg[i].object_list_size
       # print(me_camera_objects.length())
-      obstacles_info_all2 = load_obstacle_radar(radar_objects,i)
+      obstacles_info_all2 = load_obstacle_radar(radar_objects,i,num)
 
       for key in obstacles_info_all2:
         obstacles_info = obstacles_info_all2[key]
@@ -687,7 +656,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # if bag_loader.plan_msg['enable'] == True and loc_mode == 2:
   if bag_loader.plan_msg['enable'] == True and loc_mode == 2:
     trajectory = plan_msg.trajectory
-    plan_traj_s = []
+    # plan_traj_s = []
+    # for i in range(len(trajectory.trajectory_points)):
+    #   plan_traj_s.append(trajectory.trajectory_points[i].distance)
     if trajectory.trajectory_type == 0: # 实时轨迹
       try:
         planning_polynomial = trajectory.target_reference.polynomial
@@ -696,8 +667,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       except:
         plan_traj_x, plan_traj_y, plan_traj_s = [], [], []
     else:
-      for i in range(len(trajectory.trajectory_points)):
-        plan_traj_s.append(trajectory.trajectory_points[i].distance)
       plan_traj_x, plan_traj_y, plan_traj_theta, plan_dict = generate_planning_trajectory(trajectory, loc_msg, g_is_display_enu)
       for i in range(5):
         local_view_data['data_planning_' + str(i)].data.update({
@@ -789,29 +758,17 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     cur_yaw = loc_msg.orientation.euler_boot.yaw
 
     if bag_loader.planning_hmi_msg['enable'] ==True:
-      ad_info = bag_loader.planning_hmi_msg['data'][planning_hmi_msg_idx].ad_info
-      print("dis to ramp:", ad_info.distance_to_ramp)
-      print("dis to split:", ad_info.distance_to_split)
-      print("dis to merge:", ad_info.distance_to_merge)
+      noa_output_info_msg = planning_hmi_msg.noa_output_info
+      print("dis to ramp:",noa_output_info_msg.dis_to_ramp)
+      print("dis to split:",noa_output_info_msg.dis_to_split)
+      print("dis to merge:",noa_output_info_msg.dis_to_merge)
 
     print("ehr static map timestamp:",ehr_static_map_msg.header)
     print("road_map.lanes len:",len(ehr_static_map_msg.road_map.lanes))
     #load center line
-    lane_id_in_route_set = set()
-    lane_boundary_id_in_route_set = set()
-    road_boundary_id_in_route_set = set()
-    for lane_group in bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].current_routing.lane_groups_in_route:
-      for lane in lane_group.lanes_in_route:
-        lane_id_in_route_set.add(lane.lane_id)
-    for lane in bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].road_map.lanes:
-      if lane.lane_id in lane_id_in_route_set:
-        lane_boundary_id_in_route_set.add(lane.left_lane_boundary_id)
-        lane_boundary_id_in_route_set.add(lane.right_lane_boundary_id)
-        road_boundary_id_in_route_set.add(lane.left_road_boundary_id)
-        road_boundary_id_in_route_set.add(lane.right_road_boundary_id)
 
     ehr_line_info_list = ehr_load_center_lane_lines(ehr_static_map_msg.road_map.lanes,
-                                             cur_pos_xn,cur_pos_yn,cur_yaw,Max_line_size,lane_id_in_route_set)
+                                             cur_pos_xn,cur_pos_yn,cur_yaw,Max_line_size)
     ehr_data_lane_dict = {}
     for i in range(Max_line_size):
       ehr_data_lane_dict[i] = local_view_data['ehr_data_lane_{}'.format(i)]
@@ -829,7 +786,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     #load road boundary
     print("road_map.road_boundaries len:",len(ehr_static_map_msg.road_map.road_boundaries))
     ehr_load_road_boundary_info_list = ehr_load_road_boundary_lines(ehr_static_map_msg.road_map.road_boundaries,
-                                             cur_pos_xn,cur_pos_yn,cur_yaw,Road_boundary_max_line_size,road_boundary_id_in_route_set)
+                                             cur_pos_xn,cur_pos_yn,cur_yaw,Road_boundary_max_line_size)
     ehr_data_road_boundary_dict = {}
     for i in range(Road_boundary_max_line_size):
       ehr_data_road_boundary_dict[i] = local_view_data['ehr_road_boundary_{}'.format(i)]
@@ -843,7 +800,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     #load lane boundary
     print("road_map.lane_boundaries len:",len(ehr_static_map_msg.road_map.lane_boundaries))
     ehr_lane_boundary_info_list = ehr_load_lane_boundary_lines(ehr_static_map_msg.road_map.lane_boundaries,
-                                             cur_pos_xn,cur_pos_yn,cur_yaw,Lane_boundary_max_line_size,lane_boundary_id_in_route_set)
+                                             cur_pos_xn,cur_pos_yn,cur_yaw,Lane_boundary_max_line_size)
     ehr_data_lane_boundary_dict = {}
     for i in range(Lane_boundary_max_line_size):
       ehr_data_lane_boundary_dict[i] = local_view_data['ehr_lane_boundary_{}'.format(i)]
@@ -881,7 +838,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     })
 
   if bag_loader.ground_line_msg['enable'] == True:
-    print("groundline_msg_idx", groundline_msg_idx)
     groundline_x_vec, groundline_y_vec = generate_ground_line(ground_line_msg, loc_msg, g_is_display_enu)
     local_view_data['data_ground_line'].data.update({
       'ground_line_x' : groundline_x_vec,
@@ -932,6 +888,7 @@ def load_local_view_figure():
   data_lane_7 = ColumnDataSource(data = {'line_7_y':[], 'line_7_x':[]})
   data_lane_8 = ColumnDataSource(data = {'line_8_y':[], 'line_8_x':[]})
   data_lane_9 = ColumnDataSource(data = {'line_9_y':[], 'line_9_x':[]})
+  data_center_line_gen = ColumnDataSource(data = {'center_line_gen_y':[], 'center_line_gen_x':[]})
   data_lane_10 = ColumnDataSource(data = {'line_10_y':[], 'line_10_x':[]})
   data_lane_11 = ColumnDataSource(data = {'line_11_y':[], 'line_11_x':[]})
   data_lane_12 = ColumnDataSource(data = {'line_12_y':[], 'line_12_x':[]})
@@ -966,7 +923,6 @@ def load_local_view_figure():
   data_center_line_7 = ColumnDataSource(data = {'center_line_7_y':[], 'center_line_7_x':[]})
   data_center_line_8 = ColumnDataSource(data = {'center_line_8_y':[], 'center_line_8_x':[]})
   data_center_line_9 = ColumnDataSource(data = {'center_line_9_y':[], 'center_line_9_x':[]})
-  data_center_line_gen = ColumnDataSource(data = {'center_line_gen_y':[], 'center_line_gen_x':[]})
   data_fix_lane = ColumnDataSource(data = {'fix_lane_y':[], 'fix_lane_x':[]})
   data_target_lane = ColumnDataSource(data = {'target_lane_y':[], 'target_lane_x':[]})
   data_origin_lane = ColumnDataSource(data = {'origin_lane_y':[], 'origin_lane_x':[]})
@@ -974,6 +930,9 @@ def load_local_view_figure():
                                         'pos_y':[], 'pos_x':[],
                                         'obs_label':[]})
   data_me_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
+                                        'pos_y':[], 'pos_x':[],
+                                        'obs_label':[]})
+  data_rdg_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obs_label':[]})
   data_radar_fm_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
@@ -1042,6 +1001,7 @@ def load_local_view_figure():
                 'road_msg_idx': 0,
                 'fus_msg_idx': 0,
                 'mobileye_objects_msg_idx':0,
+                'rdg_objects_msg_idx':0,
                 'radar_fm_msg_idx':0,
                 'radar_fl_msg_idx':0,
                 'radar_fr_msg_idx':0,
@@ -1056,6 +1016,15 @@ def load_local_view_figure():
                 'ehr_static_map_msg_idx': 0,
                 'planning_hmi_msg_idx': 0,
                }
+
+  data_msg = {'plan_msg': None,
+              'plan_debug_msg': None,
+              'loc_msg': None,
+              'plan_debug_json_msg': None,
+              'ctrl_msg':None,
+              'ctrl_debug_msg':None,
+              'ctrl_debug_json_msg':None,
+  }
 
   local_view_data = {'data_car':data_car, \
                      'data_car_traj':data_car_traj, \
@@ -1086,6 +1055,7 @@ def load_local_view_figure():
                      'data_lane_17':data_lane_17, \
                      'data_lane_18':data_lane_18, \
                      'data_lane_19':data_lane_19, \
+                     'data_center_line_gen': data_center_line_gen, \
                      'data_center_line_0':data_center_line_0, \
                      'data_center_line_1':data_center_line_1, \
                      'data_center_line_2':data_center_line_2, \
@@ -1096,7 +1066,6 @@ def load_local_view_figure():
                      'data_center_line_7':data_center_line_7, \
                      'data_center_line_8':data_center_line_8, \
                      'data_center_line_9':data_center_line_9, \
-                     'data_center_line_gen': data_center_line_gen, \
                      'data_fix_lane': data_fix_lane ,\
                      'data_target_lane': data_target_lane ,\
                      'data_origin_lane': data_origin_lane ,\
@@ -1113,6 +1082,7 @@ def load_local_view_figure():
                      'data_ground_line_clusters' : data_ground_line_clusters, \
                      'data_fus_obj':data_fus_obj, \
                      'data_me_obj':data_me_obj, \
+                     'data_rdg_obj':data_rdg_obj, \
                      'data_radar_fm_obj':data_radar_fm_obj, \
                      'data_radar_fl_obj':data_radar_fl_obj, \
                      'data_radar_fr_obj':data_radar_fr_obj, \
@@ -1129,6 +1099,7 @@ def load_local_view_figure():
                      'data_planning_4':data_planning_4,\
                      'data_control':data_control,\
                      'data_index': data_index, \
+                     'data_msg': data_msg
                      }
   if is_vis_map:
     for i in range(len(ehr_data_lanes)):
@@ -1147,7 +1118,7 @@ def load_local_view_figure():
       local_view_data[key] = value
 
   ### figures config
-  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1200, match_aspect = True, aspect_scale=1)
+  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1000, match_aspect = True, aspect_scale=1)
 
   fig1.x_range.flipped = True
   # figure plot
@@ -1173,8 +1144,9 @@ def load_local_view_figure():
   fig1.line('line_17_y', 'line_17_x', source = data_lane_17, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   fig1.line('line_18_y', 'line_18_x', source = data_lane_18, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   fig1.line('line_19_y', 'line_19_x', source = data_lane_19, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
-  # !!!!!!!!!!!! Important: Do not draw above !!!!!!!!!!!
 
+  # !!!!!!!!!!!! Important: Do not draw above !!!!!!!!!!!
+  fig1.line('center_line_gen_y', 'center_line_gen_x', source = data_center_line_gen, line_width = 3, line_color = 'cyan', line_dash = 'dashed', line_alpha = 0.8, legend_label = 'center_line_gen')
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat',visible = True)
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_raw, fill_color = "deepskyblue", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_raw',visible = False)
@@ -1215,24 +1187,26 @@ def load_local_view_figure():
   fig1.line('origin_lane_y', 'origin_lane_x', source = data_origin_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'origin_lane')
   fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'obj')
   #if 0:
-  fig1.patches('obstacles_y', 'obstacles_x', source = data_me_obj, fill_color = "orange", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'me_obj',visible = False)
+  fig1.patches('obstacles_y', 'obstacles_x', source = data_rdg_obj, fill_color = "orange", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'rdg_obj',visible = False)
+  fig1.patches('obstacles_y', 'obstacles_x', source = data_me_obj, fill_color = "maroon", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'me_obj',visible = False)
   fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_fm_obj, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fm_obj',visible = False)
   fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_fl_obj, fill_color = "red", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fl_obj',visible = False)
   fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_fr_obj, fill_color = "blue", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fr_obj',visible = False)
   fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_rl_obj, fill_color = "yellow", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_rl_obj',visible = False)
   fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_rr_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_rr_obj',visible = False)
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_me_obj, text_color="orange", text_align="center", text_font_size="8pt", legend_label = 'me_info',visible = False)
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_fm_obj, text_color="palegreen", text_align="center", text_font_size="8pt", legend_label = 'radar_fm_info',visible = False)
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_fl_obj, text_color="red", text_align="center", text_font_size="8pt", legend_label = 'radar_fl_info',visible = False)
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_fr_obj, text_color="blue", text_align="center", text_font_size="8pt", legend_label = 'radar_fr_info',visible = False)
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_rl_obj, text_color="yellow", text_align="center", text_font_size="8pt", legend_label = 'radar_rl_info',visible = False)
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_rr_obj, text_color="black", text_align="center", text_font_size="8pt", legend_label = 'radar_rr_info',visible = False)
+  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_rdg_obj, text_color="orange", text_align="center", text_font_size="10pt", legend_label = 'rdg_info',visible = False)
+  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_me_obj, text_color="maroon", text_align="center", text_font_size="10pt", legend_label = 'me_info',visible = False)
+  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_fm_obj, text_color="palegreen", text_align="center", text_font_size="10pt", legend_label = 'radar_fm_info',visible = False)
+  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_fl_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'radar_fl_info',visible = False)
+  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_fr_obj, text_color="blue", text_align="center", text_font_size="10pt", legend_label = 'radar_fr_info',visible = False)
+  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_rl_obj, text_color="yellow", text_align="center", text_font_size="10pt", legend_label = 'radar_rl_info',visible = False)
+  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_rr_obj, text_color="black", text_align="center", text_font_size="10pt", legend_label = 'radar_rr_info',visible = False)
 
   fig1.patches('obstacles_y', 'obstacles_x', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd')
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fusion_info')
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
-  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_raw, line_width = 5, line_color = 'deepskyblue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'raw plan', visible = False)
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_raw, line_width = 5, line_color = 'deepskyblue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'raw plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
   fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
   fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_1, radius = 0.03, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
@@ -1245,24 +1219,24 @@ def load_local_view_figure():
   fig1.circle('prediction_y', 'prediction_x', source = data_prediction_2, radius = 0.3, line_width = 1,  line_color = 'orange', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
   fig1.circle('prediction_y', 'prediction_x', source = data_prediction_3, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
   fig1.circle('prediction_y', 'prediction_x', source = data_prediction_4, radius = 0.3, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
-  fig1.patches('parking_space_y', 'parking_space_x', source = data_parking_space, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'parking_space')
-  fig1.text('parking_space_center_y', 'parking_space_center_x', text = 'parking_space_id_vec' ,source = data_parking_space_text, text_color="black", text_align="center", text_font_size="8pt", legend_label = 'parking_space_id')
-  fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'road_mark')
-  fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line, line_width = 2, line_color = 'green', line_dash = 'dotted', legend_label = 'ground_line')
-  fig1.circle('ground_line_y', 'ground_line_x', source = data_ground_line_point, radius = 0.01, line_width = 1,  line_color = 'green', line_alpha = 1, fill_color = "green", fill_alpha = 1.0, legend_label = 'ground_line')
-  fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line_clusters, line_width = 2, line_color = 'red', line_dash = 'dotted', legend_label = 'ground_line_cluster')
+  # fig1.patches('parking_space_y', 'parking_space_x', source = data_parking_space, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'parking_space')
+  # fig1.text('parking_space_center_y', 'parking_space_center_x', text = 'parking_space_id_vec' ,source = data_parking_space_text, text_color="black", text_align="center", text_font_size="10pt", legend_label = 'parking_space_id')
+  # fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'road_mark')
+  # fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line, line_width = 2, line_color = 'green', line_dash = 'dotted', legend_label = 'ground_line')
+  # fig1.circle('ground_line_y', 'ground_line_x', source = data_ground_line_point, radius = 0.01, line_width = 1,  line_color = 'green', line_alpha = 1, fill_color = "green", fill_alpha = 1.0, legend_label = 'ground_line')
+  # fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line_clusters, line_width = 2, line_color = 'red', line_dash = 'dotted', legend_label = 'ground_line_cluster')
 
   hover1_1 = HoverTool(renderers=[fig1.renderers[25]], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
                                                                 ('lat init x', '@init_state_x'), ('lat init y', '@init_state_y'), ('lat init theta', '@init_state_theta'),
                                                                 ('lat init delta', '@init_state_delta'), ('lon init s', '@init_state_s'), ('lon init v', '@init_state_v'),
                                                                 ('lon init a', '@init_state_a'), ('replan status', '@replan_status')])
-  hover1_2 = HoverTool(renderers=[fig1.renderers[26]], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
-  hover1_3 = HoverTool(renderers=[fig1.renderers[52]], tooltips=[('index', '$index')])
-  hover1_4 = HoverTool(renderers=[fig1.renderers[53]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
-  hover1_5 = HoverTool(renderers=[fig1.renderers[54]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
-  hover1_6 = HoverTool(renderers=[fig1.renderers[60]], tooltips=[('index', '$index')])
-  hover1_7 = HoverTool(renderers=[fig1.renderers[70]], tooltips=[('index', '$index')])
-  hover1_8 = HoverTool(renderers=[fig1.renderers[71]], tooltips=[('id', '@groundline_id_vec')])
+  hover1_2 = HoverTool(renderers=[fig1.renderers[6]], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
+  hover1_3 = HoverTool(renderers=[fig1.renderers[51]], tooltips=[('index', '$index')])
+  hover1_4 = HoverTool(renderers=[fig1.renderers[52]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
+  hover1_5 = HoverTool(renderers=[fig1.renderers[53]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
+  hover1_6 = HoverTool(renderers=[fig1.renderers[59]], tooltips=[('index', '$index')])
+  hover1_7 = HoverTool(renderers=[fig1.renderers[69]], tooltips=[('index', '$index')])
+  hover1_8 = HoverTool(renderers=[fig1.renderers[70]], tooltips=[('id', '@groundline_id_vec')])
 
   fig1.add_tools(hover1_1)
   fig1.add_tools(hover1_2)
@@ -1282,7 +1256,6 @@ def load_local_view_figure():
 
 #start
 def update_local_view_data_index(fig1, bag_loader, bag_time, local_view_data):
-
   ### step 1: 时间戳对齐
   loc_msg_idx = 0
   if bag_loader.loc_msg['enable'] == True:
@@ -1307,31 +1280,23 @@ def update_local_view_data_index(fig1, bag_loader, bag_time, local_view_data):
   if bag_loader.mobileye_objects_msg['enable'] == True:
     while bag_loader.mobileye_objects_msg['t'][mobileye_objects_msg_idx] <= bag_time and mobileye_objects_msg_idx < (len(bag_loader.mobileye_objects_msg['t'])-2):
         mobileye_objects_msg_idx = mobileye_objects_msg_idx + 1
-        # print("bag_loader.mobileye_objects_msg['t'][mobileye_objects_msg_idx]:",bag_loader.mobileye_objects_msg['t'][mobileye_objects_msg_idx])
-    # print("mobileye_objects_msg_idx:",mobileye_objects_msg_idx)
   local_view_data['data_index']['mobileye_objects_msg_idx'] = mobileye_objects_msg_idx
 
-  # radar_msg_idx = dict()
+  rdg_objects_msg_idx = 0
+  if bag_loader.rdg_objects_msg['enable'] == True:
+    while bag_loader.rdg_objects_msg['t'][rdg_objects_msg_idx] <= bag_time and rdg_objects_msg_idx < (len(bag_loader.rdg_objects_msg['t'])-2):
+        rdg_objects_msg_idx = rdg_objects_msg_idx + 1
+  local_view_data['data_index']['rdg_objects_msg_idx'] = rdg_objects_msg_idx
+
   radar_msg_idx_list = ['radar_fm_msg_idx','radar_fl_msg_idx','radar_fr_msg_idx','radar_rl_msg_idx','radar_rr_msg_idx']
   radar_msg_idx = [0,0,0,0,0]
   bag_loader_radar_msg = [bag_loader.radar_fm_msg, bag_loader.radar_fl_msg, bag_loader.radar_fr_msg,
                           bag_loader.radar_rl_msg, bag_loader.radar_rr_msg]
-  # print("bag_loader.radar_fm_msg:",bag_loader.radar_fm_msg['t'][0])
   for i in range(5):
     if bag_loader_radar_msg[i]['enable'] == True:
       while bag_loader_radar_msg[i]['t'][radar_msg_idx[i]] <= bag_time and radar_msg_idx[i] < (len(bag_loader_radar_msg[i]['t'])-2):
           radar_msg_idx[i] = radar_msg_idx[i] + 1
-          # print("bag_loader_radar_msg[i]['t'][radar_msg_idx[i]]:",bag_loader_radar_msg[i]['t'][radar_msg_idx[i]])
-          # print("bag_time:",bag_time)
-          # print("radar_msg_idx[i]:",radar_msg_idx[i])
-      #print('radar_msg_idx:',i,radar_msg_idx[i])
     local_view_data['data_index'][radar_msg_idx_list[i]] = radar_msg_idx[i]
-
-  # radar_fm_msg_idx = 0
-  # if bag_loader.radar_fm_msg['enable'] == True:
-  #   while bag_loader.radar_fm_msg['t'][radar_fm_msg_idx] <= bag_time and radar_fm_msg_idx < (len(bag_loader.radar_fm_msg['t'])-2):
-  #       radar_fm_msg_idx = radar_fm_msg_idx + 1
-  # local_view_data['data_index']['radar_fm_msg_idx'] = radar_fm_msg_idx
 
   vs_msg_idx = 0
   if bag_loader.vs_msg['enable'] == True:

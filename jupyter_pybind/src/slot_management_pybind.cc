@@ -6,6 +6,24 @@
 #include "planning_debug_info.pb.h"
 #include "slot_management.h"
 
+#include "struct_convert/common_c.h"
+#include "struct_convert/func_state_machine_c.h"
+#include "struct_convert/fusion_parking_slot_c.h"
+#include "struct_convert/localization_c.h"
+#include "struct_convert/planning_plan_c.h"
+#include "struct_convert/uss_perception_info_c.h"
+#include "struct_convert/uss_wave_info_c.h"
+#include "struct_convert/vehicle_service_c.h"
+#include "struct_msgs/FuncStateMachine.h"
+#include "struct_msgs/LocalizationEstimate.h"
+#include "struct_msgs/ParkingFusionInfo.h"
+#include "struct_msgs/PlanningOutput.h"
+#include "struct_msgs/UssPerceptInfo.h"
+#include "struct_msgs/UssWaveInfo.h"
+#include "struct_msgs/VehicleServiceOutputInfo.h"
+
+#include "serialize_utils.h"
+
 namespace py = pybind11;
 using namespace planning;
 
@@ -17,19 +35,6 @@ int Init() {
   return 0;
 }
 
-template <class T>
-inline T BytesToProto(py::bytes &bytes) {
-  T proto_obj;
-  py::buffer buf(bytes);
-  py::buffer_info input_info = buf.request();
-  char *input_ptr = static_cast<char *>(input_info.ptr);
-  std::string input_s(input_ptr, input_info.size);
-
-  T input;
-  input.ParseFromString(input_s);
-  return input;
-}
-
 int UpdateBytes(py::bytes &func_statemachine_bytes,
                 py::bytes &parking_slot_info_bytes,
                 py::bytes &localization_info_bytes,
@@ -37,21 +42,26 @@ int UpdateBytes(py::bytes &func_statemachine_bytes,
                 py::bytes &uss_perception_info_bytes,
                 py::bytes &ground_line_perception_info_bytes,
                 py::bytes &fusion_objects_info_bytes) {
-  auto func_statemachine =
-      BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
+ 
+  iflyauto::FuncStateMachine func_statemachine =
+      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
+          func_statemachine_bytes);
 
-  auto parking_slot_info =
-      BytesToProto<ParkingFusion::ParkingFusionInfo>(parking_slot_info_bytes);
+  iflyauto::ParkingFusionInfo parking_slot_info =
+      BytesToStruct<iflyauto::ParkingFusionInfo,
+                    struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
 
-  auto localization_info =
-      BytesToProto<LocalizationOutput::LocalizationEstimate>(
-          localization_info_bytes);
+  iflyauto::LocalizationEstimate localization_info =
+      BytesToStruct<iflyauto::LocalizationEstimate,
+                    struct_msgs::LocalizationEstimate>(localization_info_bytes);
 
-  auto uss_wave_info =
-      BytesToProto<UssWaveInfo::UssWaveInfo>(uss_wave_info_bytes);
+  iflyauto::UssWaveInfo uss_wave_info =
+      BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
+          uss_wave_info_bytes);
 
-  auto uss_perception_info =
-      BytesToProto<UssPerceptInfo::UssPerceptInfo>(uss_perception_info_bytes);
+  iflyauto::UssPerceptInfo uss_perception_info =
+      BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
+          uss_perception_info_bytes);
 
   auto ground_line_perception_info =
       BytesToProto<GroundLinePerception::GroundLinePerceptionInfo>(
@@ -79,21 +89,26 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
                        double max_slot_boundary_line_angle_dif_deg,
                        double outside_lon_dist_max_slot2mirror,
                        double outside_lon_dist_min_slot2mirror) {
-  auto func_statemachine =
-      BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
+  iflyauto::FuncStateMachine func_statemachine =
+      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
+          func_statemachine_bytes);
 
-  auto parking_slot_info =
-      BytesToProto<ParkingFusion::ParkingFusionInfo>(parking_slot_info_bytes);
+  iflyauto::ParkingFusionInfo parking_slot_info =
+      BytesToStruct<iflyauto::ParkingFusionInfo,
+                    struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
 
-  auto localization_info =
-      BytesToProto<LocalizationOutput::LocalizationEstimate>(
-          localization_info_bytes);
+  iflyauto::LocalizationEstimate localization_info =
+      BytesToStruct<iflyauto::LocalizationEstimate,
+                    struct_msgs::LocalizationEstimate>(localization_info_bytes);
 
-  auto uss_wave_info =
-      BytesToProto<UssWaveInfo::UssWaveInfo>(uss_wave_info_bytes);
+  iflyauto::UssWaveInfo uss_wave_info =
+      BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
+          uss_wave_info_bytes);
 
-  auto uss_perception_info =
-      BytesToProto<UssPerceptInfo::UssPerceptInfo>(uss_perception_info_bytes);
+  // iflyauto::UssPerceptInfo uss_perception_info =
+  //   BytesToStruct<iflyauto::UssPerceptInfo,
+  //   struct_msgs::UssPerceptInfo>(uss_perception_info_bytes);
+  iflyauto::UssPerceptInfo uss_perception_info;
 
   auto ground_line_perception_info =
       BytesToProto<GroundLinePerception::GroundLinePerceptionInfo>(

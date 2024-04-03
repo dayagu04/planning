@@ -1,6 +1,11 @@
+#include <array>
+#include <cmath>
+
+#include "behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"
 #include "frenet_ego_state.h"
+#include "gtest/gtest.h"
 #include "lateral_obstacle.h"
 #include "log.h"
 #include "math/linear_interpolation.h"
@@ -11,14 +16,9 @@
 #include "scene_type_config.pb.h"
 #include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 #include "traffic_light_decision_manager.h"
-#include "vehicle_service.pb.h"
+#include "vehicle_service_c.h"
 #include "vehicle_status.pb.h"
 #include "virtual_lane_manager.h"
-
-#include <array>
-#include <cmath>
-
-#include "gtest/gtest.h"
 
 namespace planning {
 

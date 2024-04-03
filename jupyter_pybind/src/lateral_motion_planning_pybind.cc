@@ -8,6 +8,8 @@
 #include "motion_planners/lateral_motion_planner/src/lateral_motion_planning_problem.h"
 #include "planning_debug_info.pb.h"
 
+#include "serialize_utils.h"
+
 namespace py = pybind11;
 using namespace pnc::lateral_planning;
 
@@ -17,19 +19,6 @@ int Init() {
   pBase = new LateralMotionPlanningProblem();
   pBase->Init();
   return 0;
-}
-
-template <class T>
-inline T BytesToProto(py::bytes &bytes) {
-  T proto_obj;
-  py::buffer buf(bytes);
-  py::buffer_info input_info = buf.request();
-  char *input_ptr = static_cast<char *>(input_info.ptr);
-  std::string input_s(input_ptr, input_info.size);
-
-  T input;
-  input.ParseFromString(input_s);
-  return input;
 }
 
 int UpdateBytes(py::bytes &planning_input_bytes) {

@@ -19,9 +19,7 @@ class EmergencyLaneKeep {
   bool get_elk_right_intervention_flag_info() {
     return elk_right_intervention_flag_;
   }
-  PlanningHMI::ELKOutputInfoStr_ELKFunctionFSMWorkState get_elk_state() {
-    return elk_state_;
-  }
+  iflyauto::ELKFunctionFSMWorkState get_elk_state() { return elk_state_; }
   ~EmergencyLaneKeep() = default;
 
  private:
@@ -37,28 +35,25 @@ class EmergencyLaneKeep {
   void ste_elk_output_info() {
     switch (measurement_str_.state) {
       case 0:
-        elk_state_ = PlanningHMI::
-            ELKOutputInfoStr_ELKFunctionFSMWorkState_ELK_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+        elk_state_ = iflyauto::ELK_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
         break;
       case 1:
-        elk_state_ = PlanningHMI::
-            ELKOutputInfoStr_ELKFunctionFSMWorkState_ELK_FUNCTION_FSM_WORK_STATE_OFF;
+        elk_state_ = iflyauto::ELK_FUNCTION_FSM_WORK_STATE_OFF;
         break;
       case 2:
-        elk_state_ = PlanningHMI::
-            ELKOutputInfoStr_ELKFunctionFSMWorkState_ELK_FUNCTION_FSM_WORK_STATE_STANDBY;
+        elk_state_ = iflyauto::ELK_FUNCTION_FSM_WORK_STATE_STANDBY;
         break;
       case 3:
-        elk_state_ = PlanningHMI::
-            ELKOutputInfoStr_ELKFunctionFSMWorkState_ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
+        elk_state_ =
+            iflyauto::ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
         break;
       case 4:
-        elk_state_ = PlanningHMI::
-            ELKOutputInfoStr_ELKFunctionFSMWorkState_ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION;
+        elk_state_ =
+            iflyauto::ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION;
         break;
       default:
-        elk_state_ = PlanningHMI::
-            ELKOutputInfoStr_ELKFunctionFSMWorkState_ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION;
+        elk_state_ =
+            iflyauto::ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION;
         break;
     }
     if (measurement_str_.state == 4) {
@@ -78,9 +73,8 @@ class EmergencyLaneKeep {
   planning::MeasurementPoint measurement_str_;
   planning::CalibrationParameter calribration_str_;
   planning::EmergencyLaneKeepAlert bsd_lca_;
-  PlanningHMI::ELKOutputInfoStr_ELKFunctionFSMWorkState elk_state_{
-      PlanningHMI::
-          ELKOutputInfoStr_ELKFunctionFSMWorkState_ELK_FUNCTION_FSM_WORK_STATE_OFF}; /* ELK功能状态
+  iflyauto::ELKFunctionFSMWorkState elk_state_{
+      iflyauto::ELK_FUNCTION_FSM_WORK_STATE_OFF}; /* ELK功能状态
 0:Unavailable 1:Off 2:Standby 3:Active(No Intervention) 4:Active(Left
 Intervention) 5:Active(Right Intervention) */
   bool elk_left_intervention_flag_{

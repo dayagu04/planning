@@ -26,6 +26,7 @@ from bokeh.models import TextInput
 from cyber_record.record import Record
 from google.protobuf.json_format import MessageToJson
 from lib.local_view_lib import *
+import rosbag
 
 plan_debug_ts = []
 plan_debug_timestamps = []
@@ -52,10 +53,12 @@ replan_time_list = []
 correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
 load_uss_wave_from_uss_percept_msg = False
+corner_points_size = 4
+NUM_OF_OUTLINE_DATAORI = 4
 class LoadCyberbag:
   def __init__(self, path, parking_flag = False) -> None:
     self.bag_path = path
-    self.bag = Record(path)
+    self.bag = rosbag.Bag(path)
     # loclization msg
     self.loc_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
@@ -121,7 +124,7 @@ class LoadCyberbag:
     try:
       loc_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
-        loc_msg_dict[msg.header.timestamp / 1e6] = msg
+        loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in loc_msg_dict.items():
         self.loc_msg['t'].append(t)
@@ -139,11 +142,32 @@ class LoadCyberbag:
       self.loc_msg['enable'] = False
       print('missing /iflytek/localization/ego_pose !!!')
 
+    # load fusion objects msg
+    if self.parking_flag == False:
+      try:
+        fus_msg_dict = {}
+        for topic, msg, t in self.bag.read_messages("/iflytek/fusion/objects"):
+          fus_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        fus_msg_dict = {key: val for key, val in sorted(fus_msg_dict.items(), key = lambda ele: ele[0])}
+        for t, msg in fus_msg_dict.items():
+          self.fus_msg['t'].append(t)
+          self.fus_msg['abs_t'].append(t)
+          self.fus_msg['data'].append(msg)
+        self.fus_msg['t'] = [tmp - t0  for tmp in self.fus_msg['t']]
+        print('fus_msg time:',self.fus_msg['t'][-1])
+        if len(self.fus_msg['t']) > 0:
+          self.fus_msg['enable'] = True
+        else:
+          self.fus_msg['enable'] = False
+      except:
+        self.fus_msg['enable'] = False
+        print('missing /iflytek/fusion/objects !!!')
+
     # load vehicle service msg
     try:
       vs_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/vehicle_service"):
-        vs_msg_dict[msg.header.timestamp / 1e6] = msg
+        vs_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       vs_msg_dict = {key: val for key, val in sorted(vs_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in vs_msg_dict.items():
         self.vs_msg['t'].append(t)
@@ -165,19 +189,18 @@ class LoadCyberbag:
     try:
       plan_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
-        plan_msg_dict[msg.meta.header.timestamp / 1e6] = msg
+        plan_msg_dict[msg.meta.msg_header.timestamp / 1e6] = msg
       plan_msg_dict = {key: val for key, val in sorted(plan_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in plan_msg_dict.items():
         self.plan_msg['t'].append(t)
         self.plan_msg['abs_t'].append(t)
         self.plan_msg['data'].append(msg)
 
-
       t0_plan = self.plan_msg['t'][0]
       self.plan_msg['t'] = [tmp - t0_plan  for tmp in self.plan_msg['t']]
       max_time = max(max_time, self.plan_msg['t'][-1])
       print('plan_msg time:',self.plan_msg['t'][-1])
-      print('plan version:', self.plan_msg['data'][0].meta.header.version)
+      print('plan version:', self.plan_msg['data'][0].meta.msg_header.version)
       if len(self.plan_msg['t']) > 0:
         self.plan_msg['enable'] = True
       else:
@@ -258,7 +281,7 @@ class LoadCyberbag:
     try:
       ctrl_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/control/control_command"):
-        ctrl_msg_dict[msg.header.timestamp / 1e6] = msg
+        ctrl_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       ctrl_msg_dict = {key: val for key, val in sorted(ctrl_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ctrl_msg_dict.items():
         self.ctrl_msg['t'].append(t)
@@ -321,7 +344,7 @@ class LoadCyberbag:
     try:
       fus_parking_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/parking_slot"):
-        fus_parking_msg_dict[msg.header.timestamp / 1e6] = msg
+        fus_parking_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       fus_parking_msg_dict = {key: val for key, val in sorted(fus_parking_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in fus_parking_msg_dict.items():
         self.fus_parking_msg['t'].append(t)
@@ -403,7 +426,7 @@ class LoadCyberbag:
       # for topic, msg, t in self.bag.read_messages("/parking_slot"):
       # new visula parking slot proto
       for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/parking_slot_list"):
-        vis_parking_msg_dict[msg.header.timestamp / 1e6] = msg
+        vis_parking_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       vis_parking_msg_dict = {key: val for key, val in sorted(vis_parking_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in vis_parking_msg_dict.items():
         self.vis_parking_msg['t'].append(t)
@@ -429,7 +452,7 @@ class LoadCyberbag:
     try:
       soc_state_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/system_state/soc_state"):
-        soc_state_msg_dict[msg.header.timestamp / 1e6] = msg
+        soc_state_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
       global enter_parking_time
       enter_parking_time = 0.0
@@ -462,7 +485,7 @@ class LoadCyberbag:
     # try:
     #   precept_msg_dict = {}
     #   for topic, msg, t in self.bag.read_messages("/iflytek/ultrasonic_perception_info"):
-    #     precept_msg_dict[msg.header.timestamp / 1e6] = msg
+    #     precept_msg_dict[msg.msg_header.timestamp / 1e6] = msg
     #   precept_msg_dict = {key: val for key, val in sorted(precept_msg_dict.items(), key = lambda ele: ele[0])}
     #   for t, msg in precept_msg_dict.items():
     #     self.precept_msg['t'].append(t)
@@ -485,7 +508,7 @@ class LoadCyberbag:
     # try:
     #   precept_debug_msg_dict = {}
     #   for topic, msg, t in self.bag.read_messages("/iflytek/ultrasonic_perception_debug_info"):
-    #     precept_debug_msg_dict[msg.header.timestamp / 1e6] = msg
+    #     precept_debug_msg_dict[msg.msg_header.timestamp / 1e6] = msg
     #   precept_debug_msg_dict = {key: val for key, val in sorted(precept_debug_msg_dict.items(), key = lambda ele: ele[0])}
     #   for t, msg in precept_debug_msg_dict.items():
     #     self.precept_debug_msg['t'].append(t)
@@ -507,7 +530,7 @@ class LoadCyberbag:
     try:
       wave_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/uss/wave_info"):
-        wave_msg_dict[msg.header.timestamp / 1e6] = msg
+        wave_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       wave_msg_dict = {key: val for key, val in sorted(wave_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in wave_msg_dict.items():
         self.wave_msg['t'].append(t)
@@ -528,7 +551,7 @@ class LoadCyberbag:
     try:
       adas_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/adas_function_debug"):
-        adas_debug_msg_dict[msg.header.timestamp / 1e6] = msg
+        adas_debug_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       adas_debug_msg_dict = {key: val for key, val in sorted(adas_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in adas_debug_msg_dict.items():
         self.adas_debug_msg['t'].append(t)
@@ -550,7 +573,7 @@ class LoadCyberbag:
     try:
       wave_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/uss/ussdriver_debug_info"):
-        wave_debug_msg_dict[msg.header.timestamp / 1e6] = msg
+        wave_debug_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       wave_debug_msg_dict = {key: val for key, val in sorted(wave_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in wave_debug_msg_dict.items():
         self.wave_debug_msg['t'].append(t)
@@ -572,7 +595,7 @@ class LoadCyberbag:
     try:
       uss_percept_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/UssPerceptInfo"):
-        uss_percept_msg_dict[msg.header.timestamp / 1e6] = msg
+        uss_percept_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       uss_percept_msg_dict = {key: val for key, val in sorted(uss_percept_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in uss_percept_msg_dict.items():
         self.uss_percept_msg['t'].append(t)
@@ -885,7 +908,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     plan_y = []
     plan_heading = []
 
-    for i in range(len(trajectory.trajectory_points)):
+    for i in range(trajectory.trajectory_points_size):
       plan_x.append(trajectory.trajectory_points[i].x - cur_pos_xn0)
       plan_y.append(trajectory.trajectory_points[i].y - cur_pos_yn0)
       plan_heading.append(trajectory.trajectory_points[i].heading_yaw)
@@ -948,7 +971,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
   # load control
   if bag_loader.ctrl_msg['enable'] == True:
-    control_result_points = bag_loader.ctrl_msg['data'][ctrl_msg_idx].control_trajectory.control_result_points
+    control_result_points = []
+    for i in range(bag_loader.ctrl_msg['data'][ctrl_msg_idx].control_trajectory.control_result_points_size):
+      control_result_points.append(bag_loader.ctrl_msg['data'][ctrl_msg_idx].control_trajectory.control_result_points[i])
     mpc_dx_local = []
     mpc_dy_local = []
 
@@ -965,6 +990,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
   # load fusion slot
   if bag_loader.fus_parking_msg['enable'] == True:
     parking_fusion_slot_lists = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].parking_fusion_slot_lists
+    parking_fusion_slot_lists_size = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].parking_fusion_slot_lists_size
     select_slot_id = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].select_slot_id
     # clear data
     # local_view_data['data_target_managed_slot'].data.update({'corner_point_x': [], 'corner_point_y': [],})
@@ -996,13 +1022,13 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     fus_release_solts_id = []
     id_text_x_vec = []
     id_text_y_vec = []
-    for j in range(len(parking_fusion_slot_lists)):
+    for j in range(parking_fusion_slot_lists_size):
       slot = parking_fusion_slot_lists[j]
       single_slot_x_vec = []
       single_slot_y_vec = []
       # attention: fusion slots are based on odom system, visual slots are based on vehicle system
       # 1. update slots corner points
-      for k in range(len(slot.corner_points)):
+      for k in range(corner_points_size):
         corner_x_global = slot.corner_points[k].x
         corner_y_global = slot.corner_points[k].y
         single_slot_x_vec.append(corner_x_global - cur_pos_xn0)
@@ -1074,17 +1100,18 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
           })
 
     parking_fusion_slot_lists = bag_loader.fus_parking_msg['data'][-1].parking_fusion_slot_lists
+    parking_fusion_slot_lists_size = bag_loader.fus_parking_msg['data'][-1].parking_fusion_slot_lists_size
     select_slot_id = bag_loader.fus_parking_msg['data'][-1].select_slot_id
     slots_x_vec = []
     slots_y_vec = []
 
-    for j in range(len(parking_fusion_slot_lists)):
+    for j in range(parking_fusion_slot_lists_size):
       slot = parking_fusion_slot_lists[j]
       single_slot_x_vec = []
       single_slot_y_vec = []
       # attention: fusion slots are based on odom system, visual slots are based on vehicle system
       # 1. update slots corner points
-      for k in range(len(slot.corner_points)):
+      for k in range(corner_points_size):
         corner_x_global = slot.corner_points[k].x
         corner_y_global = slot.corner_points[k].y
         single_slot_x_vec.append(corner_x_global - cur_pos_xn0)
@@ -1100,7 +1127,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
   # load visual slot
   if bag_loader.vis_parking_msg['enable'] == True:
-    parking_slot = bag_loader.vis_parking_msg['data'][vis_parking_msg_idx].parking_slot
+    parking_slots = bag_loader.vis_parking_msg['data'][vis_parking_msg_idx].parking_slots
+    parking_slots_size = bag_loader.vis_parking_msg['data'][vis_parking_msg_idx].parking_slots_size
     local_view_data['data_vision_parking'].data.update({'corner_point_x': [], 'corner_point_y': [],})
     slots_x_vec = []
     slots_y_vec = []
@@ -1109,13 +1137,13 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
     # attention: vision slots and limiters are based on vehicle system, needed to be transferred into global system
     # 1. updatge slot points
-    for j in range(len(parking_slot)):
-      slot = parking_slot[j]
+    for j in range(parking_slots_size):
+      slot = parking_slots[j]
       single_slot_x_vec = []
       single_slot_y_vec = []
       slot_plot_x_vec = []
       slot_plot_y_vec = []
-      for k in range(len(slot.corner_points)):
+      for k in range(corner_points_size):
         corner_x_local = slot.corner_points[k].x
         corner_y_local = slot.corner_points[k].y
         corner_x_global, corner_y_global = local2global(corner_x_local, corner_y_local, cur_pos_xn, cur_pos_yn, cur_yaw)
@@ -1126,9 +1154,10 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       slots_x_vec.append(slot_plot_x_vec)
       slots_y_vec.append(slot_plot_y_vec)
     # 2. update limiters
-    vision_slot_limiter = bag_loader.vis_parking_msg['data'][vis_parking_msg_idx].vision_slot_limiter
-    for j in range(len(vision_slot_limiter)):
-      limiter = vision_slot_limiter[j]
+    vision_slot_limiters = bag_loader.vis_parking_msg['data'][vis_parking_msg_idx].vision_slot_limiters
+    vision_slot_limiters_size = bag_loader.vis_parking_msg['data'][vis_parking_msg_idx].vision_slot_limiters_size
+    for j in range(vision_slot_limiters_size):
+      limiter = vision_slot_limiters[j]
       global_limiter_x0, global_limiter_y0 = local2global(limiter.limiter_points[0].x, limiter.limiter_points[0].y, cur_pos_xn, cur_pos_yn, cur_yaw)
       global_limiter_x1, global_limiter_y1 = local2global(limiter.limiter_points[1].x, limiter.limiter_points[1].y, cur_pos_xn, cur_pos_yn, cur_yaw)
       slots_x_vec.append([global_limiter_x0 - cur_pos_xn0, global_limiter_x1 - cur_pos_xn0])
@@ -1423,8 +1452,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     model_x, model_y = [], []
     post_x, post_y = [], []
     parking_slot_x, parking_slot_y = [], []
-    for i in range(len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori)):
-      for j in range(len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt)):
+    for i in range(NUM_OF_OUTLINE_DATAORI):
+      for j in range(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt_cnt):
         x = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt[j].x
         y = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt[j].y
         if i == 0:
@@ -1442,11 +1471,11 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       'obj_pt_y': model_y,
     })
 
-    if len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots) != 0:
-      for parking_slot in bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots:
-        for corner_index in [0,3,2,1]:
-          parking_slot_x.append(parking_slot.corner_point[corner_index].x)
-          parking_slot_y.append(parking_slot.corner_point[corner_index].y)
+    for i in range(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots_size):
+      parking_slot = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots[i]
+      for corner_index in [0,3,2,1]:
+        parking_slot_x.append(parking_slot.corner_point[corner_index].x)
+        parking_slot_y.append(parking_slot.corner_point[corner_index].y)
     local_view_data['data_spatial_parking_slot'].data.update({
       'corner_point_x': [parking_slot_x],
       'corner_point_y': [parking_slot_y],
@@ -1784,7 +1813,7 @@ def load_local_view_figure_parking():
   fig1.patches('occupied_slot_y', 'occupied_slot_x', source = data_all_managed_occupied_slot, fill_color = "blue", line_color = "blue", line_width = 1, fill_alpha = 0.15, legend_label = 'all managed slot', visible = False)
 
   # dluss
-  fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_post, size=3, color='orange', legend_label = 'dluss_post', visible = True)
+  fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_post, size=3, color='orange', legend_label = 'dluss_post', visible = False)
   fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_model, size=3, color='blue', legend_label = 'dluss_model', visible = False)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_spatial_parking_slot, line_width = 2, line_color = 'orange', line_dash = 'solid',legend_label = 'spatial pariking slot', visible = False)
   fig1.circle('y','x', source = data_fusion_obj, size=3, color='blue', legend_label = 'fusion_obj', visible = True)
@@ -2673,7 +2702,8 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
         if dataLoader.vis_parking_msg['enable'] == True:
           temp_corner_x_list = []
           temp_corner_y_list = []
-          parking_fusion_slot_lists = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx].parking_slot
+          parking_slots = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx].parking_slots
+          parking_slots_size = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx].parking_slots_size
           if dataLoader.loc_msg['enable'] == True:
             flag, loc_msg = findrt(dataLoader.loc_msg, localization_timestamps[slot_i])
             if not flag:
@@ -2687,7 +2717,8 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
               # 1. update slots corner points
               # coord_tf = coord_transformer()
               # coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-              for slot in parking_fusion_slot_lists:
+              for j in range(parking_slots_size):
+                  slot = parking_slots[j]
                   temp_corner_x = []
                   temp_corner_y = []
                   for corner_point in slot.corner_points:
@@ -2701,8 +2732,8 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
                   temp_corner_x_list.append(temp_corner_x)
                   temp_corner_y_list.append(temp_corner_y)
               # 2. update limiters
-              vision_slot_limiter = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx].vision_slot_limiter
-              for limiter in vision_slot_limiter:
+              vision_slot_limiters = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx].vision_slot_limiters
+              for limiter in vision_slot_limiters:
                 global_limiter_x0, global_limiter_y0 = local2global(limiter.limiter_points[0].x, limiter.limiter_points[0].y, cur_pos_xn, cur_pos_yn, cur_yaw)
                 global_limiter_x1, global_limiter_y1 = local2global(limiter.limiter_points[1].x, limiter.limiter_points[1].y, cur_pos_xn, cur_pos_yn, cur_yaw)
                 temp_corner_x_list.append([global_limiter_x0, global_limiter_x1])
@@ -2796,7 +2827,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
         target_line_xn, target_line_yn = [], []
         target_pos_xn, target_pos_yn = [], []
         car_box_x_vec, car_box_y_vec = [], []
-        for j in range(len(trajectory.trajectory_points)):
+        for j in range(trajectory.trajectory_points_size):
           plan_traj_x.append(trajectory.trajectory_points[j].x)
           plan_traj_y.append(trajectory.trajectory_points[j].y)
           plan_heading.append(trajectory.trajectory_points[j].heading_yaw)
@@ -3083,6 +3114,33 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     uss_generator.ts = np.array(ctrl_debug_ts)
     uss_text_generator.ts = np.array(ctrl_debug_ts)
     wave_min_generator.ts = np.array(ctrl_debug_ts)
+
+  # uss perception
+    uss_post_generator = CommonGenerator()
+    uss_model_generator = CommonGenerator()
+    for uss_i, uss_percept_timestamp in enumerate(uss_percept_timestamps):
+      flag, uss_percept_msg = findrt(dataLoader.uss_percept_msg, uss_percept_timestamp)
+      model_x, model_y = [], []
+      post_x, post_y = [], []
+      if not flag:
+        print('find uss percept error')
+      else:
+        for i in range(NUM_OF_OUTLINE_DATAORI):
+          for j in range(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt_cnt):
+            x = uss_percept_msg.out_line_dataori[i].obj_pt[j].x
+            y = uss_percept_msg.out_line_dataori[i].obj_pt[j].y
+            if i == 0:
+              post_x.append(x)
+              post_y.append(y)
+            elif i == 1:
+              model_x.append(x)
+              model_y.append(y)
+
+      uss_post_generator.xys.append((post_y, post_x))
+      uss_model_generator.xys.append((model_y, model_x))
+    uss_post_generator.ts = np.array(ctrl_debug_ts)
+    uss_model_generator.ts = np.array(ctrl_debug_ts)
+
 
   # move Layer here for manage
     if dataLoader.plan_msg['enable'] == True:

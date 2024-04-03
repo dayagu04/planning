@@ -1,0 +1,13 @@
+syntax = "proto2";
+
+package planning.common;
+
+message LateralOffsetDeciderInfo {
+  repeated int32 avoid_car_ids = 1;
+  repeated int32 select_avoid_car_ids = 2;
+  optional float lateral_offset = 3;
+  optional float smooth_lateral_offset = 4;
+  optional int32 avoid_way = 5;
+  optional int32 allow_max_opposite_offset = 6;
+  optional int32 allow_max_opposite_offset_id = 7;
+}

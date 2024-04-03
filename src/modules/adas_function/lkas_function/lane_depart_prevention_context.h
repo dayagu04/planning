@@ -17,9 +17,7 @@ class LaneDepartPrevention {
   bool get_ldp_right_intervention_flag_info() {
     return ldp_right_intervention_flag_;
   }
-  PlanningHMI::LDPOutputInfoStr_LDPFunctionFSMWorkState get_ldp_state() {
-    return ldp_state_;
-  }
+  iflyauto::LDPFunctionFSMWorkState get_ldp_state() { return ldp_state_; }
   ~LaneDepartPrevention() = default;
 
  private:
@@ -35,28 +33,25 @@ class LaneDepartPrevention {
   void set_ldp_output_info() {
     switch (measurement_str_.state) {
       case 0:
-        ldp_state_ = PlanningHMI::
-            LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+        ldp_state_ = iflyauto::LDP_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
         break;
       case 1:
-        ldp_state_ = PlanningHMI::
-            LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_OFF;
+        ldp_state_ = iflyauto::LDP_FUNCTION_FSM_WORK_STATE_OFF;
         break;
       case 2:
-        ldp_state_ = PlanningHMI::
-            LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_STANDBY;
+        ldp_state_ = iflyauto::LDP_FUNCTION_FSM_WORK_STATE_STANDBY;
         break;
       case 3:
-        ldp_state_ = PlanningHMI::
-            LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
+        ldp_state_ =
+            iflyauto::LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
         break;
       case 4:
-        ldp_state_ = PlanningHMI::
-            LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION;
+        ldp_state_ =
+            iflyauto::LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION;
         break;
       default:
-        ldp_state_ = PlanningHMI::
-            LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION;
+        ldp_state_ =
+            iflyauto::LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION;
         break;
     }
     if (measurement_str_.state == 4) {
@@ -74,9 +69,8 @@ class LaneDepartPrevention {
  private:
   planning::MeasurementPoint measurement_str_;
   planning::CalibrationParameter calribration_str_;
-  PlanningHMI::LDPOutputInfoStr_LDPFunctionFSMWorkState ldp_state_{
-      PlanningHMI::
-          LDPOutputInfoStr_LDPFunctionFSMWorkState_LDP_FUNCTION_FSM_WORK_STATE_OFF}; /* LDP功能状态
+  iflyauto::LDPFunctionFSMWorkState ldp_state_{
+      iflyauto::LDP_FUNCTION_FSM_WORK_STATE_OFF}; /* LDP功能状态
 0:Unavailable 1:Off 2:Standby 3:Active(No Intervention) 4:Active(Left
 Intervention) 5:Active(Right Intervention) */
   bool ldp_left_intervention_flag_{

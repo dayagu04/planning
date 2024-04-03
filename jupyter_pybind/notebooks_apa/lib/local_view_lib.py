@@ -386,6 +386,14 @@ control_params = {
   'line_width' : 5, 'line_color' : 'green', 'line_dash' : 'dashed', 'line_alpha' : 0.8, 'legend_label' : 'ctrl_traj'
 }
 
+parking_space_params = {
+    'fill_color' : "gray",
+    'line_color' : "black",
+    'line_width' : 1,
+    'fill_alpha' : 0.3,
+    'legend_label' : 'obj'
+}
+
 table_params={
     'width': 600,
     'height':500,
@@ -1019,135 +1027,176 @@ def load_obstacle_radar_params(obstacle_list):
 
 # 可视化rdg objects
 def load_obstacle_rdg(dataLoader, layer_manager, fig_local_view):
-
-    obstacle_rdg_generate = CommonGenerator()
-    obstacle_rdg_text_generate = TextGenerator()
-    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-      flag, rdg_objects_msg = findME(dataLoader.rdg_objects_msg, fusion_object_timestamps[i])
-      if not flag:
-        # print('find mobileye_objects_msg error')
-        obstacle_rdg_generate.xys.append(([], []))
-        obstacle_rdg_text_generate.xys.append(([], [], []))
-        continue
-      # obstacles_mobileye_info = load_obstacle_params(mobileye_objects_msg.camera_perception_object_list, plan_debug.environment_model_info)
-      obstacles_rdg_info = load_obstacle_mobileye_params(rdg_objects_msg.camera_perception_object_list)
-      obstacle_rdg_generate.xys.append((obstacles_rdg_info['obstacles_y_rel'], obstacles_rdg_info['obstacles_x_rel']))
-      obstacle_rdg_text_generate.xys.append((obstacles_rdg_info['pos_y_rel'], obstacles_rdg_info['pos_x_rel'], obstacles_rdg_info['obs_label']))
-    obstacle_rdg_generate.ts = np.array(plan_debug_ts)
-    obstacle_rdg_layer = PatchLayer(fig_local_view ,obstacle_rdg_params)
-    layer_manager.AddLayer(obstacle_rdg_layer, 'obstacle_rdg_layer', obstacle_rdg_generate, 'obstacle_rdg_generate', 2)
-    obstacle_rdg_text_generate.ts = np.array(plan_debug_ts)
-    obstacle_rdg_text_layer = TextLayer(fig_local_view, obstacle_rdg_text_params)
-    layer_manager.AddLayer(obstacle_rdg_text_layer, 'obstacle_rdg_text_layer', obstacle_rdg_text_generate, 'obstacle_rdg_text_generate', 3)
+    if dataLoader.rdg_objects_msg['enable'] == True:
+      obstacle_rdg_generate = CommonGenerator()
+      obstacle_rdg_text_generate = TextGenerator()
+      for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+        flag, rdg_objects_msg = findME(dataLoader.rdg_objects_msg, fusion_object_timestamps[i])
+        if not flag:
+          # print('find mobileye_objects_msg error')
+          obstacle_rdg_generate.xys.append(([], []))
+          obstacle_rdg_text_generate.xys.append(([], [], []))
+          continue
+        # obstacles_mobileye_info = load_obstacle_params(mobileye_objects_msg.camera_perception_object_list, plan_debug.environment_model_info)
+        obstacles_rdg_info = load_obstacle_mobileye_params(rdg_objects_msg.camera_perception_object_list)
+        obstacle_rdg_generate.xys.append((obstacles_rdg_info['obstacles_y_rel'], obstacles_rdg_info['obstacles_x_rel']))
+        obstacle_rdg_text_generate.xys.append((obstacles_rdg_info['pos_y_rel'], obstacles_rdg_info['pos_x_rel'], obstacles_rdg_info['obs_label']))
+      obstacle_rdg_generate.ts = np.array(plan_debug_ts)
+      obstacle_rdg_layer = PatchLayer(fig_local_view ,obstacle_rdg_params)
+      layer_manager.AddLayer(obstacle_rdg_layer, 'obstacle_rdg_layer', obstacle_rdg_generate, 'obstacle_rdg_generate', 2)
+      obstacle_rdg_text_generate.ts = np.array(plan_debug_ts)
+      obstacle_rdg_text_layer = TextLayer(fig_local_view, obstacle_rdg_text_params)
+      layer_manager.AddLayer(obstacle_rdg_text_layer, 'obstacle_rdg_text_layer', obstacle_rdg_text_generate, 'obstacle_rdg_text_generate', 3)
 
 #可视化  lidar ojects
 def load_obstacle_lidar(dataLoader, layer_manager, fig_local_view):
-
-    obstacle_lidar_generate = CommonGenerator()
-    obstacle_lidar_text_generate = TextGenerator()
-    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-      flag, lidar_objects_msg = findME(dataLoader.lidar_msg, fusion_object_timestamps[i])
-      if not flag:
-        # print('find mobileye_objects_msg error')
-        obstacle_lidar_generate.xys.append(([], []))
-        obstacle_lidar_text_generate.xys.append(([], [], []))
-        continue
-      obstacles_lidar_info = load_obstacle_lidar_params(lidar_objects_msg.lidar_object)
-      obstacle_lidar_generate.xys.append((obstacles_lidar_info['obstacles_y_rel'], obstacles_lidar_info['obstacles_x_rel']))
-      obstacle_lidar_text_generate.xys.append((obstacles_lidar_info['pos_y_rel'], obstacles_lidar_info['pos_x_rel'], obstacles_lidar_info['obs_label']))
-    obstacle_lidar_generate.ts = np.array(plan_debug_ts)
-    obstacle_lidar_layer = PatchLayer(fig_local_view ,obstacle_lidar_params)
-    layer_manager.AddLayer(obstacle_lidar_layer, 'obstacle_lidar_layer', obstacle_lidar_generate, 'obstacle_lidar_generate', 2)
-    obstacle_lidar_text_generate.ts = np.array(plan_debug_ts)
-    obstacle_lidar_text_layer = TextLayer(fig_local_view, obstacle_lidar_text_params)
-    layer_manager.AddLayer(obstacle_lidar_text_layer, 'obstacle_lidar_text_layer', obstacle_lidar_text_generate, 'obstacle_lidar_text_generate', 3)
+    if dataLoader.lidar_msg['enable'] == True:
+      obstacle_lidar_generate = CommonGenerator()
+      obstacle_lidar_text_generate = TextGenerator()
+      for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+        flag, lidar_objects_msg = findME(dataLoader.lidar_msg, fusion_object_timestamps[i])
+        if not flag:
+          # print('find mobileye_objects_msg error')
+          obstacle_lidar_generate.xys.append(([], []))
+          obstacle_lidar_text_generate.xys.append(([], [], []))
+          continue
+        obstacles_lidar_info = load_obstacle_lidar_params(lidar_objects_msg.lidar_object)
+        obstacle_lidar_generate.xys.append((obstacles_lidar_info['obstacles_y_rel'], obstacles_lidar_info['obstacles_x_rel']))
+        obstacle_lidar_text_generate.xys.append((obstacles_lidar_info['pos_y_rel'], obstacles_lidar_info['pos_x_rel'], obstacles_lidar_info['obs_label']))
+      obstacle_lidar_generate.ts = np.array(plan_debug_ts)
+      obstacle_lidar_layer = PatchLayer(fig_local_view ,obstacle_lidar_params)
+      layer_manager.AddLayer(obstacle_lidar_layer, 'obstacle_lidar_layer', obstacle_lidar_generate, 'obstacle_lidar_generate', 2)
+      obstacle_lidar_text_generate.ts = np.array(plan_debug_ts)
+      obstacle_lidar_text_layer = TextLayer(fig_local_view, obstacle_lidar_text_params)
+      layer_manager.AddLayer(obstacle_lidar_text_layer, 'obstacle_lidar_text_layer', obstacle_lidar_text_generate, 'obstacle_lidar_text_generate', 3)
 
 #可视化  radar ojects
 def load_obstacle_radar(dataLoader, layer_manager, fig_local_view):
 
-    obstacle_fm_generate = CommonGenerator()
-    obstacle_fl_generate = CommonGenerator()
-    obstacle_fr_generate = CommonGenerator()
-    obstacle_rl_generate = CommonGenerator()
-    obstacle_rr_generate = CommonGenerator()
-    obstacle_radar_generate = [obstacle_fm_generate,
-                               obstacle_fl_generate,
-                               obstacle_fr_generate,
-                               obstacle_rl_generate,
-                               obstacle_rr_generate]
-    obstacle_fm_text_generate = TextGenerator()
-    obstacle_fl_text_generate = TextGenerator()
-    obstacle_fr_text_generate = TextGenerator()
-    obstacle_rl_text_generate = TextGenerator()
-    obstacle_rr_text_generate = TextGenerator()
-    obstacle_radar_text_generate = [obstacle_fm_text_generate,
-                                    obstacle_fl_text_generate,
-                                    obstacle_fr_text_generate,
-                                    obstacle_rl_text_generate,
-                                    obstacle_rr_text_generate]
+      obstacle_fm_generate = CommonGenerator()
+      obstacle_fl_generate = CommonGenerator()
+      obstacle_fr_generate = CommonGenerator()
+      obstacle_rl_generate = CommonGenerator()
+      obstacle_rr_generate = CommonGenerator()
+      obstacle_radar_generate = [obstacle_fm_generate,
+                                obstacle_fl_generate,
+                                obstacle_fr_generate,
+                                obstacle_rl_generate,
+                                obstacle_rr_generate]
+      obstacle_fm_text_generate = TextGenerator()
+      obstacle_fl_text_generate = TextGenerator()
+      obstacle_fr_text_generate = TextGenerator()
+      obstacle_rl_text_generate = TextGenerator()
+      obstacle_rr_text_generate = TextGenerator()
+      obstacle_radar_text_generate = [obstacle_fm_text_generate,
+                                      obstacle_fl_text_generate,
+                                      obstacle_fr_text_generate,
+                                      obstacle_rl_text_generate,
+                                      obstacle_rr_text_generate]
 
-    radar_obj_msg = [dataLoader.radar_fm_msg,
-                     dataLoader.radar_fl_msg,
-                     dataLoader.radar_fr_msg,
-                     dataLoader.radar_rl_msg,
-                     dataLoader.radar_rr_msg]
-    radar_object_timestamps = [fm_object_timestamps,
-                               fl_object_timestamps,
-                               fr_object_timestamps,
-                               rl_object_timestamps,
-                               rr_object_timestamps]
-    for k in range(5):
-      for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-        #if i <= len(radar_object_timestamps[k]):
-        flag, radar_msg = findME(radar_obj_msg[k], fusion_object_timestamps[i])
-        if not flag:
-          print("find",i,"radar_object error")
-          obstacle_radar_generate[k].xys.append(([], []))
-          obstacle_radar_text_generate[k].xys.append(([], [], []))
-          continue
-        obstacles_info_all = load_obstacle_radar_params(radar_msg.radar_perception_object_list)
-        obstacle_radar_generate[k].xys.append((obstacles_info_all['obstacles_y_rel'], obstacles_info_all['obstacles_x_rel']))
-        obstacle_radar_text_generate[k].xys.append((obstacles_info_all['pos_y_rel'], obstacles_info_all['pos_x_rel'], obstacles_info_all['obs_label']))
-    obstacle_fm_generate.ts = np.array(plan_debug_ts)
-    obstacle_fl_generate.ts = np.array(plan_debug_ts)
-    obstacle_fr_generate.ts = np.array(plan_debug_ts)
-    obstacle_rl_generate.ts = np.array(plan_debug_ts)
-    obstacle_rr_generate.ts = np.array(plan_debug_ts)
+      radar_obj_msg = [dataLoader.radar_fm_msg,
+                      dataLoader.radar_fl_msg,
+                      dataLoader.radar_fr_msg,
+                      dataLoader.radar_rl_msg,
+                      dataLoader.radar_rr_msg]
+      radar_object_timestamps = [fm_object_timestamps,
+                                fl_object_timestamps,
+                                fr_object_timestamps,
+                                rl_object_timestamps,
+                                rr_object_timestamps]
+      for k in range(5):
+        for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+          #if i <= len(radar_object_timestamps[k]):
+          flag, radar_msg = findME(radar_obj_msg[k], fusion_object_timestamps[i])
+          if not flag:
+            print("find",i,"radar_object error")
+            obstacle_radar_generate[k].xys.append(([], []))
+            obstacle_radar_text_generate[k].xys.append(([], [], []))
+            continue
+          obstacles_info_all = load_obstacle_radar_params(radar_msg.radar_perception_object_list)
+          obstacle_radar_generate[k].xys.append((obstacles_info_all['obstacles_y_rel'], obstacles_info_all['obstacles_x_rel']))
+          obstacle_radar_text_generate[k].xys.append((obstacles_info_all['pos_y_rel'], obstacles_info_all['pos_x_rel'], obstacles_info_all['obs_label']))
+      obstacle_fm_generate.ts = np.array(plan_debug_ts)
+      obstacle_fl_generate.ts = np.array(plan_debug_ts)
+      obstacle_fr_generate.ts = np.array(plan_debug_ts)
+      obstacle_rl_generate.ts = np.array(plan_debug_ts)
+      obstacle_rr_generate.ts = np.array(plan_debug_ts)
 
-    obstacle_fm_layer = PatchLayer(fig_local_view ,obstacle_fm_params)
-    obstacle_fl_layer = PatchLayer(fig_local_view ,obstacle_fl_params)
-    obstacle_fr_layer = PatchLayer(fig_local_view ,obstacle_fr_params)
-    obstacle_rl_layer = PatchLayer(fig_local_view ,obstacle_rl_params)
-    obstacle_rr_layer = PatchLayer(fig_local_view ,obstacle_rr_params)
-    layer_manager.AddLayer(obstacle_fm_layer, 'obstacle_fm_layer', obstacle_fm_generate, 'obstacle_fm_generate', 2)
-    layer_manager.AddLayer(obstacle_fl_layer, 'obstacle_fl_layer', obstacle_fl_generate, 'obstacle_fl_generate', 2)
-    layer_manager.AddLayer(obstacle_fr_layer, 'obstacle_fr_layer', obstacle_fr_generate, 'obstacle_fr_generate', 2)
-    layer_manager.AddLayer(obstacle_rl_layer, 'obstacle_rl_layer', obstacle_rl_generate, 'obstacle_rl_generate', 2)
-    layer_manager.AddLayer(obstacle_rr_layer, 'obstacle_rr_layer', obstacle_rr_generate, 'obstacle_rr_generate', 2)
-    obstacle_fm_text_generate.ts = np.array(plan_debug_ts)
-    obstacle_fl_text_generate.ts = np.array(plan_debug_ts)
-    obstacle_fr_text_generate.ts = np.array(plan_debug_ts)
-    obstacle_rl_text_generate.ts = np.array(plan_debug_ts)
-    obstacle_rr_text_generate.ts = np.array(plan_debug_ts)
-    obstacle_text_layer3 = TextLayer(fig_local_view, obstacle_fm_text_params)
-    obstacle_text_layer4 = TextLayer(fig_local_view, obstacle_fl_text_params)
-    obstacle_text_layer5 = TextLayer(fig_local_view, obstacle_fr_text_params)
-    obstacle_text_layer6 = TextLayer(fig_local_view, obstacle_rl_text_params)
-    obstacle_text_layer7 = TextLayer(fig_local_view, obstacle_rr_text_params)
-    layer_manager.AddLayer(obstacle_text_layer3, 'obstacle_text_layer3', obstacle_fm_text_generate, 'obstacle_fm_text_generate', 3)
-    layer_manager.AddLayer(obstacle_text_layer4, 'obstacle_text_layer4', obstacle_fl_text_generate, 'obstacle_fl_text_generate', 3)
-    layer_manager.AddLayer(obstacle_text_layer5, 'obstacle_text_layer5', obstacle_fr_text_generate, 'obstacle_fr_text_generate', 3)
-    layer_manager.AddLayer(obstacle_text_layer6, 'obstacle_text_layer6', obstacle_rl_text_generate, 'obstacle_rl_text_generate', 3)
-    layer_manager.AddLayer(obstacle_text_layer7, 'obstacle_text_layer7', obstacle_rr_text_generate, 'obstacle_rr_text_generate', 3)
+      obstacle_fm_layer = PatchLayer(fig_local_view ,obstacle_fm_params)
+      obstacle_fl_layer = PatchLayer(fig_local_view ,obstacle_fl_params)
+      obstacle_fr_layer = PatchLayer(fig_local_view ,obstacle_fr_params)
+      obstacle_rl_layer = PatchLayer(fig_local_view ,obstacle_rl_params)
+      obstacle_rr_layer = PatchLayer(fig_local_view ,obstacle_rr_params)
+      layer_manager.AddLayer(obstacle_fm_layer, 'obstacle_fm_layer', obstacle_fm_generate, 'obstacle_fm_generate', 2)
+      layer_manager.AddLayer(obstacle_fl_layer, 'obstacle_fl_layer', obstacle_fl_generate, 'obstacle_fl_generate', 2)
+      layer_manager.AddLayer(obstacle_fr_layer, 'obstacle_fr_layer', obstacle_fr_generate, 'obstacle_fr_generate', 2)
+      layer_manager.AddLayer(obstacle_rl_layer, 'obstacle_rl_layer', obstacle_rl_generate, 'obstacle_rl_generate', 2)
+      layer_manager.AddLayer(obstacle_rr_layer, 'obstacle_rr_layer', obstacle_rr_generate, 'obstacle_rr_generate', 2)
+      obstacle_fm_text_generate.ts = np.array(plan_debug_ts)
+      obstacle_fl_text_generate.ts = np.array(plan_debug_ts)
+      obstacle_fr_text_generate.ts = np.array(plan_debug_ts)
+      obstacle_rl_text_generate.ts = np.array(plan_debug_ts)
+      obstacle_rr_text_generate.ts = np.array(plan_debug_ts)
+      obstacle_text_layer3 = TextLayer(fig_local_view, obstacle_fm_text_params)
+      obstacle_text_layer4 = TextLayer(fig_local_view, obstacle_fl_text_params)
+      obstacle_text_layer5 = TextLayer(fig_local_view, obstacle_fr_text_params)
+      obstacle_text_layer6 = TextLayer(fig_local_view, obstacle_rl_text_params)
+      obstacle_text_layer7 = TextLayer(fig_local_view, obstacle_rr_text_params)
+      layer_manager.AddLayer(obstacle_text_layer3, 'obstacle_text_layer3', obstacle_fm_text_generate, 'obstacle_fm_text_generate', 3)
+      layer_manager.AddLayer(obstacle_text_layer4, 'obstacle_text_layer4', obstacle_fl_text_generate, 'obstacle_fl_text_generate', 3)
+      layer_manager.AddLayer(obstacle_text_layer5, 'obstacle_text_layer5', obstacle_fr_text_generate, 'obstacle_fr_text_generate', 3)
+      layer_manager.AddLayer(obstacle_text_layer6, 'obstacle_text_layer6', obstacle_rl_text_generate, 'obstacle_rl_text_generate', 3)
+      layer_manager.AddLayer(obstacle_text_layer7, 'obstacle_text_layer7', obstacle_rr_text_generate, 'obstacle_rr_text_generate', 3)
 
-def draw_local_view_debug(dataLoader, layer_manager):
-    #define figure
-    # 定义 debug
-    table_attr_list = ['Attr', 'Val']
-    table_layer = TableLayerV2(None, table_attr_list, table_params)
-    layer_manager.AddLayer(
-      table_layer, 'table_layer', lat_behavior_table1, 'lat_behavior_table1', 3)
-    pass
+def load_ehr_parking_map(dataLoader, layer_manager, fig_local_view):
+  if dataLoader.ehr_parking_map_msg['enable'] == True:
+    parking_space_generate = CommonGenerator()
+    for i, plan_debug in enumerate([0]):
+      ehr_parking_map_msg = dataLoader.ehr_parking_map_msg['data']
+      road_tile_info = ehr_parking_map_msg[i].road_tile_info
+
+
+      parking_space_info = road_tile_info.parking_space
+      parking_space_boxes_x = []
+      parking_space_boxes_y = []
+      for parking_space in parking_space_info:
+        parking_space_box_x = []
+        parking_space_box_y = []
+        for shape in parking_space.shape:
+          x = shape.enu.x
+          y = shape.enu.y
+          parking_space_box_x.append(x)
+          parking_space_box_y.append(y)
+        parking_space_boxes_x.append(parking_space_box_x)
+        parking_space_boxes_y.append(parking_space_box_y)
+      parking_space_generate.xys.append((parking_space_boxes_y, parking_space_boxes_x))
+    parking_space_generate.ts = np.array([1])
+    parkingspace_params_layer = PatchLayer(fig_local_view ,parking_space_params)
+    layer_manager.AddLayer(parkingspace_params_layer, 'parkingspace_params_layer', parking_space_generate, 'parking_space_generate', 2)
+def load_ground_line(dataLoader, layer_manager, fig_local_view):
+    parking_space_generate = CommonGenerator()
+    for i, plan_debug in enumerate([0]):
+      ehr_parking_map_msg = dataLoader.ehr_parking_map_msg['data']
+      road_tile_info = ehr_parking_map_msg[i].road_tile_info
+
+      parking_space_info = road_tile_info.parking_space
+      parking_space_boxes_x = []
+      parking_space_boxes_y = []
+      for parking_space in parking_space_info:
+        parking_space_box_x = []
+        parking_space_box_y = []
+        for shape in parking_space.shape:
+          x = shape.enu.x
+          y = shape.enu.y
+          parking_space_box_x.append(x)
+          parking_space_box_y.append(y)
+        parking_space_boxes_x.append(parking_space_box_x)
+        parking_space_boxes_y.append(parking_space_box_y)
+      parking_space_generate.xys.append((parking_space_boxes_y, parking_space_boxes_x))
+    parking_space_generate.ts = np.array([1])
+    parkingspace_params_layer = PatchLayer(fig_local_view ,parking_space_params)
+    layer_manager.AddLayer(parkingspace_params_layer, 'parkingspace_params_layer', parking_space_generate, 'parking_space_generate', 2)
+
 def draw_local_view(dataLoader, layer_manager):
     #define figure
     # 定义 local_view fig
@@ -1197,38 +1246,39 @@ def draw_local_view(dataLoader, layer_manager):
       control_output_timestamps.append(control_output_timestamp)
 
     # 加载定位
-    location_generator = CommonGenerator()
-    cur_pos_xn0 = cur_pos_xn = dataLoader.loc_msg['data'][0].pose.local_position.x
-    cur_pos_yn0 = cur_pos_yn = dataLoader.loc_msg['data'][0].pose.local_position.y
-    for localization_timestamp in localization_timestamps:
-      flag, loc_msg = find(dataLoader.loc_msg, localization_timestamp)
-      if not flag:
-        # print('find loc_msg error')
-        location_generator.xys.append(([],[]))
-        continue
-      cur_pos_xn = loc_msg.pose.local_position.x
-      cur_pos_yn = loc_msg.pose.local_position.y
-      cur_yaw = loc_msg.pose.euler_angles.yaw
-      ego_xb, ego_yb = [], []
-      ego_xn, ego_yn = [], []
-      ### global variables
-      # pos offset
-      for i in range(len(dataLoader.loc_msg['data'])):
-        if (i % 10 != 0): # 下采样 10
+    if dataLoader.loc_msg['enable'] == True:
+      location_generator = CommonGenerator()
+      cur_pos_xn0 = cur_pos_xn = dataLoader.loc_msg['data'][0].pose.local_position.x
+      cur_pos_yn0 = cur_pos_yn = dataLoader.loc_msg['data'][0].pose.local_position.y
+      for localization_timestamp in localization_timestamps:
+        flag, loc_msg = find(dataLoader.loc_msg, localization_timestamp)
+        if not flag:
+          # print('find loc_msg error')
+          location_generator.xys.append(([],[]))
           continue
-        pos_xn_i = dataLoader.loc_msg['data'][i].pose.local_position.x
-        pos_yn_i = dataLoader.loc_msg['data'][i].pose.local_position.y
+        cur_pos_xn = loc_msg.pose.local_position.x
+        cur_pos_yn = loc_msg.pose.local_position.y
+        cur_yaw = loc_msg.pose.euler_angles.yaw
+        ego_xb, ego_yb = [], []
+        ego_xn, ego_yn = [], []
+        ### global variables
+        # pos offset
+        for i in range(len(dataLoader.loc_msg['data'])):
+          if (i % 10 != 0): # 下采样 10
+            continue
+          pos_xn_i = dataLoader.loc_msg['data'][i].pose.local_position.x
+          pos_yn_i = dataLoader.loc_msg['data'][i].pose.local_position.y
 
-        ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+          ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
 
-        ego_xb.append(ego_local_x)
-        ego_yb.append(ego_local_y)
-        ego_xn.append(pos_xn_i - cur_pos_xn0)
-        ego_yn.append(pos_yn_i - cur_pos_yn0)
-      location_generator.xys.append((ego_yb,ego_xb))
-    location_generator.ts = np.array(plan_debug_ts)
-    location_layer = CurveLayer(fig_local_view, location_params)
-    layer_manager.AddLayer(location_layer, 'location_layer', location_generator, 'location_generator', 2)
+          ego_xb.append(ego_local_x)
+          ego_yb.append(ego_local_y)
+          ego_xn.append(pos_xn_i - cur_pos_xn0)
+          ego_yn.append(pos_yn_i - cur_pos_yn0)
+        location_generator.xys.append((ego_yb,ego_xb))
+      location_generator.ts = np.array(plan_debug_ts)
+      location_layer = CurveLayer(fig_local_view, location_params)
+      layer_manager.AddLayer(location_layer, 'location_layer', location_generator, 'location_generator', 2)
 
 
     # 加载车道线
@@ -1285,7 +1335,7 @@ def draw_local_view(dataLoader, layer_manager):
                 lane_info['fix_index'] = [fig_index]
               lane_generator_dict[lane_generator_key].xys.append((lane_info['line_y_vec'] , lane_info['line_x_vec'] ,lane_info['type'], lane_info['fix_index']))
             except:
-              print("old interface before 2.2.3")
+              # print("old interface before 2.2.3")
               if index < len(fusion_road_msg.lanes):
                 lane = fusion_road_msg.lanes[index]
                 if derection == 0:
@@ -1351,49 +1401,50 @@ def draw_local_view(dataLoader, layer_manager):
     fix_lane_xys = []
     origin_lane_xys = []
     target_lane_xys = []
-    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-      flag, fusion_road_msg = find(dataLoader.road_msg, fusion_road_timestamps[i])
-      if not flag:
-        continue
-      try:
-        center_line_list = load_lane_center_lines(fusion_road_msg.reference_line_msg)
-      except:
-        center_line_list = load_lane_center_lines(fusion_road_msg.lanes)
-      lat_behavior_common = plan_debug.lat_behavior_common
-      environment_model_info =plan_debug.environment_model_info
-      current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
-      fix_lane_ralative_id = lat_behavior_common.fix_lane_virtual_id - current_lane_virtual_id
-      target_lane_ralative_id = lat_behavior_common.target_lane_virtual_id - current_lane_virtual_id
-      origin_lane_ralative_id = lat_behavior_common.origin_lane_virtual_id - current_lane_virtual_id
-      for j in range(5):
-        if center_line_list[j]['relative_id'] == fix_lane_ralative_id:
-          fix_lane_xys.append((center_line_list[j]['line_y_vec'], center_line_list[j]['line_x_vec']))
-        if center_line_list[j]['relative_id'] == target_lane_ralative_id:
-          target_lane_xys.append((center_line_list[j]['line_y_vec'], center_line_list[j]['line_x_vec']))
-        if center_line_list[j]['relative_id'] == origin_lane_ralative_id:
+    if dataLoader.plan_debug_msg['enable'] == True:
+      for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+        flag, fusion_road_msg = find(dataLoader.road_msg, fusion_road_timestamps[i])
+        if not flag:
+          continue
+        try:
+          center_line_list = load_lane_center_lines(fusion_road_msg.reference_line_msg)
+        except:
+          center_line_list = load_lane_center_lines(fusion_road_msg.lanes)
+        lat_behavior_common = plan_debug.lat_behavior_common
+        environment_model_info =plan_debug.environment_model_info
+        current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
+        fix_lane_ralative_id = lat_behavior_common.fix_lane_virtual_id - current_lane_virtual_id
+        target_lane_ralative_id = lat_behavior_common.target_lane_virtual_id - current_lane_virtual_id
+        origin_lane_ralative_id = lat_behavior_common.origin_lane_virtual_id - current_lane_virtual_id
+        for j in range(5):
+          if center_line_list[j]['relative_id'] == fix_lane_ralative_id:
+            fix_lane_xys.append((center_line_list[j]['line_y_vec'], center_line_list[j]['line_x_vec']))
+          if center_line_list[j]['relative_id'] == target_lane_ralative_id:
+            target_lane_xys.append((center_line_list[j]['line_y_vec'], center_line_list[j]['line_x_vec']))
+          if center_line_list[j]['relative_id'] == origin_lane_ralative_id:
 
-          origin_lane_xys.append((center_line_list[j]['line_y_vec'], center_line_list[j]['line_x_vec']))
-      text = '({})'.format(current_lane_virtual_id)
-      ego_info_generatev2.xys.append(([0],[-3], [text]))
-    fix_lane_generate = CommonGenerator()
-    target_lane_generate = CommonGenerator()
-    origin_lane_generate = CommonGenerator()
-    fix_lane_generate.xys = fix_lane_xys
-    target_lane_generate.xys = fix_lane_xys
-    origin_lane_generate.xys = fix_lane_xys
-    fix_lane_generate.ts = np.array(plan_debug_ts)
-    target_lane_generate.ts = np.array(plan_debug_ts)
-    origin_lane_generate.ts = np.array(plan_debug_ts)
-    fix_lane_layer = CurveLayer(fig_local_view ,fix_lane_params)
-    target_lane_layer = CurveLayer(fig_local_view ,target_lane_params)
-    origin_lane_layer = CurveLayer(fig_local_view ,origin_lane_params)
-    layer_manager.AddLayer(fix_lane_layer, 'fix_lane_layer', fix_lane_generate, 'fix_lane_generate', 2)
-    layer_manager.AddLayer(target_lane_layer, 'target_lane_layer', target_lane_generate, 'target_lane_generate', 2)
-    layer_manager.AddLayer(origin_lane_layer, 'origin_lane_layer', origin_lane_generate, 'origin_lane_generate', 2)
+            origin_lane_xys.append((center_line_list[j]['line_y_vec'], center_line_list[j]['line_x_vec']))
+        text = '({})'.format(current_lane_virtual_id)
+        ego_info_generatev2.xys.append(([0],[-3], [text]))
+      fix_lane_generate = CommonGenerator()
+      target_lane_generate = CommonGenerator()
+      origin_lane_generate = CommonGenerator()
+      fix_lane_generate.xys = fix_lane_xys
+      target_lane_generate.xys = fix_lane_xys
+      origin_lane_generate.xys = fix_lane_xys
+      fix_lane_generate.ts = np.array(plan_debug_ts)
+      target_lane_generate.ts = np.array(plan_debug_ts)
+      origin_lane_generate.ts = np.array(plan_debug_ts)
+      fix_lane_layer = CurveLayer(fig_local_view ,fix_lane_params)
+      target_lane_layer = CurveLayer(fig_local_view ,target_lane_params)
+      origin_lane_layer = CurveLayer(fig_local_view ,origin_lane_params)
+      layer_manager.AddLayer(fix_lane_layer, 'fix_lane_layer', fix_lane_generate, 'fix_lane_generate', 2)
+      layer_manager.AddLayer(target_lane_layer, 'target_lane_layer', target_lane_generate, 'target_lane_generate', 2)
+      layer_manager.AddLayer(origin_lane_layer, 'origin_lane_layer', origin_lane_generate, 'origin_lane_generate', 2)
 
-    ego_info_generatev2.ts = np.array(plan_debug_ts)
-    ego_info_layerv2 = TextLayer(fig_local_view ,ego_info_paramsv2)
-    layer_manager.AddLayer(ego_info_layerv2, 'ego_info_layerv2', ego_info_generatev2, 'ego_info_generatev2', 3)
+      ego_info_generatev2.ts = np.array(plan_debug_ts)
+      ego_info_layerv2 = TextLayer(fig_local_view ,ego_info_paramsv2)
+      layer_manager.AddLayer(ego_info_layerv2, 'ego_info_layerv2', ego_info_generatev2, 'ego_info_generatev2', 3)
 
     # # 加载自车信息
     ego_generate = CommonGenerator()
@@ -1404,207 +1455,212 @@ def draw_local_view(dataLoader, layer_manager):
     ego_pose_layer = PatchLayer(fig_local_view ,ego_pose_params)
     layer_manager.AddLayer(ego_pose_layer, 'ego_pose_layer', ego_generate, 'ego_generate', 2)
 
-    ego_info_generate = TextGenerator()
-    for vehicle_service_timestamp in vehicle_service_timestamps:
-      flag, vs_msg = find(dataLoader.vs_msg, vehicle_service_timestamp)
-      if not flag:
-        # print('find vs_msg error')
-        ego_info_generate.xys.append(([0],[-2],['']))
-        continue
-      steer_deg = vs_msg.steering_wheel_angle * 57.3
-      vel_ego = vs_msg.vehicle_speed
-      text = 'v={:.2f}\nsteer={:.2f}'.format(round(vel_ego, 2), round(steer_deg, 2))
-      ego_info_generate.xys.append(([0],[-2], [text]))
-    ego_info_generate.ts = np.array(plan_debug_ts)
-    ego_info_layer = TextLayer(fig_local_view ,ego_info_params)
-    layer_manager.AddLayer(ego_info_layer, 'ego_info_layer', ego_info_generate, 'ego_info_generate', 3)
+    if dataLoader.vs_msg['enable'] == True:
+      ego_info_generate = TextGenerator()
+      for vehicle_service_timestamp in vehicle_service_timestamps:
+        flag, vs_msg = find(dataLoader.vs_msg, vehicle_service_timestamp)
+        if not flag:
+          # print('find vs_msg error')
+          ego_info_generate.xys.append(([0],[-2],['']))
+          continue
+        steer_deg = vs_msg.steering_wheel_angle * 57.3
+        vel_ego = vs_msg.vehicle_speed
+        text = 'v={:.2f}\nsteer={:.2f}'.format(round(vel_ego, 2), round(steer_deg, 2))
+        ego_info_generate.xys.append(([0],[-2], [text]))
+      ego_info_generate.ts = np.array(plan_debug_ts)
+      ego_info_layer = TextLayer(fig_local_view ,ego_info_params)
+      layer_manager.AddLayer(ego_info_layer, 'ego_info_layer', ego_info_generate, 'ego_info_generate', 3)
 
 
     # # # 加载障碍物
-    obstacle_fusion_generate = CommonGenerator()
-    obstacle_snrd_generate = CommonGenerator()
-    obstacle_fusion_text_generate = TextGenerator()
-    obstacle_snrd_text_generate = TextGenerator()
-    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-      flag, fus_msg = find(dataLoader.fus_msg, fusion_object_timestamps[i])
-    # for i, fusion_object_timestamp in enumerate(fusion_object_timestamps):
-      # flag, fus_msg = find(dataLoader.fus_msg, fusion_object_timestamp)
-      # flag, fus_msg = find(dataLoader.fus_msg, fusion_object_timestamp)
-      if not flag:
-        # print('find fus_msg error')
-        obstacle_fusion_generate.xys.append(([], []))
-        obstacle_snrd_generate.xys.append(([], []))
-        obstacle_fusion_text_generate.xys.append(([], [], []))
-        obstacle_snrd_text_generate.xys.append(([], [], []))
-        continue
-      obstacles_info_all = load_obstacle_params(fus_msg.fusion_object, plan_debug.environment_model_info)
-      obstacle_fusion_generate.xys.append((obstacles_info_all[1]['obstacles_y_rel'], obstacles_info_all[1]['obstacles_x_rel']))
-      obstacle_snrd_generate.xys.append((obstacles_info_all[4]['obstacles_y_rel'], obstacles_info_all[4]['obstacles_x_rel']))
-      obstacle_fusion_text_generate.xys.append((obstacles_info_all[1]['pos_y_rel'], obstacles_info_all[1]['pos_x_rel'], obstacles_info_all[1]['obs_label']))
-      obstacle_snrd_text_generate.xys.append((obstacles_info_all[4]['pos_y_rel'], obstacles_info_all[4]['pos_x_rel'], obstacles_info_all[4]['obs_label']))
+    if dataLoader.fus_msg['enable'] == True:
+      obstacle_fusion_generate = CommonGenerator()
+      obstacle_snrd_generate = CommonGenerator()
+      obstacle_fusion_text_generate = TextGenerator()
+      obstacle_snrd_text_generate = TextGenerator()
+      for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+        flag, fus_msg = find(dataLoader.fus_msg, fusion_object_timestamps[i])
+      # for i, fusion_object_timestamp in enumerate(fusion_object_timestamps):
+        # flag, fus_msg = find(dataLoader.fus_msg, fusion_object_timestamp)
+        # flag, fus_msg = find(dataLoader.fus_msg, fusion_object_timestamp)
+        if not flag:
+          # print('find fus_msg error')
+          obstacle_fusion_generate.xys.append(([], []))
+          obstacle_snrd_generate.xys.append(([], []))
+          obstacle_fusion_text_generate.xys.append(([], [], []))
+          obstacle_snrd_text_generate.xys.append(([], [], []))
+          continue
+        obstacles_info_all = load_obstacle_params(fus_msg.fusion_object, plan_debug.environment_model_info)
+        obstacle_fusion_generate.xys.append((obstacles_info_all[1]['obstacles_y_rel'], obstacles_info_all[1]['obstacles_x_rel']))
+        obstacle_snrd_generate.xys.append((obstacles_info_all[4]['obstacles_y_rel'], obstacles_info_all[4]['obstacles_x_rel']))
+        obstacle_fusion_text_generate.xys.append((obstacles_info_all[1]['pos_y_rel'], obstacles_info_all[1]['pos_x_rel'], obstacles_info_all[1]['obs_label']))
+        obstacle_snrd_text_generate.xys.append((obstacles_info_all[4]['pos_y_rel'], obstacles_info_all[4]['pos_x_rel'], obstacles_info_all[4]['obs_label']))
 
-    obstacle_fusion_generate.ts = np.array(plan_debug_ts)
-    obstacle_snrd_generate.ts = np.array(plan_debug_ts)
-    obstacle_fusion_layer = PatchLayer(fig_local_view ,obstacle_fusion_params)
-    obstacle_snrd_layer = PatchLayer(fig_local_view ,obstacle_snrd_params)
-    layer_manager.AddLayer(obstacle_fusion_layer, 'obstacle_fusion_layer', obstacle_fusion_generate, 'obstacle_fusion_generate', 2)
-    layer_manager.AddLayer(obstacle_snrd_layer, 'obstacle_snrd_layer', obstacle_snrd_generate, 'obstacle_snrd_generate', 2)
+      obstacle_fusion_generate.ts = np.array(plan_debug_ts)
+      obstacle_snrd_generate.ts = np.array(plan_debug_ts)
+      obstacle_fusion_layer = PatchLayer(fig_local_view ,obstacle_fusion_params)
+      obstacle_snrd_layer = PatchLayer(fig_local_view ,obstacle_snrd_params)
+      layer_manager.AddLayer(obstacle_fusion_layer, 'obstacle_fusion_layer', obstacle_fusion_generate, 'obstacle_fusion_generate', 2)
+      layer_manager.AddLayer(obstacle_snrd_layer, 'obstacle_snrd_layer', obstacle_snrd_generate, 'obstacle_snrd_generate', 2)
 
-    obstacle_fusion_text_generate.ts = np.array(plan_debug_ts)
-    obstacle_snrd_text_generate.ts = np.array(plan_debug_ts)
-    obstacle_text_layer1 = TextLayer(fig_local_view, obstacle_text_params)
-    obstacle_text_layer2 = TextLayer(fig_local_view, obstacle_text_params)
-    layer_manager.AddLayer(obstacle_text_layer1, 'obstacle_text_layer1', obstacle_fusion_text_generate, 'obstacle_fusion_text_generate', 3)
-    layer_manager.AddLayer(obstacle_text_layer2, 'obstacle_text_layer2', obstacle_snrd_text_generate, 'obstacle_snrd_text_generate', 3)
+      obstacle_fusion_text_generate.ts = np.array(plan_debug_ts)
+      obstacle_snrd_text_generate.ts = np.array(plan_debug_ts)
+      obstacle_text_layer1 = TextLayer(fig_local_view, obstacle_text_params)
+      obstacle_text_layer2 = TextLayer(fig_local_view, obstacle_text_params)
+      layer_manager.AddLayer(obstacle_text_layer1, 'obstacle_text_layer1', obstacle_fusion_text_generate, 'obstacle_fusion_text_generate', 3)
+      layer_manager.AddLayer(obstacle_text_layer2, 'obstacle_text_layer2', obstacle_snrd_text_generate, 'obstacle_snrd_text_generate', 3)
 
     # # # 加载预测
-    prediction_generator = CommonGenerator()
+    if dataLoader.prediction_msg['enable'] == True:
+      prediction_generator = CommonGenerator()
 
-    for index, prediction_timestamp in enumerate(prediction_timestamps):
-      flag, prediction_msg = find(dataLoader.prediction_msg, prediction_timestamp)
-      loc_flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[index])
-      if not flag or not loc_flag:
-        # print('find loc_msg error')
-        prediction_generator.xys.append(([], []))
-        continue
+      for index, prediction_timestamp in enumerate(prediction_timestamps):
+        flag, prediction_msg = find(dataLoader.prediction_msg, prediction_timestamp)
+        loc_flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[index])
+        if not flag or not loc_flag:
+          # print('find loc_msg error')
+          prediction_generator.xys.append(([], []))
+          continue
 
-      # 定位的选择需要修改
-      try:
-        prediction_objects, trajectory_info = load_prediction_objects(prediction_msg.prediction_obstacle_list, loc_msg)
-        prediction_generator.xys.append((trajectory_info['y'], trajectory_info['x']))
-      except:
-        prediction_generator.xys.append(([], []))
-        pass
+        # 定位的选择需要修改
+        try:
+          prediction_objects, trajectory_info = load_prediction_objects(prediction_msg.prediction_obstacle_list, loc_msg)
+          prediction_generator.xys.append((trajectory_info['y'], trajectory_info['x']))
+        except:
+          prediction_generator.xys.append(([], []))
+          pass
 
-    prediction_generator.ts = np.array(plan_debug_ts)
-    prediction_layer = MultiLinesLayer(fig_local_view, prediction_params)
-    layer_manager.AddLayer(prediction_layer, 'prediction_layer', prediction_generator, 'prediction_generator', 2)
+      prediction_generator.ts = np.array(plan_debug_ts)
+      prediction_layer = MultiLinesLayer(fig_local_view, prediction_params)
+      layer_manager.AddLayer(prediction_layer, 'prediction_layer', prediction_generator, 'prediction_generator', 2)
 
     # # # 加载plan轨迹
-    plan_generator = CommonGenerator()
-    coord_tf = coord_transformer()
-    # print(dataLoader.plan_msg)
-    # print(plan_debug_ts)
-    for i, plan_debug_t in enumerate(plan_debug_ts):
-      flag, plan_msg = find(dataLoader.plan_msg, plan_debug_timestamps[i])
-    # for i, plan_msg in enumerate(dataLoader.plan_msg['data']):
-      if not flag:
-        # print('find plan error')
-        plan_traj_x, plan_traj_y = [], []
-      else:
-        trajectory = plan_msg.trajectory
-        try:
-          planning_polynomial = trajectory.target_reference.polynomial
-          plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
-        except:
-          if dataLoader.loc_msg['enable'] == True:
-            flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
-            if not flag:
-              plan_traj_x, plan_traj_y = [], []
-            else:
-              cur_pos_xn = loc_msg.pose.local_position.x
-              cur_pos_yn = loc_msg.pose.local_position.y
-              cur_yaw = loc_msg.pose.euler_angles.yaw
-              coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-              plan_x = []
-              plan_y = []
-              for i in range(len(trajectory.trajectory_points)):
-                plan_x.append(trajectory.trajectory_points[i].x)
-                plan_y.append(trajectory.trajectory_points[i].y)
-
-              if trajectory.target_reference.lateral_maneuver_gear == 2:
-                plan_traj_x = plan_x
-                plan_traj_y = plan_y
+    if dataLoader.plan_msg['enable'] == True:
+      plan_generator = CommonGenerator()
+      coord_tf = coord_transformer()
+      # print(dataLoader.plan_msg)
+      # print(plan_debug_ts)
+      for i, plan_debug_t in enumerate(plan_debug_ts):
+        flag, plan_msg = find(dataLoader.plan_msg, plan_debug_timestamps[i])
+      # for i, plan_msg in enumerate(dataLoader.plan_msg['data']):
+        if not flag:
+          # print('find plan error')
+          plan_traj_x, plan_traj_y = [], []
+        else:
+          trajectory = plan_msg.trajectory
+          try:
+            planning_polynomial = trajectory.target_reference.polynomial
+            plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
+          except:
+            if dataLoader.loc_msg['enable'] == True:
+              flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
+              if not flag:
+                plan_traj_x, plan_traj_y = [], []
               else:
-                plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
-          else:
-            plan_traj_x, plan_traj_y = [], []
-      plan_generator.xys.append((plan_traj_y, plan_traj_x))
-    plan_generator.ts = np.array(plan_debug_ts)
-    plan_layer = CurveLayer(fig_local_view, plan_params)
-    layer_manager.AddLayer(plan_layer, 'plan_layer', plan_generator, 'plane_generator', 2)
+                cur_pos_xn = loc_msg.pose.local_position.x
+                cur_pos_yn = loc_msg.pose.local_position.y
+                cur_yaw = loc_msg.pose.euler_angles.yaw
+                coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+                plan_x = []
+                plan_y = []
+                for i in range(len(trajectory.trajectory_points)):
+                  plan_x.append(trajectory.trajectory_points[i].x)
+                  plan_y.append(trajectory.trajectory_points[i].y)
+
+                if trajectory.target_reference.lateral_maneuver_gear == 2:
+                  plan_traj_x = plan_x
+                  plan_traj_y = plan_y
+                else:
+                  plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
+            else:
+              plan_traj_x, plan_traj_y = [], []
+        plan_generator.xys.append((plan_traj_y, plan_traj_x))
+      plan_generator.ts = np.array(plan_debug_ts)
+      plan_layer = CurveLayer(fig_local_view, plan_params)
+      layer_manager.AddLayer(plan_layer, 'plan_layer', plan_generator, 'plane_generator', 2)
 
     # # # 加载control轨迹
-
-    control_generator = CommonGenerator()
     if dataLoader.ctrl_msg['enable'] == True:
-      for control_output_timestamp in control_output_timestamps:
-        flag, ctrl_msg = find(dataLoader.ctrl_msg, control_output_timestamp)
-        if not flag:
-          # print('find ctrl_msg error')
-          control_generator.xys.append(([], []))
-          continue
-        control_result_points = ctrl_msg.control_trajectory.control_result_points
-        mpc_dx = []
-        mpc_dy = []
-        for i in range(len(control_result_points)):
-          mpc_dx.append(control_result_points[i].x)
-          mpc_dy.append(control_result_points[i].y)
-        control_generator.xys.append((mpc_dy, mpc_dx))
-    control_generator.ts = np.array(plan_debug_ts)
-    control_layer = CurveLayer(fig_local_view, control_params)
-    layer_manager.AddLayer(control_layer, 'control_layer', control_generator, 'control_generator', 2)
+      control_generator = CommonGenerator()
+      if dataLoader.ctrl_msg['enable'] == True:
+        for control_output_timestamp in control_output_timestamps:
+          flag, ctrl_msg = find(dataLoader.ctrl_msg, control_output_timestamp)
+          if not flag:
+            # print('find ctrl_msg error')
+            control_generator.xys.append(([], []))
+            continue
+          control_result_points = ctrl_msg.control_trajectory.control_result_points
+          mpc_dx = []
+          mpc_dy = []
+          for i in range(len(control_result_points)):
+            mpc_dx.append(control_result_points[i].x)
+            mpc_dy.append(control_result_points[i].y)
+          control_generator.xys.append((mpc_dy, mpc_dx))
+      control_generator.ts = np.array(plan_debug_ts)
+      control_layer = CurveLayer(fig_local_view, control_params)
+      layer_manager.AddLayer(control_layer, 'control_layer', control_generator, 'control_generator', 2)
 
     # legend
     fig_local_view.legend.click_policy = 'hide'
-
-    plan_debug_table1 = TextGenerator()
-    plan_debug_table2 = TextGenerator()
-    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-      plan_debug_json = dataLoader.plan_debug_msg['json'][i]
-      names1 = []
-      datas1 = []
-      names2 = []
-      datas2 = []
-      names1.append('frame_num')
-      datas1.append(plan_debug.frame_info.frame_num - dataLoader.plan_debug_msg['data'][0].frame_info.frame_num)
-      names1.append('frame_duration_ms')
-      datas1.append(plan_debug.frame_info.frame_duration_ms)
-
-      names1.append('planning_succ')
-      datas1.append(plan_debug.frame_info.planning_succ)
-
-      names1.append('fusion_object_latency')
-      datas1.append(plan_debug.input_topic_latency.fusion_object)
-      names1.append('fusion_road_latency')
-      datas1.append(plan_debug.input_topic_latency.fusion_road)
-      names1.append('localization_latency')
-      datas1.append(plan_debug.input_topic_latency.localization)
-
-      names2.append('prediction_latency')
-      datas2.append(plan_debug.input_topic_latency.prediction)
-      names2.append('vehicle_service_latency')
-      datas2.append(plan_debug.input_topic_latency.vehicle_service)
-      names2.append('hmi_latency')
-      datas2.append(plan_debug.input_topic_latency.hmi)
-
-      names2.append('EnvironmentalModelManagerCost')
-      datas2.append(plan_debug_json['EnvironmentalModelManagerCost'])
-      names2.append('VisionLateralBehaviorPlannerCost')
-      datas2.append(plan_debug_json['VisionLateralBehaviorPlannerCost'])
-      names2.append('VisionLateralMotionPlannerCost')
-      datas2.append(plan_debug_json['VisionLateralMotionPlannerCost'])
-      names2.append('VisionLongitudinalBehaviorPlannerCost')
-      datas2.append(plan_debug_json['VisionLongitudinalBehaviorPlannerCost'])
-
-      plan_debug_table1.xys.append((names1, datas1, [None] * len(names1)))
-      plan_debug_table2.xys.append((names2, datas2, [None] * len(names2)))
-    plan_debug_table1.ts = np.array(plan_debug_ts)
-    plan_debug_table2.ts = np.array(plan_debug_ts)
     tab_attr_list = ['Attr', 'Val']
     tab_debug_layer1 = TableLayerV2(None, tab_attr_list, table_params)
     tab_debug_layer2 = TableLayerV2(None, tab_attr_list, table_params)
-    layer_manager.AddLayer(
-      tab_debug_layer1, 'tab_debug_layer1', plan_debug_table1, 'plan_debug_table1', 3)
-    layer_manager.AddLayer(
-      tab_debug_layer2, 'tab_debug_layer2', plan_debug_table2, 'plan_debug_table2', 3)
+    if dataLoader.plan_debug_msg['enable'] == True:
+      plan_debug_table1 = TextGenerator()
+      plan_debug_table2 = TextGenerator()
+      for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+        plan_debug_json = dataLoader.plan_debug_msg['json'][i]
+        names1 = []
+        datas1 = []
+        names2 = []
+        datas2 = []
+        names1.append('frame_num')
+        datas1.append(plan_debug.frame_info.frame_num - dataLoader.plan_debug_msg['data'][0].frame_info.frame_num)
+        names1.append('frame_duration_ms')
+        datas1.append(plan_debug.frame_info.frame_duration_ms)
+
+        names1.append('planning_succ')
+        datas1.append(plan_debug.frame_info.planning_succ)
+
+        names1.append('fusion_object_latency')
+        datas1.append(plan_debug.input_topic_latency.fusion_object)
+        names1.append('fusion_road_latency')
+        datas1.append(plan_debug.input_topic_latency.fusion_road)
+        names1.append('localization_latency')
+        datas1.append(plan_debug.input_topic_latency.localization)
+
+        names2.append('prediction_latency')
+        datas2.append(plan_debug.input_topic_latency.prediction)
+        names2.append('vehicle_service_latency')
+        datas2.append(plan_debug.input_topic_latency.vehicle_service)
+        names2.append('hmi_latency')
+        datas2.append(plan_debug.input_topic_latency.hmi)
+
+        names2.append('EnvironmentalModelManagerCost')
+        datas2.append(plan_debug_json['EnvironmentalModelManagerCost'])
+        names2.append('VisionLateralBehaviorPlannerCost')
+        datas2.append(plan_debug_json['VisionLateralBehaviorPlannerCost'])
+        names2.append('VisionLateralMotionPlannerCost')
+        datas2.append(plan_debug_json['VisionLateralMotionPlannerCost'])
+        names2.append('VisionLongitudinalBehaviorPlannerCost')
+        datas2.append(plan_debug_json['VisionLongitudinalBehaviorPlannerCost'])
+
+        plan_debug_table1.xys.append((names1, datas1, [None] * len(names1)))
+        plan_debug_table2.xys.append((names2, datas2, [None] * len(names2)))
+      plan_debug_table1.ts = np.array(plan_debug_ts)
+      plan_debug_table2.ts = np.array(plan_debug_ts)
+
+      layer_manager.AddLayer(
+        tab_debug_layer1, 'tab_debug_layer1', plan_debug_table1, 'plan_debug_table1', 3)
+      layer_manager.AddLayer(
+        tab_debug_layer2, 'tab_debug_layer2', plan_debug_table2, 'plan_debug_table2', 3)
 
     # 加载mobileye车道线
     mobileye_lane_lines_generator_dict = {}
     if dataLoader.mobileye_lane_lines_msg['enable'] == True:
       for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
         flag, mobileye_lane_lines_msg = findME(dataLoader.mobileye_lane_lines_msg, fusion_road_timestamps[i])
-        for index in range(mobileye_lane_lines_msg.num) :
+        for index in range(10) :
           mobileye_lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
           mobileye_lane_generator_key = 'mobileye_lane_' + str(index)
           if (mobileye_lane_generator_key in mobileye_lane_lines_generator_dict.keys()) == False:
@@ -1612,6 +1668,11 @@ def draw_local_view(dataLoader, layer_manager):
           if not flag:
             mobileye_lane_lines_generator_dict[mobileye_lane_generator_key].xys.append(([] , [] ,[], []))
             continue
+
+          if index >= mobileye_lane_lines_msg.num:
+            mobileye_lane_lines_generator_dict[mobileye_lane_generator_key].xys.append(([] , [] ,[], []))
+            continue
+
           lane = mobileye_lane_lines_msg.lane_line[index]
           fig_index = lane.pos_type
           line_x, line_y = gen_line(lane.a0, lane.a1, lane.a2, lane.a3, lane.start, lane.end)
@@ -1639,7 +1700,7 @@ def draw_local_view(dataLoader, layer_manager):
     if dataLoader.rdg_lane_lines_msg['enable'] == True:
       for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
         flag, rdg_lane_lines_msg = findME(dataLoader.rdg_lane_lines_msg, fusion_road_timestamps[i])
-        for index in range(rdg_lane_lines_msg.num) :
+        for index in range(10) :
           rdg_lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
           rdg_lane_generator_key = 'rdg_lane_' + str(index)
           if (rdg_lane_generator_key in rdg_lane_lines_generator_dict.keys()) == False:
@@ -1647,8 +1708,11 @@ def draw_local_view(dataLoader, layer_manager):
           if not flag:
             rdg_lane_lines_generator_dict[rdg_lane_generator_key].xys.append(([] , [] ,[], []))
             continue
+          if index >=rdg_lane_lines_msg.num:
+            rdg_lane_lines_generator_dict[rdg_lane_generator_key].xys.append(([] , [] ,[], []))
+            continue
           lane = rdg_lane_lines_msg.lane_line[index]
-          fig_index = lane.pos_type
+          fig_index = index
           line_x, line_y = gen_line(lane.a0, lane.a1, lane.a2, lane.a3, lane.start, lane.end)
           rdg_lane_info['line_x_vec'] = line_x
           rdg_lane_info['line_y_vec'] = line_y
@@ -1670,32 +1734,36 @@ def draw_local_view(dataLoader, layer_manager):
                                  rdg_lane_generator_key , 2)
 
     # 加载mobileye障碍物
-    obstacle_mobileye_generate = CommonGenerator()
-    obstacle_mobileye_text_generate = TextGenerator()
-    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-      flag, mobileye_objects_msg = findME(dataLoader.mobileye_objects_msg, fusion_object_timestamps[i])
-      if not flag:
-        # print('find mobileye_objects_msg error')
-        obstacle_mobileye_generate.xys.append(([], []))
-        obstacle_mobileye_text_generate.xys.append(([], [], []))
-        continue
-      # obstacles_mobileye_info = load_obstacle_params(mobileye_objects_msg.camera_perception_object_list, plan_debug.environment_model_info)
-      obstacles_mobileye_info = load_obstacle_mobileye_params(mobileye_objects_msg.camera_perception_object_list)
-      obstacle_mobileye_generate.xys.append((obstacles_mobileye_info['obstacles_y_rel'], obstacles_mobileye_info['obstacles_x_rel']))
-      obstacle_mobileye_text_generate.xys.append((obstacles_mobileye_info['pos_y_rel'], obstacles_mobileye_info['pos_x_rel'], obstacles_mobileye_info['obs_label']))
-    obstacle_mobileye_generate.ts = np.array(plan_debug_ts)
-    obstacle_mobileye_layer = PatchLayer(fig_local_view ,obstacle_mobileye_params)
-    layer_manager.AddLayer(obstacle_mobileye_layer, 'obstacle_mobileye_layer', obstacle_mobileye_generate, 'obstacle_mobileye_generate', 2)
-    obstacle_mobileye_text_generate.ts = np.array(plan_debug_ts)
-    obstacle_mobileye_text_layer = TextLayer(fig_local_view, obstacle_mobileye_text_params)
-    layer_manager.AddLayer(obstacle_mobileye_text_layer, 'obstacle_mobileye_text_layer', obstacle_mobileye_text_generate, 'obstacle_mobileye_text_generate', 3)
+    if dataLoader.mobileye_objects_msg['enable'] == True:
+      obstacle_mobileye_generate = CommonGenerator()
+      obstacle_mobileye_text_generate = TextGenerator()
+      for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+        flag, mobileye_objects_msg = findME(dataLoader.mobileye_objects_msg, fusion_object_timestamps[i])
+        if not flag:
+          # print('find mobileye_objects_msg error')
+          obstacle_mobileye_generate.xys.append(([], []))
+          obstacle_mobileye_text_generate.xys.append(([], [], []))
+          continue
+        # obstacles_mobileye_info = load_obstacle_params(mobileye_objects_msg.camera_perception_objects, plan_debug.environment_model_info)
+        obstacles_mobileye_info = load_obstacle_mobileye_params(mobileye_objects_msg.camera_perception_objects)
+        obstacle_mobileye_generate.xys.append((obstacles_mobileye_info['obstacles_y_rel'], obstacles_mobileye_info['obstacles_x_rel']))
+        obstacle_mobileye_text_generate.xys.append((obstacles_mobileye_info['pos_y_rel'], obstacles_mobileye_info['pos_x_rel'], obstacles_mobileye_info['obs_label']))
+      obstacle_mobileye_generate.ts = np.array(plan_debug_ts)
+      obstacle_mobileye_layer = PatchLayer(fig_local_view ,obstacle_mobileye_params)
+      layer_manager.AddLayer(obstacle_mobileye_layer, 'obstacle_mobileye_layer', obstacle_mobileye_generate, 'obstacle_mobileye_generate', 2)
+      obstacle_mobileye_text_generate.ts = np.array(plan_debug_ts)
+      obstacle_mobileye_text_layer = TextLayer(fig_local_view, obstacle_mobileye_text_params)
+      layer_manager.AddLayer(obstacle_mobileye_text_layer, 'obstacle_mobileye_text_layer', obstacle_mobileye_text_generate, 'obstacle_mobileye_text_generate', 3)
 
     # 加载rdg障碍物
     load_obstacle_rdg(dataLoader, layer_manager, fig_local_view)
-    # 加载lidar 障碍物
+    # # 加载lidar 障碍物
     load_obstacle_lidar(dataLoader, layer_manager, fig_local_view)
-    # 加载雷达障碍物
+    # # 加载雷达障碍物
     load_obstacle_radar(dataLoader, layer_manager, fig_local_view)
+
+    # 加载hpp ehr
+    load_ehr_parking_map(dataLoader, layer_manager, fig_local_view)
 
     return fig_local_view, (tab_debug_layer1.plot, tab_debug_layer2.plot)
 

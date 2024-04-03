@@ -707,14 +707,14 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecisions(
                 obstacle->id());
       continue;
     }
-    if (otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
-                                                             // obstacle type
-        otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
-        otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
-        otype == Common::ObjectType::OBJECT_TYPE_VAN or
-        otype == Common::ObjectType::OBJECT_TYPE_TRAILER or
-        otype == Common::ObjectType::OBJECT_TYPE_TEMPORY_SIGN or
-        otype == Common::ObjectType::OBJECT_TYPE_PEDESTRIAN) {  // hpp hack
+    if (otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN ||  // TBD: check
+                                                               // obstacle type
+        otype == iflyauto::OBJECT_TYPE_UNKNOWN_MOVABLE ||
+        otype == iflyauto::OBJECT_TYPE_UNKNOWN_IMMOVABLE ||
+        otype == iflyauto::OBJECT_TYPE_VAN ||
+        otype == iflyauto::OBJECT_TYPE_TRAILER ||
+        otype == iflyauto::OBJECT_TYPE_TRAFFIC_TEM_SIGN ||
+        otype == iflyauto::OBJECT_TYPE_PEDESTRIAN) {  // hpp hack
       // add logs;
       continue;
     }
@@ -798,7 +798,7 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
   bool nudge_obj_flag{false};
   bool reset_conflict_decision{false};
 
-  obstacle_decision.rel_pos_type = ObsRelPosType::UNDEFINED;
+  obstacle_decision.rel_pos_type = ObsRelPosType::NONE;
 
   auto care_object_t_threshold = config_.care_object_t_threshold;
   // bool is_approach_to_destination =
@@ -826,10 +826,10 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
   }
 
   auto safe_extra_distance = 0.0;
-  if (obstacle->type() == Common::ObjectType::OBJECT_TYPE_CONE ||
-      obstacle->type() == Common::ObjectType::OBJECT_TYPE_BUS ||
-      obstacle->type() == Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
-      obstacle->type() == Common::ObjectType::OBJECT_TYPE_TRUCK) {
+  if (obstacle->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE ||
+      obstacle->type() == iflyauto::OBJECT_TYPE_BUS ||
+      obstacle->type() == iflyauto::OBJECT_TYPE_PEDESTRIAN ||
+      obstacle->type() == iflyauto::OBJECT_TYPE_TRUCK) {
     safe_extra_distance += 0.2;
   }
 
@@ -868,12 +868,6 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
     auto care_area_length = care_area_s_end - care_area_s_start;
     auto care_polygon =  // @cai: consider the heading
         Polygon2d(Box2d(care_area_center, 0, care_area_length, l_care_width));
-
-    // auto obstacle_pos_time = 0.;  // TBD: wait for predication
-    //  if (obstacle->type() == ObjectType::PEDESTRIAN ||
-    //      obstacle->type() == ObjectType::OFO) {
-    //    obstacle_pos_time = 0.;
-    //  }
 
     bool ok = true;
     if (obstacle->obstacle()->is_static() && static_obstacle_loop_flag) {
@@ -1569,15 +1563,13 @@ void HppGeneralLateralDecider::CalcLateralBehaviorOutput() {
   auto &d_poly = lateral_output.d_poly;
   auto &c_poly = lateral_output.c_poly;
 
-  d_poly.resize(flane->get_center_line().poly_coefficient_car().size());
-  c_poly.resize(flane->get_center_line().poly_coefficient_car().size());
+  d_poly.resize(flane->get_center_line().size());
+  c_poly.resize(flane->get_center_line().size());
 
-  std::reverse_copy(flane->get_center_line().poly_coefficient_car().begin(),
-                    flane->get_center_line().poly_coefficient_car().end(),
-                    d_poly.begin());
-  std::reverse_copy(flane->get_center_line().poly_coefficient_car().begin(),
-                    flane->get_center_line().poly_coefficient_car().end(),
-                    c_poly.begin());
+  std::reverse_copy(flane->get_center_line().begin(),
+                    flane->get_center_line().end(), d_poly.begin());
+  std::reverse_copy(flane->get_center_line().begin(),
+                    flane->get_center_line().end(), c_poly.begin());
 }
 
 ObstacleBorderInfo HppGeneralLateralDecider::GetNearestObstacleBorder(

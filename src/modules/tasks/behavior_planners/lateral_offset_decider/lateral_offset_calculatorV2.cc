@@ -6,7 +6,7 @@
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
-#include "fusion_road.pb.h"
+#include "fusion_road_c.h"
 #include "lateral_behavior_planner.pb.h"
 #include "lateral_motion_planner.pb.h"
 #include "lateral_offset_decider_utils.h"
@@ -677,7 +677,7 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
         // TODO(clren):考虑横向速度
         if (tr.d_max_cpath > -front_limit_lateral_distance_tmp) {
           front_limit_lateral_distance_tmp = -tr.d_max_cpath;
-          if (tr.type == Common::ObjectType::OBJECT_TYPE_CONE) {
+          if (tr.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
             front_limit_lateral_distance_tmp -= 0.7;
           }
           debug_front_id = tr.track_id;
@@ -705,7 +705,7 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
 
         if (tr.d_max_cpath > -side_limit_lateral_distance_tmp) {
           side_limit_lateral_distance_tmp = -tr.d_max_cpath;
-          if (tr.type == Common::ObjectType::OBJECT_TYPE_CONE) {
+          if (tr.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
             side_limit_lateral_distance_tmp -= 0.7;
           }
           debug_side_id = tr.track_id;
@@ -756,7 +756,7 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
 
         if (tr.d_min_cpath < front_limit_lateral_distance_tmp) {
           front_limit_lateral_distance_tmp = tr.d_min_cpath;
-          if (tr.type == Common::ObjectType::OBJECT_TYPE_CONE) {
+          if (tr.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
             front_limit_lateral_distance_tmp += 0.7;
           }
           front_limit_lateral_distance =
@@ -768,7 +768,7 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
                    tr.d_rel < std::max(std::min(std::fabs(tr.v_rel * 15), 60.0),
                                        20.0)) {
           front_limit_lateral_distance_tmp = -tr.d_max_cpath;
-          if (tr.type == Common::ObjectType::OBJECT_TYPE_CONE) {
+          if (tr.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
             front_limit_lateral_distance_tmp -= 0.7;
           }
           front_limit_lateral_distance =
@@ -796,7 +796,7 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
           }
           if (tr.d_min_cpath < side_limit_lateral_distance_tmp) {
             side_limit_lateral_distance_tmp = tr.d_min_cpath;
-            if (tr.type == Common::ObjectType::OBJECT_TYPE_CONE) {
+            if (tr.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
               side_limit_lateral_distance_tmp += 0.7;
             }
             side_limit_lateral_distance =

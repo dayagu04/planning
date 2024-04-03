@@ -47,9 +47,9 @@ TEST(PlanningScheduler, RunOnce) {
   init_planning();
 
   LocalView local_view_;
-  PlanningOutput::PlanningOutput planning_output;
-  DebugOutput debug_output;
-  PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_info;
+  iflyauto::PlanningOutput planning_output;
+  // DebugOutput debug_output;
+  iflyauto::PlanningHMIOutputInfoStr planning_hmi_info;
 
   std::unique_ptr<PlanningScheduler> planning_scheduler =
       std::make_unique<PlanningScheduler>();

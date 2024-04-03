@@ -2,22 +2,22 @@
 
 #include <memory>
 
-#include "control_command.pb.h"
+#include "camera_preception_groundline_c.h"
+#include "control_command_c.h"
 #include "ehr.pb.h"
-#include "func_state_machine.pb.h"
-#include "fusion_objects.pb.h"
-#include "fusion_road.pb.h"
-#include "groundline_perception.pb.h"
-#include "hmi_mcu_inner.pb.h"
-#include "ifly_localization.pb.h"
-#include "ifly_parking_map.pb.h"
-#include "localization.pb.h"
-#include "parking_fusion.pb.h"
-#include "parking_slot_list.pb.h"
-#include "planning_plan.pb.h"
-#include "prediction.pb.h"
-#include "uss_wave_info.pb.h"
-#include "vehicle_service.pb.h"
+#include "func_state_machine_c.h"
+#include "fusion_objects_c.h"
+#include "fusion_parking_slot_c.h"
+#include "fusion_road_c.h"
+#include "hmi_mcu_inner_c.h"
+#include "ifly_localization_c.h"
+#include "ifly_parking_map_c.h"
+#include "localization_c.h"
+#include "planning_plan_c.h"
+#include "prediction_c.h"
+#include "uss_perception_info_c.h"
+#include "uss_wave_info_c.h"
+#include "vehicle_service_c.h"
 
 namespace planning {
 /**
@@ -26,52 +26,50 @@ namespace planning {
  */
 
 struct LocalView {
-  Prediction::PredictionResult prediction_result;
+  iflyauto::PredictionResult prediction_result;
   double prediction_result_recv_time = 0.0;
 
-  FusionRoad::RoadInfo road_info;
+  iflyauto::RoadInfo road_info;
   double road_info_recv_time = 0.0;
 
-  GroundLinePerception::GroundLinePerceptionInfo ground_line_perception;
-  double ground_line_perception_recv_time = 0.0;
-
-  LocalizationOutput::LocalizationEstimate localization_estimate;
+  iflyauto::LocalizationEstimate localization_estimate;
   double localization_estimate_recv_time = 0.0;
 
-  IFLYLocalization::IFLYLocalization localization;
+  iflyauto::IFLYLocalization localization;
   double localization_recv_time = 0.0;
 
-  FusionObjects::FusionObjectsInfo fusion_objects_info;
+  iflyauto::FusionObjectsInfo fusion_objects_info;
   double fusion_objects_info_recv_time = 0.0;
 
-  VehicleService::VehicleServiceOutputInfo vehicle_service_output_info;
+  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info;
   double vehicle_service_output_info_recv_time = 0.0;
 
-  ControlCommand::ControlOutput control_output;
+  iflyauto::ControlOutput control_output;
   double control_output_recv_time = 0.0;
 
-  HmiMcuInner::HmiMcuInner hmi_mcu_inner_info;
+  iflyauto::HmiMcuInner hmi_mcu_inner_info;
   double hmi_mcu_inner_info_recv_time = 0.0;
 
-  ParkingFusion::ParkingFusionInfo parking_fusion_info;
+  iflyauto::ParkingFusionInfo parking_fusion_info;
   double parking_fusion_info_recv_time = 0.0;
 
-  IFLYParkingMap::ParkingInfo parking_map_info;
-  double parking_map_info_recv_time = 0.0;
-
-  FuncStateMachine::FuncStateMachine function_state_machine_info;
+  iflyauto::FuncStateMachine function_state_machine_info;
   double function_state_machine_info_recv_time = 0.0;
 
-  UssWaveInfo::UssWaveInfo uss_wave_info;
+  iflyauto::UssWaveInfo uss_wave_info;
   double uss_wave_info_recv_time = 0.0;
 
-  UssPerceptInfo::UssPerceptInfo uss_percept_info;
+  iflyauto::UssPerceptInfo uss_percept_info;
   double uss_percept_info_recv_time = 0.0;
 
   Map::StaticMap static_map_info;
   double static_map_info_recv_time = 0.0;
 
-  double hdmap_time = 0.0;
+  // iflyauto::ParkingInfo parking_map_info;
+  // double parking_map_info_recv_time = 0.0;
+
+  iflyauto::GroundLinePerceptionInfo ground_line_perception;
+  double ground_line_perception_recv_time = 0.0;
 };
 
 }  // namespace planning

@@ -189,7 +189,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   bool lead_fusion_enable = (lead_one.fusion_source() & OBSTACLE_SOURCE_CAMERA);
   LOG_DEBUG("----compute_speed_with_leads--- \n");
   if (lead_one.track_id() != 0 &&
-      lead_one.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN &&
+      lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
       lead_fusion_enable) {
     LOG_DEBUG("target_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
               lead_one.track_id(), lead_one.d_rel(), lead_one.v_lead());
@@ -231,7 +231,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
         lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
     if (config_.enable_lead_two && is_camera_and_lidar &&
         lead_two.track_id() != 0 &&
-        lead_two.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
           "target_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
           lead_two.track_id(), lead_two.d_rel(), lead_two.v_lead());
@@ -331,7 +331,7 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
   if (temp_lead_one.track_id() != 0 && !lateral_outputs.close_to_accident() &&
       (temp_lead_one.d_path_self() + std::min(temp_lead_one.v_lat(), 0.3)) <
           1.0 &&
-      temp_lead_one.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+      temp_lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
     LOG_DEBUG("temp_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n ",
               temp_lead_one.track_id(), temp_lead_one.d_rel(),
               temp_lead_one.v_lead());
@@ -376,7 +376,7 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
         temp_lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
     if (config_.enable_lead_two && is_camera_and_lidar &&
         temp_lead_two.track_id() != 0 &&
-        temp_lead_two.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        temp_lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
           "target_temp_lead_two's id : [%i], d_rel is : [%f], v_lead is: "
           "[%f]\n",
@@ -680,7 +680,7 @@ void StGraphGenerator::UpdateNearObstacles(
       continue;
     };
     if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
-        track.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       near_cars.push_back(&track);
     }
   }
@@ -691,7 +691,7 @@ void StGraphGenerator::UpdateNearObstacles(
       continue;
     };
     if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
-        track.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       near_cars.push_back(&track);
     }
   }
@@ -1106,7 +1106,7 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
     };
     if (!track.is_lead() && track.cutinp() > cutinp_threshold &&
         track.v_lat() < -0.01 &&
-        track.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       cut_in_info->set_has_cutin(true);
 
       front_cut_in_track_id.push_back(track.track_id());

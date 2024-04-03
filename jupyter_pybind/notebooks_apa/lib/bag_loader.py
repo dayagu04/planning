@@ -3,10 +3,11 @@ from lib.load_json import *
 import json
 import numpy as np
 from cyber_record.record import Record
+import rosbag
 
 class LoadCyberbag:
   def __init__(self, path) -> None:
-    self.bag = Record(path)
+    self.bag = rosbag.Bag(path)
     # loclization msg
     self.loc_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
@@ -74,8 +75,8 @@ class LoadCyberbag:
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
         # load timestamp
-        self.loc_msg['t'].append(msg.header.timestamp / 1e6)
-        self.loc_msg['timestamp'].append(msg.header.timestamp)
+        self.loc_msg['t'].append(msg.msg_header.timestamp / 1e6)
+        self.loc_msg['timestamp'].append(msg.msg_header.timestamp)
         self.loc_msg['data'].append(msg)
       self.loc_msg['t'] = [tmp - self.loc_msg['t'][0]  for tmp in self.loc_msg['t']]
       max_time = max(max_time, self.loc_msg['t'][-1])
@@ -92,8 +93,8 @@ class LoadCyberbag:
     # load road_fusion msg
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/road_fusion"):
-        self.road_msg['t'].append(msg.header.timestamp / 1e6)
-        self.road_msg['timestamp'].append(msg.header.timestamp)
+        self.road_msg['t'].append(msg.msg_header.timestamp / 1e6)
+        self.road_msg['timestamp'].append(msg.msg_header.timestamp)
         self.road_msg['data'].append(msg)
       self.road_msg['t'] = [tmp - self.road_msg['t'][0]  for tmp in self.road_msg['t']]
       if normal_print == True:
@@ -109,8 +110,8 @@ class LoadCyberbag:
     # load fusion objects msg
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/objects"):
-        self.fus_msg['t'].append(msg.header.timestamp / 1e6)
-        self.fus_msg['timestamp'].append(msg.header.timestamp)
+        self.fus_msg['t'].append(msg.msg_header.timestamp / 1e6)
+        self.fus_msg['timestamp'].append(msg.msg_header.timestamp)
         self.fus_msg['data'].append(msg)
       self.fus_msg['t'] = [tmp - self.fus_msg['t'][0]  for tmp in self.fus_msg['t']]
       if normal_print == True:
@@ -126,8 +127,8 @@ class LoadCyberbag:
     # load vehicle service msg
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/vehicle_service"):
-        self.vs_msg['t'].append(msg.header.timestamp / 1e6)
-        self.vs_msg['timestamp'].append(msg.header.timestamp)
+        self.vs_msg['t'].append(msg.msg_header.timestamp / 1e6)
+        self.vs_msg['timestamp'].append(msg.msg_header.timestamp)
         self.vs_msg['data'].append(msg)
       self.vs_msg['t'] = [tmp - self.vs_msg['t'][0]  for tmp in self.vs_msg['t']]
       self.vs_msg['enable'] = True
@@ -145,8 +146,8 @@ class LoadCyberbag:
     # load planning msg
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
-        self.plan_msg['t'].append(msg.meta.header.timestamp / 1e6)
-        self.plan_msg['timestamp'].append(msg.meta.header.timestamp)
+        self.plan_msg['t'].append(msg.meta.msg_header.timestamp / 1e6)
+        self.plan_msg['timestamp'].append(msg.meta.msg_header.timestamp)
         self.plan_msg['data'].append(msg)
       self.plan_msg['t'] = [tmp - self.plan_msg['t'][0]  for tmp in self.plan_msg['t']]
       max_time = max(max_time, self.plan_msg['t'][-1])
@@ -164,8 +165,8 @@ class LoadCyberbag:
     # load prediction msg
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/prediction/prediction_result"):
-        self.prediction_msg['t'].append(msg.header.timestamp / 1e6)
-        self.prediction_msg['timestamp'].append(msg.header.timestamp)
+        self.prediction_msg['t'].append(msg.msg_header.timestamp / 1e6)
+        self.prediction_msg['timestamp'].append(msg.msg_header.timestamp)
         self.prediction_msg['data'].append(msg)
       self.prediction_msg['t'] = [tmp - self.prediction_msg['t'][0]  for tmp in self.prediction_msg['t']]
       self.prediction_msg['enable'] = True
@@ -232,8 +233,8 @@ class LoadCyberbag:
     # load control msg
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/control/control_command"):
-        self.ctrl_msg['t'].append(msg.header.timestamp / 1e6)
-        self.ctrl_msg['timestamp'].append(msg.header.timestamp)
+        self.ctrl_msg['t'].append(msg.msg_header.timestamp / 1e6)
+        self.ctrl_msg['timestamp'].append(msg.msg_header.timestamp)
         self.ctrl_msg['data'].append(msg)
       self.ctrl_msg['t'] = [tmp - self.ctrl_msg['t'][0]  for tmp in self.ctrl_msg['t']]
       max_time = max(max_time, self.ctrl_msg['t'][-1])
@@ -287,8 +288,8 @@ class LoadCyberbag:
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/parking_slot"):
         # load timestamp
-        self.slot_msg['t'].append(msg.header.timestamp / 1e6)
-        self.slot_msg['timestamp'].append(msg.header.timestamp)
+        self.slot_msg['t'].append(msg.msg_header.timestamp / 1e6)
+        self.slot_msg['timestamp'].append(msg.msg_header.timestamp)
         self.slot_msg['data'].append(msg)
       self.slot_msg['t'] = [tmp - self.slot_msg['t'][0]  for tmp in self.slot_msg['t']]
       max_time = max(max_time, self.slot_msg['t'][-1])
@@ -306,8 +307,8 @@ class LoadCyberbag:
     # load mobileye lane_lines msg
     try:
       for topic, msg, t in self.bag.read_messages("/mobileye/camera_perception/lane_lines"):
-        self.mobileye_lane_lines_msg['t'].append(msg.header.timestamp / 1e6)
-        self.mobileye_lane_lines_msg['timestamp'].append(msg.header.timestamp)
+        self.mobileye_lane_lines_msg['t'].append(msg.msg_header.timestamp / 1e6)
+        self.mobileye_lane_lines_msg['timestamp'].append(msg.msg_header.timestamp)
         self.mobileye_lane_lines_msg['data'].append(msg)
       self.mobileye_lane_lines_msg['t'] = [tmp - self.mobileye_lane_lines_msg['t'][0]  for tmp in self.mobileye_lane_lines_msg['t']]
       if normal_print == True:
@@ -323,8 +324,8 @@ class LoadCyberbag:
     # load rdg lane_lines msg
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/lane_lines"):
-        self.rdg_lane_lines_msg['t'].append(msg.header.timestamp / 1e6)
-        self.rdg_lane_lines_msg['timestamp'].append(msg.header.timestamp)
+        self.rdg_lane_lines_msg['t'].append(msg.msg_header.timestamp / 1e6)
+        self.rdg_lane_lines_msg['timestamp'].append(msg.msg_header.timestamp)
         self.rdg_lane_lines_msg['data'].append(msg)
       self.rdg_lane_lines_msg['t'] = [tmp - self.rdg_lane_lines_msg['t'][0]  for tmp in self.rdg_lane_lines_msg['t']]
       if normal_print == True:
@@ -340,8 +341,8 @@ class LoadCyberbag:
     # load mobileye objects msg
     try:
       for topic, msg, t in self.bag.read_messages("/mobileye/camera_perception/objects"):
-        self.mobileye_objects_msg['t'].append(msg.header.timestamp / 1e6)
-        self.mobileye_objects_msg['timestamp'].append(msg.header.timestamp)
+        self.mobileye_objects_msg['t'].append(msg.msg_header.timestamp / 1e6)
+        self.mobileye_objects_msg['timestamp'].append(msg.msg_header.timestamp)
         self.mobileye_objects_msg['data'].append(msg)
       self.mobileye_objects_msg['t'] = [tmp - self.mobileye_objects_msg['t'][0]  for tmp in self.mobileye_objects_msg['t']]
       if normal_print == True:
@@ -357,8 +358,8 @@ class LoadCyberbag:
      # load rdg objects msg
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/objects"):
-        self.rdg_objects_msg['t'].append(msg.header.timestamp / 1e6)
-        self.rdg_objects_msg['timestamp'].append(msg.header.timestamp)
+        self.rdg_objects_msg['t'].append(msg.msg_header.timestamp / 1e6)
+        self.rdg_objects_msg['timestamp'].append(msg.msg_header.timestamp)
         self.rdg_objects_msg['data'].append(msg)
       self.rdg_objects_msg['t'] = [tmp - self.rdg_objects_msg['t'][0]  for tmp in self.rdg_objects_msg['t']]
       if normal_print == True:
@@ -374,8 +375,8 @@ class LoadCyberbag:
     # load lidar objects msg
     try:
       for topic, msg, t in self.bag.read_messages("/iflytek/lidar_objects"):
-        self.lidar_msg['t'].append(msg.header.timestamp / 1e6)
-        self.lidar_msg['timestamp'].append(msg.header.timestamp)
+        self.lidar_msg['t'].append(msg.msg_header.timestamp / 1e6)
+        self.lidar_msg['timestamp'].append(msg.msg_header.timestamp)
         self.lidar_msg['data'].append(msg)
       self.lidar_msg['t'] = [tmp - self.lidar_msg['t'][0]  for tmp in self.lidar_msg['t']]
       if normal_print == True:
@@ -397,28 +398,28 @@ class LoadCyberbag:
       try:
         if i == 0:
           for topic, msg, t in self.bag.read_messages("/iflytek/radar_fm_perception_info"):
-            radar_msg[i]['t'].append(msg.header.timestamp / 1e6)
-            radar_msg[i]['timestamp'].append(msg.header.timestamp)
+            radar_msg[i]['t'].append(msg.msg_header.timestamp / 1e6)
+            radar_msg[i]['timestamp'].append(msg.msg_header.timestamp)
             radar_msg[i]['data'].append(msg)
         elif i == 1:
           for topic, msg, t in self.bag.read_messages("/iflytek/radar_fl_perception_info"):
-            radar_msg[i]['t'].append(msg.header.timestamp / 1e6)
-            radar_msg[i]['timestamp'].append(msg.header.timestamp)
+            radar_msg[i]['t'].append(msg.msg_header.timestamp / 1e6)
+            radar_msg[i]['timestamp'].append(msg.msg_header.timestamp)
             radar_msg[i]['data'].append(msg)
         elif i == 2:
           for topic, msg, t in self.bag.read_messages("/iflytek/radar_fr_perception_info"):
-            radar_msg[i]['t'].append(msg.header.timestamp / 1e6)
-            radar_msg[i]['timestamp'].append(msg.header.timestamp)
+            radar_msg[i]['t'].append(msg.msg_header.timestamp / 1e6)
+            radar_msg[i]['timestamp'].append(msg.msg_header.timestamp)
             radar_msg[i]['data'].append(msg)
         elif i == 3:
           for topic, msg, t in self.bag.read_messages("/iflytek/radar_rl_perception_info"):
-            radar_msg[i]['t'].append(msg.header.timestamp / 1e6)
-            radar_msg[i]['timestamp'].append(msg.header.timestamp)
+            radar_msg[i]['t'].append(msg.msg_header.timestamp / 1e6)
+            radar_msg[i]['timestamp'].append(msg.msg_header.timestamp)
             radar_msg[i]['data'].append(msg)
         elif i == 4:
           for topic, msg, t in self.bag.read_messages("/iflytek/radar_rr_perception_info"):
-            radar_msg[i]['t'].append(msg.header.timestamp / 1e6)
-            radar_msg[i]['timestamp'].append(msg.header.timestamp)
+            radar_msg[i]['t'].append(msg.msg_header.timestamp / 1e6)
+            radar_msg[i]['timestamp'].append(msg.msg_header.timestamp)
             radar_msg[i]['data'].append(msg)
         radar_msg[i]['t'] = [tmp - radar_msg[i]['t'][0]  for tmp in radar_msg[i]['t']]
         if normal_print == True:
