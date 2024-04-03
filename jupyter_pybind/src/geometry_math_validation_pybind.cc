@@ -14,19 +14,6 @@
 
 namespace py = pybind11;
 
-template <class T>
-inline T BytesToProto(py::bytes& bytes) {
-  T proto_obj;
-  py::buffer buf(bytes);
-  py::buffer_info input_info = buf.request();
-  char* input_ptr = static_cast<char*>(input_info.ptr);
-  std::string input_s(input_ptr, input_info.size);
-
-  T input;
-  input.ParseFromString(input_s);
-  return input;
-}
-
 static std::vector<double> res;
 int UpdateOneStepArcTargetLineByGear(double ego_x, double ego_y,
                                      double ego_heading, double target_x,
@@ -438,8 +425,8 @@ const Eigen::Vector4d CalTwoArcBySameHeading(
 }
 
 const double CalPoint2LineSegDistPb(const Eigen::Vector2d pO,
-                                  const Eigen::Vector2d p1,
-                                  const Eigen::Vector2d p2) {
+                                    const Eigen::Vector2d p1,
+                                    const Eigen::Vector2d p2) {
   pnc::geometry_lib::LineSegment line;
   line.SetPoints(p1, p2);
   return pnc::geometry_lib::CalPoint2LineSegDist(pO, line);

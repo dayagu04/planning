@@ -6,10 +6,10 @@ sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
 
-sys.path.append('python_proto')
+sys.path.append('../../python_proto')
 from bokeh.models import ColumnDataSource, DataTable, TableColumn, TextInput
 from ipywidgets import Layout
-from python_proto import common_pb2, gap_selector_pb2
+from python_proto import gap_selector_pb2
 
 # bag path and frame dt
 bag_path = "/data_cold/abu_zone/autoparse/jac_s811_35kw2/trigger/20240220/20240220-16-03-05/data_collection_JAC_S811_35KW2_EVENT_MANUAL_2024-02-20-16-03-05.record.1708496697.plan"

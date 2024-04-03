@@ -27,14 +27,8 @@ class coord_transformer:
     def global_to_local(self, global_x_vec, global_y_vec):
         local_x_vec = []
         local_y_vec = []
-        tmp_x = 0.0
-        tmp_y = 0.0
-        for i in (range(len(global_x_vec))):
-            tmp_x, tmp_y = global2local(global_x_vec[i], global_y_vec[i], self.cur_pos_xn, self.cur_pos_yn, self.cur_yaw)
-            local_x_vec.append(tmp_x)
-            local_y_vec.append(tmp_y)
-
-        return local_x_vec, local_y_vec
+        local_x_vec, local_y_vec = global2local(np.array(global_x_vec), np.array(global_y_vec), self.cur_pos_xn, self.cur_pos_yn, self.cur_yaw)
+        return local_x_vec.tolist(), local_y_vec.tolist()
 
 def rotate(x, y, theta):
     x_rotated = x * math.cos(theta) - y * math.sin(theta)

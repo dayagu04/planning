@@ -77,15 +77,18 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
   plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
   pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
 
+  print('loc_msg_idx:', loc_msg_idx)
+  print('road_msg_idx:', road_msg_idx)
+  print('plan_msg_idx:', plan_msg_idx)
+
+  planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
+  planning_debug = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
+  debug1, debug2 = load_lat_common(planning_debug, planning_json)
+  print(debug2)
   if bag_loader.loc_msg['enable'] == True:
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
-    planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
-    planning_debug = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
-
-    debug1, debug2 = load_lat_common(planning_debug, planning_json)
-    print(debug2)
     ego_xn, ego_yn = [], []
     ### global variables
     # pos offset
@@ -323,13 +326,11 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
     steer_deg_lower_bound = []
     steer_dot_deg_upper_bound = []
     steer_dot_deg_lower_bound = []
-
     try:
       delta_bound = min(360.0 / 14.5 / 57.3, lat_motion_plan_input.acc_bound / (lat_motion_plan_input.curv_factor * lat_motion_plan_input.ref_vel * lat_motion_plan_input.ref_vel))
       omega_bound = min(240.0 / 14.5 / 57.3, lat_motion_plan_input.jerk_bound / (lat_motion_plan_input.curv_factor * lat_motion_plan_input.ref_vel * lat_motion_plan_input.ref_vel))
     except:
-      print("no lat_motion_plan_input!!")
-
+      pass
     for i in range(len(time_vec)):
       ref_theta_deg_vec.append(lat_motion_plan_input.ref_theta_vec[i] * 57.3)
       theta_deg_vec.append(lat_motion_plan_output.theta_vec[i] * 57.3)
@@ -415,7 +416,7 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
     })
 
   ### step 3: 加载车道线信息
-  if bag_loader.road_msg['enable'] == True:
+  if bag_loader.road_msg['enable'] == False:
     # load lane info
     line_info_list = load_local_lane_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
     # update lane info
@@ -472,26 +473,29 @@ def load_lateral_offset(bag_loader):
     'frame_num_y': [],
   })
 
-  if bag_loader.plan_debug_msg['enable'] == True:
-      lateral_offsets = []
-      smooth_lateral_offsets = []
-      frame_nums = []
-      avoid_ways = []
-      for i, plan_json_debug in enumerate(bag_loader.plan_debug_msg['json']):
-        plan_debug_msg = bag_loader.plan_debug_msg['data'][i]
-        frame_nums.append(plan_debug_msg.frame_info.frame_num)
-        lateral_offsets.append(plan_json_debug['lat_offset'])
-        smooth_lateral_offsets.append(plan_json_debug['smooth_lateral_offset'])
-        avoid_ways.append(plan_json_debug['avoid_way'] * 0.1)
-      frame_num_0 = frame_nums[0]
-      frame_nums = [frame_num - frame_num_0 for frame_num in frame_nums]
+  try:
+    if bag_loader.plan_debug_msg['enable'] == True:
+        lateral_offsets = []
+        smooth_lateral_offsets = []
+        frame_nums = []
+        avoid_ways = []
+        for i, plan_json_debug in enumerate(bag_loader.plan_debug_msg['json']):
+          plan_debug_msg = bag_loader.plan_debug_msg['data'][i]
+          frame_nums.append(plan_debug_msg.frame_info.frame_num)
+          lateral_offsets.append(plan_json_debug['lat_offset'])
+          smooth_lateral_offsets.append(plan_json_debug['smooth_lateral_offset'])
+          avoid_ways.append(plan_json_debug['avoid_way'] * 0.1)
+        frame_num_0 = frame_nums[0]
+        frame_nums = [frame_num - frame_num_0 for frame_num in frame_nums]
+    data_fig.data.update({
+      'lateral_offset_1':lateral_offsets,
+      'lateral_offset_2':smooth_lateral_offsets,
+      "avoid_ways":avoid_ways,
+      'frame_num_y':frame_nums,
+    })
+  except:
+    pass
   fig = bkp.figure(x_axis_label='frame_num', y_axis_label='lat_offset',x_range = [frame_nums[0], frame_nums[-1]], width=700, height=200)
-  data_fig.data.update({
-    'lateral_offset_1':lateral_offsets,
-    'lateral_offset_2':smooth_lateral_offsets,
-    "avoid_ways":avoid_ways,
-    'frame_num_y':frame_nums,
-  })
   f1 = fig.line('frame_num_y', 'lateral_offset_1', source = data_fig, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lateral_offset')
   fig.line('frame_num_y', 'lateral_offset_2', source = data_fig, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'smooth_lateral_offset')
   fig.line('frame_num_y', 'avoid_ways', source = data_fig, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'avoid_way')

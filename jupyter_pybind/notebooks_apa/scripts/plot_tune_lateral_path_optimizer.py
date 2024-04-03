@@ -5,10 +5,10 @@ sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
 
-sys.path.append('python_proto')
+sys.path.append('../../python_proto')
 
 from jupyter_pybind import lateral_path_optimizer_py
-from python_proto import lateral_path_optimizer_pb2,common_pb2
+from python_proto import lateral_path_optimizer_pb2
 from lib.load_local_view import *
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

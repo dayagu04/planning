@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "common.h"
-#include "common.pb.h"
+#include "common_c.h"
 #include "config/basic_type.h"
 
 namespace planning {
@@ -61,7 +61,7 @@ struct PredictionTrajectory {
 
 struct PredictionObject {
   uint id;
-  Common::ObjectType type;
+  iflyauto::ObjectType type;
   uint fusion_source;
   double timestamp_us;
   double delay_time{0.0};

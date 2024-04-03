@@ -6,10 +6,11 @@ sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
 
-sys.path.append('python_proto')
+sys.path.append('../../python_proto')
 
 from jupyter_pybind import optimizer_apa_simulation_py
-from python_proto import planning_plan_pb2, lateral_path_optimizer_pb2
+from python_proto import lateral_path_optimizer_pb2
+from struct_msgs.msg import PlanningOutput
 from lib.load_local_view_parking import *
 
 
@@ -260,8 +261,8 @@ def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_ci
 
     if res == True:
         # fig 1 path
-        tuned_planning_output = planning_plan_pb2.PlanningOutput()
-        tuned_planning_output.ParseFromString(
+        tuned_planning_output = PlanningOutput()
+        tuned_planning_output.deserialize(
             optimizer_apa_simulation_py.GetPlanningOutput())
 
         plan_path_x = []

@@ -227,20 +227,20 @@ bool HasOverlap(const framework::Session *session,
 }
 
 bool IsTruck(const AvoidObstacleInfo &avoid_obstacle) {
-  return (avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_BUS ||
-          avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_TRUCK) &&
+  return (avoid_obstacle.type == iflyauto::OBJECT_TYPE_BUS ||
+          avoid_obstacle.type == iflyauto::OBJECT_TYPE_TRUCK) &&
          avoid_obstacle.length > lateral_offset_decider::kTruckMinLength;
 }
 
 bool IsVRU(const AvoidObstacleInfo &avoid_obstacle) {
-  return avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_BICYCLE ||
-         avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
-         avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_TRICYCLE ||
-         avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_ANIMAL;
+  return avoid_obstacle.type == iflyauto::OBJECT_TYPE_BICYCLE ||
+         avoid_obstacle.type == iflyauto::OBJECT_TYPE_PEDESTRIAN ||
+         avoid_obstacle.type == iflyauto::OBJECT_TYPE_TRICYCLE ||
+         avoid_obstacle.type == iflyauto::OBJECT_TYPE_ANIMAL;
 }
 
 bool IsCone(const AvoidObstacleInfo &avoid_obstacle) {
-  return avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_CONE;
+  return avoid_obstacle.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE;
 }
 
 bool HasEnoughSpace(const AvoidObstacleInfo &avoid_obstacle_1,

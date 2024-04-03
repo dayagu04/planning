@@ -6,8 +6,8 @@ sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
 
-sys.path.append('python_proto')
-from python_proto import common_pb2, planning_plan_pb2
+sys.path.append('../../python_proto')
+from struct_msgs.msg import PlanningOutput
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
@@ -104,7 +104,7 @@ def slider_callback(bag_time, selected_id, force_replan, is_replay, is_complete,
   # print("fus_parking_input = ", fus_parking_input)
   # print("loc_msg_input = ", loc_msg_input)
   # print("vs_msg_input = ", vs_msg_input)
-  planning_output = planning_plan_pb2.PlanningOutput()
+  planning_output = PlanningOutput()
 
   # if turn_on_plan_stm == 1:
   #   last_seg_name = plan_stm
@@ -128,7 +128,7 @@ def slider_callback(bag_time, selected_id, force_replan, is_replay, is_complete,
                                       planning_data.slot_management_info.SerializeToString(),
                                       selected_id, is_replan or force_replan, is_complete, chn_length_one_side,
                                       chn_length_one_side, chn_width, sample_ds, slot_width_offset)
-    planning_output.ParseFromString(diag_slot_planning_py.GetOutputBytes())
+    planning_output.deserialize(diag_slot_planning_py.GetOutputBytes())
   except:
     print("error")
     pass

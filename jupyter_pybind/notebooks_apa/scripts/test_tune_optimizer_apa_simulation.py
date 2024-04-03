@@ -6,10 +6,11 @@ sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
 
-sys.path.append('python_proto')
+sys.path.append('../../python_proto')
 
 from jupyter_pybind import optimizer_apa_simulation_py
-from python_proto import planning_plan_pb2, planning_debug_info_pb2
+from python_proto import planning_debug_info_pb2
+from struct_msgs.msg import PlanningOutput
 from lib.load_local_view_parking import *
 
 
@@ -267,8 +268,8 @@ for bag_time in np.arange(0.0, 19.6, 0.1):
 
     if res == True:
         # fig 1 path
-        tuned_planning_output = planning_plan_pb2.PlanningOutput()
-        tuned_planning_output.ParseFromString(
+        tuned_planning_output = PlanningOutput()
+        tuned_planning_output.deserialize(
             optimizer_apa_simulation_py.GetPlanningOutput())
 
         plan_path_x = []

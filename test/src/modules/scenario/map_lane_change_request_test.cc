@@ -14,15 +14,17 @@ using namespace std;
 namespace planning {
 namespace map_request_test {
 
-bool transform_fusion_to_prediction(
-    const FusionObjects::FusionObject &fusion_object, double timestamp,
-    planning::framework::Session *session) {
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
+bool transform_fusion_to_prediction(const iflyauto::FusionObject &fusion_object,
+                                    double timestamp,
+                                    planning::framework::Session *session) {
+  double ego_rear_axis_to_front_edge = 0;
+  ego_rear_axis_to_front_edge = session->vehicle_config_context()
+                                    .get_vehicle_param()
+                                    .rear_axis_to_front_edge;
 
-  double ego_rear_axis_to_front_edge = vehicle_param.rear_axis_to_front_edge;
-
-  double current_time = session->planning_context().planning_result().timestamp;
+  double current_time = session->planning_output_context()
+                            .planning_status()
+                            .planning_result.next_timestamp;
   auto &prediction_info =
       session->mutable_environmental_model()->get_mutable_prediction_info();
 
@@ -108,19 +110,19 @@ class MapLaneChangeRequestTest : public ::testing::Test {
       road->set_relative_id(i - 3);
       // road->set_ego_lateral_offset(std::fabs(1 - i) * 3.8);
       auto lane_types = road->add_lane_types();
-      lane_types->set_type(FusionRoad::LaneType::LANETYPE_NORMAL);
+      lane_types->set_type(iflyauto::LaneType::LANETYPE_NORMAL);
       lane_types->set_begin(0.);
       lane_types->set_end(200.);
 
       auto lane_marks = road->add_lane_marks();
       lane_marks->set_lane_mark(
-          FusionRoad::LaneDrivableDirection::DIRECTION_STRAIGHT);
+          iflyauto::LaneDrivableDirection::DIRECTION_STRAIGHT);
       lane_marks->set_begin(0.);
       lane_marks->set_begin(200.);
 
       auto lane_sources = road->add_lane_sources();
       lane_sources->set_source(
-          FusionRoad::LaneSource::SOURCE_CAMERA_HDMAP_FUSION);
+          iflyauto::LaneSource::LaneSource_SOURCE_CAMERA_HDMAP_FUSION);
       lane_sources->set_begin(0.);
       lane_sources->set_begin(200.);
 
@@ -133,13 +135,13 @@ class MapLaneChangeRequestTest : public ::testing::Test {
         merge_split_point_data->set_is_split(true);
         merge_split_point_data->set_is_continue(true);
         merge_split_point_data->set_orientation(
-            FusionRoad::LaneOrientation::ORIENTATION_UNKNOWN);
+            iflyauto::LaneOrientation::ORIENTATION_UNKNOWN);
       }
       road->mutable_left_lane_boundary()->set_existence(true);
       road->mutable_left_lane_boundary()->set_life_time(1000.);
       road->mutable_left_lane_boundary()->set_track_id(i - 2 == 0 ? 1 : i - 2);
       road->mutable_left_lane_boundary()->set_type(
-          FusionRoad::LineType::LINE_TYPE_LANELINE);
+          iflyauto::LineType::LINE_TYPE_LANELINE);
       //   auto poly_coefficients =
       //   road->mutable_left_lane_boundary()->add_poly_coefficient(-1.9);
       road->mutable_left_lane_boundary()->add_poly_coefficient(1.9 +
@@ -157,7 +159,7 @@ class MapLaneChangeRequestTest : public ::testing::Test {
       road->mutable_right_lane_boundary()->set_life_time(1000.);
       road->mutable_right_lane_boundary()->set_track_id(i - 1 == 0 ? 1 : i - 1);
       road->mutable_right_lane_boundary()->set_type(
-          FusionRoad::LineType::LINE_TYPE_LANELINE);
+          iflyauto::LineType::LINE_TYPE_LANELINE);
       road->mutable_right_lane_boundary()->add_poly_coefficient(-1.9 +
                                                                 (3 - i) * 3.8);
       road->mutable_right_lane_boundary()->add_poly_coefficient(0.);
@@ -201,7 +203,7 @@ class MapLaneChangeRequestTest : public ::testing::Test {
         point->set_right_lane_border_type(
             Common::LaneBoundaryType::MARKING_DASHED);
         point->set_is_in_intersection(false);
-        point->set_lane_type(FusionRoad::LaneType::LANETYPE_NORMAL);
+        point->set_lane_type(iflyauto::LaneType::LANETYPE_NORMAL);
         point->set_s(0. + j);
       }
     }
@@ -220,7 +222,7 @@ class MapLaneChangeRequestTest : public ::testing::Test {
       auto fusion_obj = local_view.fusion_objects_info.add_fusion_object();
       fusion_obj->mutable_additional_info()->set_track_id(i + 1);
       fusion_obj->mutable_common_info()->set_type(
-          Common::ObjectType::OBJECT_TYPE_COUPE);
+          iflyauto::ObjectType::OBJECT_TYPE_COUPE);
       // fusion_obj->mutable_common_info()->mutable_position()->set_x(fusion_object.long_position());
       // fusion_obj->mutable_common_info()->mutable_position()->set_y(fusion_object.lat_position());
       fusion_obj->mutable_common_info()->mutable_velocity()->set_x(0.1);

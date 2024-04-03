@@ -3,6 +3,7 @@
 #include <chrono>
 #include <string>
 
+// #include "modules_register.h"
 #include "planning_player.h"
 
 int run_planning_player(const std::string &bag_path, const std::string &out_bag,
@@ -10,12 +11,12 @@ int run_planning_player(const std::string &bag_path, const std::string &out_bag,
                         const std::string &scene_type) {
   planning::planning_player::PlanningPlayer player;
 
-  if (!player.LoadCyberBag(bag_path)) {
+  if (!player.LoadRosBag(bag_path)) {
     return -1;
   }
   player.Init(is_close_loop, auto_time_sec, scene_type);
   player.PlayAllFrames();
-  player.StoreCyberBag(out_bag);
+  player.StoreRosBag(out_bag);
   return 0;
 }
 

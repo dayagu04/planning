@@ -1,0 +1,55 @@
+syntax = "proto2";
+
+package ControlDebugInfo;
+
+message InputTopicStampList {
+  optional uint64 topic1_timestamp = 1;
+  optional uint64 topic2_timestamp = 2;
+}
+
+message ControlDebugInfo {
+  optional uint64 timestamp = 1;
+  optional string extra_json = 2;
+  optional InputTopicStampList input_topic_timestamp_list = 3;
+  optional LateralMpcInput lat_mpc_input = 4;
+  optional LateralMpcOutput lat_mpc_output = 5;
+}
+
+message LateralMpcState {
+  optional double dx = 1;
+  optional double dy = 2;
+  optional double dphi = 3;
+  optional double delta = 4;
+}
+
+message LateralMpcInput {
+  // parameters
+  optional double q_y = 1;
+  optional double q_phi = 2;
+  optional double q_omega = 3;
+  optional double q_phi_WN = 4;
+  optional double q_y_WN = 5;
+  optional double omega_limit = 6;
+  optional double delta_limit = 7;
+
+  // init state
+  optional LateralMpcState init_state = 8;
+
+  // reference
+  repeated double curv_factor_vec = 9;
+  repeated double dx_ref_mpc_vec = 10;
+  repeated double dy_ref_mpc_vec = 11;
+  repeated double dphi_ref_mpc_vec = 12;
+  repeated double vel_lat_ctrl_mpc_vec = 13;
+}
+
+message LateralMpcOutput {
+  repeated double time_mpc_vec = 1;
+  repeated double dx_mpc_vec = 2;
+  repeated double dy_mpc_vec = 3;
+  repeated double dphi_mpc_vec = 4;
+  repeated double delta_mpc_vec = 5;
+  repeated double omega_mpc_vec = 6;
+  optional uint32 status = 7;
+  optional uint32 iteration = 8;
+}

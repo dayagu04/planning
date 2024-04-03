@@ -13,6 +13,7 @@ import pymap3d as pm
 import numpy as np
 import bisect
 import datetime
+import rosbag
 
 
 kRefLat = 39.907500
@@ -28,7 +29,7 @@ altitude0 = kRefAlt
 class LocalizationApaPlotter(object):
   def __init__(self):
   # bag path and frame dt
-    self.file_path = '/data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240328/20240328-19-05-08/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-03-28-19-05-08_no_camera.record'
+    self.file_path = '/data_cold/autoupload/jac_s811_37xu2/trigger/20240514/20240514-20-37-59/data_collection_JAC_S811_37XU2_EVENT_MANUAL_2024-05-14-20-37-59.bag'
     self.abnormal_timestamp_path = '/mnt/noa/abnormal_timestamp.txt'
     self.online_insd_data_file_path = '/data_cold/abu_zone/S811-6/1201-xiawu/1201-1/sensor_navi_navifusion.json'
     self.offline_insd_data_file_path = '/data_cold/abu_zone/S811-6/1201-xiawu/1201-1/test.txt'
@@ -51,6 +52,9 @@ class LocalizationApaPlotter(object):
     self.abnormal_positons_timestamp = []
     self.positons_header_timestamp_vec = []
     self.positons_timestamp_vec = []
+    self.positons_timestamp_interval_vec = []
+    self.positons_header_time_vec = []
+    self.positons_header_timestamp_interval_vec = []
 
     # AbsolutePostion
     self.absolute_pos_original_loc_timestamp_vec = []
@@ -60,6 +64,7 @@ class LocalizationApaPlotter(object):
     self.absolute_x_vec = []
     self.absolute_y_vec = []
     self.absolute_pos_time_vec = []
+    self.absolute_pos_original_loc_timestamp_interval_vec = []
     # PostionFailSafe
     self.failsafe_loc_status_vec = []
     self.failsafe_gnss_status_vec = []
@@ -269,72 +274,72 @@ class LocalizationApaPlotter(object):
       return [lla[0] * 2 - mglat, lla[1] * 2 - mglon, lla[2]]
 
   def load_iflytek_position_data(self):
-    bag = Record(self.file_path)
+    bag = rosbag.Bag(self.file_path)
     start_iflytek_localization_timestamp = None
     last_iflytek_localization_timestamp = None
     for topic, msg, t in bag.read_messages('/iflytek/localization/ego_pose'):
       if start_iflytek_localization_timestamp is None:
-        start_iflytek_localization_timestamp = msg.header.timestamp
+        start_iflytek_localization_timestamp = msg.msg_header.timestamp
       if abs(msg.pose.local_position.x) < 0.0001:
         continue
       self.iflytek_local_position_x_vec.append(msg.pose.local_position.x)
       self.iflytek_local_position_y_vec.append(msg.pose.local_position.y)
-      time = (msg.header.timestamp - start_iflytek_localization_timestamp) * 1e-6
+      time = (msg.msg_header.timestamp - start_iflytek_localization_timestamp) * 1e-6
       interval = 0.0
       if last_iflytek_localization_timestamp is not None:
-        interval = (msg.header.timestamp - last_iflytek_localization_timestamp) * 1e-6
+        interval = (msg.msg_header.timestamp - last_iflytek_localization_timestamp) * 1e-6
       self.iflytek_localization_timestamp_interval_vec.append(interval)
       self.iflytek_localization_time_vec.append(time)
-      last_iflytek_localization_timestamp = msg.header.timestamp
+      last_iflytek_localization_timestamp = msg.msg_header.timestamp
     # print('average time interval:', sum(self.iflytek_localization_timestamp_interval_vec) / len(self.iflytek_localization_timestamp_interval_vec))
 
 
   def load_pbox_gnss_data(self):
-    bag = Record(self.file_path)
+    bag = rosbag.Bag(self.file_path)
     start_pbox_gnss_timestamp = None
     last_pbox_gnss_timestamp = None
     for topic, msg, t in bag.read_messages('/iflytek/sensor/pbox/gnss'):
-      self.pbox_gnss_timestamp_vec.append(msg.header.timestamp)
+      self.pbox_gnss_timestamp_vec.append(msg.msg_header.timestamp)
       if start_pbox_gnss_timestamp is None:
-        start_pbox_gnss_timestamp = msg.header.timestamp
+        start_pbox_gnss_timestamp = msg.msg_header.timestamp
       if(self.is_out_of_china([msg.gnss_msg.gnss_lat, msg.gnss_msg.gnss_lon, 0.0])):
         continue
       self.pbox_gnss_lon_vec.append(msg.gnss_msg.gnss_lon)
       self.pbox_gnss_lat_vec.append(msg.gnss_msg.gnss_lat)
       self.pbox_gnss_quality_vec.append(int(msg.gnss_msg.gnss_quality))
-      time = (msg.header.timestamp - start_pbox_gnss_timestamp) * 1e-6
+      time = (msg.msg_header.timestamp - start_pbox_gnss_timestamp) * 1e-6
       interval = 0.0
       if last_pbox_gnss_timestamp is not None:
-        interval = (msg.header.timestamp - last_pbox_gnss_timestamp) * 1e-6
+        interval = (msg.msg_header.timestamp - last_pbox_gnss_timestamp) * 1e-6
       self.pbox_gnss_timestamp_interval_vec.append(interval)
       self.pbox_gnss_time_vec.append(time)
-      last_pbox_gnss_timestamp = msg.header.timestamp
+      last_pbox_gnss_timestamp = msg.msg_header.timestamp
 
   def load_pbox_imu_data(self):
-    bag = Record(self.file_path)
+    bag = rosbag.Bag(self.file_path)
     start_pbox_imu_timestamp = None
     last_pbox_imu_timestamp = None
     for topic, msg, t in bag.read_messages('/iflytek/sensor/pbox/imu'):
       if start_pbox_imu_timestamp is None:
-        start_pbox_imu_timestamp = msg.header.timestamp
-      self.pbox_imu_timestamp_vec.append(msg.header.timestamp)
+        start_pbox_imu_timestamp = msg.msg_header.timestamp
+      self.pbox_imu_timestamp_vec.append(msg.msg_header.timestamp)
       self.pbox_imu_acc_x_vec.append(msg.acc_val.x)
       self.pbox_imu_acc_y_vec.append(msg.acc_val.y)
       self.pbox_imu_acc_z_vec.append(msg.acc_val.z)
       self.pbox_imu_yaw_rate_x_vec.append(msg.angular_rate_val.x)
       self.pbox_imu_yaw_rate_y_vec.append(msg.angular_rate_val.y)
       self.pbox_imu_yaw_rate_z_vec.append(msg.angular_rate_val.z)
-      time = (msg.header.timestamp - start_pbox_imu_timestamp) * 1e-6
+      time = (msg.msg_header.timestamp - start_pbox_imu_timestamp) * 1e-6
       interval = 0.0
       if last_pbox_imu_timestamp is not None:
-        interval = (msg.header.timestamp - last_pbox_imu_timestamp) * 1e-6
+        interval = (msg.msg_header.timestamp - last_pbox_imu_timestamp) * 1e-6
       self.pbox_imu_time_vec.append(time)
       self.pbox_imu_timestamp_interval_vec.append(interval)
-      last_pbox_imu_timestamp = msg.header.timestamp
+      last_pbox_imu_timestamp = msg.msg_header.timestamp
 
 
   def load_gnss_data(self):
-    bag = Record(self.file_path)
+    bag = rosbag.Bag(self.file_path)
     for topic, msg, t in bag.read_messages('/iflytek/sensor/gnss'):
       self.gnss_lon_vec.append(msg.gnss_msg.new_longitude)
       self.gnss_lat_vec.append(msg.gnss_msg.new_latitude)
@@ -351,127 +356,127 @@ class LocalizationApaPlotter(object):
 
 
   def load_vehicle_service_data(self):
-    bag = Record(self.file_path)
+    bag = rosbag.Bag(self.file_path)
     start_vehicle_service_timestamp = None
     last_vehicle_service_timestamp = None
     for topic, msg, t in bag.read_messages('/iflytek/vehicle_service'):
-      self.vehicle_service_timestamp_vec.append(msg.header.timestamp)
+      self.vehicle_service_timestamp_vec.append(msg.msg_header.timestamp)
       if start_vehicle_service_timestamp is None:
-        start_vehicle_service_timestamp = msg.header.timestamp
-      time = (msg.header.timestamp - start_vehicle_service_timestamp) * 1e-6
+        start_vehicle_service_timestamp = msg.msg_header.timestamp
+      time = (msg.msg_header.timestamp - start_vehicle_service_timestamp) * 1e-6
       self.vehicle_service_time_vec.append(time)
       interval = 0.0
       if last_vehicle_service_timestamp is not None:
-        interval = (msg.header.timestamp - last_vehicle_service_timestamp) * 1e-6
+        interval = (msg.msg_header.timestamp - last_vehicle_service_timestamp) * 1e-6
       self.vehicle_service_timestamp_interval_vec.append(interval)
       self.vehicle_service_turn_switch_state_vec.append(msg.turn_switch_state)
-      last_vehicle_service_timestamp = msg.header.timestamp
+      last_vehicle_service_timestamp = msg.msg_header.timestamp
 
 
   def load_planning_data(self):
-    bag = Record(self.file_path)
+    bag = rosbag.Bag(self.file_path)
     start_planning_timestamp = None
     last_planning_timestamp = None
     for topic, msg, t in bag.read_messages('/iflytek/planning/plan'):
-      self.planning_timestamp_vec.append(msg.meta.header.timestamp)
+      self.planning_timestamp_vec.append(msg.meta.msg_header.timestamp)
       if start_planning_timestamp is None:
-        start_planning_timestamp = msg.meta.header.timestamp
-      time = (msg.meta.header.timestamp - start_planning_timestamp) * 1e-6
+        start_planning_timestamp = msg.meta.msg_header.timestamp
+      time = (msg.meta.msg_header.timestamp - start_planning_timestamp) * 1e-6
       self.planning_time_vec.append(time)
       interval = 0.0
       if last_planning_timestamp is not None:
-        interval = (msg.meta.header.timestamp - last_planning_timestamp) * 1e-6
+        interval = (msg.meta.msg_header.timestamp - last_planning_timestamp) * 1e-6
       self.planning_timestamp_interval_vec.append(interval)
-      last_planning_timestamp = msg.meta.header.timestamp
+      last_planning_timestamp = msg.meta.msg_header.timestamp
 
 
   def load_control_data(self):
-    bag = Record(self.file_path)
+    bag = rosbag.Bag(self.file_path)
     start_control_timestamp = None
     last_control_timestamp = None
     for topic, msg, t in bag.read_messages('/iflytek/control/control_command'):
-      self.control_timestamp_vec.append(msg.header.timestamp)
+      self.control_timestamp_vec.append(msg.msg_header.timestamp)
       if start_control_timestamp is None:
-        start_control_timestamp = msg.header.timestamp
-      time = (msg.header.timestamp - start_control_timestamp) * 1e-6
+        start_control_timestamp = msg.msg_header.timestamp
+      time = (msg.msg_header.timestamp - start_control_timestamp) * 1e-6
       self.control_time_vec.append(time)
       interval = 0.0
       if last_control_timestamp is not None:
-        interval = (msg.header.timestamp - last_control_timestamp) * 1e-6
+        interval = (msg.msg_header.timestamp - last_control_timestamp) * 1e-6
       self.control_timestamp_interval_vec.append(interval)
-      last_control_timestamp = msg.header.timestamp
+      last_control_timestamp = msg.msg_header.timestamp
 
 
   def load_road_fusion_data(self):
-    bag = Record(self.file_path)
+    bag = rosbag.Bag(self.file_path)
     start_road_fusion_timestamp = None
     last_road_fusion_timestamp = None
     for topic, msg, t in bag.read_messages('/iflytek/fusion/road_fusion'):
-      self.road_fusion_timestamp_vec.append(msg.header.timestamp)
+      self.road_fusion_timestamp_vec.append(msg.msg_header.timestamp)
       if start_road_fusion_timestamp is None:
-        start_road_fusion_timestamp = msg.header.timestamp
-      time = (msg.header.timestamp - start_road_fusion_timestamp) * 1e-6
+        start_road_fusion_timestamp = msg.msg_header.timestamp
+      time = (msg.msg_header.timestamp - start_road_fusion_timestamp) * 1e-6
       self.road_fusion_time_vec.append(time)
       interval = 0.0
       if last_road_fusion_timestamp is not None:
-        interval = (msg.header.timestamp - last_road_fusion_timestamp) * 1e-6
+        interval = (msg.msg_header.timestamp - last_road_fusion_timestamp) * 1e-6
       self.road_fusion_timestamp_interval_vec.append(interval)
       for ref_line_msg in msg.reference_line_msg:
         if ref_line_msg.relative_id == 0:
           self.cur_lane_source_vec.append(ref_line_msg.lane_sources[0].source)
           break
-      last_road_fusion_timestamp = msg.header.timestamp
+      last_road_fusion_timestamp = msg.msg_header.timestamp
 
 
   def load_object_fusion_data(self):
-    bag = Record(self.file_path)
+    bag = rosbag.Bag(self.file_path)
     start_object_fusion_timestamp = None
     last_object_fusion_timestamp = None
     for topic, msg, t in bag.read_messages('/iflytek/fusion/objects'):
-      self.object_fusion_timestamp_vec.append(msg.header.timestamp)
+      self.object_fusion_timestamp_vec.append(msg.msg_header.timestamp)
       if start_object_fusion_timestamp is None:
-        start_object_fusion_timestamp = msg.header.timestamp
-      time = (msg.header.timestamp - start_object_fusion_timestamp) * 1e-6
+        start_object_fusion_timestamp = msg.msg_header.timestamp
+      time = (msg.msg_header.timestamp - start_object_fusion_timestamp) * 1e-6
       self.object_fusion_time_vec.append(time)
       interval = 0.0
       if last_object_fusion_timestamp is not None:
-        interval = (msg.header.timestamp - last_object_fusion_timestamp) * 1e-6
+        interval = (msg.msg_header.timestamp - last_object_fusion_timestamp) * 1e-6
       self.object_fusion_timestamp_interval_vec.append(interval)
-      last_object_fusion_timestamp = msg.header.timestamp
+      last_object_fusion_timestamp = msg.msg_header.timestamp
 
 
   def load_perception_lane_data(self):
-    bag = Record(self.file_path)
+    bag = rosbag.Bag(self.file_path)
     start_perception_lane_timestamp = None
     last_perception_lane_timestamp = None
     for topic, msg, t in bag.read_messages('/iflytek/camera_perception/lane_lines'):
-      self.perception_lane_timestamp_vec.append(msg.header.timestamp)
+      self.perception_lane_timestamp_vec.append(msg.msg_header.timestamp)
       if start_perception_lane_timestamp is None:
-        start_perception_lane_timestamp = msg.header.timestamp
-      time = (msg.header.timestamp - start_perception_lane_timestamp) * 1e-6
+        start_perception_lane_timestamp = msg.msg_header.timestamp
+      time = (msg.msg_header.timestamp - start_perception_lane_timestamp) * 1e-6
       self.perception_lane_time_vec.append(time)
       interval = 0.0
       if last_perception_lane_timestamp is not None:
-        interval = (msg.header.timestamp - last_perception_lane_timestamp) * 1e-6
+        interval = (msg.msg_header.timestamp - last_perception_lane_timestamp) * 1e-6
       self.perception_lane_timestamp_interval_vec.append(interval)
-      last_perception_lane_timestamp = msg.header.timestamp
+      last_perception_lane_timestamp = msg.msg_header.timestamp
 
 
   def load_perception_object_data(self):
-    bag = Record(self.file_path)
+    bag = rosbag.Bag(self.file_path)
     start_perception_object_timestamp = None
     last_perception_object_timestamp = None
     for topic, msg, t in bag.read_messages('/iflytek/camera_perception/objects'):
-      self.perception_object_timestamp_vec.append(msg.header.timestamp)
+      self.perception_object_timestamp_vec.append(msg.msg_header.timestamp)
       if start_perception_object_timestamp is None:
-        start_perception_object_timestamp = msg.header.timestamp
-      time = (msg.header.timestamp - start_perception_object_timestamp) * 1e-6
+        start_perception_object_timestamp = msg.msg_header.timestamp
+      time = (msg.msg_header.timestamp - start_perception_object_timestamp) * 1e-6
       self.perception_object_time_vec.append(time)
       interval = 0.0
       if last_perception_object_timestamp is not None:
-        interval = (msg.header.timestamp - last_perception_object_timestamp) * 1e-6
+        interval = (msg.msg_header.timestamp - last_perception_object_timestamp) * 1e-6
       self.perception_object_timestamp_interval_vec.append(interval)
-      last_perception_object_timestamp = msg.header.timestamp
+      last_perception_object_timestamp = msg.msg_header.timestamp
 
 
   def load_offline_insd_data(self):
@@ -499,7 +504,7 @@ class LocalizationApaPlotter(object):
 
   def load_ehr_position_data(self):
     ell_wgs84 = pm.Ellipsoid('wgs84')
-    bag = Record(self.file_path)
+    bag = rosbag.Bag(self.file_path)
     if os.path.exists(self.abnormal_timestamp_path):
       os.remove(self.abnormal_timestamp_path)
     with open(self.abnormal_timestamp_path, 'a') as file:
@@ -507,11 +512,14 @@ class LocalizationApaPlotter(object):
       abnormal_position_index = 0
       last_lat = None
       last_lon = None
-      ehr_start_time = None
+      start_msg_timestamp = None
+      last_absolute_pos_original_loc_timestamp = None
+      last_positons_timestamp = None
+      last_positons_header_timestamp = None
       for topic, msg, t in bag.read_messages('/iflytek/ehr/position'):
         msg_index = msg_index + 1
-        if ehr_start_time is None:
-          ehr_start_time = msg.timestamp
+        if start_msg_timestamp is None:
+          start_msg_timestamp = msg.timestamp
         # positions
         is_positions_valid = False
         is_absolute_valid = False
@@ -527,7 +535,12 @@ class LocalizationApaPlotter(object):
           self.positions_longitudinal_accuracy_vec.append(msg.positions[0].longitudinal_accuracy)
           self.positions_deviation_vec.append(msg.positions[0].deviation)
           self.positions_probability_vec.append(msg.positions[0].probability)
-          self.positions_time_vec.append((msg.timestamp - ehr_start_time) * 0.001)
+          self.positions_time_vec.append((msg.timestamp - start_msg_timestamp) * 0.001)
+          interval = 0.0
+          if last_positons_timestamp is not None:
+            interval = msg.timestamp - last_positons_timestamp
+          self.positons_timestamp_interval_vec.append(interval * 0.001)
+          last_positons_timestamp = msg.timestamp
           self.positions_original_lon_vec.append(llu_lon)
           self.positions_original_lat_vec.append(llu_lat)
           e, n, u = pm.geodetic2enu(llu_lat,llu_lon, llu_alt, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
@@ -542,9 +555,20 @@ class LocalizationApaPlotter(object):
             continue
           is_absolute_valid = True
           self.absolute_pos_original_loc_timestamp_vec.append(msg.absolute_pos[0].original_loc_timestamp * 1000)
-          self.positons_header_timestamp_vec.append(msg.header.timestamp * 1000)
+          interval = 0.0
+          if last_absolute_pos_original_loc_timestamp is not None:
+            interval = msg.absolute_pos[0].original_loc_timestamp - last_absolute_pos_original_loc_timestamp
+          self.absolute_pos_original_loc_timestamp_interval_vec.append(interval * 0.001)
+          last_absolute_pos_original_loc_timestamp = msg.absolute_pos[0].original_loc_timestamp
+          self.positons_header_timestamp_vec.append(msg.msg_header.timestamp * 1000)
+          interval = 0.0
+          if last_positons_header_timestamp is not None:
+            interval = msg.msg_header.timestamp - last_positons_header_timestamp
+          self.positons_header_timestamp_interval_vec.append(interval * 0.001)
+          last_positons_header_timestamp = msg.msg_header.timestamp
+          self.positons_header_time_vec.append((msg.msg_header.timestamp - start_msg_timestamp) * 0.001)
           self.positons_timestamp_vec.append(msg.timestamp * 1000)
-          self.absolute_pos_time_vec.append((msg.timestamp - ehr_start_time) * 0.001)
+          self.absolute_pos_time_vec.append((msg.absolute_pos[0].original_loc_timestamp - start_msg_timestamp) * 0.001)
           self.absolute_lon_vec.append(llu_lon)
           self.absolute_lat_vec.append(llu_lat)
           e, n, u = pm.geodetic2enu(llu_lat,llu_lon, llu_alt, latitude0, longitude0, altitude0, ell=ell_wgs84, deg=True)
@@ -578,7 +602,7 @@ class LocalizationApaPlotter(object):
           self.failsafe_hdmap_status_vec.append(msg.fail_safe[0].failsafe_hdmap_status)
           self.failsafe_vehicle_status_vec.append(msg.fail_safe[0].failsafe_vehicle_status)
           self.failsafe_imu_status_vec.append(msg.fail_safe[0].failsafe_imu_status)
-          self.failsafe_time_vec.append((msg.timestamp - ehr_start_time) * 0.001)
+          self.failsafe_time_vec.append((msg.timestamp - start_msg_timestamp) * 0.001)
           if self.failsafe_loc_status_vec[-1] != 0:
             file.writelines(str(msg.timestamp)+'\n')
             if is_positions_valid:
@@ -698,28 +722,28 @@ class LocalizationApaPlotter(object):
 
 
   def load_function_state_machine_data(self):
-    bag = Record(self.file_path)
+    bag = rosbag.Bag(self.file_path)
     start_function_state_machine_timestamp = None
     last_function_state_machine_timestamp = None
     for topic, msg, t in bag.read_messages('/iflytek/system_state/soc_state'):
-      self.function_state_machine_timestamp_vec.append(msg.header.timestamp)
+      self.function_state_machine_timestamp_vec.append(msg.msg_header.timestamp)
       if start_function_state_machine_timestamp is None:
-        start_function_state_machine_timestamp = msg.header.timestamp
-      time = (msg.header.timestamp - start_function_state_machine_timestamp) * 1e-6
+        start_function_state_machine_timestamp = msg.msg_header.timestamp
+      time = (msg.msg_header.timestamp - start_function_state_machine_timestamp) * 1e-6
       self.function_state_machine_time_vec.append(time)
       interval = 0.0
       if last_function_state_machine_timestamp is not None:
-        interval = (msg.header.timestamp - last_function_state_machine_timestamp) * 1e-6
+        interval = (msg.msg_header.timestamp - last_function_state_machine_timestamp) * 1e-6
       self.function_state_machine_timestamp_interval_vec.append(interval)
-      last_function_state_machine_timestamp = msg.header.timestamp
+      last_function_state_machine_timestamp = msg.msg_header.timestamp
       self.current_state_vec.append(msg.current_state)
 
 
   def plot_figure(self):
     self.load_ehr_position_data()
-    # self.load_pbox_imu_data()
-    # self.load_iflytek_position_data()
-    # self.load_pbox_gnss_data()
+    self.load_pbox_imu_data()
+    self.load_iflytek_position_data()
+    self.load_pbox_gnss_data()
     # self.load_gnss_data()
     # self.load_online_insd_data()
     # self.load_rtk_data()
@@ -840,6 +864,10 @@ class LocalizationApaPlotter(object):
     fig7.line(self.object_fusion_time_vec, self.object_fusion_timestamp_interval_vec, line_width=1, line_color='gold', line_dash='solid', legend_label='object_fusion time interval')
     fig7.line(self.perception_lane_time_vec, self.perception_lane_timestamp_interval_vec, line_width=1, line_color='cyan', line_dash='solid', legend_label='perception_lane time interval')
     fig7.line(self.perception_object_time_vec, self.perception_object_timestamp_interval_vec, line_width=1, line_color='lime', line_dash='solid', legend_label='perception_object time interval')
+    fig7.line(self.absolute_pos_time_vec, self.absolute_pos_original_loc_timestamp_interval_vec, line_width=1, line_color='orange', line_dash='solid', legend_label='absolute_pos_original_loc interval')
+    fig7.line(self.positions_time_vec, self.positons_timestamp_interval_vec, line_width=1, line_color='black', line_dash='solid', legend_label='positons_timestamp interval')
+    fig7.line(self.positons_header_time_vec, self.positons_header_timestamp_interval_vec, line_width=1, line_color='purple', line_dash='solid', legend_label='positons_header_timestamp interval')
+    fig7.line(self.vehicle_service_time_vec, self.vehicle_service_timestamp_interval_vec, line_width=1, line_color='royalblue', line_dash='solid', legend_label='vehicle_service_timestamp interval')
 
     fig7.toolbar.active_scroll = fig7.select_one(WheelZoomTool)
     fig7.legend.click_policy = 'hide'

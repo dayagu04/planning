@@ -330,15 +330,15 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
     for (auto &tr : lateral_obstacle->front_tracks_copy()) {
       if (tr.is_avd_car == true && ncar_cnt < 3) {
         ncar_cnt += 1;
-        if (!(tr.type == Common::ObjectType::OBJECT_TYPE_COUPE ||
-              tr.type == Common::ObjectType::OBJECT_TYPE_MINIBUS ||
-              tr.type == Common::ObjectType::OBJECT_TYPE_VAN ||
-              tr.type == Common::ObjectType::OBJECT_TYPE_BUS ||
-              tr.type == Common::ObjectType::OBJECT_TYPE_TRUCK ||
-              tr.type == Common::ObjectType::OBJECT_TYPE_TRAILER ||
-              tr.type == Common::ObjectType::OBJECT_TYPE_TRICYCLE)) {
+        if (!(tr.type == iflyauto::OBJECT_TYPE_COUPE ||
+              tr.type == iflyauto::OBJECT_TYPE_MINIBUS ||
+              tr.type == iflyauto::OBJECT_TYPE_VAN ||
+              tr.type == iflyauto::OBJECT_TYPE_BUS ||
+              tr.type == iflyauto::OBJECT_TYPE_TRUCK ||
+              tr.type == iflyauto::OBJECT_TYPE_TRAILER ||
+              tr.type == iflyauto::OBJECT_TYPE_TRICYCLE)) {
           if (tr.d_min_cpath > 0) {
-            if (tr.type != Common::ObjectType::OBJECT_TYPE_CONE) {
+            if (tr.type != iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
               // length 后续调整
               avd_temp_cars.emplace_back(AvoidObstacleInfo(
                   AvoidObstacleFlag::NORMAL, 0, tr.v_lead, tr.v_rel, tr.v_rel,
@@ -355,7 +355,7 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
                   tr.type, AvoidObstacleUpdateFlag::Update, 5.0, 0));
             }
           } else {
-            if (tr.type != Common::ObjectType::OBJECT_TYPE_CONE) {
+            if (tr.type != iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
               avd_temp_cars.emplace_back(AvoidObstacleInfo(
                   AvoidObstacleFlag::NORMAL, 0, tr.v_lead, tr.v_rel, tr.v_rel,
                   tr.d_rel - 3, tr.tail_rel_s - 3, tr.v_lat,

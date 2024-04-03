@@ -1,6 +1,7 @@
 #ifndef EMERGENCY_LANE_KEEP_ALERT_CONTEXT_H_
 #define EMERGENCY_LANE_KEEP_ALERT_CONTEXT_H_
 #include "lane_keep_assist_type.h"
+#include "session.h"
 
 namespace planning {
 class EmergencyLaneKeepAlert {

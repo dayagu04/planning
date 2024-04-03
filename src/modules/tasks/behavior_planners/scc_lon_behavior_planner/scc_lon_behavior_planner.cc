@@ -631,23 +631,21 @@ void SccLonBehaviorPlanner::UpdateHMI() {
   if ((lc_status != "left_lane_change") && (lc_status != "right_lane_change")) {
     if (lateral_obstacle.has_lead_one() &&
         lateral_obstacle.lead_one().type() != 0) {
-      hmi_info->mutable_cipv_info()->set_has_cipv(true);
-      hmi_info->mutable_cipv_info()->set_cipv_id(
-          lateral_obstacle.lead_one().track_id());
+      hmi_info->cipv_info.has_cipv = true;
+      hmi_info->cipv_info.cipv_id = lateral_obstacle.lead_one().track_id();
       CIPV_id = lateral_obstacle.lead_one().track_id();
     }
   } else {
     if (lateral_obstacle.has_temp_lead_one() &&
         lateral_obstacle.temp_lead_one().type() != 0) {
-      hmi_info->mutable_cipv_info()->set_has_cipv(true);
-      hmi_info->mutable_cipv_info()->set_cipv_id(
-          lateral_obstacle.temp_lead_one().track_id());
+      hmi_info->cipv_info.has_cipv = true;
+      hmi_info->cipv_info.cipv_id = lateral_obstacle.temp_lead_one().track_id();
       CIPV_id = lateral_obstacle.temp_lead_one().track_id();
     }
   }
   if (CIPV_id == -1) {
-    hmi_info->mutable_cipv_info()->set_has_cipv(false);
-    hmi_info->mutable_cipv_info()->set_cipv_id(CIPV_id);
+    hmi_info->cipv_info.has_cipv = false;
+    hmi_info->cipv_info.cipv_id = CIPV_id;
   }
   JSON_DEBUG_VALUE("CIPV_id", CIPV_id);
 }

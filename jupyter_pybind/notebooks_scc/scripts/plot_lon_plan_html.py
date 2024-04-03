@@ -17,11 +17,11 @@ sys.path.append('..')
 sys.path.append('../..')
 sys.path.append('../../..')
 from lib.basic_layers import *
-from lib.load_bag import *
+from lib.load_ros_bag import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/share//data_cold/abu_zone/autoparse/jac_s811_35kw2/trigger/20240305/20240305-13-56-14/data_collection_JAC_S811_35KW2_EVENT_MANUAL_2024-03-05-13-56-14.record"
+bag_path = "/docker_share/data/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-05-06-14-37-18.bag"
 html_file = bag_path +".lonplan.html"
 
 # bokeh创建的html在jupyter中显示
@@ -1095,7 +1095,7 @@ def draw_rt_table(plan_debug_msg, layer_manager):
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:
-        dataLoader = LoadCyberbag(bag_path)
+        dataLoader = LoadRosbag(bag_path)
     except:
         print('load cyber_bag error!')
         return

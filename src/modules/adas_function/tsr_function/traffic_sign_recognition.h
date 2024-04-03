@@ -5,8 +5,7 @@
 #include "Platform_Types.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
-#include "planning_hmi.pb.h"
-#include "session.h"
+#include "planning_hmi_c.h"
 #include "virtual_lane_manager.h"
 
 namespace planning {
@@ -45,7 +44,7 @@ class TrafficSignRecognition {
   }
   void init(planning::framework::Session *session) { session_ = session; }
   void RunOnce();
-  PlanningHMI::TSROutputInfoStr_TSRFunctionFSMWorkState get_tsr_state_info() {
+  iflyauto::TSRFunctionFSMWorkState get_tsr_state_info() {
     return tsr_state_;  // TSR功能状态 0:Unavailable 1:Off 2:Standby 3:Active
   }
   uint8 get_tsr_speed_limit_info() {
@@ -66,20 +65,16 @@ class TrafficSignRecognition {
     // TSR功能状态 0:Unavailable 1:Off 2:Standby 3:Active
     switch (tsr_sys_.state.tsr_state) {
       case 0:
-        tsr_state_ = PlanningHMI::
-            TSROutputInfoStr_TSRFunctionFSMWorkState_TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+        tsr_state_ = iflyauto::TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
         break;
       case 1:
-        tsr_state_ = PlanningHMI::
-            TSROutputInfoStr_TSRFunctionFSMWorkState_TSR_FUNCTION_FSM_WORK_STATE_OFF;
+        tsr_state_ = iflyauto::TSR_FUNCTION_FSM_WORK_STATE_OFF;
         break;
       case 2:
-        tsr_state_ = PlanningHMI::
-            TSROutputInfoStr_TSRFunctionFSMWorkState_TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
+        tsr_state_ = iflyauto::TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
         break;
       default:
-        tsr_state_ = PlanningHMI::
-            TSROutputInfoStr_TSRFunctionFSMWorkState_TSR_FUNCTION_FSM_WORK_STATE_ACTIVE;
+        tsr_state_ = iflyauto::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE;
         break;
     }
     tsr_speed_limit_ =
@@ -91,11 +86,10 @@ class TrafficSignRecognition {
  private:
   planning::framework::Session *session_;
   TSRSys tsr_sys_;
-  PlanningHMI::TSROutputInfoStr_TSRFunctionFSMWorkState tsr_state_{
-      PlanningHMI::
-          TSROutputInfoStr_TSRFunctionFSMWorkState_TSR_FUNCTION_FSM_WORK_STATE_OFF};  // TSR功能状态
-                                                                                      // 0:Unavailable 1:Off
-                                                                                      // 2:Standby 3:Active
+  iflyauto::TSRFunctionFSMWorkState tsr_state_{
+      iflyauto::TSR_FUNCTION_FSM_WORK_STATE_OFF};  // TSR功能状态
+                                                   // 0:Unavailable 1:Off
+                                                   // 2:Standby 3:Active
   uint8 tsr_speed_limit_;  // TSR识别到的限速标识牌 单位:km/h
   bool tsr_warning_;       // TSR超速报警标志位 0:No Warning 1:Warning
 };

@@ -1,5 +1,6 @@
 import sys, os
 sys.path.append("..")
+sys.path.append("../lib/")
 import inspect
 # from lib.load_cyberbag import *
 from lib.load_local_view import *
@@ -7,8 +8,8 @@ sys.path.append('../..')
 sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
-# bag path and frame dt 
-bag_path = "/data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240522/20240522-15-32-19/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-05-22-15-32-19_no_camera.record" #.1688547247.plan
+# bag path and frame dt
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240525/20240525-15-54-05/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-05-25-15-54-05.bag" #.1688547247.plan
 # bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
@@ -16,7 +17,8 @@ frame_dt = 0.02 # sec
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-bag_loader = LoadCyberbag(bag_path)
+# bag_loader = LoadCyberbag(bag_path)
+bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 
@@ -25,7 +27,7 @@ obj_id = 0
 ### sliders config
 class LatBehaviorSlider:
   def __init__(self,  slider_callback):
-    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%', height='100%'), description= "bag_time",min=0.0, max=max_time, value=0.1, step=frame_dt)
+    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=0.1, step=frame_dt)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider)
 
 # 障碍物的id选择
@@ -279,7 +281,6 @@ def slider_callback(bag_time):
 
   push_notebook()
 
+bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table), column(data_overtake_lc_table, data_behavior_table_2)), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
-bkp.show(row(fig1, column(data_behavior_table_1,data_overtake_lc_table), column(data_lc_table_3,data_obstacle_table,data_behavior_table_2)), notebook_handle=True)
-slider_class = ObjText(obj_id_handler)
-
+# slider_class = ObjText(obj_id_handler)

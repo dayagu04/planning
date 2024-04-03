@@ -839,13 +839,10 @@ void LaneChangeDecider::compute_lc_back_info(RequestType direction) {
   std::array<double, 3> fp_l{0, 0.4, 0.6};
   double c1 = 0;
 
-  if (direction == LEFT_CHANGE &&
-      target_lane->get_right_lane_boundary().poly_coefficient_size() == 4) {
-    c1 = target_lane->get_right_lane_boundary().poly_coefficient()[1];
-  } else if (direction == RIGHT_CHANGE &&
-             target_lane->get_left_lane_boundary().poly_coefficient_size() ==
-                 4) {
-    c1 = target_lane->get_left_lane_boundary().poly_coefficient()[1];
+  if (direction == LEFT_CHANGE) {
+    c1 = target_lane->get_right_lane_boundary().poly_coefficient[1];
+  } else if (direction == RIGHT_CHANGE) {
+    c1 = target_lane->get_left_lane_boundary().poly_coefficient[1];
   }
 
   double move_thre =
@@ -865,9 +862,8 @@ void LaneChangeDecider::compute_lc_back_info(RequestType direction) {
   auto left_lane = virtual_lane_manager->get_left_lane();
   if (left_lane != nullptr) {
     for (auto &p : left_lane->lane_points()) {
-      if (p.car_point().x() >= 0 && p.car_point().x() <= 20 &&
-          !p.is_in_intersection()) {
-        left_lane_width = p.lane_width();
+      if (p.car_point.x >= 0 && p.car_point.x <= 20 && !p.is_in_intersection) {
+        left_lane_width = p.lane_width;
         if (left_lane_width < 100) {
           break;
         }
@@ -880,9 +876,8 @@ void LaneChangeDecider::compute_lc_back_info(RequestType direction) {
   auto right_lane = virtual_lane_manager->get_right_lane();
   if (right_lane != nullptr) {
     for (auto &p : right_lane->lane_points()) {
-      if (p.car_point().x() >= 0 && p.car_point().x() <= 20 &&
-          !p.is_in_intersection()) {
-        right_lane_width = p.lane_width();
+      if (p.car_point.x >= 0 && p.car_point.x <= 20 && !p.is_in_intersection) {
+        right_lane_width = p.lane_width;
         if (right_lane_width < 100) {
           break;
         }
@@ -1250,10 +1245,10 @@ bool LaneChangeDecider::check_lc_change_finish(RequestType direction) {
   }
 
   if (lc_change_finish == true) {
-    auto ad_info = session_->mutable_planning_context()
-                       ->mutable_planning_hmi_info()
-                       ->mutable_ad_info();
-    ad_info->set_lane_change_status(::PlanningHMI::LaneChangeStatus::COMPLETED);
+    auto ad_info = &(session_->mutable_planning_context()
+                         ->mutable_planning_hmi_info()
+                         ->ad_info);
+    ad_info->lane_change_status = iflyauto::LC_COMPLETED;
   }
   return lc_change_finish;
 }
@@ -1715,32 +1710,28 @@ void LaneChangeDecider::UpdateStateMachineDebugInfo() {
 }
 
 void LaneChangeDecider::UpdateAdInfo() {
-  auto ad_info = session_->mutable_planning_context()
-                     ->mutable_planning_hmi_info()
-                     ->mutable_ad_info();
+  auto ad_info = &(session_->mutable_planning_context()
+                       ->mutable_planning_hmi_info()
+                       ->ad_info);
 
   // feed hmi
-  ad_info->set_lane_change_direction(::PlanningHMI::LaneChangeDirection::OTHER);
+  ad_info->lane_change_direction = iflyauto::LC_OTHER;
   if (transition_context_.target_state == ROAD_LC_LWAIT ||
       transition_context_.target_state == ROAD_LC_RWAIT) {
-    ad_info->set_lane_change_status(::PlanningHMI::LaneChangeStatus::WAITING);
+    ad_info->lane_change_status = iflyauto::LC_WAITING;
     if (transition_context_.target_state == ROAD_LC_LWAIT) {
-      ad_info->set_lane_change_direction(
-          ::PlanningHMI::LaneChangeDirection::LEFT);
+      ad_info->lane_change_direction = iflyauto::LC_LEFT;
     } else {
-      ad_info->set_lane_change_direction(
-          ::PlanningHMI::LaneChangeDirection::RIGHT);
+      ad_info->lane_change_direction = iflyauto::LC_RIGHT;
     }
   } else if (transition_context_.target_state == ROAD_LC_LCHANGE ||
              transition_context_.target_state == ROAD_LC_RCHANGE) {
     if (transition_context_.target_state == ROAD_LC_LCHANGE) {
-      ad_info->set_lane_change_direction(
-          ::PlanningHMI::LaneChangeDirection::LEFT);
+      ad_info->lane_change_direction = iflyauto::LC_LEFT;
     } else {
-      ad_info->set_lane_change_direction(
-          ::PlanningHMI::LaneChangeDirection::RIGHT);
+      ad_info->lane_change_direction = iflyauto::LC_RIGHT;
     }
-    ad_info->set_lane_change_status(::PlanningHMI::LaneChangeStatus::STARTING);
+    ad_info->lane_change_status = iflyauto::LC_STARTING;
   } else if (transition_context_.target_state == ROAD_NONE) {
     if (transition_context_.source_state == ROAD_LC_LWAIT ||
         transition_context_.source_state == ROAD_LC_RWAIT ||
@@ -1748,23 +1739,18 @@ void LaneChangeDecider::UpdateAdInfo() {
         transition_context_.source_state == ROAD_LC_RCHANGE ||
         transition_context_.source_state == ROAD_LC_LBACK ||
         transition_context_.source_state == ROAD_LC_RBACK) {
-      if (ad_info->has_lane_change_status() &&
-          ad_info->lane_change_status() ==
-              ::PlanningHMI::LaneChangeStatus::COMPLETED) {
+      if (ad_info->lane_change_status == iflyauto::LC_COMPLETED) {
         // check_lc_change_finish
       } else {
-        ad_info->set_lane_change_status(
-            ::PlanningHMI::LaneChangeStatus::CANCELLED);
+        ad_info->lane_change_status = iflyauto::LC_CANCELLED;
       }
 
       if (transition_context_.source_state == ROAD_LC_LWAIT ||
           transition_context_.source_state == ROAD_LC_LCHANGE ||
           transition_context_.source_state == ROAD_LC_LBACK) {
-        ad_info->set_lane_change_direction(
-            ::PlanningHMI::LaneChangeDirection::LEFT);
+        ad_info->lane_change_direction = iflyauto::LC_LEFT;
       } else {
-        ad_info->set_lane_change_direction(
-            ::PlanningHMI::LaneChangeDirection::RIGHT);
+        ad_info->lane_change_direction = iflyauto::LC_RIGHT;
       }
     }
   }
@@ -1783,12 +1769,10 @@ void LaneChangeDecider::UpdateAdInfo() {
       if (target_reference->get_frenet_coord()->SLToXY(
               Point2D(target_reference->get_frenet_ego_state().s() + 5, 0),
               cart_point)) {
-        ad_info->mutable_landing_point()->mutable_relative_pos()->set_x(
-            cart_point.x);
-        ad_info->mutable_landing_point()->mutable_relative_pos()->set_y(
-            cart_point.y);
-        ad_info->mutable_landing_point()->mutable_relative_pos()->set_z(0);
-        ad_info->mutable_landing_point()->set_heading(0);
+        ad_info->landing_point.relative_pos.x = cart_point.x;
+        ad_info->landing_point.relative_pos.y = cart_point.y;
+        ad_info->landing_point.relative_pos.z = 0;
+        ad_info->landing_point.heading = 0;
       }
     }
   }

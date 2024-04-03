@@ -6,8 +6,8 @@ sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
 
-sys.path.append('python_proto')
-from python_proto import planning_plan_pb2
+sys.path.append('../../python_proto')
+from struct_msgs.msg import PlanningOutput
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
@@ -177,8 +177,8 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   car_box_x_vec = []
   car_box_y_vec = []
   if res == True:
-    tuned_planning_output = planning_plan_pb2.PlanningOutput()
-    tuned_planning_output.ParseFromString(apa_simulation_py.GetPlanningOutput())
+    tuned_planning_output = PlanningOutput()
+    tuned_planning_output.deserialize(apa_simulation_py.GetPlanningOutput())
 
     for i in range(len(tuned_planning_output.trajectory.trajectory_points)):
       plan_path_x.append(tuned_planning_output.trajectory.trajectory_points[i].x)

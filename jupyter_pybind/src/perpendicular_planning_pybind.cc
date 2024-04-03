@@ -21,19 +21,6 @@ int Init() {
   return 0;
 }
 
-template <class T>
-inline T BytesToProto(py::bytes &bytes) {
-  T proto_obj;
-  py::buffer buf(bytes);
-  py::buffer_info input_info = buf.request();
-  char *input_ptr = static_cast<char *>(input_info.ptr);
-  std::string input_s(input_ptr, input_info.size);
-
-  T input;
-  input.ParseFromString(input_s);
-  return input;
-}
-
 static PerpendicularPathPlanner::DebugInfo debuginfo;
 static std::vector<double> res;
 

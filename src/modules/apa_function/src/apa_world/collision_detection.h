@@ -9,7 +9,7 @@
 #include "geometry_math.h"
 #include "local_view.h"
 #include "math_lib.h"
-#include "planning_plan.pb.h"
+#include "planning_plan_c.h"
 #include "transform_lib.h"
 
 namespace planning {

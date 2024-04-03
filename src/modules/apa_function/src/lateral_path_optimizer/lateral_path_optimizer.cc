@@ -6,11 +6,14 @@
 #include <vector>
 
 #include "Eigen/Core"
+
+#include "apa_world.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "lateral_path_optimizer.pb.h"
 #include "log.h"
 #include "math_lib.h"
+#include "planning_plan_c.h"
 #include "src/lateral_path_optimizer_cost.h"
 #include "src/lateral_path_optimizer_problem.h"
 
@@ -19,6 +22,8 @@ static const double kMinRadius = 6.0;
 static const double kCurvFactor = 0.3;
 static const double kMaxDelta = 400 / 57.3 / 15;
 static const double kRefVel = 0.6;
+static const size_t PlanningTraPointsNum =
+    PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM;
 
 namespace planning {
 namespace apa_planner {
@@ -228,8 +233,13 @@ void LateralPathOptimizer::PostProcessOutput() {
     s_vec.emplace_back(planning_output.s_vec(i));
   }
 
-  const size_t resampled_point_num =
-      std::floor(s_vec.back() / param_.sample_ds) + 1;
+  size_t resampled_point_num = std::ceil(s_vec.back() / param_.sample_ds);
+  double adjust_sample_ds = param_.sample_ds;
+  size_t adjust_sample_point_num = resampled_point_num;
+  if (resampled_point_num > PlanningTraPointsNum) {
+    adjust_sample_ds = s_vec.back() / PlanningTraPointsNum;
+    adjust_sample_point_num = std::ceil(s_vec.back() / adjust_sample_ds);
+  }
 
   pnc::mathlib::spline x_s_spline;
   pnc::mathlib::spline y_s_spline;
@@ -239,17 +249,17 @@ void LateralPathOptimizer::PostProcessOutput() {
   theta_s_spline.set_points(s_vec, theta_vec);
 
   output_path_vec_.clear();
-  output_path_vec_.reserve(resampled_point_num);
+  output_path_vec_.reserve(adjust_sample_point_num);
   double resampled_ds = 0.0;
   Eigen::Vector2d point;
   double heading;
   pnc::geometry_lib::PathPoint tmp_output;
-  for (size_t i = 0; i < resampled_point_num; i++) {
+  for (size_t i = 0; i < adjust_sample_point_num; i++) {
     point << x_s_spline(resampled_ds), y_s_spline(resampled_ds);
     heading = pnc::geometry_lib::NormalizeAngle(theta_s_spline(resampled_ds));
     tmp_output.Set(point, heading);
     output_path_vec_.emplace_back(tmp_output);
-    resampled_ds += param_.sample_ds;
+    resampled_ds += adjust_sample_ds;
   }
 }
 

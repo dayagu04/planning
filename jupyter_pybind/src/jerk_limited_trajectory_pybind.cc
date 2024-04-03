@@ -17,22 +17,9 @@ int Init() {
   return 0;
 }
 
-template <class T>
-inline T BytesToProto(py::bytes &bytes) {
-  T proto_obj;
-  py::buffer buf(bytes);
-  py::buffer_info input_info = buf.request();
-  char *input_ptr = static_cast<char *>(input_info.ptr);
-  std::string input_s(input_ptr, input_info.size);
-
-  T input;
-  input.ParseFromString(input_s);
-  return input;
-}
-
-int UpdateByParams(double s0, double v0, double a0,
-                   double s_des, double v_des, double v_min, double v_max, double a_min,
-                   double a_max, double j_min, double j_max) {
+int UpdateByParams(double s0, double v0, double a0, double s_des, double v_des,
+                   double v_min, double v_max, double a_min, double a_max,
+                   double j_min, double j_max) {
   planning::jlt::StateLimitParam state_limit;
   planning::jlt::PointState init_point_state;
   state_limit.v_max = v_max;
@@ -82,10 +69,10 @@ PYBIND11_MODULE(jerk_limited_trajectory_py, m) {
   m.doc() = "m";
 
   m.def("Init", Init)
-   .def("UpdateByParams", &UpdateByParams)
-   .def("GetTotalTime", &GetTotalTime)
-   .def("GetSOutput", &GetSOutput)
-   .def("GetVelOutput", &GetVelOutput)
-   .def("GetAccOutput", &GetAccOutput)
-   .def("GetJerkOutput", &GetJerkOutput);
+      .def("UpdateByParams", &UpdateByParams)
+      .def("GetTotalTime", &GetTotalTime)
+      .def("GetSOutput", &GetSOutput)
+      .def("GetVelOutput", &GetVelOutput)
+      .def("GetAccOutput", &GetAccOutput)
+      .def("GetJerkOutput", &GetJerkOutput);
 }

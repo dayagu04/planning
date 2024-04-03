@@ -15,7 +15,7 @@
 #include "config/vehicle_param.h"
 #include "ego_planning_config.h"
 #include "environmental_model.h"
-#include "func_state_machine.pb.h"
+#include "func_state_machine_c.h"
 #include "ifly_time.h"
 #include "log.h"
 #include "math/math_utils.h"
@@ -27,8 +27,6 @@
 #include "vehicle_status.pb.h"
 
 namespace planning {
-
-using ::FuncStateMachine::FunctionalState;
 
 PlanningScheduler::PlanningScheduler(const LocalView *const local_view)
     : local_view_(local_view) {
@@ -107,8 +105,8 @@ void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
 }
 
 bool PlanningScheduler::RunOnce(
-    PlanningOutput::PlanningOutput *const planning_output,
-    PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+    iflyauto::PlanningOutput *const planning_output,
+    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
   double start_timestamp = IflyTime::Now_ms();
 
   LOG_ERROR("PlanningScheduler::RunOnce \n");
@@ -119,19 +117,16 @@ bool PlanningScheduler::RunOnce(
 
   auto scene_type = planning::common::SceneType::HIGHWAY;
   const auto &state_machine = local_view_->function_state_machine_info;
-  if (state_machine.has_current_state()) {
-    if (IsUndefinedScene(state_machine.current_state())) {
-      scene_type = planning::common::SceneType::HIGHWAY;
-    } else if (IsValidParkingState(state_machine.current_state())) {
-      scene_type = planning::common::SceneType::PARKING_APA;
-    } else if (IsValidHppState(state_machine.current_state())) {
-      scene_type = planning::common::SceneType::HPP;
-    } else {
-      scene_type = planning::common::SceneType::HIGHWAY;
-    }
+  if (IsUndefinedScene(state_machine.current_state)) {
+    scene_type = planning::common::SceneType::HIGHWAY;
+  } else if (IsValidParkingState(state_machine.current_state)) {
+    scene_type = planning::common::SceneType::PARKING_APA;
+  } else if (IsValidHppState(state_machine.current_state)) {
+    scene_type = planning::common::SceneType::HPP;
   } else {
-    return false;
+    scene_type = planning::common::SceneType::HIGHWAY;
   }
+
   session_.set_scene_type(scene_type);
 
   auto frame_info =
@@ -142,7 +137,7 @@ bool PlanningScheduler::RunOnce(
   if (scene_type == common::PARKING_APA) {
     // 泊车规划部分
     planning_success = apa_function_->Plan();
-    planning_output->CopyFrom(session_.planning_context().planning_output());
+    *planning_output = session_.planning_context().planning_output();
     return planning_success;
   }
 
@@ -183,8 +178,7 @@ bool PlanningScheduler::RunOnce(
     LOG_DEBUG("Planning failed !!!! \n");
     if (!UpdateFailedPlanningResult()) {
       LOG_DEBUG("RunOnce failed !!!! \n");
-      FillPlanningRequest(PlanningOutput::PlanningRequest::MIDDLE,
-                          planning_output);
+      FillPlanningRequest(iflyauto::REQUEST_LEVEL_MIDDLE, planning_output);
       return false;
     }
   } else {
@@ -211,7 +205,7 @@ bool PlanningScheduler::RunOnce(
 }
 
 void PlanningScheduler::FillPlanningTrajectory(
-    double start_time, PlanningOutput::PlanningOutput *const planning_output) {
+    double start_time, iflyauto::PlanningOutput *const planning_output) {
   // 获取LDP&&ELK功能干预状态
   auto lkas_info =
       session_.mutable_planning_context()->lane_keep_assit_function();
@@ -242,73 +236,70 @@ void PlanningScheduler::FillPlanningTrajectory(
   // 更新输出
   auto time_stamp_us = IflyTime::Now_us();
 
-  planning_output->mutable_meta()->set_plan_timestamp_us(time_stamp_us);
-  planning_output->mutable_meta()->set_plan_strategy_name("Real Time Planning");
+  planning_output->meta.plan_timestamp_us = time_stamp_us;
+  strcpy(planning_output->meta.plan_strategy_name, "Real Time Planning");
 
   // 2.Trajectory
-  auto trajectory = planning_output->mutable_trajectory();
+  auto trajectory = &planning_output->trajectory;
+  trajectory->trajectory_points_size = 0;
   // set trajectory false when dbw is false
   if (lkas_intervention_flag) {
-    trajectory->set_available(true);
+    trajectory->available = true;
   } else {
-    trajectory->set_available(active);
+    trajectory->available = active;
   }
 
   // 根据定位有效性决定实时、长时
   auto location_valid = session_.environmental_model().location_valid();
 
   if (location_valid) {
-    trajectory->set_trajectory_type(
-        Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
-    trajectory->mutable_trajectory_points()->Clear();
-    trajectory->mutable_target_reference()->Clear();
+    trajectory->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
     for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
-      auto path_point = trajectory->add_trajectory_points();
-      path_point->set_x(planning_result.traj_points[i].x);
-      path_point->set_y(planning_result.traj_points[i].y);
-      path_point->set_heading_yaw(planning_result.traj_points[i].heading_angle);
-      path_point->set_curvature(planning_result.traj_points[i].curvature);
-      path_point->set_t(planning_result.traj_points[i].t);
-      path_point->set_v(planning_result.traj_points[i].v);
-      path_point->set_a(planning_result.traj_points[i].a);
-      path_point->set_distance(planning_result.traj_points[i].s);
-      path_point->set_jerk(planning_result.traj_points[i].jerk);
+      auto path_point = &trajectory->trajectory_points[i];
+      path_point->x = planning_result.traj_points[i].x;
+      path_point->y = planning_result.traj_points[i].y;
+      path_point->heading_yaw = planning_result.traj_points[i].heading_angle;
+      path_point->curvature = planning_result.traj_points[i].curvature;
+      path_point->t = planning_result.traj_points[i].t;
+      path_point->v = planning_result.traj_points[i].v;
+      path_point->a = planning_result.traj_points[i].a;
+      path_point->distance = planning_result.traj_points[i].s;
+      path_point->jerk = planning_result.traj_points[i].jerk;
+      ++(trajectory->trajectory_points_size);
     }
     // 设置参考线为default
-    auto target_ref = trajectory->mutable_target_reference();
+    auto target_ref = &trajectory->target_reference;
     // add polynomial
     const auto &d_polynomial = lateral_output.d_poly;
     for (size_t i = 0; i < d_polynomial.size(); i++) {
-      target_ref->add_polynomial(d_polynomial[i]);
+      target_ref->polynomial[i] = d_polynomial[i];
     }
-    target_ref->set_target_velocity(
-        vision_only_longitudinal_outputs.velocity_target);
-    auto acceleration_range_limit =
-        target_ref->mutable_acceleration_range_limit();
-    acceleration_range_limit->set_min_a(-4.0);
-    acceleration_range_limit->set_max_a(4.0);
+    target_ref->target_velocity =
+        vision_only_longitudinal_outputs.velocity_target;
+    auto acceleration_range_limit = &target_ref->acceleration_range_limit;
+    acceleration_range_limit->min_a = -4.0;
+    acceleration_range_limit->max_a = 4.0;
 
-    target_ref->set_lateral_maneuver_gear(
-        Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
+    target_ref->lateral_maneuver_gear = iflyauto::LATERAL_MANEUVER_GEAR_NORMAL;
   } else {
     // set vision_only_longitudinal_outputs if hdmpa valid is false
-    trajectory->set_trajectory_type(
-        Common::TrajectoryType::TRAJECTORY_TYPE_TARGET_REFERENCE);
-    trajectory->mutable_trajectory_points()->Clear();
-    trajectory->mutable_target_reference()->Clear();
+    trajectory->trajectory_type = iflyauto::TRAJECTORY_TYPE_TARGET_REFERENCE;
+    // trajectory->mutable_trajectory_points()->Clear();
+    // trajectory->mutable_target_reference()->Clear();
     // 设置轨迹为default
-    auto path_point = trajectory->add_trajectory_points();
-    path_point->set_x(0.0);
-    path_point->set_y(0.0);
-    path_point->set_heading_yaw(0.0);
-    path_point->set_curvature(0.0);
-    path_point->set_t(0.0);
-    path_point->set_v(0.0);
-    path_point->set_a(0.0);
-    path_point->set_distance(0.0);
-    path_point->set_jerk(0.0);
+    auto path_point = &trajectory->trajectory_points[0];
+    path_point->x = 0.0;
+    path_point->y = 0.0;
+    path_point->heading_yaw = 0.0;
+    path_point->curvature = 0.0;
+    path_point->t = 0.0;
+    path_point->v = 0.0;
+    path_point->a = 0.0;
+    path_point->distance = 0.0;
+    path_point->jerk = 0.0;
+    ++(trajectory->trajectory_points_size);
 
-    auto target_ref = trajectory->mutable_target_reference();
+    auto target_ref = &trajectory->target_reference;
     // add polynomial
     // clip the polynomial C_3
     const double lat_offset_rate = config_.d_poly_lat_offset_rate;
@@ -361,14 +352,10 @@ void PlanningScheduler::FillPlanningTrajectory(
                                    .get_virtual_lane_manager()
                                    ->get_current_lane();
     if ((lkas_intervention_flag == true) && (current_lane != nullptr)) {
-      polynomial_limited[0] =
-          current_lane->get_center_line().poly_coefficient_car(3);
-      polynomial_limited[1] =
-          current_lane->get_center_line().poly_coefficient_car(2);
-      polynomial_limited[2] =
-          current_lane->get_center_line().poly_coefficient_car(1);
-      polynomial_limited[3] =
-          current_lane->get_center_line().poly_coefficient_car(0);
+      polynomial_limited[0] = current_lane->get_center_line()[3];
+      polynomial_limited[1] = current_lane->get_center_line()[2];
+      polynomial_limited[2] = current_lane->get_center_line()[1];
+      polynomial_limited[3] = current_lane->get_center_line()[0];
     } else {
       polynomial_limited[0] = d_polynomial[0];
       polynomial_limited[1] = d_polynomial[1];
@@ -379,214 +366,203 @@ void PlanningScheduler::FillPlanningTrajectory(
               polynomial_limited[0], polynomial_limited[1],
               polynomial_limited[2], polynomial_limited[3]);
     for (size_t i = 0; i < polynomial_limited.size(); i++) {
-      target_ref->add_polynomial(polynomial_limited[i]);
+      target_ref->polynomial[i] = polynomial_limited[i];
     }
 
-    target_ref->set_target_velocity(
-        vision_only_longitudinal_outputs.velocity_target);
+    target_ref->target_velocity =
+        vision_only_longitudinal_outputs.velocity_target;
 
-    auto acceleration_range_limit =
-        target_ref->mutable_acceleration_range_limit();
-    acceleration_range_limit->set_min_a(
-        vision_only_longitudinal_outputs.a_target_min);
-    acceleration_range_limit->set_max_a(
-        vision_only_longitudinal_outputs.a_target_max);
-    target_ref->set_lateral_maneuver_gear(
-        Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
+    auto acceleration_range_limit = &(target_ref->acceleration_range_limit);
+    acceleration_range_limit->min_a =
+        vision_only_longitudinal_outputs.a_target_min;
+    acceleration_range_limit->max_a =
+        vision_only_longitudinal_outputs.a_target_max;
+    target_ref->lateral_maneuver_gear = iflyauto::LATERAL_MANEUVER_GEAR_NORMAL;
   }
   // 3.Turn signal
-  auto turn_signal = planning_output->mutable_turn_signal_command();
-  turn_signal->set_available(true);
+  auto turn_signal = &(planning_output->turn_signal_command);
+  turn_signal->available = true;
   if (planning_result.turn_signal == NO_CHANGE) {
-    turn_signal->set_turn_signal_value(
-        Common::TurnSignalType::TURN_SIGNAL_TYPE_NONE);
+    turn_signal->turn_signal_value = iflyauto::TURN_SIGNAL_TYPE_NONE;
   } else if (planning_result.turn_signal == LEFT_CHANGE) {
-    turn_signal->set_turn_signal_value(
-        Common::TurnSignalType::TURN_SIGNAL_TYPE_LEFT);
+    turn_signal->turn_signal_value = iflyauto::TURN_SIGNAL_TYPE_LEFT;
   } else {
-    turn_signal->set_turn_signal_value(
-        Common::TurnSignalType::TURN_SIGNAL_TYPE_RIGHT);
+    turn_signal->turn_signal_value = iflyauto::TURN_SIGNAL_TYPE_RIGHT;
   }
   // WB start:--------临时hack以下信号--------
   // 4.Light signal
-  auto light_signal = planning_output->mutable_light_signal_command();
-  light_signal->set_available(true);
-  light_signal->set_light_signal_value(
-      Common::LightSignalType::LIGHT_SIGNAL_TYPE_NONE);
+  auto light_signal = &(planning_output->light_signal_command);
+  light_signal->available = true;
+  light_signal->light_signal_value = iflyauto::LIGHT_SIGNAL_TYPE_NONE;
 
   // 5.Horn signal
-  auto horn_signal_command = planning_output->mutable_horn_signal_command();
-  horn_signal_command->set_available(true);
-  horn_signal_command->set_horn_signal_value(
-      Common::HornSignalType::HORN_SIGNAL_TYPE_NONE);
+  auto horn_signal_command = &(planning_output->horn_signal_command);
+  horn_signal_command->available = true;
+  horn_signal_command->horn_signal_value = iflyauto::HORN_SIGNAL_TYPE_NONE;
 
   // 6.Gear signal
-  auto gear_command = planning_output->mutable_gear_command();
-  gear_command->set_available(true);
+  auto gear_command = &(planning_output->gear_command);
+  gear_command->available = true;
   // 需要获取目标挡位值
-  gear_command->set_gear_command_value(
-      Common::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE);
+  gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_DRIVE;
 
   // 7.Open loop steering command
   auto open_loop_steering_command =
-      planning_output->mutable_open_loop_steering_command();
-  open_loop_steering_command->set_available(true);
-  open_loop_steering_command->set_jerk_factor(70.0);  // hack
-  open_loop_steering_command->set_need_steering_wheel_stationary(false);
-  open_loop_steering_command->set_steering_wheel_rad_limit(0.1);
+      &(planning_output->open_loop_steering_command);
+  open_loop_steering_command->available = true;
+  open_loop_steering_command->jerk_factor = 70.0;  // hack
+  open_loop_steering_command->need_steering_wheel_stationary = false;
+  open_loop_steering_command->steering_wheel_rad_limit = 0.1;
 
   // 8.Planning status
-  auto planning_status = planning_output->mutable_planning_status();
-  planning_status->set_standstill(false);
+  auto planning_status = &(planning_output->planning_status);
+  planning_status->standstill = false;
   if (function_info.function_mode() == common::DrivingFunctionInfo::ACC ||
       function_info.function_mode() == common::DrivingFunctionInfo::SCC) {
-    planning_status->set_standstill(std::fabs(ego_state->ego_v()) < 0.1);
+    planning_status->standstill = std::fabs(ego_state->ego_v()) < 0.1;
   }
   // 启停状态机
-  planning_status->set_ready_to_go(
-      planning_context.start_stop_result().state() !=
-      common::StartStopInfo::STOP);
-  planning_status->set_apa_planning_status(
-      PlanningOutput::ApaPlanningStatus::NONE);
+  planning_status->ready_to_go = planning_context.start_stop_result().state() !=
+                                 common::StartStopInfo::STOP;
+  planning_status->apa_planning_status = iflyauto::APA_NONE;
   // WB end:--------临时hack以上信号--------
   const bool planning_success = planning_context.planning_success();
   const bool planning_completed = planning_context.planning_completed();
   if (planning_completed) {
-    planning_status->set_hpp_planning_status(
-        PlanningOutput::HppPlanningStatus::COMPLETED);
+    planning_status->hpp_planning_status = iflyauto::HPP_COMPLETED;
   } else if (planning_success) {
-    planning_status->set_hpp_planning_status(
-        PlanningOutput::HppPlanningStatus::RUNNING);
+    planning_status->hpp_planning_status = iflyauto::HPP_RUNNING;
   } else {
-    planning_status->set_hpp_planning_status(
-        PlanningOutput::HppPlanningStatus::RUNNING_FAILED);
+    planning_status->hpp_planning_status = iflyauto::HPP_RUNNING_FAILED;
   }
 }
 
 void PlanningScheduler::GenerateStopTrajectory(
-    double start_time, PlanningOutput::PlanningOutput *const planning_output) {
+    double start_time, iflyauto::PlanningOutput *const planning_output) {
   // 更新输出
-  planning_output->mutable_meta()->set_plan_timestamp_us(IflyTime::Now_ms());
+  planning_output->meta.plan_timestamp_us = IflyTime::Now_ms();
 
-  auto trajectory = planning_output->mutable_trajectory();
+  auto trajectory = &(planning_output->trajectory);
   // Hack: 长时规划
-  trajectory->set_trajectory_type(
-      Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
-  trajectory->mutable_trajectory_points()->Clear();
-  trajectory->mutable_target_reference()->Clear();
+  trajectory->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
+  trajectory->trajectory_points_size = 0;
   double t = 0.0;
   for (size_t i = 0; i < 21; i++) {
     t = 0.1 * i;
-    auto path_point = trajectory->add_trajectory_points();
-    path_point->set_x(0.0);
-    path_point->set_y(0.0);
-    path_point->set_heading_yaw(0.0);
-    path_point->set_curvature(0.0);
-    path_point->set_t(t);
-    path_point->set_v(0.0);
-    path_point->set_a(0.0);
-    path_point->set_distance(0.0);
-    path_point->set_jerk(0.0);  // TBD
+    auto path_point =
+        &(trajectory->trajectory_points[trajectory->trajectory_points_size++]);
+    path_point->x = 0.0;
+    path_point->y = 0.0;
+    path_point->heading_yaw = 0.0;
+    path_point->curvature = 0.0;
+    path_point->t = t;
+    path_point->v = 0.0;
+    path_point->a = 0.0;
+    path_point->distance = 0.0;
+    path_point->jerk = 0.0;  // TBD
   }
 }
 
 void PlanningScheduler::FillPlanningHmiInfo(
     double start_timestamp,
-    PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
   const auto &lateral_output =
       session_.planning_context().lateral_behavior_planner_output();
   const auto &lane_change_decider_output =
       session_.planning_context().lane_change_decider_output();
 
-  planning_hmi_info->mutable_header()->set_timestamp(IflyTime::Now_us());
+  planning_hmi_info->header.timestamp = IflyTime::Now_us();
   // HMI for alc
-  auto alc_output_pb = planning_hmi_info->mutable_alc_output_info();
-  alc_output_pb->set_lc_request(lateral_output.lc_request);
-  alc_output_pb->set_lc_status(lateral_output.lc_status);
-  alc_output_pb->set_lc_invalid_reason(
-      lane_change_decider_output.lc_invalid_reason);
-  alc_output_pb->set_lc_back_reason(
-      lane_change_decider_output.lc_back_invalid_reason);
+  auto alc_output_pb = &(planning_hmi_info->alc_output_info);
+
+  strcpy(alc_output_pb->lc_request, lateral_output.lc_request.c_str());
+
+  strcpy(alc_output_pb->lc_status, lateral_output.lc_status.c_str());
+
+  strcpy(alc_output_pb->lc_invalid_reason,
+         lane_change_decider_output.lc_invalid_reason.c_str());
+
+  strcpy(alc_output_pb->lc_back_reason,
+         lane_change_decider_output.lc_back_invalid_reason.c_str());
+
   // HMI for ldw
-  auto lkas_info =
-      session_.mutable_planning_context()->lane_keep_assit_function();
-  planning_hmi_info->mutable_ldw_output_info()->set_ldw_state(
-      lkas_info->get_ldw_state_info());
-  planning_hmi_info->mutable_ldw_output_info()->set_ldw_left_warning(
-      lkas_info->get_ldw_left_warning_info());
-  planning_hmi_info->mutable_ldw_output_info()->set_ldw_right_warning(
-      lkas_info->get_ldw_right_warning_info());
+  const auto &lkas_info =
+      session_.planning_context().lane_keep_assit_function();
+  planning_hmi_info->ldw_output_info.ldw_state =
+      lkas_info->get_ldw_state_info();
+  planning_hmi_info->ldw_output_info.ldw_left_warning =
+      lkas_info->get_ldw_left_warning_info();
+  planning_hmi_info->ldw_output_info.ldw_right_warning =
+      lkas_info->get_ldw_right_warning_info();
   // HMI for ldp
-  planning_hmi_info->mutable_ldp_output_info()->set_ldp_state(
-      lkas_info->get_ldp_state_info());
-  planning_hmi_info->mutable_ldp_output_info()->set_ldp_left_intervention_flag(
-      lkas_info->get_ldp_left_intervention_flag_info());
-  planning_hmi_info->mutable_ldp_output_info()->set_ldp_right_intervention_flag(
-      lkas_info->get_ldp_right_intervention_flag_info());
+  planning_hmi_info->ldp_output_info.ldp_state =
+      lkas_info->get_ldp_state_info();
+  planning_hmi_info->ldp_output_info.ldp_left_intervention_flag =
+      lkas_info->get_ldp_left_intervention_flag_info();
+  planning_hmi_info->ldp_output_info.ldp_right_intervention_flag =
+      lkas_info->get_ldp_right_intervention_flag_info();
   // HMI for elk
-  planning_hmi_info->mutable_elk_output_info()->set_elk_state(
-      lkas_info->get_elk_state_info());
-  planning_hmi_info->mutable_elk_output_info()->set_elk_left_intervention_flag(
-      lkas_info->get_elk_left_intervention_flag_info());
-  planning_hmi_info->mutable_elk_output_info()->set_elk_right_intervention_flag(
-      lkas_info->get_elk_right_intervention_flag_info());
+  planning_hmi_info->elk_output_info.elk_state =
+      lkas_info->get_elk_state_info();
+  planning_hmi_info->elk_output_info.elk_left_intervention_flag =
+      lkas_info->get_elk_left_intervention_flag_info();
+  planning_hmi_info->elk_output_info.elk_right_intervention_flag =
+      lkas_info->get_elk_right_intervention_flag_info();
   // HMI for ihc
-  auto ihc_info = session_.mutable_planning_context()
-                      ->intelligent_headlight_control_function();
-  planning_hmi_info->mutable_ihc_output_info()->set_ihc_state(
-      ihc_info->get_ihc_state_info());
-  planning_hmi_info->mutable_ihc_output_info()->set_ihc_request(
-      ihc_info->get_ihc_request_info());
-  planning_hmi_info->mutable_ihc_output_info()->set_ihc_request_status(
-      ihc_info->get_ihc_request_status_info());
+  const auto &ihc_info =
+      session_.planning_context().intelligent_headlight_control_function();
+  planning_hmi_info->ihc_output_info.ihc_state = ihc_info->get_ihc_state_info();
+  planning_hmi_info->ihc_output_info.ihc_request =
+      ihc_info->get_ihc_request_info();
+  planning_hmi_info->ihc_output_info.ihc_request_status =
+      ihc_info->get_ihc_request_status_info();
   // HMI for tsr
-  auto tsr_info =
-      session_.mutable_planning_context()->traffic_sign_recognition_function();
-  planning_hmi_info->mutable_tsr_output_info()->set_tsr_state(
-      tsr_info->get_tsr_state_info());
-  planning_hmi_info->mutable_tsr_output_info()->set_tsr_warning(
-      tsr_info->get_tsr_warning_info());
-  planning_hmi_info->mutable_tsr_output_info()->set_tsr_speed_limit(
-      tsr_info->get_tsr_speed_limit_info());
+  const auto &tsr_info =
+      session_.planning_context().traffic_sign_recognition_function();
+  planning_hmi_info->tsr_output_info.tsr_state = tsr_info->get_tsr_state_info();
+  planning_hmi_info->tsr_output_info.tsr_warning =
+      tsr_info->get_tsr_warning_info();
+  planning_hmi_info->tsr_output_info.tsr_speed_limit =
+      tsr_info->get_tsr_speed_limit_info();
   // HMI for CIPV
   // TBD: 后续需要丰富障碍物的信息，后车、侧方车辆等
-  auto cipv_info = session_.planning_context().planning_hmi_info().cipv_info();
-  planning_hmi_info->mutable_cipv_info()->set_has_cipv(cipv_info.has_cipv());
-  planning_hmi_info->mutable_cipv_info()->set_cipv_id(cipv_info.cipv_id());
+  const auto &cipv_info =
+      session_.planning_context().planning_hmi_info().cipv_info;
+  planning_hmi_info->cipv_info.has_cipv = cipv_info.has_cipv;
+  planning_hmi_info->cipv_info.cipv_id = cipv_info.cipv_id;
 
   const auto &ego_state_manager =
       session_.environmental_model().get_ego_state_manager();
-  planning_hmi_info->mutable_ad_info()->set_cruise_speed(
-      ego_state_manager->ego_v_cruise());
+  planning_hmi_info->ad_info.cruise_speed = ego_state_manager->ego_v_cruise();
 
   // HMI for NOA
   const auto &virtual_lane_manager =
       session_.environmental_model().get_virtual_lane_manager();
-  planning_hmi_info->mutable_ad_info()->set_distance_to_ramp(
-      virtual_lane_manager->dis_to_ramp());
-  planning_hmi_info->mutable_ad_info()->set_distance_to_split(
-      virtual_lane_manager->distance_to_first_road_split());
-  planning_hmi_info->mutable_ad_info()->set_distance_to_merge(
-      virtual_lane_manager->distance_to_first_road_merge());
-  planning_hmi_info->mutable_ad_info()->set_distance_to_toll_station(
+  planning_hmi_info->ad_info.distance_to_ramp =
+      virtual_lane_manager->dis_to_ramp();
+  planning_hmi_info->ad_info.distance_to_split =
+      virtual_lane_manager->distance_to_first_road_split();
+  planning_hmi_info->ad_info.distance_to_merge =
+      virtual_lane_manager->distance_to_first_road_merge();
+  planning_hmi_info->ad_info.distance_to_toll_station =
       (uint)virtual_lane_manager
-          ->ramp_direction());  // 临时将toll_station改为ramp_direction
+          ->ramp_direction();  // 临时将toll_station改为ramp_direction
 
   // HMI for hpp
-  auto hpp_info = session_.mutable_planning_context()
-                      ->mutable_planning_hmi_info()
-                      ->mutable_hpp_info();
-  hpp_info->set_is_avaliable(virtual_lane_manager->is_on_hpp_lane());
-  hpp_info->set_distance_to_parking_space(
-      virtual_lane_manager->GetDistanceToDestination());
-  hpp_info->set_is_on_hpp_lane(virtual_lane_manager->is_on_hpp_lane());
-  hpp_info->set_is_reached_hpp_trace_start(
-      virtual_lane_manager->is_reached_hpp_start_point());
-  hpp_info->set_accumulated_driving_distance(
-      virtual_lane_manager->sum_distance_driving());
+  auto hpp_info = &(session_.mutable_planning_context()
+                        ->mutable_planning_hmi_info()
+                        ->hpp_info);
+  hpp_info->is_avaliable = virtual_lane_manager->is_on_hpp_lane();
+  hpp_info->distance_to_parking_space =
+      virtual_lane_manager->GetDistanceToDestination();
+  hpp_info->is_on_hpp_lane = virtual_lane_manager->is_on_hpp_lane();
+  hpp_info->is_reached_hpp_trace_start =
+      virtual_lane_manager->is_reached_hpp_start_point();
+  hpp_info->accumulated_driving_distance =
+      virtual_lane_manager->sum_distance_driving();
 
-  hpp_info->set_is_approaching_intersection(false);
-  hpp_info->set_is_approaching_turn(false);
+  hpp_info->is_approaching_intersection = false;
+  hpp_info->is_approaching_turn = false;
   auto reference_path_manager =
       session_.environmental_model().get_reference_path_manager();
   auto current_reference_path =
@@ -609,7 +585,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
         if (point.path_point.kappa >
             0.1) {  // 关注实际曲率的连续性，考虑多点还是单点
           // hpp_info->set_is_approaching_intersection(true);
-          hpp_info->set_is_approaching_turn(true);
+          hpp_info->is_approaching_turn = true;
           break;
         }
       } else if (distance > kCheckTurnDistance) {
@@ -620,27 +596,24 @@ void PlanningScheduler::FillPlanningHmiInfo(
 }
 
 void PlanningScheduler::FillPlanningRequest(
-    PlanningOutput::PlanningRequest::RequestLevel request,
-    PlanningOutput::PlanningOutput *const planning_output) {
-  planning_output->mutable_planning_request()->set_take_over_req_level(request);
-  planning_output->mutable_planning_request()->set_request_reason(
-      PlanningOutput::PlanningRequest::NO_REASON);
+    iflyauto::RequestLevel request,
+    iflyauto::PlanningOutput *const planning_output) {
+  planning_output->planning_request.take_over_req_level = request;
+  planning_output->planning_request.request_reason =
+      iflyauto::REQUEST_REASON_NO_REASON;
 }
 
 void PlanningScheduler::ClearParkingInfo(
-    PlanningOutput::PlanningOutput *const planning_output) {
+    iflyauto::PlanningOutput *const planning_output) {
   session_.mutable_planning_context()
       ->mutable_planning_output()
-      .mutable_planning_status()
-      ->set_apa_planning_status(PlanningOutput::ApaPlanningStatus::NONE);
+      .planning_status.apa_planning_status = iflyauto::APA_NONE;
 
   session_.mutable_planning_context()
       ->mutable_planning_output()
-      .mutable_successful_slot_info_list()
-      ->Clear();
+      .successful_slot_info_list_size = 0;
 
-  planning_output->mutable_planning_status()->set_apa_planning_status(
-      PlanningOutput::ApaPlanningStatus::NONE);
+  planning_output->planning_status.apa_planning_status = iflyauto::APA_NONE;
 }
 
 void PlanningScheduler::PrepareForApa() {
@@ -654,40 +627,36 @@ void PlanningScheduler::PrepareForApa() {
 
   auto &planning_output = planning_context->mutable_planning_output();
 
-  auto gear_command = planning_output.mutable_gear_command();
+  auto gear_command = &(planning_output.gear_command);
   double distance_to_destination = std::numeric_limits<double>::max();
   distance_to_destination = virtual_lane_manager->GetDistanceToDestination();
   bool entering_parking_area = distance_to_destination < kDistanceToDestination;
   double ego_v = ego_state->ego_v();
   auto fsm_state = session_.environmental_model()
                        .get_local_view()
-                       .function_state_machine_info.current_state();
+                       .function_state_machine_info.current_state;
 
-  if (fsm_state != FuncStateMachine::FunctionalState::HPP_IN_SECURE &&
+  if (fsm_state != iflyauto::FunctionalState_HPP_IN_SECURE &&
       entering_parking_area && ego_v < 0.1) {
-    gear_command->set_gear_command_value(
-        Common::GearCommandValue::GEAR_COMMAND_VALUE_PARKING);
+    gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_PARKING;
     if (ego_state->ego_gear() == planning::common::GearType::PARK) {
       planning_context->mutable_planning_completed() = true;
       std::cout << "HPP has arrived destination !!! " << std::endl;
     }
   } else {
-    if (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_SECURE &&
-        ego_v < 0.1) {
+    if (fsm_state == iflyauto::FunctionalState_HPP_IN_SECURE && ego_v < 0.1) {
       if (ego_state->ego_gear() == planning::common::GearType::PARK) {
         planning_context->mutable_planning_completed() = true;
         std::cout << "[general_planning] The HPP gear has been changed to PARK "
                      "by fsm_state HPP_IN_SECURE !!! "
                   << std::endl;
       }
-      gear_command->set_gear_command_value(
-          Common::GearCommandValue::GEAR_COMMAND_VALUE_PARKING);
+      gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_PARKING;
       std::cout << "[general planning] The HPP has stopped by MFF because of "
                    "SECURE situation"
                 << std::endl;
     } else {
-      gear_command->set_gear_command_value(
-          Common::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE);
+      gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_DRIVE;
       planning_context->mutable_planning_completed() = false;
       std::cout << "[general_planning] reset planning_completed to false"
                 << std::endl;
@@ -696,20 +665,20 @@ void PlanningScheduler::PrepareForApa() {
 }
 
 bool PlanningScheduler::IsUndefinedScene(
-    const ::FuncStateMachine::FunctionalState &current_state) {
-  return current_state == FunctionalState::INIT ||
-         current_state == FunctionalState::STANDBY ||
-         current_state == FunctionalState::ERROR;
+    const iflyauto::FunctionalState &current_state) {
+  return current_state == iflyauto::FunctionalState_INIT ||
+         current_state == iflyauto::FunctionalState_STANDBY ||
+         current_state == iflyauto::FunctionalState_ERROR;
 }
 
 bool PlanningScheduler::IsValidHppState(
-    const ::FuncStateMachine::FunctionalState &current_state) {
-  return current_state == FunctionalState::HPP_IN_MEMORY ||
-         current_state == FunctionalState::HPP_IN_READY_EXISTROUTE ||
-         current_state == FunctionalState::HPP_IN_READY_REENTRYROUTE ||
-         current_state == FunctionalState::HPP_IN_MEMORY_READY ||
-         current_state == FunctionalState::HPP_IN_MEMORY_CRUISE ||
-         current_state == FunctionalState::HPP_IN_SECURE;
+    const iflyauto::FunctionalState &current_state) {
+  return current_state == iflyauto::FunctionalState_HPP_IN_MEMORY ||
+         current_state == iflyauto::FunctionalState_HPP_IN_READY_EXISTROUTE ||
+         current_state == iflyauto::FunctionalState_HPP_IN_READY_REENTRYROUTE ||
+         current_state == iflyauto::FunctionalState_HPP_IN_MEMORY_READY ||
+         current_state == iflyauto::FunctionalState_HPP_IN_MEMORY_CRUISE ||
+         current_state == iflyauto::FunctionalState_HPP_IN_SECURE;
 }
 
 void PlanningScheduler::InitSccFunction() {

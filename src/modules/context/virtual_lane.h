@@ -3,10 +3,12 @@
 
 #include <float.h>
 #include <limits.h>
+
 #include <vector>
+
+#include "camera_perception_lane_lines_c.h"
 #include "config/basic_type.h"
-#include "fusion_road.pb.h"
-#include "lane_lines.pb.h"
+#include "fusion_road_c.h"
 #include "lane_reference_path.h"
 #include "log.h"
 #include "map_info_manager.h"
@@ -34,14 +36,14 @@ enum RampDirection {
 //   int relative_id_ = 0;
 //   float ego_lateral_offset_ = 0;
 //   LaneStatusEx lane_status_;
-//   FusionRoad::LaneType lane_type_;
-//   FusionRoad::LaneDrivableDirection lane_marks_;
-//   FusionRoad::LaneSource lane_source_;
-//   FusionRoad::LaneReferenceLine lane_reference_line_;
+//   iflyauto::LaneType lane_type_;
+//   iflyauto::LaneDrivableDirection lane_marks_;
+//   iflyauto::LaneSource lane_source_;
+//   iflyauto::LaneReferenceLine lane_reference_line_;
 //   std::vector<double> c_poly_;
-//   FusionRoad::LaneMergeSplitPoint lane_merge_split_point_;
-//   FusionRoad::LaneBoundary left_lane_boundary_;
-//   FusionRoad::LaneBoundary right_lane_boundary_;
+//   iflyauto::LaneMergeSplitPoint lane_merge_split_point_;
+//   iflyauto::LaneBoundary left_lane_boundary_;
+//   iflyauto::LaneBoundary right_lane_boundary_;
 // };
 
 class VirtualLane {
@@ -50,7 +52,7 @@ class VirtualLane {
   ~VirtualLane() = default;
 
  public:
-  void update_data(const FusionRoad::ReferenceLineMsg &lane);
+  void update_data(const iflyauto::ReferenceLineMsg &lane);
   void set_order_id(uint order_id) { order_id_ = order_id; };
   void set_virtual_id(int virtual_id) { virtual_id_ = virtual_id; };
   void set_relative_id(int relative_id) { relative_id_ = relative_id; };
@@ -65,21 +67,18 @@ class VirtualLane {
   double velocity_limit() const { return v_cruise_; };
   const std::vector<double> &c_poly() const { return c_poly_; }
   LaneStatusEx status() { return lane_status_; }
-  const FusionRoad::LaneBoundary &get_left_lane_boundary() {
+  const iflyauto::LaneBoundary &get_left_lane_boundary() {
     return left_lane_boundary_;
   }
-  const FusionRoad::LaneBoundary &get_right_lane_boundary() {
+  const iflyauto::LaneBoundary &get_right_lane_boundary() {
     return right_lane_boundary_;
   }
-  const FusionRoad::ReferenceLine &get_center_line() const {
-    return lane_reference_line_;
-  };
-  const FusionRoad::LaneMergeSplitPoint &get_lane_merge_split_point() {
+  const std::vector<double> &get_center_line() const { return c_poly_; };
+  const iflyauto::LaneMergeSplitPoint &get_lane_merge_split_point() {
     return lane_merge_split_point_;
   }
-  const google::protobuf::RepeatedPtrField<FusionRoad::ReferencePoint>
-      &lane_points() const {
-    return lane_reference_line_.virtual_lane_refline_points();
+  const std::vector<iflyauto::ReferencePoint> &lane_points() const {
+    return virtual_lane_refline_points_;
   }
   void update_reference_path(
       std::shared_ptr<LaneReferencePath> reference_path) {
@@ -94,18 +93,18 @@ class VirtualLane {
     return reference_path_;
   }
   double get_ego_lateral_offset() const { return ego_lateral_offset_; };
-  FusionRoad::LaneType get_lane_type() const {
-    return lane_types_.size() > 0 ? lane_types_[0].type()
-                                  : ::FusionRoad::LaneType::LANETYPE_UNKNOWN;
+  iflyauto::LaneType get_lane_type() const {
+    return lane_types_.size() > 0 ? lane_types_[0].type
+                                  : iflyauto::LANETYPE_UNKNOWN;
   };
-  FusionRoad::LaneDrivableDirection get_lane_marks() const {
+  iflyauto::LaneDrivableDirection get_lane_marks() const {
     return lane_marks_.size() > 0
-               ? lane_marks_[0].lane_mark()
-               : ::FusionRoad::LaneDrivableDirection::DIRECTION_UNKNOWN;
+               ? lane_marks_[0].lane_mark
+               : iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN;
   };
-  FusionRoad::LaneSource get_lane_source() const {
-    return lane_sources_.size() > 0 ? lane_sources_[0].source()
-                                    : ::FusionRoad::LaneSource::SOURCE_UNKNOWN;
+  iflyauto::LaneSource get_lane_source() const {
+    return lane_sources_.size() > 0 ? lane_sources_[0].source
+                                    : iflyauto::LaneSource_SOURCE_UNKNOWN;
   };
 
   // 能让车沿着route形式，在当前位置所在的lanegroup中，最少需要变道几次
@@ -115,8 +114,7 @@ class VirtualLane {
 
   uint get_common_point_num(const std::shared_ptr<VirtualLane> &other);
 
-  bool get_point_by_distance(double distance,
-                             FusionRoad::ReferencePoint *point);
+  bool get_point_by_distance(double distance, iflyauto::ReferencePoint &point);
 
   const std::vector<std::string> &center_line_points_track_id() const {
     return center_line_points_track_id_;
@@ -149,14 +147,14 @@ class VirtualLane {
   float ego_lateral_offset_ = 0;
   double width_ = 2.8;
   LaneStatusEx lane_status_;
-  std::vector<FusionRoad::LaneTypeMsg> lane_types_;
-  std::vector<FusionRoad::LaneMarkMsg> lane_marks_;
-  std::vector<FusionRoad::LaneSourceMsg> lane_sources_;
-  FusionRoad::ReferenceLine lane_reference_line_;
+  std::vector<iflyauto::LaneTypeMsg> lane_types_;
+  std::vector<iflyauto::LaneMarkMsg> lane_marks_;
+  std::vector<iflyauto::LaneSourceMsg> lane_sources_;
+  std::vector<iflyauto::ReferencePoint> virtual_lane_refline_points_;
   std::vector<double> c_poly_;
-  FusionRoad::LaneMergeSplitPoint lane_merge_split_point_;
-  FusionRoad::LaneBoundary left_lane_boundary_;
-  FusionRoad::LaneBoundary right_lane_boundary_;
+  iflyauto::LaneMergeSplitPoint lane_merge_split_point_;
+  iflyauto::LaneBoundary left_lane_boundary_;
+  iflyauto::LaneBoundary right_lane_boundary_;
 
   std::vector<std::string> center_line_points_track_id_;
   // todo:clren 后面改成map，适配多种reference_path

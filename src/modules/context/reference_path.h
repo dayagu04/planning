@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "common.pb.h"
+#include "common_c.h"
 #include "config/basic_type.h"
 #include "frenet_ego_state.h"
 #include "frenet_obstacle.h"
@@ -21,10 +21,10 @@ struct ReferencePathPoint {
   double distance_to_right_road_border;
   double distance_to_left_lane_border;
   double distance_to_right_lane_border;
-  Common::LaneBoundaryType left_road_border_type;
-  Common::LaneBoundaryType right_road_border_type;
-  Common::LaneBoundaryType left_lane_border_type;
-  Common::LaneBoundaryType right_lane_border_type;
+  iflyauto::LaneBoundaryType left_road_border_type;
+  iflyauto::LaneBoundaryType right_road_border_type;
+  iflyauto::LaneBoundaryType left_lane_border_type;
+  iflyauto::LaneBoundaryType right_lane_border_type;
   double lane_width;
   double max_velocity;
   double min_velocity;

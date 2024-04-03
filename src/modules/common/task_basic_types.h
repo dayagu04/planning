@@ -19,7 +19,7 @@ enum class LatIngoreType {
   IGNORE_NONE
 };
 
-enum class ObsRelPosType { FRONT, CUTIN, CROSSING, ADJACENT, REAR, UNDEFINED };
+enum class ObsRelPosType { FRONT, CUTIN, CROSSING, ADJACENT, REAR, NONE };
 
 enum class LatDeciderLaneChangeInfo {
   NONE,

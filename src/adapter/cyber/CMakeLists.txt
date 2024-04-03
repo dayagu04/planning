@@ -13,7 +13,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   -Wl,-no-whole-archive
   autoplt
   osqpstatic
-  interface_converter
 )
 
 include_directories(

@@ -5,6 +5,8 @@
 #include "motion_planners/longitudinal_motion_planner/src/longitudinal_motion_planning_problem.h"
 #include "planning_debug_info.pb.h"
 
+#include "serialize_utils.h"
+
 namespace py = pybind11;
 using namespace pnc::longitudinal_planning;
 
@@ -16,22 +18,10 @@ int Init() {
   return 0;
 }
 
-template <class T>
-inline T BytesToProto(py::bytes &bytes) {
-  T proto_obj;
-  py::buffer buf(bytes);
-  py::buffer_info input_info = buf.request();
-  char *input_ptr = static_cast<char *>(input_info.ptr);
-  std::string input_s(input_ptr, input_info.size);
-
-  T input;
-  input.ParseFromString(input_s);
-  return input;
-}
-
 int UpdateBytes(py::bytes &planning_input_bytes) {
   planning::common::LongitudinalPlanningInput planning_input =
-      BytesToProto<planning::common::LongitudinalPlanningInput>(planning_input_bytes);
+      BytesToProto<planning::common::LongitudinalPlanningInput>(
+          planning_input_bytes);
 
   pBase->Update(planning_input);
 
@@ -46,10 +36,14 @@ py::bytes GetOutputBytes() {
   return serialized_message;
 }
 
-int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_pos, double q_ref_vel, double q_acc, double q_jerk,
-                   double q_soft_pos_bound, double q_hard_pos_bound, double q_vel_bound, double q_acc_bound, double q_jerk_bound, double q_stop_s) {
+int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_pos,
+                   double q_ref_vel, double q_acc, double q_jerk,
+                   double q_soft_pos_bound, double q_hard_pos_bound,
+                   double q_vel_bound, double q_acc_bound, double q_jerk_bound,
+                   double q_stop_s) {
   planning::common::LongitudinalPlanningInput planning_input =
-      BytesToProto<planning::common::LongitudinalPlanningInput>(planning_input_bytes);
+      BytesToProto<planning::common::LongitudinalPlanningInput>(
+          planning_input_bytes);
   planning_input.set_q_ref_pos(q_ref_pos);
   planning_input.set_q_ref_vel(q_ref_vel);
 

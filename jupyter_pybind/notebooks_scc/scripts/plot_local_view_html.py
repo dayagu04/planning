@@ -16,26 +16,20 @@ import logging
 sys.path.append('..')
 sys.path.append('../..')
 sys.path.append('../../..')
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from lib.basic_layers import *
-from lib.load_bag import *
+from lib.load_ros_bag import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
 bag_path = "/share/mnt/s811_1_0824_1/realtime_cutin_9.00000"
 # bag_path = '/share/data_cold/abu_zone/hpp/1219bag/memory1219_12.00000'
 bag_path = '/share/data_cold/abu_zone/hpp/hpp1225/hpp_first_loop_0.00000'
-bag_path = "/share/data_cold/abu_zone/autoparse/jac_s811_35kw2/trigger/20240223/20240223-14-08-20/data_collection_JAC_S811_35KW2_EVENT_MANUAL_2024-02-23-14-08-20_no_camera.record.1709812513.plan"
+bag_path = "/share/data/clren/rosbag.bag"
 
 
-html_file = bag_path +".local_view.html" 
+html_file = bag_path +".local_view.html"
 # -
-def isINJupyter():
-    try:
-        __file__
-    except NameError:
-        return True
-    else:
-        return False
 # bokeh创建的html在jupyter中显示
 if isINJupyter():
     display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -52,7 +46,7 @@ table_params={
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:
-        dataLoader = LoadCyberbag(bag_path)
+      dataLoader = LoadRosbag(bag_path)
     except:
         print('load cyber_bag error!')
         return
@@ -147,7 +141,7 @@ def plotOnce(bag_path, html_file):
     """)
     car_slider.js_on_change('value', callback)
     obstacle_selector.js_on_change('value',selector_callback)
-    
+
     for gdlabel in layer_manager.gds.keys():
         gd = layer_manager.gds[gdlabel]
         if gdlabel is 'ep_source' or gdlabel is 'ep_source2' or gdlabel.startswith('global'):
@@ -191,11 +185,9 @@ USAGE:
 
 def plotMain():
     # print('sys.argv = ', sys.argv)
-
     if(len(sys.argv) == 2):
         bag_path = str(sys.argv[1])
         html_file = bag_path +".html"
-
     else:
         bag_path = str(sys.argv[1])
         html_file = str(sys.argv[2])
@@ -237,7 +229,7 @@ def plotMain():
     print("{} html files generated\n".format(generated_count))
 
 if __name__ == '__main__':
-    if isINJupyter():
-        plotOnce(bag_path, html_file)
-    else:
-        plotMain()
+    # if isINJupyter():
+    plotOnce(bag_path, html_file)
+    # else:
+    #     plotMain()

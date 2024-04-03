@@ -62,22 +62,16 @@ class VisionLateralMotionPlanner : public Task {
   bool create_lateral_behavior_planner_msg(std::string &plan_msg);
 
   void set_left_lane_boundary_poly() {
-    for (auto i = 0;
-         i < flane_->get_left_lane_boundary().poly_coefficient_size(); ++i) {
-      if (i < 4) {
-        left_lane_boundary_poly_.push_back(
-            flane_->get_left_lane_boundary().poly_coefficient(i));
-      }
+    for (auto i = 0; i < NUM_OF_POLYNOMIAL; ++i) {
+      left_lane_boundary_poly_.push_back(
+          flane_->get_left_lane_boundary().poly_coefficient[i]);
     }
   }
 
   void set_right_lane_boundary_poly() {
-    for (auto i = 0;
-         i < flane_->get_right_lane_boundary().poly_coefficient_size(); ++i) {
-      if (i < 4) {
-        right_lane_boundary_poly_.push_back(
-            flane_->get_right_lane_boundary().poly_coefficient(i));
-      }
+    for (auto i = 0; i < NUM_OF_POLYNOMIAL; ++i) {
+      right_lane_boundary_poly_.push_back(
+          flane_->get_right_lane_boundary().poly_coefficient[i]);
     }
   }
   const std::vector<double> &left_lane_boundary_poly() {

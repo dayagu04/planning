@@ -1,18 +1,20 @@
 import sys, os
 sys.path.append("..")
+sys.path.append("../lib/")
 # from lib.load_cyberbag import *
 from lib.load_local_view import *
 sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/mnt/00fjw/00field_test/plan/0516/s_s_8.00000"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240525/20240525-15-54-05/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-05-25-15-54-05.bag"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-bag_loader = LoadCyberbag(bag_path)
+#bag_loader = LoadCyberbag(bag_path)
+bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 
@@ -347,15 +349,15 @@ def slider_callback(bag_time):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
 
-  json_index = local_view_data['data_index']['ctrl_debug_msg_idx']
+  ctrl_debug_msg_idx = local_view_data['data_index']['ctrl_debug_msg_idx']
 
-  dx_ref_mpc_vec = ctrl_json_data[json_index]['dx_ref_mpc_vec']
-  dy_ref_mpc_vec = ctrl_json_data[json_index]['dy_ref_mpc_vec']
-  dx_mpc_vec = ctrl_json_data[json_index]['dx_mpc_vec']
-  dy_mpc_vec = ctrl_json_data[json_index]['dy_mpc_vec']
-  delta_mpc_vec = ctrl_json_data[json_index]['delta_mpc_vec']
-  dphi_ref_mpc_vec = ctrl_json_data[json_index]['dphi_ref_mpc_vec']
-  dphi_mpc_vec = ctrl_json_data[json_index]['dphi_mpc_vec']
+  dx_ref_mpc_vec = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['dx_ref_mpc_vec']
+  dy_ref_mpc_vec = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['dy_ref_mpc_vec']
+  dx_mpc_vec = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['dx_mpc_vec']
+  dy_mpc_vec = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['dy_mpc_vec']
+  delta_mpc_vec = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['delta_mpc_vec']
+  dphi_ref_mpc_vec = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['dphi_ref_mpc_vec']
+  dphi_mpc_vec = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['dphi_mpc_vec']
 
   t0 = 0
   time_vec = []

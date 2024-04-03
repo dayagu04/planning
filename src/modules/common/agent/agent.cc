@@ -142,16 +142,16 @@ AgentDecision* const Agent::mutable_agent_decision() {
   return &agent_decision_;
 }
 
-const Common::ObjectType Agent::type() const { return type_; }
-void Agent::set_type(const Common::ObjectType type) { type_ = type; }
+const iflyauto::ObjectType Agent::type() const { return type_; }
+void Agent::set_type(const iflyauto::ObjectType type) { type_ = type; }
 
 bool Agent::is_vehicle_type() const {
-  return type_ == Common::ObjectType::OBJECT_TYPE_BUS ||
-         type_ == Common::ObjectType::OBJECT_TYPE_COUPE ||
-         type_ == Common::ObjectType::OBJECT_TYPE_MINIBUS ||
-         type_ == Common::ObjectType::OBJECT_TYPE_VAN ||
-         type_ == Common::ObjectType::OBJECT_TYPE_TRAILER ||
-         type_ == Common::ObjectType::OBJECT_TYPE_TRUCK;
+  return type_ == iflyauto::OBJECT_TYPE_BUS ||
+         type_ == iflyauto::OBJECT_TYPE_COUPE ||
+         type_ == iflyauto::OBJECT_TYPE_MINIBUS ||
+         type_ == iflyauto::OBJECT_TYPE_VAN ||
+         type_ == iflyauto::OBJECT_TYPE_TRAILER ||
+         type_ == iflyauto::OBJECT_TYPE_TRUCK;
 }
 
 bool Agent::is_static() const { return is_static_; }

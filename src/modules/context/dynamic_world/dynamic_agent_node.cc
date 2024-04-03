@@ -2,7 +2,6 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include "fusion_road.pb.h"
 #include "ifly_time.h"
 #include "reference_path.h"
 #include "trajectory/center_line_point.h"
@@ -84,24 +83,22 @@ DynamicAgentNode::DynamicAgentNode(const agent::Agent* agent,
   }
 
   std::vector<trajectory::CenterLinePoint> center_line_points;
-  if (lane.get_center_line().virtual_lane_refline_points_size() < 1) {
+  if (lane.lane_points().size() < 1) {
     return;
   }
-  center_line_points.reserve(
-      lane.get_center_line().virtual_lane_refline_points_size());
-  for (const auto& ref_line_point :
-       lane.get_center_line().virtual_lane_refline_points()) {
+  center_line_points.reserve(lane.lane_points().size());
+  for (const auto& ref_line_point : lane.lane_points()) {
     trajectory::CenterLinePoint center_line_point{
-        ref_line_point.local_point().x(),
-        ref_line_point.local_point().y(),
-        ref_line_point.s(),
+        ref_line_point.local_point.x,
+        ref_line_point.local_point.y,
+        ref_line_point.s,
         0,
         0,
         0,
         0,
         0,
-        ref_line_point.distance_to_left_lane_border(),
-        ref_line_point.distance_to_right_lane_border()};
+        ref_line_point.distance_to_left_lane_border,
+        ref_line_point.distance_to_right_lane_border};
     center_line_points.emplace_back(center_line_point);
   }
 
@@ -358,7 +355,7 @@ const std::vector<trajectory::Trajectory>& DynamicAgentNode::node_trajectories()
   return agent_->trajectories();
 }
 
-const Common::ObjectType DynamicAgentNode::type() const {
+const iflyauto::ObjectType DynamicAgentNode::type() const {
   return agent_->type();
 }
 

@@ -74,14 +74,21 @@ TrackletMaintainer::TrackletMaintainer(planning::framework::Session *session) {
   theta_ego_ = 0;
   vl_ego_ = 0;
   vs_ego_ = 0;
+  object_map_ = {{-1, nullptr}};
+  fusion_object_history_map_ = {{-1, nullptr}};
 }
 
 TrackletMaintainer::~TrackletMaintainer() {
   for (auto iter = object_map_.begin(); iter != object_map_.end(); ++iter) {
     delete iter->second;
   }
+  for (auto iter = fusion_object_history_map_.begin();
+       iter != fusion_object_history_map_.end(); ++iter) {
+    delete iter->second;
+  }
 
   object_map_.clear();
+  fusion_object_history_map_.clear();
 }
 
 void TrackletMaintainer::apply_update(
@@ -163,6 +170,7 @@ void TrackletMaintainer::recv_prediction_objects(
   double ego_ly = ego_fx;
 
   for (auto &p : predictions) {
+    std::cout << "---recv_prediction_objects---" << std::endl;
     if (p.type == 0) {
       continue;
     }
@@ -362,23 +370,25 @@ void TrackletMaintainer::recv_prediction_objects(
     delete iter->second;
   }
 
-  object_map_.clear();
-  object_map_ = new_map;
+  // object_map_.clear();
+  object_map_.swap(new_map);
 }
 
 // use relative interface when hdmap valid is false
 void TrackletMaintainer::recv_relative_prediction_objects(
     const std::vector<PredictionObject> &predictions,
     std::vector<TrackedObject *> &objects) {
-  std::map<int, TrackedObject *> new_map;
   auto ego_state = session_->environmental_model().get_ego_state_manager();
-
-  // double ego_fx = std::cos(ego_state_->ego_pose_raw().theta);
-  // double ego_fy = std::sin(ego_state_->ego_pose_raw().theta);
-  // double ego_lx = -ego_fy;
-  // double ego_ly = ego_fx;
+  std::set<int> id_sets;
 
   for (auto &p : predictions) {
+    LOG_DEBUG("---recv_relative_prediction_objects--- \n");
+    if (id_sets.find(p.id) != id_sets.end()) {
+      LOG_DEBUG("[obstacle_prediction_update] !!!!!! : [%d] \n", p.id);
+      continue;
+    } else {
+      LOG_DEBUG("[obstacle_prediction_update] new obstacle: [%d] \n", p.id);
+    }
     // 过滤未与相机融合， 且在相机FOV之内的
     if ((p.type == 0 && p.relative_speed_x + ego_state_->ego_v() < 1.) ||
         (!(p.fusion_source & OBSTACLE_SOURCE_CAMERA)) &&
@@ -389,12 +399,6 @@ void TrackletMaintainer::recv_relative_prediction_objects(
                 p.id);
       continue;
     }
-
-    // double dx = p.position_x - ego_state_->ego_pose_raw().x;
-    // double dy = p.position_y - ego_state_->ego_pose_raw().y;
-
-    // double rel_x = dx * ego_fx + dy * ego_fy;
-    // double rel_y = dx * ego_lx + dy * ego_ly;
     double rel_x = p.relative_position_x;
     double rel_y = p.relative_position_y;
 
@@ -405,13 +409,10 @@ void TrackletMaintainer::recv_relative_prediction_objects(
 
     TrackedObject *origin = nullptr;
 
-    auto iter = object_map_.find(p.id);
+    auto iter = fusion_object_history_map_.find(p.id);
 
-    if (iter != object_map_.end()) {
+    if (iter != fusion_object_history_map_.end()) {
       origin = iter->second;
-      object_map_.erase(iter);
-      new_map.insert(std::make_pair(origin->track_id, origin));
-
       // set history results
       origin->has_history = true;
       origin->c0_history = origin->c0;
@@ -419,7 +420,8 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     } else {
       origin = new TrackedObject();
       origin->track_id = p.id;
-      new_map.insert(std::make_pair(origin->track_id, origin));
+      fusion_object_history_map_.insert(
+          std::make_pair(origin->track_id, origin));
 
       origin->has_history = false;
     }
@@ -457,7 +459,8 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     origin->v_x = p.relative_speed_x + ego_state_->ego_v();
     // TODO: 这里的v_y为绝对速度，需要再加上自车的横向速度(暂时无法获取)
     origin->v_y = p.relative_speed_y;
-    origin->speed_yaw = std::atan2(p.relative_speed_y, origin->v_x);
+    // p.relative_theta 在低速时为相对朝向角，高速时为相对速度方向角
+    origin->speed_yaw = p.relative_theta;
     origin->a = p.acc;
     origin->v = std::hypot(origin->v_x, p.relative_speed_y);
 
@@ -475,110 +478,30 @@ void TrackletMaintainer::recv_relative_prediction_objects(
 
     // calculate fisheye related for cutin
     fisheye_helper(p, *origin);
+    objects.push_back(origin);
+    id_sets.insert(p.id);
+  }
+  LOG_DEBUG("1map size= : [%d] \n", fusion_object_history_map_.size());
 
-    int idx = 0;
-    for (auto &tr : p.trajectory_array) {
-      TrackedObject *object = nullptr;
-      int track_id = hash_prediction_id(origin->track_id, idx);
+  if (id_sets.size() == 0) {
+    for (auto iter = fusion_object_history_map_.begin();
+         iter != fusion_object_history_map_.end(); ++iter) {
+      delete iter->second;
+    }
 
-      iter = object_map_.find(track_id);
-      if (iter != object_map_.end()) {
-        object = iter->second;
-        object_map_.erase(iter);
-
-        if (object != origin) {
-          *object = *origin;
-          object->track_id = track_id;
-        }
-        new_map.insert(std::make_pair(track_id, object));
+    fusion_object_history_map_.clear();
+  } else {
+    for (auto iter = fusion_object_history_map_.begin();
+         iter != fusion_object_history_map_.end();) {
+      if (id_sets.find(iter->first) == id_sets.end()) {
+        delete iter->second;
+        iter = fusion_object_history_map_.erase(iter);
       } else {
-        iter = new_map.find(track_id);
-        if (iter != new_map.end()) {
-          object = iter->second;
-
-          if (object != origin) {
-            *object = *origin;
-            object->track_id = track_id;
-          }
-        } else {
-          object = new TrackedObject(*origin);
-          object->track_id = track_id;
-          new_map.insert(std::make_pair(track_id, object));
-        }
+        ++iter;
       }
-
-      object->prediction.prob = tr.prob;
-      object->prediction.interval = tr.prediction_interval;
-      object->prediction.num_of_points = tr.num_of_points;
-      object->prediction.const_vel_prob = tr.const_vel_prob;
-      object->prediction.const_acc_prob = tr.const_acc_prob;
-      object->prediction.still_prob = tr.still_prob;
-      object->prediction.coord_turn_prob = tr.coord_turn_prob;
-
-      size_t size = tr.trajectory.size();
-
-      object->trajectory.x.resize(size);
-      object->trajectory.y.resize(size);
-      object->trajectory.yaw.resize(size);
-      object->trajectory.speed.resize(size);
-
-      object->trajectory.std_dev_x.resize(size);
-      object->trajectory.std_dev_y.resize(size);
-      object->trajectory.std_dev_yaw.resize(size);
-      object->trajectory.std_dev_speed.resize(size);
-
-      object->trajectory.relative_ego_x.resize(size);
-      object->trajectory.relative_ego_y.resize(size);
-      object->trajectory.relative_ego_yaw.resize(size);
-      object->trajectory.relative_ego_speed.resize(size);
-
-      object->trajectory.relative_ego_std_dev_x.resize(size);
-      object->trajectory.relative_ego_std_dev_y.resize(size);
-      object->trajectory.relative_ego_std_dev_yaw.resize(size);
-      object->trajectory.relative_ego_std_dev_speed.resize(size);
-
-      for (size_t i = 0; i < size; i++) {
-        object->trajectory.x[i] = tr.trajectory[i].x;
-        object->trajectory.y[i] = tr.trajectory[i].y;
-        object->trajectory.yaw[i] = tr.trajectory[i].yaw;
-        object->trajectory.speed[i] = tr.trajectory[i].speed;
-
-        object->trajectory.std_dev_x[i] = tr.trajectory[i].std_dev_x;
-        object->trajectory.std_dev_y[i] = tr.trajectory[i].std_dev_y;
-        object->trajectory.std_dev_yaw[i] = tr.trajectory[i].std_dev_yaw;
-        object->trajectory.std_dev_speed[i] = tr.trajectory[i].std_dev_speed;
-
-        object->trajectory.relative_ego_x[i] = tr.trajectory[i].relative_ego_x;
-        object->trajectory.relative_ego_y[i] = tr.trajectory[i].relative_ego_y;
-        object->trajectory.relative_ego_yaw[i] =
-            tr.trajectory[i].relative_ego_yaw;
-        if (origin->fusion_source & OBSTACLE_SOURCE_CAMERA) {
-          object->trajectory.relative_ego_yaw[i] = origin->speed_yaw;
-        }
-
-        object->trajectory.relative_ego_speed[i] =
-            tr.trajectory[i].relative_ego_speed;
-        object->trajectory.relative_ego_std_dev_x[i] =
-            tr.trajectory[i].relative_ego_std_dev_x;
-        object->trajectory.relative_ego_std_dev_y[i] =
-            tr.trajectory[i].relative_ego_std_dev_y;
-        object->trajectory.relative_ego_std_dev_yaw[i] =
-            tr.trajectory[i].relative_ego_std_dev_yaw;
-        object->trajectory.relative_ego_std_dev_speed[i] =
-            tr.trajectory[i].relative_ego_std_dev_speed;
-      }
-
-      objects.push_back(object);
-      idx++;
     }
   }
-
-  for (auto iter = object_map_.begin(); iter != object_map_.end(); ++iter) {
-    delete iter->second;
-  }
-
-  object_map_.clear();
-  object_map_ = new_map;
+  LOG_DEBUG("2map size= : [%d] \n", fusion_object_history_map_.size());
 }
 
 void TrackletMaintainer::fisheye_helper(const PredictionObject &prediction,
@@ -781,9 +704,9 @@ void TrackletMaintainer::calc(
   //   tr->track_id ||
   //       lead_cars.temp_lead_one != nullptr &&
   //       lead_cars.temp_lead_one->track_id == tr->track_id) {
-  //     obstacle->set_lon_status(::PlanningHMI::ObstacleLonStatus::FOLLOWING);
+  //     obstacle->set_lon_status(iflyauto::OBSTACLE_STATUS_FOLLOWING);
   //   } else {
-  //     obstacle->set_lon_status(::PlanningHMI::ObstacleLonStatus::NORMAL);
+  //     obstacle->set_lon_status(iflyauto::OBSTACLE_STATUS_NORMAL);
   //   }
   // }
   // Point2D cart_point;

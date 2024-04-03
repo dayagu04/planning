@@ -1,0 +1,50 @@
+syntax = "proto2";
+
+package planning.common;
+
+message AccSafetyInfo {
+  optional bool need_takeover = 1 [default = false];
+}
+
+message ObstacleInformation {
+  optional int32 obstacle_id = 1 [default = -1];
+  optional int32 obstacle_type = 2 [default = -1];
+  optional double obstacle_s = 3 [default = 0.0];
+  optional double obstacle_v = 4 [default = 0.0];
+  optional double obstacle_length = 5 [default = 0.0];
+  optional double duration = 6 [default = 0.0];
+  optional double desired_distance = 7 [default = 1.0];
+}
+
+message LeadoneInfo {
+  optional bool has_leadone = 1;
+  optional ObstacleInformation leadone_information = 2;
+}
+
+message LeadtwoInfo {
+  optional bool has_leadtwo = 1;
+  optional ObstacleInformation leadtwo_information = 2;
+}
+
+message CutinInfo {
+  optional bool has_cutin = 1 [default = false];
+  repeated ObstacleInformation cutin_information = 2;
+}
+
+message CIPVInfo {
+  optional bool has_CIPV = 1 [default = false];
+  repeated ObstacleInformation cipv_information = 2;
+}
+
+message LonDecisionInfo {
+  optional LeadoneInfo leadone_info = 1;
+  optional LeadoneInfo temp_leadone_info = 2;
+  optional CutinInfo cutin_info = 3;
+  optional CIPVInfo cipv_info = 4;
+  optional AccSafetyInfo acc_safety_info = 5;
+  optional bool nearby_obstacle = 6 [default = false];
+  optional double map_velocity_limit = 7 [default = 0.0];
+  optional double v_cruise = 8 [default = 0.0];
+  optional LeadtwoInfo leadtwo_info = 9;
+}
+

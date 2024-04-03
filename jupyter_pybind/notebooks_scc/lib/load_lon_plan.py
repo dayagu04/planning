@@ -59,14 +59,13 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   t_vec = list(plan_debug_info.long_ref_path.t_list)
 
   t_long_vec = []
-  for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
-    t_long_vec.append(item.t)
   s_plan_vec =  []
-  for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
-    s_plan_vec.append(item.distance)
   v_plan_vec =  []
-  for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
-     v_plan_vec.append(item.v)
+  for i in range(bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points_size):
+    point = bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points[i]
+    t_long_vec.append(point.t)
+    s_plan_vec.append(point.distance)
+    v_plan_vec.append(point.v)
   s_ref_vec = []
   for item in (plan_debug_info.long_ref_path.s_refs):
     s_ref_vec.append(item.first)
@@ -164,7 +163,10 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   vision_lon_attr_vec = []
   for ind in range(len(planning_json_value_list)):
-     vision_lon_attr_vec.append(plan_debug_json_info[planning_json_value_list[ind]])
+    try:
+        vision_lon_attr_vec.append(plan_debug_json_info[planning_json_value_list[ind]])
+    except:
+      pass
 
   v_limit_vec = plan_debug_json_info['limit_v_type']
   print('v_limit_vec', v_limit_vec)
@@ -283,19 +285,18 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
-    planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
-    print("dbw_status = ", planning_json['dbw_status'])
-    print("replan_status = ", planning_json['replan_status'])
-    print("lat_err = ", planning_json['lat_err'])
-    print("theta_err = ", planning_json['theta_err'])
-    print("lon_err = ", planning_json['lon_err'])
-    print("dist_err = ", planning_json['dist_err'])
+    print("dbw_status = ", plan_debug_json_info['dbw_status'])
+    print("replan_status = ", plan_debug_json_info['replan_status'])
+    print("lat_err = ", plan_debug_json_info['lat_err'])
+    print("theta_err = ", plan_debug_json_info['theta_err'])
+    print("lon_err = ", plan_debug_json_info['lon_err'])
+    print("dist_err = ", plan_debug_json_info['dist_err'])
 
     try:
-      json_pos_x = planning_json['ego_pos_x']
-      json_pos_y = planning_json['ego_pos_y']
-      json_yaw = planning_json['ego_pos_yaw']
+      json_pos_x = plan_debug_json_info['ego_pos_x']
+      json_pos_y = plan_debug_json_info['ego_pos_y']
+      json_yaw = plan_debug_json_info['ego_pos_yaw']
       coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
     except:
       coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
@@ -316,7 +317,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
         plan_y.append(trajectory.trajectory_points[i].y)
 
       # plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
-      plan_traj_x, plan_traj_y = coord_tf.global_to_local(planning_json['traj_x_vec'], planning_json['traj_y_vec'])
+      plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_debug_json_info['traj_x_vec'], plan_debug_json_info['traj_y_vec'])
 
     lon_plan_data['data_planning'].data.update({
       'plan_traj_y' : plan_traj_y,
@@ -510,10 +511,13 @@ def load_lon_global_figure(bag_loader):
   acc_cipv_vec = []
 
   t_vs_vec = bag_loader.vs_msg['t']
-  for ind in range(len(bag_loader.plan_debug_msg['json'])):
-    acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
-    acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
-    acc_cipv_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
+  try:
+    for ind in range(len(bag_loader.plan_debug_msg['json'])):
+      acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
+      acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
+      acc_cipv_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
+  except:
+     pass
   for ind in range(len(bag_loader.vs_msg['data'])):
     ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
 
@@ -674,7 +678,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
      ('high_type','@obs_high_type'),
      ('v_limit_type','@v_limit_type')
   ])
-  # fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
 
   # fig2 S-T
   fig2 = bkp.figure(x_axis_label='t', y_axis_label='s', x_range = [-0.1, 7.0], width=600, height=400, tools=[hover,'pan,wheel_zoom,box_zoom,reset'], match_aspect = True, aspect_scale=1)

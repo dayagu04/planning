@@ -210,20 +210,20 @@ bool MapRequest::IsDashEnoughForRepeatSegments(
   double dash_length = 0;
   if (lc_map_decision < 0) {
     const auto& left_lane_boundarys = current_lane->get_left_lane_boundary();
-    for (int i = 0; i < left_lane_boundarys.type_segments_size(); i++) {
-      if (left_lane_boundarys.type_segments()[i].type() ==
-          Common::LaneBoundaryType::MARKING_DASHED) {
-        dash_length += left_lane_boundarys.type_segments()[i].length();
+    for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
+      if (left_lane_boundarys.type_segments[i].type ==
+          iflyauto::LaneBoundaryType_MARKING_DASHED) {
+        dash_length += left_lane_boundarys.type_segments[i].length;
       } else {
         break;
       }
     }
   } else if (lc_map_decision > 0) {
     const auto& right_lane_boundarys = current_lane->get_right_lane_boundary();
-    for (int i = 0; i < right_lane_boundarys.type_segments_size(); i++) {
-      if (right_lane_boundarys.type_segments()[i].type() ==
-          Common::LaneBoundaryType::MARKING_DASHED) {
-        dash_length += right_lane_boundarys.type_segments()[i].length();
+    for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
+      if (right_lane_boundarys.type_segments[i].type ==
+          iflyauto::LaneBoundaryType_MARKING_DASHED) {
+        dash_length += right_lane_boundarys.type_segments[i].length;
       } else {
         break;
       }
