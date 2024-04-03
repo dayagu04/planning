@@ -6,9 +6,11 @@
 #include <cstdint>
 
 #include "apa_function/src/lateral_path_optimizer/src/lateral_path_optimizer_problem.h"
-#include "lateral_path_optimizer.pb.h"
 #include "geometry_math.h"
+#include "lateral_path_optimizer.pb.h"
 #include "math_lib.h"
+
+#include "serialize_utils.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
@@ -133,19 +135,6 @@ int Init() {
   pBBase = new LateralPathOptimizerProblem();
   pBBase->Init(false);
   return 0;
-}
-
-template <class T>
-inline T BytesToProto(py::bytes &bytes) {
-  T proto_obj;
-  py::buffer buf(bytes);
-  py::buffer_info input_info = buf.request();
-  char *input_ptr = static_cast<char *>(input_info.ptr);
-  std::string input_s(input_ptr, input_info.size);
-
-  T input;
-  input.ParseFromString(input_s);
-  return input;
 }
 
 int UpdateBytes(py::bytes &planning_input_bytes) {

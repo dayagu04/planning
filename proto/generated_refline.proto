@@ -1,0 +1,82 @@
+syntax = "proto2";
+
+package planning.common;
+
+import "basic_types.proto";
+
+enum LaneType {
+    LANETYPE_UNKNOWN = 0;                 //!< Unknown Lane Type
+    LANETYPE_NORMAL = 1;                  //!< Normal Lane Type
+    LANETYPE_VIRTUAL = 2;                 //!< Virtual Lane Type
+    LANETYPE_PARKING = 3;                 //!< Parking Lane Type
+    LANETYPE_ACCELERATE = 4;              //!< Accelerate Lane Type
+    LANETYPE_DECELERATE = 5;              //!< Decelerate Lane TYpe
+    LANETYPE_BUS = 6;                     //!< Bus Lane Type
+    LANETYPE_EMERGENCY = 7;               //!< Emergency Lane Type
+    LANETYPE_ACCELERATE_DECELERATE = 8;   //!< Accelerate and Decelerate Lane Type
+    LANETYPE_LEFT_TURN_WAITTING_AREA = 9; //!< Left Turning Waiting Area
+    LANETYPE_NON_MOTOR = 10;              //!< Non-Motor Lane Type
+    /*下面的type 11-38为腾讯地图内定义的类型*/
+    LANETYPE_HOV = 11;                     // HOV
+    LANETYPE_SLOW = 12;                    // 慢车道
+    LANETYPE_SHOULDER = 13;                // 路肩
+    LANETYPE_DRIVABLE_SHOULDER = 14;       // 可行驶路肩
+    LANETYPE_CONTROL = 15;                 // 管制车道
+    LANETYPE_EMERGENCY_PARKING_STRIP = 16; // 紧急停车带
+    LANETYPE_TIDE = 17;                    // 潮汐车道
+    LANETYPE_DIRECTION_CHANGE = 18;        // 可变车道
+    LANETYPE_DRIVABLE_PARKING_ROAD = 19;   // 可行驶停车道
+    LANETYPE_TRUCK = 20;                   // 货车专用道
+    LANETYPE_TIME_LIMIT_BUS = 21;          // 限时公交车道
+    LANETYPE_PASSING_BAY = 22;             // 错车道
+    LANETYPE_REVERSAL_LEFT_TURN = 23;      // 借道左转车道
+    LANETYPE_TAXI = 24;                    // 出租车车道
+    LANETYPE_DIRECTION_LOCKED = 25;        // 定向车道
+    LANETYPE_VEHICLE_BICYCLE_MIX = 26;     // 机非混合车道
+    LANETYPE_MOTOR = 27;                   // 摩托车道
+    LANETYPE_U_TURN = 28;                  // 掉头车道
+    LANETYPE_TOLL = 29;                    // 收费站车道
+    LANETYPE_CHECK_POINT = 30;             // 检查站车道
+    LANETYPE_DANGEROUS_ARTICLE = 31;       // 危险品专用车道
+    LANETYPE_FORBIDDEN_DRIVE = 32;         // 非行驶区域
+    LANETYPE_THOUGH_LANE_ZONE = 33;        // 借道区
+    LANETYPE_STREET_RAILWAY = 34;          // 有轨电车车道
+    LANETYPE_BUS_BAY = 35;                 // 公交港湾车道
+    LANETYPE_SPECIAL_CAR = 36;             // 特殊车辆专用车道
+    LANETYPE_PEDESTRIANS = 37;             // 人行道
+    LANETYPE_ETC = 38;                     // ETC车道
+}
+
+message ReferenceLine {
+    repeated ReferencePoint  virtual_lane_refline_points = 1;  // 车道中心线的参考点           <固定100个>
+
+    /** 自车坐标系下中心线方程系数
+     *  备注:固定4个，依次为常数项、一次项、二次项、三次项
+    **/
+    repeated double poly_coefficient_car = 2;
+}
+
+message ReferencePoint {
+    optional int64 track_id = 1;                                        // 该点处lane_id
+    optional Point2d car_point = 2;                              // 参考点在自车坐标系下坐标     (米)
+    optional Point3d enu_point = 3;                              // 参考点在ENU坐标系下坐标      (米)
+    optional Point3d local_point = 4;                            // 参考点在局部坐标系下坐标     (米)
+    optional float curvature = 5;                                       // 参考点处曲率
+    optional float car_heading = 6;                                     // 参考点处自车坐标系下航向角   (弧度rad)
+    optional float enu_heading = 7;                                     // 参考点处ENU坐标系下航向角    (弧度rad)
+    optional float local_heading = 8;                                   // 参考点处LOCAL坐标系下航向角  (弧度rad)
+    optional float distance_to_left_road_border = 9;                    // 参考点到道路左边缘距离       (米)
+    optional float distance_to_right_road_border = 10;                  // 参考点到道路右边缘距离       (米)
+    optional float distance_to_left_lane_border = 11;                   // 参考点到车道左车道线距离     (米)
+    optional float distance_to_right_lane_border = 12;                  // 参考点到车道右车道线距离     (米)
+    optional float lane_width = 13;                                     // 参考点处车道宽度             (米)
+    optional float speed_limit_max = 14;                                // 参考点处最高限速             (米/秒)
+    optional float speed_limit_min = 15;                                // 参考点处最低限速             (米/秒)
+    optional LineType left_road_border_type = 16;        // 参考点处左道路边缘类型
+    optional LineType right_road_border_type = 17;       // 参考点处右道路边缘类型
+    optional LineType left_lane_border_type = 18;        // 参考点处左车道线类型
+    optional LineType right_lane_border_type = 19;       // 参考点处右车道线类型
+    optional bool is_in_intersection = 20;                              // 参考点是否在路口             (true:路口 / false:不在路口)
+    optional LaneType lane_type = 21;                                   // 参考点处车道类型
+    optional double s = 22;                                             // 参考点距离起点的累计距离
+}

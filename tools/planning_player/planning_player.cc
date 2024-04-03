@@ -109,7 +109,7 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
   } else if (scene_type == "apa") {
     for (const auto& it : msg_cache_[TOPIC_PLANNING_PLAN]) {
       auto plan_msg =
-          std::dynamic_pointer_cast<PlanningOutput::PlanningOutput>(it.second);
+          std::dynamic_pointer_cast<iflyauto::PlanningOutput>(it.second);
 
       const auto apa_planning_status =
           plan_msg->planning_status().apa_planning_status();
@@ -135,10 +135,9 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
   planning_adapter_->Init();
 
   planning_adapter_->RegisterOutputWriter(
-      [this,
-       is_close_loop](const PlanningOutput::PlanningOutput& planning_output) {
+      [this, is_close_loop](const iflyauto::PlanningOutput& planning_output) {
         auto planning_output_ptr =
-            std::make_shared<PlanningOutput::PlanningOutput>(planning_output);
+            std::make_shared<iflyauto::PlanningOutput>(planning_output);
         planning_output_ptr->mutable_meta()->mutable_header()->set_timestamp(
             planning_header_time_us_);
         output_msg_cache_[TOPIC_PLANNING_PLAN][planning_msg_time_ns_] =
@@ -161,6 +160,18 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
         output_msg_cache_[TOPIC_PLANNING_DEBUG_INFO]
                          [planning_dubug_info_msg_time_ns_] =
                              planning_debug_info_ptr;
+      });
+
+  planning_adapter_->RegisterHMIOutputInfoWriter(
+      [this](
+          const iflyauto::PlanningHMIOutputInfoStr& planning_hmi_ouput_info) {
+        output_msg_cache_[TOPIC_PLANNING_HMI][planning_msg_time_ns_] =
+            std::make_shared<iflyauto::PlanningHMIOutputInfoStr>(
+                planning_hmi_ouput_info);
+        planning_hmi_ouput_info_ptr->mutable_header()->set_timestamp(
+            planning_hmi_header_time_us_);
+        output_msg_cache_[TOPIC_PLANNING_HMI][planning_hmi_msg_time_ns_] =
+            planning_hmi_ouput_info_ptr;
       });
 }
 
@@ -198,16 +209,16 @@ bool PlanningPlayer::LoadCyberBag(const std::string& bag_path) {
 
   for (const auto& msg : *record_viewer) {
     if (msg.channel_name == TOPIC_FUSION_OBJECTS) {
-      cache_with_msg_and_header_time<FusionObjects::FusionObjectsInfo>(msg);
+      cache_with_msg_and_header_time<iflyauto::FusionObjectsInfo>(msg);
     } else if (msg.channel_name == TOPIC_ROAD_FUSION) {
-      cache_with_msg_and_header_time<FusionRoad::RoadInfo>(msg);
+      cache_with_msg_and_header_time<iflyauto::RoadInfo>(msg);
     } else if (msg.channel_name == TOPIC_LOCALIZATION_ESTIMATE) {
       cache_with_msg_and_header_time<LocalizationOutput::LocalizationEstimate>(
           msg);
     } else if (msg.channel_name == TOPIC_LOCALIZATION) {
       cache_with_msg_and_header_time<IFLYLocalization::IFLYLocalization>(msg);
     } else if (msg.channel_name == TOPIC_PREDICTION_RESULT) {
-      cache_with_msg_and_header_time<Prediction::PredictionResult>(msg);
+      cache_with_msg_and_header_time<iflyauto::PredictionResult>(msg);
     } else if (msg.channel_name == TOPIC_VEHICLE_SERVICE) {
       cache_with_msg_and_header_time<VehicleService::VehicleServiceOutputInfo>(
           msg);
@@ -216,19 +227,19 @@ bool PlanningPlayer::LoadCyberBag(const std::string& bag_path) {
     } else if (msg.channel_name == TOPIC_HMI_MCU_INNER) {
       cache_with_msg_and_header_time<HmiMcuInner::HmiMcuInner>(msg);
     } else if (msg.channel_name == TOPIC_PARKING_FUSION) {
-      cache_with_msg_and_header_time<ParkingFusion::ParkingFusionInfo>(msg);
+      cache_with_msg_and_header_time<iflyauto::ParkingFusionInfo>(msg);
     } else if (msg.channel_name == TOPIC_FUNC_STATE_MACHINE) {
       cache_with_msg_and_header_time<FuncStateMachine::FuncStateMachine>(msg);
     } else if (msg.channel_name == TOPIC_PLANNING_PLAN) {
-      cache_with_msg_time<PlanningOutput::PlanningOutput>(msg);
+      cache_with_msg_time<iflyauto::PlanningOutput>(msg);
     } else if (msg.channel_name == TOPIC_PLANNING_DEBUG_INFO) {
       cache_with_msg_time<planning::common::PlanningDebugInfo>(msg);
     } else if (msg.channel_name == TOPIC_PLANNING_HMI) {
-      cache_with_msg_time<PlanningHMI::PlanningHMIOutputInfoStr>(msg);
+      cache_with_msg_time<iflyauto::PlanningHMIOutputInfoStr>(msg);
     } else if (msg.channel_name == TOPIC_HD_MAP) {
       cache_with_msg_and_header_time<Map::StaticMap>(msg);
     } else if (msg.channel_name == TOPIC_EHR_PARKING_MAP) {
-      cache_with_msg_and_header_time<IFLYParkingMap::ParkingInfo>(msg);
+      cache_with_msg_and_header_time<iflyauto::ParkingInfo>(msg);
     } else if (msg.channel_name == TOPIC_GROUND_LINE) {
       cache_with_msg_and_header_time<
           GroundLinePerception::GroundLinePerceptionInfo>(msg);
@@ -237,6 +248,44 @@ bool PlanningPlayer::LoadCyberBag(const std::string& bag_path) {
     }
   }
   return true;
+}
+
+void PlanningPlayer::StoreCyberBag_old(const std::string& bag_path) {
+  apollo::cyber::record::RecordWriter record_writer;
+  record_writer.SetSizeOfFileSegmentation(0);
+  record_writer.SetIntervalOfFileSegmentation(0);
+  if (!record_writer.Open(bag_path)) {
+    std::cerr << "open writer file failed: " << bag_path << std::endl;
+    return;
+  }
+  write_topic_msg<iflyauto::FusionObjectsInfo>(msg_cache_, record_writer,
+                                               TOPIC_FUSION_OBJECTS);
+  write_topic_msg<iflyauto::RoadInfo>(msg_cache_, record_writer,
+                                      TOPIC_ROAD_FUSION);
+  write_topic_msg<LocalizationOutput::LocalizationEstimate>(
+      msg_cache_, record_writer, TOPIC_LOCALIZATION_ESTIMATE);
+  write_topic_msg<iflyauto::PredictionResult>(msg_cache_, record_writer,
+                                              TOPIC_PREDICTION_RESULT);
+  write_topic_msg<VehicleService::VehicleServiceOutputInfo>(
+      msg_cache_, record_writer, TOPIC_VEHICLE_SERVICE);
+  write_topic_msg<ControlCommand::ControlOutput>(msg_cache_, record_writer,
+                                                 TOPIC_CONTROL_COMMAN);
+  write_topic_msg<HmiMcuInner::HmiMcuInner>(msg_cache_, record_writer,
+                                            TOPIC_HMI_MCU_INNER);
+  write_topic_msg<iflyauto::ParkingFusionInfo>(msg_cache_, record_writer,
+                                               TOPIC_PARKING_FUSION);
+  write_topic_msg<FuncStateMachine::FuncStateMachine>(msg_cache_, record_writer,
+                                                      TOPIC_FUNC_STATE_MACHINE);
+  write_topic_msg<iflyauto::PlanningOutput>(output_msg_cache_, record_writer,
+                                            TOPIC_PLANNING_PLAN);
+  write_topic_msg<planning::common::PlanningDebugInfo>(
+      output_msg_cache_, record_writer, TOPIC_PLANNING_DEBUG_INFO);
+  write_topic_msg<iflyauto::PlanningHMIOutputInfoStr>(
+      output_msg_cache_, record_writer, TOPIC_PLANNING_HMI);
+  write_topic_msg<Map::StaticMap>(msg_cache_, record_writer, TOPIC_HD_MAP);
+
+  std::cout << "write bag:" << record_writer.GetFile() << std::endl;
+  record_writer.Close();
 }
 
 void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
@@ -269,7 +318,7 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
       continue;
     }
     if (it_msg.second->GetTypeName() == "FusionRoad.RoadInfo") {
-      write_msg<FusionRoad::RoadInfo>(it_msg, record_writer, TOPIC_ROAD_FUSION);
+      write_msg<iflyauto::RoadInfo>(it_msg, record_writer, TOPIC_ROAD_FUSION);
     } else if (it_msg.second->GetTypeName() ==
                "FusionObjects.FusionObjectsInfo") {
       write_msg<FusionObjects::FusionObjectsInfo>(it_msg, record_writer,
@@ -305,21 +354,21 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
                                                     TOPIC_FUNC_STATE_MACHINE);
     } else if (it_msg.second->GetTypeName() ==
                "PlanningOutput.PlanningOutput") {
-      write_msg<PlanningOutput::PlanningOutput>(it_msg, record_writer,
-                                                TOPIC_PLANNING_PLAN);
+      write_msg<iflyauto::PlanningOutput>(it_msg, record_writer,
+                                          TOPIC_PLANNING_PLAN);
     } else if (it_msg.second->GetTypeName() ==
                "planning.common.PlanningDebugInfo") {
       write_msg<planning::common::PlanningDebugInfo>(it_msg, record_writer,
                                                      TOPIC_PLANNING_DEBUG_INFO);
     } else if (it_msg.second->GetTypeName() ==
                "PlanningHMI.PlanningHMIOutputInfoStr") {
-      write_msg<PlanningHMI::PlanningHMIOutputInfoStr>(it_msg, record_writer,
-                                                       TOPIC_PLANNING_HMI);
+      write_msg<iflyauto::PlanningHMIOutputInfoStr>(it_msg, record_writer,
+                                                    TOPIC_PLANNING_HMI);
     } else if (it_msg.second->GetTypeName() == "Map.StaticMap") {
       write_msg<Map::StaticMap>(it_msg, record_writer, TOPIC_HD_MAP);
     } else if (it_msg.second->GetTypeName() == "IFLYParkingMap.ParkingInfo") {
-      write_msg<IFLYParkingMap::ParkingInfo>(it_msg, record_writer,
-                                             TOPIC_EHR_PARKING_MAP);
+      write_msg<iflyauto::ParkingInfo>(it_msg, record_writer,
+                                       TOPIC_EHR_PARKING_MAP);
     } else if (it_msg.second->GetTypeName() ==
                "GroundLinePerception.GroundLinePerceptionInfo") {
       write_msg<GroundLinePerception::GroundLinePerceptionInfo>(
@@ -339,7 +388,7 @@ void PlanningPlayer::PlayOneFrame(
             << input_time_list.DebugString() << std::endl;
 
   auto fusion_object_msg =
-      find_msg_with_header_time<FusionObjects::FusionObjectsInfo>(
+      find_msg_with_header_time<iflyauto::FusionObjectsInfo>(
           TOPIC_FUSION_OBJECTS, input_time_list.fusion_object());
   if (fusion_object_msg) {
     planning_adapter_->FeedFusionObjects(fusion_object_msg);
@@ -351,7 +400,7 @@ void PlanningPlayer::PlayOneFrame(
   // 由于fusion_road的频率与planning相同，为了避免重复feed同一帧fusion_road而做对应判断
   if (input_time_list_road_fusion_ != input_time_list.fusion_road()) {
     input_time_list_road_fusion_ = input_time_list.fusion_road();
-    auto fusion_road_msg = find_msg_with_header_time<FusionRoad::RoadInfo>(
+    auto fusion_road_msg = find_msg_with_header_time<iflyauto::RoadInfo>(
         TOPIC_ROAD_FUSION, input_time_list.fusion_road());
     if (fusion_road_msg) {
       planning_adapter_->FeedFusionRoad(fusion_road_msg);
@@ -388,7 +437,7 @@ void PlanningPlayer::PlayOneFrame(
     //           << " missing /iflytek/localization/egomotion" << std::endl;
   }
 
-  auto prediction_msg = find_msg_with_header_time<Prediction::PredictionResult>(
+  auto prediction_msg = find_msg_with_header_time<iflyauto::PredictionResult>(
       TOPIC_PREDICTION_RESULT, input_time_list.prediction());
   if (prediction_msg) {
     planning_adapter_->FeedPredictionResult(prediction_msg);
@@ -426,7 +475,7 @@ void PlanningPlayer::PlayOneFrame(
   }
 
   auto parking_fusion_msg =
-      find_msg_with_header_time<ParkingFusion::ParkingFusionInfo>(
+      find_msg_with_header_time<iflyauto::ParkingFusionInfo>(
           TOPIC_PARKING_FUSION, input_time_list.parking_fusion());
   if (parking_fusion_msg) {
     planning_adapter_->FeedParkingFusion(parking_fusion_msg);
@@ -449,9 +498,8 @@ void PlanningPlayer::PlayOneFrame(
     }
   }
 
-  auto ehr_parking_map_msg =
-      find_msg_with_header_time<IFLYParkingMap::ParkingInfo>(
-          TOPIC_EHR_PARKING_MAP, input_time_list.ehr_parking_map());
+  auto ehr_parking_map_msg = find_msg_with_header_time<iflyauto::ParkingInfo>(
+      TOPIC_EHR_PARKING_MAP, input_time_list.ehr_parking_map());
   if (ehr_parking_map_msg) {
     planning_adapter_->FeedParkingMap(ehr_parking_map_msg);
   } else {
@@ -482,18 +530,16 @@ void PlanningPlayer::PlayOneFrame(
                 << " missing /iflytek/system_state/soc_state" << std::endl;
     }
   }
-  auto functional_state = ::FuncStateMachine::FunctionalState::INIT;
+  auto functional_state = iflyauto::FunctionalState::INIT;
   if (frame_num >= frame_num_before_enter_auto_) {  // enter auto after 1.5s
     if (scene_type_ == "acc") {
-      functional_state = ::FuncStateMachine::FunctionalState::ACC_ACTIVATE;
+      functional_state = iflyauto::FunctionalState::ACC_ACTIVATE;
     } else if (scene_type_ == "apa") {
-      functional_state =
-          ::FuncStateMachine::FunctionalState::PARK_IN_ACTIVATE_CONTROL;
+      functional_state = iflyauto::FunctionalState::PARK_IN_ACTIVATE_CONTROL;
     } else if (scene_type_ == "scc") {
-      functional_state = ::FuncStateMachine::FunctionalState::SCC_ACTIVATE;
+      functional_state = iflyauto::FunctionalState::SCC_ACTIVATE;
     } else if (scene_type_ == "hpp") {
-      functional_state =
-          ::FuncStateMachine::FunctionalState::HPP_IN_MEMORY_CRUISE;
+      functional_state = iflyauto::FunctionalState::HPP_IN_MEMORY_CRUISE;
     }
   }
   func_state_machine_msg->set_current_state(functional_state);
@@ -512,13 +558,12 @@ void PlanningPlayer::PlayAllFrames() {
   auto debug_info =
       std::dynamic_pointer_cast<planning::common::PlanningDebugInfo>(
           it_debug_info_msg->second);
-  auto planning_msg = std::dynamic_pointer_cast<PlanningOutput::PlanningOutput>(
+  auto planning_msg = std::dynamic_pointer_cast<iflyauto::PlanningOutput>(
       it_planning_msg->second);
   if (debug_info->timestamp() > planning_msg->meta().header().timestamp()) {
     it_planning_msg++;
-    auto planning_msg =
-        std::dynamic_pointer_cast<PlanningOutput::PlanningOutput>(
-            it_planning_msg->second);
+    auto planning_msg = std::dynamic_pointer_cast<iflyauto::PlanningOutput>(
+        it_planning_msg->second);
     if (debug_info->timestamp() > planning_msg->meta().header().timestamp()) {
       std::cerr << "timestamp error!!!!!" << std::endl;
       return;
@@ -530,9 +575,8 @@ void PlanningPlayer::PlayAllFrames() {
     auto debug_info =
         std::dynamic_pointer_cast<planning::common::PlanningDebugInfo>(
             it_debug_info_msg->second);
-    auto planning_msg =
-        std::dynamic_pointer_cast<PlanningOutput::PlanningOutput>(
-            it_planning_msg->second);
+    auto planning_msg = std::dynamic_pointer_cast<iflyauto::PlanningOutput>(
+        it_planning_msg->second);
 
     auto& debug_data_json = debug_info->data_json();
     std::cout << debug_data_json << std::endl;
@@ -610,7 +654,7 @@ void PlanningPlayer::PlayAllFrames() {
 }
 
 void PlanningPlayer::RunCloseLoop(
-    const PlanningOutput::PlanningOutput& planning_output) {
+    const iflyauto::PlanningOutput& planning_output) {
   if (scene_type_ == "scc") {  // scc
     if (!check_msg_exist(msg_cache_, TOPIC_PLANNING_DEBUG_INFO) ||
         !check_msg_exist(msg_cache_, TOPIC_LOCALIZATION_ESTIMATE)) {
@@ -698,7 +742,7 @@ void PlanningPlayer::RunCloseLoop(
 }
 
 void PlanningPlayer::PerfectControlHPP(
-    const PlanningOutput::PlanningOutput& plan_msg, uint64_t delta_t,
+    const iflyauto::PlanningOutput& plan_msg, uint64_t delta_t,
     std::shared_ptr<IFLYLocalization::IFLYLocalization>& loc_msg) {
   const double dt = static_cast<double>(delta_t) / 1e6;
   const auto& trajectory = plan_msg.trajectory();
@@ -789,7 +833,7 @@ void PlanningPlayer::PerfectControlHPP(
 }
 
 void PlanningPlayer::PerfectControlAPA(
-    const PlanningOutput::PlanningOutput& plan_msg, uint64_t delta_t,
+    const iflyauto::PlanningOutput& plan_msg, uint64_t delta_t,
     std::shared_ptr<LocalizationOutput::LocalizationEstimate>& loc_msg) {
   const double dt = static_cast<double>(delta_t) / 1e6;
   const auto path_size = plan_msg.trajectory().trajectory_points_size();
@@ -922,7 +966,7 @@ void PlanningPlayer::PerfectControlAPA(
 }
 
 void PlanningPlayer::PerfectControlSCC(
-    const PlanningOutput::PlanningOutput& plan_msg, uint64_t delta_t,
+    const iflyauto::PlanningOutput& plan_msg, uint64_t delta_t,
     std::shared_ptr<LocalizationOutput::LocalizationEstimate>& loc_msg) {
   const double dt = static_cast<double>(delta_t) / 1e6;
   const auto& trajectory = plan_msg.trajectory();

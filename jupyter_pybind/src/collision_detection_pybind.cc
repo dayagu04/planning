@@ -27,19 +27,6 @@ int Init() {
   return 0;
 }
 
-template <class T>
-inline T BytesToProto(py::bytes& bytes) {
-  T proto_obj;
-  py::buffer buf(bytes);
-  py::buffer_info input_info = buf.request();
-  char* input_ptr = static_cast<char*>(input_info.ptr);
-  std::string input_s(input_ptr, input_info.size);
-
-  T input;
-  input.ParseFromString(input_s);
-  return input;
-}
-
 void SetObstacle(const double obstacles_x, const double obstacles_y) {
   std::vector<Eigen::Vector2d> obstacle_global_vec;
   obstacle_global_vec.clear();
@@ -80,7 +67,8 @@ void UpdateRefTrajLine(const Eigen::Vector3d ego_pos_start,
   if (is_line_obs == 0) {
     collision_result = pBaseColDetAir->Update(line_seg, ego_pos_start[2]);
   } else {
-    collision_result = pBaseColDetAir->UpdateByLineObs(line_seg, ego_pos_start[2]);
+    collision_result =
+        pBaseColDetAir->UpdateByLineObs(line_seg, ego_pos_start[2]);
   }
 }
 

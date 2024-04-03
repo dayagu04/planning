@@ -4,10 +4,11 @@
 #include <cmath>
 #include <iostream>
 
+#include "planning_plan_c.h"
+
 #include "config/basic_type.h"
 #include "config/message_type.h"
 #include "path_point.h"
-#include "planning_plan.pb.h"
 #include "prediction_object.h"
 /**
  * @namespace apollo::common::math
@@ -86,9 +87,9 @@ planning::PredictionTrajectoryPoint InterpolateUsingLinearApproximation(
     const PredictionTrajectoryPoint &tp0, const PredictionTrajectoryPoint &tp1,
     const double t);
 
-::PlanningOutput::TrajectoryPoint InterpolateUsingLinearApproximation(
-    const ::PlanningOutput::TrajectoryPoint &p0,
-    const ::PlanningOutput::TrajectoryPoint &p1, const double s);
+iflyauto::TrajectoryPoint InterpolateUsingLinearApproximation(
+    const iflyauto::TrajectoryPoint &p0, const iflyauto::TrajectoryPoint &p1,
+    const double s);
 }  // namespace planning_math
 }  // namespace planning
 

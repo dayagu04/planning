@@ -101,7 +101,7 @@ void ObstacleManager::update() {
            OBSTACLE_SOURCE_CAMERA_AND_RRRADAR);
 
       if (gs_care_fusion_source &&
-          prediction_object.type != Common::ObjectType::OBJECT_TYPE_UNKNOWN &&
+          prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
           prediction_object.length > 0. && prediction_object.width > 0. &&
           std::fabs(prediction_object.relative_position_y) < 10. &&
           std::fabs(prediction_object.relative_position_x) < 100.) {

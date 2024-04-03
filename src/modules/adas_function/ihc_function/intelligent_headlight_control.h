@@ -5,8 +5,7 @@
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "obstacle_manager.h"
-#include "planning_hmi.pb.h"
-#include "session.h"
+#include "planning_hmi_c.h"
 #include "virtual_lane_manager.h"
 
 namespace planning {
@@ -47,9 +46,7 @@ class IntelligentHeadlightControl {
   void RunOnce();
   bool get_ihc_request_status_info() { return ihc_request_status_; }
   bool get_ihc_request_info() { return ihc_request_; }
-  PlanningHMI::IHCOutputInfoStr_IHCFunctionFSMWorkState get_ihc_state_info() {
-    return ihc_state_;
-  }
+  iflyauto::IHCFunctionFSMWorkState get_ihc_state_info() { return ihc_state_; }
   ~IntelligentHeadlightControl() = default;
 
  private:
@@ -69,20 +66,16 @@ class IntelligentHeadlightControl {
                            // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
     switch (ihc_sys_.state.ihc_state) {
       case 0:
-        ihc_state_ = PlanningHMI::
-            IHCOutputInfoStr_IHCFunctionFSMWorkState_IHC_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+        ihc_state_ = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
         break;
       case 1:
-        ihc_state_ = PlanningHMI::
-            IHCOutputInfoStr_IHCFunctionFSMWorkState_IHC_FUNCTION_FSM_WORK_STATE_OFF;
+        ihc_state_ = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
         break;
       case 2:
-        ihc_state_ = PlanningHMI::
-            IHCOutputInfoStr_IHCFunctionFSMWorkState_IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
+        ihc_state_ = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
         break;
       default:
-        ihc_state_ = PlanningHMI::
-            IHCOutputInfoStr_IHCFunctionFSMWorkState_IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
+        ihc_state_ = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
         break;
     }
   }
@@ -92,11 +85,10 @@ class IntelligentHeadlightControl {
   IHCSys ihc_sys_;
   bool ihc_request_status_{true};  // IHC请求状态 0:No Request 1:Request
   bool ihc_request_{FALSE};        // IHC请求 0:LowBeam 1:HighBeam
-  PlanningHMI::IHCOutputInfoStr_IHCFunctionFSMWorkState ihc_state_{
-      PlanningHMI::
-          IHCOutputInfoStr_IHCFunctionFSMWorkState_IHC_FUNCTION_FSM_WORK_STATE_OFF};  // IHC功能状态
-                                                                                      // 0:Unavailable 1:Off
-                                                                                      // 2:Standby 3:Active
+  iflyauto::IHCFunctionFSMWorkState ihc_state_{
+      iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF};  // IHC功能状态
+                                                   // 0:Unavailable 1:Off
+                                                   // 2:Standby 3:Active
 };
 }
 #endif

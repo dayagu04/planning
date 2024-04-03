@@ -17,8 +17,8 @@ StGraphGenerator::StGraphGenerator(const SccLonBehaviorPlannerConfig &config)
     : config_(config) {
   lead_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step, 0.0,
                                      150.0, 0.1);
-  lead_two_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step, 0.0,
-                                     150.0, 0.1);
+  lead_two_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step,
+                                         0.0, 150.0, 0.1);
   cut_in_desired_distance_filter_.Init(
       -0.2, config_.cut_in_desired_distance_step, 0.0, 150.0, 0.1);
   accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
@@ -170,7 +170,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   bool lead_fusion_enable = (lead_one.fusion_source() & OBSTACLE_SOURCE_CAMERA);
   LOG_DEBUG("----compute_speed_with_leads--- \n");
   if (lead_one.track_id() != 0 &&
-      lead_one.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN &&
+      lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
       lead_fusion_enable) {
     LOG_DEBUG("target_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
               lead_one.track_id(), lead_one.d_rel(), lead_one.v_lead());
@@ -212,7 +212,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
         lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
     if (config_.enable_lead_two && is_camera_and_lidar &&
         lead_two.track_id() != 0 &&
-        lead_two.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
           "target_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
           lead_two.track_id(), lead_two.d_rel(), lead_two.v_lead());
@@ -227,7 +227,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
           lead_two.d_rel(), lead_two_desired_distance, lead_two.v_lead());
 
       lead_two_desired_distance_filtered = LeadtwoDesiredDistanceFilter(
-        lead_two, v_ego, safe_distance, lead_two_desired_distance);
+          lead_two, v_ego, safe_distance, lead_two_desired_distance);
 
       // update lead two st
       planning::common::RealTimeLonObstacleSTInfo lead_two_st_info;
@@ -290,7 +290,7 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
   if (temp_lead_one.track_id() != 0 && !lateral_outputs.close_to_accident() &&
       (temp_lead_one.d_path_self() + std::min(temp_lead_one.v_lat(), 0.3)) <
           1.0 &&
-      temp_lead_one.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+      temp_lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
     LOG_DEBUG("temp_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n ",
               temp_lead_one.track_id(), temp_lead_one.d_rel(),
               temp_lead_one.v_lead());
@@ -335,7 +335,7 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
         temp_lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
     if (config_.enable_lead_two && is_camera_and_lidar &&
         temp_lead_two.track_id() != 0 &&
-        temp_lead_two.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        temp_lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
           "target_temp_lead_two's id : [%i], d_rel is : [%f], v_lead is: "
           "[%f]\n",
@@ -566,7 +566,7 @@ void StGraphGenerator::UpdateSTGraphs(
         double s_step = st.v_lead() * sample_time;
         // 考虑decision type是overtake的情况
         if (st.decision() == common::RealTimeLonObstacleSTInfo::YIELD) {
-          //没必要区分
+          // 没必要区分
           /*
           if (st.st_type() == common::RealTimeLonObstacleSTInfo::GAP) {
             s_ref = st.start_s() - st.desired_distance() +
@@ -594,14 +594,15 @@ void StGraphGenerator::UpdateSTGraphs(
           s_ref = st.start_s() + st.desired_distance() + s_step;
           // hard bound使用安全距离
           hard_bound.upper = 150;
-          hard_bound.lower = std::max(st.start_s() + st.safe_distance() + s_step, 0.0);
+          hard_bound.lower =
+              std::max(st.start_s() + st.safe_distance() + s_step, 0.0);
           st_boundary.hard_bound.emplace_back(hard_bound);
           s_ref_update = std::max(
               hard_bound.lower, s_ref_update = std::max(sref_update[i], s_ref));
           // soft bound先使用期望跟车距离+buffer
           soft_bound.upper = 150;
           soft_bound.lower =
-              std::max(0.5 * (hard_bound.lower + s_ref_update), s_ref );
+              std::max(0.5 * (hard_bound.lower + s_ref_update), s_ref);
           st_boundary.soft_bound.emplace_back(soft_bound);
           // 根据障碍物跟车距离刷新s_refs
           sref_update[i] = s_ref_update;
@@ -643,7 +644,7 @@ void StGraphGenerator::UpdateNearObstacles(
       continue;
     };
     if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
-        track.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       near_cars.push_back(&track);
     }
   }
@@ -654,7 +655,7 @@ void StGraphGenerator::UpdateNearObstacles(
       continue;
     };
     if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
-        track.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       near_cars.push_back(&track);
     }
   }
@@ -1069,7 +1070,7 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
     };
     if (!track.is_lead() && track.cutinp() > cutinp_threshold &&
         track.v_lat() < -0.01 &&
-        track.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       cut_in_info->set_has_cutin(true);
 
       front_cut_in_track_id.push_back(track.track_id());
@@ -1466,9 +1467,9 @@ double StGraphGenerator::DesiredDistanceFilter(
   }
   lead_desired_distance_filter_.SetState(
       leadone_info->leadone_information().desired_distance());
-  if (!(lon_behav_input_ ->dbw_status())) {
+  if (!(lon_behav_input_->dbw_status())) {
     lead_desired_distance_filter_.SetState(
-      std::min(lead_obstacle.d_rel(), safe_distance));
+        std::min(lead_obstacle.d_rel(), safe_distance));
   }
   if (slow_car_cut_in) {
     // 慢车切入
@@ -1517,22 +1518,22 @@ double StGraphGenerator::LeadtwoDesiredDistanceFilter(
   lead_two_desired_distance_filter_.SetState(
       leadtwo_info->leadtwo_information().desired_distance());
 
-  if (!(lon_behav_input_ ->dbw_status())) {
+  if (!(lon_behav_input_->dbw_status())) {
     lead_two_desired_distance_filter_.SetState(
-      std::min(lead_obstacle.d_rel(), safe_distance));
+        std::min(lead_obstacle.d_rel(), safe_distance));
   }
 
   if (slow_car_cut_in) {
     // 慢车切入
     lead_two_desired_distance_filter_.SetRate(-4.0,
-                                          config_.slow_lead_distance_step);
+                                              config_.slow_lead_distance_step);
     lead_two_desired_distance_filter_.Update(desired_distance);
     desired_distance_new = lead_two_desired_distance_filter_.GetOutput();
     JSON_DEBUG_VALUE("slow_lead_id", lead_obstacle.track_id());
   } else {
     // 快车切入
     lead_two_desired_distance_filter_.SetRate(-4.0,
-                                          config_.fast_lead_distance_step);
+                                              config_.fast_lead_distance_step);
     lead_two_desired_distance_filter_.Update(desired_distance);
     desired_distance_new = lead_two_desired_distance_filter_.GetOutput();
     JSON_DEBUG_VALUE("fast_lead_id", lead_obstacle.track_id());
@@ -1617,9 +1618,9 @@ double StGraphGenerator::CutInDesiredDistanceFilter(
 
   cut_in_desired_distance_filter_.SetState(
       cutin_information->desired_distance());
-  if (!(lon_behav_input_ ->dbw_status())) {
+  if (!(lon_behav_input_->dbw_status())) {
     cut_in_desired_distance_filter_.SetState(
-      std::min(predict_distance, safe_distance));
+        std::min(predict_distance, safe_distance));
   }
   JSON_DEBUG_VALUE("fast_car_cut_in_id", -1.0);
   JSON_DEBUG_VALUE("slow_car_cut_in_id", -1.0);
@@ -1647,7 +1648,6 @@ double StGraphGenerator::LCGapDesiredDistanceFilter(
     const planning::common::TrackedObjectInfo &lead_obstacle,
     const double v_ego, double safe_distance, double desired_distance,
     bool is_front) {
-  
   // 更新lead初始信息
   if (is_front) {
     if (lc_front_id_ != lead_obstacle.track_id()) {
@@ -1715,7 +1715,6 @@ double StGraphGenerator::LCGapDesiredDistanceFilter(
     lc_rear_desired_distance_ = desired_rear_distance_new;
     return desired_rear_distance_new;
   }
-
 }
 
 common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(

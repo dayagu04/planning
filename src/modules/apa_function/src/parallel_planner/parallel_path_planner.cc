@@ -38,7 +38,6 @@ static const double kColBufferInSlot = 0.4;
 static const double kColBufferOutSlot = 0.5;
 
 static const size_t kMaxParallelParkInSegmentNums = 15;
-static const size_t kReservedOutputPathPointSize = 750;
 static const size_t kMaxPathNumsInSlot = 5;
 static const size_t kMaxMultiStepNums = 5;
 static const size_t kMaxParallelShiftNums = 6;
@@ -211,7 +210,8 @@ const bool ParallelPathPlanner::PlanFromEgoToParkOutRootPose(
             << first_arc_length_vec.back() << std::endl;
 
   const double park_out_target_heading =
-      apa_param.GetParam().parallel_search_out_heading / 57.3 * calc_params_.slot_side_sgn;
+      apa_param.GetParam().parallel_search_out_heading / 57.3 *
+      calc_params_.slot_side_sgn;
 
   for (const auto& arc_length : first_arc_length_vec) {
     if (!pnc::geometry_lib::CompleteArcInfo(first_arc, arc_length,
@@ -3770,17 +3770,29 @@ const bool ParallelPathPlanner::SampleCurrentPathSeg() {
   }
 
   output_.path_point_vec.clear();
-  output_.path_point_vec.reserve(kReservedOutputPathPointSize);
+  output_.path_point_vec.reserve(PLANNING_TRAJ_POINTS_NUM);
 
-  pnc::geometry_lib::PathPoint path_point;
+  double first_path_length = 0.0;
+  for (size_t i = output_.path_seg_index.first;
+       i <= output_.path_seg_index.second; i++) {
+    first_path_length += output_.path_segment_vec[i].Getlength();
+  }
+
+  const size_t max_points_size =
+      PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM;
+  const double min_ds =
+      first_path_length / static_cast<double>(max_points_size);
+
+  const double actual_sample_ds = std::max(input_.sample_ds, min_ds);
+
   for (size_t i = output_.path_seg_index.first;
        i <= output_.path_seg_index.second; ++i) {
     const auto& current_seg = output_.path_segment_vec[i];
 
     if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-      SampleLineSegment(current_seg.line_seg, input_.sample_ds);
+      SampleLineSegment(current_seg.line_seg, actual_sample_ds);
     } else {
-      SampleArcSegment(current_seg.arc_seg, input_.sample_ds);
+      SampleArcSegment(current_seg.arc_seg, actual_sample_ds);
     }
     if (i < output_.path_seg_index.second) {
       output_.path_point_vec.pop_back();

@@ -516,7 +516,9 @@ void EgoStateManager::UpdatePlanningInitState() {
     if (!session_->environmental_model().GetVehicleDbwStatus()) {
       set_lat_replan = true;
       set_lon_replan = true;
-    } else if (session_->environmental_model().function_info().function_mode() == common::DrivingFunctionInfo::ACC) {
+    } else if (session_->environmental_model()
+                   .function_info()
+                   .function_mode() == common::DrivingFunctionInfo::ACC) {
       set_lat_replan = true;
     }
 

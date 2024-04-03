@@ -89,11 +89,10 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
   // bool curr_direct_exist =
   //     (current_lane->get_lane_marks() == DIRECTION_UNKNOWN &&
   //      current_lane->get_lane_type() ==
-  //      FusionRoad::LaneType::LANETYPE_NORMAL);
+  //      iflyauto::LANETYPE_NORMAL);
   // hack curr_direct_exist until intersection info ready
-  bool curr_direct_exist =
-      (current_lane->get_lane_marks() ==
-       FusionRoad::LaneDrivableDirection::DIRECTION_STRAIGHT);
+  bool curr_direct_exist = (current_lane->get_lane_marks() ==
+                            iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT);
   // 获取左右车道的index 换成获取id
   if (current_lane_index > 0) {
     left_lane_index = current_lane_index - 1;
@@ -115,31 +114,28 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
   // 判断是否为最左侧车道
   bool is_not_on_most_left_lane = current_lane_index != 0;
   bool is_normal_lane =
-      current_lane->get_lane_type() == FusionRoad::LaneType::LANETYPE_NORMAL;
+      current_lane->get_lane_type() == iflyauto::LANETYPE_NORMAL;
 
   auto distance_to_merge_point =
-      current_lane->get_lane_merge_split_point().merge_split_point_data_size() >
-              0
+      current_lane->get_lane_merge_split_point().merge_split_point_data_size > 0
           ? current_lane->get_lane_merge_split_point()
-                .merge_split_point_data(0)
-                .distance()
+                .merge_split_point_data[0]
+                .distance
           : 5000.;  // hack
   // WB hack: distance_to_y_point计算需要更新
   auto distance_to_y_point =
-      current_lane->get_lane_merge_split_point().merge_split_point_data_size() >
-              0
+      current_lane->get_lane_merge_split_point().merge_split_point_data_size > 0
           ? current_lane->get_lane_merge_split_point()
-                .merge_split_point_data(0)
-                .distance()
+                .merge_split_point_data[0]
+                .distance
           : 5000.;  // hack
   // 判断分汇流情况目前不完善，TBD
   bool is_nearby_right_merge_point =
-      current_lane->get_lane_merge_split_point().merge_split_point_data_size() >
+      current_lane->get_lane_merge_split_point().merge_split_point_data_size >
           0 &&
       current_lane->get_lane_merge_split_point()
-              .merge_split_point_data(0)
-              .orientation() ==
-          FusionRoad::LaneOrientation::ORIENTATION_RIGHT &&
+              .merge_split_point_data[0]
+              .orientation == iflyauto::LaneOrientation_ORIENTATION_RIGHT &&
       distance_to_merge_point > 0 &&
       distance_to_merge_point < kDistanceBuffer &&
       distance_to_merge_point + kDistanceBuffer <
@@ -153,12 +149,11 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
 
   // WB TBD： 汇流判断目前为hack，需要更新逻辑
   bool is_nearby_right_y_point =
-      current_lane->get_lane_merge_split_point().merge_split_point_data_size() >
+      current_lane->get_lane_merge_split_point().merge_split_point_data_size >
           0 &&
       current_lane->get_lane_merge_split_point()
-              .merge_split_point_data(0)
-              .orientation() ==
-          FusionRoad::LaneOrientation::ORIENTATION_RIGHT &&
+              .merge_split_point_data[0]
+              .orientation == iflyauto::LaneOrientation_ORIENTATION_RIGHT &&
       distance_to_y_point > 0 && distance_to_y_point < kDistanceBuffer &&
       distance_to_y_point + kDistanceBuffer < virtual_lane_mgr_->dis_to_ramp();
   bool is_from_right_y_point_lc_decision_valid =
@@ -258,11 +253,10 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
       // if (map_info.lanes_y_point_type() == MSD_MERGE_TYPE_MERGE_FROM_RIGHT) {
       // 需要区分 merge_split_point, y_point的差异和类型
       if (current_lane->get_lane_merge_split_point()
-                  .merge_split_point_data_size() > 0 &&
+                  .merge_split_point_data_size > 0 &&
           current_lane->get_lane_merge_split_point()
-                  .merge_split_point_data(0)
-                  .orientation() ==
-              FusionRoad::LaneOrientation::ORIENTATION_RIGHT) {
+                  .merge_split_point_data[0]
+                  .orientation == iflyauto::LaneOrientation_ORIENTATION_RIGHT) {
         act_request_source_ = "avd_y_from_right";
       }
       // else if (map_info.lanes_merge_type() ==

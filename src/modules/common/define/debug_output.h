@@ -1,10 +1,4 @@
 #pragma once
-#include <cstdint>
-#include <string>
-
-#include "common.pb.h"
-#include "planning_debug_info.pb.h"
-#include "planning_plan.pb.h"
 
 namespace planning {
 
@@ -20,18 +14,4 @@ struct Polyline {
   double corri_l = 0.5;  // corridor size = 0.5m
 };
 
-struct DebugOutput {
-  // 自车位置
-  Common::Point2d ego_position;
-  // 横向信息
-  Polyline left_lane;
-  Polyline centre_lane;
-  Polyline right_lane;
-  Polyline target_lane;
-  Polyline fix_lane;
-  // 纵向信息
-  Common::Point2d velocity;
-  PlanningOutput::AccelerationRange acceleration;
-  planning::common::PlanningDebugInfo data;
-};
 }  // namespace planning

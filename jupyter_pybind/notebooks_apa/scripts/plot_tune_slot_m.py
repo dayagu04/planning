@@ -1,6 +1,6 @@
 import sys, os
 sys.path.append("..")
-# from lib.load_cyberbag import *
+from io import BytesIO
 from lib.load_local_view_parking import *
 sys.path.append('../..')
 sys.path.append('../../../build')
@@ -8,10 +8,11 @@ sys.path.append('../../../')
 
 sys.path.append('python_proto')
 from python_proto import common_pb2, slot_management_info_pb2
+from struct_msgs.msg import PlanningOutput, UssPerceptInfo
 from jupyter_pybind import slot_management_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/planning-601f469a/test_8.00000'
+bag_path = '/data_cold/autoupload/jac_s811_37xu2/trigger/20240426/20240426-20-30-46/park_in_data_collection_JAC_S811_37XU2_ALL_FILTER_2024-04-26-20-30-46.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -105,17 +106,38 @@ def slider_callback(bag_time, force_apa, force_clear,
   uss_wave_idx = local_view_data['data_index']['wave_msg_idx']
   uss_percept_idx = local_view_data['data_index']['uss_percept_msg_idx']
 
-  soc_state_input = bag_loader.soc_state_msg['data'][soc_state_msg_idx]
-  fus_parking_input = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx]
-  loc_msg_input = bag_loader.loc_msg['data'][loc_msg_idx]
-  uss_wave_input = bag_loader.wave_msg['data'][uss_wave_idx]
-  uss_percept_input = bag_loader.uss_percept_msg['data'][uss_percept_idx]
+  soc_state_msg = bag_loader.soc_state_msg['data'][soc_state_msg_idx]
+  fus_parking_msg = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx]
+  loc_msg = bag_loader.loc_msg['data'][loc_msg_idx]
+  wave_msg = bag_loader.wave_msg['data'][uss_wave_idx]
+  # uss_perception_msg = bag_loader.uss_percept_msg['data'][uss_percept_idx]
+  uss_perception_msg = UssPerceptInfo() # uss_perception_msg is unavailable now
 
-  slot_management_py.UpdateBytesByParam(soc_state_input.SerializeToString(),
-                                        fus_parking_input.SerializeToString(),
-                                        loc_msg_input.SerializeToString(),
-                                        uss_wave_input.SerializeToString(),
-                                        uss_percept_input.SerializeToString(),
+  soc_state_msg_buff = BytesIO()
+  soc_state_msg.serialize(soc_state_msg_buff)
+  soc_state_msg_bytes = soc_state_msg_buff.getvalue()
+
+  fus_parking_msg_buff = BytesIO()
+  fus_parking_msg.serialize(fus_parking_msg_buff)
+  fus_parking_msg_bytes = fus_parking_msg_buff.getvalue()
+
+  loc_msg_buff = BytesIO()
+  loc_msg.serialize(loc_msg_buff)
+  loc_msg_bytes = loc_msg_buff.getvalue()
+
+  wave_msg_buff = BytesIO()
+  wave_msg.serialize(wave_msg_buff)
+  wave_msg_bytes = wave_msg_buff.getvalue()
+
+  uss_perception_msg_buff = BytesIO()
+  uss_perception_msg.serialize(uss_perception_msg_buff)
+  uss_perception_msg_bytes = uss_perception_msg_buff.getvalue()
+
+  slot_management_py.UpdateBytesByParam(soc_state_msg_bytes,
+                                        fus_parking_msg_bytes,
+                                        loc_msg_bytes,
+                                        wave_msg_bytes,
+                                        uss_perception_msg_bytes,
                                         force_apa, force_clear,
                                         max_slots_update_angle_dis_limit_deg,
                                         max_slot_boundary_line_angle_dif_deg,

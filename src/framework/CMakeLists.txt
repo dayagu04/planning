@@ -9,7 +9,7 @@ add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
   common
-  proto_interface_planning
+  planning_proto
   modules_context
   nlohmann_json
 )

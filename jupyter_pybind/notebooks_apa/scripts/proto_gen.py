@@ -21,7 +21,7 @@ def proto_gen_py():
             command = f"protoc --python_out={new_dir} {proto_lists[i]}"
             os.system(command)
 
-    os.chdir("../../../interface/src/private/planning")
+    os.chdir("../../../proto")
     proto_lists = os.listdir(".")
     for i in range(len(proto_lists)):
         if ".proto" in proto_lists[i]:

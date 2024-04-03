@@ -1,0 +1,158 @@
+syntax = "proto2";
+
+import "basic_types.proto";
+import "task_basic_types.proto";
+import "lon_behavior_planner.proto";
+
+package planning.common;
+
+message EgoInfo {
+  optional double ego_v = 1;
+  optional double ego_cruise = 2;
+  optional double ego_acc = 3;
+  optional double ego_steer_angle = 4;
+}
+
+message LatOutputInfo {
+  optional string lc_request = 1;
+  optional string lc_status = 2;
+  optional bool close_to_accident = 3;
+  repeated double d_poly_vec = 4;
+}
+
+message TrackedObjectInfo {
+  optional int32 track_id = 1 [default = 0];
+  optional int32 type = 2;
+  optional int32 fusion_source = 3;
+  optional double v_lead = 4;
+  optional double v_rel = 5;
+  optional double a_lead_k = 6;
+  optional double d_rel = 7;
+  optional double d_path = 8;
+  optional double d_path_self = 9;
+  optional double v_lat = 10;
+  optional bool is_accident_car = 11 [default = false];
+  optional bool is_lead = 12;
+  optional bool is_temp_lead = 13;
+  optional double cutinp = 14;
+  optional double y_min = 15;
+  optional double y_x0 = 16;
+  optional double location_head = 17;
+  optional double location_tail = 18;
+  optional double vy_rel = 19;
+  optional double y_rel = 20;
+}
+
+message LatObsInfo {
+  optional TrackedObjectInfo lead_one = 1;
+  optional TrackedObjectInfo lead_two = 2;
+  optional TrackedObjectInfo temp_lead_one = 3;
+  optional TrackedObjectInfo temp_lead_two = 4;
+  repeated TrackedObjectInfo front_tracks = 5;
+  repeated TrackedObjectInfo side_tracks = 6;
+}
+
+message LaneChangeInfo {
+  optional bool has_target_lane = 1;
+  optional int32 tlane_virtual_id = 2;
+  optional int32 lc_map_decision = 3;
+  optional double lc_end_dis = 4;
+  optional double v_limit = 5;
+  optional int32 current_lane_type = 6;
+  optional int32 target_gap_obs_first = 7;
+  optional int32 target_gap_obs_second = 8;
+  repeated TrackedObjectInfo lc_cars = 9;
+}
+
+message RealTimeLonObstacleSTInfo {
+  enum StInfoType {
+    DEFAULT = 0;
+    LEADS = 1;
+    TEMP_LEADS = 2;
+    CUT_IN = 3;
+    GAP = 4;
+  }
+  enum DecisionType {
+    YIELD = 0;
+    OVERTAKE = 1;
+  }
+  optional StInfoType st_type = 1;
+  optional DecisionType decision = 2 [default = YIELD];
+  optional int32 id = 3;
+  optional double a_lead = 4;
+  optional double v_lead = 5;
+  optional double s_lead = 6;
+  optional double desired_distance = 7;  // soft bound
+  optional double desired_velocity = 8;  // v ref of ego
+  optional double safe_distance = 9;     // hard bound
+  optional double start_time = 10;  // the time at which it appears in the s-t graph
+  optional double end_time = 11;  // the time at which it disappears in the s-t graph
+  optional double start_s = 12;  // the s at which it appears in the s-t graph
+}
+
+message RealTimeLonBehaviorTunedParams {
+  optional double safe_distance_base = 1 [default = 3.0];
+  optional double safe_distance_ttc = 2 [default = 0.3];
+  optional double t_actuator_delay = 3 [default = 0.4];
+  optional double lane_keep_cutinp_threshold = 4 [default = 0.2];
+  optional double lane_change_cutinp_threshold = 5 [default = 0.6];
+  optional double corridor_width = 6 [default = 1.5];
+  optional double preview_x = 7 [default = 80.0];
+  optional double dis_zero_speed = 8 [default = 3.5];
+  optional double dis_zero_speed_accident = 9 [default = 6];
+  optional double ttc_brake_hysteresis = 10 [default = 0.3];
+  optional double t_curv = 11 [default = 3.0];
+  optional double dis_curv = 12 [default = 0.0];
+  optional double velocity_upper_bound = 13 [default = 33.33];
+  optional double v_start = 14 [default = 0.3];
+  optional double distance_stop = 15 [default = 1.0];
+  optional double distance_start = 16 [default = 0.3];
+}
+
+message RealTimeLonBehaviorInput {
+  optional EgoInfo ego_info = 1;
+  optional LatOutputInfo lat_output = 2;
+  optional LatObsInfo lat_obs_info = 3;
+  optional LaneChangeInfo lc_info = 4;
+  optional StartStopInfo start_stop_info = 5;
+  optional bool dbw_status = 6;
+  optional LonDecisionInfo lon_decision_info = 7;
+  optional DrivingFunctionInfo function_info = 8;
+  optional bool is_on_ramp = 9;
+  optional double dis_to_ramp = 10;
+  optional double dis_to_merge = 11;
+  repeated ReferencePathPoint ref_path_points = 12;
+  optional bool is_in_intersection = 13;
+}
+
+// The output of real time lon behavior
+message SVBound {
+  optional double s = 1;
+  optional Bound v_bound = 2;
+}
+
+message SVBoundary {
+  enum SVBoundaryType {
+    DEFAULT = 0;
+    ROAD = 1;
+    CURVATURE = 2;
+    STOP = 3;
+  }
+  optional SVBoundaryType boundary_type = 1;
+  repeated SVBound sv_bounds = 2;
+}
+
+message LonRefPath {
+  repeated double t_list = 1;
+  repeated DoublePair s_refs = 2;  // <offset, weight>
+  repeated DoublePair ds_refs = 3;
+
+  repeated WeightedBounds bounds = 4;
+  repeated WeightedBounds soft_bounds = 5;
+  repeated WeightedLonLeadBounds lon_lead_bounds = 6;
+  optional SVBoundary lon_sv_boundary = 7;
+
+  optional Bounds lon_bound_v = 8;
+  optional Bounds lon_bound_a = 9;
+  optional Bounds lon_bound_jerk = 10;
+}

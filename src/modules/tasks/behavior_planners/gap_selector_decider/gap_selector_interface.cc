@@ -90,8 +90,8 @@ void GapSelectorInterface::Store(
   const auto &cur_reference_path = current_lane->get_reference_path();
   for (const auto &point : lane_points) {
     planning::common::Point2d *Point = current_refline_points->Add();
-    Point->set_x(point.local_point().x());
-    Point->set_y(point.local_point().y());
+    Point->set_x(point.local_point.x);
+    Point->set_y(point.local_point.y);
   }
 
   for (const auto &refpath_point : cur_reference_path->get_points()) {
@@ -111,8 +111,8 @@ void GapSelectorInterface::Store(
   const auto &origin_lane_points = origin_lane->lane_points();
   for (const auto &point : origin_lane_points) {
     planning::common::Point2d *Point = origin_refline_points->Add();
-    Point->set_x(point.local_point().x());
-    Point->set_y(point.local_point().y());
+    Point->set_x(point.local_point.x);
+    Point->set_y(point.local_point.y);
   }
 
   const auto &coarse_planning_info = session->planning_context()
@@ -144,8 +144,8 @@ void GapSelectorInterface::Store(
     target_lane_s_width->Clear();
     for (const auto &point : target_lane->lane_points()) {
       planning::common::Point2d *Point = target_refline_points->Add();
-      Point->set_x(point.local_point().x());
-      Point->set_y(point.local_point().y());
+      Point->set_x(point.local_point.x);
+      Point->set_y(point.local_point.y);
     }
 
     for (const auto &refpath_point : tar_reference_path->get_points()) {
@@ -556,7 +556,7 @@ void GapSelectorInterface::Parse(planning::common::GapSelectorInput &input) {
     obstacle_info.length = input.gs_care_objs(i).length();
     obstacle_info.width = input.gs_care_objs(i).width();
     obstacle_info.id = input.gs_care_objs(i).id();
-    obstacle_info.type = Common::ObjectType::OBJECT_TYPE_COUPE;
+    obstacle_info.type = iflyauto::ObjectType::OBJECT_TYPE_COUPE;
     obstacle_info.speed = input.gs_care_objs(i).speed();
     obstacle_info.yaw = input.gs_care_objs(i).yaw();
     obstacle_info.acc = input.gs_care_objs(i).acc();
@@ -721,11 +721,11 @@ void GapSelectorInterface::ReplayCollect(
       nearby_gap.front_agent_id);
   gap_selector_replay_info->mutable_nearby_gap()->set_rear_agent_id(
       nearby_gap.rear_agent_id);
-  gap_selector_replay_info->set_current_front_agent_id(ego_current_lane_id);
-  gap_selector_replay_info->set_front_car_dynamic_dis(front_car_dynamic_dis);
-  gap_selector_replay_info->set_rear_car_dynamic_dis(rear_car_dynamic_dis);
-  gap_selector_replay_info->set_ego_lane_car_dynamic_dis(
-      ego_lane_car_dynamic_dis);
+  //   gap_selector_replay_info->set_current_front_agent_id(ego_current_lane_id);
+  //   gap_selector_replay_info->set_front_car_dynamic_dis(front_car_dynamic_dis);
+  //   gap_selector_replay_info->set_rear_car_dynamic_dis(rear_car_dynamic_dis);
+  //   gap_selector_replay_info->set_ego_lane_car_dynamic_dis(
+  //       ego_lane_car_dynamic_dis);
   // front gap pred objs
   for (auto i = 0; i < front_gap_car_st_boundaries.size(); i++) {
     planning::common::ObstaclePredicatedPoint *obj_pred_point =
@@ -748,14 +748,14 @@ void GapSelectorInterface::ReplayCollect(
   }
 
   // front car pred objs
-  for (auto i = 0; i < current_lane_front_car_st_boundaries.size(); i++) {
-    planning::common::ObstaclePredicatedPoint *obj_pred_point =
-        gap_selector_replay_info
-            ->mutable_obstacle_predicate_points_current_lane_car()
-            ->Add();
-    obj_pred_point->set_s(current_lane_front_car_st_boundaries[i].second.s());
-    obj_pred_point->set_t(current_lane_front_car_st_boundaries[i].second.t());
-  }
+  //   for (auto i = 0; i < current_lane_front_car_st_boundaries.size(); i++) {
+  //     planning::common::ObstaclePredicatedPoint *obj_pred_point =
+  //         gap_selector_replay_info
+  //             ->mutable_obstacle_predicate_points_current_lane_car()
+  //             ->Add();
+  //     obj_pred_point->set_s(current_lane_front_car_st_boundaries[i].second.s());
+  //     obj_pred_point->set_t(current_lane_front_car_st_boundaries[i].second.t());
+  //   }
 
   // gap list
 

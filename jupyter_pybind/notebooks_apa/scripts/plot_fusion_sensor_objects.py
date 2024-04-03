@@ -136,8 +136,8 @@ def obj_id_handler(id, me_id, fm_id, fl_id, fr_id, rl_id, rr_id):
 
       #mobieye_object
       me_index = local_view_data['data_index']['me_msg_idx']
-      me_obs_num = len(me_data[me_index].camera_perception_object_list) #1
-      me_obj_list = me_data[me_index].camera_perception_object_list
+      me_obs_num = len(me_data[me_index].camera_perception_objects) #1
+      me_obj_list = me_data[me_index].camera_perception_objects
       find_me = 0
       for i in range(me_obs_num):
           if(me_obj_list[i].common_info.id == object_id[1]):
@@ -166,8 +166,8 @@ def obj_id_handler(id, me_id, fm_id, fl_id, fr_id, rl_id, rr_id):
           index = local_view_data['data_index']['radar_rl_msg_idx']
         elif i==4:
           index = local_view_data['data_index']['radar_rr_msg_idx']
-        radar_obs_num = len(radar_data[i][index].radar_perception_object_list) #1
-        radar_obj_list = radar_data[i][index].radar_perception_object_list
+        radar_obs_num = len(radar_data[i][index].object_list) #1
+        radar_obj_list = radar_data[i][index].object_list
         find_radar = 0
         for j in range(radar_obs_num):
           if(radar_obj_list[j].id == object_id[i+2]):

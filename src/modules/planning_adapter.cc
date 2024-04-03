@@ -8,11 +8,8 @@
 #include "common.pb.h"
 #include "common/config_context.h"
 #include "debug_info_log.h"
-#include "func_state_machine.pb.h"
 #include "general_planning_context.h"
 #include "ifly_time.h"
-#include "local_view.h"
-#include "planning_debug_info.pb.h"
 #include "version.h"
 
 namespace planning {
@@ -62,9 +59,7 @@ static uint64_t get_latency(double now, uint64_t input_time) {
 }
 
 static inline void calc_fusion_latency(
-    u_int64_t planning_in_time_us,
-    const google::protobuf::RepeatedPtrField<Common::InputHistoryTimestamp>
-        &input_timestamp_list,
+    uint64 planning_in_time_us, const iflyauto::Header &header,
     planning::common::ImageLatency *latency) {
   constexpr uint64_t US_PER_MS = 1000;
 
@@ -74,34 +69,33 @@ static inline void calc_fusion_latency(
   u_int64_t fusion_in_time_us = 0;
   u_int64_t fusion_out_time_us = 0;
 
-  for (auto &input : input_timestamp_list) {
-    switch (input.input_type()) {
+  for (int i = 0; i < header.input_list_size; i++) {
+    const auto &input = header.input_list[i];
+    switch (input.input_type) {
       case Common::InputHistoryTimestamp::
           INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_CAMERA: {
-        perception_in_time_us = input.in_ts_us();
+        perception_in_time_us = input.in_ts_us;
         break;
       }
       case Common::InputHistoryTimestamp::
           INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PERCEPTION: {
-        perception_in_time_us = input.in_ts_us();
-        perception_out_time_us = input.out_ts_us();
+        perception_in_time_us = input.in_ts_us;
+        perception_out_time_us = input.out_ts_us;
         break;
       }
       case Common::InputHistoryTimestamp::
           INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_OBSTACLE_FUSION: {
-        fusion_in_time_us = input.in_ts_us();
-        fusion_out_time_us = input.out_ts_us();
+        fusion_in_time_us = input.in_ts_us;
+        fusion_out_time_us = input.out_ts_us;
         break;
       }
       case Common::InputHistoryTimestamp::
           INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_ROAD_FUSION: {
-        fusion_in_time_us = input.in_ts_us();
-        fusion_out_time_us = input.out_ts_us();
+        fusion_in_time_us = input.in_ts_us;
+        fusion_out_time_us = input.out_ts_us;
         break;
       }
-      default: {
-        break;
-      }
+      default: { break; }
     }
   }
 
@@ -117,33 +111,30 @@ static inline void calc_fusion_latency(
       (planning_in_time_us - fusion_out_time_us) / US_PER_MS);
 }
 
-static void calc_location_latency(
-    u_int64_t planning_in_time_us,
-    const google::protobuf::RepeatedPtrField<Common::InputHistoryTimestamp>
-        &input_timestamp_list,
-    planning::common::LocationLatency *latency) {
+static void calc_location_latency(uint64 planning_in_time_us,
+                                  const iflyauto::Header &header,
+                                  planning::common::LocationLatency *latency) {
   constexpr uint64_t US_PER_MS = 1000;
 
   u_int64_t sensor_time_us = 0;
   u_int64_t location_in_time_us = 0;
   u_int64_t location_out_time_us = 0;
 
-  for (auto &input : input_timestamp_list) {
-    switch (input.input_type()) {
+  for (int i = 0; i < header.input_list_size; i++) {
+    const auto &input = header.input_list[i];
+    switch (input.input_type) {
       case Common::InputHistoryTimestamp::
           INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_IMU: {
-        sensor_time_us = input.in_ts_us();
+        sensor_time_us = input.in_ts_us;
         break;
       }
       case Common::InputHistoryTimestamp::
           INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_LOCALIZATION: {
-        location_in_time_us = input.in_ts_us();
-        location_out_time_us = input.out_ts_us();
+        location_in_time_us = input.in_ts_us;
+        location_out_time_us = input.out_ts_us;
         break;
       }
-      default: {
-        break;
-      }
+      default: { break; }
     }
   }
 
@@ -174,9 +165,9 @@ void PlanningAdapter::Proc() {
     is_prediction_result_msg_updated_.store(false);
   }
   input_topic_timestamp->set_prediction(
-      local_view_ptr_->prediction_result.header().timestamp());
+      local_view_ptr_->prediction_result.header.timestamp);
   input_topic_latency->set_prediction(get_latency(
-      start_time, local_view_ptr_->prediction_result.header().timestamp()));
+      start_time, local_view_ptr_->prediction_result.header.timestamp));
 
   if (is_road_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -185,9 +176,32 @@ void PlanningAdapter::Proc() {
     is_road_info_msg_updated_.store(false);
   }
   input_topic_timestamp->set_fusion_road(
-      local_view_ptr_->road_info.header().timestamp());
+      local_view_ptr_->road_info.header.timestamp);
   input_topic_latency->set_fusion_road(
-      get_latency(start_time, local_view_ptr_->road_info.header().timestamp()));
+      get_latency(start_time, local_view_ptr_->road_info.header.timestamp));
+
+  if (is_ground_line_perception_msg_updated_) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    local_view_ptr_->ground_line_perception = ground_line_perception_msg_;
+    local_view_ptr_->ground_line_perception_recv_time =
+        ground_line_perception_msg_recv_time_;
+    is_ground_line_perception_msg_updated_.store(false);
+  }
+  input_topic_timestamp->set_ground_line(
+      local_view_ptr_->ground_line_perception.header.timestamp);
+  input_topic_latency->set_ground_line(get_latency(
+      start_time, local_view_ptr_->ground_line_perception.header.timestamp));
+
+  if (is_localization_msg_updated_) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    local_view_ptr_->localization = localization_msg_;
+    local_view_ptr_->localization_recv_time = localization_msg_recv_time_;
+    is_localization_msg_updated_.store(false);
+  }
+  input_topic_timestamp->set_localization(
+      local_view_ptr_->localization.header.timestamp);
+  input_topic_latency->set_localization(
+      get_latency(start_time, local_view_ptr_->localization.header.timestamp));
 
   if (is_localization_estimate_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -197,9 +211,9 @@ void PlanningAdapter::Proc() {
     is_localization_estimate_msg_updated_.store(false);
   }
   input_topic_timestamp->set_localization_estimate(
-      local_view_ptr_->localization_estimate.header().timestamp());
+      local_view_ptr_->localization_estimate.header.timestamp);
   input_topic_latency->set_localization(get_latency(
-      start_time, local_view_ptr_->localization_estimate.header().timestamp()));
+      start_time, local_view_ptr_->localization_estimate.header.timestamp));
 
   if (is_fusion_objects_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -209,9 +223,9 @@ void PlanningAdapter::Proc() {
     is_fusion_objects_info_msg_updated_.store(false);
   }
   input_topic_timestamp->set_fusion_object(
-      local_view_ptr_->fusion_objects_info.header().timestamp());
+      local_view_ptr_->fusion_objects_info.header.timestamp);
   input_topic_latency->set_fusion_object(get_latency(
-      start_time, local_view_ptr_->fusion_objects_info.header().timestamp()));
+      start_time, local_view_ptr_->fusion_objects_info.header.timestamp));
 
   if (is_vehicle_service_output_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -222,10 +236,10 @@ void PlanningAdapter::Proc() {
     is_vehicle_service_output_info_msg_updated_.store(false);
   }
   input_topic_timestamp->set_vehicle_service(
-      local_view_ptr_->vehicle_service_output_info.header().timestamp());
+      local_view_ptr_->vehicle_service_output_info.header.timestamp);
   input_topic_latency->set_vehicle_service(get_latency(
       start_time,
-      local_view_ptr_->vehicle_service_output_info.header().timestamp()));
+      local_view_ptr_->vehicle_service_output_info.header.timestamp));
 
   if (is_control_output_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -234,9 +248,9 @@ void PlanningAdapter::Proc() {
     is_control_output_msg_updated_.store(false);
   }
   input_topic_timestamp->set_control_output(
-      local_view_ptr_->control_output.header().timestamp());
+      local_view_ptr_->control_output.header.timestamp);
   input_topic_latency->set_control_output(get_latency(
-      start_time, local_view_ptr_->control_output.header().timestamp()));
+      start_time, local_view_ptr_->control_output.header.timestamp));
 
   if (is_hmi_mcu_inner_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -246,9 +260,9 @@ void PlanningAdapter::Proc() {
     is_hmi_mcu_inner_info_msg_updated_.store(false);
   }
   input_topic_timestamp->set_hmi(
-      local_view_ptr_->hmi_mcu_inner_info.header().timestamp());
+      local_view_ptr_->hmi_mcu_inner_info.header.timestamp);
   input_topic_latency->set_hmi(get_latency(
-      start_time, local_view_ptr_->hmi_mcu_inner_info.header().timestamp()));
+      start_time, local_view_ptr_->hmi_mcu_inner_info.header.timestamp));
 
   if (is_parking_fusion_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -258,20 +272,22 @@ void PlanningAdapter::Proc() {
     is_parking_fusion_info_msg_updated_.store(false);
   }
   input_topic_timestamp->set_parking_fusion(
-      local_view_ptr_->parking_fusion_info.header().timestamp());
+      local_view_ptr_->parking_fusion_info.header.timestamp);
   input_topic_latency->set_parking_fusion(get_latency(
-      start_time, local_view_ptr_->parking_fusion_info.header().timestamp()));
+      start_time, local_view_ptr_->parking_fusion_info.header.timestamp));
 
   if (is_func_state_machine_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     local_view_ptr_->function_state_machine_info = func_state_machine_msg_;
+    local_view_ptr_->function_state_machine_info_recv_time =
+        func_state_machine_msg_recv_time_;
     is_func_state_machine_msg_updated_.store(false);
   }
   input_topic_timestamp->set_function_state_machine(
-      local_view_ptr_->function_state_machine_info.header().timestamp());
+      local_view_ptr_->function_state_machine_info.header.timestamp);
   input_topic_latency->set_function_state_machine(get_latency(
       start_time,
-      local_view_ptr_->function_state_machine_info.header().timestamp()));
+      local_view_ptr_->function_state_machine_info.header.timestamp));
 
   if (is_uss_wave_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -289,26 +305,24 @@ void PlanningAdapter::Proc() {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     local_view_ptr_->static_map_info = map_info_msg_;
     local_view_ptr_->static_map_info_recv_time = map_info_msg_recv_time_;
-    local_view_ptr_->hdmap_time = map_info_msg_recv_time_;
     is_map_info_msg_updated_.store(false);
   }
   input_topic_timestamp->set_map(
       local_view_ptr_->static_map_info.header().timestamp());
   input_topic_latency->set_map(get_latency(
-      start_time,
-      local_view_ptr_->static_map_info.header().timestamp()));
+      start_time, local_view_ptr_->static_map_info.header().timestamp()));
 
   // update general context
   auto &state_machine_g = g_context.MutableStatemachine();
 
   const auto &current_state =
-      local_view_ptr_->function_state_machine_info.current_state();
+      local_view_ptr_->function_state_machine_info.current_state;
 
   const auto &last_state = g_context.GetStatemachine().current_state;
 
-  if (last_state == FuncStateMachine::STANDBY &&
-      (current_state >= FuncStateMachine::PARK_IN_APA_IN &&
-       current_state <= FuncStateMachine::PARK_IN_COMPLETED)) {
+  if (last_state == iflyauto::FunctionalState_STANDBY &&
+      (current_state >= iflyauto::FunctionalState_PARK_IN_APA_IN &&
+       current_state <= iflyauto::FunctionalState_PARK_IN_COMPLETED)) {
     state_machine_g.apa_reset_flag = true;
   } else {
     state_machine_g.apa_reset_flag = false;
@@ -316,9 +330,9 @@ void PlanningAdapter::Proc() {
 
   // APA plan once when state machine changes from no ready to other parking in
   // state
-  if (last_state == FuncStateMachine::PARK_IN_NO_READY &&
-      (current_state == FuncStateMachine::PARK_IN_READY ||
-       current_state >= FuncStateMachine::PARK_IN_ACTIVATE_CONTROL)) {
+  if (last_state == iflyauto::FunctionalState_PARK_IN_NO_READY &&
+      (current_state == iflyauto::FunctionalState_PARK_IN_READY ||
+       current_state >= iflyauto::FunctionalState_PARK_IN_ACTIVATE_CONTROL)) {
     state_machine_g.apa_start_plan_once_flag = true;
   } else {
     state_machine_g.apa_start_plan_once_flag = false;
@@ -327,8 +341,16 @@ void PlanningAdapter::Proc() {
   state_machine_g.current_state = current_state;
 
   // 2.planning run
-  PlanningOutput::PlanningOutput planning_output;
-  PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_info;
+  auto planning_output_container =
+      std::make_shared<iflyauto::StructContainer>();
+  auto &planning_output = *iflyauto::struct_cast<iflyauto::PlanningOutput>(
+      planning_output_container);
+  auto planning_hmi_info_container =
+      std::make_shared<iflyauto::StructContainer>();
+  auto &planning_hmi_info =
+      *iflyauto::struct_cast<iflyauto::PlanningHMIOutputInfoStr>(
+          planning_hmi_info_container);
+
   std::cout << "==============The planning enters RunOnce============="
             << std::endl;
 
@@ -345,16 +367,13 @@ void PlanningAdapter::Proc() {
     const auto &debug_info_json =
         *DebugInfoManager::GetInstance().GetDebugJson();
     planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
-    calc_fusion_latency(start_time,
-                        local_view_ptr_->road_info.header().input_list(),
+    calc_fusion_latency(start_time, local_view_ptr_->road_info.header,
                         planning_debug_data->mutable_road_fusion_latency());
-    calc_fusion_latency(
-        start_time, local_view_ptr_->fusion_objects_info.header().input_list(),
-        planning_debug_data->mutable_obstacle_fusion_latency());
-    calc_location_latency(
-        start_time,
-        local_view_ptr_->localization_estimate.header().input_list(),
-        planning_debug_data->mutable_location_latency());
+    calc_fusion_latency(start_time, local_view_ptr_->fusion_objects_info.header,
+                        planning_debug_data->mutable_obstacle_fusion_latency());
+    calc_location_latency(start_time,
+                          local_view_ptr_->localization_estimate.header,
+                          planning_debug_data->mutable_location_latency());
 
     auto frame_info = planning_debug_data->mutable_frame_info();
     frame_info->set_frame_num(frame_num_);
@@ -374,28 +393,40 @@ void PlanningAdapter::Proc() {
       planning_output = last_planning_output_;
       LOG_WARNING("planning failed, use last planning output\n");
     }
-    auto header = planning_output.mutable_meta()->mutable_header();
-    header->set_timestamp(output_time_us);
-    header->set_version(__version_str__);
-    header->mutable_input_list()->MergeFrom(
-        local_view_ptr_->fusion_objects_info.header().input_list());
-    header->mutable_input_list()->MergeFrom(
-        local_view_ptr_->road_info.header().input_list());
-    header->mutable_input_list()->MergeFrom(
-        local_view_ptr_->localization_estimate.header().input_list());
-    auto planning_latency = header->mutable_input_list()->Add();
-    planning_latency->set_input_type(
-        Common::InputHistoryTimestamp::
-            INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PLANNING);
-    planning_latency->set_in_ts_us(start_time);
-    planning_latency->set_out_ts_us(output_time_us);
-    planning_writer_(planning_output);
+    auto &header = planning_output.meta.header;
+    header.timestamp = output_time_us;
+    strncpy(header.version, __version_str__, 64);
+    // TODO
+    // header->input_list_size =
+    // local_view_ptr_->fusion_objects_info.header.input_list_size; for (int i =
+    // 0; i < local_view_ptr_->fusion_objects_info.header.input_list_size; i++)
+    // {
+    //   header->input_list[i] =
+    //   local_view_ptr_->fusion_objects_info.header.input_list[i];
+    // }
+    // for (int i = ; i < local_view_ptr_->road_info.header.input_list_size;
+    // i++) {
+    //   header->input_list[header->input_list_size + i] =
+    //   local_view_ptr_->road_info.header.input_list[i];
+    // }
+    // for (int i = ; i <
+    // local_view_ptr_->localization_estimate.header.input_list_size; i++) {
+    //   header->input_list[header->input_list_size + i] =
+    //   local_view_ptr_->localization_estimate.header.input_list[i];
+    // }
+    // auto &planning_latency = header->mutable_input_list()->Add();
+    // planning_latency->set_input_type(
+    //     Common::InputHistoryTimestamp::
+    //         INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PLANNING);
+    // planning_latency->set_in_ts_us(start_time);
+    // planning_latency->set_out_ts_us(output_time_us);
+    planning_writer_(planning_output_container);
   }
 
   if (planning_hmi_info_writer_) {
-    planning_hmi_info.mutable_header()->set_timestamp(output_time_us);
-    planning_hmi_info.mutable_header()->set_version(__version_str__);
-    planning_hmi_info_writer_(planning_hmi_info);
+    planning_hmi_info.header.timestamp = output_time_us;
+    strncpy(planning_hmi_info.header.version, __version_str__, 64);
+    planning_hmi_info_writer_(planning_hmi_info_container);
   }
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
   LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);

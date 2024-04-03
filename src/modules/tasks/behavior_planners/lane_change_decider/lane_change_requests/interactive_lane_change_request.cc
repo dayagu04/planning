@@ -40,18 +40,21 @@ void IntRequest::Update(int lc_status) {
       target_reference_path != nullptr
           ? target_reference_path->get_frenet_ego_state().l()
           : 0.;
+
   // 获取左车道线型
-  auto left_lane_boundary =
+  iflyauto::LaneBoundaryType left_boundary_type;
+  const auto& left_boundary =
       virtual_lane_mgr_->get_current_lane()->get_left_lane_boundary();
-  auto left_boundary_type = left_lane_boundary.type_segments_size() > 0
-                                ? left_lane_boundary.type_segments(0).type()
-                                : Common::LaneBoundaryType::MARKING_UNKNOWN;
+  if (left_boundary.type_segments_size > 0) {
+    left_boundary_type = left_boundary.type_segments[0].type;
+  }
   // 获取右车道线型,实线禁止换道
-  auto right_lane_boundary =
+  iflyauto::LaneBoundaryType right_boundary_type;
+  const auto& right_boundary =
       virtual_lane_mgr_->get_current_lane()->get_right_lane_boundary();
-  auto right_boundary_type = right_lane_boundary.type_segments_size() > 0
-                                 ? right_lane_boundary.type_segments(0).type()
-                                 : Common::LaneBoundaryType::MARKING_UNKNOWN;
+  if (right_boundary.type_segments_size > 0) {
+    right_boundary_type = right_boundary.type_segments[0].type;
+  }
   if (lane_change_lane_mgr_->has_origin_lane()) {
     auto origin_lane = lane_change_lane_mgr_->olane();
     origin_lane_virtual_id_ = origin_lane->get_virtual_id();
@@ -67,12 +70,13 @@ void IntRequest::Update(int lc_status) {
       current_lane_virtual_id, origin_lane_virtual_id_,
       target_lane_virtual_id_);
 
-  if (lane_change_cmd_ == common::TurnSignalType::LEFT &&
+  if (lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_LEFT &&
       request_type_ != LEFT_CHANGE && is_lever_status_valid_) {
     counter_right_ = 0;
     counter_left_++;
     // 实线禁止换道
-    if (left_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) {
+    if (left_boundary_type ==
+        iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
       counter_left_ = -5;
     }
     if (counter_left_ > count_threshold_) {
@@ -94,11 +98,12 @@ void IntRequest::Update(int lc_status) {
           "[IntRequest::update] waiting counter for interactive changing lane "
           "to left \n");
     }
-  } else if (lane_change_cmd_ == common::TurnSignalType::RIGHT &&
+  } else if (lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_RIGHT &&
              request_type_ != RIGHT_CHANGE && is_lever_status_valid_) {
     counter_left_ = 0;
     counter_right_ = counter_right_ + 1;
-    if (right_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) {
+    if (right_boundary_type ==
+        iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
       counter_right_ = -5;
     }
     if (counter_right_ > count_threshold_) {
@@ -121,7 +126,7 @@ void IntRequest::Update(int lc_status) {
           "[IntRequest::update] waiting counter for interactive changing lane "
           "to right \n");
     }
-  } else if (lane_change_cmd_ == common::TurnSignalType::NONE &&
+  } else if (lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_NONE &&
              request_type_ != NO_CHANGE) {
     // 3.换道过程中取消拨杆
     if (lane_change_lane_mgr_->has_target_lane() &&
@@ -138,8 +143,8 @@ void IntRequest::Update(int lc_status) {
       counter_left_ = 0;
       counter_right_ = 0;
     }
-  } else if (lane_change_cmd_ == common::TurnSignalType::NONE ||
-             lane_change_cmd_ == common::TurnSignalType::EMERGENCY_FLASHER) {
+  } else if (lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_NONE ||
+             lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_EMERGENCY_FLASH) {
     Finish();
     set_target_lane_virtual_id(current_lane_virtual_id);
     counter_left_ = 0;
@@ -149,9 +154,11 @@ void IntRequest::Update(int lc_status) {
               tlane->width() / 2 +
                   int_request_config_.disallow_cancel_int_lc_lateral_thr)) {
     if ((request_type_ == LEFT_CHANGE &&
-         left_boundary_type == Common::LaneBoundaryType::MARKING_SOLID) ||
+         left_boundary_type ==
+             iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) ||
         (request_type_ == RIGHT_CHANGE &&
-         right_boundary_type == Common::LaneBoundaryType::MARKING_SOLID)) {
+         right_boundary_type ==
+             iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID)) {
       Finish();
       set_target_lane_virtual_id(current_lane_virtual_id);
       counter_left_ = 0;
@@ -164,7 +171,7 @@ void IntRequest::finish_and_clear() {
   Finish();
   counter_left_ = 0;
   counter_right_ = 0;
-  lane_change_cmd_ = planning::LeverStatus::LEVER_STATE_OFF;
+  lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
   LOG_DEBUG(
       "[IntRequest::update] %s: clear int request and set lane_change_cmd_ off "
       "\n",

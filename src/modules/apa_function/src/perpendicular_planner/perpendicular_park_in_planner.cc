@@ -21,13 +21,14 @@
 #include "debug_info_log.h"
 #include "dubins_lib.h"
 #include "fem_pos_deviation_smoother_config.pb.h"
-#include "func_state_machine.pb.h"
+#include "func_state_machine_c.h"
 #include "general_planning_context.h"
 #include "geometry_math.h"
 #include "ifly_time.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
 #include "perpendicular_path_planner.h"
+#include "planning_plan_c.h"
 #include "slot_management_info.pb.h"
 
 namespace planning {
@@ -221,19 +222,19 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
         Common::PARKING_SLOT_TYPE_SLANTING) {
       const Eigen::Vector2d origin_pt_0 =
           Eigen::Vector2d(slot_manager_ptr_->GetEgoSlotInfo()
-                              .select_fusion_slot.corner_points(0)
-                              .x(),
+                              .select_fusion_slot.corner_points[0]
+                              .x,
                           slot_manager_ptr_->GetEgoSlotInfo()
-                              .select_fusion_slot.corner_points(0)
-                              .y());
+                              .select_fusion_slot.corner_points[0]
+                              .y);
 
       const Eigen::Vector2d origin_pt_1 =
           Eigen::Vector2d(slot_manager_ptr_->GetEgoSlotInfo()
-                              .select_fusion_slot.corner_points(1)
-                              .x(),
+                              .select_fusion_slot.corner_points[1]
+                              .x,
                           slot_manager_ptr_->GetEgoSlotInfo()
-                              .select_fusion_slot.corner_points(1)
-                              .y());
+                              .select_fusion_slot.corner_points[1]
+                              .y);
 
       ego_slot_info.pt_0 = ego_slot_info.g2l_tf.GetPos(origin_pt_0);
       ego_slot_info.pt_1 = ego_slot_info.g2l_tf.GetPos(origin_pt_1);
@@ -437,7 +438,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       apa_world_ptr_->GetMeasurementsPtr()->static_flag &&
       apa_world_ptr_->GetMeasurementsPtr()->current_state ==
-          FuncStateMachine::PARK_IN_ACTIVATE_CONTROL) {
+          iflyauto::FunctionalState_PARK_IN_ACTIVATE_CONTROL) {
     frame_.stuck_uss_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_uss_time = 0.0;
@@ -448,7 +449,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
        frame_.plan_stm.planning_status == PARKING_PLANNING) &&
       apa_world_ptr_->GetMeasurementsPtr()->static_flag &&
       apa_world_ptr_->GetMeasurementsPtr()->current_state ==
-          FuncStateMachine::PARK_IN_ACTIVATE_CONTROL) {
+          iflyauto::FunctionalState_PARK_IN_ACTIVATE_CONTROL) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_time = 0.0;
@@ -1435,22 +1436,29 @@ void PerpendicularInPlanner::GenPlanningOutput() {
 }
 
 void PerpendicularInPlanner::GenPlanningPath() {
-  planning_output_.Clear();
-  planning_output_.mutable_planning_status()->set_apa_planning_status(
-      ::PlanningOutput::ApaPlanningStatus::IN_PROGRESS);
+  // planning_output_.Clear();
+  memset(&planning_output_, 0, sizeof(planning_output_));
+  planning_output_.planning_status.apa_planning_status =
+      iflyauto::APA_IN_PROGRESS;
 
-  auto trajectory = planning_output_.mutable_trajectory();
-  trajectory->set_available(true);
+  auto trajectory = &(planning_output_.trajectory);
+  trajectory->available = true;
 
-  trajectory->set_trajectory_type(
-      Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
+  trajectory->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
 
-  for (const auto& global_point : current_path_point_global_vec_) {
-    auto trajectory_point = trajectory->add_trajectory_points();
-    trajectory_point->set_x(global_point.pos.x());
-    trajectory_point->set_y(global_point.pos.y());
-    trajectory_point->set_heading_yaw(global_point.heading);
-    trajectory_point->set_v(0.5);
+  size_t N = current_path_point_global_vec_.size();
+  if (N > PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM) {
+    std::cout << "sample ds is possible err\n";
+    N = PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM;
+  }
+  trajectory->trajectory_points_size = N;
+
+  for (size_t i = 0; i < N; ++i) {
+    const auto& global_point = current_path_point_global_vec_[i];
+    trajectory->trajectory_points[i].x = global_point.pos.x();
+    trajectory->trajectory_points[i].y = global_point.pos.y();
+    trajectory->trajectory_points[i].heading_yaw = global_point.heading;
+    trajectory->trajectory_points[i].v = 0.5;
   }
 
   // set target velocity to control as a limit
@@ -1461,36 +1469,28 @@ void PerpendicularInPlanner::GenPlanningPath() {
   const double vel_limit = pnc::mathlib::Interp1(
       ratio_tab, vel_limit_tab, frame_.ego_slot_info.slot_occupied_ratio);
 
-  planning_output_.mutable_trajectory()
-      ->mutable_target_reference()
-      ->set_target_velocity(vel_limit);
+  planning_output_.trajectory.target_reference.target_velocity = vel_limit;
 
   // send uss remain dist to control
-  planning_output_.mutable_trajectory()
-      ->mutable_trajectory_points(0)
-      ->set_distance(frame_.remain_dist_uss);
+  planning_output_.trajectory.trajectory_points[0].distance =
+      frame_.remain_dist_uss;
 
   // send slot occupation ratio to control
-  planning_output_.mutable_trajectory()
-      ->mutable_trajectory_points(1)
-      ->set_distance(frame_.ego_slot_info.slot_occupied_ratio);
+  planning_output_.trajectory.trajectory_points[1].distance =
+      frame_.ego_slot_info.slot_occupied_ratio;
 
   // send slot type to control
-  planning_output_.mutable_trajectory()
-      ->mutable_trajectory_points(2)
-      ->set_distance(static_cast<double>(
-          Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL));
+  planning_output_.trajectory.trajectory_points[2].distance =
+      static_cast<double>(iflyauto::PARKING_SLOT_TYPE_VERTICAL);
 
   // set plan gear cmd
-  auto gear_command = planning_output_.mutable_gear_command();
-  gear_command->set_available(true);
+  auto gear_command = &(planning_output_.gear_command);
+  gear_command->available = true;
 
   if (gear_command_ == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-    gear_command->set_gear_command_value(
-        Common::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE);
+    gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_DRIVE;
   } else {
-    gear_command->set_gear_command_value(
-        Common::GearCommandValue::GEAR_COMMAND_VALUE_REVERSE);
+    gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_REVERSE;
   }
 }
 
@@ -1517,9 +1517,9 @@ const bool PerpendicularInPlanner::CheckPlanSkip() const {
 
 const bool PerpendicularInPlanner::CheckPaused() {
   if (apa_world_ptr_->GetMeasurementsPtr()->current_state ==
-          FuncStateMachine::PARK_IN_SUSPEND_ACTIVATE ||
+          iflyauto::FunctionalState_PARK_IN_SUSPEND_ACTIVATE ||
       apa_world_ptr_->GetMeasurementsPtr()->current_state ==
-          FuncStateMachine::PARK_IN_SUSPEND_CLOSE) {
+          iflyauto::FunctionalState_PARK_IN_SUSPEND_CLOSE) {
     return true;
   } else {
     return false;
@@ -1660,8 +1660,19 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingLimiter() {
   }
   if (s < s_proj) {
     std::cout << "path shoule be extended because of limiter\n";
+    double sample_ds = simu_param_.sample_ds;
+    double extern_length = s_proj - s;
+    size_t extern_N = std::ceil(extern_length / sample_ds);
+    size_t cur_N = origin_traj_size;
+    if (cur_N + extern_N > PLANNING_TRAJ_POINTS_NUM - 1) {
+      sample_ds = extern_length / extern_N;
+    }
+
     while (s <= s_proj) {
-      s += simu_param_.sample_ds;
+      if (x_vec.size() > PLANNING_TRAJ_POINTS_NUM - 1) {
+        break;
+      }
+      s += sample_ds;
       x_vec.emplace_back(frame_.x_s_spline(s));
       y_vec.emplace_back(frame_.y_s_spline(s));
       heading_vec.emplace_back(heading_vec.back());

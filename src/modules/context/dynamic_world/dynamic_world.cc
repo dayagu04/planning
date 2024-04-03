@@ -6,11 +6,10 @@
 #include "agent/agent_manager.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
-#include "fusion_road.pb.h"
 #include "log.h"
 // #include "trajectory/path_point.h"
-#include "utils/path_point.h"
 #include "trajectory/trajectory_point.h"
+#include "utils/path_point.h"
 #include "virtual_lane_manager.h"
 // #include "utils/kd_path.h"
 
@@ -281,7 +280,8 @@ void DynamicWorld::BuildConnectionForNeighborLane(
     // }
     neighbor_lane_id = right_lane_id;
   }
-  const auto& neighbor_lane = lane_manager->get_lane_with_virtual_id(neighbor_lane_id);
+  const auto& neighbor_lane =
+      lane_manager->get_lane_with_virtual_id(neighbor_lane_id);
   if (neighbor_lane == nullptr) {
     return;
   }
@@ -306,7 +306,6 @@ void DynamicWorld::BuildConnectionForNeighborLane(
   } else {
     neighbor_lane_coord_ = neighbor_ref_line->get_frenet_coord();
   }
-
 
   if (!neighbor_lane_coord_->XYToSL(ego_state.x(), ego_state.y(), &ego_s,
                                     &ego_l)) {

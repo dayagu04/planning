@@ -31,21 +31,19 @@ class LateralOffsetCalculator {
 
  private:
   void set_left_lane_boundary_poly() {
-    for (auto i = 0;
-         i < flane_->get_left_lane_boundary().poly_coefficient_size(); ++i) {
+    for (auto i = 0; i < NUM_OF_POLYNOMIAL; ++i) {
       if (i < 4) {
         left_lane_boundary_poly_.push_back(
-            flane_->get_left_lane_boundary().poly_coefficient(i));
+            flane_->get_left_lane_boundary().poly_coefficient[i]);
       }
     }
   }
 
   void set_right_lane_boundary_poly() {
-    for (auto i = 0;
-         i < flane_->get_right_lane_boundary().poly_coefficient_size(); ++i) {
+    for (auto i = 0; i < NUM_OF_POLYNOMIAL; ++i) {
       if (i < 4) {
         right_lane_boundary_poly_.push_back(
-            flane_->get_right_lane_boundary().poly_coefficient(i));
+            flane_->get_right_lane_boundary().poly_coefficient[i]);
       }
     }
   }

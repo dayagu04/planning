@@ -2,7 +2,8 @@
 #define ZNQC_MODULES_CONTEXT_PARKING_SLOT_MANAGER_H_
 
 #include <vector>
-#include "ifly_parking_map.pb.h"
+
+#include "ifly_parking_map_c.h"
 #include "session.h"
 #include "vec2d.h"
 
@@ -15,7 +16,7 @@ class ParkingSlotManager {
   ~ParkingSlotManager() = default;
 
  public:
-  bool update(const IFLYParkingMap::ParkingInfo &parking_info);
+  bool update(const iflyauto::ParkingInfo &parking_info);
   std::vector<ParkingSlotPoints> get_points() { return points_; };
 
  private:

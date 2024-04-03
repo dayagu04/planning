@@ -744,7 +744,7 @@ bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   if ((session_->is_hpp_scene() &&
-       obstacle->type() != Common::ObjectType::OBJECT_TYPE_PEDESTRIAN)) {
+       obstacle->type() != iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN)) {
     // the obstacle will be ignored when it behind rear axle for PNP
     if (obstacle_sl_boundary.s_end + vehicle_param.back_edge_to_rear_axis <
         ego_sl_boundary.s_end) {
@@ -1236,8 +1236,8 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
     }
     auto obstacle_type = obstacle->type();
     bool b_fast_car =
-        obstacle_type != Common::ObjectType::OBJECT_TYPE_BICYCLE and
-        obstacle_type != Common::ObjectType::OBJECT_TYPE_PEDESTRIAN &&
+        obstacle_type != iflyauto::ObjectType::OBJECT_TYPE_BICYCLE and
+        obstacle_type != iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN &&
         obstacle_v_lon > ego_velocity &&
         obstacle->obstacle()->acceleration() > 0.5;
     if (t < 0.3 && obstacle_yield_uppers[i].second < (5.0 + ego_s) &&
@@ -1722,9 +1722,9 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
           leadone_min_s_leadone = leadone_information->obstacle_s();
           leadone_information->set_obstacle_v(frenet_obstacle->velocity());
           if (frenet_obstacle->type() ==
-                  Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
+                  iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
               frenet_obstacle->type() ==
-                  Common::ObjectType::OBJECT_TYPE_BICYCLE) {
+                  iflyauto::ObjectType::OBJECT_TYPE_BICYCLE) {
             leadone_information->set_obstacle_type(0);
           } else {
             leadone_information->set_obstacle_type(1);
@@ -1740,9 +1740,9 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
           CIPV_object->set_obstacle_id(obstacle_decision.first);
           CIPV_object->set_obstacle_v(frenet_obstacle->velocity());
           if (frenet_obstacle->type() ==
-                  Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
+                  iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
               frenet_obstacle->type() ==
-                  Common::ObjectType::OBJECT_TYPE_BICYCLE) {
+                  iflyauto::ObjectType::OBJECT_TYPE_BICYCLE) {
             CIPV_object->set_obstacle_type(0);
           } else {
             CIPV_object->set_obstacle_type(1);
@@ -1756,9 +1756,9 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
                                 ->mutable_cutin_information()
                                 ->Add();
         if (frenet_obstacle->type() ==
-                Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
+                iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
             frenet_obstacle->type() ==
-                Common::ObjectType::OBJECT_TYPE_BICYCLE) {
+                iflyauto::ObjectType::OBJECT_TYPE_BICYCLE) {
           cutin_object->set_obstacle_type(0);
         } else {
           cutin_object->set_obstacle_type(1);

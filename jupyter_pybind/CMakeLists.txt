@@ -27,6 +27,19 @@ execute_process(
 
 find_package(pybind11 REQUIRED PATHS ~/miniconda3/lib/python3.7/site-packages/pybind11/share/cmake/pybind11)
 
+find_package(catkin REQUIRED COMPONENTS
+  rosbag
+  roscpp
+  rospy
+)
+
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_LIST_DIR}/../interface/src
+  ${CMAKE_CURRENT_LIST_DIR}/../interface/type_convert
+  ${CMAKE_CURRENT_LIST_DIR}/../build/devel/include
+)
+
 pybind11_add_module(lateral_motion_planning_py MODULE src/lateral_motion_planning_pybind.cc)
 target_link_libraries(lateral_motion_planning_py PRIVATE
   autoplt
@@ -43,6 +56,7 @@ target_link_libraries(longitudinal_motion_planning_py PRIVATE
 
 pybind11_add_module(slot_management_py MODULE src/slot_management_pybind.cc)
 target_link_libraries(slot_management_py PRIVATE
+  ${catkin_LIBRARIES}
   autoplt
   modules
   modules_common
@@ -107,6 +121,7 @@ target_link_libraries(uss_obstacle_avoidance_py PRIVATE
 
 pybind11_add_module(apa_simulation_py MODULE src/apa_simulation_pybind.cc)
 target_link_libraries(apa_simulation_py PRIVATE
+ ${catkin_LIBRARIES}
   autoplt
   modules
   modules_common

@@ -6,7 +6,8 @@
 #include "cyber/scheduler/scheduler.h"
 #include "gflags/gflags.h"
 
-#include "proto_to_uncompressed.hpp"
+#include "struct_container.hpp"
+#include "struct_container.pb.h"
 
 namespace planning {
 
@@ -29,115 +30,158 @@ bool PlanningComponent::Init() {
   // 2.定义收发topics
   // -------------- reader topics --------------
   auto fusion_objects_reader_ =
-      planning_node_->CreateReader<FusionObjects::FusionObjectsInfo>(
+      planning_node_->CreateReader<iflyauto::StructContainer>(
           "/iflytek/fusion/objects",
-          [this](const std::shared_ptr<FusionObjects::FusionObjectsInfo>
-                     &fusion_objects_info_msg) {
+          [this](const std::shared_ptr<iflyauto::StructContainer>
+                     &fusion_objects_info_container) {
+            const auto &fusion_objects_info_msg =
+                *iflyauto::struct_cast<iflyauto::FusionObjectsInfo>(
+                    fusion_objects_info_container);
             planning_adapter_->FeedFusionObjects(fusion_objects_info_msg);
           });
 
-  auto fusion_road_reader_ = planning_node_->CreateReader<FusionRoad::RoadInfo>(
-      "/iflytek/fusion/road_fusion",
-      [this](const std::shared_ptr<FusionRoad::RoadInfo> &road_info_msg) {
-        planning_adapter_->FeedFusionRoad(road_info_msg);
-      });
+  auto fusion_road_reader_ =
+      planning_node_->CreateReader<iflyauto::StructContainer>(
+          "/iflytek/fusion/road_fusion",
+          [this](const std::shared_ptr<iflyauto::StructContainer>
+                     &road_info_container) {
+            const auto &road_info_msg =
+                *iflyauto::struct_cast<iflyauto::RoadInfo>(road_info_container);
+            planning_adapter_->FeedFusionRoad(road_info_msg);
+          });
 
-  auto fusion_groudline_reader_ = planning_node_->CreateReader<
-      GroundLinePerception::GroundLinePerceptionInfo>(
-      "/iflytek/fusion/ground_line",
-      [this](
-          const std::shared_ptr<GroundLinePerception::GroundLinePerceptionInfo>
-              &ground_line_perception_msg) {
-        planning_adapter_->FeedGroundLinePerception(ground_line_perception_msg);
-      });
+  auto fusion_groudline_reader_ =
+      planning_node_->CreateReader<iflyauto::StructContainer>(
+          "/iflytek/fusion/ground_line",
+          [this](const std::shared_ptr<iflyauto::StructContainer>
+                     &ground_line_perception_container) {
+            const auto ground_line_perception_msg =
+                *iflyauto::struct_cast<iflyauto::GroundLinePerceptionInfo>(
+                    ground_line_perception_container);
+            planning_adapter_->FeedGroundLinePerception(
+                ground_line_perception_msg);
+          });
 
   auto localization_estimate_reader_ =
-      planning_node_->CreateReader<LocalizationOutput::LocalizationEstimate>(
+      planning_node_->CreateReader<iflyauto::StructContainer>(
           "/iflytek/localization/ego_pose",
-          [this](const std::shared_ptr<LocalizationOutput::LocalizationEstimate>
-                     &localization_estimate_msg) {
+          [this](const std::shared_ptr<iflyauto::StructContainer>
+                     &localization_estimate_container) {
+            const auto localization_estimate_msg =
+                *iflyauto::struct_cast<iflyauto::LocalizationEstimate>(
+                    localization_estimate_container);
             planning_adapter_->FeedLocalizationEstimateOutput(
                 localization_estimate_msg);
           });
 
   auto localization_reader_ =
-      planning_node_->CreateReader<IFLYLocalization::IFLYLocalization>(
+      planning_node_->CreateReader<iflyauto::StructContainer>(
           "/iflytek/localization/egomotion",
-          [this](const std::shared_ptr<IFLYLocalization::IFLYLocalization>
+          [this](const std::shared_ptr<iflyauto::StructContainer>
                      &localization_msg) {
-            planning_adapter_->FeedLocalizationOutput(localization_msg);
+            const auto &localizationn_struct =
+                *iflyauto::struct_cast<iflyauto::IFLYLocalization>(
+                    localization_msg);
+            planning_adapter_->FeedLocalizationOutput(localizationn_struct);
           });
 
   auto prediction_reader_ =
-      planning_node_->CreateReader<Prediction::PredictionResult>(
+      planning_node_->CreateReader<iflyauto::StructContainer>(
           "/iflytek/prediction/prediction_result",
-          [this](const std::shared_ptr<Prediction::PredictionResult>
+          [this](const std::shared_ptr<iflyauto::StructContainer>
                      &prediction_result_msg) {
-            planning_adapter_->FeedPredictionResult(prediction_result_msg);
+            const auto &prediction_struct =
+                *iflyauto::struct_cast<iflyauto::PredictionResult>(
+                    prediction_result_msg);
+            planning_adapter_->FeedPredictionResult(prediction_struct);
           });
 
   auto vehicle_service_reader_ =
-      planning_node_->CreateReader<VehicleService::VehicleServiceOutputInfo>(
+      planning_node_->CreateReader<iflyauto::StructContainer>(
           "/iflytek/vehicle_service",
-          [this](const std::shared_ptr<VehicleService::VehicleServiceOutputInfo>
+          [this](const std::shared_ptr<iflyauto::StructContainer>
                      &vehicle_service_output_info_msg) {
+            const auto &vehicle_service_output_struct =
+                *iflyauto::struct_cast<iflyauto::VehicleServiceOutputInfo>(
+                    vehicle_service_output_info_msg);
             planning_adapter_->FeedVehicleService(
-                vehicle_service_output_info_msg);
+                vehicle_service_output_struct);
           });
 
   auto control_output_reader_ =
-      planning_node_->CreateReader<ControlCommand::ControlOutput>(
+      planning_node_->CreateReader<iflyauto::StructContainer>(
           "/iflytek/control/control_command",
-          [this](const std::shared_ptr<ControlCommand::ControlOutput>
+          [this](const std::shared_ptr<iflyauto::StructContainer>
                      &control_output_msg) {
-            planning_adapter_->FeedControlCommand(control_output_msg);
+            const auto &control_output_struct =
+                *iflyauto::struct_cast<iflyauto::ControlOutput>(
+                    control_output_msg);
+            planning_adapter_->FeedControlCommand(control_output_struct);
           });
 
-  auto hmi_reader_ = planning_node_->CreateReader<HmiMcuInner::HmiMcuInner>(
+  auto hmi_reader_ = planning_node_->CreateReader<iflyauto::StructContainer>(
       "/iflytek/hmi/mcu_inner",
-      [this](const std::shared_ptr<HmiMcuInner::HmiMcuInner>
+      [this](const std::shared_ptr<iflyauto::StructContainer>
                  &hmi_mcu_inner_info_msg) {
-        planning_adapter_->FeedHmiMcuInner(hmi_mcu_inner_info_msg);
+        const auto &hmi_mcu_inner_struct =
+            *iflyauto::struct_cast<iflyauto::HmiMcuInner>(
+                hmi_mcu_inner_info_msg);
+        planning_adapter_->FeedHmiMcuInner(hmi_mcu_inner_struct);
       });
 
   auto parking_fusion_info_reader_ =
-      planning_node_->CreateReader<ParkingFusion::ParkingFusionInfo>(
+      planning_node_->CreateReader<iflyauto::StructContainer>(
           "/iflytek/fusion/parking_slot",
-          [this](const std::shared_ptr<ParkingFusion::ParkingFusionInfo>
+          [this](const std::shared_ptr<iflyauto::StructContainer>
                      &parking_fusion_info_msg) {
-            planning_adapter_->FeedParkingFusion(parking_fusion_info_msg);
+            const auto &parking_fusion_info_struct =
+                *iflyauto::struct_cast<iflyauto::ParkingFusionInfo>(
+                    parking_fusion_info_msg);
+            planning_adapter_->FeedParkingFusion(parking_fusion_info_struct);
           });
 
-  auto parking_map_info_reader_ =
-      planning_node_->CreateReader<IFLYParkingMap::ParkingInfo>(
-          "/iflytek/ehr/parking_map",
-          [this](const std::shared_ptr<IFLYParkingMap::ParkingInfo>
-                     &parking_map_info_msg) {
-            planning_adapter_->FeedParkingMap(parking_map_info_msg);
-          });
+  //   auto parking_map_info_reader_ =
+  //       planning_node_->CreateReader<iflyauto::StructContainer>(
+  //           "/iflytek/ehr/parking_map",
+  //           [this](const std::shared_ptr<iflyauto::StructContainer>
+  //                      &parking_map_info_msg) {
+  //             const auto &parking_map_info_struct =
+  //                 *iflyauto::struct_cast<iflyauto::ParkingInfo>(
+  //                     parking_map_info_msg);
+  //             planning_adapter_->FeedParkingMap(parking_map_info_struct);
+  //           });
 
   auto func_state_machine_reader_ =
-      planning_node_->CreateReader<FuncStateMachine::FuncStateMachine>(
+      planning_node_->CreateReader<iflyauto::StructContainer>(
           "/iflytek/system_state/soc_state",
-          [this](const std::shared_ptr<FuncStateMachine::FuncStateMachine>
+          [this](const std::shared_ptr<iflyauto::StructContainer>
                      &func_state_machine_msg) {
-            planning_adapter_->FeedFuncStateMachine(func_state_machine_msg);
+            const auto &func_state_machine_struct =
+                *iflyauto::struct_cast<iflyauto::FuncStateMachine>(
+                    func_state_machine_msg);
+            planning_adapter_->FeedFuncStateMachine(func_state_machine_struct);
           });
 
   auto uss_wave_info_reader_ =
-      planning_node_->CreateReader<UssWaveInfo::UssWaveInfo>(
+      planning_node_->CreateReader<iflyauto::StructContainer>(
           "/iflytek/uss/wave_info",
-          [this](const std::shared_ptr<UssWaveInfo::UssWaveInfo>
+          [this](const std::shared_ptr<iflyauto::StructContainer>
                      &uss_wave_info_msg) {
-            planning_adapter_->FeedUssWaveInfo(uss_wave_info_msg);
+            const auto &uss_wave_info_struct =
+                *iflyauto::struct_cast<iflyauto::UssWaveInfo>(
+                    uss_wave_info_msg);
+            planning_adapter_->FeedUssWaveInfo(uss_wave_info_struct);
           });
 
   auto uss_percept_info_reader_ =
-      planning_node_->CreateReader<UssPerceptInfo::UssPerceptInfo>(
+      planning_node_->CreateReader<iflyauto::StructContainer>(
           "/iflytek/UssPerceptInfo",
-          [this](const std::shared_ptr<UssPerceptInfo::UssPerceptInfo>
-                     &uss_percept_info_msg) {
-            planning_adapter_->FeedUssPerceptInfo(uss_percept_info_msg);
+          [this](const std::shared_ptr<iflyauto::StructContainer>
+                     uss_percept_info_struct_msg) {
+            const auto &uss_percept_info_struct =
+                *iflyauto::struct_cast<iflyauto::UssPerceptInfo>(
+                    uss_percept_info_struct_msg);
+            planning_adapter_->FeedUssPerceptInfo(uss_percept_info_struct);
           });
 
   auto map_reader_ = planning_node_->CreateReader<Map::StaticMap>(
@@ -147,24 +191,12 @@ bool PlanningComponent::Init() {
       });
 
   // -------------- writter topics --------------
-  planning_writer_ =
-      planning_node_->CreateWriter<PlanningOutput::PlanningOutput>(
-          "/iflytek/planning/plan");
-  auto planning_uncompress_writer =
-      planning_node_->CreateWriter<apollo::cyber::message::RawMessage>(
-          "/iflytek/planning/plan/uncompress");
+  planning_writer_ = planning_node_->CreateWriter<iflyauto::StructContainer>(
+      "/iflytek/planning/plan");
   planning_adapter_->RegisterOutputWriter(
-      [this, planning_uncompress_writer](
-          const PlanningOutput::PlanningOutput &planning_output) {
+      [this](
+          const std::shared_ptr<iflyauto::StructContainer> &planning_output) {
         planning_writer_->Write(planning_output);
-
-        iflyauto::PlanningOutput planning_output_uncompressed;
-        proto_to_uncompressed(planning_output, planning_output_uncompressed);
-        apollo::cyber::message::RawMessage planning_output_uncompressed_msg;
-        planning_output_uncompressed_msg.ParseFromArray(
-            (const char *)&planning_output_uncompressed,
-            sizeof(planning_output_uncompressed));
-        planning_uncompress_writer->Write(planning_output_uncompressed_msg);
       });
 
   planning_debug_writer_ =
@@ -176,10 +208,10 @@ bool PlanningComponent::Init() {
       });
 
   planning_hmi_info_writer_ =
-      planning_node_->CreateWriter<PlanningHMI::PlanningHMIOutputInfoStr>(
+      planning_node_->CreateWriter<iflyauto::StructContainer>(
           "/iflytek/planning/hmi");
   planning_adapter_->RegisterHMIOutputInfoWriter(
-      [this](const PlanningHMI::PlanningHMIOutputInfoStr
+      [this](const std::shared_ptr<iflyauto::StructContainer>
                  &planning_hmi_ouput_info) {
         planning_hmi_info_writer_->Write(planning_hmi_ouput_info);
       });

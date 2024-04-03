@@ -11,7 +11,7 @@
 #include "geometry_math.h"
 #include "local_view.h"
 #include "math_lib.h"
-#include "planning_plan.pb.h"
+#include "planning_plan_c.h"
 
 namespace planning {
 
@@ -78,7 +78,7 @@ class UssObstacleAvoidance {
 
   const RemainDistInfo& GetRemainDistInfo() const { return remain_dist_info_; }
 
-  void Update(PlanningOutput::PlanningOutput* const planning_output,
+  void Update(iflyauto::PlanningOutput* const planning_output,
               const LocalView* local_view_ptr);
 
   void SetParam(const Paramters& param) {
@@ -134,7 +134,7 @@ class UssObstacleAvoidance {
   CarMotionInfo car_motion_info_;
 
   const LocalView* local_view_ptr_ = nullptr;
-  PlanningOutput::PlanningOutput* planning_output_;
+  iflyauto::PlanningOutput* planning_output_;
 };
 }  // namespace planning
 
