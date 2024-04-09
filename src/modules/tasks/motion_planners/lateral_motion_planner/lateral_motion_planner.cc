@@ -12,6 +12,8 @@
 #include "planning_context.h"
 #include "spline.h"
 #include "src/lateral_motion_planning_cost.h"
+#include "src/lateral_motion_planning_weight.h"
+#include "virtual_lane_manager.h"
 
 static const double pi_const = 3.141592654;
 static const double planning_loop_dt = 0.1;
@@ -26,6 +28,10 @@ LateralMotionPlanner::LateralMotionPlanner(
 };
 
 void LateralMotionPlanner::Init() {
+  // init planning weight
+  planning_weight_ptr_ =
+      std::make_shared<pnc::lateral_planning::LateralMotionPlanningWeight>(
+          config_);
   // init planning problem
   planning_problem_ptr_ =
       std::make_shared<pnc::lateral_planning::LateralMotionPlanningProblem>();
@@ -263,48 +269,25 @@ void LateralMotionPlanner::AssembleInput() {
     planning_input_.set_ref_vel(
         std::max(general_lateral_decider_output.v_cruise, min_v_cruise));
 
-    planning_input_.set_curv_factor(0.3);
+    planning_input_.set_curv_factor(config_.curv_factor);
   }
 
   // set weights
-  planning_input_.set_acc_bound(config_.acc_bound);
-  planning_input_.set_jerk_bound(config_.jerk_bound);
-  planning_input_.set_q_ref_x(config_.q_ref_x);
-  planning_input_.set_q_ref_y(config_.q_ref_y);
-  planning_input_.set_q_ref_theta(config_.q_ref_theta);
-  planning_input_.set_q_continuity(config_.q_continuity);
-  planning_input_.set_q_acc(config_.q_acc);
-  planning_input_.set_q_jerk(config_.q_jerk);
-  planning_input_.set_q_acc_bound(config_.q_acc_bound);
-  planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
-  planning_input_.set_q_soft_corridor(config_.q_soft_corridor);
-  planning_input_.set_q_hard_corridor(config_.q_hard_corridor);
-
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
   if (lateral_offset_decider_output.is_valid) {
-    planning_input_.set_acc_bound(config_.acc_bound_avoid);
-    planning_input_.set_jerk_bound(config_.jerk_bound_avoid);
-    planning_input_.set_q_ref_x(config_.q_ref_x_avoid);
-    planning_input_.set_q_ref_y(config_.q_ref_y_avoid);
-    planning_input_.set_q_ref_theta(config_.q_ref_theta_avoid);
-    planning_input_.set_q_continuity(config_.q_continuity);
-    planning_input_.set_q_acc(config_.q_acc_avoid);
-    planning_input_.set_q_jerk(config_.q_jerk_avoid);
-    planning_input_.set_q_acc_bound(config_.q_acc_bound_avoid);
-    planning_input_.set_q_jerk_bound(config_.q_jerk_bound_avoid);
-    planning_input_.set_q_soft_corridor(0);
-    planning_input_.set_q_hard_corridor(0);
+    planning_weight_ptr_->SetWeightByScene(pnc::lateral_planning::AVOID,
+                                           planning_input_);
+  } else if (lane_change_scene) {
+    planning_weight_ptr_->SetWeightByScene(pnc::lateral_planning::LANE_CHANGE,
+                                           planning_input_);
+  } else {
+    planning_weight_ptr_->SetWeightByScene(pnc::lateral_planning::LANE_KEEP,
+                                           planning_input_);
   }
-  // TODO: set control vec for warm start
-  if (lane_change_scene) {
-    planning_input_.set_q_continuity(0.01);
-    planning_input_.set_q_jerk(config_.q_jerk_lane_change);
-    planning_input_.set_q_acc(config_.q_acc_lane_change);
-    planning_input_.set_q_ref_x(config_.q_ref_x_lane_change);
-    planning_input_.set_q_ref_y(config_.q_ref_y_lane_change);
-    planning_input_.set_q_ref_theta(config_.q_ref_theta_lane_change);
-  }
+  
+  planning_weight_ptr_->SetWeightByPosBoundAndLaneType(session_->environmental_model().get_virtual_lane_manager()->get_current_lane(), planning_input_);
+
   // set complete hold flag, concerned index
   planning_input_.set_complete_follow(complete_follow);
   planning_input_.set_motion_plan_concerned_index(

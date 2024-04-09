@@ -294,6 +294,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     is_enu_to_car = True
   # step 3: 加载车道线信息
   if bag_loader.road_msg['enable'] == True:
+    print("fusion road local point valid: ", road_msg.local_point_valid)
     # load lane info
     try:
       line_info_list = load_lane_lines(road_msg.reference_line_msg, is_enu_to_car, loc_msg, g_is_display_enu)
@@ -577,6 +578,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   ### step 4: 加载障碍物信息
   # load fus_obj
   if bag_loader.fus_msg['enable'] == True:
+    print("fusion objects local point valid: ", fus_msg.local_point_valid)
     fusion_objects = fus_msg.fusion_object
     obstacles_info_all = load_obstacle_params(fusion_objects, is_enu_to_car, loc_msg)
     local_view_data['data_fus_obj'].data.update({

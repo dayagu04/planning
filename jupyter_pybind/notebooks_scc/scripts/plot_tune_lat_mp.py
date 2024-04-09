@@ -30,13 +30,13 @@ lat_motion_plan_input0 = bag_loader.plan_debug_msg['data'][-1].lateral_motion_pl
 # load lateral planning (behavior and motion)
 fig1, fig2, fig3, fig4, fig5, fig6, fig7, lat_plan_data = load_lat_plan_figure(fig1)
 
-init_info_name = ["dbw status", "replan status", "lat err", "theta err", "lon err", "dist err", "init theta", "ego theta", "ref theta", "ref vel"]
+init_info_name = ["dbw status", "replan status", "lat err", "theta err", "lon err", "dist err", "init theta", "ego theta", "ref theta", "ref vel", "steer angle", "steer angle rate"]
 init_info = ColumnDataSource(data = {'name':[], 'init info':[]})
 init_info_columns = [
         TableColumn(field="name", title="name"),
         TableColumn(field="init info", title="init info"),
       ]
-tab2 = DataTable(source = init_info, columns = init_info_columns, width = 300, height = 300)
+tab2 = DataTable(source = init_info, columns = init_info_columns, width = 300, height = 350)
 
 param_name = ["q_ref_xy", "q_ref_theta", "q_ref_theta_real", "q_acc", "q_jerk", "q_acc_bound", "q_jerk_bound", "acc_bound", "jerk_bound", "q_safe_bound", "q_hard_bound", "q_ref_xy_remote", "q_ref_theta_remote", "q_ref_theta_real_remote", "q_safe_bound_remote", "q_hard_bound_remote"]
 param = ColumnDataSource(data = {'name':[], 'origin param':[], 'new param':[]})
@@ -123,10 +123,12 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
 
   plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
   loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
+  vs_msg_idx = local_view_data['data_index']['vs_msg_idx']
 
   lat_motion_plan_input = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_input
   loc_msg = bag_loader.loc_msg['data'][loc_msg_idx]
   planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
+  vs_msg = bag_loader.vs_msg['data'][vs_msg_idx]
 
   if len(lat_motion_plan_input.ref_theta_vec) > 0:
     ref_vel = lat_motion_plan_input.ref_vel
@@ -141,6 +143,8 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
     init_info_vec.append(loc_msg.orientation.euler_boot.yaw)
     init_info_vec.append(lat_motion_plan_input.ref_theta_vec[0])
     init_info_vec.append(ref_vel)
+    init_info_vec.append(vs_msg.steering_wheel_angle * 57.3)
+    init_info_vec.append(vs_msg.steering_wheel_angle_speed * 57.3)
     init_info.data.update({
       'name': init_info_name,
       'init info': init_info_vec,
@@ -228,6 +232,8 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
     planning_output.ParseFromString(output_string_tmp)
 
     print("\n------------------------------------------\n")
+    print("ego steering_wheel_angle_available:", vs_msg.steering_wheel_angle_available)
+    print("ego steering_wheel_angle_speed_available:", vs_msg.steering_wheel_angle_speed_available)
 
     delta_bound = min(360.0 / 14.5 / 57.3, acc_bound / (lat_motion_plan_input.curv_factor * ref_vel * ref_vel))
     omega_bound = min(240.0 / 14.5 / 57.3, jerk_bound / (lat_motion_plan_input.curv_factor * ref_vel * ref_vel))

@@ -323,9 +323,13 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
     steer_deg_lower_bound = []
     steer_dot_deg_upper_bound = []
     steer_dot_deg_lower_bound = []
-
-    delta_bound = min(360.0 / 14.5 / 57.3, lat_motion_plan_input.acc_bound / (lat_motion_plan_input.curv_factor * lat_motion_plan_input.ref_vel * lat_motion_plan_input.ref_vel))
-    omega_bound = min(240.0 / 14.5 / 57.3, lat_motion_plan_input.jerk_bound / (lat_motion_plan_input.curv_factor * lat_motion_plan_input.ref_vel * lat_motion_plan_input.ref_vel))
+    
+    try:
+      delta_bound = min(360.0 / 14.5 / 57.3, lat_motion_plan_input.acc_bound / (lat_motion_plan_input.curv_factor * lat_motion_plan_input.ref_vel * lat_motion_plan_input.ref_vel))
+      omega_bound = min(240.0 / 14.5 / 57.3, lat_motion_plan_input.jerk_bound / (lat_motion_plan_input.curv_factor * lat_motion_plan_input.ref_vel * lat_motion_plan_input.ref_vel))
+    except:
+      print("no lat_motion_plan_input!!")
+    
     for i in range(len(time_vec)):
       ref_theta_deg_vec.append(lat_motion_plan_input.ref_theta_vec[i] * 57.3)
       theta_deg_vec.append(lat_motion_plan_output.theta_vec[i] * 57.3)
