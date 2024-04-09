@@ -583,6 +583,20 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
         std::cout << "right_lane == NULL" << std::endl;
       }
     }
+    if (relative_id_lane->get_relative_id() == 0) {
+      auto left_boundary_type = relative_id_lane->get_left_lane_boundary().type_segments_size() > 0
+                              ? relative_id_lane->get_left_lane_boundary().type_segments(0).type()
+                              : Common::LaneBoundaryType::MARKING_UNKNOWN;
+      bool is_solid_left_boundary = left_boundary_type == Common::LaneBoundaryType::MARKING_SOLID;
+      
+      auto right_boundary_type = relative_id_lane->get_right_lane_boundary().type_segments_size() > 0
+                        ? relative_id_lane->get_right_lane_boundary().type_segments(0).type()
+                        : Common::LaneBoundaryType::MARKING_UNKNOWN;
+      bool is_solid_right_boundary = right_boundary_type == Common::LaneBoundaryType::MARKING_SOLID;
+      JSON_DEBUG_VALUE("is_solid_left_boundary", is_solid_left_boundary);
+      JSON_DEBUG_VALUE("is_solid_right_boundary", is_solid_right_boundary);
+      JSON_DEBUG_VALUE("is_in_merge_area", is_in_merge_area);
+    }
     relative_id_lane->set_is_in_merge_area(is_in_merge_area);
     if (dis_to_first_road_split < 3000.0 || is_leaving_ramp_) {
       relative_id_lane->update_lane_tasks(dis_to_ramp_, is_nearing_ramp,
@@ -644,6 +658,9 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
               lane->get_virtual_id());
   }
   LOG_DEBUG("\n");
+  JSON_DEBUG_VALUE("current_lane_order_id", current_lane_->get_order_id());
+  JSON_DEBUG_VALUE("current_lane_virtual_id", current_lane_->get_virtual_id());
+  JSON_DEBUG_VALUE("current_lane_relative_id", current_lane_->get_relative_id());
 
   return true;
 }
