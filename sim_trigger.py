@@ -29,8 +29,9 @@ def check_status():
 
 if __name__ == '__main__':
     #整合发送内容
-    target_branch = sys.argv[1] if len(sys.argv) >= 2 else 'main'
-    commit_id2 = sys.argv[2] if len(sys.argv) >= 3 else ''
+    in_dir = sys.argv[1]
+    target_branch = sys.argv[2] if len(sys.argv) >= 3 else 'main'
+    commit_id2 = sys.argv[3] if len(sys.argv) >= 4 else ''
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
     url = "http://172.30.170.35:9003/manager/simulation-task-api/"
     headers = {"Content-Type": "application/json"}
@@ -41,7 +42,7 @@ if __name__ == '__main__':
         "commit_id_1": os.getenv('COMMIT_ID'),
         "commit_id_2": commit_id2,
         "current_time": current_time,
-        "in_dir": "/data_cold/abu_zone/simulation_scenario/"
+        "in_dir": in_dir
     }
     response = requests.post(url, headers=headers, json=data)
     if response.json()['status'] == 'failed':
