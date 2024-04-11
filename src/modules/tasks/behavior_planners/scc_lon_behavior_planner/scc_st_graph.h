@@ -128,6 +128,10 @@ class StGraphGenerator {
       const planning::common::TrackedObjectInfo &lead_obstacle,
       const double v_ego, double safe_distance, double desired_distance);
 
+  double LeadtwoDesiredDistanceFilter(
+      const planning::common::TrackedObjectInfo &lead_obstacle,
+      const double v_ego, double safe_distance, double desired_distance);
+
   double LCGapDesiredDistanceFilter(
       const planning::common::TrackedObjectInfo &lead_obstacle,
       const double v_ego, double safe_distance, double desired_distance,
@@ -172,6 +176,7 @@ class StGraphGenerator {
 
   // lead障碍物期望距离膨胀速率
   pnc::filters::SlopeFilter lead_desired_distance_filter_;
+  pnc::filters::SlopeFilter lead_two_desired_distance_filter_;
   // cut in障碍物期望距离膨胀速率
   pnc::filters::SlopeFilter cut_in_desired_distance_filter_;
   pnc::filters::SlopeFilter accel_vel_filter_;
