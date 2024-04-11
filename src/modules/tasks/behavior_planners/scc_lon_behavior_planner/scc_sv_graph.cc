@@ -1,10 +1,10 @@
 #include "scc_sv_graph.h"
 
 #include <utility>
-#include "behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_types.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "planning_context.h"
+#include "tasks/behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_types.h"
 namespace planning {
 namespace scc {
 

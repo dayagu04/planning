@@ -2,10 +2,10 @@
 
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
-#include "lane_change_requests/lane_change_lane_manager.h"
 #include "math/linear_interpolation.h"
 #include "planning_context.h"
-#include "scenario_state_machine.h"
+#include "tasks/behavior_planners/lane_change_decider/lane_change_requests/lane_change_lane_manager.h"
+// #include "scenario_state_machine.h"
 #include "task_basic_types.h"
 #include "task_basic_types.pb.h"
 #include "virtual_lane_manager.h"
@@ -19,7 +19,7 @@ StGraphGenerator::StGraphGenerator(const SccLonBehaviorPlannerConfig &config)
                                      150.0, 0.1);
   cut_in_desired_distance_filter_.Init(
       -0.2, config_.cut_in_desired_distance_step, 0.0, 150.0, 0.1);
-  // accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
+  accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
 }
 
 void StGraphGenerator::Update(
@@ -56,6 +56,9 @@ void StGraphGenerator::Update(
 
   JSON_DEBUG_VALUE("stop_start_state", (int)stop_start_state);
   JSON_DEBUG_VALUE("v_target_start_stop", v_cruise);
+
+  last_v_target_ = v_target_;
+  accel_vel_filter_.SetState(last_v_target_);
 
   // 1. 初始化refs
   // 1.1 初始化v_refs
@@ -123,6 +126,15 @@ void StGraphGenerator::Update(
     st_infos[leads_st_info.size() + temp_leads_st_info.size() +
              cut_in_st_info.size() + i]
         .CopyFrom(lane_change_st_info[i]);
+  }
+
+  // filter v target
+  if (v_target_ > v_ego) {
+    if (v_ego > last_v_target_) {
+      accel_vel_filter_.SetState(v_ego);
+    }
+    accel_vel_filter_.Update(v_target_);
+    v_target_ = accel_vel_filter_.GetOutput();
   }
   // 3. update vref
   UpdateVelRefs();
@@ -193,7 +205,10 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     JSON_DEBUG_VALUE("desired_distance_lead_one", desired_distance_filtered);
 
     // 对lead two进行类似的计算
-    if (config_.enable_lead_two && lead_two.track_id() != 0 &&
+    bool is_camera_and_lidar =
+        lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
+    if (config_.enable_lead_two && is_camera_and_lidar &&
+        lead_two.track_id() != 0 &&
         lead_two.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
           "target_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
@@ -310,7 +325,10 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
     JSON_DEBUG_VALUE("v_target_temp_lead_one", temp_lead_one_desired_velocity);
 
     // 对lead two进行类似的计算
-    if (config_.enable_lead_two && temp_lead_two.track_id() != 0 &&
+    bool is_camera_and_lidar =
+        temp_lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
+    if (config_.enable_lead_two && is_camera_and_lidar &&
+        temp_lead_two.track_id() != 0 &&
         temp_lead_two.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
           "target_temp_lead_two's id : [%i], d_rel is : [%f], v_lead is: "
@@ -1024,6 +1042,7 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
 
   double v_target_potential_cutin = 40.0;
   double v_limit = std::min(v_cruise, v_ego);
+  std::pair<int, double> cutin_id_vt = {-1, 0.0};
 
   auto cut_in_info =
       lon_behav_input_->mutable_lon_decision_info()->mutable_cutin_info();
@@ -1072,9 +1091,16 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
       desired_velocity =
           CalcDesiredVelocity(track.d_rel(), desired_distance, track.v_lead());
       // 通过切入概率更新目标车速
-      v_target_potential_cutin =
-          std::min(v_target_potential_cutin,
-                   (desired_velocity - v_limit) * track.cutinp() + v_limit);
+      // v_target_potential_cutin =
+      //     std::min(v_target_potential_cutin,
+      //              (desired_velocity - v_limit) * track.cutinp() + v_limit);
+      double v_potental_cutin =
+          (desired_velocity - v_limit) * track.cutinp() + v_limit;
+      if (v_target_potential_cutin > v_potental_cutin) {
+        v_target_potential_cutin = v_potental_cutin;
+        cutin_id_vt.first = track.track_id();
+        cutin_id_vt.second = v_target_potential_cutin;
+      }
 
       desired_distance_filtered = CutInDesiredDistanceFilter(
           track, v_ego, safe_distance, predict_distance, desired_distance);
@@ -1101,17 +1127,12 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
           "desired_distance: [%f], desired_velocity: [%f], "
           "v_target_potential_cutin: [%f]\n",
           desired_distance, desired_velocity, v_target_potential_cutin);
-
-      JSON_DEBUG_VALUE("potential_cutin_track_id", track.track_id());
-      JSON_DEBUG_VALUE("v_target_potential_cutin", v_target_potential_cutin);
-      JSON_DEBUG_VALUE("cutin_desired_distance", desired_distance_filtered);
-
     } else {
       cut_in_info->Clear();
-      JSON_DEBUG_VALUE("potential_cutin_track_id", 0);
-      JSON_DEBUG_VALUE("v_target_potential_cutin", 0);
     }
   }
+  JSON_DEBUG_VALUE("v_target_potental_cutin", cutin_id_vt.second);
+  JSON_DEBUG_VALUE("potental_cutin_track_id", cutin_id_vt.first);
 };
 
 double StGraphGenerator::CalcDesiredVelocity(const double d_rel,
@@ -1767,9 +1788,7 @@ void StGraphGenerator::MakeAccBound() {
   const auto &lc_request = lon_behav_input_->lat_output().lc_request();
   const auto &lc_status = lon_behav_input_->lat_output().lc_status();
   const bool is_in_lane_change =
-      ((lc_request != "none") &&
-       ((lc_status == "none") || (lc_status == "left_lane_change_wait") ||
-        (lc_status == "right_lane_change_wait")));
+      ((lc_request != "none") && (lc_status != "none"));
   if (is_in_lane_change) {
     acc_upper_bound_with_lower_speed =
         config_.lane_change_low_speed_acc_upper_bound;

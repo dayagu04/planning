@@ -1,10 +1,11 @@
+#pragma once
+
 /**
  *  @file
  *  @brief Construct obstacle S-T graph for generating S-bounds and performing
  *velocity planning
  **/
 #include <utility>
-#include "behavior_planners/real_time_lane_change_decider/real_time_lane_change_decider.h"
 #include "debug_info_log.h"
 #include "filters.h"
 #include "lateral_obstacle.h"
@@ -12,6 +13,7 @@
 #include "real_time_lon_behavior_planner.pb.h"
 #include "scc_lon_behavior_types.h"
 #include "task_basic_types.h"
+#include "tasks/behavior_planners/real_time_lane_change_decider/real_time_lane_change_decider.h"
 
 namespace planning {
 namespace scc {
@@ -163,6 +165,7 @@ class StGraphGenerator {
   std::vector<double> st_refs_;
   std::vector<double> vt_refs_;
   double v_target_;
+  double last_v_target_;
   scc::STboundaries st_boundaries_;
   common::StartStopInfo start_stop_info_;
   std::array<double, 3> lon_init_state_;
@@ -171,6 +174,7 @@ class StGraphGenerator {
   pnc::filters::SlopeFilter lead_desired_distance_filter_;
   // cut in障碍物期望距离膨胀速率
   pnc::filters::SlopeFilter cut_in_desired_distance_filter_;
+  pnc::filters::SlopeFilter accel_vel_filter_;
 
   // acc bound
   std::pair<double, double> acc_bound_;

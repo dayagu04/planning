@@ -7,7 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
 set(CMAKE_CXX_FLAGS "-DX86")
-set(WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/notebooks/scripts/")
+set(WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/notebooks_apa/scripts/")
 set(SH_COMMAND "python proto_gen.py")
 
 execute_process(
@@ -49,31 +49,10 @@ target_link_libraries(slot_management_py PRIVATE
   modules_context
   modules_tasks)
 
-pybind11_add_module(realtime_lateral_motion_planning_py MODULE src/realtime_lateral_motion_planning_pybind.cc)
-target_link_libraries(realtime_lateral_motion_planning_py PRIVATE
-  autoplt
-  modules_common
-  modules_context
-  modules_tasks)
-
-pybind11_add_module(realtime_longitudinal_motion_planning_py MODULE src/realtime_longitudinal_motion_planning_pybind.cc)
-target_link_libraries(realtime_longitudinal_motion_planning_py PRIVATE
-  autoplt
-  modules_common
-  modules_context
-  modules_tasks)
-
 pybind11_add_module(dubins_lib_py MODULE src/dubins_lib_pybind.cc)
 target_link_libraries(dubins_lib_py PRIVATE
   autoplt
   modules
-  modules_common
-  modules_context
-  modules_tasks)
-
-pybind11_add_module(real_time_lon_behavior_planning_py MODULE src/realtime_lon_behavior_planner_pybind.cc)
-target_link_libraries(real_time_lon_behavior_planning_py PRIVATE
-  autoplt
   modules_common
   modules_context
   modules_tasks)

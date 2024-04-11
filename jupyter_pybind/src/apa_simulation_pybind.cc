@@ -30,9 +30,8 @@ static planning::LocalView local_view;
 static bool last_cilqr_optimization_enable = false;
 int Init() {
   apa_interface_ptr = new apa_planner::ApaPlanInterface();
-  const auto plan_data_ptr = std::make_shared<plan_interface::PlanData>();
 
-  apa_interface_ptr->Init(plan_data_ptr);
+  apa_interface_ptr->Init();
 
   perfect_control_ptr = new PerfectControl();
   perfect_control_ptr->Init();
@@ -88,9 +87,7 @@ const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
   local_view.function_state_machine_info = func_statemachine;
   local_view.uss_wave_info = uss_wave_info;
 
-  std::shared_ptr<LocalView> local_view_ptr = std::make_shared<LocalView>();
-  *local_view_ptr = local_view;
-  const bool result = apa_interface_ptr->Update(local_view_ptr);
+  const bool result = apa_interface_ptr->Update(&local_view);
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;
@@ -119,9 +116,7 @@ const bool InterfaceUpdateClosedLoop(
   local_view.parking_fusion_info = parking_slot_info;
   local_view.function_state_machine_info = func_statemachine;
 
-  std::shared_ptr<LocalView> local_view_ptr = std::make_shared<LocalView>();
-  *local_view_ptr = local_view;
-  const bool result = apa_interface_ptr->Update(local_view_ptr);
+  const bool result = apa_interface_ptr->Update(&local_view);
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;
@@ -131,10 +126,10 @@ const bool InterfaceUpdateParam(
     py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
     py::bytes &localization_info_bytes,
     py::bytes &vehicle_service_output_info_bytes,
-    py::bytes &uss_wave_info_bytes, int select_id, bool force_plan,
-    bool is_path_optimization, bool is_cilqr_optimization, bool is_reset,
-    bool is_complete_path, double sample_ds,
-    std::vector<double> target_managed_slot_x_vec,
+    py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
+    int select_id, bool force_plan, bool is_path_optimization,
+    bool is_cilqr_optimization, bool is_reset, bool is_complete_path,
+    double sample_ds, std::vector<double> target_managed_slot_x_vec,
     std::vector<double> target_managed_slot_y_vec,
     std::vector<double> target_managed_limiter_x_vec,
     std::vector<double> target_managed_limiter_y_vec) {
@@ -174,11 +169,15 @@ const bool InterfaceUpdateParam(
   auto uss_wave_info =
       BytesToProto<UssWaveInfo::UssWaveInfo>(uss_wave_info_bytes);
 
+  auto uss_perception_info =
+      BytesToProto<UssPerceptInfo::UssPerceptInfo>(uss_perception_info_bytes);
+
   local_view.localization_estimate = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
   local_view.uss_wave_info = uss_wave_info;
   local_view.function_state_machine_info = func_statemachine;
+  local_view.uss_percept_info = uss_perception_info;
 
   if (force_plan) {
     local_view.function_state_machine_info.set_current_state(
@@ -190,9 +189,7 @@ const bool InterfaceUpdateParam(
               << local_view.parking_fusion_info.select_slot_id() << std::endl;
   }
 
-  std::shared_ptr<LocalView> local_view_ptr = std::make_shared<LocalView>();
-  *local_view_ptr = local_view;
-  const bool result = apa_interface_ptr->Update(local_view_ptr);
+  const bool result = apa_interface_ptr->Update(&local_view);
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;

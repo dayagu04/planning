@@ -13,6 +13,7 @@ using namespace planning;
 using namespace planning::planning_math;
 namespace planning {
 namespace planning_math {
+enum KDPathStatus { NORMAL = 0, EXCEED = 1, FALL = 2, ERROR =3 };
 constexpr static double KD_EPSILON = 1.0e-6;
 constexpr static double KD_MAX = 1.0e6;
 class KDPath {
@@ -46,6 +47,8 @@ class KDPath {
   bool SLToXY(const double s, const double l, double* const x,
               double* const y) const;
 
+  KDPathStatus XYPointToSLPoint(const Point2D& cart_point,
+                                Point2D& frenet_point);
   bool XYToSL(const Point2D& cart_point, Point2D& frenet_point);
 
   bool SLToXY(const Point2D& frenet_point, Point2D& cart_point);

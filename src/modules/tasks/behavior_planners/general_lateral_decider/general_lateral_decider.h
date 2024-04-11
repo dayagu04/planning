@@ -12,10 +12,10 @@
 #include "obstacle_manager.h"
 #include "planning_context.h"
 #include "quintic_poly_path.h"
-#include "scenario_state_machine.h"
+// #include "scenario_state_machine.h"
 #include "spline_projection.h"
-#include "task.h"
 #include "task_basic_types.h"
+#include "tasks/task.h"
 #include "utils/kd_path.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
@@ -23,15 +23,14 @@ namespace planning {
 
 class GeneralLateralDecider : public Task {
  public:
-  explicit GeneralLateralDecider(
-      const EgoPlanningConfigBuilder *config_builder,
-      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+  explicit GeneralLateralDecider(const EgoPlanningConfigBuilder *config_builder,
+                                 framework::Session *session);
 
   virtual ~GeneralLateralDecider() = default;
 
-  bool Execute(planning::framework::Frame *frame) override;
+  bool Execute() override;
 
-  bool ExecuteTest(planning::framework::Frame *frame, bool pipeline_test);
+  bool ExecuteTest(bool pipeline_test);
 
   bool InitInfo();
 
@@ -67,21 +66,22 @@ class GeneralLateralDecider : public Task {
       const MapObstacleDecision &map_obstacle_decision,
       const ObstacleDecisions &obstacle_decisions,
       std::vector<std::pair<double, double>> &frenet_safe_bounds,
-      std::vector<std::pair<double, double>> &frenet_path_bounds,
-      LatDeciderOutput &lat_decider_output);
+      std::vector<std::pair<double, double>> &frenet_path_bounds);
 
   void GenerateEnuBoundaryPoints(
 
       const std::vector<std::pair<double, double>> &frenet_safe_bounds,
       const std::vector<std::pair<double, double>> &frenet_path_bounds,
-      LatDeciderOutput &lat_decider_output);
+      GeneralLateralDeciderOutput &general_lateral_decider_output);
 
   void SampleRoadDistanceInfo(const double &s_target,
                               ReferencePathPoint &sample_path_point);
 
-  void GenerateEnuReferenceTraj(LatDeciderOutput &lat_decider_output);
+  void GenerateEnuReferenceTraj(
+      GeneralLateralDeciderOutput &general_lateral_decider_output);
 
-  void GenerateEnuReferenceTheta(LatDeciderOutput &lat_decider_output);
+  void GenerateEnuReferenceTheta(
+      GeneralLateralDeciderOutput &general_lateral_decider_output);
 
   void HandleLaneChangeScene(TrajectoryPoints &traj_points);
   void HandleAvoidScene(TrajectoryPoints &traj_points);
@@ -91,7 +91,6 @@ class GeneralLateralDecider : public Task {
 
   // VelocityLimitInfo vel_limit_info_;
   // LatIgnoreType lat_ignore_type_;
-  planning::framework::Frame *frame_;
   TrajectoryPoints ref_traj_points_;
   ReferencePathPoints ref_path_points_;
   FrenetEgoState ego_frenet_state_;
@@ -101,7 +100,6 @@ class GeneralLateralDecider : public Task {
   bool is_lane_change_scene_ = false;
   LatDeciderLaneChangeInfo lat_lane_change_info_ =
       LatDeciderLaneChangeInfo::NONE;
-  GapSelectorResult gap_selector_result_;
   planning::common::LateralBehaviorDebugInfo lat_debug_info_;
 };
 

@@ -29,6 +29,10 @@ g_is_display_enu = False # True: local_view显示enu坐标系   False: local_vie
 is_new_loc = False #   True:新定位 False:老定位
 is_match_planning = True  #True: topic按照planning接收的时间戳匹配；  False:按最近时间匹配
 is_vis_map = False
+kMapRange = 500
+only_display_map_in_route = False
+load_center_line_in_poly = False
+
 class LoadCyberbag:
   def __init__(self, path) -> None:
     self.bag_path = path
@@ -512,7 +516,7 @@ class LoadCyberbag:
                          "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
                          'RealTimeLateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                          "SccLonBehaviorCostTime", "SccLonMotionCostTime",
-                         "final_y_rel_id", "final_y_rel"]
+                         "final_y_rel_id", "final_y_rel",'lateral_offset', 'avoid_way']
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type"]
 

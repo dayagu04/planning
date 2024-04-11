@@ -6,8 +6,9 @@
 
 #include "../../common/planning_gflags.h"
 #include "obstacle_manager.h"
-#include "planning_output_context.h"
+#include "planning_context.h"
 #include "utils/frenet_coordinate_system.h"
+#include "vehicle_config_context.h"
 
 namespace planning {
 
@@ -33,11 +34,12 @@ bool HistoryObstacleManager::Update() {
     old_obstacles_.clear();
     return false;
   }
-  const auto &planning_result =
-      session_->planning_output_context().planning_status().planning_result;
-  if (planning_result.timestamp > 0) {
+  const auto &planning_result = session_->planning_context().planning_result();
+  const auto &last_planning_result =
+      session_->planning_context().last_planning_result();
+  if (last_planning_result.timestamp > 0) {
     planning_loop_dt_ =
-        (planning_result.next_timestamp - planning_result.timestamp) / 1000.0;
+        (planning_result.timestamp - last_planning_result.timestamp) / 1000.0;
   }
   const std::shared_ptr<EgoStateManager> &ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -45,7 +47,9 @@ bool HistoryObstacleManager::Update() {
       session_->environmental_model().get_reference_path_manager();
   const std::shared_ptr<ObstacleManager> &obstacles =
       session_->environmental_model().get_obstacle_manager();
-  vehicle_param_ = session_->vehicle_config_context().get_vehicle_param();
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double rear_axis_to_front_edge = vehicle_param.rear_axis_to_front_edge;
   frenet_coord_ =
       reference_path->get_reference_path_by_current_lane()->get_frenet_coord();
   if (frenet_coord_ != nullptr) {
@@ -103,7 +107,7 @@ bool HistoryObstacleManager::Update() {
           // obstacle center to camera.  camera to car front edge:1.25m
           // maintain obstacle in blind spots for entering the field of vision
           double obs_to_camera_s =
-              rel_s - vehicle_param_.rear_axis_to_front_edge + 1.25;
+              rel_s - vehicle_param.rear_axis_to_front_edge + 1.25;
           // TODO(bsniu): rel_camera_s to be modified (enu)
           if (CheckEgoNearBound(rel_s, rel_l) &&
               ((obs_to_camera_s < 0) ||

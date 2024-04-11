@@ -14,8 +14,9 @@
 
 #include "lon_behavior_planner.pb.h"
 #include "planning_context.h"
-#include "task.h"
+#include "reference_path.h"
 #include "task_basic_types.h"
+#include "tasks/task.h"
 #include "trajectory1d/bounded_constant_jerk_trajectory1d.h"
 
 namespace planning {
@@ -40,28 +41,29 @@ class GeneralLongitudinalDecider : public Task {
  public:
   explicit GeneralLongitudinalDecider(
       const EgoPlanningConfigBuilder *config_builder,
-      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+      framework::Session *session);
 
   virtual ~GeneralLongitudinalDecider() = default;
 
-  bool Execute(planning::framework::Frame *frame) override;
+  bool Execute() override;
 
  private:
   void get_lon_decision_info(common::LonDecisionInfo &lon_decision_information);
 
   BoundedConstantJerkTrajectory1d get_velocity_limit(
-      const LonRefPath &lon_ref_path);
+      const LongitudinalDeciderOutput &lon_ref_path);
 
   const double compute_max_lat_acceleration() const;
 
-  void set_velocity_acceleration_bound(LonRefPath &lon_ref_path);
+  void set_velocity_acceleration_bound(LongitudinalDeciderOutput &lon_ref_path);
 
   // TBD(binwang33): refpath_points 入参没有被使用，需要去除
   // 函数名需要统一
   void construct_longitudinal_obstacle_decisions(
       const TrajectoryPoints &traj_points,
       const ReferencePathPoints &refpath_points,
-      ObstacleDecisions &obstacle_decisions, LonRefPath &lon_ref_path);
+      ObstacleDecisions &obstacle_decisions,
+      LongitudinalDeciderOutput &lon_ref_path);
 
   // TBD(binwang33): refpath_points 入参没有被使用，需要去除
   // 函数名需要统一
@@ -70,7 +72,8 @@ class GeneralLongitudinalDecider : public Task {
       const ReferencePathPoints &refpath_points,
       const std::vector<planning_math::Polygon2d> &overlap_path,
       const std::shared_ptr<FrenetObstacle> obstacle,
-      ObstacleDecision &obstacle_decision, LonRefPath &lon_ref_path);
+      ObstacleDecision &obstacle_decision,
+      LongitudinalDeciderOutput &lon_ref_path);
 
   void make_longitudinal_overlap_path(
       const TrajectoryPoints &traj_points,
@@ -106,7 +109,8 @@ class GeneralLongitudinalDecider : public Task {
   void generate_lon_decision_from_path(
       const TrajectoryPoints &lateral_trajectory_points,
       const ReferencePathPoints &refpath_points,
-      ObstacleDecisions &obstacle_decisions, LonRefPath &lon_ref_path);
+      ObstacleDecisions &obstacle_decisions,
+      LongitudinalDeciderOutput &lon_ref_path);
 
   double get_distance_to_destination();
 
@@ -123,7 +127,7 @@ class GeneralLongitudinalDecider : public Task {
   /**
    * @brief 将纵向输出转存为proto后存入planning debug info
    */
-  void GenerateLonRefPathPB(const LonRefPath &lon_ref_path);
+  void GenerateLonRefPathPB(const LongitudinalDeciderOutput &lon_ref_path);
 
  private:
   LongitudinalDeciderV3Config config_;
@@ -131,9 +135,11 @@ class GeneralLongitudinalDecider : public Task {
   StartStopEnableConfig config_start_stop_;
   LonYieldInfo lon_yield_info_;
   VelocityLimitInfo vel_limit_info_;
-  GapSelectorResult gap_selector_result_;
   // CollisionChecker lon_collision_checker_; // 主要给pnp使用，暂时不需要
-  planning::framework::Frame *frame_;
+
+  ObstacleDecisions obstacle_decisions_;
+
+  double max_curvature_ = 0.0;
 };
 
 }  // namespace planning

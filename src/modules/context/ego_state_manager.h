@@ -59,9 +59,9 @@ class EgoStateManager {
   };
   void set_ego_gear(const planning::common::VehicleStatus &vehicle_status);
 
-  const planning::VehicleParam &get_vehicle_param() const {
-    return vehicle_param_;
-  };
+  // const planning::VehicleParam &get_vehicle_param() const {
+  //   return vehicle_param_;
+  // };
   double navi_timestamp() const { return navi_timestamp_; }  // todo
   double location_timestamp() const { return timestamp_us_; }
   Pose location_enu() const { return location_enu_; };
@@ -121,7 +121,6 @@ class EgoStateManager {
   void set_timestamp_us(const planning::common::VehicleStatus &vehicle_status);
 
  private:
-  planning::VehicleParam vehicle_param_;
   framework::Session *session_ = nullptr;
   EgoPlanningEgoStateManagerConfig config_;
   double parking_cruise_speed_;

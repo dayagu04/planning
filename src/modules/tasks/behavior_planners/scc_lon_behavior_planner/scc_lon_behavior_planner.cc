@@ -4,33 +4,24 @@
 
 #include "debug_info_log.h"
 #include "ifly_time.h"
-#include "planning_output_context.h"
-#include "scenario_state_machine.h"
+#include "planning_context.h"
 
 namespace planning {
 
 SccLonBehaviorPlanner::SccLonBehaviorPlanner(
-    const EgoPlanningConfigBuilder *config_builder,
-    const std::shared_ptr<TaskPipelineContext> &pipeline_context)
-    : Task(config_builder, pipeline_context) {
+    const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
+    : Task(config_builder, session) {
   config_ = config_builder->cast<SccLonBehaviorPlannerConfig>();
   name_ = "SccLonBehaviorPlanner";
 
   Init();
 }
 
-SccLonBehaviorPlanner::SccLonBehaviorPlanner(
-    const EgoPlanningConfigBuilder *config_builder)
-    : Task(config_builder) {
-  config_ = config_builder->cast<SccLonBehaviorPlannerConfig>();
-  name_ = "SccLonBehaviorPlanner";
+bool SccLonBehaviorPlanner::Execute() {
+  LOG_DEBUG("=======SccLonBehaviorPlanner======= \n");
 
-  Init();
-}
-
-bool SccLonBehaviorPlanner::Execute(framework::Frame *frame) {
-  LOG_DEBUG("%s !! \n", name_.c_str());
-  if (!Task::Execute(frame)) {
+  if (!PreCheck()) {
+    LOG_DEBUG("PreCheck failed\n");
     return false;
   }
 
@@ -90,29 +81,22 @@ void SccLonBehaviorPlanner::SetConfig(
 }
 
 void SccLonBehaviorPlanner::ConstructLonBehavInput() {
-  const auto &environmental_model = frame_->session()->environmental_model();
+  const auto &environmental_model = session_->environmental_model();
   const bool dbw_status = environmental_model.GetVehicleDbwStatus();
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   const auto lateral_obstacles = environmental_model.get_lateral_obstacle();
   const auto virtual_lane_manager =
       environmental_model.get_virtual_lane_manager();
   const auto lane_tracks_mgr = environmental_model.get_lane_tracks_manager();
-  const auto lateral_outputs =
-      frame_->session()->planning_context().lateral_behavior_planner_output();
+  const auto &lateral_behavior_planner_output =
+      session_->planning_context().lateral_behavior_planner_output();
   const auto start_stop_state_info =
-      frame_->session()->planning_context().start_stop_result();
-  auto &lon_decision_info = frame_->mutable_session()
-                                ->mutable_planning_context()
-                                ->mutable_lon_decision_result();
-  auto &function_info =
-      frame_->session()->environmental_model().function_info();
-  const auto lane_change_lane_manager = frame_->session()
-                                            ->planning_context()
-                                            .scenario_state_machine()
-                                            ->get_lane_change_lane_manager();
+      session_->planning_context().start_stop_result();
+  auto &lon_decision_info =
+      session_->mutable_planning_context()->mutable_lon_decision_result();
+  auto &function_info = session_->environmental_model().function_info();
 
-  const auto planning_status =
-      frame_->session()->planning_output_context().planning_status();
+  const auto &lane_status = session_->planning_context().lane_status();
 
   // 0. set dbw (Drive-by-Wire)
   lon_behav_plan_input_->set_dbw_status(dbw_status);
@@ -129,12 +113,13 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
 
   // 2. set lat_output
   auto lat_output = lon_behav_plan_input_->mutable_lat_output();
-  lat_output->set_lc_request(lateral_outputs.lc_request);
-  lat_output->set_lc_status(lateral_outputs.lc_status);
-  lat_output->set_close_to_accident(lateral_outputs.close_to_accident);
+  lat_output->set_lc_request(lateral_behavior_planner_output.lc_request);
+  lat_output->set_lc_status(lateral_behavior_planner_output.lc_status);
+  lat_output->set_close_to_accident(
+      lateral_behavior_planner_output.close_to_accident);
   lat_output->clear_d_poly_vec();
 
-  for (auto coeff : lateral_outputs.d_poly) {
+  for (auto coeff : lateral_behavior_planner_output.d_poly) {
     lat_output->add_d_poly_vec(coeff);
   }
 
@@ -296,27 +281,29 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   }
 
   // 4. set lane change info
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
   const auto current_lane = virtual_lane_manager->get_current_lane();
   int lc_map_decision = virtual_lane_manager->lc_map_decision(current_lane);
   double lc_end_dis = 0;
   auto lane_change_info = lon_behav_plan_input_->mutable_lc_info();
   lane_change_info->set_has_target_lane(
-      lane_change_lane_manager->has_target_lane());
+      lane_change_decider_output.has_target_lane);
   lane_change_info->set_tlane_virtual_id(
-      lane_change_lane_manager->tlane_virtual_id());
+      lane_change_decider_output.target_lane_virtual_id);
   lane_change_info->set_v_limit(ego_state_mgr->ego_v_cruise());
   lane_change_info->set_lc_end_dis(lc_end_dis);
   lane_change_info->set_lc_map_decision(lc_map_decision);
   lane_change_info->set_current_lane_type(current_lane->get_lane_type());
   lane_change_info->set_target_gap_obs_first(
-      planning_status.lane_status.change_lane.target_gap_obs.first);
+      lane_status.change_lane.target_gap_obs.first);
   lane_change_info->set_target_gap_obs_second(
-      planning_status.lane_status.change_lane.target_gap_obs.second);
+      lane_status.change_lane.target_gap_obs.second);
   lane_change_info->clear_lc_cars();
 
   std::vector<TrackedObject> *front_target_tracks =
       lane_tracks_mgr->get_lane_tracks(
-          lane_change_lane_manager->tlane_virtual_id(), FRONT_TRACK);
+          lane_change_decider_output.target_lane_virtual_id, FRONT_TRACK);
   if (front_target_tracks != nullptr) {
     for (auto &track : *front_target_tracks) {
       // ignore obj without camera source
@@ -343,7 +330,7 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   }
   std::vector<TrackedObject> *side_target_tracks =
       lane_tracks_mgr->get_lane_tracks(
-          lane_change_lane_manager->tlane_virtual_id(), SIDE_TRACK);
+          lane_change_decider_output.target_lane_virtual_id, SIDE_TRACK);
   if (side_target_tracks != nullptr) {
     for (auto &track : *side_target_tracks) {
       // ignore obj without camera source
@@ -372,7 +359,7 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   // 5. set fix lane info
   // TBD: 格式统一用proto后直接copy from
   const auto fix_lane = virtual_lane_manager->get_lane_with_virtual_id(
-      lane_change_lane_manager->flane_virtual_id());
+      lane_change_decider_output.fix_lane_virtual_id);
   const std::vector<ReferencePathPoint> fix_ref_points =
       fix_lane->get_reference_path()->get_points();
   auto ref_path_points = lon_behav_plan_input_->mutable_ref_path_points();
@@ -632,9 +619,8 @@ void SccLonBehaviorPlanner::GenerateLonRefPathPB() {
 }
 
 void SccLonBehaviorPlanner::UpdateHMI() {
-  auto hmi_info = frame_->mutable_session()
-                      ->mutable_planning_output_context()
-                      ->mutable_planning_hmi_info();
+  auto hmi_info =
+      session_->mutable_planning_context()->mutable_planning_hmi_info();
   auto lc_status = lon_behav_plan_input_->lat_output().lc_status();
   auto lateral_obstacle = lon_behav_plan_input_->lat_obs_info();
 
@@ -666,15 +652,13 @@ void SccLonBehaviorPlanner::UpdateHMI() {
 
 void SccLonBehaviorPlanner::SaveToSession() {
   // 更新状态信息
-  auto &start_stop_state_info = frame_->mutable_session()
-                                    ->mutable_planning_context()
-                                    ->mutable_start_stop_result();
+  auto &start_stop_state_info =
+      session_->mutable_planning_context()->mutable_start_stop_result();
   start_stop_state_info.CopyFrom(st_graph_->GetStartStopState());
 
   // 更新lon_decision_info
-  auto &lon_decision_info = frame_->mutable_session()
-                                ->mutable_planning_context()
-                                ->mutable_lon_decision_result();
+  auto &lon_decision_info =
+      session_->mutable_planning_context()->mutable_lon_decision_result();
   lon_decision_info.CopyFrom(lon_behav_plan_input_->lon_decision_info());
 }
 
@@ -683,7 +667,9 @@ void SccLonBehaviorPlanner::SaveToDebugInfo() {
   auto &debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   debug_info_pb->mutable_real_time_lon_behavior_planning_input()->CopyFrom(
       *lon_behav_plan_input_);
-  auto &lon_ref_path = pipeline_context_->planning_info.lon_ref_path;
+  auto &lon_ref_path = session_->mutable_planning_context()
+                           ->mutable_longitudinal_decider_output();
+
   lon_ref_path = lon_behav_output_;
   auto long_ref_path_pb = debug_info_pb->mutable_long_ref_path();
   long_ref_path_pb->CopyFrom(lon_behav_output_pb_);

@@ -1,72 +1,67 @@
-
-// #include
-// "motion_planners/lateral_motion_planner_real_time/lateral_motion_planner_real_time.h"
+#include "lateral_motion_planner_real_time.h"
 
 #include <iomanip>
 #include <vector>
 
-// #include "core/common/trace.h"
-// #include "core/modules/common/ego_prediction_utils.h"
-// #include "core/modules/context/ego_state.h"
-// #include "core/modules/np_functions/mrc_condition.h"
 #include "debug_info_log.h"
-#include "lateral_motion_planner_real_time.h"
-#include "planning_output_context.h"
+#include "environmental_model.h"
+#include "ifly_time.h"
+#include "planning_context.h"
+#include "planning_hmi.pb.h"
 namespace planning {
 
 VisionLateralMotionPlanner::VisionLateralMotionPlanner(
-    const EgoPlanningConfigBuilder *config_builder,
-    const std::shared_ptr<TaskPipelineContext> &pipeline_context)
-    : Task(config_builder, pipeline_context) {
+    const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
+    : Task(config_builder, session) {
   config_ = config_builder->cast<VisionLateralMotionPlannerConfig>();
   name_ = "VisionLateralMotionPlanner";
 }
 
-bool VisionLateralMotionPlanner::Execute(planning::framework::Frame *frame) {
-  // NTRACE_CALL(7);
-  auto current_time = IflyTime::Now_ms();
-  frame_ = frame;
+bool VisionLateralMotionPlanner::Execute() {
+  LOG_DEBUG("=======VisionLateralMotionPlanner======= \n");
 
-  if (Task::Execute(frame) == false) {
+  if (!PreCheck()) {
+    LOG_DEBUG("PreCheck failed\n");
     return false;
   }
 
-  // auto config_builder =
-  //     frame->mutable_session()->mutable_planning_context()->config_builder(
-  //         planning::common::SceneType::HIGHWAY);
+  auto current_time = IflyTime::Now_ms();
 
-  const auto &session = frame_->session();
-  auto &planning_context = session->planning_context();
-  auto &ego_prediction_result = pipeline_context_->planning_result;
-  auto &ego_prediction_info = pipeline_context_->planning_info;
-  auto &coarse_planning_info = pipeline_context_->coarse_planning_info;
+  const auto &planning_context = session_->planning_context();
+  const auto &coarse_planning_info =
+      planning_context.lane_change_decider_output().coarse_planning_info;
   bool b_success = false;
 
   // obtain the session information
-  const auto &state_machine_output =
-      planning_context.lat_behavior_state_machine_output();
-  const auto &lat_behavior_info = planning_context.lat_behavior_info();
-  const auto &status = state_machine_output.curr_state;
-  const auto &accident_ahead = state_machine_output.accident_ahead;
-  const auto &should_premove = state_machine_output.should_premove;
-  const auto &should_suspend = state_machine_output.should_suspend;
-  const auto &avd_car_past = lat_behavior_info.avd_car_past;
-  const auto &avd_sp_car_past = lat_behavior_info.avd_sp_car_past;
-  const auto &flag_avd = lat_behavior_info.flag_avd;
-  const auto &dist_rblane = lat_behavior_info.dist_rblane;
+  const auto &lane_change_decider_output =
+      planning_context.lane_change_decider_output();
+  const auto &vision_lateral_behavior_planner_output =
+      planning_context.vision_lateral_behavior_planner_output();
+  const auto &status = lane_change_decider_output.curr_state;
+  const auto &accident_ahead = lane_change_decider_output.accident_ahead;
+  const auto &should_premove = lane_change_decider_output.should_premove;
+  const auto &should_suspend = lane_change_decider_output.should_suspend;
+  const auto &avd_car_past =
+      vision_lateral_behavior_planner_output.avd_car_past;
+  const auto &avd_sp_car_past =
+      vision_lateral_behavior_planner_output.avd_sp_car_past;
+  const auto &flag_avd = vision_lateral_behavior_planner_output.flag_avd;
+  const auto &dist_rblane = vision_lateral_behavior_planner_output.dist_rblane;
 
   // init info
-  flane_ = frame_->session()
-               ->environmental_model()
+  flane_ = session_->environmental_model()
                .get_virtual_lane_manager()
                ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
 
-  ego_frenet_state_ = reference_path_ptr_->get_frenet_ego_state();
+  const auto &reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  ego_frenet_state_ = reference_path_ptr->get_frenet_ego_state();
   ego_cart_state_manager_ =
-      frame_->session()->environmental_model().get_ego_state_manager();
+      session_->environmental_model().get_ego_state_manager();
 
   virtual_lane_manager_ =
-      frame_->session()->environmental_model().get_virtual_lane_manager();
+      session_->environmental_model().get_virtual_lane_manager();
 
   left_lane_boundary_poly_.clear();
   right_lane_boundary_poly_.clear();
@@ -232,7 +227,7 @@ bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
     if ((!l_reject && !r_reject) || reject_reason_ == BIAS_L ||
         reject_reason_ == BIAS_R) {
       if (lane_width < min_width) {
-        if (frame_->session()->environmental_model().is_on_highway()) {
+        if (session_->environmental_model().is_on_highway()) {
           double FRONT_DISTANCE_CHECK = 30.0;
           double REAR_DISTANCE_CHECK = -15.0;
           double MIN_WIDTH = 2.2;
@@ -646,9 +641,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                         virtual_lane_manager_->get_right_lane()
                                 ->get_lane_type() ==
                             MSD_LANE_TYPE_NON_MOTOR)) &&
-                      !frame_->session()
-                           ->environmental_model()
-                           .is_on_highway() &&
+                      !session_->environmental_model().is_on_highway() &&
                       ((avd_car_past[0][3] < 15 && v_ego < 5) ||
                        (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
                        avd_car_past[0][3] < 1)) {
@@ -890,9 +883,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                        virtual_lane_manager_->get_right_lane() != nullptr &&
                        virtual_lane_manager_->get_right_lane()
                                ->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR)) {
-                    if (!frame_->session()
-                             ->environmental_model()
-                             .is_on_highway() &&
+                    if (!session_->environmental_model().is_on_highway() &&
                         // map_info.dist_to_intsect() > 80 &&  // hack
                         // map_info.dist_to_intsect() - avd_car_past[0][3] > 80
                         // &&
@@ -1137,9 +1128,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
 
                 sb_lane_ = true;
               }
-            } else if (!frame_->session()
-                            ->environmental_model()
-                            .is_on_highway() &&
+            } else if (!session_->environmental_model().is_on_highway() &&
                        abs(avd_car_past[0][4]) < 0.45) {
               if ((avd_car_past[0][3] < 15 && v_ego < 5) ||
                   (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
@@ -1254,7 +1243,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                     virtual_lane_manager_->get_right_lane() != nullptr &&
                     virtual_lane_manager_->get_right_lane()->get_lane_type() ==
                         MSD_LANE_TYPE_NON_MOTOR))) {
-                if (((!frame_->session()->environmental_model().is_on_highway()
+                if (((!session_->environmental_model().is_on_highway()
                       //    &&  // hack
                       //  map_info.dist_to_intsect() > 80 &&
                       //  map_info.dist_to_intsect() - avd_car_past[0][3] > 80
@@ -1312,9 +1301,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                       virtual_lane_manager_->get_right_lane() != nullptr &&
                       virtual_lane_manager_->get_right_lane()
                               ->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR))) {
-                  if (!frame_->session()
-                           ->environmental_model()
-                           .is_on_highway() &&
+                  if (!session_->environmental_model().is_on_highway() &&
                       // map_info.dist_to_intsect() > 80 &&  //hack
                       // map_info.dist_to_intsect() - avd_car_past[0][3] > 80 &&
                       ((avd_car_past[0][3] < 15 && v_ego < 5) ||
@@ -1593,9 +1580,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                     avd_car_past[0][5] -
                     (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
                 lat_offset = std::max(lat_offset, -0.5 * lane_width + 0.9);
-              } else if (!frame_->session()
-                              ->environmental_model()
-                              .is_on_highway() &&
+              } else if (!session_->environmental_model().is_on_highway() &&
                          abs(avd_car_past[0][4]) < 0.45) {
                 if ((avd_car_past[0][3] < 15 && v_ego < 5) ||
                     (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
@@ -1840,7 +1825,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                          virtual_lane_manager_->get_right_lane()
                                  ->get_lane_type() ==
                              MSD_LANE_TYPE_NON_MOTOR))) {
-              if (((!frame_->session()->environmental_model().is_on_highway()
+              if (((!session_->environmental_model().is_on_highway()
                     //  &&map_info.dist_to_intsect() > 80 &&
                     // map_info.dist_to_intsect() - avd_car_past[0][3] > 80
                     ) ||
@@ -2415,8 +2400,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
   one_nudge_left_car_ = one_nudge_left_car;
   one_nudge_right_car_ = one_nudge_right_car;
   lane_width_ = lane_width;
-  auto ad_info = frame_->mutable_session()
-                     ->mutable_planning_output_context()
+  auto ad_info = session_->mutable_planning_context()
                      ->mutable_planning_hmi_info()
                      ->mutable_ad_info();
   ad_info->set_avoid_status(::PlanningHMI::AvoidObstacle::NO_HIDING);
@@ -2456,14 +2440,10 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   //   auto &map_info = world_model_->get_map_info();
   //   auto &map_info_mgr =
   // world_model_->get_map_info_manager();
-  auto &lateral_output = frame_->mutable_session()
-                             ->mutable_planning_context()
+  auto &lateral_output = session_->mutable_planning_context()
                              ->mutable_lateral_behavior_planner_output();
-  // lateral_output = context_->mutable_lateral_behavior_planner_output();
-  auto &state_machine_output =
-      frame_->mutable_session()
-          ->mutable_planning_context()
-          ->mutable_lat_behavior_state_machine_output();
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
 
   //   //   auto &flane = virtual_lane_mgr_->get_fix_lane();
   //   //
@@ -2474,27 +2454,27 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   //   //   auto &lateral_obstacle =
   //   world_model_->mutable_lateral_obstacle();
 
-  int scenario = state_machine_output.scenario;
-  int state = state_machine_output.curr_state;
-  auto &state_name = state_machine_output.state_name;
-  int turn_light = state_machine_output.turn_light;
-  int map_turn_light = state_machine_output.map_turn_light;  //
+  int scenario = lane_change_decider_output.scenario;
+  int state = lane_change_decider_output.curr_state;
+  auto &state_name = lane_change_decider_output.state_name;
+  int turn_light = lane_change_decider_output.turn_light;
+  int map_turn_light = lane_change_decider_output.map_turn_light;  //
   //   取值范围，对应的含义？
-  bool accident_ahead = state_machine_output.accident_ahead;
+  bool accident_ahead = lane_change_decider_output.accident_ahead;
 
-  bool accident_back = state_machine_output.accident_back;
+  bool accident_back = lane_change_decider_output.accident_back;
 
-  bool close_to_accident = state_machine_output.close_to_accident;
+  bool close_to_accident = lane_change_decider_output.close_to_accident;
 
-  bool lc_pause = state_machine_output.lc_pause;
-  int lc_pause_id = state_machine_output.lc_pause_id;  // id
+  bool lc_pause = lane_change_decider_output.lc_pause;
+  int lc_pause_id = lane_change_decider_output.lc_pause_id;  // id
   //   //                          //
   //   //
   //   是指车辆id还是路线id，以及id命名顺序是从左到右还是从右到左？
-  double tr_pause_l = state_machine_output.tr_pause_l;  //
+  double tr_pause_l = lane_change_decider_output.tr_pause_l;  //
   //   为啥是double 类型？
   //   //       表示的含义是？
-  double tr_pause_s = state_machine_output.tr_pause_s;
+  double tr_pause_s = lane_change_decider_output.tr_pause_s;
 
   bool isRedLightStop = false;  // hack!
 
@@ -2506,20 +2486,19 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   lateral_output.v_limit = 40.0 / 3.6;
   lateral_output.isRedLightStop = isRedLightStop;
 
-  lateral_output.disable_l = state_machine_output.disable_l;
-  lateral_output.disable_r = state_machine_output.disable_r;
-  lateral_output.enable_l = state_machine_output.enable_l;  // disabled
+  lateral_output.disable_l = lane_change_decider_output.disable_l;
+  lateral_output.disable_r = lane_change_decider_output.disable_r;
+  lateral_output.enable_l = lane_change_decider_output.enable_l;  // disabled
   //       ,enable的区别是啥？代表啥意思
-  lateral_output.enable_r = state_machine_output.enable_r;
-  lateral_output.enable_id = state_machine_output.enable_id;  //
+  lateral_output.enable_r = lane_change_decider_output.enable_r;
+  lateral_output.enable_id = lane_change_decider_output.enable_id;  //
   //   enable车的id？ 车道线的id?
 
   lateral_output.lat_offset = lat_offset_;
 
   lateral_output.lane_borrow = false;        // attention!! hack!
   lateral_output.lane_borrow_range = -1000;  // attention!! hack!
-  TrackedObject *lead_one = frame_->mutable_session()
-                                ->mutable_environmental_model()
+  TrackedObject *lead_one = session_->mutable_environmental_model()
                                 ->get_lateral_obstacle()
                                 ->leadone();
 
@@ -2534,7 +2513,7 @@ bool VisionLateralMotionPlanner::update_planner_output() {
     lateral_output.which_lane = "current_line";
   }
 
-  int lb_request = state_machine_output.lb_request;
+  int lb_request = lane_change_decider_output.lb_request;
 
   if (lb_request == NO_CHANGE) {
     lateral_output.lb_request = "none";
@@ -2545,7 +2524,7 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   }
 
   lateral_output.lb_width = -10.;  //  attention!! hack!
-  int lc_request = state_machine_output.lc_request;
+  int lc_request = lane_change_decider_output.lc_request;
 
   if (lc_request == NO_CHANGE) {
     lateral_output.lc_request = "none";
@@ -2694,23 +2673,22 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   lateral_output.lc_pause = lc_pause;
   lateral_output.tr_pause_l = tr_pause_l;
   lateral_output.tr_pause_s = tr_pause_s;
-  lateral_output.must_change_lane = state_machine_output.must_change_lane;
+  lateral_output.must_change_lane = lane_change_decider_output.must_change_lane;
   lateral_output.close_to_accident = close_to_accident;
   lateral_output.angle_steers_limit = 0.0;  // attention!
-  lateral_output.left_faster = state_machine_output.left_is_faster;
+  lateral_output.left_faster = lane_change_decider_output.left_is_faster;
 
-  lateral_output.right_faster = state_machine_output.right_is_faster;
-  lateral_output.premove =
-      (state_machine_output.premovel || state_machine_output.premover);
-  lateral_output.premove_dist = state_machine_output.premove_dist;
+  lateral_output.right_faster = lane_change_decider_output.right_is_faster;
+  lateral_output.premove = (lane_change_decider_output.premovel ||
+                            lane_change_decider_output.premover);
+  lateral_output.premove_dist = lane_change_decider_output.premove_dist;
   lateral_output.isFasterStaticAvd =
       (left_direct_exist && lateral_output.left_faster) ||
       (right_direct_exist && lateral_output.right_faster) ||
       (curr_direct_has_right && !curr_direct_has_straight) ||
       (is_right_turn && left_direct_has_straight &&
        lateral_output.left_faster);  // attention!
-  lateral_output.isOnHighway =
-      frame_->session()->environmental_model().is_on_highway();
+  lateral_output.isOnHighway = session_->environmental_model().is_on_highway();
 
   lateral_output.c_poly.assign(c_poly_.begin(), c_poly_.end());
 
@@ -2743,7 +2721,7 @@ bool VisionLateralMotionPlanner::update_planner_output() {
     lateral_output.turn_light = "None";
   }
 
-  auto request_source = state_machine_output.lc_request_source;
+  auto request_source = lane_change_decider_output.lc_request_source;
   lateral_output.act_request_source = "none";
   if (request_source == INT_REQUEST) {
     lateral_output.lc_request_source = "int_request";
@@ -2752,31 +2730,21 @@ bool VisionLateralMotionPlanner::update_planner_output() {
     lateral_output.lc_request_source = "map_request";
   } else if (request_source == ACT_REQUEST) {
     lateral_output.lc_request_source = "act_request";
-    lateral_output.act_request_source = state_machine_output.act_request_source;
+    lateral_output.act_request_source =
+        lane_change_decider_output.act_request_source;
   } else {
     lateral_output.lc_request_source = "none";
   }
 
   if (map_turn_light > 0) {
     lateral_output.turn_light_source = "map_turn_light";
-  } else if (state_machine_output.lc_turn_light > 0) {
+  } else if (lane_change_decider_output.lc_turn_light > 0) {
     lateral_output.turn_light_source = "lc_turn_light";
-  } else if (state_machine_output.lb_turn_light > 0) {
+  } else if (lane_change_decider_output.lb_turn_light > 0) {
     lateral_output.turn_light_source = "lb_turn_light";
   } else {
     lateral_output.turn_light_source = "none";
   }
-
-  // auto planning_status = frame_->session()
-  //                            ->planning_output_context()
-  //                            .planning_status();  // attention!
-
-  //                            pipeline_context_->planning_result
-  // if (nullptr != planning_status) {
-  //   planning_status->planning_result.turn_signal_cmd.set_value(
-  //       turn_light);  //
-  //       planning_result.planning_output->turn_single_command->turn_signal_value(turn_light)
-  // }
 
   lateral_output.avd_car_past = avd_car_past_;
   lateral_output.avd_sp_car_past = avd_sp_car_past_;
@@ -2793,11 +2761,11 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   lateral_output.r_poly = r_poly_;
 
   lateral_output.behavior_suspension =
-      state_machine_output.behavior_suspend;  //
-                                              //   lateral suspend
+      lane_change_decider_output.behavior_suspend;  //
+                                                    //   lateral suspend
   lateral_output.suspension_obs.assign(
-      state_machine_output.suspend_obs.begin(),
-      state_machine_output.suspend_obs.end());  //
+      lane_change_decider_output.suspend_obs.begin(),
+      lane_change_decider_output.suspend_obs.end());  //
   //   lateral suspend
   //   //       obstacles
   if (!update_lateral_info()) {  // 这里进入
@@ -2811,7 +2779,7 @@ bool VisionLateralMotionPlanner::update_planner_output() {
 
 void VisionLateralMotionPlanner::save_to_debug_info() {
   const auto &lateral_output =
-      frame_->session()->planning_context().lateral_behavior_planner_output();
+      session_->planning_context().lateral_behavior_planner_output();
   auto &debug_info_manager = DebugInfoManager::GetInstance();
   auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
 
@@ -2820,15 +2788,15 @@ void VisionLateralMotionPlanner::save_to_debug_info() {
   // lat_behavior_plan->set_lc_request_source(lateral_output.lc_request_source);
   // lat_behavior_plan->set_lc_status(lateral_output.lc_status);
   // lat_behavior_plan->set_is_lc_valid(lateral_output.lc_valid);
-  // lat_behavior_plan->set_lc_valid_cnt(state_machine_output.lc_valid_cnt);
+  // lat_behavior_plan->set_lc_valid_cnt(lane_change_decider_output.lc_valid_cnt);
   // lat_behavior_plan->set_lc_back_cnt(lateral_output.lc_request_source);
   // lat_behavior_plan->set_lc_back_invalid_reason(lateral_output.lc_request);
   // lat_behavior_plan->set_turn_light(lateral_output.turn_light);
   // lat_behavior_plan->set_turn_light_source(lateral_output.turn_light_source);
-  // lat_behavior_plan->set_v_relative_left_lane(state_machine_output.lc_status);
-  // lat_behavior_plan->set_faster_left_lane_cnt(state_machine_output.lc_status);
-  // lat_behavior_plan->set_v_relative_right_lane(state_machine_output.lc_status);
-  // lat_behavior_plan->set_faster_right_lane_cnt(state_machine_output.lc_status)
+  // lat_behavior_plan->set_v_relative_left_lane(lane_change_decider_output.lc_status);
+  // lat_behavior_plan->set_faster_left_lane_cnt(lane_change_decider_output.lc_status);
+  // lat_behavior_plan->set_v_relative_right_lane(lane_change_decider_output.lc_status);
+  // lat_behavior_plan->set_faster_right_lane_cnt(lane_change_decider_output.lc_status)
 
   // lat_behavior_plan->set_is_side_borrow_bicycle_lane(lateral_output.sb_blane);
   // lat_behavior_plan->set_is_side_borrow_lane(lateral_output.sb_lane);
@@ -2851,11 +2819,9 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
   // //   auto &map_info =
   // world_model_->mutable_map_info_manager().get_map_info();
 
-  auto planning_status = frame_->mutable_session()
-                             ->mutable_planning_output_context()
-                             ->mutable_planning_status();  // attention!
-  auto &lateral_output = frame_->mutable_session()
-                             ->mutable_planning_context()
+  auto &lane_status = session_->mutable_planning_context()
+                          ->mutable_lane_status();  // attention!
+  auto &lateral_output = session_->mutable_planning_context()
                              ->mutable_lateral_behavior_planner_output();
   auto lc_request = lateral_output.lc_request;
   auto lc_status = lateral_output.lc_status;
@@ -2870,58 +2836,52 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
   // //   //   lb_status.c_str(), lb_request.c_str(),
   // lb_info);
 
-  auto &state_machine_output =
-      frame_->mutable_session()
-          ->mutable_planning_context()
-          ->mutable_lat_behavior_state_machine_output();
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
 
-  int scenario = state_machine_output.scenario;
-  int state = state_machine_output.curr_state;
+  int scenario = lane_change_decider_output.scenario;
+  int state = lane_change_decider_output.curr_state;
   planning::common::LaneStatus default_lane_status;
   // //   // scenario input info
   default_lane_status.change_lane.target_gap_obs =
-      planning_status->lane_status.change_lane.target_gap_obs;
-  planning_status->lane_status = default_lane_status;
+      lane_status.change_lane.target_gap_obs;
+  lane_status = default_lane_status;
 
   if (state == ROAD_NONE || state == INTER_GS_NONE || state == INTER_TR_NONE ||
       state == INTER_TL_NONE) {
-    planning_status->lane_status.status =
-        planning::common::LaneStatus::Status::LANE_KEEP;
+    lane_status.status = planning::common::LaneStatus::Status::LANE_KEEP;
   } else {
     if (lc_request == "none") {
       if (lb_request != "none") {
-        planning_status->lane_status.status =
-            planning::common::LaneStatus::Status::LANE_BORROW;
+        lane_status.status = planning::common::LaneStatus::Status::LANE_BORROW;
         // TODO: BORROW_LANE_KEEP state to be set
         // accordingly
         if (lb_request == "left") {
-          planning_status->lane_status.borrow_lane.direction = "left";
+          lane_status.borrow_lane.direction = "left";
         } else if (lb_request == "right") {
-          planning_status->lane_status.borrow_lane.direction = "right";
+          lane_status.borrow_lane.direction = "right";
         }
         if (lb_status == "left_lane_borrow" ||
             lb_status == "right_lane_borrow") {
-          planning_status->lane_status.borrow_lane.status =
+          lane_status.borrow_lane.status =
               planning::common::BorrowLaneStatus::Status::IN_BORROW_LANE;
         } else if (lb_status == "left_lane_suspend" ||
                    lb_status == "right_lane_suspend") {
-          planning_status->lane_status.borrow_lane.status =
+          lane_status.borrow_lane.status =
               planning::common::BorrowLaneStatus::Status::BORROW_LANE_KEEP;
         } else {
-          planning_status->lane_status.borrow_lane.status =
+          lane_status.borrow_lane.status =
               planning::common::BorrowLaneStatus::Status::BORROW_LANE_FINISHED;
         }
       } else {
-        planning_status->lane_status.status =
-            planning::common::LaneStatus::Status::LANE_KEEP;
-        planning_status->lane_status.change_lane.status =
+        lane_status.status = planning::common::LaneStatus::Status::LANE_KEEP;
+        lane_status.change_lane.status =
             planning::common::ChangeLaneStatus::Status::CHANGE_LANE_FINISHED;
-        planning_status->lane_status.borrow_lane.status =
+        lane_status.borrow_lane.status =
             planning::common::BorrowLaneStatus::Status::BORROW_LANE_FINISHED;
       }
     } else {
-      planning_status->lane_status.status =
-          planning::common::LaneStatus::Status::LANE_CHANGE;
+      lane_status.status = planning::common::LaneStatus::Status::LANE_CHANGE;
 
       if (virtual_lane_manager_->get_tasks(
               virtual_lane_manager_->get_current_lane()) <
@@ -2929,45 +2889,45 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
           virtual_lane_manager_->get_tasks(
               virtual_lane_manager_->get_current_lane()) > 0) {  // attention!!
 
-        planning_status->lane_status.change_lane.is_active_lane_change = false;
+        lane_status.change_lane.is_active_lane_change = false;
       } else {
-        planning_status->lane_status.change_lane.is_active_lane_change = true;
+        lane_status.change_lane.is_active_lane_change = true;
       }
       if (lc_status == "none") {
         // lane change preparation stage
-        planning_status->lane_status.change_lane.status =
+        lane_status.change_lane.status =
             planning::common::ChangeLaneStatus::Status::CHANGE_LANE_PREPARATION;
         if (lc_request == "left") {
-          planning_status->lane_status.change_lane.direction = "left";
+          lane_status.change_lane.direction = "left";
         } else if (lc_request == "right") {
-          planning_status->lane_status.change_lane.direction = "right";
+          lane_status.change_lane.direction = "right";
         }
       } else if (lc_status == "left_lane_change" ||
                  lc_status == "right_lane_change") {
-        planning_status->lane_status.change_lane.status =
+        lane_status.change_lane.status =
             planning::common::ChangeLaneStatus::Status::IN_CHANGE_LANE;
         if (lc_status == "left_lane_change") {
-          planning_status->lane_status.change_lane.direction = "left";
+          lane_status.change_lane.direction = "left";
         } else if (lc_status == "right_lane_change") {
-          planning_status->lane_status.change_lane.direction = "right";
+          lane_status.change_lane.direction = "right";
         }
       } else if (lc_status == "left_lane_change_back" ||
                  lc_status == "right_lane_change_back") {
-        planning_status->lane_status.change_lane.status =
+        lane_status.change_lane.status =
             planning::common::ChangeLaneStatus::Status::CHANGE_LANE_BACK;
         if (lc_status == "left_lane_change_back") {
-          planning_status->lane_status.change_lane.direction = "left";
+          lane_status.change_lane.direction = "left";
         } else if (lc_status == "right_lane_change_back") {
-          planning_status->lane_status.change_lane.direction = "right";
+          lane_status.change_lane.direction = "right";
         }
       } else if (lc_status == "left_lane_change_wait" ||
                  lc_status == "right_lane_change_wait") {
-        planning_status->lane_status.change_lane.status =
+        lane_status.change_lane.status =
             planning::common::ChangeLaneStatus::Status::CHANGE_LANE_PREPARATION;
         if (lc_status == "left_lane_change_wait") {
-          planning_status->lane_status.change_lane.direction = "left";
+          lane_status.change_lane.direction = "left";
         } else if (lc_status == "right_lane_change_wait") {
-          planning_status->lane_status.change_lane.direction = "right";
+          lane_status.change_lane.direction = "right";
         }
       }
     }
@@ -2982,23 +2942,20 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
   } else {
     target_lane_id = 0;
   }
-  planning_status->lane_status.target_lane_id = target_lane_id;
-  planning_status->lane_status.change_lane.path_id = target_lane_id;
-  if (planning_status->lane_status.status ==
-          planning::common::LaneStatus::Status::LANE_CHANGE &&
-      (planning_status->lane_status.change_lane.status ==
-           planning::common::ChangeLaneStatus::Status::
-               CHANGE_LANE_PREPARATION ||
-       planning_status->lane_status.change_lane.status ==
+  lane_status.target_lane_id = target_lane_id;
+  lane_status.change_lane.path_id = target_lane_id;
+  if (lane_status.status == planning::common::LaneStatus::Status::LANE_CHANGE &&
+      (lane_status.change_lane.status == planning::common::ChangeLaneStatus::
+                                             Status::CHANGE_LANE_PREPARATION ||
+       lane_status.change_lane.status ==
            planning::common::ChangeLaneStatus::Status::CHANGE_LANE_BACK)) {
     if (lc_request == "left") {
-      planning_status->lane_status.change_lane.path_id = target_lane_id - 1;
+      lane_status.change_lane.path_id = target_lane_id - 1;
     } else if (lc_request == "right") {
-      planning_status->lane_status.change_lane.path_id = target_lane_id + 1;
+      lane_status.change_lane.path_id = target_lane_id + 1;
     }
   }
-  planning_status->lane_status.target_lane_lat_offset =
-      lateral_output.lat_offset;
+  lane_status.target_lane_lat_offset = lateral_output.lat_offset;
 
   // //   auto baseline_info =
   // world_model_->get_baseline_info(target_lane_id);
@@ -3016,19 +2973,16 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
   return true;
 }
 bool VisionLateralMotionPlanner::update_planner_status() {
-  auto &lateral_output = frame_->mutable_session()
-                             ->mutable_planning_context()
+  auto &lateral_output = session_->mutable_planning_context()
                              ->mutable_lateral_behavior_planner_output();
-  auto &state_machine_output =
-      frame_->mutable_session()
-          ->mutable_planning_context()
-          ->mutable_lat_behavior_state_machine_output();
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
 
   lateral_output.planner_scene = 0;
   lateral_output.planner_action = 0;
   lateral_output.planner_status = 0;
 
-  switch (state_machine_output.curr_state) {
+  switch (lane_change_decider_output.curr_state) {
     case ROAD_NONE:
       lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
       break;
@@ -3274,555 +3228,6 @@ bool VisionLateralMotionPlanner::update_planner_status() {
   }
   return true;
 }
-//   // bool
-//   VisionLateralMotionPlanner::log_planner_debug_info()
-//   {
-//   //   std::string plan_msg;
-//   //   create_lateral_behavior_planner_msg(plan_msg);
-
-//   //   auto &lateral_behavior_planner_output =
-//   //
-//   PlanningContext::Instance()->mutable_lateral_behavior_planner_output();
-
-//   //   lateral_behavior_planner_output.plan_msg =
-//   plan_msg;
-//   // }
-//   // bool
-//   VisionLateralMotionPlanner::create_lateral_behavior_planner_msg(
-//   //     std::string &plan_msg) {
-//   //   auto &lateral_output =
-//   //
-//   PlanningContext::Instance()->lateral_behavior_planner_output();
-//   //   rapidjson::Document
-//   later_out_json(rapidjson::kObjectType);
-//   //   rapidjson::Document::AllocatorType &allocator =
-//   //   later_out_json.GetAllocator();
-
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/timestamp",
-//   // lateral_output.timestamp);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/enable",
-//   // lateral_output.enable);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/track_id",
-//   // lateral_output.track_id);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/v_limit",
-//   // lateral_output.v_limit);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lat_offset",
-//   // lateral_output.lat_offset);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lane_borrow",
-//   // lateral_output.lane_borrow);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lane_borrow_range",
-//   // lateral_output.lane_borrow_range);
-
-//   //   rapidjson::Document
-//   avd_array(rapidjson::kArrayType, &allocator);
-//   //   for (int i = 0; i <
-//   lateral_output.avd_info.size(); i++)
-//   {
-//   //     rapidjson::Document
-//   one_avd_obj(rapidjson::kObjectType, &allocator);
-//   //     rapidjson::Value str_val;
-//   //     rapidjson::SetValueByPointer(one_avd_obj,
-//   "/id",
-//   // lateral_output.avd_info[i].id);
-//   //
-//   str_val.SetString(lateral_output.avd_info[i].property.c_str(),
-//   // lateral_output.avd_info[i].property.length(),
-//   //                       allocator);
-//   //     rapidjson::SetValueByPointer(one_avd_obj,
-//   "/property", str_val);
-//   //     rapidjson::SetValueByPointer(one_avd_obj,
-//   "/ignore",
-//   // lateral_output.avd_info[i].ignore);
-//   //
-//   str_val.SetString(lateral_output.avd_info[i].avd_direction.c_str(),
-//   // lateral_output.avd_info[i].avd_direction.length(),
-//   //                       allocator);
-//   //     rapidjson::SetValueByPointer(one_avd_obj,
-//   "/avd_direction", str_val);
-//   //     rapidjson::SetValueByPointer(one_avd_obj,
-//   "/avd_priority",
-//   // lateral_output.avd_info[i].avd_priority);
-//   //     rapidjson::SetValueByPointer(one_avd_obj,
-//   "/blocked_time_begin",
-//   // lateral_output.avd_info[i].blocked_time_begin);
-//   //     rapidjson::SetValueByPointer(one_avd_obj,
-//   "/blocked_time_end",
-//   // lateral_output.avd_info[i].blocked_time_end);
-//   //     avd_array.PushBack(one_avd_obj, allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/avd_info", avd_array);
-
-//   //   rapidjson::Value str_temp;
-//   //
-//   str_temp.SetString(lateral_output.which_lane.c_str(),
-//   // lateral_output.which_lane.length(), allocator);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/which_lane", str_temp);
-//   //
-//   str_temp.SetString(lateral_output.lb_request.c_str(),
-//   // lateral_output.lb_request.length(), allocator);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lb_request", str_temp);
-//   //
-//   str_temp.SetString(lateral_output.lc_request.c_str(),
-//   // lateral_output.lc_request.length(), allocator);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lc_request", str_temp);
-//   //
-//   str_temp.SetString(lateral_output.lc_status.c_str(),
-//   // lateral_output.lc_status.length(), allocator);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lc_status", str_temp);
-//   //
-//   str_temp.SetString(lateral_output.lb_status.c_str(),
-//   // lateral_output.lb_status.length(), allocator);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lb_status", str_temp);
-
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/scenario",
-//   // lateral_output.scenario);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/flane_width",
-//   // lateral_output.flane_width);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/dist_rblane",
-//   // lateral_output.dist_rblane);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/borrow_bicycle_lane",
-//   // lateral_output.borrow_bicycle_lane);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   //   "/enable_intersection_planner",
-//   // lateral_output.enable_intersection_planner);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/tleft_lane",
-//   // lateral_output.tleft_lane);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/rightest_lane",
-//   // lateral_output.rightest_lane);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/isFasterStaticAvd",
-//   // lateral_output.isFasterStaticAvd);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/isOnHighway",
-//   // lateral_output.isOnHighway);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/isRedLightStop",
-//   // lateral_output.isRedLightStop);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/dist_intersect",
-//   // lateral_output.dist_intersect);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/intersect_length",
-//   // lateral_output.intersect_length);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lc_end_dis",
-//   // lateral_output.lc_end_dis);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/dis_to_ramp",
-//   // lateral_output.dis_to_ramp);
-
-//   //   /* rapidjson::Document
-//   path_pnt_array(rapidjson::kArrayType, &allocator);
-//   //   for(int i = 0; i <
-//   lateral_output.path_points.size(); i++)
-//   //   {
-//   //     rapidjson::Document
-//   one_path_pnt(rapidjson::kObjectType, &allocator);
-//   //     rapidjson::SetValueByPointer(one_path_pnt,
-//   "/x",
-//   //   lateral_output.path_points[i].x);
-//   //   rapidjson::SetValueByPointer(one_path_pnt,
-//   //   "/y", lateral_output.path_points[i].y);
-//   //     rapidjson::SetValueByPointer(one_path_pnt,
-//   "/z",
-//   //   lateral_output.path_points[i].z);
-//   //   rapidjson::SetValueByPointer(one_path_pnt,
-//   //   "/theta", lateral_output.path_points[i].theta);
-//   //     rapidjson::SetValueByPointer(one_path_pnt,
-//   "/kappa",
-//   //   lateral_output.path_points[i].kappa);
-//   //     rapidjson::SetValueByPointer(one_path_pnt,
-//   "/s",
-//   //   lateral_output.path_points[i].s);
-//   //   rapidjson::SetValueByPointer(one_path_pnt,
-//   //   "/dkappa",
-//   lateral_output.path_points[i].dkappa);
-//   //     rapidjson::SetValueByPointer(one_path_pnt,
-//   "/ddkappa",
-//   //   lateral_output.path_points[i].ddkappa);
-//   //     rapidjson::SetValueByPointer(one_path_pnt,
-//   "/lane_id",
-//   //   lateral_output.path_points[i].lane_id.c_str());
-//   //     rapidjson::SetValueByPointer(one_path_pnt,
-//   "/x_derivative",
-//   //   lateral_output.path_points[i].x_derivative);
-//   //     rapidjson::SetValueByPointer(one_path_pnt,
-//   "/y_derivative",
-//   //   lateral_output.path_points[i].y_derivative);
-//   //     path_pnt_array.PushBack(one_path_pnt,
-//   allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/path_points",
-//   //   path_pnt_array);
-//   // */
-
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/sb_lane",
-//   // lateral_output.sb_lane);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/sb_blane",
-//   // lateral_output.sb_blane);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/force_pause",
-//   // lateral_output.force_pause);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/large_lat",
-//   // lateral_output.large_lat);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/premoving",
-//   // lateral_output.premoving);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/accident_ahead",
-//   // lateral_output.accident_ahead);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/accident_back",
-//   // lateral_output.accident_back);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lc_pause_id",
-//   // lateral_output.lc_pause_id);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lc_pause",
-//   // lateral_output.lc_pause);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/tr_pause_l",
-//   // lateral_output.tr_pause_l);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/tr_pause_s",
-//   // lateral_output.tr_pause_s);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/must_change_lane",
-//   // lateral_output.must_change_lane);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/left_faster",
-//   // lateral_output.left_faster);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/right_faster",
-//   // lateral_output.right_faster);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/close_to_accident",
-//   // lateral_output.close_to_accident);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/premove",
-//   // lateral_output.premove);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/behavior_suspension",
-//   // lateral_output.behavior_suspension);
-
-//   //   rapidjson::Document
-//   suspension_ob_array(rapidjson::kArrayType,
-//   //   &allocator); for (int i = 0; i <
-//   lateral_output.suspension_obs.size();
-//   //   i++) {
-//   //
-//   suspension_ob_array.PushBack(lateral_output.suspension_obs[i],
-//   //     allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/suspension_obs",
-//   // suspension_ob_array);
-
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/angle_steers_limit",
-//   // lateral_output.angle_steers_limit);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/premove_dist",
-//   // lateral_output.premove_dist);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/planner_scene",
-//   // lateral_output.planner_scene);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/planner_action",
-//   // lateral_output.planner_action);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/planner_status",
-//   // lateral_output.planner_status);
-
-//   //   rapidjson::Document
-//   c_poly_array(rapidjson::kArrayType, &allocator);
-//   //   for (int i = 0; i <
-//   lateral_output.c_poly.size(); i++) {
-//   // c_poly_array.PushBack(lateral_output.c_poly[i],
-//   allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/c_poly", c_poly_array);
-
-//   //   rapidjson::Document
-//   d_poly_array(rapidjson::kArrayType, &allocator);
-//   //   for (int i = 0; i <
-//   lateral_output.d_poly.size(); i++) {
-//   // d_poly_array.PushBack(lateral_output.d_poly[i],
-//   allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/d_poly", d_poly_array);
-
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lead_one_drel",
-//   // lateral_output.lead_one_drel);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lead_one_vrel",
-//   // lateral_output.lead_one_vrel);
-
-//   //
-//   str_temp.SetString(lateral_output.state_name.c_str(),
-//   // lateral_output.state_name.length(), allocator);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/state_name", str_temp);
-//   //
-//   str_temp.SetString(lateral_output.scenario_name.c_str(),
-//   // lateral_output.scenario_name.length(), allocator);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/scenario_name", str_temp);
-//   //
-//   str_temp.SetString(lateral_output.turn_light.c_str(),
-//   // lateral_output.turn_light.length(), allocator);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/turn_light", str_temp);
-//   //
-//   str_temp.SetString(lateral_output.lc_request_source.c_str(),
-//   // lateral_output.lc_request_source.length(),
-//   allocator);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lc_request_source",
-//   //   str_temp);
-//   str_temp.SetString(lateral_output.act_request_source.c_str(),
-//   // lateral_output.act_request_source.length(),
-//   //                      allocator);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/act_request_source",
-//   //   str_temp);
-//   str_temp.SetString(lateral_output.turn_light_source.c_str(),
-//   // lateral_output.turn_light_source.length(),
-//   allocator);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/turn_light_source",
-//   //   str_temp);
-//   rapidjson::SetValueByPointer(later_out_json,
-//   "/lb_width",
-//   // lateral_output.lb_width);
-
-//   //   rapidjson::Document
-//   v_seq_array(rapidjson::kArrayType, &allocator);
-//   //   for (int i = 0; i <
-//   lateral_output.vel_sequence.size(); i++) {
-//   //
-//   v_seq_array.PushBack(lateral_output.vel_sequence[i],
-//   allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/vel_sequence",
-//   //   v_seq_array);
-
-//   //   rapidjson::Document
-//   ig_change_f_array(rapidjson::kArrayType, &allocator);
-//   //   for (auto i =
-//   lateral_output.ignore_change_false.begin();
-//   //        i !=
-//   lateral_output.ignore_change_false.end(); i++)
-//   {
-//   //     ig_change_f_array.PushBack(*i, allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/ignore_change_false",
-//   //                                ig_change_f_array);
-
-//   //   rapidjson::Document
-//   ig_change_t_array(rapidjson::kArrayType, &allocator);
-//   //   for (auto i =
-//   lateral_output.ignore_change_true.begin();
-//   //        i !=
-//   lateral_output.ignore_change_true.end(); i++)
-//   {
-//   //     ig_change_t_array.PushBack(*i, allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/ignore_change_true",
-//   //                                ig_change_t_array);
-
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/cross_lsolid_line",
-//   // lateral_output.cross_lsolid_line);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/cross_rsolid_line",
-//   // lateral_output.cross_rsolid_line);
-
-//   //   rapidjson::Document
-//   l_poly_array(rapidjson::kArrayType, &allocator);
-//   //   for (int i = 0; i <
-//   lateral_output.l_poly.size(); i++) {
-//   // l_poly_array.PushBack(lateral_output.l_poly[i],
-//   allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/l_poly", l_poly_array);
-
-//   //   rapidjson::Document
-//   r_poly_array(rapidjson::kArrayType, &allocator);
-//   //   for (int i = 0; i <
-//   lateral_output.r_poly.size(); i++) {
-//   // r_poly_array.PushBack(lateral_output.r_poly[i],
-//   allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/r_poly", r_poly_array);
-
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/disable_l",
-//   // lateral_output.disable_l);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/disable_r",
-//   // lateral_output.disable_r);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/enable_l",
-//   // lateral_output.enable_l);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/enable_r",
-//   // lateral_output.enable_r);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/enable_id",
-//   // lateral_output.enable_id);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lc_warning",
-//   // lateral_output.lc_warning);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/avd_in_lane",
-//   // lateral_output.avd_in_lane);
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/lc_exit_ramp_start",
-//   // lateral_output.lc_exit_ramp_start);
-
-//   //   /* rapidjson::Document
-//   s_v_limit_array(rapidjson::kArrayType,
-//   //   &allocator); for(int i = 0; i <
-//   lateral_output.s_v_limit.size(); i++)
-//   //   {
-//   //     rapidjson::Document
-//   one_s_v_limit(rapidjson::kArrayType, &allocator);
-//   //
-//   one_s_v_limit.PushBack(std::get<0>(lateral_output.s_v_limit[i]),
-//   //     allocator);
-//   //
-//   one_s_v_limit.PushBack(std::get<1>(lateral_output.s_v_limit[i]),
-//   //     allocator);
-
-//   //     s_v_limit_array.PushBack(one_s_v_limit,
-//   allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/s_v_limit",
-//   //   s_v_limit_array);
-
-//   //   rapidjson::Document
-//   s_a_limit_array(rapidjson::kArrayType, &allocator);
-//   //   for(int i = 0; i <
-//   lateral_output.s_a_limit.size(); i++)
-//   //   {
-//   //     rapidjson::Document
-//   one_s_a_limit(rapidjson::kArrayType, &allocator);
-//   //
-//   one_s_a_limit.PushBack(std::get<0>(lateral_output.s_a_limit[i]),
-//   //     allocator);
-//   //
-//   one_s_a_limit.PushBack(std::get<1>(lateral_output.s_a_limit[i]),
-//   //     allocator);
-
-//   //     s_a_limit_array.PushBack(one_s_a_limit,
-//   allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/s_a_limit",
-//   //   s_a_limit_array);
-
-//   //   rapidjson::Document
-//   s_r_off_array(rapidjson::kArrayType, &allocator);
-//   //   for(int i = 0; i <
-//   lateral_output.s_r_offset.size(); i++)
-//   //   {
-//   //     rapidjson::Document
-//   one_s_r_off(rapidjson::kArrayType, &allocator);
-//   //
-//   one_s_r_off.PushBack(std::get<0>(lateral_output.s_r_offset[i]),
-//   //     allocator);
-//   //
-//   one_s_r_off.PushBack(std::get<1>(lateral_output.s_r_offset[i]),
-//   //     allocator);
-
-//   //     s_r_off_array.PushBack(one_s_r_off,
-//   allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/s_r_offset",
-//   //   s_r_off_array);
-//   //   */
-
-//   //   rapidjson::Document
-//   avd_past_array(rapidjson::kArrayType, &allocator);
-//   //   for (int i = 0; i <
-//   lateral_output.avd_car_past.size(); i++) {
-//   //     rapidjson::Document
-//   one_avd_past(rapidjson::kArrayType, &allocator);
-//   //     for (int j = 0; j <
-//   lateral_output.avd_car_past[i].size(); j++)
-//   {
-//   //
-//   one_avd_past.PushBack(lateral_output.avd_car_past[i][j],
-//   allocator);
-//   //     }
-//   //     avd_past_array.PushBack(one_avd_past,
-//   allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/avd_car_past",
-//   //   avd_past_array);
-
-//   //   rapidjson::Document
-//   avd_sp_past_array(rapidjson::kArrayType, &allocator);
-//   //   for (int i = 0; i <
-//   lateral_output.avd_sp_car_past.size(); i++)
-//   {
-//   //     rapidjson::Document
-//   one_avd_sp_past(rapidjson::kArrayType, &allocator);
-//   //     for (int j = 0; j <
-//   lateral_output.avd_sp_car_past[i].size(); j++)
-//   {
-//   //
-//   one_avd_sp_past.PushBack(lateral_output.avd_sp_car_past[i][j],
-//   //       allocator);
-//   //     }
-//   //     avd_sp_past_array.PushBack(one_avd_sp_past,
-//   allocator);
-//   //   }
-//   //   rapidjson::SetValueByPointer(later_out_json,
-//   "/avd_sp_car_past",
-//   //                                avd_sp_past_array);
-
-//   //   rapidjson::StringBuffer jsonBuffer;
-//   //   rapidjson::Writer<rapidjson::StringBuffer>
-//   writer(jsonBuffer);
-//   //   later_out_json.Accept(writer);
-//   //   plan_msg = std::string(jsonBuffer.GetString(),
-//   jsonBuffer.GetSize());
 
 void VisionLateralMotionPlanner::calc_desired_path(
     const std::array<double, 4> &l_poly, const std::array<double, 4> &r_poly,

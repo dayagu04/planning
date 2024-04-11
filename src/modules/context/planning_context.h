@@ -1,14 +1,24 @@
 #pragma once
 
-#include "../tasks/behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner_output.h"
 #include "config/basic_type.h"
 #include "config/vehicle_param.h"
 #include "define/lateral_behavior_planner_output.h"
 #include "define/planning_status.h"
 #include "lon_behavior_planner.pb.h"
 #include "macro.h"
+#include "planning_hmi.pb.h"
 #include "real_time_lon_behavior_planner.pb.h"
 #include "speed/speed_limit.h"
+
+#include "../tasks/task_interface/gap_selcector_decider_output.h"
+#include "../tasks/task_interface/general_lateral_decider_output.h"
+#include "../tasks/task_interface/lane_change_decider_output.h"
+#include "../tasks/task_interface/lateral_motion_planner_output.h"
+#include "../tasks/task_interface/longitudinal_decider_output.h"
+#include "../tasks/task_interface/motion_planner_output.h"
+#include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
+#include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
+#include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
 
 namespace planning {
 
@@ -30,13 +40,11 @@ struct StatusInfo {
   int planning_loop = 0;
   double timestamp_ego_prediction = 0.0;
   double last_vel_limit = 100.0;
-};
-
-struct GapSelectorResult {
-  bool gap_selector_trustworthy = false;
-  int lc_direction = 0;  // 0 -- no change, 1-- left change, 2--right change
-  bool lat_decider_ignore = 0;
-  bool lon_decider_ignore = 0;
+  void Clear() {
+    error_info.clear();
+    debug_info.clear();
+    source.clear();
+  }
 };
 
 class StartStopEnable;
@@ -55,16 +63,85 @@ class PlanningContext {
 
   bool &mutable_last_planning_success() { return last_planning_success_; }
 
-  const bool replan_trajectory() const { return replan_trajectory_; }
-
-  bool &mutable_replan_trajectory() { return replan_trajectory_; }
-
-  const LatDecisionInfos &lateral_decisions_for_show() const {
-    return lateral_decisions_for_show_;
+  const LaneChangeDeciderOutput &lane_change_decider_output() const {
+    return lane_change_decider_output_;
   }
 
-  LatDecisionInfos &mutable_lateral_decisions_for_show() {
-    return lateral_decisions_for_show_;
+  LaneChangeDeciderOutput &mutable_lane_change_decider_output() {
+    return lane_change_decider_output_;
+  }
+
+  const GapSelectorDeciderOutput &gap_selector_decider_output() const {
+    return gap_selector_decider_output_;
+  }
+
+  GapSelectorDeciderOutput &mutable_gap_selector_decider_output() {
+    return gap_selector_decider_output_;
+  }
+
+  const VisionLateralBehaviorPlannerOutput &
+  vision_lateral_behavior_planner_output() const {
+    return vision_lateral_behavior_planner_output_;
+  }
+
+  VisionLateralBehaviorPlannerOutput &
+  mutable_vision_lateral_behavior_planner_output() {
+    return vision_lateral_behavior_planner_output_;
+  }
+
+  const VisionLateralMotionPlannerOutput &vision_lateral_motion_planner_output()
+      const {
+    return vision_lateral_motion_planner_output_;
+  }
+
+  VisionLateralMotionPlannerOutput &
+  mutable_vision_lateral_motion_planner_output() {
+    return vision_lateral_motion_planner_output_;
+  }
+
+  const GeneralLateralDeciderOutput &general_lateral_decider_output() const {
+    return general_lateral_decider_output_;
+  }
+
+  GeneralLateralDeciderOutput &mutable_general_lateral_decider_output() {
+    return general_lateral_decider_output_;
+  }
+
+  const VisionLongitudinalBehaviorPlannerOutput &
+  vision_longitudinal_behavior_planner_output() const {
+    return vision_longitudinal_behavior_planner_output_;
+  }
+
+  VisionLongitudinalBehaviorPlannerOutput &
+  mutable_vision_longitudinal_behavior_planner_output() {
+    return vision_longitudinal_behavior_planner_output_;
+  }
+
+  const LongitudinalDeciderOutput &longitudinal_decider_output() const {
+    return longitudinal_decider_output_;
+  }
+
+  LongitudinalDeciderOutput &mutable_longitudinal_decider_output() {
+    return longitudinal_decider_output_;
+  }
+
+  const MotionPlannerOutput &motion_planner_output() const {
+    return motion_planner_output_;
+  }
+
+  MotionPlannerOutput &mutable_motion_planner_output() {
+    return motion_planner_output_;
+  }
+
+  void feed_planning_hmi_info(
+      PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+    planning_hmi_info_ = planning_hmi_info;
+  }
+  const PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_info() const {
+    return *planning_hmi_info_;
+  }
+  PlanningHMI::PlanningHMIOutputInfoStr *mutable_planning_hmi_info() {
+    return planning_hmi_info_;
   }
 
   const common::StartStopInfo &start_stop_result() const {
@@ -86,32 +163,27 @@ class PlanningContext {
 
   PlanningResult &mutable_planning_result() { return planning_result_; }
 
+  PlanningResult &mutable_last_planning_result() {
+    return last_planning_result_;
+  }
+
+  const PlanningResult &last_planning_result() const {
+    return last_planning_result_;
+  }
+
+  const PlanningOutput::PlanningOutput &planning_output() const {
+    return planning_output_;
+  }
+
+  PlanningOutput::PlanningOutput &mutable_planning_output() {
+    return planning_output_;
+  }
+
   const common::LonDecisionInfo &lon_decision_result() const {
     return lon_decision_result_;
   }
   common::LonDecisionInfo &mutable_lon_decision_result() {
     return lon_decision_result_;
-  }
-
-  const FaultDiagnosisInfo &fault_diagnosis_result() const {
-    return fault_diagnosis_result_;
-  }
-  FaultDiagnosisInfo &mutable_fault_diagnosis_result() {
-    return fault_diagnosis_result_;
-  }
-  const LatBehaviorInfo &lat_behavior_info() const {
-    return lat_behavior_info_;
-  }
-
-  LatBehaviorInfo &mutable_lat_behavior_info() { return lat_behavior_info_; }
-
-  const LatBehaviorStateMachineOutput &lat_behavior_state_machine_output()
-      const {
-    return lat_behavior_state_machine_output_;
-  }
-
-  LatBehaviorStateMachineOutput &mutable_lat_behavior_state_machine_output() {
-    return lat_behavior_state_machine_output_;
   }
 
   const LateralBehaviorPlannerOutput &lateral_behavior_planner_output() const {
@@ -122,23 +194,6 @@ class PlanningContext {
     return lateral_behavior_planner_output_;
   }
 
-  const std::shared_ptr<ObjectSelector> &object_selector() const {
-    return object_selector_ptr_;
-  }
-  void set_object_selector(std::shared_ptr<ObjectSelector> object_selector) {
-    object_selector_ptr_ = object_selector;
-  }
-
-  const VisionLongitudinalBehaviorPlannerOutput &
-  vision_longitudinal_behavior_planner_output() const {
-    return vision_longitudinal_behavior_planner_output_;
-  }
-
-  VisionLongitudinalBehaviorPlannerOutput &
-  mutable_vision_longitudinal_behavior_planner_output() {
-    return vision_longitudinal_behavior_planner_output_;
-  }
-
   const LateralOffsetDeciderOutput &lateral_offset_decider_output() const {
     return lateral_offset_decider_output_;
   }
@@ -146,12 +201,6 @@ class PlanningContext {
   LateralOffsetDeciderOutput &mutable_lateral_offset_decider_output() {
     return lateral_offset_decider_output_;
   }
-
-  const LatDeciderOutput &lat_decider_output() const {
-    return lat_decider_output_;
-  }
-
-  LatDeciderOutput &mutable_lat_decider_output() { return lat_decider_output_; }
 
   const std::shared_ptr<AdaptiveCruiseControl>
       &adaptive_cruise_control_function() {
@@ -204,67 +253,13 @@ class PlanningContext {
     traffic_sign_recognition_ = traffic_sign_recognition;
   }
 
-  void set_last_planning_result(
-      const std::shared_ptr<PlanningResult> planning_result) {
-    last_planning_result_ = planning_result;
-  }
-
-  const std::shared_ptr<PlanningResult> &last_planning_result() const {
-    return last_planning_result_;
-  }
-
-  const common::PlanningResult &last_frame_planning_result() const {
-    return last_frame_planning_result_;
-  }
-  common::PlanningResult &mutable_last_frame_planning_result() {
-    return last_frame_planning_result_;
-  }
-
-  const std::vector<std::pair<double, double>> &last_lat_enu_ref_path() const {
-    return last_enu_ref_path_;
-  }
-  std::vector<std::pair<double, double>> &mutable_last_lat_enu_ref_path() {
-    return last_enu_ref_path_;
-  }
-
-  const std::vector<double> &last_enu_ref_theta() const {
-    return last_enu_ref_theta_;
-  }
-  std::vector<double> &mutable_last_enu_ref_theta() {
-    return last_enu_ref_theta_;
-  }
-
-  const VehicleParam &vehicle_param() const { return vehicle_param_; }
-
-  void set_vehicle_param(const VehicleParam &vehicle_param) {
-    vehicle_param_ = vehicle_param;
-  }
-
-  const std::shared_ptr<ScenarioStateMachine> &scenario_state_machine() const {
-    return scenario_state_machine_ptr_;
-  }
-  std::shared_ptr<ScenarioStateMachine> mutable_scenario_state_machine() {
-    return scenario_state_machine_ptr_;
-  }
-  void set_scenario_state_machine(
-      std::shared_ptr<ScenarioStateMachine> scenario_state_machine) {
-    scenario_state_machine_ptr_ = scenario_state_machine;
-  }
-
-  GapSelectorResult &mutable_gap_selector_result() {
-    return gap_selector_result_;
-  };
-  const GapSelectorResult &gap_selector_result() const {
-    return gap_selector_result_;
-  };
-
   const StatusInfo &status_info() { return status_info_; }
 
   StatusInfo &mutable_status_info() { return status_info_; }
 
-  const SpeedLimit &speed_limit() { return speed_limit_; }
+  const common::LaneStatus &lane_status() { return lane_status_; }
 
-  SpeedLimit &mutable_speed_limit() { return speed_limit_; }
+  common::LaneStatus &mutable_lane_status() { return lane_status_; }
 
   const double &v_ref_cruise() const { return v_ref_cruise_; }
 
@@ -272,12 +267,16 @@ class PlanningContext {
     v_ref_cruise_ = v_ref_cruise;
   }
 
-  void clear() {
-    last_planning_success_ = planning_success_;
+  const double &v_limit() const { return v_limit_; }
+
+  void set_v_limit(const double &v_limit) { v_limit_ = v_limit; }
+
+  void Clear() {
     planning_success_ = false;
     planning_completed_ = false;
-    planning_result_.raw_traj_points.clear();
-    planning_result_.traj_points.clear();
+    planning_result_.Clear();
+    planning_output_.Clear();
+    status_info_.Clear();
   }
 
   void reset() {
@@ -285,11 +284,11 @@ class PlanningContext {
     last_planning_success_ = false;
     planning_completed_ = false;
     planning_result_ = PlanningResult();
+    last_planning_result_ = PlanningResult();
+    planning_output_.Clear();
     adaptive_cruise_control_result_ = AdaptiveCruiseControlInfo();
     start_stop_result_.Clear();
     lon_decision_result_.Clear();
-    fault_diagnosis_result_ = FaultDiagnosisInfo();
-    lateral_decisions_for_show_ = LatDecisionInfos();
     status_info_ = StatusInfo();
   }
 
@@ -297,32 +296,47 @@ class PlanningContext {
   bool planning_success_{false};
   bool last_planning_success_{false};
   bool planning_completed_{false};
-  bool replan_trajectory_{false};
   double v_ref_cruise_;
+  double v_limit_;
   PlanningResult planning_result_;
-  common::PlanningResult last_frame_planning_result_;
-  std::shared_ptr<PlanningResult> last_planning_result_;
-  std::vector<std::pair<double, double>> last_enu_ref_path_;
-  std::vector<double> last_enu_ref_theta_;
+  // std::shared_ptr<PlanningResult> last_planning_result_;
+  PlanningResult last_planning_result_;
+  PlanningOutput::PlanningOutput planning_output_;
+  StatusInfo status_info_;
+  LateralOffsetDeciderOutput lateral_offset_decider_output_;
+
+  common::LaneStatus lane_status_;  // TODO: 拆分到独立的Task里面
+  LateralBehaviorPlannerOutput
+      lateral_behavior_planner_output_;  // TODO: 拆分到独立的Task里面
+
+  PlanningHMI::PlanningHMIOutputInfoStr *planning_hmi_info_;
+
+  // NOTE:注意Task成员变量的清空
+  // lane change task pipeline
+  LaneChangeDeciderOutput lane_change_decider_output_;
+  GapSelectorDeciderOutput gap_selector_decider_output_;
+
+  // lateral task pipeline
+  VisionLateralBehaviorPlannerOutput vision_lateral_behavior_planner_output_;
+  VisionLateralMotionPlannerOutput vision_lateral_motion_planner_output_;
+  // used in HppGeneralLateralDecider and GeneralLateralDecider
+  GeneralLateralDeciderOutput general_lateral_decider_output_;
+
+  // longitudinal task pipeline
+  VisionLongitudinalBehaviorPlannerOutput
+      vision_longitudinal_behavior_planner_output_;
+  // used in GeneralLongitudinalDecider and SccLonBehaviorPlanner
+  LongitudinalDeciderOutput longitudinal_decider_output_;
+  // used in LateralMotionPlanner, SccLongitudinalMotionPlanner,
+  // LongitudinalMotionPlanner
+  MotionPlannerOutput motion_planner_output_;  // TODO: 拆分到独立的Task里面
+
+  // TODO(xjli32)：将adas功能的输出暂时保持不变
   AdaptiveCruiseControlInfo adaptive_cruise_control_result_;
   common::StartStopInfo start_stop_result_;
   common::LonDecisionInfo lon_decision_result_;
-  FaultDiagnosisInfo fault_diagnosis_result_;
-  LatDecisionInfos lateral_decisions_for_show_;
-  VehicleParam vehicle_param_;
-  StatusInfo status_info_;
-  SpeedLimit speed_limit_;
-  LatBehaviorInfo lat_behavior_info_;
-  LatBehaviorStateMachineOutput lat_behavior_state_machine_output_;
-  LateralOffsetDeciderOutput lateral_offset_decider_output_;
-  LatDeciderOutput lat_decider_output_;
-  LateralBehaviorPlannerOutput lateral_behavior_planner_output_;
-  VisionLongitudinalBehaviorPlannerOutput
-      vision_longitudinal_behavior_planner_output_;
-  GapSelectorResult gap_selector_result_;
-  std::shared_ptr<ScenarioManager> scenario_manager_ptr_;
-  std::shared_ptr<ObjectSelector> object_selector_ptr_;
-  std::shared_ptr<ScenarioStateMachine> scenario_state_machine_ptr_;
+
+  // TODO(xjli32)：将adas相关的功能从PlanningContext移出去
   std::shared_ptr<MrcCondition> mrc_condition_ptr_;
   std::shared_ptr<StartStopEnable> start_stop_ptr_;
   std::shared_ptr<AdaptiveCruiseControl> adaptive_cruise_control_ptr_;

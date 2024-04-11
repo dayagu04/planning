@@ -5,6 +5,10 @@ from scipy.interpolate import interp1d
 from scipy.misc import derivative
 from lib.load_rotate import *
 
+kMapRange = 500
+only_display_map_in_route = False
+load_center_line_in_poly = False
+
 def load_car_params_patch():
   # car_x = [3.624, 3.624, -0.947, -0.947, 3.624]
   # car_y = [1.89*0.5, -1.89*0.5, -1.89*0.5, 1.89*0.5, 1.89*0.5]
@@ -40,11 +44,13 @@ def one_echo_text_local(old_x, old_y, radian, distance):
     new_x = old_x + distance * math.cos(radian)
     new_y = old_y + distance * math.sin(radian)
     return new_x, new_y
-def ehr_load_center_lane_lines(lanes,x,y,yaw,Max_line_size):
+def ehr_load_center_lane_lines(lanes,x,y,yaw,Max_line_size,lane_id_in_route_set):
   ehr_line_info_list = []
   for i in range(Max_line_size):
     ehr_lane_info = {'ehr_line_x_vec':[], 'ehr_line_y_vec':[],'ehr_relative_id':[], 'ehr_type':[]}
     if i < len(lanes):
+      if only_display_map_in_route and lanes[i].lane_id not in lane_id_in_route_set:
+        continue
       lane = lanes[i]
       line_x = []
       line_y = []
@@ -52,8 +58,8 @@ def ehr_load_center_lane_lines(lanes,x,y,yaw,Max_line_size):
       cur_line_last_point = lane.points_on_central_line[-1]
       first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
       last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
-      # if ((first_point_to_cur_dis > 1000) & (last_point_to_cur_dis>1000)):
-      #   continue
+      if first_point_to_cur_dis > kMapRange and last_point_to_cur_dis > kMapRange:
+        continue
       for point in lane.points_on_central_line:
         ehr_x = point.x
         ehr_y = point.y
@@ -68,28 +74,29 @@ def ehr_load_center_lane_lines(lanes,x,y,yaw,Max_line_size):
       ehr_lane_info['ehr_type'] = 0
       ehr_line_info_list.append(ehr_lane_info)
     else:
-      line_x, line_y = gen_line(0,0,0,0,0,0)
-      ehr_lane_info['ehr_line_x_vec'] = line_x
-      ehr_lane_info['ehr_line_y_vec'] = line_y
-      ehr_lane_info['ehr_relative_id'] = 1000
-      ehr_lane_info['ehr_type'] = 0
+      ehr_lane_info['ehr_line_x_vec'] = []
+      ehr_lane_info['ehr_line_y_vec'] = []
+      ehr_lane_info['ehr_relative_id'] = []
+      ehr_lane_info['ehr_type'] = []
       ehr_line_info_list.append(ehr_lane_info)
   return ehr_line_info_list
 
-def ehr_load_road_boundary_lines(road_boundaries,x,y,yaw,Road_boundary_max_line_size):
+def ehr_load_road_boundary_lines(road_boundaries,x,y,yaw,Road_boundary_max_line_size,road_boundary_id_in_route_set):
   ehr_road_boundary_info_list = []
   for i in range(Road_boundary_max_line_size):
     ehr_road_boundary_info = {'ehr_road_boundary_x_vec':[], 'ehr_road_boundary_y_vec':[],'ehr_road_boundary_relative_id':[], 'ehr_type':[]}
     if i < len(road_boundaries):
+      if only_display_map_in_route and road_boundaries[i].boundary_id not in road_boundary_id_in_route_set:
+        continue
       road_boundary = road_boundaries[i]
       line_x = []
       line_y = []
-      # cur_line_first_point = road_boundary.points_on_central_line[0]
-      # cur_line_last_point = road_boundary.points_on_central_line[-1]
-      # first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
-      # last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
-      # # if ((first_point_to_cur_dis > 1000) & (last_point_to_cur_dis>1000)):
-      # #   continue
+      cur_line_first_point = road_boundary.boundary_attributes[0].points[0]
+      cur_line_last_point = road_boundary.boundary_attributes[-1].points[-1]
+      first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
+      last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
+      if first_point_to_cur_dis > kMapRange and last_point_to_cur_dis > kMapRange:
+        continue
       for doundary_attribute in road_boundary.boundary_attributes:
         for  point in doundary_attribute.points:
           ehr_x = point.x
@@ -105,23 +112,30 @@ def ehr_load_road_boundary_lines(road_boundaries,x,y,yaw,Road_boundary_max_line_
       ehr_road_boundary_info['ehr_type'] = 0
       ehr_road_boundary_info_list.append(ehr_road_boundary_info)
     else:
-      line_x, line_y = gen_line(0,0,0,0,0,0)
-      ehr_road_boundary_info['ehr_road_boundary_x_vec'] = line_x
-      ehr_road_boundary_info['ehr_road_boundary_y_vec'] = line_y
-      ehr_road_boundary_info['ehr_road_boundary_relative_id'] = 1000
-      ehr_road_boundary_info['ehr_type'] = 0
+      ehr_road_boundary_info['ehr_road_boundary_x_vec'] = []
+      ehr_road_boundary_info['ehr_road_boundary_y_vec'] = []
+      ehr_road_boundary_info['ehr_road_boundary_relative_id'] = []
+      ehr_road_boundary_info['ehr_type'] = []
       ehr_road_boundary_info_list.append(ehr_road_boundary_info)
   return ehr_road_boundary_info_list
 
-def ehr_load_lane_boundary_lines(lane_boundaries,x,y,yaw,Lane_boundary_max_line_size):
+def ehr_load_lane_boundary_lines(lane_boundaries,x,y,yaw,Lane_boundary_max_line_size, lane_boundary_id_in_route_set):
   ehr_lane_boundary_info_list = []
 
   for i in range(Lane_boundary_max_line_size):
     ehr_lane_boundary_info = {'ehr_lane_boundary_x_vec':[], 'ehr_lane_boundary_y_vec':[],'ehr_lane_boundary_relative_id':[], 'ehr_type':[]}
     if i < len(lane_boundaries):
+      if only_display_map_in_route and lane_boundaries[i].boundary_id not in lane_boundary_id_in_route_set:
+        continue
       lane_boundary = lane_boundaries[i]
       line_x = []
       line_y = []
+      cur_line_first_point = lane_boundary.boundary_attributes[0].points[0]
+      cur_line_last_point = lane_boundary.boundary_attributes[-1].points[-1]
+      first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
+      last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
+      if first_point_to_cur_dis > kMapRange and last_point_to_cur_dis > kMapRange:
+        continue
       for boundary_attribute in lane_boundary.boundary_attributes:
         for  point in boundary_attribute.points:
           ehr_x = point.x
@@ -137,11 +151,10 @@ def ehr_load_lane_boundary_lines(lane_boundaries,x,y,yaw,Lane_boundary_max_line_
       ehr_lane_boundary_info['ehr_type'] = 0
       ehr_lane_boundary_info_list.append(ehr_lane_boundary_info)
     else:
-      line_x, line_y = gen_line(0,0,0,0,0,0)
-      ehr_lane_boundary_info['ehr_lane_boundary_x_vec'] = line_x
-      ehr_lane_boundary_info['ehr_lane_boundary_y_vec'] = line_y
-      ehr_lane_boundary_info['ehr_lane_boundary_relative_id'] = 1000
-      ehr_lane_boundary_info['ehr_type'] = 0
+      ehr_lane_boundary_info['ehr_lane_boundary_x_vec'] = []
+      ehr_lane_boundary_info['ehr_lane_boundary_y_vec'] = []
+      ehr_lane_boundary_info['ehr_lane_boundary_relative_id'] = []
+      ehr_lane_boundary_info['ehr_type'] = []
       ehr_lane_boundary_info_list.append(ehr_lane_boundary_info)
   return ehr_lane_boundary_info_list
 
@@ -1270,6 +1283,15 @@ def load_lat_common(plan_debug, planning_json):
   try:
     data_dict2['final_y_rel_id'] = planning_json["final_y_rel_id"]
     data_dict2['final_y_rel'] = planning_json["final_y_rel"]
+  except:
+    pass
+  
+  try:
+    data_dict2['lateral_offset'] = planning_json["lateral_offset"] 
+  except:
+    pass
+  try:
+    data_dict2['avoid_way'] = planning_json["avoid_way"] 
   except:
     pass
   return data_dict1, data_dict2

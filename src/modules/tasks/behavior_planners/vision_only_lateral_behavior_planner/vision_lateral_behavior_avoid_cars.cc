@@ -1,7 +1,9 @@
-#include "behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
+#include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
+
 #include "ifly_time.h"
+#include "planning_context.h"
 
 namespace planning {
 
@@ -15,16 +17,16 @@ double VisionLateralBehaviorPlanner::update_antsides_strict() {
   double ego_car_width = 2.2;
   double lat_safety_buffer = 0.2;
 
-  auto &virtual_lane_manager = frame_->mutable_session()
-                                   ->mutable_environmental_model()
-                                   ->get_virtual_lane_manager();
-  auto &lateral_obstacle = frame_->mutable_session()
-                               ->mutable_environmental_model()
-                               ->get_lateral_obstacle();
-  auto &ego_state = frame_->mutable_session()
-                        ->mutable_environmental_model()
-                        ->get_ego_state_manager();
-  auto &frenet_ego_state = reference_path_ptr_->get_frenet_ego_state();
+  auto &virtual_lane_manager =
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
+  auto &lateral_obstacle =
+      session_->mutable_environmental_model()->get_lateral_obstacle();
+  auto &ego_state =
+      session_->mutable_environmental_model()->get_ego_state_manager();
+  const auto &reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
 
   double v_ego = ego_state->ego_v();
   auto &front_tracks_copy = lateral_obstacle->front_tracks_copy();
@@ -186,9 +188,8 @@ double VisionLateralBehaviorPlanner::update_antsides_strict() {
 }
 
 bool VisionLateralBehaviorPlanner::update_lfrontavds_info(bool no_near_car) {
-  auto &lateral_obstacle = frame_->mutable_session()
-                               ->mutable_environmental_model()
-                               ->get_lateral_obstacle();
+  auto &lateral_obstacle =
+      session_->mutable_environmental_model()->get_lateral_obstacle();
 
   if (no_near_car == false ||
       lateral_obstacle->front_tracks_copy().size() == 0) {
@@ -218,9 +219,8 @@ bool VisionLateralBehaviorPlanner::update_lfrontavds_info(bool no_near_car) {
 }
 
 bool VisionLateralBehaviorPlanner::update_rfrontavds_info(bool no_near_car) {
-  auto &lateral_obstacle = frame_->mutable_session()
-                               ->mutable_environmental_model()
-                               ->get_lateral_obstacle();
+  auto &lateral_obstacle =
+      session_->mutable_environmental_model()->get_lateral_obstacle();
 
   if (no_near_car == false ||
       lateral_obstacle->front_tracks_copy().size() == 0) {
@@ -254,9 +254,8 @@ bool VisionLateralBehaviorPlanner::update_lsideavds_info(bool no_near_car) {
     return no_near_car;
   }
 
-  auto &lateral_obstacle = frame_->mutable_session()
-                               ->mutable_environmental_model()
-                               ->get_lateral_obstacle();
+  auto &lateral_obstacle =
+      session_->mutable_environmental_model()->get_lateral_obstacle();
 
   for (auto &tr : lateral_obstacle->side_tracks_l()) {
     if (tr.d_rel > -7 &&
@@ -285,9 +284,8 @@ bool VisionLateralBehaviorPlanner::update_rsideavds_info(bool no_near_car) {
     return no_near_car;
   }
 
-  auto &lateral_obstacle = frame_->mutable_session()
-                               ->mutable_environmental_model()
-                               ->get_lateral_obstacle();
+  auto &lateral_obstacle =
+      session_->mutable_environmental_model()->get_lateral_obstacle();
 
   for (auto &tr : lateral_obstacle->side_tracks_r()) {
     if (tr.d_rel > -7 &&
@@ -312,8 +310,7 @@ bool VisionLateralBehaviorPlanner::update_rsideavds_info(bool no_near_car) {
 }
 
 void VisionLateralBehaviorPlanner::update_avoid_cars(
-    const CoarsePlanningInfo &coarse_planning_info,
-    LateralAvdCarsInfo &lateral_avd_cars_info) {
+    const CoarsePlanningInfo &coarse_planning_info) {
   int enter0 = 0;
   int enter1 = 0;
   int enter2 = 0;
@@ -328,22 +325,22 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
   t_avd_car_ = 3.0;
   is_ncar_ = false;
 
-  auto &virtual_lane_manager = frame_->mutable_session()
-                                   ->mutable_environmental_model()
-                                   ->get_virtual_lane_manager();
-  auto &lateral_obstacle = frame_->mutable_session()
-                               ->mutable_environmental_model()
-                               ->get_lateral_obstacle();
-  auto &ego_state = frame_->mutable_session()
-                        ->mutable_environmental_model()
-                        ->get_ego_state_manager();
-  auto &frenet_ego_state = reference_path_ptr_->get_frenet_ego_state();
-  auto &lat_behavior_info = frame_->mutable_session()
-                                ->mutable_planning_context()
-                                ->mutable_lat_behavior_info();
+  auto &virtual_lane_manager =
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
+  auto &lateral_obstacle =
+      session_->mutable_environmental_model()->get_lateral_obstacle();
+  auto &ego_state =
+      session_->mutable_environmental_model()->get_ego_state_manager();
+  const auto &reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
+  auto &vision_lateral_behavior_planner_output =
+      session_->mutable_planning_context()
+          ->mutable_vision_lateral_behavior_planner_output();
 
   // const auto &lon_output =
-  //     frame_->mutable_session()->mutable_planning_context()->vision_only_longitudinal_motion_planner_output();
+  //     session_->mutable_planning_context()->vision_only_longitudinal_motion_planner_output();
 
   int state = coarse_planning_info.target_state;
 
@@ -365,13 +362,13 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
   for (auto &tr : lateral_obstacle->side_tracks()) {
     front_side_tracks.emplace_back(tr);
   }
-  avd_car_past_ = lat_behavior_info.avd_car_past;
-  flag_avd_ = lat_behavior_info.flag_avd;
-  final_y_rel_ = lat_behavior_info.final_y_rel;
-  ncar_change_ = lat_behavior_info.ncar_change;
-  avd_back_cnt_ = lat_behavior_info.avd_back_cnt;
-  avd_leadone_ = lat_behavior_info.avd_leadone;
-  pre_leadone_id_ = lat_behavior_info.pre_leadone_id;
+  avd_car_past_ = vision_lateral_behavior_planner_output.avd_car_past;
+  flag_avd_ = vision_lateral_behavior_planner_output.flag_avd;
+  final_y_rel_ = vision_lateral_behavior_planner_output.final_y_rel;
+  ncar_change_ = vision_lateral_behavior_planner_output.ncar_change;
+  avd_back_cnt_ = vision_lateral_behavior_planner_output.avd_back_cnt;
+  avd_leadone_ = vision_lateral_behavior_planner_output.avd_leadone;
+  pre_leadone_id_ = vision_lateral_behavior_planner_output.pre_leadone_id;
 
   if (front_side_tracks.size() > 0) {
     // if (lon_output.cutin_msg.cutin_dir == "left") {
@@ -1510,14 +1507,14 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
   for (auto avd_car : avd_car_past_) {
     if (avd_car.size() != 0) LOG_DEBUG("avd_car id :%d ", (int)avd_car[0]);
   }
-  lateral_avd_cars_info.avd_car_past = avd_car_past_;
-  lat_behavior_info.flag_avd = flag_avd_;
-  lat_behavior_info.avd_car_past = avd_car_past_;
-  lat_behavior_info.final_y_rel = final_y_rel_;
-  lat_behavior_info.ncar_change = ncar_change_;
-  lat_behavior_info.avd_back_cnt = avd_back_cnt_;
-  lat_behavior_info.avd_leadone = avd_leadone_;
-  lat_behavior_info.pre_leadone_id = pre_leadone_id_;
+  vision_lateral_behavior_planner_output.avd_car_past = avd_car_past_;
+  vision_lateral_behavior_planner_output.flag_avd = flag_avd_;
+  vision_lateral_behavior_planner_output.avd_car_past = avd_car_past_;
+  vision_lateral_behavior_planner_output.final_y_rel = final_y_rel_;
+  vision_lateral_behavior_planner_output.ncar_change = ncar_change_;
+  vision_lateral_behavior_planner_output.avd_back_cnt = avd_back_cnt_;
+  vision_lateral_behavior_planner_output.avd_leadone = avd_leadone_;
+  vision_lateral_behavior_planner_output.pre_leadone_id = pre_leadone_id_;
 }
 
 }  // namespace planning

@@ -6,10 +6,6 @@
 #include "cyber/scheduler/scheduler.h"
 #include "gflags/gflags.h"
 
-// This file compile modules register map and constructor and link to .so
-// When .so loads, static vairiables will init and module constructors will
-// register.
-#include "modules_register.h"
 #include "proto_to_uncompressed.hpp"
 
 namespace planning {
@@ -135,6 +131,15 @@ bool PlanningComponent::Init() {
                      &uss_wave_info_msg) {
             planning_adapter_->FeedUssWaveInfo(uss_wave_info_msg);
           });
+
+  auto uss_percept_info_reader_ =
+      planning_node_->CreateReader<UssPerceptInfo::UssPerceptInfo>(
+          "/iflytek/UssPerceptInfo",
+          [this](const std::shared_ptr<UssPerceptInfo::UssPerceptInfo>
+                     &uss_percept_info_msg) {
+            planning_adapter_->FeedUssPerceptInfo(uss_percept_info_msg);
+          });
+
   auto map_reader_ = planning_node_->CreateReader<Map::StaticMap>(
       "/iflytek/ehr/static_map",
       [this](const std::shared_ptr<Map::StaticMap> &map_msg) {

@@ -56,7 +56,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/data_cold/abu_zone/autoparse/jac_s811_35kw2/trigger/20240305/20240305-09-47-55/data_collection_JAC_S811_35KW2_EVENT_FILTER_2024-03-05-09-47-55.record"
+                "/data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240408/20240408-10-13-43/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-04-08-10-13-43.record"
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",

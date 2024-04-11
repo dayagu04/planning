@@ -5,9 +5,12 @@ from lib.load_lat_plan import *
 sys.path.append('../..')
 sys.path.append('../../../')
 
+# +
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/S811-1/2014-0327-night/avoid_3.00000"
+bag_path = "/data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240408/20240408-10-53-33/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-04-08-10-53-33.record"
+
 frame_dt = 0.1 # sec
+# -
 
 # plot global figure?
 global_fig_plot = False

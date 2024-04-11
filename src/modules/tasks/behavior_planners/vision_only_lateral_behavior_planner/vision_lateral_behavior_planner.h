@@ -11,8 +11,8 @@
 #include "config/basic_type.h"
 #include "lateral_obstacle.h"  // TODO(Rui):include object_selector.h
 #include "reference_path.h"
-#include "task.h"
 #include "task_basic_types.h"
+#include "tasks/task.h"
 
 namespace planning {
 
@@ -20,23 +20,21 @@ class VisionLateralBehaviorPlanner : public Task {
  public:
   explicit VisionLateralBehaviorPlanner(
       const EgoPlanningConfigBuilder *config_builder,
-      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+      framework::Session *session);
 
   virtual ~VisionLateralBehaviorPlanner() = default;
 
-  bool Execute(planning::framework::Frame *frame) override;
+  bool Execute() override;
 
  private:
-  bool Process(const CoarsePlanningInfo &coarse_planning_info,
-               LateralAvdCarsInfo &lateral_avd_cars_info);
+  bool Process();
 
   double update_antsides_strict();
   bool update_lfrontavds_info(bool no_near_car);
   bool update_rfrontavds_info(bool no_near_car);
   bool update_lsideavds_info(bool no_near_car);
   bool update_rsideavds_info(bool no_near_car);
-  void update_avoid_cars(const CoarsePlanningInfo &coarse_planning_info,
-                         LateralAvdCarsInfo &lateral_avd_cars_info);
+  void update_avoid_cars(const CoarsePlanningInfo &coarse_planning_info);
 
   void update_lside_svsp_info();
   void update_rside_svsp_info();
@@ -45,7 +43,6 @@ class VisionLateralBehaviorPlanner : public Task {
 
  private:
   VisionLateralBehaviorPlannerConfig config_;
-  planning::framework::Frame *frame_;
   bool no_sp_car_ = true;
 
   bool is_ncar_ = false;

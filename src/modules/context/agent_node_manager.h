@@ -55,13 +55,13 @@ class AgentNodeManager {
     return map_gs_care_obstacles_;
   };
 
-  const std::unordered_map<int64_t, ObstaclePredicatedInfo>
-      &agent_node_origin_lane_map() const {
+  const std::unordered_map<int64_t, ObstaclePredicatedInfo> &
+  agent_node_origin_lane_map() const {
     return agent_node_origin_lane_map_;
   };
 
-  const std::unordered_map<int64_t, ObstaclePredicatedInfo>
-      &agent_node_target_lane_map() const {
+  const std::unordered_map<int64_t, ObstaclePredicatedInfo> &
+  agent_node_target_lane_map() const {
     return agent_node_target_lane_map_;
   };
 
@@ -88,10 +88,17 @@ class AgentNodeManager {
       ObstaclePredicatedInfo &obstacle_predicated_info, const Obstacle &obj,
       const int obj_in_which_lane = 0);  // 0 --origin lane; 1-- target lane
 
+  bool InferObjTrajByKDPath(ObstaclePredicatedInfo &obstacle_predicated_info,
+                            const Obstacle &obj, const int obj_in_target_lane);
+
  public:
   bool HandleAllObjPredInfo();
 
   bool HandleAllObjNormalInfo();
+
+  bool InferAllObjPredInfoByKDPath();
+  bool InferAllObjNormalInfoByKDPath();
+
   // -------------------new code -----------------------
   int FindNearestIndex(const std::vector<double> &inputVector,
                        const int &monotonic_status, double target);

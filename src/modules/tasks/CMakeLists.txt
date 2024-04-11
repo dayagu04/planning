@@ -9,7 +9,7 @@ add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
   modules_common
-  modules_scc_function
+  modules_adas_function
   ilqr_lib
 )
 

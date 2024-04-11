@@ -2,9 +2,10 @@
 #include <iomanip>
 #include <vector>
 #include "debug_info_log.h"
+#include "environmental_model.h"
 #include "lateral_behavior_planner.pb.h"
 #include "lateral_motion_planner.pb.h"
-#include "planning_output_context.h"
+#include "planning_context.h"
 namespace planning {
 
 LateralOffsetCalculator::LateralOffsetCalculator(
@@ -14,51 +15,41 @@ LateralOffsetCalculator::LateralOffsetCalculator(
 }
 
 bool LateralOffsetCalculator::Process(
-    planning::framework::Frame *frame,
-    std::shared_ptr<TaskPipelineContext> &pipeline_context,
+    framework::Session *session,
     const std::array<std::vector<double>, 2> &avd_car_past,
     const std::array<std::vector<double>, 2> &avd_sp_car_past,
     double dist_rblane, bool flag_avd) {
   // NTRACE_CALL(7);
   auto current_time = IflyTime::Now_ms();
-  frame_ = frame;
+  session_ = session;
 
-  // if (Task::Execute(frame) == false) {
-  //   return false;
-  // }
+  const auto &planning_context = session_->planning_context();
 
-  // auto config_builder =
-  //     frame->mutable_session()->mutable_planning_context()->config_builder(
-  //         planning::common::SceneType::HIGHWAY);
-
-  const auto &session = frame_->session();
-  auto &planning_context = session->planning_context();
-  // auto &ego_prediction_result = pipeline_context_->planning_result;
-  // auto &ego_prediction_info = pipeline_context_->planning_info;
-  auto &coarse_planning_info = pipeline_context->coarse_planning_info;
+  const auto &coarse_planning_info =
+      planning_context.lane_change_decider_output().coarse_planning_info;
   bool b_success = false;
 
   // obtain the session information
-  const auto &state_machine_output =
-      planning_context.lat_behavior_state_machine_output();
-  const auto &lat_behavior_info = planning_context.lat_behavior_info();
-  const auto &status = state_machine_output.curr_state;
-  const auto &accident_ahead = state_machine_output.accident_ahead;
-  const auto &should_premove = state_machine_output.should_premove;
-  const auto &should_suspend = state_machine_output.should_suspend;
+  const auto &lane_change_decider_output =
+      planning_context.lane_change_decider_output();
+  const auto &status = lane_change_decider_output.curr_state;
+  const auto &accident_ahead = lane_change_decider_output.accident_ahead;
+  const auto &should_premove = lane_change_decider_output.should_premove;
+  const auto &should_suspend = lane_change_decider_output.should_suspend;
 
   // init info
-  flane_ = frame_->session()
-               ->environmental_model()
+  flane_ = session_->environmental_model()
                .get_virtual_lane_manager()
                ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
-  auto reference_path_ptr = pipeline_context->reference_path_ptr;
+  const auto &reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
   ego_frenet_state_ = reference_path_ptr->get_frenet_ego_state();
   ego_cart_state_manager_ =
-      frame_->session()->environmental_model().get_ego_state_manager();
+      session_->environmental_model().get_ego_state_manager();
 
   virtual_lane_manager_ =
-      frame_->session()->environmental_model().get_virtual_lane_manager();
+      session_->environmental_model().get_virtual_lane_manager();
 
   left_lane_boundary_poly_.clear();
   right_lane_boundary_poly_.clear();
@@ -228,7 +219,7 @@ bool LateralOffsetCalculator::update_basic_path(const int &status) {
     if ((!l_reject && !r_reject) || reject_reason_ == BIAS_L ||
         reject_reason_ == BIAS_R) {
       if (lane_width < min_width) {
-        if (frame_->session()->environmental_model().is_on_highway()) {
+        if (session_->environmental_model().is_on_highway()) {
           double FRONT_DISTANCE_CHECK = 30.0;
           double REAR_DISTANCE_CHECK = -15.0;
           double MIN_WIDTH = 2.2;
@@ -642,9 +633,7 @@ bool LateralOffsetCalculator::update_avoidance_path(
                         virtual_lane_manager_->get_right_lane()
                                 ->get_lane_type() ==
                             MSD_LANE_TYPE_NON_MOTOR)) &&
-                      !frame_->session()
-                           ->environmental_model()
-                           .is_on_highway() &&
+                      !session_->environmental_model().is_on_highway() &&
                       ((avd_car_past[0][3] < 15 && v_ego < 5) ||
                        (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
                        avd_car_past[0][3] < 1)) {
@@ -886,9 +875,7 @@ bool LateralOffsetCalculator::update_avoidance_path(
                        virtual_lane_manager_->get_right_lane() != nullptr &&
                        virtual_lane_manager_->get_right_lane()
                                ->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR)) {
-                    if (!frame_->session()
-                             ->environmental_model()
-                             .is_on_highway() &&
+                    if (!session_->environmental_model().is_on_highway() &&
                         // map_info.dist_to_intsect() > 80 &&  // hack
                         // map_info.dist_to_intsect() - avd_car_past[0][3] > 80
                         // &&
@@ -1133,9 +1120,7 @@ bool LateralOffsetCalculator::update_avoidance_path(
 
                 sb_lane_ = true;
               }
-            } else if (!frame_->session()
-                            ->environmental_model()
-                            .is_on_highway() &&
+            } else if (!session_->environmental_model().is_on_highway() &&
                        abs(avd_car_past[0][4]) < 0.45) {
               if ((avd_car_past[0][3] < 15 && v_ego < 5) ||
                   (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
@@ -1250,7 +1235,7 @@ bool LateralOffsetCalculator::update_avoidance_path(
                     virtual_lane_manager_->get_right_lane() != nullptr &&
                     virtual_lane_manager_->get_right_lane()->get_lane_type() ==
                         MSD_LANE_TYPE_NON_MOTOR))) {
-                if (((!frame_->session()->environmental_model().is_on_highway()
+                if (((!session_->environmental_model().is_on_highway()
                       //    &&  // hack
                       //  map_info.dist_to_intsect() > 80 &&
                       //  map_info.dist_to_intsect() - avd_car_past[0][3] > 80
@@ -1308,9 +1293,7 @@ bool LateralOffsetCalculator::update_avoidance_path(
                       virtual_lane_manager_->get_right_lane() != nullptr &&
                       virtual_lane_manager_->get_right_lane()
                               ->get_lane_type() == MSD_LANE_TYPE_NON_MOTOR))) {
-                  if (!frame_->session()
-                           ->environmental_model()
-                           .is_on_highway() &&
+                  if (!session_->environmental_model().is_on_highway() &&
                       // map_info.dist_to_intsect() > 80 &&  //hack
                       // map_info.dist_to_intsect() - avd_car_past[0][3] > 80 &&
                       ((avd_car_past[0][3] < 15 && v_ego < 5) ||
@@ -1589,9 +1572,7 @@ bool LateralOffsetCalculator::update_avoidance_path(
                     avd_car_past[0][5] -
                     (avd_car_past[0][5] + 1.8 + avd_car_past[0][9]) / 2;
                 lat_offset = std::max(lat_offset, -0.5 * lane_width + 0.9);
-              } else if (!frame_->session()
-                              ->environmental_model()
-                              .is_on_highway() &&
+              } else if (!session_->environmental_model().is_on_highway() &&
                          abs(avd_car_past[0][4]) < 0.45) {
                 if ((avd_car_past[0][3] < 15 && v_ego < 5) ||
                     (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
@@ -1836,7 +1817,7 @@ bool LateralOffsetCalculator::update_avoidance_path(
                          virtual_lane_manager_->get_right_lane()
                                  ->get_lane_type() ==
                              MSD_LANE_TYPE_NON_MOTOR))) {
-              if (((!frame_->session()->environmental_model().is_on_highway()
+              if (((!session_->environmental_model().is_on_highway()
                     //  &&map_info.dist_to_intsect() > 80 &&
                     // map_info.dist_to_intsect() - avd_car_past[0][3] > 80
                     ) ||
@@ -2411,8 +2392,7 @@ bool LateralOffsetCalculator::update_avoidance_path(
   one_nudge_left_car_ = one_nudge_left_car;
   one_nudge_right_car_ = one_nudge_right_car;
   lane_width_ = lane_width;
-  auto ad_info = frame_->mutable_session()
-                     ->mutable_planning_output_context()
+  auto ad_info = session_->mutable_planning_context()
                      ->mutable_planning_hmi_info()
                      ->mutable_ad_info();
   ad_info->set_avoid_status(::PlanningHMI::AvoidObstacle::NO_HIDING);
@@ -2452,45 +2432,33 @@ bool LateralOffsetCalculator::update_planner_output() {
   //   auto &map_info = world_model_->get_map_info();
   //   auto &map_info_mgr =
   // world_model_->get_map_info_manager();
-  auto &lateral_output = frame_->mutable_session()
-                             ->mutable_planning_context()
+  auto &lateral_output = session_->mutable_planning_context()
                              ->mutable_lateral_behavior_planner_output();
   // lateral_output = context_->mutable_lateral_behavior_planner_output();
-  auto &state_machine_output =
-      frame_->mutable_session()
-          ->mutable_planning_context()
-          ->mutable_lat_behavior_state_machine_output();
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
 
-  //   //   auto &flane = virtual_lane_mgr_->get_fix_lane();
-  //   //
-  //   //   auto &f_refline =
-  //   //       virtual_lane_mgr_
-  //   //           ->get_fix_refline();  // fix lane 和fix
-  //   refline 的区别是？
-  //   //   auto &lateral_obstacle =
-  //   world_model_->mutable_lateral_obstacle();
-
-  int scenario = state_machine_output.scenario;
-  int state = state_machine_output.curr_state;
-  auto &state_name = state_machine_output.state_name;
-  int turn_light = state_machine_output.turn_light;
-  int map_turn_light = state_machine_output.map_turn_light;  //
+  int scenario = lane_change_decider_output.scenario;
+  int state = lane_change_decider_output.curr_state;
+  auto &state_name = lane_change_decider_output.state_name;
+  int turn_light = lane_change_decider_output.turn_light;
+  int map_turn_light = lane_change_decider_output.map_turn_light;  //
   //   取值范围，对应的含义？
-  bool accident_ahead = state_machine_output.accident_ahead;
+  bool accident_ahead = lane_change_decider_output.accident_ahead;
 
-  bool accident_back = state_machine_output.accident_back;
+  bool accident_back = lane_change_decider_output.accident_back;
 
-  bool close_to_accident = state_machine_output.close_to_accident;
+  bool close_to_accident = lane_change_decider_output.close_to_accident;
 
-  bool lc_pause = state_machine_output.lc_pause;
-  int lc_pause_id = state_machine_output.lc_pause_id;  // id
+  bool lc_pause = lane_change_decider_output.lc_pause;
+  int lc_pause_id = lane_change_decider_output.lc_pause_id;  // id
   //   //                          //
   //   //
   //   是指车辆id还是路线id，以及id命名顺序是从左到右还是从右到左？
-  double tr_pause_l = state_machine_output.tr_pause_l;  //
+  double tr_pause_l = lane_change_decider_output.tr_pause_l;  //
   //   为啥是double 类型？
   //   //       表示的含义是？
-  double tr_pause_s = state_machine_output.tr_pause_s;
+  double tr_pause_s = lane_change_decider_output.tr_pause_s;
 
   bool isRedLightStop = false;  // hack!
 
@@ -2502,20 +2470,19 @@ bool LateralOffsetCalculator::update_planner_output() {
   lateral_output.v_limit = 40.0 / 3.6;
   lateral_output.isRedLightStop = isRedLightStop;
 
-  lateral_output.disable_l = state_machine_output.disable_l;
-  lateral_output.disable_r = state_machine_output.disable_r;
-  lateral_output.enable_l = state_machine_output.enable_l;  // disabled
+  lateral_output.disable_l = lane_change_decider_output.disable_l;
+  lateral_output.disable_r = lane_change_decider_output.disable_r;
+  lateral_output.enable_l = lane_change_decider_output.enable_l;  // disabled
   //       ,enable的区别是啥？代表啥意思
-  lateral_output.enable_r = state_machine_output.enable_r;
-  lateral_output.enable_id = state_machine_output.enable_id;  //
+  lateral_output.enable_r = lane_change_decider_output.enable_r;
+  lateral_output.enable_id = lane_change_decider_output.enable_id;  //
   //   enable车的id？ 车道线的id?
 
   lateral_output.lat_offset = lat_offset_;
 
   lateral_output.lane_borrow = false;        // attention!! hack!
   lateral_output.lane_borrow_range = -1000;  // attention!! hack!
-  TrackedObject *lead_one = frame_->mutable_session()
-                                ->mutable_environmental_model()
+  TrackedObject *lead_one = session_->mutable_environmental_model()
                                 ->get_lateral_obstacle()
                                 ->leadone();
 
@@ -2530,7 +2497,7 @@ bool LateralOffsetCalculator::update_planner_output() {
     lateral_output.which_lane = "current_line";
   }
 
-  int lb_request = state_machine_output.lb_request;
+  int lb_request = lane_change_decider_output.lb_request;
 
   if (lb_request == NO_CHANGE) {
     lateral_output.lb_request = "none";
@@ -2541,7 +2508,7 @@ bool LateralOffsetCalculator::update_planner_output() {
   }
 
   lateral_output.lb_width = -10.;  //  attention!! hack!
-  int lc_request = state_machine_output.lc_request;
+  int lc_request = lane_change_decider_output.lc_request;
 
   if (lc_request == NO_CHANGE) {
     lateral_output.lc_request = "none";
@@ -2690,23 +2657,22 @@ bool LateralOffsetCalculator::update_planner_output() {
   lateral_output.lc_pause = lc_pause;
   lateral_output.tr_pause_l = tr_pause_l;
   lateral_output.tr_pause_s = tr_pause_s;
-  lateral_output.must_change_lane = state_machine_output.must_change_lane;
+  lateral_output.must_change_lane = lane_change_decider_output.must_change_lane;
   lateral_output.close_to_accident = close_to_accident;
   lateral_output.angle_steers_limit = 0.0;  // attention!
-  lateral_output.left_faster = state_machine_output.left_is_faster;
+  lateral_output.left_faster = lane_change_decider_output.left_is_faster;
 
-  lateral_output.right_faster = state_machine_output.right_is_faster;
-  lateral_output.premove =
-      (state_machine_output.premovel || state_machine_output.premover);
-  lateral_output.premove_dist = state_machine_output.premove_dist;
+  lateral_output.right_faster = lane_change_decider_output.right_is_faster;
+  lateral_output.premove = (lane_change_decider_output.premovel ||
+                            lane_change_decider_output.premover);
+  lateral_output.premove_dist = lane_change_decider_output.premove_dist;
   lateral_output.isFasterStaticAvd =
       (left_direct_exist && lateral_output.left_faster) ||
       (right_direct_exist && lateral_output.right_faster) ||
       (curr_direct_has_right && !curr_direct_has_straight) ||
       (is_right_turn && left_direct_has_straight &&
        lateral_output.left_faster);  // attention!
-  lateral_output.isOnHighway =
-      frame_->session()->environmental_model().is_on_highway();
+  lateral_output.isOnHighway = session_->environmental_model().is_on_highway();
 
   lateral_output.c_poly.assign(c_poly_.begin(), c_poly_.end());
 
@@ -2739,7 +2705,7 @@ bool LateralOffsetCalculator::update_planner_output() {
     lateral_output.turn_light = "None";
   }
 
-  auto request_source = state_machine_output.lc_request_source;
+  auto request_source = lane_change_decider_output.lc_request_source;
   lateral_output.act_request_source = "none";
   if (request_source == INT_REQUEST) {
     lateral_output.lc_request_source = "int_request";
@@ -2748,22 +2714,23 @@ bool LateralOffsetCalculator::update_planner_output() {
     lateral_output.lc_request_source = "map_request";
   } else if (request_source == ACT_REQUEST) {
     lateral_output.lc_request_source = "act_request";
-    lateral_output.act_request_source = state_machine_output.act_request_source;
+    lateral_output.act_request_source =
+        lane_change_decider_output.act_request_source;
   } else {
     lateral_output.lc_request_source = "none";
   }
 
   if (map_turn_light > 0) {
     lateral_output.turn_light_source = "map_turn_light";
-  } else if (state_machine_output.lc_turn_light > 0) {
+  } else if (lane_change_decider_output.lc_turn_light > 0) {
     lateral_output.turn_light_source = "lc_turn_light";
-  } else if (state_machine_output.lb_turn_light > 0) {
+  } else if (lane_change_decider_output.lb_turn_light > 0) {
     lateral_output.turn_light_source = "lb_turn_light";
   } else {
     lateral_output.turn_light_source = "none";
   }
 
-  // auto planning_status = frame_->session()
+  // auto planning_status = session_
   //                            ->planning_output_context()
   //                            .planning_status();  // attention!
 
@@ -2789,11 +2756,11 @@ bool LateralOffsetCalculator::update_planner_output() {
   lateral_output.r_poly = r_poly_;
 
   lateral_output.behavior_suspension =
-      state_machine_output.behavior_suspend;  //
-                                              //   lateral suspend
+      lane_change_decider_output.behavior_suspend;  //
+                                                    //   lateral suspend
   lateral_output.suspension_obs.assign(
-      state_machine_output.suspend_obs.begin(),
-      state_machine_output.suspend_obs.end());  //
+      lane_change_decider_output.suspend_obs.begin(),
+      lane_change_decider_output.suspend_obs.end());  //
   //   lateral suspend
   //   //       obstacles
   if (!update_lateral_info()) {  // 这里进入
@@ -2807,7 +2774,7 @@ bool LateralOffsetCalculator::update_planner_output() {
 
 void LateralOffsetCalculator::save_to_debug_info() {
   const auto &lateral_output =
-      frame_->session()->planning_context().lateral_behavior_planner_output();
+      session_->planning_context().lateral_behavior_planner_output();
   auto &debug_info_manager = DebugInfoManager::GetInstance();
   auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
 
@@ -2816,15 +2783,15 @@ void LateralOffsetCalculator::save_to_debug_info() {
   // lat_behavior_plan->set_lc_request_source(lateral_output.lc_request_source);
   // lat_behavior_plan->set_lc_status(lateral_output.lc_status);
   // lat_behavior_plan->set_is_lc_valid(lateral_output.lc_valid);
-  // lat_behavior_plan->set_lc_valid_cnt(state_machine_output.lc_valid_cnt);
+  // lat_behavior_plan->set_lc_valid_cnt(lane_change_decider_output.lc_valid_cnt);
   // lat_behavior_plan->set_lc_back_cnt(lateral_output.lc_request_source);
   // lat_behavior_plan->set_lc_back_invalid_reason(lateral_output.lc_request);
   // lat_behavior_plan->set_turn_light(lateral_output.turn_light);
   // lat_behavior_plan->set_turn_light_source(lateral_output.turn_light_source);
-  // lat_behavior_plan->set_v_relative_left_lane(state_machine_output.lc_status);
-  // lat_behavior_plan->set_faster_left_lane_cnt(state_machine_output.lc_status);
-  // lat_behavior_plan->set_v_relative_right_lane(state_machine_output.lc_status);
-  // lat_behavior_plan->set_faster_right_lane_cnt(state_machine_output.lc_status)
+  // lat_behavior_plan->set_v_relative_left_lane(lane_change_decider_output.lc_status);
+  // lat_behavior_plan->set_faster_left_lane_cnt(lane_change_decider_output.lc_status);
+  // lat_behavior_plan->set_v_relative_right_lane(lane_change_decider_output.lc_status);
+  // lat_behavior_plan->set_faster_right_lane_cnt(lane_change_decider_output.lc_status)
 
   // lat_behavior_plan->set_is_side_borrow_bicycle_lane(lateral_output.sb_blane);
   // lat_behavior_plan->set_is_side_borrow_lane(lateral_output.sb_lane);
@@ -2847,11 +2814,10 @@ bool LateralOffsetCalculator::update_lateral_info() {
   // //   auto &map_info =
   // world_model_->mutable_map_info_manager().get_map_info();
 
-  auto planning_status = frame_->mutable_session()
-                             ->mutable_planning_output_context()
-                             ->mutable_planning_status();  // attention!
-  auto &lateral_output = frame_->mutable_session()
-                             ->mutable_planning_context()
+  auto &lane_status = session_->mutable_planning_context()
+                          ->mutable_lane_status();  // attention!
+
+  auto &lateral_output = session_->mutable_planning_context()
                              ->mutable_lateral_behavior_planner_output();
   auto lc_request = lateral_output.lc_request;
   auto lc_status = lateral_output.lc_status;
@@ -2866,58 +2832,52 @@ bool LateralOffsetCalculator::update_lateral_info() {
   // //   //   lb_status.c_str(), lb_request.c_str(),
   // lb_info);
 
-  auto &state_machine_output =
-      frame_->mutable_session()
-          ->mutable_planning_context()
-          ->mutable_lat_behavior_state_machine_output();
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
 
-  int scenario = state_machine_output.scenario;
-  int state = state_machine_output.curr_state;
+  int scenario = lane_change_decider_output.scenario;
+  int state = lane_change_decider_output.curr_state;
   planning::common::LaneStatus default_lane_status;
   // //   // scenario input info
   default_lane_status.change_lane.target_gap_obs =
-      planning_status->lane_status.change_lane.target_gap_obs;
-  planning_status->lane_status = default_lane_status;
+      lane_status.change_lane.target_gap_obs;
+  lane_status = default_lane_status;
 
   if (state == ROAD_NONE || state == INTER_GS_NONE || state == INTER_TR_NONE ||
       state == INTER_TL_NONE) {
-    planning_status->lane_status.status =
-        planning::common::LaneStatus::Status::LANE_KEEP;
+    lane_status.status = planning::common::LaneStatus::Status::LANE_KEEP;
   } else {
     if (lc_request == "none") {
       if (lb_request != "none") {
-        planning_status->lane_status.status =
-            planning::common::LaneStatus::Status::LANE_BORROW;
+        lane_status.status = planning::common::LaneStatus::Status::LANE_BORROW;
         // TODO: BORROW_LANE_KEEP state to be set
         // accordingly
         if (lb_request == "left") {
-          planning_status->lane_status.borrow_lane.direction = "left";
+          lane_status.borrow_lane.direction = "left";
         } else if (lb_request == "right") {
-          planning_status->lane_status.borrow_lane.direction = "right";
+          lane_status.borrow_lane.direction = "right";
         }
         if (lb_status == "left_lane_borrow" ||
             lb_status == "right_lane_borrow") {
-          planning_status->lane_status.borrow_lane.status =
+          lane_status.borrow_lane.status =
               planning::common::BorrowLaneStatus::Status::IN_BORROW_LANE;
         } else if (lb_status == "left_lane_suspend" ||
                    lb_status == "right_lane_suspend") {
-          planning_status->lane_status.borrow_lane.status =
+          lane_status.borrow_lane.status =
               planning::common::BorrowLaneStatus::Status::BORROW_LANE_KEEP;
         } else {
-          planning_status->lane_status.borrow_lane.status =
+          lane_status.borrow_lane.status =
               planning::common::BorrowLaneStatus::Status::BORROW_LANE_FINISHED;
         }
       } else {
-        planning_status->lane_status.status =
-            planning::common::LaneStatus::Status::LANE_KEEP;
-        planning_status->lane_status.change_lane.status =
+        lane_status.status = planning::common::LaneStatus::Status::LANE_KEEP;
+        lane_status.change_lane.status =
             planning::common::ChangeLaneStatus::Status::CHANGE_LANE_FINISHED;
-        planning_status->lane_status.borrow_lane.status =
+        lane_status.borrow_lane.status =
             planning::common::BorrowLaneStatus::Status::BORROW_LANE_FINISHED;
       }
     } else {
-      planning_status->lane_status.status =
-          planning::common::LaneStatus::Status::LANE_CHANGE;
+      lane_status.status = planning::common::LaneStatus::Status::LANE_CHANGE;
 
       if (virtual_lane_manager_->get_tasks(
               virtual_lane_manager_->get_current_lane()) <
@@ -2925,45 +2885,45 @@ bool LateralOffsetCalculator::update_lateral_info() {
           virtual_lane_manager_->get_tasks(
               virtual_lane_manager_->get_current_lane()) > 0) {  // attention!!
 
-        planning_status->lane_status.change_lane.is_active_lane_change = false;
+        lane_status.change_lane.is_active_lane_change = false;
       } else {
-        planning_status->lane_status.change_lane.is_active_lane_change = true;
+        lane_status.change_lane.is_active_lane_change = true;
       }
       if (lc_status == "none") {
         // lane change preparation stage
-        planning_status->lane_status.change_lane.status =
+        lane_status.change_lane.status =
             planning::common::ChangeLaneStatus::Status::CHANGE_LANE_PREPARATION;
         if (lc_request == "left") {
-          planning_status->lane_status.change_lane.direction = "left";
+          lane_status.change_lane.direction = "left";
         } else if (lc_request == "right") {
-          planning_status->lane_status.change_lane.direction = "right";
+          lane_status.change_lane.direction = "right";
         }
       } else if (lc_status == "left_lane_change" ||
                  lc_status == "right_lane_change") {
-        planning_status->lane_status.change_lane.status =
+        lane_status.change_lane.status =
             planning::common::ChangeLaneStatus::Status::IN_CHANGE_LANE;
         if (lc_status == "left_lane_change") {
-          planning_status->lane_status.change_lane.direction = "left";
+          lane_status.change_lane.direction = "left";
         } else if (lc_status == "right_lane_change") {
-          planning_status->lane_status.change_lane.direction = "right";
+          lane_status.change_lane.direction = "right";
         }
       } else if (lc_status == "left_lane_change_back" ||
                  lc_status == "right_lane_change_back") {
-        planning_status->lane_status.change_lane.status =
+        lane_status.change_lane.status =
             planning::common::ChangeLaneStatus::Status::CHANGE_LANE_BACK;
         if (lc_status == "left_lane_change_back") {
-          planning_status->lane_status.change_lane.direction = "left";
+          lane_status.change_lane.direction = "left";
         } else if (lc_status == "right_lane_change_back") {
-          planning_status->lane_status.change_lane.direction = "right";
+          lane_status.change_lane.direction = "right";
         }
       } else if (lc_status == "left_lane_change_wait" ||
                  lc_status == "right_lane_change_wait") {
-        planning_status->lane_status.change_lane.status =
+        lane_status.change_lane.status =
             planning::common::ChangeLaneStatus::Status::CHANGE_LANE_PREPARATION;
         if (lc_status == "left_lane_change_wait") {
-          planning_status->lane_status.change_lane.direction = "left";
+          lane_status.change_lane.direction = "left";
         } else if (lc_status == "right_lane_change_wait") {
-          planning_status->lane_status.change_lane.direction = "right";
+          lane_status.change_lane.direction = "right";
         }
       }
     }
@@ -2978,23 +2938,20 @@ bool LateralOffsetCalculator::update_lateral_info() {
   } else {
     target_lane_id = 0;
   }
-  planning_status->lane_status.target_lane_id = target_lane_id;
-  planning_status->lane_status.change_lane.path_id = target_lane_id;
-  if (planning_status->lane_status.status ==
-          planning::common::LaneStatus::Status::LANE_CHANGE &&
-      (planning_status->lane_status.change_lane.status ==
-           planning::common::ChangeLaneStatus::Status::
-               CHANGE_LANE_PREPARATION ||
-       planning_status->lane_status.change_lane.status ==
+  lane_status.target_lane_id = target_lane_id;
+  lane_status.change_lane.path_id = target_lane_id;
+  if (lane_status.status == planning::common::LaneStatus::Status::LANE_CHANGE &&
+      (lane_status.change_lane.status == planning::common::ChangeLaneStatus::
+                                             Status::CHANGE_LANE_PREPARATION ||
+       lane_status.change_lane.status ==
            planning::common::ChangeLaneStatus::Status::CHANGE_LANE_BACK)) {
     if (lc_request == "left") {
-      planning_status->lane_status.change_lane.path_id = target_lane_id - 1;
+      lane_status.change_lane.path_id = target_lane_id - 1;
     } else if (lc_request == "right") {
-      planning_status->lane_status.change_lane.path_id = target_lane_id + 1;
+      lane_status.change_lane.path_id = target_lane_id + 1;
     }
   }
-  planning_status->lane_status.target_lane_lat_offset =
-      lateral_output.lat_offset;
+  lane_status.target_lane_lat_offset = lateral_output.lat_offset;
 
   // //   auto baseline_info =
   // world_model_->get_baseline_info(target_lane_id);
@@ -3012,19 +2969,16 @@ bool LateralOffsetCalculator::update_lateral_info() {
   return true;
 }
 bool LateralOffsetCalculator::update_planner_status() {
-  auto &lateral_output = frame_->mutable_session()
-                             ->mutable_planning_context()
+  auto &lateral_output = session_->mutable_planning_context()
                              ->mutable_lateral_behavior_planner_output();
-  auto &state_machine_output =
-      frame_->mutable_session()
-          ->mutable_planning_context()
-          ->mutable_lat_behavior_state_machine_output();
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
 
   lateral_output.planner_scene = 0;
   lateral_output.planner_action = 0;
   lateral_output.planner_status = 0;
 
-  switch (state_machine_output.curr_state) {
+  switch (lane_change_decider_output.curr_state) {
     case ROAD_NONE:
       lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
       break;

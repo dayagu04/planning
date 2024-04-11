@@ -1,12 +1,12 @@
 #ifndef MSQUARE_REAL_TIME_DECISION_PLANNING_PLANNER_LANE_CHANGE_DECIDER_H_
 #define MSQUARE_REAL_TIME_DECISION_PLANNING_PLANNER_LANE_CHANGE_DECIDER_H_
 
-#include "behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner_output.h"
 #include "environmental_model.h"
-#include "frame.h"
 #include "fusion_road.pb.h"
 #include "lateral_obstacle.h"
 #include "real_time_lon_behavior_planner.pb.h"
+#include "session.h"
+#include "tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
 
 namespace planning {
 
@@ -22,16 +22,7 @@ class RealTimeLaneChangeDecider {
  public:
   // explicit RealTimeLaneChangeDecider(const TaskConfig &config);
   explicit RealTimeLaneChangeDecider(planning::common::LaneChangeInfo lc_info);
-  // virtual void init(std::shared_ptr<WorldModel> world_model,
-  //                   std::shared_ptr<BaseLineInfo> baseline_info);
 
-  // void set_lead(int id) { leader_car_id_ = id; }
-  // void set_target_lane(int id) { target_lane_id_ = id; }
-  // void set_current_lane(int id) { current_lane_id_ = id; }
-  // void set_v_limit(double v_limit) { v_limit_ = v_limit; }
-  // void set_mode(bool called_in_state_machine) { called_in_state_machine_ =
-  // called_in_state_machine; }
-  // void set_frame(framework::Frame *frame) { frame_ = frame; }
   std::pair<int, int> get_target_gap() { return target_gap_; }
   std::vector<GapInfo> get_gap_list() { return gap_list_; }
   double get_lc_safe_dist(double buffer, double t_gap, double v_ego_p) {
@@ -107,7 +98,6 @@ class RealTimeLaneChangeDecider {
   bool is_merging_ = false;
 
   RTLaneChangeParams params_;
-  // framework::Frame *frame_ = nullptr;
   planning::common::LaneChangeInfo lc_info_;
 };
 

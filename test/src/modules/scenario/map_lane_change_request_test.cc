@@ -2,16 +2,12 @@
 
 #include <cstddef>
 
-#include "gtest/gtest.h"
-// #include "ilqr_define.h"
-// #include "lane_change_requests/map_lane_change_request.h"
 #include "adaptive_cruise_control.h"
+#include "adas_function/mrc_condition.h"
+#include "adas_function/start_stop_enable.h"
 #include "gtest/gtest.h"
 #include "lateral_behavior_object_selector.h"
-#include "mrc_condition.h"
-#include "planning_output_context.h"
-#include "scenario_state_machine.h"
-#include "start_stop_enable.h"
+#include "vehicle_config_context.h"
 
 using namespace std;
 
@@ -21,14 +17,12 @@ namespace map_request_test {
 bool transform_fusion_to_prediction(
     const FusionObjects::FusionObject &fusion_object, double timestamp,
     planning::framework::Session *session) {
-  double ego_rear_axis_to_front_edge = 0;
-  ego_rear_axis_to_front_edge = session->vehicle_config_context()
-                                    .get_vehicle_param()
-                                    .rear_axis_to_front_edge;
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
 
-  double current_time = session->planning_output_context()
-                            .planning_status()
-                            .planning_result.next_timestamp;
+  double ego_rear_axis_to_front_edge = vehicle_param.rear_axis_to_front_edge;
+
+  double current_time = session->planning_context().planning_result().timestamp;
   auto &prediction_info =
       session->mutable_environmental_model()->get_mutable_prediction_info();
 
@@ -99,13 +93,12 @@ class MapLaneChangeRequestTest : public ::testing::Test {
                                       bst::DEBUG);
 
     printf("TestMapLaneChangeRequest: map_lane_change_request");
-    // std::unique_ptr<GeneralPlanning> planning_base_ = nullptr;
-    // planning_base_ = std::make_unique<GeneralPlanning>();
+    // std::unique_ptr<PlanningScheduler> planning_scheduler = nullptr;
+    // planning_scheduler = std::make_unique<PlanningScheduler>();
     session.Init();
 
     auto config_builder =
         std::make_unique<EgoPlanningConfigBuilder>("", "empty");
-    framework::Frame frame{&session};
     LocalView local_view;
     double time_stamp = IflyTime::Now_ms();
     for (int i = 0; i < 4; i++) {
@@ -251,40 +244,29 @@ class MapLaneChangeRequestTest : public ::testing::Test {
       fusion_obj->mutable_common_info()->mutable_shape()->set_height(1.5);
     }
 
-    // framework::Frame *frame;
-    // frame(session);
-
     ego_state_manager_ptr_ =
         std::make_shared<planning::EgoStateManager>(&session);
-    (&frame)->mutable_session()->mutable_environmental_model()->set_ego_state(
-        ego_state_manager_ptr_);
+    session.mutable_environmental_model()->set_ego_state(
+        ego_state_manager_ptr_;
 
     virtual_lane_manager_ptr_ =
         std::make_shared<planning::VirtualLaneManager>(&session);
-    (&frame)
-        ->mutable_session()
-        ->mutable_environmental_model()
+    session.mutable_environmental_model()
         ->set_virtual_lane_manager(virtual_lane_manager_ptr_);
 
     obstacle_manager_ptr_ = std::make_shared<planning::ObstacleManager>(
         config_builder.get(), &session);
-    (&frame)
-        ->mutable_session()
-        ->mutable_environmental_model()
+    session.mutable_environmental_model()
         ->set_obstacle_manager(obstacle_manager_ptr_);
 
     reference_path_manager_ptr_ =
         std::make_shared<planning::ReferencePathManager>(&session);
-    (&frame)
-        ->mutable_session()
-        ->mutable_environmental_model()
+    session.mutable_environmental_model()
         ->set_reference_path_manager(reference_path_manager_ptr_);
 
     lateral_obstacle_ptr_ = std::make_shared<planning::LateralObstacle>(
         config_builder.get(), &session);
-    (&frame)
-        ->mutable_session()
-        ->mutable_environmental_model()
+    session.mutable_environmental_model()
         ->set_lateral_obstacle(lateral_obstacle_ptr_);
 
     lane_tracks_mgr_ptr_ = std::make_shared<LaneTracksManager>(
@@ -298,28 +280,22 @@ class MapLaneChangeRequestTest : public ::testing::Test {
 
     mrc_condition_ =
         std::make_shared<MrcCondition>(config_builder.get(), &session);
-    (&frame)->mutable_session()->mutable_planning_context()->set_mrc_condition(
+    session.mutable_planning_context()->set_mrc_condition(
         mrc_condition_);
 
     adaptive_cruise_control_ =
         std::make_shared<AdaptiveCruiseControl>(config_builder.get(), &session);
-    (&frame)
-        ->mutable_session()
-        ->mutable_planning_context()
+    session.mutable_planning_context()
         ->set_adaptive_cruise_control_function(adaptive_cruise_control_);
 
     start_stop_ptr_ =
         std::make_shared<StartStopEnable>(config_builder.get(), &session);
-    (&frame)
-        ->mutable_session()
-        ->mutable_planning_context()
+    session.mutable_planning_context()
         ->set_start_stop_enable(start_stop_ptr_);
 
     object_selector_ =
         std::make_shared<ObjectSelector>(config_builder.get(), &session);
-    (&frame)
-        ->mutable_session()
-        ->mutable_planning_context()
+    session.mutable_planning_context()
         ->set_object_selector(object_selector_);
 
     lc_lane_mgr_ = std::make_shared<LaneChangeLaneManager>(
@@ -333,7 +309,7 @@ class MapLaneChangeRequestTest : public ::testing::Test {
     for (auto &obj : local_view.fusion_objects_info.fusion_object()) {
       map_request_test::transform_fusion_to_prediction(
           obj, (double)local_view.fusion_objects_info.header().timestamp(),
-          (&frame)->mutable_session());
+          &session);
     }
     //   obstacle_prediction_update(time_stamp, local_view);
     obstacle_manager_ptr_->update();
@@ -359,21 +335,12 @@ class MapLaneChangeRequestTest : public ::testing::Test {
     scenario_state_machine_ =
         std::make_shared<ScenarioStateMachine>(config_builder.get(), &session);
 
-    // scenario_state_machine_->init();
-    // (&frame)
-    //     ->mutable_session()
-    //     ->mutable_planning_context()
-    //     ->set_scenario_state_machine(scenario_state_machine_);
-
-    object_selector_->update((&frame)
-                                 ->session()
-                                 ->planning_context()
-                                 .lat_behavior_state_machine_output()
+    object_selector_->update(session.planning_context()
+                                 .lane_change_decider_output()
                                  .curr_state,
                              0., false, 80., false, false, false, false, false,
                              -1);
 
-    // (void)scenario_state_machine_->update(&frame);
     lc_req_mgr_->Update(ROAD_NONE, true);
   }
 

@@ -1,21 +1,21 @@
 #pragma once
 #include "avoid_obstacle_maintainer.h"
-#include "frame.h"
 #include "lateral_offset_calculator.h"
+#include "session.h"
+#include "tasks/task.h"
 
 namespace planning {
 
 class LateralOffsetDecider : public Task {
  public:
-  explicit LateralOffsetDecider(
-      const EgoPlanningConfigBuilder *config_builder,
-      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+  explicit LateralOffsetDecider(const EgoPlanningConfigBuilder *config_builder,
+                                framework::Session *session);
 
   virtual ~LateralOffsetDecider() = default;
 
-  bool Execute(planning::framework::Frame *frame) override;
+  bool Execute() override;
 
-  bool ExecuteTest(planning::framework::Frame *frame, bool pipeline_test);
+  bool ExecuteTest(bool pipeline_test);
 
   // double lat_offset() const {
   //   return lat_offset_;

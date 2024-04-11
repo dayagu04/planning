@@ -1,4 +1,4 @@
-#include "trajectory_generator/result_trajectory_generator.h"
+#include "tasks/trajectory_generator/result_trajectory_generator.h"
 
 #include <cmath>
 #include <cstddef>
@@ -11,6 +11,7 @@
 #include "define/geometry.h"
 #include "math/math_utils.h"
 #include "math_lib.h"
+#include "planning_context.h"
 
 namespace planning {
 
@@ -19,9 +20,8 @@ using namespace planning::planning_math;
 using namespace pnc::mathlib;
 
 ResultTrajectoryGenerator::ResultTrajectoryGenerator(
-    const EgoPlanningConfigBuilder *config_builder,
-    const std::shared_ptr<TaskPipelineContext> &pipeline_context)
-    : Task(config_builder, pipeline_context) {
+    const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
+    : Task(config_builder, session) {
   config_ = config_builder->cast<ResultTrajectoryGeneratorConfig>();
   name_ = "ResultTrajectoryGenerator";
   Init();
@@ -29,21 +29,20 @@ ResultTrajectoryGenerator::ResultTrajectoryGenerator(
 
 void ResultTrajectoryGenerator::Init() {}
 
-bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
-  auto start_time = IflyTime::Now_ms();
-  if (Task::Execute(frame) == false) {
+bool ResultTrajectoryGenerator::Execute() {
+  LOG_DEBUG("=======ResultTrajectoryGenerator======= \n");
+
+  if (!PreCheck()) {
+    LOG_DEBUG("PreCheck failed\n");
     return false;
   }
 
-  const auto &location_valid =
-      frame_->session()->environmental_model().location_valid();
+  auto start_time = IflyTime::Now_ms();
 
+  // const auto &location_valid =
+  // session_->environmental_model().location_valid();
   bool res = false;
-  if (location_valid) {
-    res = TrajectoryGenerator();
-  } else {
-    res = RealtimeTrajectoryGenerator();
-  }
+  res = TrajectoryGenerator();
 
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("TrajectoryGeneratorCostTime", end_time - start_time);
@@ -51,14 +50,14 @@ bool ResultTrajectoryGenerator::Execute(planning::framework::Frame *frame) {
 }
 
 bool ResultTrajectoryGenerator::TrajectoryGenerator() {
-  auto &ego_planning_result = pipeline_context_->planning_result;
+  auto &ego_planning_result =
+      session_->mutable_planning_context()->mutable_planning_result();
+
   // Step 1) get x,y of trajectory points
   auto &traj_points = ego_planning_result.traj_points;
   // const auto &num_point = traj_points.size();
-  auto &motion_planning_info = frame_->mutable_session()
-                                   ->mutable_planning_context()
-                                   ->mutable_planning_result()
-                                   .motion_planning_info;
+  auto &motion_planner_output =
+      session_->mutable_planning_context()->mutable_motion_planner_output();
 
   pnc::mathlib::spline s_t_spline;
   pnc::mathlib::spline l_t_spline;
@@ -75,12 +74,15 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   std::vector<double> curvature_vec(N);
   std::vector<double> dkappa_vec(N);
   std::vector<double> ddkappa_vec(N);
-
+  const auto &reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  const auto &frenet_coord = reference_path_ptr->get_frenet_coord();
   for (size_t i = 0; i < traj_points.size(); i++) {
     if (config_.is_pwj_planning) {
       Point2D frenet_pt{traj_points[i].s, traj_points[i].l};
       Point2D cart_pt;
-      if (!frenet_coord_->SLToXY(frenet_pt, cart_pt)) {
+      if (!frenet_coord->SLToXY(frenet_pt, cart_pt)) {
         LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
         return false;
       }
@@ -108,7 +110,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
 
   // Step 2) get dense trajectory points
   auto &planning_init_point =
-      reference_path_ptr_->get_frenet_ego_state().planning_init_point();
+      reference_path_ptr->get_frenet_ego_state().planning_init_point();
   // double init_point_relative_time = planning_init_point.relative_time;
 
   std::vector<TrajectoryPoint> dense_traj_points;
@@ -122,13 +124,13 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
     // traj_pt.t = init_point_relative_time + t;
     traj_pt.t = t;
     traj_pt.s = s_t_spline(t);
-    traj_pt.x = motion_planning_info.x_t_spline(t);
-    traj_pt.y = motion_planning_info.y_t_spline(t);
-    traj_pt.v = motion_planning_info.v_t_spline(t);
-    traj_pt.a = motion_planning_info.a_t_spline(t);
-    traj_pt.jerk = motion_planning_info.j_t_spline(t);
+    traj_pt.x = motion_planner_output.x_t_spline(t);
+    traj_pt.y = motion_planner_output.y_t_spline(t);
+    traj_pt.v = motion_planner_output.v_t_spline(t);
+    traj_pt.a = motion_planner_output.a_t_spline(t);
+    traj_pt.jerk = motion_planner_output.j_t_spline(t);
     traj_pt.l = l_t_spline(t);
-    traj_pt.heading_angle = motion_planning_info.theta_t_spline(t);
+    traj_pt.heading_angle = motion_planner_output.theta_t_spline(t);
     traj_pt.curvature = curvature_t_spline(t);
     traj_pt.dkappa = dkappa_t_spline(t);
     traj_pt.ddkappa = ddkappa_t_spline(t);
@@ -146,7 +148,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
 
     Point2D frenet_pt{traj_pt.s, traj_pt.l};
     Point2D cart_pt;
-    if (!frenet_coord_->SLToXY(frenet_pt, cart_pt)) {
+    if (!frenet_coord->SLToXY(frenet_pt, cart_pt)) {
       LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
       return false;
     }
@@ -170,23 +172,19 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
 
   ego_planning_result.traj_points = dense_traj_points;
 
-  // record some results
-  ego_planning_result.motion_planning_info = motion_planning_info;
-
   return true;
 }
 
 bool ResultTrajectoryGenerator::RealtimeTrajectoryGenerator() {
   bool enable_lat_traj = config_.enable_lat_traj;
 
-  auto &ego_planning_result = pipeline_context_->planning_result;
+  auto &ego_planning_result =
+      session_->mutable_planning_context()->mutable_planning_result();
 
   // Step 1) get x,y of trajectory points
   auto &traj_points = ego_planning_result.traj_points;
-  auto &motion_planning_info = frame_->mutable_session()
-                                   ->mutable_planning_context()
-                                   ->mutable_planning_result()
-                                   .motion_planning_info;
+  auto &motion_planner_output =
+      session_->mutable_planning_context()->mutable_motion_planner_output();
 
   pnc::mathlib::spline s_t_spline;
   pnc::mathlib::spline curvature_t_spline;
@@ -217,7 +215,7 @@ bool ResultTrajectoryGenerator::RealtimeTrajectoryGenerator() {
 
   // combination of genereted trajectory and reference without localization
   const double lat_err_norm =
-      std::fabs(motion_planning_info.ref_y_t_spline(0.0));
+      std::fabs(motion_planner_output.ref_y_t_spline(0.0));
   static const std::vector<double> lat_err_norm_tab = {0.0, 0.3, 0.5, 100.0};
   static const std::vector<double> alpha_tab = {1.0, 1.0, 0.0, 0.0};
 
@@ -241,15 +239,15 @@ bool ResultTrajectoryGenerator::RealtimeTrajectoryGenerator() {
     traj_pt.s = s_t_spline(t);
 
     // combination of genereted trajectory and reference considering x and y
-    traj_pt.x = motion_planning_info.x_t_spline(t) * (1.0 - alpha) +
-                motion_planning_info.ref_x_t_spline(t) * alpha;
+    traj_pt.x = motion_planner_output.x_t_spline(t) * (1.0 - alpha) +
+                motion_planner_output.ref_x_t_spline(t) * alpha;
 
-    traj_pt.y = motion_planning_info.y_t_spline(t) * (1.0 - alpha) +
-                motion_planning_info.ref_y_t_spline(t) * alpha;
+    traj_pt.y = motion_planner_output.y_t_spline(t) * (1.0 - alpha) +
+                motion_planner_output.ref_y_t_spline(t) * alpha;
 
-    traj_pt.v = motion_planning_info.v_t_spline(t);
-    traj_pt.a = motion_planning_info.a_t_spline(t);
-    traj_pt.heading_angle = motion_planning_info.theta_t_spline(t);
+    traj_pt.v = motion_planner_output.v_t_spline(t);
+    traj_pt.a = motion_planner_output.a_t_spline(t);
+    traj_pt.heading_angle = motion_planner_output.theta_t_spline(t);
     traj_pt.curvature = curvature_t_spline(t);
     traj_pt.dkappa = dkappa_t_spline(t);
     traj_pt.ddkappa = ddkappa_t_spline(t);
@@ -270,9 +268,6 @@ bool ResultTrajectoryGenerator::RealtimeTrajectoryGenerator() {
   JSON_DEBUG_VECTOR("traj_y_vec", traj_y_vec, 3)
 
   ego_planning_result.traj_points = dense_traj_points;
-
-  // record some results
-  ego_planning_result.motion_planning_info = motion_planning_info;
 
   return true;
 }

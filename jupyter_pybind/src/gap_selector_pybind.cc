@@ -10,8 +10,8 @@
 #include <vector>
 
 #include "basic_types.pb.h"
-#include "behavior_planners/gap_selector/gap_selector.h"
-#include "behavior_planners/gap_selector/gap_selector_interface.h"
+#include "tasks/behavior_planners/gap_selector_decider/gap_selector_decider.h"
+#include "tasks/behavior_planners/gap_selector_decider/gap_selector_interface.h"
 #include "config/basic_type.h"
 #include "environmental_model.h"
 #include "gap_selector.pb.h"
@@ -25,11 +25,15 @@ namespace py = pybind11;
 using namespace planning;
 constexpr int PointNum = 25;
 constexpr double delta_t = 0.2;
-static GapSelector *pBase = nullptr;
+static GapSelectorDecider *pBase = nullptr;
 static GapSelectorInterface *pInterface = nullptr;
+static Json json;
+static const char *file_name = "test.json";
+static EgoPlanningConfigBuilder config_builder(json, file_name);
+static framework::Session session;
 
 int Init() {
-  pBase = new GapSelector();
+  pBase = new GapSelectorDecider(&config_builder, &session);
   pInterface = new GapSelectorInterface();
   return 0;
 }
@@ -161,6 +165,7 @@ void FeedInput(bool closed_loop) {
         pInterface->gap_selector_feed_info_.gap_selector_info.lc_in,
         pInterface->gap_selector_feed_info_.gap_selector_info.lb_in,
         pInterface->gap_selector_feed_info_.gap_selector_info.lc_pass_time,
+        pInterface->gap_selector_feed_info_.gap_selector_info.lc_wait_time,
         pInterface->gap_selector_feed_info_.gap_selector_info.lc_wait_time,
         static_cast<bool>(pInterface->gap_selector_feed_info_.gap_selector_info
                               .path_requintic),
@@ -302,8 +307,8 @@ int UpdateBytes(py::bytes &gap_selector_input_bytes, bool closed_loop,
       pInterface->gap_selector_feed_info_.cruise_vel = v_cruise;
     }
 
-    GapSelectorResult gap_selector_result;
-    gap_status = pBase->Update(gap_selector_result);
+    GapSelectorDeciderOutput gap_selector_decider_output;
+    gap_status = pBase->Update(gap_selector_decider_output);
   }
 
   return gap_status;

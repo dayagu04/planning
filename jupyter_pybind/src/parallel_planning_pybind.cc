@@ -210,17 +210,19 @@ std::vector<double> GetInverseArcVec() {
   std::vector<double> res;
   res.reserve(80);
 
-  const auto &reverse_arc_vec = pBase->GetPlannerParams().reverse_arc_vec;
-  for (const auto &arc : reverse_arc_vec) {
-    res.emplace_back(arc.circle_info.center.x());
-    res.emplace_back(arc.circle_info.center.y());
-    res.emplace_back(arc.circle_info.radius);
+  for (const auto &path_seg : pBase->GetPlannerParams().park_out_path_in_slot) {
+    if (path_seg.seg_type == pnc::geometry_lib::PathSegType::SEG_TYPE_ARC) {
+      const auto arc = path_seg.arc_seg;
+      res.emplace_back(arc.circle_info.center.x());
+      res.emplace_back(arc.circle_info.center.y());
+      res.emplace_back(arc.circle_info.radius);
 
-    res.emplace_back(arc.pA.x());
-    res.emplace_back(arc.pA.y());
+      res.emplace_back(arc.pA.x());
+      res.emplace_back(arc.pA.y());
 
-    res.emplace_back(arc.pB.x());
-    res.emplace_back(arc.pB.y());
+      res.emplace_back(arc.pB.x());
+      res.emplace_back(arc.pB.y());
+    }
   }
   return res;
 }

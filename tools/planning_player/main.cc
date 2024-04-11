@@ -3,7 +3,6 @@
 #include <chrono>
 #include <string>
 
-#include "modules_register.h"
 #include "planning_player.h"
 
 int run_planning_player(const std::string &bag_path, const std::string &out_bag,

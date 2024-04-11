@@ -9,9 +9,8 @@
 
 namespace planning {
 LongitudinalMotionPlanner::LongitudinalMotionPlanner(
-    const EgoPlanningConfigBuilder *config_builder,
-    const std::shared_ptr<TaskPipelineContext> &pipeline_context)
-    : Task(config_builder, pipeline_context) {
+    const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
+    : Task(config_builder, session) {
   config_ = config_builder->cast<LongitudinalMotionPlannerConfig>();
   config_start_stop_ = config_builder->cast<StartStopEnableConfig>();
   config_acc_ = config_builder->cast<AdaptiveCruiseControlConfig>();
@@ -47,13 +46,15 @@ void LongitudinalMotionPlanner::Init() {
   planning_input_.mutable_jerk_min_vec()->Resize(N, 0.0);
 }
 
-bool LongitudinalMotionPlanner::Execute(planning::framework::Frame *frame) {
+bool LongitudinalMotionPlanner::Execute() {
   LOG_DEBUG("=======LongitudinalMotionPlanner======= \n");
-  auto start_time = IflyTime::Now_ms();
-  frame_ = frame;
-  if (Task::Execute(frame) == false) {
+
+  if (!PreCheck()) {
+    LOG_DEBUG("PreCheck failed\n");
     return false;
   }
+
+  auto start_time = IflyTime::Now_ms();
 
   AssembleInput();
 
@@ -75,28 +76,28 @@ bool LongitudinalMotionPlanner::Execute(planning::framework::Frame *frame) {
 }
 
 void LongitudinalMotionPlanner::AssembleInput() {
-  const auto &lon_ref_path =  // result from lon decision
-      pipeline_context_->planning_info.lon_ref_path;
+  const auto &longitudinal_decider_output =
+      session_->planning_context().longitudinal_decider_output();
 
-  const auto &s_refs = lon_ref_path.s_refs;
-  const auto &v_refs = lon_ref_path.ds_refs;
-  const auto &s_bounds = lon_ref_path.hard_bounds;
-  const auto &s_lead_bounds = lon_ref_path.lon_lead_bounds;
-  const auto &v_bounds = lon_ref_path.lon_bound_v;
-  const auto &a_bounds = lon_ref_path.lon_bound_a;
-  const auto &jerk_bounds = lon_ref_path.lon_bound_jerk;
+  const auto &s_refs = longitudinal_decider_output.s_refs;
+  const auto &v_refs = longitudinal_decider_output.ds_refs;
+  const auto &s_bounds = longitudinal_decider_output.hard_bounds;
+  const auto &s_lead_bounds = longitudinal_decider_output.lon_lead_bounds;
+  const auto &v_bounds = longitudinal_decider_output.lon_bound_v;
+  const auto &a_bounds = longitudinal_decider_output.lon_bound_a;
+  const auto &jerk_bounds = longitudinal_decider_output.lon_bound_jerk;
 
-  // const auto &enable_dx_ref = frame_->mutable_session()
+  // const auto &enable_dx_ref = session_
   //                                 ->mutable_planning_context()
   //                                 ->mutable_adaptive_cruise_control_result()
   //                                 .navi_speed_control_info.enable_v_cost;
 
-  // const auto &enable_stop_flag = frame_->mutable_session()
+  // const auto &enable_stop_flag = session_
   //                                    ->mutable_planning_context()
   //                                    ->mutable_start_stop_result()
   //                                    .enable_stop;
 
-  // const auto &mrc_brake_type = frame_->mutable_session()
+  // const auto &mrc_brake_type = session_
   //                                  ->mutable_planning_context()
   //                                  ->mrc_condition()
   //                                  ->mrc_brake_type();
@@ -190,8 +191,11 @@ void LongitudinalMotionPlanner::AssembleInput() {
   }
 
   // set init state
+  const auto &reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
   const auto &planning_init_point =
-      reference_path_ptr_->get_frenet_ego_state().planning_init_point();
+      reference_path_ptr->get_frenet_ego_state().planning_init_point();
 
   // init s uses frenet state
   planning_input_.mutable_init_state()->set_s(
@@ -251,17 +255,15 @@ void LongitudinalMotionPlanner::Update() {
   }
 
   // generate motion planning output into planning_context
-  auto &motion_planning_info = frame_->mutable_session()
-                                   ->mutable_planning_context()
-                                   ->mutable_planning_result()
-                                   .motion_planning_info;
+  auto &motion_planner_output =
+      session_->mutable_planning_context()->mutable_motion_planner_output();
 
-  // motion_planning_info.s_t_spline.set_points(t_vec, s_vec);
-  motion_planning_info.v_t_spline.set_points(t_vec, v_vec);
-  motion_planning_info.a_t_spline.set_points(t_vec, a_vec);
-  motion_planning_info.j_t_spline.set_points(t_vec, j_vec);
+  // motion_planner_output.s_t_spline.set_points(t_vec, s_vec);
+  motion_planner_output.v_t_spline.set_points(t_vec, v_vec);
+  motion_planner_output.a_t_spline.set_points(t_vec, a_vec);
+  motion_planner_output.j_t_spline.set_points(t_vec, j_vec);
 
-  motion_planning_info.lon_enable_flag = true;
+  motion_planner_output.lon_enable_flag = true;
   // respline the lateral path a.c. longitudinal result
   std::vector<double> assembled_x(N);
   std::vector<double> assembled_y(N);
@@ -276,7 +278,13 @@ void LongitudinalMotionPlanner::Update() {
   }
 
   // assemble trajectory that combines lateral and longitudinal planning_result
-  auto &traj_points = pipeline_context_->planning_result.traj_points;
+  auto &traj_points = session_->mutable_planning_context()
+                          ->mutable_planning_result()
+                          .traj_points;
+  const auto &reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+
   const auto &s0 = s_vec[0];
   for (size_t i = 0; i < N; ++i) {
     traj_points[i].v = v_vec[i];
@@ -290,18 +298,18 @@ void LongitudinalMotionPlanner::Update() {
     auto s = std::max(s_vec[i] - s0, 0.0);
 
     // limit s to avoid outer spline
-    s = std::min(s, motion_planning_info.s_lat_vec.back());
+    s = std::min(s, motion_planner_output.s_lat_vec.back());
 
-    traj_points[i].x = motion_planning_info.x_s_spline(s);
-    traj_points[i].y = motion_planning_info.y_s_spline(s);
-    traj_points[i].heading_angle = motion_planning_info.theta_s_spline(s);
+    traj_points[i].x = motion_planner_output.x_s_spline(s);
+    traj_points[i].y = motion_planner_output.y_s_spline(s);
+    traj_points[i].heading_angle = motion_planner_output.theta_s_spline(s);
 
     // frenet state update
     Point2D cart_pt(traj_points[i].x, traj_points[i].y);
     Point2D frenet_pt;
 
-    if (reference_path_ptr_->get_frenet_coord() != nullptr &&
-        reference_path_ptr_->get_frenet_coord()->XYToSL(cart_pt, frenet_pt)) {
+    if (reference_path_ptr->get_frenet_coord() != nullptr &&
+        reference_path_ptr->get_frenet_coord()->XYToSL(cart_pt, frenet_pt)) {
       traj_points[i].s = frenet_pt.x;
       traj_points[i].l = frenet_pt.y;
     } else {
@@ -314,57 +322,21 @@ void LongitudinalMotionPlanner::Update() {
     assembled_x[i] = traj_points[i].x;
     assembled_y[i] = traj_points[i].y;
     assembled_theta[i] = traj_points[i].heading_angle;
-    assembled_delta[i] = motion_planning_info.delta_s_spline(s);
-    assembled_omega[i] = motion_planning_info.omega_s_spline(s);
+    assembled_delta[i] = motion_planner_output.delta_s_spline(s);
+    assembled_omega[i] = motion_planner_output.omega_s_spline(s);
   }
 
-  motion_planning_info.x_t_spline.set_points(t_vec, assembled_x);
-  motion_planning_info.y_t_spline.set_points(t_vec, assembled_y);
-  motion_planning_info.theta_t_spline.set_points(t_vec, assembled_theta);
-  motion_planning_info.delta_t_spline.set_points(t_vec, assembled_delta);
-  motion_planning_info.omega_t_spline.set_points(t_vec, assembled_omega);
-  motion_planning_info.lat_enable_flag = true;
+  motion_planner_output.x_t_spline.set_points(t_vec, assembled_x);
+  motion_planner_output.y_t_spline.set_points(t_vec, assembled_y);
+  motion_planner_output.theta_t_spline.set_points(t_vec, assembled_theta);
+  motion_planner_output.delta_t_spline.set_points(t_vec, assembled_delta);
+  motion_planner_output.omega_t_spline.set_points(t_vec, assembled_omega);
+  motion_planner_output.lat_enable_flag = true;
 
   JSON_DEBUG_VECTOR("assembled_x", assembled_x, 4)
   JSON_DEBUG_VECTOR("assembled_y", assembled_y, 4)
   JSON_DEBUG_VECTOR("assembled_theta", assembled_theta, 4)
   JSON_DEBUG_VECTOR("assembled_delta", assembled_delta, 4)
   JSON_DEBUG_VECTOR("assembled_omega", assembled_omega, 4)
-
-  // bool LongitudinalMotionPlanner::RecheckPlanningResult() {
-  //   const auto &lon_ref_path = // result from lon decision
-  //       pipeline_context_->planning_info.lon_ref_path;
-  //   const auto &state_result =
-  //       planning_problem_ptr_->GetiLqrCorePtr()->GetStateResultPtr();
-
-  //   const auto &num_t = lon_ref_path.t_list.size();
-
-  //   for (size_t i = 0; i < num_t; i++) {
-  //     if (state_result->at(i)[pnc::longitudinal_planning::StateId::POS] <
-  //             s_limit_.lower ||
-  //         state_result->at(i)[pnc::longitudinal_planning::StateId::POS] >
-  //             s_limit_.upper) {
-  //       LOG_ERROR("[ILqrLonPlanning]: Error! s bound collide! %d %f [%f %f]
-  //       \n",
-  //                 i,
-  //                 state_result->at(i)[pnc::longitudinal_planning::StateId::POS],
-  //                 s_limit_.lower, s_limit_.upper);
-  //     }
-
-  //     if (state_result->at(i)[pnc::longitudinal_planning::StateId::ACC] >
-  //             config_.kMaxAcc ||
-  //         state_result->at(i)[pnc::longitudinal_planning::StateId::ACC] <
-  //             config_.kMinDec) {
-  //       LOG_ERROR("[ILqrLonPlanning]: Error! Invalid acc %f ! \n",
-  //                 state_result->at(i)[pnc::longitudinal_planning::StateId::ACC]);
-  //     }
-
-  //     if (std::fabs(state_result->at(
-  //             i)[pnc::longitudinal_planning::StateId::JERK]) >
-  //             config_.kMaxJerk) {
-  //       LOG_ERROR("[ILqrLonPlanning]: Error! Invalid jerk %f ! \n",
-  //                 state_result->at(i)[pnc::longitudinal_planning::StateId::JERK]);
-  //     }
-  //   }
 }
 }  // namespace planning

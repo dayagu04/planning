@@ -61,7 +61,7 @@ struct BoundInfo {
 static std::string BoundType2String(BoundType in) {
   switch (in) {
     case BoundType::DEFAULT:
-      return "TRAFFIC_LIGHT";
+      return "DEFAULT";
     case BoundType::LANE:
       return "LANE";
     case BoundType::AGENT:
@@ -79,9 +79,9 @@ static std::string BoundType2String(BoundType in) {
     case BoundType::TRAFFIC_LIGHT:
       return "TRAFFIC_LIGHT";
     case BoundType::DESTINATION:
-      return "LANE_BORDER";
+      return "DESTINATION";
     default:
-      return "UNKNOWN";
+      return "ERROR";
   }
 }
 struct WeightedBound {

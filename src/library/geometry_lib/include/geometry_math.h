@@ -196,6 +196,14 @@ struct PathSegment {
     }
   }
 
+  const PathPoint GetStartPose() const {
+    return PathPoint(GetStartPos(), GetStartHeading());
+  }
+  
+  const PathPoint GetEndPose() const {
+    return PathPoint(GetEndPos(), GetEndHeading());
+  }
+
   PathSegment(const uint8_t seg_type_in, const uint8_t seg_steer_in,
               const uint8_t seg_gear_in, const LineSegment &line_seg_in,
               const Arc &arc_seg_in) {
@@ -330,6 +338,11 @@ const bool CheckPointLiesOnArc(const pnc::geometry_lib::Arc &arc,
 
 const bool GetArcLineIntersection(
     Eigen::Vector2d &intersection, const pnc::geometry_lib::Arc &arc,
+    const pnc::geometry_lib::LineSegment &line_seg);
+
+const size_t GetArcLineIntersection(
+    std::pair<Eigen::Vector2d, Eigen::Vector2d> &intersections,
+    const pnc::geometry_lib::Arc &arc,
     const pnc::geometry_lib::LineSegment &line_seg);
 
 const bool CheckTwoCircleIntersection(const Circle &c1, const Circle &c2);

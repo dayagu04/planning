@@ -21,15 +21,12 @@ double AvoidObstacleMaintainer::UpdateAntsidesStrict() {
   int debug_front_id = -1000;
   int debug_side_id = -1000;
 
-  auto &virtual_lane_manager = frame_->mutable_session()
-                                   ->mutable_environmental_model()
-                                   ->get_virtual_lane_manager();
-  auto &lateral_obstacle = frame_->mutable_session()
-                               ->mutable_environmental_model()
-                               ->get_lateral_obstacle();
-  auto &ego_state = frame_->mutable_session()
-                        ->mutable_environmental_model()
-                        ->get_ego_state_manager();
+  auto &virtual_lane_manager =
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
+  auto &lateral_obstacle =
+      session_->mutable_environmental_model()->get_lateral_obstacle();
+  auto &ego_state =
+      session_->mutable_environmental_model()->get_ego_state_manager();
   // auto &frenet_ego_state = reference_path_ptr_->get_frenet_ego_state();
 
   double v_ego = ego_state->ego_v();
@@ -189,9 +186,8 @@ double AvoidObstacleMaintainer::UpdateAntsidesStrict() {
 }
 
 bool AvoidObstacleMaintainer::UpdateLFrontAvdsInfo(bool no_near_car) {
-  auto &lateral_obstacle = frame_->mutable_session()
-                               ->mutable_environmental_model()
-                               ->get_lateral_obstacle();
+  auto &lateral_obstacle =
+      session_->mutable_environmental_model()->get_lateral_obstacle();
 
   if (no_near_car == false ||
       lateral_obstacle->front_tracks_copy().size() == 0) {
@@ -221,9 +217,8 @@ bool AvoidObstacleMaintainer::UpdateLFrontAvdsInfo(bool no_near_car) {
 }
 
 bool AvoidObstacleMaintainer::UpdateRFrontAvdsInfo(bool no_near_car) {
-  auto &lateral_obstacle = frame_->mutable_session()
-                               ->mutable_environmental_model()
-                               ->get_lateral_obstacle();
+  auto &lateral_obstacle =
+      session_->mutable_environmental_model()->get_lateral_obstacle();
 
   if (no_near_car == false ||
       lateral_obstacle->front_tracks_copy().size() == 0) {
@@ -257,9 +252,8 @@ bool AvoidObstacleMaintainer::UpdateLSideAvdsInfo(bool no_near_car) {
     return no_near_car;
   }
 
-  auto &lateral_obstacle = frame_->mutable_session()
-                               ->mutable_environmental_model()
-                               ->get_lateral_obstacle();
+  auto &lateral_obstacle =
+      session_->mutable_environmental_model()->get_lateral_obstacle();
 
   for (auto &tr : lateral_obstacle->side_tracks_l()) {
     if (tr.d_rel > -7 &&
@@ -288,9 +282,8 @@ bool AvoidObstacleMaintainer::UpdateRSideAvdsInfo(bool no_near_car) {
     return no_near_car;
   }
 
-  auto &lateral_obstacle = frame_->mutable_session()
-                               ->mutable_environmental_model()
-                               ->get_lateral_obstacle();
+  auto &lateral_obstacle =
+      session_->mutable_environmental_model()->get_lateral_obstacle();
 
   for (auto &tr : lateral_obstacle->side_tracks_r()) {
     if (tr.d_rel > -7 &&
@@ -314,9 +307,7 @@ bool AvoidObstacleMaintainer::UpdateRSideAvdsInfo(bool no_near_car) {
   return no_near_car;
 }
 
-bool AvoidObstacleMaintainer::Process(
-    planning::framework::Frame *frame,
-    std::shared_ptr<TaskPipelineContext> &pipeline_context) {
+bool AvoidObstacleMaintainer::Process(planning::framework::Session *session) {
   int enter0 = 0;
   int enter1 = 0;
   int enter2 = 0;
@@ -331,25 +322,17 @@ bool AvoidObstacleMaintainer::Process(
   t_avd_car_ = 3.0;
   is_ncar_ = false;
 
-  frame_ = frame;
-  auto &virtual_lane_manager = frame_->mutable_session()
-                                   ->mutable_environmental_model()
-                                   ->get_virtual_lane_manager();
-  auto &lateral_obstacle = frame_->mutable_session()
-                               ->mutable_environmental_model()
-                               ->get_lateral_obstacle();
-  auto &ego_state = frame_->mutable_session()
-                        ->mutable_environmental_model()
-                        ->get_ego_state_manager();
+  session_ = session;
+  auto &virtual_lane_manager =
+      session->mutable_environmental_model()->get_virtual_lane_manager();
+  auto &lateral_obstacle =
+      session->mutable_environmental_model()->get_lateral_obstacle();
+  auto &ego_state =
+      session->mutable_environmental_model()->get_ego_state_manager();
   const CoarsePlanningInfo &coarse_planning_info =
-      pipeline_context->coarse_planning_info;
-  // auto &frenet_ego_state = reference_path_ptr_->get_frenet_ego_state();
-  auto &lat_behavior_info = frame_->mutable_session()
-                                ->mutable_planning_context()
-                                ->mutable_lat_behavior_info();
-
-  // const auto &lon_output =
-  //     frame_->mutable_session()->mutable_planning_context()->vision_only_longitudinal_motion_planner_output();
+      session_->planning_context()
+          .lane_change_decider_output()
+          .coarse_planning_info;
 
   int state = coarse_planning_info.target_state;
 
@@ -371,13 +354,6 @@ bool AvoidObstacleMaintainer::Process(
   for (auto &tr : lateral_obstacle->side_tracks()) {
     front_side_tracks.emplace_back(tr);
   }
-  // avd_car_past_ = lat_behavior_info.avd_car_past;
-  // flag_avd_ = lat_behavior_info.flag_avd;
-  // final_y_rel_ = lat_behavior_info.final_y_rel;
-  // ncar_change_ = lat_behavior_info.ncar_change;
-  // avd_back_cnt_ = lat_behavior_info.avd_back_cnt;
-  // avd_leadone_ = lat_behavior_info.avd_leadone;
-  // pre_leadone_id_ = lat_behavior_info.pre_leadone_id;
 
   if (is_ncar_ == true && avd_car_past_[0].size() > 0) {
     avd_car_past_[0][9] = UpdateAntsidesStrict();
@@ -1225,14 +1201,7 @@ bool AvoidObstacleMaintainer::Process(
   for (auto avd_car : avd_car_past_) {
     if (avd_car.size() != 0) LOG_DEBUG("avd_car id :%d ", (int)avd_car[0]);
   }
-  // lateral_avd_cars_info.avd_car_past = avd_car_past_;
-  // lat_behavior_info.flag_avd = flag_avd_;
-  // lat_behavior_info.avd_car_past = avd_car_past_;
-  // lat_behavior_info.final_y_rel = final_y_rel_;
-  // lat_behavior_info.ncar_change = ncar_change_;
-  // lat_behavior_info.avd_back_cnt = avd_back_cnt_;
-  // lat_behavior_info.avd_leadone = avd_leadone_;
-  // lat_behavior_info.pre_leadone_id = pre_leadone_id_;
+
   return true;
 }
 

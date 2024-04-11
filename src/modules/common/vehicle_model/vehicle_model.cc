@@ -6,9 +6,6 @@
 #include "config/vehicle_param_tmp.h"
 #include "config_context.h"
 #include "mjson/mjson.hpp"
-// #include <hocon/config_list.hpp>
-// #include <hocon/config_exception.hpp>
-// #include <hocon/config_parse_options.hpp>
 
 namespace planning {
 namespace common {
@@ -102,7 +99,7 @@ VehicleState VehicleModel::Predict(const double predicted_time_horizon,
   return predicted_vehicle_state;
 }
 
-bool VehicleModel::LoadVehicleModelConfig(std::string config_file_dir) {
+bool VehicleModel::LoadVehicleModelConfig(const std::string& config_file_dir) {
   std::string config_path = config_file_dir + "/vehicle_model.json";
   std::ifstream fjson(config_path);
   if (!fjson.is_open()) {

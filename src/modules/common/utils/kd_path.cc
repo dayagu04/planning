@@ -243,6 +243,32 @@ bool KDPath::XYToSL(const Point2D& cart_point, Point2D& frenet_point) {
   return true;
 }
 
+KDPathStatus KDPath::XYPointToSLPoint(const Point2D& cart_point,
+                                      Point2D& frenet_point) {
+  if (path_points_.empty()) {
+    LOG_DEBUG("path_points_ is empty");
+    return ERROR;
+  }
+
+  const auto* nearest_object =
+      kd_tree_->GetNearestObject({cart_point.x, cart_point.y});
+  if (nearest_object == nullptr) {
+    LOG_DEBUG("nearest_object is nullptr");
+    return ERROR;
+  }
+
+  const auto& line_object = nearest_object->line_segment();
+  double base_s = path_points_.at(nearest_object->index()).s();
+  Project(*line_object, cart_point.x, cart_point.y, base_s, &frenet_point.x,
+          &frenet_point.y);
+  if (frenet_point.x < 0) {
+    return FALL;
+  } else if (frenet_point.x > length_) {
+    return EXCEED;
+  }
+
+  return NORMAL;
+}
 bool KDPath::SLToXY(const Point2D& frenet_point, Point2D& cart_point) {
   if (path_points_.empty()) {
     LOG_DEBUG("path_points_ is empty");

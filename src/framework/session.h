@@ -37,22 +37,6 @@ class Session : public planning::common::Arena {
 
   PlanningContext *mutable_planning_context() { return planning_context_; }
 
-  const PlanningOutputContext &planning_output_context() const {
-    return *planning_output_context_;
-  }
-
-  PlanningOutputContext *mutable_planning_output_context() {
-    return planning_output_context_;
-  }
-
-  const VehicleConfigurationContext &vehicle_config_context() const {
-    return *vehicle_config_context_;
-  }
-
-  VehicleConfigurationContext *mutable_vehicle_config_context() {
-    return vehicle_config_context_;
-  }
-
   bool is_parking_scene() const {
     return get_scene_type() == planning::common::SceneType::PARKING_APA;
   }
@@ -64,14 +48,6 @@ class Session : public planning::common::Arena {
   planning::common::SceneType get_scene_type() const { return scene_type_; }
   void set_scene_type(const planning::common::SceneType &default_scene_type) {
     scene_type_ = default_scene_type;
-  }
-
-  common::ModuleList module_name_list() const {
-    auto it = module_name_map_.find(scene_type_);
-    if (it == module_name_map_.end()) {
-      return {};
-    }
-    return it->second;
   }
 
   const PlanningInitConfig &planning_init_config() const {
@@ -88,12 +64,13 @@ class Session : public planning::common::Arena {
 
  private:
   planning::EnvironmentalModel *environmental_model_;
+
   PlanningContext *planning_context_;
-  PlanningOutputContext *planning_output_context_;
-  VehicleConfigurationContext *vehicle_config_context_;
+
   planning::common::SceneType scene_type_;
-  std::map<common::SceneType, common::ModuleList> module_name_map_;
+
   PlanningInitConfig planning_init_config_;
+
   SimulationContext *simulation_context_;
 
   DISALLOW_COPY_AND_ASSIGN(Session);

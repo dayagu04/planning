@@ -14,9 +14,9 @@
 #include <memory>
 #include <vector>
 
-#include "general_planning.h"
 #include "geometry_math.h"
 #include "math_lib.h"
+#include "planning_scheduler.h"
 #include "spline.h"
 #include "transform_lib.h"
 

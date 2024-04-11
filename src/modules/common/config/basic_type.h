@@ -73,6 +73,7 @@ enum RequestSource {
   ACT_REQUEST,
   ROUTE_REQUEST
 };
+
 struct PointLLH {
   double Longitude;  // Longitude in degrees, ranging from -180 to 180,(度)
   double Latitude;   // Latitude in degrees, ranging from -90 to 90,(度)
@@ -117,6 +118,7 @@ struct GapSelectorPathSpline {
     LH_VALID = 2,
     LB_VALID = 3,
     LC_LANE_CROSS = 4,
+    LC_PREMOVE =5,
   };
   int path_spline_status{
       NO_VALID};  // 0--NO_VALID, 1--LC_VALID, 2--LH_VALID, 3--LB_VALID
@@ -442,19 +444,24 @@ struct GapSelectorInfo {
 };
 struct PlanningResult {
   int target_lane_id;
-  ScenarioStateEnum target_scenario_state = ROAD_NONE;
+  // ScenarioStateEnum target_scenario_state = ROAD_NONE;
   TrajectoryPoints raw_traj_points;
   TrajectoryPoints traj_points;
-  MotionPlanningInfo motion_planning_info;
+  // MotionPlanningInfo motion_planning_info; // TODO: 从PlanningResult移出去
   RequestType turn_signal = NO_CHANGE;
-  CurvatureInfo curvature_info;
+  // CurvatureInfo curvature_info;
   int use_backup_cnt = 0;
   double timestamp = 0.0;
-  bool use_refined_reference_path = false;
-  int contingency_trigger_index = 0;
-  bool gap_selector_trustworthy = false;
+  // bool use_refined_reference_path = false;
+  // int contingency_trigger_index = 0;
+  // bool gap_selector_trustworthy = false;
   // std::string extra_json;
   mjson::Json extra_json = mjson::Json(mjson::Json::object());
+  void Clear() {
+    raw_traj_points.clear();
+    traj_points.clear();
+    extra_json = mjson::Json(mjson::Json::object());
+  }
 };
 
 struct PlanningInitPoint {

@@ -65,7 +65,7 @@ class HistoryObstacleManager {
   std::vector<Obstacle> old_obstacles_;  // hack: maintain static_obstacle
   std::vector<Obstacle> new_obstacles_;
   std::vector<HistoryObstacle> history_obstacles_;
-  VehicleParam vehicle_param_;
+  // VehicleParam vehicle_param_;
   double planning_loop_dt_;
 };
 }  // namespace planning

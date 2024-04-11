@@ -69,8 +69,8 @@ class TrackletMaintainer {
             bool tleft_lane, bool rightest_lane, double dist_intersect,
             double intersect_length, bool left_faster, bool right_faster,
             LeadCars &lead_cars, bool isRedLightStop, bool isFasterStaticAvd,
-            bool isOnHighway, std::vector<double> d_poly,
-            std::vector<double> c_poly);
+            bool isOnHighway, const std::vector<double> &d_poly,
+            const std::vector<double> &c_poly);
 
   bool fill_info_with_refline(TrackedObject &item, double lat_offset);
 

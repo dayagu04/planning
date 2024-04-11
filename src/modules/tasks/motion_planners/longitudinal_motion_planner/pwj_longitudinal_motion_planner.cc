@@ -11,36 +11,35 @@
 // #include "core/common/trace.h"
 // #include "core/modules/common/ego_prediction_utils.h"
 // #include "core/modules/context/ego_state.h"
+#include "adas_function/mrc_condition.h"
 #include "debug_info_log.h"
 #include "ifly_time.h"
 #include "math/piecewise_jerk/piecewise_problem.h"
-#include "mrc_condition.h"
 
 namespace planning {
 
 LongitudinalOptimizerV3::LongitudinalOptimizerV3(
-    const EgoPlanningConfigBuilder *config_builder,
-    const std::shared_ptr<TaskPipelineContext> &pipeline_context)
-    : Task(config_builder, pipeline_context) {
+    const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
+    : Task(config_builder, session) {
   config_ = config_builder->cast<LongitudinalOptimizerV3Config>();
-  name_ = "PWJLonMotionPlanner";
+  name_ = "LongitudinalOptimizerV3";
 }
 
-bool LongitudinalOptimizerV3::Execute(planning::framework::Frame *frame) {
+bool LongitudinalOptimizerV3::Execute() {
   // NTRACE_CALL(7);
   LOG_DEBUG("=======LongitudinalOptimizerV3======= \n");
-  double start_time = IflyTime::Now_ms();
-  if (Task::Execute(frame) == false) {
+
+  if (!PreCheck()) {
+    LOG_DEBUG("PreCheck failed\n");
     return false;
   }
-  auto config_builder =
-      frame->mutable_session()->mutable_environmental_model()->config_builder(
-          planning::common::SceneType::HIGHWAY);
+
+  double start_time = IflyTime::Now_ms();
+  auto config_builder = session_->mutable_environmental_model()->config_builder(
+      planning::common::SceneType::HIGHWAY);
   config_acc_ = config_builder->cast<AdaptiveCruiseControlConfig>();
   config_start_stop_ = config_builder->cast<StartStopEnableConfig>();
 
-  auto &ego_prediction_result = pipeline_context_->planning_result;
-  auto &ego_prediction_info = pipeline_context_->planning_info;
   bool b_success = false;
   LongitudinalSolverOption solver_option;
   solver_option.enable_log = false;
@@ -49,46 +48,12 @@ bool LongitudinalOptimizerV3::Execute(planning::framework::Frame *frame) {
 
   // MDEBUG_JSON_BEGIN_DICT(LongitudinalOptimizerProblem)
   // MDEBUG_JSON_BEGIN_DICT(LongitudinalOptimizerProblem_Full_Constraint)
-  b_success = optimize(solver_option, ego_prediction_info.lon_ref_path,
-                       ego_prediction_result.traj_points);
+  b_success = optimize(solver_option);
   // MDEBUG_JSON_END_DICT(LongitudinalOptimizerProblem_Full_Constraint)
   if (!b_success) {
     LOG_ERROR("LongitudinalOptimizerV3::Execute failed");
   }
 
-  // 暂时关闭：失败后是否开启重新优化
-  // if (config_.enable_longitudinal_optimization_backup) {
-  //   if (!b_success) {
-  //     solver_option.loose_obstacle_bound = true;
-  //     //
-  //     MDEBUG_JSON_BEGIN_DICT(LongitudinalOptimizerProblem_Only_Map_Constraint)
-  //     b_success = optimize(solver_option, ego_prediction_info.lon_ref_path,
-  //                          ego_prediction_result.traj_points);
-  //     //
-  //     MDEBUG_JSON_END_DICT(LongitudinalOptimizerProblem_Only_Map_Constraint)
-  //     if (!b_success) {
-  //       LOG_ERROR(
-  //           "LongitudinalOptimizerV3::Execute failed with only map
-  //           constraint");
-  //     }
-  //   }
-
-  //   if (!b_success) {
-  //     solver_option.enable_log = true;
-  //     solver_option.use_raw_model_traj = true;
-  //     //
-  //     MDEBUG_JSON_BEGIN_DICT(LongitudinalOptimizerProblem_Without_Constraint)
-  //     b_success = optimize(solver_option, ego_prediction_info.lon_ref_path,
-  //                          ego_prediction_result.traj_points);
-  //     //
-  //     MDEBUG_JSON_END_DICT(LongitudinalOptimizerProblem_Without_Constraint)
-  //     if (!b_success) {
-  //       LOG_ERROR(
-  //           "LongitudinalOptimizerV3::Execute failed without constraint");
-  //     }
-  //   }
-  // }
-  // MDEBUG_JSON_END_DICT(LongitudinalOptimizerProblem)
   double end_time = IflyTime::Now_ms();
   LOG_DEBUG("=======LongitudinalOptimizerV3 time cost is [%f]ms:\n",
             end_time - start_time);
@@ -96,34 +61,38 @@ bool LongitudinalOptimizerV3::Execute(planning::framework::Frame *frame) {
   return b_success;
 }
 
-bool LongitudinalOptimizerV3::optimize(
-    const LongitudinalSolverOption &option, const LonRefPath &lon_ref_path,
-    std::vector<TrajectoryPoint> &traj_points) {
+bool LongitudinalOptimizerV3::optimize(const LongitudinalSolverOption &option) {
   // Step 1) define optimization problem
+  auto &planning_result =
+      session_->mutable_planning_context()->mutable_planning_result();
+  auto &traj_points = planning_result.traj_points;
+  const auto &lon_ref_path =
+      session_->planning_context().longitudinal_decider_output();
+  const auto &reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+
   const auto &planning_init_point =
-      reference_path_ptr_->get_frenet_ego_state().planning_init_point();
+      reference_path_ptr->get_frenet_ego_state().planning_init_point();
   auto ego_vel = planning_init_point.v;
   auto ego_acc = planning_init_point.a;
 
-  auto &acc_info = frame_->mutable_session()
-                       ->mutable_planning_context()
+  auto &acc_info = session_->mutable_planning_context()
                        ->mutable_adaptive_cruise_control_result();
   bool enable_dx_ref = acc_info.navi_speed_control_info.enable_v_cost;
   double acc_weight_dx_config = config_acc_.dx_ref_weight;
   double stop_weight_dx_config = config_start_stop_.dx_ref_weight;
   LOG_DEBUG("HHLDEBUGB in optimize ego_vel: %.2f, ego_acc: %.2f \n",
             ego_vel * 3.6, ego_acc);
-  common::StartStopInfo &start_stop_result = frame_->mutable_session()
-                                                 ->mutable_planning_context()
-                                                 ->mutable_start_stop_result();
+  common::StartStopInfo &start_stop_result =
+      session_->mutable_planning_context()->mutable_start_stop_result();
   bool enable_stop_flag = start_stop_result.enable_stop();
   std::array<double, 3> s_init_state = {planning_init_point.frenet_state.s,
                                         ego_vel, ego_acc};  // todo recheck
   size_t num_t = lon_ref_path.t_list.size();
   planning_math::PiecewiseProblem lon_problem(num_t, lon_ref_path.t_list,
                                               s_init_state, false);
-  auto mrc_brake =
-      frame_->mutable_session()->mutable_planning_context()->mrc_condition();
+  auto mrc_brake = session_->mutable_planning_context()->mrc_condition();
   MrcBrakeType mrc_brake_type = mrc_brake->mrc_brake_type();
   bool mrc_condition_enable = mrc_brake_type == MrcBrakeType::SLOW_BRAKE ||
                               mrc_brake_type == MrcBrakeType::HARD_BRAKE ||
@@ -189,12 +158,10 @@ bool LongitudinalOptimizerV3::optimize(
   // Step 2) optimize problem
   int status = 0;
   bool success = lon_problem.optimize(config_.max_iteration_num, status);
-  pipeline_context_->planning_result.extra_json["lon_motion_error_info"] =
-      "none";
+  planning_result.extra_json["lon_motion_error_info"] = "none";
   if (!success) {
     if (option.enable_log) {
-      pipeline_context_->planning_result.extra_json["lon_motion_error_info"] =
-          "solver_failed";
+      planning_result.extra_json["lon_motion_error_info"] = "solver_failed";
     }
   }
 
@@ -219,13 +186,14 @@ bool LongitudinalOptimizerV3::optimize(
   JSON_DEBUG_VALUE("LonMotionOpt_init_state_v", s_init_state[1]);
   JSON_DEBUG_VALUE("LonMotionOpt_init_state_a", s_init_state[2]);
 
-  const auto &ego_prediction_raw_traj_points =
-      pipeline_context_->planning_result.raw_traj_points;
+  const auto &ego_prediction_raw_traj_points = planning_result.raw_traj_points;
   auto init_s = planning_init_point.frenet_state.s;
   constexpr size_t kMaxCheckIndex = 5;
   bool check_invalid_speed_bound{false};
   double s_last = init_s;
   double v_ok = 0.0;
+  auto &status_info =
+      session_->mutable_planning_context()->mutable_status_info();
   for (size_t i = 0; i < num_t; ++i) {
     auto t = lon_ref_path.t_list[i];
     auto s_ref = lon_ref_path.s_refs[i].first;
@@ -255,8 +223,7 @@ bool LongitudinalOptimizerV3::optimize(
       LOG_ERROR("NP_DEBUG: Error! Invalid s bound! \n");
       check_invalid_speed_bound = true;
       if (option.enable_log) {
-        pipeline_context_->planning_result.extra_json["lon_motion_error_info"] =
-            "invalid_s_bound";
+        planning_result.extra_json["lon_motion_error_info"] = "invalid_s_bound";
       }
     }
     auto s_lead_bound = std::numeric_limits<double>::max();
@@ -275,30 +242,28 @@ bool LongitudinalOptimizerV3::optimize(
     constexpr double kMinDec = -7.0;
     constexpr double kMaxJerk = 10.0;
 
-    bool after_hot_start = pipeline_context_->status_info.planning_loop > 50;
+    bool after_hot_start = status_info.planning_loop > 50;
     size_t max_check_index = std::min(kMaxCheckIndex, s.size());
     if (!check_invalid_speed_bound && after_hot_start && i < max_check_index) {
       if (s[i] < s_lower - 2.0 || s[i] > s_upper + 2.0) {
         LOG_ERROR("NP_DEBUG: Error! speed bound collide! %d %f [%f %f] \n", i,
                   s[i], s_lower, s_upper);
         if (option.enable_log) {
-          pipeline_context_->planning_result
-              .extra_json["lon_motion_error_info"] = "speed_bound_collide";
+          planning_result.extra_json["lon_motion_error_info"] =
+              "speed_bound_collide";
         }
       }
       if (a[i] > kMaxAcc || a[i] < kMinDec) {
         LOG_ERROR("NP_DEBUG: Error! Invalid acc %f ! \n", a[i]);
         if (option.enable_log) {
-          pipeline_context_->planning_result
-              .extra_json["lon_motion_error_info"] =
+          planning_result.extra_json["lon_motion_error_info"] =
               "speed_dynamic_check_failed_for_invalid_acc";
         }
       }
       if (std::abs(jerk[i]) > kMaxJerk) {
         LOG_ERROR("NP_DEBUG: Error! Invalid jerk %f! \n", jerk[i]);
         if (option.enable_log) {
-          pipeline_context_->planning_result
-              .extra_json["lon_motion_error_info"] =
+          planning_result.extra_json["lon_motion_error_info"] =
               "speed_dynamic_check_failed_for_invalid_jerk";
         }
       }
@@ -309,7 +274,7 @@ bool LongitudinalOptimizerV3::optimize(
   if (not success) {
     std::stringstream error_info;
     error_info << "lon_pwj_opt_fail:" << status;
-    pipeline_context_->status_info.error_info = error_info.str();
+    status_info.error_info = error_info.str();
     LOG_ERROR("LongitudinalOptimizerV3::optimize failed \n");
     return false;
   }
@@ -317,7 +282,7 @@ bool LongitudinalOptimizerV3::optimize(
   if (success && s.size() >= num_t && v.size() >= num_t && a.size() >= num_t) {
     for (size_t i = 0; i < num_t; i++) {
       if (std::isnan(s[i]) || std::isnan(v[i]) || std::isnan(a[i])) {
-        pipeline_context_->status_info.error_info = "invalid_lonopt_solution";
+        status_info.error_info = "invalid_lonopt_solution";
         LOG_ERROR(
             "LongitudinalOptimizerV3::optimize invalid_lonopt_solution \n");
         return false;

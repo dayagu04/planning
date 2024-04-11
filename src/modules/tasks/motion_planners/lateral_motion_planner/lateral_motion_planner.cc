@@ -9,6 +9,7 @@
 #include "debug_info_log.h"
 #include "ilqr_define.h"
 #include "lateral_motion_planner.pb.h"
+#include "planning_context.h"
 #include "spline.h"
 #include "src/lateral_motion_planning_cost.h"
 
@@ -16,9 +17,8 @@ static const double pi_const = 3.141592654;
 static const double planning_loop_dt = 0.1;
 namespace planning {
 LateralMotionPlanner::LateralMotionPlanner(
-    const EgoPlanningConfigBuilder *config_builder,
-    const std::shared_ptr<TaskPipelineContext> &pipeline_context)
-    : Task(config_builder, pipeline_context) {
+    const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
+    : Task(config_builder, session) {
   config_ = config_builder->cast<LateralMotionPlannerConfig>();
   name_ = "LateralMotionPlanner";
 
@@ -68,13 +68,15 @@ void LateralMotionPlanner::Init() {
   planning_input_.mutable_control_vec()->Resize(N, 0.0);
 }
 
-bool LateralMotionPlanner::Execute(planning::framework::Frame *frame) {
+bool LateralMotionPlanner::Execute() {
   LOG_DEBUG("=======LateralMotionPlanner======= \n");
-  auto start_time = IflyTime::Now_ms();
-  frame_ = frame;
-  if (Task::Execute(frame) == false) {
+
+  if (!PreCheck()) {
+    LOG_DEBUG("PreCheck failed\n");
     return false;
   }
+
+  auto start_time = IflyTime::Now_ms();
 
   // assemble input
   AssembleInput();
@@ -100,12 +102,13 @@ bool LateralMotionPlanner::Execute(planning::framework::Frame *frame) {
 
 void LateralMotionPlanner::AssembleInput() {
   // set init state
+  const auto &reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
   const auto &planning_init_point =
-      reference_path_ptr_->get_frenet_ego_state().planning_init_point();
-  const auto &motion_planning_info = frame_->mutable_session()
-                                         ->mutable_planning_context()
-                                         ->mutable_planning_result()
-                                         .motion_planning_info;
+      reference_path_ptr->get_frenet_ego_state().planning_init_point();
+  const auto &motion_planner_output =
+      session_->planning_context().motion_planner_output();
 
   JSON_DEBUG_VALUE("init_pos_x1", planning_init_point.lat_init_state.x())
   JSON_DEBUG_VALUE("init_pos_y1", planning_init_point.lat_init_state.y())
@@ -120,13 +123,14 @@ void LateralMotionPlanner::AssembleInput() {
       planning_init_point.lat_init_state.delta());
 
   // set reference
-  const auto &lat_decider_output =  // result from lat decision
-      frame_->session()->planning_context().lat_decider_output();
+  const auto &general_lateral_decider_output =  // result from lat decision
+      session_->planning_context().general_lateral_decider_output();
 
-  const auto &enu_ref_path = lat_decider_output.enu_ref_path;
-  const auto &enu_ref_theta = lat_decider_output.enu_ref_theta;
-  const bool &complete_follow = lat_decider_output.complete_follow;
-  const bool &lane_change_scene = lat_decider_output.lane_change_scene;
+  const auto &enu_ref_path = general_lateral_decider_output.enu_ref_path;
+  const auto &enu_ref_theta = general_lateral_decider_output.enu_ref_theta;
+  const bool &complete_follow = general_lateral_decider_output.complete_follow;
+  const bool &lane_change_scene =
+      general_lateral_decider_output.lane_change_scene;
   assert(enu_ref_path.size() == enu_ref_theta.size());
 
   // set reference trajectory
@@ -176,15 +180,15 @@ void LateralMotionPlanner::AssembleInput() {
   // set last trajectory: temporarily same as reference: TODO
   double final_t = 5.0;  // hack now
   double tmp_t = 0.0;
-  if (motion_planning_info.lat_init_flag == true) {
+  if (motion_planner_output.lat_init_flag == true) {
     for (size_t i = 0; i < enu_ref_path.size(); ++i) {
       tmp_t = std::fmin(planning_loop_dt + i * 0.2, final_t);
       planning_input_.mutable_last_x_vec()->Set(
-          i, motion_planning_info.lateral_x_t_spline(tmp_t));
+          i, motion_planner_output.lateral_x_t_spline(tmp_t));
       planning_input_.mutable_last_y_vec()->Set(
-          i, motion_planning_info.lateral_y_t_spline(tmp_t));
+          i, motion_planner_output.lateral_y_t_spline(tmp_t));
       planning_input_.mutable_last_theta_vec()->Set(
-          i, motion_planning_info.lateral_theta_t_spline(tmp_t));
+          i, motion_planner_output.lateral_theta_t_spline(tmp_t));
     }
 
   } else {
@@ -196,8 +200,8 @@ void LateralMotionPlanner::AssembleInput() {
   }
 
   // set safe (hard) and path (soft) bound
-  const auto &safe_bounds = lat_decider_output.safe_bounds;
-  const auto &path_bounds = lat_decider_output.path_bounds;
+  const auto &safe_bounds = general_lateral_decider_output.safe_bounds;
+  const auto &path_bounds = general_lateral_decider_output.path_bounds;
   assert(safe_bounds.size() == path_bounds.size());
 
   for (size_t i = 0; i < safe_bounds.size(); ++i) {
@@ -257,7 +261,7 @@ void LateralMotionPlanner::AssembleInput() {
 
     static const double min_v_cruise = 0.5;
     planning_input_.set_ref_vel(
-        std::max(lat_decider_output.v_cruise, min_v_cruise));
+        std::max(general_lateral_decider_output.v_cruise, min_v_cruise));
 
     planning_input_.set_curv_factor(0.3);
   }
@@ -277,9 +281,7 @@ void LateralMotionPlanner::AssembleInput() {
   planning_input_.set_q_hard_corridor(config_.q_hard_corridor);
 
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
-      frame_->mutable_session()
-          ->mutable_planning_context()
-          ->lateral_offset_decider_output();
+      session_->mutable_planning_context()->lateral_offset_decider_output();
   if (lateral_offset_decider_output.is_valid) {
     planning_input_.set_acc_bound(config_.acc_bound_avoid);
     planning_input_.set_jerk_bound(config_.jerk_bound_avoid);
@@ -363,10 +365,8 @@ void LateralMotionPlanner::Update() {
   }
 
   // generate motion planning output into planning_context
-  auto &motion_planning_info = frame_->mutable_session()
-                                   ->mutable_planning_context()
-                                   ->mutable_planning_result()
-                                   .motion_planning_info;
+  auto &motion_planner_output =
+      session_->mutable_planning_context()->mutable_motion_planner_output();
 
   // append the planning traj anti-direction for decoupling lat & lon replan
   const static double appended_length = 1.5;
@@ -385,51 +385,56 @@ void LateralMotionPlanner::Update() {
   t_vec[0] = -0.2;
 
   // set state spline
-  motion_planning_info.x_s_spline.set_points(s_vec, x_vec);
-  motion_planning_info.y_s_spline.set_points(s_vec, y_vec);
-  motion_planning_info.theta_s_spline.set_points(s_vec, theta_vec);
-  motion_planning_info.delta_s_spline.set_points(s_vec, delta_vec);
-  motion_planning_info.omega_s_spline.set_points(s_vec, omega_vec);
-  motion_planning_info.curv_s_spline.set_points(s_vec, curv_vec);
-  motion_planning_info.d_curv_s_spline.set_points(s_vec, d_curv_vec);
-  motion_planning_info.lateral_x_t_spline.set_points(t_vec, x_vec);
-  motion_planning_info.lateral_y_t_spline.set_points(t_vec, y_vec);
-  motion_planning_info.lateral_theta_t_spline.set_points(t_vec, theta_vec);
-  motion_planning_info.s_lat_vec = s_vec;
-  motion_planning_info.lat_init_flag = true;
+  motion_planner_output.x_s_spline.set_points(s_vec, x_vec);
+  motion_planner_output.y_s_spline.set_points(s_vec, y_vec);
+  motion_planner_output.theta_s_spline.set_points(s_vec, theta_vec);
+  motion_planner_output.delta_s_spline.set_points(s_vec, delta_vec);
+  motion_planner_output.omega_s_spline.set_points(s_vec, omega_vec);
+  motion_planner_output.curv_s_spline.set_points(s_vec, curv_vec);
+  motion_planner_output.d_curv_s_spline.set_points(s_vec, d_curv_vec);
+  motion_planner_output.lateral_x_t_spline.set_points(t_vec, x_vec);
+  motion_planner_output.lateral_y_t_spline.set_points(t_vec, y_vec);
+  motion_planner_output.lateral_theta_t_spline.set_points(t_vec, theta_vec);
+  motion_planner_output.s_lat_vec = s_vec;
+  motion_planner_output.lat_init_flag = true;
 
   ilqr_solver::ControlVec u_vec;
   u_vec.resize(N);
 
-  // set u_vec to motion_planning_info for warm start
+  // set u_vec to motion_planner_output for warm start
   for (size_t i = 0; i < N; ++i) {
     ilqr_solver::Control u;
     u.resize(1);
     u[0] = omega_vec[i];
     u_vec[i] = u;
   }
-  motion_planning_info.u_vec = u_vec;
+  motion_planner_output.u_vec = u_vec;
 
   // assemble results
-  const auto &lat_decider_output =  // result from lat decision
-      frame_->session()->planning_context().lat_decider_output();
+  const auto &general_lateral_decider_output =  // result from lat decision
+      session_->planning_context().general_lateral_decider_output();
 
-  auto &traj_points = pipeline_context_->planning_result.traj_points;
+  auto &traj_points = session_->mutable_planning_context()
+                          ->mutable_planning_result()
+                          .traj_points;
+  const auto &reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
   for (size_t i = 0; i < N; i++) {
     traj_points[i].x = x_vec[i + 1];
     traj_points[i].y = y_vec[i + 1];
     traj_points[i].heading_angle = theta_vec[i + 1];
     traj_points[i].curvature = planning_input_.curv_factor() * delta_vec[i + 1];
 
-    traj_points[i].v = lat_decider_output.v_cruise;
+    traj_points[i].v = general_lateral_decider_output.v_cruise;
     traj_points[i].t = planning_output.time_vec(i);
 
     // frenet state update
     Point2D cart_pt(traj_points[i].x, traj_points[i].y);
     Point2D frenet_pt;
 
-    if (reference_path_ptr_->get_frenet_coord() != nullptr &&
-        reference_path_ptr_->get_frenet_coord()->XYToSL(cart_pt, frenet_pt)) {
+    if (reference_path_ptr->get_frenet_coord() != nullptr &&
+        reference_path_ptr->get_frenet_coord()->XYToSL(cart_pt, frenet_pt)) {
       traj_points[i].s = frenet_pt.x;
       traj_points[i].l = frenet_pt.y;
     } else {

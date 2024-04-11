@@ -8,6 +8,7 @@
 
 #include "Eigen/Core"
 #include "collision_detection.h"
+#include "geometry_math.h"
 #include "math_lib.h"
 #include "transform_lib.h"
 
@@ -50,6 +51,20 @@ void SetObstacle(const double obstacles_x, const double obstacles_y) {
   pBaseColDetAir->SetObstacles(obstacle_global_vec);
 }
 
+void SetObstacleLine(const double obstacles_x1, const double obstacles_y1,
+                     const double obstacles_x2, const double obstacles_y2) {
+  std::vector<pnc::geometry_lib::LineSegment> obs_line_global_vec;
+  obs_line_global_vec.clear();
+  obs_line_global_vec.reserve(1);
+  pnc::geometry_lib::LineSegment obs_line_global;
+  Eigen::Vector2d obstacle_global_1(obstacles_x1, obstacles_y1);
+  Eigen::Vector2d obstacle_global_2(obstacles_x2, obstacles_y2);
+  obs_line_global.SetPoints(obstacle_global_1, obstacle_global_2);
+  obs_line_global_vec.emplace_back(obs_line_global);
+
+  pBaseColDetAir->SetLineObstacles(obs_line_global_vec);
+}
+
 void SetParam(const double lat_inflation) {
   CollisionDetector::Paramters param;
   param.lat_inflation = lat_inflation;
@@ -57,22 +72,34 @@ void SetParam(const double lat_inflation) {
 }
 
 void UpdateRefTrajLine(const Eigen::Vector3d ego_pos_start,
-                       const Eigen::Vector3d ego_pos_end) {
+                       const Eigen::Vector3d ego_pos_end,
+                       const int is_line_obs) {
   pnc::geometry_lib::LineSegment line_seg(
       Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]),
       Eigen::Vector2d(ego_pos_end[0], ego_pos_end[1]));
-  collision_result = pBaseColDetAir->Update(line_seg, ego_pos_start[2]);
+  if (is_line_obs == 0) {
+    collision_result = pBaseColDetAir->Update(line_seg, ego_pos_start[2]);
+  } else {
+    collision_result = pBaseColDetAir->UpdateByLineObs(line_seg, ego_pos_start[2]);
+  }
 }
 
 void UpdateRefTrajArc(const Eigen::Vector3d ego_pos_start,
                       const Eigen::Vector3d ego_pos_end,
-                      const Eigen::Vector5d ego_turn_circle) {
+                      const Eigen::Vector5d ego_turn_circle,
+                      bool is_anti_clockwise, const int is_line_obs) {
   pnc::geometry_lib::Arc arc;
   arc.pA = Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]);
   arc.pB = Eigen::Vector2d(ego_pos_end[0], ego_pos_end[1]);
-  arc.circle_info.center = Eigen::Vector2d(ego_turn_circle[0], ego_turn_circle[1]);
+  arc.circle_info.center =
+      Eigen::Vector2d(ego_turn_circle[0], ego_turn_circle[1]);
   arc.circle_info.radius = ego_turn_circle[2];
-  collision_result = pBaseColDetAir->Update(arc, ego_pos_start[2]);
+  arc.is_anti_clockwise = is_anti_clockwise;
+  if (!is_line_obs) {
+    collision_result = pBaseColDetAir->Update(arc, ego_pos_start[2]);
+  } else {
+    collision_result = pBaseColDetAir->UpdateByLineObs(arc, ego_pos_start[2]);
+  }
 }
 
 const double GetRemainDist() { return float(collision_result.remain_dist); }
@@ -107,7 +134,7 @@ const Eigen::Vector2d GetTrunCenterCoord(
 }
 
 const Eigen::Vector2d GetEgoPosCoord(const Eigen::Vector3d ego_pos_start,
-                                        const Eigen::Vector5d ego_turn_circle) {
+                                     const Eigen::Vector5d ego_turn_circle) {
   // ego_pos_start: x, y, heading
   // ego_turn_circle: x, y, radius, rotation_angle, rotation_direction
   const Eigen::Vector2d OA =
@@ -126,6 +153,7 @@ PYBIND11_MODULE(collision_detection_py, m) {
 
   m.def("Init", &Init)
       .def("SetObstacle", &SetObstacle)
+      .def("SetObstacleLine", &SetObstacleLine)
       .def("UpdateRefTrajLine", &UpdateRefTrajLine)
       .def("UpdateRefTrajArc", &UpdateRefTrajArc)
       .def("GetTrunCenterCoord", &GetTrunCenterCoord)

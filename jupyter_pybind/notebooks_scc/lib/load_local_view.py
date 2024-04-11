@@ -290,7 +290,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   # step 3: 加载车道线信息
   if bag_loader.road_msg['enable'] == True:
-    is_enu_to_car = True
+    is_enu_to_car = False
     # load lane info
     try:
       line_info_list = load_lane_lines(road_msg.reference_line_msg, is_enu_to_car, loc_msg, g_is_display_enu)
@@ -393,22 +393,25 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       #   print('error')
       #   pass
     #加载planning 生成中心线的信息
-    plan_gen_refline_list = list(bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].generated_refline_info)
-
-    if(len(plan_gen_refline_list) > 0):
-      plan_gen_refline = plan_gen_refline_list[0]
-      line_x, line_y = load_intersection_generated_refline(plan_gen_refline, is_enu_to_car, loc_msg)
-        #line_x.append(virtual_lane_refline_point.car_point.x)
-        #line_y.append(virtual_lane_refline_point.car_point.y)
-      local_view_data['data_center_line_gen'].data.update({
-            'center_line_gen_x': line_x,
-            'center_line_gen_y': line_y,
-      })
-    else:
-      local_view_data['data_center_line_gen'].data.update({
-            'center_line_gen_x': [],
-            'center_line_gen_y': [],
-      })
+    try:
+      plan_gen_refline_list = list(bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].generated_refline_info)
+      if(len(plan_gen_refline_list) > 0):
+        plan_gen_refline = plan_gen_refline_list[0]
+        line_x, line_y = load_intersection_generated_refline(plan_gen_refline, is_enu_to_car, loc_msg)
+          #line_x.append(virtual_lane_refline_point.car_point.x)
+          #line_y.append(virtual_lane_refline_point.car_point.y)
+        local_view_data['data_center_line_gen'].data.update({
+              'center_line_gen_x': line_x,
+              'center_line_gen_y': line_y,
+        })
+      else:
+        local_view_data['data_center_line_gen'].data.update({
+              'center_line_gen_x': [],
+              'center_line_gen_y': [],
+        })
+    except:
+      pass
+    
   # fix_lane,origin_lane
   if bag_loader.plan_debug_msg['enable'] == True:
     try:
@@ -680,9 +683,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # if bag_loader.plan_msg['enable'] == True and loc_mode == 2:
   if bag_loader.plan_msg['enable'] == True and loc_mode == 2:
     trajectory = plan_msg.trajectory
-    # plan_traj_s = []
-    # for i in range(len(trajectory.trajectory_points)):
-    #   plan_traj_s.append(trajectory.trajectory_points[i].distance)
+    plan_traj_s = []
     if trajectory.trajectory_type == 0: # 实时轨迹
       try:
         planning_polynomial = trajectory.target_reference.polynomial
@@ -691,6 +692,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       except:
         plan_traj_x, plan_traj_y, plan_traj_s = [], [], []
     else:
+      for i in range(len(trajectory.trajectory_points)):
+        plan_traj_s.append(trajectory.trajectory_points[i].distance)
       plan_traj_x, plan_traj_y, plan_traj_theta, plan_dict = generate_planning_trajectory(trajectory, loc_msg, g_is_display_enu)
       for i in range(5):
         local_view_data['data_planning_' + str(i)].data.update({
@@ -782,17 +785,29 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     cur_yaw = loc_msg.orientation.euler_boot.yaw
 
     if bag_loader.planning_hmi_msg['enable'] ==True:
-      noa_output_info_msg = planning_hmi_msg.noa_output_info
-      print("dis to ramp:",noa_output_info_msg.dis_to_ramp)
-      print("dis to split:",noa_output_info_msg.dis_to_split)
-      print("dis to merge:",noa_output_info_msg.dis_to_merge)
+      ad_info = bag_loader.planning_hmi_msg['data'][planning_hmi_msg_idx].ad_info
+      print("dis to ramp:", ad_info.distance_to_ramp)
+      print("dis to split:", ad_info.distance_to_split)
+      print("dis to merge:", ad_info.distance_to_merge)
 
     print("ehr static map timestamp:",ehr_static_map_msg.header)
     print("road_map.lanes len:",len(ehr_static_map_msg.road_map.lanes))
     #load center line
+    lane_id_in_route_set = set()
+    lane_boundary_id_in_route_set = set()
+    road_boundary_id_in_route_set = set()
+    for lane_group in bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].current_routing.lane_groups_in_route:
+      for lane in lane_group.lanes_in_route:
+        lane_id_in_route_set.add(lane.lane_id)
+    for lane in bag_loader.ehr_static_map_msg['data'][ehr_static_map_msg_idx].road_map.lanes:
+      if lane.lane_id in lane_id_in_route_set:
+        lane_boundary_id_in_route_set.add(lane.left_lane_boundary_id)
+        lane_boundary_id_in_route_set.add(lane.right_lane_boundary_id)
+        road_boundary_id_in_route_set.add(lane.left_road_boundary_id)
+        road_boundary_id_in_route_set.add(lane.right_road_boundary_id)
 
     ehr_line_info_list = ehr_load_center_lane_lines(ehr_static_map_msg.road_map.lanes,
-                                             cur_pos_xn,cur_pos_yn,cur_yaw,Max_line_size)
+                                             cur_pos_xn,cur_pos_yn,cur_yaw,Max_line_size,lane_id_in_route_set)
     ehr_data_lane_dict = {}
     for i in range(Max_line_size):
       ehr_data_lane_dict[i] = local_view_data['ehr_data_lane_{}'.format(i)]
@@ -810,7 +825,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     #load road boundary
     print("road_map.road_boundaries len:",len(ehr_static_map_msg.road_map.road_boundaries))
     ehr_load_road_boundary_info_list = ehr_load_road_boundary_lines(ehr_static_map_msg.road_map.road_boundaries,
-                                             cur_pos_xn,cur_pos_yn,cur_yaw,Road_boundary_max_line_size)
+                                             cur_pos_xn,cur_pos_yn,cur_yaw,Road_boundary_max_line_size,road_boundary_id_in_route_set)
     ehr_data_road_boundary_dict = {}
     for i in range(Road_boundary_max_line_size):
       ehr_data_road_boundary_dict[i] = local_view_data['ehr_road_boundary_{}'.format(i)]
@@ -824,7 +839,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     #load lane boundary
     print("road_map.lane_boundaries len:",len(ehr_static_map_msg.road_map.lane_boundaries))
     ehr_lane_boundary_info_list = ehr_load_lane_boundary_lines(ehr_static_map_msg.road_map.lane_boundaries,
-                                             cur_pos_xn,cur_pos_yn,cur_yaw,Lane_boundary_max_line_size)
+                                             cur_pos_xn,cur_pos_yn,cur_yaw,Lane_boundary_max_line_size,lane_boundary_id_in_route_set)
     ehr_data_lane_boundary_dict = {}
     for i in range(Lane_boundary_max_line_size):
       ehr_data_lane_boundary_dict[i] = local_view_data['ehr_lane_boundary_{}'.format(i)]
@@ -1156,7 +1171,7 @@ def load_local_view_figure():
   fig1.line('line_19_y', 'line_19_x', source = data_lane_19, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   # !!!!!!!!!!!! Important: Do not draw above !!!!!!!!!!! 
   
-  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
+  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat',visible = False)
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_raw, fill_color = "deepskyblue", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_raw',visible = False)
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_mpc, fill_color = "salmon", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_mpc',visible = False)

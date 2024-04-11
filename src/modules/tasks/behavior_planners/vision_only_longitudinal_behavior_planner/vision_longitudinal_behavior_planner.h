@@ -1,8 +1,8 @@
 #include <memory>
-#include "behavior_planners/vision_only_lane_change_decider/vision_only_lane_change_decider.h"
 #include "filters.h"
 #include "lateral_obstacle.h"
-#include "task.h"
+#include "tasks/behavior_planners/vision_only_lane_change_decider/vision_only_lane_change_decider.h"
+#include "tasks/task.h"
 #include "virtual_lane_manager.h"
 
 namespace planning {
@@ -11,10 +11,10 @@ class VisionLongitudinalBehaviorPlanner : public Task {
  public:
   explicit VisionLongitudinalBehaviorPlanner(
       const EgoPlanningConfigBuilder *config_builder,
-      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+      framework::Session *session);
   virtual ~VisionLongitudinalBehaviorPlanner() = default;
 
-  bool Execute(framework::Frame *frame);
+  bool Execute() override;
 
  private:
   virtual bool calculate();

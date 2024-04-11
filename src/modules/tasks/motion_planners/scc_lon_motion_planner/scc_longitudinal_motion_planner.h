@@ -13,30 +13,29 @@
 #include <string>
 #include <vector>
 
+#include "adas_function/mrc_condition.h"
 #include "environmental_model.h"
 #include "frenet_ego_state.h"
 #include "ilqr_core.h"
 #include "longitudinal_motion_planner.pb.h"
 #include "math_lib.h"
-#include "mrc_condition.h"
 #include "obstacle_manager.h"
-#include "scenario_state_machine.h"
+// #include "scenario_state_machine.h"
 #include "src/scc_longitudinal_motion_planning_cost.h"
 #include "src/scc_longitudinal_motion_planning_model.h"
 #include "src/scc_longitudinal_motion_planning_problem.h"
-#include "task.h"
 #include "task_basic_types.h"
+#include "tasks/task.h"
 
 namespace planning {
 
 class SccLongitudinalMotionPlanner : public Task {
  public:
-  SccLongitudinalMotionPlanner(
-      const EgoPlanningConfigBuilder *config_builder,
-      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+  SccLongitudinalMotionPlanner(const EgoPlanningConfigBuilder* config_builder,
+                               framework::Session* session);
 
   void Init();
-  bool Execute(planning::framework::Frame *frame);
+  bool Execute() override;
 
  private:
   void AssembleInput();

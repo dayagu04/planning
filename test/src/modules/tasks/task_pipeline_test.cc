@@ -6,7 +6,6 @@
 #include "ego_planning_candidate.h"
 #include "gtest/gtest.h"
 #include "log.h"
-#include "task_pipeline_context.h"
 
 namespace planning {
 
@@ -19,7 +18,6 @@ TEST(TestTaskPpeline, TaskPipeline) {
   // 初始化task pipeline所需的frame
   framework::Session session{};
   session.Init();
-  framework::Frame frame{&session};
 
   auto highway_config_builder =
       std::make_shared<EgoPlanningConfigBuilder>("", "empty");
@@ -29,14 +27,14 @@ TEST(TestTaskPpeline, TaskPipeline) {
 
   std::shared_ptr<TaskPipeline> taskpipeline;
 
-  common::SceneType scene_type = frame.session()->get_scene_type();
+  common::SceneType scene_type = session.get_scene_type();
   auto config_builder =
-      frame.session()->environmental_model().config_builder(scene_type);
+      session.environmental_model().config_builder(scene_type);
   taskpipeline =
-      TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, &frame);
+      TaskPipeline::Make(TaskPipelineType::NORMAL, config_builder, &session);
   printf("TestTaskPpeline: TaskPipeline finish");
 
-  EgoPlanningCandidate candidate(&frame);
+  EgoPlanningCandidate candidate(&session);
   // candidate.set_coarse_planning_info(transition_context);
   bool ok = taskpipeline->Run(candidate);
 }

@@ -65,6 +65,9 @@ struct LocalView {
   UssWaveInfo::UssWaveInfo uss_wave_info;
   double uss_wave_info_recv_time = 0.0;
 
+  UssPerceptInfo::UssPerceptInfo uss_percept_info;
+  double uss_percept_info_recv_time = 0.0;
+
   Map::StaticMap static_map_info;
   double static_map_info_recv_time = 0.0;
 

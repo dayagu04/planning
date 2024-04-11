@@ -91,10 +91,6 @@ void ObstacleManager::update() {
       const bool gs_care_fusion_source =
           (prediction_object.fusion_source == OBSTACLE_SOURCE_CAMERA) ||
           (prediction_object.fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA) ||
-          (prediction_object.fusion_source == OBSTACLE_SOURCE_LF_RADAR) ||
-          (prediction_object.fusion_source == OBSTACLE_SOURCE_RF_RADAR) ||
-          (prediction_object.fusion_source == OBSTACLE_SOURCE_LR_RADAR) ||
-          (prediction_object.fusion_source == OBSTACLE_SOURCE_RR_RADAR) ||
           (prediction_object.fusion_source ==
            OBSTACLE_SOURCE_CAMERA_AND_FLRADAR) ||
           (prediction_object.fusion_source ==

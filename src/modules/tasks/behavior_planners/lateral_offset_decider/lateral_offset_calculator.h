@@ -3,8 +3,6 @@
 #include "config/basic_type.h"
 #include "define/planning_status.h"
 #include "lateral_obstacle.h"
-#include "scenario_state_machine.h"
-#include "task.h"
 #include "utils/pose2d_utils.h"
 #include "virtual_lane_manager.h"
 
@@ -16,8 +14,7 @@ class LateralOffsetCalculator {
   LateralOffsetCalculator(const EgoPlanningConfigBuilder *config_builder);
   ~LateralOffsetCalculator() = default;
 
-  bool Process(planning::framework::Frame *frame,
-               std::shared_ptr<TaskPipelineContext> &pipeline_context,
+  bool Process(framework::Session *session,
                const std::array<std::vector<double>, 2> &avd_car_past,
                const std::array<std::vector<double>, 2> &avd_sp_car_past,
                double dist_rblane, bool flag_avd);
@@ -91,7 +88,7 @@ class LateralOffsetCalculator {
 
  private:
   VisionLateralMotionPlannerConfig config_;
-  planning::framework::Frame *frame_;
+  framework::Session *session_;
   bool sb_lane_ = false;
   bool sb_blane_ = false;
   bool premoving_ = false;

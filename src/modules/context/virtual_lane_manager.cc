@@ -22,9 +22,9 @@
 #include "log_glog.h"
 #include "math/box2d.h"
 #include "planning_context.h"
-#include "planning_output_context.h"
 #include "reference_path_manager.h"
 #include "task_basic_types.h"
+#include "vehicle_config_context.h"
 
 namespace planning {
 
@@ -60,11 +60,11 @@ std::vector<double> VirtualLaneManager::construct_reference_line_acc(void) {
                                      .get_ego_state_manager()
                                      ->ego_steer_angle();
 
-  const double steer_ratio =
-      session_->environmental_model().vehicle_param().steer_ratio;
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double steer_ratio = vehicle_param.steer_ratio;
 
-  const double wheel_base =
-      session_->environmental_model().vehicle_param().wheel_base;
+  const double wheel_base = vehicle_param.wheel_base;
 
   const double curv_low_spd = ego_steer_angle / steer_ratio / wheel_base;
   const double curv_high_spd = ego_yaw_rate / std::fmax(ego_v, 0.1);
@@ -162,8 +162,9 @@ void VirtualLaneManager::construct_reference_line_msg(
         std::fabs(2.0 * c2 + 6.0 * c3 * x) /
         std::pow(std::pow(c1 + (2.0 * c2 + 3.0 * c3 * x) * x, 2) + 1, 1.5);
 
-    const double half_car_width =
-        session_->environmental_model().vehicle_param().width;
+    const auto& half_car_width =
+        VehicleConfigurationContext::Instance()->get_vehicle_param().width *
+        0.5;
 
     current_lane_virtual_ref_point->set_track_id(0);
 
@@ -1413,7 +1414,7 @@ void VirtualLaneManager::CalculateHPPInfo(
   const auto& local_view = session_->environmental_model().get_local_view();
   // ego box
   const auto& vehicle_param =
-      session->vehicle_config_context().get_vehicle_param();
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto center_x =
       ego_pose_x_ + std::cos(yaw_) * vehicle_param.rear_axis_to_center;
   const auto center_y =

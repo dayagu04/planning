@@ -1,11 +1,11 @@
 #ifndef MSQUARE_VISION_ONLY_DECISION_PLANNING_PLANNER_LANE_CHANGE_DECIDER_H_
 #define MSQUARE_VISION_ONLY_DECISION_PLANNING_PLANNER_LANE_CHANGE_DECIDER_H_
 
-#include "behavior_planners/vision_only_longitudinal_behavior_planner/vision_longitudinal_behavior_planner_output.h"
 #include "environmental_model.h"
-#include "frame.h"
 #include "fusion_road.pb.h"
 #include "lateral_obstacle.h"
+#include "session.h"
+#include "tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
 namespace planning {
 
 struct LaneChangeParams {
@@ -20,16 +20,9 @@ class VisionOnlyLaneChangeDecider {
  public:
   // explicit VisionOnlyLaneChangeDecider(const TaskConfig &config);
   explicit VisionOnlyLaneChangeDecider();
-  // virtual void init(std::shared_ptr<WorldModel> world_model,
-  //                   std::shared_ptr<BaseLineInfo> baseline_info);
 
-  // void set_lead(int id) { leader_car_id_ = id; }
-  // void set_target_lane(int id) { target_lane_id_ = id; }
-  // void set_current_lane(int id) { current_lane_id_ = id; }
-  // void set_v_limit(double v_limit) { v_limit_ = v_limit; }
-  // void set_mode(bool called_in_state_machine) { called_in_state_machine_ =
-  // called_in_state_machine; }
-  void set_frame(framework::Frame *frame) { frame_ = frame; }
+  void set_session(framework::Session *session) { session_ = session; }
+
   std::pair<int, int> get_target_gap() { return target_gap_; }
   std::vector<GapInfo> get_gap_list() { return gap_list_; }
   double get_target_gap_cost() { return target_gap_cost_; }
@@ -98,7 +91,7 @@ class VisionOnlyLaneChangeDecider {
   bool is_merging_ = false;
 
   LaneChangeParams params_;
-  framework::Frame *frame_ = nullptr;
+  framework::Session *session_;
 };
 
 }  // namespace planning

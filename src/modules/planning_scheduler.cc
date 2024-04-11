@@ -1,0 +1,916 @@
+#include "planning_scheduler.h"
+
+#include <algorithm>
+#include <cmath>
+#include <complex>
+
+#include "adas_function/adaptive_cruise_control.h"
+#include "adas_function/ihc_function/intelligent_headlight_control.h"
+#include "adas_function/lkas_function/lane_keep_assist_manager.h"
+#include "adas_function/mrc_condition.h"
+#include "adas_function/start_stop_enable.h"
+#include "adas_function/tsr_function/traffic_sign_recognition.h"
+#include "apa_function/src/apa_utils.h"
+#include "basic_types.pb.h"
+#include "config/vehicle_param.h"
+#include "ego_planning_config.h"
+#include "environmental_model.h"
+#include "func_state_machine.pb.h"
+#include "ifly_time.h"
+#include "log.h"
+#include "math/math_utils.h"
+#include "planning_context.h"
+#include "planning_debug_info.pb.h"
+#include "scene_type_config.pb.h"
+#include "utils/lateral_utils.h"
+#include "vehicle_config_context.h"
+#include "vehicle_status.pb.h"
+
+namespace planning {
+
+using ::FuncStateMachine::FunctionalState;
+
+PlanningScheduler::PlanningScheduler(const LocalView *const local_view)
+    : local_view_(local_view) {
+  Init();
+}
+
+PlanningScheduler::~PlanningScheduler() {}
+
+void PlanningScheduler::Init() {
+  session_.Init();
+  environmental_model_manager_.Init(&session_);
+  EnvironmentalModel *environmental_model =
+      session_.mutable_environmental_model();
+  environmental_model->feed_local_view(local_view_);
+  // TODO: 车辆配置文件从文件读取
+  VehicleParam vehicle_param;
+  VehicleConfigurationContext::Instance()->set_vehicle_param(vehicle_param);
+
+  // TODO：配置文件改成和场景/功能有关，不能使用默认场景
+  planning::common::SceneType scene_type = session_.get_scene_type();
+  auto config_builder =
+      session_.environmental_model().config_builder(scene_type);
+  config_ = config_builder->cast<GeneralPlanningConfig>();
+
+  // TODO：移到Scc_Function
+  InitSccFunction();
+
+  hpp_function_ = std::make_unique<HppFunction>(&session_);
+  noa_function_ = std::make_unique<NoaFunction>(&session_);
+  scc_function_ = std::make_unique<SccFunction>(&session_);
+  apa_function_ = std::make_unique<ApaFunction>(&session_);
+}
+
+static std::string ReadFile(const std::string &path) {
+  FILE *file = fopen(path.c_str(), "r");
+  assert(file != nullptr);
+  std::shared_ptr<FILE> fp(file, [](FILE *file) { fclose(file); });
+  fseek(fp.get(), 0, SEEK_END);
+  std::vector<char> content(ftell(fp.get()));
+  fseek(fp.get(), 0, SEEK_SET);
+  auto read_bytes = fread(content.data(), 1, content.size(), fp.get());
+  assert(read_bytes == content.size());
+  (void)read_bytes;
+  return std::string(content.begin(), content.end());
+}
+
+void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
+  std::string path;
+  switch (scene_type) {
+    case planning::common::SceneType::HIGHWAY:
+      path =
+          "/asw/planning/res/conf/module_configs/"
+          "general_planner_module_highway.json";
+      break;
+    case planning::common::SceneType::PARKING_APA:
+      path =
+          "/asw/planning/res/conf/module_configs/"
+          "general_planner_module_parking.json";
+      break;
+    case planning::common::SceneType::HPP:
+      path =
+          "/asw/planning/res/conf/module_configs/"
+          "general_planner_module_hpp.json";
+      break;
+    default:
+      path =
+          "/asw/planning/res/conf/module_configs/"
+          "general_planner_module_highway.json";
+  }
+
+  std::string config_file = ReadFile(path);
+  auto config = mjson::Reader(config_file);
+
+  // all parameters can be changed here
+  JSON_READ_VALUE(g_context.MutablePram().planner_type, int, "planner_type");
+}
+
+bool PlanningScheduler::RunOnce(
+    PlanningOutput::PlanningOutput *const planning_output,
+    PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+  double start_timestamp = IflyTime::Now_ms();
+
+  LOG_ERROR("PlanningScheduler::RunOnce \n");
+
+  session_.mutable_planning_context()->Clear();
+  session_.mutable_planning_context()->feed_planning_hmi_info(
+      planning_hmi_info);
+
+  auto scene_type = planning::common::SceneType::HIGHWAY;
+  const auto &state_machine = local_view_->function_state_machine_info;
+  if (state_machine.has_current_state()) {
+    if (IsUndefinedScene(state_machine.current_state())) {
+      scene_type = planning::common::SceneType::HIGHWAY;
+    } else if (IsValidParkingState(state_machine.current_state())) {
+      scene_type = planning::common::SceneType::PARKING_APA;
+    } else if (IsValidHppState(state_machine.current_state())) {
+      scene_type = planning::common::SceneType::HPP;
+    } else {
+      scene_type = planning::common::SceneType::HIGHWAY;
+    }
+  } else {
+    return false;
+  }
+  session_.set_scene_type(scene_type);
+
+  auto frame_info =
+      DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_frame_info();
+  frame_info->set_scene_type(common::SceneType_Name(scene_type));
+
+  bool planning_success = false;
+  if (scene_type == common::PARKING_APA) {
+    // 泊车规划部分
+    planning_success = apa_function_->Plan();
+    planning_output->CopyFrom(session_.planning_context().planning_output());
+    return planning_success;
+  }
+
+  // 行车规划部分
+  // TODO(xjli32): 功能切换时，reset
+  apa_function_->Reset();
+  ClearParkingInfo(planning_output);
+  auto &planning_result =
+      session_.mutable_planning_context()->mutable_planning_result();
+  planning_result.timestamp = start_timestamp;
+
+  // sync parameters only if scene_type or dbw_status changes
+  const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
+  if ((scene_type != g_context.GetStatemachine().scene_type ||
+       (dbw_status != g_context.GetStatemachine().dbw_status))) {
+    SyncParameters(scene_type);
+  }
+  g_context.MutableStatemachine().dbw_status = dbw_status;
+  g_context.MutableStatemachine().scene_type = scene_type;
+
+  // update environment model
+  auto environmental_model = session_.mutable_environmental_model();
+  if (!environmental_model_manager_.Run()) {
+    session_.mutable_planning_context()->Clear();
+    return false;
+  }
+
+  if (scene_type == planning::common::SceneType::HIGHWAY) {
+    planning_success = scc_function_->Plan();
+  } else if (planning::common::SceneType::HPP) {
+    planning_success = hpp_function_->Plan();
+  } else {
+    planning_success = scc_function_->Plan();
+  }
+  session_.mutable_planning_context()->mutable_planning_success() =
+      planning_success;
+  if (!planning_success) {
+    LOG_DEBUG("Planning failed !!!! \n");
+    if (!UpdateFailedPlanningResult()) {
+      LOG_DEBUG("RunOnce failed !!!! \n");
+      FillPlanningRequest(PlanningOutput::PlanningRequest::MIDDLE,
+                          planning_output);
+      return false;
+    }
+  } else {
+    UpdateSuccessfulPlanningResult();
+  }
+  std::cout << "The RunOnce is successed !!!!:" << std::endl;
+  session_.mutable_planning_context()->mutable_last_planning_success() =
+      session_.planning_context().planning_success();
+
+  const auto end_timestamp = IflyTime::Now_ms();
+  const double time_consumption = end_timestamp - start_timestamp;
+  LOG_DEBUG("general planning: planning time cost %f\n", time_consumption);
+
+  FillPlanningTrajectory(start_timestamp, planning_output);
+  FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
+  if (session_.is_hpp_scene()) {
+    PrepareForApa();
+  }
+
+  int64_t frame_duration = IflyTime::Now_ms() - start_timestamp;
+  LOG_DEBUG("The time cost of RunOnce is: %d\n", (int)frame_duration);
+
+  return planning_success;
+}
+
+void PlanningScheduler::FillPlanningTrajectory(
+    double start_time, PlanningOutput::PlanningOutput *const planning_output) {
+  // 获取LDP&&ELK功能干预状态
+  auto lkas_info =
+      session_.mutable_planning_context()->lane_keep_assit_function();
+  bool lkas_intervention_flag;
+  if ((lkas_info->get_ldp_left_intervention_flag_info() == true) ||
+      (lkas_info->get_ldp_right_intervention_flag_info() == true) ||
+      (lkas_info->get_elk_left_intervention_flag_info() == true) ||
+      (lkas_info->get_elk_right_intervention_flag_info() == true)) {
+    lkas_intervention_flag = true;
+  } else {
+    lkas_intervention_flag = false;
+  }
+
+  // 获取计算结果
+  const auto &lateral_output =
+      session_.planning_context().lateral_behavior_planner_output();
+  const auto &vision_only_longitudinal_outputs =
+      session_.planning_context().vision_longitudinal_behavior_planner_output();
+  const auto &planning_context = session_.planning_context();
+  const auto &planning_result = planning_context.planning_result();
+  const auto &ego_state =
+      session_.environmental_model().get_ego_state_manager();
+  const auto &function_info = session_.environmental_model().function_info();
+  const bool active = session_.environmental_model().GetVehicleDbwStatus();
+  auto virtual_lane_manager =
+      session_.environmental_model().get_virtual_lane_manager();
+
+  // 更新输出
+  auto time_stamp_us = IflyTime::Now_us();
+
+  planning_output->mutable_meta()->set_plan_timestamp_us(time_stamp_us);
+  planning_output->mutable_meta()->set_plan_strategy_name("Real Time Planning");
+
+  // 2.Trajectory
+  auto trajectory = planning_output->mutable_trajectory();
+  // set trajectory false when dbw is false
+  if (lkas_intervention_flag) {
+    trajectory->set_available(true);
+  } else {
+    trajectory->set_available(active);
+  }
+
+  // 根据定位有效性决定实时、长时
+  auto location_valid = session_.environmental_model().location_valid();
+
+  if (location_valid) {
+    trajectory->set_trajectory_type(
+        Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
+    trajectory->mutable_trajectory_points()->Clear();
+    trajectory->mutable_target_reference()->Clear();
+    for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
+      auto path_point = trajectory->add_trajectory_points();
+      path_point->set_x(planning_result.traj_points[i].x);
+      path_point->set_y(planning_result.traj_points[i].y);
+      path_point->set_heading_yaw(planning_result.traj_points[i].heading_angle);
+      path_point->set_curvature(planning_result.traj_points[i].curvature);
+      path_point->set_t(planning_result.traj_points[i].t);
+      path_point->set_v(planning_result.traj_points[i].v);
+      path_point->set_a(planning_result.traj_points[i].a);
+      path_point->set_distance(planning_result.traj_points[i].s);
+      path_point->set_jerk(planning_result.traj_points[i].jerk);
+    }
+    // 设置参考线为default
+    auto target_ref = trajectory->mutable_target_reference();
+    // add polynomial
+    const auto &d_polynomial = lateral_output.d_poly;
+    for (size_t i = 0; i < d_polynomial.size(); i++) {
+      target_ref->add_polynomial(d_polynomial[i]);
+    }
+    target_ref->set_target_velocity(
+        vision_only_longitudinal_outputs.velocity_target);
+    auto acceleration_range_limit =
+        target_ref->mutable_acceleration_range_limit();
+    acceleration_range_limit->set_min_a(-4.0);
+    acceleration_range_limit->set_max_a(4.0);
+
+    target_ref->set_lateral_maneuver_gear(
+        Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
+  } else {
+    // set vision_only_longitudinal_outputs if hdmpa valid is false
+    trajectory->set_trajectory_type(
+        Common::TrajectoryType::TRAJECTORY_TYPE_TARGET_REFERENCE);
+    trajectory->mutable_trajectory_points()->Clear();
+    trajectory->mutable_target_reference()->Clear();
+    // 设置轨迹为default
+    auto path_point = trajectory->add_trajectory_points();
+    path_point->set_x(0.0);
+    path_point->set_y(0.0);
+    path_point->set_heading_yaw(0.0);
+    path_point->set_curvature(0.0);
+    path_point->set_t(0.0);
+    path_point->set_v(0.0);
+    path_point->set_a(0.0);
+    path_point->set_distance(0.0);
+    path_point->set_jerk(0.0);
+
+    auto target_ref = trajectory->mutable_target_reference();
+    // add polynomial
+    // clip the polynomial C_3
+    const double lat_offset_rate = config_.d_poly_lat_offset_rate;
+    const double max_lat_offset = config_.d_poly_max_lat_offset;
+    const auto &d_polynomial = lateral_output.d_poly;
+    double lat_offset_bound = max_lat_offset;
+    static double limited_polynomial_3 = 0.0;
+
+    if (d_polynomial.size() == 4) {
+      if (lateral_output.lc_status == "left_lane_change" ||
+          lateral_output.lc_status == "right_lane_change") {
+        lat_offset_bound = ComputeBoundOfReferenceIntercept();
+
+        if (std::fabs(d_polynomial[3]) > lat_offset_bound) {
+          limited_polynomial_3 += planning_math::Clamp(
+              d_polynomial[3], -lat_offset_rate, lat_offset_rate);
+        } else {
+          limited_polynomial_3 = planning_math::Clamp(
+              d_polynomial[3], -lat_offset_bound, lat_offset_bound);
+        }
+      } else if ((lateral_output.lc_status == "left_lane_change_back" ||
+                  lateral_output.lc_status == "right_lane_change_back") &&
+                 std::fabs(d_polynomial[3]) >
+                     config_.lc_back_consider_smooth_dpoly_thr) {
+        limited_polynomial_3 =
+            planning_math::Clamp(d_polynomial[3], -config_.lc_back_smooth_thr,
+                                 config_.lc_back_smooth_thr);
+      } else {
+        limited_polynomial_3 = planning_math::Clamp(
+            d_polynomial[3], -lat_offset_bound, lat_offset_bound);
+      }
+      limited_polynomial_3 = planning_math::Clamp(
+          limited_polynomial_3, -lat_offset_bound, lat_offset_bound);
+    }
+
+    std::cout << "smooth dpoly enable_none_smooth: "
+              << config_.enable_none_smooth
+              << "   config_.none_consider_slope_thr:   "
+              << config_.none_consider_slope_thr << std::endl;
+    LOG_DEBUG("limited_polynomial_3: [%f]: \n", limited_polynomial_3);
+    LOG_DEBUG("lateral_output.d_poly C0: [%f] C1: [%f] C2: [%f] C3: [%f] \n",
+              lateral_output.d_poly[0], lateral_output.d_poly[1],
+              lateral_output.d_poly[2], lateral_output.d_poly[3]);
+    std::vector<double> polynomial_limited(4);
+
+    const auto &current_lane = session_.environmental_model()
+                                   .get_virtual_lane_manager()
+                                   ->get_current_lane();
+    if ((lkas_intervention_flag == true) && (current_lane != nullptr)) {
+      polynomial_limited[0] =
+          current_lane->get_center_line().poly_coefficient_car(3);
+      polynomial_limited[1] =
+          current_lane->get_center_line().poly_coefficient_car(2);
+      polynomial_limited[2] =
+          current_lane->get_center_line().poly_coefficient_car(1);
+      polynomial_limited[3] =
+          current_lane->get_center_line().poly_coefficient_car(0);
+    } else {
+      polynomial_limited[0] = d_polynomial[0];
+      polynomial_limited[1] = d_polynomial[1];
+      polynomial_limited[2] = d_polynomial[2];
+      polynomial_limited[3] = limited_polynomial_3;
+    }
+    LOG_DEBUG("limited_polynomial C0: [%f] C1: [%f] C2: [%f] C3: [%f] \n",
+              polynomial_limited[0], polynomial_limited[1],
+              polynomial_limited[2], polynomial_limited[3]);
+    for (size_t i = 0; i < polynomial_limited.size(); i++) {
+      target_ref->add_polynomial(polynomial_limited[i]);
+    }
+
+    target_ref->set_target_velocity(
+        vision_only_longitudinal_outputs.velocity_target);
+
+    auto acceleration_range_limit =
+        target_ref->mutable_acceleration_range_limit();
+    acceleration_range_limit->set_min_a(
+        vision_only_longitudinal_outputs.a_target_min);
+    acceleration_range_limit->set_max_a(
+        vision_only_longitudinal_outputs.a_target_max);
+    target_ref->set_lateral_maneuver_gear(
+        Common::LateralManeuverGear::LATERAL_MANEUVER_GEAR_NORMAL);
+  }
+  // 3.Turn signal
+  auto turn_signal = planning_output->mutable_turn_signal_command();
+  turn_signal->set_available(true);
+  if (planning_result.turn_signal == NO_CHANGE) {
+    turn_signal->set_turn_signal_value(
+        Common::TurnSignalType::TURN_SIGNAL_TYPE_NONE);
+  } else if (planning_result.turn_signal == LEFT_CHANGE) {
+    turn_signal->set_turn_signal_value(
+        Common::TurnSignalType::TURN_SIGNAL_TYPE_LEFT);
+  } else {
+    turn_signal->set_turn_signal_value(
+        Common::TurnSignalType::TURN_SIGNAL_TYPE_RIGHT);
+  }
+  // WB start:--------临时hack以下信号--------
+  // 4.Light signal
+  auto light_signal = planning_output->mutable_light_signal_command();
+  light_signal->set_available(true);
+  light_signal->set_light_signal_value(
+      Common::LightSignalType::LIGHT_SIGNAL_TYPE_NONE);
+
+  // 5.Horn signal
+  auto horn_signal_command = planning_output->mutable_horn_signal_command();
+  horn_signal_command->set_available(true);
+  horn_signal_command->set_horn_signal_value(
+      Common::HornSignalType::HORN_SIGNAL_TYPE_NONE);
+
+  // 6.Gear signal
+  auto gear_command = planning_output->mutable_gear_command();
+  gear_command->set_available(true);
+  // 需要获取目标挡位值
+  gear_command->set_gear_command_value(
+      Common::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE);
+
+  // 7.Open loop steering command
+  auto open_loop_steering_command =
+      planning_output->mutable_open_loop_steering_command();
+  open_loop_steering_command->set_available(true);
+  open_loop_steering_command->set_jerk_factor(70.0);  // hack
+  open_loop_steering_command->set_need_steering_wheel_stationary(false);
+  open_loop_steering_command->set_steering_wheel_rad_limit(0.1);
+
+  // 8.Planning status
+  auto planning_status = planning_output->mutable_planning_status();
+  planning_status->set_standstill(false);
+  if (function_info.function_mode() == common::DrivingFunctionInfo::ACC ||
+      function_info.function_mode() == common::DrivingFunctionInfo::SCC) {
+    planning_status->set_standstill(std::fabs(ego_state->ego_v()) < 0.1);
+  }
+  // 启停状态机
+  planning_status->set_ready_to_go(
+      planning_context.start_stop_result().state() !=
+      common::StartStopInfo::STOP);
+  planning_status->set_apa_planning_status(
+      PlanningOutput::ApaPlanningStatus::NONE);
+  // WB end:--------临时hack以上信号--------
+  const bool planning_success = planning_context.planning_success();
+  const bool planning_completed = planning_context.planning_completed();
+  if (planning_completed) {
+    planning_status->set_hpp_planning_status(
+        PlanningOutput::HppPlanningStatus::COMPLETED);
+  } else if (planning_success) {
+    planning_status->set_hpp_planning_status(
+        PlanningOutput::HppPlanningStatus::RUNNING);
+  } else {
+    planning_status->set_hpp_planning_status(
+        PlanningOutput::HppPlanningStatus::RUNNING_FAILED);
+  }
+}
+
+void PlanningScheduler::GenerateStopTrajectory(
+    double start_time, PlanningOutput::PlanningOutput *const planning_output) {
+  // 更新输出
+  planning_output->mutable_meta()->set_plan_timestamp_us(IflyTime::Now_ms());
+
+  auto trajectory = planning_output->mutable_trajectory();
+  // Hack: 长时规划
+  trajectory->set_trajectory_type(
+      Common::TrajectoryType::TRAJECTORY_TYPE_TRAJECTORY_POINTS);
+  trajectory->mutable_trajectory_points()->Clear();
+  trajectory->mutable_target_reference()->Clear();
+  double t = 0.0;
+  for (size_t i = 0; i < 21; i++) {
+    t = 0.1 * i;
+    auto path_point = trajectory->add_trajectory_points();
+    path_point->set_x(0.0);
+    path_point->set_y(0.0);
+    path_point->set_heading_yaw(0.0);
+    path_point->set_curvature(0.0);
+    path_point->set_t(t);
+    path_point->set_v(0.0);
+    path_point->set_a(0.0);
+    path_point->set_distance(0.0);
+    path_point->set_jerk(0.0);  // TBD
+  }
+}
+
+void PlanningScheduler::FillPlanningHmiInfo(
+    double start_timestamp,
+    PlanningHMI::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+  const auto &lateral_output =
+      session_.planning_context().lateral_behavior_planner_output();
+  const auto &lane_change_decider_output =
+      session_.planning_context().lane_change_decider_output();
+
+  planning_hmi_info->mutable_header()->set_timestamp(IflyTime::Now_us());
+  // HMI for alc
+  auto alc_output_pb = planning_hmi_info->mutable_alc_output_info();
+  alc_output_pb->set_lc_request(lateral_output.lc_request);
+  alc_output_pb->set_lc_status(lateral_output.lc_status);
+  alc_output_pb->set_lc_invalid_reason(
+      lane_change_decider_output.lc_invalid_reason);
+  alc_output_pb->set_lc_back_reason(
+      lane_change_decider_output.lc_back_invalid_reason);
+  // HMI for ldw
+  auto lkas_info =
+      session_.mutable_planning_context()->lane_keep_assit_function();
+  planning_hmi_info->mutable_ldw_output_info()->set_ldw_state(
+      lkas_info->get_ldw_state_info());
+  planning_hmi_info->mutable_ldw_output_info()->set_ldw_left_warning(
+      lkas_info->get_ldw_left_warning_info());
+  planning_hmi_info->mutable_ldw_output_info()->set_ldw_right_warning(
+      lkas_info->get_ldw_right_warning_info());
+  // HMI for ldp
+  planning_hmi_info->mutable_ldp_output_info()->set_ldp_state(
+      lkas_info->get_ldp_state_info());
+  planning_hmi_info->mutable_ldp_output_info()->set_ldp_left_intervention_flag(
+      lkas_info->get_ldp_left_intervention_flag_info());
+  planning_hmi_info->mutable_ldp_output_info()->set_ldp_right_intervention_flag(
+      lkas_info->get_ldp_right_intervention_flag_info());
+  // HMI for elk
+  planning_hmi_info->mutable_elk_output_info()->set_elk_state(
+      lkas_info->get_elk_state_info());
+  planning_hmi_info->mutable_elk_output_info()->set_elk_left_intervention_flag(
+      lkas_info->get_elk_left_intervention_flag_info());
+  planning_hmi_info->mutable_elk_output_info()->set_elk_right_intervention_flag(
+      lkas_info->get_elk_right_intervention_flag_info());
+  // HMI for ihc
+  auto ihc_info = session_.mutable_planning_context()
+                      ->intelligent_headlight_control_function();
+  planning_hmi_info->mutable_ihc_output_info()->set_ihc_state(
+      ihc_info->get_ihc_state_info());
+  planning_hmi_info->mutable_ihc_output_info()->set_ihc_request(
+      ihc_info->get_ihc_request_info());
+  planning_hmi_info->mutable_ihc_output_info()->set_ihc_request_status(
+      ihc_info->get_ihc_request_status_info());
+  // HMI for tsr
+  auto tsr_info =
+      session_.mutable_planning_context()->traffic_sign_recognition_function();
+  planning_hmi_info->mutable_tsr_output_info()->set_tsr_state(
+      tsr_info->get_tsr_state_info());
+  planning_hmi_info->mutable_tsr_output_info()->set_tsr_warning(
+      tsr_info->get_tsr_warning_info());
+  planning_hmi_info->mutable_tsr_output_info()->set_tsr_speed_limit(
+      tsr_info->get_tsr_speed_limit_info());
+  // HMI for CIPV
+  // TBD: 后续需要丰富障碍物的信息，后车、侧方车辆等
+  auto cipv_info = session_.planning_context().planning_hmi_info().cipv_info();
+  planning_hmi_info->mutable_cipv_info()->set_has_cipv(cipv_info.has_cipv());
+  planning_hmi_info->mutable_cipv_info()->set_cipv_id(cipv_info.cipv_id());
+
+  auto ad_info = session_.mutable_planning_context()
+                     ->mutable_planning_hmi_info()
+                     ->mutable_ad_info();
+  auto ego_state_manager =
+      session_.environmental_model().get_ego_state_manager();
+  ad_info->set_cruise_speed(ego_state_manager->ego_v_cruise());
+
+  // HMI for NOA
+  auto virtual_lane_manager =
+      session_.environmental_model().get_virtual_lane_manager();
+  ad_info->set_distance_to_ramp(virtual_lane_manager->dis_to_ramp());
+  ad_info->set_distance_to_split(
+      virtual_lane_manager->distance_to_first_road_split());
+  ad_info->set_distance_to_merge(
+      virtual_lane_manager->distance_to_first_road_merge());
+  ad_info->set_distance_to_toll_station(
+      (uint)virtual_lane_manager
+          ->ramp_direction());  // 临时将toll_station改为ramp_direction
+
+  // HMI for hpp
+  auto hpp_info = session_.mutable_planning_context()
+                      ->mutable_planning_hmi_info()
+                      ->mutable_hpp_info();
+  hpp_info->set_is_avaliable(virtual_lane_manager->is_on_hpp_lane());
+  hpp_info->set_distance_to_parking_space(
+      virtual_lane_manager->GetDistanceToDestination());
+  hpp_info->set_is_on_hpp_lane(virtual_lane_manager->is_on_hpp_lane());
+  hpp_info->set_is_reached_hpp_trace_start(
+      virtual_lane_manager->is_reached_hpp_start_point());
+  hpp_info->set_accumulated_driving_distance(
+      virtual_lane_manager->sum_distance_driving());
+
+  hpp_info->set_is_approaching_intersection(false);
+  hpp_info->set_is_approaching_turn(false);
+  auto reference_path_manager =
+      session_.environmental_model().get_reference_path_manager();
+  auto current_reference_path =
+      reference_path_manager->get_reference_path_by_current_lane();
+  const double kCheckTurnDistance = 15.0;
+  const double kEgoIsOnTurnDistance1 = -3.0;
+  const double kEgoIsOnTurnDistance2 = 5.0;
+  if (current_reference_path != nullptr) {
+    auto frenet_ego_state = current_reference_path->get_frenet_ego_state();
+    auto points = current_reference_path->get_points();
+    double ego_s = frenet_ego_state.s();
+    for (auto &point : points) {
+      double distance = point.path_point.s - ego_s;
+      if (distance > kEgoIsOnTurnDistance1 &&
+          distance < kEgoIsOnTurnDistance2 &&
+          point.path_point.kappa > 0.08) {  // ego is on the curve
+        break;
+      }
+      if (distance > kEgoIsOnTurnDistance2 && distance <= kCheckTurnDistance) {
+        if (point.path_point.kappa >
+            0.1) {  // 关注实际曲率的连续性，考虑多点还是单点
+          // hpp_info->set_is_approaching_intersection(true);
+          hpp_info->set_is_approaching_turn(true);
+          break;
+        }
+      } else if (distance > kCheckTurnDistance) {
+        break;
+      }
+    }
+  }
+}
+
+void PlanningScheduler::FillPlanningRequest(
+    PlanningOutput::PlanningRequest::RequestLevel request,
+    PlanningOutput::PlanningOutput *const planning_output) {
+  planning_output->mutable_planning_request()->set_take_over_req_level(request);
+  planning_output->mutable_planning_request()->set_request_reason(
+      PlanningOutput::PlanningRequest::NO_REASON);
+}
+
+void PlanningScheduler::ClearParkingInfo(
+    PlanningOutput::PlanningOutput *const planning_output) {
+  session_.mutable_planning_context()
+      ->mutable_planning_output()
+      .mutable_planning_status()
+      ->set_apa_planning_status(PlanningOutput::ApaPlanningStatus::NONE);
+
+  session_.mutable_planning_context()
+      ->mutable_planning_output()
+      .mutable_successful_slot_info_list()
+      ->Clear();
+
+  planning_output->mutable_planning_status()->set_apa_planning_status(
+      PlanningOutput::ApaPlanningStatus::NONE);
+}
+
+void PlanningScheduler::PrepareForApa() {
+  const double kDistanceToDestination = 8.;
+  auto virtual_lane_manager =
+      session_.environmental_model().get_virtual_lane_manager();
+  auto &ego_state = session_.environmental_model().get_ego_state_manager();
+
+  auto planning_context = session_.mutable_planning_context();
+  auto &planning_result = planning_context->mutable_planning_result();
+
+  auto &planning_output = planning_context->mutable_planning_output();
+
+  auto gear_command = planning_output.mutable_gear_command();
+  double distance_to_destination = std::numeric_limits<double>::max();
+  distance_to_destination = virtual_lane_manager->GetDistanceToDestination();
+  bool entering_parking_area = distance_to_destination < kDistanceToDestination;
+  double ego_v = ego_state->ego_v();
+  auto fsm_state = session_.environmental_model()
+                       .get_local_view()
+                       .function_state_machine_info.current_state();
+
+  if (fsm_state != FuncStateMachine::FunctionalState::HPP_IN_SECURE &&
+      entering_parking_area && ego_v < 0.1) {
+    gear_command->set_gear_command_value(
+        Common::GearCommandValue::GEAR_COMMAND_VALUE_PARKING);
+    if (ego_state->ego_gear() == planning::common::GearType::PARK) {
+      planning_context->mutable_planning_completed() = true;
+      std::cout << "HPP has arrived destination !!! " << std::endl;
+    }
+  } else {
+    if (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_SECURE &&
+        ego_v < 0.1) {
+      if (ego_state->ego_gear() == planning::common::GearType::PARK) {
+        planning_context->mutable_planning_completed() = true;
+        std::cout << "[general_planning] The HPP gear has been changed to PARK "
+                     "by fsm_state HPP_IN_SECURE !!! "
+                  << std::endl;
+      }
+      gear_command->set_gear_command_value(
+          Common::GearCommandValue::GEAR_COMMAND_VALUE_PARKING);
+      std::cout << "[general planning] The HPP has stopped by MFF because of "
+                   "SECURE situation"
+                << std::endl;
+    } else {
+      gear_command->set_gear_command_value(
+          Common::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE);
+      planning_context->mutable_planning_completed() = false;
+      std::cout << "[general_planning] reset planning_completed to false"
+                << std::endl;
+    }
+  }
+}
+
+bool PlanningScheduler::IsUndefinedScene(
+    const ::FuncStateMachine::FunctionalState &current_state) {
+  return current_state == FunctionalState::INIT ||
+         current_state == FunctionalState::STANDBY ||
+         current_state == FunctionalState::ERROR;
+}
+
+bool PlanningScheduler::IsValidHppState(
+    const ::FuncStateMachine::FunctionalState &current_state) {
+  return current_state == FunctionalState::HPP_IN_MEMORY ||
+         current_state == FunctionalState::HPP_IN_READY_EXISTROUTE ||
+         current_state == FunctionalState::HPP_IN_READY_REENTRYROUTE ||
+         current_state == FunctionalState::HPP_IN_MEMORY_READY ||
+         current_state == FunctionalState::HPP_IN_MEMORY_CRUISE ||
+         current_state == FunctionalState::HPP_IN_SECURE;
+}
+
+void PlanningScheduler::InitSccFunction() {
+  // TODO：配置文件改成和场景/功能有关，不能使用默认场景
+  planning::common::SceneType scene_type = session_.get_scene_type();
+  auto config_builder =
+      session_.environmental_model().config_builder(scene_type);
+
+  // SCC Function
+  auto adaptive_cruise_control =
+      std::make_shared<AdaptiveCruiseControl>(config_builder, &session_);
+  session_.mutable_planning_context()->set_adaptive_cruise_control_function(
+      adaptive_cruise_control);
+
+  auto start_stop =
+      std::make_shared<StartStopEnable>(config_builder, &session_);
+  session_.mutable_planning_context()->set_start_stop_enable(start_stop);
+
+  auto mrc_condition =
+      std::make_shared<MrcCondition>(config_builder, &session_);
+  session_.mutable_planning_context()->set_mrc_condition(mrc_condition);
+
+  auto lane_keep_assit = std::make_shared<LaneKeepAssistManager>(&session_);
+  session_.mutable_planning_context()->set_lane_keep_assit_function(
+      lane_keep_assit);
+
+  auto intelligent_headlight_control =
+      std::make_shared<IntelligentHeadlightControl>(&session_);
+  session_.mutable_planning_context()
+      ->set_intelligent_headlight_control_function(
+          intelligent_headlight_control);
+
+  auto traffic_sign_recognition =
+      std::make_shared<TrafficSignRecognition>(&session_);
+  session_.mutable_planning_context()->set_traffic_sign_recognition_function(
+      traffic_sign_recognition);
+}
+
+void PlanningScheduler::interpolate_with_last_trajectory_points() {
+  const auto &last_planning_result =
+      session_.planning_context().last_planning_result();
+
+  auto curr_time = session_.mutable_environmental_model()
+                       ->get_ego_state_manager()
+                       ->navi_timestamp();
+  auto start_time = curr_time - last_planning_result.timestamp;
+  assert(start_time >= 0);
+
+  // interpolate traj points
+  // todo @xbliu config
+
+  auto &planning_result =
+      session_.mutable_planning_context()->mutable_planning_result();
+  planning_result.traj_points.clear();
+  auto backup_num_points = 201;
+  auto delta_time = 0.025;
+  auto &last_traj_points = last_planning_result.traj_points;
+  assert(last_traj_points.size() >= 2);
+
+  size_t idx = 0;
+  for (int j = 0; j < backup_num_points; ++j) {
+    TrajectoryPoint traj_pt;
+    auto t = j * delta_time;
+    auto interpolate_t = t + start_time;
+    for (; idx < last_traj_points.size() - 1; idx++) {
+      if (last_traj_points[idx].t <= interpolate_t &&
+          interpolate_t <= last_traj_points[idx + 1].t) {
+        break;
+      }
+    }
+
+    auto pre_idx = std::min(idx, last_traj_points.size() - 2);
+    auto &pre_pt = last_traj_points[pre_idx];
+    auto &next_pt = last_traj_points[pre_idx + 1];
+
+    traj_pt.t = t;
+    traj_pt.x = planning_math::Interpolate(pre_pt.t, pre_pt.x, next_pt.t,
+                                           next_pt.x, interpolate_t);
+    traj_pt.y = planning_math::Interpolate(pre_pt.t, pre_pt.y, next_pt.t,
+                                           next_pt.y, interpolate_t);
+    traj_pt.heading_angle = planning_math::InterpolateAngle(
+        pre_pt.t, pre_pt.heading_angle, next_pt.t, next_pt.heading_angle,
+        interpolate_t);
+    traj_pt.curvature =
+        planning_math::Interpolate(pre_pt.t, pre_pt.curvature, next_pt.t,
+                                   next_pt.curvature, interpolate_t);
+    traj_pt.v = planning_math::Interpolate(pre_pt.t, pre_pt.v, next_pt.t,
+                                           next_pt.v, interpolate_t);
+    traj_pt.a = planning_math::Interpolate(pre_pt.t, pre_pt.a, next_pt.t,
+                                           next_pt.a, interpolate_t);
+    traj_pt.s = planning_math::Interpolate(pre_pt.t, pre_pt.s, next_pt.t,
+                                           next_pt.s, interpolate_t);
+    traj_pt.l = planning_math::Interpolate(pre_pt.t, pre_pt.l, next_pt.t,
+                                           next_pt.l, interpolate_t);
+    traj_pt.frenet_valid = pre_pt.frenet_valid && next_pt.frenet_valid;
+    planning_result.traj_points.emplace_back(traj_pt);
+  }
+  planning_result.raw_traj_points.clear();
+}
+
+bool PlanningScheduler::UpdateFailedPlanningResult() {
+  const auto &coarse_planning_info = session_.planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  const auto &last_planning_result =
+      session_.planning_context().last_planning_result();
+  auto &planning_result =
+      session_.mutable_planning_context()->mutable_planning_result();
+  if (last_planning_result.target_lane_id ==
+          coarse_planning_info.target_lane_id &&
+      last_planning_result.use_backup_cnt <= config_.failure_counter_thrshld) {
+    auto cur_time = session_.mutable_environmental_model()
+                        ->get_ego_state_manager()
+                        ->navi_timestamp();
+    auto delta_time = cur_time - last_planning_result.timestamp;
+    if (0.0 < delta_time && delta_time < 1.0) {
+      interpolate_with_last_trajectory_points();
+      planning_result.use_backup_cnt = last_planning_result.use_backup_cnt + 1;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool PlanningScheduler::UpdateSuccessfulPlanningResult() {
+  const auto &coarse_planning_info = session_.planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  auto &planning_result =
+      session_.mutable_planning_context()->mutable_planning_result();
+  planning_result.use_backup_cnt = 0;
+  planning_result.target_lane_id = coarse_planning_info.target_lane_id;
+  session_.mutable_planning_context()->mutable_last_planning_result() =
+      planning_result;
+
+  return true;
+}
+
+double PlanningScheduler::ComputeBoundOfReferenceIntercept() {
+  int origin_lane_virtual_id = session_.planning_context()
+                                   .lane_change_decider_output()
+                                   .origin_lane_virtual_id;
+  int target_lane_virtual_id = session_.planning_context()
+                                   .lane_change_decider_output()
+                                   .target_lane_virtual_id;
+  auto target_reference =
+      session_.environmental_model()
+          .get_reference_path_manager()
+          ->get_reference_path_by_lane(target_lane_virtual_id, false);
+  auto origin_reference =
+      session_.environmental_model()
+          .get_reference_path_manager()
+          ->get_reference_path_by_lane(origin_lane_virtual_id, false);
+  const double max_lat_offset = config_.d_poly_max_lat_offset;
+  const double min_lat_offset = config_.d_poly_min_lat_offset;
+  double intercept_cart_point = 0.0;
+  double intercept_presee_cart_point = 0.0;
+  double presee_dist = 25;
+  double reference_intercept_bound = max_lat_offset;
+  LOG_DEBUG("start compute bound of reference intercept!! \n");
+
+  if (origin_reference != nullptr && target_reference != nullptr) {
+    Point2D frenet_of_cart_point_in_target;
+    Point2D cart_point_in_target;
+    Point2D presee_cart_point_in_target;
+    Point2D frenet_of_presee_cart_point_in_target;
+
+    if (target_reference->get_frenet_coord()->SLToXY(
+            Point2D(target_reference->get_frenet_ego_state().s(), 0),
+            cart_point_in_target)) {
+      if (origin_reference->get_frenet_coord()->XYToSL(
+              cart_point_in_target, frenet_of_cart_point_in_target)) {
+        intercept_cart_point = frenet_of_cart_point_in_target.y;
+      }
+    }
+
+    double s_end =
+        min(target_reference->get_frenet_coord()->Length(),
+            target_reference->get_frenet_ego_state().s() + presee_dist);
+    if (target_reference->get_frenet_coord()->SLToXY(
+            Point2D(s_end, 0), presee_cart_point_in_target)) {
+      if (origin_reference->get_frenet_coord()->XYToSL(
+              presee_cart_point_in_target,
+              frenet_of_presee_cart_point_in_target)) {
+        intercept_presee_cart_point = frenet_of_presee_cart_point_in_target.y;
+      }
+    }
+  }
+  std::cout << "intercept_presee_cart_point: " << intercept_presee_cart_point
+            << "intercept_cart_point: " << intercept_cart_point << std::endl;
+
+  if (std::fabs(intercept_presee_cart_point) >
+      std::fabs(intercept_cart_point)) {
+    reference_intercept_bound =
+        max_lat_offset -
+        std::fabs(intercept_presee_cart_point - intercept_cart_point);
+    reference_intercept_bound = planning_math::Clamp(
+        reference_intercept_bound, min_lat_offset, max_lat_offset);
+    LOG_DEBUG("lat_offset_bound: [%f]: \n", reference_intercept_bound);
+  }
+
+  return reference_intercept_bound;
+}
+
+}  // namespace planning

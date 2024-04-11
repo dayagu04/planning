@@ -12,6 +12,7 @@
   "replanning_with_navi": false,
   "use_ego_prediction_model_in_planning": true,
   "dump_mdebug": false,
+  "active_lane_change_min_duration_threshold": 300,
   "enable_bbox_mode": true,
   "max_speed_static_obstacle": 0.5,
   "is_select_split_nearing_ramp": false,

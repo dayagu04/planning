@@ -1,3 +1,5 @@
+#pragma once
+
 #include <memory>
 
 #include "debug_info_log.h"
@@ -6,24 +8,22 @@
 #include "real_time_lon_behavior_planner.pb.h"
 #include "scc_st_graph.h"
 #include "scc_sv_graph.h"
-#include "task.h"
 #include "task_basic_types.pb.h"
+#include "tasks/behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_planner.h"
+#include "tasks/task.h"
+#include "tasks/task_interface/longitudinal_decider_output.h"
 #include "virtual_lane_manager.h"
 
 namespace planning {
 
 class SccLonBehaviorPlanner : public Task {
  public:
-  explicit SccLonBehaviorPlanner(
-      const EgoPlanningConfigBuilder *config_builder,
-      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
-
-  explicit SccLonBehaviorPlanner(
-      const EgoPlanningConfigBuilder *config_builder);
+  explicit SccLonBehaviorPlanner(const EgoPlanningConfigBuilder *config_builder,
+                                 framework::Session *session);
 
   virtual ~SccLonBehaviorPlanner() = default;
 
-  bool Execute(framework::Frame *frame);
+  bool Execute();
 
   bool Update();
   void SetConfig(
@@ -64,7 +64,7 @@ class SccLonBehaviorPlanner : public Task {
   std::shared_ptr<scc::StGraphGenerator> st_graph_;
   std::shared_ptr<scc::SvGraphGenerator> sv_graph_;
 
-  LonRefPath lon_behav_output_;
+  LongitudinalDeciderOutput lon_behav_output_;
   planning::common::LonRefPath lon_behav_output_pb_;
 };
 

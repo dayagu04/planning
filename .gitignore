@@ -9,6 +9,9 @@ jupyter_pybind/notebooks/**/.ipynb_checkpoints
 jupyter_pybind/notebooks_scc/scripts/python_proto/*.py
 jupyter_pybind/notebooks_scc/**/__pycache__
 jupyter_pybind/notebooks_scc/**/.ipynb_checkpoints
+jupyter_pybind/notebooks_apa/scripts/python_proto/*.py
+jupyter_pybind/notebooks_apa/**/__pycache__
+jupyter_pybind/notebooks_apa/**/.ipynb_checkpoints
 target/*.tar
 bags/
 src/modules/version.h

@@ -53,7 +53,6 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/eigen thirdparty/eigen.out EXC
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/rapidjson thirdparty/rapidjson.out EXCLUDE_FROM_ALL)
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/osqp thirdparty/osqp.out EXCLUDE_FROM_ALL)
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/nlohmann_json thirdparty/nlohmann_json.out EXCLUDE_FROM_ALL)
-add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/hfsm thirdparty/hfsm.out EXCLUDE_FROM_ALL)
 add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/proto interface.out EXCLUDE_FROM_ALL)
 add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/private/planning interface_planning.out EXCLUDE_FROM_ALL)
 add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/interface_converter interface_converter.out EXCLUDE_FROM_ALL)

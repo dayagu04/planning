@@ -3,9 +3,9 @@
 
 #include "common/config_context.h"
 #include "define/debug_output.h"
-#include "general_planning.h"
 #include "gtest/gtest.h"
 #include "local_view.h"
+#include "planning_scheduler.h"
 
 namespace planning {
 
@@ -43,7 +43,7 @@ static void init_planning() {
   LOG_DEBUG("The planning component init!!! \n");
 }
 
-TEST(GeneralPlanning, RunOnce) {
+TEST(PlanningScheduler, RunOnce) {
   init_planning();
 
   LocalView local_view_;
@@ -51,11 +51,9 @@ TEST(GeneralPlanning, RunOnce) {
   DebugOutput debug_output;
   PlanningHMI::PlanningHMIOutputInfoStr planning_hmi_info;
 
-  std::unique_ptr<GeneralPlanning> planning_base =
-      std::make_unique<GeneralPlanning>();
+  std::unique_ptr<PlanningScheduler> planning_scheduler =
+      std::make_unique<PlanningScheduler>();
   std::cout << "==============The planning enters RunOnce============="
             << std::endl;
-  // planning_base->RunOnce(local_view_, &planning_output, debug_output,
-  //                        &planning_hmi_info);
 }
 }  // namespace planning

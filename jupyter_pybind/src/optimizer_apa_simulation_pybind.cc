@@ -30,9 +30,8 @@ static planning::LocalView local_view;
 static bool last_cilqr_optimization_enable = false;
 
 int Init() {
-  apa_interface_ptr = new apa_planner::ApaPlanInterface();
   const auto plan_data_ptr = std::make_shared<plan_interface::PlanData>();
-  apa_interface_ptr->Init(plan_data_ptr);
+  apa_interface_ptr->Init();
 
   perfect_control_ptr = new PerfectControl();
   perfect_control_ptr->Init();
@@ -88,9 +87,7 @@ const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
   local_view.function_state_machine_info = func_statemachine;
   local_view.uss_wave_info = uss_wave_info;
 
-  std::shared_ptr<LocalView> local_view_ptr = std::make_shared<LocalView>();
-  *local_view_ptr = local_view;
-  const bool result = apa_interface_ptr->Update(local_view_ptr);
+  const bool result = apa_interface_ptr->Update(&local_view);
 
   apa_interface_ptr->UpdateDebugInfo();
 
@@ -120,9 +117,7 @@ const bool InterfaceUpdateClosedLoop(
   local_view.parking_fusion_info = parking_slot_info;
   local_view.function_state_machine_info = func_statemachine;
 
-  std::shared_ptr<LocalView> local_view_ptr = std::make_shared<LocalView>();
-  *local_view_ptr = local_view;
-  const bool result = apa_interface_ptr->Update(local_view_ptr);
+  const bool result = apa_interface_ptr->Update(&local_view);
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;
@@ -189,9 +184,7 @@ const bool InterfaceUpdateParam(
     }
   }
 
-  std::shared_ptr<LocalView> local_view_ptr = std::make_shared<LocalView>();
-  *local_view_ptr = local_view;
-  const bool result = apa_interface_ptr->Update(local_view_ptr);
+  const bool result = apa_interface_ptr->Update(&local_view);
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;

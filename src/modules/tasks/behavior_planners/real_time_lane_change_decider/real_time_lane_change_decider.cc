@@ -1,5 +1,4 @@
-#include "behavior_planners/real_time_lane_change_decider/real_time_lane_change_decider.h"
-#include "planning_output_context.h"
+#include "real_time_lane_change_decider.h"
 #include "virtual_lane_manager.h"
 
 namespace planning {
@@ -33,154 +32,17 @@ void RealTimeLaneChangeDecider::feed_config_and_target_cars(
 
 bool RealTimeLaneChangeDecider::process() {
   LOG_NOTICE("----RealTimeLaneChangeDecider::process---- \n");
-  /*  context_.mutable_planning_status()->lane_status.status =
-       context.planning_status().lane_status.status;
-   context_.mutable_planning_status()->v_limit =
-       context.planning_status().v_limit;
-  */
+
   // id = -1 stands for virtual front/back obstacle; id = -10 stands for no
   // available gap
   target_gap_ = std::make_pair(-10, -10);
   target_gap_cost_ = std::numeric_limits<double>::max();
   gap_list_.clear();
-  // cur_lane_.clear();
-  // target_lane_.clear();
 
-  // only enable in lane change preparation stage
-  // if (planning_status.lane_status.status != LaneStatus::Status::LANE_CHANGE
-  // ||
-  //     planning_status.lane_status.change_lane.status !=
-  //         ChangeLaneStatus::Status::CHANGE_LANE_PREPARATION) {
-  //   context_.mutable_planning_status()->lane_status.change_lane.target_gap_obs
-  //   =
-  //       target_gap_;
-  //   return TaskStatus::STATUS_SUCCESS;
-  // }
-  // current_lane_id_ = planning_status.lane_status.target_lane_id;
-  // dis_to_change_point_ = std::numeric_limits<double>::max();
-  // bool is_in_dash_line = false;
-  // if (planning_status.lane_status.change_lane.direction == "left") {
-  //   lane_change_direction_ = 1;
-  //   target_lane_id_ = current_lane_id_ - 1;
-  //   if (map_info.left_boundary_info().size() > 0 &&
-  //       map_info.left_boundary_info()[0].type == MSD_LANE_BOUNDARY_TYPE_DASH)
-  //       {
-  //     dis_to_change_point_ = map_info.left_boundary_info()[0].length;
-  //     is_in_dash_line = true;
-  //   }
-  // } else {
-  //   lane_change_direction_ = -1;
-  //   target_lane_id_ = current_lane_id_ + 1;
-  //   if (map_info.right_boundary_info().size() > 0 &&
-  //       map_info.right_boundary_info()[0].type ==
-  //       MSD_LANE_BOUNDARY_TYPE_DASH) {
-  //     dis_to_change_point_ = map_info.right_boundary_info()[0].length;
-  //     is_in_dash_line = true;
-  //   }
-  // }
-  // LOG_NOTICE("gap debug dis %f", dis_to_change_point_);
-  // dis_to_change_point_ = map_info.lc_end_dis();
   lc_map_decision_ = lc_info_.lc_map_decision();
   current_lane_type_ = lc_info_.current_lane_type();
 
   v_limit_ = lc_info_.v_limit();
-  // leader_car_id_ =
-  // planning_status.lane_status.change_lane.origin_lane_leader_id;
-
-  // if (!world_model_->get_baseline_info(current_lane_id_)) {
-  //   LOG_NOTICE("invalid origin_lane_id %d", current_lane_id_);
-  // }
-  // if (!world_model_->get_baseline_info(target_lane_id_)) {
-  //   LOG_NOTICE("invalid target_lane_id %d", target_lane_id_);
-  // }
-  // auto curr_baseline = world_model_->get_baseline_info(current_lane_id_);
-  // auto target_baseline = world_model_->get_baseline_info(target_lane_id_);
-  // debug for fov
-  // if (target_baseline != nullptr) {
-  //   auto blocked_s_sections = target_baseline->fov_in_lon_direction();
-  // }
-  // if (curr_baseline == nullptr || !curr_baseline->is_valid()) {
-  //   return TaskStatus::STATUS_FAILED;
-  // }
-  // if (target_baseline == nullptr || !target_baseline->is_valid()) {
-  //   return TaskStatus::STATUS_FAILED;
-  // }
-  // double dis_to_stopline =
-  // world_model_->get_map_info().distance_to_stop_line(); bool
-  // solid_lane_change_mode =
-  // config_.lane_change_decider_config().enable_solid_lane_change; int
-  // broken_down_car_count =
-  // config_.lane_change_decider_config().broken_down_car_count; const double
-  // kMinDetectDis = 90.0; bool clear_gap_below_broken_down_car = false; int
-  // potential_broken_down_car_id{-100}; if (solid_lane_change_mode &&
-  // dis_to_stopline < kMinDetectDis) {
-  //   //TODO: update scenario context here
-  //   auto& brokendown_car_in_solid_line =
-  //   PlanningContext::Instance()->mutable_planning_status()->broken_down_car.broken_down_cars_map;
-  //   if (!is_in_dash_line) {
-  //     // when ego car in solid line, set lane change point in front of ego
-  //     car dis_to_change_point_ = 0.0;
-  //   }
-  //   if (target_baseline->detect_brokendown_car_in_solidline(dis_to_stopline,
-  //   dis_to_change_point_, potential_broken_down_car_id)) {
-  //     LOG_NOTICE("detect broken down car[%d] in solidline",
-  //     potential_broken_down_car_id); if
-  //     (brokendown_car_in_solid_line.find(potential_broken_down_car_id) ==
-  //     brokendown_car_in_solid_line.end()) {
-  //       brokendown_car_in_solid_line.clear();
-  //       brokendown_car_in_solid_line[potential_broken_down_car_id] = 1;
-  //       return TaskStatus::STATUS_FAILED;
-  //     } else {
-  //       if (++brokendown_car_in_solid_line[potential_broken_down_car_id] >
-  //       broken_down_car_count) {
-  //         dis_to_change_point_ = dis_to_stopline;
-  //         clear_gap_below_broken_down_car = true;
-  //       } else {
-  //         return TaskStatus::STATUS_FAILED;
-  //       }
-  //     }
-  //   } else {
-  //     brokendown_car_in_solid_line.clear();
-  //   }
-  // }
-  // auto &obstacles =
-  // world_model_->get_baseline_info(current_lane_id_)->obstacle_manager().get_obstacles().Items();
-  // auto target_lane_frenet_coord = curr_baseline->get_frenet_coord();
-  // if (target_lane_frenet_coord == nullptr) {
-  //   return TaskStatus::STATUS_FAILED;
-  // }
-
-  // world_model_->trans_lane_points(curr_baseline->get_raw_refline_points(),
-  //                                 cur_lane_, target_lane_frenet_coord);
-  // world_model_->trans_lane_points(target_baseline->get_raw_refline_points(),
-  //                                 target_lane_, target_lane_frenet_coord);
-
-  // double ego_s = curr_baseline->get_ego_state().ego_frenet.x +
-  // vehicle_param::length / 2; double v_ego =
-  // curr_baseline->get_ego_state().ego_vel;
-
-  // if (lead_car_.id > 0) {
-  //   auto lead_obs =
-  //     curr_baseline->mutable_obstacle_manager().find_obstacle(lead_car_.id);
-  //   if (lead_obs == nullptr) {
-  //     lead_car_.id = -1;
-  //   }
-  //   else {
-  //     SLBoundary sl_boundary = lead_obs->PerceptionSLBoundary();
-  //     if (sl_boundary.start_s - ego_s > 0) {
-  //       lead_car_.d_rel = sl_boundary.start_s - ego_s;
-  //     }
-  //     else if (sl_boundary.end_s - ego_s < 0){
-  //       lead_car_.d_rel = sl_boundary.end_s - ego_s;
-  //     }
-  //     else {
-  //       lead_car_.d_rel = 0.0;
-  //     }
-  //     lead_car_.v_rel = lead_obs->speed() *
-  //     std::cos(lead_obs->Yaw_relative_frenet()) - v_ego_;
-
-  //   }
-  // }
 
   if (lead_one_ != nullptr) {
     lead_car_.id = lead_one_->track_id();
@@ -195,31 +57,6 @@ bool RealTimeLaneChangeDecider::process() {
   obstacle_on_target_.clear();
   obstacle_on_target_.push_back(most_front_car_);
   obstacle_on_target_.push_back(most_rear_car_);
-  // Obstacle* broken_down_car{nullptr};
-  // if (clear_gap_below_broken_down_car) {
-  //   broken_down_car =
-  //     curr_baseline->mutable_obstacle_manager().find_obstacle(potential_broken_down_car_id);
-  // }
-  // for (auto &obstacle : obstacles) {
-  //   SLBoundary sl_boundary = obstacle->PerceptionSLBoundary();
-  //   if (is_on_target(sl_boundary)){
-  //     TargetObstacle target_obs;
-  //     target_obs.id = obstacle->Id();
-  //     if (sl_boundary.start_s - ego_s > 0) {
-  //       target_obs.d_rel = sl_boundary.start_s - ego_s;
-  //     }
-  //     else if (sl_boundary.end_s - ego_s < 0){
-  //       target_obs.d_rel = sl_boundary.end_s - ego_s;
-  //     }
-  //     else {
-  //       target_obs.d_rel = 0.0;
-  //     }
-  //     target_obs.v_rel = obstacle->speed() *
-  //     std::cos(obstacle->Yaw_relative_frenet()) - v_ego_;
-  //     obstacle_on_target_.push_back(target_obs);
-  //     // LOG_NOTICE("gap obstacle[%d] in target_lane", obstacle->Id());
-  //   }
-  // }
 
   for (auto &obstacle : target_cars_) {
     TargetObstacle target_obs;
@@ -277,31 +114,7 @@ bool RealTimeLaneChangeDecider::process() {
     target_gap_cost_ = gap_list_.at(0).cost;
   }
   LOG_DEBUG("Target gap: [%d], [%d]\n", target_gap_.first, target_gap_.second);
-  // if (clear_gap_below_broken_down_car &&
-  // broken_down_car) {
-  //   auto target_car =
-  //     curr_baseline->mutable_obstacle_manager().find_obstacle(target_gap_.first);
-  //   if (target_car == nullptr) {
-  //     target_car =
-  //     curr_baseline->mutable_obstacle_manager().find_obstacle(target_gap_.second);
-  //   }
-  //   if (target_car) {
-  //     if (target_car->PerceptionSLBoundary().end_s <
-  //     broken_down_car->PerceptionSLBoundary().start_s ||
-  //         target_car->Id() == potential_broken_down_car_id) {
-  //       context_.mutable_planning_status()->lane_status.change_lane.target_gap_obs
-  //       = {-1, potential_broken_down_car_id}; target_gap_ = {-1,
-  //       potential_broken_down_car_id}; target_gap_cost_ = 0.0; return
-  //       TaskStatus::STATUS_SUCCESS;
-  //     }
-  //   }
-  // }
-  /*
-  frame_->mutable_session()
-      ->mutable_planning_output_context()
-      ->mutable_planning_status()
-      ->lane_status.change_lane.target_gap_obs = target_gap_;
-  */
+
   return true;
 }
 

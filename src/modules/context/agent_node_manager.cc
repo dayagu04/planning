@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <variant>
@@ -16,13 +17,14 @@
 #include "obstacle.h"
 #include "reference_path.h"
 #include "utils/frenet_coordinate_system.h"
+#include "utils/kd_path.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
 
 using namespace planning;
 constexpr double Eps = 1e-3;
 constexpr int PointNum = 25;
-constexpr double LaneCheckBuffer = 0.35;
+constexpr double LaneCheckBuffer = 0.55;
 constexpr double delta_t = 0.2;
 
 bool AgentNodeManager::init() {
@@ -288,6 +290,39 @@ bool AgentNodeManager::InferObjTrajByLane(
   return infer_ok;
 }
 
+bool AgentNodeManager::InferObjTrajByKDPath(
+    ObstaclePredicatedInfo &obstacle_predicated_info, const Obstacle &obj,
+    const int obj_in_target_lane) {
+  const double init_s = obstacle_predicated_info.cur_s;
+  bool use_cur_s = false;
+
+  if (init_s < -50 || init_s > 180.) {
+    use_cur_s = true;
+  }
+
+  auto &obj_pred_traj = obstacle_predicated_info.obstacle_pred_info;
+  obj_pred_traj.resize(PointNum + 1);
+
+  for (auto i = 0; i < PointNum + 1; i++) {
+    obj_pred_traj[i].x =
+        obstacle_predicated_info.origin_x;  // x y is keep origin
+    obj_pred_traj[i].y = obstacle_predicated_info.origin_y;
+
+    obj_pred_traj[i].s =
+        use_cur_s ? obstacle_predicated_info.cur_s
+                  : std::fmin(obstacle_predicated_info.cur_s +
+                                  (i - 1) * obstacle_predicated_info.raw_vel *
+                                      delta_t,
+                              frenet_coord_->Length());
+    obj_pred_traj[i].l = obstacle_predicated_info.cur_l;
+
+    // reserve, the xy can be convert by kdpath
+    obj_pred_traj[i].heading_angle = 0.;
+  }
+
+  return true;
+}
+
 std::vector<std::pair<size_t, size_t>>
 AgentNodeManager::GetLaneMonoIntervalIndex(
     std::vector<std::vector<double>> &lane_mono_intervals) {
@@ -384,18 +419,16 @@ bool AgentNodeManager::InferConstSpeedObstacleTraj(
 
     Point2D cart_point{obj_pred_traj[i].x, obj_pred_traj[i].y};
     Point2D frenet_point{100, 0.};
-    if (!frenet_coord_->XYToSL(cart_point, frenet_point)) {
-      obj_pred_traj[i].s =
-          i > 0 ? obj_pred_traj[i - 1].s + delta_s
-                : 300;  //@TODO May exceed the maximum length of the reference
-                        // line, awaiting optimization
-      obj_pred_traj[i].l =
-          obj_in_which_lane == 0 ? 0 : (target_state_ == 1 ? 3 : -3);
-      // LOG_ERROR("Agent Node, cart 2 frenet failed");
-    } else {
-      obj_pred_traj[i].s = frenet_point.x;
-      obj_pred_traj[i].l = frenet_point.y;
+    auto status = frenet_coord_->XYPointToSLPoint(cart_point, frenet_point);
+    if (status == KDPathStatus::FALL) {
+      frenet_point.x = -100.;
+
+    } else if (status == KDPathStatus::EXCEED) {
+      frenet_point.x = 200.;
     }
+
+    obj_pred_traj[i].s = frenet_point.x;
+    obj_pred_traj[i].l = frenet_point.y;
   }
   return true;
 }
@@ -530,9 +563,12 @@ bool AgentNodeManager::HandleAllObjNormalInfo() {
     if (iter != map_gs_care_obstacles_.end()) {
       Point2D obj_frenet_p{-50., 0.};
       Point2D obj_cart_p{iter->second.x_center(), iter->second.y_center()};
-      if (!frenet_coord_->XYToSL(obj_cart_p, obj_frenet_p)) {
-        obj_frenet_p.x = 100.;
-        LOG_ERROR("agent node, frenet transform failed!");
+      auto status = frenet_coord_->XYPointToSLPoint(obj_cart_p, obj_frenet_p);
+      if (status == KDPathStatus::FALL) {
+        obj_frenet_p.x = -100.;
+
+      } else if (status == KDPathStatus::EXCEED) {
+        obj_frenet_p.x = 200.;
       }
       obj_predicated_info.origin_x = iter->second.x_center();
       obj_predicated_info.origin_y = iter->second.y_center();
@@ -553,10 +589,14 @@ bool AgentNodeManager::HandleAllObjNormalInfo() {
     if (iter != map_gs_care_obstacles_.end()) {
       Point2D obj_frenet_p{-50., 0.};
       Point2D obj_cart_p{iter->second.x_center(), iter->second.y_center()};
-      if (!frenet_coord_->XYToSL(obj_cart_p, obj_frenet_p)) {
-        obj_frenet_p.x = 100.;
-        LOG_ERROR("agent node, frenet transform failed!");
+      auto status = frenet_coord_->XYPointToSLPoint(obj_cart_p, obj_frenet_p);
+      if (status == KDPathStatus::FALL) {
+        obj_frenet_p.x = -100.;
+
+      } else if (status == KDPathStatus::EXCEED) {
+        obj_frenet_p.x = 200.;
       }
+
       obj_predicated_info.origin_x = iter->second.x_center();
       obj_predicated_info.origin_y = iter->second.y_center();
       obj_predicated_info.raw_vel = iter->second.velocity();
@@ -596,15 +636,147 @@ void AgentNodeManager::SortNodeByS() {
   return;
 }
 
-// pybind debug
-bool AgentNodeManager::Update() {
-  if (!HandleAllObjPredInfo()) {
-    LOG_ERROR("Gap Selector assign obj pred faild!");
+bool AgentNodeManager::InferAllObjPredInfoByKDPath(){
+
+};
+
+bool AgentNodeManager::InferAllObjNormalInfoByKDPath() {
+  // Recheck unreasonable objs
+  for (auto &obj : map_origin_lane_obstacles_) {  // finally, need to check
+                                                  // relative x,y to check
+    auto iter = map_gs_care_obstacles_.find(obj);
+    if (iter != map_gs_care_obstacles_.end()) {
+      if (iter->second.y_relative_center() - iter->second.width() * 0.5 >
+              1.75 + LaneCheckBuffer ||
+          iter->second.y_relative_center() + iter->second.width() * 0.5 <
+              -1.75 + LaneCheckBuffer) {
+        map_origin_lane_obstacles_.erase(
+            std::remove(map_origin_lane_obstacles_.begin(),
+                        map_origin_lane_obstacles_.end(), obj),
+            map_origin_lane_obstacles_.end());
+      }
+    }
+  }
+  if (target_state_ == 1) {
+    for (auto &obj : map_target_lane_obstacles_) {  // finally, need to check
+                                                    // relative x,y to check
+      auto iter = map_gs_care_obstacles_.find(obj);
+      if (iter != map_gs_care_obstacles_.end()) {
+        if (iter->second.y_relative_center() - iter->second.width() * 0.5 >
+                5.25 + LaneCheckBuffer ||
+            iter->second.y_relative_center() + iter->second.width() * 0.5 <
+                1.75 - LaneCheckBuffer) {
+          map_target_lane_obstacles_.erase(
+              std::remove(map_target_lane_obstacles_.begin(),
+                          map_target_lane_obstacles_.end(), obj),
+              map_target_lane_obstacles_.end());
+        }
+      }
+    }
+  } else if (target_state_ == 2) {
+    for (auto &obj : map_target_lane_obstacles_) {  // finally, need to check
+                                                    // relative x,y to check
+      auto iter = map_gs_care_obstacles_.find(obj);
+      if (iter != map_gs_care_obstacles_.end()) {
+        if (iter->second.y_relative_center() - iter->second.width() * 0.5 >
+                -1.75 + LaneCheckBuffer ||
+            iter->second.y_relative_center() + iter->second.width() * 0.5 <
+                -5.75 - LaneCheckBuffer) {
+          map_target_lane_obstacles_.erase(
+              std::remove(map_target_lane_obstacles_.begin(),
+                          map_target_lane_obstacles_.end(), obj),
+              map_target_lane_obstacles_.end());
+        }
+      }
+    }
   }
 
-  if (!HandleAllObjNormalInfo()) {
-    LOG_ERROR("Gap Selector obj normal info faild!");
+  std::vector<int64_t> origin_delete_ids;
+  std::vector<int64_t> target_delete_ids;
+
+  for (auto &agent_id : map_origin_lane_obstacles_) {
+    ObstaclePredicatedInfo obj_predicated_info;
+    auto iter = map_gs_care_obstacles_.find(agent_id);
+    if (iter != map_gs_care_obstacles_.end()) {
+      Point2D obj_frenet_p{-50.0, 0.};
+      Point2D obj_cart_p{iter->second.x_center(), iter->second.y_center()};
+      auto status = frenet_coord_->XYPointToSLPoint(obj_cart_p, obj_frenet_p);
+      if (status == KDPathStatus::FALL) {
+        obj_frenet_p.x = -100.0;
+        obj_frenet_p.y = 0.0;
+      } else if (status == KDPathStatus::EXCEED) {
+        obj_frenet_p.x = 200.0;
+        obj_frenet_p.y = 0.0;
+      }
+
+      obj_predicated_info.origin_x = iter->second.x_center();
+      obj_predicated_info.origin_y = iter->second.y_center();
+      obj_predicated_info.raw_vel = iter->second.velocity();
+      obj_predicated_info.cur_s = obj_frenet_p.x;
+      obj_predicated_info.cur_l = obj_frenet_p.y;
+      obj_predicated_info.length = iter->second.length();
+      obj_predicated_info.width = iter->second.width();
+
+      bool infer_ok =
+          InferObjTrajByKDPath(obj_predicated_info, iter->second, false);
+      if (infer_ok) {
+        agent_node_origin_lane_map_.insert(
+            std::make_pair(agent_id, obj_predicated_info));
+      }
+      ids_sorted_origin_lane_.emplace_back(agent_id);
+    }
+  };
+
+  for (auto &agent_id : map_target_lane_obstacles_) {
+    ObstaclePredicatedInfo obj_predicated_info;
+    auto iter = map_gs_care_obstacles_.find(agent_id);
+    if (iter != map_gs_care_obstacles_.end()) {
+      Point2D obj_frenet_p{-50., 0.};
+      Point2D obj_cart_p{iter->second.x_center(), iter->second.y_center()};
+      auto status = frenet_coord_->XYPointToSLPoint(obj_cart_p, obj_frenet_p);
+      if (status == KDPathStatus::FALL) {
+        obj_frenet_p.x = -100.0;
+        obj_frenet_p.y = 0.0;
+      } else if (status == KDPathStatus::EXCEED) {
+        obj_frenet_p.x = 200.0;
+        obj_frenet_p.y = 0.0;
+      }
+
+      obj_predicated_info.origin_x = iter->second.x_center();
+      obj_predicated_info.origin_y = iter->second.y_center();
+      obj_predicated_info.raw_vel = iter->second.velocity();
+      obj_predicated_info.cur_s = obj_frenet_p.x;
+      obj_predicated_info.cur_l = obj_frenet_p.y;
+      obj_predicated_info.length = iter->second.length();
+      obj_predicated_info.width = iter->second.width();
+      ids_sorted_target_lane_.emplace_back(agent_id);
+
+      auto iter = map_gs_care_obstacles_.find(agent_id);
+      if (iter != map_gs_care_obstacles_.end()) {
+        bool infer_ok =
+            InferObjTrajByKDPath(obj_predicated_info, iter->second, true);
+        if (infer_ok) {
+          agent_node_target_lane_map_.insert(
+              std::make_pair(agent_id, obj_predicated_info));
+        }
+        ids_sorted_target_lane_.emplace_back(agent_id);
+      }
+    }
   }
+  return true;
+}
+
+// pybind debug
+bool AgentNodeManager::Update() {
+  // if (!HandleAllObjPredInfo()) {
+  //   LOG_ERROR("Gap Selector assign obj pred faild!");
+  // }
+
+  // if (!HandleAllObjNormalInfo()) {
+  //   LOG_ERROR("Gap Selector obj normal info faild!");
+  // }
+
+  InferAllObjNormalInfoByKDPath();
   SortNodeByS();
   return true;
 }

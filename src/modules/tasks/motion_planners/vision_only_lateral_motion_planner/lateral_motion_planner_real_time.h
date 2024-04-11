@@ -5,8 +5,8 @@
 #include "config/basic_type.h"
 #include "define/planning_status.h"
 #include "lateral_obstacle.h"
-#include "scenario_state_machine.h"
-#include "task.h"
+// #include "scenario_state_machine.h"
+#include "tasks/task.h"
 #include "utils/pose2d_utils.h"
 #include "virtual_lane_manager.h"
 namespace planning {
@@ -19,11 +19,11 @@ class VisionLateralMotionPlanner : public Task {
  public:
   explicit VisionLateralMotionPlanner(
       const EgoPlanningConfigBuilder *config_builder,
-      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+      framework::Session *session);
 
   virtual ~VisionLateralMotionPlanner() = default;
 
-  bool Execute(planning::framework::Frame *frame) override;
+  bool Execute() override;
 
   bool update_basic_path(const int &status);
 

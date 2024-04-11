@@ -1,0 +1,71 @@
+#pragma once
+
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "apa_plan_base.h"
+#include "apa_world.h"
+#include "local_view.h"
+#include "plan_data.h"
+#include "session.h"
+
+namespace planning {
+namespace apa_planner {
+
+class ApaPlanInterface {
+ public:
+  void Init();
+
+  void Reset();
+
+  const bool Update(const LocalView* local_view_ptr);
+
+  void SyncParameters();
+
+  const std::vector<std::shared_ptr<ApaPlannerBase>>& GetPlannerStack() const {
+    return apa_planner_stack_;
+  }
+
+  // only for simulation
+  void UpdateDebugInfo();
+
+  const planning::common::LateralPathOptimizerOutput& GetOutputDebugInfo()
+      const {
+    return planner_ptr_->GetLateralPathOptimizerPtr()->GetOutputDebugInfo();
+  }
+
+  const planning::common::LateralPathOptimizerInput& GetInputDebugInfo() const {
+    return planner_ptr_->GetLateralPathOptimizerPtr()->GetInputDebugInfo();
+  }
+
+  const planning::common::PlanningDebugInfo& GetPlanningDebugInfo() const {
+    return planning_debug_info_;
+  }
+
+  const PlanningOutput::PlanningOutput& GetPlaningOutput() const {
+    return planning_output_;
+  }
+
+ private:
+  std::shared_ptr<ApaPlannerBase> GetPlannerByType(
+      const uint8_t apa_planner_id);
+
+  const bool ApaPlanOnce(const uint8_t planner_type);
+  void AddReleasedSlotInfo(PlanningOutput::PlanningOutput& planning_output);
+
+  std::vector<std::shared_ptr<ApaPlannerBase>> apa_planner_stack_;
+  std::shared_ptr<ApaWorld> apa_world_ptr_ = nullptr;
+  std::shared_ptr<ApaPlannerBase> planner_ptr_ = nullptr;
+
+  PlanningOutput::PlanningOutput planning_output_;
+  std::shared_ptr<plan_interface::PlanData> plan_data_ptr_;
+
+  // for simulation
+  planning::common::PlanningDebugInfo planning_debug_info_;
+};
+
+}  // namespace apa_planner
+}  // namespace planning

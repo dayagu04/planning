@@ -102,8 +102,8 @@ class VirtualLaneManager {
   // Destination destination_;
 
   // void update_current_lane();
-  void update_last_fix_lane_id(int flane_virtual_id) {
-    last_fix_lane_virtual_id_ = flane_virtual_id;
+  void update_last_fix_lane_id(int fix_lane_virtual_id) {
+    last_fix_lane_virtual_id_ = fix_lane_virtual_id;
   }
   int get_last_fix_lane_id() const { return last_fix_lane_virtual_id_; }
   const std::shared_ptr<VirtualLane> get_last_fix_lane() const {

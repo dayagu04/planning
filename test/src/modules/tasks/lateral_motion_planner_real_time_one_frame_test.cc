@@ -4,7 +4,6 @@
 #include "gtest/gtest.h"
 #include "motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
 #include "session.h"
-#include "task_pipeline_context.h"
 
 namespace planning {
 
@@ -17,12 +16,11 @@ TEST(TestLatMotionPlannerRealTime, VisionLateralMotionPlanner) {
   printf("TestLongMotion: lateral_motion_planner");
 
   EgoPlanningConfigBuilder *config_builder;
-  framework::Frame *frame;
-  std::shared_ptr<TaskPipelineContext> pipeline_context;
+  framework::Session *session;
 
-  auto lat_motion_planner_ptr = std::make_shared<VisionLateralMotionPlanner>(
-      config_builder, pipeline_context);
+  auto lat_motion_planner_ptr =
+      std::make_shared<VisionLateralMotionPlanner>(config_builder);
 
-  lat_motion_planner_ptr->Execute(frame);
+  lat_motion_planner_ptr->Execute(session);
 }
 }  // namespace planning

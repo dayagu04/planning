@@ -5,19 +5,19 @@
 #include <map>
 
 // #include "core/modules/common/config/basic_types.h"
-#include "task.h"
 #include "task_basic_types.h"
+#include "tasks/task.h"
 
 namespace planning {
 
 class ResultTrajectoryGenerator : public Task {
  public:
   explicit ResultTrajectoryGenerator(
-      const EgoPlanningConfigBuilder *config_builder,
-      const std::shared_ptr<TaskPipelineContext> &pipeline_context);
+      const EgoPlanningConfigBuilder* config_builder,
+      framework::Session* session);
   virtual ~ResultTrajectoryGenerator() = default;
 
-  bool Execute(planning::framework::Frame *frame) override;
+  bool Execute() override;
 
   bool TrajectoryGenerator();
   bool RealtimeTrajectoryGenerator();

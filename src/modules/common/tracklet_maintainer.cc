@@ -17,8 +17,8 @@
 #include "ifly_time.h"
 #include "path_point.h"
 #include "planning_context.h"
-#include "planning_output_context.h"
 #include "tracklet_maintainer.h"
+#include "vehicle_config_context.h"
 #include "virtual_lane_manager.h"
 namespace planning {
 TrackletSequentialState *LifecycleDict::get(int uid) {
@@ -94,7 +94,7 @@ void TrackletMaintainer::apply_update(
   std::vector<PathPoint> path_points;
   frenet_coord_ = nullptr;
   bool is_location_valid = session_->environmental_model().location_valid();
-  auto &lateral_output =
+  const auto &lateral_output =
       session_->planning_context().lateral_behavior_planner_output();
 
   auto flane = session_->environmental_model()
@@ -624,7 +624,8 @@ void TrackletMaintainer::fisheye_helper(const PredictionObject &prediction,
 
   // calcuate cutin related
   // 转换为障碍物相对自车车头距离
-  auto vehicle_param = session_->vehicle_config_context().get_vehicle_param();
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   object.location_head = std::max(object.points_3d_f.x, object.points_3d_r.x) -
                          vehicle_param.rear_axis_to_front_edge;
   object.location_tail = std::min(object.points_3d_f.x, object.points_3d_r.x) -
@@ -652,12 +653,12 @@ void TrackletMaintainer::calc(
     bool rightest_lane, double dist_intersect, double intersect_length,
     bool left_faster, bool right_faster, LeadCars &lead_cars,
     bool isRedLightStop, bool isFasterStaticAvd, bool isOnHighway,
-    std::vector<double> d_poly, std::vector<double> c_poly) {
+    const std::vector<double> &d_poly, const std::vector<double> &c_poly) {
   seq_state_.remove_clean();
   double v_ego = ego_state_->ego_v();
-  double ego_rear_axis_to_front_edge = session_->vehicle_config_context()
-                                           .get_vehicle_param()
-                                           .rear_axis_to_front_edge;
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double ego_rear_axis_to_front_edge = vehicle_param.rear_axis_to_front_edge;
   if (frenet_coord_ != nullptr) {
     Point2D frenet_point;
     if (frenet_coord_->XYToSL(Point2D(ego_rear_axis_to_front_edge, 0),
@@ -684,8 +685,10 @@ void TrackletMaintainer::calc(
         fill_deriv_info(*item);
       }
       // only use obstacle with camera source
+      // HACK: ignore traffic barrier (refer to common.proto.ObjectType == 15)
+      bool is_traffic_barrier = item->type == 15;
       if ((item->fusion_source & OBSTACLE_SOURCE_CAMERA) &&
-          frenet_transform_valid) {
+          frenet_transform_valid && !is_traffic_barrier) {
         is_potential_lead_one(*item, v_ego);
       } else {
         obstacle_reset(*item);
@@ -754,7 +757,7 @@ void TrackletMaintainer::calc(
     // obstacle->set_cutin_p(tr->cutinp);
   }
 
-  // auto ad_info = session_->mutable_planning_output_context()
+  // auto ad_info = session_->mutable_planning_context()
   //                    ->mutable_planning_hmi_info()
   //                    ->mutable_ad_info();
   // feed_hmi

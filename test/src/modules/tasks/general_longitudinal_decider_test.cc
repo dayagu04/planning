@@ -1,11 +1,10 @@
-#include "behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
+#include "tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
 
 #include <array>
 #include <cmath>
 
 #include "gtest/gtest.h"
 #include "log.h"
-#include "task_pipeline_context.h"
 
 namespace planning {
 
@@ -17,12 +16,11 @@ TEST(TestLongBehavior, general_longitudinal_decider) {
   auto kk = 10.0;
   printf("TestLongBehavior: general_longitudinal_decider");
   EgoPlanningConfigBuilder *config_builder;
-  framework::Frame *frame;
-  std::shared_ptr<TaskPipelineContext> pipeline_context;
+  framework::Session *session
 
-  auto long_behavior_planner_ptr = std::make_shared<GeneralLongitudinalDecider>(
-      config_builder, pipeline_context);
+      auto long_behavior_planner_ptr =
+          std::make_shared<GeneralLongitudinalDecider>(config_builder);
 
-  long_behavior_planner_ptr->Execute(frame);
+  long_behavior_planner_ptr->Execute(session);
 }
 }  // namespace planning

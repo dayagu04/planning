@@ -114,11 +114,14 @@ struct EgoPlanningConfig : public Config {
     use_ego_prediction_model_in_planning = read_json_key<bool>(
         json, "use_ego_prediction_model_in_planning", false);
     planner_type = read_json_key<int>(json, "planner_type");
+    active_lane_change_min_duration_threshold =
+        read_json_key<int>(json, "active_lane_change_min_duration_threshold");
   }
   bool enable_raw_ego_prediction = false;
   bool enable_dagger = false;
   bool use_ego_prediction_model_in_planning = false;
   int planner_type = planning::context::PlannerType::REALTIME_PLANNER;
+  int active_lane_change_min_duration_threshold = 300;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
@@ -208,6 +211,8 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
   }
   double lc_t_actuator_delay = 0.03;
   double lc_back_available_thr = 1.5;
+  double delta_t = 0.2;
+  int num_point = 26;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {
@@ -302,10 +307,16 @@ struct GapSelectorConfig : public EgoPlanningConfig {
     collision_check_length_threshold = read_json_keys<double>(
         json, std::vector<std::string>{"gap_selector",
                                        "collision_check_length_threshold"});
+    lc_premove_time = read_json_keys<double>(
+        json, std::vector<std::string>{"gap_selector", "lc_premove_time"});
+    near_car_ttc = read_json_keys<double>(
+        json, std::vector<std::string>{"gap_selector", "near_car_ttc"});
   }
 
-  double default_lc_time = 5.0;
-  double collision_check_length_threshold = 1.2;
+  double default_lc_time = 5.5;
+  double collision_check_length_threshold = 2.2;
+  double lc_premove_time = 1.5;
+  double near_car_ttc = 0.2;
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
@@ -1176,8 +1187,8 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double high_speed_acc_upper_bound = 1.8;
   double low_speed_threshold_with_acc_upper_bound = 5.5;
   double high_speed_threshold_with_acc_upper_bound = 16.67;
-  double lane_change_low_speed_acc_upper_bound = 2.4;
-  double lane_change_high_speed_acc_upper_bound = 1.6;
+  double lane_change_low_speed_acc_upper_bound = 2.0;
+  double lane_change_high_speed_acc_upper_bound = 1.2;
   double acc_lower_bound = -7.0;
   // vel
   double kSpeedBoundFactor = 1.1;

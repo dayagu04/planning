@@ -304,6 +304,10 @@ const bool DubinsLibrary::GenLineArcOutput(
       output.path_available = false;
       return false;
     }
+    if (std::fabs(v_BC.dot(result.t1) / v_BC_norm) < 0.999962) {
+      output.path_available = false;
+      return false;
+    }
     output.line_BC.length = (output.line_BC.pA - output.line_BC.pB).norm();
     output.line_BC.heading = output.arc_AB.headingB;
 
@@ -331,6 +335,10 @@ const bool DubinsLibrary::GenLineArcOutput(
     if (v_BC_norm > dist_tol &&
         std::fabs(v_BC.dot(result.t2) / v_BC_norm) < 0.999962) {
       // std::cout << "BC wrong!" << std::endl;
+      output.path_available = false;
+      return false;
+    }
+    if (std::fabs(v_BC.dot(result.t1) / v_BC_norm) < 0.999962) {
       output.path_available = false;
       return false;
     }
@@ -505,7 +513,7 @@ const bool DubinsLibrary::GenDubinsOutput(
 
   // std::cout << "res = " << res << std::endl;
 
-  if (res < -0.9 || cos_AO1B < cos_120deg || cos_CO2D < cos_120deg) {
+  if (res < 0.999962 || cos_AO1B < cos_120deg || cos_CO2D < cos_120deg) {
     output.path_available = false;
     return false;
   } else {

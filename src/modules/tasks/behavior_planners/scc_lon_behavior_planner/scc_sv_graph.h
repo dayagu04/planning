@@ -2,9 +2,9 @@
 #include "define/lateral_behavior_planner_output.h"
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"
-#include "frame.h"
 #include "real_time_lon_behavior_planner.pb.h"
 #include "scc_lon_behavior_types.h"
+#include "session.h"
 #include "task_basic_types.h"
 
 namespace planning {

@@ -1,6 +1,6 @@
 {
   "enable_raw_ego_prediction": false,
-  "planner_type": 1,
+  "planner_type": 0,
   "failure_counter_thrshld": 20,
   "enable_dagger": false,
   "pipeline_version": "v1",
@@ -12,6 +12,7 @@
   "replanning_with_navi": false,
   "use_ego_prediction_model_in_planning": true,
   "dump_mdebug": false,
+  "active_lane_change_min_duration_threshold": 300,
   "enable_bbox_mode": true,
   "max_speed_static_obstacle": 0.5,
   "is_select_split_nearing_ramp": false,
@@ -268,7 +269,7 @@
     "dece_to_ramp": -1.0,
     "v_limit_ramp": 16.67,
     "safe_distance_ttc": 0.3,
-    "enable_lead_two": false,
+    "enable_lead_two": true,
     "enable_rss_model": false,
     "cruise_set_acc": 5.0,
     "cruise_set_dec": -1.0,
@@ -287,6 +288,8 @@
   "pnp_lower_speed_filter_threshold": 1.0,
   "gap_selector": {
     "default_lc_time": 5.5,
-    "collision_check_length_threshold":3.5
+    "collision_check_length_threshold":3.5,
+    "lc_premove_time":0.1,
+    "near_car_ttc": 0.3
   }
 }

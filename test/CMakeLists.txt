@@ -23,7 +23,6 @@ add_executable(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME} PRIVATE
   common
   modules
-  modules_scenario
   modules_tasks
   modules_common
   modules_context

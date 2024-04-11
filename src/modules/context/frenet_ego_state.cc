@@ -4,6 +4,7 @@
 
 #include "session.h"
 #include "utils/frenet_coordinate_system.h"
+#include "vehicle_config_context.h"
 
 namespace planning {
 
@@ -20,51 +21,37 @@ void FrenetEgoState::update(
   } else {
     LOG_DEBUG("kd_path coordinate conversion failed");
   };
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   heading_angle_ = planning_math::NormalizeAngle(
       ego_state.heading_angle() - frenet_coord->GetPathCurveHeading(s_));
   velocity_ = ego_state.ego_v();
   acc_ = ego_state.ego_acc();
   jerk_ = ego_state.jerk();
   corners_.s_front_left =
-      s_ +
-      ego_state.get_vehicle_param().rear_axis_to_front_edge *
-          std::cos(heading_angle_) -
-      ego_state.get_vehicle_param().width / 2.0 * std::sin(heading_angle_);
+      s_ + vehicle_param.rear_axis_to_front_edge * std::cos(heading_angle_) -
+      vehicle_param.width / 2.0 * std::sin(heading_angle_);
   corners_.l_front_left =
-      l_ +
-      ego_state.get_vehicle_param().rear_axis_to_front_edge *
-          std::sin(heading_angle_) +
-      ego_state.get_vehicle_param().width / 2.0 * std::cos(heading_angle_);
+      l_ + vehicle_param.rear_axis_to_front_edge * std::sin(heading_angle_) +
+      vehicle_param.width / 2.0 * std::cos(heading_angle_);
   corners_.s_front_right =
-      s_ +
-      ego_state.get_vehicle_param().rear_axis_to_front_edge *
-          std::cos(heading_angle_) +
-      ego_state.get_vehicle_param().width / 2.0 * std::sin(heading_angle_);
+      s_ + vehicle_param.rear_axis_to_front_edge * std::cos(heading_angle_) +
+      vehicle_param.width / 2.0 * std::sin(heading_angle_);
   corners_.l_front_right =
-      l_ +
-      ego_state.get_vehicle_param().rear_axis_to_front_edge *
-          std::sin(heading_angle_) -
-      ego_state.get_vehicle_param().width / 2.0 * std::cos(heading_angle_);
+      l_ + vehicle_param.rear_axis_to_front_edge * std::sin(heading_angle_) -
+      vehicle_param.width / 2.0 * std::cos(heading_angle_);
   corners_.s_rear_left =
-      s_ -
-      ego_state.get_vehicle_param().back_edge_to_rear_axis *
-          std::cos(heading_angle_) -
-      ego_state.get_vehicle_param().width / 2.0 * std::sin(heading_angle_);
+      s_ - vehicle_param.back_edge_to_rear_axis * std::cos(heading_angle_) -
+      vehicle_param.width / 2.0 * std::sin(heading_angle_);
   corners_.l_rear_left =
-      l_ -
-      ego_state.get_vehicle_param().back_edge_to_rear_axis *
-          std::sin(heading_angle_) +
-      ego_state.get_vehicle_param().width / 2.0 * std::cos(heading_angle_);
+      l_ - vehicle_param.back_edge_to_rear_axis * std::sin(heading_angle_) +
+      vehicle_param.width / 2.0 * std::cos(heading_angle_);
   corners_.s_rear_right =
-      s_ -
-      ego_state.get_vehicle_param().back_edge_to_rear_axis *
-          std::cos(heading_angle_) +
-      ego_state.get_vehicle_param().width / 2.0 * std::sin(heading_angle_);
+      s_ - vehicle_param.back_edge_to_rear_axis * std::cos(heading_angle_) +
+      vehicle_param.width / 2.0 * std::sin(heading_angle_);
   corners_.l_rear_right =
-      l_ -
-      ego_state.get_vehicle_param().back_edge_to_rear_axis *
-          std::sin(heading_angle_) -
-      ego_state.get_vehicle_param().width / 2.0 * std::cos(heading_angle_);
+      l_ - vehicle_param.back_edge_to_rear_axis * std::sin(heading_angle_) -
+      vehicle_param.width / 2.0 * std::cos(heading_angle_);
 
   // Step 2) update polygon
   auto enu_polygon = ego_state.polygon();

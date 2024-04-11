@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <string>
 #include "config/message_type.h"
 
 namespace planning {
@@ -35,7 +36,7 @@ class VehicleModel {
  public:
   VehicleModel() = delete;
 
-  static bool LoadVehicleModelConfig(std::string config_file_dir);
+  static bool LoadVehicleModelConfig(const std::string& config_file_dir);
 
   static VehicleState Predict(const double predicted_time_horizon,
                               const VehicleState& cur_vehicle_state);

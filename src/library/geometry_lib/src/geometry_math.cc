@@ -407,6 +407,74 @@ const bool GetArcLineIntersection(
   return false;
 }
 
+const size_t GetArcLineIntersection(
+    std::pair<Eigen::Vector2d, Eigen::Vector2d> &intersections,
+    const pnc::geometry_lib::Arc &arc,
+    const pnc::geometry_lib::LineSegment &line_seg) {
+  const auto AB = line_seg.pB - line_seg.pA;
+  const Eigen::Vector2d OA(line_seg.pA.x() - arc.circle_info.center.x(),
+                           line_seg.pA.y() - arc.circle_info.center.y());
+  // |OA + lambda * AB|^2 = r^2 means that line segment AB intersects at circle
+  // OA·OA + 2*OA·AB*lambda + AB·AB*lambda^2 = r^2
+  const auto a = AB.dot(AB);
+  const auto b = 2 * OA.dot(AB);
+  const auto c = OA.dot(OA) - pow(arc.circle_info.radius, 2);
+
+  const auto delta = b * b - 4.0 * a * c;
+
+  if (delta < 0.0) {
+    // line does not intersect with a circle
+    return 0;
+  }
+
+  if (mathlib::IsDoubleEqual(delta, 0.0)) {
+    // line has one intersection with a circle
+    const auto lambda = -b / (2.0 * a);
+    // if lambda ∈ [0, 1], line segment AB intersects with a circle
+    if (!pnc::mathlib::IsInBound(lambda, 0.0, 1.0)) {
+      // the intersection is not on line_segment
+      return 0;
+    }
+    // AC = lamdba * AB -> pC - pA = lamdba * (pB - pA)
+    // pC = lamdba * pB + (1 - lambda) * pA
+    intersections.first = lambda * line_seg.pB + (1.0 - lambda) * line_seg.pA;
+    // determine whether the intersection point is on an arc
+    if (CheckPointLiesOnArc(arc, intersections.first)) {
+      return 1;
+    }
+    return 0;
+  }
+
+  size_t number = 0;
+  // delta > 0 -> line has two intersection with a circle
+  const auto lambda1 = (-b + sqrt(delta)) / (2.0 * a);
+  const auto lambda2 = (-b - sqrt(delta)) / (2.0 * a);
+  // due to motion limitations, line segment and arc can only have at most one
+  // intersection
+  if (pnc::mathlib::IsInBound(lambda1, 0.0, 1.0)) {
+    intersections.first = lambda1 * line_seg.pB + (1.0 - lambda1) * line_seg.pA;
+    if (CheckPointLiesOnArc(arc, intersections.first)) {
+      number++;
+    }
+  }
+  if (pnc::mathlib::IsInBound(lambda2, 0.0, 1.0)) {
+    if (number == 0) {
+      intersections.first =
+          lambda2 * line_seg.pB + (1.0 - lambda2) * line_seg.pA;
+      if (CheckPointLiesOnArc(arc, intersections.first)) {
+        number++;
+      }
+    } else {
+      intersections.second =
+          lambda2 * line_seg.pB + (1.0 - lambda2) * line_seg.pA;
+      if (CheckPointLiesOnArc(arc, intersections.second)) {
+        number++;
+      }
+    }
+  }
+  return number;
+}
+
 const bool CheckTwoCircleIntersection(const Circle &c1, const Circle &c2) {
   // due to car lat expand, when tangential, it can be regarded as no collision
   const double d = (c1.center - c2.center).norm();
@@ -1114,7 +1182,7 @@ const bool SamplePointSetInLineSeg(std::vector<Eigen::Vector2d> &point_set,
   }
 
   point_set.clear();
-  point_set.reserve(50);
+  point_set.reserve(100);
 
   Eigen::Vector2d pn;
   // get first point

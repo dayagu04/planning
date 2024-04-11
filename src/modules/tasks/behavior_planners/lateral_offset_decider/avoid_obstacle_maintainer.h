@@ -2,9 +2,8 @@
 #include <array>
 #include <vector>
 #include "config/basic_type.h"
-#include "frame.h"
+#include "session.h"
 #include "task_basic_types.h"
-#include "task_pipeline_context.h"
 
 namespace planning {
 class AvoidObstacleMaintainer {
@@ -12,12 +11,11 @@ class AvoidObstacleMaintainer {
   AvoidObstacleMaintainer() = default;
   ~AvoidObstacleMaintainer() = default;
 
-  bool Process(planning::framework::Frame *frame,
-               std::shared_ptr<TaskPipelineContext> &pipeline_context);
-  const std::array<std::vector<double>, 2> &avd_car_past() const {
+  bool Process(planning::framework::Session* session);
+  const std::array<std::vector<double>, 2>& avd_car_past() const {
     return avd_car_past_;
   };
-  const std::array<std::vector<double>, 2> &avd_sp_car_past() const {
+  const std::array<std::vector<double>, 2>& avd_sp_car_past() const {
     return avd_sp_car_past_;
   }
   double dist_rblane() const { return dist_rblane_; }
@@ -30,7 +28,7 @@ class AvoidObstacleMaintainer {
   bool UpdateLSideAvdsInfo(bool no_near_car);
   bool UpdateRSideAvdsInfo(bool no_near_car);
 
-  planning::framework::Frame *frame_;
+  planning::framework::Session* session_;
   bool no_sp_car_ = true;
 
   bool is_ncar_ = false;
