@@ -551,22 +551,21 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->mutable_cipv_info()->set_has_cipv(cipv_info.has_cipv());
   planning_hmi_info->mutable_cipv_info()->set_cipv_id(cipv_info.cipv_id());
 
-  auto ad_info = session_.mutable_planning_context()
-                     ->mutable_planning_hmi_info()
-                     ->mutable_ad_info();
-  auto ego_state_manager =
+  const auto &ego_state_manager =
       session_.environmental_model().get_ego_state_manager();
-  ad_info->set_cruise_speed(ego_state_manager->ego_v_cruise());
+  planning_hmi_info->mutable_ad_info()->set_cruise_speed(
+      ego_state_manager->ego_v_cruise());
 
   // HMI for NOA
-  auto virtual_lane_manager =
+  const auto &virtual_lane_manager =
       session_.environmental_model().get_virtual_lane_manager();
-  ad_info->set_distance_to_ramp(virtual_lane_manager->dis_to_ramp());
-  ad_info->set_distance_to_split(
+  planning_hmi_info->mutable_ad_info()->set_distance_to_ramp(
+      virtual_lane_manager->dis_to_ramp());
+  planning_hmi_info->mutable_ad_info()->set_distance_to_split(
       virtual_lane_manager->distance_to_first_road_split());
-  ad_info->set_distance_to_merge(
+  planning_hmi_info->mutable_ad_info()->set_distance_to_merge(
       virtual_lane_manager->distance_to_first_road_merge());
-  ad_info->set_distance_to_toll_station(
+  planning_hmi_info->mutable_ad_info()->set_distance_to_toll_station(
       (uint)virtual_lane_manager
           ->ramp_direction());  // 临时将toll_station改为ramp_direction
 
