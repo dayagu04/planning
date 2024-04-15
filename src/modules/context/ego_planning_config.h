@@ -783,6 +783,24 @@ struct VisionLongitudinalBehaviorPlannerConfig : public EgoPlanningConfig {
     v_limit_ramp = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "v_limit_ramp"});
+    max_update_rate = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "max_update_rate"});
+    min_update_rate = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "min_update_rate"});
+    p_slope_v_max = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "p_slope_v_max"});
+    p_slope_v_min = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "p_slope_v_min"});
+    l_slope_v_max = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "l_slope_v_max"});
+    l_slope_v_min = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "l_slope_v_min"});
   }
   double preview_x = 80.0;
   double dis_zero_speed = 3.5;
@@ -797,6 +815,13 @@ struct VisionLongitudinalBehaviorPlannerConfig : public EgoPlanningConfig {
   double obstacle_v_start = 0.5;  // start of obstacle
   double distance_stop = 1.0;
   double distance_start = 0.3;
+  // The param for acc_vel_filter
+  double min_update_rate = -1.0;
+  double max_update_rate = 0.8;
+  double p_slope_v_max = 1.0;
+  double p_slope_v_min = 0.2;
+  double l_slope_v_max = 0.35;
+  double l_slope_v_min = 0.08;
 };
 
 struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {

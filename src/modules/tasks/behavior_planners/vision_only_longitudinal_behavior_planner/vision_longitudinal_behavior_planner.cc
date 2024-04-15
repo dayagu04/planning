@@ -19,7 +19,8 @@ VisionLongitudinalBehaviorPlanner::VisionLongitudinalBehaviorPlanner(
   config_ = config_builder->cast<VisionLongitudinalBehaviorPlannerConfig>();
   name_ = "VisionLongitudinalBehaviorPlanner";
 
-  accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
+  accel_vel_filter_.Init(config_.min_update_rate, config_.max_update_rate, 0.0,
+                         42.0, 0.1);
 }
 
 bool VisionLongitudinalBehaviorPlanner::Execute(framework::Frame *frame) {
@@ -1694,8 +1695,10 @@ double VisionLongitudinalBehaviorPlanner::calc_desired_speed(
   // 4-parabolic (constant decel)
   const double max_runaway_speed = -2.;  // no slower than 2m/s over the lead
   //  interpolate the lookups to find the slopes for a give lead speed
-  double l_slope = interp(v_lead, _L_SLOPE_BP, _L_SLOPE_V);
-  double p_slope = interp(v_lead, _P_SLOPE_BP, _P_SLOPE_V);
+  const std::vector<double> L_SLOPE_V_VEC{config_.l_slope_v_max, config_.l_slope_v_min};
+  const std::vector<double> P_SLOPE_V_VEC{config_.p_slope_v_max, config_.p_slope_v_min};
+  double l_slope = interp(v_lead, _L_SLOPE_BP, L_SLOPE_V_VEC);
+  double p_slope = interp(v_lead, _P_SLOPE_BP, P_SLOPE_V_VEC);
   // this is where parabola && linear curves are tangents
   double x_linear_to_parabola = p_slope / std::pow(l_slope, 2);
   // parabola offset to have the parabola being tangent to the linear curve

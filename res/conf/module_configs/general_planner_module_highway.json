@@ -250,7 +250,13 @@
     "fast_lead_distance_step": 1.0,
     "slow_lead_distance_step": 2.0,
     "cut_in_desired_distance_step": 1.0,
-    "soft_bound_corridor_t": 0.3
+    "soft_bound_corridor_t": 0.3,
+    "max_update_rate": 0.8,
+    "min_update_rate": -1.0,
+    "p_slope_v_max": 1.0,
+    "p_slope_v_min": 0.2,
+    "l_slope_v_max": 0.35,
+    "l_slope_v_min": 0.08
   },
   "result_trajectory_generator": {
     "enable_lat_traj": false
