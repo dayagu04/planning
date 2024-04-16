@@ -118,7 +118,7 @@ struct GapSelectorPathSpline {
     LH_VALID = 2,
     LB_VALID = 3,
     LC_LANE_CROSS = 4,
-    LC_PREMOVE =5,
+    LC_PREMOVE = 5,
   };
   int path_spline_status{
       NO_VALID};  // 0--NO_VALID, 1--LC_VALID, 2--LH_VALID, 3--LB_VALID

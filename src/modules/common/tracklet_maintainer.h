@@ -9,6 +9,7 @@
 #include "refline.h"
 // #include "path_point.h"
 #include "fusion_objects.pb.h"
+#include "math/filter/mean_filter.h"
 #include "session.h"
 #include "tracked_object.h"
 #include "utils/kd_path.h"

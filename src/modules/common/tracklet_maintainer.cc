@@ -335,15 +335,10 @@ void TrackletMaintainer::recv_prediction_objects(
         object->trajectory.relative_ego_y[i] = tr.trajectory[i].relative_ego_y;
         // Todo:clren
         // 后续根据情况修改成与recv_relative_prediction_objects类似的写法
-        double theta = tr.trajectory[i].yaw - ego_state_->ego_pose_raw().theta;
-        if (theta > pi) {
-          theta -= 2 * pi;
-        } else if (theta < -pi) {
-          theta += 2 * pi;
-        }
-        // object->trajectory.relative_ego_yaw[i] =
-        // tr.trajectory[i].relative_ego_yaw;
-        object->trajectory.relative_ego_yaw[i] = theta;
+
+        // 未来使用预测轨迹的话，还需要使用障碍物轨迹的box朝向
+        object->trajectory.relative_ego_yaw[i] =
+            NormalizeAngle(tr.trajectory[i].relative_ego_yaw);
         object->trajectory.relative_ego_speed[i] =
             tr.trajectory[i].relative_ego_speed;
 
@@ -799,7 +794,6 @@ void TrackletMaintainer::calc(
 bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
                                                 double lat_offset) {
   double half_length = item.length * 0.5;
-
   double half_width;
   bool frenet_transform_valid = true;
   // 对车辆障碍物half_width限定在1-2m以内
@@ -864,6 +858,7 @@ bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
   //           << " item.v_lat: " << item.v_lat << " item.vy_rel: " <<
   //           item.vy_rel
   //           << " v_l: " << v_l << std::endl;
+
   if (hdmap_valid_) {
     item.a_lead = item.a * std::cos(item.theta - theta);
     item.a_lead_k = item.a_lead;
@@ -1065,8 +1060,6 @@ void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
   double interval = (item.last_recv_time == 0.0)
                         ? planning_cycle_time
                         : (item.timestamp - item.last_recv_time);
-
-  double pi = std::atan(1.0) * 4;
 
   double v_lat_unfiltered;
   if (item.c0 != DBL_MAX && item.d_center_cpath_hostory != DBL_MAX &&

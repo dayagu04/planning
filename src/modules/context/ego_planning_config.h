@@ -116,12 +116,16 @@ struct EgoPlanningConfig : public Config {
     planner_type = read_json_key<int>(json, "planner_type");
     active_lane_change_min_duration_threshold =
         read_json_key<int>(json, "active_lane_change_min_duration_threshold");
+    use_lateral_distance_to_judge_cutout_in_active_lane_change =
+        read_json_key<bool>(
+            json, "use_lateral_distance_to_judge_cutout_in_active_lane_change");
   }
   bool enable_raw_ego_prediction = false;
   bool enable_dagger = false;
   bool use_ego_prediction_model_in_planning = false;
   int planner_type = planning::context::PlannerType::REALTIME_PLANNER;
-  int active_lane_change_min_duration_threshold = 300;
+  int active_lane_change_min_duration_threshold = 150;
+  bool use_lateral_distance_to_judge_cutout_in_active_lane_change = true;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
