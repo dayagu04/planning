@@ -1527,9 +1527,10 @@ void LaneChangeDecider::UpdateCoarsePlanningInfo() {
 
   coarse_planning_info.trajectory_points.clear();
   TrajectoryPoint point;
+  const double buff = 0.1;//由于是double类型，为了能取到最后一个点的信息
   for (size_t i = 0; i < N; ++i) {
     // cart info
-    if (s_ref < cart_ref_info.s_vec.back()) {
+    if (s_ref < cart_ref_info.s_vec.back() + buff) {
       point.x = cart_ref_info.x_s_spline(s_ref);
       point.y = cart_ref_info.y_s_spline(s_ref);
       point.heading_angle =

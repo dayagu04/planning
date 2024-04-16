@@ -46,6 +46,8 @@ class LaneReferencePath
  private:
   void update_refined_lane_points();
   virtual void update_obstacles();
+  ReferencePathPoint ExtendLine(const ReferencePathPoint &p1,
+                                const ReferencePathPoint &p2, double length);
   bool get_ref_points(ReferencePathPoints &points);
 
   int lane_virtual_id_ = 0;

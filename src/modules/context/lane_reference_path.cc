@@ -1,4 +1,6 @@
 #include "lane_reference_path.h"
+#include <openssl/evp.h>
+#include <sys/param.h>
 
 #include "ifly_time.h"
 #include "obstacle_manager.h"
@@ -166,6 +168,60 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
     }
     ref_path_points.emplace_back(std::move(ref_path_pt));
   }
+  //判断参考线的长度是否大于自车5s的行驶距离，如果不够的话，则延长参考线
+  // const bool is_NOA =
+  //     session_->environmental_model().function_info().function_mode() ==
+  //     common::DrivingFunctionInfo::NOA;
+  const bool is_HIGHWAY =
+      session_->get_scene_type() == planning::common::SceneType::HIGHWAY;
+  if (ref_path_points.size() >= 3 && is_HIGHWAY) {
+    ReferencePathPoint extend_point;
+    const int point_nums = ref_path_points.size();
+    double distance = 0;
+    for (int i = 1; i < point_nums; i++) {
+      const auto &cur_point = ref_path_points[i].path_point;
+      const auto &pre_point = ref_path_points[i - 1].path_point;
+      distance +=
+          std::hypotf(pre_point.x - cur_point.x, pre_point.y - cur_point.y);
+    }
+    const std::shared_ptr<EgoStateManager> ego_state_mgr =
+        session_->mutable_environmental_model()->get_ego_state_manager();
+    const double ego_v = ego_state_mgr->ego_v();
+    const double cruise_v = ego_state_mgr->ego_v_cruise();
+    const double preview_dis = std::fmax(ego_v, cruise_v) * 5;
+    const double cur_s = 50.0;
+    const double extend_buff = 5;
+    if (preview_dis + cur_s > distance) {
+      double extend_length = preview_dis + cur_s - distance + extend_buff;
+      extend_point = ExtendLine(ref_path_points[point_nums - 2],
+                                ref_path_points[point_nums - 1], extend_length);
+      const auto &last_point = ref_path_points[point_nums - 1];
+      extend_point.path_point.set_z(last_point.path_point.z);
+      extend_point.path_point.set_theta(last_point.path_point.theta);
+      extend_point.path_point.set_kappa(0);
+
+      extend_point.distance_to_left_lane_border =
+          last_point.distance_to_left_lane_border;
+      extend_point.distance_to_left_road_border =
+          last_point.distance_to_left_road_border;
+      extend_point.distance_to_right_lane_border =
+          last_point.distance_to_right_lane_border;
+      extend_point.distance_to_right_road_border =
+          last_point.distance_to_right_road_border;
+
+      extend_point.left_road_border_type = last_point.left_road_border_type;
+      extend_point.right_road_border_type = last_point.right_road_border_type;
+      extend_point.left_lane_border_type = last_point.left_lane_border_type;
+      extend_point.right_lane_border_type = last_point.right_lane_border_type;
+      extend_point.lane_width = last_point.lane_width;
+      extend_point.max_velocity = last_point.max_velocity;
+      extend_point.min_velocity = last_point.min_velocity;
+      extend_point.type = ReferencePathPointType::MAP;
+      extend_point.is_in_intersection = last_point.is_in_intersection;
+
+      ref_path_points.emplace_back(std::move(extend_point));
+    }
+  }
 
   return ref_path_points.size() >= 3;
 }
@@ -299,6 +355,24 @@ bool LaneReferencePath::is_potential_current_leadone_leadtwo_to_ego(
   } else {
     return false;
   }
+}
+ReferencePathPoint LaneReferencePath::ExtendLine(const ReferencePathPoint &p1,
+                                                 const ReferencePathPoint &p2,
+                                                 double length) {
+  // 计算直线方向向量
+  double dx = p2.path_point.x - p1.path_point.x;
+  double dy = p2.path_point.y - p1.path_point.y;
+  // 计算直线长度
+  double lineLength = sqrt(dx * dx + dy * dy);
+  // 将方向向量归一化
+  dx /= lineLength;
+  dy /= lineLength;
+  // 计算延长后的点坐标
+  ReferencePathPoint extendedPoint;
+  extendedPoint.path_point.x = p2.path_point.x + dx * length;
+  extendedPoint.path_point.y = p2.path_point.y + dy * length;
+
+  return extendedPoint;
 }
 
 }  // namespace planning
