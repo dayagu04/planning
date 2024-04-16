@@ -594,14 +594,14 @@ void StGraphGenerator::UpdateSTGraphs(
           s_ref = st.start_s() + st.desired_distance() + s_step;
           // hard bound使用安全距离
           hard_bound.upper = 150;
-          hard_bound.lower = st.start_s() + st.safe_distance() + s_step;
+          hard_bound.lower = std::max(st.start_s() + st.safe_distance() + s_step, 0.0);
           st_boundary.hard_bound.emplace_back(hard_bound);
           s_ref_update = std::max(
               hard_bound.lower, s_ref_update = std::max(sref_update[i], s_ref));
           // soft bound先使用期望跟车距离+buffer
           soft_bound.upper = 150;
           soft_bound.lower =
-              std::max(hard_bound.lower, s_ref + st.v_lead() * 0.5);
+              std::max(0.5 * (hard_bound.lower + s_ref_update), s_ref );
           st_boundary.soft_bound.emplace_back(soft_bound);
           // 根据障碍物跟车距离刷新s_refs
           sref_update[i] = s_ref_update;
@@ -1455,7 +1455,7 @@ double StGraphGenerator::DesiredDistanceFilter(
     leadone_info->mutable_leadone_information()->set_obstacle_id(
         lead_obstacle.track_id());
     leadone_info->mutable_leadone_information()->set_desired_distance(
-        std::max(lead_obstacle.d_rel(), safe_distance));
+        std::min(lead_obstacle.d_rel(), safe_distance));
   }
 
   // TBD: 目前cut in和lead区分不明显，cut in会被判断为lead
@@ -1468,7 +1468,7 @@ double StGraphGenerator::DesiredDistanceFilter(
       leadone_info->leadone_information().desired_distance());
   if (!(lon_behav_input_ ->dbw_status())) {
     lead_desired_distance_filter_.SetState(
-      std::max(lead_obstacle.d_rel(), safe_distance));
+      std::min(lead_obstacle.d_rel(), safe_distance));
   }
   if (slow_car_cut_in) {
     // 慢车切入
@@ -1505,7 +1505,7 @@ double StGraphGenerator::LeadtwoDesiredDistanceFilter(
     leadtwo_info->mutable_leadtwo_information()->set_obstacle_id(
         lead_obstacle.track_id());
     leadtwo_info->mutable_leadtwo_information()->set_desired_distance(
-        std::max(lead_obstacle.d_rel(), safe_distance));
+        std::min(lead_obstacle.d_rel(), safe_distance));
   }
 
   // TBD: 目前cut in和lead区分不明显，cut in会被判断为lead
@@ -1519,7 +1519,7 @@ double StGraphGenerator::LeadtwoDesiredDistanceFilter(
 
   if (!(lon_behav_input_ ->dbw_status())) {
     lead_two_desired_distance_filter_.SetState(
-      std::max(lead_obstacle.d_rel(), safe_distance));
+      std::min(lead_obstacle.d_rel(), safe_distance));
   }
 
   if (slow_car_cut_in) {
@@ -1557,7 +1557,7 @@ double StGraphGenerator::TmpLeadDesiredDistanceFilter(
     leadone_info->mutable_leadone_information()->set_obstacle_id(
         lead_obstacle.track_id());
     leadone_info->mutable_leadone_information()->set_desired_distance(
-        std::max(lead_obstacle.d_rel(), safe_distance));
+        std::min(lead_obstacle.d_rel(), safe_distance));
   }
 
   // TBD: 目前cut in和lead区分不明显，cut in会被判断为cut in
@@ -1607,7 +1607,7 @@ double StGraphGenerator::CutInDesiredDistanceFilter(
   if (cutin_information->obstacle_id() != cut_in_obstacle.track_id()) {
     cutin_information->set_obstacle_id(cut_in_obstacle.track_id());
     cutin_information->set_desired_distance(
-        std::max(predict_distance, safe_distance));
+        std::min(predict_distance, safe_distance));
   }
 
   bool slow_car_cut_in = false;
@@ -1619,7 +1619,7 @@ double StGraphGenerator::CutInDesiredDistanceFilter(
       cutin_information->desired_distance());
   if (!(lon_behav_input_ ->dbw_status())) {
     cut_in_desired_distance_filter_.SetState(
-      std::max(predict_distance, safe_distance));
+      std::min(predict_distance, safe_distance));
   }
   JSON_DEBUG_VALUE("fast_car_cut_in_id", -1.0);
   JSON_DEBUG_VALUE("slow_car_cut_in_id", -1.0);
@@ -1653,7 +1653,7 @@ double StGraphGenerator::LCGapDesiredDistanceFilter(
     if (lc_front_id_ != lead_obstacle.track_id()) {
       lc_front_id_ = lead_obstacle.track_id();
       lc_front_desired_distance_ =
-          std::max(lead_obstacle.d_rel(), safe_distance);
+          std::min(lead_obstacle.d_rel(), safe_distance);
     }
     double desired_front_distance_new = desired_distance;
 
@@ -1686,7 +1686,7 @@ double StGraphGenerator::LCGapDesiredDistanceFilter(
     if (lc_rear_id_ != lead_obstacle.track_id()) {
       lc_rear_id_ = lead_obstacle.track_id();
       lc_rear_desired_distance_ =
-          std::max(0 - lead_obstacle.d_rel(), safe_distance);
+          std::min(0 - lead_obstacle.d_rel(), safe_distance);
     }
     double desired_rear_distance_new = desired_distance;
 
