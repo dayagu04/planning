@@ -280,6 +280,9 @@ bool ObjectSelector::update(int status, double start_move_distolane,
   const int active_lane_change_min_duration_threshold =
       config_.active_lane_change_min_duration_threshold;
 
+  const bool use_lateral_distance_to_judge_cutout_in_active_lane_change =
+      config_.use_lateral_distance_to_judge_cutout_in_active_lane_change;
+
   const std::vector<TrackedObject> &front_tracks =
       lateral_obstacle->front_tracks();
   auto &lane_tracks_mgr =
@@ -1941,20 +1944,25 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                 double temp_attenuation =
                     interp(std::max(v_target - v_front_lb, 0.), xp3, fp3);
                 if (std::min(v_left_front, v_target) <
-                        v_front_lb + interp(v_front_lb, xp, fp1) ||
-                    v_left_front < v_ego + 2 || tr.v_rel > temp_attenuation ||
-                    std::fabs(tr.v_lat) > 0.3 ||
-                    ((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE &&
-                      status != INTER_GS_LC_LCHANGE &&
-                      status != INTER_TR_LC_LCHANGE &&
-                      status != INTER_TL_LC_LCHANGE) &&
-                     lead_one != nullptr && lead_two != nullptr &&
-                     lead_two->d_rel - lead_one->d_rel <
-                         std::min(v_left_front, v_target) * 2 &&
-                     (lead_two->v_rel < 5. &&
-                      std::fabs(lead_two->v_lat) < 0.3 &&
-                      lead_two->d_min_cpath < 1.1 &&
-                      lead_two->d_min_cpath + lead_two->width > 1.1))) {
+                                v_front_lb + interp(v_front_lb, xp, fp1) ||
+                            v_left_front < v_ego + 2 ||
+                            tr.v_rel > temp_attenuation ||
+                            use_lateral_distance_to_judge_cutout_in_active_lane_change
+                        ? tr.l > olane->width_by_s(tr.s)
+                        : std::fabs(tr.v_lat) > 0.3 ||
+                              ((status != ROAD_LC_LCHANGE &&
+                                status != ROAD_LC_RCHANGE &&
+                                status != INTER_GS_LC_LCHANGE &&
+                                status != INTER_TR_LC_LCHANGE &&
+                                status != INTER_TL_LC_LCHANGE) &&
+                               lead_one != nullptr && lead_two != nullptr &&
+                               lead_two->d_rel - lead_one->d_rel <
+                                   std::min(v_left_front, v_target) * 2 &&
+                               (lead_two->v_rel < 5. &&
+                                std::fabs(lead_two->v_lat) < 0.3 &&
+                                lead_two->d_min_cpath < 1.1 &&
+                                lead_two->d_min_cpath + lead_two->width >
+                                    1.1))) {
                   left_lb_car_cnt_[tr.track_id].neg += 1;
                   left_alc_car_cnt_[tr.track_id].neg += 1;
 
@@ -2048,19 +2056,23 @@ bool ObjectSelector::update(int status, double start_move_distolane,
               int neg_thr_lb_l = neg_thr_l;
 
               if (std::min(v_left_front, v_target) <
-                      v_front_lb + interp(v_front_lb, xp2, fp2) ||
-                  v_left_front < v_ego + 2 || tr.v_rel > 2.5 ||
-                  std::fabs(tr.v_lat) > 0.3 ||
-                  ((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE &&
-                    status != INTER_GS_LC_LCHANGE &&
-                    status != INTER_TR_LC_LCHANGE &&
-                    status != INTER_TL_LC_LCHANGE) &&
-                   lead_one != nullptr && lead_two != nullptr &&
-                   lead_two->d_rel - lead_one->d_rel <
-                       std::min(v_left_front, v_target) * 2 &&
-                   (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 &&
-                    lead_two->d_min_cpath < 1.1 &&
-                    lead_two->d_min_cpath + lead_two->width > 1.1))) {
+                              v_front_lb + interp(v_front_lb, xp2, fp2) ||
+                          v_left_front < v_ego + 2 || tr.v_rel > 2.5 ||
+                          use_lateral_distance_to_judge_cutout_in_active_lane_change
+                      ? tr.l > olane->width_by_s(tr.s)
+                      : std::fabs(tr.v_lat) > 0.3 ||
+                            ((status != ROAD_LC_LCHANGE &&
+                              status != ROAD_LC_RCHANGE &&
+                              status != INTER_GS_LC_LCHANGE &&
+                              status != INTER_TR_LC_LCHANGE &&
+                              status != INTER_TL_LC_LCHANGE) &&
+                             lead_one != nullptr && lead_two != nullptr &&
+                             lead_two->d_rel - lead_one->d_rel <
+                                 std::min(v_left_front, v_target) * 2 &&
+                             (lead_two->v_rel < 5. &&
+                              std::fabs(lead_two->v_lat) < 0.3 &&
+                              lead_two->d_min_cpath < 1.1 &&
+                              lead_two->d_min_cpath + lead_two->width > 1.1))) {
                 if (left_lb_car_cnt_.find(tr.track_id) !=
                     left_lb_car_cnt_.end()) {
                   left_lb_car_cnt_[tr.track_id].neg += 1;
@@ -3443,26 +3455,33 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                     interp(std::max(v_target - v_front_lb, 0.), xp3, fp3);
 
                 if (std::min(v_right_front, v_target) < v_front_lb + temp ||
-                    v_right_front < std::min(v_ego + 2, tr.v_lead + 3) ||
-                    tr.v_rel > temp_attenuation || std::fabs(tr.v_lat) > 0.3 ||
-                    (((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE &&
-                       status != INTER_GS_LC_RCHANGE &&
-                       status != INTER_TR_LC_RCHANGE &&
-                       status != INTER_TL_LC_RCHANGE) &&
-                      lead_one != nullptr && lead_two != nullptr &&
-                      lead_two->v_lead > -0.5 &&
-                      lead_two->d_rel - lead_one->d_rel <
-                          std::min(v_right_front, v_target) * 2 &&
-                      (lead_two->v_rel < 5. &&
-                       std::fabs(lead_two->v_lat) < 0.3 &&
-                       lead_two->d_min_cpath < 1.1 &&
-                       lead_two->d_min_cpath + lead_two->width > 1.1)) ||
-                     (temp_leadone != nullptr && temp_leadtwo != nullptr &&
-                      temp_leadtwo->v_lead > -0.5 &&
-                      temp_leadtwo->d_rel - temp_leadone->d_rel <
-                          v_target * 2 &&
-                      (temp_leadtwo->v_rel < 5. ||
-                       std::fabs(temp_leadtwo->v_lat) < 0.2)))) {
+                            v_right_front <
+                                std::min(v_ego + 2, tr.v_lead + 3) ||
+                            tr.v_rel > temp_attenuation ||
+                            use_lateral_distance_to_judge_cutout_in_active_lane_change
+                        ? tr.l < -olane->width_by_s(tr.s)
+                        : std::fabs(tr.v_lat) > 0.3 ||
+                              (((status != ROAD_LC_LCHANGE &&
+                                 status != ROAD_LC_RCHANGE &&
+                                 status != INTER_GS_LC_RCHANGE &&
+                                 status != INTER_TR_LC_RCHANGE &&
+                                 status != INTER_TL_LC_RCHANGE) &&
+                                lead_one != nullptr && lead_two != nullptr &&
+                                lead_two->v_lead > -0.5 &&
+                                lead_two->d_rel - lead_one->d_rel <
+                                    std::min(v_right_front, v_target) * 2 &&
+                                (lead_two->v_rel < 5. &&
+                                 std::fabs(lead_two->v_lat) < 0.3 &&
+                                 lead_two->d_min_cpath < 1.1 &&
+                                 lead_two->d_min_cpath + lead_two->width >
+                                     1.1)) ||
+                               (temp_leadone != nullptr &&
+                                temp_leadtwo != nullptr &&
+                                temp_leadtwo->v_lead > -0.5 &&
+                                temp_leadtwo->d_rel - temp_leadone->d_rel <
+                                    v_target * 2 &&
+                                (temp_leadtwo->v_rel < 5. ||
+                                 std::fabs(temp_leadtwo->v_lat) < 0.2)))) {
                   right_lb_car_cnt_[tr.track_id].neg += 1;
                   right_alc_car_cnt_[tr.track_id].neg += 1;
 
@@ -3555,23 +3574,30 @@ bool ObjectSelector::update(int status, double start_move_distolane,
               int neg_thr_lb_r = neg_thr_r;
 
               if (std::min(v_right_front, v_target) <
-                      v_front_lb + interp(v_front_lb, xp2, fp2) ||
-                  v_right_front < v_ego + 2 || tr.v_rel > 2.5 ||
-                  std::fabs(tr.v_lat) > 0.3 ||
-                  ((status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE &&
-                    status != INTER_GS_LC_RCHANGE &&
-                    status != INTER_TR_LC_RCHANGE &&
-                    status != INTER_TL_LC_RCHANGE) &&
-                   (lead_one != nullptr && lead_two != nullptr &&
-                    lead_two->d_rel - lead_one->d_rel <
-                        std::min(v_right_front, v_target) * 2 &&
-                    (lead_two->v_rel < 5. && std::fabs(lead_two->v_lat) < 0.3 &&
-                     lead_two->d_min_cpath < 1.1 &&
-                     lead_two->d_min_cpath + lead_two->width > 1.1))) ||
-                  (temp_leadone != nullptr && temp_leadtwo != nullptr &&
-                   temp_leadtwo->d_rel - temp_leadone->d_rel < v_target * 2 &&
-                   (temp_leadtwo->v_rel < 5. ||
-                    std::fabs(temp_leadtwo->v_lat) < 0.2))) {
+                              v_front_lb + interp(v_front_lb, xp2, fp2) ||
+                          v_right_front < v_ego + 2 || tr.v_rel > 2.5 ||
+                          use_lateral_distance_to_judge_cutout_in_active_lane_change
+                      ? tr.l > olane->width_by_s(tr.s)
+                      : std::fabs(tr.v_lat) > 0.3 ||
+                            ((status != ROAD_LC_LCHANGE &&
+                              status != ROAD_LC_RCHANGE &&
+                              status != INTER_GS_LC_RCHANGE &&
+                              status != INTER_TR_LC_RCHANGE &&
+                              status != INTER_TL_LC_RCHANGE) &&
+                             (lead_one != nullptr && lead_two != nullptr &&
+                              lead_two->d_rel - lead_one->d_rel <
+                                  std::min(v_right_front, v_target) * 2 &&
+                              (lead_two->v_rel < 5. &&
+                               std::fabs(lead_two->v_lat) < 0.3 &&
+                               lead_two->d_min_cpath < 1.1 &&
+                               lead_two->d_min_cpath + lead_two->width >
+                                   1.1))) ||
+                            (temp_leadone != nullptr &&
+                             temp_leadtwo != nullptr &&
+                             temp_leadtwo->d_rel - temp_leadone->d_rel <
+                                 v_target * 2 &&
+                             (temp_leadtwo->v_rel < 5. ||
+                              std::fabs(temp_leadtwo->v_lat) < 0.2))) {
                 if (right_lb_car_cnt_.find(tr.track_id) !=
                     right_lb_car_cnt_.end()) {
                   right_lb_car_cnt_[tr.track_id].neg += 1;
