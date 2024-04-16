@@ -292,6 +292,11 @@ void PlanningAdapter::Proc() {
     local_view_ptr_->hdmap_time = map_info_msg_recv_time_;
     is_map_info_msg_updated_.store(false);
   }
+  input_topic_timestamp->set_map(
+      local_view_ptr_->static_map_info.header().timestamp());
+  input_topic_latency->set_map(get_latency(
+      start_time,
+      local_view_ptr_->static_map_info.header().timestamp()));
 
   // update general context
   auto &state_machine_g = g_context.MutableStatemachine();
