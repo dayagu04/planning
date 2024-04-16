@@ -28,7 +28,7 @@ def find_and_run_files(path, command):
             with ThreadPoolExecutor() as executor:
                 for root, dirs, files in os.walk(path):
                     for file in files:
-                        if ".0000" in file or ".record" in file:
+                        if (".0000" in file or ".record" in file or ".bag" in file) and (".json" not in file):
                             file_path = os.path.join(root, file)
                             executor.submit(run_command_by_path, file_path)
 
