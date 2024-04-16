@@ -337,7 +337,7 @@ def load_intersection_generated_refline(plan_gen_refline, is_enu_to_car = False,
     line_y.append(car_point_y[0])
   return line_x, line_y
 
-def load_obstacle_params(obstacle_list, environment_model_info = None):
+def load_obstacle_params(obstacle_list, is_enu_to_car = False, loc_msg = [], environment_model_info = None):
   obs_info_all = dict()
   obs_num = len(obstacle_list)
   num = 0
@@ -425,10 +425,25 @@ def load_obstacle_params(obstacle_list, environment_model_info = None):
               lat_pos + dy1 + dy2]
 
     num = num + 1
-    obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
-    obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
-    obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
-    obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
+
+    if is_enu_to_car:
+      coord_tf = coord_transformer()
+      if loc_msg != []: # 长时轨迹 
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+      obstacles_x_rel, obstacles_y_rel = coord_tf.global_to_local(obs_x, obs_y)
+      pos_x_rel, pos_y_rel = coord_tf.global_to_local([long_pos], [lat_pos])
+      obs_info_all[source]['obstacles_x_rel'].append(obstacles_x_rel)
+      obs_info_all[source]['obstacles_y_rel'].append(obstacles_y_rel)
+      obs_info_all[source]['pos_x_rel'].append(pos_x_rel)
+      obs_info_all[source]['pos_y_rel'].append(pos_y_rel)
+    else:  
+      obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
+      obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
+      obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
+      obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
     obs_info_all[source]['obstacles_vel'].append(obstacle_list[i].common_info.relative_velocity.x)
     obs_info_all[source]['obstacles_acc'].append(obstacle_list[i].common_info.relative_acceleration.x)
     obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].additional_info.track_id)

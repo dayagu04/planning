@@ -192,6 +192,7 @@ bool EnvironmentalModelManager::Run() {
       (fsm_state == FuncStateMachine::FunctionalState::HPP_IN_SECURE);
   bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
+  JSON_DEBUG_VALUE("dbw_status", dbw_status)
 
   common::DrivingFunctionInfo::DrivingFunctionstate function_state =
       common::DrivingFunctionInfo::ACTIVATE;

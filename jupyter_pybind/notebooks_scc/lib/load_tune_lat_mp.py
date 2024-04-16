@@ -32,7 +32,9 @@ def normalize_vector(v):
         return v
     return v / norm
 
-def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, upper_safe_bound, lower_safe_bound, g_is_display_enu = False):
+# def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, upper_safe_bound, lower_safe_bound, g_is_display_enu = False):
+def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound, 
+                              safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, g_is_display_enu = False):
   loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
   road_msg_idx = local_view_data['data_index']['road_msg_idx']
   fus_msg_idx = local_view_data['data_index']['fus_msg_idx']
@@ -99,6 +101,41 @@ def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_da
     else:
       ref_x, ref_y = coord_tf.global_to_local(lat_motion_plan_input.ref_x_vec, \
         lat_motion_plan_input.ref_y_vec)
+    
+    soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = lat_motion_plan_input.soft_upper_bound_x0_vec, \
+      lat_motion_plan_input.soft_upper_bound_y0_vec
+
+    soft_lower_bound_x0_vec, soft_lower_bound_y0_vec = lat_motion_plan_input.soft_lower_bound_x0_vec, \
+      lat_motion_plan_input.soft_lower_bound_y0_vec
+    
+    soft_upper_bound_x1_vec, soft_upper_bound_y1_vec = lat_motion_plan_input.soft_upper_bound_x1_vec, \
+      lat_motion_plan_input.soft_upper_bound_y1_vec
+
+    soft_lower_bound_x1_vec, soft_lower_bound_y1_vec = lat_motion_plan_input.soft_lower_bound_x1_vec, \
+      lat_motion_plan_input.soft_lower_bound_y1_vec
+    
+    hard_upper_bound_x0_vec, hard_upper_bound_y0_vec = lat_motion_plan_input.hard_upper_bound_x0_vec, \
+      lat_motion_plan_input.hard_upper_bound_y0_vec
+
+    hard_lower_bound_x0_vec, hard_lower_bound_y0_vec = lat_motion_plan_input.hard_lower_bound_x0_vec, \
+      lat_motion_plan_input.hard_lower_bound_y0_vec
+
+    hard_upper_bound_x1_vec, hard_upper_bound_y1_vec = lat_motion_plan_input.hard_upper_bound_x1_vec, \
+      lat_motion_plan_input.hard_upper_bound_y1_vec
+
+    hard_lower_bound_x1_vec, hard_lower_bound_y1_vec = lat_motion_plan_input.hard_lower_bound_x1_vec, \
+      lat_motion_plan_input.hard_lower_bound_y1_vec
+    
+    if(len(soft_upper_bound_x0_vec) > 1):
+      soft_upper_bound_x0_vec[len(soft_upper_bound_x0_vec) - 1] = soft_upper_bound_x1_vec[len(soft_upper_bound_x1_vec) - 1]
+      soft_upper_bound_y0_vec[len(soft_upper_bound_y0_vec) - 1] = soft_upper_bound_y1_vec[len(soft_upper_bound_y1_vec) - 1]
+      soft_lower_bound_x0_vec[len(soft_lower_bound_x0_vec) - 1] = soft_lower_bound_x1_vec[len(soft_lower_bound_x1_vec) - 1]
+      soft_lower_bound_y0_vec[len(soft_lower_bound_y0_vec) - 1] = soft_lower_bound_y1_vec[len(soft_lower_bound_y1_vec) - 1]
+      hard_upper_bound_x0_vec[len(hard_upper_bound_x0_vec) - 1] = hard_upper_bound_x1_vec[len(hard_upper_bound_x1_vec) - 1]
+      hard_upper_bound_y0_vec[len(hard_upper_bound_y0_vec) - 1] = hard_upper_bound_y1_vec[len(hard_upper_bound_y1_vec) - 1]
+      hard_lower_bound_x0_vec[len(hard_lower_bound_x0_vec) - 1] = hard_lower_bound_x1_vec[len(hard_lower_bound_x1_vec) - 1]
+      hard_lower_bound_y0_vec[len(hard_lower_bound_y0_vec) - 1] = hard_lower_bound_y1_vec[len(hard_lower_bound_y1_vec) - 1]
+
 
     # tune the path bound and soft bound
     tmp_soft_upper_bound_x0_vec = []
@@ -106,53 +143,150 @@ def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_da
 
     tmp_soft_lower_bound_x0_vec = []
     tmp_soft_lower_bound_y0_vec = []
-    for i in range(len(lat_motion_plan_input.soft_upper_bound_x0_vec)):
-      upper_unit_vector = [lat_motion_plan_input.soft_upper_bound_x0_vec[i] - lat_motion_plan_input.soft_lower_bound_x0_vec[i], lat_motion_plan_input.soft_upper_bound_y0_vec[i] - lat_motion_plan_input.soft_lower_bound_y0_vec[i]]
-      upper_unit_vector = list(normalize_vector(upper_unit_vector))
-      #lat_motion_plan_input.soft_upper_bound_x0_vec[i] = lat_motion_plan_input.soft_upper_bound_x0_vec[i] + upper_unit_vector[0]*upper_safe_bound
-      #lat_motion_plan_input.soft_upper_bound_y0_vec[i] = lat_motion_plan_input.soft_upper_bound_y0_vec[i] + upper_unit_vector[1]*upper_safe_bound
-      tmp_soft_upper_bound_x0_vec.append(lat_motion_plan_input.soft_upper_bound_x0_vec[i] + upper_unit_vector[0]*upper_safe_bound)
-      tmp_soft_upper_bound_y0_vec.append(lat_motion_plan_input.soft_upper_bound_y0_vec[i] + upper_unit_vector[1]*upper_safe_bound)
 
-      lower_unit_vector = [lat_motion_plan_input.soft_lower_bound_x0_vec[i] - lat_motion_plan_input.soft_upper_bound_x0_vec[i], lat_motion_plan_input.soft_lower_bound_y0_vec[i] - lat_motion_plan_input.soft_upper_bound_y0_vec[i]]
-      lower_unit_vector = list(normalize_vector(lower_unit_vector))
-      tmp_soft_lower_bound_x0_vec.append(lat_motion_plan_input.soft_lower_bound_x0_vec[i] + lower_unit_vector[0]*lower_safe_bound)
-      tmp_soft_lower_bound_y0_vec.append(lat_motion_plan_input.soft_lower_bound_y0_vec[i] + lower_unit_vector[1]*lower_safe_bound)
+    tmp_hard_upper_bound_x0_vec = []
+    tmp_hard_upper_bound_y0_vec = []
+
+    tmp_hard_lower_bound_x0_vec = []
+    tmp_hard_lower_bound_y0_vec = []
+
+    if (safe_ub_start_idx < 0):
+      for i in range(len(soft_upper_bound_x0_vec)):
+        upper_unit_vector = [soft_upper_bound_x0_vec[i] - soft_lower_bound_x0_vec[i], 
+                             soft_upper_bound_y0_vec[i] - soft_lower_bound_y0_vec[i]]
+        upper_unit_vector = list(normalize_vector(upper_unit_vector))
+        tmp_soft_upper_bound_x0_vec.append(soft_upper_bound_x0_vec[i] + upper_unit_vector[0] * upper_safe_bound)
+        tmp_soft_upper_bound_y0_vec.append(soft_upper_bound_y0_vec[i] + upper_unit_vector[1] * upper_safe_bound)
+    else:
+      for j in range(0, safe_ub_start_idx):
+        tmp_soft_upper_bound_x0_vec.append(soft_upper_bound_x0_vec[j])
+        tmp_soft_upper_bound_y0_vec.append(soft_upper_bound_y0_vec[j])
+
+      for i in range(safe_ub_start_idx, safe_ub_end_idx):
+        upper_unit_vector = [soft_upper_bound_x0_vec[i] - soft_lower_bound_x0_vec[i],
+                             soft_upper_bound_y0_vec[i] - soft_lower_bound_y0_vec[i]]
+        upper_unit_vector = list(normalize_vector(upper_unit_vector))
+        tmp_soft_upper_bound_x0_vec.append(soft_upper_bound_x0_vec[i] + upper_unit_vector[0]*upper_safe_bound)
+        tmp_soft_upper_bound_y0_vec.append(soft_upper_bound_y0_vec[i] + upper_unit_vector[1]*upper_safe_bound)
+
+      for m in range(safe_ub_end_idx, len(soft_upper_bound_x0_vec)):
+        upper_unit_vector = [soft_upper_bound_x0_vec[m] - soft_lower_bound_x0_vec[m],
+                             soft_upper_bound_y0_vec[m] - soft_lower_bound_y0_vec[m]]
+        upper_unit_vector = list(normalize_vector(upper_unit_vector))
+        tmp_soft_upper_bound_x0_vec.append(soft_upper_bound_x0_vec[m])
+        tmp_soft_upper_bound_y0_vec.append(soft_upper_bound_y0_vec[m])
+
+    if (safe_lb_start_idx < 0):
+      for i in range(len(soft_lower_bound_x0_vec)):
+        lower_unit_vector = [soft_lower_bound_x0_vec[i] - soft_upper_bound_x0_vec[i],
+                             soft_lower_bound_y0_vec[i] - soft_upper_bound_y0_vec[i]]
+        lower_unit_vector = list(normalize_vector(lower_unit_vector))
+        tmp_soft_lower_bound_x0_vec.append(soft_lower_bound_x0_vec[i] + lower_unit_vector[0]*lower_safe_bound)
+        tmp_soft_lower_bound_y0_vec.append(soft_lower_bound_y0_vec[i] + lower_unit_vector[1]*lower_safe_bound)
+    else:
+      for j in range(0, safe_lb_start_idx):
+        tmp_soft_lower_bound_x0_vec.append(soft_lower_bound_x0_vec[j])
+        tmp_soft_lower_bound_y0_vec.append(soft_lower_bound_y0_vec[j])
+
+      for i in range(safe_lb_start_idx, safe_lb_end_idx):
+        lower_unit_vector = [soft_lower_bound_x0_vec[i] - soft_upper_bound_x0_vec[i],
+                             soft_lower_bound_y0_vec[i] - soft_upper_bound_y0_vec[i]]
+        lower_unit_vector = list(normalize_vector(lower_unit_vector))
+        tmp_soft_lower_bound_x0_vec.append(soft_lower_bound_x0_vec[i] + lower_unit_vector[0]*lower_safe_bound)
+        tmp_soft_lower_bound_y0_vec.append(soft_lower_bound_y0_vec[i] + lower_unit_vector[1]*lower_safe_bound)
+
+      for m in range(safe_lb_end_idx, len(soft_lower_bound_x0_vec)):
+        lower_unit_vector = [soft_lower_bound_x0_vec[m] - soft_upper_bound_x0_vec[m],
+                             soft_lower_bound_y0_vec[m] - soft_upper_bound_y0_vec[m]]
+        lower_unit_vector = list(normalize_vector(lower_unit_vector))
+        tmp_soft_lower_bound_x0_vec.append(soft_lower_bound_x0_vec[m])
+        tmp_soft_lower_bound_y0_vec.append(soft_lower_bound_y0_vec[m])
+
+    if (hard_ub_start_idx < 0):
+      for i in range(len(hard_upper_bound_x0_vec)):
+        upper_unit_vector = [hard_upper_bound_x0_vec[i] - hard_lower_bound_x0_vec[i],
+                             hard_upper_bound_y0_vec[i] - hard_lower_bound_y0_vec[i]]
+        upper_unit_vector = list(normalize_vector(upper_unit_vector))
+        tmp_hard_upper_bound_x0_vec.append(hard_upper_bound_x0_vec[i] + upper_unit_vector[0]*upper_hard_bound)
+        tmp_hard_upper_bound_y0_vec.append(hard_upper_bound_y0_vec[i] + upper_unit_vector[1]*upper_hard_bound)
+    else:
+      for j in range(0, hard_ub_start_idx):
+        tmp_hard_upper_bound_x0_vec.append(hard_upper_bound_x0_vec[j])
+        tmp_hard_upper_bound_y0_vec.append(hard_upper_bound_y0_vec[j])
+
+      for i in range(hard_ub_start_idx, hard_ub_end_idx):
+        upper_unit_vector = [hard_upper_bound_x0_vec[i] - hard_lower_bound_x0_vec[i],
+                             hard_upper_bound_y0_vec[i] - hard_lower_bound_y0_vec[i]]
+        upper_unit_vector = list(normalize_vector(upper_unit_vector))
+        tmp_hard_upper_bound_x0_vec.append(hard_upper_bound_x0_vec[i] + upper_unit_vector[0]*upper_hard_bound)
+        tmp_hard_upper_bound_y0_vec.append(hard_upper_bound_y0_vec[i] + upper_unit_vector[1]*upper_hard_bound)
+
+      for m in range(hard_ub_end_idx, len(hard_upper_bound_x0_vec)):
+        upper_unit_vector = [hard_upper_bound_x0_vec[m] - hard_lower_bound_x0_vec[m],
+                             hard_upper_bound_y0_vec[m] - hard_lower_bound_y0_vec[m]]
+        upper_unit_vector = list(normalize_vector(upper_unit_vector))
+        tmp_hard_upper_bound_x0_vec.append(hard_upper_bound_x0_vec[m])
+        tmp_hard_upper_bound_y0_vec.append(hard_upper_bound_y0_vec[m])
+
+    if (hard_lb_start_idx < 0):
+      for i in range(len(hard_lower_bound_x0_vec)):
+        lower_unit_vector = [hard_lower_bound_x0_vec[i] - hard_upper_bound_x0_vec[i],
+                             hard_lower_bound_y0_vec[i] - hard_upper_bound_y0_vec[i]]
+        lower_unit_vector = list(normalize_vector(lower_unit_vector))
+        tmp_hard_lower_bound_x0_vec.append(hard_lower_bound_x0_vec[i] + lower_unit_vector[0]*lower_hard_bound)
+        tmp_hard_lower_bound_y0_vec.append(hard_lower_bound_y0_vec[i] + lower_unit_vector[1]*lower_hard_bound)
+    else:
+      for j in range(0, hard_lb_start_idx):
+        tmp_hard_lower_bound_x0_vec.append(hard_lower_bound_x0_vec[j])
+        tmp_hard_lower_bound_y0_vec.append(hard_lower_bound_y0_vec[j])
+
+      for i in range(hard_lb_start_idx, hard_lb_end_idx):
+        lower_unit_vector = [hard_lower_bound_x0_vec[i] - hard_upper_bound_x0_vec[i],
+                             hard_lower_bound_y0_vec[i] - hard_upper_bound_y0_vec[i]]
+        lower_unit_vector = list(normalize_vector(lower_unit_vector))
+        tmp_hard_lower_bound_x0_vec.append(hard_lower_bound_x0_vec[i] + lower_unit_vector[0]*lower_hard_bound)
+        tmp_hard_lower_bound_y0_vec.append(hard_lower_bound_y0_vec[i] + lower_unit_vector[1]*lower_hard_bound)
+
+      for m in range(hard_lb_end_idx, len(hard_lower_bound_x0_vec)):
+        lower_unit_vector = [hard_lower_bound_x0_vec[m] - hard_upper_bound_x0_vec[m],
+                             hard_lower_bound_y0_vec[m] - hard_upper_bound_y0_vec[m]]
+        lower_unit_vector = list(normalize_vector(lower_unit_vector))
+        tmp_hard_lower_bound_x0_vec.append(hard_lower_bound_x0_vec[m])
+        tmp_hard_lower_bound_y0_vec.append(hard_lower_bound_y0_vec[m])
+    
     if g_is_display_enu:
       try:
         soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = tmp_soft_upper_bound_x0_vec, tmp_soft_upper_bound_y0_vec
         soft_lower_bound_x0_vec, soft_lower_bound_y0_vec = tmp_soft_lower_bound_x0_vec, tmp_soft_lower_bound_y0_vec
+        hard_upper_bound_x0_vec, hard_upper_bound_y0_vec = tmp_hard_upper_bound_x0_vec, tmp_hard_upper_bound_y0_vec
+        hard_lower_bound_x0_vec, hard_lower_bound_y0_vec = tmp_hard_lower_bound_x0_vec, tmp_hard_lower_bound_y0_vec
       except:
-        soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = lat_motion_plan_input.soft_upper_bound_x0_vec, \
-          lat_motion_plan_input.soft_upper_bound_y0_vec
-
-        soft_lower_bound_x0_vec, soft_lower_bound_y0_vec = lat_motion_plan_input.soft_lower_bound_x0_vec, \
-          lat_motion_plan_input.soft_lower_bound_y0_vec
-
-      hard_upper_bound_x0_vec, hard_upper_bound_y0_vec = lat_motion_plan_input.hard_upper_bound_x0_vec, \
-        lat_motion_plan_input.hard_upper_bound_y0_vec
-
-      hard_lower_bound_x0_vec, hard_lower_bound_y0_vec = lat_motion_plan_input.hard_lower_bound_x0_vec, \
-        lat_motion_plan_input.hard_lower_bound_y0_vec
+        print("tuned bound error! plot origin bound!")
     else:
       try:
-        soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = coord_tf.global_to_local(tmp_soft_upper_bound_x0_vec, \
-          tmp_soft_upper_bound_y0_vec)
+        soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = coord_tf.global_to_local(tmp_soft_upper_bound_x0_vec,
+                                                                                    tmp_soft_upper_bound_y0_vec)
 
-        soft_lower_bound_x0_vec, soft_lower_bound_y0_vec = coord_tf.global_to_local(tmp_soft_lower_bound_x0_vec, \
-          tmp_soft_lower_bound_y0_vec)
+        soft_lower_bound_x0_vec, soft_lower_bound_y0_vec = coord_tf.global_to_local(tmp_soft_lower_bound_x0_vec,
+                                                                                    tmp_soft_lower_bound_y0_vec)
+
+        hard_upper_bound_x0_vec, hard_upper_bound_y0_vec = coord_tf.global_to_local(tmp_hard_upper_bound_x0_vec,
+                                                                                    tmp_hard_upper_bound_y0_vec)
+
+        hard_lower_bound_x0_vec, hard_lower_bound_y0_vec = coord_tf.global_to_local(tmp_hard_lower_bound_x0_vec,
+                                                                                    tmp_hard_lower_bound_y0_vec)
       except:
-        soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_upper_bound_x0_vec, \
-          lat_motion_plan_input.soft_upper_bound_y0_vec)
+        soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = coord_tf.global_to_local(soft_upper_bound_x0_vec,
+                                                                                    soft_upper_bound_y0_vec)
 
-        soft_lower_bound_x0_vec, soft_lower_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_lower_bound_x0_vec, \
-          lat_motion_plan_input.soft_lower_bound_y0_vec)
+        soft_lower_bound_x0_vec, soft_lower_bound_y0_vec = coord_tf.global_to_local(soft_lower_bound_x0_vec,
+                                                                                    soft_lower_bound_y0_vec)
 
-      hard_upper_bound_x0_vec, hard_upper_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.hard_upper_bound_x0_vec, \
-        lat_motion_plan_input.hard_upper_bound_y0_vec)
+        hard_upper_bound_x0_vec, hard_upper_bound_y0_vec = coord_tf.global_to_local(hard_upper_bound_x0_vec,
+                                                                                    hard_upper_bound_y0_vec)
 
-      hard_lower_bound_x0_vec, hard_lower_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.hard_lower_bound_x0_vec, \
-        lat_motion_plan_input.hard_lower_bound_y0_vec)
+        hard_lower_bound_x0_vec, hard_lower_bound_y0_vec = coord_tf.global_to_local(hard_lower_bound_x0_vec,
+                                                                                    hard_lower_bound_y0_vec)
 
     if len(soft_upper_bound_x0_vec) == 0 or bag_loader.plan_msg['data'][plan_msg_idx].trajectory.target_reference.lateral_maneuver_gear == 2:
       soft_upper_bound_x0_vec = ref_x
@@ -180,7 +314,7 @@ def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_da
     hard_lower_bound_type_vec = []
     try:
       lat_behavior_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_behavior_debug_info
-      for i in range(len(lat_behavior_debug_info.bound_s_vec) - 1):
+      for i in range(len(lat_behavior_debug_info.bound_s_vec)):
         bound_t_vec.append(round(i * 0.2, 2))
         bound_s_vec.append(round(lat_behavior_debug_info.bound_s_vec[i], 3))
         soft_upper_bound_vec.append(round(lat_behavior_debug_info.soft_upper_bound_info_vec[i].upper, 3))
@@ -258,10 +392,10 @@ def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_da
     })
 
     lat_motion_plan_output = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_output
-    if g_is_display_enu:
-      x_vec, y_vec = lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec
-    else:
-      x_vec, y_vec = coord_tf.global_to_local(lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec)
+    # if g_is_display_enu:
+    #   x_vec, y_vec = lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec
+    # else:
+    #   x_vec, y_vec = coord_tf.global_to_local(lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec)
     time_vec = lat_motion_plan_output.time_vec
 
     ref_theta_deg_vec = []
@@ -280,8 +414,6 @@ def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_da
 
     lat_plan_data['data_lat_motion_plan_output'].data.update({
       'time_vec': time_vec,
-      'x_vec': x_vec,
-      'y_vec': y_vec,
       'xn_vec': lat_motion_plan_output.x_vec,
       'yn_vec': lat_motion_plan_output.y_vec,
       'ref_theta_deg_vec': ref_theta_deg_vec,
@@ -297,11 +429,14 @@ def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_da
     # for i in range(len(planning_json['assembled_delta'])):
     #   assembled_delta.append(planning_json['assembled_delta'][i] * 57.3 * 15.7)
     #   assembled_omega.append(planning_json['assembled_omega'][i] * 57.3 * 15.7)
-    print("dbw_status = ", planning_json['dbw_status'])
-    print("replan_status = ", planning_json['replan_status'])
-    print("lat_err = ", planning_json['lat_err'])
-    print("lon_err = ", planning_json['lon_err'])
-    print("dist_err = ", planning_json['dist_err'])
+    # print("dbw_status = ", planning_json['dbw_status'])
+    # print("replan_status = ", planning_json['replan_status'])
+    # print("lat_err = ", planning_json['lat_err'])
+    # print("theta_err = ", planning_json['theta_err'])
+    # print("lon_err = ", planning_json['lon_err'])
+    # print("dist_err = ", planning_json['dist_err'])
+    print("solver_condition = ", lat_motion_plan_output.solver_info.solver_condition)
+    print("iLqr_lat_update_time = ", planning_json['iLqr_lat_update_time'], " ms")
 
   if bag_loader.plan_msg['enable'] == True:
     trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
@@ -369,8 +504,6 @@ def load_lat_plan_figure(fig1):
                                                         })
 
   data_lat_motion_plan_output = ColumnDataSource(data = {'time_vec':[],
-                                                         'x_vec':[],
-                                                         'y_vec':[],
                                                          'xn_vec':[],
                                                          'yn_vec':[],
                                                          'ref_theta_deg_vec':[],
@@ -389,8 +522,14 @@ def load_lat_plan_figure(fig1):
                                                          'steer_dot_deg_vec_t':[],
                                                          'acc_vec_t':[],
                                                          'jerk_vec_t':[],
-                                                        #  'comb_x_vec': [],
-                                                        #  'comb_y_vec': [],
+                                                         'acc_upper_bound':[],
+                                                         'acc_lower_bound':[],
+                                                         'jerk_upper_bound':[],
+                                                         'jerk_lower_bound':[],
+                                                         'steer_deg_upper_bound': [],
+                                                         'steer_deg_lower_bound': [],
+                                                         'steer_dot_deg_upper_bound': [],
+                                                         'steer_dot_deg_lower_bound': [],
                                                         })
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
@@ -421,10 +560,10 @@ def load_lat_plan_figure(fig1):
   fig1.line('hard_upper_bound_y0_vec', 'hard_upper_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 4, line_color = 'maroon', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard upper bound')
   fig1.line('hard_lower_bound_y0_vec', 'hard_lower_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 4, line_color = 'maroon', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard lower bound')
   fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=False)
-  fig1.line('y_vec', 'x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
+  # fig1.line('y_vec', 'x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
   fig1.line('y_vec_t', 'x_vec_t', source = data_lat_motion_plan_output, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.4, legend_label = 'tuned plan path')
   # fig1.line('comb_y_vec', 'comb_x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.7, legend_label = 'combined path')
-  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
+  # fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
   fig1.circle('soft_upper_bound_y0_vec','soft_upper_bound_x0_vec', source = data_lat_motion_plan_input, size = 6, line_width = 4, line_color = "darkorange", line_alpha = 0.7, fill_color = 'gold',fill_alpha = 1.0, legend_label = 'soft upper bound')
   fig1.circle('soft_lower_bound_y0_vec','soft_lower_bound_x0_vec', source = data_lat_motion_plan_input, size = 6, line_width = 4, line_color = "darkorange", line_alpha = 0.7, fill_color = 'gold',fill_alpha = 1.0, legend_label = 'soft lower bound')
   fig1.circle('hard_upper_bound_y0_vec','hard_upper_bound_x0_vec', source = data_lat_motion_plan_input, size = 6, line_width = 4, line_color = "maroon", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'hard upper bound')
@@ -462,15 +601,31 @@ def load_lat_plan_figure(fig1):
 
   f3 = fig3.line('time_vec', 'acc_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin lat acc')
   fig3.line('time_vec', 'acc_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned lat acc')
+  fig3.line('time_vec', 'acc_upper_bound', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat acc corridor')
+  fig3.line('time_vec', 'acc_lower_bound', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat acc corridor')
+  fig3.triangle ('time_vec', 'acc_lower_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'lat acc corridor')
+  fig3.inverted_triangle ('time_vec', 'acc_upper_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'lat acc corridor')
 
   f4 = fig4.line('time_vec', 'jerk_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin lat jerk')
   fig4.line('time_vec', 'jerk_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned lat jerk')
-
+  fig4.line('time_vec', 'jerk_upper_bound', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat jerk corridor')
+  fig4.line('time_vec', 'jerk_lower_bound', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat jerk corridor')
+  fig4.triangle ('time_vec', 'jerk_lower_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'lat jerk corridor')
+  fig4.inverted_triangle ('time_vec', 'jerk_upper_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'lat jerk corridor')
+  
   f5 = fig5.line('time_vec', 'steer_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin steer deg')
   fig5.line('time_vec', 'steer_deg_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned steer deg')
+  fig5.line('time_vec', 'steer_deg_upper_bound', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer deg corridor')
+  fig5.line('time_vec', 'steer_deg_lower_bound', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer deg corridor')
+  fig5.triangle ('time_vec', 'steer_deg_lower_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'steer deg corridor')
+  fig5.inverted_triangle ('time_vec', 'steer_deg_upper_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'steer deg corridor')
 
   f6 = fig6.line('time_vec', 'steer_dot_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin steer dot deg')
   fig6.line('time_vec', 'steer_dot_deg_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned steer dot deg')
+  fig6.line('time_vec', 'steer_dot_deg_upper_bound', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer dot deg corridor')
+  fig6.line('time_vec', 'steer_dot_deg_lower_bound', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer dot deg corridor')
+  fig6.triangle ('time_vec', 'steer_dot_deg_lower_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'steer dot deg corridor')
+  fig6.inverted_triangle ('time_vec', 'steer_dot_deg_upper_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'steer dot deg corridor')
 
   hover1_1 = HoverTool(renderers=[fig1.renderers[len(fig1.renderers) - 4]], tooltips=[('index', '$index'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @soft_upper_bound_vec)'), 
                                                                                     ('obstacle id', '@soft_upper_bound_id_vec'), ('type', '@soft_upper_bound_type_vec')])
@@ -481,10 +636,10 @@ def load_lat_plan_figure(fig1):
   hover1_4 = HoverTool(renderers=[fig1.renderers[len(fig1.renderers) - 1]], tooltips=[('index', '$index'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @hard_lower_bound_vec)'), 
                                                                                      ('obstacle id', '@hard_lower_bound_id_vec'), ('type', '@hard_lower_bound_type_vec')])
   hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time_vec'), ('ref_theta', '@ref_theta_deg_vec'), ('origin theta', '@theta_deg_vec'), ('tuned theta', '@theta_deg_vec_t')], mode='vline')
-  hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time_vec'), ('origin acc', '@acc_vec'), ('tuned acc', '@acc_vec_t')], mode='vline')
-  hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('origin jerk', '@jerk_vec'), ('tuned jerk', '@jerk_vec_t')], mode='vline')
-  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('origin steer', '@steer_deg_vec'), ('tuned steer', '@steer_deg_vec_t')], mode='vline')
-  hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('origin steer dot', '@steer_dot_deg_vec'), ('tuned steer dot', '@steer_dot_deg_vec_t')], mode='vline')
+  hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time_vec'), ('origin acc', '@acc_vec'), ('tuned acc', '@acc_vec_t'), ('|acc bound|', '@acc_upper_bound')], mode='vline')
+  hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('origin jerk', '@jerk_vec'), ('tuned jerk', '@jerk_vec_t'), ('|jerk bound|', '@jerk_upper_bound')], mode='vline')
+  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('origin steer', '@steer_deg_vec'), ('tuned steer', '@steer_deg_vec_t'), ('|steer deg bound|', '@steer_deg_upper_bound')], mode='vline')
+  hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('origin steer dot', '@steer_dot_deg_vec'), ('tuned steer dot', '@steer_dot_deg_vec_t'), ('|steer dot deg bound|', '@steer_dot_deg_upper_bound')], mode='vline')
   
   fig1.add_tools(hover1_1)
   fig1.add_tools(hover1_2)
@@ -511,4 +666,4 @@ def load_lat_plan_figure(fig1):
   fig6.legend.click_policy = 'hide'
   fig7.legend.click_policy = 'hide'
 
-  return fig1, fig2, fig3, fig4, fig5, fig6, fig7, tab1, lat_plan_data
+  return fig1, fig2, fig3, fig4, fig5, fig6, fig7, lat_plan_data

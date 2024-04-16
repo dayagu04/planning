@@ -287,10 +287,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'text_xn': [-2],
         'text_yn': [0],
       })
-
+  
+  if plan_msg.trajectory.trajectory_type == 0: # 实时轨迹
+    is_enu_to_car = False
+  else:
+    is_enu_to_car = True
   # step 3: 加载车道线信息
   if bag_loader.road_msg['enable'] == True:
-    is_enu_to_car = False
     # load lane info
     try:
       line_info_list = load_lane_lines(road_msg.reference_line_msg, is_enu_to_car, loc_msg, g_is_display_enu)
@@ -349,7 +352,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         print('error')
         pass
 
-    is_enu_to_car = True
     center_line_list = load_lane_center_lines(road_msg.reference_line_msg, is_enu_to_car, loc_msg, g_is_display_enu)
     # print(center_line_list)
     trajectory = plan_msg.trajectory
@@ -576,7 +578,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # load fus_obj
   if bag_loader.fus_msg['enable'] == True:
     fusion_objects = fus_msg.fusion_object
-    obstacles_info_all = load_obstacle_params(fusion_objects)
+    obstacles_info_all = load_obstacle_params(fusion_objects, is_enu_to_car, loc_msg)
     local_view_data['data_fus_obj'].data.update({
             'obstacles_x': [],
             'obstacles_y': [],
@@ -1171,7 +1173,7 @@ def load_local_view_figure():
   fig1.line('line_19_y', 'line_19_x', source = data_lane_19, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   # !!!!!!!!!!!! Important: Do not draw above !!!!!!!!!!! 
   
-  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat',visible = False)
+  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat',visible = True)
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_raw, fill_color = "deepskyblue", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_raw',visible = False)
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_mpc, fill_color = "salmon", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_mpc',visible = False)
@@ -1228,7 +1230,7 @@ def load_local_view_figure():
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fusion_info')
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
-  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_raw, line_width = 5, line_color = 'deepskyblue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'raw plan')
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_raw, line_width = 5, line_color = 'deepskyblue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'raw plan', visible = False)
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
   fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
   fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_1, radius = 0.03, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
@@ -1248,17 +1250,17 @@ def load_local_view_figure():
   fig1.circle('ground_line_y', 'ground_line_x', source = data_ground_line_point, radius = 0.01, line_width = 1,  line_color = 'green', line_alpha = 1, fill_color = "green", fill_alpha = 1.0, legend_label = 'ground_line')
   fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line_clusters, line_width = 2, line_color = 'red', line_dash = 'dotted', legend_label = 'ground_line_cluster')
   
-  hover1_1 = HoverTool(renderers=[fig1.renderers[5]], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
+  hover1_1 = HoverTool(renderers=[fig1.renderers[25]], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
                                                                 ('lat init x', '@init_state_x'), ('lat init y', '@init_state_y'), ('lat init theta', '@init_state_theta'), 
                                                                 ('lat init delta', '@init_state_delta'), ('lon init s', '@init_state_s'), ('lon init v', '@init_state_v'), 
                                                                 ('lon init a', '@init_state_a'), ('replan status', '@replan_status')])
-  hover1_2 = HoverTool(renderers=[fig1.renderers[6]], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
-  hover1_3 = HoverTool(renderers=[fig1.renderers[51]], tooltips=[('index', '$index')])
-  hover1_4 = HoverTool(renderers=[fig1.renderers[52]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
-  hover1_5 = HoverTool(renderers=[fig1.renderers[53]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
-  hover1_6 = HoverTool(renderers=[fig1.renderers[59]], tooltips=[('index', '$index')])
-  hover1_7 = HoverTool(renderers=[fig1.renderers[69]], tooltips=[('index', '$index')])
-  hover1_8 = HoverTool(renderers=[fig1.renderers[70]], tooltips=[('id', '@groundline_id_vec')])
+  hover1_2 = HoverTool(renderers=[fig1.renderers[26]], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
+  hover1_3 = HoverTool(renderers=[fig1.renderers[52]], tooltips=[('index', '$index')])
+  hover1_4 = HoverTool(renderers=[fig1.renderers[53]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
+  hover1_5 = HoverTool(renderers=[fig1.renderers[54]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
+  hover1_6 = HoverTool(renderers=[fig1.renderers[60]], tooltips=[('index', '$index')])
+  hover1_7 = HoverTool(renderers=[fig1.renderers[70]], tooltips=[('index', '$index')])
+  hover1_8 = HoverTool(renderers=[fig1.renderers[71]], tooltips=[('id', '@groundline_id_vec')])
 
   fig1.add_tools(hover1_1)
   fig1.add_tools(hover1_2)

@@ -499,7 +499,7 @@ class LoadCyberbag:
     # load planning debug msg
     try:
       json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'VisionLonBehavior_a_target_high', \
-                         "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", \
+                         "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "iLqr_lat_update_time", \
                          'VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                          "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
