@@ -6,7 +6,7 @@
 # CURRENT_TIME=$(date "+%Y%m%d_%H%M%S")
 # IN_DIR="/data_cold/abu_zone/simulation_scenario/"
 
-if [ "$VERSION_1" = "" ] || [ "$VERSION_2" = "" ] || [ "$CURRENT_TIME" = "" ] || [ "$IN_DIR" = "" ]; then
+if [ "$VERSION_1" = "" ] || [ "$CURRENT_TIME" = "" ] || [ "$IN_DIR" = "" ]; then
     echo "Environment variables VERSION_1, VERSION_2 and CURRENT_TIME and IN_DIR are required."
     exit
 fi
