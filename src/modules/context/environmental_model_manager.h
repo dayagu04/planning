@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+#include "agent/agent_manager.h"
 #include "agent_node_manager.h"
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"
@@ -81,6 +83,9 @@ class EnvironmentalModelManager {
   std::shared_ptr<planning::LaneTracksManager> lane_tracks_mgr_ptr_ = nullptr;
   std::shared_ptr<planning::AgentNodeManager> agent_node_mgr_ptr_ = nullptr;
   std::shared_ptr<planning::HistoryObstacleManager> history_obstacle_ptr_ =
+      nullptr;
+  std::shared_ptr<planning::agent::AgentManager> agent_manager_ptr_ = nullptr;
+  std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world_ =
       nullptr;
   double last_feed_time_[FEED_TYPE_MAX]{};
   EgoPlanningConfig ego_config_;
