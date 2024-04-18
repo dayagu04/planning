@@ -84,6 +84,7 @@ class PlanningPlayer {
   uint64_t planning_dubug_info_frame_num_ = 0;
   int frame_num_before_enter_auto_ = 0;
   std::string scene_type_ = "acc";
+  FuncStateMachine::FunctionalState last_functional_state = FuncStateMachine::FunctionalState::INIT;
 
   template <class T>
   void cache_with_msg_time(const apollo::cyber::record::RecordMessage &msg);
