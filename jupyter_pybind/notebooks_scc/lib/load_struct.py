@@ -179,7 +179,7 @@ def load_lane_lines(lanes, is_enu_to_car = False, loc_msg = [], g_is_display_enu
         else :
           if is_enu_to_car:
             coord_tf = coord_transformer()
-            if loc_msg != []: # 长时轨迹 
+            if loc_msg != []: # 长时轨迹
               cur_pos_xn = loc_msg.position.position_boot.x
               cur_pos_yn = loc_msg.position.position_boot.y
               cur_yaw = loc_msg.orientation.euler_boot.yaw
@@ -189,7 +189,7 @@ def load_lane_lines(lanes, is_enu_to_car = False, loc_msg = [], g_is_display_enu
               car_point_x, car_point_y = coord_tf.global_to_local([local_point.x], [local_point.y])
               line_x.append(car_point_x[0])
               line_y.append(car_point_y[0])
-            # print(car_point_x, car_point_y)   
+            # print(car_point_x, car_point_y)
           else:
             car_points = left_line.car_points
             for car_point in car_points:
@@ -230,7 +230,7 @@ def load_lane_lines(lanes, is_enu_to_car = False, loc_msg = [], g_is_display_enu
         else :
           if is_enu_to_car:
             coord_tf = coord_transformer()
-            if loc_msg != []: # 长时轨迹 
+            if loc_msg != []: # 长时轨迹
               cur_pos_xn = loc_msg.position.position_boot.x
               cur_pos_yn = loc_msg.position.position_boot.y
               cur_yaw = loc_msg.orientation.euler_boot.yaw
@@ -240,7 +240,7 @@ def load_lane_lines(lanes, is_enu_to_car = False, loc_msg = [], g_is_display_enu
               car_point_x, car_point_y = coord_tf.global_to_local([local_point.x], [local_point.y])
               line_x.append(car_point_x[0])
               line_y.append(car_point_y[0])
-            # print(car_point_x, car_point_y)   
+            # print(car_point_x, car_point_y)
           else:
             car_points = right_line.car_points
             for car_point in car_points:
@@ -293,7 +293,7 @@ def load_lane_center_lines(lanes, is_enu_to_car = False, loc_msg = [], g_is_disp
         else:
           if is_enu_to_car:
             coord_tf = coord_transformer()
-            if loc_msg != []: # 长时轨迹 
+            if loc_msg != []: # 长时轨迹
               cur_pos_xn = loc_msg.position.position_boot.x
               cur_pos_yn = loc_msg.position.position_boot.y
               cur_yaw = loc_msg.orientation.euler_boot.yaw
@@ -302,7 +302,7 @@ def load_lane_center_lines(lanes, is_enu_to_car = False, loc_msg = [], g_is_disp
             # print(car_point_x, car_point_y)
             line_x.append(car_point_x[0])
             line_y.append(car_point_y[0])
-          else:  
+          else:
             line_x.append(virtual_lane_refline_point.car_point.x)
             line_y.append(virtual_lane_refline_point.car_point.y)
 
@@ -428,7 +428,7 @@ def load_obstacle_params(obstacle_list, is_enu_to_car = False, loc_msg = [], env
 
     if is_enu_to_car:
       coord_tf = coord_transformer()
-      if loc_msg != []: # 长时轨迹 
+      if loc_msg != []: # 长时轨迹
         cur_pos_xn = loc_msg.position.position_boot.x
         cur_pos_yn = loc_msg.position.position_boot.y
         cur_yaw = loc_msg.orientation.euler_boot.yaw
@@ -439,7 +439,7 @@ def load_obstacle_params(obstacle_list, is_enu_to_car = False, loc_msg = [], env
       obs_info_all[source]['obstacles_y_rel'].append(obstacles_y_rel)
       obs_info_all[source]['pos_x_rel'].append(pos_x_rel)
       obs_info_all[source]['pos_y_rel'].append(pos_y_rel)
-    else:  
+    else:
       obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
       obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
       obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
@@ -449,11 +449,11 @@ def load_obstacle_params(obstacle_list, is_enu_to_car = False, loc_msg = [], env
     obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].additional_info.track_id)
 #             fusion_obs_info['is_cipv'].append(obstacle_list[i].target_selection_type)
     if frenet_vs == 255 and  frenet_vl == 255:
-      obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
-          + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 4)))
+      obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
+          + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4))+','+str(obstacle_list[i].common_info.type))
     else:
       obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
-          + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4)))
+          + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4))+','+str(obstacle_list[i].common_info.type))
     obs_info_all[source]['obstacles_x'].append(obs_x)
     # for ind in range(len(obs_y)):
     obs_info_all[source]['obstacles_y'].append(obs_y)
@@ -806,7 +806,7 @@ def load_prediction_objects(obstacle_list, localization_info, g_is_display_enu =
           local_x, local_y = global2local(global_x, global_y, localization_x, localization_y, localization_theta)
           p_x.append(local_x)
           p_y.append(local_y)
-        
+
       # trajectory_info[track_id] = [p_x, p_y]
   trajectory_info['x']=p_x
   trajectory_info['y']=p_y
@@ -863,7 +863,7 @@ def generate_planning_trajectory(trajectory, loc_msg = None, g_is_display_enu = 
           tmp_theta = plan_theta[i] - cur_yaw
           plan_theta[i] = tmp_theta
   except:
-    print('generate_planning_trajectory error')  
+    print('generate_planning_trajectory error')
   return plan_x, plan_y, plan_theta, plan_dict
 
 def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = "", g_is_display_enu = False):
@@ -874,8 +874,8 @@ def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = "", g_is_display_enu
   road_mark_info = road_tile_info.road_mark
   road_mark_boxes_x = []
   road_mark_boxes_y = []
-  
-  try:  
+
+  try:
     if g_is_display_enu:
       for parking_space in parking_space_info:
         parking_space_box_x = []
@@ -887,7 +887,7 @@ def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = "", g_is_display_enu
           parking_space_box_y.append(y)
         parking_space_boxes_x.append(parking_space_box_x)
         parking_space_boxes_y.append(parking_space_box_y)
-      
+
       for road_mark in road_mark_info:
         road_mark_box_x = []
         road_mark_box_y = []
@@ -900,7 +900,7 @@ def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = "", g_is_display_enu
         road_mark_boxes_y.append(road_mark_box_y)
     else:
       coord_tf = coord_transformer()
-      if loc_msg != "": # 长时轨迹 
+      if loc_msg != "": # 长时轨迹
         cur_pos_xn = loc_msg.position.position_boot.x
         cur_pos_yn = loc_msg.position.position_boot.y
         cur_yaw = loc_msg.orientation.euler_boot.yaw
@@ -916,7 +916,7 @@ def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = "", g_is_display_enu
             parking_space_box_y.append(local_y)
           parking_space_boxes_x.append(parking_space_box_x)
           parking_space_boxes_y.append(parking_space_box_y)
-        
+
         for road_mark in road_mark_info:
           road_mark_box_x = []
           road_mark_box_y = []
@@ -951,7 +951,7 @@ def generate_ground_line(ground_line_msg, loc_msg = "", g_is_display_enu = False
         groundline_y_vec.append(single_groundline_y_vec)
     else:
       coord_tf = coord_transformer()
-      if loc_msg != "": # 长时轨迹 
+      if loc_msg != "": # 长时轨迹
         cur_pos_xn = loc_msg.position.position_boot.x
         cur_pos_yn = loc_msg.position.position_boot.y
         cur_yaw = loc_msg.orientation.euler_boot.yaw
@@ -1087,7 +1087,7 @@ def generate_ground_line_clusters(ground_line_msg, loc_msg = "", g_is_display_en
 
     else:
       coord_tf = coord_transformer()
-      if loc_msg != "": # 长时轨迹 
+      if loc_msg != "": # 长时轨迹
         cur_pos_xn = loc_msg.position.position_boot.x
         cur_pos_yn = loc_msg.position.position_boot.y
         cur_yaw = loc_msg.orientation.euler_boot.yaw
@@ -1104,7 +1104,7 @@ def generate_ground_line_clusters(ground_line_msg, loc_msg = "", g_is_display_en
             groundline_points.append(groundline_point)
   except:
     print('groundline error')
-  
+
   clusters = GroundLineDecider.execute(groundline_points)
   groundline_x_vec = []
   groundline_y_vec = []
@@ -1149,7 +1149,7 @@ class ParkingSlotManager:
       if ((min_y > 0 and min_y < ParkingSlotManager.kMaxDistanceY) or (max_y < 0 and max_y > -ParkingSlotManager.kMaxDistanceY) or (min_y <= 0 and max_y >=0)) and min_x < ParkingSlotManager.kMaxDistanceFrontX and max_x > -ParkingSlotManager.kMaxDistanceBackX:
         points_.append(slot_point)
     return points_
-  
+
   def enu2car_matrix(loc_info, v):
     o = loc_info.orientation.quaternion_boot
     p = loc_info.position.position_boot
@@ -1158,12 +1158,12 @@ class ParkingSlotManager:
     enu2car_q = m_basis.T
     enu2car_v = enu2car_q.dot(-1 * m_origin)
     return enu2car_q.dot(v) + enu2car_v
-  
+
   def calculate_m_basis(q):
     d = q.dot(q)
     k_epsilon = 1.0e-10
     if d >= 0.0:
-      d = max(d, k_epsilon) 
+      d = max(d, k_epsilon)
     else:
       d = min(d, -k_epsilon)
     s = 2.0 / d
@@ -1179,8 +1179,8 @@ class ParkingSlotManager:
     yy = q[1] * ys
     yz = q[1] * zs
     zz = q[2] * zs
-    return np.array([[(1.0 - (yy + zz)), (xy - wz), (xz + wy)], 
-                     [(xy + wz), (1.0 - (xx + zz)), (yz - wx)], 
+    return np.array([[(1.0 - (yy + zz)), (xy - wz), (xz + wy)],
+                     [(xy + wz), (1.0 - (xx + zz)), (yz - wx)],
                      [(xz - wy), (yz + wx), (1.0 - (xx + yy))]])
 
 def hpp_generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, g_is_display_enu = False):
@@ -1192,7 +1192,7 @@ def hpp_generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, g_is_display_enu 
   parking_space_boxes_y = []
   parking_space_boxes_id = []
   kParkingSlotIdOffset = 6000000
-  try:  
+  try:
     if g_is_display_enu:
       for parking_slot_point in parking_slot_points:
         if len(parking_slot_point) != 4:
@@ -1206,7 +1206,7 @@ def hpp_generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, g_is_display_enu 
         parking_space_boxes_x.append(parking_space_box_x)
         parking_space_boxes_y.append(parking_space_box_y)
         parking_space_boxes_id.append(kParkingSlotIdOffset)
-      
+
       # for road_mark in road_mark_info:
         # road_mark_box_x = []
         # road_mark_box_y = []
@@ -1236,7 +1236,7 @@ def hpp_generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, g_is_display_enu 
         parking_space_boxes_x.append(parking_space_box_x)
         parking_space_boxes_y.append(parking_space_box_y)
         parking_space_boxes_id.append(kParkingSlotIdOffset)
-      
+
       # for road_mark in road_mark_info:
         # road_mark_box_x = []
         # road_mark_box_y = []
@@ -1271,7 +1271,7 @@ def load_lat_common(plan_debug, planning_json):
       data_dict1[name] = getattr(lat_behavior_common,name)
     except:
       pass
-    
+
   data_dict2 = {}
   try:
   # 横向运动规划offset 可视化
@@ -1280,7 +1280,7 @@ def load_lat_common(plan_debug, planning_json):
     data_dict2['avoid_dpoly_c0'] = vo_lat_motion_plan.avoid_dpoly_c0 - basic_dpoly[3]
   except:
     pass
-  
+
   avoid_car_id_str = ""
   for avoid_car_id in vo_lat_behavior_plan.avoid_car_ids:
     avoid_car_id_str = avoid_car_id_str + str(avoid_car_id) + ' '
@@ -1291,7 +1291,7 @@ def load_lat_common(plan_debug, planning_json):
   for right_alc_car_id in lat_behavior_common.right_alc_car_ids:
     right_alc_car_id_str = right_alc_car_id_str + str(right_alc_car_id) + ' '
   # 添加可视化left_alc_car_ids、right_alc_car_ids可视化
-  
+
   data_dict2['avoid_car_id'] = avoid_car_id_str
   data_dict2['left_alc_car_ids'] = left_alc_car_id_str
   data_dict2['right_alc_car_ids'] = right_alc_car_id_str
@@ -1300,13 +1300,13 @@ def load_lat_common(plan_debug, planning_json):
     data_dict2['final_y_rel'] = planning_json["final_y_rel"]
   except:
     pass
-  
+
   try:
-    data_dict2['lateral_offset'] = planning_json["lateral_offset"] 
+    data_dict2['lateral_offset'] = planning_json["lateral_offset"]
   except:
     pass
   try:
-    data_dict2['avoid_way'] = planning_json["avoid_way"] 
+    data_dict2['avoid_way'] = planning_json["avoid_way"]
   except:
     pass
   return data_dict1, data_dict2
