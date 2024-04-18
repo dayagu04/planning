@@ -11,7 +11,7 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/planning-147a787f-JAC_S811-test/test_5.00000'
+bag_path = '/data_cold/abu_zone/APA/Parallel/0408_tlane_dx_1p0m/planning-f0c32901-JAC_S811/test_2.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -71,7 +71,7 @@ class LocalViewSlider:
                         heading_dif = self.heading_dif_slider)
 
 ### sliders callback
-for bag_time in np.arange(0.0, 35, 0.1):
+for bag_time in np.arange(0.0, max_time, 0.1):
   select_id = 0
   force_plan = False
   is_path_optimization = False

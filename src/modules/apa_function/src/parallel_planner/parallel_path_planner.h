@@ -21,25 +21,46 @@ namespace apa_planner {
 class ParallelPathPlanner {
  public:
   struct Tlane {
+    // tlane
     Eigen::Vector2d pt_outside = Eigen::Vector2d::Zero();
     Eigen::Vector2d pt_inside = Eigen::Vector2d::Zero();
     Eigen::Vector2d pt_terminal_pos = Eigen::Vector2d::Zero();
+
+    // slot corner
+    Eigen::Vector2d corner_inside_slot = Eigen::Vector2d::Zero();
+    Eigen::Vector2d corner_outside_slot = Eigen::Vector2d::Zero();
+
+    // obs tlane
+    Eigen::Vector2d obs_pt_inside = Eigen::Vector2d::Zero();
+    Eigen::Vector2d obs_pt_outside = Eigen::Vector2d::Zero();
+    double curb_y = 2.6;
+
     uint8_t slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
+    double slot_side_sgn = 1.0;
 
     double slot_width = 2.4;
     double slot_length = 6.0;
 
-    double channel_width = 5.5;
-    double channel_length = 10.0;
+    double channel_y = 6.5;
+    double channel_x_limit = 16.6;
 
     void Reset() {
       pt_outside = Eigen::Vector2d::Zero();
       pt_inside = Eigen::Vector2d::Zero();
       pt_terminal_pos = Eigen::Vector2d::Zero();
+
+      corner_inside_slot = Eigen::Vector2d::Zero();
+      corner_outside_slot = Eigen::Vector2d::Zero();
+
+      obs_pt_inside = Eigen::Vector2d::Zero();
+      obs_pt_outside = Eigen::Vector2d::Zero();
+
+      curb_y = 2.6;
       slot_width = 2.4;
       slot_length = 6.0;
-      channel_width = 5.5;
-      channel_length = 10.0;
+      channel_y = 6.5;
+      channel_x_limit = 16.6;
+      slot_side_sgn = 1.0;
     }
   };
 
@@ -219,13 +240,13 @@ class ParallelPathPlanner {
   // use dubins
   const bool OneStepDubinsPlan(const pnc::geometry_lib::PathPoint &start_pose,
                                const pnc::geometry_lib::PathPoint &target_pose,
-                               const double radius);
+                               const double radius, const double buffer = 0.0);
+  const bool IsDubinsCollided(const double buffer = 0.0);
 
   const bool RSCurvePlan(const pnc::geometry_lib::PathPoint &current_pose,
                          const pnc::geometry_lib::PathPoint &target_pose,
                          const double radius);
 
-  const bool IsDubinsCollided(const double buffer = 0.0);
   void GenPathOutputByDubins();
 
   // normal plan
@@ -262,10 +283,14 @@ class ParallelPathPlanner {
       const double buffer =
           0.15);  // start pose and radius should be given in arc
 
+  const bool CheckParkOutCornerSafeWithObsPin(
+      const pnc::geometry_lib::Arc &first_arc) const;
+
   const bool TwoSameGearArcPlanToLine(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const pnc::geometry_lib::PathPoint &start_pose,
-      const pnc::geometry_lib::LineSegment &target_line, const uint8_t gear);
+      const pnc::geometry_lib::LineSegment &target_line, const uint8_t gear,
+      const double buffer = 0.0);
 
   const bool CalcParkOutPath(
       std::vector<pnc::geometry_lib::PathSegment> &reversed_park_out_path,
@@ -292,7 +317,7 @@ class ParallelPathPlanner {
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
 
   // multi align body if multi plan failed
-  const bool MultiAlignBodyPlan();
+  //   const bool MultiAlignBodyPlan();
 
   const bool OneArcPlan(
       pnc::geometry_lib::Arc &arc,

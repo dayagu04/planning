@@ -15,7 +15,7 @@ namespace apa_planner {
 class ParallelParInPlanner : public ApaPlannerBase {
  public:
   ParallelParInPlanner() = default;
-  ParallelParInPlanner(const std::shared_ptr<ApaWorld> &apa_world_ptr) {
+  ParallelParInPlanner(const std::shared_ptr<ApaWorld>& apa_world_ptr) {
     SetApaWorldPtr(apa_world_ptr);
     const bool c_ilqr_enable = false;
     Init(c_ilqr_enable);
@@ -24,7 +24,11 @@ class ParallelParInPlanner : public ApaPlannerBase {
   virtual void Init(const bool c_ilqr_enable) override;
   virtual void Reset() override;
   virtual void Update() override;
-  virtual std::string GetName() override { return typeid(this).name(); }
+  virtual std::string GetName() override { return typeid(this).name(); };
+
+  const double CalcSlotOccupiedRatio(const Eigen::Vector2d& terminal_err,
+                                     const double slot_width,
+                                     const bool is_right_side) const;
 
  private:
   void PlanCore();
@@ -55,10 +59,8 @@ class ParallelParInPlanner : public ApaPlannerBase {
   void PrepareSimulation();
   const bool CheckPlanSkip() const;
 
-  planning::apa_planner::ParallelPathPlanner::Tlane t_lane_;
+  ParallelPathPlanner::Tlane t_lane_;
   ParallelPathPlanner parallel_path_planner_;
-  bool is_slot_reset_ = false;
-  uint8_t plan_count_ = 0;
   uint8_t gear_command_ = 0;
 
   std::vector<pnc::geometry_lib::PathPoint> current_path_point_global_vec_;

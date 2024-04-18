@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/planning-eb06678d-JAC_S811-test/test_9.00000'
+bag_path = '/data_cold/abu_zone/APA/slant_slot/test_2.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
@@ -93,18 +93,19 @@ def slider_callback(bag_time):
   index_map = bag_loader.get_msg_index(bag_time)
 
   plan_msg = bag_loader.plan_msg['data'][index_map['plan_msg_idx']]
-  # print("plan_msg = ", plan_msg)
+  # print("plan_msg = ", plan_msg.trajectory.trajectory_points)
 
   planning_json = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
   fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
-  print("fus_parking_msg",fus_parking_msg.parking_fusion_slot_lists)
-  for i in range(len(fus_parking_msg.parking_fusion_slot_lists)):
-    slot_info = fus_parking_msg.parking_fusion_slot_lists[i]
-    print("slot_id = ", slot_info.id, "  slot_type = ", slot_info.type,
-          "slot_allow_parking = ", slot_info.allow_parking, "slot_fusion_source = ", slot_info.fusion_source,
-          "slot_slot_side = ", slot_info.slot_side, "slot_uss_id = ", slot_info.uss_id,
-          )
+  # print("fus_parking_msg",fus_parking_msg.parking_fusion_slot_lists)
+  # for i in range(len(fus_parking_msg.parking_fusion_slot_lists)):
+  #   slot_info = fus_parking_msg.parking_fusion_slot_lists[i]
+  #   print("slot_id = ", slot_info.id, "  slot_type = ", slot_info.type,
+  #         "slot_allow_parking = ", slot_info.allow_parking, "slot_fusion_source = ", slot_info.fusion_source,
+  #         "slot_slot_side = ", slot_info.slot_side, "slot_uss_id = ", slot_info.uss_id,
+  #         )
   print("remain_dist = ", planning_json['remain_dist'])
+  print("remain_dist_uss =", planning_json['remain_dist_uss'])
 
   # print("planning_json = ", planning_json)
 

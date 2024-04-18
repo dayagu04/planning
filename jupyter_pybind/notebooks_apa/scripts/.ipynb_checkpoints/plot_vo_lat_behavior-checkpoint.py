@@ -7,7 +7,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
-# bag path and frame dt 
+# bag path and frame dt
 bag_path = "/share/mnt/0809/real_time_21.00000" #.1688547247.plan
 # bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
@@ -140,16 +140,16 @@ def update_data(lat_behavior_common, vo_lat_motion_plan):
     'name': names,
     'data': datas,
   })
-  
+
   names  = []
-  datas = []  
+  datas = []
   # 横向运动规划offset 可视化
   names.append('premove_dpoly_c0')
   names.append('avoid_dpoly_c0')
   basic_dpoly = vo_lat_motion_plan.basic_dpoly
   datas.append(vo_lat_motion_plan.premove_dpoly_c0 - basic_dpoly[3])
   datas.append(vo_lat_motion_plan.avoid_dpoly_c0 - basic_dpoly[3])
-  
+
   # 添加可视化left_alc_car_ids、right_alc_car_ids可视化
   names.append('left_alc_car_ids')
   names.append('right_alc_car_ids')

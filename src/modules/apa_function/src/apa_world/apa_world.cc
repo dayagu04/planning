@@ -226,14 +226,19 @@ const bool ApaWorld::Update() {
                Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
       std::cout << "planner_type = PARALLEL_PARK_IN!" << std::endl;
       measures_ptr_->planner_type = ApaPlannerType::PARALLEL_PARK_IN_PLANNER;
+    } else if (measures_ptr_->slot_type ==
+               Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
+      std::cout << "planner_type = SLANT_PARK_IN!" << std::endl;
+      measures_ptr_->planner_type =
+          ApaPlannerType::PERPENDICULAR_PARK_IN_PLANNER;
     } else {
       std::cout << "current slot type is not supported now!" << std::endl;
       return false;
     }
   }
 
-  std::cout << "planner_type = "
-            << static_cast<int>(measures_ptr_->planner_type) << std::endl;
+  // std::cout << "planner_type = "
+  //           << static_cast<int>(measures_ptr_->planner_type) << std::endl;
 
   return true;
 }

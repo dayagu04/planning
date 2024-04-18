@@ -314,6 +314,11 @@ class SlotManagement {
 
     std::vector<Eigen::Vector2d> obs_pt_vec_slot;
 
+    double origin_pt_0_heading = 0.0;
+    double sin_angle = 1.0;
+    Eigen::Vector2d pt_0;
+    Eigen::Vector2d pt_1;
+
     void Reset() {
       select_slot_id = 0;
       slot_type = Common::PARKING_SLOT_TYPE_INVALID;
@@ -341,6 +346,11 @@ class SlotManagement {
       slot_occupied_ratio = 0.0;
 
       obs_pt_vec_slot.clear();
+
+      origin_pt_0_heading = 0.0;
+      sin_angle = 1.0;
+      pt_0.setZero();
+      pt_1.setZero();
     }
   };
 
@@ -356,6 +366,10 @@ class SlotManagement {
     std::vector<PlanningOutput::SuccessfulSlotsInfo> released_slot_info_vec;
 
     std::unordered_map<int, size_t> slot_info_map;
+    std::unordered_map<int, std::pair<double, double>> slot_info_angle;
+    std::unordered_map<int, bool> slot_info_direction;
+    std::unordered_map<int, std::pair<Eigen::Vector2d, Eigen::Vector2d>>
+        slot_info_corner_01;
     std::vector<SlotInfoWindow> slot_info_window_vec;
     common::SlotManagementInfo slot_management_info;
 
@@ -485,6 +499,10 @@ class SlotManagement {
   const double CalAngleSlot2Car(const common::SlotInfo& new_slot_info) const;
 
   void UpdateReleasedSlotInfo();
+
+  const bool ProcessSlantSlot(
+      common::SlotInfo& slot_info,
+      const ParkingFusion::ParkingFusionSlot& parking_fusion_slot);
 };
 
 }  // namespace planning

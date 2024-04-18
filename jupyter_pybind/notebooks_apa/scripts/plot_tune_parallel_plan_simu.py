@@ -81,150 +81,134 @@ parallel_planning_py.Init()
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-15, max=15, value= 1.94, step=0.01)
-    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value= 0.18, step=0.01)
-    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value= 15.0, step=0.1)
+    # ego pose
+    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-15, max=15, value= 0.930078, step=0.01)
+    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value= 0.0943415, step=0.01)
+    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value= 7.68852, step=0.1)
     self.s_init_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "s_init",min=-10.0, max=10.0, value=0.0, step=0.01)
-
-    self.tlane_p_outside_deta_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_outside_deta_x",min=-15, max=15, value=0.0, step=0.01)
-    self.tlane_p_outside_deta_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_outside_deta_y",min=-15, max=15, value=1.345, step=0.01)
-    self.tlane_p_inside_deta_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_inside_deta_x",min=-15, max=15, value= 5.771, step=0.01)# 6.74947
-    self.tlane_p_inside_deta_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_inside_deta_y",min=-15, max=15, value= 1.345, step=0.01)
-
+    # obs pt pos
+    self.obs_tlane_p_outside_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_out_x",min=-15, max=15, value=-1.0753, step=0.01)
+    self.obs_tlane_p_outside_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_out_y",min=-15, max=15, value=1.17322, step=0.01)
+    self.obs_tlane_p_inside_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_in_x",min=-15, max=15, value=6.13941, step=0.01)
+    self.obs_tlane_p_inside_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_in_y",min=-15, max=15, value=1.17322, step=0.01)
+    # tlane pt pose
+    self.tlane_p_outside_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_outside_x",min=-15, max=15, value=-1.0753, step=0.01)
+    self.tlane_p_outside_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_outside_y",min=-15, max=15, value=1.17322, step=0.01)
+    self.tlane_p_inside_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_inside_x",min=-15, max=15, value= 6.13941, step=0.01)# 6.74947
+    self.tlane_p_inside_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_inside_y",min=-15, max=15, value= 1.17322, step=0.01)
+    # terminal pos
     self.tlane_pt_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_pt_x",min=-2.0, max=2.0, value=1.497, step=0.01)
     self.tlane_pt_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_pt_y",min=-2.0, max=2.0, value=0.0, step=0.01)
-    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_width",min=3.0, max=20.0, value=6.5, step=0.1)
-    self.channel_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_length",min=8.0, max=30.0, value=18.0, step=0.1)
-    self.curb_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "curb_offset",min=1.2, max=5.0, value=1.445, step=0.1)
-    self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ds",min=0.025, max=1.0, value=0.2, step=0.025)
-
+    # channel
+    self.channel_max_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_x",min=3.0, max=20.0, value=16.6, step=0.1)
+    self.channel_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_y",min=8.0, max=30.0, value=7.5, step=0.1)
+    self.curb_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "curb_offset",min=-5.0, max=5.0, value=-1.31336, step=0.1)
+    self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "path ds",min=0.025, max=1.0, value=0.1, step=0.025)
+    self.obs_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs ds",min=0.025, max=1.0, value=0.5, step=0.5)
 
     self.fix_car_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "fix_car",min=-20.0, max=20.0, value=1.30479, step=0.01)
     self.fix_car_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "fix_car",min=-20.0, max=20.0, value=-0.262434, step=0.01)
     self.fix_car_heading_deg_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "fix_car",min=-180.0, max=180.0, value=25.8808, step=0.01)
 
+    self.slot_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot width",min=2.0, max=4.0, value=1.17322 * 2.0, step=0.01)
     self.set_left_slot_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set left slot",min=0, max=1, value=0, step=1)
     self.set_start_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_start",min=0, max=1, value=0, step=1)
     self.reset_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "reset_target",min=0, max=1, value=0, step=1)
     self.fix_result_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "fix_result",min=0, max=1, value=0, step=1)
 
-    self.set_prepare_tangent_pt_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_prepare_tangent_pt",min=0, max=1, value=0, step=1)
     self.is_complete_path_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_complete_path",min=0, max=1, value=1, step=1)
     self.is_plan_first_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_plan_first",min=0, max=1, value=1, step=1)
-    self.set_pin_obs_slider =  ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pin_obs",min=0, max=1, value=1, step=1)
-    self.set_pout_obs_slider =  ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pout_obs",min=0, max=1, value=0, step=1)
-    self.set_pin_line_obs_slider =  ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pin_line_obs",min=0, max=1, value=1, step=1)
-    self.set_pout_line_obs_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_pout_line_obs",min=0, max=1, value=1, step=1)
-    self.seg_pin_parallel_line_obs_slider =ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "seg_pin_parallel_line_obs",min=0, max=1, value=1, step=1)
-    self.ref_gear_drive_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "dirve",min=0, max=1, value=0, step=1)
-    self.ref_steer_left_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "left",min=0, max=1, value=1, step=1)
+
+    self.ref_gear_drive_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "dirve",min=0, max=1, value=1, step=1)
+    self.ref_steer_left_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "left",min=0, max=1, value=0, step=1)
 
 
     ipywidgets.interact(slider_callback, ego_x = self.ego_x_slider,
                                          ego_y = self.ego_y_slider,
                                          ego_heading = self.ego_heading_slider,
                                          s_init = self.s_init_slider,
-                                         tlane_p_outside_deta_x = self.tlane_p_outside_deta_x_slider,
-                                         tlane_p_outside_deta_y = self.tlane_p_outside_deta_y_slider,
-                                         tlane_p_inside_deta_x = self.tlane_p_inside_deta_x_slider,
-                                         tlane_p_inside_deta_y = self.tlane_p_inside_deta_y_slider,
+                                         obs_tlane_p_outside_x = self.obs_tlane_p_outside_x_slider,
+                                         obs_tlane_p_outside_y = self.obs_tlane_p_outside_y_slider,
+                                         obs_tlane_p_inside_x = self.obs_tlane_p_inside_x_slider,
+                                         obs_tlane_p_inside_y = self.obs_tlane_p_inside_y_slider,
+
+                                         tlane_p_outside_x = self.tlane_p_outside_x_slider,
+                                         tlane_p_outside_y = self.tlane_p_outside_y_slider,
+                                         tlane_p_inside_x = self.tlane_p_inside_x_slider,
+                                         tlane_p_inside_y = self.tlane_p_inside_y_slider,
+
                                          tlane_pt_x = self.tlane_pt_x_slider,
                                          tlane_pt_y = self.tlane_pt_y_slider,
-                                         channel_width = self.channel_width_slider,
-                                         channel_length = self.channel_length_slider,
-                                         curb_offset = self.curb_offset_slider,
+
+                                         channel_x = self.channel_max_x_slider,
+                                         channel_y = self.channel_y_slider,
+                                         curb_y = self.curb_y_slider,
+
                                          ds = self.ds_slider,
+                                         obs_ds = self.obs_ds_slider,
+
                                          fix_car_x = self.fix_car_x_slider,
                                          fix_car_y = self.fix_car_y_slider,
                                          fix_car_heading_deg = self.fix_car_heading_deg_slider,
+
+                                         slot_width = self.slot_width_slider,
                                          set_left_slot = self.set_left_slot_slider,
-                                         set_start = self.set_start_slider,
-                                         reset_target = self.reset_target_slider,
                                          fix_result = self.fix_result_slider,
-                                         set_prepare_tangent_pt = self.set_prepare_tangent_pt_slider,
+
                                          is_complete_path = self.is_complete_path_slider,
                                          is_plan_first = self.is_plan_first_slider,
-                                         set_pin_obs = self.set_pin_obs_slider,
-                                         set_pout_obs = self.set_pout_obs_slider,
-                                         set_pin_line_obs = self.set_pin_line_obs_slider,
-                                         set_pout_line_obs = self.set_pout_line_obs_slider,
-                                         seg_pin_parallel_line_obs = self.seg_pin_parallel_line_obs_slider,
                                          ref_gear_drive = self.ref_gear_drive_slider,
                                          ref_steer_left = self.ref_steer_left_slider)
 
 ### sliders callback
-def slider_callback(ego_x, ego_y, ego_heading, s_init,
-                    tlane_p_outside_deta_x, tlane_p_outside_deta_y,
-                    tlane_p_inside_deta_x,tlane_p_inside_deta_y,
+def slider_callback(ego_x, ego_y, ego_heading,s_init,
+                    obs_tlane_p_outside_x,obs_tlane_p_outside_y,
+                    obs_tlane_p_inside_x,obs_tlane_p_inside_y,
+                    tlane_p_outside_x, tlane_p_outside_y,
+                    tlane_p_inside_x,tlane_p_inside_y,
                     tlane_pt_x,tlane_pt_y,
-                    channel_width,channel_length,
-                    curb_offset,ds,
-                    fix_car_x, fix_car_y, fix_car_heading_deg,
-                    set_left_slot, set_start,reset_target,
-                    fix_result,set_prepare_tangent_pt,is_complete_path,
-                    is_plan_first,
-                    set_pin_obs,set_pout_obs, set_pin_line_obs, set_pout_line_obs, seg_pin_parallel_line_obs,
-                    ref_gear_drive, ref_steer_left):
+                    channel_x, channel_y,curb_y,
+                    ds,obs_ds,fix_car_x, fix_car_y,fix_car_heading_deg,
+                    slot_width, set_left_slot, fix_result,
+                    is_complete_path,is_plan_first, ref_gear_drive,ref_steer_left):
   kwargs = locals()
-
 
   slot_side_sgn = 1.0
   if set_left_slot:
     slot_side_sgn = -1.0
 
-  kNormalSlotDepth = 2.0
-  kNormalSlotLength = 6.0
-  # tlane_p0_y = 0.5 * slot_side_sgn * kNormalSlotDepth + tlane_p_outside_deta_y
-  # tlane_p1_y = 0.5 * slot_side_sgn * kNormalSlotDepth + tlane_p_inside_deta_y
-  # tlane_p0_x = tlane_p_outside_deta_x
-  # tlane_p1_x = kNormalSlotLength + tlane_p_inside_deta_x
-
-  tlane_p0_x = tlane_p_outside_deta_x
-  tlane_p0_y = tlane_p_outside_deta_y
-
-  tlane_p1_x = tlane_p_inside_deta_x
-  tlane_p1_y = tlane_p_inside_deta_y
-
-  if set_start == 1:
-    slider_class.s_init_slider.value = 0.0
-    slider_class.ego_x_slider.value = ego_x
-    slider_class.ego_y_slider.value = ego_y
-
-  if reset_target == 1:
-    slider_class.tlane_pt_x_slider.value = 1.2
-    slider_class.tlane_pt_y_slider.value = 0.0
-
   tlane_bounds_x_vec = []
   tlane_bounds_y_vec = []
 
   ## first parallel line to p0
-  tlane_bounds_x_vec.append([tlane_p0_x -slot_side_sgn * 3.0, tlane_p0_x])
-  tlane_bounds_y_vec.append([tlane_p0_y, tlane_p0_y])
+  tlane_bounds_x_vec.append([obs_tlane_p_outside_x, obs_tlane_p_outside_x-2.0])
+  tlane_bounds_y_vec.append([obs_tlane_p_outside_y, obs_tlane_p_outside_y])
 
   ## second parallel line to p1
-  tlane_bounds_x_vec.append([tlane_p1_x + 3.0, tlane_p1_x])
-  tlane_bounds_y_vec.append([tlane_p1_y, tlane_p1_y])
+  tlane_bounds_x_vec.append([obs_tlane_p_inside_x, channel_x])
+  tlane_bounds_y_vec.append([obs_tlane_p_inside_y, obs_tlane_p_inside_y])
 
   ## vertical line to p0
-  tlane_bottom_y = -curb_offset
-  tlane_bounds_x_vec.append([tlane_p0_x, tlane_p0_x])
-  tlane_bounds_y_vec.append([tlane_p0_y, tlane_bottom_y * slot_side_sgn])
+  curb_y = - abs(curb_y) * slot_side_sgn
+  tlane_bounds_x_vec.append([obs_tlane_p_outside_x, obs_tlane_p_outside_x])
+  tlane_bounds_y_vec.append([obs_tlane_p_outside_y, curb_y])
 
   ##vertical line to p1
-  tlane_bounds_x_vec.append([tlane_p1_x,tlane_p1_x])
-  tlane_bounds_y_vec.append([tlane_p1_y,tlane_bottom_y * slot_side_sgn])
+  tlane_bounds_x_vec.append([obs_tlane_p_inside_x,obs_tlane_p_inside_x])
+  tlane_bounds_y_vec.append([obs_tlane_p_inside_y,curb_y])
 
   ##bottom parallel line
-  tlane_bounds_x_vec.append([tlane_p0_x,tlane_p1_x])
-  tlane_bounds_y_vec.append([tlane_bottom_y * slot_side_sgn, tlane_bottom_y * slot_side_sgn])
+  tlane_bounds_x_vec.append([obs_tlane_p_outside_x,obs_tlane_p_inside_x])
+  tlane_bounds_y_vec.append([curb_y, curb_y])
 
   data_tlane.data.update({
      'x_vec': tlane_bounds_x_vec,
      'y_vec': tlane_bounds_y_vec,})
 
   # channel
-  channel_y = slot_side_sgn * (channel_width + 0.5 * kNormalSlotDepth)
-  data_channel.data.update({'y_vec':[channel_y,channel_y],'x_vec':[0.0, channel_length]})
+  channel_y = slot_side_sgn * abs(channel_y)
+  data_channel.data.update({'y_vec':[channel_y,channel_y],'x_vec':[obs_tlane_p_outside_x, channel_x]})
+
 
   # ego start position
   data_start_pos.data.update({'x':[ego_x],'y':[ego_y]})
@@ -267,18 +251,16 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init,
   })
 
   if fix_result == 0:
-    parallel_planning_py.Update(ego_x, ego_y, ego_heading / 57.2958, \
-                                tlane_p0_x, tlane_p0_y, \
-                                tlane_p1_x, tlane_p1_y, \
-                                tlane_pt_x, tlane_pt_y, \
-                                channel_width, channel_length, curb_offset, \
-                                ds, is_complete_path, \
-                                is_plan_first, set_left_slot, \
-                                set_pin_obs,set_pout_obs, \
-                                set_pin_line_obs, set_pout_line_obs, \
-                                seg_pin_parallel_line_obs,\
-                                ref_gear_drive, ref_steer_left)
-
+    parallel_planning_py.Update(ego_x, ego_y, ego_heading / 57.3,
+                                obs_tlane_p_inside_x,obs_tlane_p_inside_y,
+                                obs_tlane_p_outside_x,obs_tlane_p_outside_y,
+                                tlane_pt_x,tlane_pt_y,
+                                tlane_p_outside_x, tlane_p_outside_y,
+                                tlane_p_inside_x,tlane_p_inside_y,
+                                channel_x, channel_y, curb_y,
+                                slot_width, ds, obs_ds, is_complete_path,
+                                is_plan_first, set_left_slot,
+                                ref_gear_drive,ref_steer_left)
   # clear
   data_path.data.update({
     'x_vec': [],
@@ -319,13 +301,6 @@ def slider_callback(ego_x, ego_y, ego_heading, s_init,
     'x_vec': car_box_x_vec,
     'y_vec': car_box_y_vec,
   })
-
-  if set_prepare_tangent_pt:
-    slider_class.ego_x_slider.value = path_x_vec[-1]
-    slider_class.ego_y_slider.value = path_y_vec[-1]
-    slider_class.ego_heading_slider.value = path_theta_vec[-1] * 57.3
-    slider_class.s_init_slider.value = 0.0
-
 
   res = parallel_planning_py.GetInverseArcVec()
   print("arc info: cx, cy, radius, pBx, pBy")

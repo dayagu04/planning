@@ -16,6 +16,14 @@ namespace planning {
 
 class CollisionDetector {
  public:
+  enum ObsType {
+    CHANNEL_OBS,
+    TLANE_OBS,
+    LINEARC_OBS,
+    COUNT_OBS,
+  };
+
+ public:
   CollisionDetector() { Init(); }
   struct CollisionResult {
     bool collision_flag = false;
@@ -24,6 +32,7 @@ class CollisionDetector {
     double remain_obstacle_dist = 25.0;
     Eigen::Vector2d collision_point;
     Eigen::Vector2d collision_point_global;
+    size_t car_line_order = 0;
   };
 
   struct Paramters {
@@ -39,8 +48,15 @@ class CollisionDetector {
   const CollisionResult Update(const pnc::geometry_lib::LineSegment &line_seg,
                                const double heading_start);
 
+  const CollisionResult UpdateByObsMap(
+      const pnc::geometry_lib::LineSegment &line_seg,
+      const double heading_start);
+
   const CollisionResult Update(const pnc::geometry_lib::Arc &arc,
                                const double heading_start);
+
+  const CollisionResult UpdateByObsMap(const pnc::geometry_lib::Arc &arc,
+                                       const double heading_start);
 
   const CollisionResult Update(
       const pnc::geometry_lib::LineSegment &line_seg,
@@ -68,11 +84,25 @@ class CollisionDetector {
       const std::vector<pnc::geometry_lib::LineSegment> &obs_line_global_vec);
 
   void SetObstacles(const std::vector<Eigen::Vector2d> &obs_pt_global_vec);
+  void SetObstacles(const std::vector<Eigen::Vector2d> &obs_pt_global_vec,
+                    const size_t obs_type);
   void AddObstacles(const std::vector<Eigen::Vector2d> &obs_pt_global_vec);
+  void AddObstacles(const std::vector<Eigen::Vector2d> &obs_pt_global_vec,
+                    const size_t obs_type);
   void AddObstacles(const Eigen::Vector2d &obs_pt_global);
+  void AddObstacles(const Eigen::Vector2d &obs_pt_global,
+                    const size_t obs_type);
   const std::vector<Eigen::Vector2d> GetObstacles() {
     return obs_pt_global_vec_;
   }
+
+  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>> GetObstaclesMap() {
+    return obs_pt_global_map_;
+  }
+
+  void ClearObstacles();
+
+  void DeleteObstacles(const size_t obs_type);
 
   void SetLineObstacles(
       const std::vector<pnc::geometry_lib::LineSegment> &obs_line_global_vec);
@@ -103,6 +133,8 @@ class CollisionDetector {
   std::vector<Eigen::Vector2d> car_local_vertex_vec_;
 
   std::vector<Eigen::Vector2d> obs_pt_global_vec_;
+
+  std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_global_map_;
 
   std::vector<pnc::geometry_lib::LineSegment> obs_line_global_vec_;
 

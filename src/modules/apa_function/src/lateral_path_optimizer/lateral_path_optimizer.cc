@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "Eigen/src/Core/Matrix.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "lateral_path_optimizer.pb.h"
@@ -19,7 +18,7 @@ static const double kPiConst = 3.141592654;
 static const double kMinRadius = 6.0;
 static const double kCurvFactor = 0.3;
 static const double kMaxDelta = 400 / 57.3 / 15;
-static const double kRefVel = 0.368;
+static const double kRefVel = 0.6;
 
 namespace planning {
 namespace apa_planner {

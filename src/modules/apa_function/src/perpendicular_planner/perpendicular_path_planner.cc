@@ -50,6 +50,9 @@ void PerpendicularPathPlanner::Preprocess() {
     calc_params_.slot_side_sgn = -1.0;
   }
 
+  // reset output
+  output_.Reset();
+
   // target line
   calc_params_.target_line = pnc::geometry_lib::BuildLineSegByPose(
       input_.tlane.pt_terminal_pos, input_.tlane.pt_terminal_heading);
@@ -165,16 +168,28 @@ const bool PerpendicularPathPlanner::PreparePlan() {
   std::vector<double> x_offset_vec;
   std::vector<double> heading_offset_vec;
 
-  double x_offset = apa_param.GetParam().prepare_line_min_x_offset_slot;
-  while (x_offset < apa_param.GetParam().prepare_line_max_x_offset_slot) {
+  const double pt_01_x = ((input_.pt_0 + input_.pt_1) / 2.0).x();
+  const double x_min =
+      pt_01_x +
+      apa_param.GetParam().prepare_line_min_x_offset_slot / input_.sin_angle;
+  const double x_max =
+      pt_01_x +
+      apa_param.GetParam().prepare_line_max_x_offset_slot / input_.sin_angle;
+
+  double x_offset = x_min;
+  while (x_offset < x_max) {
     x_offset_vec.emplace_back(x_offset);
     x_offset += apa_param.GetParam().prepare_line_dx_offset_slot;
   }
 
   double heading_offset =
-      apa_param.GetParam().prepare_line_max_heading_offset_slot_deg / 57.3;
+      (apa_param.GetParam().prepare_line_max_heading_offset_slot_deg +
+       input_.origin_pt_0_heading) /
+      57.3;
   while (heading_offset >=
-         apa_param.GetParam().prepare_line_min_heading_offset_slot_deg / 57.3) {
+         (apa_param.GetParam().prepare_line_min_heading_offset_slot_deg +
+          input_.origin_pt_0_heading) /
+             57.3) {
     heading_offset_vec.emplace_back(heading_offset);
     heading_offset -=
         apa_param.GetParam().prepare_line_dheading_offset_slot_deg / 57.3;
@@ -184,9 +199,8 @@ const bool PerpendicularPathPlanner::PreparePlan() {
   for (const auto& heading_offset : heading_offset_vec) {
     for (const auto& x_offset : x_offset_vec) {
       if (PreparePlanOnce(x_offset, heading_offset)) {
-        // std::cout << "x_offset = " << x_offset << std::endl;
-        // std::cout << "heading_offset = " << heading_offset * 57.3 <<
-        // std::endl;
+        std::cout << "x_offset = " << x_offset << std::endl;
+        std::cout << "heading_offset = " << heading_offset * 57.3 << std::endl;
         return true;
       } else {
         if (calc_params_.cal_tang_pt_success) {
@@ -1221,6 +1235,37 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
     }
   }
 
+  if (type == 2 &&
+      input_.slot_occupied_ratio >
+          apa_param.GetParam().line_arc_obs_slot_occupied_ratio &&
+      current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+    const double channel_width =
+        apa_param.GetParam().line_arc_obs_channel_width;
+    const double channel_length =
+        apa_param.GetParam().line_arc_obs_channel_length;
+
+    const double pt_01_x = ((input_.pt_0 + input_.pt_1) / 2.0).x();
+    const double top_x = pt_01_x + channel_width / input_.sin_angle;
+
+    Eigen::Vector2d channel_point_1 =
+        Eigen::Vector2d(top_x, 0.0) +
+        (input_.pt_0 - input_.pt_1).normalized() * channel_length / 2.0;
+    Eigen::Vector2d channel_point_2 =
+        Eigen::Vector2d(top_x, 0.0) -
+        (input_.pt_0 - input_.pt_1).normalized() * channel_length / 2.0;
+
+    pnc::geometry_lib::LineSegment channel_line;
+    channel_line.SetPoints(channel_point_1, channel_point_2);
+    std::vector<Eigen::Vector2d> point_set;
+    pnc::geometry_lib::SamplePointSetInLineSeg(
+        point_set, channel_line, apa_param.GetParam().obstacle_ds);
+    collision_detector_ptr_->AddObstacles(point_set,
+                                          CollisionDetector::LINEARC_OBS);
+    std::cout << "add linearc obs\n";
+  } else {
+    collision_detector_ptr_->DeleteObstacles(CollisionDetector::LINEARC_OBS);
+  }
+
   // collision detect
   for (size_t j = 0; j < tmp_path_seg_vec.size(); ++j) {
     double safe_dist = apa_param.GetParam().col_obs_safe_dist;
@@ -1233,11 +1278,16 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
       params.lat_inflation +=
           apa_param.GetParam().car_lat_inflation_for_trim_path;
       collision_detector_ptr_->SetParam(params);
+    } else if (calc_params_.first_multi_plan) {
+      CollisionDetector::Paramters params;
+      params.lat_inflation -=
+          apa_param.GetParam().car_lat_inflation_for_trim_path;
+      collision_detector_ptr_->SetParam(params);
     } else {
       CollisionDetector::Paramters params;
       collision_detector_ptr_->SetParam(params);
     }
-    // PrintSegmentInfo(tmp_path_seg);
+    PrintSegmentInfo(tmp_path_seg);
     const uint8_t path_col_det_res =
         TrimPathByCollisionDetection(tmp_path_seg, safe_dist);
     if (path_col_det_res == PATH_COL_NORMAL) {
@@ -1256,6 +1306,8 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
       break;
     }
   }
+  CollisionDetector::Paramters params;
+  collision_detector_ptr_->SetParam(params);
   // for (size_t j = 0; j < tmp_path_seg_vec.size(); ++j) {
   //   double safe_dist = apa_param.GetParam().col_obs_safe_dist;
   //   auto& tmp_path_seg = tmp_path_seg_vec[j];
@@ -2174,18 +2226,28 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
   if (line_arc_success &&
       input_.slot_occupied_ratio >
           apa_param.GetParam().line_arc_obs_slot_occupied_ratio) {
-    Eigen::Vector2d channel_point_1(
-        apa_param.GetParam().line_arc_obs_channel_width,
-        -apa_param.GetParam().line_arc_obs_channel_length / 2.0);
-    Eigen::Vector2d channel_point_2(
-        apa_param.GetParam().line_arc_obs_channel_width,
-        apa_param.GetParam().line_arc_obs_channel_length / 2.0);
+    const double channel_width =
+        apa_param.GetParam().line_arc_obs_channel_width;
+    const double channel_length =
+        apa_param.GetParam().line_arc_obs_channel_length;
+
+    const double pt_01_x = ((input_.pt_0 + input_.pt_1) / 2.0).x();
+    const double top_x = pt_01_x + channel_width / input_.sin_angle;
+
+    Eigen::Vector2d channel_point_1 =
+        Eigen::Vector2d(top_x, 0.0) +
+        (input_.pt_0 - input_.pt_1).normalized() * channel_length / 2.0;
+    Eigen::Vector2d channel_point_2 =
+        Eigen::Vector2d(top_x, 0.0) -
+        (input_.pt_0 - input_.pt_1).normalized() * channel_length / 2.0;
+
     pnc::geometry_lib::LineSegment channel_line;
     channel_line.SetPoints(channel_point_1, channel_point_2);
     std::vector<Eigen::Vector2d> point_set;
     pnc::geometry_lib::SamplePointSetInLineSeg(
         point_set, channel_line, apa_param.GetParam().obstacle_ds);
-    collision_detector_ptr_->AddObstacles(point_set);
+    collision_detector_ptr_->AddObstacles(point_set,
+                                          CollisionDetector::LINEARC_OBS);
   }
 
   // collision detect
@@ -2288,8 +2350,8 @@ const bool PerpendicularPathPlanner::SetCurrentPathSegIndex() {
     return false;
   }
 
-  for (size_t i = output_.path_seg_index.second;
-       i >= output_.path_seg_index.first; --i) {
+  for (int i = output_.path_seg_index.second; i >= output_.path_seg_index.first;
+       --i) {
     if (output_.path_segment_vec[i].seg_type ==
         pnc::geometry_lib::SEG_TYPE_ARC) {
       output_.current_arc_steer = output_.steer_vec[i];
@@ -2645,10 +2707,10 @@ const uint8_t PerpendicularPathPlanner::TrimPathByCollisionDetection(
   CollisionDetector::CollisionResult col_res;
   if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
     auto& line = path_seg.line_seg;
-    col_res = collision_detector_ptr_->Update(line, line.heading);
+    col_res = collision_detector_ptr_->UpdateByObsMap(line, line.heading);
   } else if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
     auto& arc = path_seg.arc_seg;
-    col_res = collision_detector_ptr_->Update(arc, arc.headingA);
+    col_res = collision_detector_ptr_->UpdateByObsMap(arc, arc.headingA);
   } else {
     std::cout << "no support the seg type\n";
     return PATH_COL_INVALID;
@@ -2665,7 +2727,8 @@ const uint8_t PerpendicularPathPlanner::TrimPathByCollisionDetection(
 
   std::cout << "collision_point = " << col_res.collision_point.transpose()
             << "  obs_pt_global = "
-            << col_res.collision_point_global.transpose() << std::endl;
+            << col_res.collision_point_global.transpose()
+            << "  car_line_order = " << col_res.car_line_order << std::endl;
 
   if (safe_remain_dist < 1e-5) {
     std::cout << "safe_remain_dist is samller than 0.0, the path donot meet "
@@ -2927,6 +2990,27 @@ const double PerpendicularPathPlanner::CalOccupiedRatio(
     slot_occupied_ratio = 0.0;
   }
   return slot_occupied_ratio;
+}
+
+// for simulation
+const bool PerpendicularPathPlanner::PreparePlanPb() { return PreparePlan(); }
+
+const bool PerpendicularPathPlanner::GenPathOutputByDubinsPb() {
+  input_.ego_pose = calc_params_.safe_circle_tang_pt;
+  return GenPathOutputByDubins();
+}
+
+const bool PerpendicularPathPlanner::MultiPlanPb() { return MultiPlan(); }
+
+const bool PerpendicularPathPlanner::AdjustPlanPb() { return AdjustPlan(); }
+
+const PerpendicularPathPlanner::PlannerParams
+PerpendicularPathPlanner::GetCalcParams() {
+  return calc_params_;
+}
+
+const bool PerpendicularPathPlanner::CheckReachTargetPosePb() {
+  return CheckReachTargetPose();
 }
 
 }  // namespace apa_planner

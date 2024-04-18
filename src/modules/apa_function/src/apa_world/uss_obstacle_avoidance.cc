@@ -12,11 +12,28 @@ namespace planning {
 void UssObstacleAvoidance::Init() {
   // init car local vertex
   car_local_vertex_vec_.clear();
-  car_local_vertex_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size());
+  car_local_vertex_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size() +
+                                4);
   for (size_t i = 0; i < apa_param.GetParam().car_vertex_x_vec.size(); ++i) {
     car_local_vertex_vec_.emplace_back(
         Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
                         apa_param.GetParam().car_vertex_y_vec[i]));
+    if (i == 1) {
+      car_local_vertex_vec_.emplace_back(
+          Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
+                          apa_param.GetParam().uss_vertex_y_vec[2]));
+      car_local_vertex_vec_.emplace_back(
+          Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
+                          apa_param.GetParam().uss_vertex_y_vec[3]));
+    }
+    if (i == 9) {
+      car_local_vertex_vec_.emplace_back(
+          Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
+                          apa_param.GetParam().uss_vertex_y_vec[8]));
+      car_local_vertex_vec_.emplace_back(
+          Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
+                          apa_param.GetParam().uss_vertex_y_vec[9]));
+    }
   }
 
   SetLatInflation();
@@ -39,8 +56,7 @@ void UssObstacleAvoidance::Init() {
 }
 
 void UssObstacleAvoidance::SetLatInflation() {
-  for (size_t i = 0; i < apa_param.GetParam().car_vertex_y_vec.size(); ++i) {
-    car_local_vertex_vec_[i].y() = apa_param.GetParam().car_vertex_y_vec[i];
+  for (size_t i = 0; i < car_local_vertex_vec_.size(); ++i) {
     if (car_local_vertex_vec_[i].y() > 0) {
       car_local_vertex_vec_[i].y() += param_.lat_inflation;
     } else {
@@ -269,7 +285,7 @@ const bool UssObstacleAvoidance::Preprocess() {
 
   // set uss raw dist data
   uss_raw_dist_vec_.clear();
-  uss_raw_dist_vec_.reserve(apa_param.GetParam().uss_vertex_x_vec.size());
+  uss_raw_dist_vec_.reserve(uss_local_vertex_vec_.size());
   const auto &upa_dis_info_buf =
       local_view_ptr_->uss_wave_info.upa_dis_info_buf();
 
@@ -307,12 +323,12 @@ void UssObstacleAvoidance::CalRemainDist() {
   pnc::geometry_lib::LineSegment car_local_line;
   Eigen::Vector2d intersection;
   double rot_angle = 0.0;
-  for (size_t i = 0; i < apa_param.GetParam().uss_vertex_x_vec.size(); ++i) {
+  for (size_t i = 0; i < uss_local_vertex_vec_.size(); ++i) {
     uss_local_arc = uss_local_arc_vec_[i];
     if (uss_local_arc.is_ignored == true) {
       continue;
     }
-    for (size_t j = 0; j < apa_param.GetParam().car_vertex_x_vec.size(); ++j) {
+    for (size_t j = 0; j < car_local_vertex_vec_.size(); ++j) {
       if (car_motion_info_.car_motion_mode == LINE_MODE) {
         car_local_line = car_local_line_vec_[j];
         if (pnc::geometry_lib::GetArcLineIntersection(
@@ -418,9 +434,9 @@ const bool UssObstacleAvoidance::CheckIsDirectlyBehindUss() {
 void UssObstacleAvoidance::SetUssRawDist(const double &uss_raw_dist) {
   // set uss raw dist data
   uss_raw_dist_vec_.clear();
-  uss_raw_dist_vec_.reserve(apa_param.GetParam().uss_vertex_x_vec.size());
+  uss_raw_dist_vec_.reserve(uss_local_vertex_vec_.size());
 
-  for (size_t i = 0; i < apa_param.GetParam().uss_vertex_x_vec.size(); ++i) {
+  for (size_t i = 0; i < uss_local_vertex_vec_.size(); ++i) {
     uss_raw_dist_vec_.emplace_back(uss_raw_dist);
   }
 }

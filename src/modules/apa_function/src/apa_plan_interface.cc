@@ -15,6 +15,10 @@
 #include "perpendicular_park_in_planner.h"
 #include "planning_context.h"
 
+// #define PERPENDICULAR_SIMULATION
+
+// #define PERPENDICULAR_SIMULATION
+
 namespace planning {
 namespace apa_planner {
 
@@ -93,11 +97,12 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   bool success = false;
 #ifdef PERPENDICULAR_SIMULATION
   std::cout << "PERPENDICULAR_SIMULATION\n";
-  if (current_state == FuncStateMachine::PARK_IN_ACTIVATE_WAIT ||
-      current_state == FuncStateMachine::PARK_IN_ACTIVATE_CONTROL ||
-      current_state == FuncStateMachine::PARK_IN_SECURE) {
-    success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
-  }
+  success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
+  // if (current_state == FuncStateMachine::PARK_IN_ACTIVATE_WAIT ||
+  //     current_state == FuncStateMachine::PARK_IN_ACTIVATE_CONTROL ||
+  //     current_state == FuncStateMachine::PARK_IN_SECURE) {
+  //   success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
+  // }
 #else
   if (apa_world_ptr_->GetMeasurementsPtr()->planner_type <
       ApaWorld::NONE_PLANNER) {
@@ -225,6 +230,9 @@ void ApaPlanInterface::SyncParameters() {
 
   JSON_READ_VALUE(apa_param.SetPram().terminal_target_x_to_limiter, double,
                   "terminal_target_x_to_limiter");
+
+  JSON_READ_VALUE(apa_param.SetPram().terminal_parallel_y_offset, double,
+                  "terminal_parallel_y_offset");
 
   // check finish params
   JSON_READ_VALUE(apa_param.SetPram().finish_lat_err, double, "finish_lat_err");
@@ -421,6 +429,9 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().max_obs2car_dist_out_slot, double,
                   "max_obs2car_dist_out_slot");
 
+  JSON_READ_VALUE(apa_param.SetPram().max_obs2car_dist_slot_occupied_ratio,
+                  double, "max_obs2car_dist_slot_occupied_ratio");
+
   JSON_READ_VALUE(apa_param.SetPram().col_obs_safe_dist, double,
                   "col_obs_safe_dist");
 
@@ -441,6 +452,22 @@ void ApaPlanInterface::SyncParameters() {
 
   JSON_READ_VALUE(apa_param.SetPram().obs2slot_max_dist, double,
                   "obs2slot_max_dist");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_obs2slot_max_dist, double,
+                  "parallel_obs2slot_max_dist");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_channel_y_mag, double,
+                  "parallel_channel_y_mag");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_channel_x_mag, double,
+                  "parallel_channel_x_mag");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_ego_side_to_obs_in_buffer, double,
+                  "parallel_ego_side_to_obs_in_buffer");
+
+  JSON_READ_VALUE(
+      apa_param.SetPram().parallel_ego_front_corner_to_obs_in_buffer, double,
+      "parallel_ego_front_corner_to_obs_in_buffer");
 
   JSON_READ_VALUE(apa_param.SetPram().slot_max_jump_dist, double,
                   "slot_max_jump_dist");

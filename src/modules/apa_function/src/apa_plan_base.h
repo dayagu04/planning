@@ -16,8 +16,6 @@
 #include "local_view.h"
 #include "planning_plan.pb.h"
 
-// #define PERPENDICULAR_SIMULATION
-
 namespace planning {
 namespace apa_planner {
 class ApaPlannerBase {
@@ -63,6 +61,7 @@ class ApaPlannerBase {
     std::vector<Eigen::Vector2d> limiter_corner;
 
     size_t selected_slot_id = 0;
+    size_t slot_type = 0;
 
     Eigen::Vector2d slot_origin_pos = Eigen::Vector2d::Zero();
     double slot_origin_heading = 0.0;
@@ -85,9 +84,15 @@ class ApaPlannerBase {
 
     std::vector<Eigen::Vector2d> obs_pt_vec_slot;
 
+    double origin_pt_0_heading = 0.0;
+    double sin_angle = 1.0;
+    Eigen::Vector2d pt_0;
+    Eigen::Vector2d pt_1;
+
     void Reset() {
       target_managed_slot.Clear();
       selected_slot_id = 0;
+      slot_type = 0;
       target_ego_pos_slot = Eigen::Vector2d::Zero();
       target_ego_heading_slot = 0.0;
 
@@ -116,6 +121,11 @@ class ApaPlannerBase {
       first_fix_limiter = true;
 
       obs_pt_vec_slot.clear();
+
+      origin_pt_0_heading = 0.0;
+      sin_angle = 1.0;
+      pt_0.setZero();
+      pt_1.setZero();
     }
   };
 
@@ -138,6 +148,8 @@ class ApaPlannerBase {
       is_replan_dynamic = false;
       is_dynamic_replan_first = true;
       dynamic_replan_count = 0;
+      total_plan_count = 0;
+      in_slot_plan_count = 0;
       is_finished = false;
       is_fix_slot = false;
       stuck_time = 0.0;
@@ -165,6 +177,8 @@ class ApaPlannerBase {
     bool is_dynamic_replan_first = true;
     uint8_t dynamic_replan_count = 0;
     uint8_t replan_reason = NOT_REPLAN;
+    uint8_t total_plan_count = 0;
+    uint8_t in_slot_plan_count = 0;
     bool is_finished = false;
     bool is_fix_slot = false;
     bool spline_success = false;

@@ -68,6 +68,10 @@ class PerpendicularPathPlanner {
     uint8_t ref_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
     uint8_t ref_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
     double slot_occupied_ratio = 0.0;
+    double origin_pt_0_heading = 0.0;
+    double sin_angle = 1.0;
+    Eigen::Vector2d pt_0;
+    Eigen::Vector2d pt_1;
 
     void Set(const Tlane &tlane_in,
              const pnc::geometry_lib::PathPoint &ego_pose_in,
@@ -201,6 +205,24 @@ class PerpendicularPathPlanner {
       const uint8_t steer,
       std::vector<pnc::geometry_lib::PathSegment> &inverse_two_segmemts,
       DebugInfo &debuginfo) const;
+
+  // for simulation
+  const bool PreparePlanPb();
+
+  const bool GenPathOutputByDubinsPb();
+
+  const bool MultiPlanPb();
+
+  const bool AdjustPlanPb();
+
+  const bool CheckReachTargetPosePb();
+
+  const PlannerParams GetCalcParams();
+
+  void SetColPtr(
+      const std::shared_ptr<CollisionDetector> &collision_detector_ptr) {
+    collision_detector_ptr_ = collision_detector_ptr;
+  }
 
  private:
   // member function
