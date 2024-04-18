@@ -264,7 +264,9 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
     }
   }
 
+  uint32_t index = 0;
   for (const auto& it_msg : msg_cache_ordered_by_time_) {
+    ++index;
     if (!it_msg.second) {
       continue;
     }
@@ -276,12 +278,25 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
                                                   TOPIC_FUSION_OBJECTS);
     } else if (it_msg.second->GetTypeName() ==
                "LocalizationOutput.LocalizationEstimate") {
-      write_msg<LocalizationOutput::LocalizationEstimate>(
-          it_msg, record_writer, TOPIC_LOCALIZATION_ESTIMATE);
+      // 如果i是奇数，也就是第一次遇到。原始定位数据和新的定位总是成对出现，且原始定位数据在前
+      if (index & 1) {
+        write_msg<LocalizationOutput::LocalizationEstimate>(
+            it_msg, record_writer,
+            std::string(TOPIC_LOCALIZATION_ESTIMATE) + "_origin");
+      } else {
+        write_msg<LocalizationOutput::LocalizationEstimate>(
+            it_msg, record_writer, TOPIC_LOCALIZATION_ESTIMATE);
+      }
     } else if (it_msg.second->GetTypeName() ==
                "IFLYLocalization.IFLYLocalization") {
-      write_msg<IFLYLocalization::IFLYLocalization>(it_msg, record_writer,
-                                                    TOPIC_LOCALIZATION);
+      // 如果i是奇数
+      if (index & 1) {
+        write_msg<IFLYLocalization::IFLYLocalization>(
+            it_msg, record_writer, std::string(TOPIC_LOCALIZATION) + "_origin");
+      } else {
+        write_msg<IFLYLocalization::IFLYLocalization>(it_msg, record_writer,
+                                                      TOPIC_LOCALIZATION);
+      }
     } else if (it_msg.second->GetTypeName() == "Prediction.PredictionResult") {
       write_msg<Prediction::PredictionResult>(it_msg, record_writer,
                                               TOPIC_PREDICTION_RESULT);
@@ -624,7 +639,7 @@ void PlanningPlayer::PlayAllFrames() {
 
 void PlanningPlayer::RunCloseLoop(
     const PlanningOutput::PlanningOutput& planning_output) {
-  if (scene_type_ == "scc") {  // scc
+  if (scene_type_ == "scc" || scene_type_ == "noa") {  // scc
     if (!check_msg_exist(msg_cache_, TOPIC_PLANNING_DEBUG_INFO) ||
         !check_msg_exist(msg_cache_, TOPIC_LOCALIZATION_ESTIMATE)) {
       return;

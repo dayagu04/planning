@@ -84,7 +84,8 @@ class PlanningPlayer {
   uint64_t planning_dubug_info_frame_num_ = 0;
   int frame_num_before_enter_auto_ = 0;
   std::string scene_type_ = "acc";
-  FuncStateMachine::FunctionalState last_functional_state = FuncStateMachine::FunctionalState::INIT;
+  FuncStateMachine::FunctionalState last_functional_state =
+      FuncStateMachine::FunctionalState::INIT;
 
   template <class T>
   void cache_with_msg_time(const apollo::cyber::record::RecordMessage &msg);
@@ -148,6 +149,12 @@ void PlanningPlayer::cache_with_msg_and_header_time(
   msg_cache_[msg.channel_name][msg.time] = obj_msg;  // ns
   header_cache_[msg.channel_name][obj_msg->header().timestamp()] =
       obj_msg;  // us
+  if (msg.channel_name == "/iflytek/localization/ego_pose" ||
+      msg.channel_name == "/iflytek/localization/egomotion") {
+    auto loc_msg = std::make_shared<T>();
+    loc_msg->ParseFromString(msg.content);
+    msg_cache_[msg.channel_name + "_origin"][msg.time - 1] = loc_msg;  // ns
+  }
 }
 
 template <class T>
