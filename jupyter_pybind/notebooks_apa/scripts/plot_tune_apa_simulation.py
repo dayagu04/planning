@@ -12,7 +12,7 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/planning-96e56c2e-JAC_S811/test_4.00000'
+bag_path = '/data_cold/abu_zone/APA/planning-57def8ab-JAC_S811-test/test_3.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 

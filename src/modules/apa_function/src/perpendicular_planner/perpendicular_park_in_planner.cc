@@ -816,7 +816,7 @@ void PerpendicularInPlanner::GenObstacles() {
   const auto& ego_slot_info = frame_.ego_slot_info;
   const auto pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
   const auto obs_length = (channel_length - pt_01_vec.norm()) / 2.0;
-  Eigen::Vector2d A = B + slot_side * pt_01_vec.normalized() * obs_length;
+  Eigen::Vector2d A = B - slot_side * pt_01_vec.normalized() * obs_length;
 
   Eigen::Vector2d C(obstacle_t_lane_.pt_lower_boundry_pos);
   C.y() = B.y();
@@ -825,16 +825,16 @@ void PerpendicularInPlanner::GenObstacles() {
   Eigen::Vector2d D(obstacle_t_lane_.pt_lower_boundry_pos);
   D.y() = E.y();
 
-  Eigen::Vector2d F = E - slot_side * pt_01_vec.normalized() * obs_length;
+  Eigen::Vector2d F = E + slot_side * pt_01_vec.normalized() * obs_length;
 
   // add channel obstacle
   const double pt_01_x = ((ego_slot_info.pt_0 + ego_slot_info.pt_1) / 2.0).x();
   const double top_x = pt_01_x + channel_width / ego_slot_info.sin_angle;
   Eigen::Vector2d channel_point_1 =
-      Eigen::Vector2d(top_x, 0.0) +
+      Eigen::Vector2d(top_x, 0.0) -
       slot_side * pt_01_vec.normalized() * channel_length / 2.0;
   Eigen::Vector2d channel_point_2 =
-      Eigen::Vector2d(top_x, 0.0) -
+      Eigen::Vector2d(top_x, 0.0) +
       slot_side * pt_01_vec.normalized() * channel_length / 2.0;
 
   Eigen::Vector2d channel_point_3;
@@ -878,6 +878,13 @@ void PerpendicularInPlanner::GenObstacles() {
     tlane_line.SetPoints(E, F);
     tlane_line_vec.emplace_back(tlane_line);
   }
+
+  // std::cout << "A = " << A.transpose() << "  B = " << B.transpose()
+  //           << "  C = " << C.transpose() << "  D = " << D.transpose()
+  //           << "  E = " << E.transpose() << "  F = " << F.transpose()
+  //           << "  channel1 = " << channel_point_1.transpose()
+  //           << "  channel2 = " << channel_point_2.transpose()
+  //           << "  channel3 = " << channel_point_3.transpose() << std::endl;
 
   // tmp method, should modify
   std::vector<Eigen::Vector2d> tlane_obstacle_vec;
