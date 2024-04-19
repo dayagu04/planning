@@ -1185,9 +1185,7 @@ bool SlotManagement::LonDifUpdateCondition(
   bool lon_dif_update_condition = false;
 
   if (new_slot_info.slot_type() ==
-          Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL ||
-      new_slot_info.slot_type() ==
-          Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
+      Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
     const auto cross_product = pnc::geometry_lib::GetCrossFromTwoVec2d(
         ego_unit_heading, ego_pos_to_pt0_vec);
 
