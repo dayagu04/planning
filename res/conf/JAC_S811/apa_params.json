@@ -44,8 +44,9 @@
   "finish_uss_slot_occupied_ratio": 0.668,
   "finish_heading_err_loose": 2.868,
   "finish_parallel_lat_err": 0.1,
-  "finish_parallel_lon_err": 0.2,
-  "finish_parallel_heading_err": 2.3,
+  "finish_parallel_lat_rac_err": 0.25,
+  "finish_parallel_lon_err": 0.4,
+  "finish_parallel_heading_err": 1.66,
   "finish_parallel_rear_stop_buffer": 0.55,
 
   "comment_6": "check fail params",

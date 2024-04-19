@@ -253,6 +253,9 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().finish_parallel_lat_err, double,
                   "finish_parallel_lat_err");
 
+  JSON_READ_VALUE(apa_param.SetPram().finish_parallel_lat_rac_err, double,
+                  "finish_parallel_lat_rac_err");
+
   JSON_READ_VALUE(apa_param.SetPram().finish_parallel_lon_err, double,
                   "finish_parallel_lon_err");
 
@@ -462,8 +465,8 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().parallel_channel_x_mag, double,
                   "parallel_channel_x_mag");
 
-  JSON_READ_VALUE(apa_param.SetPram().parallel_ego_side_to_obs_in_buffer, double,
-                  "parallel_ego_side_to_obs_in_buffer");
+  JSON_READ_VALUE(apa_param.SetPram().parallel_ego_side_to_obs_in_buffer,
+                  double, "parallel_ego_side_to_obs_in_buffer");
 
   JSON_READ_VALUE(
       apa_param.SetPram().parallel_ego_front_corner_to_obs_in_buffer, double,

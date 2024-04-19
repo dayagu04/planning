@@ -2009,6 +2009,7 @@ const bool ParallelPathPlanner::ParallelAdjustPlan() {
     if (AlignBodyPlan(tmp_path_seg_vec, current_pose, current_gear)) {
       if (!CheckPathSegCollided(tmp_path_seg_vec.back())) {
         success = true;
+        AddPathSegToOutPut(tmp_path_seg_vec.back());
         pnc::geometry_lib::PrintPose("align body success! start pose",
                                      current_pose);
         current_pose = tmp_path_seg_vec.back().GetEndPose();
@@ -2029,9 +2030,8 @@ const bool ParallelPathPlanner::ParallelAdjustPlan() {
     last_line.heading = current_pose.heading;
 
     if (OneLinePlanAlongEgoHeading(last_line, calc_params_.target_pose)) {
-      tmp_path_seg_vec.emplace_back(pnc::geometry_lib::PathSegment(
+      AddPathSegToOutPut(pnc::geometry_lib::PathSegment(
           pnc::geometry_lib::CalLineSegGear(last_line), last_line));
-      AddPathSegVecToOutput(tmp_path_seg_vec);
       return true;
     }
   }
@@ -3303,12 +3303,7 @@ const bool ParallelPathPlanner::OneLinePlan(
 const bool ParallelPathPlanner::OneLinePlanInCSCS(
     pnc::geometry_lib::LineSegment& line,
     const pnc::geometry_lib::PathPoint& target_pose) const {
-  // std::cout << "--- try one line plan ---\n";
-
   const pnc::geometry_lib::PathPoint start_pose(line.pA, line.heading);
-
-  // std::cout << "line start pose =" << start_pose.pos.transpose()
-  //           << ", heading(deg) =" << start_pose.heading * 57.3 << std::endl;
 
   auto target_line = pnc::geometry_lib::BuildLineSegByPose(target_pose.pos,
                                                            target_pose.heading);
@@ -3319,13 +3314,12 @@ const bool ParallelPathPlanner::OneLinePlanInCSCS(
   const double heading_dif_mag = std::fabs(pnc::geometry_lib::NormalizeAngle(
       start_pose.heading - target_line.heading));
 
-  if (lat_dif_mag > apa_param.GetParam().finish_parallel_lat_err ||
+  if (lat_dif_mag > apa_param.GetParam().finish_parallel_lat_rac_err ||
       heading_dif_mag >
           apa_param.GetParam().finish_parallel_heading_err / 57.3) {
     // std::cout << "pose is not on line, fail\n";
     return false;
   }
-  // DEBUG_PRINT("pose is on line, success");
 
   const double fixed_y_coor = 0.5 * (start_pose.pos.y() + target_line.pA.y());
 

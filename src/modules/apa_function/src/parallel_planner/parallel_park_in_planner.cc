@@ -444,7 +444,7 @@ void ParallelParInPlanner::GenTlane() {
                            << "-----------");
   // shift obstacles that meet requirement
   for (const auto& obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
-    DEBUG_PRINT(obstacle_point_slot.transpose());
+    // DEBUG_PRINT(obstacle_point_slot.transpose());
 
     const bool front_obs_condition =
         (std::fabs(obstacle_point_slot.x() - slot_length) < 1.5) &&
@@ -454,7 +454,7 @@ void ParallelParInPlanner::GenTlane() {
     if (front_obs_condition) {
       // front obs line que
       front_obs_que_ascending_x.emplace(obstacle_point_slot);
-      DEBUG_PRINT("front_obs_condition!");
+      // DEBUG_PRINT("front_obs_condition!");
     }
 
     const bool rear_obs_condition =
@@ -465,7 +465,7 @@ void ParallelParInPlanner::GenTlane() {
     if (rear_obs_condition) {
       // rear obs line que
       rear_obs_que_descending_x.emplace(obstacle_point_slot);
-      DEBUG_PRINT("rear_obs_condition!");
+      // DEBUG_PRINT("rear_obs_condition!");
     }
 
     const bool curb_condition =
@@ -477,7 +477,7 @@ void ParallelParInPlanner::GenTlane() {
       curb_y_limit = side_sgn > 0.0
                          ? std::max(curb_y_limit, obstacle_point_slot.y())
                          : std::min(curb_y_limit, obstacle_point_slot.y());
-      DEBUG_PRINT("curb condition!");
+      // DEBUG_PRINT("curb condition!");
     }
 
     // const bool channel_y_condition =
@@ -500,7 +500,7 @@ void ParallelParInPlanner::GenTlane() {
 
     if (channel_x_limit_condition) {
       channel_x_limit = std::min(channel_x_limit, obstacle_point_slot.x());
-      DEBUG_PRINT("channel_x_limit_condition!");
+      // DEBUG_PRINT("channel_x_limit_condition!");
     }
 
     const bool front_parallel_line_condition =
@@ -514,7 +514,7 @@ void ParallelParInPlanner::GenTlane() {
           side_sgn > 0.0
               ? std::max(front_parallel_line_y_limit, obstacle_point_slot.y())
               : std::min(front_parallel_line_y_limit, obstacle_point_slot.y());
-      DEBUG_PRINT("front_parallel_line_y_limit condition!");
+      // DEBUG_PRINT("front_parallel_line_y_limit condition!");
     }
 
     const bool rear_parallel_line_condition =
@@ -527,7 +527,7 @@ void ParallelParInPlanner::GenTlane() {
           side_sgn > 0.0
               ? std::max(rear_parallel_line_y_limit, obstacle_point_slot.y())
               : std::min(rear_parallel_line_y_limit, obstacle_point_slot.y());
-      DEBUG_PRINT("rear_parallel_line_y_limit condition!");
+      // DEBUG_PRINT("rear_parallel_line_y_limit condition!");
     }
   }
   bool front_vacant = false;
@@ -556,6 +556,9 @@ void ParallelParInPlanner::GenTlane() {
   const double front_min_x =
       pnc::mathlib::Clamp(front_obs_que_ascending_x.top().x(),
                           slot_length + 0.2, slot_length + 0.66);
+
+  DEBUG_PRINT("front quene min x = " << front_obs_que_ascending_x.top().x());
+  DEBUG_PRINT("front min x = " << front_min_x);
 
   const double front_y_limit = front_parallel_line_y_limit;
 
@@ -774,18 +777,24 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
       parallel_path_planner_.Update(apa_world_ptr_->GetCollisionDetectorPtr());
 
   frame_.total_plan_count++;
+
+  double extend_lenth = 0.3;
   if (frame_.ego_slot_info.slot_occupied_ratio > 0.3) {
     frame_.in_slot_plan_count++;
+
+    extend_lenth =
+        (std::fabs(frame_.ego_slot_info.ego_heading_slot * 57.3) < 12.0 ? 0.25
+                                                                        : 0.2);
   }
 
   parallel_path_planner_.SetCurrentPathSegIndex();
   parallel_path_planner_.SetLineSegmentHeading();
-  parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(0.2);
+  parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(extend_lenth);
   parallel_path_planner_.SampleCurrentPathSeg();
 
-  // print segment info
-  pnc::geometry_lib::PrintSegmentsVecInfo(
-      parallel_path_planner_.GetOutput().path_segment_vec);
+  // // print segment info
+  // pnc::geometry_lib::PrintSegmentsVecInfo(
+  //     parallel_path_planner_.GetOutput().path_segment_vec);
 
   // reverse info for next plan
   if (frame_.is_replan_first) {
@@ -1025,15 +1034,18 @@ const bool ParallelParInPlanner::CheckFinished() {
                                     apa_param.GetParam().front_overhanging) *
                                        ego_slot_info.ego_heading_slot_vec;
   const bool lon_condition =
-      rear_bumper_center.x() >= 0.2 &&
-      front_bumper_center.x() < ego_slot_info.slot_length - 0.2;
+      rear_bumper_center.x() >= apa_param.GetParam().finish_parallel_lon_err &&
+      front_bumper_center.x() <=
+          ego_slot_info.slot_length -
+              apa_param.GetParam().finish_parallel_lon_err;
 
   const bool heading_condition =
       std::fabs(ego_slot_info.terminal_err.heading) <=
       apa_param.GetParam().finish_parallel_heading_err / 57.3;
 
   const bool lat_condition_1 = std::fabs(ego_slot_info.terminal_err.pos.y()) <=
-                               apa_param.GetParam().finish_parallel_lat_err;
+                               apa_param.GetParam().finish_parallel_lat_rac_err;
+
   // lat condition 2, keep both outer wheels in slot
   const double side_sgn =
       t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT ? 1.0 : -1.0;
@@ -1070,13 +1082,16 @@ const bool ParallelParInPlanner::CheckFinished() {
   DEBUG_PRINT("terminal y error = " << ego_slot_info.terminal_err.pos.y());
   DEBUG_PRINT(
       "terminal heading error = " << ego_slot_info.terminal_err.heading * 57.3);
-
-  // DEBUG_PRINT("lat condition =" << lat_condition);
-  // DEBUG_PRINT("  is loose condition =" << lat_1);
-  // DEBUG_PRINT("  is head and tail condition =" << lat_2);
-
-  // DEBUG_PRINT("lon condition =" << lon_condition);
-  // DEBUG_PRINT("static condition =" << static_condition);
+  DEBUG_PRINT("lat condition  = " << lat_condition);
+  if (lat_condition) {
+    if (lat_condition_1) {
+      DEBUG_PRINT("lat y err = "
+                  << ego_slot_info.terminal_err.pos.y() << " < "
+                  << apa_param.GetParam().finish_parallel_lat_rac_err);
+    } else {
+      DEBUG_PRINT("ego outer wheel are both in slot!");
+    }
+  }
 
   return lon_condition && lat_condition && heading_condition &&
          static_condition;
