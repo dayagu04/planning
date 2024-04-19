@@ -239,9 +239,10 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
       ego_slot_info.pt_1 = ego_slot_info.g2l_tf.GetPos(origin_pt_1);
       const Eigen::Vector2d pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
 
-      double angle = std::fabs(pnc::geometry_lib::GetAngleFromTwoVec(
-                       Eigen::Vector2d(virtual_slot_length, 0.0), pt_01_vec)) *
-                   57.3;
+      double angle =
+          std::fabs(pnc::geometry_lib::GetAngleFromTwoVec(
+              Eigen::Vector2d(virtual_slot_length, 0.0), pt_01_vec)) *
+          57.3;
 
       if (angle > 90.0) {
         angle = 180.0 - angle;
@@ -582,14 +583,19 @@ void PerpendicularInPlanner::GenTlane() {
                       decltype(lambda_func_3)>
       right_que_for_x(lambda_func_3);
 
+  const double x_max = ((ego_slot_info.pt_0 + ego_slot_info.pt_1) / 2.0).x() +
+                       apa_param.GetParam().obs_consider_long_threshold /
+                           ego_slot_info.sin_angle;
+
+  const double y_max =
+      ((ego_slot_info.slot_width / ego_slot_info.sin_angle) / 2.0 +
+       apa_param.GetParam().obs_consider_lat_threshold) *
+      ego_slot_info.sin_angle;
+
   // sift obstacles that meet requirement
   for (const auto& obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
-    if (std::fabs(obstacle_point_slot.x()) >
-            apa_param.GetParam().obs_consider_long_threshold /
-                ego_slot_info.sin_angle ||
-        std::fabs(obstacle_point_slot.y()) >
-            apa_param.GetParam().obs_consider_lat_threshold /
-                ego_slot_info.sin_angle) {
+    if (std::fabs(obstacle_point_slot.x()) > x_max ||
+        std::fabs(obstacle_point_slot.y()) > y_max) {
       continue;
     }
     if (obstacle_point_slot.y() > 1e-6) {

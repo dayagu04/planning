@@ -149,8 +149,6 @@ void SlotManagement::Preprocess() {
 
   measurement.v_ego =
       frame_.localization_ptr->pose().linear_velocity_from_wheel();
-
-  // AddUssPerceptObstacles();
 }
 
 bool SlotManagement::IsInSearchingState() const {
@@ -288,19 +286,19 @@ bool SlotManagement::GenTLane(
                       decltype(lambda_func_3)>
       right_que_for_x(lambda_func_3);
 
-  double sin_angle = 1.0;
-  if (ego_slot_info.slot_type ==
-          Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING &&
-      frame_.slot_info_angle.count(ego_slot_info.select_slot_id) != 0) {
-    sin_angle = frame_.slot_info_angle[ego_slot_info.select_slot_id].second;
-  }
+  const double x_max = ((ego_slot_info.pt_0 + ego_slot_info.pt_1) / 2.0).x() +
+                       apa_param.GetParam().obs_consider_long_threshold /
+                           ego_slot_info.sin_angle;
+
+  const double y_max =
+      ((ego_slot_info.slot_width / ego_slot_info.sin_angle) / 2.0 +
+       apa_param.GetParam().obs_consider_lat_threshold) *
+      ego_slot_info.sin_angle;
 
   // sift obstacles that meet requirement
   for (const auto &obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
-    if (std::fabs(obstacle_point_slot.x()) >
-            apa_param.GetParam().obs_consider_long_threshold / sin_angle ||
-        std::fabs(obstacle_point_slot.y()) >
-            apa_param.GetParam().obs_consider_lat_threshold / sin_angle) {
+    if (std::fabs(obstacle_point_slot.x()) > x_max ||
+        std::fabs(obstacle_point_slot.y()) > y_max) {
       continue;
     }
     if (obstacle_point_slot.y() > 1e-6) {
@@ -565,9 +563,6 @@ bool SlotManagement::UpdateSlotsInSearching() {
        i < frame_.parking_slot_ptr->parking_fusion_slot_lists_size(); ++i) {
     const auto &fusion_slot =
         frame_.parking_slot_ptr->parking_fusion_slot_lists(i);
-    // std::cout << "InSearching slot id = " << fusion_slot.id()
-    //           << "  is release = " << fusion_slot.allow_parking() <<
-    //           std::endl;
     common::SlotInfo slot_info;
     if (!ProcessRawSlot(fusion_slot, slot_info)) {
       continue;
@@ -623,13 +618,6 @@ bool SlotManagement::UpdateSlotsInSearching() {
          slot->slot_type() ==
              Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) &&
         slot->is_release()) {
-      double sin_angle = 1.0;
-      if (slot->slot_type() ==
-              Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING &&
-          frame_.slot_info_angle.count(slot->id()) != 0) {
-        sin_angle = frame_.slot_info_angle[slot->id()].second;
-      }
-
       if (slot->slot_type() ==
               Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING &&
           frame_.slot_info_direction.count(slot->id()) != 0) {
@@ -648,10 +636,8 @@ bool SlotManagement::UpdateSlotsInSearching() {
       std::cout << "lon_dist = " << lon_dist << std::endl;
       std::cout << "angle = " << CalAngleSlot2Car(*slot) * 57.3 << std::endl;
 
-      double min_slot_release_long_dist_slot2mirror =
-          apa_param.GetParam().min_slot_release_long_dist_slot2mirror *
-          sin_angle;
-      if (lon_dist < min_slot_release_long_dist_slot2mirror &&
+      if (lon_dist <
+              apa_param.GetParam().min_slot_release_long_dist_slot2mirror &&
           frame_.slot_info_window_vec[j].GetOccupied()) {
         slot->set_is_release(false);
         slot->set_is_occupied(true);
@@ -738,14 +724,11 @@ const bool SlotManagement::ProcessRawSlot(
     common::SlotInfo &slot_info) {
   slot_info.Clear();
   SlotInfoTransfer(parking_fusion_slot, slot_info);
-  // slot_info = SlotInfoTransfer(parking_fusion_slot);
 
   if (!slot_info.has_corner_points()) {
     std::cout << "slot doesnot have corner points\n";
     return false;
   }
-
-  // todo: should adapt slanting slot
 
   // check slot is valid
   if (!IsValidParkingSlot(slot_info)) {
@@ -1304,17 +1287,32 @@ bool SlotManagement::LonDifUpdateCondition(
       return false;
     }
 
-    const Eigen::Vector2d slot_center_to_mirror_vec(
-        mirror_pos.x() - new_slot_info.center().x(),
-        mirror_pos.y() - new_slot_info.center().y());
+    Eigen::Vector2d origin_pt_0 =
+        Eigen::Vector2d(slot_pts[0].x(), slot_pts[0].y());
+    Eigen::Vector2d origin_pt_1 =
+        Eigen::Vector2d(slot_pts[1].x(), slot_pts[1].y());
 
-    // longitudinal distance from slot center to car mirror
-    double lon_dist = pnc::geometry_lib::GetCrossFromTwoVec2d(
-        slot_heading_vec_unit, slot_center_to_mirror_vec);
+    if (frame_.slot_info_corner_01.count(new_slot_info.id()) != 0) {
+      origin_pt_0 = frame_.slot_info_corner_01[new_slot_info.id()].first;
+      origin_pt_1 = frame_.slot_info_corner_01[new_slot_info.id()].second;
+    }
 
-    double sin_angle = 1.0;
-    if (frame_.slot_info_angle.count(new_slot_info.id()) != 0) {
-      sin_angle = frame_.slot_info_angle[new_slot_info.id()].second;
+    const Eigen::Vector2d origin_pt_01_vec = origin_pt_1 - origin_pt_0;
+    const Eigen::Vector2d origin_pt_01_vec_n(origin_pt_01_vec.y(),
+                                             -origin_pt_01_vec.x());
+    const Eigen::Vector2d origin_pt_01_mid = (origin_pt_0 + origin_pt_1) / 2.0;
+    pnc::geometry_lib::LineSegment line(
+        origin_pt_01_mid, origin_pt_01_mid + origin_pt_01_vec_n.normalized());
+
+    double lon_dist = pnc::geometry_lib::CalPoint2LineDist(mirror_pos, line);
+
+    const Eigen::Vector2d pt_01_mid_mirr_vec = mirror_pos - origin_pt_01_mid;
+    const double cros = pnc::geometry_lib::GetCrossFromTwoVec2d(
+        origin_pt_01_vec_n, pt_01_mid_mirr_vec);
+
+    if (cros < 0.0) {
+      // car is at inside
+      lon_dist *= -1.0;
     }
 
     bool outside_case = false;
@@ -1322,27 +1320,19 @@ bool SlotManagement::LonDifUpdateCondition(
     if (cross_product < -1e-5) {
       // right side
       outside_case =
-          lon_dist >= apa_param.GetParam().outside_lon_dist_min_slot2mirror *
-                          sin_angle &&
-          lon_dist <=
-              apa_param.GetParam().outside_lon_dist_max_slot2mirror * sin_angle;
+          lon_dist >= apa_param.GetParam().outside_lon_dist_min_slot2mirror &&
+          lon_dist <= apa_param.GetParam().outside_lon_dist_max_slot2mirror;
       inside_case =
-          lon_dist >= -apa_param.GetParam().inside_lon_dist_max_slot2mirror *
-                          sin_angle &&
-          lon_dist <=
-              -apa_param.GetParam().inside_lon_dist_min_slot2mirror * sin_angle;
+          lon_dist >= -apa_param.GetParam().inside_lon_dist_max_slot2mirror &&
+          lon_dist <= -apa_param.GetParam().inside_lon_dist_min_slot2mirror;
     } else {
       // left side
       outside_case =
-          lon_dist >= -apa_param.GetParam().outside_lon_dist_max_slot2mirror *
-                          sin_angle &&
-          lon_dist <= -apa_param.GetParam().outside_lon_dist_min_slot2mirror *
-                          sin_angle;
+          lon_dist >= -apa_param.GetParam().outside_lon_dist_max_slot2mirror &&
+          lon_dist <= -apa_param.GetParam().outside_lon_dist_min_slot2mirror;
       inside_case =
-          lon_dist >= apa_param.GetParam().inside_lon_dist_min_slot2mirror *
-                          sin_angle &&
-          lon_dist <=
-              apa_param.GetParam().inside_lon_dist_max_slot2mirror * sin_angle;
+          lon_dist >= apa_param.GetParam().inside_lon_dist_min_slot2mirror &&
+          lon_dist <= apa_param.GetParam().inside_lon_dist_max_slot2mirror;
     }
     lon_dif_update_condition = outside_case || inside_case;
   }
@@ -1354,14 +1344,24 @@ const double SlotManagement::CalLonDistSlot2Car(
     const common::SlotInfo &new_slot_info) const {
   const auto &measurement = frame_.measurement;
   const auto slot_pts = new_slot_info.corner_points().corner_point();
-  const Eigen::Vector2d ego_pos_to_pt0_vec(
-      slot_pts[0].x() - measurement.ego_pos.x(),
-      slot_pts[0].y() - measurement.ego_pos.y());
 
-  const auto ego_unit_heading =
+  Eigen::Vector2d origin_pt_0 =
+      Eigen::Vector2d(slot_pts[0].x(), slot_pts[0].y());
+  Eigen::Vector2d origin_pt_1 =
+      Eigen::Vector2d(slot_pts[1].x(), slot_pts[1].y());
+
+  if (new_slot_info.slot_type() == Common::PARKING_SLOT_TYPE_SLANTING &&
+      frame_.slot_info_corner_01.count(new_slot_info.id()) != 0) {
+    origin_pt_0 = frame_.slot_info_corner_01.at(new_slot_info.id()).first;
+    origin_pt_1 = frame_.slot_info_corner_01.at(new_slot_info.id()).second;
+  }
+
+  const Eigen::Vector2d ego_pos_to_pt0_vec = origin_pt_0 - measurement.ego_pos;
+
+  const Eigen::Vector2d ego_unit_heading =
       pnc::geometry_lib::GetUnitTangVecByHeading(measurement.heading);
 
-  const auto cross_product = pnc::geometry_lib::GetCrossFromTwoVec2d(
+  const double cross_product = pnc::geometry_lib::GetCrossFromTwoVec2d(
       ego_unit_heading, ego_pos_to_pt0_vec);
 
   Eigen::Vector2d mirror_pos;
@@ -1371,66 +1371,69 @@ const double SlotManagement::CalLonDistSlot2Car(
   } else if (cross_product > 1e-5) {
     // left side slot
     mirror_pos = measurement.left_mirror_pos;
-  } else {
-    return false;
   }
 
-  const Eigen::Vector2d slot_center_to_mirror_vec(
-      mirror_pos.x() - new_slot_info.center().x(),
-      mirror_pos.y() - new_slot_info.center().y());
+  const Eigen::Vector2d origin_pt_01_vec = origin_pt_1 - origin_pt_0;
+  const Eigen::Vector2d origin_pt_01_vec_n(origin_pt_01_vec.y(),
+                                           -origin_pt_01_vec.x());
 
-  const Eigen::Vector2d slot_pt01_mid(
-      (slot_pts[0].x() + slot_pts[1].x()) / 2.0,
-      (slot_pts[0].y() + slot_pts[1].y()) / 2.0);
+  const Eigen::Vector2d origin_pt_01_mid = (origin_pt_0 + origin_pt_1) / 2.0;
+  pnc::geometry_lib::LineSegment line(
+      origin_pt_01_mid, origin_pt_01_mid + origin_pt_01_vec_n.normalized());
 
-  const Eigen::Vector2d slot_pt23_mid(
-      (slot_pts[2].x() + slot_pts[3].x()) / 2.0,
-      (slot_pts[2].y() + slot_pts[3].y()) / 2.0);
+  double lon_dist = pnc::geometry_lib::CalPoint2LineDist(mirror_pos, line);
 
-  const auto slot_heading_vec_unit =
-      (slot_pt01_mid - slot_pt23_mid).normalized();
+  const Eigen::Vector2d pt_01_mid_mirr_vec = mirror_pos - origin_pt_01_mid;
+  const double cros = pnc::geometry_lib::GetCrossFromTwoVec2d(
+      origin_pt_01_vec_n, pt_01_mid_mirr_vec);
 
-  // longitudinal distance from slot center to car mirror
-  // behind slot is negative, forward slot is positive
-  double longitudinal_dist = pnc::geometry_lib::GetCrossFromTwoVec2d(
-      slot_heading_vec_unit, slot_center_to_mirror_vec);
-  if (cross_product < 1e-6) {
-    longitudinal_dist = -longitudinal_dist;
+  // when car is at outside, lon_dist should be negative
+  if ((cross_product < 1e-5 && cros > 0.0) ||
+      (cross_product > 1e-5 && cros < 0.0)) {
+    // right side slot and car is at outside
+    // left side slot and car is at outside
+    lon_dist *= -1.0;
   }
-  return longitudinal_dist;
+
+  return lon_dist;
 }
 
 bool SlotManagement::AngleUpdateCondition(
     const common::SlotInfo &new_slot_info) {
-  const auto measurement = frame_.measurement;
+  const Measurement measurement = frame_.measurement;
 
-  const auto mirror_center_pos =
+  const Eigen::Vector2d mirror_center_pos =
       (measurement.left_mirror_pos + measurement.right_mirror_pos) / 2.0;
 
   const Eigen::Vector2d mirror_center_to_slot_center_vec(
       new_slot_info.center().x() - mirror_center_pos.x(),
       new_slot_info.center().y() - mirror_center_pos.y());
 
-  const auto angle = std::fabs(pnc::transform::GetAngleFromTwoVec(
+  double angle = std::fabs(pnc::transform::GetAngleFromTwoVec(
       measurement.ego_heading_vec, mirror_center_to_slot_center_vec));
 
-  const auto angle_offset = pnc::mathlib::Deg2Rad(
+  const double angle_offset = pnc::mathlib::Deg2Rad(
       apa_param.GetParam().max_slots_update_angle_dis_limit_deg);
 
-  double mid_angle = 0.5 * kPie;
-
   if (new_slot_info.slot_type() == Common::PARKING_SLOT_TYPE_SLANTING &&
-      frame_.slot_info_direction.count(new_slot_info.id()) != 0 &&
-      frame_.slot_info_angle.count(new_slot_info.id()) != 0) {
-    if (frame_.slot_info_direction[new_slot_info.id()]) {
-      mid_angle +=
-          (90.0 - frame_.slot_info_angle[new_slot_info.id()].first) / 57.3;
-    } else {
-      mid_angle -=
-          (90.0 - frame_.slot_info_angle[new_slot_info.id()].first) / 57.3;
-    }
-    mid_angle = std::max(mid_angle, angle_offset + 0.068);
+      frame_.slot_info_corner_01.count(new_slot_info.id()) != 0) {
+    const Eigen::Vector2d origin_pt_0 =
+        frame_.slot_info_corner_01[new_slot_info.id()].first;
+    const Eigen::Vector2d origin_pt_1 =
+        frame_.slot_info_corner_01[new_slot_info.id()].second;
+
+    const Eigen::Vector2d origin_pt_01_vec = origin_pt_1 - origin_pt_0;
+    const Eigen::Vector2d origin_pt_01_vec_n_down(-origin_pt_01_vec.y(),
+                                                  origin_pt_01_vec.x());
+    const Eigen::Vector2d origin_pt_01_mid = (origin_pt_0 + origin_pt_1) / 2.0;
+    const Eigen::Vector2d slot_center =
+        origin_pt_01_mid + 2.5 * origin_pt_01_vec_n_down;
+    const Eigen::Vector2d mirror_center_vec = slot_center - mirror_center_pos;
+    angle = std::fabs(pnc::transform::GetAngleFromTwoVec(
+        measurement.ego_heading_vec, mirror_center_vec));
   }
+
+  const double mid_angle = 0.5 * kPie;
 
   return pnc::mathlib::IsInBound(angle, mid_angle - angle_offset,
                                  mid_angle + angle_offset);
@@ -1438,17 +1441,35 @@ bool SlotManagement::AngleUpdateCondition(
 
 const double SlotManagement::CalAngleSlot2Car(
     const common::SlotInfo &new_slot_info) const {
-  const auto measurement = frame_.measurement;
+  const Measurement measurement = frame_.measurement;
 
-  const auto mirror_center_pos =
+  const Eigen::Vector2d mirror_center_pos =
       (measurement.left_mirror_pos + measurement.right_mirror_pos) / 2.0;
 
   const Eigen::Vector2d mirror_center_to_slot_center_vec(
       new_slot_info.center().x() - mirror_center_pos.x(),
       new_slot_info.center().y() - mirror_center_pos.y());
 
-  const auto angle = std::fabs(pnc::transform::GetAngleFromTwoVec(
+  double angle = std::fabs(pnc::transform::GetAngleFromTwoVec(
       measurement.ego_heading_vec, mirror_center_to_slot_center_vec));
+
+  if (new_slot_info.slot_type() == Common::PARKING_SLOT_TYPE_SLANTING &&
+      frame_.slot_info_corner_01.count(new_slot_info.id()) != 0) {
+    const Eigen::Vector2d origin_pt_0 =
+        frame_.slot_info_corner_01.at(new_slot_info.id()).first;
+    const Eigen::Vector2d origin_pt_1 =
+        frame_.slot_info_corner_01.at(new_slot_info.id()).second;
+
+    const Eigen::Vector2d origin_pt_01_vec = origin_pt_1 - origin_pt_0;
+    const Eigen::Vector2d origin_pt_01_vec_n_down(-origin_pt_01_vec.y(),
+                                                  origin_pt_01_vec.x());
+    const Eigen::Vector2d origin_pt_01_mid = (origin_pt_0 + origin_pt_1) / 2.0;
+    const Eigen::Vector2d slot_center =
+        origin_pt_01_mid + 2.5 * origin_pt_01_vec_n_down;
+    const Eigen::Vector2d mirror_center_vec = slot_center - mirror_center_pos;
+    angle = std::fabs(pnc::transform::GetAngleFromTwoVec(
+        measurement.ego_heading_vec, mirror_center_vec));
+  }
 
   return angle;
 }
@@ -1668,6 +1689,22 @@ bool SlotManagement::UpdateEgoSlotInfo(
     ego_slot_info.slot_occupied_ratio = 0.0;
   }
 
+  ego_slot_info.sin_angle = 1.0;
+  ego_slot_info.origin_pt_0_heading = 0.0;
+  ego_slot_info.pt_0 = ego_slot_info.g2l_tf.GetPos(pt[0]);
+  ego_slot_info.pt_1 = ego_slot_info.g2l_tf.GetPos(pt[1]);
+  if (select_slot.slot_type() == Common::PARKING_SLOT_TYPE_SLANTING) {
+    if (frame_.slot_info_angle.count(select_slot.id()) != 0) {
+      ego_slot_info.sin_angle = frame_.slot_info_angle[select_slot.id()].second;
+      ego_slot_info.origin_pt_0_heading =
+          90.0 - frame_.slot_info_angle[select_slot.id()].first;
+      ego_slot_info.pt_0 = ego_slot_info.g2l_tf.GetPos(
+          frame_.slot_info_corner_01[select_slot.id()].first);
+      ego_slot_info.pt_1 = ego_slot_info.g2l_tf.GetPos(
+          frame_.slot_info_corner_01[select_slot.id()].second);
+    }
+  }
+
   ego_slot_info.obs_pt_vec_slot.clear();
   if (frame_.obs_pt_map.count(select_slot.id()) == 0) {
     return true;
@@ -1851,17 +1888,28 @@ void SlotManagement::UpdateSlotInfoInParking() {
       IfUpdateSlot(ego_slot_info.select_slot,
                    ego_slot_info.select_fusion_slot.fusion_source());
 
+  double slot_update_out_heading_max =
+      apa_param.GetParam().slot_update_out_heading_max;
+  double slot_update_out_heading_min =
+      apa_param.GetParam().slot_update_out_heading_min;
+  double slot_update_out_lat_max = apa_param.GetParam().slot_update_out_lat_max;
+  double slot_update_out_lat_min = apa_param.GetParam().slot_update_out_lat_min;
+
+  if (ego_slot_info.slot_type == Common::PARKING_SLOT_TYPE_SLANTING) {
+    slot_update_out_heading_max -= ego_slot_info.origin_pt_0_heading;
+    slot_update_out_heading_min -= ego_slot_info.origin_pt_0_heading;
+    slot_update_out_lat_min = 0.01;
+  }
+
   bool update_slot_condition_2 =
       (ego_slot_info.slot_occupied_ratio <
        apa_param.GetParam().slot_update_in_or_out_occupied_ratio) &&
       (std::fabs(ego_slot_info.ego_heading_slot) <
-           apa_param.GetParam().slot_update_out_heading_max / 57.3 &&
+           slot_update_out_heading_max / 57.3 &&
        std::fabs(ego_slot_info.ego_heading_slot) >
-           apa_param.GetParam().slot_update_out_heading_min / 57.3) &&
-      (std::fabs(ego_slot_info.ego_pos_slot.y()) <
-           apa_param.GetParam().slot_update_out_lat_max &&
-       std::fabs(ego_slot_info.ego_pos_slot.y()) >
-           apa_param.GetParam().slot_update_out_lat_min);
+           slot_update_out_heading_min / 57.3) &&
+      (std::fabs(ego_slot_info.ego_pos_slot.y()) < slot_update_out_lat_max &&
+       std::fabs(ego_slot_info.ego_pos_slot.y()) > slot_update_out_lat_min);
 
   bool update_slot_condition_3 =
       (ego_slot_info.slot_occupied_ratio >=
