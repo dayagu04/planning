@@ -92,10 +92,10 @@ void Init() {
   cost_config[W_TERMINAL_THETA] = 9000.0;
   cost_config[W_U] = 10.0;
   cost_config[W_K] = 10.0;
-  alilqr_config_vec[ilqr_solver::W_K_HARDBOUND] = 75.0;
-  alilqr_config_vec[ilqr_solver::W_U_HARDBOUND] = 75.0;
-  alilqr_config_vec[ilqr_solver::L_K_HARDBOUND] = 0.0;
-  alilqr_config_vec[ilqr_solver::L_U_HARDBOUND] = 0.05412;
+  alilqr_config_vec[W_K_HARDBOUND] = 75.0;
+  alilqr_config_vec[W_U_HARDBOUND] = 75.0;
+  alilqr_config_vec[L_K_HARDBOUND] = 0.0;
+  alilqr_config_vec[L_U_HARDBOUND] = 0.05412;
 }
 
 void SetRandomMat(Eigen::MatrixXd &A) {
