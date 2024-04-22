@@ -2352,6 +2352,10 @@ const bool PerpendicularPathPlanner::SetCurrentPathSegIndex() {
 
   const int first = output_.path_seg_index.first;
   const int second = output_.path_seg_index.second;
+  if (first < 0 || second < 0 || first > second) {
+    std::cout << "first and second index is err\n";
+    return false;
+  }
   for (int i = second; i >= first; --i) {
     if (output_.path_segment_vec[i].seg_type ==
         pnc::geometry_lib::SEG_TYPE_ARC) {
