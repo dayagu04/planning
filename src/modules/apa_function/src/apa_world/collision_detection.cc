@@ -474,7 +474,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
             D = cross_points.back();
           }
         }
-        const auto v_OD = cross_points.front() - arc.circle_info.center;
+        const auto v_OD = D - arc.circle_info.center;
 
         const auto obs_rot_angle =
             pnc::geometry_lib::GetAngleFromTwoVec(v_OC, v_OD);
@@ -483,7 +483,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
             fabs(obs_rot_angle) < fabs(min_obs_rot_limit_angle)) {
           // the rotation direction of obstacles and car must be opposite
           min_obs_rot_limit_angle = obs_rot_angle;
-          collision_point = cross_points.front();
+          collision_point = D;
           i = j;
           h = k;
           key = obs_pt_pair.first;
