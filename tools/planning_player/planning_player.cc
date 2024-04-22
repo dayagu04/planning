@@ -650,7 +650,7 @@ void PlanningPlayer::RunCloseLoop(
                 << std::endl;
       return;
     }
-
+    PerpareTrajectory(planning_output);
     for (auto it = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
          it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
       auto loc_msg_i =
@@ -661,7 +661,7 @@ void PlanningPlayer::RunCloseLoop(
       if (loc_header_time_i > loc_esti_header_time_us_) {
         if (loc_header_time_i <= next_loc_esti_header_time_us_) {
           auto delta_t = loc_header_time_i - loc_esti_header_time_us_;
-          PerfectControlSCC(planning_output, delta_t, loc_msg_i);
+          PerfectControlSCC(delta_t, loc_msg_i);
         } else {
           break;
         }
@@ -703,7 +703,7 @@ void PlanningPlayer::RunCloseLoop(
                 << std::endl;
       return;
     }
-
+    PerpareTrajectory(planning_output);
     for (auto it = msg_cache_[TOPIC_LOCALIZATION].begin();
          it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
       auto loc_msg_i =
@@ -714,7 +714,7 @@ void PlanningPlayer::RunCloseLoop(
       if (loc_header_time_i > loc_header_time_us_) {
         if (loc_header_time_i <= next_loc_header_time_us_) {
           auto delta_t = loc_header_time_i - loc_header_time_us_;
-          PerfectControlHPP(planning_output, delta_t, loc_msg_i);
+          PerfectControlHPP(delta_t, loc_msg_i);
         } else {
           break;
         }
@@ -725,10 +725,8 @@ void PlanningPlayer::RunCloseLoop(
   }
 }
 
-void PlanningPlayer::PerfectControlHPP(
-    const PlanningOutput::PlanningOutput& plan_msg, uint64_t delta_t,
-    std::shared_ptr<IFLYLocalization::IFLYLocalization>& loc_msg) {
-  const double dt = static_cast<double>(delta_t) / 1e6;
+void PlanningPlayer::PerpareTrajectory(
+    const PlanningOutput::PlanningOutput& plan_msg) {
   const auto& trajectory = plan_msg.trajectory();
   auto traj_size = trajectory.trajectory_points_size();
   std::vector<double> x_vec(traj_size);
@@ -737,6 +735,7 @@ void PlanningPlayer::PerfectControlHPP(
   std::vector<double> v_vec(traj_size);
   std::vector<double> a_vec(traj_size);
   std::vector<double> t_vec(traj_size);
+  std::vector<double> yaw_rate_vec(traj_size);
 
   double angle_offset = 0.0;
   static const double pi_const = 3.141592654;
@@ -749,6 +748,7 @@ void PlanningPlayer::PerfectControlHPP(
 
     if (i == 0) {
       theta_vec[i] = trajectory.trajectory_points(i).heading_yaw();
+      yaw_rate_vec[i] = 0;
     } else {
       const auto delta_theta =
           trajectory.trajectory_points(i).heading_yaw() -
@@ -760,26 +760,28 @@ void PlanningPlayer::PerfectControlHPP(
       }
       theta_vec[i] =
           trajectory.trajectory_points(i).heading_yaw() + angle_offset;
+      const auto delta_t = t_vec[i] - t_vec[i - 1];
+      yaw_rate_vec[i] = delta_theta / delta_t;
     }
   }
 
-  pnc::mathlib::spline x_t_spline;
-  pnc::mathlib::spline y_t_spline;
-  pnc::mathlib::spline theta_t_spline;
-  pnc::mathlib::spline v_t_spline;
-  pnc::mathlib::spline a_t_spline;
+  x_t_spline_.set_points(t_vec, x_vec);
+  y_t_spline_.set_points(t_vec, y_vec);
+  theta_t_spline_.set_points(t_vec, theta_vec);
+  v_t_spline_.set_points(t_vec, v_vec);
+  a_t_spline_.set_points(t_vec, a_vec);
+  yaw_rate_t_spline_.set_points(t_vec, yaw_rate_vec);
+}
 
-  x_t_spline.set_points(t_vec, x_vec);
-  y_t_spline.set_points(t_vec, y_vec);
-  theta_t_spline.set_points(t_vec, theta_vec);
-  v_t_spline.set_points(t_vec, v_vec);
-  a_t_spline.set_points(t_vec, a_vec);
-
-  const double x = x_t_spline(dt);
-  const double y = y_t_spline(dt);
-  const double v = v_t_spline(dt);
-  const double a = a_t_spline(dt);
-  const double theta = pnc::mathlib::DeltaAngleFix(theta_t_spline(dt));
+void PlanningPlayer::PerfectControlHPP(
+    uint64_t delta_t,
+    std::shared_ptr<IFLYLocalization::IFLYLocalization>& loc_msg) {
+  const double dt = static_cast<double>(delta_t) / 1e6;
+  const double x = x_t_spline_(dt);
+  const double y = y_t_spline_(dt);
+  const double v = v_t_spline_(dt);
+  const double a = a_t_spline_(dt);
+  const double theta = pnc::mathlib::DeltaAngleFix(theta_t_spline_(dt));
 
   Eigen::Vector3d euler_zxy;
   Eigen::Quaterniond q;
@@ -950,60 +952,14 @@ void PlanningPlayer::PerfectControlAPA(
 }
 
 void PlanningPlayer::PerfectControlSCC(
-    const PlanningOutput::PlanningOutput& plan_msg, uint64_t delta_t,
+    uint64_t delta_t,
     std::shared_ptr<LocalizationOutput::LocalizationEstimate>& loc_msg) {
   const double dt = static_cast<double>(delta_t) / 1e6;
-  const auto& trajectory = plan_msg.trajectory();
-  auto traj_size = trajectory.trajectory_points_size();
-  std::vector<double> x_vec(traj_size);
-  std::vector<double> y_vec(traj_size);
-  std::vector<double> theta_vec(traj_size);
-  std::vector<double> v_vec(traj_size);
-  std::vector<double> a_vec(traj_size);
-  std::vector<double> t_vec(traj_size);
-
-  double angle_offset = 0.0;
-  static const double pi_const = 3.141592654;
-  for (size_t i = 0; i < traj_size; ++i) {
-    t_vec[i] = trajectory.trajectory_points(i).t();
-    x_vec[i] = trajectory.trajectory_points(i).x();
-    y_vec[i] = trajectory.trajectory_points(i).y();
-    v_vec[i] = trajectory.trajectory_points(i).v();
-    a_vec[i] = trajectory.trajectory_points(i).a();
-
-    if (i == 0) {
-      theta_vec[i] = trajectory.trajectory_points(i).heading_yaw();
-    } else {
-      const auto delta_theta =
-          trajectory.trajectory_points(i).heading_yaw() -
-          trajectory.trajectory_points(i - 1).heading_yaw();
-      if (delta_theta > 1.5 * pi_const) {
-        angle_offset -= 2.0 * pi_const;
-      } else if (delta_theta < -1.5 * pi_const) {
-        angle_offset += 2.0 * pi_const;
-      }
-      theta_vec[i] =
-          trajectory.trajectory_points(i).heading_yaw() + angle_offset;
-    }
-  }
-
-  pnc::mathlib::spline x_t_spline;
-  pnc::mathlib::spline y_t_spline;
-  pnc::mathlib::spline theta_t_spline;
-  pnc::mathlib::spline v_t_spline;
-  pnc::mathlib::spline a_t_spline;
-
-  x_t_spline.set_points(t_vec, x_vec);
-  y_t_spline.set_points(t_vec, y_vec);
-  theta_t_spline.set_points(t_vec, theta_vec);
-  v_t_spline.set_points(t_vec, v_vec);
-  a_t_spline.set_points(t_vec, a_vec);
-
-  const double x = x_t_spline(dt);
-  const double y = y_t_spline(dt);
-  const double v = v_t_spline(dt);
-  const double a = a_t_spline(dt);
-  const double theta = pnc::mathlib::DeltaAngleFix(theta_t_spline(dt));
+  const double x = x_t_spline_(dt);
+  const double y = y_t_spline_(dt);
+  const double v = v_t_spline_(dt);
+  const double a = a_t_spline_(dt);
+  const double theta = pnc::mathlib::DeltaAngleFix(theta_t_spline_(dt));
 
   Eigen::Vector3d euler_zxy;
   Eigen::Quaterniond q;

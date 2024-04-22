@@ -48,11 +48,12 @@ class PlanningPlayer {
                     const planning::common::TopicTimeList &input_time_list);
   void PlayAllFrames();
   void RunCloseLoop(const PlanningOutput::PlanningOutput &planning_output);
+  void PerpareTrajectory(const PlanningOutput::PlanningOutput &plan_msg);
   void PerfectControlHPP(
-      const PlanningOutput::PlanningOutput &plan_msg, uint64_t delta_t,
+      uint64_t delta_t,
       std::shared_ptr<IFLYLocalization::IFLYLocalization> &loc_msg);
   void PerfectControlSCC(
-      const PlanningOutput::PlanningOutput &plan_msg, uint64_t delta_t,
+      uint64_t delta_t,
       std::shared_ptr<LocalizationOutput::LocalizationEstimate> &loc_msg);
   void PerfectControlAPA(
       const PlanningOutput::PlanningOutput &plan_msg, uint64_t delta_t,
@@ -86,6 +87,12 @@ class PlanningPlayer {
   std::string scene_type_ = "acc";
   FuncStateMachine::FunctionalState last_functional_state =
       FuncStateMachine::FunctionalState::INIT;
+  pnc::mathlib::spline x_t_spline_;
+  pnc::mathlib::spline y_t_spline_;
+  pnc::mathlib::spline theta_t_spline_;
+  pnc::mathlib::spline v_t_spline_;
+  pnc::mathlib::spline a_t_spline_;
+  pnc::mathlib::spline yaw_rate_t_spline_;
 
   template <class T>
   void cache_with_msg_time(const apollo::cyber::record::RecordMessage &msg);
