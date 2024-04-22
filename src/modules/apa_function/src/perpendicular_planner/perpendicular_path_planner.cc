@@ -2350,8 +2350,9 @@ const bool PerpendicularPathPlanner::SetCurrentPathSegIndex() {
     return false;
   }
 
-  for (int i = output_.path_seg_index.second; i >= output_.path_seg_index.first;
-       --i) {
+  const int first = output_.path_seg_index.first;
+  const int second = output_.path_seg_index.second;
+  for (int i = second; i >= first; --i) {
     if (output_.path_segment_vec[i].seg_type ==
         pnc::geometry_lib::SEG_TYPE_ARC) {
       output_.current_arc_steer = output_.steer_vec[i];
