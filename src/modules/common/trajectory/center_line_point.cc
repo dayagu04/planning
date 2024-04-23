@@ -7,7 +7,7 @@ CenterLinePoint::CenterLinePoint(double x, double y, double s, double l,
                                  double theta, double kappa, double dkappa,
                                  double ddkappa, double left_lane_width,
                                  double right_lane_width)
-    : trajectory::PathPoint(x, y, s, l, theta, kappa, dkappa, ddkappa),
+    : planning_math::PathPoint(x, y, s, l, theta, kappa, dkappa, ddkappa),
       left_lane_width_(left_lane_width),
       right_lane_width_(right_lane_width) {}
 
@@ -16,7 +16,7 @@ CenterLinePoint::CenterLinePoint(double x, double y, double s, double l,
                                  double ddkappa, double left_lane_width,
                                  double right_lane_width,
                                  double actual_lane_width)
-    : trajectory::PathPoint(x, y, s, l, theta, kappa, dkappa, ddkappa),
+    : planning_math::PathPoint(x, y, s, l, theta, kappa, dkappa, ddkappa),
       left_lane_width_(left_lane_width),
       right_lane_width_(right_lane_width),
       actual_lane_width_(actual_lane_width) {}

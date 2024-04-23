@@ -3,12 +3,12 @@
 #include "math/integral.h"
 #include "math/linear_interpolation.h"
 #include "math/math_utils.h"
-#include "path_point.h"
+#include "utils/path_point.h"
 
 namespace planning {
 namespace trajectory {
 
-class TrajectoryPoint : public PathPoint {
+class TrajectoryPoint : public planning_math::PathPoint {
  public:
   TrajectoryPoint() = default;
 

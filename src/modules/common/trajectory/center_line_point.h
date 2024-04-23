@@ -1,11 +1,11 @@
 #pragma once
 
-#include "trajectory/path_point.h"
+#include "utils/path_point.h"
 
 namespace planning {
 namespace trajectory {
 
-class CenterLinePoint : public trajectory::PathPoint {
+class CenterLinePoint : public planning_math::PathPoint {
  public:
   CenterLinePoint() = default;
 

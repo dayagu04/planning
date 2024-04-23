@@ -4,7 +4,6 @@
 #include <vector>
 #include "fusion_road.pb.h"
 #include "ifly_time.h"
-#include "path_point.h"
 #include "reference_path.h"
 #include "trajectory/center_line_point.h"
 // #include "trajectory/path_point.h"
