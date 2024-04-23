@@ -349,7 +349,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'line_{}_y'.format(i): line_info_list[i]['line_y_vec'],
         })
       except:
-        print('error')
+        # print('error')
         pass
 
     center_line_list = load_lane_center_lines(road_msg.reference_line_msg, is_enu_to_car, loc_msg, g_is_display_enu)

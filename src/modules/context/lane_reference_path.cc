@@ -1,4 +1,7 @@
 #include "lane_reference_path.h"
+#include <openssl/evp.h>
+#include <sys/param.h>
+#include <cmath>
 
 #include "ifly_time.h"
 #include "obstacle_manager.h"
@@ -166,7 +169,41 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
     }
     ref_path_points.emplace_back(std::move(ref_path_pt));
   }
-
+  //判断参考线的长度是否大于自车5s的行驶距离，如果不够的话，则延长参考线
+  // calculate reference path origin total length
+  double origin_reference_path_total_length = 0;
+  for (int i = 1; i < ref_path_points.size(); i++) {
+    const auto &cur_point = ref_path_points[i].path_point;
+    const auto &pre_point = ref_path_points[i - 1].path_point;
+    origin_reference_path_total_length +=
+        std::hypotf(pre_point.x - cur_point.x, pre_point.y - cur_point.y);
+  }
+  origin_reference_path_length_ = origin_reference_path_total_length;
+  const bool is_highway =
+      session_->get_scene_type() == planning::common::SceneType::HIGHWAY;
+  if (ref_path_points.size() >= 2 && is_highway) {
+    const std::shared_ptr<EgoStateManager> ego_state_mgr =
+        session_->mutable_environmental_model()->get_ego_state_manager();
+    const double ego_v = ego_state_mgr->ego_v();
+    const double cruise_v = ego_state_mgr->ego_v_cruise();
+    const double preview_dis = std::fmax(ego_v, cruise_v) * 5;
+    const double extend_buff = 5;
+    const double ego_projection_length_in_reference_path =
+        CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
+    // if need to extend reference path length
+    if (preview_dis + ego_projection_length_in_reference_path >
+        origin_reference_path_total_length) {
+      const double extend_length =
+          preview_dis + ego_projection_length_in_reference_path -
+          origin_reference_path_total_length + extend_buff;
+      ReferencePathPoint extend_point;
+      const int point_nums = ref_path_points.size();
+      extend_point = CalculateExtendedReferencePathPoint(
+          ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
+          extend_length);
+      ref_path_points.emplace_back(std::move(extend_point));
+    }
+  }
   return ref_path_points.size() >= 3;
 }
 
@@ -299,6 +336,87 @@ bool LaneReferencePath::is_potential_current_leadone_leadtwo_to_ego(
   } else {
     return false;
   }
+}
+ReferencePathPoint LaneReferencePath::CalculateExtendedReferencePathPoint(
+    const ReferencePathPoint &p1, const ReferencePathPoint &p2,
+    const double length) const {
+  // 计算直线方向向量
+  double dx = p2.path_point.x - p1.path_point.x;
+  double dy = p2.path_point.y - p1.path_point.y;
+  // 计算直线长度
+  double line_length = sqrt(dx * dx + dy * dy);
+  // 将方向向量归一化
+  dx /= line_length;
+  dy /= line_length;
+  // 计算延长后的点坐标
+  ReferencePathPoint extend_point;
+  extend_point.path_point.x = p2.path_point.x + dx * length;
+  extend_point.path_point.y = p2.path_point.y + dy * length;
+
+  const auto &last_point = p2;
+  extend_point.path_point.set_z(last_point.path_point.z);
+  extend_point.path_point.set_theta(last_point.path_point.theta);
+  extend_point.path_point.set_kappa(1e-6);
+
+  extend_point.distance_to_left_lane_border =
+      last_point.distance_to_left_lane_border;
+  extend_point.distance_to_left_road_border =
+      last_point.distance_to_left_road_border;
+  extend_point.distance_to_right_lane_border =
+      last_point.distance_to_right_lane_border;
+  extend_point.distance_to_right_road_border =
+      last_point.distance_to_right_road_border;
+
+  extend_point.left_road_border_type = last_point.left_road_border_type;
+  extend_point.right_road_border_type = last_point.right_road_border_type;
+  extend_point.left_lane_border_type = last_point.left_lane_border_type;
+  extend_point.right_lane_border_type = last_point.right_lane_border_type;
+  extend_point.lane_width = last_point.lane_width;
+  extend_point.max_velocity = last_point.max_velocity;
+  extend_point.min_velocity = last_point.min_velocity;
+  extend_point.type = ReferencePathPointType::MAP;
+  extend_point.is_in_intersection = last_point.is_in_intersection;
+
+  return extend_point;
+}
+double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
+    const ReferencePathPoints &ref_path_points) const {
+  const std::shared_ptr<EgoStateManager> ego_state_mgr =
+      session_->mutable_environmental_model()->get_ego_state_manager();
+  const auto &ego_pose = ego_state_mgr->ego_pose();
+  double dx = ego_pose.x - ref_path_points[0].path_point.x;
+  double dy = ego_pose.y - ref_path_points[0].path_point.y;
+  const int point_nums = ref_path_points.size();
+  int nearest_point_index = 0;
+  double accumulate_distance_for_nearest_point = 0;
+  double accumulate_distance_reference_path = 0;
+  double min_distance_square_to_ego_point = dx * dx + dy * dy;
+  // find nearest point
+  for (int i = 1; i < point_nums; i++) {
+    const auto &cur_point = ref_path_points[i].path_point;
+    const auto &pre_point = ref_path_points[i - 1].path_point;
+    accumulate_distance_reference_path +=
+        std::hypotf(pre_point.x - cur_point.x, pre_point.y - cur_point.y);
+    dx = ego_pose.x - cur_point.x;
+    dy = ego_pose.y - cur_point.y;
+    double temp_min_distance_square_to_ego_point = dx * dx + dy * dy;
+    if (temp_min_distance_square_to_ego_point <
+        min_distance_square_to_ego_point) {
+      nearest_point_index = i;
+      accumulate_distance_for_nearest_point =
+          accumulate_distance_reference_path;
+      min_distance_square_to_ego_point = temp_min_distance_square_to_ego_point;
+    }
+  }
+  // calculate ego projection distance in reference path
+  const auto &nearest_point = ref_path_points[nearest_point_index].path_point;
+  dx = ego_pose.x - nearest_point.x;
+  dy = ego_pose.y - nearest_point.y;
+  const double projection_length =
+      dx * std::cos(nearest_point.theta) + dy * std::sin(nearest_point.theta);
+  const double ego_projection_distance_in_reference_path =
+      projection_length + accumulate_distance_for_nearest_point;
+  return ego_projection_distance_in_reference_path;
 }
 
 }  // namespace planning

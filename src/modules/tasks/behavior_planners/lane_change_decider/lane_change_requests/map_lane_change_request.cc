@@ -1,4 +1,5 @@
 #include "map_lane_change_request.h"
+#include "debug_info_log.h"
 
 namespace planning {
 const double kNeedLaneChangeTime = 4.0;
@@ -89,6 +90,7 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
   int lc_map_decision = current_lane != nullptr
                             ? virtual_lane_mgr_->lc_map_decision(current_lane)
                             : 0;
+  JSON_DEBUG_VALUE("lc_map_decision", lc_map_decision);
 
   bool allow_cancel = (lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT ||
                        lc_status == ROAD_LC_RWAIT);

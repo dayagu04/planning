@@ -3,6 +3,7 @@
 #include <string>
 
 #include "common.pb.h"
+#include "debug_info_log.h"
 #include "interactive_lane_change_request.h"
 
 namespace planning {
@@ -24,6 +25,7 @@ void IntRequest::Update(int lc_status) {
   lane_change_cmd_ = session_->mutable_environmental_model()
                          ->get_ego_state_manager()
                          ->ego_blinker();
+  JSON_DEBUG_VALUE("lane_change_cmd_", lane_change_cmd_);
   if (lane_change_cmd_ == 0) {
     is_lever_status_valid_ = true;
   }

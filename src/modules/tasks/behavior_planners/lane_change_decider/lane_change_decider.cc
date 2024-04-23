@@ -19,6 +19,10 @@
 
 namespace planning {
 
+namespace {
+constexpr double kEps = 1e-6;
+}
+
 LaneChangeDecider::LaneChangeDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : Task(config_builder, session) {
@@ -1529,7 +1533,7 @@ void LaneChangeDecider::UpdateCoarsePlanningInfo() {
   TrajectoryPoint point;
   for (size_t i = 0; i < N; ++i) {
     // cart info
-    if (s_ref < cart_ref_info.s_vec.back()) {
+    if (s_ref < cart_ref_info.s_vec.back() + kEps) {
       point.x = cart_ref_info.x_s_spline(s_ref);
       point.y = cart_ref_info.y_s_spline(s_ref);
       point.heading_angle =

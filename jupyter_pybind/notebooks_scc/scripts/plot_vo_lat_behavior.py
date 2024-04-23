@@ -8,7 +8,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt 
-bag_path = "/share//mnt/noa/20231008/noa_15.00000" #.1688547247.plan
+bag_path = "/data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240417/20240417-15-03-09/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-04-17-15-03-09_no_camera.record" #.1688547247.plan
 # bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
@@ -25,7 +25,7 @@ obj_id = 0
 ### sliders config
 class LatBehaviorSlider:
   def __init__(self,  slider_callback):
-    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=0.1, step=frame_dt)
+    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%', height='100%'), description= "bag_time",min=0.0, max=max_time, value=0.1, step=frame_dt)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider)
 
 # 障碍物的id选择
@@ -58,13 +58,18 @@ data_avd_cars = ColumnDataSource({
   'pos_y':[],
   'pos_x':[]
 })
+lc_data_3 = ColumnDataSource({
+  'name':[],
+  'data':[]
+})
 columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
     ]
-data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=400, height=800)
-data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=800)
-data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=400, height=800)
+data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=400, height=600)
+data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=1000)
+data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=400, height=300)
+data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=400, height=350)
 
 fig1.line('d_poly_y', 'd_poly_x', source = data_d_poly, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'd_poly')
 fig1.line('fixlane_y', 'fixlane_x', source = data_fix_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
@@ -136,6 +141,7 @@ def update_data(lat_behavior_common, vo_lat_motion_plan):
       names.append(name)
     except:
       pass
+      
   behavior_data_1.data.update({
     'name': names,
     'data': datas,
@@ -166,6 +172,30 @@ def update_data(lat_behavior_common, vo_lat_motion_plan):
     'data': datas,
   })
   push_notebook()
+def update_lc_data (noa_info, plan_debug_json):
+  vars_noa = ['distance_to_ramp','distance_to_split','distance_to_merge']
+  names  = []
+  datas = []
+  for name in vars_noa:
+    try:
+      datas.append(getattr(noa_info,name))
+      names.append(name)
+    except:
+      pass
+  vars_lc = ['hdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision','is_in_merge_area',
+             'current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
+             'is_solid_left_boundary','is_solid_right_boundary']
+  for name in vars_lc:
+    try:
+      datas.append((plan_debug_json[name]))
+      names.append(name)
+    except:
+      pass
+  lc_data_3.data.update({
+    'name': names,
+    'data': datas,
+  })
+  push_notebook()
 
 def slider_callback(bag_time):
   global plan_debug_msg_idx
@@ -174,9 +204,15 @@ def slider_callback(bag_time):
   if bag_loader.plan_debug_msg['enable'] == True:
     while bag_loader.plan_debug_msg['t'][plan_debug_msg_idx] <= bag_time and plan_debug_msg_idx < (len(bag_loader.plan_debug_msg['t'])-2):
         plan_debug_msg_idx = plan_debug_msg_idx + 1
+  #增加宏观变道决策的信息
+  global plan_hmi_msg_idx
+  plan_hmi_msg_idx = 0
+  if bag_loader.planning_hmi_msg['enable'] == True:
+    while bag_loader.planning_hmi_msg['t'][plan_hmi_msg_idx] <= bag_time and plan_hmi_msg_idx < (len(bag_loader.planning_hmi_msg['t'])-2):
+        plan_hmi_msg_idx = plan_hmi_msg_idx + 1
 
   obj_id_handler(obj_id)
-  if bag_loader.plan_debug_msg['enable'] == True:
+  if bag_loader.plan_debug_msg['enable'] == True and bag_loader.planning_hmi_msg['enable'] == True:
     vo_lat_motion_plan = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].vo_lat_motion_plan
     # basic_dpoly = vo_lat_motion_plan.basic_dpoly
     # d_poly_x, d_poly_y = gen_line(basic_dpoly[3], basic_dpoly[2], basic_dpoly[1], basic_dpoly[0], 0,60)
@@ -186,7 +222,10 @@ def slider_callback(bag_time):
     # })
 
     lat_behavior_common = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lat_behavior_common
+    plan_debug_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
+    noa_info = bag_loader.planning_hmi_msg['data'][plan_hmi_msg_idx].ad_info
     update_data(lat_behavior_common, vo_lat_motion_plan)
+    update_lc_data(noa_info, plan_debug_json)
 
     lat_behavior_plan = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].vo_lat_behavior_plan
 
@@ -196,13 +235,13 @@ def slider_callback(bag_time):
     for id in lat_behavior_plan.avoid_car_ids:
       tmp_str = '(' + str(id) + ')'
       for index, obs_label in enumerate(local_view_data_['data_fus_obj'].data['obs_label']):
-        if tmp_str in obs_label:
+        if tmp_str in obs_label and 'pos_x_rel' in local_view_data_['data_fus_obj'].data:
           pos_x_rel = local_view_data_['data_fus_obj'].data['pos_x_rel'][index]
           pos_y_rel = local_view_data_['data_fus_obj'].data['pos_y_rel'][index]
           pos_y_rels.append(pos_y_rel)
           pos_x_rels.append(pos_x_rel)
           break
-    print('avoid obstacle: ', lat_behavior_plan.avoid_car_ids)
+    # print('avoid obstacle: ', lat_behavior_plan.avoid_car_ids)
     data_avd_cars.data.update({
       'pos_y':pos_y_rels,
       'pos_x':pos_x_rels,
@@ -210,7 +249,7 @@ def slider_callback(bag_time):
 
   push_notebook()
 
-
-bkp.show(row(fig1,data_obstacle_table,data_behavior_table_1,data_behavior_table_2), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
+bkp.show(row(fig1,data_behavior_table_1,column(data_lc_table_3,data_obstacle_table,data_behavior_table_2)), notebook_handle=True)
 slider_class = ObjText(obj_id_handler)
+

@@ -1,4 +1,5 @@
 #include "environmental_model.h"
+#include "debug_info_log.h"
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"
 #include "frenet_ego_state.h"
@@ -45,6 +46,7 @@ void EnvironmentalModel::UpdateStaticMap(const LocalView &local_view) {
     std::cout << "error!!! because more than 20s no update hdmap!!!"
               << std::endl;
   }
+  JSON_DEBUG_VALUE("hdmap_valid_", hdmap_valid_)
 }
 
 }  // namespace planning

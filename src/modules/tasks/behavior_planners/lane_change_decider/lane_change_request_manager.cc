@@ -2,6 +2,7 @@
 
 #include "adas_function/mrc_condition.h"
 #include "config/basic_type.h"
+#include "debug_info_log.h"
 
 namespace planning {
 
@@ -130,7 +131,7 @@ bool LaneChangeRequestManager::Update(
   LOG_WARNING(
       "[LCRequestManager::update] ===cur_state: %d=== gen_turn_signal_: %d \n",
       lc_status, gen_turn_signal_);
-
+  JSON_DEBUG_VALUE("cur_state", lc_status)
   return true;
 }
 
