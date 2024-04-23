@@ -42,12 +42,18 @@ class LaneReferencePath
     return current_leadtwo_obstacle_to_ego_;
   }
   bool IsObstacleOn(std::shared_ptr<FrenetObstacle> frenet_obstacle);
+  double get_origin_reference_path_length() const {
+    return origin_reference_path_length_;
+  }
 
  private:
   void update_refined_lane_points();
   virtual void update_obstacles();
-  ReferencePathPoint ExtendLine(const ReferencePathPoint &p1,
-                                const ReferencePathPoint &p2, double length);
+  ReferencePathPoint CalculateExtendedReferencePathPoint(
+      const ReferencePathPoint &p1, const ReferencePathPoint &p2,
+      const double length) const;
+  double CalculateEgoProjectionDistanceInReferencePath(
+      const ReferencePathPoints &ref_path_points) const;
   bool get_ref_points(ReferencePathPoints &points);
 
   int lane_virtual_id_ = 0;
@@ -56,6 +62,7 @@ class LaneReferencePath
   int lane_leadtwo_obstacle_;
   int current_leadone_obstacle_to_ego_{-1};
   int current_leadtwo_obstacle_to_ego_{-1};
+  double origin_reference_path_length_ = -1;
 };
 
 }  // namespace planning
