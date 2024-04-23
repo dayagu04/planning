@@ -300,7 +300,7 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
     lon_replan = true;
   }
 
-  if (fabs(dist_replan) > max_replan_dist_err) {
+  if (fabs(dist_err) > max_replan_dist_err) {
     dist_replan = true;
   }
 
@@ -324,10 +324,10 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
     lat_init_state.set_y(motion_planner_output.y_s_spline(s_proj));
 
     // update lon init state
-    lon_init_state.set_s(0.0);
+    lon_init_state.set_s(s_proj);
 
     if (!session_->is_hpp_scene()) {
-      if (lon_init_state.v() - ego_state->ego_v() > 3.0) {
+      if (lon_init_state.v() - ego_state->ego_v() > 1.0) {
         lon_init_state.set_v(ego_state->ego_v());
       }
     } else {
