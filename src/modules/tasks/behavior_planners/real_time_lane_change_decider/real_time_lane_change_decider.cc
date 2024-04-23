@@ -54,6 +54,8 @@ bool RealTimeLaneChangeDecider::process() {
 
   most_front_car_.d_rel = params_.most_front_car_dist;
   most_rear_car_.d_rel = params_.most_rear_car_dist;
+  most_front_car_.v_rel = 20.0;
+  most_rear_car_.v_rel = -20.0;
   obstacle_on_target_.clear();
   obstacle_on_target_.push_back(most_front_car_);
   obstacle_on_target_.push_back(most_rear_car_);

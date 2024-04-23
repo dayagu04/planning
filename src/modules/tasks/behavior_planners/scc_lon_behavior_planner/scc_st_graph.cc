@@ -17,6 +17,8 @@ StGraphGenerator::StGraphGenerator(const SccLonBehaviorPlannerConfig &config)
     : config_(config) {
   lead_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step, 0.0,
                                      150.0, 0.1);
+  lead_two_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step, 0.0,
+                                     150.0, 0.1);
   cut_in_desired_distance_filter_.Init(
       -0.2, config_.cut_in_desired_distance_step, 0.0, 150.0, 0.1);
   accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
@@ -162,6 +164,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   double lead_two_desired_distance = 0.0;
   double lead_two_desired_velocity = 0.0;
   double desired_distance_filtered = 0.0;
+  double lead_two_desired_distance_filtered = 0.0;
 
   // 纵向只使用融合成功障碍物
   bool lead_fusion_enable = (lead_one.fusion_source() & OBSTACLE_SOURCE_CAMERA);
@@ -223,6 +226,9 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
       lead_two_desired_velocity = CalcDesiredVelocity(
           lead_two.d_rel(), lead_two_desired_distance, lead_two.v_lead());
 
+      lead_two_desired_distance_filtered = LeadtwoDesiredDistanceFilter(
+        lead_two, v_ego, safe_distance, lead_two_desired_distance);
+
       // update lead two st
       planning::common::RealTimeLonObstacleSTInfo lead_two_st_info;
       lead_two_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
@@ -230,7 +236,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
       lead_two_st_info.set_a_lead(lead_two_a_processed);
       lead_two_st_info.set_v_lead(lead_two.v_lead());
       lead_two_st_info.set_s_lead(lead_two.d_rel());
-      lead_two_st_info.set_desired_distance(lead_two_desired_distance);
+      lead_two_st_info.set_desired_distance(lead_two_desired_distance_filtered);
       lead_two_st_info.set_desired_velocity(lead_two_desired_velocity);
       lead_two_st_info.set_safe_distance(safe_distance);
       lead_two_st_info.set_start_time(0.0);  // TBD:使用可配置参数
@@ -588,14 +594,14 @@ void StGraphGenerator::UpdateSTGraphs(
           s_ref = st.start_s() + st.desired_distance() + s_step;
           // hard bound使用安全距离
           hard_bound.upper = 150;
-          hard_bound.lower = st.start_s() + st.safe_distance() + s_step;
+          hard_bound.lower = std::max(st.start_s() + st.safe_distance() + s_step, 0.0);
           st_boundary.hard_bound.emplace_back(hard_bound);
           s_ref_update = std::max(
               hard_bound.lower, s_ref_update = std::max(sref_update[i], s_ref));
           // soft bound先使用期望跟车距离+buffer
           soft_bound.upper = 150;
           soft_bound.lower =
-              std::max(hard_bound.lower, s_ref + st.v_lead() * 0.5);
+              std::max(0.5 * (hard_bound.lower + s_ref_update), s_ref );
           st_boundary.soft_bound.emplace_back(soft_bound);
           // 根据障碍物跟车距离刷新s_refs
           sref_update[i] = s_ref_update;
@@ -1460,6 +1466,10 @@ double StGraphGenerator::DesiredDistanceFilter(
   }
   lead_desired_distance_filter_.SetState(
       leadone_info->leadone_information().desired_distance());
+  if (!(lon_behav_input_ ->dbw_status())) {
+    lead_desired_distance_filter_.SetState(
+      std::min(lead_obstacle.d_rel(), safe_distance));
+  }
   if (slow_car_cut_in) {
     // 慢车切入
     lead_desired_distance_filter_.SetRate(-4.0,
@@ -1476,6 +1486,58 @@ double StGraphGenerator::DesiredDistanceFilter(
     JSON_DEBUG_VALUE("fast_lead_id", lead_obstacle.track_id());
   }
   leadone_info->mutable_leadone_information()->set_desired_distance(
+      desired_distance_new);
+  return desired_distance_new;
+}
+
+double StGraphGenerator::LeadtwoDesiredDistanceFilter(
+    const planning::common::TrackedObjectInfo &lead_obstacle,
+    const double v_ego, double safe_distance, double desired_distance) {
+  double desired_distance_new = desired_distance;
+  auto leadtwo_info =
+      lon_behav_input_->mutable_lon_decision_info()->mutable_leadtwo_info();
+
+  // 更新lead初始信息
+  if (leadtwo_info->leadtwo_information().obstacle_id() !=
+          lead_obstacle.track_id() ||
+      leadtwo_info->has_leadtwo() != true) {
+    leadtwo_info->set_has_leadtwo(true);
+    leadtwo_info->mutable_leadtwo_information()->set_obstacle_id(
+        lead_obstacle.track_id());
+    leadtwo_info->mutable_leadtwo_information()->set_desired_distance(
+        std::min(lead_obstacle.d_rel(), safe_distance));
+  }
+
+  // TBD: 目前cut in和lead区分不明显，cut in会被判断为lead
+  bool slow_car_cut_in = false;
+  if (lead_obstacle.d_rel() < desired_distance &&
+      lead_obstacle.v_rel() <= 0.5) {
+    slow_car_cut_in = true;
+  }
+  lead_two_desired_distance_filter_.SetState(
+      leadtwo_info->leadtwo_information().desired_distance());
+
+  if (!(lon_behav_input_ ->dbw_status())) {
+    lead_two_desired_distance_filter_.SetState(
+      std::min(lead_obstacle.d_rel(), safe_distance));
+  }
+
+  if (slow_car_cut_in) {
+    // 慢车切入
+    lead_two_desired_distance_filter_.SetRate(-4.0,
+                                          config_.slow_lead_distance_step);
+    lead_two_desired_distance_filter_.Update(desired_distance);
+    desired_distance_new = lead_two_desired_distance_filter_.GetOutput();
+    JSON_DEBUG_VALUE("slow_lead_id", lead_obstacle.track_id());
+  } else {
+    // 快车切入
+    lead_two_desired_distance_filter_.SetRate(-4.0,
+                                          config_.fast_lead_distance_step);
+    lead_two_desired_distance_filter_.Update(desired_distance);
+    desired_distance_new = lead_two_desired_distance_filter_.GetOutput();
+    JSON_DEBUG_VALUE("fast_lead_id", lead_obstacle.track_id());
+  }
+  leadtwo_info->mutable_leadtwo_information()->set_desired_distance(
       desired_distance_new);
   return desired_distance_new;
 }
@@ -1555,6 +1617,10 @@ double StGraphGenerator::CutInDesiredDistanceFilter(
 
   cut_in_desired_distance_filter_.SetState(
       cutin_information->desired_distance());
+  if (!(lon_behav_input_ ->dbw_status())) {
+    cut_in_desired_distance_filter_.SetState(
+      std::min(predict_distance, safe_distance));
+  }
   JSON_DEBUG_VALUE("fast_car_cut_in_id", -1.0);
   JSON_DEBUG_VALUE("slow_car_cut_in_id", -1.0);
   if (slow_car_cut_in) {
@@ -1581,8 +1647,7 @@ double StGraphGenerator::LCGapDesiredDistanceFilter(
     const planning::common::TrackedObjectInfo &lead_obstacle,
     const double v_ego, double safe_distance, double desired_distance,
     bool is_front) {
-  double desired_distance_new = desired_distance;
-
+  
   // 更新lead初始信息
   if (is_front) {
     if (lc_front_id_ != lead_obstacle.track_id()) {
@@ -1590,6 +1655,7 @@ double StGraphGenerator::LCGapDesiredDistanceFilter(
       lc_front_desired_distance_ =
           std::min(lead_obstacle.d_rel(), safe_distance);
     }
+    double desired_front_distance_new = desired_distance;
 
     // TBD: 目前cut in和lead区分不明显，cut in会被判断为lead
     bool slow_car_cut_in = false;
@@ -1603,16 +1669,18 @@ double StGraphGenerator::LCGapDesiredDistanceFilter(
       lead_desired_distance_filter_.SetRate(-4.0,
                                             config_.slow_lead_distance_step);
       lead_desired_distance_filter_.Update(desired_distance);
-      desired_distance_new = lead_desired_distance_filter_.GetOutput();
+      desired_front_distance_new = lead_desired_distance_filter_.GetOutput();
       JSON_DEBUG_VALUE("slow_lead_id", lead_obstacle.track_id());
     } else {
       // 快车切入
       lead_desired_distance_filter_.SetRate(-4.0,
                                             config_.fast_lead_distance_step);
       lead_desired_distance_filter_.Update(desired_distance);
-      desired_distance_new = lead_desired_distance_filter_.GetOutput();
+      desired_front_distance_new = lead_desired_distance_filter_.GetOutput();
       JSON_DEBUG_VALUE("fast_lead_id", lead_obstacle.track_id());
     }
+    lc_front_desired_distance_ = desired_front_distance_new;
+    return desired_front_distance_new;
 
   } else {
     if (lc_rear_id_ != lead_obstacle.track_id()) {
@@ -1620,6 +1688,7 @@ double StGraphGenerator::LCGapDesiredDistanceFilter(
       lc_rear_desired_distance_ =
           std::min(0 - lead_obstacle.d_rel(), safe_distance);
     }
+    double desired_rear_distance_new = desired_distance;
 
     // TBD: 目前cut in和lead区分不明显，cut in会被判断为lead
     bool slow_car_cut_in = false;
@@ -1633,20 +1702,20 @@ double StGraphGenerator::LCGapDesiredDistanceFilter(
       lead_desired_distance_filter_.SetRate(-4.0,
                                             config_.slow_lead_distance_step);
       lead_desired_distance_filter_.Update(desired_distance);
-      desired_distance_new = lead_desired_distance_filter_.GetOutput();
+      desired_rear_distance_new = lead_desired_distance_filter_.GetOutput();
       JSON_DEBUG_VALUE("slow_lead_id", lead_obstacle.track_id());
     } else {
       // 快车切入
       lead_desired_distance_filter_.SetRate(-4.0,
                                             config_.fast_lead_distance_step);
       lead_desired_distance_filter_.Update(desired_distance);
-      desired_distance_new = lead_desired_distance_filter_.GetOutput();
+      desired_rear_distance_new = lead_desired_distance_filter_.GetOutput();
       JSON_DEBUG_VALUE("fast_lead_id", lead_obstacle.track_id());
     }
+    lc_rear_desired_distance_ = desired_rear_distance_new;
+    return desired_rear_distance_new;
   }
 
-  lc_front_desired_distance_ = desired_distance_new;
-  return desired_distance_new;
 }
 
 common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
