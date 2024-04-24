@@ -264,9 +264,9 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
     }
   }
 
-  uint32_t index = 0;
+  uint32_t index_loc_esti = 0;
+  uint32_t index_loc = 0;
   for (const auto& it_msg : msg_cache_ordered_by_time_) {
-    ++index;
     if (!it_msg.second) {
       continue;
     }
@@ -278,8 +278,9 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
                                                   TOPIC_FUSION_OBJECTS);
     } else if (it_msg.second->GetTypeName() ==
                "LocalizationOutput.LocalizationEstimate") {
+      ++index_loc_esti;
       // 如果i是奇数，也就是第一次遇到。原始定位数据和新的定位总是成对出现，且原始定位数据在前
-      if (index & 1) {
+      if (index_loc_esti & 1) {
         write_msg<LocalizationOutput::LocalizationEstimate>(
             it_msg, record_writer,
             std::string(TOPIC_LOCALIZATION_ESTIMATE) + "_origin");
@@ -289,8 +290,9 @@ void PlanningPlayer::StoreCyberBag(const std::string& bag_path) {
       }
     } else if (it_msg.second->GetTypeName() ==
                "IFLYLocalization.IFLYLocalization") {
+      ++index_loc;
       // 如果i是奇数
-      if (index & 1) {
+      if (index_loc & 1) {
         write_msg<IFLYLocalization::IFLYLocalization>(
             it_msg, record_writer, std::string(TOPIC_LOCALIZATION) + "_origin");
       } else {
@@ -612,6 +614,11 @@ void PlanningPlayer::PlayAllFrames() {
             it_debug_info_msg->second)
             ->input_topic_timestamp()
             .localization_estimate();
+    next_vehi_svc_header_time_us_ =
+        std::dynamic_pointer_cast<planning::common::PlanningDebugInfo>(
+            it_debug_info_msg->second)
+            ->input_topic_timestamp()
+            .vehicle_service();
     // 兼容老版本的包，在老版本中，ego_pose的时间戳被加在input_topic_timestamp.localization字段
     if (0 == next_loc_esti_header_time_us_) {
       next_loc_esti_header_time_us_ = next_loc_header_time_us_;
@@ -620,6 +627,7 @@ void PlanningPlayer::PlayAllFrames() {
     if (i == msg_cache_[TOPIC_PLANNING_DEBUG_INFO].size() - 3) {
       next_loc_header_time_us_ = UINT64_MAX;
       next_loc_esti_header_time_us_ = UINT64_MAX;
+      next_vehi_svc_header_time_us_ = UINT64_MAX;
     }
 
     planning_header_time_us_ = planning_msg->meta().header().timestamp();
@@ -633,6 +641,8 @@ void PlanningPlayer::PlayAllFrames() {
     if (0 == loc_esti_header_time_us_) {
       loc_esti_header_time_us_ = loc_header_time_us_;
     }
+    vehi_svc_header_time_us_ =
+        debug_info->input_topic_timestamp().vehicle_service();
     PlayOneFrame(frame_num_++, debug_info->input_topic_timestamp());
   }
 }
@@ -662,6 +672,22 @@ void PlanningPlayer::RunCloseLoop(
         if (loc_header_time_i <= next_loc_esti_header_time_us_) {
           auto delta_t = loc_header_time_i - loc_esti_header_time_us_;
           PerfectControlSCC(delta_t, loc_msg_i);
+        } else {
+          break;
+        }
+      }
+    }
+    for (auto it = msg_cache_[TOPIC_VEHICLE_SERVICE].begin();
+         it != msg_cache_[TOPIC_VEHICLE_SERVICE].end(); it++) {
+      auto vehi_svc_msg_i =
+          std::const_pointer_cast<VehicleService::VehicleServiceOutputInfo>(
+              std::dynamic_pointer_cast<
+                  VehicleService::VehicleServiceOutputInfo>(it->second));
+      auto vehi_svc_header_time_i = vehi_svc_msg_i->header().timestamp();
+      if (vehi_svc_header_time_i > vehi_svc_header_time_us_) {
+        if (vehi_svc_header_time_i <= next_vehi_svc_header_time_us_) {
+          auto delta_t = vehi_svc_header_time_i - vehi_svc_header_time_us_;
+          UpdateVehicleService(delta_t, vehi_svc_msg_i);
         } else {
           break;
         }
@@ -720,6 +746,22 @@ void PlanningPlayer::RunCloseLoop(
         }
       }
     }
+    for (auto it = msg_cache_[TOPIC_VEHICLE_SERVICE].begin();
+         it != msg_cache_[TOPIC_VEHICLE_SERVICE].end(); it++) {
+      auto vehi_svc_msg_i =
+          std::const_pointer_cast<VehicleService::VehicleServiceOutputInfo>(
+              std::dynamic_pointer_cast<
+                  VehicleService::VehicleServiceOutputInfo>(it->second));
+      auto vehi_svc_header_time_i = vehi_svc_msg_i->header().timestamp();
+      if (vehi_svc_header_time_i > vehi_svc_header_time_us_) {
+        if (vehi_svc_header_time_i <= next_vehi_svc_header_time_us_) {
+          auto delta_t = vehi_svc_header_time_i - vehi_svc_header_time_us_;
+          UpdateVehicleService(delta_t, vehi_svc_msg_i);
+        } else {
+          break;
+        }
+      }
+    }
   } else {
     std::cerr << "Error, unknown scene_type !" << std::endl;
   }
@@ -736,6 +778,7 @@ void PlanningPlayer::PerpareTrajectory(
   std::vector<double> a_vec(traj_size);
   std::vector<double> t_vec(traj_size);
   std::vector<double> yaw_rate_vec(traj_size);
+  std::vector<double> curvature_vec(traj_size);
 
   double angle_offset = 0.0;
   static const double pi_const = 3.141592654;
@@ -745,6 +788,7 @@ void PlanningPlayer::PerpareTrajectory(
     y_vec[i] = trajectory.trajectory_points(i).y();
     v_vec[i] = trajectory.trajectory_points(i).v();
     a_vec[i] = trajectory.trajectory_points(i).a();
+    curvature_vec[i] = trajectory.trajectory_points(i).curvature();
 
     if (i == 0) {
       theta_vec[i] = trajectory.trajectory_points(i).heading_yaw();
@@ -771,6 +815,7 @@ void PlanningPlayer::PerpareTrajectory(
   v_t_spline_.set_points(t_vec, v_vec);
   a_t_spline_.set_points(t_vec, a_vec);
   yaw_rate_t_spline_.set_points(t_vec, yaw_rate_vec);
+  curvature_t_spline_.set_points(t_vec, curvature_vec);
 }
 
 void PlanningPlayer::PerfectControlHPP(
@@ -988,6 +1033,29 @@ void PlanningPlayer::PerfectControlSCC(
   // pos
   pose->mutable_local_position()->set_x(x);
   pose->mutable_local_position()->set_y(y);
+}
+
+void PlanningPlayer::UpdateVehicleService(
+    uint64_t delta_t,
+    std::shared_ptr<VehicleService::VehicleServiceOutputInfo>& vehi_svc_msg) {
+  const double dt = static_cast<double>(delta_t) / 1e6;
+  const double v = v_t_spline_(dt);
+  const double a = a_t_spline_(dt);
+  const double yaw_rate = yaw_rate_t_spline_(dt);
+  const double curvature = curvature_t_spline_(dt);
+
+  // vel
+  vehi_svc_msg->set_vehicle_speed(v);
+
+  // acc
+  vehi_svc_msg->set_long_acceleration(a);
+
+  // yaw_rate
+  vehi_svc_msg->set_yaw_rate(yaw_rate);
+
+  // steering_angle = 1/R * L * steering_ratio * 补偿系数
+  auto compensation_factor = curvature > 0 ? 1.5 : 1;
+  vehi_svc_msg->set_steering_wheel_angle(curvature * 3.33 * 15.7 * compensation_factor);
 }
 
 }  // namespace planning_player

@@ -58,6 +58,9 @@ class PlanningPlayer {
   void PerfectControlAPA(
       const PlanningOutput::PlanningOutput &plan_msg, uint64_t delta_t,
       std::shared_ptr<LocalizationOutput::LocalizationEstimate> &loc_msg);
+  void UpdateVehicleService(
+      uint64_t delta_t,
+      std::shared_ptr<VehicleService::VehicleServiceOutputInfo> &vehi_svc_msg);
 
  private:
   DynamicState state_;
@@ -82,6 +85,8 @@ class PlanningPlayer {
   uint64_t loc_header_time_us_ = 0;
   uint64_t next_loc_esti_header_time_us_ = 0;
   uint64_t loc_esti_header_time_us_ = 0;
+  uint64_t next_vehi_svc_header_time_us_ = 0;
+  uint64_t vehi_svc_header_time_us_ = 0;
   uint64_t planning_dubug_info_frame_num_ = 0;
   int frame_num_before_enter_auto_ = 0;
   std::string scene_type_ = "acc";
@@ -93,6 +98,7 @@ class PlanningPlayer {
   pnc::mathlib::spline v_t_spline_;
   pnc::mathlib::spline a_t_spline_;
   pnc::mathlib::spline yaw_rate_t_spline_;
+  pnc::mathlib::spline curvature_t_spline_;
 
   template <class T>
   void cache_with_msg_time(const apollo::cyber::record::RecordMessage &msg);
