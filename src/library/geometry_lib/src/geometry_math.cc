@@ -830,7 +830,7 @@ const bool CalProjFromSplineByBisection(
   const auto &y0 = current_pos.y();
 
   for (size_t i = 0; i < max_iter; ++i) {
-    s_mid = (s_left + s_right) / 2.0;
+    s_mid = (s_left + s_right) * 0.5;
 
     if (fabs(s_right - s_left) < min_err) {
       break;
@@ -1446,7 +1446,7 @@ const bool CalTwoArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
   }
 
   // the mid of two center is tangent, also pB
-  arc1.pB = (arc1.circle_info.center + arc2.circle_info.center) / 2.0;
+  arc1.pB = (arc1.circle_info.center + arc2.circle_info.center) * 0.5;
   if (!CompleteArcInfo(arc1)) {
     return LogErr(__func__, 4);
   }
@@ -1537,7 +1537,7 @@ const bool CalTwoSameGearArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
   }
 
   // the mid of two center is tangent, also pB
-  arc1.pB = (arc1.circle_info.center + arc2.circle_info.center) / 2.0;
+  arc1.pB = (arc1.circle_info.center + arc2.circle_info.center) * 0.5;
   if (!CompleteArcInfo(arc1)) {
     return LogErr(__func__, 4);
   }
@@ -2195,7 +2195,7 @@ const bool CalTwoArcWithSameHeading(Arc &arc1, Arc &arc2,
   // the dist from C to line2 is the half of lat_dist because of the same
   // radius of arc1 and arc2 the theta is rot_angle of arc1
   const double cos_theta =
-      (arc1.circle_info.radius - lat_dist / 2.0) / arc1.circle_info.radius;
+      (arc1.circle_info.radius - lat_dist * 0.5) / arc1.circle_info.radius;
 
   const double sin_theta = std::sqrt(1 - std::min(cos_theta * cos_theta, 1.0));
 
@@ -2208,7 +2208,7 @@ const bool CalTwoArcWithSameHeading(Arc &arc1, Arc &arc2,
     tmp_tang_vec = -line1_tang_vec;
   }
 
-  arc1.pB = arc1.pA + lat_dist / 2.0 * line1_norm_vec + lon_dist * tmp_tang_vec;
+  arc1.pB = arc1.pA + lat_dist * 0.5 * line1_norm_vec + lon_dist * tmp_tang_vec;
 
   if (!CompleteArcInfo(arc1)) {
     return LogErr(__func__, 3);
@@ -2216,7 +2216,7 @@ const bool CalTwoArcWithSameHeading(Arc &arc1, Arc &arc2,
 
   arc2.pA = arc1.pB;
   arc2.headingA = arc1.headingB;
-  arc2.pB = arc2.pA + lat_dist / 2.0 * line1_norm_vec + lon_dist * tmp_tang_vec;
+  arc2.pB = arc2.pA + lat_dist * 0.5 * line1_norm_vec + lon_dist * tmp_tang_vec;
   arc2.circle_info.center = arc2.pB - line1_norm_vec * arc2.circle_info.radius;
   arc2.is_anti_clockwise = !arc1.is_anti_clockwise;
   arc2.length = arc1.length;

@@ -73,6 +73,22 @@ target_link_libraries(perpendicular_planning_py PRIVATE
   modules_context
   modules_tasks)
 
+pybind11_add_module(slant_planning_py MODULE src/slant_planning_pybind.cc)
+target_link_libraries(slant_planning_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)
+
+pybind11_add_module(vertical_planning_py MODULE src/vertical_planning_pybind.cc)
+target_link_libraries(vertical_planning_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)
+
 pybind11_add_module(parallel_planning_py MODULE src/parallel_planning_pybind.cc)
 target_link_libraries(parallel_planning_py PRIVATE
   autoplt

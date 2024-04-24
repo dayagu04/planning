@@ -101,6 +101,8 @@ class LoadCyberbag:
     self.parking_flag = parking_flag
 
     self.max_time = 0
+
+    self.enter_parking_time = 0
     # time offset
     t0 = 0
 
@@ -366,10 +368,16 @@ class LoadCyberbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/system_state/soc_state"):
         soc_state_msg_dict[msg.header.timestamp / 1e6] = msg
       soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
+
+      enter_parking_time = None
       for t, msg in soc_state_msg_dict.items():
         self.soc_state_msg['t'].append(t)
         self.soc_state_msg['abs_t'].append(t)
         self.soc_state_msg['data'].append(msg)
+        # record the start time of fusi_parking_msg
+        if msg.current_state > 1 and enter_parking_time is None:
+          enter_parking_time = t
+
       self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
       max_time = max(max_time, self.soc_state_msg['t'][-1])
       print('soc_state_msg time:',self.soc_state_msg['t'][-1])
@@ -377,6 +385,10 @@ class LoadCyberbag:
         self.soc_state_msg['enable'] = True
       else:
         self.soc_state_msg['enable'] = False
+
+      if enter_parking_time is not None:
+        self.enter_parking_time = enter_parking_time - self.soc_state_msg['abs_t'][0]
+        # print("enter_parking_time ：", self.enter_parking_time)
     except:
       self.soc_state_msg['enable'] = False
       print('missing /iflytek/system_state/soc_state !!!')
@@ -536,7 +548,7 @@ class LoadCyberbag:
 
     fus_parking_msg_idx = 0
     if self.fus_parking_msg['enable'] == True:
-      while self.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time and fus_parking_msg_idx < (len(self.fus_parking_msg['t'])-1):
+      while self.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time - self.enter_parking_time and fus_parking_msg_idx < (len(self.fus_parking_msg['t'])-1):
         fus_parking_msg_idx = fus_parking_msg_idx + 1
     out['fus_parking_msg_idx'] = fus_parking_msg_idx
 
@@ -1442,12 +1454,12 @@ def load_local_view_figure_parking():
   fig1.line('y', 'x', source = data_current_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'current_line')
 
 
-  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot', visible = True)
-  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_parking, line_width = 2, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = False)
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot', visible = False)
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_parking, line_width = 2, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = True)
   fig1.line('corner_point_y', 'corner_point_x', source = data_target_managed_slot, line_width = 3, line_color = 'green', line_dash = 'solid',legend_label = 'target_managed_slot')
   fig1.line('corner_point_y', 'corner_point_x', source = data_final_slot, line_width = 3, line_color = '#A52A2A', line_dash = 'dashed',legend_label = 'final_parking_slot')
 
-  fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_fusion_parking_id, text_color='red', text_align='center', text_font_size='10pt',legend_label = 'fusion_parking_slot')
+  fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_fusion_parking_id, text_color='red', text_align='center', text_font_size='10pt',legend_label = 'fusion_parking_slot', visible = True)
 
   fig1.wedge('wave_x','wave_y', 'radius', 'start_angle', 'end_angle',source = data_wave, fill_color="lavender", line_color="black",legend_label = 'uss_wave',alpha = 0.5, visible = False)
   fig1.wedge('wave_x','wave_y', 'radius', 'start_angle', 'end_angle',source = data_wave_min, fill_color="blue", line_color="black",legend_label = 'uss_wave',alpha = 0.8, visible = False)

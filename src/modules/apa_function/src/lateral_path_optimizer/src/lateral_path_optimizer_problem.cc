@@ -124,7 +124,7 @@ uint8_t LateralPathOptimizerProblem::Update(
       alilqr_config_vec.at(i)[L_K_HARDBOUND] = 0.0;
       alilqr_config_vec.at(i)[L_U_HARDBOUND] = 0.0;
 
-      alilqr_config_vec.at(i)[PHI_SCALE] = 6.0;
+      alilqr_config_vec.at(i)[PHI_SCALE] = 10.0;
       alilqr_config_vec.at(i)[CONSTRAINT_CONFIG_SIZE] = 2;
     }
   }

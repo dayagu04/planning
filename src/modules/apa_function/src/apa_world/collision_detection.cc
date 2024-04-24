@@ -59,6 +59,16 @@ void CollisionDetector::SetLatInflation() { Init(); }
 void CollisionDetector::Reset() {
   obs_pt_global_vec_.clear();
   param_.Reset();
+  obs_pt_global_map_.clear();
+}
+
+void CollisionDetector::ClearObstacles() {
+  obs_pt_global_vec_.clear();
+  obs_pt_global_map_.clear();
+}
+
+void CollisionDetector::DeleteObstacles(const size_t obs_type) {
+  obs_pt_global_map_.erase(obs_type);
 }
 
 void CollisionDetector::SetObstacles(
@@ -66,6 +76,12 @@ void CollisionDetector::SetObstacles(
   obs_pt_global_vec_.clear();
   obs_pt_global_vec_.reserve(obs_pt_global_vec.size());
   obs_pt_global_vec_ = obs_pt_global_vec;
+}
+
+void CollisionDetector::SetObstacles(
+    const std::vector<Eigen::Vector2d> &obs_pt_global_vec,
+    const size_t obs_type) {
+  obs_pt_global_map_[obs_type] = obs_pt_global_vec;
 }
 
 void CollisionDetector::AddObstacles(
@@ -81,11 +97,42 @@ void CollisionDetector::AddObstacles(const Eigen::Vector2d &obs_pt_global) {
   obs_pt_global_vec_.emplace_back(obs_pt_global);
 }
 
+void CollisionDetector::AddObstacles(
+    const std::vector<Eigen::Vector2d> &obs_pt_global_vec,
+    const size_t obs_type) {
+  if (obs_pt_global_map_.count(obs_type) == 0) {
+    obs_pt_global_map_[obs_type] = obs_pt_global_vec;
+  } else {
+    obs_pt_global_map_[obs_type].reserve(obs_pt_global_map_[obs_type].size() +
+                                         obs_pt_global_vec.size());
+    obs_pt_global_map_[obs_type].insert(obs_pt_global_map_[obs_type].end(),
+                                        obs_pt_global_vec.begin(),
+                                        obs_pt_global_vec.end());
+  }
+}
+
+void CollisionDetector::AddObstacles(const Eigen::Vector2d &obs_pt_global,
+                                     const size_t obs_type) {
+  if (obs_pt_global_map_.count(obs_type) == 0) {
+    std::vector<Eigen::Vector2d> obs_pt_global_vec;
+    obs_pt_global_vec.clear();
+    obs_pt_global_vec.reserve(1);
+    obs_pt_global_vec.emplace_back(obs_pt_global);
+    obs_pt_global_map_[obs_type] = obs_pt_global_vec;
+  } else {
+    obs_pt_global_map_[obs_type].reserve(obs_pt_global_map_[obs_type].size() +
+                                         1);
+    obs_pt_global_map_[obs_type].emplace_back(obs_pt_global);
+  }
+}
+
 const CollisionDetector::CollisionResult CollisionDetector::Update(
     const pnc::geometry_lib::LineSegment &line_seg,
     const double heading_start) {
   if (obs_pt_global_vec_.size() < 1) {
     CollisionResult tmp_result;
+    tmp_result.remain_car_dist = line_seg.length;
+    tmp_result.remain_dist = line_seg.length;
     return tmp_result;
   }
 
@@ -149,6 +196,94 @@ const CollisionDetector::CollisionResult CollisionDetector::Update(
   //           << std::endl;
 
   result.collision_point = collision_point;
+  result.collision_point_global = obs_pt_global_vec_[i];
+
+  return result;
+}
+
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
+    const pnc::geometry_lib::LineSegment &line_seg,
+    const double heading_start) {
+  if (obs_pt_global_map_.empty()) {
+    CollisionResult tmp_result;
+    tmp_result.remain_car_dist = line_seg.length;
+    tmp_result.remain_dist = line_seg.length;
+    return tmp_result;
+  }
+
+  // car line segment
+  std::vector<pnc::geometry_lib::LineSegment> car_line_global_vec;
+  car_line_global_vec.clear();
+  car_line_global_vec.reserve(car_line_local_vec_.size());
+  pnc::geometry_lib::LineSegment car_line_global;
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+  l2g_tf.Init(line_seg.pA, heading_start);
+  for (const auto &car_line_local : car_line_local_vec_) {
+    car_line_global.pA = l2g_tf.GetPos(car_line_local.pA);
+    car_line_global.pB = l2g_tf.GetPos(car_line_local.pB);
+    car_line_global_vec.emplace_back(car_line_global);
+  }
+
+  // detect if there is intersection(point_P) between obstacle and car line
+  // segment
+  double min_obs_move_dist = 33.3;
+  pnc::geometry_lib::LineSegment obs_move_line;
+  // the cross points of obstacle lin seg and single car polygon line seg
+  Eigen::Vector2d cross_point;
+  // collision points between car movement along trajectory and obstacles
+  Eigen::Vector2d collision_point(0.0, 0.0);
+
+  const Eigen::Vector2d AB = line_seg.pB - line_seg.pA;
+  const Eigen::Vector2d unit_obs_move_line = -AB.normalized();
+
+  size_t i = 0;
+  size_t j = 0;
+  size_t k = 0;
+  size_t h = 0;
+  size_t key = 0;
+  bool col_flag = false;
+  for (const auto &obs_pt_pair : obs_pt_global_map_) {
+    j = 0;
+    for (const auto &obs_pt_global : obs_pt_pair.second) {
+      k = 0;
+      for (auto &car_line_global : car_line_global_vec) {
+        obs_move_line.pA = obs_pt_global;
+        // obs_move_line.pB = obs_move_line.pA - AB;
+        obs_move_line.pB =
+            obs_move_line.pA + min_obs_move_dist * unit_obs_move_line;
+        if (GetIntersectionFromTwoLineSeg(cross_point, car_line_global,
+                                          obs_move_line)) {
+          const auto dist_CP = (cross_point - obs_move_line.pA).norm();
+          if (dist_CP < min_obs_move_dist) {
+            collision_point = cross_point;
+            min_obs_move_dist = dist_CP;
+            i = j;
+            h = k;
+            key = obs_pt_pair.first;
+            col_flag = true;
+          }
+        }
+        k++;
+      }
+      j++;
+    }
+  }
+
+  CollisionResult result;
+
+  result.remain_car_dist = AB.norm();
+  result.remain_obstacle_dist = min_obs_move_dist;
+  result.remain_dist =
+      std::min(result.remain_obstacle_dist, result.remain_car_dist);
+
+  result.collision_flag =
+      (result.remain_obstacle_dist <= result.remain_car_dist);
+
+  result.collision_point = collision_point;
+  if (col_flag) {
+    result.collision_point_global = obs_pt_global_map_[key][i];
+  }
+  result.car_line_order = h;
 
   return result;
 }
@@ -157,6 +292,8 @@ const CollisionDetector::CollisionResult CollisionDetector::Update(
     const pnc::geometry_lib::Arc &arc, const double heading_start) {
   if (obs_pt_global_vec_.size() < 1) {
     CollisionResult tmp_result;
+    tmp_result.remain_car_dist = arc.length;
+    tmp_result.remain_dist = arc.length;
     return tmp_result;
   }
   // car line segment
@@ -261,6 +398,127 @@ const CollisionDetector::CollisionResult CollisionDetector::Update(
   return result;
 }
 
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
+    const pnc::geometry_lib::Arc &arc, const double heading_start) {
+  if (obs_pt_global_map_.empty()) {
+    CollisionResult tmp_result;
+    tmp_result.remain_car_dist = arc.length;
+    tmp_result.remain_dist = arc.length;
+    return tmp_result;
+  }
+  // car line segment
+  std::vector<pnc::geometry_lib::LineSegment> car_line_global_vec;
+  car_line_global_vec.clear();
+  car_line_global_vec.reserve(car_line_local_vec_.size());
+
+  pnc::geometry_lib::LineSegment car_line_global;
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+  l2g_tf.Init(arc.pA, heading_start);
+  for (const auto &car_line_local : car_line_local_vec_) {
+    car_line_global.pA = l2g_tf.GetPos(car_line_local.pA);
+    car_line_global.pB = l2g_tf.GetPos(car_line_local.pB);
+    car_line_global_vec.emplace_back(car_line_global);
+  }
+
+  // obstacle arc segment
+  const auto v_OA = arc.pA - arc.circle_info.center;
+  const auto v_OB = arc.pB - arc.circle_info.center;
+  const auto car_rot_angle = pnc::geometry_lib::GetAngleFromTwoVec(v_OA, v_OB);
+
+  // obstacle rotates around the the car rotation center to form a circle
+  // The minimum angle allowed for obstacle rotation
+  auto min_obs_rot_limit_angle = 5.0;
+  pnc::geometry_lib::Circle obs_rot_circle;
+  // the cross points of obstacle circle and single car polygon line seg
+  std::vector<Eigen::Vector2d> cross_points;
+  // collision points between car movement along trajectory and obstacles
+  Eigen::Vector2d collision_point;
+  collision_point.setZero();
+  size_t i = 0;
+  size_t j = 0;
+  size_t k = 0;
+  size_t h = 0;
+  size_t key = 0;
+  bool col_flag = false;
+  for (const auto &obs_pt_pair : obs_pt_global_map_) {
+    j = 0;
+    for (const auto &obs_pt_global : obs_pt_pair.second) {
+      k = 0;
+      for (auto &car_line_global : car_line_global_vec) {
+        obs_rot_circle.center = arc.circle_info.center;
+        obs_rot_circle.radius = (obs_pt_global - obs_rot_circle.center).norm();
+
+        const auto num = pnc::geometry_lib::CalcCrossPointsOfLineSegAndCircle(
+            car_line_global, obs_rot_circle, cross_points);
+
+        if (num == 0) {
+          // if num == 0, no cross points, contiue
+          continue;
+        }
+
+        const auto v_OC = obs_pt_global - arc.circle_info.center;
+        Eigen::Vector2d D;
+        if (num == 1) {
+          D = cross_points.front();
+        } else if (num == 2) {
+          const auto v_OD1 = cross_points.front() - arc.circle_info.center;
+          const auto v_OD2 = cross_points.back() - arc.circle_info.center;
+
+          const auto obs_rot_angle1 =
+              pnc::geometry_lib::GetAngleFromTwoVec(v_OC, v_OD1);
+
+          const auto obs_rot_angle2 =
+              pnc::geometry_lib::GetAngleFromTwoVec(v_OC, v_OD2);
+
+          if (std::fabs(obs_rot_angle1) < std::fabs(obs_rot_angle2)) {
+            D = cross_points.front();
+          } else {
+            D = cross_points.back();
+          }
+        }
+        const auto v_OD = D - arc.circle_info.center;
+
+        const auto obs_rot_angle =
+            pnc::geometry_lib::GetAngleFromTwoVec(v_OC, v_OD);
+
+        if (obs_rot_angle * car_rot_angle < 0.0 &&
+            fabs(obs_rot_angle) < fabs(min_obs_rot_limit_angle)) {
+          // the rotation direction of obstacles and car must be opposite
+          min_obs_rot_limit_angle = obs_rot_angle;
+          collision_point = D;
+          i = j;
+          h = k;
+          key = obs_pt_pair.first;
+          col_flag = true;
+        }
+        k++;
+      }
+      j++;
+    }
+  }
+
+  CollisionResult result;
+
+  result.remain_car_dist = fabs(car_rot_angle) * arc.circle_info.radius;
+  // result.remain_obstacle_dist =
+  //     fabs(min_obs_rot_limit_angle) * obs_rot_circle.radius; //err cal method
+  result.remain_obstacle_dist =
+      fabs(min_obs_rot_limit_angle) * arc.circle_info.radius;
+
+  result.collision_flag =
+      (result.remain_obstacle_dist <= result.remain_car_dist);
+
+  result.remain_dist =
+      std::min(result.remain_obstacle_dist, result.remain_car_dist);
+
+  result.collision_point = collision_point;
+  if (col_flag) {
+    result.collision_point_global = obs_pt_global_map_[key][i];
+  }
+  result.car_line_order = h;
+  return result;
+}
+
 const CollisionDetector::CollisionResult CollisionDetector::Update(
     const pnc::geometry_lib::LineSegment &line_seg, const double heading_start,
     const std::vector<Eigen::Vector2d> &obs_pt_global_vec) {
@@ -358,6 +616,8 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByLineObs(
   std::cout << "UpdateByLineObs\n";
   if (obs_line_global_vec_.empty()) {
     CollisionResult tmp_result;
+    tmp_result.remain_car_dist = line_seg.length;
+    tmp_result.remain_dist = line_seg.length;
     return tmp_result;
   }
 
@@ -417,6 +677,8 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByLineObs(
     const pnc::geometry_lib::Arc &arc, const double heading_start) {
   if (obs_line_global_vec_.empty()) {
     CollisionResult tmp_result;
+    tmp_result.remain_car_dist = arc.length;
+    tmp_result.remain_dist = arc.length;
     return tmp_result;
   }
 

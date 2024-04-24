@@ -49,6 +49,7 @@ struct ApaParameters {
   double terminal_target_y = 0.0;
   double terminal_target_heading = 0.0;
   double terminal_target_x_to_limiter = 0.15;
+  double terminal_parallel_y_offset = 0.0;
 
   // check finish params
   double finish_lat_err = 0.08;
@@ -61,6 +62,7 @@ struct ApaParameters {
   double finish_parallel_lon_err = 0.3;
   double finish_parallel_heading_err = 2.3;
   double finish_parallel_rear_stop_buffer = 0.55;
+  double finish_parallel_lat_rac_err = 0.3;
 
   // check fail params
   double stuck_failed_time = 9.0;
@@ -135,6 +137,7 @@ struct ApaParameters {
   double channel_length = 12.28;
   double max_obs2car_dist_in_slot = 1.2;
   double max_obs2car_dist_out_slot = 1.2;
+  double max_obs2car_dist_slot_occupied_ratio = 0.086;
   double obstacle_ds = 0.5;
   double col_obs_safe_dist = 0.36;
   double car_lat_inflation_for_obs = 0.0;
@@ -150,6 +153,11 @@ struct ApaParameters {
   bool dynamic_col_det_enable = false;
   double car_lat_inflation_for_trim_path = 0.1;
   double safe_dist_for_trim_path = 0.2;
+  double parallel_obs2slot_max_dist = 16.66;
+  double parallel_channel_y_mag = 8.5;
+  double parallel_channel_x_mag = 16.6;
+  double parallel_ego_side_to_obs_in_buffer = 0.3;
+  double parallel_ego_front_corner_to_obs_in_buffer = 0.3;
 
   // dynamic update path params
   double car_to_limiter_dis = 1.0;
