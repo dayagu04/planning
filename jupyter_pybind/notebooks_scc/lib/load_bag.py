@@ -514,11 +514,14 @@ class LoadCyberbag:
                          'gap_v_limit_lc', \
                          "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                          "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                         'RealTimeLateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
-                         "SccLonBehaviorCostTime", "SccLonMotionCostTime", \
-                         "final_y_rel_id", "final_y_rel",'lateral_offset', 'avoid_way', \
                          'hdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision', \
-                         "is_in_merge_area","current_lane_order_id","current_lane_virtual_id","current_lane_relative_id","is_solid_left_boundary","is_solid_right_boundary"]
+                         "is_in_merge_area","current_lane_order_id","current_lane_virtual_id","current_lane_relative_id","is_solid_left_boundary","is_solid_right_boundary", \
+                         'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                         "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost", \
+                         "front_node_id", "rear_node_id", \
+                         "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
+                         "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
+                         "final_y_rel_id", "final_y_rel",'lateral_offset', 'avoid_way']
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type"]
 

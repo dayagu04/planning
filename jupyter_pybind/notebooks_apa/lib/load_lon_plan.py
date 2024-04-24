@@ -543,11 +543,6 @@ def load_lon_global_figure(bag_loader):
     RealTimeLateralMotionCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTimeLateralMotionCostTime'], 2))
     EnvironmentalModelManagerCost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['EnvironmentalModelManagerCost'], 2))
     GeneralPlannerModuleCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['GeneralPlannerModuleCostTime'], 2))
-
-  lead_fig.line(t_plan_vec, lead_one_dis_vec, line_width=1, legend_label='lead_one_dis', color="red")
-  lead_fig.line(t_plan_vec, lead_two_dis_vec, line_width=1, legend_label='lead_two_dis', color="green")
-  lead_fig.line(t_plan_vec, temp_lead_one_dis_vec, line_width=1, legend_label='temp_lead_one_dis', color="blue")
-  lead_fig.line(t_plan_vec, temp_lead_two_dis_vec, line_width=1, legend_label='temp_lead_two_dis', color="purple")
   lead_fig.line(t_plan_vec, desired_distance_rss_vec, line_width=1, legend_label='distance_rss', color="yellow")
   lead_fig.line(t_plan_vec, desired_distance_calibrate_vec, line_width=1, legend_label='distance_cali', color="orange")
 
@@ -557,12 +552,12 @@ def load_lon_global_figure(bag_loader):
   cost_time_fig.line(t_plan_vec, EnvironmentalModelManagerCost_vec, line_width=1, legend_label='EnvironmentalCostTime', color="yellow")
   cost_time_fig.line(t_plan_vec, GeneralPlannerModuleCostTime_vec, line_width=1, legend_label='GeneralPlannerModuleCostTime', color="purple")
 
-  cutin_fig = bkp.figure(title='速度',x_axis_label='time/s', y_axis_label='velocity/(m/s)',width=600,height=300)  
+  cutin_fig = bkp.figure(title='速度',x_axis_label='time/s', y_axis_label='velocity/(m/s)',width=600,height=300)
 
   limit_cutin_vel_vec = []
   potential_cutin_speed_vec = []
   cutin_status_vec = []
-   
+
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
     limit_cutin_vel_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_cutin'], 2))
     potential_cutin_speed_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_potental_cutin'], 2))
@@ -573,7 +568,7 @@ def load_lon_global_figure(bag_loader):
   cutin_fig.line(t_plan_vec, potential_cutin_speed_vec, line_width=1,
                                 legend_label='Speed regulation cutin', color="red")
   # cutin_fig.line(t_plan_vec, cutin_status_vec, line_width=1,
-  #                               legend_label='cutin_status', color="black")                              
+  #                               legend_label='cutin_status', color="black")
 
   #get longtime obstacle id list in st-graph
   obs_st_ids = []

@@ -6,6 +6,7 @@
 #include <typeinfo>
 #include <unordered_map>
 
+#include "agent/agent_manager.h"
 #include "basic_types.pb.h"
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
@@ -121,6 +122,15 @@ void EnvironmentalModelManager::InitContext() {
   const std::string &config_file_dir =
       session_->mutable_environmental_model()->get_module_config_file_dir();
   common::VehicleModel::LoadVehicleModelConfig(config_file_dir);
+  // new agent manager
+  agent_manager_ptr_ =
+      std::make_shared<agent::AgentManager>(config_builder, session_);
+  session_->mutable_environmental_model()->set_agent_manager(
+      agent_manager_ptr_);
+
+  dynamic_world_ = std::make_shared<planning_data::DynamicWorld>(
+      *agent_manager_ptr_, session_);
+  session_->mutable_environmental_model()->set_dynamic_world(dynamic_world_);
 }
 
 bool EnvironmentalModelManager::Run() {
@@ -278,7 +288,13 @@ bool EnvironmentalModelManager::Run() {
   LOG_DEBUG("obstacle_manager cost:%f\n", time_end - time_start);
   JSON_DEBUG_VALUE("obstacle_manager_cost", time_end - time_start);
 
-  // Step 6) update reference path
+  time_start = IflyTime::Now_ms();
+  agent_manager_ptr_->Update();
+  time_end = IflyTime::Now_ms();
+  LOG_DEBUG("agent manager cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("agent_manager_cost", time_end - time_start);
+
+  // Step 5) update reference path
   time_start = IflyTime::Now_ms();
   if (!reference_path_manager_ptr_->update()) {
     LOG_ERROR("reference_path_manager update fail\n");
@@ -312,6 +328,13 @@ bool EnvironmentalModelManager::Run() {
     JSON_DEBUG_VALUE("history_obstacle_cost", time_end - time_start)
   }
 
+  // DynamicWorld验证
+  time_start = IflyTime::Now_ms();
+  dynamic_world_->ConstructDynamicWorld();
+  time_end = IflyTime::Now_ms();
+  LOG_DEBUG("dynamic world update cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("dynamic_world_cost", time_end - time_start)
+
   auto end_time = IflyTime::Now_ms();
   LOG_DEBUG("EnvironmentalModelManager::Run cost time:%f\n",
             end_time - current_time);
@@ -321,15 +344,6 @@ bool EnvironmentalModelManager::Run() {
     LOG_ERROR("InputReady is failed !!!! \n");
     // return false;
   }
-
-  // Step 6) update agent node manager
-  // time_start = IflyTime::Now_ms();
-  // agent_node_mgr_ptr_->init();
-  // time_end = IflyTime::Now_ms();
-  // LOG_DEBUG("agent_node_manager init cost:%f\n", time_end - time_start);
-  // JSON_DEBUG_VALUE("agent_node_manager_init_cost", time_end - time_start);
-  // // std::cout<< "agent_node_mgr time is : " << time_end - time_start
-  // // <<std::endl;
 
   return true;
 }

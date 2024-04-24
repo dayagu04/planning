@@ -6,7 +6,9 @@
 #include <unordered_map>
 
 #include "ad_common/hdmap/hdmap.h"
+#include "agent/agent_manager.h"
 #include "config/vehicle_param.h"
+#include "dynamic_world/dynamic_world.h"
 #include "ego_planning_config.h"
 #include "fusion_objects.pb.h"
 #include "groundline_decider.h"
@@ -195,6 +197,22 @@ class EnvironmentalModel {
     history_obstacle_manager_ = history_obstacle_manager;
   }
 
+  const std::shared_ptr<agent::AgentManager> &get_agent_manager() const {
+    return agent_manager_;
+  }
+  void set_agent_manager(const std::shared_ptr<agent::AgentManager> agent_manager) {
+    agent_manager_ = agent_manager;
+  }
+
+  const std::shared_ptr<planning_data::DynamicWorld> &get_dynamic_world()
+      const {
+    return dynamic_world_;
+  }
+  void set_dynamic_world(const
+      std::shared_ptr<planning_data::DynamicWorld> dynamic_world) {
+    dynamic_world_ = dynamic_world;
+  }
+
   const std::string &get_module_config_file_dir() const {
     return config_file_dir_;
   }
@@ -285,6 +303,8 @@ class EnvironmentalModel {
   std::vector<PredictionObject> prediction_info_;
   std::vector<PredictionObject> fusion_info_;
   std::shared_ptr<HistoryObstacleManager> history_obstacle_manager_ = nullptr;
+  std::shared_ptr<agent::AgentManager> agent_manager_ = nullptr;
+  std::shared_ptr<planning_data::DynamicWorld> dynamic_world_ = nullptr;
   std::vector<GroundLinePoint> ground_line_point_info_;
   std::shared_ptr<ParkingSlotManager> parking_slot_manager_ = nullptr;
   bool hdmap_valid_{false};
