@@ -217,7 +217,7 @@ class PerpendicularPathPlanner {
 
   const bool CheckReachTargetPosePb();
 
-  const PlannerParams GetCalcParams();
+  const PlannerParams& GetCalcParams();
 
   void SetColPtr(
       const std::shared_ptr<CollisionDetector> &collision_detector_ptr) {

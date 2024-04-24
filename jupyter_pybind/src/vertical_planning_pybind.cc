@@ -170,8 +170,8 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
   const double car_width_include_mirror =
       apa_param.GetParam().car_width + 2.0 * apa_param.GetParam().mirror_width;
-  const double car_y_right_include_mirror = -car_width_include_mirror / 2.0;
-  const double car_y_left_include_mirror = car_width_include_mirror / 2.0;
+  const double car_y_right_include_mirror = -car_width_include_mirror * 0.5;
+  const double car_y_left_include_mirror = car_width_include_mirror * 0.5;
 
   const double virtual_slot_width =
       car_width_include_mirror + apa_param.GetParam().slot_compare_to_car_width;

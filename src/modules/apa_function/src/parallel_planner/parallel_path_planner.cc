@@ -786,7 +786,7 @@ const bool ParallelPathPlanner::CalcParkOutPath(
     return false;
   }
 
-  const auto& last_line =
+  const auto last_line =
       pnc::geometry_lib::BuildLineSegByPose(last_arc.pB, last_arc.headingB);
 
   const double lat_dist = pnc::geometry_lib::CalPoint2LineDist(
@@ -3428,8 +3428,13 @@ const bool ParallelPathPlanner::SetCurrentPathSegIndex() {
     }
   }
 
-  for (int i = output_.path_seg_index.second; i >= output_.path_seg_index.first;
-       --i) {
+  const int first = output_.path_seg_index.first;
+  const int second = output_.path_seg_index.second;
+  if (first < 0 || second < 0 || first > second) {
+    std::cout << "first and second index is err\n";
+    return false;
+  }
+  for (int i = second; i >= first; --i) {
     if (output_.path_segment_vec[i].seg_type ==
         pnc::geometry_lib::SEG_TYPE_ARC) {
       output_.current_arc_steer = output_.steer_vec[i];

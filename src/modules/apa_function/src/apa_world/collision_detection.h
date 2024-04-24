@@ -92,11 +92,11 @@ class CollisionDetector {
   void AddObstacles(const Eigen::Vector2d &obs_pt_global);
   void AddObstacles(const Eigen::Vector2d &obs_pt_global,
                     const size_t obs_type);
-  const std::vector<Eigen::Vector2d> GetObstacles() {
+  const std::vector<Eigen::Vector2d>& GetObstacles() {
     return obs_pt_global_vec_;
   }
 
-  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>> GetObstaclesMap() {
+  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>& GetObstaclesMap() {
     return obs_pt_global_map_;
   }
 

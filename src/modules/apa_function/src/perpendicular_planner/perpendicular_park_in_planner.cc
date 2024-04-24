@@ -350,9 +350,9 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     const double safe_dist = apa_param.GetParam().safe_dist_for_trim_path;
 
     apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
-
+    const double min_remain_dist = 0.016;
     if (dist > apa_param.GetParam().slot_max_jump_dist &&
-        frame_.remain_dist > 0.016) {
+        frame_.remain_dist > min_remain_dist) {
       // construct obs
       GenTlane();
       GenObstacles();
@@ -583,12 +583,12 @@ void PerpendicularInPlanner::GenTlane() {
                       decltype(lambda_func_3)>
       right_que_for_x(lambda_func_3);
 
-  const double x_max = ((ego_slot_info.pt_0 + ego_slot_info.pt_1) / 2.0).x() +
+  const double x_max = ((ego_slot_info.pt_0 + ego_slot_info.pt_1) * 0.5).x() +
                        apa_param.GetParam().obs_consider_long_threshold /
                            ego_slot_info.sin_angle;
 
   const double y_max =
-      ((ego_slot_info.slot_width / ego_slot_info.sin_angle) / 2.0 +
+      ((ego_slot_info.slot_width / ego_slot_info.sin_angle) * 0.5 +
        apa_param.GetParam().obs_consider_lat_threshold) *
       ego_slot_info.sin_angle;
 
@@ -632,8 +632,8 @@ void PerpendicularInPlanner::GenTlane() {
 
   const double car_width_include_mirror =
       apa_param.GetParam().car_width + 2.0 * apa_param.GetParam().mirror_width;
-  const double car_y_right_include_mirror = -car_width_include_mirror / 2.0;
-  const double car_y_left_include_mirror = car_width_include_mirror / 2.0;
+  const double car_y_right_include_mirror = -car_width_include_mirror * 0.5;
+  const double car_y_left_include_mirror = car_width_include_mirror * 0.5;
 
   const double virtual_slot_width =
       car_width_include_mirror + apa_param.GetParam().slot_compare_to_car_width;
@@ -651,9 +651,9 @@ void PerpendicularInPlanner::GenTlane() {
   double right_y = right_que_for_y.top().y();
 
   if (apa_param.GetParam().tmp_no_consider_obs_dy) {
-    left_y = real_slot_width / 2.0 + apa_param.GetParam().tmp_virtual_obs_dy;
+    left_y = real_slot_width * 0.5 + apa_param.GetParam().tmp_virtual_obs_dy;
 
-    right_y = -real_slot_width / 2.0 - apa_param.GetParam().tmp_virtual_obs_dy;
+    right_y = -real_slot_width * 0.5 - apa_param.GetParam().tmp_virtual_obs_dy;
   }
 
   std::cout << "left_y = " << left_y << "  right_y = " << right_y << std::endl;
@@ -815,7 +815,7 @@ void PerpendicularInPlanner::GenObstacles() {
   Eigen::Vector2d B(obstacle_t_lane_.pt_outside);
   const auto& ego_slot_info = frame_.ego_slot_info;
   const auto pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
-  const auto obs_length = (channel_length - pt_01_vec.norm()) / 2.0;
+  const auto obs_length = (channel_length - pt_01_vec.norm()) * 0.5;
   Eigen::Vector2d A = B - slot_side * pt_01_vec.normalized() * obs_length;
 
   Eigen::Vector2d C(obstacle_t_lane_.pt_lower_boundry_pos);
@@ -828,14 +828,14 @@ void PerpendicularInPlanner::GenObstacles() {
   Eigen::Vector2d F = E + slot_side * pt_01_vec.normalized() * obs_length;
 
   // add channel obstacle
-  const double pt_01_x = ((ego_slot_info.pt_0 + ego_slot_info.pt_1) / 2.0).x();
+  const double pt_01_x = ((ego_slot_info.pt_0 + ego_slot_info.pt_1) * 0.5).x();
   const double top_x = pt_01_x + channel_width / ego_slot_info.sin_angle;
   Eigen::Vector2d channel_point_1 =
       Eigen::Vector2d(top_x, 0.0) -
-      slot_side * pt_01_vec.normalized() * channel_length / 2.0;
+      slot_side * pt_01_vec.normalized() * channel_length * 0.5;
   Eigen::Vector2d channel_point_2 =
       Eigen::Vector2d(top_x, 0.0) +
-      slot_side * pt_01_vec.normalized() * channel_length / 2.0;
+      slot_side * pt_01_vec.normalized() * channel_length * 0.5;
 
   Eigen::Vector2d channel_point_3;
   pnc::geometry_lib::LineSegment channel_line;
@@ -1883,7 +1883,7 @@ void PerpendicularInPlanner::Log() const {
   JSON_DEBUG_VALUE("tlane_pt_y", pt_g.y())
   JSON_DEBUG_VALUE("slot_side", slot_t_lane_.slot_side)
 
-  std::vector<Eigen::Vector2d> obstacles =
+  const std::vector<Eigen::Vector2d>& obstacles =
       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstacles();
 
   std::vector<double> obstaclesX;
@@ -1898,8 +1898,9 @@ void PerpendicularInPlanner::Log() const {
     obstaclesY.emplace_back(tmp_obstacle.y());
   }
 
-  std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obstacles_map =
-      apa_world_ptr_->GetCollisionDetectorPtr()->GetObstaclesMap();
+  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>&
+      obstacles_map =
+          apa_world_ptr_->GetCollisionDetectorPtr()->GetObstaclesMap();
 
   for (const auto& obs_pair : obstacles_map) {
     for (const auto& obstacle : obs_pair.second) {

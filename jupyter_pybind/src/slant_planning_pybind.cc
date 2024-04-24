@@ -223,8 +223,8 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
   const double car_width_include_mirror =
       apa_param.GetParam().car_width + 2.0 * apa_param.GetParam().mirror_width;
-  const double car_y_right_include_mirror = -car_width_include_mirror / 2.0;
-  const double car_y_left_include_mirror = car_width_include_mirror / 2.0;
+  const double car_y_right_include_mirror = -car_width_include_mirror * 0.5;
+  const double car_y_left_include_mirror = car_width_include_mirror * 0.5;
 
   const double virtual_slot_width =
       car_width_include_mirror + apa_param.GetParam().slot_compare_to_car_width;
@@ -305,7 +305,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
   const double channel_length = apa_param.GetParam().channel_length;
 
-  const double obs_length = (channel_length - vec_01.norm()) / 2.0;
+  const double obs_length = (channel_length - vec_01.norm()) * 0.5;
 
   const Eigen::Vector2d obj_pt_0 =
       raw_pt[0] + right_obj_dx * unit_vec_02 +
@@ -328,12 +328,12 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       obj_pt_1 + unit_vec_02 * (vec_02.norm() - left_obj_dx);
 
   const Eigen::Vector2d channel_mid =
-      (raw_pt[0] + raw_pt[1]) / 2.0 +
+      (raw_pt[0] + raw_pt[1]) * 0.5 +
       channel_width * Eigen::Vector2d(unit_vec_01.y(), -unit_vec_01.x());
   const Eigen::Vector2d channel_left =
-      channel_mid + channel_length / 2.0 * unit_vec_01;
+      channel_mid + channel_length * 0.5 * unit_vec_01;
   const Eigen::Vector2d channel_right =
-      channel_mid - channel_length / 2.0 * unit_vec_01;
+      channel_mid - channel_length * 0.5 * unit_vec_01;
 
   std::cout << "obj_pt_02 = " << obj_pt_0.transpose() << std::endl;
 

@@ -1377,7 +1377,7 @@ void ParallelParInPlanner::Log() const {
   JSON_DEBUG_VALUE("tlane_pt_y", pt_g.y())
   JSON_DEBUG_VALUE("slot_side", t_lane_.slot_side)
 
-  std::vector<Eigen::Vector2d> obstacles =
+  const std::vector<Eigen::Vector2d>& obstacles =
       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstacles();
 
   std::vector<double> obstaclesX;

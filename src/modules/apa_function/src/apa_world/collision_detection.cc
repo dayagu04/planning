@@ -81,7 +81,6 @@ void CollisionDetector::SetObstacles(
 void CollisionDetector::SetObstacles(
     const std::vector<Eigen::Vector2d> &obs_pt_global_vec,
     const size_t obs_type) {
-  obs_pt_global_map_.erase(obs_type);
   obs_pt_global_map_[obs_type] = obs_pt_global_vec;
 }
 
@@ -241,7 +240,8 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   size_t j = 0;
   size_t k = 0;
   size_t h = 0;
-  size_t key = 66;
+  size_t key = 0;
+  bool col_flag = false;
   for (const auto &obs_pt_pair : obs_pt_global_map_) {
     j = 0;
     for (const auto &obs_pt_global : obs_pt_pair.second) {
@@ -260,6 +260,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
             i = j;
             h = k;
             key = obs_pt_pair.first;
+            col_flag = true;
           }
         }
         k++;
@@ -279,7 +280,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
       (result.remain_obstacle_dist <= result.remain_car_dist);
 
   result.collision_point = collision_point;
-  if (key < 66) {
+  if (col_flag) {
     result.collision_point_global = obs_pt_global_map_[key][i];
   }
   result.car_line_order = h;
@@ -437,7 +438,8 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   size_t j = 0;
   size_t k = 0;
   size_t h = 0;
-  size_t key = 66;
+  size_t key = 0;
+  bool col_flag = false;
   for (const auto &obs_pt_pair : obs_pt_global_map_) {
     j = 0;
     for (const auto &obs_pt_global : obs_pt_pair.second) {
@@ -487,6 +489,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
           i = j;
           h = k;
           key = obs_pt_pair.first;
+          col_flag = true;
         }
         k++;
       }
@@ -509,7 +512,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
       std::min(result.remain_obstacle_dist, result.remain_car_dist);
 
   result.collision_point = collision_point;
-  if (key < 66) {
+  if (col_flag) {
     result.collision_point_global = obs_pt_global_map_[key][i];
   }
   result.car_line_order = h;

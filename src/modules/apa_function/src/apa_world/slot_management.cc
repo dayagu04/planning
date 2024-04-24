@@ -286,12 +286,12 @@ bool SlotManagement::GenTLane(
                       decltype(lambda_func_3)>
       right_que_for_x(lambda_func_3);
 
-  const double x_max = ((ego_slot_info.pt_0 + ego_slot_info.pt_1) / 2.0).x() +
+  const double x_max = ((ego_slot_info.pt_0 + ego_slot_info.pt_1) * 0.5).x() +
                        apa_param.GetParam().obs_consider_long_threshold /
                            ego_slot_info.sin_angle;
 
   const double y_max =
-      ((ego_slot_info.slot_width / ego_slot_info.sin_angle) / 2.0 +
+      ((ego_slot_info.slot_width / ego_slot_info.sin_angle) * 0.5 +
        apa_param.GetParam().obs_consider_lat_threshold) *
       ego_slot_info.sin_angle;
 
@@ -335,8 +335,8 @@ bool SlotManagement::GenTLane(
   // rightmost coordinates which includes rearview mirror are as follows
   const double car_width_include_mirror =
       apa_param.GetParam().car_width + 2.0 * apa_param.GetParam().mirror_width;
-  const double car_y_right_include_mirror = -car_width_include_mirror / 2.0;
-  const double car_y_left_include_mirror = car_width_include_mirror / 2.0;
+  const double car_y_right_include_mirror = -car_width_include_mirror * 0.5;
+  const double car_y_left_include_mirror = car_width_include_mirror * 0.5;
 
   const double virtual_slot_width =
       car_width_include_mirror + apa_param.GetParam().slot_compare_to_car_width;
@@ -354,9 +354,9 @@ bool SlotManagement::GenTLane(
   double right_y = right_que_for_y.top().y();
 
   if (apa_param.GetParam().tmp_no_consider_obs_dy) {
-    left_y = real_slot_width / 2.0 + apa_param.GetParam().tmp_virtual_obs_dy;
+    left_y = real_slot_width * 0.5 + apa_param.GetParam().tmp_virtual_obs_dy;
 
-    right_y = -real_slot_width / 2.0 - apa_param.GetParam().tmp_virtual_obs_dy;
+    right_y = -real_slot_width * 0.5 - apa_param.GetParam().tmp_virtual_obs_dy;
   }
 
   std::cout << "left_y = " << left_y << "  right_y = " << right_y << std::endl;
@@ -396,8 +396,8 @@ bool SlotManagement::GenTLane(
     // cal max_move_slot_dist to avoid car press line
     const double car2line_dist_threshold =
         apa_param.GetParam().car2line_dist_threshold;
-    const double max_move_slot_dist = ego_slot_info.slot_width / 2.0 -
-                                      apa_param.GetParam().car_width / 2.0 -
+    const double max_move_slot_dist = ego_slot_info.slot_width * 0.5 -
+                                      apa_param.GetParam().car_width * 0.5 -
                                       car2line_dist_threshold;
 
     if (std::fabs(move_slot_dist) > max_move_slot_dist) {
@@ -836,7 +836,7 @@ const bool SlotManagement::ProcessSlantSlot(
       slot_info.corner_points().corner_point(3).y();
 
   const Eigen::Vector2d pt_23mid_01_mid =
-      (slot_pt_0 + slot_pt_1 - slot_pt_2 - slot_pt_3) / 2.0;
+      (slot_pt_0 + slot_pt_1 - slot_pt_2 - slot_pt_3) * 0.5;
 
   double angle = std::fabs(pnc::geometry_lib::GetAngleFromTwoVec(
                      pt_23mid_01_mid, origin_pt_01_vec)) *
@@ -1172,12 +1172,12 @@ bool SlotManagement::LonDifUpdateCondition(
       pnc::geometry_lib::GetUnitTangVecByHeading(measurement.heading);
 
   const Eigen::Vector2d slot_pt01_mid(
-      (slot_pts[0].x() + slot_pts[1].x()) / 2.0,
-      (slot_pts[0].y() + slot_pts[1].y()) / 2.0);
+      (slot_pts[0].x() + slot_pts[1].x()) * 0.5,
+      (slot_pts[0].y() + slot_pts[1].y()) * 0.5);
 
   const Eigen::Vector2d slot_pt23_mid(
-      (slot_pts[2].x() + slot_pts[3].x()) / 2.0,
-      (slot_pts[2].y() + slot_pts[3].y()) / 2.0);
+      (slot_pts[2].x() + slot_pts[3].x()) * 0.5,
+      (slot_pts[2].y() + slot_pts[3].y()) * 0.5);
 
   const auto slot_heading_vec_unit =
       (slot_pt01_mid - slot_pt23_mid).normalized();
@@ -1298,7 +1298,7 @@ bool SlotManagement::LonDifUpdateCondition(
     const Eigen::Vector2d origin_pt_01_vec = origin_pt_1 - origin_pt_0;
     const Eigen::Vector2d origin_pt_01_vec_n(origin_pt_01_vec.y(),
                                              -origin_pt_01_vec.x());
-    const Eigen::Vector2d origin_pt_01_mid = (origin_pt_0 + origin_pt_1) / 2.0;
+    const Eigen::Vector2d origin_pt_01_mid = (origin_pt_0 + origin_pt_1) * 0.5;
     pnc::geometry_lib::LineSegment line(
         origin_pt_01_mid, origin_pt_01_mid + origin_pt_01_vec_n.normalized());
 
@@ -1375,7 +1375,7 @@ const double SlotManagement::CalLonDistSlot2Car(
   const Eigen::Vector2d origin_pt_01_vec_n(origin_pt_01_vec.y(),
                                            -origin_pt_01_vec.x());
 
-  const Eigen::Vector2d origin_pt_01_mid = (origin_pt_0 + origin_pt_1) / 2.0;
+  const Eigen::Vector2d origin_pt_01_mid = (origin_pt_0 + origin_pt_1) * 0.5;
   pnc::geometry_lib::LineSegment line(
       origin_pt_01_mid, origin_pt_01_mid + origin_pt_01_vec_n.normalized());
 
@@ -1401,7 +1401,7 @@ bool SlotManagement::AngleUpdateCondition(
   const Measurement measurement = frame_.measurement;
 
   const Eigen::Vector2d mirror_center_pos =
-      (measurement.left_mirror_pos + measurement.right_mirror_pos) / 2.0;
+      (measurement.left_mirror_pos + measurement.right_mirror_pos) * 0.5;
 
   const Eigen::Vector2d mirror_center_to_slot_center_vec(
       new_slot_info.center().x() - mirror_center_pos.x(),
@@ -1423,7 +1423,7 @@ bool SlotManagement::AngleUpdateCondition(
     const Eigen::Vector2d origin_pt_01_vec = origin_pt_1 - origin_pt_0;
     const Eigen::Vector2d origin_pt_01_vec_n_down(-origin_pt_01_vec.y(),
                                                   origin_pt_01_vec.x());
-    const Eigen::Vector2d origin_pt_01_mid = (origin_pt_0 + origin_pt_1) / 2.0;
+    const Eigen::Vector2d origin_pt_01_mid = (origin_pt_0 + origin_pt_1) * 0.5;
     const Eigen::Vector2d slot_center =
         origin_pt_01_mid + 2.5 * origin_pt_01_vec_n_down;
     const Eigen::Vector2d mirror_center_vec = slot_center - mirror_center_pos;
@@ -1442,7 +1442,7 @@ const double SlotManagement::CalAngleSlot2Car(
   const Measurement measurement = frame_.measurement;
 
   const Eigen::Vector2d mirror_center_pos =
-      (measurement.left_mirror_pos + measurement.right_mirror_pos) / 2.0;
+      (measurement.left_mirror_pos + measurement.right_mirror_pos) * 0.5;
 
   const Eigen::Vector2d mirror_center_to_slot_center_vec(
       new_slot_info.center().x() - mirror_center_pos.x(),
@@ -1461,7 +1461,7 @@ const double SlotManagement::CalAngleSlot2Car(
     const Eigen::Vector2d origin_pt_01_vec = origin_pt_1 - origin_pt_0;
     const Eigen::Vector2d origin_pt_01_vec_n_down(-origin_pt_01_vec.y(),
                                                   origin_pt_01_vec.x());
-    const Eigen::Vector2d origin_pt_01_mid = (origin_pt_0 + origin_pt_1) / 2.0;
+    const Eigen::Vector2d origin_pt_01_mid = (origin_pt_0 + origin_pt_1) * 0.5;
     const Eigen::Vector2d slot_center =
         origin_pt_01_mid + 2.5 * origin_pt_01_vec_n_down;
     const Eigen::Vector2d mirror_center_vec = slot_center - mirror_center_pos;
@@ -1979,9 +1979,9 @@ void SlotManagement::UpdateLimiterInfoInParking() {
   if (frame_.limiter_point_window.IsEmpty()) {
     std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter_slot =
         std::make_pair(Eigen::Vector2d(apa_param.GetParam().terminal_target_x,
-                                       ego_slot_info.slot_width / 2.0),
+                                       ego_slot_info.slot_width * 0.5),
                        Eigen::Vector2d(apa_param.GetParam().terminal_target_x,
-                                       -ego_slot_info.slot_width / 2.0));
+                                       -ego_slot_info.slot_width * 0.5));
     frame_.limiter_point_window.Add(limiter_slot);
   }
 
@@ -2045,8 +2045,8 @@ void SlotManagement::UpdateLimiterInfoInParking() {
 
     limiter_slot.first = ego_slot_info.g2l_tf.GetPos(limiter_global.first);
     limiter_slot.second = ego_slot_info.g2l_tf.GetPos(limiter_global.second);
-    limiter_slot.first.y() = ego_slot_info.slot_width / 2.0;
-    limiter_slot.second.y() = -ego_slot_info.slot_width / 2.0;
+    limiter_slot.first.y() = ego_slot_info.slot_width * 0.5;
+    limiter_slot.second.y() = -ego_slot_info.slot_width * 0.5;
     limiter_slot.first.x() += move_dist;
     limiter_slot.second.x() += move_dist;
     frame_.limiter_point_window.Add(limiter_slot);

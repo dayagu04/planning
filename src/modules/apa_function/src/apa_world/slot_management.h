@@ -306,9 +306,9 @@ class SlotManagement {
 
     std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter = std::make_pair(
         Eigen::Vector2d(apa_param.GetParam().terminal_target_x,
-                        apa_param.GetParam().normal_slot_width / 2.0),
+                        apa_param.GetParam().normal_slot_width * 0.5),
         Eigen::Vector2d(apa_param.GetParam().terminal_target_x,
-                        -apa_param.GetParam().normal_slot_width / 2.0));
+                        -apa_param.GetParam().normal_slot_width * 0.5));
 
     double slot_occupied_ratio = 0.0;
 
@@ -340,9 +340,9 @@ class SlotManagement {
       terminal_err.Reset();
       limiter = std::make_pair(
           Eigen::Vector2d(apa_param.GetParam().terminal_target_x,
-                          apa_param.GetParam().normal_slot_width / 2.0),
+                          apa_param.GetParam().normal_slot_width * 0.5),
           Eigen::Vector2d(apa_param.GetParam().terminal_target_x,
-                          -apa_param.GetParam().normal_slot_width / 2.0));
+                          -apa_param.GetParam().normal_slot_width * 0.5));
       slot_occupied_ratio = 0.0;
 
       obs_pt_vec_slot.clear();

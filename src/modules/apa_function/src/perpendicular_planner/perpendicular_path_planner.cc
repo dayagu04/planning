@@ -168,7 +168,7 @@ const bool PerpendicularPathPlanner::PreparePlan() {
   std::vector<double> x_offset_vec;
   std::vector<double> heading_offset_vec;
 
-  const double pt_01_x = ((input_.pt_0 + input_.pt_1) / 2.0).x();
+  const double pt_01_x = ((input_.pt_0 + input_.pt_1) * 0.5).x();
   const double x_min =
       pt_01_x +
       apa_param.GetParam().prepare_line_min_x_offset_slot / input_.sin_angle;
@@ -1244,15 +1244,15 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
     const double channel_length =
         apa_param.GetParam().line_arc_obs_channel_length;
 
-    const double pt_01_x = ((input_.pt_0 + input_.pt_1) / 2.0).x();
+    const double pt_01_x = ((input_.pt_0 + input_.pt_1) * 0.5).x();
     const double top_x = pt_01_x + channel_width / input_.sin_angle;
 
     Eigen::Vector2d channel_point_1 =
         Eigen::Vector2d(top_x, 0.0) +
-        (input_.pt_0 - input_.pt_1).normalized() * channel_length / 2.0;
+        (input_.pt_0 - input_.pt_1).normalized() * channel_length * 0.5;
     Eigen::Vector2d channel_point_2 =
         Eigen::Vector2d(top_x, 0.0) -
-        (input_.pt_0 - input_.pt_1).normalized() * channel_length / 2.0;
+        (input_.pt_0 - input_.pt_1).normalized() * channel_length * 0.5;
 
     pnc::geometry_lib::LineSegment channel_line;
     channel_line.SetPoints(channel_point_1, channel_point_2);
@@ -2231,15 +2231,15 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
     const double channel_length =
         apa_param.GetParam().line_arc_obs_channel_length;
 
-    const double pt_01_x = ((input_.pt_0 + input_.pt_1) / 2.0).x();
+    const double pt_01_x = ((input_.pt_0 + input_.pt_1) * 0.5).x();
     const double top_x = pt_01_x + channel_width / input_.sin_angle;
 
     Eigen::Vector2d channel_point_1 =
         Eigen::Vector2d(top_x, 0.0) +
-        (input_.pt_0 - input_.pt_1).normalized() * channel_length / 2.0;
+        (input_.pt_0 - input_.pt_1).normalized() * channel_length * 0.5;
     Eigen::Vector2d channel_point_2 =
         Eigen::Vector2d(top_x, 0.0) -
-        (input_.pt_0 - input_.pt_1).normalized() * channel_length / 2.0;
+        (input_.pt_0 - input_.pt_1).normalized() * channel_length * 0.5;
 
     pnc::geometry_lib::LineSegment channel_line;
     channel_line.SetPoints(channel_point_1, channel_point_2);
@@ -3009,7 +3009,7 @@ const bool PerpendicularPathPlanner::MultiPlanPb() { return MultiPlan(); }
 
 const bool PerpendicularPathPlanner::AdjustPlanPb() { return AdjustPlan(); }
 
-const PerpendicularPathPlanner::PlannerParams
+const PerpendicularPathPlanner::PlannerParams&
 PerpendicularPathPlanner::GetCalcParams() {
   return calc_params_;
 }
