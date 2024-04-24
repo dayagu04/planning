@@ -200,7 +200,7 @@ class EnvironmentalModel {
   const std::shared_ptr<agent::AgentManager> &get_agent_manager() const {
     return agent_manager_;
   }
-  void set_agent_manager(std::shared_ptr<agent::AgentManager> agent_manager) {
+  void set_agent_manager(const std::shared_ptr<agent::AgentManager> agent_manager) {
     agent_manager_ = agent_manager;
   }
 
@@ -208,7 +208,7 @@ class EnvironmentalModel {
       const {
     return dynamic_world_;
   }
-  void set_dynamic_world(
+  void set_dynamic_world(const
       std::shared_ptr<planning_data::DynamicWorld> dynamic_world) {
     dynamic_world_ = dynamic_world;
   }

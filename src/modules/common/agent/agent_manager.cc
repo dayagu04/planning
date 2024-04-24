@@ -41,6 +41,7 @@ void AgentManager::Update() {
   for (int i = 0;
        i < session_->environmental_model().get_prediction_info().size(); i++) {
     auto prediction_object = prediction_objects[i];
+    // TBD:后续前移至EnvironmentalModelManager::obstacle_prediction_update中
     if (prediction_object.type == 0 ||
         ((!(prediction_object.fusion_source & OBSTACLE_SOURCE_CAMERA)) &&
          (prediction_object.relative_position_x > 0 &&
