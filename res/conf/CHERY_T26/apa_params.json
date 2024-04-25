@@ -135,7 +135,7 @@
   "car_lat_inflation_for_trim_path": 0.088,
   "safe_dist_for_trim_path": 0.338,
   "parallel_obs2slot_max_dist": 16.66,
-  "parallel_channel_y_mag": 7.5,
+  "parallel_channel_y_mag": 5.7,
   "parallel_channel_x_mag": 16.6,
   "parallel_ego_side_to_obs_in_buffer": 0.3,
   "parallel_ego_front_corner_to_obs_in_buffer": 0.1,
@@ -203,6 +203,7 @@
   "cilqr_path_optimization_enable": true,
   "min_opt_path_length": 0.9,
   "parallel_multi_plan_radius_eps": 0.03,
+  "parallel_search_out_heading": 0.0,
 
   "comment_16": "slot managent params",
   "release_slot_by_prepare": true,

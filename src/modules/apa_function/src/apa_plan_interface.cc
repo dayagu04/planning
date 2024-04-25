@@ -658,6 +658,9 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().parallel_multi_plan_radius_eps, double,
                   "parallel_multi_plan_radius_eps");
 
+  JSON_READ_VALUE(apa_param.SetPram().parallel_search_out_heading, double,
+                  "parallel_search_out_heading");
+
   // slot managent params
   JSON_READ_VALUE(apa_param.SetPram().release_slot_by_prepare, bool,
                   "release_slot_by_prepare");

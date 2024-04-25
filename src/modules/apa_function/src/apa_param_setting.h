@@ -218,6 +218,7 @@ struct ApaParameters {
   double adjust_plan_max_heading2_err = 15.0;
   double min_gear_path_length = 0.25;
   double parallel_multi_plan_radius_eps = 0.03;
+  double parallel_search_out_heading = 0.0;
   // path optimizer params
   bool cilqr_path_optimization_enable = false;
   bool perpendicular_lat_opt_enable = false;
