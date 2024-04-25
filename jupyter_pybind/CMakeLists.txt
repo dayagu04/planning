@@ -41,6 +41,13 @@ target_link_libraries(longitudinal_motion_planning_py PRIVATE
   modules_context
   modules_tasks)
 
+pybind11_add_module(scc_lon_motion_planning_py MODULE src/scc_lon_motion_planning_pybind.cc)
+target_link_libraries(scc_lon_motion_planning_py PRIVATE
+  autoplt
+  modules_common
+  modules_context
+  modules_tasks)
+
 pybind11_add_module(slot_management_py MODULE src/slot_management_pybind.cc)
 target_link_libraries(slot_management_py PRIVATE
   autoplt

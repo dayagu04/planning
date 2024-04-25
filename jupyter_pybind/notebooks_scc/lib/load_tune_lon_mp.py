@@ -267,7 +267,6 @@ def load_lon_global_figure(bag_loader):
    t_loc_vec = bag_loader.loc_msg['t']
    for ind in range(len(bag_loader.plan_debug_msg['json'])):
       target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target'], 2))
-      # ref_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_v_ref'], 2))
       leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_vel'], 2))
       leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_two_vel'], 2))
 
@@ -477,7 +476,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
 
   pan1 = Panel(child=row(column(fig2, fig3), column(fig4, fig5, fig6, fig7)), title="Longtime")
 
-  tab1 = DataTable(source=data_text, columns=columns, width=500, height=400)
+  tab1 = DataTable(source=data_text, columns=columns, width=500, height=1000)
 
   pan2 = Panel(child=row(tab1, column(velocity_fig, acc_fig)), title="Realtime")
 
