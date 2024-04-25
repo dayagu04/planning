@@ -31,7 +31,6 @@ static const double kMaxParkOutFirstArcHeading = 66.0;
 static const double kMaxParkOutLineLength = 6.0;
 static const double kSearchOutArcSampleDistance = 0.2;
 static const double kSearchOutLineSampleDistance = 0.3;
-static const double kSearchOutTargetHeading = 16.66;
 static const double kMaxParkOutRootHeading = 25.0;
 
 static const double kColBufferTrippleStep = 0.2;
@@ -212,7 +211,7 @@ const bool ParallelPathPlanner::PlanFromEgoToParkOutRootPose(
             << first_arc_length_vec.back() << std::endl;
 
   const double park_out_target_heading =
-      kSearchOutTargetHeading / 57.3 * calc_params_.slot_side_sgn;
+      apa_param.GetParam().parallel_search_out_heading / 57.3 * calc_params_.slot_side_sgn;
 
   for (const auto& arc_length : first_arc_length_vec) {
     if (!pnc::geometry_lib::CompleteArcInfo(first_arc, arc_length,
