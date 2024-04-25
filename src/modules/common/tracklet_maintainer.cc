@@ -398,7 +398,8 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     double rel_x = p.relative_position_x;
     double rel_y = p.relative_position_y;
 
-    if (rel_x < -45 || rel_x > 120 || p.trajectory_array.size() == 0) {
+    // TBD: use config
+    if (rel_x < -45 || rel_x > 150 || p.trajectory_array.size() == 0) {
       continue;
     }
 
