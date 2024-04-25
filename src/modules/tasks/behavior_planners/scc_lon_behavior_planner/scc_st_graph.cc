@@ -17,8 +17,8 @@ StGraphGenerator::StGraphGenerator(const SccLonBehaviorPlannerConfig &config)
     : config_(config) {
   lead_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step, 0.0,
                                      150.0, 0.1);
-  lead_two_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step, 0.0,
-                                     150.0, 0.1);
+  lead_two_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step,
+                                         0.0, 150.0, 0.1);
   cut_in_desired_distance_filter_.Init(
       -0.2, config_.cut_in_desired_distance_step, 0.0, 150.0, 0.1);
   accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
@@ -165,6 +165,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   double lead_two_desired_velocity = 0.0;
   double desired_distance_filtered = 0.0;
   double lead_two_desired_distance_filtered = 0.0;
+  std::pair<double, double> acc_target = {-0.5, 0.5};
 
   // 纵向只使用融合成功障碍物
   bool lead_fusion_enable = (lead_one.fusion_source() & OBSTACLE_SOURCE_CAMERA);
@@ -227,7 +228,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
           lead_two.d_rel(), lead_two_desired_distance, lead_two.v_lead());
 
       lead_two_desired_distance_filtered = LeadtwoDesiredDistanceFilter(
-        lead_two, v_ego, safe_distance, lead_two_desired_distance);
+          lead_two, v_ego, safe_distance, lead_two_desired_distance);
 
       // update lead two st
       planning::common::RealTimeLonObstacleSTInfo lead_two_st_info;
@@ -251,6 +252,18 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
       JSON_DEBUG_VALUE("lead_two_vel", lead_two.v_lead());
       JSON_DEBUG_VALUE("v_target_lead_two", lead_two_desired_velocity);
     }
+
+    // calcuate acc
+    CalcAccLimits(lead_one, lead_one_desired_distance,
+                  lead_one_desired_velocity, v_ego, lead_one_a_processed,
+                  acc_target);
+    acc_target_.first = std::min(acc_target.first, acc_target.first);
+    acc_target_.second = std::min(acc_target.second, acc_target.second);
+
+    JSON_DEBUG_VALUE("acc_cipv", lead_one.a_lead_k());
+    JSON_DEBUG_VALUE("acc_target_high", acc_target_.second);
+    JSON_DEBUG_VALUE("acc_target_low", acc_target_.first);
+
   } else {
     LOG_DEBUG("There is no lead \n");
     lon_behav_input_->mutable_lon_decision_info()
@@ -265,6 +278,9 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     JSON_DEBUG_VALUE("lead_two_dis", 0);
     JSON_DEBUG_VALUE("lead_two_vel", 0);
     JSON_DEBUG_VALUE("v_target_lead_two", 0);
+    JSON_DEBUG_VALUE("acc_cipv", 0.0);
+    JSON_DEBUG_VALUE("acc_target_high", acc_target_.second);
+    JSON_DEBUG_VALUE("acc_target_low", acc_target_.first);
   }
   return true;
 }
@@ -566,7 +582,7 @@ void StGraphGenerator::UpdateSTGraphs(
         double s_step = st.v_lead() * sample_time;
         // 考虑decision type是overtake的情况
         if (st.decision() == common::RealTimeLonObstacleSTInfo::YIELD) {
-          //没必要区分
+          // 没必要区分
           /*
           if (st.st_type() == common::RealTimeLonObstacleSTInfo::GAP) {
             s_ref = st.start_s() - st.desired_distance() +
@@ -594,14 +610,15 @@ void StGraphGenerator::UpdateSTGraphs(
           s_ref = st.start_s() + st.desired_distance() + s_step;
           // hard bound使用安全距离
           hard_bound.upper = 150;
-          hard_bound.lower = std::max(st.start_s() + st.safe_distance() + s_step, 0.0);
+          hard_bound.lower =
+              std::max(st.start_s() + st.safe_distance() + s_step, 0.0);
           st_boundary.hard_bound.emplace_back(hard_bound);
           s_ref_update = std::max(
               hard_bound.lower, s_ref_update = std::max(sref_update[i], s_ref));
           // soft bound先使用期望跟车距离+buffer
           soft_bound.upper = 150;
           soft_bound.lower =
-              std::max(0.5 * (hard_bound.lower + s_ref_update), s_ref );
+              std::max(0.5 * (hard_bound.lower + s_ref_update), s_ref);
           st_boundary.soft_bound.emplace_back(soft_bound);
           // 根据障碍物跟车距离刷新s_refs
           sref_update[i] = s_ref_update;
@@ -924,7 +941,8 @@ void StGraphGenerator::UpdateNearObstacles(
     }
   }
 
-  // a_target_.first = std::min(a_target_.first, a_limit_cutin[v_min_index]);
+  // acc_target_.first = std::min(acc_target_.first,
+  // a_limit_cutin[v_min_index]);
   v_target_ = std::min(v_target_, v_limit_cutin[v_min_index]);
 
   LOG_DEBUG("nearest_car_track_id : [%d],[%d],[%d] \n", nearest_car_track_id[0],
@@ -1466,9 +1484,9 @@ double StGraphGenerator::DesiredDistanceFilter(
   }
   lead_desired_distance_filter_.SetState(
       leadone_info->leadone_information().desired_distance());
-  if (!(lon_behav_input_ ->dbw_status())) {
+  if (!(lon_behav_input_->dbw_status())) {
     lead_desired_distance_filter_.SetState(
-      std::min(lead_obstacle.d_rel(), safe_distance));
+        std::min(lead_obstacle.d_rel(), safe_distance));
   }
   if (slow_car_cut_in) {
     // 慢车切入
@@ -1488,6 +1506,91 @@ double StGraphGenerator::DesiredDistanceFilter(
   leadone_info->mutable_leadone_information()->set_desired_distance(
       desired_distance_new);
   return desired_distance_new;
+}
+
+bool StGraphGenerator::CalcAccLimits(
+    const planning::common::TrackedObjectInfo &lead_obstacle,
+    const double desired_distance, const double v_target, const double v_ego,
+    const double lead_one_a_processed, std::pair<double, double> &acc_target) {
+  //
+  double agent_v_rel = -lead_obstacle.v_rel();
+  double a_lead_contr =
+      lead_one_a_processed *
+      interp(lead_obstacle.v_lead(), _A_LEAD_LOW_SPEED_BP,
+             _A_LEAD_LOW_SPEED_V) *
+      interp(desired_distance, _A_LEAD_DISTANCE_BP, _A_LEAD_DISTANCE_V) * 0.8;
+  acc_target.second = CalcPositiveAccLimit(
+      lead_obstacle.d_rel(), desired_distance, v_ego, agent_v_rel, v_target,
+      a_lead_contr, acc_target.second);
+  // compute max decel
+  // assume the car is 1m/s slower
+  double v_offset =
+      1.2 * std::min(std::max(2.5 - lead_obstacle.d_path(), 0.0) / 1.5, 1.0);
+  // assume the distance is 1m lower
+  double d_offset = 0.5 + 0.2 * v_ego;
+  if (v_target < v_ego) {
+    // add small value to avoid by zero divisions
+    // compute needed accel to get to 1m distance with -1m/s rel speed
+    double decel_offset =
+        interp(lead_obstacle.v_lead(), _DECEL_OFFSET_BP, _DECEL_OFFSET_V);
+
+    double critical_decel = CalcCriticalDecel(lead_obstacle.d_rel(),
+                                              agent_v_rel, d_offset, v_offset);
+    acc_target.first = std::min(decel_offset + critical_decel + a_lead_contr,
+                                acc_target.first);
+  }
+  // a_min can't be higher than a_max
+  acc_target.first = min(acc_target.first, acc_target.second);
+  // final check on limits
+  acc_target.first = clip(acc_target.first, _A_MAX, _A_MIN);
+  acc_target.second = clip(acc_target.second, _A_MAX, _A_MIN);
+  return true;
+}
+
+double StGraphGenerator::CalcPositiveAccLimit(
+    const double d_lead, const double d_des, const double v_ego,
+    const double v_rel, const double v_target, const double a_lead_contr,
+    const double a_max_const) {
+  // never coast faster then -1m/s^2
+  double a_coast_min = -1.0;
+  double a_max = a_max_const;
+  // coasting behavior above v_coast. Forcing a_max to be negative will force
+  // the pid_speed to decrease, regardless v_target
+  if (v_ego > v_target + 0.5) {
+    // for smooth coast we can be aggressive && target a point where car
+    // would actually crash
+    double v_offset_coast = 1.0;
+    double d_offset_coast = d_des / 2.0 - 4.0;
+
+    // acceleration value to smoothly coast until we hit v_target
+    if (d_lead > d_offset_coast + 0.1) {
+      double a_coast =
+          CalcCriticalDecel(d_lead, v_rel, d_offset_coast, v_offset_coast);
+      // if lead is decelerating, then offset the coast decel
+      a_coast += a_lead_contr;
+      a_max = std::max(a_coast, a_coast_min);
+    } else {
+      a_max = a_coast_min;
+    }
+  } else {
+    // same as cruise accel, plus add a small correction based on relative
+    // lead speed if the lead car is faster, we can accelerate more, if the
+    // car is slower, then we can reduce acceleration
+    a_max = a_max + interp(v_ego, _A_CORR_BY_SPEED_BP, _A_CORR_BY_SPEED_V) *
+                        clip(-v_rel / 4.0, -0.5, 1.0);
+  }
+  return a_max;
+}
+
+double StGraphGenerator::CalcCriticalDecel(const double d_lead,
+                                           const double v_rel,
+                                           const double d_offset,
+                                           const double v_offset) {
+  // this function computes the required decel to avoid crashing, given safety
+  // offsets
+  double a_critical = -std::pow(std::max(0.0, v_rel + v_offset), 2) /
+                      std::max(2 * (d_lead - d_offset), 0.5);
+  return a_critical;
 }
 
 double StGraphGenerator::LeadtwoDesiredDistanceFilter(
@@ -1517,22 +1620,22 @@ double StGraphGenerator::LeadtwoDesiredDistanceFilter(
   lead_two_desired_distance_filter_.SetState(
       leadtwo_info->leadtwo_information().desired_distance());
 
-  if (!(lon_behav_input_ ->dbw_status())) {
+  if (!(lon_behav_input_->dbw_status())) {
     lead_two_desired_distance_filter_.SetState(
-      std::min(lead_obstacle.d_rel(), safe_distance));
+        std::min(lead_obstacle.d_rel(), safe_distance));
   }
 
   if (slow_car_cut_in) {
     // 慢车切入
     lead_two_desired_distance_filter_.SetRate(-4.0,
-                                          config_.slow_lead_distance_step);
+                                              config_.slow_lead_distance_step);
     lead_two_desired_distance_filter_.Update(desired_distance);
     desired_distance_new = lead_two_desired_distance_filter_.GetOutput();
     JSON_DEBUG_VALUE("slow_lead_id", lead_obstacle.track_id());
   } else {
     // 快车切入
     lead_two_desired_distance_filter_.SetRate(-4.0,
-                                          config_.fast_lead_distance_step);
+                                              config_.fast_lead_distance_step);
     lead_two_desired_distance_filter_.Update(desired_distance);
     desired_distance_new = lead_two_desired_distance_filter_.GetOutput();
     JSON_DEBUG_VALUE("fast_lead_id", lead_obstacle.track_id());
@@ -1617,9 +1720,9 @@ double StGraphGenerator::CutInDesiredDistanceFilter(
 
   cut_in_desired_distance_filter_.SetState(
       cutin_information->desired_distance());
-  if (!(lon_behav_input_ ->dbw_status())) {
+  if (!(lon_behav_input_->dbw_status())) {
     cut_in_desired_distance_filter_.SetState(
-      std::min(predict_distance, safe_distance));
+        std::min(predict_distance, safe_distance));
   }
   JSON_DEBUG_VALUE("fast_car_cut_in_id", -1.0);
   JSON_DEBUG_VALUE("slow_car_cut_in_id", -1.0);
@@ -1647,7 +1750,6 @@ double StGraphGenerator::LCGapDesiredDistanceFilter(
     const planning::common::TrackedObjectInfo &lead_obstacle,
     const double v_ego, double safe_distance, double desired_distance,
     bool is_front) {
-  
   // 更新lead初始信息
   if (is_front) {
     if (lc_front_id_ != lead_obstacle.track_id()) {
@@ -1715,7 +1817,6 @@ double StGraphGenerator::LCGapDesiredDistanceFilter(
     lc_rear_desired_distance_ = desired_rear_distance_new;
     return desired_rear_distance_new;
   }
-
 }
 
 common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
@@ -1871,7 +1972,8 @@ void StGraphGenerator::MakeAccBound() {
       config_.high_speed_threshold_with_acc_upper_bound, lon_init_state_[1]);
   acc_bound_.second =
       (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
-  acc_bound_.first = (std::fmin(lon_init_state_[2], config_.acc_lower_bound));
+  // acc_bound_.first = (std::fmin(lon_init_state_[2], config_.acc_lower_bound));
+  acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
 }
 
 void StGraphGenerator::MakeJerkBound() {

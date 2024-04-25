@@ -33,7 +33,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
   pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
 
-  planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
+  planning_json_value_list = ['acc_target_high', 'acc_target_low', 'acc_cipv',\
                               "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                               "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                               'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
@@ -507,11 +507,13 @@ def load_lon_global_figure(bag_loader):
   ego_acc_vec = []
   acc_min_vec = []
   acc_max_vec = []
+  acc_cipv_vec = []
 
   t_vs_vec = bag_loader.vs_msg['t']
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
-    acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_low'], 2))
-    acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_high'], 2))
+    acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
+    acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
+    acc_cipv_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
   for ind in range(len(bag_loader.vs_msg['data'])):
     ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
 
@@ -521,6 +523,8 @@ def load_lon_global_figure(bag_loader):
                                 legend_label='ego_acc',color="blue")
   acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
                               legend_label='acc_max', color="red")
+  acc_fig.line(t_plan_vec, acc_cipv_vec, line_width=1,
+                              legend_label='acc_cipv', color="orange")
 
   lead_fig = bkp.figure(title='lead_car_distance',x_axis_label='time/s',
                 y_axis_label='distance/(m)',width=600,height=300)

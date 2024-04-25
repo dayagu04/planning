@@ -154,8 +154,8 @@ bool VisionLongitudinalBehaviorPlanner::update() {
     JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_reset", 0);
   }
 
-  JSON_DEBUG_VALUE("VisionLonBehavior_a_target_high", a_target_.second);
-  JSON_DEBUG_VALUE("VisionLonBehavior_a_target_low", a_target_.first);
+  JSON_DEBUG_VALUE("acc_target_high", a_target_.second);
+  JSON_DEBUG_VALUE("acc_target_low", a_target_.first);
 
   // get start & stop state
   common::StartStopInfo::StateType stop_start_state =

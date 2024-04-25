@@ -313,7 +313,7 @@ class LoadCyberbag:
     # load planning debug msg
     try:
       json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw",
-                         "VisionLonBehavior_a_target_low", "VisionLonBehavior_a_target_high",
+                         "acc_target_low", "acc_target_high",
                          'v_limit_road', 'v_limit_in_turns','v_target', \
                          'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one",\
                          'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two",\

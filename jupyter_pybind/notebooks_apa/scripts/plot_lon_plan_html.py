@@ -395,10 +395,10 @@ class ScalarGenerator(DataGeneratorBase):
                     ys.append(round(v['lead_two_vel'], 2))
 
                 elif val_type == 'acc_min':
-                    ys.append(round(v['VisionLonBehavior_a_target_low'], 2))
+                    ys.append(round(v['acc_target_low'], 2))
 
                 elif val_type == 'acc_max':
-                    ys.append(round(v['VisionLonBehavior_a_target_high'], 2))
+                    ys.append(round(v['acc_target_high'], 2))
 
                 elif val_type == 'lead_one_dis':
                     ys.append(round(v['lead_one_dis'], 2))
@@ -644,7 +644,7 @@ class TextGenerator4Lon(DataGeneratorBase):
         ts = []
         xys = []
         if text_type == "real_time_json_value":
-            planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
+            planning_json_value_list = ['acc_target_high', 'acc_target_low', \
                             "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                             "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                             'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego',\

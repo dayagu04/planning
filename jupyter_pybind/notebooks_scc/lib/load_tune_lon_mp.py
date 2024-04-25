@@ -33,7 +33,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
   pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
 
-  planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
+  planning_json_value_list = ['acc_target_high', 'acc_target_low', 'acc_cipv', \
                               "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                               "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                               'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
@@ -47,7 +47,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'gap_v_limit_lc', \
                               "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                               "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                              'RealTimeLateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                              'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
 
   plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
@@ -295,11 +295,13 @@ def load_lon_global_figure(bag_loader):
    ego_acc_vec = []
    acc_min_vec = []
    acc_max_vec = []
+   acc_leadone_vec = []
 
    t_vs_vec = bag_loader.vs_msg['t']
    for ind in range(len(bag_loader.plan_debug_msg['json'])):
-      acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_low'], 2))
-      acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_high'], 2))
+      acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
+      acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
+      acc_leadone_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
    for ind in range(len(bag_loader.vs_msg['data'])):
       ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
 

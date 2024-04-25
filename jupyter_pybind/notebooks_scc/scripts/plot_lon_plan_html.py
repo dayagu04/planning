@@ -286,49 +286,49 @@ acc_max_params = {
 lead_one_dis_params = {
     'line_width': 1,
     'color': 'red',
-    'legend_label': 'lead_one_dis'    
+    'legend_label': 'lead_one_dis'
 }
 
 lead_two_dis_params = {
     'line_width': 1,
     'color': 'yellow',
-    'legend_label': 'lead_two_dis'    
+    'legend_label': 'lead_two_dis'
 }
 
 temp_lead_one_dis_params = {
     'line_width': 1,
     'color': 'blue',
-    'legend_label': 'temp_lead_one_dis'    
+    'legend_label': 'temp_lead_one_dis'
 }
 
 temp_lead_two_dis_params = {
     'line_width': 1,
     'color': 'grey',
-    'legend_label': 'temp_lead_two_dis'    
+    'legend_label': 'temp_lead_two_dis'
 }
 
 des_dis_rss_params = {
     'line_width': 1,
     'color': 'green',
-    'legend_label': 'des_dis_rss' 
+    'legend_label': 'des_dis_rss'
 }
 
 des_dis_cab_params = {
     'line_width': 1,
     'color': 'purple',
-    'legend_label': 'des_dis_cab' 
+    'legend_label': 'des_dis_cab'
 }
 
 behav_cost_params = {
     'line_width': 1,
     'color': 'red',
-    'legend_label': 'behav_cost' 
+    'legend_label': 'behav_cost'
 }
 
 motion_cost_params = {
     'line_width': 1,
     'color': 'blue',
-    'legend_label': 'motion_cost' 
+    'legend_label': 'motion_cost'
 }
 
 box_params = {
@@ -390,10 +390,10 @@ class ScalarGenerator(DataGeneratorBase):
                     ys.append(round(v['RealTime_lead_two_velocity'], 2))
 
                 elif val_type == 'acc_min':
-                    ys.append(round(v['VisionLonBehavior_a_target_low'], 2))
+                    ys.append(round(v['acc_target_low'], 2))
 
                 elif val_type == 'acc_max':
-                    ys.append(round(v['VisionLonBehavior_a_target_high'], 2))
+                    ys.append(round(v['acc_target_high'], 2))
 
                 elif val_type == 'lead_one_dis':
                     ys.append(round(v['RealTime_lead_one_distance'], 2))
@@ -402,22 +402,22 @@ class ScalarGenerator(DataGeneratorBase):
                     ys.append(round(v['RealTime_lead_two_distance'], 2))
 
                 elif val_type == 'temp_lead_one_dis':
-                    ys.append(round(v['RealTime_temp_lead_one_distance'], 2)) 
+                    ys.append(round(v['RealTime_temp_lead_one_distance'], 2))
 
                 elif val_type == 'temp_lead_two_dis':
-                    ys.append(round(v['RealTime_temp_lead_two_distance'], 2)) 
+                    ys.append(round(v['RealTime_temp_lead_two_distance'], 2))
 
                 elif val_type == 'des_dis_rss':
-                    ys.append(round(v['RealTime_desired_distance_rss'], 2)) 
+                    ys.append(round(v['RealTime_desired_distance_rss'], 2))
 
                 elif val_type == 'des_dis_cab':
-                    ys.append(round(v['RealTime_desired_distance_calibrate'], 2)) 
+                    ys.append(round(v['RealTime_desired_distance_calibrate'], 2))
 
                 elif val_type == 'behav_cost':
-                    ys.append(round(v['RealTimeLonBehaviorCostTime'], 2))                 
-                     
+                    ys.append(round(v['RealTimeLonBehaviorCostTime'], 2))
+
                 elif val_type == 'motion_cost':
-                    ys.append(round(v['RealTimeLonMotionCostTime'], 2)) 
+                    ys.append(round(v['RealTimeLonMotionCostTime'], 2))
 
                 elif val_type == 'target_velocity_start_stop':
                     if hasattr(v, 'VisionLonBehavior_v_target_start_stop'):
@@ -482,8 +482,8 @@ class BoundLineGenerator(DataGeneratorBase):
                         soft_bound_high_vec.append(soft_high_bound)
                     xys.append((one_t_vec, soft_bound_high_vec))
                 except:
-                    xys.append(([], []))  
-                
+                    xys.append(([], []))
+
             elif bound_type == "st_s_soft_bound_lb":
                 soft_bound_low_vec = []
                 try:
@@ -617,7 +617,7 @@ class BoundLineGenerator(DataGeneratorBase):
                 one_jerk_plan = list(v.longitudinal_motion_planning_output.jerk_vec)
                 xys.append((one_t_vec, one_jerk_plan))
             else:
-                pass              
+                pass
         if len(xys) == 0:
                 xys = [([], [])]
 
@@ -637,7 +637,7 @@ class TextGenerator4Lon(DataGeneratorBase):
         ts = []
         xys = []
         if text_type == "real_time_json_value":
-            planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
+            planning_json_value_list = ['acc_target_high', 'acc_target_low', \
                           'VisionLonBehavior_v_limit_road', 'VisionLonBehavior_v_limit_in_turns','VisionLonBehavior_v_target', \
                           'VisionLonBehavior_lead_one_id', 'VisionLonBehavior_lead_one_dis', 'VisionLonBehavior_lead_one_vel', "VisionLonBehavior_v_target_lead_one", \
                           'VisionLonBehavior_lead_two_id', 'VisionLonBehavior_lead_two_dis', 'VisionLonBehavior_lead_two_vel', "VisionLonBehavior_v_target_lead_two", \
@@ -1034,7 +1034,7 @@ def draw_rt_distance(plan_debug_msg, vs_msg, layer_manager):
     fig_rt_dis = bkp.figure(title='距离',
                          x_axis_label='time/s',
                          y_axis_label='distance/m',
-                         width=600,height=225)    
+                         width=600,height=225)
 
     rt_lead_one_dis = ScalarGenerator(plan_debug_msg, 'lead_one_dis', accu=True, name="rt_lead_one_dis")
     rt_lead_two_dis = ScalarGenerator(plan_debug_msg, 'lead_two_dis', accu=True, name="rt_lead_two_dis")
@@ -1066,9 +1066,9 @@ def draw_rt_cost(plan_debug_msg, vs_msg, layer_manager):
     fig_rt_cost = bkp.figure(title='耗时',
                          x_axis_label='time/s',
                          y_axis_label='time_cost/ms',
-                         width=600,height=225)  
+                         width=600,height=225)
 
-    rt_behav_cost = ScalarGenerator(plan_debug_msg, 'behav_cost', accu=True, name="rt_behav_cost")                       
+    rt_behav_cost = ScalarGenerator(plan_debug_msg, 'behav_cost', accu=True, name="rt_behav_cost")
     rt_motion_cost = ScalarGenerator(plan_debug_msg, 'motion_cost', accu=True, name="rt_motion_cost")
 
     rt_behav_cost_layer = CurveLayer(fig_rt_cost, behav_cost_params)
