@@ -79,6 +79,8 @@ class StGraphGenerator {
                          bool is_on_ramp, double ramp_v_limit,
                          double acc_to_ramp, double v_ego);
 
+  bool CalcCruiseAccelLimits(const double v_ego);
+
   bool CalcSpeedWithTurns(const double v_ego, const double angle_steers,
                           const std::vector<double> &d_poly);
 

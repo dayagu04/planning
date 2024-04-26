@@ -62,8 +62,11 @@ void StGraphGenerator::Update(
   last_v_target_ = v_target_;
   accel_vel_filter_.SetState(last_v_target_);
 
-  // 1. 初始化refs
-  // 1.1 初始化v_refs
+  // 1. 初始化 acc_bound, refs
+  // 1.1 acceleration limits for cruising
+  CalcCruiseAccelLimits(v_ego);
+
+  // 1.2 初始化v_refs
   v_target_ = v_cruise;
   vt_refs_.resize(config_.lon_num_step + 1);
   for (int i = 0; i < config_.lon_num_step + 1; ++i) {
@@ -422,6 +425,15 @@ void StGraphGenerator::CalcSpeedInfoWithCutin(
 
   UpdateSpeedWithPotentialCutinCar(lateral_obstacles, lc_request, v_cruise,
                                    v_ego, cut_in_st_info);
+}
+
+bool StGraphGenerator::CalcCruiseAccelLimits(const double v_ego) {
+  acc_target_.first = interp(v_ego, _A_CRUISE_MIN_BP, _A_CRUISE_MIN_V);
+  acc_target_.second = interp(v_ego, _A_CRUISE_MAX_BP, _A_CRUISE_MAX_V);
+  LOG_DEBUG("----CalcCruiseAccelLimits--- \n");
+  LOG_DEBUG("acc_target_.first : %f ,acc_target_.first : %f\n",
+            acc_target_.first, acc_target_.second);
+  return true;
 }
 
 bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
@@ -949,8 +961,6 @@ void StGraphGenerator::UpdateNearObstacles(
             nearest_car_track_id[1], nearest_car_track_id[2]);
   LOG_DEBUG("v_limit_cutin : [%f], v_target : [%f] \n",
             v_limit_cutin[v_min_index], v_target_);
-  // LOG_DEBUG("a_target_.first : [%f] ,a_target_.second : [%f]\n",
-  //           a_target_.first, a_target_.second);
 
   JSON_DEBUG_VALUE("nearest_car_track_id_one", nearest_car_track_id[0]);
   JSON_DEBUG_VALUE("nearest_car_track_id_two", nearest_car_track_id[1]);
@@ -1273,8 +1283,8 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
               v_limit_lc * interp(gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
                                   _V_LIMIT_DISTANCE_V);
         }
-
         v_limit_lc = std::max(v_ego - 3.0, v_ego + v_limit_lc);
+        // a_target_lc = 0.0;
       } else {
         // safe_distance = CalcSafeDistance(gap.v_rear, v_ego);
         v_limit_lc =
@@ -1293,9 +1303,11 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
                                   _V_LIMIT_DISTANCE_V);
         }
         v_limit_lc = std::max(v_ego - 2.8, v_ego + v_limit_lc);
+        // a_target_lc = 0.6;
       }
       if (v_limit_lc < 6.0) {
         v_limit_lc = 6.0;
+        // a_target_lc = 1.0;
       }
       JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc);
 
@@ -1369,12 +1381,13 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
           v_ego / 10.0;
       v_limit_lc = std::max({v_ego - 3.2, v_ego + v_limit_lc,
                              6.0 + 4.0 * std::max(lc_map_decision - 2, 0)});
-
+      // a_target_lc = 0.0;
       JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc);
     }
   } else {
     JSON_DEBUG_VALUE("gap_v_limit_lc", 0);
   }
+  // acc_target_.second = std::max(acc_target_.second, a_target_lc);
   v_target_ = std::min(v_target_, v_limit_lc);
 }
 
@@ -1970,10 +1983,12 @@ void StGraphGenerator::MakeAccBound() {
       config_.low_speed_threshold_with_acc_upper_bound,
       acc_upper_bound_with_high_speed,
       config_.high_speed_threshold_with_acc_upper_bound, lon_init_state_[1]);
-  acc_bound_.second =
-      (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
-  // acc_bound_.first = (std::fmin(lon_init_state_[2], config_.acc_lower_bound));
+  // acc_bound_.first = (std::fmin(lon_init_state_[2],
+  // config_.acc_lower_bound));
+  // acc_bound_.second =
+  //     (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
   acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
+  acc_bound_.second = (std::fmax(lon_init_state_[2], acc_target_.second));
 }
 
 void StGraphGenerator::MakeJerkBound() {
