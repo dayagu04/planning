@@ -443,20 +443,24 @@ bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
   // the existing lateral acceleration
   //  this should avoid accelerating when losing the target in turns
   LOG_DEBUG("----CalcSpeedWithTurns--- \n");
-  double deg_rad = std::atan(1.0) * 4 / 180.0;
-  double angle_steers_deg = angle_steers / deg_rad;
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double steer_ratio = vehicle_param.steer_ratio;
+  double wheel_base = vehicle_param.wheel_base;
 
-  double a_total_max = interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V);
-  double steer_ratio = 16.5;
-  double wheel_base = 2.92;
-  double a_y = std::pow(v_ego, 2) * angle_steers / (steer_ratio * wheel_base);
-  double a_x_allowed =
-      std::sqrt(std::max(std::pow(a_total_max, 2) - std::pow(a_y, 2), 0.0));
+  double acc_target_in_turns = 0.0;
+  double angle_steers_deg = angle_steers * DEG_PER_RAD;
+
+  double acc_total_max = interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V);
+  double acc_lat =
+      std::pow(v_ego, 2) * angle_steers / (steer_ratio * wheel_base);
+  double acc_lon_allowed = std::sqrt(
+      std::max(std::pow(acc_total_max, 2) - std::pow(acc_lat, 2), 0.0));
 
   // And limit the logitudinal velocity for a safe turn
-  double a_y_max =
+  double acc_lat_max =
       interp(std::abs(angle_steers_deg), _AY_MAX_ABS_BP, _AY_MAX_STEERS);
-  double v_limit_steering = std::sqrt((a_y_max * steer_ratio * wheel_base) /
+  double v_limit_steering = std::sqrt((acc_lat_max * steer_ratio * wheel_base) /
                                       std::max(std::abs(angle_steers), 0.001));
   double v_limit_in_turns = v_limit_steering;
   // calculate the velocity limit according to the road curvature
@@ -467,43 +471,29 @@ bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
         std::pow(std::pow(2 * d_poly[0] * preview_x + d_poly[1], 2) + 1, 1.5);
     double road_radius = 1 / std::max(curv, 0.0001);
     if (road_radius < 750) {
-      a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+      acc_lat_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
     }
-    double v_limit_road = std::sqrt(a_y_max * road_radius) * 0.9;
+    double v_limit_road = std::sqrt(acc_lat_max * road_radius) * 0.9;
     v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
-    LOG_DEBUG("road_radius is : [%f], a_y_max: [%f]\n", road_radius, a_y_max);
+    LOG_DEBUG("road_radius is : [%f], acc_lat_max: [%f]\n", road_radius,
+              acc_lat_max);
     LOG_DEBUG(
         "angle_steers: [%f], angle_steers_deg: [%f], v_limit_road: [%f]\n",
         angle_steers, angle_steers_deg, v_limit_road);
     JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
     JSON_DEBUG_VALUE("road_radius", road_radius);
   }
-  /*
-  if(ref_points.size() > 0) {
-    double curv_max_pt = -100.0;
-    for (int i = 0; i < ref_points.size(); i++) {
-      if(std::abs(ref_points[i].path_point.kappa) > curv_max_pt) {
-        curv_max_pt = std::abs(ref_points[i].path_point.kappa);
-      }
-    }
-    double road_radius = 1 / std::max(curv_max_pt, 0.0001);
-    if (road_radius < 680) {
-      a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
-    }
-    double v_limit_curv_pt = std::sqrt(a_y_max * road_radius) * 0.9;
-    LOG_DEBUG("ref points calced road_radius is : [%f]\n", road_radius);
-    LOG_DEBUG("ref points max kappa is : [%f]\n", curv_max_pt);
-    LOG_DEBUG("v_limit_curv_pt: [%f]\n", v_limit_curv_pt);
-    JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_curv_pt", v_limit_curv_pt);
-    JSON_DEBUG_VALUE("road_radius_in_ref_pt", road_radius);
-    JSON_DEBUG_VALUE("max_kappa_abs", curv_max_pt);
-    v_limit_in_turns = std::min(v_limit_in_turns, v_limit_curv_pt);
-  }
-  */
 
   JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
   JSON_DEBUG_VALUE("v_limit_in_turns", v_limit_in_turns);
+  JSON_DEBUG_VALUE("ego_acc_lat", acc_lat);
 
+  if (v_limit_in_turns < v_ego - 2) {
+    acc_target_in_turns = -0.2;
+  }
+
+  acc_target_.first = std::min(acc_target_.first, acc_target_in_turns);
+  acc_target_.second = std::min(acc_target_.second, acc_lon_allowed);
   v_target_ = std::min(v_target_, v_limit_in_turns);
 
   LOG_DEBUG("v_target_ : [%f] \n", v_target_);

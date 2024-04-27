@@ -2,10 +2,12 @@
 
 #include <float.h>
 #include <limits.h>
+
 #include <map>
 #include <memory>
 
 #include "utils/spline.h"
+#include "utils_math.h"
 // #include "worldmodel/lane.h"
 #include "define/geometry.h"
 #include "define/lateral_behavior_planner_output.h"

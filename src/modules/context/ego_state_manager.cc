@@ -17,7 +17,6 @@
 namespace planning {
 
 static double planning_loop_dt = 0.1;
-static const double steer_ratio = 15.7;
 static const double curve_factor = 0.30;
 
 EgoStateManager::EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
@@ -237,11 +236,13 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
                                        const bool &lon_reset_flag) {
   // note that lon_reset_flag and lat_reset_flag reserved for acc and override
 
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
   auto &motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();
-
+  double steer_ratio = vehicle_param.steer_ratio;
   // const auto &traj_points =
   // session_->mutable_planning_context()->mutable_planning_result().traj_points;
 
@@ -359,6 +360,9 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
 void EgoStateManager::LateralReset() {
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double steer_ratio = vehicle_param.steer_ratio;
 
   auto &lat_init_state = planning_init_point_.lat_init_state;
 
@@ -444,6 +448,10 @@ bool EgoStateManager::LongitudinalStitch() {
 void EgoStateManager::RealtimeUpdatePlanningInitState() {
   // lateral motion never replans, lateral stitch obeys that (x,y,theta) always
   // apply current pose, delta uses current delta
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double steer_ratio = vehicle_param.steer_ratio;
+
   auto &lat_init_state = planning_init_point_.lat_init_state;
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();

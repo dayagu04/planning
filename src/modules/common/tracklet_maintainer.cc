@@ -21,6 +21,7 @@
 #include "vehicle_config_context.h"
 #include "virtual_lane_manager.h"
 namespace planning {
+
 TrackletSequentialState *LifecycleDict::get(int uid) {
   auto iter = data_dict_.find(uid);
   if (iter != data_dict_.end()) {
@@ -153,7 +154,6 @@ void TrackletMaintainer::apply_update(
 void TrackletMaintainer::recv_prediction_objects(
     const std::vector<PredictionObject> &predictions,
     std::vector<TrackedObject *> &objects) {
-  double pi = std::atan(1.0) * 4;
   std::map<int, TrackedObject *> new_map;
 
   double ego_fx = std::cos(ego_state_->ego_pose_raw().theta);
@@ -217,10 +217,10 @@ void TrackletMaintainer::recv_prediction_objects(
     double rot_ax = abs_ax * ego_fx + abs_ay * ego_fy;
 
     double theta = p.yaw - ego_state_->ego_pose_raw().theta;
-    if (theta > pi) {
-      theta -= 2 * pi;
-    } else if (theta < -pi) {
-      theta += 2 * pi;
+    if (theta > M_PI) {
+      theta -= 2 * M_PI;
+    } else if (theta < -M_PI) {
+      theta += 2 * M_PI;
     }
 
     origin->position_type = (rel_x > 2.0) ? 0 : 1;
@@ -369,7 +369,6 @@ void TrackletMaintainer::recv_prediction_objects(
 void TrackletMaintainer::recv_relative_prediction_objects(
     const std::vector<PredictionObject> &predictions,
     std::vector<TrackedObject *> &objects) {
-  // double pi = std::atan(1.0) * 4;
   std::map<int, TrackedObject *> new_map;
   auto ego_state = session_->environmental_model().get_ego_state_manager();
 
@@ -439,10 +438,10 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     // double rot_ax = abs_ax * ego_fx + abs_ay * ego_fy;
 
     // double theta = p.yaw - ego_state_->ego_pose_raw().theta;
-    // if (theta > pi) {
-    //   theta -= 2 * pi;
-    // } else if (theta < -pi) {
-    //   theta += 2 * pi;
+    // if (theta > M_PI) {
+    //   theta -= 2 * M_PI;
+    // } else if (theta < -M_PI) {
+    //   theta += 2 * M_PI;
     // }
 
     origin->position_type = (rel_x > 2.0) ? 0 : 1;
@@ -583,7 +582,6 @@ void TrackletMaintainer::recv_relative_prediction_objects(
 
 void TrackletMaintainer::fisheye_helper(const PredictionObject &prediction,
                                         TrackedObject &object) {
-  double pi = std::atan(1.0) * 4;
   double half_length = prediction.length / 2;
   double half_width = prediction.width / 2;
   double v_cos = std::cos(prediction.relative_theta);
@@ -1087,7 +1085,7 @@ void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
   // item.v_lat += (sequential_state->v_lat_deriv + 3.2 * v_lat_error) *
   // interval;
 
-  // double k_v_lat = 2 * pi * 0.2 * interval / (1 + 2 * pi * 0.2 * interval);
+  // double k_v_lat = 2 * M_PI * 0.2 * interval / (1 + 2 * M_PI * 0.2 * interval);
   double k_v_lat = 0.4;
   item.v_lat = k_v_lat * v_lat_unfiltered + (1 - k_v_lat) * item.v_lat;
   // obstacle without camera source, set to zero
@@ -1099,14 +1097,14 @@ void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
 
   // double v_lat_self_unfiltered = equal_zero(interval) ? 0.0 :
   //     (item.d_path_self - item.history->d_path_self) / interval;
-  // double k_v_lat = 2 * pi * 0.2 * interval / (1 + 2 * pi * 0.2 * interval);
+  // double k_v_lat = 2 * M_PI * 0.2 * interval / (1 + 2 * M_PI * 0.2 * interval);
   // item.v_lat_self = k_v_lat * v_lat_self_unfiltered + (1 - k_v_lat) *
   //     item.v_lat_self;
 
   // double a_rel_unfiltered = equal_zero(interval) ? 0.0:
   //     (item.v_rel - item.history->v_rel);
   // double a_rel_unfiltered = std::max(-10.0, std::min(10.0,
-  // a_rel_unfiltered)); double k_a_lead = 2 * pi * 0.5 * interval / (1 + 2 * pi
+  // a_rel_unfiltered)); double k_a_lead = 2 * M_PI * 0.5 * interval / (1 + 2 * M_PI
   // * 0.5 * interval); item.a_rel = (k_a_lead == 1.0) ? 0.0 :
   //     (k_a_lead * a_rel_unfiltered + (1 - k_a_lead) *item.a_rel);
 }

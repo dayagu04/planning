@@ -4,7 +4,7 @@
 
 #include <cmath>
 
-#include "../define/geometry.h"
+#include "define/geometry.h"
 
 const double PI = 3.1415926;
 

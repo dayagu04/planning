@@ -207,8 +207,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
   // the existing lateral acceleration
   //  this should avoid accelerating when losing the target in turns
   LOG_DEBUG("----limit_accel_velocity_in_turns--- \n");
-  double deg_rad = std::atan(1.0) * 4 / 180.0;
-  double angle_steers_deg = angle_steers / deg_rad;
+  double angle_steers_deg = angle_steers * DEG_PER_RAD;
 
   double a_total_max = interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V);
   const auto &vehicle_param =
