@@ -17,6 +17,14 @@ checker_1:
         case_1:
         case_2:
         ···
+    same_failed:         # json1和json2中均未通过且结果一致的case
+        case_1:
+        case_2:
+        ···
+    same_pass:            # json1和json2中均通过的case
+        case_1:
+        case_2:
+        ···
 
 checker_2:
     faild_pass:
@@ -31,6 +39,15 @@ checker_2:
         case_1:
         case_2:
         ···
+    same_failed:
+        case_1:
+        case_2:
+        ···
+    same_pass:
+        case_1:
+        case_2:
+        ···
+
 ···
 """
 
@@ -53,8 +70,43 @@ def compare_jsons(json1_path, json2_path, output_path):
         all_checkers.update(bag["checker_result"].keys())
 
     # 初始化输出结果字典
-    output = {checker: {"failed_pass": {}, "pass_failed": {}, "diff_failed": {}}
-              for checker in all_checkers}
+    output = {checker: {
+        "pass_rates": {
+            "json1": "",
+            "json2": "",
+            "diff": ""
+        },
+        "failed_pass": {},
+        "pass_failed": {},
+        "diff_failed": {},
+        "same_failed": {},
+        "same_pass": {}
+    } for checker in all_checkers}
+
+    # 初始化通过率
+    checker_success_counts = {checker: {"json1": 0, "json2": 0} for checker in all_checkers}
+    checker_bag_counts = {checker: {"json1": len(json1), "json2": len(json2)} for checker in all_checkers}
+
+    # 遍历两个JSON文件中的bags进行比较和计数
+    for bag1 in json1:
+        for checker, checker1 in bag1["checker_result"].items():
+            if checker1["success"]:
+                checker_success_counts[checker]["json1"] += 1
+
+    for bag2 in json2:
+        for checker, checker2 in bag2["checker_result"].items():
+            if checker2["success"]:
+                checker_success_counts[checker]["json2"] += 1
+
+    # 计算通过率
+    for checker, counts in checker_success_counts.items():
+        total_bags_json1 = checker_bag_counts[checker]["json1"]
+        total_bags_json2 = checker_bag_counts[checker]["json2"]
+        pass_rate_json1 = (counts["json1"] / total_bags_json1) * 100 if total_bags_json1 > 0 else 0
+        pass_rate_json2 = (counts["json2"] / total_bags_json2) * 100 if total_bags_json2 > 0 else 0
+        output[checker]["pass_rates"]["json1"] = str(pass_rate_json1) + " %"
+        output[checker]["pass_rates"]["json2"] = str(pass_rate_json2) + " %"
+        output[checker]["pass_rates"]["diff"] = str(pass_rate_json1 - pass_rate_json2) + " %"
 
     # 遍历两个JSON文件中的bags进行比较
     for bag1 in json1:
@@ -62,30 +114,41 @@ def compare_jsons(json1_path, json2_path, output_path):
             if bag1["bag_name"] == bag2["bag_name"]:
                 common_checkers = set(bag1["checker_result"].keys()) & set(bag2["checker_result"].keys())
                 for checker in common_checkers:
+                    checker1 = bag1["checker_result"][checker]
+                    checker2 = bag2["checker_result"][checker]
+
                     # 情况一：json1中的success为true，json2中的success为false
-                    if bag1["checker_result"][checker]["success"] and not bag2["checker_result"][checker]["success"]:
-                        output[checker]["failed_pass"][bag1["bag_name"]] = {
-                            "json_1_result": bag1["checker_result"][checker],
-                            "json_2_result": bag2["checker_result"][checker]
+                    if checker1["success"] and not checker2["success"]:
+                        output[checker]["pass_failed"][bag1["bag_name"]] = {
+                            "json_1_result": checker1,
+                            "json_2_result": checker2
                         }
                     # 情况二：json1中的success为false，json2中的success为true
-                    elif not bag1["checker_result"][checker]["success"] and bag2["checker_result"][checker]["success"]:
-                        output[checker]["pass_failed"][bag1["bag_name"]] = {
-                            "json_1_result": bag1["checker_result"][checker],
-                            "json_2_result": bag2["checker_result"][checker]
+                    elif not checker1["success"] and checker2["success"]:
+                        output[checker]["failed_pass"][bag1["bag_name"]] = {
+                            "json_1_result": checker1,
+                            "json_2_result": checker2
                         }
-                    # 情况三：两个json中的success都为false，但是其他字段不一样
-                    elif not bag1["checker_result"][checker]["success"] and not bag2["checker_result"][checker]["success"]:
-                        diff_fields = {}
-                        for key in bag1["checker_result"][checker]:
-                            if key != "success" and bag1["checker_result"][checker][key] != bag2["checker_result"][checker][key]:
-                                diff_fields[key] = (bag1["checker_result"][checker][key], bag2["checker_result"][checker][key])
+                    # 情况三 & 情况四：两个json中的success都为false
+                    elif not checker1["success"] and not checker2["success"]:
+                        diff_fields = {key: (checker1[key], checker2[key]) for key in checker1 if key != "success" and checker1[key] != checker2[key]}
                         if diff_fields:
                             output[checker]["diff_failed"][bag1["bag_name"]] = {
-                                "json_1_result": bag1["checker_result"][checker],
-                                "json_2_result": bag2["checker_result"][checker],
+                                "json_1_result": checker1,
+                                "json_2_result": checker2,
                                 "diff_fields": diff_fields
                             }
+                        else:
+                            output[checker]["same_failed"][bag1["bag_name"]] = {
+                                "json_1_result": checker1,
+                                "json_2_result": checker2
+                            }
+                    # 情况五：两个json中的success都为true
+                    elif checker1["success"] and checker2["success"]:
+                        output[checker]["same_pass"][bag1["bag_name"]] = {
+                            "json_1_result": checker1,
+                            "json_2_result": checker2
+                        }
 
     # 将输出结果写入JSON文件
     with open(output_path, 'w') as f:
