@@ -11,7 +11,7 @@ namespace planning {
 
 struct HistoryObstacle {
   int id{};
-  Common::ObjectType type;
+  iflyauto::ObjectType type;
   double time = 0.0;
   double cart_x_center = 0.0;
   double cart_y_center = 0.0;

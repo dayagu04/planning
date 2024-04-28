@@ -21,10 +21,10 @@ add_subdirectory(scc_function EXCLUDE_FROM_ALL)
 add_subdirectory(noa_function EXCLUDE_FROM_ALL)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-  interface_converter
   framework
   modules_context
   modules_apa_function
+  modules_adas_function
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})

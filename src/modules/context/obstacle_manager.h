@@ -4,7 +4,7 @@
 #include "ego_planning_config.h"
 #include "environmental_model.h"
 #include "frenet_obstacle.h"
-#include "fusion_objects.pb.h"
+#include "fusion_objects_c.h"
 #include "obstacle.h"
 #include "reference_path.h"
 #include "session.h"

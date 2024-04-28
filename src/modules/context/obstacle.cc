@@ -7,7 +7,7 @@
 namespace planning {
 
 // Obstacle::Obstacle(int id,
-//                    const Prediction::PredictionObject &prediction_object,
+//                    const iflyauto::PredictionObject &prediction_object,
 //                    const bool is_static, double start_relative_timestamp)
 //     : id_(id),
 //       perception_id_(prediction_object.fusion_obstacle().additional_info().track_id()),
@@ -207,7 +207,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
   is_virtual_ = id_ < 0;
 
   if (prediction_object.trajectory_array.empty()) return;
-  //轨迹默认选第一条
+  // 轨迹默认选第一条
   auto &prediction_trajectory =
       prediction_object.trajectory_array[0].trajectory;
   if (prediction_trajectory.empty()) {
@@ -293,7 +293,7 @@ Obstacle::Obstacle(const Obstacle *obstacle) {
 }
 
 // Obstacle::Obstacle(int id,
-//                    const FusionObjects::FusionObject &perception_obstacle,
+//                    const iflyauto::FusionObject &perception_obstacle,
 //                    const bool is_static)
 //     : id_(id),
 //     perception_id_(perception_obstacle.additional_info().track_id()),
@@ -368,7 +368,7 @@ Obstacle::Obstacle(const Obstacle *obstacle) {
 
 // Obstacle::Obstacle(int id, const std::vector<Point3d> &points)
 //     : id_(id), perception_id_(id), is_static_(true) {
-//   type_ = Common::ObjectType::OBJECT_TYPE_UNKNOWN;
+//   type_ = iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN;
 //   perception_velocity_ = 0.0;
 //   velocity_ = 0.0;
 //   if (points.size() > 2) {
@@ -390,7 +390,7 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
       perception_id_(id),
       is_static_(true),
       perception_points_(points) {
-  type_ = Common::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE;  // FREESPACE占位
+  type_ = iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE;  // FREESPACE占位
   velocity_ = 0.0;
   if (id_ > 6000000) {
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,

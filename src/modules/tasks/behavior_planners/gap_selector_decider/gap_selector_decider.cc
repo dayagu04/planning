@@ -2051,9 +2051,10 @@ void GapSelectorDecider::GenerateLinearRefTrajectory(
     TrajectoryPoints &traj_points) {
   // linear generate traj
   const double lane_direction =
-      gap_selector_state_machine_info_.lc_request_buffer[2] == 1   ? 1
-      : gap_selector_state_machine_info_.lc_request_buffer[2] == 2 ? -1
-                                                                   : 0.;
+      gap_selector_state_machine_info_.lc_request_buffer[2] == 1
+          ? 1
+          : gap_selector_state_machine_info_.lc_request_buffer[2] == 2 ? -1
+                                                                       : 0.;
   const double lat_movd_coef =
       lane_direction * 0.5 * (origin_lane_width_ + target_lane_width_) /
       (config_.default_lc_time + config_.lc_premove_time);

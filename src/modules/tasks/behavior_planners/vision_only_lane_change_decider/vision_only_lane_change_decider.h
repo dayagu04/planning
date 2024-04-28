@@ -2,7 +2,6 @@
 #define MSQUARE_VISION_ONLY_DECISION_PLANNING_PLANNER_LANE_CHANGE_DECIDER_H_
 
 #include "environmental_model.h"
-#include "fusion_road.pb.h"
 #include "lateral_obstacle.h"
 #include "session.h"
 #include "tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
@@ -78,7 +77,7 @@ class VisionOnlyLaneChangeDecider {
   std::vector<RefPointFrenet> cur_lane_, target_lane_;
   double dis_to_change_point_;
   int lc_map_decision_;
-  FusionRoad::LaneType current_lane_type_;
+  iflyauto::LaneType current_lane_type_;
 
   int target_lane_id_;
   int current_lane_id_;

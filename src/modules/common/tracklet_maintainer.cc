@@ -366,8 +366,8 @@ void TrackletMaintainer::recv_prediction_objects(
     delete iter->second;
   }
 
-  object_map_.clear();
-  object_map_ = new_map;
+  // object_map_.clear();
+  object_map_.swap(new_map);
 }
 
 // use relative interface when hdmap valid is false
@@ -577,12 +577,18 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     }
   }
 
-  for (auto iter = object_map_.begin(); iter != object_map_.end(); ++iter) {
-    delete iter->second;
+  std::cout << "1map size=" << object_map_.size() << std::endl;
+  if (object_map_.size() > 0) {
+    for (auto &it : object_map_) {
+      if (it.second != nullptr) {
+        delete it.second;
+        it.second = nullptr;
+      }
+    }
   }
 
-  object_map_.clear();
-  object_map_ = new_map;
+  object_map_.swap(new_map);
+  std::cout << "2map size=" << object_map_.size() << std::endl;
 }
 
 void TrackletMaintainer::fisheye_helper(const PredictionObject &prediction,
@@ -780,9 +786,9 @@ void TrackletMaintainer::calc(
   //   tr->track_id ||
   //       lead_cars.temp_lead_one != nullptr &&
   //       lead_cars.temp_lead_one->track_id == tr->track_id) {
-  //     obstacle->set_lon_status(::PlanningHMI::ObstacleLonStatus::FOLLOWING);
+  //     obstacle->set_lon_status(iflyauto::OBSTACLE_STATUS_FOLLOWING);
   //   } else {
-  //     obstacle->set_lon_status(::PlanningHMI::ObstacleLonStatus::NORMAL);
+  //     obstacle->set_lon_status(iflyauto::OBSTACLE_STATUS_NORMAL);
   //   }
   // }
   // Point2D cart_point;

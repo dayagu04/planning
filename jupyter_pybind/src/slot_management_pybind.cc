@@ -38,7 +38,7 @@ int UpdateBytes(py::bytes &func_statemachine_bytes,
       BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
 
   auto parking_slot_info =
-      BytesToProto<ParkingFusion::ParkingFusionInfo>(parking_slot_info_bytes);
+      BytesToProto<iflyauto::ParkingFusionInfo>(parking_slot_info_bytes);
 
   auto localization_info =
       BytesToProto<LocalizationOutput::LocalizationEstimate>(
@@ -70,7 +70,7 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
       BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
 
   auto parking_slot_info =
-      BytesToProto<ParkingFusion::ParkingFusionInfo>(parking_slot_info_bytes);
+      BytesToProto<iflyauto::ParkingFusionInfo>(parking_slot_info_bytes);
 
   auto localization_info =
       BytesToProto<LocalizationOutput::LocalizationEstimate>(

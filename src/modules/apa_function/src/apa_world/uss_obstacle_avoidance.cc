@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "apa_param_setting.h"
+#include "common_c.h"
 #include "geometry_math.h"
 #include "transform_lib.h"
 
@@ -243,56 +244,51 @@ const bool UssObstacleAvoidance::Preprocess() {
   }
 
   car_motion_info_.steer_angle =
-      local_view_ptr_->vehicle_service_output_info.steering_wheel_angle();
+      local_view_ptr_->vehicle_service_output_info.steering_wheel_angle;
 
   const bool trajectory_available =
-      planning_output_->has_trajectory() &&
-      planning_output_->trajectory().trajectory_points_size() > 1;
+      planning_output_->trajectory.available &&
+      planning_output_->trajectory.trajectory_points_size > 1;
 
   const bool gear_available =
-      planning_output_->has_gear_command() &&
-      (planning_output_->gear_command().gear_command_value() ==
-           Common::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE ||
-       planning_output_->gear_command().gear_command_value() ==
-           Common::GearCommandValue::GEAR_COMMAND_VALUE_REVERSE);
+      planning_output_->gear_command.available &&
+      (planning_output_->gear_command.gear_command_value ==
+           iflyauto::GEAR_COMMAND_VALUE_DRIVE ||
+       planning_output_->gear_command.gear_command_value ==
+           iflyauto::GEAR_COMMAND_VALUE_REVERSE);
 
   if (gear_available == false || trajectory_available == false) {
     return false;
   }
 
-  uint8_t gear_cmd = Common::GearCommandValue::GEAR_COMMAND_VALUE_NONE;
-  if (planning_output_->gear_command().available()) {
-    gear_cmd = planning_output_->gear_command().gear_command_value();
+  uint8_t gear_cmd = iflyauto::GEAR_COMMAND_VALUE_NONE;
+  if (planning_output_->gear_command.available) {
+    gear_cmd = planning_output_->gear_command.gear_command_value;
   }
   car_motion_info_.reverse_flag =
-      (gear_cmd == Common::GearCommandValue::GEAR_COMMAND_VALUE_REVERSE);
+      (gear_cmd == iflyauto::GEAR_COMMAND_VALUE_REVERSE);
 
   // set uss raw dist data
   uss_raw_dist_vec_.clear();
   uss_raw_dist_vec_.reserve(apa_param.GetParam().uss_vertex_x_vec.size());
   const auto &upa_dis_info_buf =
-      local_view_ptr_->uss_wave_info.upa_dis_info_buf();
-
-  // uss info is abnormal, quit directly
-  if (upa_dis_info_buf.size() < 2) {
-    return false;
-  }
+      local_view_ptr_->uss_wave_info.upa_dis_info_buf;
 
   // front uss
   for (size_t i = 0; i < apa_param.GetParam().uss_wdis_index_front.size();
        ++i) {
     uss_raw_dist_vec_.emplace_back(
         upa_dis_info_buf[0]
-            .wdis(apa_param.GetParam().uss_wdis_index_front[i])
-            .wdis_value(0));
+            .wdis[apa_param.GetParam().uss_wdis_index_front[i]]
+            .wdis_value[0]);
   }
 
   // back uss
   for (size_t i = 0; i < apa_param.GetParam().uss_wdis_index_back.size(); ++i) {
     uss_raw_dist_vec_.emplace_back(
         upa_dis_info_buf[1]
-            .wdis(apa_param.GetParam().uss_wdis_index_back[i])
-            .wdis_value(0));
+            .wdis[apa_param.GetParam().uss_wdis_index_back[i]]
+            .wdis_value[0]);
   }
 
   return true;
@@ -343,7 +339,7 @@ void UssObstacleAvoidance::CalRemainDist() {
 }
 
 void UssObstacleAvoidance::Update(
-    PlanningOutput::PlanningOutput *const planning_output,
+    iflyauto::PlanningOutput *const planning_output,
     const LocalView *local_view_ptr) {
   // update local_view
   local_view_ptr_ = local_view_ptr;

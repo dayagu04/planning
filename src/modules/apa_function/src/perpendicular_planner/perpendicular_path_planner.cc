@@ -22,6 +22,7 @@
 #include "dubins_lib.h"
 #include "geometry_math.h"
 #include "math_lib.h"
+#include "planning_plan_c.h"
 namespace planning {
 namespace apa_planner {
 
@@ -2538,15 +2539,27 @@ const bool PerpendicularPathPlanner::SampleCurrentPathSeg() {
   output_.path_point_vec.clear();
   output_.path_point_vec.reserve(kReservedOutputPathPointSize);
 
+  double length = 0.0;
+  for (size_t i = output_.path_seg_index.first;
+       i <= output_.path_seg_index.second; ++i) {
+    length += output_.path_segment_vec[i].Getlength();
+  }
+  size_t N = std::ceil(length / input_.sample_ds);
+  double sample_ds = input_.sample_ds;
+  if (N >= PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM) {
+    N = PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM;
+    sample_ds = length / N;
+  }
+
   pnc::geometry_lib::PathPoint path_point;
   for (size_t i = output_.path_seg_index.first;
        i <= output_.path_seg_index.second; ++i) {
     const auto& current_seg = output_.path_segment_vec[i];
 
     if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-      SampleLineSegment(current_seg.line_seg, input_.sample_ds);
+      SampleLineSegment(current_seg.line_seg, sample_ds);
     } else {
-      SampleArcSegment(current_seg.arc_seg, input_.sample_ds);
+      SampleArcSegment(current_seg.arc_seg, sample_ds);
     }
     if (i < output_.path_seg_index.second) {
       output_.path_point_vec.pop_back();

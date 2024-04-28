@@ -5,7 +5,8 @@
 
 #include "apa_param_setting.h"
 #include "common.pb.h"
-#include "func_state_machine.pb.h"
+#include "common_c.h"
+#include "func_state_machine_c.h"
 #include "general_planning_context.h"
 #include "geometry_math.h"
 #include "slot_management_info.pb.h"
@@ -34,12 +35,12 @@ void ApaWorld::Preprocess() {
 
 void ApaWorld::UpdateEgoState() {
   measures_ptr_->current_state =
-      local_view_ptr_->function_state_machine_info.current_state();
+      local_view_ptr_->function_state_machine_info.current_state;
 
-  const auto& pose = local_view_ptr_->localization_estimate.pose();
+  const auto& pose = local_view_ptr_->localization_estimate.pose;
 
-  const Eigen::Vector2d current_pos(pose.local_position().x(),
-                                    pose.local_position().y());
+  const Eigen::Vector2d current_pos(pose.local_position.x,
+                                    pose.local_position.y);
 
   // calculate standstill time by pos
   if ((measures_ptr_->pos_ego - current_pos).norm() <
@@ -50,15 +51,15 @@ void ApaWorld::UpdateEgoState() {
   }
 
   measures_ptr_->pos_ego = current_pos;
-  measures_ptr_->heading_ego = pose.heading();
-  measures_ptr_->heading_ego_vec << std::cos(pose.heading()),
-      std::sin(pose.heading());
+  measures_ptr_->heading_ego = pose.heading;
+  measures_ptr_->heading_ego_vec << std::cos(pose.heading),
+      std::sin(pose.heading);
 
   // measures_ptr_->vel_ego =
   //     local_view_ptr_->vehicle_service_output_info.vehicle_speed();
 
-  measures_ptr_->vel_ego = local_view_ptr_->localization_estimate.pose()
-                               .linear_velocity_from_wheel();
+  measures_ptr_->vel_ego =
+      local_view_ptr_->localization_estimate.pose.linear_velocity_from_wheel;
 
   // calculate standstill time by velocity
   if (std::fabs(measures_ptr_->vel_ego) <
@@ -80,7 +81,7 @@ void ApaWorld::UpdateEgoState() {
 
 const bool ApaWorld::CheckSelectedSlot() const {
   // check selected slot id
-  if (!local_view_ptr_->parking_fusion_info.has_select_slot_id()) {
+  if (local_view_ptr_->parking_fusion_info.select_slot_id == 0) {
     std::cout << "Error: no selected id" << std::endl;
     return false;
   }
@@ -94,22 +95,23 @@ const bool ApaWorld::CheckSelectedSlot() const {
   }
 
   const size_t selected_slot_id =
-      local_view_ptr_->parking_fusion_info.select_slot_id();
+      local_view_ptr_->parking_fusion_info.select_slot_id;
   std::cout << "selected_slot_id:" << selected_slot_id << std::endl;
 
   // check slot type
   const auto& fusion_slots =
-      local_view_ptr_->parking_fusion_info.parking_fusion_slot_lists();
+      local_view_ptr_->parking_fusion_info.parking_fusion_slot_lists;
 
   bool valid_selected_slot = false;
-  for (int i = 0; i < fusion_slots.size(); ++i) {
-    if (selected_slot_id == fusion_slots[i].id()) {
-      const auto& slot_type = fusion_slots[i].type();
+  const int fusion_slot_lists_size =
+      local_view_ptr_->parking_fusion_info.parking_fusion_slot_lists_size;
+  for (int i = 0; i < fusion_slot_lists_size; ++i) {
+    if (selected_slot_id == fusion_slots[i].id) {
+      const auto& slot_type = fusion_slots[i].type;
 
-      if (slot_type == Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
+      if (slot_type == iflyauto::PARKING_SLOT_TYPE_VERTICAL) {
         std::cout << "perpendicular slot selected in fusion" << std::endl;
-      } else if (slot_type ==
-                 Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
+      } else if (slot_type == iflyauto::PARKING_SLOT_TYPE_HORIZONTAL) {
         std::cout << "parallel slot selected in fusion" << std::endl;
       }
 
@@ -147,31 +149,31 @@ const bool ApaWorld::CheckSelectedSlot() const {
 }
 
 const bool ApaWorld::CheckParkInState() const {
-  return (local_view_ptr_->function_state_machine_info.current_state() >=
-              FuncStateMachine::PARK_IN_APA_IN &&
-          local_view_ptr_->function_state_machine_info.current_state() <=
-              FuncStateMachine::PARK_IN_COMPLETED);
+  return (local_view_ptr_->function_state_machine_info.current_state >=
+              iflyauto::FunctionalState_PARK_IN_APA_IN &&
+          local_view_ptr_->function_state_machine_info.current_state <=
+              iflyauto::FunctionalState_PARK_IN_COMPLETED);
 }
 
 const bool ApaWorld::CheckParkInActivated() const {
-  return (local_view_ptr_->function_state_machine_info.current_state() >=
-              FuncStateMachine::PARK_IN_ACTIVATE_WAIT &&
-          local_view_ptr_->function_state_machine_info.current_state() <=
-              FuncStateMachine::PARK_IN_COMPLETED);
+  return (local_view_ptr_->function_state_machine_info.current_state >=
+              iflyauto::FunctionalState_PARK_IN_ACTIVATE_WAIT &&
+          local_view_ptr_->function_state_machine_info.current_state <=
+              iflyauto::FunctionalState_PARK_IN_COMPLETED);
 }
 
 const bool ApaWorld::CheckParkOutState() const {
-  return (local_view_ptr_->function_state_machine_info.current_state() >=
-              FuncStateMachine::PARK_OUT_SEARCHING &&
-          local_view_ptr_->function_state_machine_info.current_state() <=
-              FuncStateMachine::PARK_OUT_COMPLETED);
+  return (local_view_ptr_->function_state_machine_info.current_state >=
+              iflyauto::FunctionalState_PARK_OUT_SEARCHING &&
+          local_view_ptr_->function_state_machine_info.current_state <=
+              iflyauto::FunctionalState_PARK_OUT_COMPLETED);
 }
 
 const bool ApaWorld::CheckParkOutActivated() const {
-  return (local_view_ptr_->function_state_machine_info.current_state() >=
-              FuncStateMachine::PARK_OUT_ACTIVATE &&
-          local_view_ptr_->function_state_machine_info.current_state() <=
-              FuncStateMachine::PARK_OUT_COMPLETED);
+  return (local_view_ptr_->function_state_machine_info.current_state >=
+              iflyauto::FunctionalState_PARK_OUT_ACTIVATE &&
+          local_view_ptr_->function_state_machine_info.current_state <=
+              iflyauto::FunctionalState_PARK_OUT_COMPLETED);
 }
 const bool ApaWorld::Update() {
   // preprocess measurements

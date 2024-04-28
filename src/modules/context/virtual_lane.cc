@@ -15,52 +15,59 @@ constexpr double kMinLaneWidth = 2.8;
 namespace planning {
 VirtualLane::VirtualLane() {}
 
-void VirtualLane::update_data(const FusionRoad::ReferenceLineMsg &lane) {
-  order_id_ = lane.order_id();
+void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
+  order_id_ = lane.order_id;
   // virtual_id_ = lane.virtual_id();
-  relative_id_ = lane.relative_id();
+  relative_id_ = lane.relative_id;
   // ego_lateral_offset_ = lane.ego_lateral_offset();
 
-  for (auto lane_type : lane.lane_types()) {
-    lane_types_.emplace_back(lane_type);
+  lane_types_.reserve(lane.lane_types_size);
+  for (int i = 0; i < lane.lane_types_size; i++) {
+    lane_types_.emplace_back(lane.lane_types[i]);
   }
-  for (auto lane_mark : lane.lane_marks()) {
-    lane_marks_.emplace_back(lane_mark);
+  lane_marks_.reserve(lane.lane_marks_size);
+  for (int i = 0; i < lane.lane_marks_size; i++) {
+    lane_marks_.emplace_back(lane.lane_marks[i]);
   }
-  for (auto lane_source : lane.lane_sources()) {
-    lane_sources_.emplace_back(lane_source);
+  lane_sources_.reserve(lane.lane_sources_size);
+  for (int i = 0; i < lane.lane_sources_size; i++) {
+    lane_sources_.emplace_back(lane.lane_sources[i]);
   }
-  lane_reference_line_.CopyFrom(lane.lane_reference_line());
-  lane_merge_split_point_.CopyFrom(lane.lane_merge_split_point());
-  left_lane_boundary_.CopyFrom(lane.left_lane_boundary());
-  right_lane_boundary_.CopyFrom(lane.right_lane_boundary());
+  lane_merge_split_point_ = lane.lane_merge_split_point;
+  left_lane_boundary_ = lane.left_lane_boundary;
+  right_lane_boundary_ = lane.right_lane_boundary;
 
-  if (left_lane_boundary_.existence()) {
-    if (right_lane_boundary_.existence()) {
+  if (left_lane_boundary_.existence) {
+    if (right_lane_boundary_.existence) {
       lane_status_ = BOTH_AVAILABLE;
     } else {
       lane_status_ = LEFT_AVAILABLE;
     }
   } else {
-    if (right_lane_boundary_.existence()) {
+    if (right_lane_boundary_.existence) {
       lane_status_ = RIGHT_AVAILABLE;
     } else {
       lane_status_ = BOTH_MISSING;
     }
   }
-
-  for (auto poly_coefficient : lane_reference_line_.poly_coefficient_car()) {
-    c_poly_.emplace_back(poly_coefficient);
+  const int num_of_reflane_point =
+      lane.lane_reference_line.virtual_lane_refline_points_size;
+  c_poly_.resize(NUM_OF_POLYNOMIAL);
+  for (int i = 0; i < NUM_OF_POLYNOMIAL; i++) {
+    c_poly_[i] = lane.lane_reference_line.poly_coefficient_car[i];
   }
-
-  assert(c_poly_.size() == 4);
+  virtual_lane_refline_points_.resize(num_of_reflane_point);
+  for (int i = 0; i < num_of_reflane_point; i++) {
+    virtual_lane_refline_points_[i] =
+        lane.lane_reference_line.virtual_lane_refline_points[i];
+  }
 
   center_line_points_track_id_.clear();
-  for (auto &virtual_lane_refine_point :
-       lane_reference_line_.virtual_lane_refline_points()) {
-    // center_line_points_track_id_.emplace_back(virtual_lane_refine_point.track_id());
-    // // todo
-  }
+  // for (auto &virtual_lane_refine_point :
+  //      lane_reference_line_.virtual_lane_refline_points()) {
+  // center_line_points_track_id_.emplace_back(virtual_lane_refine_point.track_id());
+  // // todo
+  // }
 
   width_ = width(0);
 }
@@ -72,41 +79,31 @@ bool VirtualLane::calc_c_poly(std::vector<double> &output) {  // 该函数先保
     output.assign(4, 0.0);
     return true;
   } else if (lane_status_ == LEFT_AVAILABLE) {
-    if (left_lane_boundary_.poly_coefficient_size() < 4) {
-      output.assign(4, 0.0);
-      return true;
-    }
-    for (size_t i = 0; i < left_lane_boundary_.poly_coefficient_size(); i++) {
-      output.push_back((left_lane_boundary_.poly_coefficient(i)));
+    for (size_t i = 0; i < NUM_OF_POLYNOMIAL; i++) {
+      output.push_back((left_lane_boundary_.poly_coefficient[i]));
       if (i == 0) {
         output[0] =
-            left_lane_boundary_.poly_coefficient(0) -
+            left_lane_boundary_.poly_coefficient[0] -
             0.5 * width() *
                 std::sqrt(1 +
-                          std::pow(left_lane_boundary_.poly_coefficient(1), 2));
+                          std::pow(left_lane_boundary_.poly_coefficient[1], 2));
       }
     }
   } else if (lane_status_ == RIGHT_AVAILABLE) {
-    if (right_lane_boundary_.poly_coefficient_size() < 4) {
-      output.assign(4, 0.0);
-      return true;
-    }
-    for (size_t i = 0; i < right_lane_boundary_.poly_coefficient_size(); i++) {
-      output.push_back((right_lane_boundary_.poly_coefficient(i)));
+    for (size_t i = 0; i < NUM_OF_POLYNOMIAL; i++) {
+      output.push_back((right_lane_boundary_.poly_coefficient[i]));
       if (i == 0) {
         output[0] =
-            right_lane_boundary_.poly_coefficient(0) +
+            right_lane_boundary_.poly_coefficient[0] +
             0.5 * width() *
                 std::sqrt(
-                    1 + std::pow(right_lane_boundary_.poly_coefficient(1), 2));
+                    1 + std::pow(right_lane_boundary_.poly_coefficient[1], 2));
       }
     }
   } else {
-    for (size_t i = 0; i < left_lane_boundary_.poly_coefficient_size() &&
-                       i < right_lane_boundary_.poly_coefficient_size();
-         i++) {
-      output.push_back((left_lane_boundary_.poly_coefficient(i) +
-                        right_lane_boundary_.poly_coefficient(i)) /
+    for (size_t i = 0; i < NUM_OF_POLYNOMIAL; i++) {
+      output.push_back((left_lane_boundary_.poly_coefficient[i] +
+                        right_lane_boundary_.poly_coefficient[i]) /
                        2.0);
     }
   }
@@ -190,26 +187,20 @@ uint VirtualLane::get_common_point_num(
 
 double VirtualLane::width(double x) {
   double width = 0;
-  auto virtual_lane_refline_points =
-      lane_reference_line_.virtual_lane_refline_points();
-  if (virtual_lane_refline_points.size() < 1) {
+  auto comp = [](const iflyauto::ReferencePoint &p, const double x) {
+    return p.car_point.x < x;
+  };
+  auto p_first_point =
+      std::lower_bound(virtual_lane_refline_points_.begin(),
+                       virtual_lane_refline_points_.end(), x, comp);
+  if (p_first_point == virtual_lane_refline_points_.begin()) {
+    width = virtual_lane_refline_points_.begin()->lane_width;
+  } else if (p_first_point == virtual_lane_refline_points_.end()) {
+    width = std::prev(virtual_lane_refline_points_.end())->lane_width;
   } else {
-    auto comp = [](const FusionRoad::ReferencePoint &p, const double x) {
-      return p.car_point().x() < x;
-    };
-    auto p_first_point =
-        std::lower_bound(virtual_lane_refline_points.begin(),
-                         virtual_lane_refline_points.end(), x, comp);
-    if (p_first_point == virtual_lane_refline_points.begin()) {
-      width = virtual_lane_refline_points.begin()->lane_width();
-    } else if (p_first_point == virtual_lane_refline_points.end()) {
-      width = std::prev(virtual_lane_refline_points.end())->lane_width();
-    } else {
-      width = planning_math::lerp((p_first_point - 1)->lane_width(),
-                                  (p_first_point - 1)->car_point().x(),
-                                  p_first_point->lane_width(),
-                                  p_first_point->car_point().x(), x);
-    }
+    width = planning_math::lerp(
+        (p_first_point - 1)->lane_width, (p_first_point - 1)->car_point.x,
+        p_first_point->lane_width, p_first_point->car_point.x, x);
   }
   return std::max(width, 2.8);
 }
@@ -239,39 +230,37 @@ double VirtualLane::width_by_s(double s) {
 }
 
 bool VirtualLane::get_point_by_distance(double distance,
-                                        FusionRoad::ReferencePoint *point) {
+                                        iflyauto::ReferencePoint &point) {
   double min_distance_diff = std::numeric_limits<double>::max();
-  for (auto virtual_lane_refine_point :
-       lane_reference_line_.virtual_lane_refline_points()) {
+  for (auto &virtual_lane_refine_point : virtual_lane_refline_points_) {
     double distance_diff =
-        fabs(distance - virtual_lane_refine_point.car_point().x());
+        fabs(distance - virtual_lane_refine_point.car_point.x);
     if (distance_diff < min_distance_diff) {
       min_distance_diff = distance_diff;
-      point->CopyFrom(virtual_lane_refine_point);
+      point = virtual_lane_refine_point;
     }
   }
 
   if (min_distance_diff < std::numeric_limits<double>::max()) {
     return true;
-  } else {
-    return false;
   }
+  return false;
 }
 
 double VirtualLane::max_width() const {
   if (lane_types_.size() > 0) {
-    switch (lane_types_[0].type()) {
-      case FusionRoad::LaneType::LANETYPE_UNKNOWN:;
-      case FusionRoad::LaneType::LANETYPE_NORMAL:;
-      case FusionRoad::LaneType::LANETYPE_VIRTUAL:;
-      case FusionRoad::LaneType::LANETYPE_PARKING:;
-      case FusionRoad::LaneType::LANETYPE_ACCELERATE:;
-      case FusionRoad::LaneType::LANETYPE_DECELERATE:;
-      case FusionRoad::LaneType::LANETYPE_BUS:;
-      case FusionRoad::LaneType::LANETYPE_EMERGENCY:;
-      case FusionRoad::LaneType::LANETYPE_ACCELERATE_DECELERATE:;
-      case FusionRoad::LaneType::LANETYPE_LEFT_TURN_WAITTING_AREA:;
-      case FusionRoad::LaneType::LANETYPE_NON_MOTOR:;
+    switch (lane_types_[0].type) {
+      case iflyauto::LANETYPE_UNKNOWN:;
+      case iflyauto::LANETYPE_NORMAL:;
+      case iflyauto::LANETYPE_VIRTUAL:;
+      case iflyauto::LANETYPE_PARKING:;
+      case iflyauto::LANETYPE_ACCELERATE:;
+      case iflyauto::LANETYPE_DECELERATE:;
+      case iflyauto::LANETYPE_BUS:;
+      case iflyauto::LANETYPE_EMERGENCY:;
+      case iflyauto::LANETYPE_ACCELERATE_DECELERATE:;
+      case iflyauto::LANETYPE_LEFT_TURN_WAITTING_AREA:;
+      case iflyauto::LANETYPE_NON_MOTOR:;
         return kMaxLaneWidth;
       default:
         LOG_ERROR("Error Lane Type");
@@ -286,15 +275,15 @@ double VirtualLane::max_width() const {
 bool VirtualLane::is_solid_line(int side) const {
   assert(side == 0 || side == 1);
   if (side == 0) {
-    if (left_lane_boundary_.type_segments_size() > 0 &&
-        left_lane_boundary_.type_segments(0).type() ==
-            Common::LaneBoundaryType::MARKING_SOLID) {
+    if (left_lane_boundary_.type_segments_size > 0 &&
+        left_lane_boundary_.type_segments[0].type ==
+            iflyauto::LaneBoundaryType_MARKING_SOLID) {
       return true;
     }
   } else if (side == 1) {
-    if (right_lane_boundary_.type_segments_size() > 0 &&
-        right_lane_boundary_.type_segments(0).type() ==
-            Common::LaneBoundaryType::MARKING_SOLID) {
+    if (right_lane_boundary_.type_segments_size > 0 &&
+        right_lane_boundary_.type_segments[0].type ==
+            iflyauto::LaneBoundaryType_MARKING_SOLID) {
       return true;
     }
   }
@@ -303,18 +292,18 @@ bool VirtualLane::is_solid_line(int side) const {
 
 double VirtualLane::min_width() const {
   if (lane_types_.size() > 0) {
-    switch (lane_types_[0].type()) {
-      case FusionRoad::LaneType::LANETYPE_UNKNOWN:;
-      case FusionRoad::LaneType::LANETYPE_NORMAL:;
-      case FusionRoad::LaneType::LANETYPE_VIRTUAL:;
-      case FusionRoad::LaneType::LANETYPE_PARKING:;
-      case FusionRoad::LaneType::LANETYPE_ACCELERATE:;
-      case FusionRoad::LaneType::LANETYPE_DECELERATE:;
-      case FusionRoad::LaneType::LANETYPE_BUS:;
-      case FusionRoad::LaneType::LANETYPE_EMERGENCY:;
-      case FusionRoad::LaneType::LANETYPE_ACCELERATE_DECELERATE:;
-      case FusionRoad::LaneType::LANETYPE_LEFT_TURN_WAITTING_AREA:;
-      case FusionRoad::LaneType::LANETYPE_NON_MOTOR:;
+    switch (lane_types_[0].type) {
+      case iflyauto::LANETYPE_UNKNOWN:;
+      case iflyauto::LANETYPE_NORMAL:;
+      case iflyauto::LANETYPE_VIRTUAL:;
+      case iflyauto::LANETYPE_PARKING:;
+      case iflyauto::LANETYPE_ACCELERATE:;
+      case iflyauto::LANETYPE_DECELERATE:;
+      case iflyauto::LANETYPE_BUS:;
+      case iflyauto::LANETYPE_EMERGENCY:;
+      case iflyauto::LANETYPE_ACCELERATE_DECELERATE:;
+      case iflyauto::LANETYPE_LEFT_TURN_WAITTING_AREA:;
+      case iflyauto::LANETYPE_NON_MOTOR:;
         return kMinLaneWidth;
       default:
         LOG_ERROR("Error Lane Type");
@@ -329,7 +318,7 @@ double VirtualLane::min_width() const {
 void VirtualLane::update_speed_limit(double ego_vel,
                                      double ego_v_cruise) {  // todo
   // update vision only v_cruise_
-  if (get_lane_source() == FusionRoad::LaneSource::SOURCE_CAMERA_HDMAP_FUSION) {
+  if (get_lane_source() == iflyauto::LaneSource_SOURCE_CAMERA_HDMAP_FUSION) {
     v_cruise_ = ego_v_cruise;
   }
 
@@ -387,8 +376,8 @@ void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
   if (order_id_ + 1 > lane_num) return;
   if (is_nearing_ramp && !is_leaving_ramp) {
     if (ramp_direction == RAMP_ON_RIGHT) {
-      if (lane_type == FusionRoad::LaneType::LANETYPE_DECELERATE &&
-          order_id_ > 0 && lane_num > 3) {
+      if (lane_type == iflyauto::LANETYPE_DECELERATE && order_id_ > 0 &&
+          lane_num > 3) {
         // std::cout << "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN" << std::endl;
         return;
       }

@@ -23,6 +23,7 @@ import bokeh.plotting as bkp
 from bokeh.models import WheelZoomTool, HoverTool, TapTool, CustomJS
 from cyber_record.record import Record
 from google.protobuf.json_format import MessageToJson
+import rosbag
 
 car_xb, car_yb = load_car_params_patch()
 coord_tf = coord_transformer()
@@ -33,9 +34,14 @@ timestamp_shrink = 1e6
 is_vis_map = False
 
 class LoadCyberbag:
-  def __init__(self, path) -> None:
+  def __init__(self, path, type='cyber') -> None:
     self.bag_path = path
-    self.bag = Record(path)
+
+    if type == 'cyber':
+      self.bag = Record(path)
+    elif type == 'ros':
+      self.bag = rosbag.Bag(path, 'r')
+
     # loclization msg
     self.loc_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
@@ -874,20 +880,35 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             fig1.renderers[13 + i].glyph.line_alpha = 1
             fig1.renderers[13 + i].glyph.line_width = 2
           else:
-            fig1.renderers[13 + i].glyph.line_dash = 'dotted'
-            fig1.renderers[13 + i].glyph.line_alpha = 0.8
-            fig1.renderers[13 + i].glyph.line_width = 1
+            data_center_line = data_center_line_dict[i]
+            line_x_rel = []
+            line_y_rel = []
+            for index in range(len(center_line_list[i]['line_x_vec'])):
+              pos_xn_i, pos_yn_i = center_line_list[i]['line_x_vec'][index], center_line_list[i]['line_y_vec'][index]
+              ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+              line_x_rel.append(ego_local_x)
+              line_y_rel.append(ego_local_y)
+            center_line_list[i]['line_x_vec'] = line_x_rel
+            center_line_list[i]['line_y_vec'] = line_y_rel
+            if center_line_list[i]['relative_id'] == 0:
+              fig1.renderers[13 + i].glyph.line_dash = 'dotdash'
+              fig1.renderers[13 + i].glyph.line_alpha = 1
+              fig1.renderers[13 + i].glyph.line_width = 2
+            else:
+              fig1.renderers[13 + i].glyph.line_dash = 'dotted'
+              fig1.renderers[13 + i].glyph.line_alpha = 0.8
+              fig1.renderers[13 + i].glyph.line_width = 1
 
-          if center_line_list[i]['relative_id'] == 1000:  # 车道不存在
-            center_line_list[i]['line_x_vec'] = []
-            center_line_list[i]['line_y_vec'] = []
-          data_center_line.data.update({
-            'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
-            'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
-          })
-      # except:
-      #   print('error')
-      #   pass
+            if center_line_list[i]['relative_id'] == 1000:  # 车道不存在
+              center_line_list[i]['line_x_vec'] = []
+              center_line_list[i]['line_y_vec'] = []
+            data_center_line.data.update({
+              'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
+              'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
+            })
+        # except:
+        #   print('error')
+        #   pass
 
   # fix_lane,origin_lane
   if bag_loader.plan_debug_msg['enable'] == True:
@@ -1022,7 +1043,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # load me_obj
   if bag_loader.me_msg['enable'] == True:
     # print("me_msg_idx:",me_msg_idx)
-    me_camera_objects = bag_loader.me_msg['data'][me_msg_idx].camera_perception_object_list
+    me_camera_objects = bag_loader.me_msg['data'][me_msg_idx].camera_perception_objects
     # print(me_camera_objects.size())
     obstacles_info_all1 = load_obstacle_me(me_camera_objects)
     # 加载自车坐标系下的数据
@@ -1100,7 +1121,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     # print(data_radar_obj[i])
     if bag_loader_radar_msg[i]['enable'] == True:
       # print(radar_msg_idx[i])
-      radar_objects = bag_loader_radar_msg[i]['data'][radar_msg_idx[i]].radar_perception_object_list
+      radar_objects = bag_loader_radar_msg[i]['data'][radar_msg_idx[i]].object_list
       # print(me_camera_objects.length())
       obstacles_info_all2 = load_obstacle_radar(radar_objects,i)
       # 加载自车坐标系下的数据

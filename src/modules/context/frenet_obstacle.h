@@ -20,7 +20,7 @@ class FrenetObstacle {
                  bool is_location_valid);
 
   int id() const { return id_; }
-  Common::ObjectType type() const { return obstacle_ptr_->type(); }
+  iflyauto::ObjectType type() const { return obstacle_ptr_->type(); }
 
   double frenet_s() const { return frenet_s_; }
   double frenet_l() const { return frenet_l_; }

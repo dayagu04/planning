@@ -8,7 +8,7 @@
 #include "apa_world.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
-#include "func_state_machine.pb.h"
+#include "func_state_machine_c.h"
 #include "general_planning_context.h"
 #include "local_view.h"
 #include "parallel_park_in_planner.h"
@@ -44,11 +44,10 @@ void ApaPlanInterface::Init() {
 
 void ApaPlanInterface::Reset() {
   // reset planning output
-  planning_output_.Clear();
-  planning_output_.mutable_planning_status()->set_apa_planning_status(
-      PlanningOutput::ApaPlanningStatus::NONE);
+  memset(&planning_output_, 0, sizeof(planning_output_));
+  planning_output_.planning_status.apa_planning_status = iflyauto::APA_NONE;
 
-  planning_output_.mutable_successful_slot_info_list()->Clear();
+  planning_output_.successful_slot_info_list_size = 0;
 
   // reset apa world
   apa_world_ptr_->Reset();
@@ -76,12 +75,12 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
       apa_world_ptr_->GetMeasurementsPtr()->current_state;
 
   const uint8_t current_state =
-      local_view_ptr->function_state_machine_info.current_state();
+      local_view_ptr->function_state_machine_info.current_state;
 
   // just used for pybind simulation to clear previous state varible
-  if (last_state == FuncStateMachine::STANDBY &&
-      (current_state >= FuncStateMachine::PARK_IN_APA_IN &&
-       current_state <= FuncStateMachine::PARK_IN_COMPLETED)) {
+  if (last_state == iflyauto::FunctionalState_STANDBY &&
+      (current_state >= iflyauto::FunctionalState_PARK_IN_APA_IN &&
+       current_state <= iflyauto::FunctionalState_PARK_IN_COMPLETED)) {
     Reset();
   }
 
@@ -93,9 +92,9 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   bool success = false;
 #ifdef PERPENDICULAR_SIMULATION
   std::cout << "PERPENDICULAR_SIMULATION\n";
-  if (current_state == FuncStateMachine::PARK_IN_ACTIVATE_WAIT ||
-      current_state == FuncStateMachine::PARK_IN_ACTIVATE_CONTROL ||
-      current_state == FuncStateMachine::PARK_IN_SECURE) {
+  if (current_state == iflyauto::FunctionalState_PARK_IN_ACTIVATE_WAIT ||
+      current_state == iflyauto::FunctionalState_PARK_IN_ACTIVATE_CONTROL ||
+      current_state == iflyauto::FunctionalState_PARK_IN_SECURE) {
     success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
   }
 #else
@@ -128,16 +127,15 @@ const bool ApaPlanInterface::ApaPlanOnce(const uint8_t planner_type) {
 }
 
 void ApaPlanInterface::AddReleasedSlotInfo(
-    PlanningOutput::PlanningOutput &planning_output) {
-  planning_output.clear_successful_slot_info_list();
+    iflyauto::PlanningOutput &planning_output) {
+  planning_output.successful_slot_info_list_size = 0;
 
   for (const auto &successful_slot_info :
        apa_world_ptr_->GetSlotManagerPtr()->GetReleasedSlotInfoVec()) {
-    // std::cout << "successful_slot_info = " <<
-    // successful_slot_info.DebugString()
-    //           << std::endl;
-    const auto slot_info_list = planning_output.add_successful_slot_info_list();
-    slot_info_list->CopyFrom(successful_slot_info);
+    auto &slot_info_list =
+        planning_output.successful_slot_info_list
+            [planning_output.successful_slot_info_list_size++];
+    slot_info_list = successful_slot_info;
   }
 }
 

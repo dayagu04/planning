@@ -16,7 +16,7 @@ if [[ $TYPE == "SYSTEM" ]]; then
     rm -rf install/planning
     cd $SCRIPT_DIR/..
 
-    make build BUILD_TYPE=Release PLATFORM=BZT PRODUCT=$PRODUCT_NAME NUM_JOB=8
+    make build BUILD_TYPE=Release PLATFORM=BZT PRODUCT=$PRODUCT_NAME NUM_JOB=${NUM_JOB:-8}
 
     cp target/README.md install/planning/
     cp CHANGELOG.md install/planning/

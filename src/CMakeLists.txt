@@ -18,6 +18,9 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+if(CMAKE_EXPORT_COMPILE_COMMANDS)
+  set(CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
+endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -g -fPIC -fpermissive")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D${PLATFORM} -D${PRODUCT}")
 
@@ -55,7 +58,7 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/osqp thirdparty/osqp.out EXCLU
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/nlohmann_json thirdparty/nlohmann_json.out EXCLUDE_FROM_ALL)
 add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/proto interface.out EXCLUDE_FROM_ALL)
 add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/private/planning interface_planning.out EXCLUDE_FROM_ALL)
-add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/interface_converter interface_converter.out EXCLUDE_FROM_ALL)
+add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/c interface_c.out EXCLUDE_FROM_ALL)
 
 if(ADAPTER STREQUAL "cyber")
   add_subdirectory(adapter/cyber)

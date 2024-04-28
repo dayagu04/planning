@@ -14,7 +14,7 @@
 #include "geometry_math.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
-#include "planning_plan.pb.h"
+#include "planning_plan_c.h"
 
 // #define PERPENDICULAR_SIMULATION
 
@@ -223,9 +223,7 @@ class ApaPlannerBase {
 
   const Frame &GetFrame() const { return frame_; }
 
-  const PlanningOutput::PlanningOutput &GetOutput() const {
-    return planning_output_;
-  }
+  const iflyauto::PlanningOutput &GetOutput() const { return planning_output_; }
 
   void SetApaWorldPtr(const std::shared_ptr<ApaWorld> &apa_world_ptr) {
     apa_world_ptr_ = apa_world_ptr;
@@ -251,7 +249,7 @@ class ApaPlannerBase {
   std::shared_ptr<ApaWorld> apa_world_ptr_;
   std::shared_ptr<LateralPathOptimizer> lateral_path_optimizer_ptr_;
 
-  PlanningOutput::PlanningOutput planning_output_;
+  iflyauto::PlanningOutput planning_output_;
 
   Frame frame_;
 

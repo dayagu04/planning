@@ -55,13 +55,13 @@ class AgentNodeManager {
     return map_gs_care_obstacles_;
   };
 
-  const std::unordered_map<int64_t, ObstaclePredicatedInfo> &
-  agent_node_origin_lane_map() const {
+  const std::unordered_map<int64_t, ObstaclePredicatedInfo>
+      &agent_node_origin_lane_map() const {
     return agent_node_origin_lane_map_;
   };
 
-  const std::unordered_map<int64_t, ObstaclePredicatedInfo> &
-  agent_node_target_lane_map() const {
+  const std::unordered_map<int64_t, ObstaclePredicatedInfo>
+      &agent_node_target_lane_map() const {
     return agent_node_target_lane_map_;
   };
 

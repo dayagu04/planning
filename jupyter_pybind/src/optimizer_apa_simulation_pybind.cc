@@ -13,10 +13,10 @@
 
 #include "apa_plan_base.h"
 #include "apa_plan_interface.h"
-#include "func_state_machine.pb.h"
+#include "func_state_machine_c.h"
 #include "perfect_control.h"
 #include "planning_debug_info.pb.h"
-#include "planning_plan.pb.h"
+#include "planning_plan_c.h"
 #include "spline.h"
 
 namespace py = pybind11;
@@ -211,9 +211,9 @@ py::bytes GetPlanningInputDebugInfo() {
 py::bytes PlanningOutputTransfer(py::bytes &new_planning_bytes,
                                  py::bytes &old_planning_bytes) {
   auto new_planning =
-      BytesToProto<PlanningOutput::PlanningOutput>(new_planning_bytes);
+      BytesToProto<iflyauto::PlanningOutput>(new_planning_bytes);
   auto old_planning =
-      BytesToProto<PlanningOutput::PlanningOutput>(old_planning_bytes);
+      BytesToProto<iflyauto::PlanningOutput>(old_planning_bytes);
 
   new_planning.clear_meta();
   new_planning.mutable_meta()->CopyFrom(old_planning.meta());
@@ -234,8 +234,8 @@ py::bytes PlanningDebugInforansfer(py::bytes &new_planning_bytes,
 }
 
 void DynamicsUpdate(py::bytes &planning_output_bytes, double dt) {
-  PlanningOutput::PlanningOutput planning_output =
-      BytesToProto<PlanningOutput::PlanningOutput>(planning_output_bytes);
+  iflyauto::PlanningOutput planning_output =
+      BytesToProto<iflyauto::PlanningOutput>(planning_output_bytes);
 
   perfect_control_ptr->Update(planning_output, dt);
 }

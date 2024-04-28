@@ -47,15 +47,15 @@ class PlanningPlayer {
   void PlayOneFrame(int frame_num,
                     const planning::common::TopicTimeList &input_time_list);
   void PlayAllFrames();
-  void RunCloseLoop(const PlanningOutput::PlanningOutput &planning_output);
+  void RunCloseLoop(const iflyauto::PlanningOutput &planning_output);
   void PerfectControlHPP(
-      const PlanningOutput::PlanningOutput &plan_msg, uint64_t delta_t,
+      const iflyauto::PlanningOutput &plan_msg, uint64_t delta_t,
       std::shared_ptr<IFLYLocalization::IFLYLocalization> &loc_msg);
   void PerfectControlSCC(
-      const PlanningOutput::PlanningOutput &plan_msg, uint64_t delta_t,
+      const iflyauto::PlanningOutput &plan_msg, uint64_t delta_t,
       std::shared_ptr<LocalizationOutput::LocalizationEstimate> &loc_msg);
   void PerfectControlAPA(
-      const PlanningOutput::PlanningOutput &plan_msg, uint64_t delta_t,
+      const iflyauto::PlanningOutput &plan_msg, uint64_t delta_t,
       std::shared_ptr<LocalizationOutput::LocalizationEstimate> &loc_msg);
 
  private:

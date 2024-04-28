@@ -1669,8 +1669,8 @@ def draw_local_view(dataLoader, layer_manager):
         obstacle_mobileye_generate.xys.append(([], []))
         obstacle_mobileye_text_generate.xys.append(([], [], []))
         continue
-      # obstacles_mobileye_info = load_obstacle_params(mobileye_objects_msg.camera_perception_object_list, plan_debug.environment_model_info)
-      obstacles_mobileye_info = load_obstacle_mobileye_params(mobileye_objects_msg.camera_perception_object_list)
+      # obstacles_mobileye_info = load_obstacle_params(mobileye_objects_msg.camera_perception_objects, plan_debug.environment_model_info)
+      obstacles_mobileye_info = load_obstacle_mobileye_params(mobileye_objects_msg.camera_perception_objects)
       obstacle_mobileye_generate.xys.append((obstacles_mobileye_info['obstacles_y_rel'], obstacles_mobileye_info['obstacles_x_rel']))
       obstacle_mobileye_text_generate.xys.append((obstacles_mobileye_info['pos_y_rel'], obstacles_mobileye_info['pos_x_rel'], obstacles_mobileye_info['obs_label']))
     obstacle_mobileye_generate.ts = np.array(plan_debug_ts)
