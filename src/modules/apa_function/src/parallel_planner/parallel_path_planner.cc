@@ -211,7 +211,8 @@ const bool ParallelPathPlanner::PlanFromEgoToParkOutRootPose(
             << first_arc_length_vec.back() << std::endl;
 
   const double park_out_target_heading =
-      apa_param.GetParam().parallel_search_out_heading / 57.3 * calc_params_.slot_side_sgn;
+      apa_param.GetParam().parallel_search_out_heading / 57.3 *
+      calc_params_.slot_side_sgn;
 
   for (const auto& arc_length : first_arc_length_vec) {
     if (!pnc::geometry_lib::CompleteArcInfo(first_arc, arc_length,

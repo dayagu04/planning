@@ -199,7 +199,7 @@ struct PathSegment {
   const PathPoint GetStartPose() const {
     return PathPoint(GetStartPos(), GetStartHeading());
   }
-  
+
   const PathPoint GetEndPose() const {
     return PathPoint(GetEndPos(), GetEndHeading());
   }

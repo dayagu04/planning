@@ -145,18 +145,20 @@ void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s,
 
     if (path_points[index].theta > M_PI / 2 &&
         path_points[index + 1].theta < -M_PI / 2) {
-      theta_r = path_points[index].theta + (path_points[index + 1].theta +
-                                            2 * M_PI - path_points[index].theta) *
-                                               t;
+      theta_r =
+          path_points[index].theta +
+          (path_points[index + 1].theta + 2 * M_PI - path_points[index].theta) *
+              t;
 
       if (theta_r > 2 * M_PI) {
         theta_r -= 2 * M_PI;
       }
     } else if (path_points[index].theta < -M_PI / 2 &&
                path_points[index + 1].theta > M_PI / 2) {
-      theta_r = path_points[index].theta + (path_points[index + 1].theta -
-                                            2 * M_PI - path_points[index].theta) *
-                                               t;
+      theta_r =
+          path_points[index].theta +
+          (path_points[index + 1].theta - 2 * M_PI - path_points[index].theta) *
+              t;
 
       if (theta_r < -2 * M_PI) {
         theta_r += 2 * M_PI;

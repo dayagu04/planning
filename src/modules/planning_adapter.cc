@@ -99,9 +99,7 @@ static inline void calc_fusion_latency(
         fusion_out_time_us = input.out_ts_us();
         break;
       }
-      default: {
-        break;
-      }
+      default: { break; }
     }
   }
 
@@ -141,9 +139,7 @@ static void calc_location_latency(
         location_out_time_us = input.out_ts_us();
         break;
       }
-      default: {
-        break;
-      }
+      default: { break; }
     }
   }
 
@@ -295,8 +291,7 @@ void PlanningAdapter::Proc() {
   input_topic_timestamp->set_map(
       local_view_ptr_->static_map_info.header().timestamp());
   input_topic_latency->set_map(get_latency(
-      start_time,
-      local_view_ptr_->static_map_info.header().timestamp()));
+      start_time, local_view_ptr_->static_map_info.header().timestamp()));
 
   // update general context
   auto &state_machine_g = g_context.MutableStatemachine();

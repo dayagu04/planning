@@ -1085,7 +1085,8 @@ void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
   // item.v_lat += (sequential_state->v_lat_deriv + 3.2 * v_lat_error) *
   // interval;
 
-  // double k_v_lat = 2 * M_PI * 0.2 * interval / (1 + 2 * M_PI * 0.2 * interval);
+  // double k_v_lat = 2 * M_PI * 0.2 * interval / (1 + 2 * M_PI * 0.2 *
+  // interval);
   double k_v_lat = 0.4;
   item.v_lat = k_v_lat * v_lat_unfiltered + (1 - k_v_lat) * item.v_lat;
   // obstacle without camera source, set to zero
@@ -1097,14 +1098,16 @@ void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
 
   // double v_lat_self_unfiltered = equal_zero(interval) ? 0.0 :
   //     (item.d_path_self - item.history->d_path_self) / interval;
-  // double k_v_lat = 2 * M_PI * 0.2 * interval / (1 + 2 * M_PI * 0.2 * interval);
-  // item.v_lat_self = k_v_lat * v_lat_self_unfiltered + (1 - k_v_lat) *
+  // double k_v_lat = 2 * M_PI * 0.2 * interval / (1 + 2 * M_PI * 0.2 *
+  // interval); item.v_lat_self = k_v_lat * v_lat_self_unfiltered + (1 -
+  // k_v_lat) *
   //     item.v_lat_self;
 
   // double a_rel_unfiltered = equal_zero(interval) ? 0.0:
   //     (item.v_rel - item.history->v_rel);
   // double a_rel_unfiltered = std::max(-10.0, std::min(10.0,
-  // a_rel_unfiltered)); double k_a_lead = 2 * M_PI * 0.5 * interval / (1 + 2 * M_PI
+  // a_rel_unfiltered)); double k_a_lead = 2 * M_PI * 0.5 * interval / (1 + 2 *
+  // M_PI
   // * 0.5 * interval); item.a_rel = (k_a_lead == 1.0) ? 0.0 :
   //     (k_a_lead * a_rel_unfiltered + (1 - k_a_lead) *item.a_rel);
 }
