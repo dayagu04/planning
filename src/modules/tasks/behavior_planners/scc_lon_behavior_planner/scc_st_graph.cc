@@ -135,12 +135,18 @@ void StGraphGenerator::Update(
 
   // filter v target
   if (v_target_ > v_ego) {
-    if (v_ego > last_v_target_) {
+    if (v_ego > v_last_target_) {
       accel_vel_filter_.SetState(v_ego);
     }
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
+  } else if (v_target_ < v_ego &&
+             (v_limit_on_turns_and_road_ == v_target_ ||
+              (is_on_ramp && v_limit_on_ramp_ == v_target_))) {
+    accel_vel_filter_.Update(v_target_);
+    v_target_ = accel_vel_filter_.GetOutput();
   }
+  v_last_target_ = v_target_;
   // 3. update vref
   UpdateVelRefs();
   // 4. calculate sref by vref
@@ -494,6 +500,7 @@ bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
 
   acc_target_.first = std::min(acc_target_.first, acc_target_in_turns);
   acc_target_.second = std::min(acc_target_.second, acc_lon_allowed);
+  v_limit_on_turns_and_road_ = v_limit_in_turns;
   v_target_ = std::min(v_target_, v_limit_in_turns);
 
   LOG_DEBUG("v_target_ : [%f] \n", v_target_);
@@ -524,6 +531,7 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
   v_target_ramp = std::pow(
       std::pow(ramp_v_limit, 2.0) - 2 * pre_brake_dis_to_ramp * acc_to_ramp,
       0.5);
+  v_limit_on_ramp_ = v_target_ramp;
   v_target_ = std::min(v_target_ramp, v_target_);
   LOG_DEBUG("dis_to_ramp : [%f] \n", dis_to_ramp);
   LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);

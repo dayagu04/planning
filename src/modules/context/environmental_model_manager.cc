@@ -1,11 +1,15 @@
 #include "environmental_model_manager.h"
 
+#include <Eigen/Dense>
+#include <cmath>
 #include <memory>
 #include <set>
 #include <string>
 #include <typeinfo>
 #include <unordered_map>
 
+#include "Eigen/src/Core/Matrix.h"
+#include "Eigen/src/Core/util/Constants.h"
 #include "agent/agent_manager.h"
 #include "basic_types.pb.h"
 #include "debug_info_log.h"
@@ -966,6 +970,17 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   prediction_object.acc =
       std::hypot(fusion_object.common_info().acceleration().x(),
                  fusion_object.common_info().acceleration().y());
+  // judge direction of obj acc
+  auto obj_acc_heading_angle =
+      atan2(fusion_object.common_info().acceleration().y(),
+            fusion_object.common_info().acceleration().x());
+  Eigen::Vector2f obj_acc_heading_vec(cos(obj_acc_heading_angle),
+                                      sin(obj_acc_heading_angle));
+  Eigen::Vector2f obj_heading_vec(cos(prediction_object.yaw),
+                                  sin(prediction_object.yaw));
+  if (obj_acc_heading_vec.dot(obj_heading_vec) < 0.0) {
+    prediction_object.acc *= -1.0;
+  }
   // add relative info for highway
   prediction_object.relative_position_x =
       fusion_object.common_info().relative_center_position().x();
