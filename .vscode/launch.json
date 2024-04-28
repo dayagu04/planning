@@ -56,8 +56,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                // "/data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240408/20240408-10-13-43/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-04-08-10-13-43.record"
-                "/mnt/00fjw/00field_test/plan/0425/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-04-25-15-04-11_no_camera.record"
+                "/data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240425/20240425-15-04-11/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-04-25-15-04-11_no_camera.record"
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",
