@@ -30,21 +30,20 @@ def check_status():
 if __name__ == '__main__':
     #整合发送内容
     in_dir = sys.argv[1]
-    target_branch = sys.argv[2] if len(sys.argv) >= 3 else ''
-    commit_id2 = sys.argv[3] if len(sys.argv) >= 4 else ''
-    current_time =  datetime.fromtimestamp(int(os.getenv('START_TIME')) / 1000 + 28800).strftime("%Y%m%d_%H%M%S")
+    current_time =  datetime.fromtimestamp(int(os.getenv('START_TIME')) / 1000).strftime("%Y%m%d_%H%M%S")
     print("start_time:" + current_time + "=========================" + os.getenv('START_TIME'))
+    docker_image = "artifacts.iflytek.com/auto-docker-product-public/autofpilotdevtools/simulation/planning_simulation:" + os.getenv('COMMIT_ID')
     url = "http://172.30.170.35:9003/manager/simulation-task-api/"
     headers = {"Content-Type": "application/json"}
     data = {
         "task_id": current_time,
         "version_1": os.getenv('GIT_BRANCH'),
-        "version_2": target_branch,
         "commit_id_1": os.getenv('COMMIT_ID'),
-        "commit_id_2": commit_id2,
         "current_time": current_time,
-        "in_dir": in_dir
+        "in_dir": in_dir,
+        "docker_image": docker_image
     }
+    print(data)
     response = requests.post(url, headers=headers, json=data)
     if response.json()['status'] == 'failed':
         print('ci Simulate failed, please check sim server status!')

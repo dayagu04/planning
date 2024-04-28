@@ -29,7 +29,7 @@ unset __conda_setup
 PROJECT_PATH="/root"
 # PROJECT_PATH="/docker_share"
 # COMMON_TOOL_BRANCH="develop"
-COMMON_TOOL_BRANCH="planning_tools_develop"
+COMMON_TOOL_BRANCH="develop"
 OUT_ROOT="/data_cold/abu_zone"
 OUT_SUFFIX=".PP"
 
@@ -43,16 +43,6 @@ mkdir -p $OUT_DIR_1
 
 # run PP for VERSION_1 -------------------------------
 cd $PROJECT_PATH/planning
-
-git fetch
-git checkout -b $VERSION_1/$CURRENT_TIME origin/$VERSION_1
-if [ -n "$COMMIT_ID_1" ]; then
-    git checkout $COMMIT_ID_1
-fi
-git submodule update
-sed -i "s/$OLD_TEXT/$NEW_TEXT/g" $CONFIG_FILE
-make clean
-make pp_build BUILD_TYPE=Release
 
 # translate string to arry
 IFS=','
@@ -77,7 +67,7 @@ cd $PROJECT_PATH/common_tools/
 git fetch
 git checkout -b $CURRENT_TIME origin/$COMMON_TOOL_BRANCH
 
-cd $PROJECT_PATH/common_tools/checker/task
+cd $PROJECT_PATH/common_tools/checker_scc/task
 
 index=0
 for element in "${IN_DIR[@]}"
@@ -89,52 +79,3 @@ do
     python prepare_CI_json.py --input_dir $OUT_DIR --out_dir $OUT_DIR --output_json $JSON_NAME.json
     python scc_checker_task.py $JSON_NAME.json
 done
-
-if [ -n "$VERSION_2" ]; then
-    VERSION_DIR_2=$(echo $VERSION_2 | tr '/' '_')
-    OUT_DIR_2="$OUT_ROOT/simulation_test_result/CI/$CURRENT_TIME/${VERSION_DIR_2}_${COMMIT_ID_2}"
-    mkdir -p $OUT_DIR_2
-
-    # run PP for VERSION_2 -------------------------------
-    cd $PROJECT_PATH/planning
-
-    git fetch
-    git checkout -b $VERSION_2/$CURRENT_TIME origin/$VERSION_2
-    if [ -n "$COMMIT_ID_2" ]; then
-        git checkout $COMMIT_ID_2
-    fi
-    git submodule update
-    sed -i "s/$OLD_TEXT/$NEW_TEXT/g" $CONFIG_FILE
-    make clean
-    make pp_build BUILD_TYPE=Release
-
-    index=0
-    for element in "${IN_DIR[@]}"
-    do
-        ((index++))
-        last_folder=$(basename "$element")
-        cd $PROJECT_PATH/planning
-        OUT_DIR="${OUT_DIR_2}/${last_folder}_${index}"
-        python tools/planning_player/pp.py --dir $element --out_suffix $OUT_SUFFIX --out_dir $OUT_DIR --close_loop 1 --ignore_suffix 1
-        cd $PROJECT_PATH/planning/jupyter_pybind/notebooks_scc/scripts/
-        python html_generator.py plot_lat_plan_html $OUT_DIR
-        python html_generator.py plot_lon_plan_html $OUT_DIR
-    done
-
-    # run checker for VERSION_2 -------------------------------
-    cd $PROJECT_PATH/common_tools/checker/task
-
-    index=0
-    for element in "${IN_DIR[@]}"
-    do
-        ((index++))
-        last_folder=$(basename "$element")
-        OUT_DIR="${OUT_DIR_2}/${last_folder}_${index}"
-        JSON_NAME=$(date "+%Y%m%d_%H%M%S")
-        python prepare_CI_json.py --input_dir $OUT_DIR --out_dir $OUT_DIR --output_json $JSON_NAME.json
-        python scc_checker_task.py $JSON_NAME.json
-    done
-fi
-
-
-
