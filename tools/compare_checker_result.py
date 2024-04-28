@@ -5,6 +5,10 @@
 
 结果json层级结构:
 checker_1:
+    pass_rates:          # 两个json的通过率对比
+        json1:
+        json2:
+        diff:
     faild_pass:          # json1中未通过, json2中通过的case
         case_1:
         case_2:
@@ -21,12 +25,16 @@ checker_1:
         case_1:
         case_2:
         ···
-    same_pass:            # json1和json2中均通过的case
+    same_pass:           # json1和json2中均通过的case
         case_1:
         case_2:
         ···
 
 checker_2:
+    pass_rates:
+        json1:
+        json2:
+        diff:
     faild_pass:
         case_1:
         case_2:
