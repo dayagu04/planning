@@ -62,9 +62,9 @@ checker_2:
 import json
 
 # 使用提供的文件路径/dock
-json1_path = "/docker_share/temp/json1.json"
-json2_path = "/docker_share/temp/json2.json"
-output_path = "/docker_share/temp/compare_output.json"
+json1_path = "/data_cold/abu_zone/simulation_test_result/CI/20240428_120437/develop_eb2bb3c0a53c5cef8928fc9831d6cd5ec19891a2/simulation_1/checker_result.2024.0428.1206.44/scc_checker_task.2024.0428.1206.44.json"
+json2_path = "/data_cold/abu_zone/simulation_test_result/CI/20240428_112836/develop_eb2bb3c0a53c5cef8928fc9831d6cd5ec19891a2/simulation_1/checker_result.2024.0428.1147.59/scc_checker_task.2024.0428.1147.59.json"
+output_path = "/docker_share/temp/compare_output1.json"
 
 def compare_jsons(json1_path, json2_path, output_path):
     # 读取两个JSON文件
@@ -119,7 +119,7 @@ def compare_jsons(json1_path, json2_path, output_path):
     # 遍历两个JSON文件中的bags进行比较
     for bag1 in json1:
         for bag2 in json2:
-            if bag1["bag_name"] == bag2["bag_name"]:
+            if bag1["bag_name"].split('/')[-1] == bag2["bag_name"].split('/')[-1]:
                 common_checkers = set(bag1["checker_result"].keys()) & set(bag2["checker_result"].keys())
                 for checker in common_checkers:
                     checker1 = bag1["checker_result"][checker]
@@ -127,13 +127,17 @@ def compare_jsons(json1_path, json2_path, output_path):
 
                     # 情况一：json1中的success为true，json2中的success为false
                     if checker1["success"] and not checker2["success"]:
-                        output[checker]["pass_failed"][bag1["bag_name"]] = {
+                        output[checker]["pass_failed"][bag1["bag_name"].split('/')[-1]] = {
+                            "json_1_bag_path": bag1["bag_name"],
+                            "json_2_bag_path": bag2["bag_name"],
                             "json_1_result": checker1,
                             "json_2_result": checker2
                         }
                     # 情况二：json1中的success为false，json2中的success为true
                     elif not checker1["success"] and checker2["success"]:
-                        output[checker]["failed_pass"][bag1["bag_name"]] = {
+                        output[checker]["failed_pass"][bag1["bag_name"].split('/')[-1]] = {
+                            "json_1_bag_path": bag1["bag_name"],
+                            "json_2_bag_path": bag2["bag_name"],
                             "json_1_result": checker1,
                             "json_2_result": checker2
                         }
@@ -141,21 +145,24 @@ def compare_jsons(json1_path, json2_path, output_path):
                     elif not checker1["success"] and not checker2["success"]:
                         diff_fields = {key: (checker1[key], checker2[key]) for key in checker1 if key != "success" and checker1[key] != checker2[key]}
                         if diff_fields:
-                            output[checker]["diff_failed"][bag1["bag_name"]] = {
+                            output[checker]["diff_failed"][bag1["bag_name"].split('/')[-1]] = {
+                                "json_1_bag_path": bag1["bag_name"],
+                                "json_2_bag_path": bag2["bag_name"],
                                 "json_1_result": checker1,
                                 "json_2_result": checker2,
                                 "diff_fields": diff_fields
                             }
                         else:
-                            output[checker]["same_failed"][bag1["bag_name"]] = {
-                                "json_1_result": checker1,
-                                "json_2_result": checker2
+                            output[checker]["same_failed"][bag1["bag_name"].split('/')[-1]] = {
+                                "json_1_bag_path": bag1["bag_name"],
+                                "json_2_bag_path": bag2["bag_name"],
+                                "json_1_and_2_result": checker1,
                             }
                     # 情况五：两个json中的success都为true
                     elif checker1["success"] and checker2["success"]:
-                        output[checker]["same_pass"][bag1["bag_name"]] = {
-                            "json_1_result": checker1,
-                            "json_2_result": checker2
+                        output[checker]["same_pass"][bag1["bag_name"].split('/')[-1]] = {
+                            "json_1_bag_path": bag1["bag_name"],
+                            "json_2_bag_path": bag2["bag_name"],
                         }
 
     # 将输出结果写入JSON文件
