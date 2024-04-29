@@ -431,7 +431,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     lane_msg.emplace_back(lane);
   }
   auto compare_order_id = [&](FusionRoad::ReferenceLineMsg lane1,
-                                 FusionRoad::ReferenceLineMsg lane2) {
+                              FusionRoad::ReferenceLineMsg lane2) {
     return lane1.order_id() < lane2.order_id();
   };
   std::sort(lane_msg.begin(), lane_msg.end(), compare_order_id);

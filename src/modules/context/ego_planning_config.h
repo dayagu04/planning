@@ -432,9 +432,11 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     jerk_bound = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "jerk_bound"});
     acc_bound_lane_change = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "acc_bound_lane_change"});
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "acc_bound_lane_change"});
     jerk_bound_lane_change = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "jerk_bound_lane_change"});
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "jerk_bound_lane_change"});
     q_ref_x = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_x"});
     q_ref_y = read_json_keys<double>(
@@ -480,7 +482,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json,
         std::vector<std::string>{"lat_motion_ilqr", "q_jerk_lane_change"});
     q_acc_big_curvature = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_big_curvature"});
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_acc_big_curvature"});
     q_jerk_big_curvature = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "q_jerk_big_curvature"});
@@ -1301,14 +1304,14 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
     /* read config from json */
     parking_cruise_speed = read_json_key<double>(json, "parking_cruise_speed",
                                                  parking_cruise_speed);
-    max_replan_lat_err = read_json_key<double>(
-        json, "max_replan_lat_err", max_replan_lat_err);
-    max_replan_theta_err = read_json_key<double>(
-        json, "max_replan_theta_err", max_replan_theta_err);
-    max_replan_lon_err = read_json_key<double>(
-        json, "max_replan_lon_err", max_replan_lon_err);
-    max_replan_dist_err = read_json_key<double>(
-        json, "max_replan_dist_err", max_replan_dist_err);                                            
+    max_replan_lat_err =
+        read_json_key<double>(json, "max_replan_lat_err", max_replan_lat_err);
+    max_replan_theta_err = read_json_key<double>(json, "max_replan_theta_err",
+                                                 max_replan_theta_err);
+    max_replan_lon_err =
+        read_json_key<double>(json, "max_replan_lon_err", max_replan_lon_err);
+    max_replan_dist_err =
+        read_json_key<double>(json, "max_replan_dist_err", max_replan_dist_err);
     hpp_max_replan_lat_err = read_json_key<double>(
         json, "hpp_max_replan_lat_err", hpp_max_replan_lat_err);
     hpp_max_replan_theta_err = read_json_key<double>(
