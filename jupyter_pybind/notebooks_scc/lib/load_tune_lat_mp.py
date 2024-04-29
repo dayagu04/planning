@@ -157,7 +157,7 @@ def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_da
         upper_unit_vector = list(normalize_vector(upper_unit_vector))
         tmp_soft_upper_bound_x0_vec.append(soft_upper_bound_x0_vec[i] + upper_unit_vector[0] * upper_safe_bound)
         tmp_soft_upper_bound_y0_vec.append(soft_upper_bound_y0_vec[i] + upper_unit_vector[1] * upper_safe_bound)
-    else:
+    elif (len(soft_upper_bound_x0_vec) > 0):
       for j in range(0, safe_ub_start_idx):
         tmp_soft_upper_bound_x0_vec.append(soft_upper_bound_x0_vec[j])
         tmp_soft_upper_bound_y0_vec.append(soft_upper_bound_y0_vec[j])
@@ -183,7 +183,7 @@ def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_da
         lower_unit_vector = list(normalize_vector(lower_unit_vector))
         tmp_soft_lower_bound_x0_vec.append(soft_lower_bound_x0_vec[i] + lower_unit_vector[0]*lower_safe_bound)
         tmp_soft_lower_bound_y0_vec.append(soft_lower_bound_y0_vec[i] + lower_unit_vector[1]*lower_safe_bound)
-    else:
+    elif (len(soft_lower_bound_x0_vec) > 0):
       for j in range(0, safe_lb_start_idx):
         tmp_soft_lower_bound_x0_vec.append(soft_lower_bound_x0_vec[j])
         tmp_soft_lower_bound_y0_vec.append(soft_lower_bound_y0_vec[j])
@@ -209,7 +209,7 @@ def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_da
         upper_unit_vector = list(normalize_vector(upper_unit_vector))
         tmp_hard_upper_bound_x0_vec.append(hard_upper_bound_x0_vec[i] + upper_unit_vector[0]*upper_hard_bound)
         tmp_hard_upper_bound_y0_vec.append(hard_upper_bound_y0_vec[i] + upper_unit_vector[1]*upper_hard_bound)
-    else:
+    elif (len(hard_upper_bound_x0_vec) > 0):
       for j in range(0, hard_ub_start_idx):
         tmp_hard_upper_bound_x0_vec.append(hard_upper_bound_x0_vec[j])
         tmp_hard_upper_bound_y0_vec.append(hard_upper_bound_y0_vec[j])
@@ -235,7 +235,7 @@ def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_da
         lower_unit_vector = list(normalize_vector(lower_unit_vector))
         tmp_hard_lower_bound_x0_vec.append(hard_lower_bound_x0_vec[i] + lower_unit_vector[0]*lower_hard_bound)
         tmp_hard_lower_bound_y0_vec.append(hard_lower_bound_y0_vec[i] + lower_unit_vector[1]*lower_hard_bound)
-    else:
+    elif (len(hard_lower_bound_x0_vec) > 0):
       for j in range(0, hard_lb_start_idx):
         tmp_hard_lower_bound_x0_vec.append(hard_lower_bound_x0_vec[j])
         tmp_hard_lower_bound_y0_vec.append(hard_lower_bound_y0_vec[j])

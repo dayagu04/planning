@@ -25,6 +25,10 @@ EgoStateManager::EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
     : session_(session) {
   config_ = config_builder->cast<EgoPlanningEgoStateManagerConfig>();
   parking_cruise_speed_ = config_.parking_cruise_speed;
+  max_replan_lat_err_ = config_.max_replan_lat_err;
+  max_replan_theta_err_ = config_.max_replan_theta_err;
+  max_replan_lon_err_ = config_.max_replan_lon_err;
+  max_replan_dist_err_ = config_.max_replan_dist_err;
   hpp_max_replan_lat_err_ = config_.hpp_max_replan_lat_err;
   hpp_max_replan_theta_err_ = config_.hpp_max_replan_theta_err;
   hpp_max_replan_lon_err_ = config_.hpp_max_replan_lon_err;
@@ -280,10 +284,10 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
   JSON_DEBUG_VALUE("lon_err", lon_err)
   JSON_DEBUG_VALUE("dist_err", dist_err)
 
-  double max_replan_lat_err = 0.6;
-  double max_replan_lon_err = 1.0;
-  double max_replan_dist_err = 1.5;
-  double max_replan_theta_err = 10.0 / 57.3;
+  double max_replan_lat_err = max_replan_lat_err_;
+  double max_replan_theta_err = max_replan_theta_err_ / 57.3;
+  double max_replan_lon_err = max_replan_lon_err_;
+  double max_replan_dist_err = max_replan_dist_err_;
   if (session_->is_hpp_scene()) {
     max_replan_lat_err = hpp_max_replan_lat_err_;
     max_replan_theta_err = hpp_max_replan_theta_err_ / 57.3;
@@ -292,7 +296,7 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
   }
 
   if (fabs(lat_err) > max_replan_lat_err || lat_reset_flag ||
-      (session_->is_hpp_scene() && fabs(theta_err) > max_replan_theta_err)) {
+      fabs(theta_err) > max_replan_theta_err) {
     lat_replan = true;
   }
 
@@ -509,10 +513,11 @@ void EgoStateManager::UpdatePlanningInitState() {
     bool set_lat_replan = false;
     bool set_lon_replan = false;
 
-    // TODO: acc should be considered here
     if (!session_->environmental_model().GetVehicleDbwStatus()) {
       set_lat_replan = true;
       set_lon_replan = true;
+    } else if (session_->environmental_model().function_info().function_mode() == common::DrivingFunctionInfo::ACC) {
+      set_lat_replan = true;
     }
 
     replan_status = ReplanProcess(set_lat_replan, set_lon_replan);

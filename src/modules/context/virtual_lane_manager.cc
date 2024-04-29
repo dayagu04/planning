@@ -425,7 +425,18 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   LOG_DEBUG("dis to tar slot: %f, distance_to_frist_speed_bump: %f \n",
             distance_to_target_slot_, distance_to_next_speed_bump_);
 
+  std::vector<FusionRoad::ReferenceLineMsg> lane_msg;
+  lane_msg.reserve(roads_ptr->reference_line_msg().size());
   for (auto& lane : roads_ptr->reference_line_msg()) {
+    lane_msg.emplace_back(lane);
+  }
+  auto compare_order_id = [&](FusionRoad::ReferenceLineMsg lane1,
+                                 FusionRoad::ReferenceLineMsg lane2) {
+    return lane1.order_id() < lane2.order_id();
+  };
+  std::sort(lane_msg.begin(), lane_msg.end(), compare_order_id);
+
+  for (auto& lane : lane_msg) {
     std::shared_ptr<VirtualLane> virtual_lane_tmp =
         std::make_shared<VirtualLane>();
     if (lane.lane_merge_split_point().merge_split_point_data_size() ==
@@ -670,7 +681,7 @@ const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(
   if (virtual_id_mapped_lane_.find(virtual_id) !=
       virtual_id_mapped_lane_.end()) {
     LOG_DEBUG("get lane virtual %d id\n", virtual_id);
-    return virtual_id_mapped_lane_[virtual_id];
+    return virtual_id_mapped_lane_.at(virtual_id);
   } else {
     LOG_DEBUG("lane virtual %d id is null\n", virtual_id);
     return nullptr;
