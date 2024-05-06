@@ -366,6 +366,9 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
       params.lat_inflation +=
           apa_param.GetParam().car_lat_inflation_for_trim_path;
       safe_dist += 0.1;
+    } else {
+      params.lat_inflation +=
+          apa_param.GetParam().car_lat_inflation_for_trim_path / 3.0;
     }
 
     apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);

@@ -60,7 +60,7 @@
   "car_static_keep_time_by_vel": 0.5,
 
   "comment_8": "uss params",
-  "lat_inflation": 0.03886,
+  "lat_inflation": 0.0168,
   "detection_distance": 2.5,
   "safe_uss_remain_dist_in_slot": 0.2886,
   "safe_uss_remain_dist_out_slot": 0.53886,
@@ -209,7 +209,7 @@
   "release_slot_by_prepare": true,
   "slot_update_in_or_out_occupied_ratio": 0.088,
   "slot_update_out_heading_max": 66.8,
-  "slot_update_out_heading_min": 0.008,
+  "slot_update_out_heading_min": 38.68,
   "slot_update_out_lat_max": 2.68,
   "slot_update_out_lat_min": 0.006,
   "slot_update_in_heading": 32.6,
