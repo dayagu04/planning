@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/Vertical/planning-cf79b66d-JAC_S811/test_6.00000'
+bag_path = '/data_cold/abu_zone/APA/Parallel/uss_perception_bf5b0b563877-test/test_3.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
@@ -97,6 +97,7 @@ def slider_callback(bag_time):
 
   planning_json = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
   fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
+  uss_percept_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
   # print("fus_parking_msg",fus_parking_msg.parking_fusion_slot_lists)
   # for i in range(len(fus_parking_msg.parking_fusion_slot_lists)):
   #   slot_info = fus_parking_msg.parking_fusion_slot_lists[i]
@@ -114,6 +115,10 @@ def slider_callback(bag_time):
   # print("is_replan_once = ", planning_json['is_replan_once'])
   # print("replan_count = ", planning_json['replan_count'])
 
+  ## debug for detecting distance in uss perception
+  # if (len(uss_percept_msg.out_line_dataori) > 4):
+  #   print("---------------")
+  #   print(uss_percept_msg.out_line_dataori[4].dis_from_car_to_obj)
 
   push_notebook()
 

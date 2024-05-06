@@ -77,8 +77,8 @@
                       -0.935328, -0.669815, -0.299949, 0.299949,  0.699815,  0.935328],
   "uss_normal_angle_deg_vec": [169.998, 125.019, 97.046,  82.954,  54.981,   10.002,
                                354.78,   298.086, 277.369, 262.631, 241.9914, 185.22],
-  "uss_wdis_index_front": [0, 9, 6, 3, 1, 11],
-  "uss_wdis_index_back": [0, 1, 3, 6, 9, 11],
+  "uss_wdis_index_front": [8, 0, 1, 2, 3, 9],
+  "uss_wdis_index_back": [10, 4, 5, 6, 7, 11],
   "uss_directly_behind_index": [8, 9],
 
   "comment_9": "check replan params",

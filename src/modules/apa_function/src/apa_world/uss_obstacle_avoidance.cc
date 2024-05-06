@@ -286,29 +286,31 @@ const bool UssObstacleAvoidance::Preprocess() {
   // set uss raw dist data
   uss_raw_dist_vec_.clear();
   uss_raw_dist_vec_.reserve(uss_local_vertex_vec_.size());
-  const auto &upa_dis_info_buf =
-      local_view_ptr_->uss_wave_info.upa_dis_info_buf();
+  const auto &uss_dis_info_buf =
+      local_view_ptr_->uss_percept_info.out_line_dataori();
 
-  // uss info is abnormal, quit directly
-  if (upa_dis_info_buf.size() < 2) {
+  // uss info is stored in the fifth buf, if the size is smaller than 5, the
+  // data is abnormal, quit directly
+  if (uss_dis_info_buf.size() < 5) {
     return false;
   }
 
-  // front uss
-  for (size_t i = 0; i < apa_param.GetParam().uss_wdis_index_front.size();
-       ++i) {
+  const auto &uss_dis_info = uss_dis_info_buf[4];
+  if (uss_dis_info.dis_from_car_to_obj_size() != 12) {
+    std::cout << "uss dis nums = " << uss_dis_info.dis_from_car_to_obj_size()
+              << " != 12 " << std::endl;
+    return false;
+  }
+  // front uss: uss dis need to be transfered from mm to m.
+  for (const auto &front_uss_idx : apa_param.GetParam().uss_wdis_index_front) {
     uss_raw_dist_vec_.emplace_back(
-        upa_dis_info_buf[0]
-            .wdis(apa_param.GetParam().uss_wdis_index_front[i])
-            .wdis_value(0));
+        0.001 * uss_dis_info.dis_from_car_to_obj(front_uss_idx));
   }
 
-  // back uss
-  for (size_t i = 0; i < apa_param.GetParam().uss_wdis_index_back.size(); ++i) {
+  // rear uss: uss dis need to be transfered from mm to m.
+  for (const auto &rear_uss_idx : apa_param.GetParam().uss_wdis_index_back) {
     uss_raw_dist_vec_.emplace_back(
-        upa_dis_info_buf[1]
-            .wdis(apa_param.GetParam().uss_wdis_index_back[i])
-            .wdis_value(0));
+        0.001 * uss_dis_info.dis_from_car_to_obj(rear_uss_idx));
   }
 
   return true;
