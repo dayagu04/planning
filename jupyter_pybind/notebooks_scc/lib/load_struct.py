@@ -449,8 +449,9 @@ def load_obstacle_params(obstacle_list, is_enu_to_car = False, loc_msg = [], env
     obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].additional_info.track_id)
 #             fusion_obs_info['is_cipv'].append(obstacle_list[i].target_selection_type)
     if frenet_vs == 255 and  frenet_vl == 255:
-      obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
-          + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4))+','+str(obstacle_list[i].common_info.type))
+      obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
+          + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 4)) \
+          +','+str(obstacle_list[i].common_info.type))
     else:
       obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
           + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4))+','+str(obstacle_list[i].common_info.type))
