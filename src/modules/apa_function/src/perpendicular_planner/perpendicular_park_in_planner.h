@@ -68,7 +68,7 @@ class PerpendicularInPlanner : public ApaPlannerBase {
   std::vector<pnc::geometry_lib::PathPoint> current_path_point_global_vec_;
 
   std::vector<pnc::geometry_lib::PathSegment> first_reverse_path_vec_;
-  Eigen::Vector2d pt0_;
+  Eigen::Vector2d pt_center_;
 };
 
 }  // namespace apa_planner
