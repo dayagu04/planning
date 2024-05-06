@@ -361,9 +361,12 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     std::cout << "slot jump dist = " << dist << std::endl;
 
     CollisionDetector::Paramters params;
-    params.lat_inflation +=
-        apa_param.GetParam().car_lat_inflation_for_trim_path;
-    const double safe_dist = apa_param.GetParam().safe_dist_for_trim_path;
+    double safe_dist = apa_param.GetParam().safe_dist_for_trim_path;
+    if (perpendicular_path_planner_.GetOutput().is_first_reverse_path) {
+      params.lat_inflation +=
+          apa_param.GetParam().car_lat_inflation_for_trim_path;
+      safe_dist += 0.1;
+    }
 
     apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
     const double min_remain_dist = 0.016;
