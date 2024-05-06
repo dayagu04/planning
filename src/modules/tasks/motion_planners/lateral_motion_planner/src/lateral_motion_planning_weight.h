@@ -8,7 +8,12 @@
 namespace pnc {
 namespace lateral_planning {
 
-enum LateralMotionSceneEnum { LANE_KEEP = 0, AVOID, LANE_CHANGE, BIG_CURVATURE };
+enum LateralMotionSceneEnum {
+  LANE_KEEP = 0,
+  AVOID,
+  LANE_CHANGE,
+  BIG_CURVATURE
+};
 
 class LateralMotionPlanningWeight {
  public:
@@ -18,9 +23,10 @@ class LateralMotionPlanningWeight {
 
   void SetWeightByScene(LateralMotionSceneEnum scene,
                         planning::common::LateralPlanningInput &planning_input);
-  
-  void SetWeightByPosBoundAndLaneType(std::shared_ptr<VirtualLane> current_lane,
-                        planning::common::LateralPlanningInput &planning_input);
+
+  void SetWeightByPosBoundAndLaneType(
+      std::shared_ptr<VirtualLane> current_lane,
+      planning::common::LateralPlanningInput &planning_input);
 
  private:
   planning::LateralMotionPlannerConfig config_;

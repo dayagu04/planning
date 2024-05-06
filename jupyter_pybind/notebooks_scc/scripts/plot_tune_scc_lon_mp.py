@@ -8,11 +8,11 @@ sys.path.append('../../../')
 
 sys.path.append('python_proto')
 from python_proto import common_pb2, longitudinal_motion_planner_pb2
-from jupyter_pybind import realtime_longitudinal_motion_planning_py
+from jupyter_pybind import scc_lon_motion_planning_py
 
 # bag path and frame dt
 #bag_path = "/mnt/s811_1_0907/motion_14.00000"
-bag_path = "/mnt/0913/8_8.00000"
+bag_path = "/data_cold/abu_zone/autoparse/jac_s811_21pt6/trigger/20240419/20240419-10-51-35/data_collection_JAC_S811_21PT6_EVENT_MANUAL_2024-04-19-10-51-35_no_camera.record.1714067217.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -28,10 +28,9 @@ velocity_fig, acc_fig = load_lon_global_figure(bag_loader)
 pans, lon_plan_data = load_lon_plan_figure(fig1, velocity_fig, acc_fig)
 
 # init pybind
-realtime_longitudinal_motion_planning_py.Init()
+scc_lon_motion_planning_py.Init()
 
 lon_motion_plan_input0 = bag_loader.plan_debug_msg['data'][-1].longitudinal_motion_planning_input
-
 
 ### sliders config
 class LocalViewSlider:
@@ -63,7 +62,6 @@ class LocalViewSlider:
                                         q_stop_s = self.q_stop_s_slider,
                                         )
 
-
 ### sliders callback
 def slider_callback(bag_time, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_soft_pos_bound,
                     q_hard_pos_bound, q_vel_bound, q_acc_bound, q_jerk_bound, q_sv_bound, q_stop_s):
@@ -77,11 +75,11 @@ def slider_callback(bag_time, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_soft_pos_bo
   lon_motion_plan_input = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].longitudinal_motion_planning_input
 
   input_string = lon_motion_plan_input.SerializeToString()
-  realtime_longitudinal_motion_planning_py.UpdateByParams(input_string, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_soft_pos_bound,
+  scc_lon_motion_planning_py.UpdateByParams(input_string, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_soft_pos_bound,
                                             q_hard_pos_bound, q_vel_bound, q_acc_bound, q_jerk_bound, q_sv_bound, q_stop_s)
 
   planning_output = longitudinal_motion_planner_pb2.LongitudinalPlanningOutput()
-  output_string_tmp = realtime_longitudinal_motion_planning_py.GetOutputBytes()
+  output_string_tmp = scc_lon_motion_planning_py.GetOutputBytes()
   planning_output.ParseFromString(output_string_tmp)
 
   # print(planning_output)

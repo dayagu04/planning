@@ -13,7 +13,7 @@ using namespace planning;
 using namespace planning::planning_math;
 namespace planning {
 namespace planning_math {
-enum KDPathStatus { NORMAL = 0, EXCEED = 1, FALL = 2, ERROR =3 };
+enum KDPathStatus { NORMAL = 0, EXCEED = 1, FALL = 2, ERROR = 3 };
 constexpr static double KD_EPSILON = 1.0e-6;
 constexpr static double KD_MAX = 1.0e6;
 class KDPath {

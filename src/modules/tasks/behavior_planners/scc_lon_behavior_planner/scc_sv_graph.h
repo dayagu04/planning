@@ -6,6 +6,7 @@
 #include "scc_lon_behavior_types.h"
 #include "session.h"
 #include "task_basic_types.h"
+#include "utils_math.h"
 
 namespace planning {
 namespace scc {

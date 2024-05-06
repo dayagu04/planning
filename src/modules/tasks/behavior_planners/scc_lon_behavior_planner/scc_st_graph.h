@@ -6,6 +6,7 @@
  *velocity planning
  **/
 #include <utility>
+
 #include "debug_info_log.h"
 #include "filters.h"
 #include "lateral_obstacle.h"
@@ -14,6 +15,7 @@
 #include "scc_lon_behavior_types.h"
 #include "task_basic_types.h"
 #include "tasks/behavior_planners/real_time_lane_change_decider/real_time_lane_change_decider.h"
+#include "utils_math.h"
 
 namespace planning {
 namespace scc {
@@ -78,8 +80,22 @@ class StGraphGenerator {
                          bool is_on_ramp, double ramp_v_limit,
                          double acc_to_ramp, double v_ego);
 
+  bool CalcCruiseAccelLimits(const double v_ego);
+
   bool CalcSpeedWithTurns(const double v_ego, const double angle_steers,
                           const std::vector<double> &d_poly);
+
+  // Calculate acceleration range
+  bool CalcAccLimits(const planning::common::TrackedObjectInfo &lead_obstacle,
+                     const double desired_distance, const double v_target,
+                     const double v_ego, const double lead_one_a_processed,
+                     std::pair<double, double> &acc_target);
+  double CalcPositiveAccLimit(const double d_lead, const double d_des,
+                              const double v_ego, const double v_rel,
+                              const double v_target, const double a_lead_contr,
+                              const double a_max_const);
+  double CalcCriticalDecel(const double d_lead, const double v_rel,
+                           const double d_offset, const double v_offset);
 
   void UpdateSTRefs(const std::vector<double> &sref_vec);
 
@@ -170,6 +186,7 @@ class StGraphGenerator {
   std::vector<double> vt_refs_;
   double v_target_;
   double last_v_target_;
+  std::pair<double, double> acc_target_;
   scc::STboundaries st_boundaries_;
   common::StartStopInfo start_stop_info_;
   std::array<double, 3> lon_init_state_;
@@ -187,7 +204,7 @@ class StGraphGenerator {
   std::pair<double, double> jerk_bound_;
   // s bound
   // std::pair<double, double> s_bound_;
-  //为计算lc st时前车和后车期望距离，添加以下变量
+  // 为计算lc st时前车和后车期望距离，添加以下变量
   int lc_front_id_ = -10;
   int lc_rear_id_ = -20;
   double lc_front_desired_distance_;
@@ -239,6 +256,8 @@ class StGraphGenerator {
   const std::vector<double> _A_PREBRK_TTC_BP{5.0, 10.0};
   const std::vector<double> _A_PREBRK_TTC_V{1.0, 0.0};
 
+  const double _A_MAX = 2.0;
+  const double _A_MIN = -4.0;
   const double _J_MAX = 7.0;
   const double _J_MIN = -3.0;
 
@@ -246,6 +265,9 @@ class StGraphGenerator {
   const double CUIIN_WIDTH = 1.6;  // 类似半个车道宽，取窄
   const double p1min_speed = 2.0;
   const double p2min_speed = 3.0;
+  double v_limit_on_turns_and_road_;
+  double v_limit_on_ramp_;
+  double v_last_target_ = 0.0;
 };
 
 }  // namespace scc

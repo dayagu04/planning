@@ -14,6 +14,7 @@
 #include "tracked_object.h"
 #include "utils/kd_path.h"
 #include "utils/lateral_utils.h"
+#include "utils_math.h"
 
 namespace planning {
 

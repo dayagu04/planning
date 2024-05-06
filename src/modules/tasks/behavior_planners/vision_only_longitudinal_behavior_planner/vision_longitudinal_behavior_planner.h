@@ -1,8 +1,10 @@
 #include <memory>
+
 #include "filters.h"
 #include "lateral_obstacle.h"
 #include "tasks/behavior_planners/vision_only_lane_change_decider/vision_only_lane_change_decider.h"
 #include "tasks/task.h"
+#include "utils_math.h"
 #include "virtual_lane_manager.h"
 
 namespace planning {
@@ -149,7 +151,7 @@ class VisionLongitudinalBehaviorPlanner : public Task {
   VisionLongitudinalBehaviorPlannerConfig config_;
 
   std::shared_ptr<VisionOnlyLaneChangeDecider> lane_changing_decider_ = nullptr;
-  //限制猛加速的滤波器
+  // 限制猛加速的滤波器
   pnc::filters::SlopeFilter accel_vel_filter_;
   bool is_on_ramp_ = false;
 };

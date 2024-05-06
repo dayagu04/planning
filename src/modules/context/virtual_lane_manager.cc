@@ -431,7 +431,7 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
     lane_msg.emplace_back(lane);
   }
   auto compare_order_id = [&](FusionRoad::ReferenceLineMsg lane1,
-                                 FusionRoad::ReferenceLineMsg lane2) {
+                              FusionRoad::ReferenceLineMsg lane2) {
     return lane1.order_id() < lane2.order_id();
   };
   std::sort(lane_msg.begin(), lane_msg.end(), compare_order_id);
@@ -595,15 +595,23 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
       }
     }
     if (relative_id_lane->get_relative_id() == 0) {
-      auto left_boundary_type = relative_id_lane->get_left_lane_boundary().type_segments_size() > 0
-                              ? relative_id_lane->get_left_lane_boundary().type_segments(0).type()
-                              : Common::LaneBoundaryType::MARKING_UNKNOWN;
-      bool is_solid_left_boundary = left_boundary_type == Common::LaneBoundaryType::MARKING_SOLID;
-      
-      auto right_boundary_type = relative_id_lane->get_right_lane_boundary().type_segments_size() > 0
-                        ? relative_id_lane->get_right_lane_boundary().type_segments(0).type()
-                        : Common::LaneBoundaryType::MARKING_UNKNOWN;
-      bool is_solid_right_boundary = right_boundary_type == Common::LaneBoundaryType::MARKING_SOLID;
+      auto left_boundary_type =
+          relative_id_lane->get_left_lane_boundary().type_segments_size() > 0
+              ? relative_id_lane->get_left_lane_boundary()
+                    .type_segments(0)
+                    .type()
+              : Common::LaneBoundaryType::MARKING_UNKNOWN;
+      bool is_solid_left_boundary =
+          left_boundary_type == Common::LaneBoundaryType::MARKING_SOLID;
+
+      auto right_boundary_type =
+          relative_id_lane->get_right_lane_boundary().type_segments_size() > 0
+              ? relative_id_lane->get_right_lane_boundary()
+                    .type_segments(0)
+                    .type()
+              : Common::LaneBoundaryType::MARKING_UNKNOWN;
+      bool is_solid_right_boundary =
+          right_boundary_type == Common::LaneBoundaryType::MARKING_SOLID;
       JSON_DEBUG_VALUE("is_solid_left_boundary", is_solid_left_boundary);
       JSON_DEBUG_VALUE("is_solid_right_boundary", is_solid_right_boundary);
       JSON_DEBUG_VALUE("is_in_merge_area", is_in_merge_area);
@@ -671,7 +679,8 @@ bool VirtualLaneManager::update(const FusionRoad::RoadInfo& roads) {
   LOG_DEBUG("\n");
   JSON_DEBUG_VALUE("current_lane_order_id", current_lane_->get_order_id());
   JSON_DEBUG_VALUE("current_lane_virtual_id", current_lane_->get_virtual_id());
-  JSON_DEBUG_VALUE("current_lane_relative_id", current_lane_->get_relative_id());
+  JSON_DEBUG_VALUE("current_lane_relative_id",
+                   current_lane_->get_relative_id());
 
   return true;
 }

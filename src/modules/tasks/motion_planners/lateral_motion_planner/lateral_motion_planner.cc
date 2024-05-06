@@ -285,8 +285,12 @@ void LateralMotionPlanner::AssembleInput() {
     planning_weight_ptr_->SetWeightByScene(pnc::lateral_planning::LANE_KEEP,
                                            planning_input_);
   }
-  
-  planning_weight_ptr_->SetWeightByPosBoundAndLaneType(session_->environmental_model().get_virtual_lane_manager()->get_current_lane(), planning_input_);
+
+  planning_weight_ptr_->SetWeightByPosBoundAndLaneType(
+      session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->get_current_lane(),
+      planning_input_);
 
   // set complete hold flag, concerned index
   planning_input_.set_complete_follow(complete_follow);

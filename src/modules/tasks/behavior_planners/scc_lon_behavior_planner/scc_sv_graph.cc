@@ -48,8 +48,7 @@ void SvGraphGenerator::CalculateCurvSvs(const double v_ego,
                                         const std::vector<double> &d_poly,
                                         SVBoundary &sv_boundary) {
   LOG_DEBUG("----entering CalculateCurvSvs--- \n");
-  double deg_rad = std::atan(1.0) * 4 / 180.0;
-  double angle_steers_deg = angle_steers / deg_rad;
+  double angle_steers_deg = angle_steers * DEG_PER_RAD;
   double base_dis = config_.dis_curv;  // 从自车位置开始，计算5s
   sv_boundary.boundary_type = SVBoundaryType::CURVATURE;
   sv_boundary.sv_bounds.resize(config_.lon_num_step + 1);

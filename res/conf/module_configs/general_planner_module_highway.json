@@ -256,7 +256,7 @@
     "q_hard_pos_bound": 1000.0,
     "q_sv_bound": 10.0,
     "q_vel_bound": 100.0,
-    "q_acc_bound": 400.0,
+    "q_acc_bound": 1600.0,
     "q_jerk_bound": 100.0,
     "q_stop_s": 2000.0
   },

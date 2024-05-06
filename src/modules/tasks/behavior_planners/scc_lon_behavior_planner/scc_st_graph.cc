@@ -17,8 +17,8 @@ StGraphGenerator::StGraphGenerator(const SccLonBehaviorPlannerConfig &config)
     : config_(config) {
   lead_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step, 0.0,
                                      150.0, 0.1);
-  lead_two_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step, 0.0,
-                                     150.0, 0.1);
+  lead_two_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step,
+                                         0.0, 150.0, 0.1);
   cut_in_desired_distance_filter_.Init(
       -0.2, config_.cut_in_desired_distance_step, 0.0, 150.0, 0.1);
   accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
@@ -62,8 +62,11 @@ void StGraphGenerator::Update(
   last_v_target_ = v_target_;
   accel_vel_filter_.SetState(last_v_target_);
 
-  // 1. 初始化refs
-  // 1.1 初始化v_refs
+  // 1. 初始化 acc_bound, refs
+  // 1.1 acceleration limits for cruising
+  CalcCruiseAccelLimits(v_ego);
+
+  // 1.2 初始化v_refs
   v_target_ = v_cruise;
   vt_refs_.resize(config_.lon_num_step + 1);
   for (int i = 0; i < config_.lon_num_step + 1; ++i) {
@@ -132,12 +135,18 @@ void StGraphGenerator::Update(
 
   // filter v target
   if (v_target_ > v_ego) {
-    if (v_ego > last_v_target_) {
+    if (v_ego > v_last_target_) {
       accel_vel_filter_.SetState(v_ego);
     }
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
+  } else if (v_target_ < v_ego &&
+             (v_limit_on_turns_and_road_ == v_target_ ||
+              (is_on_ramp && v_limit_on_ramp_ == v_target_))) {
+    accel_vel_filter_.Update(v_target_);
+    v_target_ = accel_vel_filter_.GetOutput();
   }
+  v_last_target_ = v_target_;
   // 3. update vref
   UpdateVelRefs();
   // 4. calculate sref by vref
@@ -165,6 +174,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   double lead_two_desired_velocity = 0.0;
   double desired_distance_filtered = 0.0;
   double lead_two_desired_distance_filtered = 0.0;
+  std::pair<double, double> acc_target = {-0.5, 0.5};
 
   // 纵向只使用融合成功障碍物
   bool lead_fusion_enable = (lead_one.fusion_source() & OBSTACLE_SOURCE_CAMERA);
@@ -227,7 +237,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
           lead_two.d_rel(), lead_two_desired_distance, lead_two.v_lead());
 
       lead_two_desired_distance_filtered = LeadtwoDesiredDistanceFilter(
-        lead_two, v_ego, safe_distance, lead_two_desired_distance);
+          lead_two, v_ego, safe_distance, lead_two_desired_distance);
 
       // update lead two st
       planning::common::RealTimeLonObstacleSTInfo lead_two_st_info;
@@ -251,6 +261,18 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
       JSON_DEBUG_VALUE("lead_two_vel", lead_two.v_lead());
       JSON_DEBUG_VALUE("v_target_lead_two", lead_two_desired_velocity);
     }
+
+    // calcuate acc
+    CalcAccLimits(lead_one, lead_one_desired_distance,
+                  lead_one_desired_velocity, v_ego, lead_one_a_processed,
+                  acc_target);
+    acc_target_.first = std::min(acc_target.first, acc_target.first);
+    acc_target_.second = std::min(acc_target.second, acc_target.second);
+
+    JSON_DEBUG_VALUE("acc_cipv", lead_one.a_lead_k());
+    JSON_DEBUG_VALUE("acc_target_high", acc_target_.second);
+    JSON_DEBUG_VALUE("acc_target_low", acc_target_.first);
+
   } else {
     LOG_DEBUG("There is no lead \n");
     lon_behav_input_->mutable_lon_decision_info()
@@ -265,6 +287,9 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     JSON_DEBUG_VALUE("lead_two_dis", 0);
     JSON_DEBUG_VALUE("lead_two_vel", 0);
     JSON_DEBUG_VALUE("v_target_lead_two", 0);
+    JSON_DEBUG_VALUE("acc_cipv", 0.0);
+    JSON_DEBUG_VALUE("acc_target_high", acc_target_.second);
+    JSON_DEBUG_VALUE("acc_target_low", acc_target_.first);
   }
   return true;
 }
@@ -408,6 +433,15 @@ void StGraphGenerator::CalcSpeedInfoWithCutin(
                                    v_ego, cut_in_st_info);
 }
 
+bool StGraphGenerator::CalcCruiseAccelLimits(const double v_ego) {
+  acc_target_.first = interp(v_ego, _A_CRUISE_MIN_BP, _A_CRUISE_MIN_V);
+  acc_target_.second = interp(v_ego, _A_CRUISE_MAX_BP, _A_CRUISE_MAX_V);
+  LOG_DEBUG("----CalcCruiseAccelLimits--- \n");
+  LOG_DEBUG("acc_target_.first : %f ,acc_target_.first : %f\n",
+            acc_target_.first, acc_target_.second);
+  return true;
+}
+
 bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
                                           const double angle_steers,
                                           const std::vector<double> &d_poly) {
@@ -415,20 +449,24 @@ bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
   // the existing lateral acceleration
   //  this should avoid accelerating when losing the target in turns
   LOG_DEBUG("----CalcSpeedWithTurns--- \n");
-  double deg_rad = std::atan(1.0) * 4 / 180.0;
-  double angle_steers_deg = angle_steers / deg_rad;
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double steer_ratio = vehicle_param.steer_ratio;
+  double wheel_base = vehicle_param.wheel_base;
 
-  double a_total_max = interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V);
-  double steer_ratio = 16.5;
-  double wheel_base = 2.92;
-  double a_y = std::pow(v_ego, 2) * angle_steers / (steer_ratio * wheel_base);
-  double a_x_allowed =
-      std::sqrt(std::max(std::pow(a_total_max, 2) - std::pow(a_y, 2), 0.0));
+  double acc_target_in_turns = 0.0;
+  double angle_steers_deg = angle_steers * DEG_PER_RAD;
+
+  double acc_total_max = interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V);
+  double acc_lat =
+      std::pow(v_ego, 2) * angle_steers / (steer_ratio * wheel_base);
+  double acc_lon_allowed = std::sqrt(
+      std::max(std::pow(acc_total_max, 2) - std::pow(acc_lat, 2), 0.0));
 
   // And limit the logitudinal velocity for a safe turn
-  double a_y_max =
+  double acc_lat_max =
       interp(std::abs(angle_steers_deg), _AY_MAX_ABS_BP, _AY_MAX_STEERS);
-  double v_limit_steering = std::sqrt((a_y_max * steer_ratio * wheel_base) /
+  double v_limit_steering = std::sqrt((acc_lat_max * steer_ratio * wheel_base) /
                                       std::max(std::abs(angle_steers), 0.001));
   double v_limit_in_turns = v_limit_steering;
   // calculate the velocity limit according to the road curvature
@@ -439,43 +477,30 @@ bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
         std::pow(std::pow(2 * d_poly[0] * preview_x + d_poly[1], 2) + 1, 1.5);
     double road_radius = 1 / std::max(curv, 0.0001);
     if (road_radius < 750) {
-      a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+      acc_lat_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
     }
-    double v_limit_road = std::sqrt(a_y_max * road_radius) * 0.9;
+    double v_limit_road = std::sqrt(acc_lat_max * road_radius) * 0.9;
     v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
-    LOG_DEBUG("road_radius is : [%f], a_y_max: [%f]\n", road_radius, a_y_max);
+    LOG_DEBUG("road_radius is : [%f], acc_lat_max: [%f]\n", road_radius,
+              acc_lat_max);
     LOG_DEBUG(
         "angle_steers: [%f], angle_steers_deg: [%f], v_limit_road: [%f]\n",
         angle_steers, angle_steers_deg, v_limit_road);
     JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
     JSON_DEBUG_VALUE("road_radius", road_radius);
   }
-  /*
-  if(ref_points.size() > 0) {
-    double curv_max_pt = -100.0;
-    for (int i = 0; i < ref_points.size(); i++) {
-      if(std::abs(ref_points[i].path_point.kappa) > curv_max_pt) {
-        curv_max_pt = std::abs(ref_points[i].path_point.kappa);
-      }
-    }
-    double road_radius = 1 / std::max(curv_max_pt, 0.0001);
-    if (road_radius < 680) {
-      a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
-    }
-    double v_limit_curv_pt = std::sqrt(a_y_max * road_radius) * 0.9;
-    LOG_DEBUG("ref points calced road_radius is : [%f]\n", road_radius);
-    LOG_DEBUG("ref points max kappa is : [%f]\n", curv_max_pt);
-    LOG_DEBUG("v_limit_curv_pt: [%f]\n", v_limit_curv_pt);
-    JSON_DEBUG_VALUE("VisionLonBehavior_v_limit_curv_pt", v_limit_curv_pt);
-    JSON_DEBUG_VALUE("road_radius_in_ref_pt", road_radius);
-    JSON_DEBUG_VALUE("max_kappa_abs", curv_max_pt);
-    v_limit_in_turns = std::min(v_limit_in_turns, v_limit_curv_pt);
-  }
-  */
 
   JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
   JSON_DEBUG_VALUE("v_limit_in_turns", v_limit_in_turns);
+  JSON_DEBUG_VALUE("ego_acc_lat", acc_lat);
 
+  if (v_limit_in_turns < v_ego - 2) {
+    acc_target_in_turns = -0.2;
+  }
+
+  acc_target_.first = std::min(acc_target_.first, acc_target_in_turns);
+  acc_target_.second = std::min(acc_target_.second, acc_lon_allowed);
+  v_limit_on_turns_and_road_ = v_limit_in_turns;
   v_target_ = std::min(v_target_, v_limit_in_turns);
 
   LOG_DEBUG("v_target_ : [%f] \n", v_target_);
@@ -506,6 +531,7 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
   v_target_ramp = std::pow(
       std::pow(ramp_v_limit, 2.0) - 2 * pre_brake_dis_to_ramp * acc_to_ramp,
       0.5);
+  v_limit_on_ramp_ = v_target_ramp;
   v_target_ = std::min(v_target_ramp, v_target_);
   LOG_DEBUG("dis_to_ramp : [%f] \n", dis_to_ramp);
   LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
@@ -566,7 +592,7 @@ void StGraphGenerator::UpdateSTGraphs(
         double s_step = st.v_lead() * sample_time;
         // 考虑decision type是overtake的情况
         if (st.decision() == common::RealTimeLonObstacleSTInfo::YIELD) {
-          //没必要区分
+          // 没必要区分
           /*
           if (st.st_type() == common::RealTimeLonObstacleSTInfo::GAP) {
             s_ref = st.start_s() - st.desired_distance() +
@@ -594,14 +620,15 @@ void StGraphGenerator::UpdateSTGraphs(
           s_ref = st.start_s() + st.desired_distance() + s_step;
           // hard bound使用安全距离
           hard_bound.upper = 150;
-          hard_bound.lower = std::max(st.start_s() + st.safe_distance() + s_step, 0.0);
+          hard_bound.lower =
+              std::max(st.start_s() + st.safe_distance() + s_step, 0.0);
           st_boundary.hard_bound.emplace_back(hard_bound);
           s_ref_update = std::max(
               hard_bound.lower, s_ref_update = std::max(sref_update[i], s_ref));
           // soft bound先使用期望跟车距离+buffer
           soft_bound.upper = 150;
           soft_bound.lower =
-              std::max(0.5 * (hard_bound.lower + s_ref_update), s_ref );
+              std::max(0.5 * (hard_bound.lower + s_ref_update), s_ref);
           st_boundary.soft_bound.emplace_back(soft_bound);
           // 根据障碍物跟车距离刷新s_refs
           sref_update[i] = s_ref_update;
@@ -924,15 +951,14 @@ void StGraphGenerator::UpdateNearObstacles(
     }
   }
 
-  // a_target_.first = std::min(a_target_.first, a_limit_cutin[v_min_index]);
+  // acc_target_.first = std::min(acc_target_.first,
+  // a_limit_cutin[v_min_index]);
   v_target_ = std::min(v_target_, v_limit_cutin[v_min_index]);
 
   LOG_DEBUG("nearest_car_track_id : [%d],[%d],[%d] \n", nearest_car_track_id[0],
             nearest_car_track_id[1], nearest_car_track_id[2]);
   LOG_DEBUG("v_limit_cutin : [%f], v_target : [%f] \n",
             v_limit_cutin[v_min_index], v_target_);
-  // LOG_DEBUG("a_target_.first : [%f] ,a_target_.second : [%f]\n",
-  //           a_target_.first, a_target_.second);
 
   JSON_DEBUG_VALUE("nearest_car_track_id_one", nearest_car_track_id[0]);
   JSON_DEBUG_VALUE("nearest_car_track_id_two", nearest_car_track_id[1]);
@@ -1255,8 +1281,8 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
               v_limit_lc * interp(gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
                                   _V_LIMIT_DISTANCE_V);
         }
-
         v_limit_lc = std::max(v_ego - 3.0, v_ego + v_limit_lc);
+        // a_target_lc = 0.0;
       } else {
         // safe_distance = CalcSafeDistance(gap.v_rear, v_ego);
         v_limit_lc =
@@ -1275,9 +1301,11 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
                                   _V_LIMIT_DISTANCE_V);
         }
         v_limit_lc = std::max(v_ego - 2.8, v_ego + v_limit_lc);
+        // a_target_lc = 0.6;
       }
       if (v_limit_lc < 6.0) {
         v_limit_lc = 6.0;
+        // a_target_lc = 1.0;
       }
       JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc);
 
@@ -1351,12 +1379,13 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
           v_ego / 10.0;
       v_limit_lc = std::max({v_ego - 3.2, v_ego + v_limit_lc,
                              6.0 + 4.0 * std::max(lc_map_decision - 2, 0)});
-
+      // a_target_lc = 0.0;
       JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc);
     }
   } else {
     JSON_DEBUG_VALUE("gap_v_limit_lc", 0);
   }
+  // acc_target_.second = std::max(acc_target_.second, a_target_lc);
   v_target_ = std::min(v_target_, v_limit_lc);
 }
 
@@ -1466,9 +1495,9 @@ double StGraphGenerator::DesiredDistanceFilter(
   }
   lead_desired_distance_filter_.SetState(
       leadone_info->leadone_information().desired_distance());
-  if (!(lon_behav_input_ ->dbw_status())) {
+  if (!(lon_behav_input_->dbw_status())) {
     lead_desired_distance_filter_.SetState(
-      std::min(lead_obstacle.d_rel(), safe_distance));
+        std::min(lead_obstacle.d_rel(), safe_distance));
   }
   if (slow_car_cut_in) {
     // 慢车切入
@@ -1488,6 +1517,91 @@ double StGraphGenerator::DesiredDistanceFilter(
   leadone_info->mutable_leadone_information()->set_desired_distance(
       desired_distance_new);
   return desired_distance_new;
+}
+
+bool StGraphGenerator::CalcAccLimits(
+    const planning::common::TrackedObjectInfo &lead_obstacle,
+    const double desired_distance, const double v_target, const double v_ego,
+    const double lead_one_a_processed, std::pair<double, double> &acc_target) {
+  //
+  double agent_v_rel = -lead_obstacle.v_rel();
+  double a_lead_contr =
+      lead_one_a_processed *
+      interp(lead_obstacle.v_lead(), _A_LEAD_LOW_SPEED_BP,
+             _A_LEAD_LOW_SPEED_V) *
+      interp(desired_distance, _A_LEAD_DISTANCE_BP, _A_LEAD_DISTANCE_V) * 0.8;
+  acc_target.second = CalcPositiveAccLimit(
+      lead_obstacle.d_rel(), desired_distance, v_ego, agent_v_rel, v_target,
+      a_lead_contr, acc_target.second);
+  // compute max decel
+  // assume the car is 1m/s slower
+  double v_offset =
+      1.2 * std::min(std::max(2.5 - lead_obstacle.d_path(), 0.0) / 1.5, 1.0);
+  // assume the distance is 1m lower
+  double d_offset = 0.5 + 0.2 * v_ego;
+  if (v_target < v_ego) {
+    // add small value to avoid by zero divisions
+    // compute needed accel to get to 1m distance with -1m/s rel speed
+    double decel_offset =
+        interp(lead_obstacle.v_lead(), _DECEL_OFFSET_BP, _DECEL_OFFSET_V);
+
+    double critical_decel = CalcCriticalDecel(lead_obstacle.d_rel(),
+                                              agent_v_rel, d_offset, v_offset);
+    acc_target.first = std::min(decel_offset + critical_decel + a_lead_contr,
+                                acc_target.first);
+  }
+  // a_min can't be higher than a_max
+  acc_target.first = min(acc_target.first, acc_target.second);
+  // final check on limits
+  acc_target.first = clip(acc_target.first, _A_MAX, _A_MIN);
+  acc_target.second = clip(acc_target.second, _A_MAX, _A_MIN);
+  return true;
+}
+
+double StGraphGenerator::CalcPositiveAccLimit(
+    const double d_lead, const double d_des, const double v_ego,
+    const double v_rel, const double v_target, const double a_lead_contr,
+    const double a_max_const) {
+  // never coast faster then -1m/s^2
+  double a_coast_min = -1.0;
+  double a_max = a_max_const;
+  // coasting behavior above v_coast. Forcing a_max to be negative will force
+  // the pid_speed to decrease, regardless v_target
+  if (v_ego > v_target + 0.5) {
+    // for smooth coast we can be aggressive && target a point where car
+    // would actually crash
+    double v_offset_coast = 1.0;
+    double d_offset_coast = d_des / 2.0 - 4.0;
+
+    // acceleration value to smoothly coast until we hit v_target
+    if (d_lead > d_offset_coast + 0.1) {
+      double a_coast =
+          CalcCriticalDecel(d_lead, v_rel, d_offset_coast, v_offset_coast);
+      // if lead is decelerating, then offset the coast decel
+      a_coast += a_lead_contr;
+      a_max = std::max(a_coast, a_coast_min);
+    } else {
+      a_max = a_coast_min;
+    }
+  } else {
+    // same as cruise accel, plus add a small correction based on relative
+    // lead speed if the lead car is faster, we can accelerate more, if the
+    // car is slower, then we can reduce acceleration
+    a_max = a_max + interp(v_ego, _A_CORR_BY_SPEED_BP, _A_CORR_BY_SPEED_V) *
+                        clip(-v_rel / 4.0, -0.5, 1.0);
+  }
+  return a_max;
+}
+
+double StGraphGenerator::CalcCriticalDecel(const double d_lead,
+                                           const double v_rel,
+                                           const double d_offset,
+                                           const double v_offset) {
+  // this function computes the required decel to avoid crashing, given safety
+  // offsets
+  double a_critical = -std::pow(std::max(0.0, v_rel + v_offset), 2) /
+                      std::max(2 * (d_lead - d_offset), 0.5);
+  return a_critical;
 }
 
 double StGraphGenerator::LeadtwoDesiredDistanceFilter(
@@ -1517,22 +1631,22 @@ double StGraphGenerator::LeadtwoDesiredDistanceFilter(
   lead_two_desired_distance_filter_.SetState(
       leadtwo_info->leadtwo_information().desired_distance());
 
-  if (!(lon_behav_input_ ->dbw_status())) {
+  if (!(lon_behav_input_->dbw_status())) {
     lead_two_desired_distance_filter_.SetState(
-      std::min(lead_obstacle.d_rel(), safe_distance));
+        std::min(lead_obstacle.d_rel(), safe_distance));
   }
 
   if (slow_car_cut_in) {
     // 慢车切入
     lead_two_desired_distance_filter_.SetRate(-4.0,
-                                          config_.slow_lead_distance_step);
+                                              config_.slow_lead_distance_step);
     lead_two_desired_distance_filter_.Update(desired_distance);
     desired_distance_new = lead_two_desired_distance_filter_.GetOutput();
     JSON_DEBUG_VALUE("slow_lead_id", lead_obstacle.track_id());
   } else {
     // 快车切入
     lead_two_desired_distance_filter_.SetRate(-4.0,
-                                          config_.fast_lead_distance_step);
+                                              config_.fast_lead_distance_step);
     lead_two_desired_distance_filter_.Update(desired_distance);
     desired_distance_new = lead_two_desired_distance_filter_.GetOutput();
     JSON_DEBUG_VALUE("fast_lead_id", lead_obstacle.track_id());
@@ -1617,9 +1731,9 @@ double StGraphGenerator::CutInDesiredDistanceFilter(
 
   cut_in_desired_distance_filter_.SetState(
       cutin_information->desired_distance());
-  if (!(lon_behav_input_ ->dbw_status())) {
+  if (!(lon_behav_input_->dbw_status())) {
     cut_in_desired_distance_filter_.SetState(
-      std::min(predict_distance, safe_distance));
+        std::min(predict_distance, safe_distance));
   }
   JSON_DEBUG_VALUE("fast_car_cut_in_id", -1.0);
   JSON_DEBUG_VALUE("slow_car_cut_in_id", -1.0);
@@ -1647,7 +1761,6 @@ double StGraphGenerator::LCGapDesiredDistanceFilter(
     const planning::common::TrackedObjectInfo &lead_obstacle,
     const double v_ego, double safe_distance, double desired_distance,
     bool is_front) {
-  
   // 更新lead初始信息
   if (is_front) {
     if (lc_front_id_ != lead_obstacle.track_id()) {
@@ -1715,7 +1828,6 @@ double StGraphGenerator::LCGapDesiredDistanceFilter(
     lc_rear_desired_distance_ = desired_rear_distance_new;
     return desired_rear_distance_new;
   }
-
 }
 
 common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
@@ -1869,9 +1981,12 @@ void StGraphGenerator::MakeAccBound() {
       config_.low_speed_threshold_with_acc_upper_bound,
       acc_upper_bound_with_high_speed,
       config_.high_speed_threshold_with_acc_upper_bound, lon_init_state_[1]);
-  acc_bound_.second =
-      (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
-  acc_bound_.first = (std::fmin(lon_init_state_[2], config_.acc_lower_bound));
+  // acc_bound_.first = (std::fmin(lon_init_state_[2],
+  // config_.acc_lower_bound));
+  // acc_bound_.second =
+  //     (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
+  acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
+  acc_bound_.second = (std::fmax(lon_init_state_[2], acc_target_.second));
 }
 
 void StGraphGenerator::MakeJerkBound() {

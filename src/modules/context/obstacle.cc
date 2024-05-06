@@ -400,10 +400,9 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
 
 void Obstacle::extract_point_at_specified_resolution(
     std::vector<planning_math::Vec2d> &points) const {
-  constexpr double PI = std::atan(1.0) * 4.0;
   constexpr int kMinPointsNum = 4;
   constexpr double kMinDist = 0.5;
-  constexpr double kMinCosTheta = cos(0.8 * PI);
+  const double kMinCosTheta = cos(0.8 * M_PI);
   if (points.size() <= kMinPointsNum) {
     return;
   }

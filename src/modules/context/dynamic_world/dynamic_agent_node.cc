@@ -7,8 +7,8 @@
 #include "reference_path.h"
 #include "trajectory/center_line_point.h"
 // #include "trajectory/path_point.h"
-#include "utils/path_point.h"
 #include "utils/kd_path.h"
+#include "utils/path_point.h"
 
 namespace planning {
 namespace planning_data {

@@ -33,7 +33,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
   pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
 
-  planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
+  planning_json_value_list = ['acc_target_high', 'acc_target_low', 'acc_cipv', \
                               "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                               "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                               'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
@@ -47,7 +47,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'gap_v_limit_lc', \
                               "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                               "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                              'RealTimeLateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                              'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
 
   plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
@@ -267,7 +267,6 @@ def load_lon_global_figure(bag_loader):
    t_loc_vec = bag_loader.loc_msg['t']
    for ind in range(len(bag_loader.plan_debug_msg['json'])):
       target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target'], 2))
-      # ref_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_v_ref'], 2))
       leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_vel'], 2))
       leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_two_vel'], 2))
 
@@ -295,11 +294,13 @@ def load_lon_global_figure(bag_loader):
    ego_acc_vec = []
    acc_min_vec = []
    acc_max_vec = []
+   acc_leadone_vec = []
 
    t_vs_vec = bag_loader.vs_msg['t']
    for ind in range(len(bag_loader.plan_debug_msg['json'])):
-      acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_low'], 2))
-      acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_high'], 2))
+      acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
+      acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
+      acc_leadone_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
    for ind in range(len(bag_loader.vs_msg['data'])):
       ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
 
@@ -475,7 +476,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
 
   pan1 = Panel(child=row(column(fig2, fig3), column(fig4, fig5, fig6, fig7)), title="Longtime")
 
-  tab1 = DataTable(source=data_text, columns=columns, width=500, height=400)
+  tab1 = DataTable(source=data_text, columns=columns, width=500, height=1000)
 
   pan2 = Panel(child=row(tab1, column(velocity_fig, acc_fig)), title="Realtime")
 

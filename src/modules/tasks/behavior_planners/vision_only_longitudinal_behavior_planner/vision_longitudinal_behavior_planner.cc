@@ -154,8 +154,8 @@ bool VisionLongitudinalBehaviorPlanner::update() {
     JSON_DEBUG_VALUE("VisionLonBehavior_acc_filter_reset", 0);
   }
 
-  JSON_DEBUG_VALUE("VisionLonBehavior_a_target_high", a_target_.second);
-  JSON_DEBUG_VALUE("VisionLonBehavior_a_target_low", a_target_.first);
+  JSON_DEBUG_VALUE("acc_target_high", a_target_.second);
+  JSON_DEBUG_VALUE("acc_target_low", a_target_.first);
 
   // get start & stop state
   common::StartStopInfo::StateType stop_start_state =
@@ -207,8 +207,7 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_in_turns(
   // the existing lateral acceleration
   //  this should avoid accelerating when losing the target in turns
   LOG_DEBUG("----limit_accel_velocity_in_turns--- \n");
-  double deg_rad = std::atan(1.0) * 4 / 180.0;
-  double angle_steers_deg = angle_steers / deg_rad;
+  double angle_steers_deg = angle_steers * DEG_PER_RAD;
 
   double a_total_max = interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V);
   const auto &vehicle_param =

@@ -65,23 +65,37 @@ void LateralMotionPlanningWeight::SetWeightByScene(
   planning_input.set_q_jerk_bound(config_.q_jerk_bound);
 }
 
-void LateralMotionPlanningWeight::SetWeightByPosBoundAndLaneType(std::shared_ptr<VirtualLane> current_lane, planning::common::LateralPlanningInput &planning_input) {
+void LateralMotionPlanningWeight::SetWeightByPosBoundAndLaneType(
+    std::shared_ptr<VirtualLane> current_lane,
+    planning::common::LateralPlanningInput &planning_input) {
   // upper
-  const double a1 = planning_input.soft_upper_bound_y1_vec(0) - planning_input.soft_upper_bound_y0_vec(0);
-  const double b1 = planning_input.soft_upper_bound_x0_vec(0) - planning_input.soft_upper_bound_x1_vec(0);
-  const double c1 = planning_input.soft_upper_bound_y0_vec(0) * planning_input.soft_upper_bound_x1_vec(0) -
-                    planning_input.soft_upper_bound_x0_vec(0) * planning_input.soft_upper_bound_y1_vec(0);
-  const double init_dis_to_upper = (a1 * planning_input.init_state().x() + b1 * planning_input.init_state().y() + c1);
+  const double a1 = planning_input.soft_upper_bound_y1_vec(0) -
+                    planning_input.soft_upper_bound_y0_vec(0);
+  const double b1 = planning_input.soft_upper_bound_x0_vec(0) -
+                    planning_input.soft_upper_bound_x1_vec(0);
+  const double c1 = planning_input.soft_upper_bound_y0_vec(0) *
+                        planning_input.soft_upper_bound_x1_vec(0) -
+                    planning_input.soft_upper_bound_x0_vec(0) *
+                        planning_input.soft_upper_bound_y1_vec(0);
+  const double init_dis_to_upper = (a1 * planning_input.init_state().x() +
+                                    b1 * planning_input.init_state().y() + c1);
   // lower
-  const double a2 = planning_input.soft_lower_bound_y1_vec(0) - planning_input.soft_lower_bound_y0_vec(0);
-  const double b2 = planning_input.soft_lower_bound_x0_vec(0) - planning_input.soft_lower_bound_x1_vec(0);
-  const double c2 = planning_input.soft_lower_bound_y0_vec(0) * planning_input.soft_lower_bound_x1_vec(0) -
-                    planning_input.soft_lower_bound_x0_vec(0) * planning_input.soft_lower_bound_y1_vec(0);
-  const double init_dis_to_lower = (a2 * planning_input.init_state().x() + b2 * planning_input.init_state().y() + c2);
-  
-  const double ref_s = planning_input.ref_vel() * config_.delta_t * (planning_input.ref_x_vec().size() - 1);
+  const double a2 = planning_input.soft_lower_bound_y1_vec(0) -
+                    planning_input.soft_lower_bound_y0_vec(0);
+  const double b2 = planning_input.soft_lower_bound_x0_vec(0) -
+                    planning_input.soft_lower_bound_x1_vec(0);
+  const double c2 = planning_input.soft_lower_bound_y0_vec(0) *
+                        planning_input.soft_lower_bound_x1_vec(0) -
+                    planning_input.soft_lower_bound_x0_vec(0) *
+                        planning_input.soft_lower_bound_y1_vec(0);
+  const double init_dis_to_lower = (a2 * planning_input.init_state().x() +
+                                    b2 * planning_input.init_state().y() + c2);
+
+  const double ref_s = planning_input.ref_vel() * config_.delta_t *
+                       (planning_input.ref_x_vec().size() - 1);
   const double theta_error =
-      (planning_input.init_state().theta() - planning_input.ref_theta_vec(0)) * 57.3;
+      (planning_input.init_state().theta() - planning_input.ref_theta_vec(0)) *
+      57.3;
   double q_acc = planning_input.q_acc();
   double q_jerk = planning_input.q_jerk();
   double q_soft_corridor = config_.q_soft_corridor;
@@ -91,7 +105,8 @@ void LateralMotionPlanningWeight::SetWeightByPosBoundAndLaneType(std::shared_ptr
   if (init_dis_to_upper > 0.0 && init_dis_to_lower < 0.0) {
     q_soft_corridor *= 4.0;
   } else if (init_dis_to_upper < 0.0) {
-    for (auto type_segment : current_lane->get_left_lane_boundary().type_segments()) {
+    for (auto type_segment :
+         current_lane->get_left_lane_boundary().type_segments()) {
       if (type_segment.type() == Common::MARKING_DASHED ||
           type_segment.type() == Common::MARKING_SHORT_DASHED ||
           type_segment.type() == Common::MARKING_DOUBLE_DASHED ||
@@ -107,7 +122,8 @@ void LateralMotionPlanningWeight::SetWeightByPosBoundAndLaneType(std::shared_ptr
       q_soft_corridor *= 4.0;
     }
   } else if (init_dis_to_lower > 0) {
-    for (auto type_segment : current_lane->get_right_lane_boundary().type_segments()) {
+    for (auto type_segment :
+         current_lane->get_right_lane_boundary().type_segments()) {
       if (type_segment.type() == Common::MARKING_DASHED ||
           type_segment.type() == Common::MARKING_SHORT_DASHED ||
           type_segment.type() == Common::MARKING_DOUBLE_DASHED ||
