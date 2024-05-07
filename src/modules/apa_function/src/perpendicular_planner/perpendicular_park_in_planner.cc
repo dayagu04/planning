@@ -924,7 +924,7 @@ void PerpendicularInPlanner::GenObstacles() {
   pnc::geometry_lib::PathPoint ego_pose;
   ego_pose.Set(frame_.ego_slot_info.ego_pos_slot,
                frame_.ego_slot_info.ego_heading_slot);
-  double safe_dist = apa_param.GetParam().max_obs2car_dist_in_slot;
+  double safe_dist = apa_param.GetParam().max_obs2car_dist_out_slot;
   if (frame_.ego_slot_info.slot_occupied_ratio >
           apa_param.GetParam().max_obs2car_dist_slot_occupied_ratio &&
       std::fabs(frame_.ego_slot_info.terminal_err.heading) * 57.3 < 36.6) {
