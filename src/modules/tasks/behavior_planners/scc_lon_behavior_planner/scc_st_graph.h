@@ -13,10 +13,10 @@
 #include "lon_behavior_planner.pb.h"
 #include "real_time_lon_behavior_planner.pb.h"
 #include "scc_lon_behavior_types.h"
+#include "session.h"
 #include "task_basic_types.h"
 #include "tasks/behavior_planners/real_time_lane_change_decider/real_time_lane_change_decider.h"
 #include "utils_math.h"
-
 namespace planning {
 namespace scc {
 
@@ -31,7 +31,7 @@ class StGraphGenerator {
 
   // 更新
   void Update(
-      std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input);
+      std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input, const TrajectoryPoints& last_traj);
 
   void SetConfig(
       planning::common::RealTimeLonBehaviorTunedParams &tuned_params);
@@ -167,7 +167,7 @@ class StGraphGenerator {
 
   // 计算启停状态，避免二次起步
   common::StartStopInfo::StateType UpdateStartStopState(
-      const planning::common::TrackedObjectInfo &lead_one, const double v_ego);
+      const planning::common::TrackedObjectInfo &lead_one, const double v_ego, const TrajectoryPoints& last_traj);
 
   // update vt_refs_
   void UpdateVelRefs();

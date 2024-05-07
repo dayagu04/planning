@@ -1131,6 +1131,9 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
     v_start = read_json_keys<double>(
         json,
         std::vector<std::string>{"real_time_long_behavior_planner", "v_start"});
+    v_startmode = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "v_startmode"});
     obstacle_v_start = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "obstacle_v_start"});
@@ -1153,6 +1156,18 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
     soft_bound_corridor_t = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "soft_bound_corridor_t"});
+    acc_start_max_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "acc_start_max_bound"});
+    acc_start = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "acc_start"});
+    v_target_stop_thrd = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "v_target_stop_thrd"}); 
+    acc_stop_max_bound = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "acc_stop_max_bound"});                                                              
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -1181,9 +1196,12 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double velocity_upper_bound = 33.33;  // 120km/h
   // The param for StartStopState
   double v_start = 0.3;
+  double v_startmode = 5.0;
   double obstacle_v_start = 0.5;  // start of obstacle
   double distance_stop = 1.0;
   double distance_start = 0.3;
+  double acc_start_max_bound = 1.0;
+  double acc_start = 1.0;
   // param for st graph
   double fast_lead_distance_step = 1.0;  // fast lead跟车距离膨胀速率1.0m/s
   double slow_lead_distance_step = 2.0;  // slow lead跟车距离膨胀速率2.0m/s
@@ -1204,6 +1222,9 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double kSlowJerkUpperBound = 6.0;
   double jerk_upper_bound = 10.0;
   double jerk_lower_bound = -5.0;
+  //stop condition judge
+  double v_target_stop_thrd = 0.2;
+  double acc_stop_max_bound = 1.0;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
@@ -1232,6 +1253,77 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"long_motion_ilqr", "q_jerk_bound"});
     q_stop_s = read_json_keys<double>(
         json, std::vector<std::string>{"long_motion_ilqr", "q_stop_s"});
+    
+    // start mode q
+    q_ref_pos_startmode = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_ref_pos_startmode"});
+    q_ref_vel_startmode = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_ref_vel_startmode"});
+    q_acc_startmode = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_acc_startmode"});
+    q_jerk_startmode = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_jerk_startmode"});
+    q_soft_pos_bound_startmode = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr",
+                                       "q_soft_pos_bound_startmode"});
+    q_hard_pos_bound_startmode = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr",
+                                       "q_hard_pos_bound_startmode"});
+    q_sv_bound_startmode = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_sv_bound_startmode"});
+    q_vel_bound_startmode = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_vel_bound_startmode"});
+    q_acc_bound_startmode = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_acc_bound_startmode"});
+    q_jerk_bound_startmode = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_jerk_bound_startmode"});
+    q_stop_s_startmode = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_stop_s_startmode"});
+    
+    // stop mode q
+    q_ref_pos_stopmode = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_ref_pos_stopmode"});
+    q_ref_vel_stopmode = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_ref_vel_stopmode"});
+    q_acc_stopmode = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_acc_stopmode"});
+    q_jerk_stopmode = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_jerk_stopmode"});
+    q_soft_pos_bound_stopmode = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr",
+                                       "q_soft_pos_bound_stopmode"});
+    q_hard_pos_bound_stopmode = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr",
+                                       "q_hard_pos_bound_stopmode"});
+    q_sv_bound_stopmode = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_sv_bound_stopmode"});
+    q_vel_bound_stopmode = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_vel_bound_stopmode"});
+    q_acc_bound_stopmode = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_acc_bound_stopmode"});
+    q_jerk_bound_stopmode = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_jerk_bound_stopmode"});
+    q_stop_s_stopmode = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_stop_s_stopmode"});
+    // v_target stop threshold
+    v_target_stop_thrd = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "v_target_stop_thrd"});
+
   }
   double q_ref_pos = 1.0;
   double q_ref_vel = 0.05;
@@ -1245,6 +1337,35 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_bound = 400.0;
   double q_jerk_bound = 100.0;
   double q_stop_s = 2000.0;
+
+  // only in start mode
+  double q_ref_pos_startmode = 1.0;
+  double q_ref_vel_startmode = 0.05;
+  double q_acc_startmode = 10.0;
+  double q_jerk_startmode = 5.0;
+
+  double q_soft_pos_bound_startmode = 5.0;
+  double q_hard_pos_bound_startmode = 1000.0;
+  double q_sv_bound_startmode = 1000.0;
+  double q_vel_bound_startmode = 400.0;
+  double q_acc_bound_startmode = 400.0;
+  double q_jerk_bound_startmode = 100.0;
+  double q_stop_s_startmode = 2000.0;
+
+  // only in stop mode
+  double v_target_stop_thrd = 0.2;
+  double q_ref_pos_stopmode = 1.0;
+  double q_ref_vel_stopmode = 0.05;
+  double q_acc_stopmode = 10.0;
+  double q_jerk_stopmode = 5.0;
+
+  double q_soft_pos_bound_stopmode = 5.0;
+  double q_hard_pos_bound_stopmode = 1000.0;
+  double q_sv_bound_stopmode = 1000.0;
+  double q_vel_bound_stopmode = 400.0;
+  double q_acc_bound_stopmode = 400.0;
+  double q_jerk_bound_stopmode = 100.0;
+  double q_stop_s_stopmode = 2000.0;
 };
 
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
