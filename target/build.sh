@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 SCRIPT_DIR=$(dirname "$0")
 PRODUCT_NAME=JAC_S811
