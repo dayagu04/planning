@@ -1725,6 +1725,14 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
     item.is_temp_lead = false;
     return item.is_temp_lead;
   }
+  // Only use obstacle with frenet transform success
+  bool frenet_transform_valid = true;
+  Point2D frenet_point;
+  frenet_transform_valid = frenet_coord_->XYToSL(
+      Point2D(item.center_x, item.center_y), frenet_point);
+  if (!frenet_transform_valid) {
+    return false;
+  }
   LOG_DEBUG("----is_potential_temp_lead_one-----\n");
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   std::array<double, 5> xp1{1.5, 5.0, 10.0, 40.0, 60.0 + v_ego / 1.2};
