@@ -1901,13 +1901,15 @@ void SlotManagement::UpdateSlotInfoInParking() {
 
   bool update_slot_condition_2 =
       (ego_slot_info.slot_occupied_ratio <
-       apa_param.GetParam().slot_update_in_or_out_occupied_ratio) &&
+           apa_param.GetParam().slot_update_in_or_out_occupied_ratio ||
+       std::fabs(ego_slot_info.ego_heading_slot * 57.3 > 22.8)) &&
       (std::fabs(ego_slot_info.ego_heading_slot) <
            slot_update_out_heading_max / 57.3 &&
        std::fabs(ego_slot_info.ego_heading_slot) >
            slot_update_out_heading_min / 57.3) &&
       (std::fabs(ego_slot_info.ego_pos_slot.y()) < slot_update_out_lat_max &&
-       std::fabs(ego_slot_info.ego_pos_slot.y()) > slot_update_out_lat_min);
+       std::fabs(ego_slot_info.ego_pos_slot.y()) > slot_update_out_lat_min) &&
+      (std::fabs(ego_slot_info.ego_pos_slot.x() < 7.86));
 
   bool update_slot_condition_3 =
       (ego_slot_info.slot_occupied_ratio >=

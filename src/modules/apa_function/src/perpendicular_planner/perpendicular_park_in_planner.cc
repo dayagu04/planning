@@ -237,6 +237,11 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
 
       ego_slot_info.pt_0 = ego_slot_info.g2l_tf.GetPos(origin_pt_0);
       ego_slot_info.pt_1 = ego_slot_info.g2l_tf.GetPos(origin_pt_1);
+
+      if (ego_slot_info.pt_0.y() > ego_slot_info.pt_1.y()) {
+        std::swap(ego_slot_info.pt_0, ego_slot_info.pt_1);
+      }
+
       const Eigen::Vector2d pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
 
       double angle =
@@ -337,22 +342,44 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     }
   }
 
+  if (frame_.is_replan_first) {
+    pt_center_ = (ego_slot_info.slot_corner[0] + ego_slot_info.slot_corner[1] +
+                  ego_slot_info.slot_corner[2] + ego_slot_info.slot_corner[3]) /
+                 4.0;
+  }
+
   // trim path according to slot when 1R
   if ((perpendicular_path_planner_.GetOutput().is_first_reverse_path ||
        apa_param.GetParam().dynamic_col_det_enable) &&
       !first_reverse_path_vec_.empty()) {
-    const double dist = (ego_slot_info.slot_corner[0] - pt0_).norm();
+    const double dist =
+        ((ego_slot_info.slot_corner[0] + ego_slot_info.slot_corner[1] +
+          ego_slot_info.slot_corner[2] + ego_slot_info.slot_corner[3]) /
+             4.0 -
+         pt_center_)
+            .norm();
     std::cout << "slot jump dist = " << dist << std::endl;
 
     CollisionDetector::Paramters params;
-    params.lat_inflation +=
-        apa_param.GetParam().car_lat_inflation_for_trim_path;
-    const double safe_dist = apa_param.GetParam().safe_dist_for_trim_path;
+    double safe_dist = apa_param.GetParam().safe_dist_for_trim_path;
+    if (perpendicular_path_planner_.GetOutput().is_first_reverse_path) {
+      params.lat_inflation +=
+          apa_param.GetParam().car_lat_inflation_for_trim_path;
+      safe_dist += 0.1;
+    } else {
+      params.lat_inflation +=
+          apa_param.GetParam().car_lat_inflation_for_trim_path / 3.0;
+    }
 
     apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
     const double min_remain_dist = 0.016;
     if (dist > apa_param.GetParam().slot_max_jump_dist &&
         frame_.remain_dist > min_remain_dist) {
+      // record pt_center_
+      pt_center_ =
+          (ego_slot_info.slot_corner[0] + ego_slot_info.slot_corner[1] +
+           ego_slot_info.slot_corner[2] + ego_slot_info.slot_corner[3]) /
+          4.0;
       // construct obs
       GenTlane();
       GenObstacles();
@@ -431,7 +458,6 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     params.Reset();
     apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
   }
-  pt0_ = ego_slot_info.slot_corner[0];
 
   // update stuck uss time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
@@ -898,10 +924,11 @@ void PerpendicularInPlanner::GenObstacles() {
   pnc::geometry_lib::PathPoint ego_pose;
   ego_pose.Set(frame_.ego_slot_info.ego_pos_slot,
                frame_.ego_slot_info.ego_heading_slot);
-  double safe_dist = apa_param.GetParam().max_obs2car_dist_in_slot;
-  if (frame_.ego_slot_info.slot_occupied_ratio <
-      apa_param.GetParam().max_obs2car_dist_slot_occupied_ratio) {
-    safe_dist = apa_param.GetParam().max_obs2car_dist_out_slot;
+  double safe_dist = apa_param.GetParam().max_obs2car_dist_out_slot;
+  if (frame_.ego_slot_info.slot_occupied_ratio >
+          apa_param.GetParam().max_obs2car_dist_slot_occupied_ratio &&
+      std::fabs(frame_.ego_slot_info.terminal_err.heading) * 57.3 < 36.6) {
+    safe_dist = apa_param.GetParam().max_obs2car_dist_in_slot;
   }
   for (const auto& obs_pos : tlane_obstacle_vec) {
     if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
