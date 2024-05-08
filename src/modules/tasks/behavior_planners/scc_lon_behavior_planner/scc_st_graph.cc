@@ -1588,7 +1588,7 @@ double StGraphGenerator::CalcPositiveAccLimit(
     // lead speed if the lead car is faster, we can accelerate more, if the
     // car is slower, then we can reduce acceleration
     a_max = a_max + interp(v_ego, _A_CORR_BY_SPEED_BP, _A_CORR_BY_SPEED_V) *
-                        clip(-v_rel / 4.0, -0.5, 1.0);
+                        clip(-v_rel / 4.0, 1.0, -0.5);
   }
   return a_max;
 }
