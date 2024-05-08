@@ -11,6 +11,7 @@
 #include "geometry_math.h"
 #include "math_lib.h"
 #include "transform_lib.h"
+#include "apa_plan_interface.h"
 
 namespace py = pybind11;
 using namespace planning;
@@ -21,8 +22,12 @@ typedef Eigen::Matrix<double, 5, 1> Vector5d;
 
 static CollisionDetector* pBaseColDetAir = nullptr;
 static CollisionDetector::CollisionResult collision_result;
+static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
 
 int Init() {
+  pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
+
+  pApaPlanInterface->Init();
   pBaseColDetAir = new CollisionDetector();
   return 0;
 }

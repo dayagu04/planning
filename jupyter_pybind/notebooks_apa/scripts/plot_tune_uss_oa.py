@@ -17,7 +17,7 @@ output_notebook()
 
 
 # load car local vertex
-car_local_x_list, car_local_y_list = load_car_params_patch()
+car_local_x_list, car_local_y_list = load_car_params_patch_parking()
 # load uss local vertex and normal angle
 uss_local_x_list, uss_local_y_list = load_car_uss_patch()
 uss_angle_list = load_uss_angle_patch()
@@ -71,7 +71,7 @@ class LocalViewSlider:
 
     self.detection_distance_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "detection_distance",min=0, max=2.6, value=2.5, step=0.01)
 
-    self.lat_inflation_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "lat_inflation",min=0, max=0.3, value=0.18, step=0.01)
+    self.lat_inflation_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "lat_inflation",min=0, max=0.3, value=0.0, step=0.01)
 
     self.uss_raw_dist_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "uss_raw_dist",min=0.15, max=4.7, value=1.98, step=0.01)
 

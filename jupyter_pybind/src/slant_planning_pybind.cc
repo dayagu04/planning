@@ -23,12 +23,11 @@ static planning::apa_planner::PerpendicularPathPlanner *pBase = nullptr;
 static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
 
 int Init() {
-  pBase = new PerpendicularPathPlanner();
-  pBase->Reset();
-
   pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
 
   pApaPlanInterface->Init();
+  pBase = new PerpendicularPathPlanner();
+  pBase->Reset();
 
   return 0;
 }
