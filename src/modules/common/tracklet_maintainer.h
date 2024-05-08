@@ -125,6 +125,7 @@ class TrackletMaintainer {
   std::shared_ptr<planning_math::KDPath> frenet_coord_;
   LifecycleDict seq_state_;
   std::map<int, TrackedObject *> object_map_;
+  std::map<int, TrackedObject *> fusion_object_history_map_;
   std::shared_ptr<EgoStateManager> ego_state_;
   bool hdmap_valid_{false};
 
