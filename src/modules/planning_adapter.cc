@@ -350,6 +350,8 @@ void PlanningAdapter::Proc() {
   auto &planning_hmi_info =
       *iflyauto::struct_cast<iflyauto::PlanningHMIOutputInfoStr>(
           planning_hmi_info_container);
+  auto planning_debuginfo_container =
+      std::make_shared<iflyauto::StructContainer>();
 
   std::cout << "==============The planning enters RunOnce============="
             << std::endl;
@@ -381,7 +383,9 @@ void PlanningAdapter::Proc() {
     frame_info->set_frame_duration_ms(frame_duration);
     frame_info->set_planning_succ(run_success);
 
-    planning_debug_writer_(*planning_debug_data);
+    auto payload = planning_debuginfo_container->mutable_payload();
+    planning_debug_data->SerializeToString(payload);
+    planning_debug_writer_(planning_debuginfo_container);
   }
 
   if (planning_writer_) {

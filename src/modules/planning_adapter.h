@@ -139,7 +139,8 @@ class PlanningAdapter {
     planning_writer_ = planning_writer;
   }
   void RegisterDebugInfoWriter(
-      const std::function<void(planning::common::PlanningDebugInfo)>&
+      const std::function<
+          void(const std::shared_ptr<iflyauto::StructContainer>&)>&
           planning_debug_writer) {
     planning_debug_writer_ = planning_debug_writer;
   }
@@ -215,7 +216,7 @@ class PlanningAdapter {
 
   std::function<void(const std::shared_ptr<iflyauto::StructContainer>&)>
       planning_writer_ = nullptr;
-  std::function<void(planning::common::PlanningDebugInfo)>
+  std::function<void(const std::shared_ptr<iflyauto::StructContainer>&)>
       planning_debug_writer_ = nullptr;
   std::function<void(const std::shared_ptr<iflyauto::StructContainer>&)>
       planning_hmi_info_writer_ = nullptr;

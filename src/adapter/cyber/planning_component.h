@@ -25,8 +25,8 @@ class PlanningComponent final : public autoplt::ADSTimerCoponent {
  private:
   std::shared_ptr<ADSNode> planning_node_ = nullptr;
   std::shared_ptr<Writer<iflyauto::StructContainer>> planning_writer_ = nullptr;
-  std::shared_ptr<Writer<planning::common::PlanningDebugInfo>>
-      planning_debug_writer_ = nullptr;
+  std::shared_ptr<Writer<iflyauto::StructContainer>> planning_debug_writer_ =
+      nullptr;
   std::shared_ptr<Writer<iflyauto::StructContainer>> planning_hmi_info_writer_ =
       nullptr;
 

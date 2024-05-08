@@ -6,7 +6,6 @@
 #include "cyber/scheduler/scheduler.h"
 #include "gflags/gflags.h"
 
-#include "struct_container.hpp"
 #include "struct_container.pb.h"
 
 namespace planning {
@@ -79,10 +78,10 @@ bool PlanningComponent::Init() {
           "/iflytek/localization/egomotion",
           [this](const std::shared_ptr<iflyauto::StructContainer>
                      &localization_msg) {
-            const auto &localizationn_struct =
+            const auto &localization_struct =
                 *iflyauto::struct_cast<iflyauto::IFLYLocalization>(
                     localization_msg);
-            planning_adapter_->FeedLocalizationOutput(localizationn_struct);
+            planning_adapter_->FeedLocalizationOutput(localization_struct);
           });
 
   auto prediction_reader_ =
@@ -200,10 +199,11 @@ bool PlanningComponent::Init() {
       });
 
   planning_debug_writer_ =
-      planning_node_->CreateWriter<planning::common::PlanningDebugInfo>(
+      planning_node_->CreateWriter<iflyauto::StructContainer>(
           "/iflytek/planning/debug_info");
   planning_adapter_->RegisterDebugInfoWriter(
-      [this](const planning::common::PlanningDebugInfo &planning_debug_info) {
+      [this](const std::shared_ptr<iflyauto::StructContainer>
+                 &planning_debug_info) {
         planning_debug_writer_->Write(planning_debug_info);
       });
 
