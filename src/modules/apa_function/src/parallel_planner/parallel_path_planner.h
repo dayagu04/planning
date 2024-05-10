@@ -473,6 +473,9 @@ class ParallelPathPlanner {
 
   const bool IsOnTarget(const pnc::geometry_lib::PathPoint &current_pose) const;
 
+  const bool CheckLonToTarget(
+      const pnc::geometry_lib::PathPoint &current_pose) const;
+
   const bool IsOnTargetLine(const pnc::geometry_lib::PathPoint &current_pose);
 
   const bool CheckSamePose(const pnc::geometry_lib::PathPoint &pose1,

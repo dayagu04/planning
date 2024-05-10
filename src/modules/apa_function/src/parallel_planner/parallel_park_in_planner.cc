@@ -24,6 +24,18 @@
 
 namespace planning {
 namespace apa_planner {
+static double kFrontDetaXMagWhenFrontVacant = 1.66;
+static double kRearDetaXMagWhenFrontVacant = 0.2;
+static double kRearDetaXMagWhenFrontOccupiedRearVacant = 1.5;
+
+static double kFrontObsLineYMagIdentification = 0.8;
+static double kRearObsLineYMagIdentification = 0.8;
+static double kChannelLengthXMagIdentification = 1.0;
+static double kChannelLengthMinYMagIdentification = 0.5;
+static double kChannelLengthMaxYMagIdentification = 5.0;
+
+static double kCurbInitialOffset = 0.2;
+static double kCurbYMagIdentification = 0.8;
 
 void ParallelParInPlanner::Init(const bool c_ilqr_enable) {
   lateral_path_optimizer_ptr_ = std::make_shared<LateralPathOptimizer>();
@@ -387,15 +399,6 @@ void ParallelParInPlanner::GenTlane() {
   // Todo: generate t-lane according to nearby obstacles
   const auto& ego_slot_info = frame_.ego_slot_info;
 
-  // const auto y_ascending_func = [](const Eigen::Vector2d& a,
-  //                                  const Eigen::Vector2d& b) {
-  //   return a.y() > b.y();  // the top element is smallest
-  // };
-  // const auto y_descending_func = [](const Eigen::Vector2d& a,
-  //                                   const Eigen::Vector2d& b) {
-  //   return a.y() < b.y();  // the top element is largest
-  // };
-
   const auto x_ascending_func = [](const Eigen::Vector2d& a,
                                    const Eigen::Vector2d& b) {
     return a.x() > b.x();  // the top element is smallest
@@ -426,19 +429,22 @@ void ParallelParInPlanner::GenTlane() {
                       decltype(x_descending_func)>
       rear_obs_que_descending_x(x_descending_func);
 
-  const double side_sgn =
-      (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT ? 1.0 : -1.0);
   const double slot_length = ego_slot_info.slot_length;
   const double half_slot_width = 0.5 * ego_slot_info.slot_width;
+
+  const double side_sgn =
+      (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT ? 1.0 : -1.0);
 
   double channel_x_limit = apa_param.GetParam().parallel_channel_x_mag;
   double channel_y_limit =
       side_sgn * apa_param.GetParam().parallel_channel_y_mag;
 
-  double curb_y_limit = -side_sgn * (half_slot_width + 0.2);
+  size_t curb_count = 0;
+  double curb_y_limit = -side_sgn * (half_slot_width + kCurbInitialOffset);
 
-  double front_parallel_line_y_limit = side_sgn * half_slot_width;
-  double rear_parallel_line_y_limit = side_sgn * half_slot_width;
+  const double quarter_slot_width = 0.5 * half_slot_width;
+  double front_parallel_line_y_limit = side_sgn * quarter_slot_width;
+  double rear_parallel_line_y_limit = side_sgn * quarter_slot_width;
 
   DEBUG_PRINT("obs size =" << ego_slot_info.obs_pt_vec_slot.size()
                            << "-----------");
@@ -447,9 +453,12 @@ void ParallelParInPlanner::GenTlane() {
     // DEBUG_PRINT(obstacle_point_slot.transpose());
 
     const bool front_obs_condition =
-        (std::fabs(obstacle_point_slot.x() - slot_length) < 1.5) &&
-        (obstacle_point_slot.y() * side_sgn <= half_slot_width + 0.5) &&
-        (obstacle_point_slot.y() * side_sgn >= -0.8);
+        (std::fabs(obstacle_point_slot.x() - slot_length) <
+         kFrontDetaXMagWhenFrontVacant) &&
+        pnc::mathlib::IsInBound(
+            obstacle_point_slot.y() * side_sgn,
+            -kFrontObsLineYMagIdentification,
+            half_slot_width + kFrontObsLineYMagIdentification);
 
     if (front_obs_condition) {
       // front obs line que
@@ -458,9 +467,11 @@ void ParallelParInPlanner::GenTlane() {
     }
 
     const bool rear_obs_condition =
-        (std::fabs(obstacle_point_slot.x()) < 1.5) &&
-        (obstacle_point_slot.y() * side_sgn <= half_slot_width + 0.5) &&
-        (obstacle_point_slot.y() * side_sgn >= -0.8);
+        (std::fabs(obstacle_point_slot.x()) <
+         kRearDetaXMagWhenFrontOccupiedRearVacant) &&
+        pnc::mathlib::IsInBound(
+            obstacle_point_slot.y() * side_sgn, -kRearObsLineYMagIdentification,
+            half_slot_width + kRearObsLineYMagIdentification);
 
     if (rear_obs_condition) {
       // rear obs line que
@@ -469,11 +480,13 @@ void ParallelParInPlanner::GenTlane() {
     }
 
     const bool curb_condition =
-        (obstacle_point_slot.x() >= 0.5) &&
-        (obstacle_point_slot.x() <= slot_length - 0.5) &&
-        (obstacle_point_slot.y() * side_sgn <= -0.8);
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(),
+                                kRearDetaXMagWhenFrontVacant,
+                                slot_length - kRearDetaXMagWhenFrontVacant) &&
+        (obstacle_point_slot.y() * side_sgn <= -kCurbYMagIdentification);
 
     if (curb_condition) {
+      curb_count++;
       curb_y_limit = side_sgn > 0.0
                          ? std::max(curb_y_limit, obstacle_point_slot.y())
                          : std::min(curb_y_limit, obstacle_point_slot.y());
@@ -494,9 +507,12 @@ void ParallelParInPlanner::GenTlane() {
     // }
 
     const bool channel_x_limit_condition =
-        (obstacle_point_slot.x() > slot_length + 1.0) &&
-        (obstacle_point_slot.y() * side_sgn > half_slot_width + 0.5) &&
-        (obstacle_point_slot.y() * side_sgn < 5.0);
+        (obstacle_point_slot.x() >
+         slot_length + kChannelLengthXMagIdentification) &&
+        pnc::mathlib::IsInBound(
+            obstacle_point_slot.y() * side_sgn,
+            half_slot_width + kChannelLengthMinYMagIdentification,
+            half_slot_width + kChannelLengthMaxYMagIdentification);
 
     if (channel_x_limit_condition) {
       channel_x_limit = std::min(channel_x_limit, obstacle_point_slot.x());
@@ -504,10 +520,9 @@ void ParallelParInPlanner::GenTlane() {
     }
 
     const bool front_parallel_line_condition =
-        (obstacle_point_slot.x() >= slot_length - 0.2) &&
-        (obstacle_point_slot.x() <= slot_length + 2.5) &&
-        (obstacle_point_slot.y() * side_sgn > 0.0) &&
-        (obstacle_point_slot.y() * side_sgn < 2.3);
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(), slot_length - 0.2,
+                                slot_length + 2.5) &&
+        pnc::mathlib::IsInBound(obstacle_point_slot.y() * side_sgn, 0.0, 2.3);
 
     if (front_parallel_line_condition) {
       front_parallel_line_y_limit =
@@ -518,9 +533,8 @@ void ParallelParInPlanner::GenTlane() {
     }
 
     const bool rear_parallel_line_condition =
-        (obstacle_point_slot.x() <= 0.2) && (obstacle_point_slot.x() >= -2.5) &&
-        (obstacle_point_slot.y() * side_sgn > 0.0) &&
-        (obstacle_point_slot.y() * side_sgn < 2.3);
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(), -2.5, 0.2) &&
+        pnc::mathlib::IsInBound(obstacle_point_slot.y() * side_sgn, 0.0, 2.3);
 
     if (rear_parallel_line_condition) {
       rear_parallel_line_y_limit =
@@ -545,25 +559,30 @@ void ParallelParInPlanner::GenTlane() {
 
   if (front_vacant) {
     front_obs_que_ascending_x.emplace(
-        Eigen::Vector2d(slot_length + 0.66, side_sgn * 0.5 * half_slot_width));
-    rear_obs_que_descending_x.emplace(
-        Eigen::Vector2d(-0.2, side_sgn * 0.5 * half_slot_width));
+        Eigen::Vector2d(slot_length + kFrontDetaXMagWhenFrontVacant,
+                        side_sgn * 0.5 * half_slot_width));
+
+    rear_obs_que_descending_x.emplace(Eigen::Vector2d(
+        -kRearDetaXMagWhenFrontVacant, side_sgn * 0.5 * half_slot_width));
   } else if (!front_vacant && rear_vacant) {
     rear_obs_que_descending_x.emplace(
-        Eigen::Vector2d(-0.5, side_sgn * 0.5 * half_slot_width));
+        Eigen::Vector2d(-kRearDetaXMagWhenFrontOccupiedRearVacant,
+                        side_sgn * 0.5 * half_slot_width));
   }
 
   const double front_min_x =
       pnc::mathlib::Clamp(front_obs_que_ascending_x.top().x(),
-                          slot_length + 0.2, slot_length + 0.66);
+                          slot_length - kRearDetaXMagWhenFrontVacant,
+                          slot_length + kFrontDetaXMagWhenFrontVacant);
 
   DEBUG_PRINT("front quene min x = " << front_obs_que_ascending_x.top().x());
   DEBUG_PRINT("front min x = " << front_min_x);
 
   const double front_y_limit = front_parallel_line_y_limit;
 
-  const double rear_max_x =
-      pnc::mathlib::Clamp(rear_obs_que_descending_x.top().x(), -0.2, -0.66);
+  const double rear_max_x = pnc::mathlib::Clamp(
+      rear_obs_que_descending_x.top().x(), -kRearDetaXMagWhenFrontVacant,
+      -kRearDetaXMagWhenFrontOccupiedRearVacant);
 
   const double rear_y_limit = rear_parallel_line_y_limit;
 
@@ -606,6 +625,27 @@ void ParallelParInPlanner::GenTlane() {
   t_lane_.slot_width = ego_slot_info.slot_width;
   t_lane_.slot_length = ego_slot_info.slot_length;
 
+  // if curb exist, combine curb and slot center line to decide target y
+  if (curb_count > 3) {
+    const double target_y_with_curb =
+        curb_y_limit +
+        side_sgn * (apa_param.GetParam().terminal_parallel_y_offset_with_curb +
+                    0.5 * apa_param.GetParam().car_width);
+
+    frame_.ego_slot_info.target_ego_pos_slot.y() =
+        (side_sgn ? std::max(t_lane_.pt_terminal_pos.y(), target_y_with_curb)
+                  : std::min(t_lane_.pt_terminal_pos.y(), target_y_with_curb));
+
+    t_lane_.pt_terminal_pos = frame_.ego_slot_info.target_ego_pos_slot;
+
+    frame_.ego_slot_info.terminal_err.Set(
+        frame_.ego_slot_info.ego_pos_slot -
+            frame_.ego_slot_info.target_ego_pos_slot,
+        pnc::geometry_lib::NormalizeAngle(
+            frame_.ego_slot_info.ego_heading_slot -
+            frame_.ego_slot_info.target_ego_heading_slot));
+  }
+
   DEBUG_PRINT("-- t_lane --------");
   if (pnc::mathlib::IsDoubleEqual(side_sgn, 1.0)) {
     DEBUG_PRINT("right slot");
@@ -622,8 +662,8 @@ void ParallelParInPlanner::GenTlane() {
   DEBUG_PRINT("pt_outside = " << t_lane_.pt_outside.transpose());
   DEBUG_PRINT("pt_inside = " << t_lane_.pt_inside.transpose());
   DEBUG_PRINT("pt_terminal_pos = " << t_lane_.pt_terminal_pos.transpose());
-  DEBUG_PRINT("slot length =" << ego_slot_info.slot_length);
-  DEBUG_PRINT("half slot width =" << 0.5 * ego_slot_info.slot_width);
+  DEBUG_PRINT("slot length =" << t_lane_.slot_length);
+  DEBUG_PRINT("half slot width =" << 0.5 * t_lane_.slot_width);
   DEBUG_PRINT("curb y =" << t_lane_.curb_y);
   DEBUG_PRINT("channel x =" << t_lane_.channel_x_limit);
   DEBUG_PRINT("channel y =" << t_lane_.channel_y);
@@ -643,9 +683,9 @@ void ParallelParInPlanner::GenObstacles() {
   const Eigen::Vector2d A(t_lane_.obs_pt_outside.x() - 1.0, B.y());
   const Eigen::Vector2d E = t_lane_.obs_pt_inside;
 
-  if (frame_.ego_slot_info.slot_occupied_ratio > 0.7) {
-    t_lane_.curb_y -= t_lane_.slot_side_sgn * 0.1;
-  }
+  // if (frame_.ego_slot_info.slot_occupied_ratio > 0.7) {
+  //   t_lane_.curb_y -= t_lane_.slot_side_sgn * 0.1;
+  // }
 
   const Eigen::Vector2d C(B.x(), t_lane_.curb_y);
   const Eigen::Vector2d D(E.x(), t_lane_.curb_y);
@@ -727,6 +767,13 @@ const bool ParallelParInPlanner::IsEgoInSlot() const {
                 apa_param.GetParam().car_width - 0.2);
 }
 
+const bool ParallelParInPlanner::IsEgoInSlot(
+    const pnc::geometry_lib::PathPoint& pose) const {
+  return std::fabs(pose.pos.y() - t_lane_.pt_terminal_pos.y()) <=
+         0.5 * (frame_.ego_slot_info.slot_width +
+                apa_param.GetParam().car_width - 0.2);
+}
+
 const uint8_t ParallelParInPlanner::PathPlanOnce() {
   // construct input
 
@@ -776,23 +823,32 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
   const bool path_plan_success =
       parallel_path_planner_.Update(apa_world_ptr_->GetCollisionDetectorPtr());
 
+  const auto& path_planner_output = parallel_path_planner_.GetOutput();
+
   frame_.total_plan_count++;
 
-  double extend_lenth = 0.3;
-  if (frame_.ego_slot_info.slot_occupied_ratio > 0.3) {
-    frame_.in_slot_plan_count++;
+  parallel_path_planner_.SetCurrentPathSegIndex();
+  // parallel_path_planner_.SetLineSegmentHeading();
 
-    extend_lenth =
-        (std::fabs(frame_.ego_slot_info.ego_heading_slot * 57.3) < 12.0 ? 0.25
-                                                                        : 0.2);
+  bool is_allow_entend_line = true;
+  if (frame_.ego_slot_info.slot_occupied_ratio < 0.05) {
+    const auto path_end_idx = path_planner_output.path_seg_index.second;
+    const auto& end_pose =
+        path_planner_output.path_segment_vec[path_end_idx].GetEndPose();
+
+    if (IsEgoInSlot(end_pose)) {
+      is_allow_entend_line = false;
+    }
   }
 
-  parallel_path_planner_.SetCurrentPathSegIndex();
-  parallel_path_planner_.SetLineSegmentHeading();
-  parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(extend_lenth);
+  if (is_allow_entend_line) {
+    const double extend_lenth = 0.15;
+    parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
+        extend_lenth);
+  }
   parallel_path_planner_.SampleCurrentPathSeg();
 
-  // // print segment info
+  // print segment info
   // pnc::geometry_lib::PrintSegmentsVecInfo(
   //     parallel_path_planner_.GetOutput().path_segment_vec);
 
@@ -1057,7 +1113,7 @@ const bool ParallelParInPlanner::CheckFinished() {
   ego2slot.Init(ego_slot_info.ego_pos_slot, ego_slot_info.ego_heading_slot);
 
   const auto& front_out_wheel = ego2slot.GetPos(
-      Eigen::Vector2d(apa_param.GetParam().front_overhanging,
+      Eigen::Vector2d(apa_param.GetParam().wheel_base,
                       0.5 * apa_param.GetParam().car_width * side_sgn));
 
   const auto& rear_out_wheel = ego2slot.GetPos(

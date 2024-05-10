@@ -35,6 +35,7 @@ static const double kMaxParkOutRootHeading = 25.0;
 
 static const double kColBufferTrippleStep = 0.2;
 static const double kColBufferInSlot = 0.4;
+static const double kSmallColBufferInSlot = 0.1;
 static const double kColBufferOutSlot = 0.5;
 
 static const size_t kMaxParallelParkInSegmentNums = 15;
@@ -1802,6 +1803,34 @@ const bool ParallelPathPlanner::CalSinglePathInMulti(
     }
   }
 
+  if (col_res == PATH_COL_INVALID) {
+    DEBUG_PRINT("start loose buffer to 0.2 in slot!");
+    for (size_t i = 0; i < tmp_path_seg_vec.size(); i++) {
+      auto& tmp_path_seg = tmp_path_seg_vec[i];
+      col_res =
+          TrimPathByCollisionDetection(tmp_path_seg, kSmallColBufferInSlot);
+
+      if (col_res == PATH_COL_NORMAL) {
+        path_seg_vec.emplace_back(tmp_path_seg);
+        DEBUG_PRINT("No. " << i << " normal!");
+      } else if (col_res == PATH_COL_SHORTEN) {
+        path_seg_vec.emplace_back(tmp_path_seg);
+        DEBUG_PRINT("No. " << i << " cut, due to collision, end point ="
+                           << tmp_path_seg.GetEndPos().transpose()
+                           << ", heading ="
+                           << tmp_path_seg.GetEndHeading() * 57.3);
+        if (multi_plan_method == MultiPlanMethod::LineArcMultiPlan && i == 0) {
+          DEBUG_PRINT("line-arc cut at line, quit multi-plan");
+          return false;
+        }
+        break;
+      } else if (col_res == PATH_COL_INVALID) {
+        DEBUG_PRINT("path col at start pose, invalid!");
+        break;
+      }
+    }
+  }
+
   success = false;
   if (path_seg_vec.size() > 0) {
     DEBUG_PRINT("CalSinglePathInMulti success, single path in multi:");
@@ -2028,6 +2057,10 @@ const bool ParallelPathPlanner::ParallelAdjustPlan() {
     pnc::geometry_lib::LineSegment last_line;
     last_line.pA = current_pose.pos;
     last_line.heading = current_pose.heading;
+
+    if (CheckLonToTarget(current_pose)) {
+      return true;
+    }
 
     if (OneLinePlanAlongEgoHeading(last_line, calc_params_.target_pose)) {
       AddPathSegToOutPut(pnc::geometry_lib::PathSegment(
@@ -3954,6 +3987,26 @@ const bool ParallelPathPlanner::IsOnTarget(
               apa_param.GetParam().finish_parallel_heading_err / 57.3);
 }
 
+const bool ParallelPathPlanner::CheckLonToTarget(
+    const pnc::geometry_lib::PathPoint& current_pose) const {
+  const Eigen::Vector2d v_heading =
+      pnc::geometry_lib::GetUnitTangVecByHeading(current_pose.heading);
+
+  const Eigen::Vector2d rear_bumper_center =
+      current_pose.pos - apa_param.GetParam().rear_overhanging * v_heading;
+
+  const Eigen::Vector2d front_bumper_center =
+      current_pose.pos + v_heading * (apa_param.GetParam().wheel_base +
+                                      apa_param.GetParam().front_overhanging);
+
+  const bool lon_condition =
+      rear_bumper_center.x() >= apa_param.GetParam().finish_parallel_lon_err &&
+      front_bumper_center.x() <=
+          input_.tlane.slot_length -
+              apa_param.GetParam().finish_parallel_lon_err;
+  return lon_condition;
+}
+
 const bool ParallelPathPlanner::IsOnTargetLine(
     const pnc::geometry_lib::PathPoint& current_pose) {
   const auto& target_pose = calc_params_.target_pose;
@@ -3965,7 +4018,7 @@ const bool ParallelPathPlanner::IsOnTargetLine(
 
   const double lat_condition_1 =
       std::fabs(current_pose.pos.y() - target_pose.pos.y()) <=
-      apa_param.GetParam().finish_parallel_lat_err;
+      apa_param.GetParam().finish_parallel_lat_rac_err;
   // lat condition 2, keep both outer wheels in slot
 
   const double side_sgn = calc_params_.slot_side_sgn;
@@ -3973,7 +4026,7 @@ const bool ParallelPathPlanner::IsOnTargetLine(
   ego2slot.Init(current_pose.pos, current_pose.heading);
 
   const auto& front_out_wheel = ego2slot.GetPos(
-      Eigen::Vector2d(apa_param.GetParam().front_overhanging,
+      Eigen::Vector2d(apa_param.GetParam().wheel_base,
                       0.5 * apa_param.GetParam().car_width * side_sgn));
 
   const auto& rear_out_wheel = ego2slot.GetPos(
