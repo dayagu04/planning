@@ -743,13 +743,11 @@ void LaneChangeDecider::compute_lc_valid_info(RequestType direction) {
 }
 
 LaneChangeStageInfo LaneChangeDecider::decide_lc_valid_info(
-    const bool localation_valid, RequestType direction) {
+    RequestType direction) {
   last_should_premove_ = lane_change_stage_info_.should_premove;
   clear_lc_stage_info();
   lane_change_stage_info_.gap_insertable = true;
-  if (!localation_valid) {
-    compute_lc_valid_info(direction);
-  }
+  compute_lc_valid_info(direction);
   double coefficient = FLAGS_planning_loop_rate / 25.;
   int lc_valid_thre = static_cast<int>(10.0 * coefficient);
   auto &virtual_lane_manager =
@@ -1158,11 +1156,9 @@ void LaneChangeDecider::compute_lc_back_info(RequestType direction) {
 }
 
 LaneChangeStageInfo LaneChangeDecider::decide_lc_back_info(
-    const bool localation_valid, RequestType direction) {
+    RequestType direction) {
   clear_lc_stage_info();
-  if (!localation_valid) {
-    compute_lc_back_info(direction);
-  }
+  compute_lc_back_info(direction);
   double coefficient = FLAGS_planning_loop_rate / 25.;
   int lc_back_thre = static_cast<int>(5 * coefficient);
   if (lane_change_stage_info_.lc_should_back) {
@@ -1830,8 +1826,6 @@ void LaneChangeDecider::ProcessNoneState() {
 }
 
 void LaneChangeDecider::ProcessWaitState() {
-  const bool location_valid = session_->environmental_model().location_valid();
-
   const RequestType lc_request = lc_req_mgr_->request();
   const RequestSource lc_source = lc_req_mgr_->request_source();
   const bool aggressive_change = lc_req_mgr_->AggressiveChange();
@@ -1858,10 +1852,8 @@ void LaneChangeDecider::ProcessWaitState() {
       lc_lane_mgr_->assign_lc_lanes(target_lane_virtual_id);
     }
     gap_available =
-        location_valid
-            ? true
-            : GapAvailable(lc_request, overtake_obstacles, yield_obstacles);
-    lane_change_info = decide_lc_valid_info(location_valid, lc_request);
+        GapAvailable(lc_request, overtake_obstacles, yield_obstacles);
+    lane_change_info = decide_lc_valid_info(lc_request);
     LOG_DEBUG(
         "[CruiseState::Wait] gap_available: %d, aggressive_change: %d, "
         "target_lane_virtual_id: %d, "
@@ -1925,15 +1917,12 @@ void LaneChangeDecider::ProcessChangeState() {
     }
 
     gap_available =
-        location_valid
-            ? true  // @cailiu: general planning consider lc valid
-                    // in GapSelectorDecider
-            : GapAvailable(lc_request, overtake_obstacles, yield_obstacles);
+        GapAvailable(lc_request, overtake_obstacles, yield_obstacles);
 
     if (lc_lane_mgr_->has_origin_lane() &&
         lc_lane_mgr_->origin_lane_virtual_id() !=
             lc_lane_mgr_->target_lane_virtual_id()) {
-      lc_back_info = decide_lc_back_info(location_valid, lc_request);
+      lc_back_info = decide_lc_back_info(lc_request);
       if (lc_back_info.lc_should_back) {
         PrepareForBackState();
         if ((transition_context_.target_state == ROAD_LC_LBACK ||
@@ -2006,10 +1995,8 @@ void LaneChangeDecider::ProcessBackState() {
       lc_lane_mgr_->assign_lc_lanes(target_lane_virtual_id);
     }
     gap_available =
-        location_valid
-            ? true
-            : GapAvailable(lc_request, overtake_obstacles, yield_obstacles);
-    lane_change_info = decide_lc_valid_info(location_valid, lc_request);
+        GapAvailable(lc_request, overtake_obstacles, yield_obstacles);
+    lane_change_info = decide_lc_valid_info(lc_request);
     // if (gap_available || aggressive_change) {
     // //TODO(Rui):后面把安全检查坐在gap_available里，统一通过gap_available判断
     if (lane_change_info.gap_insertable) {

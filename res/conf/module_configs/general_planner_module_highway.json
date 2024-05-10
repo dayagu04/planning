@@ -320,7 +320,7 @@
   "lat_collision_check_filter_parking_slot": true,
   "pnp_lower_speed_filter_threshold": 1.0,
   "gap_selector": {
-    "default_lc_time": 5.5,
+    "default_lc_time": 6.0,
     "collision_check_length_threshold":3.5,
     "lc_premove_time":0.1,
     "near_car_ttc": 0.3

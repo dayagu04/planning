@@ -59,6 +59,8 @@ class GapSelectorDecider : public Task {
   GapSelectorStatus Update(
       GapSelectorDeciderOutput &gap_selector_decider_output);
 
+  GapSelectorStatus Update();
+
   void Preprocessor();
   GapSelectorStatus EnvHandle(
       const int target_state, const Point2D &ego_cart_pose,
@@ -126,6 +128,7 @@ class GapSelectorDecider : public Task {
   void GenerateLinearRefTrajectory(TrajectoryPoints &traj_points);
   void RetentivePathPlan();
   void ResponsivePathPlan();
+  void FixedTimeQuinticPathPlan(TrajectoryPoints &traj_points);
   void ObtainNearbyGap();
   void QuerySplineCrossLinePoint(GapSelectorPathSpline &path_spline);
   void ConstructGaps();
@@ -225,6 +228,9 @@ class GapSelectorDecider : public Task {
 
   std::shared_ptr<KDPath> base_frenet_coord_;
   std::shared_ptr<AgentNodeManager> agent_node_mgr_;
+
+  ScenarioStateEnum last_target_state_{ROAD_NONE};
+  double lc_timer_{0.};
 };
 
 }  // namespace planning

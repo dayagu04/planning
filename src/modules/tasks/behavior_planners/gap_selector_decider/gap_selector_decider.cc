@@ -92,40 +92,46 @@ bool GapSelectorDecider::Execute() {
     return false;
   }
 
-  GapSelectorDeciderOutput &gap_selector_decider_output =
-      session_->mutable_planning_context()
-          ->mutable_gap_selector_decider_output();
+  Update();
 
-  // Preprocess Part:below is the upstream info, these need to be decoupled by
-  // interface
-  // -----------------------------------------
+  //   GapSelectorDeciderOutput &gap_selector_decider_output =
+  //       session_->mutable_planning_context()
+  //           ->mutable_gap_selector_decider_output();
 
-  auto start_time = IflyTime::Now_ms();
+  //   // Preprocess Part:below is the upstream info, these need to be decoupled
+  //   by
+  //   // interface
+  //   // -----------------------------------------
 
-  Preprocessor();
+  //   auto start_time = IflyTime::Now_ms();
 
-  auto preprocessor_end_time = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("GapSelectorPreprocessCostTime",
-                   preprocessor_end_time - start_time);
-  // update
-  GapSelectorStatus gap_status = Update(gap_selector_decider_output);
+  //   Preprocessor();
 
-#ifdef __COLLECT_GAP_SELECTOR_DEBUG_INFO__
-  gap_selector_interface_.Store(session_, gap_selector_state_machine_info_);
-  gap_selector_interface_.Store(path_spline_, *traj_points_ptr_);
-#endif
+  //   auto preprocessor_end_time = IflyTime::Now_ms();
+  //   JSON_DEBUG_VALUE("GapSelectorPreprocessCostTime",
+  //                    preprocessor_end_time - start_time);
+  //   // update
+  //   GapSelectorStatus gap_status = Update(gap_selector_decider_output);
 
-#ifdef __COLLECT_GAP_SELECTOR_REPLAY_INFO__
-  gap_selector_interface_.ReplayCollect(
-      *traj_points_ptr_, gap_selector_state_machine_info_, path_spline_,
-      gap_list_, nearby_gap_, front_gap_car_st_boundaries_,
-      rear_gap_car_st_boundaries_, front_careful_car_st_boundary_,
-      front_careful_car_id_origin_lane_, st_time_optimal_, gap_status,
-      front_car_dynamic_dis_, rear_car_dynamic_dis_, ego_lane_car_dynamic_dis_);
+  // #ifdef __COLLECT_GAP_SELECTOR_DEBUG_INFO__
+  //   gap_selector_interface_.Store(session_,
+  //   gap_selector_state_machine_info_);
+  //   gap_selector_interface_.Store(path_spline_, *traj_points_ptr_);
+  // #endif
 
-#endif
-  auto all_task_end_time = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("GapSelectorTaskCostTime", all_task_end_time - start_time);
+  // #ifdef __COLLECT_GAP_SELECTOR_REPLAY_INFO__
+  //   gap_selector_interface_.ReplayCollect(
+  //       *traj_points_ptr_, gap_selector_state_machine_info_, path_spline_,
+  //       gap_list_, nearby_gap_, front_gap_car_st_boundaries_,
+  //       rear_gap_car_st_boundaries_, front_careful_car_st_boundary_,
+  //       front_careful_car_id_origin_lane_, st_time_optimal_, gap_status,
+  //       front_car_dynamic_dis_, rear_car_dynamic_dis_,
+  //       ego_lane_car_dynamic_dis_);
+
+  // #endif
+  //   auto all_task_end_time = IflyTime::Now_ms();
+  //   JSON_DEBUG_VALUE("GapSelectorTaskCostTime", all_task_end_time -
+  //   start_time);
   return true;
 }
 
@@ -270,6 +276,181 @@ void GapSelectorDecider::Preprocessor() {
       reference_path_ptr->get_frenet_ego_state().planning_init_point();
   ego_planning_init_s_[1] = ego_state_mgr->ego_v();
   ego_planning_init_s_[2] = ego_state_mgr->ego_acc();
+  return;
+}
+
+GapSelectorStatus GapSelectorDecider::Update() {
+  const auto &coarse_planning_info = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+
+  auto &traj_points = session_->mutable_planning_context()
+                          ->mutable_lane_change_decider_output()
+                          .coarse_planning_info.trajectory_points;
+  auto &gap_selector_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_gap_selector_decider_output();
+  bool is_lc_scene{false};
+  if (coarse_planning_info.target_state != last_target_state_) {
+    if (coarse_planning_info.target_state == ROAD_NONE) {
+      lc_timer_ = 0.;
+      return GapSelectorStatus::NO_LC_REQUSET;
+    } else {
+      lc_timer_ += 0.1;
+      is_lc_scene = true;
+    }
+  } else if (coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
+             coarse_planning_info.target_state == ROAD_LC_RCHANGE) {
+    lc_timer_ += 0.1;
+    is_lc_scene = true;
+  }
+  if (is_lc_scene) {
+    FixedTimeQuinticPathPlan(traj_points);
+    gap_selector_decider_output.gap_selector_trustworthy = true;
+  }
+
+  last_target_state_ = coarse_planning_info.target_state;
+  return GapSelectorStatus::DEFAULT;
+}
+
+void GapSelectorDecider::FixedTimeQuinticPathPlan(
+    TrajectoryPoints &traj_points) {
+  const auto &coarse_planning_info = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  const std::shared_ptr<EgoStateManager> ego_state_mgr =
+      session_->mutable_environmental_model()->get_ego_state_manager();
+  double remaining_lane_change_duration = config_.default_lc_time - lc_timer_;
+  auto ego_v = ego_state_mgr->ego_v_cruise();
+
+  auto lat_state = ego_state_mgr->planning_init_point().lat_init_state;
+  Point2D frenet_init_point;
+  Point2D cart_init_point{lat_state.x(), lat_state.y()};
+  const auto &coord =
+      session_->planning_context()
+          .lane_change_decider_output()
+          .coarse_planning_info.reference_path->get_frenet_coord();
+  if (!coord->XYToSL(cart_init_point, frenet_init_point)) {
+    LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
+  }
+
+  // if reamining duration less than 1s, then aggresively lane change
+  if (remaining_lane_change_duration < 1.0) {
+    return;
+  }
+
+  // refine velocity if frenet length is short
+  const auto curvature = lat_state.curv();
+  const auto heading_angle = lat_state.theta();
+
+  const auto normal_acc = ego_v * ego_v * curvature;
+
+  // const auto &heading_angle =
+  // ego_state->planning_init_point().heading_angle; const auto normal_acc
+  // = ego_v * ego_v * curvature;
+  if (frenet_init_point.x + ego_v * remaining_lane_change_duration >=
+      coord->Length() - 0.5) {
+    ego_v = (coord->Length() - frenet_init_point.x - 0.5) /
+            std::fmax(remaining_lane_change_duration,
+                      (traj_points.size() - 1) * 0.2);
+  }
+  auto lane_change_end_s =
+      frenet_init_point.x + ego_v * remaining_lane_change_duration;
+
+  const auto v_x = ego_v * std::cos(heading_angle);
+  const auto v_y = ego_v * std::sin(heading_angle);
+  auto normal_acc_x = normal_acc * std::sin(heading_angle);
+  auto normal_acc_y = normal_acc * std::cos(heading_angle);
+
+  // set lane change end state
+  Point2D frenet_end_point{lane_change_end_s, 0.};
+  Point2D cart_end_point;
+  if (!coord->SLToXY(frenet_end_point, cart_end_point)) {
+    LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
+  }
+
+  const auto lane_change_end_heading_angle =
+      coord->GetPathCurveHeading(lane_change_end_s);
+  double lane_change_end_curvature{0.};
+  coord->GetKappaByS(lane_change_end_s, &lane_change_end_curvature);
+
+  const auto normal_acc_end = ego_v * ego_v * lane_change_end_curvature;
+
+  const auto v_x_end = ego_v * std::cos(lane_change_end_heading_angle);
+  const auto v_y_end = ego_v * std::sin(lane_change_end_heading_angle);
+  auto normal_acc_x_end =
+      normal_acc_end * std::sin(lane_change_end_heading_angle);
+  auto normal_acc_y_end =
+      normal_acc_end * std::cos(lane_change_end_heading_angle);
+
+  // construct quintic path for lane change duration
+  QuinticPolynominalPath lane_change_quintic_path;
+
+  Eigen::Vector2d x0(ego_state_mgr->planning_init_point().x,
+                     ego_state_mgr->planning_init_point().y);
+  Eigen::Vector2d dx0(v_x, v_y);
+  Eigen::Vector2d ddx0(normal_acc_x, normal_acc_y);
+  Eigen::Vector2d xT(cart_end_point.x, cart_end_point.y);
+  Eigen::Vector2d dxT(v_x_end, v_y_end);
+  Eigen::Vector2d ddxT(normal_acc_x_end, normal_acc_y_end);
+  lane_change_quintic_path.SetPoints(x0, xT, dx0, dxT, ddx0, ddxT,
+                                     remaining_lane_change_duration);
+
+  // sample traj point on quintic path by t
+  TrajectoryPoint point;
+  Eigen::Vector2d sample_point;
+  Point2D frenet_point;
+  size_t truncation_idx = 0;
+  for (size_t i = 0; i < traj_points.size(); i++) {
+    if (traj_points[i].t < remaining_lane_change_duration) {
+      sample_point = lane_change_quintic_path(traj_points[i].t);
+      point.x = sample_point.x();
+      point.y = sample_point.y();
+      point.heading_angle = lane_change_quintic_path.heading(traj_points[i].t);
+
+      Point2D cart_point(point.x, point.y);
+      if (!coord->XYToSL(cart_point, frenet_point)) {
+        LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
+      }
+      point.s = frenet_point.x;
+      point.l = frenet_point.y;
+      point.t = traj_points[i].t;
+
+      traj_points[i] = point;
+      truncation_idx = i;
+    } else {
+      double s_truncation;
+      if (i == truncation_idx + 1) {
+        Eigen::Vector2d truncation_point(traj_points[truncation_idx].x,
+                                         traj_points[truncation_idx].y);
+        auto &cart_ref_info = coarse_planning_info.cart_ref_info;
+
+        pnc::spline::Projection projection_truncation_point;
+        projection_truncation_point.CalProjectionPoint(
+            cart_ref_info.x_s_spline, cart_ref_info.y_s_spline,
+            cart_ref_info.s_vec.front(), cart_ref_info.s_vec.back(),
+            truncation_point);
+
+        s_truncation = projection_truncation_point.GetOutput().s_proj;
+      }
+      point.s = std::fmin(s_truncation + ego_v * (i - truncation_idx) * 0.2,
+                          coord->Length());
+      point.l = 0.;
+      point.t = traj_points[i].t;
+
+      frenet_point.x = point.s;
+      frenet_point.y = point.l;
+      Point2D cart_point;
+      if (!coord->SLToXY(frenet_point, cart_point)) {
+        LOG_ERROR("ERROR! Cart Point -> Frenet Point Failed!!!");
+      }
+      point.x = cart_point.x;
+      point.y = cart_point.y;
+
+      point.heading_angle = coord->GetPathCurveHeading(point.s);
+      traj_points[i] = point;
+    }
+  }
   return;
 }
 
