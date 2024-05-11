@@ -33,9 +33,10 @@ static double kRearObsLineYMagIdentification = 0.8;
 static double kChannelLengthXMagIdentification = 1.0;
 static double kChannelLengthMinYMagIdentification = 0.5;
 static double kChannelLengthMaxYMagIdentification = 5.0;
-
 static double kCurbInitialOffset = 0.2;
 static double kCurbYMagIdentification = 0.8;
+
+static double kEnterMultiPlanSlotRatio = 0.36;
 
 void ParallelParInPlanner::Init(const bool c_ilqr_enable) {
   lateral_path_optimizer_ptr_ = std::make_shared<LateralPathOptimizer>();
@@ -798,7 +799,8 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
 
     path_planner_input.path_planner_state =
         ParallelPathPlanner::PrepareStepPlan;
-  } else if (frame_.ego_slot_info.slot_occupied_ratio > 0.3 &&
+  } else if (frame_.ego_slot_info.slot_occupied_ratio >
+                 kEnterMultiPlanSlotRatio &&
              frame_.in_slot_plan_count == 0) {
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
     frame_.current_arc_steer =
@@ -826,6 +828,9 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
   const auto& path_planner_output = parallel_path_planner_.GetOutput();
 
   frame_.total_plan_count++;
+  if (frame_.ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
+    frame_.in_slot_plan_count++;
+  }
 
   parallel_path_planner_.SetCurrentPathSegIndex();
   // parallel_path_planner_.SetLineSegmentHeading();
@@ -868,7 +873,7 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
       return PathPlannerResult::PLAN_FAILED;
     }
 
-    if (frame_.ego_slot_info.slot_occupied_ratio > 0.3) {
+    if (frame_.ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
       // set current arc steer
       frame_.current_arc_steer =
           pnc::geometry_lib::ReverseSteer(frame_.current_arc_steer);

@@ -144,14 +144,14 @@ const bool ParallelPathPlanner::Update() {
       std::cout << "parallel adjust step plan failed!" << std::endl;
     }
 
-    // if heading diff is small use CSCS curve, or use multi
-    if (CSCSAdjustPlan()) {
-      // pnc::geometry_lib::PrintSegmentsVecInfo(output_.path_segment_vec);
-      DEBUG_PRINT("CSCSAdjustPlan success!");
-      return true;
-    } else {
-      DEBUG_PRINT("CSCSAdjustPlan failed!");
-    }
+    // // if heading diff is small use CSCS curve, or use multi
+    // if (CSCSAdjustPlan()) {
+    //   // pnc::geometry_lib::PrintSegmentsVecInfo(output_.path_segment_vec);
+    //   DEBUG_PRINT("CSCSAdjustPlan success!");
+    //   return true;
+    // } else {
+    //   DEBUG_PRINT("CSCSAdjustPlan failed!");
+    // }
   }
   output_.Reset();
   std::cout << "plan failed!" << std::endl;
