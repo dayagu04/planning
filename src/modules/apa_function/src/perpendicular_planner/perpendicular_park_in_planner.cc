@@ -1920,8 +1920,6 @@ void PerpendicularInPlanner::Log() const {
 
   JSON_DEBUG_VALUE("correct_path_for_limiter", frame_.correct_path_for_limiter)
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
-  std::cout << "correct_path_for_limiter = " << frame_.correct_path_for_limiter
-            << "replan_flag = " << frame_.replan_flag << std::endl;
 
   const std::vector<Eigen::Vector2d>& obstacles =
       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstacles();

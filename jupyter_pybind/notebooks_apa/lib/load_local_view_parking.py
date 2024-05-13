@@ -227,6 +227,7 @@ class LoadCyberbag:
         self.plan_debug_msg['t'].append(t)
         self.plan_debug_msg['abs_t'].append(t)
         self.plan_debug_msg['data'].append(msg)
+
         try:
           json_struct = json.loads(msg.data_json, strict = False)
           json_data = {}
@@ -234,8 +235,21 @@ class LoadCyberbag:
           LoadVectorList(json_data, json_vector_list, json_struct)
 
           self.plan_debug_msg['json'].append(json_data)
+
+          if json_data['replan_flag'] == 1:
+            replan_time_list.append(t)
+          if json_data['correct_path_for_limiter'] == 1:
+            correct_path_for_limiter_time_list.append(t)
+
         except json.decoder.JSONDecodeError as jserr:
           print('except',jserr)
+
+      for i in range(len(replan_time_list)):
+        replan_time_list[i] = replan_time_list[i] - self.plan_debug_msg['t'][0]
+        replan_time_list[i] = round(replan_time_list[i], 2)
+      for i in range(len(correct_path_for_limiter_time_list)):
+        correct_path_for_limiter_time_list[i] = correct_path_for_limiter_time_list[i] - self.plan_debug_msg['t'][0]
+        correct_path_for_limiter_time_list[i] = round(correct_path_for_limiter_time_list[i], 2)
 
       t0_plan_debug = self.plan_debug_msg['t'][0]
       self.plan_debug_msg['t'] = [tmp - t0_plan_debug  for tmp in self.plan_debug_msg['t']]
@@ -375,7 +389,6 @@ class LoadCyberbag:
       soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
 
       enter_parking_time = None
-      replan_time_list, correct_path_for_limiter_time_list = [],[]
       for t, msg in soc_state_msg_dict.items():
         self.soc_state_msg['t'].append(t)
         self.soc_state_msg['abs_t'].append(t)
@@ -383,12 +396,7 @@ class LoadCyberbag:
         # record the start time of fusi_parking_msg
         if msg.current_state > 1 and enter_parking_time is None:
           enter_parking_time = t
-        # record the replan time
-        if replan_flag:
-          replan_time_list.append(t)
-        # record the correct_path_for_limiter time
-        if correct_path_for_limiter:
-          correct_path_for_limiter_time_list.append(t)
+
 
 
       self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
@@ -402,10 +410,7 @@ class LoadCyberbag:
       if enter_parking_time is not None:
         self.enter_parking_time = enter_parking_time - self.soc_state_msg['abs_t'][0]
         # print("enter_parking_time ：", self.enter_parking_time)
-      if replan_time_list is not None:
-        replan_time_list = [tmp - self.soc_state_msg['t'][0]  for tmp in replan_time_list]
-      if correct_path_for_limiter_time_list is not None:
-        correct_path_for_limiter_time_list = [tmp - self.soc_state_msg['t'][0]  for tmp in correct_path_for_limiter_time_list]
+
     except:
       self.soc_state_msg['enable'] = False
       print('missing /iflytek/system_state/soc_state !!!')
