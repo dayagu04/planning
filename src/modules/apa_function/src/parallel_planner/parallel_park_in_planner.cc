@@ -627,7 +627,7 @@ void ParallelParInPlanner::GenTlane() {
   t_lane_.slot_length = ego_slot_info.slot_length;
 
   // if curb exist, combine curb and slot center line to decide target y
-  if (curb_count > 3) {
+  if (curb_count > 1) {
     const double target_y_with_curb =
         curb_y_limit +
         side_sgn * (apa_param.GetParam().terminal_parallel_y_offset_with_curb +
@@ -1097,11 +1097,15 @@ const bool ParallelParInPlanner::CheckFinished() {
       ego_slot_info.ego_pos_slot + (apa_param.GetParam().wheel_base +
                                     apa_param.GetParam().front_overhanging) *
                                        ego_slot_info.ego_heading_slot_vec;
-  const bool lon_condition =
+
+  const bool lon_condition_1 = std::fabs(ego_slot_info.terminal_err.pos.x()) <
+                               apa_param.GetParam().finish_parallel_lon_err;
+  const bool lon_condition_2 =
       rear_bumper_center.x() >= apa_param.GetParam().finish_parallel_lon_err &&
       front_bumper_center.x() <=
           ego_slot_info.slot_length -
               apa_param.GetParam().finish_parallel_lon_err;
+  const bool lon_condition = lon_condition_1 || lon_condition_2;
 
   const bool heading_condition =
       std::fabs(ego_slot_info.terminal_err.heading) <=
