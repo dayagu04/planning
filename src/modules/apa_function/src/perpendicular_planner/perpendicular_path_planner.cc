@@ -1197,11 +1197,11 @@ const bool PerpendicularPathPlanner::MultiPlan() {
     }
   }
 
-  if (output_.gear_cmd_vec.front() != input_.ref_gear) {
+  if (output_.gear_cmd_vec.front() != input_.ref_gear &&
+      !input_.is_replan_first) {
     output_.Reset();
     success = false;
   }
-
 
   if (!success) {
     std::cout << "multi plan failed!" << std::endl;
