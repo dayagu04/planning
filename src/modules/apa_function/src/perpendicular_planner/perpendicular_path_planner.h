@@ -124,15 +124,19 @@ class PerpendicularPathPlanner {
     bool should_prepare_third = false;
     bool first_multi_plan = true;
     bool stuck_by_inside = false;
+    bool multi_plan = false;
 
     pnc::geometry_lib::LineSegment target_line;
 
     pnc::geometry_lib::Circle mono_safe_circle;
     pnc::geometry_lib::Circle multi_safe_circle;
 
+    Eigen::Vector2d pt_inside;
+
     pnc::geometry_lib::PathPoint safe_circle_tang_pt;
     bool cal_tang_pt_success = false;
     bool directly_use_ego_pose = false;
+    uint8_t first_path_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
 
     bool use_mono_tang = false;
     bool use_multi_tang = false;
@@ -148,10 +152,14 @@ class PerpendicularPathPlanner {
       should_prepare_second = false;
       should_prepare_third = false;
       first_multi_plan = true;
-      stuck_by_inside = true;
+      stuck_by_inside = false;
+      multi_plan = false;
 
       use_mono_tang = false;
       use_multi_tang = false;
+      first_path_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+
+      pt_inside.setZero();
 
       target_line.Reset();
 
@@ -209,6 +217,8 @@ class PerpendicularPathPlanner {
   // for simulation
   const bool PreparePlanPb();
 
+  const bool PreparePlanSecondPb();
+
   const bool GenPathOutputByDubinsPb();
 
   const bool MultiPlanPb();
@@ -228,8 +238,9 @@ class PerpendicularPathPlanner {
   // member function
   // prepare plan start
   const bool PreparePlan();
-  const bool PreparePlanOnce(const double x_offset,
-                             const double heading_offset);
+  const bool PreparePlanOnce(const double &x_offset,
+                             const double &heading_offset,
+                             const double &radius);
 
   const bool PreparePlanV2();
   const bool PreparePlanOnceV2(const double x_offset,

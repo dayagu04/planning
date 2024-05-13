@@ -8,6 +8,7 @@
 #include <iostream>
 #include <utility>
 
+#include "../../../modules/apa_function/src/apa_param_setting.h"
 #include "geometry_math.h"
 #include "math_lib.h"
 #include "transform_lib.h"
@@ -17,7 +18,7 @@ using namespace pnc::geometry_lib;
 namespace pnc {
 namespace dubins_lib {
 
-static const double dist_tol = 0.05;
+static double dist_tol = 0.05;
 
 void DubinsLibrary::LineArcCalculate(DubinsLibrary::GeometryResult& result,
                                      const uint8_t line_arc_type) {
@@ -165,6 +166,68 @@ void DubinsLibrary::DubinsCalculate(DubinsLibrary::GeometryResult& result,
   result.n2 = n2;
 
   result.r = input_.radius;
+}
+
+// solve by line
+bool DubinsLibrary::Solve() {
+  const pnc::geometry_lib::PathPoint pose2(input_.p2, input_.heading2);
+  pnc::geometry_lib::LineSegment line1 =
+      pnc::geometry_lib::BuildLineSegByPose(input_.p1, input_.heading1);
+  if (!pnc::geometry_lib::IsPoseOnLine(
+          pose2, line1, apa_param.GetParam().target_pos_err - 1e-6,
+          apa_param.GetParam().target_heading_err / 57.3 - 1e-6)) {
+    return false;
+  }
+
+  const auto AB = input_.p2 - input_.p1;
+  const auto AB_norm = AB.normalized();
+  const auto heading1_vec =
+      pnc::geometry_lib::GetUnitTangVecByHeading(input_.heading1);
+
+  const double cos_theta = heading1_vec.dot(AB_norm);
+  if (std::fabs(cos_theta) < 0.026) {
+    return false;
+  }
+
+  Output output;
+  output.gear_cmd_vec.clear();
+  output.gear_cmd_vec.reserve(3);
+  output.gear_change_count = 0;
+  uint8_t current_gear = geometry_lib::SEG_GEAR_INVALID;
+  output.current_gear_cmd = geometry_lib::SEG_GEAR_INVALID;
+
+  output.arc_AB.length = 0.0;
+  output.arc_AB.is_ignored = true;
+  output.gear_cmd_vec.emplace_back(geometry_lib::SEG_GEAR_INVALID);
+
+  output.line_BC.length = std::fabs(AB.dot(heading1_vec));
+  if (output.line_BC.length < dist_tol) {
+    return false;
+  }
+  output.line_BC.pA = input_.p1;
+  if (cos_theta > 0.0) {
+    output.line_BC.pB = input_.p1 + output.line_BC.length * heading1_vec;
+    current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+  } else {
+    output.line_BC.pB = input_.p1 - output.line_BC.length * heading1_vec;
+    current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+  }
+  output.gear_cmd_vec.emplace_back(current_gear);
+  output.line_BC.heading = input_.heading1;
+
+  output.arc_CD.length = 0.0;
+  output.arc_CD.is_ignored = true;
+  output.gear_cmd_vec.emplace_back(geometry_lib::SEG_GEAR_INVALID);
+
+  output.length =
+      output.arc_AB.length + output.line_BC.length + output.arc_CD.length;
+  output.current_gear_cmd = current_gear;
+  output.current_length = output.line_BC.length;
+  output.path_available = true;
+
+  output_ = output;
+
+  return true;
 }
 
 // solve by line arc
@@ -942,6 +1005,54 @@ const bool DubinsLibrary::OneStepDubinsUpdate() {
   // std::cout << "dubins failed!" << std::endl;
 
   return false;
+}
+
+const bool DubinsLibrary::OneStepDubinsUpdateByVer() {
+  // try line method
+  if (Solve()) {
+    if (output_.gear_change_count == 0) {
+      return true;
+    }
+  }
+  // try line arc method
+  for (size_t i = 0; i < DubinsLibrary::LINEARC_TYPE_COUNT; ++i) {
+    if (Solve(i)) {
+      if (output_.gear_change_count == 0 &&
+          output_.line_arc_radius >= input_.radius) {
+        // std::cout << "line arc success!" << std::endl;
+        return true;
+      }
+    }
+
+  }  // linearc loop
+
+  // try dubins method
+  for (size_t i = 0; i < DubinsLibrary::CASE_COUNT; ++i) {
+    for (size_t j = 0; j < DubinsLibrary::DUBINS_TYPE_COUNT; ++j) {
+      if (Solve(j, i)) {
+        if (output_.gear_change_count == 0) {
+          // std::cout << "dubins success!" << std::endl;
+          return true;
+        }
+      }
+    }
+  }  // dubins loop
+  // std::cout << "dubins failed!" << std::endl;
+
+  return false;
+}
+
+const bool DubinsLibrary::OneStepDubinsUpdateByVer(const double min_length) {
+  bool success = false;
+  const double dist = dist_tol;
+  dist_tol = 0.016;
+  if (OneStepDubinsUpdateByVer()) {
+    if (output_.current_length >= min_length) {
+      success = true;
+    }
+  }
+  dist_tol = dist;
+  return success;
 }
 
 }  // namespace dubins_lib

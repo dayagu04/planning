@@ -28,6 +28,7 @@ namespace apa_planner {
 static const size_t kMaxPerpenParkInSegmentNums = 15;
 static const size_t kReservedOutputPathPointSize = 750;
 static const size_t kMaxPathNumsInSlot = 4;
+static const double kMinSingleGearPathLength = 0.4;
 
 void PerpendicularPathPlanner::Reset() {
   output_.Reset();
@@ -40,6 +41,7 @@ void PerpendicularPathPlanner::Reset() {
 void PerpendicularPathPlanner::Preprocess() {
   // calc_params_.Reset();
   calc_params_.stuck_by_inside = false;
+  calc_params_.multi_plan = false;
 
   // calc slot side by Tlane
   if (input_.tlane.pt_inside.y() > input_.tlane.pt_outside.y()) {
@@ -71,55 +73,49 @@ bool PerpendicularPathPlanner::Update() {
   if (input_.is_replan_first) {
     calc_params_.first_multi_plan = true;
     if (PreparePlan()) {
-      if (GenPathOutputByDubins()) {
-        std::cout << "first prepare success, the gear is reverse, use "
-                     "safe_circle_tang_pt to multi plan, no second prepare!\n";
-        input_.ego_pose = calc_params_.safe_circle_tang_pt;
-        output_.gear_shift = true;
-        calc_params_.should_prepare_second = false;
-      } else {
-        std::cout << "first prepare success, the gear is drive, no need multi "
-                     "plan, need second prepare!\n";
-        calc_params_.should_prepare_second = true;
-        return true;
-      }
-    } else {
       if (calc_params_.directly_use_ego_pose) {
         std::cout << "ego pose is close to safe_circle_tang_pt, directly use"
                      "ego pose to multi plan, no second prepare!\n";
         calc_params_.should_prepare_second = false;
         output_.gear_shift = true;
+      } else if (output_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+        std::cout << "first prepare success, the gear is reverse, use "
+                     "safe_circle_tang_pt to multi plan, no second prepare!\n";
+        calc_params_.should_prepare_second = false;
+        output_.gear_shift = true;
+      } else if (output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+        std::cout << "first prepare success, the gear is drive, no need multi "
+                     "plan, need second prepare!\n";
+        calc_params_.should_prepare_second = true;
+        output_.gear_shift = false;
+        return true;
       } else {
-        std::cout << "prepare plan, quit plan!\n";
+        std::cout << "except err\n";
         return false;
       }
+    } else {
+      std::cout << "prepare plan fail, quit plan!\n";
+      return false;
     }
   }
 
   if (input_.is_replan_second) {
     if (calc_params_.should_prepare_second) {
       std::cout << "should try second prepare!\n";
-      if (!PreparePlanSecond()) {
-        std::cout
-            << "second prepare fail, directly use ego pose to multi plan!\n";
-        output_.gear_shift = true;
-      } else {
-        std::cout << "second prepare success\n";
-        if (output_.path_segment_vec.empty()) {
-          std::cout << "ego pose is close to safe_circle_tang_pt, directly use"
-                       "ego pose to multi plan!\n";
+      if (PreparePlanSecond()) {
+        if (output_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+          std::cout << "second prepare gear is reverse, need multi plan!\n";
           output_.gear_shift = true;
+        } else if (output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+          std::cout << "second prepare gear is drive, no need multi plan!\n";
+          return true;
         } else {
-          uint8_t gear = output_.path_segment_vec.back().seg_gear;
-          if (gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-            std::cout << "second prepare gear is reverse, need multi plan!\n";
-            input_.ego_pose = calc_params_.safe_circle_tang_pt;
-            output_.gear_shift = true;
-          } else {
-            std::cout << "second prepare gear is drive, no need multi plan!\n";
-            return true;
-          }
+          std::cout << "except err\n";
+          return false;
         }
+      } else {
+        std::cout << "directly use ego pose to multi plan!\n";
+        output_.gear_shift = true;
       }
     } else {
       std::cout
@@ -195,14 +191,26 @@ const bool PerpendicularPathPlanner::PreparePlan() {
         apa_param.GetParam().prepare_line_dheading_offset_slot_deg / 57.3;
   }
 
+  bool flag = false;
+  bool prepare_success = false;
+  const double pre_turn_radius = 1.036 * apa_param.GetParam().min_turn_radius;
   calc_params_.directly_use_ego_pose = false;
-  for (const auto& heading_offset : heading_offset_vec) {
-    for (const auto& x_offset : x_offset_vec) {
-      if (PreparePlanOnce(x_offset, heading_offset)) {
-        std::cout << "x_offset = " << x_offset << std::endl;
-        std::cout << "heading_offset = " << heading_offset * 57.3 << std::endl;
-        return true;
+
+  CollisionDetector::Paramters params;
+  params.lat_inflation += apa_param.GetParam().car_lat_inflation_for_trim_path;
+  collision_detector_ptr_->SetParam(params);
+
+  for (size_t i = 0; i < heading_offset_vec.size() && !flag; ++i) {
+    const double& heading_offset = heading_offset_vec[i];
+    for (size_t j = 0; j < x_offset_vec.size() && !flag; ++j) {
+      const double& x_offset = x_offset_vec[j];
+      if (PreparePlanOnce(x_offset, heading_offset, pre_turn_radius)) {
+        prepare_success = true;
+        std::cout << "  x_offset = " << x_offset
+                  << "  heading_offset = " << heading_offset * 57.3
+                  << std::endl;
       } else {
+        // decide if can directly use ego pose to plan
         if (calc_params_.cal_tang_pt_success) {
           const double dist =
               (input_.ego_pose.pos - calc_params_.safe_circle_tang_pt.pos)
@@ -210,39 +218,53 @@ const bool PerpendicularPathPlanner::PreparePlan() {
           const double heading_err =
               std::fabs(input_.ego_pose.heading -
                         calc_params_.safe_circle_tang_pt.heading);
-          // std::cout << "input_.ego_pose.pos = "
-          //           << input_.ego_pose.pos.transpose()
-          //           << "  input_.ego_pose.heading = " <<
-          //           input_.ego_pose.heading
-          //           << "  safe_circle_tang_pt.pos = "
-          //           << calc_params_.safe_circle_tang_pt.pos.transpose()
-          //           << "  safe_circle_tang_pt.heading = "
-          //           << calc_params_.safe_circle_tang_pt.heading
-          //           << "  dist = " << dist << " heading_err = " <<
-          //           heading_err
-          //           << std::endl;
-          // std::cout << "  dist = " << dist << " heading_err = " <<
-          // heading_err
-          //           << std::endl;
           if (dist <
                   apa_param.GetParam().prepare_directly_use_tangent_pos_err &&
               heading_err < apa_param.GetParam()
                                     .prepare_directly_use_tangent_heading_err /
                                 57.3) {
-            // input_.ego_pose = calc_params_.safe_circle_tang_pt;
             calc_params_.directly_use_ego_pose = true;
-            return false;
           }
         }
       }
+      flag = prepare_success || calc_params_.directly_use_ego_pose;
     }
   }
 
-  return false;
+  params.Reset();
+  collision_detector_ptr_->SetParam(params);
+  calc_params_.pt_inside = input_.tlane.pt_inside;
+
+  if (!flag) {
+    std::cout << "prepare first fail\n";
+    return false;
+  }
+
+  // if success, directly quit
+  if (prepare_success) {
+    // gen prepare path
+    GenPathOutputByDubins();
+    if (output_.length < kMinSingleGearPathLength - 0.016) {
+      output_.Reset();
+      return false;
+    }
+    std::cout << "first try dubins success\n";
+    input_.ego_pose = calc_params_.safe_circle_tang_pt;
+  }
+
+  if (calc_params_.directly_use_ego_pose) {
+    // directly use ego pose to multi plan
+    std::cout << "directly use ego pose to multi plan\n";
+  }
+
+  calc_params_.first_path_gear = output_.current_gear;
+
+  return true;
 }
 
 const bool PerpendicularPathPlanner::PreparePlanOnce(
-    const double x_offset, const double heading_offset) {
+    const double& x_offset, const double& heading_offset,
+    const double& radius) {
   double start_heading =
       calc_params_.slot_side_sgn * (90.0 / 57.3 - heading_offset);
 
@@ -272,48 +294,121 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
   target_pose.heading = calc_params_.prepare_line.heading;
 
   pnc::dubins_lib::DubinsLibrary::Input input;
-  input.radius = apa_param.GetParam().min_turn_radius * 1.05;
+  input.radius = radius;
 
   calc_params_.cal_tang_pt_success = false;
-
-  bool prepare_success = false;
-  // first use mono prepare to find target point
-  if (apa_param.GetParam().mono_plan_enable &&
-      MonoPreparePlan(target_pose.pos)) {
-    input.Set(input_.ego_pose.pos, target_pose.pos, input_.ego_pose.heading,
-              target_pose.heading);
-    dubins_planner_.SetInput(input);
-    prepare_success = dubins_planner_.OneStepDubinsUpdate();
-    calc_params_.cal_tang_pt_success = true;
-    calc_params_.safe_circle_tang_pt = target_pose;
-  }
   calc_params_.use_mono_tang = false;
   calc_params_.use_multi_tang = false;
+  bool prepare_success = false;
+  while (!prepare_success) {
+    // first use mono prepare to find target point
+    if (apa_param.GetParam().mono_plan_enable &&
+        MonoPreparePlan(target_pose.pos)) {
+      input.Set(input_.ego_pose.pos, target_pose.pos, input_.ego_pose.heading,
+                target_pose.heading);
+      dubins_planner_.SetInput(input);
+      prepare_success =
+          dubins_planner_.OneStepDubinsUpdateByVer(kMinSingleGearPathLength);
+      calc_params_.cal_tang_pt_success = true;
+      calc_params_.safe_circle_tang_pt = target_pose;
+    }
+    if (prepare_success) {
+      // std::cout << "use mono prepare to find target point successful!\n";
+      calc_params_.use_mono_tang = true;
+      break;
+    }
+    // if mono prepare fail, use multi prepare to find target point
+    if (MultiPreparePlan(target_pose.pos)) {
+      input.Set(input_.ego_pose.pos, target_pose.pos, input_.ego_pose.heading,
+                target_pose.heading);
+      dubins_planner_.SetInput(input);
+      prepare_success =
+          dubins_planner_.OneStepDubinsUpdateByVer(kMinSingleGearPathLength);
+      calc_params_.cal_tang_pt_success = true;
+      calc_params_.safe_circle_tang_pt = target_pose;
+    }
+    if (prepare_success) {
+      // std::cout << "use multi prepare to find target point successful!\n";
+      calc_params_.use_multi_tang = true;
+      break;
+    }
+    // force quit
+    break;
+  }
+
   if (prepare_success) {
-    std::cout << "use mono prepare to find target point successful!\n";
-    calc_params_.use_mono_tang = true;
-    return true;
+    // should col det
+    std::vector<pnc::geometry_lib::PathSegment> path_seg_vec;
+    path_seg_vec.clear();
+    path_seg_vec.reserve(3);
+    pnc::geometry_lib::PathSegment path_seg;
+    // set arc AB
+    if (dubins_planner_.GetOutput().gear_cmd_vec[0] !=
+        pnc::geometry_lib::SEG_GEAR_INVALID) {
+      path_seg.seg_type = pnc::geometry_lib::SEG_TYPE_ARC;
+      path_seg.arc_seg = dubins_planner_.GetOutput().arc_AB;
+      path_seg_vec.emplace_back(path_seg);
+    }
+    // set line BC
+    if (dubins_planner_.GetOutput().gear_cmd_vec[1] !=
+        pnc::geometry_lib::SEG_GEAR_INVALID) {
+      path_seg.seg_type = pnc::geometry_lib::SEG_TYPE_LINE;
+      path_seg.line_seg = dubins_planner_.GetOutput().line_BC;
+      path_seg_vec.emplace_back(path_seg);
+    }
+    // set arc CD
+    if (dubins_planner_.GetOutput().gear_cmd_vec[2] !=
+        pnc::geometry_lib::SEG_GEAR_INVALID) {
+      path_seg.seg_type = pnc::geometry_lib::SEG_TYPE_ARC;
+      path_seg.arc_seg = dubins_planner_.GetOutput().arc_CD;
+      path_seg_vec.emplace_back(path_seg);
+    }
+    // set virtual arc DE that make sure multi plan success
+    if (dubins_planner_.GetOutput().current_gear_cmd ==
+        pnc::geometry_lib::SEG_GEAR_DRIVE) {
+      pnc::geometry_lib::Arc arc_DE;
+      arc_DE.pA = target_pose.pos;
+      arc_DE.headingA = target_pose.heading;
+      arc_DE.length = 3.068;
+      // cal pre line tangent vec and normal vec
+      const Eigen::Vector2d line_tangent_vec =
+          pnc::geometry_lib::GenHeadingVec(target_pose.heading);
+      Eigen::Vector2d line_normal_vec(line_tangent_vec.y(),
+                                      -line_tangent_vec.x());
+      // sure line_normal_vec towards downward along the x axis.
+      if (line_normal_vec.x() > 0.0) {
+        line_normal_vec = -1.0 * line_normal_vec;
+      }
+      arc_DE.circle_info.radius = apa_param.GetParam().min_turn_radius - 0.168;
+      arc_DE.circle_info.center =
+          arc_DE.pA + arc_DE.circle_info.radius * line_normal_vec;
+      arc_DE.is_anti_clockwise = calc_params_.is_left_side ? false : true;
+      pnc::geometry_lib::CompleteArcInfo(arc_DE, arc_DE.length,
+                                         arc_DE.is_anti_clockwise);
+      path_seg.seg_type = pnc::geometry_lib::SEG_TYPE_ARC;
+      path_seg.arc_seg = arc_DE;
+      path_seg_vec.emplace_back(path_seg);
+    }
+    for (pnc::geometry_lib::PathSegment& path_seg : path_seg_vec) {
+      CollisionDetector::CollisionResult col_res;
+      if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
+        auto& line = path_seg.line_seg;
+        col_res = collision_detector_ptr_->UpdateByObsMap(line, line.heading);
+      } else if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
+        auto& arc = path_seg.arc_seg;
+        col_res = collision_detector_ptr_->UpdateByObsMap(arc, arc.headingA);
+      }
+      const double safe_remain_dist = std::min(
+          col_res.remain_car_dist, col_res.remain_obstacle_dist -
+                                       apa_param.GetParam().col_obs_safe_dist);
+      if (col_res.remain_car_dist - 1e-3 > safe_remain_dist ||
+          safe_remain_dist < 1e-5) {
+        prepare_success = false;
+        break;
+      }
+    }
   }
-  // std::cout << "use mono prepare to find target point failed!\n";
-
-  // if mono prepare fail, use multi prepare to find target point
-  if (MultiPreparePlan(target_pose.pos)) {
-    input.Set(input_.ego_pose.pos, target_pose.pos, input_.ego_pose.heading,
-              target_pose.heading);
-    dubins_planner_.SetInput(input);
-    prepare_success = dubins_planner_.OneStepDubinsUpdate();
-    calc_params_.cal_tang_pt_success = true;
-    calc_params_.safe_circle_tang_pt = target_pose;
-  }
-
-  if (prepare_success) {
-    std::cout << "use multi prepare to find target point successful!\n";
-    calc_params_.use_multi_tang = true;
-    return true;
-  }
-  // std::cout << "prepare find target point multi failed\n";
-
-  return false;
+  return prepare_success;
 }
 
 const bool PerpendicularPathPlanner::PreparePlanV2() {
@@ -608,107 +703,98 @@ const bool PerpendicularPathPlanner::PreparePlanSecond() {
   double heading_err = std::fabs(input_.ego_pose.heading -
                                  calc_params_.safe_circle_tang_pt.heading);
 
-  bool case_1 =
-      (dist < apa_param.GetParam().prepare_directly_use_tangent_pos_err &&
-       heading_err <
-           apa_param.GetParam().prepare_directly_use_tangent_heading_err /
-               57.3);
-
-  if (case_1) {
-    return true;
-  } else {
-    std::cout << "input_.ego_pose.pos = " << input_.ego_pose.pos.transpose()
-              << "  input_.ego_pose.heading = "
-              << input_.ego_pose.heading * 57.3
-              << "  calc_params_.safe_circle_tang_pt.pos = "
-              << calc_params_.safe_circle_tang_pt.pos.transpose()
-              << "  calc_params_.safe_circle_tang_pt.heading = "
-              << calc_params_.safe_circle_tang_pt.heading * 57.3
-              << "  dist = " << dist << "  heading_err = " << heading_err * 57.3
-              << std::endl;
+  if (dist < apa_param.GetParam().prepare_directly_use_tangent_pos_err &&
+      heading_err <
+          apa_param.GetParam().prepare_directly_use_tangent_heading_err /
+              57.3) {
+    std::cout << "use ego pose to multi plan when prepare second\n";
+    return false;
   }
 
-  // try line
-  // dist = pnc::geometry_lib::CalPoint2LineDist(input_.ego_pose.pos,
-  //                                             calc_params_.prepare_line);
-
-  // bool case_2 = (heading_err < apa_param.GetParam().static_heading_eps &&
-  //                dist < apa_param.GetParam().static_pos_eps);
-
-  // if (case_2) {
-  //   pnc::geometry_lib::LineSegment line;
-  //   line.pA = input_.ego_pose.pos;
-  //   line.heading = calc_params_.safe_circle_tang_pt.heading;
-  //   line.pB = calc_params_.safe_circle_tang_pt.pos;
-  //   const auto AB = (line.pB - line.pA).normalized();
-  //   const auto heading_vec =
-  //       pnc::geometry_lib::GetUnitTangVecByHeading(line.heading);
-  //   const auto cos_theta = AB.dot(heading_vec);
-  //   uint8_t seg_gear;
-  //   if (cos_theta > 0.0) {
-  //     seg_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
-  //   } else if (cos_theta < 0.0) {
-  //     seg_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-  //   } else {
-  //     return false;
-  //   }
-  //   pnc::geometry_lib::PathSegment line_seg(seg_gear, line);
-  //   output_.path_available = true;
-  //   output_.path_segment_vec.emplace_back(line_seg);
-  //   output_.length = line_seg.Getlength();
-  //   output_.gear_cmd_vec.emplace_back(line_seg.seg_gear);
-  //   output_.steer_vec.emplace_back(line_seg.seg_steer);
-  //   return true;
-  // }
+  double min_dubins_path = kMinSingleGearPathLength;
+  if (calc_params_.first_path_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+    // current dubins gear must be reverse, and the path is continue to multi or
+    // adjust plan so no length need for it
+    min_dubins_path = 0.086;
+  }
 
   // try dubins
+  bool dubins_success = false;
   pnc::dubins_lib::DubinsLibrary::Input input;
-  input.radius = apa_param.GetParam().min_turn_radius * 1.05;
   input.Set(input_.ego_pose.pos, calc_params_.safe_circle_tang_pt.pos,
             input_.ego_pose.heading, calc_params_.safe_circle_tang_pt.heading);
+  std::vector<pnc::geometry_lib::PathSegment> path_seg_vec;
+
+  input.radius = 1.036 * apa_param.GetParam().min_turn_radius;
   dubins_planner_.SetInput(input);
-  if (dubins_planner_.OneStepDubinsUpdate()) {
-    GenPathOutputByDubins();
-    if (output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
-        output_.length < apa_param.GetParam().min_one_step_path_length) {
-      output_.Reset();
-      return false;
+  path_seg_vec.clear();
+  path_seg_vec.reserve(3);
+
+  if (dubins_planner_.OneStepDubinsUpdateByVer(min_dubins_path) &&
+      dubins_planner_.GetOutput().current_gear_cmd !=
+          calc_params_.first_path_gear) {
+    // should col det
+    std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
+    tmp_path_seg_vec.clear();
+    tmp_path_seg_vec.reserve(3);
+    pnc::geometry_lib::PathSegment path_seg;
+    // set arc AB
+    if (dubins_planner_.GetOutput().gear_cmd_vec[0] !=
+        pnc::geometry_lib::SEG_GEAR_INVALID) {
+      path_seg.seg_type = pnc::geometry_lib::SEG_TYPE_ARC;
+      path_seg.arc_seg = dubins_planner_.GetOutput().arc_AB;
+      path_seg.seg_gear = dubins_planner_.GetOutput().gear_cmd_vec[0];
+      path_seg.seg_steer = pnc::geometry_lib::CalArcSteer(path_seg.arc_seg);
+      tmp_path_seg_vec.emplace_back(path_seg);
     }
-    return true;
-  } else {
-    std::cout << "dubins fail\n";
+    // set line BC
+    if (dubins_planner_.GetOutput().gear_cmd_vec[1] !=
+        pnc::geometry_lib::SEG_GEAR_INVALID) {
+      path_seg.seg_type = pnc::geometry_lib::SEG_TYPE_LINE;
+      path_seg.line_seg = dubins_planner_.GetOutput().line_BC;
+      path_seg.seg_gear = dubins_planner_.GetOutput().gear_cmd_vec[1];
+      path_seg.seg_steer = pnc::geometry_lib::SEG_STEER_STRAIGHT;
+      tmp_path_seg_vec.emplace_back(path_seg);
+    }
+    // set arc CD
+    if (dubins_planner_.GetOutput().gear_cmd_vec[2] !=
+        pnc::geometry_lib::SEG_GEAR_INVALID) {
+      path_seg.seg_type = pnc::geometry_lib::SEG_TYPE_ARC;
+      path_seg.arc_seg = dubins_planner_.GetOutput().arc_CD;
+      path_seg.seg_gear = dubins_planner_.GetOutput().gear_cmd_vec[2];
+      path_seg.seg_steer = pnc::geometry_lib::CalArcSteer(path_seg.arc_seg);
+      tmp_path_seg_vec.emplace_back(path_seg);
+    }
+    // collision detect
+    for (pnc::geometry_lib::PathSegment& tmp_path_seg : tmp_path_seg_vec) {
+      const uint8_t path_col_det_res =
+          TrimPathByCollisionDetection(tmp_path_seg);
+      if (path_col_det_res == PATH_COL_NORMAL) {
+        path_seg_vec.emplace_back(tmp_path_seg);
+      } else if (path_col_det_res == PATH_COL_SHORTEN) {
+        path_seg_vec.emplace_back(tmp_path_seg);
+        break;
+      } else if (path_col_det_res == PATH_COL_INVALID) {
+        break;
+      }
+    }
+    if (path_seg_vec.size() > 0) {
+      dubins_success = true;
+    }
   }
 
-  // tmp directly use ego pose, no consider inner stuck
-  return false;
-
-  // force line
-  pnc::geometry_lib::LineSegment line;
-  line.pA = input_.ego_pose.pos;
-  line.heading = calc_params_.safe_circle_tang_pt.heading;
-  line.pB = calc_params_.safe_circle_tang_pt.pos;
-  const auto AB = (line.pB - line.pA).normalized();
-  const auto heading_vec =
-      pnc::geometry_lib::GetUnitTangVecByHeading(line.heading);
-  const auto cos_theta = AB.dot(heading_vec);
-  if (std::fabs(cos_theta < 0.686)) {
-    return false;
+  if (dubins_success) {
+    output_.path_available = true;
+    output_.current_gear = dubins_planner_.GetOutput().current_gear_cmd;
+    for (const pnc::geometry_lib::PathSegment& path_seg : path_seg_vec) {
+      output_.path_segment_vec.emplace_back(path_seg);
+      output_.length += path_seg.Getlength();
+      output_.gear_cmd_vec.emplace_back(path_seg.seg_gear);
+      output_.steer_vec.emplace_back(path_seg.seg_steer);
+    }
+    input_.ego_pose = path_seg_vec.back().GetEndPose();
   }
-  uint8_t seg_gear;
-  if (cos_theta > 0.0) {
-    seg_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
-  } else if (cos_theta < 0.0) {
-    seg_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-  } else {
-    return false;
-  }
-  pnc::geometry_lib::PathSegment line_seg(seg_gear, line);
-  output_.path_available = true;
-  output_.path_segment_vec.emplace_back(line_seg);
-  output_.length = line_seg.Getlength();
-  output_.gear_cmd_vec.emplace_back(line_seg.seg_gear);
-  output_.steer_vec.emplace_back(line_seg.seg_steer);
-  return true;
+  return dubins_success;
 }
 
 const bool PerpendicularPathPlanner::PreparePlanThird() {
@@ -1027,6 +1113,7 @@ const bool PerpendicularPathPlanner::MultiPlan() {
 
   std::cout << "try multi plan to target point\n";
   bool success = false;
+  calc_params_.multi_plan = true;
   double turn_radius = apa_param.GetParam().min_turn_radius;
   std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
   for (int i = 0; i < kMaxPathNumsInSlot; ++i) {
@@ -1277,11 +1364,13 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
       CollisionDetector::Paramters params;
       params.lat_inflation +=
           apa_param.GetParam().car_lat_inflation_for_trim_path;
+      std::cout
+          << "when 1R increase car latflation, which can let far from inside\n";
       collision_detector_ptr_->SetParam(params);
     } else if (calc_params_.first_multi_plan) {
       CollisionDetector::Paramters params;
-      params.lat_inflation -=
-          apa_param.GetParam().car_lat_inflation_for_trim_path;
+      // params.lat_inflation -=
+      //     apa_param.GetParam().car_lat_inflation_for_trim_path;
       collision_detector_ptr_->SetParam(params);
     } else {
       CollisionDetector::Paramters params;
@@ -1666,6 +1755,7 @@ const bool PerpendicularPathPlanner::AdjustPlan() {
 
   std::cout << "try adjust plan to target point\n";
   bool success = false;
+  calc_params_.multi_plan = false;
   double steer_change_ratio = 1.0;
   double steer_change_radius = apa_param.GetParam().max_radius_in_slot;
   // set steer_change_radius according to slot_occupied_ratio
@@ -2757,7 +2847,12 @@ const uint8_t PerpendicularPathPlanner::TrimPathByCollisionDetection(
       }
     }
     path_seg.collision_flag = true;
-    if (calc_params_.first_multi_plan) {
+    if (calc_params_.multi_plan &&
+        col_res.collision_point_global.x() >
+            input_.tlane.pt_inside.x() - 0.368 &&
+        col_res.collision_point_global.x() <
+            (input_.pt_0.x() + input_.pt_1.x()) * 0.5 + 2.68 &&
+        path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
       if ((calc_params_.is_left_side &&
            col_res.collision_point_global.y() > 0.0) ||
           (!calc_params_.is_left_side &&
@@ -3000,8 +3095,13 @@ const double PerpendicularPathPlanner::CalOccupiedRatio(
 // for simulation
 const bool PerpendicularPathPlanner::PreparePlanPb() { return PreparePlan(); }
 
+const bool PerpendicularPathPlanner::PreparePlanSecondPb() {
+  return PreparePlanSecond();
+}
+
 const bool PerpendicularPathPlanner::GenPathOutputByDubinsPb() {
-  input_.ego_pose = calc_params_.safe_circle_tang_pt;
+  input_.ego_pose.pos = dubins_planner_.GetInput().p2;
+  input_.ego_pose.heading = dubins_planner_.GetInput().heading2;
   return GenPathOutputByDubins();
 }
 

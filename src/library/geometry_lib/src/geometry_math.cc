@@ -1565,7 +1565,7 @@ const bool IsPoseOnLine(const PathPoint &pose, LineSegment &line,
   using namespace mathlib;
   if (lat_err < 0.0 || heading_err < 0.0 ||
       IsDoubleEqual((line.pB - line.pA).norm(), 0.0)) {
-    return LogErr(__func__, 0);
+    return false;
   }
 
   if (IsDoubleEqual(line.length, 0.0)) {
@@ -1583,7 +1583,7 @@ const bool IsPoseOnLine(const PathPoint &pose, LineSegment &line,
   // std::cout << "pos = " << pose.pos.transpose()
   //           << "  heading = " << pose.heading << "  dist = " << dist
   //           << "   line.heading = " << line.heading << std::endl;
-  return LogErr(__func__, 1);
+  return false;
 }
 
 const bool CalCommonTangentCircleOfTwoLine(

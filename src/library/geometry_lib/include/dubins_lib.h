@@ -95,6 +95,8 @@ class DubinsLibrary {
 
  public:
   const bool OneStepDubinsUpdate();
+  const bool OneStepDubinsUpdateByVer();
+  const bool OneStepDubinsUpdateByVer(const double min_length);
   void SetInput(Input& input) { input_ = input; }
   void PrintOutput() const;
 
@@ -115,6 +117,9 @@ class DubinsLibrary {
 
   // solve by line arc
   bool Solve(uint8_t line_arc_type);
+
+  // solve by line arc
+  bool Solve();
 
   void Sampling(const double ds, const bool is_complete_path);
   void Extend(const double extend_s);

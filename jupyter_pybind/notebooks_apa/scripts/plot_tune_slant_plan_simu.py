@@ -133,22 +133,23 @@ slant_planning_py.Init()
 
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=0.0, step=0.01)
-    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=0.0, step=0.01)
-    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=10.0, step=1)
+    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=-1.2, step=0.01)
+    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=-0.6, step=0.01)
+    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=0.0, step=0.2)
 
     self.is_left = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_left",min=0, max=1, value=0, step=1)
-    self.slot_phi_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_phi",min=45, max=90, value=60, step=15.0)
+    self.slot_phi_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_phi",min=45, max=90, value=90, step=15.0)
+    self.slot_inside_obs_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_inside_obs",min=0.66, max=9.9, value=8.8, step=0.25)
 
     self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-2.0, max=2.0, value=0.2, step=0.05)
     self.right_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dy",min=0, max=2.0, value=0.2, step=0.05)
     self.left_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dx",min=-2.0, max=2.0, value=0.2, step=0.5)
     self.left_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dy",min=0, max=2.0, value=0.2, step=0.05)
-    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_width",min=3.0, max=7.2, value=6.6, step=0.1)
+    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_width",min=3.0, max=12.4, value=4.6, step=0.1)
 
     self.slot_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_width",min=0, max=3, value=2.4, step=0.01)
     self.slot_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_length",min=0, max=6, value=5.0, step=0.01)
-    self.inside_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "inside_dx",min=-3, max=3, value=0.0, step=0.1)
+    self.inside_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "inside_dx",min=-6, max=6, value=0.0, step=0.1)
 
     self.slot_pt0_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_x",min=-10, max=10, value=2.0, step=0.01)
     self.slot_pt0_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_y",min=-10, max=10, value=-2.0, step=0.01)
@@ -156,22 +157,26 @@ class LocalViewSlider:
     ipywidgets.interact(slider_callback, ego_x = self.ego_x_slider,
                                          ego_y = self.ego_y_slider,
                                          ego_heading = self.ego_heading_slider,
-                                         slot_pt0_x = self.slot_pt0_x_slider,
-                                         slot_pt0_y  = self.slot_pt0_y_slider,
                                          is_left = self.is_left,
                                          slot_phi = self.slot_phi_slider,
-                                         slot_width = self.slot_width_slider,
-                                         slot_length = self.slot_length_slider,
-                                         inside_dx = self.inside_dx_slider,
+                                         slot_inside_obs = self.slot_inside_obs_slider,
                                          right_obj_dx = self.right_obj_dx_slider,
                                          right_obj_dy = self.right_obj_dy_slider,
                                          left_obj_dx = self.left_obj_dx_slider,
                                          left_obj_dy = self.left_obj_dy_slider,
-                                         channel_width = self.channel_width_slider,)
+                                         channel_width = self.channel_width_slider,
+
+                                         slot_pt0_x = self.slot_pt0_x_slider,
+                                         slot_pt0_y  = self.slot_pt0_y_slider,
+
+                                         slot_width = self.slot_width_slider,
+                                         slot_length = self.slot_length_slider,
+                                         inside_dx = self.inside_dx_slider,
+                                       )
 
 ### sliders callback
-def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, slot_phi, slot_width, slot_length, inside_dx, right_obj_dx,
-                    right_obj_dy, left_obj_dx, left_obj_dy, channel_width):
+def slider_callback(ego_x, ego_y, ego_heading, is_left, slot_phi, slot_inside_obs, right_obj_dx,
+                    right_obj_dy, left_obj_dx, left_obj_dy, channel_width,  slot_pt0_x, slot_pt0_y, slot_width, slot_length, inside_dx, ):
   kwargs = locals()
 
   car_xn = []
@@ -268,7 +273,7 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
   ego_pose = [ego_x, ego_y, ego_heading / 57.3]
   slot_pt = [[slot_pt0_x, slot_pt0_y], [slot_pt1_x, slot_pt1_y], [slot_pt2_x, slot_pt2_y], [slot_pt3_x, slot_pt3_y],]
 
-  obs_params = [right_obj_dx, right_obj_dy, left_obj_dx, left_obj_dy, channel_width]
+  obs_params = [right_obj_dx, right_obj_dy, left_obj_dx, left_obj_dy, channel_width, slot_inside_obs]
 
   current_path_point_global_vec_ = slant_planning_py.Update(ego_pose, slot_pt, 0.2, True, inside_dx, obs_params)
 
@@ -384,7 +389,7 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
 
 
   safe_circle_tang_pose = slant_planning_py.GetCircleTangentPose()
-  print('circle_tang_pos handing: ', safe_circle_tang_pose[2] * 57.3)
+  #print('circle_tang_pos handing: ', safe_circle_tang_pose[2] * 57.3)
 
   extend_pos_x = safe_circle_tang_pose[0] + math.cos(safe_circle_tang_pose[2])
   extend_pos_y = safe_circle_tang_pose[1] + math.sin(safe_circle_tang_pose[2])

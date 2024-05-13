@@ -23,6 +23,13 @@ class CollisionDetector {
     COUNT_OBS,
   };
 
+  struct CarMoveBound {
+    double min_x;
+    double min_y;
+    double max_x;
+    double max_y;
+  };
+
  public:
   CollisionDetector() { Init(); }
   struct CollisionResult {
@@ -32,7 +39,8 @@ class CollisionDetector {
     double remain_obstacle_dist = 25.0;
     Eigen::Vector2d collision_point;
     Eigen::Vector2d collision_point_global;
-    size_t car_line_order = 0;
+    int car_line_order = -1;
+    CarMoveBound car_move_bound;
   };
 
   struct Paramters {
@@ -92,12 +100,12 @@ class CollisionDetector {
   void AddObstacles(const Eigen::Vector2d &obs_pt_global);
   void AddObstacles(const Eigen::Vector2d &obs_pt_global,
                     const size_t obs_type);
-  const std::vector<Eigen::Vector2d> &GetObstacles() {
+  const std::vector<Eigen::Vector2d> &GetObstacles() const {
     return obs_pt_global_vec_;
   }
 
   const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>
-      &GetObstaclesMap() {
+      &GetObstaclesMap() const {
     return obs_pt_global_map_;
   }
 
@@ -127,6 +135,10 @@ class CollisionDetector {
   const bool IsObstacleInCar(const Eigen::Vector2d &obs_pos,
                              const pnc::geometry_lib::PathPoint &ego_pose,
                              double safe_dist);
+
+  const bool CalCarMoveBound(CarMoveBound &car_move_bound,
+                             const pnc::geometry_lib::PathPoint &start_pose,
+                             const pnc::geometry_lib::PathPoint &target_pose);
 
  private:
   std::vector<pnc::geometry_lib::LineSegment> car_line_local_vec_;
