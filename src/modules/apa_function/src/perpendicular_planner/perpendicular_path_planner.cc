@@ -1329,10 +1329,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
     }
   }
 
-  if (type == 2 &&
-      input_.slot_occupied_ratio >
-          apa_param.GetParam().line_arc_obs_slot_occupied_ratio &&
-      current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+  if (type == 2 && current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
     const double channel_width =
         apa_param.GetParam().line_arc_obs_channel_width;
     const double channel_length =

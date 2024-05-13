@@ -288,7 +288,8 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
       std::min(result.remain_obstacle_dist, result.remain_car_dist);
 
   result.collision_flag =
-      (result.remain_obstacle_dist <= result.remain_car_dist);
+      (result.remain_obstacle_dist <=
+       result.remain_car_dist + apa_param.GetParam().col_obs_safe_dist + 1e-3);
 
   result.collision_point = collision_point;
   result.collision_point_global.setZero();
@@ -527,7 +528,8 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
       fabs(min_obs_rot_limit_angle) * arc.circle_info.radius;
 
   result.collision_flag =
-      (result.remain_obstacle_dist <= result.remain_car_dist);
+      (result.remain_obstacle_dist <=
+       result.remain_car_dist + apa_param.GetParam().col_obs_safe_dist + 1e-3);
 
   result.collision_point = collision_point;
   result.collision_point_global.setZero();
