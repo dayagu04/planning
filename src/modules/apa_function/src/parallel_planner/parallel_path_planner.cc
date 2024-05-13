@@ -132,6 +132,12 @@ const bool ParallelPathPlanner::Update() {
       return true;
     } else {
       std::cout << "MultiPlan  failed!" << std::endl;
+      if (MultiAlignBody()) {
+        std::cout << "Multi align body success!" << std::endl;
+        return true;
+      } else {
+        std::cout << "Multi align body failed!" << std::endl;
+      };
     }
 
     // parallel adjust step
@@ -1659,7 +1665,7 @@ const bool ParallelPathPlanner::MultiPlan() {
 const bool ParallelPathPlanner::CheckMultiPlanSuitable(
     const pnc::geometry_lib::PathPoint& current_pose) const {
   // apa_param.GetParam().multi_plan_min_heading_err
-  if (std::fabs(current_pose.heading) <= 8.0 / 57.3) {
+  if (std::fabs(current_pose.heading) <= 5.0 / 57.3) {
     return false;
   }
   return true;
@@ -1857,34 +1863,88 @@ const bool ParallelPathPlanner::CalSinglePathInMulti(
   return success;
 }
 
-// const bool ParallelPathPlanner::MultiAlignBodyPlan() {
-//   std::cout << "-----MultiAlignBodyPlan-----\n";
-//   // set init state
-//   uint8_t current_gear = input_.ref_gear;
-//   pnc::geometry_lib::PathPoint current_pose = input_.ego_pose;
+const bool ParallelPathPlanner::MultiAlignBody() {
+  std::cout << "-----MultiAlignBodyPlan-----\n";
+  // set init state
+  uint8_t current_gear = input_.ref_gear;
+  DEBUG_PRINT("ref gear = " << static_cast<int>(current_gear));
 
-//   if (output_.path_segment_vec.size() > 0) {
-//     const auto& last_seg = output_.path_segment_vec.back();
-//   }
+  pnc::geometry_lib::PathPoint current_pose = input_.ego_pose;
+  pnc::geometry_lib::PrintPose("start pose", current_pose);
 
-//   DEBUG_PRINT("ref gear = " << static_cast<int>(current_gear));
+  if (!pnc::geometry_lib::IsValidGear(current_gear)) {
+    DEBUG_PRINT("ref_gear error!");
+    return false;
+  }
 
-//   // check pose and slot_occupied_ratio, if error is small, multi isn't
-//   suitable if (!CheckMultiPlanSuitable(current_pose)) {
-//     std::cout << "pose err is relatively small, skip multi plan, directly try
-//     "
-//                  "adjust plan\n";
-//     return false;
-//   }
-//   // Todo: remove ref arc, gear is enough.
-//   // check gear
-//   if (!pnc::geometry_lib::IsValidGear(current_gear)) {
-//     std::cout << "ref_gear error\n";
-//     return false;
-//   }
+  if (input_.slot_occupied_ratio < 0.3) {
+    DEBUG_PRINT("not in slot!");
+    return false;
+  }
 
-//   return true;
-// }
+  // check pose and slot_occupied_ratio, if error is small, multi isn't suitable
+  if (std::fabs(current_pose.heading * 57.3) <=
+      apa_param.GetParam().finish_parallel_heading_err) {
+    DEBUG_PRINT("body already aligned!");
+    return false;
+  }
+
+  std::vector<pnc::geometry_lib::PathSegment> single_aligned_path;
+  std::vector<pnc::geometry_lib::PathSegment> path_res;
+  path_res.clear();
+  path_res.reserve(kMaxMultiStepNums);
+
+  bool success = false;
+  while (std::fabs(current_pose.heading * 57.3) >
+         apa_param.GetParam().finish_parallel_heading_err) {
+    single_aligned_path.clear();
+    single_aligned_path.reserve(1);
+
+    if (AlignBodyPlan(single_aligned_path, current_pose,
+                      calc_params_.target_pose.heading, current_gear)) {
+      auto col_res = TrimPathByCollisionDetection(single_aligned_path.back(),
+                                                  kColBufferInSlot);
+
+      if (col_res == PATH_COL_SHORTEN) {
+        success = true;
+        path_res.emplace_back(single_aligned_path.back());
+
+      } else if (col_res == PATH_COL_NORMAL) {
+        success = true;
+        path_res.emplace_back(single_aligned_path.back());
+        break;
+      } else if (col_res == PATH_COL_INVALID) {
+        success = false;
+      }
+
+      if (!success) {
+        col_res = TrimPathByCollisionDetection(single_aligned_path.back(),
+                                               0.25);
+
+        if (col_res == PATH_COL_SHORTEN) {
+          success = true;
+          path_res.emplace_back(single_aligned_path.back());
+
+        } else if (col_res == PATH_COL_NORMAL) {
+          success = true;
+          path_res.emplace_back(single_aligned_path.back());
+          break;
+        } else if (col_res == PATH_COL_INVALID) {
+          success = false;
+          break;
+        }
+      }
+    }
+    current_pose = single_aligned_path.back().GetEndPose();
+          current_gear = pnc::geometry_lib::ReverseGear(current_gear);
+  }
+  if (success) {  
+    output_.Reset();
+    AddPathSegToOutPut(path_res);
+  }
+
+  return success;
+}
 
 // adjust plan start
 const bool ParallelPathPlanner::AdjustPlan() {
