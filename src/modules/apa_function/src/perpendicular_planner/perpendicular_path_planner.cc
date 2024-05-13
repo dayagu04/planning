@@ -1735,6 +1735,7 @@ const bool PerpendicularPathPlanner::AdjustPlan() {
     }
     current_gear = output_.gear_cmd_vec.back();
     current_arc_steer = output_.steer_vec.back();
+    current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
     continue_after_multi = true;
     std::cout << "continue to plan after multi\n";
   }
@@ -2313,9 +2314,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
     }
   }
 
-  if (line_arc_success &&
-      input_.slot_occupied_ratio >
-          apa_param.GetParam().line_arc_obs_slot_occupied_ratio) {
+  if (line_arc_success) {
     const double channel_width =
         apa_param.GetParam().line_arc_obs_channel_width;
     const double channel_length =

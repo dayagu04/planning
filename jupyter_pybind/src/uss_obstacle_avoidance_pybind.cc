@@ -5,24 +5,23 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "apa_plan_interface.h"
 #include "geometry_math.h"
 #include "math_lib.h"
 #include "transform_lib.h"
 #include "uss_obstacle_avoidance.h"
-#include "apa_plan_interface.h"
 
 namespace py = pybind11;
 using namespace planning;
 
 static UssObstacleAvoidance* pBaseUssOaAir = nullptr;
 
-static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
+static planning::apa_planner::ApaPlanInterface* pApaPlanInterface = nullptr;
 
 int Init() {
   pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
 
   pApaPlanInterface->Init();
-
 
   pBaseUssOaAir = new UssObstacleAvoidance();
   return 0;
@@ -110,6 +109,18 @@ const Eigen::Vector3d GetCarArc() {
   return car_arc;
 }
 
+const std::vector<Eigen::Vector2d> GetCarLocalVertex(){
+  return pBaseUssOaAir->GetCarLocalVertex();
+};
+
+const std::vector<Eigen::Vector2d> GetUssLocalVertex(){
+  return pBaseUssOaAir->GetUssLocalVertex();
+};
+
+const std::vector<double> GetUssLocalAngle(){
+  return pBaseUssOaAir->GetUssLocalAngle();
+};
+
 PYBIND11_MODULE(uss_obstacle_avoidance_py, m) {
   m.doc() = "m";
 
@@ -123,5 +134,8 @@ PYBIND11_MODULE(uss_obstacle_avoidance_py, m) {
       .def("GetCarIndex", &GetCarIndex)
       .def("GetCarLine", &GetCarLine)
       .def("GetCarArc", &GetCarArc)
+      .def("GetCarLocalVertex", &GetCarLocalVertex)
+      .def("GetUssLocalVertex", &GetUssLocalVertex)
+      .def("GetUssLocalAngle", &GetUssLocalAngle)
       .def("SetParam", &SetParam);
 }

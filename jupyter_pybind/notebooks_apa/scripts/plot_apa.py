@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/Vertical/planning-58216f53-JAC_S811_test/test_13.00000'
+bag_path = '/data_cold/abu_zone/APA/Vertical/planning-58216f53-JAC_S811_test/test_0.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
@@ -107,6 +107,16 @@ def slider_callback(bag_time):
   #         )
   print("remain_dist = ", planning_json['remain_dist'])
   print("remain_dist_uss =", planning_json['remain_dist_uss'])
+
+  # replan_time_list, correct_path_for_limiter_list = [],[]
+  # if planning_json['replan_flag'] == True:
+  #   replan_time_list.append(bag_time)
+
+  # if planning_json['correct_path_for_limiter'] == True:
+  #   replan_time_list.append(bag_time)
+
+  # print("replan_time_list = ", replan_time_list)
+  # print("correct_path_for_limiter_list = ", correct_path_for_limiter_list)
 
   # print("planning_json = ", planning_json)
 

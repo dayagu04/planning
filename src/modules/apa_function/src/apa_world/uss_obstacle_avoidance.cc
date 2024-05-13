@@ -36,7 +36,13 @@ void UssObstacleAvoidance::Init() {
     }
   }
 
-  SetLatInflation();
+  for (size_t i = 0; i < car_local_vertex_vec_.size(); ++i) {
+    if (car_local_vertex_vec_[i].y() > 0) {
+      car_local_vertex_vec_[i].y() += param_.lat_inflation;
+    } else {
+      car_local_vertex_vec_[i].y() -= param_.lat_inflation;
+    }
+  }
 
   // init uss local vertex and normal angle
   uss_local_vertex_vec_.clear();
@@ -55,15 +61,19 @@ void UssObstacleAvoidance::Init() {
   }
 }
 
-void UssObstacleAvoidance::SetLatInflation() {
-  for (size_t i = 0; i < car_local_vertex_vec_.size(); ++i) {
-    if (car_local_vertex_vec_[i].y() > 0) {
-      car_local_vertex_vec_[i].y() += param_.lat_inflation;
-    } else {
-      car_local_vertex_vec_[i].y() -= param_.lat_inflation;
-    }
-  }
+const std::vector<Eigen::Vector2d> UssObstacleAvoidance::GetCarLocalVertex() {
+  return car_local_vertex_vec_;
 }
+
+const std::vector<Eigen::Vector2d> UssObstacleAvoidance::GetUssLocalVertex() {
+  return uss_local_vertex_vec_;
+}
+
+const std::vector<double> UssObstacleAvoidance::GetUssLocalAngle() {
+  return uss_local_normal_angle_vec_;
+}
+
+void UssObstacleAvoidance::SetLatInflation() { Init(); }
 
 void UssObstacleAvoidance::GenCarLine() {
   car_local_line_vec_.clear();

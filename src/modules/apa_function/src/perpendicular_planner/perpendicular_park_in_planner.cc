@@ -113,6 +113,7 @@ void PerpendicularInPlanner::PlanCore() {
 
     // UpdateSlotRealtime();
     frame_.ego_slot_info.first_fix_limiter = true;
+    frame_.replan_flag = true;
 
     GenTlane();
 
@@ -171,6 +172,9 @@ void PerpendicularInPlanner::PlanCore() {
 const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   const auto measures_ptr = apa_world_ptr_->GetMeasurementsPtr();
   const auto slot_manager_ptr_ = apa_world_ptr_->GetSlotManagerPtr();
+
+  frame_.correct_path_for_limiter = false;
+  frame_.replan_flag = false;
 
   EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
 
@@ -336,9 +340,10 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     std::cout << "dist_ego_limiter = " << dist_ego_limiter << std::endl;
 
     if (dist_ego_limiter < apa_param.GetParam().car_to_limiter_dis) {
-      std::cout << "should trim path according limiter\n";
+      std::cout << "should correct path according limiter\n";
       ego_slot_info.first_fix_limiter = false;
       PostProcessPathAccordingLimiter();
+      frame_.correct_path_for_limiter = true;
     }
   }
 
@@ -1901,6 +1906,9 @@ void PerpendicularInPlanner::Log() const {
   JSON_DEBUG_VALUE("tlane_pt_x", pt_g.x())
   JSON_DEBUG_VALUE("tlane_pt_y", pt_g.y())
   JSON_DEBUG_VALUE("slot_side", slot_t_lane_.slot_side)
+
+  JSON_DEBUG_VALUE("correct_path_for_limiter", frame_.correct_path_for_limiter)
+  JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
 
   const std::vector<Eigen::Vector2d>& obstacles =
       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstacles();

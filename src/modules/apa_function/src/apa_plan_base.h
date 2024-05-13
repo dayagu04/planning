@@ -167,6 +167,8 @@ class ApaPlannerBase {
       current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
       replan_reason = NOT_REPLAN;
       need_update_slot = true;
+      correct_path_for_limiter = false;
+      replan_flag = false;
     }
 
     bool is_replan = false;
@@ -201,6 +203,9 @@ class ApaPlannerBase {
     uint8_t current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
 
     bool need_update_slot = true;
+
+    bool correct_path_for_limiter = false;
+    bool replan_flag = false;
   };
 
   enum PathPlannerResult {

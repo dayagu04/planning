@@ -101,6 +101,10 @@ class UssObstacleAvoidance {
     return car_local_line_vec_;
   }
 
+  const std::vector<Eigen::Vector2d> GetCarLocalVertex();
+  const std::vector<Eigen::Vector2d> GetUssLocalVertex();
+  const std::vector<double> GetUssLocalAngle();
+
   const std::vector<pnc::geometry_lib::Arc>& GetCarLocalArc() {
     return car_local_arc_vec_;
   }

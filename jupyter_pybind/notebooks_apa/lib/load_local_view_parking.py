@@ -45,6 +45,10 @@ car_xb, car_yb = load_car_params_patch_parking()
 car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord()
 coord_tf = coord_transformer()
 max_slot_num = 20
+replan_flag = False
+correct_path_for_limiter = False
+replan_time_list = []
+correct_path_for_limiter_time_list = []
 class LoadCyberbag:
   def __init__(self, path, parking_flag = False) -> None:
     self.bag_path = path
@@ -209,7 +213,8 @@ class LoadCyberbag:
                          "slot_occupied_ratio", "pathplan_result", "target_ego_pos_slot", "path_start_seg_index", "path_end_seg_index", "path_length",
                          "uss_available", "uss_remain_dist", "uss_index", "uss_car_index",
                          "optimization_terminal_pose_error", "optimization_terminal_heading_error", "lat_path_opt_cost_time_ms",
-                         "ref_gear", "ref_arc_steer"]
+                         "ref_gear", "ref_arc_steer",
+                         "correct_path_for_limiter", "replan_flag"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
                           "obstaclesX", "obstaclesY", "slot_corner_X", "slot_corner_Y", "limiter_corner_X", "limiter_corner_Y"]
@@ -370,6 +375,7 @@ class LoadCyberbag:
       soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
 
       enter_parking_time = None
+      replan_time_list, correct_path_for_limiter_time_list = [],[]
       for t, msg in soc_state_msg_dict.items():
         self.soc_state_msg['t'].append(t)
         self.soc_state_msg['abs_t'].append(t)
@@ -377,6 +383,13 @@ class LoadCyberbag:
         # record the start time of fusi_parking_msg
         if msg.current_state > 1 and enter_parking_time is None:
           enter_parking_time = t
+        # record the replan time
+        if replan_flag:
+          replan_time_list.append(t)
+        # record the correct_path_for_limiter time
+        if correct_path_for_limiter:
+          correct_path_for_limiter_time_list.append(t)
+
 
       self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
       max_time = max(max_time, self.soc_state_msg['t'][-1])
@@ -389,6 +402,10 @@ class LoadCyberbag:
       if enter_parking_time is not None:
         self.enter_parking_time = enter_parking_time - self.soc_state_msg['abs_t'][0]
         # print("enter_parking_time ：", self.enter_parking_time)
+      if replan_time_list is not None:
+        replan_time_list = [tmp - self.soc_state_msg['t'][0]  for tmp in replan_time_list]
+      if correct_path_for_limiter_time_list is not None:
+        correct_path_for_limiter_time_list = [tmp - self.soc_state_msg['t'][0]  for tmp in correct_path_for_limiter_time_list]
     except:
       self.soc_state_msg['enable'] = False
       print('missing /iflytek/system_state/soc_state !!!')
@@ -1050,6 +1067,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
     obstacle_x = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['obstaclesX']
     obstacle_y = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['obstaclesY']
 
+    replan_flag = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_flag']
+    correct_path_for_limiter = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['correct_path_for_limiter']
+
     local_view_data['data_obs'].data.update({
       'obs_x': obstacle_x,
       'obs_y': obstacle_y,
@@ -1200,6 +1220,18 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
 
       names.append("path_plan_result")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['pathplan_result']))
+
+      names.append("replan_flag")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_flag']))
+
+      names.append("replan_time_list")
+      datas.append(str(replan_time_list))
+
+      names.append("correct_path_for_limiter")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['correct_path_for_limiter']))
+
+      names.append("correct_path_for_limiter_list")
+      datas.append(str(correct_path_for_limiter_time_list))
 
       names.append("terminal_error_x")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['terminal_error_x']))
