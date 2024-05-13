@@ -1654,7 +1654,7 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
       if (item.cutin_confidence_cnt >=
           cutin_confidence_cnt * planning_cycle_time) {
         item.cutinp =
-            std::max(0.2, item.cutinp - gap * std::max(item.v_lat, -1.0) /
+            std::max(0.6, item.cutinp - gap * std::max(item.v_lat, -1.0) /
                                             std::max(item.d_path, 0.01));
       } else {
         item.cutinp = item.cutinp - std::max(0.1, item.v_lat / 3);

@@ -41,7 +41,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
                               'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
                               'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
-                              'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
+                              'potental_cutin_track_id', 'v_target_potental_cutin', "v_target_cutin", "road_radius", \
                               'stop_start_state', 'v_target_start_stop', 'STANDSTILL', \
                               "dis_to_ramp", "v_target_ramp", \
                               'gap_v_limit_lc', \
@@ -581,7 +581,7 @@ def load_lon_global_figure(bag_loader):
 
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
     limit_cutin_vel_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_cutin'], 2))
-    potential_cutin_speed_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_potential_cutin'], 2))
+    potential_cutin_speed_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_potental_cutin'], 2))
 
   cutin_fig.line(t_plan_vec, limit_cutin_vel_vec, line_width=1,
                                   legend_label='Pre-deceleration cutin',color="blue")

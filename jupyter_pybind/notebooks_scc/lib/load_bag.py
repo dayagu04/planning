@@ -508,7 +508,7 @@ class LoadCyberbag:
                          'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
                          'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
                          'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
-                         'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
+                         'potental_cutin_track_id', 'v_target_potental_cutin', "v_target_cutin", "road_radius", \
                          'stop_start_state', 'v_target_start_stop', 'STANDSTILL', \
                          "dis_to_ramp", "v_target_ramp", \
                          'gap_v_limit_lc', \
