@@ -1196,6 +1196,13 @@ const bool PerpendicularPathPlanner::MultiPlan() {
       break;
     }
   }
+
+  if (output_.gear_cmd_vec.front() != input_.ref_gear) {
+    output_.Reset();
+    success = false;
+  }
+
+
   if (!success) {
     std::cout << "multi plan failed!" << std::endl;
   }
@@ -1376,7 +1383,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
       CollisionDetector::Paramters params;
       collision_detector_ptr_->SetParam(params);
     }
-    PrintSegmentInfo(tmp_path_seg);
+    // PrintSegmentInfo(tmp_path_seg);
     const uint8_t path_col_det_res =
         TrimPathByCollisionDetection(tmp_path_seg, safe_dist);
     if (path_col_det_res == PATH_COL_NORMAL) {

@@ -646,19 +646,30 @@ void PerpendicularInPlanner::GenTlane() {
 
   // If there are no obstacles on either side, set up a virtual obstacle that is
   // farther away
+  const Eigen::Vector2d pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
+  const Eigen::Vector2d pt_01_norm_vec(-pt_01_vec.y(), pt_01_vec.x());
+
+  const double virtual_x =
+      ((ego_slot_info.pt_1 + ego_slot_info.pt_0) / 2.0 +
+       apa_param.GetParam().virtual_obs_x_pos * pt_01_norm_vec)
+          .x();
+
+  const double virtual_left_y =
+      (ego_slot_info.pt_1 + apa_param.GetParam().virtual_obs_y_pos * pt_01_vec)
+          .y();
+  const double virtual_right_y =
+      (ego_slot_info.pt_0 - apa_param.GetParam().virtual_obs_y_pos * pt_01_vec)
+          .y();
+
   if (left_que_for_x.empty()) {
     std::cout << "left space is empty\n";
-    left_que_for_x.emplace(
-        Eigen::Vector2d(apa_param.GetParam().virtual_obs_x_pos, 0.0));
-    left_que_for_y.emplace(
-        Eigen::Vector2d(0.0, apa_param.GetParam().virtual_obs_y_pos));
+    left_que_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
+    left_que_for_y.emplace(Eigen::Vector2d(0.0, virtual_left_y));
   }
   if (right_que_for_x.empty()) {
     std::cout << "right space is empty\n";
-    right_que_for_x.emplace(
-        Eigen::Vector2d(apa_param.GetParam().virtual_obs_x_pos, 0.0));
-    right_que_for_y.emplace(
-        Eigen::Vector2d(0.0, -apa_param.GetParam().virtual_obs_y_pos));
+    right_que_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
+    right_que_for_y.emplace(Eigen::Vector2d(0.0, virtual_right_y));
   }
 
   const double car_width_include_mirror =
@@ -1909,6 +1920,8 @@ void PerpendicularInPlanner::Log() const {
 
   JSON_DEBUG_VALUE("correct_path_for_limiter", frame_.correct_path_for_limiter)
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
+  std::cout << "correct_path_for_limiter = " << frame_.correct_path_for_limiter
+            << "replan_flag = " << frame_.replan_flag << std::endl;
 
   const std::vector<Eigen::Vector2d>& obstacles =
       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstacles();
