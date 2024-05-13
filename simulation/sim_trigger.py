@@ -3,12 +3,6 @@
 #运行前置
 #pip3 install requests polling
 
-#使用步骤
-#1. 在ibuild流水线填入pr目标分支的分支号  （TARGET_BRANCH） 例：[TARGET_BRANCH] | [main] 
-#2. 在ibuild流水线启动前填入pr 目标分支的commitid  （TARGET_COMMIT） 例：[TARGET_COMMIT] | [12a8152] 
-#3. 勾选仿真模块, 仿真报告上传模块
-#注 1和2可以省略
-
 import sys
 import subprocess
 import argparse
@@ -30,6 +24,7 @@ def check_status():
 if __name__ == '__main__':
     #整合发送内容
     in_dir = sys.argv[1]
+    tools_branch = sys.argv[2]
     current_time =  datetime.fromtimestamp(int(os.getenv('START_TIME')) / 1000).strftime("%Y%m%d_%H%M%S")
     print("start_time:" + current_time + "=========================" + os.getenv('START_TIME'))
     docker_image = "artifacts.iflytek.com/auto-docker-product-public/autofpilotdevtools/simulation/planning_simulation:" + os.getenv('COMMIT_ID')
@@ -41,7 +36,8 @@ if __name__ == '__main__':
         "commit_id_1": os.getenv('COMMIT_ID'),
         "current_time": current_time,
         "in_dir": in_dir,
-        "docker_image": docker_image
+        "docker_image": docker_image,
+        "common_tools_branch": tools_branch
     }
     print(data)
     response = requests.post(url, headers=headers, json=data)

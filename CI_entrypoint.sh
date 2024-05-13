@@ -29,7 +29,7 @@ unset __conda_setup
 PROJECT_PATH="/root"
 # PROJECT_PATH="/docker_share"
 # COMMON_TOOL_BRANCH="develop"
-COMMON_TOOL_BRANCH="develop"
+# COMMON_TOOL_BRANCH="develop"
 OUT_ROOT="/data_cold/abu_zone"
 OUT_SUFFIX=".PP"
 
@@ -65,7 +65,7 @@ done
 cd $PROJECT_PATH/common_tools/
 
 git fetch
-git checkout -b $CURRENT_TIME origin/$COMMON_TOOL_BRANCH
+git checkout -b $CURRENT_TIME origin/$COMMON_TOOLS_BRANCH
 
 cd $PROJECT_PATH/common_tools/checker_scc/task
 
