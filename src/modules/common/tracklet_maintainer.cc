@@ -685,7 +685,7 @@ void TrackletMaintainer::calc(
           frenet_transform_valid && !is_traffic_barrier) {
         is_potential_lead_one(*item, v_ego);
       } else {
-        obstacle_reset(*item);
+        obstacle_reset(*item, frenet_transform_valid);
       }
       calc_intersection_with_refline(*item, enable_intersection_planner);
     }
@@ -2235,9 +2235,9 @@ void TrackletMaintainer::set_default_value(
   }
 }
 
-void TrackletMaintainer::obstacle_reset(TrackedObject &item) {
-  // Reset lead/temp_lead that have not been fused successfully
-  if (!(item.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+void TrackletMaintainer::obstacle_reset(TrackedObject &item, bool frenet_transform_valid) {
+  // Reset lead/temp_lead that have not been fused successfully or frenet tramsform false
+  if (!((item.fusion_source & OBSTACLE_SOURCE_CAMERA) && frenet_transform_valid)) {
     item.is_lead = false;
     item.is_temp_lead = false;
   }

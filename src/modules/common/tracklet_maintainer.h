@@ -122,7 +122,7 @@ class TrackletMaintainer {
 
   void set_default_value(const std::vector<TrackedObject *> &tracked_objects);
 
-  void obstacle_reset(TrackedObject &item);
+  void obstacle_reset(TrackedObject &item, bool frenet_transform_valid);
 
   planning::framework::Session *session_ = nullptr;
   std::shared_ptr<planning_math::KDPath> frenet_coord_;
