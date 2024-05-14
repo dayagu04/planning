@@ -35,7 +35,7 @@ static const double kMaxParkOutRootHeading = 25.0;
 
 static const double kColBufferTrippleStep = 0.2;
 static const double kColBufferInSlot = 0.4;
-static const double kSmallColBufferInSlot = 0.1;
+static const double kSmallColBufferInSlot = 0.25;
 static const double kColBufferOutSlot = 0.5;
 
 static const size_t kMaxParallelParkInSegmentNums = 15;
@@ -332,8 +332,7 @@ const bool ParallelPathPlanner::MonoStepPlan() {
         }
         // prolong the path during preparation, or will not calc success
         // during normal backward step if ego stops early
-        const double min_line_length =
-            apa_param.GetParam().min_line_length + 0.2;
+        const double min_line_length = 0.15;
         first_line_prolong = true;
         Eigen::Vector2d v_ego(std::cos(ego_line.heading),
                               std::sin(ego_line.heading));
@@ -363,7 +362,7 @@ const bool ParallelPathPlanner::MonoStepPlan() {
     if (!CheckSamePose(last_line_pose_A, last_line_pose_B)) {
       if (pnc::geometry_lib::CalLineSegGear(last_line_seg) ==
               pnc::geometry_lib::SEG_GEAR_DRIVE &&
-          last_line_seg.length <= apa_param.GetParam().min_line_length + 0.2) {
+          last_line_seg.length <= apa_param.GetParam().min_line_length) {
         continue;
       }
     }
@@ -551,9 +550,20 @@ const bool ParallelPathPlanner::MonoStepPlanOnceWithShift(
       calc_params_.valid_target_pt_vec.emplace_back(
           pnc::geometry_lib::PathPoint(forward_arc.pA, forward_arc.headingA));
     }
+
+    auto compare = [](const pnc::geometry_lib::PathPoint& pose1,
+                      const pnc::geometry_lib::PathPoint& pose2) {
+      return pose1.pos.x() > pose2.pos.x();
+    };
+
     if (calc_params_.valid_target_pt_vec.size() > 1) {
-      std::reverse(calc_params_.valid_target_pt_vec.begin(),
-                   calc_params_.valid_target_pt_vec.end());
+      std::sort(calc_params_.valid_target_pt_vec.begin(),
+                calc_params_.valid_target_pt_vec.end(), compare);
+      std::cout << "target pt vec: " << std::endl;
+      for (const auto& pt : calc_params_.valid_target_pt_vec) {
+        std::cout << pt.pos.x() << ", ";
+      }
+      std::cout << std::endl;
     }
   }
   return true;
@@ -1918,8 +1928,8 @@ const bool ParallelPathPlanner::MultiAlignBody() {
       }
 
       if (!success) {
-        col_res = TrimPathByCollisionDetection(single_aligned_path.back(),
-                                               0.25);
+        col_res =
+            TrimPathByCollisionDetection(single_aligned_path.back(), 0.25);
 
         if (col_res == PATH_COL_SHORTEN) {
           success = true;
@@ -1936,9 +1946,24 @@ const bool ParallelPathPlanner::MultiAlignBody() {
       }
     }
     current_pose = single_aligned_path.back().GetEndPose();
-          current_gear = pnc::geometry_lib::ReverseGear(current_gear);
+    current_gear = pnc::geometry_lib::ReverseGear(current_gear);
   }
-  if (success) {  
+
+  if (success) {
+    pnc::geometry_lib::LineSegment last_line;
+    const Eigen::Vector2d last_pt_start = path_res.back().GetEndPos();
+    const Eigen::Vector2d last_pt_end(input_.tlane.pt_terminal_pos.x(),
+                                      last_pt_start.y());
+    last_line.SetPoints(last_pt_start, last_pt_end);
+    const pnc::geometry_lib::PathSegment last_line_path(
+        pnc::geometry_lib::CalLineSegGear(last_line), last_line);
+    if ((last_line_path.seg_gear == path_res.back().seg_gear) ||
+        (last_line_path.seg_gear != path_res.back().seg_gear &&
+         last_line_path.GetLineSeg().length >=
+             apa_param.GetParam().min_line_length)) {
+      path_res.emplace_back(last_line_path);
+    }
+
     output_.Reset();
     AddPathSegToOutPut(path_res);
   }
@@ -3655,7 +3680,7 @@ void ParallelPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
     const auto& remain_obstacle_dist = collision_result.remain_obstacle_dist;
 
     const auto safe_remain_dist =
-        std::min(remain_car_dist, remain_obstacle_dist - 0.3);
+        std::min(remain_car_dist, remain_obstacle_dist - kColBufferInSlot);
     // std::cout << "remain_car_dist = " << remain_car_dist
     //           << "   remain_obstacle_dist = " << remain_obstacle_dist
     //           << "  safe_remain_dist = " << safe_remain_dist <<

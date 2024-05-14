@@ -1,11 +1,14 @@
 #include "parallel_park_in_planner.h"
 
+#include <algorithm>
 #include <cmath>
 #include <complex>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <queue>
+#include <utility>
+#include <vector>
 
 #include "apa_param_setting.h"
 #include "apa_plan_base.h"
@@ -26,6 +29,7 @@ namespace planning {
 namespace apa_planner {
 static double kFrontDetaXMagWhenFrontVacant = 1.66;
 static double kRearDetaXMagWhenFrontVacant = 0.2;
+static double kRearDetaXMagWhenBothSidesVacant = 0.2;
 static double kRearDetaXMagWhenFrontOccupiedRearVacant = 1.5;
 
 static double kFrontObsLineYMagIdentification = 0.8;
@@ -34,7 +38,7 @@ static double kChannelLengthXMagIdentification = 1.0;
 static double kChannelLengthMinYMagIdentification = 0.5;
 static double kChannelLengthMaxYMagIdentification = 5.0;
 static double kCurbInitialOffset = 0.2;
-static double kCurbYMagIdentification = 0.8;
+static double kCurbYMagIdentification = 0.0;
 
 static double kEnterMultiPlanSlotRatio = 0.36;
 
@@ -558,13 +562,20 @@ void ParallelParInPlanner::GenTlane() {
     DEBUG_PRINT("rear space empty!");
   }
 
-  if (front_vacant) {
+  if (front_vacant && rear_vacant) {
     front_obs_que_ascending_x.emplace(
         Eigen::Vector2d(slot_length + kFrontDetaXMagWhenFrontVacant,
                         side_sgn * 0.5 * half_slot_width));
 
     rear_obs_que_descending_x.emplace(Eigen::Vector2d(
+        -kRearDetaXMagWhenBothSidesVacant, side_sgn * 0.5 * half_slot_width));
+  } else if (front_vacant && !rear_vacant) {
+    front_obs_que_ascending_x.emplace(
+        Eigen::Vector2d(slot_length + kFrontDetaXMagWhenFrontVacant,
+                        side_sgn * 0.5 * half_slot_width));
+    rear_obs_que_descending_x.emplace(Eigen::Vector2d(
         -kRearDetaXMagWhenFrontVacant, side_sgn * 0.5 * half_slot_width));
+
   } else if (!front_vacant && rear_vacant) {
     rear_obs_que_descending_x.emplace(
         Eigen::Vector2d(-kRearDetaXMagWhenFrontOccupiedRearVacant,
@@ -647,6 +658,12 @@ void ParallelParInPlanner::GenTlane() {
             frame_.ego_slot_info.target_ego_heading_slot));
   }
 
+  // update tlane using USS dist
+  if (frame_.ego_slot_info.slot_occupied_ratio >= kEnterMultiPlanSlotRatio &&
+      frame_.in_slot_plan_count == 0) {
+    UpdateTlaneOnceInSlot();
+  }
+
   DEBUG_PRINT("-- t_lane --------");
   if (pnc::mathlib::IsDoubleEqual(side_sgn, 1.0)) {
     DEBUG_PRINT("right slot");
@@ -669,6 +686,57 @@ void ParallelParInPlanner::GenTlane() {
   DEBUG_PRINT("channel x =" << t_lane_.channel_x_limit);
   DEBUG_PRINT("channel y =" << t_lane_.channel_y);
   DEBUG_PRINT("------------------");
+}
+
+void ParallelParInPlanner::UpdateTlaneOnceInSlot() {
+  if (frame_.ego_slot_info.slot_occupied_ratio < kEnterMultiPlanSlotRatio) {
+    DEBUG_PRINT("ego not in slot!");
+    return;
+  }
+
+  if (frame_.in_slot_plan_count != 0) {
+    DEBUG_PRINT("already planned twice in slot!");
+    return;
+  }
+
+  DEBUG_PRINT("UpdateTlaneOnceInSlot work now!");
+
+  // update tlane via 12 uss dist
+  const pnc::geometry_lib::PathPoint ego_pose(
+      frame_.ego_slot_info.ego_pos_slot, frame_.ego_slot_info.ego_heading_slot);
+
+  // get front and rear uss dist
+  const auto& uss_dist_vec =
+      apa_world_ptr_->GetUssObstacleAvoidancePtr()->GetUssDistVec();
+
+  if (uss_dist_vec.size() != 12) {
+    DEBUG_PRINT("uss dist size != 12");
+    return;
+  }
+
+  // get upa dist, first four parameters are the front side, the others are the
+  // rear size.
+  const std::vector<size_t> upa_idx_vec = {1, 2, 3, 4, 7, 8, 9, 10};
+  pnc::geometry_lib::LocalToGlobalTf ego2slot(ego_pose.pos, ego_pose.heading);
+
+  for (size_t i = 0; i < upa_idx_vec.size(); i++) {
+    const auto idx = upa_idx_vec[i];
+    const double upa_dist = uss_dist_vec[idx];
+
+    const Eigen::Vector2d upa_pos_ego(
+        apa_param.GetParam().uss_vertex_x_vec[idx],
+        apa_param.GetParam().uss_vertex_y_vec[idx]);
+
+    const Eigen::Vector2d upa_pos_slot = ego2slot.GetPos(upa_pos_ego);
+
+    if (i < 4) {
+      t_lane_.obs_pt_inside.x() =
+          std::min(t_lane_.obs_pt_inside.x(), upa_pos_slot.x() + upa_dist);
+    } else {
+      t_lane_.obs_pt_outside.x() =
+          std::max(t_lane_.obs_pt_outside.x(), upa_pos_slot.x() - upa_dist);
+    }
+  }
 }
 
 void ParallelParInPlanner::GenObstacles() {
@@ -770,9 +838,8 @@ const bool ParallelParInPlanner::IsEgoInSlot() const {
 
 const bool ParallelParInPlanner::IsEgoInSlot(
     const pnc::geometry_lib::PathPoint& pose) const {
-  return std::fabs(pose.pos.y() - t_lane_.pt_terminal_pos.y()) <=
-         0.5 * (frame_.ego_slot_info.slot_width +
-                apa_param.GetParam().car_width - 0.2);
+  return pose.pos.y() * t_lane_.slot_side_sgn <=
+         t_lane_.slot_side_sgn * t_lane_.corner_inside_slot.y();
 }
 
 const uint8_t ParallelParInPlanner::PathPlanOnce() {
@@ -825,28 +892,43 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
   const bool path_plan_success =
       parallel_path_planner_.Update(apa_world_ptr_->GetCollisionDetectorPtr());
 
-  const auto& path_planner_output = parallel_path_planner_.GetOutput();
+  // const auto& path_planner_output = parallel_path_planner_.GetOutput();
 
   frame_.total_plan_count++;
   if (frame_.ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
     frame_.in_slot_plan_count++;
   }
 
+  uint8_t plan_result = 0;
+  if (path_plan_success) {
+    plan_result = PathPlannerResult::PLAN_UPDATE;
+    std::cout << "path plan success!" << std::endl;
+  } else {
+    plan_result = PathPlannerResult::PLAN_FAILED;
+    std::cout << "path plan fail!" << std::endl;
+    return PathPlannerResult::PLAN_FAILED;
+  }
+
   parallel_path_planner_.SetCurrentPathSegIndex();
   // parallel_path_planner_.SetLineSegmentHeading();
 
-  bool is_allow_entend_line = true;
-  if (frame_.ego_slot_info.slot_occupied_ratio < 0.05) {
-    const auto path_end_idx = path_planner_output.path_seg_index.second;
-    const auto& end_pose =
-        path_planner_output.path_segment_vec[path_end_idx].GetEndPose();
+  // bool is_allow_entend_line = true;
+  // if (frame_.ego_slot_info.slot_occupied_ratio < 0.05) {
+  //   const auto path_end_idx = path_planner_output.path_seg_index.second;
+  //   const auto& end_pose =
+  //       path_planner_output.path_segment_vec[path_end_idx].GetEndPose();
 
-    if (IsEgoInSlot(end_pose)) {
-      is_allow_entend_line = false;
-    }
-  }
+  //   if (IsEgoInSlot(end_pose)) {
+  //     is_allow_entend_line = false;
+  //   }
+  // }
 
-  if (is_allow_entend_line) {
+  // if (is_allow_entend_line) {
+  //   const double extend_lenth = 0.15;
+  //   parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
+  //       extend_lenth);
+  // }
+  if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
     const double extend_lenth = 0.15;
     parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
         extend_lenth);
@@ -887,19 +969,10 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
 
   frame_.is_replan_first = false;
 
-  // TODO: check if need update
-  uint8_t plan_result = 0;
-  if (path_plan_success) {
-    plan_result = PathPlannerResult::PLAN_UPDATE;
-    std::cout << "path plan success!" << std::endl;
-  } else {
-    plan_result = PathPlannerResult::PLAN_FAILED;
-    std::cout << "path plan fail!" << std::endl;
-    return PathPlannerResult::PLAN_FAILED;
-  }
-
   const auto& planner_output = parallel_path_planner_.GetOutput();
   gear_command_ = planner_output.current_gear;
+
+  std::cout << "start lat optimizer!" << std::endl;
 
   // lateral path optimization
   bool is_use_optimizer = true;

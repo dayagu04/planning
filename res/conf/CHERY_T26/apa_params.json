@@ -35,7 +35,7 @@
   "terminal_target_heading": 0.0,
   "terminal_target_x_to_limiter": 0.15,
   "terminal_parallel_y_offset": 0.0,
-  "terminal_parallel_y_offset_with_curb": 0.5,
+  "terminal_parallel_y_offset_with_curb": 0.4,
 
   "comment_5": "check finish params",
   "finish_lat_err": 0.108,
@@ -45,7 +45,7 @@
   "finish_uss_slot_occupied_ratio": 0.668,
   "finish_heading_err_loose": 2.868,
   "finish_parallel_lat_err": 0.1,
-  "finish_parallel_lat_rac_err": 0.25,
+  "finish_parallel_lat_rac_err": 0.35,
   "finish_parallel_lon_err": 0.4,
   "finish_parallel_heading_err": 1.66,
   "finish_parallel_rear_stop_buffer": 0.55,
