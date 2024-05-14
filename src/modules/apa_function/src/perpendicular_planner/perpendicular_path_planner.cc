@@ -2347,7 +2347,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
   for (size_t j = 0; j < tmp_path_seg_vec.size(); ++j) {
     double safe_dist = apa_param.GetParam().col_obs_safe_dist;
     auto& tmp_path_seg = tmp_path_seg_vec[j];
-    // PrintSegmentInfo(tmp_path_seg);
+    PrintSegmentInfo(tmp_path_seg);
     const uint8_t path_col_det_res =
         TrimPathByCollisionDetection(tmp_path_seg, safe_dist);
     if (path_col_det_res == PATH_COL_NORMAL) {
@@ -2366,7 +2366,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
     double length = 0.0;
     bool collision_flag = false;
     for (const auto& path_seg : path_seg_vec) {
-      // PrintSegmentInfo(path_seg);
+      PrintSegmentInfo(path_seg);
       if (path_seg.seg_gear == current_gear) {
         length += path_seg.Getlength();
         collision_flag = path_seg.collision_flag;
