@@ -175,6 +175,7 @@ const bool ParallelPathPlanner::Update(
       std::chrono::duration_cast<std::chrono::milliseconds>(time1 - time0)
           .count();
   std::cout << "parallel cost time(ms) = " << duration << "\n" << std::endl;
+  JSON_DEBUG_VALUE("path_plan_time_ms", duration);
   return success;
 }
 

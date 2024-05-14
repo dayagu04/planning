@@ -591,12 +591,16 @@ void ParallelParInPlanner::GenTlane() {
   DEBUG_PRINT("front min x = " << front_min_x);
 
   const double front_y_limit = front_parallel_line_y_limit;
+  DEBUG_PRINT("front parallel line y =" << front_y_limit);
 
   const double rear_max_x = pnc::mathlib::Clamp(
-      rear_obs_que_descending_x.top().x(), -kRearDetaXMagWhenFrontVacant,
-      -kRearDetaXMagWhenFrontOccupiedRearVacant);
+      rear_obs_que_descending_x.top().x(),
+      -kRearDetaXMagWhenFrontOccupiedRearVacant, -kRearDetaXMagWhenFrontVacant);
+  DEBUG_PRINT("rear quene min x = " << rear_obs_que_descending_x.top().x());
+  DEBUG_PRINT("rear max x = " << rear_max_x);
 
   const double rear_y_limit = rear_parallel_line_y_limit;
+  DEBUG_PRINT("rear parallel line y =" << rear_y_limit);
 
   t_lane_.obs_pt_inside << front_min_x, front_y_limit;
   t_lane_.obs_pt_outside << rear_max_x, rear_y_limit;
@@ -740,7 +744,14 @@ void ParallelParInPlanner::UpdateTlaneOnceInSlot() {
 }
 
 void ParallelParInPlanner::GenObstacles() {
-  // set obstacles. eg: right side
+  // set obstacles.
+
+  //                         ^ y                      |
+  //                         c-------------D
+  //                         |-->x         |  pin
+  //            A -----------B pout        E---------F
+  //                         |       ego-------->     |
+
   //  channel pt1 ----------------------------------- channel pt2
   //                         ^ y                      |
   //                         |       ego-------->     |
@@ -751,10 +762,6 @@ void ParallelParInPlanner::GenObstacles() {
   const Eigen::Vector2d B = t_lane_.obs_pt_outside;
   const Eigen::Vector2d A(t_lane_.obs_pt_outside.x() - 1.0, B.y());
   const Eigen::Vector2d E = t_lane_.obs_pt_inside;
-
-  // if (frame_.ego_slot_info.slot_occupied_ratio > 0.7) {
-  //   t_lane_.curb_y -= t_lane_.slot_side_sgn * 0.1;
-  // }
 
   const Eigen::Vector2d C(B.x(), t_lane_.curb_y);
   const Eigen::Vector2d D(E.x(), t_lane_.curb_y);
@@ -1504,8 +1511,8 @@ const double ParallelParInPlanner::CalcSlotOccupiedRatio(
 
 void ParallelParInPlanner::Log() const {
   const auto& l2g_tf = frame_.ego_slot_info.l2g_tf;
-  const auto p0_g = l2g_tf.GetPos(t_lane_.pt_outside);
-  const auto p1_g = l2g_tf.GetPos(t_lane_.pt_inside);
+  const auto p0_g = l2g_tf.GetPos(t_lane_.obs_pt_outside);
+  const auto p1_g = l2g_tf.GetPos(t_lane_.obs_pt_inside);
   const auto pt_g = l2g_tf.GetPos(t_lane_.pt_terminal_pos);
 
   std::cout << "p0_g = " << p0_g.transpose() << std::endl;

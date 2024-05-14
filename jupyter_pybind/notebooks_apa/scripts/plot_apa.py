@@ -118,6 +118,11 @@ def slider_callback(bag_time):
   # print("replan_time_list = ", replan_time_list)
   # print("correct_path_for_limiter_list = ", correct_path_for_limiter_list)
 
+  print("path plan time =", planning_json['path_plan_time_ms'])
+  print("tlane_p1_x =", planning_json['tlane_p1_x'])
+  print("tlane_p1_y =", planning_json['tlane_p1_y'])
+  print("tlane_p0_x =", planning_json['tlane_p0_x'])
+  print("tlane_p0_y =", planning_json['tlane_p0_y'])
   # print("planning_json = ", planning_json)
 
   # planning_data = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
