@@ -911,15 +911,10 @@ void PerpendicularInPlanner::GenObstacles() {
   tlane_line_vec.emplace_back(tlane_line);
   tlane_line.SetPoints(C, D);
   tlane_line_vec.emplace_back(tlane_line);
-  if (frame_.ego_slot_info.slot_occupied_ratio < 0.001 &&
-      std::fabs(frame_.ego_slot_info.ego_heading_slot) * 57.3 > 48.68 &&
-      false) {
-  } else {
-    tlane_line.SetPoints(D, E);
-    tlane_line_vec.emplace_back(tlane_line);
-    tlane_line.SetPoints(E, F);
-    tlane_line_vec.emplace_back(tlane_line);
-  }
+  tlane_line.SetPoints(D, E);
+  tlane_line_vec.emplace_back(tlane_line);
+  tlane_line.SetPoints(E, F);
+  tlane_line_vec.emplace_back(tlane_line);
 
   // std::cout << "A = " << A.transpose() << "  B = " << B.transpose()
   //           << "  C = " << C.transpose() << "  D = " << D.transpose()

@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <queue>
 #include <utility>
 
@@ -253,7 +254,8 @@ bool SlotManagement::UpdateEgoSlotInfo(EgoSlotInfo &ego_slot_info,
 
 bool SlotManagement::GenTLane(
     const EgoSlotInfo &ego_slot_info,
-    apa_planner::PerpendicularPathPlanner::Tlane &t_lane) {
+    apa_planner::PerpendicularPathPlanner::Tlane &slot_tlane,
+    apa_planner::PerpendicularPathPlanner::Tlane &obs_tlane) {
   const auto lambda_func_1 = [](const Eigen::Vector2d &a,
                                 const Eigen::Vector2d &b) {
     return a.y() > b.y();  // the top element is smallest
@@ -437,12 +439,12 @@ bool SlotManagement::GenTLane(
           ego_slot_info.slot_origin_heading_vec);
 
   if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
-    t_lane.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
+    slot_tlane.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
   } else if (cross_ego_to_slot_heading < 0.0 &&
              cross_ego_to_slot_center > 0.0) {
-    t_lane.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
+    slot_tlane.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
   } else {
-    t_lane.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
+    slot_tlane.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
     return false;
   }
 
@@ -454,60 +456,198 @@ bool SlotManagement::GenTLane(
   Eigen::Vector2d corner_right_slot(ego_slot_info.slot_length,
                                     -0.5 * slot_width);
 
-  const auto &slot_side = t_lane.slot_side;
+  const auto &slot_side = slot_tlane.slot_side;
   if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
     // inside is right, outside is left
-    t_lane.corner_outside_slot = corner_left_slot;
-    t_lane.corner_inside_slot = corner_right_slot;
-    t_lane.pt_outside = corner_left_slot;
-    t_lane.pt_inside = corner_right_slot;
-    t_lane.pt_inside.x() =
+    slot_tlane.corner_outside_slot = corner_left_slot;
+    slot_tlane.corner_inside_slot = corner_right_slot;
+    slot_tlane.pt_outside = corner_left_slot;
+    slot_tlane.pt_inside = corner_right_slot;
+    slot_tlane.pt_inside.x() =
         right_que_for_x.top().x() + apa_param.GetParam().tlane_safe_dx;
   } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
     // outside is right, inside is left
-    t_lane.corner_outside_slot = corner_right_slot;
-    t_lane.corner_inside_slot = corner_left_slot;
-    t_lane.pt_outside = corner_right_slot;
-    t_lane.pt_inside = corner_left_slot;
-    t_lane.pt_inside.x() =
+    slot_tlane.corner_outside_slot = corner_right_slot;
+    slot_tlane.corner_inside_slot = corner_left_slot;
+    slot_tlane.pt_outside = corner_right_slot;
+    slot_tlane.pt_inside = corner_left_slot;
+    slot_tlane.pt_inside.x() =
         left_que_for_x.top().x() + apa_param.GetParam().tlane_safe_dx;
   }
 
-  t_lane.pt_terminal_pos << ego_slot_info.target_ego_pos_slot.x(),
+  slot_tlane.pt_terminal_pos << ego_slot_info.target_ego_pos_slot.x(),
       ego_slot_info.target_ego_pos_slot.y();
 
-  t_lane.pt_terminal_heading = ego_slot_info.target_ego_heading_slot;
+  slot_tlane.pt_terminal_heading = ego_slot_info.target_ego_heading_slot;
 
   if (need_move_slot) {
-    t_lane.pt_terminal_pos.y() += move_slot_dist;
-    t_lane.pt_inside.y() += move_slot_dist;
-    t_lane.pt_outside.y() += move_slot_dist;
+    slot_tlane.pt_terminal_pos.y() += move_slot_dist;
+    slot_tlane.pt_inside.y() += move_slot_dist;
+    slot_tlane.pt_outside.y() += move_slot_dist;
     std::cout << "move slot according to obs point\n";
   }
 
-  t_lane.pt_lower_boundry_pos = t_lane.pt_terminal_pos;
+  slot_tlane.pt_lower_boundry_pos = slot_tlane.pt_terminal_pos;
   // subtrace 0.05 to avoid plan failure due to col det
-  t_lane.pt_lower_boundry_pos.x() =
-      t_lane.pt_lower_boundry_pos.x() - apa_param.GetParam().rear_overhanging -
-      apa_param.GetParam().col_obs_safe_dist - 0.05;
+  slot_tlane.pt_lower_boundry_pos.x() = slot_tlane.pt_lower_boundry_pos.x() -
+                                        apa_param.GetParam().rear_overhanging -
+                                        apa_param.GetParam().col_obs_safe_dist -
+                                        0.05;
+
+  // construct obstacle_t_lane_
+  // for onstacle_t_lane    right is inside, left is outside
+  obs_tlane.slot_side = slot_side;
+  if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
+    obs_tlane.pt_inside.x() =
+        right_que_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
+    obs_tlane.pt_inside.y() = right_y;
+    obs_tlane.pt_outside.x() =
+        left_que_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
+    obs_tlane.pt_outside.y() = left_y;
+  } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
+    obs_tlane.pt_inside.x() =
+        left_que_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
+    obs_tlane.pt_inside.y() = left_y;
+    obs_tlane.pt_outside.x() =
+        right_que_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
+    obs_tlane.pt_outside.y() = right_y;
+  }
+
+  obs_tlane.pt_terminal_pos = slot_tlane.pt_terminal_pos;
+  obs_tlane.pt_terminal_heading = slot_tlane.pt_terminal_heading;
+  obs_tlane.pt_lower_boundry_pos = slot_tlane.pt_lower_boundry_pos;
 
   // tmp method, obstacle is temporarily unavailable, force lift slot_t_lane
   // pt_inside and pt_outside
   if (apa_param.GetParam().force_both_side_occupied) {
-    t_lane.pt_inside.x() = corner_right_slot.x();
-    t_lane.pt_outside.x() = corner_left_slot.x();
+    slot_tlane.pt_inside.x() = corner_right_slot.x();
+    slot_tlane.pt_outside.x() = corner_left_slot.x();
 
-    t_lane.pt_inside +=
+    slot_tlane.pt_inside +=
         Eigen::Vector2d(apa_param.GetParam().occupied_pt_inside_dx,
                         apa_param.GetParam().occupied_pt_inside_dy);
 
-    t_lane.pt_outside +=
+    slot_tlane.pt_outside +=
         Eigen::Vector2d(apa_param.GetParam().occupied_pt_outside_dx,
                         apa_param.GetParam().occupied_pt_outside_dy);
   }
 
-  std::cout << "t_lane.pt_inside.x() = " << t_lane.pt_inside.x() << std::endl;
+  std::cout << "t_lane.pt_inside.x() = " << slot_tlane.pt_inside.x()
+            << std::endl;
 
+  return true;
+}
+
+bool SlotManagement::GenObstacles(
+    std::shared_ptr<CollisionDetector> &collision_detector_ptr,
+    const apa_planner::PerpendicularPathPlanner::Tlane &slot_tlane,
+    apa_planner::PerpendicularPathPlanner::Tlane &obs_tlane,
+    const EgoSlotInfo &ego_slot_info) {
+  if (!collision_detector_ptr) {
+    return false;
+  }
+  collision_detector_ptr->ClearObstacles();
+  // set obstacles
+  double channel_width = apa_param.GetParam().channel_width;
+  double channel_length = apa_param.GetParam().channel_length;
+
+  if (apa_param.GetParam().force_both_side_occupied) {
+    obs_tlane = slot_tlane;
+  }
+
+  // add tlane obstacle
+  //  B is always outside
+  int slot_side = 1;
+  if (obs_tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
+    slot_side = -1;
+  } else if (obs_tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
+    slot_side = 1;
+  }
+  Eigen::Vector2d B(obs_tlane.pt_outside);
+  const auto pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
+  const auto obs_length = (channel_length - pt_01_vec.norm()) * 0.5;
+  Eigen::Vector2d A = B - slot_side * pt_01_vec.normalized() * obs_length;
+
+  Eigen::Vector2d C(obs_tlane.pt_lower_boundry_pos);
+  C.y() = B.y();
+
+  Eigen::Vector2d E(obs_tlane.pt_inside);
+  Eigen::Vector2d D(obs_tlane.pt_lower_boundry_pos);
+  D.y() = E.y();
+
+  Eigen::Vector2d F = E + slot_side * pt_01_vec.normalized() * obs_length;
+
+  // add channel obstacle
+  const double pt_01_x = ((ego_slot_info.pt_0 + ego_slot_info.pt_1) * 0.5).x();
+  const double top_x = pt_01_x + channel_width / ego_slot_info.sin_angle;
+  Eigen::Vector2d channel_point_1 =
+      Eigen::Vector2d(top_x, 0.0) -
+      slot_side * pt_01_vec.normalized() * channel_length * 0.5;
+  Eigen::Vector2d channel_point_2 =
+      Eigen::Vector2d(top_x, 0.0) +
+      slot_side * pt_01_vec.normalized() * channel_length * 0.5;
+
+  Eigen::Vector2d channel_point_3;
+  pnc::geometry_lib::LineSegment channel_line;
+  std::vector<pnc::geometry_lib::LineSegment> channel_line_vec;
+  channel_line.SetPoints(channel_point_1, channel_point_2);
+  channel_line_vec.emplace_back(channel_line);
+  channel_point_3 = F;
+  channel_line.SetPoints(channel_point_2, channel_point_3);
+  channel_line_vec.emplace_back(channel_line);
+
+  const double ds = apa_param.GetParam().obstacle_ds;
+  std::vector<Eigen::Vector2d> point_set;
+  std::vector<Eigen::Vector2d> channel_obstacle_vec;
+  channel_obstacle_vec.clear();
+  channel_obstacle_vec.reserve(68);
+  for (const auto &line : channel_line_vec) {
+    pnc::geometry_lib::SamplePointSetInLineSeg(point_set, line, ds);
+    channel_obstacle_vec.insert(channel_obstacle_vec.end(), point_set.begin(),
+                                point_set.end());
+  }
+
+  collision_detector_ptr->SetObstacles(channel_obstacle_vec,
+                                       CollisionDetector::CHANNEL_OBS);
+
+  pnc::geometry_lib::LineSegment tlane_line;
+  std::vector<pnc::geometry_lib::LineSegment> tlane_line_vec;
+  tlane_line.SetPoints(A, B);
+  tlane_line_vec.emplace_back(tlane_line);
+  tlane_line.SetPoints(B, C);
+  tlane_line_vec.emplace_back(tlane_line);
+  tlane_line.SetPoints(C, D);
+  tlane_line_vec.emplace_back(tlane_line);
+  tlane_line.SetPoints(D, E);
+  tlane_line_vec.emplace_back(tlane_line);
+  tlane_line.SetPoints(E, F);
+  tlane_line_vec.emplace_back(tlane_line);
+
+  // tmp method, should modify
+  std::vector<Eigen::Vector2d> tlane_obstacle_vec;
+  tlane_obstacle_vec.clear();
+  tlane_obstacle_vec.reserve(88);
+  for (const auto &line : tlane_line_vec) {
+    pnc::geometry_lib::SamplePointSetInLineSeg(point_set, line, ds);
+    tlane_obstacle_vec.insert(tlane_obstacle_vec.end(), point_set.begin(),
+                              point_set.end());
+  }
+  pnc::geometry_lib::PathPoint ego_pose;
+  ego_pose.Set(frame_.ego_slot_info.ego_pos_slot,
+               frame_.ego_slot_info.ego_heading_slot);
+  double safe_dist = apa_param.GetParam().max_obs2car_dist_out_slot;
+  if (frame_.ego_slot_info.slot_occupied_ratio >
+          apa_param.GetParam().max_obs2car_dist_slot_occupied_ratio &&
+      std::fabs(frame_.ego_slot_info.terminal_err.heading) * 57.3 < 36.6) {
+    safe_dist = apa_param.GetParam().max_obs2car_dist_in_slot;
+  }
+  for (const auto &obs_pos : tlane_obstacle_vec) {
+    if (!collision_detector_ptr->IsObstacleInCar(obs_pos, ego_pose,
+                                                 safe_dist)) {
+      collision_detector_ptr->AddObstacles(obs_pos,
+                                           CollisionDetector::TLANE_OBS);
+    }
+  }
   return true;
 }
 
@@ -674,8 +814,9 @@ bool SlotManagement::UpdateSlotsInSearching() {
       }
 
       // gen T_Lane
-      apa_planner::PerpendicularPathPlanner::Tlane per_t_lane;
-      if (!GenTLane(ego_slot_info, per_t_lane)) {
+      apa_planner::PerpendicularPathPlanner::Tlane slot_tlane;
+      planning::apa_planner::PerpendicularPathPlanner::Tlane obs_tlane;
+      if (!GenTLane(ego_slot_info, slot_tlane, obs_tlane)) {
         slot->set_is_release(false);
         slot->set_is_occupied(true);
         std::cout << "GenTLane slot id = " << slot->id()
@@ -690,12 +831,25 @@ bool SlotManagement::UpdateSlotsInSearching() {
       path_planner_input.sin_angle = ego_slot_info.sin_angle;
       path_planner_input.origin_pt_0_heading =
           ego_slot_info.origin_pt_0_heading;
-      path_planner_input.tlane = per_t_lane;
+      path_planner_input.tlane = slot_tlane;
       path_planner_input.ego_pose.Set(ego_slot_info.ego_pos_slot,
                                       ego_slot_info.ego_heading_slot);
 
+      std::shared_ptr<planning::CollisionDetector> collision_detector_ptr =
+          std::make_shared<planning::CollisionDetector>();
+      if (!GenObstacles(collision_detector_ptr, slot_tlane, obs_tlane,
+                        ego_slot_info)) {
+        slot->set_is_release(false);
+        slot->set_is_occupied(true);
+        std::cout << "GenObstacles slot id = " << slot->id()
+                  << "  slot type = " << slot->slot_type()
+                  << "  is_release = " << slot->is_release() << std::endl;
+        continue;
+      }
+
       apa_planner::PerpendicularPathPlanner path_planner;
       path_planner.SetInput(path_planner_input);
+      path_planner.SetColPtr(collision_detector_ptr);
       if (!path_planner.UpdateByPrePlan()) {
         slot->set_is_release(false);
         slot->set_is_occupied(true);
