@@ -30,7 +30,7 @@ static planning::LocalView local_view;
 static bool last_cilqr_optimization_enable = false;
 
 int Init() {
-  const auto plan_data_ptr = std::make_shared<plan_interface::PlanData>();
+  apa_interface_ptr = new apa_planner::ApaPlanInterface();
   apa_interface_ptr->Init();
 
   perfect_control_ptr = new PerfectControl();
