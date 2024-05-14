@@ -1091,12 +1091,21 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
 
   // lateral path optimization
   bool is_use_optimizer = true;
-  auto distance_approx = (planner_output.path_point_vec.front().pos -
-                          planner_output.path_point_vec.back().pos)
-                             .norm();
-  std::cout << "trajectory_approx_length = " << distance_approx << std::endl;
-  if (distance_approx < 2.0) {
+
+  // refuse optimizer
+  if (planner_output.path_point_vec.size() < 3) {
+    std::cout << " input size is too small" << std::endl;
     is_use_optimizer = false;
+  } else {
+    const auto path_length = (planner_output.path_point_vec.front().pos -
+                              planner_output.path_point_vec.back().pos)
+                                 .norm();
+    if (path_length < apa_param.GetParam().min_opt_path_length) {
+      std::cout << "path length is too short, optimizer is closed "
+                << std::endl;
+
+      is_use_optimizer = false;
+    }
   }
 
   auto cilqr_optimization_enable = false;
@@ -1159,9 +1168,6 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
 
     const auto& optimized_path_vec =
         lateral_path_optimizer_ptr_->GetOutputPathVec();
-
-    std::cout << "optimization path size = " << optimized_path_vec.size()
-              << std::endl;
 
     // TODO: longitudinal path optimization
     current_path_point_global_vec_.clear();

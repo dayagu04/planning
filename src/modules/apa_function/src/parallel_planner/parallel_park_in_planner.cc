@@ -842,13 +842,23 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
 
   // lateral path optimization
   bool is_use_optimizer = true;
-  const auto path_length = (planner_output.path_point_vec.front().pos -
-                            planner_output.path_point_vec.back().pos)
-                               .norm();
-  if (path_length < apa_param.GetParam().min_opt_path_length) {
-    std::cout << "path length is too short, optimizer is closed " << std::endl;
+
+  // refuse optimizer
+  if (planner_output.path_point_vec.size() < 3) {
+    std::cout << " input size is too small" << std::endl;
     is_use_optimizer = false;
+  } else {
+    const auto path_length = (planner_output.path_point_vec.front().pos -
+                              planner_output.path_point_vec.back().pos)
+                                 .norm();
+    if (path_length < apa_param.GetParam().min_opt_path_length) {
+      std::cout << "path length is too short, optimizer is closed "
+                << std::endl;
+
+      is_use_optimizer = false;
+    }
   }
+
   auto cilqr_optimization_enable = false;
   auto parallel_optimization_enable = false;
   if (!is_simulation_) {
