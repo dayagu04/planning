@@ -227,7 +227,6 @@ class LoadCyberbag:
         self.plan_debug_msg['t'].append(t)
         self.plan_debug_msg['abs_t'].append(t)
         self.plan_debug_msg['data'].append(msg)
-
         try:
           json_struct = json.loads(msg.data_json, strict = False)
           json_data = {}
@@ -387,7 +386,6 @@ class LoadCyberbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/system_state/soc_state"):
         soc_state_msg_dict[msg.header.timestamp / 1e6] = msg
       soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
-
       enter_parking_time = None
       for t, msg in soc_state_msg_dict.items():
         self.soc_state_msg['t'].append(t)
@@ -396,9 +394,6 @@ class LoadCyberbag:
         # record the start time of fusi_parking_msg
         if msg.current_state > 1 and enter_parking_time is None:
           enter_parking_time = t
-
-
-
       self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
       max_time = max(max_time, self.soc_state_msg['t'][-1])
       print('soc_state_msg time:',self.soc_state_msg['t'][-1])
@@ -409,8 +404,6 @@ class LoadCyberbag:
 
       if enter_parking_time is not None:
         self.enter_parking_time = enter_parking_time - self.soc_state_msg['abs_t'][0]
-        # print("enter_parking_time ：", self.enter_parking_time)
-
     except:
       self.soc_state_msg['enable'] = False
       print('missing /iflytek/system_state/soc_state !!!')
@@ -1908,7 +1901,7 @@ dluss_post_params={
   "size" : 3,
   "color" : 'orange',
   "legend_label" : 'dluss_post',
-  "visible" : False
+  "visible" : True
 }
 
 dluss_model_params={
@@ -2690,6 +2683,18 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
 
           names.append("path_plan_result")
           datas.append(str(plan_json['pathplan_result']))
+
+          names.append("replan_flag")
+          datas.append(str(plan_json['replan_flag']))
+
+          names.append("replan_time_list")
+          datas.append(str(replan_time_list))
+
+          names.append("correct_path_for_limiter")
+          datas.append(str(plan_json['correct_path_for_limiter']))
+
+          names.append("correct_path_for_limiter_list")
+          datas.append(str(correct_path_for_limiter_time_list))
 
           names.append("terminal_error_x")
           datas.append(str(plan_json['terminal_error_x']))
