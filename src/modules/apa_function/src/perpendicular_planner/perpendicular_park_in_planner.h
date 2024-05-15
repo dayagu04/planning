@@ -54,7 +54,6 @@ class PerpendicularInPlanner : public ApaPlannerBase {
   const bool CheckSegCompleted();
   const bool CheckDynamicUpdate();
   const uint8_t CheckParkingStatus();
-  void UpdateSlotRealtime();
 
   void InitSimulation();
   void PrepareSimulation();

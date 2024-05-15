@@ -8,6 +8,7 @@
 #include <memory>
 #include <queue>
 #include <utility>
+#include <vector>
 
 #include "Eigen/Core"
 #include "apa_param_setting.h"
@@ -288,14 +289,20 @@ bool SlotManagement::GenTLane(
                       decltype(lambda_func_3)>
       right_que_for_x(lambda_func_3);
 
-  const double x_max = ((ego_slot_info.pt_0 + ego_slot_info.pt_1) * 0.5).x() +
-                       apa_param.GetParam().obs_consider_long_threshold /
-                           ego_slot_info.sin_angle;
+  const Eigen::Vector2d pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
+  const Eigen::Vector2d pt_10_vec = ego_slot_info.pt_0 - ego_slot_info.pt_1;
+  const Eigen::Vector2d pt_01_norm_up_vec(pt_01_vec.y(), -pt_01_vec.x());
+  const Eigen::Vector2d pt_01_norm_down_vec(-pt_01_vec.y(), pt_01_vec.x());
+
+  const double x_max =
+      ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5 +
+       apa_param.GetParam().obs_consider_long_threshold * pt_01_norm_up_vec)
+          .x();
 
   const double y_max =
-      ((ego_slot_info.slot_width / ego_slot_info.sin_angle) * 0.5 +
-       apa_param.GetParam().obs_consider_lat_threshold) *
-      ego_slot_info.sin_angle;
+      std::fabs((ego_slot_info.pt_1 +
+                 apa_param.GetParam().obs_consider_lat_threshold * pt_01_vec)
+                    .y());
 
   // sift obstacles that meet requirement
   for (const auto &obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
@@ -320,19 +327,16 @@ bool SlotManagement::GenTLane(
 
   // If there are no obstacles on either side, set up a virtual obstacle that is
   // farther away
-  const Eigen::Vector2d pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
-  const Eigen::Vector2d pt_01_norm_vec(-pt_01_vec.y(), pt_01_vec.x());
-
   const double virtual_x =
-      ((ego_slot_info.pt_1 + ego_slot_info.pt_0) / 2.0 +
-       apa_param.GetParam().virtual_obs_x_pos * pt_01_norm_vec)
+      ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5 +
+       apa_param.GetParam().virtual_obs_x_pos * pt_01_norm_down_vec)
           .x();
 
   const double virtual_left_y =
       (ego_slot_info.pt_1 + apa_param.GetParam().virtual_obs_y_pos * pt_01_vec)
           .y();
   const double virtual_right_y =
-      (ego_slot_info.pt_0 - apa_param.GetParam().virtual_obs_y_pos * pt_01_vec)
+      (ego_slot_info.pt_0 + apa_param.GetParam().virtual_obs_y_pos * pt_10_vec)
           .y();
 
   if (left_que_for_x.empty()) {
@@ -712,10 +716,12 @@ const bool SlotManagement::AddUssPerceptObstacles(
 bool SlotManagement::UpdateSlotsInSearching() {
   std::cout << "apa state is in searching!\n";
   // Update slots
+  std::vector<size_t> fusion_slot_id_vec;
   for (size_t i = 0;
        i < frame_.parking_slot_ptr->parking_fusion_slot_lists_size(); ++i) {
     const auto &fusion_slot =
         frame_.parking_slot_ptr->parking_fusion_slot_lists(i);
+    fusion_slot_id_vec.emplace_back(fusion_slot.id());
     common::SlotInfo slot_info;
     if (!ProcessRawSlot(fusion_slot, slot_info)) {
       continue;
@@ -761,6 +767,13 @@ bool SlotManagement::UpdateSlotsInSearching() {
     // ModifySlot2Rectangle(slot_info);
     // *slot = slot_info;
     *slot = frame_.slot_info_window_vec[j].GetFusedInfo();
+
+    if (std::find(fusion_slot_id_vec.begin(), fusion_slot_id_vec.end(),
+                  slot->id()) == fusion_slot_id_vec.end()) {
+      slot->set_is_release(false);
+      slot->set_is_occupied(true);
+      continue;
+    }
 
     if (!apa_param.GetParam().release_slot_by_prepare) {
       continue;

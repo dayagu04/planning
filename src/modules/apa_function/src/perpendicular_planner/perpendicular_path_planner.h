@@ -126,6 +126,8 @@ class PerpendicularPathPlanner {
     bool stuck_by_inside = false;
     bool multi_plan = false;
 
+    double turn_radius = 5.5;
+
     pnc::geometry_lib::LineSegment target_line;
 
     pnc::geometry_lib::Circle mono_safe_circle;
@@ -148,6 +150,8 @@ class PerpendicularPathPlanner {
     void Reset() {
       is_left_side = true;
       slot_side_sgn = 1.0;
+
+      turn_radius = 5.5;
 
       should_prepare_second = false;
       should_prepare_third = false;
@@ -242,16 +246,7 @@ class PerpendicularPathPlanner {
                              const double &heading_offset,
                              const double &radius);
 
-  const bool PreparePlanV2();
-  const bool PreparePlanOnceV2(const double x_offset,
-                               const double heading_offset);
-  const bool PreparePlanAdjust(
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const uint8_t current_gear);
-
   const bool PreparePlanSecond();
-
-  const bool PreparePlanThird();
 
   const bool GenPathOutputByDubins();
   const bool MonoPreparePlan(Eigen::Vector2d &tag_point);
@@ -303,8 +298,8 @@ class PerpendicularPathPlanner {
   const bool CalSinglePathInAdjust(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const pnc::geometry_lib::PathPoint &current_pose,
-      const uint8_t current_gear, const double steer_change_ratio,
-      const double steer_change_radius);
+      const uint8_t& current_gear, const double& steer_change_ratio,
+      const double& steer_change_radius, const size_t& i);
 
   const bool OneArcPlan(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,

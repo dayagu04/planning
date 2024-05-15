@@ -487,11 +487,11 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().dynamic_col_det_enable, bool,
                   "dynamic_col_det_enable");
 
-  JSON_READ_VALUE(apa_param.SetPram().car_lat_inflation_for_trim_path, double,
-                  "car_lat_inflation_for_trim_path");
+  JSON_READ_VALUE(apa_param.SetPram().car_lat_inflation_for_obs_radical, double,
+                  "car_lat_inflation_for_obs_radical");
 
-  JSON_READ_VALUE(apa_param.SetPram().safe_dist_for_trim_path, double,
-                  "safe_dist_for_trim_path");
+  JSON_READ_VALUE(apa_param.SetPram().col_obs_safe_dist_radical, double,
+                  "col_obs_safe_dist_radical");
 
   // dynamic update path params
   JSON_READ_VALUE(apa_param.SetPram().car_to_limiter_dis, double,
