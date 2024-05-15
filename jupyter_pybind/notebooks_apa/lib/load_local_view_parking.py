@@ -1110,95 +1110,6 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
     uss_car_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_car_index']
     uss_car_index = int(uss_car_index)
 
-  # load uss wave
-  if bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True:
-    #get cur pose and uss wave
-    upa_dis_info_bufs = bag_loader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
-
-    sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
-
-    text_x, text_y = [], []
-    # rs_text = []
-    uss_x, uss_y = load_car_uss_patch()
-    uss_angle = load_uss_angle_patch()
-    wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
-    m = 0
-    for i in range(2):
-      for j in wdis_index[i]:
-          rs0 = ''
-          rs1 = ''
-          if upa_dis_info_bufs[i].wdis[j].wdis_value[0] <= 10 and upa_dis_info_bufs[i].wdis[j].wdis_value[0] != 0:
-              rs1 = round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2)
-              # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
-              rs0 = '{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2))
-              ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
-              uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
-              uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
-              x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
-          elif upa_dis_info_bufs[i].wdis[j].wdis_value[0] == 0 or upa_dis_info_bufs[i].wdis[j].wdis_value[0] > 10:
-              ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
-              x_text, y_text = 0, 0
-          text_x.append(x_text)
-          text_y.append(y_text)
-          sector_x.append(ego_local_x)
-          sector_y.append(ego_local_y)
-          # print("rs1:",rs1)
-          rs.append(rs1)
-          # print("rs size:",len(rs))
-          length.append(rs0)
-          start_angle.append(uss_angle_start)
-          end_angle.append(uss_angle_end)
-          m += 1
-    local_view_data['data_wave'].data.update({
-      'wave_x':sector_y,
-      'wave_y':sector_x,
-      'radius':rs,
-      'start_angle':start_angle,
-      'end_angle':end_angle,
-    })
-    local_view_data['data_wave_length_text'].data.update({
-      'wave_text_x':text_y,
-      'wave_text_y':text_x,
-      'length':length,
-    })
-
-    if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
-      local_view_data['data_wave_min'].data.update({
-        'wave_x':[sector_y[uss_index]],
-        'wave_y':[sector_x[uss_index]],
-        'radius':[rs[uss_index]],
-        'start_angle':[start_angle[uss_index]],
-        'end_angle':[end_angle[uss_index]],
-      })
-    else:
-      local_view_data['data_wave_min'].data.update({
-        'wave_x':[],
-        'wave_y':[],
-        'radius':[],
-        'start_angle':[],
-        'end_angle':[],
-      })
-
-    if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
-      local_view_data['data_wave_min'].data.update({
-        'wave_x':[sector_y[uss_index]],
-        'wave_y':[sector_x[uss_index]],
-        'radius':[rs[uss_index]],
-        'start_angle':[start_angle[uss_index]],
-        'end_angle':[end_angle[uss_index]],
-      })
-    else:
-      local_view_data['data_wave_min'].data.update({
-        'wave_x':[],
-        'wave_y':[],
-        'radius':[],
-        'start_angle':[],
-        'end_angle':[],
-      })
-
   if plot_ctrl_flag == True:
     names = []
     datas = []
@@ -1354,10 +1265,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
     })
 
   if bag_loader.uss_percept_msg['enable'] == True:
-    model_x = []
-    model_y = []
-    post_x = []
-    post_y = []
+    model_x, model_y = [], []
+    post_x, post_y = [], []
+    parking_slot_x, parking_slot_y = [], []
     for i in range(len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori)):
       for j in range(len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt)):
         x = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt[j].x
@@ -1376,6 +1286,87 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       'obj_pt_x': model_x,
       'obj_pt_y': model_y,
     })
+
+    if len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots) != 0:
+      for parking_slot in bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots:
+        for corner_index in [0,3,2,1]:
+          parking_slot_x.append(parking_slot.corner_point[corner_index].x)
+          parking_slot_y.append(parking_slot.corner_point[corner_index].y)
+    local_view_data['data_spatial_parking_slot'].data.update({
+      'corner_point_x': [parking_slot_x],
+      'corner_point_y': [parking_slot_y],
+    })
+    # load uss wave
+    #get cur pose and uss wave
+    uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[4]
+    print(uss_dis_info.dis_from_car_to_obj[1])
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+
+    sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
+
+    text_x, text_y = [], []
+    # rs_text = []
+    uss_x, uss_y = load_car_uss_patch()
+    uss_angle = load_uss_angle_patch()
+    wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
+    m = 0
+    for i in range(2):
+      for j in wdis_index[i]:
+          rs0 = ''
+          rs1 = ''
+          if uss_dis_info.dis_from_car_to_obj[j] * 0.001 <= 10 and uss_dis_info.dis_from_car_to_obj[i] * 0.001 != 0:
+              rs1 = round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2)
+              # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
+              rs0 = '{:.2f}'.format(round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2))
+              ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
+              uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
+              uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
+              x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
+          elif uss_dis_info.dis_from_car_to_obj[j] * 0.001 == 0 or uss_dis_info.dis_from_car_to_obj[j] * 0.001 > 10:
+              ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
+              x_text, y_text = 0, 0
+          text_x.append(x_text)
+          text_y.append(y_text)
+          sector_x.append(ego_local_x)
+          sector_y.append(ego_local_y)
+          # print("rs1:",rs1)
+          rs.append(rs1)
+          # print("rs size:",len(rs))
+          length.append(rs0)
+          start_angle.append(uss_angle_start)
+          end_angle.append(uss_angle_end)
+          m += 1
+    local_view_data['data_wave'].data.update({
+      'wave_x':sector_y,
+      'wave_y':sector_x,
+      'radius':rs,
+      'start_angle':start_angle,
+      'end_angle':end_angle,
+    })
+    local_view_data['data_wave_length_text'].data.update({
+      'wave_text_x':text_y,
+      'wave_text_y':text_x,
+      'length':length,
+    })
+
+    if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[sector_y[uss_index]],
+        'wave_y':[sector_x[uss_index]],
+        'radius':[rs[uss_index]],
+        'start_angle':[start_angle[uss_index]],
+        'end_angle':[end_angle[uss_index]],
+      })
+    else:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[],
+        'wave_y':[],
+        'radius':[],
+        'start_angle':[],
+        'end_angle':[],
+      })
 
   return local_view_data
 
@@ -1419,6 +1410,7 @@ def load_local_view_figure_parking():
 
   data_dluss_model = ColumnDataSource(data = {'obj_pt_y':[], 'obj_pt_x':[]})
   data_dluss_post = ColumnDataSource(data = {'obj_pt_y':[], 'obj_pt_x':[]})
+  data_spatial_parking_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
                 'fus_msg_idx': 0,
@@ -1462,6 +1454,7 @@ def load_local_view_figure_parking():
                      'data_car_target_line':data_car_target_line,\
                      'data_dluss_model':data_dluss_model,\
                      'data_dluss_post':data_dluss_post,\
+                     'data_spatial_parking_slot':data_spatial_parking_slot,\
                      }
   ### figures config
 
@@ -1499,9 +1492,11 @@ def load_local_view_figure_parking():
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_all_managed_slot, line_width = 2, line_color = 'blue', line_dash = 'solid',legend_label = 'all managed slot', visible = False)
   fig1.line('limiter_point_y', 'limiter_point_x', source = data_all_managed_limiter, line_width = 3, line_color = 'blue', line_dash = 'solid', legend_label = 'managed limiter')
   fig1.patches('occupied_slot_y', 'occupied_slot_x', source = data_all_managed_occupied_slot, fill_color = "blue", line_color = "blue", line_width = 1, fill_alpha = 0.15, legend_label = 'all managed slot', visible = False)
+
   # dluss
   fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_post, size=3, color='orange', legend_label = 'dluss_post', visible = True)
   fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_model, size=3, color='blue', legend_label = 'dluss_model', visible = False)
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_spatial_parking_slot, line_width = 2, line_color = 'orange', line_dash = 'solid',legend_label = 'spatial pariking slot', visible = False)
 
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
