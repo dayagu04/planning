@@ -129,6 +129,9 @@ void LateralPathOptimizer::AssembleInput(
     planning_input_.mutable_ref_theta_vec()->Set(i, theta_s_spline_(s_ilqr));
     planning_input_.mutable_ref_x_vec()->Set(i, x_s_spline_(s_ilqr));
     planning_input_.mutable_ref_y_vec()->Set(i, y_s_spline_(s_ilqr));
+    planning_input_.mutable_ref_k_vec()->Set(
+        i, pnc::mathlib::Limit(theta_s_spline_.deriv(1, s_ilqr), k_max));
+        
     planning_input_.mutable_k_max_vec()->Set(i, k_max);
     planning_input_.mutable_k_min_vec()->Set(i, k_min);
     planning_input_.mutable_u_max_vec()->Set(i, u_max);
@@ -252,6 +255,11 @@ void LateralPathOptimizer::PostProcessOutput() {
 void LateralPathOptimizer::Update(
     const std::vector<pnc::geometry_lib::PathPoint> &path_vec,
     const uint8_t gear_cmd) {
+  // fail protection if path_vec is empty
+  if (path_vec.size() < 3) {
+    std::cout << "optimizer input size is too small" << std::endl;
+    return;
+  }
   // assemble input
   AssembleInput(path_vec);
 

@@ -169,43 +169,45 @@ uint8_t LateralPathOptimizerProblem::Update(
 
   const auto get_solver_config = ilqr_core_ptr_->GetSolverConfigPtr();
 
-  ilqr_solver::ControlVec u_vec;
-
-  u_vec.resize(get_solver_config->horizon + 1);
-
-  for (size_t i = 0; i < u_vec.size(); i++) {
-    ilqr_solver::Control u;
-    u.resize(1);
-    u[0] = planning_input.control_vec(i);
-    u_vec[i] = u;
-  }
-
   // fail protection
   if (solver_condition >= iLqr::BACKWARD_PASS_FAIL) {
-    ilqr_core_ptr_->Simulation(init_state_, u_vec);
-  }
+    double s = 0.0;
+    for (size_t i = 0; i < N; i++) {
+      planning_output_.mutable_s_vec()->Set(i, s);
+      s += ds;
+      planning_output_.mutable_x_vec()->Set(i, planning_input.ref_x_vec(i));
+      planning_output_.mutable_y_vec()->Set(i, planning_input.ref_y_vec(i));
 
-  // assemble planning result
-  const auto &state_result = ilqr_core_ptr_->GetStateResultPtr();
-  const auto &control_result = ilqr_core_ptr_->GetControlResultPtr();
+      planning_output_.mutable_theta_vec()->Set(
+          i, planning_input.ref_theta_vec(i));
 
-  double s = 0.0;
-  for (size_t i = 0; i < N; i++) {
-    planning_output_.mutable_s_vec()->Set(i, s);
-    s += ds;
-    planning_output_.mutable_x_vec()->Set(i, state_result->at(i)[StateId::X]);
-    planning_output_.mutable_y_vec()->Set(i, state_result->at(i)[StateId::Y]);
+      planning_output_.mutable_k_vec()->Set(i, planning_input.ref_k_vec(i));
 
-    planning_output_.mutable_theta_vec()->Set(
-        i, state_result->at(i)[StateId::THETA]);
+      planning_output_.mutable_u_vec()->Set(i, planning_input.control_vec(i));
+    }
+  } else {
+    // assemble planning result
+    const auto &state_result = ilqr_core_ptr_->GetStateResultPtr();
+    const auto &control_result = ilqr_core_ptr_->GetControlResultPtr();
 
-    planning_output_.mutable_k_vec()->Set(i, state_result->at(i)[StateId::K]);
+    double s = 0.0;
+    for (size_t i = 0; i < N; i++) {
+      planning_output_.mutable_s_vec()->Set(i, s);
+      s += ds;
+      planning_output_.mutable_x_vec()->Set(i, state_result->at(i)[StateId::X]);
+      planning_output_.mutable_y_vec()->Set(i, state_result->at(i)[StateId::Y]);
 
-    if (i < N - 1) {
-      planning_output_.mutable_u_vec()->Set(
-          i, control_result->at(i)[ControlId::U]);
-    } else {
-      planning_output_.mutable_u_vec()->Set(i, planning_output_.u_vec(i - 1));
+      planning_output_.mutable_theta_vec()->Set(
+          i, state_result->at(i)[StateId::THETA]);
+
+      planning_output_.mutable_k_vec()->Set(i, state_result->at(i)[StateId::K]);
+
+      if (i < N - 1) {
+        planning_output_.mutable_u_vec()->Set(
+            i, control_result->at(i)[ControlId::U]);
+      } else {
+        planning_output_.mutable_u_vec()->Set(i, planning_output_.u_vec(i - 1));
+      }
     }
   }
   // load solver and iteration info
