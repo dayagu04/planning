@@ -48,7 +48,7 @@
   "finish_parallel_lat_rac_err": 0.35,
   "finish_parallel_lon_err": 0.4,
   "finish_parallel_heading_err": 1.66,
-  "finish_parallel_rear_stop_buffer": 0.55,
+  "finish_parallel_rear_stop_buffer": 0.45,
 
   "comment_6": "check fail params",
   "stuck_failed_time": 12.0,
