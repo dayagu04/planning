@@ -157,7 +157,7 @@ void OvertakeRequest::Update(int lc_status) {
   enable_l_ = llane && left_reference_path_;
   enable_r_ = rlane && right_reference_path_;
   const bool is_lane_changing =
-      lc_status == ROAD_LC_LCHANGE || lc_status == ROAD_LC_RCHANGE;
+      lc_status == kLaneChangeExecution || lc_status == kLaneChangeComplete;
 
   if (enable_l_) {
     bool left_valid =
@@ -385,8 +385,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     }
     if (!IsDashEnoughForRepeatSegments(LEFT_CHANGE, clane) &&
         curr_direct_exist && request_type_ != NO_CHANGE &&
-        (lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT ||
-         (lc_status == ROAD_LC_LBACK &&
+        (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
+         (lc_status == kLaneChangeCancel &&
           (lane_change_lane_mgr_->has_origin_lane() &&
            lane_change_lane_mgr_->is_ego_on(olane))))) {
       Finish();
@@ -411,8 +411,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     }
     if (!IsDashEnoughForRepeatSegments(RIGHT_CHANGE, clane) &&
         curr_direct_exist && request_type_ != NO_CHANGE &&
-        (lc_status == ROAD_NONE || lc_status == ROAD_LC_RWAIT ||
-         (lc_status == ROAD_LC_RBACK &&
+        (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
+         (lc_status == kLaneChangeCancel  &&
           (lane_change_lane_mgr_->has_origin_lane() &&
            lane_change_lane_mgr_->is_ego_on(olane))))) {
       Finish();
@@ -1474,7 +1474,7 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
       }
     }
 
-    if (((lc_state == ROAD_LC_LWAIT || lc_state == ROAD_LC_RWAIT) &&
+    if (((lc_state == kLaneChangePropose) &&
          ((request_type_ == LEFT_CHANGE &&
            leading_vehicle_lateral_speed >
                kCancelOverTakeLnChgLeadVehLatSpdThold &&
@@ -1485,7 +1485,7 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
                kCancelOverTakeLnChgLeadVehLatSpdThold &&
            leading_vehicle_lateral_dis <=
                -kCancelOverTakeLnChgLeadVehLatDstThold))) ||
-        (((lc_state == ROAD_LC_LCHANGE || lc_state == ROAD_LC_RCHANGE) &&
+        (((lc_state == kLaneChangeExecution || lc_state == kLaneChangeComplete) &&
           front_leading_vehivle_long_distance >
               kCancelOverTakeLnChgFrtLeadVehLonDst) &&
          ((request_type_ == LEFT_CHANGE &&

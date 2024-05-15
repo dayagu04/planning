@@ -96,7 +96,7 @@ bool LateralOffsetCalculatorV2::update(
     const std::array<AvoidObstacleInfo, 2> &avd_obstacle,
     const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacle) {
   last_avoid_info_ = avoid_info_;
-  if (status >= ROAD_NONE && status <= ROAD_LC_RBACK) {
+  if (status >= kLaneKeeping && status <= kLaneChangeHold) {
     UpdateAvoidPath(status, flag_avd, accident_ahead, should_premove,
                     dist_rblane, avd_obstacle, avd_sp_obstacle);
   } else {

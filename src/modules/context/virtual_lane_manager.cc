@@ -636,9 +636,9 @@ void VirtualLaneManager::UpdateLaneVirtualId() {
   double target_lane_maping_diff_total = std::numeric_limits<double>::max();
   double origin_lane_maping_diff_total = std::numeric_limits<double>::max();
   double current_relative_id_lane_mapping_cost = 10.0;
-
-  if ((lc_request == LEFT_CHANGE || lc_request == RIGHT_CHANGE) &&
-      (lc_state != ROAD_NONE)) {
+  bool is_LC_CHANGE = ((coarse_planning_info.target_state == kLaneChangeExecution) || 
+                        (coarse_planning_info.target_state == kLaneChangeComplete));
+  if (is_LC_CHANGE && (lc_state != kLaneKeeping)) {
     for (const auto& relative_id_lane : relative_id_lanes_) {
       if (relative_id_lane != nullptr) {
         current_relative_id_lane_mapping_cost = ComputeLanesMatchlaterakDisCost(
@@ -1979,7 +1979,7 @@ void VirtualLaneManager::TrackEgoLane() {
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto& lane_change_status = lane_change_decider_output.curr_state;
-  const bool lane_keep_status = lane_change_status == ROAD_NONE;
+  const bool lane_keep_status = lane_change_status == kLaneKeeping;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const auto& function_info = session_->environmental_model().function_info();
@@ -2185,12 +2185,12 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
   min_s = std::fmax(kMinCostLength, min_s);
 
   const auto& lane_change_status = lane_change_decider_output.curr_state;
-  bool is_lane_change = (lane_change_status == ROAD_LC_LCHANGE ||
-                         lane_change_status == ROAD_LC_RCHANGE ||
-                         lane_change_status == ROAD_LC_LBACK ||
-                         lane_change_status == ROAD_LC_RBACK);
-  bool is_lane_change_execution = (lane_change_status == ROAD_LC_LCHANGE ||
-                                   lane_change_status == ROAD_LC_RCHANGE);
+  const auto coarse_planning_info = session_->planning_context().lane_change_decider_output().coarse_planning_info;
+  bool is_LC_CHANGE = ((coarse_planning_info.target_state == kLaneChangeExecution) || 
+                        (coarse_planning_info.target_state == kLaneChangeComplete));
+  bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
+  bool is_lane_change = (is_LC_CHANGE || is_LC_BACK);
+  bool is_lane_change_execution = (coarse_planning_info.target_state == kLaneChangeExecution);
   const double k_init_pos_cost_weight =
       is_lane_change_execution
           ? kLaneChangeExecutionWeightRatio * kInitPosCostWeight

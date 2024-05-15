@@ -11,6 +11,7 @@
 #include "adas_function/adaptive_cruise_control.h"
 #include "adas_function/mrc_condition.h"
 #include "adas_function/start_stop_enable.h"
+#include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
@@ -606,8 +607,12 @@ const double GeneralLongitudinalDecider::compute_max_lat_acceleration() const {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  auto lc_acc_decay = ((coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
-                        coarse_planning_info.target_state == ROAD_LC_RCHANGE) &&
+  const auto& lane_change_decider_output = session_->planning_context().lane_change_decider_output();
+  const auto state = coarse_planning_info.target_state;
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  bool is_LC_LCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == RIGHT_CHANGE);
+  auto lc_acc_decay = ((is_LC_LCHANGE ||is_LC_RCHANGE) &&
                        ego_velocity < kUrbanVelocityThld)
                           ? kLowSpeedLaneChangeAccBuff
                           : 0.0;
@@ -1198,8 +1203,13 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  bool keep_stop = (coarse_planning_info.target_state != ROAD_LC_LCHANGE &&
-                    coarse_planning_info.target_state != ROAD_LC_RCHANGE) &&
+  const auto& lane_change_decider_output = session_->planning_context().lane_change_decider_output();
+  const auto state = coarse_planning_info.target_state;
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  bool is_LC_LCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == RIGHT_CHANGE);
+  
+  bool keep_stop = (!is_LC_LCHANGE && !is_LC_RCHANGE) &&
                    is_CIPV && ini_ds > 0.0 && ini_ds < kDisToCIPVThreshold &&
                    ego_velocity < kLowSpeedThreshold && too_close_to_nudge;
   lon_yield_info_.keep_stop = keep_stop || lon_yield_info_.keep_stop;
@@ -1393,8 +1403,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_outer_decision(
                                        .coarse_planning_info.reference_path;
   // Step 1) wait speed
   if (b_enable_lane_wait_adjust_speed &&
-      (coarse_planning_info.target_state == ROAD_LC_LWAIT ||
-       coarse_planning_info.target_state == ROAD_LC_RWAIT)) {
+      (coarse_planning_info.target_state == kLaneChangePropose)) {
     auto overtake_obstacle_id = -1;
     auto yield_obstacle_id = -1;
     if (not coarse_planning_info.overtake_obstacles.empty()) {
@@ -1533,7 +1542,7 @@ void GeneralLongitudinalDecider::construct_refpath_points(
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  if (coarse_planning_info.target_state != ROAD_NONE) {
+  if (coarse_planning_info.target_state != kLaneKeeping) {
     for (auto &pt : refpath_points) {
       pt.distance_to_left_lane_border = 10;
       pt.distance_to_right_lane_border = 10;

@@ -238,7 +238,8 @@ class GapSelectorDecider : public Task {
   std::shared_ptr<KDPath> base_frenet_coord_;
   std::shared_ptr<AgentNodeManager> agent_node_mgr_;
 
-  ScenarioStateEnum last_target_state_{ROAD_NONE};
+  // ScenarioStateEnum last_target_state_{ROAD_NONE};
+  StateMachineLaneChangeStatus last_target_state_{kLaneKeeping};
   double lc_timer_{0.};
   Point2D frenet_init_point_;
   bool use_ego_v_{false};

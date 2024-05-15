@@ -1,4 +1,5 @@
 #include "avoid_obstacle_maintainer.h"
+#include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
@@ -338,7 +339,7 @@ bool AvoidObstacleMaintainer::Process(planning::framework::Session *session) {
 
   TrackedObject *lead_one = lateral_obstacle->leadone();
 
-  if (state == ROAD_NONE && intersection_cnt_ != 0) {
+  if (state == kLaneKeeping && intersection_cnt_ != 0) {
     intersection_cnt_ = 0;
   }
 
@@ -679,14 +680,14 @@ bool AvoidObstacleMaintainer::Process(planning::framework::Session *session) {
         }
       }
     }
-
-    if ((state == INTER_TR_NONE || state == INTER_TL_NONE) &&
-        intersection_cnt_ == 0) {
-      avd_cars.clear();
-      avd_car_past_[0].clear();
-      avd_car_past_[1].clear();
-      intersection_cnt_ = 1;
-    }
+    // fengwang31:新状态机中没有这几个状态，暂时注掉这部分代码
+    // if ((state == INTER_TR_NONE || state == INTER_TL_NONE) &&
+    //     intersection_cnt_ == 0) {
+    //   avd_cars.clear();
+    //   avd_car_past_[0].clear();
+    //   avd_car_past_[1].clear();
+    //   intersection_cnt_ = 1;
+    // }
 
     if (avd_cars.size() == 2) {
       if ((avd_car_past_[0].size() > 0 &&

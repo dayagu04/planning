@@ -335,7 +335,7 @@ void LateralMotionPlanner::AssembleInput() {
     const auto target_state = session_->planning_context()
                                   .lane_change_decider_output()
                                   .coarse_planning_info.target_state;
-    if (target_state == ROAD_LC_RBACK || target_state == ROAD_LC_LBACK) {
+    if (target_state == kLaneChangeCancel) {
       planning_weight_ptr_->SetLCBackFlag(true);
     }
     planning_weight_ptr_->SetLateralMotionWeight(

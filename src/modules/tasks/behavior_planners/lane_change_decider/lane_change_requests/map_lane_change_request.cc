@@ -112,13 +112,11 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
                             : 0;
   JSON_DEBUG_VALUE("lc_map_decision", lc_map_decision);
 
-  bool allow_cancel = (lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT ||
-                       lc_status == ROAD_LC_RWAIT);
+  bool allow_cancel = (lc_status == kLaneChangePropose || lc_status == kLaneKeeping );
 
   bool allow_generate =
-      ((lc_status == ROAD_LC_LBACK || lc_status == ROAD_LC_RBACK) ||
-       lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT ||
-       lc_status == ROAD_LC_RWAIT);
+      ((lc_status == kLaneChangePropose || lc_status == kLaneChangeHold) ||
+       lc_status == kLaneKeeping );
 
   auto& ego_state = session_->environmental_model().get_ego_state_manager();
   double v_ego = ego_state->ego_v();
@@ -186,8 +184,8 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
 
         if (!IsDashEnoughForRepeatSegments(RIGHT_CHANGE, current_lane) &&
             request_type_ != NO_CHANGE &&
-            (lc_status == ROAD_NONE || lc_status == ROAD_LC_RWAIT ||
-             (lc_status == ROAD_LC_RBACK &&
+            (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
+             (lc_status == kLaneChangeCancel &&
               (lane_change_lane_mgr_->has_origin_lane() &&
                lane_change_lane_mgr_->is_ego_on(olane)))) &&
             virtual_lane_mgr_->dis_to_ramp() >
