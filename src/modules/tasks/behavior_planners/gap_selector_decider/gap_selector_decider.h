@@ -240,6 +240,7 @@ class GapSelectorDecider : public Task {
   double lc_timer_{0.};
   Point2D frenet_init_point_;
   bool use_ego_v_{false};
+  bool use_ego_point_{false};
   double lc_total_time_{6.0};
 };
 

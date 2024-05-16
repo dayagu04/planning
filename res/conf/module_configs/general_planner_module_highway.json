@@ -323,6 +323,7 @@
     "default_lc_time": 6.0,
     "collision_check_length_threshold":3.5,
     "lc_premove_time":0.1,
-    "near_car_ttc": 0.3
+    "near_car_ttc": 0.3,
+    "use_ego_v": false
   }
 }

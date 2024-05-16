@@ -336,6 +336,9 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
                                          .coarse_planning_info;
   const std::shared_ptr<EgoStateManager> ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
+  if (config_.use_ego_v) {
+    use_ego_v_ = true;
+  }
   auto ego_v =
       use_ego_v_ ? ego_state_mgr->ego_v() : ego_state_mgr->ego_v_cruise();
 

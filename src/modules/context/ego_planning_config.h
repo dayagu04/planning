@@ -315,12 +315,15 @@ struct GapSelectorConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"gap_selector", "lc_premove_time"});
     near_car_ttc = read_json_keys<double>(
         json, std::vector<std::string>{"gap_selector", "near_car_ttc"});
+    use_ego_v = read_json_keys<bool>(
+        json, std::vector<std::string>{"gap_selector", "use_ego_v"});
   }
 
   double default_lc_time = 6.0;
   double collision_check_length_threshold = 2.2;
   double lc_premove_time = 1.5;
   double near_car_ttc = 0.2;
+  bool use_ego_v = false;
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
