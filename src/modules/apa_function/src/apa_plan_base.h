@@ -33,7 +33,6 @@ class ApaPlannerBase {
     bool force_plan = false;
     bool is_path_optimization = false;
     bool is_cilqr_optimization = false;
-    bool last_cilqr_optimization_enable = false;
     bool is_reset = false;
     double sample_ds = 0.02;
     std::vector<double> target_managed_slot_x_vec;

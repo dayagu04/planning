@@ -1103,13 +1103,12 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
     if (path_length < apa_param.GetParam().min_opt_path_length) {
       std::cout << "path length is too short, optimizer is closed "
                 << std::endl;
-
       is_use_optimizer = false;
     }
   }
 
-  auto cilqr_optimization_enable = false;
-  auto perpendicular_optimization_enable = false;
+  bool cilqr_optimization_enable = true;
+  bool perpendicular_optimization_enable = true;
 
   if (!is_simulation_) {
     perpendicular_optimization_enable =
@@ -1121,10 +1120,6 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
   } else {
     perpendicular_optimization_enable = simu_param_.is_path_optimization;
     cilqr_optimization_enable = simu_param_.is_cilqr_optimization;
-    if (simu_param_.last_cilqr_optimization_enable !=
-        cilqr_optimization_enable) {
-      update_optimizer_ptr_enable = true;
-    }
   }
 
   double lat_path_opt_cost_time_ms = 0.0;
@@ -1148,27 +1143,17 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
     param.q_k_bound = simu_param_.q_k_bound;
     param.q_u_bound = simu_param_.q_u_bound;
 
-    if ((!is_simulation_) && (!update_optimizer_ptr_enable) &&
-        cilqr_optimization_enable) {
-      lateral_path_optimizer_ptr_->Init(cilqr_optimization_enable);
-      update_optimizer_ptr_enable = true;
-    }
-
-    if ((is_simulation_) && update_optimizer_ptr_enable) {
-      lateral_path_optimizer_ptr_->Init(cilqr_optimization_enable);
-    }
-
+    lateral_path_optimizer_ptr_->Init(cilqr_optimization_enable);
     lateral_path_optimizer_ptr_->SetParam(param);
-
     auto time_start = IflyTime::Now_ms();
     lateral_path_optimizer_ptr_->Update(planner_output.path_point_vec,
                                         gear_command_);
+
     auto time_end = IflyTime::Now_ms();
     lat_path_opt_cost_time_ms = time_end - time_start;
 
     const auto& optimized_path_vec =
         lateral_path_optimizer_ptr_->GetOutputPathVec();
-
     // TODO: longitudinal path optimization
     current_path_point_global_vec_.clear();
     current_path_point_global_vec_.reserve(optimized_path_vec.size());
@@ -1205,6 +1190,7 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
     }
   }
 
+  JSON_DEBUG_VALUE("cilqr_optimization_enable", cilqr_optimization_enable);
   JSON_DEBUG_VALUE("lat_path_opt_cost_time_ms", lat_path_opt_cost_time_ms);
 
   std::cout << "current_path_point_global_vec_.size() = "

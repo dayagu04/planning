@@ -27,8 +27,6 @@ static PerfectControl *perfect_control_ptr;
 
 static planning::LocalView local_view;
 
-static bool last_cilqr_optimization_enable = false;
-
 int Init() {
   apa_interface_ptr = new apa_planner::ApaPlanInterface();
   apa_interface_ptr->Init();
@@ -137,7 +135,7 @@ const bool InterfaceUpdateParam(
   param.force_plan = force_plan;
   param.is_path_optimization = is_path_optimization;
   param.is_cilqr_optimization = is_cilqr_optimization;
-  param.last_cilqr_optimization_enable = last_cilqr_optimization_enable;
+
   param.q_ref_xy = q_ref_xy;
   param.q_terminal_xy = q_terminal_xy;
   param.q_terminal_theta = q_terminal_theta;
@@ -151,7 +149,6 @@ const bool InterfaceUpdateParam(
   for (const auto &planner : apa_planner_stack) {
     planner->SetSimuParam(param);
   }
-  last_cilqr_optimization_enable = is_cilqr_optimization;
 
   auto func_statemachine =
       BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
@@ -254,6 +251,9 @@ void DynamicsSwitchBuf(double x, double y, double heading) {
       PerfectControl::DynamicState(Eigen::Vector2d(x, y), heading));
 }
 
+py::bytes GetPlanningDebugInfo() {
+  return ProtoToBytes(apa_interface_ptr->GetPlanningDebugInfo());
+}
 PYBIND11_MODULE(optimizer_apa_simulation_py, m) {
   m.doc() = "m";
 
@@ -265,6 +265,7 @@ PYBIND11_MODULE(optimizer_apa_simulation_py, m) {
       .def("GetPlanningOutputDebugInfo", &GetPlanningOutputDebugInfo)
       .def("GetPlanningInputDebugInfo", &GetPlanningInputDebugInfo)
       .def("PlanningOutputTransfer", &PlanningOutputTransfer)
+      .def("GetPlanningDebugInfo", GetPlanningDebugInfo)
       .def("DynamicsUpdate", &DynamicsUpdate)
       .def("DynamicsSwitchBuf", &DynamicsSwitchBuf)
       .def("GetDynamicState", &GetDynamicState);

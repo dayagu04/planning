@@ -37,6 +37,7 @@ void LateralPathOptimizer::Init(const bool c_ilqr_enable) {
   planning_input_.mutable_ref_x_vec()->Resize(N, 0.0);
   planning_input_.mutable_ref_y_vec()->Resize(N, 0.0);
   planning_input_.mutable_ref_theta_vec()->Resize(N, 0.0);
+  planning_input_.mutable_ref_k_vec()->Resize(N, 0.0);
 
   planning_input_.mutable_k_max_vec()->Resize(N, 0.0);
   planning_input_.mutable_k_min_vec()->Resize(N, 0.0);
@@ -131,7 +132,7 @@ void LateralPathOptimizer::AssembleInput(
     planning_input_.mutable_ref_y_vec()->Set(i, y_s_spline_(s_ilqr));
     planning_input_.mutable_ref_k_vec()->Set(
         i, pnc::mathlib::Limit(theta_s_spline_.deriv(1, s_ilqr), k_max));
-        
+
     planning_input_.mutable_k_max_vec()->Set(i, k_max);
     planning_input_.mutable_k_min_vec()->Set(i, k_min);
     planning_input_.mutable_u_max_vec()->Set(i, u_max);

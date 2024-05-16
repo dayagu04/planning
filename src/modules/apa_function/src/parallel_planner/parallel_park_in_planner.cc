@@ -859,19 +859,16 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
     }
   }
 
-  auto cilqr_optimization_enable = false;
-  auto parallel_optimization_enable = false;
+  bool cilqr_optimization_enable = true;
+  bool parallel_optimization_enable = true;
   if (!is_simulation_) {
     parallel_optimization_enable = apa_param.GetParam().parallel_lat_opt_enable;
     cilqr_optimization_enable =
         apa_param.GetParam().cilqr_path_optimization_enable;
+
   } else {
     parallel_optimization_enable = simu_param_.is_path_optimization;
     cilqr_optimization_enable = simu_param_.is_cilqr_optimization;
-    if (simu_param_.last_cilqr_optimization_enable !=
-        cilqr_optimization_enable) {
-      update_optimizer_ptr_enable = true;
-    }
   }
 
   double lat_path_opt_cost_time_ms = 0.0;
@@ -879,8 +876,10 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
     std::cout << "------------------------ lateral path optimization "
                  "------------------------"
               << std::endl;
+
     std::cout << "gear_command_= " << static_cast<int>(gear_command_)
               << std::endl;
+
     std::cout << "origin path size= " << planner_output.path_point_vec.size()
               << std::endl;
 
@@ -895,21 +894,14 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
     param.q_k_bound = simu_param_.q_k_bound;
     param.q_u_bound = simu_param_.q_u_bound;
 
-    if ((!is_simulation_) && (!update_optimizer_ptr_enable) &&
-        cilqr_optimization_enable) {
-      lateral_path_optimizer_ptr_->Init(cilqr_optimization_enable);
-      update_optimizer_ptr_enable = true;
-    }
-
-    if ((is_simulation_) && update_optimizer_ptr_enable) {
-      lateral_path_optimizer_ptr_->Init(cilqr_optimization_enable);
-    }
+    lateral_path_optimizer_ptr_->Init(cilqr_optimization_enable);
 
     lateral_path_optimizer_ptr_->SetParam(param);
 
     auto time_start = IflyTime::Now_ms();
     lateral_path_optimizer_ptr_->Update(planner_output.path_point_vec,
                                         gear_command_);
+
     auto time_end = IflyTime::Now_ms();
     lat_path_opt_cost_time_ms = time_end - time_start;
 
@@ -952,6 +944,7 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
     }
   }
 
+  JSON_DEBUG_VALUE("cilqr_optimization_enable", cilqr_optimization_enable);
   JSON_DEBUG_VALUE("lat_path_opt_cost_time_ms", lat_path_opt_cost_time_ms);
 
   std::cout << "current_path_point_global_vec_.size() = "
