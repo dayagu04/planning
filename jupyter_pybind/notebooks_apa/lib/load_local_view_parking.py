@@ -1099,17 +1099,6 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
     uss_car_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_car_index']
     uss_car_index = int(uss_car_index)
 
-    uss_available = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_available']
-    #print("uss_available = ", uss_available)
-    uss_available = bool(uss_available)
-    #print("uss_available = ", uss_available)
-    uss_remain_dist = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_remain_dist']
-    #print("uss_remain_dist = ", uss_remain_dist)
-    uss_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_index']
-    uss_index = int(uss_index)
-    uss_car_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_car_index']
-    uss_car_index = int(uss_car_index)
-
   if plot_ctrl_flag == True:
     names = []
     datas = []
@@ -1299,7 +1288,6 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
     # load uss wave
     #get cur pose and uss wave
     uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[4]
-    print(uss_dis_info.dis_from_car_to_obj[1])
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
@@ -1310,7 +1298,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
     # rs_text = []
     uss_x, uss_y = load_car_uss_patch()
     uss_angle = load_uss_angle_patch()
-    wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
+    wdis_index = [[8, 0, 1, 2, 3, 9],[10, 4, 5, 6, 7, 11]]
     m = 0
     for i in range(2):
       for j in wdis_index[i]:
@@ -2436,7 +2424,33 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
       mpc_generator.xys.append((mpc_dy, mpc_dx))
     mpc_generator.ts = np.array(ctrl_debug_ts)
 
-  # load uss
+  # uss perception
+    uss_post_generator = CommonGenerator()
+    uss_model_generator = CommonGenerator()
+    for uss_i, uss_percept_timestamp in enumerate(uss_percept_timestamps):
+      flag, uss_percept_msg = findrt(dataLoader.uss_percept_msg, uss_percept_timestamp)
+      model_x, model_y = [], []
+      post_x, post_y = [], []
+      if not flag:
+        print('find uss percept error')
+      else:
+        for i in range(len(uss_percept_msg.out_line_dataori)):
+          for j in range(len(uss_percept_msg.out_line_dataori[i].obj_pt)):
+            x = uss_percept_msg.out_line_dataori[i].obj_pt[j].x
+            y = uss_percept_msg.out_line_dataori[i].obj_pt[j].y
+            if i == 0:
+              post_x.append(x)
+              post_y.append(y)
+            elif i == 1:
+              model_x.append(x)
+              model_y.append(y)
+
+      uss_post_generator.xys.append((post_y, post_x))
+      uss_model_generator.xys.append((model_y, model_x))
+    uss_post_generator.ts = np.array(ctrl_debug_ts)
+    uss_model_generator.ts = np.array(ctrl_debug_ts)
+
+    # load cur pose and uss wave
     uss_generator = WedgesGenerator()
     uss_text_generator = TextGenerator()
     wave_min_generator = WedgesGenerator()
@@ -2452,35 +2466,34 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
       if not flag:
         print('find loc_msg error')
       else:
-        wave_msg_idx = 0
-        if dataLoader.wave_msg['enable'] == True:
-          flag, wave_msg = findrt(dataLoader.wave_msg, wave_timestamps[loc_i])
+        if dataLoader.uss_percept_msg['enable'] == True:
+          flag, uss_percept_msg = findrt(dataLoader.uss_percept_msg, uss_percept_timestamps[loc_i])
           if not flag:
-            print('find wave_msg error')
+            print('find uss_percept_msg error')
           else:
             #get cur pose and uss wave
-            upa_dis_info_bufs = wave_msg.upa_dis_info_buf
+            uss_dis_info = uss_percept_msg.out_line_dataori[4]
             cur_pos_xn = loc_msg.pose.local_position.x
             cur_pos_yn = loc_msg.pose.local_position.y
             cur_yaw = loc_msg.pose.euler_angles.yaw
             # rs_text = []
             uss_x, uss_y = load_car_uss_patch()
             uss_angle = load_uss_angle_patch()
-            wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
+            wdis_index = [[8, 0, 1, 2, 3, 9],[10, 4, 5, 6, 7, 11]]
             m = 0
             for i in range(2):
               for j in wdis_index[i]:
                   rs0 = ''
                   rs1 = ''
-                  if upa_dis_info_bufs[i].wdis[j].wdis_value[0] <= 10 and upa_dis_info_bufs[i].wdis[j].wdis_value[0] != 0:
-                      rs1 = round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2)
+                  if uss_dis_info.dis_from_car_to_obj[j] * 0.001 <= 10 and uss_dis_info.dis_from_car_to_obj[i] * 0.001 != 0:
+                      rs1 = round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2)
                       # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
-                      rs0 = '{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2))
+                      rs0 = '{:.2f}'.format(round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2))
                       ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
                       uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
                       uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
                       x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
-                  elif upa_dis_info_bufs[i].wdis[j].wdis_value[0] == 0 or upa_dis_info_bufs[i].wdis[j].wdis_value[0] > 10:
+                  elif uss_dis_info.dis_from_car_to_obj[j] * 0.001 == 0 or uss_dis_info.dis_from_car_to_obj[j] * 0.001 > 10:
                       ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
                       x_text, y_text = 0, 0
                   text_x.append(x_text)
@@ -2522,33 +2535,6 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
     uss_generator.ts = np.array(ctrl_debug_ts)
     uss_text_generator.ts = np.array(ctrl_debug_ts)
     wave_min_generator.ts = np.array(ctrl_debug_ts)
-
-  # uss perception
-    uss_post_generator = CommonGenerator()
-    uss_model_generator = CommonGenerator()
-    for uss_i, uss_percept_timestamp in enumerate(uss_percept_timestamps):
-      flag, uss_percept_msg = findrt(dataLoader.uss_percept_msg, uss_percept_timestamp)
-      model_x, model_y = [], []
-      post_x, post_y = [], []
-      if not flag:
-        print('find uss percept error')
-      else:
-        for i in range(len(uss_percept_msg.out_line_dataori)):
-          for j in range(len(uss_percept_msg.out_line_dataori[i].obj_pt)):
-            x = uss_percept_msg.out_line_dataori[i].obj_pt[j].x
-            y = uss_percept_msg.out_line_dataori[i].obj_pt[j].y
-            if i == 0:
-              post_x.append(x)
-              post_y.append(y)
-            elif i == 1:
-              model_x.append(x)
-              model_y.append(y)
-
-      uss_post_generator.xys.append((post_y, post_x))
-      uss_model_generator.xys.append((model_y, model_x))
-    uss_post_generator.ts = np.array(ctrl_debug_ts)
-    uss_model_generator.ts = np.array(ctrl_debug_ts)
-
 
   # move Layer here for manage
     if dataLoader.plan_msg['enable'] == True:
