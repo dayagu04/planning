@@ -914,6 +914,14 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
             << ",  current_pos = " << current_pose.pos.transpose()
             << ",  current_heading = " << current_pose.heading * 57.3
             << std::endl;
+
+  const double lat_err = apa_param.GetParam().target_pos_err;
+  const double heading_err = apa_param.GetParam().target_heading_err;
+  if (current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+    apa_param.SetPram().target_pos_err = lat_err * 0.5;
+    apa_param.SetPram().target_heading_err = heading_err * 0.5;
+  }
+
   auto temp_pose = current_pose;
   std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
   tmp_path_seg_vec.clear();
@@ -1051,6 +1059,9 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
   } else {
     collision_detector_ptr_->DeleteObstacles(CollisionDetector::LINEARC_OBS);
   }
+
+  apa_param.SetPram().target_pos_err = lat_err;
+  apa_param.SetPram().target_heading_err = heading_err;
 
   for (pnc::geometry_lib::PathSegment& tmp_path_seg : tmp_path_seg_vec) {
     // when send ref gear path, more conservative, otherwise more radical
@@ -1839,6 +1850,14 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
             << ",  current_pos = " << current_pose.pos.transpose()
             << ",  current_heading = " << current_pose.heading * 57.3
             << std::endl;
+
+  const double lat_err = apa_param.GetParam().target_pos_err;
+  const double heading_err = apa_param.GetParam().target_heading_err;
+  if (current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+    apa_param.SetPram().target_pos_err = lat_err * 0.5;
+    apa_param.SetPram().target_heading_err = heading_err * 0.5;
+  }
+
   auto temp_pose = current_pose;
   std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
   tmp_path_seg_vec.clear();
@@ -1955,6 +1974,9 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
   } else {
     collision_detector_ptr_->DeleteObstacles(CollisionDetector::LINEARC_OBS);
   }
+
+  apa_param.SetPram().target_pos_err = lat_err;
+  apa_param.SetPram().target_heading_err = heading_err;
 
   // collision detect
   for (pnc::geometry_lib::PathSegment& tmp_path_seg : tmp_path_seg_vec) {
