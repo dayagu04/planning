@@ -291,9 +291,19 @@ GapSelectorStatus GapSelectorDecider::Update() {
       session_->mutable_planning_context()
           ->mutable_gap_selector_decider_output();
   bool is_lc_scene{false};
+
+  // lat avoid scene
+  const LateralOffsetDeciderOutput &lateral_offset_decider_output =
+      session_->mutable_planning_context()->lateral_offset_decider_output();
+  double avoid_lat_offset = lateral_offset_decider_output.is_valid
+                                ? lateral_offset_decider_output.lateral_offset
+                                : 0.0;
+
   if (coarse_planning_info.target_state != last_target_state_) {
     if (coarse_planning_info.target_state == ROAD_NONE) {
       lc_timer_ = 0.;
+      lc_total_time_ = config_.default_lc_time;
+      use_ego_v_ = false;
       return GapSelectorStatus::NO_LC_REQUSET;
     } else {
       lc_timer_ += 0.1;
@@ -304,8 +314,13 @@ GapSelectorStatus GapSelectorDecider::Update() {
     lc_timer_ += 0.1;
     is_lc_scene = true;
   }
+  double lc_end_s, remain_lc_time = lc_total_time_ - lc_timer_;
   if (is_lc_scene) {
-    FixedTimeQuinticPathPlan(traj_points);
+    RefineLCTime(&lc_end_s, &remain_lc_time, avoid_lat_offset);
+
+    FixedTimeQuinticPathPlan(avoid_lat_offset, lc_end_s, remain_lc_time,
+                             traj_points);
+
     gap_selector_decider_output.gap_selector_trustworthy = true;
   }
 
@@ -314,14 +329,15 @@ GapSelectorStatus GapSelectorDecider::Update() {
 }
 
 void GapSelectorDecider::FixedTimeQuinticPathPlan(
-    TrajectoryPoints &traj_points) {
+    const double lat_avoid_offset, const double lc_end_s,
+    const double remain_lc_duration, TrajectoryPoints &traj_points) {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
   const std::shared_ptr<EgoStateManager> ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
-  double remaining_lane_change_duration = config_.default_lc_time - lc_timer_;
-  auto ego_v = ego_state_mgr->ego_v_cruise();
+  auto ego_v =
+      use_ego_v_ ? ego_state_mgr->ego_v() : ego_state_mgr->ego_v_cruise();
 
   auto lat_state = ego_state_mgr->planning_init_point().lat_init_state;
   Point2D frenet_init_point;
@@ -333,9 +349,8 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
   if (!coord->XYToSL(cart_init_point, frenet_init_point)) {
     LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
   }
-
   // if reamining duration less than 1s, then aggresively lane change
-  if (remaining_lane_change_duration < 1.0) {
+  if (remain_lc_duration < 1.0) {
     return;
   }
 
@@ -348,14 +363,12 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
   // const auto &heading_angle =
   // ego_state->planning_init_point().heading_angle; const auto normal_acc
   // = ego_v * ego_v * curvature;
-  if (frenet_init_point.x + ego_v * remaining_lane_change_duration >=
+  if (frenet_init_point.x + ego_v * remain_lc_duration >=
       coord->Length() - 0.5) {
     ego_v = (coord->Length() - frenet_init_point.x - 0.5) /
-            std::fmax(remaining_lane_change_duration,
-                      (traj_points.size() - 1) * 0.2);
+            std::fmax(remain_lc_duration, (traj_points.size() - 1) * 0.2);
   }
-  auto lane_change_end_s =
-      frenet_init_point.x + ego_v * remaining_lane_change_duration;
+  auto lane_change_end_s = frenet_init_point.x + ego_v * remain_lc_duration;
 
   const auto v_x = ego_v * std::cos(heading_angle);
   const auto v_y = ego_v * std::sin(heading_angle);
@@ -363,7 +376,7 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
   auto normal_acc_y = normal_acc * std::cos(heading_angle);
 
   // set lane change end state
-  Point2D frenet_end_point{lane_change_end_s, 0.};
+  Point2D frenet_end_point{lane_change_end_s, lat_avoid_offset};
   Point2D cart_end_point;
   if (!coord->SLToXY(frenet_end_point, cart_end_point)) {
     LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
@@ -394,7 +407,7 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
   Eigen::Vector2d dxT(v_x_end, v_y_end);
   Eigen::Vector2d ddxT(normal_acc_x_end, normal_acc_y_end);
   lane_change_quintic_path.SetPoints(x0, xT, dx0, dxT, ddx0, ddxT,
-                                     remaining_lane_change_duration);
+                                     remain_lc_duration);
 
   // sample traj point on quintic path by t
   TrajectoryPoint point;
@@ -402,7 +415,7 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
   Point2D frenet_point;
   size_t truncation_idx = 0;
   for (size_t i = 0; i < traj_points.size(); i++) {
-    if (traj_points[i].t < remaining_lane_change_duration) {
+    if (traj_points[i].t < remain_lc_duration) {
       sample_point = lane_change_quintic_path(traj_points[i].t);
       point.x = sample_point.x();
       point.y = sample_point.y();
@@ -435,7 +448,7 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
       }
       point.s = std::fmin(s_truncation + ego_v * (i - truncation_idx) * 0.2,
                           coord->Length());
-      point.l = 0.;
+      point.l = lat_avoid_offset;
       point.t = traj_points[i].t;
 
       frenet_point.x = point.s;
@@ -451,6 +464,55 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
       traj_points[i] = point;
     }
   }
+  return;
+}
+
+void GapSelectorDecider::RefineLCTime(double *lc_end_s, double *remain_lc_time,
+                                      const double lat_avoid_offset) {
+  if (*remain_lc_time > 1.0 || use_ego_v_) {
+    return;
+  }
+
+  const auto &coarse_planning_info = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  const auto &target_state = coarse_planning_info.target_state;
+  const auto target_l = lat_avoid_offset;
+  const auto &planning_init_point = session_->mutable_environmental_model()
+                                        ->get_ego_state_manager()
+                                        ->planning_init_point();
+
+  Point2D frenet_init_point;
+  Point2D cart_init_point{planning_init_point.lat_init_state.x(),
+                          planning_init_point.lat_init_state.y()};
+  const auto &coord =
+      session_->planning_context()
+          .lane_change_decider_output()
+          .coarse_planning_info.reference_path->get_frenet_coord();
+
+  if (!coord->XYToSL(cart_init_point, frenet_init_point)) {
+    LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
+  }
+  // frenet_init_point_ = frenet_init_point;
+
+  const double lat_lc_dis =
+      target_state == ROAD_LC_LCHANGE
+          ? std::fabs(lat_avoid_offset - frenet_init_point.y)
+          : std::fabs(frenet_init_point.y - lat_avoid_offset);
+  const double ego_v =
+      session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
+  const double v_cruise = session_->mutable_environmental_model()
+                              ->get_ego_state_manager()
+                              ->ego_v_cruise();
+  const double default_lc_lat_v = 3.8 / config_.default_lc_time;
+  if (lat_lc_dis <= 0.6) {
+    return;
+  }
+
+  *remain_lc_time = lat_lc_dis / default_lc_lat_v;
+  lc_total_time_ = *remain_lc_time;
+  lc_timer_ = 0.0;
+  use_ego_v_ = true;
   return;
 }
 

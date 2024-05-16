@@ -128,7 +128,14 @@ class GapSelectorDecider : public Task {
   void GenerateLinearRefTrajectory(TrajectoryPoints &traj_points);
   void RetentivePathPlan();
   void ResponsivePathPlan();
-  void FixedTimeQuinticPathPlan(TrajectoryPoints &traj_points);
+  void FixedTimeQuinticPathPlan(const double lat_avoid_offset,
+                                const double lc_end_s,
+                                const double remain_lc_duration,
+                                TrajectoryPoints &traj_points);
+
+  void RefineLCTime(double *lc_end_s, double *remain_lc_time,
+                    const double lat_avoid_offset);
+
   void ObtainNearbyGap();
   void QuerySplineCrossLinePoint(GapSelectorPathSpline &path_spline);
   void ConstructGaps();
@@ -231,6 +238,9 @@ class GapSelectorDecider : public Task {
 
   ScenarioStateEnum last_target_state_{ROAD_NONE};
   double lc_timer_{0.};
+  Point2D frenet_init_point_;
+  bool use_ego_v_{false};
+  double lc_total_time_{6.0};
 };
 
 }  // namespace planning

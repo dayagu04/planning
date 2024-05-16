@@ -317,7 +317,7 @@ struct GapSelectorConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"gap_selector", "near_car_ttc"});
   }
 
-  double default_lc_time = 5.5;
+  double default_lc_time = 6.0;
   double collision_check_length_threshold = 2.2;
   double lc_premove_time = 1.5;
   double near_car_ttc = 0.2;
