@@ -79,7 +79,8 @@ bool SlotManagement::Update(
       ->mutable_slot_management_info()
       ->CopyFrom(frame_.slot_management_info);
 
-  DEBUG_PRINT("--------------------------------------------");
+  Log();
+
   return update_slot_in_searching_flag || update_slot_in_parking_flag;
 }
 
@@ -2356,6 +2357,24 @@ const bool SlotManagement::SetRealtime() {
   frame_.ego_slot_info.select_slot_filter = *slot;
 
   return true;
+}
+
+void SlotManagement::Log() {
+  const auto select_slot_id =
+      static_cast<size_t>(frame_.ego_slot_info.select_slot_id);
+  std::vector<double> nearby_obs_x_vec;
+  std::vector<double> nearby_obs_y_vec;
+  if (frame_.obs_pt_map.count(select_slot_id) != 0) {
+    for (const auto &obs_pt : frame_.obs_pt_map[select_slot_id]) {
+      nearby_obs_x_vec.emplace_back(obs_pt.x());
+      nearby_obs_y_vec.emplace_back(obs_pt.y());
+    }
+  } else {
+    nearby_obs_x_vec.emplace_back(0);
+    nearby_obs_y_vec.emplace_back(0);
+  }
+  JSON_DEBUG_VECTOR("slm_selected_obs_x", nearby_obs_x_vec, 2)
+  JSON_DEBUG_VECTOR("slm_selected_obs_y", nearby_obs_y_vec, 2)
 }
 
 }  // namespace planning

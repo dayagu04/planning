@@ -617,30 +617,34 @@ void ParallelParInPlanner::GenTlane() {
   t_lane_.channel_y = channel_y_limit;
   t_lane_.channel_x_limit = channel_x_limit;
 
-  if (t_lane_.obs_pt_inside.x() - t_lane_.corner_inside_slot.x() > 1.0) {
-    t_lane_.pt_inside.x() = t_lane_.corner_inside_slot.x() + 1.0;
-  } else if (t_lane_.obs_pt_inside.x() - t_lane_.corner_inside_slot.x() > 0.2) {
-    t_lane_.pt_inside.x() = std::max(
-        t_lane_.corner_inside_slot.x() + 0.2,
-        0.5 * (t_lane_.obs_pt_inside.x() + t_lane_.corner_inside_slot.x()));
-  } else {
-    t_lane_.pt_inside.x() = t_lane_.corner_inside_slot.x() + 0.2;
-  }
+  // if (t_lane_.obs_pt_inside.x() - t_lane_.corner_inside_slot.x() > 1.0) {
+  //   t_lane_.pt_inside.x() = t_lane_.corner_inside_slot.x() + 1.0;
+  // } else if (t_lane_.obs_pt_inside.x() - t_lane_.corner_inside_slot.x() >
+  // 0.2) {
+  //   t_lane_.pt_inside.x() = std::max(
+  //       t_lane_.corner_inside_slot.x() + 0.2,
+  //       0.5 * (t_lane_.obs_pt_inside.x() + t_lane_.corner_inside_slot.x()));
+  // } else {
+  //   t_lane_.pt_inside.x() = t_lane_.corner_inside_slot.x() + 0.2;
+  // }
 
-  if (t_lane_.obs_pt_inside.y() * side_sgn > t_lane_.pt_inside.y() * side_sgn) {
-    t_lane_.pt_inside.y() = t_lane_.obs_pt_inside.y() + 0.1;
-  } else {
-    t_lane_.pt_inside.y() =
-        0.5 * (t_lane_.obs_pt_inside.y() + t_lane_.pt_inside.y());
-  }
+  // if (t_lane_.obs_pt_inside.y() * side_sgn > t_lane_.pt_inside.y() *
+  // side_sgn) {
+  //   t_lane_.pt_inside.y() = t_lane_.obs_pt_inside.y() + 0.1;
+  // } else {
+  //   t_lane_.pt_inside.y() =
+  //       0.5 * (t_lane_.obs_pt_inside.y() + t_lane_.pt_inside.y());
+  // }
 
-  t_lane_.pt_inside.x() =
-      std::min(t_lane_.obs_pt_inside.x() - 0.2, t_lane_.corner_inside_slot.x());
+  // t_lane_.pt_inside.x() =
+  //     std::min(t_lane_.obs_pt_inside.x() - 0.2,
+  //     t_lane_.corner_inside_slot.x());
 
-  t_lane_.pt_inside.y() =
-      std::min(t_lane_.obs_pt_inside.y(), t_lane_.corner_inside_slot.y());
+  // t_lane_.pt_inside.y() =
+  //     std::min(t_lane_.obs_pt_inside.y(), t_lane_.corner_inside_slot.y());
 
   t_lane_.pt_outside = t_lane_.obs_pt_outside;
+  t_lane_.pt_inside = t_lane_.obs_pt_inside;
 
   t_lane_.slot_width = ego_slot_info.slot_width;
   t_lane_.slot_length = ego_slot_info.slot_length;

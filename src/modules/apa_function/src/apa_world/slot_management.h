@@ -511,6 +511,8 @@ class SlotManagement {
   const bool ProcessSlantSlot(
       common::SlotInfo& slot_info,
       const ParkingFusion::ParkingFusionSlot& parking_fusion_slot);
+
+  void Log();
 };
 
 }  // namespace planning
