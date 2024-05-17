@@ -1405,6 +1405,15 @@ void PerpendicularInPlanner::GenPlanningOutput() {
     SetIdlePlanningOutput(planning_output_, current_ego_pose);
   }
 
+  if (frame_.plan_stm.planning_status == PARKING_IDLE ||
+      frame_.plan_stm.planning_status == PARKING_FAILED ||
+      frame_.plan_stm.planning_status == PARKING_FINISHED) {
+    frame_.replan_flag = false;
+    frame_.correct_path_for_limiter = false;
+    frame_.ego_slot_info.Reset();
+    apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
+  }
+
   // std::cout << "planning_output:" << planning_output_.DebugString()
   //           << std::endl;
 }
