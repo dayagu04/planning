@@ -30,7 +30,7 @@ namespace apa_planner {
 static double kFrontDetaXMagWhenFrontVacant = 1.66;
 static double kFrontMaxDetaXMagWhenFrontOccupied = 0.5;
 static double kRearDetaXMagWhenFrontVacant = 0.2;
-static double kRearDetaXMagWhenBothSidesVacant = 0.2;
+static double kRearDetaXMagWhenBothSidesVacant = 0.4;
 static double kRearDetaXMagWhenFrontOccupiedRearVacant = 1.5;
 static double kRearMaxDetaXMagWhenRearOccupied = 0.5;
 
@@ -503,36 +503,22 @@ void ParallelParInPlanner::GenTlane() {
       // DEBUG_PRINT("curb condition!");
     }
 
-    // const bool channel_y_condition =
-    //     (obstacle_point_slot.x() > -1.0) &&
-    //     (obstacle_point_slot.x() < slot_length + 1.0) &&
-    //     (obstacle_point_slot.y() * side_sgn >= 2.5);
+    const bool channel_y_condition =
+        (obstacle_point_slot.x() > -1.0) &&
+        (obstacle_point_slot.x() < slot_length + 2.0) &&
+        (obstacle_point_slot.y() * side_sgn >= 2.5);
 
-    // if (channel_y_condition) {
-    //   channel_y_limit =
-    //       side_sgn > 0.0 ? std::min(channel_y_limit, obstacle_point_slot.y())
-    //                      : std::max(channel_y_limit,
-    //                      obstacle_point_slot.y());
-    //   DEBUG_PRINT("channel_y_condition!");
-    // }
-
-    const bool channel_x_limit_condition =
-        (obstacle_point_slot.x() >
-         slot_length + kChannelLengthXMagIdentification) &&
-        pnc::mathlib::IsInBound(
-            obstacle_point_slot.y() * side_sgn,
-            half_slot_width + kChannelLengthMinYMagIdentification,
-            half_slot_width + kChannelLengthMaxYMagIdentification);
-
-    if (channel_x_limit_condition) {
-      channel_x_limit = std::min(channel_x_limit, obstacle_point_slot.x());
-      // DEBUG_PRINT("channel_x_limit_condition!");
+    if (channel_y_condition) {
+      channel_y_limit =
+          side_sgn > 0.0 ? std::min(channel_y_limit, obstacle_point_slot.y())
+                         : std::max(channel_y_limit, obstacle_point_slot.y());
+      DEBUG_PRINT("channel_y_condition!");
     }
 
     const bool front_parallel_line_condition =
         pnc::mathlib::IsInBound(obstacle_point_slot.x(), slot_length - 0.2,
-                                slot_length + 2.5) &&
-        pnc::mathlib::IsInBound(obstacle_point_slot.y() * side_sgn, 0.0, 2.3);
+                                slot_length + 1.6) &&
+        pnc::mathlib::IsInBound(obstacle_point_slot.y(), 0.0, 2.2 * side_sgn);
 
     if (front_parallel_line_condition) {
       front_parallel_line_y_limit =
@@ -579,7 +565,7 @@ void ParallelParInPlanner::GenTlane() {
         Eigen::Vector2d(slot_length + kFrontDetaXMagWhenFrontVacant,
                         side_sgn * 0.5 * half_slot_width));
     rear_obs_que_descending_x.emplace(Eigen::Vector2d(
-        -kRearDetaXMagWhenFrontVacant, side_sgn * 0.5 * half_slot_width));
+        -kRearDetaXMagWhenFrontVacant, side_sgn * half_slot_width));
 
   } else if (!front_vacant && rear_vacant) {
     rear_obs_que_descending_x.emplace(
@@ -598,9 +584,10 @@ void ParallelParInPlanner::GenTlane() {
   const double front_y_limit = front_parallel_line_y_limit;
   DEBUG_PRINT("front parallel line y =" << front_y_limit);
 
-  const double rear_max_x = pnc::mathlib::Clamp(
-      rear_obs_que_descending_x.top().x(),
-      -kRearDetaXMagWhenFrontOccupiedRearVacant, -kRearDetaXMagWhenFrontVacant);
+  const double rear_max_x =
+      pnc::mathlib::Clamp(rear_obs_que_descending_x.top().x(),
+                          -kRearDetaXMagWhenFrontOccupiedRearVacant,
+                          kRearMaxDetaXMagWhenRearOccupied);
   DEBUG_PRINT("rear quene min x = " << rear_obs_que_descending_x.top().x());
   DEBUG_PRINT("rear max x = " << rear_max_x);
 
@@ -617,37 +604,11 @@ void ParallelParInPlanner::GenTlane() {
   t_lane_.channel_y = channel_y_limit;
   t_lane_.channel_x_limit = channel_x_limit;
 
-  // if (t_lane_.obs_pt_inside.x() - t_lane_.corner_inside_slot.x() > 1.0) {
-  //   t_lane_.pt_inside.x() = t_lane_.corner_inside_slot.x() + 1.0;
-  // } else if (t_lane_.obs_pt_inside.x() - t_lane_.corner_inside_slot.x() >
-  // 0.2) {
-  //   t_lane_.pt_inside.x() = std::max(
-  //       t_lane_.corner_inside_slot.x() + 0.2,
-  //       0.5 * (t_lane_.obs_pt_inside.x() + t_lane_.corner_inside_slot.x()));
-  // } else {
-  //   t_lane_.pt_inside.x() = t_lane_.corner_inside_slot.x() + 0.2;
-  // }
-
-  // if (t_lane_.obs_pt_inside.y() * side_sgn > t_lane_.pt_inside.y() *
-  // side_sgn) {
-  //   t_lane_.pt_inside.y() = t_lane_.obs_pt_inside.y() + 0.1;
-  // } else {
-  //   t_lane_.pt_inside.y() =
-  //       0.5 * (t_lane_.obs_pt_inside.y() + t_lane_.pt_inside.y());
-  // }
-
-  // t_lane_.pt_inside.x() =
-  //     std::min(t_lane_.obs_pt_inside.x() - 0.2,
-  //     t_lane_.corner_inside_slot.x());
-
-  // t_lane_.pt_inside.y() =
-  //     std::min(t_lane_.obs_pt_inside.y(), t_lane_.corner_inside_slot.y());
-
   t_lane_.pt_outside = t_lane_.obs_pt_outside;
   t_lane_.pt_inside = t_lane_.obs_pt_inside;
 
   t_lane_.slot_width = ego_slot_info.slot_width;
-  t_lane_.slot_length = ego_slot_info.slot_length;
+  t_lane_.slot_length = slot_length;
 
   // update tlane using USS dist
   if (frame_.ego_slot_info.slot_occupied_ratio >= kEnterMultiPlanSlotRatio &&
