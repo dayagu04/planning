@@ -336,6 +336,9 @@ void PlanningScheduler::FillPlanningTrajectory(
         limited_polynomial_3 =
             planning_math::Clamp(d_polynomial[3], -config_.lc_back_smooth_thr,
                                  config_.lc_back_smooth_thr);
+      } else if (lateral_output.lc_status == "left_lane_change_wait" ||
+                 lateral_output.lc_status == "right_lane_change_wait") {
+        limited_polynomial_3 = 0.0;
       } else {
         limited_polynomial_3 = planning_math::Clamp(
             d_polynomial[3], -lat_offset_bound, lat_offset_bound);
