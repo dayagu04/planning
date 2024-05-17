@@ -1,9 +1,10 @@
 #pragma once
 #include "avoid_obstacle_maintainer.h"
+#include "avoid_obstacle_maintainer5V.h"
 #include "lateral_offset_calculator.h"
+#include "lateral_offset_calculatorV2.h"
 #include "session.h"
 #include "tasks/task.h"
-
 namespace planning {
 
 class LateralOffsetDecider : public Task {
@@ -17,15 +18,18 @@ class LateralOffsetDecider : public Task {
 
   bool ExecuteTest(bool pipeline_test);
 
-  // double lat_offset() const {
-  //   return lat_offset_;
-  // }
  private:
+  void SmoothLateralOffset(double in_lat_offset);
+  void SaveDebugInfo();
+  void Reset();
   LateralOffsetDeciderConfig config_;
   AvoidObstacleMaintainer avoid_obstacle_maintainer_;
   LateralOffsetCalculator lateral_offset_calculator_;
 
-  // double lat_offset_;
+  AvoidObstacleMaintainer5V avoid_obstacle_maintainer5v_;
+  LateralOffsetCalculatorV2 lateral_offset_calculatorv2_;
+
+  double lateral_offset_ = 0.0;
 };
 
 }  // namespace planning

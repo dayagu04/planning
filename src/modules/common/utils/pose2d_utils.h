@@ -1,10 +1,10 @@
 #ifndef __UTILS__POSE2D_UTILS_HPP__
 #define __UTILS__POSE2D_UTILS_HPP__
 
+#include <cassert>
 #include <string>
 #include <tuple>
 #include <vector>
-
 #include "cartesian_coordinate_system.h"
 
 namespace planning {
@@ -100,6 +100,7 @@ T interpolation(T x, const vector<T> &xp, const vector<T> &fp) {
 
 template <class T>
 T clip(T x, T max_x, T min_x) {
+  assert(min_x <= max_x);
   if (x > max_x) return max_x;
   if (x < min_x) return min_x;
   return x;

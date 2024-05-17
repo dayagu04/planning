@@ -211,7 +211,7 @@ double VirtualLane::width(double x) {
                                   p_first_point->car_point().x(), x);
     }
   }
-  return std::max(width, 2.8);
+  return std::min(std::max(width, min_width()), max_width());
 }
 
 double VirtualLane::width_by_s(double s) {
@@ -235,7 +235,7 @@ double VirtualLane::width_by_s(double s) {
       }
     }
   }
-  return std::max(width, 2.8);
+  return std::min(std::max(width, min_width()), max_width());
 }
 
 bool VirtualLane::get_point_by_distance(double distance,

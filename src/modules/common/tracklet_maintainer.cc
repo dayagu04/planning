@@ -2,6 +2,7 @@
 #include <memory>
 #include <vector>
 
+#include "common.pb.h"
 #include "path_point.h"
 #include "refline.h"
 #include "utils/path_point.h"
@@ -928,6 +929,12 @@ bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
       }
     }
   }
+
+  std::vector<double> rel_s_box;
+  for (auto tmp_s : bbox_s) {
+    rel_s_box.emplace_back(tmp_s - s_ego_);
+  }
+  item.tail_rel_s = *min_element(rel_s_box.begin(), rel_s_box.end());
 
   if (bbox_s.empty()) {
     item.d_rel = 0;
