@@ -21,35 +21,9 @@ class LateralOffsetCalculatorV2 {
                double dist_rblane, bool flag_avd);
 
   double lat_offset() const { return lat_offset_; }
-
-  const std::vector<double>& left_lane_boundary_poly() {
-    return left_lane_boundary_poly_;
-  };
-  const std::vector<double>& right_lane_boundary_poly() {
-    return right_lane_boundary_poly_;
-  };
   void Reset();
 
  private:
-  void set_left_lane_boundary_poly() {
-    for (auto i = 0;
-         i < flane_->get_left_lane_boundary().poly_coefficient_size(); ++i) {
-      if (i < 4) {
-        left_lane_boundary_poly_.push_back(
-            flane_->get_left_lane_boundary().poly_coefficient(i));
-      }
-    }
-  }
-
-  void set_right_lane_boundary_poly() {
-    for (auto i = 0;
-         i < flane_->get_right_lane_boundary().poly_coefficient_size(); ++i) {
-      if (i < 4) {
-        right_lane_boundary_poly_.push_back(
-            flane_->get_right_lane_boundary().poly_coefficient(i));
-      }
-    }
-  }
   void CalLaneWidth();
   bool UpdateBasicPath(const int& status);
   bool UpdateAvoidPath(int status, bool flag_avd, bool accident_ahead,
@@ -60,15 +34,6 @@ class LateralOffsetCalculatorV2 {
       int status, bool flag_avd, bool accident_ahead, bool should_premove,
       double dist_rblane, const std::array<AvoidObstacleInfo, 2>& avd_obstacle,
       const std::array<AvoidObstacleInfo, 2>& avd_sp_obstacle);
-
-  void calc_desired_path(const std::array<double, 4>& l_poly,
-                         const std::array<double, 4>& r_poly, double l_prob,
-                         double r_prob, double intercept_width,
-                         std::array<double, 4>& d_poly);
-
-  double calc_lane_width_by_dist(const std::vector<double>& left_poly,
-                                 const std::vector<double>& right_poly,
-                                 const double& dist_x);
 
   bool update(int lane_status, bool flag_avoid, bool exist_accident_ahead,
               bool execute_premove, bool should_suspend, double dist_rblane,
@@ -117,25 +82,14 @@ class LateralOffsetCalculatorV2 {
   void SaveDebugInfo();
 
  private:
-  VisionLateralMotionPlannerConfig config_;
+  LateralOffsetDeciderConfig config_;
   framework::Session* session_;
 
   double lat_offset_ = 0.0;
   double last_lat_offset_ = 0.0;
   double curr_time_ = 0;
 
-  int reject_reason_ = NO_REJECTION;
-  bool l_reject_ = false;
-  bool r_reject_ = false;
-  double intercept_width_ = 3.8;
-
   double lane_width_ = 3.8;
-  std::array<double, 4> c_poly_;
-  std::array<double, 4> d_poly_;
-  std::array<double, 4> l_poly_;
-  std::array<double, 4> r_poly_;
-  std::vector<double> left_lane_boundary_poly_;
-  std::vector<double> right_lane_boundary_poly_;
   std::shared_ptr<ReferencePath> fix_reference_path_;
   std::shared_ptr<VirtualLane> flane_;
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;

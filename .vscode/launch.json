@@ -58,7 +58,6 @@
                 "--play",
                 // "/data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240425/20240425-15-04-11/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-04-25-15-04-11_no_camera.record"
                 "/mnt/00fjw/00field_test/plan/0516/s_s_8.00000"
-                "/mnt/00fjw/00field_test/plan/0516/s_s_8.00000"
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",

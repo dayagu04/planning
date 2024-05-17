@@ -17,7 +17,7 @@ const double kSafeDistance = 1.0;
 const double kDefaultLimitLateralDistance = 10.0;
 LateralOffsetCalculatorV2::LateralOffsetCalculatorV2(
     const EgoPlanningConfigBuilder *config_builder) {
-  config_ = config_builder->cast<VisionLateralMotionPlannerConfig>();
+  config_ = config_builder->cast<LateralOffsetDeciderConfig>();
 }
 
 bool LateralOffsetCalculatorV2::Process(
@@ -55,10 +55,6 @@ bool LateralOffsetCalculatorV2::Process(
 
   virtual_lane_manager_ =
       session_->environmental_model().get_virtual_lane_manager();
-  left_lane_boundary_poly_.clear();
-  right_lane_boundary_poly_.clear();
-  set_left_lane_boundary_poly();   // hack left_lane_boundary_poly
-  set_right_lane_boundary_poly();  // hack right_lane_boundary_poly
 
   b_success =
       update(status, flag_avd, accident_ahead, should_premove, should_suspend,
@@ -77,18 +73,7 @@ bool LateralOffsetCalculatorV2::update(
     bool should_suspend, double dist_rblane,
     const std::array<AvoidObstacleInfo, 2> &avd_obstacle,
     const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacle) {
-  std::reverse_copy(flane_->c_poly().begin(), flane_->c_poly().end(),
-                    c_poly_.begin());  // c_poly should
-
-  if (flane_->status() == LaneStatusEx::BOTH_MISSING) {
-    std::reverse_copy(flane_->c_poly().begin(), flane_->c_poly().end(),
-                      d_poly_.begin());
-  }
-
-  l_poly_.fill(0);
-  r_poly_.fill(0);
-  UpdateBasicPath(status);
-
+  last_lat_offset_ = lat_offset_;
   if (status >= ROAD_NONE && status <= ROAD_LC_RBACK) {
     UpdateAvoidPath(status, flag_avd, accident_ahead, should_premove,
                     dist_rblane, avd_obstacle, avd_sp_obstacle);
@@ -104,7 +89,6 @@ bool LateralOffsetCalculatorV2::UpdateAvoidPath(
     int status, bool flag_avd, bool accident_ahead, bool should_premove,
     double dist_rblane, const std::array<AvoidObstacleInfo, 2> &avd_obstacle,
     const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacle) {
-  last_lat_offset_ = lat_offset_;
   last_front_allow_max_opposite_offset_ = allow_front_max_opposite_offset_;
   last_side_allow_max_opposite_offset_ = allow_side_max_opposite_offset_;
   Reset();
@@ -129,9 +113,9 @@ void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double ego_width = vehicle_param.width + vehicle_param.width_mirror;
+  int flane_lane_index = virtual_lane_manager_->get_lane_index(flane_);
   if (virtual_lane_manager_ != nullptr &&
-      (virtual_lane_manager_->current_lane_index() == 0 ||
-       virtual_lane_manager_->current_lane_index() ==
+      (flane_lane_index == 0 || flane_lane_index ==
            virtual_lane_manager_->get_lane_num() -
                1)) {  // 非最左车道;
                       // hack(clren):当前无法给出lane_border时,最右车道也减小避让距离
@@ -491,7 +475,7 @@ double LateralOffsetCalculatorV2::SmoothLateralOffset(
       }
 
       if (is_positive) {
-        smooth_lat_offset = std::min(smooth_lat_offset, lat_offset);
+        smooth_lat_offset = std::min(std::max(last_lat_offset_, smooth_lat_offset), lat_offset);
       } else {
         smooth_lat_offset = std::max(smooth_lat_offset, lat_offset);
       }
@@ -533,20 +517,29 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
   double nearest_l_to_ref =
       fabs(is_left ? avoid_obstacle.min_l_to_ref : avoid_obstacle.max_l_to_ref);
 
-  double lat_offset =
-      coeff * (lane_width_ - ego_width * 0.5 - nearest_l_to_ref) +
-      lat_compensate;
-  // double base_distance = 0.6;
-  // if (lateral_offset_decider::IsTruck(avoid_obstacle)) {
-  //   base_distance += 0.1;
-  // }
-  // const double pred_ts =
-  //     clip(std::max(avoid_obstacle.s_to_ego - 4, 0.0) /
-  //              std::min(-avoid_obstacle.vs_lon_relative, 1e-6),
-  //          5.0, 0.0);
-  // double lat_offset =
-  //     base_distance + 0.015 * ego_cart_state_manager_->ego_v() - 0.1 *
-  //     pred_ts;
+  double lat_offset;
+  if (config_.nudge_value_way) {
+    lat_offset =
+        coeff * (lane_width_ - ego_width * 0.5 - nearest_l_to_ref) +
+        lat_compensate;
+  } else {
+    double base_distance = config_.base_nudge_distance;
+    if (lateral_offset_decider::IsTruck(avoid_obstacle)) {
+      base_distance += 0.2;
+    } else if (lateral_offset_decider::IsVRU(avoid_obstacle)) {
+      base_distance += 0.2;
+    } else if (lateral_offset_decider::IsCone(avoid_obstacle)) {
+
+    }
+    const double pred_ts =
+        clip(std::max(avoid_obstacle.s_to_ego - 4, 0.0) /
+                std::min(-avoid_obstacle.vs_lon_relative, 1e-6),
+            5.0, 0.0);
+    double distance_ego_to_obstacle =
+        base_distance + 0.015 * ego_cart_state_manager_->ego_v() - 0.02 * pred_ts;
+    lat_offset = ego_width * 0.5 + distance_ego_to_obstacle - nearest_l_to_ref;
+  }
+
   return std::max(lat_offset, 0.0);
 }
 
@@ -853,232 +846,6 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
 
 void LateralOffsetCalculatorV2::PostProcess() { return; }
 
-bool LateralOffsetCalculatorV2::UpdateBasicPath(const int &status) {
-  double reject_prob_thre = 0.5;
-  double short_reject_length = 15;
-
-  reject_reason_ = NO_REJECTION;
-  l_reject_ = false;
-  r_reject_ = false;
-  intercept_width_ = 3.8;
-
-  int lane_status = flane_->status();
-  double lane_width = flane_->width();
-  double min_width = flane_->min_width();
-  double max_width = flane_->max_width();
-
-  l_poly_.fill(0);
-  r_poly_.fill(0);
-
-  double l_prob, r_prob, intercept_width;
-
-  if (lane_status == LEFT_AVAILABLE) {
-    if (lane_width > min_width && lane_width < max_width) {
-      std::reverse_copy(flane_->c_poly().begin(),
-                        flane_->c_poly().end(),  // flane_->c_poly：0-3
-                        d_poly_.begin());        // d_poly_ : 3-0
-    } else {
-      l_prob = 1;
-      r_prob = 0;
-
-      std::reverse_copy(left_lane_boundary_poly().begin(),
-                        left_lane_boundary_poly().end(), l_poly_.begin());
-      r_poly_.fill(0.0);
-
-      lane_width = clip(lane_width, max_width, min_width);
-      intercept_width = lane_width * std::sqrt(1 + l_poly_[2] * l_poly_[2]);
-
-      calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width,
-                        d_poly_);
-    }
-  } else if (lane_status == RIGHT_AVAILABLE) {
-    if (lane_width > min_width && lane_width < max_width) {
-      std::reverse_copy(flane_->c_poly().begin(),
-                        flane_->c_poly().end(),  // flane_->c_poly：0-3
-                        d_poly_.begin());
-    } else {
-      l_prob = 0;
-      r_prob = 1;
-
-      l_poly_.fill(0.0);
-      std::reverse_copy(right_lane_boundary_poly().begin(),
-                        right_lane_boundary_poly().end(), r_poly_.begin());
-
-      l_poly_.begin();
-      lane_width = clip(lane_width, max_width, min_width);
-      intercept_width = lane_width * std::sqrt(1 + r_poly_[2] * r_poly_[2]);
-
-      calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width,
-                        d_poly_);
-    }
-  } else {
-    l_prob = 1;
-    r_prob = 1;
-    double l_intercept = flane_->get_left_lane_boundary().poly_coefficient(0);
-    double r_intercept = flane_->get_right_lane_boundary().poly_coefficient(0);
-    double l_length = flane_->get_left_lane_boundary().end();
-    double r_length = flane_->get_right_lane_boundary().end();
-
-    bool l_reject = false;
-    bool r_reject = false;
-    // bool bias_enable = true;
-    bool wide_reject_enable = true;
-    bool narrow_reject_enable = true;
-    bool short_reject_enable = true;
-
-    double gap_distance = 1.0;
-
-    if (lane_width > max_width) {
-      if (std::fabs(r_intercept) < std::fabs(l_intercept) - gap_distance &&
-          status != ROAD_LC_LWAIT && status != ROAD_LC_LBACK) {
-        l_reject = true;
-        reject_reason_ = WIDE_REJECTION_L;
-      } else if (std::fabs(r_intercept) >=
-                     std::fabs(l_intercept) - gap_distance &&
-                 status != ROAD_LC_RWAIT && status != ROAD_LC_RBACK) {
-        r_reject = true;
-        reject_reason_ = WIDE_REJECTION_R;
-      }
-    }
-
-    if ((!l_reject && !r_reject) || reject_reason_ == BIAS_L ||
-        reject_reason_ == BIAS_R) {
-      if (lane_width < min_width) {
-        if (session_->environmental_model().is_on_highway()) {
-          double FRONT_DISTANCE_CHECK = 30.0;
-          double REAR_DISTANCE_CHECK = -15.0;
-          double MIN_WIDTH = 2.2;
-
-          double front_lane_witdh = calc_lane_width_by_dist(
-              left_lane_boundary_poly(), right_lane_boundary_poly(),
-              FRONT_DISTANCE_CHECK);
-          double rear_lane_witdh = calc_lane_width_by_dist(
-              left_lane_boundary_poly(), right_lane_boundary_poly(),
-              REAR_DISTANCE_CHECK);
-          if (lane_width > MIN_WIDTH && front_lane_witdh > MIN_WIDTH &&
-              rear_lane_witdh > MIN_WIDTH) {
-          } else {
-            if (status == ROAD_LC_LCHANGE) {
-              l_reject = true;
-              reject_reason_ = NARROW_REJECTION;
-            } else if (status == ROAD_LC_RCHANGE) {
-              r_reject = true;
-              reject_reason_ = NARROW_REJECTION;
-            } else if (reject_reason_ == BIAS_L || reject_reason_ == BIAS_R) {
-              l_reject = true;
-              reject_reason_ = NARROW_REJECTION;
-            }
-          }
-        } else {
-          l_reject = true;
-          reject_reason_ = NARROW_REJECTION;
-        }
-      }
-    }
-
-    if (!l_reject && !r_reject) {
-      if (l_length < short_reject_length && r_length > 60) {
-        l_reject = true;
-        reject_reason_ = SHORT_REJECTION;
-      } else if (r_length < short_reject_length && l_length > 60) {
-        r_reject = true;
-        reject_reason_ = SHORT_REJECTION;
-      }
-    }
-
-    if (lane_width > min_width && lane_width < max_width && !l_reject &&
-        !r_reject) {
-      std::reverse_copy(flane_->c_poly().begin(), flane_->c_poly().end(),
-                        d_poly_.begin());
-    } else {
-      lane_width = clip(lane_width, max_width, min_width);
-
-      if (l_reject) {
-        l_prob = 0;
-        r_prob = 1;
-
-        l_poly_.fill(0.0);
-        std::reverse_copy(right_lane_boundary_poly().begin(),
-                          right_lane_boundary_poly().end(), r_poly_.begin());
-
-        intercept_width = lane_width * std::sqrt(1 + r_poly_[2] * r_poly_[2]);
-
-        calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width,
-                          d_poly_);
-      } else if (r_reject) {
-        l_prob = 1;
-        r_prob = 0;
-
-        std::reverse_copy(left_lane_boundary_poly().begin(),
-                          left_lane_boundary_poly().end(), l_poly_.begin());
-
-        r_poly_.fill(0.0);
-
-        intercept_width = lane_width * std::sqrt(1 + l_poly_[2] * l_poly_[2]);
-
-        calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width,
-                          d_poly_);
-      } else {
-        l_prob = 1;
-        r_prob = 1;
-
-        std::reverse_copy(left_lane_boundary_poly().begin(),
-                          left_lane_boundary_poly().end(), l_poly_.begin());
-
-        std::reverse_copy(right_lane_boundary_poly().begin(),
-                          right_lane_boundary_poly().end(), r_poly_.begin());
-
-        intercept_width =
-            lane_width *
-            std::sqrt(1 + std::pow(l_poly_[2] + r_poly_[2], 2) / 4);
-
-        calc_desired_path(l_poly_, r_poly_, l_prob, r_prob, intercept_width,
-                          d_poly_);
-      }
-      l_reject_ = l_reject;
-      r_reject_ = r_reject;
-      intercept_width_ = intercept_width;
-    }
-  }
-  return true;
-}
-
-void LateralOffsetCalculatorV2::calc_desired_path(
-    const std::array<double, 4> &l_poly, const std::array<double, 4> &r_poly,
-    double l_prob, double r_prob, double intercept_width,
-    std::array<double, 4> &d_poly) {
-  std::array<double, 4> half_lane_poly{0, 0, 0, intercept_width / 2};
-
-  if (l_prob + r_prob > 0) {
-    for (size_t i = 0; i < d_poly.size(); i++) {
-      d_poly[i] = ((l_poly[i] - half_lane_poly[i]) * l_prob +
-                   (r_poly[i] + half_lane_poly[i]) * r_prob) /
-                  (l_prob + r_prob);
-    }
-  } else {
-    d_poly.fill(0);
-  }
-}
-
-double LateralOffsetCalculatorV2::calc_lane_width_by_dist(
-    const std::vector<double> &left_poly, const std::vector<double> &right_poly,
-    const double &dist_x) {
-  std::vector<double> left_poly_yx, r_poly_yx;
-  left_poly_yx.resize(left_poly.size());
-  r_poly_yx.resize(right_poly.size());
-  std::reverse_copy(left_poly.begin(), left_poly.end(), left_poly_yx.begin());
-  std::reverse_copy(right_poly.begin(), right_poly.end(), r_poly_yx.begin());
-
-  double left_intercept = calc_poly1d(left_poly_yx, dist_x);
-  double right_intercept = calc_poly1d(r_poly_yx, dist_x);
-
-  if (left_poly_yx.size() >= 2 && r_poly_yx.size() >= 2) {
-    return (left_intercept - right_intercept) /
-           std::sqrt(1 + std::pow(0.5 * (left_poly_yx[1] + r_poly_yx[1]), 2));
-  } else {
-    return 3.8;
-  }
-}
 void LateralOffsetCalculatorV2::CalLaneWidth() {
   if (1) {
     double width = 0.0;

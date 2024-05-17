@@ -7,7 +7,7 @@
 #include "session.h"
 #include "task_basic_types.h"
 
-#define MIN_T_EXCEED_AVD_CAR (0.1)
+constexpr double MIN_T_EXCEED_AVD_CAR = 0.1;
 namespace planning {
 class AvoidObstacleMaintainer5V {
  public:
@@ -17,6 +17,9 @@ class AvoidObstacleMaintainer5V {
   bool Process(planning::framework::Session *session);
   const std::array<AvoidObstacleInfo, 2> &avd_obstacles() const {
     return avd_obstacles_;
+  };
+  const std::array<AvoidObstacleInfo, 2> &avd_obstacles_history() const {
+    return avd_obstacles_history_;
   };
   const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacles() const {
     return avd_sp_obstacles_;
@@ -65,6 +68,7 @@ class AvoidObstacleMaintainer5V {
   double ego_length_ = 0.;
 
   std::array<AvoidObstacleInfo, 2> avd_obstacles_;
+  std::array<AvoidObstacleInfo, 2> avd_obstacles_history_;
   std::array<AvoidObstacleInfo, 2> avd_sp_obstacles_;
 
   std::vector<AvoidObstacleInfo> avd_obstacles_cur_;

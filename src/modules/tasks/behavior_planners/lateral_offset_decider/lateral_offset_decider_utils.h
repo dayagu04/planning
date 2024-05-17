@@ -1,7 +1,7 @@
 #pragma once
 #include "lateral_obstacle.h"
 
-#define MAX_T_EXCEED_AVD_CAR (6.0)
+constexpr double MAX_T_EXCEED_AVD_CAR = 6.0;
 namespace planning {
 enum AvoidObstacleFlag { INVALID = -1000, LEAD_ONE = -1, NORMAL = 0, SIDE = 1 };
 enum AvoidObstacleUpdateFlag { Update = 1, Past = 2 };
@@ -121,6 +121,8 @@ bool IsFrontObstacleConsider(const framework::Session *session,
 bool IsSideObstacleConsider(const framework::Session *session,
                             const TrackedObject &tr, bool is_left);
 bool IsTruck(const AvoidObstacleInfo &avoid_obstacle);
+bool IsVRU(const AvoidObstacleInfo &avoid_obstacle);
+bool IsCone(const AvoidObstacleInfo &avoid_obstacle);
 bool HasEnoughSpace(const AvoidObstacleInfo &avoid_obstacle_1,
                     const AvoidObstacleInfo &avoid_obstacle_2);
 bool HasOverlap(const framework::Session *session,

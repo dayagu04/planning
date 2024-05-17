@@ -389,8 +389,20 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     is_valid_lateral_offset = read_json_key<bool>(
         json, "is_valid_lateral_offset", is_valid_lateral_offset);
+    base_nudge_distance = read_json_key<double>(
+        json, "base_nudge_distance", base_nudge_distance);
+    nudge_buffer_road_boundary =
+        read_json_key<double>(json, "nudge_buffer_road_boundary");
+    nudge_buffer_lane_boundary =
+        read_json_key<double>(json, "nudge_buffer_lane_boundary");
+    nudge_value_way =
+        read_json_key<bool>(json, "nudge_value_way");
   }
   bool is_valid_lateral_offset = false;
+  double nudge_buffer_road_boundary = 0.3;
+  double nudge_buffer_lane_boundary = 0.1;
+  double base_nudge_distance = 0.6;
+  bool nudge_value_way = true;
 };
 
 struct GeneralLateralDeciderConfig : public EgoPlanningConfig {

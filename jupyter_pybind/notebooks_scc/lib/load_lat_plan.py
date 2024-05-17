@@ -468,6 +468,7 @@ def load_lateral_offset(bag_loader):
   data_fig = ColumnDataSource(data ={
     'lateral_offset_1': [],
     'lateral_offset_2': [],
+    'avoid_ways': [],
     'frame_num_y': [],
   })
 
@@ -475,24 +476,29 @@ def load_lateral_offset(bag_loader):
       lateral_offsets = []
       smooth_lateral_offsets = []
       frame_nums = []
+      avoid_ways = []
       for i, plan_json_debug in enumerate(bag_loader.plan_debug_msg['json']):
         plan_debug_msg = bag_loader.plan_debug_msg['data'][i]
         frame_nums.append(plan_debug_msg.frame_info.frame_num)
         lateral_offsets.append(plan_json_debug['lat_offset'])
         smooth_lateral_offsets.append(plan_json_debug['smooth_lateral_offset'])
+        avoid_ways.append(plan_json_debug['avoid_way'] * 0.1)
       frame_num_0 = frame_nums[0]
       frame_nums = [frame_num - frame_num_0 for frame_num in frame_nums]
   fig = bkp.figure(x_axis_label='frame_num', y_axis_label='lat_offset',x_range = [frame_nums[0], frame_nums[-1]], width=700, height=200)
   data_fig.data.update({
     'lateral_offset_1':lateral_offsets,
     'lateral_offset_2':smooth_lateral_offsets,
+    "avoid_ways":avoid_ways,
     'frame_num_y':frame_nums,
   })
   f1 = fig.line('frame_num_y', 'lateral_offset_1', source = data_fig, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lateral_offset')
   fig.line('frame_num_y', 'lateral_offset_2', source = data_fig, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'smooth_lateral_offset')
+  fig.line('frame_num_y', 'avoid_ways', source = data_fig, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'avoid_way')
 
-  hover1_1 = HoverTool(renderers=[f1], tooltips=[('frame_num', '@frame_num_y'), ('lateral_offset', '@lateral_offset_1'), ('smooth_lateral_offset', '@lateral_offset_2')], mode='vline')
+  hover1_1 = HoverTool(renderers=[f1], tooltips=[('frame_num', '@frame_num_y'), ('lateral_offset', '@lateral_offset_1'), ('smooth_lateral_offset', '@lateral_offset_2'), ('avoid_way', '@avoid_ways')], mode='vline')
   fig.add_tools(hover1_1)
+  fig.legend.click_policy = 'hide'
   fig.toolbar.active_scroll = fig.select_one(WheelZoomTool)
   return fig
 def load_lat_plan_figure(fig1):

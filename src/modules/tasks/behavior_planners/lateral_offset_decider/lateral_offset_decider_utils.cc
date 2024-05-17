@@ -5,11 +5,23 @@
 #include "planning_context.h"
 namespace planning {
 namespace lateral_offset_decider {
+
+bool IsStaticObstacle(const TrackedObject &tr) {
+  return tr.v < 0.1;
+}
+
 bool IsAboutToEnterLonRange(const TrackedObject &tr, bool is_front) {
   if (is_front) {
     return tr.d_rel < std::max(std::min(-tr.v_rel * 15, 60.0), 20.0);
   } else {
-    return tr.d_rel > std::min(-10.0 - tr.v_rel * 2, -5.0) && tr.d_rel < 2;
+    const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+    const double ego_length = vehicle_param.length;
+    if (IsStaticObstacle(tr)) {
+      return tr.d_rel > -ego_length - 1;
+    } else {
+      return tr.d_rel > std::min(-10.0 - tr.v_rel * 2, -5.0) && tr.d_rel < 2;
+    }
   }
 }
 
@@ -218,6 +230,17 @@ bool IsTruck(const AvoidObstacleInfo &avoid_obstacle) {
   return (avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_BUS ||
           avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_TRUCK) &&
          avoid_obstacle.length > lateral_offset_decider::kTruckMinLength;
+}
+
+bool IsVRU(const AvoidObstacleInfo &avoid_obstacle) {
+  return avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_BICYCLE ||
+         avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
+         avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_TRICYCLE ||
+         avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_ANIMAL;
+}
+
+bool IsCone(const AvoidObstacleInfo &avoid_obstacle) {
+  return avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_CONE;
 }
 
 bool HasEnoughSpace(const AvoidObstacleInfo &avoid_obstacle_1,

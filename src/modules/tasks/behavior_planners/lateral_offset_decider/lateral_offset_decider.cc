@@ -103,6 +103,15 @@ void LateralOffsetDecider::SmoothLateralOffset(double in_lat_offset) {
     }
   }
 
+  const auto &avd_obstacles_history =
+      avoid_obstacle_maintainer5v_.avd_obstacles_history();
+  const auto &avd_obstacles = avoid_obstacle_maintainer5v_.avd_obstacles();
+  if (avd_obstacles[0].flag == AvoidObstacleFlag::INVALID) {
+    if (avd_obstacles_history[0].flag != AvoidObstacleFlag::INVALID && avd_obstacles_history[0].s_to_ego >=0) {
+      overlap_lateral_offset_change_rate = 0.01;
+    }
+  }
+
   const double speed_ratio =
       kMaxLateralOffsetChangeRate / kMaxChangeRateEgoSpeed;
   const auto &ego_state_manager =
