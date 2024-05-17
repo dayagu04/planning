@@ -460,14 +460,14 @@ void ParallelParInPlanner::GenTlane() {
     // DEBUG_PRINT(obstacle_point_slot.transpose());
 
     const bool front_obs_condition =
-        pnc::mathlib::IsInBound(
-            obstacle_point_slot.x(),
-            slot_length - kFrontMaxDetaXMagWhenFrontOccupied,
-            slot_length + kFrontDetaXMagWhenFrontVacant) &&
-        pnc::mathlib::IsInBound(
-            obstacle_point_slot.y(),
-            -kFrontObsLineYMagIdentification * side_sgn,
-            (half_slot_width + kFrontObsLineYMagIdentification) * side_sgn);
+        ((pnc::mathlib::IsInBound(
+             obstacle_point_slot.x(),
+             slot_length - kFrontMaxDetaXMagWhenFrontOccupied,
+             slot_length + kFrontDetaXMagWhenFrontVacant)) &&
+         (pnc::mathlib::IsInBound(
+             obstacle_point_slot.y(),
+             -kFrontObsLineYMagIdentification * side_sgn,
+             (half_slot_width + kFrontObsLineYMagIdentification) * side_sgn)));
 
     if (front_obs_condition) {
       // front obs line que
@@ -476,12 +476,13 @@ void ParallelParInPlanner::GenTlane() {
     }
 
     const bool rear_obs_condition =
-        pnc::mathlib::IsInBound(obstacle_point_slot.x(),
-                                -kRearDetaXMagWhenFrontOccupiedRearVacant,
-                                kRearMaxDetaXMagWhenRearOccupied) &&
-        pnc::mathlib::IsInBound(
-            obstacle_point_slot.y(), -side_sgn * kRearObsLineYMagIdentification,
-            (half_slot_width + kRearObsLineYMagIdentification) * side_sgn);
+        ((pnc::mathlib::IsInBound(obstacle_point_slot.x(),
+                                  -kRearDetaXMagWhenFrontOccupiedRearVacant,
+                                  kRearMaxDetaXMagWhenRearOccupied)) &&
+         (pnc::mathlib::IsInBound(
+             obstacle_point_slot.y(),
+             -side_sgn * kRearObsLineYMagIdentification,
+             (half_slot_width + kRearObsLineYMagIdentification) * side_sgn)));
 
     if (rear_obs_condition) {
       // rear obs line que
@@ -553,6 +554,10 @@ void ParallelParInPlanner::GenTlane() {
     DEBUG_PRINT("rear space empty!");
   }
 
+  JSON_DEBUG_VALUE("para_tlane_is_front_vacant", front_vacant)
+  JSON_DEBUG_VALUE("para_tlane_is_rear_vacant", rear_vacant)
+  JSON_DEBUG_VALUE("para_tlane_side_sgn", side_sgn)
+
   if (front_vacant && rear_vacant) {
     front_obs_que_ascending_x.emplace(
         Eigen::Vector2d(slot_length + kFrontDetaXMagWhenFrontVacant,
@@ -571,6 +576,7 @@ void ParallelParInPlanner::GenTlane() {
     rear_obs_que_descending_x.emplace(
         Eigen::Vector2d(-kRearDetaXMagWhenFrontOccupiedRearVacant,
                         side_sgn * 0.5 * half_slot_width));
+  } else {
   }
 
   const double front_min_x =
@@ -581,8 +587,33 @@ void ParallelParInPlanner::GenTlane() {
   DEBUG_PRINT("front quene min x = " << front_obs_que_ascending_x.top().x());
   DEBUG_PRINT("front min x = " << front_min_x);
 
+  JSON_DEBUG_VALUE("para_tlane_front_quene_top_x",
+                   front_obs_que_ascending_x.top().x())
+  JSON_DEBUG_VALUE("para_tlane_front_min_x", front_min_x)
+
+  std::vector<double> front_que_x;
+  std::vector<double> front_que_y;
+  while (!front_obs_que_ascending_x.empty()) {
+    front_que_x.emplace_back(front_obs_que_ascending_x.top().x());
+    front_que_y.emplace_back(front_obs_que_ascending_x.top().y());
+    front_obs_que_ascending_x.pop();
+  }
+  JSON_DEBUG_VECTOR("tlane_front_que_x", front_que_x, 2)
+  JSON_DEBUG_VECTOR("tlane_front_que_y", front_que_y, 2)
+
+  std::vector<double> rear_que_x;
+  std::vector<double> rear_que_y;
+  while (!rear_obs_que_descending_x.empty()) {
+    rear_que_x.emplace_back(rear_obs_que_descending_x.top().x());
+    rear_que_y.emplace_back(rear_obs_que_descending_x.top().y());
+    rear_obs_que_descending_x.pop();
+  }
+  JSON_DEBUG_VECTOR("tlane_rear_que_x", rear_que_x, 2)
+  JSON_DEBUG_VECTOR("tlane_rear_que_y", rear_que_y, 2)
+
   const double front_y_limit = front_parallel_line_y_limit;
   DEBUG_PRINT("front parallel line y =" << front_y_limit);
+  JSON_DEBUG_VALUE("para_tlane_front_y", front_y_limit)
 
   const double rear_max_x =
       pnc::mathlib::Clamp(rear_obs_que_descending_x.top().x(),
@@ -591,8 +622,14 @@ void ParallelParInPlanner::GenTlane() {
   DEBUG_PRINT("rear quene min x = " << rear_obs_que_descending_x.top().x());
   DEBUG_PRINT("rear max x = " << rear_max_x);
 
+  JSON_DEBUG_VALUE("para_tlane_rear_quene_top_x",
+                   rear_obs_que_descending_x.top().x())
+  JSON_DEBUG_VALUE("para_tlane_rear_max_x", rear_max_x)
+
   const double rear_y_limit = rear_parallel_line_y_limit;
   DEBUG_PRINT("rear parallel line y =" << rear_y_limit);
+
+  JSON_DEBUG_VALUE("para_tlane_rear_y", rear_max_x)
 
   t_lane_.obs_pt_inside << front_min_x, front_y_limit;
   t_lane_.obs_pt_outside << rear_max_x, rear_y_limit;
@@ -610,12 +647,26 @@ void ParallelParInPlanner::GenTlane() {
   t_lane_.slot_width = ego_slot_info.slot_width;
   t_lane_.slot_length = slot_length;
 
+  std::vector<double> tlane_obs_pt_vec;
+  tlane_obs_pt_vec.emplace_back(t_lane_.pt_inside.x());
+  tlane_obs_pt_vec.emplace_back(t_lane_.pt_inside.y());
+  tlane_obs_pt_vec.emplace_back(t_lane_.pt_outside.x());
+  tlane_obs_pt_vec.emplace_back(t_lane_.pt_outside.x());
+  JSON_DEBUG_VECTOR("para_tlane_obs_pt_before_uss", tlane_obs_pt_vec, 2)
+
   // update tlane using USS dist
   if (frame_.ego_slot_info.slot_occupied_ratio >= kEnterMultiPlanSlotRatio &&
       (frame_.in_slot_plan_count == 0 ||
        std::fabs(frame_.ego_slot_info.terminal_err.heading) <= 15.0 / 57.3)) {
     UpdateTlaneOnceInSlot();
   }
+
+  tlane_obs_pt_vec.clear();
+  tlane_obs_pt_vec.emplace_back(t_lane_.pt_inside.x());
+  tlane_obs_pt_vec.emplace_back(t_lane_.pt_inside.y());
+  tlane_obs_pt_vec.emplace_back(t_lane_.pt_outside.x());
+  tlane_obs_pt_vec.emplace_back(t_lane_.pt_outside.x());
+  JSON_DEBUG_VECTOR("para_tlane_obs_pt_after_uss", tlane_obs_pt_vec, 2)
 
   // if curb exist, combine curb and slot center line to decide target y
   if (curb_count > 1) {
@@ -724,6 +775,11 @@ void ParallelParInPlanner::GenTlane() {
   DEBUG_PRINT("channel x =" << t_lane_.channel_x_limit);
   DEBUG_PRINT("channel y =" << t_lane_.channel_y);
   DEBUG_PRINT("------------------");
+
+  JSON_DEBUG_VALUE("para_tlane_obs_in_x", t_lane_.obs_pt_inside.x())
+  JSON_DEBUG_VALUE("para_tlane_obs_in_y", t_lane_.obs_pt_inside.y())
+  JSON_DEBUG_VALUE("para_tlane_obs_out_x", t_lane_.obs_pt_outside.x())
+  JSON_DEBUG_VALUE("para_tlane_obs_out_x", t_lane_.obs_pt_outside.y())
 }
 
 void ParallelParInPlanner::UpdateTlaneOnceInSlot() {
