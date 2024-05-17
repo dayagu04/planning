@@ -136,7 +136,7 @@
   "dynamic_col_det_enable": true,
   "car_lat_inflation_for_obs_radical": 0.0286,
   "parallel_obs2slot_max_dist": 16.66,
-  "parallel_channel_y_mag": 5.7,
+  "parallel_channel_y_mag": 6.2,
   "parallel_channel_x_mag": 16.6,
   "parallel_ego_side_to_obs_in_buffer": 0.3,
   "parallel_ego_front_corner_to_obs_in_buffer": 0.1,

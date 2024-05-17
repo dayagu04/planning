@@ -512,7 +512,7 @@ void ParallelParInPlanner::GenTlane() {
       channel_y_limit =
           side_sgn > 0.0 ? std::min(channel_y_limit, obstacle_point_slot.y())
                          : std::max(channel_y_limit, obstacle_point_slot.y());
-      DEBUG_PRINT("channel_y_condition!");
+      // DEBUG_PRINT("channel_y_condition!");
     }
 
     const bool front_parallel_line_condition =
