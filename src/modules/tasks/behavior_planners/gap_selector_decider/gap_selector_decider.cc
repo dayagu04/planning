@@ -300,7 +300,11 @@ GapSelectorStatus GapSelectorDecider::Update() {
                                 : 0.0;
 
   if (coarse_planning_info.target_state != last_target_state_) {
-    if (coarse_planning_info.target_state == ROAD_NONE) {
+    if (coarse_planning_info.target_state == ROAD_NONE ||
+        coarse_planning_info.target_state == ROAD_LC_LWAIT ||
+        coarse_planning_info.target_state == ROAD_LC_RWAIT ||
+        coarse_planning_info.target_state == ROAD_LC_LBACK ||
+        coarse_planning_info.target_state == ROAD_LC_RBACK) {
       lc_timer_ = 0.;
       lc_total_time_ = config_.default_lc_time;
       use_ego_v_ = false;
@@ -2297,10 +2301,9 @@ void GapSelectorDecider::GenerateLinearRefTrajectory(
     TrajectoryPoints &traj_points) {
   // linear generate traj
   const double lane_direction =
-      gap_selector_state_machine_info_.lc_request_buffer[2] == 1
-          ? 1
-          : gap_selector_state_machine_info_.lc_request_buffer[2] == 2 ? -1
-                                                                       : 0.;
+      gap_selector_state_machine_info_.lc_request_buffer[2] == 1   ? 1
+      : gap_selector_state_machine_info_.lc_request_buffer[2] == 2 ? -1
+                                                                   : 0.;
   const double lat_movd_coef =
       lane_direction * 0.5 * (origin_lane_width_ + target_lane_width_) /
       (config_.default_lc_time + config_.lc_premove_time);
