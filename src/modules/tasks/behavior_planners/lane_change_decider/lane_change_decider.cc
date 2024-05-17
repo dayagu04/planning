@@ -15,6 +15,7 @@
 #include "reference_path_manager.h"
 #include "spline_projection.h"
 #include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
+#include "tracked_object.h"
 #include "utils/pose2d_utils.h"
 #include "vehicle_config_context.h"
 
@@ -519,6 +520,9 @@ void LaneChangeDecider::compute_lc_valid_info(RequestType direction) {
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
                    obstacle.track_id) > 0) {
+      if (!(obstacle.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+        continue;
+      }
       side_target_tracks.push_back(obstacle);
     }
   }
@@ -526,6 +530,9 @@ void LaneChangeDecider::compute_lc_valid_info(RequestType direction) {
   for (auto &obstacle : lateral_obstacle->front_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
                    obstacle.track_id) > 0) {
+      if (!(obstacle.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+        continue;
+      }
       front_target_tracks.push_back(obstacle);
     }
   }
@@ -920,6 +927,9 @@ void LaneChangeDecider::compute_lc_back_info(RequestType direction) {
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
                    obstacle.track_id) > 0) {
+      if (!(obstacle.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+        continue;
+      }
       side_target_tracks.push_back(obstacle);
     }
   }
@@ -927,6 +937,9 @@ void LaneChangeDecider::compute_lc_back_info(RequestType direction) {
   for (auto &obstacle : lateral_obstacle->front_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
                    obstacle.track_id) > 0) {
+      if (!(obstacle.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+        continue;
+      }
       front_target_tracks.push_back(obstacle);
     }
   }
