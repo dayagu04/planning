@@ -158,7 +158,7 @@ struct ApaParameters {
   double parallel_channel_y_mag = 8.5;
   double parallel_channel_x_mag = 16.6;
   double parallel_ego_side_to_obs_in_buffer = 0.3;
-  double parallel_ego_front_corner_to_obs_in_buffer = 0.3;
+  double parallel_ego_front_corner_to_obs_in_buffer = 0.2;
 
   // dynamic update path params
   double car_to_limiter_dis = 1.0;

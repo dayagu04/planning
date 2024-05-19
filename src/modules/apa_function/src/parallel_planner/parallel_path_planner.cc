@@ -38,6 +38,9 @@ static const double kColBufferInSlot = 0.4;
 static const double kSmallColBufferInSlot = 0.25;
 static const double kColBufferOutSlot = 0.5;
 
+static const double kLatColBufferOutSlot = 0.2;
+static const double kLatColBufferInSlot = 0.08;
+
 static const size_t kMaxParallelParkInSegmentNums = 15;
 static const size_t kReservedOutputPathPointSize = 750;
 static const size_t kMaxPathNumsInSlot = 5;
@@ -75,6 +78,11 @@ void ParallelPathPlanner::Preprocess() {
   // target line
   calc_params_.target_line = pnc::geometry_lib::BuildLineSegByPose(
       input_.tlane.pt_terminal_pos, target_heading);
+
+  CollisionDetector::Paramters params;
+  params.lat_inflation = input_.slot_occupied_ratio > 0.3 ? kLatColBufferOutSlot
+                                                          : kLatColBufferInSlot;
+  collision_detector_ptr_->SetParam(params);
 }
 
 const bool ParallelPathPlanner::Update() {

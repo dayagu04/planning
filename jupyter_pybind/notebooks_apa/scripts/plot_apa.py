@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/Parallel/0517/planning-9e1386df2-JAC_S811/test_14.00000'
+bag_path = '/data_cold/abu_zone/APA/Parallel/0517_fix_log/planning-939d2c973-JAC_S811/test_0.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
@@ -150,8 +150,32 @@ def slider_callback(bag_time):
         'y': slm_selected_obs_x,
         'x': slm_selected_obs_y
     })
-    for i in range(len(slm_selected_obs_x)):
-      print(slm_selected_obs_x[i], ", ", slm_selected_obs_x[i])
+    # for i in range(len(slm_selected_obs_x)):
+    #   print(slm_selected_obs_x[i], ", ", slm_selected_obs_y[i])
+
+    print("para_tlane_side_sgn", planning_json['para_tlane_side_sgn'])
+    print("para_tlane_is_front_vacant",planning_json['para_tlane_is_front_vacant'])
+    print("para_tlane_is_rear_vacant",planning_json['para_tlane_is_rear_vacant'])
+    tlane = planning_json['para_tlane_obs_pt_before_uss']
+    print("para_tlane_obs_pt_before_uss = (", tlane[0], ", ", tlane[1], ")  (", tlane[2], ", ",tlane[3],")")
+    tlane_after_uss = planning_json['para_tlane_obs_pt_after_uss']
+    print("para_tlane_obs_pt_after_uss = (", tlane_after_uss[0], ", ", tlane_after_uss[1], ")  (", tlane_after_uss[2], ", ",tlane_after_uss[3],")")
+
+    print("------------front---------------")
+    print("para_tlane_front_min_x_before_clamp", planning_json['para_tlane_front_min_x_before_clamp'])
+    print("para_tlane_front_min_x_after_clamp", planning_json['para_tlane_front_min_x_after_clamp'])
+
+    print("tlane_front_que_x:-----------------------")
+    for i in range(len(planning_json['tlane_front_que_x'])):
+      print("( ", planning_json['tlane_front_que_x'][i], ", ", planning_json['tlane_front_que_y'][i], ")  ")
+
+    print("--------------rear-------------")
+    print("para_tlane_rear_max_x_before_clamp", planning_json['para_tlane_rear_max_x_before_clamp'])
+    print("para_tlane_rear_max_x_after_clamp", planning_json['para_tlane_rear_max_x_after_clamp'])
+
+    print("tlane_rear_que_x:-----------------------")
+    for i in range(len(planning_json['tlane_rear_que_x'])):
+      print("( ", planning_json['tlane_rear_que_x'][i], ", ", planning_json['tlane_rear_que_y'][i], ")  ")
   print("----------------------------------------------")
 
   push_notebook()
