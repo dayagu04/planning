@@ -177,10 +177,10 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   double lead_one_a_processed = 0.0;
   double lead_one_desired_distance = 0.0;
   double safe_distance = 0.0;
-  double lead_one_desired_velocity = 0.0;
+  double lead_one_desired_velocity = 40.0;
   double lead_two_a_processed = 0.0;
   double lead_two_desired_distance = 0.0;
-  double lead_two_desired_velocity = 0.0;
+  double lead_two_desired_velocity = 40.0;
   double desired_distance_filtered = 0.0;
   double lead_two_desired_distance_filtered = 0.0;
   std::pair<double, double> acc_target = {-0.5, 0.5};
@@ -265,6 +265,13 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
 
       v_target_ = std::min(v_target_, lead_two_desired_velocity);
 
+      if (lead_two_desired_velocity < lead_one_desired_velocity) {
+        CalcAccLimits(lead_two, lead_two_desired_distance,
+                      lead_two_desired_velocity, v_ego, lead_two_a_processed,
+                      acc_target);
+        acc_target_.first = std::min(acc_target.first, acc_target.first);
+        acc_target_.second = std::min(acc_target.second, acc_target.second);
+      }
       JSON_DEBUG_VALUE("lead_two_id", lead_two.track_id());
       JSON_DEBUG_VALUE("lead_two_dis", lead_two.d_rel());
       JSON_DEBUG_VALUE("lead_two_vel", lead_two.v_lead());
@@ -314,10 +321,10 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
   double temp_lead_one_desired_distance = 0.0;
   double temp_desired_distance_filtered = 0.0;
   double safe_distance = 0.0;
-  double temp_lead_one_desired_velocity = 0.0;
+  double temp_lead_one_desired_velocity = 40.0;
   double temp_lead_two_a_processed = 0.0;
   double temp_lead_two_desired_distance = 0.0;
-  double temp_lead_two_desired_velocity = 0.0;
+  double temp_lead_two_desired_velocity = 40.0;
 
   LOG_DEBUG("----CalcSpeedInfoWithTempLead--- \n");
   // temp leadone
@@ -429,12 +436,6 @@ void StGraphGenerator::CalcSpeedInfoWithCutin(
     const planning::common::LatObsInfo &lateral_obstacles,
     const std::string &lc_request, double v_cruise, double v_ego,
     std::vector<planning::common::RealTimeLonObstacleSTInfo> &cut_in_st_info) {
-  constexpr double velocity_increase_cutin = 0.005;
-  constexpr double p1min_speed = 2.0;
-  constexpr double p2min_speed = 3.0;
-
-  std::vector<const planning::common::TrackedObjectInfo *> near_cars,
-      near_cars_sorted;
   // 更新周围障碍物的cut in信息，纵向评估的cut in,不用做计算
   UpdateNearObstacles(lateral_obstacles, lc_request, v_ego);
 
@@ -1076,7 +1077,7 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
   double a_processed = 0.0;
   double desired_distance = 0.0;
   double safe_distance = 0.0;
-  double desired_velocity = 0.0;
+  double desired_velocity = 40.0;
   double time_to_entry = 0.0;
   double predict_distance = 0.0;
   double desired_distance_filtered = 0.0;
@@ -1233,13 +1234,10 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
     std::vector<planning::common::RealTimeLonObstacleSTInfo>
         &lane_change_st_info) {
   LOG_DEBUG("----entering CalcSpeedInfoWithGap--- \n");
-  double a_processed = 0.0;
-  double desired_distance = 0.0;
   double lc_t_gap = 0.2;
   double lc_buffer = 2;
   double safe_distance =
       lane_changing_decider_->get_lc_safe_dist(lc_buffer, lc_t_gap, v_ego);
-  double desired_velocity = 0.0;
   double time_to_lc = 0.0;
   double predict_distance = 0.0;
   double v_limit_lc = 40.0;
@@ -1546,7 +1544,8 @@ bool StGraphGenerator::CalcAccLimits(
       interp(lead_obstacle.v_lead(), _A_LEAD_LOW_SPEED_BP,
              _A_LEAD_LOW_SPEED_V) *
       interp(desired_distance, _A_LEAD_DISTANCE_BP, _A_LEAD_DISTANCE_V) * 0.8;
-  acc_target.second = CalcPositiveAccLimit(v_ego, agent_v_rel, acc_target.second);
+  acc_target.second =
+      CalcPositiveAccLimit(v_ego, agent_v_rel, acc_target.second);
   // compute max decel
   // assume the car is 1m/s slower
   double v_offset =
@@ -1572,8 +1571,9 @@ bool StGraphGenerator::CalcAccLimits(
   return true;
 }
 
-double StGraphGenerator::CalcPositiveAccLimit(
-    const double v_ego, const double v_rel, const double a_max_const) {
+double StGraphGenerator::CalcPositiveAccLimit(const double v_ego,
+                                              const double v_rel,
+                                              const double a_max_const) {
   double a_max = a_max_const;
   // same as cruise accel, plus add a small correction based on relative
   // lead speed if the lead car is faster, we can accelerate more, if the
