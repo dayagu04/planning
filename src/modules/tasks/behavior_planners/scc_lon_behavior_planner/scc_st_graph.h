@@ -89,9 +89,7 @@ class StGraphGenerator {
                      const double desired_distance, const double v_target,
                      const double v_ego, const double lead_one_a_processed,
                      std::pair<double, double> &acc_target);
-  double CalcPositiveAccLimit(const double d_lead, const double d_des,
-                              const double v_ego, const double v_rel,
-                              const double v_target, const double a_lead_contr,
+  double CalcPositiveAccLimit(const double v_ego, const double v_rel,
                               const double a_max_const);
   double CalcCriticalDecel(const double d_lead, const double v_rel,
                            const double d_offset, const double v_offset);

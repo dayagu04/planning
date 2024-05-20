@@ -1546,9 +1546,7 @@ bool StGraphGenerator::CalcAccLimits(
       interp(lead_obstacle.v_lead(), _A_LEAD_LOW_SPEED_BP,
              _A_LEAD_LOW_SPEED_V) *
       interp(desired_distance, _A_LEAD_DISTANCE_BP, _A_LEAD_DISTANCE_V) * 0.8;
-  acc_target.second = CalcPositiveAccLimit(
-      lead_obstacle.d_rel(), desired_distance, v_ego, agent_v_rel, v_target,
-      a_lead_contr, acc_target.second);
+  acc_target.second = CalcPositiveAccLimit(v_ego, agent_v_rel, acc_target.second);
   // compute max decel
   // assume the car is 1m/s slower
   double v_offset =
@@ -1575,37 +1573,13 @@ bool StGraphGenerator::CalcAccLimits(
 }
 
 double StGraphGenerator::CalcPositiveAccLimit(
-    const double d_lead, const double d_des, const double v_ego,
-    const double v_rel, const double v_target, const double a_lead_contr,
-    const double a_max_const) {
-  // never coast faster then -1m/s^2
-  double a_coast_min = -1.0;
+    const double v_ego, const double v_rel, const double a_max_const) {
   double a_max = a_max_const;
-  // coasting behavior above v_coast. Forcing a_max to be negative will force
-  // the pid_speed to decrease, regardless v_target
-  if (v_ego > v_target + 0.5) {
-    // for smooth coast we can be aggressive && target a point where car
-    // would actually crash
-    double v_offset_coast = 1.0;
-    double d_offset_coast = d_des / 2.0 - 4.0;
-
-    // acceleration value to smoothly coast until we hit v_target
-    if (d_lead > d_offset_coast + 0.1) {
-      double a_coast =
-          CalcCriticalDecel(d_lead, v_rel, d_offset_coast, v_offset_coast);
-      // if lead is decelerating, then offset the coast decel
-      a_coast += a_lead_contr;
-      a_max = std::max(a_coast, a_coast_min);
-    } else {
-      a_max = a_coast_min;
-    }
-  } else {
-    // same as cruise accel, plus add a small correction based on relative
-    // lead speed if the lead car is faster, we can accelerate more, if the
-    // car is slower, then we can reduce acceleration
-    a_max = a_max + interp(v_ego, _A_CORR_BY_SPEED_BP, _A_CORR_BY_SPEED_V) *
-                        clip(-v_rel / 4.0, 1.0, -0.5);
-  }
+  // same as cruise accel, plus add a small correction based on relative
+  // lead speed if the lead car is faster, we can accelerate more, if the
+  // car is slower, then we can reduce acceleration
+  a_max = a_max + interp(v_ego, _A_CORR_BY_SPEED_BP, _A_CORR_BY_SPEED_V) *
+                      clip(-v_rel / 4.0, 1.0, -0.5);
   return a_max;
 }
 
