@@ -364,6 +364,11 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
             ? apa_param.GetParam().col_obs_safe_dist
             : apa_param.GetParam().col_obs_safe_dist_radical;
 
+    CollisionDetector::Paramters params;
+    params.lat_inflation =
+        apa_param.GetParam().car_lat_inflation_for_obs_radical;
+    apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
+
     double min_remain_dist = 0.0268;
     if (dist > apa_param.GetParam().slot_max_jump_dist &&
         frame_.remain_dist > min_remain_dist) {
@@ -449,6 +454,9 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
         PostProcessPathAccordingObs(car_remain_dist);
       }
     }
+
+    params.Reset();
+    apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
   }
 
   // update stuck uss time
@@ -1635,6 +1643,12 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingLimiter() {
     }
     if (s > s_proj) {
       std::cout << "path shoule be shorten because of limiter\n";
+      if (s_proj - s_vec.back() > 0.036 && frame_.spline_success) {
+        x_vec.emplace_back(frame_.x_s_spline(s_proj));
+        y_vec.emplace_back(frame_.y_s_spline(s_proj));
+        heading_vec.emplace_back(heading_vec.back());
+        s_vec.emplace_back(s_proj);
+      }
       break;
     }
     x_vec.emplace_back(current_path_point_global_vec_[i].pos.x());
@@ -1733,6 +1747,12 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingObs(
     }
     if (s > car_remain_dist) {
       std::cout << "path shoule be shorten because of obs\n";
+      if (car_remain_dist - s_vec.back() > 0.036 && frame_.spline_success) {
+        x_vec.emplace_back(frame_.x_s_spline(car_remain_dist));
+        y_vec.emplace_back(frame_.y_s_spline(car_remain_dist));
+        heading_vec.emplace_back(heading_vec.back());
+        s_vec.emplace_back(car_remain_dist);
+      }
       break;
     }
     x_vec.emplace_back(current_path_point_global_vec_[i].pos.x());
