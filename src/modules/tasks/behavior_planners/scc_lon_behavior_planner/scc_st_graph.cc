@@ -6,7 +6,6 @@
 #include "ego_planning_config.h"
 #include "math/linear_interpolation.h"
 #include "planning_context.h"
-#include "session.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_requests/lane_change_lane_manager.h"
 // #include "scenario_state_machine.h"
 #include "task_basic_types.h"
@@ -1881,7 +1880,6 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
         (lead_one.v_lead() > obstacle_v_start &&
          (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
              distance_start);
-    std::cout << start_stop_info_.stop_distance_of_leadone() << std::endl;
     // lead_one change: obj stopped adc by cut_in, then leaved
     bool lead_one_change =
         (lead_one.d_rel() - desire_distance) > (distance_stop + 1.0);
@@ -1896,7 +1894,6 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
       start_stop_info_.set_stop_distance_of_leadone(lead_one.d_rel());
       LOG_DEBUG("The distance error of STOP is [%f]m \n",
                 lead_one.d_rel() - desire_distance);
-      std::cout << desire_distance << std::endl;
     } else if (start_stop_info_.state() == common::StartStopInfo::CRUISE &&
                cruise_to_start_condition) {
       // CRUISE --> START

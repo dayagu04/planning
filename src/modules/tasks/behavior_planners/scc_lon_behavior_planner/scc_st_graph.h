@@ -13,7 +13,6 @@
 #include "lon_behavior_planner.pb.h"
 #include "real_time_lon_behavior_planner.pb.h"
 #include "scc_lon_behavior_types.h"
-#include "session.h"
 #include "task_basic_types.h"
 #include "tasks/behavior_planners/real_time_lane_change_decider/real_time_lane_change_decider.h"
 #include "utils_math.h"
