@@ -266,8 +266,8 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     CalcAccLimits(lead_one, lead_one_desired_distance,
                   lead_one_desired_velocity, v_ego, lead_one_a_processed,
                   acc_target);
-    acc_target_.first = std::min(acc_target.first, acc_target.first);
-    acc_target_.second = std::min(acc_target.second, acc_target.second);
+    acc_target_.first = std::min(acc_target_.first, acc_target.first);
+    acc_target_.second = std::min(acc_target_.second, acc_target.second);
 
     JSON_DEBUG_VALUE("acc_cipv", lead_one.a_lead_k());
     JSON_DEBUG_VALUE("acc_target_high", acc_target_.second);
@@ -1075,6 +1075,7 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
   double v_target_potential_cutin = 40.0;
   double v_limit = std::min(v_cruise, v_ego);
   std::pair<int, double> cutin_id_vt = {-1, 0.0};
+  std::pair<double, double> acc_target = {-0.5, 0.5};
 
   auto cut_in_info =
       lon_behav_input_->mutable_lon_decision_info()->mutable_cutin_info();
@@ -1122,14 +1123,20 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
       // 计算期望车速
       desired_velocity =
           CalcDesiredVelocity(track.d_rel(), desired_distance, track.v_lead());
+
+      CalcAccLimits(track, desired_distance, desired_velocity, v_ego,
+                    a_processed, acc_target);
+      acc_target_.first = std::min(acc_target_.first, acc_target.first);
+      acc_target_.second = std::min(acc_target_.second, acc_target.second);
+
       // 通过切入概率更新目标车速
       // v_target_potential_cutin =
       //     std::min(v_target_potential_cutin,
       //              (desired_velocity - v_limit) * track.cutinp() + v_limit);
-      double v_potental_cutin =
+      double v_potential_cutin =
           (desired_velocity - v_limit) * track.cutinp() + v_limit;
-      if (v_target_potential_cutin > v_potental_cutin) {
-        v_target_potential_cutin = v_potental_cutin;
+      if (v_target_potential_cutin > v_potential_cutin) {
+        v_target_potential_cutin = v_potential_cutin;
         cutin_id_vt.first = track.track_id();
         cutin_id_vt.second = v_target_potential_cutin;
       }
@@ -1163,8 +1170,8 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
       cut_in_info->Clear();
     }
   }
-  JSON_DEBUG_VALUE("v_target_potental_cutin", cutin_id_vt.second);
-  JSON_DEBUG_VALUE("potental_cutin_track_id", cutin_id_vt.first);
+  JSON_DEBUG_VALUE("v_target_potential_cutin", cutin_id_vt.second);
+  JSON_DEBUG_VALUE("potential_cutin_track_id", cutin_id_vt.first);
 };
 
 double StGraphGenerator::CalcDesiredVelocity(const double d_rel,
