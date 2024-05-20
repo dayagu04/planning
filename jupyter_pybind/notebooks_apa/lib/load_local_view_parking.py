@@ -1743,14 +1743,14 @@ fusion_slot_params_apa = {
   'line_alpha' : 0.6,
   'line_width' : 2,
   'legend_label' : 'fusion_parking_slot',
-  'visible' : False
+  'visible' : True
 }
 vision_slot_params_apa = {
   'line_dash' : 'solid',
   'line_color' : "lightgrey",
   'line_width' : 3,
   'legend_label' : 'vision_parking_slot',
-  'visible' : True
+  'visible' : False
 }
 
 final_slot_params_apa = {
