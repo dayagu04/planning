@@ -1052,24 +1052,25 @@ void LaneChangeDecider::compute_lc_back_info(RequestType direction) {
                 }
               }
 
-              if (tr.d_rel >
-                      -5.0 -
-                          (mss -
-                           std::max(
-                               std::max(
-                                   (std::max(l_ego - tr.d_max_cpath - 1.6,
-                                             tr.d_min_cpath - l_ego - 1.6)),
-                                   0.0) /
-                                   std::max((-tr.v_lat + 0.7), 0.1) * tr.v_rel,
-                               0.0)) &&
-                  ((tr.d_max_cpath >= -lat_thre &&
-                    tr.d_min_cpath <= lat_thre) ||
-                   (tr.d_max_cpath -
-                        tr.v_lat * std::min(tr.d_rel + 5 / tr.v_rel, 4.) >=
-                    -lat_thre) ||
-                   (tr.d_min_cpath +
-                        tr.v_lat * std::min(tr.d_rel + 5 / tr.v_rel, 4.) <=
-                    lat_thre))) {
+              // if (tr.d_rel >
+              //         -5.0 -
+              //             (mss -
+              //              std::max(
+              //                  std::max(
+              //                      (std::max(l_ego - tr.d_max_cpath - 1.6,
+              //                                tr.d_min_cpath - l_ego - 1.6)),
+              //                      0.0) /
+              //                      std::max((-tr.v_lat + 0.7), 0.1) * tr.v_rel,
+              //                  0.0)) &&
+              //     ((tr.d_max_cpath >= -lat_thre &&
+              //       tr.d_min_cpath <= lat_thre) ||
+              //      (tr.d_max_cpath -
+              //           tr.v_lat * std::min(tr.d_rel + 5 / tr.v_rel, 4.) >=
+              //       -lat_thre) ||
+              //      (tr.d_min_cpath +
+              //           tr.v_lat * std::min(tr.d_rel + 5 / tr.v_rel, 4.) <=
+              //       lat_thre))) 
+              if (tr.d_rel > -5.0 - mss) {
                 lane_change_stage_info_.lc_should_back = true;
                 lane_change_stage_info_.lc_back_reason = "side view back";
                 lc_back_track_.set_value(tr.track_id, tr.d_rel, tr.v_rel);
