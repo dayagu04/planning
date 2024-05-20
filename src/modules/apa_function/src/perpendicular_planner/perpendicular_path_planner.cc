@@ -19,6 +19,7 @@
 #include "apa_plan_base.h"
 #include "apa_world.h"
 #include "collision_detection.h"
+#include "debug_info_log.h"
 #include "dubins_lib.h"
 #include "geometry_math.h"
 #include "math_lib.h"
@@ -2487,18 +2488,19 @@ const uint8_t PerpendicularPathPlanner::TrimPathByCollisionDetection(
   const double safe_remain_dist =
       std::min(remain_car_dist, remain_obs_dist - safe_dist);
 
-  // std::cout << "  remain_car_dist = " << remain_car_dist
-  //           << "  remain_obs_dist = " << remain_obs_dist
-  //           << "  safe_remain_dist = " << safe_remain_dist << std::endl;
+  DEBUG_PRINT("remain_car_dist = "
+              << remain_car_dist << "  remain_obs_dist = " << remain_obs_dist
+              << "  safe_remain_dist = " << safe_remain_dist);
 
-  std::cout << "collision_point = " << col_res.collision_point.transpose()
-            << "  obs_pt_global = "
-            << col_res.collision_point_global.transpose()
-            << "  car_line_order = " << col_res.car_line_order << std::endl;
+  DEBUG_PRINT("collision_point = "
+              << col_res.collision_point.transpose() << "  obs_pt_global = "
+              << col_res.collision_point_global.transpose()
+              << "  car_line_order = " << col_res.car_line_order);
 
   if (safe_remain_dist < 1e-5) {
-    std::cout << "safe_remain_dist is samller than 0.0, the path donot meet "
-                 "requirements\n";
+    DEBUG_PRINT(
+        "safe_remain_dist is samller than 0.0, the path donot meet "
+        "requirements");
     return PATH_COL_INVALID;
   }
 
@@ -2544,27 +2546,23 @@ const uint8_t PerpendicularPathPlanner::TrimPathByCollisionDetection(
 
 void PerpendicularPathPlanner::PrintSegmentInfo(
     const pnc::geometry_lib::PathSegment& seg) const {
-  std::cout << "----" << std::endl;
-  std::cout << "seg_gear: " << static_cast<int>(seg.seg_gear) << std::endl;
+  DEBUG_PRINT("----");
+  DEBUG_PRINT("seg_gear: " << static_cast<int>(seg.seg_gear));
 
-  std::cout << "seg_steer: " << static_cast<int>(seg.seg_steer) << std::endl;
-  std::cout << "seg_type: " << static_cast<int>(seg.seg_type) << std::endl;
-  std::cout << "length: " << seg.Getlength() << std::endl;
+  DEBUG_PRINT("seg_steer: " << static_cast<int>(seg.seg_steer));
+  DEBUG_PRINT("seg_type: " << static_cast<int>(seg.seg_type));
+  DEBUG_PRINT("length: " << seg.Getlength());
 
   if (seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-    std::cout << "start_pos: " << seg.GetLineSeg().pA.transpose() << std::endl;
-    std::cout << "start_heading: " << seg.GetLineSeg().heading * 57.3
-              << std::endl;
-    std::cout << "end_pos: " << seg.GetLineSeg().pB.transpose() << std::endl;
-    std::cout << "end_heading: " << seg.GetLineSeg().heading * 57.3
-              << std::endl;
+    DEBUG_PRINT("start_pos: " << seg.GetLineSeg().pA.transpose());
+    DEBUG_PRINT("start_heading: " << seg.GetLineSeg().heading * 57.3);
+    DEBUG_PRINT("end_pos: " << seg.GetLineSeg().pB.transpose());
+    DEBUG_PRINT("end_heading: " << seg.GetLineSeg().heading * 57.3);
   } else {
-    std::cout << "start_pos: " << seg.GetArcSeg().pA.transpose() << std::endl;
-    std::cout << "start_heading: " << seg.GetArcSeg().headingA * 57.3
-              << std::endl;
-    std::cout << "end_pos: " << seg.GetArcSeg().pB.transpose() << std::endl;
-    std::cout << "end_heading: " << seg.GetArcSeg().headingB * 57.3
-              << std::endl;
+    DEBUG_PRINT("start_pos: " << seg.GetArcSeg().pA.transpose());
+    DEBUG_PRINT("start_heading: " << seg.GetArcSeg().headingA * 57.3);
+    DEBUG_PRINT("end_pos: " << seg.GetArcSeg().pB.transpose());
+    DEBUG_PRINT("end_heading: " << seg.GetArcSeg().headingB * 57.3);
   }
 }
 

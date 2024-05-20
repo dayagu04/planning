@@ -1569,7 +1569,9 @@ const double PerpendicularInPlanner::CalRemainDistFromUss() {
   remain_dist = uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist -
                 safe_uss_remain_dist;
 
-  std::cout << "uss remain dist = " << remain_dist << std::endl;
+  DEBUG_PRINT("origin_uss remain dist = "
+              << uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist
+              << "  uss remain dist = " << remain_dist);
 
   // remain_dist = 5.01;
 
