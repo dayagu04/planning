@@ -324,6 +324,10 @@
     "collision_check_length_threshold":3.5,
     "lc_premove_time":0.1,
     "near_car_ttc": 0.3,
-    "use_ego_v": false
+    "use_ego_v": false,
+    "lb_heading_error_min":0.5,
+    "lb_heading_error_max":4.5,
+    "lb_t_max": 4.0,
+    "lb_t_min":1.5
   }
 }

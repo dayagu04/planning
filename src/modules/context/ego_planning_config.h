@@ -317,6 +317,15 @@ struct GapSelectorConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"gap_selector", "near_car_ttc"});
     use_ego_v = read_json_keys<bool>(
         json, std::vector<std::string>{"gap_selector", "use_ego_v"});
+      lb_t_max = read_json_keys<double>(
+        json, std::vector<std::string>{"gap_selector", "lb_t_max"});
+    lb_t_min = read_json_keys<double>(
+        json, std::vector<std::string>{"gap_selector",
+                                       "lb_t_min"});
+    lb_heading_error_max = read_json_keys<double>(
+        json, std::vector<std::string>{"gap_selector", "lb_heading_error_max"});
+    lb_heading_error_min = read_json_keys<double>(
+        json, std::vector<std::string>{"gap_selector", "lb_heading_error_min"});
   }
 
   double default_lc_time = 6.0;
@@ -324,6 +333,10 @@ struct GapSelectorConfig : public EgoPlanningConfig {
   double lc_premove_time = 1.5;
   double near_car_ttc = 0.2;
   bool use_ego_v = false;
+  double lb_t_min = 1.5;
+  double lb_t_max = 5.0;
+  double lb_heading_error_min = 4.5;
+  double lb_heading_error_max = 0.5;
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
