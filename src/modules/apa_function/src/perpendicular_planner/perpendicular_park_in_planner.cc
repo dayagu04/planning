@@ -83,28 +83,28 @@ void PerpendicularInPlanner::PlanCore() {
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
-    std::cout << "update ego slot info" << std::endl;
+    DEBUG_PRINT("update ego slot info");
     SetParkingStatus(PARKING_FAILED);
     return;
   }
 
   // check finish
   if (CheckFinished()) {
-    std::cout << "check apa finished!" << std::endl;
+    DEBUG_PRINT("check apa finished!");
     SetParkingStatus(PARKING_FINISHED);
     return;
   }
 
   // check failed
   if (CheckStuckFailed()) {
-    std::cout << "check stuck failed!" << std::endl;
+    DEBUG_PRINT("check stuck failed!");
     SetParkingStatus(PARKING_FAILED);
     return;
   }
 
   // check replan
   if (simu_param_.force_plan || CheckReplan()) {
-    std::cout << "replan is required!" << std::endl;
+    DEBUG_PRINT("replan is required!");
 
     frame_.ego_slot_info.first_fix_limiter = true;
     frame_.replan_flag = true;
@@ -120,48 +120,46 @@ void PerpendicularInPlanner::PlanCore() {
     if (pathplan_result == PathPlannerResult::PLAN_HOLD) {
       if (PostProcessPath()) {
         SetParkingStatus(PARKING_GEARCHANGE);
-        std::cout << "replan from PARKING_GEARCHANGE!" << std::endl;
+        DEBUG_PRINT("replan from PARKING_GEARCHANGE!");
       } else {
         SetParkingStatus(PARKING_FAILED);
-        std::cout << "replan failed from PLAN_HOLD!" << std::endl;
+        DEBUG_PRINT("replan failed from PLAN_HOLD!");
       }
     } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
       if (PostProcessPath()) {
         SetParkingStatus(PARKING_PLANNING);
-        std::cout << "replan from PARKING_PLANNING!" << std::endl;
+        DEBUG_PRINT("replan from PARKING_PLANNING!");
       } else {
         SetParkingStatus(PARKING_FAILED);
-        std::cout << "replan failed from PARKING_PLANNING!" << std::endl;
+        DEBUG_PRINT("replan failed from PARKING_PLANNING!");
       }
     } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
       SetParkingStatus(PARKING_FAILED);
     }
 
-    std::cout << "pathplan_result = " << static_cast<int>(pathplan_result)
-              << std::endl;
+    DEBUG_PRINT("pathplan_result = " << static_cast<int>(pathplan_result));
   } else {
-    std::cout << "replan is not required!" << std::endl;
+    DEBUG_PRINT("replan is not required!");
     SetParkingStatus(PARKING_RUNNING);
   }
 
   // check finish
   if (CheckFinished()) {
-    std::cout << "check apa finished!" << std::endl;
+    DEBUG_PRINT("check apa finished!");
     SetParkingStatus(PARKING_FINISHED);
     return;
   }
 
   // check failed
   if (CheckStuckFailed()) {
-    std::cout << "check stuck failed!" << std::endl;
+    DEBUG_PRINT("check stuck failed!");
     SetParkingStatus(PARKING_FAILED);
     return;
   }
 
   // check planning status
-  std::cout << "parking status = "
-            << static_cast<int>(GetPlannerStates().planning_status)
-            << std::endl;
+  DEBUG_PRINT("parking status = "
+              << static_cast<int>(GetPlannerStates().planning_status));
 }
 const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   const auto measures_ptr = apa_world_ptr_->GetMeasurementsPtr();
@@ -331,10 +329,10 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     const auto dist_ego_limiter = pnc::geometry_lib::CalPoint2LineDist(
         ego_slot_info.ego_pos_slot, limiter_line);
 
-    std::cout << "dist_ego_limiter = " << dist_ego_limiter << std::endl;
+    DEBUG_PRINT("dist_ego_limiter = " << dist_ego_limiter);
 
     if (dist_ego_limiter < apa_param.GetParam().car_to_limiter_dis) {
-      std::cout << "should correct path according limiter\n";
+      DEBUG_PRINT("should correct path according limiter");
       ego_slot_info.first_fix_limiter = false;
       PostProcessPathAccordingLimiter();
       frame_.correct_path_for_limiter = true;
@@ -357,7 +355,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
              4.0 -
          pt_center_)
             .norm();
-    std::cout << "slot jump dist = " << dist << std::endl;
+    DEBUG_PRINT("slot jump dist = " << dist);
 
     const double safe_dist =
         perpendicular_path_planner_.GetOutput().is_first_reverse_path
@@ -414,25 +412,24 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
               path_seg_local.arc_seg, path_seg_local.arc_seg.headingA);
         }
         pnc::geometry_lib::PrintSegmentInfo(path_seg_local);
-        std::cout
-            << "remain_obstacle_dist = " << col_res.remain_obstacle_dist
-            << "  remain_car_dist = " << col_res.remain_car_dist
-            << "  collision_point_local"
+        DEBUG_PRINT(
+            "remain_obstacle_dist = "
+            << col_res.remain_obstacle_dist << "  remain_car_dist = "
+            << col_res.remain_car_dist << "  collision_point_local"
             << col_res.collision_point_global.transpose()
             << "  collision_point_global = "
             << ego_slot_info.l2g_tf.GetPos(col_res.collision_point_global)
                    .transpose()
             << "  pt_outside = "
             << ego_slot_info.l2g_tf.GetPos(slot_t_lane_.pt_outside).transpose()
-            << "  car_line_order = " << col_res.car_line_order << std::endl;
+            << "  car_line_order = " << col_res.car_line_order);
 
         if (perpendicular_path_planner_.GetOutput().is_first_reverse_path) {
           if ((slot_t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT &&
                col_res.collision_point_global.y() > 0.0) ||
               (slot_t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT &&
                col_res.collision_point_global.y() < 0.0)) {
-            std::cout
-                << "no consider inner stuck in dynamic trim path when 1R\n";
+            DEBUG_PRINT("no consider inner stuck in dynamic trim path when 1R");
             break;
           }
         }
@@ -449,7 +446,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
 
       car_remain_dist = std::max(
           frame_.current_path_length - frame_.remain_dist, car_remain_dist);
-      std::cout << "car_remain_dist = " << car_remain_dist << std::endl;
+      DEBUG_PRINT("car_remain_dist = " << car_remain_dist);
       if (need_trim_path) {
         PostProcessPathAccordingObs(car_remain_dist);
       }
@@ -526,48 +523,45 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
       slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
       frame_.current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
-      std::cout << "calculate slot side error " << std::endl;
+      DEBUG_PRINT("calculate slot side error ");
       // return false;
     }
   }
 
-  std::cout << "slot_side = " << static_cast<int>(slot_t_lane_.slot_side)
-            << std::endl;
-  std::cout << "frame_.current_gear = " << static_cast<int>(frame_.current_gear)
-            << std::endl;
-  std::cout << "frame_.current_arc_steer = "
-            << static_cast<int>(frame_.current_arc_steer) << std::endl;
+  DEBUG_PRINT("slot_side = " << static_cast<int>(slot_t_lane_.slot_side));
+  DEBUG_PRINT(
+      "frame_.current_gear = " << static_cast<int>(frame_.current_gear));
+  DEBUG_PRINT("frame_.current_arc_steer = "
+              << static_cast<int>(frame_.current_arc_steer));
 
-  std::cout << "ego_pos = " << measures_ptr->pos_ego.transpose()
-            << "  ego_heading = " << measures_ptr->heading_ego * 57.3
-            << "  ego_pos_slot = " << ego_slot_info.ego_pos_slot.transpose()
-            << "  ego_heading_slot = " << ego_slot_info.ego_heading_slot * 57.3
-            << std::endl;
+  DEBUG_PRINT(
+      "ego_pos = " << measures_ptr->pos_ego.transpose() << "  ego_heading = "
+                   << measures_ptr->heading_ego * 57.3 << "  ego_pos_slot = "
+                   << ego_slot_info.ego_pos_slot.transpose()
+                   << "  ego_heading_slot = "
+                   << ego_slot_info.ego_heading_slot * 57.3);
 
-  std::cout << "ego_slot_info.limiter.first = "
-            << ego_slot_info.limiter.first.transpose()
-            << "  ego_slot_info.limiter.second = "
-            << ego_slot_info.limiter.second.transpose() << std::endl;
+  DEBUG_PRINT("ego_slot_info.limiter.first = "
+              << ego_slot_info.limiter.first.transpose()
+              << "  ego_slot_info.limiter.second = "
+              << ego_slot_info.limiter.second.transpose());
 
-  std::cout << "target_ego_pos_slot = "
-            << ego_slot_info.target_ego_pos_slot.transpose()
-            << "  target_ego_heading_slot = "
-            << ego_slot_info.target_ego_heading_slot * 57.3 << std::endl;
+  DEBUG_PRINT("target_ego_pos_slot = "
+              << ego_slot_info.target_ego_pos_slot.transpose()
+              << "  target_ego_heading_slot = "
+              << ego_slot_info.target_ego_heading_slot * 57.3);
 
-  std::cout << "terminal x error= " << ego_slot_info.terminal_err.pos.x()
-            << std::endl;
-  std::cout << "terminal y error= " << ego_slot_info.terminal_err.pos.y()
-            << std::endl;
-  std::cout << "terminal heading error= "
-            << ego_slot_info.terminal_err.heading * 57.3 << std::endl;
+  DEBUG_PRINT("terminal x error= " << ego_slot_info.terminal_err.pos.x());
+  DEBUG_PRINT("terminal y error= " << ego_slot_info.terminal_err.pos.y());
+  DEBUG_PRINT("terminal heading error= " << ego_slot_info.terminal_err.heading *
+                                                57.3);
 
-  std::cout << "slot_occupied_ratio = " << ego_slot_info.slot_occupied_ratio
-            << std::endl;
+  DEBUG_PRINT("slot_occupied_ratio = " << ego_slot_info.slot_occupied_ratio);
 
-  std::cout << "vel_ego = " << measures_ptr->vel_ego << std::endl;
-  std::cout << "stuck_time = " << frame_.stuck_time << " s\n";
-  std::cout << "static_flag = "
-            << apa_world_ptr_->GetMeasurementsPtr()->static_flag << "\n";
+  DEBUG_PRINT("vel_ego = " << measures_ptr->vel_ego);
+  DEBUG_PRINT("stuck_time = " << frame_.stuck_time << " s");
+  DEBUG_PRINT(
+      "static_flag = " << apa_world_ptr_->GetMeasurementsPtr()->static_flag);
 
   return true;
 }
@@ -659,12 +653,12 @@ void PerpendicularInPlanner::GenTlane() {
           .y();
 
   if (left_que_for_x.empty()) {
-    std::cout << "left space is empty\n";
+    DEBUG_PRINT("left space is empty");
     left_que_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
     left_que_for_y.emplace(Eigen::Vector2d(0.0, virtual_left_y));
   }
   if (right_que_for_x.empty()) {
-    std::cout << "right space is empty\n";
+    DEBUG_PRINT("right space is empty");
     right_que_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
     right_que_for_y.emplace(Eigen::Vector2d(0.0, virtual_right_y));
   }
@@ -679,9 +673,10 @@ void PerpendicularInPlanner::GenTlane() {
 
   const double real_slot_width = ego_slot_info.slot_width;
 
-  std::cout << "car_width_include_mirror = " << car_width_include_mirror
-            << "  virtual slot width = " << virtual_slot_width
-            << "  real slot width = " << real_slot_width << std::endl;
+  DEBUG_PRINT("car_width_include_mirror = "
+              << car_width_include_mirror
+              << "  virtual slot width = " << virtual_slot_width
+              << "  real slot width = " << real_slot_width);
 
   const double safe_threshold = apa_param.GetParam().safe_threshold;
 
@@ -695,14 +690,15 @@ void PerpendicularInPlanner::GenTlane() {
     right_y = -real_slot_width * 0.5 - apa_param.GetParam().tmp_virtual_obs_dy;
   }
 
-  std::cout << "left_y = " << left_y << "  right_y = " << right_y << std::endl;
+  DEBUG_PRINT("left_y = " << left_y << "  right_y = " << right_y);
 
   const double left_dis_obs_car = left_y - car_y_left_include_mirror;
 
   const double right_dis_obs_car = car_y_right_include_mirror - right_y;
 
-  std::cout << "left_dis_obs_car = " << left_dis_obs_car
-            << "  right_dis_obs_car = " << right_dis_obs_car << std::endl;
+  DEBUG_PRINT("left_dis_obs_car = " << left_dis_obs_car
+                                    << "  right_dis_obs_car = "
+                                    << right_dis_obs_car);
 
   bool left_obs_meet_safe_require = false;
   bool right_obs_meet_safe_require = false;
@@ -761,7 +757,7 @@ void PerpendicularInPlanner::GenTlane() {
     slot_t_lane_.pt_terminal_pos.y() += move_slot_dist;
     slot_t_lane_.pt_inside.y() += move_slot_dist;
     slot_t_lane_.pt_outside.y() += move_slot_dist;
-    std::cout << "should move slot according to obs pt\n";
+    DEBUG_PRINT("should move slot according to obs pt");
   }
 
   slot_t_lane_.pt_lower_boundry_pos = slot_t_lane_.pt_terminal_pos;
@@ -808,29 +804,22 @@ void PerpendicularInPlanner::GenTlane() {
                         apa_param.GetParam().occupied_pt_outside_dy);
   }
 
-  std::cout << "-- slot_t_lane_ --" << std::endl;
-  std::cout << "pt_outside = " << slot_t_lane_.pt_outside.transpose()
-            << std::endl;
-  std::cout << "pt_inside = " << slot_t_lane_.pt_inside.transpose()
-            << std::endl;
-  std::cout << "pt_terminal_pos = " << slot_t_lane_.pt_terminal_pos.transpose()
-            << std::endl;
-  std::cout << "pt_terminal_heading = " << slot_t_lane_.pt_terminal_heading
-            << std::endl;
-  std::cout << "pt_lower_boundry_pos = "
-            << slot_t_lane_.pt_lower_boundry_pos.transpose() << std::endl;
+  DEBUG_PRINT("-- slot_t_lane_ --");
+  DEBUG_PRINT("pt_outside = " << slot_t_lane_.pt_outside.transpose());
+  DEBUG_PRINT("pt_inside = " << slot_t_lane_.pt_inside.transpose());
+  DEBUG_PRINT("pt_terminal_pos = " << slot_t_lane_.pt_terminal_pos.transpose());
+  DEBUG_PRINT("pt_terminal_heading = " << slot_t_lane_.pt_terminal_heading);
+  DEBUG_PRINT("pt_lower_boundry_pos = "
+              << slot_t_lane_.pt_lower_boundry_pos.transpose());
 
-  std::cout << "-- obstacle_t_lane_ --" << std::endl;
-  std::cout << "pt_outside = " << obstacle_t_lane_.pt_outside.transpose()
-            << std::endl;
-  std::cout << "pt_inside = " << obstacle_t_lane_.pt_inside.transpose()
-            << std::endl;
-  std::cout << "pt_terminal_pos = "
-            << obstacle_t_lane_.pt_terminal_pos.transpose() << std::endl;
-  std::cout << "pt_terminal_heading = " << obstacle_t_lane_.pt_terminal_heading
-            << std::endl;
-  std::cout << "pt_lower_boundry_pos = "
-            << obstacle_t_lane_.pt_lower_boundry_pos.transpose() << std::endl;
+  DEBUG_PRINT("-- obstacle_t_lane_ --");
+  DEBUG_PRINT("pt_outside = " << obstacle_t_lane_.pt_outside.transpose());
+  DEBUG_PRINT("pt_inside = " << obstacle_t_lane_.pt_inside.transpose());
+  DEBUG_PRINT(
+      "pt_terminal_pos = " << obstacle_t_lane_.pt_terminal_pos.transpose());
+  DEBUG_PRINT("pt_terminal_heading = " << obstacle_t_lane_.pt_terminal_heading);
+  DEBUG_PRINT("pt_lower_boundry_pos = "
+              << obstacle_t_lane_.pt_lower_boundry_pos.transpose());
 }
 
 void PerpendicularInPlanner::GenObstacles() {
@@ -944,7 +933,7 @@ void PerpendicularInPlanner::GenObstacles() {
 }
 
 const uint8_t PerpendicularInPlanner::PathPlanOnce() {
-  std::cout << "-------------- PathPlanOnce --------------" << std::endl;
+  DEBUG_PRINT("-------------- PathPlanOnce --------------");
   // construct input
   const auto& ego_slot_info = frame_.ego_slot_info;
   PerpendicularPathPlanner::Input path_planner_input;
@@ -966,7 +955,7 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
 
   if (frame_.replan_reason == DYNAMIC &&
       gear_command_ == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-    std::cout << "dynamic replan, gear should be reverse\n";
+    DEBUG_PRINT("dynamic replan, gear should be reverse");
     path_planner_input.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
   }
 
@@ -978,13 +967,13 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
 
   uint8_t plan_result = 0;
   if (!path_plan_success && !is_simulation_ && !frame_.is_replan_dynamic) {
-    std::cout << "path plan fail\n";
+    DEBUG_PRINT("path plan fail");
     plan_result = PathPlannerResult::PLAN_FAILED;
     return plan_result;
   }
 
   if (!path_plan_success && frame_.is_replan_dynamic) {
-    std::cout << "path dynamic plan fail, save last plan path.\n";
+    DEBUG_PRINT("path dynamic plan fail, save last plan path.");
     plan_result = PathPlannerResult::PLAN_UPDATE;
     return plan_result;
   }
@@ -992,7 +981,7 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
   plan_result = PathPlannerResult::PLAN_UPDATE;
 
   if (!perpendicular_path_planner_.SetCurrentPathSegIndex()) {
-    std::cout << "path plan fail\n";
+    DEBUG_PRINT("path plan fail");
     plan_result = PathPlannerResult::PLAN_FAILED;
     return plan_result;
   }
@@ -1049,14 +1038,14 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
        frame_.replan_reason != DYNAMIC);
 
   if (gear_steer_shift) {
-    std::cout << "next plan should shift gear\n";
+    DEBUG_PRINT("next plan should shift gear");
     // set current arc steer
     if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
     } else if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_LEFT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
     } else {
-      std::cout << "fault ref_arc_steer state!" << std::endl;
+      DEBUG_PRINT("fault ref_arc_steer state!");
       return false;
     }
 
@@ -1066,7 +1055,7 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
     } else if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
       frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
     } else {
-      std::cout << "fault ref_gear state!" << std::endl;
+      DEBUG_PRINT("fault ref_gear state!");
       return false;
     }
   }
@@ -1095,15 +1084,14 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
 
   // refuse optimizer
   if (planner_output.path_point_vec.size() < 3) {
-    std::cout << " input size is too small" << std::endl;
+    DEBUG_PRINT(" input size is too small");
     is_use_optimizer = false;
   } else {
     const auto path_length = (planner_output.path_point_vec.front().pos -
                               planner_output.path_point_vec.back().pos)
                                  .norm();
     if (path_length < apa_param.GetParam().min_opt_path_length) {
-      std::cout << "path length is too short, optimizer is closed "
-                << std::endl;
+      DEBUG_PRINT("path length is too short, optimizer is closed ");
       is_use_optimizer = false;
     }
   }
@@ -1125,13 +1113,11 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
 
   double lat_path_opt_cost_time_ms = 0.0;
   if (perpendicular_optimization_enable && is_use_optimizer) {
-    std::cout << "------------------------ lateral path optimization "
-                 "------------------------"
-              << std::endl;
-    std::cout << "gear_command_= " << static_cast<int>(gear_command_)
-              << std::endl;
-    std::cout << "origin path size= " << planner_output.path_point_vec.size()
-              << std::endl;
+    DEBUG_PRINT(
+        "------------------------ lateral path optimization "
+        "------------------------");
+    DEBUG_PRINT("gear_command_= " << static_cast<int>(gear_command_));
+    DEBUG_PRINT("origin path size= " << planner_output.path_point_vec.size());
 
     LateralPathOptimizer::Parameter param;
     param.sample_ds = simu_param_.sample_ds;
@@ -1169,14 +1155,13 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
     const auto plan_debug_info =
         lateral_path_optimizer_ptr_->GetOutputDebugInfo();
 
-    std::cout << "lat_path_opt_cost_time_ms = " << lat_path_opt_cost_time_ms
-              << std::endl;
+    DEBUG_PRINT("lat_path_opt_cost_time_ms = " << lat_path_opt_cost_time_ms);
 
-    std::cout << "terminal point error = "
-              << plan_debug_info.terminal_pos_error() << std::endl;
+    DEBUG_PRINT(
+        "terminal point error = " << plan_debug_info.terminal_pos_error());
 
-    std::cout << "terminal heading error = "
-              << plan_debug_info.terminal_heading_error() << std::endl;
+    DEBUG_PRINT("terminal heading error = "
+                << plan_debug_info.terminal_heading_error());
   } else {
     current_path_point_global_vec_.clear();
     current_path_point_global_vec_.reserve(
@@ -1194,8 +1179,8 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
   JSON_DEBUG_VALUE("cilqr_optimization_enable", cilqr_optimization_enable);
   JSON_DEBUG_VALUE("lat_path_opt_cost_time_ms", lat_path_opt_cost_time_ms);
 
-  std::cout << "current_path_point_global_vec_.size() = "
-            << current_path_point_global_vec_.size() << std::endl;
+  DEBUG_PRINT("current_path_point_global_vec_.size() = "
+              << current_path_point_global_vec_.size());
 
   return plan_result;
 }
@@ -1211,10 +1196,10 @@ const bool PerpendicularInPlanner::CheckSegCompleted() {
       frame_.is_replan_by_uss = (frame_.remain_dist_uss < frame_.remain_dist);
 
       if (!frame_.is_replan_by_uss) {
-        std::cout << "close to target!\n";
+        DEBUG_PRINT("close to target!");
         is_seg_complete = true;
       } else {
-        std::cout << "close to obstacle by uss!\n";
+        DEBUG_PRINT("close to obstacle by uss!");
         // uss distance may not be accurate, so wait for a period of time
         if (frame_.stuck_uss_time >
             apa_param.GetParam().uss_stuck_replan_wait_time) {
@@ -1283,8 +1268,8 @@ const bool PerpendicularInPlanner::CheckDynamicUpdate() {
     }
   }
 
-  std::cout << "dynamic_replan_count = "
-            << static_cast<int>(frame_.dynamic_replan_count) << std::endl;
+  DEBUG_PRINT("dynamic_replan_count = "
+              << static_cast<int>(frame_.dynamic_replan_count));
 
   update_flag =
       (update_flag && gear_command_ == pnc::geometry_lib::SEG_GEAR_REVERSE &&
@@ -1297,7 +1282,7 @@ const bool PerpendicularInPlanner::CheckDynamicUpdate() {
 
 const bool PerpendicularInPlanner::CheckReplan() {
   if (frame_.is_replan_first == true) {
-    std::cout << "first plan" << std::endl;
+    DEBUG_PRINT("first plan");
     frame_.replan_reason = FIRST_PLAN;
     return true;
   }
@@ -1321,7 +1306,7 @@ const bool PerpendicularInPlanner::CheckReplan() {
   }
 
   if (CheckDynamicUpdate()) {
-    std::cout << "replan by dynamic!" << std::endl;
+    DEBUG_PRINT("replan by dynamic!");
     frame_.replan_reason = DYNAMIC;
     return true;
   }
@@ -1422,8 +1407,8 @@ void PerpendicularInPlanner::GenPlanningOutput() {
     apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
   }
 
-  // std::cout << "planning_output:" << planning_output_.DebugString()
-  //           << std::endl;
+  // DEBUG_PRINT("planning_output:" << planning_output_.DebugString()
+  //          );
 }
 
 void PerpendicularInPlanner::GenPlanningPath() {
@@ -1495,7 +1480,7 @@ void PerpendicularInPlanner::InitSimulation() {
 const bool PerpendicularInPlanner::CheckPlanSkip() const {
   if (frame_.plan_stm.planning_status == PARKING_FINISHED ||
       frame_.plan_stm.planning_status == PARKING_FAILED) {
-    std::cout << "plan has been finished or failed, need reset" << std::endl;
+    DEBUG_PRINT("plan has been finished or failed, need reset");
 
     if (!is_simulation_) {
       apa_world_ptr_->GetSlotManagerPtr()->Reset();
@@ -1535,15 +1520,14 @@ const double PerpendicularInPlanner::CalRemainDistFromPath() {
     if (success == true) {
       remain_dist = frame_.current_path_length - s_proj;
 
-      std::cout << "remain_dist = " << remain_dist << "  s_proj = " << s_proj
-                << "  current_path_length = " << frame_.current_path_length
-                << std::endl;
+      DEBUG_PRINT("remain_dist = " << remain_dist << "  s_proj = " << s_proj
+                                   << "  current_path_length = "
+                                   << frame_.current_path_length);
     } else {
-      std::cout << "remain_dist calculation error:input is error" << std::endl;
+      DEBUG_PRINT("remain_dist calculation error:input is error");
     }
   } else {
-    std::cout << "remain_dist calculation error: path spline failed!"
-              << std::endl;
+    DEBUG_PRINT("remain_dist calculation error: path spline failed!");
   }
 
   return remain_dist;
@@ -1593,7 +1577,7 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingLimiter() {
 
   if (origin_traj_size < 2) {
     frame_.spline_success = false;
-    std::cout << "error: origin_traj_size = " << origin_traj_size << std::endl;
+    DEBUG_PRINT("error: origin_traj_size = " << origin_traj_size);
     return false;
   }
 
@@ -1626,11 +1610,11 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingLimiter() {
       0.0, frame_.current_path_length + frame_.path_extended_dist, s_proj,
       limiter_mid, frame_.x_s_spline, frame_.y_s_spline);
   if (!success) {
-    std::cout << "path is err\n";
+    DEBUG_PRINT("path is err");
     return false;
   }
   if (s_proj < simu_param_.sample_ds * 1.5) {
-    std::cout << "limiter s_proj is too small\n";
+    DEBUG_PRINT("limiter s_proj is too small");
     return false;
   }
   double ds = 0.0;
@@ -1644,7 +1628,7 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingLimiter() {
       s += std::max(ds, 1e-3);
     }
     if (s > s_proj) {
-      std::cout << "path shoule be shorten because of limiter\n";
+      DEBUG_PRINT("path shoule be shorten because of limiter");
       if (s_proj - s_vec.back() > 0.036 && frame_.spline_success) {
         x_vec.emplace_back(frame_.x_s_spline(s_proj));
         y_vec.emplace_back(frame_.y_s_spline(s_proj));
@@ -1659,7 +1643,7 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingLimiter() {
     s_vec.emplace_back(s);
   }
   if (s < s_proj) {
-    std::cout << "path shoule be extended because of limiter\n";
+    DEBUG_PRINT("path shoule be extended because of limiter");
     while (s <= s_proj) {
       s += simu_param_.sample_ds;
       x_vec.emplace_back(frame_.x_s_spline(s));
@@ -1676,7 +1660,7 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingLimiter() {
   const size_t N = x_vec.size();
   if (N < 2) {
     frame_.spline_success = false;
-    std::cout << "error: no enough point = " << x_vec.size() << std::endl;
+    DEBUG_PRINT("error: no enough point = " << x_vec.size());
     return false;
   }
   current_path_point_global_vec_.clear();
@@ -1696,7 +1680,7 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingLimiter() {
 
   if (!success) {
     frame_.spline_success = false;
-    std::cout << "limit need extend fit line by spline error!" << std::endl;
+    DEBUG_PRINT("limit need extend fit line by spline error!");
     return false;
   }
 
@@ -1719,7 +1703,7 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingObs(
 
   if (origin_traj_size < 2) {
     frame_.spline_success = false;
-    std::cout << "error: origin_traj_size = " << origin_traj_size << std::endl;
+    DEBUG_PRINT("error: origin_traj_size = " << origin_traj_size);
     return false;
   }
 
@@ -1748,7 +1732,7 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingObs(
       s += std::max(ds, 1e-3);
     }
     if (s > car_remain_dist) {
-      std::cout << "path shoule be shorten because of obs\n";
+      DEBUG_PRINT("path shoule be shorten because of obs");
       if (car_remain_dist - s_vec.back() > 0.036 && frame_.spline_success) {
         x_vec.emplace_back(frame_.x_s_spline(car_remain_dist));
         y_vec.emplace_back(frame_.y_s_spline(car_remain_dist));
@@ -1767,7 +1751,7 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingObs(
   const size_t N = x_vec.size();
   if (N < 2) {
     frame_.spline_success = false;
-    std::cout << "error: no enough point = " << x_vec.size() << std::endl;
+    DEBUG_PRINT("error: no enough point = " << x_vec.size());
     return false;
   }
   current_path_point_global_vec_.clear();
@@ -1787,7 +1771,7 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingObs(
 
   if (!success) {
     frame_.spline_success = false;
-    std::cout << "limit need extend fit line by spline error!" << std::endl;
+    DEBUG_PRINT("limit need extend fit line by spline error!");
     return false;
   }
 
@@ -1809,8 +1793,7 @@ const bool PerpendicularInPlanner::PostProcessPath() {
 
   if (origin_trajectory_size < 2) {
     frame_.spline_success = false;
-    std::cout << "error: origin_trajectory_size = " << origin_trajectory_size
-              << std::endl;
+    DEBUG_PRINT("error: origin_trajectory_size = " << origin_trajectory_size);
     return false;
   }
 
@@ -1857,7 +1840,7 @@ const bool PerpendicularInPlanner::PostProcessPath() {
 
   if (success == false) {
     frame_.spline_success = false;
-    std::cout << "fit line by spline error!" << std::endl;
+    DEBUG_PRINT("fit line by spline error!");
     return false;
   }
 

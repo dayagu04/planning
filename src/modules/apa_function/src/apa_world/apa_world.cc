@@ -5,6 +5,7 @@
 
 #include "apa_param_setting.h"
 #include "common.pb.h"
+#include "debug_info_log.h"
 #include "func_state_machine.pb.h"
 #include "general_planning_context.h"
 #include "geometry_math.h"
@@ -81,7 +82,7 @@ void ApaWorld::UpdateEgoState() {
 const bool ApaWorld::CheckSelectedSlot() const {
   // check selected slot id
   if (!local_view_ptr_->parking_fusion_info.has_select_slot_id()) {
-    std::cout << "Error: no selected id" << std::endl;
+    DEBUG_PRINT("Error: no selected id");
     return false;
   }
 
@@ -89,13 +90,13 @@ const bool ApaWorld::CheckSelectedSlot() const {
   const size_t slots_size =
       slot_manager_ptr_->GetOutputPtr()->slot_info_vec_size();
   if (slots_size == 0) {
-    std::cout << "empty managed slot!" << std::endl;
+    DEBUG_PRINT("empty managed slot!");
     return false;
   }
 
   const size_t selected_slot_id =
       local_view_ptr_->parking_fusion_info.select_slot_id();
-  std::cout << "selected_slot_id:" << selected_slot_id << std::endl;
+  DEBUG_PRINT("selected_slot_id:" << selected_slot_id);
 
   // check slot type
   const auto& fusion_slots =
@@ -107,10 +108,10 @@ const bool ApaWorld::CheckSelectedSlot() const {
       const auto& slot_type = fusion_slots[i].type();
 
       if (slot_type == Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
-        std::cout << "perpendicular slot selected in fusion" << std::endl;
+        DEBUG_PRINT("perpendicular slot selected in fusion");
       } else if (slot_type ==
                  Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
-        std::cout << "parallel slot selected in fusion" << std::endl;
+        DEBUG_PRINT("parallel slot selected in fusion");
       }
 
       measures_ptr_->slot_type = slot_type;
@@ -120,7 +121,7 @@ const bool ApaWorld::CheckSelectedSlot() const {
   }
 
   if (!valid_selected_slot) {
-    std::cout << "selected slot is invalid!" << std::endl;
+    DEBUG_PRINT("selected slot is invalid!");
     return false;
   }
 
@@ -129,15 +130,15 @@ const bool ApaWorld::CheckSelectedSlot() const {
 
   if (!slot_manager_ptr_->GetSelectedSlot(selected_slot_slm,
                                           static_cast<int>(selected_slot_id))) {
-    std::cout << "selected slot is not found in slot management!" << std::endl;
+    DEBUG_PRINT("selected slot is not found in slot management!");
     return false;
   }
 
-  // std::cout << "selected_slot_slm = " << selected_slot_slm.DebugString()
-  //           << std::endl;
+  // DEBUG_PRINT("selected_slot_slm = " << selected_slot_slm.DebugString()
+  //          );
 
   if (!selected_slot_slm.is_release()) {
-    std::cout << "selected slot is not released!" << std::endl;
+    DEBUG_PRINT("selected slot is not released!");
     return false;
   }
 
@@ -175,31 +176,31 @@ const bool ApaWorld::CheckParkOutActivated() const {
 }
 const bool ApaWorld::Update() {
   // preprocess measurements
-  std::cout << "-- apa_world: run preprocess ---\n";
+  DEBUG_PRINT("-- apa_world: run preprocess ---");
   Preprocess();
 
-  std::cout << "current_state = "
-            << static_cast<int>(measures_ptr_->current_state) << std::endl;
+  DEBUG_PRINT(
+      "current_state = " << static_cast<int>(measures_ptr_->current_state));
 
   // check parking scenarios
   if (CheckParkInState()) {
     measures_ptr_->general_apa_function = GeneralApaFunction::PARK_IN_FUNCTION;
-    std::cout << "current parking in is activated now!" << std::endl;
+    DEBUG_PRINT("current parking in is activated now!");
   } else if (CheckParkOutState()) {
     measures_ptr_->general_apa_function = GeneralApaFunction::PARK_OUT_FUNCTION;
-    std::cout << "current parking out is not supported now!" << std::endl;
+    DEBUG_PRINT("current parking out is not supported now!");
     return false;
   } else {
     measures_ptr_->general_apa_function = GeneralApaFunction::NONE_FUNCTION;
-    std::cout << "current parking scenarios is not supported now!" << std::endl;
+    DEBUG_PRINT("current parking scenarios is not supported now!");
     return false;
   }
 
   // run slot manager
   // path planning only starts when the current state machines are 29 and 30
-  std::cout << "-- apa_world: run slot_management ---" << std::endl;
+  DEBUG_PRINT("-- apa_world: run slot_management ---");
   if (!slot_manager_ptr_->Update(local_view_ptr_)) {
-    std::cout << "shouldn't have entered the parking function at that time\n";
+    DEBUG_PRINT("shouldn't have entered the parking function at that time");
     return false;
   }
 
@@ -208,37 +209,36 @@ const bool ApaWorld::Update() {
     measures_ptr_->slot_type = slot_manager_ptr_->GetEgoSlotInfo().slot_type;
     measures_ptr_->is_slot_type_fixed = true;
   }
-  std::cout << "current slot type in slm ="
-            << static_cast<int>(slot_manager_ptr_->GetEgoSlotInfo().slot_type)
-            << std::endl;
-  std::cout << "fixed slot type =" << static_cast<int>(measures_ptr_->slot_type)
-            << std::endl;
+  DEBUG_PRINT("current slot type in slm =" << static_cast<int>(
+                  slot_manager_ptr_->GetEgoSlotInfo().slot_type));
+  DEBUG_PRINT(
+      "fixed slot type =" << static_cast<int>(measures_ptr_->slot_type));
 
   measures_ptr_->planner_type = ApaPlannerType::NONE_PLANNER;
   // check park in planner
   if (CheckParkInActivated()) {
     if (measures_ptr_->slot_type ==
         Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
-      std::cout << "planner_type = PERPENDICULAR_PARK_IN!" << std::endl;
+      DEBUG_PRINT("planner_type = PERPENDICULAR_PARK_IN!");
       measures_ptr_->planner_type =
           ApaPlannerType::PERPENDICULAR_PARK_IN_PLANNER;
     } else if (measures_ptr_->slot_type ==
                Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
-      std::cout << "planner_type = PARALLEL_PARK_IN!" << std::endl;
+      DEBUG_PRINT("planner_type = PARALLEL_PARK_IN!");
       measures_ptr_->planner_type = ApaPlannerType::PARALLEL_PARK_IN_PLANNER;
     } else if (measures_ptr_->slot_type ==
                Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
-      std::cout << "planner_type = SLANT_PARK_IN!" << std::endl;
+      DEBUG_PRINT("planner_type = SLANT_PARK_IN!");
       measures_ptr_->planner_type =
           ApaPlannerType::PERPENDICULAR_PARK_IN_PLANNER;
     } else {
-      std::cout << "current slot type is not supported now!" << std::endl;
+      DEBUG_PRINT("current slot type is not supported now!");
       return false;
     }
   }
 
-  // std::cout << "planner_type = "
-  //           << static_cast<int>(measures_ptr_->planner_type) << std::endl;
+  // DEBUG_PRINT("planner_type = "
+  //           << static_cast<int>(measures_ptr_->planner_type));
 
   return true;
 }

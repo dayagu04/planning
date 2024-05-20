@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "apa_param_setting.h"
+#include "debug_info_log.h"
 #include "geometry_math.h"
 
 const bool box = true;
@@ -194,9 +195,9 @@ const CollisionDetector::CollisionResult CollisionDetector::Update(
   result.collision_flag =
       (result.remain_obstacle_dist <= result.remain_car_dist);
 
-  // std::cout << "collision_point = " << collision_point.transpose()
+  // DEBUG_PRINT("collision_point = " << collision_point.transpose()
   //           << "  obs_pt_global = " << obs_pt_global_vec_[i].transpose()
-  //           << std::endl;
+  //          );
 
   result.collision_point = collision_point;
   result.collision_point_global = obs_pt_global_vec_[i];
@@ -401,9 +402,9 @@ const CollisionDetector::CollisionResult CollisionDetector::Update(
   result.collision_flag =
       (result.remain_obstacle_dist <= result.remain_car_dist);
 
-  // std::cout << "collision_point = " << collision_point.transpose()
+  // DEBUG_PRINT("collision_point = " << collision_point.transpose()
   //           << "  obs_pt_global = " << obs_pt_global_vec_[i].transpose()
-  //           << std::endl;
+  //          );
 
   result.remain_dist =
       std::min(result.remain_obstacle_dist, result.remain_car_dist);
@@ -579,14 +580,14 @@ const double CollisionDetector::CalMinDistObs2Car(
     car_line_global_vec.emplace_back(car_line_global);
   }
   double min_dist = 166.6;
-  // std::cout << "ego_pose = " << ego_pose.pos << std::endl;
+  // DEBUG_PRINT("ego_pose = " << ego_pose.pos);
   for (const auto &car_line_global : car_line_global_vec) {
     min_dist = std::min(min_dist, pnc::geometry_lib::CalPoint2LineSegDist(
                                       obs_pos, car_line_global));
-    // std::cout << "min_dist = " << min_dist << "\n";
-    // std::cout << "car_line_global.pA = " << car_line_global.pA.transpose()
+    // DEBUG_PRINT("min_dist = " << min_dist << "");
+    // DEBUG_PRINT("car_line_global.pA = " << car_line_global.pA.transpose()
     //           << "car_line_global.pB = " << car_line_global.pB.transpose()
-    //           << "\n";
+    //           << "");
   }
   return min_dist;
 }
@@ -637,7 +638,7 @@ const bool CollisionDetector::IsObstacleInCar(
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByLineObs(
     const pnc::geometry_lib::LineSegment &line_seg,
     const double heading_start) {
-  std::cout << "UpdateByLineObs\n";
+  DEBUG_PRINT("UpdateByLineObs");
   if (obs_line_global_vec_.empty()) {
     CollisionResult tmp_result;
     tmp_result.remain_car_dist = line_seg.length;

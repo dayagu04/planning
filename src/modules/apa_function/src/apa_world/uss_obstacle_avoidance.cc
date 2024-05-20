@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "apa_param_setting.h"
+#include "debug_info_log.h"
 #include "geometry_math.h"
 #include "transform_lib.h"
 
@@ -264,7 +265,7 @@ void UssObstacleAvoidance::GenUssArc() {
 
 const bool UssObstacleAvoidance::Preprocess() {
   if (local_view_ptr_ == nullptr) {
-    std::cout << "uss local_view_ptr is nullptr!" << std::endl;
+    DEBUG_PRINT("uss local_view_ptr is nullptr!");
     return false;
   }
 
@@ -307,8 +308,8 @@ const bool UssObstacleAvoidance::Preprocess() {
 
   const auto &uss_dis_info = uss_dis_info_buf[4];
   if (uss_dis_info.dis_from_car_to_obj_size() != 12) {
-    std::cout << "uss dis nums = " << uss_dis_info.dis_from_car_to_obj_size()
-              << " != 12 " << std::endl;
+    DEBUG_PRINT("uss dis nums = " << uss_dis_info.dis_from_car_to_obj_size()
+              << " != 12 ");
     return false;
   }
   // front uss: uss dis need to be transfered from mm to m.
