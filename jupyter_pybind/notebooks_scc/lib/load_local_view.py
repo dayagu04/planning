@@ -580,7 +580,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   if bag_loader.fus_msg['enable'] == True:
     print("fusion objects local point valid: ", fus_msg.local_point_valid)
     fusion_objects = fus_msg.fusion_object
-    obstacles_info_all = load_obstacle_params(fusion_objects, is_enu_to_car, loc_msg)
+    obstacles_info_all = load_obstacle_params(fusion_objects, is_enu_to_car, loc_msg, environment_model_info)
     local_view_data['data_fus_obj'].data.update({
             'obstacles_x': [],
             'obstacles_y': [],

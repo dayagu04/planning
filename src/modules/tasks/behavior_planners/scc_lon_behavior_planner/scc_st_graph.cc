@@ -1133,10 +1133,10 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
       // v_target_potential_cutin =
       //     std::min(v_target_potential_cutin,
       //              (desired_velocity - v_limit) * track.cutinp() + v_limit);
-      double v_potental_cutin =
+      double v_potential_cutin =
           (desired_velocity - v_limit) * track.cutinp() + v_limit;
-      if (v_target_potential_cutin > v_potental_cutin) {
-        v_target_potential_cutin = v_potental_cutin;
+      if (v_target_potential_cutin > v_potential_cutin) {
+        v_target_potential_cutin = v_potential_cutin;
         cutin_id_vt.first = track.track_id();
         cutin_id_vt.second = v_target_potential_cutin;
       }
@@ -1170,8 +1170,8 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
       cut_in_info->Clear();
     }
   }
-  JSON_DEBUG_VALUE("v_target_potental_cutin", cutin_id_vt.second);
-  JSON_DEBUG_VALUE("potental_cutin_track_id", cutin_id_vt.first);
+  JSON_DEBUG_VALUE("v_target_potential_cutin", cutin_id_vt.second);
+  JSON_DEBUG_VALUE("potential_cutin_track_id", cutin_id_vt.first);
 };
 
 double StGraphGenerator::CalcDesiredVelocity(const double d_rel,
