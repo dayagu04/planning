@@ -221,8 +221,9 @@ class LoadCyberbag:
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
                           "slm_selected_obs_x", "slm_selected_obs_y", "obstaclesX", "obstaclesY", "slot_corner_X", "slot_corner_Y",
-                          "limiter_corner_X", "limiter_corner_Y", "tlane_front_que_x","tlane_front_que_y", "tlane_rear_que_x", "tlane_rear_que_y",
-                          "para_tlane_obs_pt_before_uss", "para_tlane_obs_pt_after_uss"]
+                          "limiter_corner_X", "limiter_corner_Y", "obstacles_x_slot", "obstacles_y_slot",
+                          "tlane_front_que_x","tlane_front_que_y", "tlane_rear_que_x", "tlane_rear_que_y",
+                          "para_tlane_obs_pt_before_uss"]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):

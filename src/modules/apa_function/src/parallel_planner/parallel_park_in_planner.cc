@@ -202,10 +202,6 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
   }
   ego_slot_info.slot_corner = pt;
 
-  ego_slot_info.obs_pt_vec_slot.clear();
-  ego_slot_info.obs_pt_vec_slot =
-      slot_manager_ptr->GetEgoSlotInfo().obs_pt_vec_slot;
-
   // calc slot side once at first
   if (frame_.is_replan_first == true) {
     const Eigen::Vector2d v_ego_to_pt3 = pt[3] - measures_ptr->pos_ego;
@@ -343,6 +339,12 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
   std::cout << "ego_slot_info.slot_occupied_ratio = "
             << ego_slot_info.slot_occupied_ratio << std::endl;
 
+  ego_slot_info.obs_pt_vec_slot.clear();
+  for (const auto& obs_pt_global : slot_manager_ptr->GetSelectedSlotObsVec()) {
+    ego_slot_info.obs_pt_vec_slot.emplace_back(
+        frame_.ego_slot_info.g2l_tf.GetPos(obs_pt_global));
+  }
+
   // update stuck time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       apa_world_ptr_->GetMeasurementsPtr()->static_flag &&
@@ -441,6 +443,15 @@ void ParallelParInPlanner::GenTlane() {
 
   DEBUG_PRINT("obs size =" << ego_slot_info.obs_pt_vec_slot.size()
                            << "-----------");
+  std::vector<double> obs_slot_x_vec;
+  std::vector<double> obs_slot_y_vec;
+  for (const auto& pt : ego_slot_info.obs_pt_vec_slot) {
+    obs_slot_x_vec.emplace_back(pt.x());
+    obs_slot_y_vec.emplace_back(pt.y());
+  }
+  JSON_DEBUG_VECTOR("obs_slot_x_vec", obs_slot_x_vec, 2)
+  JSON_DEBUG_VECTOR("obs_slot_y_vec", obs_slot_y_vec, 2)
+
   // for json debug
   std::vector<double> front_que_x;
   std::vector<double> front_que_y;
@@ -625,13 +636,6 @@ void ParallelParInPlanner::GenTlane() {
        std::fabs(frame_.ego_slot_info.terminal_err.heading) <= 15.0 / 57.3)) {
     UpdateTlaneOnceInSlot();
   }
-
-  tlane_obs_pt_vec.clear();
-  tlane_obs_pt_vec.emplace_back(t_lane_.obs_pt_inside.x());
-  tlane_obs_pt_vec.emplace_back(t_lane_.obs_pt_inside.y());
-  tlane_obs_pt_vec.emplace_back(t_lane_.obs_pt_outside.x());
-  tlane_obs_pt_vec.emplace_back(t_lane_.obs_pt_outside.x());
-  JSON_DEBUG_VECTOR("para_tlane_obs_pt_after_uss", tlane_obs_pt_vec, 2)
 
   // if curb exist, combine curb and slot center line to decide target y
   if (curb_count > 1) {
@@ -1582,6 +1586,15 @@ void ParallelParInPlanner::Log() const {
 
   DEBUG_PRINT("obs p out = " << p0_g.transpose());
   DEBUG_PRINT("obs p in = " << p1_g.transpose());
+
+  std::vector<double> obstacles_x_slot;
+  std::vector<double> obstacles_y_slot;
+  for (const auto& pt : frame_.ego_slot_info.obs_pt_vec_slot) {
+    obstacles_x_slot.emplace_back(pt.x());
+    obstacles_y_slot.emplace_back(pt.y());
+  }
+  JSON_DEBUG_VECTOR("obstacles_x_slot", obstacles_x_slot, 2)
+  JSON_DEBUG_VECTOR("obstacles_y_slot", obstacles_y_slot, 2)
 
   const std::vector<Eigen::Vector2d>& obstacles =
       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstacles();

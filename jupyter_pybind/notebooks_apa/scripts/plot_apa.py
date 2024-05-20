@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/Parallel/0517_fix_log/planning-939d2c973-JAC_S811/test_0.00000'
+bag_path = '/data_cold/abu_zone/APA/Parallel/0520/planning-f0956540e-JAC_S811/test_4.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
@@ -158,8 +158,10 @@ def slider_callback(bag_time):
     print("para_tlane_is_rear_vacant",planning_json['para_tlane_is_rear_vacant'])
     tlane = planning_json['para_tlane_obs_pt_before_uss']
     print("para_tlane_obs_pt_before_uss = (", tlane[0], ", ", tlane[1], ")  (", tlane[2], ", ",tlane[3],")")
-    tlane_after_uss = planning_json['para_tlane_obs_pt_after_uss']
-    print("para_tlane_obs_pt_after_uss = (", tlane_after_uss[0], ", ", tlane_after_uss[1], ")  (", tlane_after_uss[2], ", ",tlane_after_uss[3],")")
+    # tlane_after_uss = planning_json['para_tlane_obs_pt_after_uss']
+    # print("para_tlane_obs_pt_after_uss = (", tlane_after_uss[0], ", ", tlane_after_uss[1], ")  (", tlane_after_uss[2], ", ",tlane_after_uss[3],")")
+    print("slot length = ", planning_json['slot_length'])
+    print("slot width = ", planning_json['slot_width'])
 
     print("------------front---------------")
     print("para_tlane_front_min_x_before_clamp", planning_json['para_tlane_front_min_x_before_clamp'])

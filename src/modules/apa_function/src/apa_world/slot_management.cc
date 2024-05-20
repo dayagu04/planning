@@ -2359,6 +2359,15 @@ const bool SlotManagement::SetRealtime() {
   return true;
 }
 
+const std::vector<Eigen::Vector2d> SlotManagement::GetSelectedSlotObsVec() {
+  const size_t id = static_cast<size_t>(frame_.ego_slot_info.select_slot_id);
+  if (id != 0) {
+    return frame_.obs_pt_map[id];
+  } else {
+    return std::vector<Eigen::Vector2d>();
+  }
+}
+
 void SlotManagement::Log() {
   const auto select_slot_id =
       static_cast<size_t>(frame_.ego_slot_info.select_slot_id);
