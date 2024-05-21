@@ -124,8 +124,8 @@ void LateralPathOptimizer::AssembleInput(
 
       planning_input_.mutable_init_state()->set_theta(theta_s_spline_(s_ilqr));
 
-      planning_input_.mutable_init_state()->set_k(
-          pnc::mathlib::Limit(theta_s_spline_.deriv(1, s_ilqr), k_max));
+      planning_input_.mutable_init_state()->set_k(pnc::mathlib::Limit(
+          theta_s_spline_.deriv(1, s_ilqr + 0.5 * ds_ilqr), k_max));
     }
     planning_input_.mutable_ref_theta_vec()->Set(i, theta_s_spline_(s_ilqr));
     planning_input_.mutable_ref_x_vec()->Set(i, x_s_spline_(s_ilqr));
