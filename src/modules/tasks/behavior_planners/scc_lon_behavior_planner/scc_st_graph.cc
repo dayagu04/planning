@@ -1,5 +1,7 @@
 #include "scc_st_graph.h"
 
+#include <algorithm>
+
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
 #include "math/linear_interpolation.h"
@@ -25,7 +27,8 @@ StGraphGenerator::StGraphGenerator(const SccLonBehaviorPlannerConfig &config)
 }
 
 void StGraphGenerator::Update(
-    std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input) {
+    std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input,
+    const TrajectoryPoints &last_traj) {
   lon_behav_input_ = std::move(lon_behav_input);
   LOG_DEBUG("=======Entering StGraphGenerator::Update======= \n");
   double v_ego = lon_behav_input_->ego_info().ego_v();
@@ -50,14 +53,6 @@ void StGraphGenerator::Update(
   st_refs_.clear();
   st_boundaries_.clear();
   JSON_DEBUG_VALUE("v_ego", v_ego);
-
-  // 0. get start & stop state
-  common::StartStopInfo::StateType stop_start_state =
-      UpdateStartStopState(lon_behav_input_->lat_obs_info().lead_one(), v_ego);
-  v_cruise = stop_start_state == common::StartStopInfo::STOP ? 0.0 : v_cruise;
-
-  JSON_DEBUG_VALUE("stop_start_state", (int)stop_start_state);
-  JSON_DEBUG_VALUE("v_target_start_stop", v_cruise);
 
   last_v_target_ = v_target_;
   accel_vel_filter_.SetState(last_v_target_);
@@ -135,6 +130,11 @@ void StGraphGenerator::Update(
 
   // filter v target
   if (v_target_ > v_ego) {
+    if (start_stop_info_.state() == common::StartStopInfo::START) {
+      accel_vel_filter_.SetRate(-config_.acc_start, config_.acc_start);
+    } else {
+      accel_vel_filter_.SetRate(-1.0, 1.0);
+    }
     if (v_ego > v_last_target_) {
       accel_vel_filter_.SetState(v_ego);
     }
@@ -146,7 +146,16 @@ void StGraphGenerator::Update(
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
   }
+
+  // 0. get start & stop state
+  common::StartStopInfo::StateType stop_start_state = UpdateStartStopState(
+      lon_behav_input_->lat_obs_info().lead_one(), v_ego, last_traj);
+  v_target_ = stop_start_state == common::StartStopInfo::STOP ? 0.0 : v_target_;
+  JSON_DEBUG_VALUE("stop_start_state", (int)stop_start_state);
+  JSON_DEBUG_VALUE("v_target_start_stop", v_cruise);
+
   v_last_target_ = v_target_;
+
   // 3. update vref
   UpdateVelRefs();
   // 4. calculate sref by vref
@@ -1838,9 +1847,11 @@ double StGraphGenerator::LCGapDesiredDistanceFilter(
 }
 
 common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
-    const planning::common::TrackedObjectInfo &lead_one, const double v_ego) {
+    const planning::common::TrackedObjectInfo &lead_one, const double v_ego,
+    const TrajectoryPoints &last_traj) {
   // The AION's resolution of vehicle speed is 0.3m/s
   double v_start = config_.v_start;
+  double v_startmode = config_.v_startmode;
   double obstacle_v_start = config_.obstacle_v_start;
   double distance_stop = config_.distance_stop;
   double distance_start = config_.distance_start;
@@ -1859,7 +1870,12 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
     bool stop_condition =
         (v_ego < v_start && is_lead_static &&
          std::fabs(lead_one.d_rel() - desire_distance) < distance_stop);
-    bool cruise_condition = v_ego > v_start;
+    bool cruise_condition = v_ego > v_startmode || (v_last_target_ > v_target_);
+    bool cruise_to_start_condition = false;
+    if (v_ego < v_startmode && (v_last_target_ < v_target_ &&
+                                v_target_ > config_.v_target_stop_thrd)) {
+      cruise_to_start_condition = true;
+    }
     bool lead_one_start =
         (lead_one.v_lead() > obstacle_v_start &&
          (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
@@ -1878,6 +1894,10 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
       start_stop_info_.set_stop_distance_of_leadone(lead_one.d_rel());
       LOG_DEBUG("The distance error of STOP is [%f]m \n",
                 lead_one.d_rel() - desire_distance);
+    } else if (start_stop_info_.state() == common::StartStopInfo::CRUISE &&
+               cruise_to_start_condition) {
+      // CRUISE --> START
+      start_stop_info_.set_state(common::StartStopInfo::START);
     } else if (start_stop_info_.state() == common::StartStopInfo::STOP &&
                start_condition) {
       // STOP --> START
@@ -1886,6 +1906,10 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
                cruise_condition) {
       // START --> CRUISE
       start_stop_info_.set_state(common::StartStopInfo::CRUISE);
+    } else if (start_stop_info_.state() == common::StartStopInfo::START &&
+               stop_condition) {
+      // START --> STOP
+      start_stop_info_.set_state(common::StartStopInfo::STOP);
     }
   }
   LOG_DEBUG("The start_stop_state_info is [%d] \n", start_stop_info_.state());
@@ -1994,6 +2018,14 @@ void StGraphGenerator::MakeAccBound() {
   //     (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
   acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
   acc_bound_.second = (std::fmax(lon_init_state_[2], acc_target_.second));
+  if (start_stop_info_.state() == common::StartStopInfo::START) {
+    acc_bound_.first = -config_.acc_start_max_bound;
+    acc_bound_.second = config_.acc_start_max_bound;
+  } else if (v_target_ < config_.v_target_stop_thrd &&
+             start_stop_info_.state() != common::StartStopInfo::START) {
+    acc_bound_.first = -config_.acc_stop_max_bound;
+    acc_bound_.second = config_.acc_stop_max_bound;
+  }
 }
 
 void StGraphGenerator::MakeJerkBound() {

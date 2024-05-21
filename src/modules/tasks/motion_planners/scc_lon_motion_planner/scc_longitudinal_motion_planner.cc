@@ -238,18 +238,49 @@ void SccLongitudinalMotionPlanner::AssembleInput() {
       planning_init_point.lon_init_state.a());
 
   // 4. set weights
-  planning_input_.set_q_ref_pos(config_.q_ref_pos);
-  planning_input_.set_q_ref_vel(config_.q_ref_vel);
-  planning_input_.set_q_acc(config_.q_acc);
-  planning_input_.set_q_jerk(config_.q_jerk);
-  planning_input_.set_q_stop_s(config_.q_stop_s);
+  auto start_stop_info =
+      session_->planning_context().start_stop_result().state();
+  if (start_stop_info == common::StartStopInfo::START) {
+    planning_input_.set_q_ref_pos(config_.q_ref_pos_startmode);
+    planning_input_.set_q_ref_vel(config_.q_ref_vel_startmode);
+    planning_input_.set_q_acc(config_.q_acc_startmode);
+    planning_input_.set_q_jerk(config_.q_jerk_startmode);
+    planning_input_.set_q_stop_s(config_.q_stop_s_startmode);
 
-  planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound);
-  planning_input_.set_q_hard_pos_bound(config_.q_hard_pos_bound);
-  planning_input_.set_q_sv_bound(config_.q_sv_bound);
-  planning_input_.set_q_vel_bound(config_.q_vel_bound);
-  planning_input_.set_q_acc_bound(config_.q_acc_bound);
-  planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
+    planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound_startmode);
+    planning_input_.set_q_hard_pos_bound(config_.q_hard_pos_bound_startmode);
+    planning_input_.set_q_sv_bound(config_.q_sv_bound_startmode);
+    planning_input_.set_q_vel_bound(config_.q_vel_bound_startmode);
+    planning_input_.set_q_acc_bound(config_.q_acc_bound_startmode);
+    planning_input_.set_q_jerk_bound(config_.q_jerk_bound_startmode);
+  } else if (start_stop_info == common::StartStopInfo::STOP ||
+             v_refs.front().first < config_.v_target_stop_thrd) {
+    planning_input_.set_q_ref_pos(config_.q_ref_pos_stopmode);
+    planning_input_.set_q_ref_vel(config_.q_ref_vel_stopmode);
+    planning_input_.set_q_acc(config_.q_acc_stopmode);
+    planning_input_.set_q_jerk(config_.q_jerk_stopmode);
+    planning_input_.set_q_stop_s(config_.q_stop_s_stopmode);
+
+    planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound_stopmode);
+    planning_input_.set_q_hard_pos_bound(config_.q_hard_pos_bound_stopmode);
+    planning_input_.set_q_sv_bound(config_.q_sv_bound_stopmode);
+    planning_input_.set_q_vel_bound(config_.q_vel_bound_stopmode);
+    planning_input_.set_q_acc_bound(config_.q_acc_bound_stopmode);
+    planning_input_.set_q_jerk_bound(config_.q_jerk_bound_stopmode);
+  } else {
+    planning_input_.set_q_ref_pos(config_.q_ref_pos);
+    planning_input_.set_q_ref_vel(config_.q_ref_vel);
+    planning_input_.set_q_acc(config_.q_acc);
+    planning_input_.set_q_jerk(config_.q_jerk);
+    planning_input_.set_q_stop_s(config_.q_stop_s);
+
+    planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound);
+    planning_input_.set_q_hard_pos_bound(config_.q_hard_pos_bound);
+    planning_input_.set_q_sv_bound(config_.q_sv_bound);
+    planning_input_.set_q_vel_bound(config_.q_vel_bound);
+    planning_input_.set_q_acc_bound(config_.q_acc_bound);
+    planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
+  }
 
   // what is s_stop?
   planning_input_.set_s_stop(1.0e4);  // TBD: hack for input;
