@@ -510,9 +510,9 @@ const bool PerpendicularPathPlanner::PreparePlanSecond() {
 void PerpendicularPathPlanner::CalMonoSafeCircle() {
   calc_params_.mono_safe_circle.center.y() =
       calc_params_.target_line.pA.y() +
-      apa_param.GetParam().min_turn_radius * calc_params_.slot_side_sgn;
+      calc_params_.turn_radius * calc_params_.slot_side_sgn;
 
-  calc_params_.mono_safe_circle.radius = apa_param.GetParam().min_turn_radius;
+  calc_params_.mono_safe_circle.radius = calc_params_.turn_radius;
 
   auto pt_inside = input_.tlane.pt_inside;
 
@@ -521,9 +521,10 @@ void PerpendicularPathPlanner::CalMonoSafeCircle() {
                                apa_param.GetParam().max_pt_inside_drop_dx_mono);
 
   const double deta_x = std::sqrt(
-      std::pow((apa_param.GetParam().min_turn_radius -
-                apa_param.GetParam().car_width * 0.5),
-               2) -
+      std::pow(
+          (calc_params_.turn_radius - apa_param.GetParam().car_width * 0.5 -
+           apa_param.GetParam().car_lat_inflation_for_obs),
+          2) -
       std::pow((calc_params_.mono_safe_circle.center.y() - pt_inside.y()), 2));
 
   calc_params_.mono_safe_circle.center.x() = pt_inside.x() - deta_x;
@@ -582,13 +583,14 @@ bool PerpendicularPathPlanner::CalMultiSafeCircle() {
 
   pnc::geometry_lib::Circle circle_p1;
   circle_p1.center = pt_inside;
-  circle_p1.radius = apa_param.GetParam().min_turn_radius -
-                     0.5 * apa_param.GetParam().car_width;
+  circle_p1.radius = calc_params_.turn_radius -
+                     0.5 * apa_param.GetParam().car_width -
+                     apa_param.GetParam().car_lat_inflation_for_obs;
 
   // move down the start line
   const Eigen::Vector2d pt_s =
       calc_params_.prepare_line.pA +
-      calc_params_.pre_line_normal_vec * apa_param.GetParam().min_turn_radius;
+      calc_params_.pre_line_normal_vec * calc_params_.turn_radius;
 
   pnc::geometry_lib::LineSegment line_sa(
       pt_s, pt_s + calc_params_.pre_line_tangent_vec);
@@ -612,7 +614,7 @@ bool PerpendicularPathPlanner::CalMultiSafeCircle() {
     multi_safe_circle.center = cross_points[1];
   }
 
-  multi_safe_circle.radius = apa_param.GetParam().min_turn_radius;
+  multi_safe_circle.radius = calc_params_.turn_radius;
 
   // std::cout << "multi safa circle info: center = " <<
   // multi_safe_circle.center
@@ -750,7 +752,7 @@ const bool PerpendicularPathPlanner::MultiPlan() {
   bool success = false;
   calc_params_.multi_plan = true;
   double turn_radius = calc_params_.turn_radius;
-  double compensate_line_length = 0.1;
+  size_t stuck_by_inside_count = 0;
   std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
   for (int i = 0; i < kMaxPathNumsInSlot; ++i) {
     std::cout << "-- No." << i << "  multi-plan --\n";
@@ -762,71 +764,86 @@ const bool PerpendicularPathPlanner::MultiPlan() {
       success = true;
     } else {
       std::cout << "single path of multi-plan failed!\n";
-      if (calc_params_.stuck_by_inside &&
-          input_.ref_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-        std::cout
-            << "reverse path stuck by inside, use reverse line and arc to far "
-               "from inside.\n";
-        multi_out_put.Reset();
-        if (compensate_line_length > 0.4868) {
-          std::cout << "try  reverse line and arc enough, but also failed\n";
-          success = false;
-          break;
-        }
-        // all start again
+      if (calc_params_.stuck_by_inside) {
         i = -1;
-        current_pose = input_.ego_pose;
-        current_gear = input_.ref_gear;
-        current_arc_steer = input_.ref_arc_steer;
+        stuck_by_inside_count++;
+        if (calc_params_.first_multi_plan ||
+            current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+          DEBUG_PRINT(
+              "reverse path stuck by inside, use reverse line and arc "
+              "to far from inside.");
+          if (calc_params_.first_multi_plan) {
+            DEBUG_PRINT("first multi plan, clear all path.");
+            multi_out_put.Reset();
+          }
+          if (stuck_by_inside_count > 5) {
+            std::cout << "try reverse line and arc enough, but also failed\n";
+            success = false;
+            break;
+          }
+          double compensate_line_length = 0.1;
+          if (multi_out_put.path_segment_vec.empty()) {
+            current_pose = input_.ego_pose;
+            current_gear = input_.ref_gear;
+            current_arc_steer = input_.ref_arc_steer;
+            compensate_line_length *= stuck_by_inside_count;
+          } else {
+            current_pose = multi_out_put.path_segment_vec.back().GetEndPose();
+          }
 
-        Eigen::Vector2d ego_heading_vec =
-            pnc::geometry_lib::GenHeadingVec(input_.ego_pose.heading);
+          pnc::geometry_lib::PathPoint target_pose = current_pose;
 
-        current_pose.pos =
-            input_.ego_pose.pos - compensate_line_length * ego_heading_vec;
+          Eigen::Vector2d ego_heading_vec =
+              pnc::geometry_lib::GenHeadingVec(current_pose.heading);
 
-        pnc::geometry_lib::LineSegment line(
-            input_.ego_pose.pos, current_pose.pos, input_.ego_pose.heading);
+          target_pose.pos =
+              current_pose.pos - compensate_line_length * ego_heading_vec;
 
-        CollisionDetector::CollisionResult col_res =
-            collision_detector_ptr_->UpdateByObsMap(line, line.heading);
+          pnc::geometry_lib::LineSegment line(current_pose.pos, target_pose.pos,
+                                              current_pose.heading);
 
-        const double safe_remain_dist =
-            std::min(col_res.remain_car_dist,
-                     col_res.remain_obstacle_dist -
-                         apa_param.GetParam().col_obs_safe_dist);
+          CollisionDetector::CollisionResult col_res =
+              collision_detector_ptr_->UpdateByObsMap(line, line.heading);
 
-        if (col_res.remain_car_dist - 1e-3 > safe_remain_dist ||
-            safe_remain_dist < 1e-5) {
-          std::cout << "line will collide, fail and quit multi plan\n";
-          success = false;
-          break;
+          const double safe_remain_dist =
+              std::min(col_res.remain_car_dist,
+                       col_res.remain_obstacle_dist -
+                           apa_param.GetParam().col_obs_safe_dist);
+
+          if (col_res.remain_car_dist - 1e-3 > safe_remain_dist ||
+              safe_remain_dist < 1e-5) {
+            std::cout << "line will collide, fail and quit multi plan\n";
+            success = false;
+            break;
+          }
+
+          current_pose = target_pose;
+
+          multi_out_put.path_available = true;
+          pnc::geometry_lib::PathSegment line_seg(
+              pnc::geometry_lib::SEG_GEAR_REVERSE, line);
+          multi_out_put.gear_cmd_vec.emplace_back(line_seg.seg_gear);
+          multi_out_put.steer_vec.emplace_back(line_seg.seg_steer);
+          multi_out_put.path_segment_vec.emplace_back(line_seg);
+          multi_out_put.length += line_seg.Getlength();
+
+          continue;
+        } else if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+          DEBUG_PRINT("save current path and continue to plan.");
         }
-
-        multi_out_put.path_available = true;
-        pnc::geometry_lib::PathSegment line_seg(
-            pnc::geometry_lib::SEG_GEAR_REVERSE, line);
-        multi_out_put.gear_cmd_vec.emplace_back(line_seg.seg_gear);
-        multi_out_put.steer_vec.emplace_back(line_seg.seg_steer);
-        multi_out_put.path_segment_vec.emplace_back(line_seg);
-        multi_out_put.length += line_seg.Getlength();
-
-        compensate_line_length += 0.1;
-
-        continue;
-      }
-
-      // Determine if there are paths that have been stored. If not, it
-      // will fail. If there are, save paths and use adjust to
-      // continue planning
-      if (multi_out_put.path_segment_vec.size() > 0) {
-        multi_out_put.path_available = true;
-        success = true;
       } else {
-        multi_out_put.path_available = false;
-        success = false;
+        // Determine if there are paths that have been stored. If not, it
+        // will fail. If there are, save paths and use adjust to
+        // continue planning
+        if (multi_out_put.path_segment_vec.size() > 0) {
+          multi_out_put.path_available = true;
+          success = true;
+        } else {
+          multi_out_put.path_available = false;
+          success = false;
+        }
+        break;
       }
-      break;
     }
 
     if (tmp_path_seg_vec.size() > 0) {
@@ -1549,8 +1566,7 @@ const bool PerpendicularPathPlanner::OneArcPlan(
     std::cout << "cal radius = " << arc.circle_info.radius << std::endl;
     const auto steer = pnc::geometry_lib::CalArcSteer(arc);
     const auto gear = pnc::geometry_lib::CalArcGear(arc);
-    success = (arc.circle_info.radius >=
-                   apa_param.GetParam().min_turn_radius - 1e-3 &&
+    success = (arc.circle_info.radius >= calc_params_.turn_radius - 1e-3 &&
                arc.circle_info.radius <=
                    apa_param.GetParam().max_one_step_arc_radius + 1e-3) &&
               (gear == current_gear);
@@ -1578,6 +1594,8 @@ const bool PerpendicularPathPlanner::LineArcPlan(
 
   if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
       current_pose.pos.y() * current_pose.heading < 0.0) {
+  } else if (current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE &&
+             current_pose.pos.y() * current_pose.heading > 0.0) {
   } else {
     std::cout << "should no line arc in this case\n";
     return false;
@@ -1676,7 +1694,7 @@ const bool PerpendicularPathPlanner::AlignBodyPlan(
   pnc::geometry_lib::Arc arc;
   arc.pA = current_pose.pos;
   arc.headingA = current_pose.heading;
-  arc.circle_info.radius = apa_param.GetParam().min_turn_radius;
+  arc.circle_info.radius = calc_params_.turn_radius;
   // check if it is necessary to align body
   if (pnc::mathlib::IsDoubleEqual(arc.headingA,
                                   calc_params_.target_line.heading)) {
@@ -1891,7 +1909,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
     } else {
       // try line arc
       success = LineArcPlan(tmp_path_seg_vec, tmp_current_pose, current_gear,
-                            apa_param.GetParam().min_turn_radius);
+                            calc_params_.turn_radius);
       if (success) {
         line_arc_success = true;
         tmp_current_pose.Set(tmp_path_seg_vec.back().GetEndPos(),
