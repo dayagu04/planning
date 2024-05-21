@@ -265,20 +265,20 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       apa_param.GetParam().rear_overhanging -
       apa_param.GetParam().col_obs_safe_dist - 0.05;
 
-  const auto pt_0 = ego_slot_info.g2l_tf.GetPos(raw_pt[0]);
-  const auto pt_1 = ego_slot_info.g2l_tf.GetPos(raw_pt[1]);
+  const Eigen::Vector2d pt_0 = ego_slot_info.g2l_tf.GetPos(raw_pt[0]);
+  const Eigen::Vector2d pt_1 = ego_slot_info.g2l_tf.GetPos(raw_pt[1]);
 
   ego_slot_info.pt_0 = pt_0;
   ego_slot_info.pt_1 = pt_1;
-  const auto pt_01_vec = pt_1 - pt_0;
+  const Eigen::Vector2d pt_01_vec = pt_1 - pt_0;
 
   if (std::fabs(cos_theta) < 0.01) {
     ego_slot_info.sin_angle = 1.0;
     ego_slot_info.origin_pt_0_heading = 0.0;
   } else {
-    auto angle = std::fabs(pnc::geometry_lib::GetAngleFromTwoVec(
-                     Eigen::Vector2d(virtual_slot_length, 0.0), pt_01_vec)) *
-                 57.3;
+    double angle = std::fabs(pnc::geometry_lib::GetAngleFromTwoVec(
+                       Eigen::Vector2d(virtual_slot_length, 0.0), pt_01_vec)) *
+                   57.3;
 
     if (angle > 90.0) {
       angle = 180.0 - angle;

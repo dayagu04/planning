@@ -525,7 +525,7 @@ void PerpendicularPathPlanner::CalMonoSafeCircle() {
   const double deta_x = std::sqrt(
       std::pow(
           (calc_params_.turn_radius - apa_param.GetParam().car_width * 0.5 -
-           apa_param.GetParam().car_lat_inflation_for_obs),
+           apa_param.GetParam().car_lat_inflation_for_obs - 0.0268),
           2) -
       std::pow((calc_params_.mono_safe_circle.center.y() - pt_inside.y()), 2));
 
@@ -587,7 +587,7 @@ bool PerpendicularPathPlanner::CalMultiSafeCircle() {
   circle_p1.center = pt_inside;
   circle_p1.radius = calc_params_.turn_radius -
                      0.5 * apa_param.GetParam().car_width -
-                     apa_param.GetParam().car_lat_inflation_for_obs;
+                     apa_param.GetParam().car_lat_inflation_for_obs - 0.0268;
 
   // move down the start line
   const Eigen::Vector2d pt_s =
@@ -728,7 +728,7 @@ const bool PerpendicularPathPlanner::CheckMultiPlanSuitable(
 
 // multi plan start
 const bool PerpendicularPathPlanner::MultiPlan() {
-  DEBUG_PRINT("-----multi plan-----");
+  printf("-----multi plan-----\n");
   // set init state
   pnc::geometry_lib::PathPoint current_pose = input_.ego_pose;
   uint8_t current_gear = input_.ref_gear;
@@ -765,7 +765,7 @@ const bool PerpendicularPathPlanner::MultiPlan() {
       multi_out_put.path_available = true;
       success = true;
     } else {
-      std::cout << "single path of multi-plan failed!\n";
+      DEBUG_PRINT("single path of multi-plan failed!");
       if (calc_params_.stuck_by_inside) {
         i = -1;
         stuck_by_inside_count++;
@@ -774,14 +774,14 @@ const bool PerpendicularPathPlanner::MultiPlan() {
           DEBUG_PRINT(
               "reverse path stuck by inside, use reverse line and arc "
               "to far from inside.");
-          if (calc_params_.first_multi_plan) {
-            DEBUG_PRINT("first multi plan, clear all path.");
-            multi_out_put.Reset();
-          }
           if (stuck_by_inside_count > 5) {
             std::cout << "try reverse line and arc enough, but also failed\n";
             success = false;
             break;
+          }
+          if (calc_params_.first_multi_plan) {
+            DEBUG_PRINT("first multi plan, clear all path.");
+            multi_out_put.Reset();
           }
           double compensate_line_length = 0.1;
           if (multi_out_put.path_segment_vec.empty()) {
@@ -814,7 +814,7 @@ const bool PerpendicularPathPlanner::MultiPlan() {
 
           if (col_res.remain_car_dist - 1e-3 > safe_remain_dist ||
               safe_remain_dist < 1e-5) {
-            std::cout << "line will collide, fail and quit multi plan\n";
+            DEBUG_PRINT("line will collide, fail and quit multi plan");
             success = false;
             break;
           }
@@ -1376,7 +1376,7 @@ const bool PerpendicularPathPlanner::CheckAdjustPlanSuitable(
 }
 
 const bool PerpendicularPathPlanner::AdjustPlan() {
-  DEBUG_PRINT("-----adjust plan-----");
+  printf("-----adjust plan-----\n");
   // set init state
   pnc::geometry_lib::PathPoint current_pose = input_.ego_pose;
   uint8_t current_gear = input_.ref_gear;

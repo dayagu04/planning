@@ -602,20 +602,24 @@ void PerpendicularInPlanner::GenTlane() {
                       decltype(lambda_func_3)>
       right_que_for_x(lambda_func_3);
 
-  const Eigen::Vector2d pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
-  const Eigen::Vector2d pt_10_vec = ego_slot_info.pt_0 - ego_slot_info.pt_1;
-  const Eigen::Vector2d pt_01_norm_up_vec(pt_01_vec.y(), -pt_01_vec.x());
-  const Eigen::Vector2d pt_01_norm_down_vec(-pt_01_vec.y(), pt_01_vec.x());
+  const Eigen::Vector2d pt_01_norm_vec =
+      (ego_slot_info.pt_1 - ego_slot_info.pt_0).normalized();
+  const Eigen::Vector2d pt_10_norm_vec =
+      (ego_slot_info.pt_0 - ego_slot_info.pt_1).normalized();
+  const Eigen::Vector2d pt_01_norm_up_vec(pt_01_norm_vec.y(),
+                                          -pt_01_norm_vec.x());
+  const Eigen::Vector2d pt_01_norm_down_vec(-pt_01_norm_vec.y(),
+                                            pt_01_norm_vec.x());
 
   const double x_max =
       ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5 +
        apa_param.GetParam().obs_consider_long_threshold * pt_01_norm_up_vec)
           .x();
 
-  const double y_max =
-      std::fabs((ego_slot_info.pt_1 +
-                 apa_param.GetParam().obs_consider_lat_threshold * pt_01_vec)
-                    .y());
+  const double y_max = std::fabs(
+      (ego_slot_info.pt_1 +
+       apa_param.GetParam().obs_consider_lat_threshold * pt_01_norm_vec)
+          .y());
 
   // sift obstacles that meet requirement
   for (const auto& obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
@@ -646,10 +650,12 @@ void PerpendicularInPlanner::GenTlane() {
           .x();
 
   const double virtual_left_y =
-      (ego_slot_info.pt_1 + apa_param.GetParam().virtual_obs_y_pos * pt_01_vec)
+      (ego_slot_info.pt_1 +
+       apa_param.GetParam().virtual_obs_y_pos * pt_01_norm_vec)
           .y();
   const double virtual_right_y =
-      (ego_slot_info.pt_0 + apa_param.GetParam().virtual_obs_y_pos * pt_10_vec)
+      (ego_slot_info.pt_0 +
+       apa_param.GetParam().virtual_obs_y_pos * pt_10_norm_vec)
           .y();
 
   if (left_que_for_x.empty()) {
@@ -841,10 +847,11 @@ void PerpendicularInPlanner::GenObstacles() {
     slot_side = 1;
   }
   Eigen::Vector2d B(obstacle_t_lane_.pt_outside);
-  const auto& ego_slot_info = frame_.ego_slot_info;
-  const auto pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
-  const auto obs_length = (channel_length - pt_01_vec.norm()) * 0.5;
-  Eigen::Vector2d A = B - slot_side * pt_01_vec.normalized() * obs_length;
+  const EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
+  const Eigen::Vector2d pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
+  const Eigen::Vector2d pt_01_norm_vec = pt_01_vec.normalized();
+  const double obs_length = (channel_length - pt_01_vec.norm()) * 0.5;
+  Eigen::Vector2d A = B - slot_side * pt_01_norm_vec * obs_length;
 
   Eigen::Vector2d C(obstacle_t_lane_.pt_lower_boundry_pos);
   C.y() = B.y();
@@ -853,17 +860,17 @@ void PerpendicularInPlanner::GenObstacles() {
   Eigen::Vector2d D(obstacle_t_lane_.pt_lower_boundry_pos);
   D.y() = E.y();
 
-  Eigen::Vector2d F = E + slot_side * pt_01_vec.normalized() * obs_length;
+  Eigen::Vector2d F = E + slot_side * pt_01_norm_vec * obs_length;
 
   // add channel obstacle
   const double pt_01_x = ((ego_slot_info.pt_0 + ego_slot_info.pt_1) * 0.5).x();
   const double top_x = pt_01_x + channel_width / ego_slot_info.sin_angle;
   Eigen::Vector2d channel_point_1 =
       Eigen::Vector2d(top_x, 0.0) -
-      slot_side * pt_01_vec.normalized() * channel_length * 0.5;
+      slot_side * pt_01_norm_vec * channel_length * 0.5;
   Eigen::Vector2d channel_point_2 =
       Eigen::Vector2d(top_x, 0.0) +
-      slot_side * pt_01_vec.normalized() * channel_length * 0.5;
+      slot_side * pt_01_norm_vec * channel_length * 0.5;
 
   Eigen::Vector2d channel_point_3;
   pnc::geometry_lib::LineSegment channel_line;
