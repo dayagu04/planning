@@ -1,6 +1,7 @@
 #include "scc_st_graph.h"
 
 #include <algorithm>
+#include <complex>
 
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
@@ -712,6 +713,10 @@ void StGraphGenerator::UpdateNearObstacles(
   }
 
   for (int i = 0; i < near_cars_sorted.size(); i++) {
+    if (lon_behav_input_->lat_obs_info().lead_one().track_id() ==
+        near_cars_sorted[i]->track_id()) {
+      continue;
+    }
     nearest_car_track_id[i] = near_cars_sorted[i]->track_id();
     double car_length = near_cars_sorted[i]->location_head() -
                         near_cars_sorted[i]->location_tail();
@@ -740,51 +745,96 @@ void StGraphGenerator::UpdateNearObstacles(
     bool cutin_car = false;
     bool potential_cutin_car_1 = false;
     bool potential_cutin_car_2 = false;
+    bool NEAR_CAR_LAT_MOVING = fabs(vy_rel) > 0.1;
     if (near_cars_sorted[i]->y_min() < 0) {
       if (lc_request == "left_lane_change") {
         vy_rel = std::max(vy_rel, (vy_rel + near_cars_sorted[i]->v_lat()) / 2);
       }
       if (lc_request == "right_lane_change_wait") {
-        cutin_car =
-            near_cars_sorted[i]->y_min() + vy_rel * v_coeff >= -CUIIN_WIDTH;
-        potential_cutin_car_1 =
-            near_cars_sorted[i]->y_min() + 1.25 * vy_rel * v_coeff >=
-            -CUIIN_WIDTH;
-        potential_cutin_car_2 =
-            near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff >=
-            -CUIIN_WIDTH;
+        if (NEAR_CAR_LAT_MOVING) {
+          cutin_car =
+              (near_cars_sorted[i]->y_min() + vy_rel * v_coeff >= -CUIIN_WIDTH);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.25 * vy_rel * v_coeff >=
+               -CUIIN_WIDTH);
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff >=
+               -CUIIN_WIDTH);
+        } else {
+          cutin_car = (near_cars_sorted[i]->y_min() + vy_rel * v_coeff >=
+                       -CUIIN_WIDTH_STATIC);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.25 * vy_rel * v_coeff >=
+               -CUIIN_WIDTH_STATIC);
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff >=
+               -CUIIN_WIDTH_STATIC);
+        }
       } else {
-        cutin_car =
-            near_cars_sorted[i]->y_min() + vy_rel * v_coeff >= -CUIIN_WIDTH;
-        potential_cutin_car_1 =
-            near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff >=
-            -1 * (CUIIN_WIDTH + 0.01 * v_ego);
-        potential_cutin_car_2 =
-            near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff >=
-            -1 * (CUIIN_WIDTH + 0.01 * v_ego);
+        if (NEAR_CAR_LAT_MOVING) {
+          cutin_car =
+              (near_cars_sorted[i]->y_min() + vy_rel * v_coeff >= -CUIIN_WIDTH);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff >=
+               -1 * (CUIIN_WIDTH + 0.01 * v_ego));
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff >=
+               -1 * (CUIIN_WIDTH + 0.01 * v_ego));
+        } else {
+          cutin_car = (near_cars_sorted[i]->y_min() + vy_rel * v_coeff >=
+                       -CUIIN_WIDTH_STATIC);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff >=
+               -1 * (CUIIN_WIDTH_STATIC + 0.01 * v_ego));
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff >=
+               -1 * (CUIIN_WIDTH_STATIC + 0.01 * v_ego));
+        }
       }
     } else {
       if (lc_request == "right_lane_change") {
         vy_rel = min(vy_rel, (vy_rel + near_cars_sorted[i]->v_lat()) / 2);
       }
       if (lc_request == "left_lane_change_wait") {
-        cutin_car =
-            near_cars_sorted[i]->y_min() + vy_rel * v_coeff <= CUIIN_WIDTH;
-        potential_cutin_car_1 =
-            near_cars_sorted[i]->y_min() + 1.25 * vy_rel * v_coeff <=
-            CUIIN_WIDTH;
-        potential_cutin_car_2 =
-            near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
-            CUIIN_WIDTH;
+        if (NEAR_CAR_LAT_MOVING) {
+          cutin_car =
+              (near_cars_sorted[i]->y_min() + vy_rel * v_coeff <= CUIIN_WIDTH);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.25 * vy_rel * v_coeff <=
+               CUIIN_WIDTH);
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
+               CUIIN_WIDTH);
+        } else {
+          cutin_car = (near_cars_sorted[i]->y_min() + vy_rel * v_coeff <=
+                       CUIIN_WIDTH_STATIC);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.25 * vy_rel * v_coeff <=
+               CUIIN_WIDTH_STATIC);
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
+               CUIIN_WIDTH_STATIC);
+        }
       } else {
-        cutin_car =
-            near_cars_sorted[i]->y_min() + vy_rel * v_coeff <= CUIIN_WIDTH;
-        potential_cutin_car_1 =
-            near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
-            (CUIIN_WIDTH + 0.01 * v_ego);
-        potential_cutin_car_2 =
-            near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff <=
-            (CUIIN_WIDTH + 0.01 * v_ego);
+        if (NEAR_CAR_LAT_MOVING) {
+          cutin_car =
+              (near_cars_sorted[i]->y_min() + vy_rel * v_coeff <= CUIIN_WIDTH);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
+               (CUIIN_WIDTH + 0.01 * v_ego));
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff <=
+               (CUIIN_WIDTH + 0.01 * v_ego));
+        } else {
+          cutin_car =
+              (near_cars_sorted[i]->y_min() + vy_rel * v_coeff <= CUIIN_WIDTH_STATIC);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
+               (CUIIN_WIDTH_STATIC + 0.01 * v_ego));
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff <=
+               (CUIIN_WIDTH_STATIC + 0.01 * v_ego));
+        }
       }
     }
 
