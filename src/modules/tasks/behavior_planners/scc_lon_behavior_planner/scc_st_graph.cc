@@ -54,12 +54,6 @@ void StGraphGenerator::Update(
   st_boundaries_.clear();
   JSON_DEBUG_VALUE("v_ego", v_ego);
 
-  // // 0. get start & stop state
-  // common::StartStopInfo::StateType stop_start_state =
-  //     UpdateStartStopState(lon_behav_input_->lat_obs_info().lead_one(),
-  //     v_ego);
-  // v_cruise = stop_start_state == common::StartStopInfo::STOP ? 0.0 :
-  // v_cruise;
   last_v_target_ = v_target_;
   accel_vel_filter_.SetState(last_v_target_);
 
@@ -137,7 +131,7 @@ void StGraphGenerator::Update(
   // filter v target
   if (v_target_ > v_ego) {
     if (start_stop_info_.state() == common::StartStopInfo::START) {
-      accel_vel_filter_.SetRate(-1 * config_.acc_start, config_.acc_start);
+      accel_vel_filter_.SetRate(-config_.acc_start, config_.acc_start);
     } else {
       accel_vel_filter_.SetRate(-1.0, 1.0);
     }
@@ -157,7 +151,6 @@ void StGraphGenerator::Update(
   common::StartStopInfo::StateType stop_start_state = UpdateStartStopState(
       lon_behav_input_->lat_obs_info().lead_one(), v_ego, last_traj);
   v_target_ = stop_start_state == common::StartStopInfo::STOP ? 0.0 : v_target_;
-  // v_target_ = std::min(v_target_,v_stop_start_state);
   JSON_DEBUG_VALUE("stop_start_state", (int)stop_start_state);
   JSON_DEBUG_VALUE("v_target_start_stop", v_cruise);
 
@@ -2019,11 +2012,11 @@ void StGraphGenerator::MakeAccBound() {
   acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
   acc_bound_.second = (std::fmax(lon_init_state_[2], acc_target_.second));
   if (start_stop_info_.state() == common::StartStopInfo::START) {
-    acc_bound_.first = -1 * config_.acc_start_max_bound;
+    acc_bound_.first = -config_.acc_start_max_bound;
     acc_bound_.second = config_.acc_start_max_bound;
   } else if (v_target_ < config_.v_target_stop_thrd &&
              start_stop_info_.state() != common::StartStopInfo::START) {
-    acc_bound_.first = -1 * config_.acc_stop_max_bound;
+    acc_bound_.first = -config_.acc_stop_max_bound;
     acc_bound_.second = config_.acc_stop_max_bound;
   }
 }
