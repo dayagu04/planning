@@ -500,7 +500,7 @@ void LaneChangeDecider::compute_lc_valid_info(RequestType direction) {
 
   double v_ego = ego_state->ego_v();
   double l_ego = frenet_ego_state.l();
-  double safety_dist = v_ego * v_ego * 0.02 + 7.0;
+  double safety_dist = v_ego * v_ego * 0.02 + 2.0;
   double dist_mline = std::fabs(target_lane_frenet_ego_state.l()) -
                       1.8;  // TODO(Rui): use target_lane()->get_lane_width()
   double t_reaction = (dist_mline == DBL_MAX) ? 0.5 : 0.5 * dist_mline / 1.8;
@@ -541,7 +541,7 @@ void LaneChangeDecider::compute_lc_valid_info(RequestType direction) {
   for (auto &tr : side_target_tracks) {
     if (is_side_target_valid == true) {
       if (tr.type == 2 || tr.type == 3 || tr.type == 4) {
-        safety_dist = v_ego * v_ego * 0.015 + 7.0;
+        safety_dist = v_ego * v_ego * 0.015 + 2.0;
       }
 
       if (tr.d_rel < safety_dist && tr.d_rel > -5.0 - safety_dist &&
@@ -634,7 +634,11 @@ void LaneChangeDecider::compute_lc_valid_info(RequestType direction) {
                   120.0);
             }
           }
-
+          //如果目标车道上后车的相对车速较自车快2m/s以上,
+          //最小安全距离的阈值再增加2m，以免产生变道恐慌感
+          if (tr.v_rel > 2.0) {
+            mss = mss + 2;
+          }
           if ((tr.d_rel > -5.0 - mss && tr.v_lead > 1) ||
               (tr.v_lead <= 1 && tr.d_rel > -5.0)) {
             is_side_target_valid = false;
