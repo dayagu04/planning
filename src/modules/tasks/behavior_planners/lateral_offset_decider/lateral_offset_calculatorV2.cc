@@ -136,10 +136,26 @@ void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
 void LateralOffsetCalculatorV2::LateralOffsetCalculateOneObstacle(
     const AvoidObstacleInfo &avoid_obstacle) {
   CalcMaxOppositeOffset(avoid_obstacle);
-  if (avoid_obstacle.min_l_to_ref > 0.0) {
-    DealwithObstacleL(avoid_obstacle);
+  bool is_left = avoid_obstacle.min_l_to_ref > 0.0;
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double ego_length = vehicle_param.length;
+  double lat_offset = 0.0;
+  double lat_offset_compensate = LateralOffsetCompensate(avoid_obstacle);
+
+  avoid_way_ = is_left ? AvoidWay::Left : AvoidWay::Right;
+  if ((avoid_obstacle.flag == AvoidObstacleFlag::NORMAL ||
+       avoid_obstacle.flag == AvoidObstacleFlag::SIDE) &&
+      avoid_obstacle.s_to_ego > -(ego_length + kSafeDistance)) {  // 前方障碍物
+    lat_offset = DesireLateralOffsetSideWay(avoid_obstacle, is_left, 0.5,
+                                            lat_offset_compensate);
+
+    lat_offset = LimitLateralOffset(lat_offset, !is_left, &avoid_way_);
+    double smooth_lateral_offset =
+        SmoothLateralOffset(avoid_obstacle, is_left ? -lat_offset : lat_offset, &avoid_way_);
+    lat_offset_ = smooth_lateral_offset;
   } else {
-    DealwithObstacleR(avoid_obstacle);
+    lat_offset_ = 0.0;
   }
 }
 
@@ -153,22 +169,16 @@ void LateralOffsetCalculatorV2::LateralOffsetCalculateTwoObstacle(
 
   double lateral_offset = 0;
   if (t_exceed_obstacle_1 > 0) {
-    if (avoid_obstacle_1.min_l_to_ref > 0 &&
-        avoid_obstacle_2.min_l_to_ref < 0) {
+    if ((avoid_obstacle_1.min_l_to_ref > 0 &&
+        avoid_obstacle_2.min_l_to_ref < 0) || (avoid_obstacle_1.min_l_to_ref < 0 &&
+               avoid_obstacle_2.min_l_to_ref > 0)) {
+      lateral_offset = DealwithTwoObstacleTwoSide(avoid_obstacle_1, avoid_obstacle_2, is_side_way);
+    } else if ((avoid_obstacle_1.min_l_to_ref > 0 &&
+               avoid_obstacle_2.min_l_to_ref > 0) || (avoid_obstacle_1.min_l_to_ref < 0 &&
+               avoid_obstacle_2.min_l_to_ref < 0)) {
+      // TODO(clren):consider min_l_to_ref > 0, max_l_to_ref < 0; use obstacle lat decision
       lateral_offset =
-          DealwithObstacleLR(avoid_obstacle_1, avoid_obstacle_2, is_side_way);
-    } else if (avoid_obstacle_1.min_l_to_ref < 0 &&
-               avoid_obstacle_2.min_l_to_ref > 0) {
-      lateral_offset =
-          DealwithObstacleRL(avoid_obstacle_1, avoid_obstacle_2, is_side_way);
-    } else if (avoid_obstacle_1.min_l_to_ref > 0 &&
-               avoid_obstacle_2.min_l_to_ref > 0) {
-      lateral_offset =
-          DealwithObstacleLL(avoid_obstacle_1, avoid_obstacle_2, is_side_way);
-    } else if (avoid_obstacle_1.min_l_to_ref < 0 &&
-               avoid_obstacle_2.min_l_to_ref < 0) {
-      lateral_offset =
-          DealwithObstacleRR(avoid_obstacle_1, avoid_obstacle_2, is_side_way);
+          DealwithTwoObstacleOneSide(avoid_obstacle_1, avoid_obstacle_2, is_side_way);
     }
   }
 
@@ -227,61 +237,14 @@ bool LateralOffsetCalculatorV2::AvoidWaySelectForTwoObstacle(
   return is_side_way;
 }
 
-void LateralOffsetCalculatorV2::DealwithObstacleL(
-    const AvoidObstacleInfo &avoid_obstacle) {
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double ego_length = vehicle_param.length;
-  double lat_offset = 0.0;
-  double lat_offset_compensate = LateralOffsetCompensate(avoid_obstacle);
-
-  avoid_way_ = AvoidWay::Left;
-  if ((avoid_obstacle.flag == AvoidObstacleFlag::NORMAL ||
-       avoid_obstacle.flag == AvoidObstacleFlag::SIDE) &&
-      avoid_obstacle.s_to_ego > -(ego_length + kSafeDistance)) {  // 前方障碍物
-
-    lat_offset = DesireLateralOffsetSideWay(avoid_obstacle, true, 0.5,
-                                            lat_offset_compensate);
-    lat_offset = LimitLateralOffset(lat_offset, false, &avoid_way_);
-
-    double smooth_lateral_offset =
-        SmoothLateralOffset(avoid_obstacle, -lat_offset, &avoid_way_);
-    lat_offset_ = smooth_lateral_offset;
-  } else {
-    lat_offset_ = 0.0;
-  }
-}
-
-void LateralOffsetCalculatorV2::DealwithObstacleR(
-    const AvoidObstacleInfo &avoid_obstacle) {
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double ego_length = vehicle_param.length;
-  double lat_offset = 0.0;
-  double lat_offset_compensate = LateralOffsetCompensate(avoid_obstacle);
-
-  avoid_way_ = AvoidWay::Right;
-  if ((avoid_obstacle.flag == AvoidObstacleFlag::NORMAL ||
-       avoid_obstacle.flag == AvoidObstacleFlag::SIDE) &&
-      avoid_obstacle.s_to_ego > -(ego_length + kSafeDistance)) {  // 前方障碍物
-    lat_offset = DesireLateralOffsetSideWay(avoid_obstacle, false, 0.5,
-                                            lat_offset_compensate);
-    lat_offset = LimitLateralOffset(lat_offset, true, &avoid_way_);
-    double smooth_lateral_offset =
-        SmoothLateralOffset(avoid_obstacle, lat_offset, &avoid_way_);
-    lat_offset_ = smooth_lateral_offset;
-  } else {
-    lat_offset_ = 0.0;
-  }
-}
-
-double LateralOffsetCalculatorV2::DealwithObstacleLR(
+double LateralOffsetCalculatorV2::DealwithTwoObstacleTwoSide(
     const AvoidObstacleInfo &avoid_obstacle_1,
     const AvoidObstacleInfo &avoid_obstacle_2, bool is_side_way) {
   double lateral_offset = 0.0;
   double lat_offset_compensate_1 = LateralOffsetCompensate(avoid_obstacle_1);
   double lat_offset_compensate_2 = LateralOffsetCompensate(avoid_obstacle_2);
 
+  bool is_left = avoid_obstacle_1.min_l_to_ref > 0;
   if ((lateral_offset_decider::HasOverlap(session_, avoid_obstacle_1, 0, 0) &&
        lateral_offset_decider::HasOverlap(session_, avoid_obstacle_2, 0, 0)) ||
       (!is_side_way &&
@@ -291,18 +254,19 @@ double LateralOffsetCalculatorV2::DealwithObstacleLR(
                                               avoid_obstacle_2))) {
     // it has enough space to go through the center
     lateral_offset = DesireLateralOffsetCenterWay(
-        avoid_obstacle_1, avoid_obstacle_2, true, lat_offset_compensate_1,
+        avoid_obstacle_1, avoid_obstacle_2, is_left, lat_offset_compensate_1,
         lat_offset_compensate_2);
     curr_time_ = IflyTime::Now_s();
     avoid_way_ = AvoidWay::Center;
   } else if (is_side_way && avoid_obstacle_2.max_l_to_ref < -1.5) {
     if (IflyTime::Now_s() - curr_time_ > 2) {
       // avoid obstacle_1 first, then avoid obstacle_2
-      avoid_way_ = AvoidWay::Left;
+      avoid_way_ = is_left ? AvoidWay::Left : AvoidWay::Right;
       CalcMaxOppositeOffset(avoid_obstacle_1, avoid_obstacle_2.track_id);
-      lateral_offset = DesireLateralOffsetSideWay(avoid_obstacle_1, true, 0.5,
+      lateral_offset = DesireLateralOffsetSideWay(avoid_obstacle_1, is_left, 0.5,
                                                   lat_offset_compensate_1);
-      lateral_offset = -LimitLateralOffset(lateral_offset, false, &avoid_way_);
+      lateral_offset = LimitLateralOffset(lateral_offset, !is_left, &avoid_way_);
+      lateral_offset = is_left ? -lateral_offset : lateral_offset;
     } else {
       // TODO(clren)
       // keep
@@ -314,132 +278,59 @@ double LateralOffsetCalculatorV2::DealwithObstacleLR(
         2) {
       // avoid obstacle_1, follow obstacle_2
       // TODO(clren):添加障碍物决策
-      avoid_way_ = AvoidWay::Left;
+      avoid_way_ = is_left ? AvoidWay::Left : AvoidWay::Right;
       CalcMaxOppositeOffset(avoid_obstacle_1, avoid_obstacle_2.track_id);
-      lateral_offset = DesireLateralOffsetSideWay(avoid_obstacle_1, true, 0.6,
+      lateral_offset = DesireLateralOffsetSideWay(avoid_obstacle_1, is_left, 0.6,
                                                   lat_offset_compensate_1);
-      lateral_offset = -LimitLateralOffset(lateral_offset, false, &avoid_way_);
+      lateral_offset = LimitLateralOffset(lateral_offset, !is_left, &avoid_way_);
+      lateral_offset = is_left ? -lateral_offset : lateral_offset;
     } else {
       // avoid obstacle_2, follow obstacle_1
-      avoid_way_ = AvoidWay::Right;
+      avoid_way_ = is_left ? AvoidWay::Right : AvoidWay::Left;
       CalcMaxOppositeOffset(avoid_obstacle_2, avoid_obstacle_1.track_id);
-      lateral_offset = DesireLateralOffsetSideWay(avoid_obstacle_2, false, 0.6,
+      lateral_offset = DesireLateralOffsetSideWay(avoid_obstacle_2, !is_left, 0.6,
                                                   lat_offset_compensate_1);
-      lateral_offset = LimitLateralOffset(lateral_offset, true, &avoid_way_);
+      lateral_offset = LimitLateralOffset(lateral_offset, is_left, &avoid_way_);
+      lateral_offset = is_left ? lateral_offset : -lateral_offset;
     }
   }
 
   return lateral_offset;
 }
 
-double LateralOffsetCalculatorV2::DealwithObstacleRL(
-    const AvoidObstacleInfo &avoid_obstacle_1,
-    const AvoidObstacleInfo &avoid_obstacle_2, bool is_side_way) {
-  // similar to  DealwithObstacleLR
-  double lateral_offset = 0.0;
-  double lat_offset_compensate_1 = LateralOffsetCompensate(avoid_obstacle_1);
-  double lat_offset_compensate_2 = LateralOffsetCompensate(avoid_obstacle_2);
-  if ((lateral_offset_decider::HasOverlap(session_, avoid_obstacle_1, 0, 0) &&
-       lateral_offset_decider::HasOverlap(session_, avoid_obstacle_2, 0, 0)) ||
-      (!is_side_way &&
-       !(lateral_offset_decider::IsTruck(avoid_obstacle_1) ||
-         lateral_offset_decider::IsTruck(avoid_obstacle_2)) &&
-       lateral_offset_decider::HasEnoughSpace(avoid_obstacle_1,
-                                              avoid_obstacle_2))) {
-    lateral_offset = DesireLateralOffsetCenterWay(
-        avoid_obstacle_1, avoid_obstacle_2, false, lat_offset_compensate_1,
-        lat_offset_compensate_2);
-    curr_time_ = IflyTime::Now_s();
-    avoid_way_ = AvoidWay::Center;
-  } else if (is_side_way && avoid_obstacle_1.max_l_to_ref < -1.5) {
-    if (IflyTime::Now_s() - curr_time_ > 2) {
-      avoid_way_ = AvoidWay::Right;
-      CalcMaxOppositeOffset(avoid_obstacle_1, avoid_obstacle_2.track_id);
-      lateral_offset = DesireLateralOffsetSideWay(avoid_obstacle_1, false, 0.5,
-                                                  lat_offset_compensate_1);
-      lateral_offset = LimitLateralOffset(lateral_offset, true, &avoid_way_);
-    } else {
-      lateral_offset = ego_frenet_state_.l();
-      avoid_way_ = AvoidWay::Ego;
-    }
-  } else {
-    if (avoid_obstacle_1.vs_lon_relative - avoid_obstacle_2.vs_lon_relative <
-        2) {
-      avoid_way_ = AvoidWay::Right;
-      CalcMaxOppositeOffset(avoid_obstacle_1, avoid_obstacle_2.track_id);
-      lateral_offset = DesireLateralOffsetSideWay(avoid_obstacle_1, false, 0.6,
-                                                  lat_offset_compensate_1);
-      lateral_offset = LimitLateralOffset(lateral_offset, true, &avoid_way_);
-
-    } else {
-      avoid_way_ = AvoidWay::Left;
-      CalcMaxOppositeOffset(avoid_obstacle_2, avoid_obstacle_1.track_id);
-      lateral_offset = DesireLateralOffsetSideWay(avoid_obstacle_2, true, 0.6,
-                                                  lat_offset_compensate_1);
-      lateral_offset = -LimitLateralOffset(lateral_offset, false, &avoid_way_);
-    }
-  }
-  return lateral_offset;
-}
-
-double LateralOffsetCalculatorV2::DealwithObstacleLL(
+double LateralOffsetCalculatorV2::DealwithTwoObstacleOneSide(
     const AvoidObstacleInfo &avoid_obstacle_1,
     const AvoidObstacleInfo &avoid_obstacle_2, bool is_side_way) {
   double lateral_offset = 0.0;
   double lat_offset_compensate_1 = LateralOffsetCompensate(avoid_obstacle_1);
+  bool is_left = avoid_obstacle_1.min_l_to_ref > 0;
 
-  avoid_way_ = AvoidWay::Left;
+  avoid_way_ = is_left ? AvoidWay::Left : AvoidWay::Right;
   if (!is_side_way) {
-    auto *nearest_avoid_obstacle =
+    const AvoidObstacleInfo *nearest_avoid_obstacle;
+    if (is_left) {
+      nearest_avoid_obstacle =
         avoid_obstacle_1.min_l_to_ref < avoid_obstacle_2.min_l_to_ref
             ? &avoid_obstacle_1
             : &avoid_obstacle_2;
-    CalcMaxOppositeOffset(avoid_obstacle_1, -1, avoid_obstacle_2);
-    lateral_offset = DesireLateralOffsetSideWay(*nearest_avoid_obstacle, true,
-                                                0.5, lat_offset_compensate_1);
-  } else {
-    CalcMaxOppositeOffset(avoid_obstacle_1);
-    lateral_offset = DesireLateralOffsetSideWay(avoid_obstacle_1, true, 0.5,
-                                                lat_offset_compensate_1);
-  }
-  lateral_offset = LimitLateralOffset(lateral_offset, false, &avoid_way_);
-  lateral_offset = -lateral_offset;
-
-  return lateral_offset;
-}
-
-double LateralOffsetCalculatorV2::DealwithObstacleRR(
-    const AvoidObstacleInfo &avoid_obstacle_1,
-    const AvoidObstacleInfo &avoid_obstacle_2, bool is_side_way) {
-  double lateral_offset = 0.0;
-  double lat_offset_compensate_1 = LateralOffsetCompensate(avoid_obstacle_1);
-
-  avoid_way_ = AvoidWay::Right;
-  if (!is_side_way) {
-    if (avoid_obstacle_1.max_l_to_ref < 0 &&
-        avoid_obstacle_2.max_l_to_ref < 0) {
-      auto *nearest_avoid_obstacle =
+    } else {
+      nearest_avoid_obstacle =
           avoid_obstacle_1.max_l_to_ref > avoid_obstacle_2.max_l_to_ref
               ? &avoid_obstacle_1
               : &avoid_obstacle_2;
-      CalcMaxOppositeOffset(avoid_obstacle_1, -1, avoid_obstacle_2);
-      lateral_offset = DesireLateralOffsetSideWay(
-          *nearest_avoid_obstacle, false, 0.5, lat_offset_compensate_1);
-    } else if (avoid_obstacle_1.max_l_to_ref < 0) {
-      CalcMaxOppositeOffset(avoid_obstacle_1);
-      lateral_offset = DesireLateralOffsetSideWay(avoid_obstacle_1, false, 0.5,
-                                                  lat_offset_compensate_1);
-    } else if (avoid_obstacle_2.max_l_to_ref < 0) {
-      CalcMaxOppositeOffset(avoid_obstacle_2);
-      lateral_offset = DesireLateralOffsetSideWay(avoid_obstacle_2, false, 0.5,
-                                                  lat_offset_compensate_1);
     }
+
+    CalcMaxOppositeOffset(avoid_obstacle_1, -1, avoid_obstacle_2);
+    lateral_offset = DesireLateralOffsetSideWay(*nearest_avoid_obstacle, is_left,
+                                                0.5, lat_offset_compensate_1);
   } else {
     CalcMaxOppositeOffset(avoid_obstacle_1);
-    lateral_offset = DesireLateralOffsetSideWay(avoid_obstacle_1, false, 0.5,
+    lateral_offset = DesireLateralOffsetSideWay(avoid_obstacle_1, is_left, 0.5,
                                                 lat_offset_compensate_1);
   }
-  lateral_offset = LimitLateralOffset(lateral_offset, true, &avoid_way_);
+  lateral_offset = LimitLateralOffset(lateral_offset, !is_left, &avoid_way_);
+  lateral_offset = is_left ? -lateral_offset : lateral_offset;
+
   return lateral_offset;
 }
 
