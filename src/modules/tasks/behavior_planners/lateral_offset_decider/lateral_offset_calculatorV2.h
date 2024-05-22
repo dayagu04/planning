@@ -51,10 +51,10 @@ class LateralOffsetCalculatorV2 {
       const AvoidObstacleInfo& avoid_obstacle_2);
   void DealwithObstacleL(const AvoidObstacleInfo& avoid_obstacle);
   void DealwithObstacleR(const AvoidObstacleInfo& avoid_obstacle);
-  double DealwithObstacleLR(const AvoidObstacleInfo& avoid_obstacle_1,
+  double DealwithTwoObstacleTwoSide(const AvoidObstacleInfo& avoid_obstacle_1,
                             const AvoidObstacleInfo& avoid_obstacle_2,
                             bool is_side_way);
-  double DealwithObstacleRL(const AvoidObstacleInfo& avoid_obstacle_1,
+  double DealwithTwoObstacleOneSide(const AvoidObstacleInfo& avoid_obstacle_1,
                             const AvoidObstacleInfo& avoid_obstacle_2,
                             bool is_side_way);
   double DealwithObstacleLL(const AvoidObstacleInfo& avoid_obstacle_1,
