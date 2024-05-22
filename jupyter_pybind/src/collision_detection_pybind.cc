@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "apa_plan_interface.h"
 #include "collision_detection.h"
 #include "geometry_math.h"
 #include "math_lib.h"
@@ -21,8 +22,12 @@ typedef Eigen::Matrix<double, 5, 1> Vector5d;
 
 static CollisionDetector* pBaseColDetAir = nullptr;
 static CollisionDetector::CollisionResult collision_result;
+static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
 
 int Init() {
+  pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
+
+  pApaPlanInterface->Init();
   pBaseColDetAir = new CollisionDetector();
   return 0;
 }
@@ -48,7 +53,8 @@ void SetObstacle(const double obstacles_x, const double obstacles_y) {
 
   obstacle_global_vec.emplace_back(obstacle_global);
 
-  pBaseColDetAir->SetObstacles(obstacle_global_vec);
+  pBaseColDetAir->SetObstacles(obstacle_global_vec,
+                               planning::CollisionDetector::TLANE_OBS);
 }
 
 void SetObstacleLine(const double obstacles_x1, const double obstacles_y1,
@@ -78,9 +84,11 @@ void UpdateRefTrajLine(const Eigen::Vector3d ego_pos_start,
       Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]),
       Eigen::Vector2d(ego_pos_end[0], ego_pos_end[1]));
   if (is_line_obs == 0) {
-    collision_result = pBaseColDetAir->Update(line_seg, ego_pos_start[2]);
+    collision_result =
+        pBaseColDetAir->UpdateByObsMap(line_seg, ego_pos_start[2]);
   } else {
-    collision_result = pBaseColDetAir->UpdateByLineObs(line_seg, ego_pos_start[2]);
+    collision_result =
+        pBaseColDetAir->UpdateByLineObs(line_seg, ego_pos_start[2]);
   }
 }
 
@@ -96,7 +104,7 @@ void UpdateRefTrajArc(const Eigen::Vector3d ego_pos_start,
   arc.circle_info.radius = ego_turn_circle[2];
   arc.is_anti_clockwise = is_anti_clockwise;
   if (!is_line_obs) {
-    collision_result = pBaseColDetAir->Update(arc, ego_pos_start[2]);
+    collision_result = pBaseColDetAir->UpdateByObsMap(arc, ego_pos_start[2]);
   } else {
     collision_result = pBaseColDetAir->UpdateByLineObs(arc, ego_pos_start[2]);
   }
@@ -110,6 +118,10 @@ const double GetRemainCarDist() {
 
 const double GetRemainObstacleDist() {
   return float(collision_result.remain_obstacle_dist);
+}
+
+const int GetCarLineOrder() {
+  return collision_result.car_line_order;
 }
 
 const bool GetCollisionFlag() { return collision_result.collision_flag; }
@@ -163,5 +175,6 @@ PYBIND11_MODULE(collision_detection_py, m) {
       .def("GetCollisionPoint", &GetCollisionPoint)
       .def("GetRemainCarDist", &GetRemainCarDist)
       .def("GetRemainObstacleDist", &GetRemainObstacleDist)
+      .def("GetCarLineOrder", &GetCarLineOrder)
       .def("SetParam", &SetParam);
 }

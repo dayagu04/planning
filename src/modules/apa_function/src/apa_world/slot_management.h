@@ -14,6 +14,7 @@
 #include "Eigen/Core"
 #include "apa_param_setting.h"
 #include "basic_types.pb.h"
+#include "collision_detection.h"
 #include "func_state_machine.pb.h"
 #include "geometry_math.h"
 #include "local_view.h"
@@ -472,7 +473,14 @@ class SlotManagement {
   bool UpdateEgoSlotInfo(EgoSlotInfo& ego_slot_info,
                          const common::SlotInfo* slot_info);
   bool GenTLane(const EgoSlotInfo& ego_slot_info,
-                apa_planner::PerpendicularPathPlanner::Tlane& t_lane);
+                apa_planner::PerpendicularPathPlanner::Tlane& slot_tlane,
+                apa_planner::PerpendicularPathPlanner::Tlane& obs_tlane);
+  bool GenObstacles(
+      std::shared_ptr<CollisionDetector>& collision_detector_ptr,
+      const apa_planner::PerpendicularPathPlanner::Tlane& slot_tlane,
+      apa_planner::PerpendicularPathPlanner::Tlane& obs_tlane,
+      const EgoSlotInfo& ego_slot_info);
+
   void UpdateSlotInfoInParking();
   void UpdateParallelSlotInfoInParking();
   void UpdateLimiterInfoInParking();

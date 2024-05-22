@@ -124,15 +124,21 @@ class PerpendicularPathPlanner {
     bool should_prepare_third = false;
     bool first_multi_plan = true;
     bool stuck_by_inside = false;
+    bool multi_plan = false;
+
+    double turn_radius = 5.5;
 
     pnc::geometry_lib::LineSegment target_line;
 
     pnc::geometry_lib::Circle mono_safe_circle;
     pnc::geometry_lib::Circle multi_safe_circle;
 
+    Eigen::Vector2d pt_inside;
+
     pnc::geometry_lib::PathPoint safe_circle_tang_pt;
     bool cal_tang_pt_success = false;
     bool directly_use_ego_pose = false;
+    uint8_t first_path_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
 
     bool use_mono_tang = false;
     bool use_multi_tang = false;
@@ -145,13 +151,19 @@ class PerpendicularPathPlanner {
       is_left_side = true;
       slot_side_sgn = 1.0;
 
+      turn_radius = 5.5;
+
       should_prepare_second = false;
       should_prepare_third = false;
       first_multi_plan = true;
-      stuck_by_inside = true;
+      stuck_by_inside = false;
+      multi_plan = false;
 
       use_mono_tang = false;
       use_multi_tang = false;
+      first_path_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+
+      pt_inside.setZero();
 
       target_line.Reset();
 
@@ -209,6 +221,8 @@ class PerpendicularPathPlanner {
   // for simulation
   const bool PreparePlanPb();
 
+  const bool PreparePlanSecondPb();
+
   const bool GenPathOutputByDubinsPb();
 
   const bool MultiPlanPb();
@@ -228,19 +242,11 @@ class PerpendicularPathPlanner {
   // member function
   // prepare plan start
   const bool PreparePlan();
-  const bool PreparePlanOnce(const double x_offset,
-                             const double heading_offset);
-
-  const bool PreparePlanV2();
-  const bool PreparePlanOnceV2(const double x_offset,
-                               const double heading_offset);
-  const bool PreparePlanAdjust(
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const uint8_t current_gear);
+  const bool PreparePlanOnce(const double &x_offset,
+                             const double &heading_offset,
+                             const double &radius);
 
   const bool PreparePlanSecond();
-
-  const bool PreparePlanThird();
 
   const bool GenPathOutputByDubins();
   const bool MonoPreparePlan(Eigen::Vector2d &tag_point);
@@ -292,8 +298,8 @@ class PerpendicularPathPlanner {
   const bool CalSinglePathInAdjust(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const pnc::geometry_lib::PathPoint &current_pose,
-      const uint8_t current_gear, const double steer_change_ratio,
-      const double steer_change_radius);
+      const uint8_t& current_gear, const double& steer_change_ratio,
+      const double& steer_change_radius, const size_t& i);
 
   const bool OneArcPlan(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,

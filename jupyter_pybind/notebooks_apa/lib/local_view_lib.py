@@ -729,6 +729,16 @@ def findrt(data, t):
 
   return False, ""
 
+def findrt_json(data, t):
+  '''
+  find data based on relative t (sub the 0 time)
+  '''
+  for index, timestamp in enumerate(data['t']):
+    if t == timestamp:
+      return True, data['json'][index]
+
+  return False, ""
+
 def findME(data, t):
   for index, timestamp in enumerate(data['timestamp']):
     if t < timestamp:

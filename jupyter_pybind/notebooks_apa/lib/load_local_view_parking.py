@@ -45,6 +45,10 @@ car_xb, car_yb = load_car_params_patch_parking()
 car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord()
 coord_tf = coord_transformer()
 max_slot_num = 20
+replan_flag = False
+correct_path_for_limiter = False
+replan_time_list = []
+correct_path_for_limiter_time_list = []
 class LoadCyberbag:
   def __init__(self, path, parking_flag = False) -> None:
     self.bag_path = path
@@ -209,7 +213,8 @@ class LoadCyberbag:
                          "slot_occupied_ratio", "pathplan_result", "target_ego_pos_slot", "path_start_seg_index", "path_end_seg_index", "path_length",
                          "uss_available", "uss_remain_dist", "uss_index", "uss_car_index",
                          "optimization_terminal_pose_error", "optimization_terminal_heading_error", "lat_path_opt_cost_time_ms",
-                         "ref_gear", "ref_arc_steer"]
+                         "ref_gear", "ref_arc_steer",
+                         "correct_path_for_limiter", "replan_flag"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
                           "obstaclesX", "obstaclesY", "slot_corner_X", "slot_corner_Y", "limiter_corner_X", "limiter_corner_Y"]
@@ -229,8 +234,21 @@ class LoadCyberbag:
           LoadVectorList(json_data, json_vector_list, json_struct)
 
           self.plan_debug_msg['json'].append(json_data)
+
+          if json_data['replan_flag'] == 1:
+            replan_time_list.append(t)
+          if json_data['correct_path_for_limiter'] == 1:
+            correct_path_for_limiter_time_list.append(t)
+
         except json.decoder.JSONDecodeError as jserr:
           print('except',jserr)
+
+      for i in range(len(replan_time_list)):
+        replan_time_list[i] = replan_time_list[i] - self.plan_debug_msg['t'][0]
+        replan_time_list[i] = round(replan_time_list[i], 2)
+      for i in range(len(correct_path_for_limiter_time_list)):
+        correct_path_for_limiter_time_list[i] = correct_path_for_limiter_time_list[i] - self.plan_debug_msg['t'][0]
+        correct_path_for_limiter_time_list[i] = round(correct_path_for_limiter_time_list[i], 2)
 
       t0_plan_debug = self.plan_debug_msg['t'][0]
       self.plan_debug_msg['t'] = [tmp - t0_plan_debug  for tmp in self.plan_debug_msg['t']]
@@ -368,7 +386,6 @@ class LoadCyberbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/system_state/soc_state"):
         soc_state_msg_dict[msg.header.timestamp / 1e6] = msg
       soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
-
       enter_parking_time = None
       for t, msg in soc_state_msg_dict.items():
         self.soc_state_msg['t'].append(t)
@@ -377,7 +394,6 @@ class LoadCyberbag:
         # record the start time of fusi_parking_msg
         if msg.current_state > 1 and enter_parking_time is None:
           enter_parking_time = t
-
       self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
       max_time = max(max_time, self.soc_state_msg['t'][-1])
       print('soc_state_msg time:',self.soc_state_msg['t'][-1])
@@ -388,7 +404,6 @@ class LoadCyberbag:
 
       if enter_parking_time is not None:
         self.enter_parking_time = enter_parking_time - self.soc_state_msg['abs_t'][0]
-        # print("enter_parking_time ：", self.enter_parking_time)
     except:
       self.soc_state_msg['enable'] = False
       print('missing /iflytek/system_state/soc_state !!!')
@@ -1050,6 +1065,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
     obstacle_x = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['obstaclesX']
     obstacle_y = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['obstaclesY']
 
+    replan_flag = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_flag']
+    correct_path_for_limiter = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['correct_path_for_limiter']
+
     local_view_data['data_obs'].data.update({
       'obs_x': obstacle_x,
       'obs_y': obstacle_y,
@@ -1081,106 +1099,6 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
     uss_car_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_car_index']
     uss_car_index = int(uss_car_index)
 
-    uss_available = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_available']
-    #print("uss_available = ", uss_available)
-    uss_available = bool(uss_available)
-    #print("uss_available = ", uss_available)
-    uss_remain_dist = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_remain_dist']
-    #print("uss_remain_dist = ", uss_remain_dist)
-    uss_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_index']
-    uss_index = int(uss_index)
-    uss_car_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_car_index']
-    uss_car_index = int(uss_car_index)
-
-  # load uss wave
-  if bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True:
-    #get cur pose and uss wave
-    upa_dis_info_bufs = bag_loader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
-
-    sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
-
-    text_x, text_y = [], []
-    # rs_text = []
-    uss_x, uss_y = load_car_uss_patch()
-    uss_angle = load_uss_angle_patch()
-    wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
-    m = 0
-    for i in range(2):
-      for j in wdis_index[i]:
-          rs0 = ''
-          rs1 = ''
-          if upa_dis_info_bufs[i].wdis[j].wdis_value[0] <= 10 and upa_dis_info_bufs[i].wdis[j].wdis_value[0] != 0:
-              rs1 = round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2)
-              # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
-              rs0 = '{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2))
-              ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
-              uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
-              uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
-              x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
-          elif upa_dis_info_bufs[i].wdis[j].wdis_value[0] == 0 or upa_dis_info_bufs[i].wdis[j].wdis_value[0] > 10:
-              ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
-              x_text, y_text = 0, 0
-          text_x.append(x_text)
-          text_y.append(y_text)
-          sector_x.append(ego_local_x)
-          sector_y.append(ego_local_y)
-          # print("rs1:",rs1)
-          rs.append(rs1)
-          # print("rs size:",len(rs))
-          length.append(rs0)
-          start_angle.append(uss_angle_start)
-          end_angle.append(uss_angle_end)
-          m += 1
-    local_view_data['data_wave'].data.update({
-      'wave_x':sector_y,
-      'wave_y':sector_x,
-      'radius':rs,
-      'start_angle':start_angle,
-      'end_angle':end_angle,
-    })
-    local_view_data['data_wave_length_text'].data.update({
-      'wave_text_x':text_y,
-      'wave_text_y':text_x,
-      'length':length,
-    })
-
-    if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
-      local_view_data['data_wave_min'].data.update({
-        'wave_x':[sector_y[uss_index]],
-        'wave_y':[sector_x[uss_index]],
-        'radius':[rs[uss_index]],
-        'start_angle':[start_angle[uss_index]],
-        'end_angle':[end_angle[uss_index]],
-      })
-    else:
-      local_view_data['data_wave_min'].data.update({
-        'wave_x':[],
-        'wave_y':[],
-        'radius':[],
-        'start_angle':[],
-        'end_angle':[],
-      })
-
-    if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
-      local_view_data['data_wave_min'].data.update({
-        'wave_x':[sector_y[uss_index]],
-        'wave_y':[sector_x[uss_index]],
-        'radius':[rs[uss_index]],
-        'start_angle':[start_angle[uss_index]],
-        'end_angle':[end_angle[uss_index]],
-      })
-    else:
-      local_view_data['data_wave_min'].data.update({
-        'wave_x':[],
-        'wave_y':[],
-        'radius':[],
-        'start_angle':[],
-        'end_angle':[],
-      })
-
   if plot_ctrl_flag == True:
     names = []
     datas = []
@@ -1200,6 +1118,18 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
 
       names.append("path_plan_result")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['pathplan_result']))
+
+      names.append("replan_flag")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_flag']))
+
+      names.append("replan_time_list")
+      datas.append(str(replan_time_list))
+
+      names.append("correct_path_for_limiter")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['correct_path_for_limiter']))
+
+      names.append("correct_path_for_limiter_list")
+      datas.append(str(correct_path_for_limiter_time_list))
 
       names.append("terminal_error_x")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['terminal_error_x']))
@@ -1324,10 +1254,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
     })
 
   if bag_loader.uss_percept_msg['enable'] == True:
-    model_x = []
-    model_y = []
-    post_x = []
-    post_y = []
+    model_x, model_y = [], []
+    post_x, post_y = [], []
+    parking_slot_x, parking_slot_y = [], []
     for i in range(len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori)):
       for j in range(len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt)):
         x = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt[j].x
@@ -1346,6 +1275,86 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
       'obj_pt_x': model_x,
       'obj_pt_y': model_y,
     })
+
+    if len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots) != 0:
+      for parking_slot in bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots:
+        for corner_index in [0,3,2,1]:
+          parking_slot_x.append(parking_slot.corner_point[corner_index].x)
+          parking_slot_y.append(parking_slot.corner_point[corner_index].y)
+    local_view_data['data_spatial_parking_slot'].data.update({
+      'corner_point_x': [parking_slot_x],
+      'corner_point_y': [parking_slot_y],
+    })
+    # load uss wave
+    #get cur pose and uss wave
+    uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[4]
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+
+    sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
+
+    text_x, text_y = [], []
+    # rs_text = []
+    uss_x, uss_y = load_car_uss_patch()
+    uss_angle = load_uss_angle_patch()
+    wdis_index = [[8, 0, 1, 2, 3, 9],[10, 4, 5, 6, 7, 11]]
+    m = 0
+    for i in range(2):
+      for j in wdis_index[i]:
+          rs0 = ''
+          rs1 = ''
+          if uss_dis_info.dis_from_car_to_obj[j] * 0.001 <= 10 and uss_dis_info.dis_from_car_to_obj[i] * 0.001 != 0:
+              rs1 = round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2)
+              # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
+              rs0 = '{:.2f}'.format(round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2))
+              ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
+              uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
+              uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
+              x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
+          elif uss_dis_info.dis_from_car_to_obj[j] * 0.001 == 0 or uss_dis_info.dis_from_car_to_obj[j] * 0.001 > 10:
+              ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
+              x_text, y_text = 0, 0
+          text_x.append(x_text)
+          text_y.append(y_text)
+          sector_x.append(ego_local_x)
+          sector_y.append(ego_local_y)
+          # print("rs1:",rs1)
+          rs.append(rs1)
+          # print("rs size:",len(rs))
+          length.append(rs0)
+          start_angle.append(uss_angle_start)
+          end_angle.append(uss_angle_end)
+          m += 1
+    local_view_data['data_wave'].data.update({
+      'wave_x':sector_y,
+      'wave_y':sector_x,
+      'radius':rs,
+      'start_angle':start_angle,
+      'end_angle':end_angle,
+    })
+    local_view_data['data_wave_length_text'].data.update({
+      'wave_text_x':text_y,
+      'wave_text_y':text_x,
+      'length':length,
+    })
+
+    if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[sector_y[uss_index]],
+        'wave_y':[sector_x[uss_index]],
+        'radius':[rs[uss_index]],
+        'start_angle':[start_angle[uss_index]],
+        'end_angle':[end_angle[uss_index]],
+      })
+    else:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[],
+        'wave_y':[],
+        'radius':[],
+        'start_angle':[],
+        'end_angle':[],
+      })
 
   return local_view_data
 
@@ -1389,6 +1398,7 @@ def load_local_view_figure_parking():
 
   data_dluss_model = ColumnDataSource(data = {'obj_pt_y':[], 'obj_pt_x':[]})
   data_dluss_post = ColumnDataSource(data = {'obj_pt_y':[], 'obj_pt_x':[]})
+  data_spatial_parking_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
                 'fus_msg_idx': 0,
@@ -1432,6 +1442,7 @@ def load_local_view_figure_parking():
                      'data_car_target_line':data_car_target_line,\
                      'data_dluss_model':data_dluss_model,\
                      'data_dluss_post':data_dluss_post,\
+                     'data_spatial_parking_slot':data_spatial_parking_slot,\
                      }
   ### figures config
 
@@ -1469,9 +1480,11 @@ def load_local_view_figure_parking():
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_all_managed_slot, line_width = 2, line_color = 'blue', line_dash = 'solid',legend_label = 'all managed slot', visible = False)
   fig1.line('limiter_point_y', 'limiter_point_x', source = data_all_managed_limiter, line_width = 3, line_color = 'blue', line_dash = 'solid', legend_label = 'managed limiter')
   fig1.patches('occupied_slot_y', 'occupied_slot_x', source = data_all_managed_occupied_slot, fill_color = "blue", line_color = "blue", line_width = 1, fill_alpha = 0.15, legend_label = 'all managed slot', visible = False)
+
   # dluss
   fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_post, size=3, color='orange', legend_label = 'dluss_post', visible = True)
   fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_model, size=3, color='blue', legend_label = 'dluss_model', visible = False)
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_spatial_parking_slot, line_width = 2, line_color = 'orange', line_dash = 'solid',legend_label = 'spatial pariking slot', visible = False)
 
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
@@ -1730,14 +1743,14 @@ fusion_slot_params_apa = {
   'line_alpha' : 0.6,
   'line_width' : 2,
   'legend_label' : 'fusion_parking_slot',
-  'visible' : False
+  'visible' : True
 }
 vision_slot_params_apa = {
   'line_dash' : 'solid',
   'line_color' : "lightgrey",
   'line_width' : 3,
   'legend_label' : 'vision_parking_slot',
-  'visible' : True
+  'visible' : False
 }
 
 final_slot_params_apa = {
@@ -1871,7 +1884,7 @@ dluss_post_params={
   "size" : 3,
   "color" : 'orange',
   "legend_label" : 'dluss_post',
-  "visible" : False
+  "visible" : True
 }
 
 dluss_model_params={
@@ -2411,7 +2424,33 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
       mpc_generator.xys.append((mpc_dy, mpc_dx))
     mpc_generator.ts = np.array(ctrl_debug_ts)
 
-  # load uss
+  # uss perception
+    uss_post_generator = CommonGenerator()
+    uss_model_generator = CommonGenerator()
+    for uss_i, uss_percept_timestamp in enumerate(uss_percept_timestamps):
+      flag, uss_percept_msg = findrt(dataLoader.uss_percept_msg, uss_percept_timestamp)
+      model_x, model_y = [], []
+      post_x, post_y = [], []
+      if not flag:
+        print('find uss percept error')
+      else:
+        for i in range(len(uss_percept_msg.out_line_dataori)):
+          for j in range(len(uss_percept_msg.out_line_dataori[i].obj_pt)):
+            x = uss_percept_msg.out_line_dataori[i].obj_pt[j].x
+            y = uss_percept_msg.out_line_dataori[i].obj_pt[j].y
+            if i == 0:
+              post_x.append(x)
+              post_y.append(y)
+            elif i == 1:
+              model_x.append(x)
+              model_y.append(y)
+
+      uss_post_generator.xys.append((post_y, post_x))
+      uss_model_generator.xys.append((model_y, model_x))
+    uss_post_generator.ts = np.array(ctrl_debug_ts)
+    uss_model_generator.ts = np.array(ctrl_debug_ts)
+
+    # load cur pose and uss wave
     uss_generator = WedgesGenerator()
     uss_text_generator = TextGenerator()
     wave_min_generator = WedgesGenerator()
@@ -2427,35 +2466,34 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
       if not flag:
         print('find loc_msg error')
       else:
-        wave_msg_idx = 0
-        if dataLoader.wave_msg['enable'] == True:
-          flag, wave_msg = findrt(dataLoader.wave_msg, wave_timestamps[loc_i])
+        if dataLoader.uss_percept_msg['enable'] == True:
+          flag, uss_percept_msg = findrt(dataLoader.uss_percept_msg, uss_percept_timestamps[loc_i])
           if not flag:
-            print('find wave_msg error')
+            print('find uss_percept_msg error')
           else:
             #get cur pose and uss wave
-            upa_dis_info_bufs = wave_msg.upa_dis_info_buf
+            uss_dis_info = uss_percept_msg.out_line_dataori[4]
             cur_pos_xn = loc_msg.pose.local_position.x
             cur_pos_yn = loc_msg.pose.local_position.y
             cur_yaw = loc_msg.pose.euler_angles.yaw
             # rs_text = []
             uss_x, uss_y = load_car_uss_patch()
             uss_angle = load_uss_angle_patch()
-            wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
+            wdis_index = [[8, 0, 1, 2, 3, 9],[10, 4, 5, 6, 7, 11]]
             m = 0
             for i in range(2):
               for j in wdis_index[i]:
                   rs0 = ''
                   rs1 = ''
-                  if upa_dis_info_bufs[i].wdis[j].wdis_value[0] <= 10 and upa_dis_info_bufs[i].wdis[j].wdis_value[0] != 0:
-                      rs1 = round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2)
+                  if uss_dis_info.dis_from_car_to_obj[j] * 0.001 <= 10 and uss_dis_info.dis_from_car_to_obj[i] * 0.001 != 0:
+                      rs1 = round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2)
                       # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
-                      rs0 = '{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2))
+                      rs0 = '{:.2f}'.format(round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2))
                       ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
                       uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
                       uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
                       x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
-                  elif upa_dis_info_bufs[i].wdis[j].wdis_value[0] == 0 or upa_dis_info_bufs[i].wdis[j].wdis_value[0] > 10:
+                  elif uss_dis_info.dis_from_car_to_obj[j] * 0.001 == 0 or uss_dis_info.dis_from_car_to_obj[j] * 0.001 > 10:
                       ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
                       x_text, y_text = 0, 0
                   text_x.append(x_text)
@@ -2497,33 +2535,6 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
     uss_generator.ts = np.array(ctrl_debug_ts)
     uss_text_generator.ts = np.array(ctrl_debug_ts)
     wave_min_generator.ts = np.array(ctrl_debug_ts)
-
-  # uss perception
-    uss_post_generator = CommonGenerator()
-    uss_model_generator = CommonGenerator()
-    for uss_i, uss_percept_timestamp in enumerate(uss_percept_timestamps):
-      flag, uss_percept_msg = findrt(dataLoader.uss_percept_msg, uss_percept_timestamp)
-      model_x, model_y = [], []
-      post_x, post_y = [], []
-      if not flag:
-        print('find uss percept error')
-      else:
-        for i in range(len(uss_percept_msg.out_line_dataori)):
-          for j in range(len(uss_percept_msg.out_line_dataori[i].obj_pt)):
-            x = uss_percept_msg.out_line_dataori[i].obj_pt[j].x
-            y = uss_percept_msg.out_line_dataori[i].obj_pt[j].y
-            if i == 0:
-              post_x.append(x)
-              post_y.append(y)
-            elif i == 1:
-              model_x.append(x)
-              model_y.append(y)
-
-      uss_post_generator.xys.append((post_y, post_x))
-      uss_model_generator.xys.append((model_y, model_x))
-    uss_post_generator.ts = np.array(ctrl_debug_ts)
-    uss_model_generator.ts = np.array(ctrl_debug_ts)
-
 
   # move Layer here for manage
     if dataLoader.plan_msg['enable'] == True:
@@ -2653,6 +2664,18 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
 
           names.append("path_plan_result")
           datas.append(str(plan_json['pathplan_result']))
+
+          names.append("replan_flag")
+          datas.append(str(plan_json['replan_flag']))
+
+          names.append("replan_time_list")
+          datas.append(str(replan_time_list))
+
+          names.append("correct_path_for_limiter")
+          datas.append(str(plan_json['correct_path_for_limiter']))
+
+          names.append("correct_path_for_limiter_list")
+          datas.append(str(correct_path_for_limiter_time_list))
 
           names.append("terminal_error_x")
           datas.append(str(plan_json['terminal_error_x']))

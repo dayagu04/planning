@@ -223,8 +223,8 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
   const double car_width_include_mirror =
       apa_param.GetParam().car_width + 2.0 * apa_param.GetParam().mirror_width;
-  const double car_y_right_include_mirror = -car_width_include_mirror * 0.5;
-  const double car_y_left_include_mirror = car_width_include_mirror * 0.5;
+  const double car_y_right_include_mirror = -car_width_include_mirror / 2.0;
+  const double car_y_left_include_mirror = car_width_include_mirror / 2.0;
 
   const double virtual_slot_width =
       car_width_include_mirror + apa_param.GetParam().slot_compare_to_car_width;
@@ -254,8 +254,6 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
     slot_t_lane.pt_inside = corner_left_slot;
   }
 
-  slot_t_lane.pt_inside.x() += inside_dx;
-
   slot_t_lane.pt_terminal_pos << ego_slot_info.target_ego_pos_slot.x(),
       ego_slot_info.target_ego_pos_slot.y();
 
@@ -267,20 +265,20 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       apa_param.GetParam().rear_overhanging -
       apa_param.GetParam().col_obs_safe_dist - 0.05;
 
-  const auto pt_0 = ego_slot_info.g2l_tf.GetPos(raw_pt[0]);
-  const auto pt_1 = ego_slot_info.g2l_tf.GetPos(raw_pt[1]);
+  const Eigen::Vector2d pt_0 = ego_slot_info.g2l_tf.GetPos(raw_pt[0]);
+  const Eigen::Vector2d pt_1 = ego_slot_info.g2l_tf.GetPos(raw_pt[1]);
 
   ego_slot_info.pt_0 = pt_0;
   ego_slot_info.pt_1 = pt_1;
-  const auto pt_01_vec = pt_1 - pt_0;
+  const Eigen::Vector2d pt_01_vec = pt_1 - pt_0;
 
-  if (pnc::mathlib::IsDoubleEqual(cos_theta, 0.0)) {
+  if (std::fabs(cos_theta) < 0.01) {
     ego_slot_info.sin_angle = 1.0;
     ego_slot_info.origin_pt_0_heading = 0.0;
   } else {
-    auto angle = std::fabs(pnc::geometry_lib::GetAngleFromTwoVec(
-                     Eigen::Vector2d(virtual_slot_length, 0.0), pt_01_vec)) *
-                 57.3;
+    double angle = std::fabs(pnc::geometry_lib::GetAngleFromTwoVec(
+                       Eigen::Vector2d(virtual_slot_length, 0.0), pt_01_vec)) *
+                   57.3;
 
     if (angle > 90.0) {
       angle = 180.0 - angle;
@@ -291,9 +289,12 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
     ego_slot_info.origin_pt_0_heading = 90.0 - angle;
   }
 
+  std::cout << "origin_pt_0_heading = " << ego_slot_info.origin_pt_0_heading
+            << std::endl;
+
   obs_pts_.clear();
 
-  if (obs_params.size() != 5) {
+  if (obs_params.size() != 6) {
     current_path_point_global_vec_.clear();
     return current_path_point_global_vec_;
   }
@@ -302,10 +303,11 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   const double left_obj_dx = obs_params[2];
   const double left_obj_dy = obs_params[3];
   const double channel_width = obs_params[4];
+  const double slot_inside_obs = obs_params[5];
 
   const double channel_length = apa_param.GetParam().channel_length;
 
-  const double obs_length = (channel_length - vec_01.norm()) * 0.5;
+  const double obs_length = (channel_length - vec_01.norm()) / 2.0;
 
   const Eigen::Vector2d obj_pt_0 =
       raw_pt[0] + right_obj_dx * unit_vec_02 +
@@ -315,7 +317,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       obj_pt_0 - obs_length * unit_vec_01;
 
   const Eigen::Vector2d right_obj_pt_vertical =
-      obj_pt_0 + unit_vec_02 * (vec_02.norm() - right_obj_dx);
+      obj_pt_0 + unit_vec_02 * (vec_02.norm() - right_obj_dx + 0.15);
 
   const Eigen::Vector2d obj_pt_1 =
       raw_pt[1] + left_obj_dx * unit_vec_02 +
@@ -325,37 +327,67 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       obj_pt_1 + obs_length * unit_vec_01;
 
   const Eigen::Vector2d left_obj_pt_vertical =
-      obj_pt_1 + unit_vec_02 * (vec_02.norm() - left_obj_dx);
+      obj_pt_1 + unit_vec_02 * (vec_02.norm() - left_obj_dx + 0.15);
 
   const Eigen::Vector2d channel_mid =
-      (raw_pt[0] + raw_pt[1]) * 0.5 +
+      (raw_pt[0] + raw_pt[1]) / 2.0 +
       channel_width * Eigen::Vector2d(unit_vec_01.y(), -unit_vec_01.x());
   const Eigen::Vector2d channel_left =
-      channel_mid + channel_length * 0.5 * unit_vec_01;
+      channel_mid + channel_length / 2.0 * unit_vec_01;
   const Eigen::Vector2d channel_right =
-      channel_mid - channel_length * 0.5 * unit_vec_01;
+      channel_mid - channel_length / 2.0 * unit_vec_01;
 
-  std::cout << "obj_pt_02 = " << obj_pt_0.transpose() << std::endl;
+  Eigen::Vector2d A, B, C, D, E, F, G, H;
+  if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
+    A = left_obj_pt_horizontal;
+    B = obj_pt_1;
+    C = left_obj_pt_vertical;
+    D = right_obj_pt_vertical;
+    E = obj_pt_0;
+    F = right_obj_pt_horizontal;
+    F = obj_pt_0 - slot_inside_obs * unit_vec_01;
+    G = channel_right;
+    G = channel_mid - ((raw_pt[0] - raw_pt[1]).norm() / 2.0 + slot_inside_obs +
+                       right_obj_dy) *
+                          unit_vec_01;
+    H = channel_left;
+  } else {
+    A = right_obj_pt_horizontal;
+    B = obj_pt_0;
+    C = right_obj_pt_vertical;
+    D = left_obj_pt_vertical;
+    E = obj_pt_1;
+    F = left_obj_pt_horizontal;
+    F = obj_pt_1 + slot_inside_obs * unit_vec_01;
+    G = channel_left;
+    G = channel_mid +
+        ((raw_pt[0] - raw_pt[1]).norm() / 2.0 + slot_inside_obs + left_obj_dy) *
+            unit_vec_01;
+    H = channel_right;
+  }
 
   std::vector<pnc::geometry_lib::LineSegment> line_vec;
   pnc::geometry_lib::LineSegment line;
-  line.SetPoints(obj_pt_0, right_obj_pt_horizontal);
+  line.SetPoints(A, B);
   line_vec.emplace_back(line);
-  line.SetPoints(obj_pt_0, right_obj_pt_vertical);
+  line.SetPoints(B, C);
   line_vec.emplace_back(line);
-  line.SetPoints(obj_pt_1, left_obj_pt_horizontal);
+  line.SetPoints(C, D);
   line_vec.emplace_back(line);
-  line.SetPoints(obj_pt_1, left_obj_pt_vertical);
+  line.SetPoints(D, E);
   line_vec.emplace_back(line);
-  line.SetPoints(channel_left, channel_right);
+  line.SetPoints(E, F);
+  line_vec.emplace_back(line);
+  line.SetPoints(F, G);
+  line_vec.emplace_back(line);
+  line.SetPoints(G, H);
   line_vec.emplace_back(line);
 
   std::vector<Eigen::Vector2d> pt_vec;
   obs_pts_.clear();
 
   for (const auto &line : line_vec) {
-    pnc::geometry_lib::SamplePointSetInLineSeg(
-        pt_vec, line, apa_param.GetParam().obstacle_ds);
+    pnc::geometry_lib::SamplePointSetInLineSeg(pt_vec, line, 0.25);
     obs_pts_.insert(obs_pts_.end(), pt_vec.begin(), pt_vec.end());
   }
 
@@ -380,11 +412,11 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
     pt_inside = obj_pt_1;
   }
-  slot_t_lane.pt_inside.x() = ego_slot_info.g2l_tf.GetPos(obj_pt_0).x();
+  slot_t_lane.pt_inside.x() = ego_slot_info.g2l_tf.GetPos(pt_inside).x();
   input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
   input.tlane = slot_t_lane;
   input.is_complete_path = is_complete_path;
-  input.sample_ds = ds;
+  input.sample_ds = 0.2;
   input.ref_arc_steer = frame.current_arc_steer;
   input.ref_gear = frame.current_gear;
   input.is_replan_first = frame.is_replan_first;
@@ -412,14 +444,23 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
     if (pBase->PreparePlanPb()) {
       std::cout << "prepare plan success\n";
-      pBase->GenPathOutputByDubinsPb();
-    } else if (pBase->GetCalcParams().directly_use_ego_pose) {
-      std::cout << "ego pose is close to safe_circle_tang_pt, directly use"
-                   "ego pose to multi plan \n";
+      // success = true;
+      // break;
     } else {
-      std::cout << "prepare is complete fail\n";
+      std::cout << "prepare is complete fail\n\n";
       success = false;
       break;
+    }
+
+    if (pBase->CheckReachTargetPosePb()) {
+      success = true;
+      break;
+    }
+
+    if (pBase->PreparePlanSecondPb()) {
+      std::cout << "prepare second plan success\n";
+    } else {
+      std::cout << "prepare second fail\n";
     }
 
     if (pBase->CheckReachTargetPosePb()) {
@@ -445,6 +486,10 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
     break;
   }
 
+  pt_inside_pose_.setZero();
+  const Eigen::Vector2d pt_inside_local = pBase->GetCalcParams().pt_inside;
+  pt_inside_pose_ = ego_slot_info.l2g_tf.GetPos(pt_inside_local);
+
   safe_circle_tang_pose_.setZero();
   const auto &tange_pos_global = ego_slot_info.l2g_tf.GetPos(
       pBase->GetCalcParams().safe_circle_tang_pt.pos);
@@ -453,6 +498,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   safe_circle_tang_pose_ << tange_pos_global.x(), tange_pos_global.y(),
       tange_heading_global;
 
+  std::cout << "this plan success = " << success << "\n\n\n";
   if (success) {
     pBase->SampleCurrentPathSeg();
 

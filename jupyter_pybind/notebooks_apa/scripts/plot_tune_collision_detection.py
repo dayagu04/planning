@@ -36,12 +36,16 @@ data_obstacle_turn_circle = ColumnDataSource(data = {'x':[], 'y':[], 'r':[]})
 
 data_collision_point_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 
+data_remain_dist_line = ColumnDataSource(data = {'x':[], 'y':[]})
+data_car_collision_line = ColumnDataSource(data = {'x':[], 'y':[]})
+
 
 fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=960, height=640, match_aspect = True, aspect_scale=1)
 
 fig1.circle('x','y', source = data_car_turn_circle, size=8, color='grey', legend_label = 'car_turn_circle', visible = True)
 fig1.circle(x ='x', y ='y', radius = 'r', source=data_car_turn_circle, line_alpha = 0.5, line_width = 1, line_color = "grey", fill_alpha=0, legend_label = 'car_turn_circle', visible = True)
 fig1.patch('car_xn', 'car_yn', source = data_car_start, fill_color = "red", line_color = "red", line_width = 1, legend_label = 'car_start', fill_alpha=0.5)
+fig1.line('x', 'y', source = data_car_collision_line, line_width = 5.0, line_color = 'black', line_dash = 'solid', legend_label = 'car_collision_line', visible = True)
 fig1.circle('x','y', source = data_car_start_pos, size=8, color='red', legend_label = 'car_start')
 fig1.patch('car_xn', 'car_yn', source = data_car_end, fill_color = "blue", line_color = "blue", line_width = 1, legend_label = 'car_end', fill_alpha=0.5)
 fig1.circle('x','y', source = data_car_end_pos, size=8, color='blue', legend_label = 'car_end')
@@ -50,11 +54,13 @@ fig1.patch('car_xn', 'car_yn', source = data_car_collision, fill_color = "grey",
 fig1.circle('x','y', source = data_car_collision_pos, size=8, color='grey', legend_label = 'car_collision')
 
 fig1.circle('x','y', source = data_obstacle_pos, size=8, color='red', legend_label = 'obstacle_pos')
-fig1.line('x', 'y', source = data_obstacle_line, line_width = 1.5, line_color = 'orange', line_dash = 'solid', legend_label = 'obstacle_line')
+fig1.line('x', 'y', source = data_obstacle_line, line_width = 1.5, line_color = 'orange', line_dash = 'solid', legend_label = 'obstacle_line', visible = False)
 fig1.circle('x','y', source = data_obstacle_turn_circle, size=8, color='yellow', legend_label = 'obstacle_turn_circle', visible = False)
 fig1.circle(x ='x', y ='y', radius = 'r', source=data_obstacle_turn_circle, line_alpha = 0.5, line_width = 1, line_color = "black", fill_alpha=0, legend_label = 'obstacle_turn_circle', visible = False)
 
 fig1.circle('x','y', source = data_collision_point_pos, size=8, color='orange', legend_label = 'collision_point_pos')
+
+fig1.line('x', 'y', source = data_remain_dist_line, line_width = 5.0, line_color = 'green', line_dash = 'solid', legend_label = 'remain_dist', visible = False)
 
 fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 fig1.legend.click_policy = 'hide'
@@ -228,6 +234,25 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
     'car_yn': car_yn,
   })
 
+  car_line_order = collision_detection_py.GetCarLineOrder()
+  print("car_line_order", car_line_order)
+  if car_line_order != -1:
+    if car_line_order < len(car_xb) - 1:
+      data_car_collision_line.data.update({
+        'x': [car_xn[car_line_order], car_xn[car_line_order + 1]],
+        'y': [car_yn[car_line_order], car_yn[car_line_order + 1]],
+      })
+    else:
+      data_car_collision_line.data.update({
+        'x': [car_xn[car_line_order], car_xn[0]],
+        'y': [car_yn[car_line_order], car_yn[0]],
+      })
+  else:
+    data_car_collision_line.data.update({
+      'x': [],
+      'y': [],
+    })
+
   # update ego turn center pos and circle
   # update obstacle turn center pos and circle
   if straight_left_right == 0:
@@ -307,6 +332,8 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
   remain_dist = collision_detection_py.GetRemainDist()
   car_remain_dist = collision_detection_py.GetRemainCarDist()
   obstacle_remain_dist = collision_detection_py.GetRemainObstacleDist()
+  car_line_order1 = collision_detection_py.GetCarLineOrder()
+  print("car_line_order1 = ", car_line_order1)
 
   names = []
   datas = []
@@ -389,6 +416,11 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
       'y': [ego_pos_collision[1]],
     })
 
+    data_remain_dist_line.data.update({
+    'x': [ego_pos_start[0], ego_pos_collision[0]],
+    'y': [ego_pos_start[1], ego_pos_collision[1]],
+    })
+
   else:
     data_collision_point_pos.data.update({
       'x': [],
@@ -401,6 +433,10 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
     data_car_collision.data.update({
       'car_xn': [],
       'car_yn': [],
+    })
+    data_remain_dist_line.data.update({
+      'x': [],
+      'y': [],
     })
 
   debug_data.data.update({

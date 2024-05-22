@@ -151,8 +151,8 @@ struct ApaParameters {
   double line_arc_obs_channel_width = 8.886;
   double line_arc_obs_channel_length = 5.086;
   bool dynamic_col_det_enable = false;
-  double car_lat_inflation_for_trim_path = 0.1;
-  double safe_dist_for_trim_path = 0.2;
+  double car_lat_inflation_for_obs_radical = 0.1;
+  double col_obs_safe_dist_radical = 0.2;
   double parallel_obs2slot_max_dist = 16.66;
   double parallel_channel_y_mag = 8.5;
   double parallel_channel_x_mag = 16.6;
@@ -220,8 +220,8 @@ struct ApaParameters {
   double parallel_multi_plan_radius_eps = 0.03;
   double parallel_search_out_heading = 0.0;
   // path optimizer params
-  bool cilqr_path_optimization_enable = false;
-  bool perpendicular_lat_opt_enable = false;
+  bool cilqr_path_optimization_enable = true;
+  bool perpendicular_lat_opt_enable = true;
   bool parallel_lat_opt_enable = false;
   double min_opt_path_length = 0.7;
   // slot managent params

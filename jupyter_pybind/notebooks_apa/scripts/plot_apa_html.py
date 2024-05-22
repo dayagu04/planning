@@ -2,10 +2,11 @@ import sys
 import os
 from abc import ABC, abstractmethod
 import bokeh.plotting as bkp
-from bokeh.models import HoverTool, Slider, CustomJS, Div, WheelZoomTool, DataTable, TableColumn, Panel, Tabs
+from bokeh.models import HoverTool, Slider, CustomJS, Div, WheelZoomTool, DataTable, TableColumn, Panel, Tabs, Arrow, NormalHead, Label
 from bokeh.io import output_notebook, push_notebook, output_file, export_png
 from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure, output_file, show, ColumnDataSource
+from bokeh.events import Tap
 
 import numpy as np
 from IPython.core.display import display, HTML
@@ -24,9 +25,12 @@ from lib.local_view_lib import *
 from lib.load_local_view_parking import LoadCyberbag
 from lib.load_local_view_parking import apa_draw_local_view, apa_draw_local_view_parking_ctrl
 
-bag_path = "/docker_share/0924/test_22.00000"
+bag_path = '/data_cold/abu_zone/APA/Vertical/planning-5c8b4aed-JAC_S811_slant_test_01/test_1.00000'
 html_file = bag_path +".apa.html"
 plot_ctrl_flag = True
+fig1_time_step = 0.1
+fig_other_time_step = 0.1
+slider_time_step = 0.1
 
 # bokeh创建的html在jupyter中显示
 if isINJupyter():
@@ -47,7 +51,7 @@ def isINJupyter():
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:
-        dataLoader = LoadCyberbag(bag_path)
+        dataLoader = LoadCyberbag(bag_path, True)
     except:
         print('load cyber_bag error!')
         return
@@ -63,14 +67,14 @@ def plotOnce(bag_path, html_file):
     # fig1: local view
     # try:
 
-    fig_local_view, tab_debug_layer = apa_draw_local_view(dataLoader, layer_manager, plot_ctrl_flag = True)
+    fig_local_view, tab_debug_layer = apa_draw_local_view(dataLoader, layer_manager, max_time, fig1_time_step, plot_ctrl_flag = True)
     # except:
     #     print("fig_local_view plot error!")
     #     fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=600, height=1000, match_aspect = True, aspect_scale=1)
     #     fig_local_view.x_range.flipped = True
     #     fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
     # if plot_ctrl_flag:
-    fig2, fig3, fig4, fig5, fig6, fig7 = apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time)
+    fig2, fig3, fig4, fig5, fig6, fig7 = apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time, time_step=fig_other_time_step)
 
 
     min_t = sys.maxsize
@@ -116,7 +120,7 @@ def plotOnce(bag_path, html_file):
     """
 
     car_slider = Slider(start=0.0, end=max_time-0,
-                        value=-0.1, step=0.1, title="time")
+                        value=-0.1, step=slider_time_step, title="time")
     code0 = """
     %s
             console.log("cb_objS");
@@ -136,6 +140,64 @@ def plotOnce(bag_path, html_file):
     callback = CustomJS(args=callback_arg.arg, code=codes)
 
     car_slider.js_on_change('value', callback)
+
+    #####
+    source = ColumnDataSource(data=dict(x=[], y=[]))
+    fig_local_view.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
+    line_source = ColumnDataSource(data=dict(x=[], y=[]))
+    fig_local_view.line('x', 'y', source=source, line_width=3, line_color = 'pink', line_dash = 'solid', legend_label='measure tool')
+    text_source = ColumnDataSource(data=dict(x=[], y=[], text=[]))
+    fig_local_view.text('x', 'y', 'text', source=text_source, text_color='red', text_align='center', text_font_size='15pt', legend_label='measure tool')
+
+    # Define the JavaScript callback code
+    callback_code = """
+        var x = cb_obj.x;
+        var y = cb_obj.y;
+
+        source.data['x'].push(x);
+        source.data['y'].push(y);
+
+        if (source.data['x'].length > 2) {
+            source.data['x'].shift();
+            source.data['y'].shift();
+            source.data['x'].shift();
+            source.data['y'].shift();
+        }
+        source.change.emit();
+
+        if (source.data['x'].length >= 2) {
+            var x1 = source.data['x'][source.data['x'].length - 2];
+            var y1 = source.data['y'][source.data['y'].length - 2];
+            var x2 = x;
+            var y2 = y;
+            var x3 = (x1 + x2) / 2;
+            var y3 = (y1 + y2) / 2;
+
+            var distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+            console.log("Distance between the last two points: " + distance);
+
+            distance = distance.toFixed(4);
+            text_source.data = {'x': [x3], 'y': [y3], 'text': [distance]};
+            text_source.change.emit();
+
+            line_source.data = {'x': [x1, x2], 'y': [y1, y2]};
+            line_source.change.emit();
+        }
+
+        if (source.data['x'].length == 1) {
+            text_source.data['x'].shift();
+            text_source.data['y'].shift();
+            text_source.data['text'].shift();
+        }
+        text_source.change.emit();
+    """
+
+    # Create a CustomJS callback with the defined code
+    callback = CustomJS(args=dict(source=source, line_source=line_source, text_source=text_source), code=callback_code)
+
+    # Attach the callback to the Tap event on the plot
+    fig_local_view.js_on_event(Tap, callback)
 
     for gdlabel in layer_manager.gds.keys():
         gd = layer_manager.gds[gdlabel]
@@ -170,7 +232,7 @@ def plotOnce(bag_path, html_file):
     # layout = gridplot([[fig_local_view],
     #                [car_slider]])
     # show(layout)
-    bkp.show(layout(row(fig_local_view, row(column(fig2.fig, fig3.fig, fig4.fig, fig5.fig), column(fig6.fig, fig7.fig, tab_debug_layer))), car_slider))
+    bkp.show(layout(car_slider, row(fig_local_view, row(column(fig2.fig, fig3.fig, fig4.fig, fig5.fig), column(fig6.fig, fig7.fig, tab_debug_layer)))))
     # bkp.show(fig_local_view, notebook_handle=True)
 
 def plotMain():

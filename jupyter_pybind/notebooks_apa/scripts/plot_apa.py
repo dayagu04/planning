@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA/Vertical/planning-58216f53-JAC_S811_test/test_13.00000'
+bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-a9f48cff6-JAC_S811_test/planning-a9f48cff6-JAC_S811/test_4.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
@@ -98,15 +98,25 @@ def slider_callback(bag_time):
   planning_json = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
   fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
   uss_percept_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
-  # print("fus_parking_msg",fus_parking_msg.parking_fusion_slot_lists)
-  # for i in range(len(fus_parking_msg.parking_fusion_slot_lists)):
-  #   slot_info = fus_parking_msg.parking_fusion_slot_lists[i]
-  #   print("slot_id = ", slot_info.id, "  slot_type = ", slot_info.type,
-  #         "slot_allow_parking = ", slot_info.allow_parking, "slot_fusion_source = ", slot_info.fusion_source,
-  #         "slot_slot_side = ", slot_info.slot_side, "slot_uss_id = ", slot_info.uss_id,
-  #         )
+  #print("fus_parking_msg",fus_parking_msg.parking_fusion_slot_lists)
+  for i in range(len(fus_parking_msg.parking_fusion_slot_lists)):
+    slot_info = fus_parking_msg.parking_fusion_slot_lists[i]
+    print("slot_id = ", slot_info.id, "  slot_type = ", slot_info.type,
+          "slot_allow_parking = ", slot_info.allow_parking, "slot_fusion_source = ", slot_info.fusion_source,
+          "slot_slot_side = ", slot_info.slot_side, "slot_uss_id = ", slot_info.uss_id,
+          )
   print("remain_dist = ", planning_json['remain_dist'])
   print("remain_dist_uss =", planning_json['remain_dist_uss'])
+
+  # replan_time_list, correct_path_for_limiter_list = [],[]
+  # if planning_json['replan_flag'] == True:
+  #   replan_time_list.append(bag_time)
+
+  # if planning_json['correct_path_for_limiter'] == True:
+  #   replan_time_list.append(bag_time)
+
+  # print("replan_time_list = ", replan_time_list)
+  # print("correct_path_for_limiter_list = ", correct_path_for_limiter_list)
 
   # print("planning_json = ", planning_json)
 

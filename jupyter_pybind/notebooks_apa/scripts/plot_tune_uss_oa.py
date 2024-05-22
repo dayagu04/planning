@@ -15,13 +15,6 @@ from jupyter_pybind import uss_obstacle_avoidance_py
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-
-# load car local vertex
-car_local_x_list, car_local_y_list = load_car_params_patch()
-# load uss local vertex and normal angle
-uss_local_x_list, uss_local_y_list = load_car_uss_patch()
-uss_angle_list = load_uss_angle_patch()
-
 data_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 
 data_car_start_pos = ColumnDataSource(data = {'x':[], 'y':[]})
@@ -71,7 +64,7 @@ class LocalViewSlider:
 
     self.detection_distance_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "detection_distance",min=0, max=2.6, value=2.5, step=0.01)
 
-    self.lat_inflation_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "lat_inflation",min=0, max=0.3, value=0.18, step=0.01)
+    self.lat_inflation_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "lat_inflation",min=0, max=0.3, value=0.0, step=0.01)
 
     self.uss_raw_dist_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "uss_raw_dist",min=0.15, max=4.7, value=1.98, step=0.01)
 
@@ -98,7 +91,17 @@ def slider_callback(ego_x, ego_y, ego_heading, steer_angle, forward_back, detect
     'y': [y_start],
   })
 
+  uss_obstacle_avoidance_py.SetParam(detection_distance, lat_inflation)
+  uss_obstacle_avoidance_py.SetUssRawDist(uss_raw_dist)
+  uss_obstacle_avoidance_py.SetCarMotionInfo(math.radians(steer_angle), forward_back)
+  uss_obstacle_avoidance_py.UpdateUssDis()
 
+  # load car local vertex
+  car_local_vertex_vec = uss_obstacle_avoidance_py.GetCarLocalVertex()
+  car_local_x_list, car_local_y_list = [], []
+  for vertex in car_local_vertex_vec:
+    car_local_x_list.append(vertex[0])
+    car_local_y_list.append(vertex[1])
   # update ego car pos
   car_global_x_list = []
   car_global_y_list = []
@@ -111,23 +114,30 @@ def slider_callback(ego_x, ego_y, ego_heading, steer_angle, forward_back, detect
     'car_yn': car_global_y_list,
   })
 
+  # load uss local vertex and normal angle
+  uss_local_vertex_vec = uss_obstacle_avoidance_py.GetUssLocalVertex()
+  uss_local_x_list, uss_local_y_list = [], []
+  for vertex in uss_local_vertex_vec:
+    uss_local_x_list.append(vertex[0])
+    uss_local_y_list.append(vertex[1])
+  uss_angle_list_rad = uss_obstacle_avoidance_py.GetUssLocalAngle()
+  uss_angle_list_deg = [angle * (180 / math.pi) for angle in uss_angle_list_rad]
   uss_global_x_list, uss_global_y_list, uss_radius_list, uss_angle_start_list, uss_angle_end_list = [], [], [], [], []
   for i in range(len(uss_local_x_list)):
     uss_global_x, uss_global_y = local2global(uss_local_x_list[i], uss_local_y_list[i], ego_x, ego_y, math.radians(ego_heading))
 
-    uss_scan_angle = 60
-    if i == 1 or i == 4 or i == 7 or i == 10:
-      uss_scan_angle *= 1.4
+    uss_scan_angle = 120
+    if i == 0 or i == 5 or i == 6 or i == 11:
+      uss_scan_angle = 80
 
-    uss_angle_start = math.radians(uss_angle_list[i] - uss_scan_angle / 2 + ego_heading - 90)
-    uss_angle_end = math.radians(uss_angle_list[i] + uss_scan_angle / 2 + ego_heading - 90)
+    uss_angle_start = math.radians(uss_angle_list_deg[i] - uss_scan_angle / 2 + ego_heading)
+    uss_angle_end = math.radians(uss_angle_list_deg[i] + uss_scan_angle / 2 + ego_heading)
 
     uss_global_x_list.append(uss_global_x)
     uss_global_y_list.append(uss_global_y)
     uss_radius_list.append(uss_raw_dist)
     uss_angle_start_list.append(uss_angle_start)
     uss_angle_end_list.append(uss_angle_end)
-
 
   data_wave.data.update({
     'wave_x':uss_global_x_list,
@@ -137,13 +147,8 @@ def slider_callback(ego_x, ego_y, ego_heading, steer_angle, forward_back, detect
     'end_angle':uss_angle_end_list,
   })
 
-  uss_obstacle_avoidance_py.SetParam(detection_distance, lat_inflation)
-  uss_obstacle_avoidance_py.SetUssRawDist(uss_raw_dist)
-  uss_obstacle_avoidance_py.SetCarMotionInfo(math.radians(steer_angle), forward_back)
-  uss_obstacle_avoidance_py.UpdateUssDis();
-
   remain_dist = uss_obstacle_avoidance_py.GetRemainDist()
-  available_flag = uss_obstacle_avoidance_py.GetAvailable();
+  available_flag = uss_obstacle_avoidance_py.GetAvailable()
   uss_index = uss_obstacle_avoidance_py.GetUssIndex()
   car_index = uss_obstacle_avoidance_py.GetCarIndex()
   if available_flag == False:
