@@ -234,6 +234,9 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().terminal_parallel_y_offset, double,
                   "terminal_parallel_y_offset");
 
+  JSON_READ_VALUE(apa_param.SetPram().terminal_parallel_y_offset_with_curb,
+                  double, "terminal_parallel_y_offset_with_curb");
+
   // check finish params
   JSON_READ_VALUE(apa_param.SetPram().finish_lat_err, double, "finish_lat_err");
 

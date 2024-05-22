@@ -312,13 +312,18 @@ const bool UssObstacleAvoidance::Preprocess() {
               << " != 12 ");
     return false;
   }
-  // front uss: uss dis need to be transfered from mm to m.
+  // raw dist info stored in dis_from_car_to_obj in clockwise direction, the
+  // first four are front upa, the middle four are rear upa, the rest are apa.
+
+  //  front uss: uss dis need to be transfered from mm to m. order: fl apa, 4
+  //  upa, fr apa
   for (const auto &front_uss_idx : apa_param.GetParam().uss_wdis_index_front) {
     uss_raw_dist_vec_.emplace_back(
         0.001 * uss_dis_info.dis_from_car_to_obj(front_uss_idx));
   }
 
-  // rear uss: uss dis need to be transfered from mm to m.
+  // rear uss: uss dis need to be transfered from mm to m. order: rr apa, 4 upa,
+  // rl apa
   for (const auto &rear_uss_idx : apa_param.GetParam().uss_wdis_index_back) {
     uss_raw_dist_vec_.emplace_back(
         0.001 * uss_dis_info.dis_from_car_to_obj(rear_uss_idx));

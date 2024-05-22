@@ -214,10 +214,16 @@ class LoadCyberbag:
                          "uss_available", "uss_remain_dist", "uss_index", "uss_car_index",
                          "optimization_terminal_pose_error", "optimization_terminal_heading_error", "lat_path_opt_cost_time_ms",
                          "ref_gear", "ref_arc_steer",
-                         "correct_path_for_limiter", "replan_flag"]
+                         "correct_path_for_limiter", "replan_flag", "path_plan_time_ms",
+                         "para_tlane_is_front_vacant", "para_tlane_is_rear_vacant", "para_tlane_side_sgn",
+                         "para_tlane_front_min_x_before_clamp", "para_tlane_front_min_x_after_clamp", "para_tlane_front_y",
+                         "para_tlane_rear_max_x_before_clamp", "para_tlane_rear_max_x_after_clamp", "para_tlane_rear_y"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
-                          "obstaclesX", "obstaclesY", "slot_corner_X", "slot_corner_Y", "limiter_corner_X", "limiter_corner_Y"]
+                          "slm_selected_obs_x", "slm_selected_obs_y", "obstaclesX", "obstaclesY", "slot_corner_X", "slot_corner_Y",
+                          "limiter_corner_X", "limiter_corner_Y", "obstacles_x_slot", "obstacles_y_slot",
+                          "tlane_front_que_x","tlane_front_que_y", "tlane_rear_que_x", "tlane_rear_que_y",
+                          "para_tlane_obs_pt_before_uss"]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):

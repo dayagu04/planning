@@ -50,6 +50,7 @@ struct ApaParameters {
   double terminal_target_heading = 0.0;
   double terminal_target_x_to_limiter = 0.15;
   double terminal_parallel_y_offset = 0.0;
+  double terminal_parallel_y_offset_with_curb = 0.45;
 
   // check finish params
   double finish_lat_err = 0.08;
@@ -62,7 +63,7 @@ struct ApaParameters {
   double finish_parallel_lon_err = 0.3;
   double finish_parallel_heading_err = 2.3;
   double finish_parallel_rear_stop_buffer = 0.55;
-  double finish_parallel_lat_rac_err = 0.3;
+  double finish_parallel_lat_rac_err = 0.35;
 
   // check fail params
   double stuck_failed_time = 9.0;
@@ -157,7 +158,7 @@ struct ApaParameters {
   double parallel_channel_y_mag = 8.5;
   double parallel_channel_x_mag = 16.6;
   double parallel_ego_side_to_obs_in_buffer = 0.3;
-  double parallel_ego_front_corner_to_obs_in_buffer = 0.3;
+  double parallel_ego_front_corner_to_obs_in_buffer = 0.2;
 
   // dynamic update path params
   double car_to_limiter_dis = 1.0;

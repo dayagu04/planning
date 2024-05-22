@@ -35,6 +35,7 @@
   "terminal_target_heading": 0.0,
   "terminal_target_x_to_limiter": 0.15,
   "terminal_parallel_y_offset": 0.0,
+  "terminal_parallel_y_offset_with_curb": 0.4,
 
   "comment_5": "check finish params",
   "finish_lat_err": 0.108,
@@ -44,10 +45,10 @@
   "finish_uss_slot_occupied_ratio": 0.668,
   "finish_heading_err_loose": 2.868,
   "finish_parallel_lat_err": 0.1,
-  "finish_parallel_lat_rac_err": 0.25,
+  "finish_parallel_lat_rac_err": 0.35,
   "finish_parallel_lon_err": 0.4,
   "finish_parallel_heading_err": 1.66,
-  "finish_parallel_rear_stop_buffer": 0.55,
+  "finish_parallel_rear_stop_buffer": 0.45,
 
   "comment_6": "check fail params",
   "stuck_failed_time": 12.0,
@@ -135,10 +136,10 @@
   "dynamic_col_det_enable": true,
   "car_lat_inflation_for_obs_radical": 0.0286,
   "parallel_obs2slot_max_dist": 16.66,
-  "parallel_channel_y_mag": 5.7,
+  "parallel_channel_y_mag": 6.2,
   "parallel_channel_x_mag": 16.6,
   "parallel_ego_side_to_obs_in_buffer": 0.3,
-  "parallel_ego_front_corner_to_obs_in_buffer": 0.1,
+  "parallel_ego_front_corner_to_obs_in_buffer": 0.2,
 
   "comment_12": "dynamic update path params",
   "car_to_limiter_dis": 1.0,

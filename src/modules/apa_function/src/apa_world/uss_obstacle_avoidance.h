@@ -109,6 +109,10 @@ class UssObstacleAvoidance {
     return car_local_arc_vec_;
   }
 
+  const std::vector<double>& GetUssDistVec(){
+    return uss_raw_dist_vec_;
+  }
+
   void UpdateByPybind();
 
  private:
@@ -126,7 +130,7 @@ class UssObstacleAvoidance {
 
   std::vector<Eigen::Vector2d> uss_local_vertex_vec_;
   std::vector<double> uss_local_normal_angle_vec_;
-  std::vector<double> uss_raw_dist_vec_;
+  std::vector<double> uss_raw_dist_vec_; // front, rear uss in clockwise direction
 
   std::vector<pnc::geometry_lib::LineSegment> car_local_line_vec_;
   std::vector<pnc::geometry_lib::Arc> car_local_arc_vec_;

@@ -433,6 +433,8 @@ class SlotManagement {
 
   const size_t GetFusedSlotSize() { return frame_.slot_info_window_vec.size(); }
 
+  const std::vector<Eigen::Vector2d> GetSelectedSlotObsVec();
+
   const common::SlotManagementInfo& GetOutput() const {
     return frame_.slot_management_info;
   }
@@ -511,6 +513,8 @@ class SlotManagement {
   const bool ProcessSlantSlot(
       common::SlotInfo& slot_info,
       const ParkingFusion::ParkingFusionSlot& parking_fusion_slot);
+
+  void Log();
 };
 
 }  // namespace planning

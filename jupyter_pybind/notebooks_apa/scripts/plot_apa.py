@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-a9f48cff6-JAC_S811_test/planning-a9f48cff6-JAC_S811/test_4.00000'
+bag_path = '/data_cold/abu_zone/APA/Parallel/0520/planning-f0956540e-JAC_S811/test_4.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
@@ -26,6 +26,8 @@ fig1.line('x', 'y', source=source, line_width=3, line_color = 'pink', line_dash 
 text_source = ColumnDataSource(data=dict(x=[], y=[], text=[]))
 fig1.text('x', 'y', 'text', source=text_source, text_color='red', text_align='center', text_font_size='15pt', legend_label='measure tool')
 
+data_obs_slm_filtered = ColumnDataSource(data=dict(x=[], y=[]))
+fig1.circle('x', 'y', size=2, source=data_obs_slm_filtered, color='blue', legend_label='obs after filtered by slm')
 # Define the JavaScript callback code
 callback_code = """
     var x = cb_obj.x;
@@ -118,6 +120,10 @@ def slider_callback(bag_time):
   # print("replan_time_list = ", replan_time_list)
   # print("correct_path_for_limiter_list = ", correct_path_for_limiter_list)
 
+  print("path plan time =", planning_json['path_plan_time_ms'])
+  print("tlane_p1 =", planning_json['tlane_p1_x'], ", ", planning_json['tlane_p1_y'])
+  print("tlane_p0 =", planning_json['tlane_p0_x'], ", ", planning_json['tlane_p0_y'])
+
   # print("planning_json = ", planning_json)
 
   # planning_data = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
@@ -129,6 +135,50 @@ def slider_callback(bag_time):
   # if (len(uss_percept_msg.out_line_dataori) > 4):
   #   print("---------------")
   #   print(uss_percept_msg.out_line_dataori[4].dis_from_car_to_obj)
+
+  print("obs filtered for selected slot by slm")
+  data_obs_slm_filtered.data.update({
+      'y': [],
+      'x': []
+  })
+  slm_selected_obs_x = planning_json['slm_selected_obs_x']
+  slm_selected_obs_y = planning_json['slm_selected_obs_y']
+  print("slm_selected_obs_x size = ", len(slm_selected_obs_x))
+
+  if len(slm_selected_obs_x) > 1:
+    data_obs_slm_filtered.data.update({
+        'y': slm_selected_obs_x,
+        'x': slm_selected_obs_y
+    })
+    # for i in range(len(slm_selected_obs_x)):
+    #   print(slm_selected_obs_x[i], ", ", slm_selected_obs_y[i])
+
+    print("para_tlane_side_sgn", planning_json['para_tlane_side_sgn'])
+    print("para_tlane_is_front_vacant",planning_json['para_tlane_is_front_vacant'])
+    print("para_tlane_is_rear_vacant",planning_json['para_tlane_is_rear_vacant'])
+    tlane = planning_json['para_tlane_obs_pt_before_uss']
+    print("para_tlane_obs_pt_before_uss = (", tlane[0], ", ", tlane[1], ")  (", tlane[2], ", ",tlane[3],")")
+    # tlane_after_uss = planning_json['para_tlane_obs_pt_after_uss']
+    # print("para_tlane_obs_pt_after_uss = (", tlane_after_uss[0], ", ", tlane_after_uss[1], ")  (", tlane_after_uss[2], ", ",tlane_after_uss[3],")")
+    print("slot length = ", planning_json['slot_length'])
+    print("slot width = ", planning_json['slot_width'])
+
+    print("------------front---------------")
+    print("para_tlane_front_min_x_before_clamp", planning_json['para_tlane_front_min_x_before_clamp'])
+    print("para_tlane_front_min_x_after_clamp", planning_json['para_tlane_front_min_x_after_clamp'])
+
+    print("tlane_front_que_x:-----------------------")
+    for i in range(len(planning_json['tlane_front_que_x'])):
+      print("( ", planning_json['tlane_front_que_x'][i], ", ", planning_json['tlane_front_que_y'][i], ")  ")
+
+    print("--------------rear-------------")
+    print("para_tlane_rear_max_x_before_clamp", planning_json['para_tlane_rear_max_x_before_clamp'])
+    print("para_tlane_rear_max_x_after_clamp", planning_json['para_tlane_rear_max_x_after_clamp'])
+
+    print("tlane_rear_que_x:-----------------------")
+    for i in range(len(planning_json['tlane_rear_que_x'])):
+      print("( ", planning_json['tlane_rear_que_x'][i], ", ", planning_json['tlane_rear_que_y'][i], ")  ")
+  print("----------------------------------------------")
 
   push_notebook()
 
