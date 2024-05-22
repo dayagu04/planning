@@ -59,6 +59,8 @@ std::vector<double> VirtualLaneManager::construct_reference_line_acc(void) {
   const double ego_steer_angle = session_->environmental_model()
                                      .get_ego_state_manager()
                                      ->ego_steer_angle();
+  
+  LOG_DEBUG("ego_v =  %f, ego_yaw_rate = %f, ego_steer_angle = %f\n", ego_v, ego_yaw_rate, ego_steer_angle);
 
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -87,6 +89,8 @@ std::vector<double> VirtualLaneManager::construct_reference_line_acc(void) {
 
   double curv = curv_low_spd_factor * curv_low_spd +
                 (1.0 - curv_low_spd_factor) * curv_high_spd;
+  LOG_DEBUG("curv =  %f\n", curv);
+  curv = std::min(std::max(curv, -0.1), 0.1);
 
   std::vector<double> virtual_poly(4, 0.0);
   virtual_poly[2] = curv / 2.0;
