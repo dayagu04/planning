@@ -50,8 +50,8 @@
   "finish_parallel_rear_stop_buffer": 0.55,
 
   "comment_6": "check fail params",
-  "stuck_failed_time": 9.0,
-  "pause_failed_time": 12.68,
+  "stuck_failed_time": 12.0,
+  "pause_failed_time": 16.68,
 
   "comment_7": "check static params",
   "car_static_pos_err": 0.005,
@@ -82,7 +82,7 @@
   "uss_directly_behind_index": [8, 9],
 
   "comment_9": "check replan params",
-  "stuck_replan_time": 6.2,
+  "stuck_replan_time": 8.8,
   "max_replan_remain_dist": 0.2,
 
   "comment_10": "construct t_lane params",
