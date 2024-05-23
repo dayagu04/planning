@@ -244,6 +244,7 @@ class GapSelectorDecider : public Task {
   double lc_total_time_{6.0};
   double lc_back_total_time_{3.5};
   double lc_back_timer_{0.};
+  double lc_back_vel_{0.};
 
   std::vector<double> _LB_T_;
   std::vector<double> _LB_HEADING_ERROR_;

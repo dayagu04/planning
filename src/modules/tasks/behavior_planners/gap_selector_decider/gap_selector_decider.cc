@@ -321,6 +321,7 @@ GapSelectorStatus GapSelectorDecider::Update() {
       lc_timer_ = 0.;
       lc_total_time_ = config_.default_lc_time;
       lc_back_timer_ = 0.;
+      lc_back_vel_ = 0.;
       use_ego_v_ = false;
       return GapSelectorStatus::NO_LC_REQUSET;
     } else if (coarse_planning_info.target_state == ROAD_LC_LBACK ||
@@ -341,6 +342,7 @@ GapSelectorStatus GapSelectorDecider::Update() {
       } else {
         lc_back_total_time_ =
             interp(ego_theta_error, _LB_HEADING_ERROR_, _LB_T_);
+        lc_back_vel_ = ego_frenet_pose.y / lc_back_total_time_;
       }
       lc_back_timer_ = 0.;
       is_lc_back_scene = true;
@@ -370,10 +372,9 @@ GapSelectorStatus GapSelectorDecider::Update() {
   } else if (is_lc_back_scene) {
     double lb_end_s, lb_target_l,
         remain_lb_time = lc_back_total_time_ - lc_back_timer_;
-    if (remain_lb_time > 2.0) {
-      lb_target_l = ego_frenet_pose.y;
-    } else {
-      lb_target_l = 0.;
+    if (remain_lb_time > 1.0) {
+      lb_target_l =
+          lc_back_vel_ * lc_back_total_time_ - lc_back_vel_ * lc_back_timer_;
     }
 
     FixedTimeQuinticPathPlan(lb_target_l, lb_end_s, remain_lb_time,
