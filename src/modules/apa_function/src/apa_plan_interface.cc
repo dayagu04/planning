@@ -427,6 +427,9 @@ void ApaPlanInterface::SyncParameters() {
   // construce obstacles params
   JSON_READ_VALUE(apa_param.SetPram().channel_width, double, "channel_width");
 
+  JSON_READ_VALUE(apa_param.SetPram().min_channel_width, double,
+                  "min_channel_width");
+
   JSON_READ_VALUE(apa_param.SetPram().channel_length, double, "channel_length");
 
   JSON_READ_VALUE(apa_param.SetPram().max_obs2car_dist_in_slot, double,

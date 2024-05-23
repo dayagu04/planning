@@ -6,15 +6,21 @@
  * @date       Sep-17-2021
  **************************************************************/
 #include "math_lib.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <type_traits>
+
 #include "Eigen/Geometry"
 namespace pnc {
 namespace mathlib {
 static const double kPie = 3.141592653589793;
 
 double DoubleConstrain(double u, double min, double max) {
+  if (min > max) {
+    std::swap(min, max);
+  }
   if (u < min) {
     return min;
   } else if (u > max) {
