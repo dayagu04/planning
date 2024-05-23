@@ -2222,7 +2222,7 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
   if (pnc::mathlib::IsInBound(path_seg.GetEndHeading() * 57.3, -0.1, 0.1)) {
     insert_case = 0;
   } else {
-    if (length > kMinSingleGearPathLength - 0.016) {
+    if (length > apa_param.GetParam().min_one_step_path_length - 0.016) {
       DEBUG_PRINT("no need insert line");
       return;
     } else {
@@ -2252,8 +2252,12 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
       if (length + extend_distance < min_path_length) {
         extend_distance = min_path_length - path_seg.Getlength();
       }
-    } else if (insert_case == 2) {
-      extend_distance = std::max(0.01, kMinSingleGearPathLength - length);
+    } else if (insert_case == 1) {
+      extend_distance = apa_param.GetParam().min_one_step_path_length - length;
+    }
+
+    if (extend_distance < 0.02168) {
+      return;
     }
 
     new_line.line_seg.length = extend_distance;
@@ -2276,7 +2280,18 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
     Eigen::Vector2d new_line_vector = extend_distance * unit_tangent;
     new_line.line_seg.pB = new_line_vector + new_line.line_seg.pA;
 
-    const uint8_t path_col_res = TrimPathByCollisionDetection(new_line);
+    CollisionDetector::Paramters params;
+    params.lat_inflation = apa_param.GetParam().car_lat_inflation_for_obs +
+                           apa_param.GetParam().safe_threshold;
+    collision_detector_ptr_->SetParam(params);
+    const uint8_t path_col_res = TrimPathByCollisionDetection(
+        new_line, apa_param.GetParam().col_obs_safe_dist + 0.168);
+    params.Reset();
+    collision_detector_ptr_->SetParam(params);
+
+    if (new_line.Getlength() < 0.02168) {
+      return;
+    }
 
     if (path_col_res == PATH_COL_NORMAL || path_col_res == PATH_COL_SHORTEN) {
       output_.path_segment_vec.insert(
