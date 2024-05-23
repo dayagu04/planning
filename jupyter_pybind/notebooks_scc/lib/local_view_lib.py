@@ -835,45 +835,48 @@ def draw_local_view(dataLoader, layer_manager):
     centerline_generator_dict = {}
     center_line_lists = []
     if dataLoader.road_msg['enable'] == True:
+      #print(dataLoader.road_msg['timestamp'])
       is_enu_to_car = True
       for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+        #print(fusion_road_timestamps[i])
         fusion_road_msg = find(dataLoader.road_msg, fusion_road_timestamps[i])
         loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
         # 加载车道线
         if fusion_road_msg != None:
           line_info_list = load_lane_lines(fusion_road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
-        for i in range(10):
-          lane_generator_key = 'line_' + str(i)
+        for idx in range(10):
+          lane_generator_key = 'line_' + str(idx)
           if (lane_generator_key in lane_generator_dict.keys()) == False:
               lane_generator_dict[lane_generator_key] = LineGenerator('line')
 
           if fusion_road_msg == None:
-            lane_generator_dict[lane_generator_key].xys.append(([] , [] ,[], [i]))
+            lane_generator_dict[lane_generator_key].xys.append(([] , [] ,[], [idx]))
             continue
-          line_info = line_info_list[i]
-          line_info['fig_index'] = [i]
+          line_info = line_info_list[idx]
+          line_info['fig_index'] = [idx]
           lane_generator_dict[lane_generator_key].xys.append((line_info['line_y_vec'] , line_info['line_x_vec'] ,line_info['type'], line_info['fig_index']))
         # 加载车道中心线
-        center_line_list = load_lane_center_lines(fusion_road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
-        # for index in range(5):
-        #   line_generator_key = 'centerline_' + str(index)
-        #   fig_index = 10 + index
-        #   if (line_generator_key in centerline_generator_dict.keys()) == False:
-        #     centerline_generator_dict[line_generator_key] = LineGenerator('center_line')
-        #   if not flag:
-        #     centerline_generator_dict[line_generator_key].xys.append(([] , [] ,[], []))
-        #     continue
-        #   centerline_generator_dict[line_generator_key].xys.append((center_line_list[index]['line_y_vec'], center_line_list[index]['line_x_vec'], [center_line_list[index]['relative_id']], [fig_index]))
+        if fusion_road_msg != None:
+          center_line_list = load_lane_center_lines(fusion_road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
+        for index in range(5):
+          line_generator_key = 'centerline_' + str(index)
+          fig_index = 10 + index
+          if (line_generator_key in centerline_generator_dict.keys()) == False:
+            centerline_generator_dict[line_generator_key] = LineGenerator('center_line')
+          if fusion_road_msg == None:
+            centerline_generator_dict[line_generator_key].xys.append(([] , [] ,[], []))
+            continue
+          centerline_generator_dict[line_generator_key].xys.append((center_line_list[index]['line_y_vec'], center_line_list[index]['line_x_vec'], [center_line_list[index]['relative_id']], [fig_index]))
 
-        for lane_generator_key in lane_generator_dict.keys():
-            lane_generator_dict[lane_generator_key].ts = np.array(plan_debug_ts)
-            lane_layer = CurveLayer(fig_local_view, lane_params)
-            layer_manager.AddLayer(lane_layer, lane_generator_key.replace('line_', 'line_layer_'), lane_generator_dict[lane_generator_key], lane_generator_key , 2)
+      for lane_generator_key in lane_generator_dict.keys():
+        lane_generator_dict[lane_generator_key].ts = np.array(plan_debug_ts)
+        lane_layer = CurveLayer(fig_local_view, lane_params)
+        layer_manager.AddLayer(lane_layer, lane_generator_key.replace('line_', 'line_layer_'), lane_generator_dict[lane_generator_key], lane_generator_key , 2)
 
-        # for line_generator_key in centerline_generator_dict.keys():
-        #     centerline_generator_dict[line_generator_key].ts = np.array(plan_debug_ts)
-        #     lane_layer = CurveLayer(fig_local_view, center_line_params)
-        #     layer_manager.AddLayer(lane_layer, line_generator_key.replace('centerline_', 'centerline_layer_'), centerline_generator_dict[line_generator_key], line_generator_key , 2)
+      for line_generator_key in centerline_generator_dict.keys():
+        centerline_generator_dict[line_generator_key].ts = np.array(plan_debug_ts)
+        lane_layer = CurveLayer(fig_local_view, center_line_params)
+        layer_manager.AddLayer(lane_layer, line_generator_key.replace('centerline_', 'centerline_layer_'), centerline_generator_dict[line_generator_key], line_generator_key , 2)
 
 
     # # 加载planning debug部分信息
@@ -884,10 +887,11 @@ def draw_local_view(dataLoader, layer_manager):
     if dataLoader.plan_debug_msg['enable'] == True:
       for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
         fusion_road_msg = find(dataLoader.road_msg, fusion_road_timestamps[i])
+        loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
         if fusion_road_msg == None:
           continue
 
-        center_line_list = load_lane_center_lines(fusion_road_msg)
+        center_line_list = load_lane_center_lines(fusion_road_msg, True, loc_msg, False)
         lat_behavior_common = plan_debug.lat_behavior_common
         environment_model_info =plan_debug.environment_model_info
         current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
@@ -985,8 +989,10 @@ def draw_local_view(dataLoader, layer_manager):
       obstacle_snrd_generate = CommonGenerator()
       obstacle_fusion_text_generate = TextGenerator()
       obstacle_snrd_text_generate = TextGenerator()
+      is_enu_to_car = True
       for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
         fus_msg = find(dataLoader.fus_msg, fusion_object_timestamps[i])
+        loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
       # for i, fusion_object_timestamp in enumerate(fusion_object_timestamps):
         # flag, fus_msg = find(dataLoader.fus_msg, fusion_object_timestamp)
         # flag, fus_msg = find(dataLoader.fus_msg, fusion_object_timestamp)
@@ -997,7 +1003,7 @@ def draw_local_view(dataLoader, layer_manager):
           obstacle_fusion_text_generate.xys.append(([], [], []))
           obstacle_snrd_text_generate.xys.append(([], [], []))
           continue
-        obstacles_info_all = load_obstacle_params(fus_msg, plan_debug.environment_model_info)
+        obstacles_info_all = load_obstacle_params(fus_msg, is_enu_to_car, loc_msg, plan_debug.environment_model_info)
         if g_is_display_enu:
           obstacle_fusion_generate.xys.append((obstacles_info_all[1]['obstacles_y'], obstacles_info_all[1]['obstacles_x']))
           obstacle_snrd_generate.xys.append((obstacles_info_all[4]['obstacles_y'], obstacles_info_all[4]['obstacles_x']))
@@ -1982,7 +1988,7 @@ def load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, g_is_display
     layer_manager.AddLayer(road_mark_params_layer, 'road_mark_params_layer', road_mark_generate, 'road_mark_generate', 2)
 
 def load_ground_line(dataLoader, layer_manager, fig_local_view, g_is_display_enu = False):
-  if dataLoader.ground_line_msg['enable'] == False:
+  if dataLoader.ground_line_msg['enable'] == True:
     groundline_generate = CommonGenerator()
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
       flag, ground_line_msg = find(dataLoader.ground_line_msg, ground_line_timestamps[i])
