@@ -291,7 +291,7 @@
     "t_curv": 3.0,
     "dis_curv": 50.0,
     "v_start": 0.3,
-    "v_startmode": 6.5,
+    "v_startmode": 3.5,
     "obstacle_v_start": 0.5,
     "distance_stop": 2.0,
     "distance_start": 0.3,
@@ -306,7 +306,7 @@
     "slow_lead_distance_step": 2.0,
     "cut_in_desired_distance_step": 1.0,
     "soft_bound_corridor_t": 0.3,
-    "acc_start_max_bound" : 1.5,
+    "acc_start_max_bound" : 1.0,
     "acc_start" : 2.5,
     "v_target_stop_thrd" : 0.3,
     "acc_stop_max_bound" : 1.5
