@@ -8,6 +8,10 @@
 
 namespace planning {
 // class: IntRequest
+namespace {
+constexpr double kLCCoolingTime = 3.0;
+}
+
 IntRequest::IntRequest(
     planning::framework::Session* session,
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,

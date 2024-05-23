@@ -129,7 +129,8 @@ bool GeneralLateralDecider::Execute() {
   HandleAvoidScene(traj_points);
   const auto &gap_selector_decider_output =
       session_->planning_context().gap_selector_decider_output();
-  if (gap_selector_decider_output.gap_selector_trustworthy) {
+  if (coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
+      coarse_planning_info.target_state == ROAD_LC_RCHANGE) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
   } else {
@@ -410,9 +411,12 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
 
   double left_border_distance{10.};
   double right_border_distance{10.};
-
-  const auto &gap_selector_decider_output =
-      session_->planning_context().gap_selector_decider_output();
+  const auto &coarse_planning_info = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  auto &general_lateral_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_general_lateral_decider_output();
 
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound path_bound{-10., 10.};
@@ -449,7 +453,7 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
           ref_path_points_[lower_truncation_idx].distance_to_right_lane_border;
     }
     if (lat_lane_change_info_ == LatDeciderLaneChangeInfo::NONE &&
-        gap_selector_decider_output.gap_selector_trustworthy != true) {
+        general_lateral_decider_output.lane_change_scene != true) {
       safe_bound.upper =
           std::fmin(ref_path_points_[i].distance_to_left_lane_border -
                         0.5 * vehicle_param.width - config_.buffer2lane,
@@ -468,8 +472,8 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
                     path_bound.lower);
     } else if (lat_lane_change_info_ ==
                    LatDeciderLaneChangeInfo::LEFT_LANE_CHANGE ||
-               (gap_selector_decider_output.gap_selector_trustworthy &&
-                gap_selector_decider_output.lc_direction == 1)) {
+               (general_lateral_decider_output.lane_change_scene != true &&
+                coarse_planning_info.target_state == ROAD_LC_LCHANGE)) {
       safe_bound.upper =
           std::fmin(ref_path_points_[i].distance_to_left_road_border -
                         0.5 * vehicle_param.width - config_.buffer2lane,
@@ -517,8 +521,9 @@ void GeneralLateralDecider::ConstructLateralObstacleDecisions(
 
   int32_t obj_cnt = 0;
 
-  const auto &gap_selector_decider_output =
-      session_->planning_context().gap_selector_decider_output();
+  const auto &general_lateral_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_general_lateral_decider_output();
   const auto &reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
@@ -542,7 +547,7 @@ void GeneralLateralDecider::ConstructLateralObstacleDecisions(
       continue;
     }
 
-    if (gap_selector_decider_output.lat_decider_ignore) {
+    if (general_lateral_decider_output.lane_change_scene) {
       LOG_DEBUG("LatObstacle Decider! GS trustworthy");
       continue;
     }
