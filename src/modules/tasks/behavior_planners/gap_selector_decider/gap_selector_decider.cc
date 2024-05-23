@@ -375,10 +375,10 @@ GapSelectorStatus GapSelectorDecider::Update() {
     if (remain_lb_time > 1.0) {
       lb_target_l =
           lc_back_vel_ * lc_back_total_time_ - lc_back_vel_ * lc_back_timer_;
-    }
 
-    FixedTimeQuinticPathPlan(lb_target_l, lb_end_s, remain_lb_time,
-                             traj_points);
+      FixedTimeQuinticPathPlan(lb_target_l, lb_end_s, remain_lb_time,
+                               traj_points);
+    }
   }
 
   last_target_state_ = coarse_planning_info.target_state;
