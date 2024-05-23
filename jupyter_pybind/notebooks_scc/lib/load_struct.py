@@ -16,10 +16,28 @@ def isINJupyter():
         return False
 def find(msg, t):
   if msg['enable']  == True:
-    for index, timestamp in enumerate(msg['timestamp']):
-      if t == timestamp:
-        return msg['data'][index]
-  return None
+    t_list = msg['timestamp']
+    ind = binary_search(t_list, t)
+    if(ind == -1):
+      return None
+    else:
+      return msg['data'][ind]
+  else:
+    return None
+
+def binary_search(in_list, target):
+  low = 0
+  high = len(in_list) - 1
+  while low <= high:
+      mid = (low + high) // 2
+      if in_list[mid] == target:
+          return mid
+      elif in_list[mid] > target:
+          high = mid - 1
+      else:
+          low = mid + 1
+  return -1
+
 def find_nearest(msg, bag_time, find_json = False):
   if msg['enable']  == True:
     msg_idx = 0
@@ -191,8 +209,8 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
           # print(left_line.enu_points)
           local_points = left_line.enu_points
           point_num = left_line.enu_points_size
-          line_x = [local_points[i].x for i in range(point_num)]
-          line_y = [local_points[i].y for i in range(point_num)]
+          line_x = [local_points[j].x for j in range(point_num)]
+          line_y = [local_points[j].y for j in range(point_num)]
         else :
           if is_enu_to_car:
             coord_tf = coord_transformer()
@@ -203,14 +221,16 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
               coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
             local_points = left_line.enu_points
             point_num = left_line.enu_points_size
-            line_x = [local_points[i].x for i in range(point_num)]
-            line_y = [local_points[i].y for i in range(point_num)]
+            line_x = [local_points[j].x for j in range(point_num)]
+            line_y = [local_points[j].y for j in range(point_num)]
             line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+            #pt_vec = local_points[:point_num]
+            #line_x, line_y = coord_tf.global_to_local(pt_vec)
           else:
             car_points = left_line.car_points
             point_num = left_line.car_points_size
-            line_x = [car_points[i].x for i in range(point_num)]
-            line_y = [car_points[i].y for i in range(point_num)]
+            line_x = [car_points[j].x for j in range(point_num)]
+            line_y = [car_points[j].y for j in range(point_num)]
         # line_x, line_y = gen_line(left_line_coef[0], left_line_coef[1], left_line_coef[2], left_line_coef[3], \
         #   left_line.begin, left_line.end)
         lane_info_l['line_x_vec'] = line_x
@@ -237,8 +257,8 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
           # print(right_line.enu_points)
           local_points = right_line.enu_points
           point_num = right_line.enu_points_size
-          line_x = [local_points[i].x for i in range(point_num)]
-          line_y = [local_points[i].y for i in range(point_num)]
+          line_x = [local_points[j].x for j in range(point_num)]
+          line_y = [local_points[j].y for j in range(point_num)]
         else :
           if is_enu_to_car:
             coord_tf = coord_transformer()
@@ -249,14 +269,16 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
               coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
             local_points = right_line.enu_points
             point_num = right_line.enu_points_size
-            line_x = [local_points[i].x for i in range(point_num)]
-            line_y = [local_points[i].y for i in range(point_num)]
+            line_x = [local_points[j].x for j in range(point_num)]
+            line_y = [local_points[j].y for j in range(point_num)]
             line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+            #pt_vec = local_points[:point_num]
+            #line_x, line_y = coord_tf.global_to_local(pt_vec)
           else:
             car_points = right_line.car_points
             point_num = right_line.car_points_size
-            line_x = [car_points[i].x for i in range(point_num)]
-            line_y = [car_points[i].y for i in range(point_num)]
+            line_x = [car_points[j].x for j in range(point_num)]
+            line_y = [car_points[j].y for j in range(point_num)]
         # line_x, line_y = gen_line(right_line_coef[0], right_line_coef[1], right_line_coef[2], right_line_coef[3], \
         #   right_line.begin, right_line.end)
         lane_info_r['line_x_vec'] = line_x
@@ -296,8 +318,8 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       line_x = []
       line_y = []
       if g_is_display_enu:
-        line_x = [virtual_lane_refline_points[i].enu_point.x for i in range(virtual_lane_refline_points_size)]
-        line_y = [virtual_lane_refline_points[i].enu_point.y for i in range(virtual_lane_refline_points_size)]
+        line_x = [virtual_lane_refline_points[j].enu_point.x for j in range(virtual_lane_refline_points_size)]
+        line_y = [virtual_lane_refline_points[j].enu_point.y for j in range(virtual_lane_refline_points_size)]
       else:
         if is_enu_to_car:
           coord_tf = coord_transformer()
@@ -306,12 +328,16 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
             cur_pos_yn = loc_msg.position.position_boot.y
             cur_yaw = loc_msg.orientation.euler_boot.yaw
             coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-            line_x = [virtual_lane_refline_points[i].enu_point.x for i in range(virtual_lane_refline_points_size)]
-            line_y = [virtual_lane_refline_points[i].enu_point.y for i in range(virtual_lane_refline_points_size)]
+            line_x = [virtual_lane_refline_points[j].enu_point.x for j in range(virtual_lane_refline_points_size)]
+            line_y = [virtual_lane_refline_points[j].enu_point.y for j in range(virtual_lane_refline_points_size)]
             line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+            """ for virtual_lane_refline_point in virtual_lane_refline_points:
+              car_point_x, car_point_y = coord_tf.global_to_local([virtual_lane_refline_point.enu_point.x], [virtual_lane_refline_point.enu_point.y])
+              line_x.append(car_point_x[0])
+              line_y.append(car_point_y[0]) """
         else:
-          line_x = [virtual_lane_refline_points[i].car_point.x for i in range(virtual_lane_refline_points_size)]
-          line_y = [virtual_lane_refline_points[i].car_point.y for i in range(virtual_lane_refline_points_size)]
+          line_x = [virtual_lane_refline_points[j].car_point.x for j in range(virtual_lane_refline_points_size)]
+          line_y = [virtual_lane_refline_points[j].car_point.y for j in range(virtual_lane_refline_points_size)]
 
       lane_info['line_x_vec'] = line_x
       lane_info['line_y_vec'] = line_y
@@ -332,12 +358,12 @@ def load_intersection_generated_refline(plan_gen_refline, is_enu_to_car = False,
   virtual_lane_refline_points = plan_gen_refline.virtual_lane_refline_points
   line_x = []
   line_y = []
+  coord_tf = coord_transformer()
+  cur_pos_xn = loc_msg.position.position_boot.x
+  cur_pos_yn = loc_msg.position.position_boot.y
+  cur_yaw = loc_msg.orientation.euler_boot.yaw
+  coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
   for virtual_lane_refline_point in virtual_lane_refline_points:
-    coord_tf = coord_transformer()
-    cur_pos_xn = loc_msg.position.position_boot.x
-    cur_pos_yn = loc_msg.position.position_boot.y
-    cur_yaw = loc_msg.orientation.euler_boot.yaw
-    coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
     car_point_x, car_point_y = coord_tf.global_to_local([virtual_lane_refline_point.enu_point.x], [virtual_lane_refline_point.enu_point.y])
     line_x.append(car_point_x[0])
     line_y.append(car_point_y[0])
@@ -439,7 +465,7 @@ def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environ
 
     if is_enu_to_car:
       coord_tf = coord_transformer()
-      if loc_msg != []: # 长时轨迹
+      if loc_msg != None: # 长时轨迹
         cur_pos_xn = loc_msg.position.position_boot.x
         cur_pos_yn = loc_msg.position.position_boot.y
         cur_yaw = loc_msg.orientation.euler_boot.yaw
