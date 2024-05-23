@@ -34,7 +34,7 @@ static const double kSearchOutLineSampleDistance = 0.3;
 static const double kMaxParkOutRootHeading = 25.0;
 
 static const double kColBufferTrippleStep = 0.2;
-static const double kColBufferInSlot = 0.4;
+static const double kColBufferInSlot = 0.3;
 static const double kSmallColBufferInSlot = 0.25;
 static const double kColBufferOutSlot = 0.5;
 
@@ -1167,6 +1167,8 @@ const bool ParallelPathPlanner::InverseSearchLoopInSlot(
 
     search_out_res.emplace_back(pnc::geometry_lib::PathSegment(
         pnc::geometry_lib::SEG_GEAR_REVERSE, first_line_step));
+  } else {
+    DEBUG_PRINT("first backward step collided!");
   }
 
   // get valid target pose
@@ -1937,6 +1939,7 @@ const bool ParallelPathPlanner::MultiAlignBody() {
       }
 
       if (!success) {
+        DEBUG_PRINT("normal buffer failed");
         col_res =
             TrimPathByCollisionDetection(single_aligned_path.back(), 0.25);
 
@@ -1975,6 +1978,8 @@ const bool ParallelPathPlanner::MultiAlignBody() {
 
     output_.Reset();
     AddPathSegToOutPut(path_res);
+  } else {
+    DEBUG_PRINT("small buffer failed");
   }
 
   return success;
