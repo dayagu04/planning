@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <queue>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -727,12 +728,12 @@ const bool SlotManagement::AddUssPerceptObstacles(
 bool SlotManagement::UpdateSlotsInSearching() {
   DEBUG_PRINT("apa state is in searching!");
   // Update slots
-  std::vector<size_t> fusion_slot_id_vec;
+  std::unordered_map<size_t, ParkingFusion::ParkingFusionSlot> fusion_slot_map;
   for (size_t i = 0;
        i < frame_.parking_slot_ptr->parking_fusion_slot_lists_size(); ++i) {
     const auto &fusion_slot =
         frame_.parking_slot_ptr->parking_fusion_slot_lists(i);
-    fusion_slot_id_vec.emplace_back(fusion_slot.id());
+    fusion_slot_map[fusion_slot.id()] = fusion_slot;
     common::SlotInfo slot_info;
     if (!ProcessRawSlot(fusion_slot, slot_info)) {
       continue;
@@ -779,11 +780,13 @@ bool SlotManagement::UpdateSlotsInSearching() {
     // *slot = slot_info;
     *slot = frame_.slot_info_window_vec[j].GetFusedInfo();
 
-    if (std::find(fusion_slot_id_vec.begin(), fusion_slot_id_vec.end(),
-                  slot->id()) == fusion_slot_id_vec.end()) {
+    if (fusion_slot_map.count(slot->id()) == 0) {
       slot->set_is_release(false);
       slot->set_is_occupied(true);
       continue;
+    } else {
+      slot->set_is_release(fusion_slot_map[slot->id()].allow_parking() == 1);
+      slot->set_is_occupied(!slot->is_release());
     }
 
     if (!apa_param.GetParam().release_slot_by_prepare) {
