@@ -1,6 +1,7 @@
 #ifndef __APA_PARAM_SETTING_H__
 #define __APA_PARAM_SETTING_H__
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -228,6 +229,8 @@ struct ApaParameters {
   double min_opt_path_length = 0.7;
   // slot managent params
   bool release_slot_by_prepare = false;
+  size_t max_slot_window_size = 3;
+  size_t max_limiter_window_size = 6;
   // slot update
   double slot_update_in_or_out_occupied_ratio = 0.001;
   double slot_update_out_heading_max = 66.8;

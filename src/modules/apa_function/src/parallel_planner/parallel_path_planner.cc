@@ -35,11 +35,11 @@ static const double kMaxParkOutRootHeading = 25.0;
 
 static const double kColBufferTrippleStep = 0.2;
 static const double kColBufferInSlot = 0.3;
-static const double kSmallColBufferInSlot = 0.25;
+static const double kSmallColBufferInSlot = 0.1;
 static const double kColBufferOutSlot = 0.5;
 
 static const double kLatColBufferOutSlot = 0.2;
-static const double kLatColBufferInSlot = 0.00;
+static const double kLatColBufferInSlot = 0.0;
 
 static const size_t kMaxParallelParkInSegmentNums = 15;
 static const size_t kReservedOutputPathPointSize = 750;
@@ -1831,7 +1831,7 @@ const bool ParallelPathPlanner::CalSinglePathInMulti(
   }
 
   if (col_res == PATH_COL_INVALID) {
-    DEBUG_PRINT("start loose buffer to 0.2 in slot!");
+    DEBUG_PRINT("start loose buffer to 0.1 in slot!");
     for (size_t i = 0; i < tmp_path_seg_vec.size(); i++) {
       auto& tmp_path_seg = tmp_path_seg_vec[i];
       col_res =
