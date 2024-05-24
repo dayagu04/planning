@@ -320,7 +320,7 @@ bool SlotManagement::GenTLane(
       right_pq_for_x(Compare(0));
 
   // sift obstacles that meet requirement
-  for (const auto& obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
+  for (const auto &obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
     if (std::fabs(obstacle_point_slot.x()) > x_max ||
         std::fabs(obstacle_point_slot.y()) > y_max) {
       continue;

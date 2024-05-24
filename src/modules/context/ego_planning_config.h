@@ -344,6 +344,25 @@ struct GapSelectorConfig : public EgoPlanningConfig {
   double lb_heading_error_max = 0.5;
 };
 
+struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    near_car_thr = read_json_key<double>(json, "near_car_thr", near_car_thr);
+    lat_safety_buffer =
+        read_json_key<double>(json, "lat_safety_buffer", lat_safety_buffer);
+    oversize_veh_addition_buffer = read_json_key<double>(
+        json, "oversize_veh_addition_buffer", oversize_veh_addition_buffer);
+    traffic_cone_thr =
+        read_json_key<double>(json, "traffic_cone_thr", traffic_cone_thr);
+    static_obs_buffer =
+        read_json_key<double>(json, "static_obs_buffer", static_obs_buffer);
+  }
+  double near_car_thr = 0.3;
+  double lat_safety_buffer = 0.7;
+  double oversize_veh_addition_buffer = 0.15;
+  double traffic_cone_thr = 0.15;
+  double static_obs_buffer = 3.4;
+};
+
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     is_valid_lateral_offset = read_json_key<bool>(
