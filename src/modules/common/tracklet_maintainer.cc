@@ -1879,12 +1879,12 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   LOG_DEBUG("----is_potential_avoiding_car-----\n");
   auto config_builder =
       session_->environmental_model().highway_config_builder();
-  PotentialAvoidDeciderConfig config_ =
+  PotentialAvoidDeciderConfig config =
       config_builder->cast<PotentialAvoidDeciderConfig>();
-  double near_car_thr = config_.near_car_thr;
-  double lat_safety_buffer = config_.lat_safety_buffer;
-  double oversize_veh_addition_buffer = config_.oversize_veh_addition_buffer;
-  double traffic_cone_thr = config_.traffic_cone_thr;
+  double near_car_thr = config.near_car_thr;
+  double lat_safety_buffer = config.lat_safety_buffer;
+  double oversize_veh_addition_buffer = config.oversize_veh_addition_buffer;
+  double traffic_cone_thr = config.traffic_cone_thr;
 
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   item.is_ncar = false;
@@ -2333,7 +2333,7 @@ void TrackletMaintainer::obstacle_reset(TrackedObject &item,
   // OBJECT_TYPE_WATER_SAFETY_BARRIER = 21;  // 水马
   // OBJECT_TYPE_CTASH_BARREL = 22;          // 防撞桶
 
-bool TrackletMaintainer::is_oversize_vehicle(int type) {
+bool TrackletMaintainer::is_oversize_vehicle(const int type) {
   if (type == 6 ||
       type == 7 ||
       type == 8) {
@@ -2343,7 +2343,7 @@ bool TrackletMaintainer::is_oversize_vehicle(int type) {
   }
 }
 
-bool TrackletMaintainer::is_VRU(int type) {
+bool TrackletMaintainer::is_VRU(const int type) {
   if (type == 9 ||
       type == 10 ||
       type == 11 ||
@@ -2358,7 +2358,7 @@ bool TrackletMaintainer::is_VRU(int type) {
   }
 }
 
-bool TrackletMaintainer::is_traffic_facilities(int type) {
+bool TrackletMaintainer::is_traffic_facilities(const int type) {
   if (type == 14 ||
       type == 15 ||
       type == 17 ||
@@ -2371,7 +2371,7 @@ bool TrackletMaintainer::is_traffic_facilities(int type) {
 }
 
 // TODO(zkxie): 包含UNKNOWN障碍物,确认感知什么时候会给UNKNOWN障碍物
-bool TrackletMaintainer::is_car(int type) {
+bool TrackletMaintainer::is_car(const int type) {
   if (type <= 8) {
     return true;
   } else {

@@ -124,13 +124,13 @@ class TrackletMaintainer {
 
   void obstacle_reset(TrackedObject &item, bool frenet_transform_valid);
 
-  bool is_oversize_vehicle(int type);
+  bool is_oversize_vehicle(const int type);
 
-  bool is_VRU(int type);
+  bool is_VRU(const int type);
 
-  bool is_traffic_facilities(int type);
+  bool is_traffic_facilities(const int type);
 
-  bool is_car(int type);
+  bool is_car(const int type);
 
   planning::framework::Session *session_ = nullptr;
   std::shared_ptr<planning_math::KDPath> frenet_coord_;
