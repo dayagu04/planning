@@ -1945,8 +1945,9 @@ bool TrackletMaintainer::is_potential_avoiding_car(
              std::max((lane_width / 2 - (ego_car_width + lat_safety_buffer)),
                       -1.8)) ||
             (dist_rblane > 0 &&
-             ((lane_width / 2 + item.d_min_cpath + dist_rblane >= 2.2 &&
-               borrow_bicycle_lane && item.v_lead < 0.2) ||
+            //  ((lane_width / 2 + item.d_min_cpath + dist_rblane >= 2.2 &&
+            //    borrow_bicycle_lane && item.v_lead < 0.2) ||
+             ((lane_width / 2 + item.d_min_cpath >= 3 && item.v_lead < 0.2) ||
               (lane_width / 2 - item.d_max_cpath >= 3 && item.v_lead < 0.2)));
 
         if (dist_intersect == 1000 && lane_width > 5. && lead_one != nullptr &&
