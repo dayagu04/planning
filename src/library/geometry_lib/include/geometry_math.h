@@ -298,6 +298,24 @@ struct LocalToGlobalTf {
   }
 };
 
+struct Compare {
+  size_t type = 0;
+  Compare(const size_t _type) : type(_type) {}
+
+  const bool operator()(const Eigen::Vector2d &a,
+                        const Eigen::Vector2d &b) const {
+    if (type == 0) {
+      return a.x() < b.x();  // big -> small
+    } else if (type == 1) {
+      return a.x() > b.x();  // small -> big
+    } else if (type == 2) {
+      return a.y() < b.y();  // big -> small
+    } else {
+      return a.y() > b.y();  // small -> big
+    }
+  }
+};
+
 const Eigen::Vector2d GenHeadingVec(const double heading);
 
 const double NormSquareOfTwoVector2d(const Eigen::Vector2d &p1,

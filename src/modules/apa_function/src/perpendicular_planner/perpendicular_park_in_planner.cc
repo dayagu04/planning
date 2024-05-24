@@ -27,6 +27,7 @@
 #include "ifly_time.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
+#include "math_lib.h"
 #include "perpendicular_path_planner.h"
 #include "slot_management_info.pb.h"
 
@@ -567,40 +568,8 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
 }
 
 void PerpendicularInPlanner::GenTlane() {
-  const auto& ego_slot_info = frame_.ego_slot_info;
-
-  const auto lambda_func_1 = [](const Eigen::Vector2d& a,
-                                const Eigen::Vector2d& b) {
-    return a.y() > b.y();  // the top element is smallest
-  };
-  const auto lambda_func_2 = [](const Eigen::Vector2d& a,
-                                const Eigen::Vector2d& b) {
-    return a.y() < b.y();  // the top element is largest
-  };
-
-  const auto lambda_func_3 = [](const Eigen::Vector2d& a,
-                                const Eigen::Vector2d& b) {
-    return a.x() < b.x();  // the top element is largest
-  };
-
-  // left y is positive, right y is negative
-  // left y should be smallest, right y should be largest
-  // all x should be largest
-  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
-                      decltype(lambda_func_1)>
-      left_que_for_y(lambda_func_1);
-
-  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
-                      decltype(lambda_func_3)>
-      left_que_for_x(lambda_func_3);
-
-  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
-                      decltype(lambda_func_2)>
-      right_que_for_y(lambda_func_2);
-
-  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
-                      decltype(lambda_func_3)>
-      right_que_for_x(lambda_func_3);
+  using namespace pnc::geometry_lib;
+  EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
 
   const Eigen::Vector2d pt_01_norm_vec =
       (ego_slot_info.pt_1 - ego_slot_info.pt_0).normalized();
@@ -621,6 +590,45 @@ void PerpendicularInPlanner::GenTlane() {
        apa_param.GetParam().obs_consider_lat_threshold * pt_01_norm_vec)
           .y());
 
+  // construct channel width and length
+  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>, Compare>
+      channel_width_pq_for_x(Compare(1));
+  for (const auto& obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
+    if (obstacle_point_slot.x() < x_max ||
+        std::fabs(obstacle_point_slot.y()) > y_max) {
+      continue;
+    }
+    channel_width_pq_for_x.emplace(obstacle_point_slot);
+  }
+
+  if (channel_width_pq_for_x.empty()) {
+    channel_width_pq_for_x.emplace(
+        Eigen::Vector2d(apa_param.GetParam().channel_width, 0.0));
+  }
+
+  const double channel_width =
+      channel_width_pq_for_x.top().x() -
+      ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5).x();
+
+  ego_slot_info.channel_width = pnc::mathlib::DoubleConstrain(
+      channel_width, apa_param.GetParam().min_channel_width,
+      apa_param.GetParam().channel_width);
+
+  DEBUG_PRINT("channel_width = " << ego_slot_info.channel_width);
+
+  // construct tlane pq
+  // left y is positive, right y is negative
+  // left y should be smallest, right y should be largest
+  // all x should be largest
+  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>, Compare>
+      left_pq_for_y(Compare(3));
+  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>, Compare>
+      left_pq_for_x(Compare(0));
+  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>, Compare>
+      right_pq_for_y(Compare(2));
+  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>, Compare>
+      right_pq_for_x(Compare(0));
+
   // sift obstacles that meet requirement
   for (const auto& obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
     if (std::fabs(obstacle_point_slot.x()) > x_max ||
@@ -628,16 +636,16 @@ void PerpendicularInPlanner::GenTlane() {
       continue;
     }
     if (obstacle_point_slot.y() > 1e-6) {
-      left_que_for_y.emplace(obstacle_point_slot);
-      left_que_for_x.emplace(obstacle_point_slot);
+      left_pq_for_y.emplace(obstacle_point_slot);
+      left_pq_for_x.emplace(obstacle_point_slot);
     } else {
-      right_que_for_y.emplace(obstacle_point_slot);
-      right_que_for_x.emplace(obstacle_point_slot);
+      right_pq_for_y.emplace(obstacle_point_slot);
+      right_pq_for_x.emplace(obstacle_point_slot);
     }
   }
 
   if (apa_param.GetParam().conservative_mono_enable) {
-    if (!left_que_for_x.empty() || !right_que_for_x.empty()) {
+    if (!left_pq_for_x.empty() || !right_pq_for_x.empty()) {
       apa_param.SetPram().mono_plan_enable = false;
     }
   }
@@ -658,15 +666,15 @@ void PerpendicularInPlanner::GenTlane() {
        apa_param.GetParam().virtual_obs_y_pos * pt_10_norm_vec)
           .y();
 
-  if (left_que_for_x.empty()) {
+  if (left_pq_for_x.empty()) {
     DEBUG_PRINT("left space is empty");
-    left_que_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
-    left_que_for_y.emplace(Eigen::Vector2d(0.0, virtual_left_y));
+    left_pq_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
+    left_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_left_y));
   }
-  if (right_que_for_x.empty()) {
+  if (right_pq_for_x.empty()) {
     DEBUG_PRINT("right space is empty");
-    right_que_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
-    right_que_for_y.emplace(Eigen::Vector2d(0.0, virtual_right_y));
+    right_pq_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
+    right_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_right_y));
   }
 
   const double car_width_include_mirror =
@@ -686,9 +694,9 @@ void PerpendicularInPlanner::GenTlane() {
 
   const double safe_threshold = apa_param.GetParam().safe_threshold;
 
-  double left_y = left_que_for_y.top().y();
+  double left_y = left_pq_for_y.top().y();
 
-  double right_y = right_que_for_y.top().y();
+  double right_y = right_pq_for_y.top().y();
 
   if (apa_param.GetParam().tmp_no_consider_obs_dy) {
     left_y = real_slot_width * 0.5 + apa_param.GetParam().tmp_virtual_obs_dy;
@@ -743,7 +751,7 @@ void PerpendicularInPlanner::GenTlane() {
     slot_t_lane_.pt_outside = corner_left_slot;
     slot_t_lane_.pt_inside = corner_right_slot;
     slot_t_lane_.pt_inside.x() =
-        right_que_for_x.top().x() + apa_param.GetParam().tlane_safe_dx;
+        right_pq_for_x.top().x() + apa_param.GetParam().tlane_safe_dx;
   } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
     // outside is right, inside is left
     slot_t_lane_.corner_outside_slot = corner_right_slot;
@@ -751,7 +759,7 @@ void PerpendicularInPlanner::GenTlane() {
     slot_t_lane_.pt_outside = corner_right_slot;
     slot_t_lane_.pt_inside = corner_left_slot;
     slot_t_lane_.pt_inside.x() =
-        left_que_for_x.top().x() + apa_param.GetParam().tlane_safe_dx;
+        left_pq_for_x.top().x() + apa_param.GetParam().tlane_safe_dx;
   }
 
   slot_t_lane_.pt_terminal_pos << ego_slot_info.target_ego_pos_slot.x(),
@@ -777,17 +785,17 @@ void PerpendicularInPlanner::GenTlane() {
   obstacle_t_lane_.slot_side = slot_side;
   if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
     obstacle_t_lane_.pt_inside.x() =
-        right_que_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
+        right_pq_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
     obstacle_t_lane_.pt_inside.y() = right_y;
     obstacle_t_lane_.pt_outside.x() =
-        left_que_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
+        left_pq_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
     obstacle_t_lane_.pt_outside.y() = left_y;
   } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
     obstacle_t_lane_.pt_inside.x() =
-        left_que_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
+        left_pq_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
     obstacle_t_lane_.pt_inside.y() = left_y;
     obstacle_t_lane_.pt_outside.x() =
-        right_que_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
+        right_pq_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
     obstacle_t_lane_.pt_outside.y() = right_y;
   }
 
@@ -831,7 +839,7 @@ void PerpendicularInPlanner::GenTlane() {
 void PerpendicularInPlanner::GenObstacles() {
   apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
   // set obstacles
-  double channel_width = apa_param.GetParam().channel_width;
+  double channel_width = frame_.ego_slot_info.channel_width;
   double channel_length = apa_param.GetParam().channel_length;
 
   if (apa_param.GetParam().force_both_side_occupied) {

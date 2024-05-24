@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "apa_param_setting.h"
 #include "apa_world.h"
 #include "collision_detection.h"
 #include "geometry_math.h"
@@ -88,6 +89,8 @@ class ApaPlannerBase {
     Eigen::Vector2d pt_0;
     Eigen::Vector2d pt_1;
 
+    double channel_width;
+
     void Reset() {
       target_managed_slot.Clear();
       selected_slot_id = 0;
@@ -125,6 +128,8 @@ class ApaPlannerBase {
       sin_angle = 1.0;
       pt_0.setZero();
       pt_1.setZero();
+
+      channel_width = apa_param.GetParam().channel_width;
     }
   };
 

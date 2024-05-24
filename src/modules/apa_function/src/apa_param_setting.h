@@ -135,6 +135,7 @@ struct ApaParameters {
 
   // construce obstacles params
   double channel_width = 12.28;
+  double min_channel_width = 5.2;
   double channel_length = 12.28;
   double max_obs2car_dist_in_slot = 1.2;
   double max_obs2car_dist_out_slot = 1.2;

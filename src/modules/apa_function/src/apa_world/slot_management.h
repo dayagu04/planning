@@ -320,6 +320,8 @@ class SlotManagement {
     Eigen::Vector2d pt_0;
     Eigen::Vector2d pt_1;
 
+    double channel_width;
+
     void Reset() {
       select_slot_id = 0;
       slot_type = Common::PARKING_SLOT_TYPE_INVALID;
@@ -352,6 +354,8 @@ class SlotManagement {
       sin_angle = 1.0;
       pt_0.setZero();
       pt_1.setZero();
+
+      channel_width = apa_param.GetParam().channel_width;
     }
   };
 
@@ -474,7 +478,7 @@ class SlotManagement {
       const ParkingFusion::ParkingFusionSlot& selecte_fusion_slot);
   bool UpdateEgoSlotInfo(EgoSlotInfo& ego_slot_info,
                          const common::SlotInfo* slot_info);
-  bool GenTLane(const EgoSlotInfo& ego_slot_info,
+  bool GenTLane(EgoSlotInfo& ego_slot_info,
                 apa_planner::PerpendicularPathPlanner::Tlane& slot_tlane,
                 apa_planner::PerpendicularPathPlanner::Tlane& obs_tlane);
   bool GenObstacles(
