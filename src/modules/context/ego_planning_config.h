@@ -353,11 +353,14 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
         json, "oversize_veh_addition_buffer", oversize_veh_addition_buffer);
     traffic_cone_thr =
         read_json_key<double>(json, "traffic_cone_thr", traffic_cone_thr);
+    static_obs_buffer =
+        read_json_key<double>(json, "static_obs_buffer", static_obs_buffer);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
   double oversize_veh_addition_buffer = 0.15;
   double traffic_cone_thr = 0.15;
+  double static_obs_buffer = 3.4;
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {

@@ -1885,6 +1885,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double lat_safety_buffer = config.lat_safety_buffer;
   double oversize_veh_addition_buffer = config.oversize_veh_addition_buffer;
   double traffic_cone_thr = config.traffic_cone_thr;
+  double static_obs_buffer = config.static_obs_buffer;
 
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   item.is_ncar = false;
@@ -1947,8 +1948,10 @@ bool TrackletMaintainer::is_potential_avoiding_car(
             (dist_rblane > 0 &&
              //  ((lane_width / 2 + item.d_min_cpath + dist_rblane >= 2.2 &&
              //    borrow_bicycle_lane && item.v_lead < 0.2) ||
-             ((lane_width / 2 + item.d_min_cpath >= 3 && item.v_lead < 0.2) ||
-              (lane_width / 2 - item.d_max_cpath >= 3 && item.v_lead < 0.2)));
+             ((lane_width / 2 + item.d_min_cpath >= static_obs_buffer &&
+               item.v_lead < 0.2) ||
+              (lane_width / 2 - item.d_max_cpath >= static_obs_buffer &&
+               item.v_lead < 0.2)));
 
         if (dist_intersect == 1000 && lane_width > 5. && lead_one != nullptr &&
             !lead_one->is_accident_car) {

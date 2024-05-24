@@ -115,6 +115,7 @@
   "lat_safety_buffer": 1.2,
   "oversize_veh_addition_buffer": 0.1,
   "traffic_cone_thr": 0.2,
+  "static_obs_buffer": 3.3,
   "dynamic_obj_safe_buffer": 0.5,
   "curv_threshold": 0.1,
   "max_ref_curvature": 0.5,
