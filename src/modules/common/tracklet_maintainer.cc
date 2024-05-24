@@ -703,9 +703,11 @@ void TrackletMaintainer::calc(
     check_prebrk_object(*tr, v_ego, lane_width);
   }
 
+  std::vector<double> avd_car_id;
   for (auto tr : tracked_objects) {
     // ignore obj without camera source
-    if (!(tr->fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+    if ((!(tr->fusion_source & OBSTACLE_SOURCE_CAMERA)) ||
+        tr->d_rel <= 0) {  // hack(clren)
       tr->is_avd_car = false;
       continue;
     }
@@ -713,7 +715,11 @@ void TrackletMaintainer::calc(
         *tr, lead_cars.lead_one, v_ego, lane_width, scenario,
         borrow_bicycle_lane, dist_rblane, tleft_lane, rightest_lane,
         dist_intersect, intersect_length, isRedLightStop);
+    if (tr->is_avd_car) {
+      avd_car_id.emplace_back(tr->track_id);
+    }
   }
+  JSON_DEBUG_VECTOR("avoid_car_id", avd_car_id, 0);
 
   is_leadone_potential_avoiding_car(lead_cars.lead_one, scenario, lane_width,
                                     borrow_bicycle_lane, rightest_lane,
@@ -1871,33 +1877,55 @@ bool TrackletMaintainer::is_potential_avoiding_car(
     double dist_rblane, bool tleft_lane, bool rightest_lane,
     double dist_intersect, double intersect_length, bool isRedLightStop) {
   LOG_DEBUG("----is_potential_avoiding_car-----\n");
+  auto config_builder =
+      session_->environmental_model().highway_config_builder();
+  PotentialAvoidDeciderConfig config_ =
+      config_builder->cast<PotentialAvoidDeciderConfig>();
+  double near_car_thr = config_.near_car_thr;
+  double lat_safety_buffer = config_.lat_safety_buffer;
+  double oversize_veh_addition_buffer = config_.oversize_veh_addition_buffer;
+  double traffic_cone_thr = config_.traffic_cone_thr;
+
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   item.is_ncar = false;
   double ego_car_width = 2.2;
-  double lat_safety_buffer = 0.2;
   // double l_ego = ego_state_->ego_frenet.y;
   // TODO: ego_state relative
   double l_ego = 0.;
   double dist_limit;
 
   std::array<double, 3> xp{20, 40, 60};
-  std::array<double, 3> fp{0.3, 0.12, 0.09};
+  std::array<double, 3> fp{near_car_thr, 0.12, 0.09};
   double near_car_d_lane_thr = interp(item.d_rel, xp, fp);
+  // addition buffer for oversize vehicle
+  if (is_oversize_vehicle(item.type)) {
+    std::array<double, 2> xp_oversize_veh{2.7, 5.6};
+    std::array<double, 2> fp_oversize_veh{1, 2.5};
+    double factor_oversize_veh =
+        interp(ego_state_->ego_v(), xp_oversize_veh, fp_oversize_veh);
+    near_car_d_lane_thr = near_car_d_lane_thr * factor_oversize_veh;
+    lat_safety_buffer += oversize_veh_addition_buffer;
+  }
+
+  // addition buffer for VRU
+  if (is_VRU(item.type)) {
+    lat_safety_buffer += 0.2;
+  }
 
   bool is_not_full_in_road = (std::fabs(item.y_rel) > 0.0);
   bool is_in_range = (item.d_rel < 20.0 && item.v_rel < 1.0);
   bool is_about_to_enter_range =
-      (item.d_rel < std::min(std::fabs(15.0 * item.v_rel), 60.0) &&
+      (item.d_rel < std::min(std::fabs(10.0 * item.v_rel), 50.0) &&
        item.v_rel < -2.5);
   bool cross_solid_line = false;
 
   if (scenario != LocationEnum::LOCATION_INTER) {
     if (is_not_full_in_road && (is_in_range || is_about_to_enter_range)) {
       if (item.d_min_cpath != DBL_MAX && item.d_max_cpath != DBL_MAX) {
-        if (item.type != 20001) {
+        if (!is_traffic_facilities(item.type)) {
           dist_limit = lane_width * 0.5 + near_car_d_lane_thr;
         } else {
-          dist_limit = lane_width * 0.5 - 0.2;
+          dist_limit = lane_width * 0.5 - traffic_cone_thr;
         }
         bool is_same_side = ((item.d_min_cpath > 0 && item.d_max_cpath > 0) ||
                              (item.d_min_cpath <= 0 && item.d_max_cpath <= 0));
@@ -1912,14 +1940,14 @@ bool TrackletMaintainer::is_potential_avoiding_car(
         bool can_avoid =
             (item.d_min_cpath >
              std::min(((ego_car_width + lat_safety_buffer) - lane_width / 2),
-                      0.9)) ||
+                      1.8)) ||
             (item.d_max_cpath <
              std::max((lane_width / 2 - (ego_car_width + lat_safety_buffer)),
-                      -0.9)) ||
+                      -1.8)) ||
             (dist_rblane > 0 &&
              ((lane_width / 2 + item.d_min_cpath + dist_rblane >= 2.2 &&
                borrow_bicycle_lane && item.v_lead < 0.2) ||
-              lane_width / 2 - item.d_max_cpath >= 2.4));
+              (lane_width / 2 - item.d_max_cpath >= 3 && item.v_lead < 0.2)));
 
         if (dist_intersect == 1000 && lane_width > 5. && lead_one != nullptr &&
             !lead_one->is_accident_car) {
@@ -1989,7 +2017,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   }
 
   double ncar_count;
-  if (item.type < 10000) {
+  // for car
+  if (is_car(item.type)) {
     if (item.d_rel >= 20) {
       std::array<double, 2> xp2{-7.5, -2.5};
       std::array<double, 2> fp2{5, 20};
@@ -2002,10 +2031,12 @@ bool TrackletMaintainer::is_potential_avoiding_car(
 
       ncar_count = interp(item.v_rel, xp2, fp2) + interp(item.v_ego, xp3, fp3);
     }
-  } else if (item.type != 20001) {
+    // for VRU
+  } else if (is_VRU(item.type)) {
     std::array<double, 2> xp2{20, 40};
     std::array<double, 2> fp2{5, 10};
     ncar_count = interp(item.d_rel, xp2, fp2);
+    // TRAFFIC_BARRIER, TEMPORY_SIGN, FENCE, WATER_SAFETY_BARRIER, CTASH_BARREL
   } else {
     ncar_count = 1.0;
   }
@@ -2023,19 +2054,30 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   int count = (int)((gap + 0.01) / planning_cycle_time);
 
   if (item.is_ncar) {
-    if (item.trajectory.intersection == 0 ||
-        (item.type < 10000 && std::fabs(item.v_lead) < 0.5 &&
-         item.v_lat > -0.2 && item.v_lat < 0.3) ||
-        (item.type > 10000 && (std::fabs(item.v_lat) < 0.3)) ||
+    // hack：missing prediction, considering v_lat
+    // if (item.trajectory.intersection == 0 ||
+    if ((item.trajectory.intersection == 0 && item.v_lat > -0.3 &&
+         item.v_lat < 0.3) ||
+        // 静止的车
+        (is_car(item.type) &&
+         std::fabs(item.v_lead) < 0.5 && item.v_lat > -0.3 &&
+         item.v_lat < 0.3) ||
+        // 横向无运动的人或锥桶
+        (!is_car(item.type) &&
+         (std::fabs(item.v_lat) < 0.3)) ||
+        // 可以借用自行车道 || 自车在最右车道
         borrow_bicycle_lane || rightest_lane) {
-      if ((item.v_lat > -0.5 && item.v_lat < 0.3 && item.type < 10000) ||
-          (std::fabs(item.v_lat) < 0.3 && item.type > 10000)) {
+      // hack: always true: 横向无运动的车 || 横向无运动的人或锥桶
+      if ((item.v_lat > -0.3 && item.v_lat < 0.3 &&
+           is_car(item.type)) ||
+          (std::fabs(item.v_lat) < 0.3 &&
+           !is_car(item.type))) {
         item.ncar_count =
             std::min(item.ncar_count + gap, 100 * planning_cycle_time);
       }
     } else {
       item.ncar_count = std::max(
-          item.ncar_count - 5 * (int)(std::fabs(item.v_lat) / 0.3 + 0.5) *
+          item.ncar_count - 5 * (int)(std::fabs(item.v_lat) / 0.4 + 0.5) *
                                 count * planning_cycle_time,
           0.0);
     }
@@ -2053,8 +2095,21 @@ bool TrackletMaintainer::is_potential_avoiding_car(
       return true;
     }
   } else {
-    item.ncar_count =
-        std::max(item.ncar_count - 2 * count * planning_cycle_time, 0.0);
+    double lat_dis_thr = lane_width - ego_car_width + 0.8;
+    bool in_lat_near_area =
+        ((item.d_min_cpath > 0 &&
+          item.d_min_cpath - l_ego_ - ego_car_width / 2 < lat_dis_thr) ||
+         (item.d_max_cpath < 0 &&
+          l_ego_ - item.d_max_cpath - ego_car_width / 2 < lat_dis_thr));
+    bool in_lon_near_area =
+        (item.v_rel < 0 &&
+         ((item.d_rel / (-item.v_rel) < 3) ||
+          ((item.d_rel / (-item.v_rel) < 5 && item.d_rel < 10))));
+    if (!in_lon_near_area || !in_lat_near_area) {
+      item.ncar_count =
+          std::max(item.ncar_count - 2 * count * planning_cycle_time, 0.0);
+    }
+
     if (item.v_rel > 1.5) {
       item.ncar_count =
           std::max(item.ncar_count - 5 * count * planning_cycle_time, 0.0);
@@ -2063,6 +2118,14 @@ bool TrackletMaintainer::is_potential_avoiding_car(
     if (item.trajectory.intersection > 0) {
       item.ncar_count =
           std::max(item.ncar_count - 10 * count * planning_cycle_time, 0.0);
+    }
+
+    // for cut in and cut out
+    if (!in_lon_near_area && (item.v_lat > 0.3 || item.v_lat < -0.3)) {
+      item.ncar_count = std::max(
+          item.ncar_count - 5 * (int)(std::fabs(item.v_lat) / 0.4 + 0.5) *
+                                count * planning_cycle_time,
+          0.0);
     }
 
     if (item.d_max_cpath > 0 && item.d_min_cpath < 0) {
@@ -2246,4 +2309,73 @@ void TrackletMaintainer::obstacle_reset(TrackedObject &item,
   }
 }
 
+  // OBJECT_TYPE_UNKNOWN = 0;                // 未知障碍物
+  // OBJECT_TYPE_UNKNOWN_MOVABLE = 1;        // 未知可移动障碍物
+  // OBJECT_TYPE_UNKNOWN_IMMOVABLE = 2;      // 未知不可移动障碍物
+  // OBJECT_TYPE_COUPE = 3;                  // 轿车
+  // OBJECT_TYPE_MINIBUS = 4;                // 面包车
+  // OBJECT_TYPE_VAN = 5;                    // 厢式轿车
+  // OBJECT_TYPE_BUS = 6;                    // 大型客车
+  // OBJECT_TYPE_TRUCK = 7;                  // 卡车
+  // OBJECT_TYPE_TRAILER = 8;                // 拖车
+  // OBJECT_TYPE_BICYCLE = 9;                // 自行车
+  // OBJECT_TYPE_MOTORCYCLE = 10;            // 摩托车
+  // OBJECT_TYPE_TRICYCLE = 11;              // 三轮车
+  // OBJECT_TYPE_PEDESTRIAN = 12;            // 行人
+  // OBJECT_TYPE_ANIMAL = 13;                // 动物
+  // OBJECT_TYPE_TRAFFIC_CONE = 14;          // 交通锥
+  // OBJECT_TYPE_TRAFFIC_BARREL = 15;        // 隔离墩
+  // OBJECT_TYPE_TRAFFIC_TEM_SIGN = 16;      // 临时指示牌
+  // OBJECT_TYPE_FENCE = 17;                 // 栅栏
+  // OBJECT_TYPE_CYCLE_RIDING = 18;          // 人骑着自行车
+  // OBJECT_TYPE_MOTORCYCLE_RIDING = 19;     // 人骑着摩托车
+  // OBJECT_TYPE_TRICYCLE_RIDING = 20;       // 人骑着三轮车
+  // OBJECT_TYPE_WATER_SAFETY_BARRIER = 21;  // 水马
+  // OBJECT_TYPE_CTASH_BARREL = 22;          // 防撞桶
+
+bool TrackletMaintainer::is_oversize_vehicle(int type) {
+  if (type == 6 ||
+      type == 7 ||
+      type == 8) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool TrackletMaintainer::is_VRU(int type) {
+  if (type == 9 ||
+      type == 10 ||
+      type == 11 ||
+      type == 12 ||
+      type == 13 ||
+      type == 18 ||
+      type == 19 ||
+      type == 20) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool TrackletMaintainer::is_traffic_facilities(int type) {
+  if (type == 14 ||
+      type == 15 ||
+      type == 17 ||
+      type == 21 ||
+      type == 22) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+// TODO(zkxie): 包含UNKNOWN障碍物,确认感知什么时候会给UNKNOWN障碍物
+bool TrackletMaintainer::is_car(int type) {
+  if (type <= 8) {
+    return true;
+  } else {
+    return false;
+  }
+}
 }  // namespace planning

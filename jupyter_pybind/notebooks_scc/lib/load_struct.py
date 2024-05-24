@@ -1296,11 +1296,17 @@ def load_lat_common(plan_debug, planning_json):
   data_dict2['avoid_car_id'] = avoid_car_id_str
   data_dict2['left_alc_car_ids'] = left_alc_car_id_str
   data_dict2['right_alc_car_ids'] = right_alc_car_id_str
-  try:
-    data_dict2['final_y_rel_id'] = planning_json["final_y_rel_id"]
-    data_dict2['final_y_rel'] = planning_json["final_y_rel"]
-  except:
-    pass
+
+
+  avoid_debug_key = ["avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
+                        "select_avoid_car_ids_1", "select_avoid_car_ids_2","lat_offset", "smooth_lateral_offset", "lane_width", "smooth_lateral_offset", "normal_avoid_threshold", "avoid_way", "allow_max_opposite_offset", "allow_max_opposite_offset_id",\
+                        "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
+                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l"]
+  for key in avoid_debug_key:
+    try:
+      data_dict2[key] = planning_json[key]
+    except:
+      pass
 
   try:
     data_dict2['lateral_offset'] = planning_json["lateral_offset"]
