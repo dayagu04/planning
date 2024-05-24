@@ -1945,8 +1945,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
              std::max((lane_width / 2 - (ego_car_width + lat_safety_buffer)),
                       -1.8)) ||
             (dist_rblane > 0 &&
-            //  ((lane_width / 2 + item.d_min_cpath + dist_rblane >= 2.2 &&
-            //    borrow_bicycle_lane && item.v_lead < 0.2) ||
+             //  ((lane_width / 2 + item.d_min_cpath + dist_rblane >= 2.2 &&
+             //    borrow_bicycle_lane && item.v_lead < 0.2) ||
              ((lane_width / 2 + item.d_min_cpath >= 3 && item.v_lead < 0.2) ||
               (lane_width / 2 - item.d_max_cpath >= 3 && item.v_lead < 0.2)));
 
@@ -2060,19 +2060,15 @@ bool TrackletMaintainer::is_potential_avoiding_car(
     if ((item.trajectory.intersection == 0 && item.v_lat > -0.3 &&
          item.v_lat < 0.3) ||
         // 静止的车
-        (is_car(item.type) &&
-         std::fabs(item.v_lead) < 0.5 && item.v_lat > -0.3 &&
-         item.v_lat < 0.3) ||
+        (is_car(item.type) && std::fabs(item.v_lead) < 0.5 &&
+         item.v_lat > -0.3 && item.v_lat < 0.3) ||
         // 横向无运动的人或锥桶
-        (!is_car(item.type) &&
-         (std::fabs(item.v_lat) < 0.3)) ||
+        (!is_car(item.type) && (std::fabs(item.v_lat) < 0.3)) ||
         // 可以借用自行车道 || 自车在最右车道
         borrow_bicycle_lane || rightest_lane) {
       // hack: always true: 横向无运动的车 || 横向无运动的人或锥桶
-      if ((item.v_lat > -0.3 && item.v_lat < 0.3 &&
-           is_car(item.type)) ||
-          (std::fabs(item.v_lat) < 0.3 &&
-           !is_car(item.type))) {
+      if ((item.v_lat > -0.3 && item.v_lat < 0.3 && is_car(item.type)) ||
+          (std::fabs(item.v_lat) < 0.3 && !is_car(item.type))) {
         item.ncar_count =
             std::min(item.ncar_count + gap, 100 * planning_cycle_time);
       }
@@ -2310,34 +2306,32 @@ void TrackletMaintainer::obstacle_reset(TrackedObject &item,
   }
 }
 
-  // OBJECT_TYPE_UNKNOWN = 0;                // 未知障碍物
-  // OBJECT_TYPE_UNKNOWN_MOVABLE = 1;        // 未知可移动障碍物
-  // OBJECT_TYPE_UNKNOWN_IMMOVABLE = 2;      // 未知不可移动障碍物
-  // OBJECT_TYPE_COUPE = 3;                  // 轿车
-  // OBJECT_TYPE_MINIBUS = 4;                // 面包车
-  // OBJECT_TYPE_VAN = 5;                    // 厢式轿车
-  // OBJECT_TYPE_BUS = 6;                    // 大型客车
-  // OBJECT_TYPE_TRUCK = 7;                  // 卡车
-  // OBJECT_TYPE_TRAILER = 8;                // 拖车
-  // OBJECT_TYPE_BICYCLE = 9;                // 自行车
-  // OBJECT_TYPE_MOTORCYCLE = 10;            // 摩托车
-  // OBJECT_TYPE_TRICYCLE = 11;              // 三轮车
-  // OBJECT_TYPE_PEDESTRIAN = 12;            // 行人
-  // OBJECT_TYPE_ANIMAL = 13;                // 动物
-  // OBJECT_TYPE_TRAFFIC_CONE = 14;          // 交通锥
-  // OBJECT_TYPE_TRAFFIC_BARREL = 15;        // 隔离墩
-  // OBJECT_TYPE_TRAFFIC_TEM_SIGN = 16;      // 临时指示牌
-  // OBJECT_TYPE_FENCE = 17;                 // 栅栏
-  // OBJECT_TYPE_CYCLE_RIDING = 18;          // 人骑着自行车
-  // OBJECT_TYPE_MOTORCYCLE_RIDING = 19;     // 人骑着摩托车
-  // OBJECT_TYPE_TRICYCLE_RIDING = 20;       // 人骑着三轮车
-  // OBJECT_TYPE_WATER_SAFETY_BARRIER = 21;  // 水马
-  // OBJECT_TYPE_CTASH_BARREL = 22;          // 防撞桶
+// OBJECT_TYPE_UNKNOWN = 0;                // 未知障碍物
+// OBJECT_TYPE_UNKNOWN_MOVABLE = 1;        // 未知可移动障碍物
+// OBJECT_TYPE_UNKNOWN_IMMOVABLE = 2;      // 未知不可移动障碍物
+// OBJECT_TYPE_COUPE = 3;                  // 轿车
+// OBJECT_TYPE_MINIBUS = 4;                // 面包车
+// OBJECT_TYPE_VAN = 5;                    // 厢式轿车
+// OBJECT_TYPE_BUS = 6;                    // 大型客车
+// OBJECT_TYPE_TRUCK = 7;                  // 卡车
+// OBJECT_TYPE_TRAILER = 8;                // 拖车
+// OBJECT_TYPE_BICYCLE = 9;                // 自行车
+// OBJECT_TYPE_MOTORCYCLE = 10;            // 摩托车
+// OBJECT_TYPE_TRICYCLE = 11;              // 三轮车
+// OBJECT_TYPE_PEDESTRIAN = 12;            // 行人
+// OBJECT_TYPE_ANIMAL = 13;                // 动物
+// OBJECT_TYPE_TRAFFIC_CONE = 14;          // 交通锥
+// OBJECT_TYPE_TRAFFIC_BARREL = 15;        // 隔离墩
+// OBJECT_TYPE_TRAFFIC_TEM_SIGN = 16;      // 临时指示牌
+// OBJECT_TYPE_FENCE = 17;                 // 栅栏
+// OBJECT_TYPE_CYCLE_RIDING = 18;          // 人骑着自行车
+// OBJECT_TYPE_MOTORCYCLE_RIDING = 19;     // 人骑着摩托车
+// OBJECT_TYPE_TRICYCLE_RIDING = 20;       // 人骑着三轮车
+// OBJECT_TYPE_WATER_SAFETY_BARRIER = 21;  // 水马
+// OBJECT_TYPE_CTASH_BARREL = 22;          // 防撞桶
 
 bool TrackletMaintainer::is_oversize_vehicle(const int type) {
-  if (type == 6 ||
-      type == 7 ||
-      type == 8) {
+  if (type == 6 || type == 7 || type == 8) {
     return true;
   } else {
     return false;
@@ -2345,14 +2339,8 @@ bool TrackletMaintainer::is_oversize_vehicle(const int type) {
 }
 
 bool TrackletMaintainer::is_VRU(const int type) {
-  if (type == 9 ||
-      type == 10 ||
-      type == 11 ||
-      type == 12 ||
-      type == 13 ||
-      type == 18 ||
-      type == 19 ||
-      type == 20) {
+  if (type == 9 || type == 10 || type == 11 || type == 12 || type == 13 ||
+      type == 18 || type == 19 || type == 20) {
     return true;
   } else {
     return false;
@@ -2360,11 +2348,7 @@ bool TrackletMaintainer::is_VRU(const int type) {
 }
 
 bool TrackletMaintainer::is_traffic_facilities(const int type) {
-  if (type == 14 ||
-      type == 15 ||
-      type == 17 ||
-      type == 21 ||
-      type == 22) {
+  if (type == 14 || type == 15 || type == 17 || type == 21 || type == 22) {
     return true;
   } else {
     return false;

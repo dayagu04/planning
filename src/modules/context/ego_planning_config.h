@@ -346,14 +346,13 @@ struct GapSelectorConfig : public EgoPlanningConfig {
 
 struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
-    near_car_thr = read_json_key<double>(
-        json, "near_car_thr", near_car_thr);
-    lat_safety_buffer = read_json_key<double>(
-        json, "lat_safety_buffer", lat_safety_buffer);
+    near_car_thr = read_json_key<double>(json, "near_car_thr", near_car_thr);
+    lat_safety_buffer =
+        read_json_key<double>(json, "lat_safety_buffer", lat_safety_buffer);
     oversize_veh_addition_buffer = read_json_key<double>(
         json, "oversize_veh_addition_buffer", oversize_veh_addition_buffer);
-    traffic_cone_thr = read_json_key<double>(
-        json, "traffic_cone_thr", traffic_cone_thr);
+    traffic_cone_thr =
+        read_json_key<double>(json, "traffic_cone_thr", traffic_cone_thr);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
