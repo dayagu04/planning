@@ -1450,6 +1450,7 @@ void LaneChangeDecider::UpdateCoarsePlanningInfo() {
   Point2D cart_pt(0.0, 0.0);
   const auto &ref_point = coarse_planning_info.reference_path->get_points();
   auto point_size = ref_point.size();
+  LOG_DEBUG("point_size =  %d\n", point_size);
   cart_ref_info.x_vec.resize(point_size);
   cart_ref_info.y_vec.resize(point_size);
   cart_ref_info.s_vec.resize(point_size);
