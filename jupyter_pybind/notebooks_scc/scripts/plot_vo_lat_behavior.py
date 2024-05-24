@@ -62,6 +62,10 @@ lc_data_3 = ColumnDataSource({
   'name':[],
   'data':[]
 })
+overtake_lc_data = ColumnDataSource({
+  'name':[],
+  'data':[]
+})
 columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
@@ -70,6 +74,7 @@ data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=400
 data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=1000)
 data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=400, height=300)
 data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=400, height=350)
+data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=400, height=500)
 
 fig1.line('d_poly_y', 'd_poly_x', source = data_d_poly, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'd_poly')
 fig1.line('fixlane_y', 'fixlane_x', source = data_fix_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
@@ -200,6 +205,24 @@ def update_lc_data (noa_info, plan_debug_json):
   })
   push_notebook()
 
+def update_overtake_request_lc_data (plan_debug_json):
+  names  = []
+  datas = []
+  overtake_lc_vars_ = ["enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", 
+                       "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", 
+                       "trigger_right_overtake", "overtake_vehicle_id"]
+  for name in overtake_lc_vars_:
+    try:
+      datas.append((plan_debug_json[name]))
+      names.append(name)
+    except:
+      pass
+  overtake_lc_data.data.update({
+    'name': names,
+    'data': datas,
+  })
+  push_notebook()
+
 def slider_callback(bag_time):
   global plan_debug_msg_idx
   local_view_data_ = update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
@@ -227,8 +250,12 @@ def slider_callback(bag_time):
     lat_behavior_common = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lat_behavior_common
     plan_debug_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
     noa_info = bag_loader.planning_hmi_msg['data'][plan_hmi_msg_idx].ad_info
-    update_data(lat_behavior_common, vo_lat_motion_plan)
+    try:
+      update_data(lat_behavior_common, vo_lat_motion_plan)
+    except:
+      pass
     update_lc_data(noa_info, plan_debug_json)
+    update_overtake_request_lc_data(plan_debug_json)
 
     lat_behavior_plan = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].vo_lat_behavior_plan
 
@@ -253,6 +280,6 @@ def slider_callback(bag_time):
   push_notebook()
 
 slider_class = LatBehaviorSlider(slider_callback)
-bkp.show(row(fig1,data_behavior_table_1,column(data_lc_table_3,data_obstacle_table,data_behavior_table_2)), notebook_handle=True)
+bkp.show(row(fig1, column(data_behavior_table_1,data_overtake_lc_table), column(data_lc_table_3,data_obstacle_table,data_behavior_table_2)), notebook_handle=True)
 slider_class = ObjText(obj_id_handler)
 

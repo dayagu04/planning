@@ -2235,9 +2235,12 @@ void TrackletMaintainer::set_default_value(
   }
 }
 
-void TrackletMaintainer::obstacle_reset(TrackedObject &item, bool frenet_transform_valid) {
-  // Reset lead/temp_lead that have not been fused successfully or frenet tramsform false
-  if (!((item.fusion_source & OBSTACLE_SOURCE_CAMERA) && frenet_transform_valid)) {
+void TrackletMaintainer::obstacle_reset(TrackedObject &item,
+                                        bool frenet_transform_valid) {
+  // Reset lead/temp_lead that have not been fused successfully or frenet
+  // tramsform false
+  if (!((item.fusion_source & OBSTACLE_SOURCE_CAMERA) &&
+        frenet_transform_valid)) {
     item.is_lead = false;
     item.is_temp_lead = false;
   }

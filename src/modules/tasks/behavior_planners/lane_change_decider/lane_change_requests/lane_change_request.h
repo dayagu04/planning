@@ -36,8 +36,10 @@ class LaneChangeRequest {
   RequestType turn_signal() const { return turn_signal_; }
   double tstart() const { return tstart_; }
   double tfinish() const { return tfinish_; }
+  bool compute_lc_valid_info(RequestType direction);
 
  protected:
+  TrackInfo lc_invalid_track_;
   RequestType request_type_ = NO_CHANGE;
   int target_lane_virtual_id_ = -1000;  // invalid
   int origin_lane_virtual_id_ = -1000;

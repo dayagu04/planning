@@ -309,7 +309,7 @@ const bool UssObstacleAvoidance::Preprocess() {
   const auto &uss_dis_info = uss_dis_info_buf[4];
   if (uss_dis_info.dis_from_car_to_obj_size() != 12) {
     DEBUG_PRINT("uss dis nums = " << uss_dis_info.dis_from_car_to_obj_size()
-              << " != 12 ");
+                                  << " != 12 ");
     return false;
   }
   // raw dist info stored in dis_from_car_to_obj in clockwise direction, the
