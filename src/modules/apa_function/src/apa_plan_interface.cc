@@ -670,6 +670,13 @@ void ApaPlanInterface::SyncParameters() {
   // slot managent params
   JSON_READ_VALUE(apa_param.SetPram().release_slot_by_prepare, bool,
                   "release_slot_by_prepare");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_slot_window_size, int,
+                  "max_slot_window_size");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_limiter_window_size, int,
+                  "max_limiter_window_size");
+
   // slot update
   JSON_READ_VALUE(apa_param.SetPram().slot_update_in_or_out_occupied_ratio,
                   double, "slot_update_in_or_out_occupied_ratio");

@@ -29,8 +29,12 @@
 #include "uss_wave_info.pb.h"
 
 static const size_t slot_corner_pt_nums = 4;
-static const size_t max_slot_window_size = 15;
-static const size_t max_limiter_window_size = 15;
+
+static const size_t max_slot_window_size =
+    apa_param.GetParam().max_slot_window_size;
+
+static const size_t max_limiter_window_size =
+    apa_param.GetParam().max_limiter_window_size;
 namespace planning {
 class SlotInfoWindow {
  public:

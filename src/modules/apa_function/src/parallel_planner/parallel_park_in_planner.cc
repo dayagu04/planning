@@ -40,6 +40,9 @@ static double kRearObsLineYMagIdentification = 0.6;
 static double kCurbInitialOffset = 0.3;
 static double kCurbYMagIdentification = 0.0;
 
+static double kMaxDistDeleteObsToEgoInSlot = 0.25;
+static double kMaxDistDeleteObsToEgoOutSlot = 0.3;
+
 static double kEnterMultiPlanSlotRatio = 0.3;
 static double kEps = 1e-5;
 
@@ -909,10 +912,11 @@ void ParallelParInPlanner::GenObstacles() {
   pnc::geometry_lib::PathPoint ego_pose;
   ego_pose.Set(frame_.ego_slot_info.ego_pos_slot,
                frame_.ego_slot_info.ego_heading_slot);
-  double safe_dist = apa_param.GetParam().max_obs2car_dist_in_slot;
-  if (frame_.ego_slot_info.slot_occupied_ratio < 0.018) {
-    safe_dist = apa_param.GetParam().max_obs2car_dist_out_slot;
-  }
+
+  const double safe_dist =
+      frame_.ego_slot_info.slot_occupied_ratio < kEnterMultiPlanSlotRatio
+          ? kMaxDistDeleteObsToEgoInSlot
+          : kMaxDistDeleteObsToEgoOutSlot;
 
   for (const auto& obs_pos : tlane_obstacle_vec) {
     if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
@@ -969,6 +973,10 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
             ? pnc::geometry_lib::SEG_STEER_RIGHT
             : pnc::geometry_lib::SEG_STEER_LEFT;
   }
+
+  DEBUG_PRINT("frame_.ego_slot_info.slot_occupied_ratio = "
+              << frame_.ego_slot_info.slot_occupied_ratio);
+  DEBUG_PRINT("frame_.in_slot_plan_count = " << frame_.in_slot_plan_count);
 
   path_planner_input.ref_gear = frame_.current_gear;
   path_planner_input.ref_arc_steer = frame_.current_arc_steer;
