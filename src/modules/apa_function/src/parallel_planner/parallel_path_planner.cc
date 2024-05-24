@@ -39,7 +39,7 @@ static const double kSmallColBufferInSlot = 0.25;
 static const double kColBufferOutSlot = 0.5;
 
 static const double kLatColBufferOutSlot = 0.2;
-static const double kLatColBufferInSlot = 0.08;
+static const double kLatColBufferInSlot = 0.00;
 
 static const size_t kMaxParallelParkInSegmentNums = 15;
 static const size_t kReservedOutputPathPointSize = 750;
@@ -1924,7 +1924,7 @@ const bool ParallelPathPlanner::MultiAlignBody() {
     if (AlignBodyPlan(single_aligned_path, current_pose,
                       calc_params_.target_pose.heading, current_gear)) {
       auto col_res = TrimPathByCollisionDetection(single_aligned_path.back(),
-                                                  kColBufferInSlot);
+                                                  0.2);
 
       if (col_res == PATH_COL_SHORTEN) {
         success = true;
@@ -1941,7 +1941,7 @@ const bool ParallelPathPlanner::MultiAlignBody() {
       if (!success) {
         DEBUG_PRINT("normal buffer failed");
         col_res =
-            TrimPathByCollisionDetection(single_aligned_path.back(), 0.25);
+            TrimPathByCollisionDetection(single_aligned_path.back(), 0.1);
 
         if (col_res == PATH_COL_SHORTEN) {
           success = true;
