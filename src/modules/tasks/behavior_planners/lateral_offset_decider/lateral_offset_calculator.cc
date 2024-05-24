@@ -1,6 +1,7 @@
 #include "lateral_offset_calculator.h"
 #include <iomanip>
 #include <vector>
+#include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "lateral_behavior_planner.pb.h"
@@ -2716,6 +2717,8 @@ bool LateralOffsetCalculator::update_planner_output() {
     lateral_output.lc_request_source = "act_request";
     lateral_output.act_request_source =
         lane_change_decider_output.act_request_source;
+  } else if (request_source == OVERTAKE_REQUEST) {
+    lateral_output.lc_request_source = "overtake_request";
   } else {
     lateral_output.lc_request_source = "none";
   }

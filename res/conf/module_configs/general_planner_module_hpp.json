@@ -14,6 +14,7 @@
   "dump_mdebug": false,
   "active_lane_change_min_duration_threshold": 100,
   "use_lateral_distance_to_judge_cutout_in_active_lane_change": true,
+  "use_overtake_lane_change_request_instead_of_active_lane_change_request": true,
   "enable_bbox_mode": true,
   "max_speed_static_obstacle": 0.5,
   "is_select_split_nearing_ramp": false,

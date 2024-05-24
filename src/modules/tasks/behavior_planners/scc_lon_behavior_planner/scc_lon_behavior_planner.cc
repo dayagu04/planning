@@ -418,8 +418,8 @@ void SccLonBehaviorPlanner::SetInput(
 bool SccLonBehaviorPlanner::Update() {
   LOG_DEBUG("=======Entering SccLonBehaviorPlanner::Update======= \n");
   // 1.ST
-  const auto& last_traj =
-        session_->planning_context().last_planning_result().traj_points;
+  const auto &last_traj =
+      session_->planning_context().last_planning_result().traj_points;
   st_graph_->Update(lon_behav_plan_input_, last_traj);
 
   // 2.SV

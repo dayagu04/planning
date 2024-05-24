@@ -1055,7 +1055,8 @@ void PlanningPlayer::UpdateVehicleService(
 
   // steering_angle = 1/R * L * steering_ratio * 补偿系数
   auto compensation_factor = curvature > 0 ? 1.5 : 1;
-  vehi_svc_msg->set_steering_wheel_angle(curvature * 3.33 * 15.7 * compensation_factor);
+  vehi_svc_msg->set_steering_wheel_angle(curvature * 3.33 * 15.7 *
+                                         compensation_factor);
 }
 
 }  // namespace planning_player

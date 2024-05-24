@@ -302,7 +302,7 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
 
     if (left_alc_car.size() > 0) {
       // 存在需要从左避让的车
-      if (request_type_ != LEFT_CHANGE) {
+      if (request_type_ != LEFT_CHANGE && compute_lc_valid_info(LEFT_CHANGE)) {
         // if (is_on_highway &&
         //     ((map_info.lanes_merge_type(left_lane_index) ==
         //           MSD_MERGE_TYPE_MERGE_FROM_LEFT &&
@@ -336,7 +336,8 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
       }
     } else if (right_alc_car.size() > 0) {
       // 存在需要从右避让的车
-      if (request_type_ != RIGHT_CHANGE) {
+      if (request_type_ != RIGHT_CHANGE &&
+          compute_lc_valid_info(RIGHT_CHANGE)) {
         // if (is_on_highway &&
         //     ((map_info.lanes_merge_type(right_lane_index) ==
         //           MSD_MERGE_TYPE_MERGE_FROM_RIGHT &&

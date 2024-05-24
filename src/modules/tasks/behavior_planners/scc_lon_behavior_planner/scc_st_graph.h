@@ -29,8 +29,8 @@ class StGraphGenerator {
   virtual ~StGraphGenerator() = default;
 
   // 更新
-  void Update(
-      std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input, const TrajectoryPoints& last_traj);
+  void Update(std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input,
+              const TrajectoryPoints &last_traj);
 
   void SetConfig(
       planning::common::RealTimeLonBehaviorTunedParams &tuned_params);
@@ -164,7 +164,8 @@ class StGraphGenerator {
 
   // 计算启停状态，避免二次起步
   common::StartStopInfo::StateType UpdateStartStopState(
-      const planning::common::TrackedObjectInfo &lead_one, const double v_ego, const TrajectoryPoints& last_traj);
+      const planning::common::TrackedObjectInfo &lead_one, const double v_ego,
+      const TrajectoryPoints &last_traj);
 
   // update vt_refs_
   void UpdateVelRefs();

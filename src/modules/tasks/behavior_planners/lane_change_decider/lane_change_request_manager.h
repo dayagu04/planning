@@ -7,7 +7,9 @@
 #include "lane_change_requests/interactive_lane_change_request.h"
 #include "lane_change_requests/lane_change_request.h"
 #include "lane_change_requests/map_lane_change_request.h"
+#include "lane_change_requests/overtake_lane_change_request.h"
 #include "session.h"
+#include "tasks/behavior_planners/lane_change_decider/lane_change_requests/overtake_lane_change_request.h"
 
 namespace planning {
 
@@ -57,13 +59,17 @@ class LaneChangeRequestManager {
       return map_request_.AggressiveChange();
     } else if (request_source_ == ACT_REQUEST) {
       return act_request_.AggressiveChange();
+    } else if (request_source_ == OVERTAKE_REQUEST) {
+      return overtake_request_.AggressiveChange();
     }
     return false;
   }
 
   void GenerateHMIInfo();
+  void GenerateHMIInfoForOvertake();
 
  private:
+  EgoPlanningConfig config_;
   RequestType request_ = NO_CHANGE;
   RequestSource request_source_ = NO_REQUEST;
   RequestType gen_turn_signal_ = NO_CHANGE;
@@ -72,6 +78,7 @@ class LaneChangeRequestManager {
   IntRequest int_request_;
   MapRequest map_request_;
   ActRequest act_request_;
+  OvertakeRequest overtake_request_;
 
   std::shared_ptr<VirtualLaneManager> virtual_lane_mgr_;
   framework::Session* session_;

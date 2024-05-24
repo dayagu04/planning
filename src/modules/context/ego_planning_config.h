@@ -119,6 +119,10 @@ struct EgoPlanningConfig : public Config {
     use_lateral_distance_to_judge_cutout_in_active_lane_change =
         read_json_key<bool>(
             json, "use_lateral_distance_to_judge_cutout_in_active_lane_change");
+    use_overtake_lane_change_request_instead_of_active_lane_change_request =
+        read_json_key<bool>(json,
+                            "use_overtake_lane_change_request_instead_of_"
+                            "active_lane_change_request");
   }
   bool enable_raw_ego_prediction = false;
   bool enable_dagger = false;
@@ -126,6 +130,8 @@ struct EgoPlanningConfig : public Config {
   int planner_type = planning::context::PlannerType::REALTIME_PLANNER;
   int active_lane_change_min_duration_threshold = 150;
   bool use_lateral_distance_to_judge_cutout_in_active_lane_change = true;
+  bool use_overtake_lane_change_request_instead_of_active_lane_change_request =
+      false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
@@ -317,11 +323,10 @@ struct GapSelectorConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"gap_selector", "near_car_ttc"});
     use_ego_v = read_json_keys<bool>(
         json, std::vector<std::string>{"gap_selector", "use_ego_v"});
-      lb_t_max = read_json_keys<double>(
+    lb_t_max = read_json_keys<double>(
         json, std::vector<std::string>{"gap_selector", "lb_t_max"});
     lb_t_min = read_json_keys<double>(
-        json, std::vector<std::string>{"gap_selector",
-                                       "lb_t_min"});
+        json, std::vector<std::string>{"gap_selector", "lb_t_min"});
     lb_heading_error_max = read_json_keys<double>(
         json, std::vector<std::string>{"gap_selector", "lb_heading_error_max"});
     lb_heading_error_min = read_json_keys<double>(
@@ -1180,10 +1185,10 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
                                        "acc_start"});
     v_target_stop_thrd = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
-                                       "v_target_stop_thrd"}); 
+                                       "v_target_stop_thrd"});
     acc_stop_max_bound = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
-                                       "acc_stop_max_bound"});                                                              
+                                       "acc_stop_max_bound"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -1238,7 +1243,7 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double kSlowJerkUpperBound = 6.0;
   double jerk_upper_bound = 10.0;
   double jerk_lower_bound = -5.0;
-  //stop condition judge
+  // stop condition judge
   double v_target_stop_thrd = 0.2;
   double acc_stop_max_bound = 1.0;
 };
@@ -1269,7 +1274,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"long_motion_ilqr", "q_jerk_bound"});
     q_stop_s = read_json_keys<double>(
         json, std::vector<std::string>{"long_motion_ilqr", "q_stop_s"});
-    
+
     // start mode q
     q_ref_pos_startmode = read_json_keys<double>(
         json,
@@ -1302,7 +1307,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
     q_stop_s_startmode = read_json_keys<double>(
         json,
         std::vector<std::string>{"long_motion_ilqr", "q_stop_s_startmode"});
-    
+
     // stop mode q
     q_ref_pos_stopmode = read_json_keys<double>(
         json,
@@ -1339,7 +1344,6 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
     v_target_stop_thrd = read_json_keys<double>(
         json,
         std::vector<std::string>{"long_motion_ilqr", "v_target_stop_thrd"});
-
   }
   double q_ref_pos = 1.0;
   double q_ref_vel = 0.05;

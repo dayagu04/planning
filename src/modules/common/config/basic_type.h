@@ -71,7 +71,8 @@ enum RequestSource {
   INT_REQUEST,
   MAP_REQUEST,
   ACT_REQUEST,
-  ROUTE_REQUEST
+  ROUTE_REQUEST,
+  OVERTAKE_REQUEST
 };
 
 struct PointLLH {

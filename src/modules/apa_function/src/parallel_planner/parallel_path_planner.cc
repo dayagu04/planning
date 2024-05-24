@@ -1923,8 +1923,8 @@ const bool ParallelPathPlanner::MultiAlignBody() {
 
     if (AlignBodyPlan(single_aligned_path, current_pose,
                       calc_params_.target_pose.heading, current_gear)) {
-      auto col_res = TrimPathByCollisionDetection(single_aligned_path.back(),
-                                                  0.2);
+      auto col_res =
+          TrimPathByCollisionDetection(single_aligned_path.back(), 0.2);
 
       if (col_res == PATH_COL_SHORTEN) {
         success = true;
@@ -1940,8 +1940,7 @@ const bool ParallelPathPlanner::MultiAlignBody() {
 
       if (!success) {
         DEBUG_PRINT("normal buffer failed");
-        col_res =
-            TrimPathByCollisionDetection(single_aligned_path.back(), 0.1);
+        col_res = TrimPathByCollisionDetection(single_aligned_path.back(), 0.1);
 
         if (col_res == PATH_COL_SHORTEN) {
           success = true;

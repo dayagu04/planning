@@ -117,6 +117,15 @@ class LaneTracksManager {
   const std::vector<TrackedObject> &get_side_tracks() const {
     return lateral_obstacle_.side_tracks();
   }
+  const std::vector<TrackedObject> &side_tracks_l() const {
+    return side_tracks_llane_;
+  }
+  const std::vector<TrackedObject> &side_tracks_r() const {
+    return side_tracks_rlane_;
+  }
+  const std::vector<TrackedObject> &side_tracks_c() const {
+    return side_tracks_clane_;
+  }
   std::vector<TrackedObject> *get_lane_tracks(int lane, TrackType track_type);
 
   // std::pair<int, double> get_vavg_poi_int(int side, double bound, double

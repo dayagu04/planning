@@ -298,8 +298,8 @@ class PerpendicularPathPlanner {
   const bool CalSinglePathInAdjust(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const pnc::geometry_lib::PathPoint &current_pose,
-      const uint8_t& current_gear, const double& steer_change_ratio,
-      const double& steer_change_radius, const size_t& i);
+      const uint8_t &current_gear, const double &steer_change_ratio,
+      const double &steer_change_radius, const size_t &i);
 
   const bool OneArcPlan(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,

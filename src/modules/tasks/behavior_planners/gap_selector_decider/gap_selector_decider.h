@@ -248,7 +248,6 @@ class GapSelectorDecider : public Task {
 
   std::vector<double> _LB_T_;
   std::vector<double> _LB_HEADING_ERROR_;
-
 };
 
 }  // namespace planning
