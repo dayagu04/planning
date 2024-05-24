@@ -47,6 +47,7 @@ class LateralMotionPlanner : public Task {
 
   std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight>
       planning_weight_ptr_;
+  double auto_start_time_;
 };
 
 }  // namespace planning

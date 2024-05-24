@@ -130,7 +130,9 @@ bool GeneralLateralDecider::Execute() {
   const auto &gap_selector_decider_output =
       session_->planning_context().gap_selector_decider_output();
   if (coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
-      coarse_planning_info.target_state == ROAD_LC_RCHANGE) {
+      coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
+      coarse_planning_info.target_state == ROAD_LC_LBACK ||
+      coarse_planning_info.target_state == ROAD_LC_RBACK) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
   } else {
@@ -470,6 +472,12 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
           std::fmax(-ref_path_points_[i].distance_to_right_lane_border +
                         0.5 * vehicle_param.width + config_.buffer2border,
                     path_bound.lower);
+      map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+          safe_bound.lower, safe_bound.upper, config_.kPhysicalBoundWeight,
+          BoundInfo{-100, BoundType::LANE}});
+      map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+          path_bound.lower, path_bound.upper, config_.kHardBoundWeight,
+          BoundInfo{-100, BoundType::LANE}});
     } else if (lat_lane_change_info_ ==
                    LatDeciderLaneChangeInfo::LEFT_LANE_CHANGE ||
                (general_lateral_decider_output.lane_change_scene != true &&
@@ -487,6 +495,12 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
                         0.5 * vehicle_param.width + config_.buffer2border,
                     path_bound.lower);
       safe_bound.lower = path_bound.lower + 1e-2;
+      map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+          safe_bound.lower, safe_bound.upper, config_.kPhysicalBoundWeight,
+          BoundInfo{-100, BoundType::ROAD_BORDER}});
+      map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+          path_bound.lower, path_bound.upper, config_.kHardBoundWeight,
+          BoundInfo{-100, BoundType::ROAD_BORDER}});
     } else {
       safe_bound.lower =
           std::fmax(-ref_path_points_[i].distance_to_right_road_border +
@@ -501,14 +515,13 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
                         0.5 * vehicle_param.width + config_.buffer2border,
                     path_bound.lower);
       safe_bound.upper = path_bound.upper - 1e-2;
+      map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+          safe_bound.lower, safe_bound.upper, config_.kPhysicalBoundWeight,
+          BoundInfo{-100, BoundType::ROAD_BORDER}});
+      map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+          path_bound.lower, path_bound.upper, config_.kHardBoundWeight,
+          BoundInfo{-100, BoundType::ROAD_BORDER}});
     }
-
-    map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
-        safe_bound.lower, safe_bound.upper, config_.kPhysicalBoundWeight,
-        BoundInfo{-100, BoundType::LANE}});
-    map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
-        path_bound.lower, path_bound.upper, config_.kHardBoundWeight,
-        BoundInfo{-100, BoundType::ROAD_BORDER}});
 
     map_obstacle_decisions.emplace_back(std::move(map_obstacle_decision));
   }

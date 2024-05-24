@@ -199,16 +199,17 @@ void VirtualLaneManager::construct_reference_line_msg(
     current_lane_virtual_ref_point->set_local_heading(
         fmod(heading + heading_angle + M_PI, 2 * M_PI) - M_PI);
 
-    current_lane_virtual_ref_point->set_distance_to_left_road_border(
-        half_car_width);
-    current_lane_virtual_ref_point->set_distance_to_right_road_border(
-        half_car_width);
-    current_lane_virtual_ref_point->set_distance_to_left_lane_border(
-        half_car_width);
-    current_lane_virtual_ref_point->set_distance_to_right_lane_border(
-        half_car_width);
-
     current_lane_virtual_ref_point->set_lane_width(3.75);
+
+    current_lane_virtual_ref_point->set_distance_to_left_lane_border(
+        current_lane_virtual_ref_point->lane_width() * 0.5);
+    current_lane_virtual_ref_point->set_distance_to_right_lane_border(
+        current_lane_virtual_ref_point->lane_width() * 0.5);
+    current_lane_virtual_ref_point->set_distance_to_left_road_border(
+        current_lane_virtual_ref_point->lane_width() * 0.5);
+    current_lane_virtual_ref_point->set_distance_to_right_road_border(
+        current_lane_virtual_ref_point->lane_width() * 0.5);
+
     current_lane_virtual_ref_point->set_speed_limit_max(0.0);
     current_lane_virtual_ref_point->set_speed_limit_min(0.0);
 

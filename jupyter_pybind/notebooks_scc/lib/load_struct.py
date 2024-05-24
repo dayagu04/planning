@@ -280,12 +280,14 @@ def load_lane_center_lines(lanes, is_enu_to_car = False, loc_msg = [], g_is_disp
   line_info_list = []
 
   for i in range(10):
-    lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[]}
+    lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[], 'line_s_vec':[], 'curvature_vec':[]}
     if i< len(lanes):
       lane = lanes[i]
       virtual_lane_refline_points = lane.lane_reference_line.virtual_lane_refline_points
       line_x = []
       line_y = []
+      line_curvature = []
+      line_s = []
       for virtual_lane_refline_point in virtual_lane_refline_points:
         if g_is_display_enu:
           line_x.append(virtual_lane_refline_point.enu_point.x)
@@ -306,11 +308,15 @@ def load_lane_center_lines(lanes, is_enu_to_car = False, loc_msg = [], g_is_disp
             line_x.append(virtual_lane_refline_point.car_point.x)
             line_y.append(virtual_lane_refline_point.car_point.y)
 
+        line_s.append(virtual_lane_refline_point.s)
+        line_curvature.append(max(min(1.0 / (virtual_lane_refline_point.curvature + 1e-6), 10000.0), -10000.0))
+
       lane_info['line_x_vec'] = line_x
       lane_info['line_y_vec'] = line_y
       lane_info['relative_id'] = lane.relative_id
       lane_info['type'] = 0
-
+      lane_info['line_s_vec'] = line_s
+      lane_info['curvature_vec'] = line_curvature
       line_info_list.append(lane_info)
     else:
       line_x, line_y = gen_line(0,0,0,0,0,0)
@@ -318,6 +324,8 @@ def load_lane_center_lines(lanes, is_enu_to_car = False, loc_msg = [], g_is_disp
       lane_info['line_y_vec'] = line_y
       lane_info['relative_id'] = 1000
       lane_info['type'] = 0
+      lane_info['line_s_vec'] = 0
+      lane_info['curvature_vec'] = 0
       line_info_list.append(lane_info)
 
   return line_info_list

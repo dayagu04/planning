@@ -305,9 +305,9 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
     lon_replan = true;
   }
 
-  if (fabs(dist_err) > max_replan_dist_err) {
-    dist_replan = true;
-  }
+  // if (fabs(dist_err) > max_replan_dist_err) {
+  //   dist_replan = true;
+  // }
 
   uint8_t out = 0;
 

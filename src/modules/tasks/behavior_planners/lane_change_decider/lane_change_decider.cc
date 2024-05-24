@@ -1528,26 +1528,66 @@ void LaneChangeDecider::UpdateCoarsePlanningInfo() {
 
   coarse_planning_info.trajectory_points.clear();
   TrajectoryPoint point;
-  for (size_t i = 0; i < N; ++i) {
-    // cart info
-    if (s_ref < cart_ref_info.s_vec.back() + kEps) {
-      point.x = cart_ref_info.x_s_spline(s_ref);
-      point.y = cart_ref_info.y_s_spline(s_ref);
-      point.heading_angle =
-          std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
-                     cart_ref_info.x_s_spline.deriv(1, s_ref));
+  const double ego_vel = session_->environmental_model().get_ego_state_manager()->ego_v();
+  if (config_.ref_vel_set_valid && ((v_ref_cruise- ego_vel) > config_.ref_ego_vel_thr)) {
+    double ref_vel_acc = 0.0;
+    if (ego_vel < (config_.ref_vel_low_thr / 3.6)) {  // 10 kph
+      ref_vel_acc =  config_.ref_vel_acc0;
+    } else if (ego_vel < (config_.ref_vel_high_thr / 3.6)) {  // 36 kph
+      ref_vel_acc = config_.ref_vel_acc1;
+    } else {
+      ref_vel_acc = config_.ref_vel_acc2;
     }
 
-    // frenet info
-    Point2D frenet_pt{0.0, 0.0};
-    Point2D cart_pt(point.x, point.y);
-    frenet_coord->XYToSL(cart_pt, frenet_pt);
-    point.s = frenet_pt.x;
-    point.l = frenet_pt.y;
-    point.t = static_cast<double>(i) * delta_time;
+    std::vector<double> ref_vel_vec;
+    ref_vel_vec.resize(N, 0.0);
+    for (size_t i = 0; i < N; ++i) {
+      ref_vel_vec[i] = std::min(ego_vel + ref_vel_acc * (0.2 * i), v_ref_cruise);
+    }
 
-    s_ref += v_cruise_scale * v_ref_cruise * delta_time;
-    coarse_planning_info.trajectory_points.emplace_back(point);
+    for (size_t i = 0; i < N; ++i) {
+      // cart info
+      if (s_ref < cart_ref_info.s_vec.back() + kEps) {
+        point.x = cart_ref_info.x_s_spline(s_ref);
+        point.y = cart_ref_info.y_s_spline(s_ref);
+        point.heading_angle =
+            std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
+                      cart_ref_info.x_s_spline.deriv(1, s_ref));
+      }
+
+      // frenet info
+      Point2D frenet_pt{0.0, 0.0};
+      Point2D cart_pt(point.x, point.y);
+      frenet_coord->XYToSL(cart_pt, frenet_pt);
+      point.s = frenet_pt.x;
+      point.l = frenet_pt.y;
+      point.t = static_cast<double>(i) * delta_time;
+
+      s_ref += v_cruise_scale * ref_vel_vec[i] * delta_time;
+      coarse_planning_info.trajectory_points.emplace_back(point);
+    }
+  } else {
+    for (size_t i = 0; i < N; ++i) {
+      // cart info
+      if (s_ref < cart_ref_info.s_vec.back() + kEps) {
+        point.x = cart_ref_info.x_s_spline(s_ref);
+        point.y = cart_ref_info.y_s_spline(s_ref);
+        point.heading_angle =
+            std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
+                      cart_ref_info.x_s_spline.deriv(1, s_ref));
+      }
+
+      // frenet info
+      Point2D frenet_pt{0.0, 0.0};
+      Point2D cart_pt(point.x, point.y);
+      frenet_coord->XYToSL(cart_pt, frenet_pt);
+      point.s = frenet_pt.x;
+      point.l = frenet_pt.y;
+      point.t = static_cast<double>(i) * delta_time;
+
+      s_ref += v_cruise_scale * v_ref_cruise * delta_time;
+      coarse_planning_info.trajectory_points.emplace_back(point);
+    }
   }
 }
 

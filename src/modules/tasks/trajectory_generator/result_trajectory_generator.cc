@@ -139,24 +139,24 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   }
 
   // Step 3) extends to max length if needed
-  double desired_length = planning_init_point.frenet_state.s + 1.0;
+  // double desired_length = planning_init_point.frenet_state.s + 1.0;
 
-  while (dense_traj_points.back().s < desired_length) {
-    auto traj_pt = dense_traj_points.back();
-    traj_pt.s += 0.2;
-    traj_pt.t += config_.planning_result_delta_time;
+  // while (dense_traj_points.back().s < desired_length) {
+  //   auto traj_pt = dense_traj_points.back();
+  //   traj_pt.s += 0.2;
+  //   traj_pt.t += config_.planning_result_delta_time;
 
-    Point2D frenet_pt{traj_pt.s, traj_pt.l};
-    Point2D cart_pt;
-    if (!frenet_coord->SLToXY(frenet_pt, cart_pt)) {
-      LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
-      return false;
-    }
+  //   Point2D frenet_pt{traj_pt.s, traj_pt.l};
+  //   Point2D cart_pt;
+  //   if (!frenet_coord->SLToXY(frenet_pt, cart_pt)) {
+  //     LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
+  //     return false;
+  //   }
 
-    traj_pt.x = cart_pt.x;
-    traj_pt.y = cart_pt.y;
-    dense_traj_points.emplace_back(std::move(traj_pt));
-  }
+  //   traj_pt.x = cart_pt.x;
+  //   traj_pt.y = cart_pt.y;
+  //   dense_traj_points.emplace_back(std::move(traj_pt));
+  // }
 
   const auto N_ext = dense_traj_points.size();
   std::vector<double> traj_x_vec(N_ext);

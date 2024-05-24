@@ -37,7 +37,7 @@ int UpdateBytes(py::bytes &planning_input_bytes) {
       BytesToProto<planning::common::LateralPlanningInput>(
           planning_input_bytes);
 
-  pBase->Update(planning_input);
+  pBase->Update(planning_input, 2, 1.0, 0.2, 1.5, 0.2, 0.0, 0.0, 0.2);
 
   return 0;
 }
@@ -113,13 +113,22 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
                    double q_ref_theta, double q_acc, double q_jerk,
                    double q_acc_bound, double q_jerk_bound, double acc_bound,
                    double jerk_bound, double q_safe_bound, double q_hard_bound,
+                   double ref_xy,
                    double upper_safe_bound, double lower_safe_bound,
                    double upper_hard_bound, double lower_hard_bound,
-                   int safe_ub_start_idx, int safe_ub_end_idx, 
-                   int safe_lb_start_idx, int safe_lb_end_idx, 
-                   int hard_ub_start_idx, int hard_ub_end_idx, 
+                   int safe_ub_start_idx, int safe_ub_end_idx,
+                   int safe_lb_start_idx, int safe_lb_end_idx,
+                   int hard_ub_start_idx, int hard_ub_end_idx,
                    int hard_lb_start_idx, int hard_lb_end_idx,
-                   bool complete_follow, int motion_plan_concerned_index) {
+                   bool complete_follow,
+                   int motion_plan_concerned_start_index, int motion_plan_concerned_end_index,
+                   double motion_plan_concerned_start_ratio, double motion_plan_concerned_end_ratio,
+                   double close_jerk_bound, double decay_factor,
+                   double w_xy, double w_theta,
+                   double ref_vel,
+                   double curv_factor,
+                   double model_dt,
+                   double ref_acc, double ego_v) {
   planning::common::LateralPlanningInput planning_input =
       BytesToProto<planning::common::LateralPlanningInput>(
           planning_input_bytes);
@@ -136,14 +145,33 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
   planning_input.set_q_jerk_bound(q_jerk_bound);
   planning_input.set_q_soft_corridor(q_safe_bound);
   planning_input.set_q_hard_corridor(q_hard_bound);
+  // planning_input.set_ref_vel(ref_vel);
+  planning_input.set_curv_factor(curv_factor);
 
   planning_input.set_complete_follow(complete_follow);
-  if (motion_plan_concerned_index < 0) {
-    motion_plan_concerned_index = 0;
-  } else if (motion_plan_concerned_index > 26) {
-    motion_plan_concerned_index = 26;
+  if (motion_plan_concerned_start_index < 0) {
+    motion_plan_concerned_start_index = 0;
+  } else if (motion_plan_concerned_start_index > 26) {
+    motion_plan_concerned_start_index = 26;
   }
-  planning_input.set_motion_plan_concerned_index(motion_plan_concerned_index);
+  if (motion_plan_concerned_end_index < 0) {
+    motion_plan_concerned_end_index = 0;
+  } else if (motion_plan_concerned_end_index > 26) {
+    motion_plan_concerned_end_index = 26;
+  }
+  planning_input.set_motion_plan_concerned_index(motion_plan_concerned_end_index);
+  //
+  auto N = planning_input.ref_x_vec().size();
+  for (size_t i = 0; i < N; i++) {
+    Eigen::Vector2d ref_unit_vector(
+        origin_planning_input.soft_upper_bound_x0_vec(i) -
+            origin_planning_input.soft_lower_bound_x0_vec(i),
+        origin_planning_input.soft_upper_bound_y0_vec(i) -
+            origin_planning_input.soft_lower_bound_y0_vec(i));
+    ref_unit_vector.normalize();
+    planning_input.mutable_ref_x_vec()->Set(i, origin_planning_input.ref_x_vec(i) + ref_unit_vector.x() * ref_xy);
+    planning_input.mutable_ref_y_vec()->Set(i, origin_planning_input.ref_y_vec(i) + ref_unit_vector.y() * ref_xy);
+  }
   // set bound idx
   if (safe_lb_start_idx < 0) {
     safe_lb_start_idx = 0;
@@ -170,7 +198,6 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
     hard_ub_end_idx = 26;
   }
   // tune the path bound and soft bound
-  auto N = planning_input.ref_x_vec().size();
   for (size_t i = safe_lb_start_idx; i < safe_lb_end_idx; i++) {
     if (i < N - 1) {
       Eigen::Vector2d lower_unit_vector(
@@ -199,7 +226,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
       planning_input.mutable_soft_lower_bound_y1_vec()->Set(
           i - 1, origin_planning_input.soft_lower_bound_y1_vec(i - 1) +
                 lower_unit_vector1.y() * lower_safe_bound);
-    } 
+    }
   }
   planning_input.mutable_soft_lower_bound_x0_vec()->Set(N - 1, planning_input.soft_lower_bound_x0_vec(N - 2));
   planning_input.mutable_soft_lower_bound_y0_vec()->Set(N - 1, planning_input.soft_lower_bound_y0_vec(N - 2));
@@ -220,7 +247,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
       planning_input.mutable_soft_upper_bound_y0_vec()->Set(
           i, origin_planning_input.soft_upper_bound_y0_vec(i) +
                 upper_unit_vector.y() * upper_safe_bound);
-    }        
+    }
     if (i > 0) {
       Eigen::Vector2d upper_unit_vector1(
           origin_planning_input.soft_upper_bound_x1_vec(i - 1) -
@@ -311,7 +338,26 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
   planning_input.mutable_hard_upper_bound_x1_vec()->Set(N - 1, planning_input.hard_upper_bound_x1_vec(N - 2));
   planning_input.mutable_hard_upper_bound_y1_vec()->Set(N - 1, planning_input.hard_upper_bound_y1_vec(N - 2));
 
-  pBase->Update(planning_input);
+  const double ref_s = planning_input.ref_vel() * 5.0;
+  std::vector<double> ref_vel_vec;
+  std::vector<double> model_dt_vec;
+  ref_vel_vec.resize(26, 0.0);
+  model_dt_vec.resize(26, 0.0);
+  double new_ref_s = 0.0;
+  for (size_t i = 0; i < 26; ++i) {
+    ref_vel_vec[i] = std::min(planning_input.ref_vel(), ego_v + ref_acc * (0.2 * i));
+    double new_dt = 0.0;
+    if (i > 0) {
+      double ref_ds = planning_input.ref_vel() * 0.2 * i;
+      double new_ref_ds = 0.5 * (ref_vel_vec[i] + ref_vel_vec[i - 1]) * 0.2;
+      new_ref_s += new_ref_ds;
+      new_dt = 0.2 * i * (new_ref_s / ref_ds);
+    }
+    model_dt_vec[i] = new_dt;
+  }
+
+  // pBase->Update(planning_input, motion_plan_concerned_start_index, motion_plan_concerned_start_ratio, motion_plan_concerned_end_ratio, close_jerk_bound, decay_factor, w_xy, w_theta, model_dt);
+  pBase->Update(planning_input, motion_plan_concerned_start_index, motion_plan_concerned_start_ratio, motion_plan_concerned_end_ratio, close_jerk_bound, decay_factor, w_xy, w_theta, model_dt_vec, ref_vel_vec);
 
   return 0;
 }
