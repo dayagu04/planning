@@ -49,6 +49,7 @@ replan_flag = False
 correct_path_for_limiter = False
 replan_time_list = []
 correct_path_for_limiter_time_list = []
+enter_parking_time = 0.0
 class LoadCyberbag:
   def __init__(self, path, parking_flag = False) -> None:
     self.bag_path = path
@@ -106,7 +107,6 @@ class LoadCyberbag:
 
     self.max_time = 0
 
-    self.enter_parking_time = 0
     # time offset
     t0 = 0
 
@@ -392,14 +392,14 @@ class LoadCyberbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/system_state/soc_state"):
         soc_state_msg_dict[msg.header.timestamp / 1e6] = msg
       soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
-      enter_parking_time = None
+      enter_parking_time_temp = None
       for t, msg in soc_state_msg_dict.items():
         self.soc_state_msg['t'].append(t)
         self.soc_state_msg['abs_t'].append(t)
         self.soc_state_msg['data'].append(msg)
         # record the start time of fusi_parking_msg
-        if msg.current_state > 1 and enter_parking_time is None:
-          enter_parking_time = t
+        if msg.current_state > 1 and enter_parking_time_temp is None:
+          enter_parking_time_temp = t
       self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
       max_time = max(max_time, self.soc_state_msg['t'][-1])
       print('soc_state_msg time:',self.soc_state_msg['t'][-1])
@@ -408,8 +408,8 @@ class LoadCyberbag:
       else:
         self.soc_state_msg['enable'] = False
 
-      if enter_parking_time is not None:
-        self.enter_parking_time = enter_parking_time - self.soc_state_msg['abs_t'][0]
+      if enter_parking_time_temp is not None:
+        enter_parking_time = enter_parking_time_temp - self.soc_state_msg['abs_t'][0]
     except:
       self.soc_state_msg['enable'] = False
       print('missing /iflytek/system_state/soc_state !!!')
@@ -569,7 +569,7 @@ class LoadCyberbag:
 
     fus_parking_msg_idx = 0
     if self.fus_parking_msg['enable'] == True:
-      while self.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time - self.enter_parking_time and fus_parking_msg_idx < (len(self.fus_parking_msg['t'])-1):
+      while self.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time - enter_parking_time and fus_parking_msg_idx < (len(self.fus_parking_msg['t'])-1):
         fus_parking_msg_idx = fus_parking_msg_idx + 1
     out['fus_parking_msg_idx'] = fus_parking_msg_idx
 
@@ -653,7 +653,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
 
   fus_parking_msg_idx = 0
   if bag_loader.fus_parking_msg['enable'] == True:
-    while bag_loader.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time and fus_parking_msg_idx < (len(bag_loader.fus_parking_msg['t'])-1):
+    while bag_loader.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time - enter_parking_time and fus_parking_msg_idx < (len(bag_loader.fus_parking_msg['t'])-1):
       fus_parking_msg_idx = fus_parking_msg_idx + 1
   local_view_data['data_index']['fus_parking_msg_idx'] = fus_parking_msg_idx
 
