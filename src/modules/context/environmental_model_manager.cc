@@ -940,6 +940,7 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   if (session_ == nullptr) {
     return false;
   }
+  bool object_is_slow = false;
   auto &ego_state = session_->environmental_model().get_ego_state_manager();
 
   PredictionObject prediction_object;
@@ -999,21 +1000,26 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   prediction_object.acceleration_relative_to_ground_y =
       fusion_object.common_info().acceleration().y();
 
-  // TODO:clren  后面感知会直接给出yaw和theta;   这部分赋值需要重新更改
-  // prediction_object.relative_theta =
-  //     fusion_object.common_info().relative_heading_angle();
-
   double relative_v_x = fusion_object.common_info().relative_velocity().x();
   double relative_v_y = fusion_object.common_info().relative_velocity().y();
 
-  prediction_object.relative_theta =
-      std::atan2(relative_v_y, relative_v_x + ego_state_manager_ptr_->ego_v());
+  // The agent is slow when it's speed < 4km/h (person's speed)
+  object_is_slow = prediction_object.speed < 1.1 ? true : false;
+  // For no prediction schemes, use heading angle when obstacles are slow
+  if (object_is_slow) {
+    prediction_object.relative_theta =
+        fusion_object.common_info().relative_heading_angle();
+    prediction_object.theta = fusion_object.common_info().heading_angle();
+  } else {
+    prediction_object.relative_theta = std::atan2(
+        relative_v_y, relative_v_x + ego_state_manager_ptr_->ego_v());
+    prediction_object.theta = std::atan2(fusion_object.common_info().velocity().y(),
+                                         fusion_object.common_info().velocity().x());
+  }
+
   if ((int)prediction_object.relative_theta == 255) {
     prediction_object.relative_theta = 0;
   }
-  prediction_object.theta =
-      std::atan2(fusion_object.common_info().velocity().y(),
-                 fusion_object.common_info().velocity().x());
 
   PredictionTrajectoryPoint trajectory_point;
   trajectory_point.relative_time = 0;

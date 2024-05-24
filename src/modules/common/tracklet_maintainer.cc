@@ -457,7 +457,8 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     origin->v_x = p.relative_speed_x + ego_state_->ego_v();
     // TODO: 这里的v_y为绝对速度，需要再加上自车的横向速度(暂时无法获取)
     origin->v_y = p.relative_speed_y;
-    origin->speed_yaw = std::atan2(p.relative_speed_y, origin->v_x);
+    // p.relative_theta 在低速时为相对朝向角，高速时为相对速度方向角
+    origin->speed_yaw = p.relative_theta;
     origin->a = p.acc;
     origin->v = std::hypot(origin->v_x, p.relative_speed_y);
 
