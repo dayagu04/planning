@@ -7,7 +7,7 @@ sys.path.append('../../../')
 
 # +
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240408/20240408-10-53-33/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-04-08-10-53-33.record"
+bag_path = "/share/data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240516/20240516-18-24-34/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-05-16-18-24-34_no_camera.record"
 
 frame_dt = 0.1 # sec
 # -
@@ -25,6 +25,7 @@ fig1, local_view_data = load_local_view_figure()
 # load lateral planning (behavior and motion)
 fig1, fig2, fig3, fig4, fig5, fig6, fig7, lat_plan_data = load_lat_plan_figure(fig1)
 
+fig8 = load_lateral_offset(bag_loader)
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
@@ -43,6 +44,6 @@ def slider_callback(bag_time):
 if global_fig_plot:
   bkp.show(row(fig1, fig7, column(fig2, fig3, fig4, fig5, fig6)), notebook_handle=True)
 else:
-  bkp.show(row(fig1, column(fig2, fig3, fig4, fig5, fig6)), notebook_handle=True)
+  bkp.show(row(fig1, column(fig2, fig3, fig4, fig5, fig6, fig8)), notebook_handle=True)
 
 slider_class = LocalViewSlider(slider_callback)

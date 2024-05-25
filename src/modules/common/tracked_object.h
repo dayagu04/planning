@@ -161,6 +161,7 @@ struct TrackedObject {
   bool has_history = false;
   double c0_history = DBL_MAX;
   double d_center_cpath_hostory = DBL_MAX;
+  double tail_rel_s;  // ego head to obstacle's tail
 
   PredictionInfo prediction;
   PredictionTrajectoryEx trajectory;

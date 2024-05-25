@@ -1265,6 +1265,7 @@ def load_lat_common(plan_debug, planning_json):
   vo_lat_motion_plan = plan_debug.vo_lat_motion_plan
   vo_lat_behavior_plan = plan_debug.vo_lat_behavior_plan
   lat_behavior_common = plan_debug.lat_behavior_common
+
   vars = ['fix_lane_virtual_id','target_lane_virtual_id','origin_lane_virtual_id',\
           'lc_request','lc_request_source','turn_light','map_turn_light','lc_turn_light','act_request_source','lc_back_invalid_reason','lc_status',\
             'is_lc_valid','lc_valid_cnt','lc_invalid_obj_id','lc_invalid_reason',\
@@ -1290,9 +1291,6 @@ def load_lat_common(plan_debug, planning_json):
   except:
     pass
 
-  avoid_car_id_str = ""
-  for avoid_car_id in vo_lat_behavior_plan.avoid_car_ids:
-    avoid_car_id_str = avoid_car_id_str + str(avoid_car_id) + ' '
   left_alc_car_id_str = ""
   right_alc_car_id_str = ""
   for left_alc_car_id in lat_behavior_common.left_alc_car_ids:
@@ -1301,7 +1299,7 @@ def load_lat_common(plan_debug, planning_json):
     right_alc_car_id_str = right_alc_car_id_str + str(right_alc_car_id) + ' '
   # 添加可视化left_alc_car_ids、right_alc_car_ids可视化
 
-  data_dict2['avoid_car_id'] = avoid_car_id_str
+
   data_dict2['left_alc_car_ids'] = left_alc_car_id_str
   data_dict2['right_alc_car_ids'] = right_alc_car_id_str
 

@@ -115,6 +115,7 @@ class LoadCyberbag:
   def load_all_data(self, normal_print = True):
     print('load bag')
     max_time = 0.0
+    t0 = 0
     # load localization msg
     if is_new_loc:
       try:

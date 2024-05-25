@@ -126,7 +126,7 @@ bool GeneralLateralDecider::Execute() {
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
   general_lateral_decider_output.v_cruise = cruise_vel_;
-  HandleAvoidScene(traj_points);
+
   const auto &gap_selector_decider_output =
       session_->planning_context().gap_selector_decider_output();
   if (coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
@@ -140,6 +140,7 @@ bool GeneralLateralDecider::Execute() {
         false;  // fusion is unsteady, lane keep weight need decay in end of
                 // ref
     general_lateral_decider_output.lane_change_scene = false;
+    HandleAvoidScene(traj_points);
     HandleLaneChangeScene(traj_points);  // TODO:handle the lane change info;
   }
 
@@ -1298,8 +1299,10 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
   // flane width
   lateral_output.flane_width = flane->width();
   // lat offset, attention!
-  lateral_output.lat_offset = 0.0;
+  const LateralOffsetDeciderOutput &lateral_offset_decider_output =
+      session_->mutable_planning_context()->lateral_offset_decider_output();
   // borrow_bicycle_lane
+  lateral_output.lat_offset = lateral_offset_decider_output.lateral_offset;
   bool isRedLightStop = false;  // attention again!!!
   TrackedObject *lead_one = session_->mutable_environmental_model()
                                 ->get_lateral_obstacle()

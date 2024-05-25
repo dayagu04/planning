@@ -14,6 +14,7 @@ struct VehicleParam {
   double length = 4.786;
   double width = 1.935;
   double height = 1.685;
+  double width_mirror = 0.15;
   double min_turn_radius = 4.88;
   double max_acceleration = 2.5;
   double max_deceleration = -6.0;
