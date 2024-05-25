@@ -5,6 +5,7 @@
 #include <numeric>
 
 #include "../../common/planning_gflags.h"
+#include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "ego_state_manager.h"
 #include "lateral_behavior_object_selector.h"
@@ -14,6 +15,7 @@
 #include "reference_path_manager.h"
 #include "spline_projection.h"
 #include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
+#include "tracked_object.h"
 #include "utils/pose2d_utils.h"
 #include "vehicle_config_context.h"
 
@@ -500,7 +502,7 @@ void LaneChangeDecider::compute_lc_valid_info(RequestType direction) {
 
   double v_ego = ego_state->ego_v();
   double l_ego = frenet_ego_state.l();
-  double safety_dist = v_ego * v_ego * 0.02 + 7.0;
+  double safety_dist = v_ego * v_ego * 0.02 + 2.0;
   double dist_mline = std::fabs(target_lane_frenet_ego_state.l()) -
                       1.8;  // TODO(Rui): use target_lane()->get_lane_width()
   double t_reaction = (dist_mline == DBL_MAX) ? 0.5 : 0.5 * dist_mline / 1.8;
@@ -518,6 +520,9 @@ void LaneChangeDecider::compute_lc_valid_info(RequestType direction) {
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
                    obstacle.track_id) > 0) {
+      if (!(obstacle.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+        continue;
+      }
       side_target_tracks.push_back(obstacle);
     }
   }
@@ -525,6 +530,9 @@ void LaneChangeDecider::compute_lc_valid_info(RequestType direction) {
   for (auto &obstacle : lateral_obstacle->front_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
                    obstacle.track_id) > 0) {
+      if (!(obstacle.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+        continue;
+      }
       front_target_tracks.push_back(obstacle);
     }
   }
@@ -541,7 +549,7 @@ void LaneChangeDecider::compute_lc_valid_info(RequestType direction) {
   for (auto &tr : side_target_tracks) {
     if (is_side_target_valid == true) {
       if (tr.type == 2 || tr.type == 3 || tr.type == 4) {
-        safety_dist = v_ego * v_ego * 0.015 + 7.0;
+        safety_dist = v_ego * v_ego * 0.015 + 2.0;
       }
 
       if (tr.d_rel < safety_dist && tr.d_rel > -5.0 - safety_dist &&
@@ -634,7 +642,11 @@ void LaneChangeDecider::compute_lc_valid_info(RequestType direction) {
                   120.0);
             }
           }
-
+          //如果目标车道上后车的相对车速较自车快2m/s以上,
+          //最小安全距离的阈值再增加2m，以免产生变道恐慌感
+          if (tr.v_rel > 2.0) {
+            mss = mss + 2;
+          }
           if ((tr.d_rel > -5.0 - mss && tr.v_lead > 1) ||
               (tr.v_lead <= 1 && tr.d_rel > -5.0)) {
             is_side_target_valid = false;
@@ -915,6 +927,9 @@ void LaneChangeDecider::compute_lc_back_info(RequestType direction) {
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
                    obstacle.track_id) > 0) {
+      if (!(obstacle.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+        continue;
+      }
       side_target_tracks.push_back(obstacle);
     }
   }
@@ -922,6 +937,9 @@ void LaneChangeDecider::compute_lc_back_info(RequestType direction) {
   for (auto &obstacle : lateral_obstacle->front_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
                    obstacle.track_id) > 0) {
+      if (!(obstacle.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+        continue;
+      }
       front_target_tracks.push_back(obstacle);
     }
   }
@@ -1048,24 +1066,26 @@ void LaneChangeDecider::compute_lc_back_info(RequestType direction) {
                 }
               }
 
-              if (tr.d_rel >
-                      -5.0 -
-                          (mss -
-                           std::max(
-                               std::max(
-                                   (std::max(l_ego - tr.d_max_cpath - 1.6,
-                                             tr.d_min_cpath - l_ego - 1.6)),
-                                   0.0) /
-                                   std::max((-tr.v_lat + 0.7), 0.1) * tr.v_rel,
-                               0.0)) &&
-                  ((tr.d_max_cpath >= -lat_thre &&
-                    tr.d_min_cpath <= lat_thre) ||
-                   (tr.d_max_cpath -
-                        tr.v_lat * std::min(tr.d_rel + 5 / tr.v_rel, 4.) >=
-                    -lat_thre) ||
-                   (tr.d_min_cpath +
-                        tr.v_lat * std::min(tr.d_rel + 5 / tr.v_rel, 4.) <=
-                    lat_thre))) {
+              // if (tr.d_rel >
+              //         -5.0 -
+              //             (mss -
+              //              std::max(
+              //                  std::max(
+              //                      (std::max(l_ego - tr.d_max_cpath - 1.6,
+              //                                tr.d_min_cpath - l_ego - 1.6)),
+              //                      0.0) /
+              //                      std::max((-tr.v_lat + 0.7), 0.1) *
+              //                      tr.v_rel,
+              //                  0.0)) &&
+              //     ((tr.d_max_cpath >= -lat_thre &&
+              //       tr.d_min_cpath <= lat_thre) ||
+              //      (tr.d_max_cpath -
+              //           tr.v_lat * std::min(tr.d_rel + 5 / tr.v_rel, 4.) >=
+              //       -lat_thre) ||
+              //      (tr.d_min_cpath +
+              //           tr.v_lat * std::min(tr.d_rel + 5 / tr.v_rel, 4.) <=
+              //       lat_thre)))
+              if (tr.d_rel > -5.0 - mss) {
                 lane_change_stage_info_.lc_should_back = true;
                 lane_change_stage_info_.lc_back_reason = "side view back";
                 lc_back_track_.set_value(tr.track_id, tr.d_rel, tr.v_rel);
@@ -1256,7 +1276,7 @@ bool LaneChangeDecider::check_lc_back_finish(RequestType direction) {
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   double ego_width = vehicle_param.width;
   double dist_threshold = half_lane_width - 0.5 * ego_width - 0.1;
-  double angle_threshold = 0.01;
+  double angle_threshold = 0.02;
 
   std::shared_ptr<ReferencePathManager> reference_path_mgr =
       session_->mutable_environmental_model()->get_reference_path_manager();
@@ -1265,18 +1285,21 @@ bool LaneChangeDecider::check_lc_back_finish(RequestType direction) {
   auto frenet_ego_state = fix_reference_path->get_frenet_ego_state();
 
   bool lc_back_finish{false};
-  if (direction == LEFT_CHANGE) {
-    lc_back_finish =
-        ((frenet_ego_state.l() < dist_threshold) &&
-         (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
-  } else if (direction == RIGHT_CHANGE) {
-    lc_back_finish =
-        ((frenet_ego_state.l() > -dist_threshold) &&
-         (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
-  } else {
-    LOG_ERROR("[check_lc_back_finish] invalid direction[%d]", direction);
-    lc_back_finish = true;
-  }
+  lc_back_finish =
+      ((std::fabs(frenet_ego_state.l()) < dist_threshold) &&
+       (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
+  // if (direction == LEFT_CHANGE) {
+  //   lc_back_finish =
+  //       ((frenet_ego_state.l() < dist_threshold) &&
+  //        (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
+  // } else if (direction == RIGHT_CHANGE) {
+  //   lc_back_finish =
+  //       ((frenet_ego_state.l() > -dist_threshold) &&
+  //        (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
+  // } else {
+  //   LOG_ERROR("[check_lc_back_finish] invalid direction[%d]", direction);
+  //   lc_back_finish = true;
+  // }
   return lc_back_finish;
 }
 
@@ -1959,7 +1982,8 @@ void LaneChangeDecider::ProcessChangeState() {
 
     gap_available =
         GapAvailable(lc_request, overtake_obstacles, yield_obstacles);
-
+    const auto &last_frame_lane_change_decider_output =
+        session_->planning_context().lane_change_decider_output();
     if (lc_lane_mgr_->has_origin_lane() &&
         lc_lane_mgr_->origin_lane_virtual_id() !=
             lc_lane_mgr_->target_lane_virtual_id()) {
@@ -1993,6 +2017,17 @@ void LaneChangeDecider::ProcessChangeState() {
             enable_arbitrator) {
           PrepareForBackState();
         }
+      }
+    } else if (last_frame_lane_change_decider_output.lc_request != NO_CHANGE &&
+               last_frame_lane_change_decider_output.lc_request_source ==
+                   INT_REQUEST &&
+               lc_req_mgr_->request() == NO_CHANGE) {
+      if (last_frame_lane_change_decider_output.lc_request == LEFT_CHANGE) {
+        transition_context_.target_state = ROAD_LC_LBACK;
+        LOG_DEBUG("[RoadState::Change] Change to Back fo ilc\n");
+      } else {
+        transition_context_.target_state = ROAD_LC_RBACK;
+        LOG_DEBUG("[RoadState::Change] Change to Back for ilc\n");
       }
     } else if (lc_lane_mgr_->has_target_lane()) {
       transition_context_.target_state = ROAD_NONE;
@@ -2046,8 +2081,6 @@ void LaneChangeDecider::ProcessBackState() {
       LOG_DEBUG("[CruiseState haowen] Wait to Back\n");
       PrepareForBackState();
     }
-  } else {
-    PrepareForNoneState();
   }
 
   generate_state_machine_output(lane_change_info);
