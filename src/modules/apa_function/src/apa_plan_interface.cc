@@ -530,6 +530,9 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().pose_min_remain_dis, double,
                   "pose_min_remain_dis");
 
+  JSON_READ_VALUE(apa_param.SetPram().max_slot_jump_dist, double,
+                  "max_slot_jump_dist");
+
   // slot update params when parking
   JSON_READ_VALUE(apa_param.SetPram().fix_slot_occupied_ratio, double,
                   "fix_slot_occupied_ratio");

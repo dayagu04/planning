@@ -109,6 +109,7 @@ void PerpendicularInPlanner::PlanCore() {
 
     frame_.ego_slot_info.first_fix_limiter = true;
     frame_.replan_flag = true;
+    pt_center_replan_ = frame_.ego_slot_info.slot_center;
 
     GenTlane();
 
@@ -197,6 +198,8 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     pt[3] = pt[1] - real_slot_length * n;
 
     ego_slot_info.slot_corner = pt;
+
+    ego_slot_info.slot_center = (pt[0] + pt[1] + pt[2] + pt[3]) * 0.25;
 
     const double virtual_slot_length =
         apa_param.GetParam().car_length +
@@ -341,21 +344,15 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   }
 
   if (frame_.is_replan_first) {
-    pt_center_ = (ego_slot_info.slot_corner[0] + ego_slot_info.slot_corner[1] +
-                  ego_slot_info.slot_corner[2] + ego_slot_info.slot_corner[3]) /
-                 4.0;
+    pt_center_ = ego_slot_info.slot_center;
+    pt_center_replan_ = ego_slot_info.slot_center;
   }
 
   // trim path according to slot when 1R
   if ((perpendicular_path_planner_.GetOutput().is_first_reverse_path ||
        apa_param.GetParam().dynamic_col_det_enable) &&
       !first_reverse_path_vec_.empty()) {
-    const double dist =
-        ((ego_slot_info.slot_corner[0] + ego_slot_info.slot_corner[1] +
-          ego_slot_info.slot_corner[2] + ego_slot_info.slot_corner[3]) /
-             4.0 -
-         pt_center_)
-            .norm();
+    const double dist = (ego_slot_info.slot_center - pt_center_).norm();
     DEBUG_PRINT("slot jump dist = " << dist);
 
     const double safe_dist =
@@ -602,8 +599,10 @@ void PerpendicularInPlanner::GenTlane() {
   }
 
   if (channel_width_pq_for_x.empty()) {
-    channel_width_pq_for_x.emplace(
-        Eigen::Vector2d(apa_param.GetParam().channel_width, 0.0));
+    channel_width_pq_for_x.emplace(Eigen::Vector2d(
+        apa_param.GetParam().channel_width +
+            ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5).x(),
+        0.0));
   }
 
   const double channel_width =
@@ -1288,7 +1287,8 @@ const bool PerpendicularInPlanner::CheckDynamicUpdate() {
 
   update_flag =
       (update_flag && gear_command_ == pnc::geometry_lib::SEG_GEAR_REVERSE &&
-       !apa_world_ptr_->GetMeasurementsPtr()->static_flag);
+       !apa_world_ptr_->GetMeasurementsPtr()->static_flag) &&
+      pt_center_replan_jump_dist_ < apa_param.GetParam().max_slot_jump_dist;
 
   frame_.is_replan_dynamic = update_flag;
 
@@ -1296,6 +1296,10 @@ const bool PerpendicularInPlanner::CheckDynamicUpdate() {
 }
 
 const bool PerpendicularInPlanner::CheckReplan() {
+  pt_center_replan_jump_dist_ =
+      (pt_center_replan_ - frame_.ego_slot_info.slot_center).norm();
+  DEBUG_PRINT("replan slot_jump_dist = " << pt_center_replan_jump_dist_);
+
   if (frame_.is_replan_first == true) {
     DEBUG_PRINT("first plan");
     frame_.replan_reason = FIRST_PLAN;
@@ -1889,6 +1893,7 @@ void PerpendicularInPlanner::Log() const {
 
   JSON_DEBUG_VALUE("correct_path_for_limiter", frame_.correct_path_for_limiter)
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
+  JSON_DEBUG_VALUE("slot_replan_jump_dist", pt_center_replan_jump_dist_)
 
   const std::vector<Eigen::Vector2d>& obstacles =
       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstacles();

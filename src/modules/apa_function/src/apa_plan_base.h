@@ -60,6 +60,8 @@ class ApaPlannerBase {
     std::vector<Eigen::Vector2d> slot_corner;
     std::vector<Eigen::Vector2d> limiter_corner;
 
+    Eigen::Vector2d slot_center;
+
     size_t selected_slot_id = 0;
     size_t slot_type = 0;
 
@@ -100,6 +102,8 @@ class ApaPlannerBase {
 
       slot_corner.clear();
       limiter_corner.clear();
+
+      slot_center.setZero();
 
       limiter.first.setZero();
       limiter.second.setZero();

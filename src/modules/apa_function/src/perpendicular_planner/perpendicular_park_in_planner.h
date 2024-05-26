@@ -68,6 +68,8 @@ class PerpendicularInPlanner : public ApaPlannerBase {
 
   std::vector<pnc::geometry_lib::PathSegment> first_reverse_path_vec_;
   Eigen::Vector2d pt_center_;
+  Eigen::Vector2d pt_center_replan_;
+  double pt_center_replan_jump_dist_ = 0.0;
 };
 
 }  // namespace apa_planner
