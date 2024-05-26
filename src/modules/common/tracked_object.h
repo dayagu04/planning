@@ -149,6 +149,8 @@ struct TrackedObject {
 
   double cutinp = 0.0;
 
+  bool frenet_transform_valid = false;
+
   // fisheye related for cutin
   Point2D points_3d_f = {DBL_MAX, DBL_MAX};
   Point2D points_3d_r = {DBL_MAX, DBL_MAX};
