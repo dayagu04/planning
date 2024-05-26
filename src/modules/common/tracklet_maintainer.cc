@@ -591,14 +591,14 @@ void TrackletMaintainer::calc(
     for (auto item : tracked_objects) {
       item->v_ego = v_ego;
       item->v_rel = item->v_lead - v_ego;
-      bool frenet_transform_valid = false;
 
       double d_poly_offset = lat_offset;
       if ((d_poly.size() == 4) && (c_poly.size() == 4)) {
         d_poly_offset = d_poly[3] - c_poly[3];
       }
 
-      frenet_transform_valid = fill_info_with_refline(*item, d_poly_offset);
+      item->frenet_transform_valid =
+          fill_info_with_refline(*item, d_poly_offset);
       if (!hdmap_valid_) {
         fill_deriv_info(*item);
       }
@@ -606,10 +606,10 @@ void TrackletMaintainer::calc(
       // HACK: ignore traffic barrier (refer to common.proto.ObjectType == 15)
       bool is_traffic_barrier = item->type == 15;
       if ((item->fusion_source & OBSTACLE_SOURCE_CAMERA) &&
-          frenet_transform_valid && !is_traffic_barrier) {
+          item->frenet_transform_valid && !is_traffic_barrier) {
         is_potential_lead_one(*item, v_ego);
       } else {
-        obstacle_reset(*item, frenet_transform_valid);
+        obstacle_reset(*item, item->frenet_transform_valid);
       }
       calc_intersection_with_refline(*item, enable_intersection_planner);
     }
@@ -631,7 +631,7 @@ void TrackletMaintainer::calc(
   for (auto tr : tracked_objects) {
     // ignore obj without camera source
     if ((!(tr->fusion_source & OBSTACLE_SOURCE_CAMERA)) ||
-        tr->d_rel <= 0) {  // hack(clren)
+        !tr->frenet_transform_valid || tr->d_rel <= 0) {  // hack(clren)
       tr->is_avd_car = false;
       continue;
     }
@@ -1662,11 +1662,7 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
     return item.is_temp_lead;
   }
   // Only use obstacle with frenet transform success
-  bool frenet_transform_valid = true;
-  Point2D frenet_point;
-  frenet_transform_valid = frenet_coord_->XYToSL(
-      Point2D(item.center_x, item.center_y), frenet_point);
-  if (!frenet_transform_valid) {
+  if (!item.frenet_transform_valid) {
     return false;
   }
   LOG_DEBUG("----is_potential_temp_lead_one-----\n");
