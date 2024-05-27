@@ -486,6 +486,7 @@ void PlanningPlayer::PlayOneFrame(
     //           << " missing /iflytek/fusion/ground_line" << std::endl;
   }
 
+  bool find_function_state_machine = false;
   auto func_state_machine_msg =
       std::make_shared<FuncStateMachine::FuncStateMachine>();
   auto functional_state = ::FuncStateMachine::FunctionalState::INIT;
@@ -495,34 +496,41 @@ void PlanningPlayer::PlayOneFrame(
             TOPIC_FUNC_STATE_MACHINE, input_time_list.function_state_machine());
     if (cached_func_state_machine_msg) {
       func_state_machine_msg = cached_func_state_machine_msg;
-      if (frame_num >= frame_num_before_enter_auto_) {  // enter auto after 1.5s
-        if (scene_type_ == "acc") {
-          functional_state = ::FuncStateMachine::FunctionalState::ACC_ACTIVATE;
-        } else if (scene_type_ == "apa") {
-          functional_state =
-              ::FuncStateMachine::FunctionalState::PARK_IN_ACTIVATE_CONTROL;
-        } else if (scene_type_ == "scc" || scene_type_ == "noa") {
-          if (FuncStateMachine::FunctionalState::SCC_ACTIVATE <=
-                  func_state_machine_msg->current_state() &&
-              func_state_machine_msg->current_state() <=
-                  FuncStateMachine::FunctionalState::SCC_SECURE) {
-            functional_state = FuncStateMachine::FunctionalState::SCC_ACTIVATE;
-          } else if (FuncStateMachine::FunctionalState::NOA_ACTIVATE <=
-                         func_state_machine_msg->current_state() &&
-                     func_state_machine_msg->current_state() <=
-                         FuncStateMachine::FunctionalState::NOA_SECUR) {
-            functional_state = FuncStateMachine::FunctionalState::NOA_ACTIVATE;
-          } else {
-            functional_state = last_functional_state;
-          }
-        } else if (scene_type_ == "hpp") {
-          functional_state =
-              ::FuncStateMachine::FunctionalState::HPP_IN_MEMORY_CRUISE;
-        }
-      }
+      find_function_state_machine = true;
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/system_state/soc_state" << std::endl;
+    }
+  }
+  if (frame_num >= frame_num_before_enter_auto_) {  // enter auto after 1.5s
+    if (scene_type_ == "acc") {
+      functional_state = ::FuncStateMachine::FunctionalState::ACC_ACTIVATE;
+    } else if (scene_type_ == "apa") {
+      functional_state =
+          ::FuncStateMachine::FunctionalState::PARK_IN_ACTIVATE_CONTROL;
+    } else if (scene_type_ == "scc" || scene_type_ == "noa") {
+      if (find_function_state_machine) {
+        if (FuncStateMachine::FunctionalState::SCC_ACTIVATE <=
+                func_state_machine_msg->current_state() &&
+            func_state_machine_msg->current_state() <=
+                FuncStateMachine::FunctionalState::SCC_SECURE) {
+          functional_state = FuncStateMachine::FunctionalState::SCC_ACTIVATE;
+        } else if (FuncStateMachine::FunctionalState::NOA_ACTIVATE <=
+                       func_state_machine_msg->current_state() &&
+                   func_state_machine_msg->current_state() <=
+                       FuncStateMachine::FunctionalState::NOA_SECUR) {
+          functional_state = FuncStateMachine::FunctionalState::NOA_ACTIVATE;
+        } else {
+          functional_state = last_functional_state;
+        }
+      } else if (scene_type_ == "scc") {
+        functional_state = FuncStateMachine::FunctionalState::SCC_ACTIVATE;
+      } else if (scene_type_ == "noa") {
+        functional_state = FuncStateMachine::FunctionalState::NOA_ACTIVATE;
+      }
+    } else if (scene_type_ == "hpp") {
+      functional_state =
+          ::FuncStateMachine::FunctionalState::HPP_IN_MEMORY_CRUISE;
     }
   }
   func_state_machine_msg->set_current_state(functional_state);
