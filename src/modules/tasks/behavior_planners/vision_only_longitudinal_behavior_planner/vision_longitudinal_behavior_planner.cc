@@ -314,6 +314,8 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
   LOG_DEBUG("----limit_accel_velocity_4_cutin--- \n");
   // filter near cars from front && side tracks
   near_cars.clear();
+  auto &lateral_obstacle =
+      session_->environmental_model().get_lateral_obstacle();
   for (auto &track : front_tracks) {
     // ignore obj without camera source
     if ((track.fusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
@@ -349,6 +351,10 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
 
   a_limit_cutin_now_.clear();
   for (int i = 0; i < near_cars_sorted.size(); i++) {
+    if (lateral_obstacle->leadone()->track_id ==
+        near_cars_sorted[i]->track_id) {
+      continue;
+    }
     nearest_car_track_id[i] = near_cars_sorted[i]->track_id;
     // check a history
     auto iter = a_limit_cutin_history_.find(near_cars_sorted[i]->track_id);
@@ -387,43 +393,88 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
     bool cutin_car = false;
     bool potential_cutin_car_1 = false;
     bool potential_cutin_car_2 = false;
+    bool NEAR_CAR_LAT_MOVING = fabs(vy_rel) > 0.1;
     if (near_cars_sorted[i]->y_min < 0) {
       if (lc_status == "left_lane_change") {
         vy_rel = std::max(vy_rel, (vy_rel + near_cars_sorted[i]->v_lat) / 2);
       }
       if (lc_status == "right_lane_change_wait") {
-        cutin_car = near_cars_sorted[i]->y_min + vy_rel * v_coeff >= -1.6;
-        potential_cutin_car_1 =
-            near_cars_sorted[i]->y_min + 1.25 * vy_rel * v_coeff >= -1.6;
-        potential_cutin_car_2 =
-            near_cars_sorted[i]->y_min + 1.5 * vy_rel * v_coeff >= -1.6;
+        if (NEAR_CAR_LAT_MOVING) {
+          cutin_car = near_cars_sorted[i]->y_min + vy_rel * v_coeff >= -1.6;
+          potential_cutin_car_1 =
+              near_cars_sorted[i]->y_min + 1.25 * vy_rel * v_coeff >= -1.6;
+          potential_cutin_car_2 =
+              near_cars_sorted[i]->y_min + 1.5 * vy_rel * v_coeff >= -1.6;
+        } else {
+          cutin_car = (near_cars_sorted[i]->y_min + vy_rel * v_coeff >=
+                       -CUIIN_WIDTH_STATIC);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min + 1.25 * vy_rel * v_coeff >=
+               -CUIIN_WIDTH_STATIC);
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min + 1.5 * vy_rel * v_coeff >=
+               -CUIIN_WIDTH_STATIC);
+        }
       } else {
-        cutin_car = near_cars_sorted[i]->y_min + vy_rel * v_coeff >= -1.6;
-        potential_cutin_car_1 =
-            near_cars_sorted[i]->y_min + 1.5 * vy_rel * v_coeff >=
-            -1 * (1.6 + 0.01 * v_ego);
-        potential_cutin_car_2 =
-            near_cars_sorted[i]->y_min + 2.0 * vy_rel * v_coeff >=
-            -1 * (1.6 + 0.01 * v_ego);
+        if (NEAR_CAR_LAT_MOVING) {
+          cutin_car = near_cars_sorted[i]->y_min + vy_rel * v_coeff >= -1.6;
+          potential_cutin_car_1 =
+              near_cars_sorted[i]->y_min + 1.5 * vy_rel * v_coeff >=
+              -1 * (1.6 + 0.01 * v_ego);
+          potential_cutin_car_2 =
+              near_cars_sorted[i]->y_min + 2.0 * vy_rel * v_coeff >=
+              -1 * (1.6 + 0.01 * v_ego);
+        } else {
+          cutin_car = (near_cars_sorted[i]->y_min + vy_rel * v_coeff >=
+                       -CUIIN_WIDTH_STATIC);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min + 1.5 * vy_rel * v_coeff >=
+               -1 * (CUIIN_WIDTH_STATIC + 0.01 * v_ego));
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min + 2.0 * vy_rel * v_coeff >=
+               -1 * (CUIIN_WIDTH_STATIC + 0.01 * v_ego));
+        }
       }
     } else {
       if (lc_status == "right_lane_change") {
         vy_rel = min(vy_rel, (vy_rel + near_cars_sorted[i]->v_lat) / 2);
       }
       if (lc_status == "left_lane_change_wait") {
-        cutin_car = near_cars_sorted[i]->y_min + vy_rel * v_coeff <= 1.6;
-        potential_cutin_car_1 =
-            near_cars_sorted[i]->y_min + 1.25 * vy_rel * v_coeff <= 1.6;
-        potential_cutin_car_2 =
-            near_cars_sorted[i]->y_min + 1.5 * vy_rel * v_coeff <= 1.6;
+        if (NEAR_CAR_LAT_MOVING) {
+          cutin_car = near_cars_sorted[i]->y_min + vy_rel * v_coeff <= 1.6;
+          potential_cutin_car_1 =
+              near_cars_sorted[i]->y_min + 1.25 * vy_rel * v_coeff <= 1.6;
+          potential_cutin_car_2 =
+              near_cars_sorted[i]->y_min + 1.5 * vy_rel * v_coeff <= 1.6;
+        } else {
+          cutin_car = (near_cars_sorted[i]->y_min + vy_rel * v_coeff <=
+                       CUIIN_WIDTH_STATIC);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min + 1.25 * vy_rel * v_coeff <=
+               CUIIN_WIDTH_STATIC);
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min + 1.5 * vy_rel * v_coeff <=
+               CUIIN_WIDTH_STATIC);
+        }
       } else {
-        cutin_car = near_cars_sorted[i]->y_min + vy_rel * v_coeff <= 1.6;
-        potential_cutin_car_1 =
-            near_cars_sorted[i]->y_min + 1.5 * vy_rel * v_coeff <=
-            (1.6 + 0.01 * v_ego);
-        potential_cutin_car_2 =
-            near_cars_sorted[i]->y_min + 2.0 * vy_rel * v_coeff <=
-            (1.6 + 0.01 * v_ego);
+        if (NEAR_CAR_LAT_MOVING) {
+          cutin_car = near_cars_sorted[i]->y_min + vy_rel * v_coeff <= 1.6;
+          potential_cutin_car_1 =
+              near_cars_sorted[i]->y_min + 1.5 * vy_rel * v_coeff <=
+              (1.6 + 0.01 * v_ego);
+          potential_cutin_car_2 =
+              near_cars_sorted[i]->y_min + 2.0 * vy_rel * v_coeff <=
+              (1.6 + 0.01 * v_ego);
+        } else {
+          cutin_car = (near_cars_sorted[i]->y_min + vy_rel * v_coeff <=
+                       CUIIN_WIDTH_STATIC);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min + 1.5 * vy_rel * v_coeff <=
+               (CUIIN_WIDTH_STATIC + 0.01 * v_ego));
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min + 2.0 * vy_rel * v_coeff <=
+               (CUIIN_WIDTH_STATIC + 0.01 * v_ego));
+        }
       }
     }
 
