@@ -25,7 +25,6 @@ from functools import  partial
 from bokeh.models import ColumnDataSource
 import bokeh.plotting as bkp
 from bokeh.models import WheelZoomTool, HoverTool, TapTool, CustomJS, CheckboxGroup
-from cyber_record.record import Record
 from google.protobuf.json_format import MessageToJson
 import rosbag
 import rospy
@@ -516,9 +515,10 @@ class LoadRosbag:
 
     # load planning debug msg
     try:
-      json_value_list = ["replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'VisionLonBehavior_a_target_high', \
+      json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
+                         "replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", \
                          "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "iLqr_lat_update_time", \
-                         'VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
+                         'acc_target_high', 'acc_target_low', 'acc_cipv', \
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                          "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                          'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
@@ -531,15 +531,18 @@ class LoadRosbag:
                          "dis_to_ramp", "v_target_ramp", \
                          'gap_v_limit_lc', \
                          "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
-                         "dynamic_world_cost", "front_node_id", "rear_node_id", \
+                         "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
+                         'hdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision', \
+                         "is_in_merge_area","current_lane_order_id","current_lane_virtual_id","current_lane_relative_id","is_solid_left_boundary","is_solid_right_boundary", \
+                         "enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", "trigger_right_overtake", "overtake_vehicle_id", \
+                         'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                         "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost", \
+                         "front_node_id", "rear_node_id", \
                          "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
                          "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
-                         "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                         'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
-                         "SccLonBehaviorCostTime", "SccLonMotionCostTime", \
-                         "final_y_rel_id", "final_y_rel", \
-                         'hdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision', \
-                         "is_in_merge_area","current_lane_order_id","current_lane_virtual_id","current_lane_relative_id","is_solid_left_boundary","is_solid_right_boundary"]
+                         "lane_width", "smooth_lateral_offset", "normal_avoid_threshold","lat_offset","smooth_lateral_offset", "avoid_way", "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
+                         "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
+                         "select_avoid_car_ids_1", "select_avoid_car_ids_2", "allow_max_opposite_offset", "allow_max_opposite_offset_id"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type"]
 

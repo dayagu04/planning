@@ -288,15 +288,13 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
   reference_line_msg_size = road_msg.reference_line_msg_size
   default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
   for i in range(10):
-    lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[], 'line_s_vec':[], 'curvature_vec':[]}
-    if i < reference_line_msg_size:
+    lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[]}
+    if i< reference_line_msg_size:
       lane = reference_line_msg[i]
       virtual_lane_refline_points = lane.lane_reference_line.virtual_lane_refline_points
       virtual_lane_refline_points_size = lane.lane_reference_line.virtual_lane_refline_points_size
       line_x = []
       line_y = []
-      line_curvature = []
-      line_s = []
       if g_is_display_enu:
         line_x = [virtual_lane_refline_points[i].enu_point.x for i in range(virtual_lane_refline_points_size)]
         line_y = [virtual_lane_refline_points[i].enu_point.y for i in range(virtual_lane_refline_points_size)]
@@ -315,23 +313,17 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
           line_x = [virtual_lane_refline_points[i].car_point.x for i in range(virtual_lane_refline_points_size)]
           line_y = [virtual_lane_refline_points[i].car_point.y for i in range(virtual_lane_refline_points_size)]
 
-        line_s.append(virtual_lane_refline_points[i].s)
-        line_curvature.append(max(min(1.0 / (virtual_lane_refline_points[i].curvature + 1e-6), 10000.0), -10000.0))
-
       lane_info['line_x_vec'] = line_x
       lane_info['line_y_vec'] = line_y
       lane_info['relative_id'] = lane.relative_id
       lane_info['type'] = 0
-      lane_info['line_s_vec'] = line_s
-      lane_info['curvature_vec'] = line_curvature
+
       line_info_list.append(lane_info)
     else:
       lane_info['line_x_vec'] = default_line_x
       lane_info['line_y_vec'] = default_line_y
       lane_info['relative_id'] = 1000
       lane_info['type'] = 0
-      lane_info['line_s_vec'] = 0
-      lane_info['curvature_vec'] = 0
       line_info_list.append(lane_info)
 
   return line_info_list
@@ -470,8 +462,7 @@ def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environ
 #             fusion_obs_info['is_cipv'].append(obstacle_list[i].target_selection_type)
     if frenet_vs == 255 and  frenet_vl == 255:
       obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
-          + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 4)) \
-          +','+str(obstacle_list[i].common_info.type))
+          + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 4)))
     else:
       obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
           + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4)))
@@ -1277,7 +1268,6 @@ def load_lat_common(plan_debug, planning_json):
   vo_lat_motion_plan = plan_debug.vo_lat_motion_plan
   vo_lat_behavior_plan = plan_debug.vo_lat_behavior_plan
   lat_behavior_common = plan_debug.lat_behavior_common
-
   vars = ['fix_lane_virtual_id','target_lane_virtual_id','origin_lane_virtual_id',\
           'lc_request','lc_request_source','turn_light','map_turn_light','lc_turn_light','act_request_source','lc_back_invalid_reason','lc_status',\
             'is_lc_valid','lc_valid_cnt','lc_invalid_obj_id','lc_invalid_reason',\
@@ -1303,6 +1293,9 @@ def load_lat_common(plan_debug, planning_json):
   except:
     pass
 
+  avoid_car_id_str = ""
+  for avoid_car_id in vo_lat_behavior_plan.avoid_car_ids:
+    avoid_car_id_str = avoid_car_id_str + str(avoid_car_id) + ' '
   left_alc_car_id_str = ""
   right_alc_car_id_str = ""
   for left_alc_car_id in lat_behavior_common.left_alc_car_ids:
@@ -1311,13 +1304,10 @@ def load_lat_common(plan_debug, planning_json):
     right_alc_car_id_str = right_alc_car_id_str + str(right_alc_car_id) + ' '
   # 添加可视化left_alc_car_ids、right_alc_car_ids可视化
 
-
-  data_dict2['left_alc_car_ids'] = left_alc_car_id_str
-  data_dict2['right_alc_car_ids'] = right_alc_car_id_str
   avoid_debug_key = ["avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
                         "select_avoid_car_ids_1", "select_avoid_car_ids_2","lat_offset", "smooth_lateral_offset", "lane_width", "smooth_lateral_offset", "normal_avoid_threshold", "avoid_way", "allow_max_opposite_offset", "allow_max_opposite_offset_id",\
                         "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
-                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "final_y_rel_id", "final_y_rel"]
+                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l"]
   for key in avoid_debug_key:
     try:
       data_dict2[key] = planning_json[key]
@@ -1339,5 +1329,3 @@ class ObjText:
   def __init__(self,  obj_callback):
     self.id = ipywidgets.IntText(layout=ipywidgets.Layout(width='10%'), description= "obj_id",min=0.0, max=10000)
     ipywidgets.interact(obj_callback, id = self.id)
-
-
