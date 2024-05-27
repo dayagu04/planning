@@ -21,74 +21,20 @@ from functools import  partial
 from bokeh.models import ColumnDataSource
 import bokeh.plotting as bkp
 from bokeh.models import WheelZoomTool, HoverTool
-from cyber_record.record import Record
 
 car_xb, car_yb = load_car_params_patch()
 coord_tf = coord_transformer()
 
-def load_local_lane_lines(reference_line_msg):
-  line_info_list = []
-
-  for i in range(10):
-    lane_info_l = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
-    if i< len(reference_line_msg):
-      reference_line = reference_line_msg[i]
-      left_line = reference_line.left_lane_boundary
-      line_x = []
-      line_y = []
-      for point in left_line.enu_points:
-        line_x.append(point.x)
-        line_y.append(point.y)
-      lane_info_l['line_x_vec'] = line_x
-      lane_info_l['line_y_vec'] = line_y
-      lane_info_l['type'] = left_line.type
-
-      line_info_list.append(lane_info_l)
-
-      lane_info_r = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
-      right_line = reference_line.right_lane_boundary
-      line_x = []
-      line_y = []
-      for point in right_line.enu_points:
-        line_x.append(point.x)
-        line_y.append(point.y)
-
-      lane_info_r['line_x_vec'] = line_x
-      lane_info_r['line_y_vec'] = line_y
-      lane_info_r['type'] = right_line.type
-      line_info_list.append(lane_info_r)
-    else:
-      line_x = []
-      line_y = []
-      # line_x, line_y = gen_line(0,0,0,0,0,0)
-      lane_info_l['line_x_vec'] = line_x
-      lane_info_l['line_y_vec'] = line_y
-      lane_info_l['type'] = []
-      line_info_list.append(lane_info_l)
-
-  return line_info_list
-
 def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g_is_display_enu = False):
-  loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
-  road_msg_idx = local_view_data['data_index']['road_msg_idx']
-  fus_msg_idx = local_view_data['data_index']['fus_msg_idx']
-  vs_msg_idx = local_view_data['data_index']['vs_msg_idx']
-  plan_msg_idx = local_view_data['data_index']['plan_msg_idx']
-  plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
-  pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
-
-  print('loc_msg_idx:', loc_msg_idx)
-  print('road_msg_idx:', road_msg_idx)
-  print('plan_msg_idx:', plan_msg_idx)
-
-  planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
-  planning_debug = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
-  debug1, debug2 = load_lat_common(planning_debug, planning_json)
-  print(debug2)
   if bag_loader.loc_msg['enable'] == True:
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
+    cur_pos_xn = local_view_data['data_msg']['loc_msg'].position.position_boot.x
+    cur_pos_yn = local_view_data['data_msg']['loc_msg'].position.position_boot.y
+    cur_yaw = local_view_data['data_msg']['loc_msg'].orientation.euler_boot.yaw
+    planning_json = local_view_data['data_msg']['plan_debug_json_msg']
+    planning_debug = local_view_data['data_msg']['plan_debug_msg']
+
+    debug1, debug2 = load_lat_common(planning_debug, planning_json)
+    print(debug2)
     ego_xn, ego_yn = [], []
     ### global variables
     # pos offset
@@ -130,7 +76,7 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
       coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
   if bag_loader.plan_debug_msg['enable'] == True:
-    lat_motion_plan_input = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_input
+    lat_motion_plan_input = local_view_data['data_msg']['plan_debug_msg'].lateral_motion_planning_input
 
     if g_is_display_enu:
       ref_x, ref_y = lat_motion_plan_input.ref_x_vec, lat_motion_plan_input.ref_y_vec
@@ -205,7 +151,7 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
         hard_lower_bound_x0_vec[len(hard_lower_bound_x0_vec) - 1] = hard_lower_bound_x1_vec[len(hard_lower_bound_x1_vec) - 1]
         hard_lower_bound_y0_vec[len(hard_lower_bound_y0_vec) - 1] = hard_lower_bound_y1_vec[len(hard_lower_bound_y1_vec) - 1]
 
-    if len(soft_upper_bound_x0_vec) == 0 or bag_loader.plan_msg['data'][plan_msg_idx].trajectory.target_reference.lateral_maneuver_gear == 2:
+    if len(soft_upper_bound_x0_vec) == 0 or local_view_data['data_msg']['plan_msg'].trajectory.target_reference.lateral_maneuver_gear == 2:
       soft_upper_bound_x0_vec = ref_x
       soft_upper_bound_y0_vec = ref_y
       soft_lower_bound_x0_vec = ref_x
@@ -230,7 +176,7 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
     hard_upper_bound_type_vec = []
     hard_lower_bound_type_vec = []
     try:
-      lat_behavior_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_behavior_debug_info
+      lat_behavior_debug_info = local_view_data['data_msg']['plan_debug_msg'].lateral_behavior_debug_info
       for i in range(len(lat_behavior_debug_info.bound_s_vec)):
         bound_t_vec.append(round(i * 0.2, 2))
         bound_s_vec.append(round(lat_behavior_debug_info.bound_s_vec[i], 3))
@@ -307,7 +253,7 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
       'raw_refline_y': raw_refline_y,
     })
 
-    lat_motion_plan_output = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_output
+    lat_motion_plan_output = local_view_data['data_msg']['plan_debug_msg'].lateral_motion_planning_output
     if g_is_display_enu:
       x_vec, y_vec = lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec
     else:
@@ -326,11 +272,13 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
     steer_deg_lower_bound = []
     steer_dot_deg_upper_bound = []
     steer_dot_deg_lower_bound = []
+
     try:
       delta_bound = min(360.0 / 14.5 / 57.3, lat_motion_plan_input.acc_bound / (lat_motion_plan_input.curv_factor * lat_motion_plan_input.ref_vel * lat_motion_plan_input.ref_vel))
       omega_bound = min(240.0 / 14.5 / 57.3, lat_motion_plan_input.jerk_bound / (lat_motion_plan_input.curv_factor * lat_motion_plan_input.ref_vel * lat_motion_plan_input.ref_vel))
     except:
-      pass
+      print("no lat_motion_plan_input!!")
+
     for i in range(len(time_vec)):
       ref_theta_deg_vec.append(lat_motion_plan_input.ref_theta_vec[i] * 57.3)
       theta_deg_vec.append(lat_motion_plan_output.theta_vec[i] * 57.3)
@@ -386,7 +334,7 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
     print("iLqr_lat_update_time = ", planning_json['iLqr_lat_update_time'], " ms")
 
   if bag_loader.plan_msg['enable'] == True:
-    trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
+    trajectory = local_view_data['data_msg']['plan_msg'].trajectory
     if trajectory.trajectory_type == 0: # 实时轨迹
       try:
         planning_polynomial = trajectory.target_reference.polynomial
@@ -415,56 +363,6 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
       'plan_traj_x' : plan_traj_x,
     })
 
-  ### step 3: 加载车道线信息
-  if bag_loader.road_msg['enable'] == False:
-    # load lane info
-    line_info_list = load_local_lane_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
-    # update lane info
-    data_lane_dict = {
-      0:lat_plan_data['data_lane_0'],
-      1:lat_plan_data['data_lane_1'],
-      2:lat_plan_data['data_lane_2'],
-      3:lat_plan_data['data_lane_3'],
-      4:lat_plan_data['data_lane_4'],
-      5:lat_plan_data['data_lane_5'],
-      6:lat_plan_data['data_lane_6'],
-      7:lat_plan_data['data_lane_7'],
-      8:lat_plan_data['data_lane_8'],
-      9:lat_plan_data['data_lane_9'],
-    }
-
-    data_center_line_dict = {
-      0:lat_plan_data['data_center_line_0'],
-      1:lat_plan_data['data_center_line_1'],
-      2:lat_plan_data['data_center_line_2'],
-      3:lat_plan_data['data_center_line_3'],
-      4:lat_plan_data['data_center_line_4'],
-    }
-
-    for i in range(10):
-      try:
-        data_lane = data_lane_dict[i]
-        data_lane.data.update({
-          'line_{}_x'.format(i): line_info_list[i]['line_x_vec'],
-          'line_{}_y'.format(i): line_info_list[i]['line_y_vec'],
-        })
-      except:
-        print('error')
-        pass
-
-    try:
-      center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].reference_line_msg)
-    except:
-      print("old interface before 2.2.3")
-      center_line_list = load_lane_center_lines(bag_loader.road_msg['data'][road_msg_idx].lanes)
-    # print(center_line_list)
-    for i in range(5):
-        data_center_line = data_center_line_dict[i]
-        data_center_line.data.update({
-          'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
-          'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
-        })
-
 def load_lateral_offset(bag_loader):
   data_fig = ColumnDataSource(data ={
     'lateral_offset_1': [],
@@ -473,29 +371,26 @@ def load_lateral_offset(bag_loader):
     'frame_num_y': [],
   })
 
-  try:
-    if bag_loader.plan_debug_msg['enable'] == True:
-        lateral_offsets = []
-        smooth_lateral_offsets = []
-        frame_nums = []
-        avoid_ways = []
-        for i, plan_json_debug in enumerate(bag_loader.plan_debug_msg['json']):
-          plan_debug_msg = bag_loader.plan_debug_msg['data'][i]
-          frame_nums.append(plan_debug_msg.frame_info.frame_num)
-          lateral_offsets.append(plan_json_debug['lat_offset'])
-          smooth_lateral_offsets.append(plan_json_debug['smooth_lateral_offset'])
-          avoid_ways.append(plan_json_debug['avoid_way'] * 0.1)
-        frame_num_0 = frame_nums[0]
-        frame_nums = [frame_num - frame_num_0 for frame_num in frame_nums]
-    data_fig.data.update({
-      'lateral_offset_1':lateral_offsets,
-      'lateral_offset_2':smooth_lateral_offsets,
-      "avoid_ways":avoid_ways,
-      'frame_num_y':frame_nums,
-    })
-  except:
-    pass
+  if bag_loader.plan_debug_msg['enable'] == True:
+      lateral_offsets = []
+      smooth_lateral_offsets = []
+      frame_nums = []
+      avoid_ways = []
+      for i, plan_json_debug in enumerate(bag_loader.plan_debug_msg['json']):
+        plan_debug_msg = bag_loader.plan_debug_msg['data'][i]
+        frame_nums.append(plan_debug_msg.frame_info.frame_num)
+        lateral_offsets.append(plan_json_debug['lat_offset'])
+        smooth_lateral_offsets.append(plan_json_debug['smooth_lateral_offset'])
+        avoid_ways.append(plan_json_debug['avoid_way'] * 0.1)
+      frame_num_0 = frame_nums[0]
+      frame_nums = [frame_num - frame_num_0 for frame_num in frame_nums]
   fig = bkp.figure(x_axis_label='frame_num', y_axis_label='lat_offset',x_range = [frame_nums[0], frame_nums[-1]], width=700, height=200)
+  data_fig.data.update({
+    'lateral_offset_1':lateral_offsets,
+    'lateral_offset_2':smooth_lateral_offsets,
+    "avoid_ways":avoid_ways,
+    'frame_num_y':frame_nums,
+  })
   f1 = fig.line('frame_num_y', 'lateral_offset_1', source = data_fig, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lateral_offset')
   fig.line('frame_num_y', 'lateral_offset_2', source = data_fig, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'smooth_lateral_offset')
   fig.line('frame_num_y', 'avoid_ways', source = data_fig, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'avoid_way')
