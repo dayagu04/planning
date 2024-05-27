@@ -55,10 +55,6 @@ class PlanningPlayer {
   void PlayOneFrame(int frame_num,
                     const planning::common::TopicTimeList &input_time_list);
   void PlayAllFrames();
-  void PerpareTrajectory(const struct_msgs::PlanningOutput &plan_msg);
-  void UpdateVehicleService(
-      uint64_t delta_t,
-      std::shared_ptr<struct_msgs::VehicleServiceOutputInfo> &vehi_svc_msg);
 
   void RunCloseLoop(const struct_msgs::PlanningOutput &planning_output);
   void PerfectControlHPP(const struct_msgs::PlanningOutput &plan_msg,
@@ -92,20 +88,9 @@ class PlanningPlayer {
   uint64_t loc_header_time_us_ = 0;
   uint64_t next_loc_esti_header_time_us_ = 0;
   uint64_t loc_esti_header_time_us_ = 0;
-  uint64_t next_vehi_svc_header_time_us_ = 0;
-  uint64_t vehi_svc_header_time_us_ = 0;
   uint64_t planning_dubug_info_frame_num_ = 0;
   int frame_num_before_enter_auto_ = 0;
   std::string scene_type_ = "acc";
-  FuncStateMachine::FunctionalState last_functional_state =
-      FuncStateMachine::FunctionalState::INIT;
-  pnc::mathlib::spline x_t_spline_;
-  pnc::mathlib::spline y_t_spline_;
-  pnc::mathlib::spline theta_t_spline_;
-  pnc::mathlib::spline v_t_spline_;
-  pnc::mathlib::spline a_t_spline_;
-  pnc::mathlib::spline yaw_rate_t_spline_;
-  pnc::mathlib::spline curvature_t_spline_;
 
   template <class T>
   void cache_with_ros_msg_time(const rosbag::MessageInstance &msg);

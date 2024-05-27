@@ -486,7 +486,6 @@ void PlanningPlayer::PlayOneFrame(
       //           << " missing /iflytek/system_state/soc_state" << std::endl;
     }
   }
-  last_functional_state = functional_state;
   auto functional_state = iflyauto::FunctionalState_INIT;
   if (frame_num >= frame_num_before_enter_auto_) {  // enter auto after 1.5s
     if (scene_type_ == "acc") {
@@ -586,8 +585,7 @@ void PlanningPlayer::PlayAllFrames() {
     next_loc_header_time_us_ = next_input_topic_timestamp.localization();
     next_loc_esti_header_time_us_ =
         next_input_topic_timestamp.localization_estimate();
-    next_vehi_svc_header_time_us_ =
-        next_input_topic_timestamp.vehicle_service();
+
     // 兼容老版本的包，在老版本中，ego_pose的时间戳被加在input_topic_timestamp.localization字段
     if (0 == next_loc_esti_header_time_us_) {
       next_loc_esti_header_time_us_ = next_loc_header_time_us_;
@@ -596,7 +594,6 @@ void PlanningPlayer::PlayAllFrames() {
     if (i == msg_cache_[TOPIC_PLANNING_DEBUG_INFO].size() - 3) {
       next_loc_header_time_us_ = UINT64_MAX;
       next_loc_esti_header_time_us_ = UINT64_MAX;
-      next_vehi_svc_header_time_us_ = UINT64_MAX;
     }
 
     planning_header_time_us_ = planning_msg->meta.msg_header.timestamp;
@@ -611,15 +608,13 @@ void PlanningPlayer::PlayAllFrames() {
     if (0 == loc_esti_header_time_us_) {
       loc_esti_header_time_us_ = loc_header_time_us_;
     }
-    vehi_svc_header_time_us_ =
-        debug_info->input_topic_timestamp().vehicle_service();
     PlayOneFrame(frame_num_++, planning_debug_info->input_topic_timestamp());
   }
 }
 
 void PlanningPlayer::RunCloseLoop(
     const struct_msgs::PlanningOutput& planning_output) {
-  if (scene_type_ == "scc" || scene_type_ == "noa") {  // scc
+  if (scene_type_ == "scc") {  // scc
     if (!check_msg_exist(msg_cache_, TOPIC_PLANNING_DEBUG_INFO) ||
         !check_msg_exist(msg_cache_, TOPIC_LOCALIZATION_ESTIMATE)) {
       return;
@@ -630,7 +625,7 @@ void PlanningPlayer::RunCloseLoop(
                 << std::endl;
       return;
     }
-    PerpareTrajectory(planning_output);
+
     for (auto it = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
          it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
       auto loc_msg_i =
@@ -639,23 +634,7 @@ void PlanningPlayer::RunCloseLoop(
       if (loc_header_time_i > loc_esti_header_time_us_) {
         if (loc_header_time_i <= next_loc_esti_header_time_us_) {
           auto delta_t = loc_header_time_i - loc_esti_header_time_us_;
-          PerfectControlSCC(delta_t, loc_msg_i);
-        } else {
-          break;
-        }
-      }
-    }
-    for (auto it = msg_cache_[TOPIC_VEHICLE_SERVICE].begin();
-         it != msg_cache_[TOPIC_VEHICLE_SERVICE].end(); it++) {
-      auto vehi_svc_msg_i =
-          std::const_pointer_cast<VehicleService::VehicleServiceOutputInfo>(
-              std::dynamic_pointer_cast<
-                  VehicleService::VehicleServiceOutputInfo>(it->second));
-      auto vehi_svc_header_time_i = vehi_svc_msg_i->header().timestamp();
-      if (vehi_svc_header_time_i > vehi_svc_header_time_us_) {
-        if (vehi_svc_header_time_i <= next_vehi_svc_header_time_us_) {
-          auto delta_t = vehi_svc_header_time_i - vehi_svc_header_time_us_;
-          UpdateVehicleService(delta_t, vehi_svc_msg_i);
+          PerfectControlSCC(planning_output, delta_t, loc_msg_i);
         } else {
           break;
         }
@@ -695,7 +674,7 @@ void PlanningPlayer::RunCloseLoop(
                 << std::endl;
       return;
     }
-    PerpareTrajectory(planning_output);
+
     for (auto it = msg_cache_[TOPIC_LOCALIZATION].begin();
          it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
       auto loc_msg_i =
@@ -704,23 +683,7 @@ void PlanningPlayer::RunCloseLoop(
       if (loc_header_time_i > loc_header_time_us_) {
         if (loc_header_time_i <= next_loc_header_time_us_) {
           auto delta_t = loc_header_time_i - loc_header_time_us_;
-          PerfectControlHPP(delta_t, loc_msg_i);
-        } else {
-          break;
-        }
-      }
-    }
-    for (auto it = msg_cache_[TOPIC_VEHICLE_SERVICE].begin();
-         it != msg_cache_[TOPIC_VEHICLE_SERVICE].end(); it++) {
-      auto vehi_svc_msg_i =
-          std::const_pointer_cast<VehicleService::VehicleServiceOutputInfo>(
-              std::dynamic_pointer_cast<
-                  VehicleService::VehicleServiceOutputInfo>(it->second));
-      auto vehi_svc_header_time_i = vehi_svc_msg_i->header().timestamp();
-      if (vehi_svc_header_time_i > vehi_svc_header_time_us_) {
-        if (vehi_svc_header_time_i <= next_vehi_svc_header_time_us_) {
-          auto delta_t = vehi_svc_header_time_i - vehi_svc_header_time_us_;
-          UpdateVehicleService(delta_t, vehi_svc_msg_i);
+          PerfectControlHPP(planning_output, delta_t, loc_msg_i);
         } else {
           break;
         }
@@ -732,7 +695,9 @@ void PlanningPlayer::RunCloseLoop(
 }
 
 void PlanningPlayer::PerfectControlHPP(
-    const struct_msgs::PlanningOutput& plan_msg) {
+    const struct_msgs::PlanningOutput& plan_msg, uint64_t delta_t,
+    struct_msgs::IFLYLocalization::Ptr loc_msg) {
+  const double dt = static_cast<double>(delta_t) / 1e6;
   const auto& trajectory = plan_msg.trajectory;
   auto traj_size = trajectory.trajectory_points_size;
   std::vector<double> x_vec(traj_size);
@@ -741,8 +706,6 @@ void PlanningPlayer::PerfectControlHPP(
   std::vector<double> v_vec(traj_size);
   std::vector<double> a_vec(traj_size);
   std::vector<double> t_vec(traj_size);
-  std::vector<double> yaw_rate_vec(traj_size);
-  std::vector<double> curvature_vec(traj_size);
 
   double angle_offset = 0.0;
   static const double pi_const = 3.141592654;
@@ -752,11 +715,9 @@ void PlanningPlayer::PerfectControlHPP(
     y_vec[i] = trajectory.trajectory_points[i].y;
     v_vec[i] = trajectory.trajectory_points[i].v;
     a_vec[i] = trajectory.trajectory_points[i].a;
-    curvature_vec[i] = trajectory.trajectory_points[i].curvature;
 
     if (i == 0) {
       theta_vec[i] = trajectory.trajectory_points[i].heading_yaw;
-      yaw_rate_vec[i] = 0;
     } else {
       const auto delta_theta = trajectory.trajectory_points[i].heading_yaw -
                                trajectory.trajectory_points[i - 1].heading_yaw;
@@ -765,31 +726,27 @@ void PlanningPlayer::PerfectControlHPP(
       } else if (delta_theta < -1.5 * pi_const) {
         angle_offset += 2.0 * pi_const;
       }
-      theta_vec[i] =
-          trajectory.trajectory_points[i].heading_yaw + angle_offset;
-      const auto delta_t = t_vec[i] - t_vec[i - 1];
-      yaw_rate_vec[i] = delta_theta / delta_t;
+      theta_vec[i] = trajectory.trajectory_points[i].heading_yaw + angle_offset;
     }
   }
 
-  x_t_spline_.set_points(t_vec, x_vec);
-  y_t_spline_.set_points(t_vec, y_vec);
-  theta_t_spline_.set_points(t_vec, theta_vec);
-  v_t_spline_.set_points(t_vec, v_vec);
-  a_t_spline_.set_points(t_vec, a_vec);
-  yaw_rate_t_spline_.set_points(t_vec, yaw_rate_vec);
-  curvature_t_spline_.set_points(t_vec, curvature_vec);
-}
+  pnc::mathlib::spline x_t_spline;
+  pnc::mathlib::spline y_t_spline;
+  pnc::mathlib::spline theta_t_spline;
+  pnc::mathlib::spline v_t_spline;
+  pnc::mathlib::spline a_t_spline;
 
-void PlanningPlayer::PerfectControlHPP(
-    uint64_t delta_t,
-    std::shared_ptr<IFLYLocalization::IFLYLocalization>& loc_msg) {
-  const double dt = static_cast<double>(delta_t) / 1e6;
-  const double x = x_t_spline_(dt);
-  const double y = y_t_spline_(dt);
-  const double v = v_t_spline_(dt);
-  const double a = a_t_spline_(dt);
-  const double theta = pnc::mathlib::DeltaAngleFix(theta_t_spline_(dt));
+  x_t_spline.set_points(t_vec, x_vec);
+  y_t_spline.set_points(t_vec, y_vec);
+  theta_t_spline.set_points(t_vec, theta_vec);
+  v_t_spline.set_points(t_vec, v_vec);
+  a_t_spline.set_points(t_vec, a_vec);
+
+  const double x = x_t_spline(dt);
+  const double y = y_t_spline(dt);
+  const double v = v_t_spline(dt);
+  const double a = a_t_spline(dt);
+  const double theta = pnc::mathlib::DeltaAngleFix(theta_t_spline(dt));
 
   Eigen::Vector3d euler_zxy;
   Eigen::Quaterniond q;
@@ -1035,30 +992,6 @@ void PlanningPlayer::PerfectControlSCC(
   // pos
   pose.local_position.x = x;
   pose.local_position.y = y;
-}
-
-void PlanningPlayer::UpdateVehicleService(
-    uint64_t delta_t,
-    std::shared_ptr<VehicleService::VehicleServiceOutputInfo>& vehi_svc_msg) {
-  const double dt = static_cast<double>(delta_t) / 1e6;
-  const double v = v_t_spline_(dt);
-  const double a = a_t_spline_(dt);
-  const double yaw_rate = yaw_rate_t_spline_(dt);
-  const double curvature = curvature_t_spline_(dt);
-
-  // vel
-  vehi_svc_msg->set_vehicle_speed(v);
-
-  // acc
-  vehi_svc_msg->set_long_acceleration(a);
-
-  // yaw_rate
-  vehi_svc_msg->set_yaw_rate(yaw_rate);
-
-  // steering_angle = 1/R * L * steering_ratio * 补偿系数
-  auto compensation_factor = curvature > 0 ? 1.5 : 1;
-  vehi_svc_msg->set_steering_wheel_angle(curvature * 3.33 * 15.7 *
-                                         compensation_factor);
 }
 
 }  // namespace planning_player
