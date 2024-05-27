@@ -5,8 +5,6 @@ file(GLOB_RECURSE SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/*.cc
 )
 
-add_definitions(-DDEBUG_PRINT)
-
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
