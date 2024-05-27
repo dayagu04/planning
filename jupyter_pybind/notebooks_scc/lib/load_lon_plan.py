@@ -25,14 +25,6 @@ from lib.load_struct import *
 coord_tf = coord_transformer()
 
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
-  #loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
-  road_msg_idx = local_view_data['data_index']['road_msg_idx']
-  fus_msg_idx = local_view_data['data_index']['fus_msg_idx']
-  vs_msg_idx = local_view_data['data_index']['vs_msg_idx']
-  #plan_msg_idx = local_view_data['data_index']['plan_msg_idx']
-  plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
-  pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
-
   planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
                               "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                               "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
